@@ -79,12 +79,14 @@ ProcessFreeBSD::CreateInstance(lldb::TargetSP target_sp,
 }
 
 void ProcessFreeBSD::Initialize() {
-  static llvm::once_flag g_once_flag;
+  if (!getenv("FREEBSD_REMOTE_PLUGIN")) {
+    static llvm::once_flag g_once_flag;
 
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+    llvm::call_once(g_once_flag, []() {
+      PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                    GetPluginDescriptionStatic(), CreateInstance);
+    });
+  }
 }
 
 lldb_private::ConstString ProcessFreeBSD::GetPluginNameStatic() {
@@ -380,8 +382,7 @@ Status ProcessFreeBSD::DoLaunch(Module *module,
   FileSpec stdout_file_spec{};
   FileSpec stderr_file_spec{};
 
-  const FileSpec dbg_pts_file_spec{
-      launch_info.GetPTY().GetSecondaryName(NULL, 0)};
+  const FileSpec dbg_pts_file_spec{launch_info.GetPTY().GetSecondaryName()};
 
   file_action = launch_info.GetFileActionForFD(STDIN_FILENO);
   stdin_file_spec =

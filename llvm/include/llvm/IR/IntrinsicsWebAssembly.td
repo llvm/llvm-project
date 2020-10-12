@@ -159,6 +159,10 @@ def int_wasm_narrow_unsigned :
   Intrinsic<[llvm_anyvector_ty],
             [llvm_anyvector_ty, LLVMMatchType<1>],
             [IntrNoMem, IntrSpeculatable]>;
+def int_wasm_q15mulr_saturate_signed :
+  Intrinsic<[llvm_v8i16_ty],
+            [llvm_v8i16_ty, llvm_v8i16_ty],
+            [IntrNoMem, IntrSpeculatable]>;
 
 // TODO: Replace these intrinsics with normal ISel patterns
 def int_wasm_pmin :

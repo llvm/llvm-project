@@ -329,10 +329,8 @@ define <vscale x 8 x half> @fneg_nxv8f16(<vscale x 8 x half> %a) {
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ret
-  %minus.one = insertelement <vscale x 8 x half> undef, half -1.0, i64 0
-  %minus.one.vec = shufflevector <vscale x 8 x half> %minus.one, <vscale x 8 x half> undef, <vscale x 8 x i32> zeroinitializer
-  %neg = fmul <vscale x 8 x half> %a, %minus.one.vec
-  ret <vscale x 8 x half> %neg
+  %res = fneg <vscale x 8 x half> %a
+  ret <vscale x 8 x half> %res
 }
 
 define <vscale x 4 x half> @fneg_nxv4f16(<vscale x 4 x half> %a) {
@@ -341,10 +339,8 @@ define <vscale x 4 x half> @fneg_nxv4f16(<vscale x 4 x half> %a) {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ret
-  %minus.one = insertelement <vscale x 4 x half> undef, half -1.0, i64 0
-  %minus.one.vec = shufflevector <vscale x 4 x half> %minus.one, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
-  %neg = fmul <vscale x 4 x half> %a, %minus.one.vec
-  ret <vscale x 4 x half> %neg
+  %res = fneg <vscale x 4 x half> %a
+  ret <vscale x 4 x half> %res
 }
 
 define <vscale x 2 x half> @fneg_nxv2f16(<vscale x 2 x half> %a) {
@@ -353,10 +349,8 @@ define <vscale x 2 x half> @fneg_nxv2f16(<vscale x 2 x half> %a) {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ret
-  %minus.one = insertelement <vscale x 2 x half> undef, half -1.0, i64 0
-  %minus.one.vec = shufflevector <vscale x 2 x half> %minus.one, <vscale x 2 x half> undef, <vscale x 2 x i32> zeroinitializer
-  %neg = fmul <vscale x 2 x half> %a, %minus.one.vec
-  ret <vscale x 2 x half> %neg
+  %res = fneg <vscale x 2 x half> %a
+  ret <vscale x 2 x half> %res
 }
 
 define <vscale x 4 x float> @fneg_nxv4f32(<vscale x 4 x float> %a) {
@@ -365,10 +359,8 @@ define <vscale x 4 x float> @fneg_nxv4f32(<vscale x 4 x float> %a) {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fneg z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ret
-  %minus.one = insertelement <vscale x 4 x float> undef, float -1.0, i64 0
-  %minus.one.vec = shufflevector <vscale x 4 x float> %minus.one, <vscale x 4 x float> undef, <vscale x 4 x i32> zeroinitializer
-  %neg = fmul <vscale x 4 x float> %a, %minus.one.vec
-  ret <vscale x 4 x float> %neg
+  %res = fneg <vscale x 4 x float> %a
+  ret <vscale x 4 x float> %res
 }
 
 define <vscale x 2 x float> @fneg_nxv2f32(<vscale x 2 x float> %a) {
@@ -377,10 +369,8 @@ define <vscale x 2 x float> @fneg_nxv2f32(<vscale x 2 x float> %a) {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fneg z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ret
-  %minus.one = insertelement <vscale x 2 x float> undef, float -1.0, i64 0
-  %minus.one.vec = shufflevector <vscale x 2 x float> %minus.one, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
-  %neg = fmul <vscale x 2 x float> %a, %minus.one.vec
-  ret <vscale x 2 x float> %neg
+  %res = fneg <vscale x 2 x float> %a
+  ret <vscale x 2 x float> %res
 }
 
 define <vscale x 2 x double> @fneg_nxv2f64(<vscale x 2 x double> %a) {
@@ -389,10 +379,8 @@ define <vscale x 2 x double> @fneg_nxv2f64(<vscale x 2 x double> %a) {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fneg z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
-  %minus.one = insertelement <vscale x 2 x double> undef, double -1.0, i64 0
-  %minus.one.vec = shufflevector <vscale x 2 x double> %minus.one, <vscale x 2 x double> undef, <vscale x 2 x i32> zeroinitializer
-  %neg = fmul <vscale x 2 x double> %a, %minus.one.vec
-  ret <vscale x 2 x double> %neg
+  %res = fneg <vscale x 2 x double> %a
+  ret <vscale x 2 x double> %res
 }
 
 define <vscale x 8 x half> @frecps_h(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {

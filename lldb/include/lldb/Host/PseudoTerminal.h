@@ -105,20 +105,11 @@ public:
   /// A primary pseudo terminal should already be valid prior to
   /// calling this function.
   ///
-  /// \param[out] error_str
-  ///     An pointer to an error that can describe any errors that
-  ///     occur. This can be NULL if no error status is desired.
-  ///
   /// \return
-  ///     The name of the secondary pseudo terminal as a NULL terminated
-  ///     C. This string that comes from static memory, so a copy of
-  ///     the string should be made as subsequent calls can change
-  ///     this value. NULL is returned if this object doesn't have
-  ///     a valid primary pseudo terminal opened or if the call to
-  ///     \c ptsname() fails.
+  ///     The name of the secondary pseudo terminal.
   ///
   /// \see PseudoTerminal::OpenFirstAvailablePrimary()
-  const char *GetSecondaryName(char *error_str, size_t error_len) const;
+  std::string GetSecondaryName() const;
 
   /// Open the first available pseudo terminal.
   ///

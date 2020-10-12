@@ -38,12 +38,15 @@ using namespace driver;
 Command::Command(const Action &Source, const Tool &Creator,
                  ResponseFileSupport ResponseSupport, const char *Executable,
                  const llvm::opt::ArgStringList &Arguments,
-                 ArrayRef<InputInfo> Inputs)
+                 ArrayRef<InputInfo> Inputs, ArrayRef<InputInfo> Outputs)
     : Source(Source), Creator(Creator), ResponseSupport(ResponseSupport),
       Executable(Executable), Arguments(Arguments) {
   for (const auto &II : Inputs)
     if (II.isFilename())
       InputFilenames.push_back(II.getFilename());
+  for (const auto &II : Outputs)
+    if (II.isFilename())
+      OutputFilenames.push_back(II.getFilename());
 }
 
 /// Check if the compiler flag in question should be skipped when
@@ -357,8 +360,9 @@ CC1Command::CC1Command(const Action &Source, const Tool &Creator,
                        ResponseFileSupport ResponseSupport,
                        const char *Executable,
                        const llvm::opt::ArgStringList &Arguments,
-                       ArrayRef<InputInfo> Inputs)
-    : Command(Source, Creator, ResponseSupport, Executable, Arguments, Inputs) {
+                       ArrayRef<InputInfo> Inputs, ArrayRef<InputInfo> Outputs)
+    : Command(Source, Creator, ResponseSupport, Executable, Arguments, Inputs,
+              Outputs) {
   InProcess = true;
 }
 
@@ -415,9 +419,10 @@ FallbackCommand::FallbackCommand(const Action &Source_, const Tool &Creator_,
                                  const char *Executable_,
                                  const llvm::opt::ArgStringList &Arguments_,
                                  ArrayRef<InputInfo> Inputs,
+                                 ArrayRef<InputInfo> Outputs,
                                  std::unique_ptr<Command> Fallback_)
     : Command(Source_, Creator_, ResponseSupport, Executable_, Arguments_,
-              Inputs),
+              Inputs, Outputs),
       Fallback(std::move(Fallback_)) {}
 
 void FallbackCommand::Print(raw_ostream &OS, const char *Terminator,
@@ -456,9 +461,10 @@ int FallbackCommand::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
 ForceSuccessCommand::ForceSuccessCommand(
     const Action &Source_, const Tool &Creator_,
     ResponseFileSupport ResponseSupport, const char *Executable_,
-    const llvm::opt::ArgStringList &Arguments_, ArrayRef<InputInfo> Inputs)
+    const llvm::opt::ArgStringList &Arguments_, ArrayRef<InputInfo> Inputs,
+    ArrayRef<InputInfo> Outputs)
     : Command(Source_, Creator_, ResponseSupport, Executable_, Arguments_,
-              Inputs) {}
+              Inputs, Outputs) {}
 
 void ForceSuccessCommand::Print(raw_ostream &OS, const char *Terminator,
                             bool Quote, CrashReportInfo *CrashInfo) const {

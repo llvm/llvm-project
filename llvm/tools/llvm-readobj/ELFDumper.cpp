@@ -1749,14 +1749,17 @@ static const EnumEntry<unsigned> ElfHeaderAMDGPUFlags[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_TURKS),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX600),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX601),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX602),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX700),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX701),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX702),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX703),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX704),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX705),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX801),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX802),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX803),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX805),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX810),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX900),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX902),
@@ -2745,10 +2748,10 @@ getGnuHashTableChains(Optional<DynRegionInfo> DynSymRegion,
   // is irrelevant and we should not report a warning.
   ArrayRef<typename ELFT::Word> Buckets = GnuHashTable->buckets();
   if (!llvm::all_of(Buckets, [](typename ELFT::Word V) { return V == 0; }))
-    return createError("the first hashed symbol index (" +
-                       Twine(GnuHashTable->symndx) +
-                       ") is larger than the number of dynamic symbols (" +
-                       Twine(NumSyms) + ")");
+    return createError(
+        "the first hashed symbol index (" + Twine(GnuHashTable->symndx) +
+        ") is greater than or equal to the number of dynamic symbols (" +
+        Twine(NumSyms) + ")");
   // There is no way to represent an array of (dynamic symbols count - symndx)
   // length.
   return ArrayRef<typename ELFT::Word>();
@@ -4046,8 +4049,8 @@ void GNUStyle<ELFT>::printGnuHashTableSymbols(const Elf_GnuHash &GnuHash) {
 
   Elf_Sym_Range DynSyms = this->dumper().dynamic_symbols();
   const Elf_Sym *FirstSym = DynSyms.empty() ? nullptr : &DynSyms[0];
+  Optional<DynRegionInfo> DynSymRegion = this->dumper().getDynSymRegion();
   if (!FirstSym) {
-    Optional<DynRegionInfo> DynSymRegion = this->dumper().getDynSymRegion();
     this->reportUniqueWarning(createError(
         Twine("unable to print symbols for the .gnu.hash table: the "
               "dynamic symbol table ") +
@@ -4055,18 +4058,54 @@ void GNUStyle<ELFT>::printGnuHashTableSymbols(const Elf_GnuHash &GnuHash) {
     return;
   }
 
+  auto GetSymbol = [&](uint64_t SymIndex,
+                       uint64_t SymsTotal) -> const Elf_Sym * {
+    if (SymIndex >= SymsTotal) {
+      this->reportUniqueWarning(createError(
+          "unable to print hashed symbol with index " + Twine(SymIndex) +
+          ", which is greater than or equal to the number of dynamic symbols "
+          "(" +
+          Twine::utohexstr(SymsTotal) + ")"));
+      return nullptr;
+    }
+    return FirstSym + SymIndex;
+  };
+
+  Expected<ArrayRef<Elf_Word>> ValuesOrErr =
+      getGnuHashTableChains<ELFT>(DynSymRegion, &GnuHash);
+  ArrayRef<Elf_Word> Values;
+  if (!ValuesOrErr)
+    this->reportUniqueWarning(
+        createError("unable to get hash values for the SHT_GNU_HASH "
+                    "section: " +
+                    toString(ValuesOrErr.takeError())));
+  else
+    Values = *ValuesOrErr;
+
   ArrayRef<Elf_Word> Buckets = GnuHash.buckets();
   for (uint32_t Buc = 0; Buc < GnuHash.nbuckets; Buc++) {
     if (Buckets[Buc] == ELF::STN_UNDEF)
       continue;
     uint32_t Index = Buckets[Buc];
-    uint32_t GnuHashable = Index - GnuHash.symndx;
-    // Print whole chain
+    // Print whole chain.
     while (true) {
       uint32_t SymIndex = Index++;
-      printHashedSymbol(FirstSym + SymIndex, SymIndex, StringTable, Buc);
-      // Chain ends at symbol with stopper bit
-      if ((GnuHash.values(DynSyms.size())[GnuHashable++] & 1) == 1)
+      if (const Elf_Sym *Sym = GetSymbol(SymIndex, DynSyms.size()))
+        printHashedSymbol(Sym, SymIndex, StringTable, Buc);
+      else
+        break;
+
+      if (SymIndex < GnuHash.symndx) {
+        this->reportUniqueWarning(createError(
+            "unable to read the hash value for symbol with index " +
+            Twine(SymIndex) +
+            ", which is less than the index of the first hashed symbol (" +
+            Twine(GnuHash.symndx) + ")"));
+        break;
+      }
+
+       // Chain ends at symbol with stopper bit.
+      if ((Values[SymIndex - GnuHash.symndx] & 1) == 1)
         break;
     }
   }
@@ -4724,8 +4763,62 @@ template <class ELFT> void GNUStyle<ELFT>::printCGProfile() {
   OS << "GNUStyle::printCGProfile not implemented\n";
 }
 
+static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
+  std::vector<uint64_t> Ret;
+  const uint8_t *Cur = Data.begin();
+  const uint8_t *End = Data.end();
+  while (Cur != End) {
+    unsigned Size;
+    const char *Err;
+    Ret.push_back(decodeULEB128(Cur, &Size, End, &Err));
+    if (Err)
+      return createError(Err);
+    Cur += Size;
+  }
+  return Ret;
+}
+
+template <class ELFT>
+static Expected<std::vector<uint64_t>>
+decodeAddrsigSection(const ELFFile<ELFT> &Obj, const typename ELFT::Shdr &Sec) {
+  Expected<ArrayRef<uint8_t>> ContentsOrErr = Obj.getSectionContents(Sec);
+  if (!ContentsOrErr)
+    return ContentsOrErr.takeError();
+
+  if (Expected<std::vector<uint64_t>> SymsOrErr =
+          toULEB128Array(*ContentsOrErr))
+    return *SymsOrErr;
+  else
+    return createError("unable to decode " + describe(Obj, Sec) + ": " +
+                       toString(SymsOrErr.takeError()));
+}
+
 template <class ELFT> void GNUStyle<ELFT>::printAddrsig() {
-  reportError(createError("--addrsig: not implemented"), this->FileName);
+  const Elf_Shdr *Sec = this->dumper().getDotAddrsigSec();
+  if (!Sec)
+    return;
+
+  Expected<std::vector<uint64_t>> SymsOrErr =
+      decodeAddrsigSection(this->Obj, *Sec);
+  if (!SymsOrErr) {
+    this->reportUniqueWarning(SymsOrErr.takeError());
+    return;
+  }
+
+  StringRef Name = this->getPrintableSectionName(*Sec);
+  OS << "\nAddress-significant symbols section '" << Name << "'"
+     << " contains " << SymsOrErr->size() << " entries:\n";
+  OS << "   Num: Name\n";
+
+  Field Fields[2] = {0, 8};
+  size_t SymIndex = 0;
+  for (uint64_t Sym : *SymsOrErr) {
+    Fields[0].Str = to_string(format_decimal(++SymIndex, 6)) + ":";
+    Fields[1].Str = this->dumper().getStaticSymbolName(Sym);
+    for (const Field &Entry : Fields)
+      printField(Entry);
+    OS << "\n";
+  }
 }
 
 template <typename ELFT>
@@ -6419,39 +6512,16 @@ template <class ELFT> void LLVMStyle<ELFT>::printCGProfile() {
   }
 }
 
-static Expected<std::vector<uint64_t>> toULEB128Array(ArrayRef<uint8_t> Data) {
-  std::vector<uint64_t> Ret;
-  const uint8_t *Cur = Data.begin();
-  const uint8_t *End = Data.end();
-  while (Cur != End) {
-    unsigned Size;
-    const char *Err;
-    Ret.push_back(decodeULEB128(Cur, &Size, End, &Err));
-    if (Err)
-      return createError(Err);
-    Cur += Size;
-  }
-  return Ret;
-}
-
 template <class ELFT> void LLVMStyle<ELFT>::printAddrsig() {
   ListScope L(W, "Addrsig");
   const Elf_Shdr *Sec = this->dumper().getDotAddrsigSec();
   if (!Sec)
     return;
 
-  Expected<ArrayRef<uint8_t>> ContentsOrErr =
-      this->Obj.getSectionContents(*Sec);
-  if (!ContentsOrErr) {
-    this->reportUniqueWarning(ContentsOrErr.takeError());
-    return;
-  }
-
-  Expected<std::vector<uint64_t>> SymsOrErr = toULEB128Array(*ContentsOrErr);
+  Expected<std::vector<uint64_t>> SymsOrErr =
+      decodeAddrsigSection(this->Obj, *Sec);
   if (!SymsOrErr) {
-    this->reportUniqueWarning(createError("unable to decode " +
-                                          describe(this->Obj, *Sec) + ": " +
-                                          toString(SymsOrErr.takeError())));
+    this->reportUniqueWarning(SymsOrErr.takeError());
     return;
   }
 

@@ -217,6 +217,13 @@
 	lxr	%f0,16
 	lxr	%f0,0(%r1)
 
+# Test that a high (>=16) vector register is not accepted in a non-vector
+# operand.
+#
+#CHECK: error: invalid register
+#CHECK: .insn rr,0x1800,%v16,%v0
+.insn rr,0x1800,%v16,%v0
+
 # Test access register operands
 #
 #CHECK: error: invalid operand for instruction

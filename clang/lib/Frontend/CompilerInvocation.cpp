@@ -1360,6 +1360,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
+  if (T.isOSAIX() && (Args.hasArg(OPT_mignore_xcoff_visibility) ||
+                      !Args.hasArg(OPT_fvisibility)))
+    Opts.IgnoreXCOFFVisibility = 1;
+
   Opts.DependentLibraries = Args.getAllArgValues(OPT_dependent_lib);
   Opts.LinkerOptions = Args.getAllArgValues(OPT_linker_option);
   bool NeedLocTracking = false;
@@ -2364,6 +2368,8 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.OpenCLVersion = 120;
   else if (LangStd == LangStandard::lang_opencl20)
     Opts.OpenCLVersion = 200;
+  else if (LangStd == LangStandard::lang_opencl30)
+    Opts.OpenCLVersion = 300;
   else if (LangStd == LangStandard::lang_openclcpp)
     Opts.OpenCLCPlusPlusVersion = 100;
 
@@ -2570,6 +2576,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
         .Cases("cl1.1", "CL1.1", LangStandard::lang_opencl11)
         .Cases("cl1.2", "CL1.2", LangStandard::lang_opencl12)
         .Cases("cl2.0", "CL2.0", LangStandard::lang_opencl20)
+        .Cases("cl3.0", "CL3.0", LangStandard::lang_opencl30)
         .Cases("clc++", "CLC++", LangStandard::lang_openclcpp)
         .Default(LangStandard::lang_unspecified);
 
@@ -3191,6 +3198,15 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   // Get the OpenMP target triples if any.
   if (Arg *A = Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
+    enum ArchPtrSize { Arch16Bit, Arch32Bit, Arch64Bit };
+    auto getArchPtrSize = [](const llvm::Triple &T) {
+      if (T.isArch16Bit())
+        return Arch16Bit;
+      if (T.isArch32Bit())
+        return Arch32Bit;
+      assert(T.isArch64Bit() && "Expected 64-bit architecture");
+      return Arch64Bit;
+    };
 
     for (unsigned i = 0; i < A->getNumValues(); ++i) {
       llvm::Triple TT(A->getValue(i));
@@ -3206,6 +3222,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
             TT.getArch() == llvm::Triple::x86 ||
             TT.getArch() == llvm::Triple::x86_64))
         Diags.Report(diag::err_drv_invalid_omp_target) << A->getValue(i);
+      else if (getArchPtrSize(T) != getArchPtrSize(TT))
+        Diags.Report(diag::err_drv_incompatible_omp_arch)
+            << A->getValue(i) << T.str();
       else
         Opts.OMPTargetTriples.push_back(TT);
     }

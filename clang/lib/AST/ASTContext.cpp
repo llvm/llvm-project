@@ -9427,8 +9427,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
   // designates the object or function denoted by the reference, and the
   // expression is an lvalue unless the reference is an rvalue reference and
   // the expression is a function call (possibly inside parentheses).
-  assert(!LHS->getAs<ReferenceType>() && "LHS is a reference type?");
-  assert(!RHS->getAs<ReferenceType>() && "RHS is a reference type?");
+  if (LHS->getAs<ReferenceType>() || RHS->getAs<ReferenceType>())
+    return {};
 
   if (Unqualified) {
     LHS = LHS.getUnqualifiedType();

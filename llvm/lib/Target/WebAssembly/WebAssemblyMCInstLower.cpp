@@ -38,29 +38,34 @@ cl::opt<bool>
                                " instruction output for test purposes only."),
                       cl::init(false));
 
+extern cl::opt<bool> EnableEmException;
+extern cl::opt<bool> EnableEmSjLj;
+
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI);
 
 MCSymbol *
 WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
   const GlobalValue *Global = MO.getGlobal();
-  auto *WasmSym = cast<MCSymbolWasm>(Printer.getSymbol(Global));
+  if (!isa<Function>(Global))
+    return cast<MCSymbolWasm>(Printer.getSymbol(Global));
 
-  if (const auto *FuncTy = dyn_cast<FunctionType>(Global->getValueType())) {
-    const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
-    const TargetMachine &TM = MF.getTarget();
-    const Function &CurrentFunc = MF.getFunction();
+  const auto *FuncTy = cast<FunctionType>(Global->getValueType());
+  const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
+  const TargetMachine &TM = MF.getTarget();
+  const Function &CurrentFunc = MF.getFunction();
 
-    SmallVector<MVT, 1> ResultMVTs;
-    SmallVector<MVT, 4> ParamMVTs;
-    const auto *const F = dyn_cast<Function>(Global);
-    computeSignatureVTs(FuncTy, F, CurrentFunc, TM, ParamMVTs, ResultMVTs);
+  SmallVector<MVT, 1> ResultMVTs;
+  SmallVector<MVT, 4> ParamMVTs;
+  const auto *const F = dyn_cast<Function>(Global);
+  computeSignatureVTs(FuncTy, F, CurrentFunc, TM, ParamMVTs, ResultMVTs);
+  auto Signature = signatureFromMVTs(ResultMVTs, ParamMVTs);
 
-    auto Signature = signatureFromMVTs(ResultMVTs, ParamMVTs);
-    WasmSym->setSignature(Signature.get());
-    Printer.addSignature(std::move(Signature));
-    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-  }
-
+  bool InvokeDetected = false;
+  auto *WasmSym = Printer.getMCSymbolForFunction(
+      F, EnableEmException || EnableEmSjLj, Signature.get(), InvokeDetected);
+  WasmSym->setSignature(Signature.get());
+  Printer.addSignature(std::move(Signature));
+  WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
   return WasmSym;
 }
 

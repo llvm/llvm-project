@@ -662,12 +662,15 @@ bool fromJSON(const llvm::json::Value &Params, ExecuteCommandParams &R,
 }
 
 llvm::json::Value toJSON(const SymbolInformation &P) {
-  return llvm::json::Object{
+  llvm::json::Object O{
       {"name", P.name},
       {"kind", static_cast<int>(P.kind)},
       {"location", P.location},
       {"containerName", P.containerName},
   };
+  if (P.score)
+    O["score"] = *P.score;
+  return std::move(O);
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &O,
@@ -848,7 +851,7 @@ static llvm::StringRef toTextKind(MarkupKind Kind) {
 bool fromJSON(const llvm::json::Value &V, MarkupKind &K, llvm::json::Path P) {
   auto Str = V.getAsString();
   if (!Str) {
-    elog("Failed to parse markup kind: expected a string");
+    P.report("expected string");
     return false;
   }
   if (*Str == "plaintext")
@@ -856,7 +859,7 @@ bool fromJSON(const llvm::json::Value &V, MarkupKind &K, llvm::json::Path P) {
   else if (*Str == "markdown")
     K = MarkupKind::Markdown;
   else {
-    elog("Unknown markup kind: {0}", *Str);
+    P.report("unknown markup kind");
     return false;
   }
   return true;

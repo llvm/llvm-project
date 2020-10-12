@@ -47,7 +47,7 @@ void destroy(void* v)
   t->~T();
 }
 
-int main()
+int main(int, char**)
 {
   std::set_terminate(my_terminate);
   {
@@ -56,4 +56,6 @@ int main()
   __cxxabiv1::__cxa_vec_dtor(a, 10, sizeof(test1::A), destroy<test1::A>);
   assert(false);
   }
+
+  return 0;
 }

@@ -123,9 +123,10 @@ namespace llvm {
           EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
           DisableIntegratedAS(false), RelaxELFRelocations(false),
           FunctionSections(false), DataSections(false),
-          UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
-          TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
-          EmulatedTLS(false), ExplicitEmulatedTLS(false), EnableIPRA(false),
+          IgnoreXCOFFVisibility(false), UniqueSectionNames(true),
+          UniqueBasicBlockSectionNames(false), TrapUnreachable(false),
+          NoTrapAfterNoreturn(false), TLSSize(0), EmulatedTLS(false),
+          ExplicitEmulatedTLS(false), EnableIPRA(false),
           EmitStackSizeSection(false), EnableMachineOutliner(false),
           EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
           EmitAddrsig(false), EmitCallSiteInfo(false),
@@ -229,6 +230,9 @@ namespace llvm {
 
     /// Emit data into separate sections.
     unsigned DataSections : 1;
+
+    /// Do not emit visibility attribute for xcoff.
+    unsigned IgnoreXCOFFVisibility : 1;
 
     unsigned UniqueSectionNames : 1;
 

@@ -18,11 +18,14 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
 using namespace llvm;
 
@@ -37,8 +40,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   RegisterTargetMachine<BPFTargetMachine> Z(getTheBPFTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeBPFAbstractMemberAccessPass(PR);
+  initializeBPFAbstractMemberAccessLegacyPassPass(PR);
   initializeBPFPreserveDITypePass(PR);
+  initializeBPFAdjustOptPass(PR);
   initializeBPFCheckAndAdjustIRPass(PR);
   initializeBPFMIPeepholePass(PR);
   initializeBPFMIPeepholeTruncElimPass(PR);
@@ -112,6 +116,25 @@ void BPFTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
         PM.add(createCFGSimplificationPass(
             SimplifyCFGOptions().hoistCommonInsts(true)));
       });
+  Builder.addExtension(
+      PassManagerBuilder::EP_ModuleOptimizerEarly,
+      [&](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+        PM.add(createBPFAdjustOpt());
+      });
+}
+
+void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
+                                                    bool DebugPassManager) {
+  PB.registerPipelineStartEPCallback([=](ModulePassManager &MPM) {
+    FunctionPassManager FPM(DebugPassManager);
+    FPM.addPass(BPFAbstractMemberAccessPass(this));
+    FPM.addPass(BPFPreserveDITypePass());
+    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+  });
+  PB.registerPeepholeEPCallback([=](FunctionPassManager &FPM,
+                                    PassBuilder::OptimizationLevel Level) {
+    FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().hoistCommonInsts(true)));
+  });
 }
 
 void BPFPassConfig::addIRPasses() {

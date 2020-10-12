@@ -8,7 +8,7 @@ define arm_aapcs_vfpcc i32 @add_v4i32_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    bx lr
 entry:
   %m = mul <4 x i32> %x, %y
-  %z = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %m)
   ret i32 %z
 }
 
@@ -21,7 +21,7 @@ entry:
   %xx = zext <4 x i32> %x to <4 x i64>
   %yy = zext <4 x i32> %y to <4 x i64>
   %m = mul <4 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %m)
   ret i64 %z
 }
 
@@ -34,7 +34,7 @@ entry:
   %xx = sext <4 x i32> %x to <4 x i64>
   %yy = sext <4 x i32> %y to <4 x i64>
   %m = mul <4 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %m)
   ret i64 %z
 }
 
@@ -53,7 +53,7 @@ entry:
   %xx = zext <2 x i32> %x to <2 x i64>
   %yy = zext <2 x i32> %y to <2 x i64>
   %m = mul <2 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %m)
   ret i64 %z
 }
 
@@ -72,7 +72,7 @@ entry:
   %xx = sext <2 x i32> %x to <2 x i64>
   %yy = sext <2 x i32> %y to <2 x i64>
   %m = mul <2 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %m)
   ret i64 %z
 }
 
@@ -85,7 +85,7 @@ entry:
   %xx = zext <8 x i16> %x to <8 x i32>
   %yy = zext <8 x i16> %y to <8 x i32>
   %m = mul <8 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %m)
   ret i32 %z
 }
 
@@ -98,7 +98,7 @@ entry:
   %xx = sext <8 x i16> %x to <8 x i32>
   %yy = sext <8 x i16> %y to <8 x i32>
   %m = mul <8 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %m)
   ret i32 %z
 }
 
@@ -113,7 +113,7 @@ entry:
   %xx = zext <4 x i16> %x to <4 x i32>
   %yy = zext <4 x i16> %y to <4 x i32>
   %m = mul <4 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %m)
   ret i32 %z
 }
 
@@ -128,7 +128,7 @@ entry:
   %xx = sext <4 x i16> %x to <4 x i32>
   %yy = sext <4 x i16> %y to <4 x i32>
   %m = mul <4 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %m)
   ret i32 %z
 }
 
@@ -140,7 +140,7 @@ define arm_aapcs_vfpcc zeroext i16 @add_v8i16_v8i16(<8 x i16> %x, <8 x i16> %y) 
 ; CHECK-NEXT:    bx lr
 entry:
   %m = mul <8 x i16> %x, %y
-  %z = call i16 @llvm.experimental.vector.reduce.add.v8i16(<8 x i16> %m)
+  %z = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %m)
   ret i16 %z
 }
 
@@ -153,7 +153,7 @@ entry:
   %xx = zext <8 x i16> %x to <8 x i64>
   %yy = zext <8 x i16> %y to <8 x i64>
   %m = mul <8 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %m)
   ret i64 %z
 }
 
@@ -166,7 +166,7 @@ entry:
   %xx = sext <8 x i16> %x to <8 x i64>
   %yy = sext <8 x i16> %y to <8 x i64>
   %m = mul <8 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %m)
   ret i64 %z
 }
 
@@ -180,7 +180,7 @@ entry:
   %yy = zext <8 x i16> %y to <8 x i32>
   %m = mul <8 x i32> %xx, %yy
   %ma = zext <8 x i32> %m to <8 x i64>
-  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %ma)
+  %z = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %ma)
   ret i64 %z
 }
 
@@ -194,7 +194,7 @@ entry:
   %yy = sext <8 x i16> %y to <8 x i32>
   %m = mul <8 x i32> %xx, %yy
   %ma = sext <8 x i32> %m to <8 x i64>
-  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %ma)
+  %z = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %ma)
   ret i64 %z
 }
 
@@ -207,7 +207,7 @@ entry:
   %xx = sext <8 x i16> %x to <8 x i32>
   %m = mul <8 x i32> %xx, %xx
   %ma = zext <8 x i32> %m to <8 x i64>
-  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %ma)
+  %z = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %ma)
   ret i64 %z
 }
 
@@ -228,7 +228,7 @@ entry:
   %xx = zext <2 x i16> %x to <2 x i64>
   %yy = zext <2 x i16> %y to <2 x i64>
   %m = mul <2 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %m)
   ret i64 %z
 }
 
@@ -250,7 +250,7 @@ entry:
   %xx = sext <2 x i16> %x to <2 x i64>
   %yy = sext <2 x i16> %y to <2 x i64>
   %m = mul <2 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %m)
   ret i64 %z
 }
 
@@ -263,7 +263,7 @@ entry:
   %xx = zext <16 x i8> %x to <16 x i32>
   %yy = zext <16 x i8> %y to <16 x i32>
   %m = mul <16 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %m)
   ret i32 %z
 }
 
@@ -276,7 +276,7 @@ entry:
   %xx = sext <16 x i8> %x to <16 x i32>
   %yy = sext <16 x i8> %y to <16 x i32>
   %m = mul <16 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %m)
   ret i32 %z
 }
 
@@ -290,7 +290,7 @@ entry:
   %yy = zext <16 x i8> %y to <16 x i16>
   %m = mul <16 x i16> %xx, %yy
   %ma = zext <16 x i16> %m to <16 x i32>
-  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %ma)
+  %z = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %ma)
   ret i32 %z
 }
 
@@ -304,7 +304,7 @@ entry:
   %yy = sext <16 x i8> %y to <16 x i16>
   %m = mul <16 x i16> %xx, %yy
   %ma = sext <16 x i16> %m to <16 x i32>
-  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %ma)
+  %z = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %ma)
   ret i32 %z
 }
 
@@ -317,7 +317,7 @@ entry:
   %xx = sext <16 x i8> %x to <16 x i16>
   %m = mul <16 x i16> %xx, %xx
   %ma = zext <16 x i16> %m to <16 x i32>
-  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %ma)
+  %z = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %ma)
   ret i32 %z
 }
 
@@ -333,7 +333,7 @@ entry:
   %xx = zext <4 x i8> %x to <4 x i32>
   %yy = zext <4 x i8> %y to <4 x i32>
   %m = mul <4 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %m)
   ret i32 %z
 }
 
@@ -350,7 +350,7 @@ entry:
   %xx = sext <4 x i8> %x to <4 x i32>
   %yy = sext <4 x i8> %y to <4 x i32>
   %m = mul <4 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %m)
   ret i32 %z
 }
 
@@ -364,7 +364,7 @@ entry:
   %xx = zext <16 x i8> %x to <16 x i16>
   %yy = zext <16 x i8> %y to <16 x i16>
   %m = mul <16 x i16> %xx, %yy
-  %z = call i16 @llvm.experimental.vector.reduce.add.v16i16(<16 x i16> %m)
+  %z = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %m)
   ret i16 %z
 }
 
@@ -378,7 +378,7 @@ entry:
   %xx = sext <16 x i8> %x to <16 x i16>
   %yy = sext <16 x i8> %y to <16 x i16>
   %m = mul <16 x i16> %xx, %yy
-  %z = call i16 @llvm.experimental.vector.reduce.add.v16i16(<16 x i16> %m)
+  %z = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %m)
   ret i16 %z
 }
 
@@ -394,7 +394,7 @@ entry:
   %xx = zext <8 x i8> %x to <8 x i16>
   %yy = zext <8 x i8> %y to <8 x i16>
   %m = mul <8 x i16> %xx, %yy
-  %z = call i16 @llvm.experimental.vector.reduce.add.v8i16(<8 x i16> %m)
+  %z = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %m)
   ret i16 %z
 }
 
@@ -410,7 +410,7 @@ entry:
   %xx = sext <8 x i8> %x to <8 x i16>
   %yy = sext <8 x i8> %y to <8 x i16>
   %m = mul <8 x i16> %xx, %yy
-  %z = call i16 @llvm.experimental.vector.reduce.add.v8i16(<8 x i16> %m)
+  %z = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %m)
   ret i16 %z
 }
 
@@ -422,7 +422,7 @@ define arm_aapcs_vfpcc zeroext i8 @add_v16i8_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; CHECK-NEXT:    bx lr
 entry:
   %m = mul <16 x i8> %x, %y
-  %z = call i8 @llvm.experimental.vector.reduce.add.v16i8(<16 x i8> %m)
+  %z = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %m)
   ret i8 %z
 }
 
@@ -636,7 +636,7 @@ entry:
   %xx = zext <16 x i8> %x to <16 x i64>
   %yy = zext <16 x i8> %y to <16 x i64>
   %m = mul <16 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v16i64(<16 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %m)
   ret i64 %z
 }
 
@@ -803,7 +803,7 @@ entry:
   %xx = sext <16 x i8> %x to <16 x i64>
   %yy = sext <16 x i8> %y to <16 x i64>
   %m = mul <16 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v16i64(<16 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %m)
   ret i64 %z
 }
 
@@ -826,7 +826,7 @@ entry:
   %xx = zext <2 x i8> %x to <2 x i64>
   %yy = zext <2 x i8> %y to <2 x i64>
   %m = mul <2 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %m)
   ret i64 %z
 }
 
@@ -848,7 +848,7 @@ entry:
   %xx = sext <2 x i8> %x to <2 x i64>
   %yy = sext <2 x i8> %y to <2 x i64>
   %m = mul <2 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %m)
   ret i64 %z
 }
 
@@ -879,7 +879,7 @@ define arm_aapcs_vfpcc i64 @add_v2i64_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-NEXT:    pop {r4, pc}
 entry:
   %m = mul <2 x i64> %x, %y
-  %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %m)
   ret i64 %z
 }
 
@@ -890,7 +890,7 @@ define arm_aapcs_vfpcc i32 @add_v4i32_v4i32_acc(<4 x i32> %x, <4 x i32> %y, i32 
 ; CHECK-NEXT:    bx lr
 entry:
   %m = mul <4 x i32> %x, %y
-  %z = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %m)
   %r = add i32 %z, %a
   ret i32 %r
 }
@@ -904,7 +904,7 @@ entry:
   %xx = zext <4 x i32> %x to <4 x i64>
   %yy = zext <4 x i32> %y to <4 x i64>
   %m = mul <4 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %m)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -918,7 +918,7 @@ entry:
   %xx = sext <4 x i32> %x to <4 x i64>
   %yy = sext <4 x i32> %y to <4 x i64>
   %m = mul <4 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %m)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -942,7 +942,7 @@ entry:
   %xx = zext <2 x i32> %x to <2 x i64>
   %yy = zext <2 x i32> %y to <2 x i64>
   %m = mul <2 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %m)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -966,7 +966,7 @@ entry:
   %xx = sext <2 x i32> %x to <2 x i64>
   %yy = sext <2 x i32> %y to <2 x i64>
   %m = mul <2 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %m)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -980,7 +980,7 @@ entry:
   %xx = zext <8 x i16> %x to <8 x i32>
   %yy = zext <8 x i16> %y to <8 x i32>
   %m = mul <8 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %m)
   %r = add i32 %z, %a
   ret i32 %r
 }
@@ -994,7 +994,7 @@ entry:
   %xx = sext <8 x i16> %x to <8 x i32>
   %yy = sext <8 x i16> %y to <8 x i32>
   %m = mul <8 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %m)
   %r = add i32 %z, %a
   ret i32 %r
 }
@@ -1010,7 +1010,7 @@ entry:
   %xx = zext <4 x i16> %x to <4 x i32>
   %yy = zext <4 x i16> %y to <4 x i32>
   %m = mul <4 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %m)
   %r = add i32 %z, %a
   ret i32 %r
 }
@@ -1026,7 +1026,7 @@ entry:
   %xx = sext <4 x i16> %x to <4 x i32>
   %yy = sext <4 x i16> %y to <4 x i32>
   %m = mul <4 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %m)
   %r = add i32 %z, %a
   ret i32 %r
 }
@@ -1039,7 +1039,7 @@ define arm_aapcs_vfpcc zeroext i16 @add_v8i16_v8i16_acc(<8 x i16> %x, <8 x i16> 
 ; CHECK-NEXT:    bx lr
 entry:
   %m = mul <8 x i16> %x, %y
-  %z = call i16 @llvm.experimental.vector.reduce.add.v8i16(<8 x i16> %m)
+  %z = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %m)
   %r = add i16 %z, %a
   ret i16 %r
 }
@@ -1053,7 +1053,7 @@ entry:
   %xx = zext <8 x i16> %x to <8 x i64>
   %yy = zext <8 x i16> %y to <8 x i64>
   %m = mul <8 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %m)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -1067,7 +1067,7 @@ entry:
   %xx = sext <8 x i16> %x to <8 x i64>
   %yy = sext <8 x i16> %y to <8 x i64>
   %m = mul <8 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %m)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -1082,7 +1082,7 @@ entry:
   %yy = zext <8 x i16> %y to <8 x i32>
   %m = mul <8 x i32> %xx, %yy
   %ma = zext <8 x i32> %m to <8 x i64>
-  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %ma)
+  %z = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %ma)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -1097,7 +1097,7 @@ entry:
   %yy = sext <8 x i16> %y to <8 x i32>
   %m = mul <8 x i32> %xx, %yy
   %ma = sext <8 x i32> %m to <8 x i64>
-  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %ma)
+  %z = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %ma)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -1111,7 +1111,7 @@ entry:
   %xx = sext <8 x i16> %x to <8 x i32>
   %m = mul <8 x i32> %xx, %xx
   %ma = zext <8 x i32> %m to <8 x i64>
-  %z = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %ma)
+  %z = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %ma)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -1137,7 +1137,7 @@ entry:
   %xx = zext <2 x i16> %x to <2 x i64>
   %yy = zext <2 x i16> %y to <2 x i64>
   %m = mul <2 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %m)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -1164,7 +1164,7 @@ entry:
   %xx = sext <2 x i16> %x to <2 x i64>
   %yy = sext <2 x i16> %y to <2 x i64>
   %m = mul <2 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %m)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -1178,7 +1178,7 @@ entry:
   %xx = zext <16 x i8> %x to <16 x i32>
   %yy = zext <16 x i8> %y to <16 x i32>
   %m = mul <16 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %m)
   %r = add i32 %z, %a
   ret i32 %r
 }
@@ -1192,7 +1192,7 @@ entry:
   %xx = sext <16 x i8> %x to <16 x i32>
   %yy = sext <16 x i8> %y to <16 x i32>
   %m = mul <16 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %m)
   %r = add i32 %z, %a
   ret i32 %r
 }
@@ -1207,7 +1207,7 @@ entry:
   %yy = zext <16 x i8> %y to <16 x i16>
   %m = mul <16 x i16> %xx, %yy
   %ma = zext <16 x i16> %m to <16 x i32>
-  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %ma)
+  %z = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %ma)
   %r = add i32 %z, %a
   ret i32 %r
 }
@@ -1222,7 +1222,7 @@ entry:
   %yy = sext <16 x i8> %y to <16 x i16>
   %m = mul <16 x i16> %xx, %yy
   %ma = sext <16 x i16> %m to <16 x i32>
-  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %ma)
+  %z = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %ma)
   %r = add i32 %z, %a
   ret i32 %r
 }
@@ -1236,7 +1236,7 @@ entry:
   %xx = sext <16 x i8> %x to <16 x i16>
   %m = mul <16 x i16> %xx, %xx
   %ma = zext <16 x i16> %m to <16 x i32>
-  %z = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %ma)
+  %z = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %ma)
   %r = add i32 %z, %a
   ret i32 %r
 }
@@ -1253,7 +1253,7 @@ entry:
   %xx = zext <4 x i8> %x to <4 x i32>
   %yy = zext <4 x i8> %y to <4 x i32>
   %m = mul <4 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %m)
   %r = add i32 %z, %a
   ret i32 %r
 }
@@ -1271,7 +1271,7 @@ entry:
   %xx = sext <4 x i8> %x to <4 x i32>
   %yy = sext <4 x i8> %y to <4 x i32>
   %m = mul <4 x i32> %xx, %yy
-  %z = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %m)
+  %z = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %m)
   %r = add i32 %z, %a
   ret i32 %r
 }
@@ -1286,7 +1286,7 @@ entry:
   %xx = zext <16 x i8> %x to <16 x i16>
   %yy = zext <16 x i8> %y to <16 x i16>
   %m = mul <16 x i16> %xx, %yy
-  %z = call i16 @llvm.experimental.vector.reduce.add.v16i16(<16 x i16> %m)
+  %z = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %m)
   %r = add i16 %z, %a
   ret i16 %r
 }
@@ -1301,7 +1301,7 @@ entry:
   %xx = sext <16 x i8> %x to <16 x i16>
   %yy = sext <16 x i8> %y to <16 x i16>
   %m = mul <16 x i16> %xx, %yy
-  %z = call i16 @llvm.experimental.vector.reduce.add.v16i16(<16 x i16> %m)
+  %z = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %m)
   %r = add i16 %z, %a
   ret i16 %r
 }
@@ -1318,7 +1318,7 @@ entry:
   %xx = zext <8 x i8> %x to <8 x i16>
   %yy = zext <8 x i8> %y to <8 x i16>
   %m = mul <8 x i16> %xx, %yy
-  %z = call i16 @llvm.experimental.vector.reduce.add.v8i16(<8 x i16> %m)
+  %z = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %m)
   %r = add i16 %z, %a
   ret i16 %r
 }
@@ -1335,7 +1335,7 @@ entry:
   %xx = sext <8 x i8> %x to <8 x i16>
   %yy = sext <8 x i8> %y to <8 x i16>
   %m = mul <8 x i16> %xx, %yy
-  %z = call i16 @llvm.experimental.vector.reduce.add.v8i16(<8 x i16> %m)
+  %z = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %m)
   %r = add i16 %z, %a
   ret i16 %r
 }
@@ -1348,7 +1348,7 @@ define arm_aapcs_vfpcc zeroext i8 @add_v16i8_v16i8_acc(<16 x i8> %x, <16 x i8> %
 ; CHECK-NEXT:    bx lr
 entry:
   %m = mul <16 x i8> %x, %y
-  %z = call i8 @llvm.experimental.vector.reduce.add.v16i8(<16 x i8> %m)
+  %z = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %m)
   %r = add i8 %z, %a
   ret i8 %r
 }
@@ -1565,7 +1565,7 @@ entry:
   %xx = zext <16 x i8> %x to <16 x i64>
   %yy = zext <16 x i8> %y to <16 x i64>
   %m = mul <16 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v16i64(<16 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %m)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -1737,7 +1737,7 @@ entry:
   %xx = sext <16 x i8> %x to <16 x i64>
   %yy = sext <16 x i8> %y to <16 x i64>
   %m = mul <16 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v16i64(<16 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %m)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -1765,7 +1765,7 @@ entry:
   %xx = zext <2 x i8> %x to <2 x i64>
   %yy = zext <2 x i8> %y to <2 x i64>
   %m = mul <2 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %m)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -1792,7 +1792,7 @@ entry:
   %xx = sext <2 x i8> %x to <2 x i64>
   %yy = sext <2 x i8> %y to <2 x i64>
   %m = mul <2 x i64> %xx, %yy
-  %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %m)
   %r = add i64 %z, %a
   ret i64 %r
 }
@@ -1826,18 +1826,18 @@ define arm_aapcs_vfpcc i64 @add_v2i64_v2i64_acc(<2 x i64> %x, <2 x i64> %y, i64 
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %m = mul <2 x i64> %x, %y
-  %z = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %m)
+  %z = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %m)
   %r = add i64 %z, %a
   ret i64 %r
 }
 
-declare i16 @llvm.experimental.vector.reduce.add.v16i16(<16 x i16>)
-declare i16 @llvm.experimental.vector.reduce.add.v8i16(<8 x i16>)
-declare i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32>)
-declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32>)
-declare i64 @llvm.experimental.vector.reduce.add.v16i64(<16 x i64>)
-declare i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64>)
-declare i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64>)
-declare i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64>)
-declare i8 @llvm.experimental.vector.reduce.add.v16i8(<16 x i8>)
+declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)
+declare i16 @llvm.vector.reduce.add.v8i16(<8 x i16>)
+declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
+declare i64 @llvm.vector.reduce.add.v16i64(<16 x i64>)
+declare i64 @llvm.vector.reduce.add.v2i64(<2 x i64>)
+declare i64 @llvm.vector.reduce.add.v4i64(<4 x i64>)
+declare i64 @llvm.vector.reduce.add.v8i64(<8 x i64>)
+declare i8 @llvm.vector.reduce.add.v16i8(<16 x i8>)

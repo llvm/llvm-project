@@ -593,6 +593,8 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   EXPECT_EQ(apply("auto lam = [](){ [[int x;]] }; "), "unavailable");
   // Partial statements aren't extracted.
   EXPECT_THAT(apply("int [[x = 0]];"), "unavailable");
+  // FIXME: Support hoisting.
+  EXPECT_THAT(apply(" [[int a = 5;]] a++; "), "unavailable");
 
   // Ensure that end of Zone and Beginning of PostZone being adjacent doesn't
   // lead to break being included in the extraction zone.
@@ -600,8 +602,6 @@ TEST_F(ExtractFunctionTest, FunctionTest) {
   // FIXME: ExtractFunction should be unavailable inside loop construct
   // initializer/condition.
   EXPECT_THAT(apply(" for([[int i = 0;]];);"), HasSubstr("extracted"));
-  // Don't extract because needs hoisting.
-  EXPECT_THAT(apply(" [[int a = 5;]] a++; "), StartsWith("fail"));
   // Extract certain return
   EXPECT_THAT(apply(" if(true) [[{ return; }]] "), HasSubstr("extracted"));
   // Don't extract uncertain return

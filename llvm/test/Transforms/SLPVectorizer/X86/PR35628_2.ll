@@ -20,7 +20,7 @@ define void @test() #0 {
 ; CHECK-NEXT:    [[DUMMY_SHL:%.*]] = shl i64 [[TMP7]], 32
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> <i64 1, i64 1, i64 1, i64 1>, [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = ashr exact <4 x i64> [[TMP8]], <i64 32, i64 32, i64 32, i64 32>
-; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64> [[TMP9]])
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP9]])
 ; CHECK-NEXT:    [[OP_EXTRA:%.*]] = add i64 [[TMP10]], 0
 ; CHECK-NEXT:    [[OP_EXTRA1]] = add i64 [[OP_EXTRA]], [[TMP6]]
 ; CHECK-NEXT:    br label [[LOOP]]

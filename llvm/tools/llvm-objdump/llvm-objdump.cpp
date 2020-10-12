@@ -1737,8 +1737,8 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
   // the output.
   StringSet<> FoundDisasmSymbolSet;
   for (std::pair<const SectionRef, SectionSymbolsTy> &SecSyms : AllSymbols)
-    stable_sort(SecSyms.second);
-  stable_sort(AbsoluteSymbols);
+    llvm::stable_sort(SecSyms.second);
+  llvm::stable_sort(AbsoluteSymbols);
 
   std::unique_ptr<DWARFContext> DICtx;
   LiveVariablePrinter LVP(*Ctx.getRegisterInfo(), *STI);
@@ -1852,23 +1852,6 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         if (!SegmentName.empty())
           outs() << SegmentName << ",";
         outs() << SectionName << ":\n";
-      }
-
-      if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
-        if (Symbols[SI].Type == ELF::STT_AMDGPU_HSA_KERNEL) {
-          // skip amd_kernel_code_t at the begining of kernel symbol (256 bytes)
-          Start += 256;
-        }
-        if (SI == SE - 1 ||
-            Symbols[SI + 1].Type == ELF::STT_AMDGPU_HSA_KERNEL) {
-          // cut trailing zeroes at the end of kernel
-          // cut up to 256 bytes
-          const uint64_t EndAlign = 256;
-          const auto Limit = End - (std::min)(EndAlign, End - Start);
-          while (End > Limit &&
-            *reinterpret_cast<const support::ulittle32_t*>(&Bytes[End - 4]) == 0)
-            End -= 4;
-        }
       }
 
       outs() << '\n';

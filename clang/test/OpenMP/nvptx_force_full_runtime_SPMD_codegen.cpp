@@ -11,13 +11,13 @@
 // CHECK-NOT: @__omp_offloading_{{.+}}_exec_mode = weak constant i8 1
 
 void foo() {
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
 #pragma omp target teams distribute parallel for simd
   for (int i = 0; i < 10; ++i)
     ;
@@ -40,13 +40,13 @@ void foo() {
   for (int i = 0; i < 10; ++i)
     ;
 int a;
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
 #pragma omp target teams distribute parallel for lastprivate(a)
   for (int i = 0; i < 10; ++i)
     a = i;
@@ -68,13 +68,13 @@ int a;
 #pragma omp target teams distribute parallel for schedule(guided)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
 #pragma omp target teams
 #pragma omp distribute parallel for simd
   for (int i = 0; i < 10; ++i)
@@ -103,13 +103,13 @@ int a;
 #pragma omp distribute parallel for simd schedule(guided)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
 #pragma omp target teams
 #pragma omp distribute parallel for
   for (int i = 0; i < 10; ++i)
@@ -138,13 +138,13 @@ int a;
 #pragma omp distribute parallel for schedule(guided)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for
@@ -180,13 +180,13 @@ int a;
 #pragma omp distribute parallel for schedule(guided)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
 #pragma omp target parallel for
   for (int i = 0; i < 10; ++i)
     ;
@@ -208,13 +208,13 @@ int a;
 #pragma omp target parallel for schedule(guided)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
 #pragma omp target parallel
 #pragma omp for simd
   for (int i = 0; i < 10; ++i)
@@ -243,13 +243,13 @@ int a;
 #pragma omp for simd schedule(guided)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
 #pragma omp target
 #pragma omp parallel
 #pragma omp for simd ordered
@@ -285,13 +285,13 @@ int a;
 #pragma omp for simd schedule(guided)
   for (int i = 0; i < 10; ++i)
     ;
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
 #pragma omp target
 #pragma omp parallel for
   for (int i = 0; i < 10; ++i)

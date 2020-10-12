@@ -32,20 +32,24 @@ def : ProcessorModel<"gfx601", SIQuarterSpeedModel,
   FeatureISAVersion6_0_1.Features
 >;
 
-def : ProcessorModel<"hainan", SIQuarterSpeedModel,
-  FeatureISAVersion6_0_1.Features
->;
-
-def : ProcessorModel<"oland", SIQuarterSpeedModel,
-  FeatureISAVersion6_0_1.Features
->;
-
 def : ProcessorModel<"pitcairn", SIQuarterSpeedModel,
   FeatureISAVersion6_0_1.Features
 >;
 
 def : ProcessorModel<"verde", SIQuarterSpeedModel,
   FeatureISAVersion6_0_1.Features
+>;
+
+def : ProcessorModel<"gfx602", SIQuarterSpeedModel,
+  FeatureISAVersion6_0_2.Features
+>;
+
+def : ProcessorModel<"hainan", SIQuarterSpeedModel,
+  FeatureISAVersion6_0_2.Features
+>;
+
+def : ProcessorModel<"oland", SIQuarterSpeedModel,
+  FeatureISAVersion6_0_2.Features
 >;
 
 //===------------------------------------------------------------===//
@@ -92,6 +96,10 @@ def : ProcessorModel<"bonaire", SIQuarterSpeedModel,
   FeatureISAVersion7_0_4.Features
 >;
 
+def : ProcessorModel<"gfx705", SIQuarterSpeedModel,
+  FeatureISAVersion7_0_5.Features
+>;
+
 //===------------------------------------------------------------===//
 // GCN GFX8 (Volcanic Islands (VI)).
 //===------------------------------------------------------------===//
@@ -130,6 +138,14 @@ def : ProcessorModel<"polaris10", SIQuarterSpeedModel,
 
 def : ProcessorModel<"polaris11", SIQuarterSpeedModel,
   FeatureISAVersion8_0_3.Features
+>;
+
+def : ProcessorModel<"gfx805", SIQuarterSpeedModel,
+  FeatureISAVersion8_0_5.Features
+>;
+
+def : ProcessorModel<"tongapro", SIQuarterSpeedModel,
+  FeatureISAVersion8_0_5.Features
 >;
 
 def : ProcessorModel<"gfx810", SIQuarterSpeedModel,

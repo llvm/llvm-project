@@ -594,6 +594,19 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
                llvm::all_of(this->getOperation()->getResults(), isTensorType);
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the name registered for this op when lowering to an external
+        library call.
+      }],
+      /*retTy=*/"std::string",
+      /*methodName=*/"getLibraryCallName",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op.getLibraryCallName();
+      }]
+    >,
 
     //===------------------------------------------------------------------===//
     // Other static interface methods.
@@ -647,7 +660,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       res.reserve(nExtraOperands);
       for (unsigned i = 0; i < nExtraOperands; ++i) {
         res.push_back(getOperation()->getOperand(numShapedOperands + i));
-        assert((res.back().getType().isSignlessIntOrIndexOrFloat() 
+        assert((res.back().getType().isSignlessIntOrIndexOrFloat()
                 || res.back().getType().isa<VectorType>()) &&
                "expected scalar or vector type");
       }

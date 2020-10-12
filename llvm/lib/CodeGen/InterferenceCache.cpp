@@ -60,8 +60,8 @@ void InterferenceCache::init(MachineFunction *mf,
     Entries[i].clear(mf, indexes, lis);
 }
 
-InterferenceCache::Entry *InterferenceCache::get(unsigned PhysReg) {
-  unsigned E = PhysRegEntries[PhysReg];
+InterferenceCache::Entry *InterferenceCache::get(MCRegister PhysReg) {
+  unsigned char E = PhysRegEntries[PhysReg.id()];
   if (E < CacheEntries && Entries[E].getPhysReg() == PhysReg) {
     if (!Entries[E].valid(LIUArray, TRI))
       Entries[E].revalidate(LIUArray, TRI);
@@ -97,7 +97,7 @@ void InterferenceCache::Entry::revalidate(LiveIntervalUnion *LIUArray,
     RegUnits[i].VirtTag = LIUArray[*Units].getTag();
 }
 
-void InterferenceCache::Entry::reset(unsigned physReg,
+void InterferenceCache::Entry::reset(MCRegister physReg,
                                      LiveIntervalUnion *LIUArray,
                                      const TargetRegisterInfo *TRI,
                                      const MachineFunction *MF) {

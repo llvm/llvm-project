@@ -421,6 +421,16 @@ define i32 @xor_sign_bit(i32 %x) {
   ret i32 %add
 }
 
+define <2 x i32> @xor_sign_bit_vec_splat(<2 x i32> %x) {
+; CHECK-LABEL: @xor_sign_bit_vec_splat(
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[X:%.*]], <i32 -2147483606, i32 -2147483606>
+; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+;
+  %xor = xor <2 x i32> %x, <i32 2147483648, i32 2147483648>
+  %add = add <2 x i32> %xor, <i32 42, i32 42>
+  ret <2 x i32> %add
+}
+
 ; No-wrap info allows converting the add to 'or'.
 
 define i8 @add_nsw_signbit(i8 %x) {
@@ -730,8 +740,8 @@ define i8 @test34(i8 %A) {
 
 define i8 @masked_add(i8 %x) {
 ; CHECK-LABEL: @masked_add(
-; CHECK-NEXT:    [[AND1:%.*]] = add i8 [[X:%.*]], 96
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[AND1]], -16
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 96
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP1]], -16
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %and = and i8 %x, 240 ; 0xf0
@@ -741,8 +751,8 @@ define i8 @masked_add(i8 %x) {
 
 define <2 x i8> @masked_add_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @masked_add_splat(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 -64, i8 -64>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[AND]], <i8 64, i8 64>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X:%.*]], <i8 64, i8 64>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[TMP1]], <i8 -64, i8 -64>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %and = and <2 x i8> %x, <i8 192, i8 192> ; 0xc0

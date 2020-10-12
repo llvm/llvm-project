@@ -7,6 +7,7 @@
 #===----------------------------------------------------------------------===##
 
 import os
+import pickle
 import pipes
 import platform
 import re
@@ -20,13 +21,23 @@ import lit.TestRunner
 import lit.util
 
 
-def _memoize(f):
-  cache = dict()
-  def memoized(x):
-    if x not in cache:
-      cache[x] = f(x)
-    return cache[x]
-  return memoized
+def _memoizeExpensiveOperation(extractCacheKey):
+  """
+  Allows memoizing a very expensive operation.
+
+  We pickle the cache key to make sure we store an immutable representation
+  of it. If we stored an object and the object was referenced elsewhere, it
+  could be changed from under our feet, which would break the cache.
+  """
+  def decorator(function):
+    cache = {}
+    def f(*args, **kwargs):
+      cacheKey = pickle.dumps(extractCacheKey(*args, **kwargs))
+      if cacheKey not in cache:
+        cache[cacheKey] = function(*args, **kwargs)
+      return cache[cacheKey]
+    return f
+  return decorator
 
 def _executeScriptInternal(test, commands):
   """
@@ -72,6 +83,7 @@ def _makeConfigTest(config, testPrefix=''):
     def __exit__(self, *args): os.remove(tmp.name)
   return TestWrapper(suite, pathInSuite, config)
 
+@_memoizeExpensiveOperation(lambda c, s: (c.substitutions, c.environment, s))
 def sourceBuilds(config, source):
   """
   Return whether the program in the given string builds successfully.
@@ -88,6 +100,7 @@ def sourceBuilds(config, source):
     _executeScriptInternal(test, ['rm %t.exe'])
     return exitCode == 0
 
+@_memoizeExpensiveOperation(lambda c, p, args=None, testPrefix='': (c.substitutions, c.environment, p, args))
 def programOutput(config, program, args=None, testPrefix=''):
   """
   Compiles a program for the test target, run it on the test target and return
@@ -122,6 +135,7 @@ def programOutput(config, program, args=None, testPrefix=''):
     finally:
       _executeScriptInternal(test, ['rm %t.exe'])
 
+@_memoizeExpensiveOperation(lambda c, f: (c.substitutions, c.environment, f))
 def hasCompileFlag(config, flag):
   """
   Return whether the compiler in the configuration supports a given compiler flag.
@@ -135,6 +149,7 @@ def hasCompileFlag(config, flag):
     ])
     return exitCode == 0
 
+@_memoizeExpensiveOperation(lambda c, l: (c.substitutions, c.environment, l))
 def hasLocale(config, locale):
   """
   Return whether the runtime execution environment supports a given locale.
@@ -153,6 +168,7 @@ def hasLocale(config, locale):
   return programOutput(config, program, args=[pipes.quote(locale)],
                        testPrefix="check_locale_" + locale) is not None
 
+@_memoizeExpensiveOperation(lambda c, flags='': (c.substitutions, c.environment, flags))
 def compilerMacros(config, flags=''):
   """
   Return a dictionary of predefined compiler macros.

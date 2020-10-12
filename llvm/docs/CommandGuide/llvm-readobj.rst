@@ -286,6 +286,10 @@ The following options are implemented only for the PE/COFF file format.
 
  Display the debug directory.
 
+.. option:: --coff-tls-directory
+
+ Display the TLS directory.
+
 .. option:: --coff-directives
 
  Display the .drectve section.

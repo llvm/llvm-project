@@ -435,7 +435,8 @@ Error executeObjcopyOnMachOUniversalBinary(CopyConfig &Config,
                                O.getArchFlagName().c_str(),
                                Config.InputFilename.str().c_str());
     }
-    MemBuffer MB(O.getArchFlagName());
+    std::string ArchFlagName = O.getArchFlagName();
+    MemBuffer MB(ArchFlagName);
     if (Error E = executeObjcopyOnBinary(Config, **ObjOrErr, MB))
       return E;
     std::unique_ptr<WritableMemoryBuffer> OutputBuffer =

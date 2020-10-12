@@ -564,33 +564,33 @@ public:
     if (eltType.isIntOrIndex()) {
       // Integer reductions: add/mul/min/max/and/or/xor.
       if (kind == "add")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_add>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_add>(
             op, llvmType, operands[0]);
       else if (kind == "mul")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_mul>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_mul>(
             op, llvmType, operands[0]);
       else if (kind == "min" &&
                (eltType.isIndex() || eltType.isUnsignedInteger()))
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_umin>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_umin>(
             op, llvmType, operands[0]);
       else if (kind == "min")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_smin>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_smin>(
             op, llvmType, operands[0]);
       else if (kind == "max" &&
                (eltType.isIndex() || eltType.isUnsignedInteger()))
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_umax>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_umax>(
             op, llvmType, operands[0]);
       else if (kind == "max")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_smax>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_smax>(
             op, llvmType, operands[0]);
       else if (kind == "and")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_and>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_and>(
             op, llvmType, operands[0]);
       else if (kind == "or")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_or>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_or>(
             op, llvmType, operands[0]);
       else if (kind == "xor")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_xor>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_xor>(
             op, llvmType, operands[0]);
       else
         return failure();
@@ -604,7 +604,7 @@ public:
                                         : rewriter.create<LLVM::ConstantOp>(
                                               op->getLoc(), llvmType,
                                               rewriter.getZeroAttr(eltType));
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_v2_fadd>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fadd>(
             op, llvmType, acc, operands[0],
             rewriter.getBoolAttr(reassociateFPReductions));
       } else if (kind == "mul") {
@@ -614,14 +614,14 @@ public:
                         : rewriter.create<LLVM::ConstantOp>(
                               op->getLoc(), llvmType,
                               rewriter.getFloatAttr(eltType, 1.0));
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_v2_fmul>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmul>(
             op, llvmType, acc, operands[0],
             rewriter.getBoolAttr(reassociateFPReductions));
       } else if (kind == "min")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_fmin>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmin>(
             op, llvmType, operands[0]);
       else if (kind == "max")
-        rewriter.replaceOpWithNewOp<LLVM::experimental_vector_reduce_fmax>(
+        rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fmax>(
             op, llvmType, operands[0]);
       else
         return failure();
@@ -1098,23 +1098,35 @@ public:
   bool hasBoundedRewriteRecursion() const final { return true; }
 };
 
-/// Returns true if the memory underlying `memRefType` has a contiguous layout.
-/// Strides are written to `strides`.
-static bool isContiguous(MemRefType memRefType,
-                         SmallVectorImpl<int64_t> &strides) {
+/// Returns the strides if the memory underlying `memRefType` has a contiguous
+/// static layout.
+static llvm::Optional<SmallVector<int64_t, 4>>
+computeContiguousStrides(MemRefType memRefType) {
   int64_t offset;
-  auto successStrides = getStridesAndOffset(memRefType, strides, offset);
-  bool isContiguous = strides.empty() || strides.back() == 1;
-  if (isContiguous) {
-    auto sizes = memRefType.getShape();
-    for (int index = 0, e = strides.size() - 2; index < e; ++index) {
-      if (strides[index] != strides[index + 1] * sizes[index + 1]) {
-        isContiguous = false;
-        break;
-      }
-    }
+  SmallVector<int64_t, 4> strides;
+  if (failed(getStridesAndOffset(memRefType, strides, offset)))
+    return None;
+  if (!strides.empty() && strides.back() != 1)
+    return None;
+  // If no layout or identity layout, this is contiguous by definition.
+  if (memRefType.getAffineMaps().empty() ||
+      memRefType.getAffineMaps().front().isIdentity())
+    return strides;
+
+  // Otherwise, we must determine contiguity form shapes. This can only ever
+  // work in static cases because MemRefType is underspecified to represent
+  // contiguous dynamic shapes in other ways than with just empty/identity
+  // layout.
+  auto sizes = memRefType.getShape();
+  for (int index = 0, e = strides.size() - 2; index < e; ++index) {
+    if (ShapedType::isDynamic(sizes[index + 1]) ||
+        ShapedType::isDynamicStrideOrOffset(strides[index]) ||
+        ShapedType::isDynamicStrideOrOffset(strides[index + 1]))
+      return None;
+    if (strides[index] != strides[index + 1] * sizes[index + 1])
+      return None;
   }
-  return succeeded(successStrides) && isContiguous;
+  return strides;
 }
 
 class VectorTypeCastOpConversion : public ConvertToLLVMPattern {
@@ -1150,9 +1162,17 @@ public:
     if (!llvmTargetDescriptorTy || !llvmTargetDescriptorTy.isStructTy())
       return failure();
 
-    // Only contiguous source tensors supported atm.
-    SmallVector<int64_t, 4> strides;
-    if (!isContiguous(sourceMemRefType, strides))
+    // Only contiguous source buffers supported atm.
+    auto sourceStrides = computeContiguousStrides(sourceMemRefType);
+    if (!sourceStrides)
+      return failure();
+    auto targetStrides = computeContiguousStrides(targetMemRefType);
+    if (!targetStrides)
+      return failure();
+    // Only support static strides for now, regardless of contiguity.
+    if (llvm::any_of(*targetStrides, [](int64_t stride) {
+          return ShapedType::isDynamicStrideOrOffset(stride);
+        }))
       return failure();
 
     auto int64Ty = LLVM::LLVMType::getInt64Ty(rewriter.getContext());
@@ -1181,8 +1201,8 @@ public:
           rewriter.getIntegerAttr(rewriter.getIndexType(), indexedSize.value());
       auto size = rewriter.create<LLVM::ConstantOp>(loc, int64Ty, sizeAttr);
       desc.setSize(rewriter, loc, index, size);
-      auto strideAttr =
-          rewriter.getIntegerAttr(rewriter.getIndexType(), strides[index]);
+      auto strideAttr = rewriter.getIntegerAttr(rewriter.getIndexType(),
+                                                (*targetStrides)[index]);
       auto stride = rewriter.create<LLVM::ConstantOp>(loc, int64Ty, strideAttr);
       desc.setStride(rewriter, loc, index, stride);
     }
@@ -1223,8 +1243,8 @@ public:
                                        op->getContext()))
       return failure();
     // Only contiguous source tensors supported atm.
-    SmallVector<int64_t, 4> strides;
-    if (!isContiguous(xferOp.getMemRefType(), strides))
+    auto strides = computeContiguousStrides(xferOp.getMemRefType());
+    if (!strides)
       return failure();
 
     auto toLLVMTy = [&](Type t) { return typeConverter.convertType(t); };
@@ -1380,9 +1400,11 @@ public:
 
 private:
   enum class PrintConversion {
+    // clang-format off
     None,
     ZeroExt64,
     SignExt64
+    // clang-format on
   };
 
   void emitRanks(ConversionPatternRewriter &rewriter, Operation *op,

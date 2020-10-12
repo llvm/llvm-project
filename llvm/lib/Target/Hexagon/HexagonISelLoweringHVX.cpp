@@ -94,6 +94,7 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::MUL,            T, Legal);
     setOperationAction(ISD::CTPOP,          T, Legal);
     setOperationAction(ISD::CTLZ,           T, Legal);
+    setOperationAction(ISD::SPLAT_VECTOR,   T, Legal);
     if (T != ByteV) {
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Legal);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Legal);
@@ -153,6 +154,7 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG,  T, Custom);
     setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Legal);
     setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, T, Legal);
+    setOperationAction(ISD::SPLAT_VECTOR,             T, Custom);
 
     setOperationAction(ISD::LOAD,     T, Custom);
     setOperationAction(ISD::STORE,    T, Custom);
@@ -244,6 +246,7 @@ HexagonTargetLowering::initializeHVXLowering() {
     }
   }
 
+  setTargetDAGCombine(ISD::SPLAT_VECTOR);
   setTargetDAGCombine(ISD::VSELECT);
 }
 
@@ -496,7 +499,9 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
     auto *IdxN = dyn_cast<ConstantSDNode>(SplatV.getNode());
     if (IdxN && IdxN->isNullValue())
       return getZero(dl, VecTy, DAG);
-    return DAG.getNode(HexagonISD::VSPLATW, dl, VecTy, SplatV);
+    MVT WordTy = MVT::getVectorVT(MVT::i32, HwLen/4);
+    SDValue S = DAG.getNode(ISD::SPLAT_VECTOR, dl, WordTy, SplatV);
+    return DAG.getBitcast(VecTy, S);
   }
 
   // Delay recognizing constant vectors until here, so that we can generate
@@ -1126,7 +1131,7 @@ HexagonTargetLowering::extendHvxVectorPred(SDValue VecV, const SDLoc &dl,
     return DAG.getNode(HexagonISD::Q2V, dl, ResTy, VecV);
 
   assert(ty(VecV).getVectorNumElements() == ResTy.getVectorNumElements());
-  SDValue True = DAG.getNode(HexagonISD::VSPLAT, dl, ResTy,
+  SDValue True = DAG.getNode(ISD::SPLAT_VECTOR, dl, ResTy,
                              DAG.getConstant(1, dl, MVT::i32));
   SDValue False = getZero(dl, ResTy, DAG);
   return DAG.getSelect(dl, ResTy, VecV, True, False);
@@ -1421,19 +1426,14 @@ HexagonTargetLowering::LowerHvxCttz(SDValue Op, SelectionDAG &DAG) const {
   // Calculate the vectors of 1 and bitwidth(x).
   MVT ElemTy = ty(InpV).getVectorElementType();
   unsigned ElemWidth = ElemTy.getSizeInBits();
-  // Using uint64_t because a shift by 32 can happen.
-  uint64_t Splat1 = 0, SplatW = 0;
-  assert(isPowerOf2_32(ElemWidth) && ElemWidth <= 32);
-  for (unsigned i = 0; i != 32/ElemWidth; ++i) {
-    Splat1 = (Splat1 << ElemWidth) | 1;
-    SplatW = (SplatW << ElemWidth) | ElemWidth;
-  }
-  SDValue Vec1 = DAG.getNode(HexagonISD::VSPLATW, dl, ResTy,
-                             DAG.getConstant(uint32_t(Splat1), dl, MVT::i32));
-  SDValue VecW = DAG.getNode(HexagonISD::VSPLATW, dl, ResTy,
-                             DAG.getConstant(uint32_t(SplatW), dl, MVT::i32));
-  SDValue VecN1 = DAG.getNode(HexagonISD::VSPLATW, dl, ResTy,
+
+  SDValue Vec1 = DAG.getNode(ISD::SPLAT_VECTOR, dl, ResTy,
+                             DAG.getConstant(1, dl, MVT::i32));
+  SDValue VecW = DAG.getNode(ISD::SPLAT_VECTOR, dl, ResTy,
+                             DAG.getConstant(ElemWidth, dl, MVT::i32));
+  SDValue VecN1 = DAG.getNode(ISD::SPLAT_VECTOR, dl, ResTy,
                               DAG.getConstant(-1, dl, MVT::i32));
+
   // Do not use DAG.getNOT, because that would create BUILD_VECTOR with
   // a BITCAST. Here we can skip the BITCAST (so we don't have to handle
   // it separately in custom combine or selection).
@@ -2012,6 +2012,7 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::SIGN_EXTEND:
       case ISD::ZERO_EXTEND:
       case ISD::SIGN_EXTEND_INREG:
+      case ISD::SPLAT_VECTOR:
         return SplitHvxPairOp(Op, DAG);
     }
   }
@@ -2134,14 +2135,14 @@ HexagonTargetLowering::ReplaceHvxNodeResults(SDNode *N,
 SDValue
 HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
       const {
-  if (DCI.isBeforeLegalizeOps())
-    return SDValue();
-
   const SDLoc &dl(N);
   SelectionDAG &DAG = DCI.DAG;
   SDValue Op(N, 0);
-
   unsigned Opc = Op.getOpcode();
+
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
   switch (Opc) {
     case ISD::VSELECT: {
       // (vselect (xor x, qtrue), v0, v1) -> (vselect x, v1, v0)

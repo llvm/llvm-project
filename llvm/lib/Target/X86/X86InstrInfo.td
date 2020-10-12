@@ -69,10 +69,8 @@ def SDTX86wrpkru : SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
 
 def SDTX86cas : SDTypeProfile<0, 3, [SDTCisPtrTy<0>, SDTCisInt<1>,
                                      SDTCisVT<2, i8>]>;
-def SDTX86caspair : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
-def SDTX86caspairSaveRbx16 : SDTypeProfile<1, 3,
-                                           [SDTCisVT<0, i64>, SDTCisPtrTy<1>,
-                                           SDTCisVT<2, i64>, SDTCisVT<3, i64>]>;
+def SDTX86cas8pair : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
+def SDTX86cas16pair : SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisVT<1, i64>]>;
 
 def SDTLockBinaryArithWithFlags : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
                                                        SDTCisPtrTy<1>,
@@ -171,16 +169,12 @@ def X86wrpkru : SDNode<"X86ISD::WRPKRU",    SDTX86wrpkru,
 def X86cas : SDNode<"X86ISD::LCMPXCHG_DAG", SDTX86cas,
                         [SDNPHasChain, SDNPInGlue, SDNPOutGlue, SDNPMayStore,
                          SDNPMayLoad, SDNPMemOperand]>;
-def X86cas8 : SDNode<"X86ISD::LCMPXCHG8_DAG", SDTX86caspair,
+def X86cas8 : SDNode<"X86ISD::LCMPXCHG8_DAG", SDTX86cas8pair,
                         [SDNPHasChain, SDNPInGlue, SDNPOutGlue, SDNPMayStore,
                          SDNPMayLoad, SDNPMemOperand]>;
-def X86cas16 : SDNode<"X86ISD::LCMPXCHG16_DAG", SDTX86caspair,
+def X86cas16 : SDNode<"X86ISD::LCMPXCHG16_DAG", SDTX86cas16pair,
                         [SDNPHasChain, SDNPInGlue, SDNPOutGlue, SDNPMayStore,
                          SDNPMayLoad, SDNPMemOperand]>;
-def X86cas16save_rbx : SDNode<"X86ISD::LCMPXCHG16_SAVE_RBX_DAG",
-                                SDTX86caspairSaveRbx16,
-                                [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
-                                SDNPMayStore, SDNPMayLoad, SDNPMemOperand]>;
 
 def X86retflag : SDNode<"X86ISD::RET_FLAG", SDTX86Ret,
                         [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;

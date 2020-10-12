@@ -342,8 +342,9 @@ public:
       add(TND->getUnderlyingType(), Flags | Rel::Underlying);
       Flags |= Rel::Alias; // continue with the alias.
     } else if (const UsingDecl *UD = dyn_cast<UsingDecl>(D)) {
+      // no Underlying as this is a non-renaming alias.
       for (const UsingShadowDecl *S : UD->shadows())
-        add(S->getUnderlyingDecl(), Flags | Rel::Underlying);
+        add(S->getUnderlyingDecl(), Flags);
       Flags |= Rel::Alias; // continue with the alias.
     } else if (const auto *NAD = dyn_cast<NamespaceAliasDecl>(D)) {
       add(NAD->getUnderlyingDecl(), Flags | Rel::Underlying);
@@ -354,7 +355,7 @@ public:
                UUVD->getQualifier()->getAsType(),
                [UUVD](ASTContext &) { return UUVD->getNameInfo().getName(); },
                ValueFilter)) {
-        add(Target, Flags | Rel::Underlying);
+        add(Target, Flags); // no Underlying as this is a non-renaming alias
       }
       Flags |= Rel::Alias; // continue with the alias
     } else if (const UsingShadowDecl *USD = dyn_cast<UsingShadowDecl>(D)) {
@@ -364,7 +365,6 @@ public:
       // Shadow decls are synthetic and not themselves interesting.
       // Record the underlying decl instead, if allowed.
       D = USD->getTargetDecl();
-      Flags |= Rel::Underlying; // continue with the underlying decl.
     } else if (const auto *DG = dyn_cast<CXXDeductionGuideDecl>(D)) {
       D = DG->getDeducedTemplate();
     } else if (const ObjCImplementationDecl *IID =

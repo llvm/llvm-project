@@ -85,6 +85,18 @@ class SetupConfigs(unittest.TestCase):
         return found[0]
 
 
+def findIndex(list, pred):
+    """Finds the index of the first element satisfying 'pred' in a list, or
+       'len(list)' if there is no such element."""
+    index = 0
+    for x in list:
+        if pred(x):
+            break
+        else:
+            index += 1
+    return index
+
+
 class TestHasCompileFlag(SetupConfigs):
     """
     Tests for libcxx.test.dsl.hasCompileFlag
@@ -107,17 +119,18 @@ class TestSourceBuilds(SetupConfigs):
     Tests for libcxx.test.dsl.sourceBuilds
     """
     def test_valid_program_builds(self):
-        source = """int main(int, char**) { }"""
+        source = """int main(int, char**) { return 0; }"""
         self.assertTrue(dsl.sourceBuilds(self.config, source))
 
     def test_compilation_error_fails(self):
-        source = """in main(int, char**) { }"""
+        source = """int main(int, char**) { this does not compile }"""
         self.assertFalse(dsl.sourceBuilds(self.config, source))
 
     def test_link_error_fails(self):
         source = """extern void this_isnt_defined_anywhere();
-                    int main(int, char**) { this_isnt_defined_anywhere(); }"""
+                    int main(int, char**) { this_isnt_defined_anywhere(); return 0; }"""
         self.assertFalse(dsl.sourceBuilds(self.config, source))
+
 
 class TestProgramOutput(SetupConfigs):
     """
@@ -126,20 +139,20 @@ class TestProgramOutput(SetupConfigs):
     def test_valid_program_returns_output(self):
         source = """
         #include <cstdio>
-        int main(int, char**) { std::printf("FOOBAR"); }
+        int main(int, char**) { std::printf("FOOBAR"); return 0; }
         """
         self.assertEqual(dsl.programOutput(self.config, source), "FOOBAR")
 
     def test_valid_program_returns_output_newline_handling(self):
         source = """
         #include <cstdio>
-        int main(int, char**) { std::printf("FOOBAR\\n"); }
+        int main(int, char**) { std::printf("FOOBAR\\n"); return 0; }
         """
         self.assertEqual(dsl.programOutput(self.config, source), "FOOBAR\n")
 
     def test_valid_program_returns_no_output(self):
         source = """
-        int main(int, char**) { }
+        int main(int, char**) { return 0; }
         """
         self.assertEqual(dsl.programOutput(self.config, source), "")
 
@@ -165,10 +178,34 @@ class TestProgramOutput(SetupConfigs):
             assert(argc == 3);
             assert(argv[1] == std::string("first-argument"));
             assert(argv[2] == std::string("second-argument"));
+            return 0;
         }
         """
         args = ["first-argument", "second-argument"]
         self.assertEqual(dsl.programOutput(self.config, source, args=args), "")
+
+    def test_caching_is_not_too_aggressive(self):
+        # Run a program, then change the substitutions and run it again.
+        # Make sure the program is run the second time and the right result
+        # is given, to ensure we're not incorrectly caching the result of the
+        # first program run.
+        source = """
+        #include <cstdio>
+        int main(int, char**) {
+            std::printf("MACRO=%u\\n", MACRO);
+        }
+        """
+        compileFlagsIndex = findIndex(self.config.substitutions, lambda x: x[0] == '%{compile_flags}')
+        compileFlags = self.config.substitutions[compileFlagsIndex][1]
+
+        self.config.substitutions[compileFlagsIndex] = ('%{compile_flags}',  compileFlags + ' -DMACRO=1')
+        output1 = dsl.programOutput(self.config, source)
+        self.assertEqual(output1, "MACRO=1\n")
+
+        self.config.substitutions[compileFlagsIndex] = ('%{compile_flags}',  compileFlags + ' -DMACRO=2')
+        output2 = dsl.programOutput(self.config, source)
+        self.assertEqual(output2, "MACRO=2\n")
+
 
 class TestHasLocale(SetupConfigs):
     """

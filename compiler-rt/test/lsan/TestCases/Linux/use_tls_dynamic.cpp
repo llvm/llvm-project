@@ -1,6 +1,7 @@
 // Test that dynamically allocated TLS space is included in the root set.
 
 // This is known to be broken with glibc-2.27+
+// but it should pass with Bionic
 // https://bugs.llvm.org/show_bug.cgi?id=37804
 // XFAIL: glibc-2.27
 
@@ -10,7 +11,7 @@
 // RUN: %env_lsan_opts=$LSAN_BASE:"use_tls=0" not %run %t 2>&1 | FileCheck %s
 // RUN: %env_lsan_opts=$LSAN_BASE:"use_tls=1" %run %t 2>&1
 // RUN: %env_lsan_opts="" %run %t 2>&1
-// UNSUPPORTED: i386-linux,arm,powerpc
+// UNSUPPORTED: arm,powerpc
 
 #ifndef BUILD_DSO
 #include <assert.h>

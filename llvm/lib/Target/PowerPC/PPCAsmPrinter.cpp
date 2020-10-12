@@ -1702,17 +1702,19 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
   assert(LinkageAttr != MCSA_Invalid && "LinkageAttr should not MCSA_Invalid.");
 
   MCSymbolAttr VisibilityAttr = MCSA_Invalid;
-  switch (GV->getVisibility()) {
+  if (!TM.getIgnoreXCOFFVisibility()) {
+    switch (GV->getVisibility()) {
 
-  // TODO: "exported" and "internal" Visibility needs to go here.
-  case GlobalValue::DefaultVisibility:
-    break;
-  case GlobalValue::HiddenVisibility:
-    VisibilityAttr = MAI->getHiddenVisibilityAttr();
-    break;
-  case GlobalValue::ProtectedVisibility:
-    VisibilityAttr = MAI->getProtectedVisibilityAttr();
-    break;
+    // TODO: "exported" and "internal" Visibility needs to go here.
+    case GlobalValue::DefaultVisibility:
+      break;
+    case GlobalValue::HiddenVisibility:
+      VisibilityAttr = MAI->getHiddenVisibilityAttr();
+      break;
+    case GlobalValue::ProtectedVisibility:
+      VisibilityAttr = MAI->getProtectedVisibilityAttr();
+      break;
+    }
   }
 
   OutStreamer->emitXCOFFSymbolLinkageWithVisibility(GVSym, LinkageAttr,

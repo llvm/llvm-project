@@ -37,7 +37,7 @@ define i32 @add_red(float* %A, i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[ARRAYIDX]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP2]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
-; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
 ; CHECK-NEXT:    [[ADD17]] = fadd fast float [[SUM_032]], [[TMP4]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_033]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP0]]
@@ -70,7 +70,7 @@ define i32 @add_red(float* %A, i32 %n) {
 ; STORE-NEXT:    [[TMP1:%.*]] = bitcast float* [[ARRAYIDX]] to <4 x float>*
 ; STORE-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; STORE-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP2]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
-; STORE-NEXT:    [[TMP4:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
+; STORE-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
 ; STORE-NEXT:    [[ADD17]] = fadd fast float [[SUM_032]], [[TMP4]]
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_033]], 1
 ; STORE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP0]]
@@ -164,7 +164,7 @@ define i32 @mul_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x float> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
 ; CHECK-NEXT:    [[MUL21]] = fmul float [[SUM_039]], [[TMP6]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_040]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
@@ -202,7 +202,7 @@ define i32 @mul_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; STORE-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; STORE-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; STORE-NEXT:    [[TMP5:%.*]] = fmul <4 x float> [[TMP1]], [[TMP4]]
-; STORE-NEXT:    [[TMP6:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
+; STORE-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
 ; STORE-NEXT:    [[MUL21]] = fmul float [[SUM_039]], [[TMP6]]
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_040]], 1
 ; STORE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
@@ -326,7 +326,7 @@ define i32 @long_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD47]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX48]], align 4
 ; CHECK-NEXT:    [[MUL49:%.*]] = fmul fast float [[TMP2]], [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32(float 0.000000e+00, <8 x float> [[TMP6]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[TMP6]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast float [[TMP8]], [[MUL49]]
 ; CHECK-NEXT:    [[ADD51]] = fadd fast float [[SUM_082]], [[TMP9]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_083]], 1
@@ -383,7 +383,7 @@ define i32 @long_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; STORE-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD47]]
 ; STORE-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX48]], align 4
 ; STORE-NEXT:    [[MUL49:%.*]] = fmul fast float [[TMP2]], [[TMP7]]
-; STORE-NEXT:    [[TMP8:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32(float 0.000000e+00, <8 x float> [[TMP6]])
+; STORE-NEXT:    [[TMP8:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[TMP6]])
 ; STORE-NEXT:    [[TMP9:%.*]] = fadd fast float [[TMP8]], [[MUL49]]
 ; STORE-NEXT:    [[ADD51]] = fadd fast float [[SUM_082]], [[TMP9]]
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_083]], 1
@@ -520,7 +520,7 @@ define i32 @chain_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
 ; CHECK-NEXT:    [[OP_EXTRA]] = fadd fast float [[TMP6]], [[SUM_042]]
 ; CHECK-NEXT:    [[INC]] = add nsw i64 [[I_043]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
@@ -558,7 +558,7 @@ define i32 @chain_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; STORE-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; STORE-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; STORE-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP4]]
-; STORE-NEXT:    [[TMP6:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
+; STORE-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
 ; STORE-NEXT:    [[OP_EXTRA]] = fadd fast float [[TMP6]], [[SUM_042]]
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_043]], 1
 ; STORE-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[TMP2]]
@@ -1015,7 +1015,7 @@ define i32 @store_red(float* noalias %A, float* noalias %B, float* noalias %C, i
 ; STORE-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; STORE-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; STORE-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP2]], [[TMP4]]
-; STORE-NEXT:    [[TMP6:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
+; STORE-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP5]])
 ; STORE-NEXT:    store float [[TMP6]], float* [[C_ADDR_038]], align 4
 ; STORE-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, float* [[C_ADDR_038]], i64 1
 ; STORE-NEXT:    [[INC]] = add nsw i64 [[I_039]], 1
@@ -1090,7 +1090,7 @@ define void @float_red_example4(float* %res) {
 ; STORE-LABEL: @float_red_example4(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* bitcast ([32 x float]* @arr_float to <4 x float>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP0]])
 ; STORE-NEXT:    store float [[TMP1]], float* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1130,7 +1130,7 @@ define void @float_red_example8(float* %res) {
 ; STORE-LABEL: @float_red_example8(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <8 x float>, <8 x float>* bitcast ([32 x float]* @arr_float to <8 x float>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32(float 0.000000e+00, <8 x float> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[TMP0]])
 ; STORE-NEXT:    store float [[TMP1]], float* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1194,7 +1194,7 @@ define void @float_red_example16(float* %res) {
 ; STORE-LABEL: @float_red_example16(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <16 x float>, <16 x float>* bitcast ([32 x float]* @arr_float to <16 x float>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v16f32(float 0.000000e+00, <16 x float> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v16f32(float 0.000000e+00, <16 x float> [[TMP0]])
 ; STORE-NEXT:    store float [[TMP1]], float* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1250,7 +1250,7 @@ define void @i32_red_example4(i32* %res) {
 ; STORE-LABEL: @i32_red_example4(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([32 x i32]* @arr_i32 to <4 x i32>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP0]])
 ; STORE-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1290,7 +1290,7 @@ define void @i32_red_example8(i32* %res) {
 ; STORE-LABEL: @i32_red_example8(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; STORE-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1354,7 +1354,7 @@ define void @i32_red_example16(i32* %res) {
 ; STORE-LABEL: @i32_red_example16(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([32 x i32]* @arr_i32 to <16 x i32>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP0]])
 ; STORE-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1466,7 +1466,7 @@ define void @i32_red_example32(i32* %res) {
 ; STORE-LABEL: @i32_red_example32(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <32 x i32>, <32 x i32>* bitcast ([32 x i32]* @arr_i32 to <32 x i32>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v32i32(<32 x i32> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> [[TMP0]])
 ; STORE-NEXT:    store i32 [[TMP1]], i32* [[RES:%.*]], align 16
 ; STORE-NEXT:    ret void
 ;
@@ -1544,14 +1544,14 @@ define void @i32_red_call(i32 %val) {
 ; CHECK-LABEL: @i32_red_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @foobar(i32 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
 ; STORE-LABEL: @i32_red_call(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; STORE-NEXT:    [[RES:%.*]] = call i32 @foobar(i32 [[TMP1]])
 ; STORE-NEXT:    ret void
 ;
@@ -1579,7 +1579,7 @@ define void @i32_red_invoke(i32 %val) personality i32 (...)* @__gxx_personality_
 ; CHECK-LABEL: @i32_red_invoke(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[RES:%.*]] = invoke i32 @foobar(i32 [[TMP1]])
 ; CHECK-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; CHECK:       exception:
@@ -1592,7 +1592,7 @@ define void @i32_red_invoke(i32 %val) personality i32 (...)* @__gxx_personality_
 ; STORE-LABEL: @i32_red_invoke(
 ; STORE-NEXT:  entry:
 ; STORE-NEXT:    [[TMP0:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr_i32 to <8 x i32>*), align 16
-; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
+; STORE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP0]])
 ; STORE-NEXT:    [[RES:%.*]] = invoke i32 @foobar(i32 [[TMP1]])
 ; STORE-NEXT:    to label [[NORMAL:%.*]] unwind label [[EXCEPTION:%.*]]
 ; STORE:       exception:

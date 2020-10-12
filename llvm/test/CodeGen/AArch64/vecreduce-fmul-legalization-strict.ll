@@ -3,14 +3,14 @@
 
 ; Same as vecreduce-fmul-legalization.ll, but without fmf.
 
-declare half @llvm.experimental.vector.reduce.v2.fmul.f16.v1f16(half, <1 x half>)
-declare float @llvm.experimental.vector.reduce.v2.fmul.f32.v1f32(float, <1 x float>)
-declare double @llvm.experimental.vector.reduce.v2.fmul.f64.v1f64(double, <1 x double>)
-declare fp128 @llvm.experimental.vector.reduce.v2.fmul.f128.v1f128(fp128, <1 x fp128>)
+declare half @llvm.vector.reduce.fmul.f16.v1f16(half, <1 x half>)
+declare float @llvm.vector.reduce.fmul.f32.v1f32(float, <1 x float>)
+declare double @llvm.vector.reduce.fmul.f64.v1f64(double, <1 x double>)
+declare fp128 @llvm.vector.reduce.fmul.f128.v1f128(fp128, <1 x fp128>)
 
-declare float @llvm.experimental.vector.reduce.v2.fmul.f32.v3f32(float, <3 x float>)
-declare fp128 @llvm.experimental.vector.reduce.v2.fmul.f128.v2f128(fp128, <2 x fp128>)
-declare float @llvm.experimental.vector.reduce.v2.fmul.f32.v16f32(float, <16 x float>)
+declare float @llvm.vector.reduce.fmul.f32.v3f32(float, <3 x float>)
+declare fp128 @llvm.vector.reduce.fmul.f128.v2f128(fp128, <2 x fp128>)
+declare float @llvm.vector.reduce.fmul.f32.v16f32(float, <16 x float>)
 
 define half @test_v1f16(<1 x half> %a) nounwind {
 ; CHECK-LABEL: test_v1f16:
@@ -20,7 +20,7 @@ define half @test_v1f16(<1 x half> %a) nounwind {
 ; CHECK-NEXT:    fmul s0, s0, s1
 ; CHECK-NEXT:    fcvt h0, s0
 ; CHECK-NEXT:    ret
-  %b = call half @llvm.experimental.vector.reduce.v2.fmul.f16.v1f16(half 0.0, <1 x half> %a)
+  %b = call half @llvm.vector.reduce.fmul.f16.v1f16(half 0.0, <1 x half> %a)
   ret half %b
 }
 
@@ -31,7 +31,7 @@ define float @test_v1f32(<1 x float> %a) nounwind {
 ; CHECK-NEXT:    fmov s1, wzr
 ; CHECK-NEXT:    fmul s0, s1, v0.s[0]
 ; CHECK-NEXT:    ret
-  %b = call float @llvm.experimental.vector.reduce.v2.fmul.f32.v1f32(float 0.0, <1 x float> %a)
+  %b = call float @llvm.vector.reduce.fmul.f32.v1f32(float 0.0, <1 x float> %a)
   ret float %b
 }
 
@@ -41,7 +41,7 @@ define double @test_v1f64(<1 x double> %a) nounwind {
 ; CHECK-NEXT:    fmov d1, xzr
 ; CHECK-NEXT:    fmul d0, d0, d1
 ; CHECK-NEXT:    ret
-  %b = call double @llvm.experimental.vector.reduce.v2.fmul.f64.v1f64(double 0.0, <1 x double> %a)
+  %b = call double @llvm.vector.reduce.fmul.f64.v1f64(double 0.0, <1 x double> %a)
   ret double %b
 }
 
@@ -54,7 +54,7 @@ define fp128 @test_v1f128(<1 x fp128> %a) nounwind {
 ; CHECK-NEXT:    bl __multf3
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
-  %b = call fp128 @llvm.experimental.vector.reduce.v2.fmul.f128.v1f128(fp128 zeroinitializer, <1 x fp128> %a)
+  %b = call fp128 @llvm.vector.reduce.fmul.f128.v1f128(fp128 zeroinitializer, <1 x fp128> %a)
   ret fp128 %b
 }
 
@@ -66,7 +66,7 @@ define float @test_v3f32(<3 x float> %a) nounwind {
 ; CHECK-NEXT:    fmul s1, s1, v0.s[1]
 ; CHECK-NEXT:    fmul s0, s1, v0.s[2]
 ; CHECK-NEXT:    ret
-  %b = call float @llvm.experimental.vector.reduce.v2.fmul.f32.v3f32(float 0.0, <3 x float> %a)
+  %b = call float @llvm.vector.reduce.fmul.f32.v3f32(float 0.0, <3 x float> %a)
   ret float %b
 }
 
@@ -84,7 +84,7 @@ define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #32 // =32
 ; CHECK-NEXT:    ret
-  %b = call fp128 @llvm.experimental.vector.reduce.v2.fmul.f128.v2f128(fp128 zeroinitializer, <2 x fp128> %a)
+  %b = call fp128 @llvm.vector.reduce.fmul.f128.v2f128(fp128 zeroinitializer, <2 x fp128> %a)
   ret fp128 %b
 }
 
@@ -109,6 +109,6 @@ define float @test_v16f32(<16 x float> %a) nounwind {
 ; CHECK-NEXT:    fmul s0, s0, v3.s[2]
 ; CHECK-NEXT:    fmul s0, s0, v3.s[3]
 ; CHECK-NEXT:    ret
-  %b = call float @llvm.experimental.vector.reduce.v2.fmul.f32.v16f32(float 0.0, <16 x float> %a)
+  %b = call float @llvm.vector.reduce.fmul.f32.v16f32(float 0.0, <16 x float> %a)
   ret float %b
 }

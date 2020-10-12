@@ -2823,19 +2823,54 @@ static SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr) {
       }));
 }
 
+llvm::Optional<SmallVector<bool, 4>>
+mlir::computeRankReductionMask(ArrayRef<int64_t> originalShape,
+                               ArrayRef<int64_t> reducedShape) {
+  size_t originalRank = originalShape.size(), reducedRank = reducedShape.size();
+  SmallVector<bool, 4> mask(originalRank);
+  unsigned reducedIdx = 0;
+  for (unsigned originalIdx = 0; originalIdx < originalRank; ++originalIdx) {
+    // Skip matching dims greedily.
+    mask[originalIdx] =
+        (reducedIdx < reducedRank) &&
+        (originalShape[originalIdx] == reducedShape[reducedIdx]);
+    if (mask[originalIdx])
+      reducedIdx++;
+    // 1 is the only non-matching allowed.
+    else if (originalShape[originalIdx] != 1)
+      return {};
+  }
+
+  if (reducedIdx != reducedRank)
+    return {};
+
+  return mask;
+}
+
+enum SubViewVerificationResult {
+  Success,
+  RankTooLarge,
+  SizeMismatch,
+  StrideMismatch,
+  ElemTypeMismatch,
+  MemSpaceMismatch,
+  AffineMapMismatch
+};
+
 /// Checks if `original` Type type can be rank reduced to `reduced` type.
 /// This function is slight variant of `is subsequence` algorithm where
 /// not matching dimension must be 1.
-static bool isRankReducedType(Type originalType, Type reducedType) {
+static SubViewVerificationResult isRankReducedType(Type originalType,
+                                                   Type reducedType) {
   if (originalType == reducedType)
-    return true;
+    return SubViewVerificationResult::Success;
   if (!originalType.isa<RankedTensorType>() && !originalType.isa<MemRefType>())
-    return true;
+    return SubViewVerificationResult::Success;
   if (originalType.isa<RankedTensorType>() &&
       !reducedType.isa<RankedTensorType>())
-    return true;
+    return SubViewVerificationResult::Success;
   if (originalType.isa<MemRefType>() && !reducedType.isa<MemRefType>())
-    return true;
+    return SubViewVerificationResult::Success;
 
   ShapedType originalShapedType = originalType.cast<ShapedType>();
   ShapedType reducedShapedType = reducedType.cast<ShapedType>();
@@ -2846,53 +2881,81 @@ static bool isRankReducedType(Type originalType, Type reducedType) {
   unsigned originalRank = originalShape.size(),
            reducedRank = reducedShape.size();
   if (reducedRank > originalRank)
-    return false;
+    return SubViewVerificationResult::RankTooLarge;
 
-  unsigned reducedIdx = 0;
-  SmallVector<bool, 4> keepMask(originalRank);
-  for (unsigned originalIdx = 0; originalIdx < originalRank; ++originalIdx) {
-    // -2 is never used as a dim size so it will never match.
-    int reducedVal = reducedIdx < reducedRank ? reducedShape[reducedIdx] : -2;
-    // Skip matching dims greedily.
-    if ((keepMask[originalIdx] = originalShape[originalIdx] == reducedVal))
-      reducedIdx++;
-    // 1 is the only non-matching allowed.
-    else if (originalShape[originalIdx] != 1)
-      return false;
-  }
-  // Must match the reduced rank.
-  if (reducedIdx != reducedRank)
-    return false;
+  auto optionalMask = computeRankReductionMask(originalShape, reducedShape);
+
+  // Sizes cannot be matched in case empty vector is returned.
+  if (!optionalMask.hasValue())
+    return SubViewVerificationResult::SizeMismatch;
 
   // We are done for the tensor case.
   if (originalType.isa<RankedTensorType>())
-    return true;
+    return SubViewVerificationResult::Success;
 
   // Strided layout logic is relevant for MemRefType only.
   MemRefType original = originalType.cast<MemRefType>();
   MemRefType reduced = reducedType.cast<MemRefType>();
   MLIRContext *c = original.getContext();
-  int64_t originalOffset, symCounter = 0, dimCounter = 0;
-  SmallVector<int64_t, 4> originalStrides;
+  int64_t originalOffset, reducedOffset;
+  SmallVector<int64_t, 4> originalStrides, reducedStrides, keepStrides;
+  SmallVector<bool, 4> keepMask = optionalMask.getValue();
   getStridesAndOffset(original, originalStrides, originalOffset);
-  auto getSymbolOrConstant = [&](int64_t offset) {
-    return offset == ShapedType::kDynamicStrideOrOffset
-               ? getAffineSymbolExpr(symCounter++, c)
-               : getAffineConstantExpr(offset, c);
-  };
+  getStridesAndOffset(reduced, reducedStrides, reducedOffset);
 
-  AffineExpr expr = getSymbolOrConstant(originalOffset);
-  for (unsigned i = 0, e = originalStrides.size(); i < e; i++) {
-    if (keepMask[i])
-      expr = expr + getSymbolOrConstant(originalStrides[i]) *
-                        getAffineDimExpr(dimCounter++, c);
+  // Filter strides based on the mask and check that they are the same
+  // as reduced ones.
+  unsigned reducedIdx = 0;
+  for (unsigned originalIdx = 0; originalIdx < originalRank; ++originalIdx) {
+    if (keepMask[originalIdx]) {
+      if (originalStrides[originalIdx] != reducedStrides[reducedIdx++])
+        return SubViewVerificationResult::StrideMismatch;
+      keepStrides.push_back(originalStrides[originalIdx]);
+    }
   }
 
-  auto reducedMap = AffineMap::get(dimCounter, symCounter, expr, c);
-  return original.getElementType() == reduced.getElementType() &&
-         original.getMemorySpace() == reduced.getMemorySpace() &&
-         (reduced.getAffineMaps().empty() ||
-          reducedMap == reduced.getAffineMaps().front());
+  if (original.getElementType() != reduced.getElementType())
+    return SubViewVerificationResult::ElemTypeMismatch;
+
+  if (original.getMemorySpace() != reduced.getMemorySpace())
+    return SubViewVerificationResult::MemSpaceMismatch;
+
+  auto reducedMap = makeStridedLinearLayoutMap(keepStrides, originalOffset, c);
+  if (!reduced.getAffineMaps().empty() &&
+      reducedMap != reduced.getAffineMaps().front())
+    return SubViewVerificationResult::AffineMapMismatch;
+
+  return SubViewVerificationResult::Success;
+}
+
+template <typename OpTy>
+static LogicalResult produceSubViewErrorMsg(SubViewVerificationResult result,
+                                            OpTy op, Type expectedType) {
+  auto memrefType = expectedType.cast<ShapedType>();
+  switch (result) {
+  case SubViewVerificationResult::Success:
+    return success();
+  case SubViewVerificationResult::RankTooLarge:
+    return op.emitError("expected result rank to be smaller or equal to ")
+           << "the source rank.";
+  case SubViewVerificationResult::SizeMismatch:
+    return op.emitError("expected result type to be ")
+           << expectedType
+           << " or a rank-reduced version. (mismatch of result sizes)";
+  case SubViewVerificationResult::StrideMismatch:
+    return op.emitError("expected result type to be ")
+           << expectedType
+           << " or a rank-reduced version. (mismatch of result strides)";
+  case SubViewVerificationResult::ElemTypeMismatch:
+    return op.emitError("expected result element type to be ")
+           << memrefType.getElementType();
+  case SubViewVerificationResult::MemSpaceMismatch:
+    return op.emitError("expected result and source memory spaces to match.");
+  case SubViewVerificationResult::AffineMapMismatch:
+    return op.emitError("expected result type to be ")
+           << expectedType
+           << " or a rank-reduced version. (mismatch of result affine map)";
+  }
 }
 
 template <typename OpType>
@@ -2937,11 +3000,9 @@ static LogicalResult verify(SubViewOp op) {
       baseType, extractFromI64ArrayAttr(op.static_offsets()),
       extractFromI64ArrayAttr(op.static_sizes()),
       extractFromI64ArrayAttr(op.static_strides()));
-  if (!isRankReducedType(expectedType, subViewType))
-    return op.emitError("expected result type to be ")
-           << expectedType << " or a rank-reduced version.";
 
-  return success();
+  auto result = isRankReducedType(expectedType, subViewType);
+  return produceSubViewErrorMsg(result, op, expectedType);
 }
 
 raw_ostream &mlir::operator<<(raw_ostream &os, Range &range) {
@@ -3352,11 +3413,8 @@ static LogicalResult verify(SubTensorOp op) {
       op.getSourceType(), extractFromI64ArrayAttr(op.static_offsets()),
       extractFromI64ArrayAttr(op.static_sizes()),
       extractFromI64ArrayAttr(op.static_strides()));
-  if (!isRankReducedType(expectedType, op.getType()))
-    return op.emitError("expected result type to be ")
-           << expectedType << " or a rank-reduced version.";
-
-  return success();
+  auto result = isRankReducedType(expectedType, op.getType());
+  return produceSubViewErrorMsg(result, op, expectedType);
 }
 
 void SubTensorOp::getCanonicalizationPatterns(OwningRewritePatternList &results,

@@ -65,7 +65,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds i32, i32* %x, i32 %index
   %1 = bitcast i32* %0 to <4 x i32>*
   %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %wide.load)
+  %2 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %wide.load)
   %3 = add i32 %2, %vec.phi
   %index.next = add i32 %index, 4
   %4 = icmp eq i32 %index.next, %n.vec
@@ -167,7 +167,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %3, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %4 = call i32 @llvm.experimental.vector.reduce.mul.v4i32(<4 x i32> %2)
+  %4 = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %2)
   %cmp.n = icmp eq i32 %n.vec, %n
   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader1
 
@@ -267,7 +267,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %3, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %4 = call i32 @llvm.experimental.vector.reduce.and.v4i32(<4 x i32> %2)
+  %4 = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %2)
   %cmp.n = icmp eq i32 %n.vec, %n
   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader1
 
@@ -367,7 +367,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %3, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %4 = call i32 @llvm.experimental.vector.reduce.or.v4i32(<4 x i32> %2)
+  %4 = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %2)
   %cmp.n = icmp eq i32 %n.vec, %n
   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader1
 
@@ -467,7 +467,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %3, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %4 = call i32 @llvm.experimental.vector.reduce.xor.v4i32(<4 x i32> %2)
+  %4 = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> %2)
   %cmp.n = icmp eq i32 %n.vec, %n
   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader1
 
@@ -568,7 +568,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %3, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %4 = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> %2)
+  %4 = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float 0.000000e+00, <4 x float> %2)
   %cmp.n = icmp eq i32 %n.vec, %n
   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader1
 
@@ -665,7 +665,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %3, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %4 = call fast float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float 1.000000e+00, <4 x float> %2)
+  %4 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 1.000000e+00, <4 x float> %2)
   %cmp.n = icmp eq i32 %n.vec, %n
   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader1
 
@@ -762,7 +762,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %4, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %5 = call i32 @llvm.experimental.vector.reduce.smin.v4i32(<4 x i32> %3)
+  %5 = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> %3)
   %cmp.n = icmp eq i32 %n.vec, %n
   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader1
 
@@ -790,16 +790,16 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 define i32 @smin_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-LABEL: smin_i32_inloop:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    cmp r1, #1
 ; CHECK-NEXT:    blt .LBB8_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov r12, r0
-; CHECK-NEXT:    mvn r0, #-2147483648
 ; CHECK-NEXT:    cmp r1, #4
 ; CHECK-NEXT:    bhs .LBB8_4
 ; CHECK-NEXT:  @ %bb.2:
+; CHECK-NEXT:    mvn r0, #-2147483648
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    b .LBB8_7
 ; CHECK-NEXT:  .LBB8_3:
@@ -808,22 +808,20 @@ define i32 @smin_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:  .LBB8_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
-; CHECK-NEXT:    sub.w lr, r3, #4
-; CHECK-NEXT:    add.w lr, r2, lr, lsr #2
+; CHECK-NEXT:    subs r0, r3, #4
+; CHECK-NEXT:    add.w lr, r2, r0, lsr #2
+; CHECK-NEXT:    mvn r0, #-2147483648
 ; CHECK-NEXT:    mov r2, r12
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB8_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r2], #16
-; CHECK-NEXT:    mvn r4, #-2147483648
-; CHECK-NEXT:    vminv.s32 r4, q0
-; CHECK-NEXT:    cmp r0, r4
-; CHECK-NEXT:    csel r0, r0, r4, lt
+; CHECK-NEXT:    vminv.s32 r0, q0
 ; CHECK-NEXT:    le lr, .LBB8_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
 ; CHECK-NEXT:    cmp r3, r1
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    popeq {r4, pc}
+; CHECK-NEXT:    popeq {r7, pc}
 ; CHECK-NEXT:  .LBB8_7: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w lr, r1, r3
 ; CHECK-NEXT:    add.w r1, r12, r3, lsl #2
@@ -835,7 +833,7 @@ define i32 @smin_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    csel r0, r0, r2, lt
 ; CHECK-NEXT:    le lr, .LBB8_8
 ; CHECK-NEXT:  .LBB8_9: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
@@ -854,7 +852,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds i32, i32* %x, i32 %index
   %1 = bitcast i32* %0 to <4 x i32>*
   %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %l5 = call i32 @llvm.experimental.vector.reduce.smin.v4i32(<4 x i32> %wide.load)
+  %l5 = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> %wide.load)
   %2 = icmp slt i32 %vec.phi, %l5
   %3 = select i1 %2, i32 %vec.phi, i32 %l5
   %index.next = add i32 %index, 4
@@ -960,7 +958,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %4, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %5 = call i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32> %3)
+  %5 = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %3)
   %cmp.n = icmp eq i32 %n.vec, %n
   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader1
 
@@ -988,16 +986,16 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 define i32 @smax_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-LABEL: smax_i32_inloop:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    cmp r1, #1
 ; CHECK-NEXT:    blt .LBB10_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov r12, r0
-; CHECK-NEXT:    mov.w r0, #-2147483648
 ; CHECK-NEXT:    cmp r1, #4
 ; CHECK-NEXT:    bhs .LBB10_4
 ; CHECK-NEXT:  @ %bb.2:
+; CHECK-NEXT:    mov.w r0, #-2147483648
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    b .LBB10_7
 ; CHECK-NEXT:  .LBB10_3:
@@ -1006,22 +1004,20 @@ define i32 @smax_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:  .LBB10_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
-; CHECK-NEXT:    sub.w lr, r3, #4
-; CHECK-NEXT:    add.w lr, r2, lr, lsr #2
+; CHECK-NEXT:    subs r0, r3, #4
+; CHECK-NEXT:    add.w lr, r2, r0, lsr #2
+; CHECK-NEXT:    mov.w r0, #-2147483648
 ; CHECK-NEXT:    mov r2, r12
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB10_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r2], #16
-; CHECK-NEXT:    mov.w r4, #-2147483648
-; CHECK-NEXT:    vmaxv.s32 r4, q0
-; CHECK-NEXT:    cmp r0, r4
-; CHECK-NEXT:    csel r0, r0, r4, gt
+; CHECK-NEXT:    vmaxv.s32 r0, q0
 ; CHECK-NEXT:    le lr, .LBB10_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
 ; CHECK-NEXT:    cmp r3, r1
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    popeq {r4, pc}
+; CHECK-NEXT:    popeq {r7, pc}
 ; CHECK-NEXT:  .LBB10_7: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w lr, r1, r3
 ; CHECK-NEXT:    add.w r1, r12, r3, lsl #2
@@ -1033,7 +1029,7 @@ define i32 @smax_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    csel r0, r0, r2, gt
 ; CHECK-NEXT:    le lr, .LBB10_8
 ; CHECK-NEXT:  .LBB10_9: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
@@ -1052,7 +1048,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds i32, i32* %x, i32 %index
   %1 = bitcast i32* %0 to <4 x i32>*
   %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %l5 = call i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32> %wide.load)
+  %l5 = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> %wide.load)
   %2 = icmp sgt i32 %vec.phi, %l5
   %3 = select i1 %2, i32 %vec.phi, i32 %l5
   %index.next = add i32 %index, 4
@@ -1158,7 +1154,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %4, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %5 = call i32 @llvm.experimental.vector.reduce.umin.v4i32(<4 x i32> %3)
+  %5 = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %3)
   %cmp.n = icmp eq i32 %n.vec, %n
   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader1
 
@@ -1186,16 +1182,16 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 define i32 @umin_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-LABEL: umin_i32_inloop:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    cmp r1, #1
 ; CHECK-NEXT:    blt .LBB12_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov r12, r0
-; CHECK-NEXT:    mov.w r0, #-1
 ; CHECK-NEXT:    cmp r1, #4
 ; CHECK-NEXT:    bhs .LBB12_4
 ; CHECK-NEXT:  @ %bb.2:
+; CHECK-NEXT:    mov.w r0, #-1
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    b .LBB12_7
 ; CHECK-NEXT:  .LBB12_3:
@@ -1204,22 +1200,20 @@ define i32 @umin_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:  .LBB12_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
-; CHECK-NEXT:    sub.w lr, r3, #4
-; CHECK-NEXT:    add.w lr, r2, lr, lsr #2
+; CHECK-NEXT:    subs r0, r3, #4
+; CHECK-NEXT:    add.w lr, r2, r0, lsr #2
+; CHECK-NEXT:    mov.w r0, #-1
 ; CHECK-NEXT:    mov r2, r12
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB12_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r2], #16
-; CHECK-NEXT:    mov.w r4, #-1
-; CHECK-NEXT:    vminv.u32 r4, q0
-; CHECK-NEXT:    cmp r0, r4
-; CHECK-NEXT:    csel r0, r0, r4, lo
+; CHECK-NEXT:    vminv.u32 r0, q0
 ; CHECK-NEXT:    le lr, .LBB12_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
 ; CHECK-NEXT:    cmp r3, r1
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    popeq {r4, pc}
+; CHECK-NEXT:    popeq {r7, pc}
 ; CHECK-NEXT:  .LBB12_7: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w lr, r1, r3
 ; CHECK-NEXT:    add.w r1, r12, r3, lsl #2
@@ -1231,7 +1225,7 @@ define i32 @umin_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    csel r0, r0, r2, hi
 ; CHECK-NEXT:    le lr, .LBB12_8
 ; CHECK-NEXT:  .LBB12_9: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
@@ -1250,7 +1244,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds i32, i32* %x, i32 %index
   %1 = bitcast i32* %0 to <4 x i32>*
   %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %l5 = call i32 @llvm.experimental.vector.reduce.umin.v4i32(<4 x i32> %wide.load)
+  %l5 = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %wide.load)
   %2 = icmp ult i32 %vec.phi, %l5
   %3 = select i1 %2, i32 %vec.phi, i32 %l5
   %index.next = add i32 %index, 4
@@ -1356,7 +1350,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %4, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %5 = call i32 @llvm.experimental.vector.reduce.umax.v4i32(<4 x i32> %3)
+  %5 = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %3)
   %cmp.n = icmp eq i32 %n.vec, %n
   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader1
 
@@ -1384,17 +1378,22 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 define i32 @umax_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-LABEL: umax_i32_inloop:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    cmp r1, #1
-; CHECK-NEXT:    blt .LBB14_8
+; CHECK-NEXT:    blt .LBB14_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    mov r12, r0
-; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    cmp r1, #4
-; CHECK-NEXT:    mov.w r0, #0
-; CHECK-NEXT:    blo .LBB14_5
-; CHECK-NEXT:  @ %bb.2: @ %vector.ph
+; CHECK-NEXT:    bhs .LBB14_4
+; CHECK-NEXT:  @ %bb.2:
+; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    b .LBB14_7
+; CHECK-NEXT:  .LBB14_3:
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    b .LBB14_9
+; CHECK-NEXT:  .LBB14_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
 ; CHECK-NEXT:    subs r0, r3, #4
@@ -1402,33 +1401,27 @@ define i32 @umax_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    mov r2, r12
 ; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:  .LBB14_3: @ %vector.body
+; CHECK-NEXT:  .LBB14_5: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r2], #16
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vmaxv.u32 r4, q0
-; CHECK-NEXT:    cmp r0, r4
-; CHECK-NEXT:    csel r0, r0, r4, hi
-; CHECK-NEXT:    le lr, .LBB14_3
-; CHECK-NEXT:  @ %bb.4: @ %middle.block
+; CHECK-NEXT:    vmaxv.u32 r0, q0
+; CHECK-NEXT:    le lr, .LBB14_5
+; CHECK-NEXT:  @ %bb.6: @ %middle.block
 ; CHECK-NEXT:    cmp r3, r1
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    popeq {r4, pc}
-; CHECK-NEXT:  .LBB14_5: @ %for.body.preheader1
+; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:  .LBB14_7: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w lr, r1, r3
 ; CHECK-NEXT:    add.w r1, r12, r3, lsl #2
 ; CHECK-NEXT:    dls lr, lr
-; CHECK-NEXT:  .LBB14_6: @ %for.body
+; CHECK-NEXT:  .LBB14_8: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r2, [r1], #4
 ; CHECK-NEXT:    cmp r0, r2
 ; CHECK-NEXT:    csel r0, r0, r2, hi
-; CHECK-NEXT:    le lr, .LBB14_6
-; CHECK-NEXT:  @ %bb.7: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, pc}
-; CHECK-NEXT:  .LBB14_8:
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:    le lr, .LBB14_8
+; CHECK-NEXT:  .LBB14_9: @ %for.cond.cleanup
+; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
@@ -1447,7 +1440,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %0 = getelementptr inbounds i32, i32* %x, i32 %index
   %1 = bitcast i32* %0 to <4 x i32>*
   %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %l5 = call i32 @llvm.experimental.vector.reduce.umax.v4i32(<4 x i32> %wide.load)
+  %l5 = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> %wide.load)
   %2 = icmp ugt i32 %vec.phi, %l5
   %3 = select i1 %2, i32 %vec.phi, i32 %l5
   %index.next = add i32 %index, 4
@@ -1560,7 +1553,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %4, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %5 = call float @llvm.experimental.vector.reduce.fmin.v4f32(<4 x float> %3)
+  %5 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %3)
   %cmp.n = icmp eq i32 %n.vec, %n
   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader1
 
@@ -1665,7 +1658,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %4, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body
-  %5 = call float @llvm.experimental.vector.reduce.fmax.v4f32(<4 x float> %3)
+  %5 = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %3)
   %cmp.n = icmp eq i32 %n.vec, %n
   br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader1
 
@@ -1729,7 +1722,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %1 = bitcast i32* %0 to <4 x i32>*
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %1, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
   %2 = select <4 x i1> %active.lane.mask, <4 x i32> %wide.masked.load, <4 x i32> zeroinitializer
-  %3 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %2)
+  %3 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %2)
   %4 = add i32 %3, %vec.phi
   %index.next = add i32 %index, 4
   %5 = icmp eq i32 %index.next, %n.vec
@@ -1784,7 +1777,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %wide.masked.load13 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %3, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
   %4 = mul nsw <4 x i32> %wide.masked.load13, %wide.masked.load
   %5 = select <4 x i1> %active.lane.mask, <4 x i32> %4, <4 x i32> zeroinitializer
-  %6 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %5)
+  %6 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %5)
   %7 = add i32 %6, %vec.phi
   %index.next = add i32 %index, 4
   %8 = icmp eq i32 %index.next, %n.vec
@@ -1835,7 +1828,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %1, i32 2, <8 x i1> %active.lane.mask, <8 x i16> undef)
   %2 = sext <8 x i16> %wide.masked.load to <8 x i32>
   %3 = select <8 x i1> %active.lane.mask, <8 x i32> %2, <8 x i32> zeroinitializer
-  %4 = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> %3)
+  %4 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %3)
   %5 = add i32 %4, %vec.phi
   %index.next = add i32 %index, 8
   %6 = icmp eq i32 %index.next, %n.vec
@@ -1892,7 +1885,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %5 = sext <8 x i16> %wide.masked.load14 to <8 x i32>
   %6 = mul nsw <8 x i32> %5, %2
   %7 = select <8 x i1> %active.lane.mask, <8 x i32> %6, <8 x i32> zeroinitializer
-  %8 = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> %7)
+  %8 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %7)
   %9 = add i32 %8, %vec.phi
   %index.next = add i32 %index, 8
   %10 = icmp eq i32 %index.next, %n.vec
@@ -1943,7 +1936,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %wide.masked.load = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %1, i32 1, <16 x i1> %active.lane.mask, <16 x i8> undef)
   %2 = zext <16 x i8> %wide.masked.load to <16 x i32>
   %3 = select <16 x i1> %active.lane.mask, <16 x i32> %2, <16 x i32> zeroinitializer
-  %4 = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %3)
+  %4 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %3)
   %5 = add i32 %4, %vec.phi
   %index.next = add i32 %index, 16
   %6 = icmp eq i32 %index.next, %n.vec
@@ -2000,7 +1993,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %5 = zext <16 x i8> %wide.masked.load14 to <16 x i32>
   %6 = mul nuw nsw <16 x i32> %5, %2
   %7 = select <16 x i1> %active.lane.mask, <16 x i32> %6, <16 x i32> zeroinitializer
-  %8 = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %7)
+  %8 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %7)
   %9 = add i32 %8, %vec.phi
   %index.next = add i32 %index, 16
   %10 = icmp eq i32 %index.next, %n.vec
@@ -2050,7 +2043,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %1 = bitcast i16* %0 to <8 x i16>*
   %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %1, i32 2, <8 x i1> %active.lane.mask, <8 x i16> undef)
   %2 = select <8 x i1> %active.lane.mask, <8 x i16> %wide.masked.load, <8 x i16> zeroinitializer
-  %3 = call i16 @llvm.experimental.vector.reduce.add.v8i16(<8 x i16> %2)
+  %3 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %2)
   %4 = add i16 %3, %vec.phi
   %index.next = add i32 %index, 8
   %5 = icmp eq i32 %index.next, %n.vec
@@ -2105,7 +2098,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %wide.masked.load16 = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %3, i32 2, <8 x i1> %active.lane.mask, <8 x i16> undef)
   %4 = mul <8 x i16> %wide.masked.load16, %wide.masked.load
   %5 = select <8 x i1> %active.lane.mask, <8 x i16> %4, <8 x i16> zeroinitializer
-  %6 = call i16 @llvm.experimental.vector.reduce.add.v8i16(<8 x i16> %5)
+  %6 = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %5)
   %7 = add i16 %6, %vec.phi
   %index.next = add i32 %index, 8
   %8 = icmp eq i32 %index.next, %n.vec
@@ -2156,7 +2149,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %wide.masked.load = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %1, i32 1, <16 x i1> %active.lane.mask, <16 x i8> undef)
   %2 = zext <16 x i8> %wide.masked.load to <16 x i16>
   %3 = select <16 x i1> %active.lane.mask, <16 x i16> %2, <16 x i16> zeroinitializer
-  %4 = call i16 @llvm.experimental.vector.reduce.add.v16i16(<16 x i16> %3)
+  %4 = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %3)
   %5 = add i16 %4, %vec.phi
   %index.next = add i32 %index, 16
   %6 = icmp eq i32 %index.next, %n.vec
@@ -2213,7 +2206,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %5 = zext <16 x i8> %wide.masked.load18 to <16 x i16>
   %6 = mul nuw <16 x i16> %5, %2
   %7 = select <16 x i1> %active.lane.mask, <16 x i16> %6, <16 x i16> zeroinitializer
-  %8 = call i16 @llvm.experimental.vector.reduce.add.v16i16(<16 x i16> %7)
+  %8 = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %7)
   %9 = add i16 %8, %vec.phi
   %index.next = add i32 %index, 16
   %10 = icmp eq i32 %index.next, %n.vec
@@ -2263,7 +2256,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %1 = bitcast i8* %0 to <16 x i8>*
   %wide.masked.load = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %1, i32 1, <16 x i1> %active.lane.mask, <16 x i8> undef)
   %2 = select <16 x i1> %active.lane.mask, <16 x i8> %wide.masked.load, <16 x i8> zeroinitializer
-  %3 = call i8 @llvm.experimental.vector.reduce.add.v16i8(<16 x i8> %2)
+  %3 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %2)
   %4 = add i8 %3, %vec.phi
   %index.next = add i32 %index, 16
   %5 = icmp eq i32 %index.next, %n.vec
@@ -2318,7 +2311,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %wide.masked.load15 = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %3, i32 1, <16 x i1> %active.lane.mask, <16 x i8> undef)
   %4 = mul <16 x i8> %wide.masked.load15, %wide.masked.load
   %5 = select <16 x i1> %active.lane.mask, <16 x i8> %4, <16 x i8> zeroinitializer
-  %6 = call i8 @llvm.experimental.vector.reduce.add.v16i8(<16 x i8> %5)
+  %6 = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %5)
   %7 = add i8 %6, %vec.phi
   %index.next = add i32 %index, 16
   %8 = icmp eq i32 %index.next, %n.vec
@@ -2371,7 +2364,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %1, i32 4, <4 x i1> %active.lane.mask, <4 x i32> undef)
   %2 = sext <4 x i32> %wide.masked.load to <4 x i64>
   %3 = select <4 x i1> %active.lane.mask, <4 x i64> %2, <4 x i64> zeroinitializer
-  %4 = call i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64> %3)
+  %4 = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %3)
   %5 = add i64 %4, %vec.phi
   %index.next = add i32 %index, 4
   %6 = icmp eq i32 %index.next, %n.vec
@@ -2430,7 +2423,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %5 = sext <4 x i32> %wide.masked.load14 to <4 x i64>
   %6 = mul nsw <4 x i64> %5, %2
   %7 = select <4 x i1> %active.lane.mask, <4 x i64> %6, <4 x i64> zeroinitializer
-  %8 = call i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64> %7)
+  %8 = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %7)
   %9 = add i64 %8, %vec.phi
   %index.next = add i32 %index, 4
   %10 = icmp eq i32 %index.next, %n.vec
@@ -2489,7 +2482,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %5 = sext <8 x i16> %wide.masked.load14 to <8 x i64>
   %6 = mul nsw <8 x i64> %5, %2
   %7 = select <8 x i1> %active.lane.mask, <8 x i64> %6, <8 x i64> zeroinitializer
-  %8 = call i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64> %7)
+  %8 = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %7)
   %9 = add i64 %8, %vec.phi
   %index.next = add i32 %index, 8
   %10 = icmp eq i32 %index.next, %n.vec
@@ -2504,26 +2497,26 @@ declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32) #1
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>) #2
 declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32) #1
 declare <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>*, i32 immarg, <8 x i1>, <8 x i16>) #2
-declare i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32>) #3
+declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>) #3
 declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32, i32) #1
 declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32 immarg, <16 x i1>, <16 x i8>) #2
-declare i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32>) #3
-declare i16 @llvm.experimental.vector.reduce.add.v8i16(<8 x i16>) #3
-declare i16 @llvm.experimental.vector.reduce.add.v16i16(<16 x i16>) #3
-declare i8 @llvm.experimental.vector.reduce.add.v16i8(<16 x i8>) #3
-declare i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64>) #3
-declare i64 @llvm.experimental.vector.reduce.add.v8i64(<8 x i64>) #3
+declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>) #3
+declare i16 @llvm.vector.reduce.add.v8i16(<8 x i16>) #3
+declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>) #3
+declare i8 @llvm.vector.reduce.add.v16i8(<16 x i8>) #3
+declare i64 @llvm.vector.reduce.add.v4i64(<4 x i64>) #3
+declare i64 @llvm.vector.reduce.add.v8i64(<8 x i64>) #3
 
-declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.mul.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.and.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.or.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.xor.v4i32(<4 x i32>)
-declare float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float, <4 x float>)
-declare float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float, <4 x float>)
-declare i32 @llvm.experimental.vector.reduce.smin.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.umin.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.umax.v4i32(<4 x i32>)
-declare float @llvm.experimental.vector.reduce.fmin.v4f32(<4 x float>)
-declare float @llvm.experimental.vector.reduce.fmax.v4f32(<4 x float>)
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.mul.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.and.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.or.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.xor.v4i32(<4 x i32>)
+declare float @llvm.vector.reduce.fadd.f32.v4f32(float, <4 x float>)
+declare float @llvm.vector.reduce.fmul.f32.v4f32(float, <4 x float>)
+declare i32 @llvm.vector.reduce.smin.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.smax.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.umin.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.umax.v4i32(<4 x i32>)
+declare float @llvm.vector.reduce.fmin.v4f32(<4 x float>)
+declare float @llvm.vector.reduce.fmax.v4f32(<4 x float>)

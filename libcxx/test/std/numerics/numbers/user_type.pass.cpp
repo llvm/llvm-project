@@ -54,4 +54,4 @@ user std::numbers::egamma_v<user>{};
 template <>
 user std::numbers::phi_v<user>{};
 
-int main() { return 0; }
+int main(int, char**) { return 0; }

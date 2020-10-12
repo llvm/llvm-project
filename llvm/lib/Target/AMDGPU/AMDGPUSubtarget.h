@@ -412,6 +412,8 @@ protected:
   bool HasNSAtoVMEMBug;
   bool HasOffset3fBug;
   bool HasFlatSegmentOffsetBug;
+  bool HasImageStoreD16Bug;
+  bool HasImageGather4D16Bug;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable;
@@ -1026,9 +1028,11 @@ public:
     return HasOffset3fBug;
   }
 
-  bool hasNSAEncoding() const {
-    return HasNSAEncoding;
-  }
+  bool hasImageStoreD16Bug() const { return HasImageStoreD16Bug; }
+
+  bool hasImageGather4D16Bug() const { return HasImageGather4D16Bug; }
+
+  bool hasNSAEncoding() const { return HasNSAEncoding; }
 
   bool hasGFX10_BEncoding() const {
     return GFX10_BEncoding;

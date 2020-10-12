@@ -343,6 +343,7 @@ func @generic_with_tensor_input(%arg0: tensor<?x?xvector<3x4xi4>>,
 
 #accesses = [
   affine_map<(i, j, k) -> (j, i)>,
+  affine_map<(i, j, k) -> (i, k, i + j)>,
   affine_map<(i, j, k) -> (i, k, i + j)>
 ]
 
@@ -377,6 +378,7 @@ func @generic_with_tensor_input_and_output(
 
 #accesses = [
   affine_map<(i, j, k) -> (j, i)>,
+  affine_map<(i, j, k) -> (i, k, i + j)>,
   affine_map<(i, j, k) -> (i, k, i + j)>
 ]
 

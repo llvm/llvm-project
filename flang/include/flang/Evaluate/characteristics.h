@@ -84,10 +84,6 @@ public:
   static std::optional<TypeAndShape> Characterize(
       const semantics::ObjectEntityDetails &);
   static std::optional<TypeAndShape> Characterize(
-      const semantics::AssocEntityDetails &, FoldingContext &);
-  static std::optional<TypeAndShape> Characterize(
-      const semantics::ProcEntityDetails &);
-  static std::optional<TypeAndShape> Characterize(
       const semantics::ProcInterface &);
   static std::optional<TypeAndShape> Characterize(
       const semantics::DeclTypeSpec &);
@@ -108,7 +104,7 @@ public:
         if (type->category() == TypeCategory::Character) {
           if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(x)}) {
             if (auto length{chExpr->LEN()}) {
-              result.set_LEN(Expr<SomeInteger>{std::move(*length)});
+              result.set_LEN(Fold(context, std::move(*length)));
             }
           }
         }
@@ -141,8 +137,8 @@ public:
     type_ = t;
     return *this;
   }
-  const std::optional<Expr<SomeInteger>> &LEN() const { return LEN_; }
-  TypeAndShape &set_LEN(Expr<SomeInteger> &&len) {
+  const std::optional<Expr<SubscriptInteger>> &LEN() const { return LEN_; }
+  TypeAndShape &set_LEN(Expr<SubscriptInteger> &&len) {
     LEN_ = std::move(len);
     return *this;
   }
@@ -154,16 +150,22 @@ public:
   bool IsCompatibleWith(parser::ContextualMessages &, const TypeAndShape &that,
       const char *thisIs = "POINTER", const char *thatIs = "TARGET",
       bool isElemental = false) const;
+  std::optional<Expr<SubscriptInteger>> MeasureSizeInBytes(
+      FoldingContext * = nullptr) const;
 
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
+  static std::optional<TypeAndShape> Characterize(
+      const semantics::AssocEntityDetails &, FoldingContext &);
+  static std::optional<TypeAndShape> Characterize(
+      const semantics::ProcEntityDetails &);
   void AcquireShape(const semantics::ObjectEntityDetails &);
   void AcquireLEN();
 
 protected:
   DynamicType type_;
-  std::optional<Expr<SomeInteger>> LEN_;
+  std::optional<Expr<SubscriptInteger>> LEN_;
   Shape shape_;
   Attrs attrs_;
   int corank_{0};

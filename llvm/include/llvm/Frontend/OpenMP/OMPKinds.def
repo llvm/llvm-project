@@ -220,6 +220,9 @@ __OMP_FUNCTION_TYPE(KmpcDtor, false, Void, VoidPtr)
 __OMP_FUNCTION_TYPE(KmpcCopyCtor, false, VoidPtr, VoidPtr, VoidPtr)
 __OMP_FUNCTION_TYPE(TaskRoutineEntry, false, Int32, Int32,
                     /* kmp_task_t */ VoidPtr)
+__OMP_FUNCTION_TYPE(ShuffleReduce, false, Void, VoidPtr, Int16, Int16, Int16)
+__OMP_FUNCTION_TYPE(InterWarpCopy, false, Void, VoidPtr, Int32)
+__OMP_FUNCTION_TYPE(GlobalList, false, Void, VoidPtr, Int32, VoidPtr)
 
 #undef __OMP_FUNCTION_TYPE
 #undef OMP_FUNCTION_TYPE
@@ -311,8 +314,6 @@ __OMP_RTL(__kmpc_omp_taskyield, false, Int32, IdentPtr, Int32, /* Int */ Int32)
 __OMP_RTL(__kmpc_push_num_threads, false, Void, IdentPtr, Int32,
           /* Int */ Int32)
 __OMP_RTL(__kmpc_push_proc_bind, false, Void, IdentPtr, Int32, /* Int */ Int32)
-__OMP_RTL(__kmpc_serialized_parallel, false, Void, IdentPtr, Int32)
-__OMP_RTL(__kmpc_end_serialized_parallel, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_omp_reg_task_with_affinity, false, Int32, IdentPtr, Int32,
           /* kmp_task_t */ VoidPtr, Int32,
           /* kmp_task_affinity_info_t */ VoidPtr)
@@ -518,17 +519,42 @@ __OMP_RTL(__tgt_push_mapper_component, false, Void, VoidPtr, VoidPtr, VoidPtr,
 __OMP_RTL(__kmpc_task_allow_completion_event, false, VoidPtr, IdentPtr,
           /* Int */ Int32, /* kmp_task_t */ VoidPtr)
 
+/// OpenMP Device runtime functions
+__OMP_RTL(__kmpc_kernel_init, false, Void, Int32, Int16)
+__OMP_RTL(__kmpc_kernel_deinit, false, Void, Int16)
+__OMP_RTL(__kmpc_spmd_kernel_init, false, Void, Int32, Int16)
+__OMP_RTL(__kmpc_spmd_kernel_deinit_v2, false, Void, Int16)
+__OMP_RTL(__kmpc_kernel_prepare_parallel, false, Void, VoidPtr)
+__OMP_RTL(__kmpc_kernel_parallel, false, Int1, VoidPtrPtr)
+__OMP_RTL(__kmpc_kernel_end_parallel, false, Void, )
+__OMP_RTL(__kmpc_serialized_parallel, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_end_serialized_parallel, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_shuffle_int32, false, Int32, Int32, Int16, Int16)
+__OMP_RTL(__kmpc_nvptx_parallel_reduce_nowait_v2, false, Int32, IdentPtr, Int32,
+          Int32, SizeTy, VoidPtr, ShuffleReducePtr, InterWarpCopyPtr)
+__OMP_RTL(__kmpc_nvptx_end_reduce_nowait, false, Void, Int32)
+__OMP_RTL(__kmpc_nvptx_teams_reduce_nowait_v2, false, Int32, IdentPtr, Int32,
+          VoidPtr, Int32, VoidPtr, ShuffleReducePtr, InterWarpCopyPtr,
+          GlobalListPtr, GlobalListPtr, GlobalListPtr, GlobalListPtr)
+
+__OMP_RTL(__kmpc_shuffle_int64, false, Int64, Int64, Int16, Int16)
 __OMP_RTL(__kmpc_data_sharing_init_stack, false, Void, )
-__OMP_RTL(__kmpc_data_sharing_init_stack_spmd, false, Void, ) 
-__OMP_RTL(__kmpc_data_sharing_coalesced_push_stack, false, VoidPtr, SizeTy,
-          Int16)
+__OMP_RTL(__kmpc_data_sharing_init_stack_spmd, false, Void, )
+
+__OMP_RTL(__kmpc_data_sharing_coalesced_push_stack, false, VoidPtr, SizeTy, Int16)
 __OMP_RTL(__kmpc_data_sharing_push_stack, false, VoidPtr, SizeTy, Int16)
 __OMP_RTL(__kmpc_data_sharing_pop_stack, false, Void, VoidPtr)
-
-/// Note that device runtime functions (in the following) do not necessarily
-/// need attributes as we expect to see the definitions.
-__OMP_RTL(__kmpc_kernel_parallel, false, Int1, VoidPtrPtr)
-__OMP_RTL(__kmpc_kernel_prepare_parallel, false, Void, VoidPtr)
+__OMP_RTL(__kmpc_begin_sharing_variables, false, Void, VoidPtrPtrPtr, SizeTy)
+__OMP_RTL(__kmpc_end_sharing_variables, false, Void, )
+__OMP_RTL(__kmpc_get_shared_variables, false, Void, VoidPtrPtrPtr)
+__OMP_RTL(__kmpc_parallel_level, false, Int16, IdentPtr, Int32)
+__OMP_RTL(__kmpc_is_spmd_exec_mode, false, Int8, )
+__OMP_RTL(__kmpc_get_team_static_memory, false, Void, Int16, VoidPtr, SizeTy,
+          Int16, VoidPtrPtr)
+__OMP_RTL(__kmpc_restore_team_static_memory, false, Void, Int16, Int16)
+__OMP_RTL(__kmpc_barrier_simple_spmd, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_warp_active_thread_mask, false, Int32, )
+__OMP_RTL(__kmpc_syncwarp, false, Void, Int32)
 
 __OMP_RTL(__last, false, Void, )
 
@@ -577,8 +603,8 @@ __OMP_ATTRS_SET(DefaultAttrs,
 
 __OMP_ATTRS_SET(BarrierAttrs,
                 OptimisticAttributes
-                    ? AttributeSet(EnumAttr(NoUnwind))
-                    : AttributeSet(EnumAttr(NoUnwind)))
+                    ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(Convergent))
+                    : AttributeSet(EnumAttr(NoUnwind), EnumAttr(Convergent)))
 
 __OMP_ATTRS_SET(InaccessibleArgOnlyAttrs,
                 OptimisticAttributes
@@ -650,6 +676,11 @@ __OMP_ATTRS_SET(ReturnAlignedPtrAttrs,
 
 __OMP_RTL_ATTRS(__kmpc_barrier, BarrierAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs))
+__OMP_RTL_ATTRS(__kmpc_barrier_simple_spmd, BarrierAttrs, AttributeSet(),
+                ParamAttrs(ReadOnlyPtrAttrs))
+__OMP_RTL_ATTRS(__kmpc_warp_active_thread_mask, BarrierAttrs, AttributeSet(),
+                ParamAttrs())
+__OMP_RTL_ATTRS(__kmpc_syncwarp, BarrierAttrs, AttributeSet(), ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_cancel, InaccessibleArgOnlyAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs))
 __OMP_RTL_ATTRS(__kmpc_cancel_barrier, BarrierAttrs, AttributeSet(),

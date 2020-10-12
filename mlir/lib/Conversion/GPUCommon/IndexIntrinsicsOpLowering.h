@@ -27,7 +27,7 @@ private:
   unsigned indexBitwidth;
 
   static dimension dimensionToIndex(Op op) {
-    return llvm::StringSwitch<dimension>(op.dimension())
+    return StringSwitch<dimension>(op.dimension())
         .Case("x", X)
         .Case("y", Y)
         .Case("z", Z)

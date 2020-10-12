@@ -1,4 +1,5 @@
 ; RUN: opt -S -strip-gc-relocates -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=strip-gc-relocates,instcombine < %s | FileCheck %s
 ; test utility/debugging pass which removes gc.relocates, inserted by -rewrite-statepoints-for-gc
 declare void @use_obj32(i32 addrspace(1)*) "gc-leaf-function"
 

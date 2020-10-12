@@ -85,7 +85,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
 middle.block:                                     ; preds = %vector.body
   %tmp8 = select <4 x i1> %tmp1, <4 x i32> %add, <4 x i32> %vec.phi
-  %tmp9 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %tmp8)
+  %tmp9 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %tmp8)
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -188,7 +188,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
 middle.block:                                     ; preds = %vector.body
   %acc = select <4 x i1> %tmp1, <4 x i32> %add, <4 x i32> %vec.phi
-  %reduce = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %acc)
+  %reduce = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %acc)
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -287,7 +287,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
 middle.block:                                     ; preds = %vector.body
   %acc = select <4 x i1> %tmp1, <4 x i32> %add, <4 x i32> %vec.phi
-  %reduce = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %acc)
+  %reduce = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %acc)
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -386,7 +386,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
 middle.block:                                     ; preds = %vector.body
   %acc = select <4 x i1> %tmp1, <4 x i32> %add, <4 x i32> %vec.phi
-  %reduce = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %acc)
+  %reduce = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %acc)
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -528,6 +528,6 @@ declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i
 declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
 
 ; Function Attrs: nounwind readnone willreturn
-declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)

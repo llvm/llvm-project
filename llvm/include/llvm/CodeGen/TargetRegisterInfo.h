@@ -386,12 +386,12 @@ public:
   /// The registers may be virtual registers.
   bool regsOverlap(Register regA, Register regB) const {
     if (regA == regB) return true;
-    if (regA.isVirtual() || regB.isVirtual())
+    if (!regA.isPhysical() || !regB.isPhysical())
       return false;
 
     // Regunits are numerically ordered. Find a common unit.
-    MCRegUnitIterator RUA(regA, this);
-    MCRegUnitIterator RUB(regB, this);
+    MCRegUnitIterator RUA(regA.asMCReg(), this);
+    MCRegUnitIterator RUB(regB.asMCReg(), this);
     do {
       if (*RUA == *RUB) return true;
       if (*RUA < *RUB) ++RUA;

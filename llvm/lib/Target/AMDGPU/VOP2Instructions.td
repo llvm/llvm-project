@@ -92,6 +92,7 @@ class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily> :
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
+  let OtherPredicates    = ps.OtherPredicates;
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let AsmVariantName     = ps.AsmVariantName;
   let Constraints        = ps.Constraints;
@@ -494,15 +495,19 @@ defm V_OR_B32 : VOP2Inst <"v_or_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, or>;
 defm V_XOR_B32 : VOP2Inst <"v_xor_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, xor>;
 
 let mayRaiseFPException = 0 in {
-let SubtargetPredicate = HasMadMacF32Insts in {
+let OtherPredicates = [HasMadMacF32Insts] in {
 let Constraints = "$vdst = $src2", DisableEncoding="$src2",
     isConvertibleToThreeAddress = 1 in {
 defm V_MAC_F32 : VOP2Inst <"v_mac_f32", VOP_MAC_F32>;
-}
+
+let SubtargetPredicate = isGFX6GFX7GFX10 in
+defm V_MAC_LEGACY_F32 : VOP2Inst <"v_mac_legacy_f32", VOP_MAC_F32>;
+} // End Constraints = "$vdst = $src2", DisableEncoding="$src2",
+  //     isConvertibleToThreeAddress = 1
 
 def V_MADAK_F32 : VOP2_Pseudo <"v_madak_f32", VOP_MADAK_F32, []>;
-} // End SubtargetPredicate = HasMadMacF32Insts
-}
+} // End OtherPredicates = [HasMadMacF32Insts]
+} // End mayRaiseFPException = 0
 
 // No patterns so that the scalar instructions are always selected.
 // The scalar versions will be replaced with vector when needed later.
@@ -556,10 +561,6 @@ defm V_MAX_LEGACY_F32 : VOP2Inst <"v_max_legacy_f32", VOP_F32_F32_F32, AMDGPUfma
 } // End SubtargetPredicate = isGFX6GFX7
 
 let isCommutable = 1 in {
-let SubtargetPredicate = isGFX6GFX7GFX10 in {
-let OtherPredicates = [HasMadMacF32Insts] in
-defm V_MAC_LEGACY_F32 : VOP2Inst <"v_mac_legacy_f32", VOP_F32_F32_F32>;
-} // End SubtargetPredicate = isGFX6GFX7GFX10
 let SubtargetPredicate = isGFX6GFX7 in {
 defm V_LSHR_B32 : VOP2Inst <"v_lshr_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, srl>;
 defm V_ASHR_I32 : VOP2Inst <"v_ashr_i32", VOP_PAT_GEN<VOP_I32_I32_I32>, sra>;
@@ -873,6 +874,7 @@ class Base_VOP2_DPP16<bits<6> op, VOP2_DPP_Pseudo ps,
     VOP2_DPP<op, ps, opName, p, 1> {
   let AssemblerPredicate = HasDPP16;
   let SubtargetPredicate = HasDPP16;
+  let OtherPredicates = ps.OtherPredicates;
 }
 
 class VOP2_DPP16<bits<6> op, VOP2_DPP_Pseudo ps,
@@ -899,6 +901,7 @@ class VOP2_DPP8<bits<6> op, VOP2_Pseudo ps,
 
   let AssemblerPredicate = HasDPP8;
   let SubtargetPredicate = HasDPP8;
+  let OtherPredicates = ps.OtherPredicates;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1319,7 +1322,6 @@ let SubtargetPredicate = isGFX6GFX7 in {
 defm V_ADD_F32            : VOP2_Real_gfx6_gfx7_gfx10<0x003>;
 defm V_SUB_F32            : VOP2_Real_gfx6_gfx7_gfx10<0x004>;
 defm V_SUBREV_F32         : VOP2_Real_gfx6_gfx7_gfx10<0x005>;
-let OtherPredicates = [HasMadMacF32Insts] in
 defm V_MAC_LEGACY_F32     : VOP2_Real_gfx6_gfx7_gfx10<0x006>;
 defm V_MUL_LEGACY_F32     : VOP2_Real_gfx6_gfx7_gfx10<0x007>;
 defm V_MUL_F32            : VOP2_Real_gfx6_gfx7_gfx10<0x008>;

@@ -2,7 +2,7 @@
 ; RUN: opt -instcombine -S < %s | FileCheck %s
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
-target datalayout = "e-m:e-p:64:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target datalayout = "e-m:e-p:64:64:64-i64:64-f80:128-n8:16:32:64-S128-ni:1"
 
 @X = constant i32 42		; <i32*> [#uses=2]
 @X2 = constant i32 47		; <i32*> [#uses=1]
@@ -343,4 +343,72 @@ define void @test20(<vscale x 4 x i8>* %x, <vscale x 4 x i8>* %y) {
   %x.load = load <vscale x 4 x i8>, <vscale x 4 x i8>* %x, align 1
   store <vscale x 4 x i8> %x.load, <vscale x 4 x i8>* %y, align 1
   ret void
+}
+
+
+; Check that non-integral pointers are not coverted using inttoptr
+
+declare void @use(i8*)
+declare void @use.p1(i8 addrspace(1)*)
+
+define i64 @test21(i64* %P) {
+; CHECK-LABEL: @test21(
+; CHECK-NEXT:    [[X:%.*]] = load i64, i64* [[P:%.*]], align 8
+; CHECK-NEXT:    [[Y_CAST:%.*]] = inttoptr i64 [[X]] to i8*
+; CHECK-NEXT:    call void @use(i8* [[Y_CAST]])
+; CHECK-NEXT:    ret i64 [[X]]
+;
+  %P.ptr = bitcast i64* %P to i8**
+  %X = load i64, i64* %P
+  %Y = load i8*, i8** %P.ptr
+  call void @use(i8* %Y)
+  ret i64 %X
+}
+
+define i64 @test22(i64* %P) {
+; CHECK-LABEL: @test22(
+; CHECK-NEXT:    [[P_PTR:%.*]] = bitcast i64* [[P:%.*]] to i8 addrspace(1)**
+; CHECK-NEXT:    [[X:%.*]] = load i64, i64* [[P]], align 8
+; CHECK-NEXT:    [[Y:%.*]] = load i8 addrspace(1)*, i8 addrspace(1)** [[P_PTR]], align 8
+; CHECK-NEXT:    call void @use.p1(i8 addrspace(1)* [[Y]])
+; CHECK-NEXT:    ret i64 [[X]]
+;
+  %P.ptr = bitcast i64* %P to i8 addrspace(1)**
+  %X = load i64, i64* %P
+  %Y = load i8 addrspace(1)*, i8 addrspace(1)** %P.ptr
+  call void @use.p1(i8 addrspace(1)* %Y)
+  ret i64 %X
+}
+
+declare void @use.v2.p0(<2 x i8*>)
+declare void @use.v2.p1(<2 x i8 addrspace(1)*>)
+
+define <2 x i64> @test23(<2 x i64>* %P) {
+; CHECK-LABEL: @test23(
+; CHECK-NEXT:    [[P_PTR:%.*]] = bitcast <2 x i64>* [[P:%.*]] to <2 x i8*>*
+; CHECK-NEXT:    [[X:%.*]] = load <2 x i64>, <2 x i64>* [[P]], align 16
+; CHECK-NEXT:    [[Y:%.*]] = load <2 x i8*>, <2 x i8*>* [[P_PTR]], align 16
+; CHECK-NEXT:    call void @use.v2.p0(<2 x i8*> [[Y]])
+; CHECK-NEXT:    ret <2 x i64> [[X]]
+;
+  %P.ptr = bitcast <2 x i64>* %P to <2 x i8*>*
+  %X = load <2 x i64>, <2 x i64>* %P
+  %Y = load <2 x i8*>, <2 x i8*>* %P.ptr
+  call void @use.v2.p0(<2 x i8*> %Y)
+  ret <2 x i64> %X
+}
+
+define <2 x i64> @test24(<2 x i64>* %P) {
+; CHECK-LABEL: @test24(
+; CHECK-NEXT:    [[P_PTR:%.*]] = bitcast <2 x i64>* [[P:%.*]] to <2 x i8 addrspace(1)*>*
+; CHECK-NEXT:    [[X:%.*]] = load <2 x i64>, <2 x i64>* [[P]], align 16
+; CHECK-NEXT:    [[Y:%.*]] = load <2 x i8 addrspace(1)*>, <2 x i8 addrspace(1)*>* [[P_PTR]], align 16
+; CHECK-NEXT:    call void @use.v2.p1(<2 x i8 addrspace(1)*> [[Y]])
+; CHECK-NEXT:    ret <2 x i64> [[X]]
+;
+  %P.ptr = bitcast <2 x i64>* %P to <2 x i8 addrspace(1)*>*
+  %X = load <2 x i64>, <2 x i64>* %P
+  %Y = load <2 x i8 addrspace(1)*>, <2 x i8 addrspace(1)*>* %P.ptr
+  call void @use.v2.p1(<2 x i8 addrspace(1)*> %Y)
+  ret <2 x i64> %X
 }

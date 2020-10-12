@@ -66,10 +66,6 @@ MlirContext mlirDialectGetContext(MlirDialect dialect) {
   return wrap(unwrap(dialect)->getContext());
 }
 
-int mlirDialectIsNull(MlirDialect dialect) {
-  return unwrap(dialect) == nullptr;
-}
-
 int mlirDialectEqual(MlirDialect dialect1, MlirDialect dialect2) {
   return unwrap(dialect1) == unwrap(dialect2);
 }
@@ -215,8 +211,6 @@ MlirOperation mlirOperationCreate(const MlirOperationState *state) {
 
 void mlirOperationDestroy(MlirOperation op) { unwrap(op)->erase(); }
 
-int mlirOperationIsNull(MlirOperation op) { return unwrap(op) == nullptr; }
-
 intptr_t mlirOperationGetNumRegions(MlirOperation op) {
   return static_cast<intptr_t>(unwrap(op)->getNumRegions());
 }
@@ -265,6 +259,16 @@ MlirNamedAttribute mlirOperationGetAttribute(MlirOperation op, intptr_t pos) {
 MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
                                               const char *name) {
   return wrap(unwrap(op)->getAttr(name));
+}
+
+void mlirOperationSetAttributeByName(MlirOperation op, const char *name,
+                                     MlirAttribute attr) {
+  unwrap(op)->setAttr(name, unwrap(attr));
+}
+
+int mlirOperationRemoveAttributeByName(MlirOperation op, const char *name) {
+  auto removeResult = unwrap(op)->removeAttr(name);
+  return removeResult == MutableDictionaryAttr::RemoveResult::Removed;
 }
 
 void mlirOperationPrint(MlirOperation op, MlirStringCallback callback,
@@ -328,8 +332,6 @@ void mlirRegionDestroy(MlirRegion region) {
   delete static_cast<Region *>(region.ptr);
 }
 
-int mlirRegionIsNull(MlirRegion region) { return unwrap(region) == nullptr; }
-
 /* ========================================================================== */
 /* Block API.                                                                 */
 /* ========================================================================== */
@@ -390,8 +392,6 @@ void mlirBlockInsertOwnedOperationBefore(MlirBlock block,
 }
 
 void mlirBlockDestroy(MlirBlock block) { delete unwrap(block); }
-
-int mlirBlockIsNull(MlirBlock block) { return unwrap(block) == nullptr; }
 
 intptr_t mlirBlockGetNumArguments(MlirBlock block) {
   return static_cast<intptr_t>(unwrap(block)->getNumArguments());

@@ -635,18 +635,18 @@ static struct InsnMatchEntry InsnMatchTable[] = {
   { "ssf", SystemZ::InsnSSF, 4,
     { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_BDAddr64Disp12, MCK_AnyReg } },
   { "vri", SystemZ::InsnVRI, 6,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_U12Imm, MCK_U4Imm, MCK_U4Imm } },
+    { MCK_U48Imm, MCK_VR128, MCK_VR128, MCK_U12Imm, MCK_U4Imm, MCK_U4Imm } },
   { "vrr", SystemZ::InsnVRR, 7,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_AnyReg, MCK_U4Imm, MCK_U4Imm,
+    { MCK_U48Imm, MCK_VR128, MCK_VR128, MCK_VR128, MCK_U4Imm, MCK_U4Imm,
       MCK_U4Imm } },
   { "vrs", SystemZ::InsnVRS, 5,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp12, MCK_U4Imm } },
+    { MCK_U48Imm, MCK_AnyReg, MCK_VR128, MCK_BDAddr64Disp12, MCK_U4Imm } },
   { "vrv", SystemZ::InsnVRV, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_BDVAddr64Disp12, MCK_U4Imm } },
+    { MCK_U48Imm, MCK_VR128, MCK_BDVAddr64Disp12, MCK_U4Imm } },
   { "vrx", SystemZ::InsnVRX, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_BDXAddr64Disp12, MCK_U4Imm } },
+    { MCK_U48Imm, MCK_VR128, MCK_BDXAddr64Disp12, MCK_U4Imm } },
   { "vsi", SystemZ::InsnVSI, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_BDAddr64Disp12, MCK_U8Imm } }
+    { MCK_U48Imm, MCK_VR128, MCK_BDAddr64Disp12, MCK_U8Imm } }
 };
 
 static void printMCExpr(const MCExpr *E, raw_ostream &OS) {
@@ -851,10 +851,11 @@ SystemZAsmParser::parseRegister(OperandVector &Operands, RegisterKind Kind) {
 // Parse any type of register (including integers) and add it to Operands.
 OperandMatchResultTy
 SystemZAsmParser::parseAnyRegister(OperandVector &Operands) {
+  SMLoc StartLoc = Parser.getTok().getLoc();
+
   // Handle integer values.
   if (Parser.getTok().is(AsmToken::Integer)) {
     const MCExpr *Register;
-    SMLoc StartLoc = Parser.getTok().getLoc();
     if (Parser.parseExpression(Register))
       return MatchOperand_ParseFail;
 
@@ -875,6 +876,11 @@ SystemZAsmParser::parseAnyRegister(OperandVector &Operands) {
     Register Reg;
     if (parseRegister(Reg))
       return MatchOperand_ParseFail;
+
+    if (Reg.Num > 15) {
+      Error(StartLoc, "invalid register");
+      return MatchOperand_ParseFail;
+    }
 
     // Map to the correct register kind.
     RegisterKind Kind;
@@ -1208,6 +1214,8 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
     OperandMatchResultTy ResTy;
     if (Kind == MCK_AnyReg)
       ResTy = parseAnyReg(Operands);
+    else if (Kind == MCK_VR128)
+      ResTy = parseVR128(Operands);
     else if (Kind == MCK_BDXAddr64Disp12 || Kind == MCK_BDXAddr64Disp20)
       ResTy = parseBDXAddr64(Operands);
     else if (Kind == MCK_BDAddr64Disp12 || Kind == MCK_BDAddr64Disp20)
