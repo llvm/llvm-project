@@ -12,11 +12,11 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
-// BufferAssignmentTypeConverter
+// BufferizeTypeConverter
 //===----------------------------------------------------------------------===//
 
-/// Registers conversions into BufferAssignmentTypeConverter
-BufferAssignmentTypeConverter::BufferAssignmentTypeConverter() {
+/// Registers conversions into BufferizeTypeConverter
+BufferizeTypeConverter::BufferizeTypeConverter() {
   // Keep all types unchanged.
   addConversion([](Type type) { return type; });
   // Convert RankedTensorType to MemRefType.
@@ -32,7 +32,7 @@ BufferAssignmentTypeConverter::BufferAssignmentTypeConverter() {
 /// This method tries to decompose a value of a certain type using provided
 /// decompose callback functions. If it is unable to do so, the original value
 /// is returned.
-void BufferAssignmentTypeConverter::tryDecomposeValue(
+void BufferizeTypeConverter::tryDecomposeValue(
     OpBuilder &builder, Location loc, Type type, Value value,
     SmallVectorImpl<Value> &results) {
   for (auto conversion : decomposeValueConversions)
@@ -43,8 +43,8 @@ void BufferAssignmentTypeConverter::tryDecomposeValue(
 
 /// This method tries to decompose a type using provided decompose callback
 /// functions. If it is unable to do so, the original type is returned.
-void BufferAssignmentTypeConverter::tryDecomposeType(
-    Type type, SmallVectorImpl<Type> &types) {
+void BufferizeTypeConverter::tryDecomposeType(Type type,
+                                              SmallVectorImpl<Type> &types) {
   for (auto conversion : decomposeTypeConversions)
     if (conversion(type, types) != llvm::None)
       return;
@@ -52,9 +52,8 @@ void BufferAssignmentTypeConverter::tryDecomposeType(
 }
 
 /// This method returns ResultConversionKind for the input type.
-BufferAssignmentTypeConverter::ResultConversionKind
-BufferAssignmentTypeConverter::getResultConversionKind(Type origin,
-                                                       Type converted) {
+BufferizeTypeConverter::ResultConversionKind
+BufferizeTypeConverter::getResultConversionKind(Type origin, Type converted) {
   for (auto conversion : resultTypeConversions) {
     auto res = conversion(origin, converted);
     if (res != llvm::None)
@@ -64,11 +63,11 @@ BufferAssignmentTypeConverter::getResultConversionKind(Type origin,
 }
 
 //===----------------------------------------------------------------------===//
-// BufferAssignmentFuncOpConverter
+// BufferizeFuncOpConverter
 //===----------------------------------------------------------------------===//
 
 /// Performs the actual function signature rewriting step.
-LogicalResult BufferAssignmentFuncOpConverter::matchAndRewrite(
+LogicalResult BufferizeFuncOpConverter::matchAndRewrite(
     mlir::FuncOp funcOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
   auto funcType = funcOp.getType();
@@ -91,10 +90,10 @@ LogicalResult BufferAssignmentFuncOpConverter::matchAndRewrite(
     for (auto origin : originTypes) {
       Type converted = converter.convertType(origin);
       auto kind = converter.getResultConversionKind(origin, converted);
-      if (kind == BufferAssignmentTypeConverter::AppendToArgumentsList)
+      if (kind == BufferizeTypeConverter::AppendToArgumentsList)
         conversion.addInputs(converted);
       else
-        // kind = BufferAssignmentTypeConverter::KeepAsFunctionResult
+        // kind = BufferizeTypeConverter::KeepAsFunctionResult
         newResultTypes.push_back(converted);
     }
   }
@@ -112,7 +111,7 @@ LogicalResult BufferAssignmentFuncOpConverter::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
-// BufferAssignmentCallOpConverter
+// BufferizeCallOpConverter
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -171,7 +170,7 @@ private:
 } // namespace
 
 /// Performs the actual rewriting step.
-LogicalResult BufferAssignmentCallOpConverter::matchAndRewrite(
+LogicalResult BufferizeCallOpConverter::matchAndRewrite(
     CallOp callOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
 
@@ -205,13 +204,13 @@ LogicalResult BufferAssignmentCallOpConverter::matchAndRewrite(
     for (Type origin : originTypes) {
       Type converted = converter.convertType(origin);
       auto kind = converter.getResultConversionKind(origin, converted);
-      if (kind == BufferAssignmentTypeConverter::KeepAsFunctionResult) {
+      if (kind == BufferizeTypeConverter::KeepAsFunctionResult) {
         newResultTypes.push_back(converted);
         // The result value is not yet available. Its index is kept and it is
         // replaced with the actual value of the new `CallOp` later.
         resultMapping.addMapping(newResultTypes.size() - 1);
       } else {
-        // kind = BufferAssignmentTypeConverter::AppendToArgumentsList
+        // kind = BufferizeTypeConverter::AppendToArgumentsList
         MemRefType memref = converted.dyn_cast<MemRefType>();
         if (!memref)
           return callOp.emitError("Cannot allocate for a non-Memref type");

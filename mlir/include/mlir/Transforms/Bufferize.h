@@ -29,7 +29,7 @@ namespace mlir {
 /// A helper type converter class for using inside Buffer Assignment operation
 /// conversion patterns. The default constructor keeps all the types intact
 /// except for the ranked-tensor types which is converted to memref types.
-class BufferAssignmentTypeConverter : public TypeConverter {
+class BufferizeTypeConverter : public TypeConverter {
 public:
   /// This enum is for showing how buffer placement operation converters should
   /// conduct with certain result type after type conversion. This value can be
@@ -37,7 +37,7 @@ public:
   /// getResultConversionKind.
   enum ResultConversionKind { AppendToArgumentsList, KeepAsFunctionResult };
 
-  BufferAssignmentTypeConverter();
+  BufferizeTypeConverter();
 
   /// This method tries to decompose a value of a certain type using provided
   /// decompose callback functions. If it is unable to do so, the original value
@@ -131,46 +131,43 @@ private:
   SmallVector<DecomposeTypeConversionCallFn, 2> decomposeTypeConversions;
 };
 
-/// Helper conversion pattern that encapsulates a BufferAssignmentTypeConverter
+/// Helper conversion pattern that encapsulates a BufferizeTypeConverter
 /// instance.
 template <typename SourceOp>
-class BufferAssignmentOpConversionPattern
-    : public OpConversionPattern<SourceOp> {
+class BufferizeOpConversionPattern : public OpConversionPattern<SourceOp> {
 public:
-  explicit BufferAssignmentOpConversionPattern(
-      MLIRContext *context, BufferAssignmentTypeConverter &converter,
-      PatternBenefit benefit = 1)
+  explicit BufferizeOpConversionPattern(MLIRContext *context,
+                                        BufferizeTypeConverter &converter,
+                                        PatternBenefit benefit = 1)
       : OpConversionPattern<SourceOp>(context, benefit), converter(converter) {}
 
 protected:
-  BufferAssignmentTypeConverter &converter;
+  BufferizeTypeConverter &converter;
 };
 
-/// Helper conversion pattern that encapsulates a BufferAssignmentTypeConverter
+/// Helper conversion pattern that encapsulates a BufferizeTypeConverter
 /// instance and that operates on Operation* to be compatible with OpInterfaces.
 /// This allows avoiding to instantiate N patterns for ops that can be subsumed
 /// by a single op interface (e.g. Linalg named ops).
-class BufferAssignmentConversionPattern : public ConversionPattern {
+class BufferizeConversionPattern : public ConversionPattern {
 public:
-  explicit BufferAssignmentConversionPattern(
-      MLIRContext *context, BufferAssignmentTypeConverter &converter,
-      PatternBenefit benefit = 1)
+  explicit BufferizeConversionPattern(MLIRContext *context,
+                                      BufferizeTypeConverter &converter,
+                                      PatternBenefit benefit = 1)
       : ConversionPattern(benefit, converter, MatchAnyOpTypeTag()),
         converter(converter) {}
 
 protected:
-  BufferAssignmentTypeConverter &converter;
+  BufferizeTypeConverter &converter;
 };
 
-/// Converts the signature of the function using BufferAssignmentTypeConverter.
+/// Converts the signature of the function using BufferizeTypeConverter.
 /// Each result type of the function is kept as a function result or appended to
 /// the function arguments list based on ResultConversionKind for the converted
 /// result type.
-class BufferAssignmentFuncOpConverter
-    : public BufferAssignmentOpConversionPattern<FuncOp> {
+class BufferizeFuncOpConverter : public BufferizeOpConversionPattern<FuncOp> {
 public:
-  using BufferAssignmentOpConversionPattern<
-      FuncOp>::BufferAssignmentOpConversionPattern;
+  using BufferizeOpConversionPattern<FuncOp>::BufferizeOpConversionPattern;
 
   /// Performs the actual signature rewriting step.
   LogicalResult matchAndRewrite(mlir::FuncOp, ArrayRef<Value>,
@@ -183,11 +180,11 @@ public:
 /// operation from the operand to the target function argument is inserted.
 template <typename ReturnOpSourceTy, typename ReturnOpTargetTy,
           typename CopyOpTy>
-class BufferAssignmentReturnOpConverter
-    : public BufferAssignmentOpConversionPattern<ReturnOpSourceTy> {
+class BufferizeReturnOpConverter
+    : public BufferizeOpConversionPattern<ReturnOpSourceTy> {
 public:
-  using BufferAssignmentOpConversionPattern<
-      ReturnOpSourceTy>::BufferAssignmentOpConversionPattern;
+  using BufferizeOpConversionPattern<
+      ReturnOpSourceTy>::BufferizeOpConversionPattern;
 
   /// Performs the actual return-op conversion step.
   LogicalResult
@@ -212,10 +209,10 @@ public:
         Type origin = originTypes[value.index()];
         Type converted = value.value().getType();
         auto kind = this->converter.getResultConversionKind(origin, converted);
-        if (kind == BufferAssignmentTypeConverter::KeepAsFunctionResult)
+        if (kind == BufferizeTypeConverter::KeepAsFunctionResult)
           newOperands.push_back(value.value());
         else
-          // kind = BufferAssignmentTypeConverter::AppendToArgumentsList
+          // kind = BufferizeTypeConverter::AppendToArgumentsList
           needCopyOperands.push_back(value.value());
       }
     }
@@ -242,12 +239,10 @@ public:
 
 /// Rewrites the `CallOp` to match its operands and results with the signature
 /// of the callee after rewriting the callee with
-/// BufferAssignmentFuncOpConverter.
-class BufferAssignmentCallOpConverter
-    : public BufferAssignmentOpConversionPattern<CallOp> {
+/// BufferizeFuncOpConverter.
+class BufferizeCallOpConverter : public BufferizeOpConversionPattern<CallOp> {
 public:
-  using BufferAssignmentOpConversionPattern<
-      CallOp>::BufferAssignmentOpConversionPattern;
+  using BufferizeOpConversionPattern<CallOp>::BufferizeOpConversionPattern;
 
   /// Performs the actual rewriting step.
   LogicalResult matchAndRewrite(CallOp, ArrayRef<Value>,
@@ -258,14 +253,15 @@ public:
 /// assignment.
 template <typename ReturnOpSourceTy, typename ReturnOpTargetTy,
           typename CopyOpTy>
-static void populateWithBufferAssignmentOpConversionPatterns(
-    MLIRContext *context, BufferAssignmentTypeConverter &converter,
-    OwningRewritePatternList &patterns) {
+static void
+populateWithBufferizeOpConversionPatterns(MLIRContext *context,
+                                          BufferizeTypeConverter &converter,
+                                          OwningRewritePatternList &patterns) {
   // clang-format off
   patterns.insert<
-    BufferAssignmentCallOpConverter,
-    BufferAssignmentFuncOpConverter,
-    BufferAssignmentReturnOpConverter
+    BufferizeCallOpConverter,
+    BufferizeFuncOpConverter,
+    BufferizeReturnOpConverter
       <ReturnOpSourceTy, ReturnOpTargetTy, CopyOpTy>
   >(context, converter);
   // clang-format on

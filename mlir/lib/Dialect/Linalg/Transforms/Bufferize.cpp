@@ -122,8 +122,7 @@ allocateBuffersForResults(Location loc, LinalgOp linalgOp,
 
 // Specialization for `linalg::GenericOp`.
 /// A pattern to convert Generic Linalg operations which work on tensors to
-/// use buffers. A buffer is allocated using BufferAssignmentPlacer for
-/// each operation result. BufferPlacement pass should be later used to move
+/// use buffers. BufferPlacement pass should be later used to move
 /// Alloc operations to the correct positions and insert the missing Dealloc
 /// operations in the correct places.
 static void finalizeBufferAllocation(ConversionPatternRewriter &rewriter,
@@ -294,7 +293,7 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
   void runOnOperation() override {
     MLIRContext &context = getContext();
     ConversionTarget target(context);
-    BufferAssignmentTypeConverter converter;
+    BufferizeTypeConverter converter;
 
     // Mark all Standard operations legal.
     target.addLegalDialect<StandardOpsDialect, vector::VectorDialect>();
@@ -344,13 +343,13 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     });
 
     converter.setResultConversionKind<RankedTensorType, MemRefType>(
-        BufferAssignmentTypeConverter::AppendToArgumentsList);
+        BufferizeTypeConverter::AppendToArgumentsList);
 
     OwningRewritePatternList patterns;
     populateLinalgBufferizePatterns(&context, converter, patterns);
-    populateWithBufferAssignmentOpConversionPatterns<
-        mlir::ReturnOp, mlir::ReturnOp, linalg::CopyOp>(&context, converter,
-                                                        patterns);
+    populateWithBufferizeOpConversionPatterns<mlir::ReturnOp, mlir::ReturnOp,
+                                              linalg::CopyOp>(
+        &context, converter, patterns);
     if (failed(applyFullConversion(this->getOperation(), target, patterns)))
       this->signalPassFailure();
   }
@@ -361,7 +360,7 @@ std::unique_ptr<OperationPass<ModuleOp>> mlir::createLinalgBufferizePass() {
   return std::make_unique<LinalgBufferizePass>();
 }
 void mlir::linalg::populateLinalgBufferizePatterns(
-    MLIRContext *context, BufferAssignmentTypeConverter &converter,
+    MLIRContext *context, BufferizeTypeConverter &converter,
     OwningRewritePatternList &patterns) {
   patterns.insert<
       // clang-format off
