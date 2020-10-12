@@ -2140,8 +2140,7 @@ static Instruction *matchFunnelShift(Instruction &Or) {
 
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
   Function *F = Intrinsic::getDeclaration(Or.getModule(), IID, Or.getType());
-  return IntrinsicInst::Create(
-      F, {IsFshl ? ShVal0 : ShVal1, IsFshl ? ShVal1 : ShVal0, ShAmt});
+  return IntrinsicInst::Create(F, {ShVal0, ShVal1, ShAmt});
 }
 
 /// Attempt to combine or(zext(x),shl(zext(y),bw/2) concat packing patterns.
