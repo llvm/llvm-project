@@ -16,6 +16,7 @@
 #include "URI.h"
 #include "index/BackgroundIndexLoader.h"
 #include "index/FileIndex.h"
+#include "index/Index.h"
 #include "index/IndexAction.h"
 #include "index/MemIndex.h"
 #include "index/Ref.h"
@@ -414,5 +415,10 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
   return {TUsToIndex.begin(), TUsToIndex.end()};
 }
 
+void BackgroundIndex::profile(MemoryTree &MT) const {
+  IndexedSymbols.profile(MT.child("symbols"));
+  // We don't want to mix memory used by index and symbols, so call base class.
+  MT.child("index").addUsage(SwapIndex::estimateMemoryUsage());
+}
 } // namespace clangd
 } // namespace clang
