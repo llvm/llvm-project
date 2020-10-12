@@ -15,6 +15,7 @@
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/FIRBuilder.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Lower/Support/BoxValue.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -120,8 +121,8 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
           if (const auto &gangNumValue =
                   std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
                       x.t)) {
-            gangNum = converter.genExprValue(
-                *Fortran::semantics::GetExpr(gangNumValue.value()));
+            gangNum = fir::getBase(converter.genExprValue(
+                *Fortran::semantics::GetExpr(gangNumValue.value())));
           }
           if (const auto &gangStaticValue =
                   std::get<std::optional<Fortran::parser::AccSizeExpr>>(x.t)) {
@@ -129,8 +130,8 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
                 std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
                     gangStaticValue.value().t);
             if (expr) {
-              gangStatic =
-                  converter.genExprValue(*Fortran::semantics::GetExpr(*expr));
+              gangStatic = fir::getBase(
+                  converter.genExprValue(*Fortran::semantics::GetExpr(*expr)));
             } else {
               // * was passed as value and will be represented as a -1 constant
               // integer.
@@ -145,16 +146,16 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
                      std::get_if<Fortran::parser::AccClause::Worker>(
                          &clause.u)) {
         if (workerClause->v) {
-          workerNum = converter.genExprValue(
-              *Fortran::semantics::GetExpr(*workerClause->v));
+          workerNum = fir::getBase(converter.genExprValue(
+              *Fortran::semantics::GetExpr(*workerClause->v)));
         }
         executionMapping |= mlir::acc::OpenACCExecMapping::WORKER;
       } else if (const auto *vectorClause =
                      std::get_if<Fortran::parser::AccClause::Vector>(
                          &clause.u)) {
         if (vectorClause->v) {
-          vectorLength = converter.genExprValue(
-              *Fortran::semantics::GetExpr(*vectorClause->v));
+          vectorLength = fir::getBase(converter.genExprValue(
+              *Fortran::semantics::GetExpr(*vectorClause->v)));
         }
         executionMapping |= mlir::acc::OpenACCExecMapping::VECTOR;
       } else if (const auto *tileClause =
@@ -165,8 +166,8 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
               std::get<std::optional<Fortran::parser::ScalarIntConstantExpr>>(
                   accTileExpr.t);
           if (expr) {
-            tileOperands.push_back(
-                converter.genExprValue(*Fortran::semantics::GetExpr(*expr)));
+            tileOperands.push_back(fir::getBase(
+                converter.genExprValue(*Fortran::semantics::GetExpr(*expr))));
           } else {
             // * was passed as value and will be represented as a -1 constant
             // integer.
