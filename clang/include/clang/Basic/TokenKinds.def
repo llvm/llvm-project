@@ -698,7 +698,6 @@ ALIAS("__char16_t"   , char16_t     , KEYCXX)
 ALIAS("__char32_t"   , char32_t     , KEYCXX)
 KEYWORD(__builtin_bit_cast          , KEYALL)
 KEYWORD(__builtin_available         , KEYALL)
-KEYWORD(__builtin_unique_stable_name, KEYALL)
 
 // Clang-specific keywords enabled only in testing.
 TESTING_KEYWORD(__unknown_anytype , KEYALL)
