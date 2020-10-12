@@ -557,12 +557,12 @@ static Instruction *combineLoadToOperationType(InstCombinerImpl &IC,
   const DataLayout &DL = IC.getDataLayout();
 
   // Fold away bit casts of the loaded value by loading the desired type.
-  // We can do this for BitCastInsts as well as casts from and to pointer types,
-  // as long as those are noops (i.e., the source or dest type have the same
-  // bitwidth as the target's pointers).
+  // Note that we should not do this for pointer<->integer casts,
+  // because that would result in type punning.
   if (LI.hasOneUse())
     if (auto* CI = dyn_cast<CastInst>(LI.user_back()))
-      if (CI->isNoopCast(DL))
+      if (CI->isNoopCast(DL) && LI.getType()->isPtrOrPtrVectorTy() ==
+                                    CI->getDestTy()->isPtrOrPtrVectorTy())
         if (!LI.isAtomic() || isSupportedAtomicType(CI->getDestTy())) {
           LoadInst *NewLoad = IC.combineLoadToNewType(LI, CI->getDestTy());
           CI->replaceAllUsesWith(NewLoad);
