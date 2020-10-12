@@ -147,6 +147,12 @@ class BitfieldsTestCase(TestBase):
         self.expect("v/x large_packed", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=["a = 0x0000000cbbbbaaaa", "b = 0x0000000dffffeee"])
 
+        # Check reading a bitfield through a pointer in various ways (PR47743)
+        self.expect("v/x large_packed_ptr->b",
+                substrs=["large_packed_ptr->b = 0x0000000dffffeeee"])
+        self.expect("v/x large_packed_ptr[0].b",
+                substrs=["large_packed_ptr[0].b = 0x0000000dffffeeee"])
+
     # BitFields exhibit crashes in record layout on Windows
     # (http://llvm.org/pr21800)
     @skipIfWindows
