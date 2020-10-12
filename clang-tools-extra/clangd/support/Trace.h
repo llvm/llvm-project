@@ -128,6 +128,9 @@ std::unique_ptr<EventTracer> createCSVMetricTracer(llvm::raw_ostream &OS);
 /// Records a single instant event, associated with the current thread.
 void log(const llvm::Twine &Name);
 
+/// Returns true if there is an active tracer.
+bool enabled();
+
 /// Records an event whose duration is the lifetime of the Span object.
 /// This lifetime is extended when the span's context is reused.
 ///
