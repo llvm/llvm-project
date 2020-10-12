@@ -4700,9 +4700,13 @@ emitLoadSRsrcFromVGPRLoop(const SIInstrInfo &TII, MachineRegisterInfo &MRI,
             .addImm(AMDGPU::sub1);
 
     Register NewCondReg = MRI.createVirtualRegister(BoolXExecRC);
-    BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U64_e64), NewCondReg)
-           .addReg(CurReg)
-           .addReg(VRsrc, VRsrcUndef, TRI->getSubRegFromChannel(Idx, 2));
+    auto Cmp =
+        BuildMI(LoopBB, I, DL, TII.get(AMDGPU::V_CMP_EQ_U64_e64), NewCondReg)
+            .addReg(CurReg);
+    if (NumSubRegs <= 2)
+      Cmp.addReg(VRsrc);
+    else
+      Cmp.addReg(VRsrc, VRsrcUndef, TRI->getSubRegFromChannel(Idx, 2));
 
     // Combine the comparision results with AND.
     if (CondReg == AMDGPU::NoRegister) // First.
@@ -4752,13 +4756,20 @@ emitLoadSRsrcFromVGPRLoop(const SIInstrInfo &TII, MachineRegisterInfo &MRI,
 // Build a waterfall loop around \p MI, replacing the VGPR \p Rsrc register
 // with SGPRs by iterating over all unique values across all lanes.
 static void loadSRsrcFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
-                              MachineOperand &Rsrc, MachineDominatorTree *MDT) {
+                              MachineOperand &Rsrc, MachineDominatorTree *MDT,
+                              MachineBasicBlock::iterator Begin = nullptr,
+                              MachineBasicBlock::iterator End = nullptr) {
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  MachineBasicBlock::iterator I(&MI);
+  if (!Begin.isValid())
+    Begin = &MI;
+  if (!End.isValid()) {
+    End = &MI;
+    ++End;
+  }
   const DebugLoc &DL = MI.getDebugLoc();
   unsigned Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
   unsigned MovExecOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
@@ -4767,13 +4778,17 @@ static void loadSRsrcFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
   Register SaveExec = MRI.createVirtualRegister(BoolXExecRC);
 
   // Save the EXEC mask
-  BuildMI(MBB, I, DL, TII.get(MovExecOpc), SaveExec).addReg(Exec);
+  BuildMI(MBB, Begin, DL, TII.get(MovExecOpc), SaveExec).addReg(Exec);
 
   // Killed uses in the instruction we are waterfalling around will be
   // incorrect due to the added control-flow.
-  for (auto &MO : MI.uses()) {
-    if (MO.isReg() && MO.isUse()) {
-      MRI.clearKillFlags(MO.getReg());
+  MachineBasicBlock::iterator AfterMI = MI;
+  ++AfterMI;
+  for (auto I = Begin; I != AfterMI; I++) {
+    for (auto &MO : I->uses()) {
+      if (MO.isReg() && MO.isUse()) {
+        MRI.clearKillFlags(MO.getReg());
+      }
     }
   }
 
@@ -4790,11 +4805,11 @@ static void loadSRsrcFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
   LoopBB->addSuccessor(LoopBB);
   LoopBB->addSuccessor(RemainderBB);
 
-  // Move MI to the LoopBB, and the remainder of the block to RemainderBB.
-  MachineBasicBlock::iterator J = I++;
+  // Move Begin to MI to the LoopBB, and the remainder of the block to
+  // RemainderBB.
   RemainderBB->transferSuccessorsAndUpdatePHIs(&MBB);
-  RemainderBB->splice(RemainderBB->begin(), &MBB, I, MBB.end());
-  LoopBB->splice(LoopBB->begin(), &MBB, J);
+  RemainderBB->splice(RemainderBB->begin(), &MBB, End, MBB.end());
+  LoopBB->splice(LoopBB->begin(), &MBB, Begin, MBB.end());
 
   MBB.addSuccessor(LoopBB);
 
@@ -5014,6 +5029,34 @@ void SIInstrInfo::legalizeOperands(MachineInstr &MI,
       loadSRsrcFromVGPR(*this, MI, *SSamp, MDT);
 
     return;
+  }
+
+  // Legalize SI_CALL
+  if (MI.getOpcode() == AMDGPU::SI_CALL_ISEL) {
+    MachineOperand *Dest = &MI.getOperand(0);
+    if (!RI.isSGPRClass(MRI.getRegClass(Dest->getReg()))) {
+      // Move everything between ADJCALLSTACKUP and ADJCALLSTACKDOWN and
+      // following copies, we also need to move copies from and to physical
+      // registers into the loop block.
+      const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+      unsigned FrameSetupOpcode = TII.getCallFrameSetupOpcode();
+      unsigned FrameDestroyOpcode = TII.getCallFrameDestroyOpcode();
+
+      // Also move the copies to physical registers into the loop block
+      MachineBasicBlock &MBB = *MI.getParent();
+      MachineBasicBlock::iterator Start(&MI);
+      while (Start->getOpcode() != FrameSetupOpcode)
+        --Start;
+      MachineBasicBlock::iterator End(&MI);
+      while (End->getOpcode() != FrameDestroyOpcode)
+        ++End;
+      // Also include following copies of the return value
+      ++End;
+      while (End != MBB.end() && End->isCopy() && End->getOperand(1).isReg() &&
+             MI.definesRegister(End->getOperand(1).getReg()))
+        ++End;
+      loadSRsrcFromVGPR(*this, MI, *Dest, MDT, Start, End);
+    }
   }
 
   // Legalize MUBUF* instructions.
