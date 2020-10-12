@@ -1982,11 +1982,18 @@ static bool HasSameBase(const LValue &A, const LValue &B) {
     return false;
 
   if (A.getLValueBase().getOpaqueValue() !=
-      B.getLValueBase().getOpaqueValue())
-    return false;
+      B.getLValueBase().getOpaqueValue()) {
+    const Decl *ADecl = GetLValueBaseDecl(A);
+    if (!ADecl)
+      return false;
+    const Decl *BDecl = GetLValueBaseDecl(B);
+    if (!BDecl || ADecl->getCanonicalDecl() != BDecl->getCanonicalDecl())
+      return false;
+  }
 
-  return A.getLValueCallIndex() == B.getLValueCallIndex() &&
-         A.getLValueVersion() == B.getLValueVersion();
+  return IsGlobalLValue(A.getLValueBase()) ||
+         (A.getLValueCallIndex() == B.getLValueCallIndex() &&
+          A.getLValueVersion() == B.getLValueVersion());
 }
 
 static void NoteLValueLocation(EvalInfo &Info, APValue::LValueBase Base) {
@@ -3156,8 +3163,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
 
   // If we're currently evaluating the initializer of this declaration, use that
   // in-flight value.
-  if (declaresSameEntity(Info.EvaluatingDecl.dyn_cast<const ValueDecl *>(),
-                         VD)) {
+  if (Info.EvaluatingDecl.dyn_cast<const ValueDecl*>() == VD) {
     Result = Info.EvaluatingDeclValue;
     return true;
   }

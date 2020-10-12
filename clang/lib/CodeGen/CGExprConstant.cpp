@@ -1877,10 +1877,6 @@ ConstantLValue
 ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
   // Handle values.
   if (const ValueDecl *D = base.dyn_cast<const ValueDecl*>()) {
-    // The constant always points to the canonical declaration. We want to look
-    // at properties of the most recent declaration at the point of emission.
-    D = cast<ValueDecl>(D->getMostRecentDecl());
-
     if (D->hasAttr<WeakRefAttr>())
       return CGM.GetWeakRefReference(D).getPointer();
 
