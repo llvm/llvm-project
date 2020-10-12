@@ -7,12 +7,6 @@ template <typename T>
 void clang_analyzer_dump(const T *);
 void clang_analyzer_warnIfReached();
 
-void builtin_unique_stable_name_of_lambda() {
-  auto y = [] {};
-  clang_analyzer_dump(__builtin_unique_stable_name(y));
-  // expected-warning@-1 {{&Element{"_ZTSZ36builtin_unique_stable_name_of_lambdavEUlvE11_12",0 S64b,char}}}
-}
-
 template <typename T, auto Value, typename U>
 void func(U param) {
   clang_analyzer_dump(__func__);
@@ -54,11 +48,6 @@ void foo() {
 #endif
 
   func<struct Class, 42ull>('b'); // instantiate template
-}
-
-void test_builtin_unique_stable_name(int a) {
-  clang_analyzer_dump(__builtin_unique_stable_name(a));
-  // expected-warning@-1 {{&Element{"_ZTSi",0 S64b,char}}}
 }
 
 struct A {

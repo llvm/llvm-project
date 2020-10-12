@@ -1930,17 +1930,13 @@ public:
 /// [C99 6.4.2.2] - A predefined identifier such as __func__.
 class PredefinedExpr final
     : public Expr,
-      private llvm::TrailingObjects<PredefinedExpr, Stmt *, Expr *,
-                                    TypeSourceInfo *> {
+      private llvm::TrailingObjects<PredefinedExpr, Stmt *> {
   friend class ASTStmtReader;
   friend TrailingObjects;
 
   // PredefinedExpr is optionally followed by a single trailing
   // "Stmt *" for the predefined identifier. It is present if and only if
   // hasFunctionName() is true and is always a "StringLiteral *".
-  // It can also be followed by a Expr* in the case of a
-  // __builtin_unique_stable_name with an expression, or TypeSourceInfo * if
-  // __builtin_unique_stable_name with a type.
 
 public:
   enum IdentKind {
@@ -1953,18 +1949,12 @@ public:
     PrettyFunction,
     /// The same as PrettyFunction, except that the
     /// 'virtual' keyword is omitted for virtual member functions.
-    PrettyFunctionNoVirtual,
-    UniqueStableNameType,
-    UniqueStableNameExpr,
+    PrettyFunctionNoVirtual
   };
 
 private:
   PredefinedExpr(SourceLocation L, QualType FNTy, IdentKind IK,
                  StringLiteral *SL);
-  PredefinedExpr(SourceLocation L, QualType FNTy, IdentKind IK,
-                 TypeSourceInfo *Info);
-  PredefinedExpr(SourceLocation L, QualType FNTy, IdentKind IK,
-                 Expr *E);
 
   explicit PredefinedExpr(EmptyShell Empty, bool HasFunctionName);
 
@@ -1977,39 +1967,10 @@ private:
     *getTrailingObjects<Stmt *>() = SL;
   }
 
-  void setTypeSourceInfo(TypeSourceInfo *Info) {
-    assert(!hasFunctionName() && getIdentKind() == UniqueStableNameType &&
-           "TypeSourceInfo only valid for UniqueStableName of a Type");
-    *getTrailingObjects<TypeSourceInfo *>() = Info;
-  }
-
-  void setExpr(Expr *E) {
-    assert(!hasFunctionName() && getIdentKind() == UniqueStableNameExpr &&
-           "TypeSourceInfo only valid for UniqueStableName of n Expression.");
-    *getTrailingObjects<Expr *>() = E;
-  }
-
-  size_t numTrailingObjects(OverloadToken<Stmt *>) const {
-    return hasFunctionName();
-  }
-
-  size_t numTrailingObjects(OverloadToken<TypeSourceInfo *>) const {
-    return getIdentKind() == UniqueStableNameType && !hasFunctionName();
-  }
-  size_t numTrailingObjects(OverloadToken<Expr *>) const {
-    return getIdentKind() == UniqueStableNameExpr && !hasFunctionName();
-  }
-
 public:
   /// Create a PredefinedExpr.
   static PredefinedExpr *Create(const ASTContext &Ctx, SourceLocation L,
                                 QualType FNTy, IdentKind IK, StringLiteral *SL);
-  static PredefinedExpr *Create(const ASTContext &Ctx, SourceLocation L,
-                                QualType FNTy, IdentKind IK, StringLiteral *SL,
-                                TypeSourceInfo *Info);
-  static PredefinedExpr *Create(const ASTContext &Ctx, SourceLocation L,
-                                QualType FNTy, IdentKind IK, StringLiteral *SL,
-                                Expr *E);
 
   /// Create an empty PredefinedExpr.
   static PredefinedExpr *CreateEmpty(const ASTContext &Ctx,
@@ -2034,34 +1995,8 @@ public:
                : nullptr;
   }
 
-  TypeSourceInfo *getTypeSourceInfo() {
-    assert(!hasFunctionName() && getIdentKind() == UniqueStableNameType &&
-           "TypeSourceInfo only valid for UniqueStableName of a Type");
-    return *getTrailingObjects<TypeSourceInfo *>();
-  }
-
-  const TypeSourceInfo *getTypeSourceInfo() const {
-    assert(!hasFunctionName() && getIdentKind() == UniqueStableNameType &&
-           "TypeSourceInfo only valid for UniqueStableName of a Type");
-    return *getTrailingObjects<TypeSourceInfo *>();
-  }
-
-  Expr *getExpr() {
-    assert(!hasFunctionName() && getIdentKind() == UniqueStableNameExpr &&
-           "TypeSourceInfo only valid for UniqueStableName of n Expression.");
-    return *getTrailingObjects<Expr *>();
-  }
-
-  const Expr *getExpr() const {
-    assert(!hasFunctionName() && getIdentKind() == UniqueStableNameExpr &&
-           "TypeSourceInfo only valid for UniqueStableName of n Expression.");
-    return *getTrailingObjects<Expr *>();
-  }
-
   static StringRef getIdentKindName(IdentKind IK);
   static std::string ComputeName(IdentKind IK, const Decl *CurrentDecl);
-  static std::string ComputeName(ASTContext &Context, IdentKind IK,
-                                 const QualType Ty);
 
   SourceLocation getBeginLoc() const { return getLocation(); }
   SourceLocation getEndLoc() const { return getLocation(); }
