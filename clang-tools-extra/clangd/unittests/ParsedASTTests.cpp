@@ -60,6 +60,10 @@ MATCHER_P(DeclNamed, Name, "") {
 MATCHER_P(DeclKind, Kind, "") {
   if (NamedDecl *ND = dyn_cast<NamedDecl>(arg))
     return ND->getDeclKindName() == Kind;
+  if (auto *Stream = result_listener->stream()) {
+    llvm::raw_os_ostream OS(*Stream);
+    arg->dump(OS);
+  }
   return false;
 }
 
@@ -110,10 +114,10 @@ TEST(ParsedASTTest, TopLevelDecls) {
     template <typename> bool X = true;
   )cpp";
   auto AST = TU.build();
-  EXPECT_THAT(
-      AST.getLocalTopLevelDecls(),
-      ElementsAreArray({AllOf(DeclNamed("main"), DeclKind("Function")),
-                        AllOf(DeclNamed("X"), DeclKind("VarTemplate"))}));
+  EXPECT_THAT(AST.getLocalTopLevelDecls(),
+              testing::UnorderedElementsAreArray(
+                  {AllOf(DeclNamed("main"), DeclKind("Function")),
+                   AllOf(DeclNamed("X"), DeclKind("VarTemplate"))}));
 }
 
 TEST(ParsedASTTest, DoesNotGetIncludedTopDecls) {
