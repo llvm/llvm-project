@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_MEMORYTREE_H_
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_MEMORYTREE_H_
 
+#include "Trace.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -79,6 +80,11 @@ private:
   /// Edges from current node to its children. Keys are the labels for edges.
   llvm::DenseMap<llvm::StringRef, MemoryTree> Children;
 };
+
+/// Records total memory usage of each node under \p Out. Labels are edges on
+/// the path joined with ".", starting with \p RootName.
+void record(const MemoryTree &MT, std::string RootName,
+            const trace::Metric &Out);
 
 } // namespace clangd
 } // namespace clang
