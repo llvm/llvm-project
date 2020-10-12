@@ -30,6 +30,7 @@ all_categories = {
     'expression': 'Tests related to the expression parser',
     'flakey': 'Flakey test cases, i.e. tests that do not reliably pass at each execution',
     'gmodules': 'Tests that can be run with -gmodules debug information',
+    'instrumentation-runtime': 'Tests for the instrumentation runtime plugins',
     'libc++': 'Test for libc++ data formatters',
     'libstdcxx': 'Test for libstdcxx data formatters',
     'lldb-server': 'Tests related to lldb-server',
