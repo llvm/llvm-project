@@ -170,14 +170,14 @@ define void @f3(i8* %x_addr, i8* %y_addr, i32* %tmp_addr) {
   %int5 = add i32 %int0, 5
   %int.zext = zext i32 %int5 to i64
 ; CHECK:  %int.zext = zext i32 %int5 to i64
-; CHECK-NEXT:  -->  (1 + (zext i32 (4 + (trunc [16 x i8]* @z_addr to i32)) to i64))<nuw><nsw> U: [1,4294967294) S: [1,4294967297)
+; CHECK-NEXT:  -->  (1 + (zext i32 (4 + %int0) to i64))<nuw><nsw> U: [1,4294967294) S: [1,4294967297)
 
   %ptr_noalign = bitcast [16 x i8]* @z_addr_noalign to i8*
   %int0_na = ptrtoint i8* %ptr_noalign to i32
   %int5_na = add i32 %int0_na, 5
   %int.zext_na = zext i32 %int5_na to i64
 ; CHECK:  %int.zext_na = zext i32 %int5_na to i64
-; CHECK-NEXT:  -->  (zext i32 (5 + (trunc [16 x i8]* @z_addr_noalign to i32)) to i64) U: [0,4294967296) S: [0,4294967296)
+; CHECK-NEXT:  -->  (zext i32 (5 + %int0_na) to i64) U: [0,4294967296) S: [0,4294967296)
 
   %tmp = load i32, i32* %tmp_addr
   %mul = and i32 %tmp, -4
