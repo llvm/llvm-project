@@ -397,6 +397,10 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     uint64_t Shift = RHSKnown.getConstant().getZExtValue();
     LLVM_DEBUG(dbgs() << '[' << Depth << "] Shift is " << Shift << '\n');
 
+    // Guard against oversized shift amounts
+    if (Shift >= MRI.getType(MI.getOperand(1).getReg()).getScalarSizeInBits())
+      break;
+
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
                          Depth + 1);
 
