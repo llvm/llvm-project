@@ -8494,7 +8494,7 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
                                     SourceLocation ColonLoc,
                                     Expr *CondExpr, Expr *LHSExpr,
                                     Expr *RHSExpr) {
-  if (!getLangOpts().CPlusPlus) {
+  if (!Context.isDependenceAllowed()) {
     // C cannot handle TypoExpr nodes in the condition because it
     // doesn't handle dependent types properly, so make sure any TypoExprs have
     // been dealt with before checking the operands.
