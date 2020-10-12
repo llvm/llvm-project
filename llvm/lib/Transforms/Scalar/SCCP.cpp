@@ -2105,7 +2105,7 @@ bool llvm::runIPSCCP(
         // poison nor undef. Poison will be outside any range and currently
         // values outside of the specified range cause immediate undefined
         // behavior.
-        if (!isGuaranteedNotToBeUndefOrPoison(CB, CB))
+        if (!isGuaranteedNotToBeUndefOrPoison(CB, nullptr, CB))
           continue;
 
         // Do not touch existing metadata for now.
