@@ -214,9 +214,7 @@ namespace llvm {
     }
 
     /// Return true if the bit size is a multiple of 8.
-    bool isByteSized() const {
-      return getSizeInBits().isByteSized();
-    }
+    bool isByteSized() const { return getSizeInBits().isKnownMultipleOf(8); }
 
     /// Return true if the size is a power-of-two number of bytes.
     bool isRound() const {
