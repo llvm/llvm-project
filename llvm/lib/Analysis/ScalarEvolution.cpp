@@ -3505,15 +3505,15 @@ const SCEV *ScalarEvolution::getUMinExpr(SmallVectorImpl<const SCEV *> &Ops) {
 }
 
 const SCEV *ScalarEvolution::getSizeOfExpr(Type *IntTy, Type *AllocTy) {
+  // We can bypass creating a target-independent
+  // constant expression and then folding it back into a ConstantInt.
+  // This is just a compile-time optimization.
   if (isa<ScalableVectorType>(AllocTy)) {
     Constant *NullPtr = Constant::getNullValue(AllocTy->getPointerTo());
     Constant *One = ConstantInt::get(IntTy, 1);
     Constant *GEP = ConstantExpr::getGetElementPtr(AllocTy, NullPtr, One);
-    return getUnknown(ConstantExpr::getPtrToInt(GEP, IntTy));
+    return getSCEV(ConstantExpr::getPtrToInt(GEP, IntTy));
   }
-  // We can bypass creating a target-independent
-  // constant expression and then folding it back into a ConstantInt.
-  // This is just a compile-time optimization.
   return getConstant(IntTy, getDataLayout().getTypeAllocSize(AllocTy));
 }
 
@@ -6301,36 +6301,6 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       return getSCEV(U->getOperand(0));
     break;
 
-  case Instruction::PtrToInt: {
-    // It's tempting to handle inttoptr and ptrtoint as no-ops,
-    // however this can lead to pointer expressions which cannot safely be
-    // expanded to GEPs because ScalarEvolution doesn't respect
-    // the GEP aliasing rules when simplifying integer expressions.
-    //
-    // However, given
-    //   %x = ???
-    //   %y = ptrtoint %x
-    //   %z = ptrtoint %x
-    // it is safe to say that %y and %z are the same thing.
-    //
-    // So instead of modelling the cast itself as unknown,
-    // since the casts are transparent within SCEV,
-    // we can at least model the casts original value as unknow instead.
-
-    // BUT, there's caveat. If we simply model %x as unknown, unrelated uses
-    // of %x will also see it as unknown, which is obviously bad.
-    // So we can only do this iff %x would be modelled as unknown anyways.
-    auto *OpSCEV = getSCEV(U->getOperand(0));
-    if (isa<SCEVUnknown>(OpSCEV))
-      return getTruncateOrZeroExtend(OpSCEV, U->getType());
-    // If we can model the operand, however, we must fallback to modelling
-    // the whole cast as unknown instead.
-    LLVM_FALLTHROUGH;
-  }
-  case Instruction::IntToPtr:
-    // We can't do this for inttoptr at all, however.
-    return getUnknown(V);
-
   case Instruction::SDiv:
     // If both operands are non-negative, this is just an udiv.
     if (isKnownNonNegative(getSCEV(U->getOperand(0))) &&
@@ -6344,6 +6314,11 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         isKnownNonNegative(getSCEV(U->getOperand(1))))
       return getURemExpr(getSCEV(U->getOperand(0)), getSCEV(U->getOperand(1)));
     break;
+
+  // It's tempting to handle inttoptr and ptrtoint as no-ops, however this can
+  // lead to pointer expressions which cannot safely be expanded to GEPs,
+  // because ScalarEvolution doesn't respect the GEP aliasing rules when
+  // simplifying integer expressions.
 
   case Instruction::GetElementPtr:
     return createNodeForGEP(cast<GEPOperator>(U));
