@@ -99,6 +99,7 @@ add_unittest(ClangdUnitTests ClangdTests
   support/ContextTests.cpp
   support/FunctionTests.cpp
   support/MarkupTests.cpp
+  support/MemoryTreeTests.cpp
   support/ThreadingTests.cpp
   support/TestTracer.cpp
   support/TraceTests.cpp
