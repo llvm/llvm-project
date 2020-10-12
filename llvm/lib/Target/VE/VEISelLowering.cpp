@@ -758,6 +758,15 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   }
   /// } Floating-point Ops
 
+  /// Floating-point math functions {
+
+  // VE doesn't have following floating point math functions.
+  for (MVT VT : MVT::fp_valuetypes()) {
+    setOperationAction(ISD::FCOPYSIGN, VT, Expand);
+  }
+
+  /// } Floating-point math functions
+
   setStackPointerRegisterToSaveRestore(VE::SX11);
 
   // We have target-specific dag combine patterns for the following nodes:
