@@ -34,7 +34,7 @@ namespace utils {
 ///  public:
 ///   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
 ///                            Preprocessor *ModuleExpanderPP) override {
-///     Inserter.registerPreprocessor();
+///     Inserter.registerPreprocessor(PP);
 ///   }
 ///
 ///   void registerMatchers(ast_matchers::MatchFinder* Finder) override { ... }
@@ -42,8 +42,7 @@ namespace utils {
 ///   void check(
 ///       const ast_matchers::MatchFinder::MatchResult& Result) override {
 ///     ...
-///     Inserter.createMainFileIncludeInsertion("path/to/Header.h",
-///                                             /*IsAngled=*/false);
+///     Inserter.createMainFileIncludeInsertion("path/to/Header.h");
 ///     ...
 ///   }
 ///
