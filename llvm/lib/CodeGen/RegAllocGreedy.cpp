@@ -3234,7 +3234,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
 
   initializeCSRCost();
 
-  VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, VRM, *Loops, *MBFI);
+  VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, *VRM, *Loops, *MBFI);
 
   VRAI->calculateSpillWeightsAndHints();
 
