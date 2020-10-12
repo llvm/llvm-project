@@ -173,3 +173,142 @@ func @bar() {
 // know that things will play nicely at the C ABI boundary).
 func @print_memref_f32(%ptr : tensor<*xf32>)
 // CHECK-LABEL: func @print_memref_f32(memref<*xf32>)
+
+// -----
+
+#accesses = [
+  affine_map<(i, j, k) -> (j, i, k)>,
+  affine_map<(i, j, k) -> (i, j)>
+]
+
+#trait = {
+  indexing_maps = #accesses,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+func @generic_with_init_tensor(%arg0: tensor<2x3x4xvector<3x4xi4>>,
+  %arg1: tensor<3x2xf32>) -> (tensor<3x2xf32>) {
+
+  %0 = linalg.generic #trait
+    ins(%arg0 : tensor<2x3x4xvector<3x4xi4>>)
+   init(%arg1 : tensor<3x2xf32>) {
+    ^bb(%v0: vector<3x4xi4>, %v1: f32) :
+      %f0 = constant 0.0 : f32
+      linalg.yield %f0 : f32
+  } -> tensor<3x2xf32>
+
+  return %0 : tensor<3x2xf32>
+}
+// CHECK-LABEL: func @generic_with_init_tensor
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<2x3x4xvector<3x4xi4>>, %[[ARG1:.*]]: memref<3x2xf32>, %[[RESULT0:.*]]: memref<3x2xf32>) {
+//  CHECK-NEXT: linalg.generic
+//       CHECK: linalg.copy(%[[ARG1]], %[[RESULT0]])
+//  CHECK-NEXT: return
+//   CHECK-NOT: %
+
+// -----
+
+#accesses = [
+  affine_map<(i, j, k) -> (j, i, k)>,
+  affine_map<(i, j, k) -> (i, j)>
+]
+
+#trait = {
+  indexing_maps = #accesses,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+func @init_tensor_with_2_uses(%arg0: tensor<2x3x4xvector<3x4xi4>>,
+  %arg1: tensor<3x2xf32>) -> (tensor<3x2xf32>, tensor<3x2xf32>) {
+
+  %0 = linalg.generic #trait
+    ins(%arg0 : tensor<2x3x4xvector<3x4xi4>>)
+   init(%arg1 : tensor<3x2xf32>) {
+    ^bb(%v0: vector<3x4xi4>, %v1: f32) :
+      %f0 = constant 0.0 : f32
+      linalg.yield %f0 : f32
+  } -> tensor<3x2xf32>
+
+  %1 = linalg.generic #trait
+    ins(%arg0 : tensor<2x3x4xvector<3x4xi4>>)
+   init(%arg1 : tensor<3x2xf32>) {
+    ^bb(%v0: vector<3x4xi4>, %v1: f32) :
+      %f0 = constant 0.0 : f32
+      linalg.yield %f0 : f32
+  } -> tensor<3x2xf32>
+
+  return %0, %1 : tensor<3x2xf32>, tensor<3x2xf32>
+}
+// CHECK-LABEL: func @init_tensor_with_2_uses
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<2x3x4xvector<3x4xi4>>, %[[ARG1:.*]]: memref<3x2xf32>, %[[RESULT0:.*]]: memref<3x2xf32>, %[[RESULT1:.*]]: memref<3x2xf32>) {
+//  CHECK-NEXT: %[[ALLOC0:.*]] = alloc
+//  CHECK-NEXT: linalg.copy(%[[ARG1]], %[[ALLOC0]])
+//  CHECK-NEXT: linalg.generic
+//  CHECK-SAME: outs(%[[ALLOC0]]
+//  CHECK-NEXT: ^bb
+//  CHECK-NEXT:   constant
+//  CHECK-NEXT:   yield
+//  CHECK-NEXT: }
+//  CHECK-NEXT: %[[ALLOC1:.*]] = alloc
+//  CHECK-NEXT: linalg.copy(%[[ARG1]], %[[ALLOC1]])
+//  CHECK-NEXT: linalg.generic
+//  CHECK-SAME: outs(%[[ALLOC1]]
+//  CHECK-NEXT: ^bb
+//  CHECK-NEXT:   constant
+//  CHECK-NEXT:   yield
+//  CHECK-NEXT: }
+//  CHECK-NEXT: linalg.copy(%[[ALLOC0]], %[[RESULT0]])
+//  CHECK-NEXT: dealloc
+//  CHECK-NEXT: linalg.copy(%[[ALLOC1]], %[[RESULT1]])
+//  CHECK-NEXT: dealloc
+//  CHECK-NEXT: return
+//   CHECK-NOT: %
+
+// -----
+
+#accesses = [
+  affine_map<(i, j, k) -> (j, i, k)>,
+  affine_map<(i, j, k) -> (i, j)>
+]
+
+#trait = {
+  indexing_maps = #accesses,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+func @init_tensor_with_1_use_def_chain(%arg0: tensor<2x3x4xvector<3x4xi4>>,
+  %arg1: tensor<3x2xf32>) -> (tensor<3x2xf32>) {
+
+  %0 = linalg.generic #trait
+    ins(%arg0 : tensor<2x3x4xvector<3x4xi4>>)
+   init(%arg1 : tensor<3x2xf32>) {
+    ^bb(%v0: vector<3x4xi4>, %v1: f32) :
+      %f0 = constant 0.0 : f32
+      linalg.yield %f0 : f32
+  } -> tensor<3x2xf32>
+
+  %1 = linalg.generic #trait
+    ins(%arg0 : tensor<2x3x4xvector<3x4xi4>>)
+   init(%0 : tensor<3x2xf32>) {
+    ^bb(%v0: vector<3x4xi4>, %v1: f32) :
+      %f0 = constant 0.0 : f32
+      linalg.yield %f0 : f32
+  } -> tensor<3x2xf32>
+
+  return %1 : tensor<3x2xf32>
+}
+// CHECK-LABEL: func @init_tensor_with_1_use_def_chain
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<2x3x4xvector<3x4xi4>>, %[[ARG1:.*]]: memref<3x2xf32>, %[[RESULT0:.*]]: memref<3x2xf32>) {
+//  CHECK-NEXT: linalg.generic
+//  CHECK-NEXT: ^bb
+//  CHECK-NEXT:   constant
+//  CHECK-NEXT:   yield
+//  CHECK-NEXT: }
+//  CHECK-NEXT: linalg.generic
+//  CHECK-NEXT: ^bb
+//  CHECK-NEXT:   constant
+//  CHECK-NEXT:   yield
+//  CHECK-NEXT: }
+//  CHECK-NEXT: linalg.copy(%[[ARG1]], %[[RESULT0]])
+//  CHECK-NEXT: return
+//   CHECK-NOT: %
