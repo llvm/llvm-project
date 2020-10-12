@@ -66,7 +66,7 @@ void runtime_test()
 	assert( std::countl_zero(T(130)) == dig - 8);
 }
 
-int main()
+int main(int, char**)
 {
 
     {
@@ -169,4 +169,5 @@ int main()
 	}
 #endif
 
+    return 0;
 }

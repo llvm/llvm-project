@@ -9,7 +9,7 @@ define arm_aapcs_vfpcc float @fadd_v2f32(<2 x float> %x, float %y) {
 ; CHECK-NEXT:    vadd.f32 s0, s4, s0
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v2f32(float %y, <2 x float> %x)
+  %z = call fast float @llvm.vector.reduce.fadd.f32.v2f32(float %y, <2 x float> %x)
   ret float %z
 }
 
@@ -30,7 +30,7 @@ define arm_aapcs_vfpcc float @fadd_v4f32(<4 x float> %x, float %y) {
 ; CHECK-NOFP-NEXT:    vadd.f32 s0, s4, s0
 ; CHECK-NOFP-NEXT:    bx lr
 entry:
-  %z = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float %y, <4 x float> %x)
+  %z = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float %y, <4 x float> %x)
   ret float %z
 }
 
@@ -56,7 +56,7 @@ define arm_aapcs_vfpcc float @fadd_v8f32(<8 x float> %x, float %y) {
 ; CHECK-NOFP-NEXT:    vadd.f32 s0, s8, s0
 ; CHECK-NOFP-NEXT:    bx lr
 entry:
-  %z = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32(float %y, <8 x float> %x)
+  %z = call fast float @llvm.vector.reduce.fadd.f32.v8f32(float %y, <8 x float> %x)
   ret float %z
 }
 
@@ -71,7 +71,7 @@ define arm_aapcs_vfpcc void @fadd_v2f16(<2 x half> %x, half* %yy) {
 ; CHECK-NEXT:    bx lr
 entry:
   %y = load half, half* %yy
-  %z = call fast half @llvm.experimental.vector.reduce.v2.fadd.f16.v2f16(half %y, <2 x half> %x)
+  %z = call fast half @llvm.vector.reduce.fadd.f16.v2f16(half %y, <2 x half> %x)
   store half %z, half* %yy
   ret void
 }
@@ -102,7 +102,7 @@ define arm_aapcs_vfpcc void @fadd_v4f16(<4 x half> %x, half* %yy) {
 ; CHECK-NOFP-NEXT:    bx lr
 entry:
   %y = load half, half* %yy
-  %z = call fast half @llvm.experimental.vector.reduce.v2.fadd.f16.v4f16(half %y, <4 x half> %x)
+  %z = call fast half @llvm.vector.reduce.fadd.f16.v4f16(half %y, <4 x half> %x)
   store half %z, half* %yy
   ret void
 }
@@ -139,7 +139,7 @@ define arm_aapcs_vfpcc void @fadd_v8f16(<8 x half> %x, half* %yy) {
 ; CHECK-NOFP-NEXT:    bx lr
 entry:
   %y = load half, half* %yy
-  %z = call fast half @llvm.experimental.vector.reduce.v2.fadd.f16.v8f16(half %y, <8 x half> %x)
+  %z = call fast half @llvm.vector.reduce.fadd.f16.v8f16(half %y, <8 x half> %x)
   store half %z, half* %yy
   ret void
 }
@@ -189,7 +189,7 @@ define arm_aapcs_vfpcc void @fadd_v16f16(<16 x half> %x, half* %yy) {
 ; CHECK-NOFP-NEXT:    bx lr
 entry:
   %y = load half, half* %yy
-  %z = call fast half @llvm.experimental.vector.reduce.v2.fadd.f16.v16f16(half %y, <16 x half> %x)
+  %z = call fast half @llvm.vector.reduce.fadd.f16.v16f16(half %y, <16 x half> %x)
   store half %z, half* %yy
   ret void
 }
@@ -200,7 +200,7 @@ define arm_aapcs_vfpcc double @fadd_v1f64(<1 x double> %x, double %y) {
 ; CHECK-NEXT:    vadd.f64 d0, d1, d0
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call fast double @llvm.experimental.vector.reduce.v2.fadd.f64.v1f64(double %y, <1 x double> %x)
+  %z = call fast double @llvm.vector.reduce.fadd.f64.v1f64(double %y, <1 x double> %x)
   ret double %z
 }
 
@@ -211,7 +211,7 @@ define arm_aapcs_vfpcc double @fadd_v2f64(<2 x double> %x, double %y) {
 ; CHECK-NEXT:    vadd.f64 d0, d2, d0
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call fast double @llvm.experimental.vector.reduce.v2.fadd.f64.v2f64(double %y, <2 x double> %x)
+  %z = call fast double @llvm.vector.reduce.fadd.f64.v2f64(double %y, <2 x double> %x)
   ret double %z
 }
 
@@ -224,7 +224,7 @@ define arm_aapcs_vfpcc double @fadd_v4f64(<4 x double> %x, double %y) {
 ; CHECK-NEXT:    vadd.f64 d0, d4, d0
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call fast double @llvm.experimental.vector.reduce.v2.fadd.f64.v4f64(double %y, <4 x double> %x)
+  %z = call fast double @llvm.vector.reduce.fadd.f64.v4f64(double %y, <4 x double> %x)
   ret double %z
 }
 
@@ -235,7 +235,7 @@ define arm_aapcs_vfpcc float @fadd_v2f32_nofast(<2 x float> %x, float %y) {
 ; CHECK-NEXT:    vadd.f32 s0, s4, s1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call float @llvm.experimental.vector.reduce.v2.fadd.f32.v2f32(float %y, <2 x float> %x)
+  %z = call float @llvm.vector.reduce.fadd.f32.v2f32(float %y, <2 x float> %x)
   ret float %z
 }
 
@@ -248,7 +248,7 @@ define arm_aapcs_vfpcc float @fadd_v4f32_nofast(<4 x float> %x, float %y) {
 ; CHECK-NEXT:    vadd.f32 s0, s4, s3
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float %y, <4 x float> %x)
+  %z = call float @llvm.vector.reduce.fadd.f32.v4f32(float %y, <4 x float> %x)
   ret float %z
 }
 
@@ -265,7 +265,7 @@ define arm_aapcs_vfpcc float @fadd_v8f32_nofast(<8 x float> %x, float %y) {
 ; CHECK-NEXT:    vadd.f32 s0, s0, s7
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32(float %y, <8 x float> %x)
+  %z = call float @llvm.vector.reduce.fadd.f32.v8f32(float %y, <8 x float> %x)
   ret float %z
 }
 
@@ -283,7 +283,7 @@ define arm_aapcs_vfpcc void @fadd_v4f16_nofast(<4 x half> %x, half* %yy) {
 ; CHECK-NEXT:    bx lr
 entry:
   %y = load half, half* %yy
-  %z = call half @llvm.experimental.vector.reduce.v2.fadd.f16.v4f16(half %y, <4 x half> %x)
+  %z = call half @llvm.vector.reduce.fadd.f16.v4f16(half %y, <4 x half> %x)
   store half %z, half* %yy
   ret void
 }
@@ -308,7 +308,7 @@ define arm_aapcs_vfpcc void @fadd_v8f16_nofast(<8 x half> %x, half* %yy) {
 ; CHECK-NEXT:    bx lr
 entry:
   %y = load half, half* %yy
-  %z = call half @llvm.experimental.vector.reduce.v2.fadd.f16.v8f16(half %y, <8 x half> %x)
+  %z = call half @llvm.vector.reduce.fadd.f16.v8f16(half %y, <8 x half> %x)
   store half %z, half* %yy
   ret void
 }
@@ -345,7 +345,7 @@ define arm_aapcs_vfpcc void @fadd_v16f16_nofast(<16 x half> %x, half* %yy) {
 ; CHECK-NEXT:    bx lr
 entry:
   %y = load half, half* %yy
-  %z = call half @llvm.experimental.vector.reduce.v2.fadd.f16.v16f16(half %y, <16 x half> %x)
+  %z = call half @llvm.vector.reduce.fadd.f16.v16f16(half %y, <16 x half> %x)
   store half %z, half* %yy
   ret void
 }
@@ -356,7 +356,7 @@ define arm_aapcs_vfpcc double @fadd_v1f64_nofast(<1 x double> %x, double %y) {
 ; CHECK-NEXT:    vadd.f64 d0, d1, d0
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call double @llvm.experimental.vector.reduce.v2.fadd.f64.v1f64(double %y, <1 x double> %x)
+  %z = call double @llvm.vector.reduce.fadd.f64.v1f64(double %y, <1 x double> %x)
   ret double %z
 }
 
@@ -367,7 +367,7 @@ define arm_aapcs_vfpcc double @fadd_v2f64_nofast(<2 x double> %x, double %y) {
 ; CHECK-NEXT:    vadd.f64 d0, d2, d1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call double @llvm.experimental.vector.reduce.v2.fadd.f64.v2f64(double %y, <2 x double> %x)
+  %z = call double @llvm.vector.reduce.fadd.f64.v2f64(double %y, <2 x double> %x)
   ret double %z
 }
 
@@ -380,17 +380,17 @@ define arm_aapcs_vfpcc double @fadd_v4f64_nofast(<4 x double> %x, double %y) {
 ; CHECK-NEXT:    vadd.f64 d0, d0, d3
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call double @llvm.experimental.vector.reduce.v2.fadd.f64.v4f64(double %y, <4 x double> %x)
+  %z = call double @llvm.vector.reduce.fadd.f64.v4f64(double %y, <4 x double> %x)
   ret double %z
 }
 
-declare double @llvm.experimental.vector.reduce.v2.fadd.f64.v1f64(double, <1 x double>)
-declare double @llvm.experimental.vector.reduce.v2.fadd.f64.v2f64(double, <2 x double>)
-declare double @llvm.experimental.vector.reduce.v2.fadd.f64.v4f64(double, <4 x double>)
-declare float @llvm.experimental.vector.reduce.v2.fadd.f32.v2f32(float, <2 x float>)
-declare float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float, <4 x float>)
-declare float @llvm.experimental.vector.reduce.v2.fadd.f32.v8f32(float, <8 x float>)
-declare half @llvm.experimental.vector.reduce.v2.fadd.f16.v16f16(half, <16 x half>)
-declare half @llvm.experimental.vector.reduce.v2.fadd.f16.v2f16(half, <2 x half>)
-declare half @llvm.experimental.vector.reduce.v2.fadd.f16.v4f16(half, <4 x half>)
-declare half @llvm.experimental.vector.reduce.v2.fadd.f16.v8f16(half, <8 x half>)
+declare double @llvm.vector.reduce.fadd.f64.v1f64(double, <1 x double>)
+declare double @llvm.vector.reduce.fadd.f64.v2f64(double, <2 x double>)
+declare double @llvm.vector.reduce.fadd.f64.v4f64(double, <4 x double>)
+declare float @llvm.vector.reduce.fadd.f32.v2f32(float, <2 x float>)
+declare float @llvm.vector.reduce.fadd.f32.v4f32(float, <4 x float>)
+declare float @llvm.vector.reduce.fadd.f32.v8f32(float, <8 x float>)
+declare half @llvm.vector.reduce.fadd.f16.v16f16(half, <16 x half>)
+declare half @llvm.vector.reduce.fadd.f16.v2f16(half, <2 x half>)
+declare half @llvm.vector.reduce.fadd.f16.v4f16(half, <4 x half>)
+declare half @llvm.vector.reduce.fadd.f16.v8f16(half, <8 x half>)

@@ -228,6 +228,17 @@ define <8 x i16> @avgr_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
   ret <8 x i16> %a
 }
 
+; CHECK-LABEL: q15mulr_sat_s_v8i16:
+; SIMD128-NEXT: .functype q15mulr_sat_s_v8i16 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i16x8.q15mulr_sat_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <8 x i16> @llvm.wasm.q15mulr.saturate.signed(<8 x i16>, <8 x i16>)
+define <8 x i16> @q15mulr_sat_s_v8i16(<8 x i16> %x, <8 x i16> %y) {
+  %a = call <8 x i16> @llvm.wasm.q15mulr.saturate.signed(<8 x i16> %x,
+                                                         <8 x i16> %y)
+  ret <8 x i16> %a
+}
+
 ; CHECK-LABEL: any_v8i16:
 ; SIMD128-NEXT: .functype any_v8i16 (v128) -> (i32){{$}}
 ; SIMD128-NEXT: i16x8.any_true $push[[R:[0-9]+]]=, $0{{$}}

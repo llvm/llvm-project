@@ -2189,13 +2189,14 @@ void CodeGenSchedClass::dump(const CodeGenSchedModels* SchedModels) const {
       dbgs().indent(10);
     }
   }
-  dbgs() << "\n  ProcIdx: "; dumpIdxVec(ProcIndices); dbgs() << '\n';
+  dbgs() << "\n  ProcIdx: "; dumpIdxVec(ProcIndices);
   if (!Transitions.empty()) {
     dbgs() << "\n Transitions for Proc ";
     for (const CodeGenSchedTransition &Transition : Transitions) {
       dumpIdxVec(Transition.ProcIndices);
     }
   }
+  dbgs() << '\n';
 }
 
 void PredTransitions::dump() const {

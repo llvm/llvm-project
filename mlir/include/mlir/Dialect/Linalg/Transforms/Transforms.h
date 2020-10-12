@@ -16,6 +16,9 @@
 #include "llvm/ADT/SmallBitVector.h"
 
 namespace mlir {
+
+class BufferAssignmentTypeConverter;
+
 namespace linalg {
 
 struct LinalgFusionOptions;
@@ -29,6 +32,7 @@ using LinalgLoops = SmallVector<Operation *, 4>;
 struct TiledLinalgOp {
   LinalgOp op;
   SmallVector<Operation *, 8> loops;
+  SmallVector<Value, 4> tensorResults;
 };
 
 struct TiledAndFusedLinalgOps {
@@ -43,6 +47,12 @@ struct TiledAndFusedLinalgOps {
 void populateConvVectorizationPatterns(
     MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns,
     ArrayRef<int64_t> tileSizes);
+
+/// Populates the given list with patterns to convert Linalg operations on
+/// tensors to buffers.
+void populateConvertLinalgOnTensorsToBuffersPatterns(
+    MLIRContext *context, BufferAssignmentTypeConverter *converter,
+    OwningRewritePatternList *patterns);
 
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
@@ -245,6 +255,16 @@ Optional<LinalgOp> promoteSubViews(OpBuilder &b, LinalgOp op,
                                    LinalgPromotionOptions options,
                                    OperationFolder *folder = nullptr);
 
+/// Creates a number of ranges equal to the number of dimensions in the `map`.
+/// The returned ranges correspond to the loop ranges, in the proper order, for
+/// which new loops will be created.
+/// The function supports only maps that are invertible and have results of type
+/// DimExpr or (DimExpr + DimExpr - SymbolExpr floordiv ConstExpr).
+/// It expects a non-inverted, concatenated map and last values in
+/// allViewSizes will be applied to the symbols in the map if it contains any.
+SmallVector<Range, 4> emitLoopRanges(OpBuilder &b, Location loc, AffineMap map,
+                                     ValueRange viewSizes);
+
 /// Emit a suitable vector form for a Linalg op with fully static shape.
 void vectorizeLinalgOp(OpBuilder &builder, Operation *op);
 
@@ -327,9 +347,7 @@ struct LinalgTilingOptions {
   /// values must not fold away when tiling. Otherwise, use a more robust
   /// `tileSizeComputationFunction`.
   LinalgTilingOptions &setTileSizes(SmallVector<Value, 4> ts) {
-    tileSizeComputationFunction = [=](OpBuilder &, Operation *) {
-      return ts;
-    };
+    tileSizeComputationFunction = [=](OpBuilder &, Operation *) { return ts; };
     return *this;
   }
   /// Convenience function to set the `tileSizeComputationFunction` to a
@@ -371,8 +389,9 @@ struct LinalgBaseTilingPattern : public RewritePattern {
                           LinalgTilingOptions options,
                           LinalgMarker marker = LinalgMarker(),
                           PatternBenefit benefit = 1);
-  LogicalResult matchAndRewrite(Operation *op,
-                                PatternRewriter &rewriter) const override;
+  LogicalResult
+  matchAndRewriteBase(Operation *op, PatternRewriter &rewriter,
+                      SmallVectorImpl<Value> &tensorResults) const;
 
 private:
   /// LinalgTransformMarker handles special attribute manipulations.
@@ -390,9 +409,14 @@ struct LinalgTilingPattern : public LinalgBaseTilingPattern {
                                 marker, benefit) {}
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(LinalgBaseTilingPattern::matchAndRewrite(op, rewriter)))
+    SmallVector<Value, 4> tensorResults;
+    if (failed(LinalgBaseTilingPattern::matchAndRewriteBase(op, rewriter,
+                                                            tensorResults)))
       return failure();
-    rewriter.eraseOp(op);
+    if (tensorResults.empty())
+      rewriter.eraseOp(op);
+    else
+      rewriter.replaceOp(op, tensorResults);
     return success();
   }
 };
@@ -722,6 +746,56 @@ public:
   LogicalResult matchAndRewrite(ConvOp minOp,
                                 PatternRewriter &rewriter) const override;
 };
+
+//===----------------------------------------------------------------------===//
+// Patterns to convert a LinalgOp to std.call @external library implementation.
+//===----------------------------------------------------------------------===//
+// Create a new call to the type-canonicalized `LinalgOp::getLibraryCallName()`
+// function. The implementation of the function can be either in the same module
+// or in an externally linked library.
+// This is a generic entry point for all LinalgOp, except for CopyOp and
+// IndexedGenericOp, for which omre specialized patterns are provided.
+class LinalgOpToLibraryCallRewrite : public RewritePattern {
+public:
+  LinalgOpToLibraryCallRewrite()
+      : RewritePattern(/*benefit=*/1, MatchAnyOpTypeTag()) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Rewrite pattern specialization for CopyOp, kicks in when both input and
+/// output permutations are left unspecified or are the identity.
+class CopyOpToLibraryCallRewrite : public OpRewritePattern<CopyOp> {
+public:
+  using OpRewritePattern<CopyOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(CopyOp op,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Rewrite CopyOp with permutations into a sequence of TransposeOp and
+/// permutation-free CopyOp. This interplays with TransposeOpConversion and
+/// LinalgConversion<CopyOp> to create a path to the LLVM dialect.
+class CopyTransposeRewrite : public OpRewritePattern<CopyOp> {
+public:
+  using OpRewritePattern<CopyOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(CopyOp op,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Conversion pattern specialization for IndexedGenericOp, has special handling
+/// for the extra index operands.
+class IndexedGenericOpToLibraryCallRewrite
+    : public OpRewritePattern<IndexedGenericOp> {
+public:
+  using OpRewritePattern<IndexedGenericOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(IndexedGenericOp op,
+                                PatternRewriter &rewriter) const override;
+};
+
+/// Populate the given list with patterns that convert from Linalg to Standard.
+void populateLinalgToStandardConversionPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *ctx);
 
 //===----------------------------------------------------------------------===//
 // Support for staged pattern application.

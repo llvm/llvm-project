@@ -198,7 +198,7 @@ void test10 ()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test1();
     test2();
@@ -210,4 +210,6 @@ int main()
     test8();
     test9();
     test10();
+
+    return 0;
 }

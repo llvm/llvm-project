@@ -20,22 +20,22 @@ s_load_dword s1, s[2:3], 0xff
 // VI:	s_load_dword s1, s[2:3], 0xff   ; encoding: [0x41,0x00,0x02,0xc0,0xff,0x00,0x00,0x00]
 
 s_load_dword s1, s[2:3], 0x100
-// NOSI: error: instruction not supported on this GPU
+// NOSI: error: operands are not valid for this GPU or mode
 // CI: s_load_dword s1, s[2:3], 0x100 ; encoding: [0xff,0x82,0x00,0xc0,0x00,0x01,0x00,0x00]
 // VI: s_load_dword s1, s[2:3], 0x100 ; encoding: [0x41,0x00,0x02,0xc0,0x00,0x01,0x00,0x00]
 
 s_load_dword s1, s[2:3], 0xfffff
-// NOSI: error: instruction not supported on this GPU
+// NOSI: error: operands are not valid for this GPU or mode
 // CI: s_load_dword s1, s[2:3], 0xfffff ; encoding: [0xff,0x82,0x00,0xc0,0xff,0xff,0x0f,0x00]
 // VI: s_load_dword s1, s[2:3], 0xfffff ; encoding: [0x41,0x00,0x02,0xc0,0xff,0xff,0x0f,0x00]
 
 s_load_dword s1, s[2:3], 0x100000
-// NOSI: error: instruction not supported on this GPU
+// NOSI: error: operands are not valid for this GPU or mode
 // CI: s_load_dword s1, s[2:3], 0x100000 ; encoding: [0xff,0x82,0x00,0xc0,0x00,0x00,0x10,0x00]
 // NOVI: error: expected a 20-bit unsigned offset
 
 s_load_dword s1, s[2:3], 0xffffffff
-// NOSI: error: instruction not supported on this GPU
+// NOSI: error: operands are not valid for this GPU or mode
 // CI: s_load_dword s1, s[2:3], 0xffffffff ; encoding: [0xff,0x82,0x00,0xc0,0xff,0xff,0xff,0xff]
 // NOVI: error: expected a 20-bit unsigned offset
 

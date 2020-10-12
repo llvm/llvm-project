@@ -374,7 +374,6 @@ LogicalResult BlockArgsVerifier<IndexedGenericOp>::verify(IndexedGenericOp op,
 
 template <typename GenericOpType>
 static LogicalResult verifyGenericOp(GenericOpType op) {
-  auto nInputViews = op.getNumInputs();
   auto nLoops = op.getNumLoops();
 
   if (op.inputs().size() + op.output_buffers().size() +
@@ -398,14 +397,19 @@ static LogicalResult verifyGenericOp(GenericOpType op) {
     expectedNumSymbols = op.getShapedType(index).getRank();
   }
 
+  if (op.indexing_maps().size() != op.getNumInputsAndOutputs())
+    return op.emitOpError("expected the number of indexing_map (")
+           << op.indexing_maps().size()
+           << ") to be equal to the number of inputs and outputs ("
+           << op.getNumInputsAndOutputs() << ")";
+
   SmallVector<AffineMap, 4> indexingMaps;
   indexingMaps.reserve(op.indexing_maps().size());
   for (auto en : llvm::enumerate(op.indexing_maps())) {
     auto idx = en.index();
     auto m = en.value().template cast<AffineMapAttr>().getValue();
     indexingMaps.push_back(m); // Save reference to map for further checks.
-    auto view = (idx < nInputViews) ? op.getInputShapedType(idx)
-                                    : op.getOutputShapedType(idx - nInputViews);
+    auto view = op.getShapedType(idx);
 
     if (m.getNumSymbols() != expectedNumSymbols)
       return op.emitOpError("expected the number of symbols in indexing_map #")

@@ -20,6 +20,8 @@
 
 #cmakedefine01 HAVE_PPOLL
 
+#cmakedefine01 HAVE_PTSNAME_R
+
 #cmakedefine01 HAVE_SIGACTION
 
 #cmakedefine01 HAVE_PROCESS_VM_READV

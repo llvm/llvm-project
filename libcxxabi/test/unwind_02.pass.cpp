@@ -73,7 +73,7 @@ void f1() throw (long, char, int, double)
     C c;
 }
 
-int main()
+int main(int, char**)
 {
     try
     {
@@ -99,4 +99,6 @@ int main()
     assert(A::count == 0);
     assert(B::count == 0);
     assert(C::count == 0);
+
+    return 0;
 }

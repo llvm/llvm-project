@@ -128,6 +128,12 @@ public:
                            int SPAdj, unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 
+  /// findDeadCallerSavedReg - Return a caller-saved register that isn't live
+  /// when it reaches the "return" instruction. We can then pop a stack object
+  /// to this register without worry about clobbering it.
+  unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator &MBBI) const;
+
   // Debug information queries.
   Register getFrameRegister(const MachineFunction &MF) const override;
   unsigned getPtrSizedFrameRegister(const MachineFunction &MF) const;

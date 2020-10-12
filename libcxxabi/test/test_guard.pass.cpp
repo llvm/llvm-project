@@ -136,7 +136,7 @@ namespace test5 {
 }
 #endif /* _LIBCXXABI_HAS_NO_THREADS */
 
-int main()
+int main(int, char**)
 {
     test1::test();
     test2::test();
@@ -145,4 +145,6 @@ int main()
     test4::test();
     test5::test();
 #endif
+
+    return 0;
 }

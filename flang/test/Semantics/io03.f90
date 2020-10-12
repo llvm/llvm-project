@@ -178,6 +178,6 @@ subroutine s(aa, n)
   !ERROR: Input variable 'n' must be definable
   read(*, *) n
 
-  !ERROR: Whole assumed size array 'aa' may not be an input item
+  !ERROR: Whole assumed-size array 'aa' may not appear here without subscripts
   read(*, *) aa
 end

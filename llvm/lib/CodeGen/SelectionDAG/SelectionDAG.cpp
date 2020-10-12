@@ -2310,6 +2310,9 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
   // vector types.
   switch (V.getOpcode()) {
   case ISD::SPLAT_VECTOR:
+    UndefElts = V.getOperand(0).isUndef()
+                    ? APInt::getAllOnesValue(DemandedElts.getBitWidth())
+                    : APInt(DemandedElts.getBitWidth(), 0);
     return true;
   case ISD::ADD:
   case ISD::SUB:

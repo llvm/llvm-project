@@ -2928,6 +2928,14 @@ struct SplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
   }
 };
 
+/// Helper function extracts int64_t from the assumedArrayAttr of IntegerAttr.
+static SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr) {
+  return llvm::to_vector<4>(
+      llvm::map_range(attr.cast<ArrayAttr>(), [](Attribute a) -> int64_t {
+        return a.cast<IntegerAttr>().getInt();
+      }));
+}
+
 /// Conversion pattern that transforms a subview op into:
 ///   1. An `llvm.mlir.undef` operation to create a memref descriptor
 ///   2. Updates to the descriptor to introduce the data ptr, offset, size
@@ -2948,6 +2956,12 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
             .dyn_cast_or_null<LLVM::LLVMType>();
 
     auto viewMemRefType = subViewOp.getType();
+    auto inferredType = SubViewOp::inferResultType(
+                            subViewOp.getSourceType(),
+                            extractFromI64ArrayAttr(subViewOp.static_offsets()),
+                            extractFromI64ArrayAttr(subViewOp.static_sizes()),
+                            extractFromI64ArrayAttr(subViewOp.static_strides()))
+                            .cast<MemRefType>();
     auto targetElementTy =
         typeConverter.convertType(viewMemRefType.getElementType())
             .dyn_cast<LLVM::LLVMType>();
@@ -2959,7 +2973,7 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
     // Extract the offset and strides from the type.
     int64_t offset;
     SmallVector<int64_t, 4> strides;
-    auto successStrides = getStridesAndOffset(viewMemRefType, strides, offset);
+    auto successStrides = getStridesAndOffset(inferredType, strides, offset);
     if (failed(successStrides))
       return failure();
 
@@ -2983,10 +2997,17 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
         extracted);
     targetMemRef.setAlignedPtr(rewriter, loc, bitcastPtr);
 
+    auto shape = viewMemRefType.getShape();
+    auto inferredShape = inferredType.getShape();
+    size_t inferredShapeRank = inferredShape.size();
+    size_t resultShapeRank = shape.size();
+    SmallVector<bool, 4> mask =
+        computeRankReductionMask(inferredShape, shape).getValue();
+
     // Extract strides needed to compute offset.
     SmallVector<Value, 4> strideValues;
-    strideValues.reserve(viewMemRefType.getRank());
-    for (int i = 0, e = viewMemRefType.getRank(); i < e; ++i)
+    strideValues.reserve(inferredShapeRank);
+    for (unsigned i = 0; i < inferredShapeRank; ++i)
       strideValues.push_back(sourceMemRef.stride(rewriter, loc, i));
 
     // Offset.
@@ -2995,7 +3016,7 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
       targetMemRef.setConstantOffset(rewriter, loc, offset);
     } else {
       Value baseOffset = sourceMemRef.offset(rewriter, loc);
-      for (unsigned i = 0, e = viewMemRefType.getRank(); i < e; ++i) {
+      for (unsigned i = 0; i < inferredShapeRank; ++i) {
         Value offset =
             subViewOp.isDynamicOffset(i)
                 ? operands[subViewOp.getIndexOfDynamicOffset(i)]
@@ -3009,14 +3030,18 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
     }
 
     // Update sizes and strides.
-    for (int i = viewMemRefType.getRank() - 1; i >= 0; --i) {
+    for (int i = inferredShapeRank - 1, j = resultShapeRank - 1;
+         i >= 0 && j >= 0; --i) {
+      if (!mask[i])
+        continue;
+
       Value size =
           subViewOp.isDynamicSize(i)
               ? operands[subViewOp.getIndexOfDynamicSize(i)]
               : rewriter.create<LLVM::ConstantOp>(
                     loc, llvmIndexType,
                     rewriter.getI64IntegerAttr(subViewOp.getStaticSize(i)));
-      targetMemRef.setSize(rewriter, loc, i, size);
+      targetMemRef.setSize(rewriter, loc, j, size);
       Value stride;
       if (!ShapedType::isDynamicStrideOrOffset(strides[i])) {
         stride = rewriter.create<LLVM::ConstantOp>(
@@ -3030,7 +3055,8 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
                       rewriter.getI64IntegerAttr(subViewOp.getStaticStride(i)));
         stride = rewriter.create<LLVM::MulOp>(loc, stride, strideValues[i]);
       }
-      targetMemRef.setStride(rewriter, loc, i, stride);
+      targetMemRef.setStride(rewriter, loc, j, stride);
+      j--;
     }
 
     rewriter.replaceOp(op, {targetMemRef});

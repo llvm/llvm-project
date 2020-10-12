@@ -526,6 +526,12 @@ namespace PR45124 {
   __thread b g;
 }
 
+namespace PR47175 {
+  template<typename T> struct A { A(T); T x; };
+  template<typename T> int &&n = A(T()).x;
+  int m = n<int>;
+}
+
 #else
 
 // expected-no-diagnostics

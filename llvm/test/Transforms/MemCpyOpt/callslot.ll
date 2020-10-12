@@ -91,10 +91,9 @@ define void @throw_between_call_and_mempy(i8* dereferenceable(16) %dest.i8) {
 ; CHECK-LABEL: @throw_between_call_and_mempy(
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [16 x i8], align 1
 ; CHECK-NEXT:    [[SRC_I8:%.*]] = bitcast [16 x i8]* [[SRC]] to i8*
-; CHECK-NEXT:    [[DEST_I81:%.*]] = bitcast i8* [[DEST_I8:%.*]] to [16 x i8]*
-; CHECK-NEXT:    [[DEST_I812:%.*]] = bitcast [16 x i8]* [[DEST_I81]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[DEST_I812]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[SRC_I8]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    call void @may_throw() [[ATTR2:#.*]]
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[DEST_I8:%.*]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %src = alloca [16 x i8]
@@ -111,8 +110,9 @@ define void @dest_is_gep_nounwind_call() {
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [8 x i8], align 1
 ; CHECK-NEXT:    [[SRC_I8:%.*]] = bitcast [8 x i8]* [[SRC]] to i8*
 ; CHECK-NEXT:    [[DEST_I8:%.*]] = getelementptr [16 x i8], [16 x i8]* [[DEST]], i64 0, i64 8
-; CHECK-NEXT:    call void @accept_ptr(i8* [[SRC_I8]]) [[ATTR3:#.*]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DEST_I8]], i8* [[SRC_I8]], i64 8, i1 false)
+; CHECK-NEXT:    [[DEST_I81:%.*]] = bitcast i8* [[DEST_I8]] to [8 x i8]*
+; CHECK-NEXT:    [[DEST_I812:%.*]] = bitcast [8 x i8]* [[DEST_I81]] to i8*
+; CHECK-NEXT:    call void @accept_ptr(i8* [[DEST_I812]]) [[ATTR3:#.*]]
 ; CHECK-NEXT:    ret void
 ;
   %dest = alloca [16 x i8]
@@ -159,6 +159,70 @@ define void @dest_is_gep_requires_movement() {
   call void @accept_ptr(i8* %src.i8) nounwind
   %dest.i8 = getelementptr [16 x i8], [16 x i8]* %dest, i64 0, i64 8
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest.i8, i8* %src.i8, i64 8, i1 false)
+  ret void
+}
+
+define void @capture_before_call_argmemonly() {
+; CHECK-LABEL: @capture_before_call_argmemonly(
+; CHECK-NEXT:    [[DEST:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[DEST_I8:%.*]] = bitcast [16 x i8]* [[DEST]] to i8*
+; CHECK-NEXT:    [[SRC_I8:%.*]] = bitcast [16 x i8]* [[SRC]] to i8*
+; CHECK-NEXT:    call void @accept_ptr(i8* [[DEST_I8]])
+; CHECK-NEXT:    [[DEST1:%.*]] = bitcast [16 x i8]* [[DEST]] to i8*
+; CHECK-NEXT:    call void @accept_ptr(i8* [[DEST1]]) [[ATTR4:#.*]]
+; CHECK-NEXT:    ret void
+;
+  %dest = alloca [16 x i8]
+  %src = alloca [16 x i8]
+  %dest.i8 = bitcast [16 x i8]* %dest to i8*
+  %src.i8 = bitcast [16 x i8]* %src to i8*
+  call void @accept_ptr(i8* %dest.i8) ; capture
+  call void @accept_ptr(i8* %src.i8) argmemonly
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest.i8, i8* %src.i8, i64 16, i1 false)
+  ret void
+}
+
+define void @capture_before_call_argmemonly_nounwind() {
+; CHECK-LABEL: @capture_before_call_argmemonly_nounwind(
+; CHECK-NEXT:    [[DEST:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[DEST_I8:%.*]] = bitcast [16 x i8]* [[DEST]] to i8*
+; CHECK-NEXT:    [[SRC_I8:%.*]] = bitcast [16 x i8]* [[SRC]] to i8*
+; CHECK-NEXT:    call void @accept_ptr(i8* [[DEST_I8]])
+; CHECK-NEXT:    [[DEST1:%.*]] = bitcast [16 x i8]* [[DEST]] to i8*
+; CHECK-NEXT:    call void @accept_ptr(i8* [[DEST1]]) [[ATTR5:#.*]]
+; CHECK-NEXT:    ret void
+;
+  %dest = alloca [16 x i8]
+  %src = alloca [16 x i8]
+  %dest.i8 = bitcast [16 x i8]* %dest to i8*
+  %src.i8 = bitcast [16 x i8]* %src to i8*
+  call void @accept_ptr(i8* %dest.i8) ; capture
+  ; NB: argmemonly currently implies willreturn.
+  call void @accept_ptr(i8* %src.i8) argmemonly nounwind
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest.i8, i8* %src.i8, i64 16, i1 false)
+  ret void
+}
+
+define void @capture_before_call_argmemonly_nounwind_willreturn() {
+; CHECK-LABEL: @capture_before_call_argmemonly_nounwind_willreturn(
+; CHECK-NEXT:    [[DEST:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[DEST_I8:%.*]] = bitcast [16 x i8]* [[DEST]] to i8*
+; CHECK-NEXT:    [[SRC_I8:%.*]] = bitcast [16 x i8]* [[SRC]] to i8*
+; CHECK-NEXT:    call void @accept_ptr(i8* [[DEST_I8]])
+; CHECK-NEXT:    [[DEST1:%.*]] = bitcast [16 x i8]* [[DEST]] to i8*
+; CHECK-NEXT:    call void @accept_ptr(i8* [[DEST1]]) [[ATTR0:#.*]]
+; CHECK-NEXT:    ret void
+;
+  %dest = alloca [16 x i8]
+  %src = alloca [16 x i8]
+  %dest.i8 = bitcast [16 x i8]* %dest to i8*
+  %src.i8 = bitcast [16 x i8]* %src to i8*
+  call void @accept_ptr(i8* %dest.i8) ; capture
+  call void @accept_ptr(i8* %src.i8) argmemonly nounwind willreturn
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest.i8, i8* %src.i8, i64 16, i1 false)
   ret void
 }
 

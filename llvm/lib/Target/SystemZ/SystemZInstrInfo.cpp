@@ -1196,7 +1196,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     if (RC == &SystemZ::VR32BitRegClass || RC == &SystemZ::VR64BitRegClass) {
       Register Reg = MI.getOperand(I).getReg();
       Register PhysReg = Register::isVirtualRegister(Reg)
-                             ? (VRM ? VRM->getPhys(Reg) : Register())
+                             ? (VRM ? Register(VRM->getPhys(Reg)) : Register())
                              : Reg;
       if (!PhysReg ||
           !(SystemZ::FP32BitRegClass.contains(PhysReg) ||
@@ -1242,7 +1242,8 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     else {
       Register DstReg = MI.getOperand(0).getReg();
       Register DstPhys =
-          (Register::isVirtualRegister(DstReg) ? VRM->getPhys(DstReg) : DstReg);
+          (Register::isVirtualRegister(DstReg) ? Register(VRM->getPhys(DstReg))
+                                               : DstReg);
       Register SrcReg = (OpNum == 2 ? MI.getOperand(1).getReg()
                                     : ((OpNum == 1 && MI.isCommutable())
                                            ? MI.getOperand(2).getReg()

@@ -251,20 +251,13 @@ std::vector<const Object::value_type *> sortedElements(const Object &O) {
 // Prints a one-line version of a value that isn't our main focus.
 // We interleave writes to OS and JOS, exploiting the lack of extra buffering.
 // This is OK as we own the implementation.
-// FIXME: once we have a "write custom serialized value" API, use it here.
-void abbreviate(const Value &V, OStream &JOS, raw_ostream &OS) {
+void abbreviate(const Value &V, OStream &JOS) {
   switch (V.kind()) {
   case Value::Array:
-    JOS.array([&] {
-      if (!V.getAsArray()->empty())
-        OS << " ... ";
-    });
+    JOS.rawValue(V.getAsArray()->empty() ? "[]" : "[ ... ]");
     break;
   case Value::Object:
-    JOS.object([&] {
-      if (!V.getAsObject()->empty())
-        OS << " ... ";
-    });
+    JOS.rawValue(V.getAsObject()->empty() ? "{}" : "{ ... }");
     break;
   case Value::String: {
     llvm::StringRef S = *V.getAsString();
@@ -284,19 +277,19 @@ void abbreviate(const Value &V, OStream &JOS, raw_ostream &OS) {
 
 // Prints a semi-expanded version of a value that is our main focus.
 // Array/Object entries are printed, but not recursively as they may be huge.
-void abbreviateChildren(const Value &V, OStream &JOS, raw_ostream &OS) {
+void abbreviateChildren(const Value &V, OStream &JOS) {
   switch (V.kind()) {
   case Value::Array:
     JOS.array([&] {
       for (const auto &I : *V.getAsArray())
-        abbreviate(I, JOS, OS);
+        abbreviate(I, JOS);
     });
     break;
   case Value::Object:
     JOS.object([&] {
       for (const auto *KV : sortedElements(*V.getAsObject())) {
         JOS.attributeBegin(KV->first);
-        abbreviate(KV->second, JOS, OS);
+        abbreviate(KV->second, JOS);
         JOS.attributeEnd();
       }
     });
@@ -322,7 +315,7 @@ void Path::Root::printErrorContext(const Value &R, raw_ostream &OS) const {
       std::string Comment = "error: ";
       Comment.append(ErrorMessage.data(), ErrorMessage.size());
       JOS.comment(Comment);
-      abbreviateChildren(V, JOS, OS);
+      abbreviateChildren(V, JOS);
     };
     if (Path.empty()) // We reached our target.
       return HighlightCurrent();
@@ -339,7 +332,7 @@ void Path::Root::printErrorContext(const Value &R, raw_ostream &OS) const {
           if (FieldName.equals(KV->first))
             Recurse(KV->second, Path.drop_back(), Recurse);
           else
-            abbreviate(KV->second, JOS, OS);
+            abbreviate(KV->second, JOS);
           JOS.attributeEnd();
         }
       });
@@ -354,7 +347,7 @@ void Path::Root::printErrorContext(const Value &R, raw_ostream &OS) const {
           if (Current++ == S.index())
             Recurse(V, Path.drop_back(), Recurse);
           else
-            abbreviate(V, JOS, OS);
+            abbreviate(V, JOS);
         }
       });
     }
@@ -891,6 +884,18 @@ void llvm::json::OStream::attributeEnd() {
   assert(PendingComment.empty());
   Stack.pop_back();
   assert(Stack.back().Ctx == Object);
+}
+
+raw_ostream &llvm::json::OStream::rawValueBegin() {
+  valueBegin();
+  Stack.emplace_back();
+  Stack.back().Ctx = RawValue;
+  return OS;
+}
+
+void llvm::json::OStream::rawValueEnd() {
+  assert(Stack.back().Ctx == RawValue);
+  Stack.pop_back();
 }
 
 } // namespace json

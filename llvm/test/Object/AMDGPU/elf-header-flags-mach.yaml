@@ -100,6 +100,15 @@
 # RUN: yaml2obj --docnum=34 %s -o %t.o.34
 # RUN: llvm-readobj -s -file-headers %t.o.34 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX1010 %s
 # RUN: obj2yaml %t.o.34 | FileCheck --check-prefixes=YAML-GFX1010 %s
+# RUN: yaml2obj --docnum=35 %s -o %t.o.35
+# RUN: llvm-readobj -S --file-headers %t.o.35 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX602 %s
+# RUN: obj2yaml %t.o.35 | FileCheck --check-prefixes=YAML-GFX602 %s
+# RUN: yaml2obj --docnum=36 %s -o %t.o.36
+# RUN: llvm-readobj -S --file-headers %t.o.36 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX705 %s
+# RUN: obj2yaml %t.o.36 | FileCheck --check-prefixes=YAML-GFX705 %s
+# RUN: yaml2obj --docnum=37 %s -o %t.o.37
+# RUN: llvm-readobj -S --file-headers %t.o.37 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX805 %s
+# RUN: obj2yaml %t.o.37 | FileCheck --check-prefixes=YAML-GFX805 %s
 
 # ELF-ALL:     Flags [
 # ELF-R600:      EF_AMDGPU_MACH_R600_R600     (0x1)
@@ -136,6 +145,9 @@
 # ELF-GFX908:    EF_AMDGPU_MACH_AMDGCN_GFX908 (0x30)
 # ELF-GFX909:    EF_AMDGPU_MACH_AMDGCN_GFX909 (0x31)
 # ELF-GFX1010:   EF_AMDGPU_MACH_AMDGCN_GFX1010 (0x33)
+# ELF-GFX602:    EF_AMDGPU_MACH_AMDGCN_GFX602 (0x3A)
+# ELF-GFX705:    EF_AMDGPU_MACH_AMDGCN_GFX705 (0x3B)
+# ELF-GFX805:    EF_AMDGPU_MACH_AMDGCN_GFX805 (0x3C)
 # ELF-ALL:     ]
 
 # YAML-R600:    Flags: [ EF_AMDGPU_MACH_R600_R600 ]
@@ -156,14 +168,17 @@
 # YAML-TURKS:   Flags: [ EF_AMDGPU_MACH_R600_TURKS ]
 # YAML-GFX600:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX600 ]
 # YAML-GFX601:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX601 ]
+# YAML-GFX602:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX602 ]
 # YAML-GFX700:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX700 ]
 # YAML-GFX701:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX701 ]
 # YAML-GFX702:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX702 ]
 # YAML-GFX703:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX703 ]
 # YAML-GFX704:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX704 ]
+# YAML-GFX705:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX705 ]
 # YAML-GFX801:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX801 ]
 # YAML-GFX802:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX802 ]
 # YAML-GFX803:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX803 ]
+# YAML-GFX805:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX805 ]
 # YAML-GFX810:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX810 ]
 # YAML-GFX900:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX900 ]
 # YAML-GFX902:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX902 ]
@@ -545,5 +560,38 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_AMDGPU
   Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX1010 ]
+...
+
+# Doc35
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_NONE
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX602 ]
+...
+
+# Doc36
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_NONE
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX705 ]
+...
+
+# Doc37
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_NONE
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX805 ]
 ...
 

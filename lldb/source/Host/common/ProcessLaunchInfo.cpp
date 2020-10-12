@@ -222,7 +222,7 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "PTY::OpenFirstAvailablePrimary failed");
   }
-  const FileSpec secondary_file_spec(m_pty->GetSecondaryName(nullptr, 0));
+  const FileSpec secondary_file_spec(m_pty->GetSecondaryName());
 
   // Only use the secondary tty if we don't have anything specified for
   // input and don't have an action for stdin

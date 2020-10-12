@@ -95,14 +95,9 @@ void TransformerClangTidyCheck::check(
     case transformer::EditKind::Range:
       Diag << FixItHint::CreateReplacement(T.Range, T.Replacement);
       break;
-    case transformer::EditKind::AddInclude: {
-      StringRef FileName = T.Replacement;
-      bool IsAngled = FileName.startswith("<") && FileName.endswith(">");
-      Diag << Inserter.createMainFileIncludeInsertion(
-          IsAngled ? FileName.substr(1, FileName.size() - 2) : FileName,
-          IsAngled);
+    case transformer::EditKind::AddInclude:
+      Diag << Inserter.createMainFileIncludeInsertion(T.Replacement);
       break;
-    }
     }
 }
 

@@ -4,6 +4,9 @@
 # RUN: yaml2obj %s -o %t -DCPU=GFX601
 # RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX601 -DFLAGS=0x21
 
+# RUN: yaml2obj %s -o %t -DCPU=GFX602
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX602 -DFLAGS=0x3A
+
 # RUN: yaml2obj %s -o %t -DCPU=GFX700
 # RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX700 -DFLAGS=0x22
 
@@ -19,6 +22,9 @@
 # RUN: yaml2obj %s -o %t -DCPU=GFX704
 # RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX704 -DFLAGS=0x26
 
+# RUN: yaml2obj %s -o %t -DCPU=GFX705
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX705 -DFLAGS=0x3B
+
 # RUN: yaml2obj %s -o %t -DCPU=GFX801
 # RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX801 -DFLAGS=0x28
 
@@ -27,6 +33,9 @@
 
 # RUN: yaml2obj %s -o %t -DCPU=GFX803
 # RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX803 -DFLAGS=0x2A
+
+# RUN: yaml2obj %s -o %t -DCPU=GFX805
+# RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX805 -DFLAGS=0x3C
 
 # RUN: yaml2obj %s -o %t -DCPU=GFX810
 # RUN: llvm-readobj -h %t | FileCheck %s --match-full-lines -DFILE=%t -DCPU=GFX810 -DFLAGS=0x2B

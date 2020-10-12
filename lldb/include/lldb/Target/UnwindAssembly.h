@@ -20,8 +20,6 @@ class UnwindAssembly : public std::enable_shared_from_this<UnwindAssembly>,
 public:
   static lldb::UnwindAssemblySP FindPlugin(const ArchSpec &arch);
 
-  ~UnwindAssembly() override;
-
   virtual bool
   GetNonCallSiteUnwindPlanFromAssembly(AddressRange &func, Thread &thread,
                                        UnwindPlan &unwind_plan) = 0;
@@ -42,11 +40,6 @@ public:
 protected:
   UnwindAssembly(const ArchSpec &arch);
   ArchSpec m_arch;
-
-private:
-  UnwindAssembly() = delete;
-  UnwindAssembly(const UnwindAssembly &) = delete;
-  const UnwindAssembly &operator=(const UnwindAssembly &) = delete;
 };
 
 } // namespace lldb_private

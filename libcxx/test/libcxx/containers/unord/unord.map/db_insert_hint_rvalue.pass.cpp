@@ -14,8 +14,7 @@
 //           class = typename enable_if<is_convertible<P, value_type>::value>::type>
 //     iterator insert(const_iterator p, P&& x);
 
-// This test requires debug mode, which the library on macOS doesn't have.
-// UNSUPPORTED: with_system_cxx_lib=macosx
+// UNSUPPORTED: libcxx-no-debug-mode
 
 #define _LIBCPP_DEBUG 1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))

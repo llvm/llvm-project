@@ -2060,6 +2060,10 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
           // Check if a return instruction always cause UB or not
           // Note: It is guaranteed that the returned position of the anchor
           //       scope has noundef attribute when this is called.
+          //       We also ensure the return position is not "assumed dead"
+          //       because the returned value was then potentially simplified to
+          //       `undef` in AAReturnedValues without removing the `noundef`
+          //       attribute yet.
 
           // When the returned position has noundef attriubte, UB occur in the
           // following cases.
@@ -2067,9 +2071,6 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
           //   (2) The value is known to be a null pointer and the returned
           //       position has nonnull attribute (because the returned value is
           //       poison).
-          // Note: This callback is not called for a dead returned value because
-          //       such values are ignored in
-          //       checkForAllReturnedValuesAndReturnedInsts.
           bool FoundUB = false;
           if (isa<UndefValue>(V)) {
             FoundUB = true;
@@ -2101,12 +2102,15 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     // If the returned position of the anchor scope has noundef attriubte, check
     // all returned instructions.
     if (!getAnchorScope()->getReturnType()->isVoidTy()) {
-      auto &RetPosNoUndefAA =
-          A.getAAFor<AANoUndef>(*this, IRPosition::returned(*getAnchorScope()),
-                                /* TrackDependence */ false);
-      if (RetPosNoUndefAA.isKnownNoUndef())
-        A.checkForAllReturnedValuesAndReturnInsts(InspectReturnInstForUB,
-                                                  *this);
+      const IRPosition &ReturnIRP = IRPosition::returned(*getAnchorScope());
+      if (!A.isAssumedDead(ReturnIRP, this, nullptr)) {
+        auto &RetPosNoUndefAA =
+            A.getAAFor<AANoUndef>(*this, ReturnIRP,
+                                  /* TrackDependence */ false);
+        if (RetPosNoUndefAA.isKnownNoUndef())
+          A.checkForAllReturnedValuesAndReturnInsts(InspectReturnInstForUB,
+                                                    *this);
+      }
     }
 
     if (NoUBPrevSize != AssumedNoUBInsts.size() ||
@@ -3844,9 +3848,23 @@ struct AAAlignFloating : AAAlignImpl {
                             AAAlign::StateType &T, bool Stripped) -> bool {
       const auto &AA = A.getAAFor<AAAlign>(*this, IRPosition::value(V));
       if (!Stripped && this == &AA) {
+        int64_t Offset;
+        unsigned Alignment = 1;
+        if (const Value *Base =
+                GetPointerBaseWithConstantOffset(&V, Offset, DL)) {
+          Align PA = Base->getPointerAlignment(DL);
+          // BasePointerAddr + Offset = Alignment * Q for some integer Q.
+          // So we can say that the maximum power of two which is a divisor of
+          // gcd(Offset, Alignment) is an alignment.
+
+          uint32_t gcd = greatestCommonDivisor(uint32_t(abs((int32_t)Offset)),
+                                               uint32_t(PA.value()));
+          Alignment = llvm::PowerOf2Floor(gcd);
+        } else {
+          Alignment = V.getPointerAlignment(DL).value();
+        }
         // Use only IR information if we did not strip anything.
-        Align PA = V.getPointerAlignment(DL);
-        T.takeKnownMaximum(PA.value());
+        T.takeKnownMaximum(Alignment);
         T.indicatePessimisticFixpoint();
       } else {
         // Use abstract attribute information.
@@ -4003,6 +4021,17 @@ struct AANoReturnFunction final : AANoReturnImpl {
 struct AANoReturnCallSite final : AANoReturnImpl {
   AANoReturnCallSite(const IRPosition &IRP, Attributor &A)
       : AANoReturnImpl(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AANoReturnImpl::initialize(A);
+    if (Function *F = getAssociatedFunction()) {
+      const IRPosition &FnPos = IRPosition::function(*F);
+      auto &FnAA = A.getAAFor<AANoReturn>(*this, FnPos);
+      if (!FnAA.isAssumedNoReturn())
+        indicatePessimisticFixpoint();
+    }
+  }
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -4770,10 +4799,10 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
     if (Op0IsNull && Op1IsNull) {
       Value *NewVal = ConstantInt::get(
           Type::getInt1Ty(Ctx), ICmp->getPredicate() == CmpInst::ICMP_EQ);
-      SimplifiedAssociatedValue = NewVal;
-      indicateOptimisticFixpoint();
       assert(!SimplifiedAssociatedValue.hasValue() &&
              "Did not expect non-fixed value for constant comparison");
+      SimplifiedAssociatedValue = NewVal;
+      indicateOptimisticFixpoint();
       Changed = ChangeStatus::CHANGED;
       return true;
     }
@@ -5861,9 +5890,7 @@ struct AAMemoryBehaviorFloating : AAMemoryBehaviorImpl {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AAMemoryBehaviorImpl::initialize(A);
-    // Initialize the use vector with all direct uses of the associated value.
-    for (const Use &U : getAssociatedValue().uses())
-      Uses.insert(&U);
+    addUsesOf(A, getAssociatedValue());
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -5889,8 +5916,14 @@ private:
   void analyzeUseIn(Attributor &A, const Use *U, const Instruction *UserI);
 
 protected:
+  /// Add the uses of \p V to the `Uses` set we look at during the update step.
+  void addUsesOf(Attributor &A, const Value &V);
+
   /// Container for (transitive) uses of the associated argument.
-  SetVector<const Use *> Uses;
+  SmallVector<const Use *, 8> Uses;
+
+  /// Set to remember the uses we already traversed.
+  SmallPtrSet<const Use *, 8> Visited;
 };
 
 /// Memory behavior attribute for function argument.
@@ -5915,9 +5948,7 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
     if (!Arg || !A.isFunctionIPOAmendable(*(Arg->getParent()))) {
       indicatePessimisticFixpoint();
     } else {
-      // Initialize the use vector with all direct uses of the associated value.
-      for (const Use &U : Arg->uses())
-        Uses.insert(&U);
+      addUsesOf(A, *Arg);
     }
   }
 
@@ -6169,8 +6200,7 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
 
     // Check if the users of UserI should also be visited.
     if (followUsersOfUseIn(A, U, UserI))
-      for (const Use &UserIUse : UserI->uses())
-        Uses.insert(&UserIUse);
+      addUsesOf(A, *UserI);
 
     // If UserI might touch memory we analyze the use in detail.
     if (UserI->mayReadOrWriteMemory())
@@ -6179,6 +6209,28 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
 
   return (AssumedState != getAssumed()) ? ChangeStatus::CHANGED
                                         : ChangeStatus::UNCHANGED;
+}
+
+void AAMemoryBehaviorFloating::addUsesOf(Attributor &A, const Value &V) {
+  SmallVector<const Use *, 8> WL;
+  for (const Use &U : V.uses())
+    WL.push_back(&U);
+
+  while (!WL.empty()) {
+    const Use *U = WL.pop_back_val();
+    if (!Visited.insert(U).second)
+      continue;
+
+    const Instruction *UserI = cast<Instruction>(U->getUser());
+    if (UserI->mayReadOrWriteMemory()) {
+      Uses.push_back(U);
+      continue;
+    }
+    if (!followUsersOfUseIn(A, U, UserI))
+      continue;
+    for (const Use &UU : UserI->uses())
+      WL.push_back(&UU);
+  }
 }
 
 bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use *U,
@@ -6567,6 +6619,7 @@ void AAMemoryLocationImpl::categorizePtrValue(
   auto VisitValueCB = [&](Value &V, const Instruction *,
                           AAMemoryLocation::StateType &T,
                           bool Stripped) -> bool {
+    // TODO: recognize the TBAA used for constant accesses.
     MemoryLocationsKind MLK = NO_LOCATIONS;
     assert(!isa<GEPOperator>(V) && "GEPs should have been stripped.");
     if (isa<UndefValue>(V))
@@ -6577,6 +6630,13 @@ void AAMemoryLocationImpl::categorizePtrValue(
       else
         MLK = NO_ARGUMENT_MEM;
     } else if (auto *GV = dyn_cast<GlobalValue>(&V)) {
+      // Reading constant memory is not treated as a read "effect" by the
+      // function attr pass so we won't neither. Constants defined by TBAA are
+      // similar. (We know we do not write it because it is constant.)
+      if (auto *GVar = dyn_cast<GlobalVariable>(GV))
+        if (GVar->isConstant())
+          return true;
+
       if (GV->hasLocalLinkage())
         MLK = NO_GLOBAL_INTERNAL_MEM;
       else

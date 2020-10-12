@@ -1303,7 +1303,7 @@ bool SITargetLowering::isLegalMUBUFAddressingMode(const AddrMode &AM) const {
   // assume those use MUBUF instructions. Scratch loads / stores are currently
   // implemented as mubuf instructions with offen bit set, so slightly
   // different than the normal addr64.
-  if (!isUInt<12>(AM.BaseOffs))
+  if (!SIInstrInfo::isLegalMUBUFImmOffset(AM.BaseOffs))
     return false;
 
   // FIXME: Since we can split immediate into soffset and immediate offset,
@@ -5851,7 +5851,7 @@ static SDValue constructRetValue(SelectionDAG &DAG,
   SDValue Data(Result, 0);
   SDValue TexFail;
 
-  if (IsTexFail) {
+  if (DMaskPop > 0 && Data.getValueType() != MaskPopVT) {
     SDValue ZeroIdx = DAG.getConstant(0, DL, MVT::i32);
     if (MaskPopVT.isVector()) {
       Data = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MaskPopVT,
@@ -5860,10 +5860,6 @@ static SDValue constructRetValue(SelectionDAG &DAG,
       Data = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MaskPopVT,
                          SDValue(Result, 0), ZeroIdx);
     }
-
-    TexFail = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
-                          SDValue(Result, 0),
-                          DAG.getConstant(MaskPopDwords, DL, MVT::i32));
   }
 
   if (DataDwordVT.isVector())
@@ -5887,8 +5883,13 @@ static SDValue constructRetValue(SelectionDAG &DAG,
   }
   Data = DAG.getNode(ISD::BITCAST, DL, LegalReqRetVT, Data);
 
-  if (TexFail)
+  if (IsTexFail) {
+    TexFail =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, SDValue(Result, 0),
+                    DAG.getConstant(MaskPopDwords, DL, MVT::i32));
+
     return DAG.getMergeValues({Data, TexFail, SDValue(Result, 1)}, DL);
+  }
 
   if (Result->getNumValues() == 1)
     return Data;
@@ -6007,7 +6008,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
           return Op; // D16 is unsupported for this instruction
 
         IsD16 = true;
-        VData = handleD16VData(VData, DAG);
+        VData = handleD16VData(VData, DAG, true);
       }
 
       NumVDataDwords = (VData.getValueType().getSizeInBits() + 31) / 32;
@@ -6027,7 +6028,11 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
           (!LoadVT.isVector() && DMaskLanes > 1))
           return Op;
 
-      if (IsD16 && !Subtarget->hasUnpackedD16VMem())
+      // The sq block of gfx8 and gfx9 do not estimate register use correctly
+      // for d16 image_gather4, image_gather4_l, and image_gather4_lz
+      // instructions.
+      if (IsD16 && !Subtarget->hasUnpackedD16VMem() &&
+          !(BaseOpcode->Gather4 && Subtarget->hasImageGather4D16Bug()))
         NumVDataDwords = (DMaskLanes + 1) / 2;
       else
         NumVDataDwords = DMaskLanes;
@@ -7401,8 +7406,8 @@ SDValue SITargetLowering::getMemIntrinsicNode(unsigned Opcode, const SDLoc &DL,
   return NewOp;
 }
 
-SDValue SITargetLowering::handleD16VData(SDValue VData,
-                                         SelectionDAG &DAG) const {
+SDValue SITargetLowering::handleD16VData(SDValue VData, SelectionDAG &DAG,
+                                         bool ImageStore) const {
   EVT StoreVT = VData.getValueType();
 
   // No change for f16 and legal vector D16 types.
@@ -7432,6 +7437,36 @@ SDValue SITargetLowering::handleD16VData(SDValue VData,
                                          WidenedStoreVT.getStoreSizeInBits());
     SDValue ZExt = DAG.getNode(ISD::ZERO_EXTEND, DL, WidenedIntVT, IntVData);
     return DAG.getNode(ISD::BITCAST, DL, WidenedStoreVT, ZExt);
+  }
+
+  // The sq block of gfx8.1 does not estimate register use correctly for d16
+  // image store instructions. The data operand is computed as if it were not a
+  // d16 image instruction.
+  if (ImageStore && Subtarget->hasImageStoreD16Bug()) {
+    // Bitcast to i16
+    EVT IntStoreVT = StoreVT.changeTypeToInteger();
+    SDValue IntVData = DAG.getNode(ISD::BITCAST, DL, IntStoreVT, VData);
+
+    // Decompose into scalars
+    SmallVector<SDValue, 4> Elts;
+    DAG.ExtractVectorElements(IntVData, Elts);
+
+    // Group pairs of i16 into v2i16 and bitcast to i32
+    SmallVector<SDValue, 4> PackedElts;
+    for (unsigned I = 0; I < Elts.size() / 2; I += 1) {
+      SDValue Pair =
+          DAG.getBuildVector(MVT::v2i16, DL, {Elts[I * 2], Elts[I * 2 + 1]});
+      SDValue IntPair = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Pair);
+      PackedElts.push_back(IntPair);
+    }
+
+    // Pad using UNDEF
+    PackedElts.resize(PackedElts.size() * 2, DAG.getUNDEF(MVT::i32));
+
+    // Build final vector
+    EVT VecVT =
+        EVT::getVectorVT(*DAG.getContext(), MVT::i32, PackedElts.size());
+    return DAG.getBuildVector(VecVT, DL, PackedElts);
   }
 
   assert(isTypeLegal(StoreVT));
@@ -7979,13 +8014,6 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   assert(Op.getValueType().getVectorElementType() == MVT::i32 &&
          "Custom lowering for non-i32 vectors hasn't been implemented.");
 
-  if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
-                                      MemVT, *Load->getMemOperand())) {
-    SDValue Ops[2];
-    std::tie(Ops[0], Ops[1]) = expandUnalignedLoad(Load, DAG);
-    return DAG.getMergeValues(Ops, DL);
-  }
-
   unsigned Alignment = Load->getAlignment();
   unsigned AS = Load->getAddressSpace();
   if (Subtarget->hasLDSMisalignedBug() &&
@@ -8097,6 +8125,14 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
       return SplitVectorLoad(Op, DAG);
     }
   }
+
+  if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
+                                      MemVT, *Load->getMemOperand())) {
+    SDValue Ops[2];
+    std::tie(Ops[0], Ops[1]) = expandUnalignedLoad(Load, DAG);
+    return DAG.getMergeValues(Ops, DL);
+  }
+
   return SDValue();
 }
 
@@ -8502,11 +8538,6 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   assert(VT.isVector() &&
          Store->getValue().getValueType().getScalarType() == MVT::i32);
 
-  if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
-                                      VT, *Store->getMemOperand())) {
-    return expandUnalignedStore(Store, DAG);
-  }
-
   unsigned AS = Store->getAddressSpace();
   if (Subtarget->hasLDSMisalignedBug() &&
       AS == AMDGPUAS::FLAT_ADDRESS &&
@@ -8531,6 +8562,11 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     // v3 stores not supported on SI.
     if (NumElements == 3 && !Subtarget->hasDwordx3LoadStores())
       return SplitVectorStore(Op, DAG);
+
+    if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
+                                        VT, *Store->getMemOperand()))
+      return expandUnalignedStore(Store, DAG);
+
     return SDValue();
   } else if (AS == AMDGPUAS::PRIVATE_ADDRESS) {
     switch (Subtarget->getMaxPrivateElementSize()) {
@@ -8568,6 +8604,13 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
         NumElements == 2 && VT.getStoreSize() == 8 &&
         Store->getAlignment() < 8) {
       return SplitVectorStore(Op, DAG);
+    }
+
+    if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
+                                        VT, *Store->getMemOperand())) {
+      if (VT.isVector())
+        return SplitVectorStore(Op, DAG);
+      return expandUnalignedStore(Store, DAG);
     }
 
     return SDValue();

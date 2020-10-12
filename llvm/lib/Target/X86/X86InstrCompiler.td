@@ -809,15 +809,6 @@ let Predicates = [UseIncDec] in {
 }
 
 // Atomic compare and swap.
-multiclass LCMPXCHG_UnOp<bits<8> Opc, Format Form, string mnemonic,
-                         SDPatternOperator frag, X86MemOperand x86memop> {
-let isCodeGenOnly = 1, usesCustomInserter = 1 in {
-  def NAME : I<Opc, Form, (outs), (ins x86memop:$ptr),
-               !strconcat(mnemonic, "\t$ptr"),
-               [(frag addr:$ptr)]>, TB, LOCK;
-}
-}
-
 multiclass LCMPXCHG_BinOp<bits<8> Opc8, bits<8> Opc, Format Form,
                           string mnemonic, SDPatternOperator frag> {
 let isCodeGenOnly = 1, SchedRW = [WriteCMPXCHGRMW] in {
@@ -841,14 +832,19 @@ let isCodeGenOnly = 1, SchedRW = [WriteCMPXCHGRMW] in {
 }
 
 let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EBX, ECX, EDX],
-    Predicates = [HasCmpxchg8b], SchedRW = [WriteCMPXCHGRMW] in {
-defm LCMPXCHG8B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg8b", X86cas8, i64mem>;
+    Predicates = [HasCmpxchg8b], SchedRW = [WriteCMPXCHGRMW],
+    isCodeGenOnly = 1, usesCustomInserter = 1 in {
+def LCMPXCHG8B : I<0xC7, MRM1m, (outs), (ins i64mem:$ptr),
+                   "cmpxchg8b\t$ptr",
+                   [(X86cas8 addr:$ptr)]>, TB, LOCK;
 }
 
 let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RBX, RCX, RDX],
-    Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW] in {
-defm LCMPXCHG16B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg16b",
-                                 X86cas16, i128mem>, REX_W;
+    Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW],
+    isCodeGenOnly = 1, mayLoad = 1, mayStore = 1, hasSideEffects = 0 in {
+def LCMPXCHG16B : RI<0xC7, MRM1m, (outs), (ins i128mem:$ptr),
+                     "cmpxchg16b\t$ptr",
+                     []>, TB, LOCK;
 }
 
 // This pseudo must be used when the frame uses RBX as
@@ -872,14 +868,24 @@ defm LCMPXCHG16B : LCMPXCHG_UnOp<0xC7, MRM1m, "cmpxchg16b",
 // the value of RBX.
 let Defs = [RAX, RDX, RBX, EFLAGS], Uses = [RAX, RCX, RDX],
     Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW],
-    isCodeGenOnly = 1, isPseudo = 1, Constraints = "$rbx_save = $dst",
-    usesCustomInserter = 1 in {
+    isCodeGenOnly = 1, isPseudo = 1,
+    mayLoad = 1, mayStore = 1, hasSideEffects = 0,
+    Constraints = "$rbx_save = $dst" in {
 def LCMPXCHG16B_SAVE_RBX :
     I<0, Pseudo, (outs GR64:$dst),
-      (ins i128mem:$ptr, GR64:$rbx_input, GR64:$rbx_save),
-      !strconcat("cmpxchg16b", "\t$ptr"),
-      [(set GR64:$dst, (X86cas16save_rbx addr:$ptr, GR64:$rbx_input,
-                                                    GR64:$rbx_save))]>;
+      (ins i128mem:$ptr, GR64:$rbx_input, GR64:$rbx_save), "", []>;
+}
+
+// Pseudo instruction that doesn't read/write RBX. Will be turned into either
+// LCMPXCHG16B_SAVE_RBX or LCMPXCHG16B via a custom inserter.
+let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RCX, RDX],
+    Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW],
+    isCodeGenOnly = 1, isPseudo = 1,
+    mayLoad = 1, mayStore = 1, hasSideEffects = 0,
+    usesCustomInserter = 1 in {
+def LCMPXCHG16B_NO_RBX :
+    I<0, Pseudo, (outs), (ins i128mem:$ptr, GR64:$rbx_input), "",
+      [(X86cas16 addr:$ptr, GR64:$rbx_input)]>;
 }
 
 // This pseudo must be used when the frame uses RBX/EBX as

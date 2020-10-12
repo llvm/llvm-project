@@ -86,6 +86,8 @@ append_rtti_flag(OFF ASAN_CFLAGS)
 set(ASAN_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 
 if(ANDROID)
+  list(APPEND ASAN_CFLAGS -fno-emulated-tls)
+  list(APPEND ASAN_DYNAMIC_LINK_FLAGS -fuse-ld=lld)
 # Put most Sanitizer shared libraries in the global group. For more details, see
 # android-changes-for-ndk-developers.md#changes-to-library-search-order
   if (COMPILER_RT_HAS_Z_GLOBAL)
@@ -232,7 +234,9 @@ else()
            -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/clang_rt.asan-dynamic-${arch}.vers)
       # The Solaris 11.4 linker supports a subset of GNU ld version scripts,
       # but requires a special option to enable it.
-      if (COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
+      # This is used/compatible with ANDROID because we force `lld` on ANDROID (line 90).
+      # Therefore we don't want to add it for ANDROID.
+      if (COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT AND NOT ANDROID)
           list(APPEND VERSION_SCRIPT_FLAG -Wl,-z,gnu-version-script-compat)
       endif()
       set_property(SOURCE

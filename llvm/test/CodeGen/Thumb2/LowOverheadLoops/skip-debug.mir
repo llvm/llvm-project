@@ -46,7 +46,7 @@
     %.lcssa = phi <4 x i32> [ %15, %vector.body ], !dbg !38
     %18 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %9), !dbg !34
     %19 = select <4 x i1> %18, <4 x i32> %.lcssa, <4 x i32> %vec.phi.lcssa, !dbg !38
-    %20 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %19), !dbg !32
+    %20 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %19), !dbg !32
     br label %for.cond.cleanup, !dbg !42
 
   for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -58,7 +58,7 @@
 
   declare void @llvm.dbg.value(metadata, metadata, metadata)
   declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32 immarg, <4 x i1>, <4 x i16>)
-  declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>)
+  declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
   declare void @llvm.set.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)

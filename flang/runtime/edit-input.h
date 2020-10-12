@@ -17,24 +17,25 @@ namespace Fortran::runtime::io {
 
 bool EditIntegerInput(IoStatementState &, const DataEdit &, void *, int kind);
 
-template <int binaryPrecision>
+template <int KIND>
 bool EditRealInput(IoStatementState &, const DataEdit &, void *);
 
 bool EditLogicalInput(IoStatementState &, const DataEdit &, bool &);
 bool EditDefaultCharacterInput(
     IoStatementState &, const DataEdit &, char *, std::size_t);
 
+extern template bool EditRealInput<2>(
+    IoStatementState &, const DataEdit &, void *);
+extern template bool EditRealInput<3>(
+    IoStatementState &, const DataEdit &, void *);
+extern template bool EditRealInput<4>(
+    IoStatementState &, const DataEdit &, void *);
 extern template bool EditRealInput<8>(
     IoStatementState &, const DataEdit &, void *);
-extern template bool EditRealInput<11>(
+extern template bool EditRealInput<10>(
     IoStatementState &, const DataEdit &, void *);
-extern template bool EditRealInput<24>(
-    IoStatementState &, const DataEdit &, void *);
-extern template bool EditRealInput<53>(
-    IoStatementState &, const DataEdit &, void *);
-extern template bool EditRealInput<64>(
-    IoStatementState &, const DataEdit &, void *);
-extern template bool EditRealInput<113>(
+// TODO: double/double
+extern template bool EditRealInput<16>(
     IoStatementState &, const DataEdit &, void *);
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_EDIT_INPUT_H_

@@ -421,14 +421,17 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_R600_TURKS, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX600, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX601, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX602, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX700, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX701, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX702, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX703, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX704, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX705, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX801, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX802, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX803, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX805, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX810, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX900, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX902, EF_AMDGPU_MACH);
@@ -1216,7 +1219,7 @@ static void sectionMapping(IO &IO, ELFYAML::RelrSection &Section) {
   IO.mapOptional("Content", Section.Content);
 }
 
-static void groupSectionMapping(IO &IO, ELFYAML::Group &Group) {
+static void groupSectionMapping(IO &IO, ELFYAML::GroupSection &Group) {
   commonSectionMapping(IO, Group);
   IO.mapOptional("Info", Group.Signature);
   IO.mapRequired("Members", Group.Members);
@@ -1355,8 +1358,8 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     break;
   case ELF::SHT_GROUP:
     if (!IO.outputting())
-      Section.reset(new ELFYAML::Group());
-    groupSectionMapping(IO, *cast<ELFYAML::Group>(Section.get()));
+      Section.reset(new ELFYAML::GroupSection());
+    groupSectionMapping(IO, *cast<ELFYAML::GroupSection>(Section.get()));
     break;
   case ELF::SHT_NOBITS:
     if (!IO.outputting())

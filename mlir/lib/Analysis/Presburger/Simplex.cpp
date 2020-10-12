@@ -451,6 +451,16 @@ void Simplex::rollback(unsigned snapshot) {
   }
 }
 
+/// Add all the constraints from the given FlatAffineConstraints.
+void Simplex::intersectFlatAffineConstraints(const FlatAffineConstraints &fac) {
+  assert(fac.getNumIds() == numVariables() &&
+         "FlatAffineConstraints must have same dimensionality as simplex");
+  for (unsigned i = 0, e = fac.getNumInequalities(); i < e; ++i)
+    addInequality(fac.getInequality(i));
+  for (unsigned i = 0, e = fac.getNumEqualities(); i < e; ++i)
+    addEquality(fac.getEquality(i));
+}
+
 Optional<Fraction> Simplex::computeRowOptimum(Direction direction,
                                               unsigned row) {
   // Keep trying to find a pivot for the row in the specified direction.

@@ -23,7 +23,8 @@
 # CHECK-NEXT:          },
 # CHECK-NEXT:          "uri": "file://{{.*}}/vector.h"
 # CHECK-NEXT:        },
-# CHECK-NEXT:        "name": "vector"
+# CHECK-NEXT:        "name": "vector",
+# CHECK-NEXT:        "score": {{.*}}
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ]
 # CHECK-NEXT:}

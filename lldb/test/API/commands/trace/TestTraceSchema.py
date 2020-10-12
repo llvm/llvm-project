@@ -20,3 +20,15 @@ class TestTraceLoad(TestBase):
     def testInvalidPluginSchema(self):
         self.expect("trace schema invalid-plugin", error=True,
             substrs=['error: no trace plug-in matches the specified type: "invalid-plugin"'])
+
+    def testAllSchemas(self):
+        self.expect("trace schema all", substrs=['''{
+  "trace": {
+    "type": "intel-pt",
+    "pt_cpu": {
+      "vendor": "intel" | "unknown",
+      "family": integer,
+      "model": integer,
+      "stepping": integer
+    }
+  },'''])

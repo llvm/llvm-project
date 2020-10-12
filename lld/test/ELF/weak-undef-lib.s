@@ -17,6 +17,17 @@
 # CHECK-NEXT: Other: 0
 # CHECK-NEXT: Section: Undefined
 
+## -u specifies a STB_DEFAULT undefined symbol, so the definition from %t2.o is
+## fetched.
+# RUN: ld.lld -u foo %t1.o --start-lib %t2.o -o %t1
+# RUN: llvm-readobj --syms %t1 | FileCheck %s --check-prefix=CHECK-U
+
+# CHECK-U:      Name: foo
+# CHECK-U:      Binding:
+# CHECK-U-SAME:          Global
+# CHECK-U:      Section:
+# CHECK-U-SAME:          .text
+
 .weak foo
 call foo@PLT
 

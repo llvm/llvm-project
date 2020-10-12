@@ -234,6 +234,18 @@ def FeatureOffset3fBug : SubtargetFeature<"offset-3f-bug",
   "Branch offset of 3f hardware bug"
 >;
 
+def FeatureImageStoreD16Bug : SubtargetFeature<"image-store-d16-bug",
+  "HasImageStoreD16Bug",
+  "true",
+  "Image Store D16 hardware bug"
+>;
+
+def FeatureImageGather4D16Bug : SubtargetFeature<"image-gather4-d16-bug",
+  "HasImageGather4D16Bug",
+  "true",
+  "Image Gather4 D16 hardware bug"
+>;
+
 class SubtargetFeatureLDSBankCount <int Value> : SubtargetFeature <
   "ldsbankcount"#Value,
   "LDSBankCount",
@@ -774,6 +786,12 @@ def FeatureISAVersion6_0_1 : FeatureSet<
    FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
+def FeatureISAVersion6_0_2 : FeatureSet<
+  [FeatureSouthernIslands,
+   FeatureLDSBankCount32,
+   FeatureDoesNotSupportXNACK,
+   FeatureCodeObjectV3]>;
+
 def FeatureISAVersion7_0_0 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount32,
@@ -807,6 +825,12 @@ def FeatureISAVersion7_0_4 : FeatureSet<
    FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
+def FeatureISAVersion7_0_5 : FeatureSet<
+  [FeatureSeaIslands,
+   FeatureLDSBankCount16,
+   FeatureDoesNotSupportXNACK,
+   FeatureCodeObjectV3]>;
+
 def FeatureISAVersion8_0_1 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureFastFMAF32,
@@ -831,11 +855,21 @@ def FeatureISAVersion8_0_3 : FeatureSet<
    FeatureDoesNotSupportXNACK,
    FeatureCodeObjectV3]>;
 
+def FeatureISAVersion8_0_5 : FeatureSet<
+  [FeatureVolcanicIslands,
+   FeatureLDSBankCount32,
+   FeatureSGPRInitBug,
+   FeatureUnpackedD16VMem,
+   FeatureDoesNotSupportXNACK,
+   FeatureCodeObjectV3]>;
+
 def FeatureISAVersion8_1_0 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureLDSBankCount16,
    FeatureXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureCodeObjectV3,
+   FeatureImageStoreD16Bug,
+   FeatureImageGather4D16Bug]>;
 
 def FeatureISAVersion9_0_0 : FeatureSet<
   [FeatureGFX9,
@@ -843,7 +877,8 @@ def FeatureISAVersion9_0_0 : FeatureSet<
    FeatureLDSBankCount32,
    FeatureCodeObjectV3,
    FeatureDoesNotSupportXNACK,
-   FeatureDoesNotSupportSRAMECC]>;
+   FeatureDoesNotSupportSRAMECC,
+   FeatureImageGather4D16Bug]>;
 
 def FeatureISAVersion9_0_2 : FeatureSet<
   [FeatureGFX9,
@@ -851,7 +886,8 @@ def FeatureISAVersion9_0_2 : FeatureSet<
    FeatureLDSBankCount32,
    FeatureXNACK,
    FeatureDoesNotSupportSRAMECC,
-   FeatureCodeObjectV3]>;
+   FeatureCodeObjectV3,
+   FeatureImageGather4D16Bug]>;
 
 def FeatureISAVersion9_0_4 : FeatureSet<
   [FeatureGFX9,
@@ -859,7 +895,8 @@ def FeatureISAVersion9_0_4 : FeatureSet<
    FeatureFmaMixInsts,
    FeatureDoesNotSupportXNACK,
    FeatureDoesNotSupportSRAMECC,
-   FeatureCodeObjectV3]>;
+   FeatureCodeObjectV3,
+   FeatureImageGather4D16Bug]>;
 
 def FeatureISAVersion9_0_6 : FeatureSet<
   [FeatureGFX9,
@@ -870,7 +907,8 @@ def FeatureISAVersion9_0_6 : FeatureSet<
    FeatureDot1Insts,
    FeatureDot2Insts,
    FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureCodeObjectV3,
+   FeatureImageGather4D16Bug]>;
 
 def FeatureISAVersion9_0_8 : FeatureSet<
   [FeatureGFX9,
@@ -889,14 +927,16 @@ def FeatureISAVersion9_0_8 : FeatureSet<
    FeatureAtomicFaddInsts,
    FeatureSRAMECC,
    FeatureMFMAInlineLiteralBug,
-   FeatureCodeObjectV3]>;
+   FeatureCodeObjectV3,
+   FeatureImageGather4D16Bug]>;
 
 def FeatureISAVersion9_0_9 : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
    FeatureXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureCodeObjectV3,
+   FeatureImageGather4D16Bug]>;
 
 // TODO: Organize more features into groups.
 def FeatureGroup {

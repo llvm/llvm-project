@@ -29,7 +29,7 @@ define half @fmaxv_v4f16(<4 x half> %a) #0 {
 ; CHECK-LABEL: fmaxv_v4f16:
 ; CHECK: fmaxnmv h0, v0.4h
 ; CHECK-NEXT: ret
-  %res = call half @llvm.experimental.vector.reduce.fmax.v4f16(<4 x half> %a)
+  %res = call half @llvm.vector.reduce.fmax.v4f16(<4 x half> %a)
   ret half %res
 }
 
@@ -38,7 +38,7 @@ define half @fmaxv_v8f16(<8 x half> %a) #0 {
 ; CHECK-LABEL: fmaxv_v8f16:
 ; CHECK: fmaxnmv h0, v0.8h
 ; CHECK-NEXT: ret
-  %res = call half @llvm.experimental.vector.reduce.fmax.v8f16(<8 x half> %a)
+  %res = call half @llvm.vector.reduce.fmax.v8f16(<8 x half> %a)
   ret half %res
 }
 
@@ -49,7 +49,7 @@ define half @fmaxv_v16f16(<16 x half>* %a) #0 {
 ; VBITS_GE_256-NEXT: fmaxnmv h0, [[PG]], [[OP]].h
 ; VBITS_GE_256-NEXT: ret
   %op = load <16 x half>, <16 x half>* %a
-  %res = call half @llvm.experimental.vector.reduce.fmax.v16f16(<16 x half> %op)
+  %res = call half @llvm.vector.reduce.fmax.v16f16(<16 x half> %op)
   ret half %res
 }
 
@@ -59,8 +59,17 @@ define half @fmaxv_v32f16(<32 x half>* %a) #0 {
 ; VBITS_GE_512-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: fmaxnmv h0, [[PG]], [[OP]].h
 ; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
+; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: ld1h { [[LO:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1h { [[HI:z[0-9]+]].h }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: fmaxnm [[MAX:z[0-9]+]].h, [[PG]]/m, [[LO]].h, [[HI]].h
+; VBITS_EQ_256-DAG: fmaxnmv h0, [[PG]], [[MAX]].h
+; VBITS_EQ_256-NEXT: ret
   %op = load <32 x half>, <32 x half>* %a
-  %res = call half @llvm.experimental.vector.reduce.fmax.v32f16(<32 x half> %op)
+  %res = call half @llvm.vector.reduce.fmax.v32f16(<32 x half> %op)
   ret half %res
 }
 
@@ -71,7 +80,7 @@ define half @fmaxv_v64f16(<64 x half>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmaxnmv h0, [[PG]], [[OP]].h
 ; VBITS_GE_1024-NEXT: ret
   %op = load <64 x half>, <64 x half>* %a
-  %res = call half @llvm.experimental.vector.reduce.fmax.v64f16(<64 x half> %op)
+  %res = call half @llvm.vector.reduce.fmax.v64f16(<64 x half> %op)
   ret half %res
 }
 
@@ -82,7 +91,7 @@ define half @fmaxv_v128f16(<128 x half>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmaxnmv h0, [[PG]], [[OP]].h
 ; VBITS_GE_2048-NEXT: ret
   %op = load <128 x half>, <128 x half>* %a
-  %res = call half @llvm.experimental.vector.reduce.fmax.v128f16(<128 x half> %op)
+  %res = call half @llvm.vector.reduce.fmax.v128f16(<128 x half> %op)
   ret half %res
 }
 
@@ -91,7 +100,7 @@ define float @fmaxv_v2f32(<2 x float> %a) #0 {
 ; CHECK-LABEL: fmaxv_v2f32:
 ; CHECK: fmaxnmp s0, v0.2s
 ; CHECK: ret
-  %res = call float @llvm.experimental.vector.reduce.fmax.v2f32(<2 x float> %a)
+  %res = call float @llvm.vector.reduce.fmax.v2f32(<2 x float> %a)
   ret float %res
 }
 
@@ -100,7 +109,7 @@ define float @fmaxv_v4f32(<4 x float> %a) #0 {
 ; CHECK-LABEL: fmaxv_v4f32:
 ; CHECK: fmaxnmv s0, v0.4s
 ; CHECK: ret
-  %res = call float @llvm.experimental.vector.reduce.fmax.v4f32(<4 x float> %a)
+  %res = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %a)
   ret float %res
 }
 
@@ -111,7 +120,7 @@ define float @fmaxv_v8f32(<8 x float>* %a) #0 {
 ; VBITS_GE_256-NEXT: fmaxnmv s0, [[PG]], [[OP]].s
 ; VBITS_GE_256-NEXT: ret
   %op = load <8 x float>, <8 x float>* %a
-  %res = call float @llvm.experimental.vector.reduce.fmax.v8f32(<8 x float> %op)
+  %res = call float @llvm.vector.reduce.fmax.v8f32(<8 x float> %op)
   ret float %res
 }
 
@@ -121,8 +130,17 @@ define float @fmaxv_v16f32(<16 x float>* %a) #0 {
 ; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: fmaxnmv s0, [[PG]], [[OP]].s
 ; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
+; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: ld1w { [[LO:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1w { [[HI:z[0-9]+]].s }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: fmaxnm [[MAX:z[0-9]+]].s, [[PG]]/m, [[LO]].s, [[HI]].s
+; VBITS_EQ_256-DAG: fmaxnmv s0, [[PG]], [[MAX]].s
+; VBITS_EQ_256-NEXT: ret
   %op = load <16 x float>, <16 x float>* %a
-  %res = call float @llvm.experimental.vector.reduce.fmax.v16f32(<16 x float> %op)
+  %res = call float @llvm.vector.reduce.fmax.v16f32(<16 x float> %op)
   ret float %res
 }
 
@@ -133,7 +151,7 @@ define float @fmaxv_v32f32(<32 x float>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmaxnmv s0, [[PG]], [[OP]].s
 ; VBITS_GE_1024-NEXT: ret
   %op = load <32 x float>, <32 x float>* %a
-  %res = call float @llvm.experimental.vector.reduce.fmax.v32f32(<32 x float> %op)
+  %res = call float @llvm.vector.reduce.fmax.v32f32(<32 x float> %op)
   ret float %res
 }
 
@@ -144,7 +162,7 @@ define float @fmaxv_v64f32(<64 x float>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmaxnmv s0, [[PG]], [[OP]].s
 ; VBITS_GE_2048-NEXT: ret
   %op = load <64 x float>, <64 x float>* %a
-  %res = call float @llvm.experimental.vector.reduce.fmax.v64f32(<64 x float> %op)
+  %res = call float @llvm.vector.reduce.fmax.v64f32(<64 x float> %op)
   ret float %res
 }
 
@@ -153,7 +171,7 @@ define double @fmaxv_v1f64(<1 x double> %a) #0 {
 ; CHECK-LABEL: fmaxv_v1f64:
 ; CHECK-NOT: fmax
 ; CHECK: ret
-  %res = call double @llvm.experimental.vector.reduce.fmax.v1f64(<1 x double> %a)
+  %res = call double @llvm.vector.reduce.fmax.v1f64(<1 x double> %a)
   ret double %res
 }
 
@@ -162,7 +180,7 @@ define double @fmaxv_v2f64(<2 x double> %a) #0 {
 ; CHECK-LABEL: fmaxv_v2f64:
 ; CHECK: fmaxnmp d0, v0.2d
 ; CHECK-NEXT: ret
-  %res = call double @llvm.experimental.vector.reduce.fmax.v2f64(<2 x double> %a)
+  %res = call double @llvm.vector.reduce.fmax.v2f64(<2 x double> %a)
   ret double %res
 }
 
@@ -173,7 +191,7 @@ define double @fmaxv_v4f64(<4 x double>* %a) #0 {
 ; VBITS_GE_256-NEXT: fmaxnmv d0, [[PG]], [[OP]].d
 ; VBITS_GE_256-NEXT: ret
   %op = load <4 x double>, <4 x double>* %a
-  %res = call double @llvm.experimental.vector.reduce.fmax.v4f64(<4 x double> %op)
+  %res = call double @llvm.vector.reduce.fmax.v4f64(<4 x double> %op)
   ret double %res
 }
 
@@ -183,8 +201,17 @@ define double @fmaxv_v8f64(<8 x double>* %a) #0 {
 ; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: fmaxnmv d0, [[PG]], [[OP]].d
 ; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
+; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: ld1d { [[LO:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1d { [[HI:z[0-9]+]].d }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: fmaxnm [[MAX:z[0-9]+]].d, [[PG]]/m, [[LO]].d, [[HI]].d
+; VBITS_EQ_256-DAG: fmaxnmv d0, [[PG]], [[MAX]].d
+; VBITS_EQ_256-NEXT: ret
   %op = load <8 x double>, <8 x double>* %a
-  %res = call double @llvm.experimental.vector.reduce.fmax.v8f64(<8 x double> %op)
+  %res = call double @llvm.vector.reduce.fmax.v8f64(<8 x double> %op)
   ret double %res
 }
 
@@ -195,7 +222,7 @@ define double @fmaxv_v16f64(<16 x double>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmaxnmv d0, [[PG]], [[OP]].d
 ; VBITS_GE_1024-NEXT: ret
   %op = load <16 x double>, <16 x double>* %a
-  %res = call double @llvm.experimental.vector.reduce.fmax.v16f64(<16 x double> %op)
+  %res = call double @llvm.vector.reduce.fmax.v16f64(<16 x double> %op)
   ret double %res
 }
 
@@ -206,7 +233,7 @@ define double @fmaxv_v32f64(<32 x double>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmaxnmv d0, [[PG]], [[OP]].d
 ; VBITS_GE_2048-NEXT: ret
   %op = load <32 x double>, <32 x double>* %a
-  %res = call double @llvm.experimental.vector.reduce.fmax.v32f64(<32 x double> %op)
+  %res = call double @llvm.vector.reduce.fmax.v32f64(<32 x double> %op)
   ret double %res
 }
 
@@ -219,7 +246,7 @@ define half @fminv_v4f16(<4 x half> %a) #0 {
 ; CHECK-LABEL: fminv_v4f16:
 ; CHECK: fminnmv h0, v0.4h
 ; CHECK-NEXT: ret
-  %res = call half @llvm.experimental.vector.reduce.fmin.v4f16(<4 x half> %a)
+  %res = call half @llvm.vector.reduce.fmin.v4f16(<4 x half> %a)
   ret half %res
 }
 
@@ -228,7 +255,7 @@ define half @fminv_v8f16(<8 x half> %a) #0 {
 ; CHECK-LABEL: fminv_v8f16:
 ; CHECK: fminnmv h0, v0.8h
 ; CHECK-NEXT: ret
-  %res = call half @llvm.experimental.vector.reduce.fmin.v8f16(<8 x half> %a)
+  %res = call half @llvm.vector.reduce.fmin.v8f16(<8 x half> %a)
   ret half %res
 }
 
@@ -239,7 +266,7 @@ define half @fminv_v16f16(<16 x half>* %a) #0 {
 ; VBITS_GE_256-NEXT: fminnmv h0, [[PG]], [[OP]].h
 ; VBITS_GE_256-NEXT: ret
   %op = load <16 x half>, <16 x half>* %a
-  %res = call half @llvm.experimental.vector.reduce.fmin.v16f16(<16 x half> %op)
+  %res = call half @llvm.vector.reduce.fmin.v16f16(<16 x half> %op)
   ret half %res
 }
 
@@ -249,8 +276,17 @@ define half @fminv_v32f16(<32 x half>* %a) #0 {
 ; VBITS_GE_512-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: fminnmv h0, [[PG]], [[OP]].h
 ; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].h, vl16
+; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: ld1h { [[LO:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1h { [[HI:z[0-9]+]].h }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: fminnm [[MIN:z[0-9]+]].h, [[PG]]/m, [[LO]].h, [[HI]].h
+; VBITS_EQ_256-DAG: fminnmv h0, [[PG]], [[MIN]].h
+; VBITS_EQ_256-NEXT: ret
   %op = load <32 x half>, <32 x half>* %a
-  %res = call half @llvm.experimental.vector.reduce.fmin.v32f16(<32 x half> %op)
+  %res = call half @llvm.vector.reduce.fmin.v32f16(<32 x half> %op)
   ret half %res
 }
 
@@ -261,7 +297,7 @@ define half @fminv_v64f16(<64 x half>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fminnmv h0, [[PG]], [[OP]].h
 ; VBITS_GE_1024-NEXT: ret
   %op = load <64 x half>, <64 x half>* %a
-  %res = call half @llvm.experimental.vector.reduce.fmin.v64f16(<64 x half> %op)
+  %res = call half @llvm.vector.reduce.fmin.v64f16(<64 x half> %op)
   ret half %res
 }
 
@@ -272,7 +308,7 @@ define half @fminv_v128f16(<128 x half>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fminnmv h0, [[PG]], [[OP]].h
 ; VBITS_GE_2048-NEXT: ret
   %op = load <128 x half>, <128 x half>* %a
-  %res = call half @llvm.experimental.vector.reduce.fmin.v128f16(<128 x half> %op)
+  %res = call half @llvm.vector.reduce.fmin.v128f16(<128 x half> %op)
   ret half %res
 }
 
@@ -281,7 +317,7 @@ define float @fminv_v2f32(<2 x float> %a) #0 {
 ; CHECK-LABEL: fminv_v2f32:
 ; CHECK: fminnmp s0, v0.2s
 ; CHECK: ret
-  %res = call float @llvm.experimental.vector.reduce.fmin.v2f32(<2 x float> %a)
+  %res = call float @llvm.vector.reduce.fmin.v2f32(<2 x float> %a)
   ret float %res
 }
 
@@ -290,7 +326,7 @@ define float @fminv_v4f32(<4 x float> %a) #0 {
 ; CHECK-LABEL: fminv_v4f32:
 ; CHECK: fminnmv s0, v0.4s
 ; CHECK: ret
-  %res = call float @llvm.experimental.vector.reduce.fmin.v4f32(<4 x float> %a)
+  %res = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> %a)
   ret float %res
 }
 
@@ -301,7 +337,7 @@ define float @fminv_v8f32(<8 x float>* %a) #0 {
 ; VBITS_GE_256-NEXT: fminnmv s0, [[PG]], [[OP]].s
 ; VBITS_GE_256-NEXT: ret
   %op = load <8 x float>, <8 x float>* %a
-  %res = call float @llvm.experimental.vector.reduce.fmin.v8f32(<8 x float> %op)
+  %res = call float @llvm.vector.reduce.fmin.v8f32(<8 x float> %op)
   ret float %res
 }
 
@@ -311,8 +347,17 @@ define float @fminv_v16f32(<16 x float>* %a) #0 {
 ; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: fminnmv s0, [[PG]], [[OP]].s
 ; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].s, vl8
+; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: ld1w { [[LO:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1w { [[HI:z[0-9]+]].s }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: fminnm [[MIN:z[0-9]+]].s, [[PG]]/m, [[LO]].s, [[HI]].s
+; VBITS_EQ_256-DAG: fminnmv s0, [[PG]], [[MIN]].s
+; VBITS_EQ_256-NEXT: ret
   %op = load <16 x float>, <16 x float>* %a
-  %res = call float @llvm.experimental.vector.reduce.fmin.v16f32(<16 x float> %op)
+  %res = call float @llvm.vector.reduce.fmin.v16f32(<16 x float> %op)
   ret float %res
 }
 
@@ -323,7 +368,7 @@ define float @fminv_v32f32(<32 x float>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fminnmv s0, [[PG]], [[OP]].s
 ; VBITS_GE_1024-NEXT: ret
   %op = load <32 x float>, <32 x float>* %a
-  %res = call float @llvm.experimental.vector.reduce.fmin.v32f32(<32 x float> %op)
+  %res = call float @llvm.vector.reduce.fmin.v32f32(<32 x float> %op)
   ret float %res
 }
 
@@ -334,7 +379,7 @@ define float @fminv_v64f32(<64 x float>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fminnmv s0, [[PG]], [[OP]].s
 ; VBITS_GE_2048-NEXT: ret
   %op = load <64 x float>, <64 x float>* %a
-  %res = call float @llvm.experimental.vector.reduce.fmin.v64f32(<64 x float> %op)
+  %res = call float @llvm.vector.reduce.fmin.v64f32(<64 x float> %op)
   ret float %res
 }
 
@@ -343,7 +388,7 @@ define double @fminv_v1f64(<1 x double> %a) #0 {
 ; CHECK-LABEL: fminv_v1f64:
 ; CHECK-NOT: fmin
 ; CHECK: ret
-  %res = call double @llvm.experimental.vector.reduce.fmin.v1f64(<1 x double> %a)
+  %res = call double @llvm.vector.reduce.fmin.v1f64(<1 x double> %a)
   ret double %res
 }
 
@@ -352,7 +397,7 @@ define double @fminv_v2f64(<2 x double> %a) #0 {
 ; CHECK-LABEL: fminv_v2f64:
 ; CHECK: fminnmp d0, v0.2d
 ; CHECK-NEXT: ret
-  %res = call double @llvm.experimental.vector.reduce.fmin.v2f64(<2 x double> %a)
+  %res = call double @llvm.vector.reduce.fmin.v2f64(<2 x double> %a)
   ret double %res
 }
 
@@ -363,7 +408,7 @@ define double @fminv_v4f64(<4 x double>* %a) #0 {
 ; VBITS_GE_256-NEXT: fminnmv d0, [[PG]], [[OP]].d
 ; VBITS_GE_256-NEXT: ret
   %op = load <4 x double>, <4 x double>* %a
-  %res = call double @llvm.experimental.vector.reduce.fmin.v4f64(<4 x double> %op)
+  %res = call double @llvm.vector.reduce.fmin.v4f64(<4 x double> %op)
   ret double %res
 }
 
@@ -373,8 +418,17 @@ define double @fminv_v8f64(<8 x double>* %a) #0 {
 ; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
 ; VBITS_GE_512-NEXT: fminnmv d0, [[PG]], [[OP]].d
 ; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-DAG: ptrue [[PG:p[0-9]+]].d, vl4
+; VBITS_EQ_256-DAG: add x[[A_HI:[0-9]+]], x0, #32
+; VBITS_EQ_256-DAG: ld1d { [[LO:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_EQ_256-DAG: ld1d { [[HI:z[0-9]+]].d }, [[PG]]/z, [x[[A_HI]]]
+; VBITS_EQ_256-DAG: fminnm [[MIN:z[0-9]+]].d, [[PG]]/m, [[LO]].d, [[HI]].d
+; VBITS_EQ_256-DAG: fminnmv d0, [[PG]], [[MIN]].d
+; VBITS_EQ_256-NEXT: ret
   %op = load <8 x double>, <8 x double>* %a
-  %res = call double @llvm.experimental.vector.reduce.fmin.v8f64(<8 x double> %op)
+  %res = call double @llvm.vector.reduce.fmin.v8f64(<8 x double> %op)
   ret double %res
 }
 
@@ -385,7 +439,7 @@ define double @fminv_v16f64(<16 x double>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fminnmv d0, [[PG]], [[OP]].d
 ; VBITS_GE_1024-NEXT: ret
   %op = load <16 x double>, <16 x double>* %a
-  %res = call double @llvm.experimental.vector.reduce.fmin.v16f64(<16 x double> %op)
+  %res = call double @llvm.vector.reduce.fmin.v16f64(<16 x double> %op)
   ret double %res
 }
 
@@ -396,50 +450,50 @@ define double @fminv_v32f64(<32 x double>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fminnmv d0, [[PG]], [[OP]].d
 ; VBITS_GE_2048-NEXT: ret
   %op = load <32 x double>, <32 x double>* %a
-  %res = call double @llvm.experimental.vector.reduce.fmin.v32f64(<32 x double> %op)
+  %res = call double @llvm.vector.reduce.fmin.v32f64(<32 x double> %op)
   ret double %res
 }
 
 attributes #0 = { "target-features"="+sve" }
 
-declare half @llvm.experimental.vector.reduce.fmax.v4f16(<4 x half>)
-declare half @llvm.experimental.vector.reduce.fmax.v8f16(<8 x half>)
-declare half @llvm.experimental.vector.reduce.fmax.v16f16(<16 x half>)
-declare half @llvm.experimental.vector.reduce.fmax.v32f16(<32 x half>)
-declare half @llvm.experimental.vector.reduce.fmax.v64f16(<64 x half>)
-declare half @llvm.experimental.vector.reduce.fmax.v128f16(<128 x half>)
+declare half @llvm.vector.reduce.fmax.v4f16(<4 x half>)
+declare half @llvm.vector.reduce.fmax.v8f16(<8 x half>)
+declare half @llvm.vector.reduce.fmax.v16f16(<16 x half>)
+declare half @llvm.vector.reduce.fmax.v32f16(<32 x half>)
+declare half @llvm.vector.reduce.fmax.v64f16(<64 x half>)
+declare half @llvm.vector.reduce.fmax.v128f16(<128 x half>)
 
-declare float @llvm.experimental.vector.reduce.fmax.v2f32(<2 x float>)
-declare float @llvm.experimental.vector.reduce.fmax.v4f32(<4 x float>)
-declare float @llvm.experimental.vector.reduce.fmax.v8f32(<8 x float>)
-declare float @llvm.experimental.vector.reduce.fmax.v16f32(<16 x float>)
-declare float @llvm.experimental.vector.reduce.fmax.v32f32(<32 x float>)
-declare float @llvm.experimental.vector.reduce.fmax.v64f32(<64 x float>)
+declare float @llvm.vector.reduce.fmax.v2f32(<2 x float>)
+declare float @llvm.vector.reduce.fmax.v4f32(<4 x float>)
+declare float @llvm.vector.reduce.fmax.v8f32(<8 x float>)
+declare float @llvm.vector.reduce.fmax.v16f32(<16 x float>)
+declare float @llvm.vector.reduce.fmax.v32f32(<32 x float>)
+declare float @llvm.vector.reduce.fmax.v64f32(<64 x float>)
 
-declare double @llvm.experimental.vector.reduce.fmax.v1f64(<1 x double>)
-declare double @llvm.experimental.vector.reduce.fmax.v2f64(<2 x double>)
-declare double @llvm.experimental.vector.reduce.fmax.v4f64(<4 x double>)
-declare double @llvm.experimental.vector.reduce.fmax.v8f64(<8 x double>)
-declare double @llvm.experimental.vector.reduce.fmax.v16f64(<16 x double>)
-declare double @llvm.experimental.vector.reduce.fmax.v32f64(<32 x double>)
+declare double @llvm.vector.reduce.fmax.v1f64(<1 x double>)
+declare double @llvm.vector.reduce.fmax.v2f64(<2 x double>)
+declare double @llvm.vector.reduce.fmax.v4f64(<4 x double>)
+declare double @llvm.vector.reduce.fmax.v8f64(<8 x double>)
+declare double @llvm.vector.reduce.fmax.v16f64(<16 x double>)
+declare double @llvm.vector.reduce.fmax.v32f64(<32 x double>)
 
-declare half @llvm.experimental.vector.reduce.fmin.v4f16(<4 x half>)
-declare half @llvm.experimental.vector.reduce.fmin.v8f16(<8 x half>)
-declare half @llvm.experimental.vector.reduce.fmin.v16f16(<16 x half>)
-declare half @llvm.experimental.vector.reduce.fmin.v32f16(<32 x half>)
-declare half @llvm.experimental.vector.reduce.fmin.v64f16(<64 x half>)
-declare half @llvm.experimental.vector.reduce.fmin.v128f16(<128 x half>)
+declare half @llvm.vector.reduce.fmin.v4f16(<4 x half>)
+declare half @llvm.vector.reduce.fmin.v8f16(<8 x half>)
+declare half @llvm.vector.reduce.fmin.v16f16(<16 x half>)
+declare half @llvm.vector.reduce.fmin.v32f16(<32 x half>)
+declare half @llvm.vector.reduce.fmin.v64f16(<64 x half>)
+declare half @llvm.vector.reduce.fmin.v128f16(<128 x half>)
 
-declare float @llvm.experimental.vector.reduce.fmin.v2f32(<2 x float>)
-declare float @llvm.experimental.vector.reduce.fmin.v4f32(<4 x float>)
-declare float @llvm.experimental.vector.reduce.fmin.v8f32(<8 x float>)
-declare float @llvm.experimental.vector.reduce.fmin.v16f32(<16 x float>)
-declare float @llvm.experimental.vector.reduce.fmin.v32f32(<32 x float>)
-declare float @llvm.experimental.vector.reduce.fmin.v64f32(<64 x float>)
+declare float @llvm.vector.reduce.fmin.v2f32(<2 x float>)
+declare float @llvm.vector.reduce.fmin.v4f32(<4 x float>)
+declare float @llvm.vector.reduce.fmin.v8f32(<8 x float>)
+declare float @llvm.vector.reduce.fmin.v16f32(<16 x float>)
+declare float @llvm.vector.reduce.fmin.v32f32(<32 x float>)
+declare float @llvm.vector.reduce.fmin.v64f32(<64 x float>)
 
-declare double @llvm.experimental.vector.reduce.fmin.v1f64(<1 x double>)
-declare double @llvm.experimental.vector.reduce.fmin.v2f64(<2 x double>)
-declare double @llvm.experimental.vector.reduce.fmin.v4f64(<4 x double>)
-declare double @llvm.experimental.vector.reduce.fmin.v8f64(<8 x double>)
-declare double @llvm.experimental.vector.reduce.fmin.v16f64(<16 x double>)
-declare double @llvm.experimental.vector.reduce.fmin.v32f64(<32 x double>)
+declare double @llvm.vector.reduce.fmin.v1f64(<1 x double>)
+declare double @llvm.vector.reduce.fmin.v2f64(<2 x double>)
+declare double @llvm.vector.reduce.fmin.v4f64(<4 x double>)
+declare double @llvm.vector.reduce.fmin.v8f64(<8 x double>)
+declare double @llvm.vector.reduce.fmin.v16f64(<16 x double>)
+declare double @llvm.vector.reduce.fmin.v32f64(<32 x double>)

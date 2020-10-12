@@ -8,7 +8,7 @@ target triple = "aarch64--linux-gnu"
 ; Function Attrs: norecurse nounwind readonly
 define i32 @fn1() local_unnamed_addr #0 {
 ; Ensure that we don't emit reduction intrinsics for unsupported short reductions.
-; CHECK-NOT: @llvm.experimental.vector.reduce
+; CHECK-NOT: @llvm.vector.reduce
 entry:
   %0 = load i32, i32* @b, align 4, !tbaa !1
   %cmp40 = icmp sgt i32 %0, 0

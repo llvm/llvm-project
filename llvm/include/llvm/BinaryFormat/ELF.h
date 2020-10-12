@@ -685,16 +685,19 @@ enum : unsigned {
   // AMDGCN GFX6.
   EF_AMDGPU_MACH_AMDGCN_GFX600 = 0x020,
   EF_AMDGPU_MACH_AMDGCN_GFX601 = 0x021,
+  EF_AMDGPU_MACH_AMDGCN_GFX602 = 0x03a,
   // AMDGCN GFX7.
   EF_AMDGPU_MACH_AMDGCN_GFX700 = 0x022,
   EF_AMDGPU_MACH_AMDGCN_GFX701 = 0x023,
   EF_AMDGPU_MACH_AMDGCN_GFX702 = 0x024,
   EF_AMDGPU_MACH_AMDGCN_GFX703 = 0x025,
   EF_AMDGPU_MACH_AMDGCN_GFX704 = 0x026,
+  EF_AMDGPU_MACH_AMDGCN_GFX705 = 0x03b,
   // AMDGCN GFX8.
   EF_AMDGPU_MACH_AMDGCN_GFX801 = 0x028,
   EF_AMDGPU_MACH_AMDGCN_GFX802 = 0x029,
   EF_AMDGPU_MACH_AMDGCN_GFX803 = 0x02a,
+  EF_AMDGPU_MACH_AMDGCN_GFX805 = 0x03c,
   EF_AMDGPU_MACH_AMDGCN_GFX810 = 0x02b,
   // AMDGCN GFX9.
   EF_AMDGPU_MACH_AMDGCN_GFX900 = 0x02c,
@@ -858,10 +861,11 @@ enum : unsigned {
   SHT_LLVM_ADDRSIG = 0x6fff4c03, // List of address-significant symbols
                                  // for safe ICF.
   SHT_LLVM_DEPENDENT_LIBRARIES =
-      0x6fff4c04,                  // LLVM Dependent Library Specifiers.
-  SHT_LLVM_SYMPART = 0x6fff4c05,   // Symbol partition specification.
-  SHT_LLVM_PART_EHDR = 0x6fff4c06, // ELF header for loadable partition.
-  SHT_LLVM_PART_PHDR = 0x6fff4c07, // Phdrs for loadable partition.
+      0x6fff4c04,                    // LLVM Dependent Library Specifiers.
+  SHT_LLVM_SYMPART = 0x6fff4c05,     // Symbol partition specification.
+  SHT_LLVM_PART_EHDR = 0x6fff4c06,   // ELF header for loadable partition.
+  SHT_LLVM_PART_PHDR = 0x6fff4c07,   // Phdrs for loadable partition.
+  SHT_LLVM_BB_ADDR_MAP = 0x6fff4c08, // LLVM Basic Block Address Map.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.

@@ -163,11 +163,6 @@ public:
     /// Enable preview of FoldingRanges feature.
     bool FoldingRanges = false;
 
-    /// Returns true if the tweak should be enabled.
-    std::function<bool(const Tweak &)> TweakFilter = [](const Tweak &T) {
-      return !T.hidden(); // only enable non-hidden tweaks.
-    };
-
     explicit operator TUScheduler::Options() const;
   };
   // Sensible default options for use in tests.
@@ -274,9 +269,9 @@ public:
 
   /// Test the validity of a rename operation.
   ///
-  /// The returned result describes edits in the main-file only (all
-  /// occurrences of the renamed symbol are simply deleted.
+  /// If NewName is provided, it performs a name validation.
   void prepareRename(PathRef File, Position Pos,
+                     llvm::Optional<std::string> NewName,
                      const RenameOptions &RenameOpts,
                      Callback<RenameResult> CB);
 
@@ -294,7 +289,9 @@ public:
     llvm::StringLiteral Kind;
   };
   /// Enumerate the code tweaks available to the user at a specified point.
+  /// Tweaks where Filter returns false will not be checked or included.
   void enumerateTweaks(PathRef File, Range Sel,
+                       llvm::unique_function<bool(const Tweak &)> Filter,
                        Callback<std::vector<TweakRef>> CB);
 
   /// Apply the code tweak with a specified \p ID.
@@ -381,8 +378,6 @@ private:
   bool BuildRecoveryAST = true;
   // If true, preserve the type for recovery AST.
   bool PreserveRecoveryASTType = false;
-
-  std::function<bool(const Tweak &)> TweakFilter;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<llvm::Optional<FuzzyFindRequest>>

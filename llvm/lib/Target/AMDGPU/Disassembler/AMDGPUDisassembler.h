@@ -17,10 +17,11 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCDisassembler/MCRelocationInfo.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/Support/DataExtractor.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -65,6 +66,33 @@ public:
 
   DecodeStatus tryDecodeInst(const uint8_t* Table, MCInst &MI, uint64_t Inst,
                              uint64_t Address) const;
+
+  Optional<DecodeStatus> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                                       ArrayRef<uint8_t> Bytes,
+                                       uint64_t Address,
+                                       raw_ostream &CStream) const override;
+
+  DecodeStatus decodeKernelDescriptor(StringRef KdName, ArrayRef<uint8_t> Bytes,
+                                      uint64_t KdAddress) const;
+
+  DecodeStatus
+  decodeKernelDescriptorDirective(DataExtractor::Cursor &Cursor,
+                                  ArrayRef<uint8_t> Bytes,
+                                  raw_string_ostream &KdStream) const;
+
+  /// Decode as directives that handle COMPUTE_PGM_RSRC1.
+  /// \param FourByteBuffer - Bytes holding contents of COMPUTE_PGM_RSRC1.
+  /// \param KdStream       - Stream to write the disassembled directives to.
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  DecodeStatus decodeCOMPUTE_PGM_RSRC1(uint32_t FourByteBuffer,
+                                       raw_string_ostream &KdStream) const;
+
+  /// Decode as directives that handle COMPUTE_PGM_RSRC2.
+  /// \param FourByteBuffer - Bytes holding contents of COMPUTE_PGM_RSRC2.
+  /// \param KdStream       - Stream to write the disassembled directives to.
+  // NOLINTNEXTLINE(readability-identifier-naming)
+  DecodeStatus decodeCOMPUTE_PGM_RSRC2(uint32_t FourByteBuffer,
+                                       raw_string_ostream &KdStream) const;
 
   DecodeStatus convertSDWAInst(MCInst &MI) const;
   DecodeStatus convertDPP8Inst(MCInst &MI) const;

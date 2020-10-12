@@ -104,19 +104,6 @@
 ; RUN:     | llvm-dis \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-NOOP
 
-; RUN: opt -disable-output -debug-pass-manager -verify-each -passes='no-op-module,function(no-op-function)' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-VERIFY-EACH
-; CHECK-VERIFY-EACH: Starting llvm::Module pass manager run
-; CHECK-VERIFY-EACH: Running pass: VerifierPass
-; CHECK-VERIFY-EACH: Running pass: NoOpModulePass
-; CHECK-VERIFY-EACH: Running pass: VerifierPass
-; CHECK-VERIFY-EACH: Starting llvm::Function pass manager run
-; CHECK-VERIFY-EACH: Running pass: NoOpFunctionPass
-; CHECK-VERIFY-EACH: Running pass: VerifierPass
-; CHECK-VERIFY-EACH: Finished llvm::Function pass manager run
-; CHECK-VERIFY-EACH: Running pass: VerifierPass
-; CHECK-VERIFY-EACH: Finished llvm::Module pass manager run
-
 ; RUN: opt -disable-output -debug-pass-manager -disable-verify -passes='no-op-module,function(no-op-function)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-NO-VERIFY
 ; CHECK-NO-VERIFY: Starting llvm::Module pass manager run

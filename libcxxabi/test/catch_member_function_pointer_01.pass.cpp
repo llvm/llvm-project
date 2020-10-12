@@ -161,10 +161,12 @@ void test_void()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test1();
     test2();
     test_derived();
     test_void();
+
+    return 0;
 }

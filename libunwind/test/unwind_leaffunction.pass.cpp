@@ -44,7 +44,7 @@ __attribute__((noinline)) void crashing_leaf_func(void) {
   *faultyPointer = 0;
 }
 
-int main() {
+int main(int, char**) {
   signal(SIGSEGV, signal_handler);
   crashing_leaf_func();
   return -2;

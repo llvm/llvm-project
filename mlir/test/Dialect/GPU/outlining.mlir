@@ -165,14 +165,15 @@ func @extra_constants_noarg(%arg0: memref<?xf32>, %arg1: memref<?xf32>) {
 
 // -----
 
+// CHECK-LABEL: @multiple_uses
 func @multiple_uses(%arg0 : memref<?xf32>) {
   %c1 = constant 1 : index
   %c2 = constant 2 : index
   // CHECK: gpu.func {{.*}} {
-  // CHECK: %[[C2:.*]] = constant 2 : index
-  // CHECK: "use1"(%[[C2]], %[[C2]])
-  // CHECK: "use2"(%[[C2]])
-  // CHECK: gpu.return
+  // CHECK:   %[[C2:.*]] = constant 2 : index
+  // CHECK:   "use1"(%[[C2]], %[[C2]])
+  // CHECK:   "use2"(%[[C2]])
+  // CHECK:   gpu.return
   // CHECK: }
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1,
                                        %grid_z = %c1)
@@ -180,6 +181,33 @@ func @multiple_uses(%arg0 : memref<?xf32>) {
                                         %block_z = %c1) {
     "use1"(%c2, %c2) : (index, index) -> ()
     "use2"(%c2) : (index) -> ()
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @multiple_uses2
+func @multiple_uses2(%arg0 : memref<*xf32>) {
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %d = dim %arg0, %c2 : memref<*xf32>
+  // CHECK: gpu.func {{.*}} {
+  // CHECK:   %[[C2:.*]] = constant 2 : index
+  // CHECK:   %[[D:.*]] = dim %[[ARG:.*]], %[[C2]]
+  // CHECK:   "use1"(%[[D]])
+  // CHECK:   "use2"(%[[C2]], %[[C2]])
+  // CHECK:   "use3"(%[[ARG]])
+  // CHECK:   gpu.return
+  // CHECK: }
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1,
+                                       %grid_z = %c1)
+             threads(%tx, %ty, %tz) in (%block_x = %c1, %block_y = %c1,
+                                        %block_z = %c1) {
+    "use1"(%d) : (index) -> ()
+    "use2"(%c2, %c2) : (index, index) -> ()
+    "use3"(%arg0) : (memref<*xf32>) -> ()
     gpu.terminator
   }
   return

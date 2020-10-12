@@ -66,7 +66,7 @@ void runtime_test()
 	assert( std::countl_one(T(~130)) == dig - 8);
 }
 
-int main()
+int main(int, char**)
 {
 	{
     auto lambda = [](auto x) -> decltype(std::countl_one(x)) {};
@@ -162,4 +162,5 @@ int main()
 	}
 #endif
 
+    return 0;
 }

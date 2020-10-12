@@ -8,9 +8,11 @@
 
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/Config.h"
-
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Errno.h"
-
+#include <cassert>
+#include <limits.h>
+#include <mutex>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -128,15 +130,8 @@ bool PseudoTerminal::OpenSecondary(int oflag, char *error_str,
 
   CloseSecondaryFileDescriptor();
 
-  // Open the primary side of a pseudo terminal
-  const char *secondary_name = GetSecondaryName(error_str, error_len);
-
-  if (secondary_name == nullptr)
-    return false;
-
-  m_secondary_fd =
-      llvm::sys::RetryAfterSignal(-1, ::open, secondary_name, oflag);
-
+  std::string name = GetSecondaryName();
+  m_secondary_fd = llvm::sys::RetryAfterSignal(-1, ::open, name.c_str(), oflag);
   if (m_secondary_fd < 0) {
     if (error_str)
       ErrnoToStr(error_str, error_len);
@@ -146,32 +141,21 @@ bool PseudoTerminal::OpenSecondary(int oflag, char *error_str,
   return true;
 }
 
-// Get the name of the secondary pseudo terminal. A primary pseudo terminal
-// should already be valid prior to calling this function (see
-// OpenFirstAvailablePrimary()).
-//
-// RETURNS:
-//  NULL if no valid primary pseudo terminal or if ptsname() fails.
-//  The name of the secondary pseudo terminal as a NULL terminated C string
-//  that comes from static memory, so a copy of the string should be
-//  made as subsequent calls can change this value.
-const char *PseudoTerminal::GetSecondaryName(char *error_str,
-                                             size_t error_len) const {
-  if (error_str)
-    error_str[0] = '\0';
-
-  if (m_primary_fd < 0) {
-    if (error_str)
-      ::snprintf(error_str, error_len, "%s",
-                 "primary file descriptor is invalid");
-    return nullptr;
-  }
-  const char *secondary_name = ::ptsname(m_primary_fd);
-
-  if (error_str && secondary_name == nullptr)
-    ErrnoToStr(error_str, error_len);
-
-  return secondary_name;
+std::string PseudoTerminal::GetSecondaryName() const {
+  assert(m_primary_fd >= 0);
+#if HAVE_PTSNAME_R
+  char buf[PATH_MAX];
+  buf[0] = '\0';
+  int r = ptsname_r(m_primary_fd, buf, sizeof(buf));
+  assert(r == 0);
+  return buf;
+#else
+  static std::mutex mutex;
+  std::lock_guard<std::mutex> guard(mutex);
+  const char *r = ptsname(m_primary_fd);
+  assert(r != nullptr);
+  return r;
+#endif
 }
 
 // Fork a child process and have its stdio routed to a pseudo terminal.

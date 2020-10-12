@@ -153,3 +153,29 @@ acc.loop {
   }) : () -> ()
   acc.yield
 }
+
+// -----
+
+// expected-error@+1 {{at least one operand in copyout, delete or detach must appear on the exit data operation}}
+acc.exit_data attributes {async}
+
+// -----
+
+%cst = constant 1 : index
+%value = alloc() : memref<10xf32>
+// expected-error@+1 {{async attribute cannot appear with asyncOperand}}
+acc.exit_data async(%cst: index) delete(%value : memref<10xf32>) attributes {async}
+
+// -----
+
+%cst = constant 1 : index
+%value = alloc() : memref<10xf32>
+// expected-error@+1 {{wait attribute cannot appear with waitOperands}}
+acc.exit_data wait(%cst: index) delete(%value : memref<10xf32>) attributes {wait}
+
+// -----
+
+%cst = constant 1 : index
+%value = alloc() : memref<10xf32>
+// expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
+acc.exit_data wait_devnum(%cst: index) delete(%value : memref<10xf32>)

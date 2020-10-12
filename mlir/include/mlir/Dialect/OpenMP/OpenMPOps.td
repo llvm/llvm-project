@@ -58,12 +58,12 @@ def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments]> {
     should be used to execute the parallel region.
 
     The optional $default_val attribute specifies the default data sharing attribute
-    of variables used in the parallel region that are not passed explicitly as parameters
+    of values used in the parallel region that are not passed explicitly as parameters
     to the operation.
 
     The $private_vars, $firstprivate_vars, $shared_vars and $copyin_vars parameters
-    are a variadic list of variables that specify the data sharing attribute of
-    those variables.
+    are a variadic list of values that specify the data sharing attribute of
+    those values.
 
     The optional $proc_bind_val attribute controls the thread affinity for the execution
     of the parallel region.

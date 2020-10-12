@@ -37,7 +37,7 @@ define i32 @foo(i32* nocapture readonly %diff) #0 {
 ; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* [[M2]], i64 0, i64 [[INDVARS_IV]], i64 3
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i32* [[ARRAYIDX6]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP13]], <4 x i32>* [[TMP14]], align 16
-; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP13]])
+; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP13]])
 ; CHECK-NEXT:    [[OP_EXTRA]] = add nsw i32 [[TMP15]], [[A_088]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 8

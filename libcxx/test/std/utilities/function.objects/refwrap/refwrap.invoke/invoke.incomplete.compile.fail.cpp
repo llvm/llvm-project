@@ -32,6 +32,7 @@ void test() {
 struct Foo { void operator()(int) const { } };
 Foo& get_foo() { static Foo foo; return foo; }
 
-int main() {
+int main(int, char**) {
     test();
+    return 0;
 }

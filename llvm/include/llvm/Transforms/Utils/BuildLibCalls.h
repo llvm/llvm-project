@@ -96,6 +96,10 @@ namespace llvm {
                        IRBuilderBase &B, const DataLayout &DL,
                        const TargetLibraryInfo *TLI);
 
+  /// Emit a call to the mempcpy function.
+  Value *emitMemPCpy(Value *Dst, Value *Src, Value *Len, IRBuilderBase &B,
+                     const DataLayout &DL, const TargetLibraryInfo *TLI);
+
   /// Emit a call to the memchr function. This assumes that Ptr is a pointer,
   /// Val is an i32 value, and Len is an 'intptr_t' value.
   Value *emitMemChr(Value *Ptr, Value *Val, Value *Len, IRBuilderBase &B,

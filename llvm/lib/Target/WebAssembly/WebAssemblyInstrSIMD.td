@@ -1093,3 +1093,11 @@ multiclass SIMDQFM<ValueType vec_t, string vec, bits<32> simdopA,
 
 defm "" : SIMDQFM<v4f32, "f32x4", 180, 212>;
 defm "" : SIMDQFM<v2f64, "f64x2", 254, 255>;
+
+//===----------------------------------------------------------------------===//
+// Saturating Rounding Q-Format Multiplication
+//===----------------------------------------------------------------------===//
+
+defm Q15MULR_SAT_S :
+  SIMDBinary<v8i16, "i16x8", int_wasm_q15mulr_saturate_signed, "q15mulr_sat_s",
+             156>;

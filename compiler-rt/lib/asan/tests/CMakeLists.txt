@@ -91,6 +91,7 @@ if(APPLE)
 endif()
 if(ANDROID)
   list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS -pie)
+  list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS -fuse-ld=lld)
 endif()
 
 set(ASAN_UNITTEST_INSTRUMENTED_LINK_FLAGS
@@ -288,6 +289,7 @@ if(ANDROID)
       $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+      $<TARGET_OBJECTS:RTLSanCommon.${arch}>
       $<TARGET_OBJECTS:RTUbsan.${arch}>
       $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>
       ${COMPILER_RT_GTEST_SOURCE}

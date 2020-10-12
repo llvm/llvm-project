@@ -21,11 +21,10 @@ void *registers_thread_func(void *arg) {
 
   // To store the pointer, choose a register which is unlikely to be reused by
   // a function call.
-#if defined(__i386__)
-  asm ( "mov %0, %%esi"
+#if defined(__i386__) || defined(__i686__)
+  asm("mov %0, %%edi"
       :
-      : "r" (p)
-      );
+      : "r"(p));
 #elif defined(__x86_64__)
   asm ( "mov %0, %%r15"
       :
@@ -41,6 +40,12 @@ void *registers_thread_func(void *arg) {
       :
       : "r" (p)
       );
+#elif defined(__aarch64__)
+  // x9-10are used. x11-12 are probably used.
+  // So we pick x13 to be safe.
+  asm("mov x13, %0"
+      :
+      : "r"(p));
 #elif defined(__powerpc__)
   asm ( "mr 30, %0"
       :

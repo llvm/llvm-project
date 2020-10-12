@@ -545,6 +545,45 @@ Concatenate two vectors and shuffle the elements according to the mask operand.
 The mask operand should be an IR Constant which exactly matches the
 corresponding mask for the IR shufflevector instruction.
 
+Vector Reduction Operations
+---------------------------
+
+These operations represent horizontal vector reduction, producing a scalar result.
+
+G_VECREDUCE_SEQ_FADD, G_VECREDUCE_SEQ_FMUL
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The SEQ variants perform reductions in sequential order. The first operand is
+an initial scalar accumulator value, and the second operand is the vector to reduce.
+
+G_VECREDUCE_FADD, G_VECREDUCE_FMUL
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These reductions are relaxed variants which may reduce the elements in any order.
+
+G_VECREDUCE_FMAX, G_VECREDUCE_FMIN
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+FMIN/FMAX nodes can have flags, for NaN/NoNaN variants.
+
+
+Integer/bitwise reductions
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* G_VECREDUCE_ADD
+* G_VECREDUCE_MUL
+* G_VECREDUCE_AND
+* G_VECREDUCE_OR
+* G_VECREDUCE_XOR
+* G_VECREDUCE_SMAX
+* G_VECREDUCE_SMIN
+* G_VECREDUCE_UMAX
+* G_VECREDUCE_UMIN
+
+Integer reductions may have a result type larger than the vector element type.
+However, the reduction is performed using the vector element type and the value
+in the top bits is unspecified.
+
 Memory Operations
 -----------------
 

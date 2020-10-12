@@ -1011,7 +1011,7 @@ func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected result type to be 'memref<?x?x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3)>>'}}
+  // expected-error@+1 {{expected result type to be 'memref<?x?x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3)>>' or a rank-reduced version. (mismatch of result strides)}}
   %1 = subview %0[%arg0, %arg1, %arg2][%arg0, %arg1, %arg2][%arg0, %arg1, %arg2]
     : memref<8x16x4xf32> to
       memref<?x?x?xf32, offset: ?, strides: [64, 4, 1]>
@@ -1020,11 +1020,41 @@ func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = alloc() : memref<8x16x4xf32>
+  // expected-error@+1 {{expected result element type to be 'f32'}}
+  %1 = subview %0[0, 0, 0][8, 16, 4][1, 1, 1]
+    : memref<8x16x4xf32> to
+      memref<8x16x4xi32>
+  return
+}
+
+// -----
+
+func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = alloc() : memref<8x16x4xf32>
+  // expected-error@+1 {{expected result rank to be smaller or equal to the source rank.}}
+  %1 = subview %0[0, 0, 0][8, 16, 4][1, 1, 1]
+    : memref<8x16x4xf32> to
+      memref<8x16x4x3xi32>
+  return
+}
+
+// -----
+
 func @invalid_rank_reducing_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = alloc() : memref<8x16x4xf32>
-  // expected-error@+1 {{expected result type to be 'memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>'}}
+  // expected-error@+1 {{expected result type to be 'memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>' or a rank-reduced version. (mismatch of result sizes)}}
   %1 = subview %0[0, 0, 0][8, 16, 4][1, 1, 1]
     : memref<8x16x4xf32> to memref<16x4xf32>
+  return
+}
+
+// -----
+
+func @invalid_rank_reducing_subview(%arg0 : memref<?x?xf32>, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{expected result type to be 'memref<?x1xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>' or a rank-reduced version. (mismatch of result strides)}}
+  %0 = subview %arg0[0, %arg1][%arg2, 1][1, 1] : memref<?x?xf32> to memref<?xf32>
   return
 }
 
@@ -1259,7 +1289,7 @@ func @imaginary_part_from_incompatible_complex_type(%cplx: complex<f64>) {
 // -----
 
 func @subtensor_wrong_dynamic_type(%t: tensor<8x16x4xf32>, %idx : index) {
-      // expected-error @+1 {{expected result type to be 'tensor<4x4x4xf32>'}}
+      // expected-error @+1 {{expected result type to be 'tensor<4x4x4xf32>' or a rank-reduced version. (mismatch of result sizes)}}
   %0 = subtensor %t[0, 2, 0][4, 4, 4][1, 1, 1]
     : tensor<8x16x4xf32> to tensor<?x4x4xf32>
 
@@ -1269,7 +1299,7 @@ func @subtensor_wrong_dynamic_type(%t: tensor<8x16x4xf32>, %idx : index) {
 // -----
 
 func @subtensor_wrong_static_type(%t: tensor<8x16x4xf32>, %idx : index) {
-      // expected-error @+1 {{expected result type to be 'tensor<?x3x?xf32>'}}
+      // expected-error @+1 {{expected result type to be 'tensor<?x3x?xf32>' or a rank-reduced version. (mismatch of result sizes)}}
   %0 = subtensor %t[0, 0, 0][%idx, 3, %idx][1, 1, 1]
     : tensor<8x16x4xf32> to tensor<4x4x4xf32>
 

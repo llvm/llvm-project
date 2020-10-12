@@ -444,13 +444,13 @@ struct VerdefSection : Section {
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Verdef; }
 };
 
-struct Group : Section {
+struct GroupSection : Section {
   // Members of a group contain a flag and a list of section indices
   // that are part of the group.
   std::vector<SectionOrType> Members;
   Optional<StringRef> Signature; /* Info */
 
-  Group() : Section(ChunkKind::Group) {}
+  GroupSection() : Section(ChunkKind::Group) {}
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Group; }
 };

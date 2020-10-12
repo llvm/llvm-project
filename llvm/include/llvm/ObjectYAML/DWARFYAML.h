@@ -145,8 +145,8 @@ struct LineTable {
   uint8_t DefaultIsStmt;
   uint8_t LineBase;
   uint8_t LineRange;
-  uint8_t OpcodeBase;
-  std::vector<uint8_t> StandardOpcodeLengths;
+  Optional<uint8_t> OpcodeBase;
+  Optional<std::vector<uint8_t>> StandardOpcodeLengths;
   std::vector<StringRef> IncludeDirs;
   std::vector<File> Files;
   std::vector<LineTableOpcode> Opcodes;

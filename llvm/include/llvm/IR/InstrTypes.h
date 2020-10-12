@@ -650,8 +650,8 @@ public:
   /// DataLayout argument is to determine the pointer size when examining casts
   /// involving Integer and Pointer types. They are no-op casts if the integer
   /// is the same size as the pointer. However, pointer size varies with
-  /// platform.
-  /// Determine if the described cast is a no-op cast.
+  /// platform.  Note that a precondition of this method is that the cast is
+  /// legal - i.e. the instruction formed with these operands would verify.
   static bool isNoopCast(
     Instruction::CastOps Opcode, ///< Opcode of cast
     Type *SrcTy,         ///< SrcTy of cast
@@ -691,11 +691,14 @@ public:
   /// Return the destination type, as a convenience
   Type* getDestTy() const { return getType(); }
 
-  /// This method can be used to determine if a cast from S to DstTy using
+  /// This method can be used to determine if a cast from SrcTy to DstTy using
   /// Opcode op is valid or not.
   /// @returns true iff the proposed cast is valid.
   /// Determine if a cast is valid without creating one.
-  static bool castIsValid(Instruction::CastOps op, Value *S, Type *DstTy);
+  static bool castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy);
+  static bool castIsValid(Instruction::CastOps op, Value *S, Type *DstTy) {
+    return castIsValid(op, S->getType(), DstTy);
+  }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {

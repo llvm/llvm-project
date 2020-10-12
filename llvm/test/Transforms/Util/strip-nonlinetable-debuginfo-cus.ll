@@ -1,4 +1,5 @@
 ; RUN: opt -S -strip-nonlinetable-debuginfo %s -o - | FileCheck %s
+; RUN: opt -S -passes=strip-nonlinetable-debuginfo %s -o - | FileCheck %s
 !llvm.dbg.cu = !{!2, !6}
 !llvm.gcov = !{!3}
 !llvm.module.flags = !{!7}

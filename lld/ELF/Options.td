@@ -468,7 +468,7 @@ defm whole_archive: B<"whole-archive",
     "Do not force load of all members in a static library (default)">;
 
 defm wrap: Eq<"wrap", "Use wrapper functions for symbol">,
-  MetaVarName<"<symbol>=<symbol>">;
+  MetaVarName<"<symbol>">;
 
 def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
   HelpText<"Linker option extensions">;

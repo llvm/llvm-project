@@ -189,8 +189,9 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   auto *Exec = Args.MakeArgString(HTC.GetProgramPath(AsName));
-  C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileCurCP(),
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 void hexagon::Linker::RenderExtraToolArgs(const JobAction &JA,
@@ -407,8 +408,9 @@ void hexagon::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                            LinkingOutput);
 
   const char *Exec = Args.MakeArgString(HTC.GetLinkerPath());
-  C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileCurCP(),
+                                         Exec, CmdArgs, Inputs, Output));
 }
 // Hexagon tools end.
 

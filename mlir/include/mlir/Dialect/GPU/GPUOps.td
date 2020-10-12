@@ -249,7 +249,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
       return getBody().getNumArguments() - getType().getNumInputs() -
           getNumWorkgroupAttributions();
     }
- 
+
     /// Returns a list of block arguments that correspond to buffers located in
     /// the private memory.
     ArrayRef<BlockArgument> getPrivateAttributions() {
@@ -301,7 +301,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
                IntOrIndex:$blockSizeY, IntOrIndex:$blockSizeZ,
                Variadic<AnyType>:$operands)>,
     Results<(outs)> {
-  let summary = "Launches a function as a GPU kerneel";
+  let summary = "Launches a function as a GPU kernel";
 
   let description = [{
     Launch a kernel function on the specified grid of thread blocks.

@@ -51,7 +51,7 @@ DECLARE_FUNCTIONS_WITH_QUALS(13, const & noexcept);
 DECLARE_FUNCTIONS_WITH_QUALS(14, volatile & noexcept);
 DECLARE_FUNCTIONS_WITH_QUALS(15, const volatile & noexcept);
 
-int main() {
+int main(int, char**) {
 #define CHECK_FUNCTIONS(N)                                                    \
   do {                                                                        \
     /* implicit */                                                            \
@@ -114,6 +114,8 @@ int main() {
   CHECK_FUNCTIONS(13);
   CHECK_FUNCTIONS(14);
   CHECK_FUNCTIONS(15);
+
+  return 0;
 }
 
 // Make sure we fail in a SFINAE-friendly manner when we try to deduce

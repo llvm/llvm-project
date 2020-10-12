@@ -16,6 +16,7 @@ config.python_executable = "@Python3_EXECUTABLE@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
 config.have_libxml2 = @LLVM_ENABLE_LIBXML2@
 config.sizeof_void_p = @CMAKE_SIZEOF_VOID_P@
+config.ld_lld_default_mingw = @LLD_DEFAULT_LD_LLD_IS_MINGW@
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

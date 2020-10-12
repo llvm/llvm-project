@@ -41,9 +41,28 @@ static bool IsLinker(const LoadedModule& module) {
 
 __attribute__((tls_model("initial-exec")))
 THREADLOCAL int disable_counter;
-bool DisabledInThisThread() { return disable_counter > 0; }
-void DisableInThisThread() { disable_counter++; }
+bool DisabledInThisThread() {
+#if SANITIZER_ANDROID
+  // LSAN is only enabled with Android-S and up.
+  if (!HAS_ANDROID_THREAD_PROPERTIES_API)
+    return true;
+#endif
+  return disable_counter > 0;
+}
+void DisableInThisThread() {
+#if SANITIZER_ANDROID
+  // LSAN is only enabled with Android-S and up.
+  if (!HAS_ANDROID_THREAD_PROPERTIES_API)
+    return;
+#endif
+  disable_counter++;
+}
 void EnableInThisThread() {
+#if SANITIZER_ANDROID
+  // LSAN is only enabled with Android-S and up.
+  if (!HAS_ANDROID_THREAD_PROPERTIES_API)
+    return;
+#endif
   if (disable_counter == 0) {
     DisableCounterUnderflow();
   }
@@ -95,7 +114,15 @@ static int ProcessGlobalRegionsCallback(struct dl_phdr_info *info, size_t size,
 
 // Scans global variables for heap pointers.
 void ProcessGlobalRegions(Frontier *frontier) {
-  if (!flags()->use_globals) return;
+  if (!flags()->use_globals) {
+#if SANITIZER_ANDROID
+    // There are known malloc'ed global variables from libc[++] on Android.
+    // If use_globals is turnt off, we could see leaks.
+    // Issue a warning in case users turn it off by accident.
+    Report("use_globals=0 on Android could lead to false reports.");
+#endif
+    return;
+  }
   dl_iterate_phdr(ProcessGlobalRegionsCallback, frontier);
 }
 
