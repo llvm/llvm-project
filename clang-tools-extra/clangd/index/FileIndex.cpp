@@ -34,6 +34,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <algorithm>
 #include <memory>
 #include <tuple>
 #include <utility>
@@ -147,13 +148,21 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input)
       }
     }
   }
-  // Attribute relations to the file declaraing their Subject as Object might
-  // not have been indexed, see SymbolCollector::processRelations for details.
+  // The Subject and/or Object shards might be part of multiple TUs. In
+  // such cases there will be a race and the last TU to write the shard
+  // will win and all the other relations will be lost. To avoid this,
+  // we store relations in both shards. A race might still happen if the
+  // same translation unit produces different relations under different
+  // configurations, but that's something clangd doesn't handle in general.
   if (Index.Relations) {
     for (const auto &R : *Index.Relations) {
       // FIXME: RelationSlab shouldn't contain dangling relations.
-      if (auto *File = SymbolIDToFile.lookup(R.Subject))
-        File->Relations.insert(&R);
+      FileShard *SubjectFile = SymbolIDToFile.lookup(R.Subject);
+      FileShard *ObjectFile = SymbolIDToFile.lookup(R.Object);
+      if (SubjectFile)
+        SubjectFile->Relations.insert(&R);
+      if (ObjectFile && ObjectFile != SubjectFile)
+        ObjectFile->Relations.insert(&R);
     }
   }
   // Store only the direct includes of a file in a shard.
@@ -343,6 +352,12 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
     for (const auto &R : *RelationSlab)
       AllRelations.push_back(R);
   }
+  // Sort relations and remove duplicates that could arise due to
+  // relations being stored in both the shards containing their
+  // subject and object.
+  llvm::sort(AllRelations);
+  AllRelations.erase(std::unique(AllRelations.begin(), AllRelations.end()),
+                     AllRelations.end());
 
   size_t StorageSize =
       RefsStorage.size() * sizeof(Ref) + SymsStorage.size() * sizeof(Symbol);

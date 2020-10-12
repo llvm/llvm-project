@@ -229,6 +229,49 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
                        FileURI("unittest:///root/B.cc")}));
 }
 
+TEST_F(BackgroundIndexTest, RelationsMultiFile) {
+  MockFS FS;
+  FS.Files[testPath("root/Base.h")] = "class Base {};";
+  FS.Files[testPath("root/A.cc")] = R"cpp(
+    #include "Base.h"
+    class A : public Base {};
+  )cpp";
+  FS.Files[testPath("root/B.cc")] = R"cpp(
+    #include "Base.h"
+    class B : public Base {};
+  )cpp";
+
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+  OverlayCDB CDB(/*Base=*/nullptr);
+  BackgroundIndex Index(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                        /*Opts=*/{});
+
+  tooling::CompileCommand Cmd;
+  Cmd.Filename = testPath("root/A.cc");
+  Cmd.Directory = testPath("root");
+  Cmd.CommandLine = {"clang++", Cmd.Filename};
+  CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
+  ASSERT_TRUE(Index.blockUntilIdleForTest());
+
+  Cmd.Filename = testPath("root/B.cc");
+  Cmd.CommandLine = {"clang++", Cmd.Filename};
+  CDB.setCompileCommand(testPath("root/B.cc"), Cmd);
+  ASSERT_TRUE(Index.blockUntilIdleForTest());
+
+  auto HeaderShard = MSS.loadShard(testPath("root/Base.h"));
+  EXPECT_NE(HeaderShard, nullptr);
+  SymbolID Base = findSymbol(*HeaderShard->Symbols, "Base").ID;
+
+  RelationsRequest Req;
+  Req.Subjects.insert(Base);
+  Req.Predicate = RelationKind::BaseOf;
+  uint32_t Results = 0;
+  Index.relations(Req, [&](const SymbolID &, const Symbol &) { ++Results; });
+  EXPECT_EQ(Results, 2u);
+}
+
 TEST_F(BackgroundIndexTest, MainFileRefs) {
   MockFS FS;
   FS.Files[testPath("root/A.h")] = R"cpp(
@@ -345,14 +388,15 @@ TEST_F(BackgroundIndexTest, ShardStorageTest) {
     EXPECT_THAT(Ref.second,
                 UnorderedElementsAre(FileURI("unittest:///root/A.cc")));
 
-  // The BaseOf relationship between A_CC and B_CC is stored in the file
-  // containing the definition of the subject (A_CC)
+  // The BaseOf relationship between A_CC and B_CC is stored in both the file
+  // containing the definition of the subject (A_CC) and the file containing
+  // the definition of the object (B_CC).
   SymbolID A = findSymbol(*ShardHeader->Symbols, "A_CC").ID;
   SymbolID B = findSymbol(*ShardSource->Symbols, "B_CC").ID;
   EXPECT_THAT(*ShardHeader->Relations,
               UnorderedElementsAre(Relation{A, RelationKind::BaseOf, B}));
-  // (and not in the file containing the definition of the object (B_CC)).
-  EXPECT_EQ(ShardSource->Relations->size(), 0u);
+  EXPECT_THAT(*ShardSource->Relations,
+              UnorderedElementsAre(Relation{A, RelationKind::BaseOf, B}));
 }
 
 TEST_F(BackgroundIndexTest, DirectIncludesTest) {
