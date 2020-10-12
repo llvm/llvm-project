@@ -43,6 +43,7 @@ class VPValue {
   friend class VPBasicBlock;
   friend class VPInterleavedAccessInfo;
   friend class VPSlotTracker;
+  friend class VPRecipeBase;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -77,7 +78,7 @@ public:
   /// are actually instantiated. Values of this enumeration are kept in the
   /// SubclassID field of the VPValue objects. They are used for concrete
   /// type identification.
-  enum { VPValueSC, VPInstructionSC };
+  enum { VPValueSC, VPInstructionSC, VPMemoryInstructionSC };
 
   VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV) {}
   VPValue(const VPValue &) = delete;
