@@ -18,16 +18,17 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS[[BITS]]
+  Class:   ELFCLASS[[BITS=64]]
   Data:    ELFDATA2LSB
   Type:    ET_DYN
   Machine: [[MACHINE]]
 Sections:
-  - Name:   .hash
-    Type:   SHT_HASH
-    Flags:  [ SHF_ALLOC ]
-    Bucket: [ 1, 2 ]
-    Chain:  [ 3, 4, 5 ]
+  - Name:    .hash
+    Type:    SHT_HASH
+    Flags:   [ SHF_ALLOC ]
+    Bucket:  [ 1, 2 ]
+    Chain:   [ 3, 4, 5 ]
+    EntSize: [[ENTSIZE=4]]
   - Name:  .dynamic
     Type:  SHT_DYNAMIC
     Flags: [ SHF_ALLOC ]
@@ -41,6 +42,43 @@ ProgramHeaders:
     Sections:
       - Section: .hash
       - Section: .dynamic
+
+## Document that we ignore the sh_entsize value when dumping the hash section.
+## Implementation assumes that the size of entries is 4, matching the ELF specification.
+
+# RUN: yaml2obj --docnum=1 -DENTSIZE=8 -DBITS=64 -DMACHINE=EM_X86_64 %s -o %t.x64.ent8
+# RUN: yaml2obj --docnum=1 -DENTSIZE=8 -DBITS=32 -DMACHINE=EM_386 %s -o %t.x32.ent8
+
+# RUN: llvm-readobj --hash-table %t.x64.ent8 | FileCheck %s --check-prefix=HASH
+# RUN: llvm-readelf --hash-table %t.x64.ent8 | FileCheck %s --check-prefix=HASH
+# RUN: llvm-readobj --hash-table %t.x32.ent8 | FileCheck %s --check-prefix=HASH
+# RUN: llvm-readelf --hash-table %t.x32.ent8 | FileCheck %s --check-prefix=HASH
+
+## We don't support dumping hash tables on EM_S390 and EM_ALPHA platforms and report a warning.
+## On these platforms the size of entries is 8, which violates the ELF specification, which says that the size
+## of hash entries in the hash table must be 4.
+
+# RUN: yaml2obj --docnum=1 -DMACHINE=EM_S390 %s -o %t.s390
+# RUN: llvm-readobj --hash-table %t.s390 2>&1 | FileCheck %s -DFILE=%t.s390 --check-prefixes=WARN-HASH -DNAME="IBM S/390"
+# RUN: llvm-readelf --hash-table %t.s390 2>&1 | FileCheck %s -DFILE=%t.s390 --check-prefixes=WARN-HASH -DNAME="IBM S/390"
+
+# WARN-HASH:      HashTable {
+# WARN-HASH-NEXT: warning: '[[FILE]]': the hash table at 0x78 is not supported: it contains non-standard 8 byte entries on [[NAME]] platform
+# WARN-HASH-NEXT: }
+
+# RUN: yaml2obj --docnum=1 -DMACHINE=EM_ALPHA %s -o %t.alpha
+# RUN: llvm-readobj --hash-table %t.alpha 2>&1 | FileCheck %s -DFILE=%t.alpha --check-prefixes=WARN-HASH -DNAME="EM_ALPHA"
+# RUN: llvm-readelf --hash-table %t.alpha 2>&1 | FileCheck %s -DFILE=%t.alpha --check-prefixes=WARN-HASH -DNAME="EM_ALPHA"
+
+## We don't report warnings about the unsupported hash table on EM_S390 and EM_ALPHA platforms
+## when --hash-table is not requested.
+
+# RUN: llvm-readobj %t.s390 2>&1 | FileCheck %s -DFILE=%t.s390 --implicit-check-not="warning:"  --check-prefix=NOWARN
+# RUN: llvm-readelf %t.s390 2>&1 | FileCheck %s -DFILE=%t.s390 --implicit-check-not="warning:"  --check-prefix=NOWARN
+# RUN: llvm-readobj %t.alpha 2>&1 | FileCheck %s -DFILE=%t.alpha --implicit-check-not="warning:" --check-prefix=NOWARN
+# RUN: llvm-readelf %t.alpha 2>&1 | FileCheck %s -DFILE=%t.alpha --implicit-check-not="warning:" --check-prefix=NOWARN
+
+# NOWARN: warning: '[[FILE]]': string table was not found
 
 ## Check we can dump the SHT_HASH section even when an object
 ## does not have the section header table.
