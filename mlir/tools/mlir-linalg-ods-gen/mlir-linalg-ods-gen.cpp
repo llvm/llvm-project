@@ -994,6 +994,10 @@ public:
   void printRegionBuilder(llvm::raw_ostream &os, StringRef cppOpName,
                           ComprehensionParsingState &state);
 
+  /// Print the C++ impl for named ops canonicalizers and fodlers.
+  void printCanonicalizersAndFolders(llvm::raw_ostream &os,
+                                     StringRef cppOpName);
+
 private:
   //===--------------------------------------------------------------------===//
   // Internal bookkeeping of tensors.
@@ -1430,6 +1434,7 @@ LogicalResult TCParser::parseAndEmitODSDef(llvm::raw_ostream &os) {
     printReferenceIterators(ss, cppOpName, state);
     printReferenceIndexingMaps(ss, cppOpName, state);
     printRegionBuilder(ss, cppOpName, state);
+    printCanonicalizersAndFolders(ss, cppOpName);
     ss.flush();
     os << extraMethods << "\n";
   }
@@ -1569,6 +1574,22 @@ void TCParser::printReferenceIterators(llvm::raw_ostream &os,
   ss.flush();
 
   os << llvm::formatv(referenceReferenceIteratorsFmt, cppOpName, iteratorsStr);
+}
+
+void TCParser::printCanonicalizersAndFolders(llvm::raw_ostream &os,
+                                             StringRef cppOpName) {
+  const char *canonicalizersAndFoldersFmt = R"FMT(
+    void {0}::getCanonicalizationPatterns(
+        OwningRewritePatternList &results,
+        MLIRContext *context) {{
+      results.insert<EraseDeadLinalgOp>();
+      results.insert<FoldTensorCastOp>();
+    }
+    LogicalResult {0}::fold(ArrayRef<Attribute>,
+                            SmallVectorImpl<OpFoldResult> &) {{
+      return foldMemRefCast(*this);
+    })FMT";
+  os << llvm::formatv(canonicalizersAndFoldersFmt, cppOpName);
 }
 
 /// Print the C++ StructuredOpsInterface impl of `referenceIndexingMaps`.
