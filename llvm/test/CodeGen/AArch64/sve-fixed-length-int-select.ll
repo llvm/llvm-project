@@ -42,14 +42,14 @@ define void @select_v32i8(<32 x i8>* %a, <32 x i8>* %b, <32 x i1>* %c) #0 {
 ; CHECK: select_v32i8:
 ; CHECK: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,32)]]
 ; CHECK: ptrue [[PG1:p[0-9]+]].b
-; VBITS_GE_256: ld1b { [[MASK:z[0-9]+]].b }, [[PG]]/z, [x9]
-; VBITS_GE_256-NEXT: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
-; VBITS_GE_256-NEXT: and [[AND:z[0-9]+]].b, [[MASK]].b, #0x1
-; VBITS_GE_256-NEXT: cmpne [[COND:p[0-9]+]].b, [[PG1]]/z, [[AND]].b, #0
-; VBITS_GE_256-NEXT: sel [[RES:z[0-9]+]].b, [[COND]], [[OP1]].b, [[OP2]].b
-; VBITS_GE_256-NEXT: st1b { [[RES]].b }, [[PG]], [x0]
-; VBITS_GE_256: ret
+; CHECK: ld1b { [[MASK:z[0-9]+]].b }, [[PG]]/z, [x9]
+; CHECK-NEXT: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
+; CHECK-NEXT: and [[AND:z[0-9]+]].b, [[MASK]].b, #0x1
+; CHECK-NEXT: cmpne [[COND:p[0-9]+]].b, [[PG1]]/z, [[AND]].b, #0
+; CHECK-NEXT: sel [[RES:z[0-9]+]].b, [[COND]], [[OP1]].b, [[OP2]].b
+; CHECK-NEXT: st1b { [[RES]].b }, [[PG]], [x0]
+; CHECK: ret
   %mask = load <32 x i1>, <32 x i1>* %c
   %op1 = load <32 x i8>, <32 x i8>* %a
   %op2 = load <32 x i8>, <32 x i8>* %b
@@ -140,14 +140,14 @@ define void @select_v16i16(<16 x i16>* %a, <16 x i16>* %b, <16 x i1>* %c) #0 {
 ; CHECK: select_v16i16:
 ; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),16)]]
 ; CHECK: ptrue [[PG1:p[0-9]+]].h
-; VBITS_GE_256: ld1h { [[MASK:z[0-9]+]].h }, [[PG]]/z, [x9]
-; VBITS_GE_256-NEXT: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_256-NEXT: and [[AND:z[0-9]+]].h, [[MASK]].h, #0x1
-; VBITS_GE_256-NEXT: cmpne [[COND:p[0-9]+]].h, [[PG1]]/z, [[AND]].h, #0
-; VBITS_GE_256-NEXT: sel [[RES:z[0-9]+]].h, [[COND]], [[OP1]].h, [[OP2]].h
-; VBITS_GE_256-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
-; VBITS_GE_256: ret
+; CHECK: ld1h { [[MASK:z[0-9]+]].h }, [[PG]]/z, [x9]
+; CHECK-NEXT: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; CHECK-NEXT: and [[AND:z[0-9]+]].h, [[MASK]].h, #0x1
+; CHECK-NEXT: cmpne [[COND:p[0-9]+]].h, [[PG1]]/z, [[AND]].h, #0
+; CHECK-NEXT: sel [[RES:z[0-9]+]].h, [[COND]], [[OP1]].h, [[OP2]].h
+; CHECK-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK: ret
   %mask = load <16 x i1>, <16 x i1>* %c
   %op1 = load <16 x i16>, <16 x i16>* %a
   %op2 = load <16 x i16>, <16 x i16>* %b
@@ -238,14 +238,14 @@ define void @select_v8i32(<8 x i32>* %a, <8 x i32>* %b, <8 x i1>* %c) #0 {
 ; CHECK: select_v8i32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
 ; CHECK: ptrue [[PG1:p[0-9]+]].s
-; VBITS_GE_256: ld1w { [[MASK:z[0-9]+]].s }, [[PG]]/z, [x9]
-; VBITS_GE_256-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_256-NEXT: and [[AND:z[0-9]+]].s, [[MASK]].s, #0x1
-; VBITS_GE_256-NEXT: cmpne [[COND:p[0-9]+]].s, [[PG1]]/z, [[AND]].s, #0
-; VBITS_GE_256-NEXT: sel [[RES:z[0-9]+]].s, [[COND]], [[OP1]].s, [[OP2]].s
-; VBITS_GE_256-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
-; VBITS_GE_256: ret
+; CHECK: ld1w { [[MASK:z[0-9]+]].s }, [[PG]]/z, [x9]
+; CHECK-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; CHECK-NEXT: and [[AND:z[0-9]+]].s, [[MASK]].s, #0x1
+; CHECK-NEXT: cmpne [[COND:p[0-9]+]].s, [[PG1]]/z, [[AND]].s, #0
+; CHECK-NEXT: sel [[RES:z[0-9]+]].s, [[COND]], [[OP1]].s, [[OP2]].s
+; CHECK-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK: ret
   %mask = load <8 x i1>, <8 x i1>* %c
   %op1 = load <8 x i32>, <8 x i32>* %a
   %op2 = load <8 x i32>, <8 x i32>* %b
@@ -336,14 +336,14 @@ define void @select_v4i64(<4 x i64>* %a, <4 x i64>* %b, <4 x i1>* %c) #0 {
 ; CHECK: select_v4i64:
 ; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),4)]]
 ; CHECK: ptrue [[PG1:p[0-9]+]].d
-; VBITS_GE_256: ld1d { [[MASK:z[0-9]+]].d }, [[PG]]/z, [x9]
-; VBITS_GE_256-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
-; VBITS_GE_256-NEXT: and [[AND:z[0-9]+]].d, [[MASK]].d, #0x1
-; VBITS_GE_256-NEXT: cmpne [[COND:p[0-9]+]].d, [[PG1]]/z, [[AND]].d, #0
-; VBITS_GE_256-NEXT: sel [[RES:z[0-9]+]].d, [[COND]], [[OP1]].d, [[OP2]].d
-; VBITS_GE_256-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
-; VBITS_GE_256: ret
+; CHECK: ld1d { [[MASK:z[0-9]+]].d }, [[PG]]/z, [x9]
+; CHECK-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
+; CHECK-NEXT: and [[AND:z[0-9]+]].d, [[MASK]].d, #0x1
+; CHECK-NEXT: cmpne [[COND:p[0-9]+]].d, [[PG1]]/z, [[AND]].d, #0
+; CHECK-NEXT: sel [[RES:z[0-9]+]].d, [[COND]], [[OP1]].d, [[OP2]].d
+; CHECK-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK: ret
   %mask = load <4 x i1>, <4 x i1>* %c
   %op1 = load <4 x i64>, <4 x i64>* %a
   %op2 = load <4 x i64>, <4 x i64>* %b
