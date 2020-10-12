@@ -50,6 +50,7 @@ add_llvm_unittest(SupportTests
   MD5Test.cpp
   ManagedStatic.cpp
   MathExtrasTest.cpp
+  MemoryBufferRefTest.cpp
   MemoryBufferTest.cpp
   MemoryTest.cpp
   NativeFormatTests.cpp
