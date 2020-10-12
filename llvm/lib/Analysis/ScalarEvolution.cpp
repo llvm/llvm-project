@@ -5500,16 +5500,14 @@ ScalarEvolution::getRangeRef(const SCEV *S,
         auto RangeFromAffine = getRangeForAffineAR(
             AddRec->getStart(), AddRec->getStepRecurrence(*this), MaxBECount,
             BitWidth);
-        if (!RangeFromAffine.isFullSet())
-          ConservativeResult =
-              ConservativeResult.intersectWith(RangeFromAffine, RangeType);
+        ConservativeResult =
+            ConservativeResult.intersectWith(RangeFromAffine, RangeType);
 
         auto RangeFromFactoring = getRangeViaFactoring(
             AddRec->getStart(), AddRec->getStepRecurrence(*this), MaxBECount,
             BitWidth);
-        if (!RangeFromFactoring.isFullSet())
-          ConservativeResult =
-              ConservativeResult.intersectWith(RangeFromFactoring, RangeType);
+        ConservativeResult =
+            ConservativeResult.intersectWith(RangeFromFactoring, RangeType);
       }
     }
 
