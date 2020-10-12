@@ -10,7 +10,7 @@ extern "C" void ubsan_message(const char *msg);
 static void message(const char *msg) { ubsan_message(msg); }
 #else
 static void message(const char *msg) {
-  write(2, msg, strlen(msg));
+  (void)write(2, msg, strlen(msg));
 }
 #endif
 
