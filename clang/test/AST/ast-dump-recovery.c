@@ -87,3 +87,18 @@ void test2() {
   // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'some_func'
   (float)some_func();
 }
+
+void test3() {
+  // CHECK:     CallExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT: |-ParenExpr {{.*}} contains-errors lvalue
+  // CHECK-NEXT: | `-RecoveryExpr {{.*}} contains-errors
+  // CHECK-NEXT: |   `-DeclRefExpr {{.*}} '__builtin_classify_type'
+  // CHECK-NEXT: `-IntegerLiteral {{.*}} 'int' 1
+  (*__builtin_classify_type)(1);
+
+  extern void ext();
+  // CHECK:     CallExpr {{.*}} 'void' contains-errors
+  // CHECK-NEXT: |-DeclRefExpr {{.*}} 'ext'
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>'
+  ext(undef_var);
+}
