@@ -419,6 +419,86 @@ genACCParallelOp(Fortran::lower::AbstractConverter &converter,
                        firOpBuilder.getUnitAttr());
 }
 
+static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
+                         const Fortran::parser::AccClauseList &accClauseList) {
+  mlir::Value ifCond;
+  SmallVector<Value, 2> copyOperands, copyinOperands, copyinReadonlyOperands,
+      copyoutOperands, copyoutZeroOperands, createOperands, createZeroOperands,
+      noCreateOperands, presentOperands, deviceptrOperands, attachOperands;
+
+  auto &firOpBuilder = converter.getFirOpBuilder();
+  auto currentLocation = converter.getCurrentLocation();
+
+  // Lower clauses values mapped to operands.
+  // Keep track of each group of operands separatly as clauses can appear
+  // more than once.
+  for (const auto &clause : accClauseList.v) {
+    if (const auto *ifClause =
+            std::get_if<Fortran::parser::AccClause::If>(&clause.u)) {
+      Value cond = fir::getBase(
+          converter.genExprValue(*Fortran::semantics::GetExpr(ifClause->v)));
+      ifCond = firOpBuilder.createConvert(currentLocation,
+                                          firOpBuilder.getI1Type(), cond);
+    } else if (const auto *copyClause =
+                   std::get_if<Fortran::parser::AccClause::Copy>(&clause.u)) {
+      genObjectList(copyClause->v, converter, copyOperands);
+    } else if (const auto *copyinClause =
+                   std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
+      genObjectListWithModifier<Fortran::parser::AccClause::Copyin>(
+          copyinClause, converter,
+          Fortran::parser::AccDataModifier::Modifier::ReadOnly,
+          copyinReadonlyOperands, copyinOperands);
+    } else if (const auto *copyoutClause =
+                   std::get_if<Fortran::parser::AccClause::Copyout>(
+                       &clause.u)) {
+      genObjectListWithModifier<Fortran::parser::AccClause::Copyout>(
+          copyoutClause, converter,
+          Fortran::parser::AccDataModifier::Modifier::Zero, copyoutZeroOperands,
+          copyoutOperands);
+    } else if (const auto *createClause =
+                   std::get_if<Fortran::parser::AccClause::Create>(&clause.u)) {
+      genObjectListWithModifier<Fortran::parser::AccClause::Create>(
+          createClause, converter,
+          Fortran::parser::AccDataModifier::Modifier::Zero, createZeroOperands,
+          createOperands);
+    } else if (const auto *noCreateClause =
+                   std::get_if<Fortran::parser::AccClause::NoCreate>(
+                       &clause.u)) {
+      genObjectList(noCreateClause->v, converter, noCreateOperands);
+    } else if (const auto *presentClause =
+                   std::get_if<Fortran::parser::AccClause::Present>(
+                       &clause.u)) {
+      genObjectList(presentClause->v, converter, presentOperands);
+    } else if (const auto *deviceptrClause =
+                   std::get_if<Fortran::parser::AccClause::Deviceptr>(
+                       &clause.u)) {
+      genObjectList(deviceptrClause->v, converter, deviceptrOperands);
+    } else if (const auto *attachClause =
+                   std::get_if<Fortran::parser::AccClause::Attach>(&clause.u)) {
+      genObjectList(attachClause->v, converter, attachOperands);
+    }
+  }
+
+  // Prepare the operand segement size attribute and the operands value range.
+  SmallVector<Value, 8> operands;
+  SmallVector<int32_t, 8> operandSegments;
+  addOperand(operands, operandSegments, ifCond);
+  addOperands(operands, operandSegments, copyOperands);
+  addOperands(operands, operandSegments, copyinOperands);
+  addOperands(operands, operandSegments, copyinReadonlyOperands);
+  addOperands(operands, operandSegments, copyoutOperands);
+  addOperands(operands, operandSegments, copyoutZeroOperands);
+  addOperands(operands, operandSegments, createOperands);
+  addOperands(operands, operandSegments, createZeroOperands);
+  addOperands(operands, operandSegments, noCreateOperands);
+  addOperands(operands, operandSegments, presentOperands);
+  addOperands(operands, operandSegments, deviceptrOperands);
+  addOperands(operands, operandSegments, attachOperands);
+
+  createRegionOp<mlir::acc::DataOp, mlir::acc::TerminatorOp>(
+      firOpBuilder, currentLocation, operands, operandSegments);
+}
+
 static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::pft::Evaluation &eval,
@@ -432,6 +512,8 @@ genACC(Fortran::lower::AbstractConverter &converter,
 
   if (blockDirective.v == llvm::acc::ACCD_parallel) {
     genACCParallelOp(converter, accClauseList);
+  } else if (blockDirective.v == llvm::acc::ACCD_data) {
+    genACCDataOp(converter, accClauseList);
   }
 }
 
