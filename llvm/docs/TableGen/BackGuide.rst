@@ -52,14 +52,7 @@ is usually abbreviated ``RK``.
 There are two maps in the recordkeeper, one for classes and one for records
 (the latter often referred to as *defs*). Each map maps the class or record
 name to an instance of the ``Record`` class (see `Record`_), which contains
-all the information about that class or record. The ``RecordKeeper`` class
-defines a type that must be used to declare these maps if they are requested
-directly.
-
-.. code-block:: text
-
-  using RecordMap = std::map<std::string, std::unique_ptr<Record>,
-                             std::less<>>;
+all the information about that class or record.
 
 In addition to the two maps, the ``RecordKeeper`` instance contains:
 
@@ -562,7 +555,7 @@ The ``RecordKeeper`` class provides four functions for getting the
 * ``getDefs()`` returns a ``RecordMap`` reference for all the concrete
   records.
 
-* ``getDef(``\ *name*\ ``)`` return a ``Record`` reference for the named
+* ``getDef(``\ *name*\ ``)`` returns a ``Record`` reference for the named
   concrete record.
 
 * ``getAllDerivedDefinitions(``\ *classname*\ ``)`` returns a vector of
@@ -701,7 +694,7 @@ TableGen records are often derived from multiple classes and also often
 defined through a sequence of multiclasses. Because of this, it can be
 difficult for backends to report clear error messages with accurate source
 file locations.  To make error reporting easier, five error reporting
-functions are provided, each with four overloads. [all combinations to come]
+functions are provided, each with four overloads.
 
 * ``PrintWarning`` prints a message tagged as a warning.
 

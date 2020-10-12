@@ -444,8 +444,11 @@ sense after reading the remainder of this guide.
 
 This form creates a new anonymous record definition (as would be created by an
 unnamed ``def`` inheriting from the given class with the given template
-arguments; see `def`_) and the value is that record. (A field of the record can be
-obtained using a suffix; see `Suffixed Values`_.)
+arguments; see `def`_) and the value is that record. A field of the record can be
+obtained using a suffix; see `Suffixed Values`_.
+
+Invoking a class in this manner can provide a simple subroutine facility.
+See `Using Classes as Subroutines`_ for more information.
 
 .. productionlist::
    SimpleValue8: `BangOperator` ["<" `Type` ">"] "(" `ValueListNE` ")"
@@ -541,7 +544,7 @@ their declarations are parsed, and thus before the class is finally defined.
 
 .. _NAME:
 
-Every class has an implicit template argument named ``NAME`` (uppercse),
+Every class has an implicit template argument named ``NAME`` (uppercase),
 which is bound to the name of the :token:`Def` or :token:`Defm` inheriting
 the class. The value of ``NAME`` is undefined if the class is inherited by
 an anonymous record.
@@ -1252,7 +1255,7 @@ list of a ``foreach``, which establishes a scope.
 A variable named ``V`` in an inner scope shadows (hides) any variables ``V``
 in outer scopes. In particular, ``V`` in a record body shadows a global
 ``V``, and ``V`` in a ``foreach`` statement list shadows any ``V`` in
-surrounding global or record scopes.
+surrounding record or global scopes.
 
 Variables defined in a ``foreach`` go out of scope at the end of
 each loop iteration, so their value in one iteration is not available in
@@ -1287,7 +1290,6 @@ abstract records and so go through the same steps.
 5. Make a pass over all the fields to resolve any inter-field references.
 
 6. Add the record to the master record list.
-
 
 Because references between fields are resolved (step 5) after ``let`` bindings are
 applied (step 3), the ``let`` statement has unusual power. For example:
@@ -1328,6 +1330,52 @@ where a local ``let`` does the same thing, the results are:
 ``Yplus1`` is 11 because the ``let Y`` is performed before the ``!add(Y,
 1)`` is resolved. Use this power wisely.
 
+
+Using Classes as Subroutines
+============================
+
+As described in `Simple values`_, a class can be invoked in an expression
+and passed template arguments. This causes TableGen to create a new anonymous
+record inheriting from that class. As usual, the record receives all the
+fields defined in the class.
+
+This feature can be employed as a simple subroutine facility. The class can
+use the template arguments to define various variables and fields, which end
+up in the anonymous record. Those fields can then be retrieved in the
+expression invoking the class as follows. Assume that the field ``ret``
+contains the final value of the subroutine.
+
+.. code-block:: text
+
+  int Result = ... CalcValue<arg>.ret ...;
+
+The ``CalcValue`` class is invoked with the template argument ``arg``. It
+calculates a value for the ``ret`` field, which is then retrieved at the
+"point of call" in the initialization for the Result field. The anonymous
+record created in this example serves no other purpose than to carry the
+result value.
+
+Here is a practical example. The class ``isValidSize`` determines whether a
+specified number of bytes represents a valid data size. The bit ``ret`` is
+set appropriately. The field ``ValidSize`` obtains its initial value by
+invoking ``isValidSize`` with the data size and retrieving the ``ret`` field
+from the resulting anonymous record.
+
+.. code-block:: text
+
+  class isValidSize<int size> {
+    bit ret = !cond(!eq(size,  1): 1,
+                    !eq(size,  2): 1,
+                    !eq(size,  4): 1,
+                    !eq(size,  8): 1,
+                    !eq(size, 16): 1,
+                    1: 0);
+  }
+
+  def Data1 {
+    int Size = ...;
+    bit ValidSize = isValidSize<Size>.ret;
+  }
 
 Preprocessing Facilities
 ========================
@@ -1372,8 +1420,8 @@ A macro test region begins with an ``#ifdef`` or ``#ifndef`` directive. If
 the macro name is defined (``#ifdef``) or undefined (``#ifndef``), then the
 source code between the directive and the corresponding ``#else`` or
 ``#endif`` is processed. If the test fails but there is an ``#else``
-portion, the source code between the ``#else`` and the ``#endif`` is
-processed. If the test fails and there is no ``#else`` portion, then no
+clause, the source code between the ``#else`` and the ``#endif`` is
+processed. If the test fails and there is no ``#else`` clause, then no
 source code in the test region is processed.
 
 Test regions may be nested, but they must be properly nested. A region
@@ -1381,7 +1429,7 @@ started in a file must end in that file; that is, must have its
 ``#endif`` in the same file.
 
 A :token:`MacroName` may be defined externally using the ``-D`` option on the
-``llvm-tblgen`` command line::
+``xxx-tblgen`` command line::
 
   llvm-tblgen self-reference.td -Dmacro1 -Dmacro3
 
