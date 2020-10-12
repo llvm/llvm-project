@@ -676,8 +676,8 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
 
   // See if we can simplify any instructions used by the instruction whose sole
   // purpose is to compute bits we don't care about.
-  unsigned TypeBits = Op0->getType()->getScalarSizeInBits();
-
+  Type *Ty = I.getType();
+  unsigned TypeBits = Ty->getScalarSizeInBits();
   assert(!Op1C->uge(TypeBits) &&
          "Shift over the type width should have been removed already");
 
@@ -707,9 +707,8 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
       // clear the top bits as needed.  This 'and' will usually be zapped by
       // other xforms later if dead.
       unsigned SrcSize = SrcTy->getScalarSizeInBits();
-      unsigned DstSize = TI->getType()->getScalarSizeInBits();
       Constant *MaskV =
-          ConstantInt::get(SrcTy, APInt::getLowBitsSet(SrcSize, DstSize));
+          ConstantInt::get(SrcTy, APInt::getLowBitsSet(SrcSize, TypeBits));
 
       // The mask we constructed says what the trunc would do if occurring
       // between the shifts.  We want to know the effect *after* the second
@@ -719,7 +718,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *Op1,
       // shift1 & 0x00FF
       Value *And = Builder.CreateAnd(NSh, MaskV, TI->getName());
       // Return the value truncated to the interesting size.
-      return new TruncInst(And, I.getType());
+      return new TruncInst(And, Ty);
     }
   }
 
