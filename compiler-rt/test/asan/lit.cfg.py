@@ -205,7 +205,7 @@ config.substitutions.append( ("%libdl", libdl_flag) )
 config.available_features.add("asan-" + config.bits + "-bits")
 
 # Fast unwinder doesn't work with Thumb
-if re.search('mthumb', config.target_cflags) is None:
+if not config.arm_thumb:
   config.available_features.add('fast-unwinder-works')
 
 # Turn on leak detection on 64-bit Linux.
