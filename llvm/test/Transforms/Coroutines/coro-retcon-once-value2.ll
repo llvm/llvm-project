@@ -42,10 +42,9 @@ cleanup:
 ; CHECK-NEXT:    [[T0:%.*]] = bitcast i8* %0 to [[FRAME_T:%.*]]**
 ; CHECK-NEXT:    [[FRAME:%.*]] = load [[FRAME_T]]*, [[FRAME_T]]** [[T0]]
 ; CHECK-NEXT:    bitcast [[FRAME_T]]* [[FRAME]] to i8*
-; CHECK-NEXT:    %temp = getelementptr inbounds [[FRAME_T]], [[FRAME_T]]* [[FRAME]], i32 0, i32 1
+; CHECK-NEXT:    [[TEMP_SLOT:%.*]] = getelementptr inbounds [[FRAME_T]], [[FRAME_T]]* [[FRAME]], i32 0, i32 1
 ; CHECK-NEXT:    br i1 %1,
 ; CHECK:       :
-; CHECK-NEXT:    [[TEMP_SLOT:%.*]] = getelementptr inbounds [[FRAME_T]], [[FRAME_T]]* [[FRAME]], i32 0, i32 1
 ; CHECK-NEXT:    [[PTR_SLOT:%.*]] = getelementptr inbounds [[FRAME_T]], [[FRAME_T]]* [[FRAME]], i32 0, i32 0
 ; CHECK-NEXT:    [[PTR_RELOAD:%.*]] = load i32*, i32** [[PTR_SLOT]]
 ; CHECK-NEXT:    %newvalue = load i32, i32* [[TEMP_SLOT]]

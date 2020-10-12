@@ -79,10 +79,10 @@ define i32 @test_rauw(i8* %a, i8* %b, i8** %c) {
 ; CHECK-NEXT:    [[CALL50:%.*]] = call i8* @__memmove_chk(i8* [[B]], i8* [[A]], i64 [[ADD180]], i64 [[YO107]])
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(i8* nonnull dereferenceable(1) [[B]])
 ; CHECK-NEXT:    [[STRCHR1:%.*]] = getelementptr i8, i8* [[B]], i64 [[STRLEN]]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8** [[C:%.*]] to i64*
-; CHECK-NEXT:    [[D2:%.*]] = load i64, i64* [[TMP0]], align 8
+; CHECK-NEXT:    [[D:%.*]] = load i8*, i8** [[C:%.*]], align 8
+; CHECK-NEXT:    [[SUB182:%.*]] = ptrtoint i8* [[D]] to i64
 ; CHECK-NEXT:    [[SUB183:%.*]] = ptrtoint i8* [[B]] to i64
-; CHECK-NEXT:    [[SUB184:%.*]] = sub i64 [[D2]], [[SUB183]]
+; CHECK-NEXT:    [[SUB184:%.*]] = sub i64 [[SUB182]], [[SUB183]]
 ; CHECK-NEXT:    [[ADD52_I_I:%.*]] = add nsw i64 [[SUB184]], 1
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[STRCHR1]], i8 0, i64 [[ADD52_I_I]], i1 false)
 ; CHECK-NEXT:    ret i32 4

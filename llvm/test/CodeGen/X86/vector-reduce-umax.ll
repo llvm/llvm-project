@@ -1278,12 +1278,9 @@ define i16 @test_v2i16(<2 x i16> %a0) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrld $16, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    pmaxsw %xmm0, %xmm1
+; SSE2-NEXT:    psubusw %xmm0, %xmm1
+; SSE2-NEXT:    paddw %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;
@@ -1319,15 +1316,13 @@ define i16 @test_v4i16(<4 x i16> %a0) {
 ; SSE2-LABEL: test_v4i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    pmaxsw %xmm0, %xmm1
+; SSE2-NEXT:    psubusw %xmm0, %xmm1
+; SSE2-NEXT:    paddw %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    psrld $16, %xmm0
-; SSE2-NEXT:    pmaxsw %xmm1, %xmm0
+; SSE2-NEXT:    psubusw %xmm1, %xmm0
+; SSE2-NEXT:    paddw %xmm1, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;
@@ -1369,17 +1364,16 @@ define i16 @test_v8i16(<8 x i16> %a0) {
 ; SSE2-LABEL: test_v8i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    pmaxsw %xmm0, %xmm1
+; SSE2-NEXT:    psubusw %xmm0, %xmm1
+; SSE2-NEXT:    paddw %xmm0, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; SSE2-NEXT:    pmaxsw %xmm1, %xmm0
+; SSE2-NEXT:    psubusw %xmm1, %xmm0
+; SSE2-NEXT:    paddw %xmm1, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrld $16, %xmm1
-; SSE2-NEXT:    pmaxsw %xmm0, %xmm1
+; SSE2-NEXT:    psubusw %xmm0, %xmm1
+; SSE2-NEXT:    paddw %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;
@@ -1429,19 +1423,19 @@ define i16 @test_v8i16(<8 x i16> %a0) {
 define i16 @test_v16i16(<16 x i16> %a0) {
 ; SSE2-LABEL: test_v16i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pmaxsw %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; SSE2-NEXT:    pmaxsw %xmm1, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psrld $16, %xmm1
-; SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
+; SSE2-NEXT:    psubusw %xmm0, %xmm1
+; SSE2-NEXT:    paddw %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSE2-NEXT:    psubusw %xmm1, %xmm0
+; SSE2-NEXT:    paddw %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SSE2-NEXT:    psubusw %xmm0, %xmm1
+; SSE2-NEXT:    paddw %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    psrld $16, %xmm0
+; SSE2-NEXT:    psubusw %xmm1, %xmm0
+; SSE2-NEXT:    paddw %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;
@@ -1512,23 +1506,23 @@ define i16 @test_v16i16(<16 x i16> %a0) {
 define i16 @test_v32i16(<32 x i16> %a0) {
 ; SSE2-LABEL: test_v32i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm4, %xmm3
-; SSE2-NEXT:    pxor %xmm4, %xmm1
-; SSE2-NEXT:    pmaxsw %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm4, %xmm2
-; SSE2-NEXT:    pmaxsw %xmm1, %xmm2
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pmaxsw %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; SSE2-NEXT:    pmaxsw %xmm1, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psrld $16, %xmm1
-; SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
+; SSE2-NEXT:    psubusw %xmm0, %xmm2
+; SSE2-NEXT:    paddw %xmm0, %xmm2
+; SSE2-NEXT:    psubusw %xmm1, %xmm3
+; SSE2-NEXT:    paddw %xmm1, %xmm3
+; SSE2-NEXT:    psubusw %xmm2, %xmm3
+; SSE2-NEXT:    paddw %xmm2, %xmm3
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,2,3]
+; SSE2-NEXT:    psubusw %xmm3, %xmm0
+; SSE2-NEXT:    paddw %xmm3, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SSE2-NEXT:    psubusw %xmm0, %xmm1
+; SSE2-NEXT:    paddw %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    psrld $16, %xmm0
+; SSE2-NEXT:    psubusw %xmm1, %xmm0
+; SSE2-NEXT:    paddw %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;
@@ -1609,31 +1603,31 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 define i16 @test_v64i16(<64 x i16> %a0) {
 ; SSE2-LABEL: test_v64i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm8, %xmm6
-; SSE2-NEXT:    pxor %xmm8, %xmm2
-; SSE2-NEXT:    pmaxsw %xmm6, %xmm2
-; SSE2-NEXT:    pxor %xmm8, %xmm4
-; SSE2-NEXT:    pmaxsw %xmm2, %xmm4
-; SSE2-NEXT:    pxor %xmm8, %xmm0
-; SSE2-NEXT:    pxor %xmm8, %xmm7
-; SSE2-NEXT:    pxor %xmm8, %xmm3
-; SSE2-NEXT:    pmaxsw %xmm7, %xmm3
-; SSE2-NEXT:    pxor %xmm8, %xmm5
-; SSE2-NEXT:    pmaxsw %xmm3, %xmm5
-; SSE2-NEXT:    pxor %xmm8, %xmm1
-; SSE2-NEXT:    pmaxsw %xmm5, %xmm1
-; SSE2-NEXT:    pmaxsw %xmm4, %xmm1
-; SSE2-NEXT:    pmaxsw %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; SSE2-NEXT:    pmaxsw %xmm1, %xmm0
+; SSE2-NEXT:    psubusw %xmm1, %xmm5
+; SSE2-NEXT:    paddw %xmm1, %xmm5
+; SSE2-NEXT:    psubusw %xmm3, %xmm7
+; SSE2-NEXT:    paddw %xmm3, %xmm7
+; SSE2-NEXT:    psubusw %xmm0, %xmm4
+; SSE2-NEXT:    paddw %xmm0, %xmm4
+; SSE2-NEXT:    psubusw %xmm2, %xmm6
+; SSE2-NEXT:    paddw %xmm2, %xmm6
+; SSE2-NEXT:    psubusw %xmm4, %xmm6
+; SSE2-NEXT:    paddw %xmm4, %xmm6
+; SSE2-NEXT:    psubusw %xmm5, %xmm7
+; SSE2-NEXT:    paddw %xmm5, %xmm7
+; SSE2-NEXT:    psubusw %xmm6, %xmm7
+; SSE2-NEXT:    paddw %xmm6, %xmm7
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[2,3,2,3]
+; SSE2-NEXT:    psubusw %xmm7, %xmm0
+; SSE2-NEXT:    paddw %xmm7, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; SSE2-NEXT:    pmaxsw %xmm0, %xmm1
+; SSE2-NEXT:    psubusw %xmm0, %xmm1
+; SSE2-NEXT:    paddw %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; SSE2-NEXT:    psrld $16, %xmm0
-; SSE2-NEXT:    pmaxsw %xmm1, %xmm0
+; SSE2-NEXT:    psubusw %xmm1, %xmm0
+; SSE2-NEXT:    paddw %xmm1, %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    xorl $32768, %eax # imm = 0x8000
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;

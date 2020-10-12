@@ -2547,6 +2547,35 @@ Constant *ConstantExpr::getAShr(Constant *C1, Constant *C2, bool isExact) {
              isExact ? PossiblyExactOperator::IsExact : 0);
 }
 
+Constant *ConstantExpr::getExactLogBase2(Constant *C) {
+  Type *Ty = C->getType();
+  const APInt *IVal;
+  if (match(C, m_APInt(IVal)) && IVal->isPowerOf2())
+    return ConstantInt::get(Ty, IVal->logBase2());
+
+  // FIXME: We can extract pow of 2 of splat constant for scalable vectors.
+  auto *VecTy = dyn_cast<FixedVectorType>(Ty);
+  if (!VecTy)
+    return nullptr;
+
+  SmallVector<Constant *, 4> Elts;
+  for (unsigned I = 0, E = VecTy->getNumElements(); I != E; ++I) {
+    Constant *Elt = C->getAggregateElement(I);
+    if (!Elt)
+      return nullptr;
+    // Note that log2(iN undef) is *NOT* iN undef, because log2(iN undef) u< N.
+    if (isa<UndefValue>(Elt)) {
+      Elts.push_back(Constant::getNullValue(Ty->getScalarType()));
+      continue;
+    }
+    if (!match(Elt, m_APInt(IVal)) || !IVal->isPowerOf2())
+      return nullptr;
+    Elts.push_back(ConstantInt::get(Ty->getScalarType(), IVal->logBase2()));
+  }
+
+  return ConstantVector::get(Elts);
+}
+
 Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty,
                                          bool AllowRHSConstant) {
   assert(Instruction::isBinaryOp(Opcode) && "Only binops allowed");

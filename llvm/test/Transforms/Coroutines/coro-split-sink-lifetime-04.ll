@@ -43,8 +43,8 @@ exit:
 
 ; CHECK-LABEL: @a.resume(
 ; CHECK:         %testval = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* %testval)
 ; CHECK-NEXT:    getelementptr inbounds %a.Frame
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* %testval)
 ; CHECK-NEXT:    getelementptr inbounds %"struct.lean_future<int>::Awaiter"
 ; CHECK-NEXT:    %val = load i32, i32* %Result
 ; CHECK-NEXT:    %test = load i8, i8* %testval

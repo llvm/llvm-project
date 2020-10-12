@@ -560,6 +560,11 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasVPCLMULQDQ)
     Builder.defineMacro("__VPCLMULQDQ__");
 
+  // Note, in 32-bit mode, GCC does not define the macro if -mno-sahf. In LLVM,
+  // the feature flag only applies to 64-bit mode.
+  if (HasLAHFSAHF || getTriple().getArch() == llvm::Triple::x86)
+    Builder.defineMacro("__LAHF_SAHF__");
+
   if (HasLZCNT)
     Builder.defineMacro("__LZCNT__");
 

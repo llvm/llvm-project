@@ -130,8 +130,8 @@ attributes #7 = { noduplicate }
 ; CHECK: define i8* @f(i32 %x) #0 !dbg ![[ORIG:[0-9]+]]
 ; CHECK: define internal fastcc void @f.resume(%f.Frame* noalias nonnull align 8 dereferenceable(32) %FramePtr) #0 !dbg ![[RESUME:[0-9]+]]
 ; CHECK: entry.resume:
-; CHECK-NEXT: call void @coro.devirt.trigger(i8* null)
-; CHECK-NEXT: call void @llvm.dbg.declare(metadata i32* %x.addr.reload.addr, metadata ![[RESUME_VAR:[0-9]+]]
+; CHECK: call void @coro.devirt.trigger(i8* null)
+; CHECK: call void @llvm.dbg.declare(metadata i32* %x.addr.reload.addr, metadata ![[RESUME_VAR:[0-9]+]]
 ; CHECK: define internal fastcc void @f.destroy(%f.Frame* noalias nonnull align 8 dereferenceable(32) %FramePtr) #0 !dbg ![[DESTROY:[0-9]+]]
 ; CHECK: define internal fastcc void @f.cleanup(%f.Frame* noalias nonnull align 8 dereferenceable(32) %FramePtr) #0 !dbg ![[CLEANUP:[0-9]+]]
 

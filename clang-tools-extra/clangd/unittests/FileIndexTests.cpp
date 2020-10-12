@@ -547,6 +547,8 @@ TEST(FileShardedIndexTest, Sharding) {
   Sym2.CanonicalDeclaration.FileURI = BHeaderUri.c_str();
   Sym2.Definition.FileURI = BSourceUri.c_str();
 
+  auto Sym3 = symbol("3"); // not stored
+
   IndexFileIn IF;
   {
     SymbolSlab::Builder B;
@@ -562,12 +564,13 @@ TEST(FileShardedIndexTest, Sharding) {
   }
   {
     RelationSlab::Builder B;
-    // Should be stored in a.h
+    // Should be stored in a.h and b.h
     B.insert(Relation{Sym1.ID, RelationKind::BaseOf, Sym2.ID});
-    // Should be stored in b.h
+    // Should be stored in a.h and b.h
     B.insert(Relation{Sym2.ID, RelationKind::BaseOf, Sym1.ID});
-    // Dangling relation should be dropped.
-    B.insert(Relation{symbol("3").ID, RelationKind::BaseOf, Sym1.ID});
+    // Should be stored in a.h (where Sym1 is stored) even though
+    // the relation is dangling as Sym3 is unknown.
+    B.insert(Relation{Sym3.ID, RelationKind::BaseOf, Sym1.ID});
     IF.Relations.emplace(std::move(B).build());
   }
 
@@ -605,7 +608,9 @@ TEST(FileShardedIndexTest, Sharding) {
     EXPECT_THAT(*Shard->Refs, IsEmpty());
     EXPECT_THAT(
         *Shard->Relations,
-        UnorderedElementsAre(Relation{Sym1.ID, RelationKind::BaseOf, Sym2.ID}));
+        UnorderedElementsAre(Relation{Sym1.ID, RelationKind::BaseOf, Sym2.ID},
+                             Relation{Sym2.ID, RelationKind::BaseOf, Sym1.ID},
+                             Relation{Sym3.ID, RelationKind::BaseOf, Sym1.ID}));
     ASSERT_THAT(Shard->Sources->keys(), UnorderedElementsAre(AHeaderUri));
     EXPECT_THAT(Shard->Sources->lookup(AHeaderUri).DirectIncludes, IsEmpty());
     EXPECT_TRUE(Shard->Cmd.hasValue());
@@ -617,7 +622,8 @@ TEST(FileShardedIndexTest, Sharding) {
     EXPECT_THAT(*Shard->Refs, IsEmpty());
     EXPECT_THAT(
         *Shard->Relations,
-        UnorderedElementsAre(Relation{Sym2.ID, RelationKind::BaseOf, Sym1.ID}));
+        UnorderedElementsAre(Relation{Sym1.ID, RelationKind::BaseOf, Sym2.ID},
+                             Relation{Sym2.ID, RelationKind::BaseOf, Sym1.ID}));
     ASSERT_THAT(Shard->Sources->keys(),
                 UnorderedElementsAre(BHeaderUri, AHeaderUri));
     EXPECT_THAT(Shard->Sources->lookup(BHeaderUri).DirectIncludes,

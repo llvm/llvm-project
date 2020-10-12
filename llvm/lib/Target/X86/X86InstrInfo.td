@@ -276,6 +276,7 @@ def X86lock_and  : SDNode<"X86ISD::LAND",  SDTLockBinaryArithWithFlags,
                            SDNPMemOperand]>;
 
 def X86bextr  : SDNode<"X86ISD::BEXTR",  SDTIntBinOp>;
+def X86bextri : SDNode<"X86ISD::BEXTRI", SDTIntBinOp>;
 
 def X86bzhi   : SDNode<"X86ISD::BZHI",   SDTIntBinOp>;
 
@@ -1061,6 +1062,7 @@ def i16immSExt8  : ImmLeaf<i16, [{ return isInt<8>(Imm); }]>;
 def i32immSExt8  : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
 def i64immSExt8  : ImmLeaf<i64, [{ return isInt<8>(Imm); }]>;
 def i64immSExt32 : ImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
+def i64timmSExt32 : TImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
 
 def i16relocImmSExt8 : PatLeaf<(i16 relocImm), [{
   return isSExtAbsoluteSymbolRef(8, N);
@@ -2666,11 +2668,11 @@ let Predicates = [HasBMI2] in {
 //
 let Predicates = [HasTBM], Defs = [EFLAGS] in {
 
-multiclass tbm_ternary_imm<bits<8> opc, RegisterClass RC, string OpcodeStr,
-                           X86MemOperand x86memop, PatFrag ld_frag,
-                           SDNode OpNode, Operand immtype,
-                           SDPatternOperator immoperator,
-                           X86FoldableSchedWrite Sched> {
+multiclass tbm_bextri<bits<8> opc, RegisterClass RC, string OpcodeStr,
+                      X86MemOperand x86memop, PatFrag ld_frag,
+                      SDNode OpNode, Operand immtype,
+                      SDPatternOperator immoperator,
+                      X86FoldableSchedWrite Sched> {
   def ri : Ii32<opc,  MRMSrcReg, (outs RC:$dst), (ins RC:$src1, immtype:$cntl),
                 !strconcat(OpcodeStr,
                            "\t{$cntl, $src1, $dst|$dst, $src1, $cntl}"),
@@ -2684,12 +2686,12 @@ multiclass tbm_ternary_imm<bits<8> opc, RegisterClass RC, string OpcodeStr,
                 XOP, XOPA, Sched<[Sched.Folded]>;
 }
 
-defm BEXTRI32 : tbm_ternary_imm<0x10, GR32, "bextr{l}", i32mem, loadi32,
-                                X86bextr, i32imm, imm, WriteBEXTR>;
+defm BEXTRI32 : tbm_bextri<0x10, GR32, "bextr{l}", i32mem, loadi32,
+                           X86bextri, i32imm, timm, WriteBEXTR>;
 let ImmT = Imm32S in
-defm BEXTRI64 : tbm_ternary_imm<0x10, GR64, "bextr{q}", i64mem, loadi64,
-                                X86bextr, i64i32imm,
-                                i64immSExt32, WriteBEXTR>, VEX_W;
+defm BEXTRI64 : tbm_bextri<0x10, GR64, "bextr{q}", i64mem, loadi64,
+                           X86bextri, i64i32imm,
+                           i64timmSExt32, WriteBEXTR>, VEX_W;
 
 multiclass tbm_binary_rm<bits<8> opc, Format FormReg, Format FormMem,
                          RegisterClass RC, string OpcodeStr,
