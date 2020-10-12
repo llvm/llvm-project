@@ -5608,8 +5608,8 @@ static Value *EmitCommonNeonSISDBuiltinExpr(
 
   Value *Result = CGF.EmitNeonCall(F, Ops, s);
   llvm::Type *ResultType = CGF.ConvertType(E->getType());
-  if (ResultType->getPrimitiveSizeInBits() <
-      Result->getType()->getPrimitiveSizeInBits())
+  if (ResultType->getPrimitiveSizeInBits().getFixedSize() <
+      Result->getType()->getPrimitiveSizeInBits().getFixedSize())
     return CGF.Builder.CreateExtractElement(Result, C0);
 
   return CGF.Builder.CreateBitCast(Result, ResultType, s);
