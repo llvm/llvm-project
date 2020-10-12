@@ -147,12 +147,12 @@ struct TestBufferPlacementPreparationPass
   };
 
   void populateTensorLinalgToBufferLinalgConversionPattern(
-      MLIRContext *context, BufferAssignmentTypeConverter *converter,
-      OwningRewritePatternList *patterns) {
+      MLIRContext *context, BufferAssignmentTypeConverter &converter,
+      OwningRewritePatternList &patterns) {
     populateWithBufferAssignmentOpConversionPatterns<
         mlir::ReturnOp, mlir::ReturnOp, linalg::CopyOp>(context, converter,
                                                         patterns);
-    patterns->insert<GenericOpConverter>(context, converter);
+    patterns.insert<GenericOpConverter>(context, converter);
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -230,8 +230,8 @@ struct TestBufferPlacementPreparationPass
     });
 
     OwningRewritePatternList patterns;
-    populateTensorLinalgToBufferLinalgConversionPattern(&context, &converter,
-                                                        &patterns);
+    populateTensorLinalgToBufferLinalgConversionPattern(&context, converter,
+                                                        patterns);
     if (failed(applyFullConversion(this->getOperation(), target, patterns)))
       this->signalPassFailure();
   };

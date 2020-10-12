@@ -38,7 +38,7 @@ public:
     newResultTypes.reserve(assumingOp.getNumResults());
     for (auto result : assumingOp.getResults()) {
       auto originalType = result.getType();
-      Type convertedType = converter->convertType(originalType);
+      Type convertedType = converter.convertType(originalType);
       newResultTypes.push_back(convertedType);
     }
 
@@ -60,7 +60,7 @@ struct ShapeTensorToMemrefPass
 
     OwningRewritePatternList patterns;
     BufferAssignmentTypeConverter converter;
-    populateShapeTypeConversionPatterns(&ctx, &converter, &patterns);
+    populateShapeTypeConversionPatterns(&ctx, converter, patterns);
 
     ConversionTarget target(getContext());
     auto isMemRefType = [](Type type) { return type.isa<BaseMemRefType>(); };
@@ -81,9 +81,9 @@ struct ShapeTensorToMemrefPass
 //
 // TODO: Change this to work generally with any type conversions.
 void mlir::populateShapeTypeConversionPatterns(
-    MLIRContext *context, BufferAssignmentTypeConverter *converter,
-    OwningRewritePatternList *patterns) {
-  patterns->insert<TypeConversionAssumingOpConverter>(context, converter);
+    MLIRContext *context, BufferAssignmentTypeConverter &converter,
+    OwningRewritePatternList &patterns) {
+  patterns.insert<TypeConversionAssumingOpConverter>(context, converter);
 }
 
 //===----------------------------------------------------------------------===//
