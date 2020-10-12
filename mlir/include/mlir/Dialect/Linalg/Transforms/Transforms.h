@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Transforms/Bufferize.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 namespace mlir {
@@ -51,8 +52,8 @@ void populateConvVectorizationPatterns(
 /// Populates the given list with patterns to convert Linalg operations on
 /// tensors to buffers.
 void populateConvertLinalgOnTensorsToBuffersPatterns(
-    MLIRContext *context, BufferAssignmentTypeConverter *converter,
-    OwningRewritePatternList *patterns);
+    MLIRContext *context, BufferAssignmentTypeConverter &converter,
+    OwningRewritePatternList &patterns);
 
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
@@ -796,6 +797,46 @@ public:
 /// Populate the given list with patterns that convert from Linalg to Standard.
 void populateLinalgToStandardConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx);
+
+//===----------------------------------------------------------------------===//
+// Buffer allocation patterns.
+//===----------------------------------------------------------------------===//
+
+/// Generic BufferAssignmentConversionPattern that matches any Operation* and
+/// dispatches internally. This avoids template instantiating one pattern for
+/// each LinalgOp op.
+class LinalgOpConverter : public BufferAssignmentConversionPattern {
+public:
+  LinalgOpConverter(MLIRContext *context,
+                    BufferAssignmentTypeConverter &converter)
+      : BufferAssignmentConversionPattern(context, converter) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final;
+};
+
+class TensorConstantOpConverter
+    : public BufferAssignmentOpConversionPattern<ConstantOp> {
+public:
+  using BufferAssignmentOpConversionPattern<
+      ConstantOp>::BufferAssignmentOpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ConstantOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final;
+};
+
+class TensorCastOpConverter
+    : public BufferAssignmentOpConversionPattern<TensorCastOp> {
+public:
+  using BufferAssignmentOpConversionPattern<
+      TensorCastOp>::BufferAssignmentOpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(TensorCastOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final;
+};
 
 //===----------------------------------------------------------------------===//
 // Support for staged pattern application.
