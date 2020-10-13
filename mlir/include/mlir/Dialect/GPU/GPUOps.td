@@ -756,4 +756,46 @@ def GPU_HostRegisterOp : GPU_Op<"host_register">,
   let verifier = [{ return success(); }];
 }
 
+def GPU_WaitOp : GPU_Op<"wait", [GPU_AsyncOpInterface]> {
+  let summary = "Wait for async gpu ops to complete.";
+  let description = [{
+    This op synchronizes the host or the device with a list of dependent ops.
+
+    If the op contains the `async` keyword, it returns a new async token which
+    is synchronized with the op arguments. This new token is merely a shortcut
+    to the argument list, and one could replace the uses of the result with the
+    arguments for the same effect. The async version of this op is primarily
+    used to make each async token have a single use during lowering and
+    thereby make forks in async execution explicit. Example usage:
+
+    ```mlir
+    %t0 = gpu.foo async : !gpu.async.token
+    %t1 = gpu.bar async : !gpu.async.token
+    %t2 = gpu.wait async [%t0, %t1]
+    // gpu.baz doesn't run until gpu.foo and gpu.bar have both completed, just
+    // as if the async dependencies were [%t0, %t1].
+    %t3 = gpu.baz async [%t2]
+    ```
+
+    If the op does not contain the `async` keyword, it does not return a new
+    async token but blocks until all ops producing the async dependency tokens
+    finished execution. All dependent memory operations are visible to the host
+    once this op completes. Example usage:
+
+    ```mlir
+    %t0 = gpu.foo async : !gpu.async.token
+    %t1 = gpu.bar async : !gpu.async.token
+    // The gpu.wait op blocks until gpu.foo and gpu.bar have completed.
+    gpu.wait [%t0, %t1]
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies);
+  let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies) attr-dict
+  }];
+}
+
 #endif // GPU_OPS
