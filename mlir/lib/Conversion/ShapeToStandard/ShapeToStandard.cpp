@@ -567,6 +567,11 @@ public:
 } // namespace
 
 namespace {
+/// Import the Shape Ops to Std Patterns.
+#include "ShapeToStandard.cpp.inc"
+} // namespace
+
+namespace {
 /// Conversion pass.
 class ConvertShapeToStandardPass
     : public ConvertShapeToStandardBase<ConvertShapeToStandardPass> {
@@ -580,7 +585,7 @@ void ConvertShapeToStandardPass::runOnOperation() {
   MLIRContext &ctx = getContext();
   ConversionTarget target(ctx);
   target.addLegalDialect<StandardOpsDialect, SCFDialect>();
-  target.addLegalOp<FuncOp, ModuleOp, ModuleTerminatorOp>();
+  target.addLegalOp<CstrRequireOp, FuncOp, ModuleOp, ModuleTerminatorOp>();
 
   // Setup conversion patterns.
   OwningRewritePatternList patterns;
@@ -595,6 +600,7 @@ void ConvertShapeToStandardPass::runOnOperation() {
 void mlir::populateShapeToStandardConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
   // clang-format off
+  populateWithGenerated(ctx, patterns);
   patterns.insert<
       AnyOpConversion,
       BinaryOpConversion<AddOp, AddIOp>,
