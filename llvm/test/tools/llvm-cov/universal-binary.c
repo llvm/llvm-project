@@ -10,8 +10,9 @@ int main(int argc, const char *argv[]) {}
 // COMBINED: showTemplateInstantiations.cpp
 // COMBINED-NEXT: universal-binary.c
 
+// RUN: not llvm-cov show %S/Inputs/universal-binary -instr-profile %t.profdata -path-equivalence=/tmp,%S %s 2>&1 | FileCheck --check-prefix=WRONG-ARCH %s
 // RUN: not llvm-cov show %S/Inputs/universal-binary -instr-profile %t.profdata -path-equivalence=/tmp,%S %s -arch i386 2>&1 | FileCheck --check-prefix=WRONG-ARCH %s
-// WRONG-ARCH: Failed to load coverage
+// WRONG-ARCH: Failed to load coverage: `-arch` specifier is invalid or missing for universal binary
 
 // RUN: not llvm-cov show %S/Inputs/universal-binary -instr-profile %t.profdata -path-equivalence=/tmp,%S %s -arch definitly_a_made_up_architecture 2>&1 | FileCheck --check-prefix=MADE-UP-ARCH %s
 // MADE-UP-ARCH: Unknown architecture: definitly_a_made_up_architecture
