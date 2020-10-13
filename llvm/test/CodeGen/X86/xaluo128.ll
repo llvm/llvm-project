@@ -5,55 +5,35 @@
 define zeroext i1 @saddoi128(i128 %v1, i128 %v2, i128* %res) nounwind {
 ; X64-LABEL: saddoi128:
 ; X64:       ## %bb.0:
-; X64-NEXT:    testq %rcx, %rcx
-; X64-NEXT:    setns %r9b
-; X64-NEXT:    testq %rsi, %rsi
-; X64-NEXT:    setns %al
-; X64-NEXT:    cmpb %r9b, %al
-; X64-NEXT:    sete %r9b
 ; X64-NEXT:    addq %rdx, %rdi
 ; X64-NEXT:    adcq %rcx, %rsi
-; X64-NEXT:    setns %cl
-; X64-NEXT:    cmpb %cl, %al
-; X64-NEXT:    setne %al
-; X64-NEXT:    andb %r9b, %al
+; X64-NEXT:    seto %al
 ; X64-NEXT:    movq %rdi, (%r8)
 ; X64-NEXT:    movq %rsi, 8(%r8)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: saddoi128:
 ; X86:       ## %bb.0:
-; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    setns %al
-; X86-NEXT:    testl %ebx, %ebx
-; X86-NEXT:    setns %ah
-; X86-NEXT:    cmpb %al, %ah
-; X86-NEXT:    sete %cl
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    setns %al
-; X86-NEXT:    cmpb %al, %ah
-; X86-NEXT:    setne %al
-; X86-NEXT:    andb %cl, %al
-; X86-NEXT:    movl %esi, (%ebp)
-; X86-NEXT:    movl %edi, 4(%ebp)
-; X86-NEXT:    movl %edx, 8(%ebp)
-; X86-NEXT:    movl %ebx, 12(%ebp)
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    seto %al
+; X86-NEXT:    movl %edi, (%ecx)
+; X86-NEXT:    movl %ebx, 4(%ecx)
+; X86-NEXT:    movl %esi, 8(%ecx)
+; X86-NEXT:    movl %edx, 12(%ecx)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
   %t = call {i128, i1} @llvm.sadd.with.overflow.i128(i128 %v1, i128 %v2)
   %val = extractvalue {i128, i1} %t, 0
@@ -106,55 +86,35 @@ define zeroext i1 @uaddoi128(i128 %v1, i128 %v2, i128* %res) nounwind {
 define zeroext i1 @ssuboi128(i128 %v1, i128 %v2, i128* %res) nounwind {
 ; X64-LABEL: ssuboi128:
 ; X64:       ## %bb.0:
-; X64-NEXT:    testq %rcx, %rcx
-; X64-NEXT:    setns %r9b
-; X64-NEXT:    testq %rsi, %rsi
-; X64-NEXT:    setns %al
-; X64-NEXT:    cmpb %r9b, %al
-; X64-NEXT:    setne %r9b
 ; X64-NEXT:    subq %rdx, %rdi
 ; X64-NEXT:    sbbq %rcx, %rsi
-; X64-NEXT:    setns %cl
-; X64-NEXT:    cmpb %cl, %al
-; X64-NEXT:    setne %al
-; X64-NEXT:    andb %r9b, %al
+; X64-NEXT:    seto %al
 ; X64-NEXT:    movq %rdi, (%r8)
 ; X64-NEXT:    movq %rsi, 8(%r8)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: ssuboi128:
 ; X86:       ## %bb.0:
-; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    setns %al
-; X86-NEXT:    testl %ebx, %ebx
-; X86-NEXT:    setns %ah
-; X86-NEXT:    cmpb %al, %ah
-; X86-NEXT:    setne %cl
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    setns %al
-; X86-NEXT:    cmpb %al, %ah
-; X86-NEXT:    setne %al
-; X86-NEXT:    andb %cl, %al
-; X86-NEXT:    movl %esi, (%ebp)
-; X86-NEXT:    movl %edi, 4(%ebp)
-; X86-NEXT:    movl %edx, 8(%ebp)
-; X86-NEXT:    movl %ebx, 12(%ebp)
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    seto %al
+; X86-NEXT:    movl %edi, (%ecx)
+; X86-NEXT:    movl %ebx, 4(%ecx)
+; X86-NEXT:    movl %esi, 8(%ecx)
+; X86-NEXT:    movl %edx, 12(%ecx)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
   %t = call {i128, i1} @llvm.ssub.with.overflow.i128(i128 %v1, i128 %v2)
   %val = extractvalue {i128, i1} %t, 0
