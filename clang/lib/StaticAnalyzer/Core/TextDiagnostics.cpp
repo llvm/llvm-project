@@ -34,17 +34,20 @@ namespace {
 /// type to the standard error, or to to compliment many others. Emits detailed
 /// diagnostics in textual format for the 'text' output type.
 class TextDiagnostics : public PathDiagnosticConsumer {
-  PathDiagnosticConsumerOptions DiagOpts;
   DiagnosticsEngine &DiagEng;
   const LangOptions &LO;
-  bool ShouldDisplayPathNotes;
+  const bool IncludePath = false;
+  const bool ShouldEmitAsError = false;
+  const bool ApplyFixIts = false;
+  const bool ShouldDisplayCheckerName = false;
 
 public:
-  TextDiagnostics(PathDiagnosticConsumerOptions DiagOpts,
-                  DiagnosticsEngine &DiagEng, const LangOptions &LO,
-                  bool ShouldDisplayPathNotes)
-      : DiagOpts(std::move(DiagOpts)), DiagEng(DiagEng), LO(LO),
-        ShouldDisplayPathNotes(ShouldDisplayPathNotes) {}
+  TextDiagnostics(DiagnosticsEngine &DiagEng, const LangOptions &LO,
+                  bool ShouldIncludePath, const AnalyzerOptions &AnOpts)
+      : DiagEng(DiagEng), LO(LO), IncludePath(ShouldIncludePath),
+        ShouldEmitAsError(AnOpts.AnalyzerWerror),
+        ApplyFixIts(AnOpts.ShouldApplyFixIts),
+        ShouldDisplayCheckerName(AnOpts.ShouldDisplayCheckerNameForText) {}
   ~TextDiagnostics() override {}
 
   StringRef getName() const override { return "TextDiagnostics"; }
@@ -53,13 +56,13 @@ public:
   bool supportsCrossFileDiagnostics() const override { return true; }
 
   PathGenerationScheme getGenerationScheme() const override {
-    return ShouldDisplayPathNotes ? Minimal : None;
+    return IncludePath ? Minimal : None;
   }
 
   void FlushDiagnosticsImpl(std::vector<const PathDiagnostic *> &Diags,
                             FilesMade *filesMade) override {
     unsigned WarnID =
-        DiagOpts.ShouldDisplayWarningsAsErrors
+        ShouldEmitAsError
             ? DiagEng.getCustomDiagID(DiagnosticsEngine::Error, "%0")
             : DiagEng.getCustomDiagID(DiagnosticsEngine::Warning, "%0");
     unsigned NoteID = DiagEng.getCustomDiagID(DiagnosticsEngine::Note, "%0");
@@ -69,7 +72,7 @@ public:
     auto reportPiece = [&](unsigned ID, FullSourceLoc Loc, StringRef String,
                            ArrayRef<SourceRange> Ranges,
                            ArrayRef<FixItHint> Fixits) {
-      if (!DiagOpts.ShouldApplyFixIts) {
+      if (!ApplyFixIts) {
         DiagEng.Report(Loc, ID) << String << Ranges << Fixits;
         return;
       }
@@ -89,10 +92,9 @@ public:
          E = Diags.end();
          I != E; ++I) {
       const PathDiagnostic *PD = *I;
-      std::string WarningMsg = (DiagOpts.ShouldDisplayDiagnosticName
-                                    ? " [" + PD->getCheckerName() + "]"
-                                    : "")
-                                   .str();
+      std::string WarningMsg =
+          (ShouldDisplayCheckerName ? " [" + PD->getCheckerName() + "]" : "")
+              .str();
 
       reportPiece(WarnID, PD->getLocation().asLocation(),
                   (PD->getShortDescription() + WarningMsg).str(),
@@ -108,7 +110,7 @@ public:
                     Piece->getFixits());
       }
 
-      if (!ShouldDisplayPathNotes)
+      if (!IncludePath)
         continue;
 
       // Then, add the path notes if necessary.
@@ -123,7 +125,7 @@ public:
       }
     }
 
-    if (Repls.empty())
+    if (!ApplyFixIts || Repls.empty())
       return;
 
     Rewriter Rewrite(SM, LO);
@@ -137,19 +139,18 @@ public:
 } // end anonymous namespace
 
 void ento::createTextPathDiagnosticConsumer(
-    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
+    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
     const std::string &Prefix, const clang::Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
-  C.emplace_back(new TextDiagnostics(std::move(DiagOpts), PP.getDiagnostics(),
-                                     PP.getLangOpts(),
-                                     /*ShouldDisplayPathNotes=*/true));
+  C.emplace_back(new TextDiagnostics(PP.getDiagnostics(), PP.getLangOpts(),
+                                     /*ShouldIncludePath*/ true, AnalyzerOpts));
 }
 
 void ento::createTextMinimalPathDiagnosticConsumer(
-    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
+    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
     const std::string &Prefix, const clang::Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
-  C.emplace_back(new TextDiagnostics(std::move(DiagOpts), PP.getDiagnostics(),
-                                     PP.getLangOpts(),
-                                     /*ShouldDisplayPathNotes=*/false));
+  C.emplace_back(new TextDiagnostics(PP.getDiagnostics(), PP.getLangOpts(),
+                                     /*ShouldIncludePath*/ false,
+                                     AnalyzerOpts));
 }
