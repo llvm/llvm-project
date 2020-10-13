@@ -12,9 +12,9 @@
 
 declare void @use16(i16)
 
-define hidden i32* @v0_ptr_to_i64(i8* %arg, i32* %arg10) {
-; X64-LABEL: 'v0_ptr_to_i64'
-; X64-NEXT:  Classifying expressions for: @v0_ptr_to_i64
+define hidden i32* @trunc_ptr_to_i64(i8* %arg, i32* %arg10) {
+; X64-LABEL: 'trunc_ptr_to_i64'
+; X64-NEXT:  Classifying expressions for: @trunc_ptr_to_i64
 ; X64-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; X64-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; X64-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i64 ptrtoint ([0 x i8]* @global to i64)
@@ -25,13 +25,13 @@ define hidden i32* @v0_ptr_to_i64(i8* %arg, i32* %arg10) {
 ; X64-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; X64-NEXT:    %tmp18 = add i32 %tmp, 2
 ; X64-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; X64-NEXT:  Determining loop execution counts for: @v0_ptr_to_i64
+; X64-NEXT:  Determining loop execution counts for: @trunc_ptr_to_i64
 ; X64-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
 ; X64-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
 ; X64-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
 ;
-; PTR16_IDX16-LABEL: 'v0_ptr_to_i64'
-; PTR16_IDX16-NEXT:  Classifying expressions for: @v0_ptr_to_i64
+; PTR16_IDX16-LABEL: 'trunc_ptr_to_i64'
+; PTR16_IDX16-NEXT:  Classifying expressions for: @trunc_ptr_to_i64
 ; PTR16_IDX16-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR16_IDX16-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR16_IDX16-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i64 ptrtoint ([0 x i8]* @global to i64)
@@ -42,13 +42,13 @@ define hidden i32* @v0_ptr_to_i64(i8* %arg, i32* %arg10) {
 ; PTR16_IDX16-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR16_IDX16-NEXT:    %tmp18 = add i32 %tmp, 2
 ; PTR16_IDX16-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR16_IDX16-NEXT:  Determining loop execution counts for: @v0_ptr_to_i64
+; PTR16_IDX16-NEXT:  Determining loop execution counts for: @trunc_ptr_to_i64
 ; PTR16_IDX16-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
 ; PTR16_IDX16-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
 ; PTR16_IDX16-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
 ;
-; PTR16_IDX32-LABEL: 'v0_ptr_to_i64'
-; PTR16_IDX32-NEXT:  Classifying expressions for: @v0_ptr_to_i64
+; PTR16_IDX32-LABEL: 'trunc_ptr_to_i64'
+; PTR16_IDX32-NEXT:  Classifying expressions for: @trunc_ptr_to_i64
 ; PTR16_IDX32-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR16_IDX32-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR16_IDX32-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i64 ptrtoint ([0 x i8]* @global to i64)
@@ -59,7 +59,7 @@ define hidden i32* @v0_ptr_to_i64(i8* %arg, i32* %arg10) {
 ; PTR16_IDX32-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR16_IDX32-NEXT:    %tmp18 = add i32 %tmp, 2
 ; PTR16_IDX32-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR16_IDX32-NEXT:  Determining loop execution counts for: @v0_ptr_to_i64
+; PTR16_IDX32-NEXT:  Determining loop execution counts for: @trunc_ptr_to_i64
 ; PTR16_IDX32-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
 ; PTR16_IDX32-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
 ; PTR16_IDX32-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
@@ -82,9 +82,9 @@ bb17:                                             ; preds = %bb11
   %tmp18 = add i32 %tmp, 2
   br label %bb11
 }
-define hidden i32* @v0_ptr_to_i32(i8* %arg, i32* %arg10) {
-; PTR64_IDX64-LABEL: 'v0_ptr_to_i32'
-; PTR64_IDX64-NEXT:  Classifying expressions for: @v0_ptr_to_i32
+define hidden i32* @trunc_ptr_to_i32(i8* %arg, i32* %arg10) {
+; PTR64_IDX64-LABEL: 'trunc_ptr_to_i32'
+; PTR64_IDX64-NEXT:  Classifying expressions for: @trunc_ptr_to_i32
 ; PTR64_IDX64-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR64_IDX64-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR64_IDX64-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i32 ptrtoint ([0 x i8]* @global to i32)
@@ -95,13 +95,13 @@ define hidden i32* @v0_ptr_to_i32(i8* %arg, i32* %arg10) {
 ; PTR64_IDX64-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR64_IDX64-NEXT:    %tmp18 = add i32 %tmp, 2
 ; PTR64_IDX64-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR64_IDX64-NEXT:  Determining loop execution counts for: @v0_ptr_to_i32
+; PTR64_IDX64-NEXT:  Determining loop execution counts for: @trunc_ptr_to_i32
 ; PTR64_IDX64-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
 ; PTR64_IDX64-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
 ; PTR64_IDX64-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
 ;
-; PTR64_IDX32-LABEL: 'v0_ptr_to_i32'
-; PTR64_IDX32-NEXT:  Classifying expressions for: @v0_ptr_to_i32
+; PTR64_IDX32-LABEL: 'trunc_ptr_to_i32'
+; PTR64_IDX32-NEXT:  Classifying expressions for: @trunc_ptr_to_i32
 ; PTR64_IDX32-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR64_IDX32-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR64_IDX32-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i32 ptrtoint ([0 x i8]* @global to i32)
@@ -112,13 +112,13 @@ define hidden i32* @v0_ptr_to_i32(i8* %arg, i32* %arg10) {
 ; PTR64_IDX32-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR64_IDX32-NEXT:    %tmp18 = add i32 %tmp, 2
 ; PTR64_IDX32-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR64_IDX32-NEXT:  Determining loop execution counts for: @v0_ptr_to_i32
+; PTR64_IDX32-NEXT:  Determining loop execution counts for: @trunc_ptr_to_i32
 ; PTR64_IDX32-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
 ; PTR64_IDX32-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
 ; PTR64_IDX32-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
 ;
-; PTR16_IDX16-LABEL: 'v0_ptr_to_i32'
-; PTR16_IDX16-NEXT:  Classifying expressions for: @v0_ptr_to_i32
+; PTR16_IDX16-LABEL: 'trunc_ptr_to_i32'
+; PTR16_IDX16-NEXT:  Classifying expressions for: @trunc_ptr_to_i32
 ; PTR16_IDX16-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR16_IDX16-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR16_IDX16-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i32 ptrtoint ([0 x i8]* @global to i32)
@@ -129,13 +129,13 @@ define hidden i32* @v0_ptr_to_i32(i8* %arg, i32* %arg10) {
 ; PTR16_IDX16-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR16_IDX16-NEXT:    %tmp18 = add i32 %tmp, 2
 ; PTR16_IDX16-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR16_IDX16-NEXT:  Determining loop execution counts for: @v0_ptr_to_i32
+; PTR16_IDX16-NEXT:  Determining loop execution counts for: @trunc_ptr_to_i32
 ; PTR16_IDX16-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
 ; PTR16_IDX16-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
 ; PTR16_IDX16-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
 ;
-; PTR16_IDX32-LABEL: 'v0_ptr_to_i32'
-; PTR16_IDX32-NEXT:  Classifying expressions for: @v0_ptr_to_i32
+; PTR16_IDX32-LABEL: 'trunc_ptr_to_i32'
+; PTR16_IDX32-NEXT:  Classifying expressions for: @trunc_ptr_to_i32
 ; PTR16_IDX32-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR16_IDX32-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR16_IDX32-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i32 ptrtoint ([0 x i8]* @global to i32)
@@ -146,7 +146,7 @@ define hidden i32* @v0_ptr_to_i32(i8* %arg, i32* %arg10) {
 ; PTR16_IDX32-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR16_IDX32-NEXT:    %tmp18 = add i32 %tmp, 2
 ; PTR16_IDX32-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR16_IDX32-NEXT:  Determining loop execution counts for: @v0_ptr_to_i32
+; PTR16_IDX32-NEXT:  Determining loop execution counts for: @trunc_ptr_to_i32
 ; PTR16_IDX32-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
 ; PTR16_IDX32-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
 ; PTR16_IDX32-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
@@ -169,9 +169,9 @@ bb17:                                             ; preds = %bb11
   %tmp18 = add i32 %tmp, 2
   br label %bb11
 }
-define hidden i32* @v0_ptr_to_i128(i8* %arg, i32* %arg10) {
-; X64-LABEL: 'v0_ptr_to_i128'
-; X64-NEXT:  Classifying expressions for: @v0_ptr_to_i128
+define hidden i32* @trunc_ptr_to_i128(i8* %arg, i32* %arg10) {
+; X64-LABEL: 'trunc_ptr_to_i128'
+; X64-NEXT:  Classifying expressions for: @trunc_ptr_to_i128
 ; X64-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; X64-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; X64-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i128 ptrtoint ([0 x i8]* @global to i128)
@@ -182,13 +182,13 @@ define hidden i32* @v0_ptr_to_i128(i8* %arg, i32* %arg10) {
 ; X64-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; X64-NEXT:    %tmp18 = add i32 %tmp, 2
 ; X64-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; X64-NEXT:  Determining loop execution counts for: @v0_ptr_to_i128
+; X64-NEXT:  Determining loop execution counts for: @trunc_ptr_to_i128
 ; X64-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
 ; X64-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
 ; X64-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
 ;
-; PTR16_IDX16-LABEL: 'v0_ptr_to_i128'
-; PTR16_IDX16-NEXT:  Classifying expressions for: @v0_ptr_to_i128
+; PTR16_IDX16-LABEL: 'trunc_ptr_to_i128'
+; PTR16_IDX16-NEXT:  Classifying expressions for: @trunc_ptr_to_i128
 ; PTR16_IDX16-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR16_IDX16-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR16_IDX16-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i128 ptrtoint ([0 x i8]* @global to i128)
@@ -199,13 +199,13 @@ define hidden i32* @v0_ptr_to_i128(i8* %arg, i32* %arg10) {
 ; PTR16_IDX16-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR16_IDX16-NEXT:    %tmp18 = add i32 %tmp, 2
 ; PTR16_IDX16-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR16_IDX16-NEXT:  Determining loop execution counts for: @v0_ptr_to_i128
+; PTR16_IDX16-NEXT:  Determining loop execution counts for: @trunc_ptr_to_i128
 ; PTR16_IDX16-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
 ; PTR16_IDX16-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
 ; PTR16_IDX16-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
 ;
-; PTR16_IDX32-LABEL: 'v0_ptr_to_i128'
-; PTR16_IDX32-NEXT:  Classifying expressions for: @v0_ptr_to_i128
+; PTR16_IDX32-LABEL: 'trunc_ptr_to_i128'
+; PTR16_IDX32-NEXT:  Classifying expressions for: @trunc_ptr_to_i128
 ; PTR16_IDX32-NEXT:    %tmp = phi i32 [ 0, %bb ], [ %tmp18, %bb17 ]
 ; PTR16_IDX32-NEXT:    --> {0,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
 ; PTR16_IDX32-NEXT:    %tmp12 = getelementptr i8, i8* %arg, i128 ptrtoint ([0 x i8]* @global to i128)
@@ -216,7 +216,7 @@ define hidden i32* @v0_ptr_to_i128(i8* %arg, i32* %arg10) {
 ; PTR16_IDX32-NEXT:    --> %tmp14 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb11: Variant }
 ; PTR16_IDX32-NEXT:    %tmp18 = add i32 %tmp, 2
 ; PTR16_IDX32-NEXT:    --> {2,+,2}<%bb11> U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %bb11: Computable }
-; PTR16_IDX32-NEXT:  Determining loop execution counts for: @v0_ptr_to_i128
+; PTR16_IDX32-NEXT:  Determining loop execution counts for: @trunc_ptr_to_i128
 ; PTR16_IDX32-NEXT:  Loop %bb11: Unpredictable backedge-taken count.
 ; PTR16_IDX32-NEXT:  Loop %bb11: Unpredictable max backedge-taken count.
 ; PTR16_IDX32-NEXT:  Loop %bb11: Unpredictable predicated backedge-taken count.
@@ -240,47 +240,47 @@ bb17:                                             ; preds = %bb11
   br label %bb11
 }
 
-define void @v1_ptr_to_i32(i32 %arg, i32 %arg6) {
-; PTR64_IDX64-LABEL: 'v1_ptr_to_i32'
-; PTR64_IDX64-NEXT:  Classifying expressions for: @v1_ptr_to_i32
+define void @zext_ptr_to_i32(i32 %arg, i32 %arg6) {
+; PTR64_IDX64-LABEL: 'zext_ptr_to_i32'
+; PTR64_IDX64-NEXT:  Classifying expressions for: @zext_ptr_to_i32
 ; PTR64_IDX64-NEXT:    %tmp = sub i32 %arg, ptrtoint ([0 x i8]* @global to i32)
 ; PTR64_IDX64-NEXT:    --> ((-1 * (trunc [0 x i8]* @global to i32)) + %arg) U: full-set S: full-set Exits: ((-1 * (trunc [0 x i8]* @global to i32)) + %arg) LoopDispositions: { %bb7: Invariant }
 ; PTR64_IDX64-NEXT:    %tmp9 = select i1 %tmp8, i16 0, i16 1
 ; PTR64_IDX64-NEXT:    --> %tmp9 U: [0,2) S: [-2,2) Exits: <<Unknown>> LoopDispositions: { %bb7: Variant }
-; PTR64_IDX64-NEXT:  Determining loop execution counts for: @v1_ptr_to_i32
+; PTR64_IDX64-NEXT:  Determining loop execution counts for: @zext_ptr_to_i32
 ; PTR64_IDX64-NEXT:  Loop %bb7: Unpredictable backedge-taken count.
 ; PTR64_IDX64-NEXT:  Loop %bb7: Unpredictable max backedge-taken count.
 ; PTR64_IDX64-NEXT:  Loop %bb7: Unpredictable predicated backedge-taken count.
 ;
-; PTR64_IDX32-LABEL: 'v1_ptr_to_i32'
-; PTR64_IDX32-NEXT:  Classifying expressions for: @v1_ptr_to_i32
+; PTR64_IDX32-LABEL: 'zext_ptr_to_i32'
+; PTR64_IDX32-NEXT:  Classifying expressions for: @zext_ptr_to_i32
 ; PTR64_IDX32-NEXT:    %tmp = sub i32 %arg, ptrtoint ([0 x i8]* @global to i32)
 ; PTR64_IDX32-NEXT:    --> ((-1 * @global) + %arg) U: full-set S: full-set Exits: ((-1 * @global) + %arg) LoopDispositions: { %bb7: Invariant }
 ; PTR64_IDX32-NEXT:    %tmp9 = select i1 %tmp8, i16 0, i16 1
 ; PTR64_IDX32-NEXT:    --> %tmp9 U: [0,2) S: [-2,2) Exits: <<Unknown>> LoopDispositions: { %bb7: Variant }
-; PTR64_IDX32-NEXT:  Determining loop execution counts for: @v1_ptr_to_i32
+; PTR64_IDX32-NEXT:  Determining loop execution counts for: @zext_ptr_to_i32
 ; PTR64_IDX32-NEXT:  Loop %bb7: Unpredictable backedge-taken count.
 ; PTR64_IDX32-NEXT:  Loop %bb7: Unpredictable max backedge-taken count.
 ; PTR64_IDX32-NEXT:  Loop %bb7: Unpredictable predicated backedge-taken count.
 ;
-; PTR16_IDX16-LABEL: 'v1_ptr_to_i32'
-; PTR16_IDX16-NEXT:  Classifying expressions for: @v1_ptr_to_i32
+; PTR16_IDX16-LABEL: 'zext_ptr_to_i32'
+; PTR16_IDX16-NEXT:  Classifying expressions for: @zext_ptr_to_i32
 ; PTR16_IDX16-NEXT:    %tmp = sub i32 %arg, ptrtoint ([0 x i8]* @global to i32)
 ; PTR16_IDX16-NEXT:    --> ((-1 * (zext [0 x i8]* @global to i32))<nsw> + %arg) U: full-set S: full-set Exits: ((-1 * (zext [0 x i8]* @global to i32))<nsw> + %arg) LoopDispositions: { %bb7: Invariant }
 ; PTR16_IDX16-NEXT:    %tmp9 = select i1 %tmp8, i16 0, i16 1
 ; PTR16_IDX16-NEXT:    --> %tmp9 U: [0,2) S: [-2,2) Exits: <<Unknown>> LoopDispositions: { %bb7: Variant }
-; PTR16_IDX16-NEXT:  Determining loop execution counts for: @v1_ptr_to_i32
+; PTR16_IDX16-NEXT:  Determining loop execution counts for: @zext_ptr_to_i32
 ; PTR16_IDX16-NEXT:  Loop %bb7: Unpredictable backedge-taken count.
 ; PTR16_IDX16-NEXT:  Loop %bb7: Unpredictable max backedge-taken count.
 ; PTR16_IDX16-NEXT:  Loop %bb7: Unpredictable predicated backedge-taken count.
 ;
-; PTR16_IDX32-LABEL: 'v1_ptr_to_i32'
-; PTR16_IDX32-NEXT:  Classifying expressions for: @v1_ptr_to_i32
+; PTR16_IDX32-LABEL: 'zext_ptr_to_i32'
+; PTR16_IDX32-NEXT:  Classifying expressions for: @zext_ptr_to_i32
 ; PTR16_IDX32-NEXT:    %tmp = sub i32 %arg, ptrtoint ([0 x i8]* @global to i32)
 ; PTR16_IDX32-NEXT:    --> ((-1 * @global) + %arg) U: full-set S: full-set Exits: ((-1 * @global) + %arg) LoopDispositions: { %bb7: Invariant }
 ; PTR16_IDX32-NEXT:    %tmp9 = select i1 %tmp8, i16 0, i16 1
 ; PTR16_IDX32-NEXT:    --> %tmp9 U: [0,2) S: [-2,2) Exits: <<Unknown>> LoopDispositions: { %bb7: Variant }
-; PTR16_IDX32-NEXT:  Determining loop execution counts for: @v1_ptr_to_i32
+; PTR16_IDX32-NEXT:  Determining loop execution counts for: @zext_ptr_to_i32
 ; PTR16_IDX32-NEXT:  Loop %bb7: Unpredictable backedge-taken count.
 ; PTR16_IDX32-NEXT:  Loop %bb7: Unpredictable max backedge-taken count.
 ; PTR16_IDX32-NEXT:  Loop %bb7: Unpredictable predicated backedge-taken count.
@@ -290,6 +290,54 @@ bb:
 
 bb7:                                              ; preds = %bb7, %bb
   %tmp = sub i32 %arg, ptrtoint ([0 x i8]* @global to i32)
+  %tmp8 = icmp eq i32 %tmp, %arg6
+  %tmp9 = select i1 %tmp8, i16 0, i16 1
+  call void @use16(i16 %tmp9)
+  br i1 %tmp8, label %bb7, label %bb10
+
+bb10:                                             ; preds = %bb7
+  ret void
+}
+
+define void @sext_to_i32(i32 %arg, i32 %arg6) {
+; X64-LABEL: 'sext_to_i32'
+; X64-NEXT:  Classifying expressions for: @sext_to_i32
+; X64-NEXT:    %tmp = sub i32 %arg, sext (i16 ptrtoint ([0 x i8]* @global to i16) to i32)
+; X64-NEXT:    --> ((-1 * (sext i16 (trunc [0 x i8]* @global to i16) to i32))<nsw> + %arg) U: full-set S: full-set Exits: ((-1 * (sext i16 (trunc [0 x i8]* @global to i16) to i32))<nsw> + %arg) LoopDispositions: { %bb7: Invariant }
+; X64-NEXT:    %tmp9 = select i1 %tmp8, i16 0, i16 1
+; X64-NEXT:    --> %tmp9 U: [0,2) S: [-2,2) Exits: <<Unknown>> LoopDispositions: { %bb7: Variant }
+; X64-NEXT:  Determining loop execution counts for: @sext_to_i32
+; X64-NEXT:  Loop %bb7: Unpredictable backedge-taken count.
+; X64-NEXT:  Loop %bb7: Unpredictable max backedge-taken count.
+; X64-NEXT:  Loop %bb7: Unpredictable predicated backedge-taken count.
+;
+; PTR16_IDX16-LABEL: 'sext_to_i32'
+; PTR16_IDX16-NEXT:  Classifying expressions for: @sext_to_i32
+; PTR16_IDX16-NEXT:    %tmp = sub i32 %arg, sext (i16 ptrtoint ([0 x i8]* @global to i16) to i32)
+; PTR16_IDX16-NEXT:    --> ((-1 * (sext [0 x i8]* @global to i32))<nsw> + %arg) U: full-set S: full-set Exits: ((-1 * (sext [0 x i8]* @global to i32))<nsw> + %arg) LoopDispositions: { %bb7: Invariant }
+; PTR16_IDX16-NEXT:    %tmp9 = select i1 %tmp8, i16 0, i16 1
+; PTR16_IDX16-NEXT:    --> %tmp9 U: [0,2) S: [-2,2) Exits: <<Unknown>> LoopDispositions: { %bb7: Variant }
+; PTR16_IDX16-NEXT:  Determining loop execution counts for: @sext_to_i32
+; PTR16_IDX16-NEXT:  Loop %bb7: Unpredictable backedge-taken count.
+; PTR16_IDX16-NEXT:  Loop %bb7: Unpredictable max backedge-taken count.
+; PTR16_IDX16-NEXT:  Loop %bb7: Unpredictable predicated backedge-taken count.
+;
+; PTR16_IDX32-LABEL: 'sext_to_i32'
+; PTR16_IDX32-NEXT:  Classifying expressions for: @sext_to_i32
+; PTR16_IDX32-NEXT:    %tmp = sub i32 %arg, sext (i16 ptrtoint ([0 x i8]* @global to i16) to i32)
+; PTR16_IDX32-NEXT:    --> ((-1 * (sext i16 (trunc [0 x i8]* @global to i16) to i32))<nsw> + %arg) U: full-set S: full-set Exits: ((-1 * (sext i16 (trunc [0 x i8]* @global to i16) to i32))<nsw> + %arg) LoopDispositions: { %bb7: Invariant }
+; PTR16_IDX32-NEXT:    %tmp9 = select i1 %tmp8, i16 0, i16 1
+; PTR16_IDX32-NEXT:    --> %tmp9 U: [0,2) S: [-2,2) Exits: <<Unknown>> LoopDispositions: { %bb7: Variant }
+; PTR16_IDX32-NEXT:  Determining loop execution counts for: @sext_to_i32
+; PTR16_IDX32-NEXT:  Loop %bb7: Unpredictable backedge-taken count.
+; PTR16_IDX32-NEXT:  Loop %bb7: Unpredictable max backedge-taken count.
+; PTR16_IDX32-NEXT:  Loop %bb7: Unpredictable predicated backedge-taken count.
+;
+bb:
+  br label %bb7
+
+bb7:                                              ; preds = %bb7, %bb
+  %tmp = sub i32 %arg, sext (i16 ptrtoint ([0 x i8]* @global to i16) to i32)
   %tmp8 = icmp eq i32 %tmp, %arg6
   %tmp9 = select i1 %tmp8, i16 0, i16 1
   call void @use16(i16 %tmp9)
