@@ -7993,8 +7993,11 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
     }
     case scZeroExtend: {
       const SCEVZeroExtendExpr *SZ = cast<SCEVZeroExtendExpr>(V);
-      if (Constant *CastOp = BuildConstantFromSCEV(SZ->getOperand()))
-        return ConstantExpr::getZExt(CastOp, SZ->getType());
+      if (Constant *CastOp = BuildConstantFromSCEV(SZ->getOperand())) {
+        if (!CastOp->getType()->isPointerTy())
+          return ConstantExpr::getZExt(CastOp, SZ->getType());
+        return ConstantExpr::getPtrToInt(CastOp, SZ->getType());
+      }
       break;
     }
     case scTruncate: {
