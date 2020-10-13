@@ -38,7 +38,7 @@ static_assert(
     "Type is insufficiently aligned");
 
 APValue::LValueBase::LValueBase(const ValueDecl *P, unsigned I, unsigned V)
-    : Ptr(P ? cast<ValueDecl>(P->getCanonicalDecl()) : nullptr), Local{I, V} {}
+    : Ptr(P), Local{I, V} {}
 APValue::LValueBase::LValueBase(const Expr *P, unsigned I, unsigned V)
     : Ptr(P), Local{I, V} {}
 
@@ -90,17 +90,11 @@ bool operator==(const APValue::LValueBase &LHS,
                 const APValue::LValueBase &RHS) {
   if (LHS.Ptr != RHS.Ptr)
     return false;
-  if (LHS.is<TypeInfoLValue>() || LHS.is<DynamicAllocLValue>())
+  if (LHS.is<TypeInfoLValue>())
     return true;
   return LHS.Local.CallIndex == RHS.Local.CallIndex &&
          LHS.Local.Version == RHS.Local.Version;
 }
-}
-
-APValue::LValuePathEntry::LValuePathEntry(BaseOrMemberType BaseOrMember) {
-  if (const Decl *D = BaseOrMember.getPointer())
-    BaseOrMember.setPointer(D->getCanonicalDecl());
-  Value = reinterpret_cast<uintptr_t>(BaseOrMember.getOpaqueValue());
 }
 
 void APValue::LValuePathEntry::profile(llvm::FoldingSetNodeID &ID) const {
@@ -131,16 +125,14 @@ APValue::LValueBase::operator bool () const {
 
 clang::APValue::LValueBase
 llvm::DenseMapInfo<clang::APValue::LValueBase>::getEmptyKey() {
-  clang::APValue::LValueBase B;
-  B.Ptr = DenseMapInfo<const ValueDecl*>::getEmptyKey();
-  return B;
+  return clang::APValue::LValueBase(
+      DenseMapInfo<const ValueDecl*>::getEmptyKey());
 }
 
 clang::APValue::LValueBase
 llvm::DenseMapInfo<clang::APValue::LValueBase>::getTombstoneKey() {
-  clang::APValue::LValueBase B;
-  B.Ptr = DenseMapInfo<const ValueDecl*>::getTombstoneKey();
-  return B;
+  return clang::APValue::LValueBase(
+      DenseMapInfo<const ValueDecl*>::getTombstoneKey());
 }
 
 namespace clang {
@@ -934,10 +926,8 @@ void APValue::MakeMemberPointer(const ValueDecl *Member, bool IsDerivedMember,
   assert(isAbsent() && "Bad state change");
   MemberPointerData *MPD = new ((void*)(char*)Data.buffer) MemberPointerData;
   Kind = MemberPointer;
-  MPD->MemberAndIsDerivedMember.setPointer(
-      Member ? cast<ValueDecl>(Member->getCanonicalDecl()) : nullptr);
+  MPD->MemberAndIsDerivedMember.setPointer(Member);
   MPD->MemberAndIsDerivedMember.setInt(IsDerivedMember);
   MPD->resizePath(Path.size());
-  for (unsigned I = 0; I != Path.size(); ++I)
-    MPD->getPath()[I] = Path[I]->getCanonicalDecl();
+  memcpy(MPD->getPath(), Path.data(), Path.size()*sizeof(const CXXRecordDecl*));
 }
