@@ -249,11 +249,6 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
   return support_files;
 }
 
-static inline bool IsSwiftLanguage(LanguageType language) {
-  return language == eLanguageTypePLI || language == eLanguageTypeSwift ||
-         ((uint32_t)language == (uint32_t)llvm::dwarf::DW_LANG_Swift);
-}
-
 void SymbolFileDWARF::Initialize() {
   LogChannelDWARF::Initialize();
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
@@ -975,7 +970,7 @@ bool SymbolFileDWARF::ParseImportedModules(
     return false;
   auto lang = sc.comp_unit->GetLanguage();
   if (!ClangModulesDeclVendor::LanguageSupportsClangModules(lang) &&
-      !IsSwiftLanguage(lang))
+      lang != eLanguageTypeSwift)
     return false;
   UpdateExternalModuleListIfNeeded();
 
@@ -3250,8 +3245,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   }
 
   if (tag == DW_TAG_variable && mangled &&
-      IsSwiftLanguage(sc.comp_unit->GetLanguage()))
-    mangled = NULL;
+      sc.comp_unit->GetLanguage() == eLanguageTypeSwift)
+    mangled = nullptr;
 
   // Prefer DW_AT_location over DW_AT_const_value. Both can be emitted e.g.
   // for static constexpr member variables -- DW_AT_const_value will be
@@ -3495,7 +3490,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
 
     // Swift let-bindings are marked by a DW_TAG_const_type.
     bool is_constant = false;
-    if (IsSwiftLanguage(sc.comp_unit->GetLanguage())) {
+    if (sc.comp_unit->GetLanguage() == eLanguageTypeSwift) {
       DWARFDIE type_die = die.GetReferencedDIE(llvm::dwarf::DW_AT_type);
       if (type_die && type_die.Tag() == llvm::dwarf::DW_TAG_const_type)
         is_constant = true;
