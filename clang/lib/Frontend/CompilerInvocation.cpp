@@ -1561,8 +1561,11 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       std::string(Args.getLastArgValue(OPT_fsymbol_partition_EQ));
 
   Opts.ForceAAPCSBitfieldLoad = Args.hasArg(OPT_ForceAAPCSBitfieldLoad);
+  Opts.AAPCSBitfieldWidth =
+      Args.hasFlag(OPT_AAPCSBitfieldWidth, OPT_ForceNoAAPCSBitfieldWidth, true);
 
   Opts.PassByValueIsNoAlias = Args.hasArg(OPT_fpass_by_value_is_noalias);
+
   return Success;
 }
 
