@@ -24,6 +24,7 @@ static_library("Analysis") {
     "Dominators.cpp",
     "ExprMutationAnalyzer.cpp",
     "HTMLPathDiagnosticConsumer.cpp",
+    "IssueHash.cpp",
     "LiveVariables.cpp",
     "ObjCNoReturn.cpp",
     "PathDiagnostic.cpp",
