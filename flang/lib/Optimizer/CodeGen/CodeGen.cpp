@@ -1026,6 +1026,12 @@ struct ConstfOpConversion : public FIROpConversion<fir::ConstfOp> {
   }
 };
 
+static mlir::Type getComplexEleTy(mlir::Type complex) {
+  if (auto cc = complex.dyn_cast<mlir::ComplexType>())
+    return cc.getElementType();
+  return complex.cast<fir::ComplexType>().getElementType();
+}
+
 /// convert value of from-type to value of to-type
 struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
   using FIROpConversion::FIROpConversion;
@@ -1076,11 +1082,9 @@ struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
                                        convert.getContext());
       auto one = mlir::ArrayAttr::get(rewriter.getI32IntegerAttr(1),
                                       convert.getContext());
-      auto rp =
-          rewriter.create<mlir::LLVM::ExtractValueOp>(loc, fromTy_, op0, zero);
-      auto ip =
-          rewriter.create<mlir::LLVM::ExtractValueOp>(loc, fromTy_, op0, one);
       auto ty = convertType(getComplexEleTy(convert.value().getType()));
+      auto rp = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, op0, zero);
+      auto ip = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, op0, one);
       auto nt = convertType(getComplexEleTy(convert.res().getType()));
       auto fromBits = unwrap(ty).getPrimitiveSizeInBits();
       auto toBits = unwrap(nt).getPrimitiveSizeInBits();
@@ -1136,12 +1140,6 @@ struct ConvertOpConversion : public FIROpConversion<fir::ConvertOp> {
       }
     }
     return emitError(loc) << "cannot convert " << fromTy_ << " to " << toTy_;
-  }
-
-  static mlir::Type getComplexEleTy(mlir::Type complex) {
-    if (auto cc = complex.dyn_cast<mlir::ComplexType>())
-      return cc.getElementType();
-    return complex.cast<fir::ComplexType>().getElementType();
   }
 };
 
@@ -2661,13 +2659,14 @@ mlir::LLVM::InsertValueOp complexSum(OPTY sumop, OperandTy opnds,
   auto ctx = sumop.getContext();
   auto c0 = mlir::ArrayAttr::get(rewriter.getI32IntegerAttr(0), ctx);
   auto c1 = mlir::ArrayAttr::get(rewriter.getI32IntegerAttr(1), ctx);
+  auto eleTy = lowering.convertType(getComplexEleTy(sumop.getType()));
   auto ty = lowering.convertType(sumop.getType());
-  auto x = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, a, c0);
-  auto x_ = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, b, c0);
-  auto rx = rewriter.create<LLVMOP>(loc, ty, x, x_);
-  auto y = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, a, c1);
-  auto y_ = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, b, c1);
-  auto ry = rewriter.create<LLVMOP>(loc, ty, y, y_);
+  auto x = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, a, c0);
+  auto y = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, a, c1);
+  auto x_ = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, b, c0);
+  auto y_ = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, b, c1);
+  auto rx = rewriter.create<LLVMOP>(loc, eleTy, x, x_);
+  auto ry = rewriter.create<LLVMOP>(loc, eleTy, y, y_);
   auto r = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
   auto r_ = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, r, rx, c0);
   return rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, r_, ry, c1);
@@ -2721,17 +2720,18 @@ struct MulcOpConversion : public FIROpConversion<fir::MulcOp> {
     auto ctx = mulc.getContext();
     auto c0 = mlir::ArrayAttr::get(rewriter.getI32IntegerAttr(0), ctx);
     auto c1 = mlir::ArrayAttr::get(rewriter.getI32IntegerAttr(1), ctx);
+    auto eleTy = convertType(getComplexEleTy(mulc.getType()));
     auto ty = convertType(mulc.getType());
-    auto x = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, a, c0);
-    auto x_ = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, b, c0);
-    auto xx_ = rewriter.create<mlir::LLVM::FMulOp>(loc, ty, x, x_);
-    auto y = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, a, c1);
-    auto yx_ = rewriter.create<mlir::LLVM::FMulOp>(loc, ty, y, x_);
-    auto y_ = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, b, c1);
-    auto xy_ = rewriter.create<mlir::LLVM::FMulOp>(loc, ty, x, y_);
-    auto ri = rewriter.create<mlir::LLVM::FAddOp>(loc, ty, xy_, yx_);
-    auto yy_ = rewriter.create<mlir::LLVM::FMulOp>(loc, ty, y, y_);
-    auto rr = rewriter.create<mlir::LLVM::FSubOp>(loc, ty, xx_, yy_);
+    auto x = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, a, c0);
+    auto y = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, a, c1);
+    auto x_ = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, b, c0);
+    auto y_ = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, b, c1);
+    auto xx_ = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x, x_);
+    auto yx_ = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y, x_);
+    auto xy_ = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x, y_);
+    auto ri = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, xy_, yx_);
+    auto yy_ = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y, y_);
+    auto rr = rewriter.create<mlir::LLVM::FSubOp>(loc, eleTy, xx_, yy_);
     auto ra = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
     auto r_ = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, ra, rr, c0);
     auto r = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, r_, ri, c1);
@@ -2745,10 +2745,10 @@ struct MulcOpConversion : public FIROpConversion<fir::MulcOp> {
 struct DivcOpConversion : public FIROpConversion<fir::DivcOp> {
   using FIROpConversion::FIROpConversion;
 
+  // Should this just call __divdc3? Just generate inline code for now.
   mlir::LogicalResult
   matchAndRewrite(fir::DivcOp divc, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    // TODO: should this just call __divdc3 ?
     // given: (x + iy) / (x' + iy')
     // result: ((xx'+yy')/d) + i((yx'-xy')/d) where d = x'x' + y'y'
     auto a = operands[0];
@@ -2757,22 +2757,23 @@ struct DivcOpConversion : public FIROpConversion<fir::DivcOp> {
     auto ctx = divc.getContext();
     auto c0 = mlir::ArrayAttr::get(rewriter.getI32IntegerAttr(0), ctx);
     auto c1 = mlir::ArrayAttr::get(rewriter.getI32IntegerAttr(1), ctx);
+    auto eleTy = convertType(getComplexEleTy(divc.getType()));
     auto ty = convertType(divc.getType());
-    auto x = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, a, c0);
-    auto x_ = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, b, c0);
-    auto xx_ = rewriter.create<mlir::LLVM::FMulOp>(loc, ty, x, x_);
-    auto x_x_ = rewriter.create<mlir::LLVM::FMulOp>(loc, ty, x_, x_);
-    auto y = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, a, c1);
-    auto yx_ = rewriter.create<mlir::LLVM::FMulOp>(loc, ty, y, x_);
-    auto y_ = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, b, c1);
-    auto xy_ = rewriter.create<mlir::LLVM::FMulOp>(loc, ty, x, y_);
-    auto yy_ = rewriter.create<mlir::LLVM::FMulOp>(loc, ty, y, y_);
-    auto y_y_ = rewriter.create<mlir::LLVM::FMulOp>(loc, ty, y_, y_);
-    auto d = rewriter.create<mlir::LLVM::FAddOp>(loc, ty, x_x_, y_y_);
-    auto rrn = rewriter.create<mlir::LLVM::FAddOp>(loc, ty, xx_, yy_);
-    auto rin = rewriter.create<mlir::LLVM::FSubOp>(loc, ty, yx_, xy_);
-    auto rr = rewriter.create<mlir::LLVM::FDivOp>(loc, ty, rrn, d);
-    auto ri = rewriter.create<mlir::LLVM::FDivOp>(loc, ty, rin, d);
+    auto x = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, a, c0);
+    auto y = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, a, c1);
+    auto x_ = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, b, c0);
+    auto y_ = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, b, c1);
+    auto xx_ = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x, x_);
+    auto x_x_ = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x_, x_);
+    auto yx_ = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y, x_);
+    auto xy_ = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x, y_);
+    auto yy_ = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y, y_);
+    auto y_y_ = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y_, y_);
+    auto d = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, x_x_, y_y_);
+    auto rrn = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, xx_, yy_);
+    auto rin = rewriter.create<mlir::LLVM::FSubOp>(loc, eleTy, yx_, xy_);
+    auto rr = rewriter.create<mlir::LLVM::FDivOp>(loc, eleTy, rrn, d);
+    auto ri = rewriter.create<mlir::LLVM::FDivOp>(loc, eleTy, rin, d);
     auto ra = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
     auto r_ = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, ra, rr, c0);
     auto r = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, r_, ri, c1);
@@ -2792,15 +2793,16 @@ struct NegcOpConversion : public FIROpConversion<fir::NegcOp> {
     // given: -(x + iy)
     // result: -x - iy
     auto ctxt = neg.getContext();
+    auto eleTy = convertType(getComplexEleTy(neg.getType()));
     auto ty = convertType(neg.getType());
     auto loc = neg.getLoc();
-    auto c0 = mlir::ArrayAttr::get(rewriter.getI32IntegerAttr(0), ctxt);
     auto &o0 = operands[0];
-    auto rp = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, o0, c0);
-    auto nrp = rewriter.create<mlir::LLVM::FNegOp>(loc, ty, rp);
+    auto c0 = mlir::ArrayAttr::get(rewriter.getI32IntegerAttr(0), ctxt);
     auto c1 = mlir::ArrayAttr::get(rewriter.getI32IntegerAttr(1), ctxt);
-    auto ip = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ty, o0, c1);
-    auto nip = rewriter.create<mlir::LLVM::FNegOp>(loc, ty, ip);
+    auto rp = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, o0, c0);
+    auto ip = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, eleTy, o0, c1);
+    auto nrp = rewriter.create<mlir::LLVM::FNegOp>(loc, eleTy, rp);
+    auto nip = rewriter.create<mlir::LLVM::FNegOp>(loc, eleTy, ip);
     auto r = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, o0, nrp, c0);
     rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(neg, ty, r, nip, c1);
     return success();
