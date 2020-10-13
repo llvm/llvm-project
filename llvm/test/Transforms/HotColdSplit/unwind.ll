@@ -11,7 +11,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 ; CHECK-NOT: noreturn
 
-define i32 @foo() personality i8 0 {
+define i32 @foo() "hot-cold-split" personality i8 0 {
 entry:
   invoke void @llvm.donothing() to label %normal unwind label %exception
 

@@ -28,7 +28,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK: call {{.*}}@sideeffect(i32 3)
 ; CHECK: call {{.*}}@sideeffect(i32 4)
 ; CHECK: call {{.*}}@sideeffect(i32 5)
-define void @pluto() {
+define void @pluto() "hot-cold-split" {
 bb:
   switch i8 undef, label %bb1 [
     i8 0, label %bb7
