@@ -5045,13 +5045,13 @@ a :ref:`compile unit <DICompileUnit>`.
 DISubprogram
 """"""""""""
 
-``DISubprogram`` nodes represent functions from the source language. A
-distinct ``DISubprogram`` may be attached to a function definition using
-``!dbg`` metadata. A unique ``DISubprogram`` may be attached to a function
-declaration used for call site debug info. The ``variables:`` field points at
-:ref:`variables <DILocalVariable>` that must be retained, even if their IR
-counterparts are optimized out of the IR. The ``type:`` field must point at an
-:ref:`DISubroutineType`.
+``DISubprogram`` nodes represent functions from the source language. A distinct
+``DISubprogram`` may be attached to a function definition using ``!dbg``
+metadata. A unique ``DISubprogram`` may be attached to a function declaration
+used for call site debug info. The ``retainedNodes:`` field is a list of
+:ref:`variables <DILocalVariable>` and :ref:`labels <DILabel>` that must be
+retained, even if their IR counterparts are optimized out of the IR. The
+``type:`` field must point at an :ref:`DISubroutineType`.
 
 .. _DISubprogramDeclaration:
 
@@ -5074,7 +5074,8 @@ and ``scope:``.
                                 virtuality: DW_VIRTUALITY_pure_virtual,
                                 virtualIndex: 10, flags: DIFlagPrototyped,
                                 isOptimized: true, unit: !5, templateParams: !6,
-                                declaration: !7, variables: !8, thrownTypes: !9)
+                                declaration: !7, retainedNodes: !8,
+                                thrownTypes: !9)
 
 .. _DILexicalBlock:
 
@@ -5298,6 +5299,22 @@ appear in the included source file.
 
    !2 = !DIMacroFile(macinfo: DW_MACINFO_start_file, line: 7, file: !2,
                      nodes: !3)
+
+.. _DILabel:
+
+DILabel
+"""""""
+
+``DILabel`` nodes represent labels within a :ref:`DISubprogram`. All fields of
+a ``DILabel`` are mandatory. The ``scope:`` field must be one of either a
+:ref:`DILexicalBlockFile`, a :ref:`DILexicalBlock`, or a :ref:`DISubprogram`.
+The ``name:`` field is the label identifier. The ``file:`` field is the
+:ref:`DIFile` the label is present in. The ``line:`` field is the source line
+within the file where the label is declared.
+
+.. code-block:: text
+
+  !2 = !DILabel(scope: !0, name: "foo", file: !1, line: 7)
 
 '``tbaa``' Metadata
 ^^^^^^^^^^^^^^^^^^^
