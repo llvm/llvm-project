@@ -742,7 +742,7 @@ void CGRecordLowering::clipTailPadding() {
         assert(Prior->FD->hasAttr<NoUniqueAddressAttr>() &&
                "should not have reused this field's tail padding");
         Prior->Data = getByteArrayType(
-            Context.getTypeInfoDataSizeInChars(Prior->FD->getType()).first);
+            Context.getTypeInfoDataSizeInChars(Prior->FD->getType()).Width);
       }
     }
     if (Member->Data)
