@@ -75,7 +75,6 @@ def Async_ExecuteOp : Async_Op<"execute", [AttrSizedOperandSegments]> {
 
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
-
   let verifier = [{ return ::verify(*this); }];
 }
 
@@ -90,6 +89,49 @@ def Async_YieldOp :
   let arguments = (ins Variadic<AnyType>:$operands);
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+
+  let verifier = [{ return ::verify(*this); }];
+}
+
+def Async_AwaitOp : Async_Op<"await", [NoSideEffect]> {
+  let summary = "waits for the argument to become ready";
+  let description = [{
+    The `async.await` operation waits until the argument becomes ready, and for
+    the `async.value` arguments it unwraps the underlying value
+
+    Example:
+
+    ```mlir
+    %0 = ... : !async.token
+    async.await %0 : !async.token
+
+    %1 = ... : !async.value<f32>
+    %2 = async.await %1 : !async.value<f32>
+    ```
+  }];
+
+  let arguments = (ins Async_AnyValueOrTokenType:$operand);
+  let results = (outs Optional<AnyType>:$result);
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [
+    OpBuilder<"mlir::OpBuilder &builder, OperationState &result,"
+              "Value operand, ArrayRef<NamedAttribute> attrs = {}">,
+  ];
+
+  let extraClassDeclaration = [{
+    Optional<Type> getResultType() {
+      if (getResultTypes().empty()) return None;
+      return getResultTypes()[0];
+    }
+  }];
+
+  let assemblyFormat = [{
+    attr-dict $operand `:` custom<AwaitResultType>(
+      type($operand), type($result)
+    )
+  }];
 
   let verifier = [{ return ::verify(*this); }];
 }
