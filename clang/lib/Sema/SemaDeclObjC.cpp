@@ -1066,6 +1066,11 @@ Decl *Sema::ActOnStartClassInterface(
 
   ProcessDeclAttributeList(TUScope, IDecl, AttrList);
   AddPragmaAttributes(TUScope, IDecl);
+
+  // Merge attributes from previous declarations.
+  if (PrevIDecl)
+    mergeDeclAttributes(IDecl, PrevIDecl);
+
   PushOnScopeChains(IDecl, TUScope);
 
   // Start the definition of this class. If we're in a redefinition case, there
@@ -3124,6 +3129,9 @@ Sema::ActOnForwardClassDeclaration(SourceLocation AtClassLoc,
                                   ClassName, TypeParams, PrevIDecl,
                                   IdentLocs[i]);
     IDecl->setAtEndRange(IdentLocs[i]);
+
+    if (PrevIDecl)
+      mergeDeclAttributes(IDecl, PrevIDecl);
 
     PushOnScopeChains(IDecl, TUScope);
     CheckObjCDeclScope(IDecl);
