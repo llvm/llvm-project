@@ -4026,6 +4026,12 @@ llvm::StringRef TargetProperties::GetExpressionPrefixContents() {
   return "";
 }
 
+uint64_t TargetProperties::GetExprErrorLimit() const {
+  const uint32_t idx = ePropertyExprErrorLimit;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_target_properties[idx].default_uint_value);
+}
+
 bool TargetProperties::GetBreakpointsConsultPlatformAvoidList() {
   const uint32_t idx = ePropertyBreakpointUseAvoidList;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
