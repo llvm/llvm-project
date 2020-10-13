@@ -1325,6 +1325,12 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(XcodeSDK::Type sdk_type) {
   case XcodeSDK::Type::iPhoneOS:
     sdks_spec.AppendPathComponent("iPhoneOS.platform");
     break;
+  case XcodeSDK::Type::WatchSimulator:
+    sdks_spec.AppendPathComponent("WatchSimulator.platform");
+    break;
+  case XcodeSDK::Type::AppleTVSimulator:
+    sdks_spec.AppendPathComponent("AppleTVSimulator.platform");
+    break;
   default:
     llvm_unreachable("unsupported sdk");
   }
@@ -1565,6 +1571,14 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
       break;
     case XcodeSDK::Type::MacOSX:
       minimum_version_option.PutCString("-mmacosx-version-min=");
+      minimum_version_option.PutCString(version.getAsString());
+      break;
+    case XcodeSDK::Type::WatchSimulator:
+      minimum_version_option.PutCString("-mwatchos-simulator-version-min=");
+      minimum_version_option.PutCString(version.getAsString());
+      break;
+    case XcodeSDK::Type::AppleTVSimulator:
+      minimum_version_option.PutCString("-mtvos-version-min=");
       minimum_version_option.PutCString(version.getAsString());
       break;
     default:
