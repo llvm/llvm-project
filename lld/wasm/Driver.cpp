@@ -327,6 +327,7 @@ static StringRef getEntry(opt::InputArgList &args) {
 // Initializes Config members by the command line options.
 static void readConfigs(opt::InputArgList &args) {
   config->allowUndefined = args.hasArg(OPT_allow_undefined);
+  config->bsymbolic = args.hasArg(OPT_Bsymbolic);
   config->checkFeatures =
       args.hasFlag(OPT_check_features, OPT_no_check_features, true);
   config->compressRelocations = args.hasArg(OPT_compress_relocations);
@@ -489,6 +490,10 @@ static void checkOptions(opt::InputArgList &args) {
     if (config->pie) {
       warn("creating PIEs, with -pie, is not yet stable");
     }
+  }
+
+  if (config->bsymbolic && !config->shared) {
+    warn("-Bsymbolic is only meaningful when combined with -shared");
   }
 }
 

@@ -18,6 +18,8 @@ multiclass B<string name, string help1, string help2> {
 }
 
 // The following flags are shared with the ELF linker
+def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind defined symbols locally">;
+
 def color_diagnostics: F<"color-diagnostics">,
   HelpText<"Use colors in diagnostics">;
 

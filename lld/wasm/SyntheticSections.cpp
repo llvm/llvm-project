@@ -268,21 +268,56 @@ void GlobalSection::assignIndexes() {
   uint32_t globalIndex = out.importSec->getNumImportedGlobals();
   for (InputGlobal *g : inputGlobals)
     g->setGlobalIndex(globalIndex++);
-  for (Symbol *sym : staticGotSymbols)
+  for (Symbol *sym : internalGotSymbols)
     sym->setGOTIndex(globalIndex++);
   isSealed = true;
 }
 
-void GlobalSection::addStaticGOTEntry(Symbol *sym) {
+void GlobalSection::addInternalGOTEntry(Symbol *sym) {
   assert(!isSealed);
   if (sym->requiresGOT)
     return;
-  LLVM_DEBUG(dbgs() << "addStaticGOTEntry: " << sym->getName() << " "
+  LLVM_DEBUG(dbgs() << "addInternalGOTEntry: " << sym->getName() << " "
                     << toString(sym->kind()) << "\n");
   sym->requiresGOT = true;
   if (auto *F = dyn_cast<FunctionSymbol>(sym))
     out.elemSec->addEntry(F);
-  staticGotSymbols.push_back(sym);
+  internalGotSymbols.push_back(sym);
+}
+
+void GlobalSection::generateRelocationCode(raw_ostream &os) const {
+  unsigned opcode_ptr_const = config->is64.getValueOr(false)
+                                  ? WASM_OPCODE_I64_CONST
+                                  : WASM_OPCODE_I32_CONST;
+  unsigned opcode_ptr_add = config->is64.getValueOr(false)
+                                ? WASM_OPCODE_I64_ADD
+                                : WASM_OPCODE_I32_ADD;
+
+  for (const Symbol *sym : internalGotSymbols) {
+    if (auto *d = dyn_cast<DefinedData>(sym)) {
+      // Get __memory_base
+      writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
+      writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(), "__memory_base");
+
+      // Add the virtual address of the data symbol
+      writeU8(os, opcode_ptr_const, "CONST");
+      writeSleb128(os, d->getVirtualAddress(), "offset");
+    } else if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
+      // Get __table_base
+      writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
+      writeUleb128(os, WasmSym::tableBase->getGlobalIndex(), "__table_base");
+
+      // Add the table index to __table_base
+      writeU8(os, opcode_ptr_const, "CONST");
+      writeSleb128(os, f->getTableIndex(), "offset");
+    } else {
+      assert(isa<UndefinedData>(sym));
+      continue;
+    }
+    writeU8(os, opcode_ptr_add, "ADD");
+    writeU8(os, WASM_OPCODE_GLOBAL_SET, "GLOBAL_SET");
+    writeUleb128(os, sym->getGOTIndex(), "got_entry");
+  }
 }
 
 void GlobalSection::writeBody() {
@@ -292,9 +327,9 @@ void GlobalSection::writeBody() {
   for (InputGlobal *g : inputGlobals)
     writeGlobal(os, g->global);
   // TODO(wvo): when do these need I64_CONST?
-  for (const Symbol *sym : staticGotSymbols) {
+  for (const Symbol *sym : internalGotSymbols) {
     WasmGlobal global;
-    global.Type = {WASM_TYPE_I32, false};
+    global.Type = {WASM_TYPE_I32, config->isPic};
     global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
     if (auto *d = dyn_cast<DefinedData>(sym))
       global.InitExpr.Value.Int32 = d->getVirtualAddress();
