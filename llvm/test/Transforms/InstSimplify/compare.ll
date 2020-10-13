@@ -1709,4 +1709,129 @@ define i1 @cmp_through_addrspacecast(i32 addrspace(1)* %p1) {
   ret i1 %cmp
 }
 
+; Test simplifications for: icmp (X+Y), (X+Z) -> icmp Y,Z
+; Test the overflow check when the RHS has NSW set and constant Z is greater
+; or equal than Y, then we know X+Y also can't overflow.
+
+define i1 @icmp_nsw_1(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_1(
+; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[V:%.*]], 5
+; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[V]], 6
+; CHECK-NEXT:    [[S1:%.*]] = sext i32 [[ADD5]] to i64
+; CHECK-NEXT:    [[S2:%.*]] = sext i32 [[ADD6]] to i64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[S1]], [[S2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add5 = add i32 %V, 5
+  %add6 = add nsw i32 %V, 6
+  %s1 = sext i32 %add5 to i64
+  %s2 = sext i32 %add6 to i64
+  %cmp = icmp slt i64 %s1, %s2
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_2(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_2(
+; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[V:%.*]], 5
+; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[V]], 6
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD5]], [[ADD6]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add5 = add i32 %V, 5
+  %add6 = add nsw i32 %V, 6
+  %cmp = icmp slt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_3(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_3(
+; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[V:%.*]], 5
+; CHECK-NEXT:    [[ADD5_2:%.*]] = add nsw i32 [[V]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD5]], [[ADD5_2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add5 = add i32 %V, 5
+  %add5_2 = add nsw i32 %V, 5
+  %cmp = icmp slt i32 %add5, %add5_2
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_4(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_4(
+; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[V:%.*]], 5
+; CHECK-NEXT:    [[ADD4:%.*]] = add nsw i32 [[V]], 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD5]], [[ADD4]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add5 = add i32 %V, 5
+  %add4 = add nsw i32 %V, 4
+  %cmp = icmp slt i32 %add5, %add4
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_5(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_5(
+; CHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[V:%.*]], 5
+; CHECK-NEXT:    [[ADD6:%.*]] = add i32 [[V]], 6
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD5]], [[ADD6]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add5 = add nsw i32 %V, 5
+  %add6 = add i32 %V, 6
+  %cmp = icmp slt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_7(i32 %V, i32 %arg) {
+; CHECK-LABEL: @icmp_nsw_7(
+; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[V:%.*]], 5
+; CHECK-NEXT:    [[ADDARG:%.*]] = add nsw i32 [[V]], [[ARG:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD5]], [[ADDARG]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add5 = add i32 %V, 5
+  %addarg = add nsw i32 %V, %arg
+  %cmp = icmp slt i32 %add5, %addarg
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_8(i32 %V, i32 %arg) {
+; CHECK-LABEL: @icmp_nsw_8(
+; CHECK-NEXT:    [[ADDARG:%.*]] = add i32 [[V:%.*]], [[ARG:%.*]]
+; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[V]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADDARG]], [[ADD6]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %addarg = add i32 %V, %arg
+  %add6 = add nsw i32 %V, 5
+  %cmp = icmp slt i32 %addarg, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_9(i32 %V1, i32 %V2) {
+; CHECK-LABEL: @icmp_nsw_9(
+; CHECK-NEXT:    [[ADD_V1:%.*]] = add i32 [[V1:%.*]], 5
+; CHECK-NEXT:    [[ADD_V2:%.*]] = add nsw i32 [[V2:%.*]], 6
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD_V1]], [[ADD_V2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add_V1 = add i32 %V1, 5
+  %add_V2 = add nsw i32 %V2, 6
+  %cmp = icmp slt i32 %add_V1, %add_V2
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_10(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_10(
+; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[V:%.*]], 5
+; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[V]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[ADD6]], [[ADD5]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add5 = add i32 %V, 5
+  %add6 = add nsw i32 %V, 5
+  %cmp = icmp sgt i32 %add6, %add5
+  ret i1 %cmp
+}
+
 attributes #0 = { null_pointer_is_valid }
