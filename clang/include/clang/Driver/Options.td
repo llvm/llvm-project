@@ -2461,12 +2461,6 @@ def mexec_model_EQ : Joined<["-"], "mexec-model=">, Group<m_wasm_Features_Driver
                      Values<"command,reactor">,
                      HelpText<"Execution model (WebAssembly only)">;
 
-def mamdgpu_debugger_abi : Joined<["-"], "mamdgpu-debugger-abi=">,
-  Flags<[HelpHidden]>,
-  Group<m_Group>,
-  HelpText<"Generate additional code for specified <version> of debugger ABI (AMDGPU only)">,
-  MetaVarName<"<version>">;
-
 def mcode_object_v3 : Flag<["-"], "mcode-object-v3">, Group<m_amdgpu_Features_Group>,
   HelpText<"Enable code object v3 (AMDGPU only)">;
 def mno_code_object_v3 : Flag<["-"], "mno-code-object-v3">, Group<m_amdgpu_Features_Group>,

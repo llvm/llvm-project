@@ -2655,10 +2655,6 @@ Align selected branches (fused, jcc, jmp) within 32-byte boundary
 
 .. option:: -mcmodel=<arg>, -mcmodel=medany (equivalent to -mcmodel=medium), -mcmodel=medlow (equivalent to -mcmodel=small)
 
-.. option:: -mcode-object-v3, -mno-code-object-v3
-
-Enable code object v3 (AMDGPU only)
-
 .. option:: -mconsole<arg>
 
 .. program:: clang1
@@ -2939,6 +2935,10 @@ Specify the size in bits of an SVE vector register. Defaults to the vector lengt
 
 AMDGPU
 ------
+.. option:: -mcode-object-v3, -mno-code-object-v3
+
+Enable code object v3 (AMDGPU only)
+
 .. option:: -mcumode, -mno-cumode
 
 CU wavefront execution mode is used (AMDGPU only)
