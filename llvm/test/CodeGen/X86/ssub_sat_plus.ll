@@ -40,38 +40,25 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X86-LABEL: func64:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %ebx, %ebp
-; X86-NEXT:    sbbl %esi, %ebp
-; X86-NEXT:    movl %ebp, %eax
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    seto %bl
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    sarl $31, %eax
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    testl %ebp, %ebp
-; X86-NEXT:    setns %cl
-; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
-; X86-NEXT:    testl %ebx, %ebx
-; X86-NEXT:    setns %bl
-; X86-NEXT:    cmpb %cl, %bl
-; X86-NEXT:    setne %cl
+; X86-NEXT:    testb %bl, %bl
+; X86-NEXT:    cmovel %ecx, %eax
+; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    testl %esi, %esi
-; X86-NEXT:    setns %ch
-; X86-NEXT:    cmpb %ch, %bl
-; X86-NEXT:    setne %ch
-; X86-NEXT:    testb %cl, %ch
-; X86-NEXT:    cmovel %ebp, %edx
-; X86-NEXT:    cmovel %edi, %eax
+; X86-NEXT:    setns %dl
+; X86-NEXT:    addl $2147483647, %edx # imm = 0x7FFFFFFF
+; X86-NEXT:    testb %bl, %bl
+; X86-NEXT:    cmovel %esi, %edx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: func64:
