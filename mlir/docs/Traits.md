@@ -56,6 +56,47 @@ Note: It is generally good practice to define the implementation of the
 `verifyTrait` hook out-of-line as a free function when possible to avoid
 instantiating the implementation for every concrete operation type.
 
+Operation traits may also provide a `foldTrait` hook that is called when
+folding the concrete operation. The trait folders will only be invoked if
+the concrete operation fold is either not implemented, fails, or performs
+an in-place fold.
+
+The following signature of fold will be called if it is implemented
+and the op has a single result.
+
+```c++
+template <typename ConcreteType>
+class MyTrait : public OpTrait::TraitBase<ConcreteType, MyTrait> {
+public:
+  /// Override the 'foldTrait' hook to support trait based folding on the
+  /// concrete operation.
+  static OpFoldResult foldTrait(Operation *op, ArrayRef<Attribute> operands) { {
+    // ...
+  }
+};
+```
+
+Otherwise, if the operation has a single result and the above signature is
+not implemented, or the operation has multiple results, then the following signature
+will be used (if implemented):
+
+```c++
+template <typename ConcreteType>
+class MyTrait : public OpTrait::TraitBase<ConcreteType, MyTrait> {
+public:
+  /// Override the 'foldTrait' hook to support trait based folding on the
+  /// concrete operation.
+  static LogicalResult foldTrait(Operation *op, ArrayRef<Attribute> operands,
+                                 SmallVectorImpl<OpFoldResult> &results) { {
+    // ...
+  }
+};
+```
+
+Note: It is generally good practice to define the implementation of the
+`foldTrait` hook out-of-line as a free function when possible to avoid
+instantiating the implementation for every concrete operation type.
+
 ### Parametric Traits
 
 The above demonstrates the definition of a simple self-contained trait. It is

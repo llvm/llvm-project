@@ -798,6 +798,29 @@ def TestCommutativeOp : TEST_Op<"op_commutative", [Commutative]> {
   let results = (outs I32);
 }
 
+def TestInvolutionTraitNoOperationFolderOp
+ : TEST_Op<"op_involution_trait_no_operation_fold",
+           [SameOperandsAndResultType, NoSideEffect, Involution]> {
+  let arguments = (ins I32:$op1);
+  let results = (outs I32);
+}
+
+def TestInvolutionTraitFailingOperationFolderOp
+ : TEST_Op<"op_involution_trait_failing_operation_fold",
+           [SameOperandsAndResultType, NoSideEffect, Involution]> {
+  let arguments = (ins I32:$op1);
+  let results = (outs I32);
+  let hasFolder = 1;
+}
+
+def TestInvolutionTraitSuccesfulOperationFolderOp
+ : TEST_Op<"op_involution_trait_succesful_operation_fold",
+           [SameOperandsAndResultType, NoSideEffect, Involution]> {
+  let arguments = (ins I32:$op1);
+  let results = (outs I32);
+  let hasFolder = 1;
+}
+
 def TestOpInPlaceFoldAnchor : TEST_Op<"op_in_place_fold_anchor"> {
   let arguments = (ins I32);
   let results = (outs I32);
