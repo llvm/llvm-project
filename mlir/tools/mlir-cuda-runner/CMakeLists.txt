@@ -2,6 +2,10 @@ set(LLVM_OPTIONAL_SOURCES
   cuda-runtime-wrappers.cpp
   mlir-cuda-runner.cpp
   )
+set(LLVM_LINK_COMPONENTS
+  Core
+  Support
+)
 
 if(MLIR_CUDA_RUNNER_ENABLED)
   if (NOT ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD))
@@ -71,10 +75,6 @@ if(MLIR_CUDA_RUNNER_ENABLED)
 
     DEPENDS
     cuda-runtime-wrappers
-
-    LINK_COMPONENTS
-    Core
-    Support
     )
   target_include_directories(mlir-cuda-runner
     PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
