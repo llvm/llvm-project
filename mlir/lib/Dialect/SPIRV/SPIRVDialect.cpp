@@ -23,6 +23,7 @@
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -589,15 +590,80 @@ static ParseResult parseStructMemberDecorations(
 }
 
 // struct-member-decoration ::= integer-literal? spirv-decoration*
-// struct-type ::= `!spv.struct<` spirv-type (`[` struct-member-decoration `]`)?
-//                     (`, ` spirv-type (`[` struct-member-decoration `]`)? `>`
+// struct-type ::=
+//             `!spv.struct<` (id `,`)?
+//                          `(`
+//                            (spirv-type (`[` struct-member-decoration `]`)?)*
+//                          `)>`
 static Type parseStructType(SPIRVDialect const &dialect,
                             DialectAsmParser &parser) {
+  // TODO: This function is quite lengthy. Break it down into smaller chunks.
+
+  // To properly resolve recursive references while parsing recursive struct
+  // types, we need to maintain a list of enclosing struct type names. This set
+  // maintains the names of struct types in which the type we are about to parse
+  // is nested.
+  //
+  // Note: This has to be thread_local to enable multiple threads to safely
+  // parse concurrently.
+  thread_local llvm::SetVector<StringRef> structContext;
+
+  static auto removeIdentifierAndFail =
+      [](llvm::SetVector<StringRef> &structContext, StringRef identifier) {
+        if (!identifier.empty())
+          structContext.remove(identifier);
+
+        return Type();
+      };
+
   if (parser.parseLess())
     return Type();
 
-  if (succeeded(parser.parseOptionalGreater()))
-    return StructType::getEmpty(dialect.getContext());
+  StringRef identifier;
+
+  // Check if this is an idenitifed struct type.
+  if (succeeded(parser.parseOptionalKeyword(&identifier))) {
+    // Check if this is a possible recursive reference.
+    if (succeeded(parser.parseOptionalGreater())) {
+      if (structContext.count(identifier) == 0) {
+        parser.emitError(
+            parser.getNameLoc(),
+            "recursive struct reference not nested in struct definition");
+
+        return Type();
+      }
+
+      return StructType::getIdentified(dialect.getContext(), identifier);
+    }
+
+    if (failed(parser.parseComma()))
+      return Type();
+
+    if (structContext.count(identifier) != 0) {
+      parser.emitError(parser.getNameLoc(),
+                       "identifier already used for an enclosing struct");
+
+      return removeIdentifierAndFail(structContext, identifier);
+    }
+
+    structContext.insert(identifier);
+  }
+
+  if (failed(parser.parseLParen()))
+    return removeIdentifierAndFail(structContext, identifier);
+
+  if (succeeded(parser.parseOptionalRParen()) &&
+      succeeded(parser.parseOptionalGreater())) {
+    if (!identifier.empty())
+      structContext.remove(identifier);
+
+    return StructType::getEmpty(dialect.getContext(), identifier);
+  }
+
+  StructType idStructTy;
+
+  if (!identifier.empty())
+    idStructTy = StructType::getIdentified(dialect.getContext(), identifier);
 
   SmallVector<Type, 4> memberTypes;
   SmallVector<StructType::OffsetInfo, 4> offsetInfo;
@@ -606,24 +672,33 @@ static Type parseStructType(SPIRVDialect const &dialect,
   do {
     Type memberType;
     if (parser.parseType(memberType))
-      return Type();
+      return removeIdentifierAndFail(structContext, identifier);
     memberTypes.push_back(memberType);
 
-    if (succeeded(parser.parseOptionalLSquare())) {
+    if (succeeded(parser.parseOptionalLSquare()))
       if (parseStructMemberDecorations(dialect, parser, memberTypes, offsetInfo,
-                                       memberDecorationInfo)) {
-        return Type();
-      }
-    }
+                                       memberDecorationInfo))
+        return removeIdentifierAndFail(structContext, identifier);
   } while (succeeded(parser.parseOptionalComma()));
 
   if (!offsetInfo.empty() && memberTypes.size() != offsetInfo.size()) {
     parser.emitError(parser.getNameLoc(),
                      "offset specification must be given for all members");
-    return Type();
+    return removeIdentifierAndFail(structContext, identifier);
   }
-  if (parser.parseGreater())
-    return Type();
+
+  if (failed(parser.parseRParen()) || failed(parser.parseGreater()))
+    return removeIdentifierAndFail(structContext, identifier);
+
+  if (!identifier.empty()) {
+    if (failed(idStructTy.trySetBody(memberTypes, offsetInfo,
+                                     memberDecorationInfo)))
+      return Type();
+
+    structContext.remove(identifier);
+    return idStructTy;
+  }
+
   return StructType::get(memberTypes, offsetInfo, memberDecorationInfo);
 }
 
@@ -689,7 +764,24 @@ static void print(ImageType type, DialectAsmPrinter &os) {
 }
 
 static void print(StructType type, DialectAsmPrinter &os) {
+  thread_local llvm::SetVector<StringRef> structContext;
+
   os << "struct<";
+
+  if (type.isIdentified()) {
+    os << type.getIdentifier();
+
+    if (structContext.count(type.getIdentifier())) {
+      os << ">";
+      return;
+    }
+
+    os << ", ";
+    structContext.insert(type.getIdentifier());
+  }
+
+  os << "(";
+
   auto printMember = [&](unsigned i) {
     os << type.getElementType(i);
     SmallVector<spirv::StructType::MemberDecorationInfo, 0> decorations;
@@ -713,7 +805,10 @@ static void print(StructType type, DialectAsmPrinter &os) {
   };
   llvm::interleaveComma(llvm::seq<unsigned>(0, type.getNumElements()), os,
                         printMember);
-  os << ">";
+  os << ")>";
+
+  if (type.isIdentified())
+    structContext.remove(type.getIdentifier());
 }
 
 static void print(CooperativeMatrixNVType type, DialectAsmPrinter &os) {

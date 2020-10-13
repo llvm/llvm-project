@@ -35,10 +35,10 @@ spv.func @runtime_array_scalar(!spv.rtarray<f32>) "None"
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: @struct(!llvm.struct<packed (double)>)
-spv.func @struct(!spv.struct<f64>) "None"
+spv.func @struct(!spv.struct<(f64)>) "None"
 
 // CHECK-LABEL: @struct_nested(!llvm.struct<packed (i32, struct<packed (i64, i32)>)>)
-spv.func @struct_nested(!spv.struct<i32, !spv.struct<i64, i32>>) "None"
+spv.func @struct_nested(!spv.struct<(i32, !spv.struct<(i64, i32)>)>) "None"
 
 // CHECK-LABEL: @struct_with_natural_offset(!llvm.struct<(i8, i32)>)
-spv.func @struct_with_natural_offset(!spv.struct<i8[0], i32[4]>) "None"
+spv.func @struct_with_natural_offset(!spv.struct<(i8[0], i32[4])>) "None"

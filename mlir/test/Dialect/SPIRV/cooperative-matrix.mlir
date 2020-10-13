@@ -143,9 +143,9 @@ spv.func @cooperative_matrix_muladd(%a : !spv.coopmatrix<8x16xf32, Subgroup>, %b
 
 // -----
 
-spv.func @cooperative_matrix_load_memaccess(%ptr : !spv.ptr<!spv.struct<f32 [0]>, StorageBuffer>, %stride : i32, %b : i1) "None" {
+spv.func @cooperative_matrix_load_memaccess(%ptr : !spv.ptr<!spv.struct<(f32 [0])>, StorageBuffer>, %stride : i32, %b : i1) "None" {
   // expected-error @+1 {{Pointer must point to a scalar or vector type}}
-  %0 = spv.CooperativeMatrixLoadNV %ptr, %stride, %b : !spv.ptr<!spv.struct<f32 [0]>, StorageBuffer> as !spv.coopmatrix<8x16xi32, Subgroup>
+  %0 = spv.CooperativeMatrixLoadNV %ptr, %stride, %b : !spv.ptr<!spv.struct<(f32 [0])>, StorageBuffer> as !spv.coopmatrix<8x16xi32, Subgroup>
   spv.Return
 }
 

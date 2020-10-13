@@ -87,6 +87,43 @@ struct DebugLine {
 /// Map from a selection/loop's header block to its merge (and continue) target.
 using BlockMergeInfoMap = DenseMap<Block *, BlockMergeInfo>;
 
+/// A "deferred struct type" is a struct type with one or more member types not
+/// known when the Deserializer first encounters the struct. This happens, for
+/// example, with recursive structs where a pointer to the struct type is
+/// forward declared through OpTypeForwardPointer in the SPIR-V module before
+/// the struct declaration; the actual pointer to struct type should be defined
+/// later through an OpTypePointer. For example, the following C struct:
+///
+/// struct A {
+///   A* next;
+/// };
+///
+/// would be represented in the SPIR-V module as:
+///
+/// OpName %A "A"
+/// OpTypeForwardPointer %APtr Generic
+/// %A = OpTypeStruct %APtr
+/// %APtr = OpTypePointer Generic %A
+///
+/// This means that the spirv::StructType cannot be fully constructed directly
+/// when the Deserializer encounters it. Instead we create a
+/// DeferredStructTypeInfo that contains all the information we know about the
+/// spirv::StructType. Once all forward references for the struct are resolved,
+/// the struct's body is set with all member info.
+struct DeferredStructTypeInfo {
+  spirv::StructType deferredStructType;
+
+  // A list of all unresolved member types for the struct. First element of each
+  // item is operand ID, second element is member index in the struct.
+  SmallVector<std::pair<uint32_t, unsigned>, 0> unresolvedMemberTypes;
+
+  // The list of member types. For unresolved members, this list contains
+  // place-holder empty types that will be updated later.
+  SmallVector<Type, 4> memberTypes;
+  SmallVector<spirv::StructType::OffsetInfo, 0> offsetInfo;
+  SmallVector<spirv::StructType::MemberDecorationInfo, 0> memberDecorationsInfo;
+};
+
 /// A SPIR-V module serializer.
 ///
 /// A SPIR-V binary module is a single linear stream of instructions; each
@@ -223,6 +260,8 @@ private:
   /// Processes a SPIR-V type instruction with given `opcode` and `operands` and
   /// registers the type into `module`.
   LogicalResult processType(spirv::Opcode opcode, ArrayRef<uint32_t> operands);
+
+  LogicalResult processOpTypePointer(ArrayRef<uint32_t> operands);
 
   LogicalResult processArrayType(ArrayRef<uint32_t> operands);
 
@@ -387,6 +426,8 @@ private:
   /// insertion point.
   LogicalResult processUndef(ArrayRef<uint32_t> operands);
 
+  LogicalResult processTypeForwardPointer(ArrayRef<uint32_t> operands);
+
   /// Method to dispatch to the specialized deserialization function for an
   /// operation in SPIR-V dialect that is a mirror of an instruction in the
   /// SPIR-V spec. This is auto-generated from ODS. Dispatch is handled for
@@ -528,6 +569,13 @@ private:
   // processed.
   SmallVector<std::pair<spirv::Opcode, ArrayRef<uint32_t>>, 4>
       deferredInstructions;
+
+  /// A list of IDs for all types forward-declared through OpTypeForwardPointer
+  /// instructions.
+  llvm::SetVector<uint32_t> typeForwardPointerIDs;
+
+  /// A list of all structs which have unresolved member types.
+  SmallVector<DeferredStructTypeInfo, 0> deferredStructTypesInfos;
 };
 } // namespace
 
@@ -1165,16 +1213,7 @@ LogicalResult Deserializer::processType(spirv::Opcode opcode,
     typeMap[operands[0]] = VectorType::get({operands[2]}, elementTy);
   } break;
   case spirv::Opcode::OpTypePointer: {
-    if (operands.size() != 3) {
-      return emitError(unknownLoc, "OpTypePointer must have two parameters");
-    }
-    auto pointeeType = getType(operands[2]);
-    if (!pointeeType) {
-      return emitError(unknownLoc, "unknown OpTypePointer pointee type <id> ")
-             << operands[2];
-    }
-    auto storageClass = static_cast<spirv::StorageClass>(operands[1]);
-    typeMap[operands[0]] = spirv::PointerType::get(pointeeType, storageClass);
+    return processOpTypePointer(operands);
   } break;
   case spirv::Opcode::OpTypeArray:
     return processArrayType(operands);
@@ -1191,6 +1230,59 @@ LogicalResult Deserializer::processType(spirv::Opcode opcode,
   default:
     return emitError(unknownLoc, "unhandled type instruction");
   }
+  return success();
+}
+
+LogicalResult Deserializer::processOpTypePointer(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 3)
+    return emitError(unknownLoc, "OpTypePointer must have two parameters");
+
+  auto pointeeType = getType(operands[2]);
+  if (!pointeeType)
+    return emitError(unknownLoc, "unknown OpTypePointer pointee type <id> ")
+           << operands[2];
+
+  uint32_t typePointerID = operands[0];
+  auto storageClass = static_cast<spirv::StorageClass>(operands[1]);
+  typeMap[typePointerID] = spirv::PointerType::get(pointeeType, storageClass);
+
+  for (auto *deferredStructIt = std::begin(deferredStructTypesInfos);
+       deferredStructIt != std::end(deferredStructTypesInfos);) {
+    for (auto *unresolvedMemberIt =
+             std::begin(deferredStructIt->unresolvedMemberTypes);
+         unresolvedMemberIt !=
+         std::end(deferredStructIt->unresolvedMemberTypes);) {
+      if (unresolvedMemberIt->first == typePointerID) {
+        // The newly constructed pointer type can resolve one of the
+        // deferred struct type members; update the memberTypes list and
+        // clean the unresolvedMemberTypes list accordingly.
+        deferredStructIt->memberTypes[unresolvedMemberIt->second] =
+            typeMap[typePointerID];
+        unresolvedMemberIt =
+            deferredStructIt->unresolvedMemberTypes.erase(unresolvedMemberIt);
+      } else {
+        ++unresolvedMemberIt;
+      }
+    }
+
+    if (deferredStructIt->unresolvedMemberTypes.empty()) {
+      // All deferred struct type members are now resolved, set the struct body.
+      auto structType = deferredStructIt->deferredStructType;
+
+      assert(structType && "expected a spirv::StructType");
+      assert(structType.isIdentified() && "expected an indentified struct");
+
+      if (failed(structType.trySetBody(
+              deferredStructIt->memberTypes, deferredStructIt->offsetInfo,
+              deferredStructIt->memberDecorationsInfo)))
+        return failure();
+
+      deferredStructIt = deferredStructTypesInfos.erase(deferredStructIt);
+    } else {
+      ++deferredStructIt;
+    }
+  }
+
   return success();
 }
 
@@ -1297,22 +1389,34 @@ Deserializer::processRuntimeArrayType(ArrayRef<uint32_t> operands) {
 }
 
 LogicalResult Deserializer::processStructType(ArrayRef<uint32_t> operands) {
+  // TODO: Find a way to handle identified structs when debug info is stripped.
+
   if (operands.empty()) {
     return emitError(unknownLoc, "OpTypeStruct must have at least result <id>");
   }
+
   if (operands.size() == 1) {
     // Handle empty struct.
-    typeMap[operands[0]] = spirv::StructType::getEmpty(context);
+    typeMap[operands[0]] =
+        spirv::StructType::getEmpty(context, nameMap.lookup(operands[0]).str());
     return success();
   }
 
-  SmallVector<Type, 0> memberTypes;
+  // First element is operand ID, second element is member index in the struct.
+  SmallVector<std::pair<uint32_t, unsigned>, 0> unresolvedMemberTypes;
+  SmallVector<Type, 4> memberTypes;
+
   for (auto op : llvm::drop_begin(operands, 1)) {
     Type memberType = getType(op);
-    if (!memberType) {
+    bool typeForwardPtr = (typeForwardPointerIDs.count(op) != 0);
+
+    if (!memberType && !typeForwardPtr)
       return emitError(unknownLoc, "OpTypeStruct references undefined <id> ")
              << op;
-    }
+
+    if (!memberType)
+      unresolvedMemberTypes.emplace_back(op, memberTypes.size());
+
     memberTypes.push_back(memberType);
   }
 
@@ -1344,8 +1448,28 @@ LogicalResult Deserializer::processStructType(ArrayRef<uint32_t> operands) {
       }
     }
   }
-  typeMap[operands[0]] =
-      spirv::StructType::get(memberTypes, offsetInfo, memberDecorationsInfo);
+
+  uint32_t structID = operands[0];
+  std::string structIdentifier = nameMap.lookup(structID).str();
+
+  if (structIdentifier.empty()) {
+    assert(unresolvedMemberTypes.empty() &&
+           "didn't expect unresolved member types");
+    typeMap[structID] =
+        spirv::StructType::get(memberTypes, offsetInfo, memberDecorationsInfo);
+  } else {
+    auto structTy = spirv::StructType::getIdentified(context, structIdentifier);
+    typeMap[structID] = structTy;
+
+    if (!unresolvedMemberTypes.empty())
+      deferredStructTypesInfos.push_back({structTy, unresolvedMemberTypes,
+                                          memberTypes, offsetInfo,
+                                          memberDecorationsInfo});
+    else if (failed(structTy.trySetBody(memberTypes, offsetInfo,
+                                        memberDecorationsInfo)))
+      return failure();
+  }
+
   // TODO: Update StructType to have member name as attribute as
   // well.
   return success();
@@ -2359,6 +2483,8 @@ LogicalResult Deserializer::processInstruction(spirv::Opcode opcode,
     return processPhi(operands);
   case spirv::Opcode::OpUndef:
     return processUndef(operands);
+  case spirv::Opcode::OpTypeForwardPointer:
+    return processTypeForwardPointer(operands);
   default:
     break;
   }
@@ -2374,6 +2500,19 @@ LogicalResult Deserializer::processUndef(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "unknown type <id> with OpUndef instruction");
   }
   undefMap[operands[1]] = type;
+  return success();
+}
+
+LogicalResult
+Deserializer::processTypeForwardPointer(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 2)
+    return emitError(unknownLoc,
+                     "OpTypeForwardPointer instruction must have two operands");
+
+  typeForwardPointerIDs.insert(operands[0]);
+  // TODO: Use the 2nd operand (Storage Class) to validate the OpTypePointer
+  // instruction that defines the actual type.
+
   return success();
 }
 
