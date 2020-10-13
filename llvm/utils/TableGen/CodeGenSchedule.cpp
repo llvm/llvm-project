@@ -1664,7 +1664,6 @@ static void inferFromTransitions(ArrayRef<PredTransition> LastTransitions,
                                  CodeGenSchedModels &SchedModels) {
   // For each PredTransition, create a new CodeGenSchedTransition, which usually
   // requires creating a new SchedClass.
-  const CodeGenSchedClass &FromSC = SchedModels.getSchedClass(FromClassIdx);
   for (ArrayRef<PredTransition>::iterator
          I = LastTransitions.begin(), E = LastTransitions.end(); I != E; ++I) {
     IdxVec OperWritesVariant, OperReadsVariant;
@@ -1674,6 +1673,7 @@ static void inferFromTransitions(ArrayRef<PredTransition> LastTransitions,
 
     // Transition should not contain processor indices already assigned to
     // InstRWs in this scheduling class.
+    const CodeGenSchedClass &FromSC = SchedModels.getSchedClass(FromClassIdx);
     llvm::copy_if(I->ProcIndices, std::back_inserter(SCTrans.ProcIndices),
                   [&FromSC](unsigned PIdx) {
                     return !FromSC.InstRWProcIndices.count(PIdx);
