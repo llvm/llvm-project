@@ -19,6 +19,7 @@
 
 #include "DLL.h"
 #include "Chunks.h"
+#include "SymbolTable.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Path.h"
@@ -653,9 +654,18 @@ void DelayLoadContents::create(Defined *h) {
         auto *c = make<HintNameChunk>(extName, 0);
         names.push_back(make<LookupChunk>(c));
         hintNames.push_back(c);
+        // Add a syntentic symbol for this load thunk, using the "__imp_load"
+        // prefix, in case this thunk needs to be added to the list of valid
+        // call targets for Control Flow Guard.
+        StringRef symName = saver.save("__imp_load_" + extName);
+        s->loadThunkSym =
+            cast<DefinedSynthetic>(symtab->addSynthetic(symName, t));
       }
     }
     thunks.push_back(tm);
+    StringRef tmName =
+        saver.save("__tailMerge_" + syms[0]->getDLLName().lower());
+    symtab->addSynthetic(tmName, tm);
     // Terminate with null values.
     addresses.push_back(make<NullChunk>(8));
     names.push_back(make<NullChunk>(8));
