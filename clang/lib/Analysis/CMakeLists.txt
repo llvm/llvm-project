@@ -17,7 +17,6 @@ add_clang_library(clangAnalysis
   CodeInjector.cpp
   Dominators.cpp
   ExprMutationAnalyzer.cpp
-  IssueHash.cpp
   LiveVariables.cpp
   ObjCNoReturn.cpp
   PathDiagnostic.cpp
