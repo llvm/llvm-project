@@ -231,6 +231,10 @@ enum NodeType : unsigned {
   SRHADD,
   URHADD,
 
+  // Absolute difference
+  UABD,
+  SABD,
+
   // Vector across-lanes min/max
   // Only the lower result lane is defined.
   SMINV,
