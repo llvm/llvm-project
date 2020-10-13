@@ -13416,6 +13416,56 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     // Ops 0 and 1 are swapped.
     return EmitX86FunnelShift(*this, Ops[1], Ops[0], Ops[2], true);
 
+  // Reductions
+  case X86::BI__builtin_ia32_reduce_add_d512:
+  case X86::BI__builtin_ia32_reduce_add_q512: {
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::vector_reduce_add, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0]});
+  }
+  case X86::BI__builtin_ia32_reduce_and_d512:
+  case X86::BI__builtin_ia32_reduce_and_q512: {
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::vector_reduce_and, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0]});
+  }
+  case X86::BI__builtin_ia32_reduce_mul_d512:
+  case X86::BI__builtin_ia32_reduce_mul_q512: {
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::vector_reduce_mul, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0]});
+  }
+  case X86::BI__builtin_ia32_reduce_or_d512:
+  case X86::BI__builtin_ia32_reduce_or_q512: {
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::vector_reduce_or, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0]});
+  }
+  case X86::BI__builtin_ia32_reduce_smax_d512:
+  case X86::BI__builtin_ia32_reduce_smax_q512: {
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::vector_reduce_smax, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0]});
+  }
+  case X86::BI__builtin_ia32_reduce_smin_d512:
+  case X86::BI__builtin_ia32_reduce_smin_q512: {
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::vector_reduce_smin, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0]});
+  }
+  case X86::BI__builtin_ia32_reduce_umax_d512:
+  case X86::BI__builtin_ia32_reduce_umax_q512: {
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::vector_reduce_umax, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0]});
+  }
+  case X86::BI__builtin_ia32_reduce_umin_d512:
+  case X86::BI__builtin_ia32_reduce_umin_q512: {
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::vector_reduce_umin, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0]});
+  }
+
   // 3DNow!
   case X86::BI__builtin_ia32_pswapdsf:
   case X86::BI__builtin_ia32_pswapdsi: {

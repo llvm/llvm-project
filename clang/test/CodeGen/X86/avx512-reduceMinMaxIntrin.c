@@ -4,25 +4,13 @@
 
 long long test_mm512_reduce_max_epi64(__m512i __W){
 // CHECK-LABEL: @test_mm512_reduce_max_epi64(
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-// CHECK:    call <8 x i64> @llvm.smax.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5>
-// CHECK:    call <8 x i64> @llvm.smax.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-// CHECK:    call <8 x i64> @llvm.smax.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    extractelement <8 x i64> %{{.*}}, i32 0
+// CHECK:    call i64 @llvm.vector.reduce.smax.v8i64(<8 x i64> %{{.*}})
   return _mm512_reduce_max_epi64(__W);
 }
 
 unsigned long long test_mm512_reduce_max_epu64(__m512i __W){
 // CHECK-LABEL: @test_mm512_reduce_max_epu64(
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-// CHECK:    call <8 x i64> @llvm.umax.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5>
-// CHECK:    call <8 x i64> @llvm.umax.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-// CHECK:    call <8 x i64> @llvm.umax.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    extractelement <8 x i64> %{{.*}}, i32 0
+// CHECK:    call i64 @llvm.vector.reduce.umax.v8i64(<8 x i64> %{{.*}})
   return _mm512_reduce_max_epu64(__W);
 }
 
@@ -42,25 +30,13 @@ double test_mm512_reduce_max_pd(__m512d __W){
 
 long long test_mm512_reduce_min_epi64(__m512i __W){
 // CHECK-LABEL: @test_mm512_reduce_min_epi64(
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-// CHECK:    call <8 x i64> @llvm.smin.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5>
-// CHECK:    call <8 x i64> @llvm.smin.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-// CHECK:    call <8 x i64> @llvm.smin.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    extractelement <8 x i64> %{{.*}}, i32 0
+// CHECK:    call i64 @llvm.vector.reduce.smin.v8i64(<8 x i64> %{{.*}})
   return _mm512_reduce_min_epi64(__W);
 }
 
 unsigned long long test_mm512_reduce_min_epu64(__m512i __W){
 // CHECK-LABEL: @test_mm512_reduce_min_epu64(
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-// CHECK:    call <8 x i64> @llvm.umin.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5>
-// CHECK:    call <8 x i64> @llvm.umin.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-// CHECK:    call <8 x i64> @llvm.umin.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    extractelement <8 x i64> %{{.*}}, i32 0
+// CHECK:    call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> %{{.*}})
   return _mm512_reduce_min_epu64(__W);
 }
 
@@ -82,13 +58,7 @@ long long test_mm512_mask_reduce_max_epi64(__mmask8 __M, __m512i __W){
 // CHECK-LABEL: @test_mm512_mask_reduce_max_epi64(
 // CHECK:    bitcast i8 %{{.*}} to <8 x i1>
 // CHECK:    select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-// CHECK:    call <8 x i64> @llvm.smax.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5>
-// CHECK:    call <8 x i64> @llvm.smax.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-// CHECK:    call <8 x i64> @llvm.smax.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    extractelement <8 x i64> %{{.*}}, i32 0
+// CHECK:    call i64 @llvm.vector.reduce.smax.v8i64(<8 x i64> %{{.*}})
   return _mm512_mask_reduce_max_epi64(__M, __W); 
 }
 
@@ -96,13 +66,7 @@ unsigned long test_mm512_mask_reduce_max_epu64(__mmask8 __M, __m512i __W){
 // CHECK-LABEL: @test_mm512_mask_reduce_max_epu64(
 // CHECK:    bitcast i8 %{{.*}} to <8 x i1>
 // CHECK:    select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-// CHECK:    call <8 x i64> @llvm.umax.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5>
-// CHECK:    call <8 x i64> @llvm.umax.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-// CHECK:    call <8 x i64> @llvm.umax.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    extractelement <8 x i64> %{{.*}}, i32 0
+// CHECK:    call i64 @llvm.vector.reduce.umax.v8i64(<8 x i64> %{{.*}})
   return _mm512_mask_reduce_max_epu64(__M, __W); 
 }
 
@@ -126,13 +90,7 @@ long long test_mm512_mask_reduce_min_epi64(__mmask8 __M, __m512i __W){
 // CHECK-LABEL: @test_mm512_mask_reduce_min_epi64(
 // CHECK:    bitcast i8 %{{.*}} to <8 x i1>
 // CHECK:    select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-// CHECK:    call <8 x i64> @llvm.smin.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5>
-// CHECK:    call <8 x i64> @llvm.smin.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-// CHECK:    call <8 x i64> @llvm.smin.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    extractelement <8 x i64> %{{.*}}, i32 0
+// CHECK:    call i64 @llvm.vector.reduce.smin.v8i64(<8 x i64> %{{.*}})
   return _mm512_mask_reduce_min_epi64(__M, __W); 
 }
 
@@ -140,13 +98,7 @@ unsigned long long test_mm512_mask_reduce_min_epu64(__mmask8 __M, __m512i __W){
 // CHECK-LABEL: @test_mm512_mask_reduce_min_epu64(
 // CHECK:    bitcast i8 %{{.*}} to <8 x i1>
 // CHECK:    select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
-// CHECK:    call <8 x i64> @llvm.umin.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5>
-// CHECK:    call <8 x i64> @llvm.umin.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-// CHECK:    call <8 x i64> @llvm.umin.v8i64(<8 x i64> %{{.*}}, <8 x i64> %{{.*}})
-// CHECK:    extractelement <8 x i64> %{{.*}}, i32 0
+// CHECK:    call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> %{{.*}})
   return _mm512_mask_reduce_min_epu64(__M, __W); 
 }
 
@@ -168,33 +120,13 @@ double test_mm512_mask_reduce_min_pd(__mmask8 __M, __m512d __W){
 
 int test_mm512_reduce_max_epi32(__m512i __W){
 // CHECK-LABEL: @test_mm512_reduce_max_epi32(
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// CHECK:    call <8 x i32> @llvm.smax.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
-// CHECK:    call <4 x i32> @llvm.smax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
-// CHECK:    call <4 x i32> @llvm.smax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-// CHECK:    call <4 x i32> @llvm.smax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    extractelement <4 x i32> %{{.*}}, i32 0
+// CHECK:    call i32 @llvm.vector.reduce.smax.v16i32(<16 x i32> %{{.*}})
   return _mm512_reduce_max_epi32(__W);
 }
 
 unsigned int test_mm512_reduce_max_epu32(__m512i __W){
 // CHECK-LABEL: @test_mm512_reduce_max_epu32(
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// CHECK:    call <8 x i32> @llvm.umax.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
-// CHECK:    call <4 x i32> @llvm.umax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
-// CHECK:    call <4 x i32> @llvm.umax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-// CHECK:    call <4 x i32> @llvm.umax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    extractelement <4 x i32> %{{.*}}, i32 0
+// CHECK:    call i32 @llvm.vector.reduce.umax.v16i32(<16 x i32> %{{.*}})
   return _mm512_reduce_max_epu32(__W);
 }
 
@@ -216,33 +148,13 @@ float test_mm512_reduce_max_ps(__m512 __W){
 
 int test_mm512_reduce_min_epi32(__m512i __W){
 // CHECK-LABEL: @test_mm512_reduce_min_epi32(
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// CHECK:    call <8 x i32> @llvm.smin.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
-// CHECK:    call <4 x i32> @llvm.smin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
-// CHECK:    call <4 x i32> @llvm.smin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-// CHECK:    call <4 x i32> @llvm.smin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    extractelement <4 x i32> %{{.*}}, i32 0
+// CHECK:    call i32 @llvm.vector.reduce.smin.v16i32(<16 x i32> %{{.*}})
   return _mm512_reduce_min_epi32(__W);
 }
 
 unsigned int test_mm512_reduce_min_epu32(__m512i __W){
 // CHECK-LABEL: @test_mm512_reduce_min_epu32(
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// CHECK:    call <8 x i32> @llvm.umin.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
-// CHECK:    call <4 x i32> @llvm.umin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
-// CHECK:    call <4 x i32> @llvm.umin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-// CHECK:    call <4 x i32> @llvm.umin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    extractelement <4 x i32> %{{.*}}, i32 0
+// CHECK:    call i32 @llvm.vector.reduce.umin.v16i32(<16 x i32> %{{.*}})
   return _mm512_reduce_min_epu32(__W);
 }
 
@@ -266,17 +178,7 @@ int test_mm512_mask_reduce_max_epi32(__mmask16 __M, __m512i __W){
 // CHECK-LABEL: @test_mm512_mask_reduce_max_epi32(
 // CHECK:    bitcast i16 %{{.*}} to <16 x i1>
 // CHECK:    select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// CHECK:    call <8 x i32> @llvm.smax.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
-// CHECK:    call <4 x i32> @llvm.smax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
-// CHECK:    call <4 x i32> @llvm.smax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-// CHECK:    call <4 x i32> @llvm.smax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    extractelement <4 x i32> %{{.*}}, i32 0
+// CHECK:    call i32 @llvm.vector.reduce.smax.v16i32(<16 x i32> %{{.*}})
   return _mm512_mask_reduce_max_epi32(__M, __W); 
 }
 
@@ -284,17 +186,7 @@ unsigned int test_mm512_mask_reduce_max_epu32(__mmask16 __M, __m512i __W){
 // CHECK-LABEL: @test_mm512_mask_reduce_max_epu32(
 // CHECK:    bitcast i16 %{{.*}} to <16 x i1>
 // CHECK:    select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// CHECK:    call <8 x i32> @llvm.umax.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
-// CHECK:    call <4 x i32> @llvm.umax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
-// CHECK:    call <4 x i32> @llvm.umax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-// CHECK:    call <4 x i32> @llvm.umax.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    extractelement <4 x i32> %{{.*}}, i32 0
+// CHECK:    call i32 @llvm.vector.reduce.umax.v16i32(<16 x i32> %{{.*}})
   return _mm512_mask_reduce_max_epu32(__M, __W); 
 }
 
@@ -320,17 +212,7 @@ int test_mm512_mask_reduce_min_epi32(__mmask16 __M, __m512i __W){
 // CHECK-LABEL: @test_mm512_mask_reduce_min_epi32(
 // CHECK:    bitcast i16 %{{.*}} to <16 x i1>
 // CHECK:    select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// CHECK:    call <8 x i32> @llvm.smin.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
-// CHECK:    call <4 x i32> @llvm.smin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
-// CHECK:    call <4 x i32> @llvm.smin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-// CHECK:    call <4 x i32> @llvm.smin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    extractelement <4 x i32> %{{.*}}, i32 0
+// CHECK:    call i32 @llvm.vector.reduce.smin.v16i32(<16 x i32> %{{.*}})
   return _mm512_mask_reduce_min_epi32(__M, __W); 
 }
 
@@ -338,17 +220,7 @@ unsigned int test_mm512_mask_reduce_min_epu32(__mmask16 __M, __m512i __W){
 // CHECK-LABEL: @test_mm512_mask_reduce_min_epu32(
 // CHECK:    bitcast i16 %{{.*}} to <16 x i1>
 // CHECK:    select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-// CHECK:    shufflevector <8 x i64> %{{.*}}, <8 x i64> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// CHECK:    call <8 x i32> @llvm.umin.v8i32(<8 x i32> %{{.*}}, <8 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
-// CHECK:    shufflevector <4 x i64> %{{.*}}, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
-// CHECK:    call <4 x i32> @llvm.umin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
-// CHECK:    call <4 x i32> @llvm.umin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-// CHECK:    call <4 x i32> @llvm.umin.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
-// CHECK:    extractelement <4 x i32> %{{.*}}, i32 0
+// CHECK:    call i32 @llvm.vector.reduce.umin.v16i32(<16 x i32> %{{.*}})
   return _mm512_mask_reduce_min_epu32(__M, __W); 
 }
 
