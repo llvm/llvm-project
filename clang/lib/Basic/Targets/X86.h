@@ -129,6 +129,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasENQCMD = false;
   bool HasKL = false;      // For key locker
   bool HasWIDEKL = false; // For wide key locker
+  bool HasHRESET = false;
   bool HasAMXTILE = false;
   bool HasAMXINT8 = false;
   bool HasAMXBF16 = false;

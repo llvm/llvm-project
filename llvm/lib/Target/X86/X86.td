@@ -285,6 +285,8 @@ def FeatureKL  : SubtargetFeature<"kl", "HasKL", "true",
 def FeatureWIDEKL  : SubtargetFeature<"widekl", "HasWIDEKL", "true",
                                       "Support Key Locker wide Instructions",
                                       [FeatureKL]>;
+def FeatureHRESET : SubtargetFeature<"hreset", "HasHRESET", "true",
+                                      "Has hreset instruction">;
 def FeatureSERIALIZE : SubtargetFeature<"serialize", "HasSERIALIZE", "true",
                                         "Has serialize instruction">;
 def FeatureTSXLDTRK : SubtargetFeature<"tsxldtrk", "HasTSXLDTRK", "true",
