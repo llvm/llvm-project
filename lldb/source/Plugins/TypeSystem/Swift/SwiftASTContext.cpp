@@ -4430,6 +4430,9 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
     case swift::DeclKind::Accessor:
     case swift::DeclKind::PoundDiagnostic:
       break;
+
+    default:
+      break;
     }
   }
   return CompilerType();
@@ -5565,6 +5568,9 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
 
   case swift::TypeKind::SILToken:
     break;
+
+  default:
+    break;
   }
   return swift_flags;
 }
@@ -5637,6 +5643,9 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
     break;
 
   case swift::TypeKind::SILToken:
+    break;
+
+  default:
     break;
   }
 
@@ -6143,6 +6152,9 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
 
   case swift::TypeKind::SILToken:
     break;
+
+  default:
+    break;
   }
   count = 0;
   return lldb::eEncodingInvalid;
@@ -6228,6 +6240,9 @@ lldb::Format SwiftASTContext::GetFormat(opaque_compiler_type_t type) {
     break;
 
   case swift::TypeKind::SILToken:
+    break;
+
+  default:
     break;
   }
   // We don't know hot to display this type.
@@ -6340,6 +6355,9 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
     break;
 
   case swift::TypeKind::SILToken:
+    break;
+
+  default:
     break;
   }
 
@@ -6456,6 +6474,9 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
     break;
 
   case swift::TypeKind::SILToken:
+    break;
+
+  default:
     break;
   }
 
@@ -6748,6 +6769,9 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
 
   case swift::TypeKind::SILToken:
     break;
+
+  default:
+    break;
   }
 
   return CompilerType();
@@ -6823,6 +6847,9 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
     break;
 
   case swift::TypeKind::SILToken:
+    break;
+
+  default:
     break;
   }
 
@@ -7186,6 +7213,9 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
 
   case swift::TypeKind::SILToken:
     break;
+
+  default:
+    break;
   }
   return CompilerType();
 }
@@ -7401,6 +7431,9 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
       break;
 
     case swift::TypeKind::SILToken:
+      break;
+
+    default:
       break;
     }
   }
@@ -7770,6 +7803,9 @@ bool SwiftASTContext::DumpTypeValue(
     break;
 
   case swift::TypeKind::SILToken:
+    break;
+
+  default:
     break;
   }
 
