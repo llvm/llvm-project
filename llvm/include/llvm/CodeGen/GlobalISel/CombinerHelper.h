@@ -423,6 +423,10 @@ public:
                                 std::pair<Register, Register> &MatchInfo);
   ///}
 
+  /// Combine G_PTR_ADD with nullptr to G_INTTOPTR
+  bool matchPtrAddZero(MachineInstr &MI);
+  bool applyPtrAddZero(MachineInstr &MI);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);
