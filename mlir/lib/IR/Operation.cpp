@@ -14,7 +14,6 @@
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include <numeric>
 
 using namespace mlir;
