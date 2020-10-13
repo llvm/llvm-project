@@ -979,18 +979,23 @@ Value ConvertToLLVMPattern::getSizeInBytes(
   return rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gep);
 }
 
+Value ConvertToLLVMPattern::getNumElements(
+    Location loc, ArrayRef<Value> shape,
+    ConversionPatternRewriter &rewriter) const {
+  // Compute the total number of memref elements.
+  Value numElements =
+      shape.empty() ? createIndexConstant(rewriter, loc, 1) : shape.front();
+  for (unsigned i = 1, e = shape.size(); i < e; ++i)
+    numElements = rewriter.create<LLVM::MulOp>(loc, numElements, shape[i]);
+  return numElements;
+}
+
 Value ConvertToLLVMPattern::getCumulativeSizeInBytes(
     Location loc, Type elementType, ArrayRef<Value> shape,
     ConversionPatternRewriter &rewriter) const {
-  // Compute the total number of memref elements.
-  Value cumulativeSizeInBytes =
-      shape.empty() ? createIndexConstant(rewriter, loc, 1) : shape.front();
-  for (unsigned i = 1, e = shape.size(); i < e; ++i)
-    cumulativeSizeInBytes = rewriter.create<LLVM::MulOp>(
-        loc, getIndexType(), ArrayRef<Value>{cumulativeSizeInBytes, shape[i]});
-  auto elementSize = this->getSizeInBytes(loc, elementType, rewriter);
-  return rewriter.create<LLVM::MulOp>(
-      loc, getIndexType(), ArrayRef<Value>{cumulativeSizeInBytes, elementSize});
+  Value numElements = this->getNumElements(loc, shape, rewriter);
+  Value elementSize = this->getSizeInBytes(loc, elementType, rewriter);
+  return rewriter.create<LLVM::MulOp>(loc, numElements, elementSize);
 }
 
 /// Creates and populates the memref descriptor struct given all its fields.
