@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=kaveri -filetype=obj -mattr=-code-object-v3 | llvm-readobj -symbols -s -sd - | FileCheck --check-prefix=ELF %s
 ; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=kaveri -mattr=-code-object-v3 | llvm-mc -filetype=obj -triple amdgcn--amdpal -mcpu=kaveri -mattr=-code-object-v3 | llvm-readobj -symbols -s -sd - | FileCheck %s --check-prefix=ELF
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=+WavefrontSize32,-WavefrontSize64,-code-object-v3 | FileCheck --check-prefix=GFX10-W32 %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64,-code-object-v3 | FileCheck --check-prefix=GFX10-W64 %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64,-code-object-v3 | FileCheck --check-prefix=GFX10-W32 %s
+; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64,-code-object-v3 | FileCheck --check-prefix=GFX10-W64 %s
 
 ; ELF: Section {
 ; ELF: Name: .text
