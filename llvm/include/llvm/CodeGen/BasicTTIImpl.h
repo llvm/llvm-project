@@ -1194,7 +1194,7 @@ public:
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
       IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, 1, I);
-      return getIntrinsicInstrCost(Attrs, CostKind);
+      return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
     }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
@@ -1260,9 +1260,8 @@ public:
       ScalarizationCost += getOperandsScalarizationOverhead(Args, VF);
     }
 
-    IntrinsicCostAttributes Attrs(IID, RetTy, Types, FMF,
-                                  ScalarizationCost, I);
-    return thisT()->getIntrinsicInstrCost(Attrs, CostKind);
+    IntrinsicCostAttributes Attrs(IID, RetTy, Types, FMF, ScalarizationCost, I);
+    return thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
   }
 
   /// Get intrinsic cost based on argument types.
