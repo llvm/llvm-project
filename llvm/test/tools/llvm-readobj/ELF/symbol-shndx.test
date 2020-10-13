@@ -254,3 +254,60 @@ Symbols:
     Index: SHN_XINDEX
   - Name:  no_shndx2
     Index: SHN_XINDEX
+
+## Check we can dump symbols even when the number of entries in the
+## SHT_SYMTAB_SHNDX section doesn't match the number of symbols in the symbol table.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-readelf --symbols %t4 2>&1 | FileCheck %s -DFILE=%t4 --check-prefix=SHNDX-ERR-GNU
+# RUN: llvm-readobj --symbols %t4 2>&1 | FileCheck %s -DFILE=%t4 --check-prefix=SHNDX-ERR-LLVM
+
+#       SHNDX-ERR-GNU: warning: '[[FILE]]': SHT_SYMTAB_SHNDX has 3 entries, but the symbol table associated has 2
+# SHNDX-ERR-GNU-EMPTY:
+#  SHNDX-ERR-GNU-NEXT: Symbol table '.symtab' contains 2 entries:
+#  SHNDX-ERR-GNU-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
+#  SHNDX-ERR-GNU-NEXT:      0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND
+#  SHNDX-ERR-GNU-NEXT: warning: '[[FILE]]': extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+#  SHNDX-ERR-GNU-NEXT:      1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   RSV[0xffff]
+# SHNDX-ERR-GNU-EMPTY:
+#   SHNDX-ERR-GNU-NOT:{{.}}
+
+# SHNDX-ERR-LLVM: warning: '[[FILE]]': SHT_SYMTAB_SHNDX has 3 entries, but the symbol table associated has 2
+# SHNDX-ERR-LLVM:      Format: elf64-unknown
+# SHNDX-ERR-LLVM-NEXT: Arch: unknown
+# SHNDX-ERR-LLVM-NEXT: AddressSize: 64bit
+# SHNDX-ERR-LLVM-NEXT: LoadName: <Not found>
+# SHNDX-ERR-LLVM-NEXT: Symbols [
+# SHNDX-ERR-LLVM-NEXT:   Symbol {
+# SHNDX-ERR-LLVM-NEXT:     Name:  (0)
+# SHNDX-ERR-LLVM-NEXT:     Value: 0x0
+# SHNDX-ERR-LLVM-NEXT:     Size: 0
+# SHNDX-ERR-LLVM-NEXT:     Binding: Local (0x0)
+# SHNDX-ERR-LLVM-NEXT:     Type: None (0x0)
+# SHNDX-ERR-LLVM-NEXT:     Other: 0
+# SHNDX-ERR-LLVM-NEXT:     Section: Undefined (0x0)
+# SHNDX-ERR-LLVM-NEXT:   }
+# SHNDX-ERR-LLVM-NEXT:   Symbol {
+# SHNDX-ERR-LLVM-NEXT:     Name:  (0)
+# SHNDX-ERR-LLVM-NEXT:     Value: 0x0
+# SHNDX-ERR-LLVM-NEXT:     Size: 0
+# SHNDX-ERR-LLVM-NEXT:     Binding: Local (0x0)
+# SHNDX-ERR-LLVM-NEXT:     Type: None (0x0)
+# SHNDX-ERR-LLVM-NEXT:     Other: 0
+# SHNDX-ERR-LLVM-NEXT: warning: '[[FILE]]': extended symbol index (1) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# SHNDX-ERR-LLVM-NEXT:     Section: Reserved (0xFFFF)
+# SHNDX-ERR-LLVM-NEXT:   }
+# SHNDX-ERR-LLVM-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:    .symtab_shndx
+    Type:    SHT_SYMTAB_SHNDX
+    Entries: [ 0, 1, 2 ]
+    Link:    .symtab
+Symbols:
+  - Index: SHN_XINDEX

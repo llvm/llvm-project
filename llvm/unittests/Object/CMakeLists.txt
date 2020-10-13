@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   BinaryFormat
   Object
+  ObjectYAML
   )
 
 add_llvm_unittest(ObjectTests
