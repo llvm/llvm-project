@@ -1,10 +1,10 @@
 // RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx700 -mattr=-code-object-v3 %s | FileCheck --check-prefixes=GCN,GFX7 %s
-// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-code-object-v3,+WavefrontSize32,-WavefrontSize64 %s | FileCheck --check-prefixes=GCN,GFX10-W32 %s
-// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-code-object-v3,-WavefrontSize32,+WavefrontSize64 %s | FileCheck --check-prefixes=GCN,GFX10-W64 %s
+// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-code-object-v3,+wavefrontsize32,-wavefrontsize64 %s | FileCheck --check-prefixes=GCN,GFX10-W32 %s
+// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-code-object-v3,-wavefrontsize32,+wavefrontsize64 %s | FileCheck --check-prefixes=GCN,GFX10-W64 %s
 
 // RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx700 -mattr=-code-object-v3 %s 2>&1 | FileCheck --check-prefixes=GCN-ERR,GFX7-ERR %s
-// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-code-object-v3,+WavefrontSize32,-WavefrontSize64 %s 2>&1 | FileCheck --check-prefixes=GCN-ERR,GFX10-W32-ERR %s
-// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-code-object-v3,-WavefrontSize32,+WavefrontSize64 %s 2>&1 | FileCheck --check-prefixes=GCN-ERR,GFX10-W64-ERR %s
+// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-code-object-v3,+wavefrontsize32,-wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=GCN-ERR,GFX10-W32-ERR %s
+// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-code-object-v3,-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=GCN-ERR,GFX10-W64-ERR %s
 
 // GCN: test0:
 // GFX7: enable_wavefront_size32 = 0
