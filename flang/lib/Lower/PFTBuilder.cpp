@@ -131,16 +131,6 @@ public:
   }
 
   // Get rid of production wrapper
-  bool Pre(const parser::UnlabeledStatement<parser::ForallAssignmentStmt>
-               &statement) {
-    addEvaluation(std::visit(
-        [&](const auto &x) {
-          return lower::pft::Evaluation{
-              x, parentVariantStack.back(), statement.source, {}};
-        },
-        statement.statement.u));
-    return false;
-  }
   bool Pre(const parser::Statement<parser::ForallAssignmentStmt> &statement) {
     addEvaluation(std::visit(
         [&](const auto &x) {
