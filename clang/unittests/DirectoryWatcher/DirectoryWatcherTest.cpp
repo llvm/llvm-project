@@ -243,7 +243,7 @@ void checkEventualResultWithTimeout(VerifyingConsumer &TestConsumer) {
   std::thread worker(std::move(task));
   worker.detach();
 
-  EXPECT_TRUE(WaitForExpectedStateResult.wait_for(std::chrono::seconds(10)) ==
+  EXPECT_TRUE(WaitForExpectedStateResult.wait_for(std::chrono::seconds(3)) ==
               std::future_status::ready)
       << "The expected result state wasn't reached before the time-out.";
   std::unique_lock<std::mutex> L(TestConsumer.Mtx);
