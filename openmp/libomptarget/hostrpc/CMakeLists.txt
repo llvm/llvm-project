@@ -157,8 +157,9 @@ macro(add_openmp_library libname archname dir)
       COMMAND ${LLVM_INSTALL_PREFIX}/bin/llvm-ar rcs ${bc_ar_filename} ${bc_files}
       DEPENDS ${bc_files} )
 
-  add_custom_target(lib${name}-host-static-lib ALL DEPENDS ${host_ar_filename})
-  add_custom_target(lib${name}-device-static-lib ALL DEPENDS ${bc_ar_filename})
+  add_custom_target(archive-deps DEPENDS ${host_ar_filename} ${bc_ar_filename})
+  add_custom_target(lib${name}-host-static-lib ALL DEPENDS archive-deps)
+  add_custom_target(lib${name}-device-static-lib ALL DEPENDS archive-deps)
 endmacro()
 
 collect_sources(${CMAKE_CURRENT_SOURCE_DIR}/src ${sources})
