@@ -639,11 +639,17 @@ def produce_version_header():
 
 #endif // _LIBCPP_VERSIONH
 """
-  return template.format(
+
+  version_str = template.format(
       synopsis=produce_version_synopsis().strip(),
       cxx14_macros=produce_macros_definition_for_std('c++14').strip(),
       cxx17_macros=produce_macros_definition_for_std('c++17').strip(),
       cxx2a_macros=produce_macros_definition_for_std('c++2a').strip())
+
+  version_header_path = os.path.join(include_path, 'version')
+  with open(version_header_path, 'w') as f:
+    f.write(version_str)
+
 
 """
     Functions to produce test files
@@ -884,9 +890,7 @@ Status
     f.write(doc_str)
 
 def main():
-  with tempfile.NamedTemporaryFile(mode='w', prefix='version.', delete=False) as tmp_file:
-    print("producing new <version> header as %s" % tmp_file.name)
-    tmp_file.write(produce_version_header())
+  produce_version_header()
   produce_tests()
   produce_docs()
 
