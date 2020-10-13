@@ -224,7 +224,7 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
           OutputFilename += ".o";
         break;
       case CGFT_Null:
-        OutputFilename += ".null";
+        OutputFilename = "-";
         break;
       }
     }
