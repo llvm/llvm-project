@@ -691,8 +691,8 @@ func @select(%arg0 : i32, %arg1 : i32) {
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: @load_store_zero_rank_float
-// CHECK: [[ARG0:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x f32, stride=4> [0]>, StorageBuffer>,
-// CHECK: [[ARG1:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x f32, stride=4> [0]>, StorageBuffer>)
+// CHECK: [[ARG0:%.*]]: !spv.ptr<!spv.struct<(!spv.array<1 x f32, stride=4> [0])>, StorageBuffer>,
+// CHECK: [[ARG1:%.*]]: !spv.ptr<!spv.struct<(!spv.array<1 x f32, stride=4> [0])>, StorageBuffer>)
 func @load_store_zero_rank_float(%arg0: memref<f32>, %arg1: memref<f32>) {
   //      CHECK: [[ZERO1:%.*]] = spv.constant 0 : i32
   //      CHECK: spv.AccessChain [[ARG0]][
@@ -710,8 +710,8 @@ func @load_store_zero_rank_float(%arg0: memref<f32>, %arg1: memref<f32>) {
 }
 
 // CHECK-LABEL: @load_store_zero_rank_int
-// CHECK: [[ARG0:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x i32, stride=4> [0]>, StorageBuffer>,
-// CHECK: [[ARG1:%.*]]: !spv.ptr<!spv.struct<!spv.array<1 x i32, stride=4> [0]>, StorageBuffer>)
+// CHECK: [[ARG0:%.*]]: !spv.ptr<!spv.struct<(!spv.array<1 x i32, stride=4> [0])>, StorageBuffer>,
+// CHECK: [[ARG1:%.*]]: !spv.ptr<!spv.struct<(!spv.array<1 x i32, stride=4> [0])>, StorageBuffer>)
 func @load_store_zero_rank_int(%arg0: memref<i32>, %arg1: memref<i32>) {
   //      CHECK: [[ZERO1:%.*]] = spv.constant 0 : i32
   //      CHECK: spv.AccessChain [[ARG0]][
