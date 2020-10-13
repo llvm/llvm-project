@@ -759,6 +759,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // Vector add and sub nodes may conceal a high-half opportunity.
   // Also, try to fold ADD into CSINC/CSINV..
   setTargetDAGCombine(ISD::ADD);
+  setTargetDAGCombine(ISD::ABS);
   setTargetDAGCombine(ISD::SUB);
   setTargetDAGCombine(ISD::SRL);
   setTargetDAGCombine(ISD::XOR);
@@ -1830,6 +1831,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::STNP)
     MAKE_CASE(AArch64ISD::DUP_MERGE_PASSTHRU)
     MAKE_CASE(AArch64ISD::INDEX_VECTOR)
+    MAKE_CASE(AArch64ISD::UABD)
+    MAKE_CASE(AArch64ISD::SABD)
   }
 #undef MAKE_CASE
   return nullptr;
@@ -3658,6 +3661,15 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                     : (IsRoundingAdd ? AArch64ISD::URHADD : AArch64ISD::UHADD);
     return DAG.getNode(Opcode, dl, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
+  }
+
+  case Intrinsic::aarch64_neon_uabd: {
+    return DAG.getNode(AArch64ISD::UABD, dl, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+  }
+  case Intrinsic::aarch64_neon_sabd: {
+    return DAG.getNode(AArch64ISD::SABD, dl, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
   }
   }
 }
@@ -11050,6 +11062,48 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::VECREDUCE_ADD, DL, N->getValueType(0), Dot);
 }
 
+// Given a ABS node, detect the following pattern:
+// (ABS (SUB (EXTEND a), (EXTEND b))).
+// Generates UABD/SABD instruction.
+static SDValue performABSCombine(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const AArch64Subtarget *Subtarget) {
+  SDValue AbsOp1 = N->getOperand(0);
+  SDValue Op0, Op1;
+
+  if (AbsOp1.getOpcode() != ISD::SUB)
+    return SDValue();
+
+  Op0 = AbsOp1.getOperand(0);
+  Op1 = AbsOp1.getOperand(1);
+
+  unsigned Opc0 = Op0.getOpcode();
+  // Check if the operands of the sub are (zero|sign)-extended.
+  if (Opc0 != Op1.getOpcode() ||
+      (Opc0 != ISD::ZERO_EXTEND && Opc0 != ISD::SIGN_EXTEND))
+    return SDValue();
+
+  EVT VectorT1 = Op0.getOperand(0).getValueType();
+  EVT VectorT2 = Op1.getOperand(0).getValueType();
+  // Check if vectors are of same type and valid size.
+  uint64_t Size = VectorT1.getFixedSizeInBits();
+  if (VectorT1 != VectorT2 || (Size != 64 && Size != 128))
+    return SDValue();
+
+  // Check if vector element types are valid.
+  EVT VT1 = VectorT1.getVectorElementType();
+  if (VT1 != MVT::i8 && VT1 != MVT::i16 && VT1 != MVT::i32)
+    return SDValue();
+
+  Op0 = Op0.getOperand(0);
+  Op1 = Op1.getOperand(0);
+  unsigned ABDOpcode =
+      (Opc0 == ISD::SIGN_EXTEND) ? AArch64ISD::SABD : AArch64ISD::UABD;
+  SDValue ABD =
+      DAG.getNode(ABDOpcode, SDLoc(N), Op0->getValueType(0), Op0, Op1);
+  return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N->getValueType(0), ABD);
+}
+
 static SDValue performXorCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const AArch64Subtarget *Subtarget) {
@@ -12339,8 +12393,8 @@ static SDValue tryCombineLongOpWithDup(unsigned IID, SDNode *N,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  SDValue LHS = N->getOperand(1);
-  SDValue RHS = N->getOperand(2);
+  SDValue LHS = N->getOperand((IID == Intrinsic::not_intrinsic) ? 0 : 1);
+  SDValue RHS = N->getOperand((IID == Intrinsic::not_intrinsic) ? 1 : 2);
   assert(LHS.getValueType().is64BitVector() &&
          RHS.getValueType().is64BitVector() &&
          "unexpected shape for long operation");
@@ -12357,6 +12411,9 @@ static SDValue tryCombineLongOpWithDup(unsigned IID, SDNode *N,
     if (!LHS.getNode())
       return SDValue();
   }
+
+  if (IID == Intrinsic::not_intrinsic)
+    return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), LHS, RHS);
 
   return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SDLoc(N), N->getValueType(0),
                      N->getOperand(0), LHS, RHS);
@@ -12868,18 +12925,15 @@ static SDValue performExtendCombine(SDNode *N,
   // helps the backend to decide that an sabdl2 would be useful, saving a real
   // extract_high operation.
   if (!DCI.isBeforeLegalizeOps() && N->getOpcode() == ISD::ZERO_EXTEND &&
-      N->getOperand(0).getOpcode() == ISD::INTRINSIC_WO_CHAIN) {
+      (N->getOperand(0).getOpcode() == AArch64ISD::UABD ||
+       N->getOperand(0).getOpcode() == AArch64ISD::SABD)) {
     SDNode *ABDNode = N->getOperand(0).getNode();
-    unsigned IID = getIntrinsicID(ABDNode);
-    if (IID == Intrinsic::aarch64_neon_sabd ||
-        IID == Intrinsic::aarch64_neon_uabd) {
-      SDValue NewABD = tryCombineLongOpWithDup(IID, ABDNode, DCI, DAG);
-      if (!NewABD.getNode())
-        return SDValue();
+    SDValue NewABD =
+        tryCombineLongOpWithDup(Intrinsic::not_intrinsic, ABDNode, DCI, DAG);
+    if (!NewABD.getNode())
+      return SDValue();
 
-      return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N->getValueType(0),
-                         NewABD);
-    }
+    return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N->getValueType(0), NewABD);
   }
 
   // This is effectively a custom type legalization for AArch64.
@@ -14672,6 +14726,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   default:
     LLVM_DEBUG(dbgs() << "Custom combining: skipping\n");
     break;
+  case ISD::ABS:
+    return performABSCombine(N, DAG, DCI, Subtarget);
   case ISD::ADD:
   case ISD::SUB:
     return performAddSubLongCombine(N, DCI, DAG);
