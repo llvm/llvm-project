@@ -10,7 +10,7 @@ namespace M {
 
 struct NonLiteral {
   NonLiteral() {}
-  NonLiteral(int) {} // expected-note 2{{here}}
+  NonLiteral(int) {}
   operator int() const { return 0; }
 };
 struct Literal {
@@ -42,8 +42,8 @@ template<typename ...P> struct ConstexprCtor {
 };
 constexpr ConstexprCtor<> f1() { return {}; } // ok
 constexpr ConstexprCtor<int> f2() { return 0; } // ok
-constexpr ConstexprCtor<NonLiteral> f3() { return { 0 }; } // expected-error {{never produces a constant expression}} expected-note {{non-constexpr constructor 'NonLiteral}}
-constexpr ConstexprCtor<int, NonLiteral> f4() { return { 0, 0 }; } // expected-error {{never produces a constant expression}} expected-note {{non-constexpr constructor 'NonLiteral}}
+constexpr ConstexprCtor<NonLiteral> f3() { return { 0 }; } // expected-error {{never produces a constant expression}} expected-note {{non-literal type 'NonLiteral}}
+constexpr ConstexprCtor<int, NonLiteral> f4() { return { 0, 0 }; } // expected-error {{never produces a constant expression}} expected-note {{non-literal type 'NonLiteral}}
 
 struct VirtBase : virtual S {}; // expected-note {{here}}
 

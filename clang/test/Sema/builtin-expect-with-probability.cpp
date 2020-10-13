@@ -43,7 +43,7 @@ void test(int x, double p) { // expected-note {{declared here}}
   dummy = __builtin_expect_with_probability(x > 0, 1, 0.9);
   dummy = __builtin_expect_with_probability(x > 0, 1, 1.1); // expected-error {{probability argument to __builtin_expect_with_probability is outside the range [0.0, 1.0]}}
   dummy = __builtin_expect_with_probability(x > 0, 1, -1); // expected-error {{probability argument to __builtin_expect_with_probability is outside the range [0.0, 1.0]}}
-  dummy = __builtin_expect_with_probability(x > 0, 1, p); // expected-error {{probability argument to __builtin_expect_with_probability must be constant floating-point expression}} expected-note {{read of non-constexpr variable 'p' is not allowed in a constant expression}}
+  dummy = __builtin_expect_with_probability(x > 0, 1, p); // expected-error {{probability argument to __builtin_expect_with_probability must be constant floating-point expression}} expected-note {{function parameter 'p'}}
   dummy = __builtin_expect_with_probability(x > 0, 1, "aa"); // expected-error {{cannot initialize a parameter of type 'double' with an lvalue of type 'const char [3]'}}
   dummy = __builtin_expect_with_probability(x > 0, 1, __builtin_nan("")); // expected-error {{probability argument to __builtin_expect_with_probability is outside the range [0.0, 1.0]}}
   dummy = __builtin_expect_with_probability(x > 0, 1, __builtin_inf()); // expected-error {{probability argument to __builtin_expect_with_probability is outside the range [0.0, 1.0]}}
