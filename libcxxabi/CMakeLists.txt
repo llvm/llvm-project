@@ -248,6 +248,8 @@ if (LIBCXXABI_HAS_NOSTDINCXX_FLAG)
   # See: https://gitlab.kitware.com/cmake/cmake/issues/19227
   set(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES "")
   # Remove -stdlib flags to prevent them from causing an unused flag warning.
+  string(REPLACE "--stdlib=libc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REPLACE "--stdlib=libstdc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   string(REPLACE "-stdlib=libc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   string(REPLACE "-stdlib=libstdc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
