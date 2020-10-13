@@ -39,7 +39,6 @@ static_library("Core") {
     "ExprEngineCallAndReturn.cpp",
     "ExprEngineObjC.cpp",
     "FunctionSummary.cpp",
-    "IssueHash.cpp",
     "LoopUnrolling.cpp",
     "LoopWidening.cpp",
     "MemRegion.cpp",
