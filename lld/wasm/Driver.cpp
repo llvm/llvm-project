@@ -252,8 +252,15 @@ void LinkerDriver::addFile(StringRef path) {
 
     // Handle -whole-archive.
     if (inWholeArchive) {
-      for (MemoryBufferRef &m : getArchiveMembers(mbref))
-        files.push_back(createObjectFile(m, path));
+      for (MemoryBufferRef &m : getArchiveMembers(mbref)) {
+        auto *object = createObjectFile(m, path);
+        // Mark object as live; object members are normally not
+        // live by default but -whole-archive is designed to treat
+        // them as such.
+        object->markLive();
+        files.push_back(object);
+      }
+
       return;
     }
 
