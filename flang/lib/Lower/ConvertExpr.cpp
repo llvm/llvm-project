@@ -88,7 +88,7 @@ private:
     auto e = genval(expr);
     if (auto *r = e.getUnboxed())
       return *r;
-    llvm::report_fatal_error("value is not unboxed");
+    return {};
   }
 
   /// Convert parser's INTEGER relational operators to MLIR.  TODO: using
@@ -170,12 +170,10 @@ private:
   mlir::Value createBinaryOp(const fir::ExtendedValue &left,
                              const fir::ExtendedValue &right) {
     if (auto *lhs = left.getUnboxed())
-      if (auto *rhs = right.getUnboxed()) {
-        assert(lhs && rhs && "argument did not lower");
+      if (auto *rhs = right.getUnboxed())
         return builder.create<OpTy>(getLoc(), *lhs, *rhs);
-      }
     // binary ops can appear in array contexts
-    TODO("");
+    TODO("Array expression binary operation");
   }
   template <typename OpTy, typename A>
   mlir::Value createBinaryOp(const A &ex) {
@@ -430,7 +428,8 @@ private:
   fir::ExtendedValue
   genval(const Fortran::evaluate::ComplexComponent<KIND> &part) {
     auto lhs = genunbox(part.left());
-    assert(lhs && "boxed type not handled");
+    if (!lhs)
+      TODO("Array expression complex component");
     return extractComplexPart(lhs, part.isImaginaryPart);
   }
 
@@ -438,7 +437,8 @@ private:
   fir::ExtendedValue genval(
       const Fortran::evaluate::Negate<Fortran::evaluate::Type<TC, KIND>> &op) {
     auto input = genunbox(op.left());
-    assert(input && "boxed value not handled");
+    if (!input)
+      TODO("Array expression negation");
     if constexpr (TC == Fortran::common::TypeCategory::Integer) {
       // Currently no Standard/FIR op for integer negation.
       auto zero = genIntegerConstant<KIND>(builder.getContext(), 0);
@@ -515,7 +515,8 @@ private:
     auto ty = converter.genType(TC, KIND);
     auto lhs = genunbox(op.left());
     auto rhs = genunbox(op.right());
-    assert(lhs && rhs && "boxed value not handled");
+    if (!lhs || !rhs)
+      TODO("Array expression power");
     return Fortran::lower::genPow(builder, getLoc(), ty, lhs, rhs);
   }
 
@@ -526,7 +527,8 @@ private:
     auto ty = converter.genType(TC, KIND);
     auto lhs = genunbox(op.left());
     auto rhs = genunbox(op.right());
-    assert(lhs && rhs && "boxed value not handled");
+    if (!lhs || !rhs)
+      TODO("Array expression power");
     return Fortran::lower::genPow(builder, getLoc(), ty, lhs, rhs);
   }
 
@@ -541,7 +543,8 @@ private:
   genval(const Fortran::evaluate::ComplexConstructor<KIND> &op) {
     auto lhs = genunbox(op.left());
     auto rhs = genunbox(op.right());
-    assert(lhs && rhs && "boxed value not handled");
+    if (!lhs || !rhs)
+      TODO("Array expression complex ctor");
     return createComplex(KIND, lhs, rhs);
   }
 
@@ -564,7 +567,8 @@ private:
              &op) {
     auto lhs = genunbox(op.left());
     auto rhs = genunbox(op.right());
-    assert(lhs && rhs && "boxed value not handled");
+    if (!lhs || !rhs)
+      TODO("Array expression extremum");
     llvm::SmallVector<mlir::Value, 2> operands{lhs, rhs};
     if (op.ordering == Fortran::evaluate::Ordering::Greater)
       return Fortran::lower::genMax(builder, getLoc(), operands);
@@ -596,7 +600,8 @@ private:
         llvm_unreachable("relation undefined for complex");
       auto lhs = genunbox(op.left());
       auto rhs = genunbox(op.right());
-      assert(lhs && rhs && "boxed value not handled");
+      if (!lhs || !rhs)
+        TODO("Array expression comparisons");
       return createComplexCompare(lhs, rhs, eq);
     } else {
       static_assert(TC == Fortran::common::TypeCategory::Character);
@@ -616,7 +621,8 @@ private:
                                           TC2> &convert) {
     auto ty = converter.genType(TC1, KIND);
     auto operand = genunbox(convert.left());
-    assert(operand && "boxed value not handled");
+    if (!operand)
+      TODO("Array expression conversion");
     return builder.createConvert(getLoc(), ty, operand);
   }
 
@@ -633,7 +639,8 @@ private:
   fir::ExtendedValue genval(const Fortran::evaluate::Not<KIND> &op) {
     auto *context = builder.getContext();
     auto logical = genunbox(op.left());
-    assert(logical && "boxed value not handled");
+    if (!logical)
+      TODO("Array expression negation");
     auto one = genBoolConstant(context, true);
     auto val = builder.createConvert(getLoc(), builder.getI1Type(), logical);
     return builder.create<mlir::XOrOp>(getLoc(), val, one);
@@ -645,7 +652,8 @@ private:
     auto i1Type = builder.getI1Type();
     auto slhs = genunbox(op.left());
     auto srhs = genunbox(op.right());
-    assert(slhs && srhs && "boxed value not handled");
+    if (!slhs || !srhs)
+      TODO("Array expression logical operation");
     auto lhs = builder.createConvert(getLoc(), i1Type, slhs);
     auto rhs = builder.createConvert(getLoc(), i1Type, srhs);
     switch (op.logicalOperator) {
@@ -989,6 +997,8 @@ private:
     mlir::Value upper;
     if (auto up = trip.upper())
       upper = genunbox(*up);
+    if (!upper || !lower)
+      llvm::report_fatal_error("triplet not lowered to unboxed values");
     return {lower, upper, genunbox(trip.stride())};
   }
 
