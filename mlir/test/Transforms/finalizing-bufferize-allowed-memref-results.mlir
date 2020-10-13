@@ -1,9 +1,9 @@
 // RUN: mlir-opt -test-finalizing-bufferize-with-allowed-memref-results -split-input-file %s | FileCheck %s
 
-// Since allowMemrefEscaping is on for Buffer Placement in this test pass, all
-// tensor typed function results are converted to memref and remain as function
-// results. All memref typed function results will escape from the deallocation
-// phase of Buffer Placement.
+// Since allowMemrefEscaping is active for Bufferization in this test pass,
+// all tensor typed function results are converted to memref and remain as
+// function results. All memref typed function results will escape from the
+// deallocation phase of Bufferization.
 
 // CHECK-LABEL: func @void_function_signature_conversion
 func @void_function_signature_conversion(%arg0: tensor<4x8xf32>) {
@@ -13,17 +13,28 @@ func @void_function_signature_conversion(%arg0: tensor<4x8xf32>) {
 
 // -----
 
-#map0 = affine_map<(d0) -> (d0)>
-
 // CHECK-LABEL: func @complex_signature_conversion
-func @complex_signature_conversion(%arg0: tensor<5xf32>, %arg1: memref<10xf32>, %arg2: i1, %arg3: f16) -> (i1, tensor<5xf32>, memref<10xf32>, memref<15xf32>, f16) {
+func @complex_signature_conversion(
+  %arg0: tensor<5xf32>,
+  %arg1: memref<10xf32>,
+  %arg2: i1, %arg3: f16) -> (
+    i1,
+    tensor<5xf32>,
+    memref<10xf32>,
+    memref<15xf32>,
+    f16) {
   %0 = alloc() : memref<15xf32>
-  return %arg2, %arg0, %arg1, %0, %arg3 : i1, tensor<5xf32>, memref<10xf32>, memref<15xf32>, f16
+  %1 = test.tensor_based in(%arg0 : tensor<5xf32>) -> tensor<5xf32>
+  return %arg2, %1, %arg1, %0, %arg3 :
+   i1, tensor<5xf32>, memref<10xf32>, memref<15xf32>, f16
 }
-//      CHECK: (%[[ARG0:.*]]: memref<5xf32>, %[[ARG1:.*]]: memref<10xf32>, %[[ARG2:.*]]: i1, %[[ARG3:.*]]: f16)
+//      CHECK: (%[[ARG0:.*]]: memref<5xf32>, %[[ARG1:.*]]: memref<10xf32>,
+// CHECK-SAME: %[[ARG2:.*]]: i1, %[[ARG3:.*]]: f16)
 // CHECK-SAME: (i1, memref<5xf32>, memref<10xf32>, memref<15xf32>, f16)
 //      CHECK: %[[FIRST_ALLOC:.*]] = alloc()
-//      CHECK: return %[[ARG2]], %[[ARG0]], %[[ARG1]], %[[FIRST_ALLOC]], %[[ARG3]]
+//      CHECK: %[[TENSOR_ALLOC:.*]] = alloc()
+//      CHECK: return %[[ARG2]], %[[TENSOR_ALLOC]], %[[ARG1]], %[[FIRST_ALLOC]],
+// CHECK-SAME: %[[ARG3]]
 
 // -----
 
@@ -103,11 +114,12 @@ func @caller(%arg0: tensor<5xf32>) -> tensor<5xf32> {
 // -----
 
 // Test case: Testing BufferizeCallOpConverter to see if it matches with the
-// signature of the new signature of the callee function when there are tuple typed
-// args and results. BufferizeTypeConverter is set to flatten tuple typed
+// signature of the new signature of the callee function when there are tuple
+// typed args and results. BufferizeTypeConverter is set to flatten tuple typed
 // arguments. The tuple typed values should be decomposed and composed using
 // get_tuple_element and make_tuple operations of test dialect. Tensor types are
-// converted to Memref. Memref typed function results remain as function results.
+// converted to Memref. Memref typed function results remain as function
+// results.
 
 // CHECK-LABEL: func @callee
 func @callee(%arg0: tuple<tensor<2xf32>,i1, tensor<5xf32>>) -> (tuple<tensor<2xf32>,i1, tensor<5xf32>>){
@@ -150,8 +162,8 @@ func @caller(%arg0: tuple<tensor<2xf32>,i1, tensor<5xf32>>) -> tuple<tensor<2xf3
 // -----
 
 // Test case: Testing BufferizeFuncOpConverter and
-// BufferizeReturnOpConverter to see if the return operation matches with
-// the new function signature when there are tuple typed args and results.
+// BufferizeReturnOpConverter to see if the return operation matches with the
+// new function signature when there are tuple typed args and results.
 // BufferizeTypeConverter is set to flatten tuple typed arguments. The tuple
 // typed values should be decomposed and composed using get_tuple_element and
 // make_tuple operations of test dialect. Tensor types are converted to Memref.
