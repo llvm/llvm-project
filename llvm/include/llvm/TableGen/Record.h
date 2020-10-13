@@ -1784,9 +1784,17 @@ public:
   //===--------------------------------------------------------------------===//
   // High-level helper methods, useful for tablegen backends.
 
-  /// Get all the concrete records that inherit from the specified
+  /// Get all the concrete records that inherit from all the specified
+  /// classes. The classes must be defined.
+  std::vector<Record *> getAllDerivedDefinitions(
+      const ArrayRef<StringRef> ClassNames) const;
+
+  /// Get all the concrete records that inherit from the one specified
   /// class. The class must be defined.
-  std::vector<Record *> getAllDerivedDefinitions(StringRef ClassName) const;
+  std::vector<Record *> getAllDerivedDefinitions(StringRef ClassName) const {
+
+    return getAllDerivedDefinitions(makeArrayRef(ClassName));
+  }
 
   void dump() const;
 };

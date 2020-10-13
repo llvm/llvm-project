@@ -2470,16 +2470,25 @@ Init *RecordKeeper::getNewAnonymousName() {
   return StringInit::get("anonymous_" + utostr(AnonCounter++));
 }
 
-std::vector<Record *>
-RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
-  Record *Class = getClass(ClassName);
-  if (!Class)
-    PrintFatalError("ERROR: Couldn't find the `" + ClassName + "' class!\n");
+std::vector<Record *> RecordKeeper::getAllDerivedDefinitions(
+    const ArrayRef<StringRef> ClassNames) const {
+  SmallVector<Record *, 2> ClassRecs;
+  std::vector<Record *> Defs;
 
-  std::vector<Record*> Defs;
-  for (const auto &D : getDefs())
-    if (D.second->isSubClassOf(Class))
-      Defs.push_back(D.second.get());
+  assert(ClassNames.size() > 0 && "At least one class must be passed.");
+  for (const auto &ClassName : ClassNames) {
+    Record *Class = getClass(ClassName);
+    if (!Class)
+      PrintFatalError("The class '" + ClassName + "' is not defined\n");
+    ClassRecs.push_back(Class);
+  }
+
+  for (const auto &OneDef : getDefs()) {
+    if (all_of(ClassRecs, [&OneDef](const Record *Class) {
+                            return OneDef.second->isSubClassOf(Class);
+                          }))
+      Defs.push_back(OneDef.second.get());
+  }
 
   return Defs;
 }
