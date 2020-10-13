@@ -1281,6 +1281,7 @@ void CodeGenSchedModels::inferFromInstRWs(unsigned SCIdx) {
     findRWs(Rec->getValueAsListOfDefs("OperandReadWrites"), Writes, Reads);
     unsigned PIdx = getProcModel(Rec->getValueAsDef("SchedModel")).Index;
     inferFromRW(Writes, Reads, SCIdx, PIdx); // May mutate SchedClasses.
+    SchedClasses[SCIdx].InstRWProcIndices.insert(PIdx);
   }
 }
 
@@ -1639,29 +1640,50 @@ void PredTransitions::substituteVariants(const PredTransition &Trans) {
   }
 }
 
+static void addSequences(CodeGenSchedModels &SchedModels,
+                         const SmallVectorImpl<SmallVector<unsigned, 4>> &Seqs,
+                         IdxVec &Result, bool IsRead) {
+  for (const auto &S : Seqs)
+    if (!S.empty())
+      Result.push_back(SchedModels.findOrInsertRW(S, IsRead));
+}
+
+static void dumpTransition(const CodeGenSchedModels &SchedModels,
+                           const CodeGenSchedClass &FromSC,
+                           const CodeGenSchedTransition &SCTrans) {
+  LLVM_DEBUG(dbgs() << "Adding transition from " << FromSC.Name << "("
+                    << FromSC.Index << ") to "
+                    << SchedModels.getSchedClass(SCTrans.ToClassIdx).Name << "("
+                    << SCTrans.ToClassIdx << ")"
+                    << " on processor indices: (";
+             dumpIdxVec(SCTrans.ProcIndices); dbgs() << ")\n");
+}
 // Create a new SchedClass for each variant found by inferFromRW. Pass
 static void inferFromTransitions(ArrayRef<PredTransition> LastTransitions,
                                  unsigned FromClassIdx,
                                  CodeGenSchedModels &SchedModels) {
   // For each PredTransition, create a new CodeGenSchedTransition, which usually
   // requires creating a new SchedClass.
+  const CodeGenSchedClass &FromSC = SchedModels.getSchedClass(FromClassIdx);
   for (ArrayRef<PredTransition>::iterator
          I = LastTransitions.begin(), E = LastTransitions.end(); I != E; ++I) {
-    IdxVec OperWritesVariant;
-    transform(I->WriteSequences, std::back_inserter(OperWritesVariant),
-              [&SchedModels](ArrayRef<unsigned> WS) {
-                return SchedModels.findOrInsertRW(WS, /*IsRead=*/false);
-              });
-    IdxVec OperReadsVariant;
-    transform(I->ReadSequences, std::back_inserter(OperReadsVariant),
-              [&SchedModels](ArrayRef<unsigned> RS) {
-                return SchedModels.findOrInsertRW(RS, /*IsRead=*/true);
-              });
+    IdxVec OperWritesVariant, OperReadsVariant;
+    addSequences(SchedModels, I->WriteSequences, OperWritesVariant, false);
+    addSequences(SchedModels, I->ReadSequences, OperReadsVariant, true);
     CodeGenSchedTransition SCTrans;
+
+    // Transition should not contain processor indices already assigned to
+    // InstRWs in this scheduling class.
+    llvm::copy_if(I->ProcIndices, std::back_inserter(SCTrans.ProcIndices),
+                  [&FromSC](unsigned PIdx) {
+                    return !FromSC.InstRWProcIndices.count(PIdx);
+                  });
+    if (SCTrans.ProcIndices.empty())
+      continue;
     SCTrans.ToClassIdx =
-      SchedModels.addSchedClass(/*ItinClassDef=*/nullptr, OperWritesVariant,
-                                OperReadsVariant, I->ProcIndices);
-    SCTrans.ProcIndices.assign(I->ProcIndices.begin(), I->ProcIndices.end());
+        SchedModels.addSchedClass(/*ItinClassDef=*/nullptr, OperWritesVariant,
+                                  OperReadsVariant, I->ProcIndices);
+    dumpTransition(SchedModels, FromSC, SCTrans);
     // The final PredTerm is unique set of predicates guarding the transition.
     RecVec Preds;
     transform(I->PredTerm, std::back_inserter(Preds),
@@ -1684,7 +1706,6 @@ void CodeGenSchedModels::inferFromRW(ArrayRef<unsigned> OperWrites,
                                      ArrayRef<unsigned> ProcIndices) {
   LLVM_DEBUG(dbgs() << "INFER RW proc("; dumpIdxVec(ProcIndices);
              dbgs() << ") ");
-
   // Create a seed transition with an empty PredTerm and the expanded sequences
   // of SchedWrites for the current SchedClass.
   std::vector<PredTransition> LastTransitions;
