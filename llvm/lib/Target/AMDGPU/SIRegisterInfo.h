@@ -293,8 +293,6 @@ public:
   const uint32_t *getAllVGPRRegMask() const;
   const uint32_t *getAllAllocatableSRegMask() const;
 
-  int16_t calcSubRegIdx(const TargetRegisterClass *RC, unsigned SubOffset) const;
-
   // \returns number of 32 bit registers covered by a \p LM
   static unsigned getNumCoveredRegs(LaneBitmask LM) {
     // The assumption is that every lo16 subreg is an even bit and every hi16
