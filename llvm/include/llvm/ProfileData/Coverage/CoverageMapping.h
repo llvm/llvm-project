@@ -55,8 +55,7 @@ enum class coveragemap_error {
   unsupported_version,
   truncated,
   malformed,
-  decompression_failed,
-  invalid_or_missing_arch_specifier
+  decompression_failed
 };
 
 const std::error_category &coveragemap_category();
