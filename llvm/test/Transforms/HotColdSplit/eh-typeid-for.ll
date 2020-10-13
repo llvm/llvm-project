@@ -6,7 +6,7 @@
 
 ; CHECK-LABEL: @fun
 ; CHECK-NOT: call {{.*}}@fun.cold.1
-define void @fun() {
+define void @fun() "hot-cold-split" {
 entry:
   br i1 undef, label %if.then, label %if.else
 

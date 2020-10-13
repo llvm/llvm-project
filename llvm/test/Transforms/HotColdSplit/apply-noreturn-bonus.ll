@@ -3,7 +3,7 @@
 
 declare void @sink() cold
 
-define void @foo(i32 %arg) {
+define void @foo(i32 %arg) "hot-cold-split" {
 entry:
   br i1 undef, label %cold1, label %exit
 

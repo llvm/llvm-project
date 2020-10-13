@@ -37,7 +37,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; - Line locations in @foo.cold.1 point to the new scope for @foo.cold.1
 ; CHECK: [[LINE1]] = !DILocation(line: 1, column: 1, scope: [[NEWSCOPE]])
 
-define void @foo(i32 %arg1) !dbg !6 {
+define void @foo(i32 %arg1) "hot-cold-split" !dbg !6 {
 entry:
   %var = add i32 0, 0, !dbg !11
   br i1 undef, label %if.then, label %if.end

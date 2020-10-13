@@ -18,7 +18,7 @@ declare void @sink() cold
 ; CHECK: call {{.*}}@realloc2.cold.1(i64 %size, i8* %ptr, i8** %retval.0.ce.loc)
 ; CHECK-LABEL: cleanup:
 ; CHECK-NEXT: phi i8* [ null, %if.then ], [ %call, %if.end ], [ %retval.0.ce.reload, %codeRepl ]
-define i8* @realloc2(i8* %ptr, i64 %size) {
+define i8* @realloc2(i8* %ptr, i64 %size) "hot-cold-split" {
 entry:
   %0 = add i64 %size, -1
   %1 = icmp ugt i64 %0, 184549375

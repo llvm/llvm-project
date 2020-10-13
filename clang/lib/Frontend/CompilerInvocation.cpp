@@ -1469,6 +1469,17 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.PassByValueIsNoAlias = Args.hasArg(OPT_fpass_by_value_is_noalias);
 
+  // -f[no-]split-cold-code
+  // This may only be enabled when optimizing, and when small code size
+  // increases are tolerable.
+  Opts.SplitColdCode =
+      (Opts.OptimizationLevel > 0) && (Opts.OptimizeSize != 2) &&
+      Args.hasFlag(OPT_fsplit_cold_code, OPT_fno_split_cold_code, false);
+  if (Arg *A = Args.getLastArg(OPT_fsplit_cold_code))
+    if (!Opts.SplitColdCode)
+      Diags.Report(diag::warn_fe_ignored_opt_split_cold_code)
+          << A->getAsString(Args) << (Opts.OptimizeSize != 2);
+
   return Success;
 }
 

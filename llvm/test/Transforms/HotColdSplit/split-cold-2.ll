@@ -12,7 +12,7 @@
 ; CHECK: define {{.*}}@fun.cold.1{{.*}} [[cold_attr:#[0-9]+]]
 ; CHECK: attributes [[cold_attr]] = { {{.*}}noreturn
 
-define void @fun() {
+define void @fun() "hot-cold-split" {
 entry:
   br i1 undef, label %if.then, label %if.else
 
