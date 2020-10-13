@@ -94,48 +94,65 @@ void syntax::Tree::prependChildLowLevel(Node *Child) {
 
 void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
                                              Node *New) {
-  assert(!BeforeBegin || BeforeBegin->Parent == this);
+  assert((!BeforeBegin || BeforeBegin->Parent == this) &&
+         "`BeforeBegin` is not a child of `this`.");
+  assert((!End || End->Parent == this) && "`End` is not a child of `this`.");
+  assert(canModify() && "Cannot modify `this`.");
 
 #ifndef NDEBUG
-  for (auto *N = New; N; N = N->getNextSibling()) {
+  for (auto *N = New; N; N = N->NextSibling) {
     assert(N->Parent == nullptr);
     assert(N->getRole() != NodeRole::Detached && "Roles must be set");
     // FIXME: sanity-check the role.
   }
+
+  auto Reachable = [](Node *From, Node *N) {
+    if (!N)
+      return true;
+    for (auto *It = From; It; It = It->NextSibling)
+      if (It == N)
+        return true;
+    return false;
+  };
+  assert(Reachable(FirstChild, BeforeBegin) &&
+         "`BeforeBegin` is not reachable.");
+  assert(Reachable(BeforeBegin ? BeforeBegin->NextSibling : FirstChild, End) &&
+         "`End` is not after `BeforeBegin`.");
 #endif
+  Node *&Begin = BeforeBegin ? BeforeBegin->NextSibling : FirstChild;
+
+  if (!New && Begin == End)
+    return;
+
+  // Mark modification.
+  for (auto *T = this; T && T->Original; T = T->Parent)
+    T->Original = false;
 
   // Detach old nodes.
-  for (auto *N = !BeforeBegin ? FirstChild : BeforeBegin->getNextSibling();
-       N != End;) {
+  for (auto *N = Begin; N != End;) {
     auto *Next = N->NextSibling;
 
     N->setRole(NodeRole::Detached);
     N->Parent = nullptr;
     N->NextSibling = nullptr;
     if (N->Original)
-      traverse(N, [&](Node *C) { C->Original = false; });
+      traverse(N, [](Node *C) { C->Original = false; });
 
     N = Next;
   }
 
-  // Attach new nodes.
-  if (BeforeBegin)
-    BeforeBegin->NextSibling = New ? New : End;
-  else
-    FirstChild = New ? New : End;
-
-  if (New) {
-    auto *Last = New;
-    for (auto *N = New; N != nullptr; N = N->getNextSibling()) {
-      Last = N;
-      N->Parent = this;
-    }
-    Last->NextSibling = End;
+  if (!New) {
+    Begin = End;
+    return;
   }
-
-  // Mark the node as modified.
-  for (auto *T = this; T && T->Original; T = T->Parent)
-    T->Original = false;
+  // Attach new nodes.
+  Begin = New;
+  auto *Last = New;
+  for (auto *N = New; N != nullptr; N = N->NextSibling) {
+    Last = N;
+    N->Parent = this;
+  }
+  Last->NextSibling = End;
 }
 
 namespace {
