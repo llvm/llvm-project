@@ -219,6 +219,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
     BGOpts.ContextProvider = [this](PathRef P) {
       return createProcessingContext(P);
     };
+    BGOpts.CollectMainFileRefs = Opts.CollectMainFileRefs;
     BackgroundIdx = std::make_unique<BackgroundIndex>(
         TFS, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(
