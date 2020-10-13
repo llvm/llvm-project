@@ -44,10 +44,10 @@ define half @fmaxv_v8f16(<8 x half> %a) #0 {
 
 define half @fmaxv_v16f16(<16 x half>* %a) #0 {
 ; CHECK-LABEL: fmaxv_v16f16:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_GE_256-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: fmaxnmv h0, [[PG]], [[OP]].h
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
+; CHECK-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: fmaxnmv h0, [[PG]], [[OP]].h
+; CHECK-NEXT: ret
   %op = load <16 x half>, <16 x half>* %a
   %res = call half @llvm.vector.reduce.fmax.v16f16(<16 x half> %op)
   ret half %res
@@ -115,10 +115,10 @@ define float @fmaxv_v4f32(<4 x float> %a) #0 {
 
 define float @fmaxv_v8f32(<8 x float>* %a) #0 {
 ; CHECK-LABEL: fmaxv_v8f32:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_GE_256-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: fmaxnmv s0, [[PG]], [[OP]].s
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
+; CHECK-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: fmaxnmv s0, [[PG]], [[OP]].s
+; CHECK-NEXT: ret
   %op = load <8 x float>, <8 x float>* %a
   %res = call float @llvm.vector.reduce.fmax.v8f32(<8 x float> %op)
   ret float %res
@@ -186,10 +186,10 @@ define double @fmaxv_v2f64(<2 x double> %a) #0 {
 
 define double @fmaxv_v4f64(<4 x double>* %a) #0 {
 ; CHECK-LABEL: fmaxv_v4f64:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_GE_256-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: fmaxnmv d0, [[PG]], [[OP]].d
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
+; CHECK-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: fmaxnmv d0, [[PG]], [[OP]].d
+; CHECK-NEXT: ret
   %op = load <4 x double>, <4 x double>* %a
   %res = call double @llvm.vector.reduce.fmax.v4f64(<4 x double> %op)
   ret double %res
@@ -261,10 +261,10 @@ define half @fminv_v8f16(<8 x half> %a) #0 {
 
 define half @fminv_v16f16(<16 x half>* %a) #0 {
 ; CHECK-LABEL: fminv_v16f16:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].h, vl16
-; VBITS_GE_256-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: fminnmv h0, [[PG]], [[OP]].h
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
+; CHECK-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: fminnmv h0, [[PG]], [[OP]].h
+; CHECK-NEXT: ret
   %op = load <16 x half>, <16 x half>* %a
   %res = call half @llvm.vector.reduce.fmin.v16f16(<16 x half> %op)
   ret half %res
@@ -332,10 +332,10 @@ define float @fminv_v4f32(<4 x float> %a) #0 {
 
 define float @fminv_v8f32(<8 x float>* %a) #0 {
 ; CHECK-LABEL: fminv_v8f32:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].s, vl8
-; VBITS_GE_256-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: fminnmv s0, [[PG]], [[OP]].s
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
+; CHECK-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: fminnmv s0, [[PG]], [[OP]].s
+; CHECK-NEXT: ret
   %op = load <8 x float>, <8 x float>* %a
   %res = call float @llvm.vector.reduce.fmin.v8f32(<8 x float> %op)
   ret float %res
@@ -403,10 +403,10 @@ define double @fminv_v2f64(<2 x double> %a) #0 {
 
 define double @fminv_v4f64(<4 x double>* %a) #0 {
 ; CHECK-LABEL: fminv_v4f64:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].d, vl4
-; VBITS_GE_256-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: fminnmv d0, [[PG]], [[OP]].d
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
+; CHECK-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: fminnmv d0, [[PG]], [[OP]].d
+; CHECK-NEXT: ret
   %op = load <4 x double>, <4 x double>* %a
   %res = call double @llvm.vector.reduce.fmin.v4f64(<4 x double> %op)
   ret double %res
