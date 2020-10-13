@@ -245,15 +245,18 @@ names from both the *Processor* and *Alternative Processor* can be used.
      ``gfx1010``                 ``amdgcn``   dGPU  - xnack                   - Radeon RX 5700
                                                       [off]                   - Radeon RX 5700 XT
                                                     - wavefrontsize64         - Radeon Pro 5600 XT
-                                                      [off]
+                                                      [off]                   - Radeon Pro 5600M
                                                     - cumode
                                                       [off]
-     ``gfx1011``                 ``amdgcn``   dGPU  - xnack                   - Radeon Pro 5600M
+     ``gfx1011``                 ``amdgcn``   dGPU  - xnack                   *TBA*
                                                       [off]
                                                     - wavefrontsize64
                                                       [off]
                                                     - cumode
                                                       [off]
+                                                                              .. TODO
+                                                                                 Add product
+                                                                                 names.
      ``gfx1012``                 ``amdgcn``   dGPU  - xnack                   - Radeon RX 5500
                                                       [off]                   - Radeon RX 5500 XT
                                                     - wavefrontsize64
