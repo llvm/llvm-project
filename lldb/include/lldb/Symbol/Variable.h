@@ -64,6 +64,8 @@ public:
 
   lldb::ValueType GetScope() const { return m_scope; }
 
+  const RangeList &GetScopeRange() const { return m_scope_range; }
+
   bool IsExternal() const { return m_external; }
 
   bool IsArtificial() const { return m_artificial; }
