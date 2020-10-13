@@ -1,3 +1,10 @@
+# Only set LLVM_CODESIGNING_IDENTITY for building on Apple hosts for Apple
+# targets
+if (CMAKE_HOST_APPLE AND APPLE)
+  # Override locally, so the repl is ad-hoc signed.
+  set(LLVM_CODESIGNING_IDENTITY "-")
+endif()
+
 # Requires system-provided Swift libs.
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14.4)
 
