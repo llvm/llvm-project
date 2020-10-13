@@ -3260,6 +3260,8 @@ def minvpcid : Flag<["-"], "minvpcid">, Group<m_x86_Features_Group>;
 def mno_invpcid : Flag<["-"], "mno-invpcid">, Group<m_x86_Features_Group>;
 def mgfni : Flag<["-"], "mgfni">, Group<m_x86_Features_Group>;
 def mno_gfni : Flag<["-"], "mno-gfni">, Group<m_x86_Features_Group>;
+def mhreset : Flag<["-"], "mhreset">, Group<m_x86_Features_Group>;
+def mno_hreset : Flag<["-"], "mno-hreset">, Group<m_x86_Features_Group>;
 def mkl : Flag<["-"], "mkl">, Group<m_x86_Features_Group>;
 def mno_kl : Flag<["-"], "mno-kl">, Group<m_x86_Features_Group>;
 def mwidekl : Flag<["-"], "mwidekl">, Group<m_x86_Features_Group>;

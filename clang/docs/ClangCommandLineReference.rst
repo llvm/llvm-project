@@ -3261,6 +3261,8 @@ X86
 
 .. option:: -mgfni, -mno-gfni
 
+.. option:: -mhreset, -mno-hreset
+
 .. option:: -minvpcid, -mno-invpcid
 
 .. option:: -mkl, -mno-kl
