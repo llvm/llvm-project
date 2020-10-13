@@ -88,6 +88,7 @@ add_unittest(ClangdUnitTests ClangdTests
   TestFS.cpp
   TestIndex.cpp
   TestTU.cpp
+  TestWorkspace.cpp
   TypeHierarchyTests.cpp
   TweakTests.cpp
   TweakTesting.cpp
