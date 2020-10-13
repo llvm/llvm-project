@@ -439,7 +439,7 @@ class LLVMConfig(object):
         self.config.substitutions.append(
             (' clang ', """\"*** Do not use 'clang' in tests, use '%clang'. ***\""""))
         self.config.substitutions.append(
-            (' clang\+\+ ', """\"*** Do not use 'clang++' in tests, use '%clangxx'. ***\""""))
+            (r' clang\+\+ ', """\"*** Do not use 'clang++' in tests, use '%clangxx'. ***\""""))
         self.config.substitutions.append(
             (' clang-cc ',
              """\"*** Do not use 'clang-cc' in tests, use '%clang_cc1'. ***\""""))
@@ -494,11 +494,11 @@ class LLVMConfig(object):
         was_found = ld_lld and lld_link and ld64_lld and wasm_ld
         tool_substitutions = []
         if ld_lld:
-            tool_substitutions.append(ToolSubst('ld\.lld', command=ld_lld))
+            tool_substitutions.append(ToolSubst(r'ld\.lld', command=ld_lld))
         if lld_link:
             tool_substitutions.append(ToolSubst('lld-link', command=lld_link))
         if ld64_lld:
-            tool_substitutions.append(ToolSubst('ld64\.lld', command=ld64_lld))
+            tool_substitutions.append(ToolSubst(r'ld64\.lld', command=ld64_lld))
         if wasm_ld:
             tool_substitutions.append(ToolSubst('wasm-ld', command=wasm_ld))
         self.add_tool_substitutions(tool_substitutions)
