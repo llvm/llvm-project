@@ -67,6 +67,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "memcpyopt"
 
+// TODO: Actually implement MemorySSA-based MemCpyOpt.
+static cl::opt<bool>
+    EnableMemorySSA("enable-memcpyopt-memoryssa", cl::init(false), cl::Hidden,
+                    cl::desc("Use MemorySSA-backed MemCpyOpt."));
+
 STATISTIC(NumMemCpyInstr, "Number of memcpy instructions deleted");
 STATISTIC(NumMemSetInfer, "Number of memsets inferred");
 STATISTIC(NumMoveToCpy,   "Number of memmoves converted to memcpy");
@@ -282,6 +287,8 @@ private:
     AU.addPreserved<MemoryDependenceWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
     AU.addPreserved<AAResultsWrapperPass>();
+    if (EnableMemorySSA)
+      AU.addRequired<MemorySSAWrapperPass>();
     AU.addPreserved<MemorySSAWrapperPass>();
   }
 };
@@ -1477,7 +1484,8 @@ PreservedAnalyses MemCpyOptPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto *AA = &AM.getResult<AAManager>(F);
   auto *AC = &AM.getResult<AssumptionAnalysis>(F);
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  auto *MSSA = AM.getCachedResult<MemorySSAAnalysis>(F);
+  auto *MSSA = EnableMemorySSA ? &AM.getResult<MemorySSAAnalysis>(F)
+                               : AM.getCachedResult<MemorySSAAnalysis>(F);
 
   bool MadeChange =
       runImpl(F, &MD, &TLI, AA, AC, DT, MSSA ? &MSSA->getMSSA() : nullptr);
@@ -1534,7 +1542,9 @@ bool MemCpyOptLegacyPass::runOnFunction(Function &F) {
   auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
+  auto *MSSAWP = EnableMemorySSA
+      ? &getAnalysis<MemorySSAWrapperPass>()
+      : getAnalysisIfAvailable<MemorySSAWrapperPass>();
 
   return Impl.runImpl(F, MD, TLI, AA, AC, DT,
                       MSSAWP ? &MSSAWP->getMSSA() : nullptr);
