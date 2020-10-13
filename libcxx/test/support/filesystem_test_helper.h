@@ -4,7 +4,13 @@
 #include "filesystem_include.h"
 
 #include <sys/stat.h> // for stat, mkdir, mkfifo
+#ifndef _WIN32
 #include <unistd.h> // for ftruncate, link, symlink, getcwd, chdir
+#else
+#include <io.h>
+#include <direct.h>
+#include <windows.h> // for CreateSymbolicLink, CreateHardLink
+#endif
 
 #include <cassert>
 #include <cstdio> // for printf
@@ -24,6 +30,28 @@
 #endif
 
 namespace utils {
+#ifdef _WIN32
+    inline int mkdir(const char* path, int mode) { (void)mode; return ::_mkdir(path); }
+    inline int ftruncate(int fd, off_t length) { return ::_chsize(fd, length); }
+    inline int symlink(const char* oldname, const char* newname, bool is_dir) {
+        DWORD flags = is_dir ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0;
+        if (CreateSymbolicLinkA(newname, oldname,
+                                flags | SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE))
+          return 0;
+        if (GetLastError() != ERROR_INVALID_PARAMETER)
+          return 1;
+        return !CreateSymbolicLinkA(newname, oldname, flags);
+    }
+    inline int link(const char *oldname, const char* newname) {
+        return !CreateHardLinkA(newname, oldname, NULL);
+    }
+#else
+    using ::mkdir;
+    using ::ftruncate;
+    inline int symlink(const char* oldname, const char* newname, bool is_dir) { (void)is_dir; return ::symlink(oldname, newname); }
+    using ::link;
+#endif
+
     inline std::string getcwd() {
         // Assume that path lengths are not greater than this.
         // This should be fine for testing purposes.
@@ -42,7 +70,13 @@ namespace utils {
 struct scoped_test_env
 {
     scoped_test_env() : test_root(available_cwd_path()) {
-        std::string cmd = "mkdir -p " + test_root.native();
+#ifdef _WIN32
+        // Windows mkdir can create multiple recursive directories
+        // if needed.
+        std::string cmd = "mkdir " + test_root.string();
+#else
+        std::string cmd = "mkdir -p " + test_root.string();
+#endif
         int ret = std::system(cmd.c_str());
         assert(ret == 0);
 
@@ -54,11 +88,16 @@ struct scoped_test_env
     }
 
     ~scoped_test_env() {
-        std::string cmd = "chmod -R 777 " + test_root.native();
+#ifdef _WIN32
+        std::string cmd = "rmdir /s /q " + test_root.string();
+        int ret;
+#else
+        std::string cmd = "chmod -R 777 " + test_root.string();
         int ret = std::system(cmd.c_str());
         assert(ret == 0);
 
-        cmd = "rm -r " + test_root.native();
+        cmd = "rm -r " + test_root.string();
+#endif
         ret = std::system(cmd.c_str());
         assert(ret == 0);
     }
@@ -70,12 +109,12 @@ struct scoped_test_env
 
     std::string sanitize_path(std::string raw) {
         assert(raw.find("..") == std::string::npos);
-        std::string const& root = test_root.native();
+        std::string root = test_root.string();
         if (root.compare(0, root.size(), raw, 0, root.size()) != 0) {
             assert(raw.front() != '\\');
             fs::path tmp(test_root);
             tmp /= raw;
-            return std::move(const_cast<std::string&>(tmp.native()));
+            return tmp.string();
         }
         return raw;
     }
@@ -85,10 +124,11 @@ struct scoped_test_env
     // but the caller is not (std::filesystem also uses uintmax_t rather than
     // off_t). On a 32-bit system this allows us to create a file larger than
     // 2GB.
-    std::string create_file(std::string filename, uintmax_t size = 0) {
-#if defined(__LP64__)
+    std::string create_file(fs::path filename_path, uintmax_t size = 0) {
+        std::string filename = filename_path.string();
+#if defined(__LP64__) || defined(_WIN32)
         auto large_file_fopen = fopen;
-        auto large_file_ftruncate = ftruncate;
+        auto large_file_ftruncate = utils::ftruncate;
         using large_file_offset_t = off_t;
 #else
         auto large_file_fopen = fopen64;
@@ -104,7 +144,12 @@ struct scoped_test_env
             abort();
         }
 
-        FILE* file = large_file_fopen(filename.c_str(), "we");
+#ifndef _WIN32
+#define FOPEN_CLOEXEC_FLAG "e"
+#else
+#define FOPEN_CLOEXEC_FLAG ""
+#endif
+        FILE* file = large_file_fopen(filename.c_str(), "w" FOPEN_CLOEXEC_FLAG);
         if (file == nullptr) {
             fprintf(stderr, "fopen %s failed: %s\n", filename.c_str(),
                     strerror(errno));
@@ -123,38 +168,46 @@ struct scoped_test_env
         return filename;
     }
 
-    std::string create_dir(std::string filename) {
+    std::string create_dir(fs::path filename_path) {
+        std::string filename = filename_path.string();
         filename = sanitize_path(std::move(filename));
-        int ret = ::mkdir(filename.c_str(), 0777); // rwxrwxrwx mode
+        int ret = utils::mkdir(filename.c_str(), 0777); // rwxrwxrwx mode
         assert(ret == 0);
         return filename;
     }
 
-    std::string create_symlink(std::string source,
-                               std::string to,
-                               bool sanitize_source = true) {
+    std::string create_symlink(fs::path source_path,
+                               fs::path to_path,
+                               bool sanitize_source = true,
+                               bool is_dir = false) {
+        std::string source = source_path.string();
+        std::string to = to_path.string();
         if (sanitize_source)
             source = sanitize_path(std::move(source));
         to = sanitize_path(std::move(to));
-        int ret = ::symlink(source.c_str(), to.c_str());
+        int ret = utils::symlink(source.c_str(), to.c_str(), is_dir);
         assert(ret == 0);
         return to;
     }
 
-    std::string create_hardlink(std::string source, std::string to) {
+    std::string create_hardlink(fs::path source_path, fs::path to_path) {
+        std::string source = source_path.string();
+        std::string to = to_path.string();
         source = sanitize_path(std::move(source));
         to = sanitize_path(std::move(to));
-        int ret = ::link(source.c_str(), to.c_str());
+        int ret = utils::link(source.c_str(), to.c_str());
         assert(ret == 0);
         return to;
     }
 
+#ifndef _WIN32
     std::string create_fifo(std::string file) {
         file = sanitize_path(std::move(file));
         int ret = ::mkfifo(file.c_str(), 0666); // rw-rw-rw- mode
         assert(ret == 0);
         return file;
     }
+#endif
 
   // Some platforms doesn't support socket files so we shouldn't even
   // allow tests to call this unguarded.
@@ -186,7 +239,7 @@ private:
         fs::path const base = tmp / cwd.filename();
         int i = 0;
         fs::path p = base / ("static_env." + std::to_string(i));
-        while (utils::exists(p)) {
+        while (utils::exists(p.string())) {
             p = fs::path(base) / ("static_env." + std::to_string(++i));
         }
         return p;
@@ -222,7 +275,7 @@ public:
         env_.create_dir("dir1/dir2/dir3");
         env_.create_file("dir1/dir2/dir3/file5");
         env_.create_file("dir1/dir2/file4");
-        env_.create_symlink("dir3", "dir1/dir2/symlink_to_dir3", false);
+        env_.create_symlink("dir3", "dir1/dir2/symlink_to_dir3", false, true);
         env_.create_file("dir1/file1");
         env_.create_file("dir1/file2", 42);
         env_.create_file("empty_file");
@@ -398,7 +451,7 @@ std::size_t StrLen(CharT const* P) {
 // This hack forces path to allocate enough memory.
 inline void PathReserve(fs::path& p, std::size_t N) {
   auto const& native_ref = p.native();
-  const_cast<std::string&>(native_ref).reserve(N);
+  const_cast<fs::path::string_type&>(native_ref).reserve(N);
 }
 
 template <class Iter1, class Iter2>
@@ -526,8 +579,8 @@ struct ExceptionChecker {
     }
     auto transform_path = [](const fs::path& p) {
       if (p.native().empty())
-        return "\"\"";
-      return p.c_str();
+        return std::string("\"\"");
+      return p.string();
     };
     std::string format = [&]() -> std::string {
       switch (num_paths) {
@@ -537,12 +590,12 @@ struct ExceptionChecker {
       case 1:
         return format_string("filesystem error: in %s: %s%s [%s]", func_name,
                              additional_msg, message,
-                             transform_path(expected_path1));
+                             transform_path(expected_path1).c_str());
       case 2:
         return format_string("filesystem error: in %s: %s%s [%s] [%s]",
                              func_name, additional_msg, message,
-                             transform_path(expected_path1),
-                             transform_path(expected_path2));
+                             transform_path(expected_path1).c_str(),
+                             transform_path(expected_path2).c_str());
       default:
         TEST_CHECK(false && "unexpected case");
         return "";
