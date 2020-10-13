@@ -478,7 +478,7 @@ bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
       Args.insert(Ptr);
 
   // Instruction to lift before P.
-  SmallVector<Instruction*, 8> ToLift;
+  SmallVector<Instruction *, 8> ToLift{SI};
 
   // Memory locations of lifted instructions.
   SmallVector<MemoryLocation, 8> MemLocs{StoreLoc};
@@ -549,10 +549,40 @@ bool MemCpyOptPass::moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI) {
       }
   }
 
-  // We made it, we need to lift
+  // Find MSSA insertion point. Normally P will always have a corresponding
+  // memory access before which we can insert. However, with non-standard AA
+  // pipelines, there may be a mismatch between AA and MSSA, in which case we
+  // will scan for a memory access before P. In either case, we know for sure
+  // that at least the load will have a memory access.
+  // TODO: Simplify this once P will be determined by MSSA, in which case the
+  // discrepancy can no longer occur.
+  MemoryUseOrDef *MemInsertPoint = nullptr;
+  if (MSSAU) {
+    if (MemoryUseOrDef *MA = MSSAU->getMemorySSA()->getMemoryAccess(P)) {
+      MemInsertPoint = cast<MemoryUseOrDef>(--MA->getIterator());
+    } else {
+      const Instruction *ConstP = P;
+      for (const Instruction &I : make_range(++ConstP->getReverseIterator(),
+                                             ++LI->getReverseIterator())) {
+        if (MemoryUseOrDef *MA = MSSAU->getMemorySSA()->getMemoryAccess(&I)) {
+          MemInsertPoint = MA;
+          break;
+        }
+      }
+    }
+  }
+
+  // We made it, we need to lift.
   for (auto *I : llvm::reverse(ToLift)) {
     LLVM_DEBUG(dbgs() << "Lifting " << *I << " before " << *P << "\n");
     I->moveBefore(P);
+    if (MSSAU) {
+      assert(MemInsertPoint && "Must have found insert point");
+      if (MemoryUseOrDef *MA = MSSAU->getMemorySSA()->getMemoryAccess(I)) {
+        MSSAU->moveAfter(MA, MemInsertPoint);
+        MemInsertPoint = MA;
+      }
+    }
   }
 
   return true;
@@ -636,9 +666,8 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
                             << *M << "\n");
 
           if (MSSAU) {
-            assert(isa<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(P)));
             auto *LastDef =
-                cast<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(P));
+                cast<MemoryDef>(MSSAU->getMemorySSA()->getMemoryAccess(SI));
             auto *NewAccess =
                 MSSAU->createMemoryAccessAfter(M, LastDef, LastDef);
             MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
