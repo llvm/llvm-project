@@ -321,6 +321,8 @@ add_cxx_compile_flags_if_supported(-fno-rtti)
 if (LIBUNWIND_HAS_NOSTDINCXX_FLAG)
   list(APPEND LIBUNWIND_COMPILE_FLAGS -nostdinc++)
   # Remove -stdlib flags to prevent them from causing an unused flag warning.
+  string(REPLACE "--stdlib=libc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REPLACE "--stdlib=libstdc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   string(REPLACE "-stdlib=libc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   string(REPLACE "-stdlib=libstdc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
