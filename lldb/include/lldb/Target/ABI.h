@@ -159,7 +159,7 @@ public:
 protected:
   using ABI::ABI;
 
-  bool GetRegisterInfoByName(ConstString name, RegisterInfo &info);
+  bool GetRegisterInfoByName(llvm::StringRef name, RegisterInfo &info);
 
   virtual const RegisterInfo *GetRegisterInfoArray(uint32_t &count) = 0;
 };
