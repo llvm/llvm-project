@@ -3,7 +3,7 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @test(i8* %src, i64 %src_size, i8* %dst, i64 %dst_size, i8 %c) {
+define void @test(i8* %src, i64 %src_size, i8* noalias %dst, i64 %dst_size, i8 %c) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], [[SRC_SIZE]]
@@ -18,7 +18,7 @@ define void @test(i8* %src, i64 %src_size, i8* %dst, i64 %dst_size, i8 %c) {
   ret void
 }
 
-define void @test_different_types_i32_i64(i8* %dst, i8* %src, i32 %dst_size, i64 %src_size, i8 %c) {
+define void @test_different_types_i32_i64(i8* noalias %dst, i8* %src, i32 %dst_size, i64 %src_size, i8 %c) {
 ; CHECK-LABEL: @test_different_types_i32_i64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[DST_SIZE:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[TMP1]], [[SRC_SIZE:%.*]]
@@ -34,7 +34,7 @@ define void @test_different_types_i32_i64(i8* %dst, i8* %src, i32 %dst_size, i64
   ret void
 }
 
-define void @test_different_types_i128_i32(i8* %dst, i8* %src, i128 %dst_size, i32 %src_size, i8 %c) {
+define void @test_different_types_i128_i32(i8* noalias %dst, i8* %src, i128 %dst_size, i32 %src_size, i8 %c) {
 ; CHECK-LABEL: @test_different_types_i128_i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[SRC_SIZE:%.*]] to i128
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i128 [[DST_SIZE:%.*]], [[TMP1]]
@@ -50,7 +50,7 @@ define void @test_different_types_i128_i32(i8* %dst, i8* %src, i128 %dst_size, i
   ret void
 }
 
-define void @test_different_types_i32_i128(i8* %dst, i8* %src, i32 %dst_size, i128 %src_size, i8 %c) {
+define void @test_different_types_i32_i128(i8* noalias %dst, i8* %src, i32 %dst_size, i128 %src_size, i8 %c) {
 ; CHECK-LABEL: @test_different_types_i32_i128(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[DST_SIZE:%.*]] to i128
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i128 [[TMP1]], [[SRC_SIZE:%.*]]
@@ -66,7 +66,7 @@ define void @test_different_types_i32_i128(i8* %dst, i8* %src, i32 %dst_size, i1
   ret void
 }
 
-define void @test_different_types_i64_i32(i8* %dst, i8* %src, i64 %dst_size, i32 %src_size, i8 %c) {
+define void @test_different_types_i64_i32(i8* noalias %dst, i8* %src, i64 %dst_size, i32 %src_size, i8 %c) {
 ; CHECK-LABEL: @test_different_types_i64_i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[SRC_SIZE:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[TMP1]]
@@ -82,7 +82,7 @@ define void @test_different_types_i64_i32(i8* %dst, i8* %src, i64 %dst_size, i32
   ret void
 }
 
-define void @test_align_same(i8* %src, i8* %dst, i64 %dst_size) {
+define void @test_align_same(i8* %src, i8* noalias %dst, i64 %dst_size) {
 ; CHECK-LABEL: @test_align_same(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], 80
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], 80
@@ -97,7 +97,7 @@ define void @test_align_same(i8* %src, i8* %dst, i64 %dst_size) {
   ret void
 }
 
-define void @test_align_min(i8* %src, i8* %dst, i64 %dst_size) {
+define void @test_align_min(i8* %src, i8* noalias %dst, i64 %dst_size) {
 ; CHECK-LABEL: @test_align_min(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], 36
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], 36
@@ -112,7 +112,7 @@ define void @test_align_min(i8* %src, i8* %dst, i64 %dst_size) {
   ret void
 }
 
-define void @test_align_memcpy(i8* %src, i8* %dst, i64 %dst_size) {
+define void @test_align_memcpy(i8* %src, i8* noalias %dst, i64 %dst_size) {
 ; CHECK-LABEL: @test_align_memcpy(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], 80
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST_SIZE]], 80
@@ -127,7 +127,7 @@ define void @test_align_memcpy(i8* %src, i8* %dst, i64 %dst_size) {
   ret void
 }
 
-define void @test_non_i8_dst_type(i8* %src, i64 %src_size, i64* %dst_pi64, i64 %dst_size, i8 %c) {
+define void @test_non_i8_dst_type(i8* %src, i64 %src_size, i64* noalias %dst_pi64, i64 %dst_size, i8 %c) {
 ; CHECK-LABEL: @test_non_i8_dst_type(
 ; CHECK-NEXT:    [[DST:%.*]] = bitcast i64* [[DST_PI64:%.*]] to i8*
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[DST_SIZE:%.*]], [[SRC_SIZE:%.*]]
@@ -144,7 +144,7 @@ define void @test_non_i8_dst_type(i8* %src, i64 %src_size, i64* %dst_pi64, i64 %
   ret void
 }
 
-define void @test_different_dst(i8* %dst2, i8* %src, i64 %src_size, i8* %dst, i64 %dst_size) {
+define void @test_different_dst(i8* noalias %dst2, i8* %src, i64 %src_size, i8* noalias %dst, i64 %dst_size) {
 ; CHECK-LABEL: @test_different_dst(
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[DST:%.*]], i8 0, i64 [[DST_SIZE:%.*]], i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST2:%.*]], i8* [[SRC:%.*]], i64 [[SRC_SIZE:%.*]], i1 false)
@@ -157,7 +157,7 @@ define void @test_different_dst(i8* %dst2, i8* %src, i64 %src_size, i8* %dst, i6
 
 ; Make sure we also take into account dependencies on the destination.
 
-define i8 @test_intermediate_read(i8* %a, i8* %b) #0 {
+define i8 @test_intermediate_read(i8* noalias %a, i8* %b) #0 {
 ; CHECK-LABEL: @test_intermediate_read(
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[A:%.*]], i8 0, i64 64, i1 false)
 ; CHECK-NEXT:    [[R:%.*]] = load i8, i8* [[A]], align 1
@@ -191,7 +191,7 @@ define void @test_intermediate_write(i8* %b) #0 {
   ret void
 }
 
-define void @test_throwing_call(i8* %src, i64 %src_size, i8* %dst, i64 %dst_size, i8 %c) {
+define void @test_throwing_call(i8* %src, i64 %src_size, i8* noalias %dst, i64 %dst_size, i8 %c) {
 ; CHECK-LABEL: @test_throwing_call(
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[DST:%.*]], i8 [[C:%.*]], i64 [[DST_SIZE:%.*]], i1 false)
 ; CHECK-NEXT:    call void @call() [[ATTR2:#.*]]
@@ -219,6 +219,19 @@ define void @test_throwing_call_alloca(i8* %src, i64 %src_size, i64 %dst_size, i
   %dst = alloca i8
   call void @llvm.memset.p0i8.i64(i8* %dst, i8 %c, i64 %dst_size, i1 false)
   call void @call() readnone
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %src_size, i1 false)
+  ret void
+}
+
+; %dst and %src in the memcpy may be equal, in which case shorting the memset
+; is not legal.
+define void @test_missing_noalias(i8* %src, i64 %src_size, i8* %dst, i64 %dst_size, i8 %c) {
+; CHECK-LABEL: @test_missing_noalias(
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[DST:%.*]], i8 [[C:%.*]], i64 [[DST_SIZE:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST]], i8* [[SRC:%.*]], i64 [[SRC_SIZE:%.*]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0i8.i64(i8* %dst, i8 %c, i64 %dst_size, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %src_size, i1 false)
   ret void
 }
