@@ -1,4 +1,4 @@
-// RUN: %clang -std=c++14 -fcoroutines-ts -emit-llvm -S -O1 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -O1 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 
 #include "Inputs/coroutine.h"
 
@@ -48,6 +48,10 @@ detached_task foo() {
   co_return;
 }
 
-// check that the lifetime of the coroutine handle used to obtain the address ended right away.
-// CHECK:       %{{.*}} = call i8* @{{.*address.*}}(%"struct.std::experimental::coroutines_v1::coroutine_handle.0"* nonnull %{{.*}})
-// CHECK-NEXT:  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %{{.*}})
+// check that the lifetime of the coroutine handle used to obtain the address is contained within single basic block.
+// CHECK-LABEL: final.suspend:
+// CHECK:         %[[PTR1:.+]] = bitcast %"struct.std::experimental::coroutines_v1::coroutine_handle.0"* %[[ADDR_TMP:.+]] to i8*
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 8, i8* %[[PTR1]])
+// CHECK:         call i8* @{{.*address.*}}(%"struct.std::experimental::coroutines_v1::coroutine_handle.0"* %[[ADDR_TMP]])
+// CHECK-NEXT:    %[[PTR2:.+]] = bitcast %"struct.std::experimental::coroutines_v1::coroutine_handle.0"* %[[ADDR_TMP]] to i8*
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 8, i8* %[[PTR2]])
