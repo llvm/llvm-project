@@ -62,6 +62,59 @@ DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t var,
   return __builtin_amdgcn_ds_bpermute(index << 2, var);
 }
 
+static DEVICE SHARED uint32_t L1_Barrier;
+
+DEVICE void __kmpc_impl_target_init() {
+  // Don't have global ctors, and shared memory is not zero init
+  __atomic_store_n(&L1_Barrier, 0u, __ATOMIC_RELEASE);
+}
+
+DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
+  __atomic_thread_fence(__ATOMIC_ACQUIRE);
+
+  uint32_t num_waves = num_threads / WARPSIZE;
+
+  // Partial barrier implementation for amdgcn.
+  // Uses two 16 bit unsigned counters. One for the number of waves to have
+  // reached the barrier, and one to count how many times the barrier has been
+  // passed. These are packed in a single atomically accessed 32 bit integer.
+  // Low bits for the number of waves, assumed zero before this call.
+  // High bits to count the number of times the barrier has been passed.
+
+  assert(num_waves != 0);
+  assert(num_waves * WARPSIZE == num_threads);
+  assert(num_waves < 0xffffu);
+
+  // Increment the low 16 bits once, using the lowest active thread.
+  uint64_t lowestActiveThread = __kmpc_impl_ffs(__kmpc_impl_activemask()) - 1;
+  bool isLowest = GetLaneId() == lowestActiveThread;
+
+  if (isLowest) {
+    uint32_t load =
+        __atomic_fetch_add(&L1_Barrier, 1, __ATOMIC_RELAXED); // commutative
+
+    // Record the number of times the barrier has been passed
+    uint32_t generation = load & 0xffff0000u;
+
+    if ((load & 0x0000ffffu) == (num_waves - 1)) {
+      // Reached num_waves in low bits so this is the last wave.
+      // Set low bits to zero and increment high bits
+      load += 0x00010000u; // wrap is safe
+      load &= 0xffff0000u; // because bits zeroed second
+
+      // Reset the wave counter and release the waiting waves
+      __atomic_store_n(&L1_Barrier, load, __ATOMIC_RELAXED);
+    } else {
+      // more waves still to go, spin until generation counter changes
+      do {
+        __builtin_amdgcn_s_sleep(0);
+        load = __atomic_load_n(&L1_Barrier, __ATOMIC_RELAXED);
+      } while ((load & 0xffff0000u) == generation);
+    }
+  }
+  __atomic_thread_fence(__ATOMIC_RELEASE);
+}
+
 EXTERN uint64_t __ockl_get_local_size(uint32_t);
 EXTERN uint64_t __ockl_get_num_groups(uint32_t);
 DEVICE int GetNumberOfBlocksInKernel() { return __ockl_get_num_groups(0); }
