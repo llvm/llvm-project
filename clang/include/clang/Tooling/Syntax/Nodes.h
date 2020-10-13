@@ -206,7 +206,7 @@ public:
   Expression(NodeKind K) : Tree(K) {}
   static bool classof(const Node *N) {
     return NodeKind::UnknownExpression <= N->getKind() &&
-           N->getKind() <= NodeKind::UnknownExpression;
+           N->getKind() <= NodeKind::CallExpression;
   }
 };
 
