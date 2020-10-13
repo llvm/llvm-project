@@ -32,6 +32,7 @@ Sections:
         Field:           imported_table
         Kind:            TABLE
         Table:
+          Index:         0
           ElemType:      FUNCREF
           Limits:
             Flags:           [ HAS_MAX ]

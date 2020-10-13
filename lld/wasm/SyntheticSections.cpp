@@ -223,7 +223,7 @@ void TableSection::writeBody() {
     limits = {0, tableSize, 0};
   else
     limits = {WASM_LIMITS_FLAG_HAS_MAX, tableSize, tableSize};
-  writeTableType(os, WasmTable{WASM_TYPE_FUNCREF, limits});
+  writeTableType(os, WasmTable{0, WASM_TYPE_FUNCREF, limits});
 }
 
 void MemorySection::writeBody() {
