@@ -14,6 +14,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -31,7 +32,8 @@ class SarifDiagnostics : public PathDiagnosticConsumer {
   const LangOptions &LO;
 
 public:
-  SarifDiagnostics(const std::string &Output, const LangOptions &LO)
+  SarifDiagnostics(AnalyzerOptions &, const std::string &Output,
+                   const LangOptions &LO)
       : OutputFile(Output), LO(LO) {}
   ~SarifDiagnostics() override = default;
 
@@ -46,7 +48,7 @@ public:
 } // end anonymous namespace
 
 void ento::createSarifDiagnosticConsumer(
-    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
+    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
     const std::string &Output, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
 
@@ -54,9 +56,8 @@ void ento::createSarifDiagnosticConsumer(
   if (Output.empty())
     return;
 
-  C.push_back(new SarifDiagnostics(Output, PP.getLangOpts()));
-  createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, Output, PP,
-                                          CTU);
+  C.push_back(new SarifDiagnostics(AnalyzerOpts, Output, PP.getLangOpts()));
+  createTextMinimalPathDiagnosticConsumer(AnalyzerOpts, C, Output, PP, CTU);
 }
 
 static StringRef getFileName(const FileEntry &FE) {

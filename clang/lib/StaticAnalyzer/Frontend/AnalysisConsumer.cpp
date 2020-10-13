@@ -150,7 +150,7 @@ public:
       break;
 #define ANALYSIS_DIAGNOSTICS(NAME, CMDFLAG, DESC, CREATEFN)                    \
   case PD_##NAME:                                                              \
-    CREATEFN(Opts->getDiagOpts(), PathConsumers, OutDir, PP, CTU);             \
+    CREATEFN(*Opts.get(), PathConsumers, OutDir, PP, CTU);                     \
     break;
 #include "clang/StaticAnalyzer/Core/Analyses.def"
     default:
