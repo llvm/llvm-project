@@ -1125,32 +1125,14 @@ public:
     if (BaseT::getIntrinsicInstrCost(ICA, CostKind) == 0)
       return 0;
 
-    // Special case some scalar intrinsics.
-    Intrinsic::ID IID = ICA.getID();
-    if (CostKind != TTI::TCK_RecipThroughput) {
-      switch (IID) {
-      default:
-        break;
-      case Intrinsic::cttz:
-        if (getTLI()->isCheapToSpeculateCttz())
-          return TargetTransformInfo::TCC_Basic;
-        break;
-      case Intrinsic::ctlz:
-        if (getTLI()->isCheapToSpeculateCtlz())
-          return TargetTransformInfo::TCC_Basic;
-        break;
-      case Intrinsic::memcpy:
-        return thisT()->getMemcpyCost(ICA.getInst());
-        // TODO: other libc intrinsics.
-      }
-      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
-    }
-
-    // TODO: Combine these two logic paths.
     if (ICA.isTypeBasedOnly())
       return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
 
+    // TODO: Handle scalable vectors?
     Type *RetTy = ICA.getReturnType();
+    if (isa<ScalableVectorType>(RetTy))
+      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+
     unsigned VF = ICA.getVectorFactor();
     unsigned RetVF =
         (RetTy->isVectorTy() ? cast<FixedVectorType>(RetTy)->getNumElements()
@@ -1159,11 +1141,42 @@ public:
     const IntrinsicInst *I = ICA.getInst();
     const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
     FastMathFlags FMF = ICA.getFlags();
-
+    Intrinsic::ID IID = ICA.getID();
     switch (IID) {
     default:
+      // FIXME: all cost kinds should default to the same thing?
+      if (CostKind != TTI::TCK_RecipThroughput)
+        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       break;
+
+    case Intrinsic::cttz:
+      // FIXME: all cost kinds should default to the same thing?
+      if (CostKind != TTI::TCK_RecipThroughput) {
+        if (getTLI()->isCheapToSpeculateCttz())
+          return TargetTransformInfo::TCC_Basic;
+        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+      }
+      break;
+
+    case Intrinsic::ctlz:
+      // FIXME: all cost kinds should default to the same thing?
+      if (CostKind != TTI::TCK_RecipThroughput) {
+        if (getTLI()->isCheapToSpeculateCtlz())
+          return TargetTransformInfo::TCC_Basic;
+        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+      }
+      break;
+
+    case Intrinsic::memcpy:
+      // FIXME: all cost kinds should default to the same thing?
+      if (CostKind != TTI::TCK_RecipThroughput)
+        return thisT()->getMemcpyCost(ICA.getInst());
+      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+
     case Intrinsic::masked_scatter: {
+      // FIXME: all cost kinds should default to the same thing?
+      if (CostKind != TTI::TCK_RecipThroughput)
+        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       assert(VF == 1 && "Can't vectorize types here.");
       const Value *Mask = Args[3];
       bool VarMask = !isa<Constant>(Mask);
@@ -1173,6 +1186,9 @@ public:
                                              VarMask, Alignment, CostKind, I);
     }
     case Intrinsic::masked_gather: {
+      // FIXME: all cost kinds should default to the same thing?
+      if (CostKind != TTI::TCK_RecipThroughput)
+        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       assert(VF == 1 && "Can't vectorize types here.");
       const Value *Mask = Args[2];
       bool VarMask = !isa<Constant>(Mask);
@@ -1193,11 +1209,17 @@ public:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
+      // FIXME: all cost kinds should default to the same thing?
+      if (CostKind != TTI::TCK_RecipThroughput)
+        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, 1, I);
       return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
     }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
+      // FIXME: all cost kinds should default to the same thing?
+      if (CostKind != TTI::TCK_RecipThroughput)
+        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       const Value *X = Args[0];
       const Value *Y = Args[1];
       const Value *Z = Args[2];
