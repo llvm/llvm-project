@@ -17,7 +17,7 @@ __host__ __device__ void foo(const T **a) {
   constexpr T e = sizeof(a);
   constexpr T f = **a;
   // expected-error@-1 {{constexpr variable 'f' must be initialized by a constant expression}}
-  // expected-note@-2 {{read of non-constexpr variable 'a' is not allowed in a constant expression}}
+  // expected-note@-2 {{}}
   a[0] = &b;
   a[1] = &c;
   a[2] = &d;
@@ -30,7 +30,7 @@ __device__ void device_fun(const int **a) {
   static constexpr int c = sizeof(a);
   constexpr int d = **a;
   // expected-error@-1 {{constexpr variable 'd' must be initialized by a constant expression}}
-  // expected-note@-2 {{read of non-constexpr variable 'a' is not allowed in a constant expression}}
+  // expected-note@-2 {{}}
   a[0] = &b;
   a[1] = &c;
   foo(a);
@@ -43,7 +43,7 @@ void host_fun(const int **a) {
   static constexpr int c = sizeof(a);
   constexpr int d = **a;
   // expected-error@-1 {{constexpr variable 'd' must be initialized by a constant expression}}
-  // expected-note@-2 {{read of non-constexpr variable 'a' is not allowed in a constant expression}}
+  // expected-note@-2 {{}}
   a[0] = &b;
   a[1] = &c;
   foo(a);
@@ -55,7 +55,7 @@ __host__ __device__ void host_device_fun(const int **a) {
   static constexpr int c = sizeof(a);
   constexpr int d = **a;
   // expected-error@-1 {{constexpr variable 'd' must be initialized by a constant expression}}
-  // expected-note@-2 {{read of non-constexpr variable 'a' is not allowed in a constant expression}}
+  // expected-note@-2 {{}}
   a[0] = &b;
   a[1] = &c;
   foo(a);
