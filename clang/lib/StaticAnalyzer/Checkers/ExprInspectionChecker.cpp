@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Taint.h"
-#include "clang/Analysis/IssueHash.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/SValExplainer.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/IssueHash.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
@@ -326,7 +326,7 @@ void ExprInspectionChecker::analyzerHashDump(const CallExpr *CE,
   const SourceManager &SM = C.getSourceManager();
   FullSourceLoc FL(CE->getArg(0)->getBeginLoc(), SM);
   std::string HashContent =
-      getIssueString(FL, getCheckerName().getName(), "Category",
+      GetIssueString(SM, FL, getCheckerName().getName(), "Category",
                      C.getLocationContext()->getDecl(), Opts);
 
   reportBug(HashContent, C);
