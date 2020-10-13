@@ -4,13 +4,12 @@
 // RUN: | FileCheck %s
 
 func @main() {
-  %A = constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32>
+  %A = constant dense<[[1.0, 2.0], [4.0, 5.0]]> : tensor<2x2xf32>
   %B = constant dense<[[1.0, 2.0, 3.0, 4.0],
-                       [5.0, 6.0, 7.0, 8.0],
-                       [9.0, 10.0, 11.0, 12.0]]> : tensor<3x4xf32>
+                       [5.0, 6.0, 7.0, 8.0]]> : tensor<2x4xf32>
   %C = constant dense<1000.0> : tensor<2x4xf32>
 
-  %D = linalg.matmul ins(%A, %B: tensor<2x3xf32>, tensor<3x4xf32>)
+  %D = linalg.matmul ins(%A, %B: tensor<2x2xf32>, tensor<2x4xf32>)
                      init(%C: tensor<2x4xf32>) -> tensor<2x4xf32>
 
   %unranked = tensor_cast %D : tensor<2x4xf32> to tensor<*xf32>
@@ -18,8 +17,8 @@ func @main() {
 
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
   // CHECK-SAME: rank = 2 offset = 0 sizes = [2, 4] strides = [4, 1] data =
-  // CHECK-NEXT: [1038,   1044,   1050,   1056]
-  // CHECK-NEXT: [1065,   1074,   1083,   1092]
+  // CHECK-NEXT: [1011, 1014, 1017, 1020]
+  // CHECK-NEXT: [1029, 1038, 1047, 1056]
 
   return
 }
