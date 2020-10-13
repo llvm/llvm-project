@@ -217,11 +217,11 @@ namespace ParameterScopes {
 
   const int k = 42;
   constexpr const int &ObscureTheTruth(const int &a) { return a; }
-  constexpr const int &MaybeReturnJunk(bool b, const int a) {
+  constexpr const int &MaybeReturnJunk(bool b, const int a) { // expected-note 2{{declared here}}
     return ObscureTheTruth(b ? a : k);
   }
   static_assert(MaybeReturnJunk(false, 0) == 42, ""); // ok
-  constexpr int a = MaybeReturnJunk(true, 0); // expected-error {{constant expression}} expected-note {{read of object outside its lifetime}}
+  constexpr int a = MaybeReturnJunk(true, 0); // expected-error {{constant expression}} expected-note {{read of variable whose lifetime has ended}}
 
   constexpr const int MaybeReturnNonstaticRef(bool b, const int a) {
     return ObscureTheTruth(b ? a : k);
@@ -230,7 +230,7 @@ namespace ParameterScopes {
   constexpr int b = MaybeReturnNonstaticRef(true, 0); // ok
 
   constexpr int InternalReturnJunk(int n) {
-    return MaybeReturnJunk(true, n); // expected-note {{read of object outside its lifetime}}
+    return MaybeReturnJunk(true, n); // expected-note {{read of variable whose lifetime has ended}}
   }
   constexpr int n3 = InternalReturnJunk(0); // expected-error {{must be initialized by a constant expression}} expected-note {{in call to 'InternalReturnJunk(0)'}}
 
@@ -1568,7 +1568,7 @@ namespace RecursiveOpaqueExpr {
 namespace VLASizeof {
 
   void f(int k) { // expected-note {{here}}
-    int arr[k]; // expected-warning {{C99}} expected-note {{function parameter 'k'}}
+    int arr[k]; // expected-warning {{C99}} expected-note {{non-const variable 'k'}}
     constexpr int n = 1 +
         sizeof(arr) // expected-error {{constant expression}}
         * 3;
@@ -1928,9 +1928,9 @@ namespace Lifetime {
     int n = 0;
     constexpr int f() const { return 0; }
   };
-  constexpr Q *out_of_lifetime(Q q) { return &q; } // expected-warning {{address of stack}}
-  constexpr int k3 = out_of_lifetime({})->n; // expected-error {{constant expression}} expected-note {{read of object outside its lifetime}}
-  constexpr int k4 = out_of_lifetime({})->f(); // expected-error {{constant expression}} expected-note {{member call on object outside its lifetime}}
+  constexpr Q *out_of_lifetime(Q q) { return &q; } // expected-warning {{address of stack}} expected-note 2{{declared here}}
+  constexpr int k3 = out_of_lifetime({})->n; // expected-error {{constant expression}} expected-note {{read of variable whose lifetime has ended}}
+  constexpr int k4 = out_of_lifetime({})->f(); // expected-error {{constant expression}} expected-note {{member call on variable whose lifetime has ended}}
 
   constexpr int null = ((Q*)nullptr)->f(); // expected-error {{constant expression}} expected-note {{member call on dereferenced null pointer}}
 
@@ -2252,7 +2252,7 @@ namespace ns1 {
 void f(char c) { //expected-note2{{declared here}}
   struct X {
     static constexpr char f() { //expected-error{{never produces a constant expression}}
-      return c; //expected-error{{reference to local}} expected-note{{function parameter}}
+      return c; //expected-error{{reference to local}} expected-note{{non-const variable}}
     }
   };
   int I = X::f();
@@ -2312,7 +2312,7 @@ namespace array_size {
   template<typename T> void f1(T t) {
     constexpr int k = t.size();
   }
-  template<typename T> void f2(const T &t) { // expected-note {{declared here}}
+  template<typename T> void f2(const T &t) {
     constexpr int k = t.size(); // expected-error {{constant}} expected-note {{function parameter 't' with unknown value cannot be used in a constant expression}}
   }
   template<typename T> void f3(const T &t) {
