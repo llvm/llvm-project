@@ -1570,7 +1570,7 @@ define <2 x i8> @trunc_lshr_sext_uniform(<2 x i8> %A) {
 
 define <2 x i8> @trunc_lshr_sext_uniform_undef(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_sext_uniform_undef(
-; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A:%.*]], <i8 6, i8 7>
+; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A:%.*]], <i8 6, i8 undef>
 ; ALL-NEXT:    ret <2 x i8> [[D]]
 ;
   %B = sext <2 x i8> %A to <2 x i32>
@@ -1592,7 +1592,7 @@ define <2 x i8> @trunc_lshr_sext_nonuniform(<2 x i8> %A) {
 
 define <3 x i8> @trunc_lshr_sext_nonuniform_undef(<3 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_sext_nonuniform_undef(
-; ALL-NEXT:    [[D:%.*]] = ashr <3 x i8> [[A:%.*]], <i8 6, i8 2, i8 7>
+; ALL-NEXT:    [[D:%.*]] = ashr <3 x i8> [[A:%.*]], <i8 6, i8 2, i8 undef>
 ; ALL-NEXT:    ret <3 x i8> [[D]]
 ;
   %B = sext <3 x i8> %A to <3 x i32>
