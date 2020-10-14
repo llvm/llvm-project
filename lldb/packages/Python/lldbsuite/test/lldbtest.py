@@ -1038,6 +1038,7 @@ class Base(unittest2.TestCase):
         if not configuration.is_reproducer():
             # Assert that the global module cache is empty.
             # (rdar://problem/64424164) self.assertEqual(lldb.SBModule.GetNumberAllocatedModules(), 0)
+            pass
 
 
     # =========================================================
