@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-extract -S | FileCheck %s
+; RUN: opt < %s -break-crit-edges -loop-simplify -loop-extract -S | FileCheck %s
 
 ; This function has 2 simple loops and they should be extracted into 2 new functions.
 define void @test3() {

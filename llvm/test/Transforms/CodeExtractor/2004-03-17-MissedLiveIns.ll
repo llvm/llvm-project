@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-extract -disable-output
+; RUN: opt < %s -loop-simplify -loop-extract -disable-output
 
 define void @sendMTFValues() {
 entry:
