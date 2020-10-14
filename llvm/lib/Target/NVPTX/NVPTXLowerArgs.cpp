@@ -172,8 +172,12 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
   Value *ArgInParam = new AddrSpaceCastInst(
       Arg, PointerType::get(StructType, ADDRESS_SPACE_PARAM), Arg->getName(),
       FirstInst);
+  // Be sure to propagate alignment to this load; LLVM doesn't know that NVPTX
+  // addrspacecast preserves alignment.  Since params are constant, this load is
+  // definitely not volatile.
   LoadInst *LI =
-      new LoadInst(StructType, ArgInParam, Arg->getName(), FirstInst);
+      new LoadInst(StructType, ArgInParam, Arg->getName(),
+                   /*isVolatile=*/false, AllocA->getAlign(), FirstInst);
   new StoreInst(LI, AllocA, FirstInst);
 }
 
