@@ -1936,7 +1936,7 @@ def successor;
 // }
 // ```
 //
-// To define a custom builder, the parameter list (*including* the `Builder
+// To define a custom builder, the parameter list (*excluding* the `Builder
 // *builder, OperationState &state` part) and body should be passed in
 // as separate template arguments to this class. This is because we generate
 // op declaration and definition into separate files. If an empty string is
