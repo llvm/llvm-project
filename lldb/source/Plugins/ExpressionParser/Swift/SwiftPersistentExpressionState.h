@@ -15,10 +15,13 @@
 
 #include "SwiftExpressionVariable.h"
 
+#include "swift/AST/Import.h"
+#include "swift/AST/Module.h"
+
 #include "lldb/Core/SwiftForward.h"
 #include "lldb/Expression/ExpressionVariable.h"
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <set>
@@ -38,7 +41,9 @@ namespace lldb_private {
 /// 0-based counter for naming result variables.
 //----------------------------------------------------------------------
 class SwiftPersistentExpressionState : public PersistentExpressionState {
-  typedef std::set<lldb_private::ConstString> HandLoadedModuleSet;
+
+  typedef llvm::StringMap<swift::AttributedImport<swift::ImportedModule>>
+      HandLoadedModuleSet;
 
 public:
   class SwiftDeclMap {
@@ -114,8 +119,11 @@ public:
 
   // This just adds this module to the list of hand-loaded modules, it doesn't
   // actually load it.
-  void AddHandLoadedModule(ConstString module_name) {
-    m_hand_loaded_modules.insert(module_name);
+  void AddHandLoadedModule(
+      ConstString module_name,
+      swift::AttributedImport<swift::ImportedModule> attributed_import) {
+    m_hand_loaded_modules.insert_or_assign(module_name.GetStringRef(),
+                                           attributed_import);
   }
 
   /// This returns the list of hand-loaded modules.

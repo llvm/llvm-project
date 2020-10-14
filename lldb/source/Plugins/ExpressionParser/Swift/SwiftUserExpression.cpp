@@ -285,8 +285,38 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                  "couldn't start parsing (no target)");
     return false;
   }
+
+  StackFrame *frame = exe_ctx.GetFramePtr();
+  if (!frame) {
+    LLDB_LOG(log, "no stack frame");
+    return false;
+  }
+
+  // Make sure the target's SwiftASTContext has been setup before doing any
+  // Swift name lookups.
+  llvm::Optional<SwiftASTContextReader> maybe_swift_ast_ctx =
+      target->GetScratchSwiftASTContext(err, *frame);
+  if (!maybe_swift_ast_ctx) {
+    LLDB_LOG(log, "no Swift AST Context");
+    return false;
+  }
+
+  SwiftASTContext *swift_ast_ctx = maybe_swift_ast_ctx->get();
+
   if (auto *persistent_state = GetPersistentState(target, exe_ctx)) {
-    persistent_state->AddHandLoadedModule(ConstString("Swift"));
+
+    Status error;
+    SourceModule module_info;
+    module_info.path.emplace_back("Swift");
+    swift::ModuleDecl *module = swift_ast_ctx->GetModule(module_info, error);
+
+    if (error.Fail() || !module) {
+      LLDB_LOG(log, "couldn't load Swift Standard Library\n");
+      return false;
+    }
+
+    persistent_state->AddHandLoadedModule(ConstString("Swift"),
+                                          swift::ImportedModule(module));
     m_result_delegate.RegisterPersistentState(persistent_state);
     m_error_delegate.RegisterPersistentState(persistent_state);
   } else {
