@@ -1,14 +1,14 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec  < %s | \
+; RUN:     -mattr=-altivec -data-sections=false < %s | \
 ; RUN:   FileCheck --check-prefix=VISIBILITY-ASM %s
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec -ignore-xcoff-visibility < %s | \
+; RUN:     -mattr=-altivec -data-sections=false -ignore-xcoff-visibility < %s | \
 ; RUN:   FileCheck --check-prefix=IGNOREVISIBILITY-ASM %s
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec < %s | \
+; RUN:     -mattr=-altivec -data-sections=false < %s | \
 ; RUN:   FileCheck --check-prefix=VISIBILITY-ASM %s
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec -ignore-xcoff-visibility < %s | \
+; RUN:     -mattr=-altivec -data-sections=false -ignore-xcoff-visibility < %s | \
 ; RUN:   FileCheck --check-prefix=IGNOREVISIBILITY-ASM %s
 
 @foo_p = global void ()* @zoo_extern_h, align 4

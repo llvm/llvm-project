@@ -1,15 +1,15 @@
 ; This file tests the codegen of initialized and common variables in AIX
 ; assembly and XCOFF object files.
 
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck --check-prefixes=CHECK,CHECK32 %s
-; RUN: llc -mtriple powerpc64-ibm-aix-xcoff < %s | FileCheck --check-prefixes=CHECK,CHECK64 %s
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff -data-sections=false < %s | FileCheck --check-prefixes=CHECK,CHECK32 %s
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -data-sections=false < %s | FileCheck --check-prefixes=CHECK,CHECK64 %s
 
-; RUN: llc -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
+; RUN: llc -mtriple powerpc-ibm-aix-xcoff -data-sections=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --section-headers --file-header %t.o | \
 ; RUN: FileCheck --check-prefix=OBJ %s
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYMS %s
 
-; RUN: not --crash llc -mtriple powerpc64-ibm-aix-xcoff -filetype=obj < %s 2>&1 | \
+; RUN: not --crash llc -mtriple powerpc64-ibm-aix-xcoff -data-sections=false -filetype=obj < %s 2>&1 | \
 ; RUN: FileCheck --check-prefix=XCOFF64 %s
 ; XCOFF64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
 
