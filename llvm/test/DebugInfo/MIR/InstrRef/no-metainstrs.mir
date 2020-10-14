@@ -1,5 +1,7 @@
 # RUN: not --crash llc %s -march=x86-64 -run-pass=machineverifier -o - 2>&1 | FileCheck %s
 #
+# REQUIRES: x86-registered-target
+#
 # CHECK: Metadata instruction should not have a value tracking number
 --- |
   define i32 @test(i32 %bar) local_unnamed_addr !dbg !7 {
