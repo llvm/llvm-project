@@ -10,7 +10,7 @@ define void @add_cr_nsw_nuw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -37,7 +37,7 @@ define void @add_cr_nuw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I_NEXT]], -1
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -64,7 +64,7 @@ define void @add_cr_nsw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ -10, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nsw i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I_NEXT]], 10
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -91,7 +91,7 @@ define void @add_cr_none() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 10, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -118,7 +118,7 @@ define void @add_unknown_none(i32 %n) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -145,7 +145,7 @@ define void @sub_cr_nsw_nuw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = sub nsw i32 [[I]], -1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -173,7 +173,7 @@ define void @sub_unknown_none(i32 %n) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = sub i32 [[I]], -1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -206,7 +206,7 @@ define void @mul_cr_nsw_nuw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = mul i32 [[I]], 2
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -234,7 +234,7 @@ define void @shl_cr_nsw_nuw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = shl i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -262,7 +262,7 @@ define void @lshr_cr_nsw_nuw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 1024, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = lshr i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -290,7 +290,7 @@ define void @lshr_cr_nuw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = lshr i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -318,7 +318,7 @@ define void @ashr_cr_nsw_nuw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 1024, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = ashr i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -346,7 +346,7 @@ define void @ashr_cr_nsw() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ -1024, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = ashr i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[I_NEXT]], 1
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
