@@ -525,5 +525,5 @@ def err_drv_invalid_object_mode : Error<"OBJECT_MODE setting %0 is not recognize
 def err_drv_invalid_sve_vector_bits : Error<
   "'-msve-vector-bits' is not supported without SVE enabled">;
 
-def err_invalid_cxx_abi : Error<"Invalid C++ ABI name '%0'">;
+def err_invalid_cxx_abi : Error<"invalid C++ ABI name '%0'">;
 }
