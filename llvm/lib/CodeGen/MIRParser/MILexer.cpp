@@ -217,6 +217,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("exact", MIToken::kw_exact)
       .Case("nofpexcept", MIToken::kw_nofpexcept)
       .Case("debug-location", MIToken::kw_debug_location)
+      .Case("debug-instr-number", MIToken::kw_debug_instr_number)
       .Case("same_value", MIToken::kw_cfi_same_value)
       .Case("offset", MIToken::kw_cfi_offset)
       .Case("rel_offset", MIToken::kw_cfi_rel_offset)
