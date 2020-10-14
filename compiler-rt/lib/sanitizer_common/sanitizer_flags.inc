@@ -45,7 +45,7 @@ COMMON_FLAG(bool, fast_unwind_on_fatal, false,
 // [1] https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92172
 // [2] https://bugs.llvm.org/show_bug.cgi?id=44158
 COMMON_FLAG(bool, fast_unwind_on_malloc,
-	    !(SANITIZER_LINUX && !SANITIZER_ANDROID && SANITIZER_ARM),
+            !(SANITIZER_LINUX && !SANITIZER_ANDROID && SANITIZER_ARM),
             "If available, use the fast frame-pointer-based unwinder on "
             "malloc/free.")
 COMMON_FLAG(bool, handle_ioctl, false, "Intercept and handle ioctl requests.")
