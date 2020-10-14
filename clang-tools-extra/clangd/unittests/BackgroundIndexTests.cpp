@@ -21,6 +21,7 @@ using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Not;
+using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
 namespace clang {
@@ -914,6 +915,19 @@ TEST(BackgroundQueueTest, Progress) {
   EXPECT_EQ(S.Enqueued, 2000u);
   EXPECT_EQ(S.Completed, 2000u);
   EXPECT_EQ(S.LastIdle, 2000u);
+}
+
+TEST(BackgroundIndex, Profile) {
+  MockFS FS;
+  MockCompilationDatabase CDB;
+  BackgroundIndex Idx(FS, CDB, [](llvm::StringRef) { return nullptr; },
+                      /*Opts=*/{});
+
+  llvm::BumpPtrAllocator Alloc;
+  MemoryTree MT(&Alloc);
+  Idx.profile(MT);
+  ASSERT_THAT(MT.children(),
+              UnorderedElementsAre(Pair("symbols", _), Pair("index", _)));
 }
 
 } // namespace clangd

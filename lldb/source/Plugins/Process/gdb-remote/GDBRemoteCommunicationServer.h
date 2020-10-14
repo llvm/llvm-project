@@ -79,18 +79,6 @@ private:
   operator=(const GDBRemoteCommunicationServer &) = delete;
 };
 
-class PacketUnimplementedError
-    : public llvm::ErrorInfo<PacketUnimplementedError, llvm::StringError> {
-public:
-  static char ID;
-  using llvm::ErrorInfo<PacketUnimplementedError,
-                        llvm::StringError>::ErrorInfo; // inherit constructors
-  PacketUnimplementedError(const llvm::Twine &S)
-      : ErrorInfo(S, llvm::errc::not_supported) {}
-
-  PacketUnimplementedError() : ErrorInfo(llvm::errc::not_supported) {}
-};
-
 } // namespace process_gdb_remote
 } // namespace lldb_private
 

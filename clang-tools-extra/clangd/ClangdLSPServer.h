@@ -17,11 +17,13 @@
 #include "Protocol.h"
 #include "Transport.h"
 #include "support/Context.h"
+#include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/JSON.h"
+#include <chrono>
 #include <memory>
 
 namespace clang {
@@ -66,6 +68,9 @@ public:
   ///
   /// \return Whether we shut down cleanly with a 'shutdown' -> 'exit' sequence.
   bool run();
+
+  /// Profiles resource-usage.
+  void profile(MemoryTree &MT) const;
 
 private:
   // Implement ClangdServer::Callbacks.
@@ -159,6 +164,14 @@ private:
 
   /// Sends a "publishDiagnostics" notification to the LSP client.
   void publishDiagnostics(const PublishDiagnosticsParams &);
+
+  /// Runs profiling and exports memory usage metrics if tracing is enabled and
+  /// profiling hasn't happened recently.
+  void maybeExportMemoryProfile();
+
+  /// Timepoint until which profiling is off. It is used to throttle profiling
+  /// requests.
+  std::chrono::steady_clock::time_point NextProfileTime;
 
   /// Since initialization of CDBs and ClangdServer is done lazily, the
   /// following context captures the one used while creating ClangdLSPServer and

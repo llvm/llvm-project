@@ -19,13 +19,10 @@ declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 define i16 @fshl_i16(i16 %x, i16 %y, i16 %z) {
 ; CHECK-LABEL: fshl_i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    and r2, r2, #15
-; CHECK-NEXT:    mov r3, #31
-; CHECK-NEXT:    lsl r1, r1, #16
-; CHECK-NEXT:    bic r3, r3, r2
-; CHECK-NEXT:    lsl r0, r0, r2
-; CHECK-NEXT:    lsr r1, r1, #1
-; CHECK-NEXT:    orr r0, r0, r1, lsr r3
+; CHECK-NEXT:    pkhbt r0, r1, r0, lsl #16
+; CHECK-NEXT:    and r1, r2, #15
+; CHECK-NEXT:    lsl r0, r0, r1
+; CHECK-NEXT:    lsr r0, r0, #16
 ; CHECK-NEXT:    bx lr
   %f = call i16 @llvm.fshl.i16(i16 %x, i16 %y, i16 %z)
   ret i16 %f
@@ -188,15 +185,9 @@ define i8 @fshl_i8_const_fold() {
 define i16 @fshr_i16(i16 %x, i16 %y, i16 %z) {
 ; CHECK-LABEL: fshr_i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mov r3, #1
-; CHECK-NEXT:    lsl r0, r0, #1
-; CHECK-NEXT:    bfi r2, r3, #4, #28
-; CHECK-NEXT:    mov r3, #31
-; CHECK-NEXT:    bic r3, r3, r2
-; CHECK-NEXT:    and r2, r2, #31
-; CHECK-NEXT:    lsl r1, r1, #16
-; CHECK-NEXT:    lsl r0, r0, r3
-; CHECK-NEXT:    orr r0, r0, r1, lsr r2
+; CHECK-NEXT:    pkhbt r0, r1, r0, lsl #16
+; CHECK-NEXT:    and r1, r2, #15
+; CHECK-NEXT:    lsr r0, r0, r1
 ; CHECK-NEXT:    bx lr
   %f = call i16 @llvm.fshr.i16(i16 %x, i16 %y, i16 %z)
   ret i16 %f

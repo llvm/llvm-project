@@ -166,21 +166,23 @@ define i8 @testnullptrint(i8* %buf, i8* %end) nounwind {
 ; PTR64-NEXT:    ret i8 [[RET]]
 ;
 ; PTR32-LABEL: @testnullptrint(
+; PTR32-NEXT:    [[BUF1:%.*]] = ptrtoint i8* [[BUF:%.*]] to i32
 ; PTR32-NEXT:    br label [[LOOPGUARD:%.*]]
 ; PTR32:       loopguard:
-; PTR32-NEXT:    [[BI:%.*]] = ptrtoint i8* [[BUF:%.*]] to i32
+; PTR32-NEXT:    [[BI:%.*]] = ptrtoint i8* [[BUF]] to i32
 ; PTR32-NEXT:    [[EI:%.*]] = ptrtoint i8* [[END:%.*]] to i32
 ; PTR32-NEXT:    [[CNT:%.*]] = sub i32 [[EI]], [[BI]]
-; PTR32-NEXT:    [[CNT1:%.*]] = inttoptr i32 [[CNT]] to i8*
 ; PTR32-NEXT:    [[GUARD:%.*]] = icmp ult i32 0, [[CNT]]
 ; PTR32-NEXT:    br i1 [[GUARD]], label [[PREHEADER:%.*]], label [[EXIT:%.*]]
 ; PTR32:       preheader:
+; PTR32-NEXT:    [[TMP1:%.*]] = sub i32 0, [[BUF1]]
+; PTR32-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[END]], i32 [[TMP1]]
 ; PTR32-NEXT:    br label [[LOOP:%.*]]
 ; PTR32:       loop:
 ; PTR32-NEXT:    [[P_01_US_US:%.*]] = phi i8* [ null, [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]
 ; PTR32-NEXT:    [[GEP]] = getelementptr inbounds i8, i8* [[P_01_US_US]], i64 1
-; PTR32-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]]
-; PTR32-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[GEP]], [[CNT1]]
+; PTR32-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]], align 1
+; PTR32-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[GEP]], [[SCEVGEP]]
 ; PTR32-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; PTR32:       exit.loopexit:
 ; PTR32-NEXT:    [[SNEXT_LCSSA:%.*]] = phi i8 [ [[SNEXT]], [[LOOP]] ]
@@ -256,10 +258,10 @@ define i8 @testptrint(i8* %buf, i8* %end) nounwind {
 ; PTR32-NEXT:    [[P_01_US_US:%.*]] = phi i8* [ [[BUF]], [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]
 ; PTR32-NEXT:    [[IV:%.*]] = phi i32 [ [[BI]], [[PREHEADER]] ], [ [[IVNEXT:%.*]], [[LOOP]] ]
 ; PTR32-NEXT:    [[GEP]] = getelementptr inbounds i8, i8* [[P_01_US_US]], i64 1
-; PTR32-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]]
+; PTR32-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]], align 1
 ; PTR32-NEXT:    [[IVNEXT]] = add nuw i32 [[IV]], 1
-; PTR32-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IVNEXT]], [[CNT]]
-; PTR32-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
+; PTR32-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IVNEXT]], [[CNT]]
+; PTR32-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; PTR32:       exit.loopexit:
 ; PTR32-NEXT:    [[SNEXT_LCSSA:%.*]] = phi i8 [ [[SNEXT]], [[LOOP]] ]
 ; PTR32-NEXT:    br label [[EXIT]]

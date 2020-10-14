@@ -219,11 +219,11 @@ std::string SymbolInfoMap::SymbolInfo::getVarDecl(StringRef name) const {
   case Kind::Operand: {
     // Use operand range for captured operands (to support potential variadic
     // operands).
-    return std::string(
-        formatv("Operation::operand_range {0}(op0->getOperands());\n", name));
+    return std::string(formatv(
+        "::mlir::Operation::operand_range {0}(op0->getOperands());\n", name));
   }
   case Kind::Value: {
-    return std::string(formatv("ArrayRef<Value> {0};\n", name));
+    return std::string(formatv("::llvm::ArrayRef<::mlir::Value> {0};\n", name));
   }
   case Kind::Result: {
     // Use the op itself for captured results.

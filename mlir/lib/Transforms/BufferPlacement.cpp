@@ -875,8 +875,8 @@ LogicalResult BufferAssignmentFuncOpConverter::matchAndRewrite(
   TypeConverter::SignatureConversion conversion(funcType.getNumInputs());
   for (auto argType : llvm::enumerate(funcType.getInputs())) {
     SmallVector<Type, 2> decomposedTypes, convertedTypes;
-    converter->tryDecomposeType(argType.value(), decomposedTypes);
-    converter->convertTypes(decomposedTypes, convertedTypes);
+    converter.tryDecomposeType(argType.value(), decomposedTypes);
+    converter.convertTypes(decomposedTypes, convertedTypes);
     conversion.addInputs(argType.index(), convertedTypes);
   }
 
@@ -885,10 +885,10 @@ LogicalResult BufferAssignmentFuncOpConverter::matchAndRewrite(
   newResultTypes.reserve(funcOp.getNumResults());
   for (Type resultType : funcType.getResults()) {
     SmallVector<Type, 2> originTypes;
-    converter->tryDecomposeType(resultType, originTypes);
+    converter.tryDecomposeType(resultType, originTypes);
     for (auto origin : originTypes) {
-      Type converted = converter->convertType(origin);
-      auto kind = converter->getResultConversionKind(origin, converted);
+      Type converted = converter.convertType(origin);
+      auto kind = converter.getResultConversionKind(origin, converted);
       if (kind == BufferAssignmentTypeConverter::AppendToArgumentsList)
         conversion.addInputs(converted);
       else
@@ -897,7 +897,7 @@ LogicalResult BufferAssignmentFuncOpConverter::matchAndRewrite(
     }
   }
 
-  if (failed(rewriter.convertRegionTypes(&funcOp.getBody(), *converter,
+  if (failed(rewriter.convertRegionTypes(&funcOp.getBody(), converter,
                                          &conversion)))
     return failure();
 
@@ -986,8 +986,8 @@ LogicalResult BufferAssignmentCallOpConverter::matchAndRewrite(
   // values if a decompose callback function has been provided by the user.
   for (auto operand : operands) {
     SmallVector<Value, 2> values;
-    this->converter->tryDecomposeValue(builder, loc, operand.getType(), operand,
-                                       values);
+    this->converter.tryDecomposeValue(builder, loc, operand.getType(), operand,
+                                      values);
     newOperands.append(values.begin(), values.end());
   }
 
@@ -998,11 +998,11 @@ LogicalResult BufferAssignmentCallOpConverter::matchAndRewrite(
   mappings.resize(callOp.getNumResults());
   for (auto result : llvm::enumerate(callOp.getResults())) {
     SmallVector<Type, 2> originTypes;
-    converter->tryDecomposeType(result.value().getType(), originTypes);
+    converter.tryDecomposeType(result.value().getType(), originTypes);
     auto &resultMapping = mappings[result.index()];
     for (Type origin : originTypes) {
-      Type converted = converter->convertType(origin);
-      auto kind = converter->getResultConversionKind(origin, converted);
+      Type converted = converter.convertType(origin);
+      auto kind = converter.getResultConversionKind(origin, converted);
       if (kind == BufferAssignmentTypeConverter::KeepAsFunctionResult) {
         newResultTypes.push_back(converted);
         // The result value is not yet available. Its index is kept and it is
@@ -1039,7 +1039,7 @@ LogicalResult BufferAssignmentCallOpConverter::matchAndRewrite(
     } else {
       // Values need to be packed using callback function. The same callback
       // that is used for materializeArgumentConversion is used for packing.
-      Value packed = converter->materializeArgumentConversion(
+      Value packed = converter.materializeArgumentConversion(
           nextBuilder, loc, callOp.getType(i), valuesToPack);
       replacedValues.push_back(packed);
     }

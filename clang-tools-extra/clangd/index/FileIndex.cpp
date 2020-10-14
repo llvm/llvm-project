@@ -22,6 +22,7 @@
 #include "index/SymbolOrigin.h"
 #include "index/dex/Dex.h"
 #include "support/Logger.h"
+#include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Index/IndexingAction.h"
@@ -388,6 +389,25 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
   llvm_unreachable("Unknown clangd::IndexType");
 }
 
+void FileSymbols::profile(MemoryTree &MT) const {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  for (const auto &SymSlab : SymbolsSnapshot) {
+    MT.detail(SymSlab.first())
+        .child("symbols")
+        .addUsage(SymSlab.second->bytes());
+  }
+  for (const auto &RefSlab : RefsSnapshot) {
+    MT.detail(RefSlab.first())
+        .child("references")
+        .addUsage(RefSlab.second.Slab->bytes());
+  }
+  for (const auto &RelSlab : RelationsSnapshot) {
+    MT.detail(RelSlab.first())
+        .child("relations")
+        .addUsage(RelSlab.second->bytes());
+  }
+}
+
 FileIndex::FileIndex(bool UseDex, bool CollectMainFileRefs)
     : MergedIndex(&MainFileIndex, &PreambleIndex), UseDex(UseDex),
       CollectMainFileRefs(CollectMainFileRefs),
@@ -457,5 +477,15 @@ void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
   }
 }
 
+void FileIndex::profile(MemoryTree &MT) const {
+  PreambleSymbols.profile(MT.child("preamble").child("symbols"));
+  MT.child("preamble")
+      .child("index")
+      .addUsage(PreambleIndex.estimateMemoryUsage());
+  MainFileSymbols.profile(MT.child("main_file").child("symbols"));
+  MT.child("main_file")
+      .child("index")
+      .addUsage(MainFileIndex.estimateMemoryUsage());
+}
 } // namespace clangd
 } // namespace clang

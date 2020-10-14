@@ -22,20 +22,25 @@
 #include "index/Relation.h"
 #include "index/Serialization.h"
 #include "index/Symbol.h"
+#include "index/SymbolID.h"
 #include "support/Threading.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Allocator.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <utility>
+#include <vector>
 
 using ::testing::_;
 using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
+using ::testing::Gt;
 using ::testing::IsEmpty;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
@@ -86,6 +91,13 @@ std::unique_ptr<RefSlab> refSlab(const SymbolID &ID, const char *Path) {
   R.Kind = RefKind::Reference;
   Slab.insert(ID, R);
   return std::make_unique<RefSlab>(std::move(Slab).build());
+}
+
+std::unique_ptr<RelationSlab> relSlab(llvm::ArrayRef<const Relation> Rels) {
+  RelationSlab::Builder RelBuilder;
+  for (auto &Rel : Rels)
+    RelBuilder.insert(Rel);
+  return std::make_unique<RelationSlab>(std::move(RelBuilder).build());
 }
 
 TEST(FileSymbolsTest, UpdateAndGet) {
@@ -642,6 +654,50 @@ TEST(FileShardedIndexTest, Sharding) {
                 UnorderedElementsAre(BHeaderUri));
     EXPECT_TRUE(Shard->Cmd.hasValue());
   }
+}
+
+TEST(FileIndexTest, Profile) {
+  FileIndex FI;
+
+  auto FileName = testPath("foo.cpp");
+  auto AST = TestTU::withHeaderCode("int a;").build();
+  FI.updateMain(FileName, AST);
+  FI.updatePreamble(FileName, "v1", AST.getASTContext(),
+                    AST.getPreprocessorPtr(), AST.getCanonicalIncludes());
+
+  llvm::BumpPtrAllocator Alloc;
+  MemoryTree MT(&Alloc);
+  FI.profile(MT);
+  ASSERT_THAT(MT.children(),
+              UnorderedElementsAre(Pair("preamble", _), Pair("main_file", _)));
+
+  ASSERT_THAT(MT.child("preamble").children(),
+              UnorderedElementsAre(Pair("index", _), Pair("symbols", _)));
+  ASSERT_THAT(MT.child("main_file").children(),
+              UnorderedElementsAre(Pair("index", _), Pair("symbols", _)));
+
+  ASSERT_THAT(MT.child("preamble").child("index").total(), Gt(0U));
+  ASSERT_THAT(MT.child("main_file").child("index").total(), Gt(0U));
+}
+
+TEST(FileSymbolsTest, Profile) {
+  FileSymbols FS;
+  FS.update("f1", numSlab(1, 2), nullptr, nullptr, false);
+  FS.update("f2", nullptr, refSlab(SymbolID("1"), "f1"), nullptr, false);
+  FS.update("f3", nullptr, nullptr,
+            relSlab({{SymbolID("1"), RelationKind::BaseOf, SymbolID("2")}}),
+            false);
+  llvm::BumpPtrAllocator Alloc;
+  MemoryTree MT(&Alloc);
+  FS.profile(MT);
+  ASSERT_THAT(MT.children(), UnorderedElementsAre(Pair("f1", _), Pair("f2", _),
+                                                  Pair("f3", _)));
+  EXPECT_THAT(MT.child("f1").children(), ElementsAre(Pair("symbols", _)));
+  EXPECT_THAT(MT.child("f1").total(), Gt(0U));
+  EXPECT_THAT(MT.child("f2").children(), ElementsAre(Pair("references", _)));
+  EXPECT_THAT(MT.child("f2").total(), Gt(0U));
+  EXPECT_THAT(MT.child("f3").children(), ElementsAre(Pair("relations", _)));
+  EXPECT_THAT(MT.child("f3").total(), Gt(0U));
 }
 } // namespace
 } // namespace clangd
