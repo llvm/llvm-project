@@ -116,8 +116,7 @@ def Async_AwaitOp : Async_Op<"await", [NoSideEffect]> {
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"mlir::OpBuilder &builder, OperationState &result,"
-              "Value operand, ArrayRef<NamedAttribute> attrs = {}">,
+    OpBuilder<"Value operand, ArrayRef<NamedAttribute> attrs = {}">,
   ];
 
   let extraClassDeclaration = [{
