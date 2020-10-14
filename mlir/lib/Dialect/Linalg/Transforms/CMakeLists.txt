@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRLinalgTransforms
+  CodegenStrategy.cpp
   DropUnitDims.cpp
   Fusion.cpp
   FusionOnTensors.cpp
@@ -31,6 +32,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRPass
   MLIRStandard
   MLIRStandardToLLVM
+  MLIRTransforms
   MLIRTransformUtils
   MLIRVector
   )
