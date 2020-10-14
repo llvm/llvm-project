@@ -2797,17 +2797,18 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
         return false;
       }
 
-      // strip .py or .pyc extension
-      ConstString extension = target_file.GetFileNameExtension();
-      if (extension) {
-        if (llvm::StringRef(extension.GetCString()) == ".py")
-          basename.resize(basename.length() - 3);
-        else if (llvm::StringRef(extension.GetCString()) == ".pyc")
-          basename.resize(basename.length() - 4);
-      }
     } else {
       error.SetErrorString("no known way to import this module specification");
       return false;
+    }
+
+    // Strip .py or .pyc extension
+    llvm::StringRef extension = target_file.GetFileNameExtension().GetCString();
+    if (!extension.empty()) {
+      if (extension == ".py")
+        basename.resize(basename.length() - 3);
+      else if (extension == ".pyc")
+        basename.resize(basename.length() - 4);
     }
 
     // check if the module is already import-ed
