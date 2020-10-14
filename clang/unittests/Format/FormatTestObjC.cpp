@@ -1024,6 +1024,12 @@ TEST_F(FormatTestObjC, ObjCSnippets) {
   verifyFormat("@property(assign, nonatomic) CGFloat hoverAlpha;");
   verifyFormat("@property(assign, getter=isEditable) BOOL editable;");
 
+  verifyFormat("extern UIWindow *MainWindow(void) "
+               "NS_SWIFT_NAME(getter:MyHelper.mainWindow());");
+
+  verifyFormat("extern UIWindow *MainWindow(void) "
+               "CF_SWIFT_NAME(getter:MyHelper.mainWindow());");
+
   Style.ColumnLimit = 50;
   verifyFormat("@interface Foo\n"
                "- (void)doStuffWithFoo:(id)name\n"
