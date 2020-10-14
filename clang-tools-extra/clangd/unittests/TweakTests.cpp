@@ -305,138 +305,137 @@ TEST_F(ExtractVariableTest, Test) {
   EXPECT_UNAVAILABLE(UnavailableCases);
 
   // vector of pairs of input and output strings
-  const std::vector<std::pair<std::string, std::string>>
-      InputOutputs = {
-          // extraction from variable declaration/assignment
-          {R"cpp(void varDecl() {
+  const std::vector<std::pair<std::string, std::string>> InputOutputs = {
+      // extraction from variable declaration/assignment
+      {R"cpp(void varDecl() {
                    int a = 5 * (4 + (3 [[- 1)]]);
                  })cpp",
-           R"cpp(void varDecl() {
+       R"cpp(void varDecl() {
                    auto dummy = (3 - 1); int a = 5 * (4 + dummy);
                  })cpp"},
-          // FIXME: extraction from switch case
-          /*{R"cpp(void f(int a) {
-                   if(1)
-                     while(a < 1)
-                       switch (1) {
-                           case 1:
-                             a = [[1 + 2]];
-                             break;
-                           default:
-                             break;
-                       }
-                 })cpp",
-           R"cpp(void f(int a) {
-                   auto dummy = 1 + 2; if(1)
-                     while(a < 1)
-                       switch (1) {
-                           case 1:
-                             a = dummy;
-                             break;
-                           default:
-                             break;
-                       }
-                 })cpp"},*/
-          // Macros
-          {R"cpp(#define PLUS(x) x++
+      // FIXME: extraction from switch case
+      /*{R"cpp(void f(int a) {
+               if(1)
+                 while(a < 1)
+                   switch (1) {
+                       case 1:
+                         a = [[1 + 2]];
+                         break;
+                       default:
+                         break;
+                   }
+             })cpp",
+       R"cpp(void f(int a) {
+               auto dummy = 1 + 2; if(1)
+                 while(a < 1)
+                   switch (1) {
+                       case 1:
+                         a = dummy;
+                         break;
+                       default:
+                         break;
+                   }
+             })cpp"},*/
+      // Macros
+      {R"cpp(#define PLUS(x) x++
                  void f(int a) {
                    int y = PLUS([[1+a]]);
                  })cpp",
-           /*FIXME: It should be extracted like this.
-            R"cpp(#define PLUS(x) x++
-                  void f(int a) {
-                    auto dummy = 1+a; int y = PLUS(dummy);
-                  })cpp"},*/
-           R"cpp(#define PLUS(x) x++
+       /*FIXME: It should be extracted like this.
+        R"cpp(#define PLUS(x) x++
+              void f(int a) {
+                auto dummy = 1+a; int y = PLUS(dummy);
+              })cpp"},*/
+       R"cpp(#define PLUS(x) x++
                  void f(int a) {
                    auto dummy = PLUS(1+a); int y = dummy;
                  })cpp"},
-          // ensure InsertionPoint isn't inside a macro
-          {R"cpp(#define LOOP(x) while (1) {a = x;}
+      // ensure InsertionPoint isn't inside a macro
+      {R"cpp(#define LOOP(x) while (1) {a = x;}
                  void f(int a) {
                    if(1)
                     LOOP(5 + [[3]])
                  })cpp",
-            R"cpp(#define LOOP(x) while (1) {a = x;}
+       R"cpp(#define LOOP(x) while (1) {a = x;}
                  void f(int a) {
                    auto dummy = 3; if(1)
                     LOOP(5 + dummy)
                  })cpp"},
-          {R"cpp(#define LOOP(x) do {x;} while(1);
+      {R"cpp(#define LOOP(x) do {x;} while(1);
                  void f(int a) {
                    if(1)
                     LOOP(5 + [[3]])
                  })cpp",
-           R"cpp(#define LOOP(x) do {x;} while(1);
+       R"cpp(#define LOOP(x) do {x;} while(1);
                  void f(int a) {
                    auto dummy = 3; if(1)
                     LOOP(5 + dummy)
                  })cpp"},
-          // attribute testing
-          {R"cpp(void f(int a) {
+      // attribute testing
+      {R"cpp(void f(int a) {
                     [ [gsl::suppress("type")] ] for (;;) a = [[1]] + 1;
                  })cpp",
-           R"cpp(void f(int a) {
+       R"cpp(void f(int a) {
                     auto dummy = 1; [ [gsl::suppress("type")] ] for (;;) a = dummy + 1;
                  })cpp"},
-          // MemberExpr
-          {R"cpp(class T {
+      // MemberExpr
+      {R"cpp(class T {
                    T f() {
                      return [[T().f()]].f();
                    }
                  };)cpp",
-           R"cpp(class T {
+       R"cpp(class T {
                    T f() {
                      auto dummy = T().f(); return dummy.f();
                    }
                  };)cpp"},
-          // Function DeclRefExpr
-          {R"cpp(int f() {
+      // Function DeclRefExpr
+      {R"cpp(int f() {
                    return [[f]]();
                  })cpp",
-           R"cpp(int f() {
+       R"cpp(int f() {
                    auto dummy = f(); return dummy;
                  })cpp"},
-          // FIXME: Wrong result for \[\[clang::uninitialized\]\] int b = [[1]];
-          // since the attr is inside the DeclStmt and the bounds of
-          // DeclStmt don't cover the attribute.
+      // FIXME: Wrong result for \[\[clang::uninitialized\]\] int b = [[1]];
+      // since the attr is inside the DeclStmt and the bounds of
+      // DeclStmt don't cover the attribute.
 
-          // Binary subexpressions
-          {R"cpp(void f() {
+      // Binary subexpressions
+      {R"cpp(void f() {
                    int x = 1 + [[2 + 3 + 4]] + 5;
                  })cpp",
-           R"cpp(void f() {
+       R"cpp(void f() {
                    auto dummy = 2 + 3 + 4; int x = 1 + dummy + 5;
                  })cpp"},
-          {R"cpp(void f() {
+      {R"cpp(void f() {
                    int x = [[1 + 2 + 3]] + 4 + 5;
                  })cpp",
-           R"cpp(void f() {
+       R"cpp(void f() {
                    auto dummy = 1 + 2 + 3; int x = dummy + 4 + 5;
                  })cpp"},
-          {R"cpp(void f() {
+      {R"cpp(void f() {
                    int x = 1 + 2 + [[3 + 4 + 5]];
                  })cpp",
-           R"cpp(void f() {
+       R"cpp(void f() {
                    auto dummy = 3 + 4 + 5; int x = 1 + 2 + dummy;
                  })cpp"},
-          // Non-associative operations have no special support
-          {R"cpp(void f() {
+      // Non-associative operations have no special support
+      {R"cpp(void f() {
                    int x = 1 - [[2 - 3 - 4]] - 5;
                  })cpp",
-           R"cpp(void f() {
+       R"cpp(void f() {
                    auto dummy = 1 - 2 - 3 - 4; int x = dummy - 5;
                  })cpp"},
-          // A mix of associative operators isn't associative.
-          {R"cpp(void f() {
+      // A mix of associative operators isn't associative.
+      {R"cpp(void f() {
                    int x = 0 + 1 * [[2 + 3]] * 4 + 5;
                  })cpp",
-           R"cpp(void f() {
+       R"cpp(void f() {
                    auto dummy = 1 * 2 + 3 * 4; int x = 0 + dummy + 5;
                  })cpp"},
-          // Overloaded operators are supported, we assume associativity
-          // as if they were built-in.
-          {R"cpp(struct S {
+      // Overloaded operators are supported, we assume associativity
+      // as if they were built-in.
+      {R"cpp(struct S {
                    S(int);
                  };
                  S operator+(S, S);
@@ -444,7 +443,7 @@ TEST_F(ExtractVariableTest, Test) {
                  void f() {
                    S x = S(1) + [[S(2) + S(3) + S(4)]] + S(5);
                  })cpp",
-           R"cpp(struct S {
+       R"cpp(struct S {
                    S(int);
                  };
                  S operator+(S, S);
@@ -452,25 +451,25 @@ TEST_F(ExtractVariableTest, Test) {
                  void f() {
                    auto dummy = S(2) + S(3) + S(4); S x = S(1) + dummy + S(5);
                  })cpp"},
-          // Don't try to analyze across macro boundaries
-          // FIXME: it'd be nice to do this someday (in a safe way)
-          {R"cpp(#define ECHO(X) X
+      // Don't try to analyze across macro boundaries
+      // FIXME: it'd be nice to do this someday (in a safe way)
+      {R"cpp(#define ECHO(X) X
                  void f() {
                    int x = 1 + [[ECHO(2 + 3) + 4]] + 5;
                  })cpp",
-           R"cpp(#define ECHO(X) X
+       R"cpp(#define ECHO(X) X
                  void f() {
                    auto dummy = 1 + ECHO(2 + 3) + 4; int x = dummy + 5;
                  })cpp"},
-          {R"cpp(#define ECHO(X) X
+      {R"cpp(#define ECHO(X) X
                  void f() {
                    int x = 1 + [[ECHO(2) + ECHO(3) + 4]] + 5;
                  })cpp",
-           R"cpp(#define ECHO(X) X
+       R"cpp(#define ECHO(X) X
                  void f() {
                    auto dummy = 1 + ECHO(2) + ECHO(3) + 4; int x = dummy + 5;
                  })cpp"},
-      };
+  };
   for (const auto &IO : InputOutputs) {
     EXPECT_EQ(IO.second, apply(IO.first)) << IO.first;
   }
@@ -721,7 +720,7 @@ TEST_F(ExtractFunctionTest, ControlFlow) {
 
 TEST_F(ExtractFunctionTest, ExistingReturnStatement) {
   Context = File;
-  const char* Before = R"cpp(
+  const char *Before = R"cpp(
     bool lucky(int N);
     int getNum(bool Superstitious, int Min, int Max) {
       if (Superstitious) [[{
@@ -736,7 +735,7 @@ TEST_F(ExtractFunctionTest, ExistingReturnStatement) {
   )cpp";
   // FIXME: min/max should be by value.
   // FIXME: avoid emitting redundant braces
-  const char* After = R"cpp(
+  const char *After = R"cpp(
     bool lucky(int N);
     int extracted(int &Min, int &Max) {
 {
