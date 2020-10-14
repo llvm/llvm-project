@@ -7484,6 +7484,21 @@ class SBModule(object):
         """
         return _lldb.SBModule_GetNumberAllocatedModules()
 
+    @staticmethod
+    def GarbageCollectAllocatedModules():
+        r"""
+        GarbageCollectAllocatedModules()
+
+            Removes all modules which are no longer needed by any part of LLDB from
+            the module cache.
+
+            This is an implementation detail exposed for testing and should not be
+            relied upon. Use SBDebugger::MemoryPressureDetected instead to reduce
+            LLDB's memory consumption during execution.
+
+        """
+        return _lldb.SBModule_GarbageCollectAllocatedModules()
+
     def __str__(self):
         r"""__str__(SBModule self) -> std::string"""
         return _lldb.SBModule___str__(self)
@@ -7715,6 +7730,20 @@ def SBModule_GetNumberAllocatedModules():
             The number of modules in the module cache.
     """
     return _lldb.SBModule_GetNumberAllocatedModules()
+
+def SBModule_GarbageCollectAllocatedModules():
+    r"""
+    SBModule_GarbageCollectAllocatedModules()
+
+        Removes all modules which are no longer needed by any part of LLDB from
+        the module cache.
+
+        This is an implementation detail exposed for testing and should not be
+        relied upon. Use SBDebugger::MemoryPressureDetected instead to reduce
+        LLDB's memory consumption during execution.
+
+    """
+    return _lldb.SBModule_GarbageCollectAllocatedModules()
 
 class SBModuleSpec(object):
     r"""Proxy of C++ lldb::SBModuleSpec class."""
