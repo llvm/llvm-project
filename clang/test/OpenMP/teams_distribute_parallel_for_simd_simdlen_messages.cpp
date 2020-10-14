@@ -35,7 +35,7 @@ T tmain(T argc, S **argv) {
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
 
 #pragma omp target
-#pragma omp teams distribute parallel for simd safelen (argc  // expected-note {{to match this '('}} expected-error 2 {{integral constant expression}} expected-note 0+{{constant expression}} expected-error {{expected ')'}}
+#pragma omp teams distribute parallel for simd safelen (argc  // expected-note {{to match this '('}} expected-error 2 {{integral constant expression}} expected-note 2 {{read of non-const variable 'argc' is not allowed in a constant expression}} expected-note 0+{{constant expression}} expected-error {{expected ')'}}
   for (int i = ST; i < N; i++) 
     argv[0][i] = argv[0][i] - argv[0][i-ST];
   
