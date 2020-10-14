@@ -907,15 +907,16 @@ alignment.
 
 .. _amdgpu-note-records-v2:
 
-Code Object V2 Note Records (-mattr=-code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Code Object V2 Note Records (--amdhsa-code-object-version=2)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning:: Code Object V2 is not the default code object version emitted by
   this version of LLVM. For a description of the notes generated with the
   default configuration (Code Object V3) see :ref:`amdgpu-note-records-v3`.
 
 The AMDGPU backend code object uses the following ELF note record in the
-``.note`` section when compiling for Code Object V2 (-mattr=-code-object-v3).
+``.note`` section when compiling for Code Object
+V2 (--amdhsa-code-object-version=2).
 
 Additional note records may be present, but any which are not documented here
 are deprecated and should not be used.
@@ -951,11 +952,12 @@ are deprecated and should not be used.
 
 .. _amdgpu-note-records-v3:
 
-Code Object V3 Note Records (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Code Object V3 Note Records (--amdhsa-code-object-version=3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The AMDGPU backend code object uses the following ELF note record in the
-``.note`` section when compiling for Code Object V3 (-mattr=+code-object-v3).
+``.note`` section when compiling for Code Object V3
+(--amdhsa-code-object-version=3).
 
 Additional note records may be present, but any which are not documented here
 are deprecated and should not be used.
@@ -2072,8 +2074,8 @@ OpenCL runtime records kernel argument information.
 
 .. _amdgpu-amdhsa-code-object-metadata-v2:
 
-Code Object V2 Metadata (-mattr=-code-object-v3)
-++++++++++++++++++++++++++++++++++++++++++++++++
+Code Object V2 Metadata (--amdhsa-code-object-version=2)
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 .. warning:: Code Object V2 is not the default code object version emitted by
   this version of LLVM. For a description of the metadata generated with the
@@ -2493,8 +2495,8 @@ non-AMD key names should be prefixed by "*vendor-name*.".
 
 .. _amdgpu-amdhsa-code-object-metadata-v3:
 
-Code Object V3 Metadata (-mattr=+code-object-v3)
-++++++++++++++++++++++++++++++++++++++++++++++++
+Code Object V3 Metadata (--amdhsa-code-object-version=3)
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 Code object V3 metadata is specified by the ``NT_AMDGPU_METADATA`` note record
 (see :ref:`amdgpu-note-records-v3`).
@@ -7283,8 +7285,8 @@ For full list of supported instructions, refer to "Vector ALU instructions".
 
 .. _amdgpu-amdhsa-assembler-predefined-symbols-v2:
 
-Code Object V2 Predefined Symbols (-mattr=-code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Code Object V2 Predefined Symbols (--amdhsa-code-object-version=2)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning:: Code Object V2 is not the default code object version emitted by
   this version of LLVM. For a description of the predefined symbols available
@@ -7340,8 +7342,8 @@ one.
 
 .. _amdgpu-amdhsa-assembler-directives-v2:
 
-Code Object V2 Directives (-mattr=-code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Code Object V2 Directives (--amdhsa-code-object-version=2)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning:: Code Object V2 is not the default code object version emitted by
   this version of LLVM. For a description of the directives supported with
@@ -7415,8 +7417,8 @@ comments in lib/Target/AMDGPU/AmdKernelCodeT.h and test/CodeGen/AMDGPU/hsa.s.
 
 .. _amdgpu-amdhsa-assembler-example-v2:
 
-Code Object V2 Example Source Code (-mattr=-code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Code Object V2 Example Source Code (--amdhsa-code-object-version=2)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. warning:: Code Object V2 is not the default code object version emitted by
   this version of LLVM. For a description of the directives supported with
@@ -7461,8 +7463,8 @@ Here is an example of a minimal assembly source file, defining one HSA kernel:
 
 .. _amdgpu-amdhsa-assembler-predefined-symbols-v3:
 
-Code Object V3 Predefined Symbols (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Code Object V3 Predefined Symbols (--amdhsa-code-object-version=3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The AMDGPU assembler defines and updates some symbols automatically. These
 symbols do not affect code generation.
@@ -7523,8 +7525,8 @@ May be set at any time, e.g. manually set to zero at the start of each kernel.
 
 .. _amdgpu-amdhsa-assembler-directives-v3:
 
-Code Object V3 Directives (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Code Object V3 Directives (--amdhsa-code-object-version=3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Directives which begin with ``.amdgcn`` are valid for all ``amdgcn``
 architecture processors, and are not OS-specific. Directives which begin with
@@ -7678,8 +7680,8 @@ This directive is terminated by an ``.end_amdgpu_metadata`` directive.
 
 .. _amdgpu-amdhsa-assembler-example-v3:
 
-Code Object V3 Example Source Code (-mattr=+code-object-v3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Code Object V3 Example Source Code (--amdhsa-code-object-version=3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Here is an example of a minimal assembly source file, defining one HSA kernel:
 

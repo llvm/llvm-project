@@ -40,6 +40,11 @@ private:
   /// all elements of the inner vector combined give a full lane mask.
   static std::array<std::vector<int16_t>, 16> RegSplitParts;
 
+  // Table representing sub reg of given width and offset.
+  // First index is subreg size: 32, 64, 96, 128, 160, 192, 256, 512.
+  // Second index is 32 different dword offsets.
+  static std::array<std::array<uint16_t, 32>, 9> SubRegFromChannelTable;
+
   void reserveRegisterTuples(BitVector &, MCRegister Reg) const;
 
 public:

@@ -365,9 +365,6 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                                      const llvm::Triple &Triple,
                                      const llvm::opt::ArgList &Args,
                                      std::vector<StringRef> &Features) {
-  if (const Arg *dAbi = Args.getLastArg(options::OPT_mamdgpu_debugger_abi))
-    D.Diag(diag::err_drv_clang_unsupported) << dAbi->getAsString(Args);
-
   // Add target ID features to -target-feature options. No diagnostics should
   // be emitted here since invalid target ID is diagnosed at other places.
   StringRef TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
@@ -527,6 +524,19 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-fvisibility");
     CC1Args.push_back("hidden");
     CC1Args.push_back("-fapply-global-visibility-to-externs");
+  }
+
+  if (DriverArgs.hasArg(options::OPT_mcode_object_v3_legacy)) {
+    getDriver().Diag(diag::warn_drv_deprecated_arg) << "-mcode-object-v3" <<
+      "-mllvm --amdhsa-code-object-version=3";
+    CC1Args.push_back("-mllvm");
+    CC1Args.push_back("--amdhsa-code-object-version=3");
+  }
+  if (DriverArgs.hasArg(options::OPT_mno_code_object_v3_legacy)) {
+    getDriver().Diag(diag::warn_drv_deprecated_arg) << "-mno-code-object-v3" <<
+      "-mllvm --amdhsa-code-object-version=2";
+    CC1Args.push_back("-mllvm");
+    CC1Args.push_back("--amdhsa-code-object-version=2");
   }
 }
 

@@ -360,6 +360,14 @@ enum {
   ELFOSABI_LAST_ARCH = 255     // Last Architecture-specific OS ABI
 };
 
+// AMDGPU OS ABI Version identification.
+enum {
+  // ELFABIVERSION_AMDGPU_HSA_V1 does not exist because OS ABI identification
+  // was never defined for V1.
+  ELFABIVERSION_AMDGPU_HSA_V2 = 0,
+  ELFABIVERSION_AMDGPU_HSA_V3 = 1,
+};
+
 #define ELF_RELOC(name, value) name = value,
 
 // X86_64 relocations.

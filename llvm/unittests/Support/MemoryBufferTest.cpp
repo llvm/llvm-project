@@ -265,14 +265,6 @@ TEST_F(MemoryBufferTest, getOpenFileReopened) {
   testGetOpenFileSlice(true);
 }
 
-TEST_F(MemoryBufferTest, reference) {
-  OwningBuffer MB(MemoryBuffer::getMemBuffer(data));
-  MemoryBufferRef MBR(*MB);
-
-  EXPECT_EQ(MB->getBufferStart(), MBR.getBufferStart());
-  EXPECT_EQ(MB->getBufferIdentifier(), MBR.getBufferIdentifier());
-}
-
 TEST_F(MemoryBufferTest, slice) {
   // Create a file that is six pages long with different data on each page.
   int FD;

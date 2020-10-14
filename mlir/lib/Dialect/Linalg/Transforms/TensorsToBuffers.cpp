@@ -239,22 +239,43 @@ LogicalResult mlir::linalg::LinalgOpConverter::matchAndRewrite(
 LogicalResult mlir::linalg::TensorConstantOpConverter::matchAndRewrite(
     ConstantOp op, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
-  if (!op.getType().isa<RankedTensorType>())
+  RankedTensorType rankedTensorType = op.getType().dyn_cast<RankedTensorType>();
+  if (!rankedTensorType)
     return failure();
-  auto attr = op.getValue().cast<DenseElementsAttr>();
+  if (llvm::any_of(rankedTensorType.getShape(), [](int64_t s) {
+        return s == 0 || ShapedType::isDynamic(s);
+      }))
+    return failure();
 
-  Location loc = op.getLoc();
+  int64_t nElements = 1;
+  for (int64_t s : rankedTensorType.getShape())
+    nElements *= s;
+  Type elementType = rankedTensorType.getElementType();
   MemRefType memrefType =
       converter.convertType(op.getType()).cast<MemRefType>();
-  VectorType vectorType =
-      VectorType::get(memrefType.getShape(), memrefType.getElementType());
-  Value cstVec =
-      rewriter.create<ConstantOp>(loc, vectorType, attr.reshape(vectorType));
+  VectorType flatVectorType = VectorType::get({nElements}, elementType);
+  MemRefType memrefOfFlatVectorType = MemRefType::get({}, flatVectorType);
+  MemRefType flatMemrefType = MemRefType::get({nElements}, elementType);
 
-  MemRefType memrefOfVectorType = MemRefType::get({}, vectorType);
-  Value alloc = rewriter.create<AllocOp>(loc, memrefOfVectorType, ValueRange{});
+  Location loc = op.getLoc();
+  auto attr = op.getValue().cast<DenseElementsAttr>();
+  Value alloc =
+      rewriter.create<AllocOp>(loc, memrefOfFlatVectorType, ValueRange{});
+  Value cstVec = rewriter.create<ConstantOp>(loc, flatVectorType,
+                                             attr.reshape(flatVectorType));
   rewriter.create<StoreOp>(loc, cstVec, alloc);
-  rewriter.replaceOpWithNewOp<vector::TypeCastOp>(op, memrefType, alloc);
+
+  Value memref =
+      rewriter.create<vector::TypeCastOp>(loc, flatMemrefType, alloc);
+  if (rankedTensorType.getRank() > 1) {
+    // Introduce a linalg.reshape to flatten the memref.
+    AffineMap collapseAllDims = AffineMap::getMultiDimIdentityMap(
+        /*numDims=*/rankedTensorType.getRank(), op.getContext());
+    memref = rewriter.create<linalg::ReshapeOp>(
+        loc, memrefType, memref,
+        rewriter.getAffineMapArrayAttr(collapseAllDims));
+  }
+  rewriter.replaceOp(op, memref);
 
   return success();
 }

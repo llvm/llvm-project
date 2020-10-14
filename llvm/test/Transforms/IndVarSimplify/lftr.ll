@@ -14,7 +14,7 @@ define i32 @pre_to_post_add() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], 1001
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -42,7 +42,7 @@ define i32 @pre_to_post_sub() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 1000, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = sub nsw i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[I]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -73,7 +73,7 @@ define i32 @quadratic_slt() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 7, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], 33
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -103,7 +103,7 @@ define i32 @quadratic_sle() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 7, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], 33
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -132,7 +132,7 @@ define i32 @quadratic_ule() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 7, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[I_NEXT]], 33
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
@@ -160,12 +160,13 @@ define i32 @quadratic_sgt_loopdec() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 10, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[I]], i32 1)
-; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    store i32 [[I]], i32* @A, align 4
 ; CHECK-NEXT:    [[I2:%.*]] = mul i32 [[I]], [[I]]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i32 [[I2]], 0
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[I2]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    ret i32 0
+;
 
 entry:
   br label %loop
@@ -235,7 +236,7 @@ define void @test_udiv_as_shift(i8* %a, i8 %n) nounwind uwtable ssp {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I1:%.*]] = phi i8 [ [[I1_INC:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[I1_INC]] = add nuw nsw i8 [[I1]], 1
-; CHECK-NEXT:    store volatile i8 0, i8* [[A:%.*]]
+; CHECK-NEXT:    store volatile i8 0, i8* [[A:%.*]], align 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8 [[I1_INC]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
@@ -335,7 +336,7 @@ define void @extend_const() #0 {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    call void @bar(i32 [[INDVARS_IV]]) #2
+; CHECK-NEXT:    call void @bar(i32 [[INDVARS_IV]]) [[ATTR2:#.*]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INDVARS_IV_NEXT]], 512
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END:%.*]]
@@ -364,7 +365,7 @@ define i32 @extend_const_postinc() #0 {
 ; CHECK-NEXT:    br label [[DO_BODY:%.*]]
 ; CHECK:       do.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[DO_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    call void @bar(i32 [[INDVARS_IV]]) #2
+; CHECK-NEXT:    call void @bar(i32 [[INDVARS_IV]]) [[ATTR2]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INDVARS_IV]], 255
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i32 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[DO_END:%.*]], label [[DO_BODY]]

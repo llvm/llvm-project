@@ -91,7 +91,7 @@ body:             |
   ; CHECK-DAG:   MOV64mr %stack.1, 1, $noreg, 0, $noreg, $rdi :: (store 8 into %stack.1)
   ; CHECK:   EH_LABEL <mcsymbol .Ltmp0>
   ; CHECK:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK:   STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 5, 2, 0, 2, -1, 2, 0, 2, 0, 2, 0, 1, 8, %stack.0, 0, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 1, 8, %stack.1, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (load store 8 on %stack.1), (load store 8 on %stack.0)
+  ; CHECK:   STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 5, 2, 0, 2, -1, 2, 0, 2, 0, 2, 0, 2, 2, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (load store 8 on %stack.1), (load store 8 on %stack.0)
   ; CHECK-DAG:   $r14 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load 8 from %stack.0)
   ; CHECK-DAG:   $rbx = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load 8 from %stack.1)
   ; CHECK:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
@@ -119,7 +119,7 @@ body:             |
     renamable $rbx = COPY $rdi
     EH_LABEL <mcsymbol .Ltmp0>
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    renamable $r14, renamable $rbx = STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 5, 2, 0, 2, -1, 2, 0, 2, 0, 2, 0, killed renamable $r14, renamable $r14(tied-def 0), killed renamable $rbx, renamable $rbx(tied-def 1), csr_64, implicit-def $rsp, implicit-def $ssp
+    renamable $r14, renamable $rbx = STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 5, 2, 0, 2, -1, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $r14(tied-def 0), killed renamable $rbx(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     EH_LABEL <mcsymbol .Ltmp1>
     JMP_1 %bb.1

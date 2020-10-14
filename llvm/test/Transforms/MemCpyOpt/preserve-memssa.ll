@@ -36,7 +36,7 @@ invoke.cont6:
 
 declare i8* @get_ptr()
 
-define void @test2(i8 *%in) {
+define void @test2(i8* noalias %in) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL_I1_I:%.*]] = tail call i8* @get_ptr()
@@ -145,6 +145,21 @@ entry:
   %3 = getelementptr inbounds [4 x i32], [4 x i32]* %ptr, i64 0, i32 3
   store i32 0, i32* %3, align 1
   call void @clobber()
+  ret void
+}
+
+define void @test8(%t* noalias %src, %t* %dst) {
+; CHECK-LABEL: @test8(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast %t* [[SRC:%.*]] to i8*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast %t* [[DST:%.*]] to i8*
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast %t* [[SRC]] to i8*
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[TMP2]], i8* align 1 [[TMP3]], i64 8224, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP1]], i8 0, i64 8224, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %1 = load %t, %t* %src
+  store %t zeroinitializer, %t* %src
+  store %t %1, %t* %dst
   ret void
 }
 

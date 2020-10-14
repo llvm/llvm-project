@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_default_ci:
 ; GCN: float_mode = 240
@@ -90,12 +90,12 @@ define amdgpu_kernel void @test_no_ieee_mode_no_dx10_clamp_vi(float addrspace(1)
   ret void
 }
 
-attributes #0 = { nounwind "target-cpu"="kaveri" "target-features"="-code-object-v3" }
-attributes #1 = { nounwind "target-cpu"="fiji" "target-features"="-code-object-v3" }
-attributes #2 = { nounwind "target-features"="-code-object-v3" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #3 = { nounwind "target-features"="-code-object-v3" "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #4 = { nounwind "target-features"="-code-object-v3" "denormal-fp-math"="ieee,ieee" }
-attributes #5 = { nounwind "target-features"="-code-object-v3" "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #6 = { nounwind "amdgpu-dx10-clamp"="false" "target-cpu"="fiji" "target-features"="-code-object-v3" }
-attributes #7 = { nounwind "amdgpu-ieee"="false" "target-cpu"="fiji" "target-features"="-code-object-v3" }
-attributes #8 = { nounwind "amdgpu-dx10-clamp"="false" "amdgpu-ieee"="false" "target-cpu"="fiji" "target-features"="-code-object-v3" }
+attributes #0 = { nounwind "target-cpu"="kaveri" }
+attributes #1 = { nounwind "target-cpu"="fiji" }
+attributes #2 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #3 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #4 = { nounwind "denormal-fp-math"="ieee,ieee" }
+attributes #5 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #6 = { nounwind "amdgpu-dx10-clamp"="false" "target-cpu"="fiji" }
+attributes #7 = { nounwind "amdgpu-ieee"="false" "target-cpu"="fiji" }
+attributes #8 = { nounwind "amdgpu-dx10-clamp"="false" "amdgpu-ieee"="false" "target-cpu"="fiji" }

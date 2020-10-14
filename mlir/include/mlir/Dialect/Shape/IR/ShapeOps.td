@@ -483,9 +483,9 @@ def Shape_YieldOp : Shape_Op<"yield",
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let builders = [OpBuilder<
-    "OpBuilder &b, OperationState &result", [{ build(b, result, llvm::None); }]
-  >];
+  let builders = [
+    OpBuilder<"", [{ build($_builder, $_state, llvm::None); }]>
+  ];
 
   let verifier = [{ return ::verify(*this); }];
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
@@ -660,8 +660,7 @@ def Shape_AssumingYieldOp : Shape_Op<"assuming_yield",
   let arguments = (ins Variadic<AnyType>:$operands);
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result",
-    [{ /* nothing to do */ }]>
+    OpBuilder<"", [{ /* nothing to do */ }]>
   ];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";

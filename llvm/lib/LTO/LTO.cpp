@@ -1107,6 +1107,7 @@ public:
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       MapVector<StringRef, BitcodeModule> &ModuleMap) = 0;
   virtual Error wait() = 0;
+  virtual unsigned getThreadCount() = 0;
 };
 
 namespace {
@@ -1221,6 +1222,10 @@ public:
     else
       return Error::success();
   }
+
+  unsigned getThreadCount() override {
+    return BackendThreadPool.getThreadCount();
+  }
 };
 } // end anonymous namespace
 
@@ -1309,6 +1314,10 @@ public:
   }
 
   Error wait() override { return Error::success(); }
+
+  // WriteIndexesThinBackend should always return 1 to prevent module
+  // re-ordering and avoid non-determinism in the final link.
+  unsigned getThreadCount() override { return 1; }
 };
 } // end anonymous namespace
 
@@ -1443,17 +1452,37 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
   auto &ModuleMap =
       ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
 
-  // Tasks 0 through ParallelCodeGenParallelismLevel-1 are reserved for combined
-  // module and parallel code generation partitions.
-  unsigned Task = RegularLTO.ParallelCodeGenParallelismLevel;
-  for (auto &Mod : ModuleMap) {
-    if (Error E = BackendProc->start(Task, Mod.second, ImportLists[Mod.first],
-                                     ExportLists[Mod.first],
-                                     ResolvedODR[Mod.first], ThinLTO.ModuleMap))
-      return E;
-    ++Task;
-  }
+  auto ProcessOneModule = [&](int I) -> Error {
+    auto &Mod = *(ModuleMap.begin() + I);
+    // Tasks 0 through ParallelCodeGenParallelismLevel-1 are reserved for
+    // combined module and parallel code generation partitions.
+    return BackendProc->start(RegularLTO.ParallelCodeGenParallelismLevel + I,
+                              Mod.second, ImportLists[Mod.first],
+                              ExportLists[Mod.first], ResolvedODR[Mod.first],
+                              ThinLTO.ModuleMap);
+  };
 
+  if (BackendProc->getThreadCount() == 1) {
+    // Process the modules in the order they were provided on the command-line.
+    // It is important for this codepath to be used for WriteIndexesThinBackend,
+    // to ensure the emitted LinkedObjectsFile lists ThinLTO objects in the same
+    // order as the inputs, which otherwise would affect the final link order.
+    for (int I = 0, E = ModuleMap.size(); I != E; ++I)
+      if (Error E = ProcessOneModule(I))
+        return E;
+  } else {
+    // When executing in parallel, process largest bitsize modules first to
+    // improve parallelism, and avoid starving the thread pool near the end.
+    // This saves about 15 sec on a 36-core machine while link `clang.exe` (out
+    // of 100 sec).
+    std::vector<BitcodeModule *> ModulesVec;
+    ModulesVec.reserve(ModuleMap.size());
+    for (auto &Mod : ModuleMap)
+      ModulesVec.push_back(&Mod.second);
+    for (int I : generateModulesOrdering(ModulesVec))
+      if (Error E = ProcessOneModule(I))
+        return E;
+  }
   return BackendProc->wait();
 }
 
@@ -1494,4 +1523,19 @@ lto::setupStatsFile(StringRef StatsFilename) {
 
   StatsFile->keep();
   return std::move(StatsFile);
+}
+
+// Compute the ordering we will process the inputs: the rough heuristic here
+// is to sort them per size so that the largest module get schedule as soon as
+// possible. This is purely a compile-time optimization.
+std::vector<int> lto::generateModulesOrdering(ArrayRef<BitcodeModule *> R) {
+  std::vector<int> ModulesOrdering;
+  ModulesOrdering.resize(R.size());
+  std::iota(ModulesOrdering.begin(), ModulesOrdering.end(), 0);
+  llvm::sort(ModulesOrdering, [&](int LeftIndex, int RightIndex) {
+    auto LSize = R[LeftIndex]->getBuffer().size();
+    auto RSize = R[RightIndex]->getBuffer().size();
+    return LSize > RSize;
+  });
+  return ModulesOrdering;
 }

@@ -6,6 +6,24 @@
 ; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck --check-prefix=CHECKOBJ %s
 ; RUN: llvm-readobj -syms %t.o | FileCheck --check-prefix=CHECKSYM %s
 
+;; Test to see if the default is correct for -data-sections on AIX.
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff < %s | \
+; RUN:   FileCheck --check-prefixes=CHECK,CHECK32 %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
+; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck --check-prefix=CHECKOBJ %s
+; RUN: llvm-readobj -syms %t.o | FileCheck --check-prefix=CHECKSYM %s
+
+;; Test to see if the default is correct for -data-sections on AIX.
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff < %s | \
+; RUN:   FileCheck --check-prefixes=CHECK,CHECK32 %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN:   FileCheck --check-prefixes=CHECK,CHECK64 %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -filetype=obj -o %t.o < %s
+; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck --check-prefix=CHECKOBJ %s
+; RUN: llvm-readobj -syms %t.o | FileCheck --check-prefix=CHECKSYM %s
+
 @ivar = local_unnamed_addr global i32 35, align 4
 @const_ivar = constant i32 35, align 4
 

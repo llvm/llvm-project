@@ -1,0 +1,18 @@
+# RUN: llc %s -march=x86-64 -run-pass=machineverifier -o - -experimental-debug-variable-locations | FileCheck %s
+#
+# REQUIRES: x86-registered-target
+#
+# CHECK: MOV64rr $rdi, debug-instr-number 1
+---
+name: test
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi', virtual-reg: '' }
+body:  |
+  bb.0:
+  liveins: $rdi, $rax
+    $rbp = MOV64rr $rdi, debug-instr-number 1
+    dead $rcx = MOV64ri 0
+    CMP64ri8 renamable $rax, 1, implicit-def $eflags
+    RETQ $rax
+...

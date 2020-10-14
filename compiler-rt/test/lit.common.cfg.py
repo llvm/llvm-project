@@ -132,9 +132,21 @@ if config.host_os == 'NetBSD':
 else:
   config.substitutions.append( ('%run_nomprotect', '%run') )
 
+# Copied from libcxx's config.py
+def get_lit_conf(name, default=None):
+    # Allow overriding on the command line using --param=<name>=<val>
+    val = lit_config.params.get(name, None)
+    if val is None:
+        val = getattr(config, name, None)
+        if val is None:
+            val = default
+    return val
+
+emulator = get_lit_conf('emulator', None)
+
 # Allow tests to be executed on a simulator or remotely.
-if config.emulator:
-  config.substitutions.append( ('%run', config.emulator) )
+if emulator:
+  config.substitutions.append( ('%run', emulator) )
   config.substitutions.append( ('%env ', "env ") )
   # TODO: Implement `%device_rm` to perform removal of files in the emulator.
   # For now just make it a no-op.

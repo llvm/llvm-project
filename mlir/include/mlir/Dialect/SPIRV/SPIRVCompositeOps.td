@@ -163,8 +163,7 @@ def SPV_CompositeInsertOp : SPV_Op<"CompositeInsert", [NoSideEffect]> {
   );
 
   let builders = [
-    OpBuilder<[{OpBuilder &builder, OperationState &state, Value object,
-                Value composite, ArrayRef<int32_t> indices}]>
+    OpBuilder<[{Value object, Value composite, ArrayRef<int32_t> indices}]>
   ];
 }
 

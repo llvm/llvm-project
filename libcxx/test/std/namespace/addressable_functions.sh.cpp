@@ -18,8 +18,10 @@
 // RUN: %{exec} %t.exe
 
 #include <cassert>
-#include <iostream>
+#include <ios>
+#include <istream>
 #include <map>
+#include <ostream>
 #include <string>
 #include <utility>
 

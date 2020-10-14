@@ -102,7 +102,7 @@ TEST_F(MainLoopTest, TerminatesImmediately) {
 TEST_F(MainLoopTest, DetectsEOF) {
 
   PseudoTerminal term;
-  ASSERT_TRUE(term.OpenFirstAvailablePrimary(O_RDWR, nullptr, 0));
+  ASSERT_THAT_ERROR(term.OpenFirstAvailablePrimary(O_RDWR), llvm::Succeeded());
   ASSERT_TRUE(term.OpenSecondary(O_RDWR | O_NOCTTY, nullptr, 0));
   auto conn = std::make_unique<ConnectionFileDescriptor>(
       term.ReleasePrimaryFileDescriptor(), true);

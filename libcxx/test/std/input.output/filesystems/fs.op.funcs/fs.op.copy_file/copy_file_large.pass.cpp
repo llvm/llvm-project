@@ -18,9 +18,10 @@
 //           error_code& ec) noexcept;
 
 #include "filesystem_include.h"
-#include <type_traits>
-#include <chrono>
 #include <cassert>
+#include <chrono>
+#include <fstream>
+#include <string>
 
 #include "test_macros.h"
 #include "rapid-cxx-test.h"

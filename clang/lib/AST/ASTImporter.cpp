@@ -8094,9 +8094,15 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
       else
         return ToTOrErr.takeError();
     }
-    To->setInherited(From->isInherited());
-    To->setPackExpansion(From->isPackExpansion());
-    To->setImplicit(From->isImplicit());
+    ToAttr = To;
+    break;
+  }
+  case attr::Format: {
+    const auto *From = cast<FormatAttr>(FromAttr);
+    FormatAttr *To;
+    IdentifierInfo *ToAttrType = Import(From->getType());
+    To = FormatAttr::Create(ToContext, ToAttrType, From->getFormatIdx(),
+                            From->getFirstArg(), ToRange, From->getSyntax());
     ToAttr = To;
     break;
   }
@@ -8107,8 +8113,15 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
     ToAttr->setRange(ToRange);
     break;
   }
+
   assert(ToAttr && "Attribute should be created.");
-  
+  if (const auto *InheritableFromAttr = dyn_cast<InheritableAttr>(FromAttr))
+    cast<InheritableAttr>(ToAttr)->setInherited(
+        InheritableFromAttr->isInherited());
+  ToAttr->setAttributeSpellingListIndex(
+      FromAttr->getAttributeSpellingListIndex());
+  ToAttr->setPackExpansion(FromAttr->isPackExpansion());
+  ToAttr->setImplicit(FromAttr->isImplicit());
   return ToAttr;
 }
 

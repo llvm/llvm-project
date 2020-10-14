@@ -14,7 +14,7 @@ define i32 @test_drop_nuw() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ -2, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* @a
+; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* @a, align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[STOREMERGE]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -41,7 +41,7 @@ define i32 @test_drop_nsw() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* @a
+; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* @a, align 4
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[STOREMERGE]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], -2147483648
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -68,7 +68,7 @@ define i32 @test_no_drop_nuw() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ -3, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* @a
+; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* @a, align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[STOREMERGE]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], -1
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -96,7 +96,7 @@ define i32 @test_no_drop_nsw() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* @a
+; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* @a, align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[STOREMERGE]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 2147483647
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -123,7 +123,7 @@ define i32 @test_no_add_nuw() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* @a
+; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* @a, align 4
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[STOREMERGE]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 10
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -154,7 +154,7 @@ define i32 @test_drop_nsw_var_lim(i32 %lim) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ [[INC:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* @a
+; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* @a, align 4
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[STOREMERGE]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
@@ -187,10 +187,10 @@ define i32 @switch_to_different_iv_post_inc(i32* %ptr, i1 %always_false) {
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ -2147483648, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[ALWAYS_TAKEN:%.*]] ]
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV2_INC:%.*]], [[ALWAYS_TAKEN]] ]
-; CHECK-NEXT:    store i32 [[IV]], i32* [[PTR:%.*]]
+; CHECK-NEXT:    store i32 [[IV]], i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[ALWAYS_FALSE:%.*]], label [[NEVER_TAKEN:%.*]], label [[ALWAYS_TAKEN]]
 ; CHECK:       never_taken:
-; CHECK-NEXT:    store volatile i32 [[IV2]], i32* [[PTR]]
+; CHECK-NEXT:    store volatile i32 [[IV2]], i32* [[PTR]], align 4
 ; CHECK-NEXT:    br label [[ALWAYS_TAKEN]]
 ; CHECK:       always_taken:
 ; CHECK-NEXT:    [[IV_INC]] = add nsw i32 [[IV]], 1
@@ -232,13 +232,13 @@ define i32 @switch_to_different_iv_pre_inc(i32* %ptr, i1 %always_false) {
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ -2147483648, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[ALWAYS_TAKEN:%.*]] ]
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV2_INC:%.*]], [[ALWAYS_TAKEN]] ]
-; CHECK-NEXT:    store i32 [[IV]], i32* [[PTR:%.*]]
+; CHECK-NEXT:    store i32 [[IV]], i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV2]], -2147483628
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    br i1 [[ALWAYS_FALSE:%.*]], label [[NEVER_TAKEN:%.*]], label [[ALWAYS_TAKEN]]
 ; CHECK:       never_taken:
-; CHECK-NEXT:    store volatile i32 [[IV2]], i32* [[PTR]]
+; CHECK-NEXT:    store volatile i32 [[IV2]], i32* [[PTR]], align 4
 ; CHECK-NEXT:    br label [[ALWAYS_TAKEN]]
 ; CHECK:       always_taken:
 ; CHECK-NEXT:    [[IV_INC]] = add nsw i32 [[IV]], 1
@@ -280,10 +280,10 @@ define i32 @switch_to_different_iv_first_poison(i32* %ptr, i1 %always_false) {
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[IV2_INC:%.*]], [[ALWAYS_TAKEN:%.*]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ -2147483648, [[ENTRY]] ], [ [[IV_INC:%.*]], [[ALWAYS_TAKEN]] ]
-; CHECK-NEXT:    store i32 [[IV]], i32* [[PTR:%.*]]
+; CHECK-NEXT:    store i32 [[IV]], i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[ALWAYS_FALSE:%.*]], label [[NEVER_TAKEN:%.*]], label [[ALWAYS_TAKEN]]
 ; CHECK:       never_taken:
-; CHECK-NEXT:    store volatile i32 [[IV2]], i32* [[PTR]]
+; CHECK-NEXT:    store volatile i32 [[IV2]], i32* [[PTR]], align 4
 ; CHECK-NEXT:    br label [[ALWAYS_TAKEN]]
 ; CHECK:       always_taken:
 ; CHECK-NEXT:    [[IV2_INC]] = add nuw nsw i32 [[IV2]], 1
@@ -323,10 +323,10 @@ define i32 @switch_to_different_iv_second_poison(i32* %ptr, i1 %always_false) {
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i32 [ -2, [[ENTRY:%.*]] ], [ [[IV2_INC:%.*]], [[ALWAYS_TAKEN:%.*]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ -2147483648, [[ENTRY]] ], [ [[IV_INC:%.*]], [[ALWAYS_TAKEN]] ]
-; CHECK-NEXT:    store i32 [[IV]], i32* [[PTR:%.*]]
+; CHECK-NEXT:    store i32 [[IV]], i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[ALWAYS_FALSE:%.*]], label [[NEVER_TAKEN:%.*]], label [[ALWAYS_TAKEN]]
 ; CHECK:       never_taken:
-; CHECK-NEXT:    store volatile i32 [[IV2]], i32* [[PTR]]
+; CHECK-NEXT:    store volatile i32 [[IV2]], i32* [[PTR]], align 4
 ; CHECK-NEXT:    br label [[ALWAYS_TAKEN]]
 ; CHECK:       always_taken:
 ; CHECK-NEXT:    [[IV2_INC]] = add nsw i32 [[IV2]], 1

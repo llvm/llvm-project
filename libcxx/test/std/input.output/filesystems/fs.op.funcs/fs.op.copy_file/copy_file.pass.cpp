@@ -25,8 +25,6 @@
 #include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
-#include <iostream>
-
 using namespace fs;
 
 using CO = fs::copy_options;
