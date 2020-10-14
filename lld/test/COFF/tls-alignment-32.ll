@@ -1,3 +1,5 @@
+; REQUIRES: x86
+
 ; This test is to make sure that the necessary alignment for thread locals
 ; gets reflected in the TLS Directory of the generated executable on x86.
 ;
