@@ -1078,6 +1078,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   ClangExpressionDeclMap *decl_map = type_system_helper->DeclMap();
   if (decl_map) {
     decl_map->InstallCodeGenerator(&m_compiler->getASTConsumer());
+    decl_map->InstallDiagnosticManager(diagnostic_manager);
 
     clang::ExternalASTSource *ast_source = decl_map->CreateProxy();
 

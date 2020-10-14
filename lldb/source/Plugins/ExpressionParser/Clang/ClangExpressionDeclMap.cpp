@@ -19,6 +19,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectVariable.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerDecl.h"
@@ -125,6 +126,12 @@ void ClangExpressionDeclMap::InstallCodeGenerator(
   m_parser_vars->m_code_gen = code_gen;
 }
 
+void ClangExpressionDeclMap::InstallDiagnosticManager(
+    DiagnosticManager &diag_manager) {
+  assert(m_parser_vars);
+  m_parser_vars->m_diagnostics = &diag_manager;
+}
+
 void ClangExpressionDeclMap::DidParse() {
   if (m_parser_vars && m_parser_vars->m_persistent_vars) {
     for (size_t entity_index = 0, num_entities = m_found_entities.GetSize();
@@ -195,6 +202,17 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
       llvm::dyn_cast_or_null<TypeSystemClang>(parser_type.GetTypeSystem());
   if (ast == nullptr)
     return false;
+
+  // Check if we already declared a persistent variable with the same name.
+  if (lldb::ExpressionVariableSP conflicting_var =
+          m_parser_vars->m_persistent_vars->GetVariable(name)) {
+    std::string msg = llvm::formatv("redefinition of persistent variable '{0}'",
+                                    name).str();
+    m_parser_vars->m_diagnostics->AddDiagnostic(
+        msg, DiagnosticSeverity::eDiagnosticSeverityError,
+        DiagnosticOrigin::eDiagnosticOriginLLDB);
+    return false;
+  }
 
   if (m_parser_vars->m_materializer && is_result) {
     Status err;
