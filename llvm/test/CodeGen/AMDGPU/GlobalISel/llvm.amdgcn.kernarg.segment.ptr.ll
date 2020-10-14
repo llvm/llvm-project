@@ -1,4 +1,4 @@
-; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mattr=-code-object-v3 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,HSA,ALL %s
+; RUN: llc -global-isel -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,HSA,ALL %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,OS-MESA3D,MESA,ALL %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-unknown -mcpu=hawaii -mattr=+flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=OS-UNKNOWN,MESA,ALL %s
 
