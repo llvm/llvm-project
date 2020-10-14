@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
       LLVMOrcLLJITMangleAndIntern(J, "add"), 0};
 
   {
-    LLVMOrcJITDylibDefinitionGeneratorRef ProcessSymbolsGenerator = 0;
+    LLVMOrcDefinitionGeneratorRef ProcessSymbolsGenerator = 0;
     LLVMErrorRef Err;
     if ((Err = LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
              &ProcessSymbolsGenerator, LLVMOrcLLJITGetGlobalPrefix(J),

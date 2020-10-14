@@ -48,7 +48,7 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(OrcV2CAPIHelper::PoolEntry,
                                    LLVMOrcSymbolStringPoolEntryRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITDylib, LLVMOrcJITDylibRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DefinitionGenerator,
-                                   LLVMOrcJITDylibDefinitionGeneratorRef)
+                                   LLVMOrcDefinitionGeneratorRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeContext,
                                    LLVMOrcThreadSafeContextRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeModule, LLVMOrcThreadSafeModuleRef)
@@ -108,18 +108,18 @@ LLVMOrcExecutionSessionGetJITDylibByName(LLVMOrcExecutionSessionRef ES,
   return wrap(unwrap(ES)->getJITDylibByName(Name));
 }
 
-void LLVMOrcDisposeJITDylibDefinitionGenerator(
-    LLVMOrcJITDylibDefinitionGeneratorRef DG) {
+void LLVMOrcDisposeDefinitionGenerator(
+    LLVMOrcDefinitionGeneratorRef DG) {
   delete unwrap(DG);
 }
 
 void LLVMOrcJITDylibAddGenerator(LLVMOrcJITDylibRef JD,
-                                 LLVMOrcJITDylibDefinitionGeneratorRef DG) {
+                                 LLVMOrcDefinitionGeneratorRef DG) {
   unwrap(JD)->addGenerator(std::unique_ptr<DefinitionGenerator>(unwrap(DG)));
 }
 
 LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
-    LLVMOrcJITDylibDefinitionGeneratorRef *Result, char GlobalPrefix,
+    LLVMOrcDefinitionGeneratorRef *Result, char GlobalPrefix,
     LLVMOrcSymbolPredicate Filter, void *FilterCtx) {
   assert(Result && "Result can not be null");
   assert((Filter || !FilterCtx) &&

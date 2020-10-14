@@ -65,10 +65,10 @@ typedef void (*LLVMOrcErrorReporterFunction)(void *Ctx, LLVMErrorRef Err);
 typedef struct LLVMOrcOpaqueJITDylib *LLVMOrcJITDylibRef;
 
 /**
- * A reference to an orc::JITDylib::DefinitionGenerator.
+ * A reference to an orc::DefinitionGenerator.
  */
-typedef struct LLVMOrcOpaqueJITDylibDefinitionGenerator
-    *LLVMOrcJITDylibDefinitionGeneratorRef;
+typedef struct LLVMOrcOpaqueDefinitionGenerator
+    *LLVMOrcDefinitionGeneratorRef;
 
 /**
  * Predicate function for SymbolStringPoolEntries.
@@ -197,17 +197,17 @@ LLVMOrcJITDylibRef LLVMOrcExecutionSessionGetJITDylibByName(const char *Name);
  * ownership has not been passed to a JITDylib (e.g. because some error
  * prevented the client from calling LLVMOrcJITDylibAddGenerator).
  */
-void LLVMOrcDisposeJITDylibDefinitionGenerator(
-    LLVMOrcJITDylibDefinitionGeneratorRef DG);
+void LLVMOrcDisposeDefinitionGenerator(
+    LLVMOrcDefinitionGeneratorRef DG);
 
 /**
- * Add a JITDylib::DefinitionGenerator to the given JITDylib.
+ * Add a DefinitionGenerator to the given JITDylib.
  *
  * The JITDylib will take ownership of the given generator: The client is no
  * longer responsible for managing its memory.
  */
 void LLVMOrcJITDylibAddGenerator(LLVMOrcJITDylibRef JD,
-                                 LLVMOrcJITDylibDefinitionGeneratorRef DG);
+                                 LLVMOrcDefinitionGeneratorRef DG);
 
 /**
  * Get a DynamicLibrarySearchGenerator that will reflect process symbols into
@@ -228,7 +228,7 @@ void LLVMOrcJITDylibAddGenerator(LLVMOrcJITDylibRef JD,
  * the global prefix if present.
  */
 LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
-    LLVMOrcJITDylibDefinitionGeneratorRef *Result, char GlobalPrefx,
+    LLVMOrcDefinitionGeneratorRef *Result, char GlobalPrefx,
     LLVMOrcSymbolPredicate Filter, void *FilterCtx);
 
 /**
