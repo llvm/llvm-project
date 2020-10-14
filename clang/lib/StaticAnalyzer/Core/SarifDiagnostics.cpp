@@ -160,9 +160,8 @@ static unsigned int adjustColumnPos(const SourceManager &SM, SourceLocation Loc,
   assert(LocInfo.second > SM.getExpansionColumnNumber(Loc) &&
          "position in file is before column number?");
 
-  bool InvalidBuffer = false;
-  const MemoryBuffer *Buf = SM.getBuffer(LocInfo.first, &InvalidBuffer);
-  assert(!InvalidBuffer && "got an invalid buffer for the location's file");
+  Optional<MemoryBufferRef> Buf = SM.getBufferOrNone(LocInfo.first);
+  assert(Buf && "got an invalid buffer for the location's file");
   assert(Buf->getBufferSize() >= (LocInfo.second + TokenLen) &&
          "token extends past end of buffer?");
 
