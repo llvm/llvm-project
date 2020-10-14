@@ -901,10 +901,18 @@ public:
 
   /// Retrieve the memory buffer associated with the given file.
   ///
-  /// \param Invalid If non-NULL, will be set \c true if an error
-  /// occurs while retrieving the memory buffer.
-  const llvm::MemoryBuffer *getMemoryBufferForFile(const FileEntry *File,
-                                                   bool *Invalid = nullptr);
+  /// Returns None if the buffer is not valid.
+  llvm::Optional<llvm::MemoryBufferRef>
+  getMemoryBufferForFileOrNone(const FileEntry *File);
+
+  /// Retrieve the memory buffer associated with the given file.
+  ///
+  /// Returns a fake buffer if there isn't a real one.
+  llvm::MemoryBufferRef getMemoryBufferForFileOrFake(const FileEntry *File) {
+    if (auto B = getMemoryBufferForFileOrNone(File))
+      return *B;
+    return getFakeBufferForRecovery()->getMemBufferRef();
+  }
 
   /// Override the contents of the given source file by providing an
   /// already-allocated buffer.
