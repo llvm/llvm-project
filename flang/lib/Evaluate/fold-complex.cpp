@@ -23,8 +23,7 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
       name == "atan" || name == "atanh" || name == "cos" || name == "cosh" ||
       name == "exp" || name == "log" || name == "sin" || name == "sinh" ||
       name == "sqrt" || name == "tan" || name == "tanh") {
-    if (auto callable{context.hostIntrinsicsLibrary()
-                          .GetHostProcedureWrapper<Scalar, T, T>(name)}) {
+    if (auto callable{GetHostRuntimeWrapper<T, T>(name)}) {
       return FoldElementalIntrinsic<T, T>(
           context, std::move(funcRef), *callable);
     } else {
