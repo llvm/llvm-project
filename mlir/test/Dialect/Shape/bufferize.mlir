@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -shape-tensor-to-memref <%s | FileCheck %s
+// RUN: mlir-opt -split-input-file -shape-bufferize <%s | FileCheck %s
 
 // -----
 // Check that shape.assuming returns a memref.
@@ -14,5 +14,3 @@ func @shape_assuming_returns_memref() {
   "test.sink"(%1) : (tensor<2xf16>) -> ()
   return
 }
-
-
