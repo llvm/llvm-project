@@ -1999,6 +1999,35 @@ bool CombinerHelper::applyCombineAddP2IToPtrAdd(
   return true;
 }
 
+bool CombinerHelper::matchCombineConstPtrAddToI2P(MachineInstr &MI,
+                                                  int64_t &NewCst) {
+  assert(MI.getOpcode() == TargetOpcode::G_PTR_ADD && "Expected a G_PTR_ADD");
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  MachineRegisterInfo &MRI = Builder.getMF().getRegInfo();
+
+  if (auto RHSCst = getConstantVRegVal(RHS, MRI)) {
+    int64_t Cst;
+    if (mi_match(LHS, MRI, m_GIntToPtr(m_ICst(Cst)))) {
+      NewCst = Cst + *RHSCst;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool CombinerHelper::applyCombineConstPtrAddToI2P(MachineInstr &MI,
+                                                  int64_t &NewCst) {
+  assert(MI.getOpcode() == TargetOpcode::G_PTR_ADD && "Expected a G_PTR_ADD");
+  Register Dst = MI.getOperand(0).getReg();
+
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildConstant(Dst, NewCst);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) {
   assert(MI.getOpcode() == TargetOpcode::G_ANYEXT && "Expected a G_ANYEXT");
   Register DstReg = MI.getOperand(0).getReg();
