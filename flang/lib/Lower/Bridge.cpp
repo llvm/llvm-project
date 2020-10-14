@@ -867,6 +867,7 @@ private:
       if (info.isStructured()) {
         info.doLoop = builder->create<fir::DoLoopOp>(
             loc, lowerValue, upperValue, info.stepValue, info.isUnordered,
+            /*returnFinalCount=*/false,
             ArrayRef<mlir::Value>{lowerValue}); // initial doLoop result value
         builder->setInsertionPointToStart(info.doLoop.getBody());
         // Update the loop variable value, as it may have non-index references.
