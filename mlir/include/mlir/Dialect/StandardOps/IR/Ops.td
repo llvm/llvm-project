@@ -2935,7 +2935,7 @@ def SubViewOp : BaseOpWithOffsetSizesAndStrides<
     `static_offsets`, `static_sizes` and `static_strides` arguments. A special
     sentinel value ShapedType::kDynamicSize and
     ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
-    a static value.
+    a dynamic value.
 
     A subview operation may additionally reduce the rank of the resulting view
     by removing dimensions that are statically known to be of size 1.
@@ -3118,7 +3118,7 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<"subtensor"> {
                to extract the subtensor.
     * sizes: tensor-rank number of sizes which specify the sizes of the result
              tensor type.
-    * strides: tensor-rank number of strides specifying subsampling in each 
+    * strides: tensor-rank number of strides specifying subsampling in each
                dimension.
 
     The representation based on offsets, sizes and strides support a
@@ -3126,7 +3126,7 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<"subtensor"> {
     `static_offsets`, `static_sizes` and `static_strides` arguments. A special
     sentinel value ShapedType::kDynamicSize and
     ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
-    a static value.
+    a dynamic value.
 
     After buffer-allocation, the "subtensor" op is expected to lower into a
     "subview" op.
@@ -3222,7 +3222,7 @@ def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<"subtensor_insert"> {
     `static_offsets`, `static_sizes` and `static_strides` arguments. A special
     sentinel value ShapedType::kDynamicSize and
     ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
-    a static value.
+    a dynamic value.
 
     After buffer-allocation, the "subtensor_insert" op is expected to become
     an in-place buffer update.
