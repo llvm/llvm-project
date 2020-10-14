@@ -763,7 +763,7 @@ bool FormatTokenLexer::tryMergeConflictMarkers() {
   unsigned FirstInLineOffset;
   std::tie(ID, FirstInLineOffset) = SourceMgr.getDecomposedLoc(
       Tokens[FirstInLineIndex]->getStartOfNonWhitespace());
-  StringRef Buffer = SourceMgr.getBuffer(ID)->getBuffer();
+  StringRef Buffer = SourceMgr.getBufferOrFake(ID).getBuffer();
   // Calculate the offset of the start of the current line.
   auto LineOffset = Buffer.rfind('\n', FirstInLineOffset);
   if (LineOffset == StringRef::npos) {
