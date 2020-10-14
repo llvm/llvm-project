@@ -52,7 +52,6 @@
 #include "test_iterators.h"
 #include "count_new.h"
 #include "filesystem_test_helper.h"
-#include "assert_checkpoint.h"
 #include "verbose_assert.h"
 
 struct ComparePathExact {
@@ -120,7 +119,6 @@ void decompPathTest()
 {
   using namespace fs;
   for (auto const & TC : PathTestCases) {
-    CHECKPOINT(TC.raw.c_str());
     fs::path p(TC.raw);
     ASSERT(p == TC.raw);
 
@@ -192,7 +190,6 @@ void decompFilenameTest()
 {
   using namespace fs;
   for (auto const & TC : FilenameTestCases) {
-    CHECKPOINT(TC.raw.c_str());
     fs::path p(TC.raw);
     ASSERT_EQ(p, TC.raw);
     ASSERT_NOEXCEPT(p.empty());
