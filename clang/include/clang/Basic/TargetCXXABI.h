@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_BASIC_TARGETCXXABI_H
 #define LLVM_CLANG_BASIC_TARGETCXXABI_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace clang {
@@ -24,105 +25,8 @@ class TargetCXXABI {
 public:
   /// The basic C++ ABI kind.
   enum Kind {
-    /// The generic Itanium ABI is the standard ABI of most open-source
-    /// and Unix-like platforms.  It is the primary ABI targeted by
-    /// many compilers, including Clang and GCC.
-    ///
-    /// It is documented here:
-    ///   http://www.codesourcery.com/public/cxx-abi/
-    GenericItanium,
-
-    /// The generic ARM ABI is a modified version of the Itanium ABI
-    /// proposed by ARM for use on ARM-based platforms.
-    ///
-    /// These changes include:
-    ///   - the representation of member function pointers is adjusted
-    ///     to not conflict with the 'thumb' bit of ARM function pointers;
-    ///   - constructors and destructors return 'this';
-    ///   - guard variables are smaller;
-    ///   - inline functions are never key functions;
-    ///   - array cookies have a slightly different layout;
-    ///   - additional convenience functions are specified;
-    ///   - and more!
-    ///
-    /// It is documented here:
-    ///    http://infocenter.arm.com
-    ///                    /help/topic/com.arm.doc.ihi0041c/IHI0041C_cppabi.pdf
-    GenericARM,
-
-    /// The iOS ABI is a partial implementation of the ARM ABI.
-    /// Several of the features of the ARM ABI were not fully implemented
-    /// in the compilers that iOS was launched with.
-    ///
-    /// Essentially, the iOS ABI includes the ARM changes to:
-    ///   - member function pointers,
-    ///   - guard variables,
-    ///   - array cookies, and
-    ///   - constructor/destructor signatures.
-    iOS,
-
-    /// The iOS 64-bit ABI is follows ARM's published 64-bit ABI more
-    /// closely, but we don't guarantee to follow it perfectly.
-    ///
-    /// It is documented here:
-    ///    http://infocenter.arm.com
-    ///                  /help/topic/com.arm.doc.ihi0059a/IHI0059A_cppabi64.pdf
-    iOS64,
-
-    /// WatchOS is a modernisation of the iOS ABI, which roughly means it's
-    /// the iOS64 ABI ported to 32-bits. The primary difference from iOS64 is
-    /// that RTTI objects must still be unique at the moment.
-    WatchOS,
-
-    /// The generic AArch64 ABI is also a modified version of the Itanium ABI,
-    /// but it has fewer divergences than the 32-bit ARM ABI.
-    ///
-    /// The relevant changes from the generic ABI in this case are:
-    ///   - representation of member function pointers adjusted as in ARM.
-    ///   - guard variables  are smaller.
-    GenericAArch64,
-
-    /// The generic Mips ABI is a modified version of the Itanium ABI.
-    ///
-    /// At the moment, only change from the generic ABI in this case is:
-    ///   - representation of member function pointers adjusted as in ARM.
-    GenericMIPS,
-
-    /// The WebAssembly ABI is a modified version of the Itanium ABI.
-    ///
-    /// The changes from the Itanium ABI are:
-    ///   - representation of member function pointers is adjusted, as in ARM;
-    ///   - member functions are not specially aligned;
-    ///   - constructors and destructors return 'this', as in ARM;
-    ///   - guard variables are 32-bit on wasm32, as in ARM;
-    ///   - unused bits of guard variables are reserved, as in ARM;
-    ///   - inline functions are never key functions, as in ARM;
-    ///   - C++11 POD rules are used for tail padding, as in iOS64.
-    ///
-    /// TODO: At present the WebAssembly ABI is not considered stable, so none
-    /// of these details is necessarily final yet.
-    WebAssembly,
-
-    /// The Fuchsia ABI is a modified version of the Itanium ABI.
-    ///
-    /// The relevant changes from the Itanium ABI are:
-    ///   - constructors and destructors return 'this', as in ARM.
-    Fuchsia,
-
-    /// The XL ABI is the ABI used by IBM xlclang compiler and is a modified
-    /// version of the Itanium ABI.
-    ///
-    /// The relevant changes from the Itanium ABI are:
-    ///   - static initialization is adjusted to use sinit and sterm functions;
-    XL,
-
-    /// The Microsoft ABI is the ABI used by Microsoft Visual Studio (and
-    /// compatible compilers).
-    ///
-    /// FIXME: should this be split into Win32 and Win64 variants?
-    ///
-    /// Only scattered and incomplete official documentation exists.
-    Microsoft
+#define CXXABI(Name, Str) Name,
+#include "TargetCXXABI.def"
   };
 
 private:
@@ -131,7 +35,20 @@ private:
   // audit the users to pass it by reference instead.
   Kind TheKind;
 
+  static const auto &getABIMap() {
+    static llvm::StringMap<Kind> ABIMap = {
+#define CXXABI(Name, Str) {Str, Name},
+#include "TargetCXXABI.def"
+    };
+    return ABIMap;
+  }
+
 public:
+  static Kind getKind(StringRef Name) { return getABIMap().lookup(Name); }
+  static bool isABI(StringRef Name) {
+    return getABIMap().find(Name) != getABIMap().end();
+  }
+
   /// A bogus initialization of the platform ABI.
   TargetCXXABI() : TheKind(GenericItanium) {}
 
@@ -146,19 +63,11 @@ public:
   /// Does this ABI generally fall into the Itanium family of ABIs?
   bool isItaniumFamily() const {
     switch (getKind()) {
-    case Fuchsia:
-    case GenericAArch64:
-    case GenericItanium:
-    case GenericARM:
-    case iOS:
-    case iOS64:
-    case WatchOS:
-    case GenericMIPS:
-    case WebAssembly:
-    case XL:
+#define CXXABI(Name, Str)
+#define ITANIUM_CXXABI(Name, Str) case Name:
+#include "TargetCXXABI.def"
       return true;
-
-    case Microsoft:
+    default:
       return false;
     }
     llvm_unreachable("bad ABI kind");
@@ -167,20 +76,12 @@ public:
   /// Is this ABI an MSVC-compatible ABI?
   bool isMicrosoft() const {
     switch (getKind()) {
-    case Fuchsia:
-    case GenericAArch64:
-    case GenericItanium:
-    case GenericARM:
-    case iOS:
-    case iOS64:
-    case WatchOS:
-    case GenericMIPS:
-    case WebAssembly:
-    case XL:
-      return false;
-
-    case Microsoft:
+#define CXXABI(Name, Str)
+#define MICROSOFT_CXXABI(Name, Str) case Name:
+#include "TargetCXXABI.def"
       return true;
+    default:
+      return false;
     }
     llvm_unreachable("bad ABI kind");
   }
