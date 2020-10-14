@@ -1,5 +1,7 @@
 # RUN: llc %s -march=x86-64 -run-pass=machineverifier -o - -experimental-debug-variable-locations | FileCheck %s
 #
+# REQUIRES: x86-registered-target
+#
 # CHECK: MOV64rr $rdi, debug-instr-number 1
 ---
 name: test
