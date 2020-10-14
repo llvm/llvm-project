@@ -8100,6 +8100,16 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
     ToAttr = To;
     break;
   }
+  case attr::Format: {
+    const auto *From = cast<FormatAttr>(FromAttr);
+    FormatAttr *To;
+    IdentifierInfo *ToAttrType = Import(From->getType());
+    To = FormatAttr::Create(ToContext, ToAttrType, From->getFormatIdx(),
+                            From->getFirstArg(), ToRange, From->getSyntax());
+    To->setInherited(From->isInherited());
+    ToAttr = To;
+    break;
+  }
   default:
     // FIXME: 'clone' copies every member but some of them should be imported.
     // Handle other Attrs that have parameters that should be imported.
