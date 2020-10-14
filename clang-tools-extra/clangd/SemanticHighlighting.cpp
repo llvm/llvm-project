@@ -222,7 +222,7 @@ public:
       TokRef = TokRef.drop_front(Conflicting.size());
     }
     const auto &SM = AST.getSourceManager();
-    StringRef MainCode = SM.getBuffer(SM.getMainFileID())->getBuffer();
+    StringRef MainCode = SM.getBufferOrFake(SM.getMainFileID()).getBuffer();
 
     // Merge token stream with "inactive line" markers.
     std::vector<HighlightingToken> WithInactiveLines;
