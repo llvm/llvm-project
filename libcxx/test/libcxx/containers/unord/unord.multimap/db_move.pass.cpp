@@ -23,17 +23,14 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
-        std::unordered_multimap<int, int> s1 = {{1, 1}, {2, 2}, {3, 3}};
-        std::unordered_multimap<int, int>::iterator i = s1.begin();
-        std::pair<const int, int> k = *i;
-        std::unordered_multimap<int, int> s2 = std::move(s1);
-        assert(*i == k);
-        s2.erase(i);
-        assert(s2.size() == 2);
-    }
+int main(int, char**) {
+    std::unordered_multimap<int, int> s1 = {{1, 1}, {2, 2}, {3, 3}};
+    std::unordered_multimap<int, int>::iterator i = s1.begin();
+    std::pair<const int, int> k = *i;
+    std::unordered_multimap<int, int> s2 = std::move(s1);
+    assert(*i == k);
+    s2.erase(i);
+    assert(s2.size() == 2);
 
     return 0;
 }
