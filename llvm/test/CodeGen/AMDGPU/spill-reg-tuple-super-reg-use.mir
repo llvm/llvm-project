@@ -79,11 +79,11 @@ body:             |
     ; GCN-LABEL: name: spill_vgpr128_use_subreg
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
     ; GCN: renamable $vgpr1 = COPY $vgpr2
-    ; GCN: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store 4 into %stack.0, addrspace 5)
+    ; GCN: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 0, 0, 0, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store 4 into %stack.0, addrspace 5)
     ; GCN: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 4, 0, 0, 0, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store 4 into %stack.0 + 4, addrspace 5)
     ; GCN: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 8, 0, 0, 0, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store 4 into %stack.0 + 8, addrspace 5)
     ; GCN: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 12, 0, 0, 0, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store 4 into %stack.0 + 12, addrspace 5)
-    ; GCN: renamable $vgpr8 = COPY $vgpr2
+    ; GCN: renamable $vgpr8 = COPY killed renamable $vgpr1
     ; GCN: S_ENDPGM 0, implicit $vgpr8
     renamable $vgpr1 = COPY $vgpr2
     SI_SPILL_V128_SAVE renamable $vgpr0_vgpr1_vgpr2_vgpr3, %stack.0, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 0, implicit $exec :: (store 16 into %stack.0, align 4, addrspace 5)
@@ -108,7 +108,7 @@ body:             |
     ; GCN-LABEL: name: spill_vgpr128_use_kill
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
     ; GCN: renamable $vgpr1 = COPY $vgpr2
-    ; GCN: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store 4 into %stack.0, addrspace 5)
+    ; GCN: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 0, 0, 0, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store 4 into %stack.0, addrspace 5)
     ; GCN: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 4, 0, 0, 0, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store 4 into %stack.0 + 4, addrspace 5)
     ; GCN: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 8, 0, 0, 0, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: (store 4 into %stack.0 + 8, addrspace 5)
     ; GCN: BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr100_sgpr101_sgpr102_sgpr103, $sgpr32, 12, 0, 0, 0, 0, 0, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3 :: (store 4 into %stack.0 + 12, addrspace 5)
