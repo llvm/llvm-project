@@ -235,7 +235,7 @@ void initializeLoopAccessLegacyAnalysisPass(PassRegistry&);
 void initializeLoopDataPrefetchLegacyPassPass(PassRegistry&);
 void initializeLoopDeletionLegacyPassPass(PassRegistry&);
 void initializeLoopDistributeLegacyPass(PassRegistry&);
-void initializeLoopExtractorPass(PassRegistry&);
+void initializeLoopExtractorLegacyPassPass(PassRegistry &);
 void initializeLoopGuardWideningLegacyPassPass(PassRegistry&);
 void initializeLoopFuseLegacyPass(PassRegistry&);
 void initializeLoopIdiomRecognizeLegacyPassPass(PassRegistry&);
