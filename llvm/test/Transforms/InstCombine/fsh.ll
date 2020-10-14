@@ -362,6 +362,22 @@ define i33 @fshr_constant_shift_amount_modulo_bitwidth(i33 %x, i33 %y) {
   ret i33 %r
 }
 
+define i32 @fshl_undef_shift_amount(i32 %x, i32 %y) {
+; CHECK-LABEL: @fshl_undef_shift_amount(
+; CHECK-NEXT:    ret i32 [[X:%.*]]
+;
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 undef)
+  ret i32 %r
+}
+
+define i33 @fshr_undef_shift_amount(i33 %x, i33 %y) {
+; CHECK-LABEL: @fshr_undef_shift_amount(
+; CHECK-NEXT:    ret i33 [[Y:%.*]]
+;
+  %r = call i33 @llvm.fshr.i33(i33 %x, i33 %y, i33 undef)
+  ret i33 %r
+}
+
 @external_global = external global i8
 
 define i33 @fshr_constant_shift_amount_modulo_bitwidth_constexpr(i33 %x, i33 %y) {
@@ -400,6 +416,22 @@ define <2 x i31> @fshl_constant_shift_amount_modulo_bitwidth_vec_const_expr(<2 x
   %shamt = ptrtoint i8* @external_global to i31
   %r = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %x, <2 x i31> %y, <2 x i31> <i31 34, i31 ptrtoint (i8* @external_global to i31)>)
   ret <2 x i31> %r
+}
+
+define <2 x i31> @fshl_undef_shift_amount_vec(<2 x i31> %x, <2 x i31> %y) {
+; CHECK-LABEL: @fshl_undef_shift_amount_vec(
+; CHECK-NEXT:    ret <2 x i31> [[X:%.*]]
+;
+  %r = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %x, <2 x i31> %y, <2 x i31> undef)
+  ret <2 x i31> %r
+}
+
+define <2 x i32> @fshr_undef_shift_amount_vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @fshr_undef_shift_amount_vec(
+; CHECK-NEXT:    ret <2 x i32> [[Y:%.*]]
+;
+  %r = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> undef)
+  ret <2 x i32> %r
 }
 
 ; TODO: Don't let SimplifyDemandedBits split up a rotate - keep the same operand.
