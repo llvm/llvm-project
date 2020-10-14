@@ -136,9 +136,10 @@ TEST_F(ResourceTrackerStandardTest,
   auto RT = JD.createResourceTracker();
   cantFail(JD.define(std::move(MU), RT));
   cantFail(RT->remove());
-  auto SymFlags = cantFail(JD.lookupFlags(
-      LookupKind::Static, JITDylibLookupFlags::MatchExportedSymbolsOnly,
-      SymbolLookupSet(Foo)));
+  auto SymFlags = cantFail(ES.lookupFlags(
+      LookupKind::Static,
+      {{&JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
+      SymbolLookupSet(Foo, SymbolLookupFlags::WeaklyReferencedSymbol)));
 
   EXPECT_EQ(SymFlags.size(), 0U)
       << "Symbols should have been removed from the symbol table";
@@ -175,9 +176,10 @@ TEST_F(ResourceTrackerStandardTest, BasicDefineAndRemoveAllAfterMaterializing) {
   cantFail(JD.define(std::move(MU), RT));
   cantFail(ES.lookup({&JD}, Foo));
   cantFail(RT->remove());
-  auto SymFlags = cantFail(JD.lookupFlags(
-      LookupKind::Static, JITDylibLookupFlags::MatchExportedSymbolsOnly,
-      SymbolLookupSet(Foo)));
+  auto SymFlags = cantFail(ES.lookupFlags(
+      LookupKind::Static,
+      {{&JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
+      SymbolLookupSet(Foo, SymbolLookupFlags::WeaklyReferencedSymbol)));
 
   EXPECT_EQ(SymFlags.size(), 0U)
       << "Symbols should have been removed from the symbol table";
@@ -217,9 +219,10 @@ TEST_F(ResourceTrackerStandardTest, BasicDefineAndRemoveAllWhileMaterializing) {
       NoDependenciesToRegister);
 
   cantFail(RT->remove());
-  auto SymFlags = cantFail(JD.lookupFlags(
-      LookupKind::Static, JITDylibLookupFlags::MatchExportedSymbolsOnly,
-      SymbolLookupSet(Foo)));
+  auto SymFlags = cantFail(ES.lookupFlags(
+      LookupKind::Static,
+      {{&JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
+      SymbolLookupSet(Foo, SymbolLookupFlags::WeaklyReferencedSymbol)));
 
   EXPECT_EQ(SymFlags.size(), 0U)
       << "Symbols should have been removed from the symbol table";

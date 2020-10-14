@@ -272,9 +272,11 @@ TEST_F(CoreAPIsStandardTest, LookupFlagsTest) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
   cantFail(JD.define(std::move(MU)));
 
-  auto SymbolFlags = cantFail(JD.lookupFlags(
-      LookupKind::Static, JITDylibLookupFlags::MatchExportedSymbolsOnly,
-      SymbolLookupSet({Foo, Bar, Baz})));
+  auto SymbolFlags = cantFail(ES.lookupFlags(
+      LookupKind::Static,
+      {{&JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
+      SymbolLookupSet({Foo, Bar, Baz},
+                      SymbolLookupFlags::WeaklyReferencedSymbol)));
 
   EXPECT_EQ(SymbolFlags.size(), 2U)
       << "Returned symbol flags contains unexpected results";
@@ -291,8 +293,8 @@ TEST_F(CoreAPIsStandardTest, LookupWithGeneratorFailure) {
 
   class BadGenerator : public DefinitionGenerator {
   public:
-    Error tryToGenerate(LookupKind K, JITDylib &, JITDylibLookupFlags,
-                        const SymbolLookupSet &) override {
+    Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &,
+                        JITDylibLookupFlags, const SymbolLookupSet &) override {
       return make_error<StringError>("BadGenerator", inconvertibleErrorCode());
     }
   };
@@ -300,8 +302,8 @@ TEST_F(CoreAPIsStandardTest, LookupWithGeneratorFailure) {
   JD.addGenerator(std::make_unique<BadGenerator>());
 
   EXPECT_THAT_ERROR(
-      JD.lookupFlags(LookupKind::Static,
-                     JITDylibLookupFlags::MatchExportedSymbolsOnly,
+      ES.lookupFlags(LookupKind::Static,
+                     {{&JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
                      SymbolLookupSet(Foo))
           .takeError(),
       Failed<StringError>())
@@ -399,9 +401,11 @@ TEST_F(CoreAPIsStandardTest, TestReexportsGenerator) {
   JD.addGenerator(std::make_unique<ReexportsGenerator>(
       JD2, JITDylibLookupFlags::MatchExportedSymbolsOnly, Filter));
 
-  auto Flags = cantFail(JD.lookupFlags(
-      LookupKind::Static, JITDylibLookupFlags::MatchExportedSymbolsOnly,
-      SymbolLookupSet({Foo, Bar, Baz})));
+  auto Flags = cantFail(ES.lookupFlags(
+      LookupKind::Static,
+      {{&JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
+      SymbolLookupSet({Foo, Bar, Baz},
+                      SymbolLookupFlags::WeaklyReferencedSymbol)));
   EXPECT_EQ(Flags.size(), 1U) << "Unexpected number of results";
   EXPECT_EQ(Flags[Foo], FooSym.getFlags()) << "Unexpected flags for Foo";
 
@@ -1045,12 +1049,14 @@ TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
 }
 
 TEST_F(CoreAPIsStandardTest, GeneratorTest) {
-  cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
+  JITEvaluatedSymbol BazHiddenSym(
+      BazSym.getAddress(), BazSym.getFlags() & ~JITSymbolFlags::Exported);
+  cantFail(JD.define(absoluteSymbols({{Foo, FooSym}, {Baz, BazHiddenSym}})));
 
   class TestGenerator : public DefinitionGenerator {
   public:
     TestGenerator(SymbolMap Symbols) : Symbols(std::move(Symbols)) {}
-    Error tryToGenerate(LookupKind K, JITDylib &JD,
+    Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
                         JITDylibLookupFlags JDLookupFlags,
                         const SymbolLookupSet &Names) override {
       SymbolMap NewDefs;
@@ -1069,10 +1075,13 @@ TEST_F(CoreAPIsStandardTest, GeneratorTest) {
     SymbolMap Symbols;
   };
 
-  JD.addGenerator(std::make_unique<TestGenerator>(SymbolMap({{Bar, BarSym}})));
+  JD.addGenerator(std::make_unique<TestGenerator>(
+      SymbolMap({{Bar, BarSym}, {Baz, BazSym}})));
 
   auto Result = cantFail(
-      ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo, Bar})));
+      ES.lookup(makeJITDylibSearchOrder(&JD),
+                SymbolLookupSet({Foo, Bar})
+                    .add(Baz, SymbolLookupFlags::WeaklyReferencedSymbol)));
 
   EXPECT_EQ(Result.count(Bar), 1U) << "Expected to find fallback def for 'bar'";
   EXPECT_EQ(Result[Bar].getAddress(), BarSym.getAddress())
