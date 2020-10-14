@@ -1,4 +1,4 @@
-; Test loads of FP constants with VGM.
+; Test loads of FP constants with VGM and VGBM.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
 
@@ -60,4 +60,16 @@ define float @f10() {
 ; CHECK-LABEL: f10:
 ; CHECK: vgmf %v0, 2, 6
   ret float 0.125
+}
+
+define float @f11() {
+; CHECK-LABEL: f11:
+; CHECK: vgbm %v0, 61440
+  ret float 0xFFFFFFFFE0000000
+}
+
+define double @f12() {
+; CHECK-LABEL: f12:
+; CHECK: vgbm %v0, 61440
+  ret double 0xFFFFFFFF00000000
 }
