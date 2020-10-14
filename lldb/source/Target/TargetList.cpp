@@ -254,7 +254,8 @@ Status TargetList::CreateTargetInternal(
   // If we have a valid architecture, make sure the current platform is
   // compatible with that architecture.
   if (!prefer_platform_arch && arch.IsValid()) {
-    if (!platform_sp->IsCompatibleArchitecture(arch, false, nullptr)) {
+    ArchSpec compatible_arch;
+    if (!platform_sp->IsCompatibleArchitecture(arch, false, &compatible_arch)) {
       platform_sp = Platform::GetPlatformForArchitecture(arch, &platform_arch);
       if (!is_dummy_target && platform_sp)
         debugger.GetPlatformList().SetSelectedPlatform(platform_sp);
