@@ -1250,19 +1250,6 @@ bool Equivalent<llvm::Optional<uint64_t>>(llvm::Optional<uint64_t> l,
   return false;
 }
 
-/// Version taylored to GetTypeBitAlign.
-template <>
-bool Equivalent<llvm::Optional<size_t>>(llvm::Optional<size_t> l,
-                                        llvm::Optional<size_t> r) {
-  if (l == r)
-    return true;
-  // Assume that any value is "better" than none.
-  if (l.hasValue() && !r.hasValue())
-    return true;
-  llvm::dbgs() << l << " != " << r << "\n";
-  return false;
-}
-
 } // namespace
 #endif
 
