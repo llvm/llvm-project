@@ -108,7 +108,9 @@ public:
 
     llvm::SmallVector<mlir::Value, 8> loopCarried;
     loopCarried.push_back(steppedIndex);
-    loopCarried.append(terminator->operand_begin(), terminator->operand_end());
+    auto begin = loop.finalValue() ? std::next(terminator->operand_begin())
+                                   : terminator->operand_begin();
+    loopCarried.append(begin, terminator->operand_end());
     loopCarried.push_back(itersMinusOne);
     rewriter.create<mlir::BranchOp>(loc, conditionalBlock, loopCarried);
     rewriter.eraseOp(terminator);
@@ -125,8 +127,10 @@ public:
 
     // The result of the loop operation is the values of the condition block
     // arguments except the induction variable on the last iteration.
-    rewriter.replaceOp(
-        loop, conditionalBlock->getArguments().drop_front().drop_back());
+    auto args = loop.finalValue()
+                    ? conditionalBlock->getArguments()
+                    : conditionalBlock->getArguments().drop_front();
+    rewriter.replaceOp(loop, args.drop_back());
     return success();
   }
 };
@@ -232,7 +236,9 @@ public:
 
     llvm::SmallVector<mlir::Value, 8> loopCarried;
     loopCarried.push_back(stepped);
-    loopCarried.append(terminator->operand_begin(), terminator->operand_end());
+    auto begin = whileOp.finalValue() ? std::next(terminator->operand_begin())
+                                      : terminator->operand_begin();
+    loopCarried.append(begin, terminator->operand_end());
     rewriter.create<mlir::BranchOp>(loc, conditionBlock, loopCarried);
     rewriter.eraseOp(terminator);
 
@@ -261,7 +267,10 @@ public:
                                         llvm::ArrayRef<mlir::Value>());
     // The result of the loop operation is the values of the condition block
     // arguments except the induction variable on the last iteration.
-    rewriter.replaceOp(whileOp, conditionBlock->getArguments().drop_front());
+    auto args = whileOp.finalValue()
+                    ? conditionBlock->getArguments()
+                    : conditionBlock->getArguments().drop_front();
+    rewriter.replaceOp(whileOp, args);
     return success();
   }
 };

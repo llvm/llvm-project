@@ -227,15 +227,15 @@ integer function len_trim_test(c)
   ! CHECK-DAG: %[[c1:.*]] = constant 1 : index
   ! CHECK-DAG: %[[cm1:.*]] = constant -1 : index
   ! CHECK-DAG: %[[lastChar:.*]] = subi {{.*}}, %[[c1]]
-  ! CHECK: %[[iterateResult:.*]], %[[lastIndex:.*]] = fir.iterate_while (%[[index:.*]] = %[[lastChar]] to %[[c0]] step %[[cm1]]) and ({{.*}}) iter_args({{.*}}) {
+  ! CHECK: %[[iterateResult:.*]]:2 = fir.iterate_while (%[[index:.*]] = %[[lastChar]] to %[[c0]] step %[[cm1]]) and ({{.*}}) iter_args({{.*}}) {
     ! CHECK: %[[addr:.*]] = fir.coordinate_of {{.*}}, %[[index]]
     ! CHECK: %[[char:.*]] = fir.load %[[addr]]
     ! CHECK: %[[code:.*]] = fir.convert %[[char]]
     ! CHECK: %[[bool:.*]] = cmpi "eq"
-    !CHECK fir.result %[[bool]], %[[index]]
-  ! CHECK }
-  ! CHECK-DAG: %[[len:.*]] = addi %[[lastIndex]], %[[c1]]
-  ! CHECK: select %[[iterateResult]], %[[c0]], %[[len]]
+    ! CHECK: fir.result %[[bool]], %[[index]]
+  ! CHECK: }
+  ! CHECK: %[[len:.*]] = addi %[[iterateResult]]#1, %[[c1]]
+  ! CHECK: select %[[iterateResult]]#0, %[[c0]], %[[len]]
 end function
 
 ! NINT
