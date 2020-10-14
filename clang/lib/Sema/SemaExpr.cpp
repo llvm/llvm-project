@@ -6384,10 +6384,10 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   if (Context.isDependenceAllowed() &&
       (Fn->isTypeDependent() || Expr::hasAnyTypeDependentArguments(ArgExprs))) {
     assert(!getLangOpts().CPlusPlus);
-    assert(Fn->containsErrors() ||
-           llvm::any_of(ArgExprs,
-                        [](clang::Expr *E) { return E->containsErrors(); }) &&
-               "should only occur in error-recovery path.");
+    assert((Fn->containsErrors() ||
+            llvm::any_of(ArgExprs,
+                         [](clang::Expr *E) { return E->containsErrors(); })) &&
+           "should only occur in error-recovery path.");
     QualType ReturnType =
         llvm::isa_and_nonnull<FunctionDecl>(NDecl)
             ? dyn_cast<FunctionDecl>(NDecl)->getCallResultType()
