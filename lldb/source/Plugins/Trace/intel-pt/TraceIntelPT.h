@@ -9,12 +9,8 @@
 #ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPT_H
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPT_H
 
-#include "intel-pt.h"
-#include "llvm/ADT/Optional.h"
-
+#include "IntelPTDecoder.h"
 #include "TraceIntelPTSessionFileParser.h"
-#include "lldb/Target/Trace.h"
-#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 namespace trace_intel_pt {
@@ -59,6 +55,15 @@ public:
 
   llvm::StringRef GetSchema() override;
 
+  void TraverseInstructions(
+      const Thread &thread, size_t position, TraceDirection direction,
+      std::function<bool(size_t index, llvm::Expected<lldb::addr_t> load_addr)>
+          callback) override;
+
+  size_t GetInstructionCount(const Thread &thread) override;
+
+  size_t GetCursorPosition(const Thread &thread) override;
+
 private:
   friend class TraceIntelPTSessionFileParser;
 
@@ -68,8 +73,20 @@ private:
   TraceIntelPT(const pt_cpu &pt_cpu,
                const std::vector<std::shared_ptr<ThreadTrace>> &traced_threads);
 
+  /// Decode the trace of the given thread that, i.e. recontruct the traced
+  /// instructions. That trace must be managed by this class.
+  ///
+  /// \param[in] thread
+  ///     If \a thread is a \a ThreadTrace, then its internal trace file will be
+  ///     decoded. Live threads are not currently supported.
+  ///
+  /// \return
+  ///     A \a DecodedThread instance if decoding was successful, or a \b
+  ///     nullptr if the thread's trace is not managed by this class.
+  const DecodedThread *Decode(const Thread &thread);
+
   pt_cpu m_pt_cpu;
-  std::map<std::pair<lldb::pid_t, lldb::tid_t>, std::shared_ptr<ThreadTrace>>
+  std::map<std::pair<lldb::pid_t, lldb::tid_t>, ThreadTraceDecoder>
       m_trace_threads;
 };
 
