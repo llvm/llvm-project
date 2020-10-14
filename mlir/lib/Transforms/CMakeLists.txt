@@ -2,6 +2,7 @@ add_subdirectory(Utils)
 
 add_mlir_library(MLIRTransforms
   BufferPlacement.cpp
+  Bufferize.cpp
   Canonicalizer.cpp
   CopyRemoval.cpp
   CSE.cpp
