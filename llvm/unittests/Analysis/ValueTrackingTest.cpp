@@ -25,10 +25,18 @@ using namespace llvm;
 
 namespace {
 
-static Instruction &findInstructionByName(Function *F, StringRef Name) {
+static Instruction *findInstructionByNameOrNull(Function *F, StringRef Name) {
   for (Instruction &I : instructions(F))
     if (I.getName() == Name)
-      return I;
+      return &I;
+
+  return nullptr;
+}
+
+static Instruction &findInstructionByName(Function *F, StringRef Name) {
+  auto *I = findInstructionByNameOrNull(F, Name);
+  if (I)
+    return *I;
 
   llvm_unreachable("Expected value not found");
 }
@@ -56,14 +64,21 @@ protected:
     if (!F)
       return;
 
-    A = &findInstructionByName(F, "A");
+    A = findInstructionByNameOrNull(F, "A");
     ASSERT_TRUE(A) << "@test must have an instruction %A";
+
+    CxtI = findInstructionByNameOrNull(F, "CxtI");
+    CxtI2 = findInstructionByNameOrNull(F, "CxtI2");
+    CxtI3 = findInstructionByNameOrNull(F, "CxtI3");
   }
 
   LLVMContext Context;
   std::unique_ptr<Module> M;
   Function *F = nullptr;
   Instruction *A = nullptr;
+
+  // Context instructions (optional)
+  Instruction *CxtI = nullptr, *CxtI2 = nullptr, *CxtI3 = nullptr;
 };
 
 class MatchSelectPatternTest : public ValueTrackingTest {
@@ -763,7 +778,8 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBePoison_exploitBranchCond) {
     if (&BB == &F->getEntryBlock())
       continue;
 
-    EXPECT_EQ(isGuaranteedNotToBePoison(A, BB.getTerminator(), &DT), true)
+    EXPECT_EQ(isGuaranteedNotToBePoison(A, nullptr, BB.getTerminator(), &DT),
+              true)
         << "isGuaranteedNotToBePoison does not hold at " << *BB.getTerminator();
   }
 }
@@ -786,7 +802,7 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBePoison_phi) {
   DominatorTree DT(*F);
   for (auto &BB : *F) {
     if (BB.getName() == "LOOP") {
-      EXPECT_EQ(isGuaranteedNotToBePoison(A, A, &DT), true)
+      EXPECT_EQ(isGuaranteedNotToBePoison(A, nullptr, A, &DT), true)
           << "isGuaranteedNotToBePoison does not hold";
     }
   }
@@ -800,6 +816,33 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison) {
                 "  ret void\n"
                 "}\n");
   EXPECT_EQ(isGuaranteedNotToBeUndefOrPoison(A), true);
+}
+
+TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_assume) {
+  parseAssembly("declare i1 @f_i1()\n"
+                "declare i32 @f_i32()\n"
+                "declare void @llvm.assume(i1)\n"
+                "define void @test() {\n"
+                "  %A = call i32 @f_i32()\n"
+                "  %cond = call i1 @f_i1()\n"
+                "  %CxtI = add i32 0, 0\n"
+                "  br i1 %cond, label %BB1, label %EXIT\n"
+                "BB1:\n"
+                "  %CxtI2 = add i32 0, 0\n"
+                "  %cond2 = call i1 @f_i1()\n"
+                "  call void @llvm.assume(i1 true) [ \"noundef\"(i32 %A) ]\n"
+                "  br i1 %cond2, label %BB2, label %EXIT\n"
+                "BB2:\n"
+                "  %CxtI3 = add i32 0, 0\n"
+                "  ret void\n"
+                "EXIT:\n"
+                "  ret void\n"
+                "}");
+  AssumptionCache AC(*F);
+  DominatorTree DT(*F);
+  EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CxtI, &DT));
+  EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CxtI2, &DT));
+  EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A, &AC, CxtI3, &DT));
 }
 
 TEST(ValueTracking, canCreatePoisonOrUndef) {

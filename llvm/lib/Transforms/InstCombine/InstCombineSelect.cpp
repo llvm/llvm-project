@@ -1184,11 +1184,13 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
   // X == Y ? X : Z with X == Y ? Y : Z, as that would lead to an infinite
   // replacement cycle.
   Value *CmpLHS = Cmp.getOperand(0), *CmpRHS = Cmp.getOperand(1);
-  if (TrueVal != CmpLHS && isGuaranteedNotToBeUndefOrPoison(CmpRHS, &Sel, &DT))
+  if (TrueVal != CmpLHS &&
+      isGuaranteedNotToBeUndefOrPoison(CmpRHS, SQ.AC, &Sel, &DT))
     if (Value *V = SimplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, SQ,
                                           /* AllowRefinement */ true))
       return replaceOperand(Sel, Swapped ? 2 : 1, V);
-  if (TrueVal != CmpRHS && isGuaranteedNotToBeUndefOrPoison(CmpLHS, &Sel, &DT))
+  if (TrueVal != CmpRHS &&
+      isGuaranteedNotToBeUndefOrPoison(CmpLHS, SQ.AC, &Sel, &DT))
     if (Value *V = SimplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, SQ,
                                           /* AllowRefinement */ true))
       return replaceOperand(Sel, Swapped ? 2 : 1, V);
