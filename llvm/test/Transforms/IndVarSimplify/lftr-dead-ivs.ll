@@ -30,7 +30,7 @@ define void @neg_dynamically_dead_inbounds(i1 %always_false) #0 {
 ; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i8, i8* [[P_0]], i64 1
 ; CHECK-NEXT:    br i1 [[ALWAYS_FALSE:%.*]], label [[NEVER_EXECUTED:%.*]], label [[CONT]]
 ; CHECK:       never_executed:
-; CHECK-NEXT:    store volatile i8 0, i8* [[TMP3]]
+; CHECK-NEXT:    store volatile i8 0, i8* [[TMP3]], align 1
 ; CHECK-NEXT:    br label [[CONT]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[TMP4]] = add nuw i8 [[I_0]], 1
@@ -73,7 +73,7 @@ define void @neg_dynamically_dead_inbounds2(i8* %a, i1 %always_false) #0 {
 ; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i8, i8* [[P_0]], i64 1
 ; CHECK-NEXT:    br i1 [[ALWAYS_FALSE:%.*]], label [[NEVER_EXECUTED:%.*]], label [[CONT]]
 ; CHECK:       never_executed:
-; CHECK-NEXT:    store volatile i8 0, i8* [[TMP3]]
+; CHECK-NEXT:    store volatile i8 0, i8* [[TMP3]], align 1
 ; CHECK-NEXT:    br label [[CONT]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[TMP4]] = add nuw i8 [[I_0]], 1
@@ -110,7 +110,7 @@ define void @dom_store_preinc() #0 {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[P_0:%.*]] = phi i8* [ getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 0), [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    store volatile i8 0, i8* [[P_0]]
+; CHECK-NEXT:    store volatile i8 0, i8* [[P_0]], align 1
 ; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i8, i8* [[P_0]], i64 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[P_0]], getelementptr ([240 x i8], [240 x i8]* @data, i64 1, i64 5)
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -140,7 +140,7 @@ define void @dom_store_postinc() #0 {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[P_0:%.*]] = phi i8* [ getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 0), [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i8, i8* [[P_0]], i64 1
-; CHECK-NEXT:    store volatile i8 0, i8* [[TMP3]]
+; CHECK-NEXT:    store volatile i8 0, i8* [[TMP3]], align 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[TMP3]], getelementptr ([240 x i8], [240 x i8]* @data, i64 1, i64 6)
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -169,7 +169,7 @@ define i8 @dom_load() #0 {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[P_0:%.*]] = phi i8* [ getelementptr inbounds ([240 x i8], [240 x i8]* @data, i64 0, i64 0), [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP3]] = getelementptr inbounds i8, i8* [[P_0]], i64 1
-; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[TMP3]]
+; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[TMP3]], align 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[TMP3]], getelementptr ([240 x i8], [240 x i8]* @data, i64 1, i64 6)
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
