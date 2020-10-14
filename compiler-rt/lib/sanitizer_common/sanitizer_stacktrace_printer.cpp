@@ -188,13 +188,14 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
     case 'M':
       // Module basename and offset, or PC.
       if (address & kExternalPCBit) {
-      }  // There PCs are not meaningful.
-      else if (info->module)
+        // There PCs are not meaningful.
+      } else if (info->module) {
         // Always strip the module name for %M.
         RenderModuleLocation(buffer, StripModuleName(info->module),
                              info->module_offset, info->module_arch, "");
-      else
+      } else {
         buffer->append("(%p)", (void *)address);
+      }
       break;
     default:
       Report("Unsupported specifier in stack frame format: %c (0x%zx)!\n", *p,
