@@ -33,7 +33,7 @@ FormatTokenLexer::FormatTokenLexer(
       Encoding(Encoding), Allocator(Allocator), FirstInLineIndex(0),
       FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
       MacroBlockEndRegex(Style.MacroBlockEnd) {
-  Lex.reset(new Lexer(ID, SourceMgr.getBuffer(ID), SourceMgr,
+  Lex.reset(new Lexer(ID, SourceMgr.getBufferOrFake(ID), SourceMgr,
                       getFormattingLangOpts(Style)));
   Lex->SetKeepWhitespaceMode(true);
 
