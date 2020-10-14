@@ -3505,15 +3505,15 @@ const SCEV *ScalarEvolution::getUMinExpr(SmallVectorImpl<const SCEV *> &Ops) {
 }
 
 const SCEV *ScalarEvolution::getSizeOfExpr(Type *IntTy, Type *AllocTy) {
+  // We can bypass creating a target-independent
+  // constant expression and then folding it back into a ConstantInt.
+  // This is just a compile-time optimization.
   if (isa<ScalableVectorType>(AllocTy)) {
     Constant *NullPtr = Constant::getNullValue(AllocTy->getPointerTo());
     Constant *One = ConstantInt::get(IntTy, 1);
     Constant *GEP = ConstantExpr::getGetElementPtr(AllocTy, NullPtr, One);
-    return getUnknown(ConstantExpr::getPtrToInt(GEP, IntTy));
+    return getSCEV(ConstantExpr::getPtrToInt(GEP, IntTy));
   }
-  // We can bypass creating a target-independent
-  // constant expression and then folding it back into a ConstantInt.
-  // This is just a compile-time optimization.
   return getConstant(IntTy, getDataLayout().getTypeAllocSize(AllocTy));
 }
 
@@ -6301,36 +6301,6 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       return getSCEV(U->getOperand(0));
     break;
 
-  case Instruction::PtrToInt: {
-    // It's tempting to handle inttoptr and ptrtoint as no-ops,
-    // however this can lead to pointer expressions which cannot safely be
-    // expanded to GEPs because ScalarEvolution doesn't respect
-    // the GEP aliasing rules when simplifying integer expressions.
-    //
-    // However, given
-    //   %x = ???
-    //   %y = ptrtoint %x
-    //   %z = ptrtoint %x
-    // it is safe to say that %y and %z are the same thing.
-    //
-    // So instead of modelling the cast itself as unknown,
-    // since the casts are transparent within SCEV,
-    // we can at least model the casts original value as unknow instead.
-
-    // BUT, there's caveat. If we simply model %x as unknown, unrelated uses
-    // of %x will also see it as unknown, which is obviously bad.
-    // So we can only do this iff %x would be modelled as unknown anyways.
-    auto *OpSCEV = getSCEV(U->getOperand(0));
-    if (isa<SCEVUnknown>(OpSCEV))
-      return getTruncateOrZeroExtend(OpSCEV, U->getType());
-    // If we can model the operand, however, we must fallback to modelling
-    // the whole cast as unknown instead.
-    LLVM_FALLTHROUGH;
-  }
-  case Instruction::IntToPtr:
-    // We can't do this for inttoptr at all, however.
-    return getUnknown(V);
-
   case Instruction::SDiv:
     // If both operands are non-negative, this is just an udiv.
     if (isKnownNonNegative(getSCEV(U->getOperand(0))) &&
@@ -6344,6 +6314,11 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         isKnownNonNegative(getSCEV(U->getOperand(1))))
       return getURemExpr(getSCEV(U->getOperand(0)), getSCEV(U->getOperand(1)));
     break;
+
+  // It's tempting to handle inttoptr and ptrtoint as no-ops, however this can
+  // lead to pointer expressions which cannot safely be expanded to GEPs,
+  // because ScalarEvolution doesn't respect the GEP aliasing rules when
+  // simplifying integer expressions.
 
   case Instruction::GetElementPtr:
     return createNodeForGEP(cast<GEPOperator>(U));
@@ -7976,7 +7951,7 @@ const SCEV *ScalarEvolution::getSCEVAtScope(const SCEV *V, const Loop *L) {
 /// will return Constants for objects which aren't represented by a
 /// SCEVConstant, because SCEVConstant is restricted to ConstantInt.
 /// Returns NULL if the SCEV isn't representable as a Constant.
-static Constant *BuildConstantFromSCEV(const SCEV *V, const DataLayout &DL) {
+static Constant *BuildConstantFromSCEV(const SCEV *V) {
   switch (static_cast<SCEVTypes>(V->getSCEVType())) {
     case scCouldNotCompute:
     case scAddRecExpr:
@@ -7987,47 +7962,32 @@ static Constant *BuildConstantFromSCEV(const SCEV *V, const DataLayout &DL) {
       return dyn_cast<Constant>(cast<SCEVUnknown>(V)->getValue());
     case scSignExtend: {
       const SCEVSignExtendExpr *SS = cast<SCEVSignExtendExpr>(V);
-      if (Constant *CastOp = BuildConstantFromSCEV(SS->getOperand(), DL)) {
-        if (CastOp->getType()->isPointerTy())
-          // Note that for SExt, unlike ZExt/Trunc, it is incorrect to just call
-          // ConstantExpr::getPtrToInt() and be done with it, because PtrToInt
-          // will zero-extend (otherwise ZExt case wouldn't work). So we need to
-          // first cast to the same-bitwidth integer, and then SExt it.
-          CastOp = ConstantExpr::getPtrToInt(
-              CastOp, DL.getIntPtrType(CastOp->getType()));
-        // And now, we can actually perform the sign-extension.
+      if (Constant *CastOp = BuildConstantFromSCEV(SS->getOperand()))
         return ConstantExpr::getSExt(CastOp, SS->getType());
-      }
       break;
     }
     case scZeroExtend: {
       const SCEVZeroExtendExpr *SZ = cast<SCEVZeroExtendExpr>(V);
-      if (Constant *CastOp = BuildConstantFromSCEV(SZ->getOperand(), DL)) {
-        if (!CastOp->getType()->isPointerTy())
-          return ConstantExpr::getZExt(CastOp, SZ->getType());
-        return ConstantExpr::getPtrToInt(CastOp, SZ->getType());
-      }
+      if (Constant *CastOp = BuildConstantFromSCEV(SZ->getOperand()))
+        return ConstantExpr::getZExt(CastOp, SZ->getType());
       break;
     }
     case scTruncate: {
       const SCEVTruncateExpr *ST = cast<SCEVTruncateExpr>(V);
-      if (Constant *CastOp = BuildConstantFromSCEV(ST->getOperand(), DL)) {
-        if (!CastOp->getType()->isPointerTy())
-          return ConstantExpr::getTrunc(CastOp, ST->getType());
-        return ConstantExpr::getPtrToInt(CastOp, ST->getType());
-      }
+      if (Constant *CastOp = BuildConstantFromSCEV(ST->getOperand()))
+        return ConstantExpr::getTrunc(CastOp, ST->getType());
       break;
     }
     case scAddExpr: {
       const SCEVAddExpr *SA = cast<SCEVAddExpr>(V);
-      if (Constant *C = BuildConstantFromSCEV(SA->getOperand(0), DL)) {
+      if (Constant *C = BuildConstantFromSCEV(SA->getOperand(0))) {
         if (PointerType *PTy = dyn_cast<PointerType>(C->getType())) {
           unsigned AS = PTy->getAddressSpace();
           Type *DestPtrTy = Type::getInt8PtrTy(C->getContext(), AS);
           C = ConstantExpr::getBitCast(C, DestPtrTy);
         }
         for (unsigned i = 1, e = SA->getNumOperands(); i != e; ++i) {
-          Constant *C2 = BuildConstantFromSCEV(SA->getOperand(i), DL);
+          Constant *C2 = BuildConstantFromSCEV(SA->getOperand(i));
           if (!C2) return nullptr;
 
           // First pointer!
@@ -8059,11 +8019,11 @@ static Constant *BuildConstantFromSCEV(const SCEV *V, const DataLayout &DL) {
     }
     case scMulExpr: {
       const SCEVMulExpr *SM = cast<SCEVMulExpr>(V);
-      if (Constant *C = BuildConstantFromSCEV(SM->getOperand(0), DL)) {
+      if (Constant *C = BuildConstantFromSCEV(SM->getOperand(0))) {
         // Don't bother with pointers at all.
         if (C->getType()->isPointerTy()) return nullptr;
         for (unsigned i = 1, e = SM->getNumOperands(); i != e; ++i) {
-          Constant *C2 = BuildConstantFromSCEV(SM->getOperand(i), DL);
+          Constant *C2 = BuildConstantFromSCEV(SM->getOperand(i));
           if (!C2 || C2->getType()->isPointerTy()) return nullptr;
           C = ConstantExpr::getMul(C, C2);
         }
@@ -8073,8 +8033,8 @@ static Constant *BuildConstantFromSCEV(const SCEV *V, const DataLayout &DL) {
     }
     case scUDivExpr: {
       const SCEVUDivExpr *SU = cast<SCEVUDivExpr>(V);
-      if (Constant *LHS = BuildConstantFromSCEV(SU->getLHS(), DL))
-        if (Constant *RHS = BuildConstantFromSCEV(SU->getRHS(), DL))
+      if (Constant *LHS = BuildConstantFromSCEV(SU->getLHS()))
+        if (Constant *RHS = BuildConstantFromSCEV(SU->getRHS()))
           if (LHS->getType() == RHS->getType())
             return ConstantExpr::getUDiv(LHS, RHS);
       break;
@@ -8179,7 +8139,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
           const SCEV *OpV = getSCEVAtScope(OrigV, L);
           MadeImprovement |= OrigV != OpV;
 
-          Constant *C = BuildConstantFromSCEV(OpV, getDataLayout());
+          Constant *C = BuildConstantFromSCEV(OpV);
           if (!C) return V;
           if (C->getType() != Op->getType())
             C = ConstantExpr::getCast(CastInst::getCastOpcode(C, false,
