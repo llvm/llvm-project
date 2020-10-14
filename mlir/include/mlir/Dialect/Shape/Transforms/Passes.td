@@ -22,8 +22,8 @@ def ShapeToShapeLowering : FunctionPass<"shape-to-shape-lowering"> {
 }
 
 // TODO: Generalize this to allow any type conversions desired.
-def ShapeTensorToMemref : FunctionPass<"shape-tensor-to-memref"> {
-  let summary = "Replace tensors involving shape operations with memrefs";
-  let constructor = "mlir::createShapeTensorToMemrefPass()";
+def ShapeBufferize : FunctionPass<"shape-bufferize"> {
+  let summary = "Bufferize the shape dialect.";
+  let constructor = "mlir::createShapeBufferizePass()";
 }
 #endif // MLIR_DIALECT_SHAPE_TRANSFORMS_PASSES
