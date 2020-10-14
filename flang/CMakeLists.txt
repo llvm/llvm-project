@@ -82,6 +82,10 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(HandleLLVMOptions)
   include(VersionFromVCS)
 
+  if(FLANG_BUILD_NEW_DRIVER)
+    include(AddClang)
+  endif()
+
   if(LINK_WITH_FIR)
     include(TableGen)
     find_package(MLIR REQUIRED CONFIG)
