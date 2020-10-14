@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ProcessTrace.h"
+#include "lldb/Target/ProcessTrace.h"
 
 #include <memory>
 
@@ -16,9 +16,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::process_trace;
-
-LLDB_PLUGIN_DEFINE(ProcessTrace)
 
 ConstString ProcessTrace::GetPluginNameStatic() {
   static ConstString g_name("trace");

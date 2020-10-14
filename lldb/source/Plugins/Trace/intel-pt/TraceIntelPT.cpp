@@ -10,7 +10,9 @@
 
 #include "TraceIntelPTSessionFileParser.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/ThreadTrace.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -56,11 +58,11 @@ TraceIntelPT::CreateInstance(const json::Value &trace_session_file,
       .Parse();
 }
 
-TraceSP TraceIntelPT::CreateInstance(const pt_cpu &pt_cpu,
-                                     const std::vector<TargetSP> &targets) {
-  TraceSP trace_instance(new TraceIntelPT(pt_cpu, targets));
-  for (const TargetSP &target_sp : targets)
-    target_sp->SetTrace(trace_instance);
-
-  return trace_instance;
+TraceIntelPT::TraceIntelPT(
+    const pt_cpu &pt_cpu,
+    const std::vector<std::shared_ptr<ThreadTrace>> &traced_threads)
+    : m_pt_cpu(pt_cpu) {
+  for (const std::shared_ptr<ThreadTrace> &thread : traced_threads)
+    m_trace_threads.emplace(
+        std::make_pair(thread->GetProcess()->GetID(), thread->GetID()), thread);
 }
