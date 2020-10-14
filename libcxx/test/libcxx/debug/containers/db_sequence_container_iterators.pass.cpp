@@ -70,14 +70,14 @@ public:
 
 private:
   static void SanityTest() {
-    CHECKPOINT("sanity test");
+    // sanity test
     Container C = {1, 1, 1, 1};
     ::DoNotOptimize(&C);
   }
 
   static void RemoveFirstElem() {
     // See llvm.org/PR35564
-    CHECKPOINT("remove(<first-elem>)");
+    // remove(<first-elem>)
     {
       Container C = makeContainer(1);
       auto FirstVal = *(C.begin());
@@ -94,7 +94,7 @@ private:
 
   static void SpliceFirstElem() {
     // See llvm.org/PR35564
-    CHECKPOINT("splice(<first-elem>)");
+    // splice(<first-elem>)
     {
       Container C = makeContainer(1);
       Container C2;
@@ -108,14 +108,14 @@ private:
   }
 
   static void SpliceSameContainer() {
-    CHECKPOINT("splice(<same-container>)");
+    // splice(<same-container>)
     Container C = {1, 1};
     C.splice(C.end(), C, C.begin());
   }
 
   static void SpliceFirstElemAfter() {
     // See llvm.org/PR35564
-    CHECKPOINT("splice(<first-elem>)");
+    // splice(<first-elem>)
     {
       Container C = makeContainer(1);
       Container C2;
@@ -129,7 +129,7 @@ private:
   }
 
   static void AssignInvalidates() {
-    CHECKPOINT("assign(Size, Value)");
+    // assign(Size, Value)
     Container C(allocator_type{});
     iterator it1, it2, it3;
     auto reset = [&]() {
@@ -147,7 +147,7 @@ private:
     C.assign(2, makeValueType(4));
     check();
     reset();
-    CHECKPOINT("assign(Iter, Iter)");
+    // assign(Iter, Iter)
     std::vector<value_type> V = {
         makeValueType(1),
         makeValueType(2),
@@ -156,13 +156,13 @@ private:
     C.assign(V.begin(), V.end());
     check();
     reset();
-    CHECKPOINT("assign(initializer_list)");
+    // assign(initializer_list)
     C.assign({makeValueType(1), makeValueType(2), makeValueType(3)});
     check();
   }
 
   static void BackOnEmptyContainer() {
-    CHECKPOINT("testing back on empty");
+    // testing back on empty
     Container C = makeContainer(1);
     Container const& CC = C;
     (void)C.back();
@@ -173,7 +173,7 @@ private:
   }
 
   static void FrontOnEmptyContainer() {
-    CHECKPOINT("testing front on empty");
+    // testing front on empty
     Container C = makeContainer(1);
     Container const& CC = C;
     (void)C.front();
@@ -184,7 +184,7 @@ private:
   }
 
   static void EraseIterIter() {
-    CHECKPOINT("testing erase iter iter invalidation");
+    // testing erase iter iter invalidation
     Container C1 = makeContainer(3);
     iterator it1 = C1.begin();
     iterator it1_next = ++C1.begin();
@@ -206,7 +206,7 @@ private:
   }
 
   static void PopBack() {
-    CHECKPOINT("testing  pop_back() invalidation");
+    // testing  pop_back() invalidation
     Container C1 = makeContainer(2);
     iterator it1 = C1.end();
     --it1;
@@ -218,7 +218,7 @@ private:
   }
 
   static void PopFront() {
-    CHECKPOINT("testing pop_front() invalidation");
+    // testing pop_front() invalidation
     Container C1 = makeContainer(2);
     iterator it1 = C1.begin();
     C1.pop_front();
@@ -229,7 +229,7 @@ private:
   }
 
   static void InsertIterValue() {
-    CHECKPOINT("testing insert(iter, value)");
+    // testing insert(iter, value)
     Container C1 = makeContainer(2);
     iterator it1 = C1.begin();
     iterator it1_next = it1;
@@ -254,7 +254,7 @@ private:
   }
 
   static void EmplaceIterValue() {
-    CHECKPOINT("testing emplace(iter, value)");
+    // testing emplace(iter, value)
     Container C1 = makeContainer(2);
     iterator it1 = C1.begin();
     iterator it1_next = it1;
@@ -274,7 +274,7 @@ private:
   }
 
   static void InsertIterSizeValue() {
-    CHECKPOINT("testing insert(iter, size, value)");
+    // testing insert(iter, size, value)
     Container C1 = makeContainer(2);
     iterator it1 = C1.begin();
     iterator it1_next = it1;
@@ -293,7 +293,7 @@ private:
   }
 
   static void InsertIterIterIter() {
-    CHECKPOINT("testing insert(iter, iter, iter)");
+    // testing insert(iter, iter, iter)
     Container C1 = makeContainer(2);
     iterator it1 = C1.begin();
     iterator it1_next = it1;
