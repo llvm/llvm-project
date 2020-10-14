@@ -23,7 +23,7 @@
 using namespace mlir;
 
 namespace {
-/// This pass tests the computeAllocPosition helper method and buffer assignment
+/// This pass tests the computeAllocPosition helper method and bufferize
 /// operation converters. Furthermore, this pass converts linalg operations on
 /// tensors to linalg operations on buffers to prepare them for the
 /// BufferPlacement pass that can be applied afterwards.
@@ -38,17 +38,17 @@ struct TestBufferPlacementPreparationPass
           OperationPass<ModuleOp>> {
 
   /// Converts tensor-type generic linalg operations to memref ones using
-  /// buffer assignment.
+  /// bufferize.
   /// TODO: Avoid the copy-pasta by exposing the pattern from BufferPlacement.h
   /// This is limited by not wanting BufferPlacement to depend on Linalg. Fixing
   /// this probably requires an OpConversionPattern over generic Operation*. For
   /// now only RewritePattern but not ConversionPattern allow this.
 
   class GenericOpConverter
-      : public BufferAssignmentOpConversionPattern<linalg::GenericOp> {
+      : public BufferizeOpConversionPattern<linalg::GenericOp> {
   public:
-    using BufferAssignmentOpConversionPattern<
-        linalg::GenericOp>::BufferAssignmentOpConversionPattern;
+    using BufferizeOpConversionPattern<
+        linalg::GenericOp>::BufferizeOpConversionPattern;
 
     LogicalResult
     matchAndRewrite(linalg::GenericOp op, ArrayRef<Value> operands,
@@ -147,11 +147,11 @@ struct TestBufferPlacementPreparationPass
   };
 
   void populateTensorLinalgToBufferLinalgConversionPattern(
-      MLIRContext *context, BufferAssignmentTypeConverter &converter,
+      MLIRContext *context, BufferizeTypeConverter &converter,
       OwningRewritePatternList &patterns) {
-    populateWithBufferAssignmentOpConversionPatterns<
-        mlir::ReturnOp, mlir::ReturnOp, linalg::CopyOp>(context, converter,
-                                                        patterns);
+    populateWithBufferizeOpConversionPatterns<mlir::ReturnOp, mlir::ReturnOp,
+                                              linalg::CopyOp>(
+        context, converter, patterns);
     patterns.insert<GenericOpConverter>(context, converter);
   }
 
@@ -163,7 +163,7 @@ struct TestBufferPlacementPreparationPass
   void runOnOperation() override {
     MLIRContext &context = this->getContext();
     ConversionTarget target(context);
-    BufferAssignmentTypeConverter converter;
+    BufferizeTypeConverter converter;
 
     // Mark all Standard operations legal.
     target.addLegalDialect<StandardOpsDialect>();
@@ -194,8 +194,8 @@ struct TestBufferPlacementPreparationPass
     });
 
     auto kind = allowMemrefFunctionResults
-                    ? BufferAssignmentTypeConverter::KeepAsFunctionResult
-                    : BufferAssignmentTypeConverter::AppendToArgumentsList;
+                    ? BufferizeTypeConverter::KeepAsFunctionResult
+                    : BufferizeTypeConverter::AppendToArgumentsList;
     converter.setResultConversionKind<RankedTensorType, MemRefType>(kind);
     converter.setResultConversionKind<UnrankedTensorType, UnrankedMemRefType>(
         kind);
