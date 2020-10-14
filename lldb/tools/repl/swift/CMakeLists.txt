@@ -6,10 +6,15 @@ if (CMAKE_HOST_APPLE AND APPLE)
 endif()
 
 # Requires system-provided Swift libs.
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14.4)
+if(NOT APPLE_EMBEDDED)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14.4)
+endif()
 
 add_lldb_tool(repl_swift ADD_TO_FRAMEWORK
   main.c
+
+  ENTITLEMENTS
+  "${CMAKE_CURRENT_SOURCE_DIR}/get-task-allow-entitlements.plist"
   )
 target_link_libraries(repl_swift PRIVATE ${CMAKE_DL_LIBS})
 if(CMAKE_SYSTEM_NAME STREQUAL Windows)
