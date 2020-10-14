@@ -34,12 +34,13 @@ struct Y {
   struct Inner : Y { // expected-note {{declared here}}
   };
 
-  bool f(T other) {
+  bool f(T other) { // expected-note {{declared here}}
     // We can determine that 'inner' does not exist at parse time, so can
     // perform typo correction in this case.
     return this->inner<other>::z; // expected-error {{no template named 'inner' in 'Y<T>'; did you mean 'Inner'?}}
+    // expected-error@-1 {{constant expression}} expected-note@-1 {{function parameter 'other'}}
   }
 };
 
 struct Q { constexpr operator int() { return 0; } };
-void use_y(Y<Q> x) { x.f(Q()); }
+void use_y(Y<Q> x) { x.f(Q()); } // expected-note {{instantiation of}}

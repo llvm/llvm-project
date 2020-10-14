@@ -85,8 +85,7 @@ uint64_t check_integer_overflows(int i) { //expected-note 0+{{declared here}}
 // expected-warning@+1 {{overflow in expression; result is 537919488 with type 'int'}}
   case 1 + static_cast<uint64_t>(4609 * 1024 * 1024):
     return 7;
-// expected-error@+2 {{expression is not an integral constant expression}}
-// expected-note@+1 {{read of non-const variable 'i' is not allowed in a constant expression}}
+// expected-error@+1 {{expression is not an integral constant expression}}
   case ((uint64_t)(4608 * 1024 * 1024 * i)):
     return 8;
 // expected-warning@+1 {{overflow in expression; result is 536870912 with type 'int'}}
