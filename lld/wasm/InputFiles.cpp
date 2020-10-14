@@ -59,8 +59,7 @@ Optional<MemoryBufferRef> readFile(StringRef path) {
   return mbref;
 }
 
-InputFile *createObjectFile(MemoryBufferRef mb,
-                                       StringRef archiveName) {
+InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName) {
   file_magic magic = identify_magic(mb.getBuffer());
   if (magic == file_magic::wasm_object) {
     std::unique_ptr<Binary> bin =

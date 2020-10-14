@@ -64,3 +64,15 @@ public:
 void dummysymbol() {
   throw(std::runtime_error("string"));
 }
+
+namespace not_weak_on_first {
+  int func();
+  // CHECK: {{.*}} extern_weak {{.*}} @_ZN17not_weak_on_first4funcEv(
+  int func() __attribute__ ((weak));
+
+  typedef int (*FuncT)();
+
+  extern const FuncT table[] = {
+      func,
+  };
+}

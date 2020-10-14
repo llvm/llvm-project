@@ -13,7 +13,7 @@
 #ifndef LIBCXXABI_NO_TIMER
 
 #include <chrono>
-#include <iostream>
+#include <cstdio>
 
 class timer
 {
@@ -31,7 +31,7 @@ public:
         using std::chrono::duration_cast;
         TimePoint end = Clock::now();
         MicroSeconds us = duration_cast<MicroSeconds>(end - m_start);
-        std::cout << us.count() << " microseconds\n";
+        std::printf("%d microseconds\n", us.count());
     }
 
 private:

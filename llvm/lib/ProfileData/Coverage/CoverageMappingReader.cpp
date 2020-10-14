@@ -950,6 +950,19 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch) {
       BytesInAddress, Endian);
 }
 
+/// Determine whether \p Arch is invalid or empty, given \p Bin.
+static bool isArchSpecifierInvalidOrMissing(Binary *Bin, StringRef Arch) {
+  // If we have a universal binary and Arch doesn't identify any of its slices,
+  // it's user error.
+  if (auto *Universal = dyn_cast<MachOUniversalBinary>(Bin)) {
+    for (auto &ObjForArch : Universal->objects())
+      if (Arch == ObjForArch.getArchFlagName())
+        return false;
+    return true;
+  }
+  return false;
+}
+
 Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
 BinaryCoverageReader::create(
     MemoryBufferRef ObjectBuffer, StringRef Arch,
@@ -969,6 +982,10 @@ BinaryCoverageReader::create(
   if (!BinOrErr)
     return BinOrErr.takeError();
   std::unique_ptr<Binary> Bin = std::move(BinOrErr.get());
+
+  if (isArchSpecifierInvalidOrMissing(Bin.get(), Arch))
+    return make_error<CoverageMapError>(
+        coveragemap_error::invalid_or_missing_arch_specifier);
 
   // MachO universal binaries which contain archives need to be treated as
   // archives, not as regular binaries.

@@ -9,7 +9,6 @@
 // UNSUPPORTED: no-exceptions
 
 #include <typeinfo>
-#include <iostream>
 
 //  Test taken from 5.2.8.2
 //  When typeid is applied to a glvalue expression whose type is a polymorphic
@@ -30,7 +29,7 @@ bool bad_typeid_test () {
     try {bool b = typeid(*bp) == typeid (A); ((void)b); }
     catch ( const std::bad_typeid &) { return true; }
     return false;
-    }
+}
 
 
 //  The value of a failed cast to pointer type is the null pointer value of
@@ -46,20 +45,18 @@ bool bad_cast_test () {
     try { D &dr = dynamic_cast<D&> (*bp); ((void)dr); }
     catch ( const std::bad_cast & ) { return true; }
     return false;
-    }
+}
 
 int main ( ) {
     int ret_val = 0;
 
     if ( !bad_typeid_test ()) {
-        std::cerr << "TypeID test failed!" << std::endl;
         ret_val = 1;
     }
 
     if ( !bad_cast_test ()) {
-        std::cerr << "Bad cast test failed!" << std::endl;
-        ret_val = 1;
+        ret_val = 2;
     }
 
     return ret_val;
-    }
+}

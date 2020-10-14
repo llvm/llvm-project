@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 -verify-machineinstrs -run-pass greedy,amdgpu-regbanks-reassign,virtregrewriter -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -run-pass greedy,amdgpu-regbanks-reassign,virtregrewriter -o - %s | FileCheck -check-prefix=GCN %s
 
 
 # Test that subreg reassignments are correctly handled when whole register also

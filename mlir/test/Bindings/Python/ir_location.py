@@ -14,6 +14,7 @@ def run(f):
 def testUnknown():
   ctx = mlir.ir.Context()
   loc = ctx.get_unknown_location()
+  assert loc.context is ctx
   ctx = None
   gc.collect()
   # CHECK: unknown str: loc(unknown)

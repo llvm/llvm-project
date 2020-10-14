@@ -22,6 +22,9 @@ s_getreg_b32 s2, hwreg(HW_REG_SHADER_CYCLES)
 v_fma_legacy_f32 v0, v1, v2, v3
 // GFX10: error: instruction not supported on this GPU
 
+v_fmac_legacy_f32 v0, v1, v2
+// GFX10: error: instruction not supported on this GPU
+
 image_bvh_intersect_ray v[4:7], v[9:24], s[4:7]
 // GFX10: error: instruction not supported on this GPU
 

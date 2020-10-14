@@ -201,6 +201,14 @@ CAST_OPERATION(IntegralToBoolean)
 ///    float f = i;
 CAST_OPERATION(IntegralToFloating)
 
+/// CK_FloatingToFixedPoint - Floating to fixed point.
+///    _Accum a = f;
+CAST_OPERATION(FloatingToFixedPoint)
+
+/// CK_FixedPointToFloating - Fixed point to floating.
+///    (float) 2.5k
+CAST_OPERATION(FixedPointToFloating)
+
 /// CK_FixedPointCast - Fixed point to fixed point.
 ///    (_Accum) 0.5r
 CAST_OPERATION(FixedPointCast)

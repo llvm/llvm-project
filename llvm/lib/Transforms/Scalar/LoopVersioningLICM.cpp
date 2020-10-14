@@ -539,8 +539,8 @@ void LoopVersioningLICM::setNoAliasToLoop(Loop *VerLoop) {
   MDBuilder MDB(I->getContext());
   MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain("LVDomain");
   StringRef Name = "LVAliasScope";
-  SmallVector<Metadata *, 4> Scopes, NoAliases;
   MDNode *NewScope = MDB.createAnonymousAliasScope(NewDomain, Name);
+  SmallVector<Metadata *, 4> Scopes{NewScope}, NoAliases{NewScope};
   // Iterate over each instruction of loop.
   // set no-alias for all load & store instructions.
   for (auto *Block : CurLoop->getBlocks()) {
@@ -548,8 +548,6 @@ void LoopVersioningLICM::setNoAliasToLoop(Loop *VerLoop) {
       // Only interested in instruction that may modify or read memory.
       if (!Inst.mayReadFromMemory() && !Inst.mayWriteToMemory())
         continue;
-      Scopes.push_back(NewScope);
-      NoAliases.push_back(NewScope);
       // Set no-alias for current instruction.
       Inst.setMetadata(
           LLVMContext::MD_noalias,

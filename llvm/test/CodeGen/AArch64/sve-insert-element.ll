@@ -223,3 +223,57 @@ define <vscale x 16 x i8> @test_insert3_of_extract1_16xi8(<vscale x 16 x i8> %a,
   %d = insertelement <vscale x 16 x i8> %a, i8 %c, i32 3
   ret <vscale x 16 x i8> %d
 }
+
+define <vscale x 8 x half> @test_insert_into_undef_nxv8f16(half %a) {
+; CHECK-LABEL: test_insert_into_undef_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
+; CHECK-NEXT:    ret
+  %b = insertelement <vscale x 8 x half> undef, half %a, i32 0
+  ret <vscale x 8 x half> %b
+}
+
+define <vscale x 4 x half> @test_insert_into_undef_nxv4f16(half %a) {
+; CHECK-LABEL: test_insert_into_undef_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
+; CHECK-NEXT:    ret
+  %b = insertelement <vscale x 4 x half> undef, half %a, i32 0
+  ret <vscale x 4 x half> %b
+}
+
+define <vscale x 2 x half> @test_insert_into_undef_nxv2f16(half %a) {
+; CHECK-LABEL: test_insert_into_undef_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
+; CHECK-NEXT:    ret
+  %b = insertelement <vscale x 2 x half> undef, half %a, i32 0
+  ret <vscale x 2 x half> %b
+}
+
+define <vscale x 4 x float> @test_insert_into_undef_nxv4f32(float %a) {
+; CHECK-LABEL: test_insert_into_undef_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
+; CHECK-NEXT:    ret
+  %b = insertelement <vscale x 4 x float> undef, float %a, i32 0
+  ret <vscale x 4 x float> %b
+}
+
+define <vscale x 2 x float> @test_insert_into_undef_nxv2f32(float %a) {
+; CHECK-LABEL: test_insert_into_undef_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
+; CHECK-NEXT:    ret
+  %b = insertelement <vscale x 2 x float> undef, float %a, i32 0
+  ret <vscale x 2 x float> %b
+}
+
+define <vscale x 2 x double> @test_insert_into_undef_nxv2f64(double %a) {
+; CHECK-LABEL: test_insert_into_undef_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ret
+  %b = insertelement <vscale x 2 x double> undef, double %a, i32 0
+  ret <vscale x 2 x double> %b
+}

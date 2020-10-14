@@ -114,6 +114,7 @@ During this release ...
   the "target-cpu" attribute or TargetMachine CPU which will be used to select
   Instruction Set. If the attribute is not present, the tune CPU will follow
   the target CPU.
+* Support for ISA HRESET has been added.
 
 Changes to the AMDGPU Target
 -----------------------------

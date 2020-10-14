@@ -11594,10 +11594,15 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
       Known.Zero.setHighBits(countLeadingZeros(getSubtarget()->getLocalMemorySize()));
       break;
     }
-    default:
-      break;
     }
+    break;
   }
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE:
+    Known.Zero.setHighBits(24);
+    break;
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
+    Known.Zero.setHighBits(16);
+    break;
   }
 }
 

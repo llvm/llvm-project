@@ -196,6 +196,8 @@ public:
 
   llvm::StringRef GetExpressionPrefixContents();
 
+  uint64_t GetExprErrorLimit() const;
+
   bool GetUseHexImmediates() const;
 
   bool GetUseFastStepping() const;

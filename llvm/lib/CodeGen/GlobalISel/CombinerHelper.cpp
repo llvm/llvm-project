@@ -1999,6 +1999,35 @@ bool CombinerHelper::applyCombineAddP2IToPtrAdd(
   return true;
 }
 
+bool CombinerHelper::matchCombineConstPtrAddToI2P(MachineInstr &MI,
+                                                  int64_t &NewCst) {
+  assert(MI.getOpcode() == TargetOpcode::G_PTR_ADD && "Expected a G_PTR_ADD");
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  MachineRegisterInfo &MRI = Builder.getMF().getRegInfo();
+
+  if (auto RHSCst = getConstantVRegVal(RHS, MRI)) {
+    int64_t Cst;
+    if (mi_match(LHS, MRI, m_GIntToPtr(m_ICst(Cst)))) {
+      NewCst = Cst + *RHSCst;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool CombinerHelper::applyCombineConstPtrAddToI2P(MachineInstr &MI,
+                                                  int64_t &NewCst) {
+  assert(MI.getOpcode() == TargetOpcode::G_PTR_ADD && "Expected a G_PTR_ADD");
+  Register Dst = MI.getOperand(0).getReg();
+
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildConstant(Dst, NewCst);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg) {
   assert(MI.getOpcode() == TargetOpcode::G_ANYEXT && "Expected a G_ANYEXT");
   Register DstReg = MI.getOperand(0).getReg();
@@ -2763,6 +2792,32 @@ bool CombinerHelper::applyXorOfAndWithSameReg(
   MI.getOperand(1).setReg(Not->getOperand(0).getReg());
   MI.getOperand(2).setReg(Y);
   Observer.changedInstr(MI);
+  return true;
+}
+
+bool CombinerHelper::matchPtrAddZero(MachineInstr &MI) {
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(DstReg);
+  const DataLayout &DL = Builder.getMF().getDataLayout();
+
+  if (DL.isNonIntegralAddressSpace(Ty.getScalarType().getAddressSpace()))
+    return false;
+
+  if (Ty.isPointer()) {
+    auto ConstVal = getConstantVRegVal(MI.getOperand(1).getReg(), MRI);
+    return ConstVal && *ConstVal == 0;
+  }
+
+  assert(Ty.isVector() && "Expecting a vector type");
+  const MachineInstr *VecMI = MRI.getVRegDef(MI.getOperand(1).getReg());
+  return isBuildVectorAllZeros(*VecMI, MRI);
+}
+
+bool CombinerHelper::applyPtrAddZero(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_PTR_ADD);
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildIntToPtr(MI.getOperand(0), MI.getOperand(2));
+  MI.eraseFromParent();
   return true;
 }
 

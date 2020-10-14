@@ -23,6 +23,7 @@ namespace wasm {
 // Most fields are initialized by the driver.
 struct Configuration {
   bool allowUndefined;
+  bool bsymbolic;
   bool checkFeatures;
   bool compressRelocations;
   bool demangle;

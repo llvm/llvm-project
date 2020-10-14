@@ -27,6 +27,7 @@ Sections:
         Field:           __indirect_function_table
         Kind:            TABLE
         Table:
+          Index:           0
           ElemType:        FUNCREF
           Limits:
             Initial:         0x00000000
