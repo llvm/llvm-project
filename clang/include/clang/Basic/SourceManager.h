@@ -184,13 +184,21 @@ namespace SrcMgr {
     ///
     /// \param Loc If specified, is the location that invalid file diagnostics
     ///   will be emitted at.
-    ///
-    /// \param Invalid If non-NULL, will be set \c true if an error occurred.
-    const llvm::MemoryBuffer *getBuffer(DiagnosticsEngine &Diag,
-                                        FileManager &FM,
-                                        SourceLocation Loc = SourceLocation(),
-                                        bool *Invalid = nullptr) const;
+    llvm::Optional<llvm::MemoryBufferRef>
+    getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
+                    SourceLocation Loc = SourceLocation()) const;
 
+  private:
+    /// Returns pointer to memory buffer.
+    ///
+    /// TODO: SourceManager needs access to this for now, but once that's done
+    /// we should remove this API.
+    const llvm::MemoryBuffer *getBufferPointer(DiagnosticsEngine &Diag,
+                                               FileManager &FM,
+                                               SourceLocation Loc) const;
+    friend class clang::SourceManager;
+
+  public:
     /// Returns the size of the content encapsulated by this
     /// ContentCache.
     ///
@@ -960,8 +968,25 @@ public:
 
   /// Return the buffer for the specified FileID.
   ///
+  /// If there is an error opening this buffer the first time, return None.
+  llvm::Optional<llvm::MemoryBufferRef>
+  getBufferOrNone(FileID FID, SourceLocation Loc = SourceLocation()) const {
+    bool MyInvalid = false;
+    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &MyInvalid);
+    if (MyInvalid || !Entry.isFile())
+      return None;
+
+    return Entry.getFile().getContentCache()->getBufferOrNone(
+        Diag, getFileManager(), Loc);
+  }
+
+  /// Return the buffer for the specified FileID.
+  ///
   /// If there is an error opening this buffer the first time, this
   /// manufactures a temporary buffer and returns a non-empty error string.
+  ///
+  /// TODO: Update users of Invalid to call getBufferOrNone and change return
+  /// type to MemoryBufferRef.
   const llvm::MemoryBuffer *getBuffer(FileID FID, SourceLocation Loc,
                                       bool *Invalid = nullptr) const {
     bool MyInvalid = false;
@@ -973,8 +998,11 @@ public:
       return getFakeBufferForRecovery();
     }
 
-    return Entry.getFile().getContentCache()->getBuffer(Diag, getFileManager(),
-                                                        Loc, Invalid);
+    auto *B = Entry.getFile().getContentCache()->getBufferPointer(
+        Diag, getFileManager(), Loc);
+    if (Invalid)
+      *Invalid = !B;
+    return B ? B : getFakeBufferForRecovery();
   }
 
   const llvm::MemoryBuffer *getBuffer(FileID FID,
@@ -1013,6 +1041,18 @@ public:
   /// \param FID The file ID whose contents will be returned.
   /// \param Invalid If non-NULL, will be set true if an error occurred.
   StringRef getBufferData(FileID FID, bool *Invalid = nullptr) const;
+
+  /// Return a StringRef to the source buffer data for the
+  /// specified FileID, returning None if invalid.
+  ///
+  /// \param FID The file ID whose contents will be returned.
+  llvm::Optional<StringRef> getBufferDataOrNone(FileID FID) const;
+
+  /// Return a StringRef to the source buffer data for the
+  /// specified FileID, returning None if it's not yet loaded.
+  ///
+  /// \param FID The file ID whose contents will be returned.
+  llvm::Optional<StringRef> getBufferDataIfLoaded(FileID FID) const;
 
   /// Get the number of FileIDs (files and macros) that were created
   /// during preprocessing of \p FID, including it.
