@@ -436,6 +436,10 @@ public:
   /// next instruction number.
   unsigned DebugInstrNumberingCount = 0;
 
+  /// Set value of DebugInstrNumberingCount field. Avoid using this unless
+  /// you're deserializing this data.
+  void setDebugInstrNumberingCount(unsigned Num);
+
   MachineFunction(Function &F, const LLVMTargetMachine &Target,
                   const TargetSubtargetInfo &STI, unsigned FunctionNum,
                   MachineModuleInfo &MMI);
