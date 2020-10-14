@@ -73,12 +73,10 @@ ProgramHeaders:
 ## We don't report warnings about the unsupported hash table on EM_S390 and EM_ALPHA platforms
 ## when --hash-table is not requested.
 
-# RUN: llvm-readobj %t.s390 2>&1 | FileCheck %s -DFILE=%t.s390 --implicit-check-not="warning:"  --check-prefix=NOWARN
-# RUN: llvm-readelf %t.s390 2>&1 | FileCheck %s -DFILE=%t.s390 --implicit-check-not="warning:"  --check-prefix=NOWARN
-# RUN: llvm-readobj %t.alpha 2>&1 | FileCheck %s -DFILE=%t.alpha --implicit-check-not="warning:" --check-prefix=NOWARN
-# RUN: llvm-readelf %t.alpha 2>&1 | FileCheck %s -DFILE=%t.alpha --implicit-check-not="warning:" --check-prefix=NOWARN
-
-# NOWARN: warning: '[[FILE]]': string table was not found
+# RUN: llvm-readobj %t.s390 2>&1 | FileCheck %s -DFILE=%t.s390 --allow-empty --implicit-check-not="warning:"
+# RUN: llvm-readelf %t.s390 2>&1 | FileCheck %s -DFILE=%t.s390 --allow-empty --implicit-check-not="warning:"
+# RUN: llvm-readobj %t.alpha 2>&1 | FileCheck %s -DFILE=%t.alpha --allow-empty --implicit-check-not="warning:"
+# RUN: llvm-readelf %t.alpha 2>&1 | FileCheck %s -DFILE=%t.alpha --allow-empty --implicit-check-not="warning:"
 
 ## Check we can dump the SHT_HASH section even when an object
 ## does not have the section header table.
@@ -88,8 +86,6 @@ ProgramHeaders:
 # RUN:   FileCheck %s -DFILE=%t.noshdr --check-prefix=NOSHDR --implicit-check-not=warning:
 # RUN: llvm-readelf --hash-table %t.noshdr 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.noshdr --check-prefix=NOSHDR --implicit-check-not=warning:
-
-# NOSHDR: warning: '[[FILE]]': string table was not found
 
 # NOSHDR:      HashTable {
 # NOSHDR-NEXT:   Num Buckets: 1
@@ -145,8 +141,6 @@ ProgramHeaders:
 # RUN:   FileCheck %s -DFILE=%t.no.dyntag --check-prefix=NODYNTAG --implicit-check-not=warning:
 # RUN: llvm-readelf --hash-table %t.no.dyntag 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.no.dyntag --check-prefix=NODYNTAG --implicit-check-not=warning:
-
-# NODYNTAG: warning: '[[FILE]]': string table was not found
 
 # NODYNTAG:      HashTable {
 # NODYNTAG-NEXT: }
