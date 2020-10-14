@@ -293,6 +293,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ADDC:                       return "addc";
   case ISD::ADDE:                       return "adde";
   case ISD::ADDCARRY:                   return "addcarry";
+  case ISD::SADDO_CARRY:                return "saddo_carry";
   case ISD::SADDO:                      return "saddo";
   case ISD::UADDO:                      return "uaddo";
   case ISD::SSUBO:                      return "ssubo";
@@ -302,6 +303,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SUBC:                       return "subc";
   case ISD::SUBE:                       return "sube";
   case ISD::SUBCARRY:                   return "subcarry";
+  case ISD::SSUBO_CARRY:                return "ssubo_carry";
   case ISD::SHL_PARTS:                  return "shl_parts";
   case ISD::SRA_PARTS:                  return "sra_parts";
   case ISD::SRL_PARTS:                  return "srl_parts";

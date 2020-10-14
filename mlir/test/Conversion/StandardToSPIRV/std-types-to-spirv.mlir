@@ -274,35 +274,35 @@ module attributes {
 } {
 
 // CHECK-LABEL: spv.func @memref_8bit_StorageBuffer
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x i32, stride=4> [0]>, StorageBuffer>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i32, stride=4> [0])>, StorageBuffer>
 func @memref_8bit_StorageBuffer(%arg0: memref<16xi8, 0>) { return }
 
 // CHECK-LABEL: spv.func @memref_8bit_Uniform
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x si32, stride=4> [0]>, Uniform>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x si32, stride=4> [0])>, Uniform>
 func @memref_8bit_Uniform(%arg0: memref<16xsi8, 4>) { return }
 
 // CHECK-LABEL: spv.func @memref_8bit_PushConstant
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x ui32, stride=4> [0]>, PushConstant>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x ui32, stride=4> [0])>, PushConstant>
 func @memref_8bit_PushConstant(%arg0: memref<16xui8, 7>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_StorageBuffer
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x i32, stride=4> [0]>, StorageBuffer>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i32, stride=4> [0])>, StorageBuffer>
 func @memref_16bit_StorageBuffer(%arg0: memref<16xi16, 0>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_Uniform
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x si32, stride=4> [0]>, Uniform>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x si32, stride=4> [0])>, Uniform>
 func @memref_16bit_Uniform(%arg0: memref<16xsi16, 4>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_PushConstant
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x ui32, stride=4> [0]>, PushConstant>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x ui32, stride=4> [0])>, PushConstant>
 func @memref_16bit_PushConstant(%arg0: memref<16xui16, 7>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_Input
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x f32, stride=4> [0]>, Input>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f32, stride=4> [0])>, Input>
 func @memref_16bit_Input(%arg3: memref<16xf16, 9>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_Output
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x f32, stride=4> [0]>, Output>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f32, stride=4> [0])>, Output>
 func @memref_16bit_Output(%arg4: memref<16xf16, 10>) { return }
 
 } // end module
@@ -319,12 +319,12 @@ module attributes {
 } {
 
 // CHECK-LABEL: spv.func @memref_8bit_PushConstant
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x i8, stride=1> [0]>, PushConstant>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i8, stride=1> [0])>, PushConstant>
 func @memref_8bit_PushConstant(%arg0: memref<16xi8, 7>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_PushConstant
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x i16, stride=2> [0]>, PushConstant>
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x f16, stride=2> [0]>, PushConstant>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i16, stride=2> [0])>, PushConstant>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f16, stride=2> [0])>, PushConstant>
 func @memref_16bit_PushConstant(
   %arg0: memref<16xi16, 7>,
   %arg1: memref<16xf16, 7>
@@ -344,12 +344,12 @@ module attributes {
 } {
 
 // CHECK-LABEL: spv.func @memref_8bit_StorageBuffer
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x i8, stride=1> [0]>, StorageBuffer>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i8, stride=1> [0])>, StorageBuffer>
 func @memref_8bit_StorageBuffer(%arg0: memref<16xi8, 0>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_StorageBuffer
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x i16, stride=2> [0]>, StorageBuffer>
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x f16, stride=2> [0]>, StorageBuffer>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i16, stride=2> [0])>, StorageBuffer>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f16, stride=2> [0])>, StorageBuffer>
 func @memref_16bit_StorageBuffer(
   %arg0: memref<16xi16, 0>,
   %arg1: memref<16xf16, 0>
@@ -369,12 +369,12 @@ module attributes {
 } {
 
 // CHECK-LABEL: spv.func @memref_8bit_Uniform
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x i8, stride=1> [0]>, Uniform>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i8, stride=1> [0])>, Uniform>
 func @memref_8bit_Uniform(%arg0: memref<16xi8, 4>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_Uniform
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x i16, stride=2> [0]>, Uniform>
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x f16, stride=2> [0]>, Uniform>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i16, stride=2> [0])>, Uniform>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f16, stride=2> [0])>, Uniform>
 func @memref_16bit_Uniform(
   %arg0: memref<16xi16, 4>,
   %arg1: memref<16xf16, 4>
@@ -393,11 +393,11 @@ module attributes {
 } {
 
 // CHECK-LABEL: spv.func @memref_16bit_Input
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x f16, stride=2> [0]>, Input>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f16, stride=2> [0])>, Input>
 func @memref_16bit_Input(%arg3: memref<16xf16, 9>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_Output
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<16 x i16, stride=2> [0]>, Output>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i16, stride=2> [0])>, Output>
 func @memref_16bit_Output(%arg4: memref<16xi16, 10>) { return }
 
 } // end module
@@ -412,22 +412,22 @@ module attributes {
 
 // CHECK-LABEL: spv.func @memref_offset_strides
 func @memref_offset_strides(
-// CHECK-SAME: !spv.array<64 x f32, stride=4> [0]>, StorageBuffer>
-// CHECK-SAME: !spv.array<72 x f32, stride=4> [0]>, StorageBuffer>
-// CHECK-SAME: !spv.array<256 x f32, stride=4> [0]>, StorageBuffer>
-// CHECK-SAME: !spv.array<64 x f32, stride=4> [0]>, StorageBuffer>
-// CHECK-SAME: !spv.array<88 x f32, stride=4> [0]>, StorageBuffer>
+// CHECK-SAME: !spv.array<64 x f32, stride=4> [0])>, StorageBuffer>
+// CHECK-SAME: !spv.array<72 x f32, stride=4> [0])>, StorageBuffer>
+// CHECK-SAME: !spv.array<256 x f32, stride=4> [0])>, StorageBuffer>
+// CHECK-SAME: !spv.array<64 x f32, stride=4> [0])>, StorageBuffer>
+// CHECK-SAME: !spv.array<88 x f32, stride=4> [0])>, StorageBuffer>
   %arg0: memref<16x4xf32, offset: 0, strides: [4, 1]>,  // tightly packed; row major
   %arg1: memref<16x4xf32, offset: 8, strides: [4, 1]>,  // offset 8
   %arg2: memref<16x4xf32, offset: 0, strides: [16, 1]>, // pad 12 after each row
   %arg3: memref<16x4xf32, offset: 0, strides: [1, 16]>, // tightly packed; col major
   %arg4: memref<16x4xf32, offset: 0, strides: [1, 22]>, // pad 4 after each col
 
-// CHECK-SAME: !spv.array<64 x f16, stride=2> [0]>, StorageBuffer>
-// CHECK-SAME: !spv.array<72 x f16, stride=2> [0]>, StorageBuffer>
-// CHECK-SAME: !spv.array<256 x f16, stride=2> [0]>, StorageBuffer>
-// CHECK-SAME: !spv.array<64 x f16, stride=2> [0]>, StorageBuffer>
-// CHECK-SAME: !spv.array<88 x f16, stride=2> [0]>, StorageBuffer>
+// CHECK-SAME: !spv.array<64 x f16, stride=2> [0])>, StorageBuffer>
+// CHECK-SAME: !spv.array<72 x f16, stride=2> [0])>, StorageBuffer>
+// CHECK-SAME: !spv.array<256 x f16, stride=2> [0])>, StorageBuffer>
+// CHECK-SAME: !spv.array<64 x f16, stride=2> [0])>, StorageBuffer>
+// CHECK-SAME: !spv.array<88 x f16, stride=2> [0])>, StorageBuffer>
   %arg5: memref<16x4xf16, offset: 0, strides: [4, 1]>,
   %arg6: memref<16x4xf16, offset: 8, strides: [4, 1]>,
   %arg7: memref<16x4xf16, offset: 0, strides: [16, 1]>,
@@ -450,8 +450,8 @@ module attributes {
 func @unranked_memref(%arg0: memref<*xi32>) { return }
 
 // CHECK-LABEL: func @dynamic_dim_memref
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.rtarray<i32, stride=4> [0]>, StorageBuffer>
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.rtarray<f32, stride=4> [0]>, StorageBuffer>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<i32, stride=4> [0])>, StorageBuffer>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<f32, stride=4> [0])>, StorageBuffer>
 func @dynamic_dim_memref(%arg0: memref<8x?xi32>,
                          %arg1: memref<?x?xf32>)
 { return }
@@ -466,16 +466,16 @@ module attributes {
 } {
 
 // CHECK-LABEL: func @memref_vector
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<4 x vector<2xf32>, stride=8> [0]>, StorageBuffer>
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<4 x vector<4xf32>, stride=16> [0]>, Uniform>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<4 x vector<2xf32>, stride=8> [0])>, StorageBuffer>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<4 x vector<4xf32>, stride=16> [0])>, Uniform>
 func @memref_vector(
     %arg0: memref<4xvector<2xf32>, 0>,
     %arg1: memref<4xvector<4xf32>, 4>)
 { return }
 
 // CHECK-LABEL: func @dynamic_dim_memref_vector
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.rtarray<vector<4xi32>, stride=16> [0]>, StorageBuffer>
-// CHECK-SAME: !spv.ptr<!spv.struct<!spv.rtarray<vector<2xf32>, stride=8> [0]>, StorageBuffer>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<vector<4xi32>, stride=16> [0])>, StorageBuffer>
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<vector<2xf32>, stride=8> [0])>, StorageBuffer>
 func @dynamic_dim_memref_vector(%arg0: memref<8x?xvector<4xi32>>,
                          %arg1: memref<?x?xvector<2xf32>>)
 { return }

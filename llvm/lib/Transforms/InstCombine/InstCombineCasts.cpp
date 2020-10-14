@@ -810,8 +810,6 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
 
     // If the shift is small enough, all zero bits created by the shift are
     // removed by the trunc.
-    // TODO: Support passing through undef shift amounts - these currently get
-    // clamped to MaxAmt.
     if (match(C, m_SpecificInt_ICMP(ICmpInst::ICMP_ULE,
                                     APInt(SrcWidth, MaxShiftAmt)))) {
       // trunc (lshr (sext A), C) --> ashr A, C
@@ -819,6 +817,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
         Constant *MaxAmt = ConstantInt::get(SrcTy, DestWidth - 1, false);
         Constant *ShAmt = ConstantExpr::getUMin(C, MaxAmt);
         ShAmt = ConstantExpr::getTrunc(ShAmt, A->getType());
+        ShAmt = Constant::mergeUndefsWith(ShAmt, C);
         return IsExact ? BinaryOperator::CreateExactAShr(A, ShAmt)
                        : BinaryOperator::CreateAShr(A, ShAmt);
       }
@@ -841,13 +840,12 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
 
     // If the shift is small enough, all zero/sign bits created by the shift are
     // removed by the trunc.
-    // TODO: Support passing through undef shift amounts - these currently get
-    // zero'd by getIntegerCast.
     if (match(C, m_SpecificInt_ICMP(ICmpInst::ICMP_ULE,
                                     APInt(SrcWidth, MaxShiftAmt)))) {
       auto *OldShift = cast<Instruction>(Src);
-      auto *ShAmt = ConstantExpr::getIntegerCast(C, A->getType(), true);
       bool IsExact = OldShift->isExact();
+      auto *ShAmt = ConstantExpr::getIntegerCast(C, A->getType(), true);
+      ShAmt = Constant::mergeUndefsWith(ShAmt, C);
       Value *Shift =
           OldShift->getOpcode() == Instruction::AShr
               ? Builder.CreateAShr(A, ShAmt, OldShift->getName(), IsExact)

@@ -33,12 +33,7 @@ static const char *GetLLDBRepository() {
 #endif
 }
 
-#define QUOTE(str) #str
-#define EXPAND_AND_QUOTE(str) QUOTE(str)
-
 const char *lldb_private::GetVersion() {
-  // On platforms other than Darwin, report a version number in the same style
-  // as the clang tool.
   static std::string g_version_str;
   if (g_version_str.empty()) {
     g_version_str += "lldb version ";

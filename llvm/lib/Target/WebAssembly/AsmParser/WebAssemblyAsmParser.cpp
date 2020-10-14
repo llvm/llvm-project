@@ -324,6 +324,8 @@ public:
       return wasm::ValType::V128;
     if (Type == "exnref")
       return wasm::ValType::EXNREF;
+    if (Type == "funcref")
+      return wasm::ValType::FUNCREF;
     if (Type == "externref")
       return wasm::ValType::EXTERNREF;
     return Optional<wasm::ValType>();
@@ -709,6 +711,29 @@ public:
           wasm::WasmGlobalType{uint8_t(Type.getValue()), Mutable});
       // And emit the directive again.
       TOut.emitGlobalType(WasmSym);
+      return expect(AsmToken::EndOfStatement, "EOL");
+    }
+
+    if (DirectiveID.getString() == ".tabletype") {
+      auto SymName = expectIdent();
+      if (SymName.empty())
+        return true;
+      if (expect(AsmToken::Comma, ","))
+        return true;
+      auto TypeTok = Lexer.getTok();
+      auto TypeName = expectIdent();
+      if (TypeName.empty())
+        return true;
+      auto Type = parseType(TypeName);
+      if (!Type)
+        return error("Unknown type in .tabletype directive: ", TypeTok);
+
+      // Now that we have the name and table type, we can actually create the
+      // symbol
+      auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
+      WasmSym->setTableType(Type.getValue());
+      TOut.emitTableType(WasmSym);
       return expect(AsmToken::EndOfStatement, "EOL");
     }
 

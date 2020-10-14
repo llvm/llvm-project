@@ -490,6 +490,13 @@ def xor_of_and_with_same_reg: GICombineRule <
   (apply [{ return Helper.applyXorOfAndWithSameReg(*${root}, ${matchinfo}); }])
 >;
 
+// Transform (ptr_add 0, x) -> (int_to_ptr x)
+def ptr_add_with_zero: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_PTR_ADD):$root,
+         [{ return Helper.matchPtrAddZero(*${root}); }]),
+  (apply [{ return Helper.applyPtrAddZero(*${root}); }])>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -525,4 +532,4 @@ def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc,
     unmerge_zext_to_zext, trunc_ext_fold, trunc_shl,
-    constant_fp_op, xor_of_and_with_same_reg]>;
+    constant_fp_op, xor_of_and_with_same_reg, ptr_add_with_zero]>;

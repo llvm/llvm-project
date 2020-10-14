@@ -152,6 +152,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::ADDCARRY:
   case ISD::SUBCARRY:    Res = PromoteIntRes_ADDSUBCARRY(N, ResNo); break;
 
+  case ISD::SADDO_CARRY:
+  case ISD::SSUBO_CARRY: Res = PromoteIntRes_SADDSUBO_CARRY(N, ResNo); break;
+
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -1288,6 +1291,12 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBCARRY(SDNode *N, unsigned ResNo) {
   return SDValue(Res.getNode(), 0);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntRes_SADDSUBO_CARRY(SDNode *N,
+                                                       unsigned ResNo) {
+  assert(ResNo == 1 && "Don't know how to promote other results yet.");
+  return PromoteIntRes_Overflow(N);
+}
+
 SDValue DAGTypeLegalizer::PromoteIntRes_ABS(SDNode *N) {
   SDValue Op0 = SExtPromotedInteger(N->getOperand(0));
   return DAG.getNode(ISD::ABS, SDLoc(N), Op0.getValueType(), Op0);
@@ -1470,6 +1479,8 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::ROTL:
   case ISD::ROTR: Res = PromoteIntOp_Shift(N); break;
 
+  case ISD::SADDO_CARRY:
+  case ISD::SSUBO_CARRY:
   case ISD::ADDCARRY:
   case ISD::SUBCARRY: Res = PromoteIntOp_ADDSUBCARRY(N, OpNo); break;
 
@@ -2086,6 +2097,9 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::ADDCARRY:
   case ISD::SUBCARRY: ExpandIntRes_ADDSUBCARRY(N, Lo, Hi); break;
+
+  case ISD::SADDO_CARRY:
+  case ISD::SSUBO_CARRY: ExpandIntRes_SADDSUBO_CARRY(N, Lo, Hi); break;
 
   case ISD::SHL:
   case ISD::SRA:
@@ -2704,6 +2718,26 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUBCARRY(SDNode *N,
   Lo = DAG.getNode(N->getOpcode(), dl, VTList, LoOps);
   HiOps[2] = Lo.getValue(1);
   Hi = DAG.getNode(N->getOpcode(), dl, VTList, HiOps);
+
+  // Legalized the flag result - switch anything that used the old flag to
+  // use the new one.
+  ReplaceValueWith(SDValue(N, 1), Hi.getValue(1));
+}
+
+void DAGTypeLegalizer::ExpandIntRes_SADDSUBO_CARRY(SDNode *N,
+                                                   SDValue &Lo, SDValue &Hi) {
+  // Expand the subcomponents.
+  SDValue LHSL, LHSH, RHSL, RHSH;
+  SDLoc dl(N);
+  GetExpandedInteger(N->getOperand(0), LHSL, LHSH);
+  GetExpandedInteger(N->getOperand(1), RHSL, RHSH);
+  SDVTList VTList = DAG.getVTList(LHSL.getValueType(), N->getValueType(1));
+
+  // We need to use an unsigned carry op for the lo part.
+  unsigned CarryOp = N->getOpcode() == ISD::SADDO_CARRY ? ISD::ADDCARRY
+                                                        : ISD::SUBCARRY;
+  Lo = DAG.getNode(CarryOp, dl, VTList, { LHSL, RHSL, N->getOperand(2) });
+  Hi = DAG.getNode(N->getOpcode(), dl, VTList, { LHSH, RHSH, Lo.getValue(1) });
 
   // Legalized the flag result - switch anything that used the old flag to
   // use the new one.
@@ -3515,40 +3549,66 @@ void DAGTypeLegalizer::ExpandIntRes_SADDSUBO(SDNode *Node,
   SDValue RHS = Node->getOperand(1);
   SDLoc dl(Node);
 
-  // Expand the result by simply replacing it with the equivalent
-  // non-overflow-checking operation.
-  SDValue Sum = DAG.getNode(Node->getOpcode() == ISD::SADDO ?
-                            ISD::ADD : ISD::SUB, dl, LHS.getValueType(),
-                            LHS, RHS);
-  SplitInteger(Sum, Lo, Hi);
+  SDValue Ovf;
 
-  // Compute the overflow.
-  //
-  //   LHSSign -> LHS >= 0
-  //   RHSSign -> RHS >= 0
-  //   SumSign -> Sum >= 0
-  //
-  //   Add:
-  //   Overflow -> (LHSSign == RHSSign) && (LHSSign != SumSign)
-  //   Sub:
-  //   Overflow -> (LHSSign != RHSSign) && (LHSSign != SumSign)
-  //
-  EVT OType = Node->getValueType(1);
-  SDValue Zero = DAG.getConstant(0, dl, LHS.getValueType());
+  unsigned CarryOp;
+  switch(Node->getOpcode()) {
+  default: llvm_unreachable("Node has unexpected Opcode");
+  case ISD::SADDO: CarryOp = ISD::SADDO_CARRY; break;
+  case ISD::SSUBO: CarryOp = ISD::SSUBO_CARRY; break;
+  }
 
-  SDValue LHSSign = DAG.getSetCC(dl, OType, LHS, Zero, ISD::SETGE);
-  SDValue RHSSign = DAG.getSetCC(dl, OType, RHS, Zero, ISD::SETGE);
-  SDValue SignsMatch = DAG.getSetCC(dl, OType, LHSSign, RHSSign,
-                                    Node->getOpcode() == ISD::SADDO ?
-                                    ISD::SETEQ : ISD::SETNE);
+  bool HasCarryOp = TLI.isOperationLegalOrCustom(
+      CarryOp, TLI.getTypeToExpandTo(*DAG.getContext(), LHS.getValueType()));
 
-  SDValue SumSign = DAG.getSetCC(dl, OType, Sum, Zero, ISD::SETGE);
-  SDValue SumSignNE = DAG.getSetCC(dl, OType, LHSSign, SumSign, ISD::SETNE);
+  if (HasCarryOp) {
+    // Expand the subcomponents.
+    SDValue LHSL, LHSH, RHSL, RHSH;
+    GetExpandedInteger(LHS, LHSL, LHSH);
+    GetExpandedInteger(RHS, RHSL, RHSH);
+    SDVTList VTList = DAG.getVTList(LHSL.getValueType(), Node->getValueType(1));
 
-  SDValue Cmp = DAG.getNode(ISD::AND, dl, OType, SignsMatch, SumSignNE);
+    Lo = DAG.getNode(Node->getOpcode() == ISD::SADDO ?
+                     ISD::UADDO : ISD::USUBO, dl, VTList, { LHSL, RHSL });
+    Hi = DAG.getNode(CarryOp, dl, VTList, { LHSH, RHSH, Lo.getValue(1) });
+
+    Ovf = Hi.getValue(1);
+  } else {
+    // Expand the result by simply replacing it with the equivalent
+    // non-overflow-checking operation.
+    SDValue Sum = DAG.getNode(Node->getOpcode() == ISD::SADDO ?
+                              ISD::ADD : ISD::SUB, dl, LHS.getValueType(),
+                              LHS, RHS);
+    SplitInteger(Sum, Lo, Hi);
+
+    // Compute the overflow.
+    //
+    //   LHSSign -> LHS >= 0
+    //   RHSSign -> RHS >= 0
+    //   SumSign -> Sum >= 0
+    //
+    //   Add:
+    //   Overflow -> (LHSSign == RHSSign) && (LHSSign != SumSign)
+    //   Sub:
+    //   Overflow -> (LHSSign != RHSSign) && (LHSSign != SumSign)
+    //
+    EVT OType = Node->getValueType(1);
+    SDValue Zero = DAG.getConstant(0, dl, LHS.getValueType());
+
+    SDValue LHSSign = DAG.getSetCC(dl, OType, LHS, Zero, ISD::SETGE);
+    SDValue RHSSign = DAG.getSetCC(dl, OType, RHS, Zero, ISD::SETGE);
+    SDValue SignsMatch = DAG.getSetCC(dl, OType, LHSSign, RHSSign,
+                                      Node->getOpcode() == ISD::SADDO ?
+                                      ISD::SETEQ : ISD::SETNE);
+
+    SDValue SumSign = DAG.getSetCC(dl, OType, Sum, Zero, ISD::SETGE);
+    SDValue SumSignNE = DAG.getSetCC(dl, OType, LHSSign, SumSign, ISD::SETNE);
+
+    Ovf = DAG.getNode(ISD::AND, dl, OType, SignsMatch, SumSignNE);
+  }
 
   // Use the calculated overflow everywhere.
-  ReplaceValueWith(SDValue(Node, 1), Cmp);
+  ReplaceValueWith(SDValue(Node, 1), Ovf);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_SDIV(SDNode *N,

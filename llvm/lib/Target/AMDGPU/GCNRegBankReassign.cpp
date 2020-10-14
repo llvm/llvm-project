@@ -239,7 +239,8 @@ private:
 
   // Search for a register in Bank unused within LI.
   // Returns phys reg or NoRegister.
-  unsigned scavengeReg(LiveInterval &LI, unsigned Bank, unsigned SubReg) const;
+  MCRegister scavengeReg(LiveInterval &LI, unsigned Bank,
+                         unsigned SubReg) const;
 
   // Try to reassign candidate. Returns number or stall cycles saved.
   unsigned tryReassign(Candidate &C);
@@ -648,15 +649,15 @@ unsigned GCNRegBankReassign::computeStallCycles(Register SrcReg, Register Reg,
   return TotalStallCycles;
 }
 
-unsigned GCNRegBankReassign::scavengeReg(LiveInterval &LI, unsigned Bank,
-                                         unsigned SubReg) const {
+MCRegister GCNRegBankReassign::scavengeReg(LiveInterval &LI, unsigned Bank,
+                                           unsigned SubReg) const {
   const TargetRegisterClass *RC = MRI->getRegClass(LI.reg());
   unsigned MaxNumRegs = (Bank < NUM_VGPR_BANKS) ? MaxNumVGPRs
                                                 : MaxNumSGPRs;
   unsigned MaxReg = MaxNumRegs + (Bank < NUM_VGPR_BANKS ? AMDGPU::VGPR0
                                                         : AMDGPU::SGPR0);
 
-  for (Register Reg : RC->getRegisters()) {
+  for (MCRegister Reg : RC->getRegisters()) {
     // Check occupancy limit.
     if (TRI->isSubRegisterEq(Reg, MaxReg))
       break;
@@ -667,7 +668,7 @@ unsigned GCNRegBankReassign::scavengeReg(LiveInterval &LI, unsigned Bank,
     for (unsigned I = 0; CSRegs[I]; ++I)
       if (TRI->isSubRegisterEq(Reg, CSRegs[I]) &&
           !LRM->isPhysRegUsed(CSRegs[I]))
-        return AMDGPU::NoRegister;
+        return MCRegister::from(AMDGPU::NoRegister);
 
     LLVM_DEBUG(dbgs() << "Trying register " << printReg(Reg) << '\n');
 
@@ -675,7 +676,7 @@ unsigned GCNRegBankReassign::scavengeReg(LiveInterval &LI, unsigned Bank,
       return Reg;
   }
 
-  return AMDGPU::NoRegister;
+  return MCRegister::from(AMDGPU::NoRegister);
 }
 
 unsigned GCNRegBankReassign::tryReassign(Candidate &C) {
@@ -720,11 +721,11 @@ unsigned GCNRegBankReassign::tryReassign(Candidate &C) {
   }
   llvm::sort(BankStalls);
 
-  Register OrigReg = VRM->getPhys(C.Reg);
+  MCRegister OrigReg = VRM->getPhys(C.Reg);
   LRM->unassign(LI);
   while (!BankStalls.empty()) {
     BankStall BS = BankStalls.pop_back_val();
-    Register Reg = scavengeReg(LI, BS.Bank, C.SubReg);
+    MCRegister Reg = scavengeReg(LI, BS.Bank, C.SubReg);
     if (Reg == AMDGPU::NoRegister) {
       LLVM_DEBUG(dbgs() << "No free registers in bank " << printBank(BS.Bank)
                    << '\n');

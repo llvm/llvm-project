@@ -354,14 +354,12 @@ void CGNVCUDARuntime::emitDeviceStubBodyLegacy(CodeGenFunction &CGF,
   llvm::BasicBlock *EndBlock = CGF.createBasicBlock("setup.end");
   CharUnits Offset = CharUnits::Zero();
   for (const VarDecl *A : Args) {
-    CharUnits TyWidth, TyAlign;
-    std::tie(TyWidth, TyAlign) =
-        CGM.getContext().getTypeInfoInChars(A->getType());
-    Offset = Offset.alignTo(TyAlign);
+    auto TInfo = CGM.getContext().getTypeInfoInChars(A->getType());
+    Offset = Offset.alignTo(TInfo.Align);
     llvm::Value *Args[] = {
         CGF.Builder.CreatePointerCast(CGF.GetAddrOfLocalVar(A).getPointer(),
                                       VoidPtrTy),
-        llvm::ConstantInt::get(SizeTy, TyWidth.getQuantity()),
+        llvm::ConstantInt::get(SizeTy, TInfo.Width.getQuantity()),
         llvm::ConstantInt::get(SizeTy, Offset.getQuantity()),
     };
     llvm::CallBase *CB = CGF.EmitRuntimeCallOrInvoke(cudaSetupArgFn, Args);
@@ -370,7 +368,7 @@ void CGNVCUDARuntime::emitDeviceStubBodyLegacy(CodeGenFunction &CGF,
     llvm::BasicBlock *NextBlock = CGF.createBasicBlock("setup.next");
     CGF.Builder.CreateCondBr(CBZero, NextBlock, EndBlock);
     CGF.EmitBlock(NextBlock);
-    Offset += TyWidth;
+    Offset += TInfo.Width;
   }
 
   // Emit the call to cudaLaunch

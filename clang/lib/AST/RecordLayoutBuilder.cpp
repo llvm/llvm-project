@@ -1841,12 +1841,12 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
 
   auto setDeclInfo = [&](bool IsIncompleteArrayType) {
     auto TI = Context.getTypeInfoInChars(D->getType());
-    FieldAlign = TI.second;
+    FieldAlign = TI.Align;
     // Flexible array members don't have any size, but they have to be
     // aligned appropriately for their element type.
     EffectiveFieldSize = FieldSize =
-        IsIncompleteArrayType ? CharUnits::Zero() : TI.first;
-    AlignIsRequired = Context.getTypeInfo(D->getType()).AlignIsRequired;
+        IsIncompleteArrayType ? CharUnits::Zero() : TI.Width;
+    AlignIsRequired = TI.AlignIsRequired;
   };
 
   if (D->getType()->isIncompleteArrayType()) {
@@ -2572,9 +2572,9 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
     const FieldDecl *FD) {
   // Get the alignment of the field type's natural alignment, ignore any
   // alignment attributes.
-  ElementInfo Info;
-  std::tie(Info.Size, Info.Alignment) =
+  auto TInfo =
       Context.getTypeInfoInChars(FD->getType()->getUnqualifiedDesugaredType());
+  ElementInfo Info{TInfo.Width, TInfo.Align};
   // Respect align attributes on the field.
   CharUnits FieldRequiredAlignment =
       Context.toCharUnitsFromBits(FD->getMaxAlignment());

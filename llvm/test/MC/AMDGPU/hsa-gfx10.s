@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn--amdhsa -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64,-code-object-v3 -show-encoding %s | FileCheck %s --check-prefix=ASM
-// RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64,-code-object-v3 -show-encoding %s | llvm-readobj -symbols -s -sd - | FileCheck %s --check-prefix=ELF
+// RUN: llvm-mc -triple amdgcn--amdhsa -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64,-code-object-v3 -show-encoding %s | FileCheck %s --check-prefix=ASM
+// RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64,-code-object-v3 -show-encoding %s | llvm-readobj -symbols -s -sd - | FileCheck %s --check-prefix=ELF
 
 // ELF: Section {
 // ELF: Name: .text

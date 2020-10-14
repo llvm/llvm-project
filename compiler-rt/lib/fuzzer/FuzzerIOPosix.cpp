@@ -159,7 +159,7 @@ bool IsInterestingCoverageFile(const std::string &FileName) {
 }
 
 void RawPrint(const char *Str) {
-  write(2, Str, strlen(Str));
+  (void)write(2, Str, strlen(Str));
 }
 
 void MkDir(const std::string &Path) {

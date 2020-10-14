@@ -387,10 +387,7 @@ define amdgpu_ps float @raw_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffse
   ; CHECK:   [[COPY5:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[BUFFER_LOAD_UBYTE_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_OFFEN [[COPY4]], [[REG_SEQUENCE]], [[COPY5]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 1 from custom "TargetCustom7", addrspace 4)
-  ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 255
-  ; CHECK:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; CHECK:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[BUFFER_LOAD_UBYTE_OFFEN]], [[COPY6]], implicit $exec
-  ; CHECK:   $vgpr0 = COPY [[V_AND_B32_e64_]]
+  ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %val = call i8 @llvm.amdgcn.raw.buffer.load.i8(<4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %zext = zext i8 %val to i32
@@ -497,10 +494,7 @@ define amdgpu_ps float @raw_buffer_load_i8__vgpr_rsrc__vgpr_voffset__sgpr_soffse
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
   ; CHECK: bb.4:
-  ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 255
-  ; CHECK:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; CHECK:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[BUFFER_LOAD_UBYTE_OFFEN]], [[COPY8]], implicit $exec
-  ; CHECK:   $vgpr0 = COPY [[V_AND_B32_e64_]]
+  ; CHECK:   $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %val = call i8 @llvm.amdgcn.raw.buffer.load.i8(<4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %zext = zext i8 %val to i32

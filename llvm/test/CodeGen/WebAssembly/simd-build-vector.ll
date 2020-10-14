@@ -8,12 +8,95 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
+; CHECK-LABEL:  emulated_const_trivial_splat:
+; CHECK-NEXT:   .functype       emulated_const_trivial_splat () -> (v128)
+; SIMD-VM-NEXT: i64.const       $push0=, 8589934593
+; SIMD-VM-NEXT: i64x2.splat     $push1=, $pop0
+; SIMD-VM-NEXT: return  $pop1
+; UNIMP: v128.const
+define <4 x i32> @emulated_const_trivial_splat() {
+  ret <4 x i32> <i32 1, i32 2, i32 1, i32 2>
+}
+
+; CHECK-LABEL:  emulated_const_first_sufficient:
+; CHECK-NEXT:   .functype       emulated_const_first_sufficient () -> (v128)
+; SIMD-VM-NEXT: i64.const       $push0=, 8589934593
+; SIMD-VM-NEXT: i64x2.splat     $push1=, $pop0
+; SIMD-VM-NEXT: return  $pop1
+; UNIMP: v128.const
+define <4 x i32> @emulated_const_first_sufficient() {
+  ret <4 x i32> <i32 1, i32 2, i32 undef, i32 2>
+}
+
+; CHECK-LABEL:  emulated_const_second_sufficient:
+; CHECK-NEXT:   .functype       emulated_const_second_sufficient () -> (v128)
+; SIMD-VM-NEXT: i64.const       $push0=, 8589934593
+; SIMD-VM-NEXT: i64x2.splat     $push1=, $pop0
+; SIMD-VM-NEXT: return  $pop1
+; UNIMP: v128.const
+define <4 x i32> @emulated_const_second_sufficient() {
+  ret <4 x i32> <i32 1, i32 undef, i32 1, i32 2>
+}
+
+; CHECK-LABEL:  emulated_const_combined_sufficient:
+; CHECK-NEXT:   .functype       emulated_const_combined_sufficient () -> (v128)
+; SIMD-VM-NEXT: i64.const       $push0=, 8589934593
+; SIMD-VM-NEXT: i64x2.splat     $push1=, $pop0
+; SIMD-VM-NEXT: return  $pop1
+; UNIMP: v128.const
+define <4 x i32> @emulated_const_combined_sufficient() {
+  ret <4 x i32> <i32 1, i32 undef, i32 undef, i32 2>
+}
+
+; CHECK-LABEL:  emulated_const_either_sufficient:
+; CHECK-NEXT:   .functype       emulated_const_either_sufficient () -> (v128)
+; SIMD-VM-NEXT: i64.const       $push0=, 1
+; SIMD-VM-NEXT: i64x2.splat     $push1=, $pop0
+; SIMD-VM-NEXT: return  $pop1
+; UNIMP: v128.const
+define <4 x i32> @emulated_const_either_sufficient() {
+  ret <4 x i32> <i32 1, i32 undef, i32 1, i32 undef>
+}
+
+; CHECK-LABEL: emulated_const_neither_sufficient:
+; CHECK-NEXT:   .functype       emulated_const_neither_sufficient () -> (v128)
+; SIMD-VM-NEXT: i64.const       $push0=, 8589934593
+; SIMD-VM-NEXT: i64x2.splat     $push1=, $pop0
+; SIMD-VM-NEXT: i64.const       $push2=, 17179869184
+; SIMD-VM-NEXT: i64x2.replace_lane      $push3=, $pop1, 1, $pop2
+; SIMD-VM-NEXT: return  $pop3
+define <4 x i32> @emulated_const_neither_sufficient() {
+  ret <4 x i32> <i32 1, i32 2, i32 undef, i32 4>
+}
+
+; CHECK-LABEL:  emulated_const_combined_sufficient_large:
+; CHECK-NEXT:   .functype       emulated_const_combined_sufficient_large () -> (v128)
+; SIMD-VM-NEXT: i64.const       $push0=, 506097522914230528
+; SIMD-VM-NEXT: i64x2.splat     $push1=, $pop0
+; SIMD-VM-NEXT: return  $pop1
+define <16 x i8> @emulated_const_combined_sufficient_large() {
+  ret <16 x i8> <i8 0, i8 undef, i8 2, i8 undef, i8 4, i8 undef, i8 6, i8 undef,
+                 i8 undef, i8 1, i8 undef, i8 3, i8 undef, i8 5, i8 undef, i8 7>
+}
+
+; CHECK-LABEL: emulated_const_neither_sufficient_large:
+; CHECK-NEXT:   .functype       emulated_const_neither_sufficient_large () -> (v128)
+; SIMD-VM-NEXT: i64.const       $push0=, -70368726997663744
+; SIMD-VM-NEXT: i64x2.splat     $push1=, $pop0
+; SIMD-VM-NEXT: i64.const       $push2=, 504408655873966336
+; SIMD-VM-NEXT: i64x2.replace_lane      $push3=, $pop1, 1, $pop2
+; SIMD-VM-NEXT: return  $pop3
+define <16 x i8> @emulated_const_neither_sufficient_large() {
+  ret <16 x i8> <i8 0, i8 undef, i8 2, i8 undef, i8 4, i8 undef, i8 6, i8 255,
+                 i8 undef, i8 1, i8 undef, i8 3, i8 undef, i8 5, i8 undef, i8 7>
+}
+
 ; CHECK-LABEL: same_const_one_replaced_i16x8:
 ; CHECK-NEXT:  .functype       same_const_one_replaced_i16x8 (i32) -> (v128)
 ; UNIMP-NEXT:  v128.const      $push[[L0:[0-9]+]]=, 42, 42, 42, 42, 42, 0, 42, 42
 ; UNIMP-NEXT:  i16x8.replace_lane      $push[[L1:[0-9]+]]=, $pop[[L0]], 5, $0
 ; UNIMP-NEXT:  return          $pop[[L1]]
-; SIMD-VM: i16x8.splat
+; SIMD-VM: i64x2.splat
 define <8 x i16> @same_const_one_replaced_i16x8(i16 %x) {
   %v = insertelement
     <8 x i16> <i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42, i16 42>,
@@ -27,7 +110,7 @@ define <8 x i16> @same_const_one_replaced_i16x8(i16 %x) {
 ; UNIMP-NEXT:  v128.const      $push[[L0:[0-9]+]]=, 1, -2, 3, -4, 5, 0, 7, -8
 ; UNIMP-NEXT:  i16x8.replace_lane      $push[[L1:[0-9]+]]=, $pop[[L0]], 5, $0
 ; UNIMP-NEXT:  return          $pop[[L1]]
-; SIMD-VM: i16x8.splat
+; SIMD-VM: i64x2.splat
 define <8 x i16> @different_const_one_replaced_i16x8(i16 %x) {
   %v = insertelement
     <8 x i16> <i16 1, i16 -2, i16 3, i16 -4, i16 5, i16 -6, i16 7, i16 -8>,
@@ -68,7 +151,7 @@ define <4 x float> @different_const_one_replaced_f32x4(float %x) {
 ; CHECK-NEXT:  .functype       splat_common_const_i32x4 () -> (v128)
 ; UNIMP-NEXT:  v128.const      $push[[L0:[0-9]+]]=, 0, 3, 3, 1
 ; UNIMP-NEXT:  return          $pop[[L0]]
-; SIMD-VM: i32x4.splat
+; SIMD-VM: i64x2.splat
 define <4 x i32> @splat_common_const_i32x4() {
   ret <4 x i32> <i32 undef, i32 3, i32 3, i32 1>
 }
@@ -206,7 +289,7 @@ define <16 x i8> @mashup_swizzle_i8x16(<16 x i8> %src, <16 x i8> %mask, i8 %spla
 ; UNIMP:       i8x16.replace_lane
 ; UNIMP:       i8x16.replace_lane
 ; UNIMP:       return
-; SIMD-VM: i8x16.splat
+; SIMD-VM: i64x2.splat
 define <16 x i8> @mashup_const_i8x16(<16 x i8> %src, <16 x i8> %mask, i8 %splatted) {
   ; swizzle 0
   %m0 = extractelement <16 x i8> %mask, i32 0

@@ -333,6 +333,8 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
 
 def VOP_MAC_F16 : VOP_MAC <f16>;
 def VOP_MAC_F32 : VOP_MAC <f32>;
+let HasExtDPP = 0 in
+def VOP_MAC_LEGACY_F32 : VOP_MAC <f32>;
 
 class VOP_DOT_ACC<ValueType vt0, ValueType vt1> : VOP_MAC<vt0, vt1> {
   let HasClamp = 0;
@@ -501,7 +503,7 @@ let Constraints = "$vdst = $src2", DisableEncoding="$src2",
 defm V_MAC_F32 : VOP2Inst <"v_mac_f32", VOP_MAC_F32>;
 
 let SubtargetPredicate = isGFX6GFX7GFX10 in
-defm V_MAC_LEGACY_F32 : VOP2Inst <"v_mac_legacy_f32", VOP_MAC_F32>;
+defm V_MAC_LEGACY_F32 : VOP2Inst <"v_mac_legacy_f32", VOP_MAC_LEGACY_F32>;
 } // End Constraints = "$vdst = $src2", DisableEncoding="$src2",
   //     isConvertibleToThreeAddress = 1
 

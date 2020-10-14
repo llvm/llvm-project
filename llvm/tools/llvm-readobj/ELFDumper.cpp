@@ -5108,10 +5108,10 @@ static AMDGPUNote getAMDGPUNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
       return {"AMDGPU Metadata", "Invalid AMDGPU Metadata"};
 
     AMDGPU::HSAMD::V3::MetadataVerifier Verifier(true);
-    if (!Verifier.verify(MsgPackDoc.getRoot()))
-      return {"AMDGPU Metadata", "Invalid AMDGPU Metadata"};
-
     std::string HSAMetadataString;
+    if (!Verifier.verify(MsgPackDoc.getRoot()))
+      HSAMetadataString = "Invalid AMDGPU Metadata\n";
+
     raw_string_ostream StrOS(HSAMetadataString);
     MsgPackDoc.toYAML(StrOS);
 

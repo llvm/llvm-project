@@ -478,7 +478,7 @@ if (NOT LIBCXX_STANDALONE_BUILD)
   remove_flags(-DNDEBUG -UNDEBUG -D_DEBUG
                -lc++abi)
 endif()
-remove_flags(-stdlib=libc++ -stdlib=libstdc++)
+remove_flags(--stdlib=libc++ -stdlib=libc++ --stdlib=libstdc++ -stdlib=libstdc++)
 
 # FIXME: Remove all debug flags and flags that change which Windows
 # default libraries are linked. Currently we only support linking the

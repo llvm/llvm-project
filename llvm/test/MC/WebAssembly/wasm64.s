@@ -153,6 +153,7 @@ test:
 # BIN-NEXT:         Field:           __indirect_function_table
 # BIN-NEXT:         Kind:            TABLE
 # BIN-NEXT:         Table:
+# BIN-NEXT:           Index:           0
 # BIN-NEXT:           ElemType:        FUNCREF
 # BIN-NEXT:           Limits:
 # BIN-NEXT:             Initial:         0x00000000

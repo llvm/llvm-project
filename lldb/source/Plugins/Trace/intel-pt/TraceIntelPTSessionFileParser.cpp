@@ -41,7 +41,8 @@ void TraceIntelPTSessionFileParser::ParseThread(
   FileSpec trace_file(thread.trace_file);
   NormalizePath(trace_file);
 
-  ThreadSP thread_sp(new ThreadIntelPT(*process_sp, tid, trace_file));
+  ThreadSP thread_sp =
+      std::make_shared<ThreadIntelPT>(*process_sp, tid, trace_file);
   process_sp->GetThreadList().AddThread(thread_sp);
 }
 
@@ -60,7 +61,7 @@ Error TraceIntelPTSessionFileParser::ParseProcess(
   m_debugger.GetTargetList().SetSelectedTarget(target_sp.get());
 
   ProcessSP process_sp(target_sp->CreateProcess(
-      /*listener*/ nullptr, /*plugin_name*/ StringRef(),
+      /*listener*/ nullptr, "trace",
       /*crash_file*/ nullptr));
   process_sp->SetID(static_cast<lldb::pid_t>(process.pid));
 
@@ -71,7 +72,16 @@ Error TraceIntelPTSessionFileParser::ParseProcess(
     if (Error err = ParseModule(target_sp, module))
       return err;
   }
-  return Error::success();
+
+  if (!process.threads.empty())
+    process_sp->GetThreadList().SetSelectedThreadByIndexID(0);
+
+  // We invoke DidAttach to create a correct stopped state for the process and
+  // its threads.
+  ArchSpec process_arch;
+  process_sp->DidAttach(process_arch);
+
+  return llvm::Error::success();
 }
 
 void TraceIntelPTSessionFileParser::ParsePTCPU(const JSONPTCPU &pt_cpu) {
@@ -105,7 +115,7 @@ Expected<TraceSP> TraceIntelPTSessionFileParser::Parse() {
     return std::move(err);
   }
 
-  return std::make_shared<TraceIntelPT>(m_pt_cpu, m_targets);
+  return TraceIntelPT::CreateInstance(m_pt_cpu, m_targets);
 }
 
 namespace llvm {

@@ -198,7 +198,7 @@ void outputRaw(const char *Buffer) {
     }
     async_safe_write_log(AndroidLogInfo, "scudo", Buffer);
   } else {
-    write(2, Buffer, strlen(Buffer));
+    (void)write(2, Buffer, strlen(Buffer));
   }
 }
 

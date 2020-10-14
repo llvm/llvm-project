@@ -12,10 +12,10 @@ func @composite_construct_vector(%arg0: f32, %arg1: f32, %arg2 : f32) -> vector<
 
 // -----
 
-func @composite_construct_struct(%arg0: vector<3xf32>, %arg1: !spv.array<4xf32>, %arg2 : !spv.struct<f32>) -> !spv.struct<vector<3xf32>, !spv.array<4xf32>, !spv.struct<f32>> {
-  // CHECK: spv.CompositeConstruct %arg0, %arg1, %arg2 : !spv.struct<vector<3xf32>, !spv.array<4 x f32>, !spv.struct<f32>>
-  %0 = spv.CompositeConstruct %arg0, %arg1, %arg2 : !spv.struct<vector<3xf32>, !spv.array<4xf32>, !spv.struct<f32>>
-  return %0: !spv.struct<vector<3xf32>, !spv.array<4xf32>, !spv.struct<f32>>
+func @composite_construct_struct(%arg0: vector<3xf32>, %arg1: !spv.array<4xf32>, %arg2 : !spv.struct<(f32)>) -> !spv.struct<(vector<3xf32>, !spv.array<4xf32>, !spv.struct<(f32)>)> {
+  // CHECK: spv.CompositeConstruct %arg0, %arg1, %arg2 : !spv.struct<(vector<3xf32>, !spv.array<4 x f32>, !spv.struct<(f32)>)>
+  %0 = spv.CompositeConstruct %arg0, %arg1, %arg2 : !spv.struct<(vector<3xf32>, !spv.array<4xf32>, !spv.struct<(f32)>)>
+  return %0: !spv.struct<(vector<3xf32>, !spv.array<4xf32>, !spv.struct<(f32)>)>
 }
 
 // -----
@@ -28,10 +28,10 @@ func @composite_construct_coopmatrix(%arg0 : f32) -> !spv.coopmatrix<8x16xf32, S
 
 // -----
 
-func @composite_construct_empty_struct() -> !spv.struct<> {
-  // CHECK: spv.CompositeConstruct : !spv.struct<>
-  %0 = spv.CompositeConstruct : !spv.struct<>
-  return %0: !spv.struct<>
+func @composite_construct_empty_struct() -> !spv.struct<()> {
+  // CHECK: spv.CompositeConstruct : !spv.struct<()>
+  %0 = spv.CompositeConstruct : !spv.struct<()>
+  return %0: !spv.struct<()>
 }
 
 // -----
@@ -80,9 +80,9 @@ func @composite_extract_array(%arg0: !spv.array<4xf32>) -> f32 {
 
 // -----
 
-func @composite_extract_struct(%arg0 : !spv.struct<f32, !spv.array<4xf32>>) -> f32 {
-  // CHECK: {{%.*}} = spv.CompositeExtract {{%.*}}[1 : i32, 2 : i32] : !spv.struct<f32, !spv.array<4 x f32>>
-  %0 = spv.CompositeExtract %arg0[1 : i32, 2 : i32] : !spv.struct<f32, !spv.array<4xf32>>
+func @composite_extract_struct(%arg0 : !spv.struct<(f32, !spv.array<4xf32>)>) -> f32 {
+  // CHECK: {{%.*}} = spv.CompositeExtract {{%.*}}[1 : i32, 2 : i32] : !spv.struct<(f32, !spv.array<4 x f32>)>
+  %0 = spv.CompositeExtract %arg0[1 : i32, 2 : i32] : !spv.struct<(f32, !spv.array<4xf32>)>
   return %0 : f32
 }
 
@@ -156,9 +156,9 @@ func @composite_extract_2D_array_out_of_bounds_access_2(%arg0: !spv.array<4x!spv
 
 // -----
 
-func @composite_extract_struct_element_out_of_bounds_access(%arg0 : !spv.struct<f32, !spv.array<4xf32>>) -> () {
-  // expected-error @+1 {{index 2 out of bounds for '!spv.struct<f32, !spv.array<4 x f32>>'}}
-  %0 = spv.CompositeExtract %arg0[2 : i32, 0 : i32] : !spv.struct<f32, !spv.array<4xf32>>
+func @composite_extract_struct_element_out_of_bounds_access(%arg0 : !spv.struct<(f32, !spv.array<4xf32>)>) -> () {
+  // expected-error @+1 {{index 2 out of bounds for '!spv.struct<(f32, !spv.array<4 x f32>)>'}}
+  %0 = spv.CompositeExtract %arg0[2 : i32, 0 : i32] : !spv.struct<(f32, !spv.array<4xf32>)>
   return
 }
 
@@ -216,10 +216,10 @@ func @composite_insert_array(%arg0: !spv.array<4xf32>, %arg1: f32) -> !spv.array
 
 // -----
 
-func @composite_insert_struct(%arg0: !spv.struct<!spv.array<4xf32>, f32>, %arg1: !spv.array<4xf32>) -> !spv.struct<!spv.array<4xf32>, f32> {
-  // CHECK: {{%.*}} = spv.CompositeInsert {{%.*}}, {{%.*}}[0 : i32] : !spv.array<4 x f32> into !spv.struct<!spv.array<4 x f32>, f32>
-  %0 = spv.CompositeInsert %arg1, %arg0[0 : i32] : !spv.array<4xf32> into !spv.struct<!spv.array<4xf32>, f32>
-  return %0: !spv.struct<!spv.array<4xf32>, f32>
+func @composite_insert_struct(%arg0: !spv.struct<(!spv.array<4xf32>, f32)>, %arg1: !spv.array<4xf32>) -> !spv.struct<(!spv.array<4xf32>, f32)> {
+  // CHECK: {{%.*}} = spv.CompositeInsert {{%.*}}, {{%.*}}[0 : i32] : !spv.array<4 x f32> into !spv.struct<(!spv.array<4 x f32>, f32)>
+  %0 = spv.CompositeInsert %arg1, %arg0[0 : i32] : !spv.array<4xf32> into !spv.struct<(!spv.array<4xf32>, f32)>
+  return %0: !spv.struct<(!spv.array<4xf32>, f32)>
 }
 
 // -----

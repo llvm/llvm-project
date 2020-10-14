@@ -418,6 +418,8 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_ZeroToOCLOpaqueType:
       case CK_IntToOCLSampler:
       case CK_LValueBitCast:
+      case CK_FloatingToFixedPoint:
+      case CK_FixedPointToFloating:
       case CK_FixedPointCast:
       case CK_FixedPointToBoolean:
       case CK_FixedPointToIntegral:
