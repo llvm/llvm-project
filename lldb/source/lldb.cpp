@@ -56,23 +56,14 @@ const char *lldb_private::GetVersion() {
       }
       g_version_str += ")";
     }
-    
-#if LLDB_IS_BUILDBOT_BUILD
-    std::string build_date = GetBuildDate();
-    if(!build_date.empty())
-      g_version_str += " (buildbot " + build_date + ")";
-#endif
 
 #ifdef LLDB_ENABLE_SWIFT
     auto const swift_version = swift::version::getSwiftFullVersion();
     g_version_str += "\n" + swift_version;
-#endif // LLDB_ENABLE_SWIFT
-
+#else
     // getSwiftFullVersion() also prints clang and llvm versions, no
     // need to print them again. We keep this code here to not diverge
     // too much from upstream.
-#undef LLDB_UPSTREAM
-#ifdef LLDB_UPSTREAM
     std::string clang_rev(clang::getClangRevision());
     if (clang_rev.length() > 0) {
       g_version_str += "\n  clang revision ";
@@ -83,7 +74,7 @@ const char *lldb_private::GetVersion() {
       g_version_str += "\n  llvm revision ";
       g_version_str += llvm_rev;
     }
-#endif // LLDB_UPSTREAM
+#endif // LLDB_ENABLE_SWIFT
   }
   return g_version_str.c_str();
 }
