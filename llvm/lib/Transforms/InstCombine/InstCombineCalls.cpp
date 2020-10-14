@@ -885,15 +885,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Constant *ShAmtC;
     if (match(II->getArgOperand(2), m_Constant(ShAmtC)) &&
         !isa<ConstantExpr>(ShAmtC) && !ShAmtC->containsConstantExpression()) {
-      Constant *WidthC = ConstantInt::get(Ty, BitWidth);
-
       // Canonicalize a shift amount constant operand to modulo the bit-width.
-      if (!match(ShAmtC, m_SpecificInt_ICMP(ICmpInst::ICMP_ULT,
-                                            APInt(BitWidth, BitWidth)))) {
-        Constant *ModuloC = ConstantExpr::getURem(ShAmtC, WidthC);
-        ModuloC = Constant::mergeUndefsWith(ModuloC, ShAmtC);
+      Constant *WidthC = ConstantInt::get(Ty, BitWidth);
+      Constant *ModuloC = ConstantExpr::getURem(ShAmtC, WidthC);
+      if (ModuloC != ShAmtC)
         return replaceOperand(*II, 2, ModuloC);
-      }
+
+      assert(ConstantExpr::getICmp(ICmpInst::ICMP_UGT, WidthC, ShAmtC) ==
+                 ConstantInt::getTrue(CmpInst::makeCmpResultType(Ty)) &&
+             "Shift amount expected to be modulo bitwidth");
 
       // Canonicalize funnel shift right by constant to funnel shift left. This
       // is not entirely arbitrary. For historical reasons, the backend may
