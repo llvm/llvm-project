@@ -89,11 +89,6 @@ private:
   void emitMatchCheck(int depth, const FmtObjectBase &matchFmt,
                       const llvm::formatv_object_base &failureFmt);
 
-  // Emits C++ for checking a match with a corresponding match failure
-  // diagnostics.
-  void emitMatchCheck(int depth, const std::string &matchStr,
-                      const std::string &failureStr);
-
   //===--------------------------------------------------------------------===//
   // Rewrite utilities
   //===--------------------------------------------------------------------===//
@@ -332,9 +327,8 @@ void PatternEmitter::emitOperandMatch(DagNode tree, int argIndex, int depth) {
         op.arg_begin(), op.arg_begin() + argIndex,
         [](const Argument &arg) { return arg.is<NamedAttribute *>(); });
 
-    auto res = symbolInfoMap.findBoundSymbol(name, op, argIndex);
-    os << formatv("{0} = castedOp{1}.getODSOperands({2});\n",
-                  res->second.getVarName(name), depth, argIndex - numPrevAttrs);
+    os << formatv("{0} = castedOp{1}.getODSOperands({2});\n", name, depth,
+                  argIndex - numPrevAttrs);
   }
 }
 
@@ -399,15 +393,10 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, int argIndex, int depth) {
 void PatternEmitter::emitMatchCheck(
     int depth, const FmtObjectBase &matchFmt,
     const llvm::formatv_object_base &failureFmt) {
-  emitMatchCheck(depth, matchFmt.str(), failureFmt.str());
-}
-
-void PatternEmitter::emitMatchCheck(int depth, const std::string &matchStr,
-                                    const std::string &failureStr) {
-  os << "if (!(" << matchStr << "))";
+  os << "if (!(" << matchFmt.str() << "))";
   os.scope("{\n", "\n}\n").os
       << "return rewriter.notifyMatchFailure(op" << depth
-      << ", [&](::mlir::Diagnostic &diag) {\n  diag << " << failureStr
+      << ", [&](::mlir::Diagnostic &diag) {\n  diag << " << failureFmt.str()
       << ";\n});";
 }
 
@@ -456,30 +445,6 @@ void PatternEmitter::emitMatchLogic(DagNode tree) {
                              constraint.getDescription()));
     }
   }
-
-  // Some of the operands could be bound to the same symbol name, we need
-  // to enforce equality constraint on those.
-  // TODO: we should be able to emit equality checks early
-  // and short circuit unnecessary work if vars are not equal.
-  for (auto symbolInfoIt = symbolInfoMap.begin();
-       symbolInfoIt != symbolInfoMap.end();) {
-    auto range = symbolInfoMap.getRangeOfEqualElements(symbolInfoIt->first);
-    auto startRange = range.first;
-    auto endRange = range.second;
-
-    auto firstOperand = symbolInfoIt->second.getVarName(symbolInfoIt->first);
-    for (++startRange; startRange != endRange; ++startRange) {
-      auto secondOperand = startRange->second.getVarName(symbolInfoIt->first);
-      emitMatchCheck(
-          depth,
-          formatv("*{0}.begin() == *{1}.begin()", firstOperand, secondOperand),
-          formatv("\"Operands '{0}' and '{1}' must be equal\"", firstOperand,
-                  secondOperand));
-    }
-
-    symbolInfoIt = endRange;
-  }
-
   LLVM_DEBUG(llvm::dbgs() << "--- done emitting match logic ---\n");
 }
 
@@ -553,9 +518,8 @@ void PatternEmitter::emit(StringRef rewriteName) {
       // Create local variables for storing the arguments and results bound
       // to symbols.
       for (const auto &symbolInfoPair : symbolInfoMap) {
-        const auto &symbol = symbolInfoPair.first;
-        const auto &info = symbolInfoPair.second;
-
+        StringRef symbol = symbolInfoPair.getKey();
+        auto &info = symbolInfoPair.getValue();
         os << info.getVarDecl(symbol);
       }
       // TODO: capture ops with consistent numbering so that it can be
@@ -1129,7 +1093,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
       os << formatv("for (auto v: {0}) {{\n  tblgen_values.push_back(v);\n}\n",
                     range);
     } else {
-      os << formatv("tblgen_values.push_back(");
+      os << formatv("tblgen_values.push_back(", varName);
       if (node.isNestedDagArg(argIndex)) {
         os << symbolInfoMap.getValueAndRangeUse(
             childNodeNames.lookup(argIndex));

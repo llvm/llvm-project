@@ -208,10 +208,6 @@ int SymbolInfoMap::SymbolInfo::getStaticValueCount() const {
   llvm_unreachable("unknown kind");
 }
 
-std::string SymbolInfoMap::SymbolInfo::getVarName(StringRef name) const {
-  return alternativeName.hasValue() ? alternativeName.getValue() : name.str();
-}
-
 std::string SymbolInfoMap::SymbolInfo::getVarDecl(StringRef name) const {
   LLVM_DEBUG(llvm::dbgs() << "getVarDecl for '" << name << "': ");
   switch (kind) {
@@ -223,9 +219,8 @@ std::string SymbolInfoMap::SymbolInfo::getVarDecl(StringRef name) const {
   case Kind::Operand: {
     // Use operand range for captured operands (to support potential variadic
     // operands).
-    return std::string(
-        formatv("::mlir::Operation::operand_range {0}(op0->getOperands());\n",
-                getVarName(name)));
+    return std::string(formatv(
+        "::mlir::Operation::operand_range {0}(op0->getOperands());\n", name));
   }
   case Kind::Value: {
     return std::string(formatv("::llvm::ArrayRef<::mlir::Value> {0};\n", name));
@@ -364,34 +359,16 @@ bool SymbolInfoMap::bindOpArgument(StringRef symbol, const Operator &op,
                      ? SymbolInfo::getAttr(&op, argIndex)
                      : SymbolInfo::getOperand(&op, argIndex);
 
-  std::string key = symbol.str();
-  if (auto numberOfEntries = symbolInfoMap.count(key)) {
-    // Only non unique name for the operand is supported.
-    if (symInfo.kind != SymbolInfo::Kind::Operand) {
-      return false;
-    }
-
-    // Cannot add new operand if there is already non operand with the same
-    // name.
-    if (symbolInfoMap.find(key)->second.kind != SymbolInfo::Kind::Operand) {
-      return false;
-    }
-  }
-
-  symbolInfoMap.emplace(key, symInfo);
-  return true;
+  return symbolInfoMap.insert({symbol, symInfo}).second;
 }
 
 bool SymbolInfoMap::bindOpResult(StringRef symbol, const Operator &op) {
   StringRef name = getValuePackName(symbol);
-  auto inserted = symbolInfoMap.emplace(name, SymbolInfo::getResult(&op));
-
-  return symbolInfoMap.count(inserted->first) == 1;
+  return symbolInfoMap.insert({name, SymbolInfo::getResult(&op)}).second;
 }
 
 bool SymbolInfoMap::bindValue(StringRef symbol) {
-  auto inserted = symbolInfoMap.emplace(symbol, SymbolInfo::getValue());
-  return symbolInfoMap.count(inserted->first) == 1;
+  return symbolInfoMap.insert({symbol, SymbolInfo::getValue()}).second;
 }
 
 bool SymbolInfoMap::contains(StringRef symbol) const {
@@ -399,36 +376,8 @@ bool SymbolInfoMap::contains(StringRef symbol) const {
 }
 
 SymbolInfoMap::const_iterator SymbolInfoMap::find(StringRef key) const {
-  std::string name = getValuePackName(key).str();
-
+  StringRef name = getValuePackName(key);
   return symbolInfoMap.find(name);
-}
-
-SymbolInfoMap::const_iterator
-SymbolInfoMap::findBoundSymbol(StringRef key, const Operator &op,
-                               int argIndex) const {
-  std::string name = getValuePackName(key).str();
-  auto range = symbolInfoMap.equal_range(name);
-
-  for (auto it = range.first; it != range.second; ++it) {
-    if (it->second.op == &op && it->second.argIndex == argIndex) {
-      return it;
-    }
-  }
-
-  return symbolInfoMap.end();
-}
-
-std::pair<SymbolInfoMap::iterator, SymbolInfoMap::iterator>
-SymbolInfoMap::getRangeOfEqualElements(StringRef key) {
-  std::string name = getValuePackName(key).str();
-
-  return symbolInfoMap.equal_range(name);
-}
-
-int SymbolInfoMap::count(StringRef key) const {
-  std::string name = getValuePackName(key).str();
-  return symbolInfoMap.count(name);
 }
 
 int SymbolInfoMap::getStaticValueCount(StringRef symbol) const {
@@ -439,7 +388,7 @@ int SymbolInfoMap::getStaticValueCount(StringRef symbol) const {
     return 1;
   }
   // Otherwise, find how many it represents by querying the symbol's info.
-  return find(name)->second.getStaticValueCount();
+  return find(name)->getValue().getStaticValueCount();
 }
 
 std::string SymbolInfoMap::getValueAndRangeUse(StringRef symbol,
@@ -448,13 +397,13 @@ std::string SymbolInfoMap::getValueAndRangeUse(StringRef symbol,
   int index = -1;
   StringRef name = getValuePackName(symbol, &index);
 
-  auto it = symbolInfoMap.find(name.str());
+  auto it = symbolInfoMap.find(name);
   if (it == symbolInfoMap.end()) {
     auto error = formatv("referencing unbound symbol '{0}'", symbol);
     PrintFatalError(loc, error);
   }
 
-  return it->second.getValueAndRangeUse(name, index, fmt, separator);
+  return it->getValue().getValueAndRangeUse(name, index, fmt, separator);
 }
 
 std::string SymbolInfoMap::getAllRangeUse(StringRef symbol, const char *fmt,
@@ -462,44 +411,13 @@ std::string SymbolInfoMap::getAllRangeUse(StringRef symbol, const char *fmt,
   int index = -1;
   StringRef name = getValuePackName(symbol, &index);
 
-  auto it = symbolInfoMap.find(name.str());
+  auto it = symbolInfoMap.find(name);
   if (it == symbolInfoMap.end()) {
     auto error = formatv("referencing unbound symbol '{0}'", symbol);
     PrintFatalError(loc, error);
   }
 
-  return it->second.getAllRangeUse(name, index, fmt, separator);
-}
-
-void SymbolInfoMap::assignUniqueAlternativeNames() {
-  llvm::StringSet<> usedNames;
-
-  for (auto symbolInfoIt = symbolInfoMap.begin();
-       symbolInfoIt != symbolInfoMap.end();) {
-    auto range = symbolInfoMap.equal_range(symbolInfoIt->first);
-    auto startRange = range.first;
-    auto endRange = range.second;
-
-    auto operandName = symbolInfoIt->first;
-    int startSearchIndex = 0;
-    for (++startRange; startRange != endRange; ++startRange) {
-      // Current operand name is not unique, find a unique one
-      // and set the alternative name.
-      for (int i = startSearchIndex;; ++i) {
-        std::string alternativeName = operandName + std::to_string(i);
-        if (!usedNames.contains(alternativeName) &&
-            symbolInfoMap.count(alternativeName) == 0) {
-          usedNames.insert(alternativeName);
-          startRange->second.alternativeName = alternativeName;
-          startSearchIndex = i + 1;
-
-          break;
-        }
-      }
-    }
-
-    symbolInfoIt = endRange;
-  }
+  return it->getValue().getAllRangeUse(name, index, fmt, separator);
 }
 
 //===----------------------------------------------------------------------===//
@@ -527,10 +445,6 @@ void Pattern::collectSourcePatternBoundSymbols(SymbolInfoMap &infoMap) {
   LLVM_DEBUG(llvm::dbgs() << "start collecting source pattern bound symbols\n");
   collectBoundSymbols(getSourcePattern(), infoMap, /*isSrcPattern=*/true);
   LLVM_DEBUG(llvm::dbgs() << "done collecting source pattern bound symbols\n");
-
-  LLVM_DEBUG(llvm::dbgs() << "start assigning alternative names for symbols\n");
-  infoMap.assignUniqueAlternativeNames();
-  LLVM_DEBUG(llvm::dbgs() << "done assigning alternative names for symbols\n");
 }
 
 void Pattern::collectResultPatternBoundSymbols(SymbolInfoMap &infoMap) {
