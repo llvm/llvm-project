@@ -850,6 +850,21 @@
 					"-framework",
 					Security,
 				);
+				"OTHER_LDFLAGS[sdk=watchos*]" = (
+					"-framework",
+					SpringBoardServices,
+					"-framework",
+					BackBoardServices,
+					"-llockdown",
+					"-framework",
+					FrontBoardServices,
+					"-framework",
+					MobileCoreServices,
+					"$(LLDB_ENERGY_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"-framework",
+					CarouselServices,
+				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
 				SDKROOT = macosx;
@@ -907,6 +922,10 @@
 					"$(SDKROOT)/System/Library/Frameworks/System.framework/PrivateHeaders",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
+				"OTHER_CPLUSPLUSFLAGS[sdk=watchos*]" = (
+					"$(OTHER_CFLAGS)",
+					"-DWITH_CAROUSEL=1",
+				);
 				OTHER_LDFLAGS = "";
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-framework",
@@ -930,6 +949,21 @@
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"-framework",
 					Security,
+				);
+				"OTHER_LDFLAGS[sdk=watchos*]" = (
+					"-framework",
+					SpringBoardServices,
+					"-framework",
+					BackBoardServices,
+					"-llockdown",
+					"-framework",
+					FrontBoardServices,
+					"-framework",
+					MobileCoreServices,
+					"$(LLDB_ENERGY_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"-framework",
+					CarouselServices,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -987,6 +1021,10 @@
 					"$(SDKROOT)/System/Library/Frameworks/System.framework/PrivateHeaders",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
+				"OTHER_CPLUSPLUSFLAGS[sdk=watchos*]" = (
+					"$(OTHER_CFLAGS)",
+					"-DWITH_CAROUSEL=1",
+				);
 				OTHER_LDFLAGS = "";
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-framework",
@@ -1010,6 +1048,21 @@
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"-framework",
 					Security,
+				);
+				"OTHER_LDFLAGS[sdk=watchos*]" = (
+					"-framework",
+					SpringBoardServices,
+					"-framework",
+					BackBoardServices,
+					"-llockdown",
+					"-framework",
+					FrontBoardServices,
+					"-framework",
+					MobileCoreServices,
+					"$(LLDB_ENERGY_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
+					"-framework",
+					CarouselServices,
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
@@ -1385,27 +1438,6 @@
 					"$(SDKROOT)/System/Library/Frameworks/System.framework/PrivateHeaders",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
-				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-framework",
-					SpringBoardServices,
-					"-framework",
-					BackBoardServices,
-					"-llockdown",
-					"-framework",
-					FrontBoardServices,
-					"-framework",
-					MobileCoreServices,
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
@@ -1499,27 +1531,6 @@
 					"$(SDKROOT)/System/Library/Frameworks/System.framework/PrivateHeaders",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
-				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-framework",
-					SpringBoardServices,
-					"-framework",
-					BackBoardServices,
-					"-llockdown",
-					"-framework",
-					FrontBoardServices,
-					"-framework",
-					MobileCoreServices,
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
@@ -1690,28 +1701,6 @@
 					"$(SDKROOT)/System/Library/Frameworks/System.framework/PrivateHeaders",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
-				OTHER_LDFLAGS = "";
-				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-framework",
-					SpringBoardServices,
-					"-framework",
-					BackBoardServices,
-					"-llockdown",
-					"-framework",
-					FrontBoardServices,
-					"-framework",
-					MobileCoreServices,
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
@@ -1806,27 +1795,6 @@
 					"$(SDKROOT)/System/Library/Frameworks/System.framework/PrivateHeaders",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
-				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
-					"-framework",
-					SpringBoardServices,
-					"-framework",
-					BackBoardServices,
-					"-llockdown",
-					"-framework",
-					FrontBoardServices,
-					"-framework",
-					MobileCoreServices,
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/resources/lldb-debugserver-Info.plist",
-					"$(LLDB_ENERGY_LDFLAGS)",
-					"$(LLDB_COMPRESSION_LDFLAGS)",
-				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
 				PRODUCT_NAME = debugserver;
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
