@@ -93,8 +93,8 @@ define void @func_ieee_mode_off() #2 {
 ; GCN-LABEL: {{^}}cs_ieee_mode_default:
 ; GCN: {{buffer|global|flat}}_load_dword [[VAL0:v[0-9]+]]
 ; GCN-NEXT: {{buffer|global|flat}}_load_dword [[VAL1:v[0-9]+]]
-; GCN-DAG: v_mul_f32_e32 [[QUIET0:v[0-9]+]], 1.0, [[VAL0]]
-; GCN-DAG: v_mul_f32_e32 [[QUIET1:v[0-9]+]], 1.0, [[VAL1]]
+; GCN-NOT: [[VAL0]]
+; GCN-NOT: [[VAL1]]
 ; GCN: v_min_f32_e32 [[MIN:v[0-9]+]], [[QUIET0]], [[QUIET1]]
 ; GCN-NOT: v_mul_f32
 define amdgpu_cs void @cs_ieee_mode_default() #0 {
