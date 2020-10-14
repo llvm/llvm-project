@@ -160,3 +160,101 @@ define i32 @ctpop_ne_one(i64 %x) nounwind readnone {
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
+
+define i1 @ctpop_trunc_non_power2(i255 %x) {
+; POPCOUNT-LABEL: ctpop_trunc_non_power2:
+; POPCOUNT:       # %bb.0:
+; POPCOUNT-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; POPCOUNT-NEXT:    andq %rcx, %rax
+; POPCOUNT-NEXT:    popcntq %rsi, %rcx
+; POPCOUNT-NEXT:    popcntq %rdi, %rsi
+; POPCOUNT-NEXT:    addl %ecx, %esi
+; POPCOUNT-NEXT:    popcntq %rax, %rax
+; POPCOUNT-NEXT:    popcntq %rdx, %rcx
+; POPCOUNT-NEXT:    addl %eax, %ecx
+; POPCOUNT-NEXT:    addl %esi, %ecx
+; POPCOUNT-NEXT:    cmpb $1, %cl
+; POPCOUNT-NEXT:    sete %al
+; POPCOUNT-NEXT:    retq
+;
+; NO-POPCOUNT-LABEL: ctpop_trunc_non_power2:
+; NO-POPCOUNT:       # %bb.0:
+; NO-POPCOUNT-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; NO-POPCOUNT-NEXT:    andq %rcx, %rax
+; NO-POPCOUNT-NEXT:    movq %rsi, %rcx
+; NO-POPCOUNT-NEXT:    shrq %rcx
+; NO-POPCOUNT-NEXT:    movabsq $6148914691236517205, %r8 # imm = 0x5555555555555555
+; NO-POPCOUNT-NEXT:    andq %r8, %rcx
+; NO-POPCOUNT-NEXT:    subq %rcx, %rsi
+; NO-POPCOUNT-NEXT:    movabsq $3689348814741910323, %r11 # imm = 0x3333333333333333
+; NO-POPCOUNT-NEXT:    movq %rsi, %rcx
+; NO-POPCOUNT-NEXT:    andq %r11, %rcx
+; NO-POPCOUNT-NEXT:    shrq $2, %rsi
+; NO-POPCOUNT-NEXT:    andq %r11, %rsi
+; NO-POPCOUNT-NEXT:    addq %rcx, %rsi
+; NO-POPCOUNT-NEXT:    movq %rsi, %rcx
+; NO-POPCOUNT-NEXT:    shrq $4, %rcx
+; NO-POPCOUNT-NEXT:    addq %rsi, %rcx
+; NO-POPCOUNT-NEXT:    movabsq $1085102592571150095, %r9 # imm = 0xF0F0F0F0F0F0F0F
+; NO-POPCOUNT-NEXT:    andq %r9, %rcx
+; NO-POPCOUNT-NEXT:    movabsq $72340172838076673, %r10 # imm = 0x101010101010101
+; NO-POPCOUNT-NEXT:    imulq %r10, %rcx
+; NO-POPCOUNT-NEXT:    shrq $56, %rcx
+; NO-POPCOUNT-NEXT:    movq %rdi, %rsi
+; NO-POPCOUNT-NEXT:    shrq %rsi
+; NO-POPCOUNT-NEXT:    andq %r8, %rsi
+; NO-POPCOUNT-NEXT:    subq %rsi, %rdi
+; NO-POPCOUNT-NEXT:    movq %rdi, %rsi
+; NO-POPCOUNT-NEXT:    andq %r11, %rsi
+; NO-POPCOUNT-NEXT:    shrq $2, %rdi
+; NO-POPCOUNT-NEXT:    andq %r11, %rdi
+; NO-POPCOUNT-NEXT:    addq %rsi, %rdi
+; NO-POPCOUNT-NEXT:    movq %rdi, %rsi
+; NO-POPCOUNT-NEXT:    shrq $4, %rsi
+; NO-POPCOUNT-NEXT:    addq %rdi, %rsi
+; NO-POPCOUNT-NEXT:    andq %r9, %rsi
+; NO-POPCOUNT-NEXT:    imulq %r10, %rsi
+; NO-POPCOUNT-NEXT:    shrq $56, %rsi
+; NO-POPCOUNT-NEXT:    addl %ecx, %esi
+; NO-POPCOUNT-NEXT:    movq %rax, %rcx
+; NO-POPCOUNT-NEXT:    shrq %rcx
+; NO-POPCOUNT-NEXT:    movabsq $1537228672809129301, %rdi # imm = 0x1555555555555555
+; NO-POPCOUNT-NEXT:    andq %rcx, %rdi
+; NO-POPCOUNT-NEXT:    subq %rdi, %rax
+; NO-POPCOUNT-NEXT:    movq %rax, %rcx
+; NO-POPCOUNT-NEXT:    andq %r11, %rcx
+; NO-POPCOUNT-NEXT:    shrq $2, %rax
+; NO-POPCOUNT-NEXT:    andq %r11, %rax
+; NO-POPCOUNT-NEXT:    addq %rcx, %rax
+; NO-POPCOUNT-NEXT:    movq %rax, %rcx
+; NO-POPCOUNT-NEXT:    shrq $4, %rcx
+; NO-POPCOUNT-NEXT:    addq %rax, %rcx
+; NO-POPCOUNT-NEXT:    andq %r9, %rcx
+; NO-POPCOUNT-NEXT:    imulq %r10, %rcx
+; NO-POPCOUNT-NEXT:    shrq $56, %rcx
+; NO-POPCOUNT-NEXT:    movq %rdx, %rax
+; NO-POPCOUNT-NEXT:    shrq %rax
+; NO-POPCOUNT-NEXT:    andq %r8, %rax
+; NO-POPCOUNT-NEXT:    subq %rax, %rdx
+; NO-POPCOUNT-NEXT:    movq %rdx, %rax
+; NO-POPCOUNT-NEXT:    andq %r11, %rax
+; NO-POPCOUNT-NEXT:    shrq $2, %rdx
+; NO-POPCOUNT-NEXT:    andq %r11, %rdx
+; NO-POPCOUNT-NEXT:    addq %rax, %rdx
+; NO-POPCOUNT-NEXT:    movq %rdx, %rax
+; NO-POPCOUNT-NEXT:    shrq $4, %rax
+; NO-POPCOUNT-NEXT:    addq %rdx, %rax
+; NO-POPCOUNT-NEXT:    andq %r9, %rax
+; NO-POPCOUNT-NEXT:    imulq %r10, %rax
+; NO-POPCOUNT-NEXT:    shrq $56, %rax
+; NO-POPCOUNT-NEXT:    addl %ecx, %eax
+; NO-POPCOUNT-NEXT:    addl %esi, %eax
+; NO-POPCOUNT-NEXT:    cmpb $1, %al
+; NO-POPCOUNT-NEXT:    sete %al
+; NO-POPCOUNT-NEXT:    retq
+  %a = call i255 @llvm.ctpop.i255(i255 %x)
+  %b = trunc i255 %a to i8 ; largest value from ctpop is 255, fits in 8 bits.
+  %c = icmp eq i8 %b, 1
+  ret i1 %c
+}
+declare i255 @llvm.ctpop.i255(i255)
