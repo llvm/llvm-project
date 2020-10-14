@@ -40,6 +40,14 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::init(true));
 
 std::array<std::vector<int16_t>, 16> SIRegisterInfo::RegSplitParts;
+std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
+
+// Map numbers of DWORDs to indexes in SubRegFromChannelTable.
+// Valid indexes are shifted 1, such that a 0 mapping means unsupported.
+// e.g. for 8 DWORDs (256-bit), SubRegFromChannelTableWidthMap[8] = 8,
+//      meaning index 7 in SubRegFromChannelTable.
+static const std::array<unsigned, 17> SubRegFromChannelTableWidthMap = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 9};
 
 SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
     : AMDGPUGenRegisterInfo(AMDGPU::PC_REG, ST.getAMDGPUDwarfFlavour()), ST(ST),
@@ -78,8 +86,27 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
     }
   };
 
+  static llvm::once_flag InitializeSubRegFromChannelTableFlag;
+
+  static auto InitializeSubRegFromChannelTableOnce = [this]() {
+    for (auto &Row : SubRegFromChannelTable)
+      Row.fill(AMDGPU::NoSubRegister);
+    for (uint16_t Idx = 1; Idx < getNumSubRegIndices(); ++Idx) {
+      unsigned Width = AMDGPUSubRegIdxRanges[Idx].Size / 32;
+      unsigned Offset = AMDGPUSubRegIdxRanges[Idx].Offset / 32;
+      assert(Width < SubRegFromChannelTableWidthMap.size());
+      Width = SubRegFromChannelTableWidthMap[Width];
+      if (Width == 0)
+        continue;
+      assert((Width - 1) < SubRegFromChannelTable.size());
+      assert(Offset < SubRegFromChannelTable[Width].size());
+      SubRegFromChannelTable[Width - 1][Offset] = Idx;
+    }
+  };
 
   llvm::call_once(InitializeRegSplitPartsFlag, InitializeRegSplitPartsOnce);
+  llvm::call_once(InitializeSubRegFromChannelTableFlag,
+                  InitializeSubRegFromChannelTableOnce);
 }
 
 void SIRegisterInfo::reserveRegisterTuples(BitVector &Reserved,
@@ -156,71 +183,13 @@ const uint32_t *SIRegisterInfo::getAllAllocatableSRegMask() const {
   return CSR_AMDGPU_AllAllocatableSRegs_RegMask;
 }
 
-// FIXME: TableGen should generate something to make this manageable for all
-// register classes. At a minimum we could use the opposite of
-// composeSubRegIndices and go up from the base 32-bit subreg.
 unsigned SIRegisterInfo::getSubRegFromChannel(unsigned Channel,
                                               unsigned NumRegs) {
-  // Table of NumRegs sized pieces at every 32-bit offset.
-  static const uint16_t SubRegFromChannelTable[][32] = {
-      {AMDGPU::sub0,  AMDGPU::sub1,  AMDGPU::sub2,  AMDGPU::sub3,
-       AMDGPU::sub4,  AMDGPU::sub5,  AMDGPU::sub6,  AMDGPU::sub7,
-       AMDGPU::sub8,  AMDGPU::sub9,  AMDGPU::sub10, AMDGPU::sub11,
-       AMDGPU::sub12, AMDGPU::sub13, AMDGPU::sub14, AMDGPU::sub15,
-       AMDGPU::sub16, AMDGPU::sub17, AMDGPU::sub18, AMDGPU::sub19,
-       AMDGPU::sub20, AMDGPU::sub21, AMDGPU::sub22, AMDGPU::sub23,
-       AMDGPU::sub24, AMDGPU::sub25, AMDGPU::sub26, AMDGPU::sub27,
-       AMDGPU::sub28, AMDGPU::sub29, AMDGPU::sub30, AMDGPU::sub31},
-      {AMDGPU::sub0_sub1,   AMDGPU::sub1_sub2,    AMDGPU::sub2_sub3,
-       AMDGPU::sub3_sub4,   AMDGPU::sub4_sub5,    AMDGPU::sub5_sub6,
-       AMDGPU::sub6_sub7,   AMDGPU::sub7_sub8,    AMDGPU::sub8_sub9,
-       AMDGPU::sub9_sub10,  AMDGPU::sub10_sub11,  AMDGPU::sub11_sub12,
-       AMDGPU::sub12_sub13, AMDGPU::sub13_sub14,  AMDGPU::sub14_sub15,
-       AMDGPU::sub15_sub16, AMDGPU::sub16_sub17,  AMDGPU::sub17_sub18,
-       AMDGPU::sub18_sub19, AMDGPU::sub19_sub20,  AMDGPU::sub20_sub21,
-       AMDGPU::sub21_sub22, AMDGPU::sub22_sub23,  AMDGPU::sub23_sub24,
-       AMDGPU::sub24_sub25, AMDGPU::sub25_sub26,  AMDGPU::sub26_sub27,
-       AMDGPU::sub27_sub28, AMDGPU::sub28_sub29,  AMDGPU::sub29_sub30,
-       AMDGPU::sub30_sub31, AMDGPU::NoSubRegister},
-      {AMDGPU::sub0_sub1_sub2,    AMDGPU::sub1_sub2_sub3,
-       AMDGPU::sub2_sub3_sub4,    AMDGPU::sub3_sub4_sub5,
-       AMDGPU::sub4_sub5_sub6,    AMDGPU::sub5_sub6_sub7,
-       AMDGPU::sub6_sub7_sub8,    AMDGPU::sub7_sub8_sub9,
-       AMDGPU::sub8_sub9_sub10,   AMDGPU::sub9_sub10_sub11,
-       AMDGPU::sub10_sub11_sub12, AMDGPU::sub11_sub12_sub13,
-       AMDGPU::sub12_sub13_sub14, AMDGPU::sub13_sub14_sub15,
-       AMDGPU::sub14_sub15_sub16, AMDGPU::sub15_sub16_sub17,
-       AMDGPU::sub16_sub17_sub18, AMDGPU::sub17_sub18_sub19,
-       AMDGPU::sub18_sub19_sub20, AMDGPU::sub19_sub20_sub21,
-       AMDGPU::sub20_sub21_sub22, AMDGPU::sub21_sub22_sub23,
-       AMDGPU::sub22_sub23_sub24, AMDGPU::sub23_sub24_sub25,
-       AMDGPU::sub24_sub25_sub26, AMDGPU::sub25_sub26_sub27,
-       AMDGPU::sub26_sub27_sub28, AMDGPU::sub27_sub28_sub29,
-       AMDGPU::sub28_sub29_sub30, AMDGPU::sub29_sub30_sub31,
-       AMDGPU::NoSubRegister,     AMDGPU::NoSubRegister},
-      {AMDGPU::sub0_sub1_sub2_sub3,     AMDGPU::sub1_sub2_sub3_sub4,
-       AMDGPU::sub2_sub3_sub4_sub5,     AMDGPU::sub3_sub4_sub5_sub6,
-       AMDGPU::sub4_sub5_sub6_sub7,     AMDGPU::sub5_sub6_sub7_sub8,
-       AMDGPU::sub6_sub7_sub8_sub9,     AMDGPU::sub7_sub8_sub9_sub10,
-       AMDGPU::sub8_sub9_sub10_sub11,   AMDGPU::sub9_sub10_sub11_sub12,
-       AMDGPU::sub10_sub11_sub12_sub13, AMDGPU::sub11_sub12_sub13_sub14,
-       AMDGPU::sub12_sub13_sub14_sub15, AMDGPU::sub13_sub14_sub15_sub16,
-       AMDGPU::sub14_sub15_sub16_sub17, AMDGPU::sub15_sub16_sub17_sub18,
-       AMDGPU::sub16_sub17_sub18_sub19, AMDGPU::sub17_sub18_sub19_sub20,
-       AMDGPU::sub18_sub19_sub20_sub21, AMDGPU::sub19_sub20_sub21_sub22,
-       AMDGPU::sub20_sub21_sub22_sub23, AMDGPU::sub21_sub22_sub23_sub24,
-       AMDGPU::sub22_sub23_sub24_sub25, AMDGPU::sub23_sub24_sub25_sub26,
-       AMDGPU::sub24_sub25_sub26_sub27, AMDGPU::sub25_sub26_sub27_sub28,
-       AMDGPU::sub26_sub27_sub28_sub29, AMDGPU::sub27_sub28_sub29_sub30,
-       AMDGPU::sub28_sub29_sub30_sub31, AMDGPU::NoSubRegister,
-       AMDGPU::NoSubRegister,           AMDGPU::NoSubRegister}};
-
-  const unsigned NumRegIndex = NumRegs - 1;
-
-  assert(NumRegIndex < array_lengthof(SubRegFromChannelTable) &&
-         "Not implemented");
-  assert(Channel < array_lengthof(SubRegFromChannelTable[0]));
-  return SubRegFromChannelTable[NumRegIndex][Channel];
+  assert(NumRegs < SubRegFromChannelTableWidthMap.size());
+  unsigned NumRegIndex = SubRegFromChannelTableWidthMap[NumRegs];
+  assert(NumRegIndex && "Not implemented");
+  assert(Channel < SubRegFromChannelTable[NumRegIndex - 1].size());
+  return SubRegFromChannelTable[NumRegIndex - 1][Channel];
 }
 
 MCRegister SIRegisterInfo::reservedPrivateSegmentBufferReg(
