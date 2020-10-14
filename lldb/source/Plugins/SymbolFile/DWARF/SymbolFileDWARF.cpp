@@ -3511,9 +3511,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
         var_sp = std::make_shared<Variable>(
             die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
             scope_ranges, &decl, location, is_external, is_artificial,
-            is_static_member, is_constant);
-
-        var_sp->SetLocationIsConstantValueData(location_is_const_value_data);
+            location_is_const_value_data, is_static_member, is_constant);
       } else {
         // Not ready to parse this variable yet. It might be a global or static
         // variable that is in a function scope and the function in the symbol
