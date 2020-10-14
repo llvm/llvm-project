@@ -41,6 +41,8 @@ class LLVMBFloatType;
 class LLVMHalfType;
 class LLVMFloatType;
 class LLVMDoubleType;
+class LLVMFP128Type;
+class LLVMX86FP80Type;
 class LLVMIntegerType;
 
 //===----------------------------------------------------------------------===//
@@ -89,9 +91,12 @@ public:
   bool isHalfTy() { return isa<LLVMHalfType>(); }
   bool isFloatTy() { return isa<LLVMFloatType>(); }
   bool isDoubleTy() { return isa<LLVMDoubleType>(); }
+  bool isFP128Ty() { return isa<LLVMFP128Type>(); }
+  bool isX86_FP80Ty() { return isa<LLVMX86FP80Type>(); }
   bool isFloatingPointTy() {
     return isa<LLVMHalfType>() || isa<LLVMBFloatType>() ||
-           isa<LLVMFloatType>() || isa<LLVMDoubleType>();
+           isa<LLVMFloatType>() || isa<LLVMDoubleType>() ||
+           isa<LLVMFP128Type>() || isa<LLVMX86FP80Type>();
   }
 
   /// Array type utilities.
