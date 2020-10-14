@@ -27,7 +27,6 @@
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/Rename/USRFinder.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/STLExtras.h"
 
 #include <algorithm>
 #include <set>
@@ -115,8 +114,8 @@ private:
       addUSRsOfCtorDtors(Specialization);
     SmallVector<ClassTemplatePartialSpecializationDecl *, 4> PartialSpecs;
     TemplateDecl->getPartialSpecializations(PartialSpecs);
-    llvm::for_each(PartialSpecs,
-                   [&](const auto *Spec) { addUSRsOfCtorDtors(Spec); });
+    for (const auto *Spec : PartialSpecs)
+      addUSRsOfCtorDtors(Spec);
     addUSRsOfCtorDtors(TemplateDecl->getTemplatedDecl());
   }
 
