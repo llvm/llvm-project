@@ -85,7 +85,7 @@ class Linalg_ReshapeLikeOp<string mnemonic, list<OpTrait> traits = []> :
               "ArrayRef<NamedAttribute> attrs = {}", [{
       auto reassociationMaps =
           convertReassociationIndicesToMaps($_builder, reassociation);
-      build($_builder, $_state, src, reassociationMaps, attrs);
+      build($_builder, $_state, resultType, src, reassociationMaps, attrs);
     }]>
   ];
 

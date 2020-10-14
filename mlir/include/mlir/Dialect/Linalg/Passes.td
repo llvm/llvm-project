@@ -35,6 +35,14 @@ def LinalgFusionOfTensorOps : Pass<"linalg-fusion-for-tensor-ops"> {
   let dependentDialects = ["linalg::LinalgDialect", "AffineDialect"];
 }
 
+def LinalgFoldReshapeOpsByLinearization :
+  Pass<"linalg-fold-reshape-ops-by-linearization"> {
+  let summary = "Fold TensorReshapeOps with generic/indexed generic ops by "
+                "linearization";
+  let constructor = "mlir::createFoldReshapeOpsByLinearizationPass()";
+  let dependentDialects = ["AffineDialect"];
+}
+
 def LinalgLowerToAffineLoops : FunctionPass<"convert-linalg-to-affine-loops"> {
   let summary = "Lower the operations from the linalg dialect into affine "
                 "loops";
