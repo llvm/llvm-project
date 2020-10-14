@@ -121,22 +121,14 @@ const char *ContentCache::getInvalidBOM(StringRef BufStr) {
 llvm::Optional<llvm::MemoryBufferRef>
 ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
                               SourceLocation Loc) const {
-  if (auto *B = getBufferPointer(Diag, FM, Loc))
-    return B->getMemBufferRef();
-  return None;
-}
-
-const llvm::MemoryBuffer *
-ContentCache::getBufferPointer(DiagnosticsEngine &Diag, FileManager &FM,
-                               SourceLocation Loc) const {
   // Lazily create the Buffer for ContentCaches that wrap files.  If we already
   // computed it, just return what we have.
   if (isBufferInvalid())
-    return nullptr;
+    return None;
   if (auto *B = Buffer.getPointer())
-    return B;
+    return B->getMemBufferRef();
   if (!ContentsEntry)
-    return nullptr;
+    return None;
 
   // Check that the file's size fits in an 'unsigned' (with room for a
   // past-the-end value). This is deeply regrettable, but various parts of
@@ -153,7 +145,7 @@ ContentCache::getBufferPointer(DiagnosticsEngine &Diag, FileManager &FM,
         << ContentsEntry->getName();
 
     Buffer.setInt(Buffer.getInt() | InvalidFlag);
-    return nullptr;
+    return None;
   }
 
   auto BufferOrError = FM.getBufferForFile(ContentsEntry, IsFileVolatile);
@@ -173,7 +165,7 @@ ContentCache::getBufferPointer(DiagnosticsEngine &Diag, FileManager &FM,
           << ContentsEntry->getName() << BufferOrError.getError().message();
 
     Buffer.setInt(Buffer.getInt() | InvalidFlag);
-    return nullptr;
+    return None;
   }
 
   Buffer.setPointer(BufferOrError->release());
@@ -189,7 +181,7 @@ ContentCache::getBufferPointer(DiagnosticsEngine &Diag, FileManager &FM,
         << ContentsEntry->getName();
 
     Buffer.setInt(Buffer.getInt() | InvalidFlag);
-    return nullptr;
+    return None;
   }
 
   // If the buffer is valid, check to see if it has a UTF Byte Order Mark
@@ -202,10 +194,10 @@ ContentCache::getBufferPointer(DiagnosticsEngine &Diag, FileManager &FM,
     Diag.Report(Loc, diag::err_unsupported_bom)
       << InvalidBOM << ContentsEntry->getName();
     Buffer.setInt(Buffer.getInt() | InvalidFlag);
-    return nullptr;
+    return None;
   }
 
-  return Buffer.getPointer();
+  return Buffer.getPointer()->getMemBufferRef();
 }
 
 unsigned LineTableInfo::getLineTableFilenameID(StringRef Name) {
