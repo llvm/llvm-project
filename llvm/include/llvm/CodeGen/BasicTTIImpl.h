@@ -1143,10 +1143,7 @@ public:
         return thisT()->getMemcpyCost(ICA.getInst());
         // TODO: other libc intrinsics.
       }
-      // TODO: AMDGPU intrinsic costs are incorrectly all coming back as 1 with
-      // the following line uncommented. Need to understand why and
-      // fix. Temporarily removing for now to reproduce the old behaviour
-      //return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
     }
 
     // TODO: Combine these two logic paths.
