@@ -1387,8 +1387,6 @@ bool AArch64InstructionSelector::selectCompareBranch(
     MachineInstr *Cmp;
     std::tie(Cmp, Pred) = emitIntegerCompare(
         CCMI->getOperand(2), CCMI->getOperand(3), CCMI->getOperand(1), MIB);
-    if (!Cmp)
-      return false;
     const AArch64CC::CondCode CC = changeICMPPredToAArch64CC(Pred);
     MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC).addMBB(DestMBB);
     I.eraseFromParent();
@@ -2872,8 +2870,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     CmpInst::Predicate Pred;
     std::tie(Cmp, Pred) = emitIntegerCompare(I.getOperand(2), I.getOperand(3),
                                              I.getOperand(1), MIRBuilder);
-    if (!Cmp)
-      return false;
     emitCSetForICMP(I.getOperand(0).getReg(), Pred, MIRBuilder);
     I.eraseFromParent();
     return true;
@@ -3886,47 +3882,26 @@ AArch64InstructionSelector::emitIntegerCompare(
   assert(LHS.isReg() && RHS.isReg() && "Expected LHS and RHS to be registers!");
   assert(Predicate.isPredicate() && "Expected predicate?");
   MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
+  LLT CmpTy = MRI.getType(LHS.getReg());
+  assert(!CmpTy.isVector() && "Expected scalar or pointer");
+  unsigned Size = CmpTy.getSizeInBits();
+  assert((Size == 32 || Size == 64) && "Expected a 32-bit or 64-bit LHS/RHS?");
+  auto P = static_cast<CmpInst::Predicate>(Predicate.getPredicate());
 
-  CmpInst::Predicate P = (CmpInst::Predicate)Predicate.getPredicate();
-
-  // Fold the compare if possible.
-  MachineInstr *FoldCmp =
-      tryFoldIntegerCompare(LHS, RHS, Predicate, MIRBuilder);
-  if (FoldCmp)
+  // Fold the compare into a cmn or tst if possible.
+  if (auto FoldCmp = tryFoldIntegerCompare(LHS, RHS, Predicate, MIRBuilder))
     return {FoldCmp, P};
 
-  // Can't fold into a CMN. Just emit a normal compare.
-  unsigned CmpOpc = 0;
-  Register ZReg;
-
-  LLT CmpTy = MRI.getType(LHS.getReg());
-  assert((CmpTy.isScalar() || CmpTy.isPointer()) &&
-         "Expected scalar or pointer");
-  if (CmpTy == LLT::scalar(32)) {
-    CmpOpc = AArch64::SUBSWrr;
-    ZReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
-  } else if (CmpTy == LLT::scalar(64) || CmpTy.isPointer()) {
-    CmpOpc = AArch64::SUBSXrr;
-    ZReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-  } else {
-    return {nullptr, CmpInst::Predicate::BAD_ICMP_PREDICATE};
-  }
-
-  // Try to match immediate forms.
-  MachineInstr *ImmedCmp =
-      tryOptArithImmedIntegerCompare(LHS, RHS, P, MIRBuilder);
-  if (ImmedCmp)
+  // Compares need special handling for their shifted/immediate forms. We
+  // may be able to modify the predicate or an illegal constant to perform
+  // some folding.
+  if (auto ImmedCmp = tryOptArithImmedIntegerCompare(LHS, RHS, P, MIRBuilder))
     return {ImmedCmp, P};
-
-  // If we don't have an immediate, we may have a shift which can be folded
-  // into the compare.
-  MachineInstr *ShiftedCmp = tryOptArithShiftedCompare(LHS, RHS, MIRBuilder);
-  if (ShiftedCmp)
+  if (auto ShiftedCmp = tryOptArithShiftedCompare(LHS, RHS, MIRBuilder))
     return {ShiftedCmp, P};
-
-  auto CmpMI =
-      MIRBuilder.buildInstr(CmpOpc, {ZReg}, {LHS.getReg(), RHS.getReg()});
-  // Make sure that we can constrain the compare that we emitted.
+  unsigned CmpOpc = Size == 32 ? AArch64::SUBSWrr : AArch64::SUBSXrr;
+  auto CmpMI = MIRBuilder.buildInstr(
+      CmpOpc, {MRI.cloneVirtualRegister(LHS.getReg())}, {LHS, RHS});
   constrainSelectedInstRegOperands(*CmpMI, TII, TRI, RBI);
   return {&*CmpMI, P};
 }
@@ -4165,11 +4140,6 @@ bool AArch64InstructionSelector::tryOptSelect(MachineInstr &I) const {
     std::tie(Cmp, Pred) =
         emitIntegerCompare(CondDef->getOperand(2), CondDef->getOperand(3),
                            CondDef->getOperand(1), MIB);
-
-    if (!Cmp) {
-      LLVM_DEBUG(dbgs() << "Couldn't emit compare for select!\n");
-      return false;
-    }
 
     // Have to collect the CondCode after emitIntegerCompare, since it can
     // update the predicate.
