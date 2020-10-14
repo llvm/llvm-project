@@ -1220,4 +1220,38 @@ NativeRegisterContextLinux_x86_64::GetPtraceOffset(uint32_t reg_index) {
          (IsMPX(reg_index) ? 128 : 0);
 }
 
+llvm::Optional<NativeRegisterContextLinux::SyscallData>
+NativeRegisterContextLinux_x86_64::GetSyscallData() {
+  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
+  case llvm::Triple::x86: {
+    static const uint8_t Int80[] = {0xcd, 0x80};
+    static const uint32_t Args[] = {lldb_eax_i386, lldb_ebx_i386, lldb_ecx_i386,
+                                    lldb_edx_i386, lldb_esi_i386, lldb_edi_i386,
+                                    lldb_ebp_i386};
+    return SyscallData{Int80, Args, lldb_eax_i386};
+  }
+  case llvm::Triple::x86_64: {
+    static const uint8_t Syscall[] = {0x0f, 0x05};
+    static const uint32_t Args[] = {
+        lldb_rax_x86_64, lldb_rdi_x86_64, lldb_rsi_x86_64, lldb_rdx_x86_64,
+        lldb_r10_x86_64, lldb_r8_x86_64,  lldb_r9_x86_64};
+    return SyscallData{Syscall, Args, lldb_rax_x86_64};
+  }
+  default:
+    llvm_unreachable("Unhandled architecture!");
+  }
+}
+
+llvm::Optional<NativeRegisterContextLinux::MmapData>
+NativeRegisterContextLinux_x86_64::GetMmapData() {
+  switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
+  case llvm::Triple::x86:
+    return MmapData{192, 91};
+  case llvm::Triple::x86_64:
+    return MmapData{9, 11};
+  default:
+    llvm_unreachable("Unhandled architecture!");
+  }
+}
+
 #endif // defined(__i386__) || defined(__x86_64__)

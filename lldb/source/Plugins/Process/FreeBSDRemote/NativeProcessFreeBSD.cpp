@@ -543,15 +543,6 @@ Status NativeProcessFreeBSD::PopulateMemoryRegionCache() {
   return Status();
 }
 
-Status NativeProcessFreeBSD::AllocateMemory(size_t size, uint32_t permissions,
-                                            lldb::addr_t &addr) {
-  return Status("Unimplemented");
-}
-
-Status NativeProcessFreeBSD::DeallocateMemory(lldb::addr_t addr) {
-  return Status("Unimplemented");
-}
-
 lldb::addr_t NativeProcessFreeBSD::GetSharedLibraryInfoAddress() {
   // punt on this for now
   return LLDB_INVALID_ADDRESS;

@@ -138,6 +138,8 @@ protected:
   PacketResult Handle_memory_read(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_M(StringExtractorGDBRemote &packet);
+  PacketResult Handle__M(StringExtractorGDBRemote &packet);
+  PacketResult Handle__m(StringExtractorGDBRemote &packet);
 
   PacketResult
   Handle_qMemoryRegionInfoSupported(StringExtractorGDBRemote &packet);
