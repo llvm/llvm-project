@@ -46,6 +46,7 @@ class TestGdbRemoteMemoryAllocation(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIf(oslist=no_match(supported_oses))
     @skipIf(oslist=["linux"], archs=no_match(supported_linux_archs))
+    @expectedFailureAll(oslist=["windows"]) # Memory allocated with incorrect permissions
     @llgs_test
     def test_supported(self):
         """Make sure (de)allocation works on platforms where it's supposed to
@@ -61,6 +62,7 @@ class TestGdbRemoteMemoryAllocation(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.allocate(0x1100, "rwx")
 
     @skipIf(oslist=["linux"], archs=supported_linux_archs)
+    @skipIf(oslist=supported_oses)
     @llgs_test
     def test_unsupported(self):
         """Make sure we get an "unsupported" error on platforms where the
