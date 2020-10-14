@@ -770,6 +770,13 @@ void MIPrinter::print(const MachineInstr &MI) {
     NeedComma = true;
   }
 
+  if (auto Num = MI.peekDebugInstrNum()) {
+    if (NeedComma)
+      OS << ',';
+    OS << " debug-instr-number " << Num;
+    NeedComma = true;
+  }
+
   if (PrintLocations) {
     if (const DebugLoc &DL = MI.getDebugLoc()) {
       if (NeedComma)
