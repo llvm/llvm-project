@@ -17,7 +17,7 @@ namespace std {
 }
 
 template<typename T> constexpr bool has_type(...) { return false; }
-template<typename T> constexpr bool has_type(T&) { return true; }
+template<typename T> constexpr bool has_type(T) { return true; }
 
 std::initializer_list il = {1, 2, 3, 4, 5};
 

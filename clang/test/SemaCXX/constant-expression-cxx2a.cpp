@@ -1415,16 +1415,3 @@ namespace PR45350 {
   //   decreasing address
   static_assert(f(6) == 543210);
 }
-
-namespace PR47805 {
-  struct A {
-    bool bad = true;
-    constexpr ~A() { if (bad) throw; }
-  };
-  constexpr bool f(A a) { a.bad = false; return true; }
-  constexpr bool b = f(A());
-
-  struct B { B *p = this; };
-  constexpr bool g(B b) { return &b == b.p; }
-  static_assert(g({}));
-}
