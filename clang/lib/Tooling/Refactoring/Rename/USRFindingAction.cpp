@@ -27,6 +27,7 @@
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Refactoring/Rename/USRFinder.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include <algorithm>
 #include <set>
@@ -96,12 +97,6 @@ public:
     return true;
   }
 
-  bool VisitClassTemplatePartialSpecializationDecl(
-      const ClassTemplatePartialSpecializationDecl *PartialSpec) {
-    PartialSpecs.push_back(PartialSpec);
-    return true;
-  }
-
 private:
   void handleCXXRecordDecl(const CXXRecordDecl *RecordDecl) {
     if (!RecordDecl->getDefinition()) {
@@ -118,11 +113,10 @@ private:
   void handleClassTemplateDecl(const ClassTemplateDecl *TemplateDecl) {
     for (const auto *Specialization : TemplateDecl->specializations())
       addUSRsOfCtorDtors(Specialization);
-
-    for (const auto *PartialSpec : PartialSpecs) {
-      if (PartialSpec->getSpecializedTemplate() == TemplateDecl)
-        addUSRsOfCtorDtors(PartialSpec);
-    }
+    SmallVector<ClassTemplatePartialSpecializationDecl *, 4> PartialSpecs;
+    TemplateDecl->getPartialSpecializations(PartialSpecs);
+    llvm::for_each(PartialSpecs,
+                   [&](const auto *Spec) { addUSRsOfCtorDtors(Spec); });
     addUSRsOfCtorDtors(TemplateDecl->getTemplatedDecl());
   }
 
@@ -184,7 +178,6 @@ private:
   std::set<std::string> USRSet;
   std::vector<const CXXMethodDecl *> OverriddenMethods;
   std::vector<const CXXMethodDecl *> InstantiatedMethods;
-  std::vector<const ClassTemplatePartialSpecializationDecl *> PartialSpecs;
 };
 } // namespace
 
