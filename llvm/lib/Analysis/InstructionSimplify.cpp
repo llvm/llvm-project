@@ -4093,11 +4093,11 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   // long as the other value isn't poison.
   // select ?, undef, X -> X
   if (Q.isUndefValue(TrueVal) &&
-      isGuaranteedNotToBeUndefOrPoison(FalseVal, Q.CxtI, Q.DT))
+      isGuaranteedNotToBeUndefOrPoison(FalseVal, Q.AC, Q.CxtI, Q.DT))
     return FalseVal;
   // select ?, X, undef -> X
   if (Q.isUndefValue(FalseVal) &&
-      isGuaranteedNotToBeUndefOrPoison(TrueVal, Q.CxtI, Q.DT))
+      isGuaranteedNotToBeUndefOrPoison(TrueVal, Q.AC, Q.CxtI, Q.DT))
     return TrueVal;
 
   // Deal with partial undef vector constants: select ?, VecC, VecC' --> VecC''
@@ -5627,7 +5627,7 @@ Value *llvm::SimplifyCall(CallBase *Call, const SimplifyQuery &Q) {
 /// Given operands for a Freeze, see if we can fold the result.
 static Value *SimplifyFreezeInst(Value *Op0, const SimplifyQuery &Q) {
   // Use a utility function defined in ValueTracking.
-  if (llvm::isGuaranteedNotToBeUndefOrPoison(Op0, Q.CxtI, Q.DT))
+  if (llvm::isGuaranteedNotToBeUndefOrPoison(Op0, Q.AC, Q.CxtI, Q.DT))
     return Op0;
   // We have room for improvement.
   return nullptr;
