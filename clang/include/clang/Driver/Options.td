@@ -1371,6 +1371,10 @@ def fno_experimental_relative_cxx_abi_vtables : Flag<["-"], "fno-experimental-re
   Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Do not use the experimental C++ class ABI for classes with virtual tables">;
 
+def fcxx_abi_EQ : Joined<["-"], "fc++-abi=">,
+                  Group<f_clang_Group>, Flags<[CC1Option]>,
+                  HelpText<"C++ ABI to use. This will override the target C++ ABI.">;
+
 def flat__namespace : Flag<["-"], "flat_namespace">;
 def flax_vector_conversions_EQ : Joined<["-"], "flax-vector-conversions=">, Group<f_Group>,
   HelpText<"Enable implicit vector bit-casts">, Values<"none,integer,all">, Flags<[CC1Option]>;

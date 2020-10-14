@@ -1,16 +1,12 @@
-//===- TensorsToBuffers.cpp - Transformation from tensors to buffers ------===//
+//===- Bufferize.cpp - Bufferization of linalg ops ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements the conversion from tensors to buffers on Linalg
-// operations.
-//
-//===----------------------------------------------------------------------===//
 
+#include "mlir/Transforms/Bufferize.h"
 #include "PassDetail.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -20,7 +16,6 @@
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/Bufferize.h"
 
 using namespace ::mlir;
 using namespace ::mlir::linalg;
@@ -127,8 +122,7 @@ allocateBuffersForResults(Location loc, LinalgOp linalgOp,
 
 // Specialization for `linalg::GenericOp`.
 /// A pattern to convert Generic Linalg operations which work on tensors to
-/// use buffers. A buffer is allocated using BufferAssignmentPlacer for
-/// each operation result. BufferPlacement pass should be later used to move
+/// use buffers. BufferPlacement pass should be later used to move
 /// Alloc operations to the correct positions and insert the missing Dealloc
 /// operations in the correct places.
 static void finalizeBufferAllocation(ConversionPatternRewriter &rewriter,
@@ -295,12 +289,11 @@ namespace {
 
 /// Converts Linalg operations that work on tensor-type operands or results to
 /// work on buffers.
-struct ConvertLinalgOnTensorsToBuffers
-    : public LinalgOnTensorsToBuffersBase<ConvertLinalgOnTensorsToBuffers> {
+struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
   void runOnOperation() override {
     MLIRContext &context = getContext();
     ConversionTarget target(context);
-    BufferAssignmentTypeConverter converter;
+    BufferizeTypeConverter converter;
 
     // Mark all Standard operations legal.
     target.addLegalDialect<StandardOpsDialect, vector::VectorDialect>();
@@ -350,27 +343,24 @@ struct ConvertLinalgOnTensorsToBuffers
     });
 
     converter.setResultConversionKind<RankedTensorType, MemRefType>(
-        BufferAssignmentTypeConverter::AppendToArgumentsList);
+        BufferizeTypeConverter::AppendToArgumentsList);
 
     OwningRewritePatternList patterns;
-    populateConvertLinalgOnTensorsToBuffersPatterns(&context, converter,
-                                                    patterns);
-    populateWithBufferAssignmentOpConversionPatterns<
-        mlir::ReturnOp, mlir::ReturnOp, linalg::CopyOp>(&context, converter,
-                                                        patterns);
+    populateLinalgBufferizePatterns(&context, converter, patterns);
+    populateWithBufferizeOpConversionPatterns<mlir::ReturnOp, mlir::ReturnOp,
+                                              linalg::CopyOp>(
+        &context, converter, patterns);
     if (failed(applyFullConversion(this->getOperation(), target, patterns)))
       this->signalPassFailure();
   }
 };
 } // end anonymous namespace
 
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertLinalgOnTensorsToBuffersPass() {
-  return std::make_unique<ConvertLinalgOnTensorsToBuffers>();
+std::unique_ptr<OperationPass<ModuleOp>> mlir::createLinalgBufferizePass() {
+  return std::make_unique<LinalgBufferizePass>();
 }
-void mlir::linalg::populateConvertLinalgOnTensorsToBuffersPatterns(
-
-    MLIRContext *context, BufferAssignmentTypeConverter &converter,
+void mlir::linalg::populateLinalgBufferizePatterns(
+    MLIRContext *context, BufferizeTypeConverter &converter,
     OwningRewritePatternList &patterns) {
   patterns.insert<
       // clang-format off

@@ -18,7 +18,7 @@
 
 namespace mlir {
 
-class BufferAssignmentTypeConverter;
+class BufferizeTypeConverter;
 
 namespace linalg {
 
@@ -49,11 +49,10 @@ void populateConvVectorizationPatterns(
     MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns,
     ArrayRef<int64_t> tileSizes);
 
-/// Populates the given list with patterns to convert Linalg operations on
-/// tensors to buffers.
-void populateConvertLinalgOnTensorsToBuffersPatterns(
-    MLIRContext *context, BufferAssignmentTypeConverter &converter,
-    OwningRewritePatternList &patterns);
+/// Populates the given list with patterns to bufferize linalg ops.
+void populateLinalgBufferizePatterns(MLIRContext *context,
+                                     BufferizeTypeConverter &converter,
+                                     OwningRewritePatternList &patterns);
 
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
@@ -802,14 +801,13 @@ void populateLinalgToStandardConversionPatterns(
 // Buffer allocation patterns.
 //===----------------------------------------------------------------------===//
 
-/// Generic BufferAssignmentConversionPattern that matches any Operation* and
+/// Generic BufferizeConversionPattern that matches any Operation* and
 /// dispatches internally. This avoids template instantiating one pattern for
 /// each LinalgOp op.
-class LinalgOpConverter : public BufferAssignmentConversionPattern {
+class LinalgOpConverter : public BufferizeConversionPattern {
 public:
-  LinalgOpConverter(MLIRContext *context,
-                    BufferAssignmentTypeConverter &converter)
-      : BufferAssignmentConversionPattern(context, converter) {}
+  LinalgOpConverter(MLIRContext *context, BufferizeTypeConverter &converter)
+      : BufferizeConversionPattern(context, converter) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -820,10 +818,9 @@ public:
 /// stored in memory. A linalg.reshape is introduced to convert to the desired
 /// n-D buffer form.
 class TensorConstantOpConverter
-    : public BufferAssignmentOpConversionPattern<ConstantOp> {
+    : public BufferizeOpConversionPattern<ConstantOp> {
 public:
-  using BufferAssignmentOpConversionPattern<
-      ConstantOp>::BufferAssignmentOpConversionPattern;
+  using BufferizeOpConversionPattern<ConstantOp>::BufferizeOpConversionPattern;
 
   LogicalResult
   matchAndRewrite(ConstantOp op, ArrayRef<Value> operands,
@@ -832,10 +829,10 @@ public:
 
 /// TensorCastOp converts 1-1 to MemRefCastOp.
 class TensorCastOpConverter
-    : public BufferAssignmentOpConversionPattern<TensorCastOp> {
+    : public BufferizeOpConversionPattern<TensorCastOp> {
 public:
-  using BufferAssignmentOpConversionPattern<
-      TensorCastOp>::BufferAssignmentOpConversionPattern;
+  using BufferizeOpConversionPattern<
+      TensorCastOp>::BufferizeOpConversionPattern;
 
   LogicalResult
   matchAndRewrite(TensorCastOp op, ArrayRef<Value> operands,

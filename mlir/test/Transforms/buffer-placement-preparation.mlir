@@ -92,7 +92,7 @@ func @func_and_block_signature_conversion(%arg0 : tensor<2xf32>, %cond : i1, %ar
 
 // -----
 
-// Test Case: Simple case for checking if BufferAssignmentPlacer creates AllocOps right before GenericOps.
+// Test Case: Simple case for checking if BufferizePlacer creates AllocOps right before GenericOps.
 
 #map0 = affine_map<(d0) -> (d0)>
 
@@ -120,7 +120,7 @@ func @compute_allocs_position_simple(%cond: i1, %arg0: tensor<2xf32>) -> tensor<
 
 // -----
 
-// Test Case: if-else case for checking if BufferAssignmentPlacer creates AllocOps right before GenericOps.
+// Test Case: if-else case for checking if BufferizePlacer creates AllocOps right before GenericOps.
 
 #map0 = affine_map<(d0) -> (d0)>
 
@@ -209,8 +209,8 @@ func @compute_allocs_position(%cond: i1, %arg0: tensor<2xf32>) -> tensor<2xf32>{
 
 // -----
 
-// Test case: Checking BufferAssignmentCallOpConverter and
-// BufferAssignmentFuncOpConverter and BufferAssignmentReturnOpConverter all
+// Test case: Checking BufferizeCallOpConverter and
+// BufferizeFuncOpConverter and BufferizeReturnOpConverter all
 // together. The signature of `callee` after signature conversion would be:
 
 // func @callee(%arg0: memref<5xf32>,%arg1: memref<5xf32>) -> ()
@@ -252,8 +252,8 @@ func @caller(%arg0: tensor<5xf32>) -> tensor<5xf32> {
 
 // -----
 
-// Test case: Checking BufferAssignmentCallOpConverter and
-// BufferAssignmentFuncOpConverter and BufferAssignmentReturnOpConverter all
+// Test case: Checking BufferizeCallOpConverter and
+// BufferizeFuncOpConverter and BufferizeReturnOpConverter all
 // together on functions that also have memref typed results. The signature of
 // `callee` after signature conversion would be:
 
