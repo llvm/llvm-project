@@ -426,7 +426,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   TargetOptions Options;
   auto InitializeOptions = [&](const Triple &TheTriple) {
-    Options = codegen::InitTargetOptionsFromCodeGenFlags();
+    Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
     Options.DisableIntegratedAS = NoIntegratedAssembler;
     Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
     Options.MCOptions.MCUseDwarfDirectory = EnableDwarfDirectory;

@@ -773,6 +773,11 @@ public:
     return isAndroid() || isOSOpenBSD() || isWindowsCygwinEnvironment();
   }
 
+  /// Tests whether the target uses -data-sections as default.
+  bool hasDefaultDataSections() const {
+    return isOSBinFormatXCOFF() || isWasm();
+  }
+
   /// @}
   /// @name Mutators
   /// @{

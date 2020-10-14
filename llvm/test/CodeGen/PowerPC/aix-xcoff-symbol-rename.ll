@@ -4,11 +4,11 @@
 ;; tests for 64-bit mode are omitted.
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec < %s | \
+; RUN:     -mattr=-altivec -data-sections=false < %s | \
 ; RUN:   FileCheck --check-prefix=ASM %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec -filetype=obj -o %t.o < %s
+; RUN:     -mattr=-altivec -data-sections=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D -r --symbol-description %t.o | \
 ; RUN:   FileCheck --check-prefix=OBJ %s
 

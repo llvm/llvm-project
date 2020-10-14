@@ -476,7 +476,8 @@ int main(int argc, char **argv, char * const *envp) {
 
   builder.setOptLevel(getOptLevel());
 
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
+  TargetOptions Options =
+      codegen::InitTargetOptionsFromCodeGenFlags(Triple(TargetTriple));
   if (codegen::getFloatABIForCalls() != FloatABI::Default)
     Options.FloatABIType = codegen::getFloatABIForCalls();
 
