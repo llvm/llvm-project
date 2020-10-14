@@ -21,10 +21,10 @@ using namespace mlir::shape;
 namespace {
 // Propagate tensor to memref conversions through shape.assuming ops.
 class TypeConversionAssumingOpConverter
-    : public BufferAssignmentOpConversionPattern<shape::AssumingOp> {
+    : public BufferizeOpConversionPattern<shape::AssumingOp> {
 public:
-  using BufferAssignmentOpConversionPattern<
-      shape::AssumingOp>::BufferAssignmentOpConversionPattern;
+  using BufferizeOpConversionPattern<
+      shape::AssumingOp>::BufferizeOpConversionPattern;
 
   LogicalResult
   matchAndRewrite(shape::AssumingOp assumingOp, ArrayRef<Value> operands,
@@ -53,7 +53,7 @@ struct ShapeBufferizePass : public ShapeBufferizeBase<ShapeBufferizePass> {
     MLIRContext &ctx = getContext();
 
     OwningRewritePatternList patterns;
-    BufferAssignmentTypeConverter converter;
+    BufferizeTypeConverter converter;
     populateShapeTypeConversionPatterns(&ctx, converter, patterns);
 
     ConversionTarget target(getContext());
@@ -75,7 +75,7 @@ struct ShapeBufferizePass : public ShapeBufferizeBase<ShapeBufferizePass> {
 //
 // TODO: Change this to work generally with any type conversions.
 void mlir::populateShapeTypeConversionPatterns(
-    MLIRContext *context, BufferAssignmentTypeConverter &converter,
+    MLIRContext *context, BufferizeTypeConverter &converter,
     OwningRewritePatternList &patterns) {
   patterns.insert<TypeConversionAssumingOpConverter>(context, converter);
 }

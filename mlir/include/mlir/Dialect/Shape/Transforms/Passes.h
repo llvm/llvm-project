@@ -17,7 +17,7 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-class BufferAssignmentTypeConverter;
+class BufferizeTypeConverter;
 } // namespace mlir
 
 namespace mlir {
@@ -40,9 +40,9 @@ void populateRemoveShapeConstraintsPatterns(OwningRewritePatternList &patterns,
                                             MLIRContext *ctx);
 std::unique_ptr<FunctionPass> createRemoveShapeConstraintsPass();
 
-void populateShapeTypeConversionPatterns(
-    MLIRContext *ctx, BufferAssignmentTypeConverter &converter,
-    OwningRewritePatternList &patterns);
+void populateShapeTypeConversionPatterns(MLIRContext *ctx,
+                                         BufferizeTypeConverter &converter,
+                                         OwningRewritePatternList &patterns);
 // Bufferizes shape dialect ops.
 //
 // Note that most shape dialect ops must be converted to std before
