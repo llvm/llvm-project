@@ -268,9 +268,9 @@ define i8* @SyFgets(i8* %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:  LBB0_48: ## %if.then1477
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    callq _write
+; CHECK-NEXT:    subq %rbx, %r14
 ; CHECK-NEXT:    movq _syHistory@{{.*}}(%rip), %rax
-; CHECK-NEXT:    subq %rbx, %rax
-; CHECK-NEXT:    leaq 8189(%rax,%r14), %rax
+; CHECK-NEXT:    leaq 8189(%r14,%rax), %rax
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_49: ## %for.body1723
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1

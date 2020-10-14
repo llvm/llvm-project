@@ -16,25 +16,25 @@ define void @ptrtoint(i8* %in, i64* %out0, i32* %out1, i16* %out2, i128* %out3) 
 ; X64-LABEL: 'ptrtoint'
 ; X64-NEXT:  Classifying expressions for: @ptrtoint
 ; X64-NEXT:    %p0 = ptrtoint i8* %in to i64
-; X64-NEXT:    --> %in U: full-set S: full-set
+; X64-NEXT:    --> %p0 U: full-set S: full-set
 ; X64-NEXT:    %p1 = ptrtoint i8* %in to i32
-; X64-NEXT:    --> (trunc i8* %in to i32) U: full-set S: full-set
+; X64-NEXT:    --> %p1 U: full-set S: full-set
 ; X64-NEXT:    %p2 = ptrtoint i8* %in to i16
-; X64-NEXT:    --> (trunc i8* %in to i16) U: full-set S: full-set
+; X64-NEXT:    --> %p2 U: full-set S: full-set
 ; X64-NEXT:    %p3 = ptrtoint i8* %in to i128
-; X64-NEXT:    --> (zext i8* %in to i128) U: [0,18446744073709551616) S: [0,18446744073709551616)
+; X64-NEXT:    --> %p3 U: [0,18446744073709551616) S: [-18446744073709551616,18446744073709551616)
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint
 ;
 ; X32-LABEL: 'ptrtoint'
 ; X32-NEXT:  Classifying expressions for: @ptrtoint
 ; X32-NEXT:    %p0 = ptrtoint i8* %in to i64
-; X32-NEXT:    --> (zext i8* %in to i64) U: [0,4294967296) S: [0,4294967296)
+; X32-NEXT:    --> %p0 U: [0,4294967296) S: [-4294967296,4294967296)
 ; X32-NEXT:    %p1 = ptrtoint i8* %in to i32
-; X32-NEXT:    --> %in U: full-set S: full-set
+; X32-NEXT:    --> %p1 U: full-set S: full-set
 ; X32-NEXT:    %p2 = ptrtoint i8* %in to i16
-; X32-NEXT:    --> (trunc i8* %in to i16) U: full-set S: full-set
+; X32-NEXT:    --> %p2 U: full-set S: full-set
 ; X32-NEXT:    %p3 = ptrtoint i8* %in to i128
-; X32-NEXT:    --> (zext i8* %in to i128) U: [0,4294967296) S: [0,4294967296)
+; X32-NEXT:    --> %p3 U: [0,4294967296) S: [-4294967296,4294967296)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint
 ;
   %p0 = ptrtoint i8* %in to i64
@@ -53,25 +53,25 @@ define void @ptrtoint_as1(i8 addrspace(1)* %in, i64* %out0, i32* %out1, i16* %ou
 ; X64-LABEL: 'ptrtoint_as1'
 ; X64-NEXT:  Classifying expressions for: @ptrtoint_as1
 ; X64-NEXT:    %p0 = ptrtoint i8 addrspace(1)* %in to i64
-; X64-NEXT:    --> %in U: full-set S: full-set
+; X64-NEXT:    --> %p0 U: full-set S: full-set
 ; X64-NEXT:    %p1 = ptrtoint i8 addrspace(1)* %in to i32
-; X64-NEXT:    --> (trunc i8 addrspace(1)* %in to i32) U: full-set S: full-set
+; X64-NEXT:    --> %p1 U: full-set S: full-set
 ; X64-NEXT:    %p2 = ptrtoint i8 addrspace(1)* %in to i16
-; X64-NEXT:    --> (trunc i8 addrspace(1)* %in to i16) U: full-set S: full-set
+; X64-NEXT:    --> %p2 U: full-set S: full-set
 ; X64-NEXT:    %p3 = ptrtoint i8 addrspace(1)* %in to i128
-; X64-NEXT:    --> (zext i8 addrspace(1)* %in to i128) U: [0,18446744073709551616) S: [0,18446744073709551616)
+; X64-NEXT:    --> %p3 U: [0,18446744073709551616) S: [-18446744073709551616,18446744073709551616)
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_as1
 ;
 ; X32-LABEL: 'ptrtoint_as1'
 ; X32-NEXT:  Classifying expressions for: @ptrtoint_as1
 ; X32-NEXT:    %p0 = ptrtoint i8 addrspace(1)* %in to i64
-; X32-NEXT:    --> (zext i8 addrspace(1)* %in to i64) U: [0,4294967296) S: [0,4294967296)
+; X32-NEXT:    --> %p0 U: [0,4294967296) S: [-4294967296,4294967296)
 ; X32-NEXT:    %p1 = ptrtoint i8 addrspace(1)* %in to i32
-; X32-NEXT:    --> %in U: full-set S: full-set
+; X32-NEXT:    --> %p1 U: full-set S: full-set
 ; X32-NEXT:    %p2 = ptrtoint i8 addrspace(1)* %in to i16
-; X32-NEXT:    --> (trunc i8 addrspace(1)* %in to i16) U: full-set S: full-set
+; X32-NEXT:    --> %p2 U: full-set S: full-set
 ; X32-NEXT:    %p3 = ptrtoint i8 addrspace(1)* %in to i128
-; X32-NEXT:    --> (zext i8 addrspace(1)* %in to i128) U: [0,4294967296) S: [0,4294967296)
+; X32-NEXT:    --> %p3 U: [0,4294967296) S: [-4294967296,4294967296)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint_as1
 ;
   %p0 = ptrtoint i8 addrspace(1)* %in to i64
@@ -92,7 +92,7 @@ define void @ptrtoint_of_bitcast(i8* %in, i64* %out0) {
 ; X64-NEXT:    %in_casted = bitcast i8* %in to float*
 ; X64-NEXT:    --> %in U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint float* %in_casted to i64
-; X64-NEXT:    --> %in U: full-set S: full-set
+; X64-NEXT:    --> %p0 U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_bitcast
 ;
 ; X32-LABEL: 'ptrtoint_of_bitcast'
@@ -100,7 +100,7 @@ define void @ptrtoint_of_bitcast(i8* %in, i64* %out0) {
 ; X32-NEXT:    %in_casted = bitcast i8* %in to float*
 ; X32-NEXT:    --> %in U: full-set S: full-set
 ; X32-NEXT:    %p0 = ptrtoint float* %in_casted to i64
-; X32-NEXT:    --> (zext i8* %in to i64) U: [0,4294967296) S: [0,4294967296)
+; X32-NEXT:    --> %p0 U: [0,4294967296) S: [-4294967296,4294967296)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint_of_bitcast
 ;
   %in_casted = bitcast i8* %in to float*
@@ -116,7 +116,7 @@ define void @ptrtoint_of_addrspacecast(i8* %in, i64* %out0) {
 ; X64-NEXT:    %in_casted = addrspacecast i8* %in to i8 addrspace(1)*
 ; X64-NEXT:    --> %in_casted U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint i8 addrspace(1)* %in_casted to i64
-; X64-NEXT:    --> %in_casted U: full-set S: full-set
+; X64-NEXT:    --> %p0 U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_addrspacecast
 ;
 ; X32-LABEL: 'ptrtoint_of_addrspacecast'
@@ -124,7 +124,7 @@ define void @ptrtoint_of_addrspacecast(i8* %in, i64* %out0) {
 ; X32-NEXT:    %in_casted = addrspacecast i8* %in to i8 addrspace(1)*
 ; X32-NEXT:    --> %in_casted U: full-set S: full-set
 ; X32-NEXT:    %p0 = ptrtoint i8 addrspace(1)* %in_casted to i64
-; X32-NEXT:    --> (zext i8 addrspace(1)* %in_casted to i64) U: [0,4294967296) S: [0,4294967296)
+; X32-NEXT:    --> %p0 U: [0,4294967296) S: [-4294967296,4294967296)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint_of_addrspacecast
 ;
   %in_casted = addrspacecast i8* %in to i8 addrspace(1)*
@@ -140,7 +140,7 @@ define void @ptrtoint_of_inttoptr(i64 %in, i64* %out0) {
 ; X64-NEXT:    %in_casted = inttoptr i64 %in to i8*
 ; X64-NEXT:    --> %in_casted U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint i8* %in_casted to i64
-; X64-NEXT:    --> %in_casted U: full-set S: full-set
+; X64-NEXT:    --> %p0 U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_inttoptr
 ;
 ; X32-LABEL: 'ptrtoint_of_inttoptr'
@@ -148,7 +148,7 @@ define void @ptrtoint_of_inttoptr(i64 %in, i64* %out0) {
 ; X32-NEXT:    %in_casted = inttoptr i64 %in to i8*
 ; X32-NEXT:    --> %in_casted U: full-set S: full-set
 ; X32-NEXT:    %p0 = ptrtoint i8* %in_casted to i64
-; X32-NEXT:    --> (zext i8* %in_casted to i64) U: [0,4294967296) S: [0,4294967296)
+; X32-NEXT:    --> %p0 U: [0,4294967296) S: [-4294967296,4294967296)
 ; X32-NEXT:  Determining loop execution counts for: @ptrtoint_of_inttoptr
 ;
   %in_casted = inttoptr i64 %in to i8*
@@ -197,17 +197,11 @@ define void @ptrtoint_of_nullptr(i64* %out0) {
 
 ; A constant inttoptr argument of an ptrtoint is still bad.
 define void @ptrtoint_of_constantexpr_inttoptr(i64* %out0) {
-; X64-LABEL: 'ptrtoint_of_constantexpr_inttoptr'
-; X64-NEXT:  Classifying expressions for: @ptrtoint_of_constantexpr_inttoptr
-; X64-NEXT:    %p0 = ptrtoint i8* inttoptr (i64 42 to i8*) to i64
-; X64-NEXT:    --> inttoptr (i64 42 to i8*) U: [42,43) S: [-64,64)
-; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_constantexpr_inttoptr
-;
-; X32-LABEL: 'ptrtoint_of_constantexpr_inttoptr'
-; X32-NEXT:  Classifying expressions for: @ptrtoint_of_constantexpr_inttoptr
-; X32-NEXT:    %p0 = ptrtoint i8* inttoptr (i64 42 to i8*) to i64
-; X32-NEXT:    --> (zext i8* inttoptr (i64 42 to i8*) to i64) U: [42,43) S: [0,4294967296)
-; X32-NEXT:  Determining loop execution counts for: @ptrtoint_of_constantexpr_inttoptr
+; ALL-LABEL: 'ptrtoint_of_constantexpr_inttoptr'
+; ALL-NEXT:  Classifying expressions for: @ptrtoint_of_constantexpr_inttoptr
+; ALL-NEXT:    %p0 = ptrtoint i8* inttoptr (i64 42 to i8*) to i64
+; ALL-NEXT:    --> %p0 U: [42,43) S: [-64,64)
+; ALL-NEXT:  Determining loop execution counts for: @ptrtoint_of_constantexpr_inttoptr
 ;
   %p0 = ptrtoint i8* inttoptr (i64 42 to i8*) to i64
   store i64 %p0, i64* %out0

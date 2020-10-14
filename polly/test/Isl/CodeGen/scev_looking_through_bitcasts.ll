@@ -32,5 +32,6 @@ bitmap_element_allocate.exit:
 
 
 ; CHECK:       polly.stmt.cond.end73.i:
-; CHECK-NEXT:   store %structty* undef, %structty** %b.s2a
+; CHECK-NEXT:   %0 = bitcast %structty** %b.s2a to i8**
+; CHECK-NEXT:   store i8* undef, i8** %0
 ; CHECK-NEXT:   br label %polly.exiting
