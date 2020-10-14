@@ -1228,12 +1228,11 @@ const char *SourceManager::getCharacterData(SourceLocation SL,
 /// this is significantly cheaper to compute than the line number.
 unsigned SourceManager::getColumnNumber(FileID FID, unsigned FilePos,
                                         bool *Invalid) const {
-  bool MyInvalid = false;
-  const llvm::MemoryBuffer *MemBuf = getBuffer(FID, &MyInvalid);
+  llvm::Optional<llvm::MemoryBufferRef> MemBuf = getBufferOrNone(FID);
   if (Invalid)
-    *Invalid = MyInvalid;
+    *Invalid = !MemBuf;
 
-  if (MyInvalid)
+  if (!MemBuf)
     return 1;
 
   // It is okay to request a position just past the end of the buffer.
@@ -1509,7 +1508,10 @@ StringRef SourceManager::getBufferName(SourceLocation Loc,
                                        bool *Invalid) const {
   if (isInvalid(Loc, Invalid)) return "<invalid loc>";
 
-  return getBuffer(getFileID(Loc), Invalid)->getBufferIdentifier();
+  auto B = getBufferOrNone(getFileID(Loc));
+  if (Invalid)
+    *Invalid = !B;
+  return B ? B->getBufferIdentifier() : "<invalid buffer>";
 }
 
 /// getPresumedLoc - This method returns the "presumed" location of a
@@ -2047,8 +2049,8 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
   // If we arrived here, the location is either in a built-ins buffer or
   // associated with global inline asm. PR5662 and PR22576 are examples.
 
-  StringRef LB = getBuffer(LOffs.first)->getBufferIdentifier();
-  StringRef RB = getBuffer(ROffs.first)->getBufferIdentifier();
+  StringRef LB = getBufferOrFake(LOffs.first).getBufferIdentifier();
+  StringRef RB = getBufferOrFake(ROffs.first).getBufferIdentifier();
   bool LIsBuiltins = LB == "<built-in>";
   bool RIsBuiltins = RB == "<built-in>";
   // Sort built-in before non-built-in.
