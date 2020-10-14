@@ -2026,9 +2026,10 @@ function(llvm_codesign name)
       set(ARG_BUNDLE_PATH $<TARGET_FILE:${name}>)
     endif()
 
-    if(ARG_FORCE)
-      set(force_flag "-f")
-    endif()
+    # ld64 now always codesigns the binaries it creates. Apply the force arg
+    # unconditionally so that we can - for example - add entitlements to the
+    # targets that need it.
+    set(force_flag "-f")
 
     add_custom_command(
       TARGET ${name} POST_BUILD
