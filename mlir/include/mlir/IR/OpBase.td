@@ -2364,4 +2364,116 @@ def location;
 // so to replace the matched DAG with an existing SSA value.
 def replaceWithValue;
 
+
+//===----------------------------------------------------------------------===//
+// Data type generation
+//===----------------------------------------------------------------------===//
+
+// Define a new type belonging to a dialect and called 'name'.
+class TypeDef<Dialect owningdialect, string name> {
+  Dialect dialect = owningdialect;
+  string cppClassName = name # "Type";
+
+  // Short summary of the type.
+  string summary = ?;
+  // The longer description of this type.
+  string description = ?;
+
+  // Name of storage class to generate or use.
+  string storageClass = name # "TypeStorage";
+  // Namespace (withing dialect c++ namespace) in which the storage class
+  // resides.
+  string storageNamespace = "detail";
+  // Specify if the storage class is to be generated.
+  bit genStorageClass = 1;
+  // Specify that the generated storage class has a constructor which is written
+  // in C++.
+  bit hasStorageCustomConstructor = 0;
+
+  // The list of parameters for this type. Parameters will become both
+  // parameters to the get() method and storage class member variables.
+  //
+  // The format of this dag is:
+  //    (ins
+  //        "<c++ type>":$param1Name,
+  //        "<c++ type>":$param2Name,
+  //        TypeParameter<"c++ type", "param description">:$param3Name)
+  // TypeParameters (or more likely one of their subclasses) are required to add
+  // more information about the parameter, specifically:
+  //  - Documentation
+  //  - Code to allocate the parameter (if allocation is needed in the storage
+  //    class constructor)
+  //
+  // For example:
+  //    (ins
+  //        "int":$width,
+  //        ArrayRefParameter<"bool", "list of bools">:$yesNoArray)
+  //
+  // (ArrayRefParameter is a subclass of TypeParameter which has allocation code
+  // for re-allocating ArrayRefs. It is defined below.)
+  dag parameters = (ins);
+
+  // Use the lowercased name as the keyword for parsing/printing. Specify only
+  // if you want tblgen to generate declarations and/or definitions of
+  // printer/parser for this type.
+  string mnemonic = ?;
+  // If 'mnemonic' specified,
+  //   If null, generate just the declarations.
+  //   If a non-empty code block, just use that code as the definition code.
+  //   Error if an empty code block.
+  code printer = ?;
+  code parser = ?;
+
+  // If set, generate accessors for each Type parameter.
+  bit genAccessors = 1;
+  // Generate the verifyConstructionInvariants declaration and getChecked
+  // method.
+  bit genVerifyInvariantsDecl = 0;
+  // Extra code to include in the class declaration.
+  code extraClassDeclaration = [{}];
+}
+
+// 'Parameters' should be subclasses of this or simple strings (which is a
+// shorthand for TypeParameter<"C++Type">).
+class TypeParameter<string type, string desc> {
+  // Custom memory allocation code for storage constructor.
+  code allocator = ?;
+  // The C++ type of this parameter.
+  string cppType = type;
+  // A description of this parameter.
+  string description = desc;
+  // The format string for the asm syntax (documentation only).
+  string syntax = ?;
+}
+
+// For StringRefs, which require allocation.
+class StringRefParameter<string desc> :
+    TypeParameter<"::llvm::StringRef", desc> {
+  let allocator = [{$_dst = $_allocator.copyInto($_self);}];
+}
+
+// For standard ArrayRefs, which require allocation.
+class ArrayRefParameter<string arrayOf, string desc> :
+    TypeParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
+  let allocator = [{$_dst = $_allocator.copyInto($_self);}];
+}
+
+// For classes which require allocation and have their own allocateInto method.
+class SelfAllocationParameter<string type, string desc> :
+    TypeParameter<type, desc> {
+  let allocator = [{$_dst = $_self.allocateInto($_allocator);}];
+}
+
+// For ArrayRefs which contain things which allocate themselves.
+class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
+    TypeParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
+  let allocator = [{
+    llvm::SmallVector<}] # arrayOf # [{, 4> tmpFields;
+    for (size_t i = 0, e = $_self.size(); i < e; ++i)
+      tmpFields.push_back($_self[i].allocateInto($_allocator));
+    $_dst = $_allocator.copyInto(ArrayRef<}] # arrayOf # [{>(tmpFields));
+  }];
+}
+
+
 #endif // OP_BASE

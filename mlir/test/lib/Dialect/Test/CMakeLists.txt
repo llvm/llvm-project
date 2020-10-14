@@ -9,6 +9,12 @@ mlir_tablegen(TestTypeInterfaces.h.inc -gen-type-interface-decls)
 mlir_tablegen(TestTypeInterfaces.cpp.inc -gen-type-interface-defs)
 add_public_tablegen_target(MLIRTestInterfaceIncGen)
 
+set(LLVM_TARGET_DEFINITIONS TestTypeDefs.td)
+mlir_tablegen(TestTypeDefs.h.inc -gen-typedef-decls)
+mlir_tablegen(TestTypeDefs.cpp.inc -gen-typedef-defs)
+add_public_tablegen_target(MLIRTestDefIncGen)
+
+
 set(LLVM_TARGET_DEFINITIONS TestOps.td)
 mlir_tablegen(TestOps.h.inc -gen-op-decls)
 mlir_tablegen(TestOps.cpp.inc -gen-op-defs)
@@ -25,11 +31,13 @@ add_mlir_library(MLIRTestDialect
   TestDialect.cpp
   TestPatterns.cpp
   TestTraits.cpp
+  TestTypes.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
   DEPENDS
   MLIRTestInterfaceIncGen
+  MLIRTestDefIncGen
   MLIRTestOpsIncGen
 
   LINK_LIBS PUBLIC
