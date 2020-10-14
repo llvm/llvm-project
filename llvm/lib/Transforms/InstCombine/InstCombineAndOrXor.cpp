@@ -2090,15 +2090,14 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
       if (LI->ult(Width) && RI->ult(Width) && (*LI + *RI) == Width)
         return ConstantInt::get(L->getType(), *LI);
 
-    // TODO: Support undefs in non-uniform shift amounts.
+    const APInt *SumC;
     Constant *LC, *RC;
-    if (match(L, m_Constant(LC)) && !LC->containsUndefElement() &&
-        match(R, m_Constant(RC)) && !RC->containsUndefElement() &&
+    if (match(L, m_Constant(LC)) && match(R, m_Constant(RC)) &&
         match(L, m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, APInt(Width, Width))) &&
-        match(R, m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, APInt(Width, Width)))) {
-      if (match(ConstantExpr::getAdd(LC, RC), m_SpecificInt(Width)))
-        return L;
-    }
+        match(R, m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, APInt(Width, Width))) &&
+        match(ConstantExpr::getAdd(LC, RC), m_APIntAllowUndef(SumC)) &&
+        *SumC == Width)
+      return ConstantExpr::mergeUndefsWith(LC, RC);
 
     // (shl ShVal, X) | (lshr ShVal, (Width - x)) iff X < Width.
     // We limit this to X < Width in case the backend re-expands the intrinsic,
