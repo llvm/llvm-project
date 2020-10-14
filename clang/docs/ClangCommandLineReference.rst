@@ -2937,7 +2937,7 @@ AMDGPU
 ------
 .. option:: -mcode-object-v3, -mno-code-object-v3
 
-Enable code object v3 (AMDGPU only)
+Legacy option to specify code object v3 (AMDGPU only)
 
 .. option:: -mcumode, -mno-cumode
 

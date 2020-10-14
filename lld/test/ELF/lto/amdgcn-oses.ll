@@ -8,16 +8,18 @@
 
 ; RUN: llvm-as %t/amdpal.ll -o %t/amdpal.o
 ; RUN: ld.lld %t/amdpal.o -o %t/amdpal.so
-; RUN: llvm-readobj --file-headers %t/amdpal.so | FileCheck %s --check-prefixes=GCN,AMDPAL
+; RUN: llvm-readobj --file-headers %t/amdpal.so | FileCheck %s --check-prefixes=GCN,NON-AMDHSA,AMDPAL
 
 ; RUN: llvm-as %t/mesa3d.ll -o %t/mesa3d.o
 ; RUN: ld.lld %t/mesa3d.o -o %t/mesa3d.so
-; RUN: llvm-readobj --file-headers %t/mesa3d.so | FileCheck %s --check-prefixes=GCN,MESA3D
+; RUN: llvm-readobj --file-headers %t/mesa3d.so | FileCheck %s --check-prefixes=GCN,NON-AMDHSA,MESA3D
 
 ; AMDHSA: OS/ABI: AMDGPU_HSA (0x40)
+; AMDHSA: ABIVersion: 1
+
 ; AMDPAL: OS/ABI: AMDGPU_PAL (0x41)
 ; MESA3D: OS/ABI: AMDGPU_MESA3D (0x42)
-; GCN: ABIVersion: 0
+; NON-AMDHSA: ABIVersion: 0
 
 ;--- amdhsa.ll
 target triple = "amdgcn-amd-amdhsa"

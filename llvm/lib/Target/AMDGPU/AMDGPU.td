@@ -652,13 +652,6 @@ def FeatureAutoWaitcntBeforeBarrier : SubtargetFeature <
   "Hardware automatically inserts waitcnt before barrier"
 >;
 
-def FeatureCodeObjectV3 : SubtargetFeature <
-  "code-object-v3",
-  "CodeObjectV3",
-  "true",
-  "Generate code object version 3"
->;
-
 def FeatureTrigReducedRange : SubtargetFeature<"trig-reduced-range",
   "HasTrigReducedRange",
   "true",
@@ -752,59 +745,50 @@ def FeatureISAVersion6_0_0 : FeatureSet<[FeatureSouthernIslands,
    FeatureFastFMAF32,
    HalfRate64Ops,
    FeatureLDSBankCount32,
-   FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureDoesNotSupportXNACK]>;
 
 def FeatureISAVersion6_0_1 : FeatureSet<
   [FeatureSouthernIslands,
    FeatureLDSBankCount32,
-   FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureDoesNotSupportXNACK]>;
 
 def FeatureISAVersion6_0_2 : FeatureSet<
   [FeatureSouthernIslands,
    FeatureLDSBankCount32,
-   FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureDoesNotSupportXNACK]>;
 
 def FeatureISAVersion7_0_0 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount32,
-   FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureDoesNotSupportXNACK]>;
 
 def FeatureISAVersion7_0_1 : FeatureSet<
   [FeatureSeaIslands,
    HalfRate64Ops,
    FeatureLDSBankCount32,
    FeatureFastFMAF32,
-   FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureDoesNotSupportXNACK]>;
 
 def FeatureISAVersion7_0_2 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount16,
    FeatureFastFMAF32,
-   FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureDoesNotSupportXNACK]>;
 
 def FeatureISAVersion7_0_3 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount16,
-   FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureDoesNotSupportXNACK]>;
 
 def FeatureISAVersion7_0_4 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount32,
-   FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureDoesNotSupportXNACK]>;
 
 def FeatureISAVersion7_0_5 : FeatureSet<
   [FeatureSeaIslands,
    FeatureLDSBankCount16,
-   FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureDoesNotSupportXNACK]>;
 
 def FeatureISAVersion8_0_1 : FeatureSet<
   [FeatureVolcanicIslands,
@@ -812,37 +796,32 @@ def FeatureISAVersion8_0_1 : FeatureSet<
    HalfRate64Ops,
    FeatureLDSBankCount32,
    FeatureXNACK,
-   FeatureUnpackedD16VMem,
-   FeatureCodeObjectV3]>;
+   FeatureUnpackedD16VMem]>;
 
 def FeatureISAVersion8_0_2 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
    FeatureSGPRInitBug,
    FeatureUnpackedD16VMem,
-   FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureDoesNotSupportXNACK]>;
 
 def FeatureISAVersion8_0_3 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
    FeatureUnpackedD16VMem,
-   FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureDoesNotSupportXNACK]>;
 
 def FeatureISAVersion8_0_5 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
    FeatureSGPRInitBug,
    FeatureUnpackedD16VMem,
-   FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureDoesNotSupportXNACK]>;
 
 def FeatureISAVersion8_1_0 : FeatureSet<
   [FeatureVolcanicIslands,
    FeatureLDSBankCount16,
    FeatureXNACK,
-   FeatureCodeObjectV3,
    FeatureImageStoreD16Bug,
    FeatureImageGather4D16Bug]>;
 
@@ -850,7 +829,6 @@ def FeatureISAVersion9_0_0 : FeatureSet<
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
-   FeatureCodeObjectV3,
    FeatureDoesNotSupportXNACK,
    FeatureDoesNotSupportSRAMECC,
    FeatureImageGather4D16Bug]>;
@@ -861,7 +839,6 @@ def FeatureISAVersion9_0_2 : FeatureSet<
    FeatureLDSBankCount32,
    FeatureXNACK,
    FeatureDoesNotSupportSRAMECC,
-   FeatureCodeObjectV3,
    FeatureImageGather4D16Bug]>;
 
 def FeatureISAVersion9_0_4 : FeatureSet<
@@ -870,7 +847,6 @@ def FeatureISAVersion9_0_4 : FeatureSet<
    FeatureFmaMixInsts,
    FeatureDoesNotSupportXNACK,
    FeatureDoesNotSupportSRAMECC,
-   FeatureCodeObjectV3,
    FeatureImageGather4D16Bug]>;
 
 def FeatureISAVersion9_0_6 : FeatureSet<
@@ -882,7 +858,6 @@ def FeatureISAVersion9_0_6 : FeatureSet<
    FeatureDot1Insts,
    FeatureDot2Insts,
    FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3,
    FeatureImageGather4D16Bug]>;
 
 def FeatureISAVersion9_0_8 : FeatureSet<
@@ -902,7 +877,6 @@ def FeatureISAVersion9_0_8 : FeatureSet<
    FeatureAtomicFaddInsts,
    FeatureSRAMECC,
    FeatureMFMAInlineLiteralBug,
-   FeatureCodeObjectV3,
    FeatureImageGather4D16Bug]>;
 
 def FeatureISAVersion9_0_9 : FeatureSet<
@@ -910,7 +884,6 @@ def FeatureISAVersion9_0_9 : FeatureSet<
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
    FeatureXNACK,
-   FeatureCodeObjectV3,
    FeatureImageGather4D16Bug]>;
 
 // TODO: Organize more features into groups.
@@ -944,8 +917,7 @@ def FeatureISAVersion10_1_0 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureDoesNotSupportXNACK,
-     FeatureCodeObjectV3])>;
+     FeatureDoesNotSupportXNACK])>;
 
 def FeatureISAVersion10_1_1 : FeatureSet<
   !listconcat(FeatureGroup.GFX10_1_Bugs,
@@ -966,8 +938,7 @@ def FeatureISAVersion10_1_1 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureDoesNotSupportXNACK,
-     FeatureCodeObjectV3])>;
+     FeatureDoesNotSupportXNACK])>;
 
 def FeatureISAVersion10_1_2 : FeatureSet<
   !listconcat(FeatureGroup.GFX10_1_Bugs,
@@ -988,8 +959,7 @@ def FeatureISAVersion10_1_2 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureDoesNotSupportXNACK,
-     FeatureCodeObjectV3])>;
+     FeatureDoesNotSupportXNACK])>;
 
 def FeatureISAVersion10_3_0 : FeatureSet<
   [FeatureGFX10,
@@ -1003,8 +973,7 @@ def FeatureISAVersion10_3_0 : FeatureSet<
    FeatureDot6Insts,
    FeatureNSAEncoding,
    FeatureWavefrontSize32,
-   FeatureDoesNotSupportXNACK,
-   FeatureCodeObjectV3]>;
+   FeatureDoesNotSupportXNACK]>;
 
 //===----------------------------------------------------------------------===//
 
