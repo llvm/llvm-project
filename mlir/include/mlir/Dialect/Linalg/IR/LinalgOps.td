@@ -48,11 +48,10 @@ def Linalg_RangeOp :
     ````
   }];
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Value min, Value max, "
-    "Value step",
+    "Value min, Value max, Value step",
     [{
-      auto rangeType = RangeType::get(builder.getContext());
-      build(builder, result, rangeType, min, max, step);
+      auto rangeType = RangeType::get($_builder.getContext());
+      build($_builder, $_state, rangeType, min, max, step);
     }]>];
 
   // Fully specified by traits.
@@ -65,28 +64,28 @@ class Linalg_ReshapeLikeOp<string mnemonic, list<OpTrait> traits = []> :
   let builders = [
     // Builders for a contracting reshape whose result type is computed from
     // `src` and `reassociation`.
-    OpBuilder<"OpBuilder &b, OperationState &result, Value src, "
+    OpBuilder<"Value src, "
               "ArrayRef<ReassociationExprs> reassociation, "
               "ArrayRef<NamedAttribute> attrs = {}">,
-    OpBuilder<"OpBuilder &b, OperationState &result, Value src, "
+    OpBuilder<"Value src, "
               "ArrayRef<ReassociationIndices> reassociation, "
               "ArrayRef<NamedAttribute> attrs = {}", [{
       auto reassociationMaps =
-          convertReassociationIndicesToMaps(b, reassociation);
-      build(b, result, src, reassociationMaps, attrs);
+          convertReassociationIndicesToMaps($_builder, reassociation);
+      build($_builder, $_state, src, reassociationMaps, attrs);
     }]>,
 
     // Builders for a reshape whose result type is passed explicitly. This may
     // be either a contracting or expanding reshape.
-    OpBuilder<"OpBuilder &b, OperationState &result, Type resultType, "
-              "Value src, ArrayRef<ReassociationExprs> reassociation, "
+    OpBuilder<"Type resultType, Value src, "
+              "ArrayRef<ReassociationExprs> reassociation, "
               "ArrayRef<NamedAttribute> attrs = {}">,
-    OpBuilder<"OpBuilder &b, OperationState &result, Type resultType, "
-              "Value src, ArrayRef<ReassociationIndices> reassociation, "
+    OpBuilder<"Type resultType, Value src, "
+              "ArrayRef<ReassociationIndices> reassociation, "
               "ArrayRef<NamedAttribute> attrs = {}", [{
       auto reassociationMaps =
-          convertReassociationIndicesToMaps(b, reassociation);
-      build(b, result, src, reassociationMaps, attrs);
+          convertReassociationIndicesToMaps($_builder, reassociation);
+      build($_builder, $_state, src, reassociationMaps, attrs);
     }]>
   ];
 
@@ -259,9 +258,7 @@ def Linalg_SliceOp : Linalg_Op<"slice", [
       ```
   }];
 
-  let builders = [OpBuilder<
-    "OpBuilder &b, OperationState &result, Value base, "
-    "ValueRange indexings">];
+  let builders = [OpBuilder<"Value base, ValueRange indexings">];
 
   let extraClassDeclaration = [{
     enum { FirstIndexingOperand = 1 };

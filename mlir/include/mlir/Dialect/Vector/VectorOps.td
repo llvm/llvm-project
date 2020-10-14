@@ -504,7 +504,6 @@ def Vector_ExtractMapOp :
     ```
   }];
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, " #
     "Value vector, Value id, int64_t multiplicity">];
   let extraClassDeclaration = [{
     VectorType getSourceVectorType() {
@@ -718,7 +717,6 @@ def Vector_InsertMapOp :
     ```
   }];
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, " #
     "Value vector, Value id, int64_t multiplicity">];
   let extraClassDeclaration = [{
     VectorType getSourceVectorType() {
