@@ -261,7 +261,7 @@ bool GenerateHeaderModuleAction::PrepareToExecuteAction(
     if (FIF.getKind().getFormat() != InputKind::Source || !FIF.isFile()) {
       CI.getDiagnostics().Report(diag::err_module_header_file_not_found)
           << (FIF.isFile() ? FIF.getFile()
-                           : FIF.getBuffer()->getBufferIdentifier());
+                           : FIF.getBuffer().getBufferIdentifier());
       return true;
     }
 
@@ -275,7 +275,8 @@ bool GenerateHeaderModuleAction::PrepareToExecuteAction(
 
   // Set that buffer up as our "real" input.
   Inputs.clear();
-  Inputs.push_back(FrontendInputFile(Buffer.get(), Kind, /*IsSystem*/false));
+  Inputs.push_back(
+      FrontendInputFile(Buffer->getMemBufferRef(), Kind, /*IsSystem*/ false));
 
   return GenerateModuleAction::PrepareToExecuteAction(CI);
 }

@@ -860,13 +860,11 @@ public:
                       int LoadedID = 0, unsigned LoadedOffset = 0,
                       SourceLocation IncludeLoc = SourceLocation());
 
-  enum UnownedTag { Unowned };
-
   /// Create a new FileID that represents the specified memory buffer.
   ///
   /// This does not take ownership of the MemoryBuffer. The memory buffer must
   /// outlive the SourceManager.
-  FileID createFileID(UnownedTag, const llvm::MemoryBuffer *Buffer,
+  FileID createFileID(const llvm::MemoryBufferRef &Buffer,
                       SrcMgr::CharacteristicKind FileCharacter = SrcMgr::C_User,
                       int LoadedID = 0, unsigned LoadedOffset = 0,
                       SourceLocation IncludeLoc = SourceLocation());
@@ -989,36 +987,6 @@ public:
     if (auto B = getBufferOrNone(FID, Loc))
       return *B;
     return getFakeBufferForRecovery()->getMemBufferRef();
-  }
-
-  /// Return the buffer for the specified FileID.
-  ///
-  /// If there is an error opening this buffer the first time, this
-  /// manufactures a temporary buffer and returns a non-empty error string.
-  ///
-  /// TODO: Update users of Invalid to call getBufferOrNone and change return
-  /// type to MemoryBufferRef.
-  const llvm::MemoryBuffer *getBuffer(FileID FID, SourceLocation Loc,
-                                      bool *Invalid = nullptr) const {
-    bool MyInvalid = false;
-    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &MyInvalid);
-    if (MyInvalid || !Entry.isFile()) {
-      if (Invalid)
-        *Invalid = true;
-
-      return getFakeBufferForRecovery();
-    }
-
-    auto *B = Entry.getFile().getContentCache()->getBufferPointer(
-        Diag, getFileManager(), Loc);
-    if (Invalid)
-      *Invalid = !B;
-    return B ? B : getFakeBufferForRecovery();
-  }
-
-  const llvm::MemoryBuffer *getBuffer(FileID FID,
-                                      bool *Invalid = nullptr) const {
-    return getBuffer(FID, SourceLocation(), Invalid);
   }
 
   /// Returns the FileEntry record for the provided FileID.
@@ -1844,7 +1812,7 @@ private:
 
   /// Create a new ContentCache for the specified  memory buffer.
   const SrcMgr::ContentCache *
-  createMemBufferContentCache(const llvm::MemoryBuffer *Buf, bool DoNotFree);
+  createMemBufferContentCache(std::unique_ptr<llvm::MemoryBuffer> Buf);
 
   FileID getFileIDSlow(unsigned SLocOffset) const;
   FileID getFileIDLocal(unsigned SLocOffset) const;
