@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions | FileCheck %s -check-prefix=MFS-DEFAULTS
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefix=MFS-OPTS1
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefix=MFS-OPTS1
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-psi-cutoff=950000 | FileCheck %s -check-prefix=MFS-OPTS2
 
 define void @foo1(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
