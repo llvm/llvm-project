@@ -88,7 +88,7 @@ add_library(libc-benchmark
 )
 add_dependencies(libc-benchmark google-benchmark)
 target_include_directories(libc-benchmark
-    PUBLIC
+    SYSTEM PUBLIC
     "${GOOGLE_BENCHMARK_LIBC_INSTALL}/include"
 )
 target_link_libraries(libc-benchmark
