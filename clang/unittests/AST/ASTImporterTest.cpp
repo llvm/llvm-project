@@ -5767,6 +5767,31 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportExprOfAlignmentAttr) {
   EXPECT_TRUE(ToA);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportFormatAttr) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      int foo(const char * fmt, ...)
+      __attribute__ ((__format__ (__scanf__, 1, 2)));
+      )",
+      Lang_CXX03, "input.cc");
+  auto *FromD = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("foo")));
+  ASSERT_TRUE(FromD);
+
+  auto *ToD = Import(FromD, Lang_CXX03);
+  ASSERT_TRUE(ToD);
+  ToD->dump(); // Should not crash!
+
+  auto *FromAttr = FromD->getAttr<FormatAttr>();
+  auto *ToAttr = ToD->getAttr<FormatAttr>();
+  EXPECT_EQ(FromAttr->isInherited(), ToAttr->isInherited());
+  EXPECT_EQ(FromAttr->isPackExpansion(), ToAttr->isPackExpansion());
+  EXPECT_EQ(FromAttr->isImplicit(), ToAttr->isImplicit());
+  EXPECT_EQ(FromAttr->getSyntax(), ToAttr->getSyntax());
+  EXPECT_EQ(FromAttr->getAttributeSpellingListIndex(),
+            ToAttr->getAttributeSpellingListIndex());
+  EXPECT_EQ(FromAttr->getType()->getName(), ToAttr->getType()->getName());
+}
 template <typename T>
 auto ExtendWithOptions(const T &Values, const std::vector<std::string> &Args) {
   auto Copy = Values;
