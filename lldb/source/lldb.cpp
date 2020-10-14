@@ -36,22 +36,7 @@ static const char *GetLLDBRepository() {
 #endif
 }
 
-#if LLDB_IS_BUILDBOT_BUILD
-static std::string GetBuildDate() {
-#if defined(LLDB_BUILD_DATE)
-  return std::string(LLDB_BUILD_DATE);
-#else
-  return std::string();
-#endif
-}
-#endif
-
-#define QUOTE(str) #str
-#define EXPAND_AND_QUOTE(str) QUOTE(str)
-
 const char *lldb_private::GetVersion() {
-  // On platforms other than Darwin, report a version number in the same style
-  // as the clang tool.
   static std::string g_version_str;
   if (g_version_str.empty()) {
     g_version_str += "lldb version ";

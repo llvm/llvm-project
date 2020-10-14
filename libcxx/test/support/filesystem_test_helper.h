@@ -9,7 +9,6 @@
 #include <cassert>
 #include <cstdio> // for printf
 #include <string>
-#include <fstream>
 #include <random>
 #include <chrono>
 #include <vector>
@@ -309,7 +308,7 @@ struct CWDGuard {
     char* ret = ::getcwd(OldCWD, sizeof(OldCWD));
     assert(ret && "getcwd failed");
   }
-  ~CWDGuard() { 
+  ~CWDGuard() {
     int ret = ::chdir(OldCWD);
     assert(ret == 0 && "chdir failed");
   }

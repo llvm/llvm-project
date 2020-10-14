@@ -497,6 +497,8 @@ size_t PyMlirContext::getLiveCount() { return getLiveContexts().size(); }
 
 size_t PyMlirContext::getLiveOperationCount() { return liveOperations.size(); }
 
+size_t PyMlirContext::getLiveModuleCount() { return liveModules.size(); }
+
 py::object PyMlirContext::createOperation(
     std::string name, PyLocation location,
     llvm::Optional<std::vector<PyType *>> results,
@@ -582,15 +584,49 @@ py::object PyMlirContext::createOperation(
 // PyModule
 //------------------------------------------------------------------------------
 
-PyModuleRef PyModule::create(PyMlirContextRef contextRef, MlirModule module) {
-  PyModule *unownedModule = new PyModule(std::move(contextRef), module);
-  // Note that the default return value policy on cast is automatic_reference,
-  // which does not take ownership (delete will not be called).
-  // Just be explicit.
-  py::object pyRef =
-      py::cast(unownedModule, py::return_value_policy::take_ownership);
-  unownedModule->handle = pyRef;
-  return PyModuleRef(unownedModule, std::move(pyRef));
+PyModule::PyModule(PyMlirContextRef contextRef, MlirModule module)
+    : BaseContextObject(std::move(contextRef)), module(module) {}
+
+PyModule::~PyModule() {
+  py::gil_scoped_acquire acquire;
+  auto &liveModules = getContext()->liveModules;
+  assert(liveModules.count(module.ptr) == 1 &&
+         "destroying module not in live map");
+  liveModules.erase(module.ptr);
+  mlirModuleDestroy(module);
+}
+
+PyModuleRef PyModule::forModule(MlirModule module) {
+  MlirContext context = mlirModuleGetContext(module);
+  PyMlirContextRef contextRef = PyMlirContext::forContext(context);
+
+  py::gil_scoped_acquire acquire;
+  auto &liveModules = contextRef->liveModules;
+  auto it = liveModules.find(module.ptr);
+  if (it == liveModules.end()) {
+    // Create.
+    PyModule *unownedModule = new PyModule(std::move(contextRef), module);
+    // Note that the default return value policy on cast is automatic_reference,
+    // which does not take ownership (delete will not be called).
+    // Just be explicit.
+    py::object pyRef =
+        py::cast(unownedModule, py::return_value_policy::take_ownership);
+    unownedModule->handle = pyRef;
+    liveModules[module.ptr] =
+        std::make_pair(unownedModule->handle, unownedModule);
+    return PyModuleRef(unownedModule, std::move(pyRef));
+  }
+  // Use existing.
+  PyModule *existing = it->second.second;
+  py::object pyRef = py::reinterpret_borrow<py::object>(it->second.first);
+  return PyModuleRef(existing, std::move(pyRef));
+}
+
+py::object PyModule::createFromCapsule(py::object capsule) {
+  MlirModule rawModule = mlirPythonCapsuleToModule(capsule.ptr());
+  if (mlirModuleIsNull(rawModule))
+    throw py::error_already_set();
+  return forModule(rawModule).releaseObject();
 }
 
 py::object PyModule::getCapsule() {
@@ -1461,6 +1497,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
              return ref.releaseObject();
            })
       .def("_get_live_operation_count", &PyMlirContext::getLiveOperationCount)
+      .def("_get_live_module_count", &PyMlirContext::getLiveModuleCount)
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyMlirContext::getCapsule)
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyMlirContext::createFromCapsule)
@@ -1489,9 +1526,16 @@ void mlir::python::populateIRSubmodule(py::module &m) {
                   PyExc_ValueError,
                   "Unable to parse module assembly (see diagnostics)");
             }
-            return PyModule::create(self.getRef(), module).releaseObject();
+            return PyModule::forModule(module).releaseObject();
           },
           kContextParseDocstring)
+      .def(
+          "create_module",
+          [](PyMlirContext &self, PyLocation &loc) {
+            MlirModule module = mlirModuleCreateEmpty(loc.loc);
+            return PyModule::forModule(module).releaseObject();
+          },
+          py::arg("loc"), "Creates an empty module")
       .def(
           "parse_attr",
           [](PyMlirContext &self, std::string attrSpec) {
@@ -1538,16 +1582,26 @@ void mlir::python::populateIRSubmodule(py::module &m) {
           kContextGetFileLocationDocstring, py::arg("filename"),
           py::arg("line"), py::arg("col"));
 
-  py::class_<PyLocation>(m, "Location").def("__repr__", [](PyLocation &self) {
-    PyPrintAccumulator printAccum;
-    mlirLocationPrint(self.loc, printAccum.getCallback(),
-                      printAccum.getUserData());
-    return printAccum.join();
-  });
+  py::class_<PyLocation>(m, "Location")
+      .def_property_readonly(
+          "context",
+          [](PyLocation &self) { return self.getContext().getObject(); },
+          "Context that owns the Location")
+      .def("__repr__", [](PyLocation &self) {
+        PyPrintAccumulator printAccum;
+        mlirLocationPrint(self.loc, printAccum.getCallback(),
+                          printAccum.getUserData());
+        return printAccum.join();
+      });
 
   // Mapping of Module
   py::class_<PyModule>(m, "Module")
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR, &PyModule::getCapsule)
+      .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyModule::createFromCapsule)
+      .def_property_readonly(
+          "context",
+          [](PyModule &self) { return self.getContext().getObject(); },
+          "Context that created the Module")
       .def_property_readonly(
           "operation",
           [](PyModule &self) {
@@ -1576,6 +1630,10 @@ void mlir::python::populateIRSubmodule(py::module &m) {
 
   // Mapping of Operation.
   py::class_<PyOperation>(m, "Operation")
+      .def_property_readonly(
+          "context",
+          [](PyOperation &self) { return self.getContext().getObject(); },
+          "Context that owns the Operation")
       .def_property_readonly(
           "regions",
           [](PyOperation &self) { return PyRegionList(self.getRef()); })
@@ -1657,6 +1715,10 @@ void mlir::python::populateIRSubmodule(py::module &m) {
 
   // Mapping of Type.
   py::class_<PyAttribute>(m, "Attribute")
+      .def_property_readonly(
+          "context",
+          [](PyAttribute &self) { return self.getContext().getObject(); },
+          "Context that owns the Attribute")
       .def(
           "get_named",
           [](PyAttribute &self, std::string name) {
@@ -1737,6 +1799,9 @@ void mlir::python::populateIRSubmodule(py::module &m) {
 
   // Mapping of Type.
   py::class_<PyType>(m, "Type")
+      .def_property_readonly(
+          "context", [](PyType &self) { return self.getContext().getObject(); },
+          "Context that owns the Type")
       .def("__eq__",
            [](PyType &self, py::object &other) {
              try {

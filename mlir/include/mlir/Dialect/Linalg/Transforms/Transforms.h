@@ -816,6 +816,9 @@ public:
                   ConversionPatternRewriter &rewriter) const final;
 };
 
+/// TensorConstantOp conversion inserts a linearized 1-D vector constant that is
+/// stored in memory. A linalg.reshape is introduced to convert to the desired
+/// n-D buffer form.
 class TensorConstantOpConverter
     : public BufferAssignmentOpConversionPattern<ConstantOp> {
 public:
@@ -827,6 +830,7 @@ public:
                   ConversionPatternRewriter &rewriter) const final;
 };
 
+/// TensorCastOp converts 1-1 to MemRefCastOp.
 class TensorCastOpConverter
     : public BufferAssignmentOpConversionPattern<TensorCastOp> {
 public:

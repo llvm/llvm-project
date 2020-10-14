@@ -250,5 +250,54 @@ static LogicalResult verify(ExecuteOp op) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+/// AwaitOp
+//===----------------------------------------------------------------------===//
+
+void AwaitOp::build(OpBuilder &builder, OperationState &result, Value operand,
+                    ArrayRef<NamedAttribute> attrs) {
+  result.addOperands({operand});
+  result.attributes.append(attrs.begin(), attrs.end());
+
+  // Add unwrapped async.value type to the returned values types.
+  if (auto valueType = operand.getType().dyn_cast<ValueType>())
+    result.addTypes(valueType.getValueType());
+}
+
+static ParseResult parseAwaitResultType(OpAsmParser &parser, Type &operandType,
+                                        Type &resultType) {
+  if (parser.parseType(operandType))
+    return failure();
+
+  // Add unwrapped async.value type to the returned values types.
+  if (auto valueType = operandType.dyn_cast<ValueType>())
+    resultType = valueType.getValueType();
+
+  return success();
+}
+
+static void printAwaitResultType(OpAsmPrinter &p, Type operandType,
+                                 Type resultType) {
+  p << operandType;
+}
+
+static LogicalResult verify(AwaitOp op) {
+  Type argType = op.operand().getType();
+
+  // Awaiting on a token does not have any results.
+  if (argType.isa<TokenType>() && !op.getResultTypes().empty())
+    return op.emitOpError("awaiting on a token must have empty result");
+
+  // Awaiting on a value unwraps the async value type.
+  if (auto value = argType.dyn_cast<ValueType>()) {
+    if (*op.getResultType() != value.getValueType())
+      return op.emitOpError()
+             << "result type " << *op.getResultType()
+             << " does not match async value type " << value.getValueType();
+  }
+
+  return success();
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Async/IR/AsyncOps.cpp.inc"

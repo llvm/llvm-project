@@ -15,13 +15,10 @@
 // path proximate(const path& p, const path& base, error_code& ec);
 
 #include "filesystem_include.h"
-#include <type_traits>
-#include <vector>
-#include <iostream>
 #include <cassert>
+#include <cstdio>
 
 #include "test_macros.h"
-#include "test_iterators.h"
 #include "count_new.h"
 #include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
@@ -103,28 +100,28 @@ TEST_CASE(basic_test) {
     const fs::path output = fs::proximate(p, TC.base, ec);
     if (ec) {
       TEST_CHECK(!ec);
-      std::cerr << "TEST CASE #" << ID << " FAILED: \n";
-      std::cerr << "  Input: '" << TC.input << "'\n";
-      std::cerr << "  Base: '" << TC.base << "'\n";
-      std::cerr << "  Expected: '" << TC.expect << "'\n";
-
-      std::cerr << std::endl;
+      std::printf("TEST CASE #%d FAILED:\n"
+                  "  Input: '%s'\n"
+                  "  Base: '%s'\n"
+                  "  Expected: '%s'\n",
+        ID, TC.input.c_str(), TC.base.c_str(), TC.expect.c_str());
     } else if (!PathEq(output, TC.expect)) {
       TEST_CHECK(PathEq(output, TC.expect));
 
       const path canon_input = fs::weakly_canonical(TC.input);
       const path canon_base = fs::weakly_canonical(TC.base);
       const path lexically_p = canon_input.lexically_proximate(canon_base);
-      std::cerr << "TEST CASE #" << ID << " FAILED: \n";
-      std::cerr << "  Input: '" << TC.input << "'\n";
-      std::cerr << "  Base: '" << TC.base << "'\n";
-      std::cerr << "  Expected: '" << TC.expect << "'\n";
-      std::cerr << "  Output:   '" << output.native() << "'\n";
-      std::cerr << "  Lex Prox: '" << lexically_p.native() << "'\n";
-      std::cerr << "  Canon Input: " <<  canon_input << "\n";
-      std::cerr << "  Canon Base: " << canon_base << "\n";
-
-      std::cerr << std::endl;
+      std::printf("TEST CASE #%d FAILED:\n"
+                  "  Input: '%s'\n"
+                  "  Base: '%s'\n"
+                  "  Expected: '%s'\n"
+                  "  Output: '%s'\n"
+                  "  Lex Prox: '%s'\n"
+                  "  Canon Input: '%s'\n"
+                  "  Canon Base: '%s'\n",
+        ID, TC.input.c_str(), TC.base.c_str(), TC.expect.c_str(),
+        output.native().c_str(), lexically_p.native().c_str(),
+        canon_input.c_str(), canon_base.c_str());
     }
   }
 }

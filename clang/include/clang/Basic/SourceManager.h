@@ -979,17 +979,7 @@ public:
 
   const llvm::MemoryBuffer *getBuffer(FileID FID,
                                       bool *Invalid = nullptr) const {
-    bool MyInvalid = false;
-    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &MyInvalid);
-    if (MyInvalid || !Entry.isFile()) {
-      if (Invalid)
-        *Invalid = true;
-
-      return getFakeBufferForRecovery();
-    }
-
-    return Entry.getFile().getContentCache()->getBuffer(
-        Diag, getFileManager(), SourceLocation(), Invalid);
+    return getBuffer(FID, SourceLocation(), Invalid);
   }
 
   /// Returns the FileEntry record for the provided FileID.

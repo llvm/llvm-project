@@ -460,19 +460,7 @@ int GetSizeFromHdr(struct dl_phdr_info *info, size_t size, void *data) {
 
 #if !SANITIZER_GO
 static void GetTls(uptr *addr, uptr *size) {
-#if SANITIZER_ANDROID
-  if (HAS_ANDROID_THREAD_PROPERTIES_API) {
-    void *start_addr;
-    void *end_addr;
-    __libc_get_static_tls_bounds(&start_addr, &end_addr);
-    *addr = reinterpret_cast<uptr>(start_addr);
-    *size =
-        reinterpret_cast<uptr>(end_addr) - reinterpret_cast<uptr>(start_addr);
-  } else {
-    *addr = 0;
-    *size = 0;
-  }
-#elif SANITIZER_LINUX && !SANITIZER_ANDROID
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
 #if defined(__x86_64__) || defined(__i386__) || defined(__s390__)
   *addr = ThreadSelf();
   *size = GetTlsSize();
@@ -514,6 +502,9 @@ static void GetTls(uptr *addr, uptr *size) {
     }
   }
 #elif SANITIZER_OPENBSD
+  *addr = 0;
+  *size = 0;
+#elif SANITIZER_ANDROID
   *addr = 0;
   *size = 0;
 #elif SANITIZER_SOLARIS

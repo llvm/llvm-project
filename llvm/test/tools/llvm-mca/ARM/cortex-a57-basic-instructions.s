@@ -1561,31 +1561,31 @@
 # CHECK-NEXT:  1      2     1.00                        sxtablt	r6, r2, r9, ror #8
 # CHECK-NEXT:  1      2     1.00                        sxtab	r5, r1, r4, ror #16
 # CHECK-NEXT:  1      2     1.00                        sxtab	r7, r8, r3, ror #24
-# CHECK-NEXT:  1      2     1.00                        sxtab16ge	r0, r1, r4
-# CHECK-NEXT:  1      2     1.00                        sxtab16	r6, r2, r7
-# CHECK-NEXT:  1      2     1.00                        sxtab16	r3, r5, r8, ror #8
-# CHECK-NEXT:  1      2     1.00                        sxtab16	r3, r2, r1, ror #16
-# CHECK-NEXT:  1      2     1.00                        sxtab16eq	r1, r2, r3, ror #24
+# CHECK-NEXT:  1      4     1.00                        sxtab16ge	r0, r1, r4
+# CHECK-NEXT:  1      4     1.00                        sxtab16	r6, r2, r7
+# CHECK-NEXT:  1      4     1.00                        sxtab16	r3, r5, r8, ror #8
+# CHECK-NEXT:  1      4     1.00                        sxtab16	r3, r2, r1, ror #16
+# CHECK-NEXT:  1      4     1.00                        sxtab16eq	r1, r2, r3, ror #24
 # CHECK-NEXT:  1      2     1.00                        sxtah	r1, r3, r9
 # CHECK-NEXT:  1      2     1.00                        sxtahhi	r6, r1, r6
 # CHECK-NEXT:  1      2     1.00                        sxtah	r3, r8, r3, ror #8
 # CHECK-NEXT:  1      2     1.00                        sxtahlo	r2, r2, r4, ror #16
 # CHECK-NEXT:  1      2     1.00                        sxtah	r9, r3, r3, ror #24
-# CHECK-NEXT:  1      2     1.00                        sxtbge	r2, r4
-# CHECK-NEXT:  1      2     1.00                        sxtb	r5, r6
-# CHECK-NEXT:  1      2     1.00                        sxtb	r6, r9, ror #8
-# CHECK-NEXT:  1      2     1.00                        sxtblo	r5, r1, ror #16
-# CHECK-NEXT:  1      2     1.00                        sxtb	r8, r3, ror #24
+# CHECK-NEXT:  1      1     0.50                        sxtbge	r2, r4
+# CHECK-NEXT:  1      1     0.50                        sxtb	r5, r6
+# CHECK-NEXT:  1      1     0.50                        sxtb	r6, r9, ror #8
+# CHECK-NEXT:  1      1     0.50                        sxtblo	r5, r1, ror #16
+# CHECK-NEXT:  1      1     0.50                        sxtb	r8, r3, ror #24
 # CHECK-NEXT:  1      2     1.00                        sxtb16	r1, r4
 # CHECK-NEXT:  1      2     1.00                        sxtb16	r6, r7
 # CHECK-NEXT:  1      2     1.00                        sxtb16hs	r3, r5, ror #8
 # CHECK-NEXT:  1      2     1.00                        sxtb16	r3, r1, ror #16
 # CHECK-NEXT:  1      2     1.00                        sxtb16ge	r2, r3, ror #24
-# CHECK-NEXT:  1      2     1.00                        sxthne	r3, r9
-# CHECK-NEXT:  1      2     1.00                        sxth	r1, r6
-# CHECK-NEXT:  1      2     1.00                        sxth	r3, r8, ror #8
-# CHECK-NEXT:  1      2     1.00                        sxthle	r2, r2, ror #16
-# CHECK-NEXT:  1      2     1.00                        sxth	r9, r3, ror #24
+# CHECK-NEXT:  1      1     0.50                        sxthne	r3, r9
+# CHECK-NEXT:  1      1     0.50                        sxth	r1, r6
+# CHECK-NEXT:  1      1     0.50                        sxth	r3, r8, ror #8
+# CHECK-NEXT:  1      1     0.50                        sxthle	r2, r2, ror #16
+# CHECK-NEXT:  1      1     0.50                        sxth	r9, r3, ror #24
 # CHECK-NEXT:  1      1     0.50                        teq	r5, #61440
 # CHECK-NEXT:  1      1     0.50                        teq	r7, #-2147483638
 # CHECK-NEXT:  1      1     0.50                        teq	r7, #40, #2
@@ -1674,31 +1674,31 @@
 # CHECK-NEXT:  1      2     1.00                        uxtablt	r6, r2, r9, ror #8
 # CHECK-NEXT:  1      2     1.00                        uxtab	r5, r1, r4, ror #16
 # CHECK-NEXT:  1      2     1.00                        uxtab	r7, r8, r3, ror #24
-# CHECK-NEXT:  1      2     1.00                        uxtab16ge	r0, r1, r4
-# CHECK-NEXT:  1      2     1.00                        uxtab16	r6, r2, r7
-# CHECK-NEXT:  1      2     1.00                        uxtab16	r3, r5, r8, ror #8
-# CHECK-NEXT:  1      2     1.00                        uxtab16	r3, r2, r1, ror #16
-# CHECK-NEXT:  1      2     1.00                        uxtab16eq	r1, r2, r3, ror #24
+# CHECK-NEXT:  1      4     1.00                        uxtab16ge	r0, r1, r4
+# CHECK-NEXT:  1      4     1.00                        uxtab16	r6, r2, r7
+# CHECK-NEXT:  1      4     1.00                        uxtab16	r3, r5, r8, ror #8
+# CHECK-NEXT:  1      4     1.00                        uxtab16	r3, r2, r1, ror #16
+# CHECK-NEXT:  1      4     1.00                        uxtab16eq	r1, r2, r3, ror #24
 # CHECK-NEXT:  1      2     1.00                        uxtah	r1, r3, r9
 # CHECK-NEXT:  1      2     1.00                        uxtahhi	r6, r1, r6
 # CHECK-NEXT:  1      2     1.00                        uxtah	r3, r8, r3, ror #8
 # CHECK-NEXT:  1      2     1.00                        uxtahlo	r2, r2, r4, ror #16
 # CHECK-NEXT:  1      2     1.00                        uxtah	r9, r3, r3, ror #24
-# CHECK-NEXT:  1      2     1.00                        uxtbge	r2, r4
-# CHECK-NEXT:  1      2     1.00                        uxtb	r5, r6
-# CHECK-NEXT:  1      2     1.00                        uxtb	r6, r9, ror #8
-# CHECK-NEXT:  1      2     1.00                        uxtblo	r5, r1, ror #16
-# CHECK-NEXT:  1      2     1.00                        uxtb	r8, r3, ror #24
+# CHECK-NEXT:  1      1     0.50                        uxtbge	r2, r4
+# CHECK-NEXT:  1      1     0.50                        uxtb	r5, r6
+# CHECK-NEXT:  1      1     0.50                        uxtb	r6, r9, ror #8
+# CHECK-NEXT:  1      1     0.50                        uxtblo	r5, r1, ror #16
+# CHECK-NEXT:  1      1     0.50                        uxtb	r8, r3, ror #24
 # CHECK-NEXT:  1      2     1.00                        uxtb16	r1, r4
 # CHECK-NEXT:  1      2     1.00                        uxtb16	r6, r7
 # CHECK-NEXT:  1      2     1.00                        uxtb16hs	r3, r5, ror #8
 # CHECK-NEXT:  1      2     1.00                        uxtb16	r3, r1, ror #16
 # CHECK-NEXT:  1      2     1.00                        uxtb16ge	r2, r3, ror #24
-# CHECK-NEXT:  1      2     1.00                        uxthne	r3, r9
-# CHECK-NEXT:  1      2     1.00                        uxth	r1, r6
-# CHECK-NEXT:  1      2     1.00                        uxth	r3, r8, ror #8
-# CHECK-NEXT:  1      2     1.00                        uxthle	r2, r2, ror #16
-# CHECK-NEXT:  1      2     1.00                        uxth	r9, r3, ror #24
+# CHECK-NEXT:  1      1     0.50                        uxthne	r3, r9
+# CHECK-NEXT:  1      1     0.50                        uxth	r1, r6
+# CHECK-NEXT:  1      1     0.50                        uxth	r3, r8, ror #8
+# CHECK-NEXT:  1      1     0.50                        uxthle	r2, r2, ror #16
+# CHECK-NEXT:  1      1     0.50                        uxth	r9, r3, ror #24
 # CHECK-NEXT:  0      0     0.00    *      *      U     wfe
 # CHECK-NEXT:  0      0     0.00    *      *      U     wfehi
 # CHECK-NEXT:  0      0     0.00    *      *      U     wfi
@@ -1719,7 +1719,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT: 8.00   148.50 148.50 161.00 527.00 12.00   -      -
+# CHECK-NEXT: 8.00   158.50 158.50 171.00 497.00 12.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    Instructions:
@@ -2425,31 +2425,31 @@
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtablt	r6, r2, r9, ror #8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtab	r5, r1, r4, ror #16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtab	r7, r8, r3, ror #24
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtab16ge	r0, r1, r4
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtab16	r6, r2, r7
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtab16	r3, r5, r8, ror #8
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtab16	r3, r2, r1, ror #16
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtab16eq	r1, r2, r3, ror #24
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sxtab16ge	r0, r1, r4
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sxtab16	r6, r2, r7
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sxtab16	r3, r5, r8, ror #8
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sxtab16	r3, r2, r1, ror #16
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     sxtab16eq	r1, r2, r3, ror #24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtah	r1, r3, r9
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtahhi	r6, r1, r6
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtah	r3, r8, r3, ror #8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtahlo	r2, r2, r4, ror #16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtah	r9, r3, r3, ror #24
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtbge	r2, r4
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtb	r5, r6
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtb	r6, r9, ror #8
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtblo	r5, r1, ror #16
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtb	r8, r3, ror #24
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     sxtbge	r2, r4
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     sxtb	r5, r6
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     sxtb	r6, r9, ror #8
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     sxtblo	r5, r1, ror #16
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     sxtb	r8, r3, ror #24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtb16	r1, r4
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtb16	r6, r7
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtb16hs	r3, r5, ror #8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtb16	r3, r1, ror #16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxtb16ge	r2, r3, ror #24
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxthne	r3, r9
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxth	r1, r6
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxth	r3, r8, ror #8
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxthle	r2, r2, ror #16
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     sxth	r9, r3, ror #24
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     sxthne	r3, r9
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     sxth	r1, r6
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     sxth	r3, r8, ror #8
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     sxthle	r2, r2, ror #16
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     sxth	r9, r3, ror #24
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     teq	r5, #61440
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     teq	r7, #-2147483638
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     teq	r7, #40, #2
@@ -2538,31 +2538,31 @@
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtablt	r6, r2, r9, ror #8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtab	r5, r1, r4, ror #16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtab	r7, r8, r3, ror #24
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtab16ge	r0, r1, r4
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtab16	r6, r2, r7
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtab16	r3, r5, r8, ror #8
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtab16	r3, r2, r1, ror #16
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtab16eq	r1, r2, r3, ror #24
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     uxtab16ge	r0, r1, r4
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     uxtab16	r6, r2, r7
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     uxtab16	r3, r5, r8, ror #8
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     uxtab16	r3, r2, r1, ror #16
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     uxtab16eq	r1, r2, r3, ror #24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtah	r1, r3, r9
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtahhi	r6, r1, r6
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtah	r3, r8, r3, ror #8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtahlo	r2, r2, r4, ror #16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtah	r9, r3, r3, ror #24
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtbge	r2, r4
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtb	r5, r6
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtb	r6, r9, ror #8
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtblo	r5, r1, ror #16
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtb	r8, r3, ror #24
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     uxtbge	r2, r4
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     uxtb	r5, r6
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     uxtb	r6, r9, ror #8
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     uxtblo	r5, r1, ror #16
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     uxtb	r8, r3, ror #24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtb16	r1, r4
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtb16	r6, r7
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtb16hs	r3, r5, ror #8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtb16	r3, r1, ror #16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxtb16ge	r2, r3, ror #24
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxthne	r3, r9
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxth	r1, r6
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxth	r3, r8, ror #8
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxthle	r2, r2, ror #16
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     uxth	r9, r3, ror #24
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     uxthne	r3, r9
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     uxth	r1, r6
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     uxth	r3, r8, ror #8
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     uxthle	r2, r2, ror #16
+# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     uxth	r9, r3, ror #24
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     wfe
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     wfehi
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     wfi

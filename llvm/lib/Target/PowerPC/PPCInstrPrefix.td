@@ -1264,12 +1264,14 @@ multiclass ACC_NEG_UM_M42_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
 let Predicates = [MMA] in {
   def XXMFACC :
     XForm_AT3<31, 0, 177, (outs acc:$ASo), (ins acc:$AS), "xxmfacc $AS",
-              IIC_VecGeneral, []>, RegConstraint<"$ASo = $AS">,
-              NoEncode<"$ASo">;
+              IIC_VecGeneral,
+              [(set v512i1:$ASo, (int_ppc_mma_xxmfacc v512i1:$AS))]>,
+              RegConstraint<"$ASo = $AS">, NoEncode<"$ASo">;
   def XXMTACC :
     XForm_AT3<31, 1, 177, (outs acc:$AT), (ins acc:$ATi), "xxmtacc $AT",
-              IIC_VecGeneral, []>, RegConstraint<"$ATi = $AT">,
-              NoEncode<"$ATi">;
+              IIC_VecGeneral,
+              [(set v512i1:$AT, (int_ppc_mma_xxmtacc v512i1:$ATi))]>,
+              RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
   def KILL_PAIR : PPCPostRAExpPseudo<(outs vsrprc:$XTp), (ins vsrprc:$XSp),
                                       "#KILL_PAIR", []>,
                                       RegConstraint<"$XTp = $XSp">;
@@ -1280,8 +1282,8 @@ let Predicates = [MMA] in {
   // register and this copy is more expensive than calling the intrinsic again.
   let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
     def XXSETACCZ :
-      XForm_AT3<31, 3, 177, (outs acc:$AT), (ins), "xxsetaccz $AT",
-                IIC_VecGeneral, []>;
+      XForm_AT3<31, 3, 177, (outs acc:$AT), (ins), "xxsetaccz $AT", IIC_VecGeneral,
+                [(set v512i1:$AT, (int_ppc_mma_xxsetaccz))]>;
   }
   def XVI8GER4SPP :
     XX3Form_AT3_XAB6<59, 99, (outs acc:$AT), (ins acc:$ATi, vsrc:$XA, vsrc:$XB),
@@ -1368,6 +1370,11 @@ let Predicates = [MMA] in {
   def : Pat<(v512i1 (PPCAccBuild v4i32:$vs1, v4i32:$vs0, v4i32:$vs3, v4i32:$vs2)),
             (XXMTACC Concats.VecsToVecQuad)>;
   def : Pat<(v256i1 (PPCPairBuild v4i32:$vs1, v4i32:$vs0)),
+            Concats.VecsToVecPair0>;
+  def : Pat<(v512i1 (int_ppc_mma_assemble_acc v16i8:$vs1, v16i8:$vs0,
+                                              v16i8:$vs3, v16i8:$vs2)),
+            (XXMTACC Concats.VecsToVecQuad)>;
+  def : Pat<(v256i1 (int_ppc_mma_assemble_pair v16i8:$vs1, v16i8:$vs0)),
             Concats.VecsToVecPair0>;
   def : Pat<(v512i1 (PPCxxmfacc v512i1:$AS)), (XXMFACC acc:$AS)>;
   def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 0))),

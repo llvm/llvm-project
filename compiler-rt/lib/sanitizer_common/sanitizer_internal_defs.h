@@ -104,9 +104,8 @@
 //
 // FIXME: do we have anything like this on Mac?
 #ifndef SANITIZER_CAN_USE_PREINIT_ARRAY
-#if (SANITIZER_LINUX || SANITIZER_OPENBSD || SANITIZER_FUCHSIA || \
-     SANITIZER_NETBSD) &&                                         \
-    !defined(PIC)
+#if ((SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_OPENBSD || \
+     SANITIZER_FUCHSIA || SANITIZER_NETBSD) && !defined(PIC)
 #define SANITIZER_CAN_USE_PREINIT_ARRAY 1
 // Before Solaris 11.4, .preinit_array is fully supported only with GNU ld.
 // FIXME: Check for those conditions.
