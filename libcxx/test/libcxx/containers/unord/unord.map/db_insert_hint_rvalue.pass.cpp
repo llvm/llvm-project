@@ -24,18 +24,15 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::unordered_map<double, int> C;
-        typedef C::iterator R;
-        typedef C::value_type P;
-        C c;
-        C c2;
-        C::const_iterator e = c2.end();
-        R r = c.insert(e, P(3.5, 3));
-        assert(false);
-    }
+int main(int, char**) {
+    typedef std::unordered_map<double, int> C;
+    typedef C::iterator R;
+    typedef C::value_type P;
+    C c;
+    C c2;
+    C::const_iterator e = c2.end();
+    R r = c.insert(e, P(3.5, 3));
+    assert(false);
 
     return 0;
 }

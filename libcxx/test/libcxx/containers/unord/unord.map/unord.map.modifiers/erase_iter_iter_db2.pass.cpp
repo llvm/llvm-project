@@ -17,19 +17,17 @@
 
 #include <unordered_map>
 #include <cassert>
-#include <exception>
-#include <cstdlib>
+#include <utility>
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
     typedef std::pair<int, int> P;
     P a1[] = {P(1, 1), P(2, 2), P(3, 3)};
     std::unordered_map<int, int> l1(a1, a1+3);
     std::unordered_map<int, int> l2(a1, a1+3);
     std::unordered_map<int, int>::iterator i = l1.erase(l1.cbegin(), next(l2.cbegin()));
     assert(false);
-    }
+
+    return 0;
 }

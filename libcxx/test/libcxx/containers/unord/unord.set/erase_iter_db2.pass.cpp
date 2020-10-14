@@ -18,18 +18,16 @@
 #include <unordered_set>
 #include <cassert>
 #include <cstdlib>
-#include <exception>
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
     int a1[] = {1, 2, 3};
     std::unordered_set<int> l1(a1, a1+3);
     std::unordered_set<int> l2(a1, a1+3);
     std::unordered_set<int>::const_iterator i = l2.begin();
     l1.erase(i);
     assert(false);
-    }
+
+    return 0;
 }
