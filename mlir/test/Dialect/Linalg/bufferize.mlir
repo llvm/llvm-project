@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-linalg-on-tensors-to-buffers -buffer-placement -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -linalg-bufferize -buffer-placement -split-input-file %s | FileCheck %s
 
 #map0 = affine_map<(d0) -> (d0)>
 

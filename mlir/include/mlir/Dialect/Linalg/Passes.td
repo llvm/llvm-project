@@ -48,10 +48,9 @@ def LinalgLowerToLoops : FunctionPass<"convert-linalg-to-loops"> {
   let dependentDialects = ["linalg::LinalgDialect", "scf::SCFDialect", "AffineDialect"];
 }
 
-def LinalgOnTensorsToBuffers : Pass<"convert-linalg-on-tensors-to-buffers", "ModuleOp"> {
-  let summary = "Convert the Linalg operations which work on tensor-type "
-                "operands or results to use buffers instead";
-  let constructor = "mlir::createConvertLinalgOnTensorsToBuffersPass()";
+def LinalgBufferize : Pass<"linalg-bufferize", "ModuleOp"> {
+  let summary = "Bufferize the linalg dialect";
+  let constructor = "mlir::createLinalgBufferizePass()";
   let dependentDialects = ["linalg::LinalgDialect", "vector::VectorDialect"];
 }
 

@@ -1,16 +1,12 @@
-//===- TensorsToBuffers.cpp - Transformation from tensors to buffers ------===//
+//===- Bufferize.cpp - Bufferization of linalg ops ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file implements the conversion from tensors to buffers on Linalg
-// operations.
-//
-//===----------------------------------------------------------------------===//
 
+#include "mlir/Transforms/Bufferize.h"
 #include "PassDetail.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -20,7 +16,6 @@
 #include "mlir/IR/Function.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/Bufferize.h"
 
 using namespace ::mlir;
 using namespace ::mlir::linalg;
@@ -295,8 +290,7 @@ namespace {
 
 /// Converts Linalg operations that work on tensor-type operands or results to
 /// work on buffers.
-struct ConvertLinalgOnTensorsToBuffers
-    : public LinalgOnTensorsToBuffersBase<ConvertLinalgOnTensorsToBuffers> {
+struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
   void runOnOperation() override {
     MLIRContext &context = getContext();
     ConversionTarget target(context);
@@ -353,8 +347,7 @@ struct ConvertLinalgOnTensorsToBuffers
         BufferAssignmentTypeConverter::AppendToArgumentsList);
 
     OwningRewritePatternList patterns;
-    populateConvertLinalgOnTensorsToBuffersPatterns(&context, converter,
-                                                    patterns);
+    populateLinalgBufferizePatterns(&context, converter, patterns);
     populateWithBufferAssignmentOpConversionPatterns<
         mlir::ReturnOp, mlir::ReturnOp, linalg::CopyOp>(&context, converter,
                                                         patterns);
@@ -364,12 +357,10 @@ struct ConvertLinalgOnTensorsToBuffers
 };
 } // end anonymous namespace
 
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertLinalgOnTensorsToBuffersPass() {
-  return std::make_unique<ConvertLinalgOnTensorsToBuffers>();
+std::unique_ptr<OperationPass<ModuleOp>> mlir::createLinalgBufferizePass() {
+  return std::make_unique<LinalgBufferizePass>();
 }
-void mlir::linalg::populateConvertLinalgOnTensorsToBuffersPatterns(
-
+void mlir::linalg::populateLinalgBufferizePatterns(
     MLIRContext *context, BufferAssignmentTypeConverter &converter,
     OwningRewritePatternList &patterns) {
   patterns.insert<

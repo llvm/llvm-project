@@ -46,8 +46,7 @@ std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgToAffineLoopsPass();
 
 /// Create a pass to convert Linalg operations which work on tensors to use
 /// buffers instead.
-std::unique_ptr<OperationPass<ModuleOp>>
-createConvertLinalgOnTensorsToBuffersPass();
+std::unique_ptr<OperationPass<ModuleOp>> createLinalgBufferizePass();
 
 /// Patterns for fusing linalg operation on tensors.
 void populateLinalgTensorOpsFusionPatterns(MLIRContext *context,
