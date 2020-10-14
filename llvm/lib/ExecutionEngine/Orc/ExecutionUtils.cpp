@@ -261,8 +261,8 @@ DynamicLibrarySearchGenerator::Load(const char *FileName, char GlobalPrefix,
 }
 
 Error DynamicLibrarySearchGenerator::tryToGenerate(
-    LookupKind K, JITDylib &JD, JITDylibLookupFlags JDLookupFlags,
-    const SymbolLookupSet &Symbols) {
+    LookupState &LS, LookupKind K, JITDylib &JD,
+    JITDylibLookupFlags JDLookupFlags, const SymbolLookupSet &Symbols) {
   orc::SymbolMap NewSymbols;
 
   bool HasGlobalPrefix = (GlobalPrefix != '\0');
@@ -365,8 +365,8 @@ StaticLibraryDefinitionGenerator::Create(
 }
 
 Error StaticLibraryDefinitionGenerator::tryToGenerate(
-    LookupKind K, JITDylib &JD, JITDylibLookupFlags JDLookupFlags,
-    const SymbolLookupSet &Symbols) {
+    LookupState &LS, LookupKind K, JITDylib &JD,
+    JITDylibLookupFlags JDLookupFlags, const SymbolLookupSet &Symbols) {
 
   // Don't materialize symbols from static archives unless this is a static
   // lookup.
