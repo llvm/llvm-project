@@ -12,5 +12,5 @@
 
 // RUN: not %clang_cc1 -fc++-abi=InvalidABI %s 2>&1 | FileCheck %s -check-prefix=INVALID
 // RUN: not %clang_cc1 -fc++-abi=Fuchsia %s 2>&1 | FileCheck %s -check-prefix=CASE-SENSITIVE
-// INVALID: error: Invalid C++ ABI name 'InvalidABI'
-// CASE-SENSITIVE: error: Invalid C++ ABI name 'Fuchsia'
+// INVALID: error: invalid C++ ABI name 'InvalidABI'
+// CASE-SENSITIVE: error: invalid C++ ABI name 'Fuchsia'
