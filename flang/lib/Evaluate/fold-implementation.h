@@ -12,7 +12,6 @@
 #include "character.h"
 #include "host.h"
 #include "int-power.h"
-#include "intrinsics-library-templates.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/template.h"
 #include "flang/Common/unwrap.h"
@@ -22,6 +21,7 @@
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/formatting.h"
+#include "flang/Evaluate/intrinsics-library.h"
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
@@ -69,6 +69,24 @@ private:
 
 std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
     FoldingContext &, Subscript &, const NamedEntity &, int dim);
+
+// Helper to use host runtime on scalars for folding.
+template <typename TR, typename... TA>
+std::optional<std::function<Scalar<TR>(FoldingContext &, Scalar<TA>...)>>
+GetHostRuntimeWrapper(const std::string &name) {
+  std::vector<DynamicType> argTypes{TA{}.GetType()...};
+  if (auto hostWrapper{GetHostRuntimeWrapper(name, TR{}.GetType(), argTypes)}) {
+    return [hostWrapper](
+               FoldingContext &context, Scalar<TA>... args) -> Scalar<TR> {
+      std::vector<Expr<SomeType>> genericArgs{
+          AsGenericExpr(Constant<TA>{args})...};
+      return GetScalarConstantValue<TR>(
+          (*hostWrapper)(context, std::move(genericArgs)))
+          .value();
+    };
+  }
+  return std::nullopt;
+}
 
 // FoldOperation() rewrites expression tree nodes.
 // If there is any possibility that the rewritten node will
@@ -1410,8 +1428,7 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
       }
       return Expr<T>{Constant<T>{power.power}};
     } else {
-      if (auto callable{context.hostIntrinsicsLibrary()
-                            .GetHostProcedureWrapper<Scalar, T, T, T>("pow")}) {
+      if (auto callable{GetHostRuntimeWrapper<T, T, T>("pow")}) {
         return Expr<T>{
             Constant<T>{(*callable)(context, folded->first, folded->second)}};
       } else {
