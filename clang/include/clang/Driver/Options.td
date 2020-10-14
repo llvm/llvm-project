@@ -2461,10 +2461,11 @@ def mexec_model_EQ : Joined<["-"], "mexec-model=">, Group<m_wasm_Features_Driver
                      Values<"command,reactor">,
                      HelpText<"Execution model (WebAssembly only)">;
 
-def mcode_object_v3 : Flag<["-"], "mcode-object-v3">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Enable code object v3 (AMDGPU only)">;
-def mno_code_object_v3 : Flag<["-"], "mno-code-object-v3">, Group<m_amdgpu_Features_Group>,
-  HelpText<"Disable code object v3 (AMDGPU only)">;
+def mcode_object_v3_legacy : Flag<["-"], "mcode-object-v3">, Group<m_Group>,
+  HelpText<"Legacy option to specify code object v3 (AMDGPU only)">;
+def mno_code_object_v3_legacy : Flag<["-"], "mno-code-object-v3">, Group<m_Group>,
+  HelpText<"Legacy option to specify code object v2 (AMDGPU only)">;
+
 def mxnack : Flag<["-"], "mxnack">, Group<m_amdgpu_Features_Group>,
   HelpText<"Enable XNACK (AMDGPU only)">;
 def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_amdgpu_Features_Group>,

@@ -108,10 +108,13 @@ extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeAMDGPUAsmPrinter() {
 AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
   : AsmPrinter(TM, std::move(Streamer)) {
-    if (IsaInfo::hasCodeObjectV3(getGlobalSTI()))
-      HSAMetadataStream.reset(new MetadataStreamerV3());
-    else
+  if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+    if (isHsaAbiVersion2(getGlobalSTI())) {
       HSAMetadataStream.reset(new MetadataStreamerV2());
+    } else {
+      HSAMetadataStream.reset(new MetadataStreamerV3());
+    }
+  }
 }
 
 StringRef AMDGPUAsmPrinter::getPassName() const {
@@ -129,7 +132,7 @@ AMDGPUTargetStreamer* AMDGPUAsmPrinter::getTargetStreamer() const {
 }
 
 void AMDGPUAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (IsaInfo::hasCodeObjectV3(getGlobalSTI())) {
+  if (isHsaAbiVersion3(getGlobalSTI())) {
     std::string ExpectedTarget;
     raw_string_ostream ExpectedTargetOS(ExpectedTarget);
     IsaInfo::streamIsaVersion(getGlobalSTI(), ExpectedTargetOS);
@@ -147,7 +150,7 @@ void AMDGPUAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (TM.getTargetTriple().getOS() == Triple::AMDPAL)
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
 
-  if (IsaInfo::hasCodeObjectV3(getGlobalSTI()))
+  if (isHsaAbiVersion3(getGlobalSTI()))
     return;
 
   // HSA emits NT_AMDGPU_HSA_CODE_OBJECT_VERSION for code objects v2.
@@ -165,7 +168,8 @@ void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (!getTargetStreamer())
     return;
 
-  if (!IsaInfo::hasCodeObjectV3(getGlobalSTI())) {
+  if (TM.getTargetTriple().getOS() != Triple::AMDHSA ||
+      isHsaAbiVersion2(getGlobalSTI())) {
     // Emit ISA Version (NT_AMD_AMDGPU_ISA).
     std::string ISAVersionString;
     raw_string_ostream ISAVersionStream(ISAVersionString);
@@ -203,7 +207,7 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
 
   const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
   const Function &F = MF->getFunction();
-  if (!STM.hasCodeObjectV3() && STM.isAmdHsaOrMesa(F) &&
+  if ((STM.isMesaKernel(F) || isHsaAbiVersion2(getGlobalSTI())) &&
       (F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
        F.getCallingConv() == CallingConv::SPIR_KERNEL)) {
     amd_kernel_code_t KernelCode;
@@ -220,8 +224,8 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
   if (!MFI.isEntryFunction())
     return;
 
-  if (!IsaInfo::hasCodeObjectV3(getGlobalSTI()) ||
-      TM.getTargetTriple().getOS() != Triple::AMDHSA)
+  if (TM.getTargetTriple().getOS() != Triple::AMDHSA ||
+      isHsaAbiVersion2(getGlobalSTI()))
     return;
 
   auto &Streamer = getTargetStreamer()->getStreamer();
@@ -256,8 +260,8 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
 }
 
 void AMDGPUAsmPrinter::emitFunctionEntryLabel() {
-  if (IsaInfo::hasCodeObjectV3(getGlobalSTI()) &&
-      TM.getTargetTriple().getOS() == Triple::AMDHSA) {
+  if (TM.getTargetTriple().getOS() == Triple::AMDHSA &&
+      isHsaAbiVersion3(getGlobalSTI())) {
     AsmPrinter::emitFunctionEntryLabel();
     return;
   }
