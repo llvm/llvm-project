@@ -496,14 +496,15 @@ llvm::raw_ostream &Real<W, P>::AsFortran(
     }
   } else {
     using B = decimal::BinaryFloatingPointNumber<P>;
-    const auto *value{reinterpret_cast<const B *>(this)};
-    char buffer[24000]; // accommodate real*16
+    B value{word_.template ToUInt<typename B::RawType>()};
+    char buffer[common::MaxDecimalConversionDigits(P) +
+        EXTRA_DECIMAL_CONVERSION_SPACE];
     decimal::DecimalConversionFlags flags{}; // default: exact representation
     if (minimal) {
       flags = decimal::Minimize;
     }
     auto result{decimal::ConvertToDecimal<P>(buffer, sizeof buffer, flags,
-        static_cast<int>(sizeof buffer), decimal::RoundNearest, *value)};
+        static_cast<int>(sizeof buffer), decimal::RoundNearest, value)};
     const char *p{result.str};
     if (DEREF(p) == '-' || *p == '+') {
       o << *p++;
