@@ -13,7 +13,7 @@ def build_env():
     args.append('LD_LIBRARY_PATH=%s' % (ANDROID_TMPDIR,))
     for (key, value) in os.environ.items():
         if key in ['ASAN_ACTIVATION_OPTIONS', 'SCUDO_OPTIONS'] or key.endswith('SAN_OPTIONS'):
-            args.append('%s="%s"' % (key, value))
+            args.append('%s="%s"' % (key, value.replace('"', '\\"')))
     return ' '.join(args)
 
 is_64bit = (subprocess.check_output(['file', sys.argv[0] + '.real']).find('64-bit') != -1)
