@@ -22,7 +22,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr32sp = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK: $wzr = SUBSWri [[COPY]], 0, 0, implicit-def $nzcv
+    ; CHECK: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 0, 0, implicit-def $nzcv
     ; CHECK: [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[COPY2]], [[COPY1]], 0, implicit $nzcv
     ; CHECK: $w0 = COPY [[CSELWr]]
     ; CHECK: RET_ReallyLR implicit $w0
@@ -84,7 +84,7 @@ body:             |
     ; CHECK: %copy1:gpr32sp = COPY $w0
     ; CHECK: %copy2:gpr32 = COPY $w1
     ; CHECK: %cst:gpr32 = MOVi32imm -1
-    ; CHECK: $wzr = SUBSWri %copy1, 0, 0, implicit-def $nzcv
+    ; CHECK: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri %copy1, 0, 0, implicit-def $nzcv
     ; CHECK: %select:gpr32 = CSELWr %cst, %copy2, 11, implicit $nzcv
     ; CHECK: $w0 = COPY %select
     ; CHECK: RET_ReallyLR implicit $w0

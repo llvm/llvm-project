@@ -2836,9 +2836,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       return true;
 
     Register CSelOpc = selectSelectOpc(I, MRI, RBI);
+    // Make sure to use an unused vreg instead of wzr, so that the peephole
+    // optimizations will be able to optimize these.
+    Register DeadVReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
     MachineInstr &TstMI =
         *BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::ANDSWri))
-             .addDef(AArch64::WZR)
+             .addDef(DeadVReg)
              .addUse(CondReg)
              .addImm(AArch64_AM::encodeLogicalImmediate(1, 32));
 
@@ -3853,17 +3856,17 @@ AArch64InstructionSelector::emitTST(MachineOperand &LHS, MachineOperand &RHS,
                                     MachineIRBuilder &MIRBuilder) const {
   assert(LHS.isReg() && RHS.isReg() && "Expected register operands?");
   MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
-  unsigned RegSize = MRI.getType(LHS.getReg()).getSizeInBits();
+  LLT Ty = MRI.getType(LHS.getReg());
+  unsigned RegSize = Ty.getSizeInBits();
   bool Is32Bit = (RegSize == 32);
   const unsigned OpcTable[3][2] = {{AArch64::ANDSXri, AArch64::ANDSWri},
                                    {AArch64::ANDSXrs, AArch64::ANDSWrs},
                                    {AArch64::ANDSXrr, AArch64::ANDSWrr}};
-  Register ZReg = Is32Bit ? AArch64::WZR : AArch64::XZR;
   // ANDS needs a logical immediate for its immediate form. Check if we can
   // fold one in.
   if (auto ValAndVReg = getConstantVRegValWithLookThrough(RHS.getReg(), MRI)) {
     if (AArch64_AM::isLogicalImmediate(ValAndVReg->Value, RegSize)) {
-      auto TstMI = MIRBuilder.buildInstr(OpcTable[0][Is32Bit], {ZReg}, {LHS});
+      auto TstMI = MIRBuilder.buildInstr(OpcTable[0][Is32Bit], {Ty}, {LHS});
       TstMI.addImm(
           AArch64_AM::encodeLogicalImmediate(ValAndVReg->Value, RegSize));
       constrainSelectedInstRegOperands(*TstMI, TII, TRI, RBI);
@@ -3872,8 +3875,8 @@ AArch64InstructionSelector::emitTST(MachineOperand &LHS, MachineOperand &RHS,
   }
 
   if (auto Fns = selectLogicalShiftedRegister(RHS))
-    return emitInstr(OpcTable[1][Is32Bit], {ZReg}, {LHS}, MIRBuilder, Fns);
-  return emitInstr(OpcTable[2][Is32Bit], {ZReg}, {LHS, RHS}, MIRBuilder);
+    return emitInstr(OpcTable[1][Is32Bit], {Ty}, {LHS}, MIRBuilder, Fns);
+  return emitInstr(OpcTable[2][Is32Bit], {Ty}, {LHS, RHS}, MIRBuilder);
 }
 
 std::pair<MachineInstr *, CmpInst::Predicate>
@@ -4391,17 +4394,14 @@ MachineInstr *AArch64InstructionSelector::tryOptArithImmedIntegerCompare(
 
   // At this point, we know we can select an immediate form. Go ahead and do
   // that.
-  Register ZReg;
   unsigned Opc;
   if (Size == 32) {
-    ZReg = AArch64::WZR;
     Opc = AArch64::SUBSWri;
   } else {
-    ZReg = AArch64::XZR;
     Opc = AArch64::SUBSXri;
   }
 
-  auto CmpMI = MIB.buildInstr(Opc, {ZReg}, {LHS.getReg()});
+  auto CmpMI = MIB.buildInstr(Opc, {Ty}, {LHS.getReg()});
   for (auto &RenderFn : *ImmFns)
     RenderFn(CmpMI);
   constrainSelectedInstRegOperands(*CmpMI, TII, TRI, RBI);
@@ -4419,7 +4419,6 @@ MachineInstr *AArch64InstructionSelector::tryOptArithShiftedCompare(
   // Since we will select the G_ICMP to a SUBS, we can potentially fold the
   // shift into the subtract.
   static const unsigned OpcTable[2] = {AArch64::SUBSWrs, AArch64::SUBSXrs};
-  static const Register ZRegTable[2] = {AArch64::WZR, AArch64::XZR};
   auto ImmFns = selectShiftedRegister(RHS);
   if (!ImmFns)
     return nullptr;
@@ -4428,9 +4427,8 @@ MachineInstr *AArch64InstructionSelector::tryOptArithShiftedCompare(
   assert(!Ty.isVector() && "Expected scalar or pointer only?");
   unsigned Size = Ty.getSizeInBits();
   bool Idx = (Size == 64);
-  Register ZReg = ZRegTable[Idx];
   unsigned Opc = OpcTable[Idx];
-  auto CmpMI = MIB.buildInstr(Opc, {ZReg}, {LHS.getReg()});
+  auto CmpMI = MIB.buildInstr(Opc, {Ty}, {LHS.getReg()});
   for (auto &RenderFn : *ImmFns)
     RenderFn(CmpMI);
   constrainSelectedInstRegOperands(*CmpMI, TII, TRI, RBI);
