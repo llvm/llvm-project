@@ -10,7 +10,11 @@
 
 #include "NativeRegisterContextFreeBSD_x86_64.h"
 
+// clang-format off
 #include <machine/fpu.h>
+#include <x86/specialreg.h>
+#include <cpuid.h>
+// clang-format on
 
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -18,6 +22,7 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
+#include "NativeProcessFreeBSD.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
 
@@ -392,7 +397,7 @@ int NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(
     if (reg_num >= k_first_fpr_i386 && reg_num <= k_last_fpr_i386)
       return FPRegSet;
     if (reg_num >= k_first_avx_i386 && reg_num <= k_last_avx_i386)
-      return -1; // AVX
+      return XSaveRegSet; // AVX
     if (reg_num >= k_first_mpxr_i386 && reg_num <= k_last_mpxr_i386)
       return -1; // MPXR
     if (reg_num >= k_first_mpxc_i386 && reg_num <= k_last_mpxc_i386)
@@ -406,7 +411,7 @@ int NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(
     if (reg_num >= k_first_fpr_x86_64 && reg_num <= k_last_fpr_x86_64)
       return FPRegSet;
     if (reg_num >= k_first_avx_x86_64 && reg_num <= k_last_avx_x86_64)
-      return -1; // AVX
+      return XSaveRegSet; // AVX
     if (reg_num >= k_first_mpxr_x86_64 && reg_num <= k_last_mpxr_x86_64)
       return -1; // MPXR
     if (reg_num >= k_first_mpxc_x86_64 && reg_num <= k_last_mpxc_x86_64)
@@ -433,6 +438,27 @@ Status NativeRegisterContextFreeBSD_x86_64::ReadRegisterSet(uint32_t set) {
 #endif
   case DBRegSet:
     return DoRegisterSet(PT_GETDBREGS, &m_dbr);
+  case XSaveRegSet: {
+    struct ptrace_xstate_info info;
+    Status ret = NativeProcessFreeBSD::PtraceWrapper(
+        PT_GETXSTATE_INFO, GetProcessPid(), &info, sizeof(info));
+    if (!ret.Success())
+      return ret;
+
+    assert(info.xsave_mask & XFEATURE_ENABLED_X87);
+    assert(info.xsave_mask & XFEATURE_ENABLED_SSE);
+
+    m_xsave_offsets[YMMXSaveSet] = LLDB_INVALID_XSAVE_OFFSET;
+    if (info.xsave_mask & XFEATURE_ENABLED_YMM_HI128) {
+      uint32_t eax, ecx, edx;
+      __get_cpuid_count(0x0D, 2, &eax, &m_xsave_offsets[YMMXSaveSet], &ecx,
+                        &edx);
+    }
+
+    m_xsave.resize(info.xsave_len);
+    return NativeProcessFreeBSD::PtraceWrapper(PT_GETXSTATE, GetProcessPid(),
+                                               m_xsave.data(), m_xsave.size());
+  }
   }
   llvm_unreachable("NativeRegisterContextFreeBSD_x86_64::ReadRegisterSet");
 }
@@ -449,6 +475,11 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegisterSet(uint32_t set) {
 #endif
   case DBRegSet:
     return DoRegisterSet(PT_SETDBREGS, &m_dbr);
+  case XSaveRegSet:
+    // ReadRegisterSet() must always be called before WriteRegisterSet().
+    assert(m_xsave.size() > 0);
+    return NativeProcessFreeBSD::PtraceWrapper(PT_SETXSTATE, GetProcessPid(),
+                                               m_xsave.data(), m_xsave.size());
   }
   llvm_unreachable("NativeRegisterContextFreeBSD_x86_64::WriteRegisterSet");
 }
@@ -713,6 +744,39 @@ NativeRegisterContextFreeBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
                        reg_info->byte_size, endian::InlHostByteOrder());
 #endif
     break;
+  case lldb_ymm0_x86_64:
+  case lldb_ymm1_x86_64:
+  case lldb_ymm2_x86_64:
+  case lldb_ymm3_x86_64:
+  case lldb_ymm4_x86_64:
+  case lldb_ymm5_x86_64:
+  case lldb_ymm6_x86_64:
+  case lldb_ymm7_x86_64:
+  case lldb_ymm8_x86_64:
+  case lldb_ymm9_x86_64:
+  case lldb_ymm10_x86_64:
+  case lldb_ymm11_x86_64:
+  case lldb_ymm12_x86_64:
+  case lldb_ymm13_x86_64:
+  case lldb_ymm14_x86_64:
+  case lldb_ymm15_x86_64: {
+    uint32_t offset = m_xsave_offsets[YMMXSaveSet];
+    if (offset == LLDB_INVALID_XSAVE_OFFSET) {
+      error.SetErrorStringWithFormat(
+          "register \"%s\" not supported by CPU/kernel", reg_info->name);
+    } else {
+      uint32_t reg_index = reg - lldb_ymm0_x86_64;
+      auto *fpreg = reinterpret_cast<struct savexmm_ymm *>(m_xsave.data());
+      auto *ymmreg = reinterpret_cast<struct ymmacc *>(m_xsave.data() + offset);
+
+      YMMReg ymm =
+          XStateToYMM(reinterpret_cast<void *>(&fpreg->sv_xmm[reg_index]),
+                      reinterpret_cast<void *>(&ymmreg[reg_index]));
+      reg_value.SetBytes(ymm.bytes, reg_info->byte_size,
+                         endian::InlHostByteOrder());
+    }
+    break;
+  }
   case lldb_dr0_x86_64:
   case lldb_dr1_x86_64:
   case lldb_dr2_x86_64:
@@ -983,6 +1047,38 @@ Status NativeRegisterContextFreeBSD_x86_64::WriteRegister(
              reg_value.GetByteSize());
 #endif
     break;
+  case lldb_ymm0_x86_64:
+  case lldb_ymm1_x86_64:
+  case lldb_ymm2_x86_64:
+  case lldb_ymm3_x86_64:
+  case lldb_ymm4_x86_64:
+  case lldb_ymm5_x86_64:
+  case lldb_ymm6_x86_64:
+  case lldb_ymm7_x86_64:
+  case lldb_ymm8_x86_64:
+  case lldb_ymm9_x86_64:
+  case lldb_ymm10_x86_64:
+  case lldb_ymm11_x86_64:
+  case lldb_ymm12_x86_64:
+  case lldb_ymm13_x86_64:
+  case lldb_ymm14_x86_64:
+  case lldb_ymm15_x86_64: {
+    uint32_t offset = m_xsave_offsets[YMMXSaveSet];
+    if (offset == LLDB_INVALID_XSAVE_OFFSET) {
+      error.SetErrorStringWithFormat(
+          "register \"%s\" not supported by CPU/kernel", reg_info->name);
+    } else {
+      uint32_t reg_index = reg - lldb_ymm0_x86_64;
+      auto *fpreg = reinterpret_cast<struct savexmm_ymm *>(m_xsave.data());
+      auto *ymmreg = reinterpret_cast<struct ymmacc *>(m_xsave.data() + offset);
+
+      YMMReg ymm;
+      ::memcpy(ymm.bytes, reg_value.GetBytes(), reg_value.GetByteSize());
+      YMMToXState(ymm, reinterpret_cast<void *>(&fpreg->sv_xmm[reg_index]),
+                  reinterpret_cast<void *>(&ymmreg[reg_index]));
+    }
+    break;
+  }
   case lldb_dr0_x86_64:
   case lldb_dr1_x86_64:
   case lldb_dr2_x86_64:

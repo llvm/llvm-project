@@ -22,6 +22,8 @@
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 
+#define LLDB_INVALID_XSAVE_OFFSET UINT32_MAX
+
 namespace lldb_private {
 namespace process_freebsd {
 
@@ -75,7 +77,11 @@ public:
 
 private:
   // Private member types.
-  enum { GPRegSet, FPRegSet, DBRegSet };
+  enum { GPRegSet, FPRegSet, XSaveRegSet, DBRegSet };
+  enum {
+    YMMXSaveSet,
+    MaxXSaveSet = YMMXSaveSet,
+  };
 
   // Private member variables.
   struct reg m_gpr;
@@ -85,6 +91,8 @@ private:
   struct xmmreg m_fpr;
 #endif
   struct dbreg m_dbr;
+  std::vector<uint8_t> m_xsave;
+  std::array<uint32_t, MaxXSaveSet + 1> m_xsave_offsets;
 
   int GetSetForNativeRegNum(int reg_num) const;
   int GetDR(int num) const;
