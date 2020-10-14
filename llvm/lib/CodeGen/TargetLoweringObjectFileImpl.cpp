@@ -867,7 +867,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   assert(MBB.isBeginSection() && "Basic block does not start a section!");
   unsigned UniqueID = MCContext::GenericSectionID;
 
-  // For cold sections use the .text.unlikely prefix along with the parent
+  // For cold sections use the .text.split. prefix along with the parent
   // function name. All cold blocks for the same function go to the same
   // section. Similarly all exception blocks are grouped by symbol name
   // under the .text.eh prefix. For regular sections, we either use a unique
