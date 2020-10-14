@@ -215,26 +215,26 @@ TEST_F(ExtractVariableTest, Test) {
         int x = [[1]], y = [[a + 1]], a = [[1]], z = a + 1;
       // if without else
       if([[1]])
-        a = [[1]];
+        a = [[1]] + 1;
       // if with else
       if(a < [[3]])
         if(a == [[4]])
-          a = [[5]];
+          a = [[5]] + 1;
         else
-          a = [[5]];
+          a = [[5]] + 1;
       else if (a < [[4]])
-        a = [[4]];
+        a = [[4]] + 1;
       else
-        a = [[5]];
+        a = [[5]] + 1;
       // for loop
-      for(a = [[1]]; a > [[[[3]] + [[4]]]]; a++)
-        a = [[2]];
+      for(a = [[1]] + 1; a > [[[[3]] + [[4]]]]; a++)
+        a = [[2]] + 1;
       // while
       while(a < [[1]])
-        a = [[1]];
+        a = [[1]] + 1;
       // do while
       do
-        a = [[1]];
+        a = [[1]] + 1;
       while(a < [[3]]);
     }
   )cpp";
@@ -291,6 +291,7 @@ TEST_F(ExtractVariableTest, Test) {
       xyz([[a *= 5]]);
       // Variable DeclRefExpr
       a = [[b]];
+      a = [[xyz()]];
       // statement expression
       [[xyz()]];
       while (a)
@@ -373,10 +374,10 @@ TEST_F(ExtractVariableTest, Test) {
                  })cpp"},
           // attribute testing
           {R"cpp(void f(int a) {
-                    [ [gsl::suppress("type")] ] for (;;) a = [[1]];
+                    [ [gsl::suppress("type")] ] for (;;) a = [[1]] + 1;
                  })cpp",
            R"cpp(void f(int a) {
-                    auto dummy = 1; [ [gsl::suppress("type")] ] for (;;) a = dummy;
+                    auto dummy = 1; [ [gsl::suppress("type")] ] for (;;) a = dummy + 1;
                  })cpp"},
           // MemberExpr
           {R"cpp(class T {
