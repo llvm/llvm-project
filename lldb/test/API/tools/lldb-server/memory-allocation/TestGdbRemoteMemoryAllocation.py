@@ -6,7 +6,7 @@ from lldbsuite.test import lldbutil
 
 
 supported_linux_archs = ["x86_64", "i386"]
-supported_oses = ["linux"]
+supported_oses = ["linux", "windows"]
 
 class TestGdbRemoteMemoryAllocation(gdbremote_testcase.GdbRemoteTestCaseBase):
 
