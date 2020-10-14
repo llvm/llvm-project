@@ -99,6 +99,8 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
   assert((!End || End->Parent == this) && "`End` is not a child of `this`.");
   assert(canModify() && "Cannot modify `this`.");
 
+  Node *&Begin = BeforeBegin ? BeforeBegin->NextSibling : FirstChild;
+
 #ifndef NDEBUG
   for (auto *N = New; N; N = N->NextSibling) {
     assert(N->Parent == nullptr);
@@ -116,10 +118,8 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
   };
   assert(Reachable(FirstChild, BeforeBegin) &&
          "`BeforeBegin` is not reachable.");
-  assert(Reachable(BeforeBegin ? BeforeBegin->NextSibling : FirstChild, End) &&
-         "`End` is not after `BeforeBegin`.");
+  assert(Reachable(Begin, End) && "`End` is not after `BeforeBegin`.");
 #endif
-  Node *&Begin = BeforeBegin ? BeforeBegin->NextSibling : FirstChild;
 
   if (!New && Begin == End)
     return;
