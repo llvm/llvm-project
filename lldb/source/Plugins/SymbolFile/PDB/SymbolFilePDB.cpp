@@ -1020,9 +1020,8 @@ VariableSP SymbolFilePDB::ParseVariableForPDBData(
 
   var_sp = std::make_shared<Variable>(
       var_uid, var_name.c_str(), mangled_cstr, type_sp, scope, context_scope,
-      ranges, &decl, location, is_external, is_artificial, is_static_member,
-      is_constant);
-  var_sp->SetLocationIsConstantValueData(is_constant);
+      ranges, &decl, location, is_external, is_artificial, is_constant,
+      is_static_member, is_constant);
 
   m_variables.insert(std::make_pair(var_uid, var_sp));
   return var_sp;
