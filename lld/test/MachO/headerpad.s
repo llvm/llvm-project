@@ -13,8 +13,8 @@
 # RUN: %lld -o %t %t.o
 # RUN: llvm-objdump --macho --all-headers %t | FileCheck %s --check-prefix=PADx
 #
-# PADx:      magic        {{.+}}  ncmds sizeofcmds        flags
-# PADx-NEXT: MH_MAGIC_64  {{.+}}  9     [[#%u, CMDSIZE:]] {{.*}}
+# PADx:      magic        {{.+}}  ncmds  sizeofcmds         flags
+# PADx-NEXT: MH_MAGIC_64  {{.+}}  [[#]]  [[#%u, CMDSIZE:]]  {{.*}}
 # PADx:      sectname __text
 # PADx-NEXT: segname __TEXT
 # PADx-NEXT: addr
@@ -27,8 +27,8 @@
 # RUN: %lld -o %t %t.o -headerpad 0 -headerpad_max_install_names
 # RUN: llvm-objdump --macho --all-headers %t | FileCheck %s --check-prefix=PAD0
 #
-# PAD0:      magic        {{.+}}  ncmds sizeofcmds        flags
-# PAD0-NEXT: MH_MAGIC_64  {{.+}}  9     [[#%u, CMDSIZE:]] {{.*}}
+# PAD0:      magic        {{.+}}  ncmds  sizeofcmds         flags
+# PAD0-NEXT: MH_MAGIC_64  {{.+}}  [[#]]  [[#%u, CMDSIZE:]]  {{.*}}
 # PAD0:      sectname __text
 # PAD0-NEXT: segname __TEXT
 # PAD0-NEXT: addr
@@ -43,8 +43,8 @@
 # RUN: %lld -o %t %t.o -headerpad 0X11 -headerpad_max_install_names
 # RUN: llvm-objdump --macho --all-headers %t | FileCheck %s --check-prefix=PAD11
 #
-# PAD11:      magic        {{.+}}  ncmds sizeofcmds        flags
-# PAD11-NEXT: MH_MAGIC_64  {{.+}}  9     [[#%u, CMDSIZE:]] {{.*}}
+# PAD11:      magic        {{.+}}  ncmds  sizeofcmds         flags
+# PAD11-NEXT: MH_MAGIC_64  {{.+}}  [[#]]  [[#%u, CMDSIZE:]]  {{.*}}
 # PAD11:      sectname __text
 # PAD11-NEXT: segname __TEXT
 # PAD11-NEXT: addr
@@ -70,7 +70,7 @@
 # PADMAX-NEXT: segname __TEXT
 # PADMAX-NEXT: addr
 # PADMAX-NEXT: size
-# PADMAX-NEXT: offset [[#%u, CMDSIZE + 0x20 + mul(0x400, N - 6)]]
+# PADMAX-NEXT: offset [[#%u, CMDSIZE + 0x20 + mul(0x400, N - 7)]]
 
 ################ All 3 kinds of LCDylib swamped by a larger override
 # RUN: %lld -o %T/libnull.dylib %T/null.o -dylib \
