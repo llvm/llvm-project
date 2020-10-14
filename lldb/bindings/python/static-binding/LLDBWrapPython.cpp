@@ -40700,6 +40700,22 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBModule_GarbageCollectAllocatedModules(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  
+  if (!SWIG_Python_UnpackTuple(args, "SBModule_GarbageCollectAllocatedModules", 0, 0, 0)) SWIG_fail;
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    lldb::SBModule::GarbageCollectAllocatedModules();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBModule___str__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBModule *arg1 = (lldb::SBModule *) 0 ;
@@ -82547,6 +82563,17 @@ static PyMethodDef SwigMethods[] = {
 		"\n"
 		"    @return\n"
 		"        The number of modules in the module cache.\n"
+		""},
+	 { "SBModule_GarbageCollectAllocatedModules", _wrap_SBModule_GarbageCollectAllocatedModules, METH_NOARGS, "\n"
+		"SBModule_GarbageCollectAllocatedModules()\n"
+		"\n"
+		"    Removes all modules which are no longer needed by any part of LLDB from\n"
+		"    the module cache.\n"
+		"\n"
+		"    This is an implementation detail exposed for testing and should not be\n"
+		"    relied upon. Use SBDebugger::MemoryPressureDetected instead to reduce\n"
+		"    LLDB's memory consumption during execution.\n"
+		"\n"
 		""},
 	 { "SBModule___str__", _wrap_SBModule___str__, METH_O, "SBModule___str__(SBModule self) -> std::string"},
 	 { "SBModule_swigregister", SBModule_swigregister, METH_O, NULL},
