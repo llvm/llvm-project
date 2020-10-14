@@ -817,10 +817,14 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
 
   std::string global_name("::");
   global_name += name;
+  bool artificial = false;
+  bool location_is_constant_data = false;
+  bool static_member = false;
+  bool is_constant = false;
   VariableSP var_sp = std::make_shared<Variable>(
       toOpaqueUid(var_id), name.str().c_str(), global_name.c_str(), type_sp,
-      scope, comp_unit.get(), ranges, &decl, location, is_external, false,
-      false, false, false);
+      scope, comp_unit.get(), ranges, &decl, location, is_external, artificial,
+      location_is_constant_data, static_member, is_constant);
 
   return var_sp;
 }
@@ -844,10 +848,16 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbGlobalSymId var_id,
   DWARFExpression location = MakeConstantLocationExpression(
       constant.Type, tpi, constant.Value, module);
 
+  bool external = false;
+  bool artificial = false;
+  bool location_is_constant_data = true;
+  bool static_member = false;
+  bool is_constant = true;
   VariableSP var_sp = std::make_shared<Variable>(
       toOpaqueUid(var_id), constant.Name.str().c_str(), global_name.c_str(),
       type_sp, eValueTypeVariableGlobal, module.get(), ranges, &decl, location,
-      false, false, true, false, true);
+      external, artificial, location_is_constant_data, static_member,
+      is_constant);
   return var_sp;
 }
 
@@ -1349,10 +1359,15 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
 
   ValueType var_scope =
       is_param ? eValueTypeVariableArgument : eValueTypeVariableLocal;
+  bool external = false;
+  bool artificial = false;
+  bool location_is_constant_data = false;
+  bool static_member = false;
+  bool is_constant = false;
   VariableSP var_sp = std::make_shared<Variable>(
       toOpaqueUid(var_id), name.c_str(), name.c_str(), sftype, var_scope,
-      comp_unit_sp.get(), *var_info.ranges, &decl, *var_info.location, false,
-      false, false, false, false);
+      comp_unit_sp.get(), *var_info.ranges, &decl, *var_info.location, external,
+      artificial, location_is_constant_data, static_member, is_constant);
 
   if (!is_param)
     m_ast->GetOrCreateVariableDecl(scope_id, var_id);
