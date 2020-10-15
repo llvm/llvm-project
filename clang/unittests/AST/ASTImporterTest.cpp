@@ -5695,7 +5695,8 @@ TEST_P(ImportSourceLocations, NormalFileBuffer) {
   // Make sure the imported buffer has the original contents.
   SourceManager &ToSM = ToAST->getSourceManager();
   FileID ImportedID = ToSM.getFileID(ImportedLoc);
-  EXPECT_EQ(Source, ToSM.getBuffer(ImportedID, SourceLocation())->getBuffer());
+  EXPECT_EQ(Source,
+            ToSM.getBufferOrFake(ImportedID, SourceLocation()).getBuffer());
 }
 
 TEST_P(ImportSourceLocations, OverwrittenFileBuffer) {
@@ -5729,7 +5730,7 @@ TEST_P(ImportSourceLocations, OverwrittenFileBuffer) {
   SourceManager &ToSM = ToAST->getSourceManager();
   FileID ImportedID = ToSM.getFileID(ImportedLoc);
   EXPECT_EQ(Contents,
-            ToSM.getBuffer(ImportedID, SourceLocation())->getBuffer());
+            ToSM.getBufferOrFake(ImportedID, SourceLocation()).getBuffer());
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, ImportExprOfAlignmentAttr) {

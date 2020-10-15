@@ -312,10 +312,10 @@ static std::string getSourceString(clang::Preprocessor &PP,
 // Retrieve source line from file image given a location.
 static std::string getSourceLine(clang::Preprocessor &PP,
                                  clang::SourceLocation Loc) {
-  const llvm::MemoryBuffer *MemBuffer =
-      PP.getSourceManager().getBuffer(PP.getSourceManager().getFileID(Loc));
-  const char *Buffer = MemBuffer->getBufferStart();
-  const char *BufferEnd = MemBuffer->getBufferEnd();
+  llvm::MemoryBufferRef MemBuffer = PP.getSourceManager().getBufferOrFake(
+      PP.getSourceManager().getFileID(Loc));
+  const char *Buffer = MemBuffer.getBufferStart();
+  const char *BufferEnd = MemBuffer.getBufferEnd();
   const char *BeginPtr = PP.getSourceManager().getCharacterData(Loc);
   const char *EndPtr = BeginPtr;
   while (BeginPtr > Buffer) {
@@ -338,9 +338,10 @@ static std::string getSourceLine(clang::Preprocessor &PP,
 // Retrieve source line from file image given a file ID and line number.
 static std::string getSourceLine(clang::Preprocessor &PP, clang::FileID FileID,
                                  int Line) {
-  const llvm::MemoryBuffer *MemBuffer = PP.getSourceManager().getBuffer(FileID);
-  const char *Buffer = MemBuffer->getBufferStart();
-  const char *BufferEnd = MemBuffer->getBufferEnd();
+  llvm::MemoryBufferRef MemBuffer =
+      PP.getSourceManager().getBufferOrFake(FileID);
+  const char *Buffer = MemBuffer.getBufferStart();
+  const char *BufferEnd = MemBuffer.getBufferEnd();
   const char *BeginPtr = Buffer;
   const char *EndPtr = BufferEnd;
   int LineCounter = 1;
