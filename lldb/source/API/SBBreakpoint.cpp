@@ -81,6 +81,16 @@ bool SBBreakpoint::operator!=(const lldb::SBBreakpoint &rhs) {
   return m_opaque_wp.lock() != rhs.m_opaque_wp.lock();
 }
 
+SBTarget SBBreakpoint::GetTarget() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBTarget, SBBreakpoint, GetTarget);
+
+  BreakpointSP bkpt_sp = GetSP();
+  if (bkpt_sp)
+    return LLDB_RECORD_RESULT(SBTarget(bkpt_sp->GetTargetSP()));
+
+  return LLDB_RECORD_RESULT(SBTarget());
+}
+
 break_id_t SBBreakpoint::GetID() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::break_id_t, SBBreakpoint, GetID);
 
@@ -987,6 +997,7 @@ void RegisterMethods<SBBreakpoint>(Registry &R) {
                        SBBreakpoint, operator==,(const lldb::SBBreakpoint &));
   LLDB_REGISTER_METHOD(bool,
                        SBBreakpoint, operator!=,(const lldb::SBBreakpoint &));
+  LLDB_REGISTER_METHOD_CONST(lldb::SBTarget, SBBreakpoint, GetTarget, ());
   LLDB_REGISTER_METHOD_CONST(lldb::break_id_t, SBBreakpoint, GetID, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBBreakpoint, IsValid, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBBreakpoint, operator bool, ());
