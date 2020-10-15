@@ -59,6 +59,7 @@ define i32 @v_extract_v64i32_varidx(<64 x i32> addrspace(1)* %ptr, i32 %idx) {
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x10000
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v35, off, s[0:3], s33 offset:576 ; 4-byte Folded Spill
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v36, off, s[0:3], s33 offset:580 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v37, off, s[0:3], s33 offset:584 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v38, off, s[0:3], s33 offset:588 ; 4-byte Folded Spill
@@ -78,6 +79,7 @@ define i32 @v_extract_v64i32_varidx(<64 x i32> addrspace(1)* %ptr, i32 %idx) {
 ; GCN-NEXT:    global_load_dwordx4 v[43:46], v[59:60], off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:512 ; 4-byte Folded Spill
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v44, off, s[0:3], s33 offset:516 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v45, off, s[0:3], s33 offset:520 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v46, off, s[0:3], s33 offset:524 ; 4-byte Folded Spill
@@ -342,6 +344,7 @@ define i16 @v_extract_v128i16_varidx(<128 x i16> addrspace(1)* %ptr, i32 %idx) {
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x10000
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v35, off, s[0:3], s33 offset:576 ; 4-byte Folded Spill
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v36, off, s[0:3], s33 offset:580 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v37, off, s[0:3], s33 offset:584 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v38, off, s[0:3], s33 offset:588 ; 4-byte Folded Spill
@@ -361,6 +364,7 @@ define i16 @v_extract_v128i16_varidx(<128 x i16> addrspace(1)* %ptr, i32 %idx) {
 ; GCN-NEXT:    global_load_dwordx4 v[43:46], v[59:60], off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:512 ; 4-byte Folded Spill
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v44, off, s[0:3], s33 offset:516 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v45, off, s[0:3], s33 offset:520 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v46, off, s[0:3], s33 offset:524 ; 4-byte Folded Spill
@@ -630,6 +634,7 @@ define i64 @v_extract_v32i64_varidx(<32 x i64> addrspace(1)* %ptr, i32 %idx) {
 ; GCN-NEXT:    s_sub_u32 s32, s32, 0x10000
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v35, off, s[0:3], s33 offset:576 ; 4-byte Folded Spill
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v36, off, s[0:3], s33 offset:580 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v37, off, s[0:3], s33 offset:584 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v38, off, s[0:3], s33 offset:588 ; 4-byte Folded Spill
@@ -649,6 +654,7 @@ define i64 @v_extract_v32i64_varidx(<32 x i64> addrspace(1)* %ptr, i32 %idx) {
 ; GCN-NEXT:    global_load_dwordx4 v[43:46], v[59:60], off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:512 ; 4-byte Folded Spill
+; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v44, off, s[0:3], s33 offset:516 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v45, off, s[0:3], s33 offset:520 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v46, off, s[0:3], s33 offset:524 ; 4-byte Folded Spill
