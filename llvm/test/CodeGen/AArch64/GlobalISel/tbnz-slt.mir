@@ -71,7 +71,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   %copy:gpr32sp = COPY $w0
-  ; CHECK:   $wzr = SUBSWri %copy, 1, 0, implicit-def $nzcv
+  ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri %copy, 1, 0, implicit-def $nzcv
   ; CHECK:   Bcc 11, %bb.1, implicit $nzcv
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
@@ -99,7 +99,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   %copy:gpr64 = COPY $x0
-  ; CHECK:   $xzr = ANDSXri %copy, 8000, implicit-def $nzcv
+  ; CHECK:   [[ANDSXri:%[0-9]+]]:gpr64 = ANDSXri %copy, 8000, implicit-def $nzcv
   ; CHECK:   %cmp:gpr32 = CSINCWr $wzr, $wzr, 10, implicit $nzcv
   ; CHECK:   TBNZW %cmp, 0, %bb.1
   ; CHECK:   B %bb.0
