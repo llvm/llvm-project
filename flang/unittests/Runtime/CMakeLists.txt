@@ -8,8 +8,14 @@ add_library(RuntimeTesting
 )
 llvm_update_compile_flags(RuntimeTesting)
 
+if (LLVM_LINK_LLVM_DYLIB)
+  set(llvm_libs LLVM)
+else()
+  llvm_map_components_to_libnames(llvm_libs Support)
+endif()
 target_link_libraries(RuntimeTesting
   FortranRuntime
+  ${llvm_libs}
 )
 
 add_flang_nongtest_unittest(format
