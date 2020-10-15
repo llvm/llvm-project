@@ -21,7 +21,7 @@ define i8 @testnullptrptr(i8* %buf, i8* %end) nounwind {
 ; PTR64:       loop:
 ; PTR64-NEXT:    [[P_01_US_US:%.*]] = phi i8* [ null, [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]
 ; PTR64-NEXT:    [[GEP]] = getelementptr inbounds i8, i8* [[P_01_US_US]], i64 1
-; PTR64-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]]
+; PTR64-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]], align 1
 ; PTR64-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[GEP]], [[END]]
 ; PTR64-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; PTR64:       exit.loopexit:
@@ -41,7 +41,7 @@ define i8 @testnullptrptr(i8* %buf, i8* %end) nounwind {
 ; PTR32:       loop:
 ; PTR32-NEXT:    [[P_01_US_US:%.*]] = phi i8* [ null, [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]
 ; PTR32-NEXT:    [[GEP]] = getelementptr inbounds i8, i8* [[P_01_US_US]], i64 1
-; PTR32-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]]
+; PTR32-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]], align 1
 ; PTR32-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[GEP]], [[END]]
 ; PTR32-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; PTR32:       exit.loopexit:
@@ -84,7 +84,7 @@ define i8 @testptrptr(i8* %buf, i8* %end) nounwind {
 ; PTR64:       loop:
 ; PTR64-NEXT:    [[P_01_US_US:%.*]] = phi i8* [ [[BUF]], [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]
 ; PTR64-NEXT:    [[GEP]] = getelementptr inbounds i8, i8* [[P_01_US_US]], i64 1
-; PTR64-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]]
+; PTR64-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]], align 1
 ; PTR64-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[GEP]], [[END]]
 ; PTR64-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; PTR64:       exit.loopexit:
@@ -104,7 +104,7 @@ define i8 @testptrptr(i8* %buf, i8* %end) nounwind {
 ; PTR32:       loop:
 ; PTR32-NEXT:    [[P_01_US_US:%.*]] = phi i8* [ [[BUF]], [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]
 ; PTR32-NEXT:    [[GEP]] = getelementptr inbounds i8, i8* [[P_01_US_US]], i64 1
-; PTR32-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]]
+; PTR32-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]], align 1
 ; PTR32-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[GEP]], [[END]]
 ; PTR32-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; PTR32:       exit.loopexit:
@@ -155,7 +155,7 @@ define i8 @testnullptrint(i8* %buf, i8* %end) nounwind {
 ; PTR64:       loop:
 ; PTR64-NEXT:    [[P_01_US_US:%.*]] = phi i8* [ null, [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]
 ; PTR64-NEXT:    [[GEP]] = getelementptr inbounds i8, i8* [[P_01_US_US]], i64 1
-; PTR64-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]]
+; PTR64-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]], align 1
 ; PTR64-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[GEP]], [[TMP5]]
 ; PTR64-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; PTR64:       exit.loopexit:
@@ -179,7 +179,7 @@ define i8 @testnullptrint(i8* %buf, i8* %end) nounwind {
 ; PTR32:       loop:
 ; PTR32-NEXT:    [[P_01_US_US:%.*]] = phi i8* [ null, [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]
 ; PTR32-NEXT:    [[GEP]] = getelementptr inbounds i8, i8* [[P_01_US_US]], i64 1
-; PTR32-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]]
+; PTR32-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]], align 1
 ; PTR32-NEXT:    [[EXITCOND:%.*]] = icmp ne i8* [[GEP]], [[CNT1]]
 ; PTR32-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; PTR32:       exit.loopexit:
@@ -231,7 +231,7 @@ define i8 @testptrint(i8* %buf, i8* %end) nounwind {
 ; PTR64-NEXT:    [[P_01_US_US:%.*]] = phi i8* [ [[BUF]], [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]
 ; PTR64-NEXT:    [[IV:%.*]] = phi i32 [ [[BI]], [[PREHEADER]] ], [ [[IVNEXT:%.*]], [[LOOP]] ]
 ; PTR64-NEXT:    [[GEP]] = getelementptr inbounds i8, i8* [[P_01_US_US]], i64 1
-; PTR64-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]]
+; PTR64-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]], align 1
 ; PTR64-NEXT:    [[IVNEXT]] = add nuw i32 [[IV]], 1
 ; PTR64-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IVNEXT]], [[CNT]]
 ; PTR64-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
@@ -256,7 +256,7 @@ define i8 @testptrint(i8* %buf, i8* %end) nounwind {
 ; PTR32-NEXT:    [[P_01_US_US:%.*]] = phi i8* [ [[BUF]], [[PREHEADER]] ], [ [[GEP:%.*]], [[LOOP]] ]
 ; PTR32-NEXT:    [[IV:%.*]] = phi i32 [ [[BI]], [[PREHEADER]] ], [ [[IVNEXT:%.*]], [[LOOP]] ]
 ; PTR32-NEXT:    [[GEP]] = getelementptr inbounds i8, i8* [[P_01_US_US]], i64 1
-; PTR32-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]]
+; PTR32-NEXT:    [[SNEXT:%.*]] = load i8, i8* [[GEP]], align 1
 ; PTR32-NEXT:    [[IVNEXT]] = add nuw i32 [[IV]], 1
 ; PTR32-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IVNEXT]], [[CNT]]
 ; PTR32-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
