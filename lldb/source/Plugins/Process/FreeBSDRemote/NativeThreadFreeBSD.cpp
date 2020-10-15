@@ -40,32 +40,27 @@ NativeThreadFreeBSD::NativeThreadFreeBSD(NativeProcessFreeBSD &process,
       m_stop_description() {}
 
 Status NativeThreadFreeBSD::Resume() {
-  Status ret = NativeProcessFreeBSD::PtraceWrapper(PT_RESUME, m_process.GetID(),
-                                                   nullptr, GetID());
+  Status ret = NativeProcessFreeBSD::PtraceWrapper(PT_RESUME, GetID());
   if (!ret.Success())
     return ret;
-  ret = NativeProcessFreeBSD::PtraceWrapper(PT_CLEARSTEP, m_process.GetID(),
-                                            nullptr, GetID());
+  ret = NativeProcessFreeBSD::PtraceWrapper(PT_CLEARSTEP, GetID());
   if (ret.Success())
     SetRunning();
   return ret;
 }
 
 Status NativeThreadFreeBSD::SingleStep() {
-  Status ret = NativeProcessFreeBSD::PtraceWrapper(PT_RESUME, m_process.GetID(),
-                                                   nullptr, GetID());
+  Status ret = NativeProcessFreeBSD::PtraceWrapper(PT_RESUME, GetID());
   if (!ret.Success())
     return ret;
-  ret = NativeProcessFreeBSD::PtraceWrapper(PT_SETSTEP, m_process.GetID(),
-                                            nullptr, GetID());
+  ret = NativeProcessFreeBSD::PtraceWrapper(PT_SETSTEP, GetID());
   if (ret.Success())
     SetStepping();
   return ret;
 }
 
 Status NativeThreadFreeBSD::Suspend() {
-  Status ret = NativeProcessFreeBSD::PtraceWrapper(
-      PT_SUSPEND, m_process.GetID(), nullptr, GetID());
+  Status ret = NativeProcessFreeBSD::PtraceWrapper(PT_SUSPEND, GetID());
   if (ret.Success())
     SetStopped();
   return ret;
