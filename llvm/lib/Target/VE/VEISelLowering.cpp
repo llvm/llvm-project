@@ -808,7 +808,11 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
 
   // VE doesn't have following floating point math functions.
   for (MVT VT : MVT::fp_valuetypes()) {
+    setOperationAction(ISD::FABS, VT, Expand);
     setOperationAction(ISD::FCOPYSIGN, VT, Expand);
+    setOperationAction(ISD::FCOS, VT, Expand);
+    setOperationAction(ISD::FSIN, VT, Expand);
+    setOperationAction(ISD::FSQRT, VT, Expand);
   }
 
   /// } Floating-point math functions

@@ -41,7 +41,7 @@ define float @copysign_float_var(float %0, float %1) {
 ; CHECK-NEXT:    or %s0, %s0, %s1
 ; CHECK-NEXT:    sll %s0, %s0, 32
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %3 = tail call float @llvm.copysign.f32(float %0, float %1)
+  %3 = tail call fast float @llvm.copysign.f32(float %0, float %1)
   ret float %3
 }
 
@@ -56,7 +56,7 @@ define double @copysign_double_var(double %0, double %1) {
 ; CHECK-NEXT:    and %s0, %s0, (1)0
 ; CHECK-NEXT:    or %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %3 = tail call double @llvm.copysign.f64(double %0, double %1)
+  %3 = tail call fast double @llvm.copysign.f64(double %0, double %1)
   ret double %3
 }
 
@@ -81,7 +81,7 @@ define fp128 @copysign_quad_var(fp128 %0, fp128 %1) {
 ; CHECK-NEXT:    ld %s1, 176(, %s11)
 ; CHECK-NEXT:    ld %s0, 184(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %3 = tail call fp128 @llvm.copysign.f128(fp128 %0, fp128 %1)
+  %3 = tail call fast fp128 @llvm.copysign.f128(fp128 %0, fp128 %1)
   ret fp128 %3
 }
 
@@ -98,7 +98,7 @@ define float @copysign_float_zero(float %0) {
 ; CHECK-NEXT:    and %s0, %s0, %s1
 ; CHECK-NEXT:    sll %s0, %s0, 32
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %2 = tail call float @llvm.copysign.f32(float 0.000000e+00, float %0)
+  %2 = tail call fast float @llvm.copysign.f32(float 0.000000e+00, float %0)
   ret float %2
 }
 
@@ -108,7 +108,7 @@ define double @copysign_double_zero(double %0) {
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    and %s0, %s0, (1)1
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %2 = tail call double @llvm.copysign.f64(double 0.000000e+00, double %0)
+  %2 = tail call fast double @llvm.copysign.f64(double 0.000000e+00, double %0)
   ret double %2
 }
 
@@ -135,7 +135,7 @@ define fp128 @copysign_quad_zero(fp128 %0) {
 ; CHECK-NEXT:    ld %s1, 176(, %s11)
 ; CHECK-NEXT:    ld %s0, 184(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %2 = tail call fp128 @llvm.copysign.f128(fp128 0xL00000000000000000000000000000000, fp128 %0)
+  %2 = tail call fast fp128 @llvm.copysign.f128(fp128 0xL00000000000000000000000000000000, fp128 %0)
   ret fp128 %2
 }
 
@@ -151,7 +151,7 @@ define float @copysign_float_const(float %0) {
 ; CHECK-NEXT:    or %s0, %s0, %s1
 ; CHECK-NEXT:    sll %s0, %s0, 32
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %2 = tail call float @llvm.copysign.f32(float -2.000000e+00, float %0)
+  %2 = tail call fast float @llvm.copysign.f32(float -2.000000e+00, float %0)
   ret float %2
 }
 
@@ -163,7 +163,7 @@ define double @copysign_double_const(double %0) {
 ; CHECK-NEXT:    lea.sl %s1, 1073741824
 ; CHECK-NEXT:    or %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %2 = tail call double @llvm.copysign.f64(double -2.000000e+00, double %0)
+  %2 = tail call fast double @llvm.copysign.f64(double -2.000000e+00, double %0)
   ret double %2
 }
 
@@ -190,6 +190,6 @@ define fp128 @copysign_quad_const(fp128 %0) {
 ; CHECK-NEXT:    ld %s1, 176(, %s11)
 ; CHECK-NEXT:    ld %s0, 184(, %s11)
 ; CHECK-NEXT:    or %s11, 0, %s9
-  %2 = tail call fp128 @llvm.copysign.f128(fp128 0xL0000000000000000C000000000000000, fp128 %0)
+  %2 = tail call fast fp128 @llvm.copysign.f128(fp128 0xL0000000000000000C000000000000000, fp128 %0)
   ret fp128 %2
 }
