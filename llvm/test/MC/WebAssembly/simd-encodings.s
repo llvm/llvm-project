@@ -367,6 +367,9 @@ main:
     # CHECK: i8x16.avgr_u # encoding: [0xfd,0x7b]
     i8x16.avgr_u
 
+    # CHECK: i8x16.popcnt # encoding: [0xfd,0x7c]
+    i8x16.popcnt
+
     # CHECK: i16x8.abs # encoding: [0xfd,0x80,0x01]
     i16x8.abs
 
