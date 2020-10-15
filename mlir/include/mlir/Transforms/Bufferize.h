@@ -13,6 +13,16 @@
 // pattern needs to be written. The infrastructure in this file assists in
 // defining these conversion patterns in a composable way.
 //
+// Bufferization conversion patterns should generally use the ordinary
+// conversion pattern classes (e.g. OpConversionPattern). A TypeConverter
+// (accessible with getTypeConverter()) available on such patterns is sufficient
+// for most cases (if needed at all).
+//
+// But some patterns require access to the extra functions on
+// BufferizeTypeConverter that don't exist on the base TypeConverter class. For
+// those cases, BufferizeConversionPattern and its related classes should be
+// used, which provide access to a BufferizeTypeConverter directly.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_TRANSFORMS_BUFFERIZE_H

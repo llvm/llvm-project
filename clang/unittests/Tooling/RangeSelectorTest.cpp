@@ -193,6 +193,65 @@ TEST(RangeSelectorTest, AfterOp) {
                        HasValue(EqualsCharSourceRange(ExpectedAfter)));
 }
 
+// Gets the spelling location `Length` characters after the start of AST node
+// `Id`.
+static SourceLocation getSpellingLocAfter(const MatchResult &Result,
+                                          StringRef Id, int Length) {
+  const auto *E = Result.Nodes.getNodeAs<Expr>(Id);
+  assert(E != nullptr);
+  return Result.SourceManager->getSpellingLoc(E->getBeginLoc())
+      .getLocWithOffset(Length);
+}
+
+// Test with a range that is the entire macro arg, but does not end the
+// expansion itself.
+TEST(RangeSelectorTest, AfterOpInMacroArg) {
+  StringRef Code = R"cc(
+#define ISNULL(x) x == nullptr
+    bool g() { int* y; return ISNULL(y); }
+  )cc";
+
+  TestMatch Match =
+      matchCode(Code, declRefExpr(to(namedDecl(hasName("y")))).bind("yvar"));
+  int YVarLen = 1;
+  SourceLocation After = getSpellingLocAfter(Match.Result, "yvar", YVarLen);
+  CharSourceRange Expected = CharSourceRange::getCharRange(After, After);
+  EXPECT_THAT_EXPECTED(after(node("yvar"))(Match.Result),
+                       HasValue(EqualsCharSourceRange(Expected)));
+}
+
+// Test with a range that is the entire macro arg and ends the expansion itself.
+TEST(RangeSelectorTest, AfterOpInMacroArgEndsExpansion) {
+  StringRef Code = R"cc(
+#define ISNULL(x) nullptr == x
+    bool g() { int* y; return ISNULL(y); }
+  )cc";
+
+  TestMatch Match =
+      matchCode(Code, declRefExpr(to(namedDecl(hasName("y")))).bind("yvar"));
+  int YVarLen = 1;
+  SourceLocation After = getSpellingLocAfter(Match.Result, "yvar", YVarLen);
+  CharSourceRange Expected = CharSourceRange::getCharRange(After, After);
+  EXPECT_THAT_EXPECTED(after(node("yvar"))(Match.Result),
+                       HasValue(EqualsCharSourceRange(Expected)));
+}
+
+TEST(RangeSelectorTest, AfterOpInPartOfMacroArg) {
+  StringRef Code = R"cc(
+#define ISNULL(x) x == nullptr
+    int* f(int*);
+    bool g() { int* y; return ISNULL(f(y)); }
+  )cc";
+
+  TestMatch Match =
+      matchCode(Code, declRefExpr(to(namedDecl(hasName("y")))).bind("yvar"));
+  int YVarLen = 1;
+  SourceLocation After = getSpellingLocAfter(Match.Result, "yvar", YVarLen);
+  CharSourceRange Expected = CharSourceRange::getCharRange(After, After);
+  EXPECT_THAT_EXPECTED(after(node("yvar"))(Match.Result),
+                       HasValue(EqualsCharSourceRange(Expected)));
+}
+
 TEST(RangeSelectorTest, BetweenOp) {
   StringRef Code = R"cc(
     int f(int x, int y, int z) { return 3; }

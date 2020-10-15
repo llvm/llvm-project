@@ -40,7 +40,7 @@ Command *Generator::getCommandHandler(llvm::StringRef CommandName) {
     return IncludeFileCmd.get();
   } else if (CommandName == PublicAPICommand::Name) {
     if (!PublicAPICmd)
-      PublicAPICmd = std::make_unique<PublicAPICommand>();
+      PublicAPICmd = std::make_unique<PublicAPICommand>(EntrypointNameList);
     return PublicAPICmd.get();
   } else {
     return nullptr;

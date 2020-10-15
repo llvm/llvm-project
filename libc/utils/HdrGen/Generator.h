@@ -31,6 +31,7 @@ class Command;
 
 class Generator {
   llvm::StringRef HeaderDefFile;
+  const std::vector<std::string> &EntrypointNameList;
   llvm::StringRef StdHeader;
   std::unordered_map<std::string, std::string> &ArgMap;
 
@@ -44,9 +45,11 @@ class Generator {
   void printError(llvm::StringRef Msg);
 
 public:
-  Generator(const std::string &DefFile, const std::string &Header,
+  Generator(const std::string &DefFile, const std::vector<std::string> &EN,
+            const std::string &Header,
             std::unordered_map<std::string, std::string> &Map)
-      : HeaderDefFile(DefFile), StdHeader(Header), ArgMap(Map) {}
+      : HeaderDefFile(DefFile), EntrypointNameList(EN), StdHeader(Header),
+        ArgMap(Map) {}
 
   void generate(llvm::raw_ostream &OS, llvm::RecordKeeper &Records);
 };

@@ -3513,15 +3513,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Args.hasFlag(OPT_fexperimental_relative_cxx_abi_vtables,
                    OPT_fno_experimental_relative_cxx_abi_vtables,
                    /*default=*/false);
-
-  // The value can be empty, which indicates the system default should be used.
-  StringRef CXXABI = Args.getLastArgValue(OPT_fcxx_abi_EQ);
-  if (!CXXABI.empty()) {
-    if (!TargetCXXABI::isABI(CXXABI))
-      Diags.Report(diag::err_invalid_cxx_abi) << CXXABI;
-    else
-      Opts.CXXABI = TargetCXXABI::getKind(CXXABI);
-  }
 }
 
 static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
