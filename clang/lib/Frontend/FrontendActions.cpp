@@ -805,11 +805,9 @@ void PrintPreprocessedAction::ExecuteAction() {
   // concern, so if we scan for too long, we'll just assume the file should
   // be opened in binary mode.
   bool BinaryMode = true;
-  bool InvalidFile = false;
   const SourceManager& SM = CI.getSourceManager();
-  const llvm::MemoryBuffer *Buffer = SM.getBuffer(SM.getMainFileID(),
-                                                     &InvalidFile);
-  if (!InvalidFile) {
+  if (llvm::Optional<llvm::MemoryBufferRef> Buffer =
+          SM.getBufferOrNone(SM.getMainFileID())) {
     const char *cur = Buffer->getBufferStart();
     const char *end = Buffer->getBufferEnd();
     const char *next = (cur != end) ? cur + 1 : end;
@@ -937,12 +935,12 @@ void DumpCompilerOptionsAction::ExecuteAction() {
 void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
   SourceManager &SM = CI.getPreprocessor().getSourceManager();
-  const llvm::MemoryBuffer *FromFile = SM.getBuffer(SM.getMainFileID());
+  llvm::MemoryBufferRef FromFile = SM.getBufferOrFake(SM.getMainFileID());
 
   llvm::SmallString<1024> Output;
   llvm::SmallVector<minimize_source_to_dependency_directives::Token, 32> Toks;
   if (minimizeSourceToDependencyDirectives(
-          FromFile->getBuffer(), Output, Toks, &CI.getDiagnostics(),
+          FromFile.getBuffer(), Output, Toks, &CI.getDiagnostics(),
           SM.getLocForStartOfFile(SM.getMainFileID()))) {
     assert(CI.getDiagnostics().hasErrorOccurred() &&
            "no errors reported for failure");
