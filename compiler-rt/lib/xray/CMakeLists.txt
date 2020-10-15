@@ -149,6 +149,8 @@ set(XRAY_COMMON_RUNTIME_OBJECT_LIBS
     RTSanitizerCommon
     RTSanitizerCommonLibc)
 
+# XRay uses C++ standard library headers so drop -nostdinc++.
+list_filter(XRAY_CFLAGS "-nostdinc++")
 if (TARGET cxx-headers OR HAVE_LIBCXX)
   set(XRAY_DEPS cxx-headers)
 endif()

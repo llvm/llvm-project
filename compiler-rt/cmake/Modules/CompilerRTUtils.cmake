@@ -80,6 +80,13 @@ function(list_replace input_list old new)
   set(${input_list} "${replaced_list}" PARENT_SCOPE)
 endfunction()
 
+macro(list_filter list element)
+  list(FIND ${list} ${element} index)
+  if(NOT index EQUAL -1)
+    list(REMOVE_AT ${list} ${index})
+  endif()
+endmacro()
+
 # Takes ${ARGN} and puts only supported architectures in @out_var list.
 function(filter_available_targets out_var)
   set(archs ${${out_var}})
