@@ -118,7 +118,7 @@ enum dwarf_regnums {
          nullptr, nullptr, nullptr, 0                                          \
   }
 
-static RegisterInfo g_register_infos[] = {
+static const RegisterInfo g_register_infos[] = {
     DEFINE_REG(r0, 8, nullptr, LLDB_INVALID_REGNUM),
     DEFINE_REG(r1, 8, nullptr, LLDB_INVALID_REGNUM),
     DEFINE_REG(r2, 8, "arg1", LLDB_REGNUM_GENERIC_ARG1),
@@ -173,24 +173,9 @@ static RegisterInfo g_register_infos[] = {
 
 static const uint32_t k_num_register_infos =
     llvm::array_lengthof(g_register_infos);
-static bool g_register_info_names_constified = false;
 
 const lldb_private::RegisterInfo *
 ABISysV_s390x::GetRegisterInfoArray(uint32_t &count) {
-  // Make the C-string names and alt_names for the register infos into const
-  // C-string values by having the ConstString unique the names in the global
-  // constant C-string pool.
-  if (!g_register_info_names_constified) {
-    g_register_info_names_constified = true;
-    for (uint32_t i = 0; i < k_num_register_infos; ++i) {
-      if (g_register_infos[i].name)
-        g_register_infos[i].name =
-            ConstString(g_register_infos[i].name).GetCString();
-      if (g_register_infos[i].alt_name)
-        g_register_infos[i].alt_name =
-            ConstString(g_register_infos[i].alt_name).GetCString();
-    }
-  }
   count = k_num_register_infos;
   return g_register_infos;
 }

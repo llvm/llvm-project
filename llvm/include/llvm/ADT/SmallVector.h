@@ -14,7 +14,6 @@
 #define LLVM_ADT_SMALLVECTOR_H
 
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -97,8 +96,9 @@ using SmallVectorSizeType =
 
 /// Figure out the offset of the first element.
 template <class T, typename = void> struct SmallVectorAlignmentAndSize {
-  AlignedCharArrayUnion<SmallVectorBase<SmallVectorSizeType<T>>> Base;
-  AlignedCharArrayUnion<T> FirstEl;
+  alignas(SmallVectorBase<SmallVectorSizeType<T>>) char Base[sizeof(
+      SmallVectorBase<SmallVectorSizeType<T>>)];
+  alignas(T) char FirstEl[sizeof(T)];
 };
 
 /// This is the part of SmallVectorTemplateBase which does not depend on whether
@@ -870,13 +870,13 @@ SmallVectorImpl<T> &SmallVectorImpl<T>::operator=(SmallVectorImpl<T> &&RHS) {
 /// to avoid allocating unnecessary storage.
 template <typename T, unsigned N>
 struct SmallVectorStorage {
-  AlignedCharArrayUnion<T> InlineElts[N];
+  alignas(T) char InlineElts[N * sizeof(T)];
 };
 
 /// We need the storage to be properly aligned even for small-size of 0 so that
 /// the pointer math in \a SmallVectorTemplateCommon::getFirstEl() is
 /// well-defined.
-template <typename T> struct alignas(alignof(T)) SmallVectorStorage<T, 0> {};
+template <typename T> struct alignas(T) SmallVectorStorage<T, 0> {};
 
 /// This is a 'vector' (really, a variable-sized array), optimized
 /// for the case when the array is small.  It contains some number of elements

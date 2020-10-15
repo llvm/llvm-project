@@ -531,6 +531,10 @@ public:
   /// value into a vector.
   Value *getOrCreateVectorValue(Value *V, unsigned Part);
 
+  void setVectorValue(Value *Scalar, unsigned Part, Value *Vector) {
+    VectorLoopValueMap.setVectorValue(Scalar, Part, Vector);
+  }
+
   /// Return a value in the new loop corresponding to \p V from the original
   /// loop at unroll and vector indices \p Instance. If the value has been
   /// vectorized but not scalarized, the necessary extractelement instruction
@@ -553,8 +557,8 @@ public:
   /// non-null. Use \p State to translate given VPValues to IR values in the
   /// vectorized loop.
   void vectorizeMemoryInstruction(Instruction *Instr, VPTransformState &State,
-                                  VPValue *Addr, VPValue *StoredValue,
-                                  VPValue *BlockInMask);
+                                  VPValue *Def, VPValue *Addr,
+                                  VPValue *StoredValue, VPValue *BlockInMask);
 
   /// Set the debug location in the builder using the debug location in
   /// the instruction.
@@ -2503,11 +2507,9 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   }
 }
 
-void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
-                                                     VPTransformState &State,
-                                                     VPValue *Addr,
-                                                     VPValue *StoredValue,
-                                                     VPValue *BlockInMask) {
+void InnerLoopVectorizer::vectorizeMemoryInstruction(
+    Instruction *Instr, VPTransformState &State, VPValue *Def, VPValue *Addr,
+    VPValue *StoredValue, VPValue *BlockInMask) {
   // Attempt to issue a wide load.
   LoadInst *LI = dyn_cast<LoadInst>(Instr);
   StoreInst *SI = dyn_cast<StoreInst>(Instr);
@@ -2636,7 +2638,8 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
       if (Reverse)
         NewLI = reverseVector(NewLI);
     }
-    VectorLoopValueMap.setVectorValue(Instr, Part, NewLI);
+
+    State.set(Def, Instr, NewLI, Part);
   }
 }
 
@@ -4016,8 +4019,8 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
       RecurrenceDescriptor RdxDesc = Legal->getReductionVars()[Phi];
       if (PreferPredicatedReductionSelect ||
           TTI->preferPredicatedReductionSelect(
-              RdxDesc.getRecurrenceBinOp(RdxDesc.getRecurrenceKind()),
-              Phi->getType(), TargetTransformInfo::ReductionFlags())) {
+              RdxDesc.getRecurrenceBinOp(), Phi->getType(),
+              TargetTransformInfo::ReductionFlags())) {
         auto *VecRdxPhi = cast<PHINode>(getOrCreateVectorValue(Phi, Part));
         VecRdxPhi->setIncomingValueForBlock(
             LI->getLoopFor(LoopVectorBody)->getLoopLatch(), Sel);
@@ -5598,11 +5601,27 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   }
 
   // If trip count is known or estimated compile time constant, limit the
-  // interleave count to be less than the trip count divided by VF.
+  // interleave count to be less than the trip count divided by VF, provided it
+  // is at least 1.
   if (BestKnownTC) {
     MaxInterleaveCount =
         std::min(*BestKnownTC / VF.getKnownMinValue(), MaxInterleaveCount);
+    // Make sure MaxInterleaveCount is greater than 0.
+    MaxInterleaveCount = std::max(1u, MaxInterleaveCount);
   }
+
+  assert(MaxInterleaveCount > 0 &&
+         "Maximum interleave count must be greater than 0");
+
+  // Clamp the calculated IC to be between the 1 and the max interleave count
+  // that the target and trip count allows.
+  if (IC > MaxInterleaveCount)
+    IC = MaxInterleaveCount;
+  else
+    // Make sure IC is greater than 0.
+    IC = std::max(1u, IC);
+
+  assert(IC > 0 && "Interleave count must be greater than 0.");
 
   // If we did not calculate the cost for VF (because the user selected the VF)
   // then we calculate the cost of VF here.
@@ -5610,13 +5629,6 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
     LoopCost = expectedCost(VF).first;
 
   assert(LoopCost && "Non-zero loop cost expected");
-
-  // Clamp the calculated IC to be between the 1 and the max interleave count
-  // that the target and trip count allows.
-  if (IC > MaxInterleaveCount)
-    IC = MaxInterleaveCount;
-  else if (IC < 1)
-    IC = 1;
 
   // Interleave if we vectorized this loop and there is a reduction that could
   // benefit from interleaving.
@@ -6889,7 +6901,7 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
 
     // If the target would prefer this reduction to happen "in-loop", then we
     // want to record it as such.
-    unsigned Opcode = RdxDesc.getRecurrenceBinOp(RdxDesc.getRecurrenceKind());
+    unsigned Opcode = RdxDesc.getRecurrenceBinOp();
     if (!PreferInLoopReductions &&
         !TTI.preferInLoopReduction(Opcode, Phi->getType(),
                                    TargetTransformInfo::ReductionFlags()))
@@ -7754,6 +7766,16 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
       if (auto Recipe =
               RecipeBuilder.tryToCreateWidenRecipe(Instr, Range, Plan)) {
+        // Check if the recipe can be converted to a VPValue. We need the extra
+        // down-casting step until VPRecipeBase inherits from VPValue.
+        VPValue *MaybeVPValue = Recipe->toVPValue();
+        if (!Instr->getType()->isVoidTy() && MaybeVPValue) {
+          if (NeedDef.contains(Instr))
+            Plan->addOrReplaceVPValue(Instr, MaybeVPValue);
+          else
+            Plan->addVPValue(Instr, MaybeVPValue);
+        }
+
         RecipeBuilder.setRecipe(Instr, Recipe);
         VPBB->appendRecipe(Recipe);
         continue;
@@ -7803,6 +7825,11 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *Member = IG->getMember(i)) {
+        if (!Member->getType()->isVoidTy()) {
+          VPValue *OriginalV = Plan->getVPValue(Member);
+          Plan->removeVPValueFor(Member);
+          OriginalV->replaceAllUsesWith(Plan->getOrAddVPValue(Member));
+        }
         RecipeBuilder.getRecipe(Member)->eraseFromParent();
       }
   }
@@ -8145,9 +8172,11 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
 }
 
 void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
+  Instruction *Instr = getUnderlyingInstr();
   VPValue *StoredValue = isa<StoreInst>(Instr) ? getStoredValue() : nullptr;
-  State.ILV->vectorizeMemoryInstruction(&Instr, State, getAddr(), StoredValue,
-                                        getMask());
+  State.ILV->vectorizeMemoryInstruction(Instr, State,
+                                        StoredValue ? nullptr : this, getAddr(),
+                                        StoredValue, getMask());
 }
 
 // Determine how to lower the scalar epilogue, which depends on 1) optimising
@@ -8191,6 +8220,12 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
     return CM_ScalarEpilogueNotNeededUsePredicate;
 
   return CM_ScalarEpilogueAllowed;
+}
+
+void VPTransformState::set(VPValue *Def, Value *IRDef, Value *V,
+                           unsigned Part) {
+  set(Def, V, Part);
+  ILV->setVectorValue(IRDef, Part, V);
 }
 
 // Process the loop in the VPlan-native vectorization path. This path builds

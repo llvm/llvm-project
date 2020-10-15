@@ -12,6 +12,8 @@
 // XFAIL: with_system_cxx_lib=macosx10.10
 // XFAIL: with_system_cxx_lib=macosx10.9
 
+// UNSUPPORTED: libcpp-has-no-random-device
+
 // <random>
 
 // class random_device;

@@ -261,6 +261,17 @@ use omp_lib
   d = 2
   !ERROR: NUM_THREADS clause is not allowed on the END SECTIONS directive
   !$omp end sections num_threads(4)
+
+  !$omp parallel
+  !$omp sections
+    b = 1
+  !$omp section
+    c = 1
+    d = 2
+  !ERROR: At most one NOWAIT clause can appear on the END SECTIONS directive
+  !$omp end sections nowait nowait
+  !$omp end parallel
+
   !$omp end parallel
 
 ! 2.11.2 parallel-sections-clause -> parallel-clause |

@@ -11,10 +11,6 @@
 
 // constexpr T&& optional<T>::operator*() &&;
 
-#ifdef _LIBCPP_DEBUG
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
-#endif
-
 #include <optional>
 #include <type_traits>
 #include <cassert>
@@ -62,13 +58,6 @@ int main(int, char**)
         assert((*std::move(opt)).test() == 6);
     }
     static_assert(test() == 7, "");
-#ifdef _LIBCPP_DEBUG
-    {
-        optional<X> opt;
-        assert((*std::move(opt)).test() == 3);
-        assert(false);
-    }
-#endif  // _LIBCPP_DEBUG
 
-  return 0;
+    return 0;
 }

@@ -43,6 +43,8 @@ Sections:
     CPR2Size:     REG_NONE
     Flags1:       [ ODDSPREG ]
     Flags2:       0x0
+    Content:     [[CONTENT=<none>]]
+    Size:        [[SIZE=<none>]]
 
 ## Check we don't recognize the SHT_MIPS_ABIFLAGS section for non-MIPS targets.
 
@@ -50,3 +52,15 @@ Sections:
 
 # ERR:      error: invalid hex32 number
 # ERR-NEXT: Type: SHT_MIPS_ABIFLAGS
+
+## Document we don't support the "Content" key yet.
+
+# RUN: not yaml2obj %s -DCONTENT="'00'" 2>&1 | FileCheck %s --check-prefix=ERR-CONTENT
+
+# ERR-CONTENT: error: "Content" key is not implemented for SHT_MIPS_ABIFLAGS section
+
+## Document we don't support the "Size" key yet.
+
+# RUN: not yaml2obj %s -DSIZE=0 2>&1 | FileCheck %s --check-prefix=ERR-SIZE
+
+# ERR-SIZE: error: "Size" key is not implemented for SHT_MIPS_ABIFLAGS section

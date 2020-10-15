@@ -60,6 +60,7 @@ private:
   WasmYAML::Object &Obj;
   uint32_t NumImportedFunctions = 0;
   uint32_t NumImportedGlobals = 0;
+  uint32_t NumImportedTables = 0;
   uint32_t NumImportedEvents = 0;
 
   bool HasError = false;
@@ -187,6 +188,7 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
       switch (Info.Kind) {
       case wasm::WASM_SYMBOL_TYPE_FUNCTION:
       case wasm::WASM_SYMBOL_TYPE_GLOBAL:
+      case wasm::WASM_SYMBOL_TYPE_TABLE:
       case wasm::WASM_SYMBOL_TYPE_EVENT:
         encodeULEB128(Info.ElementIndex, SubSection.getStream());
         if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0 ||
@@ -360,7 +362,7 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
     case wasm::WASM_EXTERNAL_EVENT:
       writeUint32(OS, Import.EventImport.Attribute);
       writeUint32(OS, Import.EventImport.SigIndex);
-      NumImportedGlobals++;
+      NumImportedEvents++;
       break;
     case wasm::WASM_EXTERNAL_MEMORY:
       writeLimits(Import.Memory, OS);
@@ -368,6 +370,7 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
     case wasm::WASM_EXTERNAL_TABLE:
       writeUint8(OS, Import.TableImport.ElemType);
       writeLimits(Import.TableImport.TableLimits, OS);
+      NumImportedTables++;
       break;
     default:
       reportError("unknown import type: " +Twine(Import.Kind));
@@ -401,7 +404,13 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
 void WasmWriter::writeSectionContent(raw_ostream &OS,
                                      WasmYAML::TableSection &Section) {
   encodeULEB128(Section.Tables.size(), OS);
+  uint32_t ExpectedIndex = NumImportedTables;
   for (auto &Table : Section.Tables) {
+    if (Table.Index != ExpectedIndex) {
+      reportError("unexpected table index: " + Twine(Table.Index));
+      return;
+    }
+    ++ExpectedIndex;
     writeUint8(OS, Table.ElemType);
     writeLimits(Table.TableLimits, OS);
   }

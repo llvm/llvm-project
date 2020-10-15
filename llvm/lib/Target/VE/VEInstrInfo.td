@@ -2035,3 +2035,6 @@ def : Pat<(i32 (and i32:$val, 0xffff)),
                      !add(48, 64)), sub_i32)>;
 def : Pat<(i64 (and i64:$val, 0xffffffff)),
           (ANDrm $val, !add(32, 64))>;
+
+// Vector instructions.
+include "VEInstrVec.td"

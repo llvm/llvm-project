@@ -57,29 +57,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "instrprof"
 
-// FIXME: These are to be removed after switching to the new memop value
-// profiling.
-// The start and end values of precise value profile range for memory
-// intrinsic sizes
-cl::opt<std::string> MemOPSizeRange(
-    "memop-size-range",
-    cl::desc("Set the range of size in memory intrinsic calls to be profiled "
-             "precisely, in a format of <start_val>:<end_val>"),
-    cl::init(""));
-
-// The value that considered to be large value in  memory intrinsic.
-cl::opt<unsigned> MemOPSizeLarge(
-    "memop-size-large",
-    cl::desc("Set large value thresthold in memory intrinsic size profiling. "
-             "Value of 0 disables the large value profiling."),
-    cl::init(8192));
-
-cl::opt<bool> UseOldMemOpValueProf(
-    "use-old-memop-value-prof",
-    cl::desc("Use the old memop value profiling buckets. This is "
-             "transitional and to be removed after switching. "),
-    cl::init(false));
-
 namespace {
 
 cl::opt<bool> DoHashBasedCounterSplit(
@@ -424,11 +401,7 @@ enum class ValueProfilingCallType {
   // profiling.
   Default,
 
-  // The old memop size value profiling. FIXME: To be removed after switching to
-  // the new one.
-  OldMemOp,
-
-  // MemOp: the (new) memop size value profiling with extended buckets.
+  // MemOp: the memop size value profiling.
   MemOp
 };
 
@@ -566,8 +539,6 @@ bool InstrProfiling::run(
   NamesSize = 0;
   ProfileDataMap.clear();
   UsedVars.clear();
-  getMemOPSizeRangeFromOption(MemOPSizeRange, MemOPSizeRangeStart,
-                              MemOPSizeRangeLast);
   TT = Triple(M.getTargetTriple());
 
   // Emit the runtime hook even if no counters are present.
@@ -626,33 +597,19 @@ static FunctionCallee getOrInsertValueProfilingCall(
   if (auto AK = TLI.getExtAttrForI32Param(false))
     AL = AL.addParamAttribute(M.getContext(), 2, AK);
 
-  if (CallType == ValueProfilingCallType::Default ||
-      CallType == ValueProfilingCallType::MemOp) {
-    Type *ParamTypes[] = {
+  assert((CallType == ValueProfilingCallType::Default ||
+          CallType == ValueProfilingCallType::MemOp) &&
+         "Must be Default or MemOp");
+  Type *ParamTypes[] = {
 #define VALUE_PROF_FUNC_PARAM(ParamType, ParamName, ParamLLVMType) ParamLLVMType
 #include "llvm/ProfileData/InstrProfData.inc"
-    };
-    auto *ValueProfilingCallTy =
-        FunctionType::get(ReturnTy, makeArrayRef(ParamTypes), false);
-    StringRef FuncName = CallType == ValueProfilingCallType::Default
-                             ? getInstrProfValueProfFuncName()
-                             : getInstrProfValueProfMemOpFuncName();
-    return M.getOrInsertFunction(FuncName, ValueProfilingCallTy, AL);
-  } else {
-    // FIXME: This code is to be removed after switching to the new memop value
-    // profiling.
-    assert(CallType == ValueProfilingCallType::OldMemOp);
-    Type *RangeParamTypes[] = {
-#define VALUE_RANGE_PROF 1
-#define VALUE_PROF_FUNC_PARAM(ParamType, ParamName, ParamLLVMType) ParamLLVMType
-#include "llvm/ProfileData/InstrProfData.inc"
-#undef VALUE_RANGE_PROF
-    };
-    auto *ValueRangeProfilingCallTy =
-        FunctionType::get(ReturnTy, makeArrayRef(RangeParamTypes), false);
-    return M.getOrInsertFunction(getInstrProfValueRangeProfFuncName(),
-                                 ValueRangeProfilingCallTy, AL);
-  }
+  };
+  auto *ValueProfilingCallTy =
+      FunctionType::get(ReturnTy, makeArrayRef(ParamTypes), false);
+  StringRef FuncName = CallType == ValueProfilingCallType::Default
+                           ? getInstrProfValueProfFuncName()
+                           : getInstrProfValueProfMemOpFuncName();
+  return M.getOrInsertFunction(FuncName, ValueProfilingCallTy, AL);
 }
 
 void InstrProfiling::computeNumValueSiteCounts(InstrProfValueProfileInst *Ind) {
@@ -698,24 +655,13 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
                       Builder.getInt32(Index)};
     Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI), Args,
                               OpBundles);
-  } else if (!UseOldMemOpValueProf) {
+  } else {
     Value *Args[3] = {Ind->getTargetValue(),
                       Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
                       Builder.getInt32(Index)};
     Call = Builder.CreateCall(
         getOrInsertValueProfilingCall(*M, *TLI, ValueProfilingCallType::MemOp),
         Args, OpBundles);
-  } else {
-    Value *Args[6] = {
-        Ind->getTargetValue(),
-        Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
-        Builder.getInt32(Index),
-        Builder.getInt64(MemOPSizeRangeStart),
-        Builder.getInt64(MemOPSizeRangeLast),
-        Builder.getInt64(MemOPSizeLarge == 0 ? INT64_MIN : MemOPSizeLarge)};
-    Call = Builder.CreateCall(getOrInsertValueProfilingCall(
-                                  *M, *TLI, ValueProfilingCallType::OldMemOp),
-                              Args, OpBundles);
   }
   if (auto AK = TLI->getExtAttrForI32Param(false))
     Call->addParamAttr(2, AK);

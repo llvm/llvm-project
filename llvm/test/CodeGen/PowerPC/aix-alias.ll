@@ -2,10 +2,10 @@
 ;       is implemnted.
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec < %s | \
+; RUN:     -mattr=-altivec -data-sections=false < %s | \
 ; RUN:   FileCheck --check-prefix=ASM %s
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec < %s | \
+; RUN:     -mattr=-altivec -data-sections=false < %s | \
 ; RUN:   FileCheck --check-prefix=ASM %s
 
 @var = global i32 42

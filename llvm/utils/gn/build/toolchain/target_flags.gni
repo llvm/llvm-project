@@ -1,6 +1,11 @@
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
+# Flags in this file are passed both to the compiler that's building
+# compiler-rt at build time (via normal gn cflags/ldflags), as well as to the
+# compiler building compiler-rt test programs at test time (via
+# COMPILER_RT_TEST_COMPILER_CFLAGS).
+
 target_flags = []
 target_ldflags = []
 
@@ -13,6 +18,26 @@ if (current_os == "android") {
   target_ldflags += [ "-static-libstdc++" ]
   if (current_cpu == "arm") {
     target_flags += [ "-march=armv7-a" ]
+  }
+} else if (current_os == "ios") {
+  if (current_cpu == "arm64") {
+    target_flags += [
+      "-arch",
+      "arm64",
+    ]
+    target_ldflags += [
+      "-arch",
+      "arm64",
+    ]
+  } else if (current_cpu == "x64") {
+    target_flags += [
+      "-arch",
+      "x86_64",
+    ]
+    target_ldflags += [
+      "-arch",
+      "x86_64",
+    ]
   }
 }
 

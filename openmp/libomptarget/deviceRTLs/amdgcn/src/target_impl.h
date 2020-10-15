@@ -108,9 +108,11 @@ INLINE void __kmpc_impl_syncthreads() { __builtin_amdgcn_s_barrier(); }
 INLINE void __kmpc_impl_syncwarp(__kmpc_impl_lanemask_t) {
 }
 
-INLINE void __kmpc_impl_syncwarp64(__kmpc_impl_lanemask_t) {
-  // AMDGCN doesn't need to sync threads in a warp
-}
+// AMDGCN specific kernel initialization
+DEVICE void __kmpc_impl_target_init();
+
+// Equivalent to ptx bar.sync 1. Barrier until num_threads arrive.
+DEVICE void __kmpc_impl_named_sync(uint32_t num_threads);
 
 DEVICE void __kmpc_impl_named_sync(uint32_t num_threads);
 

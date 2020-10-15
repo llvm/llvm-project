@@ -128,11 +128,13 @@ public:
     /// enabled.
     ClangTidyOptionsBuilder GetClangTidyOptions;
 
-    /// If true, turn on the `-frecovery-ast` clang flag.
-    bool BuildRecoveryAST = true;
+    /// If true, force -frecovery-ast flag.
+    /// If false, respect the value in clang.
+    bool BuildRecoveryAST = false;
 
-    /// If true, turn on the `-frecovery-ast-type` clang flag.
-    bool PreserveRecoveryASTType = true;
+    /// If true, force -frecovery-ast-type flag.
+    /// If false, respect the value in clang.
+    bool PreserveRecoveryASTType = false;
 
     /// Clangd's workspace root. Relevant for "workspace" operations not bound
     /// to a particular file.

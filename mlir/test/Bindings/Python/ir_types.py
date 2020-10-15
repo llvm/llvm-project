@@ -14,6 +14,7 @@ def run(f):
 def testParsePrint():
   ctx = mlir.ir.Context()
   t = ctx.parse_type("i32")
+  assert t.context is ctx
   ctx = None
   gc.collect()
   # CHECK: i32

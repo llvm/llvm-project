@@ -186,9 +186,7 @@ define linkonce_odr i32 @vector_insert(%"class.std::__1::vector.182"*, [1 x i32]
   br i1 %114, label %124, label %115
 
 ; CHECK-LABEL: .preheader:
-; CHECK-NEXT: [[NEG_NEW:%[0-9]+]] = sub i32 0, [[NEW_CAST]]
-; CHECK-NEXT: getelementptr i8, i8* %97, i32 [[NEG_NEW]]
-
+; CHECK-NEXT: sub i32 [[OLD_CAST]], [[NEW_CAST]]
 ; <label>:115:                                    ; preds = %111, %115
   %116 = phi i8* [ %118, %115 ], [ %97, %111 ]
   %117 = phi i8* [ %119, %115 ], [ %11, %111 ]

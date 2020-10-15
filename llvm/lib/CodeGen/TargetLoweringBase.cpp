@@ -680,6 +680,8 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::ADDCARRY, VT, Expand);
     setOperationAction(ISD::SUBCARRY, VT, Expand);
     setOperationAction(ISD::SETCCCARRY, VT, Expand);
+    setOperationAction(ISD::SADDO_CARRY, VT, Expand);
+    setOperationAction(ISD::SSUBO_CARRY, VT, Expand);
 
     // ADDC/ADDE/SUBC/SUBE default to expand.
     setOperationAction(ISD::ADDC, VT, Expand);

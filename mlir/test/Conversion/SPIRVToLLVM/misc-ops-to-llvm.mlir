@@ -24,9 +24,9 @@ spv.func @composite_extract_vector(%arg: vector<3xf32>) "None" {
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: @composite_insert_struct
-spv.func @composite_insert_struct(%arg0: i32, %arg1: !spv.struct<f32, !spv.array<4xi32>>) "None" {
+spv.func @composite_insert_struct(%arg0: i32, %arg1: !spv.struct<(f32, !spv.array<4xi32>)>) "None" {
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[1 : i32, 3 : i32] : !llvm.struct<packed (float, array<4 x i32>)>
-  %0 = spv.CompositeInsert %arg0, %arg1[1 : i32, 3 : i32] : i32 into !spv.struct<f32, !spv.array<4xi32>>
+  %0 = spv.CompositeInsert %arg0, %arg1[1 : i32, 3 : i32] : i32 into !spv.struct<(f32, !spv.array<4xi32>)>
   spv.Return
 }
 

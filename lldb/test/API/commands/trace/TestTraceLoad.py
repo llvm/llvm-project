@@ -35,6 +35,10 @@ class TestTraceLoad(TestBase):
 
         self.assertEqual("6AA9A4E2-6F28-2F33-377D-59FECE874C71-5B41261A", module.GetUUIDString())
 
+        # check that the Process and Thread objects were created correctly
+        self.expect("thread info", substrs=["tid = 3842849"])
+        self.expect("thread list", substrs=["Process 1234 stopped", "tid = 3842849"])
+
 
     def testLoadInvalidTraces(self):
         src_dir = self.getSourceDir()

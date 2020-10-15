@@ -653,7 +653,7 @@ public:
   /// is the type size unless that might overlap another object, in which
   /// case it's the dsize.
   CharUnits getPreferredSize(ASTContext &Ctx, QualType Type) const {
-    return mayOverlap() ? Ctx.getTypeInfoDataSizeInChars(Type).first
+    return mayOverlap() ? Ctx.getTypeInfoDataSizeInChars(Type).Width
                         : Ctx.getTypeSizeInChars(Type);
   }
 };

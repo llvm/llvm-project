@@ -13,6 +13,8 @@
 #include "llvm/Support/Format.h"
 
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Target/Thread.h"
+#include "lldb/Utility/Stream.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -75,4 +77,12 @@ Expected<StringRef> Trace::FindPluginSchema(StringRef name) {
     return schema;
 
   return createInvalidPlugInError(name);
+}
+
+void Trace::DumpTraceInstructions(Thread &thread, Stream &s, size_t count,
+                                  size_t start_position) const {
+  s.Printf("thread #%u: tid = %" PRIu64 ", total instructions = 1000\n",
+           thread.GetIndexID(), thread.GetID());
+  s.Printf("  would print %zu instructions from position %zu\n", count,
+           start_position);
 }

@@ -265,7 +265,8 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
       PrintedOuterHeading = true;
 
       llvm::errs() << "File " << &File << " <FileID " << ID.getHashValue()
-                   << ">: " << SrcMgr.getBuffer(ID)->getBufferIdentifier();
+                   << ">: " << SrcMgr.getBufferOrFake(ID).getBufferIdentifier();
+
       if (F.second.Parent) {
         std::pair<FileID, unsigned> Decomp =
             SrcMgr.getDecomposedIncludedLoc(ID);

@@ -58,6 +58,7 @@ void registerTestFunc();
 void registerTestGpuMemoryPromotionPass();
 void registerTestGpuParallelLoopMappingPass();
 void registerTestInterfaces();
+void registerTestLinalgCodegenStrategy();
 void registerTestLinalgFusionTransforms();
 void registerTestLinalgHoisting();
 void registerTestLinalgTransforms();
@@ -77,6 +78,7 @@ void registerTestRecursiveTypesPass();
 void registerTestReducer();
 void registerTestSpirvEntryPointABIPass();
 void registerTestSCFUtilsPass();
+void registerTestTraitsPass();
 void registerTestVectorConversions();
 void registerVectorizerTestPass();
 } // namespace mlir
@@ -115,6 +117,7 @@ void registerTestPasses() {
   registerTestExpandTanhPass();
   registerTestGpuMemoryPromotionPass();
   registerTestInterfaces();
+  registerTestLinalgCodegenStrategy();
   registerTestLinalgFusionTransforms();
   registerTestLinalgHoisting();
   registerTestLinalgTransforms();
@@ -134,6 +137,7 @@ void registerTestPasses() {
   registerTestGpuParallelLoopMappingPass();
   registerTestSpirvEntryPointABIPass();
   registerTestSCFUtilsPass();
+  registerTestTraitsPass();
   registerTestVectorConversions();
   registerVectorizerTestPass();
 }

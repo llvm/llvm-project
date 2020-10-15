@@ -9,17 +9,17 @@
 // UNSUPPORTED: no-exceptions
 
 #include <cassert>
+#include <cstdio>
 #include <cstdlib>
-#include <iostream>
 
 // Roll our own assertion macro to get better error messages out of the tests.
 // In particular on systems that don't use __PRETTY_FUNCTION__ in assertions.
 #define my_assert(pred, msg) do_assert(pred, msg, __LINE__, __PRETTY_FUNCTION__)
 
 void do_assert(bool assert_passed, const char* msg, int line, const char* func) {
-  if (assert_passed) return;
-  std::cerr << __FILE__ << ":" << line << " " << func
-            << ": Assertion Failed `" << msg << "'\n\n";
+  if (assert_passed)
+    return;
+  std::printf("%s:%d %s: Assertion Failed '%s'\n\n", __FILE__, line, func, msg);
   std::abort();
 }
 

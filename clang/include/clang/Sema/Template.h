@@ -600,7 +600,7 @@ enum class TemplateSubstitutionKind : char {
                         TagDecl *NewDecl);
 
     Decl *VisitVarTemplateSpecializationDecl(
-        VarTemplateDecl *VarTemplate, VarDecl *FromVar, void *InsertPos,
+        VarTemplateDecl *VarTemplate, VarDecl *FromVar,
         const TemplateArgumentListInfo &TemplateArgsInfo,
         ArrayRef<TemplateArgument> Converted,
         VarTemplateSpecializationDecl *PrevDecl = nullptr);

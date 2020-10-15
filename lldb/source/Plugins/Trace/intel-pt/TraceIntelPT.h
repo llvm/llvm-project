@@ -52,6 +52,21 @@ public:
   CreateInstance(const llvm::json::Value &trace_session_file,
                  llvm::StringRef session_file_dir, Debugger &debugger);
 
+  /// Create an instance of this class.
+  ///
+  /// \param[in] pt_cpu
+  ///     The libipt.h cpu information needed for decoding correctling the
+  ///     traces.
+  ///
+  /// \param[in] targets
+  ///     The list of targets to associate with this trace instance
+  ///
+  /// \return
+  ///     An intel-pt trace instance.
+  static lldb::TraceSP
+  CreateInstance(const pt_cpu &pt_cpu,
+                 const std::vector<lldb::TargetSP> &targets);
+
   static ConstString GetPluginNameStatic();
 
   uint32_t GetPluginVersion() override;
@@ -59,13 +74,13 @@ public:
 
   llvm::StringRef GetSchema() override;
 
+private:
   TraceIntelPT(const pt_cpu &pt_cpu, const std::vector<lldb::TargetSP> &targets)
       : m_pt_cpu(pt_cpu) {
     for (const lldb::TargetSP &target_sp : targets)
       m_targets.push_back(target_sp);
   }
 
-private:
   pt_cpu m_pt_cpu;
   std::vector<std::weak_ptr<Target>> m_targets;
 };

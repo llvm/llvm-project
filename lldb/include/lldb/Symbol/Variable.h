@@ -33,7 +33,8 @@ public:
            const lldb::SymbolFileTypeSP &symfile_type_sp, lldb::ValueType scope,
            SymbolContextScope *owner_scope, const RangeList &scope_range,
            Declaration *decl, const DWARFExpression &location, bool external,
-           bool artificial, bool static_member = false);
+           bool artificial, bool location_is_constant_data,
+           bool static_member = false);
 
   virtual ~Variable();
 
@@ -63,6 +64,8 @@ public:
   lldb::LanguageType GetLanguage() const;
 
   lldb::ValueType GetScope() const { return m_scope; }
+
+  const RangeList &GetScopeRange() const { return m_scope_range; }
 
   bool IsExternal() const { return m_external; }
 

@@ -46,13 +46,13 @@ class VirtRegMap;
   class VirtRegAuxInfo {
     MachineFunction &MF;
     LiveIntervals &LIS;
-    VirtRegMap *const VRM;
+    const VirtRegMap &VRM;
     const MachineLoopInfo &Loops;
     const MachineBlockFrequencyInfo &MBFI;
 
   public:
-    VirtRegAuxInfo(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap *VRM,
-                   const MachineLoopInfo &Loops,
+    VirtRegAuxInfo(MachineFunction &MF, LiveIntervals &LIS,
+                   const VirtRegMap &VRM, const MachineLoopInfo &Loops,
                    const MachineBlockFrequencyInfo &MBFI)
         : MF(MF), LIS(LIS), VRM(VRM), Loops(Loops), MBFI(MBFI) {}
 

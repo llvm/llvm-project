@@ -262,7 +262,24 @@ public:
                        Optional<StorageClass> storage = llvm::None);
 };
 
-// SPIR-V struct type
+/// SPIR-V struct type. Two kinds of struct types are supported:
+/// - Literal: a literal struct type is uniqued by its fields (types + offset
+/// info + decoration info).
+/// - Identified: an indentified struct type is uniqued by its string identifier
+/// (name). This is useful in representing recursive structs. For example, the
+/// following C struct:
+///
+/// struct A {
+///   A* next;
+/// };
+///
+/// would be represented in MLIR as:
+///
+/// !spv.struct<A, (!spv.ptr<!spv.struct<A>, Generic>)>
+///
+/// In the above, expressing recursive struct types is accomplished by giving a
+/// recursive struct a unique identified and using that identifier in the struct
+/// definition for recursive references.
 class StructType : public Type::TypeBase<StructType, CompositeType,
                                          detail::StructTypeStorage> {
 public:
@@ -297,13 +314,34 @@ public:
     }
   };
 
-  /// Construct a StructType with at least one member.
+  /// Construct a literal StructType with at least one member.
   static StructType get(ArrayRef<Type> memberTypes,
                         ArrayRef<OffsetInfo> offsetInfo = {},
                         ArrayRef<MemberDecorationInfo> memberDecorations = {});
 
-  /// Construct a struct with no members.
-  static StructType getEmpty(MLIRContext *context);
+  /// Construct an identified StructType. This creates a StructType whose body
+  /// (member types, offset info, and decorations) is not set yet. A call to
+  /// StructType::trySetBody(...) must follow when the StructType contents are
+  /// available (e.g. parsed or deserialized).
+  ///
+  /// Note: If another thread creates (or had already created) a struct with the
+  /// same identifier, that struct will be returned as a result.
+  static StructType getIdentified(MLIRContext *context, StringRef identifier);
+
+  /// Construct a (possibly identified) StructType with no members.
+  ///
+  /// Note: this method might fail in a multi-threaded setup if another thread
+  /// created an identified struct with the same identifier but with different
+  /// contents before returning. In which case, an empty (default-constructed)
+  /// StructType is returned.
+  static StructType getEmpty(MLIRContext *context, StringRef identifier = "");
+
+  /// For literal structs, return an empty string.
+  /// For identified structs, return the struct's identifier.
+  StringRef getIdentifier() const;
+
+  /// Returns true if the StructType is identified.
+  bool isIdentified() const;
 
   unsigned getNumElements() const;
 
@@ -345,6 +383,13 @@ public:
   void getMemberDecorations(unsigned i,
                             SmallVectorImpl<StructType::MemberDecorationInfo>
                                 &decorationsInfo) const;
+
+  /// Sets the contents of an incomplete identified StructType. This method must
+  /// be called only for identified StructTypes and it must be called only once
+  /// per instance. Otherwise, failure() is returned.
+  LogicalResult
+  trySetBody(ArrayRef<Type> memberTypes, ArrayRef<OffsetInfo> offsetInfo = {},
+             ArrayRef<MemberDecorationInfo> memberDecorations = {});
 
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                      Optional<StorageClass> storage = llvm::None);

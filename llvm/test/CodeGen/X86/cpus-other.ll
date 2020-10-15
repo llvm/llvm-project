@@ -16,6 +16,11 @@
 ; RUN: llc < %s -o /dev/null -mtriple=i686-unknown-unknown -mcpu=c3 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
 ; RUN: llc < %s -o /dev/null -mtriple=i686-unknown-unknown -mcpu=c3-2 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ERROR --allow-empty
 
+;; x86-64 micro-architecture levels.
+; RUN: llc %s -filetype=null -mtriple=x86_64 -mcpu=x86-64-v2
+; RUN: llc %s -filetype=null -mtriple=x86_64 -mcpu=x86-64-v3
+; RUN: llc %s -filetype=null -mtriple=x86_64 -mcpu=x86-64-v4
+
 define void @foo() {
   ret void
 }

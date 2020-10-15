@@ -60,7 +60,7 @@ body:             |
   ; CHECK:   [[COPY1:%[0-9]+]]:gpr32 = COPY $wzr
   ; CHECK:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 4, 0, implicit-def $nzcv
   ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64common = SUBREG_TO_REG 0, [[SUBSWri]], %subreg.sub_32
-  ; CHECK:   $xzr = SUBSXri [[SUBREG_TO_REG]], 71, 0, implicit-def $nzcv
+  ; CHECK:   [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[SUBREG_TO_REG]], 71, 0, implicit-def $nzcv
   ; CHECK:   Bcc 8, %bb.4, implicit $nzcv
   ; CHECK: bb.1.entry:
   ; CHECK:   successors: %bb.3(0x2aaaaaab), %bb.4(0x2aaaaaab), %bb.2(0x2aaaaaab)

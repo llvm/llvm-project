@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple=%itanium_abi_triple -emit-llvm < %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-IT
+// RUN: %clang_cc1 -triple=aarch64-unknown-linux-gnu -emit-llvm < %s | FileCheck %s -check-prefix CHECK -check-prefixes CHECK-IT,CHECK-IT-ARM
+// RUN: %clang_cc1 -triple=x86_64-unknown-linux-gnu -emit-llvm < %s | FileCheck %s -check-prefix CHECK -check-prefixes CHECK-IT,CHECK-IT-OTHER
 // RUN: %clang_cc1 -triple=%ms_abi_triple -emit-llvm < %s | FileCheck %s -check-prefix CHECK -check-prefix CHECK-MS
 
 int S;
@@ -88,7 +89,8 @@ int main() {
 // CHECK-MS: load i32, i32* getelementptr {{.*}} @BF
 // CHECK: store i32 {{.*}}, i32* [[I]]
   i=vBF.x;
-// CHECK-IT: load volatile i8, i8* getelementptr {{.*}} @vBF
+// CHECK-IT-OTHER: load volatile i8, i8* getelementptr {{.*}} @vBF
+// CHECK-IT-ARM: load volatile i32, i32* bitcast {{.*}} @vBF
 // CHECK-MS: load volatile i32, i32* getelementptr {{.*}} @vBF
 // CHECK: store i32 {{.*}}, i32* [[I]]
   i=V[3];
@@ -163,9 +165,11 @@ int main() {
 // CHECK-MS: store i32 {{.*}}, i32* getelementptr {{.*}} @BF
   vBF.x=i;
 // CHECK: load i32, i32* [[I]]
-// CHECK-IT: load volatile i8, i8* getelementptr {{.*}} @vBF
+// CHECK-IT-OTHER: load volatile i8, i8* getelementptr {{.*}} @vBF
+// CHECK-IT-ARM: load volatile i32, i32* bitcast {{.*}} @vBF
 // CHECK-MS: load volatile i32, i32* getelementptr {{.*}} @vBF
-// CHECK-IT: store volatile i8 {{.*}}, i8* getelementptr {{.*}} @vBF
+// CHECK-IT-OTHER: store volatile i8 {{.*}}, i8* getelementptr {{.*}} @vBF
+// CHECK-IT-ARM: store volatile i32 {{.*}}, i32* bitcast {{.*}} @vBF
 // CHECK-MS: store volatile i32 {{.*}}, i32* getelementptr {{.*}} @vBF
   V[3]=i;
 // CHECK: load i32, i32* [[I]]

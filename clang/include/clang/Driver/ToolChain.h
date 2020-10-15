@@ -423,10 +423,10 @@ public:
   getCompilerRTArgString(const llvm::opt::ArgList &Args, StringRef Component,
                          FileType Type = ToolChain::FT_Static) const;
 
-  std::string getCompilerRTBasename(const llvm::opt::ArgList &Args,
-                                    StringRef Component,
-                                    FileType Type = ToolChain::FT_Static,
-                                    bool AddArch = true) const;
+  virtual std::string
+  getCompilerRTBasename(const llvm::opt::ArgList &Args, StringRef Component,
+                        FileType Type = ToolChain::FT_Static,
+                        bool AddArch = true) const;
 
   // Returns target specific runtime path if it exists.
   virtual Optional<std::string> getRuntimePath() const;
@@ -439,7 +439,7 @@ public:
   std::string getArchSpecificLibPath() const;
 
   // Returns <OSname> part of above.
-  StringRef getOSLibName() const;
+  virtual StringRef getOSLibName() const;
 
   /// needsProfileRT - returns true if instrumentation profile is on.
   static bool needsProfileRT(const llvm::opt::ArgList &Args);

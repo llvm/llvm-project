@@ -102,7 +102,7 @@ public:
   void run();
 
 private:
-  void segregate(size_t begin, size_t end, bool constant);
+  void segregate(size_t begin, size_t end, uint32_t eqClassBase, bool constant);
 
   template <class RelTy>
   bool constantEq(const InputSection *a, ArrayRef<RelTy> relsA,
@@ -197,7 +197,8 @@ static bool isEligible(InputSection *s) {
 
 // Split an equivalence class into smaller classes.
 template <class ELFT>
-void ICF<ELFT>::segregate(size_t begin, size_t end, bool constant) {
+void ICF<ELFT>::segregate(size_t begin, size_t end, uint32_t eqClassBase,
+                          bool constant) {
   // This loop rearranges sections in [Begin, End) so that all sections
   // that are equal in terms of equals{Constant,Variable} are contiguous
   // in [Begin, End).
@@ -219,10 +220,11 @@ void ICF<ELFT>::segregate(size_t begin, size_t end, bool constant) {
     size_t mid = bound - sections.begin();
 
     // Now we split [Begin, End) into [Begin, Mid) and [Mid, End) by
-    // updating the sections in [Begin, Mid). We use Mid as an equivalence
-    // class ID because every group ends with a unique index.
+    // updating the sections in [Begin, Mid). We use Mid as the basis for
+    // the equivalence class ID because every group ends with a unique index.
+    // Add this to eqClassBase to avoid equality with unique IDs.
     for (size_t i = begin; i < mid; ++i)
-      sections[i]->eqClass[next] = mid;
+      sections[i]->eqClass[next] = eqClassBase + mid;
 
     // If we created a group, we need to iterate the main loop again.
     if (mid != end)
@@ -353,8 +355,8 @@ bool ICF<ELFT>::variableEq(const InputSection *secA, ArrayRef<RelTy> ra,
       continue;
     auto *y = cast<InputSection>(db->section);
 
-    // Ineligible sections are in the special equivalence class 0.
-    // They can never be the same in terms of the equivalence class.
+    // Sections that are in the special equivalence class 0, can never be the
+    // same in terms of the equivalence class.
     if (x->eqClass[current] == 0)
       return false;
     if (x->eqClass[current] != y->eqClass[current])
@@ -443,7 +445,7 @@ static void combineRelocHashes(unsigned cnt, InputSection *isec,
       if (auto *relSec = dyn_cast_or_null<InputSection>(d->section))
         hash += relSec->eqClass[cnt % 2];
   }
-  // Set MSB to 1 to avoid collisions with non-hash IDs.
+  // Set MSB to 1 to avoid collisions with unique IDs.
   isec->eqClass[(cnt + 1) % 2] = hash | (1U << 31);
 }
 
@@ -471,18 +473,26 @@ template <class ELFT> void ICF<ELFT>::run() {
   uint32_t uniqueId = 0;
   for (Partition &part : partitions)
     part.ehFrame->iterateFDEWithLSDA<ELFT>(
-        [&](InputSection &s) { s.eqClass[0] = ++uniqueId; });
+        [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = ++uniqueId; });
 
   // Collect sections to merge.
   for (InputSectionBase *sec : inputSections) {
     auto *s = cast<InputSection>(sec);
-    if (isEligible(s) && s->eqClass[0] == 0)
-      sections.push_back(s);
+    if (s->eqClass[0] == 0) {
+      if (isEligible(s))
+        sections.push_back(s);
+      else
+        // Ineligible sections are assigned unique IDs, i.e. each section
+        // belongs to an equivalence class of its own.
+        s->eqClass[0] = s->eqClass[1] = ++uniqueId;
+    }
   }
 
   // Initially, we use hash values to partition sections.
-  parallelForEach(
-      sections, [&](InputSection *s) { s->eqClass[0] = xxHash64(s->data()); });
+  parallelForEach(sections, [&](InputSection *s) {
+    // Set MSB to 1 to avoid collisions with unique IDs.
+    s->eqClass[0] = xxHash64(s->data()) | (1U << 31);
+  });
 
   // Perform 2 rounds of relocation hash propagation. 2 is an empirical value to
   // reduce the average sizes of equivalence classes, i.e. segregate() which has
@@ -502,14 +512,20 @@ template <class ELFT> void ICF<ELFT>::run() {
     return a->eqClass[0] < b->eqClass[0];
   });
 
-  // Compare static contents and assign unique IDs for each static content.
-  forEachClass([&](size_t begin, size_t end) { segregate(begin, end, true); });
+  // Compare static contents and assign unique equivalence class IDs for each
+  // static content. Use a base offset for these IDs to ensure no overlap with
+  // the unique IDs already assigned.
+  uint32_t eqClassBase = ++uniqueId;
+  forEachClass([&](size_t begin, size_t end) {
+    segregate(begin, end, eqClassBase, true);
+  });
 
   // Split groups by comparing relocations until convergence is obtained.
   do {
     repeat = false;
-    forEachClass(
-        [&](size_t begin, size_t end) { segregate(begin, end, false); });
+    forEachClass([&](size_t begin, size_t end) {
+      segregate(begin, end, eqClassBase, false);
+    });
   } while (repeat);
 
   log("ICF needed " + Twine(cnt) + " iterations");

@@ -623,13 +623,20 @@ void MachODumper::printSymbol(const SymbolRef &Symbol) {
   getSymbol(Obj, Symbol.getRawDataRefImpl(), MOSymbol);
 
   StringRef SectionName = "";
-  Expected<section_iterator> SecIOrErr = Symbol.getSection();
-  if (!SecIOrErr)
-    reportError(SecIOrErr.takeError(), Obj->getFileName());
+  // Don't ask a Mach-O STABS symbol for its section unless we know that
+  // STAB symbol's section field refers to a valid section index. Otherwise
+  // the symbol may error trying to load a section that does not exist.
+  // TODO: Add a whitelist of STABS symbol types that contain valid section
+  // indices.
+  if (!(MOSymbol.Type & MachO::N_STAB)) {
+    Expected<section_iterator> SecIOrErr = Symbol.getSection();
+    if (!SecIOrErr)
+      reportError(SecIOrErr.takeError(), Obj->getFileName());
 
-  section_iterator SecI = *SecIOrErr;
-  if (SecI != Obj->section_end())
-    SectionName = unwrapOrError(Obj->getFileName(), SecI->getName());
+    section_iterator SecI = *SecIOrErr;
+    if (SecI != Obj->section_end())
+      SectionName = unwrapOrError(Obj->getFileName(), SecI->getName());
+  }
 
   DictScope D(W, "Symbol");
   W.printNumber("Name", SymbolName, MOSymbol.StringIndex);

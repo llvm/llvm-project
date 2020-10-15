@@ -1,35 +1,35 @@
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx600 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-SI600 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx601 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-SI601 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx700 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI700 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx701 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI701 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx702 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI702 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx703 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI703 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx704 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI704 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=bonaire -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI704 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=mullins -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI703 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=hawaii -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI701 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kabini -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI703 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI700 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-flat-for-global,-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI801 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=tonga -mattr=-flat-for-global,-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI802 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-flat-for-global,-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=polaris10 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=polaris11 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx801 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI801 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx802 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI802 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx803 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx810 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI810 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX900 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx902 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX902 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx904 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX904 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx906 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX906 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx908 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX908 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx909 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX909 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX1010 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1011 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX1011 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1012 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX1012 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1030 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX1030 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1031 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX1031 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx600 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-SI600 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx601 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-SI601 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx700 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI700 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx701 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI701 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx702 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI702 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx703 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI703 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx704 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI704 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=bonaire --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI704 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=mullins --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI703 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=hawaii --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI701 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kabini --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI703 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-CI700 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo --amdhsa-code-object-version=2 -mattr=-flat-for-global | FileCheck --check-prefix=HSA --check-prefix=HSA-VI801 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=tonga --amdhsa-code-object-version=2 -mattr=-flat-for-global | FileCheck --check-prefix=HSA --check-prefix=HSA-VI802 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji --amdhsa-code-object-version=2 -mattr=-flat-for-global | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=polaris10 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=polaris11 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx801 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI801 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx802 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI802 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx803 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI803 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx810 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-VI810 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX900 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx902 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX902 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx904 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX904 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx906 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX906 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx908 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX908 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx909 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX909 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX1010 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1011 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX1011 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1012 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX1012 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1030 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX1030 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1031 --amdhsa-code-object-version=2 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX1031 %s
 
 ; HSA: .hsa_code_object_version 2,1
 ; HSA-SI600: .hsa_code_object_isa 6,0,0,"AMD","AMDGPU"

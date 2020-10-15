@@ -1145,275 +1145,131 @@ define <4 x i32> @saddo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 define <2 x i32> @saddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) nounwind {
 ; SSE2-LABEL: saddo_v2i128:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pushq %rbp
-; SSE2-NEXT:    pushq %rbx
-; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; SSE2-NEXT:    testq %r9, %r9
-; SSE2-NEXT:    setns %al
-; SSE2-NEXT:    testq %rsi, %rsi
-; SSE2-NEXT:    setns %bl
-; SSE2-NEXT:    cmpb %al, %bl
-; SSE2-NEXT:    sete %bpl
 ; SSE2-NEXT:    addq %r8, %rdi
 ; SSE2-NEXT:    adcq %r9, %rsi
-; SSE2-NEXT:    setns %al
-; SSE2-NEXT:    cmpb %al, %bl
-; SSE2-NEXT:    setne %al
-; SSE2-NEXT:    andb %bpl, %al
+; SSE2-NEXT:    seto %r8b
 ; SSE2-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
-; SSE2-NEXT:    movq %rcx, %rbp
-; SSE2-NEXT:    adcq %r10, %rbp
-; SSE2-NEXT:    setns %bl
-; SSE2-NEXT:    testq %rcx, %rcx
-; SSE2-NEXT:    setns %cl
-; SSE2-NEXT:    cmpb %bl, %cl
-; SSE2-NEXT:    setne %r8b
-; SSE2-NEXT:    testq %r10, %r10
-; SSE2-NEXT:    setns %bl
-; SSE2-NEXT:    cmpb %bl, %cl
-; SSE2-NEXT:    sete %cl
-; SSE2-NEXT:    andb %r8b, %cl
-; SSE2-NEXT:    movzbl %cl, %ecx
-; SSE2-NEXT:    negl %ecx
-; SSE2-NEXT:    movd %ecx, %xmm1
+; SSE2-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
+; SSE2-NEXT:    seto %al
 ; SSE2-NEXT:    movzbl %al, %eax
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    movzbl %r8b, %eax
 ; SSE2-NEXT:    negl %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    movq %rdx, 16(%r11)
-; SSE2-NEXT:    movq %rdi, (%r11)
-; SSE2-NEXT:    movq %rbp, 24(%r11)
-; SSE2-NEXT:    movq %rsi, 8(%r11)
-; SSE2-NEXT:    popq %rbx
-; SSE2-NEXT:    popq %rbp
+; SSE2-NEXT:    movq %rdx, 16(%r10)
+; SSE2-NEXT:    movq %rdi, (%r10)
+; SSE2-NEXT:    movq %rcx, 24(%r10)
+; SSE2-NEXT:    movq %rsi, 8(%r10)
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: saddo_v2i128:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pushq %rbp
-; SSSE3-NEXT:    pushq %rbx
-; SSSE3-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; SSSE3-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; SSSE3-NEXT:    testq %r9, %r9
-; SSSE3-NEXT:    setns %al
-; SSSE3-NEXT:    testq %rsi, %rsi
-; SSSE3-NEXT:    setns %bl
-; SSSE3-NEXT:    cmpb %al, %bl
-; SSSE3-NEXT:    sete %bpl
 ; SSSE3-NEXT:    addq %r8, %rdi
 ; SSSE3-NEXT:    adcq %r9, %rsi
-; SSSE3-NEXT:    setns %al
-; SSSE3-NEXT:    cmpb %al, %bl
-; SSSE3-NEXT:    setne %al
-; SSSE3-NEXT:    andb %bpl, %al
+; SSSE3-NEXT:    seto %r8b
 ; SSSE3-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
-; SSSE3-NEXT:    movq %rcx, %rbp
-; SSSE3-NEXT:    adcq %r10, %rbp
-; SSSE3-NEXT:    setns %bl
-; SSSE3-NEXT:    testq %rcx, %rcx
-; SSSE3-NEXT:    setns %cl
-; SSSE3-NEXT:    cmpb %bl, %cl
-; SSSE3-NEXT:    setne %r8b
-; SSSE3-NEXT:    testq %r10, %r10
-; SSSE3-NEXT:    setns %bl
-; SSSE3-NEXT:    cmpb %bl, %cl
-; SSSE3-NEXT:    sete %cl
-; SSSE3-NEXT:    andb %r8b, %cl
-; SSSE3-NEXT:    movzbl %cl, %ecx
-; SSSE3-NEXT:    negl %ecx
-; SSSE3-NEXT:    movd %ecx, %xmm1
+; SSSE3-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
+; SSSE3-NEXT:    seto %al
 ; SSSE3-NEXT:    movzbl %al, %eax
+; SSSE3-NEXT:    negl %eax
+; SSSE3-NEXT:    movd %eax, %xmm1
+; SSSE3-NEXT:    movzbl %r8b, %eax
 ; SSSE3-NEXT:    negl %eax
 ; SSSE3-NEXT:    movd %eax, %xmm0
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSSE3-NEXT:    movq %rdx, 16(%r11)
-; SSSE3-NEXT:    movq %rdi, (%r11)
-; SSSE3-NEXT:    movq %rbp, 24(%r11)
-; SSSE3-NEXT:    movq %rsi, 8(%r11)
-; SSSE3-NEXT:    popq %rbx
-; SSSE3-NEXT:    popq %rbp
+; SSSE3-NEXT:    movq %rdx, 16(%r10)
+; SSSE3-NEXT:    movq %rdi, (%r10)
+; SSSE3-NEXT:    movq %rcx, 24(%r10)
+; SSSE3-NEXT:    movq %rsi, 8(%r10)
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: saddo_v2i128:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pushq %rbp
-; SSE41-NEXT:    pushq %rbx
-; SSE41-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; SSE41-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; SSE41-NEXT:    testq %r9, %r9
-; SSE41-NEXT:    setns %al
-; SSE41-NEXT:    testq %rsi, %rsi
-; SSE41-NEXT:    setns %bl
-; SSE41-NEXT:    cmpb %al, %bl
-; SSE41-NEXT:    sete %bpl
 ; SSE41-NEXT:    addq %r8, %rdi
 ; SSE41-NEXT:    adcq %r9, %rsi
-; SSE41-NEXT:    setns %al
-; SSE41-NEXT:    cmpb %al, %bl
-; SSE41-NEXT:    setne %al
-; SSE41-NEXT:    andb %bpl, %al
+; SSE41-NEXT:    seto %r8b
 ; SSE41-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
-; SSE41-NEXT:    movq %rcx, %rbp
-; SSE41-NEXT:    adcq %r10, %rbp
-; SSE41-NEXT:    setns %bl
-; SSE41-NEXT:    testq %rcx, %rcx
-; SSE41-NEXT:    setns %cl
-; SSE41-NEXT:    cmpb %bl, %cl
-; SSE41-NEXT:    setne %r8b
-; SSE41-NEXT:    testq %r10, %r10
-; SSE41-NEXT:    setns %bl
-; SSE41-NEXT:    cmpb %bl, %cl
-; SSE41-NEXT:    sete %cl
-; SSE41-NEXT:    andb %r8b, %cl
-; SSE41-NEXT:    movzbl %cl, %ecx
-; SSE41-NEXT:    negl %ecx
-; SSE41-NEXT:    movzbl %al, %eax
+; SSE41-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
+; SSE41-NEXT:    seto %al
+; SSE41-NEXT:    movzbl %al, %r9d
+; SSE41-NEXT:    negl %r9d
+; SSE41-NEXT:    movzbl %r8b, %eax
 ; SSE41-NEXT:    negl %eax
 ; SSE41-NEXT:    movd %eax, %xmm0
-; SSE41-NEXT:    pinsrd $1, %ecx, %xmm0
-; SSE41-NEXT:    movq %rdx, 16(%r11)
-; SSE41-NEXT:    movq %rdi, (%r11)
-; SSE41-NEXT:    movq %rbp, 24(%r11)
-; SSE41-NEXT:    movq %rsi, 8(%r11)
-; SSE41-NEXT:    popq %rbx
-; SSE41-NEXT:    popq %rbp
+; SSE41-NEXT:    pinsrd $1, %r9d, %xmm0
+; SSE41-NEXT:    movq %rdx, 16(%r10)
+; SSE41-NEXT:    movq %rdi, (%r10)
+; SSE41-NEXT:    movq %rcx, 24(%r10)
+; SSE41-NEXT:    movq %rsi, 8(%r10)
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: saddo_v2i128:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    pushq %rbp
-; AVX1-NEXT:    pushq %rbx
-; AVX1-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; AVX1-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX1-NEXT:    testq %r9, %r9
-; AVX1-NEXT:    setns %al
-; AVX1-NEXT:    testq %rsi, %rsi
-; AVX1-NEXT:    setns %bl
-; AVX1-NEXT:    cmpb %al, %bl
-; AVX1-NEXT:    sete %bpl
 ; AVX1-NEXT:    addq %r8, %rdi
 ; AVX1-NEXT:    adcq %r9, %rsi
-; AVX1-NEXT:    setns %al
-; AVX1-NEXT:    cmpb %al, %bl
-; AVX1-NEXT:    setne %al
-; AVX1-NEXT:    andb %bpl, %al
+; AVX1-NEXT:    seto %r8b
 ; AVX1-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
-; AVX1-NEXT:    movq %rcx, %rbp
-; AVX1-NEXT:    adcq %r10, %rbp
-; AVX1-NEXT:    setns %bl
-; AVX1-NEXT:    testq %rcx, %rcx
-; AVX1-NEXT:    setns %cl
-; AVX1-NEXT:    cmpb %bl, %cl
-; AVX1-NEXT:    setne %r8b
-; AVX1-NEXT:    testq %r10, %r10
-; AVX1-NEXT:    setns %bl
-; AVX1-NEXT:    cmpb %bl, %cl
-; AVX1-NEXT:    sete %cl
-; AVX1-NEXT:    andb %r8b, %cl
-; AVX1-NEXT:    movzbl %cl, %ecx
-; AVX1-NEXT:    negl %ecx
-; AVX1-NEXT:    movzbl %al, %eax
+; AVX1-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
+; AVX1-NEXT:    seto %al
+; AVX1-NEXT:    movzbl %al, %r9d
+; AVX1-NEXT:    negl %r9d
+; AVX1-NEXT:    movzbl %r8b, %eax
 ; AVX1-NEXT:    negl %eax
 ; AVX1-NEXT:    vmovd %eax, %xmm0
-; AVX1-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; AVX1-NEXT:    movq %rdx, 16(%r11)
-; AVX1-NEXT:    movq %rdi, (%r11)
-; AVX1-NEXT:    movq %rbp, 24(%r11)
-; AVX1-NEXT:    movq %rsi, 8(%r11)
-; AVX1-NEXT:    popq %rbx
-; AVX1-NEXT:    popq %rbp
+; AVX1-NEXT:    vpinsrd $1, %r9d, %xmm0, %xmm0
+; AVX1-NEXT:    movq %rdx, 16(%r10)
+; AVX1-NEXT:    movq %rdi, (%r10)
+; AVX1-NEXT:    movq %rcx, 24(%r10)
+; AVX1-NEXT:    movq %rsi, 8(%r10)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: saddo_v2i128:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    pushq %rbp
-; AVX2-NEXT:    pushq %rbx
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX2-NEXT:    testq %r9, %r9
-; AVX2-NEXT:    setns %al
-; AVX2-NEXT:    testq %rsi, %rsi
-; AVX2-NEXT:    setns %bl
-; AVX2-NEXT:    cmpb %al, %bl
-; AVX2-NEXT:    sete %bpl
 ; AVX2-NEXT:    addq %r8, %rdi
 ; AVX2-NEXT:    adcq %r9, %rsi
-; AVX2-NEXT:    setns %al
-; AVX2-NEXT:    cmpb %al, %bl
-; AVX2-NEXT:    setne %al
-; AVX2-NEXT:    andb %bpl, %al
+; AVX2-NEXT:    seto %r8b
 ; AVX2-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
-; AVX2-NEXT:    movq %rcx, %rbp
-; AVX2-NEXT:    adcq %r10, %rbp
-; AVX2-NEXT:    setns %bl
-; AVX2-NEXT:    testq %rcx, %rcx
-; AVX2-NEXT:    setns %cl
-; AVX2-NEXT:    cmpb %bl, %cl
-; AVX2-NEXT:    setne %r8b
-; AVX2-NEXT:    testq %r10, %r10
-; AVX2-NEXT:    setns %bl
-; AVX2-NEXT:    cmpb %bl, %cl
-; AVX2-NEXT:    sete %cl
-; AVX2-NEXT:    andb %r8b, %cl
-; AVX2-NEXT:    movzbl %cl, %ecx
-; AVX2-NEXT:    negl %ecx
-; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
+; AVX2-NEXT:    seto %al
+; AVX2-NEXT:    movzbl %al, %r9d
+; AVX2-NEXT:    negl %r9d
+; AVX2-NEXT:    movzbl %r8b, %eax
 ; AVX2-NEXT:    negl %eax
 ; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    movq %rdx, 16(%r11)
-; AVX2-NEXT:    movq %rdi, (%r11)
-; AVX2-NEXT:    movq %rbp, 24(%r11)
-; AVX2-NEXT:    movq %rsi, 8(%r11)
-; AVX2-NEXT:    popq %rbx
-; AVX2-NEXT:    popq %rbp
+; AVX2-NEXT:    vpinsrd $1, %r9d, %xmm0, %xmm0
+; AVX2-NEXT:    movq %rdx, 16(%r10)
+; AVX2-NEXT:    movq %rdi, (%r10)
+; AVX2-NEXT:    movq %rcx, 24(%r10)
+; AVX2-NEXT:    movq %rsi, 8(%r10)
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: saddo_v2i128:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    pushq %r14
-; AVX512-NEXT:    pushq %rbx
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; AVX512-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
-; AVX512-NEXT:    movq %rcx, %r14
-; AVX512-NEXT:    adcq %r11, %r14
-; AVX512-NEXT:    setns %bl
-; AVX512-NEXT:    testq %rcx, %rcx
-; AVX512-NEXT:    setns %cl
-; AVX512-NEXT:    cmpb %bl, %cl
-; AVX512-NEXT:    setne %bl
-; AVX512-NEXT:    testq %r11, %r11
-; AVX512-NEXT:    setns %al
-; AVX512-NEXT:    cmpb %al, %cl
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    andb %bl, %al
+; AVX512-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
+; AVX512-NEXT:    seto %al
 ; AVX512-NEXT:    kmovd %eax, %k0
-; AVX512-NEXT:    testq %r9, %r9
-; AVX512-NEXT:    setns %al
-; AVX512-NEXT:    testq %rsi, %rsi
-; AVX512-NEXT:    setns %cl
-; AVX512-NEXT:    cmpb %al, %cl
-; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    addq %r8, %rdi
 ; AVX512-NEXT:    adcq %r9, %rsi
-; AVX512-NEXT:    setns %bl
-; AVX512-NEXT:    cmpb %bl, %cl
-; AVX512-NEXT:    setne %cl
-; AVX512-NEXT:    andb %al, %cl
-; AVX512-NEXT:    andl $1, %ecx
-; AVX512-NEXT:    kmovw %ecx, %k1
+; AVX512-NEXT:    seto %al
+; AVX512-NEXT:    andl $1, %eax
+; AVX512-NEXT:    kmovw %eax, %k1
 ; AVX512-NEXT:    kshiftlw $1, %k0, %k0
 ; AVX512-NEXT:    korw %k0, %k1, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
 ; AVX512-NEXT:    movq %rdx, 16(%r10)
 ; AVX512-NEXT:    movq %rdi, (%r10)
-; AVX512-NEXT:    movq %r14, 24(%r10)
+; AVX512-NEXT:    movq %rcx, 24(%r10)
 ; AVX512-NEXT:    movq %rsi, 8(%r10)
-; AVX512-NEXT:    popq %rbx
-; AVX512-NEXT:    popq %r14
 ; AVX512-NEXT:    retq
   %t = call {<2 x i128>, <2 x i1>} @llvm.sadd.with.overflow.v2i128(<2 x i128> %a0, <2 x i128> %a1)
   %val = extractvalue {<2 x i128>, <2 x i1>} %t, 0

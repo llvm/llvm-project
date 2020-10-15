@@ -2448,13 +2448,13 @@ static void syscall_access_range(uptr pc, uptr p, uptr s, bool write) {
   MemoryAccessRange(thr, pc, p, s, write);
 }
 
-static void syscall_acquire(uptr pc, uptr addr) {
+static USED void syscall_acquire(uptr pc, uptr addr) {
   TSAN_SYSCALL();
   Acquire(thr, pc, addr);
   DPrintf("syscall_acquire(%p)\n", addr);
 }
 
-static void syscall_release(uptr pc, uptr addr) {
+static USED void syscall_release(uptr pc, uptr addr) {
   TSAN_SYSCALL();
   DPrintf("syscall_release(%p)\n", addr);
   Release(thr, pc, addr);

@@ -42,6 +42,21 @@
 
 # COMBINED: cannot specify both -add_rpath @executable_b/. and -delete_rpath @executable_b/.
 
+## Remove all RPATHS
+# RUN: yaml2obj %s -o %t2
+# RUN: llvm-install-name-tool -delete_all_rpaths %t2
+# RUN: llvm-objdump -p %t2 | FileCheck %s
+
+# CHECK-NOT: LC_RPATH
+
+## Remove all RPATHS and add a new one.
+# RUN: yaml2obj %s -o %t3
+# RUN: llvm-install-name-tool --delete_all_rpaths -add_rpath @executable_b/. %t3
+# RUN: llvm-objdump -p %t3 | \
+# RUN:   FileCheck %s --check-prefix=DELETE_AND_ADD --implicit-check-not=@executable
+
+# DELETE_AND_ADD: @executable_b/.
+
 --- !mach-o
 FileHeader:
   magic:           0xFEEDFACF

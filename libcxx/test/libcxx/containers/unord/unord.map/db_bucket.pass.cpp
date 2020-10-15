@@ -12,7 +12,7 @@
 
 // UNSUPPORTED: libcxx-no-debug-mode
 
-#define _LIBCPP_DEBUG 1
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <unordered_map>
@@ -21,14 +21,11 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::unordered_map<int, std::string> C;
-        C c;
-        (void) c.bucket(3);
-        assert(false);
-    }
+int main(int, char**) {
+    typedef std::unordered_map<int, std::string> C;
+    C c;
+    (void) c.bucket(3);
+    assert(false);
 
     return 0;
 }

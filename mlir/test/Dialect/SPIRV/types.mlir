@@ -230,119 +230,194 @@ func @image_parameters_nocomma_5(!spv.image<f32, Dim1D, NoDepth, NonArrayed, Sin
 // StructType
 //===----------------------------------------------------------------------===//
 
-// CHECK: func @struct_type(!spv.struct<f32>)
-func @struct_type(!spv.struct<f32>) -> ()
+// CHECK: func @struct_type(!spv.struct<(f32)>)
+func @struct_type(!spv.struct<(f32)>) -> ()
 
-// CHECK: func @struct_type2(!spv.struct<f32 [0]>)
-func @struct_type2(!spv.struct<f32 [0]>) -> ()
+// CHECK: func @struct_type2(!spv.struct<(f32 [0])>)
+func @struct_type2(!spv.struct<(f32 [0])>) -> ()
 
-// CHECK: func @struct_type_simple(!spv.struct<f32, !spv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Unknown>>)
-func @struct_type_simple(!spv.struct<f32, !spv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Unknown>>) -> ()
+// CHECK: func @struct_type_simple(!spv.struct<(f32, !spv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Unknown>)>)
+func @struct_type_simple(!spv.struct<(f32, !spv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Unknown>)>) -> ()
 
-// CHECK: func @struct_type_with_offset(!spv.struct<f32 [0], i32 [4]>)
-func @struct_type_with_offset(!spv.struct<f32 [0], i32 [4]>) -> ()
+// CHECK: func @struct_type_with_offset(!spv.struct<(f32 [0], i32 [4])>)
+func @struct_type_with_offset(!spv.struct<(f32 [0], i32 [4])>) -> ()
 
-// CHECK: func @nested_struct(!spv.struct<f32, !spv.struct<f32, i32>>)
-func @nested_struct(!spv.struct<f32, !spv.struct<f32, i32>>)
+// CHECK: func @nested_struct(!spv.struct<(f32, !spv.struct<(f32, i32)>)>)
+func @nested_struct(!spv.struct<(f32, !spv.struct<(f32, i32)>)>)
 
-// CHECK: func @nested_struct_with_offset(!spv.struct<f32 [0], !spv.struct<f32 [0], i32 [4]> [4]>)
-func @nested_struct_with_offset(!spv.struct<f32 [0], !spv.struct<f32 [0], i32 [4]> [4]>)
+// CHECK: func @nested_struct_with_offset(!spv.struct<(f32 [0], !spv.struct<(f32 [0], i32 [4])> [4])>)
+func @nested_struct_with_offset(!spv.struct<(f32 [0], !spv.struct<(f32 [0], i32 [4])> [4])>)
 
-// CHECK: func @struct_type_with_decoration(!spv.struct<f32 [NonWritable]>)
-func @struct_type_with_decoration(!spv.struct<f32 [NonWritable]>)
+// CHECK: func @struct_type_with_decoration(!spv.struct<(f32 [NonWritable])>)
+func @struct_type_with_decoration(!spv.struct<(f32 [NonWritable])>)
 
-// CHECK: func @struct_type_with_decoration_and_offset(!spv.struct<f32 [0, NonWritable]>)
-func @struct_type_with_decoration_and_offset(!spv.struct<f32 [0, NonWritable]>)
+// CHECK: func @struct_type_with_decoration_and_offset(!spv.struct<(f32 [0, NonWritable])>)
+func @struct_type_with_decoration_and_offset(!spv.struct<(f32 [0, NonWritable])>)
 
-// CHECK: func @struct_type_with_decoration2(!spv.struct<f32 [NonWritable], i32 [NonReadable]>)
-func @struct_type_with_decoration2(!spv.struct<f32 [NonWritable], i32 [NonReadable]>)
+// CHECK: func @struct_type_with_decoration2(!spv.struct<(f32 [NonWritable], i32 [NonReadable])>)
+func @struct_type_with_decoration2(!spv.struct<(f32 [NonWritable], i32 [NonReadable])>)
 
-// CHECK: func @struct_type_with_decoration3(!spv.struct<f32, i32 [NonReadable]>)
-func @struct_type_with_decoration3(!spv.struct<f32, i32 [NonReadable]>)
+// CHECK: func @struct_type_with_decoration3(!spv.struct<(f32, i32 [NonReadable])>)
+func @struct_type_with_decoration3(!spv.struct<(f32, i32 [NonReadable])>)
 
-// CHECK: func @struct_type_with_decoration4(!spv.struct<f32 [0], i32 [4, NonReadable]>)
-func @struct_type_with_decoration4(!spv.struct<f32 [0], i32 [4, NonReadable]>)
+// CHECK: func @struct_type_with_decoration4(!spv.struct<(f32 [0], i32 [4, NonReadable])>)
+func @struct_type_with_decoration4(!spv.struct<(f32 [0], i32 [4, NonReadable])>)
 
-// CHECK: func @struct_type_with_decoration5(!spv.struct<f32 [NonWritable, NonReadable]>)
-func @struct_type_with_decoration5(!spv.struct<f32 [NonWritable, NonReadable]>)
+// CHECK: func @struct_type_with_decoration5(!spv.struct<(f32 [NonWritable, NonReadable])>)
+func @struct_type_with_decoration5(!spv.struct<(f32 [NonWritable, NonReadable])>)
 
-// CHECK: func @struct_type_with_decoration6(!spv.struct<f32, !spv.struct<i32 [NonWritable, NonReadable]>>)
-func @struct_type_with_decoration6(!spv.struct<f32, !spv.struct<i32 [NonWritable, NonReadable]>>)
+// CHECK: func @struct_type_with_decoration6(!spv.struct<(f32, !spv.struct<(i32 [NonWritable, NonReadable])>)>)
+func @struct_type_with_decoration6(!spv.struct<(f32, !spv.struct<(i32 [NonWritable, NonReadable])>)>)
 
-// CHECK: func @struct_type_with_decoration7(!spv.struct<f32 [0], !spv.struct<i32, f32 [NonReadable]> [4]>)
-func @struct_type_with_decoration7(!spv.struct<f32 [0], !spv.struct<i32, f32 [NonReadable]> [4]>)
+// CHECK: func @struct_type_with_decoration7(!spv.struct<(f32 [0], !spv.struct<(i32, f32 [NonReadable])> [4])>)
+func @struct_type_with_decoration7(!spv.struct<(f32 [0], !spv.struct<(i32, f32 [NonReadable])> [4])>)
 
-// CHECK: func @struct_type_with_decoration8(!spv.struct<f32, !spv.struct<i32 [0], f32 [4, NonReadable]>>)
-func @struct_type_with_decoration8(!spv.struct<f32, !spv.struct<i32 [0], f32 [4, NonReadable]>>)
+// CHECK: func @struct_type_with_decoration8(!spv.struct<(f32, !spv.struct<(i32 [0], f32 [4, NonReadable])>)>)
+func @struct_type_with_decoration8(!spv.struct<(f32, !spv.struct<(i32 [0], f32 [4, NonReadable])>)>)
 
-// CHECK: func @struct_type_with_matrix_1(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, ColMajor, MatrixStride=16]>)
-func @struct_type_with_matrix_1(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, ColMajor, MatrixStride=16]>)
+// CHECK: func @struct_type_with_matrix_1(!spv.struct<(!spv.matrix<3 x vector<3xf32>> [0, ColMajor, MatrixStride=16])>)
+func @struct_type_with_matrix_1(!spv.struct<(!spv.matrix<3 x vector<3xf32>> [0, ColMajor, MatrixStride=16])>)
 
-// CHECK: func @struct_type_with_matrix_2(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, RowMajor, MatrixStride=16]>)
-func @struct_type_with_matrix_2(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, RowMajor, MatrixStride=16]>)
+// CHECK: func @struct_type_with_matrix_2(!spv.struct<(!spv.matrix<3 x vector<3xf32>> [0, RowMajor, MatrixStride=16])>)
+func @struct_type_with_matrix_2(!spv.struct<(!spv.matrix<3 x vector<3xf32>> [0, RowMajor, MatrixStride=16])>)
 
-// CHECK: func @struct_empty(!spv.struct<>)
-func @struct_empty(!spv.struct<>)
-
-// -----
-
-// expected-error @+1 {{offset specification must be given for all members}}
-func @struct_type_missing_offset1((!spv.struct<f32, i32 [4]>) -> ()
+// CHECK: func @struct_empty(!spv.struct<()>)
+func @struct_empty(!spv.struct<()>)
 
 // -----
 
 // expected-error @+1 {{offset specification must be given for all members}}
-func @struct_type_missing_offset2(!spv.struct<f32 [3], i32>) -> ()
+func @struct_type_missing_offset1((!spv.struct<(f32, i32 [4])>) -> ()
 
 // -----
 
-// expected-error @+1 {{expected '>'}}
-func @struct_type_missing_comma1(!spv.struct<f32 i32>) -> ()
+// expected-error @+1 {{offset specification must be given for all members}}
+func @struct_type_missing_offset2(!spv.struct<(f32 [3], i32)>) -> ()
 
 // -----
 
-// expected-error @+1 {{expected '>'}}
-func @struct_type_missing_comma2(!spv.struct<f32 [0] i32>) -> ()
+// expected-error @+1 {{expected ')'}}
+func @struct_type_missing_comma1(!spv.struct<(f32 i32)>) -> ()
 
 // -----
 
-//  expected-error @+1 {{unbalanced '>' character in pretty dialect name}}
-func @struct_type_neg_offset(!spv.struct<f32 [0>) -> ()
+// expected-error @+1 {{expected ')'}}
+func @struct_type_missing_comma2(!spv.struct<(f32 [0] i32)>) -> ()
+
+// -----
+
+//  expected-error @+1 {{unbalanced ')' character in pretty dialect name}}
+func @struct_type_neg_offset(!spv.struct<(f32 [0)>) -> ()
 
 // -----
 
 //  expected-error @+1 {{unbalanced ']' character in pretty dialect name}}
-func @struct_type_neg_offset(!spv.struct<f32 0]>) -> ()
+func @struct_type_neg_offset(!spv.struct<(f32 0])>) -> ()
 
 // -----
 
 //  expected-error @+1 {{expected ']'}}
-func @struct_type_neg_offset(!spv.struct<f32 [NonWritable 0]>) -> ()
+func @struct_type_neg_offset(!spv.struct<(f32 [NonWritable 0])>) -> ()
 
 // -----
 
 //  expected-error @+1 {{expected valid keyword}}
-func @struct_type_neg_offset(!spv.struct<f32 [NonWritable, 0]>) -> ()
+func @struct_type_neg_offset(!spv.struct<(f32 [NonWritable, 0])>) -> ()
 
 // -----
 
 // expected-error @+1 {{expected ','}}
-func @struct_type_missing_comma(!spv.struct<f32 [0 NonWritable], i32 [4]>)
+func @struct_type_missing_comma(!spv.struct<(f32 [0 NonWritable], i32 [4])>)
 
 // -----
 
 // expected-error @+1 {{expected ']'}}
-func @struct_type_missing_comma(!spv.struct<f32 [0, NonWritable NonReadable], i32 [4]>)
+func @struct_type_missing_comma(!spv.struct<(f32 [0, NonWritable NonReadable], i32 [4])>)
 
 // -----
 
 // expected-error @+1 {{expected ']'}}
-func @struct_type_missing_comma(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, RowMajor MatrixStride=16]>)
+func @struct_type_missing_comma(!spv.struct<(!spv.matrix<3 x vector<3xf32>> [0, RowMajor MatrixStride=16])>)
 
 // -----
 
 // expected-error @+1 {{expected integer value}}
-func @struct_missing_member_decorator_value(!spv.struct<!spv.matrix<3 x vector<3xf32>> [0, RowMajor, MatrixStride=]>)
+func @struct_missing_member_decorator_value(!spv.struct<(!spv.matrix<3 x vector<3xf32>> [0, RowMajor, MatrixStride=])>)
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// StructType (identified)
+//===----------------------------------------------------------------------===//
+
+// CHECK: func @id_struct_empty(!spv.struct<empty, ()>)
+func @id_struct_empty(!spv.struct<empty, ()>) -> ()
+
+// -----
+
+// CHECK: func @id_struct_simple(!spv.struct<simple, (f32)>)
+func @id_struct_simple(!spv.struct<simple, (f32)>) -> ()
+
+// -----
+
+// CHECK: func @id_struct_multiple_elements(!spv.struct<multi_elements, (f32, i32)>)
+func @id_struct_multiple_elements(!spv.struct<multi_elements, (f32, i32)>) -> ()
+
+// -----
+
+// CHECK: func @id_struct_nested_literal(!spv.struct<a1, (!spv.struct<()>)>)
+func @id_struct_nested_literal(!spv.struct<a1, (!spv.struct<()>)>) -> ()
+
+// -----
+
+// CHECK: func @id_struct_nested_id(!spv.struct<a2, (!spv.struct<b2, ()>)>)
+func @id_struct_nested_id(!spv.struct<a2, (!spv.struct<b2, ()>)>) -> ()
+
+// -----
+
+// CHECK: func @literal_struct_nested_id(!spv.struct<(!spv.struct<a3, ()>)>)
+func @literal_struct_nested_id(!spv.struct<(!spv.struct<a3, ()>)>) -> ()
+
+// -----
+
+// CHECK: func @id_struct_self_recursive(!spv.struct<a4, (!spv.ptr<!spv.struct<a4>, Uniform>)>)
+func @id_struct_self_recursive(!spv.struct<a4, (!spv.ptr<!spv.struct<a4>, Uniform>)>) -> ()
+
+// -----
+
+// CHECK: func @id_struct_self_recursive2(!spv.struct<a5, (i32, !spv.ptr<!spv.struct<a5>, Uniform>)>)
+func @id_struct_self_recursive2(!spv.struct<a5, (i32, !spv.ptr<!spv.struct<a5>, Uniform>)>) -> ()
+
+// -----
+
+// expected-error @+1 {{recursive struct reference not nested in struct definition}}
+func @id_wrong_recursive_reference(!spv.struct<a6>) -> ()
+
+// -----
+
+// expected-error @+1 {{recursive struct reference not nested in struct definition}}
+func @id_struct_recursive_invalid(!spv.struct<a7, (!spv.ptr<!spv.struct<b7>, Uniform>)>) -> ()
+
+// -----
+
+// expected-error @+1 {{identifier already used for an enclosing struct}}
+func @id_struct_redefinition(!spv.struct<a8, (!spv.ptr<!spv.struct<a8, (!spv.ptr<!spv.struct<a8>, Uniform>)>, Uniform>)>) -> ()
+
+// -----
+
+// Equivalent to:
+//   struct a { struct b *bPtr; };
+//   struct b { struct a *aPtr; };
+// CHECK: func @id_struct_recursive(!spv.struct<a9, (!spv.ptr<!spv.struct<b9, (!spv.ptr<!spv.struct<a9>, Uniform>)>, Uniform>)>)
+func @id_struct_recursive(!spv.struct<a9, (!spv.ptr<!spv.struct<b9, (!spv.ptr<!spv.struct<a9>, Uniform>)>, Uniform>)>) -> ()
+
+// -----
+
+// Equivalent to:
+//   struct a { struct b *bPtr; };
+//   struct b { struct a *aPtr, struct b *bPtr; };
+// CHECK: func @id_struct_recursive(!spv.struct<a10, (!spv.ptr<!spv.struct<b10, (!spv.ptr<!spv.struct<a10>, Uniform>, !spv.ptr<!spv.struct<b10>, Uniform>)>, Uniform>)>)
+func @id_struct_recursive(!spv.struct<a10, (!spv.ptr<!spv.struct<b10, (!spv.ptr<!spv.struct<a10>, Uniform>, !spv.ptr<!spv.struct<b10>, Uniform>)>, Uniform>)>) -> ()
 
 // -----
 

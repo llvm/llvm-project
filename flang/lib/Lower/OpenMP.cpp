@@ -109,7 +109,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     auto parallelOp = firOpBuilder.create<mlir::omp::ParallelOp>(
         currentLocation, argTy, Value(), numThreads,
         defaultValue.dyn_cast_or_null<StringAttr>(), ValueRange(), ValueRange(),
-        ValueRange(), ValueRange(),
+        ValueRange(), ValueRange(), ValueRange(), ValueRange(),
         procBindValue.dyn_cast_or_null<StringAttr>());
     firOpBuilder.createBlock(&parallelOp.getRegion());
     auto &block = parallelOp.getRegion().back();

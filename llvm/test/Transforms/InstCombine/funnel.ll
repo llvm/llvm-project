@@ -101,7 +101,7 @@ define <2 x i17> @fshr_v2i17_constant_splat_undef1(<2 x i17> %x, <2 x i17> %y) {
 }
 
 ; Allow arbitrary shift constants.
-; TODO: Support undef elements.
+; Support undef elements.
 
 define <2 x i32> @fshr_v2i32_constant_nonsplat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @fshr_v2i32_constant_nonsplat(
@@ -116,9 +116,7 @@ define <2 x i32> @fshr_v2i32_constant_nonsplat(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @fshr_v2i32_constant_nonsplat_undef0(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @fshr_v2i32_constant_nonsplat_undef0(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 undef, i32 19>
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[Y:%.*]], <i32 15, i32 13>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i32> [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> [[X:%.*]], <2 x i32> <i32 0, i32 13>)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %shr = lshr <2 x i32> %x, <i32 undef, i32 19>
@@ -129,9 +127,7 @@ define <2 x i32> @fshr_v2i32_constant_nonsplat_undef0(<2 x i32> %x, <2 x i32> %y
 
 define <2 x i32> @fshr_v2i32_constant_nonsplat_undef1(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @fshr_v2i32_constant_nonsplat_undef1(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 17, i32 19>
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> [[Y:%.*]], <i32 15, i32 undef>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i32> [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> [[X:%.*]], <2 x i32> <i32 15, i32 0>)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %shr = lshr <2 x i32> %x, <i32 17, i32 19>
@@ -153,9 +149,7 @@ define <2 x i36> @fshl_v2i36_constant_nonsplat(<2 x i36> %x, <2 x i36> %y) {
 
 define <3 x i36> @fshl_v3i36_constant_nonsplat_undef0(<3 x i36> %x, <3 x i36> %y) {
 ; CHECK-LABEL: @fshl_v3i36_constant_nonsplat_undef0(
-; CHECK-NEXT:    [[SHL:%.*]] = shl <3 x i36> [[X:%.*]], <i36 21, i36 11, i36 undef>
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <3 x i36> [[Y:%.*]], <i36 15, i36 25, i36 undef>
-; CHECK-NEXT:    [[R:%.*]] = or <3 x i36> [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i36> @llvm.fshl.v3i36(<3 x i36> [[X:%.*]], <3 x i36> [[Y:%.*]], <3 x i36> <i36 21, i36 11, i36 0>)
 ; CHECK-NEXT:    ret <3 x i36> [[R]]
 ;
   %shl = shl <3 x i36> %x, <i36 21, i36 11, i36 undef>
@@ -168,11 +162,7 @@ define <3 x i36> @fshl_v3i36_constant_nonsplat_undef0(<3 x i36> %x, <3 x i36> %y
 
 define i64 @fshl_sub_mask(i64 %x, i64 %y, i64 %a) {
 ; CHECK-LABEL: @fshl_sub_mask(
-; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[A:%.*]], 63
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X:%.*]], [[MASK]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i64 64, [[MASK]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[Y:%.*]], [[SUB]]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.fshl.i64(i64 [[X:%.*]], i64 [[Y:%.*]], i64 [[A:%.*]])
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %mask = and i64 %a, 63
@@ -187,11 +177,7 @@ define i64 @fshl_sub_mask(i64 %x, i64 %y, i64 %a) {
 
 define i64 @fshr_sub_mask(i64 %x, i64 %y, i64 %a) {
 ; CHECK-LABEL: @fshr_sub_mask(
-; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[A:%.*]], 63
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[X:%.*]], [[MASK]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i64 64, [[MASK]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[Y:%.*]], [[SUB]]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.fshr.i64(i64 [[Y:%.*]], i64 [[X:%.*]], i64 [[A:%.*]])
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %mask = and i64 %a, 63
@@ -204,11 +190,7 @@ define i64 @fshr_sub_mask(i64 %x, i64 %y, i64 %a) {
 
 define <2 x i64> @fshr_sub_mask_vector(<2 x i64> %x, <2 x i64> %y, <2 x i64> %a) {
 ; CHECK-LABEL: @fshr_sub_mask_vector(
-; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i64> [[A:%.*]], <i64 63, i64 63>
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i64> [[X:%.*]], [[MASK]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw <2 x i64> <i64 64, i64 64>, [[MASK]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i64> [[Y:%.*]], [[SUB]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i64> [[SHL]], [[SHR]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> [[Y:%.*]], <2 x i64> [[X:%.*]], <2 x i64> [[A:%.*]])
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %mask = and <2 x i64> %a, <i64 63, i64 63>
