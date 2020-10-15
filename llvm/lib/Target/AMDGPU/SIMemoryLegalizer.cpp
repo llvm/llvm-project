@@ -716,7 +716,7 @@ bool SIGfx6CacheControl::enableLoadCacheBypass(
   /// sequentially consistent, and no other thread can access scratch
   /// memory.
 
-  /// Other address spaces do not hava a cache.
+  /// Other address spaces do not have a cache.
 
   return Changed;
 }
@@ -770,7 +770,7 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   /// sequentially consistent, and no other thread can access scratch
   /// memory.
 
-  /// Other address spaces do not hava a cache.
+  /// Other address spaces do not have a cache.
 
   if (Pos == Position::AFTER)
     --MI;
@@ -972,7 +972,7 @@ bool SIGfx10CacheControl::enableLoadCacheBypass(
   /// sequentially consistent, and no other thread can access scratch
   /// memory.
 
-  /// Other address spaces do not hava a cache.
+  /// Other address spaces do not have a cache.
 
   return Changed;
 }
@@ -1035,7 +1035,7 @@ bool SIGfx10CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   /// sequentially consistent, and no other thread can access scratch
   /// memory.
 
-  /// Other address spaces do not hava a cache.
+  /// Other address spaces do not have a cache.
 
   if (Pos == Position::AFTER)
     --MI;
