@@ -47,6 +47,7 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(SymbolStringPool, LLVMOrcSymbolStringPoolRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(OrcV2CAPIHelper::PoolEntry,
                                    LLVMOrcSymbolStringPoolEntryRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITDylib, LLVMOrcJITDylibRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ResourceTracker, LLVMOrcResourceTrackerRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DefinitionGenerator,
                                    LLVMOrcDefinitionGeneratorRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeContext,
@@ -85,6 +86,37 @@ void LLVMOrcReleaseSymbolStringPoolEntry(LLVMOrcSymbolStringPoolEntryRef S) {
   OrcV2CAPIHelper::releasePoolEntry(unwrap(S));
 }
 
+LLVMOrcResourceTrackerRef
+LLVMOrcJITDylibCreateResourceTracker(LLVMOrcJITDylibRef JD) {
+  auto RT = unwrap(JD)->createResourceTracker();
+  // Retain the pointer for the C API client.
+  RT->Retain();
+  return wrap(RT.get());
+}
+
+LLVMOrcResourceTrackerRef
+LLVMOrcJITDylibGetDefaultResourceTracker(LLVMOrcJITDylibRef JD) {
+  auto RT = unwrap(JD)->getDefaultResourceTracker();
+  // Retain the pointer for the C API client.
+  return wrap(RT.get());
+}
+
+void LLVMOrcReleaseResourceTracker(LLVMOrcResourceTrackerRef RT) {
+  ResourceTrackerSP TmpRT(unwrap(RT));
+  TmpRT->Release();
+}
+
+void LLVMOrcResourceTrackerTransferTo(LLVMOrcResourceTrackerRef SrcRT,
+                                      LLVMOrcResourceTrackerRef DstRT) {
+  ResourceTrackerSP TmpRT(unwrap(SrcRT));
+  TmpRT->transferTo(*unwrap(DstRT));
+}
+
+LLVMErrorRef LLVMOrcResourceTrackerRemove(LLVMOrcResourceTrackerRef RT) {
+  ResourceTrackerSP TmpRT(unwrap(RT));
+  return wrap(TmpRT->remove());
+}
+
 LLVMOrcJITDylibRef
 LLVMOrcExecutionSessionCreateBareJITDylib(LLVMOrcExecutionSessionRef ES,
                                           const char *Name) {
@@ -111,6 +143,10 @@ LLVMOrcExecutionSessionGetJITDylibByName(LLVMOrcExecutionSessionRef ES,
 void LLVMOrcDisposeDefinitionGenerator(
     LLVMOrcDefinitionGeneratorRef DG) {
   delete unwrap(DG);
+}
+
+LLVMErrorRef LLVMOrcJITDylibClear(LLVMOrcJITDylibRef JD) {
+  return wrap(unwrap(JD)->clear());
 }
 
 void LLVMOrcJITDylibAddGenerator(LLVMOrcJITDylibRef JD,
@@ -271,11 +307,27 @@ LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J, LLVMOrcJITDylibRef JD,
       *unwrap(JD), std::unique_ptr<MemoryBuffer>(unwrap(ObjBuffer))));
 }
 
+LLVMErrorRef LLVMOrcLLJITAddObjectFileWithRT(LLVMOrcLLJITRef J,
+                                             LLVMOrcResourceTrackerRef RT,
+                                             LLVMMemoryBufferRef ObjBuffer) {
+  return wrap(unwrap(J)->addObjectFile(
+      ResourceTrackerSP(unwrap(RT)),
+      std::unique_ptr<MemoryBuffer>(unwrap(ObjBuffer))));
+}
+
 LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(LLVMOrcLLJITRef J,
                                          LLVMOrcJITDylibRef JD,
                                          LLVMOrcThreadSafeModuleRef TSM) {
   std::unique_ptr<ThreadSafeModule> TmpTSM(unwrap(TSM));
   return wrap(unwrap(J)->addIRModule(*unwrap(JD), std::move(*TmpTSM)));
+}
+
+LLVMErrorRef LLVMOrcLLJITAddLLVMIRModuleWithRT(LLVMOrcLLJITRef J,
+                                               LLVMOrcResourceTrackerRef RT,
+                                               LLVMOrcThreadSafeModuleRef TSM) {
+  std::unique_ptr<ThreadSafeModule> TmpTSM(unwrap(TSM));
+  return wrap(unwrap(J)->addIRModule(ResourceTrackerSP(unwrap(RT)),
+                                     std::move(*TmpTSM)));
 }
 
 LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,

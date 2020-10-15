@@ -86,21 +86,8 @@ public:
     return ES->createJITDylib(std::move(Name));
   }
 
-  /// A convenience method for defining MUs in LLJIT's Main JITDylib. This can
-  /// be useful for succinctly defining absolute symbols, aliases and
-  /// re-exports.
-  template <typename MUType>
-  Error define(std::unique_ptr<MUType> &&MU) {
-    return Main->define(std::move(MU));
-  }
-
-  /// A convenience method for defining MUs in LLJIT's Main JITDylib. This can
-  /// be usedful for succinctly defining absolute symbols, aliases and
-  /// re-exports.
-  template <typename MUType>
-  Error define(std::unique_ptr<MUType> &MU) {
-    return Main->define(MU);
-  }
+  /// Adds an IR module with the given ResourceTracker.
+  Error addIRModule(ResourceTrackerSP RT, ThreadSafeModule TSM);
 
   /// Adds an IR module to the given JITDylib.
   Error addIRModule(JITDylib &JD, ThreadSafeModule TSM);
@@ -109,6 +96,9 @@ public:
   Error addIRModule(ThreadSafeModule TSM) {
     return addIRModule(*Main, std::move(TSM));
   }
+
+  /// Adds an object file to the given JITDylib.
+  Error addObjectFile(ResourceTrackerSP RT, std::unique_ptr<MemoryBuffer> Obj);
 
   /// Adds an object file to the given JITDylib.
   Error addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj);

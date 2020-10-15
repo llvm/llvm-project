@@ -979,20 +979,29 @@ LLJIT::~LLJIT() {
     ES->reportError(std::move(Err));
 }
 
-Error LLJIT::addIRModule(JITDylib &JD, ThreadSafeModule TSM) {
+Error LLJIT::addIRModule(ResourceTrackerSP RT, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
   if (auto Err =
           TSM.withModuleDo([&](Module &M) { return applyDataLayout(M); }))
     return Err;
 
-  return InitHelperTransformLayer->add(JD, std::move(TSM));
+  return InitHelperTransformLayer->add(std::move(RT), std::move(TSM));
+}
+
+Error LLJIT::addIRModule(JITDylib &JD, ThreadSafeModule TSM) {
+  return addIRModule(JD.getDefaultResourceTracker(), std::move(TSM));
+}
+
+Error LLJIT::addObjectFile(ResourceTrackerSP RT,
+                           std::unique_ptr<MemoryBuffer> Obj) {
+  assert(Obj && "Can not add null object");
+
+  return ObjTransformLayer.add(std::move(RT), std::move(Obj));
 }
 
 Error LLJIT::addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj) {
-  assert(Obj && "Can not add null object");
-
-  return ObjTransformLayer.add(JD, std::move(Obj));
+  return addObjectFile(JD.getDefaultResourceTracker(), std::move(Obj));
 }
 
 Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(JITDylib &JD,

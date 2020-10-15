@@ -65,6 +65,11 @@ typedef void (*LLVMOrcErrorReporterFunction)(void *Ctx, LLVMErrorRef Err);
 typedef struct LLVMOrcOpaqueJITDylib *LLVMOrcJITDylibRef;
 
 /**
+ * A reference to an orc::ResourceTracker instance.
+ */
+typedef struct LLVMOrcOpaqueResourceTracker *LLVMOrcResourceTrackerRef;
+
+/**
  * A reference to an orc::DefinitionGenerator.
  */
 typedef struct LLVMOrcOpaqueDefinitionGenerator
@@ -157,6 +162,48 @@ LLVMOrcExecutionSessionIntern(LLVMOrcExecutionSessionRef ES, const char *Name);
 void LLVMOrcReleaseSymbolStringPoolEntry(LLVMOrcSymbolStringPoolEntryRef S);
 
 /**
+ * Return a reference to a newly created resource tracker associated with JD.
+ * The tracker is returned with an initial ref-count of 1, and must be released
+ * with LLVMOrcReleaseResourceTracker when no longer needed.
+ */
+LLVMOrcResourceTrackerRef
+LLVMOrcJITDylibCreateResourceTracker(LLVMOrcJITDylibRef JD);
+
+/**
+ * Return a reference to the default resource tracker for the given JITDylib.
+ * This operation will increase the retain count of the tracker: Clients should
+ * call LLVMOrcReleaseResourceTracker when the result is no longer needed.
+ */
+LLVMOrcResourceTrackerRef
+LLVMOrcJITDylibGetDefaultResourceTracker(LLVMOrcJITDylibRef JD);
+
+/**
+ * Reduces the ref-count of a ResourceTracker.
+ */
+void LLVMOrcReleaseResourceTracker(LLVMOrcResourceTrackerRef RT);
+
+/**
+ * Transfers tracking of all resources associated with resource tracker SrcRT
+ * to resource tracker DstRT.
+ */
+void LLVMOrcResourceTrackerTransferTo(LLVMOrcResourceTrackerRef SrcRT,
+                                      LLVMOrcResourceTrackerRef DstRT);
+
+/**
+ * Remove all resources associated with the given tracker. See
+ * ResourceTracker::remove().
+ */
+LLVMErrorRef LLVMOrcResourceTrackerRemove(LLVMOrcResourceTrackerRef RT);
+
+/**
+ * Dispose of a JITDylib::DefinitionGenerator. This should only be called if
+ * ownership has not been passed to a JITDylib (e.g. because some error
+ * prevented the client from calling LLVMOrcJITDylibAddGenerator).
+ */
+void LLVMOrcDisposeDefinitionGenerator(
+    LLVMOrcDefinitionGeneratorRef DG);
+
+/**
  * Create a "bare" JITDylib.
  *
  * The client is responsible for ensuring that the JITDylib's name is unique,
@@ -193,12 +240,10 @@ LLVMOrcExecutionSessionCreateJITDylib(LLVMOrcExecutionSessionRef ES,
 LLVMOrcJITDylibRef LLVMOrcExecutionSessionGetJITDylibByName(const char *Name);
 
 /**
- * Dispose of a JITDylib::DefinitionGenerator. This should only be called if
- * ownership has not been passed to a JITDylib (e.g. because some error
- * prevented the client from calling LLVMOrcJITDylibAddGenerator).
+ * Calls remove on all trackers associated with this JITDylib, see
+ * JITDylib::clear().
  */
-void LLVMOrcDisposeDefinitionGenerator(
-    LLVMOrcDefinitionGeneratorRef DG);
+LLVMErrorRef LLVMOrcJITDylibClear(LLVMOrcJITDylibRef JD);
 
 /**
  * Add a DefinitionGenerator to the given JITDylib.
@@ -388,19 +433,52 @@ LLVMOrcLLJITMangleAndIntern(LLVMOrcLLJITRef J, const char *UnmangledName);
  * LLJIT instance. This operation transfers ownership of the buffer to the
  * LLJIT instance. The buffer should not be disposed of or referenced once this
  * function returns.
+ *
+ * Resources associated with the given object will be tracked by the given
+ * JITDylib's default resource tracker.
  */
 LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J, LLVMOrcJITDylibRef JD,
                                        LLVMMemoryBufferRef ObjBuffer);
 
 /**
- * Add an IR module to the given JITDylib of the given LLJIT instance. This
+ * Add a buffer representing an object file to the given ResourceTracker's
+ * JITDylib in the given LLJIT instance. This operation transfers ownership of
+ * the buffer to the LLJIT instance. The buffer should not be disposed of or
+ * referenced once this function returns.
+ *
+ * Resources associated with the given object will be tracked by ResourceTracker
+ * RT.
+ */
+LLVMErrorRef LLVMOrcLLJITAddObjectFileWithRT(LLVMOrcLLJITRef J,
+                                             LLVMOrcResourceTrackerRef RT,
+                                             LLVMMemoryBufferRef ObjBuffer);
+
+/**
+ * Add an IR module to the given JITDylib in the given LLJIT instance. This
  * operation transfers ownership of the TSM argument to the LLJIT instance.
- * The TSM argument should not be 3disposed of or referenced once this
+ * The TSM argument should not be disposed of or referenced once this
  * function returns.
+ *
+ * Resources associated with the given Module will be tracked by the given
+ * JITDylib's default resource tracker.
  */
 LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(LLVMOrcLLJITRef J,
                                          LLVMOrcJITDylibRef JD,
                                          LLVMOrcThreadSafeModuleRef TSM);
+
+/**
+ * Add an IR module to the given ResourceTracker's JITDylib in the given LLJIT
+ * instance. This operation transfers ownership of the TSM argument to the LLJIT
+ * instance. The TSM argument should not be disposed of or referenced once this
+ * function returns.
+ *
+ * Resources associated with the given Module will be tracked by ResourceTracker
+ * RT.
+ */
+LLVMErrorRef LLVMOrcLLJITAddLLVMIRModuleWithRT(LLVMOrcLLJITRef J,
+                                               LLVMOrcResourceTrackerRef JD,
+                                               LLVMOrcThreadSafeModuleRef TSM);
+
 /**
  * Look up the given symbol in the main JITDylib of the given LLJIT instance.
  *
