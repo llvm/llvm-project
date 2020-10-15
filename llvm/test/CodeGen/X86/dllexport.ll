@@ -81,6 +81,9 @@ define weak_odr dllexport void @weak1() {
 ; CHECK: .weak _WeakVar2
 @WeakVar2 = weak_odr dllexport unnamed_addr constant i32 1
 
+; CHECK: .globl "_complex-name"
+@"complex-name" = dllexport global i32 1, align 4
+
 
 ; Verify items that should not be exported do not appear in the export table.
 ; We use a separate check prefix to avoid confusion between -NOT and -SAME.
@@ -102,6 +105,7 @@ define weak_odr dllexport void @weak1() {
 ; CHECK-CL: .ascii " /EXPORT:_Var3,DATA"
 ; CHECK-CL: .ascii " /EXPORT:_WeakVar1,DATA"
 ; CHECK-CL: .ascii " /EXPORT:_WeakVar2,DATA"
+; CHECK-CL: .ascii " /EXPORT:\"_complex-name\",DATA"
 ; CHECK-CL: .ascii " /EXPORT:_alias"
 ; CHECK-CL: .ascii " /EXPORT:_alias2"
 ; CHECK-CL: .ascii " /EXPORT:_alias3"
@@ -119,6 +123,7 @@ define weak_odr dllexport void @weak1() {
 ; CHECK-GCC: .ascii " -export:Var3,data"
 ; CHECK-GCC: .ascii " -export:WeakVar1,data"
 ; CHECK-GCC: .ascii " -export:WeakVar2,data"
+; CHECK-GCC: .ascii " -export:\"complex-name\",data"
 ; CHECK-GCC: .ascii " -export:alias"
 ; CHECK-GCC: .ascii " -export:alias2"
 ; CHECK-GCC: .ascii " -export:alias3"
