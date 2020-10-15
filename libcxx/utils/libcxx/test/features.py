@@ -73,7 +73,8 @@ macros = {
   '_LIBCPP_HAS_THREAD_API_PTHREAD': 'libcpp-has-thread-api-pthread',
   '_LIBCPP_NO_VCRUNTIME': 'libcpp-no-vcruntime',
   '_LIBCPP_ABI_VERSION': 'libcpp-abi-version',
-  '_LIBCPP_ABI_UNSTABLE': 'libcpp-abi-unstable'
+  '_LIBCPP_ABI_UNSTABLE': 'libcpp-abi-unstable',
+  '_LIBCPP_HAS_NO_RANDOM_DEVICE': 'libcpp-has-no-random-device',
 }
 for macro, feature in macros.items():
   DEFAULT_FEATURES += [

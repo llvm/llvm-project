@@ -27,7 +27,6 @@ set(LIBCXX_SOURCES
   mutex_destructor.cpp
   new.cpp
   optional.cpp
-  random.cpp
   random_shuffle.cpp
   regex.cpp
   shared_mutex.cpp
@@ -58,6 +57,12 @@ set(LIBCXX_SOURCES
 if (LIBCXX_ENABLE_DEBUG_MODE_SUPPORT)
   list(APPEND LIBCXX_SOURCES
     debug.cpp
+    )
+endif()
+
+if (LIBCXX_ENABLE_RANDOM_DEVICE)
+  list(APPEND LIBCXX_SOURCES
+    random.cpp
     )
 endif()
 

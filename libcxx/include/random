@@ -3477,6 +3477,8 @@ typedef shuffle_order_engine<minstd_rand0, 256>                         knuth_b;
 
 // random_device
 
+#if !defined(_LIBCPP_HAS_NO_RANDOM_DEVICE)
+
 class _LIBCPP_TYPE_VIS random_device
 {
 #ifdef _LIBCPP_USING_DEV_RANDOM
@@ -3510,6 +3512,8 @@ private:
     random_device(const random_device&); // = delete;
     random_device& operator=(const random_device&); // = delete;
 };
+
+#endif // !_LIBCPP_HAS_NO_RANDOM_DEVICE
 
 // seed_seq
 
