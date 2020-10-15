@@ -280,6 +280,30 @@ main:
     # CHECK: v128.bitselect # encoding: [0xfd,0x52]
     v128.bitselect
 
+    # CHECK: v128.load8_lane 32, 1 # encoding: [0xfd,0x58,0x00,0x20,0x01]
+    v128.load8_lane 32, 1
+
+    # CHECK: v128.load16_lane 32, 1 # encoding: [0xfd,0x59,0x01,0x20,0x01]
+    v128.load16_lane 32, 1
+
+    # CHECK: v128.load32_lane 32, 1 # encoding: [0xfd,0x5a,0x02,0x20,0x01]
+    v128.load32_lane 32, 1
+
+    # CHECK: v128.load64_lane 32, 1 # encoding: [0xfd,0x5b,0x03,0x20,0x01]
+    v128.load64_lane 32, 1
+
+    # CHECK: v128.store8_lane 32, 1 # encoding: [0xfd,0x5c,0x00,0x20,0x01]
+    v128.store8_lane 32, 1
+
+    # CHECK: v128.store16_lane 32, 1 # encoding: [0xfd,0x5d,0x01,0x20,0x01]
+    v128.store16_lane 32, 1
+
+    # CHECK: v128.store32_lane 32, 1 # encoding: [0xfd,0x5e,0x02,0x20,0x01]
+    v128.store32_lane 32, 1
+
+    # CHECK: v128.store64_lane 32, 1 # encoding: [0xfd,0x5f,0x03,0x20,0x01]
+    v128.store64_lane 32, 1
+
     # CHECK: i8x16.abs # encoding: [0xfd,0x60]
     i8x16.abs
 
