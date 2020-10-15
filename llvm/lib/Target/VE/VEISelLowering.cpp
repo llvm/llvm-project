@@ -634,6 +634,47 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::f64, &VE::I64RegClass);
   addRegisterClass(MVT::f128, &VE::F128RegClass);
 
+  addRegisterClass(MVT::v2i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v4i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v8i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v16i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v32i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v64i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v128i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v256i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v512i32, &VE::V64RegClass);
+
+  addRegisterClass(MVT::v2i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v4i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v8i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v16i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v32i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v64i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v128i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v256i64, &VE::V64RegClass);
+
+  addRegisterClass(MVT::v2f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v4f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v8f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v16f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v32f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v64f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v128f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v256f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v512f32, &VE::V64RegClass);
+
+  addRegisterClass(MVT::v2f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v4f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v8f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v16f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v32f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v64f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v128f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v256f64, &VE::V64RegClass);
+
+  addRegisterClass(MVT::v256i1, &VE::VMRegClass);
+  addRegisterClass(MVT::v512i1, &VE::VM512RegClass);
+
   /// Load & Store {
 
   // VE doesn't have i1 sign extending load.
