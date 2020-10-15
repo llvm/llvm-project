@@ -118,6 +118,10 @@ public:
     return StackId != TargetStackID::SVEVector;
   }
 
+  void
+  orderFrameObjects(const MachineFunction &MF,
+                    SmallVectorImpl<int> &ObjectsToAllocate) const override;
+
 private:
   bool shouldCombineCSRLocalStackBump(MachineFunction &MF,
                                       uint64_t StackBumpBytes) const;
