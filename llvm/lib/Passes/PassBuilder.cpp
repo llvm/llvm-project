@@ -1843,7 +1843,7 @@ static Optional<int> parseDevirtPassName(StringRef Name) {
   if (!Name.consume_front("devirt<") || !Name.consume_back(">"))
     return None;
   int Count;
-  if (Name.getAsInteger(0, Count) || Count <= 0)
+  if (Name.getAsInteger(0, Count) || Count < 0)
     return None;
   return Count;
 }
