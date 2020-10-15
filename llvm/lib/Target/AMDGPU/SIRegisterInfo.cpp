@@ -799,20 +799,29 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       SrcDstRegState |= getKillRegState(IsKill);
     }
 
+    // Make sure the whole register is defined if there are undef components by
+    // adding an implicit def of the super-reg on the first instruction.
+    const bool NeedSuperRegDef = NumSubRegs > 1 && IsStore && i == 0;
+
     auto MIB = spillVGPRtoAGPR(ST, MI, Index, i, SubReg, IsKill);
 
     if (!MIB.getInstr()) {
       unsigned FinalReg = SubReg;
-      if (hasAGPRs(RC)) {
+
+      const bool IsAGPR = hasAGPRs(RC);
+      if (IsAGPR) {
         if (!TmpReg) {
           assert(RS && "Needs to have RegScavenger to spill an AGPR!");
           // FIXME: change to scavengeRegisterBackwards()
           TmpReg = RS->scavengeRegister(&AMDGPU::VGPR_32RegClass, MI, 0);
           RS->setRegUsed(TmpReg);
         }
-        if (IsStore)
-          BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ACCVGPR_READ_B32), TmpReg)
+        if (IsStore) {
+          auto AccRead = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ACCVGPR_READ_B32), TmpReg)
             .addReg(SubReg, getKillRegState(IsKill));
+          if (NeedSuperRegDef)
+            AccRead.addReg(ValueReg, RegState::ImplicitDefine);
+        }
         SubReg = TmpReg;
       }
 
@@ -838,14 +847,21 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
           .addImm(0) // swz
           .addMemOperand(NewMMO);
 
+      if (!IsAGPR && NeedSuperRegDef)
+        MIB.addReg(ValueReg, RegState::ImplicitDefine);
+
       if (!IsStore && TmpReg != AMDGPU::NoRegister)
         MIB = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ACCVGPR_WRITE_B32),
                       FinalReg)
           .addReg(TmpReg, RegState::Kill);
+    } else {
+      if (NeedSuperRegDef)
+        MIB.addReg(ValueReg, RegState::ImplicitDefine);
     }
 
-    if (NumSubRegs > 1)
+    if (NumSubRegs > 1) {
       MIB.addReg(ValueReg, RegState::Implicit | SrcDstRegState);
+    }
   }
 
   if (ScratchOffsetRegDelta != 0) {
