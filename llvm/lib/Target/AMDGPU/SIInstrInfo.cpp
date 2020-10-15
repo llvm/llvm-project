@@ -919,6 +919,10 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   ArrayRef<int16_t> SubIndices = RI.getRegSplitParts(RC, 4);
 
+  // If there is an overlap, we can't kill the super-register on the last
+  // instruction, since it will also kill the components made live by this def.
+  const bool CanKillSuperReg = KillSrc && !RI.regsOverlap(SrcReg, DestReg);
+
   for (unsigned Idx = 0; Idx < SubIndices.size(); ++Idx) {
     unsigned SubIdx;
     if (Forward)
@@ -926,7 +930,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     else
       SubIdx = SubIndices[SubIndices.size() - Idx - 1];
 
-    bool UseKill = KillSrc && Idx == SubIndices.size() - 1;
+    bool UseKill = CanKillSuperReg && Idx == SubIndices.size() - 1;
 
     if (Opcode == AMDGPU::INSTRUCTION_LIST_END) {
       Register ImpDefSuper = Idx == 0 ? Register(DestReg) : Register();
