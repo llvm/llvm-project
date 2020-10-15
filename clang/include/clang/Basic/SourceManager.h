@@ -983,6 +983,17 @@ public:
   /// Return the buffer for the specified FileID.
   ///
   /// If there is an error opening this buffer the first time, this
+  /// manufactures a temporary buffer and returns it.
+  llvm::MemoryBufferRef
+  getBufferOrFake(FileID FID, SourceLocation Loc = SourceLocation()) const {
+    if (auto B = getBufferOrNone(FID, Loc))
+      return *B;
+    return getFakeBufferForRecovery()->getMemBufferRef();
+  }
+
+  /// Return the buffer for the specified FileID.
+  ///
+  /// If there is an error opening this buffer the first time, this
   /// manufactures a temporary buffer and returns a non-empty error string.
   ///
   /// TODO: Update users of Invalid to call getBufferOrNone and change return
