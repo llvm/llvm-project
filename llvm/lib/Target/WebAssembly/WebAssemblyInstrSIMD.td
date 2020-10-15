@@ -53,7 +53,7 @@ defm LOAD_V128_A64 :
          "v128.load\t$off$p2align", 0>;
 }
 
-// Def load and store patterns from WebAssemblyInstrMemory.td for vector types
+// Def load patterns from WebAssemblyInstrMemory.td for vector types
 foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
 defm : LoadPatNoOffset<vec_t, load, "LOAD_V128">;
 defm : LoadPatImmOff<vec_t, load, regPlusImm, "LOAD_V128">;
@@ -201,6 +201,51 @@ defm : LoadPatOffsetOnly<v2i64, int_wasm_load64_zero, "LOAD_ZERO_v2i64">;
 defm : LoadPatGlobalAddrOffOnly<v4i32, int_wasm_load32_zero, "LOAD_ZERO_v4i32">;
 defm : LoadPatGlobalAddrOffOnly<v2i64, int_wasm_load64_zero, "LOAD_ZERO_v2i64">;
 
+// Load lane
+multiclass SIMDLoadLane<ValueType vec_t, string name, bits<32> simdop> {
+  let mayLoad = 1, UseNamedOperandTable = 1 in {
+  defm LOAD_LANE_#vec_t#_A32 :
+    SIMD_I<(outs V128:$dst),
+           (ins P2Align:$p2align, offset32_op:$off, vec_i8imm_op:$idx,
+                I32:$addr, V128:$vec),
+           (outs), (ins P2Align:$p2align, offset32_op:$off, vec_i8imm_op:$idx),
+           [], name#"\t$dst, ${off}(${addr})$p2align, $vec, $idx",
+           name#"\t$off$p2align, $idx", simdop>;
+  defm LOAD_LANE_#vec_t#_A64 :
+    SIMD_I<(outs V128:$dst),
+           (ins P2Align:$p2align, offset64_op:$off, vec_i8imm_op:$idx,
+                I64:$addr, V128:$vec),
+           (outs), (ins P2Align:$p2align, offset64_op:$off, vec_i8imm_op:$idx),
+           [], name#"\t$dst, ${off}(${addr})$p2align, $vec, $idx",
+           name#"\t$off$p2align, $idx", simdop>;
+  } // mayLoad = 1, UseNamedOperandTable = 1
+}
+
+// TODO: Also support v4f32 and v2f64 once the instructions are merged
+// to the proposal
+defm "" : SIMDLoadLane<v16i8, "v128.load8_lane", 88>;
+defm "" : SIMDLoadLane<v8i16, "v128.load16_lane", 89>;
+defm "" : SIMDLoadLane<v4i32, "v128.load32_lane", 90>;
+defm "" : SIMDLoadLane<v2i64, "v128.load64_lane", 91>;
+
+// Select loads with no constant offset.
+multiclass LoadLanePatNoOffset<ValueType ty, PatFrag kind, ImmLeaf lane_imm_t> {
+  def : Pat<(ty (kind (i32 I32:$addr), (ty V128:$vec), (i32 lane_imm_t:$idx))),
+            (!cast<NI>("LOAD_LANE_"#ty#"_A32") 0, 0, imm:$idx, I32:$addr, V128:$vec)>,
+        Requires<[HasAddr32]>;
+  def : Pat<(ty (kind (i64 I64:$addr), (ty V128:$vec), (i32 lane_imm_t:$idx))),
+            (!cast<NI>("LOAD_LANE_"#ty#"_A64") 0, 0, imm:$idx, I64:$addr, V128:$vec)>,
+        Requires<[HasAddr64]>;
+}
+
+defm : LoadLanePatNoOffset<v16i8, int_wasm_load8_lane, LaneIdx16>;
+defm : LoadLanePatNoOffset<v8i16, int_wasm_load16_lane, LaneIdx8>;
+defm : LoadLanePatNoOffset<v4i32, int_wasm_load32_lane, LaneIdx4>;
+defm : LoadLanePatNoOffset<v2i64, int_wasm_load64_lane, LaneIdx2>;
+
+// TODO: Also support the other load patterns for load_lane once the instructions
+// are merged to the proposal.
+
 // Store: v128.store
 let mayStore = 1, UseNamedOperandTable = 1 in {
 defm STORE_V128_A32 :
@@ -214,14 +259,62 @@ defm STORE_V128_A64 :
          "v128.store\t${off}(${addr})$p2align, $vec",
          "v128.store\t$off$p2align", 11>;
 }
+
+// Def store patterns from WebAssemblyInstrMemory.td for vector types
 foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
-// Def load and store patterns from WebAssemblyInstrMemory.td for vector types
 defm : StorePatNoOffset<vec_t, store, "STORE_V128">;
 defm : StorePatImmOff<vec_t, store, regPlusImm, "STORE_V128">;
 defm : StorePatImmOff<vec_t, store, or_is_add, "STORE_V128">;
 defm : StorePatOffsetOnly<vec_t, store, "STORE_V128">;
 defm : StorePatGlobalAddrOffOnly<vec_t, store, "STORE_V128">;
 }
+
+// Store lane
+multiclass SIMDStoreLane<ValueType vec_t, string name, bits<32> simdop> {
+  let mayStore = 1, UseNamedOperandTable = 1 in {
+  defm STORE_LANE_#vec_t#_A32 :
+    SIMD_I<(outs),
+           (ins P2Align:$p2align, offset32_op:$off, vec_i8imm_op:$idx,
+                I32:$addr, V128:$vec),
+           (outs), (ins P2Align:$p2align, offset32_op:$off, vec_i8imm_op:$idx),
+           [], name#"\t${off}(${addr})$p2align, $vec, $idx",
+           name#"\t$off$p2align, $idx", simdop>;
+  defm STORE_LANE_#vec_t#_A64 :
+    SIMD_I<(outs V128:$dst),
+           (ins P2Align:$p2align, offset64_op:$off, vec_i8imm_op:$idx,
+                I64:$addr, V128:$vec),
+           (outs), (ins P2Align:$p2align, offset64_op:$off, vec_i8imm_op:$idx),
+           [], name#"\t${off}(${addr})$p2align, $vec, $idx",
+           name#"\t$off$p2align, $idx", simdop>;
+  } // mayStore = 1, UseNamedOperandTable = 1
+}
+
+// TODO: Also support v4f32 and v2f64 once the instructions are merged
+// to the proposal
+defm "" : SIMDStoreLane<v16i8, "v128.store8_lane", 92>;
+defm "" : SIMDStoreLane<v8i16, "v128.store16_lane", 93>;
+defm "" : SIMDStoreLane<v4i32, "v128.store32_lane", 94>;
+defm "" : SIMDStoreLane<v2i64, "v128.store64_lane", 95>;
+
+// Select stores with no constant offset.
+multiclass StoreLanePatNoOffset<ValueType ty, PatFrag kind, ImmLeaf lane_imm_t> {
+  def : Pat<(kind (i32 I32:$addr), (ty V128:$vec), (i32 lane_imm_t:$idx)),
+            (!cast<NI>("STORE_LANE_"#ty#"_A32")
+              0, 0, imm:$idx, I32:$addr, ty:$vec)>,
+        Requires<[HasAddr32]>;
+  def : Pat<(kind (i32 I64:$addr), (ty V128:$vec), (i32 lane_imm_t:$idx)),
+            (!cast<NI>("STORE_LANE_"#ty#"_A64")
+              0, 0, imm:$idx, I64:$addr, ty:$vec)>,
+        Requires<[HasAddr64]>;
+}
+
+defm : StoreLanePatNoOffset<v16i8, int_wasm_store8_lane, LaneIdx16>;
+defm : StoreLanePatNoOffset<v8i16, int_wasm_store16_lane, LaneIdx8>;
+defm : StoreLanePatNoOffset<v4i32, int_wasm_store32_lane, LaneIdx4>;
+defm : StoreLanePatNoOffset<v2i64, int_wasm_store64_lane, LaneIdx2>;
+
+// TODO: Also support the other store patterns for store_lane once the
+// instructions are merged to the proposal.
 
 //===----------------------------------------------------------------------===//
 // Constructing SIMD values
