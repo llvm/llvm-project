@@ -30,12 +30,12 @@ public:
       return;
 
     // FIXME: Why is this happening? We might be losing contents here.
-    if (!ContentCache.getRawBuffer())
+    llvm::Optional<StringRef> Data = ContentCache.getBufferDataIfLoaded();
+    if (!Data)
       return;
 
     InMemoryFs.addFile(File->getName(), /*ModificationTime=*/0,
-                       llvm::MemoryBuffer::getMemBufferCopy(
-                           ContentCache.getRawBuffer()->getBuffer()));
+                       llvm::MemoryBuffer::getMemBufferCopy(*Data));
     // Remove the file from the set of necessary files.
     FilesToRecord.erase(File);
   }

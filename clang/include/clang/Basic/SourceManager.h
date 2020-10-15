@@ -194,9 +194,23 @@ namespace SrcMgr {
     /// this content cache.  This is used for performance analysis.
     llvm::MemoryBuffer::BufferKind getMemoryBufferKind() const;
 
-    /// Get the underlying buffer, returning NULL if the buffer is not
-    /// yet available.
-    const llvm::MemoryBuffer *getRawBuffer() const { return Buffer.get(); }
+    /// Return the buffer, only if it has been loaded.
+    /// specified FileID, returning None if it's not yet loaded.
+    ///
+    /// \param FID The file ID whose contents will be returned.
+    llvm::Optional<llvm::MemoryBufferRef> getBufferIfLoaded() const {
+      if (Buffer)
+        return Buffer->getMemBufferRef();
+      return None;
+    }
+
+    /// Return a StringRef to the source buffer data, only if it has already
+    /// been loaded.
+    llvm::Optional<StringRef> getBufferDataIfLoaded() const {
+      if (Buffer)
+        return Buffer->getBuffer();
+      return None;
+    }
 
     /// Set the buffer.
     void setBuffer(std::unique_ptr<llvm::MemoryBuffer> B) {
@@ -207,10 +221,10 @@ namespace SrcMgr {
     /// Set the buffer to one that's not owned (or to nullptr).
     ///
     /// \pre Buffer cannot already be set.
-    void setUnownedBuffer(const llvm::MemoryBuffer *B) {
+    void setUnownedBuffer(llvm::Optional<llvm::MemoryBufferRef> B) {
       assert(!Buffer && "Expected to be called right after construction");
       if (B)
-        setBuffer(llvm::MemoryBuffer::getMemBuffer(B->getMemBufferRef()));
+        setBuffer(llvm::MemoryBuffer::getMemBuffer(*B));
     }
 
     // If BufStr has an invalid BOM, returns the BOM name; otherwise, returns
