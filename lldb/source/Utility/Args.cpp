@@ -175,6 +175,11 @@ Args::Args(const StringList &list) : Args() {
     AppendArgument(arg);
 }
 
+Args::Args(llvm::ArrayRef<llvm::StringRef> args) : Args() {
+  for (llvm::StringRef arg : args)
+    AppendArgument(arg);
+}
+
 Args &Args::operator=(const Args &rhs) {
   Clear();
 
