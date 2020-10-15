@@ -73,7 +73,7 @@ Sections:
 
 # RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --check-prefix=CONTENT-BUCKET
 
-# CONTENT-BUCKET: "Bucket" cannot be used with "Content" or "Size"
+# CONTENT-BUCKET: "Bucket" and "Chain" cannot be used with "Content" or "Size"
 
 --- !ELF
 FileHeader:
@@ -133,11 +133,14 @@ Sections:
     Type:  SHT_HASH
     Chain: [ 1 ]
 
-## Check we report an error if neither "Bucket", "Chain" nor "Content" were set.
+## Check we emit an empty section if neither "Bucket", "Chain",
+## "Content" nor "Size" were set.
 
-# RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=NO-TAGS
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: llvm-readelf --sections %t7 | FileCheck %s --check-prefix=NO-TAGS
 
-# NO-TAGS: error: one of "Content", "Size", "Bucket" or "Chain" must be specified
+# NO-TAGS: [Nr] Name  Type Address  Off    Size
+# NO-TAGS: [ 1] .hash HASH 00000000 000034 000000
 
 --- !ELF
 FileHeader:

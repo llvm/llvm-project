@@ -208,12 +208,15 @@ Sections:
     Header:
       SymNdx: 0x0
 
-## Either "Content" or "Header", "BloomFilter", "HashBuckets" and "HashBuckets" must be
-## specified when declaring a SHT_GNU_HASH section.
+## Check we emit an empty section if neither "Content", "Header",
+## "BloomFilter", "HashBuckets" nor "HashBuckets" were set.
 
-# RUN: not yaml2obj --docnum=10 %s -o %t10 2>&1 | FileCheck %s --check-prefix=NOKEYS
+# NOKEYS: Section Headers:
+# NOKEYS:  [Nr] Name      Type     Address          Off    Size
+# NOKEYS:  [ 1] .gnu.hash GNU_HASH 0000000000000000 000040 000000
 
-# NOKEYS: error: either "Content", "Size" or "Header", "BloomFilter", "HashBuckets" and "HashBuckets" must be specified
+# RUN: yaml2obj --docnum=10 %s -o %t10
+# RUN: llvm-readelf --sections %t10 | FileCheck %s --check-prefix=NOKEYS
 
 --- !ELF
 FileHeader:

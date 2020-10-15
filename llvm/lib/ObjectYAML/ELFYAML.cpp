@@ -1441,77 +1441,44 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
   }
 
   if (const auto *SS = dyn_cast<ELFYAML::StackSizesSection>(C.get())) {
-    if (!SS->Entries && !SS->Content && !SS->Size)
-      return ".stack_sizes: one of Content, Entries and Size must be specified";
-
-    // We accept Content, Size or both together when there are no Entries.
-    if (!SS->Entries)
-      return {};
-
-    if (SS->Size)
-      return ".stack_sizes: Size and Entries cannot be used together";
-    if (SS->Content)
-      return ".stack_sizes: Content and Entries cannot be used together";
+    if ((SS->Content || SS->Size) && SS->Entries)
+      return "\"Entries\" cannot be used with \"Content\" or \"Size\"";
     return {};
   }
 
   if (const auto *HS = dyn_cast<ELFYAML::HashSection>(C.get())) {
-    if (!HS->Content && !HS->Bucket && !HS->Chain && !HS->Size)
-      return "one of \"Content\", \"Size\", \"Bucket\" or \"Chain\" must be "
-             "specified";
-
-    if (HS->Content || HS->Size) {
-      if (HS->Bucket)
-        return "\"Bucket\" cannot be used with \"Content\" or \"Size\"";
-      if (HS->Chain)
-        return "\"Chain\" cannot be used with \"Content\" or \"Size\"";
-      return {};
-    }
-
+    if ((HS->Content || HS->Size) && (HS->Bucket || HS->Chain))
+      return "\"Bucket\" and \"Chain\" cannot be used with \"Content\" or "
+             "\"Size\"";
     if ((HS->Bucket && !HS->Chain) || (!HS->Bucket && HS->Chain))
       return "\"Bucket\" and \"Chain\" must be used together";
     return {};
   }
 
   if (const auto *Sec = dyn_cast<ELFYAML::AddrsigSection>(C.get())) {
-    if (!Sec->Symbols && !Sec->Content && !Sec->Size)
-      return "one of \"Content\", \"Size\" or \"Symbols\" must be specified";
-
     if ((Sec->Content || Sec->Size) && Sec->Symbols)
       return "\"Symbols\" cannot be used with \"Content\" or \"Size\"";
     return {};
   }
 
   if (const auto *NS = dyn_cast<ELFYAML::NoteSection>(C.get())) {
-    if (!NS->Content && !NS->Size && !NS->Notes)
-      return "one of \"Content\", \"Size\" or \"Notes\" must be "
-             "specified";
-
     if ((NS->Content || NS->Size) && NS->Notes)
       return "\"Notes\" cannot be used with \"Content\" or \"Size\"";
     return {};
   }
 
   if (const auto *Sec = dyn_cast<ELFYAML::GnuHashSection>(C.get())) {
-    if (!Sec->Content && !Sec->Size && !Sec->Header && !Sec->BloomFilter &&
-        !Sec->HashBuckets && !Sec->HashValues)
-      return "either \"Content\", \"Size\" or \"Header\", \"BloomFilter\", "
-             "\"HashBuckets\" and \"HashBuckets\" must be specified";
+    const bool HasSpecialFields =
+        Sec->Header || Sec->BloomFilter || Sec->HashBuckets || Sec->HashValues;
+    if (HasSpecialFields && (Sec->Content || Sec->Size))
+      return "\"Header\", \"BloomFilter\", "
+             "\"HashBuckets\" and \"HashValues\" can't be used together with "
+             "\"Content\" or \"Size\"";
 
-    if (Sec->Header || Sec->BloomFilter || Sec->HashBuckets ||
-        Sec->HashValues) {
-      if (!Sec->Header || !Sec->BloomFilter || !Sec->HashBuckets ||
-          !Sec->HashValues)
-        return "\"Header\", \"BloomFilter\", "
-               "\"HashBuckets\" and \"HashValues\" must be used together";
-      if (Sec->Content || Sec->Size)
-        return "\"Header\", \"BloomFilter\", "
-               "\"HashBuckets\" and \"HashValues\" can't be used together with "
-               "\"Content\" or \"Size\"";
-      return {};
-    }
-
-    // Only Content is specified.
+    if (HasSpecialFields && (!Sec->Header || !Sec->BloomFilter ||
+                             !Sec->HashBuckets || !Sec->HashValues))
+      return "\"Header\", \"BloomFilter\", "
+             "\"HashBuckets\" and \"HashValues\" must be used together";
     return {};
   }
 
