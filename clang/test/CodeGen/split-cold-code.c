@@ -7,9 +7,11 @@
 // RUN: %clang_cc1 -Oz -fsplit-cold-code -mllvm -debug-pass=Structure \
 // RUN:   -emit-llvm -o - %s 2>&1 | FileCheck --check-prefix=NO-SPLIT %s
 //
-// No splitting by default, even at -O3.
+// ## Begin Apple modification
+// Split by default at -O3.
 // RUN: %clang_cc1 -O3 -mllvm -debug-pass=Structure \
-// RUN:   -emit-llvm -o - %s 2>&1 | FileCheck --check-prefix=NO-SPLIT %s
+// RUN:   -emit-llvm -o - %s 2>&1 | FileCheck --check-prefix=SPLIT %s
+// ## End Apple modification
 //
 // No splitting when it's explicitly disabled.
 // RUN: %clang_cc1 -O3 -fno-split-cold-code -mllvm -debug-pass=Structure \
@@ -40,9 +42,11 @@
 // RUN: %clang_cc1 -Oz -fsplit-cold-code -fexperimental-new-pass-manager -fdebug-pass-manager \
 // RUN:   -emit-llvm -o - %s 2>&1 | FileCheck --check-prefix=NO-SPLIT %s
 //
-// No splitting by default, even at -O3.
+// ## Begin Apple modification
+// Split by default at -O3.
 // RUN: %clang_cc1 -O3 -fexperimental-new-pass-manager -fdebug-pass-manager \
-// RUN:   -emit-llvm -o - %s 2>&1 | FileCheck --check-prefix=NO-SPLIT %s
+// RUN:   -emit-llvm -o - %s 2>&1 | FileCheck --check-prefix=SPLIT %s
+// ## End Apple modification
 //
 // No splitting when it's explicitly disabled.
 // RUN: %clang_cc1 -O3 -fno-split-cold-code -fexperimental-new-pass-manager -fdebug-pass-manager \
