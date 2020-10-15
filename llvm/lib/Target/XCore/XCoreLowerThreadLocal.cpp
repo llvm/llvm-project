@@ -21,6 +21,7 @@
 #include "llvm/IR/IntrinsicsXCore.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
+#include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -74,57 +75,6 @@ createLoweredInitializer(ArrayType *NewType, Constant *OriginalInitializer) {
   return ConstantArray::get(NewType, Elements);
 }
 
-static Instruction *
-createReplacementInstr(ConstantExpr *CE, Instruction *Instr) {
-  IRBuilder<NoFolder> Builder(Instr);
-  unsigned OpCode = CE->getOpcode();
-  switch (OpCode) {
-    case Instruction::GetElementPtr: {
-      SmallVector<Value *, 4> CEOpVec(CE->operands());
-      ArrayRef<Value *> CEOps(CEOpVec);
-      return dyn_cast<Instruction>(Builder.CreateInBoundsGEP(
-          cast<GEPOperator>(CE)->getSourceElementType(), CEOps[0],
-          CEOps.slice(1)));
-    }
-    case Instruction::Add:
-    case Instruction::Sub:
-    case Instruction::Mul:
-    case Instruction::UDiv:
-    case Instruction::SDiv:
-    case Instruction::FDiv:
-    case Instruction::URem:
-    case Instruction::SRem:
-    case Instruction::FRem:
-    case Instruction::Shl:
-    case Instruction::LShr:
-    case Instruction::AShr:
-    case Instruction::And:
-    case Instruction::Or:
-    case Instruction::Xor:
-      return dyn_cast<Instruction>(
-                  Builder.CreateBinOp((Instruction::BinaryOps)OpCode,
-                                      CE->getOperand(0), CE->getOperand(1),
-                                      CE->getName()));
-    case Instruction::Trunc:
-    case Instruction::ZExt:
-    case Instruction::SExt:
-    case Instruction::FPToUI:
-    case Instruction::FPToSI:
-    case Instruction::UIToFP:
-    case Instruction::SIToFP:
-    case Instruction::FPTrunc:
-    case Instruction::FPExt:
-    case Instruction::PtrToInt:
-    case Instruction::IntToPtr:
-    case Instruction::BitCast:
-      return dyn_cast<Instruction>(
-                  Builder.CreateCast((Instruction::CastOps)OpCode,
-                                     CE->getOperand(0), CE->getType(),
-                                     CE->getName()));
-    default:
-      llvm_unreachable("Unhandled constant expression!\n");
-  }
-}
 
 static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
   do {

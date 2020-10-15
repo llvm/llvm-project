@@ -54,16 +54,19 @@ public:
     unsigned Kind : 2;
     unsigned Extern : 1;
     unsigned Constant : 1;   // Constant variable.
+    unsigned Managed : 1;    // Managed variable.
     unsigned Normalized : 1; // Normalized texture.
     int SurfTexType;         // Type of surface/texutre.
 
   public:
-    DeviceVarFlags(DeviceVarKind K, bool E, bool C, bool N, int T)
-        : Kind(K), Extern(E), Constant(C), Normalized(N), SurfTexType(T) {}
+    DeviceVarFlags(DeviceVarKind K, bool E, bool C, bool M, bool N, int T)
+        : Kind(K), Extern(E), Constant(C), Managed(M), Normalized(N),
+          SurfTexType(T) {}
 
     DeviceVarKind getKind() const { return static_cast<DeviceVarKind>(Kind); }
     bool isExtern() const { return Extern; }
     bool isConstant() const { return Constant; }
+    bool isManaged() const { return Managed; }
     bool isNormalized() const { return Normalized; }
     int getSurfTexType() const { return SurfTexType; }
   };
