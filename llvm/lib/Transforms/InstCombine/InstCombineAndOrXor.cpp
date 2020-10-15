@@ -453,17 +453,9 @@ static Value *foldLogOpOfMaskedICmps_NotAllZeros_BMask_Mixed(
   //
   // We currently handle the case of B, C, D, E are constant.
   //
-  ConstantInt *BCst = dyn_cast<ConstantInt>(B);
-  if (!BCst)
-    return nullptr;
-  ConstantInt *CCst = dyn_cast<ConstantInt>(C);
-  if (!CCst)
-    return nullptr;
-  ConstantInt *DCst = dyn_cast<ConstantInt>(D);
-  if (!DCst)
-    return nullptr;
-  ConstantInt *ECst = dyn_cast<ConstantInt>(E);
-  if (!ECst)
+  ConstantInt *BCst, *CCst, *DCst, *ECst;
+  if (!match(B, m_ConstantInt(BCst)) || !match(C, m_ConstantInt(CCst)) ||
+      !match(D, m_ConstantInt(DCst)) || !match(E, m_ConstantInt(ECst)))
     return nullptr;
 
   ICmpInst::Predicate NewCC = IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE;
@@ -672,11 +664,8 @@ static Value *foldLogOpOfMaskedICmps(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
   // Remaining cases assume at least that B and D are constant, and depend on
   // their actual values. This isn't strictly necessary, just a "handle the
   // easy cases for now" decision.
-  ConstantInt *BCst = dyn_cast<ConstantInt>(B);
-  if (!BCst)
-    return nullptr;
-  ConstantInt *DCst = dyn_cast<ConstantInt>(D);
-  if (!DCst)
+  ConstantInt *BCst, *DCst;
+  if (!match(B, m_ConstantInt(BCst)) || !match(D, m_ConstantInt(DCst)))
     return nullptr;
 
   if (Mask & (Mask_NotAllZeros | BMask_NotAllOnes)) {
@@ -717,11 +706,8 @@ static Value *foldLogOpOfMaskedICmps(ICmpInst *LHS, ICmpInst *RHS, bool IsAnd,
     // We can't simply use C and E because we might actually handle
     //   (icmp ne (A & B), B) & (icmp eq (A & D), D)
     // with B and D, having a single bit set.
-    ConstantInt *CCst = dyn_cast<ConstantInt>(C);
-    if (!CCst)
-      return nullptr;
-    ConstantInt *ECst = dyn_cast<ConstantInt>(E);
-    if (!ECst)
+    ConstantInt *CCst, *ECst;
+    if (!match(C, m_ConstantInt(CCst)) || !match(E, m_ConstantInt(ECst)))
       return nullptr;
     if (PredL != NewCC)
       CCst = cast<ConstantInt>(ConstantExpr::getXor(BCst, CCst));
@@ -870,9 +856,10 @@ Value *InstCombinerImpl::foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS,
     return nullptr;
 
   // TODO support vector splats
-  ConstantInt *LHSC = dyn_cast<ConstantInt>(LHS->getOperand(1));
-  ConstantInt *RHSC = dyn_cast<ConstantInt>(RHS->getOperand(1));
-  if (!LHSC || !RHSC || !LHSC->isZero() || !RHSC->isZero())
+  if (!match(LHS->getOperand(1), m_ConstantInt()) ||
+      !match(RHS->getOperand(1), m_ConstantInt()) ||
+      !match(LHS->getOperand(1), m_Zero()) ||
+      !match(RHS->getOperand(1), m_Zero()))
     return nullptr;
 
   Value *A, *B, *C, *D;
@@ -1244,9 +1231,10 @@ Value *InstCombinerImpl::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
 
   // This only handles icmp of constants: (icmp1 A, C1) & (icmp2 B, C2).
   Value *LHS0 = LHS->getOperand(0), *RHS0 = RHS->getOperand(0);
-  ConstantInt *LHSC = dyn_cast<ConstantInt>(LHS->getOperand(1));
-  ConstantInt *RHSC = dyn_cast<ConstantInt>(RHS->getOperand(1));
-  if (!LHSC || !RHSC)
+
+  ConstantInt *LHSC, *RHSC;
+  if (!match(LHS->getOperand(1), m_ConstantInt(LHSC)) ||
+      !match(RHS->getOperand(1), m_ConstantInt(RHSC)))
     return nullptr;
 
   if (LHSC == RHSC && PredL == PredR) {
@@ -1844,14 +1832,15 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     }
   }
 
-  if (ConstantInt *AndRHS = dyn_cast<ConstantInt>(Op1)) {
+  ConstantInt *AndRHS;
+  if (match(Op1, m_ConstantInt(AndRHS))) {
     const APInt &AndRHSMask = AndRHS->getValue();
 
     // Optimize a variety of ((val OP C1) & C2) combinations...
     if (BinaryOperator *Op0I = dyn_cast<BinaryOperator>(Op0)) {
       // ((C1 OP zext(X)) & C2) -> zext((C1-X) & C2) if C2 fits in the bitwidth
       // of X and OP behaves well when given trunc(C1) and X.
-      // TODO: Do this for vectors by using m_APInt isntead of m_ConstantInt.
+      // TODO: Do this for vectors by using m_APInt instead of m_ConstantInt.
       switch (Op0I->getOpcode()) {
       default:
         break;
@@ -2621,9 +2610,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   Value *A, *B, *C, *D;
   if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
       match(Op1, m_And(m_Value(B), m_Value(D)))) {
-    ConstantInt *C1 = dyn_cast<ConstantInt>(C);
-    ConstantInt *C2 = dyn_cast<ConstantInt>(D);
-    if (C1 && C2) {  // (A & C1)|(B & C2)
+    // (A & C1)|(B & C2)
+    ConstantInt *C1, *C2;
+    if (match(C, m_ConstantInt(C1)) && match(D, m_ConstantInt(C2))) {
       Value *V1 = nullptr, *V2 = nullptr;
       if ((C1->getValue() & C2->getValue()).isNullValue()) {
         // ((V | N) & C1) | (V & C2) --> (V|N) & (C1|C2)
@@ -2814,7 +2803,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // ORs in the hopes that we'll be able to simplify it this way.
   // (X|C) | V --> (X|V) | C
   ConstantInt *CI;
-  if (Op0->hasOneUse() && !isa<ConstantInt>(Op1) &&
+  if (Op0->hasOneUse() && !match(Op1, m_ConstantInt()) &&
       match(Op0, m_Or(m_Value(A), m_ConstantInt(CI)))) {
     Value *Inner = Builder.CreateOr(A, Op1);
     Inner->takeName(Op0);
