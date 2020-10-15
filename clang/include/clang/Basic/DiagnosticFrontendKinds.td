@@ -286,6 +286,10 @@ def warn_alias_with_section : Warning<
   "as the %select{aliasee|resolver}2">,
   InGroup<IgnoredAttributes>;
 
+def warn_fe_ignored_opt_split_cold_code : Warning<
+  "'%0' has no effect when %select{optimizing for minimum size|optimizations are disabled}1">,
+  InGroup<IgnoredAttributes>;
+
 let CategoryName = "Instrumentation Issue" in {
 def warn_profile_data_out_of_date : Warning<
   "profile data may be out of date: of %0 function%s0, %1 %plural{1:has|:have}1"

@@ -9,7 +9,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-LABEL: define {{.*}}@fun.cold.1(
 ; CHECK: asm ""
 
-define void @fun() {
+define void @fun() "hot-cold-split" {
 entry:
   br i1 undef, label %if.then, label %if.else
 

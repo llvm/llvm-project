@@ -1265,6 +1265,12 @@ def G_SHUFFLE_VECTOR: GenericInstruction {
 // Vector reductions
 //------------------------------------------------------------------------------
 
+class VectorReduction : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$v);
+  let hasSideEffects = 0;
+}
+
 def G_VECREDUCE_SEQ_FADD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$acc, type2:$v);
@@ -1277,23 +1283,8 @@ def G_VECREDUCE_SEQ_FMUL : GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_VECREDUCE_FADD : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type1:$acc, type2:$v);
-  let hasSideEffects = 0;
-}
-
-def G_VECREDUCE_FMUL : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type1:$acc, type2:$v);
-  let hasSideEffects = 0;
-}
-
-class VectorReduction : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type1:$v);
-  let hasSideEffects = 0;
-}
+def G_VECREDUCE_FADD : VectorReduction;
+def G_VECREDUCE_FMUL : VectorReduction;
 
 def G_VECREDUCE_FMAX : VectorReduction;
 def G_VECREDUCE_FMIN : VectorReduction;

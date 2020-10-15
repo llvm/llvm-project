@@ -18,7 +18,7 @@ target triple = "aarch64"
 ; CHECK: %1 = icmp eq i64 %0, 0
 ; CHECK-NOT: call void @llvm.assume
 
-define void @f() {
+define void @f() "hot-cold-split" {
 entry:
   %0 = getelementptr inbounds %a, %a* null, i64 0, i32 1
   br label %label

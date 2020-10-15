@@ -1,6 +1,6 @@
 ; RUN: opt -module-summary %s -o %t.bc
-; RUN: llvm-lto -hot-cold-split=true -thinlto-action=run %t.bc -debug-pass=Structure 2>&1 | FileCheck %s -check-prefix=OLDPM-ANYLTO-POSTLINK-Os
-; RUN: llvm-lto -hot-cold-split=true %t.bc -debug-pass=Structure 2>&1 | FileCheck %s -check-prefix=OLDPM-ANYLTO-POSTLINK-Os
+; RUN: llvm-lto -thinlto-action=run %t.bc -debug-pass=Structure 2>&1 | FileCheck %s -check-prefix=OLDPM-ANYLTO-POSTLINK-Os
+; RUN: llvm-lto %t.bc -debug-pass=Structure 2>&1 | FileCheck %s -check-prefix=OLDPM-ANYLTO-POSTLINK-Os
 
 ; REQUIRES: asserts
 

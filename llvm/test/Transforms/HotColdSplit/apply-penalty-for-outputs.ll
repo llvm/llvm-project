@@ -5,7 +5,7 @@ declare void @sink() cold
 
 @g = global i32 0
 
-define i32 @foo(i32 %arg) {
+define i32 @foo(i32 %arg) "hot-cold-split" {
 entry:
   br i1 undef, label %cold, label %exit
 

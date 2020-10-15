@@ -10,7 +10,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 ; CHECK-LABEL: define {{.*}}@foo(
 ; CHECK-NOT: foo.cold.1
-define void @foo(i32, %struct.__jmp_buf_tag*) {
+define void @foo(i32, %struct.__jmp_buf_tag*) "hot-cold-split" {
   %3 = icmp eq i32 %0, 0
   tail call void @_Z10sideeffectv()
   br i1 %3, label %5, label %4
@@ -45,7 +45,7 @@ define void @xpc_objc_main(i32) noreturn {
 
 ; CHECK-LABEL: define {{.*}}@bar(
 ; CHECK: call {{.*}}@bar.cold.1(
-define void @bar(i32) {
+define void @bar(i32) "hot-cold-split" {
   %2 = icmp eq i32 %0, 0
   tail call void @_Z10sideeffectv()
   br i1 %2, label %sink, label %exit
@@ -63,7 +63,7 @@ exit:
 
 ; CHECK-LABEL: define {{.*}}@baz(
 ; CHECK: call {{.*}}@baz.cold.1(
-define void @baz(i32, %struct.__jmp_buf_tag*) {
+define void @baz(i32, %struct.__jmp_buf_tag*) "hot-cold-split" {
   %3 = icmp eq i32 %0, 0
   tail call void @_Z10sideeffectv()
   br i1 %3, label %5, label %4

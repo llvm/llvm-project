@@ -165,6 +165,7 @@
 ; CHECK-O-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
+; CHECK-O-NEXT: Running pass: HotColdSplittingPass
 ; CHECK-O-NEXT: Starting {{.*}}Function pass manager run.
 ; CHECK-O-NEXT: Running pass: Float2IntPass
 ; CHECK-O-NEXT: Running pass: LowerConstantIntrinsicsPass

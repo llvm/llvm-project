@@ -9,7 +9,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-LABEL: define {{.*}}@foo.cold
 ; CHECK-NOT: call {{.*}}llvm.dbg.value
 
-define void @foo() !dbg !6 {
+define void @foo() "hot-cold-split" !dbg !6 {
 entry:
   br i1 undef, label %if.then, label %if.end
 
