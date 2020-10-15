@@ -2824,18 +2824,17 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     }
   }
 
-  // or(ashr(subNSW(Y, X), ScalarSizeInBits(Y)-1), X)  --> X s> Y ? -1 : X.
+  // or(ashr(subNSW(Y, X), ScalarSizeInBits(Y) - 1), X)  --> X s> Y ? -1 : X.
   {
     Value *X, *Y;
-    const APInt *ShAmt;
     Type *Ty = I.getType();
-    if (match(&I, m_c_Or(m_OneUse(m_AShr(m_NSWSub(m_Value(Y), m_Value(X)),
-                                         m_APInt(ShAmt))),
-                         m_Deferred(X))) &&
-        *ShAmt == Ty->getScalarSizeInBits() - 1) {
+    if (match(&I, m_c_Or(m_OneUse(m_AShr(
+                             m_NSWSub(m_Value(Y), m_Value(X)),
+                             m_SpecificInt(Ty->getScalarSizeInBits() - 1))),
+                         m_Deferred(X)))) {
       Value *NewICmpInst = Builder.CreateICmpSGT(X, Y);
-      return SelectInst::Create(NewICmpInst, ConstantInt::getAllOnesValue(Ty),
-                                X);
+      Value *AllOnes = ConstantInt::getAllOnesValue(Ty);
+      return SelectInst::Create(NewICmpInst, AllOnes, X);
     }
   }
 
