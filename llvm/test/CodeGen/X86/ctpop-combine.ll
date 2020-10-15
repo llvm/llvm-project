@@ -161,12 +161,10 @@ define i32 @ctpop_ne_one(i64 %x) nounwind readnone {
   ret i32 %conv
 }
 
-define i1 @ctpop_trunc_non_power2(i255 %x) {
+define i1 @ctpop_trunc_non_power2(i255 %x) nounwind {
 ; CHECK-LABEL: ctpop_trunc_non_power2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
 ; CHECK-NEXT:    movq %rcx, %r9
 ; CHECK-NEXT:    andq %r8, %r9
@@ -193,7 +191,6 @@ define i1 @ctpop_trunc_non_power2(i255 %x) {
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    andb %cl, %al
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %a = call i255 @llvm.ctpop.i255(i255 %x)
   %b = trunc i255 %a to i8 ; largest value from ctpop is 255, fits in 8 bits.
