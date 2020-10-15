@@ -621,7 +621,7 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
             &signo,          // Signal int *
             &command_output, // Command output
             std::chrono::seconds(
-               120), // Large timeout to allow for long dsym download times
+               640), // Large timeout to allow for long dsym download times
             false);  // Don't run in a shell (we don't need shell expansion)
         if (error.Success() && exit_status == 0 && !command_output.empty()) {
           CFCData data(CFDataCreateWithBytesNoCopy(
