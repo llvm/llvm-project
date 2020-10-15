@@ -814,7 +814,7 @@ public:
   /// Returns true when the given FileEntry corresponds to the main file.
   ///
   /// The main file should be set prior to calling this function.
-  bool isMainFile(FileEntryRef SourceFile);
+  bool isMainFile(const FileEntry &SourceFile);
 
   /// Set the file ID for the precompiled preamble.
   void setPreambleFileID(FileID Preamble) {
