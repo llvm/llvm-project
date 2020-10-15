@@ -144,3 +144,142 @@ defm VSTU2D : VSTm<"vstu2d", 0xd2, V64>;
 
 // Section 8.9.12 - VSTL2D (Vector Store Lower 2D)
 defm VSTL2D : VSTm<"vstl2d", 0xd3, V64>;
+
+// Multiclass for VGT instructions
+let mayLoad = 1, hasSideEffects = 0, Uses = [VL] in
+multiclass VGTbm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                 dag dag_in, string disEnc = ""> {
+  let DisableEncoding = disEnc in
+  def "" : RVM<opc, (outs RC:$vx), dag_in,
+               !strconcat(opcStr, " $vx, ", argStr)>;
+  let Constraints = "$vx = $base", DisableEncoding = disEnc#"$base",
+      isCodeGenOnly = 1 in
+  def _v : RVM<opc, (outs RC:$vx), !con(dag_in, (ins RC:$base)),
+               !strconcat(opcStr, " $vx, ", argStr)>;
+}
+multiclass VGTlm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                 dag dag_in> {
+  defm "" : VGTbm<opcStr, argStr, opc, RC, dag_in>;
+  let isCodeGenOnly = 1, VE_VLInUse = 1 in {
+    defm l : VGTbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl)),
+                   "$vl,">;
+    defm L : VGTbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl)),
+                   "$vl,">;
+  }
+}
+multiclass VGTmm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                 dag dag_in> {
+  defm "" : VGTlm<opcStr, argStr, opc, RC, dag_in>;
+  let m = ?, VE_VLWithMask = 1 in
+  defm m : VGTlm<opcStr, argStr#", $m", opc, RC, !con(dag_in, (ins VM:$m))>;
+}
+let VE_VLIndex = 4 in
+multiclass VGTlhm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                  dag dag_in> {
+  defm rr : VGTmm<opcStr, argStr#", $sy, $sz", opc, RC,
+                  !con(dag_in, (ins I64:$sy, I64:$sz))>;
+  let cy = 0 in
+  defm ir : VGTmm<opcStr, argStr#", $sy, $sz", opc, RC,
+                  !con(dag_in, (ins simm7:$sy, I64:$sz))>;
+  let cz = 0 in
+  defm rz : VGTmm<opcStr, argStr#", $sy, $sz", opc, RC,
+                  !con(dag_in, (ins I64:$sy, zero:$sz))>;
+  let cy = 0, cz = 0 in
+  defm iz : VGTmm<opcStr, argStr#", $sy, $sz", opc, RC,
+                  !con(dag_in, (ins simm7:$sy, zero:$sz))>;
+}
+multiclass VGTtgm<string opcStr, bits<8>opc, RegisterClass RC> {
+  let vy = ? in defm v : VGTlhm<opcStr, "$vy", opc, RC, (ins V64:$vy)>;
+  let cs = 1, sw = ? in defm s : VGTlhm<opcStr, "$sw", opc, RC, (ins I64:$sw)>;
+}
+multiclass VGTm<string opcStr, bits<8>opc, RegisterClass RC> {
+  let vc = 1 in defm "" : VGTtgm<opcStr, opc, RC>;
+  let vc = 0 in defm NC : VGTtgm<opcStr#".nc", opc, RC>;
+}
+
+// Section 8.9.13 - VGT (Vector Gather)
+defm VGT : VGTm<"vgt", 0xa1, V64>;
+
+// Section 8.9.14 - VGTU (Vector Gather Upper)
+defm VGTU : VGTm<"vgtu", 0xa2, V64>;
+
+// Section 8.9.15 - VGTL (Vector Gather Lower)
+defm VGTLSX : VGTm<"vgtl.sx", 0xa3, V64>;
+let cx = 1 in defm VGTLZX : VGTm<"vgtl.zx", 0xa3, V64>;
+def : MnemonicAlias<"vgtl", "vgtl.zx">;
+def : MnemonicAlias<"vgtl.nc", "vgtl.zx.nc">;
+
+// Multiclass for VSC instructions
+let mayStore = 1, hasSideEffects = 0, Uses = [VL] in
+multiclass VSCbm<string opcStr, string argStr, bits<8>opc, dag dag_in> {
+  def "" : RVM<opc, (outs), dag_in, !strconcat(opcStr, argStr)>;
+  let DisableEncoding = "$vl", isCodeGenOnly = 1, VE_VLInUse = 1 in {
+    def l : RVM<opc, (outs), !con(dag_in, (ins I32:$vl)),
+                !strconcat(opcStr, argStr)>;
+    def L : RVM<opc, (outs), !con(dag_in, (ins VLS:$vl)),
+                !strconcat(opcStr, argStr)>;
+  }
+}
+multiclass VSCmm<string opcStr, string argStr, bits<8>opc, dag dag_in> {
+  defm "" : VSCbm<opcStr, argStr, opc, dag_in>;
+  let m = ?, VE_VLWithMask = 1 in
+  defm m : VSCbm<opcStr, argStr#", $m", opc, !con(dag_in, (ins VM:$m))>;
+}
+let VE_VLIndex = 4 in
+multiclass VSClhm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                  dag dag_in> {
+  defm rrv : VSCmm<opcStr, " $vx, "#argStr#", $sy, $sz", opc,
+                   !con(dag_in, (ins I64:$sy, I64:$sz, RC:$vx))>;
+  let cy = 0 in
+  defm irv : VSCmm<opcStr, " $vx, "#argStr#", $sy, $sz", opc,
+                   !con(dag_in, (ins simm7:$sy, I64:$sz, RC:$vx))>;
+  let cz = 0 in
+  defm rzv : VSCmm<opcStr, " $vx, "#argStr#", $sy, $sz", opc,
+                   !con(dag_in, (ins I64:$sy, zero:$sz, RC:$vx))>;
+  let cy = 0, cz = 0 in
+  defm izv : VSCmm<opcStr, " $vx, "#argStr#", $sy, $sz", opc,
+                   !con(dag_in, (ins simm7:$sy, zero:$sz, RC:$vx))>;
+}
+multiclass VSCtgm<string opcStr, bits<8>opc, RegisterClass RC> {
+  let vy = ? in defm v : VSClhm<opcStr, "$vy", opc, RC, (ins V64:$vy)>;
+  let cs = 1, sw = ? in defm s : VSClhm<opcStr, "$sw", opc, RC, (ins I64:$sw)>;
+}
+multiclass VSCm<string opcStr, bits<8>opc, RegisterClass RC> {
+  let vc = 1, cx = 0 in defm "" : VSCtgm<opcStr, opc, RC>;
+  let vc = 0, cx = 0 in defm NC : VSCtgm<opcStr#".nc", opc, RC>;
+  let vc = 1, cx = 1 in defm OT : VSCtgm<opcStr#".ot", opc, RC>;
+  let vc = 0, cx = 1 in defm NCOT : VSCtgm<opcStr#".nc.ot", opc, RC>;
+}
+
+// Section 8.9.16 - VSC (Vector Scatter)
+defm VSC : VSCm<"vsc", 0xb1, V64>;
+
+// Section 8.9.17 - VSCU (Vector Scatter Upper)
+defm VSCU : VSCm<"vscu", 0xb2, V64>;
+
+// Section 8.9.18 - VSCL (Vector Scatter Lower)
+defm VSCL : VSCm<"vscl", 0xb3, V64>;
+
+// Section 8.9.19 - PFCHV (Prefetch Vector)
+let Uses = [VL] in
+multiclass PFCHVbm<string opcStr, string argStr, bits<8>opc, dag dag_in> {
+  def "" : RVM<opc, (outs), dag_in, !strconcat(opcStr, argStr)>;
+  let DisableEncoding = "$vl", isCodeGenOnly = 1, VE_VLInUse = 1 in {
+    def l : RVM<opc, (outs), !con(dag_in, (ins I32:$vl)),
+                !strconcat(opcStr, argStr)>;
+    def L : RVM<opc, (outs), !con(dag_in, (ins VLS:$vl)),
+                !strconcat(opcStr, argStr)>;
+  }
+}
+let VE_VLIndex = 2 in
+multiclass PFCHVm<string opcStr, bits<8>opc> {
+  defm rr : PFCHVbm<opcStr, " $sy, $sz", opc, (ins I64:$sy, I64:$sz)>;
+  let cy = 0 in
+  defm ir : PFCHVbm<opcStr, " $sy, $sz", opc, (ins simm7:$sy, I64:$sz)>;
+  let cz = 0 in
+  defm rz : PFCHVbm<opcStr, " $sy, $sz", opc, (ins I64:$sy, zero:$sz)>;
+  let cy = 0, cz = 0 in
+  defm iz : PFCHVbm<opcStr, " $sy, $sz", opc, (ins simm7:$sy, zero:$sz)>;
+}
+let vc = 1, vx = 0 in defm PFCHV : PFCHVm<"pfchv", 0x80>;
+let vc = 0, vx = 0 in defm PFCHVNC : PFCHVm<"pfchv.nc", 0x80>;
