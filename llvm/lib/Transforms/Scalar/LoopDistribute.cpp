@@ -814,9 +814,7 @@ public:
 
       LLVM_DEBUG(dbgs() << "\nPointers:\n");
       LLVM_DEBUG(LAI->getRuntimePointerChecking()->printChecks(dbgs(), Checks));
-      LoopVersioning LVer(*LAI, L, LI, DT, SE, false);
-      LVer.setAliasChecks(std::move(Checks));
-      LVer.setSCEVChecks(LAI->getPSE().getUnionPredicate());
+      LoopVersioning LVer(*LAI, Checks, L, LI, DT, SE);
       LVer.versionLoop(DefsUsedOutside);
       LVer.annotateLoopWithNoAlias();
 

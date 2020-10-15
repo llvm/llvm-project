@@ -601,7 +601,8 @@ bool LoopVersioningLICM::runOnLoop(Loop *L, LPPassManager &LPM) {
     // Create memcheck for memory accessed inside loop.
     // Clone original loop, and set blocks properly.
     DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    LoopVersioning LVer(*LAI, CurLoop, LI, DT, SE, true);
+    LoopVersioning LVer(*LAI, LAI->getRuntimePointerChecking()->getChecks(),
+                        CurLoop, LI, DT, SE);
     LVer.versionLoop();
     // Set Loop Versioning metaData for original loop.
     addStringMetadataToLoop(LVer.getNonVersionedLoop(), LICMVersioningMetaData);
