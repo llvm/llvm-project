@@ -24,7 +24,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-NEXT: call void @foo.cold.1
 ; CHECK-LABEL: if.end:
 ; CHECK: call void @sideeffect(i32 1)
-define void @foo(i32 %cond) {
+define void @foo(i32 %cond) "hot-cold-split" {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.end, label %while.cond.preheader
@@ -62,7 +62,7 @@ if.end:                                           ; preds = %entry
 ; CHECK-NEXT: call void @while_loop_after_sink.cold.1
 ; CHECK-LABEL: if.end:
 ; CHECK: call void @sideeffect(i32 1)
-define void @while_loop_after_sink(i32 %cond) {
+define void @while_loop_after_sink(i32 %cond) "hot-cold-split" {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.end, label %sink

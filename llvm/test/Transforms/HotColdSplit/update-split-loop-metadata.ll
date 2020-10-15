@@ -14,7 +14,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK: [[LOOP_MD]] = distinct !{[[LOOP_MD]], [[LINE:![0-9]+]], [[LINE]]}
 ; CHECK: [[LINE]] = !DILocation(line: 1, column: 1, scope: [[SCOPE]])
 
-define void @basic(i32* %p, i32 %k) !dbg !6 {
+define void @basic(i32* %p, i32 %k) "hot-cold-split" !dbg !6 {
 entry:
   %cmp3 = icmp slt i32 0, %k
   br i1 %cmp3, label %for.body.lr.ph, label %for.end
