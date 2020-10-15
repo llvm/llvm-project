@@ -421,12 +421,6 @@ public:
           return error("Expected integer constant");
         parseSingleInteger(false, Operands);
       } else {
-        // v128.{load,store}{8,16,32,64}_lane has both a memarg and a lane
-        // index. We need to avoid parsing an extra alignment operand for the
-        // lane index.
-        auto IsLoadStoreLane = InstName.find("_lane") != StringRef::npos;
-        if (IsLoadStoreLane && Operands.size() == 4)
-          return false;
         // Alignment not specified (or atomics, must use default alignment).
         // We can't just call WebAssembly::GetDefaultP2Align since we don't have
         // an opcode until after the assembly matcher, so set a default to fix
