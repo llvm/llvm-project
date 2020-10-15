@@ -186,6 +186,10 @@ public:
 
   RecurrenceKind getRecurrenceKind() const { return Kind; }
 
+  unsigned getRecurrenceBinOp() const {
+    return getRecurrenceBinOp(getRecurrenceKind());
+  }
+
   MinMaxRecurrenceKind getMinMaxRecurrenceKind() const { return MinMaxKind; }
 
   FastMathFlags getFastMathFlags() const { return FMF; }
@@ -219,7 +223,7 @@ public:
   const SmallPtrSet<Instruction *, 8> &getCastInsts() const { return CastInsts; }
 
   /// Returns true if all source operands of the recurrence are SExtInsts.
-  bool isSigned() const{ return IsSigned; }
+  bool isSigned() const { return IsSigned; }
 
   /// Attempts to find a chain of operations from Phi to LoopExitInst that can
   /// be treated as a set of reductions instructions for in-loop reductions.

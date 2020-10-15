@@ -2008,12 +2008,6 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     while (run());
   }
 
-  // Create wrapped symbols for -wrap option.
-  std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
-  // Load more object files that might be needed for wrapped symbols.
-  if (!wrapped.empty())
-    while (run());
-
   if (config->autoImport) {
     // MinGW specific.
     // Load any further object files that might be needed for doing automatic
@@ -2056,10 +2050,6 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // If we generated native object files from bitcode files, this resolves
   // references to the symbols we use from them.
   run();
-
-  // Apply symbol renames for -wrap.
-  if (!wrapped.empty())
-    wrapSymbols(wrapped);
 
   // Resolve remaining undefined symbols and warn about imported locals.
   symtab->resolveRemainingUndefines();

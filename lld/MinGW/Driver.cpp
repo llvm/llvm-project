@@ -377,8 +377,6 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     add("-includeoptional:" + StringRef(a->getValue()));
   for (auto *a : args.filtered(OPT_delayload))
     add("-delayload:" + StringRef(a->getValue()));
-  for (auto *a : args.filtered(OPT_wrap))
-    add("-wrap:" + StringRef(a->getValue()));
 
   std::vector<StringRef> searchPaths;
   for (auto *a : args.filtered(OPT_L)) {

@@ -103,8 +103,8 @@ protected:
   explicit Symbol(Kind k, StringRef n = "")
       : symbolKind(k), isExternal(true), isCOMDAT(false),
         writtenToSymtab(false), pendingArchiveLoad(false), isGCRoot(false),
-        isRuntimePseudoReloc(false), deferUndefined(false), canInline(true),
-        nameSize(n.size()), nameData(n.empty() ? nullptr : n.data()) {}
+        isRuntimePseudoReloc(false), nameSize(n.size()),
+        nameData(n.empty() ? nullptr : n.data()) {}
 
   const unsigned symbolKind : 8;
   unsigned isExternal : 1;
@@ -129,16 +129,6 @@ public:
   unsigned isGCRoot : 1;
 
   unsigned isRuntimePseudoReloc : 1;
-
-  // True if we want to allow this symbol to be undefined in the early
-  // undefined check pass in SymbolTable::reportUnresolvable(), as it
-  // might be fixed up later.
-  unsigned deferUndefined : 1;
-
-  // False if LTO shouldn't inline whatever this symbol points to. If a symbol
-  // is overwritten after LTO, LTO shouldn't inline the symbol because it
-  // doesn't know the final contents of the symbol.
-  uint8_t canInline : 1;
 
 protected:
   // Symbol name length. Assume symbol lengths fit in a 32-bit integer.
@@ -478,9 +468,7 @@ void replaceSymbol(Symbol *s, ArgT &&... arg) {
                 "SymbolUnion not aligned enough");
   assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
          "Not a Symbol");
-  bool canInline = s->canInline;
   new (s) T(std::forward<ArgT>(arg)...);
-  s->canInline = canInline;
 }
 } // namespace coff
 

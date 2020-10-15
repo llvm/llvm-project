@@ -1073,6 +1073,25 @@ static const char *RelocationModelName(llvm::Reloc::Model Model) {
   llvm_unreachable("Unknown Reloc::Model kind");
 }
 
+static void HandleAmdgcnLegacyOptions(const Driver &D,
+                                      const ArgList &Args,
+                                      ArgStringList &CmdArgs) {
+  if (auto *CodeObjArg = Args.getLastArg(options::OPT_mcode_object_v3_legacy,
+                                         options::OPT_mno_code_object_v3_legacy)) {
+    if (CodeObjArg->getOption().getID() == options::OPT_mcode_object_v3_legacy) {
+      D.Diag(diag::warn_drv_deprecated_arg) << "-mcode-object-v3" <<
+        "-mllvm --amdhsa-code-object-version=3";
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("--amdhsa-code-object-version=3");
+    } else {
+      D.Diag(diag::warn_drv_deprecated_arg) << "-mno-code-object-v3" <<
+        "-mllvm --amdhsa-code-object-version=2";
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("--amdhsa-code-object-version=2");
+    }
+  }
+}
+
 void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
                                     const Driver &D, const ArgList &Args,
                                     ArgStringList &CmdArgs,
@@ -6122,6 +6141,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  HandleAmdgcnLegacyOptions(D, Args, CmdArgs);
+
   // For all the host OpenMP offloading compile jobs we need to pass the targets
   // information using -fopenmp-targets= option.
   if (JA.isHostOffloading(Action::OFK_OpenMP)) {
@@ -7084,6 +7105,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-split-dwarf-output");
     CmdArgs.push_back(SplitDebugName(JA, Args, Input, Output));
   }
+
+  HandleAmdgcnLegacyOptions(D, Args, CmdArgs);
 
   assert(Input.isFilename() && "Invalid input.");
   CmdArgs.push_back(Input.getFilename());

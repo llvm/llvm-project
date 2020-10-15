@@ -3,13 +3,12 @@
 
 #include "filesystem_include.h"
 
-#include <sys/stat.h> // for mkdir, mkfifo
+#include <sys/stat.h> // for stat, mkdir, mkfifo
 #include <unistd.h> // for ftruncate, link, symlink, getcwd, chdir
 
 #include <cassert>
 #include <cstdio> // for printf
 #include <string>
-#include <random>
 #include <chrono>
 #include <vector>
 #include <regex>
@@ -24,23 +23,25 @@
 # include <sys/un.h>
 #endif
 
-namespace random_utils {
-inline char to_hex(int ch) {
-  return ch < 10 ? static_cast<char>('0' + ch)
-                 : static_cast<char>('a' + (ch - 10));
-}
+namespace utils {
+    inline std::string getcwd() {
+        // Assume that path lengths are not greater than this.
+        // This should be fine for testing purposes.
+        char buf[4096];
+        char* ret = ::getcwd(buf, sizeof(buf));
+        assert(ret && "getcwd failed");
+        return std::string(ret);
+    }
 
-inline char random_hex_char() {
-  static std::mt19937 rd{std::random_device{}()};
-  static std::uniform_int_distribution<int> mrand{0, 15};
-  return to_hex(mrand(rd));
-}
-
-} // namespace random_utils
+    inline bool exists(std::string const& path) {
+        struct ::stat tmp;
+        return ::stat(path.c_str(), &tmp) == 0;
+    }
+} // end namespace utils
 
 struct scoped_test_env
 {
-    scoped_test_env() : test_root(random_path()) {
+    scoped_test_env() : test_root(available_cwd_path()) {
         std::string cmd = "mkdir -p " + test_root.native();
         int ret = std::system(cmd.c_str());
         assert(ret == 0);
@@ -174,20 +175,20 @@ struct scoped_test_env
     fs::path test_root;
 
 private:
-    static std::string unique_path_suffix() {
-        std::string model = "test.%%%%%%";
-        for (auto & ch :  model) {
-          if (ch == '%')
-            ch = random_utils::random_hex_char();
+    // This could potentially introduce a filesystem race if multiple
+    // scoped_test_envs were created concurrently in the same test (hence
+    // sharing the same cwd). However, it is fairly unlikely to happen as
+    // we generally don't use scoped_test_env from multiple threads, so
+    // this is deemed acceptable.
+    static inline fs::path available_cwd_path() {
+        fs::path const cwd = utils::getcwd();
+        fs::path const tmp = fs::temp_directory_path();
+        fs::path const base = tmp / cwd.filename();
+        int i = 0;
+        fs::path p = base / ("static_env." + std::to_string(i));
+        while (utils::exists(p)) {
+            p = fs::path(base) / ("static_env." + std::to_string(++i));
         }
-        return model;
-    }
-
-    // This could potentially introduce a filesystem race with other tests
-    // running at the same time, but oh well, it's just test code.
-    static inline fs::path random_path() {
-        fs::path tmp = fs::temp_directory_path();
-        fs::path p = fs::path(tmp) / unique_path_suffix();
         return p;
     }
 };
@@ -301,15 +302,10 @@ public:
 };
 
 struct CWDGuard {
-  // Assume that path lengths are not greater than this.
-  // This should be fine for testing purposes.
-  char OldCWD[4096];
-  CWDGuard() {
-    char* ret = ::getcwd(OldCWD, sizeof(OldCWD));
-    assert(ret && "getcwd failed");
-  }
+  std::string oldCwd_;
+  CWDGuard() : oldCwd_(utils::getcwd()) { }
   ~CWDGuard() {
-    int ret = ::chdir(OldCWD);
+    int ret = ::chdir(oldCwd_.c_str());
     assert(ret == 0 && "chdir failed");
   }
 

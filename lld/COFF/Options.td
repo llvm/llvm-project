@@ -252,7 +252,6 @@ def print_symbol_order: P<
     "print-symbol-order",
     "Print a symbol order specified by /call-graph-ordering-file and "
     "/call-graph-profile-sort into the specified file">;
-def wrap : P_priv<"wrap">;
 
 // Flags for debugging
 def lldmap : F<"lldmap">;

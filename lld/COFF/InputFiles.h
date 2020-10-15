@@ -148,8 +148,6 @@ public:
   ArrayRef<SectionChunk *> getGuardLJmpChunks() { return guardLJmpChunks; }
   ArrayRef<Symbol *> getSymbols() { return symbols; }
 
-  MutableArrayRef<Symbol *> getMutableSymbols() { return symbols; }
-
   ArrayRef<uint8_t> getDebugSection(StringRef secName);
 
   // Returns a Symbol object for the symbolIndex'th symbol in the
