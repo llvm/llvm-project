@@ -254,6 +254,11 @@ def int_wasm_store64_lane :
             [IntrWriteMem, IntrArgMemOnly],
             "", [SDNPMemOperand]>;
 
+// TODO: Replace this intrinsic with normal ISel patterns once popcnt is merged
+// to the proposal.
+def int_wasm_popcnt :
+  Intrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty], [IntrNoMem, IntrSpeculatable]>;
+
 //===----------------------------------------------------------------------===//
 // Thread-local storage intrinsics
 //===----------------------------------------------------------------------===//
