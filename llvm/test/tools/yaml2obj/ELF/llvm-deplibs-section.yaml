@@ -1,7 +1,7 @@
 ## Check how yaml2obj produces SHT_LLVM_DEPENDENT_LIBRARIES sections.
 
 ## Check we can describe SHT_LLVM_DEPENDENT_LIBRARIES using
-## "Libraries" and "Content" properies.
+## "Libraries", "Size" and "Content" properies.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj --sections --section-data %t1 | FileCheck %s --check-prefix=LIBRARIES
@@ -36,6 +36,21 @@
 # LIBRARIES-NEXT:   0000: 112233
 # LIBRARIES-NEXT: )
 
+# LIBRARIES:      Name: .deplibs.size
+# LIBRARIES-NEXT: Type: SHT_LLVM_DEPENDENT_LIBRARIES
+# LIBRARIES-NEXT: Flags [ (0x0)
+# LIBRARIES-NEXT: ]
+# LIBRARIES-NEXT: Address: 0x0
+# LIBRARIES-NEXT: Offset: 0x4F
+# LIBRARIES-NEXT: Size: 3
+# LIBRARIES-NEXT: Link: 0
+# LIBRARIES-NEXT: Info: 0
+# LIBRARIES-NEXT: AddressAlignment: 0
+# LIBRARIES-NEXT: EntrySize: 0
+# LIBRARIES-NEXT: SectionData (
+# LIBRARIES-NEXT:   0000: 000000 |
+# LIBRARIES-NEXT: )
+
 --- !ELF
 FileHeader:
   Class: ELFCLASS64
@@ -48,12 +63,16 @@ Sections:
   - Name:    .deplibs.content
     Type:    SHT_LLVM_DEPENDENT_LIBRARIES
     Content: "112233"
+  - Name: .deplibs.size
+    Type: SHT_LLVM_DEPENDENT_LIBRARIES
+    Size: 0x3
 
-## Check we report an error when "Libraries" and "Content" are used together.
+## Check we report an error when "Libraries" and "Content"/"Size" keys are used together.
 
-# RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --check-prefix=LIBS-CONTENT
+# RUN: not yaml2obj --docnum=2 -DCONTENT="FF" -DLIBS="[]" %s 2>&1 | FileCheck %s --check-prefix=LIBS-ERR
+# RUN: not yaml2obj --docnum=2 -DSIZE=0 -DLIBS="[]" %s 2>&1 | FileCheck %s --check-prefix=LIBS-ERR
 
-# LIBS-CONTENT: error: SHT_LLVM_DEPENDENT_LIBRARIES: "Libraries" and "Content" can't be used together
+# LIBS-ERR: error: "Libraries" cannot be used with "Content" or "Size"
 
 --- !ELF
 FileHeader:
@@ -63,22 +82,35 @@ FileHeader:
 Sections:
   - Name:      .deplibs
     Type:      SHT_LLVM_DEPENDENT_LIBRARIES
-    Content:   "FF"
-    Libraries: [ foo ]
+    Content:   [[CONTENT=<none>]]
+    Size:      [[SIZE=<none>]]
+    Libraries: [[LIBS=<none>]]
 
-## Check we create an empty section when neither "Libraries" nor "Content" are specified.
+## Check we create an empty section when none of "Libraries", "Size" or "Content" are specified.
 
-# RUN: yaml2obj --docnum=3 %s -o %t3
-# RUN: llvm-readelf --sections %t3 | FileCheck %s --check-prefix=NOPROPS
+# RUN: yaml2obj --docnum=2 %s -o %t2.empty
+# RUN: llvm-readelf --sections %t2.empty | FileCheck %s --check-prefix=EMPTY
 
-# NOPROPS: [Nr] Name     Type                     Address          Off    Size
-# NOPROPS: [ 1] .deplibs LLVM_DEPENDENT_LIBRARIES 0000000000000000 000040 000000
- 
---- !ELF
-FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_REL
-Sections:
-  - Name: .deplibs
-    Type: SHT_LLVM_DEPENDENT_LIBRARIES
+# EMPTY: [Nr] Name     Type                     Address          Off    Size
+# EMPTY: [ 1] .deplibs LLVM_DEPENDENT_LIBRARIES 0000000000000000 000040 000000
+
+## Check we can use the "Content" key with the "Size" key when the size is greater
+## than or equal to the content size.
+
+# RUN: not yaml2obj --docnum=2 -DSIZE=1 -DCONTENT="'0011'" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CONTENT-SIZE-ERR
+
+# CONTENT-SIZE-ERR: error: Section size must be greater than or equal to the content size
+
+# RUN: yaml2obj --docnum=2 -DSIZE=2 -DCONTENT="'0011'" %s -o %t.cont.size.eq.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.eq.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="0011"
+
+# RUN: yaml2obj --docnum=2 -DSIZE=3 -DCONTENT="'0011'" %s -o %t.cont.size.gr.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.gr.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="001100"
+
+# CHECK-CONTENT:      Name: .deplibs
+# CHECK-CONTENT:      SectionData (
+# CHECK-CONTENT-NEXT:   0000: [[DATA]] |
+# CHECK-CONTENT-NEXT: )
