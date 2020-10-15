@@ -12336,6 +12336,43 @@ static SDValue performSetccAddFolding(SDNode *Op, SelectionDAG &DAG) {
   return DAG.getNode(AArch64ISD::CSEL, dl, VT, RHS, LHS, CCVal, Cmp);
 }
 
+// ADD(UADDV a, UADDV b) -->  UADDV(ADD a, b)
+static SDValue performUADDVCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  // Only scalar integer and vector types.
+  if (N->getOpcode() != ISD::ADD || !VT.isScalarInteger())
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  if (LHS.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      RHS.getOpcode() != ISD::EXTRACT_VECTOR_ELT || LHS.getValueType() != VT)
+    return SDValue();
+
+  auto *LHSN1 = dyn_cast<ConstantSDNode>(LHS->getOperand(1));
+  auto *RHSN1 = dyn_cast<ConstantSDNode>(RHS->getOperand(1));
+  if (!LHSN1 || LHSN1 != RHSN1 || !RHSN1->isNullValue())
+    return SDValue();
+
+  SDValue Op1 = LHS->getOperand(0);
+  SDValue Op2 = RHS->getOperand(0);
+  EVT OpVT1 = Op1.getValueType();
+  EVT OpVT2 = Op2.getValueType();
+  if (Op1.getOpcode() != AArch64ISD::UADDV || OpVT1 != OpVT2 ||
+      Op2.getOpcode() != AArch64ISD::UADDV ||
+      OpVT1.getVectorElementType() != VT)
+    return SDValue();
+
+  SDValue Val1 = Op1.getOperand(0);
+  SDValue Val2 = Op2.getOperand(0);
+  EVT ValVT = Val1->getValueType(0);
+  SDLoc DL(N);
+  SDValue AddVal = DAG.getNode(ISD::ADD, DL, ValVT, Val1, Val2);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
+                     DAG.getNode(AArch64ISD::UADDV, DL, ValVT, AddVal),
+                     DAG.getConstant(0, DL, MVT::i64));
+}
+
 // The basic add/sub long vector instructions have variants with "2" on the end
 // which act on the high-half of their inputs. They are normally matched by
 // patterns like:
@@ -12387,6 +12424,16 @@ static SDValue performAddSubLongCombine(SDNode *N,
   }
 
   return DAG.getNode(N->getOpcode(), SDLoc(N), VT, LHS, RHS);
+}
+
+static SDValue performAddSubCombine(SDNode *N,
+                                    TargetLowering::DAGCombinerInfo &DCI,
+                                    SelectionDAG &DAG) {
+  // Try to change sum of two reductions.
+  if (SDValue Val = performUADDVCombine(N, DAG))
+    return Val;
+
+  return performAddSubLongCombine(N, DCI, DAG);
 }
 
 // Massage DAGs which we can use the high-half "long" operations on into
@@ -14739,7 +14786,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performABSCombine(N, DAG, DCI, Subtarget);
   case ISD::ADD:
   case ISD::SUB:
-    return performAddSubLongCombine(N, DCI, DAG);
+    return performAddSubCombine(N, DCI, DAG);
   case ISD::XOR:
     return performXorCombine(N, DAG, DCI, Subtarget);
   case ISD::MUL:
