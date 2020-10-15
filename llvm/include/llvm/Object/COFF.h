@@ -582,14 +582,14 @@ struct coff_tls_directory {
     return 0;
   }
 
-  void setAlignment(uint32_t align) {
-    if (!align) {
+  void setAlignment(uint32_t Align) {
+    if (!Align) {
       Characteristics &= ~COFF::IMAGE_SCN_ALIGN_MASK;
     } else {
-      assert(llvm::isPowerOf2_32(align) && "alignment is not a power of 2");
-      uint32_t p2Align = llvm::Log2_32(align);
-      assert(p2Align <= 13 && "invalid alignment requested");
-      Characteristics |= (p2Align + 1) << 20;
+      assert(llvm::isPowerOf2_32(Align) && "alignment is not a power of 2");
+      uint32_t P2Align = llvm::Log2_32(Align);
+      assert(P2Align <= 13 && "invalid alignment requested");
+      Characteristics |= (P2Align + 1) << 20;
     }
   }
 };
