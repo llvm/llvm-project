@@ -21,14 +21,14 @@ import os
 import os.path
 import platform
 import unittest2
-
-import builder_darwin
+from lldbsuite.test.builders.darwin import get_triple
 
 import sys
 if sys.version_info.major == 2:
     import commands as subprocess
 else:
     import subprocess
+
 
 def execute_command(command):
     (exit_status, output) = subprocess.getstatusoutput(command)
@@ -39,12 +39,42 @@ class TestSwiftPlaygrounds(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    def get_build_triple(self):
+        """We want to build the file with a deployment target earlier than the
+           availability set in the source file."""
+        if lldb.remote_platform:
+            arch = self.getArchitecture()
+            vendor, os, version, _ = get_triple()
+            # This is made slightly more complex by watchOS having misaligned
+            # version numbers.
+            if os == 'watchos':
+                version = '5.0'
+            else:
+                version = '7.0'
+            triple = '{}-{}-{}{}'.format(arch, vendor, os, version)
+        else:
+            triple = 'x86_64-apple-macosx10.10'
+        return triple
+
+    def get_run_triple(self):
+        if lldb.remote_platform:
+            arch = self.getArchitecture()
+            vendor, os, version, _ = get_triple()
+            triple = '{}-{}-{}{}'.format(arch, vendor, os, version)
+        else:
+            version, _, machine = platform.mac_ver()
+            triple = '{}-apple-macosx{}'.format(machine, version)
+        return triple
+
     @skipUnlessDarwin
     @swiftTest
     @skipIf(debug_info=decorators.no_match("dsym"))
     def test_cross_module_extension(self):
         """Test that playgrounds work"""
-        self.build()
+        self.build(dictionary={
+            'ARCH_SWIFTFLAGS':
+            '-target {}'.format(self.get_build_triple()),
+        })
         self.do_test(True)
         self.do_test(False)
 
@@ -61,19 +91,14 @@ class TestSwiftPlaygrounds(TestBase):
 
         # Create the target
         if force_target:
-            if lldb.remote_platform:
-                triple = builder_darwin.construct_triple(
-                    configuration.lldb_platform_name,
-                    builder_darwin.getEffectiveArchitecture(None))
-            else:
-                version, _, machine = platform.mac_ver()
-                triple = '%s-apple-macosx%s' % (machine, version)
-            target = self.dbg.CreateTargetWithFileAndArch(exe, str(triple))
+            target = self.dbg.CreateTargetWithFileAndArch(
+                exe, self.get_run_triple())
         else:
             target = self.dbg.CreateTarget(exe)
-            
+
         self.assertTrue(target, VALID_TARGET)
-        self.registerSharedLibrariesWithTarget(target, ['libPlaygroundsRuntime.dylib'])
+        self.registerSharedLibrariesWithTarget(target,
+                                               ['libPlaygroundsRuntime.dylib'])
 
         # Set the breakpoints
         breakpoint = target.BreakpointCreateBySourceRegex(
@@ -114,4 +139,3 @@ class TestSwiftPlaygrounds(TestBase):
         self.assertTrue("b=\\'5\\'" in playground_output)
         self.assertTrue("=\\'8\\'" in playground_output)
         self.assertTrue("=\\'11\\'" in playground_output)
-
