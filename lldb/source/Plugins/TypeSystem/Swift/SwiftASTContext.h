@@ -175,6 +175,8 @@ public:
 
   bool SupportsLanguage(lldb::LanguageType language) override;
 
+  SwiftASTContext *GetSwiftASTContext() override { return this; }
+
   Status IsCompatible() override;
 
   swift::SourceManager &GetSourceManager();
