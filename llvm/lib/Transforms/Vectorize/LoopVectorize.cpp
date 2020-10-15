@@ -4019,8 +4019,8 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi) {
       RecurrenceDescriptor RdxDesc = Legal->getReductionVars()[Phi];
       if (PreferPredicatedReductionSelect ||
           TTI->preferPredicatedReductionSelect(
-              RdxDesc.getRecurrenceBinOp(RdxDesc.getRecurrenceKind()),
-              Phi->getType(), TargetTransformInfo::ReductionFlags())) {
+              RdxDesc.getRecurrenceBinOp(), Phi->getType(),
+              TargetTransformInfo::ReductionFlags())) {
         auto *VecRdxPhi = cast<PHINode>(getOrCreateVectorValue(Phi, Part));
         VecRdxPhi->setIncomingValueForBlock(
             LI->getLoopFor(LoopVectorBody)->getLoopLatch(), Sel);
@@ -6901,7 +6901,7 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
 
     // If the target would prefer this reduction to happen "in-loop", then we
     // want to record it as such.
-    unsigned Opcode = RdxDesc.getRecurrenceBinOp(RdxDesc.getRecurrenceKind());
+    unsigned Opcode = RdxDesc.getRecurrenceBinOp();
     if (!PreferInLoopReductions &&
         !TTI.preferInLoopReduction(Opcode, Phi->getType(),
                                    TargetTransformInfo::ReductionFlags()))
