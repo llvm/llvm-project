@@ -908,6 +908,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
   default:
     TokError("unknown operation");
     return nullptr;
+  case tgtok::XNOT:
   case tgtok::XHead:
   case tgtok::XTail:
   case tgtok::XSize:
@@ -930,6 +931,11 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
         return nullptr;
       }
 
+      break;
+    case tgtok::XNOT:
+      Lex.Lex();  // eat the operation
+      Code = UnOpInit::NOT;
+      Type = IntRecTy::get();
       break;
     case tgtok::XHead:
       Lex.Lex();  // eat the operation
@@ -1070,6 +1076,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
   case tgtok::XMUL:
   case tgtok::XAND:
   case tgtok::XOR:
+  case tgtok::XXOR:
   case tgtok::XSRA:
   case tgtok::XSRL:
   case tgtok::XSHL:
@@ -1095,6 +1102,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XMUL:    Code = BinOpInit::MUL; break;
     case tgtok::XAND:    Code = BinOpInit::AND; break;
     case tgtok::XOR:     Code = BinOpInit::OR; break;
+    case tgtok::XXOR:    Code = BinOpInit::XOR; break;
     case tgtok::XSRA:    Code = BinOpInit::SRA; break;
     case tgtok::XSRL:    Code = BinOpInit::SRL; break;
     case tgtok::XSHL:    Code = BinOpInit::SHL; break;
@@ -1122,6 +1130,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
       break;
     case tgtok::XAND:
     case tgtok::XOR:
+    case tgtok::XXOR:
     case tgtok::XSRA:
     case tgtok::XSRL:
     case tgtok::XSHL:
@@ -1239,9 +1248,9 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
           return nullptr;
         }
         if (Code != BinOpInit::ADD && Code != BinOpInit::AND &&
-            Code != BinOpInit::OR && Code != BinOpInit::SRA &&
-            Code != BinOpInit::SRL && Code != BinOpInit::SHL &&
-            Code != BinOpInit::MUL)
+            Code != BinOpInit::OR && Code != BinOpInit::XOR &&
+            Code != BinOpInit::SRA && Code != BinOpInit::SRL &&
+            Code != BinOpInit::SHL && Code != BinOpInit::MUL)
           ArgType = Resolved;
       }
 
@@ -1278,7 +1287,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     if (Code == BinOpInit::STRCONCAT || Code == BinOpInit::LISTCONCAT ||
         Code == BinOpInit::CONCAT || Code == BinOpInit::ADD ||
         Code == BinOpInit::AND || Code == BinOpInit::OR ||
-        Code == BinOpInit::MUL) {
+        Code == BinOpInit::XOR || Code == BinOpInit::MUL) {
       while (InitList.size() > 2) {
         Init *RHS = InitList.pop_back_val();
         RHS = (BinOpInit::get(Code, InitList.back(), RHS, Type))->Fold(CurRec);
@@ -2084,8 +2093,10 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::XDag:
   case tgtok::XADD:
   case tgtok::XMUL:
+  case tgtok::XNOT:
   case tgtok::XAND:
   case tgtok::XOR:
+  case tgtok::XXOR:
   case tgtok::XSRA:
   case tgtok::XSRL:
   case tgtok::XSHL:

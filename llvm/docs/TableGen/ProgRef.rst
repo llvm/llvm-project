@@ -206,12 +206,13 @@ TableGen provides "bang operators" that have a wide variety of uses:
 
 .. productionlist::
    BangOperator: one of
-               : !add    !and         !cast         !con         !dag
-               : !empty  !eq          !foldl        !foreach     !ge
-               : !getop  !gt          !head         !if          !isa
-               : !le     !listconcat  !listsplat    !lt          !mul
-               : !ne     !or          !setop        !shl         !size
-               : !sra    !srl         !strconcat    !subst       !tail
+               : !add     !and         !cast        !con         !dag
+               : !empty   !eq          !foldl       !foreach     !ge
+               : !getop   !gt          !head        !if          !isa
+               : !le      !listconcat  !listsplat   !lt          !mul
+               : !ne      !not         !or          !setop       !shl
+               : !size    !sra         !srl         !strconcat   !subst
+               : !tail    !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1447,7 +1448,8 @@ and non-0 as true.
 
 ``!and(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator does a bitwise AND on *a*, *b*, etc., and produces the
-    result.
+    result. A logical AND can be performed if all the arguments are either
+    0 or 1.
 
 ``!cast<``\ *type*\ ``>(``\ *a*\ ``)``
     This operator performs a cast on *a* and produces the result.
@@ -1605,9 +1607,15 @@ and non-0 as true.
     The arguments must be ``bit``, ``int``, or ``string`` values.
     Use ``!cast<string>`` to compare other types of objects.
 
+``!not(``\ *a*\ ``)``
+    This operator performs a logical NOT on *a*, which must be
+    an integer. The argument 0 results in 1 (true); any other
+    argument results in 0 (false).
+
 ``!or(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator does a bitwise OR on *a*, *b*, etc., and produces the
-    result.
+    result. A logical OR can be performed if all the arguments are either
+    0 or 1.
 
 ``!setop(``\ *dag*\ ``,`` *op*\ ``)``
     This operator produces a DAG node with the same arguments as *dag*, but with its
@@ -1654,6 +1662,11 @@ and non-0 as true.
 ``!tail(``\ *a*\ ``)``
     This operator produces a new list with all the elements
     of the list *a* except for the zeroth one. (See also ``!head``.)
+
+``!xor(``\ *a*\ ``,`` *b*\ ``, ...)``
+    This operator does a bitwise EXCLUSIVE OR on *a*, *b*, etc., and produces
+    the result. A logical XOR can be performed if all the arguments are either
+    0 or 1.
 
 
 Appendix B: Sample Record

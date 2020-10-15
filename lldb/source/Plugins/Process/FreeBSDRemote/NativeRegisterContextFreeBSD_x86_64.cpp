@@ -429,15 +429,19 @@ int NativeRegisterContextFreeBSD_x86_64::GetSetForNativeRegNum(
 Status NativeRegisterContextFreeBSD_x86_64::ReadRegisterSet(uint32_t set) {
   switch (set) {
   case GPRegSet:
-    return DoRegisterSet(PT_GETREGS, &m_gpr);
+    return NativeProcessFreeBSD::PtraceWrapper(PT_GETREGS, m_thread.GetID(),
+                                               &m_gpr);
   case FPRegSet:
 #if defined(__x86_64__)
-    return DoRegisterSet(PT_GETFPREGS, &m_fpr);
+    return NativeProcessFreeBSD::PtraceWrapper(PT_GETFPREGS, m_thread.GetID(),
+                                               &m_fpr);
 #else
-    return DoRegisterSet(PT_GETXMMREGS, &m_fpr);
+    return NativeProcessFreeBSD::PtraceWrapper(PT_GETXMMREGS, m_thread.GetID(),
+                                               &m_fpr);
 #endif
   case DBRegSet:
-    return DoRegisterSet(PT_GETDBREGS, &m_dbr);
+    return NativeProcessFreeBSD::PtraceWrapper(PT_GETDBREGS, m_thread.GetID(),
+                                               &m_dbr);
   case XSaveRegSet: {
     struct ptrace_xstate_info info;
     Status ret = NativeProcessFreeBSD::PtraceWrapper(
@@ -466,15 +470,19 @@ Status NativeRegisterContextFreeBSD_x86_64::ReadRegisterSet(uint32_t set) {
 Status NativeRegisterContextFreeBSD_x86_64::WriteRegisterSet(uint32_t set) {
   switch (set) {
   case GPRegSet:
-    return DoRegisterSet(PT_SETREGS, &m_gpr);
+    return NativeProcessFreeBSD::PtraceWrapper(PT_SETREGS, m_thread.GetID(),
+                                               &m_gpr);
   case FPRegSet:
 #if defined(__x86_64__)
-    return DoRegisterSet(PT_SETFPREGS, &m_fpr);
+    return NativeProcessFreeBSD::PtraceWrapper(PT_SETFPREGS, m_thread.GetID(),
+                                               &m_fpr);
 #else
-    return DoRegisterSet(PT_SETXMMREGS, &m_fpr);
+    return NativeProcessFreeBSD::PtraceWrapper(PT_SETXMMREGS, m_thread.GetID(),
+                                               &m_fpr);
 #endif
   case DBRegSet:
-    return DoRegisterSet(PT_SETDBREGS, &m_dbr);
+    return NativeProcessFreeBSD::PtraceWrapper(PT_SETDBREGS, m_thread.GetID(),
+                                               &m_dbr);
   case XSaveRegSet:
     // ReadRegisterSet() must always be called before WriteRegisterSet().
     assert(m_xsave.size() > 0);
