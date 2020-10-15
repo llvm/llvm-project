@@ -1141,10 +1141,9 @@ void EmptyLocalizationContextChecker::MethodCrawler::VisitObjCMessageExpr(
     SE = Mgr.getSourceManager().getSLocEntry(SLInfo.first);
   }
 
-  bool Invalid = false;
-  const llvm::MemoryBuffer *BF =
-      Mgr.getSourceManager().getBuffer(SLInfo.first, SL, &Invalid);
-  if (Invalid)
+  llvm::Optional<llvm::MemoryBufferRef> BF =
+      Mgr.getSourceManager().getBufferOrNone(SLInfo.first, SL);
+  if (!BF)
     return;
 
   Lexer TheLexer(SL, LangOptions(), BF->getBufferStart(),

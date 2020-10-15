@@ -786,8 +786,8 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
   if (LPosInfo.first != BugFileID)
     return;
 
-  const llvm::MemoryBuffer *Buf = SM.getBuffer(LPosInfo.first);
-  const char* FileStart = Buf->getBufferStart();
+  llvm::MemoryBufferRef Buf = SM.getBufferOrFake(LPosInfo.first);
+  const char *FileStart = Buf.getBufferStart();
 
   // Compute the column number.  Rewind from the current position to the start
   // of the line.
@@ -797,7 +797,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
 
   // Compute LineEnd.
   const char *LineEnd = TokInstantiationPtr;
-  const char* FileEnd = Buf->getBufferEnd();
+  const char *FileEnd = Buf.getBufferEnd();
   while (*LineEnd != '\n' && LineEnd != FileEnd)
     ++LineEnd;
 

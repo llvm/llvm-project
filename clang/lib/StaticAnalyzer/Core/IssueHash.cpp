@@ -120,7 +120,8 @@ static std::string GetEnclosingDeclContextSignature(const Decl *D) {
   return "";
 }
 
-static StringRef GetNthLineOfFile(const llvm::MemoryBuffer *Buffer, int Line) {
+static StringRef GetNthLineOfFile(llvm::Optional<llvm::MemoryBufferRef> Buffer,
+                                  int Line) {
   if (!Buffer)
     return "";
 
@@ -135,7 +136,7 @@ static std::string NormalizeLine(const SourceManager &SM, FullSourceLoc &L,
                                  const LangOptions &LangOpts) {
   static StringRef Whitespaces = " \t\n";
 
-  StringRef Str = GetNthLineOfFile(SM.getBuffer(L.getFileID(), L),
+  StringRef Str = GetNthLineOfFile(SM.getBufferOrNone(L.getFileID(), L),
                                    L.getExpansionLineNumber());
   StringRef::size_type col = Str.find_first_not_of(Whitespaces);
   if (col == StringRef::npos)
@@ -144,8 +145,8 @@ static std::string NormalizeLine(const SourceManager &SM, FullSourceLoc &L,
     col++;
   SourceLocation StartOfLine =
       SM.translateLineCol(SM.getFileID(L), L.getExpansionLineNumber(), col);
-  const llvm::MemoryBuffer *Buffer =
-      SM.getBuffer(SM.getFileID(StartOfLine), StartOfLine);
+  Optional<llvm::MemoryBufferRef> Buffer =
+      SM.getBufferOrNone(SM.getFileID(StartOfLine), StartOfLine);
   if (!Buffer)
     return {};
 
