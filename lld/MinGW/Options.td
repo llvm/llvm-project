@@ -91,6 +91,8 @@ defm whole_archive: B<"whole-archive",
 def v: Flag<["-"], "v">, HelpText<"Display the version number">;
 def verbose: F<"verbose">, HelpText<"Verbose mode">;
 def version: F<"version">, HelpText<"Display the version number and exit">;
+defm wrap: Eq<"wrap", "Use wrapper functions for symbol">,
+     MetaVarName<"<symbol>">;
 
 // LLD specific options
 def _HASH_HASH_HASH : Flag<["-"], "###">,
