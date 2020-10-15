@@ -1,7 +1,5 @@
-; RUN: opt < %s -pgo-instr-gen -instrprof -use-old-memop-value-prof=true -S | FileCheck %s --check-prefix=OLDMEMOPVP
-; RUN: opt < %s -pgo-instr-gen -instrprof -use-old-memop-value-prof=false -S | FileCheck %s --check-prefix=NEWMEMOPVP
-; RUN: opt <%s -passes=pgo-instr-gen,instrprof -use-old-memop-value-prof=true -S | FileCheck %s --check-prefix=OLDMEMOPVP
-; RUN: opt <%s -passes=pgo-instr-gen,instrprof -use-old-memop-value-prof=false -S | FileCheck %s --check-prefix=NEWMEMOPVP
+; RUN: opt < %s -pgo-instr-gen -instrprof -S | FileCheck %s
+; RUN: opt <%s -passes=pgo-instr-gen,instrprof -S | FileCheck %s
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -25,8 +23,7 @@ for.cond1:
 
 for.body3:
   %conv = sext i32 %add to i64
-; OLDMEMOPVP: call void @__llvm_profile_instrument_range(i64 %conv, i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_foo to i8*), i32 0, i64 0, i64 8, i64 8192)
-; NEWMEMOPVP: call void @__llvm_profile_instrument_memop(i64 %conv, i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_foo to i8*), i32 0)
+; CHECK: call void @__llvm_profile_instrument_memop(i64 %conv, i8* bitcast ({ i64, i64, i64*, i8*, i8*, i32, [2 x i16] }* @__profd_foo to i8*), i32 0)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dst, i8* %src, i64 %conv, i1 false)
   %inc = add nsw i32 %j.0, 1
   br label %for.cond1
