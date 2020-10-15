@@ -1126,13 +1126,17 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          ContiguousBlobAccumulator &CBA) {
   // SHT_NOBITS sections do not have any content to write.
   SHeader.sh_entsize = 0;
-  SHeader.sh_size = S.Size;
+
+  if (!S.Size)
+    return;
+
+  SHeader.sh_size = *S.Size;
 
   // When a nobits section is followed by a non-nobits section or fill
   // in the same segment, we allocate the file space for it. This behavior
   // matches linkers.
   if (shouldAllocateFileSpace(Doc.ProgramHeaders, S))
-    CBA.writeZeros(S.Size);
+    CBA.writeZeros(*S.Size);
 }
 
 template <class ELFT>
@@ -1167,8 +1171,6 @@ void ELFState<ELFT>::writeSectionContent(
     SHeader.sh_entsize = *Section.EntSize;
   else
     SHeader.sh_entsize = IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
-  SHeader.sh_size = (IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel)) *
-                    Section.Relocations.size();
 
   // For relocation section set link to .symtab by default.
   unsigned Link = 0;
@@ -1179,7 +1181,15 @@ void ELFState<ELFT>::writeSectionContent(
   if (!Section.RelocatableSec.empty())
     SHeader.sh_info = toSectionIndex(Section.RelocatableSec, Section.Name);
 
-  for (const auto &Rel : Section.Relocations) {
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
+    return;
+  }
+
+  if (!Section.Relocations)
+    return;
+
+  for (const ELFYAML::Relocation &Rel : *Section.Relocations) {
     unsigned SymIdx = Rel.Symbol ? toSymbolIndex(*Rel.Symbol, Section.Name,
                                                  Section.Link == ".dynsym")
                                  : 0;
@@ -1198,6 +1208,9 @@ void ELFState<ELFT>::writeSectionContent(
       CBA.write((const char *)&REntry, sizeof(REntry));
     }
   }
+
+  SHeader.sh_size = (IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel)) *
+                    Section.Relocations->size();
 }
 
 template <class ELFT>
@@ -1207,8 +1220,8 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   SHeader.sh_entsize =
       Section.EntSize ? uint64_t(*Section.EntSize) : sizeof(Elf_Relr);
 
-  if (Section.Content) {
-    SHeader.sh_size = writeContent(CBA, Section.Content, None);
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
     return;
   }
 
@@ -1229,11 +1242,19 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::SymtabShndxSection &Shndx,
     ContiguousBlobAccumulator &CBA) {
-  for (uint32_t E : Shndx.Entries)
-    CBA.write<uint32_t>(E, ELFT::TargetEndianness);
-
   SHeader.sh_entsize = Shndx.EntSize ? (uint64_t)*Shndx.EntSize : 4;
-  SHeader.sh_size = Shndx.Entries.size() * SHeader.sh_entsize;
+
+  if (Shndx.Content || Shndx.Size) {
+    SHeader.sh_size = writeContent(CBA, Shndx.Content, Shndx.Size);
+    return;
+  }
+
+  if (!Shndx.Entries)
+    return;
+
+  for (uint32_t E : *Shndx.Entries)
+    CBA.write<uint32_t>(E, ELFT::TargetEndianness);
+  SHeader.sh_size = Shndx.Entries->size() * SHeader.sh_entsize;
 }
 
 template <class ELFT>
@@ -1249,13 +1270,20 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     SHeader.sh_link = Link;
 
   SHeader.sh_entsize = 4;
-  SHeader.sh_size = SHeader.sh_entsize * Section.Members.size();
 
   if (Section.Signature)
     SHeader.sh_info =
         toSymbolIndex(*Section.Signature, Section.Name, /*IsDynamic=*/false);
 
-  for (const ELFYAML::SectionOrType &Member : Section.Members) {
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
+    return;
+  }
+
+  if (!Section.Members)
+    return;
+
+  for (const ELFYAML::SectionOrType &Member : *Section.Members) {
     unsigned int SectionIndex = 0;
     if (Member.sectionNameOrType == "GRP_COMDAT")
       SectionIndex = llvm::ELF::GRP_COMDAT;
@@ -1263,17 +1291,26 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
       SectionIndex = toSectionIndex(Member.sectionNameOrType, Section.Name);
     CBA.write<uint32_t>(SectionIndex, ELFT::TargetEndianness);
   }
+  SHeader.sh_size = SHeader.sh_entsize * Section.Members->size();
 }
 
 template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::SymverSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  for (uint16_t Version : Section.Entries)
-    CBA.write<uint16_t>(Version, ELFT::TargetEndianness);
-
   SHeader.sh_entsize = Section.EntSize ? (uint64_t)*Section.EntSize : 2;
-  SHeader.sh_size = Section.Entries.size() * SHeader.sh_entsize;
+
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
+    return;
+  }
+
+  if (!Section.Entries)
+    return;
+
+  for (uint16_t Version : *Section.Entries)
+    CBA.write<uint16_t>(Version, ELFT::TargetEndianness);
+  SHeader.sh_size = Section.Entries->size() * SHeader.sh_entsize;
 }
 
 template <class ELFT>
@@ -1295,8 +1332,8 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::LinkerOptionsSection &Section,
     ContiguousBlobAccumulator &CBA) {
-  if (Section.Content) {
-    SHeader.sh_size = writeContent(CBA, Section.Content, None);
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
     return;
   }
 
@@ -1316,8 +1353,8 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::DependentLibrariesSection &Section,
     ContiguousBlobAccumulator &CBA) {
-  if (Section.Content) {
-    SHeader.sh_size = writeContent(CBA, Section.Content, None);
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
     return;
   }
 
@@ -1369,8 +1406,8 @@ void ELFState<ELFT>::writeSectionContent(
       SN2I.lookup(".symtab", Link))
     SHeader.sh_link = Link;
 
-  if (Section.Content) {
-    SHeader.sh_size = writeContent(CBA, Section.Content, None);
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
     return;
   }
 
@@ -1431,8 +1468,8 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 
   SHeader.sh_info = Section.Info;
 
-  if (Section.Content) {
-    SHeader.sh_size = writeContent(CBA, Section.Content, None);
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
     return;
   }
 
@@ -1481,8 +1518,8 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 
   SHeader.sh_info = Section.Info;
 
-  if (Section.Content) {
-    SHeader.sh_size = writeContent(CBA, Section.Content, None);
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
     return;
   }
 
@@ -1577,26 +1614,24 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   assert(Section.Type == llvm::ELF::SHT_DYNAMIC &&
          "Section type is not SHT_DYNAMIC");
 
-  if (!Section.Entries.empty() && Section.Content)
-    reportError("cannot specify both raw content and explicit entries "
-                "for dynamic section '" +
-                Section.Name + "'");
-
-  if (Section.Content)
-    SHeader.sh_size = Section.Content->binary_size();
-  else
-    SHeader.sh_size = 2 * sizeof(uintX_t) * Section.Entries.size();
   if (Section.EntSize)
     SHeader.sh_entsize = *Section.EntSize;
   else
-    SHeader.sh_entsize = sizeof(Elf_Dyn);
+    SHeader.sh_entsize = 2 * sizeof(uintX_t);
 
-  for (const ELFYAML::DynamicEntry &DE : Section.Entries) {
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
+    return;
+  }
+
+  if (!Section.Entries)
+    return;
+
+  for (const ELFYAML::DynamicEntry &DE : *Section.Entries) {
     CBA.write<uintX_t>(DE.Tag, ELFT::TargetEndianness);
     CBA.write<uintX_t>(DE.Val, ELFT::TargetEndianness);
   }
-  if (Section.Content)
-    CBA.writeAsBinary(*Section.Content);
+  SHeader.sh_size = 2 * sizeof(uintX_t) * Section.Entries->size();
 }
 
 template <class ELFT>
@@ -1670,8 +1705,8 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
       SN2I.lookup(".dynsym", Link))
     SHeader.sh_link = Link;
 
-  if (Section.Content) {
-    SHeader.sh_size = writeContent(CBA, Section.Content, None);
+  if (Section.Content || Section.Size) {
+    SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
     return;
   }
 

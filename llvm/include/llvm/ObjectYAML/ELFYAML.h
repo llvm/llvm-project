@@ -178,6 +178,9 @@ struct Section : public Chunk {
   llvm::yaml::Hex64 AddressAlign;
   Optional<llvm::yaml::Hex64> EntSize;
 
+  Optional<yaml::BinaryRef> Content;
+  Optional<llvm::yaml::Hex64> Size;
+
   // Usually sections are not created implicitly, but loaded from YAML.
   // When they are, this flag is used to signal about that.
   bool IsImplicit;
@@ -228,8 +231,6 @@ struct Fill : Chunk {
 };
 
 struct StackSizesSection : Section {
-  Optional<yaml::BinaryRef> Content;
-  Optional<llvm::yaml::Hex64> Size;
   Optional<std::vector<StackSizeEntry>> Entries;
 
   StackSizesSection() : Section(ChunkKind::StackSizes) {}
@@ -244,8 +245,7 @@ struct StackSizesSection : Section {
 };
 
 struct DynamicSection : Section {
-  std::vector<DynamicEntry> Entries;
-  Optional<yaml::BinaryRef> Content;
+  Optional<std::vector<DynamicEntry>> Entries;
 
   DynamicSection() : Section(ChunkKind::Dynamic) {}
 
@@ -253,8 +253,6 @@ struct DynamicSection : Section {
 };
 
 struct RawContentSection : Section {
-  Optional<yaml::BinaryRef> Content;
-  Optional<llvm::yaml::Hex64> Size;
   Optional<llvm::yaml::Hex64> Info;
 
   RawContentSection() : Section(ChunkKind::RawContent) {}
@@ -268,16 +266,12 @@ struct RawContentSection : Section {
 };
 
 struct NoBitsSection : Section {
-  llvm::yaml::Hex64 Size;
-
   NoBitsSection() : Section(ChunkKind::NoBits) {}
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::NoBits; }
 };
 
 struct NoteSection : Section {
-  Optional<yaml::BinaryRef> Content;
-  Optional<llvm::yaml::Hex64> Size;
   Optional<std::vector<ELFYAML::NoteEntry>> Notes;
 
   NoteSection() : Section(ChunkKind::Note) {}
@@ -286,8 +280,6 @@ struct NoteSection : Section {
 };
 
 struct HashSection : Section {
-  Optional<yaml::BinaryRef> Content;
-  Optional<llvm::yaml::Hex64> Size;
   Optional<std::vector<uint32_t>> Bucket;
   Optional<std::vector<uint32_t>> Chain;
 
@@ -322,8 +314,6 @@ struct GnuHashHeader {
 };
 
 struct GnuHashSection : Section {
-  Optional<yaml::BinaryRef> Content;
-
   Optional<GnuHashHeader> Header;
   Optional<std::vector<llvm::yaml::Hex64>> BloomFilter;
   Optional<std::vector<llvm::yaml::Hex32>> HashBuckets;
@@ -348,7 +338,6 @@ struct VerneedEntry {
 };
 
 struct VerneedSection : Section {
-  Optional<yaml::BinaryRef> Content;
   Optional<std::vector<VerneedEntry>> VerneedV;
   llvm::yaml::Hex64 Info;
 
@@ -360,8 +349,6 @@ struct VerneedSection : Section {
 };
 
 struct AddrsigSection : Section {
-  Optional<yaml::BinaryRef> Content;
-  Optional<llvm::yaml::Hex64> Size;
   Optional<std::vector<YAMLFlowString>> Symbols;
 
   AddrsigSection() : Section(ChunkKind::Addrsig) {}
@@ -376,7 +363,6 @@ struct LinkerOption {
 
 struct LinkerOptionsSection : Section {
   Optional<std::vector<LinkerOption>> Options;
-  Optional<yaml::BinaryRef> Content;
 
   LinkerOptionsSection() : Section(ChunkKind::LinkerOptions) {}
 
@@ -387,7 +373,6 @@ struct LinkerOptionsSection : Section {
 
 struct DependentLibrariesSection : Section {
   Optional<std::vector<YAMLFlowString>> Libs;
-  Optional<yaml::BinaryRef> Content;
 
   DependentLibrariesSection() : Section(ChunkKind::DependentLibraries) {}
 
@@ -408,7 +393,6 @@ struct CallGraphEntry {
 
 struct CallGraphProfileSection : Section {
   Optional<std::vector<CallGraphEntry>> Entries;
-  Optional<yaml::BinaryRef> Content;
 
   CallGraphProfileSection() : Section(ChunkKind::CallGraphProfile) {}
 
@@ -418,7 +402,7 @@ struct CallGraphProfileSection : Section {
 };
 
 struct SymverSection : Section {
-  std::vector<uint16_t> Entries;
+  Optional<std::vector<uint16_t>> Entries;
 
   SymverSection() : Section(ChunkKind::Symver) {}
 
@@ -435,7 +419,6 @@ struct VerdefEntry {
 
 struct VerdefSection : Section {
   Optional<std::vector<VerdefEntry>> Entries;
-  Optional<yaml::BinaryRef> Content;
 
   llvm::yaml::Hex64 Info;
 
@@ -447,7 +430,7 @@ struct VerdefSection : Section {
 struct GroupSection : Section {
   // Members of a group contain a flag and a list of section indices
   // that are part of the group.
-  std::vector<SectionOrType> Members;
+  Optional<std::vector<SectionOrType>> Members;
   Optional<StringRef> Signature; /* Info */
 
   GroupSection() : Section(ChunkKind::Group) {}
@@ -463,7 +446,7 @@ struct Relocation {
 };
 
 struct RelocationSection : Section {
-  std::vector<Relocation> Relocations;
+  Optional<std::vector<Relocation>> Relocations;
   StringRef RelocatableSec; /* Info */
 
   RelocationSection() : Section(ChunkKind::Relocation) {}
@@ -475,7 +458,6 @@ struct RelocationSection : Section {
 
 struct RelrSection : Section {
   Optional<std::vector<llvm::yaml::Hex64>> Entries;
-  Optional<yaml::BinaryRef> Content;
 
   RelrSection() : Section(ChunkKind::Relr) {}
 
@@ -485,7 +467,7 @@ struct RelrSection : Section {
 };
 
 struct SymtabShndxSection : Section {
-  std::vector<uint32_t> Entries;
+  Optional<std::vector<uint32_t>> Entries;
 
   SymtabShndxSection() : Section(ChunkKind::SymtabShndxSection) {}
 
@@ -501,8 +483,6 @@ struct ARMIndexTableEntry {
 
 struct ARMIndexTableSection : Section {
   Optional<std::vector<ARMIndexTableEntry>> Entries;
-  Optional<yaml::BinaryRef> Content;
-  Optional<llvm::yaml::Hex64> Size;
 
   ARMIndexTableSection() : Section(ChunkKind::ARMIndexTable) {}
 
