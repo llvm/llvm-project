@@ -134,7 +134,7 @@ unsigned MipsTargetLowering::getVectorTypeBreakdownForCallingConv(
   // Break down vector types to either 2 i64s or 4 i32s.
   RegisterVT = getRegisterTypeForCallingConv(Context, CC, VT);
   IntermediateVT = RegisterVT;
-  NumIntermediates = VT.getSizeInBits() < RegisterVT.getSizeInBits()
+  NumIntermediates = VT.getFixedSizeInBits() < RegisterVT.getFixedSizeInBits()
                          ? VT.getVectorNumElements()
                          : VT.getSizeInBits() / RegisterVT.getSizeInBits();
 
