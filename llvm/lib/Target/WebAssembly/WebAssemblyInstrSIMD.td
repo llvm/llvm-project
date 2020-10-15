@@ -785,6 +785,9 @@ defm ANYTRUE : SIMDReduce<int_wasm_anytrue, "any_true", 98>;
 // All lanes true: all_true
 defm ALLTRUE : SIMDReduce<int_wasm_alltrue, "all_true", 99>;
 
+// Population count: popcnt
+defm POPCNT : SIMDUnary<v16i8, "i8x16", int_wasm_popcnt, "popcnt", 124>;
+
 // Reductions already return 0 or 1, so and 1, setne 0, and seteq 1
 // can be folded out
 foreach reduction =
