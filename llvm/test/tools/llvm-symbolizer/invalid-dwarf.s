@@ -1,3 +1,4 @@
+# REQUIRES: x86-registered-target
 # Source:
 # void f1() { }
 # void f2() { }
@@ -5,7 +6,7 @@
 # Build as: clang -ffunction-sections -gdwarf-5 -c test.c
 # Hand modify the rnglist to include an invalid RLE encoding (42)
 #
-# RUN: llvm-mc -dwarf-version=5 %s -filetype=obj -o %t
+# RUN: llvm-mc -dwarf-version=5 %s -triple=x86_64-pc-linux -filetype=obj -o %t
 # RUN: not llvm-symbolizer -obj=%t 0x0 2>&1 | FileCheck %s
 #
 # CHECK: error: decoding address ranges: unknown rnglists encoding 0x2a at offset 0x10
