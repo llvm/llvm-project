@@ -29,6 +29,8 @@ int main(int, char**)
   const char* value2 = "_THIS_IS_LONG_THIS_IS_LONG_THIS_IS_LONG_THIS_IS_LONG_THIS_IS_LONG_THIS_IS_LONG_THIS_IS_LONG";
   path p1(value1);
   path p2(value2);
+  fs::path::string_type ps1 = p1.native();
+  fs::path::string_type ps2 = p2.native();
   {
     using namespace std; using namespace fs;
     ASSERT_NOEXCEPT(swap(p1, p2));
@@ -39,11 +41,11 @@ int main(int, char**)
     using namespace std;
     using namespace fs;
     swap(p1, p2);
-    assert(p1.native() == value2);
-    assert(p2.native() == value1);
+    assert(p1.native() == ps2);
+    assert(p2.native() == ps1);
     swap(p1, p2);
-    assert(p1.native() == value1);
-    assert(p2.native() == value2);
+    assert(p1.native() == ps1);
+    assert(p2.native() == ps2);
   }
 
   return 0;
