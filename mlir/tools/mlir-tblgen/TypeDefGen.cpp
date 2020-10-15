@@ -91,7 +91,7 @@ public:
 
   /// llvm::formatv will call this function when using an instance as a
   /// replacement value.
-  void format(raw_ostream &os, StringRef options) {
+  void format(raw_ostream &os, StringRef options) override {
     if (params.size() && emitFormat == EmitFormat::TypeNamePairsPrependComma)
       os << ", ";
     switch (emitFormat) {
