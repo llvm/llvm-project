@@ -2067,7 +2067,7 @@ void Writer::fixTlsAlignment() {
                                : sizeof(object::coff_tls_directory32);
 
   if (tlsOffset + directorySize > sec->getRawSize())
-    fatal("_tls_used is malformed");
+    fatal("_tls_used sym is malformed");
 
   if (config->is64()) {
     object::coff_tls_directory64 *tlsDir =
