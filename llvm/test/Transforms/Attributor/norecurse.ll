@@ -78,16 +78,16 @@ define i32 @extern() {
 declare i32 @k() readnone
 
 define void @intrinsic(i8* %dest, i8* %src, i32 %len) {
-; NOT_CGSCC_NPM: Function Attrs: argmemonly nosync nounwind willreturn
+; NOT_CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@intrinsic
-; NOT_CGSCC_NPM-SAME: (i8* nocapture writeonly [[DEST:%.*]], i8* nocapture readonly [[SRC:%.*]], i32 [[LEN:%.*]]) [[ATTR5:#.*]] {
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly [[DEST]], i8* noalias nocapture readonly [[SRC]], i32 [[LEN]], i1 noundef false) [[ATTR11:#.*]]
+; NOT_CGSCC_NPM-SAME: (i8* nocapture nofree writeonly [[DEST:%.*]], i8* nocapture nofree readonly [[SRC:%.*]], i32 [[LEN:%.*]]) [[ATTR5:#.*]] {
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[DEST]], i8* noalias nocapture nofree readonly [[SRC]], i32 [[LEN]], i1 noundef false) [[ATTR10:#.*]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly nosync nounwind willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@intrinsic
-; IS__CGSCC_NPM-SAME: (i8* nocapture writeonly [[DEST:%.*]], i8* nocapture readonly [[SRC:%.*]], i32 [[LEN:%.*]]) [[ATTR4:#.*]] {
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly [[DEST]], i8* noalias nocapture readonly [[SRC]], i32 [[LEN]], i1 noundef false) [[ATTR8:#.*]]
+; IS__CGSCC_NPM-SAME: (i8* nocapture nofree writeonly [[DEST:%.*]], i8* nocapture nofree readonly [[SRC:%.*]], i32 [[LEN:%.*]]) [[ATTR4:#.*]] {
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[DEST]], i8* noalias nocapture nofree readonly [[SRC]], i32 [[LEN]], i1 noundef false) [[ATTR7:#.*]]
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 %len, i1 false)
@@ -107,7 +107,7 @@ define internal i32 @called_by_norecurse() {
 ;
 ; IS__CGSCC____: Function Attrs: norecurse nosync readnone
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@called_by_norecurse
-; IS__CGSCC____-SAME: () [[ATTR6:#.*]] {
+; IS__CGSCC____-SAME: () [[ATTR5:#.*]] {
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = call i32 @k()
 ; IS__CGSCC____-NEXT:    ret i32 undef
 ;
@@ -117,13 +117,13 @@ define internal i32 @called_by_norecurse() {
 define void @m() norecurse {
 ; IS__TUNIT____: Function Attrs: norecurse nosync readnone
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@m
-; IS__TUNIT____-SAME: () [[ATTR7:#.*]] {
+; IS__TUNIT____-SAME: () [[ATTR6:#.*]] {
 ; IS__TUNIT____-NEXT:    [[A:%.*]] = call i32 @called_by_norecurse() [[ATTR3]]
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: norecurse nosync readnone
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@m
-; IS__CGSCC____-SAME: () [[ATTR6]] {
+; IS__CGSCC____-SAME: () [[ATTR5]] {
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = call i32 @called_by_norecurse()
 ; IS__CGSCC____-NEXT:    ret void
 ;
@@ -150,7 +150,7 @@ define internal i32 @o() {
 ;
 ; IS__CGSCC____: Function Attrs: norecurse nosync readnone
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@o
-; IS__CGSCC____-SAME: () [[ATTR6]] {
+; IS__CGSCC____-SAME: () [[ATTR5]] {
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = call i32 @called_by_norecurse_indirectly()
 ; IS__CGSCC____-NEXT:    ret i32 [[A]]
 ;
@@ -160,13 +160,13 @@ define internal i32 @o() {
 define i32 @p() norecurse {
 ; IS__TUNIT____: Function Attrs: norecurse nosync readnone
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@p
-; IS__TUNIT____-SAME: () [[ATTR7]] {
+; IS__TUNIT____-SAME: () [[ATTR6]] {
 ; IS__TUNIT____-NEXT:    [[A:%.*]] = call i32 @o() [[ATTR3]]
 ; IS__TUNIT____-NEXT:    ret i32 [[A]]
 ;
 ; IS__CGSCC____: Function Attrs: norecurse nosync readnone
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@p
-; IS__CGSCC____-SAME: () [[ATTR6]] {
+; IS__CGSCC____-SAME: () [[ATTR5]] {
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = call i32 @o()
 ; IS__CGSCC____-NEXT:    ret i32 [[A]]
 ;
@@ -177,7 +177,7 @@ define i32 @p() norecurse {
 define void @f(i32 %x)  {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@f
-; IS__TUNIT____-SAME: (i32 [[X:%.*]]) [[ATTR8:#.*]] {
+; IS__TUNIT____-SAME: (i32 [[X:%.*]]) [[ATTR7:#.*]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
 ; IS__TUNIT____-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
@@ -185,14 +185,14 @@ define void @f(i32 %x)  {
 ; IS__TUNIT____-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP0]], 0
 ; IS__TUNIT____-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; IS__TUNIT____:       if.then:
-; IS__TUNIT____-NEXT:    call void @g() [[ATTR9:#.*]]
+; IS__TUNIT____-NEXT:    call void @g() [[ATTR8:#.*]]
 ; IS__TUNIT____-NEXT:    br label [[IF_END]]
 ; IS__TUNIT____:       if.end:
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind readnone
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@f
-; IS__CGSCC_OPM-SAME: (i32 [[X:%.*]]) [[ATTR8:#.*]] {
+; IS__CGSCC_OPM-SAME: (i32 [[X:%.*]]) [[ATTR7:#.*]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
 ; IS__CGSCC_OPM-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
 ; IS__CGSCC_OPM-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
@@ -236,15 +236,15 @@ if.end:
 define void @g() norecurse {
 ; IS__TUNIT____: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@g
-; IS__TUNIT____-SAME: () [[ATTR9]] {
+; IS__TUNIT____-SAME: () [[ATTR8]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@g
-; IS__CGSCC_OPM-SAME: () [[ATTR9:#.*]] {
+; IS__CGSCC_OPM-SAME: () [[ATTR8:#.*]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    call void @f(i32 noundef 0) [[ATTR8]]
+; IS__CGSCC_OPM-NEXT:    call void @f(i32 noundef 0) [[ATTR7]]
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
@@ -279,7 +279,7 @@ define i32 @eval_func1(i32 (i32)* , i32) local_unnamed_addr {
 define i32 @eval_func2(i32 (i32)* , i32) local_unnamed_addr null_pointer_is_valid{
 ; CHECK: Function Attrs: null_pointer_is_valid
 ; CHECK-LABEL: define {{[^@]+}}@eval_func2
-; CHECK-SAME: (i32 (i32)* nocapture nofree [[TMP0:%.*]], i32 [[TMP1:%.*]]) local_unnamed_addr [[ATTR7:#.*]] {
+; CHECK-SAME: (i32 (i32)* nocapture nofree [[TMP0:%.*]], i32 [[TMP1:%.*]]) local_unnamed_addr [[ATTR6:#.*]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 [[TMP0]](i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;

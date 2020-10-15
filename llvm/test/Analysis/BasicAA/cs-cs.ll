@@ -364,41 +364,42 @@ entry:
   call void @an_argmemonly_func(i8* %q) #9 [ "unknown"() ]
   ret void
 
-; CHECK: Just Ref:  Ptr: i8* %p        <->  call void @a_readonly_func(i8* %p) #8 [ "unknown"() ]
-; CHECK: Just Ref:  Ptr: i8* %q        <->  call void @a_readonly_func(i8* %p) #8 [ "unknown"() ]
-; CHECK: NoModRef:  Ptr: i8* %p        <->  call void @an_inaccessiblememonly_func() #9 [ "unknown"() ]
-; CHECK: NoModRef:  Ptr: i8* %q        <->  call void @an_inaccessiblememonly_func() #9 [ "unknown"() ]
-; CHECK: NoModRef:  Ptr: i8* %p        <->  call void @an_inaccessibleorargmemonly_func(i8* %q) #10 [ "unknown"() ]
-; CHECK: Both ModRef (MustAlias):  Ptr: i8* %q     <->  call void @an_inaccessibleorargmemonly_func(i8* %q) #10 [ "unknown"() ]
-; CHECK: NoModRef:  Ptr: i8* %p        <->  call void @an_argmemonly_func(i8* %q) #11 [ "unknown"() ]
-; CHECK: Both ModRef (MustAlias):  Ptr: i8* %q     <->  call void @an_argmemonly_func(i8* %q) #11 [ "unknown"() ]
-; CHECK: Just Ref:   call void @a_readonly_func(i8* %p) #8 [ "unknown"() ] <->   call void @an_inaccessiblememonly_func() #9 [ "unknown"() ]
-; CHECK: Just Ref:   call void @a_readonly_func(i8* %p) #8 [ "unknown"() ] <->   call void @an_inaccessibleorargmemonly_func(i8* %q) #10 [ "unknown"() ]
-; CHECK: Just Ref:   call void @a_readonly_func(i8* %p) #8 [ "unknown"() ] <->   call void @an_argmemonly_func(i8* %q) #11 [ "unknown"() ]
-; CHECK: Both ModRef:   call void @an_inaccessiblememonly_func() #9 [ "unknown"() ] <->   call void @a_readonly_func(i8* %p) #8 [ "unknown"() ]
-; CHECK: Both ModRef:   call void @an_inaccessiblememonly_func() #9 [ "unknown"() ] <->   call void @an_inaccessibleorargmemonly_func(i8* %q) #10 [ "unknown"() ]
-; CHECK: NoModRef:   call void @an_inaccessiblememonly_func() #9 [ "unknown"() ] <->   call void @an_argmemonly_func(i8* %q) #11 [ "unknown"() ]
-; CHECK: Both ModRef:   call void @an_inaccessibleorargmemonly_func(i8* %q) #10 [ "unknown"() ] <->   call void @a_readonly_func(i8* %p) #8 [ "unknown"() ]
-; CHECK: Both ModRef:   call void @an_inaccessibleorargmemonly_func(i8* %q) #10 [ "unknown"() ] <->   call void @an_inaccessiblememonly_func() #9 [ "unknown"() ]
-; CHECK: Both ModRef (MustAlias):   call void @an_inaccessibleorargmemonly_func(i8* %q) #10 [ "unknown"() ] <->   call void @an_argmemonly_func(i8* %q) #11 [ "unknown"() ]
-; CHECK: Both ModRef:   call void @an_argmemonly_func(i8* %q) #11 [ "unknown"() ] <->   call void @a_readonly_func(i8* %p) #8 [ "unknown"() ]
-; CHECK: NoModRef:   call void @an_argmemonly_func(i8* %q) #11 [ "unknown"() ] <->   call void @an_inaccessiblememonly_func() #9 [ "unknown"() ]
-; CHECK: Both ModRef (MustAlias):   call void @an_argmemonly_func(i8* %q) #11 [ "unknown"() ] <->   call void @an_inaccessibleorargmemonly_func(i8* %q) #10 [ "unknown"() ]
+; CHECK: Just Ref:  Ptr: i8* %p        <->  call void @a_readonly_func(i8* %p) #9 [ "unknown"() ]
+; CHECK: Just Ref:  Ptr: i8* %q        <->  call void @a_readonly_func(i8* %p) #9 [ "unknown"() ]
+; CHECK: NoModRef:  Ptr: i8* %p        <->  call void @an_inaccessiblememonly_func() #10 [ "unknown"() ]
+; CHECK: NoModRef:  Ptr: i8* %q        <->  call void @an_inaccessiblememonly_func() #10 [ "unknown"() ]
+; CHECK: NoModRef:  Ptr: i8* %p        <->  call void @an_inaccessibleorargmemonly_func(i8* %q) #11 [ "unknown"() ]
+; CHECK: Both ModRef (MustAlias):  Ptr: i8* %q     <->  call void @an_inaccessibleorargmemonly_func(i8* %q) #11 [ "unknown"() ]
+; CHECK: NoModRef:  Ptr: i8* %p        <->  call void @an_argmemonly_func(i8* %q) #12 [ "unknown"() ]
+; CHECK: Both ModRef (MustAlias):  Ptr: i8* %q     <->  call void @an_argmemonly_func(i8* %q) #12 [ "unknown"() ]
+; CHECK: Just Ref:   call void @a_readonly_func(i8* %p) #9 [ "unknown"() ] <->   call void @an_inaccessiblememonly_func() #10 [ "unknown"() ]
+; CHECK: Just Ref:   call void @a_readonly_func(i8* %p) #9 [ "unknown"() ] <->   call void @an_inaccessibleorargmemonly_func(i8* %q) #11 [ "unknown"() ]
+; CHECK: Just Ref:   call void @a_readonly_func(i8* %p) #9 [ "unknown"() ] <->   call void @an_argmemonly_func(i8* %q) #12 [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessiblememonly_func() #10 [ "unknown"() ] <->   call void @a_readonly_func(i8* %p) #9 [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessiblememonly_func() #10 [ "unknown"() ] <->   call void @an_inaccessibleorargmemonly_func(i8* %q) #11 [ "unknown"() ]
+; CHECK: NoModRef:   call void @an_inaccessiblememonly_func() #10 [ "unknown"() ] <->   call void @an_argmemonly_func(i8* %q) #12 [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessibleorargmemonly_func(i8* %q) #11 [ "unknown"() ] <->   call void @a_readonly_func(i8* %p) #9 [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_inaccessibleorargmemonly_func(i8* %q) #11 [ "unknown"() ] <->   call void @an_inaccessiblememonly_func() #10 [ "unknown"() ]
+; CHECK: Both ModRef (MustAlias):   call void @an_inaccessibleorargmemonly_func(i8* %q) #11 [ "unknown"() ] <->   call void @an_argmemonly_func(i8* %q) #12 [ "unknown"() ]
+; CHECK: Both ModRef:   call void @an_argmemonly_func(i8* %q) #12 [ "unknown"() ] <->   call void @a_readonly_func(i8* %p) #9 [ "unknown"() ]
+; CHECK: NoModRef:   call void @an_argmemonly_func(i8* %q) #12 [ "unknown"() ] <->   call void @an_inaccessiblememonly_func() #10 [ "unknown"() ]
+; CHECK: Both ModRef (MustAlias):   call void @an_argmemonly_func(i8* %q) #12 [ "unknown"() ] <->   call void @an_inaccessibleorargmemonly_func(i8* %q) #11 [ "unknown"() ]
 }
 
 
-; CHECK:      attributes #0 = { argmemonly nounwind willreturn writeonly }
-; CHECK-NEXT: attributes #1 = { argmemonly nounwind willreturn }
-; CHECK-NEXT: attributes #2 = { noinline nounwind readonly }
-; CHECK-NEXT: attributes #3 = { noinline nounwind writeonly }
-; CHECK-NEXT: attributes #4 = { nounwind ssp }
-; CHECK-NEXT: attributes #5 = { inaccessiblememonly nounwind }
-; CHECK-NEXT: attributes #6 = { inaccessiblemem_or_argmemonly nounwind }
-; CHECK-NEXT: attributes #7 = { argmemonly nounwind }
-; CHECK-NEXT: attributes #8 = { readonly }
-; CHECK-NEXT: attributes #9 = { inaccessiblememonly }
-; CHECK-NEXT: attributes #10 = { inaccessiblemem_or_argmemonly }
-; CHECK-NEXT: attributes #11 = { argmemonly }
+; CHECK:      attributes #0 = { argmemonly nofree nosync nounwind willreturn writeonly }
+; CHECK-NEXT: attributes #1 = { argmemonly nofree nosync nounwind willreturn }
+; CHECK-NEXT: attributes #2 = { argmemonly nounwind willreturn }
+; CHECK-NEXT: attributes #3 = { noinline nounwind readonly }
+; CHECK-NEXT: attributes #4 = { noinline nounwind writeonly }
+; CHECK-NEXT: attributes #5 = { nounwind ssp }
+; CHECK-NEXT: attributes #6 = { inaccessiblememonly nounwind }
+; CHECK-NEXT: attributes #7 = { inaccessiblemem_or_argmemonly nounwind }
+; CHECK-NEXT: attributes #8 = { argmemonly nounwind }
+; CHECK-NEXT: attributes #9 = { readonly }
+; CHECK-NEXT: attributes #10 = { inaccessiblememonly }
+; CHECK-NEXT: attributes #11 = { inaccessiblemem_or_argmemonly }
+; CHECK-NEXT: attributes #12 = { argmemonly }
 
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { noinline nounwind readonly }

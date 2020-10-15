@@ -215,7 +215,7 @@ define i1 @c7(i32* %q, i32 %bitno) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readonly willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@c7
 ; IS__TUNIT____-SAME: (i32* nofree readonly [[Q:%.*]], i32 [[BITNO:%.*]]) [[ATTR2]] {
-; IS__TUNIT____-NEXT:    [[PTR:%.*]] = call i1* @lookup_bit(i32* noalias nofree readnone [[Q]], i32 [[BITNO]]) [[ATTR16:#.*]]
+; IS__TUNIT____-NEXT:    [[PTR:%.*]] = call i1* @lookup_bit(i32* noalias nofree readnone [[Q]], i32 [[BITNO]]) [[ATTR14:#.*]]
 ; IS__TUNIT____-NEXT:    [[VAL:%.*]] = load i1, i1* [[PTR]], align 1
 ; IS__TUNIT____-NEXT:    ret i1 [[VAL]]
 ;
@@ -330,7 +330,7 @@ define void @nc2(i32* %p, i32* %q) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@nc2
 ; IS__CGSCC____-SAME: (i32* nocapture nofree [[P:%.*]], i32* nofree [[Q:%.*]]) [[ATTR5]] {
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @nc1(i32* nofree [[Q]], i32* nocapture nofree [[P]], i1 noundef false) [[ATTR10:#.*]]
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @nc1(i32* nofree [[Q]], i32* nocapture nofree [[P]], i1 noundef false) [[ATTR18:#.*]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
   %1 = call i32 @nc1(i32* %q, i32* %p, i1 0)		; <i32> [#uses=0]
@@ -352,11 +352,17 @@ define void @nc3(void ()* %p) {
 ; FIXME: readonly and nocapture missing on the pointer.
 declare void @external(i8* readonly) nounwind argmemonly
 define void @nc4(i8* %p) {
-; CHECK: Function Attrs: argmemonly nounwind
-; CHECK-LABEL: define {{[^@]+}}@nc4
-; CHECK-SAME: (i8* [[P:%.*]]) [[ATTR6:#.*]] {
-; CHECK-NEXT:    call void @external(i8* readonly [[P]]) [[ATTR13:#.*]]
-; CHECK-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: argmemonly nounwind
+; IS__TUNIT____-LABEL: define {{[^@]+}}@nc4
+; IS__TUNIT____-SAME: (i8* [[P:%.*]]) [[ATTR6:#.*]] {
+; IS__TUNIT____-NEXT:    call void @external(i8* readonly [[P]]) [[ATTR11:#.*]]
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: argmemonly nounwind
+; IS__CGSCC____-LABEL: define {{[^@]+}}@nc4
+; IS__CGSCC____-SAME: (i8* [[P:%.*]]) [[ATTR6:#.*]] {
+; IS__CGSCC____-NEXT:    call void @external(i8* readonly [[P]]) [[ATTR13:#.*]]
+; IS__CGSCC____-NEXT:    ret void
 ;
   call void @external(i8* %p)
   ret void
@@ -599,13 +605,21 @@ entry:
 }
 
 define void @nocaptureLaunder(i8* %p) {
-; CHECK: Function Attrs: nounwind willreturn
-; CHECK-LABEL: define {{[^@]+}}@nocaptureLaunder
-; CHECK-SAME: (i8* nocapture [[P:%.*]]) [[ATTR10:#.*]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* [[P]]) [[ATTR17:#.*]]
-; CHECK-NEXT:    store i8 42, i8* [[B]], align 1
-; CHECK-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@nocaptureLaunder
+; IS__TUNIT____-SAME: (i8* nocapture nofree [[P:%.*]]) [[ATTR5]] {
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    [[B:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* nofree [[P]]) [[ATTR15:#.*]]
+; IS__TUNIT____-NEXT:    store i8 42, i8* [[B]], align 1
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@nocaptureLaunder
+; IS__CGSCC____-SAME: (i8* nocapture nofree [[P:%.*]]) [[ATTR10:#.*]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[B:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* nofree [[P]]) [[ATTR17]]
+; IS__CGSCC____-NEXT:    store i8 42, i8* [[B]], align 1
+; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
   %b = call i8* @llvm.launder.invariant.group.p0i8(i8* %p)
@@ -615,12 +629,19 @@ entry:
 
 @g2 = global i8* null
 define void @captureLaunder(i8* %p) {
-; CHECK: Function Attrs: nounwind willreturn
-; CHECK-LABEL: define {{[^@]+}}@captureLaunder
-; CHECK-SAME: (i8* [[P:%.*]]) [[ATTR10]] {
-; CHECK-NEXT:    [[B:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* [[P]]) [[ATTR17]]
-; CHECK-NEXT:    store i8* [[B]], i8** @g2, align 8
-; CHECK-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@captureLaunder
+; IS__TUNIT____-SAME: (i8* nofree [[P:%.*]]) [[ATTR5]] {
+; IS__TUNIT____-NEXT:    [[B:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* nofree [[P]]) [[ATTR15]]
+; IS__TUNIT____-NEXT:    store i8* [[B]], i8** @g2, align 8
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@captureLaunder
+; IS__CGSCC____-SAME: (i8* nofree [[P:%.*]]) [[ATTR10]] {
+; IS__CGSCC____-NEXT:    [[B:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* nofree [[P]]) [[ATTR17]]
+; IS__CGSCC____-NEXT:    store i8* [[B]], i8** @g2, align 8
+; IS__CGSCC____-NEXT:    ret void
 ;
   %b = call i8* @llvm.launder.invariant.group.p0i8(i8* %p)
   store i8* %b, i8** @g2
@@ -628,13 +649,21 @@ define void @captureLaunder(i8* %p) {
 }
 
 define void @nocaptureStrip(i8* %p) {
-; CHECK: Function Attrs: nosync nounwind willreturn writeonly
-; CHECK-LABEL: define {{[^@]+}}@nocaptureStrip
-; CHECK-SAME: (i8* nocapture writeonly [[P:%.*]]) [[ATTR11:#.*]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* noalias readnone [[P]]) [[ATTR17]]
-; CHECK-NEXT:    store i8 42, i8* [[B]], align 1
-; CHECK-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind willreturn writeonly
+; IS__TUNIT____-LABEL: define {{[^@]+}}@nocaptureStrip
+; IS__TUNIT____-SAME: (i8* nocapture nofree writeonly [[P:%.*]]) [[ATTR1]] {
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    [[B:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* noalias nofree readnone [[P]]) [[ATTR15]]
+; IS__TUNIT____-NEXT:    store i8 42, i8* [[B]], align 1
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn writeonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@nocaptureStrip
+; IS__CGSCC____-SAME: (i8* nocapture nofree writeonly [[P:%.*]]) [[ATTR11:#.*]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[B:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* noalias nofree readnone [[P]]) [[ATTR17]]
+; IS__CGSCC____-NEXT:    store i8 42, i8* [[B]], align 1
+; IS__CGSCC____-NEXT:    ret void
 ;
 entry:
   %b = call i8* @llvm.strip.invariant.group.p0i8(i8* %p)
@@ -644,12 +673,19 @@ entry:
 
 @g3 = global i8* null
 define void @captureStrip(i8* %p) {
-; CHECK: Function Attrs: nosync nounwind willreturn writeonly
-; CHECK-LABEL: define {{[^@]+}}@captureStrip
-; CHECK-SAME: (i8* writeonly [[P:%.*]]) [[ATTR11]] {
-; CHECK-NEXT:    [[B:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* noalias readnone [[P]]) [[ATTR17]]
-; CHECK-NEXT:    store i8* [[B]], i8** @g3, align 8
-; CHECK-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind willreturn writeonly
+; IS__TUNIT____-LABEL: define {{[^@]+}}@captureStrip
+; IS__TUNIT____-SAME: (i8* nofree writeonly [[P:%.*]]) [[ATTR1]] {
+; IS__TUNIT____-NEXT:    [[B:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* noalias nofree readnone [[P]]) [[ATTR15]]
+; IS__TUNIT____-NEXT:    store i8* [[B]], i8** @g3, align 8
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn writeonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@captureStrip
+; IS__CGSCC____-SAME: (i8* nofree writeonly [[P:%.*]]) [[ATTR11]] {
+; IS__CGSCC____-NEXT:    [[B:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* noalias nofree readnone [[P]]) [[ATTR17]]
+; IS__CGSCC____-NEXT:    store i8* [[B]], i8** @g3, align 8
+; IS__CGSCC____-NEXT:    ret void
 ;
   %b = call i8* @llvm.strip.invariant.group.p0i8(i8* %p)
   store i8* %b, i8** @g3
@@ -747,7 +783,7 @@ define i1 @nocaptureDereferenceableOrNullICmp(i32* dereferenceable_or_null(4) %x
 define i1 @captureDereferenceableOrNullICmp(i32* dereferenceable_or_null(4) %x) null_pointer_is_valid {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind null_pointer_is_valid readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@captureDereferenceableOrNullICmp
-; IS__TUNIT____-SAME: (i32* nofree readnone dereferenceable_or_null(4) [[X:%.*]]) [[ATTR12:#.*]] {
+; IS__TUNIT____-SAME: (i32* nofree readnone dereferenceable_or_null(4) [[X:%.*]]) [[ATTR10:#.*]] {
 ; IS__TUNIT____-NEXT:    [[TMP1:%.*]] = bitcast i32* [[X]] to i8*
 ; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP1]], null
 ; IS__TUNIT____-NEXT:    ret i1 [[TMP2]]
@@ -812,7 +848,7 @@ declare void @val_use(i8 %ptr) readonly nounwind
 define void @ptr_uses(i8* %ptr, i8* %wptr) {
 ; CHECK: Function Attrs: nounwind
 ; CHECK-LABEL: define {{[^@]+}}@ptr_uses
-; CHECK-SAME: (i8* [[PTR:%.*]], i8* nocapture nonnull writeonly dereferenceable(1) [[WPTR:%.*]]) [[ATTR13]] {
+; CHECK-SAME: (i8* [[PTR:%.*]], i8* nocapture nonnull writeonly dereferenceable(1) [[WPTR:%.*]]) [[ATTR13:#.*]] {
 ; CHECK-NEXT:    store i8 0, i8* [[WPTR]], align 1
 ; CHECK-NEXT:    ret void
 ;
