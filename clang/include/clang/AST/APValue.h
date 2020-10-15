@@ -17,9 +17,10 @@
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/FoldingSet.h"
+#include "llvm/Support/AlignOf.h"
 
 namespace clang {
   class AddrLabelExpr;
