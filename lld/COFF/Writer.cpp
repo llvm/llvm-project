@@ -2051,32 +2051,31 @@ PartialSection *Writer::findPartialSection(StringRef name, uint32_t outChars) {
 }
 
 void Writer::fixTlsAlignment() {
-  if (Symbol *sym = symtab->findUnderscore("_tls_used")) {
-    if (Defined *b = dyn_cast<Defined>(sym)) {
-      OutputSection *sec = b->getChunk()->getOutputSection();
-      assert(sec && b->getRVA() >= sec->getRVA() &&
-             "no output section for _tls_used");
+  Defined *tlsSym =
+      dyn_cast_or_null<Defined>(symtab->findUnderscore("_tls_used"));
+  if (!tlsSym)
+    return;
 
-      uint8_t *secBuf = buffer->getBufferStart() + sec->getFileOff();
-      uint64_t tlsOffset = b->getRVA() - sec->getRVA();
-      uint64_t directorySize = config->is64()
-                                   ? sizeof(object::coff_tls_directory64)
-                                   : sizeof(object::coff_tls_directory32);
+  OutputSection *sec = tlsSym->getChunk()->getOutputSection();
+  assert(sec && tlsSym->getRVA() >= sec->getRVA() &&
+         "no output section for _tls_used");
 
-      if (tlsOffset + directorySize > sec->getRawSize())
-        fatal("_tls_used is malformed");
+  uint8_t *secBuf = buffer->getBufferStart() + sec->getFileOff();
+  uint64_t tlsOffset = tlsSym->getRVA() - sec->getRVA();
+  uint64_t directorySize = config->is64()
+                               ? sizeof(object::coff_tls_directory64)
+                               : sizeof(object::coff_tls_directory32);
 
-      if (config->is64()) {
-        object::coff_tls_directory64 *tlsDir =
-            reinterpret_cast<object::coff_tls_directory64 *>(
-                &secBuf[tlsOffset]);
-        tlsDir->setAlignment(tlsAlignment);
-      } else {
-        object::coff_tls_directory32 *tlsDir =
-            reinterpret_cast<object::coff_tls_directory32 *>(
-                &secBuf[tlsOffset]);
-        tlsDir->setAlignment(tlsAlignment);
-      }
-    }
+  if (tlsOffset + directorySize > sec->getRawSize())
+    fatal("_tls_used is malformed");
+
+  if (config->is64()) {
+    object::coff_tls_directory64 *tlsDir =
+        reinterpret_cast<object::coff_tls_directory64 *>(&secBuf[tlsOffset]);
+    tlsDir->setAlignment(tlsAlignment);
+  } else {
+    object::coff_tls_directory32 *tlsDir =
+        reinterpret_cast<object::coff_tls_directory32 *>(&secBuf[tlsOffset]);
+    tlsDir->setAlignment(tlsAlignment);
   }
 }
