@@ -21,7 +21,7 @@ body:             |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[DEF2:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-  ; CHECK:   $wzr = ANDSWri [[DEF]], 0, implicit-def $nzcv
+  ; CHECK:   [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[DEF]], 0, implicit-def $nzcv
   ; CHECK:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[DEF2]], [[DEF2]], 1, implicit $nzcv
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.2(0x80000000)
@@ -75,7 +75,7 @@ body:             |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[DEF2:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-  ; CHECK:   $wzr = ANDSWri [[DEF]], 0, implicit-def $nzcv
+  ; CHECK:   [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[DEF]], 0, implicit-def $nzcv
   ; CHECK:   [[CSELWr:%[0-9]+]]:gpr32 = CSELWr [[DEF2]], [[DEF2]], 1, implicit $nzcv
   ; CHECK:   [[COPY1:%[0-9]+]]:fpr32 = COPY [[CSELWr]]
   ; CHECK:   [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub

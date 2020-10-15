@@ -31,7 +31,7 @@ body:             |
     ; CHECK: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK: [[COPY2:%[0-9]+]]:fpr32 = COPY [[CSINCWr]]
     ; CHECK: [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY2]]
-    ; CHECK: $wzr = ANDSWri [[COPY3]], 0, implicit-def $nzcv
+    ; CHECK: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY3]], 0, implicit-def $nzcv
     ; CHECK: [[FCSELSrrr:%[0-9]+]]:fpr32 = FCSELSrrr [[FMOVS0_]], [[COPY1]], 1, implicit $nzcv
     ; CHECK: $w1 = COPY [[CSINCWr]]
     ; CHECK: $s0 = COPY [[FCSELSrrr]]
@@ -98,7 +98,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:gpr32sp = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK: [[FMOVS0_:%[0-9]+]]:fpr32 = FMOVS0
-    ; CHECK: $wzr = SUBSWri [[COPY]], 0, 0, implicit-def $nzcv
+    ; CHECK: [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 0, 0, implicit-def $nzcv
     ; CHECK: [[FCSELSrrr:%[0-9]+]]:fpr32 = FCSELSrrr [[COPY1]], [[FMOVS0_]], 0, implicit $nzcv
     ; CHECK: $s0 = COPY [[FCSELSrrr]]
     ; CHECK: RET_ReallyLR implicit $s0
@@ -165,7 +165,7 @@ body:             |
     ; CHECK: [[ORRWrr:%[0-9]+]]:gpr32 = ORRWrr [[CSINCWr]], [[CSINCWr1]]
     ; CHECK: [[COPY2:%[0-9]+]]:fpr32 = COPY [[ORRWrr]]
     ; CHECK: [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY2]]
-    ; CHECK: $wzr = ANDSWri [[COPY3]], 0, implicit-def $nzcv
+    ; CHECK: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY3]], 0, implicit-def $nzcv
     ; CHECK: [[FCSELSrrr:%[0-9]+]]:fpr32 = FCSELSrrr [[FMOVS0_]], [[COPY1]], 1, implicit $nzcv
     ; CHECK: $s0 = COPY [[FCSELSrrr]]
     ; CHECK: RET_ReallyLR implicit $s0
@@ -201,7 +201,7 @@ body:             |
     ; CHECK: [[ORRWrr:%[0-9]+]]:gpr32 = ORRWrr [[CSINCWr]], [[CSINCWr1]]
     ; CHECK: [[COPY2:%[0-9]+]]:fpr32 = COPY [[ORRWrr]]
     ; CHECK: [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY2]]
-    ; CHECK: $wzr = ANDSWri [[COPY3]], 0, implicit-def $nzcv
+    ; CHECK: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY3]], 0, implicit-def $nzcv
     ; CHECK: [[FCSELSrrr:%[0-9]+]]:fpr32 = FCSELSrrr [[COPY1]], [[FMOVS0_]], 1, implicit $nzcv
     ; CHECK: $s0 = COPY [[FCSELSrrr]]
     ; CHECK: RET_ReallyLR implicit $s0
@@ -297,7 +297,7 @@ body:             |
     ; CHECK: [[ORRWrr:%[0-9]+]]:gpr32 = ORRWrr [[CSINCWr]], [[CSINCWr1]]
     ; CHECK: [[COPY2:%[0-9]+]]:fpr32 = COPY [[ORRWrr]]
     ; CHECK: [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY2]]
-    ; CHECK: $wzr = ANDSWri [[COPY3]], 0, implicit-def $nzcv
+    ; CHECK: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY3]], 0, implicit-def $nzcv
     ; CHECK: [[FCSELDrrr:%[0-9]+]]:fpr64 = FCSELDrrr [[FMOVD0_]], [[COPY1]], 1, implicit $nzcv
     ; CHECK: $d0 = COPY [[FCSELDrrr]]
     ; CHECK: RET_ReallyLR implicit $d0
@@ -333,7 +333,7 @@ body:             |
     ; CHECK: [[ORRWrr:%[0-9]+]]:gpr32 = ORRWrr [[CSINCWr]], [[CSINCWr1]]
     ; CHECK: [[COPY2:%[0-9]+]]:fpr32 = COPY [[ORRWrr]]
     ; CHECK: [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY2]]
-    ; CHECK: $wzr = ANDSWri [[COPY3]], 0, implicit-def $nzcv
+    ; CHECK: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY3]], 0, implicit-def $nzcv
     ; CHECK: [[FCSELDrrr:%[0-9]+]]:fpr64 = FCSELDrrr [[COPY1]], [[FMOVD0_]], 1, implicit $nzcv
     ; CHECK: $d0 = COPY [[FCSELDrrr]]
     ; CHECK: RET_ReallyLR implicit $d0
@@ -394,7 +394,7 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK: [[FMOVS0_:%[0-9]+]]:fpr32 = FMOVS0
     ; CHECK: BL @copy_from_physreg, implicit-def $w0
-    ; CHECK: $wzr = ANDSWri [[COPY]], 0, implicit-def $nzcv
+    ; CHECK: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY]], 0, implicit-def $nzcv
     ; CHECK: [[FCSELSrrr:%[0-9]+]]:fpr32 = FCSELSrrr [[COPY1]], [[FMOVS0_]], 1, implicit $nzcv
     ; CHECK: BL @copy_from_physreg, implicit-def $w0
     ; CHECK: $s0 = COPY [[FCSELSrrr]]
