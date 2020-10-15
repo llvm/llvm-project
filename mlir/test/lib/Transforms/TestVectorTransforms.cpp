@@ -156,6 +156,24 @@ struct TestVectorDistributePatterns
   }
 };
 
+struct TestVectorTransferUnrollingPatterns
+    : public PassWrapper<TestVectorTransferUnrollingPatterns, FunctionPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<AffineDialect>();
+  }
+  void runOnFunction() override {
+    MLIRContext *ctx = &getContext();
+    OwningRewritePatternList patterns;
+    patterns.insert<UnrollVectorPattern<vector::TransferReadOp>>(
+        ArrayRef<int64_t>{2, 2}, ctx);
+    patterns.insert<UnrollVectorPattern<vector::TransferWriteOp>>(
+        ArrayRef<int64_t>{2, 2}, ctx);
+    populateVectorToVectorCanonicalizationPatterns(patterns, ctx);
+    populateVectorToVectorTransformationPatterns(patterns, ctx);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
+  }
+};
+
 struct TestVectorTransferFullPartialSplitPatterns
     : public PassWrapper<TestVectorTransferFullPartialSplitPatterns,
                          FunctionPass> {
@@ -204,6 +222,10 @@ void registerTestVectorConversions() {
   PassRegistration<TestVectorUnrollingPatterns> contractionUnrollingPass(
       "test-vector-unrolling-patterns",
       "Test conversion patterns to unroll contract ops in the vector dialect");
+
+  PassRegistration<TestVectorTransferUnrollingPatterns> transferOpUnrollingPass(
+      "test-vector-transfer-unrolling-patterns",
+      "Test conversion patterns to unroll transfer ops in the vector dialect");
 
   PassRegistration<TestVectorTransferFullPartialSplitPatterns>
       vectorTransformFullPartialPass("test-vector-transfer-full-partial-split",
