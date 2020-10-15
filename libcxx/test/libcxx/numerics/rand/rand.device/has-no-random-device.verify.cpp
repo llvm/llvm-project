@@ -6,24 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: libcpp-has-no-random-device
+// Make sure that std::random_device is not available in namespace std:: when
+// libc++ is built without support for random device.
 
-// <random>
-
-// class random_device;
-
-// double entropy() const;
+// REQUIRES: libcpp-has-no-random-device
 
 #include <random>
-#include <cassert>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
-    std::random_device r;
-    double e = r.entropy();
-    ((void)e); // Prevent unused warning
-
+int main(int, char**) {
+  std::random_device d; // expected-error {{no type named 'random_device' in namespace 'std'}}
   return 0;
 }
