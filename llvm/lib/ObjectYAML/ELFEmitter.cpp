@@ -1322,6 +1322,9 @@ void ELFState<ELFT>::writeSectionContent(
     return;
   }
 
+  if (!Section.Entries)
+    return;
+
   for (const ELFYAML::StackSizeEntry &E : *Section.Entries) {
     CBA.write<uintX_t>(E.Address, ELFT::TargetEndianness);
     SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(E.Size);
@@ -1443,6 +1446,9 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
     return;
   }
+
+  if (!Section.Bucket)
+    return;
 
   CBA.write<uint32_t>(
       Section.NBucket.getValueOr(llvm::yaml::Hex64(Section.Bucket->size())),
@@ -1648,6 +1654,9 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     return;
   }
 
+  if (!Section.Symbols)
+    return;
+
   for (StringRef Sym : *Section.Symbols)
     SHeader.sh_size +=
         CBA.writeULEB128(toSymbolIndex(Sym, Section.Name, /*IsDynamic=*/false));
@@ -1662,6 +1671,9 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
     return;
   }
+
+  if (!Section.Notes)
+    return;
 
   for (const ELFYAML::NoteEntry &NE : *Section.Notes) {
     // Write name size.
@@ -1709,6 +1721,9 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     SHeader.sh_size = writeContent(CBA, Section.Content, Section.Size);
     return;
   }
+
+  if (!Section.Header)
+    return;
 
   // We write the header first, starting with the hash buckets count. Normally
   // it is the number of entries in HashBuckets, but the "NBuckets" property can
