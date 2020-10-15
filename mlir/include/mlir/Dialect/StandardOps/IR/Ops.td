@@ -3363,6 +3363,10 @@ def TensorLoadOp : Std_Op<"tensor_load",
     data. The result value is a tensor whose shape and element type match the
     memref operand.
 
+    The opposite of this op is tensor_to_memref. Together, these two ops are
+    useful for source/target materializations when doing type conversions
+    involving tensors and memrefs.
+
     Example:
 
     ```mlir
@@ -3394,6 +3398,8 @@ def TensorLoadOp : Std_Op<"tensor_load",
   }];
 
   let assemblyFormat = "$memref attr-dict `:` type($memref)";
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3426,6 +3432,47 @@ def TensorStoreOp : Std_Op<"tensor_store",
   let verifier = ?;
 
   let assemblyFormat = "$tensor `,` $memref attr-dict `:` type($memref)";
+}
+
+//===----------------------------------------------------------------------===//
+// TensorToMemrefOp
+//===----------------------------------------------------------------------===//
+
+def TensorToMemrefOp : Std_Op<"tensor_to_memref",
+    [SameOperandsAndResultShape, SameOperandsAndResultElementType,
+     TypesMatchWith<"type of 'tensor' is the tensor equivalent of 'memref'",
+                    "memref", "tensor",
+                    "getTensorTypeFromMemRefType($_self)">]> {
+  let summary = "tensor to memref operation";
+  let description = [{
+    Create a memref from a tensor. This is equivalent to allocating a new
+    memref of the appropriate (possibly dynamic) shape, and then copying the
+    elements (as if by a tensor_store op) into the newly allocated memref.
+
+    The opposite of this op is tensor_load. Together, these two ops are useful
+    for source/target materializations when doing type conversions involving
+    tensors and memrefs.
+
+    Note: This op takes the memref type in its pretty form because the tensor
+    type can always be inferred from the memref type, but the reverse is not
+    true. For example, the memref might have a layout map or memory space which
+    cannot be inferred from the tensor type.
+
+    ```mlir
+    // Result type is tensor<4x?xf32>
+    %12 = tensor_to_memref %10 :  memref<4x?xf32, #map0, 42>
+    ```
+  }];
+
+  let arguments = (ins AnyTensor:$tensor);
+  let results = (outs Res<AnyRankedOrUnrankedMemRef,
+                      "the memref to create", [MemAlloc]>:$memref);
+  // This op is fully verified by traits.
+  let verifier = ?;
+
+  let assemblyFormat = "$tensor attr-dict `:` type($memref)";
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
