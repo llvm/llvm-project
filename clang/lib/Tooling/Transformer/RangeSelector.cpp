@@ -116,11 +116,24 @@ RangeSelector transformer::after(RangeSelector Selector) {
     Expected<CharSourceRange> SelectedRange = Selector(Result);
     if (!SelectedRange)
       return SelectedRange.takeError();
-    if (SelectedRange->isCharRange())
-      return CharSourceRange::getCharRange(SelectedRange->getEnd());
-    return CharSourceRange::getCharRange(Lexer::getLocForEndOfToken(
-        SelectedRange->getEnd(), 0, Result.Context->getSourceManager(),
-        Result.Context->getLangOpts()));
+    SourceLocation End = SelectedRange->getEnd();
+    if (SelectedRange->isTokenRange()) {
+      // We need to find the actual (exclusive) end location from which to
+      // create a new source range. However, that's not guaranteed to be valid,
+      // even if the token location itself is valid. So, we create a token range
+      // consisting only of the last token, then map that range back to the
+      // source file. If that succeeds, we have a valid location for the end of
+      // the generated range.
+      CharSourceRange Range = Lexer::makeFileCharRange(
+          CharSourceRange::getTokenRange(SelectedRange->getEnd()),
+          *Result.SourceManager, Result.Context->getLangOpts());
+      if (Range.isInvalid())
+        return invalidArgumentError(
+            "after: can't resolve sub-range to valid source range");
+      End = Range.getEnd();
+    }
+
+    return CharSourceRange::getCharRange(End);
   };
 }
 
