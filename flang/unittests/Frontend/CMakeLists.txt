@@ -4,7 +4,6 @@ add_flang_unittest(FlangFrontendTests
 
 target_link_libraries(FlangFrontendTests
   PRIVATE
-  LLVMSupport
   clangBasic
   clangFrontend
   flangFrontend
