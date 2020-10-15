@@ -281,7 +281,3 @@ ALLOW_MULTIPLE_DEFINITION: -force:multiple
 RUN: ld.lld -### -m i386pep foo.o --allow-multiple-definition --no-allow-multiple-definition | FileCheck -check-prefix NO_ALLOW_MULTIPLE_DEFINITION %s
 RUN: ld.lld -### -m i386pep foo.o -allow-multiple-definition -no-allow-multiple-definition | FileCheck -check-prefix NO_ALLOW_MULTIPLE_DEFINITION %s
 NO_ALLOW_MULTIPLE_DEFINITION-NOT: -force:multiple
-
-RUN: ld.lld -### -m i386pep foo.o -wrap foo1 --wrap foo2 | FileCheck -check-prefix WRAP %s
-RUN: ld.lld -### -m i386pep foo.o -wrap=foo1 --wrap=foo2 | FileCheck -check-prefix WRAP %s
-WRAP: -wrap:foo1 -wrap:foo2
