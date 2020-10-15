@@ -576,10 +576,21 @@ struct coff_tls_directory {
 
   uint32_t getAlignment() const {
     // Bit [20:24] contains section alignment.
-    uint32_t Shift = (Characteristics & 0x00F00000) >> 20;
+    uint32_t Shift = (Characteristics & COFF::IMAGE_SCN_ALIGN_MASK) >> 20;
     if (Shift > 0)
       return 1U << (Shift - 1);
     return 0;
+  }
+
+  void setAlignment(uint32_t align) {
+    if (!align) {
+      Characteristics &= ~COFF::IMAGE_SCN_ALIGN_MASK;
+    } else {
+      assert(llvm::isPowerOf2_32(align) && "alignment is not a power of 2");
+      uint32_t p2Align = llvm::Log2_32(align);
+      assert(p2Align <= 13 && "invalid alignment requested");
+      Characteristics |= (p2Align + 1) << 20;
+    }
   }
 };
 
