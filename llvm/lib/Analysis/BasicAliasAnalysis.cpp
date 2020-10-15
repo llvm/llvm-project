@@ -115,50 +115,6 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
 // Useful predicates
 //===----------------------------------------------------------------------===//
 
-/// Returns true if the pointer is to a function-local object that never
-/// escapes from the function.
-static bool isNonEscapingLocalObject(
-    const Value *V,
-    SmallDenseMap<const Value *, bool, 8> *IsCapturedCache = nullptr) {
-  SmallDenseMap<const Value *, bool, 8>::iterator CacheIt;
-  if (IsCapturedCache) {
-    bool Inserted;
-    std::tie(CacheIt, Inserted) = IsCapturedCache->insert({V, false});
-    if (!Inserted)
-      // Found cached result, return it!
-      return CacheIt->second;
-  }
-
-  // If this is a local allocation, check to see if it escapes.
-  if (isa<AllocaInst>(V) || isNoAliasCall(V)) {
-    // Set StoreCaptures to True so that we can assume in our callers that the
-    // pointer is not the result of a load instruction. Currently
-    // PointerMayBeCaptured doesn't have any special analysis for the
-    // StoreCaptures=false case; if it did, our callers could be refined to be
-    // more precise.
-    auto Ret = !PointerMayBeCaptured(V, false, /*StoreCaptures=*/true);
-    if (IsCapturedCache)
-      CacheIt->second = Ret;
-    return Ret;
-  }
-
-  // If this is an argument that corresponds to a byval or noalias argument,
-  // then it has not escaped before entering the function.  Check if it escapes
-  // inside the function.
-  if (const Argument *A = dyn_cast<Argument>(V))
-    if (A->hasByValAttr() || A->hasNoAliasAttr()) {
-      // Note even if the argument is marked nocapture, we still need to check
-      // for copies made inside the function. The nocapture attribute only
-      // specifies that there are no copies made that outlive the function.
-      auto Ret = !PointerMayBeCaptured(V, false, /*StoreCaptures=*/true);
-      if (IsCapturedCache)
-        CacheIt->second = Ret;
-      return Ret;
-    }
-
-  return false;
-}
-
 /// Returns true if the pointer is one which would have been considered an
 /// escape by isNonEscapingLocalObject.
 static bool isEscapeSource(const Value *V) {
