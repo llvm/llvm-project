@@ -63,7 +63,7 @@ constexpr GPUInfo R600GPUs[26] = {
 
 // This table should be sorted by the value of GPUKind
 // Don't bother listing the implicitly true features
-constexpr GPUInfo AMDGCNGPUs[43] = {
+constexpr GPUInfo AMDGCNGPUs[44] = {
   // Name         Canonical    Kind        Features
   //              Name
   {{"gfx600"},    {"gfx600"},  GK_GFX600,  FEATURE_FAST_FMA_F32},
@@ -109,6 +109,7 @@ constexpr GPUInfo AMDGCNGPUs[43] = {
   {{"gfx1012"},   {"gfx1012"}, GK_GFX1012, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK},
   {{"gfx1030"},   {"gfx1030"}, GK_GFX1030, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
   {{"gfx1031"},   {"gfx1031"}, GK_GFX1031, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
+  {{"gfx1032"},   {"gfx1032"}, GK_GFX1032, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32},
 };
 
 const GPUInfo *getArchEntry(AMDGPU::GPUKind AK, ArrayRef<GPUInfo> Table) {
@@ -215,6 +216,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1012: return {10, 1, 2};
   case GK_GFX1030: return {10, 3, 0};
   case GK_GFX1031: return {10, 3, 1};
+  case GK_GFX1032: return {10, 3, 2};
   default:         return {0, 0, 0};
   }
 }
