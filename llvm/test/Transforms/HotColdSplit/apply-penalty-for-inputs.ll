@@ -21,7 +21,7 @@ exit:
   ret void
 }
 
-define void @bar(i32* %p1, i32 %p2, i32 %p3) {
+define void @bar(i32* %p1, i32 %p2, i32 %p3) "hot-cold-split" {
   br i1 undef, label %cold, label %exit
 
 cold:
