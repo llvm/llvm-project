@@ -183,3 +183,14 @@ namespace TwoPhaseLookup {
     template<typename T> void f6(int *p) { p->TemplateNamesNonTemplate::C::~C<int>(); } // expected-error {{'C' does not refer to a template}}
   }
 }
+
+void destroy_array_element() {
+  int arr[5];
+  using T = int;
+  arr->~T(); // ok, destroy arr[0].
+}
+
+void destroy_function() {
+  using T = void();
+  destroy_function->~T(); // expected-error {{object expression of non-scalar type 'void ()' cannot be used in a pseudo-destructor expression}}
+}

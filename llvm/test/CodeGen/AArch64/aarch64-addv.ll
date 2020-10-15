@@ -138,11 +138,9 @@ entry:
 define i32 @addv_combine_i32(<4 x i32> %a1, <4 x i32> %a2) {
 ; CHECK-LABEL: addv_combine_i32:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    addv s0, v0.4s
-; CHECK-NEXT:    addv s1, v1.4s
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    add w0, w8, w9
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %rdx.1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %a1)
@@ -154,11 +152,9 @@ entry:
 define i64 @addv_combine_i64(<2 x i64> %a1, <2 x i64> %a2) {
 ; CHECK-LABEL: addv_combine_i64:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    addp d0, v0.2d
-; CHECK-NEXT:    addp d1, v1.2d
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    add x0, x8, x9
+; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
 entry:
   %rdx.1 = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %a1)
