@@ -73,12 +73,15 @@ static cl::list<std::string> ClInputAddresses(cl::Positional,
                                               cl::desc("<input addresses>..."),
                                               cl::ZeroOrMore);
 
+static bool HasError = false;
+
 template<typename T>
 static bool error(Expected<T> &ResOrErr) {
   if (ResOrErr)
     return false;
   logAllUnhandledErrors(ResOrErr.takeError(), errs(),
                         "LLVMSymbolizer: error reading file: ");
+  HasError = true;
   return true;
 }
 
@@ -336,5 +339,5 @@ int main(int argc, char **argv) {
                      Symbolizer, Printer);
   }
 
-  return 0;
+  return HasError;
 }
