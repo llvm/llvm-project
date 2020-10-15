@@ -31,7 +31,7 @@ HELP: @FILE
 RUN: llvm-dwarfdump --version 2>&1 | FileCheck --check-prefix=VERSION %s
 VERSION: {{ version }}
 
-RUN: llvm-dwarfdump -diff -verbose 2>&1 | FileCheck --check-prefix=INCOMPATIBLE %s
+RUN: not llvm-dwarfdump -diff -verbose 2>&1 | FileCheck --check-prefix=INCOMPATIBLE %s
 INCOMPATIBLE: error: incompatible arguments: specifying both -diff and -verbose is currently not supported
 
 RUN: not llvm-dwarfdump --debug-names=0x0 2>&1 | FileCheck --check-prefix=FLAG %s
