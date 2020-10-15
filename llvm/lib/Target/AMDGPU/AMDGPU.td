@@ -1137,6 +1137,9 @@ def HasScalarFlatScratchInsts : Predicate<"Subtarget->hasScalarFlatScratchInsts(
 def HasD16LoadStore : Predicate<"Subtarget->hasD16LoadStore()">,
   AssemblerPredicate<(all_of FeatureGFX9Insts)>;
 
+def HasFlatScratchSTMode : Predicate<"Subtarget->hasFlatScratchSTMode()">,
+  AssemblerPredicate<(any_of FeatureGFX10_3Insts)>;
+
 def HasGFX10_BEncoding : Predicate<"Subtarget->hasGFX10_BEncoding()">,
   AssemblerPredicate<(all_of FeatureGFX10_BEncoding)>;
 
