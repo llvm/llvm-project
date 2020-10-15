@@ -1562,7 +1562,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   // increases are tolerable.
   Opts.SplitColdCode =
       (Opts.OptimizationLevel > 0) && (Opts.OptimizeSize != 2) &&
-      Args.hasFlag(OPT_fsplit_cold_code, OPT_fno_split_cold_code, false);
+      Args.hasFlag(OPT_fsplit_cold_code, OPT_fno_split_cold_code, true);
   if (Arg *A = Args.getLastArg(OPT_fsplit_cold_code))
     if (!Opts.SplitColdCode)
       Diags.Report(diag::warn_fe_ignored_opt_split_cold_code)
