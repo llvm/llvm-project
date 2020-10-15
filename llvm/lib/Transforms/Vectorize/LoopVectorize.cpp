@@ -2986,8 +2986,10 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
 
   // We currently don't use LoopVersioning for the actual loop cloning but we
   // still use it to add the noalias metadata.
-  LVer = std::make_unique<LoopVersioning>(*Legal->getLAI(), OrigLoop, LI, DT,
-                                          PSE.getSE());
+  LVer = std::make_unique<LoopVersioning>(
+      *Legal->getLAI(),
+      Legal->getLAI()->getRuntimePointerChecking()->getChecks(), OrigLoop, LI,
+      DT, PSE.getSE());
   LVer->prepareNoAliasMetadata();
 }
 
