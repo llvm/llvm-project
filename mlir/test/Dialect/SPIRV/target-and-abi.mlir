@@ -171,6 +171,44 @@ func @target_env_extra_fields() attributes {
 
 // -----
 
+func @target_env_cooperative_matrix() attributes{
+  // CHECK:      spv.target_env = #spv.target_env<
+  // CHECK-SAME:   SPV_NV_cooperative_matrix
+  // CHECK-SAME:   cooperative_matrix_properties_nv = [
+  // CHECK-SAME:     {a_type = i8, b_type = i8, c_type = i32,
+  // CHECK-SAME:      k_size = 32 : i32, m_size = 8 : i32, n_size = 8 : i32
+  // CHECK-SAME:      result_type = i32, scope = 3 : i32}
+  // CHECK-SAME:     {a_type = f16, b_type = f16, c_type = f16,
+  // CHECK-SAME:      k_size = 16 : i32, m_size = 8 : i32, n_size = 8 : i32
+  // CHECK-SAME:      result_type = f16, scope = 3 : i32}
+  spv.target_env = #spv.target_env<
+  #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class,
+                            SPV_NV_cooperative_matrix]>,
+  {
+    cooperative_matrix_properties_nv = [{
+      m_size = 8: i32,
+      n_size = 8: i32,
+      k_size = 32: i32,
+      a_type = i8,
+      b_type = i8,
+      c_type = i32,
+      result_type = i32,
+      scope = 3: i32
+    }, {
+      m_size = 8: i32,
+      n_size = 8: i32,
+      k_size = 16: i32,
+      a_type = f16,
+      b_type = f16,
+      c_type = f16,
+      result_type = f16,
+      scope = 3: i32
+    }]
+  }>
+} { return }
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spv.vce
 //===----------------------------------------------------------------------===//
