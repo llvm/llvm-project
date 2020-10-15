@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_HOTCOLDSPLITTING_H
 #define LLVM_TRANSFORMS_IPO_HOTCOLDSPLITTING_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -24,6 +25,9 @@ class OptimizationRemarkEmitter;
 class AssumptionCache;
 class DominatorTree;
 class CodeExtractorAnalysisCache;
+
+/// Get the attribute kind used to mark functions for hot/cold splitting.
+StringRef getHotColdSplittingAttrKind();
 
 /// A sequence of basic blocks.
 ///

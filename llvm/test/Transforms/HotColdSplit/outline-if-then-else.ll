@@ -24,7 +24,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-NEXT: call void @foo.cold.1
 ; CHECK-LABEL: if.end2:
 ; CHECK: call void @sideeffect(i32 2)
-define void @foo(i32 %cond) {
+define void @foo(i32 %cond) "hot-cold-split" {
 entry:
   %cond.addr = alloca i32
   store i32 %cond, i32* %cond.addr

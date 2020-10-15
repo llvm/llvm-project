@@ -9,7 +9,7 @@ declare void @use(i8*)
 declare void @cold_use2(i8*, i8*) cold
 
 ; CHECK-LABEL: define {{.*}}@foo(
-define void @foo() {
+define void @foo() "hot-cold-split" {
 entry:
   %local1 = alloca i256
   %local2 = alloca i256
