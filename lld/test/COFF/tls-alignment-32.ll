@@ -13,8 +13,7 @@
 ; RUN: llvm-readobj --coff-tls-directory %t.exe | FileCheck %s
 
 ; CHECK: TLSDirectory {
-; CHECK: Characteristics [ (0x600000)
-; CHECK-NEXT: IMAGE_SCN_ALIGN_32BYTES (0x600000)
+; CHECK: Characteristics [ (0x0)
 
 target triple = "i686-pc-windows-msvc"
 
