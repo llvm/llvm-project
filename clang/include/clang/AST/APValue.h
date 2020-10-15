@@ -151,7 +151,7 @@ public:
     static LValueBase getDynamicAlloc(DynamicAllocLValue LV, QualType Type);
     static LValueBase getTypeInfo(TypeInfoLValue LV, QualType TypeInfo);
 
-    void profile(llvm::FoldingSetNodeID &ID) const;
+    void Profile(llvm::FoldingSetNodeID &ID) const;
 
     template <class T>
     bool is() const { return Ptr.is<T>(); }
@@ -219,7 +219,7 @@ public:
     }
     uint64_t getAsArrayIndex() const { return Value; }
 
-    void profile(llvm::FoldingSetNodeID &ID) const;
+    void Profile(llvm::FoldingSetNodeID &ID) const;
 
     friend bool operator==(LValuePathEntry A, LValuePathEntry B) {
       return A.Value == B.Value;
@@ -363,10 +363,10 @@ public:
   /// Swaps the contents of this and the given APValue.
   void swap(APValue &RHS);
 
-  /// Profile this value. There is no guarantee that values of different
+  /// profile this value. There is no guarantee that values of different
   /// types will not produce the same profiled value, so the type should
   /// typically also be profiled if it's not implied by the context.
-  void profile(llvm::FoldingSetNodeID &ID) const;
+  void Profile(llvm::FoldingSetNodeID &ID) const;
 
   ValueKind getKind() const { return Kind; }
 
