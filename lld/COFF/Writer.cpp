@@ -241,6 +241,7 @@ private:
   void addSyntheticIdata();
   void fixPartialSectionChars(StringRef name, uint32_t chars);
   bool fixGnuImportChunks();
+  void fixTlsAlignment();
   PartialSection *createPartialSection(StringRef name, uint32_t outChars);
   PartialSection *findPartialSection(StringRef name, uint32_t outChars);
 
@@ -267,6 +268,7 @@ private:
   DelayLoadContents delayIdata;
   EdataContents edata;
   bool setNoSEHCharacteristic = false;
+  uint32_t tlsAlignment = 0;
 
   DebugDirectoryChunk *debugDirectory = nullptr;
   std::vector<std::pair<COFF::DebugType, Chunk *>> debugRecords;
@@ -633,6 +635,11 @@ void Writer::run() {
   writeSections();
   sortExceptionTable();
 
+  // Fix up the alignment in the TLS Directory's characteristic field,
+  // if a specific alignment value is needed
+  if (tlsAlignment)
+    fixTlsAlignment();
+
   t1.stop();
 
   if (!config->pdbPath.empty() && config->debug) {
@@ -866,6 +873,10 @@ void Writer::createSections() {
     StringRef name = c->getSectionName();
     if (shouldStripSectionSuffix(sc, name))
       name = name.split('$').first;
+
+    if (name.startswith(".tls"))
+      tlsAlignment = std::max(tlsAlignment, c->getAlignment());
+
     PartialSection *pSec = createPartialSection(name,
                                                 c->getOutputCharacteristics());
     pSec->chunks.push_back(c);
@@ -2037,4 +2048,35 @@ PartialSection *Writer::findPartialSection(StringRef name, uint32_t outChars) {
   if (it != partialSections.end())
     return it->second;
   return nullptr;
+}
+
+void Writer::fixTlsAlignment() {
+  if (Symbol *sym = symtab->findUnderscore("_tls_used")) {
+    if (Defined *b = dyn_cast<Defined>(sym)) {
+      OutputSection *sec = b->getChunk()->getOutputSection();
+      assert(sec && b->getRVA() >= sec->getRVA() &&
+             "no output section for _tls_used");
+
+      uint8_t *secBuf = buffer->getBufferStart() + sec->getFileOff();
+      uint64_t tlsOffset = b->getRVA() - sec->getRVA();
+      uint64_t directorySize = config->is64()
+                                   ? sizeof(object::coff_tls_directory64)
+                                   : sizeof(object::coff_tls_directory32);
+
+      if (tlsOffset + directorySize > sec->getRawSize())
+        fatal("_tls_used is malformed");
+
+      if (config->is64()) {
+        object::coff_tls_directory64 *tlsDir =
+            reinterpret_cast<object::coff_tls_directory64 *>(
+                &secBuf[tlsOffset]);
+        tlsDir->setAlignment(tlsAlignment);
+      } else {
+        object::coff_tls_directory32 *tlsDir =
+            reinterpret_cast<object::coff_tls_directory32 *>(
+                &secBuf[tlsOffset]);
+        tlsDir->setAlignment(tlsAlignment);
+      }
+    }
+  }
 }
