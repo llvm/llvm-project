@@ -3295,32 +3295,22 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   }
 
   // FIXME: This should not be limited to scalar (pull into APInt match above).
-  if (ConstantInt *RHSC = dyn_cast<ConstantInt>(Op1)) {
-    if (BinaryOperator *Op0I = dyn_cast<BinaryOperator>(Op0)) {
-      if (ConstantInt *Op0CI = dyn_cast<ConstantInt>(Op0I->getOperand(1))) {
-        if (Op0I->getOpcode() == Instruction::LShr) {
-          // ((X^C1) >> C2) ^ C3 -> (X>>C2) ^ ((C1>>C2)^C3)
-          // E1 = "X ^ C1"
-          BinaryOperator *E1;
-          ConstantInt *C1;
-          if (Op0I->hasOneUse() &&
-              (E1 = dyn_cast<BinaryOperator>(Op0I->getOperand(0))) &&
-              E1->getOpcode() == Instruction::Xor &&
-              (C1 = dyn_cast<ConstantInt>(E1->getOperand(1)))) {
-            // fold (C1 >> C2) ^ C3
-            ConstantInt *C2 = Op0CI, *C3 = RHSC;
-            APInt FoldConst = C1->getValue().lshr(C2->getValue());
-            FoldConst ^= C3->getValue();
-            // Prepare the two operands.
-            Value *Opnd0 = Builder.CreateLShr(E1->getOperand(0), C2);
-            Opnd0->takeName(Op0I);
-            cast<Instruction>(Opnd0)->setDebugLoc(I.getDebugLoc());
-            Value *FoldVal = ConstantInt::get(Ty, FoldConst);
-
-            return BinaryOperator::CreateXor(Opnd0, FoldVal);
-          }
-        }
-      }
+  {
+    Value *X;
+    ConstantInt *C1, *C2, *C3;
+    // ((X^C1) >> C2) ^ C3 -> (X>>C2) ^ ((C1>>C2)^C3)
+    if (match(Op1, m_ConstantInt(C3)) &&
+        match(Op0, m_LShr(m_Xor(m_Value(X), m_ConstantInt(C1)),
+                          m_ConstantInt(C2))) &&
+        Op0->hasOneUse()) {
+      // fold (C1 >> C2) ^ C3
+      APInt FoldConst = C1->getValue().lshr(C2->getValue());
+      FoldConst ^= C3->getValue();
+      // Prepare the two operands.
+      auto *Opnd0 = cast<Instruction>(Builder.CreateLShr(X, C2));
+      Opnd0->takeName(cast<Instruction>(Op0));
+      Opnd0->setDebugLoc(I.getDebugLoc());
+      return BinaryOperator::CreateXor(Opnd0, ConstantInt::get(Ty, FoldConst));
     }
   }
 
