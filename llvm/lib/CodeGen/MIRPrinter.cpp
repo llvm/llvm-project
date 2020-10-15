@@ -220,6 +220,10 @@ void MIRPrinter::print(const MachineFunction &MF) {
   convert(MST, YamlMF.FrameInfo, MF.getFrameInfo());
   convertStackObjects(YamlMF, MF, MST);
   convertCallSiteObjects(YamlMF, MF, MST);
+  for (auto &Sub : MF.DebugValueSubstitutions)
+    YamlMF.DebugValueSubstitutions.push_back({Sub.first.first, Sub.first.second,
+                                              Sub.second.first,
+                                              Sub.second.second});
   if (const auto *ConstantPool = MF.getConstantPool())
     convert(YamlMF, *ConstantPool);
   if (const auto *JumpTableInfo = MF.getJumpTableInfo())

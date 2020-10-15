@@ -405,17 +405,22 @@ bool MIRParserImpl::initializeCallSiteInfo(
   return false;
 }
 
-void MIRParserImpl::setupDebugValueTracking(MachineFunction &MF,
-    PerFunctionMIParsingState &PFS, const yaml::MachineFunction &YamlMF) {
-  // For now, we only compute the value of the "next instruction number"
-  // field.
+void MIRParserImpl::setupDebugValueTracking(
+    MachineFunction &MF, PerFunctionMIParsingState &PFS,
+    const yaml::MachineFunction &YamlMF) {
+  // Compute the value of the "next instruction number" field.
   unsigned MaxInstrNum = 0;
   for (auto &MBB : MF)
     for (auto &MI : MBB)
       MaxInstrNum = std::max((unsigned)MI.peekDebugInstrNum(), MaxInstrNum);
   MF.setDebugInstrNumberingCount(MaxInstrNum);
-}
 
+  // Load any substitutions.
+  for (auto &Sub : YamlMF.DebugValueSubstitutions) {
+    MF.makeDebugValueSubstitution(std::make_pair(Sub.SrcInst, Sub.SrcOp),
+                                  std::make_pair(Sub.DstInst, Sub.DstOp));
+  }
+}
 
 bool
 MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
