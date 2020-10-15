@@ -1,6 +1,7 @@
 // -*- mode: swift; -*-
 // Test that the REPL is launched with the current OS as availability target.
 // REQUIRES: system-darwin
+// REQUIRES: swift
 
 // RUN: mkdir -p %t.dir
 // RUN: echo '@available(macOS '>%t.dir/NewModule.swift
