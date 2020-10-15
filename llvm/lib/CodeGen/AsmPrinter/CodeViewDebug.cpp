@@ -141,7 +141,6 @@ CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
   if (!MMI->getModule()->getNamedMetadata("llvm.dbg.cu") ||
       !AP->getObjFileLowering().getCOFFDebugSymbolsSection()) {
     Asm = nullptr;
-    MMI->setDebugInfoAvailability(false);
     return;
   }
   // Tell MMI that we have debug info.
@@ -563,8 +562,6 @@ void CodeViewDebug::emitCodeViewMagicVersion() {
 void CodeViewDebug::endModule() {
   if (!Asm || !MMI->hasDebugInfo())
     return;
-
-  assert(Asm != nullptr);
 
   // The COFF .debug$S section consists of several subsections, each starting
   // with a 4-byte control code (e.g. 0xF1, 0xF2, etc) and then a 4-byte length
