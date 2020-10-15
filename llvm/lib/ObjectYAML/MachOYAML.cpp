@@ -305,7 +305,7 @@ void MappingTraits<MachOYAML::Section>::mapping(IO &IO,
   IO.mapOptional("relocations", Section.relocations);
 }
 
-StringRef
+std::string
 MappingTraits<MachOYAML::Section>::validate(IO &IO,
                                             MachOYAML::Section &Section) {
   if (Section.content && Section.size < Section.content->binary_size())
