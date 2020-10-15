@@ -525,19 +525,6 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("hidden");
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
-
-  if (DriverArgs.hasArg(options::OPT_mcode_object_v3_legacy)) {
-    getDriver().Diag(diag::warn_drv_deprecated_arg) << "-mcode-object-v3" <<
-      "-mllvm --amdhsa-code-object-version=3";
-    CC1Args.push_back("-mllvm");
-    CC1Args.push_back("--amdhsa-code-object-version=3");
-  }
-  if (DriverArgs.hasArg(options::OPT_mno_code_object_v3_legacy)) {
-    getDriver().Diag(diag::warn_drv_deprecated_arg) << "-mno-code-object-v3" <<
-      "-mllvm --amdhsa-code-object-version=2";
-    CC1Args.push_back("-mllvm");
-    CC1Args.push_back("--amdhsa-code-object-version=2");
-  }
 }
 
 StringRef
