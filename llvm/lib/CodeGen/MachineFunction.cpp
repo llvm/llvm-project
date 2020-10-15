@@ -967,11 +967,10 @@ void MachineFunction::substituteDebugValuesForInst(const MachineInstr &Old,
   // MIR output.
   for (unsigned int I = 0; I < Old.getNumOperands(); ++I) {
     const auto &OldMO = Old.getOperand(I);
-    auto &NewMO = Old.getOperand(I);
 
     if (!OldMO.isReg() || !OldMO.isDef())
       continue;
-    assert(NewMO.isDef());
+    assert(Old.getOperand(I).isDef());
 
     unsigned NewInstrNum = New.getDebugInstrNum();
     makeDebugValueSubstitution(std::make_pair(OldInstrNum, I),
