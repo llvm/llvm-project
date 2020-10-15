@@ -1150,21 +1150,15 @@ public:
       break;
 
     case Intrinsic::cttz:
-      // FIXME: all cost kinds should default to the same thing?
-      if (CostKind != TTI::TCK_RecipThroughput) {
-        if (getTLI()->isCheapToSpeculateCttz())
-          return TargetTransformInfo::TCC_Basic;
-        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
-      }
+      // FIXME: If necessary, this should go in target-specific overrides.
+      if (VF == 1 && RetVF == 1 && getTLI()->isCheapToSpeculateCttz())
+        return TargetTransformInfo::TCC_Basic;
       break;
 
     case Intrinsic::ctlz:
-      // FIXME: all cost kinds should default to the same thing?
-      if (CostKind != TTI::TCK_RecipThroughput) {
-        if (getTLI()->isCheapToSpeculateCtlz())
-          return TargetTransformInfo::TCC_Basic;
-        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
-      }
+      // FIXME: If necessary, this should go in target-specific overrides.
+      if (VF == 1 && RetVF == 1 && getTLI()->isCheapToSpeculateCtlz())
+        return TargetTransformInfo::TCC_Basic;
       break;
 
     case Intrinsic::memcpy:
