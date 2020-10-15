@@ -139,11 +139,6 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     r.VisibleToRegularObj = sym->isUsedInRegularObj;
     if (r.Prevailing)
       undefine(sym);
-
-    // We tell LTO to not apply interprocedural optimization for wrapped
-    // (with -wrap) symbols because otherwise LTO would inline them while
-    // their values are still not final.
-    r.LinkerRedefined = !sym->canInline;
   }
   checkError(ltoObj->add(std::move(f.obj), resols));
 }
