@@ -15,6 +15,7 @@
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "lldb/Expression/ExpressionParser.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
@@ -1019,11 +1020,6 @@ GetPatternBindingForVarDecl(swift::VarDecl *var_decl,
           containing_context, var_decl->getLoc());
 
   return pattern_binding;
-}
-
-static inline swift::Type GetSwiftType(CompilerType type) {
-  return swift::Type(
-      reinterpret_cast<swift::TypeBase *>(type.GetOpaqueQualType()));
 }
 
 bool SwiftASTManipulator::AddExternalVariables(

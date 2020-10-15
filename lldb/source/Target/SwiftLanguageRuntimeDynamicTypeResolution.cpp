@@ -2106,7 +2106,8 @@ lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
 }
 
 const swift::reflection::TypeRef *
-SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type, Module *module) {
+SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type,
+                                     SwiftASTContext *module_holder) {
   // Demangle the mangled name.
   swift::Demangle::Demangler dem;
   ConstString mangled_name = type.GetMangledTypeName();
@@ -2115,7 +2116,8 @@ SwiftLanguageRuntimeImpl::GetTypeRef(CompilerType type, Module *module) {
     return nullptr;
   swift::Demangle::NodePointer node =
       TypeSystemSwiftTypeRef::GetCanonicalDemangleTree(
-          module ? module : ts->GetModule(), dem, mangled_name.GetStringRef());
+          module_holder ? module_holder : ts->GetSwiftASTContext(), dem,
+          mangled_name.GetStringRef());
   if (!node)
     return nullptr;
 
@@ -2139,6 +2141,9 @@ SwiftLanguageRuntimeImpl::GetTypeInfo(CompilerType type,
   if (!ts)
     return nullptr;
 
+  // Resolve all type aliases.
+  type = type.GetCanonicalType();
+  
   // Resolve all generic type parameters in the type for the current
   // frame.  Archetype binding has to happen in the scratch context,
   // so we lock it while we are in this function.
@@ -2158,7 +2163,7 @@ SwiftLanguageRuntimeImpl::GetTypeInfo(CompilerType type,
   // context, but we need to resolve (any DWARF links in) the typeref
   // in the original module.
   const swift::reflection::TypeRef *type_ref =
-      GetTypeRef(type, ts->GetModule());
+      GetTypeRef(type, ts->GetSwiftASTContext());
   if (!type_ref)
     return nullptr;
 
