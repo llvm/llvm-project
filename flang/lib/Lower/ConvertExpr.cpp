@@ -1486,7 +1486,7 @@ private:
         if (!argVal)
           mlir::emitError(
               getLoc(),
-              "Lowering internal error: passing non trivial value by by value");
+              "Lowering internal error: passing non trivial value by value");
         else
           caller.placeInput(arg, *argVal);
         continue;

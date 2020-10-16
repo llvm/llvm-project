@@ -75,7 +75,8 @@ public:
   /// \p len is converted to the integer type for character lengths if needed.
   mlir::Value createEmboxChar(mlir::Value addr, mlir::Value len);
   mlir::Value createEmbox(const fir::CharBoxValue &str);
-  /// Embox a string array. The length is sizeof(str)*len(str).
+  /// Embox a string array. Note that the size/shape of the array is not
+  /// retrievable from the resulting mlir::Value.
   mlir::Value createEmbox(const fir::CharArrayBoxValue &str);
 
   /// Convert character array to a scalar by reducing the extents into the
