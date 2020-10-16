@@ -83,15 +83,15 @@ void argLongInt(sLongInt s) {}
 // and coerced to [a x iNN] for 64-bit RenderScript
 // =============================================================================
 
-// CHECK-RS32: void @retShortCharShort(%struct.sShortCharShort* noalias sret align 2 %agg.result)
+// CHECK-RS32: void @retShortCharShort(%struct.sShortCharShort* noalias sret(%struct.sShortCharShort) align 2 %agg.result)
 // CHECK-RS64: [3 x i16] @retShortCharShort()
 sShortCharShort retShortCharShort() { sShortCharShort r; return r; }
 
-// CHECK-RS32: void @retIntShortChar(%struct.sIntShortChar* noalias sret align 4 %agg.result)
+// CHECK-RS32: void @retIntShortChar(%struct.sIntShortChar* noalias sret(%struct.sIntShortChar) align 4 %agg.result)
 // CHECK-RS64: [2 x i32] @retIntShortChar()
 sIntShortChar retIntShortChar() { sIntShortChar r; return r; }
 
-// CHECK-RS32: void @retLongInt(%struct.sLongInt* noalias sret align 8 %agg.result)
+// CHECK-RS32: void @retLongInt(%struct.sLongInt* noalias sret(%struct.sLongInt) align 8 %agg.result)
 // CHECK-RS64: [2 x i64] @retLongInt()
 sLongInt retLongInt() { sLongInt r; return r; }
 
@@ -116,12 +116,12 @@ void argLong2Char(sLong2Char s) {}
 // 64-bit RenderScript
 // =============================================================================
 
-// CHECK-RS32: void @retInt5(%struct.sInt5* noalias sret align 4 %agg.result)
-// CHECK-RS64: void @retInt5(%struct.sInt5* noalias sret align 4 %agg.result)
+// CHECK-RS32: void @retInt5(%struct.sInt5* noalias sret(%struct.sInt5) align 4 %agg.result)
+// CHECK-RS64: void @retInt5(%struct.sInt5* noalias sret(%struct.sInt5) align 4 %agg.result)
 sInt5 retInt5() { sInt5 r; return r;}
 
-// CHECK-RS32: void @retLong2Char(%struct.sLong2Char* noalias sret align 8 %agg.result)
-// CHECK-RS64: void @retLong2Char(%struct.sLong2Char* noalias sret align 8 %agg.result)
+// CHECK-RS32: void @retLong2Char(%struct.sLong2Char* noalias sret(%struct.sLong2Char) align 8 %agg.result)
+// CHECK-RS64: void @retLong2Char(%struct.sLong2Char* noalias sret(%struct.sLong2Char) align 8 %agg.result)
 sLong2Char retLong2Char() { sLong2Char r; return r;}
 
 // =============================================================================
@@ -135,6 +135,6 @@ typedef struct {long l1, l2, l3, l4, l5, l6, l7, l8, l9; } sLong9;
 // CHECK-RS64: void @argLong9(%struct.sLong9* %s)
 void argLong9(sLong9 s) {}
 
-// CHECK-RS32: void @retLong9(%struct.sLong9* noalias sret align 8 %agg.result)
-// CHECK-RS64: void @retLong9(%struct.sLong9* noalias sret align 8 %agg.result)
+// CHECK-RS32: void @retLong9(%struct.sLong9* noalias sret(%struct.sLong9) align 8 %agg.result)
+// CHECK-RS64: void @retLong9(%struct.sLong9* noalias sret(%struct.sLong9) align 8 %agg.result)
 sLong9 retLong9() { sLong9 r; return r; }

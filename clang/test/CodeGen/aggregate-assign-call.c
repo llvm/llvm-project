@@ -60,13 +60,13 @@ struct S baz(int i, volatile int *j) {
     // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP1_ALLOCA]] to i8*
     // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
     //
-    // O1: call void @foo_int(%struct.S* sret align 4 %[[TMP1_ALLOCA]],
+    // O1: call void @foo_int(%struct.S* sret(%struct.S) align 4 %[[TMP1_ALLOCA]],
     // O1: call void @llvm.memcpy
     // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP1_ALLOCA]] to i8*
     // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])
     // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP2_ALLOCA]] to i8*
     // O1: call void @llvm.lifetime.start.p0i8({{[^,]*}}, i8* %[[P]])
-    // O1: call void @foo_int(%struct.S* sret align 4 %[[TMP2_ALLOCA]],
+    // O1: call void @foo_int(%struct.S* sret(%struct.S) align 4 %[[TMP2_ALLOCA]],
     // O1: call void @llvm.memcpy
     // O1: %[[P:[^ ]+]] = bitcast %struct.S* %[[TMP2_ALLOCA]] to i8*
     // O1: call void @llvm.lifetime.end.p0i8({{[^,]*}}, i8* %[[P]])

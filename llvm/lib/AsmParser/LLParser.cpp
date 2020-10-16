@@ -1657,9 +1657,16 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
     }
     case lltok::kw_byval: {
       Type *Ty;
-      if (ParseByValWithOptionalType(Ty))
+      if (ParseOptionalTypeAttr(Ty, lltok::kw_byval))
         return true;
       B.addByValAttr(Ty);
+      continue;
+    }
+    case lltok::kw_sret: {
+      Type *Ty;
+      if (ParseOptionalTypeAttr(Ty, lltok::kw_sret))
+        return true;
+      B.addStructRetAttr(Ty);
       continue;
     }
     case lltok::kw_preallocated: {
@@ -1704,7 +1711,6 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
     case lltok::kw_readonly:        B.addAttribute(Attribute::ReadOnly); break;
     case lltok::kw_returned:        B.addAttribute(Attribute::Returned); break;
     case lltok::kw_signext:         B.addAttribute(Attribute::SExt); break;
-    case lltok::kw_sret:            B.addAttribute(Attribute::StructRet); break;
     case lltok::kw_swifterror:      B.addAttribute(Attribute::SwiftError); break;
     case lltok::kw_swiftself:       B.addAttribute(Attribute::SwiftSelf); break;
     case lltok::kw_writeonly:       B.addAttribute(Attribute::WriteOnly); break;
@@ -2571,9 +2577,9 @@ bool LLParser::ParseParameterList(SmallVectorImpl<ParamInfo> &ArgList,
 /// ParseByValWithOptionalType
 ///   ::= byval
 ///   ::= byval(<ty>)
-bool LLParser::ParseByValWithOptionalType(Type *&Result) {
+bool LLParser::ParseOptionalTypeAttr(Type *&Result, lltok::Kind AttrName) {
   Result = nullptr;
-  if (!EatIfPresent(lltok::kw_byval))
+  if (!EatIfPresent(AttrName))
     return true;
   if (!EatIfPresent(lltok::lparen))
     return false;

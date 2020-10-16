@@ -38,10 +38,10 @@ struct I2 : Base2 {};
 struct I3 : Base2 {};
 struct D5 : I1, I2, I3 {}; // homogeneous aggregate
 
-// PPC: define void @_Z7func_D12D1(%struct.D1* noalias sret align 8 %agg.result, [3 x i64] %x.coerce)
-// ARM32: define arm_aapcs_vfpcc void @_Z7func_D12D1(%struct.D1* noalias sret align 8 %agg.result, [3 x i64] %x.coerce)
-// ARM64: define void @_Z7func_D12D1(%struct.D1* noalias sret align 8 %agg.result, %struct.D1* %x)
-// X64: define dso_local x86_vectorcallcc void @"\01_Z7func_D12D1@@24"(%struct.D1* noalias sret align 8 %agg.result, %struct.D1* %x)
+// PPC: define void @_Z7func_D12D1(%struct.D1* noalias sret(%struct.D1) align 8 %agg.result, [3 x i64] %x.coerce)
+// ARM32: define arm_aapcs_vfpcc void @_Z7func_D12D1(%struct.D1* noalias sret(%struct.D1) align 8 %agg.result, [3 x i64] %x.coerce)
+// ARM64: define void @_Z7func_D12D1(%struct.D1* noalias sret(%struct.D1) align 8 %agg.result, %struct.D1* %x)
+// X64: define dso_local x86_vectorcallcc void @"\01_Z7func_D12D1@@24"(%struct.D1* noalias sret(%struct.D1) align 8 %agg.result, %struct.D1* %x)
 D1 CC func_D1(D1 x) { return x; }
 
 // PPC: define [3 x double] @_Z7func_D22D2([3 x double] %x.coerce)
@@ -50,9 +50,9 @@ D1 CC func_D1(D1 x) { return x; }
 // X64: define dso_local x86_vectorcallcc %struct.D2 @"\01_Z7func_D22D2@@24"(%struct.D2 inreg %x.coerce)
 D2 CC func_D2(D2 x) { return x; }
 
-// PPC: define void @_Z7func_D32D3(%struct.D3* noalias sret align 8 %agg.result, [4 x i64] %x.coerce)
-// ARM32: define arm_aapcs_vfpcc void @_Z7func_D32D3(%struct.D3* noalias sret align 8 %agg.result, [4 x i64] %x.coerce)
-// ARM64: define void @_Z7func_D32D3(%struct.D3* noalias sret align 8 %agg.result, %struct.D3* %x)
+// PPC: define void @_Z7func_D32D3(%struct.D3* noalias sret(%struct.D3) align 8 %agg.result, [4 x i64] %x.coerce)
+// ARM32: define arm_aapcs_vfpcc void @_Z7func_D32D3(%struct.D3* noalias sret(%struct.D3) align 8 %agg.result, [4 x i64] %x.coerce)
+// ARM64: define void @_Z7func_D32D3(%struct.D3* noalias sret(%struct.D3) align 8 %agg.result, %struct.D3* %x)
 D3 CC func_D3(D3 x) { return x; }
 
 // PPC: define [4 x double] @_Z7func_D42D4([4 x double] %x.coerce)

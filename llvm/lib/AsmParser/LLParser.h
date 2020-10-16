@@ -332,8 +332,7 @@ namespace llvm {
     bool ParseFnAttributeValuePairs(AttrBuilder &B,
                                     std::vector<unsigned> &FwdRefAttrGrps,
                                     bool inAttrGrp, LocTy &BuiltinLoc);
-    bool ParseByValWithOptionalType(Type *&Result);
-
+    bool ParseOptionalTypeAttr(Type *&Result, lltok::Kind AttrName);
     bool ParseRequiredTypeAttr(Type *&Result, lltok::Kind AttrName);
     bool ParsePreallocated(Type *&Result);
     bool ParseByRef(Type *&Result);

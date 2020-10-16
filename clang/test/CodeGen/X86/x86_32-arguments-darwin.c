@@ -71,7 +71,7 @@ struct s10 {
 // Small vectors and 1 x {i64,double} are returned in registers
 
 // CHECK: i32 @f11()
-// CHECK: void @f12(<2 x i32>* noalias sret align 8 %agg.result)
+// CHECK: void @f12(<2 x i32>* noalias sret(<2 x i32>) align 8 %agg.result)
 // CHECK: i64 @f13()
 // CHECK: i64 @f14()
 // CHECK: <2 x i64> @f15()
@@ -93,11 +93,11 @@ T16 f16(void) { while (1) {} }
 // 128-bits).
 
 // CHECK: i32 @f17()
-// CHECK: void @f18(%{{.*}}* noalias sret align 8 %agg.result)
-// CHECK: void @f19(%{{.*}}* noalias sret align 8 %agg.result)
-// CHECK: void @f20(%{{.*}}* noalias sret align 8 %agg.result)
-// CHECK: void @f21(%{{.*}}* noalias sret align 16 %agg.result)
-// CHECK: void @f22(%{{.*}}* noalias sret align 16 %agg.result)
+// CHECK: void @f18(%{{.*}}* noalias sret(%struct.anon.{{[0-9]+}}) align 8 %agg.result)
+// CHECK: void @f19(%{{.*}}* noalias sret(%struct.anon.{{[0-9]+}}) align 8 %agg.result)
+// CHECK: void @f20(%{{.*}}* noalias sret(%struct.anon.{{[0-9]+}}) align 8 %agg.result)
+// CHECK: void @f21(%{{.*}}* noalias sret(%struct.anon.{{[0-9]+}}) align 16 %agg.result)
+// CHECK: void @f22(%{{.*}}* noalias sret(%struct.anon.{{[0-9]+}}) align 16 %agg.result)
 struct { T11 a; } f17(void) { while (1) {} }
 struct { T12 a; } f18(void) { while (1) {} }
 struct { T13 a; } f19(void) { while (1) {} }
@@ -116,11 +116,11 @@ struct { struct {} a; struct { float a[1]; } b; } f25(void) { while (1) {} }
 
 // Small structures are handled recursively
 // CHECK: i32 @f26()
-// CHECK: void @f27(%struct.s27* noalias sret align 1 %agg.result)
+// CHECK: void @f27(%struct.s27* noalias sret(%struct.s27) align 1 %agg.result)
 struct s26 { struct { char a, b; } a; struct { char a, b; } b; } f26(void) { while (1) {} }
 struct s27 { struct { char a, b, c; } a; struct { char a; } b; } f27(void) { while (1) {} }
 
-// CHECK: void @f28(%struct.s28* noalias sret align 4 %agg.result)
+// CHECK: void @f28(%struct.s28* noalias sret(%struct.s28) align 4 %agg.result)
 struct s28 { int a; int b[]; } f28(void) { while (1) {} }
 
 // CHECK-LABEL: define i16 @f29()
@@ -150,7 +150,7 @@ struct s36 { struct { int : 0; } a[2][10]; char b; char c; } f36(void) { while (
 // CHECK-LABEL: define float @f37()
 struct s37 { float c[1][1]; } f37(void) { while (1) {} }
 
-// CHECK-LABEL: define void @f38(%struct.s38* noalias sret align 2 %agg.result)
+// CHECK-LABEL: define void @f38(%struct.s38* noalias sret(%struct.s38) align 2 %agg.result)
 struct s38 { char a[3]; short b; } f38(void) { while (1) {} }
 
 // CHECK-LABEL: define void @f39(%struct.s39* byval(%struct.s39) align 16 %x)
@@ -264,12 +264,12 @@ struct s56_4 { t56_v2d a; };
 struct s56_5 { t56_v8i a; };
 struct s56_6 { t56_v4d a; };
 
-void f56(char a0, struct s56_0 a1, 
-         t56_v2i a2, struct s56_1 a3, 
-         t56_v1d a4, struct s56_2 a5, 
-         t56_v4i a6, struct s56_3 a7, 
-         t56_v2d a8, struct s56_4 a9, 
-         t56_v8i a10, struct s56_5 a11, 
+void f56(char a0, struct s56_0 a1,
+         t56_v2i a2, struct s56_1 a3,
+         t56_v1d a4, struct s56_2 a5,
+         t56_v4i a6, struct s56_3 a7,
+         t56_v2d a8, struct s56_4 a9,
+         t56_v8i a10, struct s56_5 a11,
          t56_v4d a12, struct s56_6 a13) {
   extern void f56_0(int x, ...);
   f56_0(1, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9,
