@@ -1871,22 +1871,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         if (Instruction *Res = OptAndOp(Op0I, Op0CI, AndRHS, I))
           return Res;
     }
-
-    // If this is an integer truncation, and if the source is an 'and' with
-    // immediate, transform it.  This frequently occurs for bitfield accesses.
-    {
-      Value *X = nullptr; ConstantInt *YC = nullptr;
-      if (match(Op0, m_Trunc(m_And(m_Value(X), m_ConstantInt(YC))))) {
-        // Change: and (trunc (and X, YC) to T), C2
-        // into  : and (trunc X to T), trunc(YC) & C2
-        // This will fold the two constants together, which may allow
-        // other simplifications.
-        Value *NewCast = Builder.CreateTrunc(X, I.getType(), "and.shrunk");
-        Constant *C3 = ConstantExpr::getTrunc(YC, I.getType());
-        C3 = ConstantExpr::getAnd(C3, AndRHS);
-        return BinaryOperator::CreateAnd(NewCast, C3);
-      }
-    }
   }
 
   if (Instruction *Z = narrowMaskedBinOp(I))
