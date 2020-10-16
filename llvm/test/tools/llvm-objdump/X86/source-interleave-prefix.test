@@ -7,7 +7,7 @@
 ; RUN: llc -o %t-relative-path.o -filetype=obj -mtriple=x86_64-pc-linux %t-relative-path.ll
 ; RUN: llvm-objdump --prefix myprefix --source %t-relative-path.o 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-relative-path.o -DPREFIX=.
-; CHECK-BROKEN-PREFIX: warning: '[[FILE]]': failed to find source [[PREFIX]]/Inputs/source-interleave-x86_64.c
+; CHECK-BROKEN-PREFIX: warning: '[[FILE]]': failed to find source {{.*}}source-interleave-x86_64.c
 
 ;; Test invalid source interleave fixed by adding the correct prefix.
 
