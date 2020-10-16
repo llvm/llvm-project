@@ -258,13 +258,16 @@ Operation *SymbolTable::lookupSymbolIn(Operation *symbolTableOp,
   return resolvedSymbols.back();
 }
 
-LogicalResult
-SymbolTable::lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr symbol,
-                            SmallVectorImpl<Operation *> &symbols) {
+/// Internal implementation of `lookupSymbolIn` that allows for specialized
+/// implementations of the lookup function.
+static LogicalResult lookupSymbolInImpl(
+    Operation *symbolTableOp, SymbolRefAttr symbol,
+    SmallVectorImpl<Operation *> &symbols,
+    function_ref<Operation *(Operation *, StringRef)> lookupSymbolFn) {
   assert(symbolTableOp->hasTrait<OpTrait::SymbolTable>());
 
   // Lookup the root reference for this symbol.
-  symbolTableOp = lookupSymbolIn(symbolTableOp, symbol.getRootReference());
+  symbolTableOp = lookupSymbolFn(symbolTableOp, symbol.getRootReference());
   if (!symbolTableOp)
     return failure();
   symbols.push_back(symbolTableOp);
@@ -281,13 +284,22 @@ SymbolTable::lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr symbol,
   // Otherwise, lookup each of the nested non-leaf references and ensure that
   // each corresponds to a valid symbol table.
   for (FlatSymbolRefAttr ref : nestedRefs.drop_back()) {
-    symbolTableOp = lookupSymbolIn(symbolTableOp, ref.getValue());
+    symbolTableOp = lookupSymbolFn(symbolTableOp, ref.getValue());
     if (!symbolTableOp || !symbolTableOp->hasTrait<OpTrait::SymbolTable>())
       return failure();
     symbols.push_back(symbolTableOp);
   }
-  symbols.push_back(lookupSymbolIn(symbolTableOp, symbol.getLeafReference()));
+  symbols.push_back(lookupSymbolFn(symbolTableOp, symbol.getLeafReference()));
   return success(symbols.back());
+}
+
+LogicalResult
+SymbolTable::lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr symbol,
+                            SmallVectorImpl<Operation *> &symbols) {
+  auto lookupFn = [](Operation *symbolTableOp, StringRef symbol) {
+    return lookupSymbolIn(symbolTableOp, symbol);
+  };
+  return lookupSymbolInImpl(symbolTableOp, symbol, symbols, lookupFn);
 }
 
 /// Returns the operation registered with the given symbol name within the
@@ -885,6 +897,42 @@ LogicalResult SymbolTable::replaceAllSymbolUses(Operation *oldSymbol,
                                                 StringRef newSymbol,
                                                 Region *from) {
   return replaceAllSymbolUsesImpl(oldSymbol, newSymbol, from);
+}
+
+//===----------------------------------------------------------------------===//
+// SymbolTableCollection
+//===----------------------------------------------------------------------===//
+
+Operation *SymbolTableCollection::lookupSymbolIn(Operation *symbolTableOp,
+                                                 StringRef symbol) {
+  return getSymbolTable(symbolTableOp).lookup(symbol);
+}
+Operation *SymbolTableCollection::lookupSymbolIn(Operation *symbolTableOp,
+                                                 SymbolRefAttr name) {
+  SmallVector<Operation *, 4> symbols;
+  if (failed(lookupSymbolIn(symbolTableOp, name, symbols)))
+    return nullptr;
+  return symbols.back();
+}
+/// A variant of 'lookupSymbolIn' that returns all of the symbols referenced by
+/// a given SymbolRefAttr. Returns failure if any of the nested references could
+/// not be resolved.
+LogicalResult
+SymbolTableCollection::lookupSymbolIn(Operation *symbolTableOp,
+                                      SymbolRefAttr name,
+                                      SmallVectorImpl<Operation *> &symbols) {
+  auto lookupFn = [this](Operation *symbolTableOp, StringRef symbol) {
+    return lookupSymbolIn(symbolTableOp, symbol);
+  };
+  return lookupSymbolInImpl(symbolTableOp, name, symbols, lookupFn);
+}
+
+/// Lookup, or create, a symbol table for an operation.
+SymbolTable &SymbolTableCollection::getSymbolTable(Operation *op) {
+  auto it = symbolTables.try_emplace(op, nullptr);
+  if (it.second)
+    it.first->second = std::make_unique<SymbolTable>(op);
+  return *it.first->second;
 }
 
 //===----------------------------------------------------------------------===//
