@@ -86,3 +86,43 @@ entry:
   store i8 3, i8* %b.gep.5
   ret i32 %res
 }
+
+declare i8* @memchr(i8*, i32, i64)
+
+; CHECK-LABEL: Function: test_memchr_const_size
+; CHECK: Just Ref:  Ptr: i8* %res      <->  %res = call i8* @memchr(i8* %a, i32 42, i64 4)
+; CHECK-NEXT: Just Ref:  Ptr: i8* %a.gep.1  <->  %res = call i8* @memchr(i8* %a, i32 42, i64 4)
+; CHECK-NEXT: NoModRef:  Ptr: i8* %a.gep.5  <->  %res = call i8* @memchr(i8* %a, i32 42, i64 4)
+define i8* @test_memchr_const_size(i8* noalias %a) {
+entry:
+  %res = call i8* @memchr(i8* %a, i32 42, i64 4)
+  %a.gep.1 = getelementptr i8, i8* %a, i32 1
+  store i8 0, i8* %a.gep.1
+  %a.gep.5 = getelementptr i8, i8* %a, i32 5
+  store i8 1, i8* %a.gep.5
+  ret i8* %res
+}
+
+declare i8* @memccpy(i8*, i8*, i32, i64)
+
+; CHECK-LABEL: Function: test_memccpy_const_size
+; CHECK:      Both ModRef:  Ptr: i8* %a     <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
+; CHECK-NEXT: Just Ref:  Ptr: i8* %b        <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
+; CHECK-NEXT: Both ModRef:  Ptr: i8* %res   <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
+; CHECK-NEXT: Both ModRef:  Ptr: i8* %a.gep.1       <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
+; CHECK-NEXT: NoModRef:  Ptr: i8* %a.gep.5  <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
+; CHECK-NEXT: Just Ref:  Ptr: i8* %b.gep.1  <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
+; CHECK-NEXT: NoModRef:  Ptr: i8* %b.gep.5  <->  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
+define i8* @test_memccpy_const_size(i8* noalias %a, i8* noalias %b) {
+entry:
+  %res = call i8* @memccpy(i8* %a, i8* %b, i32 42, i64 4)
+  %a.gep.1 = getelementptr i8, i8* %a, i32 1
+  store i8 0, i8* %a.gep.1
+  %a.gep.5 = getelementptr i8, i8* %a, i32 5
+  store i8 1, i8* %a.gep.5
+  %b.gep.1 = getelementptr i8, i8* %b, i32 1
+  store i8 2, i8* %b.gep.1
+  %b.gep.5 = getelementptr i8, i8* %b, i32 5
+  store i8 3, i8* %b.gep.5
+  ret i8* %res
+}

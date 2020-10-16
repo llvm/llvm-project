@@ -247,6 +247,21 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
         return MemoryLocation(Arg, LocationSize::precise(LenCI->getZExtValue()),
                               AATags);
       break;
+    case LibFunc_memchr:
+      assert((ArgIdx == 0) && "Invalid argument index for memchr");
+      if (const ConstantInt *LenCI =
+              dyn_cast<ConstantInt>(Call->getArgOperand(2)))
+        return MemoryLocation(Arg, LocationSize::precise(LenCI->getZExtValue()),
+                              AATags);
+      break;
+    case LibFunc_memccpy:
+      assert((ArgIdx == 0 || ArgIdx == 1) &&
+             "Invalid argument index for memccpy");
+      if (const ConstantInt *LenCI =
+              dyn_cast<ConstantInt>(Call->getArgOperand(3)))
+        return MemoryLocation(Arg, LocationSize::precise(LenCI->getZExtValue()),
+                              AATags);
+      break;
     default:
       break;
     };
