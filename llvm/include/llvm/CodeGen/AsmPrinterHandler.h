@@ -23,7 +23,6 @@ class MachineBasicBlock;
 class MachineFunction;
 class MachineInstr;
 class MCSymbol;
-class Module;
 
 typedef MCSymbol *ExceptionSymbolProvider(AsmPrinter *Asm,
                                           const MachineBasicBlock *MBB);
@@ -37,8 +36,6 @@ public:
   /// For symbols that have a size designated (e.g. common symbols),
   /// this tracks that size.
   virtual void setSymbolSize(const MCSymbol *Sym, uint64_t Size) = 0;
-
-  virtual void beginModule(Module *M) {}
 
   /// Emit all sections that should come after the content.
   virtual void endModule() = 0;
@@ -78,7 +75,6 @@ public:
   /// Process end of a basic block during basic block sections.
   virtual void endBasicBlock(const MachineBasicBlock &MBB) {}
 };
-
 } // End of namespace llvm
 
 #endif
