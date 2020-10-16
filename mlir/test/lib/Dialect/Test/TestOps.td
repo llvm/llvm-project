@@ -799,6 +799,22 @@ def TestOpWithRegionPattern : TEST_Op<"op_with_region_pattern"> {
   let hasCanonicalizer = 1;
 }
 
+def TestOpConstant : TEST_Op<"constant", [ConstantLike, NoSideEffect]> {
+  let arguments = (ins AnyAttr:$value);
+  let results = (outs AnyType);
+  let extraClassDeclaration = [{
+    Attribute getValue() { return getAttr("value"); }
+  }];
+
+  let hasFolder = 1;
+}
+
+def OpR : TEST_Op<"op_r">, Arguments<(ins AnyInteger, AnyInteger)>, Results<(outs AnyInteger)>;
+def OpS : TEST_Op<"op_s">, Arguments<(ins AnyInteger, AnyAttr:$value)>, Results<(outs AnyInteger)>;
+
+def : Pat<(OpR $input1, (ConstantLikeMatcher I32Attr:$input2)),
+          (OpS:$unused $input1, $input2)>;
+
 // Op for testing trivial removal via folding of op with inner ops and no uses.
 def TestOpWithRegionFoldNoSideEffect : TEST_Op<
     "op_with_region_fold_no_side_effect", [NoSideEffect]> {
