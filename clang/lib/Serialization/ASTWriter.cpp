@@ -1452,7 +1452,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
     if (!SLoc->isFile())
       continue;
     const SrcMgr::FileInfo &File = SLoc->getFile();
-    const SrcMgr::ContentCache *Cache = File.getContentCache();
+    const SrcMgr::ContentCache *Cache = &File.getContentCache();
     if (!Cache->OrigEntry)
       continue;
 
@@ -1952,7 +1952,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
     // Figure out which record code to use.
     unsigned Code;
     if (SLoc->isFile()) {
-      const SrcMgr::ContentCache *Cache = SLoc->getFile().getContentCache();
+      const SrcMgr::ContentCache *Cache = &SLoc->getFile().getContentCache();
       if (Cache->OrigEntry) {
         Code = SM_SLOC_FILE_ENTRY;
       } else
@@ -1970,7 +1970,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
       Record.push_back(File.getFileCharacteristic()); // FIXME: stable encoding
       Record.push_back(File.hasLineDirectives());
 
-      const SrcMgr::ContentCache *Content = File.getContentCache();
+      const SrcMgr::ContentCache *Content = &File.getContentCache();
       bool EmitBlob = false;
       if (Content->OrigEntry) {
         assert(Content->OrigEntry == Content->ContentsEntry &&

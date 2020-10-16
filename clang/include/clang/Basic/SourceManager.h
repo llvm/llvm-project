@@ -275,13 +275,13 @@ namespace SrcMgr {
 
   public:
     /// Return a FileInfo object.
-    static FileInfo get(SourceLocation IL, const ContentCache *Con,
+    static FileInfo get(SourceLocation IL, const ContentCache &Con,
                         CharacteristicKind FileCharacter, StringRef Filename) {
       FileInfo X;
       X.IncludeLoc = IL.getRawEncoding();
       X.NumCreatedFIDs = 0;
       X.HasLineDirectives = false;
-      X.ContentAndKind.setPointer(Con);
+      X.ContentAndKind.setPointer(&Con);
       X.ContentAndKind.setInt(FileCharacter);
       X.Filename = Filename;
       return X;
@@ -291,8 +291,8 @@ namespace SrcMgr {
       return SourceLocation::getFromRawEncoding(IncludeLoc);
     }
 
-    const ContentCache *getContentCache() const {
-      return ContentAndKind.getPointer();
+    const ContentCache &getContentCache() const {
+      return *ContentAndKind.getPointer();
     }
 
     /// Return whether this is a system header or not.
@@ -973,7 +973,7 @@ public:
   llvm::Optional<llvm::MemoryBufferRef>
   getBufferOrNone(FileID FID, SourceLocation Loc = SourceLocation()) const {
     if (auto *Entry = getSLocEntryForFile(FID))
-      return Entry->getFile().getContentCache()->getBufferOrNone(
+      return Entry->getFile().getContentCache().getBufferOrNone(
           Diag, getFileManager(), Loc);
     return None;
   }
@@ -992,8 +992,7 @@ public:
   /// Returns the FileEntry record for the provided FileID.
   const FileEntry *getFileEntryForID(FileID FID) const {
     if (auto *Entry = getSLocEntryForFile(FID))
-      if (auto *Content = Entry->getFile().getContentCache())
-        return Content->OrigEntry;
+      return Entry->getFile().getContentCache().OrigEntry;
     return nullptr;
   }
 
@@ -1006,10 +1005,7 @@ public:
   /// Returns the FileEntry record for the provided SLocEntry.
   const FileEntry *getFileEntryForSLocEntry(const SrcMgr::SLocEntry &sloc) const
   {
-    const SrcMgr::ContentCache *Content = sloc.getFile().getContentCache();
-    if (!Content)
-      return nullptr;
-    return Content->OrigEntry;
+    return sloc.getFile().getContentCache().OrigEntry;
   }
 
   /// Return a StringRef to the source buffer data for the
@@ -1793,10 +1789,10 @@ private:
   ///
   /// This works regardless of whether the ContentCache corresponds to a
   /// file or some other input source.
-  FileID createFileID(const SrcMgr::ContentCache *File, StringRef Filename,
-                      SourceLocation IncludePos,
-                      SrcMgr::CharacteristicKind DirCharacter, int LoadedID,
-                      unsigned LoadedOffset);
+  FileID createFileIDImpl(const SrcMgr::ContentCache &File, StringRef Filename,
+                          SourceLocation IncludePos,
+                          SrcMgr::CharacteristicKind DirCharacter, int LoadedID,
+                          unsigned LoadedOffset);
 
   const SrcMgr::ContentCache *
     getOrCreateContentCache(const FileEntry *SourceFile,
