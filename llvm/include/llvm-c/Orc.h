@@ -231,8 +231,8 @@ typedef LLVMErrorRef (*LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction)(
 /**
  * Predicate function for SymbolStringPoolEntries.
  */
-typedef int (*LLVMOrcSymbolPredicate)(LLVMOrcSymbolStringPoolEntryRef Sym,
-                                      void *Ctx);
+typedef int (*LLVMOrcSymbolPredicate)(void *Ctx,
+                                      LLVMOrcSymbolStringPoolEntryRef Sym);
 
 /**
  * A reference to an orc::ThreadSafeContext instance.
@@ -251,14 +251,9 @@ typedef struct LLVMOrcOpaqueJITTargetMachineBuilder
     *LLVMOrcJITTargetMachineBuilderRef;
 
 /**
- * A reference to an orc::LLJITBuilder instance.
+ * A reference to an orc::ObjectLayer instance.
  */
-typedef struct LLVMOrcOpaqueLLJITBuilder *LLVMOrcLLJITBuilderRef;
-
-/**
- * A reference to an orc::LLJIT instance.
- */
-typedef struct LLVMOrcOpaqueLLJIT *LLVMOrcLLJITRef;
+typedef struct LLVMOrcOpaqueObjectLayer *LLVMOrcObjectLayerRef;
 
 /**
  * Attach a custom error reporter function to the ExecutionSession.
@@ -440,7 +435,7 @@ void LLVMOrcJITDylibAddGenerator(LLVMOrcJITDylibRef JD,
  * Create a custom generator.
  */
 LLVMOrcDefinitionGeneratorRef LLVMOrcCreateCustomCAPIDefinitionGenerator(
-    void *Ctx, LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction F);
+    LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction F, void *Ctx);
 
 /**
  * Get a DynamicLibrarySearchGenerator that will reflect process symbols into
@@ -534,147 +529,9 @@ void LLVMOrcDisposeJITTargetMachineBuilder(
     LLVMOrcJITTargetMachineBuilderRef JTMB);
 
 /**
- * Create an LLJITTargetMachineBuilder.
- *
- * The client owns the resulting LLJITBuilder and should dispose of it using
- * LLVMOrcDisposeLLJITBuilder once they are done with it.
+ * Dispose of an ObjectLayer.
  */
-LLVMOrcLLJITBuilderRef LLVMOrcCreateLLJITBuilder(void);
-
-/**
- * Dispose of an LLVMOrcLLJITBuilderRef. This should only be called if ownership
- * has not been passed to LLVMOrcCreateLLJIT (e.g. because some error prevented
- * that function from being called).
- */
-void LLVMOrcDisposeLLJITBuilder(LLVMOrcLLJITBuilderRef Builder);
-
-/**
- * Set the JITTargetMachineBuilder to be used when constructing the LLJIT
- * instance. Calling this function is optional: if it is not called then the
- * LLJITBuilder will use JITTargeTMachineBuilder::detectHost to construct a
- * JITTargetMachineBuilder.
- */
-void LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(
-    LLVMOrcLLJITBuilderRef Builder, LLVMOrcJITTargetMachineBuilderRef JTMB);
-
-/**
- * Create an LLJIT instance from an LLJITBuilder.
- *
- * This operation takes ownership of the Builder argument: clients should not
- * dispose of the builder after calling this function (even if the function
- * returns an error). If a null Builder argument is provided then a
- * default-constructed LLJITBuilder will be used.
- *
- * On success the resulting LLJIT instance is uniquely owned by the client and
- * automatically manages the memory of all JIT'd code and all modules that are
- * transferred to it (e.g. via LLVMOrcLLJITAddLLVMIRModule). Disposing of the
- * LLJIT instance will free all memory managed by the JIT, including JIT'd code
- * and not-yet compiled modules.
- */
-LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,
-                                LLVMOrcLLJITBuilderRef Builder);
-
-/**
- * Dispose of an LLJIT instance.
- */
-LLVMErrorRef LLVMOrcDisposeLLJIT(LLVMOrcLLJITRef J);
-
-/**
- * Get a reference to the ExecutionSession for this LLJIT instance.
- *
- * The ExecutionSession is owned by the LLJIT instance. The client is not
- * responsible for managing its memory.
- */
-LLVMOrcExecutionSessionRef LLVMOrcLLJITGetExecutionSession(LLVMOrcLLJITRef J);
-
-/**
- * Return a reference to the Main JITDylib.
- *
- * The JITDylib is owned by the LLJIT instance. The client is not responsible
- * for managing its memory.
- */
-LLVMOrcJITDylibRef LLVMOrcLLJITGetMainJITDylib(LLVMOrcLLJITRef J);
-
-/**
- * Return the target triple for this LLJIT instance. This string is owned by
- * the LLJIT instance and should not be freed by the client.
- */
-const char *LLVMOrcLLJITGetTripleString(LLVMOrcLLJITRef J);
-
-/**
- * Returns the global prefix character according to the LLJIT's DataLayout.
- */
-char LLVMOrcLLJITGetGlobalPrefix(LLVMOrcLLJITRef J);
-
-/**
- * Mangles the given string according to the LLJIT instance's DataLayout, then
- * interns the result in the SymbolStringPool and returns a reference to the
- * pool entry. Clients should call LLVMOrcReleaseSymbolStringPoolEntry to
- * decrement the ref-count on the pool entry once they are finished with this
- * value.
- */
-LLVMOrcSymbolStringPoolEntryRef
-LLVMOrcLLJITMangleAndIntern(LLVMOrcLLJITRef J, const char *UnmangledName);
-
-/**
- * Add a buffer representing an object file to the given JITDylib in the given
- * LLJIT instance. This operation transfers ownership of the buffer to the
- * LLJIT instance. The buffer should not be disposed of or referenced once this
- * function returns.
- *
- * Resources associated with the given object will be tracked by the given
- * JITDylib's default resource tracker.
- */
-LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J, LLVMOrcJITDylibRef JD,
-                                       LLVMMemoryBufferRef ObjBuffer);
-
-/**
- * Add a buffer representing an object file to the given ResourceTracker's
- * JITDylib in the given LLJIT instance. This operation transfers ownership of
- * the buffer to the LLJIT instance. The buffer should not be disposed of or
- * referenced once this function returns.
- *
- * Resources associated with the given object will be tracked by ResourceTracker
- * RT.
- */
-LLVMErrorRef LLVMOrcLLJITAddObjectFileWithRT(LLVMOrcLLJITRef J,
-                                             LLVMOrcResourceTrackerRef RT,
-                                             LLVMMemoryBufferRef ObjBuffer);
-
-/**
- * Add an IR module to the given JITDylib in the given LLJIT instance. This
- * operation transfers ownership of the TSM argument to the LLJIT instance.
- * The TSM argument should not be disposed of or referenced once this
- * function returns.
- *
- * Resources associated with the given Module will be tracked by the given
- * JITDylib's default resource tracker.
- */
-LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(LLVMOrcLLJITRef J,
-                                         LLVMOrcJITDylibRef JD,
-                                         LLVMOrcThreadSafeModuleRef TSM);
-
-/**
- * Add an IR module to the given ResourceTracker's JITDylib in the given LLJIT
- * instance. This operation transfers ownership of the TSM argument to the LLJIT
- * instance. The TSM argument should not be disposed of or referenced once this
- * function returns.
- *
- * Resources associated with the given Module will be tracked by ResourceTracker
- * RT.
- */
-LLVMErrorRef LLVMOrcLLJITAddLLVMIRModuleWithRT(LLVMOrcLLJITRef J,
-                                               LLVMOrcResourceTrackerRef JD,
-                                               LLVMOrcThreadSafeModuleRef TSM);
-
-/**
- * Look up the given symbol in the main JITDylib of the given LLJIT instance.
- *
- * This operation does not take ownership of the Name argument.
- */
-LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,
-                                LLVMOrcJITTargetAddress *Result,
-                                const char *Name);
+void LLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer);
 
 LLVM_C_EXTERN_C_END
 
