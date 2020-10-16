@@ -115,6 +115,8 @@ private:
 
   // AsmPrinterHandler overrides.
 public:
+  void beginModule(Module *M) override;
+
   void beginInstruction(const MachineInstr *MI) override;
   void endInstruction() override;
 
