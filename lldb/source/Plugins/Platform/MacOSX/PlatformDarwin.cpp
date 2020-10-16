@@ -1521,25 +1521,20 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
 
   StreamString minimum_version_option;
   bool use_current_os_version = false;
+  // If the SDK type is for the host OS, use its version number.
+  auto get_host_os = []() { return HostInfo::GetTargetTriple().getOS(); };
   switch (sdk_type) {
-  case XcodeSDK::Type::iPhoneOS:
-#if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
-    use_current_os_version = true;
-#else
-    use_current_os_version = false;
-#endif
-    break;
-
-  case XcodeSDK::Type::iPhoneSimulator:
-    use_current_os_version = false;
-    break;
-
   case XcodeSDK::Type::MacOSX:
-#if defined(__i386__) || defined(__x86_64__)
-    use_current_os_version = true;
-#else
-    use_current_os_version = false;
-#endif
+    use_current_os_version = get_host_os() == llvm::Triple::MacOSX;
+    break;
+  case XcodeSDK::Type::iPhoneOS:
+    use_current_os_version = get_host_os() == llvm::Triple::IOS;
+    break;
+  case XcodeSDK::Type::AppleTVOS:
+    use_current_os_version = get_host_os() == llvm::Triple::TvOS;
+    break;
+  case XcodeSDK::Type::watchOS:
+    use_current_os_version = get_host_os() == llvm::Triple::WatchOS;
     break;
   default:
     break;
@@ -1559,32 +1554,49 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     }
   }
   // Only add the version-min options if we got a version from somewhere
-  if (!version.empty()) {
+  if (!version.empty() && sdk_type != XcodeSDK::Type::Linux) {
+#define OPTION(PREFIX, NAME, VAR, ...)                                         \
+  const char *opt_##VAR = NAME;                                                \
+  (void)opt_##VAR;
+#include "clang/Driver/Options.inc"
+#undef OPTION
+    minimum_version_option << '-';
     switch (sdk_type) {
-    case XcodeSDK::Type::iPhoneOS:
-      minimum_version_option.PutCString("-mios-version-min=");
-      minimum_version_option.PutCString(version.getAsString());
+    case XcodeSDK::Type::MacOSX:
+      minimum_version_option << opt_mmacosx_version_min_EQ;
       break;
     case XcodeSDK::Type::iPhoneSimulator:
-      minimum_version_option.PutCString("-mios-simulator-version-min=");
-      minimum_version_option.PutCString(version.getAsString());
+      minimum_version_option << opt_mios_simulator_version_min_EQ;
       break;
-    case XcodeSDK::Type::MacOSX:
-      minimum_version_option.PutCString("-mmacosx-version-min=");
-      minimum_version_option.PutCString(version.getAsString());
-      break;
-    case XcodeSDK::Type::WatchSimulator:
-      minimum_version_option.PutCString("-mwatchos-simulator-version-min=");
-      minimum_version_option.PutCString(version.getAsString());
+    case XcodeSDK::Type::iPhoneOS:
+      minimum_version_option << opt_mios_version_min_EQ;
       break;
     case XcodeSDK::Type::AppleTVSimulator:
-      minimum_version_option.PutCString("-mtvos-version-min=");
-      minimum_version_option.PutCString(version.getAsString());
+      minimum_version_option << opt_mtvos_simulator_version_min_EQ;
       break;
-    default:
-      llvm_unreachable("unsupported sdk");
+    case XcodeSDK::Type::AppleTVOS:
+      minimum_version_option << opt_mtvos_version_min_EQ;
+      break;
+    case XcodeSDK::Type::WatchSimulator:
+      minimum_version_option << opt_mwatchos_simulator_version_min_EQ;
+      break;
+    case XcodeSDK::Type::watchOS:
+      minimum_version_option << opt_mwatchos_version_min_EQ;
+      break;
+    case XcodeSDK::Type::bridgeOS:
+    case XcodeSDK::Type::Linux:
+    case XcodeSDK::Type::unknown:
+      if (lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST)) {
+        XcodeSDK::Info info;
+        info.type = sdk_type;
+        LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
+                  "Clang modules on %s are not supported",
+                  XcodeSDK::GetCanonicalName(info).c_str());
+      }
+      return;
     }
-    options.push_back(std::string(minimum_version_option.GetString()));
+    minimum_version_option << version.getAsString();
+    options.emplace_back(std::string(minimum_version_option.GetString()));
   }
 
   FileSpec sysroot_spec;
