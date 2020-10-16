@@ -1,4 +1,4 @@
-; RUN: opt -print-before=always-inline -always-inline < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt -print-before=always-inline -always-inline -enable-new-pm=0 < %s -o /dev/null 2>&1 | FileCheck %s
 
 define i32 @main() #0 {
 entry:

@@ -30,7 +30,7 @@ struct GPUInfo {
   unsigned Features;
 };
 
-constexpr GPUInfo R600GPUs[26] = {
+constexpr GPUInfo R600GPUs[] = {
   // Name       Canonical    Kind        Features
   //            Name
   {{"r600"},    {"r600"},    GK_R600,    FEATURE_NONE },
@@ -63,7 +63,7 @@ constexpr GPUInfo R600GPUs[26] = {
 
 // This table should be sorted by the value of GPUKind
 // Don't bother listing the implicitly true features
-constexpr GPUInfo AMDGCNGPUs[44] = {
+constexpr GPUInfo AMDGCNGPUs[] = {
   // Name         Canonical    Kind        Features
   //              Name
   {{"gfx600"},    {"gfx600"},  GK_GFX600,  FEATURE_FAST_FMA_F32},

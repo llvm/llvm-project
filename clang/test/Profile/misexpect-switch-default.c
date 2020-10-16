@@ -10,7 +10,7 @@ void init_arry();
 
 const int inner_loop = 1000;
 const int outer_loop = 20;
-const int arry_size = 25;
+enum { arry_size = 25 };
 
 int arry[arry_size] = {0};
 

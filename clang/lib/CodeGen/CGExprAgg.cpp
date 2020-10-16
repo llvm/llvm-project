@@ -1759,7 +1759,9 @@ void AggExprEmitter::VisitDesignatedInitUpdateExpr(DesignatedInitUpdateExpr *E) 
 /// non-zero bytes that will be stored when outputting the initializer for the
 /// specified initializer expression.
 static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
-  E = E->IgnoreParens();
+  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+    E = MTE->getSubExpr();
+  E = E->IgnoreParenNoopCasts(CGF.getContext());
 
   // 0 and 0.0 won't require any non-zero stores!
   if (isSimpleZero(E, CGF)) return CharUnits::Zero();
@@ -1808,7 +1810,7 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
     }
   }
 
-
+  // FIXME: This overestimates the number of non-zero bytes for bit-fields.
   CharUnits NumNonZeroBytes = CharUnits::Zero();
   for (unsigned i = 0, e = ILE->getNumInits(); i != e; ++i)
     NumNonZeroBytes += GetNumNonZeroBytesInInit(ILE->getInit(i), CGF);

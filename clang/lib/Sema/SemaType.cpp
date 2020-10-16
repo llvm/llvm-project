@@ -2273,13 +2273,9 @@ static ExprResult checkArraySize(Sema &S, Expr *&ArraySize,
     }
   } Diagnoser(VLADiag, VLAIsError);
 
-  // FIXME: GCC does *not* allow folding here in general; see PR44406.
-  // For GCC compatibility, we should remove this folding and leave it to
-  // TryFixVariablyModifiedType to convert VLAs to constant array types.
   ExprResult R = S.VerifyIntegerConstantExpression(
       ArraySize, &SizeVal, Diagnoser,
-      (S.LangOpts.GNUMode || S.LangOpts.OpenCL) ? Sema::AllowFold
-                                                : Sema::NoFold);
+      S.LangOpts.OpenCL ? Sema::AllowFold : Sema::NoFold);
   if (Diagnoser.IsVLA)
     return ExprResult();
   return R;

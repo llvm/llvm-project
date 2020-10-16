@@ -5509,17 +5509,6 @@ ScalarEvolution::getRangeRef(const SCEV *S,
         ConservativeResult =
             ConservativeResult.intersectWith(RangeFromFactoring, RangeType);
       }
-
-      // Now try symbolic BE count and more powerful methods.
-      MaxBECount = computeMaxBackedgeTakenCount(AddRec->getLoop());
-      if (!isa<SCEVCouldNotCompute>(MaxBECount) &&
-          getTypeSizeInBits(MaxBECount->getType()) <= BitWidth &&
-          AddRec->hasNoSelfWrap()) {
-        auto RangeFromAffineNew = getRangeForAffineNoSelfWrappingAR(
-            AddRec, MaxBECount, BitWidth, SignHint);
-        ConservativeResult =
-            ConservativeResult.intersectWith(RangeFromAffineNew, RangeType);
-      }
     }
 
     return setRange(AddRec, SignHint, std::move(ConservativeResult));
@@ -5687,67 +5676,6 @@ ConstantRange ScalarEvolution::getRangeForAffineAR(const SCEV *Start,
 
   // Finally, intersect signed and unsigned ranges.
   return SR.intersectWith(UR, ConstantRange::Smallest);
-}
-
-ConstantRange ScalarEvolution::getRangeForAffineNoSelfWrappingAR(
-    const SCEVAddRecExpr *AddRec, const SCEV *MaxBECount, unsigned BitWidth,
-    ScalarEvolution::RangeSignHint SignHint) {
-  assert(AddRec->isAffine() && "Non-affine AddRecs are not suppored!\n");
-  assert(AddRec->hasNoSelfWrap() &&
-         "This only works for non-self-wrapping AddRecs!");
-  const bool IsSigned = SignHint == HINT_RANGE_SIGNED;
-  const SCEV *Step = AddRec->getStepRecurrence(*this);
-  // Let's make sure that we can prove that we do not self-wrap during
-  // MaxBECount iterations. We need this because MaxBECount is a maximum
-  // iteration count estimate, and we might infer nw from some exit for which we
-  // do not know max exit count (or any other side reasoning).
-  // TODO: Turn into assert at some point.
-  MaxBECount = getNoopOrZeroExtend(MaxBECount, AddRec->getType());
-  const SCEV *RangeWidth = getNegativeSCEV(getOne(AddRec->getType()));
-  const SCEV *StepAbs = getUMinExpr(Step, getNegativeSCEV(Step));
-  const SCEV *MaxItersWithoutWrap = getUDivExpr(RangeWidth, StepAbs);
-  if (!isKnownPredicate(ICmpInst::ICMP_ULE, MaxBECount, MaxItersWithoutWrap))
-    return ConstantRange::getFull(BitWidth);
-
-  ICmpInst::Predicate LEPred =
-      IsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
-  ICmpInst::Predicate GEPred =
-      IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
-  const SCEV *Start = AddRec->getStart();
-  const SCEV *End = AddRec->evaluateAtIteration(MaxBECount, *this);
-  // We could handle non-constant End, but it harms compile time a lot.
-  if (!isa<SCEVConstant>(End))
-    return ConstantRange::getFull(BitWidth);
-
-  // We know that there is no self-wrap. Let's take Start and End values and
-  // look at all intermediate values V1, V2, ..., Vn that IndVar takes during
-  // the iteration. They either lie inside the range [Min(Start, End),
-  // Max(Start, End)] or outside it:
-  //
-  // Case 1:   RangeMin    ...    Start V1 ... VN End ...           RangeMax;
-  // Case 2:   RangeMin Vk ... V1 Start    ...    End Vn ... Vk + 1 RangeMax;
-  //
-  // No self wrap flag guarantees that the intermediate values cannot be BOTH
-  // outside and inside the range [Min(Start, End), Max(Start, End)]. Using that
-  // knowledge, let's try to prove that we are dealing with Case 1. It is so if
-  // Start <= End and step is positive, or Start >= End and step is negative.
-  ConstantRange StartRange =
-      IsSigned ? getSignedRange(Start) : getUnsignedRange(Start);
-  ConstantRange EndRange =
-      IsSigned ? getSignedRange(End) : getUnsignedRange(End);
-  ConstantRange RangeBetween = StartRange.unionWith(EndRange);
-  // If they already cover full iteration space, we will know nothing useful
-  // even if we prove what we want to prove.
-  if (RangeBetween.isFullSet())
-    return RangeBetween;
-
-  if (isKnownPositive(Step) &&
-      isKnownViaNonRecursiveReasoning(LEPred, Start, End))
-    return RangeBetween;
-  else if (isKnownNegative(Step) &&
-           isKnownViaNonRecursiveReasoning(GEPred, Start, End))
-    return RangeBetween;
-  return ConstantRange::getFull(BitWidth);
 }
 
 ConstantRange ScalarEvolution::getRangeViaFactoring(const SCEV *Start,

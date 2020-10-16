@@ -60,14 +60,16 @@ void test5(_Complex int *x) {
   (*x)++;
 }
 
-int i1[(2+3i)*(5+7i) == 29i-11 ? 1 : -1];
-int i2[(29i-11)/(5+7i) == 2+3i ? 1 : -1];
-int i3[-(2+3i) == +(-3i-2) ? 1 : -1];
-int i4[~(2+3i) == 2-3i ? 1 : -1];
-int i5[(3i == -(-3i) ? ((void)3, 1i - 1) : 0) == 1i - 1 ? 1 : -1];
+// None of these array bounds is an ICE due to the use of literals of
+// non-integer type. But we can constant-fold all of them.
+int i1[(2+3i)*(5+7i) == 29i-11 ? 1 : -1]; // expected-warning {{fold}}
+int i2[(29i-11)/(5+7i) == 2+3i ? 1 : -1]; // expected-warning {{fold}}
+int i3[-(2+3i) == +(-3i-2) ? 1 : -1]; // expected-warning {{fold}}
+int i4[~(2+3i) == 2-3i ? 1 : -1]; // expected-warning {{fold}}
+int i5[(3i == -(-3i) ? ((void)3, 1i - 1) : 0) == 1i - 1 ? 1 : -1]; // expected-warning {{fold}}
 
-int f1[(2.0+3.0i)*(5.0+7.0i) == 29.0i-11.0 ? 1 : -1];
-int f2[(29.0i-11.0)/(5.0+7.0i) == 2.0+3.0i ? 1 : -1];
-int f3[-(2.0+3.0i) == +(-3.0i-2.0) ? 1 : -1];
-int f4[~(2.0+3.0i) == 2.0-3.0i ? 1 : -1];
-int f5[(3.0i == -(-3.0i) ? ((void)3.0, __extension__ (1.0i - 1.0)) : 0) == 1.0i - 1.0 ? 1 : -1];
+int f1[(2.0+3.0i)*(5.0+7.0i) == 29.0i-11.0 ? 1 : -1]; // expected-warning {{fold}}
+int f2[(29.0i-11.0)/(5.0+7.0i) == 2.0+3.0i ? 1 : -1]; // expected-warning {{fold}}
+int f3[-(2.0+3.0i) == +(-3.0i-2.0) ? 1 : -1]; // expected-warning {{fold}}
+int f4[~(2.0+3.0i) == 2.0-3.0i ? 1 : -1]; // expected-warning {{fold}}
+int f5[(3.0i == -(-3.0i) ? ((void)3.0, __extension__ (1.0i - 1.0)) : 0) == 1.0i - 1.0 ? 1 : -1]; // expected-warning {{fold}}
