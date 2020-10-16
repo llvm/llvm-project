@@ -515,9 +515,9 @@ static Instruction *foldVecTruncToExtElt(TruncInst &Trunc,
   return ExtractElementInst::Create(VecInput, IC.Builder.getInt32(Elt));
 }
 
-/// Rotate left/right may occur in a wider type than necessary because of type
-/// promotion rules. Try to narrow the inputs and convert to funnel shift.
-Instruction *InstCombinerImpl::narrowRotate(TruncInst &Trunc) {
+/// Funnel/Rotate left/right may occur in a wider type than necessary because of
+/// type promotion rules. Try to narrow the inputs and convert to funnel shift.
+Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
   assert((isa<VectorType>(Trunc.getSrcTy()) ||
           shouldChangeType(Trunc.getSrcTy(), Trunc.getType())) &&
          "Don't narrow to an illegal scalar type");
@@ -529,38 +529,38 @@ Instruction *InstCombinerImpl::narrowRotate(TruncInst &Trunc) {
   if (!isPowerOf2_32(NarrowWidth))
     return nullptr;
 
-  // First, find an or'd pair of opposite shifts with the same shifted operand:
-  // trunc (or (lshr ShVal, ShAmt0), (shl ShVal, ShAmt1))
+  // First, find an or'd pair of opposite shifts:
+  // trunc (or (lshr ShVal0, ShAmt0), (shl ShVal1, ShAmt1))
   BinaryOperator *Or0, *Or1;
   if (!match(Trunc.getOperand(0), m_OneUse(m_Or(m_BinOp(Or0), m_BinOp(Or1)))))
     return nullptr;
 
-  Value *ShVal, *ShAmt0, *ShAmt1;
-  if (!match(Or0, m_OneUse(m_LogicalShift(m_Value(ShVal), m_Value(ShAmt0)))) ||
-      !match(Or1,
-             m_OneUse(m_LogicalShift(m_Specific(ShVal), m_Value(ShAmt1)))) ||
+  Value *ShVal0, *ShVal1, *ShAmt0, *ShAmt1;
+  if (!match(Or0, m_OneUse(m_LogicalShift(m_Value(ShVal0), m_Value(ShAmt0)))) ||
+      !match(Or1, m_OneUse(m_LogicalShift(m_Value(ShVal1), m_Value(ShAmt1)))) ||
       Or0->getOpcode() == Or1->getOpcode())
     return nullptr;
 
-  // Canonicalize to or(shl(ShVal, ShAmt0), lshr(ShVal, ShAmt1)).
+  // Canonicalize to or(shl(ShVal0, ShAmt0), lshr(ShVal1, ShAmt1)).
   if (Or0->getOpcode() == BinaryOperator::LShr) {
     std::swap(Or0, Or1);
+    std::swap(ShVal0, ShVal1);
     std::swap(ShAmt0, ShAmt1);
   }
   assert(Or0->getOpcode() == BinaryOperator::Shl &&
          Or1->getOpcode() == BinaryOperator::LShr &&
          "Illegal or(shift,shift) pair");
 
-  // Match the shift amount operands for a rotate pattern. This always matches
-  // a subtraction on the R operand.
+  // Match the shift amount operands for a funnel/rotate pattern. This always
+  // matches a subtraction on the R operand.
   auto matchShiftAmount = [](Value *L, Value *R, unsigned Width) -> Value * {
     // The shift amounts may add up to the narrow bit width:
-    // (shl ShVal, L) | (lshr ShVal, Width - L)
+    // (shl ShVal0, L) | (lshr ShVal1, Width - L)
     if (match(R, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(L)))))
       return L;
 
     // The shift amount may be masked with negation:
-    // (shl ShVal, (X & (Width - 1))) | (lshr ShVal, ((-X) & (Width - 1)))
+    // (shl ShVal0, (X & (Width - 1))) | (lshr ShVal1, ((-X) & (Width - 1)))
     Value *X;
     unsigned Mask = Width - 1;
     if (match(L, m_And(m_Value(X), m_SpecificInt(Mask))) &&
@@ -574,6 +574,11 @@ Instruction *InstCombinerImpl::narrowRotate(TruncInst &Trunc) {
 
     return nullptr;
   };
+
+  // TODO: Add support for funnel shifts (ShVal0 != ShVal1).
+  if (ShVal0 != ShVal1)
+    return nullptr;
+  Value *ShVal = ShVal0;
 
   Value *ShAmt = matchShiftAmount(ShAmt0, ShAmt1, NarrowWidth);
   bool IsFshl = true; // Sub on LSHR.
@@ -654,7 +659,7 @@ Instruction *InstCombinerImpl::narrowBinOp(TruncInst &Trunc) {
   default: break;
   }
 
-  if (Instruction *NarrowOr = narrowRotate(Trunc))
+  if (Instruction *NarrowOr = narrowFunnelShift(Trunc))
     return NarrowOr;
 
   return nullptr;
