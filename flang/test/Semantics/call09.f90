@@ -46,6 +46,7 @@ module m
     intrinsic :: sin
     procedure(realfunc), pointer :: p
     procedure(intfunc), pointer :: ip
+    integer, pointer :: intPtr
     p => realfunc
     ip => intfunc
     call s01(realfunc) ! ok
@@ -60,6 +61,10 @@ module m
     !ERROR: Actual argument procedure has interface incompatible with dummy argument 'p='
     call s01(null(ip))
     call s01(sin) ! ok
+    !ERROR: Actual argument associated with procedure dummy argument 'p=' is not a procedure
+    call s01(null(intPtr))
+    !ERROR: Actual argument associated with procedure dummy argument 'p=' is not a procedure
+    call s01(B"0101")
     !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
     call s02(realfunc)
     call s02(p) ! ok

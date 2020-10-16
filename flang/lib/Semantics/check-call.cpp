@@ -505,63 +505,67 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
         argProcDesignator ? argProcDesignator->GetSymbol() : nullptr};
     if (auto argChars{characteristics::DummyArgument::FromActual(
             "actual argument", *expr, context)}) {
-      if (auto *argProc{
-              std::get_if<characteristics::DummyProcedure>(&argChars->u)}) {
-        characteristics::Procedure &argInterface{argProc->procedure.value()};
-        argInterface.attrs.reset(characteristics::Procedure::Attr::NullPointer);
-        if (!argProcSymbol || argProcSymbol->attrs().test(Attr::INTRINSIC)) {
-          // It's ok to pass ELEMENTAL unrestricted intrinsic functions.
-          argInterface.attrs.reset(characteristics::Procedure::Attr::Elemental);
-        } else if (argInterface.attrs.test(
-                       characteristics::Procedure::Attr::Elemental)) {
-          if (argProcSymbol) { // C1533
-            evaluate::SayWithDeclaration(messages, *argProcSymbol,
-                "Non-intrinsic ELEMENTAL procedure '%s' may not be passed as an actual argument"_err_en_US,
-                argProcSymbol->name());
-            return; // avoid piling on with checks below
-          } else {
+      if (!argChars->IsTypelessIntrinsicDummy()) {
+        if (auto *argProc{
+                std::get_if<characteristics::DummyProcedure>(&argChars->u)}) {
+          characteristics::Procedure &argInterface{argProc->procedure.value()};
+          argInterface.attrs.reset(
+              characteristics::Procedure::Attr::NullPointer);
+          if (!argProcSymbol || argProcSymbol->attrs().test(Attr::INTRINSIC)) {
+            // It's ok to pass ELEMENTAL unrestricted intrinsic functions.
             argInterface.attrs.reset(
-                characteristics::Procedure::Attr::NullPointer);
-          }
-        }
-        if (!interface.IsPure()) {
-          // 15.5.2.9(1): if dummy is not pure, actual need not be.
-          argInterface.attrs.reset(characteristics::Procedure::Attr::Pure);
-        }
-        if (interface.HasExplicitInterface()) {
-          if (interface != argInterface) {
-            messages.Say(
-                "Actual argument procedure has interface incompatible with %s"_err_en_US,
-                dummyName);
-          }
-        } else { // 15.5.2.9(2,3)
-          if (interface.IsSubroutine() && argInterface.IsFunction()) {
-            messages.Say(
-                "Actual argument associated with procedure %s is a function but must be a subroutine"_err_en_US,
-                dummyName);
-          } else if (interface.IsFunction()) {
-            if (argInterface.IsFunction()) {
-              if (interface.functionResult != argInterface.functionResult) {
-                messages.Say(
-                    "Actual argument function associated with procedure %s has incompatible result type"_err_en_US,
-                    dummyName);
-              }
-            } else if (argInterface.IsSubroutine()) {
-              messages.Say(
-                  "Actual argument associated with procedure %s is a subroutine but must be a function"_err_en_US,
-                  dummyName);
+                characteristics::Procedure::Attr::Elemental);
+          } else if (argInterface.attrs.test(
+                         characteristics::Procedure::Attr::Elemental)) {
+            if (argProcSymbol) { // C1533
+              evaluate::SayWithDeclaration(messages, *argProcSymbol,
+                  "Non-intrinsic ELEMENTAL procedure '%s' may not be passed as an actual argument"_err_en_US,
+                  argProcSymbol->name());
+              return; // avoid piling on with checks below
+            } else {
+              argInterface.attrs.reset(
+                  characteristics::Procedure::Attr::NullPointer);
             }
           }
+          if (!interface.IsPure()) {
+            // 15.5.2.9(1): if dummy is not pure, actual need not be.
+            argInterface.attrs.reset(characteristics::Procedure::Attr::Pure);
+          }
+          if (interface.HasExplicitInterface()) {
+            if (interface != argInterface) {
+              messages.Say(
+                  "Actual argument procedure has interface incompatible with %s"_err_en_US,
+                  dummyName);
+            }
+          } else { // 15.5.2.9(2,3)
+            if (interface.IsSubroutine() && argInterface.IsFunction()) {
+              messages.Say(
+                  "Actual argument associated with procedure %s is a function but must be a subroutine"_err_en_US,
+                  dummyName);
+            } else if (interface.IsFunction()) {
+              if (argInterface.IsFunction()) {
+                if (interface.functionResult != argInterface.functionResult) {
+                  messages.Say(
+                      "Actual argument function associated with procedure %s has incompatible result type"_err_en_US,
+                      dummyName);
+                }
+              } else if (argInterface.IsSubroutine()) {
+                messages.Say(
+                    "Actual argument associated with procedure %s is a subroutine but must be a function"_err_en_US,
+                    dummyName);
+              }
+            }
+          }
+        } else {
+          messages.Say(
+              "Actual argument associated with procedure %s is not a procedure"_err_en_US,
+              dummyName);
         }
-      } else {
+      } else if (!(dummyIsPointer && IsNullPointer(*expr))) {
         messages.Say(
             "Actual argument associated with procedure %s is not a procedure"_err_en_US,
             dummyName);
       }
-    } else if (!(dummyIsPointer && IsNullPointer(*expr))) {
-      messages.Say(
-          "Actual argument associated with procedure %s is not a procedure"_err_en_US,
-          dummyName);
     }
     if (interface.HasExplicitInterface()) {
       if (dummyIsPointer) {
@@ -610,6 +614,9 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                   std::holds_alternative<evaluate::BOZLiteralConstant>(
                       expr->u)) {
                 // ok
+              } else if (object.type.type().IsTypelessIntrinsicArgument() &&
+                  evaluate::IsNullPointer(*expr)) {
+                // ok, calling ASSOCIATED(NULL())
               } else {
                 messages.Say(
                     "Actual argument '%s' associated with %s is not a variable or typed expression"_err_en_US,
