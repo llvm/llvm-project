@@ -898,8 +898,8 @@ namespace dr367 { // dr367: yes
   int c[true ? *new int : 4]; // expected-error 2{{variable length array}} expected-note {{read of uninitialized}}
   int d[true ? 4 : *new int];
 #if __cplusplus < 201103L
-  // expected-error@-4 {{variable length array}} expected-error@-4 {{constant expression}}
-  // expected-error@-3 {{variable length array}} expected-error@-3 {{constant expression}}
+  // expected-error@-4 2{{variable length array}}
+  // expected-error@-3 2{{variable length array}}
 #endif
 }
 
