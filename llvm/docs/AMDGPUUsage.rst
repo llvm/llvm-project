@@ -277,9 +277,7 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                               .. TODO
                                                                                  Add product
                                                                                  names.
-     ``gfx1032``                 ``amdgcn``   dGPU  - xnack                   *TBA*
-                                                      [off]
-                                                    - wavefrontsize64
+     ``gfx1032``                 ``amdgcn``   dGPU  - wavefrontsize64         *TBA*
                                                       [off]
                                                     - cumode
                                                       [off]
@@ -832,7 +830,6 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1030`` 0x036      ``gfx1030``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1031`` 0x037      ``gfx1031``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1032`` 0x038      ``gfx1032``
-     *reserved*                        0x038      Reserved.
      *reserved*                        0x039      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX602``  0x03a      ``gfx602``
      ``EF_AMDGPU_MACH_AMDGCN_GFX705``  0x03b      ``gfx705``
