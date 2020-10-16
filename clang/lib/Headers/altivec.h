@@ -7927,6 +7927,18 @@ vec_rl(vector unsigned long long __a, vector unsigned long long __b) {
 }
 #endif
 
+#ifdef __POWER10_VECTOR__
+static __inline__ vector signed __int128 __ATTRS_o_ai
+vec_rl(vector signed __int128 __a, vector unsigned __int128 __b) {
+  return (__b << __a)|(__b >> ((__CHAR_BIT__ * sizeof(vector signed __int128)) - __a));
+}
+
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_rl(vector unsigned __int128 __a, vector unsigned __int128 __b) {
+  return (__b << __a)|(__b >> ((__CHAR_BIT__ * sizeof(vector unsigned __int128)) - __a));
+}
+#endif
+
 /* vec_rlmi */
 #ifdef __POWER9_VECTOR__
 static __inline__ vector unsigned int __ATTRS_o_ai
@@ -7940,8 +7952,24 @@ vec_rlmi(vector unsigned long long __a, vector unsigned long long __b,
          vector unsigned long long __c) {
   return __builtin_altivec_vrldmi(__a, __c, __b);
 }
+#endif
+
+#ifdef __POWER10_VECTOR__
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_rlmi(vector unsigned __int128 __a, vector unsigned __int128 __b,
+         vector unsigned __int128 __c) {
+  return __builtin_altivec_vrlqmi(__a, __c, __b);
+}
+
+static __inline__ vector signed __int128 __ATTRS_o_ai
+vec_rlmi(vector signed __int128 __a, vector signed __int128 __b,
+         vector signed __int128 __c) {
+  return __builtin_altivec_vrlqmi(__a, __c, __b);
+}
+#endif
 
 /* vec_rlnm */
+#ifdef __POWER9_VECTOR__
 static __inline__ vector unsigned int __ATTRS_o_ai
 vec_rlnm(vector unsigned int __a, vector unsigned int __b,
          vector unsigned int __c) {
@@ -7954,6 +7982,42 @@ vec_rlnm(vector unsigned long long __a, vector unsigned long long __b,
          vector unsigned long long __c) {
   vector unsigned long long OneByte = { 0x8, 0x8 };
   return __builtin_altivec_vrldnm(__a, ((__c << OneByte) | __b));
+}
+#endif
+
+#ifdef __POWER10_VECTOR__
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_rlnm(vector unsigned __int128 __a, vector unsigned __int128 __b,
+         vector unsigned __int128 __c) {
+  // Merge __b and __c using an appropriate shuffle.
+  vector unsigned char TmpB = (vector unsigned char)__b;
+  vector unsigned char TmpC = (vector unsigned char)__c;
+  vector unsigned char MaskAndShift =
+#ifdef __LITTLE_ENDIAN__
+      __builtin_shufflevector(TmpB, TmpC, -1, -1, -1, -1, -1, -1, -1, -1, 16, 0,
+                              1, -1, -1, -1, -1, -1);
+#else
+      __builtin_shufflevector(TmpB, TmpC, -1, -1, -1, -1, -1, 31, 30, 15, -1,
+                              -1, -1, -1, -1, -1, -1, -1);
+#endif
+   return __builtin_altivec_vrlqnm(__a, (vector unsigned __int128) MaskAndShift);
+}
+
+static __inline__ vector signed __int128 __ATTRS_o_ai
+vec_rlnm(vector signed __int128 __a, vector signed __int128 __b,
+         vector signed __int128 __c) {
+  // Merge __b and __c using an appropriate shuffle.
+  vector unsigned char TmpB = (vector unsigned char)__b;
+  vector unsigned char TmpC = (vector unsigned char)__c;
+  vector unsigned char MaskAndShift =
+#ifdef __LITTLE_ENDIAN__
+      __builtin_shufflevector(TmpB, TmpC, -1, -1, -1, -1, -1, -1, -1, -1, 16, 0,
+                              1, -1, -1, -1, -1, -1);
+#else
+      __builtin_shufflevector(TmpB, TmpC, -1, -1, -1, -1, -1, 31, 30, 15, -1,
+                              -1, -1, -1, -1, -1, -1, -1);
+#endif
+  return __builtin_altivec_vrlqnm(__a, (vector unsigned __int128) MaskAndShift);
 }
 #endif
 
