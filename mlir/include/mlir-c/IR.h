@@ -440,6 +440,9 @@ MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr);
 /** Gets the context that an attribute was created with. */
 MlirContext mlirAttributeGetContext(MlirAttribute attribute);
 
+/** Gets the type of this attribute. */
+MlirType mlirAttributeGetType(MlirAttribute attribute);
+
 /** Checks whether an attribute is null. */
 static inline int mlirAttributeIsNull(MlirAttribute attr) { return !attr.ptr; }
 
