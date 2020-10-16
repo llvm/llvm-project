@@ -94,31 +94,16 @@ llvm::Error PseudoTerminal::OpenFirstAvailablePrimary(int oflag) {
 #endif
 }
 
-// Open the secondary pseudo terminal for the current primary pseudo terminal. A
-// primary pseudo terminal should already be valid prior to calling this
-// function (see OpenFirstAvailablePrimary()). The file descriptor is stored
-// this object's member variables and can be accessed via the
-// GetSecondaryFileDescriptor(), or released using the
-// ReleaseSecondaryFileDescriptor() member function.
-//
-// RETURNS:
-//  True when successful, false indicating an error occurred.
-bool PseudoTerminal::OpenSecondary(int oflag, char *error_str,
-                                   size_t error_len) {
-  if (error_str)
-    error_str[0] = '\0';
-
+llvm::Error PseudoTerminal::OpenSecondary(int oflag) {
   CloseSecondaryFileDescriptor();
 
   std::string name = GetSecondaryName();
   m_secondary_fd = llvm::sys::RetryAfterSignal(-1, ::open, name.c_str(), oflag);
-  if (m_secondary_fd < 0) {
-    if (error_str)
-      ErrnoToStr(error_str, error_len);
-    return false;
-  }
+  if (m_secondary_fd >= 0)
+    return llvm::Error::success();
 
-  return true;
+  return llvm::errorCodeToError(
+      std::error_code(errno, std::generic_category()));
 }
 
 std::string PseudoTerminal::GetSecondaryName() const {
@@ -174,35 +159,36 @@ lldb::pid_t PseudoTerminal::Fork(char *error_str, size_t error_len) {
     // Child Process
     ::setsid();
 
-    if (OpenSecondary(O_RDWR, error_str, error_len)) {
-      // Successfully opened secondary
+    if (llvm::Error Err = OpenSecondary(O_RDWR)) {
+      snprintf(error_str, error_len, "%s", toString(std::move(Err)).c_str());
+      return LLDB_INVALID_PROCESS_ID;
+    }
 
-      // Primary FD should have O_CLOEXEC set, but let's close it just in
-      // case...
-      ClosePrimaryFileDescriptor();
+    // Primary FD should have O_CLOEXEC set, but let's close it just in
+    // case...
+    ClosePrimaryFileDescriptor();
 
 #if defined(TIOCSCTTY)
-      // Acquire the controlling terminal
-      if (::ioctl(m_secondary_fd, TIOCSCTTY, (char *)0) < 0) {
-        if (error_str)
-          ErrnoToStr(error_str, error_len);
-      }
+    // Acquire the controlling terminal
+    if (::ioctl(m_secondary_fd, TIOCSCTTY, (char *)0) < 0) {
+      if (error_str)
+        ErrnoToStr(error_str, error_len);
+    }
 #endif
-      // Duplicate all stdio file descriptors to the secondary pseudo terminal
-      if (::dup2(m_secondary_fd, STDIN_FILENO) != STDIN_FILENO) {
-        if (error_str && !error_str[0])
-          ErrnoToStr(error_str, error_len);
-      }
+    // Duplicate all stdio file descriptors to the secondary pseudo terminal
+    if (::dup2(m_secondary_fd, STDIN_FILENO) != STDIN_FILENO) {
+      if (error_str && !error_str[0])
+        ErrnoToStr(error_str, error_len);
+    }
 
-      if (::dup2(m_secondary_fd, STDOUT_FILENO) != STDOUT_FILENO) {
-        if (error_str && !error_str[0])
-          ErrnoToStr(error_str, error_len);
-      }
+    if (::dup2(m_secondary_fd, STDOUT_FILENO) != STDOUT_FILENO) {
+      if (error_str && !error_str[0])
+        ErrnoToStr(error_str, error_len);
+    }
 
-      if (::dup2(m_secondary_fd, STDERR_FILENO) != STDERR_FILENO) {
-        if (error_str && !error_str[0])
-          ErrnoToStr(error_str, error_len);
-      }
+    if (::dup2(m_secondary_fd, STDERR_FILENO) != STDERR_FILENO) {
+      if (error_str && !error_str[0])
+        ErrnoToStr(error_str, error_len);
     }
   } else {
     // Parent Process
