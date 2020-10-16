@@ -14811,9 +14811,13 @@ void Sema::DefineImplicitLambdaToFunctionPointerConversion(
   SynthesizedFunctionScope Scope(*this, Conv);
   assert(!Conv->getReturnType()->isUndeducedType());
 
+  QualType ConvRT = Conv->getType()->getAs<FunctionType>()->getReturnType();
+  CallingConv CC =
+      ConvRT->getPointeeType()->getAs<FunctionType>()->getCallConv();
+
   CXXRecordDecl *Lambda = Conv->getParent();
   FunctionDecl *CallOp = Lambda->getLambdaCallOperator();
-  FunctionDecl *Invoker = Lambda->getLambdaStaticInvoker();
+  FunctionDecl *Invoker = Lambda->getLambdaStaticInvoker(CC);
 
   if (auto *TemplateArgs = Conv->getTemplateSpecializationArgs()) {
     CallOp = InstantiateFunctionDeclaration(

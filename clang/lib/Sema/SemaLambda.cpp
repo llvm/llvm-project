@@ -1263,30 +1263,61 @@ void Sema::ActOnLambdaError(SourceLocation StartLoc, Scope *CurScope,
   PopFunctionScopeInfo();
 }
 
+template <typename Func>
+static void repeatForLambdaConversionFunctionCallingConvs(
+    Sema &S, const FunctionProtoType &CallOpProto, Func F) {
+  CallingConv DefaultFree = S.Context.getDefaultCallingConvention(
+      CallOpProto.isVariadic(), /*IsCXXMethod=*/false);
+  CallingConv DefaultMember = S.Context.getDefaultCallingConvention(
+      CallOpProto.isVariadic(), /*IsCXXMethod=*/true);
+  CallingConv CallOpCC = CallOpProto.getCallConv();
+
+  if (CallOpCC == DefaultMember && DefaultMember != DefaultFree) {
+    F(DefaultFree);
+    F(DefaultMember);
+  } else {
+    F(CallOpCC);
+  }
+}
+
+// Returns the 'standard' calling convention to be used for the lambda
+// conversion function, that is, the 'free' function calling convention unless
+// it is overridden by a non-default calling convention attribute.
+static CallingConv
+getLambdaConversionFunctionCallConv(Sema &S,
+                                    const FunctionProtoType *CallOpProto) {
+  CallingConv DefaultFree = S.Context.getDefaultCallingConvention(
+      CallOpProto->isVariadic(), /*IsCXXMethod=*/false);
+  CallingConv DefaultMember = S.Context.getDefaultCallingConvention(
+      CallOpProto->isVariadic(), /*IsCXXMethod=*/true);
+  CallingConv CallOpCC = CallOpProto->getCallConv();
+
+  // If the call-operator hasn't been changed, return both the 'free' and
+  // 'member' function calling convention.
+  if (CallOpCC == DefaultMember && DefaultMember != DefaultFree)
+    return DefaultFree;
+  return CallOpCC;
+}
+
 QualType Sema::getLambdaConversionFunctionResultType(
-    const FunctionProtoType *CallOpProto) {
-  // The function type inside the pointer type is the same as the call
-  // operator with some tweaks. The calling convention is the default free
-  // function convention, and the type qualifications are lost.
+    const FunctionProtoType *CallOpProto, CallingConv CC) {
   const FunctionProtoType::ExtProtoInfo CallOpExtInfo =
       CallOpProto->getExtProtoInfo();
   FunctionProtoType::ExtProtoInfo InvokerExtInfo = CallOpExtInfo;
-  CallingConv CC = Context.getDefaultCallingConvention(
-      CallOpProto->isVariadic(), /*IsCXXMethod=*/false);
   InvokerExtInfo.ExtInfo = InvokerExtInfo.ExtInfo.withCallingConv(CC);
   InvokerExtInfo.TypeQuals = Qualifiers();
   assert(InvokerExtInfo.RefQualifier == RQ_None &&
-      "Lambda's call operator should not have a reference qualifier");
+         "Lambda's call operator should not have a reference qualifier");
   return Context.getFunctionType(CallOpProto->getReturnType(),
                                  CallOpProto->getParamTypes(), InvokerExtInfo);
 }
 
 /// Add a lambda's conversion to function pointer, as described in
 /// C++11 [expr.prim.lambda]p6.
-static void addFunctionPointerConversion(Sema &S,
-                                         SourceRange IntroducerRange,
+static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
                                          CXXRecordDecl *Class,
-                                         CXXMethodDecl *CallOperator) {
+                                         CXXMethodDecl *CallOperator,
+                                         QualType InvokerFunctionTy) {
   // This conversion is explicitly disabled if the lambda's function has
   // pass_object_size attributes on any of its parameters.
   auto HasPassObjectSizeAttr = [](const ParmVarDecl *P) {
@@ -1296,8 +1327,6 @@ static void addFunctionPointerConversion(Sema &S,
     return;
 
   // Add the conversion to function pointer.
-  QualType InvokerFunctionTy = S.getLambdaConversionFunctionResultType(
-      CallOperator->getType()->castAs<FunctionProtoType>());
   QualType PtrToFunctionTy = S.Context.getPointerType(InvokerFunctionTy);
 
   // Create the type of the conversion function.
@@ -1442,13 +1471,37 @@ static void addFunctionPointerConversion(Sema &S,
     Class->addDecl(Invoke);
 }
 
+/// Add a lambda's conversion to function pointers, as described in
+/// C++11 [expr.prim.lambda]p6. Note that in most cases, this should emit only a
+/// single pointer conversion. In the event that the default calling convention
+/// for free and member functions is different, it will emit both conventions.
+/// FIXME: Implement emitting a version of the operator for EVERY calling
+/// convention for MSVC, as described here:
+/// https://devblogs.microsoft.com/oldnewthing/20150220-00/?p=44623.
+static void addFunctionPointerConversions(Sema &S, SourceRange IntroducerRange,
+                                          CXXRecordDecl *Class,
+                                          CXXMethodDecl *CallOperator) {
+  const FunctionProtoType *CallOpProto =
+      CallOperator->getType()->castAs<FunctionProtoType>();
+
+  repeatForLambdaConversionFunctionCallingConvs(
+      S, *CallOpProto, [&](CallingConv CC) {
+        QualType InvokerFunctionTy =
+            S.getLambdaConversionFunctionResultType(CallOpProto, CC);
+        addFunctionPointerConversion(S, IntroducerRange, Class, CallOperator,
+                                     InvokerFunctionTy);
+      });
+}
+
 /// Add a lambda's conversion to block pointer.
 static void addBlockPointerConversion(Sema &S,
                                       SourceRange IntroducerRange,
                                       CXXRecordDecl *Class,
                                       CXXMethodDecl *CallOperator) {
+  const FunctionProtoType *CallOpProto =
+      CallOperator->getType()->castAs<FunctionProtoType>();
   QualType FunctionTy = S.getLambdaConversionFunctionResultType(
-      CallOperator->getType()->castAs<FunctionProtoType>());
+      CallOpProto, getLambdaConversionFunctionCallConv(S, CallOpProto));
   QualType BlockPtrTy = S.Context.getBlockPointerType(FunctionTy);
 
   FunctionProtoType::ExtProtoInfo ConversionEPI(
@@ -1795,8 +1848,8 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     //   to pointer to function having the same parameter and return
     //   types as the closure type's function call operator.
     if (Captures.empty() && CaptureDefault == LCD_None)
-      addFunctionPointerConversion(*this, IntroducerRange, Class,
-                                   CallOperator);
+      addFunctionPointerConversions(*this, IntroducerRange, Class,
+                                    CallOperator);
 
     // Objective-C++:
     //   The closure type for a lambda-expression has a public non-virtual
