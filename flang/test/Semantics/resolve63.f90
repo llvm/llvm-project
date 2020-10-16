@@ -161,6 +161,7 @@ contains
   subroutine s1(x, y) 
     logical :: x
     integer :: y
+    integer, pointer :: px
     logical :: l
     complex :: z
     y = y + z'1'  !OK
@@ -171,8 +172,18 @@ contains
     y = -z'1'
     !ERROR: Operands of + must be numeric; have LOGICAL(4) and untyped
     y = x + z'1'
-    !ERROR: Operands of .NE. must have comparable types; have LOGICAL(4) and untyped
+    !ERROR: NULL() not allowed as an operand of a relational operator
     l = x /= null()
+    !ERROR: NULL() not allowed as an operand of a relational operator
+    l = null(px) /= null(px)
+    !ERROR: NULL() not allowed as an operand of a relational operator
+    l = x /= null(px)
+    !ERROR: NULL() not allowed as an operand of a relational operator
+    l = px /= null()
+    !ERROR: NULL() not allowed as an operand of a relational operator
+    l = px /= null(px)
+    !ERROR: NULL() not allowed as an operand of a relational operator
+    l = null() /= null()
   end
 end
 

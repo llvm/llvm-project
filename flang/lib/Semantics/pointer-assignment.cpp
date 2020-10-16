@@ -250,59 +250,11 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
   return true;
 }
 
-// Compare procedure characteristics for equality except that lhs may be
-// Pure or Elemental when rhs is not.
-static bool CharacteristicsMatch(const Procedure &lhs, const Procedure &rhs) {
-  using Attr = Procedure::Attr;
-  auto lhsAttrs{rhs.attrs};
-  lhsAttrs.set(
-      Attr::Pure, lhs.attrs.test(Attr::Pure) | rhs.attrs.test(Attr::Pure));
-  lhsAttrs.set(Attr::Elemental,
-      lhs.attrs.test(Attr::Elemental) | rhs.attrs.test(Attr::Elemental));
-  return lhsAttrs == rhs.attrs && lhs.functionResult == rhs.functionResult &&
-      lhs.dummyArguments == rhs.dummyArguments;
-}
-
 // Common handling for procedure pointer right-hand sides
 bool PointerAssignmentChecker::Check(
     parser::CharBlock rhsName, bool isCall, const Procedure *rhsProcedure) {
-  std::optional<MessageFixedText> msg;
-  if (!procedure_) {
-    msg = "In assignment to object %s, the target '%s' is a procedure"
-          " designator"_err_en_US;
-  } else if (!rhsProcedure) {
-    msg = "In assignment to procedure %s, the characteristics of the target"
-          " procedure '%s' could not be determined"_err_en_US;
-  } else if (CharacteristicsMatch(*procedure_, *rhsProcedure)) {
-    // OK
-  } else if (isCall) {
-    msg = "Procedure %s associated with result of reference to function '%s'"
-          " that is an incompatible procedure pointer"_err_en_US;
-  } else if (procedure_->IsPure() && !rhsProcedure->IsPure()) {
-    msg = "PURE procedure %s may not be associated with non-PURE"
-          " procedure designator '%s'"_err_en_US;
-  } else if (procedure_->IsElemental() && !rhsProcedure->IsElemental()) {
-    msg = "ELEMENTAL procedure %s may not be associated with non-ELEMENTAL"
-          " procedure designator '%s'"_err_en_US;
-  } else if (procedure_->IsFunction() && !rhsProcedure->IsFunction()) {
-    msg = "Function %s may not be associated with subroutine"
-          " designator '%s'"_err_en_US;
-  } else if (!procedure_->IsFunction() && rhsProcedure->IsFunction()) {
-    msg = "Subroutine %s may not be associated with function"
-          " designator '%s'"_err_en_US;
-  } else if (procedure_->HasExplicitInterface() &&
-      !rhsProcedure->HasExplicitInterface()) {
-    msg = "Procedure %s with explicit interface may not be associated with"
-          " procedure designator '%s' with implicit interface"_err_en_US;
-  } else if (!procedure_->HasExplicitInterface() &&
-      rhsProcedure->HasExplicitInterface()) {
-    msg = "Procedure %s with implicit interface may not be associated with"
-          " procedure designator '%s' with explicit interface"_err_en_US;
-  } else {
-    msg = "Procedure %s associated with incompatible procedure"
-          " designator '%s'"_err_en_US;
-  }
-  if (msg) {
+  if (std::optional<MessageFixedText> msg{
+          evaluate::CheckProcCompatibility(isCall, procedure_, rhsProcedure)}) {
     Say(std::move(*msg), description_, rhsName);
     return false;
   }

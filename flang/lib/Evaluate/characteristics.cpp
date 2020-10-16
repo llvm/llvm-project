@@ -381,7 +381,11 @@ std::optional<DummyArgument> DummyArgument::FromActual(
                 DummyDataObject{
                     TypeAndShape{DynamicType::TypelessIntrinsicArgument()}});
           },
-          [](const NullPointer &) { return std::optional<DummyArgument>{}; },
+          [&](const NullPointer &) {
+            return std::make_optional<DummyArgument>(std::move(name),
+                DummyDataObject{
+                    TypeAndShape{DynamicType::TypelessIntrinsicArgument()}});
+          },
           [&](const ProcedureDesignator &designator) {
             if (auto proc{Procedure::Characterize(
                     designator, context.intrinsics())}) {
@@ -450,6 +454,11 @@ bool DummyArgument::CanBePassedViaImplicitInterface() const {
   } else {
     return true;
   }
+}
+
+bool DummyArgument::IsTypelessIntrinsicDummy() const {
+  const auto *argObj{std::get_if<characteristics::DummyDataObject>(&u)};
+  return argObj && argObj->type.type().IsTypelessIntrinsicArgument();
 }
 
 llvm::raw_ostream &DummyArgument::Dump(llvm::raw_ostream &o) const {
