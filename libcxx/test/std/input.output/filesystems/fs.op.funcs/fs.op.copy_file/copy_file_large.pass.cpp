@@ -54,7 +54,7 @@ TEST_CASE(large_file) {
   const std::string additional_data(additional_size, 'x');
   // Append known data to the end of the source file.
   {
-    std::ofstream outf(file.native(), std::ios_base::app);
+    std::ofstream outf(file.string(), std::ios_base::app);
     TEST_REQUIRE(outf.good());
     outf << additional_data;
     TEST_REQUIRE(outf);
@@ -74,7 +74,7 @@ TEST_CASE(large_file) {
   std::string out_data;
   out_data.reserve(additional_size);
   {
-    std::ifstream dest_file(dest.native());
+    std::ifstream dest_file(dest.string());
     TEST_REQUIRE(dest_file);
     dest_file.seekg(sendfile_size_limit);
     TEST_REQUIRE(dest_file);
