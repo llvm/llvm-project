@@ -209,7 +209,7 @@ define i16 @fshl_16bit(i16 %x, i16 %y, i32 %shift) {
 ; CHECK-NEXT:    [[CONVX:%.*]] = zext i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CONVX]], [[AND]]
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 16, [[AND]]
-; CHECK-NEXT:    [[CONVY:%.*]] = zext i16 [[X]] to i32
+; CHECK-NEXT:    [[CONVY:%.*]] = zext i16 [[Y:%.*]] to i32
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[CONVY]], [[SUB]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[SHL]]
 ; CHECK-NEXT:    [[CONV2:%.*]] = trunc i32 [[OR]] to i16
@@ -219,7 +219,7 @@ define i16 @fshl_16bit(i16 %x, i16 %y, i32 %shift) {
   %convx = zext i16 %x to i32
   %shl = shl i32 %convx, %and
   %sub = sub i32 16, %and
-  %convy = zext i16 %x to i32
+  %convy = zext i16 %y to i32
   %shr = lshr i32 %convy, %sub
   %or = or i32 %shr, %shl
   %conv2 = trunc i32 %or to i16
