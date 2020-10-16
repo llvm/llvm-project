@@ -559,6 +559,10 @@ createCGSCCToFunctionPassAdaptor(FunctionPassT Pass) {
   return CGSCCToFunctionPassAdaptor<FunctionPassT>(std::move(Pass));
 }
 
+/// Checks -abort-on-max-devirt-iterations-reached to see if we should report an
+/// error.
+void maxDevirtIterationsReached();
+
 /// A helper that repeats an SCC pass each time an indirect call is refined to
 /// a direct call by that pass.
 ///
@@ -711,6 +715,7 @@ public:
 
       // Otherwise, if we've already hit our max, we're done.
       if (Iteration >= MaxIterations) {
+        maxDevirtIterationsReached();
         LLVM_DEBUG(
             dbgs() << "Found another devirtualization after hitting the max "
                       "number of repetitions ("
