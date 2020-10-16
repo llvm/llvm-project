@@ -895,6 +895,17 @@ def : GCNPat <
                             SRCMODS.NONE, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
 >;
 
+// Don't allow source modifiers. If there are any source modifiers then it's
+// better to select fma instead of fmac.
+let SubtargetPredicate = HasNoMadMacF32Insts in
+def : GCNPat <
+      (f32 (int_amdgcn_fma_legacy (VOP3NoMods f32:$src0),
+                                  (VOP3NoMods f32:$src1),
+                                  (VOP3NoMods f32:$src2))),
+      (V_FMAC_LEGACY_F32_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
+                             SRCMODS.NONE, $src2, DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
 let SubtargetPredicate = Has16BitInsts in {
 def : FMADPat <f16, V_MAC_F16_e64, fmad>;
 def : FMADPat <f16, V_MAC_F16_e64, AMDGPUfmad_ftz>;
