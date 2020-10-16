@@ -227,14 +227,6 @@ template<class T> complex<T> sqrt (const complex<T>&);
 template<class T> complex<T> tan (const complex<T>&);
 template<class T> complex<T> tanh (const complex<T>&);
 
-template<class T, class charT, class traits>
-  basic_istream<charT, traits>&
-  operator>>(basic_istream<charT, traits>& is, complex<T>& x);
-
-template<class T, class charT, class traits>
-  basic_ostream<charT, traits>&
-  operator<<(basic_ostream<charT, traits>& o, const complex<T>& x);
-
 }  // std
 
 */
