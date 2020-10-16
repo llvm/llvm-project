@@ -457,6 +457,10 @@ MlirContext mlirAttributeGetContext(MlirAttribute attribute) {
   return wrap(unwrap(attribute).getContext());
 }
 
+MlirType mlirAttributeGetType(MlirAttribute attribute) {
+  return wrap(unwrap(attribute).getType());
+}
+
 int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2) {
   return unwrap(a1) == unwrap(a2);
 }
