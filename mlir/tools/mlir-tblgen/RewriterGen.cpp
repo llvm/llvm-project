@@ -259,6 +259,7 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
 
   raw_indented_ostream::DelimitedScope scope(os);
 
+  os << "if(!" << opName << ") return failure();\n";
   for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
     std::string argName = formatv("arg{0}_{1}", depth, i);
     if (DagNode argTree = tree.getArgAsNestedDag(i)) {
