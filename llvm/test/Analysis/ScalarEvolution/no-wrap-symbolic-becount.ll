@@ -7,7 +7,7 @@ define i32 @test_01(i32 %start, i32* %p, i32* %q) {
 ; CHECK-NEXT:    %0 = zext i32 %start to i64
 ; CHECK-NEXT:    --> (zext i32 %start to i64) U: [0,4294967296) S: [0,4294967296)
 ; CHECK-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.next, %backedge ], [ %0, %entry ]
-; CHECK-NEXT:    --> {(zext i32 %start to i64),+,-1}<nsw><%loop> U: [0,4294967296) S: [0,4294967296) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(zext i32 %start to i64),+,-1}<nsw><%loop> U: [-4294967295,4294967296) S: [-4294967295,4294967296) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.next, %backedge ]
 ; CHECK-NEXT:    --> {%start,+,-1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, -1
@@ -21,7 +21,7 @@ define i32 @test_01(i32 %start, i32* %p, i32* %q) {
 ; CHECK-NEXT:    %stop = load i32, i32* %load.addr, align 4
 ; CHECK-NEXT:    --> %stop U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %indvars.iv.next = add nsw i64 %indvars.iv, -1
-; CHECK-NEXT:    --> {(-1 + (zext i32 %start to i64))<nsw>,+,-1}<nsw><%loop> U: [-4294967296,4294967295) S: [-1,4294967295) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(-1 + (zext i32 %start to i64))<nsw>,+,-1}<nsw><%loop> U: [-4294967296,4294967295) S: [-4294967296,4294967295) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_01
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: (zext i32 %start to i64)
