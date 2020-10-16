@@ -1,4 +1,5 @@
 ;; Test --prefix option.
+;; UNSUPPORTED: system-windows
 
 ;; Test prefix option ignored for relative paths.
 
