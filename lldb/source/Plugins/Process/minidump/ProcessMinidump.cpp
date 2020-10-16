@@ -484,6 +484,53 @@ bool ProcessMinidump::UpdateThreadList(ThreadList &old_thread_list,
   return new_thread_list.GetSize(false) > 0;
 }
 
+ModuleSP ProcessMinidump::GetOrCreateModule(UUID minidump_uuid,
+                                            llvm::StringRef name,
+                                            ModuleSpec module_spec) {
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+  Status error;
+
+  ModuleSP module_sp =
+      GetTarget().GetOrCreateModule(module_spec, true /* notify */, &error);
+  if (!module_sp)
+    return module_sp;
+  // We consider the module to be a match if the minidump UUID is a
+  // prefix of the actual UUID, or if either of the UUIDs are empty.
+  const auto dmp_bytes = minidump_uuid.GetBytes();
+  const auto mod_bytes = module_sp->GetUUID().GetBytes();
+  const bool match = dmp_bytes.empty() || mod_bytes.empty() ||
+                     mod_bytes.take_front(dmp_bytes.size()) == dmp_bytes;
+  if (match) {
+    LLDB_LOG(log, "Partial uuid match for {0}.", name);
+    return module_sp;
+  }
+
+  // Breakpad generates minindump files, and if there is no GNU build
+  // ID in the binary, it will calculate a UUID by hashing first 4096
+  // bytes of the .text section and using that as the UUID for a module
+  // in the minidump. Facebook uses a modified breakpad client that
+  // uses a slightly modified this hash to avoid collisions. Check for
+  // UUIDs from the minindump that match these cases and accept the
+  // module we find if they do match.
+  std::vector<uint8_t> breakpad_uuid;
+  std::vector<uint8_t> facebook_uuid;
+  HashElfTextSection(module_sp, breakpad_uuid, facebook_uuid);
+  if (dmp_bytes == llvm::ArrayRef<uint8_t>(breakpad_uuid)) {
+    LLDB_LOG(log, "Breakpad .text hash match for {0}.", name);
+    return module_sp;
+  }
+  if (dmp_bytes == llvm::ArrayRef<uint8_t>(facebook_uuid)) {
+    LLDB_LOG(log, "Facebook .text hash match for {0}.", name);
+    return module_sp;
+  }
+  // The UUID wasn't a partial match and didn't match the .text hash
+  // so remove the module from the target, we will need to create a
+  // placeholder object file.
+  GetTarget().GetImages().Remove(module_sp);
+  module_sp.reset();
+  return module_sp;
+}
+
 void ProcessMinidump::ReadModuleList() {
   std::vector<const minidump::Module *> filtered_modules =
       m_minidump_parser->GetFilteredModuleList();
@@ -513,54 +560,22 @@ void ProcessMinidump::ReadModuleList() {
     // add the module to the target if it finds one.
     lldb::ModuleSP module_sp = GetTarget().GetOrCreateModule(module_spec,
                                                      true /* notify */, &error);
-    if (!module_sp) {
-      // Try and find a module without specifying the UUID and only looking for
-      // the file given a basename. We then will look for a partial UUID match
-      // if we find any matches. This function will add the module to the
-      // target if it finds one, so we need to remove the module from the target
-      // if the UUID doesn't match during our manual UUID verification. This
-      // allows the "target.exec-search-paths" setting to specify one or more
-      // directories that contain executables that can be searched for matches.
-      ModuleSpec basename_module_spec(module_spec);
-      basename_module_spec.GetUUID().Clear();
-      basename_module_spec.GetFileSpec().GetDirectory().Clear();
-      module_sp = GetTarget().GetOrCreateModule(basename_module_spec,
-                                                true /* notify */, &error);
-      if (module_sp) {
-        // We consider the module to be a match if the minidump UUID is a
-        // prefix of the actual UUID, or if either of the UUIDs are empty.
-        const auto dmp_bytes = uuid.GetBytes();
-        const auto mod_bytes = module_sp->GetUUID().GetBytes();
-        const bool match = dmp_bytes.empty() || mod_bytes.empty() ||
-            mod_bytes.take_front(dmp_bytes.size()) == dmp_bytes;
-        if (!match) {
-          // Breakpad generates minindump files, and if there is no GNU build
-          // ID in the binary, it will calculate a UUID by hashing first 4096
-          // bytes of the .text section and using that as the UUID for a module
-          // in the minidump. Facebook uses a modified breakpad client that
-          // uses a slightly modified this hash to avoid collisions. Check for
-          // UUIDs from the minindump that match these cases and accept the
-          // module we find if they do match.
-          std::vector<uint8_t> breakpad_uuid;
-          std::vector<uint8_t> facebook_uuid;
-          HashElfTextSection(module_sp, breakpad_uuid, facebook_uuid);
-          if (dmp_bytes == llvm::ArrayRef<uint8_t>(breakpad_uuid)) {
-            LLDB_LOG(log, "Breakpad .text hash match for {0}.", name);
-          } else if (dmp_bytes == llvm::ArrayRef<uint8_t>(facebook_uuid)) {
-            LLDB_LOG(log, "Facebook .text hash match for {0}.", name);
-          } else {
-            // The UUID wasn't a partial match and didn't match the .text hash
-            // so remove the module from the target, we will need to create a
-            // placeholder object file.
-            GetTarget().GetImages().Remove(module_sp);
-            module_sp.reset();
-          }
-        } else {
-          LLDB_LOG(log, "Partial uuid match for {0}.", name);
-        }
-      }
-    } else {
+    if (module_sp) {
       LLDB_LOG(log, "Full uuid match for {0}.", name);
+    } else {
+      // We couldn't find a module with an exactly-matching UUID.  Sometimes
+      // a minidump UUID is only a partial match or is a hash.  So try again
+      // without specifying the UUID, then again without specifying the
+      // directory if that fails.  This will allow us to find modules with
+      // partial matches or hash UUIDs in user-provided sysroots or search
+      // directories (target.exec-search-paths).
+      ModuleSpec partial_module_spec = module_spec;
+      partial_module_spec.GetUUID().Clear();
+      module_sp = GetOrCreateModule(uuid, name, partial_module_spec);
+      if (!module_sp) {
+        partial_module_spec.GetFileSpec().GetDirectory().Clear();
+        module_sp = GetOrCreateModule(uuid, name, partial_module_spec);
+      }
     }
     if (module_sp) {
       // Watch out for place holder modules that have different paths, but the
