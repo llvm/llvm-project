@@ -1735,6 +1735,8 @@ Instruction *InstCombinerImpl::narrowMaskedBinOp(BinaryOperator &And) {
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
 Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
+  Type *Ty = I.getType();
+
   if (Value *V = SimplifyAndInst(I.getOperand(0), I.getOperand(1),
                                  SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(I, V);
@@ -1769,14 +1771,14 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         C->isOneValue()) {
       // (1 << X) & 1 --> zext(X == 0)
       // (1 >> X) & 1 --> zext(X == 0)
-      Value *IsZero = Builder.CreateICmpEQ(X, ConstantInt::get(I.getType(), 0));
-      return new ZExtInst(IsZero, I.getType());
+      Value *IsZero = Builder.CreateICmpEQ(X, ConstantInt::get(Ty, 0));
+      return new ZExtInst(IsZero, Ty);
     }
 
     const APInt *XorC;
     if (match(Op0, m_OneUse(m_Xor(m_Value(X), m_APInt(XorC))))) {
       // (X ^ C1) & C2 --> (X & C2) ^ (C1&C2)
-      Constant *NewC = ConstantInt::get(I.getType(), *C & *XorC);
+      Constant *NewC = ConstantInt::get(Ty, *C & *XorC);
       Value *And = Builder.CreateAnd(X, Op1);
       And->takeName(Op0);
       return BinaryOperator::CreateXor(And, NewC);
@@ -1791,11 +1793,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       // that aren't set in C2. Meaning we can replace (C1&C2) with C1 in
       // above, but this feels safer.
       APInt Together = *C & *OrC;
-      Value *And = Builder.CreateAnd(X, ConstantInt::get(I.getType(),
-                                                         Together ^ *C));
+      Value *And = Builder.CreateAnd(X, ConstantInt::get(Ty, Together ^ *C));
       And->takeName(Op0);
-      return BinaryOperator::CreateOr(And, ConstantInt::get(I.getType(),
-                                                            Together));
+      return BinaryOperator::CreateOr(And, ConstantInt::get(Ty, Together));
     }
 
     // If the mask is only needed on one incoming arm, push the 'and' op up.
@@ -1818,12 +1818,12 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     }
     const APInt *ShiftC;
     if (match(Op0, m_OneUse(m_SExt(m_AShr(m_Value(X), m_APInt(ShiftC)))))) {
-      unsigned Width = I.getType()->getScalarSizeInBits();
+      unsigned Width = Ty->getScalarSizeInBits();
       if (*C == APInt::getLowBitsSet(Width, Width - ShiftC->getZExtValue())) {
         // We are clearing high bits that were potentially set by sext+ashr:
         // and (sext (ashr X, ShiftC)), C --> lshr (sext X), ShiftC
-        Value *Sext = Builder.CreateSExt(X, I.getType());
-        Constant *ShAmtC = ConstantInt::get(I.getType(), ShiftC->zext(Width));
+        Value *Sext = Builder.CreateSExt(X, Ty);
+        Constant *ShAmtC = ConstantInt::get(Ty, ShiftC->zext(Width));
         return BinaryOperator::CreateLShr(Sext, ShAmtC);
       }
     }
@@ -1862,7 +1862,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
               BinOp = Builder.CreateBinOp(Op0I->getOpcode(), TruncC1, X);
             auto *TruncC2 = ConstantExpr::getTrunc(AndRHS, X->getType());
             auto *And = Builder.CreateAnd(BinOp, TruncC2);
-            return new ZExtInst(And, I.getType());
+            return new ZExtInst(And, Ty);
           }
         }
       }
@@ -1963,16 +1963,15 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   Value *A;
   if (match(Op0, m_OneUse(m_SExt(m_Value(A)))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(A, Op1, Constant::getNullValue(I.getType()));
+    return SelectInst::Create(A, Op1, Constant::getNullValue(Ty));
   if (match(Op1, m_OneUse(m_SExt(m_Value(A)))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(A, Op0, Constant::getNullValue(I.getType()));
+    return SelectInst::Create(A, Op0, Constant::getNullValue(Ty));
 
   // and(ashr(subNSW(Y, X), ScalarSizeInBits(Y)-1), X) --> X s> Y ? X : 0.
   {
     Value *X, *Y;
     const APInt *ShAmt;
-    Type *Ty = I.getType();
     if (match(&I, m_c_And(m_OneUse(m_AShr(m_NSWSub(m_Value(Y), m_Value(X)),
                                           m_APInt(ShAmt))),
                           m_Deferred(X))) &&
