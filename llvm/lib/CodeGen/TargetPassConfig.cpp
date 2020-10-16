@@ -218,6 +218,11 @@ static cl::opt<bool> EnableMachineFunctionSplitter(
     cl::desc("Split out cold blocks from machine functions based on profile "
              "information."));
 
+/// Disable the expand reductions pass for testing.
+static cl::opt<bool> DisableExpandReductions(
+    "disable-expand-reductions", cl::init(false), cl::Hidden,
+    cl::desc("Disable the expand reduction intrinsics pass from running"));
+
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
 /// i.e. -disable-mypass=false has no effect.
@@ -708,7 +713,9 @@ void TargetPassConfig::addIRPasses() {
   addPass(createScalarizeMaskedMemIntrinPass());
 
   // Expand reduction intrinsics into shuffle sequences if the target wants to.
-  addPass(createExpandReductionsPass());
+  // Allow disabling it for testing purposes.
+  if (!DisableExpandReductions)
+    addPass(createExpandReductionsPass());
 }
 
 /// Turn exception handling constructs into something the code generators can
