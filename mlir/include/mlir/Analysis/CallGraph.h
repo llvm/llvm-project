@@ -27,6 +27,7 @@ class CallOpInterface;
 struct CallInterfaceCallable;
 class Operation;
 class Region;
+class SymbolTableCollection;
 
 //===----------------------------------------------------------------------===//
 // CallGraphNode
@@ -189,8 +190,11 @@ public:
   }
 
   /// Resolve the callable for given callee to a node in the callgraph, or the
-  /// external node if a valid node was not resolved.
-  CallGraphNode *resolveCallable(CallOpInterface call) const;
+  /// external node if a valid node was not resolved. The provided symbol table
+  /// is used when resolving calls that reference callables via a symbol
+  /// reference.
+  CallGraphNode *resolveCallable(CallOpInterface call,
+                                 SymbolTableCollection &symbolTable) const;
 
   /// Erase the given node from the callgraph.
   void eraseNode(CallGraphNode *node);
