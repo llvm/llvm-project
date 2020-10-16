@@ -114,6 +114,11 @@ New checks
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`modernize-loop-convert
+  <clang-tidy/checks/modernize-loop-convert>` check.
+
+  Now able to transform iterator loops using ``rbegin`` and ``rend`` methods.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability-identifier-naming>` check.
 
