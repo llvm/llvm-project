@@ -745,7 +745,7 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
           llvm_unreachable("src_pops_exiting_wave_id should not be used");
 
         case AMDGPU::NoRegister:
-          assert(MI.isDebugInstr());
+          assert(MI.isDebugInstr() && "Instruction uses invalid noreg register");
           continue;
 
         case AMDGPU::VCC:
