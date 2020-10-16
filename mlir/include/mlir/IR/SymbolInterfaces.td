@@ -159,6 +159,27 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
 }
 
 //===----------------------------------------------------------------------===//
+// SymbolUserOpInterface
+//===----------------------------------------------------------------------===//
+
+def SymbolUserOpInterface : OpInterface<"SymbolUserOpInterface"> {
+  let description = [{
+    This interface describes an operation that may use a `Symbol`. This
+    interface allows for users of symbols to hook into verification and other
+    symbol related utilities that are either costly or otherwise disallowed
+    within a traditional operation.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<"Verify the symbol uses held by this operation.",
+      "LogicalResult", "verifySymbolUses",
+      (ins "::mlir::SymbolTableCollection &":$symbolTable)
+    >,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // Symbol Traits
 //===----------------------------------------------------------------------===//
 
