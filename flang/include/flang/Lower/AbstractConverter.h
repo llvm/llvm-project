@@ -47,6 +47,7 @@ struct Variable;
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 using SymbolRef = Fortran::common::Reference<const Fortran::semantics::Symbol>;
 class FirOpBuilder;
+class StatementContext;
 
 //===----------------------------------------------------------------------===//
 // AbstractConverter interface
@@ -68,27 +69,30 @@ public:
   virtual bool lookupLabelSet(SymbolRef sym, pft::LabelSet &labelSet) = 0;
 
   /// Get the code defined by a label
-  virtual Fortran::lower::pft::Evaluation *lookupLabel(pft::Label label) = 0;
+  virtual pft::Evaluation *lookupLabel(pft::Label label) = 0;
 
   //===--------------------------------------------------------------------===//
   // Expressions
   //===--------------------------------------------------------------------===//
 
   /// Generate the address of the location holding the expression, someExpr
-  virtual fir::ExtendedValue genExprAddr(const SomeExpr &,
+  virtual fir::ExtendedValue genExprAddr(const SomeExpr &, StatementContext &,
                                          mlir::Location *loc = nullptr) = 0;
   /// Generate the address of the location holding the expression, someExpr
-  fir::ExtendedValue genExprAddr(const SomeExpr *someExpr, mlir::Location loc) {
-    return genExprAddr(*someExpr, &loc);
+  fir::ExtendedValue genExprAddr(const SomeExpr *someExpr,
+                                 StatementContext &stmtCtx,
+                                 mlir::Location loc) {
+    return genExprAddr(*someExpr, stmtCtx, &loc);
   }
 
   /// Generate the computations of the expression to produce a value
-  virtual fir::ExtendedValue genExprValue(const SomeExpr &,
+  virtual fir::ExtendedValue genExprValue(const SomeExpr &, StatementContext &,
                                           mlir::Location *loc = nullptr) = 0;
   /// Generate the computations of the expression, someExpr, to produce a value
   fir::ExtendedValue genExprValue(const SomeExpr *someExpr,
+                                  StatementContext &stmtCtx,
                                   mlir::Location loc) {
-    return genExprValue(*someExpr, &loc);
+    return genExprValue(*someExpr, stmtCtx, &loc);
   }
 
   /// Get FoldingContext that is required for some expression
@@ -133,7 +137,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Get the OpBuilder
-  virtual Fortran::lower::FirOpBuilder &getFirOpBuilder() = 0;
+  virtual FirOpBuilder &getFirOpBuilder() = 0;
   /// Get the ModuleOp
   virtual mlir::ModuleOp &getModuleOp() = 0;
   /// Get the MLIRContext

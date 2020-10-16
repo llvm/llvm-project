@@ -13,6 +13,7 @@
 #include "flang/Lower/ComplexExpr.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/Support/BoxValue.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Semantics/symbol.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -59,22 +60,37 @@ mlir::Value Fortran::lower::FirOpBuilder::createIntegerConstant(
 }
 
 mlir::Value Fortran::lower::FirOpBuilder::createRealConstant(
-    mlir::Location loc, mlir::Type realType, const llvm::APFloat &val) {
-  return create<mlir::ConstantOp>(loc, realType, getFloatAttr(realType, val));
+    mlir::Location loc, mlir::Type fltTy, llvm::APFloat::integerPart val) {
+  if (fltTy.isa<mlir::FloatType>()) {
+    if (fltTy.isF16())
+      return createRealConstant(loc, fltTy,
+                                llvm::APFloat(llvm::APFloat::IEEEhalf(), val));
+    if (fltTy.isBF16())
+      return createRealConstant(loc, fltTy,
+                                llvm::APFloat(llvm::APFloat::BFloat(), val));
+    if (fltTy.isF32())
+      return createRealConstant(
+          loc, fltTy, llvm::APFloat(llvm::APFloat::IEEEsingle(), val));
+    if (fltTy.isF64())
+      return createRealConstant(
+          loc, fltTy, llvm::APFloat(llvm::APFloat::IEEEdouble(), val));
+    llvm::report_fatal_error("unhandled MLIR float type");
+  }
+  auto ty = fltTy.cast<fir::RealType>();
+  return createRealConstant(
+      loc, ty, llvm::APFloat(kindMap.getFloatSemantics(ty.getFKind()), val));
 }
 
-mlir::Value
-Fortran::lower::FirOpBuilder::createRealZeroConstant(mlir::Location loc,
-                                                     mlir::Type realType) {
-  mlir::Attribute attr;
-  if (auto firType = realType.dyn_cast<fir::RealType>()) {
-    attr = getFloatAttr(
-        realType,
-        llvm::APFloat(kindMap.getFloatSemantics(firType.getFKind()), 0));
-  } else { // mlir::FloatType.
-    attr = getZeroAttr(realType);
+mlir::Value Fortran::lower::FirOpBuilder::createRealConstant(
+    mlir::Location loc, mlir::Type fltTy, const llvm::APFloat &value) {
+  if (fltTy.isa<mlir::FloatType>()) {
+    auto attr = getFloatAttr(fltTy, value);
+    return create<mlir::ConstantOp>(loc, fltTy, attr);
   }
-  return create<mlir::ConstantOp>(loc, realType, attr);
+  // MLIR standard dialect doesn't support floating point larger than double.
+  auto ty = fltTy.cast<fir::RealType>();
+  auto attr = fir::RealAttr::get(context, {ty.getFKind(), value});
+  return create<fir::ConstfOp>(loc, ty, attr);
 }
 
 mlir::Value Fortran::lower::FirOpBuilder::allocateLocal(
@@ -191,33 +207,35 @@ fir::StringLitOp Fortran::lower::FirOpBuilder::createStringLit(
 }
 
 mlir::Value
+Fortran::lower::FirOpBuilder::consShape(mlir::Location loc,
+                                        const fir::AbstractArrayBox &arr) {
+  if (arr.lboundsAllOne()) {
+    auto shapeType = fir::ShapeType::get(getContext(), arr.getExtents().size());
+    return create<fir::ShapeOp>(loc, shapeType, arr.getExtents());
+  }
+  auto shapeType =
+      fir::ShapeShiftType::get(getContext(), arr.getExtents().size());
+  SmallVector<mlir::Value, 8> shapeArgs;
+  auto idxTy = getIndexType();
+  for (auto [lbnd, ext] : llvm::zip(arr.getLBounds(), arr.getExtents())) {
+    auto lb = createConvert(loc, idxTy, lbnd);
+    shapeArgs.push_back(lb);
+    shapeArgs.push_back(ext);
+  }
+  return create<fir::ShapeShiftOp>(loc, shapeType, shapeArgs);
+}
+
+mlir::Value
 Fortran::lower::FirOpBuilder::createShape(mlir::Location loc,
                                           const fir::ExtendedValue &exv) {
-  auto ctor = [&](const fir::AbstractArrayBox &box) -> mlir::Value {
-    if (box.lboundsAllOne()) {
-      // Create a ShapeOp with nominal origin of all ones.
-      auto shapeTy = fir::ShapeType::get(getContext(), box.getExtents().size());
-      return create<fir::ShapeOp>(loc, shapeTy, box.getExtents());
-    }
-    // Create a ShapeShiftOp, as origin may not be all ones.
-    auto idxTy = getIndexType();
-    auto shapeTy =
-        fir::ShapeShiftType::get(getContext(), box.getExtents().size());
-    llvm::SmallVector<mlir::Value, 8> pairs;
-    for (auto [fst, snd] : llvm::zip(box.getLBounds(), box.getExtents())) {
-      pairs.push_back(createConvert(loc, idxTy, fst));
-      pairs.push_back(createConvert(loc, idxTy, snd));
-    }
-    return create<fir::ShapeShiftOp>(loc, shapeTy, pairs);
-  };
-  return exv.match([&](const fir::ArrayBoxValue &box) { return ctor(box); },
-                   [&](const fir::CharArrayBoxValue &box) { return ctor(box); },
-                   [&](const fir::BoxValue &box) { return ctor(box); },
-                   [&](const auto &) {
-                     exv.dump();
-                     mlir::emitError(loc, "expected shape on entity");
-                     return mlir::Value{};
-                   });
+  return exv.match(
+      [&](const fir::ArrayBoxValue &box) { return consShape(loc, box); },
+      [&](const fir::CharArrayBoxValue &box) { return consShape(loc, box); },
+      [&](const fir::BoxValue &box) { return consShape(loc, box); },
+      [&](auto) -> mlir::Value {
+        mlir::emitError(loc, "not an array");
+        return {};
+      });
 }
 
 mlir::Value

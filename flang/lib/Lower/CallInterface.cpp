@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/CallInterface.h"
+#include "StatementContext.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Lower/Bridge.h"
@@ -134,7 +135,7 @@ mlir::Value Fortran::lower::CallerInterface::getResultLength() {
   // FIXME: technically, this is a specification expression,
   // so it should be evaluated on entry of the region we are
   // in, it can go wrong if the specification expression
-  // uses a symbol that may have change.
+  // uses a symbol that may have changed.
   //
   // The characteristic has to be explicit for such
   // cases, so the allocation could also be handled on callee side, in such
@@ -144,8 +145,12 @@ mlir::Value Fortran::lower::CallerInterface::getResultLength() {
       characteristic->functionResult.value().GetTypeAndShape();
   assert(typeAndShape && "no result type");
   auto expr = AsGenericExpr(typeAndShape->LEN().value());
-  if (Fortran::evaluate::IsConstantExpr(expr))
-    return fir::getBase(converter.genExprValue(expr));
+  if (Fortran::evaluate::IsConstantExpr(expr)) {
+    Fortran::lower::StatementContext stmtCtx;
+    auto exv = converter.genExprValue(expr, stmtCtx);
+    assert(!stmtCtx.hasCleanups());
+    return fir::getBase(exv);
+  }
   llvm_unreachable(
       "non constant result length on caller side not yet safely handled");
 }
