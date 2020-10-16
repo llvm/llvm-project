@@ -8342,14 +8342,6 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
                                        Status &error) {
   llvm::SmallString<1> m_description;
 
-  swift::ModuleDecl::ImportFilter import_filter {
-      swift::ModuleDecl::ImportFilterKind::Exported,
-      swift::ModuleDecl::ImportFilterKind::Default,
-      swift::ModuleDecl::ImportFilterKind::ImplementationOnly,
-      swift::ModuleDecl::ImportFilterKind::SPIAccessControl,
-      swift::ModuleDecl::ImportFilterKind::ShadowedByCrossImportOverlay
-  };
-
   auto *persistent_expression_state =
       sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
 

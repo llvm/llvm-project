@@ -965,7 +965,7 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffset(
   }
   if (offset) {
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-              "[GetMemberVariableOffset] offset of %s is %d",
+              "[GetMemberVariableOffset] offset of %s is %lld",
               member_name.str().c_str(), *offset);
   } else {
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
@@ -2033,7 +2033,7 @@ bool SwiftLanguageRuntime::IsTaggedPointer(lldb::addr_t addr,
       // Check whether this is a reference to an Objective-C object.
       if ((addr & 1) == 1)
         return true;
-  }
+  } break;
   default:
     break;
   }
@@ -2098,7 +2098,7 @@ lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
       if (extra_deref)
         return refd_addr;
     }
-  }
+  } break;
   default:
     break;
   }
