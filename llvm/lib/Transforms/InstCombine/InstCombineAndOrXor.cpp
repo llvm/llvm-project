@@ -855,10 +855,7 @@ Value *InstCombinerImpl::foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS,
   if (!JoinedByAnd && Pred != ICmpInst::ICMP_EQ)
     return nullptr;
 
-  // TODO support vector splats
-  if (!match(LHS->getOperand(1), m_ConstantInt()) ||
-      !match(RHS->getOperand(1), m_ConstantInt()) ||
-      !match(LHS->getOperand(1), m_Zero()) ||
+  if (!match(LHS->getOperand(1), m_Zero()) ||
       !match(RHS->getOperand(1), m_Zero()))
     return nullptr;
 
