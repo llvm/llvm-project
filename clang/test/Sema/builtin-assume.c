@@ -23,7 +23,7 @@ int foo(int *a, int i) {
   __builtin_assume(ispure(i) > 2);
   __builtin_assume(ispure(++i) > 2); //expected-warning {{the argument to '__builtin_assume' has side effects that will be discarded}}
   
-  int test = sizeof(struct{char qq[(__builtin_assume(i != 5), 7)];});
+  int test = sizeof(struct{char qq[(__builtin_assume(i != 5), 7)];}); // expected-warning {{variable length array}}
 #endif
   return a[i];
 }

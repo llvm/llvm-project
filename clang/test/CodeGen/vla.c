@@ -210,3 +210,15 @@ void test9(int n, int a[static n]) { }
 void test10(int a[static 0]) {}
 // NULL-INVALID: define void @test10(i32* nonnull align 4 %a)
 // NULL-VALID: define void @test10(i32* align 4 %a)
+
+const int constant = 32;
+// CHECK: define {{.*}}pr44406(
+int pr44406() {
+  int n = 0;
+  // Do not fold this VLA to an array of constant bound; that would miscompile
+  // this testcase.
+  char c[1][(constant - constant) + 3];
+  // CHECK: store i32 1,
+  sizeof(c[n = 1]);
+  return n;
+}
