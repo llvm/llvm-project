@@ -9,6 +9,7 @@
 #include "ClangdServer.h"
 #include "CodeComplete.h"
 #include "Config.h"
+#include "DumpAST.h"
 #include "FindSymbols.h"
 #include "Format.h"
 #include "HeaderSourceSwitch.h"
@@ -782,6 +783,38 @@ void ClangdServer::semanticHighlights(
       };
   WorkScheduler.runWithAST("SemanticHighlights", File, std::move(Action),
                            TUScheduler::InvalidateOnUpdate);
+}
+
+void ClangdServer::getAST(PathRef File, Range R,
+                          Callback<llvm::Optional<ASTNode>> CB) {
+  auto Action =
+      [R, CB(std::move(CB))](llvm::Expected<InputsAndAST> Inputs) mutable {
+        if (!Inputs)
+          return CB(Inputs.takeError());
+        unsigned Start, End;
+        if (auto Offset = positionToOffset(Inputs->Inputs.Contents, R.start))
+          Start = *Offset;
+        else
+          return CB(Offset.takeError());
+        if (auto Offset = positionToOffset(Inputs->Inputs.Contents, R.end))
+          End = *Offset;
+        else
+          return CB(Offset.takeError());
+
+        bool Success = SelectionTree::createEach(
+            Inputs->AST.getASTContext(), Inputs->AST.getTokens(), Start, End,
+            [&](SelectionTree T) {
+              if (const SelectionTree::Node *N = T.commonAncestor()) {
+                CB(dumpAST(N->ASTNode, Inputs->AST.getTokens(),
+                           Inputs->AST.getASTContext()));
+                return true;
+              }
+              return false;
+            });
+        if (!Success)
+          CB(llvm::None);
+      };
+  WorkScheduler.runWithAST("GetAST", File, std::move(Action));
 }
 
 void ClangdServer::customAction(PathRef File, llvm::StringRef Name,
