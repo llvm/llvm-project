@@ -285,6 +285,7 @@ func @testConstOpReplaced() -> (i32) {
   // CHECK: [[V0]]
   return %2 : i32
 }
+
 // CHECK-LABEL: testConstOpMatchFailure
 func @testConstOpMatchFailure() -> (i64) {
   // CHECK-DAG: [[C0:%.+]] = constant 1
@@ -299,6 +300,20 @@ func @testConstOpMatchFailure() -> (i64) {
   // CHECK: [[V0]]
   return %2 : i64
 }
+
+// CHECK-LABEL: testConstOpMatchNonConst
+func @testConstOpMatchNonConst(%arg0 : i32) -> (i32) {
+  // CHECK-DAG: [[C0:%.+]] = constant 1
+  %0 = "test.constant"() {value = 1 : i32} : () -> i32
+
+  // CHECK: [[V0:%.+]] = "test.op_r"([[C0]], %arg0)
+  %1 = "test.op_r"(%0, %arg0) : (i32, i32) -> i32
+
+  // CHECK: [[V0]]
+  return %1 : i32
+}
+
+
 
 //===----------------------------------------------------------------------===//
 // Test Enum Attributes

@@ -4119,7 +4119,8 @@ bool AArch64InstructionSelector::tryOptSelect(MachineInstr &I) const {
   MachineIRBuilder MIB(I);
   MachineRegisterInfo &MRI = *MIB.getMRI();
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
-
+  Register SrcReg1 = I.getOperand(2).getReg();
+  Register SrcReg2 = I.getOperand(3).getReg();
   // We want to recognize this pattern:
   //
   // $z = G_FCMP pred, $x, $y
@@ -4208,6 +4209,31 @@ bool AArch64InstructionSelector::tryOptSelect(MachineInstr &I) const {
   }
 
   // Emit the select.
+  // We may also be able to emit a CSINC if the RHS operand is a 1.
+  const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg1, MRI, TRI);
+  auto ValAndVReg =
+      getConstantVRegValWithLookThrough(SrcReg2, MRI);
+
+  if (SrcRB.getID() == AArch64::GPRRegBankID && ValAndVReg &&
+      ValAndVReg->Value == 1) {
+    unsigned Size = MRI.getType(SrcReg1).getSizeInBits();
+    unsigned Opc = 0;
+    Register Zero;
+    if (Size == 64) {
+      Opc = AArch64::CSINCXr;
+      Zero = AArch64::XZR;
+    } else {
+      Opc = AArch64::CSINCWr;
+      Zero = AArch64::WZR;
+    }
+    auto CSINC =
+        MIB.buildInstr(Opc, {I.getOperand(0).getReg()}, {SrcReg1, Zero})
+            .addImm(CondCode);
+    constrainSelectedInstRegOperands(*CSINC, TII, TRI, RBI);
+    I.eraseFromParent();
+    return true;
+  }
+
   unsigned CSelOpc = selectSelectOpc(I, MRI, RBI);
   auto CSel =
       MIB.buildInstr(CSelOpc, {I.getOperand(0).getReg()},

@@ -1057,6 +1057,15 @@ def int_ppc_altivec_vrldmi :
                             [llvm_v2i64_ty, llvm_v2i64_ty, llvm_v2i64_ty],
                             [IntrNoMem]>;
 
+def int_ppc_altivec_vrlqnm :
+      PowerPC_Vec_Intrinsic<"vrlqnm", [llvm_v1i128_ty],
+                           [llvm_v1i128_ty, llvm_v1i128_ty],
+                            [IntrNoMem]>;
+def int_ppc_altivec_vrlqmi :
+      PowerPC_Vec_Intrinsic<"vrlqmi", [llvm_v1i128_ty],
+                            [llvm_v1i128_ty, llvm_v1i128_ty, llvm_v1i128_ty],
+                            [IntrNoMem]>;
+
 // Vector Divide Extended Intrinsics.
 def int_ppc_altivec_vdivesw : PowerPC_Vec_WWW_Intrinsic<"vdivesw">;
 def int_ppc_altivec_vdiveuw : PowerPC_Vec_WWW_Intrinsic<"vdiveuw">;
