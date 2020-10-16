@@ -75,6 +75,16 @@ define <16 x i8> @avgr_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
   ret <16 x i8> %a
 }
 
+; CHECK-LABEL: popcnt_v16i8:
+; SIMD128-NEXT: .functype popcnt_v16i8 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i8x16.popcnt $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <16 x i8> @llvm.wasm.popcnt(<16 x i8>)
+define <16 x i8> @popcnt_v16i8(<16 x i8> %x) {
+ %a = call <16 x i8> @llvm.wasm.popcnt(<16 x i8> %x)
+ ret <16 x i8> %a
+}
+
 ; CHECK-LABEL: any_v16i8:
 ; SIMD128-NEXT: .functype any_v16i8 (v128) -> (i32){{$}}
 ; SIMD128-NEXT: i8x16.any_true $push[[R:[0-9]+]]=, $0{{$}}

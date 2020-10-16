@@ -1160,7 +1160,7 @@ list of integer values that are either static or `?` (dynamic case). Strides
 encode the distance, in number of elements, in (linear) memory between
 successive entries along a particular dimension. A stride specification is
 syntactic sugar for an equivalent strided memref representation using
-semi-affine maps. For example, `memref<42x16xf32, offset: 33 strides: [1, 64]>`
+semi-affine maps. For example, `memref<42x16xf32, offset: 33, strides: [1, 64]>`
 specifies a non-contiguous memory region of `42` by `16` `f32` elements such
 that:
 

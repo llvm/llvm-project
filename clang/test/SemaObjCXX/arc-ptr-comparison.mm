@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin11 -fsyntax-only -fobjc-arc -verify %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin11 -fsyntax-only -fobjc-runtime-has-weak -fobjc-arc -verify %s
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin11 -fsyntax-only -verify -DNOARC %s
 #ifdef NOARC
 // expected-no-diagnostics
@@ -51,3 +51,17 @@ int testMixedQualComparisonRules(void *v, const void *cv, A *a, const A *ca) {
   return a == cv;
   return ca == v;
 }
+
+#ifndef NOARC
+int testDoublePtr(void *pv, void **ppv, A *__strong* pspa, A *__weak* pwpa, A *__strong** ppspa) {
+  return pv == pspa;
+  return pspa == pv;
+  return pv == pspa;
+  return pv == pwpa;
+  return pspa == pwpa; // expected-error {{comparison of distinct pointer types}}
+  return ppv == pspa; // expected-error {{comparison of distinct pointer types}}
+  return pspa == ppv; // expected-error {{comparison of distinct pointer types}}
+  return pv == ppspa;
+  return ppv == ppspa; // expected-error{{comparison of distinct pointer types}}
+}
+#endif

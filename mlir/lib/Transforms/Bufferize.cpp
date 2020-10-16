@@ -27,6 +27,18 @@ BufferizeTypeConverter::BufferizeTypeConverter() {
   addConversion([](UnrankedTensorType type) -> Type {
     return UnrankedMemRefType::get(type.getElementType(), 0);
   });
+  addSourceMaterialization([](OpBuilder &builder, RankedTensorType type,
+                              ValueRange inputs, Location loc) -> Value {
+    assert(inputs.size() == 1);
+    assert(inputs[0].getType().isa<BaseMemRefType>());
+    return builder.create<TensorLoadOp>(loc, type, inputs[0]);
+  });
+  addTargetMaterialization([](OpBuilder &builder, MemRefType type,
+                              ValueRange inputs, Location loc) -> Value {
+    assert(inputs.size() == 1);
+    assert(inputs[0].getType().isa<TensorType>());
+    return builder.create<TensorToMemrefOp>(loc, type, inputs[0]);
+  });
 }
 
 /// This method tries to decompose a value of a certain type using provided
