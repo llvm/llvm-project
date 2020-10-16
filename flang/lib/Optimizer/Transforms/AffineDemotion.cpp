@@ -80,10 +80,12 @@ public:
       // due to index calculation moving to affine maps we still need to
       // add converts for sequence types this has a side effect of losing
       // some information about arrays with known dimensions by creating:
-      // fir.convert %arg0 : (!fir.ref<!fir.array<5xi32>>) -> !fir.ref<!fir.array<?xi32>>
+      // fir.convert %arg0 : (!fir.ref<!fir.array<5xi32>>) ->
+      // !fir.ref<!fir.array<?xi32>>
       if (auto refTy = op.value().getType().dyn_cast<fir::ReferenceType>())
         if (auto arrTy = refTy.getEleTy().dyn_cast<fir::SequenceType>()) {
-          fir::SequenceType::Shape flatShape = {fir::SequenceType::getUnknownExtent()};
+          fir::SequenceType::Shape flatShape = {
+              fir::SequenceType::getUnknownExtent()};
           auto flatArrTy = fir::SequenceType::get(flatShape, arrTy.getEleTy());
           auto flatTy = fir::ReferenceType::get(flatArrTy);
           rewriter.replaceOpWithNewOp<fir::ConvertOp>(op, flatTy, op.value());

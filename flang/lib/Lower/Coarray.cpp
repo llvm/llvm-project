@@ -56,7 +56,9 @@ void Fortran::lower::genFormTeamStatement(
 
 fir::ExtendedValue Fortran::lower::CoarrayExprHelper::genAddr(
     const Fortran::evaluate::CoarrayRef &expr) {
+  (void)converter;
   (void)symMap;
+  (void)loc;
   TODO("co-array address");
 }
 
