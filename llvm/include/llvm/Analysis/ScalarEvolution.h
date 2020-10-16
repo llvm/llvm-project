@@ -1489,6 +1489,13 @@ private:
   ConstantRange getRangeForAffineAR(const SCEV *Start, const SCEV *Stop,
                                     const SCEV *MaxBECount, unsigned BitWidth);
 
+  /// Determines the range for the affine non-self-wrapping SCEVAddRecExpr {\p
+  /// Start,+,\p Stop}<nw>.
+  ConstantRange getRangeForAffineNoSelfWrappingAR(const SCEVAddRecExpr *AddRec,
+                                                  const SCEV *MaxBECount,
+                                                  unsigned BitWidth,
+                                                  RangeSignHint SignHint);
+
   /// Try to compute a range for the affine SCEVAddRecExpr {\p Start,+,\p
   /// Stop} by "factoring out" a ternary expression from the add recurrence.
   /// Helper called by \c getRange.
@@ -1688,10 +1695,20 @@ private:
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the given FoundCondValue value evaluates to true in given
   /// Context. If Context is nullptr, then the found predicate is true
-  /// everywhere.
+  /// everywhere. LHS and FoundLHS may have different type width.
   bool isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS,
                      const Value *FoundCondValue, bool Inverse,
                      const Instruction *Context = nullptr);
+
+  /// Test whether the condition described by Pred, LHS, and RHS is true
+  /// whenever the given FoundCondValue value evaluates to true in given
+  /// Context. If Context is nullptr, then the found predicate is true
+  /// everywhere. LHS and FoundLHS must have same type width.
+  bool isImpliedCondBalancedTypes(ICmpInst::Predicate Pred, const SCEV *LHS,
+                                  const SCEV *RHS,
+                                  ICmpInst::Predicate FoundPred,
+                                  const SCEV *FoundLHS, const SCEV *FoundRHS,
+                                  const Instruction *Context);
 
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the condition described by FoundPred, FoundLHS, FoundRHS is
