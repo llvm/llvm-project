@@ -48,7 +48,7 @@ void test7 (int x, struct test7 y)
 {
 }
 
-// CHECK: define void @test1va(%struct.test1* noalias sret align 4 %[[AGG_RESULT:.*]], i32 signext %x, ...)
+// CHECK: define void @test1va(%struct.test1* noalias sret(%struct.test1) align 4 %[[AGG_RESULT:.*]], i32 signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load i8*, i8** %ap
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, i8* %[[CUR]], i64 8
 // CHECK: store i8* %[[NEXT]], i8** %ap
@@ -66,7 +66,7 @@ struct test1 test1va (int x, ...)
   return y;
 }
 
-// CHECK: define void @test2va(%struct.test2* noalias sret align 16 %[[AGG_RESULT:.*]], i32 signext %x, ...)
+// CHECK: define void @test2va(%struct.test2* noalias sret(%struct.test2) align 16 %[[AGG_RESULT:.*]], i32 signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load i8*, i8** %ap
 // CHECK: %[[TMP0:[^ ]+]] = ptrtoint i8* %[[CUR]] to i64
 // CHECK: %[[TMP1:[^ ]+]] = add i64 %[[TMP0]], 15
@@ -88,7 +88,7 @@ struct test2 test2va (int x, ...)
   return y;
 }
 
-// CHECK: define void @test3va(%struct.test3* noalias sret align 32 %[[AGG_RESULT:.*]], i32 signext %x, ...)
+// CHECK: define void @test3va(%struct.test3* noalias sret(%struct.test3) align 32 %[[AGG_RESULT:.*]], i32 signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load i8*, i8** %ap
 // CHECK: %[[TMP0:[^ ]+]] = ptrtoint i8* %[[CUR]] to i64
 // CHECK: %[[TMP1:[^ ]+]] = add i64 %[[TMP0]], 15
@@ -110,7 +110,7 @@ struct test3 test3va (int x, ...)
   return y;
 }
 
-// CHECK: define void @test4va(%struct.test4* noalias sret align 4 %[[AGG_RESULT:.*]], i32 signext %x, ...)
+// CHECK: define void @test4va(%struct.test4* noalias sret(%struct.test4) align 4 %[[AGG_RESULT:.*]], i32 signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load i8*, i8** %ap
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, i8* %[[CUR]], i64 16
 // CHECK: store i8* %[[NEXT]], i8** %ap
@@ -128,7 +128,7 @@ struct test4 test4va (int x, ...)
   return y;
 }
 
-// CHECK: define void @testva_longdouble(%struct.test_longdouble* noalias sret align 16 %[[AGG_RESULT:.*]], i32 signext %x, ...)
+// CHECK: define void @testva_longdouble(%struct.test_longdouble* noalias sret(%struct.test_longdouble) align 16 %[[AGG_RESULT:.*]], i32 signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load i8*, i8** %ap
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, i8* %[[CUR]], i64 16
 // CHECK: store i8* %[[NEXT]], i8** %ap
@@ -147,7 +147,7 @@ struct test_longdouble testva_longdouble (int x, ...)
   return y;
 }
 
-// CHECK: define void @testva_vector(%struct.test_vector* noalias sret align 16 %[[AGG_RESULT:.*]], i32 signext %x, ...)
+// CHECK: define void @testva_vector(%struct.test_vector* noalias sret(%struct.test_vector) align 16 %[[AGG_RESULT:.*]], i32 signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load i8*, i8** %ap
 // CHECK: %[[TMP0:[^ ]+]] = ptrtoint i8* %[[CUR]] to i64
 // CHECK: %[[TMP1:[^ ]+]] = add i64 %[[TMP0]], 15

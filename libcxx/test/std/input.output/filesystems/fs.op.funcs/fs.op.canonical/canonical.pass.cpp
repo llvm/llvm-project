@@ -98,7 +98,7 @@ TEST_CASE(test_exception_contains_paths)
     CWDGuard guard;
     const path p = "blabla/dne";
     try {
-        canonical(p);
+        (void)canonical(p);
         TEST_REQUIRE(false);
     } catch (filesystem_error const& err) {
         TEST_CHECK(err.path1() == p);
@@ -107,7 +107,7 @@ TEST_CASE(test_exception_contains_paths)
     }
     fs::current_path(static_env.Dir);
     try {
-        canonical(p);
+        (void)canonical(p);
         TEST_REQUIRE(false);
     } catch (filesystem_error const& err) {
         TEST_CHECK(err.path1() == p);

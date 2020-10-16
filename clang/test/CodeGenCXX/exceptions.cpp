@@ -146,12 +146,12 @@ namespace test1 {
     // CHECK:      [[NEW:%.*]] = call noalias nonnull i8* @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, i1* [[ACTIVE]]
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
-    // CHECK-NEXT: invoke void @_ZN5test15makeBEv([[B:%.*]]* sret align 4 [[T0:%.*]])
+    // CHECK-NEXT: invoke void @_ZN5test15makeBEv([[B:%.*]]* sret([[B]]) align 4 [[T0:%.*]])
     // CHECK:      [[T1:%.*]] = invoke i32 @_ZN5test11BcviEv([[B]]* [[T0]])
     // CHECK:      invoke void @_ZN5test11AC1Ei([[A]]* [[CAST]], i32 [[T1]])
     // CHECK:      store i1 false, i1* [[ACTIVE]]
     // CHECK-NEXT: store [[A]]* [[CAST]], [[A]]** [[X]], align 8
-    // CHECK:      invoke void @_ZN5test15makeBEv([[B:%.*]]* sret align 4 [[T2:%.*]])
+    // CHECK:      invoke void @_ZN5test15makeBEv([[B:%.*]]* sret([[B]]) align 4 [[T2:%.*]])
     // CHECK:      [[RET:%.*]] = load [[A]]*, [[A]]** [[X]], align 8
 
     // CHECK98:      invoke void @_ZN5test11BD1Ev([[B]]* [[T2]])
@@ -239,7 +239,7 @@ namespace test3 {
     // CHECK-NEXT: store i8* [[FOO]], i8** [[SAVED1]]
     // CHECK-NEXT: store i1 true, i1* [[CLEANUPACTIVE]]
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
-    // CHECK-NEXT: invoke void @_ZN5test35makeAEv([[A]]* sret align 8 [[CAST]])
+    // CHECK-NEXT: invoke void @_ZN5test35makeAEv([[A]]* sret([[A]]) align 8 [[CAST]])
     // CHECK: br label
     //   -> cond.end
             new(foo(),10.0) A(makeA()) :

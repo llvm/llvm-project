@@ -103,7 +103,8 @@ public:
 
   // A rare use case used for representing the characteristics of an
   // intrinsic function like REAL() that accepts a typeless BOZ literal
-  // argument, which is something that real user Fortran can't do.
+  // argument and for typeless pointers -- things that real user Fortran can't
+  // do.
   static constexpr DynamicType TypelessIntrinsicArgument() {
     DynamicType result;
     result.category_ = TypeCategory::Integer;
@@ -199,7 +200,8 @@ public:
 private:
   // Special kind codes are used to distinguish the following Fortran types.
   enum SpecialKind {
-    TypelessKind = -1, // BOZ actual argument to intrinsic function
+    TypelessKind = -1, // BOZ actual argument to intrinsic function or pointer
+                       // argument to ASSOCIATED
     ClassKind = -2, // CLASS(T) or CLASS(*)
     AssumedTypeKind = -3, // TYPE(*)
   };

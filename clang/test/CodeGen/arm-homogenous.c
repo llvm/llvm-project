@@ -27,7 +27,7 @@ void test_union_with_first_floats(void) {
 void test_return_union_with_first_floats(void) {
   g_u_f = returns_union_with_first_floats();
 }
-// CHECK: declare arm_aapcs_vfpcc void @returns_union_with_first_floats(%union.union_with_first_floats* sret align 4)
+// CHECK: declare arm_aapcs_vfpcc void @returns_union_with_first_floats(%union.union_with_first_floats* sret(%union.union_with_first_floats) align 4)
 
 /* This is not a homogenous aggregate - fundamental types are different */
 typedef union {
@@ -47,7 +47,7 @@ void test_union_with_non_first_floats(void) {
 void test_return_union_with_non_first_floats(void) {
   g_u_nf_f = returns_union_with_non_first_floats();
 }
-// CHECK: declare arm_aapcs_vfpcc void @returns_union_with_non_first_floats(%union.union_with_non_first_floats* sret align 4)
+// CHECK: declare arm_aapcs_vfpcc void @returns_union_with_non_first_floats(%union.union_with_non_first_floats* sret(%union.union_with_non_first_floats) align 4)
 
 /* This is not a homogenous aggregate - fundamental types are different */
 typedef struct {
@@ -67,7 +67,7 @@ void test_struct_with_union_with_first_floats(void) {
 void test_return_struct_with_union_with_first_floats(void) {
   g_s_f = returns_struct_with_union_with_first_floats();
 }
-// CHECK: declare arm_aapcs_vfpcc void @returns_struct_with_union_with_first_floats(%struct.struct_with_union_with_first_floats* sret align 4)
+// CHECK: declare arm_aapcs_vfpcc void @returns_struct_with_union_with_first_floats(%struct.struct_with_union_with_first_floats* sret(%struct.struct_with_union_with_first_floats) align 4)
 
 /* This is not a homogenous aggregate - fundamental types are different */
 typedef struct {
@@ -87,7 +87,7 @@ void test_struct_with_union_with_non_first_floats(void) {
 void test_return_struct_with_union_with_non_first_floats(void) {
   g_s_nf_f = returns_struct_with_union_with_non_first_floats();
 }
-// CHECK: declare arm_aapcs_vfpcc void @returns_struct_with_union_with_non_first_floats(%struct.struct_with_union_with_non_first_floats* sret align 4)
+// CHECK: declare arm_aapcs_vfpcc void @returns_struct_with_union_with_non_first_floats(%struct.struct_with_union_with_non_first_floats* sret(%struct.struct_with_union_with_non_first_floats) align 4)
 
 /* Plain array is not a homogenous aggregate */
 extern void takes_array_of_floats(float a[4]);

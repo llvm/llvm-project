@@ -2147,16 +2147,26 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
           "References to the procedure '%s' require an explicit interface"_en_US,
           DEREF(proc.GetSymbol()).name());
     }
-    semantics::CheckArguments(*chars, arguments, GetFoldingContext(),
-        context_.FindScope(callSite), treatExternalAsImplicit);
-    const Symbol *procSymbol{proc.GetSymbol()};
-    if (procSymbol && !IsPureProcedure(*procSymbol)) {
-      if (const semantics::Scope *
-          pure{semantics::FindPureProcedureContaining(
-              context_.FindScope(callSite))}) {
-        Say(callSite,
-            "Procedure '%s' referenced in pure subprogram '%s' must be pure too"_err_en_US,
-            procSymbol->name(), DEREF(pure->symbol()).name());
+    // Checks for ASSOCIATED() are done in intrinsic table processing
+    bool procIsAssociated{false};
+    if (const SpecificIntrinsic *
+        specificIntrinsic{proc.GetSpecificIntrinsic()}) {
+      if (specificIntrinsic->name == "associated") {
+        procIsAssociated = true;
+      }
+    }
+    if (!procIsAssociated) {
+      semantics::CheckArguments(*chars, arguments, GetFoldingContext(),
+          context_.FindScope(callSite), treatExternalAsImplicit);
+      const Symbol *procSymbol{proc.GetSymbol()};
+      if (procSymbol && !IsPureProcedure(*procSymbol)) {
+        if (const semantics::Scope *
+            pure{semantics::FindPureProcedureContaining(
+                context_.FindScope(callSite))}) {
+          Say(callSite,
+              "Procedure '%s' referenced in pure subprogram '%s' must be pure too"_err_en_US,
+              procSymbol->name(), DEREF(pure->symbol()).name());
+        }
       }
     }
   }
@@ -2346,6 +2356,12 @@ MaybeExpr RelationHelper(ExpressionAnalyzer &context, RelationalOperator opr,
   if (analyzer.fatalErrors()) {
     return std::nullopt;
   } else {
+    if (IsNullPointer(analyzer.GetExpr(0)) ||
+        IsNullPointer(analyzer.GetExpr(1))) {
+      context.Say("NULL() not allowed as an operand of a relational "
+                  "operator"_err_en_US);
+      return std::nullopt;
+    }
     analyzer.ConvertBOZ(0, analyzer.GetType(1));
     analyzer.ConvertBOZ(1, analyzer.GetType(0));
     if (analyzer.IsIntrinsicRelational(opr)) {

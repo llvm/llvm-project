@@ -65,7 +65,7 @@ void f(C *c) {
 
 // CHECK-LABEL: define dso_local void @"?f@sret@@YAXPAUC@1@@Z"(%"struct.sret::C"* %c)
 // CHECK: call x86_thiscallcc i32 bitcast (void (%"struct.sret::C"*, ...)* @"??_9C@sret@@$BA@AE" to i32 (%"struct.sret::C"*)*)(%"struct.sret::C"* %{{.*}})
-// CHECK: call x86_thiscallcc void bitcast (void (%"struct.sret::C"*, ...)* @"??_9C@sret@@$BA@AE" to void (%"struct.sret::C"*, %"struct.sret::Big"*)*)(%"struct.sret::C"* %{{.*}}, %"struct.sret::Big"* sret align 4 %{{.*}})
+// CHECK: call x86_thiscallcc void bitcast (void (%"struct.sret::C"*, ...)* @"??_9C@sret@@$BA@AE" to void (%"struct.sret::C"*, %"struct.sret::Big"*)*)(%"struct.sret::C"* %{{.*}}, %"struct.sret::Big"* sret(%"struct.sret::Big") align 4 %{{.*}})
 
 // CHECK-LABEL: define linkonce_odr x86_thiscallcc void @"??_9C@sret@@$BA@AE"(%"struct.sret::C"* %this, ...) {{.*}} comdat
 // CHECK: musttail call x86_thiscallcc void (%"struct.sret::C"*, ...) %{{.*}}(%"struct.sret::C"* %{{.*}}, ...)
