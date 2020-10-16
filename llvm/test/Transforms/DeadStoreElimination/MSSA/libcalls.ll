@@ -190,3 +190,115 @@ entry:
   %res = icmp eq i32 %call, 0
   ret i1 %res
 }
+
+declare i8* @memchr(i8*, i32, i64)
+
+define i8* @test_memchr_const_size() {
+; CHECK-LABEL: @test_memchr_const_size(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[STACK:%.*]] = alloca [10 x i8], align 1
+; CHECK-NEXT:    [[STACK_PTR:%.*]] = bitcast [10 x i8]* [[STACK]] to i8*
+; CHECK-NEXT:    store i8 49, i8* [[STACK_PTR]], align 1
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, i8* [[STACK_PTR]], i64 1
+; CHECK-NEXT:    store i8 50, i8* [[GEP_1]], align 1
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @memchr(i8* [[STACK_PTR]], i32 42, i64 2)
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+entry:
+  %stack = alloca [10 x i8]
+  %stack.ptr = bitcast [10 x i8]* %stack to i8*
+  store i8 49, i8* %stack.ptr, align 1
+  %gep.1 = getelementptr i8, i8* %stack.ptr, i64 1
+  store i8 50, i8* %gep.1, align 1
+  %gep.2 = getelementptr i8, i8* %stack.ptr, i64 2
+  store i8 51, i8* %gep.2, align 1
+  %gep.3 = getelementptr i8, i8* %stack.ptr, i64 3
+  store i8 52, i8* %gep.3, align 1
+  %call = call i8* @memchr(i8* %stack.ptr, i32 42, i64 2)
+  ret i8* %call
+}
+
+define i8* @test_memchr_variable_size(i64 %n) {
+; CHECK-LABEL: @test_memchr_variable_size(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[STACK:%.*]] = alloca [10 x i8], align 1
+; CHECK-NEXT:    [[STACK_PTR:%.*]] = bitcast [10 x i8]* [[STACK]] to i8*
+; CHECK-NEXT:    store i8 49, i8* [[STACK_PTR]], align 1
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, i8* [[STACK_PTR]], i64 1
+; CHECK-NEXT:    store i8 50, i8* [[GEP_1]], align 1
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr i8, i8* [[STACK_PTR]], i64 2
+; CHECK-NEXT:    store i8 51, i8* [[GEP_2]], align 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, i8* [[STACK_PTR]], i64 4
+; CHECK-NEXT:    store i8 52, i8* [[GEP]], align 1
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @memchr(i8* [[STACK_PTR]], i32 42, i64 [[N:%.*]])
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+entry:
+  %stack = alloca [10 x i8]
+  %stack.ptr = bitcast [10 x i8]* %stack to i8*
+  store i8 49, i8* %stack.ptr, align 1
+  %gep.1 = getelementptr i8, i8* %stack.ptr, i64 1
+  store i8 50, i8* %gep.1, align 1
+  %gep.2 = getelementptr i8, i8* %stack.ptr, i64 2
+  store i8 51, i8* %gep.2, align 1
+  %gep = getelementptr i8, i8* %stack.ptr, i64 4
+  store i8 52, i8* %gep, align 1
+  %call = call i8* @memchr(i8* %stack.ptr, i32 42, i64 %n)
+  ret i8* %call
+}
+
+declare i8* @memccpy(i8*, i8*, i32, i64)
+
+define i8* @test_memccpy_const_size(i8* %foo) {
+; CHECK-LABEL: @test_memccpy_const_size(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[STACK:%.*]] = alloca [10 x i8], align 1
+; CHECK-NEXT:    [[STACK_PTR:%.*]] = bitcast [10 x i8]* [[STACK]] to i8*
+; CHECK-NEXT:    store i8 49, i8* [[STACK_PTR]], align 1
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, i8* [[STACK_PTR]], i64 1
+; CHECK-NEXT:    store i8 50, i8* [[GEP_1]], align 1
+; CHECK-NEXT:    [[RES:%.*]] = call i8* @memccpy(i8* [[FOO:%.*]], i8* [[STACK_PTR]], i32 42, i64 2)
+; CHECK-NEXT:    ret i8* [[RES]]
+;
+entry:
+  %stack = alloca [10 x i8]
+  %stack.ptr = bitcast [10 x i8]* %stack to i8*
+  store i8 49, i8* %stack.ptr, align 1
+  %gep.1 = getelementptr i8, i8* %stack.ptr, i64 1
+  store i8 50, i8* %gep.1, align 1
+  %gep.2 = getelementptr i8, i8* %stack.ptr, i64 2
+  store i8 51, i8* %gep.2, align 1
+  %gep.3 = getelementptr i8, i8* %stack.ptr, i64 3
+  store i8 52, i8* %gep.3, align 1
+  %res = call i8* @memccpy(i8* %foo, i8* %stack.ptr, i32 42, i64 2)
+  ret i8* %res
+}
+
+define i8* @test_memccpy_variable_size(i8* %foo, i64 %n) {
+; CHECK-LABEL: @test_memccpy_variable_size(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[STACK:%.*]] = alloca [10 x i8], align 1
+; CHECK-NEXT:    [[STACK_PTR:%.*]] = bitcast [10 x i8]* [[STACK]] to i8*
+; CHECK-NEXT:    store i8 49, i8* [[STACK_PTR]], align 1
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, i8* [[STACK_PTR]], i64 1
+; CHECK-NEXT:    store i8 50, i8* [[GEP_1]], align 1
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr i8, i8* [[STACK_PTR]], i64 2
+; CHECK-NEXT:    store i8 51, i8* [[GEP_2]], align 1
+; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr i8, i8* [[STACK_PTR]], i64 3
+; CHECK-NEXT:    store i8 52, i8* [[GEP_3]], align 1
+; CHECK-NEXT:    [[RES:%.*]] = call i8* @memccpy(i8* [[FOO:%.*]], i8* [[STACK_PTR]], i32 42, i64 [[N:%.*]])
+; CHECK-NEXT:    ret i8* [[RES]]
+;
+entry:
+  %stack = alloca [10 x i8]
+  %stack.ptr = bitcast [10 x i8]* %stack to i8*
+  store i8 49, i8* %stack.ptr, align 1
+  %gep.1 = getelementptr i8, i8* %stack.ptr, i64 1
+  store i8 50, i8* %gep.1, align 1
+  %gep.2 = getelementptr i8, i8* %stack.ptr, i64 2
+  store i8 51, i8* %gep.2, align 1
+  %gep.3 = getelementptr i8, i8* %stack.ptr, i64 3
+  store i8 52, i8* %gep.3, align 1
+  %res = call i8* @memccpy(i8* %foo, i8* %stack.ptr, i32 42, i64 %n)
+  ret i8* %res
+}
