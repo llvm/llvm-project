@@ -298,7 +298,9 @@ def V_MAD_F32 : VOP3Inst <"v_mad_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, fmad>;
 } // End SubtargetPredicate = HasMadMacInsts
 
 let SubtargetPredicate = HasNoMadMacF32Insts in
-def V_FMA_LEGACY_F32 : VOP3Inst <"v_fma_legacy_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
+def V_FMA_LEGACY_F32 : VOP3Inst <"v_fma_legacy_f32",
+                                 VOP3_Profile<VOP_F32_F32_F32_F32>,
+                                 int_amdgcn_fma_legacy>;
 }
 
 def V_MAD_I32_I24 : VOP3Inst <"v_mad_i32_i24", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;

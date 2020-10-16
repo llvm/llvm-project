@@ -57,6 +57,8 @@ config.available_features.add(compiler_id)
 # If needed, add cflag for shadow scale.
 if config.asan_shadow_scale != '':
   config.target_cflags += " -mllvm -asan-mapping-scale=" + config.asan_shadow_scale
+if config.memprof_shadow_scale != '':
+  config.target_cflags += " -mllvm -memprof-mapping-scale=" + config.memprof_shadow_scale
 
 # BFD linker in 64-bit android toolchains fails to find libc++_shared.so, which
 # is a transitive shared library dependency (via asan runtime).
@@ -553,6 +555,11 @@ if config.asan_shadow_scale:
   config.available_features.add("shadow-scale-%s" % config.asan_shadow_scale)
 else:
   config.available_features.add("shadow-scale-3")
+
+if config.memprof_shadow_scale:
+  config.available_features.add("memprof-shadow-scale-%s" % config.memprof_shadow_scale)
+else:
+  config.available_features.add("memprof-shadow-scale-3")
 
 if config.expensive_checks:
   config.available_features.add("expensive_checks")

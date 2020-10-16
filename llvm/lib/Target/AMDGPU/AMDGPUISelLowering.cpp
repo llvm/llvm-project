@@ -599,6 +599,7 @@ static bool fnegFoldsIntoOp(unsigned Opc) {
   case AMDGPUISD::FMIN_LEGACY:
   case AMDGPUISD::FMAX_LEGACY:
   case AMDGPUISD::FMED3:
+    // TODO: handle llvm.amdgcn.fma.legacy
     return true;
   default:
     return false;
@@ -3738,6 +3739,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   }
   case ISD::FMA:
   case ISD::FMAD: {
+    // TODO: handle llvm.amdgcn.fma.legacy
     if (!mayIgnoreSignedZero(N0))
       return SDValue();
 
@@ -4729,6 +4731,12 @@ bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
     case Intrinsic::amdgcn_fdot2:
       // TODO: Refine on operand
       return SNaN;
+    case Intrinsic::amdgcn_fma_legacy:
+      if (SNaN)
+        return true;
+      return DAG.isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1) &&
+             DAG.isKnownNeverNaN(Op.getOperand(2), SNaN, Depth + 1) &&
+             DAG.isKnownNeverNaN(Op.getOperand(3), SNaN, Depth + 1);
     default:
       return false;
     }
