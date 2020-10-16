@@ -9,6 +9,7 @@
 #ifndef DIALECT_STANDARD_TRANSFORMS_PASSDETAIL_H_
 #define DIALECT_STANDARD_TRANSFORMS_PASSDETAIL_H_
 
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {

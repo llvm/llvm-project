@@ -1755,7 +1755,9 @@ def DynamicTensorFromElementsOp : Std_Op<"dynamic_tensor_from_elements",
 
     The body region defines the tensor's elements. It takes index operands as
     its region arguments that span the index space. The element at the given
-    position is yielded with the `yield` operation (see `YieldOp`).
+    position is yielded with the `yield` operation (see `YieldOp`). There is
+    no defined ordering to the invocations of the body. It is conceptually
+    a "parallel map" operation.
 
     Example:
 
