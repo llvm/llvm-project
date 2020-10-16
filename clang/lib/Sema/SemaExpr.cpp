@@ -15059,9 +15059,8 @@ ExprResult Sema::ActOnChooseExpr(SourceLocation BuiltinLoc,
   } else {
     // The conditional expression is required to be a constant expression.
     llvm::APSInt condEval(32);
-    ExprResult CondICE
-      = VerifyIntegerConstantExpression(CondExpr, &condEval,
-          diag::err_typecheck_choose_expr_requires_constant, false);
+    ExprResult CondICE = VerifyIntegerConstantExpression(
+        CondExpr, &condEval, diag::err_typecheck_choose_expr_requires_constant);
     if (CondICE.isInvalid())
       return ExprError();
     CondExpr = CondICE.get();
@@ -15925,7 +15924,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
 }
 
 ExprResult Sema::VerifyIntegerConstantExpression(Expr *E,
-                                                 llvm::APSInt *Result) {
+                                                 llvm::APSInt *Result,
+                                                 AllowFoldKind CanFold) {
   class SimpleICEDiagnoser : public VerifyICEDiagnoser {
   public:
     SemaDiagnosticBuilder diagnoseNotICEType(Sema &S, SourceLocation Loc,
@@ -15938,13 +15938,13 @@ ExprResult Sema::VerifyIntegerConstantExpression(Expr *E,
     }
   } Diagnoser;
 
-  return VerifyIntegerConstantExpression(E, Result, Diagnoser);
+  return VerifyIntegerConstantExpression(E, Result, Diagnoser, CanFold);
 }
 
 ExprResult Sema::VerifyIntegerConstantExpression(Expr *E,
                                                  llvm::APSInt *Result,
                                                  unsigned DiagID,
-                                                 bool AllowFold) {
+                                                 AllowFoldKind CanFold) {
   class IDDiagnoser : public VerifyICEDiagnoser {
     unsigned DiagID;
 
@@ -15957,7 +15957,7 @@ ExprResult Sema::VerifyIntegerConstantExpression(Expr *E,
     }
   } Diagnoser(DiagID);
 
-  return VerifyIntegerConstantExpression(E, Result, Diagnoser, AllowFold);
+  return VerifyIntegerConstantExpression(E, Result, Diagnoser, CanFold);
 }
 
 Sema::SemaDiagnosticBuilder
@@ -15974,7 +15974,7 @@ Sema::VerifyICEDiagnoser::diagnoseFold(Sema &S, SourceLocation Loc) {
 ExprResult
 Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
                                       VerifyICEDiagnoser &Diagnoser,
-                                      bool AllowFold) {
+                                      AllowFoldKind CanFold) {
   SourceLocation DiagLoc = E->getBeginLoc();
 
   if (getLangOpts().CPlusPlus11) {
@@ -16092,7 +16092,7 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
     Notes.clear();
   }
 
-  if (!Folded || !AllowFold) {
+  if (!Folded || !CanFold) {
     if (!Diagnoser.Suppress) {
       Diagnoser.diagnoseNotICE(*this, DiagLoc) << E->getSourceRange();
       for (const PartialDiagnosticAt &Note : Notes)
