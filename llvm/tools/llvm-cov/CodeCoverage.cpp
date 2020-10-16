@@ -130,9 +130,6 @@ private:
   CoverageFiltersMatchAll Filters;
   CoverageFilters IgnoreFilenameFilters;
 
-  /// True if InputSourceFiles are provided.
-  bool HadSourceFiles = false;
-
   /// The path to the indexed profile.
   std::string PGOFilename;
 
@@ -197,7 +194,6 @@ void CodeCoverageTool::addCollectedPath(const std::string &Path) {
   sys::path::remove_dots(EffectivePath, /*remove_dot_dots=*/true);
   if (!IgnoreFilenameFilters.matchesFilename(EffectivePath))
     SourceFiles.emplace_back(EffectivePath.str());
-  HadSourceFiles = !SourceFiles.empty();
 }
 
 void CodeCoverageTool::collectPaths(const std::string &Path) {
@@ -401,7 +397,6 @@ void CodeCoverageTool::remapPathNames(const CoverageMapping &Coverage) {
     sys::path::native(Path, NativePath);
     if (!sys::path::is_separator(NativePath.back()))
       NativePath += sys::path::get_separator();
-    sys::path::remove_dots(NativePath, true);
     return NativePath.c_str();
   };
   std::string RemapFrom = nativeWithTrailing(PathRemapping->first);
@@ -411,7 +406,6 @@ void CodeCoverageTool::remapPathNames(const CoverageMapping &Coverage) {
   for (StringRef Filename : Coverage.getUniqueSourceFiles()) {
     SmallString<128> NativeFilename;
     sys::path::native(Filename, NativeFilename);
-    sys::path::remove_dots(NativeFilename, true);
     if (NativeFilename.startswith(RemapFrom)) {
       RemappedFilenames[Filename] =
           RemapTo + NativeFilename.substr(RemapFrom.size()).str();
@@ -901,7 +895,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
 
   auto Printer = CoveragePrinter::create(ViewOpts);
 
-  if (SourceFiles.empty() && !HadSourceFiles)
+  if (SourceFiles.empty())
     // Get the source files from the function coverage mapping.
     for (StringRef Filename : Coverage->getUniqueSourceFiles()) {
       if (!IgnoreFilenameFilters.matchesFilename(Filename))
