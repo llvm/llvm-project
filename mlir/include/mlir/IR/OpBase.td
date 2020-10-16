@@ -1804,6 +1804,13 @@ def NoRegionArguments : NativeOpTrait<"NoRegionArguments">;
 // Marker used to identify the argument list for an op or interface method.
 def ins;
 
+// This class represents a typed argument with optional default value for C
+// function signatures, e.g. builders or methods.
+class CArg<string ty, string value = ""> {
+  string type = ty;
+  string defaultValue = value;
+}
+
 // OpInterfaceTrait corresponds to a specific 'OpInterface' class defined in
 // C++. The purpose to wrap around C++ symbol string with this class is to make
 // interfaces specified for ops in TableGen less alien and more integrated.
@@ -1923,6 +1930,15 @@ def region;
 // Marker used to identify the successor list for an op.
 def successor;
 
+// Base class for custom builders. This is a transient class that will go away
+// when the transition to the DAG form of builder declaration is complete.
+// Should not be used directly.
+class OpBuilderBase<dag dp, code b> {
+  string params = ?;
+  dag dagParams = dp;
+  code body = b;
+}
+
 // Class for defining a custom builder.
 //
 // TableGen generates several generic builders for each op by default (see
@@ -1932,22 +1948,40 @@ def successor;
 // The signature of the builder is always
 //
 // ```c++
-// static void build(OpBuilder &builder, OperationState &state,
+// static void build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
 //                   <other-parameters>...) {
 //   <body>...
 // }
 // ```
 //
-// To define a custom builder, the parameter list (*excluding* the `Builder
-// *builder, OperationState &state` part) and body should be passed in
-// as separate template arguments to this class. This is because we generate
-// op declaration and definition into separate files. If an empty string is
-// passed in for `body`, then *only* the builder declaration will be
-// generated; this provides a way to define complicated builders entirely
-// in C++.
-class OpBuilder<string p, code b = ""> {
-  string params = p;
-  code body = b;
+// To define a custom builder, the parameter list (*excluding* the
+// `OpBuilder &builder, OperationState &state` part) and body should be passed
+// in as separate template arguments to this class. The parameter list is a
+// TableGen DAG with `ins` operation with named arguments, which has either:
+//   - string initializers ("Type":$name) to represent a typed parameter, or
+//   - CArg-typed initializers (CArg<"Type", "default">:$name) to represent a
+//     typed parameter that may have a default value.
+// The type string is used verbatim to produce code and, therefore, must be a
+// valid C++ type. It is used inside the C++ namespace of the parent Op's
+// dialect; explicit namespace qualification like `::mlir` may be necessary if
+// Ops are not placed inside the `mlir` namespace. The default value string is
+// used verbatim to produce code and must be a valid C++ initializer the given
+// type. For example, the following signature specification
+//
+// ```
+// OpBuilderDAG<(ins "int":$integerArg, CArg<"float", "3.0f">:$floatArg)>
+// ```
+//
+// has an integer parameter and a float parameter with a default value.
+//
+// If an empty string is passed in for `body`, then *only* the builder
+// declaration will be generated; this provides a way to define complicated
+// builders entirely in C++.
+class OpBuilderDAG<dag p, code b = ""> : OpBuilderBase<p, b>;
+
+// Deprecated version of OpBuilder that takes the builder signature as string.
+class OpBuilder<string p, code b = ""> : OpBuilderBase<(ins), b> {
+  let params = p;
 }
 
 // A base decorator class that may optionally be added to OpVariables.
@@ -2025,7 +2059,7 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   //                   ValueRange operands,
   //                   ArrayRef<NamedAttribute> attributes);
   // ```
-  list<OpBuilder> builders = ?;
+  list<OpBuilderBase> builders = ?;
 
   // Avoid generating default build functions.  Custom builders must be
   // provided.
