@@ -388,10 +388,12 @@ namespace OpTrait {
 // corresponding trait classes.  This avoids them being template
 // instantiated/duplicated.
 namespace impl {
+OpFoldResult foldIdempotent(Operation *op);
 OpFoldResult foldInvolution(Operation *op);
 LogicalResult verifyZeroOperands(Operation *op);
 LogicalResult verifyOneOperand(Operation *op);
 LogicalResult verifyNOperands(Operation *op, unsigned numOperands);
+LogicalResult verifyIsIdempotent(Operation *op);
 LogicalResult verifyIsInvolution(Operation *op);
 LogicalResult verifyAtLeastNOperands(Operation *op, unsigned numOperands);
 LogicalResult verifyOperandsAreFloatLike(Operation *op);
@@ -1012,7 +1014,7 @@ public:
 };
 
 /// This class adds property that the operation is an involution.
-/// This means a unary to unary operation "f" that satisfies f(f(x)) = f(x)
+/// This means a unary to unary operation "f" that satisfies f(f(x)) = x
 template <typename ConcreteType>
 class IsInvolution : public TraitBase<ConcreteType, IsInvolution> {
 public:
@@ -1030,6 +1032,28 @@ public:
 
   static OpFoldResult foldTrait(Operation *op, ArrayRef<Attribute> operands) {
     return impl::foldInvolution(op);
+  }
+};
+
+/// This class adds property that the operation is idempotent.
+/// This means a unary to unary operation "f" that satisfies f(f(x)) = f(x)
+template <typename ConcreteType>
+class IsIdempotent : public TraitBase<ConcreteType, IsIdempotent> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    static_assert(ConcreteType::template hasTrait<OneResult>(),
+                  "expected operation to produce one result");
+    static_assert(ConcreteType::template hasTrait<OneOperand>(),
+                  "expected operation to take one operand");
+    static_assert(ConcreteType::template hasTrait<SameOperandsAndResultType>(),
+                  "expected operation to preserve type");
+    // Idempotent requires the operation to be side effect free as well
+    // but currently this check is under a FIXME and is not actually done.
+    return impl::verifyIsIdempotent(op);
+  }
+
+  static OpFoldResult foldTrait(Operation *op, ArrayRef<Attribute> operands) {
+    return impl::foldIdempotent(op);
   }
 };
 
