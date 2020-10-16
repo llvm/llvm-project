@@ -374,7 +374,7 @@ MlirAttribute mlirDenseElementsAttrDoubleSplatGet(MlirType shapedType,
 
 MlirAttribute mlirDenseElementsAttrBoolGet(MlirType shapedType,
                                            intptr_t numElements,
-                                           int *elements) {
+                                           const int *elements) {
   SmallVector<bool, 8> values(elements, elements + numElements);
   return wrap(
       DenseElementsAttr::get(unwrap(shapedType).cast<ShapedType>(), values));
@@ -383,7 +383,8 @@ MlirAttribute mlirDenseElementsAttrBoolGet(MlirType shapedType,
 /// Creates a dense attribute with elements of the type deduced by templates.
 template <typename T>
 static MlirAttribute getDenseAttribute(MlirType shapedType,
-                                       intptr_t numElements, T *elements) {
+                                       intptr_t numElements,
+                                       const T *elements) {
   return wrap(
       DenseElementsAttr::get(unwrap(shapedType).cast<ShapedType>(),
                              llvm::makeArrayRef(elements, numElements)));
@@ -391,32 +392,32 @@ static MlirAttribute getDenseAttribute(MlirType shapedType,
 
 MlirAttribute mlirDenseElementsAttrUInt32Get(MlirType shapedType,
                                              intptr_t numElements,
-                                             uint32_t *elements) {
+                                             const uint32_t *elements) {
   return getDenseAttribute(shapedType, numElements, elements);
 }
 MlirAttribute mlirDenseElementsAttrInt32Get(MlirType shapedType,
                                             intptr_t numElements,
-                                            int32_t *elements) {
+                                            const int32_t *elements) {
   return getDenseAttribute(shapedType, numElements, elements);
 }
 MlirAttribute mlirDenseElementsAttrUInt64Get(MlirType shapedType,
                                              intptr_t numElements,
-                                             uint64_t *elements) {
+                                             const uint64_t *elements) {
   return getDenseAttribute(shapedType, numElements, elements);
 }
 MlirAttribute mlirDenseElementsAttrInt64Get(MlirType shapedType,
                                             intptr_t numElements,
-                                            int64_t *elements) {
+                                            const int64_t *elements) {
   return getDenseAttribute(shapedType, numElements, elements);
 }
 MlirAttribute mlirDenseElementsAttrFloatGet(MlirType shapedType,
                                             intptr_t numElements,
-                                            float *elements) {
+                                            const float *elements) {
   return getDenseAttribute(shapedType, numElements, elements);
 }
 MlirAttribute mlirDenseElementsAttrDoubleGet(MlirType shapedType,
                                              intptr_t numElements,
-                                             double *elements) {
+                                             const double *elements) {
   return getDenseAttribute(shapedType, numElements, elements);
 }
 

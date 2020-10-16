@@ -516,6 +516,10 @@ int printStandardAttributes(MlirContext ctx) {
     return 1;
   mlirAttributeDump(floating);
 
+  // Exercise mlirAttributeGetType() just for the first one.
+  MlirType floatingType = mlirAttributeGetType(floating);
+  mlirTypeDump(floatingType);
+
   MlirAttribute integer = mlirIntegerAttrGet(mlirIntegerTypeGet(ctx, 32), 42);
   if (!mlirAttributeIsAInteger(integer) ||
       mlirIntegerAttrGetValueInt(integer) != 42)
@@ -990,6 +994,7 @@ int main() {
   // clang-format off
   // CHECK-LABEL: @attrs
   // CHECK: 2.000000e+00 : f64
+  // CHECK: f64
   // CHECK: 42 : i32
   // CHECK: true
   // CHECK: #std.abc
