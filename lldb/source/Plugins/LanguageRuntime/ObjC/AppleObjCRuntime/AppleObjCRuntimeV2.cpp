@@ -2717,6 +2717,9 @@ class ObjCExceptionThrowFrameRecognizer : public StackFrameRecognizer {
     return lldb::RecognizedStackFrameSP(
         new ObjCExceptionRecognizedStackFrame(frame));
   };
+  std::string GetName() override {
+    return "ObjC Exception Throw StackFrame Recognizer";
+  }
 };
 
 static void RegisterObjCExceptionRecognizer(Process *process) {
