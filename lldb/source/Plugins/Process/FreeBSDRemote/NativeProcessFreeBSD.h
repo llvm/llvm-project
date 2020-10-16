@@ -60,11 +60,6 @@ public:
   Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
                      size_t &bytes_written) override;
 
-  Status AllocateMemory(size_t size, uint32_t permissions,
-                        lldb::addr_t &addr) override;
-
-  Status DeallocateMemory(lldb::addr_t addr) override;
-
   lldb::addr_t GetSharedLibraryInfoAddress() override;
 
   size_t UpdateThreads() override;
@@ -112,6 +107,7 @@ private:
   void SigchldHandler();
 
   Status Attach();
+  Status SetupTrace();
   Status ReinitializeThreads();
 };
 

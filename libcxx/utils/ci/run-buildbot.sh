@@ -109,6 +109,12 @@ generic-nodebug)
     args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-nodebug.cmake")
 ;;
+generic-no-random_device)
+    export CC=clang
+    export CXX=clang++
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-random_device.cmake")
+;;
 x86_64-apple-system)
     export CC=clang
     export CXX=clang++

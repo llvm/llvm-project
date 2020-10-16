@@ -52,6 +52,7 @@ namespace {
 bool isUsefullToPreserve(Attribute::AttrKind Kind) {
   switch (Kind) {
     case Attribute::NonNull:
+    case Attribute::NoUndef:
     case Attribute::Alignment:
     case Attribute::Dereferenceable:
     case Attribute::DereferenceableOrNull:

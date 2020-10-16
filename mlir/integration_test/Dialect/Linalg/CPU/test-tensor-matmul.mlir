@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-linalg-on-tensors-to-buffers -convert-linalg-to-loops -convert-linalg-to-llvm -convert-std-to-llvm | \
+// RUN: mlir-opt %s -linalg-bufferize -convert-linalg-to-loops -convert-linalg-to-llvm -convert-std-to-llvm | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
@@ -19,9 +19,10 @@ func @main() {
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
   // CHECK-SAME: rank = 2 offset = 0 sizes = [2, 4] strides = [4, 1] data =
   // CHECK-NEXT: [1038,   1044,   1050,   1056]
-  // CHECK-NEXT: [1065,   1074,   1083,   1092]
+  // CHECK-NEXT: [1083,   1098,   1113,   1128]
 
   return
 }
 
 func @print_memref_f32(%ptr : tensor<*xf32>)
+

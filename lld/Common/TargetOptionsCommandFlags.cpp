@@ -14,7 +14,7 @@
 static llvm::codegen::RegisterCodeGenFlags CGF;
 
 llvm::TargetOptions lld::initTargetOptionsFromCodeGenFlags() {
-  return llvm::codegen::InitTargetOptionsFromCodeGenFlags();
+  return llvm::codegen::InitTargetOptionsFromCodeGenFlags(llvm::Triple());
 }
 
 llvm::Optional<llvm::Reloc::Model> lld::getRelocModelFromCMModel() {

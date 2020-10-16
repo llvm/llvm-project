@@ -2531,8 +2531,10 @@ parseListOfOperandsOrIntegers(OpAsmParser &parser, OperationState &result,
   if (failed(parser.parseLSquare()))
     return failure();
   // 0-D.
-  if (succeeded(parser.parseOptionalRSquare()))
+  if (succeeded(parser.parseOptionalRSquare())) {
+    result.addAttribute(attrName, parser.getBuilder().getArrayAttr({}));
     return success();
+  }
 
   SmallVector<int64_t, 4> attrVals;
   while (true) {
@@ -3331,6 +3333,13 @@ void SubViewOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                             MLIRContext *context) {
   results.insert<OpWithOffsetSizesAndStridesConstantArgumentFolder<SubViewOp>,
                  SubViewOpMemRefCastFolder>(context);
+}
+
+OpFoldResult SubViewOp::fold(ArrayRef<Attribute> operands) {
+  if (getResultRank() == 0 && getSourceRank() == 0)
+    return getViewSource();
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//

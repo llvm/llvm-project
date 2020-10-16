@@ -1,7 +1,7 @@
-// RUN: %clangxx_asan -O0 -x c %s -o %t && not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_asan -O1 -x c %s -o %t && not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_asan -O2 -x c %s -o %t && not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_asan -O3 -x c %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O0 -x c %s -o %t && not %env_asan_opts=fast_unwind_on_malloc=1 %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O1 -x c %s -o %t && not %env_asan_opts=fast_unwind_on_malloc=1 %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O2 -x c %s -o %t && not %env_asan_opts=fast_unwind_on_malloc=1 %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O3 -x c %s -o %t && not %env_asan_opts=fast_unwind_on_malloc=1 %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: (arm-target-arch || armhf-target-arch), fast-unwinder-works
 

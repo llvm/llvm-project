@@ -14,8 +14,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
-class ProcessMonitor;
-
 class RegisterContextPOSIX_arm64 : public lldb_private::RegisterContext {
 public:
   RegisterContextPOSIX_arm64(

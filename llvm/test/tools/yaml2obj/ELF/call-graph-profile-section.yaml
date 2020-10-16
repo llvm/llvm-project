@@ -68,7 +68,7 @@ Symbols:
   - Name: bar
 
 ## Check we can set arbitrary sh_link and sh_entsize values.
-## Check we can specify neither "Content" nor "Entries" tags.
+## Check we can specify none of "Content", "Entries", and "Size" tags.
 # RUN: yaml2obj --docnum=2 %s -o %t.link
 # RUN: llvm-readelf --sections %t.link | FileCheck %s --check-prefix=LINK
 
@@ -91,23 +91,8 @@ Sections:
     Link:    0xFF
     EntSize: 0xFF
 
-## Check we can't specify both "Content" and "Entries" tags.
-# RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --check-prefix=BOTH
-# BOTH: error: "Entries" and "Content" can't be used together
-
---- !ELF
-FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_DYN
-Sections:
-  - Name:    .llvm.foo
-    Type:    SHT_LLVM_CALL_GRAPH_PROFILE
-    Content: ""
-    Entries: []
-
 ## Check we can refer to symbols by name.
-# RUN: yaml2obj --docnum=4 %s -o %t.sym
+# RUN: yaml2obj --docnum=3 %s -o %t.sym
 # RUN: llvm-readobj --cg-profile %t.sym | FileCheck %s --check-prefix=SYMBOL-NAMES
 
 # SYMBOL-NAMES:      CGProfile [
@@ -146,7 +131,7 @@ Symbols:
   - Name: 'foo (1)'
 
 ## Check we can describe SHT_LLVM_CALL_GRAPH_PROFILE sections using the "Content" tag.
-# RUN: yaml2obj --docnum=5 %s -o %t.content
+# RUN: yaml2obj --docnum=4 %s -o %t.content
 # RUN: llvm-readobj --sections --section-data %t.content | FileCheck %s --check-prefix=CONTENT
 
 # CONTENT:      Name: .llvm.call-graph-profile
@@ -165,8 +150,8 @@ Sections:
     Content: "11223344"
 
 ## Check we can't reference unknown symbols by name.
+# RUN: not yaml2obj --docnum=5 %s 2>&1 | FileCheck %s --check-prefix=UNKNOWN-NAME
 # RUN: not yaml2obj --docnum=6 %s 2>&1 | FileCheck %s --check-prefix=UNKNOWN-NAME
-# RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=UNKNOWN-NAME
 # UNKNOWN-NAME: error: unknown symbol referenced: 'bar' by YAML section '.llvm.call-graph-profile'
 
 --- !ELF
@@ -202,7 +187,7 @@ Symbols:
   - Name: foo
 
 ## Check we can specify arbitrary symbol indexes for an SHT_LLVM_CALL_GRAPH_PROFILE section entry.
-# RUN: yaml2obj --docnum=8 %s -o %t.unk
+# RUN: yaml2obj --docnum=7 %s -o %t.unk
 # RUN: llvm-readobj --sections --section-data %t.unk | FileCheck %s --check-prefix=UNKNOWN-INDEX
 
 # UNKNOWN-INDEX:      Name: .llvm.call-graph-profile
@@ -222,3 +207,69 @@ Sections:
       - From:   1
         To:     2
         Weight: 3
+
+## Check we can use the "Content" key with the "Size" key when the size is greater
+## than or equal to the content size.
+
+# RUN: not yaml2obj --docnum=8 -DSIZE=1 -DCONTENT="'0011'" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CONTENT-SIZE-ERR
+
+# CONTENT-SIZE-ERR: error: Section size must be greater than or equal to the content size
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .llvm.foo
+    Type:    SHT_LLVM_CALL_GRAPH_PROFILE
+    Link:    0x1
+    EntSize: 0x2
+    Size:    [[SIZE=<none>]]
+    Content: [[CONTENT=<none>]]
+    Entries: [[ENTRIES=<none>]]
+
+# RUN: yaml2obj --docnum=8 -DSIZE=2 -DCONTENT="'0011'" %s -o %t.cont.size.eq.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.eq.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="0011"
+
+# RUN: yaml2obj --docnum=8 -DSIZE=3 -DCONTENT="'0011'" %s -o %t.cont.size.gr.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.gr.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="001100"
+
+# CHECK-CONTENT:      Name: .llvm.foo
+# CHECK-CONTENT-NEXT: Type: SHT_LLVM_CALL_GRAPH_PROFILE
+# CHECK-CONTENT-NEXT: Flags [
+# CHECK-CONTENT-NEXT: ]
+# CHECK-CONTENT-NEXT: Address:
+# CHECK-CONTENT-NEXT: Offset:
+# CHECK-CONTENT-NEXT: Size:
+# CHECK-CONTENT-NEXT: Link: 1
+# CHECK-CONTENT-NEXT: Info:
+# CHECK-CONTENT-NEXT: AddressAlignment:
+# CHECK-CONTENT-NEXT: EntrySize: 2
+# CHECK-CONTENT-NEXT: SectionData (
+# CHECK-CONTENT-NEXT:   0000: [[DATA]] |
+# CHECK-CONTENT-NEXT: )
+
+## Check we can use the "Size" key alone to create the section.
+
+# RUN: yaml2obj --docnum=8 -DSIZE=3 %s -o %t.size.o
+# RUN: llvm-readobj --sections --section-data %t.size.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="000000"
+
+## Check we can use the "Content" key alone to create the section.
+
+# RUN: yaml2obj --docnum=8 -DCONTENT="'112233'" %s -o %t.content.o
+# RUN: llvm-readobj --sections --section-data %t.content.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="112233"
+
+## Check we can't use the "Entries" key together with the "Content" or "Size" keys.
+
+# RUN: not yaml2obj --docnum=8 -DSIZE=0 -DENTRIES="[]" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ENTRIES-ERR
+# RUN: not yaml2obj --docnum=8 -DCONTENT="'00'" -DENTRIES="[]" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ENTRIES-ERR
+
+# ENTRIES-ERR: error: "Entries" cannot be used with "Content" or "Size"

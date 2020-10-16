@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 -verify-machineinstrs -run-pass si-insert-skips,post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -run-pass si-insert-skips,post-RA-hazard-rec -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: hazard_vcmpx_smov_exec_lo
 # GCN:      $sgpr0 = S_MOV_B32 $exec_lo

@@ -111,8 +111,6 @@ CodeCompleteResult completions(const TestTU &TU, Position Point,
 
   MockFS FS;
   auto Inputs = TU.inputs(FS);
-  Inputs.Opts.BuildRecoveryAST = true;
-  Inputs.Opts.PreserveRecoveryASTType = true;
   IgnoreDiagnostics Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);
   if (!CI) {
@@ -1100,8 +1098,6 @@ SignatureHelp signatures(llvm::StringRef Text, Position Point,
   MockFS FS;
   auto Inputs = TU.inputs(FS);
   Inputs.Index = Index.get();
-  Inputs.Opts.BuildRecoveryAST = true;
-  Inputs.Opts.PreserveRecoveryASTType = true;
   IgnoreDiagnostics Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);
   if (!CI) {

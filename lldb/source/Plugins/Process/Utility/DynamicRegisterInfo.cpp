@@ -151,10 +151,8 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
               const uint32_t msbyte = msbit / 8;
               const uint32_t lsbyte = lsbit / 8;
 
-              ConstString containing_reg_name(reg_name_str);
-
               const RegisterInfo *containing_reg_info =
-                  GetRegisterInfo(containing_reg_name);
+                  GetRegisterInfo(reg_name_str);
               if (containing_reg_info) {
                 const uint32_t max_bit = containing_reg_info->byte_size * 8;
                 if (msbit < max_bit && lsbit < max_bit) {
@@ -189,7 +187,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
                 }
               } else {
                 printf("error: invalid concrete register \"%s\"\n",
-                       containing_reg_name.GetCString());
+                       reg_name_str.c_str());
               }
             } else {
               printf("error: msbit (%u) must be greater than lsbit (%u)\n",
@@ -217,7 +215,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
               if (composite_reg_list->GetItemAtIndexAsString(
                       composite_idx, composite_reg_name, nullptr)) {
                 const RegisterInfo *composite_reg_info =
-                    GetRegisterInfo(composite_reg_name);
+                    GetRegisterInfo(composite_reg_name.GetStringRef());
                 if (composite_reg_info) {
                   composite_offset = std::min(composite_offset,
                                               composite_reg_info->byte_offset);
@@ -357,7 +355,7 @@ DynamicRegisterInfo::SetRegisterInfo(const StructuredData::Dictionary &dict,
           if (invalidate_reg_list->GetItemAtIndexAsString(
                   idx, invalidate_reg_name)) {
             const RegisterInfo *invalidate_reg_info =
-                GetRegisterInfo(invalidate_reg_name);
+                GetRegisterInfo(invalidate_reg_name.GetStringRef());
             if (invalidate_reg_info) {
               m_invalidate_regs_map[i].push_back(
                   invalidate_reg_info->kinds[eRegisterKindLLDB]);
@@ -737,16 +735,10 @@ void DynamicRegisterInfo::Dump() const {
   }
 }
 
-const lldb_private::RegisterInfo *DynamicRegisterInfo::GetRegisterInfo(
-    lldb_private::ConstString reg_name) const {
-  for (auto &reg_info : m_regs) {
-    // We can use pointer comparison since we used a ConstString to set the
-    // "name" member in AddRegister()
-    assert(ConstString(reg_info.name).GetCString() == reg_info.name &&
-           "reg_info.name not from a ConstString?");
-    if (reg_info.name == reg_name.GetCString()) {
+const lldb_private::RegisterInfo *
+DynamicRegisterInfo::GetRegisterInfo(llvm::StringRef reg_name) const {
+  for (auto &reg_info : m_regs)
+    if (reg_info.name == reg_name)
       return &reg_info;
-    }
-  }
   return nullptr;
 }

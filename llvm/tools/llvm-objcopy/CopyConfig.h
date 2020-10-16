@@ -230,6 +230,9 @@ struct CopyConfig {
   bool StripUnneeded = false;
   bool Weaken = false;
   bool DecompressDebugSections = false;
+  // install-name-tool's --delete_all_rpaths
+  bool RemoveAllRpaths = false;
+
   DebugCompressionType CompressionType = DebugCompressionType::None;
 
   // parseELFConfig performs ELF-specific command-line parsing. Fills `ELF` on

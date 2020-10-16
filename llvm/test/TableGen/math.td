@@ -71,6 +71,12 @@ def v1a : Int<!and(v7.Value, 5, v1.Value)>;
 // CHECK: Value = 84
 def v84   : Int<!mul(v12.Value, v7.Value)>;
 
+// CHECK: def v9
+// CHECK: Value = 9
+def v9 : Int<!xor(v7.Value, 0x0E)>;
+
 // CHECK: def v924
 // CHECK: Value = 924
 def v924   : Int<!mul(v84.Value, 11)>;
+
+

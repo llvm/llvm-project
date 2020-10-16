@@ -1061,9 +1061,10 @@ namespace memory_leaks {
   static_assert(h({new bool(true)})); // ok
 }
 
-void *operator new(std::size_t, void*);
+constexpr void *operator new(std::size_t, void *p) { return p; }
 namespace std {
   template<typename T> constexpr T *construct(T *p) { return new (p) T; }
+  template<typename T> constexpr void destroy(T *p) { p->~T(); }
 }
 
 namespace dtor_call {
@@ -1415,3 +1416,24 @@ namespace PR45350 {
   //   decreasing address
   static_assert(f(6) == 543210);
 }
+
+namespace PR47805 {
+  struct A {
+    bool bad = true;
+    constexpr ~A() { if (bad) throw; }
+  };
+  constexpr bool f(A a) { a.bad = false; return true; }
+  constexpr bool b = f(A());
+
+  struct B { B *p = this; };
+  constexpr bool g(B b) { return &b == b.p; }
+  static_assert(g({}));
+}
+
+constexpr bool destroy_at_test() {
+  int n = 0;
+  std::destroy(&n);
+  std::construct(&n);
+  return true;
+}
+static_assert(destroy_at_test());

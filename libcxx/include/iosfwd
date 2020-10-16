@@ -215,6 +215,33 @@ typedef basic_string<wchar_t, char_traits<wchar_t>, allocator<wchar_t> > wstring
 template <class _Tp, class _Alloc = allocator<_Tp> >
 class _LIBCPP_TEMPLATE_VIS vector;
 
+template <class _CharT, class _Traits>
+class __save_flags
+{
+    typedef basic_ios<_CharT, _Traits> __stream_type;
+    typedef typename __stream_type::fmtflags fmtflags;
+
+    __stream_type& __stream_;
+    fmtflags       __fmtflags_;
+    _CharT         __fill_;
+
+    __save_flags(const __save_flags&);
+    __save_flags& operator=(const __save_flags&);
+public:
+    _LIBCPP_INLINE_VISIBILITY
+    explicit __save_flags(__stream_type& __stream)
+        : __stream_(__stream),
+          __fmtflags_(__stream.flags()),
+          __fill_(__stream.fill())
+        {}
+    _LIBCPP_INLINE_VISIBILITY
+    ~__save_flags()
+    {
+        __stream_.flags(__fmtflags_);
+        __stream_.fill(__fill_);
+    }
+};
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif  // _LIBCPP_IOSFWD

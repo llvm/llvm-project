@@ -118,11 +118,11 @@ GCNNSAReassign::tryAssignRegisters(SmallVectorImpl<LiveInterval *> &Intervals,
       LRM->unassign(*Intervals[N]);
 
   for (unsigned N = 0; N < NumRegs; ++N)
-    if (LRM->checkInterference(*Intervals[N], StartReg + N))
+    if (LRM->checkInterference(*Intervals[N], MCRegister::from(StartReg + N)))
       return false;
 
   for (unsigned N = 0; N < NumRegs; ++N)
-    LRM->assign(*Intervals[N], StartReg + N);
+    LRM->assign(*Intervals[N], MCRegister::from(StartReg + N));
 
   return true;
 }
@@ -273,7 +273,7 @@ bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
       AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::vaddr0);
 
     SmallVector<LiveInterval *, 16> Intervals;
-    SmallVector<unsigned, 16> OrigRegs;
+    SmallVector<MCRegister, 16> OrigRegs;
     SlotIndex MinInd, MaxInd;
     for (unsigned I = 0; I < Info->VAddrDwords; ++I) {
       const MachineOperand &Op = MI->getOperand(VAddr0Idx + I);

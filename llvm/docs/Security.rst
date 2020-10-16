@@ -207,13 +207,14 @@ The parts of the LLVM Project which are currently treated as non-security sensit
 How to report a security issue?
 ===============================
 
-*FUTURE*: this section will be expanded once we’ve figured out other details above.
+*FUTURE*: this section will be expanded once we’ve figured out other details above. In the meantime, if you found a security issue please follow directly the escalation instructions below.
 
 Not everyone who wants to report a security issue will be familiar with LLVM, its community, and processes. Therefore, this needs to be easy to find on the LLVM website, and set clear expectations to issue reporters.
 
-
+We aim to acknowledge your report within two business days since you first reach out. If you do not receive any response by then, you can escalate by sending a message to the `llvm-dev mailing list`_ asking to get in touch with someone from the LLVM Security Group. **The escalation mailing list is public**: avoid discussing or mentioning the specific issue when posting on it.
 
 .. _CVE process: https://cve.mitre.org
 .. _chromium issue tracker: https://crbug.com
 .. _GitHub security: https://help.github.com/en/articles/about-maintainer-security-advisories
+.. _llvm-dev mailing list: https://lists.llvm.org/mailman/listinfo/llvm-dev
 .. _MITRE: https://cve.mitre.org

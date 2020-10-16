@@ -827,6 +827,9 @@ func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %21 = subview %20[0, 0, 0][1, 16, 4][1, 1, 1] : memref<8x16x4xf32> to memref<16x4xf32>
 
   %22 = subview %20[3, 4, 2][1, 6, 3][1, 1, 1] : memref<8x16x4xf32> to memref<6x3xf32, offset: 210, strides: [4, 1]>
+
+  %23 = alloc() : memref<f32>
+  %78 = subview %23[] [] []  : memref<f32> to memref<f32>
   return
 }
 

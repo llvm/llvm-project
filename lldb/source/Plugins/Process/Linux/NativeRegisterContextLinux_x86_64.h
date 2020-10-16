@@ -64,6 +64,10 @@ public:
 
   uint32_t NumSupportedHardwareWatchpoints() override;
 
+  llvm::Optional<SyscallData> GetSyscallData() override;
+
+  llvm::Optional<MmapData> GetMmapData() override;
+
 protected:
   void *GetGPRBuffer() override { return &m_gpr_x86_64; }
 

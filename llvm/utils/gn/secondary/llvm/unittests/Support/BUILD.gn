@@ -53,6 +53,7 @@ unittest("SupportTests") {
     "ManagedStatic.cpp",
     "MatchersTest.cpp",
     "MathExtrasTest.cpp",
+    "MemoryBufferRefTest.cpp",
     "MemoryBufferTest.cpp",
     "MemoryTest.cpp",
     "NativeFormatTests.cpp",

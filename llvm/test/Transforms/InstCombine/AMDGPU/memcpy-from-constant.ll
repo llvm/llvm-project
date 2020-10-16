@@ -23,6 +23,57 @@ define i8 @memcpy_constant_arg_ptr_to_alloca([32 x i8] addrspace(4)* noalias rea
   ret i8 %load
 }
 
+define i8 @memcpy_constant_arg_ptr_to_alloca_load_metadata([32 x i8] addrspace(4)* noalias readonly align 4 dereferenceable(32) %arg, i32 %idx) {
+; CHECK-LABEL: @memcpy_constant_arg_ptr_to_alloca_load_metadata(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [32 x i8], [32 x i8] addrspace(4)* [[ARG:%.*]], i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8 addrspace(4)* [[GEP]], align 1, !noalias !0
+; CHECK-NEXT:    ret i8 [[LOAD]]
+;
+  %alloca = alloca [32 x i8], align 4, addrspace(5)
+  %alloca.cast = bitcast [32 x i8] addrspace(5)* %alloca to i8 addrspace(5)*
+  %arg.cast = bitcast [32 x i8] addrspace(4)* %arg to i8 addrspace(4)*
+  call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* %alloca.cast, i8 addrspace(4)* %arg.cast, i64 32, i1 false)
+  %gep = getelementptr inbounds [32 x i8], [32 x i8] addrspace(5)* %alloca, i32 0, i32 %idx
+  %load = load i8, i8 addrspace(5)* %gep, !noalias !0
+  ret i8 %load
+}
+
+define i64 @memcpy_constant_arg_ptr_to_alloca_load_alignment([32 x i64] addrspace(4)* noalias readonly align 4 dereferenceable(256) %arg, i32 %idx) {
+; CHECK-LABEL: @memcpy_constant_arg_ptr_to_alloca_load_alignment(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [32 x i64], [32 x i64] addrspace(4)* [[ARG:%.*]], i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i64, i64 addrspace(4)* [[GEP]], align 16
+; CHECK-NEXT:    ret i64 [[LOAD]]
+;
+  %alloca = alloca [32 x i64], align 4, addrspace(5)
+  %alloca.cast = bitcast [32 x i64] addrspace(5)* %alloca to i8 addrspace(5)*
+  %arg.cast = bitcast [32 x i64] addrspace(4)* %arg to i8 addrspace(4)*
+  call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* %alloca.cast, i8 addrspace(4)* %arg.cast, i64 256, i1 false)
+  %gep = getelementptr inbounds [32 x i64], [32 x i64] addrspace(5)* %alloca, i32 0, i32 %idx
+  %load = load i64, i64 addrspace(5)* %gep, align 16
+  ret i64 %load
+}
+
+define i64 @memcpy_constant_arg_ptr_to_alloca_load_atomic([32 x i64] addrspace(4)* noalias readonly align 8 dereferenceable(256) %arg, i32 %idx) {
+; CHECK-LABEL: @memcpy_constant_arg_ptr_to_alloca_load_atomic(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i64], align 8, addrspace(5)
+; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = bitcast [32 x i64] addrspace(5)* [[ALLOCA]] to i8 addrspace(5)*
+; CHECK-NEXT:    [[ARG_CAST:%.*]] = bitcast [32 x i64] addrspace(4)* [[ARG:%.*]] to i8 addrspace(4)*
+; CHECK-NEXT:    call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* align 8 dereferenceable(256) [[ALLOCA_CAST]], i8 addrspace(4)* align 8 dereferenceable(256) [[ARG_CAST]], i64 256, i1 false)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i64], [32 x i64] addrspace(5)* [[ALLOCA]], i32 0, i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load atomic i64, i64 addrspace(5)* [[GEP]] syncscope("somescope") acquire, align 8
+; CHECK-NEXT:    ret i64 [[LOAD]]
+;
+  %alloca = alloca [32 x i64], align 8, addrspace(5)
+  %alloca.cast = bitcast [32 x i64] addrspace(5)* %alloca to i8 addrspace(5)*
+  %arg.cast = bitcast [32 x i64] addrspace(4)* %arg to i8 addrspace(4)*
+  call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* %alloca.cast, i8 addrspace(4)* %arg.cast, i64 256, i1 false)
+  %gep = getelementptr inbounds [32 x i64], [32 x i64] addrspace(5)* %alloca, i32 0, i32 %idx
+  %load = load atomic i64, i64 addrspace(5)* %gep syncscope("somescope") acquire, align 8
+  ret i64 %load
+}
+
 ; Simple memmove to alloca from constant address space argument.
 define i8 @memmove_constant_arg_ptr_to_alloca([32 x i8] addrspace(4)* noalias readonly align 4 dereferenceable(32) %arg, i32 %idx) {
 ; CHECK-LABEL: @memmove_constant_arg_ptr_to_alloca(
@@ -168,7 +219,7 @@ define amdgpu_kernel void @byref_infloop_metadata(i8* %scratch, %struct.ty addrs
 ; CHECK-LABEL: @byref_infloop_metadata(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[CAST_ALLOCA:%.*]] = bitcast [[STRUCT_TY:%.*]] addrspace(4)* [[ARG:%.*]] to i8 addrspace(4)*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p4i8.i32(i8* nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], i8 addrspace(4)* align 4 dereferenceable(16) [[CAST_ALLOCA]], i32 16, i1 false), !noalias !0
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p4i8.i32(i8* nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], i8 addrspace(4)* align 4 dereferenceable(16) [[CAST_ALLOCA]], i32 16, i1 false), !noalias !1
 ; CHECK-NEXT:    ret void
 ;
 bb:

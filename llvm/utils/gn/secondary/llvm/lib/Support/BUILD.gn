@@ -96,6 +96,7 @@ static_library("Support") {
     "MathExtras.cpp",
     "MemAlloc.cpp",
     "MemoryBuffer.cpp",
+    "MemoryBufferRef.cpp",
     "NativeFormatting.cpp",
     "OptimizedStructLayout.cpp",
     "Optional.cpp",

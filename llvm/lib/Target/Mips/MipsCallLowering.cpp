@@ -347,7 +347,7 @@ static CCValAssign::LocInfo determineLocInfo(const MVT RegisterVT, const EVT VT,
                                              const ISD::ArgFlagsTy &Flags) {
   // > does not mean loss of information as type RegisterVT can't hold type VT,
   // it means that type VT is split into multiple registers of type RegisterVT
-  if (VT.getSizeInBits() >= RegisterVT.getSizeInBits())
+  if (VT.getFixedSizeInBits() >= RegisterVT.getFixedSizeInBits())
     return CCValAssign::LocInfo::Full;
   if (Flags.isSExt())
     return CCValAssign::LocInfo::SExt;

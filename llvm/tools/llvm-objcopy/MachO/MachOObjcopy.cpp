@@ -137,8 +137,14 @@ static Error processLoadCommands(const CopyConfig &Config, Object &Obj) {
   DenseSet<StringRef> RPathsToRemove(Config.RPathsToRemove.begin(),
                                      Config.RPathsToRemove.end());
 
-  LoadCommandPred RemovePred = [&RPathsToRemove](const LoadCommand &LC) {
+  LoadCommandPred RemovePred = [&RPathsToRemove,
+                                &Config](const LoadCommand &LC) {
     if (LC.MachOLoadCommand.load_command_data.cmd == MachO::LC_RPATH) {
+      // When removing all RPaths we don't need to care
+      // about what it contains
+      if (Config.RemoveAllRpaths)
+        return true;
+
       StringRef RPath = getPayloadString(LC);
       if (RPathsToRemove.count(RPath)) {
         RPathsToRemove.erase(RPath);

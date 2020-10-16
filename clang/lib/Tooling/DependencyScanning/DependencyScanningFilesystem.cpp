@@ -217,9 +217,11 @@ public:
                    llvm::vfs::Status Stat)
       : Buffer(std::move(Buffer)), Stat(std::move(Stat)) {}
 
-  llvm::ErrorOr<llvm::vfs::Status> status() override { return Stat; }
+  static llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
+  create(const CachedFileSystemEntry *Entry,
+         ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings);
 
-  const llvm::MemoryBuffer *getBufferPtr() const { return Buffer.get(); }
+  llvm::ErrorOr<llvm::vfs::Status> status() override { return Stat; }
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBuffer(const Twine &Name, int64_t FileSize, bool RequiresNullTerminator,
@@ -234,9 +236,11 @@ private:
   llvm::vfs::Status Stat;
 };
 
-llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
-createFile(const CachedFileSystemEntry *Entry,
-           ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings) {
+} // end anonymous namespace
+
+llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> MinimizedVFSFile::create(
+    const CachedFileSystemEntry *Entry,
+    ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings) {
   if (Entry->isDirectory())
     return llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>(
         std::make_error_code(std::errc::is_a_directory));
@@ -248,13 +252,11 @@ createFile(const CachedFileSystemEntry *Entry,
                                        /*RequiresNullTerminator=*/false),
       *Entry->getStatus());
   if (!Entry->getPPSkippedRangeMapping().empty() && PPSkipMappings)
-    (*PPSkipMappings)[Result->getBufferPtr()] =
+    (*PPSkipMappings)[Result->Buffer->getBufferStart()] =
         &Entry->getPPSkippedRangeMapping();
   return llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>(
       std::unique_ptr<llvm::vfs::File>(std::move(Result)));
 }
-
-} // end anonymous namespace
 
 llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
 DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
@@ -265,5 +267,5 @@ DependencyScanningWorkerFilesystem::openFileForRead(const Twine &Path) {
       getOrCreateFileSystemEntry(Filename);
   if (!Result)
     return Result.getError();
-  return createFile(Result.get(), PPSkipMappings);
+  return MinimizedVFSFile::create(Result.get(), PPSkipMappings);
 }

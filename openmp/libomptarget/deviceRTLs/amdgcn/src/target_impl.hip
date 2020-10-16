@@ -68,10 +68,12 @@ DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t var,
 }
 
 static DEVICE SHARED uint32_t L1_Barrier;
+
 DEVICE void __kmpc_impl_target_init() {
   // Don't have global ctors, and shared memory is not zero init
   __atomic_store_n(&L1_Barrier, 0u, __ATOMIC_RELEASE);
 }
+
 DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
   __atomic_thread_fence(__ATOMIC_ACQUIRE);
 
@@ -118,8 +120,10 @@ DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
   __atomic_thread_fence(__ATOMIC_RELEASE);
 }
 
-DEVICE int GetNumberOfBlocksInKernel() { return __kmpc_amd_grid_dim_x(); }
-DEVICE int GetNumberOfThreadsInBlock() { return __kmpc_amd_workgroup_dim_x(); }
+EXTERN uint64_t __ockl_get_local_size(uint32_t);
+EXTERN uint64_t __ockl_get_num_groups(uint32_t);
+DEVICE int GetNumberOfBlocksInKernel() { return __ockl_get_num_groups(0); }
+DEVICE int GetNumberOfThreadsInBlock() { return __ockl_get_local_size(0); }
 DEVICE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
 DEVICE unsigned GetLaneId() {
   return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));

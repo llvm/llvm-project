@@ -109,6 +109,10 @@ if(APPLE)
     find_library(MOBILESERVICES_LIBRARY MobileCoreServices
       PATHS ${CMAKE_OSX_SYSROOT}/System/Library/PrivateFrameworks)
     find_library(LOCKDOWN_LIBRARY lockdown)
+    if (APPLE_EMBEDDED STREQUAL "watchos")
+      find_library(CAROUSELSERVICES_LIBRARY CarouselServices
+        PATHS ${CMAKE_OSX_SYSROOT}/System/Library/PrivateFrameworks)
+    endif()
 
     if(NOT BACKBOARD_LIBRARY)
       set(SKIP_TEST_DEBUGSERVER ON CACHE BOOL "" FORCE)
@@ -214,6 +218,7 @@ target_link_libraries(lldbDebugserverCommon
                       ${SPRINGBOARD_LIBRARY}
                       ${MOBILESERVICES_LIBRARY}
                       ${LOCKDOWN_LIBRARY}
+                      ${CAROUSELSERVICES_LIBRARY}
                       lldbDebugserverArchSupport
                       lldbDebugserverDarwin_DarwinLog
                       ${FOUNDATION_LIBRARY}
@@ -266,6 +271,11 @@ if(APPLE_EMBEDDED)
     WITH_FBS
     WITH_BKS
     )
+  if(CAROUSELSERVICES_LIBRARY)
+    set_property(TARGET lldbDebugserverCommon APPEND PROPERTY COMPILE_DEFINITIONS
+      WITH_CAROUSEL
+      )
+  endif()
   set_property(TARGET debugserver APPEND PROPERTY COMPILE_DEFINITIONS
     WITH_LOCKDOWN
     WITH_FBS

@@ -401,12 +401,15 @@ CODEGENOPT(Addrsig, 1, 0)
 /// Whether to emit unused static constants.
 CODEGENOPT(KeepStaticConsts, 1, 0)
 
-/// Whether to not follow the AAPCS that enforce at least one read before storing to a volatile bitfield
+/// Whether to follow the AAPCS enforcing at least one read before storing to a volatile bitfield
 CODEGENOPT(ForceAAPCSBitfieldLoad, 1, 0)
 
 /// Assume that by-value parameters do not alias any other values.
 CODEGENOPT(PassByValueIsNoAlias, 1, 0)
 
+/// Whether to not follow the AAPCS that enforces volatile bit-field access width to be
+/// according to the field declaring type width.
+CODEGENOPT(AAPCSBitfieldWidth, 1, 1)
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

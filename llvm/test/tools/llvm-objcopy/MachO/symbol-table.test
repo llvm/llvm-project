@@ -63,7 +63,7 @@
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: /var/folders/1d/zyfdpp7j2995h5hqspjy28bc0000gn/T/main-c5ac21.o (38)
 # CHECK-NEXT:     Type: SymDebugTable (0x66)
-# CHECK-NEXT:     Section: __got (0x3)
+# CHECK-NEXT:     Section:  (0x3)
 # CHECK-NEXT:     RefType: ReferenceFlagUndefinedLazy (0x1)
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
@@ -72,7 +72,7 @@
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name:  (207)
 # CHECK-NEXT:     Type: SymDebugTable (0x2E)
-# CHECK-NEXT:     Section: __text (0x1)
+# CHECK-NEXT:     Section:  (0x1)
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
@@ -81,7 +81,7 @@
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: _main (101)
 # CHECK-NEXT:     Type: SymDebugTable (0x24)
-# CHECK-NEXT:     Section: __text (0x1)
+# CHECK-NEXT:     Section:  (0x1)
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
@@ -99,7 +99,7 @@
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name:  (207)
 # CHECK-NEXT:     Type: SymDebugTable (0x4E)
-# CHECK-NEXT:     Section: __text (0x1)
+# CHECK-NEXT:     Section:  (0x1)
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
@@ -108,7 +108,7 @@
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: _PrivateSymbol (169)
 # CHECK-NEXT:     Type: SymDebugTable (0x26)
-# CHECK-NEXT:     Section: __bss (0x4)
+# CHECK-NEXT:     Section:  (0x4)
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
@@ -135,7 +135,7 @@
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name:  (207)
 # CHECK-NEXT:     Type: SymDebugTable (0x64)
-# CHECK-NEXT:     Section: __text (0x1)
+# CHECK-NEXT:     Section:  (0x1)
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
 # CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]

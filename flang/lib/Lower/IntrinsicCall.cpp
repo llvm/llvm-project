@@ -15,6 +15,7 @@
 
 #include "flang/Lower/IntrinsicCall.h"
 #include "RTBuilder.h"
+#include "flang/Common/static-multimap-view.h"
 #include "flang/Lower/CharacterExpr.h"
 #include "flang/Lower/ComplexExpr.h"
 #include "flang/Lower/ConvertType.h"
@@ -24,6 +25,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
+#include <string_view>
 #include <utility>
 
 #define PGMATH_DECLARE
@@ -84,89 +86,6 @@ enum class ExtremumBehavior {
   // LLVM/MLIR do not provide ways to observe this aspect, so it is not
   // possible to implement it without some target dependent runtime.
 };
-
-namespace {
-/// StaticMultimapView is a constexpr friendly multimap
-/// implementation over sorted constexpr arrays.
-/// As the View name suggests, it does not duplicate the
-/// sorted array but only brings range and search concepts
-/// over it. It provides compile time search and can also
-/// provide dynamic search (currently linear, can be improved to
-/// log(n) due to the sorted array property).
-
-// TODO: Find a better place for this if this is retained.
-// This is currently here because this was designed to provide
-// maps over runtime description without the burden of having to
-// instantiate these maps dynamically and to keep them somewhere.
-template <typename V>
-class StaticMultimapView {
-public:
-  using Key = typename V::Key;
-  struct Range {
-    using const_iterator = const V *;
-    constexpr const_iterator begin() const { return startPtr; }
-    constexpr const_iterator end() const { return endPtr; }
-    constexpr bool empty() const {
-      return startPtr == nullptr || endPtr == nullptr || endPtr <= startPtr;
-    }
-    constexpr std::size_t size() const {
-      return empty() ? 0 : static_cast<std::size_t>(endPtr - startPtr);
-    }
-    const V *startPtr{nullptr};
-    const V *endPtr{nullptr};
-  };
-  using const_iterator = typename Range::const_iterator;
-
-  template <std::size_t N>
-  constexpr StaticMultimapView(const V (&array)[N])
-      : range{&array[0], &array[0] + N} {}
-  template <typename Key>
-  constexpr bool verify() {
-    // TODO: sorted
-    // non empty increasing pointer direction
-    return !range.empty();
-  }
-  constexpr const_iterator begin() const { return range.begin(); }
-  constexpr const_iterator end() const { return range.end(); }
-
-  // Assume array is sorted.
-  // TODO make it a log(n) search based on sorted property
-  // std::equal_range will be constexpr in C++20 only.
-  constexpr Range getRange(const Key &key) const {
-    bool matched{false};
-    const V *start{nullptr}, *end{nullptr};
-    for (const auto &desc : range) {
-      if (desc.key == key) {
-        if (!matched) {
-          start = &desc;
-          matched = true;
-        }
-      } else if (matched) {
-        end = &desc;
-        matched = false;
-      }
-    }
-    if (matched) {
-      end = range.end();
-    }
-    return Range{start, end};
-  }
-
-  constexpr std::pair<const_iterator, const_iterator>
-  equal_range(const Key &key) const {
-    Range range{getRange(key)};
-    return {range.begin(), range.end()};
-  }
-
-  constexpr typename Range::const_iterator find(Key key) const {
-    const Range subRange{getRange(key)};
-    return subRange.size() == 1 ? subRange.begin() : end();
-  }
-
-private:
-  Range range{nullptr, nullptr};
-};
-} // namespace
 
 // TODO error handling -> return a code or directly emit messages ?
 struct IntrinsicLibrary {
@@ -349,8 +268,11 @@ llvm::cl::opt<MathRuntimeVersion> mathRuntimeVersion(
     llvm::cl::init(fastVersion));
 
 struct RuntimeFunction {
-  using Key = llvm::StringRef;
-  Key key;
+  // llvm::StringRef comparison operator are not constexpr, so use string_view.
+  using Key = std::string_view;
+  // Needed for implicit compare with keys.
+  constexpr operator Key() const { return key; }
+  Key key; // intrinsic name
   llvm::StringRef symbol;
   Fortran::lower::FuncTypeBuilderFunc typeGenerator;
 };
@@ -583,16 +505,13 @@ static mlir::FuncOp getFuncOp(mlir::Location loc,
 /// function type and that will not imply narrowing arguments or extending the
 /// result.
 /// If nothing is found, the mlir::FuncOp will contain a nullptr.
-template <std::size_t N>
-mlir::FuncOp searchFunctionInLibrary(mlir::Location loc,
-                                     Fortran::lower::FirOpBuilder &builder,
-                                     const RuntimeFunction (&lib)[N],
-                                     llvm::StringRef name,
-                                     mlir::FunctionType funcType,
-                                     const RuntimeFunction **bestNearMatch,
-                                     FunctionDistance &bestMatchDistance) {
-  auto map = StaticMultimapView(lib);
-  auto range = map.equal_range(name);
+mlir::FuncOp searchFunctionInLibrary(
+    mlir::Location loc, Fortran::lower::FirOpBuilder &builder,
+    const Fortran::common::StaticMultimapView<RuntimeFunction> &lib,
+    llvm::StringRef name, mlir::FunctionType funcType,
+    const RuntimeFunction **bestNearMatch,
+    FunctionDistance &bestMatchDistance) {
+  auto range = lib.equal_range(name);
   for (auto iter{range.first}; iter != range.second && iter; ++iter) {
     const auto &impl = *iter;
     auto implType = impl.typeGenerator(builder.getContext());
@@ -620,14 +539,21 @@ static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
   const RuntimeFunction *bestNearMatch = nullptr;
   FunctionDistance bestMatchDistance{};
   mlir::FuncOp match;
+  using RtMap = Fortran::common::StaticMultimapView<RuntimeFunction>;
+  static constexpr RtMap pgmathF(pgmathFast);
+  static_assert(pgmathF.Verify() && "map must be sorted");
+  static constexpr RtMap pgmathR(pgmathRelaxed);
+  static_assert(pgmathR.Verify() && "map must be sorted");
+  static constexpr RtMap pgmathP(pgmathPrecise);
+  static_assert(pgmathP.Verify() && "map must be sorted");
   if (mathRuntimeVersion == fastVersion) {
-    match = searchFunctionInLibrary(loc, builder, pgmathFast, name, funcType,
+    match = searchFunctionInLibrary(loc, builder, pgmathF, name, funcType,
                                     &bestNearMatch, bestMatchDistance);
   } else if (mathRuntimeVersion == relaxedVersion) {
-    match = searchFunctionInLibrary(loc, builder, pgmathRelaxed, name, funcType,
+    match = searchFunctionInLibrary(loc, builder, pgmathR, name, funcType,
                                     &bestNearMatch, bestMatchDistance);
   } else if (mathRuntimeVersion == preciseVersion) {
-    match = searchFunctionInLibrary(loc, builder, pgmathPrecise, name, funcType,
+    match = searchFunctionInLibrary(loc, builder, pgmathP, name, funcType,
                                     &bestNearMatch, bestMatchDistance);
   } else {
     assert(mathRuntimeVersion == llvmOnly && "unknown math runtime");
@@ -637,8 +563,10 @@ static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
 
   // Go through llvm intrinsics if not exact match in libpgmath or if
   // mathRuntimeVersion == llvmOnly
+  static constexpr RtMap llvmIntr(llvmIntrinsics);
+  static_assert(llvmIntr.Verify() && "map must be sorted");
   if (auto exactMatch =
-          searchFunctionInLibrary(loc, builder, llvmIntrinsics, name, funcType,
+          searchFunctionInLibrary(loc, builder, llvmIntr, name, funcType,
                                   &bestNearMatch, bestMatchDistance))
     return exactMatch;
 

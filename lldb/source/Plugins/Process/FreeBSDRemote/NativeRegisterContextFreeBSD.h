@@ -37,7 +37,6 @@ public:
   virtual Status ClearWatchpointHit(uint32_t wp_index) = 0;
 
 protected:
-  Status DoRegisterSet(int req, void *buf);
   virtual NativeProcessFreeBSD &GetProcess();
   virtual ::pid_t GetProcessPid();
 };

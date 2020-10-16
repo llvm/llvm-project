@@ -12,22 +12,19 @@
 
 // UNSUPPORTED: libcxx-no-debug-mode
 
-#define _LIBCPP_DEBUG 1
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <unordered_set>
 #include <cassert>
-#include <exception>
-#include <cstdlib>
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
     int a1[] = {1, 2, 3};
     std::unordered_set<int> l1(a1, a1+3);
     std::unordered_set<int>::iterator i = l1.erase(next(l1.cbegin()), l1.cbegin());
     assert(false);
-    }
+
+    return 0;
 }

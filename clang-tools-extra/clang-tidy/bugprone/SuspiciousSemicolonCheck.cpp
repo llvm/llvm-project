@@ -54,10 +54,10 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
 
   SourceLocation LocEnd = Semicolon->getEndLoc();
   FileID FID = SM.getFileID(LocEnd);
-  const llvm::MemoryBuffer *Buffer = SM.getBuffer(FID, LocEnd);
+  llvm::MemoryBufferRef Buffer = SM.getBufferOrFake(FID, LocEnd);
   Lexer Lexer(SM.getLocForStartOfFile(FID), Ctxt.getLangOpts(),
-              Buffer->getBufferStart(), SM.getCharacterData(LocEnd) + 1,
-              Buffer->getBufferEnd());
+              Buffer.getBufferStart(), SM.getCharacterData(LocEnd) + 1,
+              Buffer.getBufferEnd());
   if (Lexer.LexFromRawLexer(Token))
     return;
 

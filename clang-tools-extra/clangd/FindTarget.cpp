@@ -125,6 +125,10 @@ const auto StaticFilter = [](const NamedDecl *D) {
   return !D->isCXXInstanceMember();
 };
 const auto ValueFilter = [](const NamedDecl *D) { return isa<ValueDecl>(D); };
+const auto TypeFilter = [](const NamedDecl *D) { return isa<TypeDecl>(D); };
+const auto TemplateFilter = [](const NamedDecl *D) {
+  return isa<TemplateDecl>(D);
+};
 
 // Given the type T of a dependent expression that appears of the LHS of a
 // "->", heuristically find a corresponding pointee type in whose scope we
@@ -219,15 +223,41 @@ std::vector<const NamedDecl *> resolveExprToDecls(const Expr *E) {
   return {};
 }
 
-// Try to heuristically resolve the type of a possibly-dependent expression `E`.
-const Type *resolveExprToType(const Expr *E) {
-  std::vector<const NamedDecl *> Decls = resolveExprToDecls(E);
+const Type *resolveDeclsToType(const std::vector<const NamedDecl *> &Decls) {
   if (Decls.size() != 1) // Names an overload set -- just bail.
     return nullptr;
   if (const auto *TD = dyn_cast<TypeDecl>(Decls[0])) {
     return TD->getTypeForDecl();
-  } else if (const auto *VD = dyn_cast<ValueDecl>(Decls[0])) {
+  }
+  if (const auto *VD = dyn_cast<ValueDecl>(Decls[0])) {
     return VD->getType().getTypePtrOrNull();
+  }
+  return nullptr;
+}
+
+// Try to heuristically resolve the type of a possibly-dependent expression `E`.
+const Type *resolveExprToType(const Expr *E) {
+  return resolveDeclsToType(resolveExprToDecls(E));
+}
+
+// Try to heuristically resolve the type of a possibly-dependent nested name
+// specifier.
+const Type *resolveNestedNameSpecifierToType(const NestedNameSpecifier *NNS) {
+  if (!NNS)
+    return nullptr;
+
+  switch (NNS->getKind()) {
+  case NestedNameSpecifier::TypeSpec:
+  case NestedNameSpecifier::TypeSpecWithTemplate:
+    return NNS->getAsType();
+  case NestedNameSpecifier::Identifier: {
+    return resolveDeclsToType(getMembersReferencedViaDependentName(
+        resolveNestedNameSpecifierToType(NNS->getPrefix()),
+        [&](const ASTContext &) { return NNS->getAsIdentifier(); },
+        TypeFilter));
+  }
+  default:
+    break;
   }
   return nullptr;
 }
@@ -291,10 +321,8 @@ const NamedDecl *getTemplatePattern(const NamedDecl *D) {
 //    and both are lossy. We must know upfront what the caller ultimately wants.
 //
 // FIXME: improve common dependent scope using name lookup in primary templates.
-// We currently handle DependentScopeDeclRefExpr and
-// CXXDependentScopeMemberExpr, but some other constructs remain to be handled:
-//  - DependentTemplateSpecializationType,
-//  - DependentNameType
+// We currently handle several dependent constructs, but some others remain to
+// be handled:
 //  - UnresolvedUsingTypenameDecl
 struct TargetFinder {
   using RelSet = DeclRelationSet;
@@ -536,6 +564,23 @@ public:
         if (auto *TD = DTST->getTemplateName().getAsTemplateDecl())
           Outer.add(TD->getTemplatedDecl(), Flags | Rel::TemplatePattern);
       }
+      void VisitDependentNameType(const DependentNameType *DNT) {
+        for (const NamedDecl *ND : getMembersReferencedViaDependentName(
+                 resolveNestedNameSpecifierToType(DNT->getQualifier()),
+                 [DNT](ASTContext &) { return DNT->getIdentifier(); },
+                 TypeFilter)) {
+          Outer.add(ND, Flags);
+        }
+      }
+      void VisitDependentTemplateSpecializationType(
+          const DependentTemplateSpecializationType *DTST) {
+        for (const NamedDecl *ND : getMembersReferencedViaDependentName(
+                 resolveNestedNameSpecifierToType(DTST->getQualifier()),
+                 [DTST](ASTContext &) { return DTST->getIdentifier(); },
+                 TemplateFilter)) {
+          Outer.add(ND, Flags);
+        }
+      }
       void VisitTypedefType(const TypedefType *TT) {
         Outer.add(TT->getDecl(), Flags);
       }
@@ -591,17 +636,16 @@ public:
       return;
     debug(*NNS, Flags);
     switch (NNS->getKind()) {
-    case NestedNameSpecifier::Identifier:
-      return;
     case NestedNameSpecifier::Namespace:
       add(NNS->getAsNamespace(), Flags);
       return;
     case NestedNameSpecifier::NamespaceAlias:
       add(NNS->getAsNamespaceAlias(), Flags);
       return;
+    case NestedNameSpecifier::Identifier:
     case NestedNameSpecifier::TypeSpec:
     case NestedNameSpecifier::TypeSpecWithTemplate:
-      add(QualType(NNS->getAsType(), 0), Flags);
+      add(QualType(resolveNestedNameSpecifierToType(NNS), 0), Flags);
       return;
     case NestedNameSpecifier::Global:
       // This should be TUDecl, but we can't get a pointer to it!
