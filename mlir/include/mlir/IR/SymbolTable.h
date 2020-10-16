@@ -211,6 +211,40 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// SymbolTableCollection
+//===----------------------------------------------------------------------===//
+
+/// This class represents a collection of `SymbolTable`s. This simplifies
+/// certain algorithms that run recursively on nested symbol tables. Symbol
+/// tables are constructed lazily to reduce the upfront cost of constructing
+/// unnecessary tables.
+class SymbolTableCollection {
+public:
+  /// Look up a symbol with the specified name within the specified symbol table
+  /// operation, returning null if no such name exists.
+  Operation *lookupSymbolIn(Operation *symbolTableOp, StringRef symbol);
+  Operation *lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr name);
+  template <typename T, typename NameT>
+  T lookupSymbolIn(Operation *symbolTableOp, NameT &&name) const {
+    return dyn_cast_or_null<T>(
+        lookupSymbolIn(symbolTableOp, std::forward<NameT>(name)));
+  }
+  /// A variant of 'lookupSymbolIn' that returns all of the symbols referenced
+  /// by a given SymbolRefAttr when resolved within the provided symbol table
+  /// operation. Returns failure if any of the nested references could not be
+  /// resolved.
+  LogicalResult lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr name,
+                               SmallVectorImpl<Operation *> &symbols);
+
+  /// Lookup, or create, a symbol table for an operation.
+  SymbolTable &getSymbolTable(Operation *op);
+
+private:
+  /// The constructed symbol tables nested within this table.
+  DenseMap<Operation *, std::unique_ptr<SymbolTable>> symbolTables;
+};
+
+//===----------------------------------------------------------------------===//
 // SymbolTable Trait Types
 //===----------------------------------------------------------------------===//
 
