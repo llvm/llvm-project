@@ -1119,17 +1119,12 @@ bool WidenIV::widenWithVariantUse(NarrowIVDefUse DU) {
   assert(DU.NarrowUse->getOperand(1 - ExtendOperIdx) == DU.NarrowDef &&
          "bad DU");
 
-  const SCEV *ExtendOperExpr = nullptr;
   const OverflowingBinaryOperator *OBO =
     cast<OverflowingBinaryOperator>(NarrowUse);
   ExtendKind ExtKind = getExtendKind(NarrowDef);
-  if (ExtKind == SignExtended && OBO->hasNoSignedWrap())
-    ExtendOperExpr = SE->getSignExtendExpr(
-      SE->getSCEV(NarrowUse->getOperand(ExtendOperIdx)), WideType);
-  else if (ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap())
-    ExtendOperExpr = SE->getZeroExtendExpr(
-      SE->getSCEV(NarrowUse->getOperand(ExtendOperIdx)), WideType);
-  else
+  bool CanSignExtend = ExtKind == SignExtended && OBO->hasNoSignedWrap();
+  bool CanZeroExtend = ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap();
+  if (!CanSignExtend && !CanZeroExtend)
     return false;
 
   // Verifying that Defining operand is an AddRec
@@ -1137,14 +1132,6 @@ bool WidenIV::widenWithVariantUse(NarrowIVDefUse DU) {
   const SCEVAddRecExpr *AddRecOp1 = dyn_cast<SCEVAddRecExpr>(Op1);
   if (!AddRecOp1 || AddRecOp1->getLoop() != L)
     return false;
-  // Verifying that other operand is an Extend.
-  if (ExtKind == SignExtended) {
-    if (!isa<SCEVSignExtendExpr>(ExtendOperExpr))
-      return false;
-  } else {
-    if (!isa<SCEVZeroExtendExpr>(ExtendOperExpr))
-      return false;
-  }
 
   if (ExtKind == SignExtended) {
     for (Use &U : NarrowUse->uses()) {
