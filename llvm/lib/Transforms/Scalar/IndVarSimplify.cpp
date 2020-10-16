@@ -1171,7 +1171,7 @@ void WidenIV::widenWithVariantUseCodegen(NarrowIVDefUse DU) {
   Instruction *WideDef = DU.WideDef;
 
   ExtendKind ExtKind = getExtendKind(NarrowDef);
-
+  assert(ExtKind != Unknown && "Unknown ExtKind not handled");
   LLVM_DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
 
   // Generating a widening use instruction.
@@ -1190,24 +1190,20 @@ void WidenIV::widenWithVariantUseCodegen(NarrowIVDefUse DU) {
   IRBuilder<> Builder(NarrowUse);
   Builder.Insert(WideBO);
   WideBO->copyIRFlags(NarrowBO);
-
-  assert(ExtKind != Unknown && "Unknown ExtKind not handled");
-
   ExtendKindMap[NarrowUse] = ExtKind;
 
   for (Use &U : NarrowUse->uses()) {
     Instruction *User = nullptr;
     if (ExtKind == SignExtended)
-      User = dyn_cast<SExtInst>(U.getUser());
+      User = cast<SExtInst>(U.getUser());
     else
-      User = dyn_cast<ZExtInst>(U.getUser());
-    if (User && User->getType() == WideType) {
-      LLVM_DEBUG(dbgs() << "INDVARS: eliminating " << *User << " replaced by "
-                        << *WideBO << "\n");
-      ++NumElimExt;
-      User->replaceAllUsesWith(WideBO);
-      DeadInsts.emplace_back(User);
-    }
+      User = cast<ZExtInst>(U.getUser());
+    assert(User->getType() == WideType && "Checked before!");
+    LLVM_DEBUG(dbgs() << "INDVARS: eliminating " << *User << " replaced by "
+                      << *WideBO << "\n");
+    ++NumElimExt;
+    User->replaceAllUsesWith(WideBO);
+    DeadInsts.emplace_back(User);
   }
 }
 
