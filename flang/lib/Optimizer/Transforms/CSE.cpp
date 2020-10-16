@@ -92,11 +92,11 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
     // Compare operands.
     if (lhs->isCommutative()) {
       SmallVector<void *, 8> lops;
-      for (const auto &lod : lhs->getOperands())
+      for (auto lod : lhs->getOperands())
         lops.push_back(lod.getAsOpaquePointer());
       llvm::sort(lops.begin(), lops.end());
       SmallVector<void *, 8> rops;
-      for (const auto &rod : rhs->getOperands())
+      for (auto rod : rhs->getOperands())
         rops.push_back(rod.getAsOpaquePointer());
       llvm::sort(rops.begin(), rops.end());
       if (!std::equal(lops.begin(), lops.end(), rops.begin()))
