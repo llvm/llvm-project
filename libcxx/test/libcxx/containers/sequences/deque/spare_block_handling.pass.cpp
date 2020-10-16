@@ -31,12 +31,12 @@ struct ContainerAdaptor : public Adaptor {
 
 template <class Deque>
 static void print(const Deque& d) {
-  std::printf("%lu : __front_spare() == %lu"
-                 " : __back_spare() == %lu"
-                 " : __capacity() == %lu"
-                 " : bytes allocated == %lu\n",
-      d.size(), d.__front_spare(), d.__back_spare(), d.__capacity(),
-      malloc_allocator_base::outstanding_bytes);
+  std::printf("%zu : __front_spare() == %zu"
+              " : __back_spare() == %zu"
+              " : __capacity() == %zu"
+              " : bytes allocated == %zu\n",
+              d.size(), d.__front_spare(), d.__back_spare(), d.__capacity(),
+              malloc_allocator_base::outstanding_bytes);
 }
 
 template <class T>
