@@ -179,8 +179,8 @@ static FileID createInMemoryFile(StringRef FileName, MemoryBuffer *Source,
                                  llvm::vfs::InMemoryFileSystem *MemFS) {
   MemFS->addFileNoOwn(FileName, 0, Source);
   auto File = Files.getFile(FileName);
-  return Sources.createFileID(File ? *File : nullptr, SourceLocation(),
-                              SrcMgr::C_User);
+  assert(File && "File not added to MemFS?");
+  return Sources.createFileID(*File, SourceLocation(), SrcMgr::C_User);
 }
 
 // Parses <start line>:<end line> input to a pair of line numbers.
