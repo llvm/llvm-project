@@ -1,0 +1,10 @@
+;; Test --prefix option platform specific behavior.
+; UNSUPPORTED: system-windows
+
+;; Test removal of trailing separators (only '/').
+;; The prefix 'myprefix/\' is not changed.
+
+; RUN: sed -e "s,SRC_COMPDIR,/Inputs,g" %p/Inputs/source-interleave.ll > %t.ll
+; RUN: llc -o %t.o -filetype=obj -mtriple=x86_64-pc-linux %t.ll
+; RUN: llvm-objdump --prefix 'myprefix/\' --source %t.o 2>&1 | FileCheck %s -DFILE=%t.o -DPREFIX='myprefix/\'
+; CHECK: warning: '[[FILE]]': failed to find source [[PREFIX]]/Inputs/source-interleave-x86_64.c
