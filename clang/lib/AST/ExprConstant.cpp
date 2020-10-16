@@ -3284,10 +3284,10 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // FIXME: We don't diagnose cases that aren't potentially usable in constant
   // expressions here; doing so would regress diagnostics for things like
   // reading from a volatile constexpr variable.
-  if ((!VD->hasConstantInitialization() &&
+  if ((Info.getLangOpts().CPlusPlus && !VD->hasConstantInitialization() &&
        VD->mightBeUsableInConstantExpressions(Info.Ctx)) ||
-      (Info.getLangOpts().CPlusPlus && !Info.getLangOpts().CPlusPlus11 &&
-       !VD->hasICEInitializer(Info.Ctx))) {
+      ((Info.getLangOpts().CPlusPlus || Info.getLangOpts().OpenCL) &&
+       !Info.getLangOpts().CPlusPlus11 && !VD->hasICEInitializer(Info.Ctx))) {
     Info.CCEDiag(E, diag::note_constexpr_var_init_non_constant, 1) << VD;
     NoteLValueLocation(Info, Base);
   }
@@ -3997,10 +3997,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       return CompleteObject();
     }
 
-    // In OpenCL if a variable is in constant address space it is a const value.
-    bool IsConstant = BaseType.isConstQualified() ||
-                      (Info.getLangOpts().OpenCL &&
-                       BaseType.getAddressSpace() == LangAS::opencl_constant);
+    bool IsConstant = BaseType.isConstant(Info.Ctx);
 
     // Unless we're looking at a local variable or argument in a constexpr call,
     // the variable we're reading must be const.
@@ -4021,8 +4018,6 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       } else if (VD->isConstexpr()) {
         // OK, we can read this variable.
       } else if (BaseType->isIntegralOrEnumerationType()) {
-        // In OpenCL if a variable is in constant address space it is a const
-        // value.
         if (!IsConstant) {
           if (!IsAccess)
             return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
@@ -14834,7 +14829,6 @@ bool Expr::EvalResult::isGlobalLValue() const {
   return IsGlobalLValue(Val.getLValueBase());
 }
 
-
 /// isIntegerConstantExpr - this recursive routine will test if an expression is
 /// an integer constant expression.
 
@@ -15037,15 +15031,20 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
     return CheckICE(cast<CXXRewrittenBinaryOperator>(E)->getSemanticForm(),
                     Ctx);
   case Expr::DeclRefExprClass: {
-    if (isa<EnumConstantDecl>(cast<DeclRefExpr>(E)->getDecl()))
+    const NamedDecl *D = cast<DeclRefExpr>(E)->getDecl();
+    if (isa<EnumConstantDecl>(D))
       return NoDiag();
-    const VarDecl *VD = dyn_cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
-    if (VD && VD->isUsableInConstantExpressions(Ctx)) {
-      // C++ 7.1.5.1p2
-      //   A variable of non-volatile const-qualified integral or enumeration
-      //   type initialized by an ICE can be used in ICEs.
+
+    // C++ and OpenCL (FIXME: spec reference?) allow reading const-qualified
+    // integer variables in constant expressions:
+    //
+    // C++ 7.1.5.1p2
+    //   A variable of non-volatile const-qualified integral or enumeration
+    //   type initialized by an ICE can be used in ICEs.
+    const VarDecl *VD = dyn_cast<VarDecl>(D);
+    if (VD && VD->isUsableInConstantExpressions(Ctx))
       return NoDiag();
-    }
+
     return ICEDiag(IK_NotICE, E->getBeginLoc());
   }
   case Expr::UnaryOperatorClass: {
