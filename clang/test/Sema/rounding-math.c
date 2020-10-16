@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-linux -verify=norounding %s
-// RUN: %clang_cc1 -triple x86_64-linux -std=c17 -verify=rounding-std %s -frounding-math
-// RUN: %clang_cc1 -triple x86_64-linux -std=gnu17 -verify=rounding-gnu %s -frounding-math
+// RUN: %clang_cc1 -triple x86_64-linux -std=c17 -verify=expected,norounding %s
+// RUN: %clang_cc1 -triple x86_64-linux -std=gnu17 -verify=expected,norounding %s
+// RUN: %clang_cc1 -triple x86_64-linux -std=c17 -verify=expected,rounding %s -frounding-math
+// RUN: %clang_cc1 -triple x86_64-linux -std=gnu17 -verify=expected,rounding %s -frounding-math
 
 #define fold(x) (__builtin_constant_p(x) ? (x) : (x))
 
@@ -24,8 +25,11 @@ void bitfield(struct Bitfield *b) {
 }
 
 void vlas() {
-  // Under -frounding-math, this is a VLA.
-  // FIXME: Due to PR44406, in GNU mode we constant-fold the initializer resulting in a non-VLA.
-  typedef int vla[(int)(-3 * (1.0 / 3.0))]; // norounding-error {{negative size}} rounding-gnu-error {{negative size}}
-  struct X { vla v; }; // rounding-std-error {{fields must have a constant size}}
+  // This is always a VLA due to its syntactic form.
+  typedef int vla1[(int)(-3 * (1.0 / 3.0))];
+  struct X1 { vla1 v; }; // expected-error {{fields must have a constant size}}
+
+  // This is always folded to a constant.
+  typedef int vla2[fold((int)(-3 * (1.0 / 3.0)))]; // expected-error {{negative size}}
+  struct X2 { vla2 v; };
 }
