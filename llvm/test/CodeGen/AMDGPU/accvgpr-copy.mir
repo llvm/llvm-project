@@ -26,7 +26,9 @@
 
     define amdgpu_kernel void @a_to_a() #0 { ret void }
     define amdgpu_kernel void @a2_to_a2() #0 { ret void }
-    define amdgpu_kernel void @a3_to_a3() #0 { ret void }
+    define amdgpu_kernel void @a2_to_a2_kill() #0 { ret void }
+    define amdgpu_kernel void @a3_to_a3_nonoverlap_kill() #0 { ret void }
+    define amdgpu_kernel void @a3_to_a3_overlap_kill() #0 { ret void }
     define amdgpu_kernel void @a4_to_a4() #0 { ret void }
     define amdgpu_kernel void @a4_to_a4_overlap() #0 { ret void }
     define amdgpu_kernel void @a8_to_a8() #0 { ret void }
@@ -455,39 +457,61 @@ body:             |
 ...
 
 ---
-name:            a2_to_a2
+name:            a2_to_a2_kill
 tracksRegLiveness: true
 body:             |
   bb.0:
-    ; GCN-LABEL: name: a2_to_a2
-    ; GCN: $agpr0_agpr1 = IMPLICIT_DEF
+    liveins: $agpr0_agpr1
+    ; GCN-LABEL: name: a2_to_a2_kill
+    ; GCN: liveins: $agpr0_agpr1
     ; GCN: $vgpr2 = V_ACCVGPR_READ_B32 $agpr1, implicit $exec, implicit $agpr0_agpr1
-    ; GCN: $agpr2 = V_ACCVGPR_WRITE_B32 killed $vgpr2, implicit $exec, implicit-def $agpr1_agpr2
-    ; GCN: $vgpr1 = V_ACCVGPR_READ_B32 killed $agpr0, implicit $exec, implicit killed $agpr0_agpr1
+    ; GCN: $agpr2 = V_ACCVGPR_WRITE_B32 $vgpr2, implicit $exec, implicit-def $agpr1_agpr2
+    ; GCN: $vgpr1 = V_ACCVGPR_READ_B32 $agpr0, implicit $exec, implicit $agpr0_agpr1
     ; GCN: $agpr1 = V_ACCVGPR_WRITE_B32 killed $vgpr1, implicit $exec, implicit $exec
-    ; GCN: S_ENDPGM 0, implicit $agpr1_agpr2
-    $agpr0_agpr1 = IMPLICIT_DEF
+    ; GCN: $agpr3 = V_ACCVGPR_WRITE_B32 $vgpr2, implicit $exec
+    ; GCN: S_ENDPGM 0, implicit $agpr1, implicit $agpr2, implicit $agpr3
     $agpr1_agpr2 = COPY killed $agpr0_agpr1, implicit $exec
-    S_ENDPGM 0, implicit $agpr1_agpr2
+    $agpr3 = COPY $agpr2
+    S_ENDPGM 0, implicit $agpr1, implicit $agpr2, implicit $agpr3
 ...
 
 ---
-name:            a3_to_a3
+name:            a3_to_a3_nonoverlap_kill
 tracksRegLiveness: true
 body:             |
   bb.0:
-    ; GCN-LABEL: name: a3_to_a3
-    ; GCN: $agpr0_agpr1_agpr2 = IMPLICIT_DEF
-    ; GCN: $vgpr1 = V_ACCVGPR_READ_B32 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2
-    ; GCN: $agpr4 = V_ACCVGPR_WRITE_B32 killed $vgpr1, implicit $exec, implicit-def $agpr2_agpr3_agpr4
-    ; GCN: $vgpr0 = V_ACCVGPR_READ_B32 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2
-    ; GCN: $agpr3 = V_ACCVGPR_WRITE_B32 killed $vgpr0, implicit $exec
-    ; GCN: $vgpr2 = V_ACCVGPR_READ_B32 killed $agpr0, implicit $exec, implicit killed $agpr0_agpr1_agpr2
-    ; GCN: $agpr2 = V_ACCVGPR_WRITE_B32 killed $vgpr2, implicit $exec, implicit $exec
-    ; GCN: S_ENDPGM 0, implicit $agpr2_agpr3_agpr4
-    $agpr0_agpr1_agpr2 = IMPLICIT_DEF
-    $agpr2_agpr3_agpr4 = COPY killed $agpr0_agpr1_agpr2, implicit $exec
-    S_ENDPGM 0, implicit $agpr2_agpr3_agpr4
+    liveins: $agpr4_agpr5_agpr6
+    ; GCN-LABEL: name: a3_to_a3_nonoverlap_kill
+    ; GCN: liveins: $agpr4_agpr5_agpr6
+    ; GCN: $vgpr0 = V_ACCVGPR_READ_B32 $agpr4, implicit $exec, implicit $agpr4_agpr5_agpr6
+    ; GCN: $agpr0 = V_ACCVGPR_WRITE_B32 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
+    ; GCN: $vgpr1 = V_ACCVGPR_READ_B32 $agpr5, implicit $exec, implicit $agpr4_agpr5_agpr6
+    ; GCN: $agpr1 = V_ACCVGPR_WRITE_B32 killed $vgpr1, implicit $exec
+    ; GCN: $vgpr2 = V_ACCVGPR_READ_B32 killed $agpr6, implicit $exec, implicit killed $agpr4_agpr5_agpr6
+    ; GCN: $agpr2 = V_ACCVGPR_WRITE_B32 killed $vgpr2, implicit $exec
+    ; GCN: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2
+    $agpr0_agpr1_agpr2 = COPY killed $agpr4_agpr5_agpr6
+    S_ENDPGM 0, implicit $agpr0_agpr1_agpr2
+...
+
+---
+name:            a3_to_a3_overlap_kill
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $agpr1_agpr2_agpr3
+    ; GCN-LABEL: name: a3_to_a3_overlap_kill
+    ; GCN: liveins: $agpr1_agpr2_agpr3
+    ; GCN: $vgpr0 = V_ACCVGPR_READ_B32 $agpr1, implicit $exec, implicit $agpr1_agpr2_agpr3
+    ; GCN: $agpr0 = V_ACCVGPR_WRITE_B32 $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
+    ; GCN: $agpr1 = V_ACCVGPR_WRITE_B32 $vgpr0, implicit $exec, implicit $agpr1_agpr2_agpr3
+    ; GCN: $vgpr4 = V_ACCVGPR_READ_B32 $agpr3, implicit $exec, implicit $agpr1_agpr2_agpr3
+    ; GCN: $agpr2 = V_ACCVGPR_WRITE_B32 killed $vgpr4, implicit $exec
+    ; GCN: $vgpr1 = V_ACCVGPR_READ_B32 $agpr1, implicit $exec
+    ; GCN: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2, implicit $vgpr1
+    $agpr0_agpr1_agpr2 = COPY killed $agpr1_agpr2_agpr3
+    $vgpr1 = COPY $agpr1
+    S_ENDPGM 0, implicit $agpr0_agpr1_agpr2, implicit $vgpr1
 ...
 
 ---
@@ -502,7 +526,7 @@ body:             |
     ; GCN: $agpr4 = V_ACCVGPR_WRITE_B32 $vgpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
     ; GCN: $vgpr0 = V_ACCVGPR_READ_B32 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
     ; GCN: $agpr3 = V_ACCVGPR_WRITE_B32 killed $vgpr0, implicit $exec
-    ; GCN: $vgpr3 = V_ACCVGPR_READ_B32 killed $agpr0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3
+    ; GCN: $vgpr3 = V_ACCVGPR_READ_B32 $agpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
     ; GCN: $agpr2 = V_ACCVGPR_WRITE_B32 killed $vgpr3, implicit $exec, implicit $exec
     ; GCN: S_ENDPGM 0, implicit $agpr2_agpr3_agpr4_agpr5
     $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
