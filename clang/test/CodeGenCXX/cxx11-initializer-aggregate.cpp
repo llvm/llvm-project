@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -S -emit-llvm -o - %s -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -S -emit-llvm -o - %s -triple x86_64-linux-gnu | FileCheck %s
 
 struct A { int a, b; int f(); };
 
@@ -118,4 +119,24 @@ namespace ZeroInit {
   // This variable must be initialized elementwise.
   Filler data_e1[1024] = {};
   // CHECK: getelementptr inbounds {{.*}} @_ZN8ZeroInit7data_e1E
+
+  struct Largeish {
+    long a, b, c;
+  };
+  // CHECK: define {{.*}}@_ZN8ZeroInit9largeish1Ev(
+  // CHECK-NOT }
+  // CHECK: call {{.*}}memset
+  Largeish largeish1() { return {}; }
+  // CHECK: define {{.*}}@_ZN8ZeroInit9largeish2Ev(
+  // CHECK-NOT }
+  // CHECK: call {{.*}}memset
+  Largeish largeish2() { return Largeish(); }
+  // CHECK: define {{.*}}@_ZN8ZeroInit9largeish3Ev(
+  // CHECK-NOT }
+  // CHECK: call {{.*}}memset
+  Largeish largeish3() { return Largeish{}; }
+  // CHECK: define {{.*}}@_ZN8ZeroInit9largeish4Ev(
+  // CHECK-NOT }
+  // CHECK: call {{.*}}memset
+  Largeish largeish4() { return (Largeish){}; }
 }
