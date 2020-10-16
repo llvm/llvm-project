@@ -17,11 +17,11 @@ REQUIRES: zlib
 RUN: llvm-profdata merge %S/Inputs/universal_bin_wrapping_archives/universal_bin_wrapping_archives.proftext -o %t.profdata
 
 RUN: llvm-cov show %S/Inputs/universal_bin_wrapping_archives/universal_bin_wrapping_archives \
-RUN:   -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs/universal_bin_wrapping_archives %s -arch i386 \
+RUN:   -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs/universal_bin_wrapping_archives -arch i386 \
 RUN:   | FileCheck %s --check-prefix=SHOW_ARCHIVE
 
 RUN: llvm-cov show %S/Inputs/universal_bin_wrapping_archives/universal_bin_wrapping_archives \
-RUN:   -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs/universal_bin_wrapping_archives %s -arch x86_64 \
+RUN:   -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs/universal_bin_wrapping_archives -arch x86_64 \
 RUN:   | FileCheck %s --check-prefix=SHOW_ARCHIVE
 
 SHOW_ARCHIVE: {{.*}}obj1.c:
