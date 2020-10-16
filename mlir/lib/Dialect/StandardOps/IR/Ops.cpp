@@ -740,34 +740,33 @@ Block *BranchOp::getSuccessorForOperands(ArrayRef<Attribute>) { return dest(); }
 // CallOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(CallOp op) {
+LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Check that the callee attribute was specified.
-  auto fnAttr = op.getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr = getAttrOfType<FlatSymbolRefAttr>("callee");
   if (!fnAttr)
-    return op.emitOpError("requires a 'callee' symbol reference attribute");
-  auto fn =
-      op.getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(fnAttr.getValue());
+    return emitOpError("requires a 'callee' symbol reference attribute");
+  FuncOp fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(*this, fnAttr);
   if (!fn)
-    return op.emitOpError() << "'" << fnAttr.getValue()
-                            << "' does not reference a valid function";
+    return emitOpError() << "'" << fnAttr.getValue()
+                         << "' does not reference a valid function";
 
   // Verify that the operand and result types match the callee.
   auto fnType = fn.getType();
-  if (fnType.getNumInputs() != op.getNumOperands())
-    return op.emitOpError("incorrect number of operands for callee");
+  if (fnType.getNumInputs() != getNumOperands())
+    return emitOpError("incorrect number of operands for callee");
 
   for (unsigned i = 0, e = fnType.getNumInputs(); i != e; ++i)
-    if (op.getOperand(i).getType() != fnType.getInput(i))
-      return op.emitOpError("operand type mismatch: expected operand type ")
+    if (getOperand(i).getType() != fnType.getInput(i))
+      return emitOpError("operand type mismatch: expected operand type ")
              << fnType.getInput(i) << ", but provided "
-             << op.getOperand(i).getType() << " for operand number " << i;
+             << getOperand(i).getType() << " for operand number " << i;
 
-  if (fnType.getNumResults() != op.getNumResults())
-    return op.emitOpError("incorrect number of results for callee");
+  if (fnType.getNumResults() != getNumResults())
+    return emitOpError("incorrect number of results for callee");
 
   for (unsigned i = 0, e = fnType.getNumResults(); i != e; ++i)
-    if (op.getResult(i).getType() != fnType.getResult(i))
-      return op.emitOpError("result type mismatch");
+    if (getResult(i).getType() != fnType.getResult(i))
+      return emitOpError("result type mismatch");
 
   return success();
 }

@@ -236,6 +236,21 @@ public:
   LogicalResult lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr name,
                                SmallVectorImpl<Operation *> &symbols);
 
+  /// Returns the operation registered with the given symbol name within the
+  /// closest parent operation of, or including, 'from' with the
+  /// 'OpTrait::SymbolTable' trait. Returns nullptr if no valid symbol was
+  /// found.
+  Operation *lookupNearestSymbolFrom(Operation *from, StringRef symbol);
+  Operation *lookupNearestSymbolFrom(Operation *from, SymbolRefAttr symbol);
+  template <typename T>
+  T lookupNearestSymbolFrom(Operation *from, StringRef symbol) {
+    return dyn_cast_or_null<T>(lookupNearestSymbolFrom(from, symbol));
+  }
+  template <typename T>
+  T lookupNearestSymbolFrom(Operation *from, SymbolRefAttr symbol) {
+    return dyn_cast_or_null<T>(lookupNearestSymbolFrom(from, symbol));
+  }
+
   /// Lookup, or create, a symbol table for an operation.
   SymbolTable &getSymbolTable(Operation *op);
 
