@@ -7,7 +7,7 @@ define i32 @test_01(i32 %start, i32* %p, i32* %q) {
 ; CHECK-NEXT:    %0 = zext i32 %start to i64
 ; CHECK-NEXT:    --> (zext i32 %start to i64) U: [0,4294967296) S: [0,4294967296)
 ; CHECK-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.next, %backedge ], [ %0, %entry ]
-; CHECK-NEXT:    --> {(zext i32 %start to i64),+,-1}<nsw><%loop> U: [-4294967295,4294967296) S: [-4294967295,4294967296) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(zext i32 %start to i64),+,-1}<nsw><%loop> U: [0,4294967296) S: [0,4294967296) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.next, %backedge ]
 ; CHECK-NEXT:    --> {%start,+,-1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, -1
