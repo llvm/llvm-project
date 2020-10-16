@@ -18,38 +18,26 @@
 #define FORTRAN_LOWER_CONVERTEXPR_H
 
 #include "flang/Lower/Support/BoxValue.h"
-#include <cstdint>
 
 namespace mlir {
 class Location;
-class OpBuilder;
-class Type;
 class Value;
 } // namespace mlir
 
 namespace fir {
-class AllocaExpr;
-} // namespace fir
+class ShapeOp;
+}
 
 namespace Fortran {
-namespace common {
-class IntrinsicTypeDefaultKinds;
-} // namespace common
-
 namespace evaluate {
 template <typename>
 class Expr;
 struct SomeType;
 } // namespace evaluate
 
-namespace semantics {
-class Symbol;
-} // namespace semantics
-
 namespace lower {
 
 class AbstractConverter;
-class FirOpBuilder;
 class SymMap;
 
 /// The evaluation of some expressions implies a surrounding context. This
@@ -57,16 +45,49 @@ class SymMap;
 class ExpressionContext {
 public:
   ExpressionContext() = default;
-  ExpressionContext(llvm::ArrayRef<mlir::Value> lcvs)
-      : loopVars{lcvs.begin(), lcvs.end()} {}
 
-  bool inArrayContext() const { return loopVars.size() > 0; }
+  //===--------------------------------------------------------------------===//
+  // Expression is in an array context.
+  //===--------------------------------------------------------------------===//
+
+  ExpressionContext(mlir::Value shape) : shape{shape}, preludePhase{true} {}
+
+  bool inArrayContext() const { return shape ? true : false; }
+  bool inPreludePhase() const { return preludePhase; }
+  fir::ShapeOp getShape() const;
+  llvm::ArrayRef<mlir::Value> getLoopCounters() const { return loopCounters; }
+  llvm::ArrayRef<mlir::Value> getArrayBlockArgs() const {
+    return arrayBlockArgs;
+  }
+  llvm::ArrayRef<mlir::Value> getLoopReturnVals() const {
+    return loopReturnVals;
+  }
+
+  ExpressionContext &setLoopPhase(bool inPrelude = false) {
+    preludePhase = inPrelude;
+    return *this;
+  }
+
+  void addLoop(mlir::Value counter, mlir::Value blockArg, mlir::Value result);
+  void finalizeLoopNest();
+
+  //===--------------------------------------------------------------------===//
+  // Expression is in an initializer context.
+  //===--------------------------------------------------------------------===//
+
   bool inInitializer() const { return isInitializer; }
-  const std::vector<mlir::Value> &getLoopVars() const { return loopVars; }
-  void setInInitializer() { isInitializer = true; }
+  ExpressionContext &setInInitializer(bool val = true) {
+    isInitializer = val;
+    return *this;
+  }
 
 private:
-  std::vector<mlir::Value> loopVars{};
+  mlir::Value shape; // shape op
+  std::vector<mlir::Value> loopCounters;
+  std::vector<mlir::Value> arrayBlockArgs;
+  std::vector<mlir::Value> loopReturnVals;
+  bool preludePhase{false};
+
   bool isInitializer{false};
 };
 
@@ -87,6 +108,12 @@ createSomeExtendedAddress(mlir::Location loc, AbstractConverter &converter,
 fir::ExtendedValue createStringLiteral(mlir::Location loc,
                                        AbstractConverter &converter,
                                        llvm::StringRef str, std::uint64_t len);
+
+/// Create a shape op from an extended value, exv.
+/// TODO: Do we want to keep a shape op in the extended value?
+mlir::Value createShape(mlir::Location loc, AbstractConverter &converter,
+                        const fir::ExtendedValue &exv);
+
 } // namespace lower
 } // namespace Fortran
 

@@ -16,11 +16,9 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Visitors.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "flang-affine-promotion"
 
@@ -434,7 +432,7 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopConversion: rewriting loop:\n";
                loop.dump(););
-    [[maybe_unused]] auto loopAnalysis =
+    LLVM_ATTRIBUTE_UNUSED auto loopAnalysis =
         functionAnalysis.getChildLoopAnalysis(loop);
     auto &loopOps = loop.getBody()->getOperations();
     auto loopAndIndex = createAffineFor(loop, rewriter);

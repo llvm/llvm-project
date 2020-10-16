@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertExpr.h"
 #include "SymbolMap.h"
@@ -64,6 +68,27 @@ public:
 
   fir::ExtendedValue genStringLit(llvm::StringRef str, std::uint64_t len) {
     return genScalarLit<1>(str.str(), static_cast<int64_t>(len));
+  }
+
+  /// Construct one of the two forms of shape op.
+  template <typename A>
+  static mlir::Value consShape(Fortran::lower::FirOpBuilder &builder,
+                               mlir::Location loc, const A &arr) {
+    if (arr.lboundsAllOne()) {
+      auto shapeType =
+          fir::ShapeType::get(builder.getContext(), arr.getExtents().size());
+      return builder.create<fir::ShapeOp>(loc, shapeType, arr.getExtents());
+    }
+    auto shapeType =
+        fir::ShapeShiftType::get(builder.getContext(), arr.getExtents().size());
+    SmallVector<mlir::Value, 8> shapeArgs;
+    auto idxTy = builder.getIndexType();
+    for (auto [lbnd, ext] : llvm::zip(arr.getLBounds(), arr.getExtents())) {
+      auto lb = builder.createConvert(loc, idxTy, lbnd);
+      shapeArgs.push_back(lb);
+      shapeArgs.push_back(ext);
+    }
+    return builder.create<fir::ShapeShiftOp>(loc, shapeType, shapeArgs);
   }
 
 private:
@@ -245,23 +270,11 @@ private:
     return createCharCompare(pred, genval(ex.left()), genval(ex.right()));
   }
 
-  fir::ExtendedValue getExValue(const Fortran::lower::SymbolBox &symBox) {
-    using T = fir::ExtendedValue;
-    return symBox.match(
-        [](const Fortran::lower::SymbolBox::Intrinsic &box) -> T {
-          return box.getAddr();
-        },
-        [](const Fortran::lower::SymbolBox::None &) -> T {
-          llvm_unreachable("symbol not mapped");
-        },
-        [](const auto &box) -> T { return box; });
-  }
-
   /// Returns a reference to a symbol or its box/boxChar descriptor if it has
   /// one.
   fir::ExtendedValue gen(Fortran::semantics::SymbolRef sym) {
     if (auto val = symMap.lookupSymbol(sym))
-      return getExValue(val);
+      return val.toExtendedValue();
     llvm_unreachable("all symbols should be in the map");
     auto addr = builder.createTemporary(getLoc(), converter.genType(sym),
                                         sym->name().ToString());
@@ -282,19 +295,22 @@ private:
         });
   }
 
-  // FIXME: replace this
-  mlir::Type peelType(mlir::Type ty, int count) {
-    if (count > 0) {
-      if (auto eleTy = fir::dyn_cast_ptrEleTy(ty))
-        return peelType(eleTy, count - 1);
-      if (auto seqTy = ty.dyn_cast<fir::SequenceType>())
-        return peelType(seqTy.getEleTy(), count - seqTy.getDimension());
-      llvm_unreachable("unhandled type");
-    }
-    return ty;
-  }
-
   fir::ExtendedValue genval(Fortran::semantics::SymbolRef sym) {
+    auto loc = getLoc();
+    if (inArrayContext() && !exprCtx.inPreludePhase()) {
+      // `sym` appears in an array expression. This is the code gen phase inside
+      // the loop nest.
+      auto exv = symMap.lookupSymbol(sym).toExtendedValue();
+      if (fir::getBase(exv).getType().isa<fir::SequenceType>()) {
+        auto base = fir::getBase(exv);
+        auto eleTy = base.getType().cast<fir::SequenceType>().getEleTy();
+        auto fetch = builder.create<fir::ArrayFetchOp>(
+            loc, eleTy, base, exprCtx.getLoopCounters());
+        return fetch.getResult();
+      }
+      return genLoad(fir::getBase(exv));
+    }
+
     auto var = gen(sym);
     if (auto *s = var.getUnboxed())
       if (fir::isReferenceLike(s->getType())) {
@@ -306,19 +322,29 @@ private:
         if (Fortran::semantics::IsFunctionResult(sym)) {
           auto resultType = converter.genType(*sym);
           if (addr.getType() != resultType)
-            addr = builder.createConvert(getLoc(),
-                                         builder.getRefType(resultType), addr);
+            addr = builder.createConvert(loc, builder.getRefType(resultType),
+                                         addr);
         }
         return genLoad(addr);
       }
-    if (inArrayContext()) {
-      // FIXME: make this more robust
-      auto base = fir::getBase(var);
-      auto ty = builder.getRefType(
-          peelType(base.getType(), exprCtx.getLoopVars().size() + 1));
-      auto coor = builder.create<fir::CoordinateOp>(getLoc(), ty, base,
-                                                    exprCtx.getLoopVars());
-      return genLoad(coor);
+
+    if (inArrayContext() && exprCtx.inPreludePhase()) {
+      // `sym` appears in an array expression. This is the prelude phase where
+      // we capture immutable values to be used inside the loop nest.
+      auto memref = fir::getBase(var);
+      if (fir::isArray(var)) {
+        auto eleTy = fir::dyn_cast_ptrEleTy(memref.getType());
+        assert(eleTy.isa<fir::SequenceType>());
+        auto shape = createShape(loc, converter, var);
+        mlir::Value slice;
+        auto arrLd = builder.create<fir::ArrayLoadOp>(loc, eleTy, memref, shape,
+                                                      slice, llvm::None);
+        symMap.addSymbol(sym, arrLd.getResult());
+        return arrLd;
+      }
+      auto ld = genLoad(memref);
+      symMap.addSymbol(sym, ld);
+      return ld;
     }
     return var;
   }
@@ -1117,9 +1143,9 @@ private:
           auto tlb = builder.createConvert(loc, idxTy, std::get<0>(*trip));
           auto dlb = builder.createConvert(loc, idxTy, getLB(arr, dim));
           auto diff = builder.create<mlir::SubIOp>(loc, tlb, dlb);
-          assert(idx < exprCtx.getLoopVars().size());
-          auto sum = builder.create<mlir::AddIOp>(loc, diff,
-                                                  exprCtx.getLoopVars()[idx++]);
+          assert(idx < exprCtx.getLoopCounters().size());
+          auto sum = builder.create<mlir::AddIOp>(
+              loc, diff, exprCtx.getLoopCounters()[idx++]);
           auto del = builder.createConvert(loc, idxTy, std::get<2>(*trip));
           auto scaled = builder.create<mlir::MulIOp>(loc, del, delta);
           auto prod = builder.create<mlir::MulIOp>(loc, scaled, sum);
@@ -1183,24 +1209,8 @@ private:
     auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
     auto refTy = builder.getRefType(eleTy);
     auto idxTy = builder.getIndexType();
-    auto arrShape = [&](const auto &arr) -> mlir::Value {
-      if (arr.getLBounds().empty()) {
-        auto shapeType =
-            fir::ShapeType::get(builder.getContext(), arr.getExtents().size());
-        return builder.create<fir::ShapeOp>(loc, shapeType, arr.getExtents());
-      }
-      auto shapeType = fir::ShapeShiftType::get(builder.getContext(),
-                                                arr.getExtents().size());
-      SmallVector<mlir::Value, 8> shapeArgs;
-      for (auto [lbnd, ext] : llvm::zip(arr.getLBounds(), arr.getExtents())) {
-        auto lb = builder.createConvert(loc, idxTy, lbnd);
-        shapeArgs.push_back(lb);
-        shapeArgs.push_back(ext);
-      }
-      return builder.create<fir::ShapeShiftOp>(loc, shapeType, shapeArgs);
-    };
     auto genWithShape = [&](const auto &arr) -> mlir::Value {
-      auto shape = arrShape(arr);
+      auto shape = consShape(builder, loc, arr);
       llvm::SmallVector<mlir::Value, 8> arrayCoorArgs;
       for (const auto &sub : aref.subscript()) {
         auto subVal = genComponent(sub);
@@ -1274,7 +1284,7 @@ private:
           auto ty = builder.getIndexType();
           auto step = builder.createConvert(loc, ty, std::get<2>(*range));
           auto scale = builder.create<mlir::MulIOp>(
-              loc, ty, exprCtx.getLoopVars()[i], step);
+              loc, ty, exprCtx.getLoopCounters()[i], step);
           auto off = builder.createConvert(loc, ty, std::get<0>(*range));
           args.push_back(builder.create<mlir::AddIOp>(loc, ty, off, scale));
         }
@@ -1658,19 +1668,85 @@ private:
       return fir::substBase(exv, mem.getResult());
     }
   }
-
-  std::string
-  applyNameMangling(const Fortran::evaluate::ProcedureDesignator &proc) {
-    if (const auto *symbol = proc.GetSymbol())
-      return converter.mangleName(*symbol);
-    // Do not mangle intrinsic for now
-    assert(proc.GetSpecificIntrinsic() &&
-           "expected intrinsic procedure in designator");
-    return proc.GetName();
-  }
 };
-
 } // namespace
+
+namespace {
+class ArrayExprLowering {
+public:
+  explicit ArrayExprLowering(Fortran::lower::AbstractConverter &converter,
+                             Fortran::lower::SymMap &map,
+                             const Fortran::lower::ExpressionContext &context)
+      : converter{converter}, builder{converter.getFirOpBuilder()}, symMap{map},
+        exprCtx{context} {}
+
+  static fir::ExtendedValue lowerArrayExpression(
+      Fortran::lower::AbstractConverter &converter, Fortran::lower::SymMap &map,
+      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr) {
+    Fortran::lower::ExpressionContext ctx;
+    ArrayExprLowering ael{converter, map, ctx};
+    ael.prelude(expr);
+    ael.body(expr);
+    return {};
+  }
+
+  template <typename A>
+  void prelude(const Fortran::evaluate::Expr<A> &exp) {
+    std::visit([&](const auto &e) { genpre(e); }, exp.u);
+  }
+
+  template <typename A, typename = std::enable_if_t<Fortran::common::HasMember<
+                            A, Fortran::evaluate::TypelessExpression>>>
+  void genpre(const A &) {}
+  template <typename A>
+  void genpre(const Fortran::evaluate::Expr<A> &x) {
+    // std::visit([&](const auto &e) { genpre(e); }, exp.u);
+  }
+
+  template <typename A>
+  void body(const Fortran::evaluate::Expr<A> &exp) {
+    (void)builder;
+    (void)symMap;
+    (void)loopCounters;
+    (void)arrayBlockArgs;
+    (void)loopReturnVals;
+    (void)exprCtx;
+    TODO("");
+  }
+
+private:
+  mlir::Location getLoc() { return converter.getCurrentLocation(); }
+
+  Fortran::lower::AbstractConverter &converter;
+  Fortran::lower::FirOpBuilder &builder;
+  Fortran::lower::SymMap &symMap;
+  std::vector<mlir::Value> loopCounters;
+  std::vector<mlir::Value> arrayBlockArgs;
+  std::vector<mlir::Value> loopReturnVals;
+  const Fortran::lower::ExpressionContext &exprCtx;
+};
+} // namespace
+
+fir::ShapeOp Fortran::lower::ExpressionContext::getShape() const {
+  // Verify that this context is built correctly.
+  if (auto sh = mlir::dyn_cast<fir::ShapeOp>(shape.getDefiningOp()))
+    return sh;
+  llvm::report_fatal_error("operation must be a fir.shape");
+}
+
+void Fortran::lower::ExpressionContext::addLoop(mlir::Value counter,
+                                                mlir::Value blockArg,
+                                                mlir::Value result) {
+  assert(inArrayContext() && !preludePhase);
+  loopCounters.push_back(counter);
+  arrayBlockArgs.push_back(blockArg);
+  loopReturnVals.push_back(result);
+}
+
+void Fortran::lower::ExpressionContext::finalizeLoopNest() {
+  assert(inArrayContext() && !preludePhase);
+  std::reverse(loopCounters.begin(), loopCounters.end());
+}
 
 fir::ExtendedValue Fortran::lower::createSomeExtendedExpression(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
@@ -1700,4 +1776,25 @@ fir::ExtendedValue Fortran::lower::createStringLiteral(
   Fortran::lower::ExpressionContext unused2;
   LLVM_DEBUG(llvm::dbgs() << "string-lit: \"" << str << "\"\n");
   return ExprLowering{loc, converter, unused1, unused2}.genStringLit(str, len);
+}
+
+mlir::Value
+Fortran::lower::createShape(mlir::Location loc,
+                            Fortran::lower::AbstractConverter &converter,
+                            const fir::ExtendedValue &exv) {
+  auto &builder = converter.getFirOpBuilder();
+  return exv.match(
+      [&](const fir::ArrayBoxValue &box) {
+        return ExprLowering::consShape(builder, loc, box);
+      },
+      [&](const fir::CharArrayBoxValue &box) {
+        return ExprLowering::consShape(builder, loc, box);
+      },
+      [&](const fir::BoxValue &box) {
+        return ExprLowering::consShape(builder, loc, box);
+      },
+      [&](auto) -> mlir::Value {
+        mlir::emitError(loc, "not an array");
+        return {};
+      });
 }

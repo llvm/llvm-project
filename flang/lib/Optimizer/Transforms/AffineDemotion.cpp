@@ -132,7 +132,7 @@ public:
     patterns.insert<AffineLoadConversion>(context);
     patterns.insert<AffineStoreConversion>(context);
     patterns.insert<StdAllocConversion>(context);
-    mlir::ConversionTarget target = *context;
+    mlir::ConversionTarget target(*context);
     target.addIllegalOp<mlir::AllocOp>();
     target.addDynamicallyLegalOp<fir::ConvertOp>([](fir::ConvertOp op) {
       if (op.res().getType().isa<mlir::MemRefType>())

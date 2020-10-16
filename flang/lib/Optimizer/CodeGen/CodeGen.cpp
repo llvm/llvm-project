@@ -301,14 +301,16 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
     auto mallocFunc = getMalloc(heap, rewriter);
     auto loc = heap.getLoc();
     auto ity = lowerTy().indexType();
-    auto c1 = genConstantIndex(loc, ity, rewriter, 1);
+    auto c1 = genConstantIndex(
+        loc, ity, rewriter,
+        unwrap(ty).getPointerElementTy().getPrimitiveSizeInBits() / 8);
     auto size = c1.getResult();
     for (auto opnd : operands)
       size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, opnd);
     heap.setAttr("callee", rewriter.getSymbolRefAttr(mallocFunc));
-    SmallVector<mlir::Value, 1> args{size};
     auto malloc = rewriter.create<mlir::LLVM::CallOp>(
-        loc, getVoidPtrType(heap.getContext()), args, heap.getAttrs());
+        loc, getVoidPtrType(heap.getContext()), mlir::ValueRange{size},
+        heap.getAttrs());
     rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(heap, ty,
                                                        malloc.getResult(0));
     return success();
@@ -340,12 +342,14 @@ struct FreeMemOpConversion : public FIROpConversion<fir::FreeMemOp> {
   matchAndRewrite(fir::FreeMemOp freemem, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto freeFunc = getFree(freemem, rewriter);
+    auto loc = freemem.getLoc();
     auto bitcast = rewriter.create<mlir::LLVM::BitcastOp>(
         freemem.getLoc(), voidPtrTy(), operands[0]);
     freemem.setAttr("callee", rewriter.getSymbolRefAttr(freeFunc));
-    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-        freemem, mlir::LLVM::LLVMType::getVoidTy(freemem.getContext()),
-        SmallVector<mlir::Value, 1>{bitcast}, freemem.getAttrs());
+    rewriter.create<mlir::LLVM::CallOp>(
+        loc, mlir::LLVM::LLVMType::getVoidTy(freemem.getContext()),
+        mlir::ValueRange{bitcast}, freemem.getAttrs());
+    rewriter.eraseOp(freemem);
     return success();
   }
 };
@@ -1972,7 +1976,7 @@ struct SelectCaseOpConversion : public FIROpConversion<fir::SelectCaseOp> {
     auto attrName = fir::SelectCaseOp::getCasesAttr();
     auto cases = caseOp.getAttrOfType<mlir::ArrayAttr>(attrName).getValue();
     // Type can be CHARACTER, INTEGER, or LOGICAL (C1145)
-    [[maybe_unused]] auto ty = caseOp.getSelector().getType();
+    LLVM_ATTRIBUTE_UNUSED auto ty = caseOp.getSelector().getType();
     auto selector = caseOp.getSelector(operands);
     auto loc = caseOp.getLoc();
     assert(conds > 0 && "fir.selectcase must have cases");

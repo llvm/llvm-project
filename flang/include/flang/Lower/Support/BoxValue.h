@@ -215,6 +215,7 @@ mlir::Value getBase(const ExtendedValue &exv);
 mlir::Value getLen(const ExtendedValue &exv);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ExtendedValue &);
 ExtendedValue substBase(const ExtendedValue &exv, mlir::Value base);
+bool isArray(const ExtendedValue &exv);
 
 /// An extended value is a box of values pertaining to a discrete entity. It is
 /// used in lowering to track all the runtime values related to an entity. For

@@ -73,7 +73,17 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
   template <typename A>
   SymbolBox(const A &x) : box{x} {}
 
-  operator bool() const { return !std::holds_alternative<None>(box); }
+  explicit operator bool() const { return !std::holds_alternative<None>(box); }
+
+  fir::ExtendedValue toExtendedValue() const {
+    return match(
+        [](const Fortran::lower::SymbolBox::Intrinsic &box)
+            -> fir::ExtendedValue { return box.getAddr(); },
+        [](const Fortran::lower::SymbolBox::None &) -> fir::ExtendedValue {
+          llvm::report_fatal_error("symbol not mapped");
+        },
+        [](const auto &box) -> fir::ExtendedValue { return box; });
+  }
 
   //===--------------------------------------------------------------------===//
   // Accessors
