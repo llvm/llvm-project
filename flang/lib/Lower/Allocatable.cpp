@@ -13,6 +13,7 @@
 #include "flang/Lower/Allocatable.h"
 #include "../runtime/allocatable.h"
 #include "RTBuilder.h"
+#include "StatementContext.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/FIRBuilder.h"
@@ -171,7 +172,7 @@ private:
     const auto &allocObj = std::get<Fortran::parser::AllocateObject>(alloc.t);
     const auto &symbol = unwrapSymbol(allocObj);
     assert(symbol.GetType());
-    return Allocation{alloc, symbol, *symbol.GetType()};
+    return {alloc, symbol, *symbol.GetType()};
   }
 
   void visitAllocateOptions() {
@@ -244,16 +245,17 @@ private:
     // Set bounds for arrays
     auto idxTy = builder.getIndexType();
     auto i32Ty = builder.getIntegerType(32);
+    Fortran::lower::StatementContext stmtCtx;
     for (const auto &iter : llvm::enumerate(alloc.getShapeSpecs())) {
       mlir::Value lb;
       const auto &bounds = iter.value().t;
       if (const auto &lbExpr = std::get<0>(bounds))
-        lb = fir::getBase(
-            converter.genExprValue(Fortran::semantics::GetExpr(*lbExpr), loc));
+        lb = fir::getBase(converter.genExprValue(
+            Fortran::semantics::GetExpr(*lbExpr), stmtCtx, loc));
       else
         lb = builder.createIntegerConstant(loc, idxTy, 1);
       auto ub = fir::getBase(converter.genExprValue(
-          Fortran::semantics::GetExpr(std::get<1>(bounds)), loc));
+          Fortran::semantics::GetExpr(std::get<1>(bounds)), stmtCtx, loc));
       auto dimIndex = builder.createIntegerConstant(loc, i32Ty, iter.index());
       // Runtime call
       genAllocatableSetBounds(builder, loc, boxAddr, dimIndex, lb, ub);
@@ -375,7 +377,8 @@ void Fortran::lower::genAllocatableInit(
       auto cat = builder.createIntegerConstant(loc, i32ty, catCode);
       auto kindExpr = Fortran::evaluate::AsGenericExpr(
           Fortran::common::Clone(intrinsic->kind()));
-      auto kind = fir::getBase(converter.genExprValue(kindExpr));
+      Fortran::lower::StatementContext stmtCtx;
+      auto kind = fir::getBase(converter.genExprValue(kindExpr, stmtCtx));
       auto rank =
           builder.createIntegerConstant(loc, i32ty, var.getSymbol().Rank());
       auto corank = builder.createIntegerConstant(loc, i32ty, 0);

@@ -26,11 +26,11 @@
 #include "llvm/ADT/Optional.h"
 
 namespace fir {
+class AbstractArrayBox;
 class ExtendedValue;
-}
+} // namespace fir
 
 namespace Fortran::lower {
-
 class AbstractConverter;
 
 //===----------------------------------------------------------------------===//
@@ -84,10 +84,18 @@ public:
   mlir::Value createIntegerConstant(mlir::Location loc, mlir::Type integerType,
                                     std::int64_t i);
 
+  /// Create a real constant from an integer value.
+  mlir::Value createRealConstant(mlir::Location loc, mlir::Type realType,
+                                 llvm::APFloat::integerPart val);
+
+  /// Create a real constant from an APFloat value.
   mlir::Value createRealConstant(mlir::Location loc, mlir::Type realType,
                                  const llvm::APFloat &val);
+
   /// Create a real constant of type \p realType with a value zero.
-  mlir::Value createRealZeroConstant(mlir::Location loc, mlir::Type realType);
+  mlir::Value createRealZeroConstant(mlir::Location loc, mlir::Type realType) {
+    return createRealConstant(loc, realType, 0u);
+  }
 
   /// Create a slot for a local on the stack. Besides the variable's type and
   /// shape, it may be given name or target attributes.
@@ -206,6 +214,9 @@ public:
   mlir::Value convertToIndexType(mlir::Location loc, mlir::Value val) {
     return createConvert(loc, getIndexType(), val);
   }
+
+  /// Construct one of the two forms of shape op from an array box.
+  mlir::Value consShape(mlir::Location loc, const fir::AbstractArrayBox &arr);
 
   /// Create one of the shape ops given an extended value.
   mlir::Value createShape(mlir::Location loc, const fir::ExtendedValue &exv);

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/OpenMP.h"
+#include "StatementContext.h"
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/FIRBuilder.h"
@@ -139,6 +140,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   auto &firOpBuilder = converter.getFirOpBuilder();
   auto currentLocation = converter.getCurrentLocation();
+  Fortran::lower::StatementContext stmtCtx;
   llvm::ArrayRef<mlir::Type> argTy;
   if (blockDirective.v == llvm::omp::OMPD_parallel) {
 
@@ -156,13 +158,13 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         auto &expr =
             std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
         ifClauseOperand = fir::getBase(
-            converter.genExprValue(*Fortran::semantics::GetExpr(expr)));
+              converter.genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx));
       } else if (const auto &numThreadsClause =
                      std::get_if<Fortran::parser::OmpClause::NumThreads>(
                          &clause.u)) {
         // OMPIRBuilder expects `NUM_THREAD` clause as a `Value`.
         numThreadsClauseOperand = fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(numThreadsClause->v)));
+            *Fortran::semantics::GetExpr(numThreadsClause->v), stmtCtx));
       } else if (const auto &privateClause =
                      std::get_if<Fortran::parser::OmpClause::Private>(
                          &clause.u)) {
@@ -198,7 +200,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
             allocateClause->t);
         if (allocatorValue) {
           allocatorOperand = fir::getBase(converter.genExprValue(
-              *Fortran::semantics::GetExpr(allocatorValue->v)));
+              *Fortran::semantics::GetExpr(allocatorValue->v), stmtCtx));
           allocatorOperands.insert(allocatorOperands.end(),
                                    ompObjectList.v.size(), allocatorOperand);
         } else {

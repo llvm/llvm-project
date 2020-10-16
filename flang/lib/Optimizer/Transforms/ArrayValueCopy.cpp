@@ -464,12 +464,13 @@ public:
                          mlir::Operation *shapeOp) {
     assert(result.empty());
     if (auto s = mlir::dyn_cast<fir::ShapeOp>(shapeOp)) {
-      auto e = s.extents();
+      auto e = s.getExtents();
       result.insert(result.end(), e.begin(), e.end());
       return;
     }
     if (auto s = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp)) {
-      s.getExtents(result);
+      auto e = s.getExtents();
+      result.insert(result.end(), e.begin(), e.end());
       return;
     }
     llvm::report_fatal_error("not a shape op");
@@ -481,12 +482,9 @@ public:
     auto insPt = rewriter.saveInsertionPoint();
     llvm::SmallVector<mlir::Value, 8> shape;
     getExtents(shape, shapeOp.getDefiningOp());
-    llvm::SmallVector<mlir::Value, 8> revShape;
-    revShape.insert(revShape.end(), shape.begin(), shape.end());
-    std::reverse(revShape.begin(), revShape.end());
-    llvm::SmallVector<mlir::Value, 8> indices;
+   llvm::SmallVector<mlir::Value, 8> indices;
     // Build loop nest from column to row.
-    for (auto sh : revShape) {
+    for (auto sh : llvm::reverse(shape)) {
       auto idxTy = rewriter.getIndexType();
       auto ub = rewriter.create<fir::ConvertOp>(loc, idxTy, sh);
       auto one = rewriter.create<mlir::ConstantIndexOp>(loc, 1);

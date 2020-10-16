@@ -1569,6 +1569,10 @@ def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
   let extraClassDeclaration = [{
     std::vector<mlir::Value> getExtents();
   }];
+
+  let extraClassDeclaration = [{
+    std::vector<mlir::Value> getExtents();
+  }];
 }
 
 def fir_ArrayFetchOp : fir_Op<"array_fetch", [NoSideEffect]> {
