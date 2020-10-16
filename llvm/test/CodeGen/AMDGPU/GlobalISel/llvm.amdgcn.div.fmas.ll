@@ -888,7 +888,7 @@ define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(float addrspace
 ; GFX8-NEXT:    v_cmp_ne_u32_e64 s[2:3], 0, s2
 ; GFX8-NEXT:    s_and_b64 vcc, vcc, s[2:3]
 ; GFX8-NEXT:    s_nop 1
-; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_div_fmas_f32 v2, v1, v2, v3
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
@@ -1027,7 +1027,7 @@ define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(float addrspace(1)* %out
 ; GFX8-NEXT:    s_and_b32 s2, 1, s2
 ; GFX8-NEXT:    v_cmp_ne_u32_e64 vcc, 0, s2
 ; GFX8-NEXT:    s_nop 3
-; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_div_fmas_f32 v2, v1, v2, v3
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1

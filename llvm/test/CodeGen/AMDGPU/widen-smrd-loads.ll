@@ -282,7 +282,7 @@ define amdgpu_kernel void @no_widen_i16_constant_divergent_load(i16 addrspace(4)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_ushort v0, v[0:1]
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u16_e32 v0, 0x3e7, v0
 ; VI-NEXT:    v_or_b32_e32 v2, 4, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, 0

@@ -34,7 +34,7 @@ define amdgpu_kernel void @cos_f16(half addrspace(1)* %r, half addrspace(1)* %a)
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    flat_load_ushort v0, v[0:1]
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_mul_f16_e32 v0, 0.15915494, v0
 ; GFX8-NEXT:    v_fract_f16_e32 v0, v0
 ; GFX8-NEXT:    v_cos_f16_e32 v2, v0
@@ -102,7 +102,7 @@ define amdgpu_kernel void @cos_v2f16(<2 x half> addrspace(1)* %r, <2 x half> add
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    flat_load_dword v0, v[0:1]
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0x3118
-; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_mul_f16_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-NEXT:    v_mul_f16_e32 v0, 0.15915494, v0
 ; GFX8-NEXT:    v_fract_f16_e32 v1, v1

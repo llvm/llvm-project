@@ -143,7 +143,7 @@ define amdgpu_kernel void @v_brev_i32(i32 addrspace(1)* noalias %out, i32 addrsp
 ; FLAT-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; FLAT-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; FLAT-NEXT:    flat_load_dword v0, v[0:1]
-; FLAT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
 ; FLAT-NEXT:    v_bfrev_b32_e32 v0, v0
 ; FLAT-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; FLAT-NEXT:    s_endpgm
@@ -219,7 +219,7 @@ define amdgpu_kernel void @v_brev_v2i32(<2 x i32> addrspace(1)* noalias %out, <2
 ; FLAT-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; FLAT-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; FLAT-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; FLAT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
 ; FLAT-NEXT:    v_bfrev_b32_e32 v1, v1
 ; FLAT-NEXT:    v_bfrev_b32_e32 v0, v0
 ; FLAT-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
@@ -397,7 +397,7 @@ define amdgpu_kernel void @v_brev_i64(i64 addrspace(1)* noalias %out, i64 addrsp
 ; FLAT-NEXT:    s_mov_b32 s0, 0x10203
 ; FLAT-NEXT:    s_mov_b32 s1, 0xf0f0f0f
 ; FLAT-NEXT:    s_mov_b32 s7, 0xf000
-; FLAT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
 ; FLAT-NEXT:    v_perm_b32 v2, 0, v0, s0
 ; FLAT-NEXT:    v_perm_b32 v4, 0, v1, s0
 ; FLAT-NEXT:    v_and_b32_e32 v1, s1, v2
@@ -691,7 +691,7 @@ define amdgpu_kernel void @v_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2
 ; FLAT-NEXT:    s_mov_b32 s10, 0xaaaaaaaa
 ; FLAT-NEXT:    s_mov_b32 s7, 0xf000
 ; FLAT-NEXT:    s_mov_b32 s6, -1
-; FLAT-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; FLAT-NEXT:    s_waitcnt vmcnt(0)
 ; FLAT-NEXT:    v_perm_b32 v6, 0, v0, s0
 ; FLAT-NEXT:    v_perm_b32 v4, 0, v3, s0
 ; FLAT-NEXT:    v_perm_b32 v2, 0, v2, s0
