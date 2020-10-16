@@ -1536,7 +1536,7 @@ public:
   /// Inherit the base class constructor.
   using InterfaceBase::InterfaceBase;
 
-private:
+protected:
   /// Returns the impl interface instance for the given operation.
   static typename InterfaceBase::Concept *getInterfaceFor(Operation *op) {
     // Access the raw interface from the abstract operation.
