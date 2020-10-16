@@ -3583,11 +3583,19 @@ struct OpenMPThreadprivate {
   std::tuple<Verbatim, OmpObjectList> t;
 };
 
+// 2.11.3 allocate -> ALLOCATE (variable-name-list) [clause]
+struct OpenMPDeclarativeAllocate {
+  TUPLE_CLASS_BOILERPLATE(OpenMPDeclarativeAllocate);
+  CharBlock source;
+  std::tuple<Verbatim, OmpObjectList, OmpClauseList> t;
+};
+
 struct OpenMPDeclarativeConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPDeclarativeConstruct);
   CharBlock source;
-  std::variant<OpenMPDeclareReductionConstruct, OpenMPDeclareSimdConstruct,
-      OpenMPDeclareTargetConstruct, OpenMPThreadprivate>
+  std::variant<OpenMPDeclarativeAllocate, OpenMPDeclareReductionConstruct,
+      OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
+      OpenMPThreadprivate>
       u;
 };
 
@@ -3605,6 +3613,19 @@ struct OmpEndCriticalDirective {
 struct OpenMPCriticalConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPCriticalConstruct);
   std::tuple<OmpCriticalDirective, Block, OmpEndCriticalDirective> t;
+};
+
+// 2.11.3 allocate -> ALLOCATE [(variable-name-list)] [clause]
+//        [ALLOCATE (variable-name-list) [clause] [...]]
+//        allocate-statement
+//        clause -> allocator-clause
+struct OpenMPExecutableAllocate {
+  TUPLE_CLASS_BOILERPLATE(OpenMPExecutableAllocate);
+  CharBlock source;
+  std::tuple<Verbatim, std::optional<OmpObjectList>, OmpClauseList,
+      std::optional<std::list<OpenMPDeclarativeAllocate>>,
+      Statement<AllocateStmt>>
+      t;
 };
 
 // 2.17.7 atomic -> ATOMIC [clause[,]] atomic-clause [[,]clause] |
@@ -3777,6 +3798,7 @@ struct OpenMPConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPConstruct);
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
       OpenMPLoopConstruct, OpenMPBlockConstruct, OpenMPAtomicConstruct,
+      OpenMPExecutableAllocate, OpenMPDeclarativeAllocate,
       OpenMPCriticalConstruct>
       u;
 };
