@@ -10,6 +10,18 @@ RUN:   %S/Inputs/sources_specified/main.covmapping \
 RUN:   %S/Inputs/sources_specified/main.cc %S/Inputs/sources_specified/extra \
 RUN:   | FileCheck -check-prefix=SHOW %s
 
+# Don't include all source files when provided source files are filtered out.
+RUN: llvm-cov show -instr-profile %S/Inputs/sources_specified/main.profdata \
+RUN:   -path-equivalence=/tmp,%S/Inputs \
+RUN:   %S/Inputs/sources_specified/main.covmapping \
+RUN:   --ignore-filename-regex='.*' \
+RUN:   %S/Inputs/sources_specified/main.cc %S/Inputs/sources_specified/extra \
+RUN:   | FileCheck -allow-empty -check-prefix=IGNORE %s
+
+IGNORE-NOT: {{.*}}main.cc{{.*}}
+IGNORE-NOT: {{.*}}inc.h{{.*}}
+IGNORE-NOT: {{.*}}dec.h{{.*}}
+
 # Order of files may differ, check the total values calculated.
 REPORT-NOT: {{.*}}abs.h{{.*}}
 REPORT: {{^}}TOTAL 3{{.*}}72.73%
