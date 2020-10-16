@@ -1767,6 +1767,8 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
       DeclaratorChunk::ArrayTypeInfo &Array = D.getTypeObject(I).Arr;
       if (Expr *NumElts = (Expr *)Array.NumElts) {
         if (!NumElts->isTypeDependent() && !NumElts->isValueDependent()) {
+          // FIXME: GCC permits constant folding here. We should either do so consistently
+          // or not do so at all, rather than changing behavior in C++14 onwards.
           if (getLangOpts().CPlusPlus14) {
             // C++1y [expr.new]p6: Every constant-expression in a noptr-new-declarator
             //   shall be a converted constant expression (5.19) of type std::size_t
@@ -1777,10 +1779,10 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
                                                 CCEK_ArrayBound)
                  .get();
           } else {
-            Array.NumElts
-              = VerifyIntegerConstantExpression(NumElts, nullptr,
-                                                diag::err_new_array_nonconst)
-                  .get();
+            Array.NumElts =
+                VerifyIntegerConstantExpression(
+                    NumElts, nullptr, diag::err_new_array_nonconst, AllowFold)
+                    .get();
           }
           if (!Array.NumElts)
             return ExprError();
@@ -5486,9 +5488,9 @@ static uint64_t EvaluateArrayTypeTrait(Sema &Self, ArrayTypeTrait ATT,
   case ATT_ArrayExtent: {
     llvm::APSInt Value;
     uint64_t Dim;
-    if (Self.VerifyIntegerConstantExpression(DimExpr, &Value,
-          diag::err_dimension_expr_not_constant_integer,
-          false).isInvalid())
+    if (Self.VerifyIntegerConstantExpression(
+                DimExpr, &Value, diag::err_dimension_expr_not_constant_integer)
+            .isInvalid())
       return 0;
     if (Value.isSigned() && Value.isNegative()) {
       Self.Diag(KeyLoc, diag::err_dimension_expr_not_constant_integer)
