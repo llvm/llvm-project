@@ -68,6 +68,30 @@ collectValidReferencesFor(Operation *symbol, StringRef symbolName,
   return success();
 }
 
+/// Walk all of the operations within the given set of regions, without
+/// traversing into any nested symbol tables. Stops walking if the result of the
+/// callback is anything other than `WalkResult::advance`.
+static Optional<WalkResult>
+walkSymbolTable(MutableArrayRef<Region> regions,
+                function_ref<Optional<WalkResult>(Operation *)> callback) {
+  SmallVector<Region *, 1> worklist(llvm::make_pointer_range(regions));
+  while (!worklist.empty()) {
+    for (Operation &op : worklist.pop_back_val()->getOps()) {
+      Optional<WalkResult> result = callback(&op);
+      if (result != WalkResult::advance())
+        return result;
+
+      // If this op defines a new symbol table scope, we can't traverse. Any
+      // symbol references nested within 'op' are different semantically.
+      if (!op.hasTrait<OpTrait::SymbolTable>()) {
+        for (Region &region : op.getRegions())
+          worklist.push_back(&region);
+      }
+    }
+  }
+  return WalkResult::advance();
+}
+
 //===----------------------------------------------------------------------===//
 // SymbolTable
 //===----------------------------------------------------------------------===//
@@ -347,7 +371,18 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
             .append("see existing symbol definition here");
     }
   }
-  return success();
+
+  // Verify any nested symbol user operations.
+  SymbolTableCollection symbolTable;
+  auto verifySymbolUserFn = [&](Operation *op) -> Optional<WalkResult> {
+    if (SymbolUserOpInterface user = dyn_cast<SymbolUserOpInterface>(op))
+      return WalkResult(user.verifySymbolUses(symbolTable));
+    return WalkResult::advance();
+  };
+
+  Optional<WalkResult> result =
+      walkSymbolTable(op->getRegions(), verifySymbolUserFn);
+  return success(result && !result->wasInterrupted());
 }
 
 LogicalResult detail::verifySymbol(Operation *op) {
@@ -452,25 +487,13 @@ static WalkResult walkSymbolRefs(
 static Optional<WalkResult> walkSymbolUses(
     MutableArrayRef<Region> regions,
     function_ref<WalkResult(SymbolTable::SymbolUse, ArrayRef<int>)> callback) {
-  SmallVector<Region *, 1> worklist(llvm::make_pointer_range(regions));
-  while (!worklist.empty()) {
-    for (Operation &op : worklist.pop_back_val()->getOps()) {
-      if (walkSymbolRefs(&op, callback).wasInterrupted())
-        return WalkResult::interrupt();
+  return walkSymbolTable(regions, [&](Operation *op) -> Optional<WalkResult> {
+    // Check that this isn't a potentially unknown symbol table.
+    if (isPotentiallyUnknownSymbolTable(op))
+      return llvm::None;
 
-      // Check that this isn't a potentially unknown symbol table.
-      if (isPotentiallyUnknownSymbolTable(&op))
-        return llvm::None;
-
-      // If this op defines a new symbol table scope, we can't traverse. Any
-      // symbol references nested within 'op' are different semantically.
-      if (!op.hasTrait<OpTrait::SymbolTable>()) {
-        for (Region &region : op.getRegions())
-          worklist.push_back(&region);
-      }
-    }
-  }
-  return WalkResult::advance();
+    return walkSymbolRefs(op, callback);
+  });
 }
 /// Walk all of the uses, for any symbol, that are nested within the given
 /// operation 'from', invoking the provided callback for each. This does not
@@ -925,6 +948,22 @@ SymbolTableCollection::lookupSymbolIn(Operation *symbolTableOp,
     return lookupSymbolIn(symbolTableOp, symbol);
   };
   return lookupSymbolInImpl(symbolTableOp, name, symbols, lookupFn);
+}
+
+/// Returns the operation registered with the given symbol name within the
+/// closest parent operation of, or including, 'from' with the
+/// 'OpTrait::SymbolTable' trait. Returns nullptr if no valid symbol was
+/// found.
+Operation *SymbolTableCollection::lookupNearestSymbolFrom(Operation *from,
+                                                          StringRef symbol) {
+  Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(from);
+  return symbolTableOp ? lookupSymbolIn(symbolTableOp, symbol) : nullptr;
+}
+Operation *
+SymbolTableCollection::lookupNearestSymbolFrom(Operation *from,
+                                               SymbolRefAttr symbol) {
+  Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(from);
+  return symbolTableOp ? lookupSymbolIn(symbolTableOp, symbol) : nullptr;
 }
 
 /// Lookup, or create, a symbol table for an operation.
