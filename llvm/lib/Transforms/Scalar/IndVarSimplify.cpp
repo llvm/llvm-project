@@ -1114,8 +1114,8 @@ bool WidenIV::widenWithVariantUse(NarrowIVDefUse DU) {
 
   // The operand that is not defined by NarrowDef of DU. Let's call it the
   // other operand.
-  unsigned ExtendOperIdx = DU.NarrowUse->getOperand(0) == NarrowDef ? 1 : 0;
-  assert(DU.NarrowUse->getOperand(1 - ExtendOperIdx) == DU.NarrowDef &&
+  assert((NarrowUse->getOperand(0) == NarrowDef ||
+          NarrowUse->getOperand(1) == NarrowDef) &&
          "bad DU");
 
   const OverflowingBinaryOperator *OBO =
