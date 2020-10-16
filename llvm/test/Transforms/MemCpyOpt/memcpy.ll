@@ -12,9 +12,11 @@ define void @test1(%0* sret  %agg.result, x86_fp80 %z.0, x86_fp80 %z.1) nounwind
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [[TMP0:%.*]], align 16
+; CHECK-NEXT:    [[MEMTMP:%.*]] = alloca [[TMP0]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub x86_fp80 0xK80000000000000000000, [[Z_1:%.*]]
 ; CHECK-NEXT:    call void @ccoshl(%0* sret [[TMP2]], x86_fp80 [[TMP5]], x86_fp80 [[Z_0:%.*]]) [[ATTR0:#.*]]
 ; CHECK-NEXT:    [[TMP219:%.*]] = bitcast %0* [[TMP2]] to i8*
+; CHECK-NEXT:    [[MEMTMP20:%.*]] = bitcast %0* [[MEMTMP]] to i8*
 ; CHECK-NEXT:    [[AGG_RESULT21:%.*]] = bitcast %0* [[AGG_RESULT:%.*]] to i8*
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 [[AGG_RESULT21]], i8* align 16 [[TMP219]], i32 32, i1 false)
 ; CHECK-NEXT:    ret void
@@ -76,8 +78,11 @@ define void @test2_memcpy(i8* noalias %P, i8* noalias %Q) nounwind  {
 
 define void @test3(%0* noalias sret %agg.result) nounwind  {
 ; CHECK-LABEL: @test3(
+; CHECK-NEXT:    [[X_0:%.*]] = alloca [[TMP0:%.*]], align 16
+; CHECK-NEXT:    [[X_01:%.*]] = bitcast %0* [[X_0]] to i8*
 ; CHECK-NEXT:    [[AGG_RESULT1:%.*]] = bitcast %0* [[AGG_RESULT:%.*]] to i8*
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 [[AGG_RESULT1]], i8* align 16 bitcast (%0* @x to i8*), i32 32, i1 false)
+; CHECK-NEXT:    [[AGG_RESULT2:%.*]] = bitcast %0* [[AGG_RESULT]] to i8*
 ; CHECK-NEXT:    ret void
 ;
   %x.0 = alloca %0
@@ -270,7 +275,10 @@ define void @test9_addrspacecast() nounwind ssp uwtable {
 ; CHECK-LABEL: @test9_addrspacecast(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_BIG:%.*]], align 4
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_BIG]], align 4
 ; CHECK-NEXT:    call void @f1(%struct.big* sret [[B]])
+; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast %struct.big* [[B]] to i8 addrspace(1)*
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast %struct.big* [[TMP]] to i8 addrspace(1)*
 ; CHECK-NEXT:    call void @f2(%struct.big* [[B]])
 ; CHECK-NEXT:    ret void
 ;
@@ -289,7 +297,10 @@ define void @test9() nounwind ssp uwtable {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_BIG:%.*]], align 4
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_BIG]], align 4
 ; CHECK-NEXT:    call void @f1(%struct.big* sret [[B]])
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct.big* [[B]] to i8*
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast %struct.big* [[TMP]] to i8*
 ; CHECK-NEXT:    call void @f2(%struct.big* [[B]])
 ; CHECK-NEXT:    ret void
 ;
