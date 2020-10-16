@@ -845,15 +845,22 @@ private:
 /// DefinitionGenerators can optionally take ownership of a LookupState object
 /// to suspend a lookup-in-progress while they search for definitions.
 class LookupState {
+  friend class OrcV2CAPIHelper;
   friend class ExecutionSession;
 
 public:
+  ~LookupState();
+
   /// Continue the lookup. This can be called by DefinitionGenerators
   /// to re-start a captured query-application operation.
   void continueLookup(Error Err);
 
 private:
   LookupState(std::unique_ptr<InProgressLookupState> IPLS);
+
+  // For C API.
+  void reset(InProgressLookupState *IPLS);
+
   std::unique_ptr<InProgressLookupState> IPLS;
 };
 

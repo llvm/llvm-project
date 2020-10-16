@@ -577,6 +577,10 @@ Error ReexportsGenerator::tryToGenerate(LookupState &LS, LookupKind K,
 LookupState::LookupState(std::unique_ptr<InProgressLookupState> IPLS)
     : IPLS(std::move(IPLS)) {}
 
+void LookupState::reset(InProgressLookupState *IPLS) { this->IPLS.reset(IPLS); }
+
+LookupState::~LookupState() {}
+
 void LookupState::continueLookup(Error Err) {
   assert(IPLS && "Cannot call continueLookup on empty LookupState");
   auto &ES = IPLS->SearchOrder.begin()->first->getExecutionSession();

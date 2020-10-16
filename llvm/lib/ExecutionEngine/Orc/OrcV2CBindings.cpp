@@ -18,6 +18,8 @@ using namespace llvm::orc;
 namespace llvm {
 namespace orc {
 
+class InProgressLookupState;
+
 class OrcV2CAPIHelper {
 public:
   using PoolEntry = SymbolStringPtr::PoolEntry;
@@ -33,14 +35,27 @@ public:
     return S.S;
   }
 
+  static void retainPoolEntry(PoolEntryPtr P) {
+    SymbolStringPtr S(P);
+    S.S = nullptr;
+  }
+
   static void releasePoolEntry(PoolEntryPtr P) {
     SymbolStringPtr S;
     S.S = P;
   }
+
+  static InProgressLookupState *extractLookupState(LookupState &LS) {
+    return LS.IPLS.release();
+  }
+
+  static void resetLookupState(LookupState &LS, InProgressLookupState *IPLS) {
+    return LS.reset(IPLS);
+  }
 };
 
-} // end namespace orc
-} // end namespace llvm
+} // namespace orc
+} // namespace llvm
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ExecutionSession, LLVMOrcExecutionSessionRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(SymbolStringPool, LLVMOrcSymbolStringPoolRef)
@@ -50,6 +65,7 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITDylib, LLVMOrcJITDylibRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ResourceTracker, LLVMOrcResourceTrackerRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DefinitionGenerator,
                                    LLVMOrcDefinitionGeneratorRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(InProgressLookupState, LLVMOrcLookupStateRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeContext,
                                    LLVMOrcThreadSafeContextRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeModule, LLVMOrcThreadSafeModuleRef)
@@ -59,6 +75,83 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLJITBuilder, LLVMOrcLLJITBuilderRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLJIT, LLVMOrcLLJITRef)
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(TargetMachine, LLVMTargetMachineRef)
+
+namespace llvm {
+namespace orc {
+
+class CAPIDefinitionGenerator final : public DefinitionGenerator {
+public:
+  CAPIDefinitionGenerator(
+      void *Ctx,
+      LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction TryToGenerate)
+      : Ctx(Ctx), TryToGenerate(TryToGenerate) {}
+
+  Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
+                      JITDylibLookupFlags JDLookupFlags,
+                      const SymbolLookupSet &LookupSet) override {
+
+    // Take the lookup state.
+    LLVMOrcLookupStateRef LSR = ::wrap(OrcV2CAPIHelper::extractLookupState(LS));
+
+    // Translate the lookup kind.
+    LLVMOrcLookupKind CLookupKind;
+    switch (K) {
+    case LookupKind::Static:
+      CLookupKind = LLVMOrcLookupKindStatic;
+      break;
+    case LookupKind::DLSym:
+      CLookupKind = LLVMOrcLookupKindDLSym;
+      break;
+    }
+
+    // Translate the JITDylibSearchFlags.
+    LLVMOrcJITDylibLookupFlags CJDLookupFlags;
+    switch (JDLookupFlags) {
+    case JITDylibLookupFlags::MatchExportedSymbolsOnly:
+      CJDLookupFlags = LLVMOrcJITDylibLookupFlagsMatchExportedSymbolsOnly;
+      break;
+    case JITDylibLookupFlags::MatchAllSymbols:
+      CJDLookupFlags = LLVMOrcJITDylibLookupFlagsMatchAllSymbols;
+      break;
+    }
+
+    // Translate the lookup set.
+    std::vector<LLVMOrcCLookupSetElement> CLookupSet;
+    CLookupSet.reserve(LookupSet.size());
+    for (auto &KV : LookupSet) {
+      LLVMOrcSymbolLookupFlags SLF;
+      switch (KV.second) {
+      case SymbolLookupFlags::RequiredSymbol:
+        SLF = LLVMOrcSymbolLookupFlagsRequiredSymbol;
+        break;
+      case SymbolLookupFlags::WeaklyReferencedSymbol:
+        SLF = LLVMOrcSymbolLookupFlagsWeaklyReferencedSymbol;
+        break;
+      }
+
+      CLookupSet.push_back(
+          {::wrap(OrcV2CAPIHelper::getRawPoolEntryPtr(KV.first)), SLF});
+    }
+    CLookupSet.push_back({nullptr, LLVMOrcSymbolLookupFlagsRequiredSymbol});
+
+    // Run the C TryToGenerate function.
+    auto Err =
+        unwrap(TryToGenerate(::wrap(this), Ctx, &LSR, CLookupKind, ::wrap(&JD),
+                             CJDLookupFlags, CLookupSet.data()));
+
+    // Restore the lookup state.
+    OrcV2CAPIHelper::resetLookupState(LS, ::unwrap(LSR));
+
+    return Err;
+  }
+
+private:
+  void *Ctx;
+  LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction TryToGenerate;
+};
+
+} // end namespace orc
+} // end namespace llvm
 
 void LLVMOrcExecutionSessionSetErrorReporter(
     LLVMOrcExecutionSessionRef ES, LLVMOrcErrorReporterFunction ReportError,
@@ -80,6 +173,10 @@ LLVMOrcSymbolStringPoolEntryRef
 LLVMOrcExecutionSessionIntern(LLVMOrcExecutionSessionRef ES, const char *Name) {
   return wrap(
       OrcV2CAPIHelper::releaseSymbolStringPtr(unwrap(ES)->intern(Name)));
+}
+
+void LLVMOrcRetainSymbolStringPoolEntry(LLVMOrcSymbolStringPoolEntryRef S) {
+  OrcV2CAPIHelper::retainPoolEntry(unwrap(S));
 }
 
 void LLVMOrcReleaseSymbolStringPoolEntry(LLVMOrcSymbolStringPoolEntryRef S) {
@@ -117,6 +214,11 @@ LLVMErrorRef LLVMOrcResourceTrackerRemove(LLVMOrcResourceTrackerRef RT) {
   return wrap(TmpRT->remove());
 }
 
+void LLVMOrcDisposeDefinitionGenerator(
+    LLVMOrcDefinitionGeneratorRef DG) {
+  delete unwrap(DG);
+}
+
 LLVMOrcJITDylibRef
 LLVMOrcExecutionSessionCreateBareJITDylib(LLVMOrcExecutionSessionRef ES,
                                           const char *Name) {
@@ -140,11 +242,6 @@ LLVMOrcExecutionSessionGetJITDylibByName(LLVMOrcExecutionSessionRef ES,
   return wrap(unwrap(ES)->getJITDylibByName(Name));
 }
 
-void LLVMOrcDisposeDefinitionGenerator(
-    LLVMOrcDefinitionGeneratorRef DG) {
-  delete unwrap(DG);
-}
-
 LLVMErrorRef LLVMOrcJITDylibClear(LLVMOrcJITDylibRef JD) {
   return wrap(unwrap(JD)->clear());
 }
@@ -152,6 +249,16 @@ LLVMErrorRef LLVMOrcJITDylibClear(LLVMOrcJITDylibRef JD) {
 void LLVMOrcJITDylibAddGenerator(LLVMOrcJITDylibRef JD,
                                  LLVMOrcDefinitionGeneratorRef DG) {
   unwrap(JD)->addGenerator(std::unique_ptr<DefinitionGenerator>(unwrap(DG)));
+}
+
+void LLVMOrcDisposeDefinitionGenerator(LLVMOrcDefinitionGeneratorRef DG) {
+  std::unique_ptr<DefinitionGenerator> TmpDG(unwrap(DG));
+}
+
+LLVMOrcDefinitionGeneratorRef LLVMOrcCreateCustomCAPIDefinitionGenerator(
+    void *Ctx, LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction F) {
+  auto DG = std::make_unique<CAPIDefinitionGenerator>(Ctx, F);
+  return wrap(DG.release());
 }
 
 LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
