@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -dse -enable-dse-memoryssa -S | FileCheck %s
+; RUN: opt < %s -basic-aa -dse -S | FileCheck %s
 
 ; CHECK-LABEL: void @skipBarrier(i8* %ptr)
 define void @skipBarrier(i8* %ptr) {
