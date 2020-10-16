@@ -2111,10 +2111,16 @@ let Predicates = [IsISA3_1] in {
                                "vcmpuq $BF, $vA, $vB", IIC_VecGeneral, []>;
   def VCMPSQ : VXForm_BF3_VAB5<321, (outs crrc:$BF), (ins vrrc:$vA, vrrc:$vB),
                                "vcmpsq $BF, $vA, $vB", IIC_VecGeneral, []>;
-  def VRLQNM : VX1_VT5_VA5_VB5<325, "vrlqnm", []>;
+  def VRLQNM : VX1_VT5_VA5_VB5<325, "vrlqnm",
+                               [(set v1i128:$vD,
+                                   (int_ppc_altivec_vrlqnm v1i128:$vA,
+                                                           v1i128:$vB))]>;
   def VRLQMI : VXForm_1<69, (outs vrrc:$vD),
                         (ins vrrc:$vA, vrrc:$vB, vrrc:$vDi),
-                        "vrlqmi $vD, $vA, $vB", IIC_VecFP, []>,
+                        "vrlqmi $vD, $vA, $vB", IIC_VecFP,
+                        [(set v1i128:$vD,
+                          (int_ppc_altivec_vrlqmi v1i128:$vA, v1i128:$vB,
+                                                  v1i128:$vDi))]>,
                         RegConstraint<"$vDi = $vD">, NoEncode<"$vDi">;
   def VSLQ : VX1_VT5_VA5_VB5<261, "vslq", []>;
   def VSRAQ : VX1_VT5_VA5_VB5<773, "vsraq", []>;
@@ -2175,6 +2181,9 @@ let Predicates = [IsISA3_1] in {
              (v1i128 (COPY_TO_REGCLASS (LXVRWX xoaddr:$src), VRRC))>;
   def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 64)),
              (v1i128 (COPY_TO_REGCLASS (LXVRDX xoaddr:$src), VRRC))>;
+
+  def : Pat<(v1i128 (rotl v1i128:$vA, v1i128:$vB)),
+            (v1i128 (VRLQ v1i128:$vA, v1i128:$vB))>;
 }
 
 let Predicates = [IsISA3_1, HasVSX] in {
