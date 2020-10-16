@@ -137,8 +137,8 @@ define <2 x i8> @and1_shl1_is_cmp_eq_0_vec(<2 x i8> %x) {
 
 define <2 x i8> @and1_shl1_is_cmp_eq_0_vec_undef(<2 x i8> %x) {
 ; CHECK-LABEL: @and1_shl1_is_cmp_eq_0_vec_undef(
-; CHECK-NEXT:    [[SH:%.*]] = shl <2 x i8> <i8 1, i8 undef>, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SH]], <i8 1, i8 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[AND:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
   %sh = shl <2 x i8> <i8 1, i8 undef>, %x
@@ -189,8 +189,8 @@ define <2 x i8> @and1_lshr1_is_cmp_eq_0_vec(<2 x i8> %x) {
 
 define <2 x i8> @and1_lshr1_is_cmp_eq_0_vec_undef(<2 x i8> %x) {
 ; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0_vec_undef(
-; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> <i8 1, i8 undef>, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SH]], <i8 1, i8 undef>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[AND:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[AND]]
 ;
   %sh = lshr <2 x i8> <i8 1, i8 undef>, %x
