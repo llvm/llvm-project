@@ -31,6 +31,10 @@ public:
     return Result;
   }
 
+  static SymbolStringPtr retainSymbolStringPtr(PoolEntryPtr P) {
+    return SymbolStringPtr(P);
+  }
+
   static PoolEntryPtr getRawPoolEntryPtr(const SymbolStringPtr &S) {
     return S.S;
   }
@@ -61,6 +65,8 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ExecutionSession, LLVMOrcExecutionSessionRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(SymbolStringPool, LLVMOrcSymbolStringPoolRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(OrcV2CAPIHelper::PoolEntry,
                                    LLVMOrcSymbolStringPoolEntryRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(MaterializationUnit,
+                                   LLVMOrcMaterializationUnitRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITDylib, LLVMOrcJITDylibRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ResourceTracker, LLVMOrcResourceTrackerRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DefinitionGenerator,
@@ -120,6 +126,8 @@ public:
     CLookupSet.reserve(LookupSet.size());
     for (auto &KV : LookupSet) {
       LLVMOrcSymbolLookupFlags SLF;
+      LLVMOrcSymbolStringPoolEntryRef Name =
+        ::wrap(OrcV2CAPIHelper::getRawPoolEntryPtr(KV.first));
       switch (KV.second) {
       case SymbolLookupFlags::RequiredSymbol:
         SLF = LLVMOrcSymbolLookupFlagsRequiredSymbol;
@@ -128,16 +136,13 @@ public:
         SLF = LLVMOrcSymbolLookupFlagsWeaklyReferencedSymbol;
         break;
       }
-
-      CLookupSet.push_back(
-          {::wrap(OrcV2CAPIHelper::getRawPoolEntryPtr(KV.first)), SLF});
+      CLookupSet.push_back({Name, SLF});
     }
-    CLookupSet.push_back({nullptr, LLVMOrcSymbolLookupFlagsRequiredSymbol});
 
     // Run the C TryToGenerate function.
-    auto Err =
-        unwrap(TryToGenerate(::wrap(this), Ctx, &LSR, CLookupKind, ::wrap(&JD),
-                             CJDLookupFlags, CLookupSet.data()));
+    auto Err = unwrap(TryToGenerate(::wrap(this), Ctx, &LSR, CLookupKind,
+                                    ::wrap(&JD), CJDLookupFlags,
+                                    CLookupSet.data(), CLookupSet.size()));
 
     // Restore the lookup state.
     OrcV2CAPIHelper::resetLookupState(LS, ::unwrap(LSR));
@@ -214,9 +219,32 @@ LLVMErrorRef LLVMOrcResourceTrackerRemove(LLVMOrcResourceTrackerRef RT) {
   return wrap(TmpRT->remove());
 }
 
-void LLVMOrcDisposeDefinitionGenerator(
-    LLVMOrcDefinitionGeneratorRef DG) {
-  delete unwrap(DG);
+void LLVMOrcDisposeDefinitionGenerator(LLVMOrcDefinitionGeneratorRef DG) {
+  std::unique_ptr<DefinitionGenerator> TmpDG(unwrap(DG));
+}
+
+void LLVMOrcDisposeMaterializationUnit(LLVMOrcMaterializationUnitRef MU) {
+  std::unique_ptr<MaterializationUnit> TmpMU(unwrap(MU));
+}
+
+LLVMOrcMaterializationUnitRef
+LLVMOrcAbsoluteSymbols(LLVMOrcCSymbolMapPairs Syms, size_t NumPairs) {
+  SymbolMap SM;
+  for (size_t I = 0; I != NumPairs; ++I) {
+    JITSymbolFlags Flags;
+
+    if (Syms[I].Sym.Flags.GenericFlags & LLVMJITSymbolGenericFlagsExported)
+      Flags |= JITSymbolFlags::Exported;
+    if (Syms[I].Sym.Flags.GenericFlags & LLVMJITSymbolGenericFlagsWeak)
+      Flags |= JITSymbolFlags::Weak;
+
+    Flags.getTargetFlags() = Syms[I].Sym.Flags.TargetFlags;
+
+    SM[OrcV2CAPIHelper::retainSymbolStringPtr(unwrap(Syms[I].Name))] =
+        JITEvaluatedSymbol(Syms[I].Sym.Address, Flags);
+  }
+
+  return wrap(absoluteSymbols(std::move(SM)).release());
 }
 
 LLVMOrcJITDylibRef
@@ -242,6 +270,17 @@ LLVMOrcExecutionSessionGetJITDylibByName(LLVMOrcExecutionSessionRef ES,
   return wrap(unwrap(ES)->getJITDylibByName(Name));
 }
 
+LLVMErrorRef LLVMOrcJITDylibDefine(LLVMOrcJITDylibRef JD,
+                                   LLVMOrcMaterializationUnitRef MU) {
+  std::unique_ptr<MaterializationUnit> TmpMU(unwrap(MU));
+
+  if (auto Err = unwrap(JD)->define(TmpMU)) {
+    TmpMU.release();
+    return wrap(std::move(Err));
+  }
+  return LLVMErrorSuccess;
+}
+
 LLVMErrorRef LLVMOrcJITDylibClear(LLVMOrcJITDylibRef JD) {
   return wrap(unwrap(JD)->clear());
 }
@@ -249,10 +288,6 @@ LLVMErrorRef LLVMOrcJITDylibClear(LLVMOrcJITDylibRef JD) {
 void LLVMOrcJITDylibAddGenerator(LLVMOrcJITDylibRef JD,
                                  LLVMOrcDefinitionGeneratorRef DG) {
   unwrap(JD)->addGenerator(std::unique_ptr<DefinitionGenerator>(unwrap(DG)));
-}
-
-void LLVMOrcDisposeDefinitionGenerator(LLVMOrcDefinitionGeneratorRef DG) {
-  std::unique_ptr<DefinitionGenerator> TmpDG(unwrap(DG));
 }
 
 LLVMOrcDefinitionGeneratorRef LLVMOrcCreateCustomCAPIDefinitionGenerator(
