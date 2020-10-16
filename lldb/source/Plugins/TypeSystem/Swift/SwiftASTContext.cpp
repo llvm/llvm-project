@@ -8296,7 +8296,9 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
 bool SwiftASTContext::GetImplicitImports(
     SwiftASTContext &swift_ast_context, SymbolContext &sc,
     ExecutionContextScope &exe_scope, lldb::StackFrameWP &stack_frame_wp,
-    llvm::SmallVectorImpl<swift::ModuleDecl *> &modules, Status &error) {
+    llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
+        &modules,
+    Status &error) {
   if (!GetCompileUnitImports(swift_ast_context, sc, stack_frame_wp, modules,
                              error)) {
     return false;
@@ -8306,15 +8308,28 @@ bool SwiftASTContext::GetImplicitImports(
       sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
 
   // Get the hand-loaded modules from the SwiftPersistentExpressionState.
-  for (ConstString name : persistent_expression_state->GetHandLoadedModules()) {
+  for (auto &module_pair :
+       persistent_expression_state->GetHandLoadedModules()) {
+
+    auto &attributed_import = module_pair.second;
+
+    // If the ImportedModule in the SwiftPersistentExpressionState has a
+    // non-null ModuleDecl, add it to the ImplicitImports list.
+    if (attributed_import.module.importedModule) {
+      modules.emplace_back(attributed_import);
+      continue;
+    }
+
+    // Otherwise, try reloading the ModuleDecl using the module name.
     SourceModule module_info;
-    module_info.path.push_back(name);
-    auto *module = LoadOneModule(module_info, swift_ast_context, stack_frame_wp,
-                                 error);
+    module_info.path.emplace_back(module_pair.first());
+    auto *module =
+        LoadOneModule(module_info, swift_ast_context, stack_frame_wp, error);
     if (!module)
       return false;
 
-    modules.push_back(module);
+    attributed_import.module = swift::ImportedModule(module);
+    modules.emplace_back(attributed_import);
   }
   return true;
 }
@@ -8326,7 +8341,6 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
                                        swift::SourceFile &source_file,
                                        Status &error) {
   llvm::SmallString<1> m_description;
-  llvm::SmallVector<swift::ImportedModule, 2> parsed_imports;
 
   swift::ModuleDecl::ImportFilter import_filter {
       swift::ModuleDecl::ImportFilterKind::Exported,
@@ -8336,13 +8350,12 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
       swift::ModuleDecl::ImportFilterKind::ShadowedByCrossImportOverlay
   };
 
-  source_file.getImportedModules(parsed_imports, import_filter);
-
   auto *persistent_expression_state =
       sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
 
-  for (auto module_pair : parsed_imports) {
-    swift::ModuleDecl *module = module_pair.importedModule;
+  for (const auto &attributed_import : source_file.getImports()) {
+    swift::ModuleDecl *module = attributed_import.module.importedModule;
+
     if (module) {
       std::string module_name;
       GetNameFromModule(module, module_name);
@@ -8358,7 +8371,8 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
           return false;
 
         // How do we tell we are in REPL or playground mode?
-        persistent_expression_state->AddHandLoadedModule(module_const_str);
+        persistent_expression_state->AddHandLoadedModule(module_const_str,
+                                                         attributed_import);
       }
     }
   }
@@ -8368,16 +8382,18 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
 bool SwiftASTContext::GetCompileUnitImports(
     SwiftASTContext &swift_ast_context, SymbolContext &sc,
     lldb::StackFrameWP &stack_frame_wp,
-    llvm::SmallVectorImpl<swift::ModuleDecl *> &modules, Status &error) {
+    llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
+        &modules,
+    Status &error) {
   // Import the Swift standard library and its dependencies.
   SourceModule swift_module;
-  swift_module.path.push_back(ConstString("Swift"));
+  swift_module.path.emplace_back("Swift");
   auto *stdlib =
       LoadOneModule(swift_module, swift_ast_context, stack_frame_wp, error);
   if (!stdlib)
     return false;
 
-  modules.push_back(stdlib);
+  modules.emplace_back(swift::ImportedModule(stdlib));
 
   CompileUnit *compile_unit = sc.comp_unit;
   if (!compile_unit || compile_unit->GetLanguage() != lldb::eLanguageTypeSwift)
@@ -8398,7 +8414,7 @@ bool SwiftASTContext::GetCompileUnitImports(
     if (!loaded_module)
       return false;
 
-    modules.push_back(loaded_module);
+    modules.emplace_back(swift::ImportedModule(loaded_module));
   }
   return true;
 }

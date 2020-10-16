@@ -752,7 +752,9 @@ public:
   static bool GetImplicitImports(
       SwiftASTContext &swift_ast_context, SymbolContext &sc,
       ExecutionContextScope &exe_scope, lldb::StackFrameWP &stack_frame_wp,
-      llvm::SmallVectorImpl<swift::ModuleDecl *> &modules, Status &error);
+      llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
+          &modules,
+      Status &error);
 
   /// Cache the user's imports from a SourceFile in a given execution scope such
   /// that they are carried over into future expression evaluations.
@@ -763,11 +765,12 @@ public:
                                swift::SourceFile &source_file, Status &error);
 
   /// Retrieve the modules imported by the compilation unit.
-  static bool
-  GetCompileUnitImports(SwiftASTContext &swift_ast_context, SymbolContext &sc,
-                        lldb::StackFrameWP &stack_frame_wp,
-                        llvm::SmallVectorImpl<swift::ModuleDecl *> &modules,
-                        Status &error);
+  static bool GetCompileUnitImports(
+      SwiftASTContext &swift_ast_context, SymbolContext &sc,
+      lldb::StackFrameWP &stack_frame_wp,
+      llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
+          &modules,
+      Status &error);
 
 protected:
   /// This map uses the string value of ConstStrings as the key, and the

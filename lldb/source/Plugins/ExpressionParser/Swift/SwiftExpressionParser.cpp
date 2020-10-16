@@ -55,17 +55,18 @@
 #include "clang/Rewrite/Core/RewriteBuffer.h"
 
 #include "swift/AST/ASTContext.h"
-#include "swift/AST/DiagnosticEngine.h"
 #include "swift/AST/DiagnosticConsumer.h"
+#include "swift/AST/DiagnosticEngine.h"
 #include "swift/AST/IRGenOptions.h"
 #include "swift/AST/IRGenRequests.h"
+#include "swift/AST/Import.h"
 #include "swift/AST/Module.h"
 #include "swift/AST/ModuleLoader.h"
-#include "swift/Demangling/Demangle.h"
+#include "swift/Basic/OptimizationMode.h"
 #include "swift/Basic/PrimarySpecificPaths.h"
 #include "swift/Basic/SourceManager.h"
-#include "swift/Basic/OptimizationMode.h"
 #include "swift/ClangImporter/ClangImporter.h"
+#include "swift/Demangling/Demangle.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Parse/LocalContext.h"
 #include "swift/Parse/PersistentParserState.h"
@@ -1162,6 +1163,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     lldb::StackFrameWP &stack_frame_wp, SymbolContext &sc,
     ExecutionContextScope &exe_scope, const EvaluateExpressionOptions &options,
     bool repl, bool playground) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   auto should_disable_objc_runtime = [&]() {
     lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
@@ -1187,7 +1189,20 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   if (playground) {
     auto *persistent_state =
         sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
-    persistent_state->AddHandLoadedModule(ConstString("Swift"));
+
+    Status error;
+    SourceModule module_info;
+    module_info.path.emplace_back("Swift");
+    swift::ModuleDecl *module =
+        swift_ast_context->GetModule(module_info, error);
+
+    if (error.Fail() || !module) {
+      LLDB_LOG(log, "couldn't load Swift Standard Library\n");
+      return error.ToError();
+    }
+
+    persistent_state->AddHandLoadedModule(ConstString("Swift"),
+                                          swift::ImportedModule(module));
   }
 
   std::string main_filename;
@@ -1203,7 +1218,8 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   // The Swift stdlib needs to be imported before the SwiftLanguageRuntime can
   // be used.
   Status implicit_import_error;
-  llvm::SmallVector<swift::ModuleDecl *, 16> additional_imports;
+  llvm::SmallVector<swift::AttributedImport<swift::ImportedModule>, 16>
+      additional_imports;
   if (!SwiftASTContext::GetImplicitImports(*swift_ast_context, sc, exe_scope,
                                            stack_frame_wp, additional_imports,
                                            implicit_import_error)) {
@@ -1213,9 +1229,8 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
 
   swift::ImplicitImportInfo importInfo;
   importInfo.StdlibKind = swift::ImplicitStdlibKind::Stdlib;
-  for (auto *module : additional_imports)
-    importInfo.AdditionalImports.emplace_back(swift::ImportedModule(module),
-                                              swift::ImportOptions());
+  for (auto &attributed_import : additional_imports)
+    importInfo.AdditionalImports.emplace_back(attributed_import);
 
   auto module_id = ast_context->getIdentifier(expr_name_buf);
   auto &module = *swift::ModuleDecl::create(module_id, *ast_context,
