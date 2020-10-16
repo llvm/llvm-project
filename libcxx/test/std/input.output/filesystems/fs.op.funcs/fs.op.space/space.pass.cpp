@@ -49,7 +49,7 @@ TEST_CASE(test_error_reporting)
     {
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try {
-            space(f);
+            (void)space(f);
             return false;
         } catch (filesystem_error const& err) {
             return err.path1() == f
