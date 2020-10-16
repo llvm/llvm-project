@@ -399,7 +399,7 @@ bool SymbolInfoMap::bindValue(StringRef symbol) {
 }
 
 bool SymbolInfoMap::bindAttr(StringRef symbol) {
-  auto inserted = symbolInfoMap.emplace(symbol, SymbolInfo::getAttr());
+  auto inserted = symbolInfoMap.emplace(symbol.str(), SymbolInfo::getAttr());
   return symbolInfoMap.count(inserted->first) == 1;
 }
 
