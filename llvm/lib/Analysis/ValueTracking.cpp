@@ -2256,8 +2256,9 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
       // See the comment for IntToPtr/PtrToInt instructions below.
       if (CE->getOpcode() == Instruction::IntToPtr ||
           CE->getOpcode() == Instruction::PtrToInt)
-        if (Q.DL.getTypeSizeInBits(CE->getOperand(0)->getType()) <=
-            Q.DL.getTypeSizeInBits(CE->getType()))
+        if (Q.DL.getTypeSizeInBits(CE->getOperand(0)->getType())
+                .getFixedSize() <=
+            Q.DL.getTypeSizeInBits(CE->getType()).getFixedSize())
           return isKnownNonZero(CE->getOperand(0), Depth, Q);
     }
 
@@ -2354,16 +2355,16 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
       return isKnownNonZero(BCO->getOperand(0), Depth, Q);
 
     if (auto *I2P = dyn_cast<IntToPtrInst>(V))
-      if (Q.DL.getTypeSizeInBits(I2P->getSrcTy()) <=
-          Q.DL.getTypeSizeInBits(I2P->getDestTy()))
+      if (Q.DL.getTypeSizeInBits(I2P->getSrcTy()).getFixedSize() <=
+          Q.DL.getTypeSizeInBits(I2P->getDestTy()).getFixedSize())
         return isKnownNonZero(I2P->getOperand(0), Depth, Q);
   }
 
   // Similar to int2ptr above, we can look through ptr2int here if the cast
   // is a no-op or an extend and not a truncate.
   if (auto *P2I = dyn_cast<PtrToIntInst>(V))
-    if (Q.DL.getTypeSizeInBits(P2I->getSrcTy()) <=
-        Q.DL.getTypeSizeInBits(P2I->getDestTy()))
+    if (Q.DL.getTypeSizeInBits(P2I->getSrcTy()).getFixedSize() <=
+        Q.DL.getTypeSizeInBits(P2I->getDestTy()).getFixedSize())
       return isKnownNonZero(P2I->getOperand(0), Depth, Q);
 
   unsigned BitWidth = getBitWidth(V->getType()->getScalarType(), Q.DL);
@@ -3059,11 +3060,11 @@ bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
     if (ComputeMultiple(Op0, Base, Mul0, LookThroughSExt, Depth+1)) {
       if (Constant *Op1C = dyn_cast<Constant>(Op1))
         if (Constant *MulC = dyn_cast<Constant>(Mul0)) {
-          if (Op1C->getType()->getPrimitiveSizeInBits() <
-              MulC->getType()->getPrimitiveSizeInBits())
+          if (Op1C->getType()->getPrimitiveSizeInBits().getFixedSize() <
+              MulC->getType()->getPrimitiveSizeInBits().getFixedSize())
             Op1C = ConstantExpr::getZExt(Op1C, MulC->getType());
-          if (Op1C->getType()->getPrimitiveSizeInBits() >
-              MulC->getType()->getPrimitiveSizeInBits())
+          if (Op1C->getType()->getPrimitiveSizeInBits().getFixedSize() >
+              MulC->getType()->getPrimitiveSizeInBits().getFixedSize())
             MulC = ConstantExpr::getZExt(MulC, Op1C->getType());
 
           // V == Base * (Mul0 * Op1), so return (Mul0 * Op1)
@@ -3083,11 +3084,11 @@ bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
     if (ComputeMultiple(Op1, Base, Mul1, LookThroughSExt, Depth+1)) {
       if (Constant *Op0C = dyn_cast<Constant>(Op0))
         if (Constant *MulC = dyn_cast<Constant>(Mul1)) {
-          if (Op0C->getType()->getPrimitiveSizeInBits() <
-              MulC->getType()->getPrimitiveSizeInBits())
+          if (Op0C->getType()->getPrimitiveSizeInBits().getFixedSize() <
+              MulC->getType()->getPrimitiveSizeInBits().getFixedSize())
             Op0C = ConstantExpr::getZExt(Op0C, MulC->getType());
-          if (Op0C->getType()->getPrimitiveSizeInBits() >
-              MulC->getType()->getPrimitiveSizeInBits())
+          if (Op0C->getType()->getPrimitiveSizeInBits().getFixedSize() >
+              MulC->getType()->getPrimitiveSizeInBits().getFixedSize())
             MulC = ConstantExpr::getZExt(MulC, Op0C->getType());
 
           // V == Base * (Mul1 * Op0), so return (Mul1 * Op0)
