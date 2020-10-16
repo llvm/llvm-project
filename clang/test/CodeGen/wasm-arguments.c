@@ -25,9 +25,9 @@ typedef struct {
 void struct_arg(s1 i) {}
 
 // Structs should be returned sret and not simplified by the frontend.
-// WEBASSEMBLY32: define void @struct_ret(%struct.s1* noalias sret align 4 %agg.result)
+// WEBASSEMBLY32: define void @struct_ret(%struct.s1* noalias sret(%struct.s1) align 4 %agg.result)
 // WEBASSEMBLY32: ret void
-// WEBASSEMBLY64: define void @struct_ret(%struct.s1* noalias sret align 4 %agg.result)
+// WEBASSEMBLY64: define void @struct_ret(%struct.s1* noalias sret(%struct.s1) align 4 %agg.result)
 // WEBASSEMBLY64: ret void
 
 // Except with the experimental multivalue ABI, which returns structs by value
@@ -103,9 +103,9 @@ union simple_union {
 void union_arg(union simple_union s) {}
 
 // Unions should be returned sret and not simplified by the frontend.
-// WEBASSEMBLY32: define void @union_ret(%union.simple_union* noalias sret align 4 %agg.result)
+// WEBASSEMBLY32: define void @union_ret(%union.simple_union* noalias sret(%union.simple_union) align 4 %agg.result)
 // WEBASSEMBLY32: ret void
-// WEBASSEMBLY64: define void @union_ret(%union.simple_union* noalias sret align 4 %agg.result)
+// WEBASSEMBLY64: define void @union_ret(%union.simple_union* noalias sret(%union.simple_union) align 4 %agg.result)
 // WEBASSEMBLY64: ret void
 
 // The experimental multivalue ABI returns them by value, though.
@@ -129,8 +129,8 @@ typedef struct {
 void bitfield_arg(bitfield1 bf1) {}
 
 // And returned via sret pointers.
-// WEBASSEMBLY32: define void @bitfield_ret(%struct.bitfield1* noalias sret align 4 %agg.result)
-// WEBASSEMBLY64: define void @bitfield_ret(%struct.bitfield1* noalias sret align 4 %agg.result)
+// WEBASSEMBLY32: define void @bitfield_ret(%struct.bitfield1* noalias sret(%struct.bitfield1) align 4 %agg.result)
+// WEBASSEMBLY64: define void @bitfield_ret(%struct.bitfield1* noalias sret(%struct.bitfield1) align 4 %agg.result)
 
 // Except, of course, in the experimental multivalue ABI
 // EXPERIMENTAL-MV: define %struct.bitfield1 @bitfield_ret()

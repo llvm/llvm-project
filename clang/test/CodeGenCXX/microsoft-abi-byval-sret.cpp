@@ -49,7 +49,7 @@ A B::qux(A x) {
 }
 
 // CHECK-LABEL: define dso_local x86_fastcallcc void @"?qux@B@@QAI?AUA@@U2@@Z"
-// CHECK:       (%struct.B* inreg %this, %struct.A* inreg noalias sret align 4 %agg.result, <{ %struct.A }>* inalloca %0)
+// CHECK:       (%struct.B* inreg %this, %struct.A* inreg noalias sret(%struct.A) align 4 %agg.result, <{ %struct.A }>* inalloca %0)
 // CHECK:   ret void
 
 int main() {
@@ -67,4 +67,4 @@ int main() {
 // CHECK: call x86_stdcallcc %struct.A* @"?baz@B@@QAG?AUA@@U2@@Z"
 // CHECK:       (<{ %struct.B*, %struct.A*, %struct.A }>* inalloca %{{[^,]*}})
 // CHECK: call x86_fastcallcc void @"?qux@B@@QAI?AUA@@U2@@Z"
-// CHECK:       (%struct.B* inreg %{{[^,]*}}, %struct.A* inreg sret align 4 %{{.*}}, <{ %struct.A }>* inalloca %{{[^,]*}})
+// CHECK:       (%struct.B* inreg %{{[^,]*}}, %struct.A* inreg sret(%struct.A) align 4 %{{.*}}, <{ %struct.A }>* inalloca %{{[^,]*}})

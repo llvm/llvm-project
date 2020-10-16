@@ -203,7 +203,7 @@ void testPromotedStruct(_Atomic(PS) *fp) {
 }
 
 PS test_promoted_load(_Atomic(PS) *addr) {
-  // CHECK-LABEL: @test_promoted_load(%struct.PS* noalias sret align 2 %agg.result, { %struct.PS, [2 x i8] }* %addr)
+  // CHECK-LABEL: @test_promoted_load(%struct.PS* noalias sret(%struct.PS) align 2 %agg.result, { %struct.PS, [2 x i8] }* %addr)
   // CHECK:   [[ADDR_ARG:%.*]] = alloca { %struct.PS, [2 x i8] }*, align 4
   // CHECK:   [[ATOMIC_RES:%.*]] = alloca { %struct.PS, [2 x i8] }, align 8
   // CHECK:   store { %struct.PS, [2 x i8] }* %addr, { %struct.PS, [2 x i8] }** [[ADDR_ARG]], align 4
@@ -245,7 +245,7 @@ void test_promoted_store(_Atomic(PS) *addr, PS *val) {
 }
 
 PS test_promoted_exchange(_Atomic(PS) *addr, PS *val) {
-  // CHECK-LABEL: @test_promoted_exchange(%struct.PS* noalias sret align 2 %agg.result, { %struct.PS, [2 x i8] }* %addr, %struct.PS* %val)
+  // CHECK-LABEL: @test_promoted_exchange(%struct.PS* noalias sret(%struct.PS) align 2 %agg.result, { %struct.PS, [2 x i8] }* %addr, %struct.PS* %val)
   // CHECK:   [[ADDR_ARG:%.*]] = alloca { %struct.PS, [2 x i8] }*, align 4
   // CHECK:   [[VAL_ARG:%.*]] = alloca %struct.PS*, align 4
   // CHECK:   [[NONATOMIC_TMP:%.*]] = alloca %struct.PS, align 2

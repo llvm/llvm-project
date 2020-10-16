@@ -17,7 +17,7 @@ typedef struct {
   int cc;
 } s2;
 // Structs should be returned sret and not simplified by the frontend
-// CHECK-LABEL: define void @f2(%struct.s2* noalias sret align 4 %agg.result)
+// CHECK-LABEL: define void @f2(%struct.s2* noalias sret(%struct.s2) align 4 %agg.result)
 s2 f2() {
   s2 foo;
   return foo;

@@ -33,9 +33,9 @@ void foo3(int a0, long double a1) {
 
 // Insert padding after hidden argument.
 //
-// N64-LABEL: define void @foo5(%struct.S0* noalias sret align 16 %agg.result, i64 %0, fp128 %a0)
-// N64: call void @foo6(%struct.S0* sret align 16 %agg.result, i32 signext 1, i32 signext 2, i64 undef, fp128 %a0)
-// N64: declare void @foo6(%struct.S0* sret align 16, i32 signext, i32 signext, i64, fp128)
+// N64-LABEL: define void @foo5(%struct.S0* noalias sret(%struct.S0) align 16 %agg.result, i64 %0, fp128 %a0)
+// N64: call void @foo6(%struct.S0* sret(%struct.S0) align 16 %agg.result, i32 signext 1, i32 signext 2, i64 undef, fp128 %a0)
+// N64: declare void @foo6(%struct.S0* sret(%struct.S0) align 16, i32 signext, i32 signext, i64, fp128)
 
 extern S0 foo6(int, int, long double);
 

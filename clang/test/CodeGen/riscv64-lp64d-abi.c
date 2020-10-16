@@ -243,7 +243,7 @@ struct int_double_int_s { int a; double b; int c; };
 // CHECK: define void @f_int_double_int_s_arg(%struct.int_double_int_s* %a)
 void f_int_double_int_s_arg(struct int_double_int_s a) {}
 
-// CHECK: define void @f_ret_int_double_int_s(%struct.int_double_int_s* noalias sret align 8 %agg.result)
+// CHECK: define void @f_ret_int_double_int_s(%struct.int_double_int_s* noalias sret(%struct.int_double_int_s) align 8 %agg.result)
 struct int_double_int_s f_ret_int_double_int_s() {
   return (struct int_double_int_s){1, 2.0, 3};
 }
