@@ -69,6 +69,22 @@ SmallVector<Value, 1> unrollSingleResultVectorOp(OpBuilder &builder,
                                                  Operation *op,
                                                  ArrayRef<int64_t> targetShape);
 
+/// Unroll a transfer_write op. Break up the vector source into a tuple of
+/// vectors matching the given shape. Then store each element with its own
+/// transfer_write.
+///
+/// Example:
+/// vector.transfer_write %A, %M[%c0, %c0] : vector<4x4xf32>, memref<4x4xf32>
+/// ->
+/// %0 = vector.extract_slices %A, [2, 4], [1, 1] :
+///                vector<4x4xf32> into tuple<vector<2x4xf32>, vector<2x4xf32>>
+/// %1 = vector.tuple_get %0, 0 : tuple<vector<2x4xf32>, vector<2x4xf32>>
+/// vector.transfer_write %1, %M[%c0, %c0] : vector<2x4xf32>, memref<4x4xf32>
+/// %2 = vector.tuple_get %0, 1 : tuple<vector<2x4xf32>, vector<2x4xf32>>
+/// vector.transfer_write %2, %M[%c2, %c0] : vector<2x4xf32>, memref<4x4xf32>
+LogicalResult unrollTransferWriteOp(OpBuilder &builder, Operation *op,
+                                    ArrayRef<int64_t> targetShape);
+
 /// Pattern to apply `unrollSingleResultVectorOp` to a `targetShape`
 /// declaratively.
 template <typename OpTy>
@@ -95,6 +111,12 @@ struct UnrollVectorPattern : public OpRewritePattern<OpTy> {
     if (!maybeShapeRatio ||
         llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; }))
       return failure();
+    if (std::is_same<OpTy, TransferWriteOp>::value) {
+      if (failed(unrollTransferWriteOp(rewriter, op, targetShape)))
+        return failure();
+      rewriter.eraseOp(op);
+      return success();
+    }
     if (op.getOperation()->getNumResults() != 1)
       return failure();
     auto resultVector = unrollSingleResultVectorOp(rewriter, op, targetShape);
