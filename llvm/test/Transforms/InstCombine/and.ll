@@ -479,6 +479,19 @@ define i64 @test35(i32 %X) {
   ret i64 %res
 }
 
+define <2 x i64> @test35_uniform(<2 x i32> %X) {
+; CHECK-LABEL: @test35_uniform(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[ZSUB:%.*]] = sub nsw <2 x i64> zeroinitializer, [[ZEXT]]
+; CHECK-NEXT:    [[RES:%.*]] = and <2 x i64> [[ZSUB]], <i64 240, i64 240>
+; CHECK-NEXT:    ret <2 x i64> [[RES]]
+;
+  %zext = zext <2 x i32> %X to <2 x i64>
+  %zsub = sub <2 x i64> zeroinitializer, %zext
+  %res = and <2 x i64> %zsub, <i64 240, i64 240>
+  ret <2 x i64> %res
+}
+
 define i64 @test36(i32 %X) {
 ; CHECK-LABEL: @test36(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 7
@@ -492,6 +505,19 @@ define i64 @test36(i32 %X) {
   ret i64 %res
 }
 
+define <2 x i64> @test36_undef(<2 x i32> %X) {
+; CHECK-LABEL: @test36_undef(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[ZSUB:%.*]] = add <2 x i64> [[ZEXT]], <i64 7, i64 undef>
+; CHECK-NEXT:    [[RES:%.*]] = and <2 x i64> [[ZSUB]], <i64 240, i64 undef>
+; CHECK-NEXT:    ret <2 x i64> [[RES]]
+;
+  %zext = zext <2 x i32> %X to <2 x i64>
+  %zsub = add <2 x i64> %zext, <i64 7, i64 undef>
+  %res = and <2 x i64> %zsub, <i64 240, i64 undef>
+  ret <2 x i64> %res
+}
+
 define i64 @test37(i32 %X) {
 ; CHECK-LABEL: @test37(
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X:%.*]], 7
@@ -503,6 +529,19 @@ define i64 @test37(i32 %X) {
   %zsub = mul i64 %zext, 7
   %res = and i64 %zsub, 240
   ret i64 %res
+}
+
+define <2 x i64> @test37_nonuniform(<2 x i32> %X) {
+; CHECK-LABEL: @test37_nonuniform(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[ZSUB:%.*]] = mul nuw nsw <2 x i64> [[ZEXT]], <i64 7, i64 9>
+; CHECK-NEXT:    [[RES:%.*]] = and <2 x i64> [[ZSUB]], <i64 240, i64 110>
+; CHECK-NEXT:    ret <2 x i64> [[RES]]
+;
+  %zext = zext <2 x i32> %X to <2 x i64>
+  %zsub = mul <2 x i64> %zext, <i64 7, i64 9>
+  %res = and <2 x i64> %zsub, <i64 240, i64 110>
+  ret <2 x i64> %res
 }
 
 define i64 @test38(i32 %X) {
