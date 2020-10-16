@@ -304,7 +304,7 @@ char MachineModuleInfoWrapperPass::ID = 0;
 bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
   MMI.initialize();
   MMI.TheModule = &M;
-  MMI.DbgInfoAvailable = false;
+  MMI.DbgInfoAvailable = !M.debug_compile_units().empty();
   return false;
 }
 
@@ -319,6 +319,6 @@ MachineModuleInfo MachineModuleAnalysis::run(Module &M,
                                              ModuleAnalysisManager &) {
   MachineModuleInfo MMI(TM);
   MMI.TheModule = &M;
-  MMI.DbgInfoAvailable = false;
+  MMI.DbgInfoAvailable = !M.debug_compile_units().empty();
   return MMI;
 }

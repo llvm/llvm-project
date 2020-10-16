@@ -621,13 +621,13 @@ public:
   //===--------------------------------------------------------------------===//
   // Main entry points.
   //
-  DwarfDebug(AsmPrinter *A);
+  DwarfDebug(AsmPrinter *A, Module *M);
 
   ~DwarfDebug() override;
 
   /// Emit all Dwarf sections that should come prior to the
   /// content.
-  void beginModule(Module *M) override;
+  void beginModule();
 
   /// Emit all Dwarf sections that should come after the content.
   void endModule() override;
