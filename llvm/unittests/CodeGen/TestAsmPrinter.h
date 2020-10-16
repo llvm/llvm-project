@@ -73,7 +73,6 @@ public:
   void setDwarfUsesRelocationsAcrossSections(bool Enable);
 
   AsmPrinter *getAP() const { return Asm.get(); }
-  AsmPrinter *releaseAP() { return Asm.release(); }
   MCContext &getCtx() const { return *MC; }
   MockMCStreamer &getMS() const { return *MS; }
 };

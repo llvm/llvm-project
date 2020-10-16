@@ -1076,9 +1076,6 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
     }
   }
 
-  if (!CurMI) // no debug info
-    return;
-
   // Skip this instruction if no DebugLoc or the DebugLoc
   // is the same as the previous instruction.
   const DebugLoc &DL = MI->getDebugLoc();

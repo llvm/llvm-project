@@ -91,11 +91,6 @@ DbgVariableLocation::extractFromMachineInstruction(
 
 DebugHandlerBase::DebugHandlerBase(AsmPrinter *A) : Asm(A), MMI(Asm->MMI) {}
 
-void DebugHandlerBase::beginModule(Module *M) {
-  if (M->debug_compile_units().empty())
-    Asm = nullptr;
-}
-
 // Each LexicalScope has first instruction and last instruction to mark
 // beginning and end of a scope respectively. Create an inverse map that list
 // scopes starts (and ends) with an instruction. One instruction may start (or
@@ -281,7 +276,7 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
 }
 
 void DebugHandlerBase::beginInstruction(const MachineInstr *MI) {
-  if (!Asm || !MMI->hasDebugInfo())
+  if (!MMI->hasDebugInfo())
     return;
 
   assert(CurMI == nullptr);
@@ -307,7 +302,7 @@ void DebugHandlerBase::beginInstruction(const MachineInstr *MI) {
 }
 
 void DebugHandlerBase::endInstruction() {
-  if (!Asm || !MMI->hasDebugInfo())
+  if (!MMI->hasDebugInfo())
     return;
 
   assert(CurMI != nullptr);
@@ -339,7 +334,7 @@ void DebugHandlerBase::endInstruction() {
 }
 
 void DebugHandlerBase::endFunction(const MachineFunction *MF) {
-  if (Asm && hasDebugInfo(MMI, MF))
+  if (hasDebugInfo(MMI, MF))
     endFunctionImpl(MF);
   DbgValues.clear();
   DbgLabels.clear();
