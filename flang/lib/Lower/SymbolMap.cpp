@@ -32,6 +32,14 @@ fir::ExtendedValue fir::substBase(const fir::ExtendedValue &exv,
       [=](const auto &x) { return fir::ExtendedValue(x.clone(base)); });
 }
 
+bool fir::isArray(const fir::ExtendedValue &exv) {
+  return exv.match(
+      [](const fir::ArrayBoxValue &) { return true; },
+      [](const fir::CharArrayBoxValue &) { return true; },
+      [](const fir::BoxValue &box) { return box.getExtents().size() > 0; },
+      [](auto) { return false; });
+}
+
 llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
                                    const fir::CharBoxValue &box) {
   return os << "boxchar { addr: " << box.getAddr() << ", len: " << box.getLen()

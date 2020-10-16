@@ -18,15 +18,16 @@ add_flang_library(FIROptimizer
   CodeGen/Target.cpp
   CodeGen/TargetRewrite.cpp
 
+  Transforms/AffineDemotion.cpp
+  Transforms/AffinePromotion.cpp
+  Transforms/ArrayValueCopy.cpp
   Transforms/ControlFlowConverter.cpp
   Transforms/CSE.cpp
-  Transforms/Inliner.cpp
-  Transforms/MemToReg.cpp
-  Transforms/AffinePromotion.cpp
-  Transforms/AffineDemotion.cpp
-  Transforms/RewriteLoop.cpp
-  Transforms/MemDataFlowOpt.cpp
   Transforms/FirLoopResultOpt.cpp
+  Transforms/Inliner.cpp
+  Transforms/MemDataFlowOpt.cpp
+  Transforms/MemToReg.cpp
+  Transforms/RewriteLoop.cpp
 
   DEPENDS
   FIROpsIncGen
