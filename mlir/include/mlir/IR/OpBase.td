@@ -2351,6 +2351,8 @@ class NativeCodeCall<string expr> {
   string expression = expr;
 }
 
+def ConstantLikeMatcher : NativeCodeCall<"success(matchPattern($0->getResult(0), m_Constant(&$1)))">;
+
 //===----------------------------------------------------------------------===//
 // Rewrite directives
 //===----------------------------------------------------------------------===//

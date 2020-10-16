@@ -615,6 +615,10 @@ OpFoldResult TestOpWithRegionFold::fold(ArrayRef<Attribute> operands) {
   return operand();
 }
 
+OpFoldResult TestOpConstant::fold(ArrayRef<Attribute> operands) {
+  return getValue();
+}
+
 LogicalResult TestOpWithVariadicResultsAndFolder::fold(
     ArrayRef<Attribute> operands, SmallVectorImpl<OpFoldResult> &results) {
   for (Value input : this->operands()) {
