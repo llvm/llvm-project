@@ -136,7 +136,8 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
             GS.StoredType = GlobalStatus::Stored;
           }
         }
-      } else if (isa<BitCastInst>(I) || isa<GetElementPtrInst>(I)) {
+      } else if (isa<BitCastInst>(I) || isa<GetElementPtrInst>(I) ||
+                 isa<AddrSpaceCastInst>(I)) {
         // Skip over bitcasts and GEPs; we don't care about the type or offset
         // of the pointer.
         if (analyzeGlobalAux(I, GS, VisitedUsers))
