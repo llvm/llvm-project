@@ -743,7 +743,6 @@ protected:
 
   bool widenLoopCompare(NarrowIVDefUse DU);
   bool widenWithVariantUse(NarrowIVDefUse DU);
-  void widenWithVariantUseCodegen(NarrowIVDefUse DU);
 
   void pushNarrowIVUsers(Instruction *NarrowDef, Instruction *WideDef);
 };
@@ -1147,18 +1146,6 @@ bool WidenIV::widenWithVariantUse(NarrowIVDefUse DU) {
     }
   }
 
-  return true;
-}
-
-/// Special Case for widening with loop variant (see
-/// WidenIV::widenWithVariant). This is the code generation part.
-void WidenIV::widenWithVariantUseCodegen(NarrowIVDefUse DU) {
-  Instruction *NarrowUse = DU.NarrowUse;
-  Instruction *NarrowDef = DU.NarrowDef;
-  Instruction *WideDef = DU.WideDef;
-
-  ExtendKind ExtKind = getExtendKind(NarrowDef);
-  assert(ExtKind != Unknown && "Unknown ExtKind not handled");
   LLVM_DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
 
   // Generating a widening use instruction.
@@ -1192,6 +1179,7 @@ void WidenIV::widenWithVariantUseCodegen(NarrowIVDefUse DU) {
     User->replaceAllUsesWith(WideBO);
     DeadInsts.emplace_back(User);
   }
+  return true;
 }
 
 /// Determine whether an individual user of the narrow IV can be widened. If so,
@@ -1296,10 +1284,8 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
     // in WideAddRec.first does not indicate a polynomial induction expression.
     // In that case, look at the operands of the use instruction to determine
     // if we can still widen the use instead of truncating its operand.
-    if (widenWithVariantUse(DU)) {
-      widenWithVariantUseCodegen(DU);
+    if (widenWithVariantUse(DU))
       return nullptr;
-    }
 
     // This user does not evaluate to a recurrence after widening, so don't
     // follow it. Instead insert a Trunc to kill off the original use,
