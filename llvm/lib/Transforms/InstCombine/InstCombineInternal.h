@@ -326,7 +326,7 @@ private:
   Instruction *narrowBinOp(TruncInst &Trunc);
   Instruction *narrowMaskedBinOp(BinaryOperator &And);
   Instruction *narrowMathIfNoOverflow(BinaryOperator &I);
-  Instruction *narrowRotate(TruncInst &Trunc);
+  Instruction *narrowFunnelShift(TruncInst &Trunc);
   Instruction *optimizeBitCastFromPhi(CastInst &CI, PHINode *PN);
   Instruction *matchSAddSubSat(SelectInst &MinMax1);
 
