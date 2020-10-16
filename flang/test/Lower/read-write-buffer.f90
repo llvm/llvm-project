@@ -1,6 +1,24 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! A test to check the buffer and it's length.
 
+! Test that we are passing the correct length when using character array as
+! Format (Fortran 2018 12.6.2.2 point 3)
+! CHECK-LABEL: func @_QPtest_array_format
+subroutine test_array_format
+  ! CHECK-DAG: %[[c2:.*]] = constant 2 : index
+  ! CHECK-DAG: %[[c10:.*]] = constant 10 : index
+  ! CHECK-DAG: %[[mem:.*]] = fir.alloca !fir.array<10x2x!fir.char<1>>
+  character(10) :: array(2)
+  array(1) ="(15HThis i"
+  array(2) ="s a test.)"
+  ! CHECK-DAG: %[[fmtLen:.*]] = muli %[[c10]], %[[c2]] : index
+  ! CHECK-DAG: %[[scalarFmt:.*]] = fir.convert %[[mem]] : (!fir.ref<!fir.array<10x2x!fir.char<1>>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
+  ! CHECK-DAG: %[[fmtArg:.*]] = fir.convert %[[scalarFmt]] : (!fir.ref<!fir.array<?x!fir.char<1>>>) -> !fir.ref<i8>
+  ! CHECK-DAG: %[[fmtLenArg:.*]] = fir.convert %[[fmtLen]] : (index) -> i64 
+  ! CHECK: fir.call @_FortranAioBeginExternalFormattedOutput(%[[fmtArg]], %[[fmtLenArg]], {{.*}}) 
+  write(*, array) 
+end subroutine
+
+! A test to check the buffer and it's length.
 ! CHECK-LABEL: @_QPsome
 subroutine some()
   character(LEN=255):: buffer
@@ -14,3 +32,4 @@ end
 ! CHECK: %[[lit:.*]] = fir.string_lit "compiler"(8) : !fir.char<1>
 ! CHECK: fir.has_value %[[lit]] : !fir.array<8x!fir.char<1>>
 ! CHECK: }
+
