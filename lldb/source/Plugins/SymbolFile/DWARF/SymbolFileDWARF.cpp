@@ -3250,7 +3250,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
 
       if (tag == DW_TAG_variable && mangled &&
           sc.comp_unit->GetLanguage() == eLanguageTypeSwift)
-        mangled = NULL;
+        mangled = nullptr;
 
       // Prefer DW_AT_location over DW_AT_const_value. Both can be emitted e.g.
       // for static constexpr member variables -- DW_AT_const_value will be

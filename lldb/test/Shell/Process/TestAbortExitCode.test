@@ -3,4 +3,4 @@ UNSUPPORTED: system-windows
 RUN: %clang_host %p/Inputs/abort.c -o %t
 RUN: %lldb %t -o run -o continue | FileCheck %s
 
-CHECK: status = 6 (0x00000006)
+CHECK: {{status = 6 \(0x00000006\)|status = 0 \(0x00000000\) Terminated due to signal 6}}
