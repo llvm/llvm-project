@@ -116,6 +116,8 @@ namespace SrcMgr {
     ///
     /// It is possible for this to be NULL if the ContentCache encapsulates
     /// an imaginary text buffer.
+    ///
+    /// FIXME: Turn this into a FileEntryRef and remove Filename.
     const FileEntry *OrigEntry;
 
     /// References the file which the contents were actually loaded from.
@@ -123,6 +125,11 @@ namespace SrcMgr {
     /// Can be different from 'Entry' if we overridden the contents of one file
     /// with the contents of another file.
     const FileEntry *ContentsEntry;
+
+    /// The filename that is used to access OrigEntry.
+    ///
+    /// FIXME: Remove this once OrigEntry is a FileEntryRef with a stable name.
+    StringRef Filename;
 
     /// A bump pointer allocated array of offsets for each source line.
     ///
@@ -246,7 +253,11 @@ namespace SrcMgr {
   /// from. This information encodes the \#include chain that a token was
   /// expanded from. The main include file has an invalid IncludeLoc.
   ///
-  /// FileInfos contain a "ContentCache *", with the contents of the file.
+  /// FileInfo should not grow larger than ExpansionInfo. Doing so will
+  /// cause memory to bloat in compilations with many unloaded macro
+  /// expansions, since the two data structurs are stored in a union in
+  /// SLocEntry. Extra fields should instead go in "ContentCache *", which
+  /// stores file contents and other bits on the side.
   ///
   class FileInfo {
     friend class clang::SourceManager;
@@ -271,10 +282,6 @@ namespace SrcMgr {
     llvm::PointerIntPair<const ContentCache*, 3, CharacteristicKind>
         ContentAndKind;
 
-    /// The filename that is used to access the file entry represented by the
-    /// content cache.
-    StringRef Filename;
-
   public:
     /// Return a FileInfo object.
     static FileInfo get(SourceLocation IL, const ContentCache *Con,
@@ -285,7 +292,7 @@ namespace SrcMgr {
       X.HasLineDirectives = false;
       X.ContentAndKind.setPointer(Con);
       X.ContentAndKind.setInt(FileCharacter);
-      X.Filename = Filename;
+      const_cast<ContentCache *>(Con)->Filename = Filename;
       return X;
     }
 
@@ -313,7 +320,7 @@ namespace SrcMgr {
 
     /// Returns the name of the file that was used when the file was loaded from
     /// the underlying file system.
-    StringRef getName() const { return Filename; }
+    StringRef getName() const { return getContentCache()->Filename; }
   };
 
   /// Each ExpansionInfo encodes the expansion location - where
@@ -433,6 +440,13 @@ namespace SrcMgr {
       return create(SpellingLoc, Start, End, false);
     }
   };
+
+  // Assert that the \c FileInfo objects are no bigger than \c ExpansionInfo
+  // objects. This controls the size of \c SLocEntry, of which we have one for
+  // each macro expansion. The number of (unloaded) macro expansions can be
+  // very large. Any other fields needed in FileInfo should go in ContentCache.
+  static_assert(sizeof(FileInfo) <= sizeof(ExpansionInfo),
+                "FileInfo must be no larger than ExpansionInfo.");
 
   /// This is a discriminated union of FileInfo and ExpansionInfo.
   ///
