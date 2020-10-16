@@ -111,6 +111,13 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   // TODO: Extend this to match GEP with constant offsets.
   Value *PtrOp = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(PtrOp->getType()) && "Expected a pointer type");
+  unsigned AS = Load->getPointerAddressSpace();
+
+  // If original AS != Load's AS, we can't bitcast the original pointer and have
+  // to use Load's operand instead. Ideally we would want to strip pointer casts
+  // without changing AS, but there's no API to do that ATM.
+  if (AS != PtrOp->getType()->getPointerAddressSpace())
+    PtrOp = Load->getPointerOperand();
 
   Type *ScalarTy = Scalar->getType();
   uint64_t ScalarSize = ScalarTy->getPrimitiveSizeInBits();
@@ -126,7 +133,6 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   if (!isSafeToLoadUnconditionally(PtrOp, MinVecTy, Alignment, DL, Load, &DT))
     return false;
 
-  unsigned AS = Load->getPointerAddressSpace();
 
   // Original pattern: insertelt undef, load [free casts of] ScalarPtr, 0
   int OldCost = TTI.getMemoryOpCost(Instruction::Load, ScalarTy, Alignment, AS);
