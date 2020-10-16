@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11
+
 // <utility>
 
 // template<class T, T... I>
@@ -23,19 +25,9 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-#if TEST_STD_VER > 11
-
-//  Should fail to compile, since float is not an integral type
+int main(int, char**) {
+    // Should fail to compile, since float is not an integral type
     using floatmix = std::integer_sequence<float>;
     floatmix::value_type I;
-
-#else
-
-X
-
-#endif  // TEST_STD_VER > 11
-
-  return 0;
+    return 0;
 }
