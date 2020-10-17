@@ -820,18 +820,18 @@ When the program is stopped at the beginning of the 'read' function in libc, we 
   (lldb) frame variable
   (int) fd = 3
 
- Writing Target Stop-Hooks in Python:
- ------------------------------------
+Writing Target Stop-Hooks in Python:
+------------------------------------
 
- Stop hooks fire whenever the process stops just before control is returned to the
- user.  Stop hooks can either be a set of lldb command-line commands, or can
- be implemented by a suitably defined Python class.  The Python based stop-hooks
- can also be passed as set of -key -value pairs when they are added, and those
- will get packaged up into a SBStructuredData Dictionary and passed to the
- constructor of the Python object managing the stop hook.  This allows for
- parametrization of the stop hooks.
+Stop hooks fire whenever the process stops just before control is returned to the
+user.  Stop hooks can either be a set of lldb command-line commands, or can
+be implemented by a suitably defined Python class.  The Python based stop-hooks
+can also be passed as set of -key -value pairs when they are added, and those
+will get packaged up into a SBStructuredData Dictionary and passed to the
+constructor of the Python object managing the stop hook.  This allows for
+parametrization of the stop hooks.
 
- To add a Python-based stop hook, first define a class with the following methods:
+To add a Python-based stop hook, first define a class with the following methods:
 
 +--------------------+---------------------------------------+------------------------------------------------------------------------------------------------------------------+
 | Name               | Arguments                             | Description                                                                                                      |
