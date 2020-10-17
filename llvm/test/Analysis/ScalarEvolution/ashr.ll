@@ -42,7 +42,7 @@ define i32 @t3(i32 %x, i32 %y) {
 ; ALL-LABEL: 't3'
 ; ALL-NEXT:  Classifying expressions for: @t3
 ; ALL-NEXT:    %i0 = ashr exact i32 %x, 4
-; ALL-NEXT:    --> %i0 U: full-set S: [-134217728,134217728)
+; ALL-NEXT:    --> ((((-1 * %x) smax %x) /u 16) * (1 smin (-1 smax %x)))<nsw> U: [-268435455,268435456) S: [-268435455,268435456)
 ; ALL-NEXT:  Determining loop execution counts for: @t3
 ;
   %i0 = ashr exact i32 %x, 4
@@ -65,7 +65,7 @@ define i32 @t5(i32 %x, i32 %y) {
 ; ALL-LABEL: 't5'
 ; ALL-NEXT:  Classifying expressions for: @t5
 ; ALL-NEXT:    %i0 = ashr exact i32 %x, 5
-; ALL-NEXT:    --> %i0 U: full-set S: [-67108864,67108864)
+; ALL-NEXT:    --> ((((-1 * %x) smax %x) /u 32) * (1 smin (-1 smax %x)))<nsw> U: [-134217727,134217728) S: [-134217727,134217728)
 ; ALL-NEXT:  Determining loop execution counts for: @t5
 ;
   %i0 = ashr exact i32 %x, 5

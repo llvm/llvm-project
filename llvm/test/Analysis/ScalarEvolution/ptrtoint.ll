@@ -325,6 +325,8 @@ bb5:
 ;   for (int* cur = start; cur != end; ++cur)
 ;     other[cur - start] += *cur;
 ; }
+;
+; FIXME: 4 * (%i10 EXACT/s 4) is just %i10
 define void @pr46786_c26_int(i32* %arg, i32* %arg1, i32* %arg2) {
 ; X64-LABEL: 'pr46786_c26_int'
 ; X64-NEXT:  Classifying expressions for: @pr46786_c26_int
@@ -339,9 +341,9 @@ define void @pr46786_c26_int(i32* %arg, i32* %arg1, i32* %arg2) {
 ; X64-NEXT:    %i10 = sub i64 %i9, %i4
 ; X64-NEXT:    --> ((-1 * %i4) + %i9) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i11 = ashr exact i64 %i10, 2
-; X64-NEXT:    --> %i11 U: full-set S: [-2305843009213693952,2305843009213693952) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    --> (((((-1 * %i4) + %i9) smax ((-1 * %i9) + %i4)) /u 4) * (1 smin (-1 smax ((-1 * %i4) + %i9))))<nsw> U: [-4611686018427387903,4611686018427387904) S: [-4611686018427387903,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i12 = getelementptr inbounds i32, i32* %arg2, i64 %i11
-; X64-NEXT:    --> ((4 * %i11)<nsw> + %arg2)<nsw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    --> ((4 * ((((-1 * %i4) + %i9) smax ((-1 * %i9) + %i4)) /u 4) * (1 smin (-1 smax ((-1 * %i4) + %i9)))) + %arg2)<nsw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i13 = load i32, i32* %i12, align 4
 ; X64-NEXT:    --> %i13 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X64-NEXT:    %i14 = add nsw i32 %i13, %i8
@@ -368,9 +370,9 @@ define void @pr46786_c26_int(i32* %arg, i32* %arg1, i32* %arg2) {
 ; X32-NEXT:    %i10 = sub i64 %i9, %i4
 ; X32-NEXT:    --> ((-1 * %i4)<nsw> + %i9) U: [-4294967295,4294967296) S: [-8589934591,8589934592) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i11 = ashr exact i64 %i10, 2
-; X32-NEXT:    --> %i11 U: full-set S: [-2147483648,2147483648) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    --> (((((-1 * %i4)<nsw> + %i9) smax ((-1 * %i9)<nsw> + %i4)) /u 4) * (1 smin (-1 smax ((-1 * %i4)<nsw> + %i9))))<nsw> U: [-4611686018427387903,4611686018427387904) S: [-4611686018427387903,4611686018427387904) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i12 = getelementptr inbounds i32, i32* %arg2, i64 %i11
-; X32-NEXT:    --> ((4 * (trunc i64 %i11 to i32))<nsw> + %arg2)<nsw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    --> ((4 * (trunc i64 (((((-1 * %i4)<nsw> + %i9) smax ((-1 * %i9)<nsw> + %i4)) /u 4) * (1 smin (-1 smax ((-1 * %i4)<nsw> + %i9))))<nsw> to i32))<nsw> + %arg2)<nsw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i13 = load i32, i32* %i12, align 4
 ; X32-NEXT:    --> %i13 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i14 = add nsw i32 %i13, %i8
