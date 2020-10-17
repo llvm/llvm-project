@@ -1307,24 +1307,16 @@ AliasResult BasicAAResult::aliasGEP(
         aliasCheck(UnderlyingV1, LocationSize::unknown(), AAMDNodes(),
                    UnderlyingV2, LocationSize::unknown(), AAMDNodes(), AAQI);
 
-    // Check for geps of non-aliasing underlying pointers where the offsets are
-    // identical.
-    if ((BaseAlias == MayAlias) && V1Size == V2Size) {
-      // Do the base pointers alias assuming type and size.
+    // For GEPs with identical sizes and offsets, we can preserve the size
+    // and AAInfo when performing the alias check on the underlying objects.
+    if (BaseAlias == MayAlias && V1Size == V2Size &&
+        GEP1BaseOffset == GEP2BaseOffset &&
+        DecompGEP1.VarIndices == DecompGEP2.VarIndices &&
+        !GEP1MaxLookupReached && !GEP2MaxLookupReached) {
       AliasResult PreciseBaseAlias = aliasCheck(
           UnderlyingV1, V1Size, V1AAInfo, UnderlyingV2, V2Size, V2AAInfo, AAQI);
-      if (PreciseBaseAlias == NoAlias) {
-        // See if the computed offset from the common pointer tells us about the
-        // relation of the resulting pointer.
-        // If the max search depth is reached the result is undefined
-        if (GEP2MaxLookupReached || GEP1MaxLookupReached)
-          return MayAlias;
-
-        // Same offsets.
-        if (GEP1BaseOffset == GEP2BaseOffset &&
-            DecompGEP1.VarIndices == DecompGEP2.VarIndices)
-          return NoAlias;
-      }
+      if (PreciseBaseAlias == NoAlias)
+        return NoAlias;
     }
 
     // If we get a No or May, then return it immediately, no amount of analysis
