@@ -311,6 +311,22 @@ INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_END(MemCpyOptLegacyPass, "memcpyopt", "MemCpy Optimization",
                     false, false)
 
+// Check that V is either not accessible by the caller, or unwinding cannot
+// occur between Start and End.
+static bool mayBeVisibleThroughUnwinding(Value *V, Instruction *Start,
+                                         Instruction *End) {
+  assert(Start->getParent() == End->getParent() && "Must be in same block");
+  if (!Start->getFunction()->doesNotThrow() &&
+      !isa<AllocaInst>(getUnderlyingObject(V))) {
+    for (const Instruction &I :
+         make_range(Start->getIterator(), End->getIterator())) {
+      if (I.mayThrow())
+        return true;
+    }
+  }
+  return false;
+}
+
 void MemCpyOptPass::eraseInstruction(Instruction *I) {
   if (MSSAU)
     MSSAU->removeMemoryAccess(I);
@@ -848,16 +864,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   //     guaranteed to be executed if C is. As it is a non-atomic access, it
   //     renders accesses from other threads undefined.
   //     TODO: This is currently not checked.
-  // TODO: Check underlying object, so we can look through GEPs.
-  if (!isa<AllocaInst>(cpyDest)) {
-    assert(C->getParent() == cpyStore->getParent() &&
-           "call and copy must be in the same block");
-    for (const Instruction &I : make_range(C->getIterator(),
-                                           cpyStore->getIterator())) {
-      if (I.mayThrow())
-        return false;
-    }
-  }
+  if (mayBeVisibleThroughUnwinding(cpyDest, C, cpyStore))
+    return false;
 
   // Check that dest points to memory that is at least as aligned as src.
   Align srcAlign = srcAlloca->getAlign();
@@ -1094,16 +1102,8 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   Value *DestSize = MemSet->getLength();
   Value *SrcSize = MemCpy->getLength();
 
-  // If the destination might be accessible by the caller, make sure we cannot
-  // unwind between the memset and the memcpy.
-  if (!MemCpy->getFunction()->doesNotThrow() &&
-      !isa<AllocaInst>(getUnderlyingObject(Dest))) {
-    for (const Instruction &I :
-         make_range(MemSet->getIterator(), MemCpy->getIterator())) {
-      if (I.mayThrow())
-        return false;
-    }
-  }
+  if (mayBeVisibleThroughUnwinding(Dest, MemSet, MemCpy))
+    return false;
 
   // By default, create an unaligned memset.
   unsigned Align = 1;
