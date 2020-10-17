@@ -1176,9 +1176,7 @@ define i8 @not_ashr_wrong_const(i8 %x) {
 
 define <2 x i32> @xor_andn_commute1(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @xor_andn_commute1(
-; CHECK-NEXT:    [[NOTA:%.*]] = xor <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[NOTA]], [[B:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = xor <2 x i32> [[R]], [[A]]
+; CHECK-NEXT:    [[Z:%.*]] = or <2 x i32> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[Z]]
 ;
   %nota = xor <2 x i32> %a, <i32 -1, i32 -1>
@@ -1192,9 +1190,7 @@ define <2 x i32> @xor_andn_commute1(<2 x i32> %a, <2 x i32> %b) {
 define i33 @xor_andn_commute2(i33 %a, i33 %pb) {
 ; CHECK-LABEL: @xor_andn_commute2(
 ; CHECK-NEXT:    [[B:%.*]] = udiv i33 42, [[PB:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i33 [[A:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i33 [[B]], [[NOTA]]
-; CHECK-NEXT:    [[Z:%.*]] = xor i33 [[R]], [[A]]
+; CHECK-NEXT:    [[Z:%.*]] = or i33 [[B]], [[A:%.*]]
 ; CHECK-NEXT:    ret i33 [[Z]]
 ;
   %b = udiv i33 42, %pb ; thwart complexity-based canonicalization
@@ -1209,9 +1205,7 @@ define i33 @xor_andn_commute2(i33 %a, i33 %pb) {
 define i32 @xor_andn_commute3(i32 %pa, i32 %b) {
 ; CHECK-LABEL: @xor_andn_commute3(
 ; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[PA:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[NOTA]], [[B:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[A]], [[R]]
+; CHECK-NEXT:    [[Z:%.*]] = or i32 [[A]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %a = udiv i32 42, %pa ; thwart complexity-based canonicalization
@@ -1227,9 +1221,7 @@ define i32 @xor_andn_commute4(i32 %pa, i32 %pb) {
 ; CHECK-LABEL: @xor_andn_commute4(
 ; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[PA:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[PB:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[NOTA]]
-; CHECK-NEXT:    [[Z:%.*]] = xor i32 [[A]], [[R]]
+; CHECK-NEXT:    [[Z:%.*]] = or i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %a = udiv i32 42, %pa ; thwart complexity-based canonicalization
