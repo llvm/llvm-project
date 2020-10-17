@@ -139,4 +139,35 @@ namespace ZeroInit {
   // CHECK-NOT }
   // CHECK: call {{.*}}memset
   Largeish largeish4() { return (Largeish){}; }
+  // CHECK: define {{.*}}@_ZN8ZeroInit9largeish5Ev(
+  // CHECK-NOT }
+  // CHECK: call {{.*}}memset
+  Largeish largeish5() { return {0, 0, 0}; }
+
+  typedef __attribute__((ext_vector_type(4))) char CI4;
+  struct Conversions {
+    _Complex int a;
+    _Complex float b;
+    short c;
+    long double d;
+    CI4 e;
+    char f;
+    char g;
+    int *h;
+    long i;
+  };
+  // CHECK: define {{.*}}@_ZN8ZeroInit11conversionsEv(
+  // CHECK-NOT }
+  // CHECK: call {{.*}}memset
+  Conversions conversions() {
+    return {0,
+            0,
+            0,
+            0,
+            CI4(0),
+            static_cast<char>(0.0),
+            char(0 + 0i),
+            reinterpret_cast<int *>(0),
+            reinterpret_cast<long>((int *)nullptr)};
+  }
 }
