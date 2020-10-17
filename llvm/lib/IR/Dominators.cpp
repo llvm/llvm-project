@@ -115,8 +115,14 @@ bool DominatorTree::invalidate(Function &F, const PreservedAnalyses &PA,
 // dominates - Return true if Def dominates a use in User. This performs
 // the special checks necessary if Def and User are in the same basic block.
 // Note that Def doesn't dominate a use in Def itself!
-bool DominatorTree::dominates(const Instruction *Def,
+bool DominatorTree::dominates(const Value *DefV,
                               const Instruction *User) const {
+  const Instruction *Def = dyn_cast<Instruction>(DefV);
+  if (!Def) {
+    assert(!isa<BasicBlock>(DefV) && "Should not be called with basic blocks");
+    return true; // Arguments, constants, globals dominate everything.
+  }
+
   const BasicBlock *UseBB = User->getParent();
   const BasicBlock *DefBB = Def->getParent();
 
@@ -250,7 +256,13 @@ bool DominatorTree::dominates(const BasicBlockEdge &BBE, const Use &U) const {
   return dominates(BBE, UseBB);
 }
 
-bool DominatorTree::dominates(const Instruction *Def, const Use &U) const {
+bool DominatorTree::dominates(const Value *DefV, const Use &U) const {
+  const Instruction *Def = dyn_cast<Instruction>(DefV);
+  if (!Def) {
+    assert(!isa<BasicBlock>(DefV) && "Should not be called with basic blocks");
+    return true; // Arguments, constants, globals dominate everything.
+  }
+
   Instruction *UserInst = cast<Instruction>(U.getUser());
   const BasicBlock *DefBB = Def->getParent();
 
