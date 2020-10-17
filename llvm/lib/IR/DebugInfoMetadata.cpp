@@ -1062,6 +1062,7 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_regx:
     case dwarf::DW_OP_bregx:
     case dwarf::DW_OP_push_object_address:
+    case dwarf::DW_OP_over:
       break;
     }
   }
