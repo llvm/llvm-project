@@ -62,7 +62,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   if(LLVM_ENABLE_ZLIB)
     find_package(ZLIB REQUIRED)
   endif()
-  option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
   option(LLVM_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 
   include(CMakeParseArguments)
