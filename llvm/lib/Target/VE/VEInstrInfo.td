@@ -1358,17 +1358,17 @@ defm CVTDL : CVTm<"cvt.d.l", 0x5F, I64, f64, I64, i64, sint_to_fp>;
 // Section 8.7.15 - CVS (Convert to Single-format)
 defm CVTSD : CVTm<"cvt.s.d", 0x1F, F32, f32, I64, f64, fpround>;
 let cx = 1 in
-defm CVTSQ : CVTm<"cvt.s.q", 0x1F, F32, f32, F128, f128>;
+defm CVTSQ : CVTm<"cvt.s.q", 0x1F, F32, f32, F128, f128, fpround>;
 
 // Section 8.7.16 - CVD (Convert to Double-format)
 defm CVTDS : CVTm<"cvt.d.s", 0x0F, I64, f64, F32, f32, fpextend>;
 let cx = 1 in
-defm CVTDQ : CVTm<"cvt.d.q", 0x0F, I64, f64, F128, f128>;
+defm CVTDQ : CVTm<"cvt.d.q", 0x0F, I64, f64, F128, f128, fpround>;
 
 // Section 8.7.17 - CVQ (Convert to Single-format)
-defm CVTQD : CVTm<"cvt.q.d", 0x2D, F128, f128, I64, f64>;
+defm CVTQD : CVTm<"cvt.q.d", 0x2D, F128, f128, I64, f64, fpextend>;
 let cx = 1 in
-defm CVTQS : CVTm<"cvt.q.s", 0x2D, F128, f128, F32, f32>;
+defm CVTQS : CVTm<"cvt.q.s", 0x2D, F128, f128, F32, f32, fpextend>;
 
 //-----------------------------------------------------------------------------
 // Section 8.8 - Branch instructions
@@ -1562,22 +1562,28 @@ def : Pat<(i32 (and (trunc i64:$src), 0xffff)),
 // Cast to i32
 def : Pat<(i32 (trunc i64:$src)),
           (ADDSWSXrm (EXTRACT_SUBREG $src, sub_i32), 0)>;
-def : Pat<(i32 (fp_to_sint I64:$reg)), (CVTWDSXr RD_RZ, $reg)>;
-def : Pat<(i32 (fp_to_sint F32:$reg)), (CVTWSSXr RD_RZ, $reg)>;
+def : Pat<(i32 (fp_to_sint f32:$src)), (CVTWSSXr RD_RZ, $src)>;
+def : Pat<(i32 (fp_to_sint f64:$src)), (CVTWDSXr RD_RZ, $src)>;
+def : Pat<(i32 (fp_to_sint f128:$src)), (CVTWDSXr RD_RZ, (CVTDQr $src))>;
 
 // Cast to i64
-def : Pat<(sext_inreg I64:$src, i32),
+def : Pat<(sext_inreg i64:$src, i32),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
             (ADDSWSXrm (EXTRACT_SUBREG $src, sub_i32), 0), sub_i32)>;
-def : Pat<(i64 (sext i32:$sy)),
-          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (ADDSWSXrm $sy, 0), sub_i32)>;
-def : Pat<(i64 (zext i32:$sy)),
-          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (ADDSWZXrm $sy, 0), sub_i32)>;
-def : Pat<(i64 (fp_to_sint f32:$sy)), (CVTLDr RD_RZ, (CVTDSr $sy))>;
-def : Pat<(i64 (fp_to_sint I64:$reg)), (CVTLDr RD_RZ, $reg)>;
+def : Pat<(i64 (sext i32:$src)),
+          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (ADDSWSXrm $src, 0), sub_i32)>;
+def : Pat<(i64 (zext i32:$src)),
+          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (ADDSWZXrm $src, 0), sub_i32)>;
+def : Pat<(i64 (fp_to_sint f32:$src)), (CVTLDr RD_RZ, (CVTDSr $src))>;
+def : Pat<(i64 (fp_to_sint f64:$src)), (CVTLDr RD_RZ, $src)>;
+def : Pat<(i64 (fp_to_sint f128:$src)), (CVTLDr RD_RZ, (CVTDQr $src))>;
 
 // Cast to f32
-def : Pat<(f32 (sint_to_fp i64:$sy)), (CVTSDr (CVTDLr i64:$sy))>;
+def : Pat<(f32 (sint_to_fp i64:$src)), (CVTSDr (CVTDLr i64:$src))>;
+
+// Cast to f128
+def : Pat<(f128 (sint_to_fp i32:$src)), (CVTQDr (CVTDWr $src))>;
+def : Pat<(f128 (sint_to_fp i64:$src)), (CVTQDr (CVTDLr $src))>;
 
 def : Pat<(i64 (anyext i32:$sy)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $sy, sub_i32)>;
