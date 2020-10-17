@@ -57,7 +57,7 @@ TEST(TFUtilsTest, LoadAndExecuteTest) {
     auto ER = Evaluator.evaluate();
     EXPECT_TRUE(ER.hasValue());
     float Ret = *ER->getTensorValue<float>(0);
-    EXPECT_EQ(static_cast<size_t>(Ret), 80);
+    EXPECT_EQ(static_cast<int64_t>(Ret), 80);
     EXPECT_EQ(ER->getUntypedTensorValue(0),
               reinterpret_cast<const void *>(ER->getTensorValue<float>(0)));
   }
@@ -72,7 +72,7 @@ TEST(TFUtilsTest, LoadAndExecuteTest) {
     auto ER = Evaluator.evaluate();
     EXPECT_TRUE(ER.hasValue());
     float Ret = *ER->getTensorValue<float>(0);
-    EXPECT_EQ(static_cast<size_t>(Ret), 80);
+    EXPECT_EQ(static_cast<int64_t>(Ret), 80);
   }
 }
 
@@ -135,10 +135,10 @@ TEST(TFUtilsTest, TensorSpecSizesAndTypes) {
   auto Spec3DLarge = TensorSpec::createSpec<float>("Hi3", {2, 4, 10});
   EXPECT_TRUE(Spec1D.isElementType<int16_t>());
   EXPECT_FALSE(Spec3DLarge.isElementType<double>());
-  EXPECT_EQ(Spec1D.getElementCount(), 1);
-  EXPECT_EQ(Spec2D.getElementCount(), 1);
-  EXPECT_EQ(Spec1DLarge.getElementCount(), 10);
-  EXPECT_EQ(Spec3DLarge.getElementCount(), 80);
+  EXPECT_EQ(Spec1D.getElementCount(), 1U);
+  EXPECT_EQ(Spec2D.getElementCount(), 1U);
+  EXPECT_EQ(Spec1DLarge.getElementCount(), 10U);
+  EXPECT_EQ(Spec3DLarge.getElementCount(), 80U);
   EXPECT_EQ(Spec3DLarge.getElementByteSize(), sizeof(float));
   EXPECT_EQ(Spec1D.getElementByteSize(), sizeof(int16_t));
 }
