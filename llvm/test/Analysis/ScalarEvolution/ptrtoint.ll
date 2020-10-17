@@ -237,3 +237,174 @@ define void @ptrtoint_of_bitcast_of_gep(i8* %in, i64* %out0) {
   store i64 %p0, i64* %out0
   ret void
 }
+
+; void pr46786_c26_char(char* start, char *end, char *other) {
+;   for (char* cur = start; cur != end; ++cur)
+;     other[cur - start] += *cur;
+; }
+define void @pr46786_c26_char(i8* %arg, i8* %arg1, i8* %arg2) {
+; X64-LABEL: 'pr46786_c26_char'
+; X64-NEXT:  Classifying expressions for: @pr46786_c26_char
+; X64-NEXT:    %i4 = ptrtoint i8* %arg to i64
+; X64-NEXT:    --> %i4 U: full-set S: full-set
+; X64-NEXT:    %i7 = phi i8* [ %arg, %bb3 ], [ %i14, %bb6 ]
+; X64-NEXT:    --> {%arg,+,1}<nuw><%bb6> U: full-set S: full-set Exits: (-1 + %arg1) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    %i8 = load i8, i8* %i7, align 1
+; X64-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i9 = ptrtoint i8* %i7 to i64
+; X64-NEXT:    --> %i9 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i10 = sub i64 %i9, %i4
+; X64-NEXT:    --> ((-1 * %i4) + %i9) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i11 = getelementptr inbounds i8, i8* %arg2, i64 %i10
+; X64-NEXT:    --> ((-1 * %i4) + %i9 + %arg2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i12 = load i8, i8* %i11, align 1
+; X64-NEXT:    --> %i12 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i13 = add i8 %i12, %i8
+; X64-NEXT:    --> (%i12 + %i8) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i14 = getelementptr inbounds i8, i8* %i7, i64 1
+; X64-NEXT:    --> {(1 + %arg)<nsw>,+,1}<nuw><%bb6> U: full-set S: full-set Exits: %arg1 LoopDispositions: { %bb6: Computable }
+; X64-NEXT:  Determining loop execution counts for: @pr46786_c26_char
+; X64-NEXT:  Loop %bb6: backedge-taken count is (-1 + (-1 * %arg) + %arg1)
+; X64-NEXT:  Loop %bb6: max backedge-taken count is -2
+; X64-NEXT:  Loop %bb6: Predicated backedge-taken count is (-1 + (-1 * %arg) + %arg1)
+; X64-NEXT:   Predicates:
+; X64:       Loop %bb6: Trip multiple is 1
+;
+; X32-LABEL: 'pr46786_c26_char'
+; X32-NEXT:  Classifying expressions for: @pr46786_c26_char
+; X32-NEXT:    %i4 = ptrtoint i8* %arg to i64
+; X32-NEXT:    --> %i4 U: [0,4294967296) S: [-4294967296,4294967296)
+; X32-NEXT:    %i7 = phi i8* [ %arg, %bb3 ], [ %i14, %bb6 ]
+; X32-NEXT:    --> {%arg,+,1}<nuw><%bb6> U: full-set S: full-set Exits: (-1 + %arg1) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    %i8 = load i8, i8* %i7, align 1
+; X32-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i9 = ptrtoint i8* %i7 to i64
+; X32-NEXT:    --> %i9 U: [0,4294967296) S: [-4294967296,4294967296) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i10 = sub i64 %i9, %i4
+; X32-NEXT:    --> ((-1 * %i4)<nsw> + %i9) U: [-4294967295,4294967296) S: [-8589934591,8589934592) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i11 = getelementptr inbounds i8, i8* %arg2, i64 %i10
+; X32-NEXT:    --> ((trunc i64 %i9 to i32) + (-1 * (trunc i64 %i4 to i32)) + %arg2) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i12 = load i8, i8* %i11, align 1
+; X32-NEXT:    --> %i12 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i13 = add i8 %i12, %i8
+; X32-NEXT:    --> (%i12 + %i8) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i14 = getelementptr inbounds i8, i8* %i7, i64 1
+; X32-NEXT:    --> {(1 + %arg)<nsw>,+,1}<nuw><%bb6> U: full-set S: full-set Exits: %arg1 LoopDispositions: { %bb6: Computable }
+; X32-NEXT:  Determining loop execution counts for: @pr46786_c26_char
+; X32-NEXT:  Loop %bb6: backedge-taken count is (-1 + (-1 * %arg) + %arg1)
+; X32-NEXT:  Loop %bb6: max backedge-taken count is -2
+; X32-NEXT:  Loop %bb6: Predicated backedge-taken count is (-1 + (-1 * %arg) + %arg1)
+; X32-NEXT:   Predicates:
+; X32:       Loop %bb6: Trip multiple is 1
+;
+  %i = icmp eq i8* %arg, %arg1
+  br i1 %i, label %bb5, label %bb3
+
+bb3:
+  %i4 = ptrtoint i8* %arg to i64
+  br label %bb6
+
+bb6:
+  %i7 = phi i8* [ %arg, %bb3 ], [ %i14, %bb6 ]
+  %i8 = load i8, i8* %i7
+  %i9 = ptrtoint i8* %i7 to i64
+  %i10 = sub i64 %i9, %i4
+  %i11 = getelementptr inbounds i8, i8* %arg2, i64 %i10
+  %i12 = load i8, i8* %i11
+  %i13 = add i8 %i12, %i8
+  store i8 %i13, i8* %i11
+  %i14 = getelementptr inbounds i8, i8* %i7, i64 1
+  %i15 = icmp eq i8* %i14, %arg1
+  br i1 %i15, label %bb5, label %bb6
+
+bb5:
+  ret void
+}
+
+; void pr46786_c26_int(int* start, int *end, int *other) {
+;   for (int* cur = start; cur != end; ++cur)
+;     other[cur - start] += *cur;
+; }
+define void @pr46786_c26_int(i32* %arg, i32* %arg1, i32* %arg2) {
+; X64-LABEL: 'pr46786_c26_int'
+; X64-NEXT:  Classifying expressions for: @pr46786_c26_int
+; X64-NEXT:    %i4 = ptrtoint i32* %arg to i64
+; X64-NEXT:    --> %i4 U: full-set S: full-set
+; X64-NEXT:    %i7 = phi i32* [ %arg, %bb3 ], [ %i15, %bb6 ]
+; X64-NEXT:    --> {%arg,+,4}<nuw><%bb6> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * %arg) + %arg1) /u 4))<nuw> + %arg) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:    %i8 = load i32, i32* %i7, align 4
+; X64-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i9 = ptrtoint i32* %i7 to i64
+; X64-NEXT:    --> %i9 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i10 = sub i64 %i9, %i4
+; X64-NEXT:    --> ((-1 * %i4) + %i9) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i11 = ashr exact i64 %i10, 2
+; X64-NEXT:    --> %i11 U: full-set S: [-2305843009213693952,2305843009213693952) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i12 = getelementptr inbounds i32, i32* %arg2, i64 %i11
+; X64-NEXT:    --> ((4 * %i11)<nsw> + %arg2)<nsw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i13 = load i32, i32* %i12, align 4
+; X64-NEXT:    --> %i13 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i14 = add nsw i32 %i13, %i8
+; X64-NEXT:    --> (%i13 + %i8) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X64-NEXT:    %i15 = getelementptr inbounds i32, i32* %i7, i64 1
+; X64-NEXT:    --> {(4 + %arg)<nsw>,+,4}<nuw><%bb6> U: full-set S: full-set Exits: (4 + (4 * ((-4 + (-1 * %arg) + %arg1) /u 4))<nuw> + %arg) LoopDispositions: { %bb6: Computable }
+; X64-NEXT:  Determining loop execution counts for: @pr46786_c26_int
+; X64-NEXT:  Loop %bb6: backedge-taken count is ((-4 + (-1 * %arg) + %arg1) /u 4)
+; X64-NEXT:  Loop %bb6: max backedge-taken count is 4611686018427387903
+; X64-NEXT:  Loop %bb6: Predicated backedge-taken count is ((-4 + (-1 * %arg) + %arg1) /u 4)
+; X64-NEXT:   Predicates:
+; X64:       Loop %bb6: Trip multiple is 1
+;
+; X32-LABEL: 'pr46786_c26_int'
+; X32-NEXT:  Classifying expressions for: @pr46786_c26_int
+; X32-NEXT:    %i4 = ptrtoint i32* %arg to i64
+; X32-NEXT:    --> %i4 U: [0,4294967296) S: [-4294967296,4294967296)
+; X32-NEXT:    %i7 = phi i32* [ %arg, %bb3 ], [ %i15, %bb6 ]
+; X32-NEXT:    --> {%arg,+,4}<nuw><%bb6> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * %arg) + %arg1) /u 4))<nuw> + %arg) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    %i8 = load i32, i32* %i7, align 4
+; X32-NEXT:    --> %i8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i9 = ptrtoint i32* %i7 to i64
+; X32-NEXT:    --> %i9 U: [0,4294967296) S: [-4294967296,4294967296) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i10 = sub i64 %i9, %i4
+; X32-NEXT:    --> ((-1 * %i4)<nsw> + %i9) U: [-4294967295,4294967296) S: [-8589934591,8589934592) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i11 = ashr exact i64 %i10, 2
+; X32-NEXT:    --> %i11 U: full-set S: [-2147483648,2147483648) Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i12 = getelementptr inbounds i32, i32* %arg2, i64 %i11
+; X32-NEXT:    --> ((4 * (trunc i64 %i11 to i32))<nsw> + %arg2)<nsw> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i13 = load i32, i32* %i12, align 4
+; X32-NEXT:    --> %i13 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i14 = add nsw i32 %i13, %i8
+; X32-NEXT:    --> (%i13 + %i8) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
+; X32-NEXT:    %i15 = getelementptr inbounds i32, i32* %i7, i64 1
+; X32-NEXT:    --> {(4 + %arg)<nsw>,+,4}<nuw><%bb6> U: full-set S: full-set Exits: (4 + (4 * ((-4 + (-1 * %arg) + %arg1) /u 4))<nuw> + %arg) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:  Determining loop execution counts for: @pr46786_c26_int
+; X32-NEXT:  Loop %bb6: backedge-taken count is ((-4 + (-1 * %arg) + %arg1) /u 4)
+; X32-NEXT:  Loop %bb6: max backedge-taken count is 1073741823
+; X32-NEXT:  Loop %bb6: Predicated backedge-taken count is ((-4 + (-1 * %arg) + %arg1) /u 4)
+; X32-NEXT:   Predicates:
+; X32:       Loop %bb6: Trip multiple is 1
+;
+  %i = icmp eq i32* %arg, %arg1
+  br i1 %i, label %bb5, label %bb3
+
+bb3:
+  %i4 = ptrtoint i32* %arg to i64
+  br label %bb6
+
+bb6:
+  %i7 = phi i32* [ %arg, %bb3 ], [ %i15, %bb6 ]
+  %i8 = load i32, i32* %i7
+  %i9 = ptrtoint i32* %i7 to i64
+  %i10 = sub i64 %i9, %i4
+  %i11 = ashr exact i64 %i10, 2
+  %i12 = getelementptr inbounds i32, i32* %arg2, i64 %i11
+  %i13 = load i32, i32* %i12
+  %i14 = add nsw i32 %i13, %i8
+  store i32 %i14, i32* %i12
+  %i15 = getelementptr inbounds i32, i32* %i7, i64 1
+  %i16 = icmp eq i32* %i15, %arg1
+  br i1 %i16, label %bb5, label %bb6
+
+bb5:
+  ret void
+}
