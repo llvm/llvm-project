@@ -52,9 +52,9 @@ COMMON_FLAG(bool, handle_ioctl, false, "Intercept and handle ioctl requests.")
 COMMON_FLAG(int, malloc_context_size, 1,
             "Max number of stack frames kept for each allocation/deallocation.")
 COMMON_FLAG(
-    const char *, log_path, "stderr",
+    const char *, log_path, nullptr,
     "Write logs to \"log_path.pid\". The special values are \"stdout\" and "
-    "\"stderr\". The default is \"stderr\".")
+    "\"stderr\". If unspecified, defaults to \"stderr\".")
 COMMON_FLAG(
     bool, log_exe_name, false,
     "Mention name of executable when reporting error and "

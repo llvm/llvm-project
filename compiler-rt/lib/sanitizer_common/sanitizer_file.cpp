@@ -69,24 +69,23 @@ void ReportFile::ReopenIfNecessary() {
 }
 
 void ReportFile::SetReportPath(const char *path) {
-  if (!path)
-    return;
-  uptr len = internal_strlen(path);
-  if (len > sizeof(path_prefix) - 100) {
-    Report("ERROR: Path is too long: %c%c%c%c%c%c%c%c...\n",
-           path[0], path[1], path[2], path[3],
-           path[4], path[5], path[6], path[7]);
-    Die();
+  if (path) {
+    uptr len = internal_strlen(path);
+    if (len > sizeof(path_prefix) - 100) {
+      Report("ERROR: Path is too long: %c%c%c%c%c%c%c%c...\n", path[0], path[1],
+             path[2], path[3], path[4], path[5], path[6], path[7]);
+      Die();
+    }
   }
 
   SpinMutexLock l(mu);
   if (fd != kStdoutFd && fd != kStderrFd && fd != kInvalidFd)
     CloseFile(fd);
   fd = kInvalidFd;
-  if (internal_strcmp(path, "stdout") == 0) {
-    fd = kStdoutFd;
-  } else if (internal_strcmp(path, "stderr") == 0) {
+  if (!path || internal_strcmp(path, "stderr") == 0) {
     fd = kStderrFd;
+  } else if (internal_strcmp(path, "stdout") == 0) {
+    fd = kStdoutFd;
   } else {
     internal_snprintf(path_prefix, kMaxPathLength, "%s", path);
   }
