@@ -26,6 +26,14 @@ Add <dir> to search path for binaries and object files used implicitly
 
 Add directory to framework include search path
 
+.. option:: -Mallocatable=<arg>
+
+Select semantics for assignments to allocatables (F03 or F95)
+
+.. option:: -Minform=<arg>
+
+Set error level of messages to display
+
 .. option:: -ObjC
 
 Treat source input files as Objective-C inputs
@@ -481,6 +489,10 @@ CUDA offloading device architecture (e.g. sm\_35), or HIP offloading target ID i
 .. option:: -p, --profile
 
 .. option:: -pagezero\_size<arg>
+
+.. option:: -parallel-jobs=<arg>
+
+Number of parallel jobs
 
 .. option:: -pg
 
@@ -2655,6 +2667,10 @@ Align selected branches (fused, jcc, jmp) within 32-byte boundary
 
 .. option:: -mcmodel=<arg>, -mcmodel=medany (equivalent to -mcmodel=medium), -mcmodel=medlow (equivalent to -mcmodel=small)
 
+.. option:: -mcode-object-v3, -mno-code-object-v3
+
+Legacy option to specify code object v3 (AMDGPU only)
+
 .. option:: -mconsole<arg>
 
 .. program:: clang1
@@ -2935,10 +2951,6 @@ Specify the size in bits of an SVE vector register. Defaults to the vector lengt
 
 AMDGPU
 ------
-.. option:: -mcode-object-v3, -mno-code-object-v3
-
-Legacy option to specify code object v3 (AMDGPU only)
-
 .. option:: -mcumode, -mno-cumode
 
 CU wavefront execution mode is used (AMDGPU only)
@@ -2953,9 +2965,13 @@ Enable XNACK (AMDGPU only)
 
 ARM
 ---
-.. option:: -fAAPCSBitfieldLoad
+.. option:: -faapcs-bitfield-load
 
 Follows the AAPCS standard that all volatile bit-field write generates at least one load. (ARM only).
+
+.. option:: -faapcs-bitfield-width, -fno-aapcs-bitfield-width
+
+Follow the AAPCS standard requirement stating that volatile bit-field width is dictated by the field container type. (ARM only).
 
 .. option:: -ffixed-r9
 
@@ -3519,6 +3535,10 @@ a Fortran input.
 
 .. option:: -J<arg>
 
+.. option:: -byteswapio
+
+Swap byte-order for unformatted input/output
+
 .. option:: -cpp
 
 .. option:: -faggressive-function-elimination, -fno-aggressive-function-elimination
@@ -3527,9 +3547,15 @@ a Fortran input.
 
 .. option:: -fall-intrinsics, -fno-all-intrinsics
 
+.. option:: -fallow-fortran-gnu-ext, -fno-allow-fortran-gnu-ext
+
+Allow Fortran GNU extensions
+
 .. option:: -fautomatic, -fno-automatic
 
 .. option:: -fbackslash, -fno-backslash
+
+Treat backslash as C-style escape character
 
 .. option:: -fbacktrace, -fno-backtrace
 
@@ -3569,17 +3595,17 @@ a Fortran input.
 
 .. option:: -ff2c, -fno-f2c
 
-.. option:: -ffixed-form, -fno-fixed-form
-
 .. option:: -ffixed-line-length-<arg>
 
 .. option:: -ffpe-trap=<arg>
 
-.. option:: -ffree-form, -fno-free-form
-
 .. option:: -ffree-line-length-<arg>
 
 .. option:: -ffrontend-optimize, -fno-frontend-optimize
+
+.. option:: -ffunc-args-alias, -fno-func-args-alias
+
+Function argument may alias (equivalent to ansi alias)
 
 .. option:: -fimplicit-none, -fno-implicit-none
 
@@ -3608,6 +3634,10 @@ a Fortran input.
 .. option:: -fmax-subrecord-length=<arg>
 
 .. option:: -fmodule-private, -fno-module-private
+
+.. option:: -fno-fortran-main
+
+Don't link in Fortran main
 
 .. option:: -fpack-derived, -fno-pack-derived
 
@@ -3643,6 +3673,10 @@ a Fortran input.
 
 .. option:: -funderscoring, -fno-underscoring
 
+.. option:: -fuse-flang-math-libs, -fno-use-flang-math-libs
+
+Use Flang internal runtime math library instead of LLVM math intrinsics.
+
 .. option:: -fwhole-file, -fno-whole-file
 
 .. option:: -imultilib <arg>
@@ -3650,6 +3684,26 @@ a Fortran input.
 .. option:: -nocpp
 
 .. option:: -static-libgfortran
+
+Fortran format Group
+~~~~~~~~~~~~~~~~~~~~
+.. option:: -ffixed-form, -fno-fixed-form
+
+Enable fixed-form format for Fortran
+
+.. option:: -ffree-form, -fno-free-form
+
+Enable free-form format for Fortran
+
+Flang runtime library Group
+===========================
+.. option:: -no-flang-libs
+
+Do not link against Flang libraries
+
+.. option:: -static-flang-libs
+
+Link using static Flang libraries
 
 Linker flags
 ============
