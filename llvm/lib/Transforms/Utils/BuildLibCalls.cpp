@@ -217,6 +217,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     LLVM_FALLTHROUGH;
   case LibFunc_stpcpy:
   case LibFunc_stpncpy:
+    Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
@@ -251,6 +252,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_strstr:
   case LibFunc_strpbrk:
+    Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 1);
@@ -446,6 +448,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_bcopy:
     Changed |= setDoesNotThrow(F);
+    Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -459,6 +462,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_bzero:
     Changed |= setDoesNotThrow(F);
+    Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_calloc:
