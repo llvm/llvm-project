@@ -9271,6 +9271,12 @@ This is analogous to the ''align'' attribute on parameters and return values.
 This metadata can only be applied to loads of a pointer type. If the returned
 value is not appropriately aligned at runtime, the behavior is undefined.
 
+The optional ``!noundef`` metadata must reference a single metadata name
+``<empty_node>`` corresponding to a node with no entries. The existence of
+``!noundef`` metadata on the instruction tells the optimizer that the value
+loaded is known to be :ref:`well defined <welldefinedvalues>`.
+If the value isn't well defined, the behavior is undefined.
+
 Semantics:
 """"""""""
 

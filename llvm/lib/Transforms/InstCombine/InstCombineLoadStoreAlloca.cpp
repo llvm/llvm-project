@@ -522,6 +522,7 @@ static StoreInst *combineStoreToNewValue(InstCombinerImpl &IC, StoreInst &SI,
       break;
     case LLVMContext::MD_invariant_load:
     case LLVMContext::MD_nonnull:
+    case LLVMContext::MD_noundef:
     case LLVMContext::MD_range:
     case LLVMContext::MD_align:
     case LLVMContext::MD_dereferenceable:
