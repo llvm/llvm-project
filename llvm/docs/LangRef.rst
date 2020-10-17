@@ -5210,6 +5210,10 @@ The current supported opcode vocabulary is limited:
 - ``DW_OP_push_object_address`` pushes the address of the object which can then
   serve as a descriptor in subsequent calculation. This opcode can be used to
   calculate bounds of fortran allocatable array which has array descriptors.
+- ``DW_OP_over`` duplicates the entry currently second in the stack at the top
+  of the stack. This opcode can be used to calculate bounds of fortran assumed
+  rank array which has rank known at run time and current dimension number is
+  implicitly first element of the stack.
 
 DWARF specifies three kinds of simple location descriptions: Register, memory,
 and implicit location descriptions.  Note that a location description is
