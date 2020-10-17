@@ -9176,10 +9176,11 @@ Syntax:
 
 ::
 
-      <result> = load [volatile] <ty>, <ty>* <pointer>[, align <alignment>][, !nontemporal !<index>][, !invariant.load !<index>][, !invariant.group !<index>][, !nonnull !<index>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !align !<align_node>]
-      <result> = load atomic [volatile] <ty>, <ty>* <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<index>]
-      !<index> = !{ i32 1 }
-      !<deref_bytes_node> = !{i64 <dereferenceable_bytes>}
+      <result> = load [volatile] <ty>, <ty>* <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.load !<empty_node>][, !invariant.group !<empty_node>][, !nonnull !<empty_node>][, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>][, !align !<align_node>][, !noundef !<empty_node>]
+      <result> = load atomic [volatile] <ty>, <ty>* <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>]
+      !<nontemp_node> = !{ i32 1 }
+      !<empty_node> = !{}
+      !<deref_bytes_node> = !{ i64 <dereferenceable_bytes> }
       !<align_node> = !{ i64 <value_alignment> }
 
 Overview:
@@ -9223,7 +9224,7 @@ tools, so should not be accessed if the function has the
 ``sanitize_thread`` or ``sanitize_address`` attributes.
 
 The optional ``!nontemporal`` metadata must reference a single
-metadata name ``<index>`` corresponding to a metadata node with one
+metadata name ``<nontemp_node>`` corresponding to a metadata node with one
 ``i32`` entry of value 1. The existence of the ``!nontemporal``
 metadata on the instruction tells the optimizer and code generator
 that this load is not expected to be reused in the cache. The code
@@ -9231,7 +9232,7 @@ generator may select special instructions to save cache bandwidth, such
 as the ``MOVNT`` instruction on x86.
 
 The optional ``!invariant.load`` metadata must reference a single
-metadata name ``<index>`` corresponding to a metadata node with no
+metadata name ``<empty_node>`` corresponding to a metadata node with no
 entries. If a load instruction tagged with the ``!invariant.load``
 metadata is executed, the optimizer may assume the memory location
 referenced by the load contains the same value at all points in the
@@ -9239,11 +9240,11 @@ program where the memory location is known to be dereferenceable;
 otherwise, the behavior is undefined.
 
 The optional ``!invariant.group`` metadata must reference a single metadata name
- ``<index>`` corresponding to a metadata node with no entries.
- See ``invariant.group`` metadata :ref:`invariant.group <md_invariant.group>`
+ ``<empty_node>`` corresponding to a metadata node with no entries.
+ See ``invariant.group`` metadata :ref:`invariant.group <md_invariant.group>`.
 
 The optional ``!nonnull`` metadata must reference a single
-metadata name ``<index>`` corresponding to a metadata node with no
+metadata name ``<empty_node>`` corresponding to a metadata node with no
 entries. The existence of the ``!nonnull`` metadata on the
 instruction tells the optimizer that the value loaded is known to
 never be null. If the value is null at runtime, the behavior is undefined.
@@ -9253,13 +9254,13 @@ values. This metadata can only be applied to loads of a pointer type.
 The optional ``!dereferenceable`` metadata must reference a single metadata
 name ``<deref_bytes_node>`` corresponding to a metadata node with one ``i64``
 entry.
-See ``dereferenceable`` metadata :ref:`dereferenceable <md_dereferenceable>`
+See ``dereferenceable`` metadata :ref:`dereferenceable <md_dereferenceable>`.
 
 The optional ``!dereferenceable_or_null`` metadata must reference a single
 metadata name ``<deref_bytes_node>`` corresponding to a metadata node with one
 ``i64`` entry.
 See ``dereferenceable_or_null`` metadata :ref:`dereferenceable_or_null
-<md_dereferenceable_or_null>`
+<md_dereferenceable_or_null>`.
 
 The optional ``!align`` metadata must reference a single metadata name
 ``<align_node>`` corresponding to a metadata node with one ``i64`` entry.
@@ -9309,8 +9310,10 @@ Syntax:
 
 ::
 
-      store [volatile] <ty> <value>, <ty>* <pointer>[, align <alignment>][, !nontemporal !<index>][, !invariant.group !<index>]        ; yields void
-      store atomic [volatile] <ty> <value>, <ty>* <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<index>] ; yields void
+      store [volatile] <ty> <value>, <ty>* <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.group !<empty_node>]        ; yields void
+      store atomic [volatile] <ty> <value>, <ty>* <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>] ; yields void
+      !<nontemp_node> = !{ i32 1 }
+      !<empty_node> = !{}
 
 Overview:
 """""""""
@@ -9357,15 +9360,15 @@ even in situations where a data race is known to not exist if the
 function has the ``sanitize_address`` attribute.
 
 The optional ``!nontemporal`` metadata must reference a single metadata
-name ``<index>`` corresponding to a metadata node with one ``i32`` entry of
-value 1. The existence of the ``!nontemporal`` metadata on the instruction
+name ``<nontemp_node>`` corresponding to a metadata node with one ``i32`` entry
+of value 1. The existence of the ``!nontemporal`` metadata on the instruction
 tells the optimizer and code generator that this load is not expected to
 be reused in the cache. The code generator may select special
 instructions to save cache bandwidth, such as the ``MOVNT`` instruction on
 x86.
 
 The optional ``!invariant.group`` metadata must reference a
-single metadata name ``<index>``. See ``invariant.group`` metadata.
+single metadata name ``<empty_node>``. See ``invariant.group`` metadata.
 
 Semantics:
 """"""""""
@@ -10273,7 +10276,7 @@ Syntax:
 
 ::
 
-      <result> = inttoptr <ty> <value> to <ty2>[, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node]             ; yields ty2
+      <result> = inttoptr <ty> <value> to <ty2>[, !dereferenceable !<deref_bytes_node>][, !dereferenceable_or_null !<deref_bytes_node>]             ; yields ty2
 
 Overview:
 """""""""
