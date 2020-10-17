@@ -11,6 +11,8 @@
 
 // XNACK: {{.*}}clang{{.*}}"-target-feature" "+xnack"
 // NOXNACK: {{.*}}clang{{.*}}"-target-feature" "-xnack"
+// XNACK: {{.*}}lld{{.*}} "-plugin-opt=-mattr=+xnack"
+// NOXNACK: {{.*}}lld{{.*}} "-plugin-opt=-mattr=-xnack"
 
 // RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
 // RUN:   --cuda-gpu-arch=gfx908:sram-ecc+ %s \
@@ -21,6 +23,20 @@
 
 // SRAM: {{.*}}clang{{.*}}"-target-feature" "+sram-ecc"
 // NOSRAM: {{.*}}clang{{.*}}"-target-feature" "-sram-ecc"
+// SRAM: {{.*}}lld{{.*}} "-plugin-opt=-mattr=+sram-ecc"
+// NOTSRAM: {{.*}}lld{{.*}} "-plugin-opt=-mattr=-sram-ecc"
+
+// RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx1010 %s \
+// RUN:   -mcumode  2>&1 | FileCheck %s -check-prefix=CUMODE
+// RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx1010 %s \
+// RUN:   -mno-cumode  2>&1 | FileCheck %s -check-prefix=NOTCUMODE
+
+// CUMODE: {{.*}}clang{{.*}}"-target-feature" "+cumode"
+// NOTCUMODE: {{.*}}clang{{.*}}"-target-feature" "-cumode"
+// CUMODE: {{.*}}lld{{.*}} "-plugin-opt=-mattr=+cumode"
+// NOTCUMODE: {{.*}}lld{{.*}} "-plugin-opt=-mattr=-cumode"
 
 // RUN: %clang -### -target x86_64-linux-gnu -fgpu-rdc -nogpulib \
 // RUN:   --cuda-gpu-arch=gfx908:xnack+:sram-ecc+ %s \
