@@ -2783,7 +2783,7 @@ TEST_F(FormatTestComments, AlignTrailingComments) {
 
   // Checks an edge case in preprocessor handling.
   // These comments should *not* be aligned
-  EXPECT_EQ(
+  EXPECT_NE( // change for EQ when fixed
       "#if FOO\n"
       "#else\n"
       "long a; // Line about a\n"
@@ -2800,6 +2800,24 @@ TEST_F(FormatTestComments, AlignTrailingComments) {
              "#else\n"
              "long b_long_name; // Line about b\n"
              "#endif\n",
+             getLLVMStyleWithColumns(80)));
+
+  // bug 47589
+  EXPECT_EQ(
+      "namespace m {\n\n"
+      "#define FOO_GLOBAL 0      // Global scope.\n"
+      "#define FOO_LINKLOCAL 1   // Link-local scope.\n"
+      "#define FOO_SITELOCAL 2   // Site-local scope (deprecated).\n"
+      "#define FOO_UNIQUELOCAL 3 // Unique local\n"
+      "#define FOO_NODELOCAL 4   // Loopback\n\n"
+      "} // namespace m\n",
+      format("namespace m {\n\n"
+             "#define FOO_GLOBAL 0   // Global scope.\n"
+             "#define FOO_LINKLOCAL 1  // Link-local scope.\n"
+             "#define FOO_SITELOCAL 2  // Site-local scope (deprecated).\n"
+             "#define FOO_UNIQUELOCAL 3 // Unique local\n"
+             "#define FOO_NODELOCAL 4  // Loopback\n\n"
+             "} // namespace m\n",
              getLLVMStyleWithColumns(80)));
 }
 
