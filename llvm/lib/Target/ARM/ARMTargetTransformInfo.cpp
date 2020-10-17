@@ -20,6 +20,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/PatternMatch.h"
@@ -1407,6 +1408,29 @@ unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
     return ScalarCost;
   }
   return ScalarCost;
+}
+
+int ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
+                                           bool IsPairwiseForm,
+                                           TTI::TargetCostKind CostKind) {
+  EVT ValVT = TLI->getValueType(DL, ValTy);
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  if (!ST->hasMVEIntegerOps() || !ValVT.isSimple() || ISD != ISD::ADD)
+    return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwiseForm,
+                                             CostKind);
+
+  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+
+  static const CostTblEntry CostTblAdd[]{
+      {ISD::ADD, MVT::v16i8, 1},
+      {ISD::ADD, MVT::v8i16, 1},
+      {ISD::ADD, MVT::v4i32, 1},
+  };
+  if (const auto *Entry = CostTableLookup(CostTblAdd, ISD, LT.second))
+    return Entry->Cost * ST->getMVEVectorCostFactor() * LT.first;
+
+  return BaseT::getArithmeticReductionCost(Opcode, ValTy, IsPairwiseForm,
+                                           CostKind);
 }
 
 int ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
