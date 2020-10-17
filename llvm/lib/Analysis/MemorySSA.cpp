@@ -465,10 +465,15 @@ checkClobberSanity(const MemoryAccess *Start, MemoryAccess *ClobberAt,
       }
 
       assert(isa<MemoryPhi>(MA));
-      Worklist.append(
-          upward_defs_begin({const_cast<MemoryAccess *>(MA), MAP.second},
-                            MSSA.getDomTree()),
-          upward_defs_end());
+
+      // Add reachable phi predecessors
+      for (auto ItB = upward_defs_begin(
+                    {const_cast<MemoryAccess *>(MA), MAP.second},
+                    MSSA.getDomTree()),
+                ItE = upward_defs_end();
+           ItB != ItE; ++ItB)
+        if (MSSA.getDomTree().isReachableFromEntry(ItB.getPhiArgBlock()))
+          Worklist.emplace_back(*ItB);
     }
   }
 
