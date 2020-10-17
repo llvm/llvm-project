@@ -411,11 +411,10 @@ static unsigned getMaxPointerSize(const DataLayout &DL) {
 /// specified amount, but which may have other unrepresented high bits. As
 /// such, the gep cannot necessarily be reconstructed from its decomposed form.
 ///
-/// When DataLayout is around, this function is capable of analyzing everything
-/// that getUnderlyingObject can look through. To be able to do that
-/// getUnderlyingObject and DecomposeGEPExpression must use the same search
-/// depth (MaxLookupSearchDepth). When DataLayout not is around, it just looks
-/// through pointer casts.
+/// This function is capable of analyzing everything that getUnderlyingObject
+/// can look through. To be able to do that getUnderlyingObject and
+/// DecomposeGEPExpression must use the same search depth
+/// (MaxLookupSearchDepth).
 bool BasicAAResult::DecomposeGEPExpression(const Value *V,
        DecomposedGEP &Decomposed, const DataLayout &DL, AssumptionCache *AC,
        DominatorTree *DT) {
