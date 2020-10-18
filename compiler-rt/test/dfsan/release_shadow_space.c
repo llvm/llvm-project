@@ -1,4 +1,5 @@
-// RUN: %clang_dfsan %s -o %t && %run %t
+// DFSAN_OPTIONS=no_huge_pages_for_shadow=false RUN: %clang_dfsan %s -o %t && %run %t
+// DFSAN_OPTIONS=no_huge_pages_for_shadow=true RUN: %clang_dfsan %s -o %t && %run %t
 
 #include <assert.h>
 #include <sanitizer/dfsan_interface.h>
