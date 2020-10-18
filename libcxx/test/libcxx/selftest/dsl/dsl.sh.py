@@ -215,12 +215,12 @@ class TestHasLocale(SetupConfigs):
         # It's really hard to test that a system has a given locale, so at least
         # make sure we don't explode when we try to check it.
         try:
-            dsl.hasLocale(self.config, 'en_US.UTF-8')
+            dsl.hasAnyLocale(self.config, ['en_US.UTF-8'])
         except subprocess.CalledProcessError:
             self.fail("checking for hasLocale should not explode")
 
     def test_nonexistent_locale(self):
-        self.assertFalse(dsl.hasLocale(self.config, 'for_sure_this_is_not_an_existing_locale'))
+        self.assertFalse(dsl.hasAnyLocale(self.config, ['for_sure_this_is_not_an_existing_locale']))
 
 
 class TestCompilerMacros(SetupConfigs):

@@ -150,9 +150,12 @@ def hasCompileFlag(config, flag):
     return exitCode == 0
 
 @_memoizeExpensiveOperation(lambda c, l: (c.substitutions, c.environment, l))
-def hasLocale(config, locale):
+def hasAnyLocale(config, locales):
   """
   Return whether the runtime execution environment supports a given locale.
+  Different systems may use different names for a locale, so this function checks
+  whether any of the passed locale names is supported by setlocale() and returns
+  true if one of them works.
 
   This is done by executing a program that tries to set the given locale using
   %{exec} -- this means that the command may be executed on a remote host
@@ -160,13 +163,21 @@ def hasLocale(config, locale):
   """
   program = """
     #include <locale.h>
-    int main(int, char** argv) {
-      if (::setlocale(LC_ALL, argv[1]) != NULL) return 0;
-      else                                      return 1;
+    #include <stdio.h>
+    int main(int argc, char** argv) {
+      // For debugging purposes print which locales are (not) supported.
+      for (int i = 1; i < argc; i++) {
+        if (::setlocale(LC_ALL, argv[i]) != NULL) {
+          printf("%s is supported.\\n", argv[i]);
+          return 0;
+        }
+        printf("%s is not supported.\\n", argv[i]);
+      }
+      return 1;
     }
   """
-  return programOutput(config, program, args=[pipes.quote(locale)],
-                       testPrefix="check_locale_" + locale) is not None
+  return programOutput(config, program, args=[pipes.quote(l) for l in locales],
+                       testPrefix="check_locale_" + locales[0]) is not None
 
 @_memoizeExpensiveOperation(lambda c, flags='': (c.substitutions, c.environment, flags))
 def compilerMacros(config, flags=''):
