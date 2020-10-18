@@ -123,7 +123,9 @@ New Pragmas in Clang
 Attribute Changes in Clang
 --------------------------
 
-- ...
+- Added support for the C++20 likelihood attributes ``[[likely]]`` and
+  ``[[unlikely]]``. As an extension they can be used in C++11 and newer.
+  This extension is enabled by default.
 
 Windows Support
 ---------------

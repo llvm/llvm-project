@@ -1724,13 +1724,23 @@ It isn't allowed to annotate a single statement with both ``likely`` and
 statement with the same likelihood attribute will result in a diagnostic and
 the attributes are ignored on both branches.
 
+In a ``switch`` statement it's allowed to annotate multiple ``case`` labels
+or the ``default`` label with the same likelihood attribute. This makes
+* all labels without an attribute have a neutral likelihood,
+* all labels marked ``[[likely]]`` have an equally positive likelihood, and
+* all labels marked ``[[unlikely]]`` have an equally negative likelihood.
+The neutral likelihood is the more likely of path execution than the negative
+likelihood. The positive likelihood is the more likely of path of execution
+than the neutral likelihood.
+
 These attributes have no effect on the generated code when using
 PGO (Profile-Guided Optimization) or at optimization level 0.
 
-In Clang, the attributes will be ignored if they're not placed on the
-substatement of an ``if`` or ``else`` statement. The C++ Standard recommends
-to honor them on every statement in the path of execution, but that can be
-confusing:
+In Clang, the attributes will be ignored if they're not placed on
+* the ``case`` or ``default`` label of a ``switch`` statement,
+* or on the substatement of an ``if`` or ``else`` statement.
+The C++ Standard recommends to honor them on every statement in the
+path of execution, but that can be confusing:
 
 .. code-block:: c++
 
@@ -1759,8 +1769,8 @@ confusing:
   }
 
 
-At the moment the attribute only has effect when used in an ``if`` or ``else``
-statement.
+At the moment the attributes only have effect when used in an ``if``, ``else``,
+or ``switch`` statement.
 
 .. code-block:: c++
 
@@ -1801,6 +1811,44 @@ statement.
   if (b)
     [[likely]] int i = 5; // Issues a diagnostic since the attribute
                           // isn't allowed on a declaration.
+
+  switch (i) {
+    [[likely]] case 1:    // This value is likely
+      ...
+      break;
+
+    [[unlikely]] case 2:  // This value is unlikely
+      ...
+      [[fallthrough]];
+
+    case 3:               // No likelihood attribute
+      ...
+      [[likely]] break;   // No effect
+
+    case 4: [[likely]] {  // attribute on substatement has no effect
+      ...
+      break;
+      }
+
+    [[unlikely]] default: // All other values are unlikely
+      ...
+      break;
+  }
+
+  switch (i) {
+    [[likely]] case 0:    // This value and code path is likely
+      ...
+      [[fallthrough]];
+
+    case 1:               // No likelihood attribute, code path is neutral
+      break;              // falling through has no effect on the likelihood
+
+    case 2:               // No likelihood attribute, code path is neutral
+      [[fallthrough]];
+
+    [[unlikely]] default: // This value and code path are both unlikely
+      break;
+  }
 
   }];
 }
