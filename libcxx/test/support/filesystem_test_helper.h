@@ -45,11 +45,24 @@ namespace utils {
     inline int link(const char *oldname, const char* newname) {
         return !CreateHardLinkA(newname, oldname, NULL);
     }
+    inline int setenv(const char *var, const char *val, int overwrite) {
+        (void)overwrite;
+        return ::_putenv((std::string(var) + "=" + std::string(val)).c_str());
+    }
+    inline int unsetenv(const char *var) {
+        return ::_putenv((std::string(var) + "=").c_str());
+    }
 #else
     using ::mkdir;
     using ::ftruncate;
     inline int symlink(const char* oldname, const char* newname, bool is_dir) { (void)is_dir; return ::symlink(oldname, newname); }
     using ::link;
+    inline int setenv(const char *var, const char *val, int overwrite) {
+        return ::setenv(var, val, overwrite);
+    }
+    inline int unsetenv(const char *var) {
+        return ::unsetenv(var);
+    }
 #endif
 
     inline std::string getcwd() {
