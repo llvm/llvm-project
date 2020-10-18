@@ -16,6 +16,7 @@ body:             |
 
 # CHECK-LABEL: name:            test1BB
 # CHECK: body:             |
+# CHECK:      liveins: $x14, $x15, $x16, $v20
 # CHECK: $f1 = MTVSRD killed $x14
 # CHECK-NEXT: $f2 = MTVSRD killed $x15
 # CHECK-NEXT: $f3 = MTVSRD killed $x16
@@ -50,12 +51,19 @@ body:             |
   bb.3:
     BLR8 implicit undef $lr8, implicit undef $rm
 
+## The spilled-to registers have to be marked as live-in so that they will not be
+## clobbered before restored in the epilogue.
 # CHECK-LABEL: name:            test2BB
 # CHECK: body:             |
-# CHECK: $f0 = MTVSRD killed $x14
-# CHECK-NEXT: $f1 = MTVSRD killed $x15
-# CHECK-NEXT: $f2 = MTVSRD killed $x16
-# CHECK: $x16 = MFVSRD killed $f2
-# CHECK-NEXT: $x15 = MFVSRD killed $f1
-# CHECK-NEXT: $x14 = MFVSRD killed $f0
+# CHECK:        $f0 = MTVSRD killed $x14
+# CHECK-NEXT:   $f1 = MTVSRD killed $x15
+# CHECK-NEXT:   $f2 = MTVSRD killed $x16
+# CHECK:      bb.2:
+# CHECK-NEXT:   successors: %bb.3
+# CHECK-NEXT:   liveins: $f0, $f1, $f2
+# CHECK:      bb.3:
+# CHECK-NEXT:   liveins: $f0, $f1, $f2
+# CHECK:        $x16 = MFVSRD killed $f2
+# CHECK-NEXT:   $x15 = MFVSRD killed $f1
+# CHECK-NEXT:   $x14 = MFVSRD killed $f0
 ...
