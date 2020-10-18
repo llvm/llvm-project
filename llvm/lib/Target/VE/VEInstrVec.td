@@ -352,3 +352,84 @@ multiclass SVMm<string opcStr, bits<8>opc, RegisterClass RCM> {
               opcStr#" $sx, $vz, $sy">;
 }
 defm SVM : SVMm<"svm", 0xa7, VM>;
+
+// Section 8.9.24 - VBRD (Vector Broadcast)
+let vx = ?, hasSideEffects = 0, Uses = [VL] in
+multiclass VBRDbm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                  dag dag_in, string disEnc = ""> {
+  let DisableEncoding = disEnc in
+  def "" : RV<opc, (outs RC:$vx), dag_in,
+              !strconcat(opcStr, " $vx, ", argStr)>;
+  let Constraints = "$vx = $base", DisableEncoding = disEnc#"$base",
+      isCodeGenOnly = 1 in
+  def _v : RV<opc, (outs RC:$vx), !con(dag_in, (ins RC:$base)),
+              !strconcat(opcStr, " $vx, ", argStr)>;
+}
+multiclass VBRDlm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                  dag dag_in> {
+  defm "" : VBRDbm<opcStr, argStr, opc, RC, dag_in>;
+  let isCodeGenOnly = 1, VE_VLInUse = 1 in {
+    defm l : VBRDbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl)),
+                   "$vl,">;
+    defm L : VBRDbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl)),
+                   "$vl,">;
+  }
+}
+multiclass VBRDmm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                  RegisterClass RCM, dag dag_in> {
+  defm "" : VBRDlm<opcStr, argStr, opc, RC, dag_in>;
+  let m = ?, VE_VLWithMask = 1 in
+  defm m : VBRDlm<opcStr, argStr#", $m", opc, RC, !con(dag_in, (ins RCM:$m))>;
+}
+let VE_VLIndex = 2 in
+multiclass VBRDm<string opcStr, bits<8>opc, RegisterClass VRC, RegisterClass RC,
+                 RegisterClass RCM> {
+  defm r : VBRDmm<opcStr, "$sy", opc, VRC, RCM, (ins RC:$sy)>;
+  let cy = 0 in
+  defm i : VBRDmm<opcStr, "$sy", opc, VRC, RCM, (ins simm7:$sy)>;
+}
+let cx = 0, cx2 = 0 in
+defm VBRD : VBRDm<"vbrd", 0x8c, V64, I64, VM>;
+let cx = 0, cx2 = 1 in
+defm VBRDL : VBRDm<"vbrdl", 0x8c, V64, I32, VM>;
+let cx = 1, cx2 = 0 in
+defm VBRDU : VBRDm<"vbrdu", 0x8c, V64, F32, VM>;
+let cx = 1, cx2 = 1 in
+defm PVBRD : VBRDm<"pvbrd", 0x8c, V64, I64, VM512>;
+
+// Section 8.9.25 - VMV (Vector Move)
+let vx = ?, vz = ?, hasSideEffects = 0, Uses = [VL] in
+multiclass VMVbm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                 dag dag_in, string disEnc = ""> {
+  let DisableEncoding = disEnc in
+  def "" : RV<opc, (outs RC:$vx), dag_in,
+              !strconcat(opcStr, " $vx, ", argStr)>;
+  let Constraints = "$vx = $base", DisableEncoding = disEnc#"$base",
+      isCodeGenOnly = 1 in
+  def _v : RV<opc, (outs RC:$vx), !con(dag_in, (ins RC:$base)),
+              !strconcat(opcStr, " $vx, ", argStr)>;
+}
+multiclass VMVlm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                 dag dag_in> {
+  defm "" : VMVbm<opcStr, argStr, opc, RC, dag_in>;
+  let isCodeGenOnly = 1, VE_VLInUse = 1 in {
+    defm l : VMVbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl)),
+                   "$vl,">;
+    defm L : VMVbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl)),
+                   "$vl,">;
+  }
+}
+multiclass VMVmm<string opcStr, bits<8>opc, RegisterClass RC,
+                 RegisterClass RCM, dag dag_in> {
+  defm "" : VMVlm<opcStr, "$sy, $vz", opc, RC, dag_in>;
+  let m = ?, VE_VLWithMask = 1 in
+  defm m : VMVlm<opcStr, "$sy, $vz, $m", opc, RC, !con(dag_in, (ins RCM:$m))>;
+}
+let VE_VLIndex = 3 in
+multiclass VMVm<string opcStr, bits<8>opc, RegisterClass RC,
+                RegisterClass RCM> {
+  defm rv : VMVmm<opcStr, opc, RC, RCM, (ins I64:$sy, RC:$vz)>;
+  let cy = 0 in
+  defm iv : VMVmm<opcStr, opc, RC, RCM, (ins uimm7:$sy, RC:$vz)>;
+}
+defm VMV : VMVm<"vmv", 0x9c, V64, VM>;
