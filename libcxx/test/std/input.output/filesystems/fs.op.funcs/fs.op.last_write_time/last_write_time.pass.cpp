@@ -106,7 +106,7 @@ struct Times {
 
 Times GetTimes(path const& p) {
     StatT st;
-    if (::stat(p.c_str(), &st) == -1) {
+    if (::stat(p.string().c_str(), &st) == -1) {
         std::error_code ec(errno, std::generic_category());
 #ifndef TEST_HAS_NO_EXCEPTIONS
         throw ec;
@@ -123,7 +123,7 @@ TimeSpec LastWriteTime(path const& p) { return GetTimes(p).write; }
 
 Times GetSymlinkTimes(path const& p) {
   StatT st;
-  if (::lstat(p.c_str(), &st) == -1) {
+  if (::lstat(p.string().c_str(), &st) == -1) {
     std::error_code ec(errno, std::generic_category());
 #ifndef TEST_HAS_NO_EXCEPTIONS
         throw ec;
@@ -395,7 +395,7 @@ TEST_CASE(get_last_write_time_dynamic_env_test)
     SleepFor(Sec(2));
 
     // update file and add a file to the directory. Make sure the times increase.
-    std::FILE* of = std::fopen(file.c_str(), "a");
+    std::FILE* of = std::fopen(file.string().c_str(), "a");
     std::fwrite("hello", 1, sizeof("hello"), of);
     std::fclose(of);
     env.create_file("dir/file1", 1);

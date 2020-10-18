@@ -25,8 +25,8 @@
 
 using namespace fs;
 
-void PutEnv(std::string var, std::string value) {
-    assert(::setenv(var.c_str(), value.c_str(), /* overwrite */ 1) == 0);
+void PutEnv(std::string var, fs::path value) {
+    assert(::setenv(var.c_str(), value.string().c_str(), /* overwrite */ 1) == 0);
 }
 
 void UnsetEnv(std::string var) {

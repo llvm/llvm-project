@@ -69,7 +69,7 @@ int main(int, char**) {
                   "  Expected: '%s'\n"
                   "  Output: '%s'\n",
         ID, Testing, TC.input.c_str(), TC.base.c_str(),
-        Expected.c_str(), Output.native().c_str());
+        Expected.string().c_str(), Output.string().c_str());
     };
     if (!PathEq(output, TC.expect))
       ReportErr("path::lexically_relative", output, TC.expect);
