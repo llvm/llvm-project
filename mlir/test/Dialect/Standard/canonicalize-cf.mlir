@@ -139,6 +139,27 @@ func @cond_br_pass_through_fail(%cond : i1) {
   return
 }
 
+/// Test folding conditional branches that are successors of conditional
+/// branches with the same condition.
+
+// CHECK-LABEL: func @cond_br_from_cond_br_with_same_condition
+func @cond_br_from_cond_br_with_same_condition(%cond : i1) {
+  // CHECK:   cond_br %{{.*}}, ^bb1, ^bb2
+  // CHECK: ^bb1:
+  // CHECK:   return
+
+  cond_br %cond, ^bb1, ^bb2
+
+^bb1:
+  cond_br %cond, ^bb3, ^bb2
+
+^bb2:
+  "foo.terminator"() : () -> ()
+
+^bb3:
+  return
+}
+
 // -----
 
 // Erase assertion if condition is known to be true at compile time.

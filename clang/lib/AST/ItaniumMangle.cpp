@@ -3668,13 +3668,18 @@ void CXXNameMangler::mangleType(const AutoType *T) {
 }
 
 void CXXNameMangler::mangleType(const DeducedTemplateSpecializationType *T) {
-  // FIXME: This is not the right mangling. We also need to include a scope
-  // here in some cases.
-  QualType D = T->getDeducedType();
-  if (D.isNull())
-    mangleUnscopedTemplateName(T->getTemplateName(), nullptr);
-  else
-    mangleType(D);
+  QualType Deduced = T->getDeducedType();
+  if (!Deduced.isNull())
+    mangleType(Deduced);
+  else if (TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl())
+    mangleName(GlobalDecl(TD));
+  else {
+    // For an unresolved template-name, mangle it as if it were a template
+    // specialization but leave off the template arguments.
+    Out << 'N';
+    mangleTemplatePrefix(T->getTemplateName());
+    Out << 'E';
+  }
 }
 
 void CXXNameMangler::mangleType(const AtomicType *T) {
