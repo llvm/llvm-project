@@ -289,7 +289,8 @@ wide range of records conveniently and compactly.
 
 ``dag``
     This type represents a nestable directed acyclic graph (DAG) of nodes.
-    Each node has an operator and zero or more operands. A operand can be
+    Each node has an *operator* and zero or more *arguments* (or *operands*).
+    An argument can be
     another ``dag`` object, allowing an arbitrary tree of nodes and edges.
     As an example, DAGs are used to represent code patterns for use by
     the code generator instruction selection algorithms. See `Directed
@@ -1215,29 +1216,30 @@ Directed acyclic graphs (DAGs)
 
 A directed acyclic graph can be represented directly in TableGen using the
 ``dag`` datatype. A DAG node consists of an operator and zero or more
-operands. Each operand can be of any desired type. By using another DAG node
-as an operand, an arbitrary graph of DAG nodes can be built. 
+arguments (or operands). Each argument can be of any desired type. By using
+another DAG node as an argument, an arbitrary graph of DAG nodes can be
+built. 
 
 The syntax of a ``dag`` instance is:
 
-  ``(`` *operator* *operand1*\ ``,`` *operand2*\ ``,`` ... ``)``
+  ``(`` *operator* *argument1*\ ``,`` *argument2*\ ``,`` ... ``)``
 
 The operator must be present and must be a record. There can be zero or more
-operands, separated by commas. The operator and operands can have three
+arguments, separated by commas. The operator and arguments can have three
 formats. 
 
 ====================== =============================================
 Format                 Meaning
 ====================== =============================================
-*value*                operand value
-*value*\ ``:``\ *name* operand value and associated name
-*name*                 operand name with unset (uninitialized) value
+*value*                argument value
+*value*\ ``:``\ *name* argument value and associated name
+*name*                 argument name with unset (uninitialized) value
 ====================== =============================================
 
 The *value* can be any TableGen value. The *name*, if present, must be a
 :token:`TokVarName`, which starts with a dollar sign (``$``). The purpose of
-a name is to tag an operator or operand in a DAG with a particular meaning,
-or to associate an operand in one DAG with a like-named operand in another
+a name is to tag an operator or argument in a DAG with a particular meaning,
+or to associate an argument in one DAG with a like-named argument in another
 DAG.
 
 The following bang operators manipulate DAGs: ``!con``, ``!dag``, ``!foreach``, 

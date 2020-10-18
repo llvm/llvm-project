@@ -2859,6 +2859,13 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       if (!TokenBeforeMatchingParen || !Left.is(TT_TypeDeclarationParen))
         return true;
     }
+    // Add a space if the previous token is a pointer qualifer or the closing
+    // parenthesis of __attribute__(()) expression and the style requires spaces
+    // after pointer qualifiers.
+    if ((Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_After ||
+         Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_Both) &&
+        (Left.is(TT_AttributeParen) || Left.canBePointerOrReferenceQualifier()))
+      return true;
     return (Left.Tok.isLiteral() ||
             (!Left.isOneOf(TT_PointerOrReference, tok::l_paren) &&
              (Style.PointerAlignment != FormatStyle::PAS_Left ||
@@ -2871,7 +2878,13 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
        (Style.PointerAlignment != FormatStyle::PAS_Right &&
         !Line.IsMultiVariableDeclStmt)))
     return true;
-  if (Left.is(TT_PointerOrReference))
+  if (Left.is(TT_PointerOrReference)) {
+    // Add a space if the next token is a pointer qualifer and the style
+    // requires spaces before pointer qualifiers.
+    if ((Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_Before ||
+         Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_Both) &&
+        Right.canBePointerOrReferenceQualifier())
+      return true;
     return Right.Tok.isLiteral() || Right.is(TT_BlockComment) ||
            (Right.isOneOf(Keywords.kw_override, Keywords.kw_final) &&
             !Right.is(TT_StartOfName)) ||
@@ -2883,6 +2896,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
             Left.Previous &&
             !Left.Previous->isOneOf(tok::l_paren, tok::coloncolon,
                                     tok::l_square));
+  }
   // Ensure right pointer alignement with ellipsis e.g. int *...P
   if (Left.is(tok::ellipsis) && Left.Previous &&
       Left.Previous->isOneOf(tok::star, tok::amp, tok::ampamp))

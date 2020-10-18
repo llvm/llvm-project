@@ -62,13 +62,13 @@ CXX11(unlikely)
 // FIXME(201806L) CHECK: ensures: 0
 // FIXME(201806L) CHECK: expects: 0
 // CHECK: fallthrough: 201603L
-// FIXME(201803L) CHECK: likely: 2L
+// CHECK: likely: 201803L
 // CHECK: maybe_unused: 201603L
 // ITANIUM: no_unique_address: 201803L
 // WINDOWS: no_unique_address: 0
 // CHECK: nodiscard: 201907L
 // CHECK: noreturn: 200809L
-// FIXME(201803L) CHECK: unlikely: 2L
+// CHECK: unlikely: 201803L
 
 // Test for Microsoft __declspec attributes
 

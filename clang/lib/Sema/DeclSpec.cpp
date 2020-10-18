@@ -1196,7 +1196,13 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
         S.Diag(TSTLoc, diag::err_invalid_vector_float_decl_spec);
     } else if (TypeSpecWidth == TSW_long) {
       // vector long is unsupported for ZVector and deprecated for AltiVec.
-      if (S.getLangOpts().ZVector)
+      // It has also been historically deprecated on AIX (as an alias for
+      // "vector int" in both 32-bit and 64-bit modes). It was then made
+      // unsupported in the Clang-based XL compiler since the deprecated type
+      // has a number of conflicting semantics and continuing to support it
+      // is a disservice to users.
+      if (S.getLangOpts().ZVector ||
+          S.Context.getTargetInfo().getTriple().isOSAIX())
         S.Diag(TSWRange.getBegin(), diag::err_invalid_vector_long_decl_spec);
       else
         S.Diag(TSWRange.getBegin(),

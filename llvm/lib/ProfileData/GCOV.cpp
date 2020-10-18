@@ -939,16 +939,16 @@ void Context::printBranchInfo(const GCOVBlock &Block, uint32_t &edgeIdx,
 }
 
 void Context::printSummary(const Summary &summary, raw_ostream &os) const {
-  os << format("Lines executed:%.2f%% of %u\n",
+  os << format("Lines executed:%.2f%% of %" PRIu64 "\n",
                double(summary.linesExec) * 100 / summary.lines, summary.lines);
   if (options.BranchInfo) {
     if (summary.branches == 0) {
       os << "No branches\n";
     } else {
-      os << format("Branches executed:%.2f%% of %u\n",
+      os << format("Branches executed:%.2f%% of %" PRIu64 "\n",
                    double(summary.branchesExec) * 100 / summary.branches,
                    summary.branches);
-      os << format("Taken at least once:%.2f%% of %u\n",
+      os << format("Taken at least once:%.2f%% of %" PRIu64 "\n",
                    double(summary.branchesTaken) * 100 / summary.branches,
                    summary.branches);
     }

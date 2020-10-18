@@ -1519,9 +1519,9 @@ namespace {
 //   3. StartDef completely overwrites CurrentDef.
 // 4. Erase CurrentDef from the function and MemorySSA.
 
-// Returns true if \p M is an intrisnic that does not read or write memory.
-bool isNoopIntrinsic(MemoryUseOrDef *M) {
-  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(M->getMemoryInst())) {
+// Returns true if \p I is an intrisnic that does not read or write memory.
+bool isNoopIntrinsic(Instruction *I) {
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
@@ -1564,7 +1564,7 @@ bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
     return true;
 
   // Skip intrinsics that do not really read or modify memory.
-  if (isNoopIntrinsic(D))
+  if (isNoopIntrinsic(D->getMemoryInst()))
     return true;
 
   return false;
@@ -1849,6 +1849,9 @@ struct DSEState {
 
   // Returns true if \p Use may read from \p DefLoc.
   bool isReadClobber(MemoryLocation DefLoc, Instruction *UseInst) {
+    if (isNoopIntrinsic(UseInst))
+      return false;
+
     // Monotonic or weaker atomic stores can be re-ordered and do not need to be
     // treated as read clobber.
     if (auto SI = dyn_cast<StoreInst>(UseInst))
@@ -2132,7 +2135,7 @@ struct DSEState {
         continue;
       }
 
-      if (isNoopIntrinsic(cast<MemoryUseOrDef>(UseAccess))) {
+      if (isNoopIntrinsic(cast<MemoryUseOrDef>(UseAccess)->getMemoryInst())) {
         LLVM_DEBUG(dbgs() << "    ... adding uses of intrinsic\n");
         PushMemUses(UseAccess);
         continue;
