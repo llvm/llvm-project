@@ -1788,47 +1788,27 @@ def GETSTACKTOP : Pseudo<(outs I64:$dst), (ins),
 //   or   %res, 0, (0)1      ; initialize by 0
 //   CMOV %res, (63)0, %tmp  ; set 1 if %tmp is true
 
-def : Pat<(i32 (setcc i64:$LHS, i64:$RHS, CCSIOp:$cond)),
-          (EXTRACT_SUBREG
-              (CMOVLrm (icond2cc $cond),
-                       (CMPSLrr i64:$LHS, i64:$RHS),
-                       !add(63, 64),
-                       (ORim 0, 0)), sub_i32)>;
+class setccrr<Instruction INSN> :
+    OutPatFrag<(ops node:$cond, node:$comp),
+               (EXTRACT_SUBREG
+                   (INSN $cond, $comp,
+                         !add(63, 64), // means (63)0 == 1
+                         (ORim 0, 0)), sub_i32)>;
 
-def : Pat<(i32 (setcc i64:$LHS, i64:$RHS, CCUIOp:$cond)),
-          (EXTRACT_SUBREG
-              (CMOVLrm (icond2cc $cond),
-                       (CMPULrr i64:$LHS, i64:$RHS),
-                       !add(63, 64),
-                       (ORim 0, 0)), sub_i32)>;
-
-def : Pat<(i32 (setcc i32:$LHS, i32:$RHS, CCSIOp:$cond)),
-          (EXTRACT_SUBREG
-              (CMOVWrm (icond2cc $cond),
-                       (CMPSWSXrr i32:$LHS, i32:$RHS),
-                       !add(63, 64),
-                       (ORim 0, 0)), sub_i32)>;
-
-def : Pat<(i32 (setcc i32:$LHS, i32:$RHS, CCUIOp:$cond)),
-          (EXTRACT_SUBREG
-              (CMOVWrm (icond2cc $cond),
-                       (CMPUWrr i32:$LHS, i32:$RHS),
-                       !add(63, 64),
-                       (ORim 0, 0)), sub_i32)>;
-
-def : Pat<(i32 (setcc f64:$LHS, f64:$RHS, cond:$cond)),
-          (EXTRACT_SUBREG
-              (CMOVDrm (fcond2cc $cond),
-                       (FCMPDrr f64:$LHS, f64:$RHS),
-                       !add(63, 64),
-                       (ORim 0, 0)), sub_i32)>;
-
-def : Pat<(i32 (setcc f32:$LHS, f32:$RHS, cond:$cond)),
-          (EXTRACT_SUBREG
-              (CMOVSrm (fcond2cc $cond),
-                       (FCMPSrr f32:$LHS, f32:$RHS),
-                       !add(63, 64),
-                       (ORim 0, 0)), sub_i32)>;
+def : Pat<(i32 (setcc i32:$l, i32:$r, CCSIOp:$cond)),
+          (setccrr<CMOVWrm> (icond2cc $cond), (CMPSWSXrr $l, $r))>;
+def : Pat<(i32 (setcc i32:$l, i32:$r, CCUIOp:$cond)),
+          (setccrr<CMOVWrm> (icond2cc $cond), (CMPUWrr $l, $r))>;
+def : Pat<(i32 (setcc i64:$l, i64:$r, CCSIOp:$cond)),
+          (setccrr<CMOVLrm> (icond2cc $cond), (CMPSLrr $l, $r))>;
+def : Pat<(i32 (setcc i64:$l, i64:$r, CCUIOp:$cond)),
+          (setccrr<CMOVLrm> (icond2cc $cond), (CMPULrr $l, $r))>;
+def : Pat<(i32 (setcc f32:$l, f32:$r, cond:$cond)),
+          (setccrr<CMOVSrm> (fcond2cc $cond), (FCMPSrr $l, $r))>;
+def : Pat<(i32 (setcc f64:$l, f64:$r, cond:$cond)),
+          (setccrr<CMOVDrm> (fcond2cc $cond), (FCMPDrr $l, $r))>;
+def : Pat<(i32 (setcc f128:$l, f128:$r, cond:$cond)),
+          (setccrr<CMOVDrm> (fcond2cc $cond), (FCMPQrr $l, $r))>;
 
 // Special SELECTCC pattern matches
 // Use min/max for better performance.
