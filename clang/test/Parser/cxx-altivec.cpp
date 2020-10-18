@@ -1,6 +1,8 @@
-// RUN: %clang_cc1 -triple=powerpc-apple-darwin8 -target-feature +altivec -fsyntax-only -verify -std=c++11 %s
-// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -target-feature +altivec -fsyntax-only -verify -std=c++11 %s
-// RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -target-feature +altivec -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -triple=powerpc-apple-darwin8 -target-feature +altivec -fsyntax-only -verify=expected,nonaix -std=c++11 %s
+// RUN: %clang_cc1 -triple=powerpc64-unknown-linux-gnu -target-feature +altivec -fsyntax-only -verify=expected,nonaix -std=c++11 %s
+// RUN: %clang_cc1 -triple=powerpc64le-unknown-linux-gnu -target-feature +altivec -fsyntax-only -verify=expected,nonaix -std=c++11 %s
+// RUN: %clang_cc1 -triple=powerpc-ibm-aix -target-feature +altivec -fsyntax-only -verify=expected,aix -std=c++11 %s
+// RUN: %clang_cc1 -triple=powerpc64-ibm-aix -target-feature +altivec -fsyntax-only -verify=expected,aix -std=c++11 %s
 #include <altivec.h>
 
 __vector char vv_c;
@@ -55,19 +57,33 @@ void f_a2(int b, vector int a);
 
 vector int v = (vector int)(-1);
 
+// These should have errors on AIX and warnings otherwise.
+__vector long vv_l;                 // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+                                    // aix-error@-1 {{cannot use 'long' with '__vector'}}
+__vector signed long vv_sl;         // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+                                    // aix-error@-1 {{cannot use 'long' with '__vector'}}
+__vector unsigned long vv_ul;       // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+                                    // aix-error@-1 {{cannot use 'long' with '__vector'}}
+__vector long int vv_li;            // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+                                    // aix-error@-1 {{cannot use 'long' with '__vector'}}
+__vector signed long int vv_sli;    // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+                                    // aix-error@-1 {{cannot use 'long' with '__vector'}}
+__vector unsigned long int vv_uli;  // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+                                    // aix-error@-1 {{cannot use 'long' with '__vector'}}
+vector long v_l;                    // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+                                    // aix-error@-1 {{cannot use 'long' with '__vector'}}
+vector signed long v_sl;            // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+                                    // aix-error@-1 {{cannot use 'long' with '__vector'}}
+vector unsigned long v_ul;          // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+                                    // aix-error@-1 {{cannot use 'long' with '__vector'}}
+vector long int v_li;               // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+                                    // aix-error@-1 {{cannot use 'long' with '__vector'}}
+vector signed long int v_sli;       // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+                                    // aix-error@-1 {{cannot use 'long' with '__vector'}}
+vector unsigned long int v_uli;     // nonaix-warning {{Use of 'long' with '__vector' is deprecated}}
+                                    // aix-error@-1 {{cannot use 'long' with '__vector'}}
+
 // These should have warnings.
-__vector long vv_l;                 // expected-warning {{Use of 'long' with '__vector' is deprecated}}
-__vector signed long vv_sl;         // expected-warning {{Use of 'long' with '__vector' is deprecated}}
-__vector unsigned long vv_ul;       // expected-warning {{Use of 'long' with '__vector' is deprecated}}
-__vector long int vv_li;            // expected-warning {{Use of 'long' with '__vector' is deprecated}}
-__vector signed long int vv_sli;    // expected-warning {{Use of 'long' with '__vector' is deprecated}}
-__vector unsigned long int vv_uli;  // expected-warning {{Use of 'long' with '__vector' is deprecated}}
-vector long v_l;                    // expected-warning {{Use of 'long' with '__vector' is deprecated}}
-vector signed long v_sl;            // expected-warning {{Use of 'long' with '__vector' is deprecated}}
-vector unsigned long v_ul;          // expected-warning {{Use of 'long' with '__vector' is deprecated}}
-vector long int v_li;               // expected-warning {{Use of 'long' with '__vector' is deprecated}}
-vector signed long int v_sli;       // expected-warning {{Use of 'long' with '__vector' is deprecated}}
-vector unsigned long int v_uli;     // expected-warning {{Use of 'long' with '__vector' is deprecated}}
 __vector long double  vv_ld;        // expected-error {{cannot use 'long double' with '__vector'}}
 vector long double  v_ld;           // expected-error {{cannot use 'long double' with '__vector'}}
 
