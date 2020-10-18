@@ -225,14 +225,8 @@ static inline unsigned int getRegOperandSize(const Record *RegRec) {
 }
 
 // Return the size of the memory operand
-static inline unsigned int
-getMemOperandSize(const Record *MemRec, const bool IntrinsicSensitive = false) {
+static inline unsigned getMemOperandSize(const Record *MemRec) {
   if (MemRec->isSubClassOf("Operand")) {
-    // Intrinsic memory instructions use ssmem/sdmem.
-    if (IntrinsicSensitive &&
-        (MemRec->getName() == "sdmem" || MemRec->getName() == "ssmem"))
-      return 128;
-
     StringRef Name =
         MemRec->getValueAsDef("ParserMatchClass")->getValueAsString("Name");
     if (Name == "Mem8")
