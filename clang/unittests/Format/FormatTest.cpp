@@ -12104,6 +12104,80 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeColon) {
                NoSpaceStyle);
 }
 
+TEST_F(FormatTest, ConfigurableSpaceAroundPointerQualifiers) {
+  FormatStyle Style = getLLVMStyle();
+
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Default;
+  verifyFormat("void* const* x = NULL;", Style);
+
+#define verifyQualifierSpaces(Code, Pointers, Qualifiers)                      \
+  do {                                                                         \
+    Style.PointerAlignment = FormatStyle::Pointers;                            \
+    Style.SpaceAroundPointerQualifiers = FormatStyle::Qualifiers;              \
+    verifyFormat(Code, Style);                                                 \
+  } while (false)
+
+  verifyQualifierSpaces("void* const* x = NULL;", PAS_Left, SAPQ_Default);
+  verifyQualifierSpaces("void *const *x = NULL;", PAS_Right, SAPQ_Default);
+  verifyQualifierSpaces("void * const * x = NULL;", PAS_Middle, SAPQ_Default);
+
+  verifyQualifierSpaces("void* const* x = NULL;", PAS_Left, SAPQ_Before);
+  verifyQualifierSpaces("void * const *x = NULL;", PAS_Right, SAPQ_Before);
+  verifyQualifierSpaces("void * const * x = NULL;", PAS_Middle, SAPQ_Before);
+
+  verifyQualifierSpaces("void* const * x = NULL;", PAS_Left, SAPQ_After);
+  verifyQualifierSpaces("void *const *x = NULL;", PAS_Right, SAPQ_After);
+  verifyQualifierSpaces("void * const * x = NULL;", PAS_Middle, SAPQ_After);
+
+  verifyQualifierSpaces("void* const * x = NULL;", PAS_Left, SAPQ_Both);
+  verifyQualifierSpaces("void * const *x = NULL;", PAS_Right, SAPQ_Both);
+  verifyQualifierSpaces("void * const * x = NULL;", PAS_Middle, SAPQ_Both);
+
+#undef verifyQualifierSpaces
+
+  FormatStyle Spaces = getLLVMStyle();
+  Spaces.AttributeMacros.push_back("qualified");
+  Spaces.PointerAlignment = FormatStyle::PAS_Right;
+  Spaces.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Default;
+  verifyFormat("SomeType *volatile *a = NULL;", Spaces);
+  verifyFormat("SomeType *__attribute__((attr)) *a = NULL;", Spaces);
+  verifyFormat("std::vector<SomeType *const *> x;", Spaces);
+  verifyFormat("std::vector<SomeType *qualified *> x;", Spaces);
+  verifyFormat("std::vector<SomeVar * NotAQualifier> x;", Spaces);
+  Spaces.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Before;
+  verifyFormat("SomeType * volatile *a = NULL;", Spaces);
+  verifyFormat("SomeType * __attribute__((attr)) *a = NULL;", Spaces);
+  verifyFormat("std::vector<SomeType * const *> x;", Spaces);
+  verifyFormat("std::vector<SomeType * qualified *> x;", Spaces);
+  verifyFormat("std::vector<SomeVar * NotAQualifier> x;", Spaces);
+
+  // Check that SAPQ_Before doesn't result in extra spaces for PAS_Left.
+  Spaces.PointerAlignment = FormatStyle::PAS_Left;
+  Spaces.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Before;
+  verifyFormat("SomeType* volatile* a = NULL;", Spaces);
+  verifyFormat("SomeType* __attribute__((attr))* a = NULL;", Spaces);
+  verifyFormat("std::vector<SomeType* const*> x;", Spaces);
+  verifyFormat("std::vector<SomeType* qualified*> x;", Spaces);
+  verifyFormat("std::vector<SomeVar * NotAQualifier> x;", Spaces);
+  // However, setting it to SAPQ_After should add spaces after __attribute, etc.
+  Spaces.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_After;
+  verifyFormat("SomeType* volatile * a = NULL;", Spaces);
+  verifyFormat("SomeType* __attribute__((attr)) * a = NULL;", Spaces);
+  verifyFormat("std::vector<SomeType* const *> x;", Spaces);
+  verifyFormat("std::vector<SomeType* qualified *> x;", Spaces);
+  verifyFormat("std::vector<SomeVar * NotAQualifier> x;", Spaces);
+
+  // PAS_Middle should not have any noticeable changes even for SAPQ_Both
+  Spaces.PointerAlignment = FormatStyle::PAS_Middle;
+  Spaces.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_After;
+  verifyFormat("SomeType * volatile * a = NULL;", Spaces);
+  verifyFormat("SomeType * __attribute__((attr)) * a = NULL;", Spaces);
+  verifyFormat("std::vector<SomeType * const *> x;", Spaces);
+  verifyFormat("std::vector<SomeType * qualified *> x;", Spaces);
+  verifyFormat("std::vector<SomeVar * NotAQualifier> x;", Spaces);
+}
+
 TEST_F(FormatTest, AlignConsecutiveMacros) {
   FormatStyle Style = getLLVMStyle();
   Style.AlignConsecutiveAssignments = true;
@@ -14193,6 +14267,16 @@ TEST_F(FormatTest, ParsesConfiguration) {
               AllowShortFunctionsOnASingleLine, FormatStyle::SFS_None);
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: true",
               AllowShortFunctionsOnASingleLine, FormatStyle::SFS_All);
+
+  Style.SpaceAroundPointerQualifiers = FormatStyle::SAPQ_Both;
+  CHECK_PARSE("SpaceAroundPointerQualifiers: Default",
+              SpaceAroundPointerQualifiers, FormatStyle::SAPQ_Default);
+  CHECK_PARSE("SpaceAroundPointerQualifiers: Before",
+              SpaceAroundPointerQualifiers, FormatStyle::SAPQ_Before);
+  CHECK_PARSE("SpaceAroundPointerQualifiers: After",
+              SpaceAroundPointerQualifiers, FormatStyle::SAPQ_After);
+  CHECK_PARSE("SpaceAroundPointerQualifiers: Both",
+              SpaceAroundPointerQualifiers, FormatStyle::SAPQ_Both);
 
   Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
   CHECK_PARSE("SpaceBeforeParens: Never", SpaceBeforeParens,
