@@ -84,6 +84,7 @@ __DEVICE__ float tgamma(float __x) { return ::tgammaf(__x); }
 #define __HIP__
 #define __OPENMP_AMDGCN__
 #include <__clang_hip_cmath.h>
+#undef __HIP__
 
 #pragma omp end declare variant
 #endif // __AMDGCN__
