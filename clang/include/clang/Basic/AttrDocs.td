@@ -1902,7 +1902,7 @@ Clang supports the ``__attribute__((preserve_access_index))``
 attribute for the BPF target. This attribute may be attached to a
 struct or union declaration, where if -g is specified, it enables
 preserving struct or union member access debuginfo indices of this
-struct or union, similar to clang ``__builtin_preserve_acceess_index()``.
+struct or union, similar to clang ``__builtin_preserve_access_index()``.
   }];
 }
 
