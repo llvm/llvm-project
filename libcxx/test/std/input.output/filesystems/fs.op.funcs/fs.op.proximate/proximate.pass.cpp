@@ -60,9 +60,9 @@ TEST_CASE(basic_test) {
   path relative_cwd = cwd.native().substr(1);
   // clang-format off
   struct {
-    std::string input;
-    std::string base;
-    std::string expect;
+    fs::path input;
+    fs::path base;
+    fs::path expect;
   } TestCases[] = {
       {"", "", "."},
       {cwd, "a", ".."},
@@ -104,7 +104,8 @@ TEST_CASE(basic_test) {
                   "  Input: '%s'\n"
                   "  Base: '%s'\n"
                   "  Expected: '%s'\n",
-        ID, TC.input.c_str(), TC.base.c_str(), TC.expect.c_str());
+        ID, TC.input.string().c_str(), TC.base.string().c_str(),
+        TC.expect.string().c_str());
     } else if (!PathEq(output, TC.expect)) {
       TEST_CHECK(PathEq(output, TC.expect));
 
@@ -119,9 +120,10 @@ TEST_CASE(basic_test) {
                   "  Lex Prox: '%s'\n"
                   "  Canon Input: '%s'\n"
                   "  Canon Base: '%s'\n",
-        ID, TC.input.c_str(), TC.base.c_str(), TC.expect.c_str(),
-        output.native().c_str(), lexically_p.native().c_str(),
-        canon_input.c_str(), canon_base.c_str());
+        ID, TC.input.string().c_str(), TC.base.string().c_str(),
+        TC.expect.string().c_str(), output.string().c_str(),
+        lexically_p.string().c_str(), canon_input.string().c_str(),
+        canon_base.string().c_str());
     }
   }
 }

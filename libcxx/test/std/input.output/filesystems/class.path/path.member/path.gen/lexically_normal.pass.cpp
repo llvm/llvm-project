@@ -131,7 +131,7 @@ int main(int, char**) {
                   "  Input: '%s'\n"
                   "  Expected: '%s'\n"
                   "  Output: '%s'\n",
-        ID, TC.input.c_str(), TC.expect.c_str(), output.native().c_str());
+        ID, TC.input.c_str(), TC.expect.c_str(), output.string().c_str());
     }
   }
   return Failed;

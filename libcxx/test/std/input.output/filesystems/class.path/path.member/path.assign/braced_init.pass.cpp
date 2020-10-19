@@ -26,7 +26,11 @@ int main(int, char**) {
   using namespace fs;
   path p("abc");
   p = {};
+#ifdef _WIN32
+  assert(p.native() == L"");
+#else
   assert(p.native() == "");
+#endif
 
   return 0;
 }
