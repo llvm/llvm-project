@@ -14075,6 +14075,8 @@ SDValue PPCTargetLowering::combineFPToIntToFP(SDNode *N,
   // from the hardware.
   if (Op.getValueType() != MVT::f32 && Op.getValueType() != MVT::f64)
     return SDValue();
+  if (!Op.getOperand(0).getValueType().isSimple())
+    return SDValue();
   if (Op.getOperand(0).getValueType().getSimpleVT() <= MVT(MVT::i1) ||
       Op.getOperand(0).getValueType().getSimpleVT() > MVT(MVT::i64))
     return SDValue();
