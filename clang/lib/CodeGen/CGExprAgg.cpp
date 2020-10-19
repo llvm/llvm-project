@@ -1463,6 +1463,7 @@ static bool castPreservesZero(const CastExpr *CE) {
   case CK_UncheckedDerivedToBase:
     return false;
   }
+  llvm_unreachable("Unhandled clang::CastKind enum");
 }
 
 /// isSimpleZero - If emitting this value will obviously just cause a store of
