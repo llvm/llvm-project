@@ -90,8 +90,6 @@ set(hip_sources
   ${devicertl_base_directory}/common/src/sync.cu
   ${devicertl_base_directory}/common/src/task.cu)
 
-set(llvm_sources
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/atomic_inc.ll)
 set(ocl_sources
   ${CMAKE_CURRENT_SOURCE_DIR}/src/hostrpc_invoke.cl)
   
@@ -211,7 +209,6 @@ foreach(mcpu ${mcpus})
   set(bc_files)
   add_cuda_bc_library(${hip_sources})
   add_ocl_bc_library(${CMAKE_CURRENT_SOURCE_DIR} ${ocl_sources})
-  list(APPEND bc_files ${llvm_sources})
 
   set(bc_libname lib${libname}-${mcpu}.bc)
   add_custom_command(
