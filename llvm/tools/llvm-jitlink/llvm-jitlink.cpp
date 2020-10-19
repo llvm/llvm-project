@@ -482,12 +482,11 @@ LLVMJITLinkObjectLinkingLayer::LLVMJITLinkObjectLinkingLayer(
     Session &S, JITLinkMemoryManager &MemMgr)
     : ObjectLinkingLayer(S.ES, MemMgr), S(S) {}
 
-Error LLVMJITLinkObjectLinkingLayer::add(JITDylib &JD,
-                                         std::unique_ptr<MemoryBuffer> O,
-                                         VModuleKey K) {
+Error LLVMJITLinkObjectLinkingLayer::add(ResourceTrackerSP RT,
+                                         std::unique_ptr<MemoryBuffer> O) {
 
   if (S.HarnessFiles.empty() || S.HarnessFiles.count(O->getBufferIdentifier()))
-    return ObjectLinkingLayer::add(JD, std::move(O), std::move(K));
+    return ObjectLinkingLayer::add(std::move(RT), std::move(O));
 
   // Use getObjectSymbolInfo to compute the init symbol, but ignore
   // the symbols field. We'll handle that manually to include promotion.
@@ -556,9 +555,10 @@ Error LLVMJITLinkObjectLinkingLayer::add(JITDylib &JD,
   }
 
   auto MU = std::make_unique<BasicObjectLayerMaterializationUnit>(
-      *this, K, std::move(O), std::move(SymbolFlags), std::move(InitSymbol));
+      *this, std::move(O), std::move(SymbolFlags), std::move(InitSymbol));
 
-  return JD.define(std::move(MU));
+  auto &JD = RT->getJITDylib();
+  return JD.define(std::move(MU), std::move(RT));
 }
 
 class PhonyExternalsGenerator : public JITDylib::DefinitionGenerator {
@@ -586,6 +586,11 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
   return std::move(S);
 }
 
+Session::~Session() {
+  if (auto Err = ES.endSession())
+    ES.reportError(std::move(Err));
+}
+
 // FIXME: Move to createJITDylib if/when we start using Platform support in
 // llvm-jitlink.
 Session::Session(Triple TT, uint64_t PageSize, Error &Err)
@@ -603,6 +608,15 @@ Session::Session(Triple TT, uint64_t PageSize, Error &Err)
       S.modifyPassConfig(TT, PassConfig);
     }
 
+    Error notifyFailed(MaterializationResponsibility &MR) override {
+      return Error::success();
+    }
+    Error notifyRemovingResources(ResourceKey K) override {
+      return Error::success();
+    }
+    void notifyTransferringResources(ResourceKey DstKey,
+                                     ResourceKey SrcKey) override {}
+
   private:
     Session &S;
   };
@@ -618,7 +632,7 @@ Session::Session(Triple TT, uint64_t PageSize, Error &Err)
 
   if (!NoExec && !TT.isOSWindows())
     ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-        std::make_unique<InProcessEHFrameRegistrar>()));
+        ES, std::make_unique<InProcessEHFrameRegistrar>()));
 
   ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
 

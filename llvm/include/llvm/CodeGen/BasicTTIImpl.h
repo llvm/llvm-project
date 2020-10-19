@@ -943,8 +943,7 @@ public:
     if (CostKind != TTI::TCK_RecipThroughput)
       return Cost;
 
-    if (Src->isVectorTy() &&
-        Src->getPrimitiveSizeInBits() < LT.second.getSizeInBits()) {
+    if (Src->isVectorTy() && EVT::getEVT(Src).bitsLT(LT.second)) {
       // This is a vector load that legalizes to a larger type than the vector
       // itself. Unless the corresponding extending load or truncating store is
       // legal, then this will scalarize.

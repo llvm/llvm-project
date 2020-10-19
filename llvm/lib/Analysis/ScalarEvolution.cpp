@@ -10285,7 +10285,7 @@ bool ScalarEvolution::isImpliedViaOperations(ICmpInst::Predicate Pred,
       // Knowing that both FoundLHS and FoundRHS are non-negative, and knowing
       // FoundLHS >u FoundRHS, we also know that FoundLHS >s FoundRHS. Let us
       // use this fact to prove that LHS and RHS are non-negative.
-      const SCEV *MinusOne = getNegativeSCEV(getOne(LHS->getType()));
+      const SCEV *MinusOne = getMinusOne(LHS->getType());
       if (isImpliedCondOperands(ICmpInst::ICMP_SGT, LHS, MinusOne, FoundLHS,
                                 FoundRHS) &&
           isImpliedCondOperands(ICmpInst::ICMP_SGT, RHS, MinusOne, FoundLHS,
@@ -10332,7 +10332,7 @@ bool ScalarEvolution::isImpliedViaOperations(ICmpInst::Predicate Pred,
 
     auto *LL = LHSAddExpr->getOperand(0);
     auto *LR = LHSAddExpr->getOperand(1);
-    auto *MinusOne = getNegativeSCEV(getOne(RHS->getType()));
+    auto *MinusOne = getMinusOne(RHS->getType());
 
     // Checks that S1 >= 0 && S2 > RHS, trivially or using the found context.
     auto IsSumGreaterThanRHS = [&](const SCEV *S1, const SCEV *S2) {
@@ -10405,7 +10405,7 @@ bool ScalarEvolution::isImpliedViaOperations(ICmpInst::Predicate Pred,
       // 1. If FoundLHS is negative, then the result is 0.
       // 2. If FoundLHS is non-negative, then the result is non-negative.
       // Anyways, the result is non-negative.
-      auto *MinusOne = getNegativeSCEV(getOne(WTy));
+      auto *MinusOne = getMinusOne(WTy);
       auto *NegDenomMinusOne = getMinusSCEV(MinusOne, DenominatorExt);
       if (isKnownNegative(RHS) &&
           IsSGTViaContext(FoundRHSExt, NegDenomMinusOne))

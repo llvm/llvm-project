@@ -5020,8 +5020,15 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
   if (!LDST->isSimple())
     return false;
 
+  EVT LdStMemVT = LDST->getMemoryVT();
+
+  // Bail out when changing the scalable property, since we can't be sure that
+  // we're actually narrowing here.
+  if (LdStMemVT.isScalableVector() != MemVT.isScalableVector())
+    return false;
+
   // Verify that we are actually reducing a load width here.
-  if (LDST->getMemoryVT().getSizeInBits() < MemVT.getSizeInBits())
+  if (LdStMemVT.bitsLT(MemVT))
     return false;
 
   // Ensure that this isn't going to produce an unsupported memory access.
@@ -7004,7 +7011,7 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
   // Handle simple types only.
   LLVMContext &Context = *DAG.getContext();
   unsigned NumStores = Stores.size();
-  unsigned NarrowNumBits = N->getMemoryVT().getSizeInBits();
+  unsigned NarrowNumBits = N->getMemoryVT().getScalarSizeInBits();
   unsigned WideNumBits = NumStores * NarrowNumBits;
   EVT WideVT = EVT::getIntegerVT(Context, WideNumBits);
   if (WideVT != MVT::i16 && WideVT != MVT::i32 && WideVT != MVT::i64)
@@ -7051,10 +7058,11 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
       return SDValue();
     else if (SourceValue.getValueType() != WideVT) {
       if (WideVal.getValueType() == WideVT ||
-          WideVal.getValueSizeInBits() > SourceValue.getValueSizeInBits())
+          WideVal.getScalarValueSizeInBits() >
+              SourceValue.getScalarValueSizeInBits())
         SourceValue = WideVal;
       // Give up if the source value type is smaller than the store size.
-      if (SourceValue.getValueSizeInBits() < WideVT.getSizeInBits())
+      if (SourceValue.getScalarValueSizeInBits() < WideVT.getScalarSizeInBits())
         return SDValue();
     }
 
@@ -7119,7 +7127,7 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
 
   SDLoc DL(N);
   if (WideVT != SourceValue.getValueType()) {
-    assert(SourceValue.getValueType().getSizeInBits() > WideNumBits &&
+    assert(SourceValue.getValueType().getScalarSizeInBits() > WideNumBits &&
            "Unexpected store value to merge");
     SourceValue = DAG.getNode(ISD::TRUNCATE, DL, WideVT, SourceValue);
   }
@@ -11013,12 +11021,12 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
       return SDValue();
 
     uint64_t ShiftAmt = N01->getZExtValue();
-    uint64_t MemoryWidth = LN0->getMemoryVT().getSizeInBits();
+    uint64_t MemoryWidth = LN0->getMemoryVT().getScalarSizeInBits();
     if (LN0->getExtensionType() != ISD::SEXTLOAD && MemoryWidth > ShiftAmt)
       ExtVT = EVT::getIntegerVT(*DAG.getContext(), MemoryWidth - ShiftAmt);
     else
       ExtVT = EVT::getIntegerVT(*DAG.getContext(),
-                                VT.getSizeInBits() - ShiftAmt);
+                                VT.getScalarSizeInBits() - ShiftAmt);
   } else if (Opc == ISD::AND) {
     // An AND with a constant mask is the same as a truncate + zero-extend.
     auto AndC = dyn_cast<ConstantSDNode>(N->getOperand(1));
@@ -11045,12 +11053,12 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
     SDValue SRL = N0;
     if (auto *ConstShift = dyn_cast<ConstantSDNode>(SRL.getOperand(1))) {
       ShAmt = ConstShift->getZExtValue();
-      unsigned EVTBits = ExtVT.getSizeInBits();
+      unsigned EVTBits = ExtVT.getScalarSizeInBits();
       // Is the shift amount a multiple of size of VT?
       if ((ShAmt & (EVTBits-1)) == 0) {
         N0 = N0.getOperand(0);
         // Is the load width a multiple of size of VT?
-        if ((N0.getValueSizeInBits() & (EVTBits-1)) != 0)
+        if ((N0.getScalarValueSizeInBits() & (EVTBits - 1)) != 0)
           return SDValue();
       }
 
@@ -11080,7 +11088,7 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
           EVT MaskedVT = EVT::getIntegerVT(*DAG.getContext(),
                                            ShiftMask.countTrailingOnes());
           // If the mask is smaller, recompute the type.
-          if ((ExtVT.getSizeInBits() > MaskedVT.getSizeInBits()) &&
+          if ((ExtVT.getScalarSizeInBits() > MaskedVT.getScalarSizeInBits()) &&
               TLI.isLoadExtLegal(ExtType, N0.getValueType(), MaskedVT))
             ExtVT = MaskedVT;
         }
@@ -11111,8 +11119,9 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
     return SDValue();
 
   auto AdjustBigEndianShift = [&](unsigned ShAmt) {
-    unsigned LVTStoreBits = LN0->getMemoryVT().getStoreSizeInBits();
-    unsigned EVTStoreBits = ExtVT.getStoreSizeInBits();
+    unsigned LVTStoreBits =
+        LN0->getMemoryVT().getStoreSizeInBits().getFixedSize();
+    unsigned EVTStoreBits = ExtVT.getStoreSizeInBits().getFixedSize();
     return LVTStoreBits - EVTStoreBits - ShAmt;
   };
 
@@ -11150,13 +11159,13 @@ SDValue DAGCombiner::ReduceLoadWidth(SDNode *N) {
   SDValue Result = Load;
   if (ShLeftAmt != 0) {
     EVT ShImmTy = getShiftAmountTy(Result.getValueType());
-    if (!isUIntN(ShImmTy.getSizeInBits(), ShLeftAmt))
+    if (!isUIntN(ShImmTy.getScalarSizeInBits(), ShLeftAmt))
       ShImmTy = VT;
     // If the shift amount is as large as the result size (but, presumably,
     // no larger than the source) then the useful bits of the result are
     // zero; we can't simply return the shortened shift, because the result
     // of that operation is undefined.
-    if (ShLeftAmt >= VT.getSizeInBits())
+    if (ShLeftAmt >= VT.getScalarSizeInBits())
       Result = DAG.getConstant(0, DL, VT);
     else
       Result = DAG.getNode(ISD::SHL, DL, VT,
@@ -11540,8 +11549,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     // after truncation.
     if (N0.hasOneUse() && ISD::isUNINDEXEDLoad(N0.getNode())) {
       LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-      if (LN0->isSimple() &&
-          LN0->getMemoryVT().getStoreSizeInBits() < VT.getSizeInBits()) {
+      if (LN0->isSimple() && LN0->getMemoryVT().bitsLT(VT)) {
         SDValue NewLoad = DAG.getExtLoad(LN0->getExtensionType(), SDLoc(LN0),
                                          VT, LN0->getChain(), LN0->getBasePtr(),
                                          LN0->getMemoryVT(),
@@ -18406,20 +18414,24 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
   // operands will all be based off of VecIn1, even those in VecIn2.
   unsigned Vec2Offset = DidSplitVec ? 0 : InVT1.getVectorNumElements();
 
+  uint64_t VTSize = VT.getFixedSizeInBits();
+  uint64_t InVT1Size = InVT1.getFixedSizeInBits();
+  uint64_t InVT2Size = InVT2.getFixedSizeInBits();
+
   // We can't generate a shuffle node with mismatched input and output types.
   // Try to make the types match the type of the output.
   if (InVT1 != VT || InVT2 != VT) {
-    if ((VT.getSizeInBits() % InVT1.getSizeInBits() == 0) && InVT1 == InVT2) {
+    if ((VTSize % InVT1Size == 0) && InVT1 == InVT2) {
       // If the output vector length is a multiple of both input lengths,
       // we can concatenate them and pad the rest with undefs.
-      unsigned NumConcats = VT.getSizeInBits() / InVT1.getSizeInBits();
+      unsigned NumConcats = VTSize / InVT1Size;
       assert(NumConcats >= 2 && "Concat needs at least two inputs!");
       SmallVector<SDValue, 2> ConcatOps(NumConcats, DAG.getUNDEF(InVT1));
       ConcatOps[0] = VecIn1;
       ConcatOps[1] = VecIn2 ? VecIn2 : DAG.getUNDEF(InVT1);
       VecIn1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps);
       VecIn2 = SDValue();
-    } else if (InVT1.getSizeInBits() == VT.getSizeInBits() * 2) {
+    } else if (InVT1Size == VTSize * 2) {
       if (!TLI.isExtractSubvectorCheap(VT, InVT1, NumElems))
         return SDValue();
 
@@ -18432,7 +18444,7 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
         // Since we now have shorter input vectors, adjust the offset of the
         // second vector's start.
         Vec2Offset = NumElems;
-      } else if (InVT2.getSizeInBits() <= InVT1.getSizeInBits()) {
+      } else if (InVT2Size <= InVT1Size) {
         // VecIn1 is wider than the output, and we have another, possibly
         // smaller input. Pad the smaller input with undefs, shuffle at the
         // input vector width, and extract the output.
@@ -18457,8 +18469,7 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
         // when we start sorting the vectors by type.
         return SDValue();
       }
-    } else if (InVT2.getSizeInBits() * 2 == VT.getSizeInBits() &&
-               InVT1.getSizeInBits() == VT.getSizeInBits()) {
+    } else if (InVT2Size * 2 == VTSize && InVT1Size == VTSize) {
       SmallVector<SDValue, 2> ConcatOps(2, DAG.getUNDEF(InVT2));
       ConcatOps[0] = VecIn2;
       VecIn2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ConcatOps);

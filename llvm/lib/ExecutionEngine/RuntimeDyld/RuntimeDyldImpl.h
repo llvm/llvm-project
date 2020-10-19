@@ -535,9 +535,12 @@ public:
 
   static void finalizeAsync(
       std::unique_ptr<RuntimeDyldImpl> This,
-      unique_function<void(object::OwningBinary<object::ObjectFile>, Error)>
+      unique_function<void(object::OwningBinary<object::ObjectFile>,
+                           std::unique_ptr<RuntimeDyld::LoadedObjectInfo>,
+                           Error)>
           OnEmitted,
-      object::OwningBinary<object::ObjectFile> O);
+      object::OwningBinary<object::ObjectFile> O,
+      std::unique_ptr<RuntimeDyld::LoadedObjectInfo> Info);
 
   void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
 

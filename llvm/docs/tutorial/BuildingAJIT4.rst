@@ -1,6 +1,6 @@
-===========================================================================
-Building a JIT: Extreme Laziness - Using Compile Callbacks to JIT from ASTs
-===========================================================================
+=======================================================================
+Building a JIT: Extreme Laziness - Using LazyReexports to JIT from ASTs
+=======================================================================
 
 .. contents::
    :local:
@@ -13,9 +13,9 @@ Chapter 4 Introduction
 ======================
 
 Welcome to Chapter 4 of the "Building an ORC-based JIT in LLVM" tutorial. This
-chapter introduces the Compile Callbacks and Indirect Stubs APIs and shows how
-they can be used to replace the CompileOnDemand layer from
-`Chapter 3 <BuildingAJIT3.html>`_ with a custom lazy-JITing scheme that JITs
+chapter introduces custom MaterializationUnits and Layers, and the lazy
+reexports API. Together these will be used to replace the CompileOnDemandLayer
+from `Chapter 3 <BuildingAJIT3.html>`_ with a custom lazy-JITing scheme that JITs
 directly from Kaleidoscope ASTs.
 
 **To be done:**

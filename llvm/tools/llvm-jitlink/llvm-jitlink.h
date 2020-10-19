@@ -33,11 +33,13 @@ struct Session;
 /// ObjectLinkingLayer with additional support for symbol promotion.
 class LLVMJITLinkObjectLinkingLayer : public orc::ObjectLinkingLayer {
 public:
+  using orc::ObjectLinkingLayer::add;
+
   LLVMJITLinkObjectLinkingLayer(Session &S,
                                 jitlink::JITLinkMemoryManager &MemMgr);
 
-  Error add(orc::JITDylib &JD, std::unique_ptr<MemoryBuffer> O,
-            orc::VModuleKey K = orc::VModuleKey()) override;
+  Error add(orc::ResourceTrackerSP RT,
+            std::unique_ptr<MemoryBuffer> O) override;
 
 private:
   Session &S;
@@ -49,6 +51,8 @@ struct Session {
   orc::JITDylib *MainJD;
   LLVMJITLinkObjectLinkingLayer ObjLayer;
   std::vector<orc::JITDylib *> JDSearchOrder;
+
+  ~Session();
 
   static Expected<std::unique_ptr<Session>> Create(Triple TT);
   void dumpSessionInfo(raw_ostream &OS);

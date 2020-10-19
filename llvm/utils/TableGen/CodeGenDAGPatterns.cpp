@@ -507,9 +507,9 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small,
     // Always treat non-scalable MVTs as smaller than scalable MVTs for the
     // purposes of ordering.
     auto ASize = std::make_tuple(A.isScalableVector(), A.getScalarSizeInBits(),
-                                 A.getSizeInBits());
+                                 A.getSizeInBits().getKnownMinSize());
     auto BSize = std::make_tuple(B.isScalableVector(), B.getScalarSizeInBits(),
-                                 B.getSizeInBits());
+                                 B.getSizeInBits().getKnownMinSize());
     return ASize < BSize;
   };
   auto SameKindLE = [](MVT A, MVT B) -> bool {
@@ -520,8 +520,10 @@ bool TypeInfer::EnforceSmallerThan(TypeSetByHwMode &Small,
         std::make_tuple(B.isVector(), B.isScalableVector()))
       return false;
 
-    return std::make_tuple(A.getScalarSizeInBits(), A.getSizeInBits()) <=
-           std::make_tuple(B.getScalarSizeInBits(), B.getSizeInBits());
+    return std::make_tuple(A.getScalarSizeInBits(),
+                           A.getSizeInBits().getKnownMinSize()) <=
+           std::make_tuple(B.getScalarSizeInBits(),
+                           B.getSizeInBits().getKnownMinSize());
   };
 
   for (unsigned M : Modes) {
@@ -728,14 +730,14 @@ bool TypeInfer::EnforceSameSize(TypeSetByHwMode &A, TypeSetByHwMode &B) {
   if (B.empty())
     Changed |= EnforceAny(B);
 
-  auto NoSize = [](const SmallSet<unsigned,2> &Sizes, MVT T) -> bool {
+  auto NoSize = [](const SmallSet<TypeSize, 2> &Sizes, MVT T) -> bool {
     return !Sizes.count(T.getSizeInBits());
   };
 
   for (unsigned M : union_modes(A, B)) {
     TypeSetByHwMode::SetType &AS = A.get(M);
     TypeSetByHwMode::SetType &BS = B.get(M);
-    SmallSet<unsigned,2> AN, BN;
+    SmallSet<TypeSize, 2> AN, BN;
 
     for (MVT T : AS)
       AN.insert(T.getSizeInBits());
@@ -2388,7 +2390,7 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
         MVT::SimpleValueType VT = P.second.SimpleTy;
         if (VT == MVT::iPTR || VT == MVT::iPTRAny)
           continue;
-        unsigned Size = MVT(VT).getSizeInBits();
+        unsigned Size = MVT(VT).getFixedSizeInBits();
         // Make sure that the value is representable for this type.
         if (Size >= 32)
           continue;
