@@ -14,7 +14,7 @@
 #include "interception.h"
 
 #if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS
+    SANITIZER_OPENBSD || SANITIZER_SOLARIS
 
 #include <dlfcn.h>   // for dlsym() and dlvsym()
 
@@ -64,7 +64,7 @@ bool InterceptFunction(const char *name, uptr *ptr_to_real, uptr func,
 }
 
 // Android and Solaris do not have dlvsym
-#if !SANITIZER_ANDROID && !SANITIZER_SOLARIS
+#if !SANITIZER_ANDROID && !SANITIZER_SOLARIS && !SANITIZER_OPENBSD
 static void *GetFuncAddr(const char *name, const char *ver) {
   return dlvsym(RTLD_NEXT, name, ver);
 }
@@ -80,4 +80,4 @@ bool InterceptFunction(const char *name, const char *ver, uptr *ptr_to_real,
 }  // namespace __interception
 
 #endif  // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD ||
-        // SANITIZER_SOLARIS
+        // SANITIZER_OPENBSD || SANITIZER_SOLARIS
