@@ -1764,17 +1764,18 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+
+  Value *X, *Y;
+  if (match(Op0, m_OneUse(m_LogicalShift(m_One(), m_Value(X)))) &&
+      match(Op1, m_One())) {
+    // (1 << X) & 1 --> zext(X == 0)
+    // (1 >> X) & 1 --> zext(X == 0)
+    Value *IsZero = Builder.CreateICmpEQ(X, ConstantInt::get(Ty, 0));
+    return new ZExtInst(IsZero, Ty);
+  }
+
   const APInt *C;
   if (match(Op1, m_APInt(C))) {
-    Value *X, *Y;
-    if (match(Op0, m_OneUse(m_LogicalShift(m_One(), m_Value(X)))) &&
-        C->isOneValue()) {
-      // (1 << X) & 1 --> zext(X == 0)
-      // (1 >> X) & 1 --> zext(X == 0)
-      Value *IsZero = Builder.CreateICmpEQ(X, ConstantInt::get(Ty, 0));
-      return new ZExtInst(IsZero, Ty);
-    }
-
     const APInt *XorC;
     if (match(Op0, m_OneUse(m_Xor(m_Value(X), m_APInt(XorC))))) {
       // (X ^ C1) & C2 --> (X & C2) ^ (C1&C2)
