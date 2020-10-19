@@ -9,8 +9,7 @@ define void @a(float* %arg, i32 %arg1) {
 ; SSE2-NEXT:    testl %esi, %esi
 ; SSE2-NEXT:    jle LBB0_3
 ; SSE2-NEXT:  ## %bb.1: ## %bb2
-; SSE2-NEXT:    movd %esi, %xmm0
-; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Folded Spill
+; SSE2-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; SSE2-NEXT:    movl %esi, %eax
 ; SSE2-NEXT:    .p2align 4, 0x90
 ; SSE2-NEXT:  LBB0_2: ## %bb6
@@ -31,8 +30,7 @@ define void @a(float* %arg, i32 %arg1) {
 ; AVX-NEXT:    testl %esi, %esi
 ; AVX-NEXT:    jle LBB0_3
 ; AVX-NEXT:  ## %bb.1: ## %bb2
-; AVX-NEXT:    vmovd %esi, %xmm0
-; AVX-NEXT:    vmovd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Folded Spill
+; AVX-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; AVX-NEXT:    movl %esi, %eax
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  LBB0_2: ## %bb6
@@ -78,8 +76,7 @@ define void @b(double* %arg, i64 %arg1) {
 ; SSE2-NEXT:    testq %rsi, %rsi
 ; SSE2-NEXT:    jle LBB1_3
 ; SSE2-NEXT:  ## %bb.1: ## %bb2
-; SSE2-NEXT:    movq %rsi, %xmm0
-; SSE2-NEXT:    movq %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Folded Spill
+; SSE2-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; SSE2-NEXT:    .p2align 4, 0x90
 ; SSE2-NEXT:  LBB1_2: ## %bb6
 ; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -99,8 +96,7 @@ define void @b(double* %arg, i64 %arg1) {
 ; AVX-NEXT:    testq %rsi, %rsi
 ; AVX-NEXT:    jle LBB1_3
 ; AVX-NEXT:  ## %bb.1: ## %bb2
-; AVX-NEXT:    vmovq %rsi, %xmm0
-; AVX-NEXT:    vmovq %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Folded Spill
+; AVX-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  LBB1_2: ## %bb6
 ; AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
