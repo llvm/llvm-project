@@ -44,6 +44,12 @@ namespace orc {
 //     linkage and non-hidden visibility.
 // (5) V -- A JITDylib associated with ES.
 class CoreAPIsBasedStandardTest : public testing::Test {
+public:
+  ~CoreAPIsBasedStandardTest() {
+    if (auto Err = ES.endSession())
+      ES.reportError(std::move(Err));
+  }
+
 protected:
   std::shared_ptr<SymbolStringPool> SSP = std::make_shared<SymbolStringPool>();
   ExecutionSession ES{SSP};
@@ -96,8 +102,7 @@ public:
       orc::SymbolStringPtr InitSym = nullptr,
       DiscardFunction Discard = DiscardFunction(),
       DestructorFunction Destructor = DestructorFunction())
-      : MaterializationUnit(std::move(SymbolFlags), std::move(InitSym),
-                            orc::VModuleKey()),
+      : MaterializationUnit(std::move(SymbolFlags), std::move(InitSym)),
         Materialize(std::move(Materialize)), Discard(std::move(Discard)),
         Destructor(std::move(Destructor)) {}
 
@@ -156,6 +161,11 @@ public:
       SupportsIndirection = !!orc::createLocalCompileCallbackManager(TT, ES, 0);
     }
   };
+
+  ~OrcExecutionTest() {
+    if (auto Err = ES.endSession())
+      ES.reportError(std::move(Err));
+  }
 
 protected:
   orc::ExecutionSession ES;

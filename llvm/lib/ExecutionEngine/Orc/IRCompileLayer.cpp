@@ -33,7 +33,7 @@ void IRCompileLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
     {
       std::lock_guard<std::mutex> Lock(IRLayerMutex);
       if (NotifyCompiled)
-        NotifyCompiled(R->getVModuleKey(), std::move(TSM));
+        NotifyCompiled(*R, std::move(TSM));
       else
         TSM = ThreadSafeModule();
     }

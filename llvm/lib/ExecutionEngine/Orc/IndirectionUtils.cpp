@@ -25,9 +25,9 @@ public:
   using CompileFunction = JITCompileCallbackManager::CompileFunction;
 
   CompileCallbackMaterializationUnit(SymbolStringPtr Name,
-                                     CompileFunction Compile, VModuleKey K)
+                                     CompileFunction Compile)
       : MaterializationUnit(SymbolFlagsMap({{Name, JITSymbolFlags::Exported}}),
-                            nullptr, std::move(K)),
+                            nullptr),
         Name(std::move(Name)), Compile(std::move(Compile)) {}
 
   StringRef getName() const override { return "<Compile Callbacks>"; }
@@ -65,10 +65,9 @@ JITCompileCallbackManager::getCompileCallback(CompileFunction Compile) {
 
     std::lock_guard<std::mutex> Lock(CCMgrMutex);
     AddrToSymbol[*TrampolineAddr] = CallbackName;
-    cantFail(CallbacksJD.define(
-        std::make_unique<CompileCallbackMaterializationUnit>(
-            std::move(CallbackName), std::move(Compile),
-            ES.allocateVModule())));
+    cantFail(
+        CallbacksJD.define(std::make_unique<CompileCallbackMaterializationUnit>(
+            std::move(CallbackName), std::move(Compile))));
     return *TrampolineAddr;
   } else
     return TrampolineAddr.takeError();
