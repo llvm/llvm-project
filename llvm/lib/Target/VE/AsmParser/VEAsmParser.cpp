@@ -125,6 +125,9 @@ static const MCPhysReg F128Regs[32] = {
     VE::Q16, VE::Q17, VE::Q18, VE::Q19, VE::Q20, VE::Q21, VE::Q22, VE::Q23,
     VE::Q24, VE::Q25, VE::Q26, VE::Q27, VE::Q28, VE::Q29, VE::Q30, VE::Q31};
 
+static const MCPhysReg VM512Regs[8] = {VE::VMP0, VE::VMP1, VE::VMP2, VE::VMP3,
+                                       VE::VMP4, VE::VMP5, VE::VMP6, VE::VMP7};
+
 static const MCPhysReg MISCRegs[31] = {
     VE::USRCC,      VE::PSW,        VE::SAR,        VE::NoRegister,
     VE::NoRegister, VE::NoRegister, VE::NoRegister, VE::PMMR,
@@ -645,6 +648,15 @@ public:
     if (regIdx % 2 || regIdx > 63)
       return false;
     Op.Reg.RegNum = F128Regs[regIdx / 2];
+    return true;
+  }
+
+  static bool MorphToVM512Reg(VEOperand &Op) {
+    unsigned Reg = Op.getReg();
+    unsigned regIdx = Reg - VE::VM0;
+    if (regIdx % 2 || regIdx > 15)
+      return false;
+    Op.Reg.RegNum = VM512Regs[regIdx / 2];
     return true;
   }
 
@@ -1460,6 +1472,10 @@ unsigned VEAsmParser::validateTargetOperandClass(MCParsedAsmOperand &GOp,
     break;
   case MCK_F128:
     if (Op.isReg() && VEOperand::MorphToF128Reg(Op))
+      return MCTargetAsmParser::Match_Success;
+    break;
+  case MCK_VM512:
+    if (Op.isReg() && VEOperand::MorphToVM512Reg(Op))
       return MCTargetAsmParser::Match_Success;
     break;
   case MCK_MISC:
