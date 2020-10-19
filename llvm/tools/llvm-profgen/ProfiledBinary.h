@@ -8,7 +8,10 @@
 
 #ifndef LLVM_TOOLS_LLVM_PROFGEN_PROFILEDBINARY_H
 #define LLVM_TOOLS_LLVM_PROFGEN_PROFILEDBINARY_H
+
+#include "CallContext.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -32,6 +35,21 @@ using namespace llvm::object;
 
 namespace llvm {
 namespace sampleprof {
+
+class ProfiledBinary;
+
+struct InstructionPointer {
+  ProfiledBinary *Binary;
+  // Offset to the base address of the executable segment of the binary.
+  uint64_t Offset;
+  // Index to the sorted code address array of the binary.
+  uint64_t Index;
+
+  InstructionPointer(ProfiledBinary *Binary, uint64_t Offset)
+      : Binary(Binary), Offset(Offset) {
+    Index = 0;
+  }
+};
 
 class ProfiledBinary {
   // Absolute path of the binary.
@@ -63,10 +81,14 @@ class ProfiledBinary {
   // A set of return instruction offsets. Used by virtual unwinding.
   std::unordered_set<uint64_t> RetAddrs;
 
+  // The symbolizer used to get inline context for an instruction.
+  std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
+
   void setPreferredBaseAddress(const ELFObjectFileBase *O);
 
   // Set up disassembler and related components.
   void setUpDisassembler(const ELFObjectFileBase *Obj);
+  void setupSymbolizer();
 
   /// Dissassemble the text section and build various address maps.
   void disassemble(const ELFObjectFileBase *O);
@@ -74,6 +96,8 @@ class ProfiledBinary {
   /// Helper function to dissassemble the symbol and extract info for unwinding
   bool dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
                           SectionSymbolsTy &Symbols, const SectionRef &Section);
+  /// Symbolize a given instruction pointer and return a full call context.
+  FrameLocationStack symbolize(const InstructionPointer &I);
 
   /// Decode the interesting parts of the binary and build internal data
   /// structures. On high level, the parts of interest are:
@@ -85,7 +109,10 @@ class ProfiledBinary {
   void load();
 
 public:
-  ProfiledBinary(StringRef Path) : Path(Path) { load(); }
+  ProfiledBinary(StringRef Path) : Path(Path) {
+    setupSymbolizer();
+    load();
+  }
 
   const StringRef getPath() const { return Path; }
   const StringRef getName() const { return llvm::sys::path::filename(Path); }
