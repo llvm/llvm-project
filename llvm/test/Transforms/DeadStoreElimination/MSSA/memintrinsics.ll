@@ -18,10 +18,8 @@ define void @test1(i8* noalias %A, i8* noalias %B) {
   ret void
 }
 
-; FIXME: We should eliminate this dead store.
 define void @test2(i8* noalias %A, i8* noalias %B) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    store i8 0, i8* [[A:%.*]], align 1
 ; CHECK-NEXT:    call void @llvm.memmove.p0i8.p0i8.i8(i8* [[A]], i8* [[B:%.*]], i8 12, i1 false)
 ; CHECK-NEXT:    ret void
 ;

@@ -583,7 +583,8 @@ def int_memmove : Intrinsic<[],
                              llvm_i1_ty],
                             [IntrArgMemOnly, IntrWillReturn,
                              NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
-                             ReadOnly<ArgIndex<1>>, ImmArg<ArgIndex<3>>]>;
+                             WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+                             ImmArg<ArgIndex<3>>]>;
 def int_memset  : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty,
                              llvm_i1_ty],
