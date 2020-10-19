@@ -153,10 +153,12 @@ struct ModuleStats {
   unsigned numBlocks;
   unsigned numRegions;
   unsigned numValues;
+  unsigned numBlockArguments;
+  unsigned numOpResults;
 };
 typedef struct ModuleStats ModuleStats;
 
-void collectStatsSingle(OpListNode *head, ModuleStats *stats) {
+int collectStatsSingle(OpListNode *head, ModuleStats *stats) {
   MlirOperation operation = head->op;
   stats->numOperations += 1;
   stats->numValues += mlirOperationGetNumResults(operation);
@@ -166,12 +168,39 @@ void collectStatsSingle(OpListNode *head, ModuleStats *stats) {
 
   stats->numRegions += numRegions;
 
+  intptr_t numResults = mlirOperationGetNumResults(operation);
+  for (intptr_t i = 0; i < numResults; ++i) {
+    MlirValue result = mlirOperationGetResult(operation, i);
+    if (!mlirValueIsAOpResult(result))
+      return 1;
+    if (mlirValueIsABlockArgument(result))
+      return 2;
+    if (!mlirOperationEqual(operation, mlirOpResultGetOwner(result)))
+      return 3;
+    if (i != mlirOpResultGetResultNumber(result))
+      return 4;
+    ++stats->numOpResults;
+  }
+
   for (unsigned i = 0; i < numRegions; ++i) {
     MlirRegion region = mlirOperationGetRegion(operation, i);
     for (MlirBlock block = mlirRegionGetFirstBlock(region);
          !mlirBlockIsNull(block); block = mlirBlockGetNextInRegion(block)) {
       ++stats->numBlocks;
-      stats->numValues += mlirBlockGetNumArguments(block);
+      intptr_t numArgs = mlirBlockGetNumArguments(block);
+      stats->numValues += numArgs;
+      for (intptr_t j = 0; j < numArgs; ++j) {
+        MlirValue arg = mlirBlockGetArgument(block, j);
+        if (!mlirValueIsABlockArgument(arg))
+          return 5;
+        if (mlirValueIsAOpResult(arg))
+          return 6;
+        if (!mlirBlockEqual(block, mlirBlockArgumentGetOwner(arg)))
+          return 7;
+        if (j != mlirBlockArgumentGetArgNumber(arg))
+          return 8;
+        ++stats->numBlockArguments;
+      }
 
       for (MlirOperation child = mlirBlockGetFirstOperation(block);
            !mlirOperationIsNull(child);
@@ -183,9 +212,10 @@ void collectStatsSingle(OpListNode *head, ModuleStats *stats) {
       }
     }
   }
+  return 0;
 }
 
-void collectStats(MlirOperation operation) {
+int collectStats(MlirOperation operation) {
   OpListNode *head = malloc(sizeof(OpListNode));
   head->op = operation;
   head->next = NULL;
@@ -196,9 +226,13 @@ void collectStats(MlirOperation operation) {
   stats.numBlocks = 0;
   stats.numRegions = 0;
   stats.numValues = 0;
+  stats.numBlockArguments = 0;
+  stats.numOpResults = 0;
 
   do {
-    collectStatsSingle(head, &stats);
+    int retval = collectStatsSingle(head, &stats);
+    if (retval)
+      return retval;
     OpListNode *next = head->next;
     free(head);
     head = next;
@@ -209,6 +243,11 @@ void collectStats(MlirOperation operation) {
   fprintf(stderr, "Number of blocks: %u\n", stats.numBlocks);
   fprintf(stderr, "Number of regions: %u\n", stats.numRegions);
   fprintf(stderr, "Number of values: %u\n", stats.numValues);
+  fprintf(stderr, "Number of block arguments: %u\n", stats.numBlockArguments);
+  fprintf(stderr, "Number of op results: %u\n", stats.numOpResults);
+  if (stats.numValues != stats.numBlockArguments + stats.numOpResults)
+    return 100;
+  return 0;
 }
 
 static void printToStderr(const char *str, intptr_t len, void *userData) {
@@ -914,13 +953,19 @@ int main() {
   // CHECK: }
   // clang-format on
 
-  collectStats(module);
+  fprintf(stderr, "@stats\n");
+  int errcode = collectStats(module);
+  fprintf(stderr, "%d\n", errcode);
   // clang-format off
+  // CHECK-LABEL: @stats
   // CHECK: Number of operations: 13
   // CHECK: Number of attributes: 4
   // CHECK: Number of blocks: 3
   // CHECK: Number of regions: 3
   // CHECK: Number of values: 9
+  // CHECK: Number of block arguments: 3
+  // CHECK: Number of op results: 6
+  // CHECK: 0
   // clang-format on
 
   printFirstOfEach(ctx, module);
@@ -988,7 +1033,7 @@ int main() {
   // CHECK: 0
   // clang-format on
   fprintf(stderr, "@types\n");
-  int errcode = printStandardTypes(ctx);
+  errcode = printStandardTypes(ctx);
   fprintf(stderr, "%d\n", errcode);
 
   // clang-format off

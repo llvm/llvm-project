@@ -241,6 +241,10 @@ void mlirOperationDestroy(MlirOperation op);
 /** Checks whether the underlying operation is null. */
 static inline int mlirOperationIsNull(MlirOperation op) { return !op.ptr; }
 
+/** Checks whether two operation handles point to the same operation. This does
+ * not perform deep comparison. */
+int mlirOperationEqual(MlirOperation op, MlirOperation other);
+
 /** Returns the number of regions attached to the given operation. */
 intptr_t mlirOperationGetNumRegions(MlirOperation op);
 
@@ -348,6 +352,10 @@ void mlirBlockDestroy(MlirBlock block);
 /** Checks whether a block is null. */
 static inline int mlirBlockIsNull(MlirBlock block) { return !block.ptr; }
 
+/** Checks whether two blocks handles point to the same block. This does not
+ * perform deep comparison. */
+int mlirBlockEqual(MlirBlock block, MlirBlock other);
+
 /** Returns the block immediately following the given block in its parent
  * region. */
 MlirBlock mlirBlockGetNextInRegion(MlirBlock block);
@@ -396,6 +404,30 @@ void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
 
 /** Returns whether the value is null. */
 static inline int mlirValueIsNull(MlirValue value) { return !value.ptr; }
+
+/** Returns 1 if the value is a block argument, 0 otherwise. */
+int mlirValueIsABlockArgument(MlirValue value);
+
+/** Returns 1 if the value is an operation result, 0 otherwise. */
+int mlirValueIsAOpResult(MlirValue value);
+
+/** Returns the block in which this value is defined as an argument. Asserts if
+ * the value is not a block argument. */
+MlirBlock mlirBlockArgumentGetOwner(MlirValue value);
+
+/** Returns the position of the value in the argument list of its block. */
+intptr_t mlirBlockArgumentGetArgNumber(MlirValue value);
+
+/** Sets the type of the block argument to the given type. */
+void mlirBlockArgumentSetType(MlirValue value, MlirType type);
+
+/** Returns an operation that produced this value as its result. Asserts if the
+ * value is not an op result. */
+MlirOperation mlirOpResultGetOwner(MlirValue value);
+
+/** Returns the position of the value in the list of results of the operation
+ * that produced it. */
+intptr_t mlirOpResultGetResultNumber(MlirValue value);
 
 /** Returns the type of the value. */
 MlirType mlirValueGetType(MlirValue value);
