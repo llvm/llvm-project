@@ -1177,6 +1177,9 @@ public:
   static void EnableStatistics();
   static void PrintStats();
 
+  /// \returns the likelihood of a set of attributes.
+  static Likelihood getLikelihood(ArrayRef<const Attr *> Attrs);
+
   /// \returns the likelihood of a statement.
   static Likelihood getLikelihood(const Stmt *S);
 
