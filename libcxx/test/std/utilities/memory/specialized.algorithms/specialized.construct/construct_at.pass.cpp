@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// constexpr destructors are only supported starting with clang 10
+// UNSUPPORTED: clang-5, clang-6, clang-7, clang-8, clang-9
 
 // Investigation needed
 // UNSUPPORTED: gcc
