@@ -18,7 +18,7 @@
 #include "format_string.h"
 
 // For creating socket files
-#if !defined(__FreeBSD__) && !defined(__APPLE__)
+#if !defined(__FreeBSD__) && !defined(__APPLE__) && !defined(_WIN32)
 # include <sys/socket.h>
 # include <sys/un.h>
 #endif
@@ -156,9 +156,9 @@ struct scoped_test_env
         return file;
     }
 
-  // OS X and FreeBSD doesn't support socket files so we shouldn't even
+  // Some platforms doesn't support socket files so we shouldn't even
   // allow tests to call this unguarded.
-#if !defined(__FreeBSD__) && !defined(__APPLE__)
+#if !defined(__FreeBSD__) && !defined(__APPLE__) && !defined(_WIN32)
     std::string create_socket(std::string file) {
         file = sanitize_path(std::move(file));
 
