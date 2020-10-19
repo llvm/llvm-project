@@ -65,7 +65,7 @@ int main(int, char**) {
     const fs::path output = fs::weakly_canonical(p);
     if (!PathEq(output, TC.expect)) {
       Failed = true;
-      std::printf("TEST CASE #%d FAILED:\n"
+      std::fprintf(stderr, "TEST CASE #%d FAILED:\n"
                   "  Input: '%s'\n"
                   "  Expected: '%s'\n"
                   "  Output: '%s'\n",
