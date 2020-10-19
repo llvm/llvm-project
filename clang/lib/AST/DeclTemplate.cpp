@@ -1142,7 +1142,7 @@ VarTemplateDecl::getSpecializations() const {
 }
 
 llvm::FoldingSetVector<VarTemplatePartialSpecializationDecl> &
-VarTemplateDecl::getPartialSpecializations() {
+VarTemplateDecl::getPartialSpecializations() const {
   LoadLazySpecializations();
   return getCommonPtr()->PartialSpecializations;
 }
@@ -1198,7 +1198,7 @@ void VarTemplateDecl::AddPartialSpecialization(
 }
 
 void VarTemplateDecl::getPartialSpecializations(
-    SmallVectorImpl<VarTemplatePartialSpecializationDecl *> &PS) {
+    SmallVectorImpl<VarTemplatePartialSpecializationDecl *> &PS) const {
   llvm::FoldingSetVector<VarTemplatePartialSpecializationDecl> &PartialSpecs =
       getPartialSpecializations();
   PS.clear();
