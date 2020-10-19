@@ -7971,97 +7971,100 @@ const SCEV *ScalarEvolution::getSCEVAtScope(const SCEV *V, const Loop *L) {
 /// Returns NULL if the SCEV isn't representable as a Constant.
 static Constant *BuildConstantFromSCEV(const SCEV *V) {
   switch (static_cast<SCEVTypes>(V->getSCEVType())) {
-    case scCouldNotCompute:
-    case scAddRecExpr:
-      break;
-    case scConstant:
-      return cast<SCEVConstant>(V)->getValue();
-    case scUnknown:
-      return dyn_cast<Constant>(cast<SCEVUnknown>(V)->getValue());
-    case scSignExtend: {
-      const SCEVSignExtendExpr *SS = cast<SCEVSignExtendExpr>(V);
-      if (Constant *CastOp = BuildConstantFromSCEV(SS->getOperand()))
-        return ConstantExpr::getSExt(CastOp, SS->getType());
-      break;
-    }
-    case scZeroExtend: {
-      const SCEVZeroExtendExpr *SZ = cast<SCEVZeroExtendExpr>(V);
-      if (Constant *CastOp = BuildConstantFromSCEV(SZ->getOperand()))
-        return ConstantExpr::getZExt(CastOp, SZ->getType());
-      break;
-    }
-    case scTruncate: {
-      const SCEVTruncateExpr *ST = cast<SCEVTruncateExpr>(V);
-      if (Constant *CastOp = BuildConstantFromSCEV(ST->getOperand()))
-        return ConstantExpr::getTrunc(CastOp, ST->getType());
-      break;
-    }
-    case scAddExpr: {
-      const SCEVAddExpr *SA = cast<SCEVAddExpr>(V);
-      if (Constant *C = BuildConstantFromSCEV(SA->getOperand(0))) {
-        if (PointerType *PTy = dyn_cast<PointerType>(C->getType())) {
-          unsigned AS = PTy->getAddressSpace();
+  case scCouldNotCompute:
+  case scAddRecExpr:
+    break;
+  case scConstant:
+    return cast<SCEVConstant>(V)->getValue();
+  case scUnknown:
+    return dyn_cast<Constant>(cast<SCEVUnknown>(V)->getValue());
+  case scSignExtend: {
+    const SCEVSignExtendExpr *SS = cast<SCEVSignExtendExpr>(V);
+    if (Constant *CastOp = BuildConstantFromSCEV(SS->getOperand()))
+      return ConstantExpr::getSExt(CastOp, SS->getType());
+    break;
+  }
+  case scZeroExtend: {
+    const SCEVZeroExtendExpr *SZ = cast<SCEVZeroExtendExpr>(V);
+    if (Constant *CastOp = BuildConstantFromSCEV(SZ->getOperand()))
+      return ConstantExpr::getZExt(CastOp, SZ->getType());
+    break;
+  }
+  case scTruncate: {
+    const SCEVTruncateExpr *ST = cast<SCEVTruncateExpr>(V);
+    if (Constant *CastOp = BuildConstantFromSCEV(ST->getOperand()))
+      return ConstantExpr::getTrunc(CastOp, ST->getType());
+    break;
+  }
+  case scAddExpr: {
+    const SCEVAddExpr *SA = cast<SCEVAddExpr>(V);
+    if (Constant *C = BuildConstantFromSCEV(SA->getOperand(0))) {
+      if (PointerType *PTy = dyn_cast<PointerType>(C->getType())) {
+        unsigned AS = PTy->getAddressSpace();
+        Type *DestPtrTy = Type::getInt8PtrTy(C->getContext(), AS);
+        C = ConstantExpr::getBitCast(C, DestPtrTy);
+      }
+      for (unsigned i = 1, e = SA->getNumOperands(); i != e; ++i) {
+        Constant *C2 = BuildConstantFromSCEV(SA->getOperand(i));
+        if (!C2)
+          return nullptr;
+
+        // First pointer!
+        if (!C->getType()->isPointerTy() && C2->getType()->isPointerTy()) {
+          unsigned AS = C2->getType()->getPointerAddressSpace();
+          std::swap(C, C2);
           Type *DestPtrTy = Type::getInt8PtrTy(C->getContext(), AS);
+          // The offsets have been converted to bytes.  We can add bytes to an
+          // i8* by GEP with the byte count in the first index.
           C = ConstantExpr::getBitCast(C, DestPtrTy);
         }
-        for (unsigned i = 1, e = SA->getNumOperands(); i != e; ++i) {
-          Constant *C2 = BuildConstantFromSCEV(SA->getOperand(i));
-          if (!C2) return nullptr;
 
-          // First pointer!
-          if (!C->getType()->isPointerTy() && C2->getType()->isPointerTy()) {
-            unsigned AS = C2->getType()->getPointerAddressSpace();
-            std::swap(C, C2);
-            Type *DestPtrTy = Type::getInt8PtrTy(C->getContext(), AS);
-            // The offsets have been converted to bytes.  We can add bytes to an
-            // i8* by GEP with the byte count in the first index.
-            C = ConstantExpr::getBitCast(C, DestPtrTy);
-          }
+        // Don't bother trying to sum two pointers. We probably can't
+        // statically compute a load that results from it anyway.
+        if (C2->getType()->isPointerTy())
+          return nullptr;
 
-          // Don't bother trying to sum two pointers. We probably can't
-          // statically compute a load that results from it anyway.
-          if (C2->getType()->isPointerTy())
-            return nullptr;
-
-          if (PointerType *PTy = dyn_cast<PointerType>(C->getType())) {
-            if (PTy->getElementType()->isStructTy())
-              C2 = ConstantExpr::getIntegerCast(
-                  C2, Type::getInt32Ty(C->getContext()), true);
-            C = ConstantExpr::getGetElementPtr(PTy->getElementType(), C, C2);
-          } else
-            C = ConstantExpr::getAdd(C, C2);
-        }
-        return C;
+        if (PointerType *PTy = dyn_cast<PointerType>(C->getType())) {
+          if (PTy->getElementType()->isStructTy())
+            C2 = ConstantExpr::getIntegerCast(
+                C2, Type::getInt32Ty(C->getContext()), true);
+          C = ConstantExpr::getGetElementPtr(PTy->getElementType(), C, C2);
+        } else
+          C = ConstantExpr::getAdd(C, C2);
       }
-      break;
+      return C;
     }
-    case scMulExpr: {
-      const SCEVMulExpr *SM = cast<SCEVMulExpr>(V);
-      if (Constant *C = BuildConstantFromSCEV(SM->getOperand(0))) {
-        // Don't bother with pointers at all.
-        if (C->getType()->isPointerTy()) return nullptr;
-        for (unsigned i = 1, e = SM->getNumOperands(); i != e; ++i) {
-          Constant *C2 = BuildConstantFromSCEV(SM->getOperand(i));
-          if (!C2 || C2->getType()->isPointerTy()) return nullptr;
-          C = ConstantExpr::getMul(C, C2);
-        }
-        return C;
+    break;
+  }
+  case scMulExpr: {
+    const SCEVMulExpr *SM = cast<SCEVMulExpr>(V);
+    if (Constant *C = BuildConstantFromSCEV(SM->getOperand(0))) {
+      // Don't bother with pointers at all.
+      if (C->getType()->isPointerTy())
+        return nullptr;
+      for (unsigned i = 1, e = SM->getNumOperands(); i != e; ++i) {
+        Constant *C2 = BuildConstantFromSCEV(SM->getOperand(i));
+        if (!C2 || C2->getType()->isPointerTy())
+          return nullptr;
+        C = ConstantExpr::getMul(C, C2);
       }
-      break;
+      return C;
     }
-    case scUDivExpr: {
-      const SCEVUDivExpr *SU = cast<SCEVUDivExpr>(V);
-      if (Constant *LHS = BuildConstantFromSCEV(SU->getLHS()))
-        if (Constant *RHS = BuildConstantFromSCEV(SU->getRHS()))
-          if (LHS->getType() == RHS->getType())
-            return ConstantExpr::getUDiv(LHS, RHS);
-      break;
-    }
-    case scSMaxExpr:
-    case scUMaxExpr:
-    case scSMinExpr:
-    case scUMinExpr:
-      break; // TODO: smax, umax, smin, umax.
+    break;
+  }
+  case scUDivExpr: {
+    const SCEVUDivExpr *SU = cast<SCEVUDivExpr>(V);
+    if (Constant *LHS = BuildConstantFromSCEV(SU->getLHS()))
+      if (Constant *RHS = BuildConstantFromSCEV(SU->getRHS()))
+        if (LHS->getType() == RHS->getType())
+          return ConstantExpr::getUDiv(LHS, RHS);
+    break;
+  }
+  case scSMaxExpr:
+  case scUMaxExpr:
+  case scSMinExpr:
+  case scUMinExpr:
+    break; // TODO: smax, umax, smin, umax.
   }
   return nullptr;
 }
