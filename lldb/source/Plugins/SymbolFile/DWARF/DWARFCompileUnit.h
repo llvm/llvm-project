@@ -20,6 +20,10 @@ public:
 
   static bool classof(const DWARFUnit *unit) { return !unit->IsTypeUnit(); }
 
+  DWARFCompileUnit &GetNonSkeletonUnit();
+
+  DWARFDIE LookupAddress(const dw_addr_t address);
+
 private:
   DWARFCompileUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                    const DWARFUnitHeader &header,
