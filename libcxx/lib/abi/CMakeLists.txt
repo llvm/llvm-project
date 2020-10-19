@@ -23,7 +23,7 @@ if (EXISTS "${ABILIST_FILE}"
          (APPLE AND "${LIBCXX_CXX_ABI_LIBNAME}" STREQUAL "default"))
     AND NOT LIBCXX_ABI_UNSTABLE
     AND LIBCXX_ENABLE_EXCEPTIONS
-    AND LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
+    AND NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
     add_custom_target(check-cxx-abilist
             ${SYMDIFF_EXE} --only-stdlib-symbols --strict ${ABILIST_FILE}
             $<TARGET_SONAME_FILE:cxx_shared>
