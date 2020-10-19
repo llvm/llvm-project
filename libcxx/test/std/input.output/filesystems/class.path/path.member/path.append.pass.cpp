@@ -331,8 +331,8 @@ int main(int, char**)
     doAppendSourceTest<char32_t>(TC);
   }
   for (auto const & TC : LongLHSCases) {
-    doAppendSourceAllocTest<char>(TC);
-    doAppendSourceAllocTest<wchar_t>(TC);
+    LIBCPP_ONLY(doAppendSourceAllocTest<char>(TC));
+    LIBCPP_ONLY(doAppendSourceAllocTest<wchar_t>(TC));
   }
   test_sfinae();
 
