@@ -127,21 +127,11 @@ EXTERN __kmpc_impl_lanemask_t __kmpc_warp_active_thread_mask() {
   return __kmpc_impl_activemask();
 }
 
-EXTERN __kmpc_impl_lanemask_t __kmpc_warp_active_thread_mask64() {
-  PRINT0(LD_IO, "call __kmpc_warp_active_thread_mask64\n");
-  return __kmpc_impl_activemask();
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // Syncwarp
 ////////////////////////////////////////////////////////////////////////////////
 
 EXTERN void __kmpc_syncwarp(__kmpc_impl_lanemask_t Mask) {
   PRINT0(LD_IO, "call __kmpc_syncwarp\n");
-  __kmpc_impl_syncwarp(Mask);
-}
-
-EXTERN void __kmpc_syncwarp64(__kmpc_impl_lanemask_t Mask) {
-  PRINT0(LD_IO, "call __kmpc_syncwarp64\n");
   __kmpc_impl_syncwarp(Mask);
 }

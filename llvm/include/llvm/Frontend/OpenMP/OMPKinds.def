@@ -553,10 +553,9 @@ __OMP_RTL(__kmpc_get_team_static_memory, false, Void, Int16, VoidPtr, SizeTy,
           Int16, VoidPtrPtr)
 __OMP_RTL(__kmpc_restore_team_static_memory, false, Void, Int16, Int16)
 __OMP_RTL(__kmpc_barrier_simple_spmd, false, Void, IdentPtr, Int32)
-__OMP_RTL(__kmpc_warp_active_thread_mask, false, Int32, )
-__OMP_RTL(__kmpc_syncwarp, false, Void, Int32)
-__OMP_RTL(__kmpc_warp_active_thread_mask64, false, Int64, )
-__OMP_RTL(__kmpc_syncwarp64, false, Void, Int64)
+
+__OMP_RTL(__kmpc_warp_active_thread_mask, false, LanemaskTy,)
+__OMP_RTL(__kmpc_syncwarp, false, Void, LanemaskTy)
 
 __OMP_RTL(__last, false, Void, )
 

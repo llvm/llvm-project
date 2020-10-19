@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -62,6 +63,7 @@ FunctionCallee
 OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
   FunctionType *FnTy = nullptr;
   Function *Fn = nullptr;
+  Type *LanemaskTy = getLanemaskType();
 
   // Try to find the declation in the module first.
   switch (FnID) {
@@ -215,6 +217,14 @@ Value *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
     Ident = GV;
   }
   return Ident;
+}
+
+Type *OpenMPIRBuilder::getLanemaskType() {
+  LLVMContext &Ctx = M.getContext();
+  Triple triple(M.getTargetTriple());
+
+  // This test is adequate until deviceRTL has finer grained lane widths
+  return triple.isAMDGCN() ? Type::getInt64Ty(Ctx) : Type::getInt32Ty(Ctx);
 }
 
 Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(StringRef LocStr) {
@@ -1177,6 +1187,8 @@ Value *OpenMPIRBuilder::getOMPCriticalRegionLock(StringRef CriticalName) {
 void OpenMPIRBuilder::initializeTypes(Module &M) {
   LLVMContext &Ctx = M.getContext();
   StructType *T;
+  LanemaskTy = getLanemaskType();
+
 #define OMP_TYPE(VarName, InitValue) VarName = InitValue;
 #define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
   VarName##Ty = ArrayType::get(ElemTy, ArraySize);                             \

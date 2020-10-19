@@ -2597,11 +2597,8 @@ void CGOpenMPRuntimeGPU::emitCriticalRegion(
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
 
   // Get the mask of active threads in the warp.
-  bool isAMDGCN = CGM.getTriple().isAMDGCN();
   llvm::Value *Mask = CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-      CGM.getModule(),
-      isAMDGCN ?  OMPRTL___kmpc_warp_active_thread_mask64
-               :  OMPRTL___kmpc_warp_active_thread_mask));
+      CGM.getModule(), OMPRTL___kmpc_warp_active_thread_mask));
   // Fetch team-local id of the thread.
   llvm::Value *ThreadID = RT.getGPUThreadID(CGF);
 
@@ -2643,11 +2640,8 @@ void CGOpenMPRuntimeGPU::emitCriticalRegion(
   // counter variable and returns to the loop.
   CGF.EmitBlock(SyncBB);
   // Reconverge active threads in the warp.
-  isAMDGCN = CGM.getTriple().isAMDGCN();
   (void)CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                                CGM.getModule(),
-			          isAMDGCN ? OMPRTL___kmpc_syncwarp64
-			                   : OMPRTL___kmpc_syncwarp),
+                                CGM.getModule(), OMPRTL___kmpc_syncwarp),
                             Mask);
 
   llvm::Value *IncCounterVal =
