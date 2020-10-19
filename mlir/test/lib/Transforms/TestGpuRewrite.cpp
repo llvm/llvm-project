@@ -18,8 +18,8 @@
 using namespace mlir;
 
 namespace {
-struct TestAllReduceLoweringPass
-    : public PassWrapper<TestAllReduceLoweringPass, OperationPass<ModuleOp>> {
+struct TestGpuRewritePass
+    : public PassWrapper<TestGpuRewritePass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<StandardOpsDialect>();
   }
@@ -33,8 +33,8 @@ struct TestAllReduceLoweringPass
 
 namespace mlir {
 void registerTestAllReduceLoweringPass() {
-  PassRegistration<TestAllReduceLoweringPass> pass(
-      "test-all-reduce-lowering",
-      "Lowers gpu.all-reduce ops within the GPU dialect.");
+  PassRegistration<TestGpuRewritePass> pass(
+      "test-gpu-rewrite",
+      "Applies all rewrite patterns within the GPU dialect.");
 }
 } // namespace mlir
