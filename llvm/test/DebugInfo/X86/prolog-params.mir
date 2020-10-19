@@ -148,7 +148,6 @@ body:             |
 
 # Locals and stack parameters are emitted after the prologue code.
 # CHECK: DBG_VALUE $rsp, 0, ![[P6]], !DIExpression(DW_OP_plus_uconst, 16)
-# CHECK-NEXT: DBG_VALUE $r9d, $noreg, ![[P6]], !DIExpression()
 # CHECK-NEXT: DBG_VALUE $rsp, 0, ![[P7]], !DIExpression(DW_OP_plus_uconst, 24)
 # CHECK-NEXT: DBG_VALUE $rsp, 0, ![[P8]], !DIExpression(DW_OP_plus_uconst, 32)
 # CHECK-NEXT: DBG_VALUE $edi, $noreg, ![[LOCAL1]], !DIExpression()
