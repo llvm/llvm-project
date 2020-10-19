@@ -2,7 +2,7 @@
 
 This is Apple's fork of llvm-project.  For more information on Apple's
 branching scheme, please see
-[apple-docs/AppleBranchingScheme.md](https://github.com/apple/llvm-project/tree/apple/master/apple-docs/AppleBranchingScheme.md).
+[apple-docs/AppleBranchingScheme.md](https://github.com/apple/llvm-project/tree/apple/main/apple-docs/AppleBranchingScheme.md).
 
 The LLVM project's main README follows.
 
