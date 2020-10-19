@@ -356,11 +356,19 @@ public:
   }
 
   // C1564
+  void Post(const parser::InterfaceBody::Function &func) {
+    CheckOptionalName<parser::FunctionStmt>("FUNCTION", func,
+        std::get<parser::Statement<parser::EndFunctionStmt>>(func.t));
+  }
+
+  // C1564
   void Post(const parser::FunctionSubprogram &functionSubprogram) {
     CheckOptionalName<parser::FunctionStmt>("FUNCTION", functionSubprogram,
         std::get<parser::Statement<parser::EndFunctionStmt>>(
             functionSubprogram.t));
   }
+
+  // C1502
   void Post(const parser::InterfaceBlock &interfaceBlock) {
     auto &interfaceStmt{
         std::get<parser::Statement<parser::InterfaceStmt>>(interfaceBlock.t)};
@@ -381,7 +389,7 @@ public:
                 context_
                     .Say(currentPosition_,
                         parser::MessageFormattedText{
-                            "INTERFACE generic-name (%s) mismatch"_en_US,
+                            "INTERFACE generic-name (%s) mismatch"_err_en_US,
                             namePointer->source})
                     .Attach(interfaceStmt.source, "mismatched INTERFACE"_en_US);
               }
@@ -430,6 +438,12 @@ public:
   void Post(const parser::Submodule &submodule) {
     CheckOptionalName<parser::SubmoduleStmt>("SUBMODULE", submodule,
         std::get<parser::Statement<parser::EndSubmoduleStmt>>(submodule.t));
+  }
+
+  // C1567
+  void Post(const parser::InterfaceBody::Subroutine &sub) {
+    CheckOptionalName<parser::SubroutineStmt>("SUBROUTINE", sub,
+        std::get<parser::Statement<parser::EndSubroutineStmt>>(sub.t));
   }
 
   // C1567
