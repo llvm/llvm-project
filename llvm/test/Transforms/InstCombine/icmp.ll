@@ -2162,6 +2162,32 @@ define i1 @or_icmp_eq_B_0_icmp_ult_A_B(i64 %a, i64 %b) {
   ret i1 %3
 }
 
+define <2 x i1> @or_icmp_eq_B_0_icmp_ult_A_B_uniform(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @or_icmp_eq_B_0_icmp_ult_A_B_uniform(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i64> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i64> [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
+;
+  %1 = icmp eq <2 x i64> %b, zeroinitializer
+  %2 = icmp ult <2 x i64> %a, %b
+  %3 = or <2 x i1> %1, %2
+  ret <2 x i1> %3
+}
+
+define <2 x i1> @or_icmp_eq_B_0_icmp_ult_A_B_undef(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @or_icmp_eq_B_0_icmp_ult_A_B_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i64> [[B:%.*]], <i64 0, i64 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i64> [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
+;
+  %1 = icmp eq <2 x i64> %b, <i64 0, i64 undef>
+  %2 = icmp ult <2 x i64> %a, %b
+  %3 = or <2 x i1> %1, %2
+  ret <2 x i1> %3
+}
+
 define i1 @icmp_add_ult_2(i32 %X) {
 ; CHECK-LABEL: @icmp_add_ult_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2
