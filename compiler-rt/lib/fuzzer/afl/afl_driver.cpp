@@ -60,31 +60,21 @@ If 1, close stdout at startup. If 2 close stderr; if 3 close both.
 #define LIBFUZZER_APPLE 0
 #define LIBFUZZER_NETBSD 0
 #define LIBFUZZER_FREEBSD 0
-#define LIBFUZZER_OPENBSD 0
 #elif __APPLE__
 #define LIBFUZZER_LINUX 0
 #define LIBFUZZER_APPLE 1
 #define LIBFUZZER_NETBSD 0
 #define LIBFUZZER_FREEBSD 0
-#define LIBFUZZER_OPENBSD 0
 #elif __NetBSD__
 #define LIBFUZZER_LINUX 0
 #define LIBFUZZER_APPLE 0
 #define LIBFUZZER_NETBSD 1
 #define LIBFUZZER_FREEBSD 0
-#define LIBFUZZER_OPENBSD 0
 #elif __FreeBSD__
 #define LIBFUZZER_LINUX 0
 #define LIBFUZZER_APPLE 0
 #define LIBFUZZER_NETBSD 0
 #define LIBFUZZER_FREEBSD 1
-#define LIBFUZZER_OPENBSD 0
-#elif __OpenBSD__
-#define LIBFUZZER_LINUX 0
-#define LIBFUZZER_APPLE 0
-#define LIBFUZZER_NETBSD 0
-#define LIBFUZZER_FREEBSD 0
-#define LIBFUZZER_OPENBSD 1
 #else
 #error "Support for your platform has not been implemented"
 #endif

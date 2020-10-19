@@ -12,7 +12,7 @@
 #include "sanitizer_platform.h"
 
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD ||                \
-    SANITIZER_OPENBSD || SANITIZER_SOLARIS
+    SANITIZER_SOLARIS
 
 #include "sanitizer_common.h"
 #include "sanitizer_placement_new.h"
