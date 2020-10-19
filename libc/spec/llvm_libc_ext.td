@@ -14,7 +14,42 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
       ]
   >;
 
+  HeaderSpec Assert = HeaderSpec<
+      "assert.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<
+              "__assert_fail",
+              RetValSpec<NoReturn>,
+              [ArgSpec<ConstCharPtr>,
+               ArgSpec<ConstCharPtr>,
+               ArgSpec<UnsignedType>,
+               ArgSpec<ConstCharPtr>,]
+
+          >,
+      ]
+  >;
+
+  HeaderSpec Errno = HeaderSpec<
+      "errno.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      [
+          FunctionSpec<
+              "__errno_location",
+              RetValSpec<IntPtr>,
+              [ArgSpec<VoidType>]
+
+          >,
+      ]
+  >;
+
   let Headers = [
     String,
+    Assert,
+    Errno,
   ];
 }
