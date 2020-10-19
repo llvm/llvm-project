@@ -253,7 +253,7 @@ public:
 class SICacheControl {
 protected:
 
-  //// AMDGPU subtarget info.
+  /// AMDGPU subtarget info.
   const GCNSubtarget &ST;
 
   /// Instruction info.
