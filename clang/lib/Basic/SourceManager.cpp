@@ -434,9 +434,11 @@ const SrcMgr::SLocEntry &SourceManager::loadSLocEntry(unsigned Index,
     // If the file of the SLocEntry changed we could still have loaded it.
     if (!SLocEntryLoaded[Index]) {
       // Try to recover; create a SLocEntry so the rest of clang can handle it.
-      LoadedSLocEntryTable[Index] = SLocEntry::get(
-          0, FileInfo::get(SourceLocation(), getFakeContentCacheForRecovery(),
-                           SrcMgr::C_User, ""));
+      if (!FakeSLocEntryForRecovery)
+        FakeSLocEntryForRecovery = std::make_unique<SLocEntry>(SLocEntry::get(
+            0, FileInfo::get(SourceLocation(), getFakeContentCacheForRecovery(),
+                             SrcMgr::C_User, "")));
+      return *FakeSLocEntryForRecovery;
     }
   }
 

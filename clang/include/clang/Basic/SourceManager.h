@@ -693,7 +693,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   ///
   /// Negative FileIDs are indexes into this table. To get from ID to an index,
   /// use (-ID - 2).
-  mutable SmallVector<SrcMgr::SLocEntry, 0> LoadedSLocEntryTable;
+  SmallVector<SrcMgr::SLocEntry, 0> LoadedSLocEntryTable;
 
   /// The starting offset of the next local SLocEntry.
   ///
@@ -774,6 +774,8 @@ class SourceManager : public RefCountedBase<SourceManager> {
   mutable std::unique_ptr<llvm::MemoryBuffer> FakeBufferForRecovery;
 
   mutable std::unique_ptr<SrcMgr::ContentCache> FakeContentCacheForRecovery;
+
+  mutable std::unique_ptr<SrcMgr::SLocEntry> FakeSLocEntryForRecovery;
 
   /// Lazily computed map of macro argument chunks to their expanded
   /// source location.
