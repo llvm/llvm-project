@@ -253,6 +253,9 @@ public:
 class SICacheControl {
 protected:
 
+  //// AMDGPU subtarget info.
+  const GCNSubtarget &ST;
+
   /// Instruction info.
   const SIInstrInfo *TII = nullptr;
 
@@ -379,7 +382,6 @@ public:
 
 class SIGfx10CacheControl : public SIGfx7CacheControl {
 protected:
-  bool CuMode = false;
 
   /// Sets DLC bit to "true" if present in \p MI. Returns true if \p MI
   /// is modified, false otherwise.
@@ -389,8 +391,7 @@ protected:
 
 public:
 
-  SIGfx10CacheControl(const GCNSubtarget &ST, bool CuMode) :
-    SIGfx7CacheControl(ST), CuMode(CuMode) {};
+  SIGfx10CacheControl(const GCNSubtarget &ST) : SIGfx7CacheControl(ST) {};
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
                              SIAtomicScope Scope,
@@ -672,7 +673,7 @@ Optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
   return constructFromMIWithMMO(MI);
 }
 
-SICacheControl::SICacheControl(const GCNSubtarget &ST) {
+SICacheControl::SICacheControl(const GCNSubtarget &ST) : ST(ST) {
   TII = ST.getInstrInfo();
   IV = getIsaVersion(ST.getCPU());
   InsertCacheInv = !AmdgcnSkipCacheInvalidations;
@@ -685,7 +686,7 @@ std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST) {
     return std::make_unique<SIGfx6CacheControl>(ST);
   if (Generation < AMDGPUSubtarget::GFX10)
     return std::make_unique<SIGfx7CacheControl>(ST);
-  return std::make_unique<SIGfx10CacheControl>(ST, ST.isCuModeEnabled());
+  return std::make_unique<SIGfx10CacheControl>(ST);
 }
 
 bool SIGfx6CacheControl::enableLoadCacheBypass(
@@ -956,7 +957,7 @@ bool SIGfx10CacheControl::enableLoadCacheBypass(
       // the WGP. Therefore need to bypass the L0 which is per CU. Otherwise in
       // CU mode all waves of a work-group are on the same CU, and so the L0
       // does not need to be bypassed.
-      if (!CuMode) Changed |= enableGLCBit(MI);
+      if (!ST.isCuModeEnabled()) Changed |= enableGLCBit(MI);
       break;
     case SIAtomicScope::WAVEFRONT:
     case SIAtomicScope::SINGLETHREAD:
@@ -1016,7 +1017,7 @@ bool SIGfx10CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
       // the WGP. Therefore need to invalidate the L0 which is per CU. Otherwise
       // in CU mode and all waves of a work-group are on the same CU, and so the
       // L0 does not need to be invalidated.
-      if (!CuMode) {
+      if (!ST.isCuModeEnabled()) {
         BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_GL0_INV));
         Changed = true;
       }
@@ -1076,7 +1077,7 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
       // they are visible to waves in the other CU as the L0 is per CU.
       // Otherwise in CU mode and all waves of a work-group are on the same CU
       // which shares the same L0.
-      if (!CuMode) {
+      if (!ST.isCuModeEnabled()) {
         if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
           VMCnt |= true;
         if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
