@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm-c/LLJIT.h"
 #include "llvm-c/Orc.h"
 #include "llvm-c/TargetMachine.h"
 
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -77,6 +80,7 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeContext,
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeModule, LLVMOrcThreadSafeModuleRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITTargetMachineBuilder,
                                    LLVMOrcJITTargetMachineBuilderRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ObjectLayer, LLVMOrcObjectLayerRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLJITBuilder, LLVMOrcLLJITBuilderRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLJIT, LLVMOrcLLJITRef)
 
@@ -295,7 +299,7 @@ void LLVMOrcJITDylibAddGenerator(LLVMOrcJITDylibRef JD,
 }
 
 LLVMOrcDefinitionGeneratorRef LLVMOrcCreateCustomCAPIDefinitionGenerator(
-    void *Ctx, LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction F) {
+    LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction F, void *Ctx) {
   auto DG = std::make_unique<CAPIDefinitionGenerator>(Ctx, F);
   return wrap(DG.release());
 }
@@ -310,7 +314,7 @@ LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
   DynamicLibrarySearchGenerator::SymbolPredicate Pred;
   if (Filter)
     Pred = [=](const SymbolStringPtr &Name) -> bool {
-      return Filter(wrap(OrcV2CAPIHelper::getRawPoolEntryPtr(Name)), FilterCtx);
+      return Filter(FilterCtx, wrap(OrcV2CAPIHelper::getRawPoolEntryPtr(Name)));
     };
 
   auto ProcessSymsGenerator =
@@ -388,6 +392,10 @@ void LLVMOrcDisposeJITTargetMachineBuilder(
   delete unwrap(JTMB);
 }
 
+void lLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer) {
+  delete unwrap(ObjLayer);
+}
+
 LLVMOrcLLJITBuilderRef LLVMOrcCreateLLJITBuilder(void) {
   return wrap(new LLJITBuilder());
 }
@@ -399,6 +407,17 @@ void LLVMOrcDisposeLLJITBuilder(LLVMOrcLLJITBuilderRef Builder) {
 void LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(
     LLVMOrcLLJITBuilderRef Builder, LLVMOrcJITTargetMachineBuilderRef JTMB) {
   unwrap(Builder)->setJITTargetMachineBuilder(*unwrap(JTMB));
+}
+
+void LLVMOrcLLJITBuilderSetObjectLinkingLayerCreator(
+    LLVMOrcLLJITBuilderRef Builder,
+    LLVMOrcLLJITBuilderObjectLinkingLayerCreatorFunction F, void *Ctx) {
+  unwrap(Builder)->setObjectLinkingLayerCreator(
+      [=](ExecutionSession &ES, const Triple &TT) {
+        auto TTStr = TT.str();
+        return std::unique_ptr<ObjectLayer>(
+            unwrap(F(Ctx, wrap(&ES), TTStr.c_str())));
+      });
 }
 
 LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,
@@ -489,4 +508,21 @@ LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,
 
   *Result = Sym->getAddress();
   return LLVMErrorSuccess;
+}
+
+LLVMOrcObjectLayerRef
+LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManager(
+    LLVMOrcExecutionSessionRef ES) {
+  assert(ES && "ES must not be null");
+  return wrap(new RTDyldObjectLinkingLayer(
+      *unwrap(ES), [] { return std::make_unique<SectionMemoryManager>(); }));
+}
+
+void LLVMOrcRTDyldObjectLinkingLayerRegisterJITEventListener(
+    LLVMOrcObjectLayerRef RTDyldObjLinkingLayer,
+    LLVMJITEventListenerRef Listener) {
+  assert(RTDyldObjLinkingLayer && "RTDyldObjLinkingLayer must not be null");
+  assert(Listener && "Listener must not be null");
+  reinterpret_cast<RTDyldObjectLinkingLayer *>(unwrap(RTDyldObjLinkingLayer))
+      ->registerJITEventListener(*unwrap(Listener));
 }
