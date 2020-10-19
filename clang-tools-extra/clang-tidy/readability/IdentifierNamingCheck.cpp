@@ -55,6 +55,7 @@ namespace readability {
     m(Namespace) \
     m(InlineNamespace) \
     m(EnumConstant) \
+    m(ScopedEnumConstant) \
     m(ConstexprVariable) \
     m(ConstantMember) \
     m(PrivateMember) \
@@ -405,7 +406,11 @@ static StyleKind findStyleKind(
   if (isa<EnumDecl>(D) && NamingStyles[SK_Enum])
     return SK_Enum;
 
-  if (isa<EnumConstantDecl>(D)) {
+  if (const auto *EnumConst = dyn_cast<EnumConstantDecl>(D)) {
+    if (cast<EnumDecl>(EnumConst->getDeclContext())->isScoped() &&
+        NamingStyles[SK_ScopedEnumConstant])
+      return SK_ScopedEnumConstant;
+
     if (NamingStyles[SK_EnumConstant])
       return SK_EnumConstant;
 
