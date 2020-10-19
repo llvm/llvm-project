@@ -56,7 +56,7 @@
 #define TODO_NOLOCDEFN(ToDoMsg, ToDoFile, ToDoLine)                            \
   do {                                                                         \
     llvm::report_fatal_error(                                                  \
-        __FILE__ ":" TODOQUOTE(__LINE__) ": not yet implemented " ToDoMsg);    \
+        ToDoFile ":" TODOQUOTE(ToDoLine) ": not yet implemented " ToDoMsg);    \
   } while (false)
 
 #define TODO_NOLOC(ToDoMsg) TODO_NOLOCDEFN(ToDoMsg, __FILE__, __LINE__)
