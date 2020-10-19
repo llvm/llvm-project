@@ -2200,10 +2200,9 @@ define i1 @or_icmp_ne_A_0_icmp_ne_B_0(i64 %a, i64 %b) {
 
 define <2 x i1> @or_icmp_ne_A_0_icmp_ne_B_0_uniform(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @or_icmp_ne_A_0_icmp_ne_B_0_uniform(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i64> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[B:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i64> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %1 = icmp ne <2 x i64> %a, zeroinitializer
   %2 = icmp ne <2 x i64> %b, zeroinitializer
@@ -2213,10 +2212,9 @@ define <2 x i1> @or_icmp_ne_A_0_icmp_ne_B_0_uniform(<2 x i64> %a, <2 x i64> %b) 
 
 define <2 x i1> @or_icmp_ne_A_0_icmp_ne_B_0_undef(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: @or_icmp_ne_A_0_icmp_ne_B_0_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i64> [[A:%.*]], <i64 0, i64 undef>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[B:%.*]], <i64 0, i64 undef>
-; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i64> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %1 = icmp ne <2 x i64> %a, <i64 0, i64 undef>
   %2 = icmp ne <2 x i64> %b, <i64 0, i64 undef>
