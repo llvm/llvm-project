@@ -15,9 +15,8 @@ define void @func() {
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, src@gotoff_hi(, %s0)
 ; CHECK-NEXT:    ld1b.zx %s0, (%s0, %s15)
-; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    lea %s2, 100
-; CHECK-NEXT:    cmov.w.ne %s1, %s2, %s0
+; CHECK-NEXT:    lea %s1, 100
+; CHECK-NEXT:    cmov.w.eq %s1, (0)1, %s0
 ; CHECK-NEXT:    lea %s0, dst@gotoff_lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, dst@gotoff_hi(, %s0)
