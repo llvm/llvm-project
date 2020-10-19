@@ -86,3 +86,21 @@ func @tensor_from_elements(%arg0: index, %arg1: index) -> tensor<2xindex> {
   %0 = tensor_from_elements %arg0, %arg1 : tensor<2xindex>
   return %0 : tensor<2xindex>
 }
+
+// The dynamic_tensor_from_elements op clones each op in its body.
+// Make sure that regions nested within such ops are recursively converted.
+// CHECK-LABEL: func @recursively_convert_cloned_regions
+func @recursively_convert_cloned_regions(%arg0: tensor<?xindex>, %arg1: index, %arg2: i1) -> tensor<?xindex> {
+  %tensor = dynamic_tensor_from_elements %arg1 {
+  ^bb0(%iv: index):
+    %48 = scf.if %arg2 -> (index) {
+      scf.yield %iv : index
+    } else {
+      // CHECK-NOT: extract_element
+      %50 = extract_element %arg0[%iv] : tensor<?xindex>
+      scf.yield %50 : index
+    }
+    yield %48 : index
+  } : tensor<?xindex>
+  return %tensor : tensor<?xindex>
+}
