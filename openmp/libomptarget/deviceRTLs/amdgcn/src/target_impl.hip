@@ -36,9 +36,12 @@ DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt() {
 
 DEVICE double __kmpc_impl_get_wtick() { return ((double)1E-9); }
 
-EXTERN uint64_t __clock64();
 DEVICE double __kmpc_impl_get_wtime() {
-  return ((double)1.0 / 745000000.0) * __clock64();
+  // The intrinsics for measuring time have undocumented frequency
+  // This will probably need to be found by measurement on a number of
+  // architectures. Until then, return 0, which is very inaccurate as a
+  // timer but resolves the undefined symbol at link time.
+  return 0;
 }
 
 // Warp vote function
@@ -115,11 +118,38 @@ DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
   __atomic_thread_fence(__ATOMIC_RELEASE);
 }
 
-EXTERN uint64_t __ockl_get_local_size(uint32_t);
-EXTERN uint64_t __ockl_get_num_groups(uint32_t);
-DEVICE int GetNumberOfBlocksInKernel() { return __ockl_get_num_groups(0); }
-DEVICE int GetNumberOfThreadsInBlock() { return __ockl_get_local_size(0); }
+namespace {
+DEVICE uint32_t grid_size_x() {
+  size_t grid_size_x_offset = 96; // In bits, from AQL kernel dispatch format
+  return *(uint32_t *)((char *)__builtin_amdgcn_dispatch_ptr() +
+                       grid_size_x_offset / 8);
+}
+
+DEVICE uint32_t get_grid_dim(uint32_t n, uint16_t d) {
+  uint32_t q = n / d;
+  return q + (n > q * d);
+}
+DEVICE uint32_t get_workgroup_dim(uint32_t group_id, uint32_t grid_size,
+                                  uint16_t group_size) {
+  uint32_t r = grid_size - group_id * group_size;
+  return (r < group_size) ? r : group_size;
+}
+} // namespace
+
+DEVICE int GetNumberOfBlocksInKernel() {
+  return get_grid_dim(grid_size_x(), __builtin_amdgcn_workgroup_size_x());
+}
+
+DEVICE int GetNumberOfThreadsInBlock() {
+  return get_workgroup_dim(__builtin_amdgcn_workgroup_id_x(), grid_size_x(),
+                           __builtin_amdgcn_workgroup_size_x());
+}
+
 DEVICE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
 DEVICE unsigned GetLaneId() {
   return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
 }
+
+// Stub implementations
+DEVICE void *__kmpc_impl_malloc(size_t ) { return nullptr }
+DEVICE void __kmpc_impl_free(void *) {}
