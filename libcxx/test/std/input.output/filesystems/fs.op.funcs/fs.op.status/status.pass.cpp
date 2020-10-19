@@ -115,7 +115,7 @@ TEST_CASE(status_file_types_test)
         {static_env.SymlinkToDir, file_type::directory},
         // Block files tested elsewhere
         {static_env.CharFile, file_type::character},
-#if !defined(__APPLE__) && !defined(__FreeBSD__) // No support for domain sockets
+#if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(_WIN32) // No support for domain sockets
         {env.create_socket("socket"), file_type::socket},
 #endif
         {env.create_fifo("fifo"), file_type::fifo}
