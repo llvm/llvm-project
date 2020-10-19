@@ -7,12 +7,3 @@ def bar(x) foo(2 * x);
 bar(2);
 # CHECK: Evaluated to 5.000000
 
-# Test redefinition.
-def foo(x) x + 2;
-foo(2);
-# CHECK: Evaluated to 4.000000
-
-# Verify that 'bar' still calls the original 'foo'.
-bar(2);
-# CHECK: Evaluated to 5.000000
-
