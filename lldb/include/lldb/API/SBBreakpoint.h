@@ -42,6 +42,8 @@ public:
 
   void ClearAllBreakpointSites();
 
+  lldb::SBTarget GetTarget() const;
+
   lldb::SBBreakpointLocation FindLocationByAddress(lldb::addr_t vm_addr);
 
   lldb::break_id_t FindLocationIDByAddress(lldb::addr_t vm_addr);
