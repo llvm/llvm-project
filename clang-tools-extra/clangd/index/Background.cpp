@@ -416,7 +416,7 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
 }
 
 void BackgroundIndex::profile(MemoryTree &MT) const {
-  IndexedSymbols.profile(MT.child("symbols"));
+  IndexedSymbols.profile(MT.child("slabs"));
   // We don't want to mix memory used by index and symbols, so call base class.
   MT.child("index").addUsage(SwapIndex::estimateMemoryUsage());
 }

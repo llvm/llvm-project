@@ -478,11 +478,11 @@ void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
 }
 
 void FileIndex::profile(MemoryTree &MT) const {
-  PreambleSymbols.profile(MT.child("preamble").child("symbols"));
+  PreambleSymbols.profile(MT.child("preamble").child("slabs"));
   MT.child("preamble")
       .child("index")
       .addUsage(PreambleIndex.estimateMemoryUsage());
-  MainFileSymbols.profile(MT.child("main_file").child("symbols"));
+  MainFileSymbols.profile(MT.child("main_file").child("slabs"));
   MT.child("main_file")
       .child("index")
       .addUsage(MainFileIndex.estimateMemoryUsage());
