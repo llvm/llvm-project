@@ -116,8 +116,7 @@ ProgramHeaders:
 # BAD-STRING-LLVM-NEXT:   0x0000000000000000 NULL      0x0
 # BAD-STRING-LLVM-NEXT: ]
 
-# BAD-STRING-GNU:      warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb6: it goes past the end of the table (0xb1)
-# BAD-STRING-GNU-NEXT: Dynamic section at offset 0xb1 contains 10 entries:
+# BAD-STRING-GNU:      Dynamic section at offset 0xb1 contains 10 entries:
 # BAD-STRING-GNU-NEXT:   Tag                Type        Name/Value
 # BAD-STRING-GNU-NEXT:   0x0000000000000005 (STRTAB)    0x1000
 # BAD-STRING-GNU-NEXT:   0x000000000000000a (STRSZ)     1 (bytes)
@@ -129,7 +128,7 @@ ProgramHeaders:
 # BAD-STRING-GNU-NEXT:   0x000000007ffffffd (AUXILIARY) Auxiliary library: [<?>]
 # BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb5: it goes past the end of the table (0xb1)
 # BAD-STRING-GNU-NEXT:   0x000000007ffffffe (USED)      Not needed object: [<?>]
-## Note: there is no "string table at offset 0xb6..." warning here, because it was printed earlier.
+# BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb6: it goes past the end of the table (0xb1)
 # BAD-STRING-GNU-NEXT:   0x000000000000000e (SONAME)    Library soname: [<?>]
 # BAD-STRING-GNU-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb7: it goes past the end of the table (0xb1)
 # BAD-STRING-GNU-NEXT:   0x000000000000000f (RPATH)     Library rpath: [<?>]
@@ -186,23 +185,26 @@ ProgramHeaders:
 # RUN: yaml2obj %s --docnum=4 -o %t.bad-strtab
 
 # RUN: llvm-readobj --dynamic-table %t.bad-strtab 2>&1 >/dev/null | \
-# RUN:   FileCheck -DFILE=%t.bad-strtab %s --check-prefix BAD-STRTAB-ERR
+# RUN:   FileCheck -DFILE=%t.bad-strtab %s --implicit-check-not=warning: --check-prefix=BAD-STRTAB-ERR
 # RUN: llvm-readelf --dynamic-table %t.bad-strtab 2>&1 >/dev/null | \
-# RUN:   FileCheck -DFILE=%t.bad-strtab %s --check-prefix BAD-STRTAB-ERR
-# BAD-STRTAB-ERR: warning: '[[FILE]]': Unable to parse DT_STRTAB: virtual address is not in any segment: 0x2000000
-# BAD-STRTAB-ERR: warning: '[[FILE]]': string table was not found
+# RUN:   FileCheck -DFILE=%t.bad-strtab %s --implicit-check-not=warning: --check-prefix=BAD-STRTAB-ERR
+# BAD-STRTAB-ERR:    warning: '[[FILE]]': Unable to parse DT_STRTAB: virtual address is not in any segment: 0x2000000
+# BAD-STRTAB-ERR:    warning: '[[FILE]]': string table was not found
+# BAD-STRTAB-ERR-NOT:{{.}}
 
 # RUN: llvm-readobj --dynamic-table --needed-libs %t.bad-strtab 2>&1 | \
-# RUN:   FileCheck -DFILE=%t.bad-strtab %s --check-prefixes=BAD-STRTAB-ERR,BAD-STRTAB,BAD-STRTAB-LLVM
+# RUN:   FileCheck -DFILE=%t.bad-strtab %s --check-prefixes=BAD-STRTAB-ERR2,BAD-STRTAB,BAD-STRTAB-LLVM
 # RUN: llvm-readelf --dynamic-table --needed-libs %t.bad-strtab 2>&1 | \
-# RUN:   FileCheck -DFILE=%t.bad-strtab %s --check-prefixes=BAD-STRTAB-ERR,BAD-STRTAB,BAD-STRTAB-GNU
+# RUN:   FileCheck -DFILE=%t.bad-strtab %s --check-prefixes=BAD-STRTAB-ERR2,BAD-STRTAB,BAD-STRTAB-GNU
 
-# BAD-STRTAB-LLVM: LoadName: <?>
-# BAD-STRTAB-LLVM: 0x0000000000000001  NEEDED   Shared library: [<?>]
-# BAD-STRTAB-GNU:  0x0000000000000001 (NEEDED)  Shared library: [<?>]
-# BAD-STRTAB:      NeededLibraries [
-# BAD-STRTAB:        <?>
-# BAD-STRTAB:      ]
+#      BAD-STRTAB-ERR2: warning: '[[FILE]]': Unable to parse DT_STRTAB: virtual address is not in any segment: 0x2000000
+#      BAD-STRTAB-LLVM: LoadName: <Not found>
+#           BAD-STRTAB: warning: '[[FILE]]': string table was not found
+# BAD-STRTAB-LLVM-NEXT: 0x0000000000000001  NEEDED   Shared library: [<?>]
+#  BAD-STRTAB-GNU-NEXT: 0x0000000000000001 (NEEDED)  Shared library: [<?>]
+#           BAD-STRTAB: NeededLibraries [
+#           BAD-STRTAB:   <?>
+#           BAD-STRTAB: ]
 
 --- !ELF
 FileHeader:
@@ -281,27 +283,33 @@ ProgramHeaders:
 ##         the not null-terminated dynamic string table.
 # RUN: yaml2obj %s -DSTRSZ=7 --docnum=6 -o %t6
 # RUN: llvm-readobj --dynamic-table %t6 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t6 --implicit-check-not=warning: --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-GREQ
+# RUN:   FileCheck %s -DFILE=%t6 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-LLVM,NOT-TERMINATED-GREQ
 # RUN: llvm-readelf --dynamic-table %t6 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t6 --implicit-check-not=warning: --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-GREQ
+# RUN:   FileCheck %s -DFILE=%t6 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-GNU,NOT-TERMINATED-GREQ
 
 ## Case B: the value of the DT_STRSZ tag is less than the size of
 ##         the not null-terminated dynamic string table.
 # RUN: yaml2obj %s -DSTRSZ=6 --docnum=6 -o %t7
 # RUN: llvm-readobj --dynamic-table %t7 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t7 --implicit-check-not=warning: --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-LESS
+# RUN:   FileCheck %s -DFILE=%t7 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-LLVM,NOT-TERMINATED-LESS
 # RUN: llvm-readelf --dynamic-table %t7 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t7 --implicit-check-not=warning: --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-LESS
+# RUN:   FileCheck %s -DFILE=%t7 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-GNU,NOT-TERMINATED-LESS
 
 ## Case C: the value of the DT_STRSZ tag is one byte larger than the size of
 ##         the not null-terminated dynamic string table.
 # RUN: yaml2obj %s -DSTRSZ=8 --docnum=6 -o %t8
 # RUN: llvm-readobj --dynamic-table %t8 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t8 --implicit-check-not=warning: --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-GREQ
+# RUN:   FileCheck %s -DFILE=%t8 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-LLVM,NOT-TERMINATED-GREQ
 # RUN: llvm-readelf --dynamic-table %t8 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t8 --implicit-check-not=warning: --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-GREQ
+# RUN:   FileCheck %s -DFILE=%t8 --implicit-check-not=warning: \
+# RUN:     --check-prefixes=NOT-TERMINATED,NOT-TERMINATED-GNU,NOT-TERMINATED-GREQ
 
-# NOT-TERMINATED:      warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb4: the string table is not null-terminated
+# NOT-TERMINATED-LLVM: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb4: the string table is not null-terminated
 # NOT-TERMINATED:      warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb0: the string table is not null-terminated
 # NOT-TERMINATED-NEXT: {{[(]?}}NEEDED{{[)]?}}    Shared library: [<?>]
 # NOT-TERMINATED-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb1: the string table is not null-terminated
@@ -310,6 +318,7 @@ ProgramHeaders:
 # NOT-TERMINATED-NEXT: {{[(]?}}AUXILIARY{{[)]?}} Auxiliary library: [<?>]
 # NOT-TERMINATED-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb3: the string table is not null-terminated
 # NOT-TERMINATED-NEXT: {{[(]?}}USED{{[)]?}}      Not needed object: [<?>]
+# NOT-TERMINATED-GNU-NEXT:  warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb4: the string table is not null-terminated
 # NOT-TERMINATED-NEXT: {{[(]?}}SONAME{{[)]?}}    Library soname: [<?>]
 # NOT-TERMINATED-NEXT: warning: '[[FILE]]': string table at offset 0xb0: unable to read the string at 0xb5: the string table is not null-terminated
 # NOT-TERMINATED-NEXT: {{[(]?}}RPATH{{[)]?}}     Library rpath: [<?>]
