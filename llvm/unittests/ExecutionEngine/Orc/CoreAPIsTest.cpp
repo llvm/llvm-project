@@ -289,7 +289,7 @@ TEST_F(CoreAPIsStandardTest, LookupFlagsTest) {
 
 TEST_F(CoreAPIsStandardTest, LookupWithGeneratorFailure) {
 
-  class BadGenerator : public JITDylib::DefinitionGenerator {
+  class BadGenerator : public DefinitionGenerator {
   public:
     Error tryToGenerate(LookupKind K, JITDylib &, JITDylibLookupFlags,
                         const SymbolLookupSet &) override {
@@ -1047,7 +1047,7 @@ TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
 TEST_F(CoreAPIsStandardTest, GeneratorTest) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 
-  class TestGenerator : public JITDylib::DefinitionGenerator {
+  class TestGenerator : public DefinitionGenerator {
   public:
     TestGenerator(SymbolMap Symbols) : Symbols(std::move(Symbols)) {}
     Error tryToGenerate(LookupKind K, JITDylib &JD,

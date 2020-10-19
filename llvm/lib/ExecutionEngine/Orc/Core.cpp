@@ -496,7 +496,7 @@ Error ReexportsGenerator::tryToGenerate(LookupKind K, JITDylib &JD,
   return JD.define(reexports(SourceJD, AliasMap, SourceJDLookupFlags));
 }
 
-JITDylib::DefinitionGenerator::~DefinitionGenerator() {}
+DefinitionGenerator::~DefinitionGenerator() {}
 
 Error JITDylib::clear() {
   std::vector<ResourceTrackerSP> TrackersToRemove;
@@ -1298,6 +1298,10 @@ Error JITDylib::lodgeQuery(UnmaterializedInfosList &UMIs,
     // Bail out early if we have resolved everything.
     if (Unresolved.empty())
       break;
+
+    // FIXME: The generator should only be run for symbols that satisfy
+    // the JDLookupFlags. E.g. if we failed to match a hidden symbol we
+    // shouldn't try to generate it.
 
     // Run the generator.
     if (auto Err = DG->tryToGenerate(K, *this, JDLookupFlags, Unresolved))
