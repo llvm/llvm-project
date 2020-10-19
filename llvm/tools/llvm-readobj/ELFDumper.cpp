@@ -5560,7 +5560,7 @@ template <class ELFT> void GNUStyle<ELFT>::printDependentLibs() {
        << format_hex(Current.Offset, 1) << " contains " << SecEntries.size()
        << " entries:\n";
     for (NameOffset Entry : SecEntries)
-      OS << "  [" << format("%6tx", Entry.Offset) << "]  " << Entry.Name
+      OS << "  [" << format("%6" PRIx64, Entry.Offset) << "]  " << Entry.Name
          << "\n";
     OS << "\n";
     SecEntries.clear();
