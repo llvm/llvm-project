@@ -37,6 +37,38 @@ define void @test3(i8* %src) {
   ret void
 }
 
+define void @test_strcat_with_lifetime(i8* %src) {
+; CHECK-LABEL: @test_strcat_with_lifetime(
+; CHECK-NEXT:    [[B:%.*]] = alloca [16 x i8], align 1
+; CHECK-NEXT:    [[B_CAST:%.*]] = bitcast [16 x i8]* [[B]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull [[B_CAST]])
+; CHECK-NEXT:    [[DEST:%.*]] = getelementptr inbounds [16 x i8], [16 x i8]* [[B]], i64 0, i64 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strcat(i8* [[DEST]], i8* [[SRC:%.*]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull [[B_CAST]])
+; CHECK-NEXT:    ret void
+;
+  %B = alloca [16 x i8]
+  %B.cast = bitcast [16 x i8]* %B to i8*
+  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %B.cast)
+  %dest = getelementptr inbounds [16 x i8], [16 x i8]* %B, i64 0, i64 0
+  %call = call i8* @strcat(i8* %dest, i8* %src)
+  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %B.cast)
+  ret void
+}
+
+define void @test_strcat_with_lifetime_nonlocal(i8* %dest, i8* %src) {
+; CHECK-LABEL: @test_strcat_with_lifetime_nonlocal(
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull [[DEST:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strcat(i8* [[DEST]], i8* [[SRC:%.*]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull [[DEST]])
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %dest)
+  %call = call i8* @strcat(i8* %dest, i8* %src)
+  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %dest)
+  ret void
+}
+
 declare i8* @strncat(i8* %dest, i8* %src, i64 %n) nounwind
 define void @test4(i8* %src) {
 ; CHECK-LABEL: @test4(
