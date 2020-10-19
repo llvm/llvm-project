@@ -132,7 +132,7 @@ void test_argument_SA(SA *a) {
   calleeSA(*a);
 }
 
-// CHECK: define void @test_return_SA(%[[STRUCT_SA]]* noalias sret align 8 %[[AGG_RESULT:.*]], %[[STRUCT_SA]]* %[[A:.*]])
+// CHECK: define void @test_return_SA(%[[STRUCT_SA]]* noalias sret(%struct.SA) align 8 %[[AGG_RESULT:.*]], %[[STRUCT_SA]]* %[[A:.*]])
 // CHECK: %[[A_ADDR:.*]] = alloca %[[STRUCT_SA]]*, align 8
 // CHECK: store %[[STRUCT_SA]]* %[[A]], %[[STRUCT_SA]]** %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load %[[STRUCT_SA]]*, %[[STRUCT_SA]]** %[[A_ADDR]], align 8
