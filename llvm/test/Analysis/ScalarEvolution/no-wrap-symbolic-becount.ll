@@ -56,3 +56,37 @@ exit:                                             ; preds = %loop
 failure:                                          ; preds = %backedge
   unreachable
 }
+
+; Check that we do not mess up with wrapping ranges.
+define i32 @test_02(i32 %start, i32* %p, i32* %q) {
+; CHECK-LABEL: 'test_02'
+; CHECK-NEXT:  Classifying expressions for: @test_02
+; CHECK-NEXT:    %zext = zext i32 %start to i64
+; CHECK-NEXT:    --> (zext i32 %start to i64) U: [0,4294967296) S: [0,4294967296)
+; CHECK-NEXT:    %shl = shl i64 %zext, 31
+; CHECK-NEXT:    --> (2147483648 * (zext i32 %start to i64))<nuw><nsw> U: [0,9223372034707292161) S: [0,9223372034707292161)
+; CHECK-NEXT:    %indvars.iv = phi i64 [ %indvars.iv.next, %loop ], [ %shl, %entry ]
+; CHECK-NEXT:    --> {(2147483648 * (zext i32 %start to i64))<nuw><nsw>,+,-1}<nsw><%loop> U: [-9223372036854775808,9223372034707292161) S: [-9223372036854775808,9223372034707292161) Exits: -9223372036854775806 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %indvars.iv.next = add nsw i64 %indvars.iv, -1
+; CHECK-NEXT:    --> {(-1 + (2147483648 * (zext i32 %start to i64))<nuw><nsw>)<nsw>,+,-1}<nw><%loop> U: full-set S: full-set Exits: -9223372036854775807 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_02
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (9223372036854775806 + (2147483648 * (zext i32 %start to i64))<nuw><nsw>)<nuw>
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -2147483650
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (9223372036854775806 + (2147483648 * (zext i32 %start to i64))<nuw><nsw>)<nuw>
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %zext = zext i32 %start to i64
+  %shl = shl i64 %zext, 31
+  br label %loop
+
+loop:                                             ; preds = %backedge, %entry
+  %indvars.iv = phi i64 [ %indvars.iv.next, %loop ], [ %shl, %entry ]
+  %cond = icmp eq i64 %indvars.iv, -9223372036854775806
+  %indvars.iv.next = add nsw i64 %indvars.iv, -1
+  br i1 %cond, label %exit, label %loop
+
+exit:                                             ; preds = %loop
+  ret i32 0
+}
