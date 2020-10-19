@@ -533,9 +533,6 @@ static void HandleDefinition() {
       fprintf(stderr, "Read function definition:");
       FnIR->print(errs());
       fprintf(stderr, "\n");
-
-      // Reset the module.
-      InitializeModule();
     }
   } else {
     // Skip token for error recovery.
@@ -564,8 +561,8 @@ static void HandleTopLevelExpression() {
       FnIR->print(errs());
       fprintf(stderr, "\n");
 
-      // Reset the module.
-      InitializeModule();
+      // Remove the anonymous expression.
+      FnIR->eraseFromParent();
     }
   } else {
     // Skip token for error recovery.
