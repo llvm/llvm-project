@@ -31,25 +31,15 @@ public:
 
   using RecordedResourcesMap = DenseMap<ResourceKey, ResourceT>;
 
-  SimpleResourceManager(
-      ExecutionSession &ES,
-      HandleRemoveFunction HandleRemove = HandleRemoveFunction(),
-      HandleTransferFunction HandleTransfer = HandleTransferFunction())
-      : ES(ES), HandleRemove(std::move(HandleRemove)),
-        HandleTransfer(std::move(HandleTransfer)) {
+  SimpleResourceManager(ExecutionSession &ES) : ES(ES) {
+    HandleRemove = [&](ResourceKey K) -> Error {
+      ES.runSessionLocked([&] { removeResource(K); });
+      return Error::success();
+    };
 
-    // If HandleRemvoe is not supplied then use the default.
-    if (!this->HandleRemove)
-      this->HandleRemove = [&](ResourceKey K) -> Error {
-        ES.runSessionLocked([&] { removeResource(K); });
-        return Error::success();
-      };
-
-    // If HandleTransfer is not supplied then use the default.
-    if (!this->HandleTransfer)
-      this->HandleTransfer = [this](ResourceKey DstKey, ResourceKey SrcKey) {
-        transferResources(DstKey, SrcKey);
-      };
+    HandleTransfer = [this](ResourceKey DstKey, ResourceKey SrcKey) {
+      transferResources(DstKey, SrcKey);
+    };
 
     ES.registerResourceManager(*this);
   }
@@ -60,6 +50,16 @@ public:
   SimpleResourceManager &operator=(SimpleResourceManager &&) = delete;
 
   ~SimpleResourceManager() { ES.deregisterResourceManager(*this); }
+
+  /// Set the HandleRemove function object.
+  void setHandleRemove(HandleRemoveFunction HandleRemove) {
+    this->HandleRemove = std::move(HandleRemove);
+  }
+
+  /// Set the HandleTransfer function object.
+  void setHandleTransfer(HandleTransferFunction HandleTransfer) {
+    this->HandleTransfer = std::move(HandleTransfer);
+  }
 
   /// Create an association between the given key and resource.
   template <typename MergeOp = std::plus<ResourceT>>
@@ -115,7 +115,8 @@ TEST_F(ResourceTrackerStandardTest,
        BasicDefineAndRemoveAllBeforeMaterializing) {
 
   bool ResourceManagerGotRemove = false;
-  SimpleResourceManager<> SRM(ES, [&](ResourceKey K) -> Error {
+  SimpleResourceManager<> SRM(ES);
+  SRM.setHandleRemove([&](ResourceKey K) -> Error {
     ResourceManagerGotRemove = true;
     EXPECT_EQ(SRM.getRecordedResources().size(), 0U)
         << "Unexpected resources recorded";
@@ -150,7 +151,8 @@ TEST_F(ResourceTrackerStandardTest,
 TEST_F(ResourceTrackerStandardTest, BasicDefineAndRemoveAllAfterMaterializing) {
 
   bool ResourceManagerGotRemove = false;
-  SimpleResourceManager<> SRM(ES, [&](ResourceKey K) -> Error {
+  SimpleResourceManager<> SRM(ES);
+  SRM.setHandleRemove([&](ResourceKey K) -> Error {
     ResourceManagerGotRemove = true;
     EXPECT_EQ(SRM.getRecordedResources().size(), 1U)
         << "Unexpected number of resources recorded";
@@ -186,7 +188,8 @@ TEST_F(ResourceTrackerStandardTest, BasicDefineAndRemoveAllAfterMaterializing) {
 TEST_F(ResourceTrackerStandardTest, BasicDefineAndRemoveAllWhileMaterializing) {
 
   bool ResourceManagerGotRemove = false;
-  SimpleResourceManager<> SRM(ES, [&](ResourceKey K) -> Error {
+  SimpleResourceManager<> SRM(ES);
+  SRM.setHandleRemove([&](ResourceKey K) -> Error {
     ResourceManagerGotRemove = true;
     EXPECT_EQ(SRM.getRecordedResources().size(), 0U)
         << "Unexpected resources recorded";
@@ -283,17 +286,12 @@ TEST_F(ResourceTrackerStandardTest,
        BasicDefineAndExplicitTransferBeforeMaterializing) {
 
   bool ResourceManagerGotTransfer = false;
-  SimpleResourceManager<> SRM(
-      ES,
-      [&](ResourceKey K) -> Error {
-        SRM.removeResource(K);
-        return Error::success();
-      },
-      [&](ResourceKey DstKey, ResourceKey SrcKey) {
-        ResourceManagerGotTransfer = true;
-        auto &RR = SRM.getRecordedResources();
-        EXPECT_EQ(RR.size(), 0U) << "Expected no resources recorded yet";
-      });
+  SimpleResourceManager<> SRM(ES);
+  SRM.setHandleTransfer([&](ResourceKey DstKey, ResourceKey SrcKey) {
+    ResourceManagerGotTransfer = true;
+    auto &RR = SRM.getRecordedResources();
+    EXPECT_EQ(RR.size(), 0U) << "Expected no resources recorded yet";
+  });
 
   auto MakeMU = [&](SymbolStringPtr Name, JITEvaluatedSymbol Sym) {
     return std::make_unique<SimpleMaterializationUnit>(
@@ -338,16 +336,11 @@ TEST_F(ResourceTrackerStandardTest,
        BasicDefineAndExplicitTransferAfterMaterializing) {
 
   bool ResourceManagerGotTransfer = false;
-  SimpleResourceManager<> SRM(
-      ES,
-      [&](ResourceKey K) -> Error {
-        SRM.removeResource(K);
-        return Error::success();
-      },
-      [&](ResourceKey DstKey, ResourceKey SrcKey) {
-        ResourceManagerGotTransfer = true;
-        SRM.transferResources(DstKey, SrcKey);
-      });
+  SimpleResourceManager<> SRM(ES);
+  SRM.setHandleTransfer([&](ResourceKey DstKey, ResourceKey SrcKey) {
+    ResourceManagerGotTransfer = true;
+    SRM.transferResources(DstKey, SrcKey);
+  });
 
   auto MakeMU = [&](SymbolStringPtr Name, JITEvaluatedSymbol Sym) {
     return std::make_unique<SimpleMaterializationUnit>(
@@ -393,16 +386,11 @@ TEST_F(ResourceTrackerStandardTest,
        BasicDefineAndExplicitTransferWhileMaterializing) {
 
   bool ResourceManagerGotTransfer = false;
-  SimpleResourceManager<> SRM(
-      ES,
-      [&](ResourceKey K) -> Error {
-        SRM.removeResource(K);
-        return Error::success();
-      },
-      [&](ResourceKey DstKey, ResourceKey SrcKey) {
-        ResourceManagerGotTransfer = true;
-        SRM.transferResources(DstKey, SrcKey);
-      });
+  SimpleResourceManager<> SRM(ES);
+  SRM.setHandleTransfer([&](ResourceKey DstKey, ResourceKey SrcKey) {
+    ResourceManagerGotTransfer = true;
+    SRM.transferResources(DstKey, SrcKey);
+  });
 
   auto FooRT = JD.createResourceTracker();
   std::unique_ptr<MaterializationResponsibility> FooMR;
