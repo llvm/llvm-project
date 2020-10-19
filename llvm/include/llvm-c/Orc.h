@@ -39,6 +39,35 @@ LLVM_C_EXTERN_C_BEGIN
 typedef uint64_t LLVMOrcJITTargetAddress;
 
 /**
+ * Represents generic linkage flags for a symbol definition.
+ */
+typedef enum {
+  LLVMJITSymbolGenericFlagsExported = 1U << 0,
+  LLVMJITSymbolGenericFlagsWeak = 1U << 1
+} LLVMJITSymbolGenericFlags;
+
+/**
+ * Represents target specific flags for a symbol definition.
+ */
+typedef uint8_t LLVMJITTargetSymbolFlags;
+
+/**
+ * Represents the linkage flags for a symbol definition.
+ */
+typedef struct {
+  uint8_t GenericFlags;
+  uint8_t TargetFlags;
+} LLVMJITSymbolFlags;
+
+/**
+ * Represents an evaluated symbol address and flags.
+ */
+typedef struct {
+  LLVMOrcJITTargetAddress Address;
+  LLVMJITSymbolFlags Flags;
+} LLVMJITEvaluatedSymbol;
+
+/**
  * A reference to an orc::ExecutionSession instance.
  */
 typedef struct LLVMOrcOpaqueExecutionSession *LLVMOrcExecutionSessionRef;
@@ -58,6 +87,20 @@ typedef struct LLVMOrcOpaqueSymbolStringPool *LLVMOrcSymbolStringPoolRef;
  */
 typedef struct LLVMOrcOpaqueSymbolStringPoolEntry
     *LLVMOrcSymbolStringPoolEntryRef;
+
+/**
+ * Represents a pair of a symbol name and an evaluated symbol.
+ */
+typedef struct {
+  LLVMOrcSymbolStringPoolEntryRef Name;
+  LLVMJITEvaluatedSymbol Sym;
+} LLVMJITCSymbolMapPair;
+
+/**
+ * Represents a list of (SymbolStringPtr, JITEvaluatedSymbol) pairs that can be
+ * used to construct a SymbolMap.
+ */
+typedef LLVMJITCSymbolMapPair *LLVMOrcCSymbolMapPairs;
 
 /**
  * Lookup kind. This can be used by definition generators when deciding whether
@@ -110,6 +153,11 @@ typedef struct {
  * responsible for managing lifetime or retain counts.
  */
 typedef LLVMOrcCLookupSetElement *LLVMOrcCLookupSet;
+
+/**
+ * A reference to an orc::MaterializationUnit.
+ */
+typedef struct LLVMOrcOpaqueMaterializationUnit *LLVMOrcMaterializationUnitRef;
 
 /**
  * A reference to an orc::JITDylib instance.
@@ -178,7 +226,7 @@ typedef LLVMErrorRef (*LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction)(
     LLVMOrcDefinitionGeneratorRef GeneratorObj, void *Ctx,
     LLVMOrcLookupStateRef *LookupState, LLVMOrcLookupKind Kind,
     LLVMOrcJITDylibRef JD, LLVMOrcJITDylibLookupFlags JDLookupFlags,
-    LLVMOrcCLookupSet LookupSet);
+    LLVMOrcCLookupSet LookupSet, size_t LookupSetSize);
 
 /**
  * Predicate function for SymbolStringPoolEntries.
@@ -272,22 +320,6 @@ void LLVMOrcRetainSymbolStringPoolEntry(LLVMOrcSymbolStringPoolEntryRef S);
 void LLVMOrcReleaseSymbolStringPoolEntry(LLVMOrcSymbolStringPoolEntryRef S);
 
 /**
- * Return a reference to a newly created resource tracker associated with JD.
- * The tracker is returned with an initial ref-count of 1, and must be released
- * with LLVMOrcReleaseResourceTracker when no longer needed.
- */
-LLVMOrcResourceTrackerRef
-LLVMOrcJITDylibCreateResourceTracker(LLVMOrcJITDylibRef JD);
-
-/**
- * Return a reference to the default resource tracker for the given JITDylib.
- * This operation will increase the retain count of the tracker: Clients should
- * call LLVMOrcReleaseResourceTracker when the result is no longer needed.
- */
-LLVMOrcResourceTrackerRef
-LLVMOrcJITDylibGetDefaultResourceTracker(LLVMOrcJITDylibRef JD);
-
-/**
  * Reduces the ref-count of a ResourceTracker.
  */
 void LLVMOrcReleaseResourceTracker(LLVMOrcResourceTrackerRef RT);
@@ -312,6 +344,18 @@ LLVMErrorRef LLVMOrcResourceTrackerRemove(LLVMOrcResourceTrackerRef RT);
  */
 void LLVMOrcDisposeDefinitionGenerator(
     LLVMOrcDefinitionGeneratorRef DG);
+
+/**
+ * Dispose of a MaterializationUnit.
+ */
+void LLVMOrcDisposeMaterializationUnit(LLVMOrcMaterializationUnitRef MU);
+
+/**
+ * Create a MaterializationUnit to define the given symbols as pointing to
+ * the corresponding raw addresses.
+ */
+LLVMOrcMaterializationUnitRef
+LLVMOrcAbsoluteSymbols(LLVMOrcCSymbolMapPairs Syms, size_t NumPairs);
 
 /**
  * Create a "bare" JITDylib.
@@ -348,6 +392,32 @@ LLVMOrcExecutionSessionCreateJITDylib(LLVMOrcExecutionSessionRef ES,
  * exists.
  */
 LLVMOrcJITDylibRef LLVMOrcExecutionSessionGetJITDylibByName(const char *Name);
+
+/**
+ * Return a reference to a newly created resource tracker associated with JD.
+ * The tracker is returned with an initial ref-count of 1, and must be released
+ * with LLVMOrcReleaseResourceTracker when no longer needed.
+ */
+LLVMOrcResourceTrackerRef
+LLVMOrcJITDylibCreateResourceTracker(LLVMOrcJITDylibRef JD);
+
+/**
+ * Return a reference to the default resource tracker for the given JITDylib.
+ * This operation will increase the retain count of the tracker: Clients should
+ * call LLVMOrcReleaseResourceTracker when the result is no longer needed.
+ */
+LLVMOrcResourceTrackerRef
+LLVMOrcJITDylibGetDefaultResourceTracker(LLVMOrcJITDylibRef JD);
+
+/**
+ * Add the given MaterializationUnit to the given JITDylib.
+ *
+ * If this operation succeeds then JITDylib JD will take ownership of MU.
+ * If the operation fails then ownership remains with the caller who should
+ * call LLVMOrcDisposeMaterializationUnit to destroy it.
+ */
+LLVMErrorRef LLVMOrcJITDylibDefine(LLVMOrcJITDylibRef JD,
+                                   LLVMOrcMaterializationUnitRef MU);
 
 /**
  * Calls remove on all trackers associated with this JITDylib, see
