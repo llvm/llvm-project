@@ -9,18 +9,14 @@ add_llvm_component_library(LLVMOrcJIT
   IRTransformLayer.cpp
   JITTargetMachineBuilder.cpp
   LazyReexports.cpp
-  Legacy.cpp
   Layer.cpp
   LLJIT.cpp
   MachOPlatform.cpp
   Mangling.cpp
-  NullResolver.cpp
   ObjectLinkingLayer.cpp
   ObjectTransformLayer.cpp
   OrcABISupport.cpp
-  OrcCBindings.cpp
   OrcV2CBindings.cpp
-  OrcMCJITReplacement.cpp
   RTDyldObjectLinkingLayer.cpp
   Speculation.cpp
   SpeculateAnalyses.cpp
