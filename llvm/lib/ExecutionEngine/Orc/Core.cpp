@@ -1459,8 +1459,7 @@ JITDylib::removeTracker(ResourceTracker &RT) {
   }
 
   for (auto &Sym : SymbolsToRemove) {
-    auto I = Symbols.find(Sym);
-    assert(I != Symbols.end() && "Symbol not in symbol table");
+    assert(Symbols.count(Sym) && "Symbol not in symbol table");
 
     // If there is a MaterializingInfo then collect any queries to fail.
     auto MII = MaterializingInfos.find(Sym);
