@@ -185,8 +185,8 @@ define amdgpu_ps float @global_xchg_saddr_uniform_ptr_in_vgprs_rtn(i32 %voffset,
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX9-NEXT:    s_nop 4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_nop 3
 ; GFX9-NEXT:    global_atomic_swap v0, v0, v1, s[0:1] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -199,9 +199,9 @@ define amdgpu_ps float @global_xchg_saddr_uniform_ptr_in_vgprs_rtn(i32 %voffset,
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX10-NEXT:    s_nop 4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_nop 2
 ; GFX10-NEXT:    global_atomic_swap v0, v0, v1, s[0:1] glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -225,8 +225,8 @@ define amdgpu_ps float @global_xchg_saddr_uniform_ptr_in_vgprs_rtn_immoffset(i32
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX9-NEXT:    s_nop 4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_nop 3
 ; GFX9-NEXT:    global_atomic_swap v0, v0, v1, s[0:1] offset:42 glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -239,9 +239,9 @@ define amdgpu_ps float @global_xchg_saddr_uniform_ptr_in_vgprs_rtn_immoffset(i32
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX10-NEXT:    s_nop 4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_nop 2
 ; GFX10-NEXT:    global_atomic_swap v0, v0, v1, s[0:1] offset:42 glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
@@ -266,8 +266,8 @@ define amdgpu_ps void @global_xchg_saddr_uniform_ptr_in_vgprs_nortn(i32 %voffset
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX9-NEXT:    s_nop 4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_nop 3
 ; GFX9-NEXT:    global_atomic_swap v0, v1, s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -280,9 +280,9 @@ define amdgpu_ps void @global_xchg_saddr_uniform_ptr_in_vgprs_nortn(i32 %voffset
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX10-NEXT:    s_nop 4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_nop 2
 ; GFX10-NEXT:    global_atomic_swap v0, v1, s[0:1]
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -306,8 +306,8 @@ define amdgpu_ps void @global_xchg_saddr_uniform_ptr_in_vgprs_nortn_immoffset(i3
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX9-NEXT:    s_nop 4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_nop 3
 ; GFX9-NEXT:    global_atomic_swap v0, v1, s[0:1] offset:42
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1
@@ -320,9 +320,9 @@ define amdgpu_ps void @global_xchg_saddr_uniform_ptr_in_vgprs_nortn_immoffset(i3
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX10-NEXT:    s_nop 4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_nop 2
 ; GFX10-NEXT:    global_atomic_swap v0, v1, s[0:1] offset:42
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
