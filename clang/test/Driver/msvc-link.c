@@ -2,6 +2,7 @@
 // BASIC: link.exe"
 // BASIC: "-out:a.exe"
 // BASIC: "-defaultlib:libcmt"
+// BASIC: "-defaultlib:oldnames"
 // BASIC: "-nologo"
 // BASIC-NOT: "-Brepro"
 
@@ -9,6 +10,7 @@
 // DLL: link.exe"
 // DLL: "-out:a.dll"
 // DLL: "-defaultlib:libcmt"
+// DLL: "-defaultlib:oldnames"
 // DLL: "-nologo"
 // DLL: "-dll"
 
