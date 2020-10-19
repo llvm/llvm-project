@@ -663,7 +663,7 @@ const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
       L = PickMostRelevantLoop(L, getRelevantLoop(Op), SE.DT);
     return RelevantLoops[N] = L;
   }
-  if (const SCEVCastExpr *C = dyn_cast<SCEVCastExpr>(S)) {
+  if (const SCEVIntegralCastExpr *C = dyn_cast<SCEVIntegralCastExpr>(S)) {
     const Loop *Result = getRelevantLoop(C->getOperand());
     return RelevantLoops[C] = Result;
   }
@@ -2364,9 +2364,9 @@ bool SCEVExpander::isHighCostExpansionHelper(
       TTI.getIntImmCostInst(WorkItem.ParentOpcode, WorkItem.OperandIdx,
                             Imm, Ty, CostKind);
     return BudgetRemaining < 0;
-  } else if (isa<SCEVCastExpr>(S)) {
-    int Cost =
-      costAndCollectOperands<SCEVCastExpr>(WorkItem, TTI, CostKind, Worklist);
+  } else if (isa<SCEVIntegralCastExpr>(S)) {
+    int Cost = costAndCollectOperands<SCEVIntegralCastExpr>(WorkItem, TTI,
+                                                            CostKind, Worklist);
     BudgetRemaining -= Cost;
     return false; // Will answer upon next entry into this function.
   } else if (isa<SCEVUDivExpr>(S)) {

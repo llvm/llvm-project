@@ -72,13 +72,13 @@ class Type;
   }
 
   /// This is the base class for unary cast operator classes.
-  class SCEVCastExpr : public SCEV {
+  class SCEVIntegralCastExpr : public SCEV {
   protected:
     std::array<const SCEV *, 1> Operands;
     Type *Ty;
 
-    SCEVCastExpr(const FoldingSetNodeIDRef ID,
-                 unsigned SCEVTy, const SCEV *op, Type *ty);
+    SCEVIntegralCastExpr(const FoldingSetNodeIDRef ID, unsigned SCEVTy,
+                         const SCEV *op, Type *ty);
 
   public:
     const SCEV *getOperand() const { return Operands[0]; }
@@ -105,7 +105,7 @@ class Type;
 
   /// This class represents a truncation of an integer value to a
   /// smaller integer value.
-  class SCEVTruncateExpr : public SCEVCastExpr {
+  class SCEVTruncateExpr : public SCEVIntegralCastExpr {
     friend class ScalarEvolution;
 
     SCEVTruncateExpr(const FoldingSetNodeIDRef ID,
@@ -120,7 +120,7 @@ class Type;
 
   /// This class represents a zero extension of a small integer value
   /// to a larger integer value.
-  class SCEVZeroExtendExpr : public SCEVCastExpr {
+  class SCEVZeroExtendExpr : public SCEVIntegralCastExpr {
     friend class ScalarEvolution;
 
     SCEVZeroExtendExpr(const FoldingSetNodeIDRef ID,
@@ -135,7 +135,7 @@ class Type;
 
   /// This class represents a sign extension of a small integer value
   /// to a larger integer value.
-  class SCEVSignExtendExpr : public SCEVCastExpr {
+  class SCEVSignExtendExpr : public SCEVIntegralCastExpr {
     friend class ScalarEvolution;
 
     SCEVSignExtendExpr(const FoldingSetNodeIDRef ID,
@@ -610,7 +610,7 @@ class Type;
         case scTruncate:
         case scZeroExtend:
         case scSignExtend:
-          push(cast<SCEVCastExpr>(S)->getOperand());
+          push(cast<SCEVIntegralCastExpr>(S)->getOperand());
           break;
         case scAddExpr:
         case scMulExpr:
