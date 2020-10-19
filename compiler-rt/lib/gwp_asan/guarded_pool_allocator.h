@@ -37,7 +37,7 @@ public:
   // GWP-ASan. The constructor value-initialises the class such that if no
   // further initialisation takes place, calls to shouldSample() and
   // pointerIsMine() will return false.
-  constexpr GuardedPoolAllocator(){};
+  constexpr GuardedPoolAllocator() {}
   GuardedPoolAllocator(const GuardedPoolAllocator &) = delete;
   GuardedPoolAllocator &operator=(const GuardedPoolAllocator &) = delete;
 

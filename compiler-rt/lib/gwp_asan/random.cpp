@@ -18,9 +18,7 @@
 GWP_ASAN_TLS_INITIAL_EXEC uint32_t RandomState = 0xff82eb50;
 
 namespace gwp_asan {
-void initPRNG() {
-  RandomState = time(nullptr) + getThreadID();
-}
+void initPRNG() { RandomState = time(nullptr) + getThreadID(); }
 
 uint32_t getRandomUnsigned32() {
   RandomState ^= RandomState << 13;
