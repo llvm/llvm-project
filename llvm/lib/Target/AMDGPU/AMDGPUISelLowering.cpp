@@ -3281,17 +3281,13 @@ static SDValue getMul24(SelectionDAG &DAG, const SDLoc &SL,
     return DAG.getNode(MulOpc, SL, MVT::i32, N0, N1);
   }
 
-  // Because we want to eliminate extension instructions before the
-  // operation, we need to create a single user here (i.e. not the separate
-  // mul_lo + mul_hi) so that SimplifyDemandedBits will deal with it.
+  unsigned MulLoOpc = Signed ? AMDGPUISD::MUL_I24 : AMDGPUISD::MUL_U24;
+  unsigned MulHiOpc = Signed ? AMDGPUISD::MULHI_I24 : AMDGPUISD::MULHI_U24;
 
-  unsigned MulOpc = Signed ? AMDGPUISD::MUL_LOHI_I24 : AMDGPUISD::MUL_LOHI_U24;
+  SDValue MulLo = DAG.getNode(MulLoOpc, SL, MVT::i32, N0, N1);
+  SDValue MulHi = DAG.getNode(MulHiOpc, SL, MVT::i32, N0, N1);
 
-  SDValue Mul = DAG.getNode(MulOpc, SL,
-                            DAG.getVTList(MVT::i32, MVT::i32), N0, N1);
-
-  return DAG.getNode(ISD::BUILD_PAIR, SL, MVT::i64,
-                     Mul.getValue(0), Mul.getValue(1));
+  return DAG.getNode(ISD::BUILD_PAIR, SL, MVT::i64, MulLo, MulHi);
 }
 
 SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
@@ -3387,29 +3383,6 @@ SDValue AMDGPUTargetLowering::performMulhuCombine(SDNode *N,
   SDValue Mulhi = DAG.getNode(AMDGPUISD::MULHI_U24, DL, MVT::i32, N0, N1);
   DCI.AddToWorklist(Mulhi.getNode());
   return DAG.getZExtOrTrunc(Mulhi, DL, VT);
-}
-
-SDValue AMDGPUTargetLowering::performMulLoHi24Combine(
-  SDNode *N, DAGCombinerInfo &DCI) const {
-  SelectionDAG &DAG = DCI.DAG;
-
-  // Simplify demanded bits before splitting into multiple users.
-  if (SDValue V = simplifyI24(N, DCI))
-    return V;
-
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-
-  bool Signed = (N->getOpcode() == AMDGPUISD::MUL_LOHI_I24);
-
-  unsigned MulLoOpc = Signed ? AMDGPUISD::MUL_I24 : AMDGPUISD::MUL_U24;
-  unsigned MulHiOpc = Signed ? AMDGPUISD::MULHI_I24 : AMDGPUISD::MULHI_U24;
-
-  SDLoc SL(N);
-
-  SDValue MulLo = DAG.getNode(MulLoOpc, SL, MVT::i32, N0, N1);
-  SDValue MulHi = DAG.getNode(MulHiOpc, SL, MVT::i32, N0, N1);
-  return DAG.getMergeValues({ MulLo, MulHi }, SL);
 }
 
 static bool isNegativeOne(SDValue Val) {
@@ -3999,9 +3972,6 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     return SDValue();
   }
-  case AMDGPUISD::MUL_LOHI_I24:
-  case AMDGPUISD::MUL_LOHI_U24:
-    return performMulLoHi24Combine(N, DCI);
   case ISD::SELECT:
     return performSelectCombine(N, DCI);
   case ISD::FNEG:
@@ -4285,8 +4255,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(MUL_I24)
   NODE_NAME_CASE(MULHI_U24)
   NODE_NAME_CASE(MULHI_I24)
-  NODE_NAME_CASE(MUL_LOHI_U24)
-  NODE_NAME_CASE(MUL_LOHI_I24)
   NODE_NAME_CASE(MAD_U24)
   NODE_NAME_CASE(MAD_I24)
   NODE_NAME_CASE(MAD_I64_I32)
