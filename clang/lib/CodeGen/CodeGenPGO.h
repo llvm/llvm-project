@@ -59,7 +59,7 @@ public:
 
   /// Check if an execution count is known for a given statement. If so, return
   /// true and put the value in Count; else return false.
-  Optional<uint64_t> getStmtCount(const Stmt *S) {
+  Optional<uint64_t> getStmtCount(const Stmt *S) const {
     if (!StmtCountMap)
       return None;
     auto I = StmtCountMap->find(S);
