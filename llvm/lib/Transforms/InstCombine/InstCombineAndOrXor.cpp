@@ -2283,6 +2283,8 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
   Value *LHS0 = LHS->getOperand(0), *RHS0 = RHS->getOperand(0);
   Value *LHS1 = LHS->getOperand(1), *RHS1 = RHS->getOperand(1);
+  auto *LHSC = dyn_cast<ConstantInt>(LHS1);
+  auto *RHSC = dyn_cast<ConstantInt>(RHS1);
 
   // Fold (icmp ult/ule (A + C1), C3) | (icmp ult/ule (A + C2), C3)
   //                   -->  (icmp ult/ule ((A & ~(C1 ^ C2)) + max(C1, C2)), C3)
@@ -2294,42 +2296,42 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // 3) C1 ^ C2 is one-bit mask.
   // 4) LowRange1 ^ LowRange2 and HighRange1 ^ HighRange2 are one-bit mask.
   // This implies all values in the two ranges differ by exactly one bit.
-  const APInt *LHSVal, *RHSVal;
   if ((PredL == ICmpInst::ICMP_ULT || PredL == ICmpInst::ICMP_ULE) &&
-      PredL == PredR && LHS->getType() == RHS->getType() &&
-      match(LHS1, m_APInt(LHSVal)) && match(RHS1, m_APInt(RHSVal)) &&
-      LHS->hasOneUse() && RHS->hasOneUse() && *LHSVal == *RHSVal) {
+      PredL == PredR && LHSC && RHSC && LHS->hasOneUse() && RHS->hasOneUse() &&
+      LHSC->getType() == RHSC->getType() &&
+      LHSC->getValue() == (RHSC->getValue())) {
+
     Value *LAddOpnd, *RAddOpnd;
-    const APInt *LAddVal, *RAddVal;
-    if (match(LHS0, m_Add(m_Value(LAddOpnd), m_APInt(LAddVal))) &&
-        match(RHS0, m_Add(m_Value(RAddOpnd), m_APInt(RAddVal))) &&
-        LAddVal->ugt(*LHSVal) && RAddVal->ugt(*LHSVal)) {
+    ConstantInt *LAddC, *RAddC;
+    if (match(LHS0, m_Add(m_Value(LAddOpnd), m_ConstantInt(LAddC))) &&
+        match(RHS0, m_Add(m_Value(RAddOpnd), m_ConstantInt(RAddC))) &&
+        LAddC->getValue().ugt(LHSC->getValue()) &&
+        RAddC->getValue().ugt(LHSC->getValue())) {
 
-      APInt DiffC = *LAddVal ^ *RAddVal;
+      APInt DiffC = LAddC->getValue() ^ RAddC->getValue();
       if (LAddOpnd == RAddOpnd && DiffC.isPowerOf2()) {
-        const APInt *MaxAddC = nullptr;
-        if (LAddVal->ult(*RAddVal))
-          MaxAddC = RAddVal;
+        ConstantInt *MaxAddC = nullptr;
+        if (LAddC->getValue().ult(RAddC->getValue()))
+          MaxAddC = RAddC;
         else
-          MaxAddC = LAddVal;
+          MaxAddC = LAddC;
 
-        APInt RRangeLow = -*RAddVal;
-        APInt RRangeHigh = RRangeLow + *LHSVal;
-        APInt LRangeLow = -*LAddVal;
-        APInt LRangeHigh = LRangeLow + *LHSVal;
+        APInt RRangeLow = -RAddC->getValue();
+        APInt RRangeHigh = RRangeLow + LHSC->getValue();
+        APInt LRangeLow = -LAddC->getValue();
+        APInt LRangeHigh = LRangeLow + LHSC->getValue();
         APInt LowRangeDiff = RRangeLow ^ LRangeLow;
         APInt HighRangeDiff = RRangeHigh ^ LRangeHigh;
         APInt RangeDiff = LRangeLow.sgt(RRangeLow) ? LRangeLow - RRangeLow
                                                    : RRangeLow - LRangeLow;
 
         if (LowRangeDiff.isPowerOf2() && LowRangeDiff == HighRangeDiff &&
-            RangeDiff.ugt(*LHSVal)) {
-          Value *NewAnd = Builder.CreateAnd(
-              LAddOpnd, ConstantInt::get(LHS0->getType(), ~DiffC));
-          Value *NewAdd = Builder.CreateAdd(
-              NewAnd, ConstantInt::get(LHS0->getType(), *MaxAddC));
-          return Builder.CreateICmp(LHS->getPredicate(), NewAdd,
-                                    ConstantInt::get(LHS0->getType(), *LHSVal));
+            RangeDiff.ugt(LHSC->getValue())) {
+          Value *MaskC = ConstantInt::get(LAddC->getType(), ~DiffC);
+
+          Value *NewAnd = Builder.CreateAnd(LAddOpnd, MaskC);
+          Value *NewAdd = Builder.CreateAdd(NewAnd, MaxAddC);
+          return Builder.CreateICmp(LHS->getPredicate(), NewAdd, LHSC);
         }
       }
     }
@@ -2415,8 +2417,6 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   }
 
   // This only handles icmp of constants: (icmp1 A, C1) | (icmp2 B, C2).
-  auto *LHSC = dyn_cast<ConstantInt>(LHS1);
-  auto *RHSC = dyn_cast<ConstantInt>(RHS1);
   if (!LHSC || !RHSC)
     return nullptr;
 
