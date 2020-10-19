@@ -3,6 +3,6 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_llvm_tool(yaml2obj
+add_llvm_utility(yaml2obj
   yaml2obj.cpp
   )
