@@ -100,7 +100,7 @@ TEST_CASE(basic_test) {
     const fs::path output = fs::proximate(p, TC.base, ec);
     if (ec) {
       TEST_CHECK(!ec);
-      std::printf("TEST CASE #%d FAILED:\n"
+      std::fprintf(stderr, "TEST CASE #%d FAILED:\n"
                   "  Input: '%s'\n"
                   "  Base: '%s'\n"
                   "  Expected: '%s'\n",
@@ -111,7 +111,7 @@ TEST_CASE(basic_test) {
       const path canon_input = fs::weakly_canonical(TC.input);
       const path canon_base = fs::weakly_canonical(TC.base);
       const path lexically_p = canon_input.lexically_proximate(canon_base);
-      std::printf("TEST CASE #%d FAILED:\n"
+      std::fprintf(stderr, "TEST CASE #%d FAILED:\n"
                   "  Input: '%s'\n"
                   "  Base: '%s'\n"
                   "  Expected: '%s'\n"
