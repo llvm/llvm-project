@@ -274,7 +274,7 @@ wide range of records conveniently and compactly.
     the programmer's intention.
 
 ``bits<``\ *n*\ ``>``
-    The ``bits`` type is a fixed-size integer of arbitrary length *n* that
+    The ``bits`` type is a fixed-sized integer of arbitrary length *n* that
     is treated as separate bits. These bits can be accessed individually.
     A field of this type is useful for representing an instruction operation
     code, register number, or address mode/register/displacement.  The bits of
@@ -1242,8 +1242,8 @@ a name is to tag an operator or argument in a DAG with a particular meaning,
 or to associate an argument in one DAG with a like-named argument in another
 DAG.
 
-The following bang operators manipulate DAGs: ``!con``, ``!dag``, ``!foreach``, 
-``!getop``, ``!setop``.
+The following bang operators are useful for working with DAGs:
+``!con``, ``!dag``, ``!empty``, ``!foreach``, ``!getop``, ``!setop``, ``!size``.
 
 Defvar in a record body
 -----------------------
@@ -1509,8 +1509,9 @@ and non-0 as true.
     Example: ``!dag(op, [a1, a2, ?], ["name1", "name2", "name3"])`` results in
     ``(op a1:$name1, a2:$name2, ?:$name3)``.
 
-``!empty(``\ *list*\ ``)``
-    This operator produces 1 if the *list* is empty; 0 otherwise.
+``!empty(``\ *a*\ ``)``
+    This operator produces 1 if the string, list, or DAG *a* is empty; 0 otherwise.
+    A dag is empty if it has no arguments; the operator does not count.
 
 ``!eq(`` *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is equal to *b*; 0 otherwise.
@@ -1631,7 +1632,8 @@ and non-0 as true.
     is undefined for shift counts outside 0...63.
 
 ``!size(``\ *a*\ ``)``
-    This operator produces the number of elements in the list *a*.
+    This operator produces the size of the string, list, or dag *a*.
+    The size of a DAG is the number of arguments; the operator does not count.
 
 ``!sra(``\ *a*\ ``,`` *count*\ ``)``
     This operator shifts *a* right arithmetically by *count* bits and produces the resulting

@@ -786,11 +786,17 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
   case SIZE:
     if (ListInit *LHSl = dyn_cast<ListInit>(LHS))
       return IntInit::get(LHSl->size());
+    if (DagInit *LHSd = dyn_cast<DagInit>(LHS))
+      return IntInit::get(LHSd->arg_size());
+    if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
+      return IntInit::get(LHSs->getValue().size());
     break;
 
   case EMPTY:
     if (ListInit *LHSl = dyn_cast<ListInit>(LHS))
       return IntInit::get(LHSl->empty());
+    if (DagInit *LHSd = dyn_cast<DagInit>(LHS))
+      return IntInit::get(LHSd->arg_empty());
     if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
       return IntInit::get(LHSs->getValue().empty());
     break;
