@@ -266,13 +266,31 @@ public:
   virtual ~AOverridden() = default;
   virtual void BadBaseMethod() = 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for virtual method 'BadBaseMethod'
+  // CHECK-FIXES: {{^}}  virtual void v_Bad_Base_Method() = 0;
 };
 
 class COverriding : public AOverridden {
 public:
   // Overriding a badly-named base isn't a new violation.
   void BadBaseMethod() override {}
+  // CHECK-FIXES: {{^}}  void v_Bad_Base_Method() override {}
+  
+  void foo() {
+    BadBaseMethod();
+    // CHECK-FIXES: {{^}}    v_Bad_Base_Method();
+    this->BadBaseMethod();
+    // CHECK-FIXES: {{^}}    this->v_Bad_Base_Method();
+    AOverridden::BadBaseMethod();
+    // CHECK-FIXES: {{^}}    AOverridden::v_Bad_Base_Method();
+    COverriding::BadBaseMethod();
+    // CHECK-FIXES: {{^}}    COverriding::v_Bad_Base_Method();
+  }
 };
+
+void VirtualCall(AOverridden &a_vItem) {
+  a_vItem.BadBaseMethod();
+  // CHECK-FIXES: {{^}}  a_vItem.v_Bad_Base_Method();
+}
 
 template <typename derived_t>
 class CRTPBase {
