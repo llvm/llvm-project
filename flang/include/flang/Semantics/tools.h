@@ -542,6 +542,8 @@ private:
       parser::CharBlock stmtLocation, parser::MessageFormattedText &&message,
       parser::CharBlock constructLocation);
 };
-
+// Return the (possibly null) name of the ConstructNode
+const std::optional<parser::Name> &MaybeGetNodeName(
+    const ConstructNode &construct);
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_
