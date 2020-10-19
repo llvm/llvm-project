@@ -31,7 +31,7 @@ define i8 @andv_v8i8(<8 x i8> %a) #0 {
 ; CHECK: andv b[[REDUCE:[0-9]+]], [[PG]], z0.b
 ; CHECK: fmov w0, s[[REDUCE]]
 ; CHECK: ret
-  %res = call i8 @llvm.experimental.vector.reduce.and.v8i8(<8 x i8> %a)
+  %res = call i8 @llvm.vector.reduce.and.v8i8(<8 x i8> %a)
   ret i8 %res
 }
 
@@ -42,7 +42,7 @@ define i8 @andv_v16i8(<16 x i8> %a) #0 {
 ; CHECK: andv b[[REDUCE:[0-9]+]], [[PG]], z0.b
 ; CHECK: fmov w0, s[[REDUCE]]
 ; CHECK: ret
-  %res = call i8 @llvm.experimental.vector.reduce.and.v16i8(<16 x i8> %a)
+  %res = call i8 @llvm.vector.reduce.and.v16i8(<16 x i8> %a)
   ret i8 %res
 }
 
@@ -54,7 +54,7 @@ define i8 @andv_v32i8(<32 x i8>* %a) #0 {
 ; CHECK-NEXT: fmov w0, s[[REDUCE]]
 ; CHECK-NEXT: ret
   %op = load <32 x i8>, <32 x i8>* %a
-  %res = call i8 @llvm.experimental.vector.reduce.and.v32i8(<32 x i8> %op)
+  %res = call i8 @llvm.vector.reduce.and.v32i8(<32 x i8> %op)
   ret i8 %res
 }
 
@@ -77,7 +77,7 @@ define i8 @andv_v64i8(<64 x i8>* %a) #0 {
 ; VBITS_EQ_256-NEXT: ret
 
   %op = load <64 x i8>, <64 x i8>* %a
-  %res = call i8 @llvm.experimental.vector.reduce.and.v64i8(<64 x i8> %op)
+  %res = call i8 @llvm.vector.reduce.and.v64i8(<64 x i8> %op)
   ret i8 %res
 }
 
@@ -89,7 +89,7 @@ define i8 @andv_v128i8(<128 x i8>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_GE_1024-NEXT: ret
   %op = load <128 x i8>, <128 x i8>* %a
-  %res = call i8 @llvm.experimental.vector.reduce.and.v128i8(<128 x i8> %op)
+  %res = call i8 @llvm.vector.reduce.and.v128i8(<128 x i8> %op)
   ret i8 %res
 }
 
@@ -101,7 +101,7 @@ define i8 @andv_v256i8(<256 x i8>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_GE_2048-NEXT: ret
   %op = load <256 x i8>, <256 x i8>* %a
-  %res = call i8 @llvm.experimental.vector.reduce.and.v256i8(<256 x i8> %op)
+  %res = call i8 @llvm.vector.reduce.and.v256i8(<256 x i8> %op)
   ret i8 %res
 }
 
@@ -112,7 +112,7 @@ define i16 @andv_v4i16(<4 x i16> %a) #0 {
 ; CHECK: andv h[[REDUCE:[0-9]+]], [[PG]], z0.h
 ; CHECK: fmov w0, s[[REDUCE]]
 ; CHECK: ret
-  %res = call i16 @llvm.experimental.vector.reduce.and.v4i16(<4 x i16> %a)
+  %res = call i16 @llvm.vector.reduce.and.v4i16(<4 x i16> %a)
   ret i16 %res
 }
 
@@ -123,7 +123,7 @@ define i16 @andv_v8i16(<8 x i16> %a) #0 {
 ; CHECK: andv h[[REDUCE:[0-9]+]], [[PG]], z0.h
 ; CHECK: fmov w0, s[[REDUCE]]
 ; CHECK: ret
-  %res = call i16 @llvm.experimental.vector.reduce.and.v8i16(<8 x i16> %a)
+  %res = call i16 @llvm.vector.reduce.and.v8i16(<8 x i16> %a)
   ret i16 %res
 }
 
@@ -135,7 +135,7 @@ define i16 @andv_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-NEXT: fmov w0, s[[REDUCE]]
 ; CHECK-NEXT: ret
   %op = load <16 x i16>, <16 x i16>* %a
-  %res = call i16 @llvm.experimental.vector.reduce.and.v16i16(<16 x i16> %op)
+  %res = call i16 @llvm.vector.reduce.and.v16i16(<16 x i16> %op)
   ret i16 %res
 }
 
@@ -157,7 +157,7 @@ define i16 @andv_v32i16(<32 x i16>* %a) #0 {
 ; VBITS_EQ_256-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <32 x i16>, <32 x i16>* %a
-  %res = call i16 @llvm.experimental.vector.reduce.and.v32i16(<32 x i16> %op)
+  %res = call i16 @llvm.vector.reduce.and.v32i16(<32 x i16> %op)
   ret i16 %res
 }
 
@@ -169,7 +169,7 @@ define i16 @andv_v64i16(<64 x i16>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_GE_1024-NEXT: ret
   %op = load <64 x i16>, <64 x i16>* %a
-  %res = call i16 @llvm.experimental.vector.reduce.and.v64i16(<64 x i16> %op)
+  %res = call i16 @llvm.vector.reduce.and.v64i16(<64 x i16> %op)
   ret i16 %res
 }
 
@@ -181,7 +181,7 @@ define i16 @andv_v128i16(<128 x i16>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_GE_2048-NEXT: ret
   %op = load <128 x i16>, <128 x i16>* %a
-  %res = call i16 @llvm.experimental.vector.reduce.and.v128i16(<128 x i16> %op)
+  %res = call i16 @llvm.vector.reduce.and.v128i16(<128 x i16> %op)
   ret i16 %res
 }
 
@@ -192,7 +192,7 @@ define i32 @andv_v2i32(<2 x i32> %a) #0 {
 ; CHECK: andv [[REDUCE:s[0-9]+]], [[PG]], z0.s
 ; CHECK: fmov w0, [[REDUCE]]
 ; CHECK: ret
-  %res = call i32 @llvm.experimental.vector.reduce.and.v2i32(<2 x i32> %a)
+  %res = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> %a)
   ret i32 %res
 }
 
@@ -203,7 +203,7 @@ define i32 @andv_v4i32(<4 x i32> %a) #0 {
 ; CHECK: andv [[REDUCE:s[0-9]+]], [[PG]], z0.s
 ; CHECK: fmov w0, [[REDUCE]]
 ; CHECK: ret
-  %res = call i32 @llvm.experimental.vector.reduce.and.v4i32(<4 x i32> %a)
+  %res = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %a)
   ret i32 %res
 }
 
@@ -215,7 +215,7 @@ define i32 @andv_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-NEXT: fmov w0, [[REDUCE]]
 ; CHECK-NEXT: ret
   %op = load <8 x i32>, <8 x i32>* %a
-  %res = call i32 @llvm.experimental.vector.reduce.and.v8i32(<8 x i32> %op)
+  %res = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> %op)
   ret i32 %res
 }
 
@@ -237,7 +237,7 @@ define i32 @andv_v16i32(<16 x i32>* %a) #0 {
 ; VBITS_EQ_256-NEXT: fmov w0, [[REDUCE]]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <16 x i32>, <16 x i32>* %a
-  %res = call i32 @llvm.experimental.vector.reduce.and.v16i32(<16 x i32> %op)
+  %res = call i32 @llvm.vector.reduce.and.v16i32(<16 x i32> %op)
   ret i32 %res
 }
 
@@ -249,7 +249,7 @@ define i32 @andv_v32i32(<32 x i32>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmov w0, [[REDUCE]]
 ; VBITS_GE_1024-NEXT: ret
   %op = load <32 x i32>, <32 x i32>* %a
-  %res = call i32 @llvm.experimental.vector.reduce.and.v32i32(<32 x i32> %op)
+  %res = call i32 @llvm.vector.reduce.and.v32i32(<32 x i32> %op)
   ret i32 %res
 }
 
@@ -261,7 +261,7 @@ define i32 @andv_v64i32(<64 x i32>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmov w0, [[REDUCE]]
 ; VBITS_GE_2048-NEXT: ret
   %op = load <64 x i32>, <64 x i32>* %a
-  %res = call i32 @llvm.experimental.vector.reduce.and.v64i32(<64 x i32> %op)
+  %res = call i32 @llvm.vector.reduce.and.v64i32(<64 x i32> %op)
   ret i32 %res
 }
 
@@ -270,7 +270,7 @@ define i64 @andv_v1i64(<1 x i64> %a) #0 {
 ; CHECK-LABEL: andv_v1i64:
 ; CHECK: fmov x0, d0
 ; CHECK: ret
-  %res = call i64 @llvm.experimental.vector.reduce.and.v1i64(<1 x i64> %a)
+  %res = call i64 @llvm.vector.reduce.and.v1i64(<1 x i64> %a)
   ret i64 %res
 }
 
@@ -281,7 +281,7 @@ define i64 @andv_v2i64(<2 x i64> %a) #0 {
 ; CHECK: andv [[REDUCE:d[0-9]+]], [[PG]], z0.d
 ; CHECK: fmov x0, [[REDUCE]]
 ; CHECK: ret
-  %res = call i64 @llvm.experimental.vector.reduce.and.v2i64(<2 x i64> %a)
+  %res = call i64 @llvm.vector.reduce.and.v2i64(<2 x i64> %a)
   ret i64 %res
 }
 
@@ -293,7 +293,7 @@ define i64 @andv_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-NEXT: fmov x0, [[REDUCE]]
 ; CHECK-NEXT: ret
   %op = load <4 x i64>, <4 x i64>* %a
-  %res = call i64 @llvm.experimental.vector.reduce.and.v4i64(<4 x i64> %op)
+  %res = call i64 @llvm.vector.reduce.and.v4i64(<4 x i64> %op)
   ret i64 %res
 }
 
@@ -315,7 +315,7 @@ define i64 @andv_v8i64(<8 x i64>* %a) #0 {
 ; VBITS_EQ_256-NEXT: fmov x0, [[REDUCE]]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <8 x i64>, <8 x i64>* %a
-  %res = call i64 @llvm.experimental.vector.reduce.and.v8i64(<8 x i64> %op)
+  %res = call i64 @llvm.vector.reduce.and.v8i64(<8 x i64> %op)
   ret i64 %res
 }
 
@@ -327,7 +327,7 @@ define i64 @andv_v16i64(<16 x i64>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmov x0, [[REDUCE]]
 ; VBITS_GE_1024-NEXT: ret
   %op = load <16 x i64>, <16 x i64>* %a
-  %res = call i64 @llvm.experimental.vector.reduce.and.v16i64(<16 x i64> %op)
+  %res = call i64 @llvm.vector.reduce.and.v16i64(<16 x i64> %op)
   ret i64 %res
 }
 
@@ -339,7 +339,7 @@ define i64 @andv_v32i64(<32 x i64>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmov x0, [[REDUCE]]
 ; VBITS_GE_2048-NEXT: ret
   %op = load <32 x i64>, <32 x i64>* %a
-  %res = call i64 @llvm.experimental.vector.reduce.and.v32i64(<32 x i64> %op)
+  %res = call i64 @llvm.vector.reduce.and.v32i64(<32 x i64> %op)
   ret i64 %res
 }
 
@@ -354,7 +354,7 @@ define i8 @eorv_v8i8(<8 x i8> %a) #0 {
 ; CHECK: eorv b[[REDUCE:[0-9]+]], [[PG]], z0.b
 ; CHECK: fmov w0, s[[REDUCE]]
 ; CHECK: ret
-  %res = call i8 @llvm.experimental.vector.reduce.xor.v8i8(<8 x i8> %a)
+  %res = call i8 @llvm.vector.reduce.xor.v8i8(<8 x i8> %a)
   ret i8 %res
 }
 
@@ -365,7 +365,7 @@ define i8 @eorv_v16i8(<16 x i8> %a) #0 {
 ; CHECK: eorv b[[REDUCE:[0-9]+]], [[PG]], z0.b
 ; CHECK: fmov w0, s[[REDUCE]]
 ; CHECK: ret
-  %res = call i8 @llvm.experimental.vector.reduce.xor.v16i8(<16 x i8> %a)
+  %res = call i8 @llvm.vector.reduce.xor.v16i8(<16 x i8> %a)
   ret i8 %res
 }
 
@@ -377,7 +377,7 @@ define i8 @eorv_v32i8(<32 x i8>* %a) #0 {
 ; CHECK-NEXT: fmov w0, s[[REDUCE]]
 ; CHECK-NEXT: ret
   %op = load <32 x i8>, <32 x i8>* %a
-  %res = call i8 @llvm.experimental.vector.reduce.xor.v32i8(<32 x i8> %op)
+  %res = call i8 @llvm.vector.reduce.xor.v32i8(<32 x i8> %op)
   ret i8 %res
 }
 
@@ -400,7 +400,7 @@ define i8 @eorv_v64i8(<64 x i8>* %a) #0 {
 ; VBITS_EQ_256-NEXT: ret
 
   %op = load <64 x i8>, <64 x i8>* %a
-  %res = call i8 @llvm.experimental.vector.reduce.xor.v64i8(<64 x i8> %op)
+  %res = call i8 @llvm.vector.reduce.xor.v64i8(<64 x i8> %op)
   ret i8 %res
 }
 
@@ -412,7 +412,7 @@ define i8 @eorv_v128i8(<128 x i8>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_GE_1024-NEXT: ret
   %op = load <128 x i8>, <128 x i8>* %a
-  %res = call i8 @llvm.experimental.vector.reduce.xor.v128i8(<128 x i8> %op)
+  %res = call i8 @llvm.vector.reduce.xor.v128i8(<128 x i8> %op)
   ret i8 %res
 }
 
@@ -424,7 +424,7 @@ define i8 @eorv_v256i8(<256 x i8>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_GE_2048-NEXT: ret
   %op = load <256 x i8>, <256 x i8>* %a
-  %res = call i8 @llvm.experimental.vector.reduce.xor.v256i8(<256 x i8> %op)
+  %res = call i8 @llvm.vector.reduce.xor.v256i8(<256 x i8> %op)
   ret i8 %res
 }
 
@@ -435,7 +435,7 @@ define i16 @eorv_v4i16(<4 x i16> %a) #0 {
 ; CHECK: eorv h[[REDUCE:[0-9]+]], [[PG]], z0.h
 ; CHECK: fmov w0, s[[REDUCE]]
 ; CHECK: ret
-  %res = call i16 @llvm.experimental.vector.reduce.xor.v4i16(<4 x i16> %a)
+  %res = call i16 @llvm.vector.reduce.xor.v4i16(<4 x i16> %a)
   ret i16 %res
 }
 
@@ -446,7 +446,7 @@ define i16 @eorv_v8i16(<8 x i16> %a) #0 {
 ; CHECK: eorv h[[REDUCE:[0-9]+]], [[PG]], z0.h
 ; CHECK: fmov w0, s[[REDUCE]]
 ; CHECK: ret
-  %res = call i16 @llvm.experimental.vector.reduce.xor.v8i16(<8 x i16> %a)
+  %res = call i16 @llvm.vector.reduce.xor.v8i16(<8 x i16> %a)
   ret i16 %res
 }
 
@@ -458,7 +458,7 @@ define i16 @eorv_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-NEXT: fmov w0, s[[REDUCE]]
 ; CHECK-NEXT: ret
   %op = load <16 x i16>, <16 x i16>* %a
-  %res = call i16 @llvm.experimental.vector.reduce.xor.v16i16(<16 x i16> %op)
+  %res = call i16 @llvm.vector.reduce.xor.v16i16(<16 x i16> %op)
   ret i16 %res
 }
 
@@ -480,7 +480,7 @@ define i16 @eorv_v32i16(<32 x i16>* %a) #0 {
 ; VBITS_EQ_256-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <32 x i16>, <32 x i16>* %a
-  %res = call i16 @llvm.experimental.vector.reduce.xor.v32i16(<32 x i16> %op)
+  %res = call i16 @llvm.vector.reduce.xor.v32i16(<32 x i16> %op)
   ret i16 %res
 }
 
@@ -492,7 +492,7 @@ define i16 @eorv_v64i16(<64 x i16>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_GE_1024-NEXT: ret
   %op = load <64 x i16>, <64 x i16>* %a
-  %res = call i16 @llvm.experimental.vector.reduce.xor.v64i16(<64 x i16> %op)
+  %res = call i16 @llvm.vector.reduce.xor.v64i16(<64 x i16> %op)
   ret i16 %res
 }
 
@@ -504,7 +504,7 @@ define i16 @eorv_v128i16(<128 x i16>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_GE_2048-NEXT: ret
   %op = load <128 x i16>, <128 x i16>* %a
-  %res = call i16 @llvm.experimental.vector.reduce.xor.v128i16(<128 x i16> %op)
+  %res = call i16 @llvm.vector.reduce.xor.v128i16(<128 x i16> %op)
   ret i16 %res
 }
 
@@ -515,7 +515,7 @@ define i32 @eorv_v2i32(<2 x i32> %a) #0 {
 ; CHECK: eorv [[REDUCE:s[0-9]+]], [[PG]], z0.s
 ; CHECK: fmov w0, [[REDUCE]]
 ; CHECK: ret
-  %res = call i32 @llvm.experimental.vector.reduce.xor.v2i32(<2 x i32> %a)
+  %res = call i32 @llvm.vector.reduce.xor.v2i32(<2 x i32> %a)
   ret i32 %res
 }
 
@@ -526,7 +526,7 @@ define i32 @eorv_v4i32(<4 x i32> %a) #0 {
 ; CHECK: eorv [[REDUCE:s[0-9]+]], [[PG]], z0.s
 ; CHECK: fmov w0, [[REDUCE]]
 ; CHECK: ret
-  %res = call i32 @llvm.experimental.vector.reduce.xor.v4i32(<4 x i32> %a)
+  %res = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> %a)
   ret i32 %res
 }
 
@@ -538,7 +538,7 @@ define i32 @eorv_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-NEXT: fmov w0, [[REDUCE]]
 ; CHECK-NEXT: ret
   %op = load <8 x i32>, <8 x i32>* %a
-  %res = call i32 @llvm.experimental.vector.reduce.xor.v8i32(<8 x i32> %op)
+  %res = call i32 @llvm.vector.reduce.xor.v8i32(<8 x i32> %op)
   ret i32 %res
 }
 
@@ -560,7 +560,7 @@ define i32 @eorv_v16i32(<16 x i32>* %a) #0 {
 ; VBITS_EQ_256-NEXT: fmov w0, [[REDUCE]]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <16 x i32>, <16 x i32>* %a
-  %res = call i32 @llvm.experimental.vector.reduce.xor.v16i32(<16 x i32> %op)
+  %res = call i32 @llvm.vector.reduce.xor.v16i32(<16 x i32> %op)
   ret i32 %res
 }
 
@@ -572,7 +572,7 @@ define i32 @eorv_v32i32(<32 x i32>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmov w0, [[REDUCE]]
 ; VBITS_GE_1024-NEXT: ret
   %op = load <32 x i32>, <32 x i32>* %a
-  %res = call i32 @llvm.experimental.vector.reduce.xor.v32i32(<32 x i32> %op)
+  %res = call i32 @llvm.vector.reduce.xor.v32i32(<32 x i32> %op)
   ret i32 %res
 }
 
@@ -584,7 +584,7 @@ define i32 @eorv_v64i32(<64 x i32>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmov w0, [[REDUCE]]
 ; VBITS_GE_2048-NEXT: ret
   %op = load <64 x i32>, <64 x i32>* %a
-  %res = call i32 @llvm.experimental.vector.reduce.xor.v64i32(<64 x i32> %op)
+  %res = call i32 @llvm.vector.reduce.xor.v64i32(<64 x i32> %op)
   ret i32 %res
 }
 
@@ -593,7 +593,7 @@ define i64 @eorv_v1i64(<1 x i64> %a) #0 {
 ; CHECK-LABEL: eorv_v1i64:
 ; CHECK: fmov x0, d0
 ; CHECK: ret
-  %res = call i64 @llvm.experimental.vector.reduce.xor.v1i64(<1 x i64> %a)
+  %res = call i64 @llvm.vector.reduce.xor.v1i64(<1 x i64> %a)
   ret i64 %res
 }
 
@@ -604,7 +604,7 @@ define i64 @eorv_v2i64(<2 x i64> %a) #0 {
 ; CHECK: eorv [[REDUCE:d[0-9]+]], [[PG]], z0.d
 ; CHECK: fmov x0, [[REDUCE]]
 ; CHECK: ret
-  %res = call i64 @llvm.experimental.vector.reduce.xor.v2i64(<2 x i64> %a)
+  %res = call i64 @llvm.vector.reduce.xor.v2i64(<2 x i64> %a)
   ret i64 %res
 }
 
@@ -616,7 +616,7 @@ define i64 @eorv_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-NEXT: fmov x0, [[REDUCE]]
 ; CHECK-NEXT: ret
   %op = load <4 x i64>, <4 x i64>* %a
-  %res = call i64 @llvm.experimental.vector.reduce.xor.v4i64(<4 x i64> %op)
+  %res = call i64 @llvm.vector.reduce.xor.v4i64(<4 x i64> %op)
   ret i64 %res
 }
 
@@ -638,7 +638,7 @@ define i64 @eorv_v8i64(<8 x i64>* %a) #0 {
 ; VBITS_EQ_256-NEXT: fmov x0, [[REDUCE]]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <8 x i64>, <8 x i64>* %a
-  %res = call i64 @llvm.experimental.vector.reduce.xor.v8i64(<8 x i64> %op)
+  %res = call i64 @llvm.vector.reduce.xor.v8i64(<8 x i64> %op)
   ret i64 %res
 }
 
@@ -650,7 +650,7 @@ define i64 @eorv_v16i64(<16 x i64>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmov x0, [[REDUCE]]
 ; VBITS_GE_1024-NEXT: ret
   %op = load <16 x i64>, <16 x i64>* %a
-  %res = call i64 @llvm.experimental.vector.reduce.xor.v16i64(<16 x i64> %op)
+  %res = call i64 @llvm.vector.reduce.xor.v16i64(<16 x i64> %op)
   ret i64 %res
 }
 
@@ -662,7 +662,7 @@ define i64 @eorv_v32i64(<32 x i64>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmov x0, [[REDUCE]]
 ; VBITS_GE_2048-NEXT: ret
   %op = load <32 x i64>, <32 x i64>* %a
-  %res = call i64 @llvm.experimental.vector.reduce.xor.v32i64(<32 x i64> %op)
+  %res = call i64 @llvm.vector.reduce.xor.v32i64(<32 x i64> %op)
   ret i64 %res
 }
 
@@ -677,7 +677,7 @@ define i8 @orv_v8i8(<8 x i8> %a) #0 {
 ; CHECK: orv b[[REDUCE:[0-9]+]], [[PG]], z0.b
 ; CHECK: fmov w0, s[[REDUCE]]
 ; CHECK: ret
-  %res = call i8 @llvm.experimental.vector.reduce.or.v8i8(<8 x i8> %a)
+  %res = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> %a)
   ret i8 %res
 }
 
@@ -688,7 +688,7 @@ define i8 @orv_v16i8(<16 x i8> %a) #0 {
 ; CHECK: orv b[[REDUCE:[0-9]+]], [[PG]], z0.b
 ; CHECK: fmov w0, s[[REDUCE]]
 ; CHECK: ret
-  %res = call i8 @llvm.experimental.vector.reduce.or.v16i8(<16 x i8> %a)
+  %res = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> %a)
   ret i8 %res
 }
 
@@ -700,7 +700,7 @@ define i8 @orv_v32i8(<32 x i8>* %a) #0 {
 ; CHECK-NEXT: fmov w0, s[[REDUCE]]
 ; CHECK-NEXT: ret
   %op = load <32 x i8>, <32 x i8>* %a
-  %res = call i8 @llvm.experimental.vector.reduce.or.v32i8(<32 x i8> %op)
+  %res = call i8 @llvm.vector.reduce.or.v32i8(<32 x i8> %op)
   ret i8 %res
 }
 
@@ -723,7 +723,7 @@ define i8 @orv_v64i8(<64 x i8>* %a) #0 {
 ; VBITS_EQ_256-NEXT: ret
 
   %op = load <64 x i8>, <64 x i8>* %a
-  %res = call i8 @llvm.experimental.vector.reduce.or.v64i8(<64 x i8> %op)
+  %res = call i8 @llvm.vector.reduce.or.v64i8(<64 x i8> %op)
   ret i8 %res
 }
 
@@ -735,7 +735,7 @@ define i8 @orv_v128i8(<128 x i8>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_GE_1024-NEXT: ret
   %op = load <128 x i8>, <128 x i8>* %a
-  %res = call i8 @llvm.experimental.vector.reduce.or.v128i8(<128 x i8> %op)
+  %res = call i8 @llvm.vector.reduce.or.v128i8(<128 x i8> %op)
   ret i8 %res
 }
 
@@ -747,7 +747,7 @@ define i8 @orv_v256i8(<256 x i8>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_GE_2048-NEXT: ret
   %op = load <256 x i8>, <256 x i8>* %a
-  %res = call i8 @llvm.experimental.vector.reduce.or.v256i8(<256 x i8> %op)
+  %res = call i8 @llvm.vector.reduce.or.v256i8(<256 x i8> %op)
   ret i8 %res
 }
 
@@ -758,7 +758,7 @@ define i16 @orv_v4i16(<4 x i16> %a) #0 {
 ; CHECK: orv h[[REDUCE:[0-9]+]], [[PG]], z0.h
 ; CHECK: fmov w0, s[[REDUCE]]
 ; CHECK: ret
-  %res = call i16 @llvm.experimental.vector.reduce.or.v4i16(<4 x i16> %a)
+  %res = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> %a)
   ret i16 %res
 }
 
@@ -769,7 +769,7 @@ define i16 @orv_v8i16(<8 x i16> %a) #0 {
 ; CHECK: orv h[[REDUCE:[0-9]+]], [[PG]], z0.h
 ; CHECK: fmov w0, s[[REDUCE]]
 ; CHECK: ret
-  %res = call i16 @llvm.experimental.vector.reduce.or.v8i16(<8 x i16> %a)
+  %res = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> %a)
   ret i16 %res
 }
 
@@ -781,7 +781,7 @@ define i16 @orv_v16i16(<16 x i16>* %a) #0 {
 ; CHECK-NEXT: fmov w0, s[[REDUCE]]
 ; CHECK-NEXT: ret
   %op = load <16 x i16>, <16 x i16>* %a
-  %res = call i16 @llvm.experimental.vector.reduce.or.v16i16(<16 x i16> %op)
+  %res = call i16 @llvm.vector.reduce.or.v16i16(<16 x i16> %op)
   ret i16 %res
 }
 
@@ -803,7 +803,7 @@ define i16 @orv_v32i16(<32 x i16>* %a) #0 {
 ; VBITS_EQ_256-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <32 x i16>, <32 x i16>* %a
-  %res = call i16 @llvm.experimental.vector.reduce.or.v32i16(<32 x i16> %op)
+  %res = call i16 @llvm.vector.reduce.or.v32i16(<32 x i16> %op)
   ret i16 %res
 }
 
@@ -815,7 +815,7 @@ define i16 @orv_v64i16(<64 x i16>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_GE_1024-NEXT: ret
   %op = load <64 x i16>, <64 x i16>* %a
-  %res = call i16 @llvm.experimental.vector.reduce.or.v64i16(<64 x i16> %op)
+  %res = call i16 @llvm.vector.reduce.or.v64i16(<64 x i16> %op)
   ret i16 %res
 }
 
@@ -827,7 +827,7 @@ define i16 @orv_v128i16(<128 x i16>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmov w0, s[[REDUCE]]
 ; VBITS_GE_2048-NEXT: ret
   %op = load <128 x i16>, <128 x i16>* %a
-  %res = call i16 @llvm.experimental.vector.reduce.or.v128i16(<128 x i16> %op)
+  %res = call i16 @llvm.vector.reduce.or.v128i16(<128 x i16> %op)
   ret i16 %res
 }
 
@@ -838,7 +838,7 @@ define i32 @orv_v2i32(<2 x i32> %a) #0 {
 ; CHECK: orv [[REDUCE:s[0-9]+]], [[PG]], z0.s
 ; CHECK: fmov w0, [[REDUCE]]
 ; CHECK: ret
-  %res = call i32 @llvm.experimental.vector.reduce.or.v2i32(<2 x i32> %a)
+  %res = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> %a)
   ret i32 %res
 }
 
@@ -849,7 +849,7 @@ define i32 @orv_v4i32(<4 x i32> %a) #0 {
 ; CHECK: orv [[REDUCE:s[0-9]+]], [[PG]], z0.s
 ; CHECK: fmov w0, [[REDUCE]]
 ; CHECK: ret
-  %res = call i32 @llvm.experimental.vector.reduce.or.v4i32(<4 x i32> %a)
+  %res = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %a)
   ret i32 %res
 }
 
@@ -861,7 +861,7 @@ define i32 @orv_v8i32(<8 x i32>* %a) #0 {
 ; CHECK-NEXT: fmov w0, [[REDUCE]]
 ; CHECK-NEXT: ret
   %op = load <8 x i32>, <8 x i32>* %a
-  %res = call i32 @llvm.experimental.vector.reduce.or.v8i32(<8 x i32> %op)
+  %res = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %op)
   ret i32 %res
 }
 
@@ -883,7 +883,7 @@ define i32 @orv_v16i32(<16 x i32>* %a) #0 {
 ; VBITS_EQ_256-NEXT: fmov w0, [[REDUCE]]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <16 x i32>, <16 x i32>* %a
-  %res = call i32 @llvm.experimental.vector.reduce.or.v16i32(<16 x i32> %op)
+  %res = call i32 @llvm.vector.reduce.or.v16i32(<16 x i32> %op)
   ret i32 %res
 }
 
@@ -895,7 +895,7 @@ define i32 @orv_v32i32(<32 x i32>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmov w0, [[REDUCE]]
 ; VBITS_GE_1024-NEXT: ret
   %op = load <32 x i32>, <32 x i32>* %a
-  %res = call i32 @llvm.experimental.vector.reduce.or.v32i32(<32 x i32> %op)
+  %res = call i32 @llvm.vector.reduce.or.v32i32(<32 x i32> %op)
   ret i32 %res
 }
 
@@ -907,7 +907,7 @@ define i32 @orv_v64i32(<64 x i32>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmov w0, [[REDUCE]]
 ; VBITS_GE_2048-NEXT: ret
   %op = load <64 x i32>, <64 x i32>* %a
-  %res = call i32 @llvm.experimental.vector.reduce.or.v64i32(<64 x i32> %op)
+  %res = call i32 @llvm.vector.reduce.or.v64i32(<64 x i32> %op)
   ret i32 %res
 }
 
@@ -916,7 +916,7 @@ define i64 @orv_v1i64(<1 x i64> %a) #0 {
 ; CHECK-LABEL: orv_v1i64:
 ; CHECK: fmov x0, d0
 ; CHECK: ret
-  %res = call i64 @llvm.experimental.vector.reduce.or.v1i64(<1 x i64> %a)
+  %res = call i64 @llvm.vector.reduce.or.v1i64(<1 x i64> %a)
   ret i64 %res
 }
 
@@ -927,7 +927,7 @@ define i64 @orv_v2i64(<2 x i64> %a) #0 {
 ; CHECK: orv [[REDUCE:d[0-9]+]], [[PG]], z0.d
 ; CHECK: fmov x0, [[REDUCE]]
 ; CHECK: ret
-  %res = call i64 @llvm.experimental.vector.reduce.or.v2i64(<2 x i64> %a)
+  %res = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> %a)
   ret i64 %res
 }
 
@@ -939,7 +939,7 @@ define i64 @orv_v4i64(<4 x i64>* %a) #0 {
 ; CHECK-NEXT: fmov x0, [[REDUCE]]
 ; CHECK-NEXT: ret
   %op = load <4 x i64>, <4 x i64>* %a
-  %res = call i64 @llvm.experimental.vector.reduce.or.v4i64(<4 x i64> %op)
+  %res = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> %op)
   ret i64 %res
 }
 
@@ -961,7 +961,7 @@ define i64 @orv_v8i64(<8 x i64>* %a) #0 {
 ; VBITS_EQ_256-NEXT: fmov x0, [[REDUCE]]
 ; VBITS_EQ_256-NEXT: ret
   %op = load <8 x i64>, <8 x i64>* %a
-  %res = call i64 @llvm.experimental.vector.reduce.or.v8i64(<8 x i64> %op)
+  %res = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> %op)
   ret i64 %res
 }
 
@@ -973,7 +973,7 @@ define i64 @orv_v16i64(<16 x i64>* %a) #0 {
 ; VBITS_GE_1024-NEXT: fmov x0, [[REDUCE]]
 ; VBITS_GE_1024-NEXT: ret
   %op = load <16 x i64>, <16 x i64>* %a
-  %res = call i64 @llvm.experimental.vector.reduce.or.v16i64(<16 x i64> %op)
+  %res = call i64 @llvm.vector.reduce.or.v16i64(<16 x i64> %op)
   ret i64 %res
 }
 
@@ -985,92 +985,92 @@ define i64 @orv_v32i64(<32 x i64>* %a) #0 {
 ; VBITS_GE_2048-NEXT: fmov x0, [[REDUCE]]
 ; VBITS_GE_2048-NEXT: ret
   %op = load <32 x i64>, <32 x i64>* %a
-  %res = call i64 @llvm.experimental.vector.reduce.or.v32i64(<32 x i64> %op)
+  %res = call i64 @llvm.vector.reduce.or.v32i64(<32 x i64> %op)
   ret i64 %res
 }
 
 attributes #0 = { "target-features"="+sve" }
 
-declare i8 @llvm.experimental.vector.reduce.and.v8i8(<8 x i8>)
-declare i8 @llvm.experimental.vector.reduce.and.v16i8(<16 x i8>)
-declare i8 @llvm.experimental.vector.reduce.and.v32i8(<32 x i8>)
-declare i8 @llvm.experimental.vector.reduce.and.v64i8(<64 x i8>)
-declare i8 @llvm.experimental.vector.reduce.and.v128i8(<128 x i8>)
-declare i8 @llvm.experimental.vector.reduce.and.v256i8(<256 x i8>)
+declare i8 @llvm.vector.reduce.and.v8i8(<8 x i8>)
+declare i8 @llvm.vector.reduce.and.v16i8(<16 x i8>)
+declare i8 @llvm.vector.reduce.and.v32i8(<32 x i8>)
+declare i8 @llvm.vector.reduce.and.v64i8(<64 x i8>)
+declare i8 @llvm.vector.reduce.and.v128i8(<128 x i8>)
+declare i8 @llvm.vector.reduce.and.v256i8(<256 x i8>)
 
-declare i16 @llvm.experimental.vector.reduce.and.v4i16(<4 x i16>)
-declare i16 @llvm.experimental.vector.reduce.and.v8i16(<8 x i16>)
-declare i16 @llvm.experimental.vector.reduce.and.v16i16(<16 x i16>)
-declare i16 @llvm.experimental.vector.reduce.and.v32i16(<32 x i16>)
-declare i16 @llvm.experimental.vector.reduce.and.v64i16(<64 x i16>)
-declare i16 @llvm.experimental.vector.reduce.and.v128i16(<128 x i16>)
+declare i16 @llvm.vector.reduce.and.v4i16(<4 x i16>)
+declare i16 @llvm.vector.reduce.and.v8i16(<8 x i16>)
+declare i16 @llvm.vector.reduce.and.v16i16(<16 x i16>)
+declare i16 @llvm.vector.reduce.and.v32i16(<32 x i16>)
+declare i16 @llvm.vector.reduce.and.v64i16(<64 x i16>)
+declare i16 @llvm.vector.reduce.and.v128i16(<128 x i16>)
 
-declare i32 @llvm.experimental.vector.reduce.and.v2i32(<2 x i32>)
-declare i32 @llvm.experimental.vector.reduce.and.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.and.v8i32(<8 x i32>)
-declare i32 @llvm.experimental.vector.reduce.and.v16i32(<16 x i32>)
-declare i32 @llvm.experimental.vector.reduce.and.v32i32(<32 x i32>)
-declare i32 @llvm.experimental.vector.reduce.and.v64i32(<64 x i32>)
+declare i32 @llvm.vector.reduce.and.v2i32(<2 x i32>)
+declare i32 @llvm.vector.reduce.and.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.and.v8i32(<8 x i32>)
+declare i32 @llvm.vector.reduce.and.v16i32(<16 x i32>)
+declare i32 @llvm.vector.reduce.and.v32i32(<32 x i32>)
+declare i32 @llvm.vector.reduce.and.v64i32(<64 x i32>)
 
-declare i64 @llvm.experimental.vector.reduce.and.v1i64(<1 x i64>)
-declare i64 @llvm.experimental.vector.reduce.and.v2i64(<2 x i64>)
-declare i64 @llvm.experimental.vector.reduce.and.v4i64(<4 x i64>)
-declare i64 @llvm.experimental.vector.reduce.and.v8i64(<8 x i64>)
-declare i64 @llvm.experimental.vector.reduce.and.v16i64(<16 x i64>)
-declare i64 @llvm.experimental.vector.reduce.and.v32i64(<32 x i64>)
+declare i64 @llvm.vector.reduce.and.v1i64(<1 x i64>)
+declare i64 @llvm.vector.reduce.and.v2i64(<2 x i64>)
+declare i64 @llvm.vector.reduce.and.v4i64(<4 x i64>)
+declare i64 @llvm.vector.reduce.and.v8i64(<8 x i64>)
+declare i64 @llvm.vector.reduce.and.v16i64(<16 x i64>)
+declare i64 @llvm.vector.reduce.and.v32i64(<32 x i64>)
 
-declare i8 @llvm.experimental.vector.reduce.or.v8i8(<8 x i8>)
-declare i8 @llvm.experimental.vector.reduce.or.v16i8(<16 x i8>)
-declare i8 @llvm.experimental.vector.reduce.or.v32i8(<32 x i8>)
-declare i8 @llvm.experimental.vector.reduce.or.v64i8(<64 x i8>)
-declare i8 @llvm.experimental.vector.reduce.or.v128i8(<128 x i8>)
-declare i8 @llvm.experimental.vector.reduce.or.v256i8(<256 x i8>)
+declare i8 @llvm.vector.reduce.or.v8i8(<8 x i8>)
+declare i8 @llvm.vector.reduce.or.v16i8(<16 x i8>)
+declare i8 @llvm.vector.reduce.or.v32i8(<32 x i8>)
+declare i8 @llvm.vector.reduce.or.v64i8(<64 x i8>)
+declare i8 @llvm.vector.reduce.or.v128i8(<128 x i8>)
+declare i8 @llvm.vector.reduce.or.v256i8(<256 x i8>)
 
-declare i16 @llvm.experimental.vector.reduce.or.v4i16(<4 x i16>)
-declare i16 @llvm.experimental.vector.reduce.or.v8i16(<8 x i16>)
-declare i16 @llvm.experimental.vector.reduce.or.v16i16(<16 x i16>)
-declare i16 @llvm.experimental.vector.reduce.or.v32i16(<32 x i16>)
-declare i16 @llvm.experimental.vector.reduce.or.v64i16(<64 x i16>)
-declare i16 @llvm.experimental.vector.reduce.or.v128i16(<128 x i16>)
+declare i16 @llvm.vector.reduce.or.v4i16(<4 x i16>)
+declare i16 @llvm.vector.reduce.or.v8i16(<8 x i16>)
+declare i16 @llvm.vector.reduce.or.v16i16(<16 x i16>)
+declare i16 @llvm.vector.reduce.or.v32i16(<32 x i16>)
+declare i16 @llvm.vector.reduce.or.v64i16(<64 x i16>)
+declare i16 @llvm.vector.reduce.or.v128i16(<128 x i16>)
 
-declare i32 @llvm.experimental.vector.reduce.or.v2i32(<2 x i32>)
-declare i32 @llvm.experimental.vector.reduce.or.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.or.v8i32(<8 x i32>)
-declare i32 @llvm.experimental.vector.reduce.or.v16i32(<16 x i32>)
-declare i32 @llvm.experimental.vector.reduce.or.v32i32(<32 x i32>)
-declare i32 @llvm.experimental.vector.reduce.or.v64i32(<64 x i32>)
+declare i32 @llvm.vector.reduce.or.v2i32(<2 x i32>)
+declare i32 @llvm.vector.reduce.or.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.or.v8i32(<8 x i32>)
+declare i32 @llvm.vector.reduce.or.v16i32(<16 x i32>)
+declare i32 @llvm.vector.reduce.or.v32i32(<32 x i32>)
+declare i32 @llvm.vector.reduce.or.v64i32(<64 x i32>)
 
-declare i64 @llvm.experimental.vector.reduce.or.v1i64(<1 x i64>)
-declare i64 @llvm.experimental.vector.reduce.or.v2i64(<2 x i64>)
-declare i64 @llvm.experimental.vector.reduce.or.v4i64(<4 x i64>)
-declare i64 @llvm.experimental.vector.reduce.or.v8i64(<8 x i64>)
-declare i64 @llvm.experimental.vector.reduce.or.v16i64(<16 x i64>)
-declare i64 @llvm.experimental.vector.reduce.or.v32i64(<32 x i64>)
+declare i64 @llvm.vector.reduce.or.v1i64(<1 x i64>)
+declare i64 @llvm.vector.reduce.or.v2i64(<2 x i64>)
+declare i64 @llvm.vector.reduce.or.v4i64(<4 x i64>)
+declare i64 @llvm.vector.reduce.or.v8i64(<8 x i64>)
+declare i64 @llvm.vector.reduce.or.v16i64(<16 x i64>)
+declare i64 @llvm.vector.reduce.or.v32i64(<32 x i64>)
 
-declare i8 @llvm.experimental.vector.reduce.xor.v8i8(<8 x i8>)
-declare i8 @llvm.experimental.vector.reduce.xor.v16i8(<16 x i8>)
-declare i8 @llvm.experimental.vector.reduce.xor.v32i8(<32 x i8>)
-declare i8 @llvm.experimental.vector.reduce.xor.v64i8(<64 x i8>)
-declare i8 @llvm.experimental.vector.reduce.xor.v128i8(<128 x i8>)
-declare i8 @llvm.experimental.vector.reduce.xor.v256i8(<256 x i8>)
+declare i8 @llvm.vector.reduce.xor.v8i8(<8 x i8>)
+declare i8 @llvm.vector.reduce.xor.v16i8(<16 x i8>)
+declare i8 @llvm.vector.reduce.xor.v32i8(<32 x i8>)
+declare i8 @llvm.vector.reduce.xor.v64i8(<64 x i8>)
+declare i8 @llvm.vector.reduce.xor.v128i8(<128 x i8>)
+declare i8 @llvm.vector.reduce.xor.v256i8(<256 x i8>)
 
-declare i16 @llvm.experimental.vector.reduce.xor.v4i16(<4 x i16>)
-declare i16 @llvm.experimental.vector.reduce.xor.v8i16(<8 x i16>)
-declare i16 @llvm.experimental.vector.reduce.xor.v16i16(<16 x i16>)
-declare i16 @llvm.experimental.vector.reduce.xor.v32i16(<32 x i16>)
-declare i16 @llvm.experimental.vector.reduce.xor.v64i16(<64 x i16>)
-declare i16 @llvm.experimental.vector.reduce.xor.v128i16(<128 x i16>)
+declare i16 @llvm.vector.reduce.xor.v4i16(<4 x i16>)
+declare i16 @llvm.vector.reduce.xor.v8i16(<8 x i16>)
+declare i16 @llvm.vector.reduce.xor.v16i16(<16 x i16>)
+declare i16 @llvm.vector.reduce.xor.v32i16(<32 x i16>)
+declare i16 @llvm.vector.reduce.xor.v64i16(<64 x i16>)
+declare i16 @llvm.vector.reduce.xor.v128i16(<128 x i16>)
 
-declare i32 @llvm.experimental.vector.reduce.xor.v2i32(<2 x i32>)
-declare i32 @llvm.experimental.vector.reduce.xor.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.xor.v8i32(<8 x i32>)
-declare i32 @llvm.experimental.vector.reduce.xor.v16i32(<16 x i32>)
-declare i32 @llvm.experimental.vector.reduce.xor.v32i32(<32 x i32>)
-declare i32 @llvm.experimental.vector.reduce.xor.v64i32(<64 x i32>)
+declare i32 @llvm.vector.reduce.xor.v2i32(<2 x i32>)
+declare i32 @llvm.vector.reduce.xor.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.xor.v8i32(<8 x i32>)
+declare i32 @llvm.vector.reduce.xor.v16i32(<16 x i32>)
+declare i32 @llvm.vector.reduce.xor.v32i32(<32 x i32>)
+declare i32 @llvm.vector.reduce.xor.v64i32(<64 x i32>)
 
-declare i64 @llvm.experimental.vector.reduce.xor.v1i64(<1 x i64>)
-declare i64 @llvm.experimental.vector.reduce.xor.v2i64(<2 x i64>)
-declare i64 @llvm.experimental.vector.reduce.xor.v4i64(<4 x i64>)
-declare i64 @llvm.experimental.vector.reduce.xor.v8i64(<8 x i64>)
-declare i64 @llvm.experimental.vector.reduce.xor.v16i64(<16 x i64>)
-declare i64 @llvm.experimental.vector.reduce.xor.v32i64(<32 x i64>)
+declare i64 @llvm.vector.reduce.xor.v1i64(<1 x i64>)
+declare i64 @llvm.vector.reduce.xor.v2i64(<2 x i64>)
+declare i64 @llvm.vector.reduce.xor.v4i64(<4 x i64>)
+declare i64 @llvm.vector.reduce.xor.v8i64(<8 x i64>)
+declare i64 @llvm.vector.reduce.xor.v16i64(<16 x i64>)
+declare i64 @llvm.vector.reduce.xor.v32i64(<32 x i64>)
