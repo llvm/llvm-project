@@ -375,12 +375,9 @@ uptr ThreadSelf() {
   descr_addr = reinterpret_cast<uptr>(__builtin_thread_pointer()) -
                                       ThreadDescriptorSize();
 #elif SANITIZER_RISCV64
-  uptr tcb_end;
-  asm volatile("mv %0, tp;\n" : "=r"(tcb_end));
   // https://github.com/riscv/riscv-elf-psabi-doc/issues/53
-  const uptr kTlsTcbOffset = 0x800;
-  descr_addr =
-      reinterpret_cast<uptr>(tcb_end - kTlsTcbOffset - TlsPreTcbSize());
+  uptr thread_pointer = reinterpret_cast<uptr>(__builtin_thread_pointer());
+  descr_addr = thread_pointer - TlsPreTcbSize();
 #elif defined(__s390__)
   descr_addr = reinterpret_cast<uptr>(__builtin_thread_pointer());
 #elif defined(__powerpc64__)
