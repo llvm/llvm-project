@@ -210,6 +210,13 @@ public:
   /// Create one of the shape ops given an extended value.
   mlir::Value createShape(mlir::Location loc, const fir::ExtendedValue &exv);
 
+  /// Create a boxed value (Fortran descriptor) to be passed to the runtime.
+  /// \p exv is an extended value holding a memory reference to the object that
+  /// must be boxed. This function will crash if provided something that is not
+  /// a memory reference type.
+  /// Array entities are boxed with a shape and character with their length.
+  mlir::Value createBox(mlir::Location loc, const fir::ExtendedValue &exv);
+
 private:
   const fir::KindMapping &kindMap;
 };

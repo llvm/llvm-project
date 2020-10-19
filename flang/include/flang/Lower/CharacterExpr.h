@@ -104,6 +104,10 @@ public:
   /// - fir.array<len x fir.char<kind>>
   static bool isCharacterScalar(mlir::Type type);
 
+  /// Does this extended value holds a !fir.array<len x ... fir.char<kind>>
+  /// where len is not the unknown extent ?
+  static bool hasConstantLengthInType(const fir::ExtendedValue &);
+
   /// Extract the kind of a character type
   static fir::KindTy getCharacterKind(mlir::Type type);
 

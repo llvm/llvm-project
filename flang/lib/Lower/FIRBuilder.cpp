@@ -9,6 +9,7 @@
 #include "flang/Lower/FIRBuilder.h"
 #include "SymbolMap.h"
 #include "flang/Lower/Bridge.h"
+#include "flang/Lower/CharacterExpr.h"
 #include "flang/Lower/ComplexExpr.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/Support/BoxValue.h"
@@ -203,7 +204,7 @@ Fortran::lower::FirOpBuilder::createShape(mlir::Location loc,
     auto shapeTy =
         fir::ShapeShiftType::get(getContext(), box.getExtents().size());
     llvm::SmallVector<mlir::Value, 8> pairs;
-    for (auto [fst,snd] : llvm::zip(box.getLBounds(), box.getExtents())) {
+    for (auto [fst, snd] : llvm::zip(box.getLBounds(), box.getExtents())) {
       pairs.push_back(createConvert(loc, idxTy, fst));
       pairs.push_back(createConvert(loc, idxTy, snd));
     }
@@ -217,4 +218,45 @@ Fortran::lower::FirOpBuilder::createShape(mlir::Location loc,
                      mlir::emitError(loc, "expected shape on entity");
                      return mlir::Value{};
                    });
+}
+
+mlir::Value
+Fortran::lower::FirOpBuilder::createBox(mlir::Location loc,
+                                        const fir::ExtendedValue &exv) {
+  auto itemAddr = fir::getBase(exv);
+  auto elementType = fir::dyn_cast_ptrEleTy(itemAddr.getType());
+  if (!elementType)
+    mlir::emitError(loc, "internal: expected a memory reference type ")
+        << itemAddr.getType();
+  auto boxTy = fir::BoxType::get(elementType);
+  return exv.match(
+      [&](const fir::ArrayBoxValue &box) -> mlir::Value {
+        auto s = createShape(loc, exv);
+        return create<fir::EmboxOp>(loc, boxTy, itemAddr, s);
+      },
+      [&](const fir::CharArrayBoxValue &box) -> mlir::Value {
+        auto s = createShape(loc, exv);
+        if (Fortran::lower::CharacterExprHelper::hasConstantLengthInType(exv))
+          return create<fir::EmboxOp>(loc, boxTy, itemAddr, s);
+
+        mlir::Value emptySlice;
+        llvm::SmallVector<mlir::Value, 1> lenParams{box.getLen()};
+        return create<fir::EmboxOp>(loc, boxTy, itemAddr, s, emptySlice,
+                                    lenParams);
+      },
+      [&](const fir::BoxValue &box) -> mlir::Value {
+        auto s = createShape(loc, exv);
+        return create<fir::EmboxOp>(loc, boxTy, itemAddr, s);
+      },
+      [&](const fir::CharBoxValue &box) -> mlir::Value {
+        if (Fortran::lower::CharacterExprHelper::hasConstantLengthInType(exv))
+          return create<fir::EmboxOp>(loc, boxTy, itemAddr);
+        mlir::Value emptyShape, emptySlice;
+        llvm::SmallVector<mlir::Value, 1> lenParams{box.getLen()};
+        return create<fir::EmboxOp>(loc, boxTy, itemAddr, emptyShape,
+                                    emptySlice, lenParams);
+      },
+      [&](const auto &) -> mlir::Value {
+        return create<fir::EmboxOp>(loc, boxTy, itemAddr);
+      });
 }
