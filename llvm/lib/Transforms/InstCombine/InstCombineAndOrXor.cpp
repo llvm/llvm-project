@@ -2373,10 +2373,10 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       else if (PredL == ICmpInst::ICMP_UGT && RHS0 == LHS0)
         A = LHS1;
     }
-    if (A && B)
+    if (A && B && B->getType()->isIntOrIntVectorTy())
       return Builder.CreateICmp(
           ICmpInst::ICMP_UGE,
-          Builder.CreateAdd(B, ConstantInt::getAllOnesValue(B->getType())), A);
+          Builder.CreateAdd(B, Constant::getAllOnesValue(B->getType())), A);
   }
 
   if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, Or, Builder, Q))
