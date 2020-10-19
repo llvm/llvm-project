@@ -135,6 +135,23 @@ void RenamerClangTidyCheck::registerPPCallbacks(
                                                          this));
 }
 
+/// Returns the function that \p Method is overridding. If There are none or
+/// multiple overrides it returns nullptr. If the overridden function itself is
+/// overridding then it will recurse up to find the first decl of the function.
+static const CXXMethodDecl *getOverrideMethod(const CXXMethodDecl *Method) {
+  if (Method->size_overridden_methods() != 1)
+    return nullptr;
+  while (true) {
+    Method = *Method->begin_overridden_methods();
+    assert(Method && "Overridden method shouldn't be null");
+    unsigned NumOverrides = Method->size_overridden_methods();
+    if (NumOverrides == 0)
+      return Method;
+    if (NumOverrides > 1)
+      return nullptr;
+  }
+}
+
 void RenamerClangTidyCheck::addUsage(
     const RenamerClangTidyCheck::NamingCheckId &Decl, SourceRange Range,
     SourceManager *SourceMgr) {
@@ -172,6 +189,10 @@ void RenamerClangTidyCheck::addUsage(
 
 void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl, SourceRange Range,
                                      SourceManager *SourceMgr) {
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
+    if (const CXXMethodDecl *Overridden = getOverrideMethod(Method))
+      Decl = Overridden;
+  }
   Decl = cast<NamedDecl>(Decl->getCanonicalDecl());
   return addUsage(RenamerClangTidyCheck::NamingCheckId(Decl->getLocation(),
                                                        Decl->getNameAsString()),
@@ -409,6 +430,14 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
                 Param->getType().getTypePtr()->getAs<TypedefType>())
           addUsage(Typedef->getDecl(), Value->getSourceRange(),
                    Result.SourceManager);
+      }
+    }
+
+    // Fix overridden methods
+    if (const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("decl")) {
+      if (const CXXMethodDecl *Overridden = getOverrideMethod(Method)) {
+        addUsage(Overridden, Method->getLocation());
+        return; // Don't try to add the actual decl as a Failure.
       }
     }
 

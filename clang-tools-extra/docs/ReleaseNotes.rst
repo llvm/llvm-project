@@ -125,6 +125,9 @@ Changes in existing checks
   Added an option `GetConfigPerFile` to support including files which use
   different naming styles.
 
+  Now renames overridden virtual methods if the method they override has a
+  style violation.
+
 - Removed `google-runtime-references` check because the rule it checks does
   not exist in the Google Style Guide anymore.
 
