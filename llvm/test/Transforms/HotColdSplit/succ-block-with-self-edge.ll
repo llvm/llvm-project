@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK: call {{.*}}@exit_block_with_same_incoming_vals.cold.1(
 ; CHECK-NOT: br i1 undef
 ; CHECK: phi i32 [ 0, %entry ], [ %p.ce.reload, %codeRepl ]
-define void @exit_block_with_same_incoming_vals(i32 %cond) "hot-cold-split" {
+define void @exit_block_with_same_incoming_vals(i32 %cond) {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.end, label %coldbb
@@ -30,7 +30,7 @@ if.end:
 ; CHECK: call {{.*}}@exit_block_with_distinct_incoming_vals.cold.1(
 ; CHECK-NOT: br i1 undef
 ; CHECK: phi i32 [ 0, %entry ], [ %p.ce.reload, %codeRepl ]
-define void @exit_block_with_distinct_incoming_vals(i32 %cond) "hot-cold-split" {
+define void @exit_block_with_distinct_incoming_vals(i32 %cond) {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.end, label %coldbb

@@ -104,6 +104,9 @@ static cl::opt<bool>
     EnablePerformThinLTO("perform-thinlto", cl::init(false), cl::Hidden,
                          cl::desc("Enable performing ThinLTO."));
 
+cl::opt<bool> EnableHotColdSplit("hot-cold-split", cl::init(false),
+    cl::ZeroOrMore, cl::desc("Enable hot-cold splitting pass"));
+
 static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
@@ -862,7 +865,7 @@ void PassManagerBuilder::populateModulePassManager(
 
   // See comment in the new PM for justification of scheduling splitting at
   // this stage (\ref buildModuleSimplificationPipeline).
-  if (!(PrepareForLTO || PrepareForThinLTO))
+  if (EnableHotColdSplit && !(PrepareForLTO || PrepareForThinLTO))
     MPM.add(createHotColdSplittingPass());
 
   if (MergeFunctions)
@@ -1086,7 +1089,8 @@ void PassManagerBuilder::addLateLTOOptimizationPasses(
     legacy::PassManagerBase &PM) {
   // See comment in the new PM for justification of scheduling splitting at
   // this stage (\ref buildLTODefaultPipeline).
-  PM.add(createHotColdSplittingPass());
+  if (EnableHotColdSplit)
+    PM.add(createHotColdSplittingPass());
 
   // Delete basic blocks, which optimization passes may have killed.
   PM.add(createCFGSimplificationPass());

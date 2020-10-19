@@ -3788,10 +3788,6 @@ def fdump_vtable_layouts : Flag<["-"], "fdump-vtable-layouts">,
   HelpText<"Dump the layouts of all vtables that will be emitted in a translation unit">;
 def fmerge_functions : Flag<["-"], "fmerge-functions">,
   HelpText<"Permit merging of identical functions when optimizing.">;
-def fsplit_cold_code : Flag<["-"], "fsplit-cold-code">,
-  HelpText<"Permit splitting of cold code when optimizing (off by default).">;
-def fno_split_cold_code : Flag<["-"], "fno-split-cold-code">,
-  HelpText<"Disable splitting of cold code when optimizing.">;
 def femit_coverage_notes : Flag<["-"], "femit-coverage-notes">,
   HelpText<"Emit a gcov coverage notes file when compiling.">;
 def femit_coverage_data: Flag<["-"], "femit-coverage-data">,

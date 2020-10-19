@@ -72,7 +72,6 @@
 #include <string>
 
 #define DEBUG_TYPE "hotcoldsplit"
-#define PASS_NAME "Hot Cold Splitting"
 
 STATISTIC(NumColdRegionsFound, "Number of cold regions found.");
 STATISTIC(NumColdRegionsOutlined, "Number of cold regions outlined.");
@@ -192,8 +191,6 @@ public:
   }
 
   bool runOnModule(Module &M) override;
-
-  StringRef getPassName() const override { return PASS_NAME; }
 };
 
 } // end anonymous namespace
@@ -215,9 +212,6 @@ bool HotColdSplitting::isFunctionCold(const Function &F) const {
 // Returns false if the function should not be considered for hot-cold split
 // optimization.
 bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
-  if (!F.hasFnAttribute(getHotColdSplittingAttrKind()))
-    return false;
-
   if (F.hasFnAttribute(Attribute::AlwaysInline))
     return false;
 
@@ -756,17 +750,13 @@ HotColdSplittingPass::run(Module &M, ModuleAnalysisManager &AM) {
 }
 
 char HotColdSplittingLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(HotColdSplittingLegacyPass, "hotcoldsplit", PASS_NAME,
-                      false, false)
+INITIALIZE_PASS_BEGIN(HotColdSplittingLegacyPass, "hotcoldsplit",
+                      "Hot Cold Splitting", false, false)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
-INITIALIZE_PASS_END(HotColdSplittingLegacyPass, "hotcoldsplit", PASS_NAME,
-                    false, false)
+INITIALIZE_PASS_END(HotColdSplittingLegacyPass, "hotcoldsplit",
+                    "Hot Cold Splitting", false, false)
 
 ModulePass *llvm::createHotColdSplittingPass() {
   return new HotColdSplittingLegacyPass();
-}
-
-StringRef llvm::getHotColdSplittingAttrKind() {
-  return "hot-cold-split";
 }
