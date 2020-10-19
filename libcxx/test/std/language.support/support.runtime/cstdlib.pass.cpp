@@ -120,7 +120,8 @@ int main(int, char**)
     static_assert((std::is_same<decltype(std::srand(0)), void>::value), "");
 
 #if TEST_STD_VER > 14 && defined(TEST_HAS_ALIGNED_ALLOC)
-    static_assert((std::is_same<decltype(std::aligned_alloc(0,0)), void*>::value), "");
+    static_assert(
+        (std::is_same<decltype(std::aligned_alloc(1, 0)), void*>::value), "");
 #endif
 
     static_assert((std::is_same<decltype(std::calloc(0,0)), void*>::value), "");
