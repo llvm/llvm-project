@@ -217,12 +217,14 @@ ResolvedSchedClass::ResolvedSchedClass(const MCSubtargetInfo &STI,
 }
 
 static unsigned ResolveVariantSchedClassId(const MCSubtargetInfo &STI,
+                                           const MCInstrInfo &InstrInfo,
                                            unsigned SchedClassId,
                                            const MCInst &MCI) {
   const auto &SM = STI.getSchedModel();
-  while (SchedClassId && SM.getSchedClassDesc(SchedClassId)->isVariant())
-    SchedClassId =
-        STI.resolveVariantSchedClass(SchedClassId, &MCI, SM.getProcessorID());
+  while (SchedClassId && SM.getSchedClassDesc(SchedClassId)->isVariant()) {
+    SchedClassId = STI.resolveVariantSchedClass(SchedClassId, &MCI, &InstrInfo,
+                                                SM.getProcessorID());
+  }
   return SchedClassId;
 }
 
@@ -234,7 +236,8 @@ ResolvedSchedClass::resolveSchedClassId(const MCSubtargetInfo &SubtargetInfo,
   const bool WasVariant = SchedClassId && SubtargetInfo.getSchedModel()
                                               .getSchedClassDesc(SchedClassId)
                                               ->isVariant();
-  SchedClassId = ResolveVariantSchedClassId(SubtargetInfo, SchedClassId, MCI);
+  SchedClassId =
+      ResolveVariantSchedClassId(SubtargetInfo, InstrInfo, SchedClassId, MCI);
   return std::make_pair(SchedClassId, WasVariant);
 }
 
