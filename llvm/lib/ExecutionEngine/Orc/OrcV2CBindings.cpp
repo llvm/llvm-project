@@ -8,6 +8,7 @@
 
 #include "llvm-c/LLJIT.h"
 #include "llvm-c/Orc.h"
+#include "llvm-c/OrcEE.h"
 #include "llvm-c/TargetMachine.h"
 
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
