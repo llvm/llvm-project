@@ -24,7 +24,8 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ...
+* ``--error-handling-script`` is added to allow for user-defined handlers upon
+  missing libraries. (`D87758 <https://reviews.llvm.org/D87758>`_)
 
 Breaking changes
 ----------------
