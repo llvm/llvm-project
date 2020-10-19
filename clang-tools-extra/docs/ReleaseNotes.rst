@@ -127,6 +127,9 @@ Changes in existing checks
 
   Now renames overridden virtual methods if the method they override has a
   style violation.
+  
+  Added support for specifying the style of scoped ``enum`` constants. If 
+  unspecified, will fall back to the style for regular ``enum`` constants.
 
 - Removed `google-runtime-references` check because the rule it checks does
   not exist in the Google Style Guide anymore.

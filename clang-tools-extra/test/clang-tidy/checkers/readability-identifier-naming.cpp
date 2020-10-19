@@ -18,6 +18,7 @@
 // RUN:     {key: readability-identifier-naming.ConstexprVariableCase, value: lower_case}, \
 // RUN:     {key: readability-identifier-naming.EnumCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.EnumPrefix, value: 'E'}, \
+// RUN:     {key: readability-identifier-naming.ScopedEnumConstantCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.EnumConstantCase, value: UPPER_CASE}, \
 // RUN:     {key: readability-identifier-naming.FunctionCase, value: camelBack}, \
 // RUN:     {key: readability-identifier-naming.GlobalConstantCase, value: UPPER_CASE}, \
@@ -158,6 +159,18 @@ enum my_enumeration {
     THIS_ConstValue = 1,
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for enum constant 'THIS_ConstValue'
 // CHECK-FIXES: {{^}}    THIS_CONST_VALUE = 1,{{$}}
+};
+
+enum class EMyEnumeration {
+    myConstant = 1,
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for scoped enum constant 'myConstant'
+// CHECK-FIXES: {{^}}    MyConstant = 1,{{$}}
+    your_CONST = 1,
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for scoped enum constant 'your_CONST'
+// CHECK-FIXES: {{^}}    YourConst = 1,{{$}}
+    THIS_ConstValue = 1,
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for scoped enum constant 'THIS_ConstValue'
+// CHECK-FIXES: {{^}}    ThisConstValue = 1,{{$}}
 };
 
 constexpr int ConstExpr_variable = MyConstant;
