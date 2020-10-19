@@ -20,7 +20,7 @@
 namespace llvm {
 namespace orc {
 
-class TPCDynamicLibrarySearchGenerator : public JITDylib::DefinitionGenerator {
+class TPCDynamicLibrarySearchGenerator : public DefinitionGenerator {
 public:
   using SymbolPredicate = unique_function<bool(const SymbolStringPtr &)>;
 
@@ -50,7 +50,7 @@ public:
     return Load(TPC, nullptr);
   }
 
-  Error tryToGenerate(LookupKind K, JITDylib &JD,
+  Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
                       JITDylibLookupFlags JDLookupFlags,
                       const SymbolLookupSet &Symbols) override;
 

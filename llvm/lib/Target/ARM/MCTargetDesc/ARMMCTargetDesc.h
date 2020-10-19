@@ -42,6 +42,8 @@ class raw_pwrite_stream;
 namespace ARM_MC {
 std::string ParseARMTriple(const Triple &TT, StringRef CPU);
 
+bool isPredicated(const MCInst &MI, const MCInstrInfo *MCII);
+
 /// Create a ARM MCSubtargetInfo instance. This is exposed so Asm parser, etc.
 /// do not need to go through TargetRegistry.
 MCSubtargetInfo *createARMMCSubtargetInfo(const Triple &TT, StringRef CPU,

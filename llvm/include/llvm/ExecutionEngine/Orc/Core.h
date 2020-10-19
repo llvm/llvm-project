@@ -36,6 +36,7 @@ class MaterializationUnit;
 class MaterializationResponsibility;
 class JITDylib;
 class ResourceTracker;
+class InProgressLookupState;
 
 enum class SymbolState : uint8_t;
 
@@ -215,9 +216,19 @@ public:
 
   /// Add an element to the set. The client is responsible for checking that
   /// duplicates are not added.
-  void add(SymbolStringPtr Name,
-           SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
+  SymbolLookupSet &
+  add(SymbolStringPtr Name,
+      SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
     Symbols.push_back(std::make_pair(std::move(Name), Flags));
+    return *this;
+  }
+
+  /// Quickly append one lookup set to another.
+  SymbolLookupSet &append(SymbolLookupSet Other) {
+    Symbols.reserve(Symbols.size() + Other.size());
+    for (auto &KV : Other)
+      Symbols.push_back(std::move(KV));
+    return *this;
   }
 
   bool empty() const { return Symbols.empty(); }
@@ -783,6 +794,7 @@ enum class SymbolState : uint8_t {
 /// makes a callback when all symbols are available.
 class AsynchronousSymbolQuery {
   friend class ExecutionSession;
+  friend class InProgressFullLookupState;
   friend class JITDylib;
   friend class JITSymbolResolverAdapter;
   friend class MaterializationResponsibility;
@@ -829,6 +841,46 @@ private:
   SymbolState RequiredState;
 };
 
+/// Wraps state for a lookup-in-progress.
+/// DefinitionGenerators can optionally take ownership of a LookupState object
+/// to suspend a lookup-in-progress while they search for definitions.
+class LookupState {
+  friend class OrcV2CAPIHelper;
+  friend class ExecutionSession;
+
+public:
+  ~LookupState();
+
+  /// Continue the lookup. This can be called by DefinitionGenerators
+  /// to re-start a captured query-application operation.
+  void continueLookup(Error Err);
+
+private:
+  LookupState(std::unique_ptr<InProgressLookupState> IPLS);
+
+  // For C API.
+  void reset(InProgressLookupState *IPLS);
+
+  std::unique_ptr<InProgressLookupState> IPLS;
+};
+
+/// Definition generators can be attached to JITDylibs to generate new
+/// definitions for otherwise unresolved symbols during lookup.
+class DefinitionGenerator {
+public:
+  virtual ~DefinitionGenerator();
+
+  /// DefinitionGenerators should override this method to insert new
+  /// definitions into the parent JITDylib. K specifies the kind of this
+  /// lookup. JD specifies the target JITDylib being searched, and
+  /// JDLookupFlags specifies whether the search should match against
+  /// hidden symbols. Finally, Symbols describes the set of unresolved
+  /// symbols and their associated lookup flags.
+  virtual Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
+                              JITDylibLookupFlags JDLookupFlags,
+                              const SymbolLookupSet &LookupSet) = 0;
+};
+
 /// A symbol table that supports asynchoronous symbol queries.
 ///
 /// Represents a virtual shared object. Instances can not be copied or moved, so
@@ -841,22 +893,6 @@ class JITDylib : public ThreadSafeRefCountedBase<JITDylib> {
   friend class Platform;
   friend class MaterializationResponsibility;
 public:
-  /// Definition generators can be attached to JITDylibs to generate new
-  /// definitions for otherwise unresolved symbols during lookup.
-  class DefinitionGenerator {
-  public:
-    virtual ~DefinitionGenerator();
-
-    /// DefinitionGenerators should override this method to insert new
-    /// definitions into the parent JITDylib. K specifies the kind of this
-    /// lookup. JD specifies the target JITDylib being searched, and
-    /// JDLookupFlags specifies whether the search should match against
-    /// hidden symbols. Finally, Symbols describes the set of unresolved
-    /// symbols and their associated lookup flags.
-    virtual Error tryToGenerate(LookupKind K, JITDylib &JD,
-                                JITDylibLookupFlags JDLookupFlags,
-                                const SymbolLookupSet &LookupSet) = 0;
-  };
 
   using AsynchronousSymbolQuerySet =
     std::set<std::shared_ptr<AsynchronousSymbolQuery>>;
@@ -978,13 +1014,6 @@ public:
   /// left unmodified (no symbols are removed).
   Error remove(const SymbolNameSet &Names);
 
-  /// Search the given JITDylib for the symbols in Symbols. If found, store
-  /// the flags for each symbol in Flags. If any required symbols are not found
-  /// then an error will be returned.
-  Expected<SymbolFlagsMap> lookupFlags(LookupKind K,
-                                       JITDylibLookupFlags JDLookupFlags,
-                                       SymbolLookupSet LookupSet);
-
   /// Dump current JITDylib state to OS.
   void dump(raw_ostream &OS);
 
@@ -1103,19 +1132,19 @@ private:
   void installMaterializationUnit(std::unique_ptr<MaterializationUnit> MU,
                                   ResourceTracker &RT);
 
-  void lookupFlagsImpl(SymbolFlagsMap &Result, LookupKind K,
-                       JITDylibLookupFlags JDLookupFlags,
-                       SymbolLookupSet &Unresolved);
+  // void lookupFlagsImpl(SymbolFlagsMap &Result, LookupKind K,
+  //                      JITDylibLookupFlags JDLookupFlags,
+  //                      SymbolLookupSet &Unresolved);
 
-  Error lodgeQuery(UnmaterializedInfosList &UMIs,
-                   std::shared_ptr<AsynchronousSymbolQuery> &Q, LookupKind K,
-                   JITDylibLookupFlags JDLookupFlags,
-                   SymbolLookupSet &Unresolved);
+  // Error lodgeQuery(UnmaterializedInfosList &UMIs,
+  //                  std::shared_ptr<AsynchronousSymbolQuery> &Q, LookupKind K,
+  //                  JITDylibLookupFlags JDLookupFlags,
+  //                  SymbolLookupSet &Unresolved);
 
-  Error lodgeQueryImpl(UnmaterializedInfosList &UMIs,
-                       std::shared_ptr<AsynchronousSymbolQuery> &Q,
-                       LookupKind K, JITDylibLookupFlags JDLookupFlags,
-                       SymbolLookupSet &Unresolved);
+  // Error lodgeQueryImpl(UnmaterializedInfosList &UMIs,
+  //                      std::shared_ptr<AsynchronousSymbolQuery> &Q,
+  //                      LookupKind K, JITDylibLookupFlags JDLookupFlags,
+  //                      SymbolLookupSet &Unresolved);
 
   void detachQueryHelper(AsynchronousSymbolQuery &Q,
                          const SymbolNameSet &QuerySymbols);
@@ -1153,11 +1182,12 @@ private:
 
   ExecutionSession &ES;
   std::string JITDylibName;
+  std::mutex GeneratorsMutex;
   bool Open = true;
   SymbolTable Symbols;
   UnmaterializedInfosMap UnmaterializedInfos;
   MaterializingInfosMap MaterializingInfos;
-  std::vector<std::unique_ptr<DefinitionGenerator>> DefGenerators;
+  std::vector<std::shared_ptr<DefinitionGenerator>> DefGenerators;
   JITDylibSearchOrder LinkOrder;
   ResourceTrackerSP DefaultTracker;
 
@@ -1198,8 +1228,11 @@ public:
 
 /// An ExecutionSession represents a running JIT program.
 class ExecutionSession {
-  // FIXME: Remove this when we remove the old ORC layers.
+  friend class InProgressLookupFlagsState;
+  friend class InProgressFullLookupState;
   friend class JITDylib;
+  friend class LookupState;
+  friend class MaterializationResponsibility;
   friend class ResourceTracker;
 
 public:
@@ -1289,7 +1322,18 @@ public:
     return *this;
   }
 
-  /// Search the given JITDylib list for the given symbols.
+  /// Search the given JITDylibs to find the flags associated with each of the
+  /// given symbols.
+  void lookupFlags(LookupKind K, JITDylibSearchOrder SearchOrder,
+                   SymbolLookupSet Symbols,
+                   unique_function<void(Expected<SymbolFlagsMap>)> OnComplete);
+
+  /// Blocking version of lookupFlags.
+  Expected<SymbolFlagsMap> lookupFlags(LookupKind K,
+                                       JITDylibSearchOrder SearchOrder,
+                                       SymbolLookupSet Symbols);
+
+  /// Search the given JITDylibs for the given symbols.
   ///
   /// SearchOrder lists the JITDylibs to search. For each dylib, the associated
   /// boolean indicates whether the search should match against non-exported
@@ -1371,7 +1415,7 @@ private:
     MU->materialize(std::move(MR));
   }
 
-  void runOutstandingMUs();
+  void dispatchOutstandingMUs();
 
   static std::unique_ptr<MaterializationResponsibility>
   createMaterializationResponsibility(ResourceTracker &RT,
@@ -1388,6 +1432,55 @@ private:
   Error removeResourceTracker(ResourceTracker &RT);
   void transferResourceTracker(ResourceTracker &DstRT, ResourceTracker &SrcRT);
   void destroyResourceTracker(ResourceTracker &RT);
+
+  // State machine functions for query application..
+
+  /// IL_updateCandidatesFor is called to remove already-defined symbols that
+  /// match a given query from the set of candidate symbols to generate
+  /// definitions for (no need to generate a definition if one already exists).
+  Error IL_updateCandidatesFor(JITDylib &JD, JITDylibLookupFlags JDLookupFlags,
+                               SymbolLookupSet &Candidates,
+                               SymbolLookupSet *NonCandidates);
+
+  /// OL_applyQueryPhase1 is an optionally re-startable loop for triggering
+  /// definition generation. It is called when a lookup is performed, and again
+  /// each time that LookupState::continueLookup is called.
+  void OL_applyQueryPhase1(std::unique_ptr<InProgressLookupState> IPLS,
+                           Error Err);
+
+  /// OL_completeLookup is run once phase 1 successfully completes for a lookup
+  /// call. It attempts to attach the symbol to all symbol table entries and
+  /// collect all MaterializationUnits to dispatch. If this method fails then
+  /// all MaterializationUnits will be left un-materialized.
+  void OL_completeLookup(std::unique_ptr<InProgressLookupState> IPLS,
+                         std::shared_ptr<AsynchronousSymbolQuery> Q,
+                         RegisterDependenciesFunction RegisterDependencies);
+
+  /// OL_completeLookupFlags is run once phase 1 successfully completes for a
+  /// lookupFlags call.
+  void OL_completeLookupFlags(
+      std::unique_ptr<InProgressLookupState> IPLS,
+      unique_function<void(Expected<SymbolFlagsMap>)> OnComplete);
+
+  // State machine functions for MaterializationResponsibility.
+  void OL_destroyMaterializationResponsibility(
+      MaterializationResponsibility &MR);
+  SymbolNameSet OL_getRequestedSymbols(const MaterializationResponsibility &MR);
+  Error OL_notifyResolved(MaterializationResponsibility &MR,
+                          const SymbolMap &Symbols);
+  Error OL_notifyEmitted(MaterializationResponsibility &MR);
+  Error OL_defineMaterializing(MaterializationResponsibility &MR,
+                               SymbolFlagsMap SymbolFlags);
+  void OL_notifyFailed(MaterializationResponsibility &MR);
+  Error OL_replace(MaterializationResponsibility &MR,
+                   std::unique_ptr<MaterializationUnit> MU);
+  Expected<std::unique_ptr<MaterializationResponsibility>>
+  OL_delegate(MaterializationResponsibility &MR, const SymbolNameSet &Symbols);
+  void OL_addDependencies(MaterializationResponsibility &MR,
+                          const SymbolStringPtr &Name,
+                          const SymbolDependenceMap &Dependencies);
+  void OL_addDependenciesForAll(MaterializationResponsibility &MR,
+                                const SymbolDependenceMap &Dependencies);
 
 #ifndef NDEBUG
   void dumpDispatchInfo(JITDylib &JD, MaterializationUnit &MU);
@@ -1432,8 +1525,8 @@ Error MaterializationResponsibility::withResourceKeyDo(Func &&F) const {
 template <typename GeneratorT>
 GeneratorT &JITDylib::addGenerator(std::unique_ptr<GeneratorT> DefGenerator) {
   auto &G = *DefGenerator;
-  ES.runSessionLocked(
-      [&]() { DefGenerators.push_back(std::move(DefGenerator)); });
+  std::lock_guard<std::mutex> Lock(GeneratorsMutex);
+  DefGenerators.push_back(std::move(DefGenerator));
   return G;
 }
 
@@ -1513,7 +1606,7 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &MU,
 
 /// ReexportsGenerator can be used with JITDylib::addGenerator to automatically
 /// re-export a subset of the source JITDylib's symbols in the target.
-class ReexportsGenerator : public JITDylib::DefinitionGenerator {
+class ReexportsGenerator : public DefinitionGenerator {
 public:
   using SymbolPredicate = std::function<bool(SymbolStringPtr)>;
 
@@ -1524,7 +1617,7 @@ public:
                      JITDylibLookupFlags SourceJDLookupFlags,
                      SymbolPredicate Allow = SymbolPredicate());
 
-  Error tryToGenerate(LookupKind K, JITDylib &JD,
+  Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
                       JITDylibLookupFlags JDLookupFlags,
                       const SymbolLookupSet &LookupSet) override;
 
@@ -1533,6 +1626,57 @@ private:
   JITDylibLookupFlags SourceJDLookupFlags;
   SymbolPredicate Allow;
 };
+
+// --------------- IMPLEMENTATION --------------
+// Implementations for inline functions/methods.
+// ---------------------------------------------
+
+inline MaterializationResponsibility::~MaterializationResponsibility() {
+  JD->getExecutionSession().OL_destroyMaterializationResponsibility(*this);
+}
+
+inline SymbolNameSet MaterializationResponsibility::getRequestedSymbols() const {
+  return JD->getExecutionSession().OL_getRequestedSymbols(*this);
+}
+
+inline Error MaterializationResponsibility::notifyResolved(
+    const SymbolMap &Symbols) {
+  return JD->getExecutionSession().OL_notifyResolved(*this, Symbols);
+}
+
+inline Error MaterializationResponsibility::notifyEmitted() {
+  return JD->getExecutionSession().OL_notifyEmitted(*this);
+}
+
+inline Error MaterializationResponsibility::defineMaterializing(
+    SymbolFlagsMap SymbolFlags) {
+  return JD->getExecutionSession().OL_defineMaterializing(
+      *this, std::move(SymbolFlags));
+}
+
+inline void MaterializationResponsibility::failMaterialization() {
+  JD->getExecutionSession().OL_notifyFailed(*this);
+}
+
+inline Error MaterializationResponsibility::replace(
+    std::unique_ptr<MaterializationUnit> MU) {
+  return JD->getExecutionSession().OL_replace(*this, std::move(MU));
+}
+
+inline Expected<std::unique_ptr<MaterializationResponsibility>>
+MaterializationResponsibility::delegate(const SymbolNameSet &Symbols) {
+  return JD->getExecutionSession().OL_delegate(*this, Symbols);
+}
+
+inline void MaterializationResponsibility::addDependencies(
+    const SymbolStringPtr &Name, const SymbolDependenceMap &Dependencies) {
+  JD->getExecutionSession().OL_addDependencies(*this, Name, Dependencies);
+}
+
+inline void MaterializationResponsibility::addDependenciesForAll(
+    const SymbolDependenceMap &Dependencies) {
+  JD->getExecutionSession().OL_addDependenciesForAll(*this, Dependencies);
+}
 
 } // End namespace orc
 } // End namespace llvm

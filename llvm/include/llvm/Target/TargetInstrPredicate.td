@@ -254,6 +254,20 @@ class CheckFunctionPredicate<string MCInstFn, string MachineInstrFn> : MCInstPre
   string MachineInstrFnName = MachineInstrFn;
 }
 
+// Similar to CheckFunctionPredicate. However it assumes that MachineInstrFn is
+// a method in TargetInstrInfo, and MCInstrFn takes an extra pointer to
+// MCInstrInfo.
+//
+// It Expands to:
+//  - TIIPointer->MachineInstrFn(MI)
+//  - MCInstrFn(MI, MCII);
+class CheckFunctionPredicateWithTII<string MCInstFn, string MachineInstrFn, string
+TIIPointer = "TII"> : MCInstPredicate {
+  string MCInstFnName = MCInstFn;
+  string TIIPtrName = TIIPointer;
+  string MachineInstrFnName = MachineInstrFn;
+}
+
 // Used to classify machine instructions based on a machine instruction
 // predicate.
 //

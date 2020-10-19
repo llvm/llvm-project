@@ -180,6 +180,12 @@ std::string ARM_MC::ParseARMTriple(const Triple &TT, StringRef CPU) {
   return ARMArchFeature;
 }
 
+bool ARM_MC::isPredicated(const MCInst &MI, const MCInstrInfo *MCII) {
+  const MCInstrDesc &Desc = MCII->get(MI.getOpcode());
+  int PredOpIdx = Desc.findFirstPredOperandIdx();
+  return PredOpIdx != -1 && MI.getOperand(PredOpIdx).getImm() != ARMCC::AL;
+}
+
 MCSubtargetInfo *ARM_MC::createARMMCSubtargetInfo(const Triple &TT,
                                                   StringRef CPU, StringRef FS) {
   std::string ArchFS = ARM_MC::ParseARMTriple(TT, CPU);
