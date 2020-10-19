@@ -44,6 +44,11 @@ typedef uint64_t LLVMOrcJITTargetAddress;
 typedef struct LLVMOrcOpaqueExecutionSession *LLVMOrcExecutionSessionRef;
 
 /**
+ * A reference to an orc::SymbolStringPool.
+ */
+typedef struct LLVMOrcOpaqueSymbolStringPool *LLVMOrcSymbolStringPoolRef;
+
+/**
  * A reference to an orc::SymbolStringPool table entry.
  */
 typedef struct LLVMOrcOpaqueSymbolStringPoolEntry
@@ -109,6 +114,27 @@ typedef struct LLVMOrcOpaqueLLJIT *LLVMOrcLLJITRef;
 void LLVMOrcExecutionSessionSetErrorReporter(
     LLVMOrcExecutionSessionRef ES, LLVMOrcErrorReporterFunction ReportError,
     void *Ctx);
+
+/**
+ * Return a reference to the SymbolStringPool for an ExecutionSession.
+ *
+ * Ownership of the pool remains with the ExecutionSession: The caller is
+ * not required to free the pool.
+ */
+LLVMOrcSymbolStringPoolRef
+LLVMOrcExecutionSessionGetSymbolStringPool(LLVMOrcExecutionSessionRef ES);
+
+/**
+ * Clear all unreferenced symbol string pool entries.
+ *
+ * This can be called at any time to release unused entries in the
+ * ExecutionSession's string pool. Since it locks the pool (preventing
+ * interning of any new strings) it is recommended that it only be called
+ * infrequently, ideally when the caller has reason to believe that some
+ * entries will have become unreferenced, e.g. after removing a module or
+ * closing a JITDylib.
+ */
+void LLVMOrcSymbolStringPoolClearDeadEntries(LLVMOrcSymbolStringPoolRef SSP);
 
 /**
  * Intern a string in the ExecutionSession's SymbolStringPool and return a
