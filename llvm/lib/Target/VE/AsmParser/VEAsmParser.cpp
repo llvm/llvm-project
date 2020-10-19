@@ -1377,7 +1377,24 @@ OperandMatchResultTy VEAsmParser::parseOperand(OperandVector &Operands,
     if (!Parser.getTok().is(AsmToken::LParen))
       break;
 
-    // FIXME: Parsing %vec-reg + "(" + %sclar-reg/number + ")"
+    // Parsing %vec-reg + "(" + %sclar-reg/number + ")"
+    std::unique_ptr<VEOperand> Op1 = VEOperand::CreateToken(
+        Parser.getTok().getString(), Parser.getTok().getLoc());
+    Parser.Lex(); // Eat the '('.
+
+    std::unique_ptr<VEOperand> Op2;
+    ResTy = parseVEAsmOperand(Op2);
+    if (ResTy != MatchOperand_Success || !Op2)
+      return MatchOperand_ParseFail;
+
+    if (!Parser.getTok().is(AsmToken::RParen))
+      return MatchOperand_ParseFail;
+
+    Operands.push_back(std::move(Op1));
+    Operands.push_back(std::move(Op2));
+    Operands.push_back(VEOperand::CreateToken(Parser.getTok().getString(),
+                                              Parser.getTok().getLoc()));
+    Parser.Lex(); // Eat the ')'.
     break;
   }
   }
