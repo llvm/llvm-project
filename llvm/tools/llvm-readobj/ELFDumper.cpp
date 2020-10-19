@@ -304,7 +304,6 @@ private:
   Optional<DynRegionInfo> DynSymRegion;
   DynRegionInfo DynamicTable;
   StringRef DynamicStringTable;
-  StringRef SOName = "<Not found>";
   const Elf_Hash *HashTable = nullptr;
   const Elf_GnuHash *GnuHashTable = nullptr;
   const Elf_Shdr *DotSymtabSec = nullptr;
@@ -312,6 +311,7 @@ private:
   const Elf_Shdr *DotCGProfileSec = nullptr;
   const Elf_Shdr *DotAddrsigSec = nullptr;
   ArrayRef<Elf_Word> ShndxTable;
+  Optional<uint64_t> SONameOffset;
 
   const Elf_Shdr *SymbolVersionSection = nullptr;   // .gnu.version
   const Elf_Shdr *SymbolVersionNeedSection = nullptr; // .gnu.version_r
@@ -2066,7 +2066,6 @@ void ELFDumper<ELFT>::parseDynamicTable() {
     return MappedAddrOrError.get();
   };
 
-  uint64_t SONameOffset = 0;
   const char *StringTableBegin = nullptr;
   uint64_t StringTableSize = 0;
   Optional<DynRegionInfo> DynSymFromTable;
@@ -2183,8 +2182,6 @@ void ELFDumper<ELFT>::parseDynamicTable() {
     else
       DynamicStringTable = StringRef(StringTableBegin, StringTableSize);
   }
-
-  SOName = getDynamicString(SONameOffset);
 
   const bool IsHashTableSupported = getHashTableEntSize() == 4;
   if (DynSymRegion) {
@@ -2820,6 +2817,9 @@ void ELFDumper<ELFT>::printGnuHashTable() {
 }
 
 template <typename ELFT> void ELFDumper<ELFT>::printLoadName() {
+  StringRef SOName = "<Not found>";
+  if (SONameOffset)
+    SOName = getDynamicString(*SONameOffset);
   W.printString("LoadName", SOName);
 }
 

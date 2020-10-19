@@ -9,7 +9,7 @@ declare void @sink() cold
 
 ; CHECK-LABEL: define {{.*}}@in_arg(
 ; CHECK: call void @in_arg.cold.1(%swift_error** swifterror
-define void @in_arg(%swift_error** swifterror %error_ptr_ref) "hot-cold-split" {
+define void @in_arg(%swift_error** swifterror %error_ptr_ref) {
   br i1 undef, label %cold, label %exit
 
 cold:
@@ -23,7 +23,7 @@ exit:
 
 ; CHECK-LABEL: define {{.*}}@in_alloca(
 ; CHECK: call void @in_alloca.cold.1(%swift_error** swifterror
-define void @in_alloca() "hot-cold-split" {
+define void @in_alloca() {
   %err = alloca swifterror %swift_error*
   br i1 undef, label %cold, label %exit
 

@@ -28,8 +28,17 @@ class AffineForOp;
 // Passes
 //===----------------------------------------------------------------------===//
 
-/// Creates an instance of the BufferPlacement pass.
-std::unique_ptr<Pass> createBufferPlacementPass();
+/// Creates an instance of the BufferDeallocation pass to free all allocated
+/// buffers.
+std::unique_ptr<Pass> createBufferDeallocationPass();
+
+/// Creates a pass that moves allocations upwards to reduce the number of
+/// required copies that are inserted during the BufferDeallocation pass.
+std::unique_ptr<Pass> createBufferHoistingPass();
+
+/// Creates a pass that moves allocations upwards out of loops. This avoids
+/// reallocations inside of loops.
+std::unique_ptr<Pass> createBufferLoopHoistingPass();
 
 /// Creates an instance of the Canonicalizer pass.
 std::unique_ptr<Pass> createCanonicalizerPass();

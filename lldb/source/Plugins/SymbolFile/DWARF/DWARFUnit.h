@@ -105,7 +105,6 @@ public:
   };
   ScopedExtractDIEs ExtractDIEsScoped();
 
-  DWARFDIE LookupAddress(const dw_addr_t address);
   bool Verify(lldb_private::Stream *s) const;
   virtual void Dump(lldb_private::Stream *s) const = 0;
   /// Get the data that contains the DIE information for this unit.

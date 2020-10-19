@@ -12,7 +12,7 @@
 ; CHECK-NOT: llvm.assume
 ; CHECK: }
 
-define void @foo(i1 %cond) "hot-cold-split" {
+define void @foo(i1 %cond) {
 entry:
   br i1 %cond, label %cold, label %cont
 

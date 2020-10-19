@@ -4,12 +4,12 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
 
 ; CHECK: define {{.*}} @foo{{.*}}#[[outlined_func_attr:[0-9]+]]
-define void @foo() noreturn cold "hot-cold-split" {
+define void @foo() noreturn cold {
   unreachable
 }
 
 ; CHECK: define {{.*}} @bar.cold.1{{.*}}#[[outlined_func_attr]]
-define void @bar() "hot-cold-split" {
+define void @bar() {
   br i1 undef, label %normal, label %exit
 
 normal:

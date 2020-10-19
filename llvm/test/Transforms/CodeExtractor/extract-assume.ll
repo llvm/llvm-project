@@ -9,7 +9,7 @@
 
 declare void @fun2(i32) #0
 
-define void @fun(i32 %x) "hot-cold-split" {
+define void @fun(i32 %x) {
 entry:
   br i1 undef, label %if.then, label %if.else
 

@@ -15474,8 +15474,8 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare void @llvm.test.set.loop.iterations.i32(i32)
-      declare void @llvm.test.set.loop.iterations.i64(i64)
+      declare i1 @llvm.test.set.loop.iterations.i32(i32)
+      declare i1 @llvm.test.set.loop.iterations.i64(i64)
 
 Overview:
 """""""""
@@ -15499,6 +15499,7 @@ The '``llvm.test.set.loop.iterations.*``' intrinsics do not perform any
 arithmetic on their operand. It's a hint to the backend that can use this to
 set up the hardware-loop count with a target specific instruction, usually a
 move of this value to a special register or a hardware-loop instruction.
+The result is the conditional value of whether the given count is not zero.
 
 '``llvm.loop.decrement.reg.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

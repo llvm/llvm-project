@@ -4,7 +4,7 @@
 declare void @sink() cold
 
 ; CHECK-LABEL: Outlining in one_non_region_successor
-define void @one_non_region_successor(i32 %arg) "hot-cold-split" {
+define void @one_non_region_successor(i32 %arg) {
 entry:
   br i1 undef, label %cold1, label %exit
 
@@ -27,7 +27,7 @@ exit:
 }
 
 ; CHECK-LABEL: Outlining in two_non_region_successor
-define void @two_non_region_successors(i32 %arg) "hot-cold-split" {
+define void @two_non_region_successors(i32 %arg) {
 entry:
   br i1 undef, label %cold1, label %exit1
 

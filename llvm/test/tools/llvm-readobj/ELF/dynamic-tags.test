@@ -491,7 +491,9 @@ Sections:
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_RELR: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_ANDROID_RELR: invalid e_phentsize: 1
 # PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': Unable to parse DT_GNU_HASH: invalid e_phentsize: 1
-# PHENTSIZE-WARN-NEXT: warning: '[[FILE]]': string table was not found
+
+# PHENTSIZE-LLVM:      warning: '[[FILE]]': string table was not found
+# PHENTSIZE-LLVM-NEXT: LoadName: <?>
 
 # PHENTSIZE-LLVM:      DynamicSection [ (61 entries)
 # PHENTSIZE-LLVM-NEXT:   Tag                Type                 Name/Value
@@ -560,6 +562,7 @@ Sections:
 
 # PHENTSIZE-GNU:      Dynamic section at offset 0xc0 contains 61 entries:
 # PHENTSIZE-GNU-NEXT:   Tag                Type                   Name/Value
+# PHENTSIZE-GNU-NEXT: warning: '[[FILE]]': string table was not found
 # PHENTSIZE-GNU-NEXT:   0x0000000000000001 (NEEDED)               Shared library: [<?>]
 # PHENTSIZE-GNU-NEXT:   0x0000000000000002 (PLTRELSZ)             16 (bytes)
 # PHENTSIZE-GNU-NEXT:   0x0000000000000003 (PLTGOT)               0x1000

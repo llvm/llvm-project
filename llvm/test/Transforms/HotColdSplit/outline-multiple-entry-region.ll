@@ -34,7 +34,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK: call void @_Z4sinkv
 ; CHECK: call void @_Z10sideeffecti(i32 3)
 
-define void @_Z3fooii(i32, i32) "hot-cold-split" {
+define void @_Z3fooii(i32, i32) {
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
   store i32 %0, i32* %3, align 4

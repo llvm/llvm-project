@@ -63,7 +63,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/Transforms/IPO/HotColdSplitting.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -1696,9 +1695,6 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
 
     if (D->hasAttr<MinSizeAttr>())
       B.addAttribute(llvm::Attribute::MinSize);
-
-    if (CodeGenOpts.SplitColdCode)
-      B.addAttribute(llvm::getHotColdSplittingAttrKind());
   }
 
   F->addAttributes(llvm::AttributeList::FunctionIndex, B);

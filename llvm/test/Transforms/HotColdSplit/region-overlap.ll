@@ -24,7 +24,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-LABEL: define {{.*}}@_Z3fooii
 ; CHECK: call {{.*}}@_Z3fooii.cold.1
 ; CHECK-NOT: _Z3fooii.cold
-define void @_Z3fooii(i32, i32) "hot-cold-split" {
+define void @_Z3fooii(i32, i32) {
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
   store i32 %0, i32* %3, align 4

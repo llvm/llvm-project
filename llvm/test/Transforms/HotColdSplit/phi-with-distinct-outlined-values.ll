@@ -11,7 +11,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK: %p.ce = phi i32 [ 1, %coldbb ], [ 3, %coldbb2 ]
 ; CHECK-NEXT: store i32 %p.ce, i32* %p.ce.out 
 
-define void @foo(i32 %cond) "hot-cold-split" {
+define void @foo(i32 %cond) {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.end, label %coldbb

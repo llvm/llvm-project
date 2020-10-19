@@ -152,7 +152,6 @@ CODEGENOPT(IncrementalLinkerCompatible, 1, 0) ///< Emit an object file which can
                                               ///< linker.
 CODEGENOPT(MergeAllConstants , 1, 1) ///< Merge identical constants.
 CODEGENOPT(MergeFunctions    , 1, 0) ///< Set when -fmerge-functions is enabled.
-CODEGENOPT(SplitColdCode     , 1, 0) ///< Set when -fsplit-cold-code is enabled.
 CODEGENOPT(MemProf           , 1, 0) ///< Set when -fmemory-profile is enabled.
 CODEGENOPT(MSVolatile        , 1, 0) ///< Set when /volatile:ms is enabled.
 CODEGENOPT(NoCommon          , 1, 0) ///< Set when -fno-common or C++ is enabled.
