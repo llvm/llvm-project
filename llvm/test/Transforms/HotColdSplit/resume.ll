@@ -10,7 +10,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 declare void @sink() cold
 
-define i32 @foo() "hot-cold-split" personality i8 0 {
+define i32 @foo() personality i8 0 {
 entry:
   br i1 undef, label %pre-resume-eh, label %normal
 

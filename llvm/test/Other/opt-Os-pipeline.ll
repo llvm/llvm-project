@@ -271,13 +271,6 @@
 ; CHECK-NEXT:     Strip Unused Function Prototypes
 ; CHECK-NEXT:     Dead Global Elimination
 ; CHECK-NEXT:     Merge Duplicate Global Constants
-; CHECK-NEXT:     Hot Cold Splitting
-; CHECK-NEXT:       FunctionPass Manager
-; CHECK-NEXT:         Dominator Tree Construction
-; CHECK-NEXT:         Natural Loop Information
-; CHECK-NEXT:         Post-Dominator Tree Construction
-; CHECK-NEXT:         Branch Probability Analysis
-; CHECK-NEXT:         Block Frequency Analysis
 ; CHECK-NEXT:     Call Graph Profile
 ; CHECK-NEXT:       FunctionPass Manager
 ; CHECK-NEXT:         Dominator Tree Construction

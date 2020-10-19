@@ -11,6 +11,11 @@
 ; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
 ; RUN:     -O2 %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O2 --check-prefix=PGOUSE
+; RUN: opt -enable-new-pm=0 -disable-output -disable-verify -debug-pass=Structure \
+; RUN:     -pgo-kind=pgo-instr-use-pipeline -profile-file='%t.profdata' \
+; RUN:     -hot-cold-split \
+; RUN:     -O2 %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-O2 --check-prefix=PGOUSE --check-prefix=SPLIT
 ;
 ; In the first pipeline there should just be a function pass manager, no other
 ; pass managers.
@@ -96,7 +101,7 @@
 ; the runtime unrolling though.
 ; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NEXT: Loop Invariant Code Motion
-; CHECK-O2: Hot Cold Splitting
+; SPLIT: Hot Cold Splitting
 ; CHECK-O2: FunctionPass Manager
 ; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NEXT: Loop Sink

@@ -32,7 +32,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK: call {{.*}}@sideeffect(i32 1)
 ; CHECK: [[return]]:
 ; CHECK-NEXT: ret void
-define void @foo(i32 %cond) "hot-cold-split" {
+define void @foo(i32 %cond) {
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %exit1, label %if.then
