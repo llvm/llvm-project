@@ -274,6 +274,9 @@ class Configuration(object):
         if self.target_info.is_windows():
             # FIXME: Can we remove this?
             self.cxx.compile_flags += ['-D_CRT_SECURE_NO_WARNINGS']
+            # Don't warn about using common but nonstandard unprefixed functions
+            # like chdir, fileno.
+            self.cxx.compile_flags += ['-D_CRT_NONSTDC_NO_WARNINGS']
             # Required so that tests using min/max don't fail on Windows,
             # and so that those tests don't have to be changed to tolerate
             # this insanity.
