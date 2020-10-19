@@ -577,10 +577,12 @@ define i1 @test46(i8 signext %c)  {
 
 define <2 x i1> @test46_uniform(<2 x i8> %c)  {
 ; CHECK-LABEL: @test46_uniform(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[C:%.*]], <i8 -33, i8 -33>
-; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], <i8 -65, i8 -65>
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <2 x i8> [[TMP2]], <i8 26, i8 26>
-; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
+; CHECK-NEXT:    [[C_OFF:%.*]] = add <2 x i8> [[C:%.*]], <i8 -97, i8 -97>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i8> [[C_OFF]], <i8 26, i8 26>
+; CHECK-NEXT:    [[C_OFF17:%.*]] = add <2 x i8> [[C]], <i8 -65, i8 -65>
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult <2 x i8> [[C_OFF17]], <i8 26, i8 26>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %c.off = add <2 x i8> %c, <i8 -97, i8 -97>
   %cmp1 = icmp ult <2 x i8> %c.off, <i8 26, i8 26>
