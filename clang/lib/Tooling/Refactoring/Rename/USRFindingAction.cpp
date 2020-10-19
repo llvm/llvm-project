@@ -80,6 +80,12 @@ public:
     } else if (const auto *TemplateDecl =
                    dyn_cast<ClassTemplateDecl>(FoundDecl)) {
       handleClassTemplateDecl(TemplateDecl);
+    } else if (const auto *FD = dyn_cast<FunctionDecl>(FoundDecl)) {
+      USRSet.insert(getUSRForDecl(FD));
+      if (const auto *FTD = FD->getPrimaryTemplate())
+        handleFunctionTemplateDecl(FTD);
+    } else if (const auto *FD = dyn_cast<FunctionTemplateDecl>(FoundDecl)) {
+      handleFunctionTemplateDecl(FD);
     } else {
       USRSet.insert(getUSRForDecl(FoundDecl));
     }
@@ -117,6 +123,13 @@ private:
     for (const auto *Spec : PartialSpecs)
       addUSRsOfCtorDtors(Spec);
     addUSRsOfCtorDtors(TemplateDecl->getTemplatedDecl());
+  }
+
+  void handleFunctionTemplateDecl(const FunctionTemplateDecl *FTD) {
+    USRSet.insert(getUSRForDecl(FTD));
+    USRSet.insert(getUSRForDecl(FTD->getTemplatedDecl()));
+    for (const auto *S : FTD->specializations())
+      USRSet.insert(getUSRForDecl(S));
   }
 
   void addUSRsOfCtorDtors(const CXXRecordDecl *RD) {
