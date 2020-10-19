@@ -127,5 +127,5 @@ void PerfReader::parsePerfTraces(cl::list<std::string> &PerfTraceFilenames) {
     parseTrace(Filename);
 }
 
-} // namespace sampleprof
-} // namespace llvm
+} // end namespace sampleprof
+} // end namespace llvm
