@@ -440,8 +440,6 @@ enum NodeType : unsigned {
   MAD_I24,
   MAD_U64_U32,
   MAD_I64_I32,
-  MUL_LOHI_I24,
-  MUL_LOHI_U24,
   PERM,
   TEXTURE_FETCH,
   R600_EXPORT,
