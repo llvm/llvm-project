@@ -120,11 +120,11 @@ void dragonfly::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    CmdArgs.push_back("-L/usr/lib/gcc50");
+    CmdArgs.push_back("-L/usr/lib/gcc80");
 
     if (!Args.hasArg(options::OPT_static)) {
       CmdArgs.push_back("-rpath");
-      CmdArgs.push_back("/usr/lib/gcc50");
+      CmdArgs.push_back("/usr/lib/gcc80");
     }
 
     if (D.CCCIsCXX()) {
@@ -189,7 +189,7 @@ DragonFly::DragonFly(const Driver &D, const llvm::Triple &Triple,
 
   getFilePaths().push_back(getDriver().Dir + "/../lib");
   getFilePaths().push_back("/usr/lib");
-  getFilePaths().push_back("/usr/lib/gcc50");
+  getFilePaths().push_back("/usr/lib/gcc80");
 }
 
 Tool *DragonFly::buildAssembler() const {
