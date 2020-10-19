@@ -237,7 +237,42 @@ class RVM<bits<8>opVal, dag outs, dag ins, string asmstr,
 
 //-----------------------------------------------------------------------------
 // Section 5.7 RV Type
+//
+// RV type is for vector instructions.
 //-----------------------------------------------------------------------------
+
+class RV<bits<8>opVal, dag outs, dag ins, string asmstr, list<dag> pattern = []>
+   : InstVE<outs, ins, asmstr, pattern> {
+  bits<1>  cx = 0;
+  bits<1>  cx2 = 0;
+  bits<1>  cs = 0;
+  bits<1>  cs2 = 0;
+  bits<4>  m = 0;
+  bits<1>  cy = 1;
+  bits<7>  sy;
+  bits<1>  cz = 0;
+  bits<7>  sz = 0;
+  bits<8>  vx = 0;
+  bits<8>  vy = 0;
+  bits<8>  vz = 0;
+  bits<8>  vw = 0;
+  let op = opVal;
+  let Inst{55} = cx;
+  let Inst{54} = cx2;
+  let Inst{53} = cs;
+  let Inst{52} = cs2;
+  let Inst{51-48} = m;
+  let Inst{47} = cy;
+  let Inst{46-40} = sy;
+  let Inst{39} = cz;
+  let Inst{38-32} = sz;
+  let Inst{31-24} = vx;
+  let Inst{23-16} = vy;
+  let Inst{15-8} = vz;
+  let Inst{7-0} = vw;
+
+  let VE_Vector = 1;
+}
 
 // Pseudo instructions.
 class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern = []>
