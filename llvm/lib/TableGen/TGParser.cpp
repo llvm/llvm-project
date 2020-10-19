@@ -986,56 +986,58 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     Init *LHS = ParseValue(CurRec);
     if (!LHS) return nullptr;
 
-    if (Code == UnOpInit::HEAD ||
-        Code == UnOpInit::TAIL ||
-        Code == UnOpInit::EMPTY) {
+    if (Code == UnOpInit::EMPTY || Code == UnOpInit::SIZE) {
       ListInit *LHSl = dyn_cast<ListInit>(LHS);
       StringInit *LHSs = dyn_cast<StringInit>(LHS);
+      DagInit *LHSd = dyn_cast<DagInit>(LHS);
       TypedInit *LHSt = dyn_cast<TypedInit>(LHS);
-      if (!LHSl && !LHSs && !LHSt) {
-        TokError("expected list or string type argument in unary operator");
+      if (!LHSl && !LHSs && !LHSd && !LHSt) {
+        TokError("expected string, list, or dag type argument in unary operator");
         return nullptr;
       }
       if (LHSt) {
         ListRecTy *LType = dyn_cast<ListRecTy>(LHSt->getType());
         StringRecTy *SType = dyn_cast<StringRecTy>(LHSt->getType());
-        if (!LType && !SType) {
-          TokError("expected list or string type argument in unary operator");
+        DagRecTy *DType = dyn_cast<DagRecTy>(LHSt->getType());
+        if (!LType && !SType && !DType) {
+          TokError("expected string, list, or dag type argument in unary operator");
           return nullptr;
         }
       }
+    }
 
-      if (Code == UnOpInit::HEAD || Code == UnOpInit::TAIL ||
-          Code == UnOpInit::SIZE) {
-        if (!LHSl && !LHSt) {
+    if (Code == UnOpInit::HEAD || Code == UnOpInit::TAIL) {
+      ListInit *LHSl = dyn_cast<ListInit>(LHS);
+      TypedInit *LHSt = dyn_cast<TypedInit>(LHS);
+      if (!LHSl && !LHSt) {
+        TokError("expected list type argument in unary operator");
+        return nullptr;
+      }
+      if (LHSt) {
+        ListRecTy *LType = dyn_cast<ListRecTy>(LHSt->getType());
+        if (!LType) {
           TokError("expected list type argument in unary operator");
           return nullptr;
         }
       }
 
-      if (Code == UnOpInit::HEAD || Code == UnOpInit::TAIL) {
-        if (LHSl && LHSl->empty()) {
-          TokError("empty list argument in unary operator");
+      if (LHSl && LHSl->empty()) {
+        TokError("empty list argument in unary operator");
+        return nullptr;
+      }
+      if (LHSl) {
+        Init *Item = LHSl->getElement(0);
+        TypedInit *Itemt = dyn_cast<TypedInit>(Item);
+        if (!Itemt) {
+          TokError("untyped list element in unary operator");
           return nullptr;
         }
-        if (LHSl) {
-          Init *Item = LHSl->getElement(0);
-          TypedInit *Itemt = dyn_cast<TypedInit>(Item);
-          if (!Itemt) {
-            TokError("untyped list element in unary operator");
-            return nullptr;
-          }
-          Type = (Code == UnOpInit::HEAD) ? Itemt->getType()
-                                          : ListRecTy::get(Itemt->getType());
-        } else {
-          assert(LHSt && "expected list type argument in unary operator");
-          ListRecTy *LType = dyn_cast<ListRecTy>(LHSt->getType());
-          if (!LType) {
-            TokError("expected list type argument in unary operator");
-            return nullptr;
-          }
-          Type = (Code == UnOpInit::HEAD) ? LType->getElementType() : LType;
-        }
+        Type = (Code == UnOpInit::HEAD) ? Itemt->getType()
+                                        : ListRecTy::get(Itemt->getType());
+      } else {
+        assert(LHSt && "expected list type argument in unary operator");
+        ListRecTy *LType = dyn_cast<ListRecTy>(LHSt->getType());
+        Type = (Code == UnOpInit::HEAD) ? LType->getElementType() : LType;
       }
     }
 
