@@ -1458,7 +1458,7 @@ void SelectionDAGLegalize::getSignAsIntValue(FloatSignAsInt &State,
                                              const SDLoc &DL,
                                              SDValue Value) const {
   EVT FloatVT = Value.getValueType();
-  unsigned NumBits = FloatVT.getSizeInBits();
+  unsigned NumBits = FloatVT.getScalarSizeInBits();
   State.FloatVT = FloatVT;
   EVT IVT = EVT::getIntegerVT(*DAG.getContext(), NumBits);
   // Convert to an integer of the same size.
@@ -1490,7 +1490,7 @@ void SelectionDAGLegalize::getSignAsIntValue(FloatSignAsInt &State,
     State.IntPointerInfo = State.FloatPointerInfo;
   } else {
     // Advance the pointer so that the loaded byte will contain the sign bit.
-    unsigned ByteOffset = (FloatVT.getSizeInBits() / 8) - 1;
+    unsigned ByteOffset = (NumBits / 8) - 1;
     IntPtr =
         DAG.getMemBasePlusOffset(StackPtr, TypeSize::Fixed(ByteOffset), DL);
     State.IntPointerInfo = MachinePointerInfo::getFixedStack(MF, FI,
@@ -1500,7 +1500,7 @@ void SelectionDAGLegalize::getSignAsIntValue(FloatSignAsInt &State,
   State.IntPtr = IntPtr;
   State.IntValue = DAG.getExtLoad(ISD::EXTLOAD, DL, LoadTy, State.Chain, IntPtr,
                                   State.IntPointerInfo, MVT::i8);
-  State.SignMask = APInt::getOneBitSet(LoadTy.getSizeInBits(), 7);
+  State.SignMask = APInt::getOneBitSet(LoadTy.getScalarSizeInBits(), 7);
   State.SignBit = 7;
 }
 
@@ -1555,7 +1555,8 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
   // Get the signbit at the right position for MagAsInt.
   int ShiftAmount = SignAsInt.SignBit - MagAsInt.SignBit;
   EVT ShiftVT = IntVT;
-  if (SignBit.getValueSizeInBits() < ClearedSign.getValueSizeInBits()) {
+  if (SignBit.getScalarValueSizeInBits() <
+      ClearedSign.getScalarValueSizeInBits()) {
     SignBit = DAG.getNode(ISD::ZERO_EXTEND, DL, MagVT, SignBit);
     ShiftVT = MagVT;
   }
@@ -1566,7 +1567,8 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
     SDValue ShiftCnst = DAG.getConstant(-ShiftAmount, DL, ShiftVT);
     SignBit = DAG.getNode(ISD::SHL, DL, ShiftVT, SignBit, ShiftCnst);
   }
-  if (SignBit.getValueSizeInBits() > ClearedSign.getValueSizeInBits()) {
+  if (SignBit.getScalarValueSizeInBits() >
+      ClearedSign.getScalarValueSizeInBits()) {
     SignBit = DAG.getNode(ISD::TRUNCATE, DL, MagVT, SignBit);
   }
 
