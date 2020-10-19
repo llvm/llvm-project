@@ -6,6 +6,8 @@
 * [DexExpectWatchType](Commands.md#DexExpectWatchType)
 * [DexExpectWatchValue](Commands.md#DexExpectWatchValue)
 * [DexUnreachable](Commands.md#DexUnreachable)
+* [DexLimitSteps](Commands.md#DexLimitSteps)
+* [DexLabel](Commands.md#DexLabel)
 * [DexWatch](Commands.md#DexWatch)
 
 ---
