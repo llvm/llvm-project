@@ -1561,11 +1561,27 @@ private:
       // function type cast can be inserted.
       auto symbolAttr = builder.getSymbolRefAttr(caller.getMangledName());
       if (callSiteType.getNumResults() != funcOpType.getNumResults() ||
-          callSiteType.getNumInputs() != funcOpType.getNumInputs())
+          callSiteType.getNumInputs() != funcOpType.getNumInputs()) {
+        // Do not emit a warning here because this can happen in legal program
+        // if the function is not defined here and it was first passed as an
+        // argument without any more information.
         funcPointer =
             builder.create<fir::AddrOfOp>(getLoc(), funcOpType, symbolAttr);
-      else
+      } else if (callSiteType.getResults() != funcOpType.getResults()) {
+        // Implicit interface result type mismatch are not standard Fortran,
+        // but some compilers are not complaining about it.
+        // The front-end is not protecting lowering from this currently. Support
+        // this with a discouraging warning.
+        mlir::emitWarning(getLoc(),
+                          "return type mismatches were never standard"
+                          " compliant and may lead to undefined behavior.");
+        // Cast the actual function to the current caller implicit type because
+        // that is the behavior we would get if we could not see the definition.
+        funcPointer =
+            builder.create<fir::AddrOfOp>(getLoc(), funcOpType, symbolAttr);
+      } else {
         funcSymbolAttr = symbolAttr;
+      }
     }
     auto funcType =
         funcPointer ? caller.genFunctionType() : caller.getFuncOp().getType();
@@ -1586,7 +1602,7 @@ private:
       operands.push_back(cast);
     }
 
-    auto call = builder.create<fir::CallOp>(getLoc(), caller.getResultType(),
+    auto call = builder.create<fir::CallOp>(getLoc(), funcType.getResults(),
                                             funcSymbolAttr, operands);
     // Handle case where result was passed as argument
     if (caller.getPassedResult()) {
