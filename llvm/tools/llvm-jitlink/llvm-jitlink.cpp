@@ -563,7 +563,7 @@ Error LLVMJITLinkObjectLinkingLayer::add(ResourceTrackerSP RT,
 
 class PhonyExternalsGenerator : public DefinitionGenerator {
 public:
-  Error tryToGenerate(LookupKind K, JITDylib &JD,
+  Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
                       JITDylibLookupFlags JDLookupFlags,
                       const SymbolLookupSet &LookupSet) override {
     SymbolMap PhonySymbols;
