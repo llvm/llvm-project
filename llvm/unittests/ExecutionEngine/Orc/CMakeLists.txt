@@ -18,6 +18,7 @@ add_llvm_unittest(OrcJITTests
   LazyCallThroughAndReexportsTest.cpp
   OrcTestCommon.cpp
   QueueChannel.cpp
+  ResourceTrackerTest.cpp
   RPCUtilsTest.cpp
   RTDyldObjectLinkingLayerTest.cpp
   SymbolStringPoolTest.cpp

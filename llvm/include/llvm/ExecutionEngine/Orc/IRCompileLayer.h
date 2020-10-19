@@ -45,8 +45,8 @@ public:
     IRSymbolMapper::ManglingOptions MO;
   };
 
-  using NotifyCompiledFunction =
-      std::function<void(VModuleKey K, ThreadSafeModule TSM)>;
+  using NotifyCompiledFunction = std::function<void(
+      MaterializationResponsibility &R, ThreadSafeModule TSM)>;
 
   IRCompileLayer(ExecutionSession &ES, ObjectLayer &BaseLayer,
                  std::unique_ptr<IRCompiler> Compile);
