@@ -10,6 +10,11 @@
 // RUN:    FileCheck %s --check-prefix=OK
 // RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA-unknown/usr/local/cuda 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=UNKNOWN_VERSION
+// CUDA versions after 11.0 (update 1) do not carry version.txt file. Make sure
+// we still detect them as a new version and handle them the same as we handle
+// other new CUDA versions.
+// RUN: %clang --target=x86_64-linux -v -### --cuda-gpu-arch=sm_60 --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda 2>&1 %s | \
+// RUN:    FileCheck %s --check-prefix=UNKNOWN_VERSION
 // Make sure that we don't warn about CUDA version during C++ compilation.
 // RUN: %clang --target=x86_64-linux -v -### -x c++ --cuda-gpu-arch=sm_60 \
 // RUN:    --cuda-path=%S/Inputs/CUDA-unknown/usr/local/cuda 2>&1 %s | \
@@ -65,5 +70,5 @@
 // ERR_SM61: error: GPU arch sm_61 {{.*}}
 // ERR_SM61-NOT: error: GPU arch sm_61
 
-// UNKNOWN_VERSION: Unknown CUDA version 999.999. Assuming the latest supported version
+// UNKNOWN_VERSION: Unknown CUDA version {{.*}}. Assuming the latest supported version
 // UNKNOWN_VERSION_CXX-NOT: Unknown CUDA version
