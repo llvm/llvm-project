@@ -120,31 +120,37 @@ DEVICE void __kmpc_impl_named_sync(uint32_t num_threads) {
   __atomic_thread_fence(__ATOMIC_RELEASE);
 }
 
-EXTERN uint64_t __ockl_get_local_size(uint32_t);
-EXTERN uint64_t __ockl_get_num_groups(uint32_t);
-DEVICE int GetNumberOfBlocksInKernel() { return __ockl_get_num_groups(0); }
-DEVICE int GetNumberOfThreadsInBlock() { return __ockl_get_local_size(0); }
+namespace {
+DEVICE uint32_t grid_size_x() {
+  size_t grid_size_x_offset = 96; // In bits, from AQL kernel dispatch format
+  return *(uint32_t *)((char *)__builtin_amdgcn_dispatch_ptr() +
+                       grid_size_x_offset / 8);
+}
+
+DEVICE uint32_t get_grid_dim(uint32_t n, uint16_t d) {
+  uint32_t q = n / d;
+  return q + (n > q * d);
+}
+DEVICE uint32_t get_workgroup_dim(uint32_t group_id, uint32_t grid_size,
+                                  uint16_t group_size) {
+  uint32_t r = grid_size - group_id * group_size;
+  return (r < group_size) ? r : group_size;
+}
+} // namespace
+
+DEVICE int GetNumberOfBlocksInKernel() {
+  return get_grid_dim(grid_size_x(), __builtin_amdgcn_workgroup_size_x());
+}
+
+DEVICE int GetNumberOfThreadsInBlock() {
+  return get_workgroup_dim(__builtin_amdgcn_workgroup_id_x(), grid_size_x(),
+                           __builtin_amdgcn_workgroup_size_x());
+}
+
 DEVICE unsigned GetWarpId() { return GetThreadIdInBlock() / WARPSIZE; }
 DEVICE unsigned GetLaneId() {
   return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
 }
-
-DEVICE bool __kmpc_impl_is_first_active_thread() {
-  __kmpc_impl_lanemask_t Mask = __kmpc_impl_activemask();
-  unsigned tid = GetThreadIdInBlock();
-  unsigned laneid = (tid & 0X3F);
-  int64_t Sh;
-  unsigned Shnum;
-  if (laneid < 32) {
-    Mask = Mask << 32;
-    Shnum = 32 - laneid;
-  } else {
-    Shnum = 64 - laneid;
-  }
-  Sh = Mask << Shnum;
-  return (Sh == (unsigned long long)0);
-}
-
 // global_allocate is hostrpc service to return pointer to device memory
 // In the future, we will implement a heap allocation and minimize
 // host service calls. 
@@ -153,5 +159,4 @@ EXTERN int global_free(void*);
 
 // Memory
 DEVICE void *__kmpc_impl_malloc(size_t t) { return global_allocate(t); }
-
 DEVICE void __kmpc_impl_free(void * ptr) {global_free(ptr);}
