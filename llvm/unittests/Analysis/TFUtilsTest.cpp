@@ -228,3 +228,46 @@ TEST(TFUtilsTest, LoggerNoReward) {
   L.print(OS);
   EXPECT_EQ(Result, Expected);
 }
+
+TEST(TFUtilsTest, LoggerFinalReward) {
+  std::vector<Logger::LoggedFeatureSpec> Features;
+  Features.push_back({TensorSpec::createSpec<float>("the_float", {1}), None});
+  Features.push_back({TensorSpec::createSpec<int64_t>("the_int", {1}), None});
+
+  auto Rewards = TensorSpec::createSpec<float>("reward", {1});
+  Logger L(Features, Rewards, true);
+  for (size_t I = 0; I < 3; ++I) {
+    float F = static_cast<float>(I);
+    L.logTensorValue(0, &F);
+    L.logTensorValue(1, &I);
+  }
+  L.logFinalReward<float>(3.14);
+  const auto *Expected = R"(feature_lists: {
+  feature_list: {
+    key: "the_float" value: {
+      feature: { float_list: { value: [0.000000e+00] } }
+      feature: { float_list: { value: [1.000000e+00] } }
+      feature: { float_list: { value: [2.000000e+00] } }
+    }
+  }
+  feature_list: {
+    key: "the_int" value: {
+      feature: { int64_list: { value: [0] } }
+      feature: { int64_list: { value: [1] } }
+      feature: { int64_list: { value: [2] } }
+    }
+  }
+  feature_list: {
+    key: "reward" value: {
+      feature: { float_list: { value: [0.000000e+00] } }
+      feature: { float_list: { value: [0.000000e+00] } }
+      feature: { float_list: { value: [3.140000e+00] } }
+    }
+  }
+}
+)";
+  std::string Result;
+  raw_string_ostream OS(Result);
+  L.print(OS);
+  EXPECT_EQ(Result, Expected);
+}
