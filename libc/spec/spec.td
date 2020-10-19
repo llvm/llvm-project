@@ -48,11 +48,40 @@ def CharType : NamedType<"char">;
 def VoidPtr : PtrType<VoidType>;
 def ConstVoidPtr : ConstType<VoidPtr>;
 def SizeTType : NamedType<"size_t">;
-def FloatPtr : PtrType<FloatType>;
 def LongDoublePtr : PtrType<LongDoubleType>;
 
 // _Noreturn is really not a type, but it is convenient to treat it as a type.
 def NoReturn : NamedType<"_Noreturn void">;
+
+//types moved from stdc.td
+def VoidRestrictedPtr : RestrictedPtrType<VoidType>;
+def ConstVoidRestrictedPtr : ConstType<VoidRestrictedPtr>;
+
+def CharPtr : PtrType<CharType>;
+def ConstCharPtr : ConstType<CharPtr>;
+def CharRestrictedPtr : RestrictedPtrType<CharType>;
+def ConstCharRestrictedPtr : ConstType<CharRestrictedPtr>;
+
+def OnceFlagType : NamedType<"once_flag">;
+def OnceFlagTypePtr : PtrType<OnceFlagType>;
+// TODO(sivachandra): Remove this non-standard type when a formal
+// way to describe callable types is available.
+def CallOnceFuncType : NamedType<"__call_once_func_t">;
+def MtxTType : NamedType<"mtx_t">;
+def MtxTTypePtr : PtrType<MtxTType>;
+def ThrdStartTType : NamedType<"thrd_start_t">;
+def ThrdTType : NamedType<"thrd_t">;
+def ThrdTTypePtr : PtrType<ThrdTType>;
+
+def IntPtr : PtrType<IntType>;
+def FloatPtr : PtrType<FloatType>;
+def DoublePtr : PtrType<DoubleType>;
+
+def SigHandlerT : NamedType<"__sighandler_t">;
+
+//added because __assert_fail needs it.
+def UnsignedType : NamedType<"unsigned">;
+
 
 class Macro<string name> {
   string Name = name;

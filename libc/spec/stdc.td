@@ -1,29 +1,4 @@
 def StdC : StandardSpec<"stdc"> {
-  ConstType ConstVoidPtr = ConstType<VoidPtr>;
-  RestrictedPtrType VoidRestrictedPtr = RestrictedPtrType<VoidType>;
-  ConstType ConstVoidRestrictedPtr = ConstType<VoidRestrictedPtr>;
-
-  PtrType CharPtr = PtrType<CharType>;
-  ConstType ConstCharPtr = ConstType<CharPtr>;
-  RestrictedPtrType CharRestrictedPtr = RestrictedPtrType<CharType>;
-  ConstType ConstCharRestrictedPtr = ConstType<CharRestrictedPtr>;
-
-  NamedType OnceFlagType = NamedType<"once_flag">;
-  PtrType OnceFlagTypePtr = PtrType<OnceFlagType>;
-  // TODO(sivachandra): Remove this non-standard type when a formal
-  // way to describe callable types is available.
-  NamedType CallOnceFuncType = NamedType<"__call_once_func_t">;
-  NamedType MtxTType = NamedType<"mtx_t">;
-  PtrType MtxTTypePtr = PtrType<MtxTType>;
-  NamedType ThrdStartTType = NamedType<"thrd_start_t">;
-  NamedType ThrdTType = NamedType<"thrd_t">;
-  PtrType ThrdTTypePtr = PtrType<ThrdTType>;
-
-  PtrType IntPtr = PtrType<IntType>;
-  PtrType FloatPtr = PtrType<FloatType>;
-  PtrType DoublePtr = PtrType<DoubleType>;
-
-  NamedType SigHandlerT = NamedType<"__sighandler_t">;
 
   NamedType FILE = NamedType<"FILE">;
   PtrType FILEPtr = PtrType<FILE>;
