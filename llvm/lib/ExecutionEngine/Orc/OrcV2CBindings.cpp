@@ -58,6 +58,13 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLJIT, LLVMOrcLLJITRef)
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(TargetMachine, LLVMTargetMachineRef)
 
+void LLVMOrcExecutionSessionSetErrorReporter(
+    LLVMOrcExecutionSessionRef ES, LLVMOrcErrorReporterFunction ReportError,
+    void *Ctx) {
+  unwrap(ES)->setErrorReporter(
+      [=](Error Err) { ReportError(Ctx, wrap(std::move(Err))); });
+}
+
 LLVMOrcSymbolStringPoolEntryRef
 LLVMOrcExecutionSessionIntern(LLVMOrcExecutionSessionRef ES, const char *Name) {
   return wrap(
