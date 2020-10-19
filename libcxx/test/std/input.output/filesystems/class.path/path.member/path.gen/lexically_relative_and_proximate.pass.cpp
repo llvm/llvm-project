@@ -62,7 +62,7 @@ int main(int, char**) {
     auto ReportErr = [&](const char* Testing, fs::path const& Output,
                                               fs::path const& Expected) {
       Failed = true;
-      std::printf("TEST CASE #%d FAILED:\n"
+      std::fprintf(stderr, "TEST CASE #%d FAILED:\n"
                   "  Testing: %s\n"
                   "  Input: '%s'\n"
                   "  Base: '%s'\n"
