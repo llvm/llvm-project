@@ -147,6 +147,10 @@ c1:
         .byte   6                               # DW_FORM_data4
         .byte   64                              # DW_AT_frame_base
         .byte   24                              # DW_FORM_exprloc
+        .byte   100                             # DW_AT_object_pointer
+        .byte   19                              # DW_FORM_ref4
+        .byte   71                              # DW_AT_specification
+        .byte   19                              # DW_FORM_ref4
         .byte   0                               # EOM(1)
         .byte   0                               # EOM(2)
         .byte   11                              # Abbreviation Code
@@ -202,6 +206,7 @@ c1:
         .byte   3                               # Abbrev [3] DW_TAG_structure_type
         .asciz  "A"                             # DW_AT_name
                                                 # DW_AT_declaration
+.LA_A:
         .byte   4                               # Abbrev [4] DW_TAG_subprogram
         .asciz  "A"                             # DW_AT_name
                                                 # DW_AT_declaration
@@ -218,6 +223,9 @@ c1:
         .long   .LZN1AC2Ev_end-_ZN1AC2Ev        # DW_AT_high_pc
         .byte   1                               # DW_AT_frame_base
         .byte   86
+        .long   .Lthis-.Lcu_begin0              # DW_AT_object_pointer
+        .long   .LA_A-.Lcu_begin0               # DW_AT_specification
+.Lthis:
         .byte   11                              # Abbrev [11] DW_TAG_formal_parameter
         .byte   2                               # DW_AT_location
         .byte   145
