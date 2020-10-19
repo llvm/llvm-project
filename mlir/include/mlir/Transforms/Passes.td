@@ -201,6 +201,22 @@ def BufferLoopHoisting : FunctionPass<"buffer-loop-hoisting"> {
   let constructor = "mlir::createBufferLoopHoistingPass()";
 }
 
+def PromoteBuffersToStack : FunctionPass<"promote-buffers-to-stack"> {
+  let summary = "Promotes heap-based allocations to automatically managed "
+                "stack-based allocations";
+  let description = [{
+    This pass implements a simple algorithm to convert heap-based memory
+    allocations to stack-based ones. It uses a built-in heuristic to decide
+    whether it makes sense to convert an allocation.
+  }];
+  let constructor = "mlir::createPromoteBuffersToStackPass()";
+  let options = [
+    Option<"maxAllocSizeInBytes", "max-alloc-size-in-bytes", "unsigned",
+           /*default=*/"1024",
+           "Define the maximum size in bytes to promote allocations to stack.">,
+  ];
+}
+
 def Canonicalizer : Pass<"canonicalize"> {
   let summary = "Canonicalize operations";
   let description = [{
