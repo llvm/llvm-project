@@ -5,7 +5,7 @@
 ; CHECK-NEXT: ret void
 ; CHECK: call {{.*}}@fun.cold.1(
 ; CHECK-NEXT: ret void
-define void @fun() "hot-cold-split" {
+define void @fun() {
 entry:
   br i1 undef, label %A.then, label %A.else
 

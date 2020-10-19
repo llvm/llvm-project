@@ -10,27 +10,23 @@
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes='default<O1>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O1 \
-; RUN:      --check-prefix=%llvmcheckext --check-prefix=CHECK-O-NOPRELINK
+; RUN:      --check-prefix=%llvmcheckext
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes='default<O2>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O2 \
-; RUN:      --check-prefix=CHECK-O23SZ --check-prefix=%llvmcheckext \
-; RUN:      --check-prefix=CHECK-O-NOPRELINK
+; RUN:      --check-prefix=CHECK-O23SZ --check-prefix=%llvmcheckext
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes='default<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O3 \
-; RUN:      --check-prefix=CHECK-O23SZ --check-prefix=%llvmcheckext \
-; RUN:      --check-prefix=CHECK-O-NOPRELINK
+; RUN:      --check-prefix=CHECK-O23SZ --check-prefix=%llvmcheckext
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes='default<Os>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-Os \
-; RUN:      --check-prefix=CHECK-O23SZ --check-prefix=%llvmcheckext \
-; RUN:      --check-prefix=CHECK-O-NOPRELINK
+; RUN:      --check-prefix=CHECK-O23SZ --check-prefix=%llvmcheckext
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes='default<Oz>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-Oz \
-; RUN:     --check-prefix=CHECK-O23SZ --check-prefix=%llvmcheckext \
-; RUN:     --check-prefix=CHECK-O-NOPRELINK
+; RUN:     --check-prefix=CHECK-O23SZ --check-prefix=%llvmcheckext
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes='lto-pre-link<O2>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O2 \
@@ -42,50 +38,43 @@
 ; RUN:     -passes='default<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O3 \
 ; RUN:     --check-prefix=%llvmcheckext \
-; RUN:     --check-prefix=CHECK-EP-PEEPHOLE --check-prefix=CHECK-O23SZ \
-; RUN:     --check-prefix=CHECK-O-NOPRELINK
+; RUN:     --check-prefix=CHECK-EP-PEEPHOLE --check-prefix=CHECK-O23SZ
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes-ep-late-loop-optimizations='no-op-loop' \
 ; RUN:     -passes='default<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O3 \
 ; RUN:     --check-prefix=%llvmcheckext \
-; RUN:     --check-prefix=CHECK-EP-LOOP-LATE --check-prefix=CHECK-O23SZ \
-; RUN:     --check-prefix=CHECK-O-NOPRELINK
+; RUN:     --check-prefix=CHECK-EP-LOOP-LATE --check-prefix=CHECK-O23SZ
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes-ep-loop-optimizer-end='no-op-loop' \
 ; RUN:     -passes='default<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O3 \
 ; RUN:     --check-prefix=%llvmcheckext \
-; RUN:     --check-prefix=CHECK-EP-LOOP-END --check-prefix=CHECK-O23SZ \
-; RUN:     --check-prefix=CHECK-O-NOPRELINK
+; RUN:     --check-prefix=CHECK-EP-LOOP-END --check-prefix=CHECK-O23SZ
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes-ep-scalar-optimizer-late='no-op-function' \
 ; RUN:     -passes='default<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O3 \
 ; RUN:     --check-prefix=%llvmcheckext \
-; RUN:     --check-prefix=CHECK-EP-SCALAR-LATE --check-prefix=CHECK-O23SZ \
-; RUN:     --check-prefix=CHECK-O-NOPRELINK
+; RUN:     --check-prefix=CHECK-EP-SCALAR-LATE --check-prefix=CHECK-O23SZ
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes-ep-cgscc-optimizer-late='no-op-cgscc' \
 ; RUN:     -passes='default<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O3 \
 ; RUN:     --check-prefix=%llvmcheckext \
-; RUN:     --check-prefix=CHECK-EP-CGSCC-LATE --check-prefix=CHECK-O23SZ \
-; RUN:     --check-prefix=CHECK-O-NOPRELINK
+; RUN:     --check-prefix=CHECK-EP-CGSCC-LATE --check-prefix=CHECK-O23SZ
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes-ep-vectorizer-start='no-op-function' \
 ; RUN:     -passes='default<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O3 \
 ; RUN:     --check-prefix=%llvmcheckext \
-; RUN:     --check-prefix=CHECK-EP-VECTORIZER-START --check-prefix=CHECK-O23SZ \
-; RUN:     --check-prefix=CHECK-O-NOPRELINK
+; RUN:     --check-prefix=CHECK-EP-VECTORIZER-START --check-prefix=CHECK-O23SZ
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes-ep-pipeline-start='no-op-module' \
 ; RUN:     -passes='default<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O3 \
 ; RUN:     --check-prefix=%llvmcheckext \
-; RUN:     --check-prefix=CHECK-EP-PIPELINE-START --check-prefix=CHECK-O23SZ \
-; RUN:     --check-prefix=CHECK-O-NOPRELINK
+; RUN:     --check-prefix=CHECK-EP-PIPELINE-START --check-prefix=CHECK-O23SZ
 ; RUN: opt -disable-verify -debug-pass-manager \
 ; RUN:     -passes-ep-pipeline-start='no-op-module' \
 ; RUN:     -passes='lto-pre-link<O3>' -S  %s 2>&1 \
@@ -97,8 +86,7 @@
 ; RUN:     -passes='default<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O3 \
 ; RUN:     --check-prefix=%llvmcheckext \
-; RUN:     --check-prefix=CHECK-EP-OPTIMIZER-LAST --check-prefix=CHECK-O23SZ \
-; RUN:     --check-prefix=CHECK-O-NOPRELINK
+; RUN:     --check-prefix=CHECK-EP-OPTIMIZER-LAST --check-prefix=CHECK-O23SZ
 
 ; CHECK-O: Starting llvm::Module pass manager run.
 ; CHECK-O-NEXT: Running pass: ForceFunctionAttrsPass
@@ -236,7 +224,6 @@
 ; CHECK-O2-LTO-NOT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
-; CHECK-O-NOPRELINK-NEXT: Running pass: HotColdSplittingPass
 ; CHECK-O-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-O-NEXT: Running pass: Float2IntPass
 ; CHECK-O-NEXT: Running pass: LowerConstantIntrinsicsPass on foo

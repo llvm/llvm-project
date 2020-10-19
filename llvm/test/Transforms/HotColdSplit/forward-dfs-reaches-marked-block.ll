@@ -5,7 +5,7 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 ; CHECK-LABEL: define {{.*}}@fun
 ; CHECK: call {{.*}}@fun.cold.1(
-define void @fun() "hot-cold-split" {
+define void @fun() {
 entry:
   br i1 undef, label %if.then, label %if.else
 
