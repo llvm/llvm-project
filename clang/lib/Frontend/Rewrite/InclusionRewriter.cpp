@@ -44,13 +44,13 @@ class InclusionRewriter : public PPCallbacks {
   bool ShowLineMarkers; ///< Show #line markers.
   bool UseLineDirectives; ///< Use of line directives or line markers.
   /// Tracks where inclusions that change the file are found.
-  std::map<unsigned, IncludedFile> FileIncludes;
+  std::map<SourceLocation, IncludedFile> FileIncludes;
   /// Tracks where inclusions that import modules are found.
-  std::map<unsigned, const Module *> ModuleIncludes;
+  std::map<SourceLocation, const Module *> ModuleIncludes;
   /// Tracks where inclusions that enter modules (in a module build) are found.
-  std::map<unsigned, const Module *> ModuleEntryIncludes;
+  std::map<SourceLocation, const Module *> ModuleEntryIncludes;
   /// Tracks where #if and #elif directives get evaluated and whether to true.
-  std::map<unsigned, bool> IfConditions;
+  std::map<SourceLocation, bool> IfConditions;
   /// Used transitively for building up the FileIncludes mapping over the
   /// various \c PPCallbacks callbacks.
   SourceLocation LastInclusionLocation;
@@ -65,8 +65,8 @@ public:
   void detectMainFileEOL();
   void handleModuleBegin(Token &Tok) {
     assert(Tok.getKind() == tok::annot_module_begin);
-    ModuleEntryIncludes.insert({Tok.getLocation().getRawEncoding(),
-                                (Module *)Tok.getAnnotationValue()});
+    ModuleEntryIncludes.insert(
+        {Tok.getLocation(), (Module *)Tok.getAnnotationValue()});
   }
 private:
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
@@ -164,7 +164,7 @@ void InclusionRewriter::FileChanged(SourceLocation Loc,
     return;
   FileID Id = FullSourceLoc(Loc, SM).getFileID();
   auto P = FileIncludes.insert(
-      std::make_pair(LastInclusionLocation.getRawEncoding(),
+      std::make_pair(LastInclusionLocation,
                      IncludedFile(Id, NewFileType, PP.GetCurDirLookup())));
   (void)P;
   assert(P.second && "Unexpected revisitation of the same include directive");
@@ -199,8 +199,7 @@ void InclusionRewriter::InclusionDirective(SourceLocation HashLoc,
                                            const Module *Imported,
                                            SrcMgr::CharacteristicKind FileType){
   if (Imported) {
-    auto P = ModuleIncludes.insert(
-        std::make_pair(HashLoc.getRawEncoding(), Imported));
+    auto P = ModuleIncludes.insert(std::make_pair(HashLoc, Imported));
     (void)P;
     assert(P.second && "Unexpected revisitation of the same include directive");
   } else
@@ -209,8 +208,7 @@ void InclusionRewriter::InclusionDirective(SourceLocation HashLoc,
 
 void InclusionRewriter::If(SourceLocation Loc, SourceRange ConditionRange,
                            ConditionValueKind ConditionValue) {
-  auto P = IfConditions.insert(
-      std::make_pair(Loc.getRawEncoding(), ConditionValue == CVK_True));
+  auto P = IfConditions.insert(std::make_pair(Loc, ConditionValue == CVK_True));
   (void)P;
   assert(P.second && "Unexpected revisitation of the same if directive");
 }
@@ -218,8 +216,7 @@ void InclusionRewriter::If(SourceLocation Loc, SourceRange ConditionRange,
 void InclusionRewriter::Elif(SourceLocation Loc, SourceRange ConditionRange,
                              ConditionValueKind ConditionValue,
                              SourceLocation IfLoc) {
-  auto P = IfConditions.insert(
-      std::make_pair(Loc.getRawEncoding(), ConditionValue == CVK_True));
+  auto P = IfConditions.insert(std::make_pair(Loc, ConditionValue == CVK_True));
   (void)P;
   assert(P.second && "Unexpected revisitation of the same elif directive");
 }
@@ -228,7 +225,7 @@ void InclusionRewriter::Elif(SourceLocation Loc, SourceRange ConditionRange,
 /// an inclusion directive) in the map of inclusion information, FileChanges.
 const InclusionRewriter::IncludedFile *
 InclusionRewriter::FindIncludeAtLocation(SourceLocation Loc) const {
-  const auto I = FileIncludes.find(Loc.getRawEncoding());
+  const auto I = FileIncludes.find(Loc);
   if (I != FileIncludes.end())
     return &I->second;
   return nullptr;
@@ -238,7 +235,7 @@ InclusionRewriter::FindIncludeAtLocation(SourceLocation Loc) const {
 /// an inclusion directive) in the map of module inclusion information.
 const Module *
 InclusionRewriter::FindModuleAtLocation(SourceLocation Loc) const {
-  const auto I = ModuleIncludes.find(Loc.getRawEncoding());
+  const auto I = ModuleIncludes.find(Loc);
   if (I != ModuleIncludes.end())
     return I->second;
   return nullptr;
@@ -248,14 +245,14 @@ InclusionRewriter::FindModuleAtLocation(SourceLocation Loc) const {
 /// an inclusion directive) in the map of module entry information.
 const Module *
 InclusionRewriter::FindEnteredModule(SourceLocation Loc) const {
-  const auto I = ModuleEntryIncludes.find(Loc.getRawEncoding());
+  const auto I = ModuleEntryIncludes.find(Loc);
   if (I != ModuleEntryIncludes.end())
     return I->second;
   return nullptr;
 }
 
 bool InclusionRewriter::IsIfAtLocationTrue(SourceLocation Loc) const {
-  const auto I = IfConditions.find(Loc.getRawEncoding());
+  const auto I = IfConditions.find(Loc);
   if (I != IfConditions.end())
     return I->second;
   return false;

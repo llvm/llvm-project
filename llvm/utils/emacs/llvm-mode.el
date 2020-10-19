@@ -23,7 +23,7 @@
    ;; Attributes
    `(,(regexp-opt
        '("alwaysinline" "argmemonly" "builtin" "cold" "convergent" "inaccessiblememonly"
-         "inaccessiblemem_or_argmemonly" "inlinehint" "jumptable" "minsize" "naked" "nobuiltin"
+         "inaccessiblemem_or_argmemonly" "inlinehint" "jumptable" "minsize" "mustprogress" "naked" "nobuiltin"
          "noduplicate" "nofree" "noimplicitfloat" "noinline" "nonlazybind" "noredzone" "noreturn"
          "norecurse" "noundef" "nounwind" "optnone" "optsize" "readnone" "readonly" "returns_twice"
          "speculatable" "ssp" "sspreq" "sspstrong" "safestack" "sanitize_address" "sanitize_hwaddress" "sanitize_memtag"

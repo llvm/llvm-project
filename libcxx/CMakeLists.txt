@@ -232,10 +232,10 @@ option(LIBCXX_ENABLE_ABI_LINKER_SCRIPT
       ${ENABLE_LINKER_SCRIPT_DEFAULT_VALUE})
 
 option(LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS
-    "Build libc++ with definitions for operator new/delete. This option can
-     be used to disable the definitions when libc++abi is expected to provide
-     them" ON)
-
+  "Build libc++ with definitions for operator new/delete. These are normally
+   defined in libc++abi, but this option can be used to define them in libc++
+   instead. If you define them in libc++, make sure they are NOT defined in
+   libc++abi. Doing otherwise is an ODR violation." OFF)
 # Build libc++abi with libunwind. We need this option to determine whether to
 # link with libunwind or libgcc_s while running the test cases.
 option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)

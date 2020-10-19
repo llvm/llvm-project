@@ -2357,7 +2357,7 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     // (icmp eq B, 0) | (icmp ult A, B) -> (icmp ule A, B-1)
     // (icmp eq B, 0) | (icmp ugt B, A) -> (icmp ule A, B-1)
     Value *A = nullptr, *B = nullptr;
-    if (PredL == ICmpInst::ICMP_EQ && LHSC && LHSC->isZero()) {
+    if (PredL == ICmpInst::ICMP_EQ && match(LHS1, m_Zero())) {
       B = LHS0;
       if (PredR == ICmpInst::ICMP_ULT && LHS0 == RHS1)
         A = RHS0;
@@ -2366,17 +2366,17 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
     // (icmp ult A, B) | (icmp eq B, 0) -> (icmp ule A, B-1)
     // (icmp ugt B, A) | (icmp eq B, 0) -> (icmp ule A, B-1)
-    else if (PredR == ICmpInst::ICMP_EQ && RHSC && RHSC->isZero()) {
+    else if (PredR == ICmpInst::ICMP_EQ && match(RHS1, m_Zero())) {
       B = RHS0;
       if (PredL == ICmpInst::ICMP_ULT && RHS0 == LHS1)
         A = LHS0;
-      else if (PredL == ICmpInst::ICMP_UGT && LHS0 == RHS0)
+      else if (PredL == ICmpInst::ICMP_UGT && RHS0 == LHS0)
         A = LHS1;
     }
-    if (A && B)
+    if (A && B && B->getType()->isIntOrIntVectorTy())
       return Builder.CreateICmp(
           ICmpInst::ICMP_UGE,
-          Builder.CreateAdd(B, ConstantInt::getSigned(B->getType(), -1)), A);
+          Builder.CreateAdd(B, Constant::getAllOnesValue(B->getType())), A);
   }
 
   if (Value *V = foldAndOrOfICmpsWithConstEq(LHS, RHS, Or, Builder, Q))
@@ -2405,17 +2405,20 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
           foldUnsignedUnderflowCheck(RHS, LHS, /*IsAnd=*/false, Q, Builder))
     return X;
 
+  // (icmp ne A, 0) | (icmp ne B, 0) --> (icmp ne (A|B), 0)
+  // TODO: Remove this when foldLogOpOfMaskedICmps can handle vectors.
+  if (PredL == ICmpInst::ICMP_NE && match(LHS1, m_Zero()) &&
+      PredR == ICmpInst::ICMP_NE && match(RHS1, m_Zero()) &&
+      LHS0->getType()->isIntOrIntVectorTy() &&
+      LHS0->getType() == RHS0->getType()) {
+    Value *NewOr = Builder.CreateOr(LHS0, RHS0);
+    return Builder.CreateICmp(PredL, NewOr,
+                              Constant::getNullValue(NewOr->getType()));
+  }
+
   // This only handles icmp of constants: (icmp1 A, C1) | (icmp2 B, C2).
   if (!LHSC || !RHSC)
     return nullptr;
-
-  if (LHSC == RHSC && PredL == PredR) {
-    // (icmp ne A, 0) | (icmp ne B, 0) --> (icmp ne (A|B), 0)
-    if (PredL == ICmpInst::ICMP_NE && LHSC->isZero()) {
-      Value *NewOr = Builder.CreateOr(LHS0, RHS0);
-      return Builder.CreateICmp(PredL, NewOr, LHSC);
-    }
-  }
 
   // (icmp ult (X + CA), C1) | (icmp eq X, C2) -> (icmp ule (X + CA), C1)
   //   iff C2 + CA == C1.

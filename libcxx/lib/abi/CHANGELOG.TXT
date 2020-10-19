@@ -16,6 +16,65 @@ New entries should be added directly below the "Version" header.
 Version 12.0
 ------------
 
+* XXXXXXX - [libc++] Define new/delete in libc++abi only by default
+
+  By default, libc++ does not include the definition for new and delete anymore.
+  Those were previously defined in both libc++ and libc++abi, which was an
+  ODR violation.
+
+  x86_64-apple-apple-darwin
+  -------------------------
+  The following symbols are now re-exported from libc++abi instead of exported
+  by libc++ directly (this should not be an ABI break):
+
+  Symbol moved: __ZdaPv
+  Symbol moved: __ZdaPvm
+  Symbol moved: __ZdaPvmSt11align_val_t
+  Symbol moved: __ZdaPvRKSt9nothrow_t
+  Symbol moved: __ZdaPvSt11align_val_t
+  Symbol moved: __ZdaPvSt11align_val_tRKSt9nothrow_t
+  Symbol moved: __ZdlPv
+  Symbol moved: __ZdlPvm
+  Symbol moved: __ZdlPvmSt11align_val_t
+  Symbol moved: __ZdlPvRKSt9nothrow_t
+  Symbol moved: __ZdlPvSt11align_val_t
+  Symbol moved: __ZdlPvSt11align_val_tRKSt9nothrow_t
+  Symbol moved: __Znam
+  Symbol moved: __ZnamRKSt9nothrow_t
+  Symbol moved: __ZnamSt11align_val_t
+  Symbol moved: __ZnamSt11align_val_tRKSt9nothrow_t
+  Symbol moved: __Znwm
+  Symbol moved: __ZnwmRKSt9nothrow_t
+  Symbol moved: __ZnwmSt11align_val_t
+  Symbol moved: __ZnwmSt11align_val_tRKSt9nothrow_t
+
+  x86_64-unknown-linux-gnu
+  ------------------------
+  The following symbols were moved to libc++abi, but are NOT being re-exported
+  by libc++. This constitutes an ABI break if one links against libc++ but
+  not libc++abi.
+
+  Symbol moved: _ZdaPv
+  Symbol moved: _ZdaPvm
+  Symbol moved: _ZdaPvmSt11align_val_t
+  Symbol moved: _ZdaPvRKSt9nothrow_t
+  Symbol moved: _ZdaPvSt11align_val_t
+  Symbol moved: _ZdaPvSt11align_val_tRKSt9nothrow_t
+  Symbol moved: _ZdlPv
+  Symbol moved: _ZdlPvm
+  Symbol moved: _ZdlPvmSt11align_val_t
+  Symbol moved: _ZdlPvRKSt9nothrow_t
+  Symbol moved: _ZdlPvSt11align_val_t
+  Symbol moved: _ZdlPvSt11align_val_tRKSt9nothrow_t
+  Symbol moved: _Znam
+  Symbol moved: _ZnamRKSt9nothrow_t
+  Symbol moved: _ZnamSt11align_val_t
+  Symbol moved: _ZnamSt11align_val_tRKSt9nothrow_t
+  Symbol moved: _Znwm
+  Symbol moved: _ZnwmRKSt9nothrow_t
+  Symbol moved: _ZnwmSt11align_val_t
+  Symbol moved: _ZnwmSt11align_val_tRKSt9nothrow_t
+
 * 4f13b9992971 - [libc++] Simplify how we re-export symbols from libc++abi
 
   We re-export some symbols that were exported from libc++abi but not from

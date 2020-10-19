@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #include "check-acc-structure.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
@@ -59,22 +58,61 @@ public:
     return true;
   }
 
-  void Post(const parser::ReturnStmt &) { emitBranchOutError("RETURN"); }
-  void Post(const parser::ExitStmt &) { emitBranchOutError("EXIT"); }
-  void Post(const parser::StopStmt &) { emitBranchOutError("STOP"); }
+  void Post(const parser::ReturnStmt &) { EmitBranchOutError("RETURN"); }
+  void Post(const parser::ExitStmt &exitStmt) {
+    if (const auto &exitName{exitStmt.v}) {
+      CheckConstructNameBranching("EXIT", exitName.value());
+    }
+  }
+  void Post(const parser::StopStmt &) { EmitBranchOutError("STOP"); }
 
 private:
-  parser::MessageFixedText GetEnclosingMsg() {
-    return "Enclosing block construct"_en_US;
+  parser::MessageFormattedText GetEnclosingMsg() const {
+    return {"Enclosing %s construct"_en_US,
+        parser::ToUpperCaseLetters(
+            llvm::acc::getOpenACCDirectiveName(currentDirective_).str())};
   }
 
-  void emitBranchOutError(const char *stmt) {
+  void EmitBranchOutError(const char *stmt) const {
     context_
         .Say(currentStatementSourcePosition_,
             "%s statement is not allowed in a %s construct"_err_en_US, stmt,
             parser::ToUpperCaseLetters(
                 llvm::acc::getOpenACCDirectiveName(currentDirective_).str()))
         .Attach(sourcePosition_, GetEnclosingMsg());
+  }
+
+  void EmitBranchOutErrorWithName(
+      const char *stmt, const parser::Name &toName) const {
+    const std::string branchingToName{toName.ToString()};
+    const auto upperCaseConstructName{parser::ToUpperCaseLetters(
+        llvm::acc::getOpenACCDirectiveName(currentDirective_).str())};
+    context_
+        .Say(currentStatementSourcePosition_,
+            "%s to construct '%s' outside of %s construct is not allowed"_err_en_US,
+            stmt, branchingToName, upperCaseConstructName)
+        .Attach(sourcePosition_, GetEnclosingMsg());
+  }
+
+  // Current semantic checker is not following OpenACC constructs as they are
+  // not Fortran constructs. Hence the ConstructStack doesn't capture OpenACC
+  // constructs. Apply an inverse way to figure out if a construct-name is
+  // branching out of an OpenACC construct. The control flow goes out of an
+  // OpenACC construct, if a construct-name from statement is found in
+  // ConstructStack.
+  void CheckConstructNameBranching(
+      const char *stmt, const parser::Name &stmtName) {
+    const ConstructStack &stack{context_.constructStack()};
+    for (auto iter{stack.cend()}; iter-- != stack.cbegin();) {
+      const ConstructNode &construct{*iter};
+      const auto &constructName{MaybeGetNodeName(construct)};
+      if (constructName) {
+        if (stmtName.source == constructName->source) {
+          EmitBranchOutErrorWithName(stmt, stmtName);
+          return;
+        }
+      }
+    }
   }
 
   SemanticsContext &context_;

@@ -16,14 +16,24 @@
 #include "fuzz.h"
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t *data, std::size_t size) {
-    auto is_even = [](auto x) { return x % 2 == 0; };
-    std::vector<std::uint8_t> working(data, data + size);
-    auto iter = std::partition(working.begin(), working.end(), is_even);
+    if (size < 2)
+        return 0;
 
-    if (!std::all_of(working.begin(), iter, is_even))
+    // Make a heap from the first half of the data
+    std::vector<std::uint8_t> working(data, data + size);
+    auto iter = working.begin() + (size / 2);
+    std::make_heap(working.begin(), iter);
+    if (!std::is_heap(working.begin(), iter))
         return 1;
-    if (!std::none_of(iter,   working.end(), is_even))
-        return 2;
+
+    // Now push the rest onto the heap, one at a time
+    ++iter;
+    for (; iter != working.end(); ++iter) {
+        std::push_heap(working.begin(), iter);
+        if (!std::is_heap(working.begin(), iter))
+            return 2;
+    }
+
     if (!fast_is_permutation(data, data + size, working.cbegin()))
         return 99;
     return 0;

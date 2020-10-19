@@ -759,9 +759,6 @@ int main(int argc, char **argv) {
       return 1;
     }
     SmallVector<StringRef, 4> Passes;
-    for (const auto &P : PassList) {
-      Passes.push_back(P->getPassArgument());
-    }
     if (OptLevelO0)
       Passes.push_back("default<O0>");
     if (OptLevelO1)
@@ -774,6 +771,8 @@ int main(int argc, char **argv) {
       Passes.push_back("default<Os>");
     if (OptLevelOz)
       Passes.push_back("default<Oz>");
+    for (const auto &P : PassList)
+      Passes.push_back(P->getPassArgument());
     OutputKind OK = OK_NoOutput;
     if (!NoOutput)
       OK = OutputAssembly

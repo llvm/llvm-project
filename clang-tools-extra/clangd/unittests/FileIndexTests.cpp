@@ -672,9 +672,9 @@ TEST(FileIndexTest, Profile) {
               UnorderedElementsAre(Pair("preamble", _), Pair("main_file", _)));
 
   ASSERT_THAT(MT.child("preamble").children(),
-              UnorderedElementsAre(Pair("index", _), Pair("symbols", _)));
+              UnorderedElementsAre(Pair("index", _), Pair("slabs", _)));
   ASSERT_THAT(MT.child("main_file").children(),
-              UnorderedElementsAre(Pair("index", _), Pair("symbols", _)));
+              UnorderedElementsAre(Pair("index", _), Pair("slabs", _)));
 
   ASSERT_THAT(MT.child("preamble").child("index").total(), Gt(0U));
   ASSERT_THAT(MT.child("main_file").child("index").total(), Gt(0U));

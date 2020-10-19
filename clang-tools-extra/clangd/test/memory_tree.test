@@ -22,7 +22,7 @@
 # CHECK-NEXT:             "_self": {{[0-9]+}},
 # CHECK-NEXT:             "_total": {{[0-9]+}}
 # CHECK-NEXT:           },
-# CHECK-NEXT:           "symbols": {
+# CHECK-NEXT:           "slabs": {
 # CHECK-NEXT:             "{{.*}}main.cpp": {
 # CHECK-NEXT:               "_self": {{[0-9]+}},
 # CHECK-NEXT:               "_total": {{[0-9]+}},
@@ -50,7 +50,7 @@
 # CHECK-NEXT:             "_self": {{[0-9]+}},
 # CHECK-NEXT:             "_total": {{[0-9]+}}
 # CHECK-NEXT:           },
-# CHECK-NEXT:           "symbols": {
+# CHECK-NEXT:           "slabs": {
 # CHECK-NEXT:             "_self": {{[0-9]+}},
 # CHECK-NEXT:             "_total": {{[0-9]+}}
 # CHECK-NEXT:           }
