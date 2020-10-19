@@ -55,7 +55,7 @@ public:
   ResourceTracker(const ResourceTracker &) = delete;
   ResourceTracker &operator=(const ResourceTracker &) = delete;
   ResourceTracker(ResourceTracker &&) = delete;
-  ResourceTracker &operator=(ResourceTracker &) = delete;
+  ResourceTracker &operator=(ResourceTracker &&) = delete;
 
   ~ResourceTracker();
 
