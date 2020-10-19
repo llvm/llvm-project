@@ -223,7 +223,7 @@ void RunStringMoveTest(const char* Expect) {
   assert(p == Expect);
   {
     // Signature test
-    ASSERT_NOEXCEPT(p = std::move(ss));
+    LIBCPP_ONLY(ASSERT_NOEXCEPT(p = std::move(ss)));
   }
 }
 
