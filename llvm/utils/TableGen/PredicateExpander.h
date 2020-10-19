@@ -79,6 +79,9 @@ public:
   void expandCheckInvalidRegOperand(raw_ostream &OS, int OpIndex);
   void expandCheckFunctionPredicate(raw_ostream &OS, StringRef MCInstFn,
                                     StringRef MachineInstrFn);
+  void expandCheckFunctionPredicateWithTII(raw_ostream &OS, StringRef MCInstFn,
+                                           StringRef MachineInstrFn,
+                                           StringRef TIIPtr);
   void expandCheckNonPortable(raw_ostream &OS, StringRef CodeBlock);
   void expandPredicate(raw_ostream &OS, const Record *Rec);
   void expandReturnStatement(raw_ostream &OS, const Record *Rec);
