@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
   int32_t InitializersRunFlag = 0;
   int32_t DeinitializersRunFlag = 0;
 
-  ExitOnErr(J->define(absoluteSymbols(
+  ExitOnErr(J->getMainJITDylib().define(absoluteSymbols(
       {{J->mangleAndIntern("InitializersRunFlag"),
         JITEvaluatedSymbol::fromPointer(&InitializersRunFlag)},
        {J->mangleAndIntern("DeinitializersRunFlag"),
