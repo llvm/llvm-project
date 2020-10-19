@@ -1717,6 +1717,8 @@ multiclass BRCCFm<ValueType ty, SDPatternOperator BrOpNode1,
 }
 defm : BRCCFm<f32, BRCFSrr, BRCFSir>;
 defm : BRCCFm<f64, BRCFDrr, BRCFDir>;
+def : Pat<(brcc cond:$cond, f128:$l, f128:$r, bb:$addr),
+          (BRCFDir (fcond2cc $cond), 0, (FCMPQrr $r, $l), bb:$addr)>;
 
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions
