@@ -188,6 +188,10 @@ void LLVMOrcReleaseSymbolStringPoolEntry(LLVMOrcSymbolStringPoolEntryRef S) {
   OrcV2CAPIHelper::releasePoolEntry(unwrap(S));
 }
 
+const char *LLVMOrcSymbolStringPoolEntryStr(LLVMOrcSymbolStringPoolEntryRef S) {
+  return unwrap(S)->getKey().data();
+}
+
 LLVMOrcResourceTrackerRef
 LLVMOrcJITDylibCreateResourceTracker(LLVMOrcJITDylibRef JD) {
   auto RT = unwrap(JD)->createResourceTracker();
