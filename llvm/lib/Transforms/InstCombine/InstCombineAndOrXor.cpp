@@ -2403,19 +2403,22 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
           foldUnsignedUnderflowCheck(RHS, LHS, /*IsAnd=*/false, Q, Builder))
     return X;
 
+  // (icmp ne A, 0) | (icmp ne B, 0) --> (icmp ne (A|B), 0)
+  // TODO: Remove this when foldLogOpOfMaskedICmps can handle vectors.
+  if (PredL == ICmpInst::ICMP_NE && match(LHS1, m_Zero()) &&
+      PredR == ICmpInst::ICMP_NE && match(RHS1, m_Zero()) &&
+      LHS0->getType()->isIntOrIntVectorTy() &&
+      LHS0->getType() == RHS0->getType()) {
+    Value *NewOr = Builder.CreateOr(LHS0, RHS0);
+    return Builder.CreateICmp(PredL, NewOr,
+                              Constant::getNullValue(NewOr->getType()));
+  }
+
   // This only handles icmp of constants: (icmp1 A, C1) | (icmp2 B, C2).
   auto *LHSC = dyn_cast<ConstantInt>(LHS1);
   auto *RHSC = dyn_cast<ConstantInt>(RHS1);
   if (!LHSC || !RHSC)
     return nullptr;
-
-  if (LHSC == RHSC && PredL == PredR) {
-    // (icmp ne A, 0) | (icmp ne B, 0) --> (icmp ne (A|B), 0)
-    if (PredL == ICmpInst::ICMP_NE && LHSC->isZero()) {
-      Value *NewOr = Builder.CreateOr(LHS0, RHS0);
-      return Builder.CreateICmp(PredL, NewOr, LHSC);
-    }
-  }
 
   // (icmp ult (X + CA), C1) | (icmp eq X, C2) -> (icmp ule (X + CA), C1)
   //   iff C2 + CA == C1.
