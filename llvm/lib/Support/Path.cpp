@@ -12,6 +12,7 @@
 
 #include "llvm/Support/Path.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
@@ -30,6 +31,10 @@
 
 using namespace llvm;
 using namespace llvm::support::endian;
+
+#define DEBUG_TYPE "file-system"
+
+ALWAYS_ENABLED_STATISTIC(NumStatusCalls, "Number of `status` calls.");
 
 namespace {
   using llvm::StringRef;
