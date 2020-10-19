@@ -86,6 +86,16 @@ public:
         handleFunctionTemplateDecl(FTD);
     } else if (const auto *FD = dyn_cast<FunctionTemplateDecl>(FoundDecl)) {
       handleFunctionTemplateDecl(FD);
+    } else if (const auto *VTD = dyn_cast<VarTemplateDecl>(FoundDecl)) {
+      handleVarTemplateDecl(VTD);
+    } else if (const auto *VD =
+                   dyn_cast<VarTemplateSpecializationDecl>(FoundDecl)) {
+      // FIXME: figure out why FoundDecl can be a VarTemplateSpecializationDecl.
+      handleVarTemplateDecl(VD->getSpecializedTemplate());
+    } else if (const auto *VD = dyn_cast<VarDecl>(FoundDecl)) {
+      USRSet.insert(getUSRForDecl(VD));
+      if (const auto *VTD = VD->getDescribedVarTemplate())
+        handleVarTemplateDecl(VTD);
     } else {
       USRSet.insert(getUSRForDecl(FoundDecl));
     }
@@ -130,6 +140,19 @@ private:
     USRSet.insert(getUSRForDecl(FTD->getTemplatedDecl()));
     for (const auto *S : FTD->specializations())
       USRSet.insert(getUSRForDecl(S));
+  }
+
+  void handleVarTemplateDecl(const VarTemplateDecl *VTD) {
+    USRSet.insert(getUSRForDecl(VTD));
+    USRSet.insert(getUSRForDecl(VTD->getTemplatedDecl()));
+    llvm::for_each(VTD->specializations(), [&](const auto *Spec) {
+      USRSet.insert(getUSRForDecl(Spec));
+    });
+    SmallVector<VarTemplatePartialSpecializationDecl *, 4> PartialSpecs;
+    VTD->getPartialSpecializations(PartialSpecs);
+    llvm::for_each(PartialSpecs, [&](const auto *Spec) {
+      USRSet.insert(getUSRForDecl(Spec));
+    });
   }
 
   void addUSRsOfCtorDtors(const CXXRecordDecl *RD) {
