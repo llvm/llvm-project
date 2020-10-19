@@ -1,4 +1,4 @@
-//===- llvm-profgen.cpp - LLVM SPGO profile generation tool ---------------===//
+//===- llvm-profgen.cpp - LLVM SPGO profile generation tool -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 
 #include "ErrorHandling.h"
 #include "PerfReader.h"
+#include "ProfileGenerator.h"
 #include "ProfiledBinary.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
@@ -27,10 +28,6 @@ static cl::list<std::string>
     BinaryFilenames("binary", cl::value_desc("binary"), cl::OneOrMore,
                     llvm::cl::MiscFlags::CommaSeparated,
                     cl::desc("Path of profiled binary files"));
-
-static cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
-                                           cl::Required,
-                                           cl::desc("Output profile file"));
 
 using namespace llvm;
 using namespace sampleprof;
@@ -48,6 +45,11 @@ int main(int argc, const char *argv[]) {
   // Load binaries and parse perf events and samples
   PerfReader Reader(BinaryFilenames);
   Reader.parsePerfTraces(PerfTraceFilenames);
+
+  std::unique_ptr<ProfileGenerator> Generator = ProfileGenerator::create(
+      Reader.getBinarySampleCounters(), Reader.getPerfScriptType());
+  Generator->generateProfile();
+  Generator->write();
 
   return EXIT_SUCCESS;
 }
