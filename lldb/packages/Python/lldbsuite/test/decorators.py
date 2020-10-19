@@ -597,7 +597,7 @@ def skipIfWindows(func):
 def skipIfWindowsAndNonEnglish(func):
     """Decorate the item to skip tests that should be skipped on non-English locales on Windows."""
     def is_Windows_NonEnglish(self):
-        if lldbplatformutil.getPlatform() != "windows":
+        if sys.platform != "win32":
             return None
         kernel = ctypes.windll.kernel32
         if locale.windows_locale[ kernel.GetUserDefaultUILanguage() ] == "en_US":
