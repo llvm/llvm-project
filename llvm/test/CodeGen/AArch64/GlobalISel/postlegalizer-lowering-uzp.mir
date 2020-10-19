@@ -3,7 +3,7 @@
 # Check that we can recognize a shuffle mask for a uzp instruction and produce
 # a G_UZP1 or G_UZP2 where appropriate.
 #
-# RUN: llc -mtriple aarch64 -run-pass=aarch64-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple aarch64 -run-pass=aarch64-postlegalizer-lowering -verify-machineinstrs %s -o - | FileCheck %s
 
 ...
 ---
