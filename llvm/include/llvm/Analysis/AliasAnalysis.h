@@ -349,6 +349,12 @@ public:
   IsCapturedCacheT IsCapturedCache;
 
   AAQueryInfo() : AliasCache(), IsCapturedCache() {}
+
+  AliasResult updateResult(const LocPair &Locs, AliasResult Result) {
+    auto It = AliasCache.find(Locs);
+    assert(It != AliasCache.end() && "Entry must have existed");
+    return It->second = Result;
+  }
 };
 
 class BatchAAResults;
