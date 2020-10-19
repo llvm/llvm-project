@@ -1300,5 +1300,17 @@ llvm::json::Value toJSON(const FoldingRange &Range) {
   return Result;
 }
 
+llvm::json::Value toJSON(const MemoryTree &MT) {
+  llvm::json::Object Out;
+  int64_t Total = MT.self();
+  Out["_self"] = Total;
+  for (const auto &Entry : MT.children()) {
+    auto Child = toJSON(Entry.getSecond());
+    Total += *Child.getAsObject()->getInteger("_total");
+    Out[Entry.first] = std::move(Child);
+  }
+  Out["_total"] = Total;
+  return Out;
+}
 } // namespace clangd
 } // namespace clang
