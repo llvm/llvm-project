@@ -2188,6 +2188,44 @@ define <2 x i1> @or_icmp_eq_B_0_icmp_ult_A_B_undef(<2 x i64> %a, <2 x i64> %b) {
   ret <2 x i1> %3
 }
 
+define i1 @or_icmp_ne_A_0_icmp_ne_B_0(i64 %a, i64 %b) {
+; CHECK-LABEL: @or_icmp_ne_A_0_icmp_ne_B_0(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %1 = icmp ne i64 %a, 0
+  %2 = icmp ne i64 %b, 0
+  %3 = or i1 %1, %2
+  ret i1 %3
+}
+
+define <2 x i1> @or_icmp_ne_A_0_icmp_ne_B_0_uniform(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @or_icmp_ne_A_0_icmp_ne_B_0_uniform(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i64> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
+;
+  %1 = icmp ne <2 x i64> %a, zeroinitializer
+  %2 = icmp ne <2 x i64> %b, zeroinitializer
+  %3 = or <2 x i1> %1, %2
+  ret <2 x i1> %3
+}
+
+define <2 x i1> @or_icmp_ne_A_0_icmp_ne_B_0_undef(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @or_icmp_ne_A_0_icmp_ne_B_0_undef(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i64> [[A:%.*]], <i64 0, i64 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[B:%.*]], <i64 0, i64 undef>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
+;
+  %1 = icmp ne <2 x i64> %a, <i64 0, i64 undef>
+  %2 = icmp ne <2 x i64> %b, <i64 0, i64 undef>
+  %3 = or <2 x i1> %1, %2
+  ret <2 x i1> %3
+}
+
 define i1 @icmp_add_ult_2(i32 %X) {
 ; CHECK-LABEL: @icmp_add_ult_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -2
