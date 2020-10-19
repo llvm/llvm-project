@@ -157,6 +157,19 @@ private:
   std::vector<std::unique_ptr<Allocation>> IndirectStubAllocs;
 };
 
+/// This will call writeResolver on the given TPCIndirectionUtils instance
+/// to set up re-entry via a function that will directly return the trampoline
+/// landing address.
+///
+/// The TPCIndirectionUtils' LazyCallThroughManager must have been previously
+/// created via TPCIndirectionUtils::createLazyCallThroughManager.
+///
+/// The TPCIndirectionUtils' writeResolver method must not have been previously
+/// called.
+///
+/// This function is experimental and likely subject to revision.
+Error setUpInProcessLCTMReentryViaTPCIU(TPCIndirectionUtils &TPCIU);
+
 namespace detail {
 
 template <typename ORCABI>
