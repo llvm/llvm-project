@@ -28,8 +28,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <algorithm>
 #include <cassert>
+#include <cinttypes>
 #include <cstddef>
-#include <cstdint>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -666,7 +666,7 @@ Error COFFObjectFile::initTLSDirectoryPtr() {
   if (DataEntry->Size != DirSize)
     return createStringError(
         object_error::parse_failed,
-        "TLS Directory size (%u) is not the expected size (%u).",
+        "TLS Directory size (%u) is not the expected size (%" PRIu64 ").",
         static_cast<uint32_t>(DataEntry->Size), DirSize);
 
   uintptr_t IntPtr = 0;
