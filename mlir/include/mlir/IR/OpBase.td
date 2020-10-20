@@ -2292,8 +2292,11 @@ def addBenefit;
 //
 // In the source pattern, `argN` can be used to specify matchers (e.g., using
 // type/attribute type constraints, etc.) and bound to a name for later use.
-// We can also bound names to op instances to reference them later in
-// multi-entity constraints.
+// We can also bind names to op instances to reference them later in
+// multi-entity constraints. Operands in the source pattern can have
+// the same name. This bounds one operand to the name while verifying
+// the rest are all equal.
+//
 //
 // In the result pattern, `argN` can be used to refer to a previously bound
 // name, with potential transformations (e.g., using tAttr, etc.). `argN` can
@@ -2303,16 +2306,18 @@ def addBenefit;
 // For example,
 //
 // ```
-// def : Pattern<(OneResultOp1:$op1 $arg0, $arg1),
+// def : Pattern<(OneResultOp1:$op1 $arg0, $arg1, $arg0),
 //               [(OneResultOp2:$op2 $arg0, $arg1),
 //                (OneResultOp3 $op2 (OneResultOp4))],
 //               [(HasStaticShapePred $op1)]>;
 // ```
 //
-// `$argN` is bound to the `OneResultOp1`'s N-th argument and used later to
-// build `OneResultOp2`. `$op1` is bound to `OneResultOp1` and used to
-// check whether the result's shape is static. `$op2` is bound to
-// `OneResultOp2` and used to build `OneResultOp3`.
+// First `$arg0` and '$arg1' are bound to the `OneResultOp1`'s first
+// and second arguments and used later to build `OneResultOp2`. Second '$arg0'
+// is verified to be equal to the first '$arg0' operand.
+// `$op1` is bound to `OneResultOp1` and used to check whether the result's
+// shape is static. `$op2` is bound to `OneResultOp2` and used to
+// build `OneResultOp3`.
 //
 // ## Multi-result op
 //

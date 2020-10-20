@@ -136,9 +136,11 @@ and `$attr` in result patterns and additional constraints.
 
 The pattern is position-based: the symbol names used for capturing here do not
 need to match with the op definition as shown in the above example. As another
-example, the pattern can be written as ` def : Pat<(AOp $a, F32Attr:$b), ...>;`
+example, the pattern can be written as `def : Pat<(AOp $a, F32Attr:$b), ...>;`
 and use `$a` and `$b` to refer to the captured input and attribute. But using
-the ODS name directly in the pattern is also allowed.
+the ODS name directly in the pattern is also allowed. Operands in the source
+pattern can have the same name. This bounds one operand to the name while
+verifying the rest are all equal.
 
 Also note that we only need to add `TypeConstraint` or `AttributeConstraint`
 when we need to further limit the match criteria. If all valid cases to the op
