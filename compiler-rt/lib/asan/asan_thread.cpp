@@ -366,7 +366,9 @@ uptr AsanThread::GetStackVariableShadowStart(uptr addr) {
     bottom = stack_bottom();
   } else if (has_fake_stack()) {
     bottom = fake_stack()->AddrIsInFakeStack(addr);
-    CHECK(bottom);
+    if (bottom == 0) {
+      return 0;
+    }
   } else {
     return 0;
   }

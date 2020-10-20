@@ -84,8 +84,6 @@ define void @test4_lifetime_end_partial_loop() {
 ; CHECK-NEXT:    [[A_2:%.*]] = getelementptr i8, i8* [[A_0]], i64 2
 ; CHECK-NEXT:    call void @use(i8* [[A_1]])
 ; CHECK-NEXT:    store i8 20, i8* [[A_2]], align 1
-; CHECK-NEXT:    store i8 10, i8* [[A_1]], align 1
-; CHECK-NEXT:    store i8 0, i8* [[A_0]], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 2, i8* [[A_0]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 10
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i8 [[IV_NEXT]], 10

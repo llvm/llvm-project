@@ -624,7 +624,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       if (auto *File = OldSM.getFileEntryForID(ID))
         Input = FrontendInputFile(File->getName(), Kind);
       else
-        Input = FrontendInputFile(OldSM.getBuffer(ID), Kind);
+        Input = FrontendInputFile(OldSM.getBufferOrFake(ID), Kind);
     }
     setCurrentInput(Input, std::move(AST));
   }
