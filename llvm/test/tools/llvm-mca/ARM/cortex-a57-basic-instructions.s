@@ -1202,9 +1202,9 @@
 # CHECK-NEXT:  1      1     0.50                        mvn	r5, r6, ror #6
 # CHECK-NEXT:  1      1     0.50                        mvn	r5, r6, rrx
 # CHECK-NEXT:  1      1     0.50                        mvneq	r2, r3
-# CHECK-NEXT:  1      1     0.50                        mvnseq	r2, r3, lsl #10
+# CHECK-NEXT:  1      2     1.00                        mvnseq	r2, r3, lsl #10
 # CHECK-NEXT:  1      1     0.50                        mvn	r5, r6, lsl r7
-# CHECK-NEXT:  1      1     0.50                        mvns	r5, r6, lsr r7
+# CHECK-NEXT:  1      2     1.00                        mvns	r5, r6, lsr r7
 # CHECK-NEXT:  1      2     0.50                        mvngt	r5, r6, asr r7
 # CHECK-NEXT:  1      2     0.50                        mvnslt	r5, r6, ror r7
 # CHECK-NEXT:  0      0     0.00    *      *      U     nop
@@ -1356,10 +1356,10 @@
 # CHECK-NEXT:  1      1     0.50                        rrx	sp, pc
 # CHECK-NEXT:  1      1     0.50                        rrx	pc, lr
 # CHECK-NEXT:  1      1     0.50                        rrx	lr, sp
-# CHECK-NEXT:  1      1     0.50                        rrxs	r0, r1
-# CHECK-NEXT:  1      1     0.50                        rrxs	sp, pc
-# CHECK-NEXT:  1      1     0.50                        rrxs	pc, lr
-# CHECK-NEXT:  1      1     0.50                        rrxs	lr, sp
+# CHECK-NEXT:  1      2     1.00                        rrxs	r0, r1
+# CHECK-NEXT:  1      2     1.00                        rrxs	sp, pc
+# CHECK-NEXT:  1      2     1.00                        rrxs	pc, lr
+# CHECK-NEXT:  1      2     1.00                        rrxs	lr, sp
 # CHECK-NEXT:  2      2     1.00    *      *      U     sadd16	r1, r2, r3
 # CHECK-NEXT:  2      4     1.00    *      *      U     sadd16gt	r1, r2, r3
 # CHECK-NEXT:  2      2     1.00    *      *      U     sadd8	r1, r2, r3
@@ -1719,7 +1719,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT: 8.00   162.00 162.00 171.00 490.00 12.00   -      -
+# CHECK-NEXT: 8.00   159.00 159.00 171.00 496.00 12.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    Instructions:
@@ -2066,9 +2066,9 @@
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     mvn	r5, r6, ror #6
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     mvn	r5, r6, rrx
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     mvneq	r2, r3
-# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     mvnseq	r2, r3, lsl #10
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     mvnseq	r2, r3, lsl #10
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     mvn	r5, r6, lsl r7
-# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     mvns	r5, r6, lsr r7
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     mvns	r5, r6, lsr r7
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     mvngt	r5, r6, asr r7
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     mvnslt	r5, r6, ror r7
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     nop
@@ -2220,10 +2220,10 @@
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     rrx	sp, pc
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     rrx	pc, lr
 # CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     rrx	lr, sp
-# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     rrxs	r0, r1
-# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     rrxs	sp, pc
-# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     rrxs	pc, lr
-# CHECK-NEXT:  -     0.50   0.50    -      -      -      -      -     rrxs	lr, sp
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     rrxs	r0, r1
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     rrxs	sp, pc
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     rrxs	pc, lr
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     rrxs	lr, sp
 # CHECK-NEXT:  -     0.50   0.50    -     1.00    -      -      -     sadd16	r1, r2, r3
 # CHECK-NEXT:  -     0.50   0.50    -     1.00    -      -      -     sadd16gt	r1, r2, r3
 # CHECK-NEXT:  -     0.50   0.50    -     1.00    -      -      -     sadd8	r1, r2, r3

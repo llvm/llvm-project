@@ -157,6 +157,13 @@ def IsPredicated : CheckFunctionPredicateWithTII<
 >;
 def IsPredicatedPred : MCSchedPredicate<IsPredicated>;
 
+def IsCPSRDefined : CheckFunctionPredicateWithTII<
+  "ARM_MC::isCPSRDefined",
+  "ARMBaseInstrInfo::isCPSRDefined"
+>;
+
+def IsCPSRDefinedPred : MCSchedPredicate<IsCPSRDefined>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Itinerary classes used for ARM
 //

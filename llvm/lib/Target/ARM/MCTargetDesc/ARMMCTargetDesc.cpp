@@ -187,6 +187,17 @@ bool ARM_MC::isPredicated(const MCInst &MI, const MCInstrInfo *MCII) {
   return PredOpIdx != -1 && MI.getOperand(PredOpIdx).getImm() != ARMCC::AL;
 }
 
+bool ARM_MC::isCPSRDefined(const MCInst &MI, const MCInstrInfo *MCII) {
+  const MCInstrDesc &Desc = MCII->get(MI.getOpcode());
+  for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
+    const MCOperand &MO = MI.getOperand(I);
+    if (MO.isReg() && MO.getReg() == ARM::CPSR &&
+        Desc.OpInfo[I].isOptionalDef())
+      return true;
+  }
+  return false;
+}
+
 MCSubtargetInfo *ARM_MC::createARMMCSubtargetInfo(const Triple &TT,
                                                   StringRef CPU, StringRef FS) {
   std::string ArchFS = ARM_MC::ParseARMTriple(TT, CPU);
