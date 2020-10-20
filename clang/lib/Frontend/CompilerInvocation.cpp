@@ -1170,18 +1170,13 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
-  if (const Arg *A = Args.getLastArg(OPT_compress_debug_sections,
-                                     OPT_compress_debug_sections_EQ)) {
-    if (A->getOption().getID() == OPT_compress_debug_sections) {
-      Opts.setCompressDebugSections(llvm::DebugCompressionType::Z);
-    } else {
-      auto DCT = llvm::StringSwitch<llvm::DebugCompressionType>(A->getValue())
-                     .Case("none", llvm::DebugCompressionType::None)
-                     .Case("zlib", llvm::DebugCompressionType::Z)
-                     .Case("zlib-gnu", llvm::DebugCompressionType::GNU)
-                     .Default(llvm::DebugCompressionType::None);
-      Opts.setCompressDebugSections(DCT);
-    }
+  if (const Arg *A = Args.getLastArg(OPT_compress_debug_sections_EQ)) {
+    auto DCT = llvm::StringSwitch<llvm::DebugCompressionType>(A->getValue())
+                   .Case("none", llvm::DebugCompressionType::None)
+                   .Case("zlib", llvm::DebugCompressionType::Z)
+                   .Case("zlib-gnu", llvm::DebugCompressionType::GNU)
+                   .Default(llvm::DebugCompressionType::None);
+    Opts.setCompressDebugSections(DCT);
   }
 
   Opts.RelaxELFRelocations = Args.hasArg(OPT_mrelax_relocations);
