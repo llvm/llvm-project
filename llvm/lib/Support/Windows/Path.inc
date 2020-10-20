@@ -710,7 +710,6 @@ handle_status_error:
 }
 
 std::error_code status(const Twine &path, file_status &result, bool Follow) {
-  ++NumStatusCalls;
   SmallString<128> path_storage;
   SmallVector<wchar_t, 128> path_utf16;
 
@@ -743,13 +742,11 @@ std::error_code status(const Twine &path, file_status &result, bool Follow) {
 }
 
 std::error_code status(int FD, file_status &Result) {
-  ++NumStatusCalls;
   HANDLE FileHandle = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
   return getStatus(FileHandle, Result);
 }
 
 std::error_code status(file_t FileHandle, file_status &Result) {
-  ++NumStatusCalls;
   return getStatus(FileHandle, Result);
 }
 
