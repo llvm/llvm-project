@@ -19,6 +19,7 @@ static_library("IR") {
     "Attributes.cpp",
     "AutoUpgrade.cpp",
     "BasicBlock.cpp",
+    "CFG.cpp",
     "Comdat.cpp",
     "ConstantFold.cpp",
     "ConstantRange.cpp",
