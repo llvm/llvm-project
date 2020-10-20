@@ -104,7 +104,7 @@ def testFloatAttr():
   loc = ctx.get_unknown_location()
   # CHECK: default_get: 4.200000e+01 : f32
   print("default_get:", mlir.ir.FloatAttr.get(
-      mlir.ir.F32Type(ctx), 42.0, loc))
+      mlir.ir.F32Type.get(ctx), 42.0, loc))
   # CHECK: f32_get: 4.200000e+01 : f32
   print("f32_get:", mlir.ir.FloatAttr.get_f32(ctx, 42.0))
   # CHECK: f64_get: 4.200000e+01 : f64
@@ -127,6 +127,8 @@ def testIntegerAttr():
   iattr = mlir.ir.IntegerAttr(ctx.parse_attr("42"))
   # CHECK: iattr value: 42
   print("iattr value:", iattr.value)
+  # CHECK: iattr type: i64
+  print("iattr type:", iattr.type)
 
   # Test factory methods.
   # CHECK: default_get: 42 : i32
