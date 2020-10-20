@@ -670,8 +670,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     }
     break;
   }
-  case Instruction::SRem:
-    if (ConstantInt *Rem = dyn_cast<ConstantInt>(I->getOperand(1))) {
+  case Instruction::SRem: {
+    ConstantInt *Rem;
+    if (match(I->getOperand(1), m_ConstantInt(Rem))) {
       // X % -1 demands all the bits because we don't want to introduce
       // INT_MIN % -1 (== undef) by accident.
       if (Rem->isMinusOne())
@@ -714,6 +715,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         Known.makeNonNegative();
     }
     break;
+  }
   case Instruction::URem: {
     KnownBits Known2(BitWidth);
     APInt AllOnes = APInt::getAllOnesValue(BitWidth);

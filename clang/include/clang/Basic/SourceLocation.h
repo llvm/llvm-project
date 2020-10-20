@@ -175,6 +175,7 @@ public:
            End.isFileID();
   }
 
+  unsigned getHashValue() const;
   void print(raw_ostream &OS, const SourceManager &SM) const;
   std::string printToString(const SourceManager &SM) const;
   void dump(const SourceManager &SM) const;
@@ -475,6 +476,27 @@ namespace llvm {
     }
 
     static bool isEqual(clang::FileID LHS, clang::FileID RHS) {
+      return LHS == RHS;
+    }
+  };
+
+  /// Define DenseMapInfo so that SourceLocation's can be used as keys in
+  /// DenseMap and DenseSet. This trait class is eqivalent to
+  /// DenseMapInfo<unsigned> which uses SourceLocation::ID is used as a key.
+  template <> struct DenseMapInfo<clang::SourceLocation> {
+    static clang::SourceLocation getEmptyKey() {
+      return clang::SourceLocation::getFromRawEncoding(~0U);
+    }
+
+    static clang::SourceLocation getTombstoneKey() {
+      return clang::SourceLocation::getFromRawEncoding(~0U - 1);
+    }
+
+    static unsigned getHashValue(clang::SourceLocation Loc) {
+      return Loc.getHashValue();
+    }
+
+    static bool isEqual(clang::SourceLocation LHS, clang::SourceLocation RHS) {
       return LHS == RHS;
     }
   };

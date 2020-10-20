@@ -28,15 +28,13 @@ struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
   using NamingCheckId = clang::tidy::RenamerClangTidyCheck::NamingCheckId;
 
   static inline NamingCheckId getEmptyKey() {
-    return NamingCheckId(
-        clang::SourceLocation::getFromRawEncoding(static_cast<unsigned>(-1)),
-        "EMPTY");
+    return NamingCheckId(DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
+                         "EMPTY");
   }
 
   static inline NamingCheckId getTombstoneKey() {
-    return NamingCheckId(
-        clang::SourceLocation::getFromRawEncoding(static_cast<unsigned>(-2)),
-        "TOMBSTONE");
+    return NamingCheckId(DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
+                         "TOMBSTONE");
   }
 
   static unsigned getHashValue(NamingCheckId Val) {
@@ -44,7 +42,8 @@ struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
     assert(Val != getTombstoneKey() && "Cannot hash the tombstone key!");
 
     std::hash<NamingCheckId::second_type> SecondHash;
-    return Val.first.getRawEncoding() + SecondHash(Val.second);
+    return DenseMapInfo<clang::SourceLocation>::getHashValue(Val.first) +
+           SecondHash(Val.second);
   }
 
   static bool isEqual(const NamingCheckId &LHS, const NamingCheckId &RHS) {
@@ -173,8 +172,7 @@ void RenamerClangTidyCheck::addUsage(
   // is already in there
   RenamerClangTidyCheck::NamingCheckFailure &Failure =
       NamingCheckFailures[Decl];
-
-  if (!Failure.RawUsageLocs.insert(FixLocation.getRawEncoding()).second)
+  if (!Failure.RawUsageLocs.insert(FixLocation).second)
     return;
 
   if (!Failure.ShouldFix())
@@ -550,9 +548,8 @@ void RenamerClangTidyCheck::onEndOfTranslationUnit() {
           //
           // Other multi-token identifiers, such as operators are not checked at
           // all.
-          Diag << FixItHint::CreateReplacement(
-              SourceRange(SourceLocation::getFromRawEncoding(Loc)),
-              Failure.Info.Fixup);
+          Diag << FixItHint::CreateReplacement(SourceRange(Loc),
+                                               Failure.Info.Fixup);
         }
       }
     }

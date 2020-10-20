@@ -108,7 +108,9 @@ public:
 
 } // namespace clang
 
-template <> struct llvm::CfgTraitsFor<clang::CFGBlock> {
+namespace llvm {
+
+template <> struct CfgTraitsFor<clang::CFGBlock> {
   using CfgTraits = clang::CfgTraits;
 };
 
@@ -116,7 +118,6 @@ template <> struct llvm::CfgTraitsFor<clang::CFGBlock> {
 // which accepts an LLVM Module, so remove this (and the method's argument that
 // needs it) when that is fixed.
 
-namespace llvm {
 
 class Module;
 

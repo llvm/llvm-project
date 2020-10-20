@@ -337,7 +337,7 @@ private:
       return false;
     if (props.empty())
       return false;
-    return MigrateCtx.AtPropsWeak.count(atLoc.getRawEncoding());
+    return MigrateCtx.AtPropsWeak.count(atLoc);
   }
 
   bool isUserDeclared(ObjCIvarDecl *ivarD) const {
