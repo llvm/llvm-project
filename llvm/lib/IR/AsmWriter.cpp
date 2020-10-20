@@ -116,6 +116,15 @@ struct OrderMap {
 
 } // end anonymous namespace
 
+/// Look for a value that might be wrapped as metadata, e.g. a value in a
+/// metadata operand. Returns the input value as-is if it is not wrapped.
+static const Value *skipMetadataWrapper(const Value *V) {
+  if (const auto *MAV = dyn_cast<MetadataAsValue>(V))
+    if (const auto *VAM = dyn_cast<ValueAsMetadata>(MAV->getMetadata()))
+      return VAM->getValue();
+  return V;
+}
+
 static void orderValue(const Value *V, OrderMap &OM) {
   if (OM.lookup(V).first)
     return;
@@ -132,8 +141,6 @@ static void orderValue(const Value *V, OrderMap &OM) {
 }
 
 static OrderMap orderModule(const Module *M) {
-  // This needs to match the order used by ValueEnumerator::ValueEnumerator()
-  // and ValueEnumerator::incorporateFunction().
   OrderMap OM;
 
   for (const GlobalVariable &G : M->globals()) {
@@ -167,10 +174,12 @@ static OrderMap orderModule(const Module *M) {
     for (const BasicBlock &BB : F) {
       orderValue(&BB, OM);
       for (const Instruction &I : BB) {
-        for (const Value *Op : I.operands())
+        for (const Value *Op : I.operands()) {
+          Op = skipMetadataWrapper(Op);
           if ((isa<Constant>(*Op) && !isa<GlobalValue>(*Op)) ||
               isa<InlineAsm>(*Op))
             orderValue(Op, OM);
+        }
         orderValue(&I, OM);
       }
     }
@@ -284,9 +293,11 @@ static UseListOrderStack predictUseListOrder(const Module *M) {
       predictValueUseListOrder(&A, &F, OM, Stack);
     for (const BasicBlock &BB : F)
       for (const Instruction &I : BB)
-        for (const Value *Op : I.operands())
+        for (const Value *Op : I.operands()) {
+          Op = skipMetadataWrapper(Op);
           if (isa<Constant>(*Op) || isa<InlineAsm>(*Op)) // Visit GlobalValues.
             predictValueUseListOrder(Op, &F, OM, Stack);
+        }
     for (const BasicBlock &BB : F)
       for (const Instruction &I : BB)
         predictValueUseListOrder(&I, &F, OM, Stack);
