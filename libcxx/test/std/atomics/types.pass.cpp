@@ -169,8 +169,8 @@ int main(int, char**)
     test<float>();
 
 #if TEST_STD_VER >= 20
-    test<std::atomic_signed_lock_free>();
-    test<std::atomic_unsigned_lock_free>();
+    test<std::atomic_signed_lock_free::value_type>();
+    test<std::atomic_unsigned_lock_free::value_type>();
 /*
     test<std::shared_ptr<int>>();
 */
