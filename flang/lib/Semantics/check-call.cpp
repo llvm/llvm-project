@@ -140,7 +140,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const std::string &dummyName, evaluate::Expr<evaluate::SomeType> &actual,
     characteristics::TypeAndShape &actualType, bool isElemental,
     bool actualIsArrayElement, evaluate::FoldingContext &context,
-    const Scope *scope) {
+    const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic) {
 
   // Basic type & rank checking
   parser::ContextualMessages &messages{context.messages()};
@@ -314,8 +314,10 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
   }
   if (actualLastObject && actualLastObject->IsCoarray() &&
-      IsAllocatable(*actualLastSymbol) &&
-      dummy.intent == common::Intent::Out) { // C846
+      IsAllocatable(*actualLastSymbol) && dummy.intent == common::Intent::Out &&
+      !(intrinsic &&
+          evaluate::AcceptsIntentOutAllocatableCoarray(
+              intrinsic->name))) { // C846
     messages.Say(
         "ALLOCATABLE coarray '%s' may not be associated with INTENT(OUT) %s"_err_en_US,
         actualLastSymbol->name(), dummyName);
@@ -594,7 +596,7 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
 static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
     const characteristics::DummyArgument &dummy,
     const characteristics::Procedure &proc, evaluate::FoldingContext &context,
-    const Scope *scope) {
+    const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic) {
   auto &messages{context.messages()};
   std::string dummyName{"dummy argument"};
   if (!dummy.name.empty()) {
@@ -609,7 +611,8 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                 arg.set_dummyIntent(object.intent);
                 bool isElemental{object.type.Rank() == 0 && proc.IsElemental()};
                 CheckExplicitDataArg(object, dummyName, *expr, *type,
-                    isElemental, IsArrayElement(*expr), context, scope);
+                    isElemental, IsArrayElement(*expr), context, scope,
+                    intrinsic);
               } else if (object.type.type().IsTypelessIntrinsicArgument() &&
                   std::holds_alternative<evaluate::BOZLiteralConstant>(
                       expr->u)) {
@@ -701,7 +704,8 @@ static void RearrangeArguments(const characteristics::Procedure &proc,
 
 static parser::Messages CheckExplicitInterface(
     const characteristics::Procedure &proc, evaluate::ActualArguments &actuals,
-    const evaluate::FoldingContext &context, const Scope *scope) {
+    const evaluate::FoldingContext &context, const Scope *scope,
+    const evaluate::SpecificIntrinsic *intrinsic) {
   parser::Messages buffer;
   parser::ContextualMessages messages{context.messages().at(), &buffer};
   RearrangeArguments(proc, actuals, messages);
@@ -711,7 +715,8 @@ static parser::Messages CheckExplicitInterface(
     for (auto &actual : actuals) {
       const auto &dummy{proc.dummyArguments.at(index++)};
       if (actual) {
-        CheckExplicitInterfaceArg(*actual, dummy, proc, localContext, scope);
+        CheckExplicitInterfaceArg(
+            *actual, dummy, proc, localContext, scope, intrinsic);
       } else if (!dummy.IsOptional()) {
         if (dummy.name.empty()) {
           messages.Say(
@@ -732,22 +737,25 @@ static parser::Messages CheckExplicitInterface(
 
 parser::Messages CheckExplicitInterface(const characteristics::Procedure &proc,
     evaluate::ActualArguments &actuals, const evaluate::FoldingContext &context,
-    const Scope &scope) {
-  return CheckExplicitInterface(proc, actuals, context, &scope);
+    const Scope &scope, const evaluate::SpecificIntrinsic *intrinsic) {
+  return CheckExplicitInterface(proc, actuals, context, &scope, intrinsic);
 }
 
 bool CheckInterfaceForGeneric(const characteristics::Procedure &proc,
     evaluate::ActualArguments &actuals,
     const evaluate::FoldingContext &context) {
-  return CheckExplicitInterface(proc, actuals, context, nullptr).empty();
+  return CheckExplicitInterface(proc, actuals, context, nullptr, nullptr)
+      .empty();
 }
 
 void CheckArguments(const characteristics::Procedure &proc,
     evaluate::ActualArguments &actuals, evaluate::FoldingContext &context,
-    const Scope &scope, bool treatingExternalAsImplicit) {
+    const Scope &scope, bool treatingExternalAsImplicit,
+    const evaluate::SpecificIntrinsic *intrinsic) {
   bool explicitInterface{proc.HasExplicitInterface()};
   if (explicitInterface) {
-    auto buffer{CheckExplicitInterface(proc, actuals, context, scope)};
+    auto buffer{
+        CheckExplicitInterface(proc, actuals, context, scope, intrinsic)};
     if (treatingExternalAsImplicit && !buffer.empty()) {
       if (auto *msg{context.messages().Say(
               "Warning: if the procedure's interface were explicit, this reference would be in error:"_en_US)}) {
