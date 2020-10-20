@@ -237,7 +237,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
   // error have occurred. Any diagnostics we might have raised will not be
   // visible, and we do not need to construct a correct AST.
   if (SemaRef.Diags.hasFatalErrorOccurred() &&
-      SemaRef.Diags.hasUncompilableErrorOccurred()) {
+      SemaRef.hasUncompilableErrorOccurred()) {
     Invalid = true;
     return;
   }
