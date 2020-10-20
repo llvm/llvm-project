@@ -453,7 +453,19 @@ TEST(SelectionTest, CommonAncestor) {
         template <template <typename> class Container> class A {};
         A<[[V^ector]]> a;
       )cpp",
-       "TemplateArgumentLoc"}};
+       "TemplateArgumentLoc"},
+
+      // Attributes
+      {R"cpp(
+        void f(int * __attribute__(([[no^nnull]])) );
+      )cpp",
+       "NonNullAttr"},
+
+      {R"cpp(
+        // Digraph syntax for attributes to avoid accidental annotations.
+        class <:[gsl::Owner([[in^t]])]:> X{};
+      )cpp",
+       "BuiltinTypeLoc"}};
 
   for (const Case &C : Cases) {
     trace::TestTracer Tracer;

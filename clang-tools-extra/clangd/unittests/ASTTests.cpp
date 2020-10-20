@@ -11,8 +11,11 @@
 #include "Annotations.h"
 #include "ParsedAST.h"
 #include "TestTU.h"
+#include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -25,6 +28,8 @@
 namespace clang {
 namespace clangd {
 namespace {
+using testing::Contains;
+using testing::Each;
 
 TEST(GetDeducedType, KwAutoKwDecltypeExpansion) {
   struct Test {
@@ -389,6 +394,40 @@ TEST(ClangdAST, IsDeeplyNested) {
   EXPECT_FALSE(
       isDeeplyNested(&findUnqualifiedDecl(AST, "Bar"), /*MaxDepth=*/4));
 }
+
+MATCHER_P(attrKind, K, "") { return arg->getKind() == K; }
+
+MATCHER(implicitAttr, "") { return arg->isImplicit(); }
+
+TEST(ClangdAST, GetAttributes) {
+  const char *Code = R"cpp(
+    class X{};
+    class [[nodiscard]] Y{};
+    void f(int * a, int * __attribute__((nonnull)) b);
+    void foo(bool c) {
+      if (c)
+        [[unlikely]] return;
+    }
+  )cpp";
+  ParsedAST AST = TestTU::withCode(Code).build();
+  auto DeclAttrs = [&](llvm::StringRef Name) {
+    return getAttributes(DynTypedNode::create(findUnqualifiedDecl(AST, Name)));
+  };
+  // Implicit attributes may be present (e.g. visibility on windows).
+  ASSERT_THAT(DeclAttrs("X"), Each(implicitAttr()));
+  ASSERT_THAT(DeclAttrs("Y"), Contains(attrKind(attr::WarnUnusedResult)));
+  ASSERT_THAT(DeclAttrs("f"), Each(implicitAttr()));
+  ASSERT_THAT(DeclAttrs("a"), Each(implicitAttr()));
+  ASSERT_THAT(DeclAttrs("b"), Contains(attrKind(attr::NonNull)));
+
+  Stmt *FooBody = cast<FunctionDecl>(findDecl(AST, "foo")).getBody();
+  IfStmt *FooIf = cast<IfStmt>(cast<CompoundStmt>(FooBody)->body_front());
+  ASSERT_THAT(getAttributes(DynTypedNode::create(*FooIf)),
+              Each(implicitAttr()));
+  ASSERT_THAT(getAttributes(DynTypedNode::create(*FooIf->getThen())),
+              Contains(attrKind(attr::Unlikely)));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
