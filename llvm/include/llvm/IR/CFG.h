@@ -25,6 +25,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CfgTraits.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -397,6 +398,98 @@ template <> struct GraphTraits<Inverse<const Function*>> :
     return &G.Graph->getEntryBlock();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// LLVM IR CfgTraits
+//===----------------------------------------------------------------------===//
+
+class IrCfgTraitsBase : public CfgTraitsBase {
+public:
+  using ParentType = Function;
+  using BlockRef = BasicBlock *;
+  using ValueRef = Value *;
+
+  static CfgBlockRef wrapRef(BlockRef block) {
+    return makeOpaque<CfgBlockRefTag>(block);
+  }
+  static CfgValueRef wrapRef(ValueRef block) {
+    return makeOpaque<CfgValueRefTag>(block);
+  }
+  static BlockRef unwrapRef(CfgBlockRef block) {
+    return static_cast<BlockRef>(getOpaque(block));
+  }
+  static ValueRef unwrapRef(CfgValueRef block) {
+    return static_cast<ValueRef>(getOpaque(block));
+  }
+};
+
+/// \brief CFG traits for LLVM IR.
+class IrCfgTraits : public CfgTraits<IrCfgTraitsBase, IrCfgTraits> {
+public:
+  explicit IrCfgTraits(Function * /*parent*/) {}
+
+  static Function *getBlockParent(BasicBlock *block) {
+    return block->getParent();
+  }
+
+  static auto predecessors(BasicBlock *block) {
+    return llvm::predecessors(block);
+  }
+  static auto successors(BasicBlock *block) { return llvm::successors(block); }
+
+  /// Get the defining block of a value if it is an instruction, or null
+  /// otherwise.
+  static BlockRef getValueDefBlock(ValueRef value) {
+    if (auto *instruction = dyn_cast<Instruction>(value))
+      return instruction->getParent();
+    return nullptr;
+  }
+
+  struct block_iterator
+      : iterator_adaptor_base<block_iterator, Function::iterator> {
+    using Base = iterator_adaptor_base<block_iterator, Function::iterator>;
+
+    block_iterator() = default;
+
+    explicit block_iterator(Function::iterator i) : Base(i) {}
+
+    BasicBlock *operator*() const { return &Base::operator*(); }
+  };
+
+  static iterator_range<block_iterator> blocks(Function *function) {
+    return {block_iterator(function->begin()), block_iterator(function->end())};
+  }
+
+  struct value_iterator
+      : iterator_adaptor_base<value_iterator, BasicBlock::iterator> {
+    using Base = iterator_adaptor_base<value_iterator, BasicBlock::iterator>;
+
+    value_iterator() = default;
+
+    explicit value_iterator(BasicBlock::iterator i) : Base(i) {}
+
+    ValueRef operator*() const { return &Base::operator*(); }
+  };
+
+  static iterator_range<value_iterator> blockdefs(BlockRef block) {
+    return {value_iterator(block->begin()), value_iterator(block->end())};
+  }
+
+  struct Printer {
+    explicit Printer(const IrCfgTraits &);
+    ~Printer();
+
+    void printBlockName(raw_ostream &out, BlockRef block) const;
+    void printValue(raw_ostream &out, ValueRef value) const;
+
+  private:
+    mutable std::unique_ptr<ModuleSlotTracker> m_moduleSlotTracker;
+
+    void ensureModuleSlotTracker(const Function &function) const;
+  };
+};
+
+template <> struct CfgTraitsFor<BasicBlock> { using CfgTraits = IrCfgTraits; };
 
 } // end namespace llvm
 
