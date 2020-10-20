@@ -326,10 +326,6 @@ public:
   /// of the subtarget.
   ArrayRef<MCPhysReg> getAllSGPR32(const MachineFunction &MF) const;
 
-  /// Return all VGPR32 which satisfy the waves per execution unit requirement
-  /// of the subtarget.
-  ArrayRef<MCPhysReg> getAllVGPR32(const MachineFunction &MF) const;
-
 private:
   void buildSpillLoadStore(MachineBasicBlock::iterator MI,
                            unsigned LoadStoreOp,
