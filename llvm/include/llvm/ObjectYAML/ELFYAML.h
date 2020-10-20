@@ -193,13 +193,6 @@ struct Section : public Chunk {
 
   static bool classof(const Chunk *S) { return S->Kind != ChunkKind::Fill; }
 
-  // Some derived sections might have their own special entries. This method
-  // returns a vector of <entry name, is used> pairs. It is used for section
-  // validation.
-  virtual std::vector<std::pair<StringRef, bool>> getEntries() const {
-    return {};
-  };
-
   // The following members are used to override section fields which is
   // useful for creating invalid objects.
 
@@ -242,10 +235,6 @@ struct StackSizesSection : Section {
 
   StackSizesSection() : Section(ChunkKind::StackSizes) {}
 
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", Entries.hasValue()}};
-  };
-
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::StackSizes;
   }
@@ -259,10 +248,6 @@ struct DynamicSection : Section {
   Optional<std::vector<DynamicEntry>> Entries;
 
   DynamicSection() : Section(ChunkKind::Dynamic) {}
-
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", Entries.hasValue()}};
-  };
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Dynamic; }
 };
@@ -291,20 +276,12 @@ struct NoteSection : Section {
 
   NoteSection() : Section(ChunkKind::Note) {}
 
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Notes", Notes.hasValue()}};
-  };
-
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Note; }
 };
 
 struct HashSection : Section {
   Optional<std::vector<uint32_t>> Bucket;
   Optional<std::vector<uint32_t>> Chain;
-
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Bucket", Bucket.hasValue()}, {"Chain", Chain.hasValue()}};
-  };
 
   // The following members are used to override section fields.
   // This is useful for creating invalid objects.
@@ -344,13 +321,6 @@ struct GnuHashSection : Section {
 
   GnuHashSection() : Section(ChunkKind::GnuHash) {}
 
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Header", Header.hasValue()},
-            {"BloomFilter", BloomFilter.hasValue()},
-            {"HashBuckets", HashBuckets.hasValue()},
-            {"HashValues", HashValues.hasValue()}};
-  };
-
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::GnuHash; }
 };
 
@@ -373,10 +343,6 @@ struct VerneedSection : Section {
 
   VerneedSection() : Section(ChunkKind::Verneed) {}
 
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Dependencies", VerneedV.hasValue()}};
-  };
-
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::Verneed;
   }
@@ -386,10 +352,6 @@ struct AddrsigSection : Section {
   Optional<std::vector<YAMLFlowString>> Symbols;
 
   AddrsigSection() : Section(ChunkKind::Addrsig) {}
-
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Symbols", Symbols.hasValue()}};
-  };
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Addrsig; }
 };
@@ -404,10 +366,6 @@ struct LinkerOptionsSection : Section {
 
   LinkerOptionsSection() : Section(ChunkKind::LinkerOptions) {}
 
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Options", Options.hasValue()}};
-  };
-
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::LinkerOptions;
   }
@@ -417,10 +375,6 @@ struct DependentLibrariesSection : Section {
   Optional<std::vector<YAMLFlowString>> Libs;
 
   DependentLibrariesSection() : Section(ChunkKind::DependentLibraries) {}
-
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Libraries", Libs.hasValue()}};
-  };
 
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::DependentLibraries;
@@ -442,10 +396,6 @@ struct CallGraphProfileSection : Section {
 
   CallGraphProfileSection() : Section(ChunkKind::CallGraphProfile) {}
 
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", Entries.hasValue()}};
-  };
-
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::CallGraphProfile;
   }
@@ -455,10 +405,6 @@ struct SymverSection : Section {
   Optional<std::vector<uint16_t>> Entries;
 
   SymverSection() : Section(ChunkKind::Symver) {}
-
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", Entries.hasValue()}};
-  };
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Symver; }
 };
@@ -478,10 +424,6 @@ struct VerdefSection : Section {
 
   VerdefSection() : Section(ChunkKind::Verdef) {}
 
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", Entries.hasValue()}};
-  };
-
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Verdef; }
 };
 
@@ -492,10 +434,6 @@ struct GroupSection : Section {
   Optional<StringRef> Signature; /* Info */
 
   GroupSection() : Section(ChunkKind::Group) {}
-
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Members", Members.hasValue()}};
-  };
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Group; }
 };
@@ -513,10 +451,6 @@ struct RelocationSection : Section {
 
   RelocationSection() : Section(ChunkKind::Relocation) {}
 
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Relocations", Relocations.hasValue()}};
-  };
-
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::Relocation;
   }
@@ -527,10 +461,6 @@ struct RelrSection : Section {
 
   RelrSection() : Section(ChunkKind::Relr) {}
 
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", Entries.hasValue()}};
-  };
-
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::Relr;
   }
@@ -540,10 +470,6 @@ struct SymtabShndxSection : Section {
   Optional<std::vector<uint32_t>> Entries;
 
   SymtabShndxSection() : Section(ChunkKind::SymtabShndxSection) {}
-
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", Entries.hasValue()}};
-  };
 
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::SymtabShndxSection;
@@ -559,10 +485,6 @@ struct ARMIndexTableSection : Section {
   Optional<std::vector<ARMIndexTableEntry>> Entries;
 
   ARMIndexTableSection() : Section(ChunkKind::ARMIndexTable) {}
-
-  std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", Entries.hasValue()}};
-  };
 
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::ARMIndexTable;
@@ -777,7 +699,7 @@ struct MappingTraits<ELFYAML::FileHeader> {
 
 template <> struct MappingTraits<ELFYAML::SectionHeaderTable> {
   static void mapping(IO &IO, ELFYAML::SectionHeaderTable &SecHdrTable);
-  static std::string validate(IO &IO, ELFYAML::SectionHeaderTable &SecHdrTable);
+  static StringRef validate(IO &IO, ELFYAML::SectionHeaderTable &SecHdrTable);
 };
 
 template <> struct MappingTraits<ELFYAML::SectionHeader> {
@@ -791,7 +713,7 @@ template <> struct MappingTraits<ELFYAML::ProgramHeader> {
 template <>
 struct MappingTraits<ELFYAML::Symbol> {
   static void mapping(IO &IO, ELFYAML::Symbol &Symbol);
-  static std::string validate(IO &IO, ELFYAML::Symbol &Symbol);
+  static StringRef validate(IO &IO, ELFYAML::Symbol &Symbol);
 };
 
 template <> struct MappingTraits<ELFYAML::StackSizeEntry> {
@@ -840,7 +762,7 @@ template <> struct MappingTraits<ELFYAML::ARMIndexTableEntry> {
 
 template <> struct MappingTraits<std::unique_ptr<ELFYAML::Chunk>> {
   static void mapping(IO &IO, std::unique_ptr<ELFYAML::Chunk> &C);
-  static std::string validate(IO &io, std::unique_ptr<ELFYAML::Chunk> &C);
+  static StringRef validate(IO &io, std::unique_ptr<ELFYAML::Chunk> &C);
 };
 
 template <>
