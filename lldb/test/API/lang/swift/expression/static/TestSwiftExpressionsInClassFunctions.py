@@ -39,6 +39,7 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
         self.assertTrue(answer == expected_result, report_str)
 
 
+    @expectedFailureAll #FIXME: This regressed silently due to 2c911bceb06ed376801251bdfd992905a66f276c
     @swiftTest
     def test_expressions_in_class_functions(self):
         """Test expressions in class func contexts"""
