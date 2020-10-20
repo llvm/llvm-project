@@ -44,7 +44,7 @@ void llvm::initializeTransformUtils(PassRegistry &Registry) {
   initializePredicateInfoPrinterLegacyPassPass(Registry);
   initializeInjectTLIMappingsLegacyPass(Registry);
   initializeFixIrreduciblePass(Registry);
-  initializeUnifyLoopExitsPass(Registry);
+  initializeUnifyLoopExitsLegacyPassPass(Registry);
   initializeUniqueInternalLinkageNamesLegacyPassPass(Registry);
 }
 
