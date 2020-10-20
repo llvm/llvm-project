@@ -1,9 +1,5 @@
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-add_executable(quick-sanity-test
-  quick-sanity-test.cpp
-)
-
-target_link_libraries(quick-sanity-test
+add_flang_nongtest_unittest(quick-sanity-test
   FortranDecimal
 )
 
@@ -12,5 +8,3 @@ add_flang_nongtest_unittest(thorough-test
   SLOW_TEST
   FortranDecimal
 )
-
-add_test(NAME Sanity COMMAND quick-sanity-test)
