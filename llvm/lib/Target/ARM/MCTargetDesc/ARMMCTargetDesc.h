@@ -41,6 +41,7 @@ class raw_pwrite_stream;
 
 namespace ARM_MC {
 std::string ParseARMTriple(const Triple &TT, StringRef CPU);
+void initLLVMToCVRegMapping(MCRegisterInfo *MRI);
 
 bool isPredicated(const MCInst &MI, const MCInstrInfo *MCII);
 
