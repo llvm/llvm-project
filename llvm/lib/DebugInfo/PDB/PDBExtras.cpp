@@ -118,7 +118,21 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const PDB_DataKind &Data) {
 
 raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
                                    const llvm::codeview::CPURegister &CpuReg) {
-  if (CpuReg.Cpu == llvm::codeview::CPUType::ARM64) {
+  if (CpuReg.Cpu == llvm::codeview::CPUType::ARMNT) {
+    switch (CpuReg.Reg) {
+#define CV_REGISTERS_ARM
+#define CV_REGISTER(name, val)                                                 \
+  case codeview::RegisterId::name:                                             \
+    OS << #name;                                                               \
+    return OS;
+#include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
+#undef CV_REGISTER
+#undef CV_REGISTERS_ARM
+
+    default:
+      break;
+    }
+  } else if (CpuReg.Cpu == llvm::codeview::CPUType::ARM64) {
     switch (CpuReg.Reg) {
 #define CV_REGISTERS_ARM64
 #define CV_REGISTER(name, val)                                                 \
