@@ -24,7 +24,7 @@
 #include "test_iterators.h"
 
 template <class Iter>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
+TEST_CONSTEXPR_CXX17 bool
 test()
 {
     int ia[] = {0};
