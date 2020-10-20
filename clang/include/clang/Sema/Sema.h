@@ -9896,6 +9896,10 @@ public:
   /// \#pragma STDC FENV_ACCESS
   void ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled);
 
+  /// Called on well formed '\#pragma clang fp' that has option 'exceptions'.
+  void ActOnPragmaFPExceptions(SourceLocation Loc,
+                               LangOptions::FPExceptionModeKind);
+
   /// Called to set constant rounding mode for floating point operations.
   void setRoundingMode(SourceLocation Loc, llvm::RoundingMode);
 
