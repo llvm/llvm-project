@@ -26,11 +26,11 @@
 using namespace fs;
 
 void PutEnv(std::string var, fs::path value) {
-    assert(::setenv(var.c_str(), value.string().c_str(), /* overwrite */ 1) == 0);
+    assert(utils::setenv(var.c_str(), value.string().c_str(), /* overwrite */ 1) == 0);
 }
 
 void UnsetEnv(std::string var) {
-    assert(::unsetenv(var.c_str()) == 0);
+    assert(utils::unsetenv(var.c_str()) == 0);
 }
 
 TEST_SUITE(filesystem_temp_directory_path_test_suite)
