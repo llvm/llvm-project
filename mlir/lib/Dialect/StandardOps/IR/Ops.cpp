@@ -3003,6 +3003,7 @@ static LogicalResult produceSubViewErrorMsg(SubViewVerificationResult result,
            << expectedType
            << " or a rank-reduced version. (mismatch of result affine map)";
   }
+  llvm_unreachable("unexpected subview verification result");
 }
 
 template <typename OpType>
