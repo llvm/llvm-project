@@ -2236,8 +2236,8 @@ template<typename T> static int costAndCollectOperands(
   };
 
   switch (S->getSCEVType()) {
-  default:
-    llvm_unreachable("No other scev expressions possible.");
+  case scCouldNotCompute:
+    llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
   case scUnknown:
   case scConstant:
     return 0;
@@ -2351,6 +2351,8 @@ bool SCEVExpander::isHighCostExpansionHelper(
           : TargetTransformInfo::TCK_RecipThroughput;
 
   switch (S->getSCEVType()) {
+  case scCouldNotCompute:
+    llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
   case scUnknown:
     // Assume to be zero-cost.
     return false;
@@ -2416,7 +2418,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
     return BudgetRemaining < 0;
   }
   }
-  llvm_unreachable("Switch is exaustive and we return in all of them.");
+  llvm_unreachable("Unknown SCEV kind!");
 }
 
 Value *SCEVExpander::expandCodeForPredicate(const SCEVPredicate *Pred,
