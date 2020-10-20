@@ -1264,14 +1264,14 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
       // Produce a nice diagnostic if multiple values aren't handled.
       if (!UnhandledNames.empty()) {
         {
-          auto DB = Diag(CondExpr->getExprLoc(), TheDefaultStmt
-                                                     ? diag::warn_def_missing_case
-                                                     : diag::warn_missing_case)
-                    << (int)UnhandledNames.size();
+        auto DB = Diag(CondExpr->getExprLoc(), TheDefaultStmt
+                                                   ? diag::warn_def_missing_case
+                                                   : diag::warn_missing_case)
+                  << (int)UnhandledNames.size();
 
-          for (size_t I = 0, E = std::min(UnhandledNames.size(), (size_t)3);
-               I != E; ++I)
-            DB << UnhandledNames[I];
+        for (size_t I = 0, E = std::min(UnhandledNames.size(), (size_t)3);
+             I != E; ++I)
+          DB << UnhandledNames[I];
         }
         auto DB =
             Diag(CondExpr->getExprLoc(), diag::note_fill_in_missing_cases);
