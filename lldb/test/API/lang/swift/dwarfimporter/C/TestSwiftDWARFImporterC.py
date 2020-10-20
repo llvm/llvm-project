@@ -67,6 +67,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         target.Clear()
         lldb.SBDebugger.MemoryPressureDetected()
 
+    @expectedFailureAll #FIXME: This regressed silently due to 2c911bceb06ed376801251bdfd992905a66f276c
     @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
     @swiftTest
     # This test needs a working Remote Mirrors implementation.

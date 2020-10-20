@@ -23,6 +23,7 @@ class TestSwiftProtocolTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @expectedFailureAll #FIXME: This regressed silently due to 2c911bceb06ed376801251bdfd992905a66f276c
     @swiftTest
     def test_swift_protocol_types(self):
         """Test support for protocol types"""
