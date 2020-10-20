@@ -6,22 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_TRACE_PROCESSTRACE_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_TRACE_PROCESSTRACE_H
+#ifndef LLDB_TARGET_PROCESSTRACE_H
+#define LLDB_TARGET_PROCESSTRACE_H
 
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 
 namespace lldb_private {
-namespace process_trace {
 
 class ProcessTrace : public Process {
 public:
-  static lldb::ProcessSP CreateInstance(lldb::TargetSP target_sp,
-                                        lldb::ListenerSP listener_sp,
-                                        const FileSpec *crash_file_path);
-
   static void Initialize();
 
   static void Terminate();
@@ -78,9 +73,13 @@ protected:
 
   bool UpdateThreadList(ThreadList &old_thread_list,
                         ThreadList &new_thread_list) override;
+
+private:
+  static lldb::ProcessSP CreateInstance(lldb::TargetSP target_sp,
+                                        lldb::ListenerSP listener_sp,
+                                        const FileSpec *crash_file_path);
 };
 
-} // namespace process_trace
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_TRACE_PROCESSTRACE_H
+#endif // LLDB_TARGET_PROCESSTRACE_H

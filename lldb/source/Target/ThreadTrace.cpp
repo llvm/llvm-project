@@ -1,4 +1,4 @@
-//===-- ThreadIntelPT.cpp -------------------------------------------------===//
+//===-- ThreadTrace.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ThreadIntelPT.h"
+#include "lldb/Target/ThreadTrace.h"
 
 #include <memory>
 
@@ -16,11 +16,10 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::trace_intel_pt;
 
-void ThreadIntelPT::RefreshStateAfterStop() {}
+void ThreadTrace::RefreshStateAfterStop() {}
 
-RegisterContextSP ThreadIntelPT::GetRegisterContext() {
+RegisterContextSP ThreadTrace::GetRegisterContext() {
   if (!m_reg_context_sp)
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
 
@@ -28,11 +27,13 @@ RegisterContextSP ThreadIntelPT::GetRegisterContext() {
 }
 
 RegisterContextSP
-ThreadIntelPT::CreateRegisterContextForFrame(StackFrame *frame) {
+ThreadTrace::CreateRegisterContextForFrame(StackFrame *frame) {
   // Eventually this will calculate the register context based on the current
   // trace position.
   return std::make_shared<RegisterContextHistory>(
       *this, 0, GetProcess()->GetAddressByteSize(), LLDB_INVALID_ADDRESS);
 }
 
-bool ThreadIntelPT::CalculateStopInfo() { return false; }
+bool ThreadTrace::CalculateStopInfo() { return false; }
+
+const FileSpec &ThreadTrace::GetTraceFile() const { return m_trace_file; }
