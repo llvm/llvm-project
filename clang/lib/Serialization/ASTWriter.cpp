@@ -5747,15 +5747,11 @@ void ASTRecordWriter::AddVarDeclInit(const VarDecl *VD) {
     return;
   }
 
-  // Bottom two bits are as follows:
-  //  01 -- initializer not checked for ICE
-  //  10 -- initializer not ICE
-  //  11 -- initializer ICE
   unsigned Val = 1;
   if (EvaluatedStmt *ES = VD->getEvaluatedStmt()) {
-    if (ES->CheckedICE)
-      Val = 2 | ES->IsICE;
+    Val |= (ES->HasConstantInitialization ? 2 : 0);
     Val |= (ES->HasConstantDestruction ? 4 : 0);
+    // FIXME: Also emit the constant initializer value.
   }
   push_back(Val);
   writeStmtRef(Init);

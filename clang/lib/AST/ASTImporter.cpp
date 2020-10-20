@@ -2014,10 +2014,11 @@ Error ASTNodeImporter::ImportInitializer(VarDecl *From, VarDecl *To) {
     return ToInitOrErr.takeError();
 
   To->setInit(*ToInitOrErr);
-  if (From->isInitKnownICE()) {
-    EvaluatedStmt *Eval = To->ensureEvaluatedStmt();
-    Eval->CheckedICE = true;
-    Eval->IsICE = From->isInitICE();
+  if (EvaluatedStmt *FromEval = From->getEvaluatedStmt()) {
+    EvaluatedStmt *ToEval = To->ensureEvaluatedStmt();
+    ToEval->HasConstantInitialization = FromEval->HasConstantInitialization;
+    ToEval->HasConstantDestruction = FromEval->HasConstantDestruction;
+    // FIXME: Also import the initializer value.
   }
 
   // FIXME: Other bits to merge?

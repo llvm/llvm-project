@@ -12983,21 +12983,28 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     // do this lazily, because the result might depend on things that change
     // later, such as which constexpr functions happen to be defined.
     SmallVector<PartialDiagnosticAt, 8> Notes;
-    bool HasConstInit = var->checkInitIsICE(Notes);
-
-    // Prior to C++11, in contexts where a constant initializer is required,
-    // additional kinds of constant expression are permitted beyond ICEs, as
-    // described in [expr.const]p2-6.
-    // FIXME: Stricter checking for these rules would be useful for constinit /
-    // -Wglobal-constructors.
-    if (!getLangOpts().CPlusPlus11 && !HasConstInit) {
+    bool HasConstInit;
+    if (!getLangOpts().CPlusPlus11) {
+      // Prior to C++11, in contexts where a constant initializer is required,
+      // the set of valid constant initializers is described by syntactic rules
+      // in [expr.const]p2-6.
+      // FIXME: Stricter checking for these rules would be useful for constinit /
+      // -Wglobal-constructors.
       HasConstInit = checkConstInit();
-      Notes.clear();
-      if (CacheCulprit) {
+
+      // Compute and cache the constant value, and remember that we have a
+      // constant initializer.
+      if (HasConstInit) {
+        (void)var->checkForConstantInitialization(Notes);
+        Notes.clear();
+      } else if (CacheCulprit) {
         Notes.emplace_back(CacheCulprit->getExprLoc(),
                            PDiag(diag::note_invalid_subexpr_in_const_expr));
         Notes.back().second << CacheCulprit->getSourceRange();
       }
+    } else {
+      // Evaluate the initializer to see if it's a constant initializer.
+      HasConstInit = var->checkForConstantInitialization(Notes);
     }
 
     if (HasConstInit) {

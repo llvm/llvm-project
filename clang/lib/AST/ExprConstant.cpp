@@ -3281,12 +3281,16 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // Check that the variable is actually usable in constant expressions. For a
   // const integral variable or a reference, we might have a non-constant
   // initializer that we can nonetheless evaluate the initializer for. Such
-  // variables are not usable in constant expressions.
+  // variables are not usable in constant expressions. In C++98, the
+  // initializer also syntactically needs to be an ICE.
   //
-  // FIXME: It would be cleaner to check VD->isUsableInConstantExpressions
-  // here, but that regresses diagnostics for things like reading from a
-  // volatile constexpr variable.
-  if (VD->isInitKnownICE() && !VD->isInitICE()) {
+  // FIXME: We don't diagnose cases that aren't potentially usable in constant
+  // expressions here; doing so would regress diagnostics for things like
+  // reading from a volatile constexpr variable.
+  if ((!VD->hasConstantInitialization() &&
+       VD->mightBeUsableInConstantExpressions(Info.Ctx)) ||
+      (Info.getLangOpts().CPlusPlus && !Info.getLangOpts().CPlusPlus11 &&
+       !VD->hasICEInitializer(Info.Ctx))) {
     Info.CCEDiag(E, diag::note_constexpr_var_init_non_constant, 1) << VD;
     NoteLValueLocation(Info, Base);
   }

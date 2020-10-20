@@ -1423,10 +1423,9 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
 
   if (uint64_t Val = Record.readInt()) {
     VD->setInit(Record.readExpr());
-    if (Val > 1) {
+    if (Val != 1) {
       EvaluatedStmt *Eval = VD->ensureEvaluatedStmt();
-      Eval->CheckedICE = (Val & 2) != 0;
-      Eval->IsICE = (Val & 3) == 3;
+      Eval->HasConstantInitialization = (Val & 2) != 0;
       Eval->HasConstantDestruction = (Val & 4) != 0;
     }
   }
@@ -4440,8 +4439,7 @@ void ASTDeclReader::UpdateDecl(Decl *D,
         VD->setInit(Record.readExpr());
         if (Val != 1) {
           EvaluatedStmt *Eval = VD->ensureEvaluatedStmt();
-          Eval->CheckedICE = (Val & 2) != 0;
-          Eval->IsICE = (Val & 3) == 3;
+          Eval->HasConstantInitialization = (Val & 2) != 0;
           Eval->HasConstantDestruction = (Val & 4) != 0;
         }
       }

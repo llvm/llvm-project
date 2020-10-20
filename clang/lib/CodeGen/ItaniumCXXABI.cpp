@@ -365,7 +365,7 @@ public:
     // variable being constant-initialized in every translation unit if it's
     // constant-initialized in any translation unit, which isn't actually
     // guaranteed by the standard but is necessary for sanity.
-    return InitDecl->isInitKnownICE() && InitDecl->isInitICE();
+    return InitDecl->hasConstantInitialization();
   }
 
   bool usesThreadWrapperFunction(const VarDecl *VD) const override {
