@@ -1052,8 +1052,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.ControlFlowGuardNoChecks = Args.hasArg(OPT_cfguard_no_checks);
   Opts.ControlFlowGuard = Args.hasArg(OPT_cfguard);
 
-  Opts.EmitGcovArcs = Args.hasArg(OPT_femit_coverage_data);
-  Opts.EmitGcovNotes = Args.hasArg(OPT_femit_coverage_notes);
+  Opts.EmitGcovNotes = Args.hasArg(OPT_ftest_coverage);
+  Opts.EmitGcovArcs = Args.hasArg(OPT_fprofile_arcs);
   if (Opts.EmitGcovArcs || Opts.EmitGcovNotes) {
     Opts.CoverageDataFile =
         std::string(Args.getLastArgValue(OPT_coverage_data_file));
