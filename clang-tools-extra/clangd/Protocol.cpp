@@ -179,10 +179,12 @@ bool fromJSON(const llvm::json::Value &E, TraceLevel &Out, llvm::json::Path P) {
     if (*S == "off") {
       Out = TraceLevel::Off;
       return true;
-    } else if (*S == "messages") {
+    }
+    if (*S == "messages") {
       Out = TraceLevel::Messages;
       return true;
-    } else if (*S == "verbose") {
+    }
+    if (*S == "verbose") {
       Out = TraceLevel::Verbose;
       return true;
     }
@@ -319,7 +321,8 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R,
       if (auto *Item = Completion->getObject("completionItem")) {
         if (auto SnippetSupport = Item->getBoolean("snippetSupport"))
           R.CompletionSnippets = *SnippetSupport;
-        if (auto DocumentationFormat = Item->getArray("documentationFormat")) {
+        if (const auto *DocumentationFormat =
+                Item->getArray("documentationFormat")) {
           for (const auto &Format : *DocumentationFormat) {
             if (fromJSON(Format, R.CompletionDocumentationFormat, P))
               break;
@@ -645,7 +648,7 @@ bool fromJSON(const llvm::json::Value &Params, ExecuteCommandParams &R,
   if (!O || !O.map("command", R.command))
     return false;
 
-  auto Args = Params.getAsObject()->getArray("arguments");
+  const auto *Args = Params.getAsObject()->getArray("arguments");
   if (R.command == ExecuteCommandParams::CLANGD_APPLY_FIX_COMMAND) {
     return Args && Args->size() == 1 &&
            fromJSON(Args->front(), R.workspaceEdit,
