@@ -2400,8 +2400,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
   case scSMaxExpr:
   case scUMinExpr:
   case scSMinExpr: {
-    const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(S);
-    assert(NAry->getNumOperands() > 1 &&
+    assert(dyn_cast<SCEVNAryExpr>(S)->getNumOperands() > 1 &&
            "Nary expr should have more than 1 operand.");
     // The simple nary expr will require one less op (or pair of ops)
     // than the number of it's terms.
