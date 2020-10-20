@@ -6,7 +6,7 @@ Introduction
 ============
 
 This document contains information about adding a build configuration and
-buildslave to private slave builder to LLVM Buildbot Infrastructure.
+buildbot-worker to private worker builder to LLVM Buildbot Infrastructure.
 
 Buildmasters
 ============
@@ -22,7 +22,7 @@ There are two buildmasters running.
 
 Steps To Add Builder To LLVM Buildbot
 =====================================
-Volunteers can provide their build machines to work as build slaves to
+Volunteers can provide their build machines to work as build workers to
 public LLVM Buildbot.
 
 Here are the steps you can follow to do so:
@@ -38,35 +38,36 @@ Here are the steps you can follow to do so:
    of parallelism (-j param) would give the fastest build.  You can build
    multiple configurations on one computer.
 
-#. Install buildslave (currently we are using buildbot version 0.8.5).
-   Depending on the platform, buildslave could be available to download and
+#. Install buildbot-worker (currently we are using buildbot version 2.8.5).
+   Depending on the platform, buildbot-worker could be available to download and
    install with your package manager, or you can download it directly from
    `<http://trac.buildbot.net>`_ and install it manually.
 
-#. Create a designated user account, your buildslave will be running under,
+#. Create a designated user account, your buildbot-worker will be running under,
    and set appropriate permissions.
 
-#. Choose the buildslave root directory (all builds will be placed under
-   it), buildslave access name and password the build master will be using
-   to authenticate your buildslave.
+#. Choose the buildbot-worker root directory (all builds will be placed under
+   it), buildbot-worker access name and password the build master will be using
+   to authenticate your buildbot-worker.
 
-#. Create a buildslave in context of that buildslave account.  Point it to
-   the **lab.llvm.org** port **9990** (see `Buildbot documentation,
-   Creating a slave
-   <http://docs.buildbot.net/current/tutorial/firstrun.html#creating-a-slave>`_
+#. Create a buildbot-worker in context of that buildbot-worker account. Point it
+   to the **lab.llvm.org** port **9990** (see `Buildbot documentation,
+   Creating a worker
+   <http://docs.buildbot.net/current/tutorial/firstrun.html#creating-a-worker>`_
    for more details) by running the following command:
 
     .. code-block:: bash
 
-       $ buildslave create-slave <buildslave-root-directory> \
+       $ buildbot-worker create-worker <buildbot-worker-root-directory> \
                     lab.llvm.org:9990 \
-                    <buildslave-access-name> <buildslave-access-password>
+                    <buildbot-worker-access-name> \
+                    <buildbot-worker-access-password>
 
-   To point a slave to silent master please use lab.llvm.org:9994 instead
+   To point a worker to silent master please use lab.llvm.org:9994 instead
    of lab.llvm.org:9990.
 
-#. Fill the buildslave description and admin name/e-mail.  Here is an
-   example of the buildslave description::
+#. Fill the buildbot-worker description and admin name/e-mail.  Here is an
+   example of the buildbot-worker description::
 
        Windows 7 x64
        Core i7 (2.66GHz), 16GB of RAM
@@ -76,16 +77,16 @@ Here are the steps you can follow to do so:
        cmake version 2.8.4
        Microsoft(R) 32-bit C/C++ Optimizing Compiler Version 16.00.40219.01 for 80x86
 
-#. Make sure you can actually start the buildslave successfully. Then set
-   up your buildslave to start automatically at the start up time.  See the
+#. Make sure you can actually start the buildbot-worker successfully. Then set
+   up your buildbot-worker to start automatically at the start up time.  See the
    buildbot documentation for help.  You may want to restart your computer
    to see if it works.
 
-#. Send a patch which adds your build slave and your builder to
+#. Send a patch which adds your build worker and your builder to
    `zorg <https://github.com/llvm/llvm-zorg>`_. Use the typical LLVM 
    `workflow <https://llvm.org/docs/Contributing.html#how-to-submit-a-patch>`_.
 
-   * slaves are added to ``buildbot/osuosl/master/config/slaves.py``
+   * workers are added to ``buildbot/osuosl/master/config/slaves.py``
    * builders are added to ``buildbot/osuosl/master/config/builders.py``
 
    Please make sure your builder name and its builddir are unique through the
@@ -97,14 +98,14 @@ Here are the steps you can follow to do so:
    This is particularly useful for the staging buildmaster which is silent
    otherwise.
 
-#. Send the buildslave access name and the access password directly to
+#. Send the buildbot-worker access name and the access password directly to
    `Galina Kistanova <mailto:gkistanova@gmail.com>`_, and wait till she
    will let you know that your changes are applied and buildmaster is
    reconfigured.
 
-#. Check the status of your buildslave on the `Waterfall Display
-   <http://lab.llvm.org:8011/waterfall>`_ to make sure it is connected, and
-   ``http://lab.llvm.org:8011/buildslaves/<your-buildslave-name>`` to see
-   if administrator contact and slave information are correct.
+#. Check the status of your buildbot-worker on the `Waterfall Display
+   <http://lab.llvm.org:8011/#/waterfall>`_ to make sure it is connected, and
+   ``http://lab.llvm.org:8011/#/workers`` to see if administrator contact and
+   worker information are correct.
 
 #. Wait for the first build to succeed and enjoy.
