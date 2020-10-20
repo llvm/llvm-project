@@ -1014,7 +1014,7 @@ public:
   }
 
   bool VisitTypeLoc(TypeLoc TTL) {
-    if (TypeLocsToSkip.count(TTL.getBeginLoc().getRawEncoding()))
+    if (TypeLocsToSkip.count(TTL.getBeginLoc()))
       return true;
     visitNode(DynTypedNode::create(TTL));
     return true;
@@ -1024,7 +1024,7 @@ public:
     // ElaboratedTypeLoc will reports information for its inner type loc.
     // Otherwise we loose information about inner types loc's qualifier.
     TypeLoc Inner = L.getNamedTypeLoc().getUnqualifiedLoc();
-    TypeLocsToSkip.insert(Inner.getBeginLoc().getRawEncoding());
+    TypeLocsToSkip.insert(Inner.getBeginLoc());
     return RecursiveASTVisitor::TraverseElaboratedTypeLoc(L);
   }
 
@@ -1090,7 +1090,7 @@ public:
     visitNode(DynTypedNode::create(L));
     // Inner type is missing information about its qualifier, skip it.
     if (auto TL = L.getTypeLoc())
-      TypeLocsToSkip.insert(TL.getBeginLoc().getRawEncoding());
+      TypeLocsToSkip.insert(TL.getBeginLoc());
     return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(L);
   }
 
@@ -1163,7 +1163,7 @@ private:
   llvm::function_ref<void(ReferenceLoc)> Out;
   /// TypeLocs starting at these locations must be skipped, see
   /// TraverseElaboratedTypeSpecifierLoc for details.
-  llvm::DenseSet</*SourceLocation*/ unsigned> TypeLocsToSkip;
+  llvm::DenseSet<SourceLocation> TypeLocsToSkip;
 };
 } // namespace
 
