@@ -338,15 +338,32 @@ public:
   static const int Default_WG_Size =
       llvm::omp::AMDGPUGpuGridValues[llvm::omp::GVIDX::GV_Default_WG_Size];
 
+  using MemcpyFunc = atmi_status_t (hsa_signal_t,
+                                    void *,
+                                    const void *,
+                                    size_t size,
+                                    hsa_agent_t);
   atmi_status_t freesignalpool_memcpy(void *dest, const void *src,
-                                      size_t size) {
+                                      size_t size, MemcpyFunc Func,
+                                      int32_t deviceId) {
+    hsa_agent_t agent = HSAAgents[deviceId];
     hsa_signal_t s = FreeSignalPool.pop();
     if (s.handle == 0) {
       return ATMI_STATUS_ERROR;
     }
-    atmi_status_t r = atmi_memcpy(s, dest, src, size);
+    atmi_status_t r = Func(s, dest, src, size, agent);
     FreeSignalPool.push(s);
     return r;
+  }
+
+  atmi_status_t freesignalpool_memcpy_d2h(void *dest, const void *src,
+                                          size_t size, int32_t deviceId) {
+    return freesignalpool_memcpy(dest, src, size, atmi_memcpy_d2h, deviceId);
+  }
+
+  atmi_status_t freesignalpool_memcpy_h2d(void *dest, const void *src,
+                                          size_t size, int32_t deviceId) {
+    return freesignalpool_memcpy(dest, src, size, atmi_memcpy_h2d, deviceId);
   }
 
   // Record entry point associated with device
@@ -540,7 +557,7 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
      (long long unsigned)(Elf64_Addr)TgtPtr,
      (long long unsigned)(Elf64_Addr)HstPtr);
 
-  err = DeviceInfo.freesignalpool_memcpy(HstPtr, TgtPtr, (size_t)Size);
+  err = DeviceInfo.freesignalpool_memcpy_d2h(HstPtr, TgtPtr, (size_t)Size, DeviceId);
 
   if (err != ATMI_STATUS_SUCCESS) {
     DP("Error when copying data from device to host. Pointers: "
@@ -566,7 +583,7 @@ int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
   DP("Submit data %ld bytes, (hst:%016llx) -> (tgt:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)HstPtr,
      (long long unsigned)(Elf64_Addr)TgtPtr);
-  err = DeviceInfo.freesignalpool_memcpy(TgtPtr, HstPtr, (size_t)Size);
+  err = DeviceInfo.freesignalpool_memcpy_h2d(TgtPtr, HstPtr, (size_t)Size, DeviceId);
   if (err != ATMI_STATUS_SUCCESS) {
     DP("Error when copying data from host to device. Pointers: "
        "host = 0x%016lx, device = 0x%016lx, size = %lld\n",
@@ -832,7 +849,7 @@ int get_symbol_info_without_loading(Elf *elf, char *base, const char *symname,
 
   Elf64_Shdr *section_hash = find_only_SHT_HASH(elf);
   if (!section_hash) {
-    return 1;
+     return 1;
   }
 
   const Elf64_Sym *sym = elf_lookup(elf, base, section_hash, symname);
@@ -1030,7 +1047,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     }
 
     // write ptr to device memory so it can be used by later kernels
-    err = DeviceInfo.freesignalpool_memcpy(state_ptr, &ptr, sizeof(void *));
+    err = DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &ptr, sizeof(void *), device_id);
     if (err != ATMI_STATUS_SUCCESS) {
       fprintf(stderr, "memcpy install of state_ptr failed\n");
       return NULL;
@@ -1099,7 +1116,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
         // If unified memory is present any target link variables
         // can access host addresses directly. There is no longer a
         // need for device copies.
-        err = DeviceInfo.freesignalpool_memcpy(varptr, e->addr, sizeof(void *));
+        err = DeviceInfo.freesignalpool_memcpy_h2d(varptr, e->addr,
+                                                   sizeof(void *), device_id);
         if (err != ATMI_STATUS_SUCCESS)
           DP("Error when copying USM\n");
         DP("Copy linked variable host address (" DPxMOD ")"
@@ -1528,7 +1546,7 @@ static void *AllocateNestedParallelCallMemory(int MaxParLevel, int NumGroups,
   atmi_status_t err =
       atmi_malloc(&TgtPtr, NestedMemSize, get_gpu_mem_place(device_id));
   err =
-      DeviceInfo.freesignalpool_memcpy(CallStackAddr, &TgtPtr, sizeof(void *));
+      DeviceInfo.freesignalpool_memcpy_h2d(CallStackAddr, &TgtPtr, sizeof(void *), device_id);
   if (print_kernel_trace > 2)
     fprintf(stderr, "CallSck %lx TgtPtr %lx *TgtPtr %lx \n",
             (long)CallStackAddr, (long)&TgtPtr, (long)TgtPtr);
@@ -1795,4 +1813,33 @@ int32_t __tgt_rtl_synchronize(int32_t device_id,
     finiAsyncInfoPtr(async_info_ptr);
   }
   return OFFLOAD_SUCCESS;
+}
+
+// This method is only used by hostrpc demo
+atmi_status_t atmi_memcpy_no_signal(void *dest, const void *src,
+                                    size_t size, bool host2Device) {
+  hsa_signal_t sig;
+  hsa_status_t err = hsa_signal_create(0, 0, NULL, &sig);
+  if (err != HSA_STATUS_SUCCESS) {
+    return ATMI_STATUS_ERROR;
+  }
+
+  const int deviceId = 0;
+  hsa_agent_t agent = DeviceInfo.HSAAgents[deviceId];
+  atmi_status_t r;
+  if (host2Device)
+    r = atmi_memcpy_h2d(sig, dest, src, size, agent);
+  else
+    r = atmi_memcpy_d2h(sig, dest, src, size, agent);
+
+  hsa_status_t rc = hsa_signal_destroy(sig);
+
+  if (r != ATMI_STATUS_SUCCESS) {
+    return r;
+  }
+  if (rc != HSA_STATUS_SUCCESS) {
+    return ATMI_STATUS_ERROR;
+  }
+
+  return ATMI_STATUS_SUCCESS;
 }
