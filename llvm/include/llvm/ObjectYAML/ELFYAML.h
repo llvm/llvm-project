@@ -193,8 +193,9 @@ struct Section : public Chunk {
 
   static bool classof(const Chunk *S) { return S->Kind != ChunkKind::Fill; }
 
-  // Some derived sections might have own special entries. This method returns
-  // vector of <entry name, is used> pairs. It is used for sections validation.
+  // Some derived sections might have their own special entries. This method
+  // returns a vector of <entry name, is used> pairs. It is used for section
+  // validation.
   virtual std::vector<std::pair<StringRef, bool>> getEntries() const {
     return {};
   };
@@ -242,7 +243,7 @@ struct StackSizesSection : Section {
   StackSizesSection() : Section(ChunkKind::StackSizes) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", !!Entries}};
+    return {{"Entries", Entries.hasValue()}};
   };
 
   static bool classof(const Chunk *S) {
@@ -260,7 +261,7 @@ struct DynamicSection : Section {
   DynamicSection() : Section(ChunkKind::Dynamic) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", !!Entries}};
+    return {{"Entries", Entries.hasValue()}};
   };
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Dynamic; }
@@ -291,7 +292,7 @@ struct NoteSection : Section {
   NoteSection() : Section(ChunkKind::Note) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Notes", !!Notes}};
+    return {{"Notes", Notes.hasValue()}};
   };
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Note; }
@@ -302,7 +303,7 @@ struct HashSection : Section {
   Optional<std::vector<uint32_t>> Chain;
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Bucket", !!Bucket}, {"Chain", !!Chain}};
+    return {{"Bucket", Bucket.hasValue()}, {"Chain", Chain.hasValue()}};
   };
 
   // The following members are used to override section fields.
@@ -344,10 +345,10 @@ struct GnuHashSection : Section {
   GnuHashSection() : Section(ChunkKind::GnuHash) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Header", !!Header},
-            {"BloomFilter", !!BloomFilter},
-            {"HashBuckets", !!HashBuckets},
-            {"HashValues", !!HashValues}};
+    return {{"Header", Header.hasValue()},
+            {"BloomFilter", BloomFilter.hasValue()},
+            {"HashBuckets", HashBuckets.hasValue()},
+            {"HashValues", HashValues.hasValue()}};
   };
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::GnuHash; }
@@ -373,7 +374,7 @@ struct VerneedSection : Section {
   VerneedSection() : Section(ChunkKind::Verneed) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Dependencies", !!VerneedV}};
+    return {{"Dependencies", VerneedV.hasValue()}};
   };
 
   static bool classof(const Chunk *S) {
@@ -387,7 +388,7 @@ struct AddrsigSection : Section {
   AddrsigSection() : Section(ChunkKind::Addrsig) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Symbols", !!Symbols}};
+    return {{"Symbols", Symbols.hasValue()}};
   };
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Addrsig; }
@@ -404,7 +405,7 @@ struct LinkerOptionsSection : Section {
   LinkerOptionsSection() : Section(ChunkKind::LinkerOptions) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Options", !!Options}};
+    return {{"Options", Options.hasValue()}};
   };
 
   static bool classof(const Chunk *S) {
@@ -418,7 +419,7 @@ struct DependentLibrariesSection : Section {
   DependentLibrariesSection() : Section(ChunkKind::DependentLibraries) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Libraries", !!Libs}};
+    return {{"Libraries", Libs.hasValue()}};
   };
 
   static bool classof(const Chunk *S) {
@@ -442,7 +443,7 @@ struct CallGraphProfileSection : Section {
   CallGraphProfileSection() : Section(ChunkKind::CallGraphProfile) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", !!Entries}};
+    return {{"Entries", Entries.hasValue()}};
   };
 
   static bool classof(const Chunk *S) {
@@ -456,7 +457,7 @@ struct SymverSection : Section {
   SymverSection() : Section(ChunkKind::Symver) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", !!Entries}};
+    return {{"Entries", Entries.hasValue()}};
   };
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Symver; }
@@ -478,7 +479,7 @@ struct VerdefSection : Section {
   VerdefSection() : Section(ChunkKind::Verdef) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", !!Entries}};
+    return {{"Entries", Entries.hasValue()}};
   };
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Verdef; }
@@ -493,7 +494,7 @@ struct GroupSection : Section {
   GroupSection() : Section(ChunkKind::Group) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Members", !!Members}};
+    return {{"Members", Members.hasValue()}};
   };
 
   static bool classof(const Chunk *S) { return S->Kind == ChunkKind::Group; }
@@ -513,7 +514,7 @@ struct RelocationSection : Section {
   RelocationSection() : Section(ChunkKind::Relocation) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Relocations", !!Relocations}};
+    return {{"Relocations", Relocations.hasValue()}};
   };
 
   static bool classof(const Chunk *S) {
@@ -527,7 +528,7 @@ struct RelrSection : Section {
   RelrSection() : Section(ChunkKind::Relr) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", !!Entries}};
+    return {{"Entries", Entries.hasValue()}};
   };
 
   static bool classof(const Chunk *S) {
@@ -541,7 +542,7 @@ struct SymtabShndxSection : Section {
   SymtabShndxSection() : Section(ChunkKind::SymtabShndxSection) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", !!Entries}};
+    return {{"Entries", Entries.hasValue()}};
   };
 
   static bool classof(const Chunk *S) {
@@ -560,7 +561,7 @@ struct ARMIndexTableSection : Section {
   ARMIndexTableSection() : Section(ChunkKind::ARMIndexTable) {}
 
   std::vector<std::pair<StringRef, bool>> getEntries() const override {
-    return {{"Entries", !!Entries}};
+    return {{"Entries", Entries.hasValue()}};
   };
 
   static bool classof(const Chunk *S) {
