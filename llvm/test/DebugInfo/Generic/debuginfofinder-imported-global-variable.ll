@@ -1,7 +1,9 @@
-; RUN: opt -analyze -module-debuginfo < %s | FileCheck %s
+; RUN: opt -analyze -module-debuginfo -enable-new-pm=0 < %s | FileCheck %s
+; RUN: opt -passes='print<module-debuginfo>' -disable-output 2>&1 < %s \
+; RUN:   | FileCheck %s
 
 ; This is to track DebugInfoFinder's ability to find the debug info metadata,
-; in particular, properly visit different kinds of DIImportedEntit'ies.
+; in particular, properly visit different kinds of DIImportedEntities.
 
 ; Derived from the following C++ snippet
 ;
@@ -13,7 +15,6 @@
 ;
 ; compiled with `clang -O1 -g3 -emit-llvm -S`
 
-; CHECK: Printing analysis 'Decodes module-level debug info':
 ; CHECK: Compile unit: DW_LANG_C_plus_plus from /somewhere/source.cpp
 ; CHECK: Global variable: i from /somewhere/source.cpp:2 ('_ZN1s1iE')
 ; CHECK: Type: int DW_ATE_signed

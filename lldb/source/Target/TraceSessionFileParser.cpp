@@ -10,8 +10,11 @@
 
 #include <sstream>
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/ThreadTrace.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -87,6 +90,81 @@ std::string TraceSessionFileParser::BuildSchema(StringRef plugin_schema) {
   return schema_builder.str();
 }
 
+ThreadTraceSP TraceSessionFileParser::ParseThread(ProcessSP &process_sp,
+                                                  const JSONThread &thread) {
+  lldb::tid_t tid = static_cast<lldb::tid_t>(thread.tid);
+
+  FileSpec trace_file(thread.trace_file);
+  NormalizePath(trace_file);
+
+  ThreadTraceSP thread_sp =
+      std::make_shared<ThreadTrace>(*process_sp, tid, trace_file);
+  process_sp->GetThreadList().AddThread(thread_sp);
+  return thread_sp;
+}
+
+Expected<TraceSessionFileParser::ParsedProcess>
+TraceSessionFileParser::ParseProcess(const JSONProcess &process) {
+  TargetSP target_sp;
+  Status error = m_debugger.GetTargetList().CreateTarget(
+      m_debugger, /*user_exe_path*/ StringRef(), process.triple,
+      eLoadDependentsNo,
+      /*platform_options*/ nullptr, target_sp);
+
+  if (!target_sp)
+    return error.ToError();
+
+  ParsedProcess parsed_process;
+  parsed_process.target_sp = target_sp;
+
+  m_debugger.GetTargetList().SetSelectedTarget(target_sp.get());
+
+  ProcessSP process_sp = target_sp->CreateProcess(
+      /*listener*/ nullptr, "trace",
+      /*crash_file*/ nullptr);
+
+  process_sp->SetID(static_cast<lldb::pid_t>(process.pid));
+
+  for (const JSONThread &thread : process.threads)
+    parsed_process.threads.push_back(ParseThread(process_sp, thread));
+
+  for (const JSONModule &module : process.modules)
+    if (Error err = ParseModule(target_sp, module))
+      return std::move(err);
+
+  if (!process.threads.empty())
+    process_sp->GetThreadList().SetSelectedThreadByIndexID(0);
+
+  // We invoke DidAttach to create a correct stopped state for the process and
+  // its threads.
+  ArchSpec process_arch;
+  process_sp->DidAttach(process_arch);
+
+  return parsed_process;
+}
+
+Expected<std::vector<TraceSessionFileParser::ParsedProcess>>
+TraceSessionFileParser::ParseCommonSessionFile(
+    const JSONTraceSessionBase &session) {
+  std::vector<ParsedProcess> parsed_processes;
+
+  auto onError = [&]() {
+    // Delete all targets that were created so far in case of failures
+    for (ParsedProcess &parsed_process : parsed_processes)
+      m_debugger.GetTargetList().DeleteTarget(parsed_process.target_sp);
+  };
+
+  for (const JSONProcess &process : session.processes) {
+    if (Expected<ParsedProcess> parsed_process = ParseProcess(process))
+      parsed_processes.push_back(std::move(*parsed_process));
+    else {
+      onError();
+      return parsed_process.takeError();
+    }
+  }
+  return parsed_processes;
+}
+
 namespace llvm {
 namespace json {
 
@@ -127,6 +205,13 @@ bool fromJSON(const Value &value,
               Path path) {
   ObjectMapper o(value, path);
   return o && o.map("type", plugin_settings.type);
+}
+
+bool fromJSON(const Value &value,
+              TraceSessionFileParser::JSONTraceSessionBase &session,
+              Path path) {
+  ObjectMapper o(value, path);
+  return o && o.map("processes", session.processes);
 }
 
 } // namespace json

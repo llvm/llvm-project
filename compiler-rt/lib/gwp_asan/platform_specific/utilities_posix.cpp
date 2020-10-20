@@ -28,7 +28,7 @@ void Check(bool Condition, const char *Message) {
     android_set_abort_message(Message);
   abort();
 }
-#else  // __BIONIC__
+#else // __BIONIC__
 void Check(bool Condition, const char *Message) {
   if (Condition)
     return;
@@ -63,7 +63,7 @@ static size_t alignPowerOfTwo(size_t RealAllocationSize) {
 #ifdef __BIONIC__
 static constexpr AlignmentStrategy PlatformDefaultAlignment =
     AlignmentStrategy::BIONIC;
-#else  // __BIONIC__
+#else // __BIONIC__
 static constexpr AlignmentStrategy PlatformDefaultAlignment =
     AlignmentStrategy::POWER_OF_TWO;
 #endif // __BIONIC__

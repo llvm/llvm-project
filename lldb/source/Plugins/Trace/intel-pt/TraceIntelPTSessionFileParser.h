@@ -9,8 +9,6 @@
 #ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTSESSIONFILEPARSER_H
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTSESSIONFILEPARSER_H
 
-#include "intel-pt.h"
-
 #include "TraceIntelPT.h"
 #include "lldb/Target/TraceSessionFileParser.h"
 
@@ -38,8 +36,8 @@ public:
   TraceIntelPTSessionFileParser(Debugger &debugger,
                                 const llvm::json::Value &trace_session_file,
                                 llvm::StringRef session_file_dir)
-      : TraceSessionFileParser(session_file_dir, GetSchema()),
-        m_debugger(debugger), m_trace_session_file(trace_session_file) {}
+      : TraceSessionFileParser(debugger, session_file_dir, GetSchema()),
+        m_trace_session_file(trace_session_file) {}
 
   /// \return
   ///   The JSON schema for the session data.
@@ -53,24 +51,14 @@ public:
   ///   errors, return a null pointer.
   llvm::Expected<lldb::TraceSP> Parse();
 
+  lldb::TraceSP
+  CreateTraceIntelPTInstance(const pt_cpu &pt_cpu,
+                             std::vector<ParsedProcess> &parsed_processes);
+
 private:
-  llvm::Error ParseImpl();
+  pt_cpu ParsePTCPU(const JSONPTCPU &pt_cpu);
 
-  llvm::Error ParseProcess(const TraceSessionFileParser::JSONProcess &process);
-
-  void ParseThread(lldb::ProcessSP &process_sp,
-                   const TraceSessionFileParser::JSONThread &thread);
-
-  void ParsePTCPU(const JSONPTCPU &pt_cpu);
-
-  Debugger &m_debugger;
   const llvm::json::Value &m_trace_session_file;
-
-  /// Objects created as product of the parsing
-  /// \{
-  pt_cpu m_pt_cpu;
-  std::vector<lldb::TargetSP> m_targets;
-  /// \}
 };
 
 } // namespace trace_intel_pt

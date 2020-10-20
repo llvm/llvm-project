@@ -211,6 +211,10 @@ MlirOperation mlirOperationCreate(const MlirOperationState *state) {
 
 void mlirOperationDestroy(MlirOperation op) { unwrap(op)->erase(); }
 
+int mlirOperationEqual(MlirOperation op, MlirOperation other) {
+  return unwrap(op) == unwrap(other);
+}
+
 intptr_t mlirOperationGetNumRegions(MlirOperation op) {
   return static_cast<intptr_t>(unwrap(op)->getNumRegions());
 }
@@ -343,6 +347,10 @@ MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType *args) {
   return wrap(b);
 }
 
+int mlirBlockEqual(MlirBlock block, MlirBlock other) {
+  return unwrap(block) == unwrap(other);
+}
+
 MlirBlock mlirBlockGetNextInRegion(MlirBlock block) {
   return wrap(unwrap(block)->getNextNode());
 }
@@ -411,6 +419,36 @@ void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
 /* ========================================================================== */
 /* Value API.                                                                 */
 /* ========================================================================== */
+
+int mlirValueIsABlockArgument(MlirValue value) {
+  return unwrap(value).isa<BlockArgument>();
+}
+
+int mlirValueIsAOpResult(MlirValue value) {
+  return unwrap(value).isa<OpResult>();
+}
+
+MlirBlock mlirBlockArgumentGetOwner(MlirValue value) {
+  return wrap(unwrap(value).cast<BlockArgument>().getOwner());
+}
+
+intptr_t mlirBlockArgumentGetArgNumber(MlirValue value) {
+  return static_cast<intptr_t>(
+      unwrap(value).cast<BlockArgument>().getArgNumber());
+}
+
+void mlirBlockArgumentSetType(MlirValue value, MlirType type) {
+  unwrap(value).cast<BlockArgument>().setType(unwrap(type));
+}
+
+MlirOperation mlirOpResultGetOwner(MlirValue value) {
+  return wrap(unwrap(value).cast<OpResult>().getOwner());
+}
+
+intptr_t mlirOpResultGetResultNumber(MlirValue value) {
+  return static_cast<intptr_t>(
+      unwrap(value).cast<OpResult>().getResultNumber());
+}
 
 MlirType mlirValueGetType(MlirValue value) {
   return wrap(unwrap(value).getType());

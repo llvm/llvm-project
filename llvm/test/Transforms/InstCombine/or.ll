@@ -376,6 +376,79 @@ define i1 @test36(i32 %x) {
   ret i1 %ret2
 }
 
+define i1 @test37(i32 %x) {
+; CHECK-LABEL: @test37(
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[ADD1]], 31
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %add1 = add i32 %x, 7
+  %cmp1 = icmp ult i32 %add1, 30
+  %cmp2 = icmp eq i32 %x, 23
+  %ret1 = or i1 %cmp1, %cmp2
+  ret i1 %ret1
+}
+
+define <2 x i1> @test37_uniform(<2 x i32> %x) {
+; CHECK-LABEL: @test37_uniform(
+; CHECK-NEXT:    [[ADD1:%.*]] = add <2 x i32> [[X:%.*]], <i32 7, i32 7>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[ADD1]], <i32 30, i32 30>
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i32> [[X]], <i32 23, i32 23>
+; CHECK-NEXT:    [[RET1:%.*]] = or <2 x i1> [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[RET1]]
+;
+  %add1 = add <2 x i32> %x, <i32 7, i32 7>
+  %cmp1 = icmp ult <2 x i32> %add1, <i32 30, i32 30>
+  %cmp2 = icmp eq <2 x i32> %x, <i32 23, i32 23>
+  %ret1 = or <2 x i1> %cmp1, %cmp2
+  ret <2 x i1> %ret1
+}
+
+define <2 x i1> @test37_undef(<2 x i32> %x) {
+; CHECK-LABEL: @test37_undef(
+; CHECK-NEXT:    [[ADD1:%.*]] = add <2 x i32> [[X:%.*]], <i32 7, i32 undef>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[ADD1]], <i32 30, i32 undef>
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq <2 x i32> [[X]], <i32 23, i32 undef>
+; CHECK-NEXT:    [[RET1:%.*]] = or <2 x i1> [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[RET1]]
+;
+  %add1 = add <2 x i32> %x, <i32 7, i32 undef>
+  %cmp1 = icmp ult <2 x i32> %add1, <i32 30, i32 undef>
+  %cmp2 = icmp eq <2 x i32> %x, <i32 23, i32 undef>
+  %ret1 = or <2 x i1> %cmp1, %cmp2
+  ret <2 x i1> %ret1
+}
+
+define i1 @test38(i32 %x) {
+; CHECK-LABEL: @test38(
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X]], 23
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[ADD1]], 30
+; CHECK-NEXT:    [[RET1:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RET1]]
+;
+  %add1 = add i32 %x, 7
+  %cmp1 = icmp eq i32 %x, 23
+  %cmp2 = icmp ult i32 %add1, 30
+  %ret1 = or i1 %cmp1, %cmp2
+  ret i1 %ret1
+}
+
+define <2 x i1> @test38_nonuniform(<2 x i32> %x) {
+; CHECK-LABEL: @test38_nonuniform(
+; CHECK-NEXT:    [[ADD1:%.*]] = add <2 x i32> [[X:%.*]], <i32 7, i32 24>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq <2 x i32> [[X]], <i32 23, i32 8>
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult <2 x i32> [[ADD1]], <i32 30, i32 32>
+; CHECK-NEXT:    [[RET1:%.*]] = or <2 x i1> [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret <2 x i1> [[RET1]]
+;
+  %add1 = add <2 x i32> %x, <i32 7, i32 24>
+  %cmp1 = icmp eq <2 x i32> %x, <i32 23, i32 8>
+  %cmp2 = icmp ult <2 x i32> %add1, <i32 30, i32 32>
+  %ret1 = or <2 x i1> %cmp1, %cmp2
+  ret <2 x i1> %ret1
+}
+
 define i32 @orsext_to_sel(i32 %x, i1 %y) {
 ; CHECK-LABEL: @orsext_to_sel(
 ; CHECK-NEXT:    [[OR:%.*]] = select i1 [[Y:%.*]], i32 -1, i32 [[X:%.*]]
@@ -577,12 +650,10 @@ define i1 @test46(i8 signext %c)  {
 
 define <2 x i1> @test46_uniform(<2 x i8> %c)  {
 ; CHECK-LABEL: @test46_uniform(
-; CHECK-NEXT:    [[C_OFF:%.*]] = add <2 x i8> [[C:%.*]], <i8 -97, i8 -97>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i8> [[C_OFF]], <i8 26, i8 26>
-; CHECK-NEXT:    [[C_OFF17:%.*]] = add <2 x i8> [[C]], <i8 -65, i8 -65>
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult <2 x i8> [[C_OFF17]], <i8 26, i8 26>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[C:%.*]], <i8 -33, i8 -33>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i8> [[TMP1]], <i8 -65, i8 -65>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <2 x i8> [[TMP2]], <i8 26, i8 26>
+; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
 ;
   %c.off = add <2 x i8> %c, <i8 -97, i8 -97>
   %cmp1 = icmp ult <2 x i8> %c.off, <i8 26, i8 26>

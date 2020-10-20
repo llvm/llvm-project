@@ -136,8 +136,8 @@ void run()
     static_assert(std::atomic<std::nullptr_t>::is_always_lock_free == (2 == ATOMIC_POINTER_LOCK_FREE), "");
 
 #if TEST_STD_VER >= 20
-    static_assert(std::atomic<std::atomic_signed_lock_free>::is_always_lock_free, "");
-    static_assert(std::atomic<std::atomic_unsigned_lock_free>::is_always_lock_free, "");
+    static_assert(std::atomic_signed_lock_free::is_always_lock_free, "");
+    static_assert(std::atomic_unsigned_lock_free::is_always_lock_free, "");
 #endif
 }
 

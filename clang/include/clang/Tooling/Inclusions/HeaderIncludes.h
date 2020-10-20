@@ -40,8 +40,6 @@ private:
   const IncludeStyle Style;
   bool IsMainFile;
   std::string FileName;
-  // This refers to a substring in FileName.
-  StringRef FileStem;
   SmallVector<llvm::Regex, 4> CategoryRegexs;
 };
 

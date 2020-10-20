@@ -1309,6 +1309,9 @@ bool LLParser::ParseFnAttributeValuePairs(AttrBuilder &B,
     case lltok::kw_inlinehint: B.addAttribute(Attribute::InlineHint); break;
     case lltok::kw_jumptable: B.addAttribute(Attribute::JumpTable); break;
     case lltok::kw_minsize: B.addAttribute(Attribute::MinSize); break;
+    case lltok::kw_mustprogress:
+      B.addAttribute(Attribute::MustProgress);
+      break;
     case lltok::kw_naked: B.addAttribute(Attribute::Naked); break;
     case lltok::kw_nobuiltin: B.addAttribute(Attribute::NoBuiltin); break;
     case lltok::kw_noduplicate: B.addAttribute(Attribute::NoDuplicate); break;
@@ -1724,6 +1727,7 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
     case lltok::kw_inlinehint:
     case lltok::kw_jumptable:
     case lltok::kw_minsize:
+    case lltok::kw_mustprogress:
     case lltok::kw_naked:
     case lltok::kw_nobuiltin:
     case lltok::kw_noduplicate:
@@ -1828,6 +1832,7 @@ bool LLParser::ParseOptionalReturnAttrs(AttrBuilder &B) {
     case lltok::kw_inlinehint:
     case lltok::kw_jumptable:
     case lltok::kw_minsize:
+    case lltok::kw_mustprogress:
     case lltok::kw_naked:
     case lltok::kw_nobuiltin:
     case lltok::kw_noduplicate:

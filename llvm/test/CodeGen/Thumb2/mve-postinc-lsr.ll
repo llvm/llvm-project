@@ -257,13 +257,13 @@ define i8* @test(i8* nocapture readonly %input_row, i8* nocapture readonly %inpu
 ; CHECK-NEXT:    ldr r3, [sp, #64]
 ; CHECK-NEXT:    mov r6, r12
 ; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    mov r10, r12
 ; CHECK-NEXT:    mla r7, r11, r3, r1
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r4, r3, [sp] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r8, r12
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB2_7: @ %for.body24
 ; CHECK-NEXT:    @ Parent Loop BB2_5 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
@@ -425,13 +425,13 @@ define i8* @test_optsize(i8* nocapture readonly %input_row, i8* nocapture readon
 ; CHECK-NEXT:    ldr r3, [sp, #64]
 ; CHECK-NEXT:    mov r6, r12
 ; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    mov r10, r12
 ; CHECK-NEXT:    mla r7, r11, r3, r1
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r4, r3, [sp] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r8, r12
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB3_5: @ %for.body24
 ; CHECK-NEXT:    @ Parent Loop BB3_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
@@ -735,13 +735,13 @@ define i8* @signext(i8* %input_row, i8* %input_col, i16 zeroext %output_ch, i16 
 ; CHECK-NEXT:    ldr.w r11, [sp, #88]
 ; CHECK-NEXT:    mov r6, r12
 ; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    dlstp.16 lr, r11
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    mov r10, r12
 ; CHECK-NEXT:    mla r3, r9, r11, r0
 ; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r7, r0, [sp] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r8, r12
-; CHECK-NEXT:    dlstp.16 lr, r11
 ; CHECK-NEXT:  .LBB5_7: @ %for.body24
 ; CHECK-NEXT:    @ Parent Loop BB5_5 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
@@ -907,13 +907,13 @@ define i8* @signext_optsize(i8* %input_row, i8* %input_col, i16 zeroext %output_
 ; CHECK-NEXT:    ldr.w r11, [sp, #88]
 ; CHECK-NEXT:    mov r6, r12
 ; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    dlstp.16 lr, r11
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    mov r10, r12
 ; CHECK-NEXT:    mla r3, r9, r11, r0
 ; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r7, r0, [sp] @ 8-byte Folded Reload
 ; CHECK-NEXT:    mov r8, r12
-; CHECK-NEXT:    dlstp.16 lr, r11
 ; CHECK-NEXT:  .LBB6_5: @ %for.body24
 ; CHECK-NEXT:    @ Parent Loop BB6_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
@@ -1120,6 +1120,7 @@ define arm_aapcs_vfpcc void @_Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cf
 ; CHECK-NEXT:    ldr.w r1, [r1, r10, lsl #2]
 ; CHECK-NEXT:    ldrd r6, r7, [r0, #32]
 ; CHECK-NEXT:    ldr.w r3, [r3, r10, lsl #2]
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    add.w r6, r6, r2, lsl #2
 ; CHECK-NEXT:    add.w r12, r12, r1, lsl #2
 ; CHECK-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
@@ -1128,7 +1129,6 @@ define arm_aapcs_vfpcc void @_Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cf
 ; CHECK-NEXT:    add.w r1, r2, r11, lsl #2
 ; CHECK-NEXT:    add.w r8, r1, r11, lsl #2
 ; CHECK-NEXT:    add.w r9, r8, r11, lsl #2
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB7_7: @ Parent Loop BB7_3 Depth=1
 ; CHECK-NEXT:    @ Parent Loop BB7_6 Depth=2
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3

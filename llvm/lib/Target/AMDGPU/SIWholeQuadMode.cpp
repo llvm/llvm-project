@@ -1285,9 +1285,6 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool isEntry) {
       if (MI.isTerminator() && OutNeeds == StateExact)
         Needs = StateExact;
 
-      if (MI.getOpcode() == AMDGPU::SI_ELSE && BI.OutNeeds == StateExact)
-        MI.getOperand(3).setImm(1);
-
       ++Next;
     } else {
       // End of basic block

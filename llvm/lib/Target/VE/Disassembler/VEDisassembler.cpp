@@ -47,7 +47,7 @@ static MCDisassembler *createVEDisassembler(const Target &T,
   return new VEDisassembler(STI, Ctx);
 }
 
-extern "C" void LLVMInitializeVEDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheVETarget(),
                                          createVEDisassembler);

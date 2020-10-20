@@ -60,9 +60,9 @@ TEST_CASE(basic_test) {
   path relative_cwd = cwd.native().substr(1);
   // clang-format off
   struct {
-    std::string input;
-    std::string base;
-    std::string expect;
+    fs::path input;
+    fs::path base;
+    fs::path expect;
   } TestCases[] = {
       {"", "", "."},
       {cwd, "a", ".."},
@@ -100,18 +100,19 @@ TEST_CASE(basic_test) {
     const fs::path output = fs::proximate(p, TC.base, ec);
     if (ec) {
       TEST_CHECK(!ec);
-      std::printf("TEST CASE #%d FAILED:\n"
+      std::fprintf(stderr, "TEST CASE #%d FAILED:\n"
                   "  Input: '%s'\n"
                   "  Base: '%s'\n"
                   "  Expected: '%s'\n",
-        ID, TC.input.c_str(), TC.base.c_str(), TC.expect.c_str());
+        ID, TC.input.string().c_str(), TC.base.string().c_str(),
+        TC.expect.string().c_str());
     } else if (!PathEq(output, TC.expect)) {
       TEST_CHECK(PathEq(output, TC.expect));
 
       const path canon_input = fs::weakly_canonical(TC.input);
       const path canon_base = fs::weakly_canonical(TC.base);
       const path lexically_p = canon_input.lexically_proximate(canon_base);
-      std::printf("TEST CASE #%d FAILED:\n"
+      std::fprintf(stderr, "TEST CASE #%d FAILED:\n"
                   "  Input: '%s'\n"
                   "  Base: '%s'\n"
                   "  Expected: '%s'\n"
@@ -119,9 +120,10 @@ TEST_CASE(basic_test) {
                   "  Lex Prox: '%s'\n"
                   "  Canon Input: '%s'\n"
                   "  Canon Base: '%s'\n",
-        ID, TC.input.c_str(), TC.base.c_str(), TC.expect.c_str(),
-        output.native().c_str(), lexically_p.native().c_str(),
-        canon_input.c_str(), canon_base.c_str());
+        ID, TC.input.string().c_str(), TC.base.string().c_str(),
+        TC.expect.string().c_str(), output.string().c_str(),
+        lexically_p.string().c_str(), canon_input.string().c_str(),
+        canon_base.string().c_str());
     }
   }
 }

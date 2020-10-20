@@ -622,6 +622,13 @@ public:
     addFnAttr(Attribute::NoRecurse);
   }
 
+  /// Determine if the function is required to make forward progress.
+  bool mustProgress() const {
+    return hasFnAttribute(Attribute::MustProgress) ||
+           hasFnAttribute(Attribute::WillReturn);
+  }
+  void setMustProgress() { addFnAttr(Attribute::MustProgress); }
+
   /// True if the ABI mandates (or the user requested) that this
   /// function be in a unwind table.
   bool hasUWTable() const {

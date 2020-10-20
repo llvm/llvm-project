@@ -55,8 +55,8 @@
 #include "verbose_assert.h"
 
 struct ComparePathExact {
-  bool operator()(std::string const& LHS, std::string const& RHS) const {
-    return LHS == RHS;
+  bool operator()(fs::path const& LHS, std::string const& RHS) const {
+    return LHS.string() == RHS;
   }
 };
 

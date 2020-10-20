@@ -29,8 +29,8 @@ int main(int, char**) {
 
   // clang-format off
   struct {
-    std::string input;
-    std::string expect;
+    fs::path input;
+    fs::path expect;
   } TestCases[] = {
       {"", fs::current_path()},
       {".", fs::current_path()},
@@ -65,11 +65,12 @@ int main(int, char**) {
     const fs::path output = fs::weakly_canonical(p);
     if (!PathEq(output, TC.expect)) {
       Failed = true;
-      std::printf("TEST CASE #%d FAILED:\n"
+      std::fprintf(stderr, "TEST CASE #%d FAILED:\n"
                   "  Input: '%s'\n"
                   "  Expected: '%s'\n"
                   "  Output: '%s'\n",
-        ID, TC.input.c_str(), TC.expect.c_str(), output.native().c_str());
+        ID, TC.input.string().c_str(), TC.expect.string().c_str(),
+        output.string().c_str());
     }
   }
   return Failed;

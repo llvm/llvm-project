@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef GWP_ASAN_UTILITIES_H_
+#define GWP_ASAN_UTILITIES_H_
+
 #include "gwp_asan/definitions.h"
 
 #include <stddef.h>
@@ -29,3 +32,5 @@ size_t rightAlignedAllocationSize(
     size_t RealAllocationSize,
     AlignmentStrategy Align = AlignmentStrategy::DEFAULT);
 } // namespace gwp_asan
+
+#endif // GWP_ASAN_UTILITIES_H_

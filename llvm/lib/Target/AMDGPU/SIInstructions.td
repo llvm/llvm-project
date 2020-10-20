@@ -327,7 +327,7 @@ def SI_IF: CFPseudoInstSI <
 
 def SI_ELSE : CFPseudoInstSI <
   (outs SReg_1:$dst),
-  (ins SReg_1:$src, brtarget:$target, i1imm:$execfix), [], 1, 1> {
+  (ins SReg_1:$src, brtarget:$target), [], 1, 1> {
   let Size = 12;
   let hasSideEffects = 1;
 }
@@ -772,7 +772,7 @@ def : GCNPat<
 
 def : GCNPat<
   (AMDGPUelse i1:$src, bb:$target),
-  (SI_ELSE $src, $target, 0)
+  (SI_ELSE $src, $target)
 >;
 
 def : Pat <

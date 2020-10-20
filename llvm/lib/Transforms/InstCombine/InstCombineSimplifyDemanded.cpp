@@ -339,7 +339,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     // we can. This helps not break apart (or helps put back together)
     // canonical patterns like min and max.
     auto CanonicalizeSelectConstant = [](Instruction *I, unsigned OpNo,
-                                         APInt DemandedMask) {
+                                         const APInt &DemandedMask) {
       const APInt *SelC;
       if (!match(I->getOperand(OpNo), m_APInt(SelC)))
         return false;

@@ -2236,8 +2236,8 @@ template<typename T> static int costAndCollectOperands(
   };
 
   switch (S->getSCEVType()) {
-  default:
-    llvm_unreachable("No other scev expressions possible.");
+  case scCouldNotCompute:
+    llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
   case scUnknown:
   case scConstant:
     return 0;
@@ -2345,31 +2345,37 @@ bool SCEVExpander::isHighCostExpansionHelper(
   if (getRelatedExistingExpansion(S, &At, L))
     return false; // Consider the expression to be free.
 
-  // Assume to be zero-cost.
-  if (isa<SCEVUnknown>(S))
-    return false;
-
   TargetTransformInfo::TargetCostKind CostKind =
-    L->getHeader()->getParent()->hasMinSize()
-    ? TargetTransformInfo::TCK_CodeSize
-    : TargetTransformInfo::TCK_RecipThroughput;
+      L->getHeader()->getParent()->hasMinSize()
+          ? TargetTransformInfo::TCK_CodeSize
+          : TargetTransformInfo::TCK_RecipThroughput;
 
-  if (auto *Constant = dyn_cast<SCEVConstant>(S)) {
+  switch (S->getSCEVType()) {
+  case scCouldNotCompute:
+    llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
+  case scUnknown:
+    // Assume to be zero-cost.
+    return false;
+  case scConstant: {
+    auto *Constant = dyn_cast<SCEVConstant>(S);
     // Only evalulate the costs of constants when optimizing for size.
     if (CostKind != TargetTransformInfo::TCK_CodeSize)
       return 0;
     const APInt &Imm = Constant->getAPInt();
     Type *Ty = S->getType();
-    BudgetRemaining -=
-      TTI.getIntImmCostInst(WorkItem.ParentOpcode, WorkItem.OperandIdx,
-                            Imm, Ty, CostKind);
+    BudgetRemaining -= TTI.getIntImmCostInst(
+        WorkItem.ParentOpcode, WorkItem.OperandIdx, Imm, Ty, CostKind);
     return BudgetRemaining < 0;
-  } else if (isa<SCEVIntegralCastExpr>(S)) {
+  }
+  case scTruncate:
+  case scZeroExtend:
+  case scSignExtend: {
     int Cost = costAndCollectOperands<SCEVIntegralCastExpr>(WorkItem, TTI,
                                                             CostKind, Worklist);
     BudgetRemaining -= Cost;
     return false; // Will answer upon next entry into this function.
-  } else if (isa<SCEVUDivExpr>(S)) {
+  }
+  case scUDivExpr: {
     // UDivExpr is very likely a UDiv that ScalarEvolution's HowFarToZero or
     // HowManyLessThans produced to compute a precise expression, rather than a
     // UDiv from the user's code. If we can't find a UDiv in the code with some
@@ -2383,27 +2389,35 @@ bool SCEVExpander::isHighCostExpansionHelper(
       return false; // Consider it to be free.
 
     int Cost =
-      costAndCollectOperands<SCEVUDivExpr>(WorkItem, TTI, CostKind, Worklist);
+        costAndCollectOperands<SCEVUDivExpr>(WorkItem, TTI, CostKind, Worklist);
     // Need to count the cost of this UDiv.
     BudgetRemaining -= Cost;
     return false; // Will answer upon next entry into this function.
-  } else if (const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(S)) {
-    assert(NAry->getNumOperands() > 1 &&
+  }
+  case scAddExpr:
+  case scMulExpr:
+  case scUMaxExpr:
+  case scSMaxExpr:
+  case scUMinExpr:
+  case scSMinExpr: {
+    assert(dyn_cast<SCEVNAryExpr>(S)->getNumOperands() > 1 &&
            "Nary expr should have more than 1 operand.");
     // The simple nary expr will require one less op (or pair of ops)
     // than the number of it's terms.
     int Cost =
-      costAndCollectOperands<SCEVNAryExpr>(WorkItem, TTI, CostKind, Worklist);
+        costAndCollectOperands<SCEVNAryExpr>(WorkItem, TTI, CostKind, Worklist);
     BudgetRemaining -= Cost;
     return BudgetRemaining < 0;
-  } else if (isa<SCEVAddRecExpr>(S)) {
+  }
+  case scAddRecExpr: {
     assert(cast<SCEVAddRecExpr>(S)->getNumOperands() >= 2 &&
            "Polynomial should be at least linear");
     BudgetRemaining -= costAndCollectOperands<SCEVAddRecExpr>(
-      WorkItem, TTI, CostKind, Worklist);
+        WorkItem, TTI, CostKind, Worklist);
     return BudgetRemaining < 0;
-  } else
-    llvm_unreachable("No other scev expressions possible.");
+  }
+  }
+  llvm_unreachable("Unknown SCEV kind!");
 }
 
 Value *SCEVExpander::expandCodeForPredicate(const SCEVPredicate *Pred,

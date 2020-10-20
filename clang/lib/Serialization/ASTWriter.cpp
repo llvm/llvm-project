@@ -4980,13 +4980,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         const VarDecl *VD = cast<VarDecl>(D);
         Record.push_back(VD->isInline());
         Record.push_back(VD->isInlineSpecified());
-        if (VD->getInit()) {
-          Record.push_back(!VD->isInitKnownICE() ? 1
-                                                 : (VD->isInitICE() ? 3 : 2));
-          Record.AddStmt(const_cast<Expr*>(VD->getInit()));
-        } else {
-          Record.push_back(0);
-        }
+        Record.AddVarDeclInit(VD);
         break;
       }
 
@@ -5744,6 +5738,23 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
       }
     }
   }
+}
+
+void ASTRecordWriter::AddVarDeclInit(const VarDecl *VD) {
+  const Expr *Init = VD->getInit();
+  if (!Init) {
+    push_back(0);
+    return;
+  }
+
+  unsigned Val = 1;
+  if (EvaluatedStmt *ES = VD->getEvaluatedStmt()) {
+    Val |= (ES->HasConstantInitialization ? 2 : 0);
+    Val |= (ES->HasConstantDestruction ? 4 : 0);
+    // FIXME: Also emit the constant initializer value.
+  }
+  push_back(Val);
+  writeStmtRef(Init);
 }
 
 void ASTWriter::ReaderInitialized(ASTReader *Reader) {

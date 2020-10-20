@@ -9,7 +9,6 @@
 #include "clang/Format/Format.h"
 
 #include "../Tooling/ReplacementTest.h"
-#include "../Tooling/RewriterTestContext.h"
 #include "clang/Tooling/Core/Replacement.h"
 
 #include "gtest/gtest.h"

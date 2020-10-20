@@ -26,7 +26,7 @@ define i32 @t(i32 %a) {
 ; CHECK-ALL: declare i32 @llvm.uadd.sat.i32(i32, i32) #0
 declare i32 @llvm.uadd.sat.i32(i32, i32) #0
 
-; CHECK-ALL: attributes #0 = { nounwind readnone speculatable willreturn }
+; CHECK-ALL: attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }
 
 ; CHECK-INTERESTINGNESS: attributes #1 = {
 ; CHECK-INTERESTINGNESS-SAME: "arg4"

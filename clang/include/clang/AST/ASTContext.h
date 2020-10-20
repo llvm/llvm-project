@@ -573,7 +573,7 @@ private:
   mutable llvm::BumpPtrAllocator BumpAlloc;
 
   /// Allocator for partial diagnostics.
-  PartialDiagnostic::StorageAllocator DiagAllocator;
+  PartialDiagnostic::DiagStorageAllocator DiagAllocator;
 
   /// The current C++ ABI.
   std::unique_ptr<CXXABI> ABI;
@@ -652,7 +652,7 @@ public:
   /// Return the total memory used for various side tables.
   size_t getSideTableAllocatedMemory() const;
 
-  PartialDiagnostic::StorageAllocator &getDiagAllocator() {
+  PartialDiagnostic::DiagStorageAllocator &getDiagAllocator() {
     return DiagAllocator;
   }
 
@@ -3096,8 +3096,8 @@ private:
 };
 
 /// Insertion operator for diagnostics.
-const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                    const ASTContext::SectionInfo &Section);
+const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                      const ASTContext::SectionInfo &Section);
 
 /// Utility function for constructing a nullary selector.
 inline Selector GetNullarySelector(StringRef name, ASTContext &Ctx) {

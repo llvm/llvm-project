@@ -13217,10 +13217,11 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   const TargetOptions &Options = DAG.getTarget().Options;
+  // FMA nodes have flags that propagate to the created nodes.
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
 
-  // FMA nodes have flags that propagate to the created nodes.
-  bool UnsafeFPMath = Options.UnsafeFPMath || isContractable(N);
+  bool UnsafeFPMath =
+      Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
 
   // Constant fold FMA.
   if (isa<ConstantFPSDNode>(N0) &&

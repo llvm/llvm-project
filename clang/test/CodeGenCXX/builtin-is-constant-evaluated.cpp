@@ -63,9 +63,9 @@ CONSTINIT int b = __builtin_is_constant_evaluated() ? 2 : y; // static initializ
 // CHECK-DYN-NEXT: store i32 %add, i32* @c,
 int c = y + (__builtin_is_constant_evaluated() ? 2 : y); // dynamic initialization to y+y
 
-// CHECK-DYN-LABEL: define internal void @__cxx_global_var_init.2()
-// CHECK-DYN: store i32 1, i32* @_ZL1a, align 4
-// CHECK-DYN-NEXT: ret void
+// This is dynamic initialization that we can convert to static initialization
+// during lowering. When doing so, the dynamic initializer value is preserved.
+// CHECK-STATIC-DAG: @_ZL1a = internal constant i32 1
 const int a = __builtin_is_constant_evaluated() ? y : 1; // dynamic initialization to 1
 const int *a_sink = &a;
 

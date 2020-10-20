@@ -147,7 +147,7 @@ def action_dump(name, args):
             suffix = hmap.get_string(suffix_idx)
 
             print ("  bucket[%d]: %r -> (%r, %r) -- %d" % (
-                i, key, prefix, suffix, (hmap_hash(key) & (num_buckets - 1))))
+                i, key, prefix, suffix, (hmap_hash(key) & (len(hmap.buckets) - 1))))
     else:
         mappings = sorted(hmap.mappings)
         for key,value in mappings:

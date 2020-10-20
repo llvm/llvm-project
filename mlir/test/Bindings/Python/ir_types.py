@@ -135,7 +135,7 @@ run(testIntegerType)
 def testIndexType():
   ctx = mlir.ir.Context()
   # CHECK: index type: index
-  print("index type:", mlir.ir.IndexType(ctx))
+  print("index type:", mlir.ir.IndexType.get(ctx))
 
 run(testIndexType)
 
@@ -143,13 +143,13 @@ run(testIndexType)
 def testFloatType():
   ctx = mlir.ir.Context()
   # CHECK: float: bf16
-  print("float:", mlir.ir.BF16Type(ctx))
+  print("float:", mlir.ir.BF16Type.get(ctx))
   # CHECK: float: f16
-  print("float:", mlir.ir.F16Type(ctx))
+  print("float:", mlir.ir.F16Type.get(ctx))
   # CHECK: float: f32
-  print("float:", mlir.ir.F32Type(ctx))
+  print("float:", mlir.ir.F32Type.get(ctx))
   # CHECK: float: f64
-  print("float:", mlir.ir.F64Type(ctx))
+  print("float:", mlir.ir.F64Type.get(ctx))
 
 run(testFloatType)
 
@@ -157,7 +157,7 @@ run(testFloatType)
 def testNoneType():
   ctx = mlir.ir.Context()
   # CHECK: none type: none
-  print("none type:", mlir.ir.NoneType(ctx))
+  print("none type:", mlir.ir.NoneType.get(ctx))
 
 run(testNoneType)
 
@@ -168,13 +168,13 @@ def testComplexType():
   # CHECK: complex type element: i32
   print("complex type element:", complex_i32.element_type)
 
-  f32 = mlir.ir.F32Type(ctx)
+  f32 = mlir.ir.F32Type.get(ctx)
   # CHECK: complex type: complex<f32>
-  print("complex type:", mlir.ir.ComplexType.get_complex(f32))
+  print("complex type:", mlir.ir.ComplexType.get(f32))
 
-  index = mlir.ir.IndexType(ctx)
+  index = mlir.ir.IndexType.get(ctx)
   try:
-    complex_invalid = mlir.ir.ComplexType.get_complex(index)
+    complex_invalid = mlir.ir.ComplexType.get(index)
   except ValueError as e:
     # CHECK: invalid 'Type(index)' and expected floating point or integer type.
     print(e)
@@ -225,15 +225,15 @@ run(testAbstractShapedType)
 # CHECK-LABEL: TEST: testVectorType
 def testVectorType():
   ctx = mlir.ir.Context()
-  f32 = mlir.ir.F32Type(ctx)
+  f32 = mlir.ir.F32Type.get(ctx)
   shape = [2, 3]
   loc = ctx.get_unknown_location()
   # CHECK: vector type: vector<2x3xf32>
-  print("vector type:", mlir.ir.VectorType.get_vector(shape, f32, loc))
+  print("vector type:", mlir.ir.VectorType.get(shape, f32, loc))
 
-  none = mlir.ir.NoneType(ctx)
+  none = mlir.ir.NoneType.get(ctx)
   try:
-    vector_invalid = mlir.ir.VectorType.get_vector(shape, none, loc)
+    vector_invalid = mlir.ir.VectorType.get(shape, none, loc)
   except ValueError as e:
     # CHECK: invalid 'Type(none)' and expected floating point or integer type.
     print(e)
@@ -245,17 +245,16 @@ run(testVectorType)
 # CHECK-LABEL: TEST: testRankedTensorType
 def testRankedTensorType():
   ctx = mlir.ir.Context()
-  f32 = mlir.ir.F32Type(ctx)
+  f32 = mlir.ir.F32Type.get(ctx)
   shape = [2, 3]
   loc = ctx.get_unknown_location()
   # CHECK: ranked tensor type: tensor<2x3xf32>
   print("ranked tensor type:",
-        mlir.ir.RankedTensorType.get_ranked_tensor(shape, f32, loc))
+        mlir.ir.RankedTensorType.get(shape, f32, loc))
 
-  none = mlir.ir.NoneType(ctx)
+  none = mlir.ir.NoneType.get(ctx)
   try:
-    tensor_invalid = mlir.ir.RankedTensorType.get_ranked_tensor(shape, none,
-                                                                loc)
+    tensor_invalid = mlir.ir.RankedTensorType.get(shape, none, loc)
   except ValueError as e:
     # CHECK: invalid 'Type(none)' and expected floating point, integer, vector
     # CHECK: or complex type.
@@ -268,9 +267,9 @@ run(testRankedTensorType)
 # CHECK-LABEL: TEST: testUnrankedTensorType
 def testUnrankedTensorType():
   ctx = mlir.ir.Context()
-  f32 = mlir.ir.F32Type(ctx)
+  f32 = mlir.ir.F32Type.get(ctx)
   loc = ctx.get_unknown_location()
-  unranked_tensor = mlir.ir.UnrankedTensorType.get_unranked_tensor(f32, loc)
+  unranked_tensor = mlir.ir.UnrankedTensorType.get(f32, loc)
   # CHECK: unranked tensor type: tensor<*xf32>
   print("unranked tensor type:", unranked_tensor)
   try:
@@ -295,9 +294,9 @@ def testUnrankedTensorType():
   else:
     print("Exception not produced")
 
-  none = mlir.ir.NoneType(ctx)
+  none = mlir.ir.NoneType.get(ctx)
   try:
-    tensor_invalid = mlir.ir.UnrankedTensorType.get_unranked_tensor(none, loc)
+    tensor_invalid = mlir.ir.UnrankedTensorType.get(none, loc)
   except ValueError as e:
     # CHECK: invalid 'Type(none)' and expected floating point, integer, vector
     # CHECK: or complex type.
@@ -310,7 +309,7 @@ run(testUnrankedTensorType)
 # CHECK-LABEL: TEST: testMemRefType
 def testMemRefType():
   ctx = mlir.ir.Context()
-  f32 = mlir.ir.F32Type(ctx)
+  f32 = mlir.ir.F32Type.get(ctx)
   shape = [2, 3]
   loc = ctx.get_unknown_location()
   memref = mlir.ir.MemRefType.get_contiguous_memref(f32, shape, 2, loc)
@@ -321,7 +320,7 @@ def testMemRefType():
   # CHECK: memory space: 2
   print("memory space:", memref.memory_space)
 
-  none = mlir.ir.NoneType(ctx)
+  none = mlir.ir.NoneType.get(ctx)
   try:
     memref_invalid = mlir.ir.MemRefType.get_contiguous_memref(none, shape, 2,
                                                               loc)
@@ -337,9 +336,9 @@ run(testMemRefType)
 # CHECK-LABEL: TEST: testUnrankedMemRefType
 def testUnrankedMemRefType():
   ctx = mlir.ir.Context()
-  f32 = mlir.ir.F32Type(ctx)
+  f32 = mlir.ir.F32Type.get(ctx)
   loc = ctx.get_unknown_location()
-  unranked_memref = mlir.ir.UnrankedMemRefType.get_unranked_memref(f32, 2, loc)
+  unranked_memref = mlir.ir.UnrankedMemRefType.get(f32, 2, loc)
   # CHECK: unranked memref type: memref<*xf32, 2>
   print("unranked memref type:", unranked_memref)
   try:
@@ -364,10 +363,9 @@ def testUnrankedMemRefType():
   else:
     print("Exception not produced")
 
-  none = mlir.ir.NoneType(ctx)
+  none = mlir.ir.NoneType.get(ctx)
   try:
-    memref_invalid = mlir.ir.UnrankedMemRefType.get_unranked_memref(none, 2,
-                                                                    loc)
+    memref_invalid = mlir.ir.UnrankedMemRefType.get(none, 2, loc)
   except ValueError as e:
     # CHECK: invalid 'Type(none)' and expected floating point, integer, vector
     # CHECK: or complex type.
@@ -381,7 +379,7 @@ run(testUnrankedMemRefType)
 def testTupleType():
   ctx = mlir.ir.Context()
   i32 = mlir.ir.IntegerType(ctx.parse_type("i32"))
-  f32 = mlir.ir.F32Type(ctx)
+  f32 = mlir.ir.F32Type.get(ctx)
   vector = mlir.ir.VectorType(ctx.parse_type("vector<2x3xf32>"))
   l = [i32, f32, vector]
   tuple_type = mlir.ir.TupleType.get_tuple(ctx, l)
@@ -400,7 +398,7 @@ def testFunctionType():
   ctx = mlir.ir.Context()
   input_types = [mlir.ir.IntegerType.get_signless(ctx, 32),
                  mlir.ir.IntegerType.get_signless(ctx, 16)]
-  result_types = [mlir.ir.IndexType(ctx)]
+  result_types = [mlir.ir.IndexType.get(ctx)]
   func = mlir.ir.FunctionType.get(ctx, input_types, result_types)
   # CHECK: INPUTS: [Type(i32), Type(i16)]
   print("INPUTS:", func.inputs)

@@ -39,6 +39,14 @@ static const EnumEntry<uint16_t> RegisterNames_X86[] = {
 #undef CV_REGISTERS_X86
 };
 
+static const EnumEntry<uint16_t> RegisterNames_ARM[] = {
+#define CV_REGISTERS_ARM
+#define CV_REGISTER(name, val) CV_ENUM_CLASS_ENT(RegisterId, name),
+#include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
+#undef CV_REGISTER
+#undef CV_REGISTERS_ARM
+};
+
 static const EnumEntry<uint16_t> RegisterNames_ARM64[] = {
 #define CV_REGISTERS_ARM64
 #define CV_REGISTER(name, val) CV_ENUM_CLASS_ENT(RegisterId, name),
@@ -434,7 +442,9 @@ ArrayRef<EnumEntry<TypeLeafKind>> getTypeLeafNames() {
 }
 
 ArrayRef<EnumEntry<uint16_t>> getRegisterNames(CPUType Cpu) {
-  if (Cpu == CPUType::ARM64) {
+  if (Cpu == CPUType::ARMNT) {
+    return makeArrayRef(RegisterNames_ARM);
+  } else if (Cpu == CPUType::ARM64) {
     return makeArrayRef(RegisterNames_ARM64);
   }
   return makeArrayRef(RegisterNames_X86);

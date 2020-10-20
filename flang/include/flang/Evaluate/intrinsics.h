@@ -102,5 +102,9 @@ public:
 private:
   Implementation *impl_{nullptr}; // owning pointer
 };
+
+// Check if an intrinsic explicitly allows its INTENT(OUT) arguments to be
+// allocatable coarrays.
+bool AcceptsIntentOutAllocatableCoarray(const std::string &);
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_INTRINSICS_H_

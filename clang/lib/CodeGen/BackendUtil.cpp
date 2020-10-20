@@ -558,8 +558,6 @@ static void initTargetOptions(DiagnosticsEngine &Diags,
 
 static Optional<GCOVOptions> getGCOVOptions(const CodeGenOptions &CodeGenOpts,
                                             const LangOptions &LangOpts) {
-  if (CodeGenOpts.DisableGCov)
-    return None;
   if (!CodeGenOpts.EmitGcovArcs && !CodeGenOpts.EmitGcovNotes)
     return None;
   // Not using 'GCOVOptions::getDefault' allows us to avoid exiting if

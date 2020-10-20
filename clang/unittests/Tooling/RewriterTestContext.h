@@ -18,13 +18,28 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
+
+/// \brief A very simple diagnostic consumer that prints to stderr and keeps
+/// track of the number of diagnostics.
+///
+/// This avoids a dependency on clangFrontend for FormatTests.
+struct RewriterDiagnosticConsumer : public DiagnosticConsumer {
+  RewriterDiagnosticConsumer() : NumDiagnosticsSeen(0) {}
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const Diagnostic &Info) override {
+    ++NumDiagnosticsSeen;
+    SmallString<100> OutStr;
+    Info.FormatDiagnostic(OutStr);
+    llvm::errs() << OutStr;
+  }
+  unsigned NumDiagnosticsSeen;
+};
 
 /// \brief A class that sets up a ready to use Rewriter.
 ///
@@ -37,7 +52,6 @@ class RewriterTestContext {
        : DiagOpts(new DiagnosticOptions()),
          Diagnostics(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
                      &*DiagOpts),
-         DiagnosticPrinter(llvm::outs(), &*DiagOpts),
          InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
          OverlayFileSystem(
              new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem())),
@@ -113,7 +127,7 @@ class RewriterTestContext {
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   DiagnosticsEngine Diagnostics;
-  TextDiagnosticPrinter DiagnosticPrinter;
+  RewriterDiagnosticConsumer DiagnosticPrinter;
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
   IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem;
   FileManager Files;

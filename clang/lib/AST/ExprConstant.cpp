@@ -3269,21 +3269,27 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
 
   // Check that we can fold the initializer. In C++, we will have already done
   // this in the cases where it matters for conformance.
-  SmallVector<PartialDiagnosticAt, 8> Notes;
-  if (!VD->evaluateValue(Notes)) {
-    Info.FFDiag(E, diag::note_constexpr_var_init_non_constant,
-              Notes.size() + 1) << VD;
+  if (!VD->evaluateValue()) {
+    Info.FFDiag(E, diag::note_constexpr_var_init_non_constant, 1) << VD;
     NoteLValueLocation(Info, Base);
-    Info.addNotes(Notes);
     return false;
   }
 
-  // Check that the variable is actually usable in constant expressions.
-  if (!VD->checkInitIsICE()) {
-    Info.CCEDiag(E, diag::note_constexpr_var_init_non_constant,
-                 Notes.size() + 1) << VD;
+  // Check that the variable is actually usable in constant expressions. For a
+  // const integral variable or a reference, we might have a non-constant
+  // initializer that we can nonetheless evaluate the initializer for. Such
+  // variables are not usable in constant expressions. In C++98, the
+  // initializer also syntactically needs to be an ICE.
+  //
+  // FIXME: We don't diagnose cases that aren't potentially usable in constant
+  // expressions here; doing so would regress diagnostics for things like
+  // reading from a volatile constexpr variable.
+  if ((!VD->hasConstantInitialization() &&
+       VD->mightBeUsableInConstantExpressions(Info.Ctx)) ||
+      (Info.getLangOpts().CPlusPlus && !Info.getLangOpts().CPlusPlus11 &&
+       !VD->hasICEInitializer(Info.Ctx))) {
+    Info.CCEDiag(E, diag::note_constexpr_var_init_non_constant, 1) << VD;
     NoteLValueLocation(Info, Base);
-    Info.addNotes(Notes);
   }
 
   // Never use the initializer of a weak variable, not even for constant
@@ -3296,11 +3302,6 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
 
   Result = VD->getEvaluatedValue();
   return true;
-}
-
-static bool IsConstNonVolatile(QualType T) {
-  Qualifiers Quals = T.getQualifiers();
-  return Quals.hasConst() && !Quals.hasVolatile();
 }
 
 /// Get the base index of the given base class within an APValue representing
@@ -8112,6 +8113,12 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
       return true;
     }
     return Success(VD);
+  }
+
+  if (!Info.getLangOpts().CPlusPlus11) {
+    Info.CCEDiag(E, diag::note_constexpr_ltor_non_integral, 1)
+        << VD << VD->getType();
+    Info.Note(VD->getLocation(), diag::note_declared_at);
   }
 
   APValue *V;
@@ -14677,7 +14684,8 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, ConstExprUsage Usage,
 
 bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
                                  const VarDecl *VD,
-                            SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
+                                 SmallVectorImpl<PartialDiagnosticAt> &Notes,
+                                 bool IsConstantInitialization) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
@@ -14690,11 +14698,12 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   Expr::EvalStatus EStatus;
   EStatus.Diag = &Notes;
 
-  EvalInfo Info(Ctx, EStatus, VD->isConstexpr()
-                                      ? EvalInfo::EM_ConstantExpression
-                                      : EvalInfo::EM_ConstantFold);
+  EvalInfo Info(Ctx, EStatus,
+                (IsConstantInitialization && Ctx.getLangOpts().CPlusPlus11)
+                    ? EvalInfo::EM_ConstantExpression
+                    : EvalInfo::EM_ConstantFold);
   Info.setEvaluatingDecl(VD, Value);
-  Info.InConstantContext = true;
+  Info.InConstantContext = IsConstantInitialization;
 
   SourceLocation DeclLoc = VD->getLocation();
   QualType DeclTy = VD->getType();
@@ -15030,30 +15039,12 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::DeclRefExprClass: {
     if (isa<EnumConstantDecl>(cast<DeclRefExpr>(E)->getDecl()))
       return NoDiag();
-    const ValueDecl *D = cast<DeclRefExpr>(E)->getDecl();
-    if (Ctx.getLangOpts().CPlusPlus &&
-        D && IsConstNonVolatile(D->getType())) {
-      // Parameter variables are never constants.  Without this check,
-      // getAnyInitializer() can find a default argument, which leads
-      // to chaos.
-      if (isa<ParmVarDecl>(D))
-        return ICEDiag(IK_NotICE, cast<DeclRefExpr>(E)->getLocation());
-
+    const VarDecl *VD = dyn_cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
+    if (VD && VD->isUsableInConstantExpressions(Ctx)) {
       // C++ 7.1.5.1p2
       //   A variable of non-volatile const-qualified integral or enumeration
       //   type initialized by an ICE can be used in ICEs.
-      if (const VarDecl *Dcl = dyn_cast<VarDecl>(D)) {
-        if (!Dcl->getType()->isIntegralOrEnumerationType())
-          return ICEDiag(IK_NotICE, cast<DeclRefExpr>(E)->getLocation());
-
-        const VarDecl *VD;
-        // Look for a declaration of this variable that has an initializer, and
-        // check whether it is an ICE.
-        if (Dcl->getAnyInitializer(VD) && !VD->isWeak() && VD->checkInitIsICE())
-          return NoDiag();
-        else
-          return ICEDiag(IK_NotICE, cast<DeclRefExpr>(E)->getLocation());
-      }
+      return NoDiag();
     }
     return ICEDiag(IK_NotICE, E->getBeginLoc());
   }

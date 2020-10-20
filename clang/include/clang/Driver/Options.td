@@ -669,6 +669,9 @@ defm hip_new_launch_api : OptInFFlag<"hip-new-launch-api",
   "Use", "Don't use", " new kernel launching API for HIP">;
 defm gpu_allow_device_init : OptInFFlag<"gpu-allow-device-init",
   "Allow", "Don't allow", " device side init function in HIP">;
+defm gpu_defer_diag : OptInFFlag<"gpu-defer-diag",
+  "Defer", "Don't defer", " host/device related diagnostic messages"
+  " for CUDA/HIP">;
 def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
   Flags<[CC1Option]>,
   HelpText<"Default max threads per block for kernel launch bounds for HIP">;
@@ -1791,7 +1794,7 @@ def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
   HelpText<"Load pass plugin from a dynamic shared object file (only with new pass manager).">;
 defm preserve_as_comments : OptOutFFlag<"preserve-as-comments", "",
   "Do not preserve comments in inline assembly">;
-def fprofile_arcs : Flag<["-"], "fprofile-arcs">, Group<f_Group>, Flags<[LinkOption]>;
+def fprofile_arcs : Flag<["-"], "fprofile-arcs">, Group<f_Group>, Flags<[CC1Option,LinkOption]>;
 def fno_profile_arcs : Flag<["-"], "fno-profile-arcs">, Group<f_Group>;
 def framework : Separate<["-"], "framework">, Flags<[LinkerInput]>;
 def frandom_seed_EQ : Joined<["-"], "frandom-seed=">, Group<clang_ignored_f_Group>;
@@ -1896,7 +1899,7 @@ def foptimization_record_passes_EQ : Joined<["-"], "foptimization-record-passes=
   HelpText<"Only include passes which match a specified regular expression in the generated optimization record (by default, include all passes)">,
   MetaVarName<"<regex>">;
 
-def ftest_coverage : Flag<["-"], "ftest-coverage">, Group<f_Group>;
+def ftest_coverage : Flag<["-"], "ftest-coverage">, Flags<[CC1Option]>, Group<f_Group>;
 def fno_test_coverage : Flag<["-"], "fno-test-coverage">, Group<f_Group>;
 def fvectorize : Flag<["-"], "fvectorize">, Group<f_Group>,
   HelpText<"Enable the loop vectorization passes">;
@@ -2118,10 +2121,9 @@ def gdwarf_aranges : Flag<["-"], "gdwarf-aranges">, Group<g_flags_Group>;
 def gmodules : Flag <["-"], "gmodules">, Group<gN_Group>,
   HelpText<"Generate debug info with external references to clang modules"
            " or precompiled headers">;
-def gz : Flag<["-"], "gz">, Group<g_flags_Group>,
-    HelpText<"DWARF debug sections compression type">;
 def gz_EQ : Joined<["-"], "gz=">, Group<g_flags_Group>,
     HelpText<"DWARF debug sections compression type">;
+def gz : Flag<["-"], "gz">, Alias<gz_EQ>, AliasArgs<["zlib"]>, Group<g_flags_Group>;
 def gembed_source : Flag<["-"], "gembed-source">, Group<g_flags_Group>, Flags<[CC1Option]>,
     HelpText<"Embed source text in DWARF debug sections">;
 def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
@@ -3729,10 +3731,10 @@ def dwarf_debug_flags : Separate<["-"], "dwarf-debug-flags">,
   HelpText<"The string to embed in the Dwarf debug flags record.">;
 def record_command_line : Separate<["-"], "record-command-line">,
   HelpText<"The string to embed in the .LLVM.command.line section.">;
-def compress_debug_sections : Flag<["-", "--"], "compress-debug-sections">,
-    HelpText<"DWARF debug sections compression">;
 def compress_debug_sections_EQ : Joined<["-", "--"], "compress-debug-sections=">,
     HelpText<"DWARF debug sections compression type">;
+def compress_debug_sections : Flag<["-", "--"], "compress-debug-sections">,
+  Alias<compress_debug_sections_EQ>, AliasArgs<["zlib"]>;
 def mno_exec_stack : Flag<["-"], "mnoexecstack">,
   HelpText<"Mark the file as not needing an executable stack">;
 def massembler_no_warn : Flag<["-"], "massembler-no-warn">,
@@ -3788,10 +3790,6 @@ def fdump_vtable_layouts : Flag<["-"], "fdump-vtable-layouts">,
   HelpText<"Dump the layouts of all vtables that will be emitted in a translation unit">;
 def fmerge_functions : Flag<["-"], "fmerge-functions">,
   HelpText<"Permit merging of identical functions when optimizing.">;
-def femit_coverage_notes : Flag<["-"], "femit-coverage-notes">,
-  HelpText<"Emit a gcov coverage notes file when compiling.">;
-def femit_coverage_data: Flag<["-"], "femit-coverage-data">,
-  HelpText<"Instrument the program to emit gcov coverage data when run.">;
 def coverage_data_file : Separate<["-"], "coverage-data-file">,
   HelpText<"Emit coverage data to this filename.">;
 def coverage_data_file_EQ : Joined<["-"], "coverage-data-file=">,
@@ -3802,8 +3800,6 @@ def coverage_notes_file_EQ : Joined<["-"], "coverage-notes-file=">,
   Alias<coverage_notes_file>;
 def coverage_version_EQ : Joined<["-"], "coverage-version=">,
   HelpText<"Four-byte version string for gcov files.">;
-def test_coverage : Flag<["-"], "test-coverage">,
-  HelpText<"Do not generate coverage files or remove coverage changes from IR">;
 def dump_coverage_mapping : Flag<["-"], "dump-coverage-mapping">,
   HelpText<"Dump the coverage mapping records, for testing">;
 def fuse_register_sized_bitfield_access: Flag<["-"], "fuse-register-sized-bitfield-access">,

@@ -233,13 +233,12 @@ static SourceLocation ReadOriginalFileName(CompilerInstance &CI,
   auto &SourceMgr = CI.getSourceManager();
   auto MainFileID = SourceMgr.getMainFileID();
 
-  bool Invalid = false;
-  const auto *MainFileBuf = SourceMgr.getBuffer(MainFileID, &Invalid);
-  if (Invalid)
+  auto MainFileBuf = SourceMgr.getBufferOrNone(MainFileID);
+  if (!MainFileBuf)
     return SourceLocation();
 
   std::unique_ptr<Lexer> RawLexer(
-      new Lexer(MainFileID, MainFileBuf, SourceMgr, CI.getLangOpts()));
+      new Lexer(MainFileID, *MainFileBuf, SourceMgr, CI.getLangOpts()));
 
   // If the first line has the syntax of
   //
