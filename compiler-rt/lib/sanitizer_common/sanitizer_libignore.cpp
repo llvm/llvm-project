@@ -9,7 +9,7 @@
 #include "sanitizer_platform.h"
 
 #if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_MAC || \
-    SANITIZER_NETBSD
+    SANITIZER_NETBSD || SANITIZER_OPENBSD
 
 #include "sanitizer_libignore.h"
 #include "sanitizer_flags.h"

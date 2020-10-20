@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 #include "FuzzerPlatform.h"
 #if LIBFUZZER_LINUX || LIBFUZZER_NETBSD || LIBFUZZER_FUCHSIA ||                \
-    LIBFUZZER_FREEBSD || LIBFUZZER_EMSCRIPTEN
+    LIBFUZZER_FREEBSD || LIBFUZZER_OPENBSD || LIBFUZZER_EMSCRIPTEN
 
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
