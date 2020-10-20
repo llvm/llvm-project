@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS
+    SANITIZER_OPENBSD || SANITIZER_SOLARIS
 
 #if !defined(INCLUDED_FROM_INTERCEPTION_LIB)
 # error "interception_linux.h should be included from interception library only"
@@ -35,8 +35,8 @@ bool InterceptFunction(const char *name, const char *ver, uptr *ptr_to_real,
       (::__interception::uptr) & (func),          \
       (::__interception::uptr) & WRAP(func))
 
-// Android and Solaris do not have dlvsym
-#if !SANITIZER_ANDROID && !SANITIZER_SOLARIS
+// Android,  Solaris and OpenBSD do not have dlvsym
+#if !SANITIZER_ANDROID && !SANITIZER_SOLARIS && !SANITIZER_OPENBSD
 #define INTERCEPT_FUNCTION_VER_LINUX_OR_FREEBSD(func, symver) \
   ::__interception::InterceptFunction(                        \
       #func, symver,                                          \
@@ -50,4 +50,4 @@ bool InterceptFunction(const char *name, const char *ver, uptr *ptr_to_real,
 
 #endif  // INTERCEPTION_LINUX_H
 #endif  // SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD ||
-        // SANITIZER_SOLARIS
+        // SANITIZER_OPENBSD || SANITIZER_SOLARIS
