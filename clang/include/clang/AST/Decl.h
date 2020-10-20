@@ -807,10 +807,6 @@ struct EvaluatedStmt {
   /// integral constant expression.
   bool CheckedICE : 1;
 
-  /// Whether we are checking whether this statement is an
-  /// integral constant expression.
-  bool CheckingICE : 1;
-
   /// Whether this statement is an integral constant expression,
   /// or in C++11, whether the statement is a constant expression. Only
   /// valid if CheckedICE is true.
@@ -828,7 +824,7 @@ struct EvaluatedStmt {
 
   EvaluatedStmt()
       : WasEvaluated(false), IsEvaluating(false), CheckedICE(false),
-        CheckingICE(false), IsICE(false), HasConstantDestruction(false) {}
+        IsICE(false), HasConstantDestruction(false) {}
 };
 
 /// Represents a variable declaration or definition.
@@ -1263,14 +1259,15 @@ public:
   /// constant expression, according to the relevant language standard.
   /// This only checks properties of the declaration, and does not check
   /// whether the initializer is in fact a constant expression.
-  bool mightBeUsableInConstantExpressions(ASTContext &C) const;
+  bool mightBeUsableInConstantExpressions(const ASTContext &C) const;
 
   /// Determine whether this variable's value can be used in a
   /// constant expression, according to the relevant language standard,
   /// including checking whether it was initialized by a constant expression.
-  bool isUsableInConstantExpressions(ASTContext &C) const;
+  bool isUsableInConstantExpressions(const ASTContext &C) const;
 
   EvaluatedStmt *ensureEvaluatedStmt() const;
+  EvaluatedStmt *getEvaluatedStmt() const;
 
   /// Attempt to evaluate the value of the initializer attached to this
   /// declaration, and produce notes explaining why it cannot be evaluated or is
@@ -1305,7 +1302,7 @@ public:
 
   /// Determine whether the value of the initializer attached to this
   /// declaration is an integral constant expression.
-  bool checkInitIsICE() const;
+  bool checkInitIsICE(SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
 
   void setInitStyle(InitializationStyle Style) {
     VarDeclBits.InitStyle = Style;
