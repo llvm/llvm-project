@@ -1,5 +1,54 @@
 // RUN: mlir-opt %s -std-bufferize | FileCheck %s
 
+// CHECK-LABEL:   func @dynamic_tensor_from_elements(
+// CHECK-SAME:                                       %[[ARG:.*]]: tensor<*xf32>,
+// CHECK-SAME:                                       %[[DYNAMIC_EXTENT:.*]]: index) -> tensor<?xindex> {
+// CHECK:           %[[MEMREF:.*]] = alloc(%[[DYNAMIC_EXTENT]]) : memref<?xindex>
+// CHECK:           %[[C0:.*]] = constant 0 : index
+// CHECK:           %[[C1:.*]] = constant 1 : index
+// CHECK:           scf.parallel (%[[I:.*]]) = (%[[C0]]) to (%[[DYNAMIC_EXTENT]]) step (%[[C1]]) {
+// CHECK:             %[[ELEM:.*]] = dim %[[ARG]], %[[I]] : tensor<*xf32>
+// CHECK:             store %[[ELEM]], %[[MEMREF]][%[[I]]] : memref<?xindex>
+// CHECK:             scf.yield
+// CHECK:           }
+// CHECK:           %[[RET:.*]] = tensor_load %[[MEMREF]] : memref<?xindex>
+// CHECK:           return %[[RET]] : tensor<?xindex>
+// CHECK:         }
+func @dynamic_tensor_from_elements(%arg: tensor<*xf32>, %rank: index) -> tensor<?xindex> {
+  %result = dynamic_tensor_from_elements %rank {
+  ^bb0(%i : index):
+    %elem = dim %arg, %i : tensor<*xf32>
+    yield %elem : index
+  } : tensor<?xindex>
+  return %result : tensor<?xindex>
+}
+
+// Additional test that checks the logic for intermixed static and dynamic
+// extents.
+//
+// CHECK-LABEL:   func @dynamic_tensor_from_elements_static_and_dynamic(
+// CHECK-SAME:                                                          %[[DYNAMIC_EXTENT:.*]]: index) -> tensor<16x?xindex> {
+// CHECK:           %[[MEMREF:.*]] = alloc(%[[DYNAMIC_EXTENT]]) : memref<16x?xindex>
+// CHECK:           %[[C0:.*]] = constant 0 : index
+// CHECK:           %[[C1:.*]] = constant 1 : index
+// CHECK:           %[[C16:.*]] = constant 16 : index
+// CHECK:           scf.parallel (%[[I:.*]], %[[J:.*]]) = (%[[C0]], %[[C0]]) to (%[[C16]], %[[DYNAMIC_EXTENT]]) step (%[[C1]], %[[C1]]) {
+// CHECK:             %[[VAL_7:.*]] = addi %[[I]], %[[J]] : index
+// CHECK:             store %[[VAL_7]], %[[MEMREF]][%[[I]], %[[J]]] : memref<16x?xindex>
+// CHECK:             scf.yield
+// CHECK:           }
+// CHECK:           %[[RET:.*]] = tensor_load %[[MEMREF]] : memref<16x?xindex>
+// CHECK:           return %[[RET]] : tensor<16x?xindex>
+// CHECK:         }
+func @dynamic_tensor_from_elements_static_and_dynamic(%arg0: index) -> tensor<16x?xindex> {
+  %result = dynamic_tensor_from_elements %arg0 {
+  ^bb0(%i: index, %j: index):
+    %sum = addi %i, %j : index
+    yield %sum : index
+  } : tensor<16x?xindex>
+  return %result : tensor<16x?xindex>
+}
+
 // CHECK-LABEL:   func @extract_element(
 // CHECK-SAME:                          %[[TENSOR:.*]]: tensor<?xf32>,
 // CHECK-SAME:                          %[[IDX:.*]]: index) -> f32 {
