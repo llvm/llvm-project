@@ -432,6 +432,9 @@ intptr_t mlirOpResultGetResultNumber(MlirValue value);
 /** Returns the type of the value. */
 MlirType mlirValueGetType(MlirValue value);
 
+/** Prints the value to the standard error stream. */
+void mlirValueDump(MlirValue value);
+
 /** Prints a value by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
  * several times with consecutive chunks of the string. */

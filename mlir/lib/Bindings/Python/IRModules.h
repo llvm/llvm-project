@@ -23,6 +23,7 @@ class PyMlirContext;
 class PyModule;
 class PyOperation;
 class PyType;
+class PyValue;
 
 /// Template for a reference to a concrete type which captures a python
 /// reference to its underlying python object.
@@ -379,6 +380,27 @@ public:
   operator MlirType() const { return type; }
 
   MlirType type;
+};
+
+/// Wrapper around the generic MlirValue.
+/// Values are managed completely by the operation that resulted in their
+/// definition. For op result value, this is the operation that defines the
+/// value. For block argument values, this is the operation that contains the
+/// block to which the value is an argument (blocks cannot be detached in Python
+/// bindings so such operation always exists).
+class PyValue {
+public:
+  PyValue(PyOperationRef parentOperation, MlirValue value)
+      : parentOperation(parentOperation), value(value) {}
+
+  MlirValue get() { return value; }
+  PyOperationRef &getParentOperation() { return parentOperation; }
+
+  void checkValid() { return parentOperation->checkValid(); }
+
+private:
+  PyOperationRef parentOperation;
+  MlirValue value;
 };
 
 void populateIRSubmodule(pybind11::module &m);
