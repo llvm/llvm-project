@@ -1739,24 +1739,12 @@ private:
         // Reference from an alternate entry point - use primary entry name.
         auto addrOf = builder->create<fir::AddrOfOp>(loc, global.resultType(),
                                                      global.getSymbol());
-        addSymbol(sym, addrOf);
+        mapSymbolAttributes(var, storeMap, addrOf);
       }
       return;
     }
     if (var.isAlias()) {
-      auto aliasOffset = var.getAlias();
-      assert(storeMap.count(aliasOffset));
-      auto store = storeMap.find(aliasOffset)->second;
-      auto i8Ty = builder->getIntegerType(8);
-      auto i8Ptr = builder->getRefType(i8Ty);
-      auto seqTy = builder->getRefType(builder->getVarLenSeqTy(i8Ty));
-      auto base = builder->createConvert(loc, seqTy, store);
-      llvm::SmallVector<mlir::Value, 1> offs{
-          builder->createIntegerConstant(loc, idxTy, aliasOffset)};
-      auto ptr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);
-      auto addrOf =
-          builder->createConvert(loc, builder->getRefType(genType(sym)), ptr);
-      addSymbol(sym, addrOf);
+      instantiateAlias(var, storeMap);
       return;
     }
     if (const auto *details =
@@ -1945,8 +1933,7 @@ private:
     mapSymbolAttributes(var, storeMap);
   }
 
-  void
-  instantiateLocalAlias(const Fortran::lower::pft::Variable &var,
+  void instantiateAlias(const Fortran::lower::pft::Variable &var,
                         llvm::DenseMap<std::size_t, mlir::Value> &storeMap) {
     assert(var.isAlias());
     const auto &sym = var.getSymbol();
@@ -2628,7 +2615,7 @@ private:
     } else if (var.isGlobal()) {
       instantiateGlobal(var, storeMap);
     } else if (var.isAlias()) {
-      instantiateLocalAlias(var, storeMap);
+      instantiateAlias(var, storeMap);
     } else {
       instantiateLocal(var, storeMap);
     }
