@@ -52,6 +52,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -114,6 +115,9 @@ static cl::opt<int> MaxExitProbReciprocal("irce-max-exit-prob-reciprocal",
 
 static cl::opt<bool> SkipProfitabilityChecks("irce-skip-profitability-checks",
                                              cl::Hidden, cl::init(false));
+
+static cl::opt<unsigned> MinRuntimeIterations("min-runtime-iterations",
+                                              cl::Hidden, cl::init(3));
 
 static cl::opt<bool> AllowUnsignedLatchCondition("irce-allow-unsigned-latch",
                                                  cl::Hidden, cl::init(true));
@@ -235,11 +239,15 @@ class InductiveRangeCheckElimination {
   DominatorTree &DT;
   LoopInfo &LI;
 
+  using GetBFIFunc =
+      llvm::Optional<llvm::function_ref<llvm::BlockFrequencyInfo &()> >;
+  GetBFIFunc GetBFI;
+
 public:
   InductiveRangeCheckElimination(ScalarEvolution &SE,
                                  BranchProbabilityInfo *BPI, DominatorTree &DT,
-                                 LoopInfo &LI)
-      : SE(SE), BPI(BPI), DT(DT), LI(LI) {}
+                                 LoopInfo &LI, GetBFIFunc GetBFI = None)
+      : SE(SE), BPI(BPI), DT(DT), LI(LI), GetBFI(GetBFI) {}
 
   bool run(Loop *L, function_ref<void(Loop *, bool)> LPMAddNewLoop);
 };
@@ -1772,14 +1780,25 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &BPI = AM.getResult<BranchProbabilityAnalysis>(F);
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
 
-  InductiveRangeCheckElimination IRCE(SE, &BPI, DT, LI);
+  // Get BFI analysis result on demand. Please note that modification of
+  // CFG invalidates this analysis and we should handle it.
+  auto getBFI = [&F, &AM ]()->BlockFrequencyInfo & {
+    return AM.getResult<BlockFrequencyAnalysis>(F);
+  };
+  InductiveRangeCheckElimination IRCE(SE, &BPI, DT, LI, { getBFI });
 
   bool Changed = false;
+  {
+    bool CFGChanged = false;
+    for (const auto &L : LI) {
+      CFGChanged |= simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr,
+                                 /*PreserveLCSSA=*/false);
+      Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
+    }
+    Changed |= CFGChanged;
 
-  for (const auto &L : LI) {
-    Changed |= simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr,
-                            /*PreserveLCSSA=*/false);
-    Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
+    if (CFGChanged && !SkipProfitabilityChecks)
+      AM.invalidate<BlockFrequencyAnalysis>(F);
   }
 
   SmallPriorityWorklist<Loop *, 4> Worklist;
@@ -1791,7 +1810,11 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
 
   while (!Worklist.empty()) {
     Loop *L = Worklist.pop_back_val();
-    Changed |= IRCE.run(L, LPMAddNewLoop);
+    if (IRCE.run(L, LPMAddNewLoop)) {
+      Changed = true;
+      if (!SkipProfitabilityChecks)
+        AM.invalidate<BlockFrequencyAnalysis>(F);
+    }
   }
 
   if (!Changed)
@@ -1878,6 +1901,18 @@ bool InductiveRangeCheckElimination::run(
     return false;
   }
   LoopStructure LS = MaybeLoopStructure.getValue();
+  // Profitability check.
+  if (!SkipProfitabilityChecks && GetBFI.hasValue()) {
+    BlockFrequencyInfo &BFI = (*GetBFI)();
+    uint64_t hFreq = BFI.getBlockFreq(LS.Header).getFrequency();
+    uint64_t phFreq = BFI.getBlockFreq(Preheader).getFrequency();
+    if (phFreq != 0 && hFreq != 0 && (hFreq / phFreq < MinRuntimeIterations)) {
+      LLVM_DEBUG(dbgs() << "irce: could not prove profitability: "
+                        << "the estimated number of iterations basing on "
+                           "frequency info is " << (hFreq / phFreq) << "\n";);
+      return false;
+    }
+  }
   const SCEVAddRecExpr *IndVar =
       cast<SCEVAddRecExpr>(SE.getMinusSCEV(SE.getSCEV(LS.IndVarBase), SE.getSCEV(LS.IndVarStep)));
 
