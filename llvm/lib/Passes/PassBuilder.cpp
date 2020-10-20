@@ -1926,6 +1926,8 @@ Expected<GVNOptions> parseGVNOptions(StringRef Params) {
       Result.setPRE(Enable);
     } else if (ParamName == "load-pre") {
       Result.setLoadPRE(Enable);
+    } else if (ParamName == "split-backedge-load-pre") {
+      Result.setLoadPRESplitBackedge(Enable);
     } else if (ParamName == "memdep") {
       Result.setMemDep(Enable);
     } else {
