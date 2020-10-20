@@ -19,6 +19,21 @@
 using namespace mlir;
 
 namespace {
+class BufferizeExtractElementOp : public OpConversionPattern<ExtractElementOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ExtractElementOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    ExtractElementOp::Adaptor adaptor(operands);
+    rewriter.replaceOpWithNewOp<LoadOp>(op, adaptor.aggregate(),
+                                        adaptor.indices());
+    return success();
+  }
+};
+} // namespace
+
+namespace {
 class BufferizeTensorCastOp : public OpConversionPattern<TensorCastOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -32,10 +47,34 @@ public:
 };
 } // namespace
 
+namespace {
+class BufferizeTensorFromElementsOp
+    : public OpConversionPattern<TensorFromElementsOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(TensorFromElementsOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    int numberOfElements = op.elements().size();
+    auto resultType = MemRefType::get(
+        {numberOfElements}, op.getType().cast<TensorType>().getElementType());
+    Value result = rewriter.create<AllocOp>(op.getLoc(), resultType);
+    for (auto element : llvm::enumerate(op.elements())) {
+      Value index =
+          rewriter.create<ConstantIndexOp>(op.getLoc(), element.index());
+      rewriter.create<StoreOp>(op.getLoc(), element.value(), result, index);
+    }
+    rewriter.replaceOp(op, {result});
+    return success();
+  }
+};
+} // namespace
+
 void mlir::populateStdBufferizePatterns(MLIRContext *context,
                                         BufferizeTypeConverter &typeConverter,
                                         OwningRewritePatternList &patterns) {
-  patterns.insert<BufferizeTensorCastOp>(typeConverter, context);
+  patterns.insert<BufferizeExtractElementOp, BufferizeTensorCastOp,
+                  BufferizeTensorFromElementsOp>(typeConverter, context);
 }
 
 namespace {
@@ -49,9 +88,9 @@ struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
     target.addLegalDialect<StandardOpsDialect>();
 
     populateStdBufferizePatterns(context, typeConverter, patterns);
-    target.addIllegalOp<TensorCastOp>();
+    target.addIllegalOp<ExtractElementOp, TensorCastOp, TensorFromElementsOp>();
 
-    if (failed(mlir::applyPartialConversion(getFunction(), target, patterns)))
+    if (failed(applyPartialConversion(getFunction(), target, patterns)))
       signalPassFailure();
   }
 };
