@@ -671,7 +671,7 @@ ASTSourceDescriptor::ASTSourceDescriptor(Module &M)
     : Signature(M.Signature), ClangModule(&M) {
   if (M.Directory)
     Path = M.Directory->getName();
-  if (auto *File = M.getASTFile())
+  if (auto File = M.getASTFile())
     ASTFile = File->getName();
 }
 
