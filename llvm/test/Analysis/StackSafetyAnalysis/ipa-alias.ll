@@ -6,10 +6,10 @@
 ; RUN: llvm-as %S/Inputs/ipa-alias.ll -o %t1.bc
 ; RUN: llvm-link %t0.bc %t1.bc -o %t.combined.bc
 
-; RUN: opt -S -analyze -stack-safety-local %t.combined.bc | FileCheck %s --check-prefixes=CHECK,LOCAL
+; RUN: opt -S -analyze -stack-safety-local %t.combined.bc -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,LOCAL
 ; RUN: opt -S -passes="print<stack-safety-local>" -disable-output %t.combined.bc 2>&1 | FileCheck %s --check-prefixes=CHECK,LOCAL
 
-; RUN: opt -S -analyze -stack-safety %t.combined.bc | FileCheck %s --check-prefixes=CHECK,GLOBAL,NOLTO
+; RUN: opt -S -analyze -stack-safety %t.combined.bc -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,GLOBAL,NOLTO
 ; RUN: opt -S -passes="print-stack-safety" -disable-output %t.combined.bc 2>&1 | FileCheck %s --check-prefixes=CHECK,GLOBAL,NOLTO
 
 ; Do an end-to-test using the new LTO API
