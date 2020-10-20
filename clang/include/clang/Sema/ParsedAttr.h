@@ -1044,32 +1044,18 @@ enum AttributeDeclKind {
   ExpectedFunctionWithProtoType,
 };
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const ParsedAttr &At) {
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const ParsedAttr &At) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(At.getAttrName()),
                   DiagnosticsEngine::ak_identifierinfo);
   return DB;
 }
 
-inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                           const ParsedAttr &At) {
-  PD.AddTaggedVal(reinterpret_cast<intptr_t>(At.getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return PD;
-}
-
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const ParsedAttr *At) {
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const ParsedAttr *At) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(At->getAttrName()),
                   DiagnosticsEngine::ak_identifierinfo);
   return DB;
-}
-
-inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                           const ParsedAttr *At) {
-  PD.AddTaggedVal(reinterpret_cast<intptr_t>(At->getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return PD;
 }
 
 } // namespace clang

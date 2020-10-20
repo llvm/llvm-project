@@ -64,8 +64,9 @@ namespace clang {
 
     // Get typedefs for common diagnostics.
     enum {
-#define DIAG(ENUM,FLAGS,DEFAULT_MAPPING,DESC,GROUP,\
-             SFINAE,CATEGORY,NOWERROR,SHOWINSYSHEADER) ENUM,
+#define DIAG(ENUM, FLAGS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, CATEGORY,      \
+             NOWERROR, SHOWINSYSHEADER, DEFFERABLE)                            \
+  ENUM,
 #define COMMONSTART
 #include "clang/Basic/DiagnosticCommonKinds.inc"
       NUM_BUILTIN_COMMON_DIAGNOSTICS
@@ -279,6 +280,13 @@ public:
   /// errors, such as those errors that involve C++ access control,
   /// are not SFINAE errors.
   static SFINAEResponse getDiagnosticSFINAEResponse(unsigned DiagID);
+
+  /// Whether the diagnostic message can be deferred.
+  ///
+  /// For single source offloading languages, a diagnostic message occurred
+  /// in a device host function may be deferred until the function is sure
+  /// to be emitted.
+  static bool isDeferrable(unsigned DiagID);
 
   /// Get the string of all diagnostic flags.
   ///
