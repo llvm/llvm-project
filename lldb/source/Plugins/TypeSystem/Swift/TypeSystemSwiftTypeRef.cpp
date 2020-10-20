@@ -2090,48 +2090,46 @@ bool TypeSystemSwiftTypeRef::IsPointerOrReferenceType(
 llvm::Optional<size_t>
 TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
                                         ExecutionContextScope *exe_scope) {
-    auto impl = [&]() -> llvm::Optional<size_t> {
-    // Clang types can be resolved even without a process.
-    if (CompilerType clang_type = GetAsClangTypeOrNull(type)) {
-      // Swift doesn't know pointers: return the size alignment of the
-      // object pointer instead of the underlying object.
-      if (Flags(clang_type.GetTypeInfo()).AllSet(eTypeIsObjC | eTypeIsClass))
-        return GetPointerByteSize() * 8;
-      return clang_type.GetTypeBitAlign(exe_scope);
-    }
-    if (!exe_scope) {
-      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-                "Couldn't compute alignment of type %s without an execution "
-                "context.",
-                AsMangledName(type));
-      return {};
-    }
-    if (auto *runtime =
-            SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
-      if (auto result = runtime->GetBitAlignment({this, type}, exe_scope))
-        return result;
-      // If this is an expression context, perhaps the type was
-      // defined in the expression. In that case we don't have debug
-      // info for it, so defer to SwiftASTContext.
-      if (llvm::isa<SwiftASTContextForExpressions>(m_swift_ast_context))
-        return ReconstructType({this, type}).GetTypeBitAlign(exe_scope);
-    }
-
-    // If there is no process, we can still try to get the static
-    // alignment information out of DWARF. Because it is stored in the
-    // Type object we need to look that up by name again.
-    if (TypeSP type_sp = LookupTypeInModule(type))
-      return type_sp->GetLayoutCompilerType().GetTypeBitAlign(exe_scope);
+  // This method doesn't use VALIDATE_AND_RETURN because except for
+  // fixed-size types the SwiftASTContext implementation forwards to
+  // SwiftLanguageRuntime anyway and for many fixed-size types the
+  // fixed layout still returns an incorrect default alignment of 0.
+  //
+  // Clang types can be resolved even without a process.
+  if (CompilerType clang_type = GetAsClangTypeOrNull(type)) {
+    // Swift doesn't know pointers: return the size alignment of the
+    // object pointer instead of the underlying object.
+    if (Flags(clang_type.GetTypeInfo()).AllSet(eTypeIsObjC | eTypeIsClass))
+      return GetPointerByteSize() * 8;
+    return clang_type.GetTypeBitAlign(exe_scope);
+  }
+  if (!exe_scope) {
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-              "Couldn't compute alignment of type %s without a process.",
+              "Couldn't compute alignment of type %s without an execution "
+              "context.",
               AsMangledName(type));
     return {};
-  };
-  if (exe_scope && exe_scope->CalculateProcess())
-    VALIDATE_AND_RETURN(impl, GetTypeBitAlign, type,
-                        (ReconstructType(type), exe_scope));
-  else
-    return impl();
+  }
+  if (auto *runtime =
+          SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
+    if (auto result = runtime->GetBitAlignment({this, type}, exe_scope))
+      return result;
+    // If this is an expression context, perhaps the type was
+    // defined in the expression. In that case we don't have debug
+    // info for it, so defer to SwiftASTContext.
+    if (llvm::isa<SwiftASTContextForExpressions>(m_swift_ast_context))
+      return ReconstructType({this, type}).GetTypeBitAlign(exe_scope);
+  }
+
+  // If there is no process, we can still try to get the static
+  // alignment information out of DWARF. Because it is stored in the
+  // Type object we need to look that up by name again.
+  if (TypeSP type_sp = LookupTypeInModule(type))
+    return type_sp->GetLayoutCompilerType().GetTypeBitAlign(exe_scope);
+  LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+            "Couldn't compute alignment of type %s without a process.",
+            AsMangledName(type));
+  return {};
 }
 bool TypeSystemSwiftTypeRef::IsTypedefType(opaque_compiler_type_t type) {
   return m_swift_ast_context->IsTypedefType(ReconstructType(type));
