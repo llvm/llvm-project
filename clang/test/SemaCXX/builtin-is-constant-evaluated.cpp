@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++2a -verify %s -fcxx-exceptions -Wno-constant-evaluated -triple=x86_64-linux-gnu
 
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+
 using size_t = decltype(sizeof(int));
 
 namespace std {
@@ -119,3 +121,25 @@ struct TestConditionalExplicit {
 };
 TestConditionalExplicit e = 42;
 #endif
+
+namespace fold_initializer {
+  // Global 'f' has a constant initializer.
+  const float f = __builtin_is_constant_evaluated();
+  static_assert(fold(f == 1.0f));
+
+  void g() {
+    // Local static 'sf' has a constant initializer.
+    static const float sf = __builtin_is_constant_evaluated();
+    static_assert(fold(sf == 1.0f));
+
+    // Local non-static 'f' has a non-constant initializer.
+    const float f = __builtin_is_constant_evaluated();
+    static_assert(fold(f == 0.0f));
+  }
+
+  struct A {
+    static const float f;
+  };
+  const float A::f = __builtin_is_constant_evaluated();
+  static_assert(fold(A::f == 1.0f));
+}

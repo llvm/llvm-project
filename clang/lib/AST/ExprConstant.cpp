@@ -3269,12 +3269,9 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
 
   // Check that we can fold the initializer. In C++, we will have already done
   // this in the cases where it matters for conformance.
-  SmallVector<PartialDiagnosticAt, 8> Notes;
-  if (!VD->evaluateValue(Notes)) {
-    Info.FFDiag(E, diag::note_constexpr_var_init_non_constant,
-              Notes.size() + 1) << VD;
+  if (!VD->evaluateValue()) {
+    Info.FFDiag(E, diag::note_constexpr_var_init_non_constant, 1) << VD;
     NoteLValueLocation(Info, Base);
-    Info.addNotes(Notes);
     return false;
   }
 
@@ -14687,7 +14684,8 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, ConstExprUsage Usage,
 
 bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
                                  const VarDecl *VD,
-                            SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
+                                 SmallVectorImpl<PartialDiagnosticAt> &Notes,
+                                 bool IsConstantInitialization) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
@@ -14700,11 +14698,12 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   Expr::EvalStatus EStatus;
   EStatus.Diag = &Notes;
 
-  EvalInfo Info(Ctx, EStatus, VD->isConstexpr()
-                                      ? EvalInfo::EM_ConstantExpression
-                                      : EvalInfo::EM_ConstantFold);
+  EvalInfo Info(Ctx, EStatus,
+                (IsConstantInitialization && Ctx.getLangOpts().CPlusPlus11)
+                    ? EvalInfo::EM_ConstantExpression
+                    : EvalInfo::EM_ConstantFold);
   Info.setEvaluatingDecl(VD, Value);
-  Info.InConstantContext = true;
+  Info.InConstantContext = IsConstantInitialization;
 
   SourceLocation DeclLoc = VD->getLocation();
   QualType DeclTy = VD->getType();
