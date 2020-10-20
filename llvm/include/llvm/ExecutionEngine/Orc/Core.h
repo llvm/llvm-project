@@ -1132,20 +1132,6 @@ private:
   void installMaterializationUnit(std::unique_ptr<MaterializationUnit> MU,
                                   ResourceTracker &RT);
 
-  // void lookupFlagsImpl(SymbolFlagsMap &Result, LookupKind K,
-  //                      JITDylibLookupFlags JDLookupFlags,
-  //                      SymbolLookupSet &Unresolved);
-
-  // Error lodgeQuery(UnmaterializedInfosList &UMIs,
-  //                  std::shared_ptr<AsynchronousSymbolQuery> &Q, LookupKind K,
-  //                  JITDylibLookupFlags JDLookupFlags,
-  //                  SymbolLookupSet &Unresolved);
-
-  // Error lodgeQueryImpl(UnmaterializedInfosList &UMIs,
-  //                      std::shared_ptr<AsynchronousSymbolQuery> &Q,
-  //                      LookupKind K, JITDylibLookupFlags JDLookupFlags,
-  //                      SymbolLookupSet &Unresolved);
-
   void detachQueryHelper(AsynchronousSymbolQuery &Q,
                          const SymbolNameSet &QuerySymbols);
 
