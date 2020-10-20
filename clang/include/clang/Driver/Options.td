@@ -3805,8 +3805,6 @@ def coverage_notes_file_EQ : Joined<["-"], "coverage-notes-file=">,
   Alias<coverage_notes_file>;
 def coverage_version_EQ : Joined<["-"], "coverage-version=">,
   HelpText<"Four-byte version string for gcov files.">;
-def test_coverage : Flag<["-"], "test-coverage">,
-  HelpText<"Do not generate coverage files or remove coverage changes from IR">;
 def dump_coverage_mapping : Flag<["-"], "dump-coverage-mapping">,
   HelpText<"Dump the coverage mapping records, for testing">;
 def fuse_register_sized_bitfield_access: Flag<["-"], "fuse-register-sized-bitfield-access">,
