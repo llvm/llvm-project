@@ -98,9 +98,9 @@ void diags(int n) {
 
 namespace IntOrEnum {
   const int k = 0;
-  const int &p = k;
+  const int &p = k; // expected-note {{declared here}}
   template<int n> struct S {};
-  S<p> s; // expected-error {{not an integral constant expression}}
+  S<p> s; // expected-error {{not an integral constant expression}} expected-note {{read of variable 'p' of non-integral, non-enumeration type 'const int &'}}
 }
 
 extern const int recurse1;

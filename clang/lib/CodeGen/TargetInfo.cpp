@@ -3061,7 +3061,11 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
 
     // Classify the fields one at a time, merging the results.
     unsigned idx = 0;
-    bool IsUnion = RT->isUnionType();
+    bool UseClang11Compat = getContext().getLangOpts().getClangABICompat() <=
+                                LangOptions::ClangABI::Ver11 ||
+                            getContext().getTargetInfo().getTriple().isPS4();
+    bool IsUnion = RT->isUnionType() && !UseClang11Compat;
+
     for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
            i != e; ++i, ++idx) {
       uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);

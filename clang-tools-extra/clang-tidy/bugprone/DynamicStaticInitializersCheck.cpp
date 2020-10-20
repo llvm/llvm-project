@@ -21,7 +21,7 @@ AST_MATCHER(clang::VarDecl, hasConstantDeclaration) {
   if (Init && !Init->isValueDependent()) {
     if (Node.isConstexpr())
       return true;
-    return Node.checkInitIsICE();
+    return Node.evaluateValue();
   }
   return false;
 }

@@ -50,10 +50,15 @@ TEST_CONSTEXPR_CXX20 bool test()
 int main(int, char**)
 {
     test<char, int>();
+#ifdef _LIBCPP_VERSION // extension
     test<char const, int const>();
+#endif // _LIBCPP_VERSION
+
 #if TEST_STD_VER > 17
     static_assert(test<char, int>());
+#ifdef _LIBCPP_VERSION // extension
     static_assert(test<char const, int const>());
+#endif // _LIBCPP_VERSION
 #endif
     return 0;
 }
