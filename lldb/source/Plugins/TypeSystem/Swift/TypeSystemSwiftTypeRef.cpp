@@ -1189,10 +1189,6 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
 /// matching that name.
 template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
   if (l != r) {
-    // Failure. Dump it for easier debugging.
-    llvm::dbgs() << "TypeSystemSwiftTypeRef diverges from SwiftASTContext: "
-                 << l.GetStringRef() << " != " << r.GetStringRef() << "\n";
-
     // For some reason the Swift type dumper doesn't attach a module
     // name to the AnyObject protocol, and only that one.
     std::string l_prime = std::regex_replace(
@@ -1225,7 +1221,11 @@ template <> bool Equivalent<ConstString>(ConstString l, ConstString r) {
     if (llvm::StringRef(l_prime) == r.GetStringRef())
       return true;
 
-#ifndef STRICT_VALIDATION
+#ifdef STRICT_VALIDATION
+    // Failure. Dump it for easier debugging.
+    llvm::dbgs() << "TypeSystemSwiftTypeRef diverges from SwiftASTContext: "
+                 << l.GetStringRef() << " != " << r.GetStringRef() << "\n";
+#else
     return true;
 #endif
   }
