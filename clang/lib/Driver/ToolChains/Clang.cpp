@@ -4924,7 +4924,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (Triple.isX86() && Triple.isOSBinFormatELF()) {
       StringRef Val = A->getValue();
       if (Val != "all" && Val != "labels" && Val != "none" &&
-          !(Val.startswith("list=") && llvm::sys::fs::exists(Val.substr(5))))
+          !Val.startswith("list="))
         D.Diag(diag::err_drv_invalid_value)
             << A->getAsString(Args) << A->getValue();
       else
