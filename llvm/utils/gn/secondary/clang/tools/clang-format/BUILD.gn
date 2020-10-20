@@ -7,5 +7,10 @@ executable("clang-format") {
     "//clang/lib/Tooling/Core",
     "//llvm/lib/Support",
   ]
+  assert_no_deps = [
+    "//clang/lib/AST/",
+    "//clang/lib/Frontend/",
+    "//clang/lib/Sema/",
+  ]
   sources = [ "ClangFormat.cpp" ]
 }
