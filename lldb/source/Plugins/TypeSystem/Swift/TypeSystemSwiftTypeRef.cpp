@@ -1909,7 +1909,7 @@ bool TypeSystemSwiftTypeRef::IsImportedType(opaque_compiler_type_t type,
     StringRef ident = GetObjCTypeName(node);
     if (ident.empty())
       return {};
-    if (original_type && GetModule())
+    if (original_type)
       if (TypeSP clang_type = LookupClangType(m_swift_ast_context, ident))
         *original_type = clang_type->GetForwardCompilerType();
     return true;
