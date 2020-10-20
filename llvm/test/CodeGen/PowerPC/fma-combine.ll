@@ -313,5 +313,37 @@ entry:
   ret <2 x double> %0
 }
 
+define double @fma_combine_const(double %a, double %b) {
+; CHECK-FAST-LABEL: fma_combine_const:
+; CHECK-FAST:       # %bb.0: # %entry
+; CHECK-FAST-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
+; CHECK-FAST-NEXT:    lfd 0, .LCPI9_0@toc@l(3)
+; CHECK-FAST-NEXT:    xsmaddadp 2, 1, 0
+; CHECK-FAST-NEXT:    fmr 1, 2
+; CHECK-FAST-NEXT:    blr
+;
+; CHECK-FAST-NOVSX-LABEL: fma_combine_const:
+; CHECK-FAST-NOVSX:       # %bb.0: # %entry
+; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
+; CHECK-FAST-NOVSX-NEXT:    lfd 0, .LCPI9_0@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    fmadd 1, 1, 0, 2
+; CHECK-FAST-NOVSX-NEXT:    blr
+;
+; CHECK-LABEL: fma_combine_const:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
+; CHECK-NEXT:    lfd 0, .LCPI9_0@toc@l(3)
+; CHECK-NEXT:    addis 3, 2, .LCPI9_1@toc@ha
+; CHECK-NEXT:    lfd 3, .LCPI9_1@toc@l(3)
+; CHECK-NEXT:    xsmuldp 0, 1, 0
+; CHECK-NEXT:    fmr 1, 2
+; CHECK-NEXT:    xsmaddadp 1, 0, 3
+; CHECK-NEXT:    blr
+entry:
+  %0 = fmul double %a, 1.1
+  %1 = call contract double @llvm.fma.f64(double %0, double 2.1, double %b)
+  ret double %1
+}
+
 declare double @llvm.fma.f64(double, double, double) nounwind readnone
 declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>) nounwind readnone
