@@ -7369,7 +7369,7 @@ TypeResult Parser::parseTypeFromString(StringRef typeStr, StringRef context,
                       SrcMgr::C_User, 0, 0, includeLoc);
 
     // Form a new lexer that references the buffer.
-    Lexer lexer(fileID, sourceMgr.getBuffer(fileID), PP);
+    Lexer lexer(fileID, sourceMgr.getBufferOrFake(fileID), PP);
     lexer.setParsingPreprocessorDirective(true);
     lexer.setIsPragmaLexer(true);
 

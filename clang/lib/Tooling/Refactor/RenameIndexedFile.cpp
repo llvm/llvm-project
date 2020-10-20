@@ -338,7 +338,7 @@ static void findMatchingTextualOccurrences(
                             ArrayRef<SourceLocation> Locations,
                             unsigned SymbolIndex)>
         MatchHandler) {
-  const llvm::MemoryBuffer *FromFile = SM.getBuffer(SM.getMainFileID());
+  const auto FromFile = SM.getBufferOrFake(SM.getMainFileID());
   Lexer RawLex(SM.getMainFileID(), FromFile, SM, LangOpts);
   RawLex.SetCommentRetentionState(true);
 
@@ -618,7 +618,7 @@ findObjCMultiPieceSelectorOccurrences(CompilerInstance &CI,
 
   // Lex the file and look for tokens.
   // Start lexing the specified input file.
-  const llvm::MemoryBuffer *FromFile = SM.getBuffer(SM.getMainFileID());
+  const auto FromFile = SM.getBufferOrFake(SM.getMainFileID());
   Lexer RawLex(SM.getMainFileID(), FromFile, SM, LangOpts);
 
   std::vector<Token> Tokens;

@@ -445,7 +445,7 @@ void html::SyntaxHighlight(Rewriter &R, FileID FID, const Preprocessor &PP) {
   RewriteBuffer &RB = R.getEditBuffer(FID);
 
   const SourceManager &SM = PP.getSourceManager();
-  const llvm::MemoryBuffer *FromFile = SM.getBuffer(FID);
+  llvm::MemoryBufferRef FromFile = SM.getBufferOrFake(FID);
   Lexer L(FID, FromFile, SM, PP.getLangOpts());
   const char *BufferStart = L.getBuffer().data();
 
@@ -536,7 +536,7 @@ void html::HighlightMacros(Rewriter &R, FileID FID, const Preprocessor& PP) {
   const SourceManager &SM = PP.getSourceManager();
   std::vector<Token> TokenStream;
 
-  const llvm::MemoryBuffer *FromFile = SM.getBuffer(FID);
+  llvm::MemoryBufferRef FromFile = SM.getBufferOrFake(FID);
   Lexer L(FID, FromFile, SM, PP.getLangOpts());
 
   // Lex all the tokens in raw mode, to avoid entering #includes or expanding
