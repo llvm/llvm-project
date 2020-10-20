@@ -401,9 +401,9 @@ template <> struct less<swift::ClusteredBitVector> {
     for (; iL >= 0 && iR >= 0; --iL, --iR) {
       bool bL = lhs[iL];
       bool bR = rhs[iR];
-      if (bL and not bR)
+      if (bL && !bR)
         return false;
-      if (bR and not bL)
+      if (bR && !bL)
         return true;
     }
     return false;
