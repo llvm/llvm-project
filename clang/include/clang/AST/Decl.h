@@ -803,14 +803,11 @@ struct EvaluatedStmt {
   /// Whether this statement is being evaluated.
   bool IsEvaluating : 1;
 
-  /// Whether we already checked whether this statement was an
-  /// integral constant expression.
-  bool CheckedICE : 1;
-
-  /// Whether this statement is an integral constant expression,
-  /// or in C++11, whether the statement is a constant expression. Only
-  /// valid if CheckedICE is true.
-  bool IsICE : 1;
+  /// Whether this variable is known to have constant initialization. This is
+  /// currently only computed in C++, for static / thread storage duration
+  /// variables that might have constant initialization and for variables that
+  /// are usable in constant expressions.
+  bool HasConstantInitialization : 1;
 
   /// Whether this variable is known to have constant destruction. That is,
   /// whether running the destructor on the initial value is a side-effect
@@ -819,12 +816,18 @@ struct EvaluatedStmt {
   /// non-trivial.
   bool HasConstantDestruction : 1;
 
+  /// In C++98, whether the initializer is an ICE. This affects whether the
+  /// variable is usable in constant expressions.
+  bool HasICEInit : 1;
+  bool CheckedForICEInit : 1;
+
   Stmt *Value;
   APValue Evaluated;
 
   EvaluatedStmt()
-      : WasEvaluated(false), IsEvaluating(false), CheckedICE(false),
-        IsICE(false), HasConstantDestruction(false) {}
+      : WasEvaluated(false), IsEvaluating(false),
+        HasConstantInitialization(false), HasConstantDestruction(false),
+        HasICEInit(false), CheckedForICEInit(false) {}
 };
 
 /// Represents a variable declaration or definition.
@@ -1284,25 +1287,29 @@ public:
   /// Evaluate the destruction of this variable to determine if it constitutes
   /// constant destruction.
   ///
-  /// \pre isInitICE()
+  /// \pre hasConstantInitialization()
   /// \return \c true if this variable has constant destruction, \c false if
   ///         not.
   bool evaluateDestruction(SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
 
-  /// Determines whether it is already known whether the
-  /// initializer is an integral constant expression or not.
-  bool isInitKnownICE() const;
-
-  /// Determines whether the initializer is an integral constant
-  /// expression, or in C++11, whether the initializer is a constant
-  /// expression.
+  /// Determine whether this variable has constant initialization.
   ///
-  /// \pre isInitKnownICE()
-  bool isInitICE() const;
+  /// This is only set in two cases: when the language semantics require
+  /// constant initialization (globals in C and some globals in C++), and when
+  /// the variable is usable in constant expressions (constexpr, const int, and
+  /// reference variables in C++).
+  bool hasConstantInitialization() const;
 
-  /// Determine whether the value of the initializer attached to this
-  /// declaration is an integral constant expression.
-  bool checkInitIsICE(SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
+  /// Determine whether the initializer of this variable is an integer constant
+  /// expression. For use in C++98, where this affects whether the variable is
+  /// usable in constant expressions.
+  bool hasICEInitializer(const ASTContext &Context) const;
+
+  /// Evaluate the initializer of this variable to determine whether it's a
+  /// constant initializer. Should only be called once, after completing the
+  /// definition of the variable.
+  bool checkForConstantInitialization(
+      SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
 
   void setInitStyle(InitializationStyle Style) {
     VarDeclBits.InitStyle = Style;
