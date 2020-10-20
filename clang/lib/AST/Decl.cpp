@@ -2325,7 +2325,16 @@ bool VarDecl::isUsableInConstantExpressions(const ASTContext &Context) const {
   if (!DefVD->mightBeUsableInConstantExpressions(Context))
     return false;
   //   ... and its initializer is a constant initializer.
-  return DefVD->isInitKnownICE() && DefVD->isInitICE();
+  if (!DefVD->hasConstantInitialization())
+    return false;
+  // C++98 [expr.const]p1:
+  //   An integral constant-expression can involve only [...] const variables
+  //   or static data members of integral or enumeration types initialized with
+  //   [integer] constant expressions (dcl.init)
+  if (Context.getLangOpts().CPlusPlus && !Context.getLangOpts().CPlusPlus11 &&
+      !DefVD->hasICEInitializer(Context))
+    return false;
+  return true;
 }
 
 /// Convert the initializer for this declaration to the elaborated EvaluatedStmt
@@ -2399,49 +2408,47 @@ APValue *VarDecl::getEvaluatedValue() const {
   return nullptr;
 }
 
-bool VarDecl::isInitKnownICE() const {
+bool VarDecl::hasICEInitializer(const ASTContext &Context) const {
+  const Expr *Init = getInit();
+  assert(Init && "no initializer");
+
+  EvaluatedStmt *Eval = ensureEvaluatedStmt();
+  if (!Eval->CheckedForICEInit) {
+    Eval->CheckedForICEInit = true;
+    Eval->HasICEInit = Init->isIntegerConstantExpr(Context);
+  }
+  return Eval->HasICEInit;
+}
+
+bool VarDecl::hasConstantInitialization() const {
+  // In C, all globals (and only globals) have constant initialization.
+  if (hasGlobalStorage() && !getASTContext().getLangOpts().CPlusPlus)
+    return true;
+
+  // In C++, it depends on whether the evaluation at the point of definition
+  // was evaluatable as a constant initializer.
   if (EvaluatedStmt *Eval = getEvaluatedStmt())
-    return Eval->CheckedICE;
+    return Eval->HasConstantInitialization;
 
   return false;
 }
 
-bool VarDecl::isInitICE() const {
-  assert(isInitKnownICE() &&
-         "Check whether we already know that the initializer is an ICE");
-  return Init.get<EvaluatedStmt *>()->IsICE;
-}
-
-bool VarDecl::checkInitIsICE(
+bool VarDecl::checkForConstantInitialization(
     SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
-  assert(!Eval->CheckedICE &&
-         "should check whether var has constant init at most once");
   // If we ask for the value before we know whether we have a constant
   // initializer, we can compute the wrong value (for example, due to
   // std::is_constant_evaluated()).
   assert(!Eval->WasEvaluated &&
          "already evaluated var value before checking for constant init");
+  assert(getASTContext().getLangOpts().CPlusPlus && "only meaningful in C++");
 
   const auto *Init = cast<Expr>(Eval->Value);
   assert(!Init->isValueDependent());
 
-  // In C++11, evaluate the initializer to check whether it's a constant
-  // expression.
-  if (getASTContext().getLangOpts().CPlusPlus11) {
-    Eval->IsICE = evaluateValue(Notes) && Notes.empty();
-    Eval->CheckedICE = true;
-    return Eval->IsICE;
-  }
-
-  // It's an ICE whether or not the definition we found is
-  // out-of-line.  See DR 721 and the discussion in Clang PR
-  // 6206 for details.
-
-  Eval->IsICE = getType()->isIntegralOrEnumerationType() &&
-                Init->isIntegerConstantExpr(getASTContext());
-  Eval->CheckedICE = true;
-  return Eval->IsICE;
+  // Evaluate the initializer to check whether it's a constant expression.
+  Eval->HasConstantInitialization = evaluateValue(Notes) && Notes.empty();
+  return Eval->HasConstantInitialization;
 }
 
 bool VarDecl::isParameterPack() const {
