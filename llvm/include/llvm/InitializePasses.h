@@ -306,7 +306,7 @@ void initializeMergeFunctionsLegacyPassPass(PassRegistry&);
 void initializeMergeICmpsLegacyPassPass(PassRegistry &);
 void initializeMergedLoadStoreMotionLegacyPassPass(PassRegistry&);
 void initializeMetaRenamerPass(PassRegistry&);
-void initializeModuleDebugInfoPrinterPass(PassRegistry&);
+void initializeModuleDebugInfoLegacyPrinterPass(PassRegistry &);
 void initializeModuleMemProfilerLegacyPassPass(PassRegistry &);
 void initializeModuleSummaryIndexWrapperPassPass(PassRegistry&);
 void initializeModuloScheduleTestPass(PassRegistry&);
