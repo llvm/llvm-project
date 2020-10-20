@@ -2451,8 +2451,7 @@ bool VarDecl::checkForConstantInitialization(
          "already evaluated var value before checking for constant init");
   assert(getASTContext().getLangOpts().CPlusPlus && "only meaningful in C++");
 
-  const auto *Init = cast<Expr>(Eval->Value);
-  assert(!Init->isValueDependent());
+  assert(!cast<Expr>(Eval->Value)->isValueDependent());
 
   // Evaluate the initializer to check whether it's a constant expression.
   Eval->HasConstantInitialization =
