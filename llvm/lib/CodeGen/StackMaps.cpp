@@ -401,7 +401,7 @@ void StackMaps::parseStatepointOpers(const MachineInstr &MI,
     SmallVector<unsigned, 8> GCPtrIndices;
     unsigned GCPtrIdx = (unsigned)SO.getFirstGCPtrIdx();
     assert((int)GCPtrIdx != -1);
-    assert(MOI - MI.operands_begin() == GCPtrIdx);
+    assert(MOI - MI.operands_begin() == GCPtrIdx + 0LL);
     while (NumGCPointers--) {
       GCPtrIndices.push_back(GCPtrIdx);
       GCPtrIdx = StackMaps::getNextMetaArgIdx(&MI, GCPtrIdx);
