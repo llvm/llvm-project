@@ -401,11 +401,17 @@ declare void @llvm.memset(i8* %dest, i8 %val, i32 %len, i1 %isvolatile)
 ; It is odd to add nocapture but a result of the llvm.memcpy nocapture.
 ;
 define i32 @memcpy_volatile(i8* %ptr1, i8* %ptr2) {
-; CHECK: Function Attrs: argmemonly nounwind willreturn
-; CHECK-LABEL: define {{[^@]+}}@memcpy_volatile
-; CHECK-SAME: (i8* nocapture writeonly [[PTR1:%.*]], i8* nocapture readonly [[PTR2:%.*]]) [[ATTR10:#.*]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly [[PTR1]], i8* noalias nocapture readonly [[PTR2]], i32 noundef 8, i1 noundef true) [[ATTR19:#.*]]
-; CHECK-NEXT:    ret i32 4
+; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@memcpy_volatile
+; IS__TUNIT____-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8* nocapture nofree readonly [[PTR2:%.*]]) [[ATTR10:#.*]] {
+; IS__TUNIT____-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[PTR1]], i8* noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) [[ATTR17:#.*]]
+; IS__TUNIT____-NEXT:    ret i32 4
+;
+; IS__CGSCC____: Function Attrs: argmemonly nofree nosync nounwind willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@memcpy_volatile
+; IS__CGSCC____-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8* nocapture nofree readonly [[PTR2:%.*]]) [[ATTR10:#.*]] {
+; IS__CGSCC____-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture nofree writeonly [[PTR1]], i8* noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) [[ATTR18:#.*]]
+; IS__CGSCC____-NEXT:    ret i32 4
 ;
   call void @llvm.memcpy(i8* %ptr1, i8* %ptr2, i32 8, i1 1)
   ret i32 4
@@ -416,11 +422,17 @@ define i32 @memcpy_volatile(i8* %ptr1, i8* %ptr2) {
 ; It is odd to add nocapture but a result of the llvm.memset nocapture.
 ;
 define i32 @memset_non_volatile(i8* %ptr1, i8 %val) {
-; CHECK: Function Attrs: argmemonly nosync nounwind willreturn writeonly
-; CHECK-LABEL: define {{[^@]+}}@memset_non_volatile
-; CHECK-SAME: (i8* nocapture writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) [[ATTR11:#.*]] {
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) [[ATTR20:#.*]]
-; CHECK-NEXT:    ret i32 4
+; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
+; IS__TUNIT____-LABEL: define {{[^@]+}}@memset_non_volatile
+; IS__TUNIT____-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) [[ATTR11:#.*]] {
+; IS__TUNIT____-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) [[ATTR18:#.*]]
+; IS__TUNIT____-NEXT:    ret i32 4
+;
+; IS__CGSCC____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@memset_non_volatile
+; IS__CGSCC____-SAME: (i8* nocapture nofree writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) [[ATTR11:#.*]] {
+; IS__CGSCC____-NEXT:    call void @llvm.memset.p0i8.i32(i8* nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) [[ATTR19:#.*]]
+; IS__CGSCC____-NEXT:    ret i32 4
 ;
   call void @llvm.memset(i8* %ptr1, i8 %val, i32 8, i1 0)
   ret i32 4
@@ -490,11 +502,17 @@ define i32 @cos_test(float %x) {
 }
 
 define float @cos_test2(float %x) {
-; CHECK: Function Attrs: nosync nounwind readnone willreturn
-; CHECK-LABEL: define {{[^@]+}}@cos_test2
-; CHECK-SAME: (float [[X:%.*]]) [[ATTR16:#.*]] {
-; CHECK-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) [[ATTR19]]
-; CHECK-NEXT:    ret float [[C]]
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@cos_test2
+; IS__TUNIT____-SAME: (float [[X:%.*]]) [[ATTR15]] {
+; IS__TUNIT____-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) [[ATTR17]]
+; IS__TUNIT____-NEXT:    ret float [[C]]
+;
+; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@cos_test2
+; IS__CGSCC____-SAME: (float [[X:%.*]]) [[ATTR16:#.*]] {
+; IS__CGSCC____-NEXT:    [[C:%.*]] = call float @llvm.cos.f32(float [[X]]) [[ATTR18]]
+; IS__CGSCC____-NEXT:    ret float [[C]]
 ;
   %c = call float @llvm.cos(float %x)
   ret float %c

@@ -363,6 +363,7 @@ declare void @f1(%struct.big* nocapture sret)
 declare void @f2(%struct.big*)
 
 ; CHECK: attributes [[ATTR0]] = { nounwind }
-; CHECK: attributes #1 = { argmemonly nounwind willreturn }
+; CHECK: attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 ; CHECK: attributes #2 = { nounwind ssp }
 ; CHECK: attributes #3 = { nounwind ssp uwtable }
+; CHECK: attributes #4 = { argmemonly nofree nosync nounwind willreturn writeonly }
