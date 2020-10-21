@@ -834,6 +834,11 @@ class SI_WATERFALL_BEGIN<RegisterClass idx_rc> : SPseudoInstSI <
   (ins idx_rc:$idx)> {
 }
 
+class SI_WATERFALL_BEGIN_CONT<RegisterClass idx_rc> : SPseudoInstSI <
+  (outs SReg_32:$tok_ret),
+  (ins SReg_32:$tok, idx_rc:$idx)> {
+}
+
 class SI_WATERFALL_READFIRSTLANE<RegisterClass dst_rc, RegisterClass src_rc> : SPseudoInstSI <
   (outs dst_rc:$dst),
   (ins SReg_32:$tok, src_rc:$src)>;
@@ -852,6 +857,11 @@ def SI_WATERFALL_BEGIN_V1 : SI_WATERFALL_BEGIN<VGPR_32>;
 def SI_WATERFALL_BEGIN_V2 : SI_WATERFALL_BEGIN<VReg_64>;
 def SI_WATERFALL_BEGIN_V4 : SI_WATERFALL_BEGIN<VReg_128>;
 def SI_WATERFALL_BEGIN_V8 : SI_WATERFALL_BEGIN<VReg_256>;
+
+def SI_WATERFALL_BEGIN_CONT_V1 : SI_WATERFALL_BEGIN_CONT<VGPR_32>;
+def SI_WATERFALL_BEGIN_CONT_V2 : SI_WATERFALL_BEGIN_CONT<VReg_64>;
+def SI_WATERFALL_BEGIN_CONT_V4 : SI_WATERFALL_BEGIN_CONT<VReg_128>;
+def SI_WATERFALL_BEGIN_CONT_V8 : SI_WATERFALL_BEGIN_CONT<VReg_256>;
 
 def SI_WATERFALL_READFIRSTLANE_V1 : SI_WATERFALL_READFIRSTLANE<SReg_32, VGPR_32>;
 def SI_WATERFALL_READFIRSTLANE_V2 : SI_WATERFALL_READFIRSTLANE<SReg_64, VReg_64>;
@@ -1676,6 +1686,11 @@ multiclass SI_WATERFALL_Pattern < ValueType dvt, ValueType svt, string VecSize> 
   >;
 
   def : GCNPat<
+    (i32 (int_amdgcn_waterfall_begin_cont i32:$tok, svt:$idx)),
+    (!cast<Instruction>("SI_WATERFALL_BEGIN_CONT_"#VecSize) i32:$tok, svt:$idx)
+  >;
+
+  def : GCNPat<
     (dvt (int_amdgcn_waterfall_readfirstlane i32:$tok, svt:$src)),
     (!cast<Instruction>("SI_WATERFALL_READFIRSTLANE_"#VecSize) i32:$tok, svt:$src)
   >;
@@ -1690,6 +1705,11 @@ multiclass SI_WATERFALL_S_Pattern < ValueType svt, string VecSize> {
   def : GCNPat<
     (i32 (int_amdgcn_waterfall_begin svt:$idx)),
     (!cast<Instruction>("SI_WATERFALL_BEGIN_"#VecSize) svt:$idx)
+  >;
+
+  def : GCNPat<
+    (i32 (int_amdgcn_waterfall_begin_cont i32:$tok, svt:$idx)),
+    (!cast<Instruction>("SI_WATERFALL_BEGIN_CONT_"#VecSize) i32:$tok, svt:$idx)
   >;
 
   def : GCNPat<

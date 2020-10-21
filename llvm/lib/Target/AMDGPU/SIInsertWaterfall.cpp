@@ -45,6 +45,23 @@ static unsigned getWFBeginSize(const unsigned Opcode) {
   return 0; // Not SI_WATERFALL_BEGIN_*
 }
 
+static unsigned getWFBeginContSize(const unsigned Opcode) {
+  switch (Opcode) {
+  case AMDGPU::SI_WATERFALL_BEGIN_CONT_V1:
+    return 1;
+  case AMDGPU::SI_WATERFALL_BEGIN_CONT_V2:
+    return 2;
+  case AMDGPU::SI_WATERFALL_BEGIN_CONT_V4:
+    return 4;
+  case AMDGPU::SI_WATERFALL_BEGIN_CONT_V8:
+    return 8;
+  default:
+    break;
+  }
+
+  return 0; // Not SI_WATERFALL_BEGIN_CONT_*
+}
+
 static unsigned getWFRFLSize(const unsigned Opcode) {
   switch (Opcode) {
   case AMDGPU::SI_WATERFALL_READFIRSTLANE_V1:
@@ -99,7 +116,7 @@ static unsigned getWFLastUseSize(const unsigned Opcode) {
 static void initReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
                     const SIRegisterInfo *RI, const SIInstrInfo *TII,
                     MachineBasicBlock::iterator &I, const DebugLoc &DL,
-                    unsigned Reg, unsigned ImmVal) {
+                    Register Reg, unsigned ImmVal) {
 
   auto EndDstRC = MRI->getRegClass(Reg);
   uint32_t RegSize = RI->getRegSizeInBits(*EndDstRC) / 32;
@@ -107,9 +124,9 @@ static void initReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
   if (RegSize == 1)
     BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), Reg).addImm(0);
   else {
-    SmallVector<unsigned, 8> TRegs;
+    SmallVector<Register, 8> TRegs;
     for (unsigned i = 0; i < RegSize; i++) {
-      unsigned TReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      Register TReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
       BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), TReg).addImm(ImmVal);
       TRegs.push_back(TReg);
     }
@@ -125,7 +142,7 @@ static void initReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
 static void orReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
                   const SIRegisterInfo *RI, const SIInstrInfo *TII,
                   MachineBasicBlock::iterator &I, const DebugLoc &DL,
-                  unsigned EndDst, unsigned PhiReg, unsigned EndSrc) {
+                  Register EndDst, Register PhiReg, Register EndSrc) {
   auto EndDstRC = MRI->getRegClass(EndDst);
   uint32_t RegSize = RI->getRegSizeInBits(*EndDstRC) / 32;
 
@@ -134,9 +151,9 @@ static void orReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
         .addReg(PhiReg)
         .addReg(EndSrc);
   else {
-    SmallVector<unsigned, 8> TRegs;
+    SmallVector<Register, 8> TRegs;
     for (unsigned i = 0; i < RegSize; ++i) {
-      unsigned TReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      Register TReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
       BuildMI(MBB, I, DL, TII->get(AMDGPU::V_OR_B32_e64), TReg)
           .addReg(PhiReg, 0, RI->getSubRegFromChannel(i))
           .addReg(EndSrc, 0, RI->getSubRegFromChannel(i));
@@ -154,8 +171,8 @@ static void orReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
 static void readFirstLaneReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
                              const SIRegisterInfo *RI, const SIInstrInfo *TII,
                              MachineBasicBlock::iterator &I, const DebugLoc &DL,
-                             unsigned RFLReg, unsigned RFLSrcReg,
-                             MachineOperand &RFLSrcOp) {
+                             Register RFLReg, Register RFLSrcReg,
+                             const MachineOperand &RFLSrcOp) {
   auto RFLRegRC = MRI->getRegClass(RFLReg);
   uint32_t RegSize = RI->getRegSizeInBits(*RFLRegRC) / 32;
   assert(RI->hasVGPRs(MRI->getRegClass(RFLSrcReg)) && "unexpected uniform operand for readfirstlane");
@@ -165,9 +182,9 @@ static void readFirstLaneReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
         .addReg(RFLSrcReg, getUndefRegState(RFLSrcOp.isUndef()),
                 RFLSrcOp.getSubReg());
   else {
-    SmallVector<unsigned, 8> TRegs;
+    SmallVector<Register, 8> TRegs;
     for (unsigned i = 0; i < RegSize; ++i) {
-      unsigned TReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+      Register TReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
       BuildMI(MBB, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), TReg)
           .addReg(RFLSrcReg, 0, RI->getSubRegFromChannel(i));
       TRegs.push_back(TReg);
@@ -185,9 +202,9 @@ static void readFirstLaneReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
 // 1. Trivially detectable as operand in SGPR
 // 2. Direct def is from an SGPR->VGPR copy (which may happen if assumed non-uniform value
 //    turns out to be uniform)
-static unsigned getUniformOperandReplacementReg(MachineRegisterInfo *MRI,
+static Register getUniformOperandReplacementReg(MachineRegisterInfo *MRI,
                                                 const SIRegisterInfo *RI,
-                                                unsigned Reg) {
+                                                Register Reg) {
   auto RegRC = MRI->getRegClass(Reg);
   if (!RI->hasVGPRs(RegRC)) {
     return Reg;
@@ -198,7 +215,7 @@ static unsigned getUniformOperandReplacementReg(MachineRegisterInfo *MRI,
   if (DefMI->isFullCopy()) {
     auto const &DefSrcOp = DefMI->getOperand(1);
     if (DefSrcOp.isReg() && DefSrcOp.getReg().isVirtual()) {
-      unsigned ReplaceReg = DefSrcOp.getReg();
+      Register ReplaceReg = DefSrcOp.getReg();
       if (!RI->hasVGPRs(MRI->getRegClass(ReplaceReg)))
         return ReplaceReg;
     }
@@ -206,14 +223,16 @@ static unsigned getUniformOperandReplacementReg(MachineRegisterInfo *MRI,
   return AMDGPU::NoRegister;
 }
 
-static unsigned compareIdx(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
+static Register compareIdx(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
                            const SIRegisterInfo *RI, const SIInstrInfo *TII,
                            MachineBasicBlock::iterator &I, const DebugLoc &DL,
-                           unsigned CurrentIdxReg, MachineOperand &IndexOp,
+                           Register CurrentIdxReg,
+                           const MachineOperand &IndexOp, Register CondReg,
                            bool IsWave32) {
   // Iterate over the index in dword chunks and'ing the result with the
   // CondReg
-  unsigned IndexReg = IndexOp.getReg();
+  // Optionally CondReg is passed in from a previous compareIdx call
+  Register IndexReg = IndexOp.getReg();
   auto IndexRC = RI->getSubRegClass(MRI->getRegClass(IndexOp.getReg()),
                                     IndexOp.getSubReg());
   unsigned AndOpc =
@@ -221,27 +240,40 @@ static unsigned compareIdx(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
   const auto *BoolXExecRC = RI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
 
   uint32_t RegSize = RI->getRegSizeInBits(*IndexRC) / 32;
-  unsigned CondReg;
 
   if (RegSize == 1) {
-    CondReg = MRI->createVirtualRegister(BoolXExecRC);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::V_CMP_EQ_U32_e64), CondReg)
+    Register TReg = MRI->createVirtualRegister(BoolXExecRC);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::V_CMP_EQ_U32_e64), TReg)
         .addReg(CurrentIdxReg)
         .addReg(IndexReg, 0, IndexOp.getSubReg());
-  } else {
-    unsigned TReg = MRI->createVirtualRegister(BoolXExecRC);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::V_CMP_EQ_U32_e64), TReg)
-        .addReg(CurrentIdxReg, 0, AMDGPU::sub0)
-        .addReg(IndexReg, 0, AMDGPU::sub0);
 
-    for (unsigned i = 1; i < RegSize; ++i) {
-      unsigned TReg2 =
-          MRI->createVirtualRegister(BoolXExecRC);
+    if (CondReg != AMDGPU::NoRegister) {
+      Register TReg2 = MRI->createVirtualRegister(BoolXExecRC);
+      BuildMI(MBB, I, DL, TII->get(AndOpc), TReg2).addReg(CondReg).addReg(TReg);
+      CondReg = TReg2;
+    } else {
+      CondReg = TReg;
+    }
+  } else {
+    unsigned StartCount;
+    Register TReg;
+    if (CondReg != AMDGPU::NoRegister) {
+      TReg = CondReg;
+      StartCount = 0;
+    } else {
+      TReg = MRI->createVirtualRegister(BoolXExecRC);
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::V_CMP_EQ_U32_e64), TReg)
+          .addReg(CurrentIdxReg, 0, AMDGPU::sub0)
+          .addReg(IndexReg, 0, AMDGPU::sub0);
+      StartCount = 1;
+    }
+
+    for (unsigned i = StartCount; i < RegSize; ++i) {
+      Register TReg2 = MRI->createVirtualRegister(BoolXExecRC);
       BuildMI(MBB, I, DL, TII->get(AMDGPU::V_CMP_EQ_U32_e64), TReg2)
           .addReg(CurrentIdxReg, 0, RI->getSubRegFromChannel(i))
           .addReg(IndexReg, 0, RI->getSubRegFromChannel(i));
-      unsigned TReg3 =
-          MRI->createVirtualRegister(BoolXExecRC);
+      Register TReg3 = MRI->createVirtualRegister(BoolXExecRC);
       BuildMI(MBB, I, DL, TII->get(AndOpc), TReg3)
           .addReg(TReg)
           .addReg(TReg2);
@@ -255,35 +287,37 @@ static unsigned compareIdx(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
 class SIInsertWaterfall : public MachineFunctionPass {
 private:
   struct WaterfallWorkitem {
-    MachineInstr *Begin;
     const SIInstrInfo *TII;
-    unsigned TokReg;
+    Register TokReg; // This is always the token from the last begin intrinsic
     MachineInstr *Final;
 
+    std::vector<MachineInstr *> BeginList;
     std::vector<MachineInstr *> RFLList;
     std::vector<MachineInstr *> EndList;
     std::vector<MachineInstr *> LastUseList;
 
     // List of corresponding init, newdst and phi registers used in loop for
     // end pseudos
-    std::vector<std::tuple<unsigned, unsigned, unsigned, unsigned>> EndRegs;
-    std::vector<unsigned> RFLRegs;
+    std::vector<std::tuple<Register, Register, Register, Register>> EndRegs;
+    std::vector<Register> RFLRegs;
 
     WaterfallWorkitem() = default;
     WaterfallWorkitem(MachineInstr *_Begin, const SIInstrInfo *_TII)
-        : Begin(_Begin), TII(_TII), Final(nullptr) {
+        : TII(_TII), Final(nullptr) {
 
-      auto TokMO = TII->getNamedOperand(*Begin, AMDGPU::OpName::tok);
+      auto TokMO = TII->getNamedOperand(*_Begin, AMDGPU::OpName::tok);
       assert(TokMO &&
              "Unable to extract tok operand from SI_WATERFALL_BEGIN pseudo op");
+      BeginList.push_back(_Begin);
       TokReg = TokMO->getReg();
     };
 
     void processCandidate(MachineInstr *Cand) {
       unsigned Opcode = Cand->getOpcode();
       // Trivially end any waterfall intrinsic instructions
-      if (getWFBeginSize(Opcode) || getWFRFLSize(Opcode) ||
-          getWFEndSize(Opcode) || getWFLastUseSize(Opcode)) {
+      if (getWFBeginSize(Opcode) || getWFBeginContSize(Opcode) ||
+          getWFRFLSize(Opcode) || getWFEndSize(Opcode) ||
+          getWFLastUseSize(Opcode)) {
         // TODO: A new waterfall clause shouldn't overlap with any uses
         // tagged by a last_use intrinsic
         return;
@@ -293,7 +327,7 @@ private:
       // later use of a tagged last_use
       for (auto Use : LastUseList) {
         auto UseMO = TII->getNamedOperand(*Use, AMDGPU::OpName::dst);
-        unsigned UseReg = UseMO->getReg();
+        Register UseReg = UseMO->getReg();
 
         if (Cand->findRegisterUseOperand(UseReg))
           Final = Cand;
@@ -303,12 +337,20 @@ private:
     bool addCandidate(MachineInstr *Cand) {
       unsigned Opcode = Cand->getOpcode();
 
-      if (getWFRFLSize(Opcode) || getWFEndSize(Opcode) ||
-          getWFLastUseSize(Opcode)) {
+      if (getWFBeginContSize(Opcode) || getWFRFLSize(Opcode) ||
+          getWFEndSize(Opcode) || getWFLastUseSize(Opcode)) {
         auto CandTokMO = TII->getNamedOperand(*Cand, AMDGPU::OpName::tok);
-        unsigned CandTokReg = CandTokMO->getReg();
+        Register CandTokReg = CandTokMO->getReg();
         if (CandTokReg == TokReg) {
-          if (getWFRFLSize(Opcode)) {
+          if (getWFBeginContSize(Opcode)) {
+            auto TokRetMO =
+                TII->getNamedOperand(*Cand, AMDGPU::OpName::tok_ret);
+            assert(TokRetMO && "Unable to extract tok_ret operand from "
+                               "SI_WATERFALL_BEGIN_CONT pseudo op");
+            BeginList.push_back(Cand);
+            TokReg = TokRetMO->getReg();
+            return true;
+          } else if (getWFRFLSize(Opcode)) {
             RFLList.push_back(Cand);
             return true;
           } else if (getWFEndSize(Opcode)) {
@@ -367,15 +409,15 @@ FunctionPass *llvm::createSIInsertWaterfallPass() {
 
 bool SIInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
   // In some cases, the waterfall is actually redundant
-  // If all the readfirstlane intrinsics are actually for uniform values and 
+  // If all the readfirstlane intrinsics are actually for uniform values and
   // the token used in the begin/end isn't used in anything else the waterfall
   // can be removed.
   // Alternatively, prior passes may have removed the readfirstlane intrinsics
   // altogether, in this case the begin/end intrinsics are now redundant and can
   // also be removed.
   // The readfirstlane intrinsics are replaced with the uniform source value,
-  // the loop is removed and the defs in the end intrinsics are just replaced with
-  // the input operands
+  // the loop is removed and the defs in the end intrinsics are just replaced
+  // with the input operands
 
   // First step is to identify any readfirstlane intrinsics that are actually
   // uniform
@@ -386,10 +428,10 @@ bool SIInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
   for (auto RFLMI : Item.RFLList) {
     auto RFLSrcOp = TII->getNamedOperand(*RFLMI, AMDGPU::OpName::src);
     auto RFLDstOp = TII->getNamedOperand(*RFLMI, AMDGPU::OpName::dst);
-    unsigned RFLSrcReg = RFLSrcOp->getReg();
-    unsigned RFLDstReg = RFLDstOp->getReg();
+    Register RFLSrcReg = RFLSrcOp->getReg();
+    Register RFLDstReg = RFLDstOp->getReg();
 
-    unsigned ReplaceReg = getUniformOperandReplacementReg(MRI, RI, RFLSrcReg);
+    Register ReplaceReg = getUniformOperandReplacementReg(MRI, RI, RFLSrcReg);
     if (ReplaceReg != AMDGPU::NoRegister) {
       MRI->replaceRegWith(RFLDstReg, ReplaceReg);
       Removed++;
@@ -428,7 +470,8 @@ bool SIInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
       MRI->replaceRegWith(LUDstReg, LUSrcReg);
     }
 
-    Item.Begin->eraseFromParent();
+    for (auto BeginMI : Item.BeginList)
+      BeginMI->eraseFromParent();
     for (auto RFLMI : Item.RFLList)
       RFLMI->eraseFromParent();
     for (auto ENDMI : Item.EndList)
@@ -459,11 +502,12 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
 
   // Firstly we check that there are at least 3 related waterfall instructions
   // for this begin
-  // SI_WATERFALL_BEGIN [ SI_WATERFALL_READFIRSTLANE ]+ [ SI_WATERFALL_END ]+
-  // If there are multiple waterfall loops they must also be disjoint
+  // SI_WATERFALL_BEGIN [ SI_WATERFALL_BEING_CONT ]*
+  // [ SI_WATERFALL_READFIRSTLANE ]+ [ SI_WATERFALL_END ]+ If there are multiple
+  // waterfall loops they must also be disjoint
 
   for (WaterfallWorkitem &Item : Worklist) {
-    LLVM_DEBUG(dbgs() << "Processing " << *Item.Begin << "\n");
+    LLVM_DEBUG(dbgs() << "Processing " << *Item.BeginList[0] << "\n");
 
     LLVM_DEBUG(
         for (auto RUse = MRI->use_begin(Item.TokReg), RSE = MRI->use_end();
@@ -491,43 +535,60 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     // if the readfirstlane is using the same index as the SI_WATERFALL_BEGIN
     // Loop is ended after the last SI_WATERFALL_END and these instructions are
     // removed with the src replacing all dst uses
-    auto Index = TII->getNamedOperand(*(Item.Begin), AMDGPU::OpName::idx);
-    auto IndexRC = RI->getSubRegClass(MRI->getRegClass(Index->getReg()),
-                                      Index->getSubReg());
+    typedef struct {
+      const MachineOperand *Index;
+      const TargetRegisterClass *IndexRC;
+      const TargetRegisterClass *IndexSRC;
+      Register CurrentIdxReg;
+    } IdxInfo;
 
-    if (!RI->hasVGPRs(IndexRC)) {
-      // Waterfall loop index is uniform! Loop can be removed
-      // TODO:: Implement loop removal
-      LLVM_DEBUG(dbgs() << "Uniform loop detected - waterfall loop is redundant\n");
+    std::vector<IdxInfo> IndexList;
+    bool IsUniform = true;
+    for (auto BeginMI : Item.BeginList) {
+      IdxInfo CurrIdx;
+      CurrIdx.Index = TII->getNamedOperand(*(BeginMI), AMDGPU::OpName::idx);
+      CurrIdx.IndexRC =
+          RI->getSubRegClass(MRI->getRegClass(CurrIdx.Index->getReg()),
+                             CurrIdx.Index->getSubReg());
+      CurrIdx.IndexSRC = RI->getEquivalentSGPRClass(CurrIdx.IndexRC);
+      IndexList.push_back(CurrIdx);
+
+      if (RI->hasVGPRs(CurrIdx.IndexRC))
+        IsUniform = false;
     }
 
-    auto IndexSRC = RI->getEquivalentSGPRClass(IndexRC);
+    LLVM_DEBUG(if (IsUniform) {
+      // Waterfall loop index is uniform! Loop can be removed
+      // TODO:: Implement loop removal
+      LLVM_DEBUG(
+          dbgs() << "Uniform loop detected - waterfall loop is redundant\n");
+    });
 
-    MachineBasicBlock::iterator I(Item.Begin);
-    const DebugLoc &DL = Item.Begin->getDebugLoc();
+    MachineBasicBlock::iterator I(Item.BeginList[0]);
+    const DebugLoc &DL = Item.BeginList[0]->getDebugLoc();
 
     // Initialize the register we accumulate the result into, which is the
     // target of any SI_WATERFALL_END instruction
     for (auto EndMI : Item.EndList) {
       auto EndDst = TII->getNamedOperand(*EndMI, AMDGPU::OpName::dst)->getReg();
       auto EndDstRC = MRI->getRegClass(EndDst);
-      unsigned EndInit = MRI->createVirtualRegister(EndDstRC);
-      unsigned PhiReg = MRI->createVirtualRegister(EndDstRC);
-      unsigned EndSrc =
+      Register EndInit = MRI->createVirtualRegister(EndDstRC);
+      Register PhiReg = MRI->createVirtualRegister(EndDstRC);
+      Register EndSrc =
           TII->getNamedOperand(*EndMI, AMDGPU::OpName::src)->getReg();
       initReg(*CurrMBB, MRI, RI, TII, I, DL, EndInit, 0x0);
       Item.EndRegs.push_back(std::make_tuple(EndInit, EndDst, PhiReg, EndSrc));
     }
     for (auto LUMI : Item.LastUseList) {
-      unsigned LUSrc =
+      Register LUSrc =
           TII->getNamedOperand(*LUMI, AMDGPU::OpName::src)->getReg();
-      unsigned LUDst =
+      Register LUDst =
           TII->getNamedOperand(*LUMI, AMDGPU::OpName::dst)->getReg();
       MRI->replaceRegWith(LUDst, LUSrc);
     }
 
     // EXEC mask handling
-    unsigned Exec = ST->isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+    Register Exec = ST->isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
     unsigned SaveExecOpc =
       ST->isWave32() ? AMDGPU::S_AND_SAVEEXEC_B32 : AMDGPU::S_AND_SAVEEXEC_B64;
     unsigned XorTermOpc =
@@ -536,10 +597,8 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
       ST->isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
     const auto *BoolXExecRC = RI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
 
-    unsigned SaveExec =
-        MRI->createVirtualRegister(BoolXExecRC);
-    unsigned TmpExec =
-        MRI->createVirtualRegister(BoolXExecRC);
+    Register SaveExec = MRI->createVirtualRegister(BoolXExecRC);
+    Register TmpExec = MRI->createVirtualRegister(BoolXExecRC);
 
     BuildMI(*CurrMBB, I, DL, TII->get(TargetOpcode::IMPLICIT_DEF), TmpExec);
 
@@ -586,11 +645,11 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
 
     MachineBasicBlock::iterator J = LoopBB.begin();
 
-    unsigned PhiExec =
-        MRI->createVirtualRegister(BoolXExecRC);
-    unsigned NewExec =
-        MRI->createVirtualRegister(BoolXExecRC);
-    unsigned CurrentIdxReg = MRI->createVirtualRegister(IndexSRC);
+    Register PhiExec = MRI->createVirtualRegister(BoolXExecRC);
+    Register NewExec = MRI->createVirtualRegister(BoolXExecRC);
+
+    for (auto &CurrIdx : IndexList)
+      CurrIdx.CurrentIdxReg = MRI->createVirtualRegister(CurrIdx.IndexSRC);
 
     for (auto EndReg : Item.EndRegs) {
       BuildMI(LoopBB, J, DL, TII->get(TargetOpcode::PHI), std::get<2>(EndReg))
@@ -606,22 +665,29 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
         .addMBB(&LoopBB);
 
     // Get the next index to use from the first enabled lane
-    readFirstLaneReg(LoopBB, MRI, RI, TII, J, DL, CurrentIdxReg,
-                     Index->getReg(), *Index);
+    for (auto &CurrIdx : IndexList)
+      readFirstLaneReg(LoopBB, MRI, RI, TII, J, DL, CurrIdx.CurrentIdxReg,
+                       CurrIdx.Index->getReg(), *CurrIdx.Index);
 
     // Also process the readlane pseudo ops - if readfirstlane is using the
     // index then just replace with the CurrentIdxReg instead
     for (auto RFLMI : Item.RFLList) {
       auto RFLSrcOp = TII->getNamedOperand(*RFLMI, AMDGPU::OpName::src);
       auto RFLDstOp = TII->getNamedOperand(*RFLMI, AMDGPU::OpName::dst);
-      unsigned RFLSrcReg = RFLSrcOp->getReg();
-      unsigned RFLDstReg = RFLDstOp->getReg();
+      Register RFLSrcReg = RFLSrcOp->getReg();
+      Register RFLDstReg = RFLDstOp->getReg();
 
-      if (RFLSrcReg == Index->getReg()) {
-        // Use the CurrentIdxReg for this
-        Item.RFLRegs.push_back(CurrentIdxReg);
-        MRI->replaceRegWith(RFLDstReg, CurrentIdxReg);
-      } else {
+      bool MatchedIdx = false;
+      for (auto &CurrIdx : IndexList) {
+        if (RFLSrcReg == CurrIdx.Index->getReg()) {
+          // Use the CurrentIdxReg for this
+          Item.RFLRegs.push_back(CurrIdx.CurrentIdxReg);
+          MRI->replaceRegWith(RFLDstReg, CurrIdx.CurrentIdxReg);
+          MatchedIdx = true;
+          break;
+        }
+      }
+      if (!MatchedIdx) {
         Item.RFLRegs.push_back(RFLDstReg);
         // Insert function to expand to required size here
         MachineBasicBlock::iterator RFLInsert(RFLMI);
@@ -631,8 +697,10 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     }
 
     // Compare the just read idx value to all possible idx values
-    unsigned CondReg =
-      compareIdx(LoopBB, MRI, RI, TII, J, DL, CurrentIdxReg, *Index, ST->isWave32());
+    Register CondReg = AMDGPU::NoRegister;
+    for (auto &CurrIdx : IndexList)
+      CondReg = compareIdx(LoopBB, MRI, RI, TII, J, DL, CurrIdx.CurrentIdxReg,
+                           *CurrIdx.Index, CondReg, ST->isWave32());
 
     // Update EXEC, save the original EXEC value to VCC
     BuildMI(LoopBB, J, DL, TII->get(SaveExecOpc), NewExec)
@@ -666,7 +734,8 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     BuildMI(RemainderBB, First, DL, TII->get(MovOpc), Exec)
         .addReg(SaveExec);
 
-    Item.Begin->eraseFromParent();
+    for (auto BeginMI : Item.BeginList)
+      BeginMI->eraseFromParent();
     for (auto RFLMI : Item.RFLList)
       RFLMI->eraseFromParent();
     for (auto ENDMI : Item.EndList)
@@ -698,8 +767,8 @@ bool SIInsertWaterfall::runOnMachineFunction(MachineFunction &MF) {
 
       if (getWFBeginSize(Opcode))
         Worklist.push_back(WaterfallWorkitem(&MI, TII));
-      else if (getWFRFLSize(Opcode) || getWFEndSize(Opcode) ||
-               getWFLastUseSize(Opcode)) {
+      else if (getWFBeginContSize(Opcode) || getWFRFLSize(Opcode) ||
+               getWFEndSize(Opcode) || getWFLastUseSize(Opcode)) {
         if (!Worklist.back().addCandidate(&MI)) {
           llvm_unreachable("Overlapping SI_WATERFALL_* groups");
         }

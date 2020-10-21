@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,PRE_GFX10,GCN-64 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9_UP,PRE_GFX10,GCN-64 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9_UP,PRE_GFX10,GCN-64 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX9_UP,GCN-32 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX9_UP,GCN-64 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX10,GFX10-64,GFX9_UP,GCN-64 %s
 
 ; GCN-LABEL: {{^}}test_waterfall_readlane:
 ; GCN: {{^}}BB0_1:
@@ -444,20 +444,202 @@ define amdgpu_ps <4 x float> @test_waterfall_uniform_buffer(<4 x i32> addrspace(
   ret <4 x float> %r1
 }
 
-declare i32 @llvm.amdgcn.waterfall.begin.i32(i32) #6
-declare i32 @llvm.amdgcn.waterfall.begin.v2i32(<2 x i32>) #6
-declare i32 @llvm.amdgcn.waterfall.begin.v4i32(<4 x i32>) #6
-declare i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32, i32) #6
-declare <2 x i32> @llvm.amdgcn.waterfall.readfirstlane.v2i32.v2i32(i32, <2 x i32>) #6
-declare <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(i32, <8 x i32>) #6
-declare <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(i32, <4 x i32>) #6
-declare i16 @llvm.amdgcn.waterfall.end.i16(i32, i16) #6
-declare i32 @llvm.amdgcn.waterfall.end.i32(i32, i32) #6
-declare <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32, <4 x float>) #6
-declare <8 x i32> @llvm.amdgcn.waterfall.end.v8i32(i32, <8 x i32>) #6
-declare <8 x i32> @llvm.amdgcn.waterfall.last.use.v8i32(i32, <8 x i32>) #6
+; GCN-LABEL: {{^}}test_waterfall_multi_begin:
+; GCN: ; %bb.0
+; GCN-64: s_mov_b64 [[EXEC:s[[0-9]+:[0-9]+]]], exec
+; GCN-32: s_mov_b32 [[EXEC:s[0-9]+]], exec_lo
+; VI-DAG: flat_load_dwordx4 v{{\[}}[[SRSRCSTART:[0-9]+]]:[[SRSRCEND:[0-9]+]]], v[2:3]
+; VI-DAG: flat_load_dwordx4 v{{\[}}[[RSRCSTART:[0-9]+]]:{{[0-9]+}}], v[{{[0-9]+:[0-9]+}}]
+; VI-DAG: flat_load_dwordx4 v[{{[0-9]+:}}[[RSRCEND:[0-9]+]]{{\]}}, v[{{[0-9]+:[0-9]+}}]
+; GFX9: global_load_dwordx4 v{{\[}}[[SRSRCSTART:[0-9]+]]:[[SRSRCEND:[0-9]+]]{{\]}}, v[{{[0-9]+:[0-9]+}}], off
+; GFX9-DAG: global_load_dwordx4 v{{\[}}[[RSRCSTART:[0-9]+]]:{{[0-9]+}}], v[{{[0-9]+:[0-9]+}}], off{{$}}
+; GFX9-DAG: global_load_dwordx4 v[{{[0-9]+:}}[[RSRCEND:[0-9]+]]{{\]}}, v[{{[0-9]+:[0-9]+}}], off offset:16
+; GCN-32-DAG: global_load_dwordx4 v{{\[}}[[RSRCSTART:[0-9]+]]:{{[0-9]+}}], v[{{[0-9]+:[0-9]+}}], off{{$}}
+; GCN-32-DAG: global_load_dwordx4 v[{{[0-9]+:}}[[RSRCEND:[0-9]+]]{{\]}}, v[{{[0-9]+:[0-9]+}}], off offset:16
+; GCN-32: global_load_dwordx4 v{{\[}}[[SRSRCSTART:[0-9]+]]:[[SRSRCEND:[0-9]+]]{{\]}}, v[{{[0-9]+:[0-9]+}}], off
+; GFX10-64: global_load_dwordx4 v{{\[}}[[SRSRCSTART:[0-9]+]]:[[SRSRCEND:[0-9]+]]{{\]}}, v[{{[0-9]+:[0-9]+}}], off
+; GFX10-64-DAG: global_load_dwordx4 v{{\[}}[[RSRCSTART:[0-9]+]]:{{[0-9]+}}], v[{{[0-9]+:[0-9]+}}], off{{$}}
+; GFX10-64-DAG: global_load_dwordx4 v[{{[0-9]+:}}[[RSRCEND:[0-9]+]]{{\]}}, v[{{[0-9]+:[0-9]+}}], off offset:16
+; GCN: {{^}}BB12_1:
+; GCN:  v_readfirstlane_b32 s[[SIDX1:[0-9]+]], [[IDX1:v[0-9]+]]
+; GCN:  v_readfirstlane_b32 s[[SIDX2:[0-9]+]], [[IDX2:v[0-9]+]]
+; GCN-64: v_cmp_eq_u32_e64 [[EXEC2:s[[0-9]+:[0-9]+]]], s[[SIDX1]], [[IDX1]]
+; GCN-32: v_cmp_eq_u32_e64 [[EXEC2:s[0-9]+]], s[[SIDX1]], [[IDX1]]
+; GCN-64: v_cmp_eq_u32_e64 [[EXEC3:s[[0-9]+:[0-9]+]]], s[[SIDX2]], [[IDX2]]
+; GCN-32: v_cmp_eq_u32_e64 [[EXEC3:s[0-9]+]], s[[SIDX2]], [[IDX2]]
+; GCN-64: s_and_b64 [[EXEC4:s[[0-9]+:[0-9]+]]], [[EXEC2]], [[EXEC3]]
+; GCN-32: s_and_b32 [[EXEC4:s[0-9]+]], [[EXEC2]], [[EXEC3]]
+; GCN-64: s_and_saveexec_b64 [[EXEC5:s[[0-9]+:[0-9]+]]], [[EXEC4]]
+; GCN-32: s_and_saveexec_b32 [[EXEC5:s[0-9]+]], [[EXEC4]]
+; GCN-DAG: v_readfirstlane_b32 s[[S_RSRC_START:[0-9]+]], v[[RSRCSTART]]
+; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG: v_readfirstlane_b32 s[[S_RSRC_END:[0-9]+]], v[[RSRCEND]]
+; GCN-DAG: s_waitcnt vmcnt(0)
+; GCN-DAG: v_readfirstlane_b32 s[[S_SRSRC_START:[0-9]+]], v[[SRSRCSTART]]
+; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG: v_readfirstlane_b32 s[[S_SRSRC_END:[0-9]+]], v[[SRSRCEND]]
+; GCN: image_sample v{{\[}}[[VALSTART:[0-9]+]]:[[VALEND:[0-9]+]]], v[{{[0-9]+:[0-9]+}}], s{{\[}}[[S_RSRC_START]]:[[S_RSRC_END]]{{\]}}, s{{\[}}[[S_SRSRC_START]]:[[S_SRSRC_END]]{{\]}} dmask:0xf
+; GCN-COUNT-4:  v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64:  s_xor_b64 exec, exec, [[EXEC5]]
+; GCN-32:  s_xor_b32 exec_lo, exec_lo, [[EXEC5]]
+; GCN s_cbranch_execnz BB12_1
+; GCN-64:        s_and_b64 exec, exec, [[EXEC]]
+; GCN-32:        s_and_b32 exec_lo, exec_lo, [[EXEC]]
+define amdgpu_ps <4 x float> @test_waterfall_multi_begin(<8 x i32> addrspace(4)* inreg %in, <4 x i32> addrspace(4)* inreg %s_in,
+                                                         i32 %idx1, i32 %idx2, i32 %s_idx, i32 %s_idx2) #1 {
+  %rptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
+  %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
+  %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
+  %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
+  %tok = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 %idx1)
+  %tok1 = call i32 @llvm.amdgcn.waterfall.begin.cont.i32(i32 %tok, i32 %idx2)
+  %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(i32 %tok1, <8 x i32> %rsrc)
+  %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(i32 %tok1, <4 x i32> %srsrc)
+  %r = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 0.000000e+00, float 0.000000e+00, <8 x i32> %s_rsrc, <4 x i32> %s_srsrc, i1 false, i32 0, i32 0)
+  %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok1, <4 x float> %r)
+
+  ret <4 x float> %r1
+}
+
+; In extreme cases we may want to waterfall using much larger values for indices - in this case using both the descriptors for an image sample (12 dwords)
+; This will be very rare in real world cases, but conceivably may happen, and the test is a useful one for stress testing the implementation
+; GCN-LABEL: {{^}}test_waterfall_full_idx_multi_begin:
+; GCN: ; %bb.0
+; GCN-64: s_mov_b64 [[EXEC:s[[0-9]+:[0-9]+]]], exec
+; GCN-32: s_mov_b32 [[EXEC:s[0-9]+]], exec_lo
+; VI: flat_load_dwordx4 v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}]
+; VI: flat_load_dwordx4 v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}]
+; VI: flat_load_dwordx4 v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}]
+; GFX9_UP: global_load_dwordx4 v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], off
+; GFX9_UP: global_load_dwordx4 v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], off
+; GFX9_UP: global_load_dwordx4 v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], off
+
+; GCN: {{^}}BB13_1:
+
+; GCN-64-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_cmp_eq_u32_e64 s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_cmp_eq_u32_e64 s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_cmp_eq_u32_e64 s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_cmp_eq_u32_e64 s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_cmp_eq_u32_e64 s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_cmp_eq_u32_e64 s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_cmp_eq_u32_e64 s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_cmp_eq_u32_e64 s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_cmp_eq_u32_e64 s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_cmp_eq_u32_e64 s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_cmp_eq_u32_e64 s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: v_cmp_eq_u32_e64 s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64-DAG: s_and_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+; GCN-64-DAG: s_and_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+; GCN-64-DAG: s_and_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+; GCN-64-DAG: s_and_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+; GCN-64-DAG: s_and_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+; GCN-64-DAG: s_and_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+; GCN-64-DAG: s_and_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+; GCN-64-DAG: s_and_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+; GCN-64-DAG: s_and_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+; GCN-64-DAG: s_and_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+; GCN-64-DAG: s_and_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+
+
+; GCN-32-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_readfirstlane_b32 s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_cmp_eq_u32_e64 s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_cmp_eq_u32_e64 s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_cmp_eq_u32_e64 s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_cmp_eq_u32_e64 s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_cmp_eq_u32_e64 s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_cmp_eq_u32_e64 s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_cmp_eq_u32_e64 s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_cmp_eq_u32_e64 s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_cmp_eq_u32_e64 s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_cmp_eq_u32_e64 s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_cmp_eq_u32_e64 s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: v_cmp_eq_u32_e64 s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
+; GCN-32-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-32-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-32-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-32-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-32-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-32-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-32-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-32-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-32-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-32-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-32-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+
+; GCN-64: s_and_saveexec_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}]
+; GCN-32: s_and_saveexec_b32 s{{[0-9]+}}, s{{[0-9]+}}
+
+; GCN: image_sample v{{\[}}[[VALSTART:[0-9]+]]:[[VALEND:[0-9]+]]], v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0xf
+; GCN-COUNT-4:  v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GCN-64:  s_xor_b64 exec, exec, s[{{[0-9]+:[0-9]+}}]
+; GCN-32:  s_xor_b32 exec_lo, exec_lo, s{{[0-9]+}}
+; GCN s_cbranch_execnz BB12_1
+; GCN-64:        s_and_b64 exec, exec, s[{{[0-9]+:[0-9]+}}]
+; GCN-32:        s_and_b32 exec_lo, exec_lo, s{{[0-9]+}}
+define amdgpu_ps <4 x float> @test_waterfall_full_idx_multi_begin(<8 x i32> addrspace(4)* inreg %in, <4 x i32> addrspace(4)* inreg %s_in,
+                                                                  i32 %s_idx, i32 %s_idx2) #1 {
+  %rptr = getelementptr <8 x i32>, <8 x i32> addrspace(4)* %in, i32 %s_idx
+  %sptr = getelementptr <4 x i32>, <4 x i32> addrspace(4)* %s_in, i32 %s_idx2
+  %rsrc = load <8 x i32>, <8 x i32> addrspace(4)* %rptr, align 16
+  %srsrc = load <4 x i32>, <4 x i32> addrspace(4)* %sptr, align 16
+  %tok = call i32 @llvm.amdgcn.waterfall.begin.v8i32(<8 x i32> %rsrc)
+  %tok1 = call i32 @llvm.amdgcn.waterfall.begin.cont.v4i32(i32 %tok, <4 x i32> %srsrc)
+  %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(i32 %tok1, <8 x i32> %rsrc)
+  %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(i32 %tok1, <4 x i32> %srsrc)
+  %r = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 0.000000e+00, float 0.000000e+00, <8 x i32> %s_rsrc, <4 x i32> %s_srsrc, i1 false, i32 0, i32 0)
+  %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32 %tok1, <4 x float> %r)
+
+  ret <4 x float> %r1
+}
+
+
+declare i32 @llvm.amdgcn.waterfall.begin.i32(i32) #1
+declare i32 @llvm.amdgcn.waterfall.begin.v2i32(<2 x i32>) #1
+declare i32 @llvm.amdgcn.waterfall.begin.v4i32(<4 x i32>) #1
+declare i32 @llvm.amdgcn.waterfall.begin.v8i32(<8 x i32>) #1
+declare i32 @llvm.amdgcn.waterfall.begin.cont.i32(i32, i32) #1
+declare i32 @llvm.amdgcn.waterfall.begin.cont.v4i32(i32, <4 x i32>) #1
+declare i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32, i32) #1
+declare <2 x i32> @llvm.amdgcn.waterfall.readfirstlane.v2i32.v2i32(i32, <2 x i32>) #1
+declare <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(i32, <8 x i32>) #1
+declare <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(i32, <4 x i32>) #1
+declare i16 @llvm.amdgcn.waterfall.end.i16(i32, i16) #1
+declare i32 @llvm.amdgcn.waterfall.end.i32(i32, i32) #1
+declare <4 x float> @llvm.amdgcn.waterfall.end.v4f32(i32, <4 x float>) #1
+declare <8 x i32> @llvm.amdgcn.waterfall.end.v8i32(i32, <8 x i32>) #1
+declare <8 x i32> @llvm.amdgcn.waterfall.last.use.v8i32(i32, <8 x i32>) #1
 declare i32 @llvm.amdgcn.readlane(i32, i32) #0
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32)
+declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
 declare void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float>, i32, i32, <8 x i32>, i32, i32)
 declare i64 @llvm.amdgcn.s.getpc() #3
 declare float @llvm.amdgcn.buffer.load.ushort(<4 x i32>, i32, i32, i1, i1) #4
@@ -470,7 +652,7 @@ declare void @llvm.amdgcn.buffer.store.short(float, <4 x i32>, i32, i32, i1, i1)
 declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) #5
 declare void @llvm.amdgcn.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #5
 declare void @llvm.amdgcn.kill(i1) #1
-declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #7
+declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, float, i1 immarg, i1 immarg) #6
 
 attributes #0 = { nounwind readnone convergent }
 attributes #1 = { nounwind }
@@ -478,5 +660,4 @@ attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind readnone speculatable }
 attributes #4 = { nounwind readonly }
 attributes #5 = { nounwind writeonly }
-attributes #6 = { nounwind }
-attributes #7 = { inaccessiblememonly nounwind writeonly }
+attributes #6 = { inaccessiblememonly nounwind writeonly }
