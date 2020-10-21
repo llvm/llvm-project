@@ -31,7 +31,8 @@ int main(int, char**) {
 
   LIBCPP_ONLY(static_assert(std::is_same<UT, signed char>::value, "")); // Implementation detail
 
-  static_assert(
+  // The standard doesn't specify the numeric values of the enum.
+  LIBCPP_STATIC_ASSERT(
           E::none == ME(0) &&
           E::not_found == ME(-1) &&
           E::regular == ME(1) &&
