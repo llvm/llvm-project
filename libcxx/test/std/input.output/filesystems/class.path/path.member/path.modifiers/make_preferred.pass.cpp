@@ -26,28 +26,36 @@
 
 struct MakePreferredTestcase {
   const char* value;
+  const char* expected_posix;
+  const char* expected_windows;
 };
 
 const MakePreferredTestcase TestCases[] =
   {
-      {""}
-    , {"hello_world"}
-    , {"/"}
-    , {"/foo/bar/baz/"}
-    , {"\\"}
-    , {"\\foo\\bar\\baz\\"}
-    , {"\\foo\\/bar\\/baz\\"}
+      {"", "", ""}
+    , {"hello_world", "hello_world", "hello_world"}
+    , {"/", "/", "\\"}
+    , {"/foo/bar/baz/", "/foo/bar/baz/", "\\foo\\bar\\baz\\"}
+    , {"\\", "\\", "\\"}
+    , {"\\foo\\bar\\baz\\", "\\foo\\bar\\baz\\", "\\foo\\bar\\baz\\"}
+    , {"\\foo\\/bar\\/baz\\", "\\foo\\/bar\\/baz\\", "\\foo\\\\bar\\\\baz\\"}
   };
 
 int main(int, char**)
 {
   // This operation is an identity operation on linux.
+  // On windows, compare with preferred_win, if set.
   using namespace fs;
   for (auto const & TC : TestCases) {
     path p(TC.value);
     assert(p == TC.value);
     path& Ref = (p.make_preferred());
-    assert(p.native() == TC.value);
+#ifdef _WIN32
+    std::string s(TC.expected_windows);
+#else
+    std::string s(TC.expected_posix);
+#endif
+    assert(p.string() == s);
     assert(&Ref == &p);
   }
 
