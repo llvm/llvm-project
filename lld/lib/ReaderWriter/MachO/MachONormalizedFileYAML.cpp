@@ -740,7 +740,9 @@ struct MappingTraits<NormalizedFile> {
     io.mapOptional("exports",          file.exportInfo);
     io.mapOptional("dataInCode",       file.dataInCode);
   }
-  static std::string validate(IO &io, NormalizedFile &file) { return {}; }
+  static StringRef validate(IO &io, NormalizedFile &file) {
+    return StringRef();
+  }
 };
 
 } // namespace llvm

@@ -359,8 +359,8 @@ struct MappingTraits<DWARFYAML::ListTable<EntryType>> {
 template <typename EntryType>
 struct MappingTraits<DWARFYAML::ListEntries<EntryType>> {
   static void mapping(IO &IO, DWARFYAML::ListEntries<EntryType> &ListEntries);
-  static std::string validate(IO &IO,
-                              DWARFYAML::ListEntries<EntryType> &ListEntries);
+  static StringRef validate(IO &IO,
+                            DWARFYAML::ListEntries<EntryType> &ListEntries);
 };
 
 template <> struct MappingTraits<DWARFYAML::RnglistEntry> {

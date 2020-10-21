@@ -1782,10 +1782,10 @@ namespace yaml {
     static void mapping(IO &io, MyValidation &d) {
         io.mapRequired("value", d.value);
     }
-    static std::string validate(IO &io, MyValidation &d) {
+    static StringRef validate(IO &io, MyValidation &d) {
         if (d.value < 0)
           return "negative value";
-        return {};
+        return StringRef();
     }
   };
  }

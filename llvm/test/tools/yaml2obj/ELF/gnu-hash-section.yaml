@@ -231,7 +231,7 @@ Sections:
 
 # RUN: not yaml2obj --docnum=11 -DCONTENT="" %s 2>&1 | FileCheck %s --check-prefix=TOGETHER
 # RUN: not yaml2obj --docnum=11 -DSIZE=0 %s 2>&1 | FileCheck %s --check-prefix=TOGETHER
-# TOGETHER: error: "Header", "BloomFilter", "HashBuckets" and "HashValues" cannot be used with "Content" or "Size"
+# TOGETHER: error: "Header", "BloomFilter", "HashBuckets" and "HashValues" can't be used together with "Content" or "Size"
 
 --- !ELF
 FileHeader:
