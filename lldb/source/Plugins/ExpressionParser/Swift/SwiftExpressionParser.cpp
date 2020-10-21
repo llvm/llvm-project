@@ -998,8 +998,6 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
       });
       actual_type =
           ToCompilerType(transformed_type->mapTypeOutOfContext().getPointer());
-      //        CompilerType return_ast_type =
-      // ToCompilerType(result_type->mapTypeOutOfContext());
       auto *swift_ast_ctx =
           llvm::cast<SwiftASTContext>(actual_type.GetTypeSystem());
 

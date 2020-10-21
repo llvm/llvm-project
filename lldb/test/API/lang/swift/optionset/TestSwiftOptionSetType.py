@@ -14,7 +14,6 @@ from lldbsuite.test.decorators import *
 
 lldbinline.MakeInlineTest(__file__, globals(),
                           decorators=[swiftTest,skipUnlessDarwin,
-        expectedFailureAll, #FIXME: This regressed silently due to 2c911bceb06ed376801251bdfd992905a66f276c
         expectedFailureAll(bugnumber="rdar://60396797",
                            setting=('symbols.use-swift-clangimporter', 'false'))
 ])
