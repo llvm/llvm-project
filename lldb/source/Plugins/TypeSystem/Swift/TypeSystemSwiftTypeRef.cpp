@@ -803,7 +803,7 @@ static uint32_t collectTypeInfo(SwiftASTContext *module_holder,
         else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_VEC))
           swift_flags |= eTypeHasChildren | eTypeIsVector;
         else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_INT) ||
-                 false /*node->getText().startswith(swift::BUILTIN_TYPE_NAME_WORD) */)
+                 node->getText().startswith(swift::BUILTIN_TYPE_NAME_WORD))
           swift_flags |= eTypeIsInteger | eTypeIsScalar;
       }
       break;
