@@ -1453,7 +1453,8 @@ static void printNamedStructuredOpResults(OpAsmPrinter &p,
 template <typename NamedStructuredOpType>
 static void printCommonStructuredOpParts(OpAsmPrinter &p,
                                          NamedStructuredOpType op) {
-  p << " ins(" << op.inputs() << " : " << op.inputs().getTypes() << ")";
+  if (!op.inputs().empty())
+    p << " ins(" << op.inputs() << " : " << op.inputs().getTypes() << ")";
   if (!op.output_buffers().empty())
     p << " outs(" << op.output_buffers() << " : "
       << op.output_buffers().getTypes() << ")";
