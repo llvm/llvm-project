@@ -443,14 +443,13 @@ SourceManager::getOrCreateContentCache(const FileEntry *FileEnt,
 
 /// Create a new ContentCache for the specified memory buffer.
 /// This does no caching.
-const ContentCache *
-SourceManager::createMemBufferContentCache(const llvm::MemoryBuffer *Buffer,
-                                           bool DoNotFree) {
+const ContentCache *SourceManager::createMemBufferContentCache(
+    std::unique_ptr<llvm::MemoryBuffer> Buffer) {
   // Add a new ContentCache to the MemBufferInfos list and return it.
   ContentCache *Entry = ContentCacheAlloc.Allocate<ContentCache>();
   new (Entry) ContentCache();
   MemBufferInfos.push_back(Entry);
-  Entry->replaceBuffer(Buffer, DoNotFree);
+  Entry->replaceBuffer(Buffer.release(), /*DoNotFree=*/false);
   return Entry;
 }
 
@@ -585,22 +584,20 @@ FileID SourceManager::createFileID(std::unique_ptr<llvm::MemoryBuffer> Buffer,
                                    int LoadedID, unsigned LoadedOffset,
                                    SourceLocation IncludeLoc) {
   StringRef Name = Buffer->getBufferIdentifier();
-  return createFileID(
-      createMemBufferContentCache(Buffer.release(), /*DoNotFree*/ false),
-      Name, IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
+  return createFileID(createMemBufferContentCache(std::move(Buffer)), Name,
+                      IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
 }
 
 /// Create a new FileID that represents the specified memory buffer.
 ///
 /// This does not take ownership of the MemoryBuffer. The memory buffer must
 /// outlive the SourceManager.
-FileID SourceManager::createFileID(UnownedTag, const llvm::MemoryBuffer *Buffer,
+FileID SourceManager::createFileID(const llvm::MemoryBufferRef &Buffer,
                                    SrcMgr::CharacteristicKind FileCharacter,
                                    int LoadedID, unsigned LoadedOffset,
                                    SourceLocation IncludeLoc) {
-  return createFileID(createMemBufferContentCache(Buffer, /*DoNotFree*/ true),
-		      Buffer->getBufferIdentifier(), IncludeLoc,
-		      FileCharacter, LoadedID, LoadedOffset);
+  return createFileID(llvm::MemoryBuffer::getMemBuffer(Buffer), FileCharacter,
+                      LoadedID, LoadedOffset, IncludeLoc);
 }
 
 /// Get the FileID for \p SourceFile if it exists. Otherwise, create a

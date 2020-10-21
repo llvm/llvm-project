@@ -145,7 +145,7 @@ public:
     assert(!CurrentInput.isEmpty() && "No current file!");
     return CurrentInput.isFile()
                ? CurrentInput.getFile()
-               : CurrentInput.getBuffer()->getBufferIdentifier();
+               : CurrentInput.getBuffer().getBufferIdentifier();
   }
 
   InputKind getCurrentFileKind() const {
