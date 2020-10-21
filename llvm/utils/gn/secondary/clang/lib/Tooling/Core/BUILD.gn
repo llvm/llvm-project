@@ -10,7 +10,6 @@ static_library("Core") {
   ]
   sources = [
     "Diagnostic.cpp",
-    "Lookup.cpp",
     "Replacement.cpp",
   ]
 }
