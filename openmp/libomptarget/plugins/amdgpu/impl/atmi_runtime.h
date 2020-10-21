@@ -155,53 +155,11 @@ atmi_status_t atmi_malloc(void **ptr, size_t size, atmi_mem_place_t place);
  */
 atmi_status_t atmi_free(void *ptr);
 
-/**
- * @brief Syncrhonously copy memory from the source to destination memory
- * locations.
- *
- * @detail This function assumes that the source and destination regions are
- * non-overlapping. The runtime determines the memory place of the source and
- * the
- * destination and executes the appropriate optimized data movement methodology.
- *
- * @param[in] dest The destination pointer previously allocated by a system
- * allocator or @p atmi_malloc.
- *
- * @param[in] src The source pointer previously allocated by a system
- * allocator or @p atmi_malloc.
- *
- * @param[in] size The size of the data to be copied in bytes.
- *
- * @retval ::ATMI_STATUS_SUCCESS The function has executed successfully.
- *
- * @retval ::ATMI_STATUS_ERROR The function encountered errors.
- *
- * @retval ::ATMI_STATUS_UNKNOWN The function encountered errors.
- *
- */
-atmi_status_t atmi_memcpy(hsa_signal_t sig, void *dest, const void *src,
-                          size_t size);
+atmi_status_t atmi_memcpy_h2d(hsa_signal_t sig, void *device_dest,
+                              const void *host_src, size_t size);
 
-static inline atmi_status_t atmi_memcpy_no_signal(void *dest, const void *src,
-                                                  size_t size) {
-  hsa_signal_t sig;
-  hsa_status_t err = hsa_signal_create(0, 0, NULL, &sig);
-  if (err != HSA_STATUS_SUCCESS) {
-    return ATMI_STATUS_ERROR;
-  }
-
-  atmi_status_t r = atmi_memcpy(sig, dest, src, size);
-  hsa_status_t rc = hsa_signal_destroy(sig);
-
-  if (r != ATMI_STATUS_SUCCESS) {
-    return r;
-  }
-  if (rc != HSA_STATUS_SUCCESS) {
-    return ATMI_STATUS_ERROR;
-  }
-
-  return ATMI_STATUS_SUCCESS;
-}
+atmi_status_t atmi_memcpy_d2h(hsa_signal_t sig, void *host_dest,
+                              const void *device_src, size_t size);
 
 /** @} */
 
