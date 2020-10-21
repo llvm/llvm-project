@@ -38,7 +38,6 @@ struct S<T> {
     stop()
     //% self.expect('expr -d run -- self', substrs=['(a.S<Int>)','a = 12'])
     //% self.expect('fr v -d run -- self', substrs=['(a.S<Int>)','a = 12'])
-    //% self.expect('fr v -d no-dynamic-values -- self', substrs=['(a.S<T>)','000c'])
     stop()
   }
 }

@@ -13,11 +13,11 @@ import Foundation
 
 func main() {
   var notification = Notification(name: Notification.Name(rawValue: "MyNotification"), object: nil, userInfo: [:])
-  print("done!") //% self.expect("frame variable notification", substrs=['name = "MyNotification"', 'object = nil', 'userInfo = 0 key/value pairs'])
-   //% self.expect("expression -d run -- notification", substrs=['name = "MyNotification"', 'object = nil', 'userInfo = 0 key/value pairs'])
+  print("done!") //% self.expect("frame variable -d run -- notification", substrs=['name = ', '"MyNotification"', 'object = nil', 'userInfo = 0 key/value pairs'])
+   //% self.expect("expression -d run -- notification", substrs=['name = ', '"MyNotification"', 'object = nil', 'userInfo = 0 key/value pairs'])
 }
 
 var g_notification = Notification(name: Notification.Name(rawValue: "MyNotification"), object: nil, userInfo: [:])
 
-main() //% self.expect("target variable g_notification", substrs=['name = "MyNotification"', 'object = nil', 'userInfo = 0 key/value pairs'])
-       //% self.expect("expression -d run -- g_notification", substrs=['name = "MyNotification"', 'object = nil', 'userInfo = 0 key/value pairs'])
+main() //% self.expect("target variable -d run g_notification", substrs=['name = ', '"MyNotification"', 'object = nil', 'userInfo = 0 key/value pairs'])
+       //% self.expect("expression -d run -- g_notification", substrs=['name = ', '"MyNotification"', 'object = nil', 'userInfo = 0 key/value pairs'])
