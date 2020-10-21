@@ -18,35 +18,42 @@ class TestClassConstrainedProtocol(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @swiftTest
-    def test_extension_weak_self (self):
+    def test_extension_weak_self(self):
         """Test that we can reconstruct weak self captured in a class constrained protocol."""
         self.build()
-        self.do_self_test("Break here for weak self")
+        self.do_self_test("Break here for weak self", needs_dynamic=True)
 
     @swiftTest
     def test_extension_self (self):
         """Test that we can reconstruct self in method of a class constrained protocol."""
         self.build()
-        self.do_self_test("Break here in class protocol")
+        self.do_self_test("Break here in class protocol", needs_dynamic=True)
 
     @swiftTest
-    def test_method_weak_self (self):
+    def test_method_weak_self(self):
         """Test that we can reconstruct weak self capture in method of a class conforming to a class constrained protocol."""
         self.build()
-        self.do_self_test("Break here for method weak self")
+        self.do_self_test("Break here for method weak self", needs_dynamic=False)
 
     @swiftTest
-    def test_method_self (self):
+    def test_method_self(self):
         """Test that we can reconstruct self in method of a class conforming to a class constrained protocol."""
         self.build()
-        self.do_self_test("Break here in method")
+        self.do_self_test("Break here in method", needs_dynamic=False)
 
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
 
-    def check_self(self, bkpt_pattern):
+    def check_self(self, bkpt_pattern, needs_dynamic):
         opts = lldb.SBExpressionOptions()
+        if needs_dynamic:
+            opts.SetFetchDynamicValue(lldb.eNoDynamicValues)
+            result = self.frame().EvaluateExpression("self", opts)
+            error = result.GetError()
+            self.assertTrue("self" in error.GetCString())
+            self.assertTrue("run-target" in error.GetCString())
+        opts.SetFetchDynamicValue(lldb.eDynamicCanRunTarget)
         result = self.frame().EvaluateExpression("self", opts)
         error = result.GetError()
         self.assertTrue(error.Success(),
@@ -58,7 +65,7 @@ class TestClassConstrainedProtocol(TestBase):
         self.assertTrue(f_ivar.GetValueAsSigned() == 12345,
                         "Wrong value for f: %d"%(f_ivar.GetValueAsSigned()))
 
-    def do_self_test(self, bkpt_pattern):
+    def do_self_test(self, bkpt_pattern, needs_dynamic):
         lldbutil.run_to_source_breakpoint(
             self, bkpt_pattern, lldb.SBFileSpec('main.swift'))
-        self.check_self(bkpt_pattern)
+        self.check_self(bkpt_pattern, needs_dynamic)

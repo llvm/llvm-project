@@ -24,7 +24,6 @@ class TestSwiftRemoteASTImport(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-    @expectedFailureAll #FIXME: This regressed silently due to 2c911bceb06ed376801251bdfd992905a66f276c
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin
