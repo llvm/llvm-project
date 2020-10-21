@@ -455,9 +455,12 @@ TEST_F(TestTypeSystemSwiftTypeRef, Tuple) {
                       b.Node(Node::Kind::TupleElementName, "z"), b.IntType())));
     CompilerType t = GetCompilerType(b.Mangle(n));
     lldb::opaque_compiler_type_t o = t.GetOpaqueQualType();
-    ASSERT_EQ(m_swift_ts.GetTupleElementName(o, 0), "x");
-    ASSERT_EQ(m_swift_ts.GetTupleElementName(o, 1), "1");
-    ASSERT_EQ(m_swift_ts.GetTupleElementName(o, 2), "z");
+    ASSERT_EQ(m_swift_ts.GetTupleElement(o, 0)->element_name.GetStringRef(), "x");
+    ASSERT_EQ(m_swift_ts.GetTupleElement(o, 1)->element_name.GetStringRef(), "1");
+    ASSERT_EQ(m_swift_ts.GetTupleElement(o, 2)->element_name.GetStringRef(), "z");
+    CompilerType int_type =
+        GetCompilerType(b.Mangle(b.GlobalTypeMangling(b.IntType())));
+    ASSERT_EQ(m_swift_ts.GetTupleElement(o, 2)->element_type, int_type);
   }
 }
 
@@ -556,4 +559,8 @@ TEST_F(TestTypeSystemSwiftTypeRef, ImportedType) {
     CompilerType type = GetCompilerType(b.Mangle(node));
     ASSERT_TRUE(m_swift_ts.IsImportedType(type.GetOpaqueQualType(), nullptr));
   }
+}
+
+TEST_F(TestTypeSystemSwiftTypeRef, RawPointer) {
+  ASSERT_EQ(m_swift_ts.GetRawPointerType().GetMangledTypeName(), "$sBpD");
 }

@@ -77,6 +77,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'))
+        self.expect("expr union", substrs=["(DoubleLongUnion)", "long_val = 42"])
         lldbutil.check_variable(self,
                                 target.FindFirstGlobalVariable("pureSwift"),
                                 value="42")

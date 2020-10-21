@@ -40,6 +40,7 @@ struct S {
   unowned var objc_ref : ObjCClass
 
   func f() {
+    use(self.objc_ref)
     use(self.pure_ref) // break here
   }
 }
@@ -48,4 +49,3 @@ let pure = PureClass()
 let objc = ObjCClass()
 
 S(pure_ref: pure, objc_ref: objc).f()
-

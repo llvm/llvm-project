@@ -69,6 +69,12 @@ public:
 
   TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                  ValueObject &static_value);
+  bool IsTaggedPointer(lldb::addr_t addr, CompilerType type);
+  std::pair<lldb::addr_t, bool> FixupPointerValue(lldb::addr_t addr,
+                                                  CompilerType type);
+  /// This allows a language runtime to adjust references depending on the type.
+  lldb::addr_t FixupAddress(lldb::addr_t addr, CompilerType type,
+                            Status &error);
 
   /// Ask Remote Mirrors for the type info about a Swift type.
   const swift::reflection::TypeInfo *
@@ -110,6 +116,18 @@ public:
                                                    llvm::StringRef member_name,
                                                    Status *error);
 
+  llvm::Optional<unsigned> GetNumChildren(CompilerType type,
+                                          ValueObject *valobj);
+
+  CompilerType GetChildCompilerTypeAtIndex(
+      CompilerType type, size_t idx, bool transparent_pointers,
+      bool omit_empty_base_classes, bool ignore_array_bounds,
+      std::string &child_name, uint32_t &child_byte_size,
+      int32_t &child_byte_offset, uint32_t &child_bitfield_bit_size,
+      uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
+      bool &child_is_deref_of_parent, ValueObject *valobj,
+      uint64_t &language_flags);
+
   /// Like \p BindGenericTypeParameters but for TypeSystemSwiftTypeRef.
   CompilerType BindGenericTypeParameters(StackFrame &stack_frame,
                                          TypeSystemSwiftTypeRef &ts,
@@ -147,17 +165,27 @@ public:
   bool IsABIStable();
 
 protected:
+  using NativeReflectionContext = swift::reflection::ReflectionContext<
+      swift::External<swift::RuntimeTarget<sizeof(uintptr_t)>>>;
+
   /// Use the reflection context to build a TypeRef object.
   const swift::reflection::TypeRef *GetTypeRef(CompilerType type,
                                                SwiftASTContext *module_holder);
 
+  /// Returned by \ref ForEachSuperClassType. Not every user of \p
+  /// ForEachSuperClassType needs all of these. By returning this
+  /// object we call into the runtime only when needed.
+  /// Using function objects to avoid instantiating ReflectionContext in this header.
+  struct SuperClassType {
+    std::function<const swift::reflection::RecordTypeInfo *()> get_record_type_info;
+    std::function<const swift::reflection::TypeRef *()> get_typeref;
+  };
   /// If \p instance points to a Swift object, retrieve its
-  /// RecordTypeInfo pass it to the callback \p fn. Repeat the process
-  /// with all superclasses. If \p fn returns \p true, early exit and
-  /// return \ptrue. Otherwise return \p false.
-  bool ForEachSuperClassTypeInfo(
-      ValueObject &instance,
-      std::function<bool(const swift::reflection::RecordTypeInfo &rti)> fn);
+  /// RecordTypeInfo and pass it to the callback \p fn. Repeat the
+  /// process with all superclasses. If \p fn returns \p true, early
+  /// exit and return \ptrue. Otherwise return \p false.
+  bool ForEachSuperClassType(ValueObject &instance,
+                             std::function<bool(SuperClassType)> fn);
 
   // Classes that inherit from SwiftLanguageRuntime can see and modify these
   Value::ValueType GetValueType(Value::ValueType static_value_type,
@@ -233,9 +261,6 @@ protected:
   CompilerType m_box_metadata_type;
 
 private:
-  using NativeReflectionContext = swift::reflection::ReflectionContext<
-      swift::External<swift::RuntimeTarget<sizeof(uintptr_t)>>>;
-
   /// Don't call these directly.
   /// \{
   /// There is a global variable \p _swift_classIsSwiftMask that is

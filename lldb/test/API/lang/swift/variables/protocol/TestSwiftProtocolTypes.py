@@ -65,21 +65,21 @@ class TestSwiftProtocolTypes(TestBase):
                              '(Builtin.RawPointer) payload_data_0 = 0x',
                              '(Builtin.RawPointer) payload_data_1 = 0x',
                              '(Builtin.RawPointer) payload_data_2 = 0x',
-                             '(Any.Type) instance_type = 0x',
-                             '(Builtin.RawPointer) witness_table_PointUtils = 0x'])
-
+                             '(Any.Type) metadata = 0x',
+                             '(Builtin.RawPointer) wtable = 0x'])
+ 
         self.expect("frame variable --dynamic-type run-target loc2d",
                     substrs=['Point2D) loc2d =',
                              'x = 1.25', 'y = 2.5'])
-
+ 
         self.expect("frame variable --raw-output --show-types loc3d",
                     substrs=['PointUtils) loc3d =',
                              '(Builtin.RawPointer) payload_data_0 = 0x',
                              '(Builtin.RawPointer) payload_data_1 = 0x',
                              '(Builtin.RawPointer) payload_data_2 = 0x',
-                             '(Any.Type) instance_type = 0x',
-                             '(Builtin.RawPointer) witness_table_PointUtils = 0x'])
-
+                             '(Any.Type) metadata = 0x',
+                             '(Builtin.RawPointer) wtable = 0x'])
+ 
         self.expect(
             "frame variable --dynamic-type run-target loc3d",
             substrs=[
@@ -87,32 +87,33 @@ class TestSwiftProtocolTypes(TestBase):
                 'x = 1.25',
                 'y = 2.5',
                 'z = 1.25'])
-
+ 
         self.expect("expression --raw-output --show-types -- loc2d",
                     substrs=['PointUtils) $R',
                              '(Builtin.RawPointer) payload_data_0 = 0x',
                              '(Builtin.RawPointer) payload_data_1 = 0x',
                              '(Builtin.RawPointer) payload_data_2 = 0x',
-                             '(Any.Type) instance_type = 0x',
-                             '(Builtin.RawPointer) witness_table_PointUtils = 0x'])
-
+                             '(Any.Type) metadata = 0x',
+                             '(Builtin.RawPointer) wtable = 0x'])
+ 
         self.expect("expression --dynamic-type run-target -- loc2d",
                     substrs=['Point2D) $R',
                              'x = 1.25', 'y = 2.5'])
-
+ 
         self.expect("expression --raw-output --show-types -- loc3dCB",
                     substrs=['PointUtils & Swift.AnyObject) $R',
-                             '(Builtin.RawPointer) instance = 0x',
-                             '(Builtin.RawPointer) witness_table_PointUtils = 0x'])
-
+                             '(Builtin.RawPointer) object = 0x',
+                             '(Builtin.RawPointer) wtable = 0x'])
+ 
         self.expect("expression --dynamic-type run-target -- loc3dCB",
                     substrs=['Point3D) $R', 'x = 1.25', 'y = 2.5', 'z = 1.25'])
 
         self.expect("expression --raw-output --show-types -- loc3dSuper",
                     substrs=['(a.PointSuperclass & a.PointUtils) $R',
-                             '(a.PointSuperclass) instance = 0x',
-                             '(Swift.Int) superData = ',
-                             '(Builtin.RawPointer) witness_table_PointUtils = 0x'])
+#                             Only supported by SwiftASTContext and of little usefulness.
+#                             '(a.PointSuperclass) object = 0x',
+#                             '(Swift.Int) superData = ',
+                             '(Builtin.RawPointer) wtable = 0x'])
 
         self.expect("expression --dynamic-type run-target -- loc3dSuper",
                     substrs=['Point3D) $R', 'x = 1.25', 'y = 2.5', 'z = 1.25'])

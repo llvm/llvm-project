@@ -7,7 +7,7 @@ func f() {
   // CHECK-DAG: (size_t) ctype = 1024
   let ctype = size_t(1024)
   // This works as a Clang type via the Objective-C runtime.
-  // CHECK-DAG: (ObjCClass) object = 0x{{[0-9a-f]+}} {
+  // CHECK-DAG: object = 0x{{[0-9a-f]+}} Int32(1234)
   // FIXME: (ObjCClass) object = {{.*}}Hello from Objective-C!
   let object = ObjCClass()
   // The Objective-C runtime recognizes this as a tagged pointer.
