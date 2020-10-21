@@ -451,10 +451,12 @@ int main_gdbserver(int argc, char *argv[]) {
   reverse_connect = Args.hasArg(OPT_reverse_connect);
   attach_target = Args.getLastArgValue(OPT_attach).str();
   if (Args.hasArg(OPT_pipe)) {
-    if (!llvm::to_integer(Args.getLastArgValue(OPT_pipe), unnamed_pipe)) {
+    uint64_t Arg;
+    if (!llvm::to_integer(Args.getLastArgValue(OPT_pipe), Arg)) {
       WithColor::error() << "invalid '--pipe' argument\n" << HelpText;
       return 1;
     }
+    unnamed_pipe = (pipe_t)Arg;
   }
   if (Args.hasArg(OPT_fd)) {
     if (!llvm::to_integer(Args.getLastArgValue(OPT_fd), connection_fd)) {
