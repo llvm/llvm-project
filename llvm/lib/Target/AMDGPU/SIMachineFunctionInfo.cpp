@@ -167,11 +167,12 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   if (UseFixedABI || F.hasFnAttribute("amdgpu-kernarg-segment-ptr"))
     KernargSegmentPtr = true;
 
-  if (ST.hasFlatAddressSpace() && isEntryFunction() && isAmdHsaOrMesa) {
+  if (ST.hasFlatAddressSpace() && isEntryFunction() &&
+      (isAmdHsaOrMesa || ST.enableFlatScratch())) {
     // TODO: This could be refined a lot. The attribute is a poor way of
     // detecting calls or stack objects that may require it before argument
     // lowering.
-    if (HasCalls || HasStackObjects)
+    if (HasCalls || HasStackObjects || ST.enableFlatScratch())
       FlatScratchInit = true;
   }
 
