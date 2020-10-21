@@ -17,12 +17,10 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_linux_s390.cpp
   sanitizer_mac.cpp
   sanitizer_netbsd.cpp
-  sanitizer_openbsd.cpp
   sanitizer_persistent_allocator.cpp
   sanitizer_platform_limits_freebsd.cpp
   sanitizer_platform_limits_linux.cpp
   sanitizer_platform_limits_netbsd.cpp
-  sanitizer_platform_limits_openbsd.cpp
   sanitizer_platform_limits_posix.cpp
   sanitizer_platform_limits_solaris.cpp
   sanitizer_posix.cpp
@@ -159,7 +157,6 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_platform.h
   sanitizer_platform_interceptors.h
   sanitizer_platform_limits_netbsd.h
-  sanitizer_platform_limits_openbsd.h
   sanitizer_platform_limits_posix.h
   sanitizer_platform_limits_solaris.h
   sanitizer_posix.h
