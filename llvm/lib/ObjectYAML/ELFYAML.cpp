@@ -871,7 +871,7 @@ std::string MappingTraits<ELFYAML::SectionHeaderTable>::validate(
   if (!SecHdrTable.NoHeaders && !SecHdrTable.Sections && !SecHdrTable.Excluded)
     return "SectionHeaderTable can't be empty. Use 'NoHeaders' key to drop the "
            "section header table";
-  return {};
+  return "";
 }
 
 void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
@@ -1093,7 +1093,7 @@ std::string MappingTraits<ELFYAML::Symbol>::validate(IO &IO,
                                                      ELFYAML::Symbol &Symbol) {
   if (Symbol.Index && Symbol.Section.data())
     return "Index and Section cannot both be specified for Symbol";
-  return {};
+  return "";
 }
 
 static void commonSectionMapping(IO &IO, ELFYAML::Section &Section) {
@@ -1427,7 +1427,7 @@ std::string MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
   if (const auto *F = dyn_cast<ELFYAML::Fill>(C.get())) {
     if (F->Pattern && F->Pattern->binary_size() != 0 && !F->Size)
       return "\"Size\" can't be 0 when \"Pattern\" is not empty";
-    return {};
+    return "";
   }
 
   const ELFYAML::Section &Sec = *cast<ELFYAML::Section>(C.get());
@@ -1437,7 +1437,7 @@ std::string MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
 
   auto BuildErrPrefix = [](ArrayRef<std::pair<StringRef, bool>> EntV) {
     std::string Msg;
-    for (size_t I = 0; I < EntV.size(); ++I) {
+    for (size_t I = 0, E = EntV.size(); I != E; ++I) {
       StringRef Name = EntV[I].first;
       if (I == 0) {
         Msg = "\"" + Name.str() + "\"";
@@ -1465,13 +1465,13 @@ std::string MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
   if (const auto *RawSection = dyn_cast<ELFYAML::RawContentSection>(C.get())) {
     if (RawSection->Flags && RawSection->ShFlags)
       return "ShFlags and Flags cannot be used together";
-    return {};
+    return "";
   }
 
   if (const auto *NB = dyn_cast<ELFYAML::NoBitsSection>(C.get())) {
     if (NB->Content)
       return "SHT_NOBITS section cannot have \"Content\"";
-    return {};
+    return "";
   }
 
   if (const auto *MF = dyn_cast<ELFYAML::MipsABIFlags>(C.get())) {
@@ -1480,10 +1480,10 @@ std::string MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
              "sections";
     if (MF->Size)
       return "\"Size\" key is not implemented for SHT_MIPS_ABIFLAGS sections";
-    return {};
+    return "";
   }
 
-  return {};
+  return "";
 }
 
 namespace {
