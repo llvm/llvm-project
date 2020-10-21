@@ -241,6 +241,7 @@ enum Kind {
   kw_zeroext,
   kw_immarg,
   kw_byref,
+  kw_mustprogress,
 
   kw_type,
   kw_opaque,
