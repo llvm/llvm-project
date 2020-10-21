@@ -104,27 +104,6 @@ template <> struct ScalarEnumerationTraits<IFSSymbolType> {
   }
 };
 
-template <> struct ScalarTraits<VersionTuple> {
-  static void output(const VersionTuple &Value, void *,
-                     llvm::raw_ostream &Out) {
-    Out << Value.getAsString();
-  }
-
-  static StringRef input(StringRef Scalar, void *, VersionTuple &Value) {
-    if (Value.tryParse(Scalar))
-      return StringRef("Can't parse version: invalid version format.");
-
-    if (Value > IFSVersionCurrent)
-      return StringRef("Unsupported IFS version.");
-
-    // Returning empty StringRef indicates successful parse.
-    return StringRef();
-  }
-
-  // Don't place quotation marks around version value.
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
-};
-
 /// YAML traits for IFSSymbol.
 template <> struct MappingTraits<IFSSymbol> {
   static void mapping(IO &IO, IFSSymbol &Symbol) {
@@ -209,6 +188,11 @@ static Expected<std::unique_ptr<IFSStub>> readInputFile(StringRef FilePath) {
 
   if (std::error_code Err = YamlIn.error())
     return createStringError(Err, "Failed reading Interface Stub File.");
+
+  if (Stub->IfsVersion > IFSVersionCurrent)
+    return make_error<StringError>(
+        "IFS version " + Stub->IfsVersion.getAsString() + " is unsupported.",
+        std::make_error_code(std::errc::invalid_argument));
 
   return std::move(Stub);
 }
