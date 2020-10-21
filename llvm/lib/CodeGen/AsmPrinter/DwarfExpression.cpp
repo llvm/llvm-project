@@ -638,14 +638,12 @@ void DwarfExpression::addFragmentOffset(const DIExpression *Expr) {
 void DwarfExpression::emitLegacySExt(unsigned FromBits) {
   // (((X >> (FromBits - 1)) * (~0)) << FromBits) | X
   emitOp(dwarf::DW_OP_dup);
-  emitOp(dwarf::DW_OP_constu);
-  emitUnsigned(FromBits - 1);
+  emitConstu(FromBits - 1);
   emitOp(dwarf::DW_OP_shr);
   emitOp(dwarf::DW_OP_lit0);
   emitOp(dwarf::DW_OP_not);
   emitOp(dwarf::DW_OP_mul);
-  emitOp(dwarf::DW_OP_constu);
-  emitUnsigned(FromBits);
+  emitConstu(FromBits);
   emitOp(dwarf::DW_OP_shl);
   emitOp(dwarf::DW_OP_or);
 }
@@ -653,8 +651,7 @@ void DwarfExpression::emitLegacySExt(unsigned FromBits) {
 void DwarfExpression::emitLegacyZExt(unsigned FromBits, unsigned ToBits) {
   if (FromBits < 64) {
     // X & ((1 << FromBits) - 1)
-    emitOp(dwarf::DW_OP_constu);
-    emitUnsigned((1ULL << FromBits) - 1);
+    emitConstu((1ULL << FromBits) - 1);
     emitOp(dwarf::DW_OP_and);
   } else {
     addOpPiece(FromBits, 0);
