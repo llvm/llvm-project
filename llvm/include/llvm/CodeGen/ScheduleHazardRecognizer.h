@@ -114,6 +114,14 @@ public:
     // Default implementation: count it as a cycle.
     AdvanceCycle();
   }
+
+  /// EmitNoops - This callback is invoked when noops were added to the
+  /// instruction stream.
+  virtual void EmitNoops(unsigned Quantity) {
+    // Default implementation: count it as a cycle.
+    for (unsigned i = 0; i < Quantity; ++i)
+      EmitNoop();
+  }
 };
 
 } // end namespace llvm
