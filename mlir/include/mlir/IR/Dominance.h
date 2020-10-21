@@ -45,10 +45,11 @@ public:
 
 } // namespace mlir
 
-template <>
-struct llvm::CfgTraitsFor<mlir::Block> {
+namespace llvm {
+template <> struct CfgTraitsFor<mlir::Block> {
   using CfgTraits = mlir::CfgTraits;
 };
+} // namespace llvm
 
 extern template class llvm::DominatorTreeBase<mlir::Block, false>;
 extern template class llvm::DominatorTreeBase<mlir::Block, true>;
