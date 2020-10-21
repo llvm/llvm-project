@@ -188,17 +188,6 @@ namespace SrcMgr {
     getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
                     SourceLocation Loc = SourceLocation()) const;
 
-  private:
-    /// Returns pointer to memory buffer.
-    ///
-    /// TODO: SourceManager needs access to this for now, but once that's done
-    /// we should remove this API.
-    const llvm::MemoryBuffer *getBufferPointer(DiagnosticsEngine &Diag,
-                                               FileManager &FM,
-                                               SourceLocation Loc) const;
-    friend class clang::SourceManager;
-
-  public:
     /// Returns the size of the content encapsulated by this
     /// ContentCache.
     ///
