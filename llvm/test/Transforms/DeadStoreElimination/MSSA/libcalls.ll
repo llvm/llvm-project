@@ -334,6 +334,33 @@ entry:
   ret i8* %res
 }
 
+; Make sure memccpy does not kill any stores, because it is not known how many
+; bytes are written.
+define i8* @test_memccpy_const_size_does_not_kill_stores(i8* noalias %dest, i8* noalias %foo) {
+; CHECK-LABEL: @test_memccpy_const_size_does_not_kill_stores(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i8 49, i8* [[DEST:%.*]], align 1
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, i8* [[DEST]], i64 1
+; CHECK-NEXT:    store i8 50, i8* [[GEP_1]], align 1
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr i8, i8* [[DEST]], i64 2
+; CHECK-NEXT:    store i8 51, i8* [[GEP_2]], align 1
+; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr i8, i8* [[DEST]], i64 3
+; CHECK-NEXT:    store i8 52, i8* [[GEP_3]], align 1
+; CHECK-NEXT:    [[RES:%.*]] = call i8* @memccpy(i8* [[DEST]], i8* [[FOO:%.*]], i32 42, i64 2)
+; CHECK-NEXT:    ret i8* [[RES]]
+;
+entry:
+  store i8 49, i8* %dest, align 1
+  %gep.1 = getelementptr i8, i8* %dest, i64 1
+  store i8 50, i8* %gep.1, align 1
+  %gep.2 = getelementptr i8, i8* %dest, i64 2
+  store i8 51, i8* %gep.2, align 1
+  %gep.3 = getelementptr i8, i8* %dest, i64 3
+  store i8 52, i8* %gep.3, align 1
+  %res = call i8* @memccpy(i8* %dest, i8* %foo, i32 42, i64 2)
+  ret i8* %res
+}
+
 define void @dse_strcpy(i8* nocapture readonly %src) {
 ; CHECK-LABEL: @dse_strcpy(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [256 x i8], align 16
