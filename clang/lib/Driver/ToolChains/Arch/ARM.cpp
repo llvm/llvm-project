@@ -134,6 +134,7 @@ bool arm::useAAPCSForMachO(const llvm::Triple &T) {
   // The backend is hardwired to assume AAPCS for M-class processors, ensure
   // the frontend matches that.
   return T.getEnvironment() == llvm::Triple::EABI ||
+         T.getEnvironment() == llvm::Triple::EABIHF ||
          T.getOS() == llvm::Triple::UnknownOS || isARMMProfile(T);
 }
 
@@ -160,11 +161,73 @@ arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
   return arm::getARMFloatABI(TC.getDriver(), TC.getEffectiveTriple(), Args);
 }
 
+arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
+  auto SubArch = getARMSubArchVersionNumber(Triple);
+  switch (Triple.getOS()) {
+  case llvm::Triple::Darwin:
+  case llvm::Triple::MacOSX:
+  case llvm::Triple::IOS:
+  case llvm::Triple::TvOS:
+    // Darwin defaults to "softfp" for v6 and v7.
+    if (Triple.isWatchABI())
+      return FloatABI::Hard;
+    else
+      return (SubArch == 6 || SubArch == 7) ? FloatABI::SoftFP : FloatABI::Soft;
+
+  case llvm::Triple::WatchOS:
+    return FloatABI::Hard;
+
+  // FIXME: this is invalid for WindowsCE
+  case llvm::Triple::Win32:
+    return FloatABI::Hard;
+
+  case llvm::Triple::NetBSD:
+    switch (Triple.getEnvironment()) {
+    case llvm::Triple::EABIHF:
+    case llvm::Triple::GNUEABIHF:
+      return FloatABI::Hard;
+    default:
+      return FloatABI::Soft;
+    }
+    break;
+
+  case llvm::Triple::FreeBSD:
+    switch (Triple.getEnvironment()) {
+    case llvm::Triple::GNUEABIHF:
+      return FloatABI::Hard;
+    default:
+      // FreeBSD defaults to soft float
+      return FloatABI::Soft;
+    }
+    break;
+
+  case llvm::Triple::OpenBSD:
+    return FloatABI::SoftFP;
+
+  default:
+    switch (Triple.getEnvironment()) {
+    case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::MuslEABIHF:
+    case llvm::Triple::EABIHF:
+      return FloatABI::Hard;
+    case llvm::Triple::GNUEABI:
+    case llvm::Triple::MuslEABI:
+    case llvm::Triple::EABI:
+      // EABI is always AAPCS, and if it was not marked 'hard', it's softfp
+      return FloatABI::SoftFP;
+    case llvm::Triple::Android:
+      return (SubArch >= 7) ? FloatABI::SoftFP : FloatABI::Soft;
+    default:
+      return FloatABI::Invalid;
+    }
+  }
+  return FloatABI::Invalid;
+}
+
 // Select the float ABI as determined by -msoft-float, -mhard-float, and
 // -mfloat-abi=.
 arm::FloatABI arm::getARMFloatABI(const Driver &D, const llvm::Triple &Triple,
                                   const ArgList &Args) {
-  auto SubArch = getARMSubArchVersionNumber(Triple);
   arm::FloatABI ABI = FloatABI::Invalid;
   if (Arg *A =
           Args.getLastArg(options::OPT_msoft_float, options::OPT_mhard_float,
@@ -184,95 +247,23 @@ arm::FloatABI arm::getARMFloatABI(const Driver &D, const llvm::Triple &Triple,
         ABI = FloatABI::Soft;
       }
     }
-
-    // It is incorrect to select hard float ABI on MachO platforms if the ABI is
-    // "apcs-gnu".
-    if (Triple.isOSBinFormatMachO() && !useAAPCSForMachO(Triple) &&
-        ABI == FloatABI::Hard) {
-      D.Diag(diag::err_drv_unsupported_opt_for_target) << A->getAsString(Args)
-                                                       << Triple.getArchName();
-    }
   }
 
   // If unspecified, choose the default based on the platform.
+  if (ABI == FloatABI::Invalid)
+    ABI = arm::getDefaultFloatABI(Triple);
+
   if (ABI == FloatABI::Invalid) {
-    switch (Triple.getOS()) {
-    case llvm::Triple::Darwin:
-    case llvm::Triple::MacOSX:
-    case llvm::Triple::IOS:
-    case llvm::Triple::TvOS: {
-      // Darwin defaults to "softfp" for v6 and v7.
-      ABI = (SubArch == 6 || SubArch == 7) ? FloatABI::SoftFP : FloatABI::Soft;
-      ABI = Triple.isWatchABI() ? FloatABI::Hard : ABI;
-      break;
-    }
-    case llvm::Triple::WatchOS:
+    // Assume "soft", but warn the user we are guessing.
+    if (Triple.isOSBinFormatMachO() &&
+        Triple.getSubArch() == llvm::Triple::ARMSubArch_v7em)
       ABI = FloatABI::Hard;
-      break;
+    else
+      ABI = FloatABI::Soft;
 
-    // FIXME: this is invalid for WindowsCE
-    case llvm::Triple::Win32:
-      ABI = FloatABI::Hard;
-      break;
-
-    case llvm::Triple::NetBSD:
-      switch (Triple.getEnvironment()) {
-      case llvm::Triple::EABIHF:
-      case llvm::Triple::GNUEABIHF:
-        ABI = FloatABI::Hard;
-        break;
-      default:
-        ABI = FloatABI::Soft;
-        break;
-      }
-      break;
-
-    case llvm::Triple::FreeBSD:
-      switch (Triple.getEnvironment()) {
-      case llvm::Triple::GNUEABIHF:
-        ABI = FloatABI::Hard;
-        break;
-      default:
-        // FreeBSD defaults to soft float
-        ABI = FloatABI::Soft;
-        break;
-      }
-      break;
-
-    case llvm::Triple::OpenBSD:
-      ABI = FloatABI::SoftFP;
-      break;
-
-    default:
-      switch (Triple.getEnvironment()) {
-      case llvm::Triple::GNUEABIHF:
-      case llvm::Triple::MuslEABIHF:
-      case llvm::Triple::EABIHF:
-        ABI = FloatABI::Hard;
-        break;
-      case llvm::Triple::GNUEABI:
-      case llvm::Triple::MuslEABI:
-      case llvm::Triple::EABI:
-        // EABI is always AAPCS, and if it was not marked 'hard', it's softfp
-        ABI = FloatABI::SoftFP;
-        break;
-      case llvm::Triple::Android:
-        ABI = (SubArch >= 7) ? FloatABI::SoftFP : FloatABI::Soft;
-        break;
-      default:
-        // Assume "soft", but warn the user we are guessing.
-        if (Triple.isOSBinFormatMachO() &&
-            Triple.getSubArch() == llvm::Triple::ARMSubArch_v7em)
-          ABI = FloatABI::Hard;
-        else
-          ABI = FloatABI::Soft;
-
-        if (Triple.getOS() != llvm::Triple::UnknownOS ||
-            !Triple.isOSBinFormatMachO())
-          D.Diag(diag::warn_drv_assuming_mfloat_abi_is) << "soft";
-        break;
-      }
-    }
+    if (Triple.getOS() != llvm::Triple::UnknownOS ||
+        !Triple.isOSBinFormatMachO())
+      D.Diag(diag::warn_drv_assuming_mfloat_abi_is) << "soft";
   }
 
   assert(ABI != FloatABI::Invalid && "must select an ABI");
