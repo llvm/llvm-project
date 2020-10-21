@@ -16,6 +16,7 @@ func f<T>(_ t: T) {
   let strct2 = S2()                // CHECK-DAG: strct2 = {}{{$}}
   let generic = t                  // CHECK-DAG: (Int) generic = 23
   let generic_tuple = (t, t)       // CHECK-DAG: generic_tuple = (0 = 23, 1 = 23)
+  let word = 0._builtinWordValue   // CHECK-DAG: word = 0
   print(number)
   useTypeFromOtherModule(x: S2())
 }
