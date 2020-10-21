@@ -49,7 +49,8 @@ public:
   PartialDiagnostic(unsigned DiagID, DiagStorageAllocator &Allocator_)
       : StreamingDiagnostic(Allocator_), DiagID(DiagID) {}
 
-  PartialDiagnostic(const PartialDiagnostic &Other) : DiagID(Other.DiagID) {
+  PartialDiagnostic(const PartialDiagnostic &Other)
+      : StreamingDiagnostic(Other), DiagID(Other.DiagID) {
     Allocator = Other.Allocator;
     if (Other.DiagStorage) {
       DiagStorage = getStorage();
