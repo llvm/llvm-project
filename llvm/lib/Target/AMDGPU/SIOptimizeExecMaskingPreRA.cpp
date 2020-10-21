@@ -35,10 +35,13 @@ private:
 
   unsigned AndOpc;
   unsigned Andn2Opc;
+  unsigned OrSaveExecOpc;
+  unsigned XorTermrOpc;
   Register CondReg;
   Register ExecReg;
 
   Register optimizeVcndVcmpPair(MachineBasicBlock &MBB);
+  bool optimizeElseBranch(MachineBasicBlock &MBB);
 
 public:
   static char ID;
@@ -224,6 +227,81 @@ SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   return CCReg;
 }
 
+// Optimize sequence
+//    %dst = S_OR_SAVEEXEC %src
+//    ... instructions not modifying exec ...
+//    %tmp = S_AND $exec, %dst
+//    $exec = S_XOR_term $exec, %tmp
+// =>
+//    %dst = S_OR_SAVEEXEC %src
+//    ... instructions not modifying exec ...
+//    $exec = S_XOR_term $exec, %dst
+//
+// Clean up potentially unnecessary code added for safety during
+// control flow lowering.
+//
+// Return whether any changes were made to MBB.
+bool SIOptimizeExecMaskingPreRA::optimizeElseBranch(MachineBasicBlock &MBB) {
+  if (MBB.empty())
+    return false;
+
+  // Check this is an else block.
+  auto First = MBB.begin();
+  MachineInstr &SaveExecMI = *First;
+  if (SaveExecMI.getOpcode() != OrSaveExecOpc)
+    return false;
+
+  auto I = llvm::find_if(MBB.terminators(), [this](const MachineInstr &MI) {
+    return MI.getOpcode() == XorTermrOpc;
+  });
+  if (I == MBB.terminators().end())
+    return false;
+
+  MachineInstr &XorTermMI = *I;
+  if (XorTermMI.getOperand(1).getReg() != ExecReg)
+    return false;
+
+  Register SavedExecReg = SaveExecMI.getOperand(0).getReg();
+  Register DstReg = XorTermMI.getOperand(2).getReg();
+
+  // Find potentially unnecessary S_AND
+  MachineInstr *AndExecMI = nullptr;
+  I--;
+  while (I != First && !AndExecMI) {
+    if (I->getOpcode() == AndOpc && I->getOperand(0).getReg() == DstReg &&
+        I->getOperand(1).getReg() == ExecReg)
+      AndExecMI = &*I;
+    I--;
+  }
+  if (!AndExecMI)
+    return false;
+
+  // Check for exec modifying instructions.
+  // Note: exec defs do not create live ranges beyond the
+  // instruction so isDefBetween cannot be used.
+  // Instead just check that the def segments are adjacent.
+  SlotIndex StartIdx = LIS->getInstructionIndex(SaveExecMI);
+  SlotIndex EndIdx = LIS->getInstructionIndex(*AndExecMI);
+  for (MCRegUnitIterator UI(ExecReg, TRI); UI.isValid(); ++UI) {
+    LiveRange &RegUnit = LIS->getRegUnit(*UI);
+    if (RegUnit.find(StartIdx) != std::prev(RegUnit.find(EndIdx)))
+      return false;
+  }
+
+  // Remove unnecessary S_AND
+  LIS->removeInterval(SavedExecReg);
+  LIS->removeInterval(DstReg);
+
+  SaveExecMI.getOperand(0).setReg(DstReg);
+
+  LIS->RemoveMachineInstrFromMaps(*AndExecMI);
+  AndExecMI->eraseFromParent();
+
+  LIS->createAndComputeVirtRegInterval(DstReg);
+
+  return true;
+}
+
 bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -237,6 +315,9 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
   const bool Wave32 = ST.isWave32();
   AndOpc = Wave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
   Andn2Opc = Wave32 ? AMDGPU::S_ANDN2_B32 : AMDGPU::S_ANDN2_B64;
+  OrSaveExecOpc =
+      Wave32 ? AMDGPU::S_OR_SAVEEXEC_B32 : AMDGPU::S_OR_SAVEEXEC_B64;
+  XorTermrOpc = Wave32 ? AMDGPU::S_XOR_B32_term : AMDGPU::S_XOR_B64_term;
   CondReg = Wave32 ? AMDGPU::VCC_LO : AMDGPU::VCC;
   ExecReg = Wave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
 
@@ -244,6 +325,11 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
+
+    if (optimizeElseBranch(MBB)) {
+      RecalcRegs.insert(AMDGPU::SCC);
+      Changed = true;
+    }
 
     if (Register Reg = optimizeVcndVcmpPair(MBB)) {
       RecalcRegs.insert(Reg);
