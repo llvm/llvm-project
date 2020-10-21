@@ -200,6 +200,8 @@ X86 Support in Clang
   implies -mtune=<cpu>. -mtune=generic is the default with no -march or -mtune
   specified.
 
+- Support for feature ``HRESET`` has been added.
+
 Internal API Changes
 --------------------
 
