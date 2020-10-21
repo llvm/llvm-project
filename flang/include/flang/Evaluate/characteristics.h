@@ -233,6 +233,8 @@ struct DummyArgument {
       std::string &&, const Expr<SomeType> &, FoldingContext &);
   bool IsOptional() const;
   void SetOptional(bool = true);
+  common::Intent GetIntent() const;
+  void SetIntent(common::Intent);
   bool CanBePassedViaImplicitInterface() const;
   bool IsTypelessIntrinsicDummy() const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
