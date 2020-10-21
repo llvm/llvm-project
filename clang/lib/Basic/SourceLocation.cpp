@@ -14,6 +14,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -39,6 +40,10 @@ void PrettyStackTraceLoc::print(raw_ostream &OS) const {
 //===----------------------------------------------------------------------===//
 // SourceLocation
 //===----------------------------------------------------------------------===//
+
+unsigned SourceLocation::getHashValue() const {
+  return llvm::DenseMapInfo<unsigned>::getHashValue(ID);
+}
 
 void SourceLocation::print(raw_ostream &OS, const SourceManager &SM)const{
   if (!isValid()) {
