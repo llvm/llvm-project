@@ -4958,6 +4958,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (D.CCGenDiagnostics)
     CmdArgs.push_back("-disable-pragma-debug-crash");
 
+  if (RawTriple.isOSAIX())
+    if (Arg *A = Args.getLastArg(options::OPT_G))
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << RawTriple.str();
+
   bool UseSeparateSections = isUseSeparateSections(Triple);
 
   if (Args.hasFlag(options::OPT_ffunction_sections,
