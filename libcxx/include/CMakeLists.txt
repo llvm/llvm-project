@@ -185,7 +185,7 @@ if(LIBCXX_INSTALL_SUPPORT_HEADERS)
     )
 endif()
 
-if(LIBCXX_HEADER_DIR)
+if (LIBCXX_GENERATED_INCLUDE_DIR) # Always true
   configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/__config_site" @ONLY)
 
   set(_all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/__config_site")
