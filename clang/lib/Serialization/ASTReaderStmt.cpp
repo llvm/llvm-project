@@ -2186,9 +2186,9 @@ void ASTStmtReader::VisitRecoveryExpr(RecoveryExpr *E) {
   unsigned NumArgs = Record.readInt();
   E->BeginLoc = readSourceLocation();
   E->EndLoc = readSourceLocation();
-  assert(
-      (NumArgs == std::distance(E->children().begin(), E->children().end())) &&
-      "Wrong NumArgs!");
+  assert((NumArgs + 0LL ==
+          std::distance(E->children().begin(), E->children().end())) &&
+         "Wrong NumArgs!");
   (void)NumArgs;
   for (Stmt *&Child : E->children())
     Child = Record.readSubStmt();
