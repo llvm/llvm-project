@@ -107,7 +107,7 @@ define i1 @caller2(i32 %y, i1 %cmp) {
   ret i1 %res
 }
 
-@GV = external global i32
+@GV = common global i32 0, align 4
 
 define i32 @f3_constantexpr_cond(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @f3_constantexpr_cond(i32 %x, i32 %y)
