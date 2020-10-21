@@ -1037,10 +1037,9 @@ Value *VectorBlockGenerator::getVectorValue(ScopStmt &Stmt, Value *Old,
   return Vector;
 }
 
-Type *VectorBlockGenerator::getVectorPtrTy(const Value *Val, int Width,
-                                           unsigned AddrSpace) {
-  PointerType *PointerTy = dyn_cast<PointerType>(Val->getType());
-  assert(PointerTy && "PointerType expected");
+Type *VectorBlockGenerator::getVectorPtrTy(const Value *Val, int Width) {
+  auto *PointerTy = cast<PointerType>(Val->getType());
+  unsigned AddrSpace = PointerTy->getAddressSpace();
 
   Type *ScalarType = PointerTy->getElementType();
   auto *FVTy = FixedVectorType::get(ScalarType, Width);
@@ -1053,8 +1052,7 @@ Value *VectorBlockGenerator::generateStrideOneLoad(
     __isl_keep isl_id_to_ast_expr *NewAccesses, bool NegativeStride = false) {
   unsigned VectorWidth = getVectorWidth();
   auto *Pointer = Load->getPointerOperand();
-  auto AS = Pointer->getType()->getPointerAddressSpace();
-  Type *VectorPtrType = getVectorPtrTy(Pointer, VectorWidth, AS);
+  Type *VectorPtrType = getVectorPtrTy(Pointer, VectorWidth);
   unsigned Offset = NegativeStride ? VectorWidth - 1 : 0;
 
   Value *NewPointer = generateLocationAccessed(Stmt, Load, ScalarMaps[Offset],
@@ -1083,8 +1081,7 @@ Value *VectorBlockGenerator::generateStrideZeroLoad(
     ScopStmt &Stmt, LoadInst *Load, ValueMapT &BBMap,
     __isl_keep isl_id_to_ast_expr *NewAccesses) {
   auto *Pointer = Load->getPointerOperand();
-  auto AS = Pointer->getType()->getPointerAddressSpace();
-  Type *VectorPtrType = getVectorPtrTy(Pointer, 1, AS);
+  Type *VectorPtrType = getVectorPtrTy(Pointer, 1);
   Value *NewPointer =
       generateLocationAccessed(Stmt, Load, BBMap, VLTS[0], NewAccesses);
   Value *VectorPtr = Builder.CreateBitCast(NewPointer, VectorPtrType,
@@ -1204,8 +1201,7 @@ void VectorBlockGenerator::copyStore(
   extractScalarValues(Store, VectorMap, ScalarMaps);
 
   if (Access.isStrideOne(isl::manage_copy(Schedule))) {
-    auto AS = Pointer->getType()->getPointerAddressSpace();
-    Type *VectorPtrType = getVectorPtrTy(Pointer, getVectorWidth(), AS);
+    Type *VectorPtrType = getVectorPtrTy(Pointer, getVectorWidth());
     Value *NewPointer = generateLocationAccessed(Stmt, Store, ScalarMaps[0],
                                                  VLTS[0], NewAccesses);
 
@@ -1343,8 +1339,7 @@ void VectorBlockGenerator::generateScalarVectorLoads(
       continue;
 
     auto *Address = getOrCreateAlloca(*MA);
-    auto AS = Address->getType()->getPointerAddressSpace();
-    Type *VectorPtrType = getVectorPtrTy(Address, 1, AS);
+    Type *VectorPtrType = getVectorPtrTy(Address, 1);
     Value *VectorPtr = Builder.CreateBitCast(Address, VectorPtrType,
                                              Address->getName() + "_p_vec_p");
     auto *Val = Builder.CreateLoad(VectorPtr, Address->getName() + ".reload");
