@@ -50,20 +50,23 @@ llvm::Expected<llvm::DenseSet<SymbolID>> getIDs(IDRange IDs) {
 Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
                        llvm::StringRef LocalIndexRoot)
     : Strings(Arena) {
+  llvm::StringRef PosixSeparator =
+      llvm::sys::path::get_separator(llvm::sys::path::Style::posix);
   if (!RemoteIndexRoot.empty()) {
     assert(llvm::sys::path::is_absolute(RemoteIndexRoot));
-    assert(RemoteIndexRoot ==
-           llvm::sys::path::convert_to_slash(RemoteIndexRoot));
-    this->RemoteIndexRoot = RemoteIndexRoot.str();
-    if (!RemoteIndexRoot.endswith(llvm::sys::path::get_separator()))
-      *this->RemoteIndexRoot += llvm::sys::path::get_separator();
+    this->RemoteIndexRoot = llvm::sys::path::convert_to_slash(
+        RemoteIndexRoot, llvm::sys::path::Style::windows);
+    llvm::StringRef Path(*this->RemoteIndexRoot);
+    if (!Path.endswith(PosixSeparator))
+      *this->RemoteIndexRoot += PosixSeparator;
   }
   if (!LocalIndexRoot.empty()) {
     assert(llvm::sys::path::is_absolute(LocalIndexRoot));
-    assert(LocalIndexRoot == llvm::sys::path::convert_to_slash(LocalIndexRoot));
-    this->LocalIndexRoot = LocalIndexRoot.str();
-    if (!LocalIndexRoot.endswith(llvm::sys::path::get_separator()))
-      *this->LocalIndexRoot += llvm::sys::path::get_separator();
+    this->LocalIndexRoot = llvm::sys::path::convert_to_slash(
+        LocalIndexRoot, llvm::sys::path::Style::windows);
+    llvm::StringRef Path(*this->LocalIndexRoot);
+    if (!Path.endswith(PosixSeparator))
+      *this->LocalIndexRoot += PosixSeparator;
   }
   assert(!RemoteIndexRoot.empty() || !LocalIndexRoot.empty());
 }
@@ -92,6 +95,9 @@ Marshaller::fromProtobuf(const FuzzyFindRequest *Message) {
   for (const auto &Path : Message->proximity_paths()) {
     llvm::SmallString<256> LocalPath = llvm::StringRef(*RemoteIndexRoot);
     llvm::sys::path::append(LocalPath, Path);
+    // FuzzyFindRequest requires proximity paths to have platform-native format
+    // in order for SymbolIndex to process the query correctly.
+    llvm::sys::path::native(LocalPath);
     Result.ProximityPaths.push_back(std::string(LocalPath));
   }
   for (const auto &Type : Message->preferred_types())
@@ -209,7 +215,7 @@ FuzzyFindRequest Marshaller::toProtobuf(const clangd::FuzzyFindRequest &From) {
     llvm::SmallString<256> RelativePath = llvm::StringRef(Path);
     if (llvm::sys::path::replace_path_prefix(RelativePath, *LocalIndexRoot, ""))
       RPCRequest.add_proximity_paths(llvm::sys::path::convert_to_slash(
-          RelativePath, llvm::sys::path::Style::posix));
+          RelativePath, llvm::sys::path::Style::windows));
   }
   for (const auto &Type : From.PreferredTypes)
     RPCRequest.add_preferred_types(Type);
@@ -315,12 +321,17 @@ llvm::Expected<std::string> Marshaller::uriToRelativePath(llvm::StringRef URI) {
   if (ParsedURI->scheme() != "file")
     return error("Can not use URI schemes other than file, given: '{0}'.", URI);
   llvm::SmallString<256> Result = ParsedURI->body();
+  llvm::StringRef Path(Result);
+  // Check for Windows paths (URI=file:///X:/path => Body=/X:/path)
+  if (llvm::sys::path::is_absolute(Path.substr(1),
+                                   llvm::sys::path::Style::windows))
+    Result = Path.drop_front();
   if (!llvm::sys::path::replace_path_prefix(Result, *RemoteIndexRoot, ""))
     return error("File path '{0}' doesn't start with '{1}'.", Result.str(),
                  *RemoteIndexRoot);
-  // Make sure the result has UNIX slashes.
-  return llvm::sys::path::convert_to_slash(Result,
-                                           llvm::sys::path::Style::posix);
+  assert(Result == llvm::sys::path::convert_to_slash(
+                       Result, llvm::sys::path::Style::windows));
+  return std::string(Result);
 }
 
 clangd::SymbolLocation::Position
