@@ -41,7 +41,7 @@ define void @func_use_lds_global_constexpr_cast() {
 ; GFX8-NEXT:    s_mov_b64 s[0:1], s[4:5]
 ; GFX8-NEXT:    s_trap 2
 ; GFX8-NEXT:    flat_store_dword v[0:1], v0
-; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: func_use_lds_global_constexpr_cast:

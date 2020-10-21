@@ -201,7 +201,7 @@ define amdgpu_kernel void @v_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v6, vcc, v5, v4
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v5
 ; VI-NEXT:    v_cmp_lt_i32_e64 s[0:1], v6, v4
@@ -368,7 +368,7 @@ define amdgpu_kernel void @v_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 ; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v6, s2
 ; VI-NEXT:    v_mov_b32_e32 v7, s3
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v8, vcc, v0, v2
 ; VI-NEXT:    v_addc_u32_e32 v9, vcc, v1, v3, vcc
 ; VI-NEXT:    v_cmp_gt_i64_e32 vcc, 0, v[2:3]
@@ -463,7 +463,7 @@ define amdgpu_kernel void @v_saddo_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32>
 ; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v6, s2
 ; VI-NEXT:    v_mov_b32_e32 v7, s3
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v9, vcc, v1, v3
 ; VI-NEXT:    v_add_u32_e32 v8, vcc, v0, v2
 ; VI-NEXT:    v_cmp_gt_i32_e64 s[0:1], 0, v3
