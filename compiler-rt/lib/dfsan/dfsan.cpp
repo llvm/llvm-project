@@ -274,9 +274,10 @@ dfsan_label dfsan_create_label(const char *desc, void *userdata) {
   return label;
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-void __dfsan_set_label(dfsan_label label, void *addr, uptr size) {
-  for (dfsan_label *labelp = shadow_for(addr); size != 0; --size, ++labelp) {
+static void WriteShadowIfDifferent(dfsan_label label, uptr shadow_addr,
+                                   uptr size) {
+  dfsan_label *labelp = (dfsan_label *)shadow_addr;
+  for (; size != 0; --size, ++labelp) {
     // Don't write the label if it is already the value we need it to be.
     // In a program where most addresses are not labeled, it is common that
     // a page of shadow memory is entirely zeroed.  The Linux copy-on-write
@@ -290,6 +291,38 @@ void __dfsan_set_label(dfsan_label label, void *addr, uptr size) {
 
     *labelp = label;
   }
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_set_label(
+    dfsan_label label, void *addr, uptr size) {
+  const uptr beg_shadow_addr = (uptr)__dfsan::shadow_for(addr);
+
+  if (0 != label) {
+    WriteShadowIfDifferent(label, beg_shadow_addr, size);
+    return;
+  }
+
+  // If label is 0, releases the pages within the shadow address range, and sets
+  // the shadow addresses not on the pages to be 0.
+  const void *end_addr = (void *)((uptr)addr + size);
+  const uptr end_shadow_addr = (uptr)__dfsan::shadow_for(end_addr);
+  const uptr page_size = GetPageSizeCached();
+  const uptr beg_aligned = RoundUpTo(beg_shadow_addr, page_size);
+  const uptr end_aligned = RoundDownTo(end_shadow_addr, page_size);
+
+  // dfsan_set_label can be called from the following cases
+  // 1) mapped ranges by new/delete and malloc/free. This case has shadow memory
+  // size > 100k, and happens less frequently.
+  // 2) zero-filling internal data structures by utility libraries. This case
+  // has shadow memory size < 32k, and happens more often.
+  // Set kNumPagesThreshold to be 8 to avoid releasing small pages.
+  const int kNumPagesThreshold = 8;
+  if (beg_aligned + kNumPagesThreshold * page_size >= end_aligned)
+    return WriteShadowIfDifferent(label, beg_shadow_addr, size);
+
+  WriteShadowIfDifferent(label, beg_shadow_addr, beg_aligned - beg_shadow_addr);
+  ReleaseMemoryPagesToOS(beg_aligned, end_aligned);
+  WriteShadowIfDifferent(label, end_aligned, end_shadow_addr - end_aligned);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
