@@ -495,3 +495,12 @@ namespace PR45000 {
   void g() { f<int>(); }
   // expected-note@-1 {{in instantiation of default function argument expression for 'f<int>' required here}}
 }
+
+namespace LambdaInDefaultMemberInitializer {
+  template<typename T> void f() {
+    struct S {
+      void *p = [this] { return &p; }();
+    };
+  }
+  template void f<int>();
+}
