@@ -84,10 +84,10 @@ static MatchKind checkOccurrence(const IndexedOccurrence &Occurrence,
   StringRef SymbolNameStart = Symbol.Name[0];
   // Extract the token at the location.
   auto DecomposedLoc = SM.getDecomposedLoc(BeginLoc);
-  const llvm::MemoryBuffer *File = SM.getBuffer(DecomposedLoc.first);
+  const auto File = SM.getBufferOrFake(DecomposedLoc.first);
   Lexer RawLex(
-      BeginLoc, LangOpts, File->getBufferStart() + DecomposedLoc.second,
-      File->getBufferStart() + DecomposedLoc.second, File->getBufferEnd());
+      BeginLoc, LangOpts, File.getBufferStart() + DecomposedLoc.second,
+      File.getBufferStart() + DecomposedLoc.second, File.getBufferEnd());
   Token Tok;
   RawLex.LexFromRawLexer(Tok);
   if (Tok.isNot(tok::raw_identifier) || Tok.getLocation() != BeginLoc) {
@@ -401,10 +401,10 @@ static void findInclusionDirectiveOccurrence(
   if (Loc.isInvalid())
     return;
   unsigned Offset = SM.getDecomposedLoc(Loc).second;
-  const llvm::MemoryBuffer *File = SM.getBuffer(SM.getMainFileID());
+  const auto File = SM.getBufferOrFake(SM.getMainFileID());
 
-  InclusionLexer RawLex(Loc, LangOpts, File->getBufferStart() + Offset,
-                        File->getBufferEnd());
+  InclusionLexer RawLex(Loc, LangOpts, File.getBufferStart() + Offset,
+                        File.getBufferEnd());
   Token RawTok;
   RawLex.LexFromRawLexer(RawTok);
   if (RawTok.isNot(tok::hash))

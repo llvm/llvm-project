@@ -85,7 +85,7 @@ APINotesManager::loadAPINotes(const FileEntry *apiNotesFile) {
 
   // Open the source file.
   auto sourceFileID = SourceMgr.createFileID(apiNotesFile, SourceLocation(), SrcMgr::C_User);
-  auto sourceBuffer = SourceMgr.getBuffer(sourceFileID, SourceLocation());
+  auto sourceBuffer = SourceMgr.getBufferOrNone(sourceFileID, SourceLocation());
   if (!sourceBuffer) return nullptr;
 
   // Compile the API notes source into a buffer.
