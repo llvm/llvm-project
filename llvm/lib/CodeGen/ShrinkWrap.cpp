@@ -144,7 +144,7 @@ class ShrinkWrap : public MachineFunctionPass {
   unsigned FrameDestroyOpcode;
 
   /// Stack pointer register, used by llvm.{savestack,restorestack}
-  unsigned SP;
+  Register SP;
 
   /// Entry block.
   const MachineBasicBlock *Entry;
