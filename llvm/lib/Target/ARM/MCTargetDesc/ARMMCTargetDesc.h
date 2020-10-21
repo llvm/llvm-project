@@ -44,6 +44,7 @@ std::string ParseARMTriple(const Triple &TT, StringRef CPU);
 void initLLVMToCVRegMapping(MCRegisterInfo *MRI);
 
 bool isPredicated(const MCInst &MI, const MCInstrInfo *MCII);
+bool isCPSRDefined(const MCInst &MI, const MCInstrInfo *MCII);
 
 /// Create a ARM MCSubtargetInfo instance. This is exposed so Asm parser, etc.
 /// do not need to go through TargetRegistry.
