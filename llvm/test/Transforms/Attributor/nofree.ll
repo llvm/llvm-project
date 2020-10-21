@@ -247,7 +247,7 @@ define void @call_both() #0 {
 
 ; TEST 10 (positive case)
 ; Call intrinsic function
-; CHECK: Function Attrs: nounwind readnone speculatable
+; CHECK: Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 ; CHECK-NEXT: declare float @llvm.floor.f32(float)
 declare float @llvm.floor.f32(float)
 
@@ -266,13 +266,18 @@ define void @call_floor(float %a) #0 {
   ret void
 }
 
-; FIXME: missing nofree
 define float @call_floor2(float %a) #0 {
-; CHECK: Function Attrs: noinline nosync nounwind readnone uwtable willreturn
-; CHECK-LABEL: define {{[^@]+}}@call_floor2
-; CHECK-SAME: (float [[A:%.*]]) [[ATTR7:#.*]] {
-; CHECK-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) [[ATTR11:#.*]]
-; CHECK-NEXT:    ret float [[C]]
+; IS__TUNIT____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@call_floor2
+; IS__TUNIT____-SAME: (float [[A:%.*]]) [[ATTR3]] {
+; IS__TUNIT____-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) [[ATTR11:#.*]]
+; IS__TUNIT____-NEXT:    ret float [[C]]
+;
+; IS__CGSCC____: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@call_floor2
+; IS__CGSCC____-SAME: (float [[A:%.*]]) [[ATTR7:#.*]] {
+; IS__CGSCC____-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) [[ATTR12:#.*]]
+; IS__CGSCC____-NEXT:    ret float [[C]]
 ;
   %c = tail call float @llvm.floor.f32(float %a)
   ret float %c
@@ -368,11 +373,17 @@ define void @nonnull_assume_pos(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4) {
 ; ATTRIBUTOR-NEXT:    call void @unknown(i8* nofree [[ARG1]], i8* [[ARG2]], i8* nofree [[ARG3]], i8* [[ARG4]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;
-; CHECK-LABEL: define {{[^@]+}}@nonnull_assume_pos
-; CHECK-SAME: (i8* nofree [[ARG1:%.*]], i8* [[ARG2:%.*]], i8* nofree [[ARG3:%.*]], i8* [[ARG4:%.*]]) {
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR11]] [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG3]]) ]
-; CHECK-NEXT:    call void @unknown(i8* nofree [[ARG1]], i8* [[ARG2]], i8* nofree [[ARG3]], i8* [[ARG4]])
-; CHECK-NEXT:    ret void
+; IS__TUNIT____-LABEL: define {{[^@]+}}@nonnull_assume_pos
+; IS__TUNIT____-SAME: (i8* nofree [[ARG1:%.*]], i8* [[ARG2:%.*]], i8* nofree [[ARG3:%.*]], i8* [[ARG4:%.*]]) {
+; IS__TUNIT____-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR11]] [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG3]]) ]
+; IS__TUNIT____-NEXT:    call void @unknown(i8* nofree [[ARG1]], i8* [[ARG2]], i8* nofree [[ARG3]], i8* [[ARG4]])
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@nonnull_assume_pos
+; IS__CGSCC____-SAME: (i8* nofree [[ARG1:%.*]], i8* [[ARG2:%.*]], i8* nofree [[ARG3:%.*]], i8* [[ARG4:%.*]]) {
+; IS__CGSCC____-NEXT:    call void @llvm.assume(i1 noundef true) [[ATTR12]] [ "nofree"(i8* [[ARG1]]), "nofree"(i8* [[ARG3]]) ]
+; IS__CGSCC____-NEXT:    call void @unknown(i8* nofree [[ARG1]], i8* [[ARG2]], i8* nofree [[ARG3]], i8* [[ARG4]])
+; IS__CGSCC____-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) ["nofree"(i8* %arg1), "nofree"(i8* %arg3)]
   call void @unknown(i8* %arg1, i8* %arg2, i8* %arg3, i8* %arg4)

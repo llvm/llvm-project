@@ -821,5 +821,5 @@ entry:
 
 
 ; CHECK: attributes [[NUW]] = { nounwind }
-; CHECK: attributes #1 = { argmemonly nounwind willreturn writeonly }
+; CHECK: attributes #1 = { argmemonly nofree nosync nounwind willreturn writeonly }
 ; CHECK: attributes #2 = { nonlazybind }

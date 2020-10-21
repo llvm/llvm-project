@@ -163,13 +163,13 @@ declare void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32>%val, <4 x i32*>, i32, 
 ; CHECK-NOT: readnone
 ; CHECK-NOT: readonly
 define void @test9(<4 x i32*> %ptrs, <4 x i32>%val) {
-; IS__TUNIT____: Function Attrs: nounwind willreturn writeonly
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test9
-; IS__TUNIT____-SAME: (<4 x i32*> [[PTRS:%.*]], <4 x i32> [[VAL:%.*]]) [[ATTR4:#.*]] {
-; IS__TUNIT____-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> [[VAL]], <4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>) [[ATTR11:#.*]]
+; IS__TUNIT____-SAME: (<4 x i32*> [[PTRS:%.*]], <4 x i32> [[VAL:%.*]]) [[ATTR0]] {
+; IS__TUNIT____-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> [[VAL]], <4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>) [[ATTR10:#.*]]
 ; IS__TUNIT____-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: nounwind willreturn writeonly
+; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn writeonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test9
 ; IS__CGSCC____-SAME: (<4 x i32*> [[PTRS:%.*]], <4 x i32> [[VAL:%.*]]) [[ATTR4:#.*]] {
 ; IS__CGSCC____-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> [[VAL]], <4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>) [[ATTR12:#.*]]
@@ -182,13 +182,13 @@ define void @test9(<4 x i32*> %ptrs, <4 x i32>%val) {
 ; CHECK: declare <4 x i32> @llvm.masked.gather
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*>, i32, <4 x i1>, <4 x i32>)
 define <4 x i32> @test10(<4 x i32*> %ptrs) {
-; IS__TUNIT____: Function Attrs: nounwind readonly willreturn
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readonly willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test10
-; IS__TUNIT____-SAME: (<4 x i32*> [[PTRS:%.*]]) [[ATTR5:#.*]] {
-; IS__TUNIT____-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>, <4 x i32> undef) [[ATTR12:#.*]]
+; IS__TUNIT____-SAME: (<4 x i32*> [[PTRS:%.*]]) [[ATTR4:#.*]] {
+; IS__TUNIT____-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>, <4 x i32> undef) [[ATTR11:#.*]]
 ; IS__TUNIT____-NEXT:    ret <4 x i32> [[RES]]
 ;
-; IS__CGSCC____: Function Attrs: nounwind readonly willreturn
+; IS__CGSCC____: Function Attrs: nofree nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test10
 ; IS__CGSCC____-SAME: (<4 x i32*> [[PTRS:%.*]]) [[ATTR5:#.*]] {
 ; IS__CGSCC____-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[PTRS]], i32 noundef 4, <4 x i1> noundef <i1 true, i1 false, i1 true, i1 false>, <4 x i32> undef) [[ATTR13:#.*]]
@@ -216,8 +216,8 @@ declare <4 x i32> @test12_1(<4 x i32*>) argmemonly nounwind
 define <4 x i32> @test12_2(<4 x i32*> %ptrs) {
 ; IS__TUNIT____: Function Attrs: argmemonly nounwind
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test12_2
-; IS__TUNIT____-SAME: (<4 x i32*> [[PTRS:%.*]]) [[ATTR7:#.*]] {
-; IS__TUNIT____-NEXT:    [[RES:%.*]] = call <4 x i32> @test12_1(<4 x i32*> [[PTRS]]) [[ATTR13:#.*]]
+; IS__TUNIT____-SAME: (<4 x i32*> [[PTRS:%.*]]) [[ATTR6:#.*]] {
+; IS__TUNIT____-NEXT:    [[RES:%.*]] = call <4 x i32> @test12_1(<4 x i32*> [[PTRS]]) [[ATTR12:#.*]]
 ; IS__TUNIT____-NEXT:    ret <4 x i32> [[RES]]
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nounwind
@@ -233,7 +233,7 @@ define <4 x i32> @test12_2(<4 x i32*> %ptrs) {
 define i32 @volatile_load(i32* %p) {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree nounwind willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@volatile_load
-; IS__TUNIT____-SAME: (i32* nofree align 4 [[P:%.*]]) [[ATTR8:#.*]] {
+; IS__TUNIT____-SAME: (i32* nofree align 4 [[P:%.*]]) [[ATTR7:#.*]] {
 ; IS__TUNIT____-NEXT:    [[LOAD:%.*]] = load volatile i32, i32* [[P]], align 4
 ; IS__TUNIT____-NEXT:    ret i32 [[LOAD]]
 ;

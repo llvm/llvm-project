@@ -65,6 +65,6 @@ define void @strided_store_2x3(<10 x double> %in, double* %out) {
 declare void @llvm.matrix.column.major.store.v6f64(<6 x double>, double*, i64, i1, i32, i32)
 declare void @llvm.matrix.column.major.store.v10f64(<10 x double>, double*, i64, i1, i32, i32)
 
-; CHECK: declare void @llvm.matrix.column.major.store.v6f64(<6 x double>, double* nocapture writeonly, i64, i1 immarg, i32 immarg, i32 immarg) #0 
-; CHECK: declare void @llvm.matrix.column.major.store.v10f64(<10 x double>, double* nocapture writeonly, i64, i1 immarg, i32 immarg, i32 immarg) #0 
-; CHECK: attributes #0 = { argmemonly nosync nounwind willreturn writeonly }
+; CHECK: declare void @llvm.matrix.column.major.store.v6f64(<6 x double>, double* nocapture writeonly, i64, i1 immarg, i32 immarg, i32 immarg) #0
+; CHECK: declare void @llvm.matrix.column.major.store.v10f64(<10 x double>, double* nocapture writeonly, i64, i1 immarg, i32 immarg, i32 immarg) #0
+; CHECK: attributes #0 = { argmemonly nofree nosync nounwind willreturn writeonly }
