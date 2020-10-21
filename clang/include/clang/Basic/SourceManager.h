@@ -90,6 +90,35 @@ namespace SrcMgr {
     return CK == C_User_ModuleMap || CK == C_System_ModuleMap;
   }
 
+  /// Mapping of line offsets into a source file. This does not own the storage
+  /// for the line numbers.
+  class LineOffsetMapping {
+  public:
+    explicit operator bool() const { return Storage; }
+    unsigned size() const {
+      assert(Storage);
+      return Storage[0];
+    }
+    ArrayRef<unsigned> getLines() const {
+      assert(Storage);
+      return ArrayRef<unsigned>(Storage + 1, Storage + 1 + size());
+    }
+    const unsigned *begin() const { return getLines().begin(); }
+    const unsigned *end() const { return getLines().end(); }
+    const unsigned &operator[](int I) const { return getLines()[I]; }
+
+    static LineOffsetMapping get(llvm::MemoryBufferRef Buffer,
+                                 llvm::BumpPtrAllocator &Alloc);
+
+    LineOffsetMapping() = default;
+    LineOffsetMapping(ArrayRef<unsigned> LineOffsets,
+                      llvm::BumpPtrAllocator &Alloc);
+
+  private:
+    /// First element is the size, followed by elements at off-by-one indexes.
+    unsigned *Storage = nullptr;
+  };
+
   /// One instance of this struct is kept for every file loaded or used.
   ///
   /// This object owns the MemoryBuffer object.
@@ -115,14 +144,9 @@ namespace SrcMgr {
 
     /// A bump pointer allocated array of offsets for each source line.
     ///
-    /// This is lazily computed.  This is owned by the SourceManager
+    /// This is lazily computed.  The lines are owned by the SourceManager
     /// BumpPointerAllocator object.
-    unsigned *SourceLineCache = nullptr;
-
-    /// The number of lines in this ContentCache.
-    ///
-    /// This is only valid if SourceLineCache is non-null.
-    unsigned NumLines = 0;
+    LineOffsetMapping SourceLineCache;
 
     /// Indicates whether the buffer itself was provided to override
     /// the actual file contents.
@@ -157,10 +181,8 @@ namespace SrcMgr {
       OrigEntry = RHS.OrigEntry;
       ContentsEntry = RHS.ContentsEntry;
 
-      assert(!RHS.Buffer && RHS.SourceLineCache == nullptr &&
+      assert(!RHS.Buffer && !RHS.SourceLineCache &&
              "Passed ContentCache object cannot own a buffer.");
-
-      NumLines = RHS.NumLines;
     }
 
     ContentCache &operator=(const ContentCache& RHS) = delete;
