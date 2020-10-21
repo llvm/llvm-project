@@ -832,6 +832,24 @@ TEST_F(TargetDeclTest, ObjC) {
                "@property(atomic, retain, readwrite) I *x");
 
   Code = R"cpp(
+    @interface MYObject
+    @end
+    @interface Interface
+    @property(retain) [[MYObject]] *x;
+    @end
+  )cpp";
+  EXPECT_DECLS("ObjCInterfaceTypeLoc", "@interface MYObject");
+
+  Code = R"cpp(
+    @interface MYObject2
+    @end
+    @interface Interface
+    @property(retain, nonnull) [[MYObject2]] *x;
+    @end
+  )cpp";
+  EXPECT_DECLS("ObjCInterfaceTypeLoc", "@interface MYObject2");
+
+  Code = R"cpp(
     @protocol Foo
     @end
     id test() {
