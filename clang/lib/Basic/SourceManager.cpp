@@ -1261,20 +1261,20 @@ unsigned SourceManager::getPresumedColumnNumber(SourceLocation Loc,
 #endif
 
 static LLVM_ATTRIBUTE_NOINLINE void
-ComputeLineNumbers(DiagnosticsEngine &Diag, ContentCache *FI,
+ComputeLineNumbers(DiagnosticsEngine &Diag, const ContentCache &FI,
                    llvm::BumpPtrAllocator &Alloc,
                    const SourceManager &SM, bool &Invalid);
-static void ComputeLineNumbers(DiagnosticsEngine &Diag, ContentCache *FI,
+static void ComputeLineNumbers(DiagnosticsEngine &Diag, const ContentCache &FI,
                                llvm::BumpPtrAllocator &Alloc,
                                const SourceManager &SM, bool &Invalid) {
   // Note that calling 'getBuffer()' may lazily page in the file.
   llvm::Optional<llvm::MemoryBufferRef> Buffer =
-      FI->getBufferOrNone(Diag, SM.getFileManager(), SourceLocation());
+      FI.getBufferOrNone(Diag, SM.getFileManager(), SourceLocation());
   Invalid = !Buffer;
   if (Invalid)
     return;
 
-  FI->SourceLineCache = LineOffsetMapping::get(*Buffer, Alloc);
+  FI.SourceLineCache = LineOffsetMapping::get(*Buffer, Alloc);
 }
 
 LineOffsetMapping LineOffsetMapping::get(llvm::MemoryBufferRef Buffer,
@@ -1324,7 +1324,7 @@ unsigned SourceManager::getLineNumber(FileID FID, unsigned FilePos,
     return 1;
   }
 
-  ContentCache *Content;
+  const ContentCache *Content;
   if (LastLineNoFileIDQuery == FID)
     Content = LastLineNoContentCache;
   else {
@@ -1336,14 +1336,14 @@ unsigned SourceManager::getLineNumber(FileID FID, unsigned FilePos,
       return 1;
     }
 
-    Content = const_cast<ContentCache *>(&Entry.getFile().getContentCache());
+    Content = &Entry.getFile().getContentCache();
   }
 
   // If this is the first use of line information for this buffer, compute the
   /// SourceLineCache for it on demand.
   if (!Content->SourceLineCache) {
     bool MyInvalid = false;
-    ComputeLineNumbers(Diag, Content, ContentCacheAlloc, *this, MyInvalid);
+    ComputeLineNumbers(Diag, *Content, ContentCacheAlloc, *this, MyInvalid);
     if (Invalid)
       *Invalid = MyInvalid;
     if (MyInvalid)
@@ -1685,14 +1685,13 @@ SourceLocation SourceManager::translateLineCol(FileID FID,
   if (Line == 1 && Col == 1)
     return FileLoc;
 
-  ContentCache *Content =
-      const_cast<ContentCache *>(&Entry.getFile().getContentCache());
+  const ContentCache *Content = &Entry.getFile().getContentCache();
 
   // If this is the first use of line information for this buffer, compute the
   // SourceLineCache for it on demand.
   if (!Content->SourceLineCache) {
     bool MyInvalid = false;
-    ComputeLineNumbers(Diag, Content, ContentCacheAlloc, *this, MyInvalid);
+    ComputeLineNumbers(Diag, *Content, ContentCacheAlloc, *this, MyInvalid);
     if (MyInvalid)
       return SourceLocation();
   }
