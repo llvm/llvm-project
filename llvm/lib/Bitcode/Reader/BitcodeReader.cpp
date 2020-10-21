@@ -1535,6 +1535,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoUndef;
   case bitc::ATTR_KIND_BYREF:
     return Attribute::ByRef;
+  case bitc::ATTR_KIND_MUSTPROGRESS:
+    return Attribute::MustProgress;
   }
 }
 

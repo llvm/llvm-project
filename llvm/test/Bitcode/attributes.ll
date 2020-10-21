@@ -398,6 +398,12 @@ define void @f67(i32* byref(i32) %a)
   ret void
 }
 
+; CHECK: define void @f68() #41
+define void @f68() mustprogress
+{
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }
@@ -439,4 +445,5 @@ define void @f67(i32* byref(i32) %a)
 ; CHECK: attributes #38 = { nosync }
 ; CHECK: attributes #39 = { sanitize_memtag }
 ; CHECK: attributes #40 = { null_pointer_is_valid }
+; CHECK: attributes #41 = { mustprogress }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }
