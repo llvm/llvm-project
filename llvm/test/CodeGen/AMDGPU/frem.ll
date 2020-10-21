@@ -612,8 +612,7 @@ define amdgpu_kernel void @frem_f64(double addrspace(1)* %out, double addrspace(
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; SI-NEXT:    v_cmp_eq_u32_e64 s[0:1], v1, v9
 ; SI-NEXT:    s_xor_b64 vcc, s[0:1], vcc
-; SI-NEXT:    s_nop 0
-; SI-NEXT:    s_nop 0
+; SI-NEXT:    s_nop 1
 ; SI-NEXT:    v_div_fmas_f64 v[4:5], v[12:13], v[6:7], v[10:11]
 ; SI-NEXT:    v_div_fixup_f64 v[4:5], v[4:5], v[2:3], v[0:1]
 ; SI-NEXT:    v_bfe_u32 v6, v5, 20, 11
@@ -740,8 +739,7 @@ define amdgpu_kernel void @fast_frem_f64(double addrspace(1)* %out, double addrs
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
 ; SI-NEXT:    v_cmp_eq_u32_e64 s[0:1], v1, v9
 ; SI-NEXT:    s_xor_b64 vcc, s[0:1], vcc
-; SI-NEXT:    s_nop 0
-; SI-NEXT:    s_nop 0
+; SI-NEXT:    s_nop 1
 ; SI-NEXT:    v_div_fmas_f64 v[4:5], v[12:13], v[6:7], v[10:11]
 ; SI-NEXT:    v_div_fixup_f64 v[4:5], v[4:5], v[2:3], v[0:1]
 ; SI-NEXT:    v_bfe_u32 v6, v5, 20, 11
@@ -1842,8 +1840,7 @@ define amdgpu_kernel void @frem_v2f64(<2 x double> addrspace(1)* %out, <2 x doub
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v7, v9
 ; SI-NEXT:    v_cmp_eq_u32_e64 s[0:1], v3, v13
 ; SI-NEXT:    s_xor_b64 vcc, s[0:1], vcc
-; SI-NEXT:    s_nop 0
-; SI-NEXT:    s_nop 0
+; SI-NEXT:    s_nop 1
 ; SI-NEXT:    v_div_fmas_f64 v[8:9], v[16:17], v[10:11], v[14:15]
 ; SI-NEXT:    v_div_fixup_f64 v[8:9], v[8:9], v[6:7], v[2:3]
 ; SI-NEXT:    v_bfe_u32 v10, v9, 20, 11
@@ -1876,8 +1873,7 @@ define amdgpu_kernel void @frem_v2f64(<2 x double> addrspace(1)* %out, <2 x doub
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, v5, v7
 ; SI-NEXT:    v_cmp_eq_u32_e64 s[0:1], v1, v11
 ; SI-NEXT:    s_xor_b64 vcc, s[0:1], vcc
-; SI-NEXT:    s_nop 0
-; SI-NEXT:    s_nop 0
+; SI-NEXT:    s_nop 1
 ; SI-NEXT:    v_div_fmas_f64 v[6:7], v[14:15], v[8:9], v[12:13]
 ; SI-NEXT:    v_div_fixup_f64 v[6:7], v[6:7], v[4:5], v[0:1]
 ; SI-NEXT:    v_bfe_u32 v8, v7, 20, 11

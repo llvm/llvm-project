@@ -1343,6 +1343,11 @@ public:
   virtual void insertNoop(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MI) const;
 
+  /// Insert noops into the instruction stream at the specified point.
+  virtual void insertNoops(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MI,
+                           unsigned Quantity) const;
+
   /// Return the noop instruction to use for a noop.
   virtual void getNoop(MCInst &NopInst) const;
 
