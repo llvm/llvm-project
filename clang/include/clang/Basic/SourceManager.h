@@ -95,9 +95,6 @@ namespace SrcMgr {
   /// This object owns the MemoryBuffer object.
   class alignas(8) ContentCache {
     enum CCFlags {
-      /// Whether the buffer is invalid.
-      InvalidFlag = 0x01,
-
       /// Whether the buffer should not be freed on destruction.
       DoNotFreeFlag = 0x02
     };
@@ -151,18 +148,21 @@ namespace SrcMgr {
     /// after serialization and deserialization.
     unsigned IsTransient : 1;
 
+    mutable unsigned IsBufferInvalid : 1;
+
     ContentCache(const FileEntry *Ent = nullptr) : ContentCache(Ent, Ent) {}
 
     ContentCache(const FileEntry *Ent, const FileEntry *contentEnt)
         : Buffer(nullptr, false), OrigEntry(Ent), ContentsEntry(contentEnt),
-          BufferOverridden(false), IsFileVolatile(false), IsTransient(false) {}
+          BufferOverridden(false), IsFileVolatile(false), IsTransient(false),
+          IsBufferInvalid(false) {}
 
     /// The copy ctor does not allow copies where source object has either
     /// a non-NULL Buffer or SourceLineCache.  Ownership of allocated memory
     /// is not transferred, so this is a logical error.
     ContentCache(const ContentCache &RHS)
         : Buffer(nullptr, false), BufferOverridden(false),
-          IsFileVolatile(false), IsTransient(false) {
+          IsFileVolatile(false), IsTransient(false), IsBufferInvalid(false) {
       OrigEntry = RHS.OrigEntry;
       ContentsEntry = RHS.ContentsEntry;
 
@@ -215,11 +215,6 @@ namespace SrcMgr {
     /// Replace the existing buffer (which will be deleted)
     /// with the given buffer.
     void replaceBuffer(const llvm::MemoryBuffer *B, bool DoNotFree = false);
-
-    /// Determine whether the buffer itself is invalid.
-    bool isBufferInvalid() const {
-      return Buffer.getInt() & InvalidFlag;
-    }
 
     /// Determine whether the buffer should be freed.
     bool shouldFreeBuffer() const {
