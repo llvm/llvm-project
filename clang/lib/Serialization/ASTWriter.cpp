@@ -5175,6 +5175,8 @@ void ASTRecordWriter::AddAPValue(const APValue &Value) {
     push_back(Value.getArraySize());
     for (unsigned Idx = 0; Idx < Value.getArrayInitializedElts(); Idx++)
       AddAPValue(Value.getArrayInitializedElt(Idx));
+    if (Value.hasArrayFiller())
+      AddAPValue(Value.getArrayFiller());
     return;
   case APValue::Struct:
     push_back(Value.getStructNumBases());

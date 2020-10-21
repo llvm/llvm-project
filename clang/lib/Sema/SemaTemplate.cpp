@@ -6929,9 +6929,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     //
     // Similarly, don't inject a call to a copy constructor when initializing
     // from a template parameter of the same type.
-    Expr *InnerArg = Arg;
-    while (auto *SNTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(InnerArg))
-      InnerArg = SNTTP->getReplacement();
+    Expr *InnerArg = Arg->IgnoreParenImpCasts();
     if (ParamType->isRecordType() && isa<DeclRefExpr>(InnerArg) &&
         Context.hasSameUnqualifiedType(ParamType, InnerArg->getType())) {
       NamedDecl *ND = cast<DeclRefExpr>(InnerArg)->getDecl();

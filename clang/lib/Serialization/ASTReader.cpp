@@ -9007,6 +9007,8 @@ APValue ASTRecordReader::readAPValue() {
     Result.MakeArray(InitLength, TotalLength);
     for (unsigned LoopIdx = 0; LoopIdx < InitLength; LoopIdx++)
       Result.getArrayInitializedElt(LoopIdx) = asImpl().readAPValue();
+    if (Result.hasArrayFiller())
+      Result.getArrayFiller() = asImpl().readAPValue();
     return Result;
   }
   case APValue::Struct: {
