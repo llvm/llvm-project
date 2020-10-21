@@ -147,7 +147,6 @@ TEST_F(TestSwiftASTContext, ResourceDir) {
   llvm::sys::path::append(tc_rdir, "/Xcode.app/Contents/Developer/Toolchains/"
                                    "XcodeDefault.xctoolchain/usr/lib/swift");
 
-  llvm::StringRef rdir;
   auto GetResourceDir = [&](const char *triple_string,
                             llvm::StringRef sdk_path) {
     llvm::Triple host("x86_64-apple-macosx10.14");
@@ -159,7 +158,7 @@ TEST_F(TestSwiftASTContext, ResourceDir) {
         std::string(toolchain), std::string(cl_tools));
   };
 
-  EXPECT_EQ(GetResourceDir({"x86_64-apple-macosx10.14"}, macosx_sdk),
+  EXPECT_EQ(GetResourceDir("x86_64-apple-macosx10.14", macosx_sdk),
             tc_rdir.str());
   EXPECT_EQ(GetResourceDir("x86_64-apple-darwin", macosx_sdk), tc_rdir);
   EXPECT_EQ(GetResourceDir("aarch64-apple-ios11.3", ios_sdk), tc_rdir);
