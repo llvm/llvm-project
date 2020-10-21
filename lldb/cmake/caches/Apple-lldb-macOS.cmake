@@ -2,6 +2,7 @@ include(${CMAKE_CURRENT_LIST_DIR}/Apple-lldb-base.cmake)
 
 set(LLDB_BUILD_FRAMEWORK ON CACHE BOOL "")
 set(LLDB_NO_INSTALL_DEFAULT_RPATH ON CACHE BOOL "")
+set(LLDB_SKIP_STRIP ON CACHE BOOL "")
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.11 CACHE STRING "")
 
 # Default install location on the enduser machine. On the build machine, use the
