@@ -60,8 +60,7 @@ static const SanitizerMask AlwaysRecoverable =
     SanitizerKind::KernelAddress | SanitizerKind::KernelHWAddress;
 static const SanitizerMask NeedsLTO = SanitizerKind::CFI;
 static const SanitizerMask TrappingSupported =
-    (SanitizerKind::Undefined & ~SanitizerKind::Vptr) |
-    SanitizerKind::UnsignedIntegerOverflow | SanitizerKind::ImplicitConversion |
+    (SanitizerKind::Undefined & ~SanitizerKind::Vptr) | SanitizerKind::Integer |
     SanitizerKind::Nullability | SanitizerKind::LocalBounds |
     SanitizerKind::CFI | SanitizerKind::FloatDivideByZero |
     SanitizerKind::ObjCCast;

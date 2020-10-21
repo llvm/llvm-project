@@ -786,6 +786,13 @@
 // CHECK-UBSAN-MINIMAL: "-fsanitize={{((signed-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|unreachable|return|vla-bound|alignment|null|pointer-overflow|float-cast-overflow|array-bounds|enum|bool|builtin|returns-nonnull-attribute|nonnull-attribute),?){17}"}}
 // CHECK-UBSAN-MINIMAL: "-fsanitize-minimal-runtime"
 
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=integer -fsanitize-trap=integer %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INTSAN-TRAP
+// CHECK-INTSAN-TRAP: "-fsanitize-trap=integer-divide-by-zero,shift-base,shift-exponent,signed-integer-overflow,unsigned-integer-overflow,unsigned-shift-base,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change"
+
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=integer -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INTSAN-MINIMAL
+// CHECK-INTSAN-MINIMAL: "-fsanitize=integer-divide-by-zero,shift-base,shift-exponent,signed-integer-overflow,unsigned-integer-overflow,unsigned-shift-base,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change"
+// CHECK-INTSAN-MINIMAL: "-fsanitize-minimal-runtime"
+
 // RUN: %clang -target aarch64-linux-android -march=armv8-a+memtag -fsanitize=memtag -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MEMTAG-MINIMAL
 // CHECK-MEMTAG-MINIMAL: "-fsanitize=memtag"
 // CHECK-MEMTAG-MINIMAL: "-fsanitize-minimal-runtime"
