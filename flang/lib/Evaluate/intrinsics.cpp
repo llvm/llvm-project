@@ -198,6 +198,7 @@ struct IntrinsicDummyArgument {
   TypePattern typePattern;
   Rank rank{Rank::elemental};
   Optionality optionality{Optionality::required};
+  common::Intent intent{common::Intent::In};
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 };
 
@@ -935,68 +936,103 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
 };
 
 static const IntrinsicInterface intrinsicSubroutine[]{
-    {"cpu_time", {{"time", AnyReal, Rank::scalar}}, {}, Rank::elemental,
-        IntrinsicClass::impureSubroutine},
+    {"cpu_time",
+        {{"time", AnyReal, Rank::scalar, Optionality::required,
+            common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"date_and_time",
-        {{"date", DefaultChar, Rank::scalar, Optionality::optional},
-            {"time", DefaultChar, Rank::scalar, Optionality::optional},
-            {"zone", DefaultChar, Rank::scalar, Optionality::optional},
-            {"values", AnyInt, Rank::vector, Optionality::optional}},
+        {{"date", DefaultChar, Rank::scalar, Optionality::optional,
+             common::Intent::Out},
+            {"time", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"zone", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"values", AnyInt, Rank::vector, Optionality::optional,
+                common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"execute_command_line",
         {{"command", DefaultChar, Rank::scalar},
             {"wait", AnyLogical, Rank::scalar, Optionality::optional},
-            {"exitstat", AnyInt, Rank::scalar, Optionality::optional},
-            {"cmdstat", AnyInt, Rank::scalar, Optionality::optional},
-            {"cmdmsg", DefaultChar, Rank::scalar, Optionality::optional}},
+            {"exitstat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::InOut},
+            {"cmdstat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"cmdmsg", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"get_command",
-        {{"command", DefaultChar, Rank::scalar, Optionality::optional},
-            {"length", AnyInt, Rank::scalar, Optionality::optional},
-            {"status", AnyInt, Rank::scalar, Optionality::optional},
-            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional}},
+        {{"command", DefaultChar, Rank::scalar, Optionality::optional,
+             common::Intent::Out},
+            {"length", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"status", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"get_command_argument",
         {{"number", AnyInt, Rank::scalar},
-            {"value", DefaultChar, Rank::scalar, Optionality::optional},
-            {"length", AnyInt, Rank::scalar, Optionality::optional},
-            {"status", AnyInt, Rank::scalar, Optionality::optional},
-            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional}},
+            {"value", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"length", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"status", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"get_environment_variable",
         {{"name", DefaultChar, Rank::scalar},
-            {"value", DefaultChar, Rank::scalar, Optionality::optional},
-            {"length", AnyInt, Rank::scalar, Optionality::optional},
-            {"status", AnyInt, Rank::scalar, Optionality::optional},
+            {"value", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"length", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"status", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
             {"trim_name", AnyLogical, Rank::scalar, Optionality::optional},
-            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional}},
+            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"move_alloc",
-        {{"from", SameType, Rank::known}, {"to", SameType, Rank::known},
-            {"stat", AnyInt, Rank::scalar, Optionality::optional},
-            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional}},
+        {{"from", SameType, Rank::known, Optionality::required,
+             common::Intent::InOut},
+            {"to", SameType, Rank::known, Optionality::required,
+                common::Intent::Out},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::pureSubroutine},
     {"mvbits",
         {{"from", SameInt}, {"frompos", AnyInt}, {"len", AnyInt},
-            {"to", SameInt}, {"topos", AnyInt}},
+            {"to", SameInt, Rank::elemental, Optionality::required,
+                common::Intent::Out},
+            {"topos", AnyInt}},
         {}, Rank::elemental, IntrinsicClass::elementalSubroutine}, // elemental
     {"random_init",
         {{"repeatable", AnyLogical, Rank::scalar},
             {"image_distinct", AnyLogical, Rank::scalar}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
-    {"random_number", {{"harvest", AnyReal, Rank::known}}, {}, Rank::elemental,
-        IntrinsicClass::impureSubroutine},
+    {"random_number",
+        {{"harvest", AnyReal, Rank::known, Optionality::required,
+            common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"random_seed",
-        {{"size", DefaultInt, Rank::scalar, Optionality::optional},
+        {{"size", DefaultInt, Rank::scalar, Optionality::optional,
+             common::Intent::Out},
             {"put", DefaultInt, Rank::vector, Optionality::optional},
-            {"get", DefaultInt, Rank::vector, Optionality::optional}},
+            {"get", DefaultInt, Rank::vector, Optionality::optional,
+                common::Intent::Out}},
         {}, Rank::elemental,
         IntrinsicClass::impureSubroutine}, // TODO: at most one argument can be
                                            // present
     {"system_clock",
-        {{"count", AnyInt, Rank::scalar, Optionality::optional},
-            {"count_rate", AnyIntOrReal, Rank::scalar, Optionality::optional},
-            {"count_max", AnyInt, Rank::scalar, Optionality::optional}},
+        {{"count", AnyInt, Rank::scalar, Optionality::optional,
+             common::Intent::Out},
+            {"count_rate", AnyIntOrReal, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"count_max", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
 };
 
@@ -1542,6 +1578,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       }
       dummyArgs.back().SetOptional();
     }
+    dummyArgs.back().SetIntent(d.intent);
   }
   characteristics::Procedure::Attrs attrs;
   if (elementalRank > 0) {
@@ -2148,7 +2185,7 @@ IntrinsicProcTable::Implementation::IsSpecificIntrinsicFunction(
     for (int j{0}; j < dummies; ++j) {
       characteristics::DummyDataObject dummy{
           GetSpecificType(specific.dummy[j].typePattern)};
-      dummy.intent = common::Intent::In;
+      dummy.intent = specific.dummy[j].intent;
       args.emplace_back(
           std::string{specific.dummy[j].keyword}, std::move(dummy));
     }
@@ -2230,7 +2267,8 @@ llvm::raw_ostream &IntrinsicDummyArgument::Dump(llvm::raw_ostream &o) const {
     o << keyword << '=';
   }
   return typePattern.Dump(o)
-      << ' ' << EnumToString(rank) << ' ' << EnumToString(optionality);
+      << ' ' << EnumToString(rank) << ' ' << EnumToString(optionality)
+      << EnumToString(intent);
 }
 
 llvm::raw_ostream &IntrinsicInterface::Dump(llvm::raw_ostream &o) const {
@@ -2272,5 +2310,16 @@ llvm::raw_ostream &IntrinsicProcTable::Implementation::Dump(
 
 llvm::raw_ostream &IntrinsicProcTable::Dump(llvm::raw_ostream &o) const {
   return impl_->Dump(o);
+}
+
+// In general C846 prohibits allocatable coarrays to be passed to INTENT(OUT)
+// dummy arguments. This rule does not apply to intrinsics in general.
+// Some intrinsic explicitly allow coarray allocatable in their description.
+// It is assumed that unless explicitly allowed for an intrinsic,
+// this is forbidden.
+// Since there are very few intrinsic identified that allow this, they are
+// listed here instead of adding a field in the table.
+bool AcceptsIntentOutAllocatableCoarray(const std::string &intrinsic) {
+  return intrinsic == "move_alloc";
 }
 } // namespace Fortran::evaluate
