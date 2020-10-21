@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
   const char *action = argv[1];
   untag_fprintf(stderr, "%s:\n", action);
 
-  static const size_t kMaxAllowedMallocSizePlusOne = (2UL << 30) + 1;
+  static const size_t kMaxAllowedMallocSizePlusOne = (1UL << 40) + 1;
 
   void *x = nullptr;
   if (!untag_strcmp(action, "malloc")) {
