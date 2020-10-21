@@ -28,9 +28,17 @@
 namespace __hwasan {
 
 struct Metadata {
-  u32 requested_size : 31;  // sizes are < 2G.
-  u32 right_aligned  : 1;
+  u32 requested_size_low;
+  u32 requested_size_high : 31;
+  u32 right_aligned : 1;
   u32 alloc_context_id;
+  u64 get_requested_size() {
+    return (static_cast<u64>(requested_size_high) << 32) + requested_size_low;
+  }
+  void set_requested_size(u64 size) {
+    requested_size_low = size & ((1ul << 32) - 1);
+    requested_size_high = size >> 32;
+  }
 };
 
 struct HwasanMapUnmapCallback {
@@ -43,7 +51,7 @@ struct HwasanMapUnmapCallback {
   }
 };
 
-static const uptr kMaxAllowedMallocSize = 2UL << 30;  // 2G
+static const uptr kMaxAllowedMallocSize = 1UL << 40;  // 1T
 
 struct AP64 {
   static const uptr kSpaceBeg = ~0ULL;
