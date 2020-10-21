@@ -333,13 +333,11 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
 
   Register DstReg = MI.getOperand(0).getReg();
 
-  bool ExecModified = MI.getOperand(3).getImm() != 0;
   MachineBasicBlock::iterator Start = MBB.begin();
 
   // This must be inserted before phis and any spill code inserted before the
   // else.
-  Register SaveReg = ExecModified ?
-    MRI->createVirtualRegister(BoolRC) : DstReg;
+  Register SaveReg = MRI->createVirtualRegister(BoolRC);
   MachineInstr *OrSaveExec =
     BuildMI(MBB, Start, DL, TII->get(OrSaveExecOpc), SaveReg)
     .add(MI.getOperand(1)); // Saved EXEC
@@ -348,15 +346,14 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
 
   MachineBasicBlock::iterator ElsePt(MI);
 
-  if (ExecModified) {
-    MachineInstr *And =
-      BuildMI(MBB, ElsePt, DL, TII->get(AndOpc), DstReg)
-      .addReg(Exec)
-      .addReg(SaveReg);
+  // This accounts for any modification of the EXEC mask within the block and
+  // can be optimized out pre-RA when not required.
+  MachineInstr *And = BuildMI(MBB, ElsePt, DL, TII->get(AndOpc), DstReg)
+                          .addReg(Exec)
+                          .addReg(SaveReg);
 
-    if (LIS)
-      LIS->InsertMachineInstrInMaps(*And);
-  }
+  if (LIS)
+    LIS->InsertMachineInstrInMaps(*And);
 
   MachineInstr *Xor =
     BuildMI(MBB, ElsePt, DL, TII->get(XorTermrOpc), Exec)
@@ -386,8 +383,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
 
   LIS->removeInterval(DstReg);
   LIS->createAndComputeVirtRegInterval(DstReg);
-  if (ExecModified)
-    LIS->createAndComputeVirtRegInterval(SaveReg);
+  LIS->createAndComputeVirtRegInterval(SaveReg);
 
   // Let this be recomputed.
   LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
