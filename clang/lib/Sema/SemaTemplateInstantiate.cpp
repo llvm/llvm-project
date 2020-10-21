@@ -2696,7 +2696,10 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
 
     // BlockDecls can appear in a default-member-initializer. They must be the
     // child of a BlockExpr, so we only know how to instantiate them from there.
-    if (isa<BlockDecl>(Member))
+    // Similarly, lambda closure types are recreated when instantiating the
+    // corresponding LambdaExpr.
+    if (isa<BlockDecl>(Member) ||
+        (isa<CXXRecordDecl>(Member) && cast<CXXRecordDecl>(Member)->isLambda()))
       continue;
 
     if (Member->isInvalidDecl()) {
