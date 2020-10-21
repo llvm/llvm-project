@@ -174,6 +174,63 @@ This may be acceptable if LLVM's coroutine support is primarily being
 used for low-level lowering and inlining is expected to be applied
 earlier in the pipeline.
 
+Async Lowering
+--------------
+
+In async-continuation lowering, signaled by the use of `llvm.coro.id.async`,
+handling of control-flow must be handled explicitly by the frontend.
+
+In this lowering, a coroutine is assumed to take the current `async context` as
+its first argument. It is used to marshal arguments and return values of the
+coroutine. Therefore a async coroutine returns `void`.
+
+.. code-block:: llvm
+
+  define swiftcc void @async_coroutine(i8* %async.ctxt, i8*, i8*) {
+  }
+
+
+Every suspend point takes an `async context` argument which provides the context
+and the coroutine frame of the callee function. Every
+suspend point has an associated `resume function` denoted by the
+`llvm.coro.async.resume` intrinsic. The coroutine is resumed by
+calling this `resume function` passing the `async context` as the first
+argument. It is assumed that the `resume function` can restore its (the
+caller's) `async context` by loading the first field in the `async context`.
+
+.. code-block:: c
+
+  struct async_context {
+    struct async_context *caller_context;
+    ...
+  }
+
+The frontend should provide a `async function pointer` struct associated with
+each async coroutine by `llvm.coro.id.async`'s argument. The initial size and
+alignment of the `async context` must be provided as arguments to the
+`llvm.coro.id.async` intrinsic. Lowering will update the size entry with the
+coroutine frame  requirements. The frontend is responsible for allocating the
+memory for the `async context` but can use the `async function pointer` struct
+to obtain the required size.
+
+.. code-block:: c
+
+  struct async_function_pointer {
+    uint32_t context_size;
+    uint32_t relative_function_pointer_to_async_impl;
+  }
+
+Lowering will split an async coroutine into a ramp function and one resume
+function per suspend point.
+
+How control-flow is passed between caller, suspension point, and back to
+resume function is left up to the frontend.
+
+The suspend point takes a function and its arguments. The function is intended
+to model the transfer to the callee function. It will be tail called by
+lowering and therefore must have the same signature and calling convention as
+the async coroutine.
+
 Coroutines by Example
 =====================
 
@@ -1093,6 +1150,45 @@ duplicated.
 
 A frontend should emit exactly one `coro.id` intrinsic per coroutine.
 
+.. _coro.id.async:
+
+'llvm.coro.id.async' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare token @llvm.coro.id.async(i32 <context size>, i32 <align>,
+                                    i8* <context arg>,
+                                    i8* <async function pointer>)
+
+Overview:
+"""""""""
+
+The '``llvm.coro.id.async``' intrinsic returns a token identifying an async coroutine.
+
+Arguments:
+""""""""""
+
+The first argument provides the initial size of the `async context` as required
+from the frontend. Lowering will add to this size the size required by the frame
+storage and store that value to the `async function pointer`.
+
+The second argument, is the alignment guarantee of the memory of the
+`async context`. The frontend guarantees that the memory will be aligned by this
+value.
+
+The third argument is the `async context` argument in the current coroutine.
+
+The fourth argument is the address of the `async function pointer` struct.
+Lowering will update the context size requirement in this struct by adding the
+coroutine frame size requirement to the initial size requirement as specified by
+the first argument of this intrinisc.
+
+
+Semantics:
+""""""""""
+
+A frontend should emit exactly one `coro.id.async` intrinsic per coroutine.
+
 .. _coro.id.retcon:
 
 'llvm.coro.id.retcon' Intrinsic
@@ -1379,6 +1475,46 @@ to the coroutine:
     %suspend1 = call i1 @llvm.coro.suspend(token %save1, i1 false)
     switch i8 %suspend1, label %suspend [i8 0, label %resume1
                                          i8 1, label %cleanup]
+
+.. _coro.suspend.async:
+
+'llvm.coro.suspend.async' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare {i8*, i8*, i8*} @llvm.coro.suspend.async(i8* <resume function>,
+                                                   i8* <callee context>,
+                                                   ... <function to call>
+                                                   ... <arguments to function>)
+
+Overview:
+"""""""""
+
+The '``llvm.coro.suspend.async``' intrinsic marks the point where
+execution of a async coroutine is suspended and control is passed to a callee.
+
+Arguments:
+""""""""""
+
+The first argument should be the result of the `llvm.coro.async.resume` intrinsic.
+Lowering will replace this intrinsic with the resume function for this suspend
+point.
+
+The second argument is the `async context` allocation for the callee. It should
+provide storage the `async context` header and the coroutine frame.
+
+The third argument is the function that models tranfer to the callee at the
+suspend point. It should take 3 arguments. Lowering will `musttail` call this
+function.
+
+The fourth to six argument are the arguments for the third argument.
+
+Semantics:
+""""""""""
+
+The result of the intrinsic are mapped to the arguments of the resume function.
+Execution is suspended at this intrinsic and resumed when the resume function is
+called.
 
 .. _coro.suspend.retcon:
 
