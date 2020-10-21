@@ -125,6 +125,7 @@ add_llvm_component_library(LLVMSupport
   FoldingSet.cpp
   FormattedStream.cpp
   FormatVariadic.cpp
+  GenericDomTree.cpp
   GlobPattern.cpp
   GraphWriter.cpp
   Hashing.cpp
