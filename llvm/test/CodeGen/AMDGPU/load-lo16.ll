@@ -99,7 +99,7 @@ define void @load_local_lo_v2i16_reglo_vreg(i16 addrspace(3)* %in, i16 %reg) #0 
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load i16, i16 addrspace(3)* %in
@@ -205,7 +205,7 @@ define void @load_local_lo_v2f16_reghi_vreg(half addrspace(3)* %in, i32 %reg) #0
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
@@ -247,7 +247,7 @@ define void @load_local_lo_v2f16_reglo_vreg(half addrspace(3)* %in, half %reg) #
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load half, half addrspace(3)* %in
@@ -288,7 +288,7 @@ define void @load_local_lo_v2i16_reghi_vreg_zexti8(i8 addrspace(3)* %in, i32 %re
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -331,7 +331,7 @@ define void @load_local_lo_v2i16_reglo_vreg_zexti8(i8 addrspace(3)* %in, i16 %re
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load i8, i8 addrspace(3)* %in
@@ -372,7 +372,7 @@ define void @load_local_lo_v2i16_reghi_vreg_sexti8(i8 addrspace(3)* %in, i32 %re
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -415,7 +415,7 @@ define void @load_local_lo_v2i16_reglo_vreg_sexti8(i8 addrspace(3)* %in, i16 %re
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load i8, i8 addrspace(3)* %in
@@ -458,7 +458,7 @@ define void @load_local_lo_v2f16_reglo_vreg_zexti8(i8 addrspace(3)* %in, half %r
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load i8, i8 addrspace(3)* %in
@@ -502,7 +502,7 @@ define void @load_local_lo_v2f16_reglo_vreg_sexti8(i8 addrspace(3)* %in, half %r
 ; GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX803-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load i8, i8 addrspace(3)* %in
@@ -694,10 +694,10 @@ define void @load_global_lo_v2i16_reglo_vreg(i16 addrspace(1)* %in, i32 %reg) #0
 ; GFX803-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX803-NEXT:    flat_load_ushort v0, v[0:1]
 ; GFX803-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -737,10 +737,10 @@ define void @load_global_lo_v2f16_reglo_vreg(half addrspace(1)* %in, i32 %reg) #
 ; GFX803-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX803-NEXT:    flat_load_ushort v0, v[0:1]
 ; GFX803-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
@@ -780,10 +780,10 @@ define void @load_global_lo_v2i16_reglo_vreg_zexti8(i8 addrspace(1)* %in, i32 %r
 ; GFX803-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX803-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX803-NEXT:    s_mov_b32 s4, 0x5040c00
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -823,10 +823,10 @@ define void @load_global_lo_v2i16_reglo_vreg_sexti8(i8 addrspace(1)* %in, i32 %r
 ; GFX803-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX803-NEXT:    flat_load_sbyte v0, v[0:1]
 ; GFX803-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -868,10 +868,10 @@ define void @load_global_lo_v2f16_reglo_vreg_zexti8(i8 addrspace(1)* %in, i32 %r
 ; GFX803-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX803-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX803-NEXT:    s_mov_b32 s4, 0x5040c00
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
@@ -913,10 +913,10 @@ define void @load_global_lo_v2f16_reglo_vreg_sexti8(i8 addrspace(1)* %in, i32 %r
 ; GFX803-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX803-NEXT:    flat_load_sbyte v0, v[0:1]
 ; GFX803-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
@@ -958,7 +958,7 @@ define void @load_flat_lo_v2i16_reghi_vreg(i16* %in, i32 %reg) #0 {
 ; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -998,7 +998,7 @@ define void @load_flat_lo_v2f16_reghi_vreg(half* %in, i32 %reg) #0 {
 ; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 
 ; FIXME: the and above should be removable
@@ -1040,7 +1040,7 @@ define void @load_flat_lo_v2i16_reglo_vreg_zexti8(i8* %in, i32 %reg) #0 {
 ; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX803-NEXT:    v_perm_b32 v0, v2, v0, s4
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -1080,7 +1080,7 @@ define void @load_flat_lo_v2i16_reglo_vreg_sexti8(i8* %in, i32 %reg) #0 {
 ; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX803-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -1122,7 +1122,7 @@ define void @load_flat_lo_v2f16_reglo_vreg_zexti8(i8* %in, i32 %reg) #0 {
 ; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX803-NEXT:    v_perm_b32 v0, v2, v0, s4
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
@@ -1164,7 +1164,7 @@ define void @load_flat_lo_v2f16_reglo_vreg_sexti8(i8* %in, i32 %reg) #0 {
 ; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX803-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
@@ -1205,7 +1205,7 @@ define void @load_private_lo_v2i16_reglo_vreg(i16 addrspace(5)* byval %in, i32 %
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -1247,7 +1247,7 @@ define void @load_private_lo_v2i16_reghi_vreg(i16 addrspace(5)* byval %in, i16 %
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %gep = getelementptr inbounds i16, i16 addrspace(5)* %in, i64 2047
@@ -1288,7 +1288,7 @@ define void @load_private_lo_v2f16_reglo_vreg(half addrspace(5)* byval %in, i32 
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
@@ -1328,7 +1328,7 @@ define void @load_private_lo_v2i16_reglo_vreg_nooff(i16 addrspace(5)* %in, i32 %
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -1367,7 +1367,7 @@ define void @load_private_lo_v2i16_reghi_vreg_nooff(i16 addrspace(5)* %in, i32 %
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -1407,7 +1407,7 @@ define void @load_private_lo_v2f16_reglo_vreg_nooff(half addrspace(5)* %in, i32 
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
@@ -1447,7 +1447,7 @@ define void @load_private_lo_v2i16_reglo_vreg_zexti8(i8 addrspace(5)* byval %in,
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_perm_b32 v0, v0, v1, s4
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -1488,7 +1488,7 @@ define void @load_private_lo_v2i16_reglo_vreg_sexti8(i8 addrspace(5)* byval %in,
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -1530,7 +1530,7 @@ define void @load_private_lo_v2i16_reglo_vreg_nooff_zexti8(i8 addrspace(5)* %in,
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_perm_b32 v0, v0, v1, s4
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -1570,7 +1570,7 @@ define void @load_private_lo_v2i16_reglo_vreg_nooff_sexti8(i8 addrspace(5)* %in,
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -1612,7 +1612,7 @@ define void @load_private_lo_v2f16_reglo_vreg_nooff_zexti8(i8 addrspace(5)* %in,
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_perm_b32 v0, v0, v1, s4
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
@@ -1652,10 +1652,10 @@ define void @load_constant_lo_v2i16_reglo_vreg(i16 addrspace(4)* %in, i32 %reg) 
 ; GFX803-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX803-NEXT:    flat_load_ushort v0, v[0:1]
 ; GFX803-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -1695,10 +1695,10 @@ define void @load_constant_lo_v2f16_reglo_vreg(half addrspace(4)* %in, i32 %reg)
 ; GFX803-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX803-NEXT:    flat_load_ushort v0, v[0:1]
 ; GFX803-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
@@ -1739,10 +1739,10 @@ define void @load_constant_lo_v2f16_reglo_vreg_zexti8(i8 addrspace(4)* %in, i32 
 ; GFX803-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX803-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX803-NEXT:    s_mov_b32 s4, 0x5040c00
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_perm_b32 v0, v1, v0, s4
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
@@ -1784,10 +1784,10 @@ define void @load_constant_lo_v2f16_reglo_vreg_sexti8(i8 addrspace(4)* %in, i32 
 ; GFX803-NEXT:    v_addc_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX803-NEXT:    flat_load_sbyte v0, v[0:1]
 ; GFX803-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
@@ -1835,7 +1835,7 @@ define void @load_private_lo_v2i16_reglo_vreg_to_offset(i32 %reg) #0 {
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %obj0 = alloca [10 x i32], align 4, addrspace(5)
@@ -1885,7 +1885,7 @@ define void @load_private_lo_v2i16_reglo_vreg_sexti8_to_offset(i32 %reg) #0 {
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %obj0 = alloca [10 x i32], align 4, addrspace(5)
@@ -1937,7 +1937,7 @@ define void @load_private_lo_v2i16_reglo_vreg_zexti8_to_offset(i32 %reg) #0 {
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_perm_b32 v0, v0, v1, s4
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %obj0 = alloca [10 x i32], align 4, addrspace(5)
@@ -1989,7 +1989,7 @@ define void @load_private_lo_v2f16_reglo_vreg_sexti8_to_offset(i32 %reg) #0 {
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %obj0 = alloca [10 x i32], align 4, addrspace(5)
@@ -2043,7 +2043,7 @@ define void @load_private_lo_v2f16_reglo_vreg_zexti8_to_offset(i32 %reg) #0 {
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    v_perm_b32 v0, v0, v1, s4
 ; GFX803-NEXT:    flat_store_dword v[0:1], v0
-; GFX803-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX803-NEXT:    s_waitcnt vmcnt(0)
 ; GFX803-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %obj0 = alloca [10 x i32], align 4, addrspace(5)

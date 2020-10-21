@@ -53,18 +53,34 @@
 # CHECK: FLAT_LOAD_DWORD
 # CHECK: FLAT_LOAD_DWORDX4
 # Global loads will return in order so we should:
-# s_waitcnt vmcnt(1) lgkmcnt(1)
-# CHECK-NEXT: S_WAITCNT 369
+# s_waitcnt vmcnt(1)
+# CHECK-NEXT: S_WAITCNT 3953
 
 # CHECK-LABEL: bb.1:
 # CHECK: FLAT_LOAD_DWORD
-# GFX89: S_WAITCNT 112
+# s_waitcnt vmcnt(0)
+# GFX89: S_WAITCNT 3952
 # CHECK: FLAT_LOAD_DWORDX4
 
 # CHECK-LABEL: bb.2:
 # CHECK: FLAT_LOAD_DWORD
-# GFX89: S_WAITCNT 112
+# s_waitcnt vmcnt(0)
+# GFX89: S_WAITCNT 3952
 # CHECK: FLAT_LOAD_DWORDX4
+
+# CHECK-LABEL: bb.3:
+# s_waitcnt vmcnt(0)
+# GFX89: S_WAITCNT 3952
+# CHECK: FLAT_LOAD_DWORD
+# CHECK: FLAT_LOAD_DWORD
+# s_waitcnt vmcnt(0) lgkmcnt(0)
+# GFX89: S_WAITCNT 112
+
+# CHECK-LABEL: bb.4:
+# GFX89-NOT: S_WAITCNT
+# CHECK: FLAT_LOAD_DWORD
+# s_waitcnt vmcnt(0) lgkmcnt(0)
+# GFX89: S_WAITCNT 112
 
 name: flat_zero_waitcnt
 
@@ -84,9 +100,22 @@ body: |
     S_BRANCH %bb.2
 
   bb.2:
+    successors: %bb.3
     $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.flat4)
     $vgpr3_vgpr4_vgpr5_vgpr6 = FLAT_LOAD_DWORDX4 $vgpr7_vgpr8, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16 from %ir.flat16)
     $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    successors: %bb.4
+    $vgpr3 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.flat4)
+    $vgpr4 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.global4)
+    $vgpr0 = V_MOV_B32_e32 $vgpr3, implicit $exec
+    S_BRANCH %bb.4
+
+  bb.4:
+    $vgpr5 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4 from %ir.flat4)
+    $vgpr0 = V_MOV_B32_e32 $vgpr5, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -291,7 +320,7 @@ body: |
 ---
 # CHECK-LABEL: name: subregs16bit
 # CHECK: S_WAITCNT 112
-# CHECK-NEXT: V_NOP_e32 
+# CHECK-NEXT: V_NOP_e32
 
 name: subregs16bit
 machineFunctionInfo:
