@@ -272,7 +272,6 @@ class Configuration(object):
         compile_flags_str = self.get_lit_conf('compile_flags', '')
         self.cxx.compile_flags += shlex.split(compile_flags_str)
         if self.target_info.is_windows():
-            # FIXME: Can we remove this?
             self.cxx.compile_flags += ['-D_CRT_SECURE_NO_WARNINGS']
             # Don't warn about using common but nonstandard unprefixed functions
             # like chdir, fileno.
