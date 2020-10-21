@@ -101,7 +101,7 @@ class TestSwiftProtocolTypes(TestBase):
                              'x = 1.25', 'y = 2.5'])
 
         self.expect("expression --raw-output --show-types -- loc3dCB",
-                    substrs=['PointUtils & AnyObject) $R',
+                    substrs=['PointUtils & Swift.AnyObject) $R',
                              '(Builtin.RawPointer) instance = 0x',
                              '(Builtin.RawPointer) witness_table_PointUtils = 0x'])
 
