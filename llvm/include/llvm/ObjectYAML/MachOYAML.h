@@ -220,7 +220,7 @@ template <> struct MappingTraits<MachOYAML::Relocation> {
 
 template <> struct MappingTraits<MachOYAML::Section> {
   static void mapping(IO &IO, MachOYAML::Section &Section);
-  static StringRef validate(IO &io, MachOYAML::Section &Section);
+  static std::string validate(IO &io, MachOYAML::Section &Section);
 };
 
 template <> struct MappingTraits<MachOYAML::NListEntry> {
