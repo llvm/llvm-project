@@ -23,6 +23,17 @@ static llvm::cl::opt<bool> clDisableStructuredFir(
     "no-structured-fir", llvm::cl::desc("disable generation of structured FIR"),
     llvm::cl::init(false), llvm::cl::Hidden);
 
+// FIXME: should be set with switch such as `--std=2018`.
+static llvm::cl::opt<bool> nonRecursiveProcedures(
+    "non-recursive-procedures",
+    llvm::cl::desc("Make procedures non-recursive by default. This was the "
+                   "default for all Fortran standards prior to 2018."),
+    llvm::cl::init(/*2018 standard=*/false));
+
+static bool defaultRecursiveFunctionSetting() {
+  return !nonRecursiveProcedures;
+}
+
 using namespace Fortran;
 
 namespace {
@@ -1275,6 +1286,17 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
   }
 }
 
+template <typename A>
+static bool procedureIsRecursive(const A &stmt) {
+  for (const auto &p : std::get<std::list<parser::PrefixSpec>>(stmt.t)) {
+    if (std::holds_alternative<parser::PrefixSpec::Recursive>(p.u))
+      return true;
+    if (std::holds_alternative<parser::PrefixSpec::Non_Recursive>(p.u))
+      return false;
+  }
+  return defaultRecursiveFunctionSetting();
+}
+
 Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     const parser::FunctionSubprogram &func,
     const lower::pft::ParentVariant &parent,
@@ -1283,6 +1305,8 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
       beginStmt{getFunctionStmt<parser::FunctionStmt>(func)},
       endStmt{getFunctionStmt<parser::EndFunctionStmt>(func)} {
   auto symbol = getSymbol(*beginStmt);
+  recursiveFunction =
+      procedureIsRecursive(beginStmt->getStatement<parser::FunctionStmt>());
   entryPointList[0].first = symbol;
   processSymbolTable(*symbol->scope(), varList);
 }
@@ -1295,6 +1319,8 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
       beginStmt{getFunctionStmt<parser::SubroutineStmt>(func)},
       endStmt{getFunctionStmt<parser::EndSubroutineStmt>(func)} {
   auto symbol = getSymbol(*beginStmt);
+  recursiveFunction =
+      procedureIsRecursive(beginStmt->getStatement<parser::SubroutineStmt>());
   entryPointList[0].first = symbol;
   processSymbolTable(*symbol->scope(), varList);
 }
@@ -1305,7 +1331,8 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     const semantics::SemanticsContext &)
     : ProgramUnit{func, parent},
       beginStmt{getFunctionStmt<parser::MpSubprogramStmt>(func)},
-      endStmt{getFunctionStmt<parser::EndMpSubprogramStmt>(func)} {
+      endStmt{getFunctionStmt<parser::EndMpSubprogramStmt>(func)},
+      recursiveFunction{defaultRecursiveFunctionSetting()} {
   auto symbol = getSymbol(*beginStmt);
   entryPointList[0].first = symbol;
   processSymbolTable(*symbol->scope(), varList);

@@ -70,6 +70,10 @@ public:
     return std::get<Ref<B>>(u).get();
   }
   template <typename B>
+  constexpr BaseType<B> &getStatement() const {
+    return std::get<Ref<parser::Statement<B>>>(u).get().statement;
+  }
+  template <typename B>
   constexpr BaseType<B> *getIf() const {
     auto *ptr = std::get_if<Ref<B>>(&u);
     return ptr ? &ptr->get() : nullptr;
@@ -547,6 +551,8 @@ struct FunctionLikeUnit : public ProgramUnit {
   FunctionLikeUnit(FunctionLikeUnit &&) = default;
   FunctionLikeUnit(const FunctionLikeUnit &) = delete;
 
+  bool isRecursive() { return isMainProgram() ? false : recursiveFunction; }
+
   std::vector<Variable> getOrderedSymbolTable() { return varList[0]; }
 
   bool isMainProgram() const {
@@ -574,6 +580,7 @@ struct FunctionLikeUnit : public ProgramUnit {
     assert(symbol && "not inside a procedure");
     return *symbol;
   }
+
   /// Return a pointer to the current entry point Evaluation.
   /// This is null for a primary entry point.
   Evaluation *getEntryEval() const {
@@ -611,6 +618,7 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
   std::vector<std::vector<Variable>> varList;
+  bool recursiveFunction{};
 };
 
 /// Module-like units contain a list of function-like units.
