@@ -103,10 +103,10 @@
     omp_high_bw_mem_space = 0, &
     omp_low_lat_mem_space = 0, &
     omp_default_mem_alloc = 1, &
-    omp_large_cap_mem_alloc = omp_default_mem_alloc, &
-    omp_const_mem_alloc = 1, &
-    omp_high_bw_mem_alloc = 1, &
-    omp_low_lat_mem_alloc = 1, &
+    omp_large_cap_mem_alloc = 2, &
+    omp_const_mem_alloc = 3, &
+    omp_high_bw_mem_alloc = 4, &
+    omp_low_lat_mem_alloc = 5, &
     omp_thread_mem_alloc = omp_atv_thread, &
     omp_pteam_mem_alloc = omp_atv_pteam, &
     omp_cgroup_mem_alloc = omp_atv_cgroup

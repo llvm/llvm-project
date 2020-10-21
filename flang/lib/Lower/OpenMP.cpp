@@ -144,7 +144,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
     mlir::Value ifClauseOperand, numThreadsClauseOperand;
     SmallVector<Value, 4> privateClauseOperands, firstprivateClauseOperands,
-        sharedClauseOperands, copyinClauseOperands;
+        sharedClauseOperands, copyinClauseOperands, allocatorOperands,
+        allocateOperands;
     Attribute defaultClauseOperand, procBindClauseOperand;
 
     const auto &parallelOpClauseList =
@@ -183,6 +184,30 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                          &clause.u)) {
         const Fortran::parser::OmpObjectList &ompObjectList = copyinClause->v;
         genObjectList(ompObjectList, converter, copyinClauseOperands);
+      } else if (const auto &allocateClause =
+                     std::get_if<Fortran::parser::OmpAllocateClause>(
+                         &clause.u)) {
+        mlir::Value allocatorOperand;
+        const Fortran::parser::OmpObjectList &ompObjectList =
+            std::get<Fortran::parser::OmpObjectList>(allocateClause->t);
+        // Check if allocate clause has allocator specified. If so, add it
+        // to list of allocators, otherwise, add default allocator to
+        // list of allocators.
+        const auto &allocatorValue = std::get<
+            std::optional<Fortran::parser::OmpAllocateClause::Allocator>>(
+            allocateClause->t);
+        if (allocatorValue) {
+          allocatorOperand = fir::getBase(converter.genExprValue(
+              *Fortran::semantics::GetExpr(allocatorValue->v)));
+          allocatorOperands.insert(allocatorOperands.end(),
+                                   ompObjectList.v.size(), allocatorOperand);
+        } else {
+          allocatorOperand = firOpBuilder.createIntegerConstant(
+              currentLocation, firOpBuilder.getI32Type(), 1);
+          allocatorOperands.insert(allocatorOperands.end(),
+                                   ompObjectList.v.size(), allocatorOperand);
+        }
+        genObjectList(ompObjectList, converter, allocateOperands);
       }
     }
     // Create and insert the operation.
@@ -190,7 +215,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         currentLocation, argTy, ifClauseOperand, numThreadsClauseOperand,
         defaultClauseOperand.dyn_cast_or_null<StringAttr>(),
         privateClauseOperands, firstprivateClauseOperands, sharedClauseOperands,
-        copyinClauseOperands, ValueRange(), ValueRange(),
+        copyinClauseOperands, allocateOperands, allocatorOperands,
         procBindClauseOperand.dyn_cast_or_null<StringAttr>());
     // Handle attribute based clauses.
     for (const auto &clause : parallelOpClauseList.v) {
