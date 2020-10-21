@@ -69,28 +69,6 @@ template <> struct ScalarTraits<ELFArchMapper> {
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
-/// YAML traits for TbeVersion.
-template <> struct ScalarTraits<VersionTuple> {
-  static void output(const VersionTuple &Value, void *,
-                     llvm::raw_ostream &Out) {
-    Out << Value.getAsString();
-  }
-
-  static StringRef input(StringRef Scalar, void *, VersionTuple &Value) {
-    if (Value.tryParse(Scalar))
-      return StringRef("Can't parse version: invalid version format.");
-
-    if (Value > TBEVersionCurrent)
-      return StringRef("Unsupported TBE version.");
-
-    // Returning empty StringRef indicates successful parse.
-    return StringRef();
-  }
-
-  // Don't place quotation marks around version value.
-  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
-};
-
 /// YAML traits for ELFSymbol.
 template <> struct MappingTraits<ELFSymbol> {
   static void mapping(IO &IO, ELFSymbol &Symbol) {
@@ -148,6 +126,11 @@ Expected<std::unique_ptr<ELFStub>> elfabi::readTBEFromBuffer(StringRef Buf) {
   YamlIn >> *Stub;
   if (std::error_code Err = YamlIn.error())
     return createStringError(Err, "YAML failed reading as TBE");
+
+  if (Stub->TbeVersion > elfabi::TBEVersionCurrent)
+    return make_error<StringError>(
+        "TBE version " + Stub->TbeVersion.getAsString() + " is unsupported.",
+        std::make_error_code(std::errc::invalid_argument));
 
   return std::move(Stub);
 }
