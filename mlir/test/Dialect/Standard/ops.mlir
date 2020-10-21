@@ -54,3 +54,15 @@ func @atan2(%arg0 : f32, %arg1 : f32) -> f32 {
   %result = atan2 %arg0, %arg1 : f32
   return %result : f32
 }
+
+// CHECK-LABEL: func @memref_reshape(
+func @memref_reshape(%unranked: memref<*xf32>, %shape1: memref<1xi32>,
+         %shape2: memref<2xi32>, %shape3: memref<?xi32>) -> memref<*xf32> {
+  %dyn_vec = memref_reshape %unranked(%shape1)
+               : (memref<*xf32>, memref<1xi32>) -> memref<?xf32>
+  %dyn_mat = memref_reshape %dyn_vec(%shape2)
+               : (memref<?xf32>, memref<2xi32>) -> memref<?x?xf32>
+  %new_unranked = memref_reshape %dyn_mat(%shape3)
+               : (memref<?x?xf32>, memref<?xi32>) -> memref<*xf32>
+  return %new_unranked : memref<*xf32>
+}
