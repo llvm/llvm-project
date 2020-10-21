@@ -111,6 +111,10 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   if (!ContentsEntry)
     return None;
 
+  // Start with the assumption that the buffer is invalid to simplify early
+  // return paths.
+  IsBufferInvalid = true;
+
   // Check that the file's size fits in an 'unsigned' (with room for a
   // past-the-end value). This is deeply regrettable, but various parts of
   // Clang (including elsewhere in this file!) use 'unsigned' to represent file
@@ -125,7 +129,6 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
       Diag.Report(Loc, diag::err_file_too_large)
         << ContentsEntry->getName();
 
-    IsBufferInvalid = true;
     return None;
   }
 
@@ -145,7 +148,6 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
       Diag.Report(Loc, diag::err_cannot_open_file)
           << ContentsEntry->getName() << BufferOrError.getError().message();
 
-    IsBufferInvalid = true;
     return None;
   }
 
@@ -161,7 +163,6 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
       Diag.Report(Loc, diag::err_file_modified)
         << ContentsEntry->getName();
 
-    IsBufferInvalid = true;
     return None;
   }
 
@@ -174,10 +175,11 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   if (InvalidBOM) {
     Diag.Report(Loc, diag::err_unsupported_bom)
       << InvalidBOM << ContentsEntry->getName();
-    IsBufferInvalid = true;
     return None;
   }
 
+  // Buffer has been validated.
+  IsBufferInvalid = false;
   return Buffer->getMemBufferRef();
 }
 
