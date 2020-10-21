@@ -486,6 +486,10 @@ typedef user_regs_struct regs_struct;
 #define REG_SP rsp
 #endif
 #define ARCH_IOVEC_FOR_GETREGSET
+// Support ptrace extensions even when compiled without required kernel support
+#ifndef NT_X86_XSTATE
+#define NT_X86_XSTATE 0x202
+#endif
 // Compiler may use FP registers to store pointers.
 static constexpr uptr kExtraRegs[] = {NT_X86_XSTATE, NT_FPREGSET};
 
