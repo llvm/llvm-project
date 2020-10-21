@@ -53,6 +53,7 @@ static_library("Support") {
     "COM.cpp",
     "CRC.cpp",
     "CachePruning.cpp",
+    "CfgTraits.cpp",
     "Chrono.cpp",
     "CodeGenCoverage.cpp",
     "CommandLine.cpp",
