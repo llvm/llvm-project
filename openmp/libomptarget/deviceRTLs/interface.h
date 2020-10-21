@@ -354,10 +354,6 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     kmp_InterWarpCopyFctPtr cpyFct, kmp_ListGlobalFctPtr lgcpyFct,
     kmp_ListGlobalFctPtr lgredFct, kmp_ListGlobalFctPtr glcpyFct,
     kmp_ListGlobalFctPtr glredFct);
-EXTERN int32_t __kmpc_nvptx_parallel_reduce_nowait_simple_spmd(
-    int32_t global_tid, int32_t num_vars, size_t reduce_size, void *reduce_data,
-    kmp_ShuffleReductFctPtr shflFct, kmp_InterWarpCopyFctPtr cpyFct);
-
 EXTERN int32_t __kmpc_shuffle_int32(int32_t val, int16_t delta, int16_t size);
 EXTERN int64_t __kmpc_shuffle_int64(int64_t val, int16_t delta, int16_t size);
 
@@ -383,7 +379,6 @@ EXTERN void __kmpc_flush(kmp_Ident *loc);
 
 // vote
 EXTERN __kmpc_impl_lanemask_t __kmpc_warp_active_thread_mask();
-
 // syncwarp
 EXTERN void __kmpc_syncwarp(__kmpc_impl_lanemask_t);
 

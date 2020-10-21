@@ -49,6 +49,7 @@ if(${AOMP_STANDALONE_BUILD} STREQUAL "0")
 else()
   message("------------- STANDALONE BUILD ---------------")
   # Assome rocm-device-libs repository is next to amd-llvm-project repository
+  set(ROCDL ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../rocm-device-libs)
   set(ROCDL_INC_OCKL ${ROCDL}/ockl/inc)
   set(ROCDL_INC_OCML ${ROCDL}/ocml/inc)
   set(ROCDL_INC_IRIF ${ROCDL}/irif/inc)
@@ -72,7 +73,6 @@ get_filename_component(devicertl_base_directory
   DIRECTORY)
 
 set(hip_sources
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_access_dimensions.hip
   ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_libcall.hip
   ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_locks.hip
   ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_smid.hip
@@ -88,7 +88,8 @@ set(hip_sources
   ${devicertl_base_directory}/common/src/reduction.cu
   ${devicertl_base_directory}/common/src/support.cu
   ${devicertl_base_directory}/common/src/sync.cu
-  ${devicertl_base_directory}/common/src/task.cu)
+  ${devicertl_base_directory}/common/src/task.cu
+  ${devicertl_base_directory}/common/src/ompd-specific.cu)
 
 set(ocl_sources
   ${CMAKE_CURRENT_SOURCE_DIR}/src/hostrpc_invoke.cl)
@@ -171,6 +172,7 @@ macro(add_cuda_bc_library)
     --cuda-device-only
     -Wno-unused-value
     -x hip
+    -nogpulib -nogpuinc
     -O${optimization_level}
     --cuda-gpu-arch=${mcpu}
     ${CUDA_DEBUG}

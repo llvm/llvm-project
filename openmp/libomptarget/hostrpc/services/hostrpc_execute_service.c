@@ -215,7 +215,6 @@ static int local_vector_product_zeros(int N, int *A, int *B, int *C) {
   return zeros;
 }
 
-
 // This is the service for the demo of vector_product_zeros
 static void hostrpc_handler_SERVICE_DEMO(uint64_t *payload) {
   atmi_status_t copyerr;

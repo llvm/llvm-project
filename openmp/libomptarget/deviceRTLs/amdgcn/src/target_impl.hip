@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "target_impl.h"
-#include "amdgcn_interface.h"
 
 // Implementations initially derived from hcc
 
