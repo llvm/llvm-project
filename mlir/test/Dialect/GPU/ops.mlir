@@ -63,7 +63,7 @@ module attributes {gpu.container_module} {
       gpu.return
     }
 
-    gpu.func @kernel_2(%arg0: f32, %arg1: memref<?xf32, 1>) kernel {
+    gpu.func @kernel_2() kernel {
       gpu.return
     }
   }
@@ -74,15 +74,11 @@ module attributes {gpu.container_module} {
     // CHECK: %{{.*}} = constant 8
     %cst = constant 8 : index
 
-    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = @kernels::@kernel_1} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
-    "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1)
-    { kernel = @kernels::@kernel_1}
-        : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
+    // CHECK: gpu.launch_func @kernels::@kernel_1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
+    gpu.launch_func @kernels::@kernel_1 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst) args(%0 : f32, %1 : memref<?xf32, 1>)
 
-    // CHECK: "gpu.launch_func"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {kernel = @kernels::@kernel_2} : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
-    "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1)
-    { kernel = @kernels::@kernel_2}
-        : (index, index, index, index, index, index, f32, memref<?xf32, 1>) -> ()
+    // CHECK: gpu.launch_func @kernels::@kernel_2 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})
+    gpu.launch_func @kernels::@kernel_2 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
 
     return
   }
