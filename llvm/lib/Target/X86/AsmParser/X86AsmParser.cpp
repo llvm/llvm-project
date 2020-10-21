@@ -3305,27 +3305,6 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     return HadVerifyError;
   }
 
-  // FIXME: Hack to handle recognize s{hr,ar,hl} $1, <op>.  Canonicalize to
-  // "shift <op>".
-  if ((Name.startswith("shr") || Name.startswith("sar") ||
-       Name.startswith("shl") || Name.startswith("sal") ||
-       Name.startswith("rcl") || Name.startswith("rcr") ||
-       Name.startswith("rol") || Name.startswith("ror")) &&
-      Operands.size() == 3) {
-    if (isParsingIntelSyntax()) {
-      // Intel syntax
-      X86Operand &Op1 = static_cast<X86Operand &>(*Operands[2]);
-      if (Op1.isImm() && isa<MCConstantExpr>(Op1.getImm()) &&
-          cast<MCConstantExpr>(Op1.getImm())->getValue() == 1)
-        Operands.pop_back();
-    } else {
-      X86Operand &Op1 = static_cast<X86Operand &>(*Operands[1]);
-      if (Op1.isImm() && isa<MCConstantExpr>(Op1.getImm()) &&
-          cast<MCConstantExpr>(Op1.getImm())->getValue() == 1)
-        Operands.erase(Operands.begin() + 1);
-    }
-  }
-
   // Transforms "int $3" into "int3" as a size optimization.  We can't write an
   // instalias with an immediate operand yet.
   if (Name == "int" && Operands.size() == 2) {
@@ -3435,6 +3414,111 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
     case X86::VMOVSSrr: NewOpc = X86::VMOVSSrr_REV; break;
     }
     Inst.setOpcode(NewOpc);
+    return true;
+  }
+  case X86::RCR8ri: case X86::RCR16ri: case X86::RCR32ri: case X86::RCR64ri:
+  case X86::RCL8ri: case X86::RCL16ri: case X86::RCL32ri: case X86::RCL64ri:
+  case X86::ROR8ri: case X86::ROR16ri: case X86::ROR32ri: case X86::ROR64ri:
+  case X86::ROL8ri: case X86::ROL16ri: case X86::ROL32ri: case X86::ROL64ri:
+  case X86::SAR8ri: case X86::SAR16ri: case X86::SAR32ri: case X86::SAR64ri:
+  case X86::SHR8ri: case X86::SHR16ri: case X86::SHR32ri: case X86::SHR64ri:
+  case X86::SHL8ri: case X86::SHL16ri: case X86::SHL32ri: case X86::SHL64ri: {
+    // Optimize s{hr,ar,hl} $1, <op> to "shift <op>". Similar for rotate.
+    // FIXME: It would be great if we could just do this with an InstAlias.
+    if (!Inst.getOperand(2).isImm() || Inst.getOperand(2).getImm() != 1)
+      return false;
+
+    unsigned NewOpc;
+    switch (Inst.getOpcode()) {
+    default: llvm_unreachable("Invalid opcode");
+    case X86::RCR8ri:  NewOpc = X86::RCR8r1;  break;
+    case X86::RCR16ri: NewOpc = X86::RCR16r1; break;
+    case X86::RCR32ri: NewOpc = X86::RCR32r1; break;
+    case X86::RCR64ri: NewOpc = X86::RCR64r1; break;
+    case X86::RCL8ri:  NewOpc = X86::RCL8r1;  break;
+    case X86::RCL16ri: NewOpc = X86::RCL16r1; break;
+    case X86::RCL32ri: NewOpc = X86::RCL32r1; break;
+    case X86::RCL64ri: NewOpc = X86::RCL64r1; break;
+    case X86::ROR8ri:  NewOpc = X86::ROR8r1;  break;
+    case X86::ROR16ri: NewOpc = X86::ROR16r1; break;
+    case X86::ROR32ri: NewOpc = X86::ROR32r1; break;
+    case X86::ROR64ri: NewOpc = X86::ROR64r1; break;
+    case X86::ROL8ri:  NewOpc = X86::ROL8r1;  break;
+    case X86::ROL16ri: NewOpc = X86::ROL16r1; break;
+    case X86::ROL32ri: NewOpc = X86::ROL32r1; break;
+    case X86::ROL64ri: NewOpc = X86::ROL64r1; break;
+    case X86::SAR8ri:  NewOpc = X86::SAR8r1;  break;
+    case X86::SAR16ri: NewOpc = X86::SAR16r1; break;
+    case X86::SAR32ri: NewOpc = X86::SAR32r1; break;
+    case X86::SAR64ri: NewOpc = X86::SAR64r1; break;
+    case X86::SHR8ri:  NewOpc = X86::SHR8r1;  break;
+    case X86::SHR16ri: NewOpc = X86::SHR16r1; break;
+    case X86::SHR32ri: NewOpc = X86::SHR32r1; break;
+    case X86::SHR64ri: NewOpc = X86::SHR64r1; break;
+    case X86::SHL8ri:  NewOpc = X86::SHL8r1;  break;
+    case X86::SHL16ri: NewOpc = X86::SHL16r1; break;
+    case X86::SHL32ri: NewOpc = X86::SHL32r1; break;
+    case X86::SHL64ri: NewOpc = X86::SHL64r1; break;
+    }
+
+    MCInst TmpInst;
+    TmpInst.setOpcode(NewOpc);
+    TmpInst.addOperand(Inst.getOperand(0));
+    TmpInst.addOperand(Inst.getOperand(1));
+    Inst = TmpInst;
+    return true;
+  }
+  case X86::RCR8mi: case X86::RCR16mi: case X86::RCR32mi: case X86::RCR64mi:
+  case X86::RCL8mi: case X86::RCL16mi: case X86::RCL32mi: case X86::RCL64mi:
+  case X86::ROR8mi: case X86::ROR16mi: case X86::ROR32mi: case X86::ROR64mi:
+  case X86::ROL8mi: case X86::ROL16mi: case X86::ROL32mi: case X86::ROL64mi:
+  case X86::SAR8mi: case X86::SAR16mi: case X86::SAR32mi: case X86::SAR64mi:
+  case X86::SHR8mi: case X86::SHR16mi: case X86::SHR32mi: case X86::SHR64mi:
+  case X86::SHL8mi: case X86::SHL16mi: case X86::SHL32mi: case X86::SHL64mi: {
+    // Optimize s{hr,ar,hl} $1, <op> to "shift <op>". Similar for rotate.
+    // FIXME: It would be great if we could just do this with an InstAlias.
+    if (!Inst.getOperand(X86::AddrNumOperands).isImm() ||
+        Inst.getOperand(X86::AddrNumOperands).getImm() != 1)
+      return false;
+
+    unsigned NewOpc;
+    switch (Inst.getOpcode()) {
+    default: llvm_unreachable("Invalid opcode");
+    case X86::RCR8mi:  NewOpc = X86::RCR8m1;  break;
+    case X86::RCR16mi: NewOpc = X86::RCR16m1; break;
+    case X86::RCR32mi: NewOpc = X86::RCR32m1; break;
+    case X86::RCR64mi: NewOpc = X86::RCR64m1; break;
+    case X86::RCL8mi:  NewOpc = X86::RCL8m1;  break;
+    case X86::RCL16mi: NewOpc = X86::RCL16m1; break;
+    case X86::RCL32mi: NewOpc = X86::RCL32m1; break;
+    case X86::RCL64mi: NewOpc = X86::RCL64m1; break;
+    case X86::ROR8mi:  NewOpc = X86::ROR8m1;  break;
+    case X86::ROR16mi: NewOpc = X86::ROR16m1; break;
+    case X86::ROR32mi: NewOpc = X86::ROR32m1; break;
+    case X86::ROR64mi: NewOpc = X86::ROR64m1; break;
+    case X86::ROL8mi:  NewOpc = X86::ROL8m1;  break;
+    case X86::ROL16mi: NewOpc = X86::ROL16m1; break;
+    case X86::ROL32mi: NewOpc = X86::ROL32m1; break;
+    case X86::ROL64mi: NewOpc = X86::ROL64m1; break;
+    case X86::SAR8mi:  NewOpc = X86::SAR8m1;  break;
+    case X86::SAR16mi: NewOpc = X86::SAR16m1; break;
+    case X86::SAR32mi: NewOpc = X86::SAR32m1; break;
+    case X86::SAR64mi: NewOpc = X86::SAR64m1; break;
+    case X86::SHR8mi:  NewOpc = X86::SHR8m1;  break;
+    case X86::SHR16mi: NewOpc = X86::SHR16m1; break;
+    case X86::SHR32mi: NewOpc = X86::SHR32m1; break;
+    case X86::SHR64mi: NewOpc = X86::SHR64m1; break;
+    case X86::SHL8mi:  NewOpc = X86::SHL8m1;  break;
+    case X86::SHL16mi: NewOpc = X86::SHL16m1; break;
+    case X86::SHL32mi: NewOpc = X86::SHL32m1; break;
+    case X86::SHL64mi: NewOpc = X86::SHL64m1; break;
+    }
+
+    MCInst TmpInst;
+    TmpInst.setOpcode(NewOpc);
+    for (int i = 0; i != X86::AddrNumOperands; ++i)
+      TmpInst.addOperand(Inst.getOperand(i));
+    Inst = TmpInst;
     return true;
   }
   }
@@ -3906,6 +3990,13 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   unsigned NumSuccessfulMatches =
       std::count(std::begin(Match), std::end(Match), Match_Success);
   if (NumSuccessfulMatches == 1) {
+    // Some instructions need post-processing to, for example, tweak which
+    // encoding is selected. Loop on it while changes happen so the
+    // individual transformations can chain off each other.
+    if (!MatchingInlineAsm)
+      while (processInstruction(Inst, Operands))
+        ;
+
     Inst.setLoc(IDLoc);
     if (!MatchingInlineAsm)
       emitInstruction(Inst, Operands, Out);
