@@ -1204,6 +1204,10 @@ bool PPCTTIImpl::isLSRCostLess(TargetTransformInfo::LSRCost &C1,
     return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
 }
 
+bool PPCTTIImpl::isRegNumMajorCostOfLSR() {
+  return false;
+}
+
 bool PPCTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
                                     MemIntrinsicInfo &Info) {
   switch (Inst->getIntrinsicID()) {
