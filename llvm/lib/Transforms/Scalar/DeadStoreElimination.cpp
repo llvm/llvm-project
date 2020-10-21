@@ -1701,6 +1701,11 @@ struct DSEState {
       return {MemoryLocation::getForDest(MTI)};
 
     if (auto *CB = dyn_cast<CallBase>(I)) {
+      // If the functions may write to memory we do not know about, bail out.
+      if (!CB->onlyAccessesArgMemory() &&
+          !CB->onlyAccessesInaccessibleMemOrArgMem())
+        return None;
+
       LibFunc LF;
       if (TLI.getLibFunc(*CB, LF) && TLI.has(LF)) {
         switch (LF) {
