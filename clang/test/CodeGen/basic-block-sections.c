@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -triple x86_64 -S -fbasic-block-sections=all -o - < %s | FileCheck %s --check-prefix=BB_WORLD --check-prefix=BB_ALL
 // RUN: %clang_cc1 -triple x86_64 -S -fbasic-block-sections=list=%S/Inputs/basic-block-sections.funcnames -o - < %s | FileCheck %s --check-prefix=BB_WORLD --check-prefix=BB_LIST
 // RUN: %clang_cc1 -triple x86_64 -S -fbasic-block-sections=all -funique-basic-block-section-names -o - < %s | FileCheck %s --check-prefix=UNIQUE
+// RUN: not %clang_cc1 -fbasic-block-sections=list= -emit-obj %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
 int world(int a) {
   if (a > 10)
@@ -38,3 +39,4 @@ int another(int a) {
 //
 // UNIQUE: .section .text.world.world.1,
 // UNIQUE: .section .text.another.another.1,
+// ERROR: error:  unable to load basic block sections function list: 'No such file or directory'
