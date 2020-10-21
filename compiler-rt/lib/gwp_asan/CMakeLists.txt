@@ -12,6 +12,7 @@ set(GWP_ASAN_SOURCES
   guarded_pool_allocator.cpp
   random.cpp
   stack_trace_compressor.cpp
+  utilities.cpp
 )
 
 set(GWP_ASAN_HEADERS
