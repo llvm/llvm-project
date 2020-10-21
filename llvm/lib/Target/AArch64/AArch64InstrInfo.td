@@ -6685,6 +6685,16 @@ def : Pat<(i32 (trunc GPR64sp:$src)),
 def : Pat<(trap), (BRK 1)>;
 def : Pat<(debugtrap), (BRK 0xF000)>;
 
+def ubsan_trap_xform : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() | ('U' << 8), SDLoc(N), MVT::i32);
+}]>;
+
+def ubsan_trap_imm : TImmLeaf<i32, [{
+  return isUInt<8>(Imm);
+}], ubsan_trap_xform>;
+
+def : Pat<(ubsantrap ubsan_trap_imm:$kind), (BRK ubsan_trap_imm:$kind)>;
+
 // Multiply high patterns which multiply the lower subvector using smull/umull
 // and the upper subvector with smull2/umull2. Then shuffle the high the high
 // part of both results together.

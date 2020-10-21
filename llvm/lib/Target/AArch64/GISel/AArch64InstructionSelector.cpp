@@ -4832,6 +4832,10 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
   case Intrinsic::debugtrap:
     MIRBuilder.buildInstr(AArch64::BRK, {}, {}).addImm(0xF000);
     break;
+  case Intrinsic::ubsantrap:
+    MIRBuilder.buildInstr(AArch64::BRK, {}, {})
+        .addImm(I.getOperand(0).getImm() | ('U' << 8));
+    break;
   }
 
   I.eraseFromParent();

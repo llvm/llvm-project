@@ -212,6 +212,8 @@ def SDTCatchret : SDTypeProfile<0, 2, [     // catchret
 
 def SDTNone : SDTypeProfile<0, 0, []>;      // ret, trap
 
+def SDTUBSANTrap : SDTypeProfile<0, 1, []>;      // ubsantrap
+
 def SDTLoad : SDTypeProfile<1, 1, [         // load
   SDTCisPtrTy<1>
 ]>;
@@ -574,6 +576,8 @@ def cleanupret : SDNode<"ISD::CLEANUPRET" , SDTNone,   [SDNPHasChain]>;
 def trap       : SDNode<"ISD::TRAP"       , SDTNone,
                         [SDNPHasChain, SDNPSideEffect]>;
 def debugtrap  : SDNode<"ISD::DEBUGTRAP"  , SDTNone,
+                        [SDNPHasChain, SDNPSideEffect]>;
+def ubsantrap  : SDNode<"ISD::UBSANTRAP"  , SDTUBSANTrap,
                         [SDNPHasChain, SDNPSideEffect]>;
 
 def prefetch   : SDNode<"ISD::PREFETCH"   , SDTPrefetch,
