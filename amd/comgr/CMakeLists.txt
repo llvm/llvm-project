@@ -52,7 +52,7 @@ set(SOURCES
 if(COMGR_BUILD_SHARED_LIBS)
   add_library(amd_comgr SHARED ${SOURCES})
   if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    add_custom_command(TARGET amd_comgr POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE_NAME:amd_comgr>)
+    add_custom_command(TARGET amd_comgr POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:amd_comgr>)
   endif()
 else()
   add_library(amd_comgr STATIC ${SOURCES})
