@@ -168,7 +168,7 @@ void ClangHighlighter::Highlight(const HighlightStyle &options,
   clang::SourceManager SM(diags, file_mgr);
   auto buf = llvm::MemoryBuffer::getMemBuffer(full_source);
 
-  FileID FID = SM.createFileID(clang::SourceManager::Unowned, buf.get());
+  FileID FID = SM.createFileID(buf->getMemBufferRef());
 
   // Let's just enable the latest ObjC and C++ which should get most tokens
   // right.
