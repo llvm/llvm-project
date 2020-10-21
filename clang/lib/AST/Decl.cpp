@@ -2280,7 +2280,9 @@ void VarDecl::setInit(Expr *I) {
 bool VarDecl::mightBeUsableInConstantExpressions(const ASTContext &C) const {
   const LangOptions &Lang = C.getLangOpts();
 
-  if (!Lang.CPlusPlus)
+  // OpenCL permits const integral variables to be used in constant
+  // expressions, like in C++98.
+  if (!Lang.CPlusPlus && !Lang.OpenCL)
     return false;
 
   // Function parameters are never usable in constant expressions.
@@ -2299,7 +2301,7 @@ bool VarDecl::mightBeUsableInConstantExpressions(const ASTContext &C) const {
   // Only const objects can be used in constant expressions in C++. C++98 does
   // not require the variable to be non-volatile, but we consider this to be a
   // defect.
-  if (!getType().isConstQualified() || getType().isVolatileQualified())
+  if (!getType().isConstant(C) || getType().isVolatileQualified())
     return false;
 
   // In C++, const, non-volatile variables of integral or enumeration types
@@ -2325,14 +2327,14 @@ bool VarDecl::isUsableInConstantExpressions(const ASTContext &Context) const {
   if (!DefVD->mightBeUsableInConstantExpressions(Context))
     return false;
   //   ... and its initializer is a constant initializer.
-  if (!DefVD->hasConstantInitialization())
+  if (Context.getLangOpts().CPlusPlus && !DefVD->hasConstantInitialization())
     return false;
   // C++98 [expr.const]p1:
   //   An integral constant-expression can involve only [...] const variables
   //   or static data members of integral or enumeration types initialized with
   //   [integer] constant expressions (dcl.init)
-  if (Context.getLangOpts().CPlusPlus && !Context.getLangOpts().CPlusPlus11 &&
-      !DefVD->hasICEInitializer(Context))
+  if ((Context.getLangOpts().CPlusPlus || Context.getLangOpts().OpenCL) &&
+      !Context.getLangOpts().CPlusPlus11 && !DefVD->hasICEInitializer(Context))
     return false;
   return true;
 }
