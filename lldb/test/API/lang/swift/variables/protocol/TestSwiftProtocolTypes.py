@@ -23,7 +23,6 @@ class TestSwiftProtocolTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll #FIXME: This regressed silently due to 2c911bceb06ed376801251bdfd992905a66f276c
     @swiftTest
     def test_swift_protocol_types(self):
         """Test support for protocol types"""
@@ -102,7 +101,7 @@ class TestSwiftProtocolTypes(TestBase):
                              'x = 1.25', 'y = 2.5'])
 
         self.expect("expression --raw-output --show-types -- loc3dCB",
-                    substrs=['PointUtils & AnyObject) $R',
+                    substrs=['PointUtils & Swift.AnyObject) $R',
                              '(Builtin.RawPointer) instance = 0x',
                              '(Builtin.RawPointer) witness_table_PointUtils = 0x'])
 

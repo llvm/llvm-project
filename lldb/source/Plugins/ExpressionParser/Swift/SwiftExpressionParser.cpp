@@ -447,10 +447,10 @@ public:
 };
 }; // END Anonymous namespace
 
-static void
-AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
-                   SwiftASTContextForExpressions &swift_ast_context,
-                   SwiftASTManipulator &manipulator) {
+static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
+                               SwiftASTContextForExpressions &swift_ast_context,
+                               SwiftASTManipulator &manipulator,
+                               lldb::DynamicValueType use_dynamic) {
   // First emit the typealias for "$__lldb_context".
   if (!block)
     return;
@@ -480,7 +480,7 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   if (stack_frame_sp) {
     lldb::ValueObjectSP valobj_sp =
         stack_frame_sp->GetValueObjectForFrameVariable(self_var_sp,
-                                                       lldb::eDynamicCanRunTarget);
+                                                       use_dynamic);
 
     if (valobj_sp)
       self_type = valobj_sp->GetCompilerType();
@@ -578,17 +578,18 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 
 /// Create a \c VariableInfo record for \c variable if there isn't
 /// already shadowing inner declaration in \c processed_variables.
-static void AddVariableInfo(
+static llvm::Optional<llvm::Error> AddVariableInfo(
     lldb::VariableSP variable_sp, lldb::StackFrameSP &stack_frame_sp,
     SwiftASTContextForExpressions &ast_context,
     SwiftLanguageRuntime *language_runtime,
     llvm::SmallDenseSet<const char *, 8> &processed_variables,
-    llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables) {
+    llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables,
+    lldb::DynamicValueType use_dynamic) {
   StringRef name = variable_sp->GetUnqualifiedName().GetStringRef();
   const char *name_cstr = name.data();
   assert(StringRef(name_cstr) == name && "missing null terminator");
   if (name.empty())
-    return;
+    return {};
 
   // To support "guard let self = self" the function argument "self"
   // is processed (as the special self argument) even if it is
@@ -599,35 +600,35 @@ static void AddVariableInfo(
     overridden_name = "$__lldb_injected_self";
 
   if (processed_variables.count(overridden_name))
-    return;
+    return {};
 
   CompilerType var_type;
   if (stack_frame_sp) {
     lldb::ValueObjectSP valobj_sp =
         stack_frame_sp->GetValueObjectForFrameVariable(variable_sp,
-                                                       lldb::eDynamicCanRunTarget);
+                                                       use_dynamic);
 
     if (!valobj_sp || valobj_sp->GetError().Fail()) {
       // Ignore the variable if we couldn't find its corresponding
       // value object.  TODO if the expression tries to use an
       // ignored variable, produce a sensible error.
-      return;
+      return {};
     }
     var_type = valobj_sp->GetCompilerType();
   }
 
   if (!var_type.IsValid())
-    return;
+    return {};
 
   if (!var_type.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
-    return;
+    return {};
 
   Status error;
   CompilerType target_type = ast_context.ImportType(var_type, error);
 
   // If the import failed, give up.
   if (!target_type.IsValid())
-    return;
+    return {};
 
   // If we couldn't fully realize the type, then we aren't going
   // to get very far making a local out of it, so discard it here.
@@ -638,7 +639,16 @@ static void AddVariableInfo(
       log->Printf("Discarding local %s because we couldn't fully realize it, "
                   "our best attempt was: %s.",
                   name_cstr, target_type.GetDisplayTypeName().AsCString("<unknown>"));
-    return;
+    // Not realizing self is a fatal error for an expression and the
+    // Swift compiler error alone is not particularly useful.
+    if (is_self)
+      return make_error<StringError>(
+          inconvertibleErrorCode(),
+          llvm::Twine("Couldn't realize type of self.") +
+              (use_dynamic
+                   ? ""
+                   : " Try evaluating the expression with -d run-target"));
+    return {};
   }
 
   if (log && is_self)
@@ -680,15 +690,17 @@ static void AddVariableInfo(
 
   local_variables.push_back(variable_info);
   processed_variables.insert(overridden_name);
+  return {};
 }
 
 /// Create a \c VariableInfo record for each visible variable.
-static void RegisterAllVariables(
+static llvm::Optional<llvm::Error> RegisterAllVariables(
     SymbolContext &sc, lldb::StackFrameSP &stack_frame_sp,
     SwiftASTContextForExpressions &ast_context,
-    llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables) {
+    llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables,
+    lldb::DynamicValueType use_dynamic) {
   if (!sc.block && !sc.function)
-    return;
+    return {};
 
   Block *block = sc.block;
   Block *top_block = block->GetContainingInlinedBlock();
@@ -743,9 +755,11 @@ static void RegisterAllVariables(
   }
 
   for (size_t vi = 0, ve = variables.GetSize(); vi != ve; ++vi)
-    AddVariableInfo({variables.GetVariableAtIndex(vi)}, stack_frame_sp,
-                    ast_context, language_runtime, processed_names,
-                    local_variables);
+    if (auto error = AddVariableInfo(
+            {variables.GetVariableAtIndex(vi)}, stack_frame_sp, ast_context,
+            language_runtime, processed_names, local_variables, use_dynamic))
+      return error;
+  return {};
 }
 
 static void ResolveSpecialNames(
@@ -1331,11 +1345,12 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
 
     if (local_context_is_swift) {
       AddRequiredAliases(sc.block, stack_frame_sp, *swift_ast_context,
-                         *code_manipulator);
+                         *code_manipulator, options.GetUseDynamic());
 
       // Register all local variables so that lookups to them resolve.
-      RegisterAllVariables(sc, stack_frame_sp, *swift_ast_context,
-                           local_variables);
+      if (auto error = RegisterAllVariables(sc, stack_frame_sp, *swift_ast_context,
+                                            local_variables, options.GetUseDynamic()))
+        return std::move(*error);
     }
 
     // Register all magic variables.
