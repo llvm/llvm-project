@@ -602,35 +602,6 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         }
       }
 
-      // Combine adjacent s_nops to use the immediate operand encoding how long
-      // to wait.
-      //
-      // s_nop N
-      // s_nop M
-      //  =>
-      // s_nop (N + M)
-      if (MI.getOpcode() == AMDGPU::S_NOP &&
-          MI.getNumOperands() == 1 && // Don't merge with implicit operands
-          Next != MBB.end() &&
-          (*Next).getOpcode() == AMDGPU::S_NOP &&
-          (*Next).getNumOperands() == 1) {
-
-        MachineInstr &NextMI = *Next;
-        // The instruction encodes the amount to wait with an offset of 1,
-        // i.e. 0 is wait 1 cycle. Convert both to cycles and then convert back
-        // after adding.
-        uint8_t Nop0 = MI.getOperand(0).getImm() + 1;
-        uint8_t Nop1 = NextMI.getOperand(0).getImm() + 1;
-
-        // Make sure we don't overflow the bounds.
-        if (Nop0 + Nop1 <= 8) {
-          NextMI.getOperand(0).setImm(Nop0 + Nop1 - 1);
-          MI.eraseFromParent();
-        }
-
-        continue;
-      }
-
       // FIXME: We also need to consider movs of constant operands since
       // immediate operands are not folded if they have more than one use, and
       // the operand folding pass is unaware if the immediate will be free since

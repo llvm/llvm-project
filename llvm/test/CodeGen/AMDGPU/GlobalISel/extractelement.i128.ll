@@ -8,7 +8,6 @@ define amdgpu_ps i128 @extractelement_sgpr_v4i128_sgpr_idx(<4 x i128> addrspace(
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx16 s[8:23], s[2:3], 0x0
 ; GFX9-NEXT:    s_lshl_b32 m0, s4, 1
-; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_movrels_b64 s[0:1], s[8:9]
 ; GFX9-NEXT:    s_movrels_b64 s[2:3], s[10:11]
