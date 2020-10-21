@@ -104,7 +104,7 @@ int fold_int5_local = (int) &((local StructTy1*)0)->p2;
 // NOOPT: @test_static_var_private.sp2 = internal addrspace(1) global i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), align 4
 // NOOPT: @test_static_var_private.sp3 = internal addrspace(1) global i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), align 4
 // NOOPT: @test_static_var_private.sp4 = internal addrspace(1) global i8 addrspace(5)* null, align 4
-// NOOPT: @test_static_var_private.sp5 = internal addrspace(1) global i8 addrspace(5)* null, align 4
+// NOOPT: @test_static_var_private.sp5 = internal addrspace(1) global i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), align 4
 // NOOPT: @test_static_var_private.SS1 = internal addrspace(1) global %struct.StructTy1 { i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(4)* null, i8 addrspace(1)* null, i8* null }, align 8
 // NOOPT: @test_static_var_private.SS2 = internal addrspace(1) global %struct.StructTy2 zeroinitializer, align 8
 
@@ -123,7 +123,7 @@ void test_static_var_private(void) {
 // NOOPT: @test_static_var_local.sp2 = internal addrspace(1) global i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), align 4
 // NOOPT: @test_static_var_local.sp3 = internal addrspace(1) global i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), align 4
 // NOOPT: @test_static_var_local.sp4 = internal addrspace(1) global i8 addrspace(3)* null, align 4
-// NOOPT: @test_static_var_local.sp5 = internal addrspace(1) global i8 addrspace(3)* null, align 4
+// NOOPT: @test_static_var_local.sp5 = internal addrspace(1) global i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), align 4
 // NOOPT: @test_static_var_local.SS1 = internal addrspace(1) global %struct.StructTy1 { i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(4)* null, i8 addrspace(1)* null, i8* null }, align 8
 // NOOPT: @test_static_var_local.SS2 = internal addrspace(1) global %struct.StructTy2 zeroinitializer, align 8
 void test_static_var_local(void) {
@@ -142,7 +142,7 @@ void test_static_var_local(void) {
 // NOOPT: store i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(5)* addrspace(5)* %sp1, align 4
 // NOOPT: store i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(5)* addrspace(5)* %sp2, align 4
 // NOOPT: store i8 addrspace(5)* null, i8 addrspace(5)* addrspace(5)* %sp3, align 4
-// NOOPT: store i8 addrspace(5)* null, i8 addrspace(5)* addrspace(5)* %sp4, align 4
+// NOOPT: store i8 addrspace(5)* addrspacecast (i8* null to i8 addrspace(5)*), i8 addrspace(5)* addrspace(5)* %sp4, align 4
 // NOOPT: %[[SS1:.*]] = bitcast %struct.StructTy1 addrspace(5)* %SS1 to i8 addrspace(5)*
 // NOOPT: call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* align 8 %[[SS1]], i8 addrspace(4)* align 8 bitcast (%struct.StructTy1 addrspace(4)* @__const.test_func_scope_var_private.SS1 to i8 addrspace(4)*), i64 32, i1 false)
 // NOOPT: %[[SS2:.*]] = bitcast %struct.StructTy2 addrspace(5)* %SS2 to i8 addrspace(5)*
@@ -162,7 +162,7 @@ void test_func_scope_var_private(void) {
 // NOOPT: store i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(3)* addrspace(5)* %sp1, align 4
 // NOOPT: store i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(3)* addrspace(5)* %sp2, align 4
 // NOOPT: store i8 addrspace(3)* null, i8 addrspace(3)* addrspace(5)* %sp3, align 4
-// NOOPT: store i8 addrspace(3)* null, i8 addrspace(3)* addrspace(5)* %sp4, align 4
+// NOOPT: store i8 addrspace(3)* addrspacecast (i8* null to i8 addrspace(3)*), i8 addrspace(3)* addrspace(5)* %sp4, align 4
 // NOOPT: %[[SS1:.*]] = bitcast %struct.StructTy1 addrspace(5)* %SS1 to i8 addrspace(5)*
 // NOOPT: call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* align 8 %[[SS1]], i8 addrspace(4)* align 8 bitcast (%struct.StructTy1 addrspace(4)* @__const.test_func_scope_var_local.SS1 to i8 addrspace(4)*), i64 32, i1 false)
 // NOOPT: %[[SS2:.*]] = bitcast %struct.StructTy2 addrspace(5)* %SS2 to i8 addrspace(5)*
