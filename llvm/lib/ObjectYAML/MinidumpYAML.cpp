@@ -292,7 +292,7 @@ static void streamMapping(yaml::IO &IO, RawContentStream &Stream) {
   IO.mapOptional("Size", Stream.Size, Stream.Content.binary_size());
 }
 
-static StringRef streamValidate(RawContentStream &Stream) {
+static std::string streamValidate(RawContentStream &Stream) {
   if (Stream.Size.value < Stream.Content.binary_size())
     return "Stream size must be greater or equal to the content size";
   return "";
@@ -434,7 +434,7 @@ void yaml::MappingTraits<std::unique_ptr<Stream>>::mapping(
   }
 }
 
-StringRef yaml::MappingTraits<std::unique_ptr<Stream>>::validate(
+std::string yaml::MappingTraits<std::unique_ptr<Stream>>::validate(
     yaml::IO &IO, std::unique_ptr<MinidumpYAML::Stream> &S) {
   switch (S->Kind) {
   case MinidumpYAML::Stream::StreamKind::RawContent:
