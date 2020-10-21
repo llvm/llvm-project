@@ -1116,8 +1116,8 @@ define void @fir(%struct.arm_fir_instance_f32* nocapture readonly %S, float* noc
 ; CHECK-NEXT:  @ %bb.5: @ %for.body.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB16_4 Depth=1
 ; CHECK-NEXT:    ldr.w lr, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    ldr r7, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    ldr r7, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:  .LBB16_6: @ %for.body
 ; CHECK-NEXT:    @ Parent Loop BB16_4 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
@@ -1436,9 +1436,9 @@ define arm_aapcs_vfpcc void @arm_biquad_cascade_stereo_df2T_f32(%struct.arm_biqu
 ; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vmov.f32 s6, s12
 ; CHECK-NEXT:    vmov.f32 s10, s14
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:    vmov.f32 s7, s12
 ; CHECK-NEXT:    vmov.f32 s11, s14
-; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB17_3: @ Parent Loop BB17_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vldrw.u32 q4, [r1, q0, uxtw #2]
@@ -1589,8 +1589,8 @@ define arm_aapcs_vfpcc void @fms(float* nocapture readonly %pSrc1, float* nocapt
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB18_3 Depth 2
 ; CHECK-NEXT:    ldr r4, [r2]
-; CHECK-NEXT:    vdup.32 q0, r4
 ; CHECK-NEXT:    dls lr, r5
+; CHECK-NEXT:    vdup.32 q0, r4
 ; CHECK-NEXT:  .LBB18_3: @ %while.body
 ; CHECK-NEXT:    @ Parent Loop BB18_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
