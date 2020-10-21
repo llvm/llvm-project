@@ -180,7 +180,7 @@
 # CHECK-NEXT:  2      4     1.00    *                   ldrbt	r1, [r2], -r6, lsl #12
 # CHECK-NEXT:  2      4     2.00    *                   ldrd	r0, r1, [r5]
 # CHECK-NEXT:  2      4     2.00    *                   ldrd	r8, r9, [r2, #15]
-# CHECK-NEXT:  4      4     2.00    *                   ldrd	r2, r3, [r9, #32]!
+# CHECK-NEXT:  4      5     2.00    *                   ldrd	r2, r3, [r9, #32]!
 # CHECK-NEXT:  4      4     2.00    *                   ldrd	r6, r7, [r1], #8
 # CHECK-NEXT:  4      4     2.00    *                   ldrd	r2, r3, [r8], #0
 # CHECK-NEXT:  4      4     2.00    *                   ldrd	r2, r3, [r8], #0
