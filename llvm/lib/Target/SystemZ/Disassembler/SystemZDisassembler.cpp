@@ -468,8 +468,10 @@ DecodeStatus SystemZDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   }
 
   // Read any remaining bytes.
-  if (Bytes.size() < Size)
+  if (Bytes.size() < Size) {
+    Size = Bytes.size();
     return MCDisassembler::Fail;
+  }
 
   // Construct the instruction.
   uint64_t Inst = 0;
