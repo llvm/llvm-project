@@ -74,6 +74,7 @@ bool Lowerer::lowerRemainingCoroIntrinsics(Function &F) {
       case Intrinsic::coro_id:
       case Intrinsic::coro_id_retcon:
       case Intrinsic::coro_id_retcon_once:
+      case Intrinsic::coro_id_async:
         II->replaceAllUsesWith(ConstantTokenNone::get(Context));
         break;
       case Intrinsic::coro_subfn_addr:

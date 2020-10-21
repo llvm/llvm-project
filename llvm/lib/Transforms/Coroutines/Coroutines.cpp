@@ -124,6 +124,9 @@ static bool isCoroutineIntrinsicName(StringRef Name) {
   // NOTE: Must be sorted!
   static const char *const CoroIntrinsics[] = {
       "llvm.coro.alloc",
+      "llvm.coro.async.context.alloc",
+      "llvm.coro.async.context.dealloc",
+      "llvm.coro.async.store_resume",
       "llvm.coro.begin",
       "llvm.coro.destroy",
       "llvm.coro.done",
@@ -131,6 +134,7 @@ static bool isCoroutineIntrinsicName(StringRef Name) {
       "llvm.coro.frame",
       "llvm.coro.free",
       "llvm.coro.id",
+      "llvm.coro.id.async",
       "llvm.coro.id.retcon",
       "llvm.coro.id.retcon.once",
       "llvm.coro.noop",
@@ -142,6 +146,7 @@ static bool isCoroutineIntrinsicName(StringRef Name) {
       "llvm.coro.size",
       "llvm.coro.subfn.addr",
       "llvm.coro.suspend",
+      "llvm.coro.suspend.async",
       "llvm.coro.suspend.retcon",
   };
   return Intrinsic::lookupLLVMIntrinsicByName(CoroIntrinsics, Name) != -1;
@@ -269,6 +274,11 @@ void coro::Shape::buildFrom(Function &F) {
         if (II->use_empty())
           UnusedCoroSaves.push_back(cast<CoroSaveInst>(II));
         break;
+      case Intrinsic::coro_suspend_async: {
+        auto *Suspend = cast<CoroSuspendAsyncInst>(II);
+        CoroSuspends.push_back(Suspend);
+        break;
+      }
       case Intrinsic::coro_suspend_retcon: {
         auto Suspend = cast<CoroSuspendRetconInst>(II);
         CoroSuspends.push_back(Suspend);
@@ -371,7 +381,22 @@ void coro::Shape::buildFrom(Function &F) {
     }
     break;
   }
-
+  case Intrinsic::coro_id_async: {
+    auto *AsyncId = cast<CoroIdAsyncInst>(Id);
+    AsyncId->checkWellFormed();
+    this->ABI = coro::ABI::Async;
+    this->AsyncLowering.Context = AsyncId->getStorage();
+    this->AsyncLowering.ContextHeaderSize = AsyncId->getStorageSize();
+    this->AsyncLowering.ContextAlignment =
+        AsyncId->getStorageAlignment().value();
+    this->AsyncLowering.AsyncFuncPointer = AsyncId->getAsyncFunctionPointer();
+    auto &Context = F.getContext();
+    auto *Int8PtrTy = Type::getInt8PtrTy(Context);
+    auto *VoidTy = Type::getVoidTy(Context);
+    this->AsyncLowering.AsyncFuncTy =
+        FunctionType::get(VoidTy, {Int8PtrTy, Int8PtrTy, Int8PtrTy}, false);
+    break;
+  };
   case Intrinsic::coro_id_retcon:
   case Intrinsic::coro_id_retcon_once: {
     auto ContinuationId = cast<AnyCoroIdRetconInst>(Id);
@@ -512,6 +537,8 @@ Value *coro::Shape::emitAlloc(IRBuilder<> &Builder, Value *Size,
     addCallToCallGraph(CG, Call, Alloc);
     return Call;
   }
+  case coro::ABI::Async:
+    llvm_unreachable("can't allocate memory in coro async-lowering");
   }
   llvm_unreachable("Unknown coro::ABI enum");
 }
@@ -532,6 +559,8 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
     addCallToCallGraph(CG, Call, Dealloc);
     return;
   }
+  case coro::ABI::Async:
+    llvm_unreachable("can't allocate memory in coro async-lowering");
   }
   llvm_unreachable("Unknown coro::ABI enum");
 }
@@ -631,6 +660,32 @@ void AnyCoroIdRetconInst::checkWellFormed() const {
   checkWFRetconPrototype(this, getArgOperand(PrototypeArg));
   checkWFAlloc(this, getArgOperand(AllocArg));
   checkWFDealloc(this, getArgOperand(DeallocArg));
+}
+
+static void checkAsyncFuncPointer(const Instruction *I, Value *V) {
+  auto *AsyncFuncPtrAddr = dyn_cast<GlobalVariable>(V->stripPointerCasts());
+  if (!AsyncFuncPtrAddr)
+    fail(I, "llvm.coro.id.async async function pointer not a global", V);
+
+  auto *StructTy = dyn_cast<StructType>(
+      AsyncFuncPtrAddr->getType()->getPointerElementType());
+  if (StructTy->isOpaque() || !StructTy->isPacked() ||
+      StructTy->getNumElements() != 2 ||
+      !StructTy->getElementType(0)->isIntegerTy(32) ||
+      !StructTy->getElementType(1)->isIntegerTy(32))
+    fail(I,
+         "llvm.coro.id.async async function pointer argument's type is not "
+         "<{i32, i32}>",
+         V);
+}
+
+void CoroIdAsyncInst::checkWellFormed() const {
+  // TODO: check that the StorageArg is a parameter of this function.
+  checkConstantInt(this, getArgOperand(SizeArg),
+                   "size argument to coro.id.async must be constant");
+  checkConstantInt(this, getArgOperand(AlignArg),
+                   "alignment argument to coro.id.async must be constant");
+  checkAsyncFuncPointer(this, getArgOperand(AsyncFuncPtrArg));
 }
 
 void LLVMAddCoroEarlyPass(LLVMPassManagerRef PM) {
