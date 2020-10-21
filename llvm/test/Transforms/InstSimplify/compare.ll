@@ -1129,10 +1129,7 @@ define i1 @compare_always_true_slt(i16 %a) {
 
 define <2 x i1> @compare_always_true_slt_splat(<2 x i16> %a) {
 ; CHECK-LABEL: @compare_always_true_slt_splat(
-; CHECK-NEXT:    [[T1:%.*]] = zext <2 x i16> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[T2:%.*]] = sub <2 x i32> zeroinitializer, [[T1]]
-; CHECK-NEXT:    [[T3:%.*]] = icmp slt <2 x i32> [[T2]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i1> [[T3]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %t1 = zext <2 x i16> %a to <2 x i32>
   %t2 = sub <2 x i32> zeroinitializer, %t1
@@ -1152,10 +1149,7 @@ define i1 @compare_always_true_sle(i16 %a) {
 
 define <2 x i1> @compare_always_true_sle_splat(<2 x i16> %a) {
 ; CHECK-LABEL: @compare_always_true_sle_splat(
-; CHECK-NEXT:    [[T1:%.*]] = zext <2 x i16> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[T2:%.*]] = sub <2 x i32> zeroinitializer, [[T1]]
-; CHECK-NEXT:    [[T3:%.*]] = icmp sle <2 x i32> [[T2]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[T3]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %t1 = zext <2 x i16> %a to <2 x i32>
   %t2 = sub <2 x i32> zeroinitializer, %t1
@@ -1175,10 +1169,7 @@ define i1 @compare_always_false_sgt(i16 %a) {
 
 define <2 x i1> @compare_always_false_sgt_splat(<2 x i16> %a) {
 ; CHECK-LABEL: @compare_always_false_sgt_splat(
-; CHECK-NEXT:    [[T1:%.*]] = zext <2 x i16> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[T2:%.*]] = sub <2 x i32> zeroinitializer, [[T1]]
-; CHECK-NEXT:    [[T3:%.*]] = icmp sgt <2 x i32> [[T2]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[T3]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %t1 = zext <2 x i16> %a to <2 x i32>
   %t2 = sub <2 x i32> zeroinitializer, %t1
@@ -1198,10 +1189,7 @@ define i1 @compare_always_false_sge(i16 %a) {
 
 define <2 x i1> @compare_always_false_sge_splat(<2 x i16> %a) {
 ; CHECK-LABEL: @compare_always_false_sge_splat(
-; CHECK-NEXT:    [[T1:%.*]] = zext <2 x i16> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[T2:%.*]] = sub <2 x i32> zeroinitializer, [[T1]]
-; CHECK-NEXT:    [[T3:%.*]] = icmp sge <2 x i32> [[T2]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i1> [[T3]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %t1 = zext <2 x i16> %a to <2 x i32>
   %t2 = sub <2 x i32> zeroinitializer, %t1
@@ -1221,10 +1209,7 @@ define i1 @compare_always_false_eq(i16 %a) {
 
 define <2 x i1> @compare_always_false_eq_splat(<2 x i16> %a) {
 ; CHECK-LABEL: @compare_always_false_eq_splat(
-; CHECK-NEXT:    [[T1:%.*]] = zext <2 x i16> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[T2:%.*]] = sub <2 x i32> zeroinitializer, [[T1]]
-; CHECK-NEXT:    [[T3:%.*]] = icmp eq <2 x i32> [[T2]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i1> [[T3]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %t1 = zext <2 x i16> %a to <2 x i32>
   %t2 = sub <2 x i32> zeroinitializer, %t1
@@ -1244,10 +1229,7 @@ define i1 @compare_always_true_ne(i16 %a) {
 
 define <2 x i1> @compare_always_true_ne_splat(<2 x i16> %a) {
 ; CHECK-LABEL: @compare_always_true_ne_splat(
-; CHECK-NEXT:    [[T1:%.*]] = zext <2 x i16> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[T2:%.*]] = sub <2 x i32> zeroinitializer, [[T1]]
-; CHECK-NEXT:    [[T3:%.*]] = icmp ne <2 x i32> [[T2]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i1> [[T3]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %t1 = zext <2 x i16> %a to <2 x i32>
   %t2 = sub <2 x i32> zeroinitializer, %t1
