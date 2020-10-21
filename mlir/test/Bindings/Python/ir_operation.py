@@ -1,6 +1,7 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 import gc
+import io
 import itertools
 import mlir
 
@@ -248,3 +249,44 @@ def testOperationResultList():
 
 
 run(testOperationResultList)
+
+
+# CHECK-LABEL: TEST: testOperationPrint
+def testOperationPrint():
+  ctx = mlir.ir.Context()
+  module = ctx.parse_module(r"""
+    func @f1(%arg0: i32) -> i32 {
+      %0 = constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+      return %arg0 : i32
+    }
+  """)
+
+  # Test print to stdout.
+  # CHECK: return %arg0 : i32
+  module.operation.print()
+
+  # Test print to text file.
+  f = io.StringIO()
+  # CHECK: <class 'str'>
+  # CHECK: return %arg0 : i32
+  module.operation.print(file=f)
+  str_value = f.getvalue()
+  print(str_value.__class__)
+  print(f.getvalue())
+
+  # Test print to binary file.
+  f = io.BytesIO()
+  # CHECK: <class 'bytes'>
+  # CHECK: return %arg0 : i32
+  module.operation.print(file=f, binary=True)
+  bytes_value = f.getvalue()
+  print(bytes_value.__class__)
+  print(bytes_value)
+
+  # Test get_asm with options.
+  # CHECK: value = opaque<"", "0xDEADBEEF"> : tensor<4xi32>
+  # CHECK: "std.return"(%arg0) : (i32) -> () -:4:7
+  module.operation.print(large_elements_limit=2, enable_debug_info=True,
+      pretty_debug_info=True, print_generic_op_form=True, use_local_scope=True)
+
+run(testOperationPrint)

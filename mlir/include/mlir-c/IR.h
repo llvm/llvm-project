@@ -50,6 +50,7 @@ extern "C" {
 DEFINE_C_API_STRUCT(MlirContext, void);
 DEFINE_C_API_STRUCT(MlirDialect, void);
 DEFINE_C_API_STRUCT(MlirOperation, void);
+DEFINE_C_API_STRUCT(MlirOpPrintingFlags, void);
 DEFINE_C_API_STRUCT(MlirBlock, void);
 DEFINE_C_API_STRUCT(MlirRegion, void);
 
@@ -229,6 +230,42 @@ void mlirOperationStateAddAttributes(MlirOperationState *state, intptr_t n,
                                      MlirNamedAttribute *attributes);
 
 /*============================================================================*/
+/* Op Printing flags API.                                                     */
+/* While many of these are simple settings that could be represented in a     */
+/* struct, they are wrapped in a heap allocated object and accessed via       */
+/* functions to maximize the possibility of compatibility over time.          */
+/*============================================================================*/
+
+/** Creates new printing flags with defaults, intended for customization.
+ * Must be freed with a call to mlirOpPrintingFlagsDestroy(). */
+MlirOpPrintingFlags mlirOpPrintingFlagsCreate();
+
+/** Destroys printing flags created with mlirOpPrintingFlagsCreate. */
+void mlirOpPrintingFlagsDestroy(MlirOpPrintingFlags flags);
+
+/** Enables the elision of large elements attributes by printing a lexically
+ * valid but otherwise meaningless form instead of the element data. The
+ * `largeElementLimit` is used to configure what is considered to be a "large"
+ * ElementsAttr by providing an upper limit to the number of elements. */
+void mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
+                                                intptr_t largeElementLimit);
+
+/** Enable printing of debug information. If 'prettyForm' is set to true,
+ * debug information is printed in a more readable 'pretty' form. Note: The
+ * IR generated with 'prettyForm' is not parsable. */
+void mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags,
+                                        int prettyForm);
+
+/** Always print operations in the generic form. */
+void mlirOpPrintingFlagsPrintGenericOpForm(MlirOpPrintingFlags flags);
+
+/** Use local scope when printing the operation. This allows for using the
+ * printer in a more localized and thread-safe setting, but may not
+ * necessarily be identical to what the IR will look like when dumping
+ * the full module. */
+void mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags);
+
+/*============================================================================*/
 /* Operation API.                                                             */
 /*============================================================================*/
 
@@ -297,6 +334,11 @@ int mlirOperationRemoveAttributeByName(MlirOperation op, const char *name);
  * several times with consecutive chunks of the string. */
 void mlirOperationPrint(MlirOperation op, MlirStringCallback callback,
                         void *userData);
+
+/** Same as mlirOperationPrint but accepts flags controlling the printing
+ * behavior. */
+void mlirOperationPrintWithFlags(MlirOperation op, MlirOpPrintingFlags flags,
+                                 MlirStringCallback callback, void *userData);
 
 /** Prints an operation to stderr. */
 void mlirOperationDump(MlirOperation op);
