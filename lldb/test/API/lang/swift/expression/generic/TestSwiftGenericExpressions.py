@@ -42,7 +42,9 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
         self.do_ivar_test()
 
     def check_expression(self, expression, expected_result, use_summary=True):
-        value = self.frame().EvaluateExpression(expression)
+        opts = lldb.SBExpressionOptions()
+        opts.SetFetchDynamicValue(lldb.eDynamicCanRunTarget)
+        value = self.frame().EvaluateExpression(expression, opts)
         self.assertTrue(value.IsValid(), expression + "returned a valid value")
 
         self.assertTrue(value.GetError().Success(), "expression failed")

@@ -14,7 +14,7 @@ extension Array
 {
     mutating func doGenericStuff()
     {
-        print("generic stuff") //% self.expect("expr 2+3", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["5"])
+        print("generic stuff") //% self.expect("expr -d run-target -- 2+3", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["5"])
     }
 }
 

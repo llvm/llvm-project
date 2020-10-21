@@ -20,7 +20,7 @@ class C<T> : P {
 
 extension P {
   func f() -> Int {
-    return v //% self.expect("p self", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["a.C"])
+    return v //% self.expect("expr -d run-target -- self", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["a.C"])
   }
 }
 

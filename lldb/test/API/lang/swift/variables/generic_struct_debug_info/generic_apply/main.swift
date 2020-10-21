@@ -14,7 +14,7 @@ func apply<Type>(_ T : Type, fn: (Type) -> Type) -> Type { return fn(T) }
 public func f<Type>(_ value : Type)
 {
   apply(value) { arg in
-    return arg //% self.expect('po arg', substrs=['3735928559'])
+    return arg //% self.expect('expr -o -d run -- arg', substrs=['3735928559'])
      //% self.expect('expr -d run -- arg', substrs=['Int', '3735928559'])
       //% self.expect('fr var -d run -- arg', substrs=['Int', '3735928559'])
   }
