@@ -589,8 +589,9 @@ bool ARMBaseInstrInfo::SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
   }
 }
 
-bool ARMBaseInstrInfo::DefinesPredicate(
-    MachineInstr &MI, std::vector<MachineOperand> &Pred) const {
+bool ARMBaseInstrInfo::ClobbersPredicate(MachineInstr &MI,
+                                         std::vector<MachineOperand> &Pred,
+                                         bool SkipDead) const {
   bool Found = false;
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI.getOperand(i);
