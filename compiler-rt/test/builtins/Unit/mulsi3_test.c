@@ -1,12 +1,9 @@
-// REQUIRES: riscv32-target-arch
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: librt_has_mulsi3
 
 #include "int_lib.h"
 #include <stdio.h>
 #include <limits.h>
-
-#if !defined(__riscv_mul) && __riscv_xlen == 32
-// Based on mulsi3_test.c
 
 COMPILER_RT_ABI si_int __mulsi3(si_int a, si_int b);
 
@@ -15,14 +12,12 @@ int test__mulsi3(si_int a, si_int b, si_int expected)
     si_int x = __mulsi3(a, b);
     if (x != expected)
         printf("error in __mulsi3: %d * %d = %d, expected %d\n",
-               a, b, __mulsi3(a, b), expected);
+               a, b, x, expected);
     return x != expected;
 }
-#endif
 
 int main()
 {
-#if !defined(__riscv_mul) && __riscv_xlen == 32
     if (test__mulsi3(0, 0, 0))
         return 1;
     if (test__mulsi3(0, 1, 0))
@@ -99,9 +94,6 @@ int main()
         return 1;
     if (test__mulsi3(-8192, -4194303, 34359730176))
         return 1;
-#else
-    printf("skipped\n");
-#endif
 
     return 0;
 }
