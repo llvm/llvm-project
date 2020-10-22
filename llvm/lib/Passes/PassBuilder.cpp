@@ -84,6 +84,7 @@
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/ArgumentPromotion.h"
 #include "llvm/Transforms/IPO/Attributor.h"
+#include "llvm/Transforms/IPO/BlockExtractor.h"
 #include "llvm/Transforms/IPO/CalledValuePropagation.h"
 #include "llvm/Transforms/IPO/ConstantMerge.h"
 #include "llvm/Transforms/IPO/CrossDSOCFI.h"
@@ -750,6 +751,12 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // redo DCE, etc.
   FPM.addPass(JumpThreadingPass());
   FPM.addPass(CorrelatedValuePropagationPass());
+
+  // Finally, do an expensive DCE pass to catch all the dead code exposed by
+  // the simplifications and basic cleanup after all the simplifications.
+  // TODO: Investigate if this is too expensive.
+  FPM.addPass(ADCEPass());
+
   FPM.addPass(DSEPass());
   FPM.addPass(createFunctionToLoopPassAdaptor(
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
@@ -761,10 +768,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   for (auto &C : ScalarOptimizerLateEPCallbacks)
     C(FPM, Level);
 
-  // Finally, do an expensive DCE pass to catch all the dead code exposed by
-  // the simplifications and basic cleanup after all the simplifications.
-  // TODO: Investigate if this is too expensive.
-  FPM.addPass(ADCEPass());
   FPM.addPass(SimplifyCFGPass());
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);

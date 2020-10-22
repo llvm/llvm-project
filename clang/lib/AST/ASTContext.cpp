@@ -1006,9 +1006,6 @@ ASTContext::~ASTContext() {
 
   for (const auto &Value : ModuleInitializers)
     Value.second->~PerModuleInitializers();
-
-  for (APValue *Value : APValueCleanups)
-    Value->~APValue();
 }
 
 void ASTContext::setTraversalScope(const std::vector<Decl *> &TopLevelDecls) {
@@ -4884,9 +4881,16 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
 
     Arg = TemplateArgument(ArgType);
   } else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+    QualType T =
+        NTTP->getType().getNonPackExpansionType().getNonLValueExprType(*this);
+    // For class NTTPs, ensure we include the 'const' so the type matches that
+    // of a real template argument.
+    // FIXME: It would be more faithful to model this as something like an
+    // lvalue-to-rvalue conversion applied to a const-qualified lvalue.
+    if (T->isRecordType())
+      T.addConst();
     Expr *E = new (*this) DeclRefExpr(
-        *this, NTTP, /*enclosing*/ false,
-        NTTP->getType().getNonPackExpansionType().getNonLValueExprType(*this),
+        *this, NTTP, /*enclosing*/ false, T,
         Expr::getValueKindForType(NTTP->getType()), NTTP->getLocation());
 
     if (NTTP->isParameterPack())
@@ -10975,6 +10979,27 @@ ASTContext::getMSGuidDecl(MSGuidDecl::Parts Parts) const {
   QualType GUIDType = getMSGuidType().withConst();
   MSGuidDecl *New = MSGuidDecl::Create(*this, GUIDType, Parts);
   MSGuidDecls.InsertNode(New, InsertPos);
+  return New;
+}
+
+TemplateParamObjectDecl *
+ASTContext::getTemplateParamObjectDecl(QualType T, const APValue &V) const {
+  assert(T->isRecordType() && "template param object of unexpected type");
+
+  // C++ [temp.param]p8:
+  //   [...] a static storage duration object of type 'const T' [...]
+  T.addConst();
+
+  llvm::FoldingSetNodeID ID;
+  TemplateParamObjectDecl::Profile(ID, T, V);
+
+  void *InsertPos;
+  if (TemplateParamObjectDecl *Existing =
+          TemplateParamObjectDecls.FindNodeOrInsertPos(ID, InsertPos))
+    return Existing;
+
+  TemplateParamObjectDecl *New = TemplateParamObjectDecl::Create(*this, T, V);
+  TemplateParamObjectDecls.InsertNode(New, InsertPos);
   return New;
 }
 

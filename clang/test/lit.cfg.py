@@ -1,7 +1,6 @@
 # -*- Python -*-
 
 import os
-import sys
 import platform
 import re
 import subprocess
@@ -172,9 +171,10 @@ if platform.system() not in ['Windows']:
 if lit.util.isMacOSTriple(config.target_triple):
    config.available_features.add('darwin')
 
-# Check 64-bit host
-if sys.maxsize > 2**32:
-  config.available_features.add("clang-64-bits")
+# Features
+known_arches = ["x86_64", "mips64", "ppc64", "aarch64"]
+if (any(config.target_triple.startswith(x) for x in known_arches)):
+  config.available_features.add("clang-target-64-bits")
 
 
 def calculate_arch_features(arch_string):

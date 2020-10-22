@@ -254,7 +254,6 @@ void UpdateProcessName();
 void CacheBinaryName();
 void DisableCoreDumperIfNecessary();
 void DumpProcessMap();
-void PrintModuleMap();
 const char *GetEnv(const char *name);
 bool SetEnv(const char *name, const char *value);
 

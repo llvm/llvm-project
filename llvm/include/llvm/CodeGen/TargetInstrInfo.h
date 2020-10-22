@@ -1399,8 +1399,13 @@ public:
   /// If the specified instruction defines any predicate
   /// or condition code register(s) used for predication, returns true as well
   /// as the definition predicate(s) by reference.
-  virtual bool DefinesPredicate(MachineInstr &MI,
-                                std::vector<MachineOperand> &Pred) const {
+  /// SkipDead should be set to false at any point that dead
+  /// predicate instructions should be considered as being defined.
+  /// A dead predicate instruction is one that is guaranteed to be removed
+  /// after a call to PredicateInstruction.
+  virtual bool ClobbersPredicate(MachineInstr &MI,
+                                 std::vector<MachineOperand> &Pred,
+                                 bool SkipDead) const {
     return false;
   }
 

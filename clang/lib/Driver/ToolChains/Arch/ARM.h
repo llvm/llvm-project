@@ -47,6 +47,7 @@ enum class FloatABI {
   Hard,
 };
 
+FloatABI getDefaultFloatABI(const llvm::Triple &Triple);
 FloatABI getARMFloatABI(const ToolChain &TC, const llvm::opt::ArgList &Args);
 FloatABI getARMFloatABI(const Driver &D, const llvm::Triple &Triple,
                         const llvm::opt::ArgList &Args);

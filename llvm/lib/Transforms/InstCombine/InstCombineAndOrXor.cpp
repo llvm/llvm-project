@@ -2301,15 +2301,15 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       LHSC->getType() == RHSC->getType() &&
       LHSC->getValue() == (RHSC->getValue())) {
 
-    Value *LAddOpnd, *RAddOpnd;
+    Value *AddOpnd;
     ConstantInt *LAddC, *RAddC;
-    if (match(LHS0, m_Add(m_Value(LAddOpnd), m_ConstantInt(LAddC))) &&
-        match(RHS0, m_Add(m_Value(RAddOpnd), m_ConstantInt(RAddC))) &&
+    if (match(LHS0, m_Add(m_Value(AddOpnd), m_ConstantInt(LAddC))) &&
+        match(RHS0, m_Add(m_Specific(AddOpnd), m_ConstantInt(RAddC))) &&
         LAddC->getValue().ugt(LHSC->getValue()) &&
         RAddC->getValue().ugt(LHSC->getValue())) {
 
       APInt DiffC = LAddC->getValue() ^ RAddC->getValue();
-      if (LAddOpnd == RAddOpnd && DiffC.isPowerOf2()) {
+      if (DiffC.isPowerOf2()) {
         ConstantInt *MaxAddC = nullptr;
         if (LAddC->getValue().ult(RAddC->getValue()))
           MaxAddC = RAddC;
@@ -2329,7 +2329,7 @@ Value *InstCombinerImpl::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
             RangeDiff.ugt(LHSC->getValue())) {
           Value *MaskC = ConstantInt::get(LAddC->getType(), ~DiffC);
 
-          Value *NewAnd = Builder.CreateAnd(LAddOpnd, MaskC);
+          Value *NewAnd = Builder.CreateAnd(AddOpnd, MaskC);
           Value *NewAdd = Builder.CreateAdd(NewAnd, MaxAddC);
           return Builder.CreateICmp(LHS->getPredicate(), NewAdd, LHSC);
         }

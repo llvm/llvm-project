@@ -49,6 +49,16 @@ void addArgAndResultAttrs(Builder &builder, OperationState &result,
 using FuncTypeBuilder = function_ref<Type(
     Builder &, ArrayRef<Type>, ArrayRef<Type>, VariadicFlag, std::string &)>;
 
+/// Parses function arguments using `parser`. The `allowVariadic` argument
+/// indicates whether functions with variadic arguments are supported. The
+/// trailing arguments are populated by this function with names, types and
+/// attributes of the arguments.
+ParseResult parseFunctionArgumentList(
+    OpAsmParser &parser, bool allowAttributes, bool allowVariadic,
+    SmallVectorImpl<OpAsmParser::OperandType> &argNames,
+    SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
+    bool &isVariadic);
+
 /// Parses a function signature using `parser`. The `allowVariadic` argument
 /// indicates whether functions with variadic arguments are supported. The
 /// trailing arguments are populated by this function with names, types and

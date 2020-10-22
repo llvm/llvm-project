@@ -963,8 +963,9 @@ R600InstrInfo::reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) con
   return false;
 }
 
-bool R600InstrInfo::DefinesPredicate(MachineInstr &MI,
-                                     std::vector<MachineOperand> &Pred) const {
+bool R600InstrInfo::ClobbersPredicate(MachineInstr &MI,
+                                      std::vector<MachineOperand> &Pred,
+                                      bool SkipDead) const {
   return isPredicateSetter(MI.getOpcode());
 }
 

@@ -428,28 +428,16 @@ static ParseResult parseLaunchOp(OpAsmParser &parser, OperationState &result) {
 //===----------------------------------------------------------------------===//
 
 void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
-                         GPUFuncOp kernelFunc, Value gridSizeX, Value gridSizeY,
-                         Value gridSizeZ, Value blockSizeX, Value blockSizeY,
-                         Value blockSizeZ, ValueRange kernelOperands) {
+                         GPUFuncOp kernelFunc, KernelDim3 gridSize,
+                         KernelDim3 blockSize, ValueRange kernelOperands) {
   // Add grid and block sizes as op operands, followed by the data operands.
-  result.addOperands(
-      {gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ});
+  result.addOperands({gridSize.x, gridSize.y, gridSize.z, blockSize.x,
+                      blockSize.y, blockSize.z});
   result.addOperands(kernelOperands);
   auto kernelModule = kernelFunc.getParentOfType<GPUModuleOp>();
   auto kernelSymbol = builder.getSymbolRefAttr(
       kernelModule.getName(), {builder.getSymbolRefAttr(kernelFunc.getName())});
   result.addAttribute(getKernelAttrName(), kernelSymbol);
-}
-
-void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
-                         GPUFuncOp kernelFunc, KernelDim3 gridSize,
-                         KernelDim3 blockSize, ValueRange kernelOperands) {
-  build(builder, result, kernelFunc, gridSize.x, gridSize.y, gridSize.z,
-        blockSize.x, blockSize.y, blockSize.z, kernelOperands);
-}
-
-SymbolRefAttr LaunchFuncOp::kernel() {
-  return getAttrOfType<SymbolRefAttr>(getKernelAttrName());
 }
 
 unsigned LaunchFuncOp::getNumKernelOperands() {
@@ -490,6 +478,33 @@ static LogicalResult verify(LaunchFuncOp op) {
                           op.getKernelAttrName() + "' must be specified");
 
   return success();
+}
+
+static ParseResult
+parseLaunchFuncOperands(OpAsmParser &parser,
+                        SmallVectorImpl<OpAsmParser::OperandType> &argNames,
+                        SmallVectorImpl<Type> &argTypes) {
+  if (parser.parseOptionalKeyword("args"))
+    return success();
+  SmallVector<NamedAttrList, 4> argAttrs;
+  bool isVariadic = false;
+  return impl::parseFunctionArgumentList(parser, /*allowAttributes=*/false,
+                                         /*allowVariadic=*/false, argNames,
+                                         argTypes, argAttrs, isVariadic);
+}
+
+static void printLaunchFuncOperands(OpAsmPrinter &printer,
+                                    OperandRange operands, TypeRange types) {
+  if (operands.empty())
+    return;
+  printer << "args(";
+  llvm::interleaveComma(llvm::zip(operands, types), printer,
+                        [&](const auto &pair) {
+                          printer.printOperand(std::get<0>(pair));
+                          printer << " : ";
+                          printer.printType(std::get<1>(pair));
+                        });
+  printer << ")";
 }
 
 //===----------------------------------------------------------------------===//

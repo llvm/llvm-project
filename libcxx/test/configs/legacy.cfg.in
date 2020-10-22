@@ -3,6 +3,7 @@
 import os
 import site
 
+config.cxx_headers              = "@LIBCXX_GENERATED_INCLUDE_DIR@"
 config.cxx_under_test           = "@CMAKE_CXX_COMPILER@"
 config.project_obj_root         = "@CMAKE_BINARY_DIR@"
 config.libcxx_src_root          = "@LIBCXX_SOURCE_DIR@"

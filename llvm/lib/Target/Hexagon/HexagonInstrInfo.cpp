@@ -1639,8 +1639,9 @@ bool HexagonInstrInfo::SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
   return false;
 }
 
-bool HexagonInstrInfo::DefinesPredicate(MachineInstr &MI,
-      std::vector<MachineOperand> &Pred) const {
+bool HexagonInstrInfo::ClobbersPredicate(MachineInstr &MI,
+                                         std::vector<MachineOperand> &Pred,
+                                         bool SkipDead) const {
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
 
   for (unsigned oper = 0; oper < MI.getNumOperands(); ++oper) {
