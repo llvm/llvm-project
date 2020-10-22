@@ -340,6 +340,11 @@ public:
     return Regs.size();
   }
 
+  void DeallocateReg(MCPhysReg Reg) {
+    assert(isAllocated(Reg) && "Trying to deallocate an unallocated register");
+    MarkUnallocated(Reg);
+  }
+
   /// AllocateReg - Attempt to allocate one register.  If it is not available,
   /// return zero.  Otherwise, return the register, marking it and any aliases
   /// as allocated.
@@ -570,6 +575,8 @@ public:
 private:
   /// MarkAllocated - Mark a register and all of its aliases as allocated.
   void MarkAllocated(MCPhysReg Reg);
+
+  void MarkUnallocated(MCPhysReg Reg);
 };
 
 } // end namespace llvm
