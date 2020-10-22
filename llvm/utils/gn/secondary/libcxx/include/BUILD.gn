@@ -217,7 +217,7 @@ if (current_toolchain == default_toolchain) {
       "wchar.h",
       "wctype.h",
     ]
-    deps = []
+    deps = [ ":write_config_site" ]
     if (target_os != "mac" && target_os != "win") {
       # libcxx/cmake/Modules/HandleLibCXXABI.cmake sets
       # LIBCXX_CXX_ABI_HEADER_TARGET if the libcxx abi library either of
@@ -264,7 +264,6 @@ config("include_config") {
 group("include") {
   deps = [
     ":copy_headers($default_toolchain)",
-    ":write_config_site($default_toolchain)",
   ]
   public_configs = [ ":include_config" ]
 }
