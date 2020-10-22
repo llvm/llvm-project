@@ -61,9 +61,9 @@ class TargetRegisterInfo;
 
     /// Create a CoalescerPair representing a virtreg-to-physreg copy.
     /// No need to call setRegisters().
-    CoalescerPair(unsigned VirtReg, unsigned PhysReg,
+    CoalescerPair(Register VirtReg, MCRegister PhysReg,
                   const TargetRegisterInfo &tri)
-      : TRI(tri), DstReg(PhysReg), SrcReg(VirtReg) {}
+        : TRI(tri), DstReg(PhysReg), SrcReg(VirtReg) {}
 
     /// Set registers to match the copy instruction MI. Return
     /// false if MI is not a coalescable copy instruction.

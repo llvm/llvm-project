@@ -907,7 +907,7 @@ public:
   ///
   /// Reserved registers may belong to an allocatable register class, but the
   /// target has explicitly requested that they are not used.
-  bool isReserved(Register PhysReg) const {
+  bool isReserved(MCRegister PhysReg) const {
     return getReservedRegs().test(PhysReg.id());
   }
 
