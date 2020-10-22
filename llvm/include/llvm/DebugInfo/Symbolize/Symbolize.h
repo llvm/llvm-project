@@ -49,7 +49,6 @@ public:
     std::string FallbackDebugPath;
     std::string DWPName;
     std::vector<std::string> DebugFileDirectory;
-    std::function<void(Error)> RecoverableErrorHandler = WithColor::defaultErrorHandler;
   };
 
   LLVMSymbolizer() = default;
