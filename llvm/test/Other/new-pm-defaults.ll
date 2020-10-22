@@ -202,16 +202,15 @@
 ; CHECK-O23SZ-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: CorrelatedValuePropagationPass
 ; CHECK-O23SZ-NEXT: Invalidating analysis: LazyValueAnalysis
+; CHECK-O-NEXT: Running pass: ADCEPass
+; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: DSEPass
-; CHECK-O23SZ-NEXT: Running analysis: PostDominatorTreeAnalysis
 ; CHECK-O23SZ-NEXT: Starting llvm::Function pass manager run.
 ; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass
 ; CHECK-O23SZ-NEXT: Finished llvm::Function pass manager run.
 ; CHECK-O23SZ-NEXT: Running pass: LICMPass
 ; CHECK-EP-SCALAR-LATE-NEXT: Running pass: NoOpFunctionPass
-; CHECK-O-NEXT: Running pass: ADCEPass
-; CHECK-O1-NEXT: Running analysis: PostDominatorTreeAnalysis
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-EP-PEEPHOLE-NEXT: Running pass: NoOpFunctionPass
