@@ -1535,10 +1535,6 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
                                     LocationSize V2Size,
                                     const AAMDNodes &V2AAInfo,
                                     const Value *UnderV2, AAQueryInfo &AAQI) {
-  // Track phi nodes we have visited. We use this information when we determine
-  // value equivalence.
-  VisitedPhiBBs.insert(PN->getParent());
-
   // If the values are PHIs in the same block, we can do a more precise
   // as well as efficient check: just check for aliases between the values
   // on corresponding edges.
@@ -1654,6 +1650,11 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   // pointer to.
   if (isRecursive)
     PNSize = LocationSize::unknown();
+
+  // In the recursive alias queries below, we may compare values from two
+  // different loop iterations. Keep track of visited phi blocks, which will
+  // be used when determining value equivalence.
+  VisitedPhiBBs.insert(PN->getParent());
 
   AliasResult Alias = aliasCheck(V2, V2Size, V2AAInfo, V1Srcs[0], PNSize,
                                  PNAAInfo, AAQI, UnderV2);
