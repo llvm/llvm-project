@@ -1166,10 +1166,7 @@ public:
       break;
 
     case Intrinsic::memcpy:
-      // FIXME: all cost kinds should default to the same thing?
-      if (CostKind != TTI::TCK_RecipThroughput)
-        return thisT()->getMemcpyCost(ICA.getInst());
-      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+      return thisT()->getMemcpyCost(ICA.getInst());
 
     case Intrinsic::masked_scatter: {
       // FIXME: all cost kinds should default to the same thing?
