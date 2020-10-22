@@ -612,12 +612,6 @@ bool ARMBaseInstrInfo::isCPSRDefined(const MachineInstr &MI) {
   return false;
 }
 
-bool ARMBaseInstrInfo::isAddrMode3OpImm(const MachineInstr &MI,
-                                        unsigned Op) const {
-  const MachineOperand &Offset = MI.getOperand(Op + 1);
-  return Offset.getReg() != 0;
-}
-
 // Load with negative register offset requires additional 1cyc and +I unit
 // for Cortex A57
 bool ARMBaseInstrInfo::isAddrMode3OpMinusReg(const MachineInstr &MI,
