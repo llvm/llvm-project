@@ -13,11 +13,11 @@
 
 using namespace mlir;
 
-static ParseResult
-parseArgumentList(OpAsmParser &parser, bool allowVariadic,
-                  SmallVectorImpl<Type> &argTypes,
-                  SmallVectorImpl<OpAsmParser::OperandType> &argNames,
-                  SmallVectorImpl<NamedAttrList> &argAttrs, bool &isVariadic) {
+ParseResult mlir::impl::parseFunctionArgumentList(
+    OpAsmParser &parser, bool allowAttributes, bool allowVariadic,
+    SmallVectorImpl<OpAsmParser::OperandType> &argNames,
+    SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
+    bool &isVariadic) {
   if (parser.parseLParen())
     return failure();
 
@@ -56,6 +56,8 @@ parseArgumentList(OpAsmParser &parser, bool allowVariadic,
     NamedAttrList attrs;
     if (parser.parseOptionalAttrDict(attrs))
       return failure();
+    if (!allowAttributes && !attrs.empty())
+      return parser.emitError(loc, "expected arguments without attributes");
     argAttrs.push_back(attrs);
     return success();
   };
@@ -129,8 +131,9 @@ ParseResult mlir::impl::parseFunctionSignature(
     SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
     bool &isVariadic, SmallVectorImpl<Type> &resultTypes,
     SmallVectorImpl<NamedAttrList> &resultAttrs) {
-  if (parseArgumentList(parser, allowVariadic, argTypes, argNames, argAttrs,
-                        isVariadic))
+  bool allowArgAttrs = true;
+  if (parseFunctionArgumentList(parser, allowArgAttrs, allowVariadic, argNames,
+                                argTypes, argAttrs, isVariadic))
     return failure();
   if (succeeded(parser.parseOptionalArrow()))
     return parseFunctionResultList(parser, resultTypes, resultAttrs);
