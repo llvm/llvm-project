@@ -223,14 +223,14 @@ if (LIBCXX_INSTALL_HEADERS)
   endforeach()
 
   # Install the generated __config_site.
-  install(FILES ${LIBCXX_BINARY_DIR}/__config_site
+  install(FILES ${LIBCXX_GENERATED_INCLUDE_DIR}/__config_site
     DESTINATION ${LIBCXX_INSTALL_HEADER_PREFIX}include/c++/v1
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_custom_target(install-cxx-headers
-                      DEPENDS cxx-headers cxx-generated-config
+                      DEPENDS cxx-headers
                       COMMAND "${CMAKE_COMMAND}"
                               -DCMAKE_INSTALL_COMPONENT=cxx-headers
                               -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
