@@ -1,6 +1,5 @@
 public class Foo {
   public static func foo() -> String  {
-    print("A")
     return "A"
   }
 }
