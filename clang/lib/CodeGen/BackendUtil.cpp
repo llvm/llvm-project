@@ -371,6 +371,16 @@ static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
   case CodeGenOptions::Accelerate:
     TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::Accelerate);
     break;
+  case CodeGenOptions::LIBMVEC:
+    switch(TargetTriple.getArch()) {
+      default:
+        break;
+      case llvm::Triple::x86_64:
+        TLII->addVectorizableFunctionsFromVecLib
+                (TargetLibraryInfoImpl::LIBMVEC_X86);
+        break;
+    }
+    break;
   case CodeGenOptions::MASSV:
     TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::MASSV);
     break;

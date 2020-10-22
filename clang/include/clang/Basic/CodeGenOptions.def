@@ -348,7 +348,7 @@ CODEGENOPT(CodeViewGHash, 1, 0)
 ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining)
 
 // Vector functions library to use.
-ENUM_CODEGENOPT(VecLib, VectorLibrary, 2, NoLibrary)
+ENUM_CODEGENOPT(VecLib, VectorLibrary, 3, NoLibrary)
 
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
