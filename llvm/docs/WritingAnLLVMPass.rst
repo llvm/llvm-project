@@ -474,8 +474,7 @@ external functions.
 To be explicit, ``FunctionPass`` subclasses are not allowed to:
 
 #. Inspect or modify a ``Function`` other than the one currently being processed.
-#. Add or remove ``Function``\ s from the current ``Module``, including
-   declarations.
+#. Add or remove ``Function``\ s from the current ``Module``.
 #. Add or remove global variables from the current ``Module``.
 #. Maintain state across invocations of :ref:`runOnFunction
    <writing-an-llvm-pass-runOnFunction>` (including global data).
