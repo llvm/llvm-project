@@ -10,9 +10,9 @@
 /* RUN: mlir-capi-ir-test 2>&1 | FileCheck %s
  */
 
+#include "mlir-c/IR.h"
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/Diagnostics.h"
-#include "mlir-c/IR.h"
 #include "mlir-c/Registration.h"
 #include "mlir-c/StandardAttributes.h"
 #include "mlir-c/StandardDialect.h"
@@ -319,6 +319,25 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   fprintf(stderr, "Removed attr is null: %d\n",
           mlirAttributeIsNull(
               mlirOperationGetAttributeByName(operation, "custom_attr")));
+
+  // Add a large attribute to verify printing flags.
+  int64_t eltsShape[] = {4};
+  int32_t eltsData[] = {1, 2, 3, 4};
+  mlirOperationSetAttributeByName(
+      operation, "elts",
+      mlirDenseElementsAttrInt32Get(
+          mlirRankedTensorTypeGet(1, eltsShape, mlirIntegerTypeGet(ctx, 32)), 4,
+          eltsData));
+  MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
+  mlirOpPrintingFlagsElideLargeElementsAttrs(flags, 2);
+  mlirOpPrintingFlagsPrintGenericOpForm(flags);
+  mlirOpPrintingFlagsEnableDebugInfo(flags, /*prettyForm=*/0);
+  mlirOpPrintingFlagsUseLocalScope(flags);
+  fprintf(stderr, "Op print with all flags: ");
+  mlirOperationPrintWithFlags(operation, flags, printToStderr, NULL);
+  fprintf(stderr, "\n");
+
+  mlirOpPrintingFlagsDestroy(flags);
 }
 
 /// Creates an operation with a region containing multiple blocks with
@@ -991,6 +1010,7 @@ int main() {
   // CHECK: Remove attr: 1
   // CHECK: Remove attr again: 0
   // CHECK: Removed attr is null: 1
+  // CHECK: Op print with all flags: %{{.*}} = "std.constant"() {elts = opaque<"", "0xDEADBEEF"> : tensor<4xi32>, value = 0 : index} : () -> index loc(unknown)
   // clang-format on
 
   mlirModuleDestroy(moduleOp);

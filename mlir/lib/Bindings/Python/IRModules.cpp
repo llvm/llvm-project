@@ -64,12 +64,44 @@ static const char kContextGetUnknownLocationDocstring[] =
 static const char kContextGetFileLocationDocstring[] =
     R"(Gets a Location representing a file, line and column)";
 
+static const char kOperationPrintDocstring[] =
+    R"(Prints the assembly form of the operation to a file like object.
+
+Args:
+  file: The file like object to write to. Defaults to sys.stdout.
+  binary: Whether to write bytes (True) or str (False). Defaults to False.
+  large_elements_limit: Whether to elide elements attributes above this
+    number of elements. Defaults to None (no limit).
+  enable_debug_info: Whether to print debug/location information. Defaults
+    to False.
+  pretty_debug_info: Whether to format debug information for easier reading
+    by a human (warning: the result is unparseable).
+  print_generic_op_form: Whether to print the generic assembly forms of all
+    ops. Defaults to False.
+  use_local_Scope: Whether to print in a way that is more optimized for
+    multi-threaded access but may not be consistent with how the overall
+    module prints.
+)";
+
+static const char kOperationGetAsmDocstring[] =
+    R"(Gets the assembly form of the operation with all options available.
+
+Args:
+  binary: Whether to return a bytes (True) or str (False) object. Defaults to
+    False.
+  ... others ...: See the print() method for common keyword arguments for
+    configuring the printout.
+Returns:
+  Either a bytes or str object, depending on the setting of the 'binary'
+  argument.
+)";
+
 static const char kOperationStrDunderDocstring[] =
-    R"(Prints the assembly form of the operation with default options.
+    R"(Gets the assembly form of the operation with default options.
 
 If more advanced control over the assembly formatting or I/O options is needed,
-use the dedicated print method, which supports keyword arguments to customize
-behavior.
+use the dedicated print or get_asm method, which supports keyword arguments to
+customize behavior.
 )";
 
 static const char kDumpDocstring[] =
@@ -116,6 +148,35 @@ struct PyPrintAccumulator {
     py::str delim("", 0);
     return delim.attr("join")(parts);
   }
+};
+
+/// Accumulates int a python file-like object, either writing text (default)
+/// or binary.
+class PyFileAccumulator {
+public:
+  PyFileAccumulator(py::object fileObject, bool binary)
+      : pyWriteFunction(fileObject.attr("write")), binary(binary) {}
+
+  void *getUserData() { return this; }
+
+  MlirStringCallback getCallback() {
+    return [](const char *part, intptr_t size, void *userData) {
+      py::gil_scoped_acquire();
+      PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
+      if (accum->binary) {
+        // Note: Still has to copy and not avoidable with this API.
+        py::bytes pyBytes(part, size);
+        accum->pyWriteFunction(pyBytes);
+      } else {
+        py::str pyStr(part, size); // Decodes as UTF-8 by default.
+        accum->pyWriteFunction(pyStr);
+      }
+    };
+  }
+
+private:
+  py::object pyWriteFunction;
+  bool binary;
 };
 
 /// Accumulates into a python string from a method that is expected to make
@@ -712,6 +773,48 @@ void PyOperation::checkValid() {
   }
 }
 
+void PyOperation::print(py::object fileObject, bool binary,
+                        llvm::Optional<int64_t> largeElementsLimit,
+                        bool enableDebugInfo, bool prettyDebugInfo,
+                        bool printGenericOpForm, bool useLocalScope) {
+  checkValid();
+  if (fileObject.is_none())
+    fileObject = py::module::import("sys").attr("stdout");
+  MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
+  if (largeElementsLimit)
+    mlirOpPrintingFlagsElideLargeElementsAttrs(flags, *largeElementsLimit);
+  if (enableDebugInfo)
+    mlirOpPrintingFlagsEnableDebugInfo(flags, /*prettyForm=*/prettyDebugInfo);
+  if (printGenericOpForm)
+    mlirOpPrintingFlagsPrintGenericOpForm(flags);
+
+  PyFileAccumulator accum(fileObject, binary);
+  py::gil_scoped_release();
+  mlirOperationPrintWithFlags(get(), flags, accum.getCallback(),
+                              accum.getUserData());
+  mlirOpPrintingFlagsDestroy(flags);
+}
+
+py::object PyOperation::getAsm(bool binary,
+                               llvm::Optional<int64_t> largeElementsLimit,
+                               bool enableDebugInfo, bool prettyDebugInfo,
+                               bool printGenericOpForm, bool useLocalScope) {
+  py::object fileObject;
+  if (binary) {
+    fileObject = py::module::import("io").attr("BytesIO")();
+  } else {
+    fileObject = py::module::import("io").attr("StringIO")();
+  }
+  print(fileObject, /*binary=*/binary,
+        /*largeElementsLimit=*/largeElementsLimit,
+        /*enableDebugInfo=*/enableDebugInfo,
+        /*prettyDebugInfo=*/prettyDebugInfo,
+        /*printGenericOpForm=*/printGenericOpForm,
+        /*useLocalScope=*/useLocalScope);
+
+  return fileObject.attr("getvalue")();
+}
+
 //------------------------------------------------------------------------------
 // PyAttribute.
 //------------------------------------------------------------------------------
@@ -745,7 +848,8 @@ namespace {
 /// CRTP base class for Python MLIR values that subclass Value and should be
 /// castable from it. The value hierarchy is one level deep and is not supposed
 /// to accommodate other levels unless core MLIR changes.
-template <typename DerivedTy> class PyConcreteValue : public PyValue {
+template <typename DerivedTy>
+class PyConcreteValue : public PyValue {
 public:
   // Derived classes must define statics for:
   //   IsAFunctionTy isaFunction
@@ -1969,13 +2073,30 @@ void mlir::python::populateIRSubmodule(py::module &m) {
       .def(
           "__str__",
           [](PyOperation &self) {
-            self.checkValid();
-            PyPrintAccumulator printAccum;
-            mlirOperationPrint(self.get(), printAccum.getCallback(),
-                               printAccum.getUserData());
-            return printAccum.join();
+            return self.getAsm(/*binary=*/false,
+                               /*largeElementsLimit=*/llvm::None,
+                               /*enableDebugInfo=*/false,
+                               /*prettyDebugInfo=*/false,
+                               /*printGenericOpForm=*/false,
+                               /*useLocalScope=*/false);
           },
-          "Returns the assembly form of the operation.");
+          "Returns the assembly form of the operation.")
+      .def("print", &PyOperation::print,
+           // Careful: Lots of arguments must match up with print method.
+           py::arg("file") = py::none(), py::arg("binary") = false,
+           py::arg("large_elements_limit") = py::none(),
+           py::arg("enable_debug_info") = false,
+           py::arg("pretty_debug_info") = false,
+           py::arg("print_generic_op_form") = false,
+           py::arg("use_local_scope") = false, kOperationPrintDocstring)
+      .def("get_asm", &PyOperation::getAsm,
+           // Careful: Lots of arguments must match up with get_asm method.
+           py::arg("binary") = false,
+           py::arg("large_elements_limit") = py::none(),
+           py::arg("enable_debug_info") = false,
+           py::arg("pretty_debug_info") = false,
+           py::arg("print_generic_op_form") = false,
+           py::arg("use_local_scope") = false, kOperationGetAsmDocstring);
 
   // Mapping of PyRegion.
   py::class_<PyRegion>(m, "Region")
