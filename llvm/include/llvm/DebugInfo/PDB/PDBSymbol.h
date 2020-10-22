@@ -42,7 +42,6 @@ class StringRef;
 class raw_ostream;
 
 namespace pdb {
-class IPDBRawSymbol;
 class IPDBSession;
 
 #define DECLARE_PDB_SYMBOL_CONCRETE_TYPE(TagValue)                             \

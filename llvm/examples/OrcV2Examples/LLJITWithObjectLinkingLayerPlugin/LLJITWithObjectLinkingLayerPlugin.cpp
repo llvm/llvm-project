@@ -72,6 +72,17 @@ public:
     return Error::success();
   }
 
+  Error notifyFailed(MaterializationResponsibility &MR) override {
+    return Error::success();
+  }
+
+  Error notifyRemovingResources(ResourceKey K) override {
+    return Error::success();
+  }
+
+  void notifyTransferringResources(ResourceKey DstKey,
+                                   ResourceKey SrcKey) override {}
+
 private:
   void printLinkGraph(jitlink::LinkGraph &G, StringRef Title) {
     constexpr JITTargetAddress LineWidth = 16;

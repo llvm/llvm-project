@@ -55,7 +55,7 @@ Error Speculator::addSpeculationRuntime(JITDylib &JD,
 // If two modules, share the same LLVMContext, different threads must
 // not access them concurrently without locking the associated LLVMContext
 // this implementation follows this contract.
-void IRSpeculationLayer::emit(MaterializationResponsibility R,
+void IRSpeculationLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
                               ThreadSafeModule TSM) {
 
   assert(TSM && "Speculation Layer received Null Module ?");
@@ -127,7 +127,7 @@ void IRSpeculationLayer::emit(MaterializationResponsibility R,
           assert(Mutator.GetInsertBlock()->getParent() == &Fn &&
                  "IR builder association mismatch?");
           S.registerSymbols(internToJITSymbols(IRNames.getValue()),
-                            &R.getTargetJITDylib());
+                            &R->getTargetJITDylib());
         }
       }
     }

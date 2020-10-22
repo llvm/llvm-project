@@ -24,7 +24,6 @@
 namespace llvm {
 
 class MCInst;
-class MCParsedAsmOperand;
 class MCStreamer;
 class MCSubtargetInfo;
 template <typename T> class SmallVectorImpl;

@@ -39,15 +39,125 @@ LLVM_C_EXTERN_C_BEGIN
 typedef uint64_t LLVMOrcJITTargetAddress;
 
 /**
+ * Represents generic linkage flags for a symbol definition.
+ */
+typedef enum {
+  LLVMJITSymbolGenericFlagsExported = 1U << 0,
+  LLVMJITSymbolGenericFlagsWeak = 1U << 1
+} LLVMJITSymbolGenericFlags;
+
+/**
+ * Represents target specific flags for a symbol definition.
+ */
+typedef uint8_t LLVMJITTargetSymbolFlags;
+
+/**
+ * Represents the linkage flags for a symbol definition.
+ */
+typedef struct {
+  uint8_t GenericFlags;
+  uint8_t TargetFlags;
+} LLVMJITSymbolFlags;
+
+/**
+ * Represents an evaluated symbol address and flags.
+ */
+typedef struct {
+  LLVMOrcJITTargetAddress Address;
+  LLVMJITSymbolFlags Flags;
+} LLVMJITEvaluatedSymbol;
+
+/**
  * A reference to an orc::ExecutionSession instance.
  */
 typedef struct LLVMOrcOpaqueExecutionSession *LLVMOrcExecutionSessionRef;
 
 /**
+ * Error reporter function.
+ */
+typedef void (*LLVMOrcErrorReporterFunction)(void *Ctx, LLVMErrorRef Err);
+
+/**
+ * A reference to an orc::SymbolStringPool.
+ */
+typedef struct LLVMOrcOpaqueSymbolStringPool *LLVMOrcSymbolStringPoolRef;
+
+/**
  * A reference to an orc::SymbolStringPool table entry.
  */
-typedef struct LLVMOrcQuaqueSymbolStringPoolEntryPtr
+typedef struct LLVMOrcOpaqueSymbolStringPoolEntry
     *LLVMOrcSymbolStringPoolEntryRef;
+
+/**
+ * Represents a pair of a symbol name and an evaluated symbol.
+ */
+typedef struct {
+  LLVMOrcSymbolStringPoolEntryRef Name;
+  LLVMJITEvaluatedSymbol Sym;
+} LLVMJITCSymbolMapPair;
+
+/**
+ * Represents a list of (SymbolStringPtr, JITEvaluatedSymbol) pairs that can be
+ * used to construct a SymbolMap.
+ */
+typedef LLVMJITCSymbolMapPair *LLVMOrcCSymbolMapPairs;
+
+/**
+ * Lookup kind. This can be used by definition generators when deciding whether
+ * to produce a definition for a requested symbol.
+ *
+ * This enum should be kept in sync with llvm::orc::LookupKind.
+ */
+typedef enum {
+  LLVMOrcLookupKindStatic,
+  LLVMOrcLookupKindDLSym
+} LLVMOrcLookupKind;
+
+/**
+ * JITDylib lookup flags. This can be used by definition generators when
+ * deciding whether to produce a definition for a requested symbol.
+ *
+ * This enum should be kept in sync with llvm::orc::JITDylibLookupFlags.
+ */
+typedef enum {
+  LLVMOrcJITDylibLookupFlagsMatchExportedSymbolsOnly,
+  LLVMOrcJITDylibLookupFlagsMatchAllSymbols
+} LLVMOrcJITDylibLookupFlags;
+
+/**
+ * Symbol lookup flags for lookup sets. This should be kept in sync with
+ * llvm::orc::SymbolLookupFlags.
+ */
+typedef enum {
+  LLVMOrcSymbolLookupFlagsRequiredSymbol,
+  LLVMOrcSymbolLookupFlagsWeaklyReferencedSymbol
+} LLVMOrcSymbolLookupFlags;
+
+/**
+ * An element type for a symbol lookup set.
+ */
+typedef struct {
+  LLVMOrcSymbolStringPoolEntryRef Name;
+  LLVMOrcSymbolLookupFlags LookupFlags;
+} LLVMOrcCLookupSetElement;
+
+/**
+ * A set of symbols to look up / generate.
+ *
+ * The list is terminated with an element containing a null pointer for the
+ * Name field.
+ *
+ * If a client creates an instance of this type then they are responsible for
+ * freeing it, and for ensuring that all strings have been retained over the
+ * course of its life. Clients receiving a copy from a callback are not
+ * responsible for managing lifetime or retain counts.
+ */
+typedef LLVMOrcCLookupSetElement *LLVMOrcCLookupSet;
+
+/**
+ * A reference to an orc::MaterializationUnit.
+ */
+typedef struct LLVMOrcOpaqueMaterializationUnit *LLVMOrcMaterializationUnitRef;
 
 /**
  * A reference to an orc::JITDylib instance.
@@ -55,16 +165,74 @@ typedef struct LLVMOrcQuaqueSymbolStringPoolEntryPtr
 typedef struct LLVMOrcOpaqueJITDylib *LLVMOrcJITDylibRef;
 
 /**
- * A reference to an orc::JITDylib::DefinitionGenerator.
+ * A reference to an orc::ResourceTracker instance.
  */
-typedef struct LLVMOrcOpaqueJITDylibDefinitionGenerator
-    *LLVMOrcJITDylibDefinitionGeneratorRef;
+typedef struct LLVMOrcOpaqueResourceTracker *LLVMOrcResourceTrackerRef;
+
+/**
+ * A reference to an orc::DefinitionGenerator.
+ */
+typedef struct LLVMOrcOpaqueDefinitionGenerator
+    *LLVMOrcDefinitionGeneratorRef;
+
+/**
+ * An opaque lookup state object. Instances of this type can be captured to
+ * suspend a lookup while a custom generator function attempts to produce a
+ * definition.
+ *
+ * If a client captures a lookup state object then they must eventually call
+ * LLVMOrcLookupStateContinueLookup to restart the lookup. This is required
+ * in order to release memory allocated for the lookup state, even if errors
+ * have occurred while the lookup was suspended (if these errors have made the
+ * lookup impossible to complete then it will issue its own error before
+ * destruction).
+ */
+typedef struct LLVMOrcOpaqueLookupState *LLVMOrcLookupStateRef;
+
+/**
+ * A custom generator function. This can be used to create a custom generator
+ * object using LLVMOrcCreateCustomCAPIDefinitionGenerator. The resulting
+ * object can be attached to a JITDylib, via LLVMOrcJITDylibAddGenerator, to
+ * receive callbacks when lookups fail to match existing definitions.
+ *
+ * GeneratorObj will contain the address of the custom generator object.
+ *
+ * Ctx will contain the context object passed to
+ * LLVMOrcCreateCustomCAPIDefinitionGenerator.
+ *
+ * LookupState will contain a pointer to an LLVMOrcLookupStateRef object. This
+ * can optionally be modified to make the definition generation process
+ * asynchronous: If the LookupStateRef value is copied, and the original
+ * LLVMOrcLookupStateRef set to null, the lookup will be suspended. Once the
+ * asynchronous definition process has been completed clients must call
+ * LLVMOrcLookupStateContinueLookup to continue the lookup (this should be
+ * done unconditionally, even if errors have occurred in the mean time, to
+ * free the lookup state memory and notify the query object of the failures. If
+ * LookupState is captured this function must return LLVMErrorSuccess.
+ *
+ * The Kind argument can be inspected to determine the lookup kind (e.g.
+ * as-if-during-static-link, or as-if-during-dlsym).
+ *
+ * The JD argument specifies which JITDylib the definitions should be generated
+ * into.
+ *
+ * The JDLookupFlags argument can be inspected to determine whether the original
+ * lookup included non-exported symobls.
+ *
+ * Finally, the LookupSet argument contains the set of symbols that could not
+ * be found in JD already (the set of generation candidates).
+ */
+typedef LLVMErrorRef (*LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction)(
+    LLVMOrcDefinitionGeneratorRef GeneratorObj, void *Ctx,
+    LLVMOrcLookupStateRef *LookupState, LLVMOrcLookupKind Kind,
+    LLVMOrcJITDylibRef JD, LLVMOrcJITDylibLookupFlags JDLookupFlags,
+    LLVMOrcCLookupSet LookupSet, size_t LookupSetSize);
 
 /**
  * Predicate function for SymbolStringPoolEntries.
  */
-typedef int (*LLVMOrcSymbolPredicate)(LLVMOrcSymbolStringPoolEntryRef Sym,
-                                      void *Ctx);
+typedef int (*LLVMOrcSymbolPredicate)(void *Ctx,
+                                      LLVMOrcSymbolStringPoolEntryRef Sym);
 
 /**
  * A reference to an orc::ThreadSafeContext instance.
@@ -83,14 +251,43 @@ typedef struct LLVMOrcOpaqueJITTargetMachineBuilder
     *LLVMOrcJITTargetMachineBuilderRef;
 
 /**
- * A reference to an orc::LLJITBuilder instance.
+ * A reference to an orc::ObjectLayer instance.
  */
-typedef struct LLVMOrcOpaqueLLJITBuilder *LLVMOrcLLJITBuilderRef;
+typedef struct LLVMOrcOpaqueObjectLayer *LLVMOrcObjectLayerRef;
 
 /**
- * A reference to an orc::LLJIT instance.
+ * Attach a custom error reporter function to the ExecutionSession.
+ *
+ * The error reporter will be called to deliver failure notices that can not be
+ * directly reported to a caller. For example, failure to resolve symbols in
+ * the JIT linker is typically reported via the error reporter (callers
+ * requesting definitions from the JIT will typically be delivered a
+ * FailureToMaterialize error instead).
  */
-typedef struct LLVMOrcOpaqueLLJIT *LLVMOrcLLJITRef;
+void LLVMOrcExecutionSessionSetErrorReporter(
+    LLVMOrcExecutionSessionRef ES, LLVMOrcErrorReporterFunction ReportError,
+    void *Ctx);
+
+/**
+ * Return a reference to the SymbolStringPool for an ExecutionSession.
+ *
+ * Ownership of the pool remains with the ExecutionSession: The caller is
+ * not required to free the pool.
+ */
+LLVMOrcSymbolStringPoolRef
+LLVMOrcExecutionSessionGetSymbolStringPool(LLVMOrcExecutionSessionRef ES);
+
+/**
+ * Clear all unreferenced symbol string pool entries.
+ *
+ * This can be called at any time to release unused entries in the
+ * ExecutionSession's string pool. Since it locks the pool (preventing
+ * interning of any new strings) it is recommended that it only be called
+ * infrequently, ideally when the caller has reason to believe that some
+ * entries will have become unreferenced, e.g. after removing a module or
+ * closing a JITDylib.
+ */
+void LLVMOrcSymbolStringPoolClearDeadEntries(LLVMOrcSymbolStringPoolRef SSP);
 
 /**
  * Intern a string in the ExecutionSession's SymbolStringPool and return a
@@ -108,26 +305,137 @@ LLVMOrcSymbolStringPoolEntryRef
 LLVMOrcExecutionSessionIntern(LLVMOrcExecutionSessionRef ES, const char *Name);
 
 /**
+ * Increments the ref-count for a SymbolStringPool entry.
+ */
+void LLVMOrcRetainSymbolStringPoolEntry(LLVMOrcSymbolStringPoolEntryRef S);
+
+/**
  * Reduces the ref-count for of a SymbolStringPool entry.
  */
 void LLVMOrcReleaseSymbolStringPoolEntry(LLVMOrcSymbolStringPoolEntryRef S);
+
+const char *LLVMOrcSymbolStringPoolEntryStr(LLVMOrcSymbolStringPoolEntryRef S);
+
+/**
+ * Reduces the ref-count of a ResourceTracker.
+ */
+void LLVMOrcReleaseResourceTracker(LLVMOrcResourceTrackerRef RT);
+
+/**
+ * Transfers tracking of all resources associated with resource tracker SrcRT
+ * to resource tracker DstRT.
+ */
+void LLVMOrcResourceTrackerTransferTo(LLVMOrcResourceTrackerRef SrcRT,
+                                      LLVMOrcResourceTrackerRef DstRT);
+
+/**
+ * Remove all resources associated with the given tracker. See
+ * ResourceTracker::remove().
+ */
+LLVMErrorRef LLVMOrcResourceTrackerRemove(LLVMOrcResourceTrackerRef RT);
 
 /**
  * Dispose of a JITDylib::DefinitionGenerator. This should only be called if
  * ownership has not been passed to a JITDylib (e.g. because some error
  * prevented the client from calling LLVMOrcJITDylibAddGenerator).
  */
-void LLVMOrcDisposeJITDylibDefinitionGenerator(
-    LLVMOrcJITDylibDefinitionGeneratorRef DG);
+void LLVMOrcDisposeDefinitionGenerator(
+    LLVMOrcDefinitionGeneratorRef DG);
 
 /**
- * Add a JITDylib::DefinitionGenerator to the given JITDylib.
+ * Dispose of a MaterializationUnit.
+ */
+void LLVMOrcDisposeMaterializationUnit(LLVMOrcMaterializationUnitRef MU);
+
+/**
+ * Create a MaterializationUnit to define the given symbols as pointing to
+ * the corresponding raw addresses.
+ */
+LLVMOrcMaterializationUnitRef
+LLVMOrcAbsoluteSymbols(LLVMOrcCSymbolMapPairs Syms, size_t NumPairs);
+
+/**
+ * Create a "bare" JITDylib.
+ *
+ * The client is responsible for ensuring that the JITDylib's name is unique,
+ * e.g. by calling LLVMOrcExecutionSessionGetJTIDylibByName first.
+ *
+ * This call does not install any library code or symbols into the newly
+ * created JITDylib. The client is responsible for all configuration.
+ */
+LLVMOrcJITDylibRef
+LLVMOrcExecutionSessionCreateBareJITDylib(LLVMOrcExecutionSessionRef ES,
+                                          const char *Name);
+
+/**
+ * Create a JITDylib.
+ *
+ * The client is responsible for ensuring that the JITDylib's name is unique,
+ * e.g. by calling LLVMOrcExecutionSessionGetJTIDylibByName first.
+ *
+ * If a Platform is attached to the ExecutionSession then
+ * Platform::setupJITDylib will be called to install standard platform symbols
+ * (e.g. standard library interposes). If no Platform is installed then this
+ * call is equivalent to LLVMExecutionSessionRefCreateBareJITDylib and will
+ * always return success.
+ */
+LLVMErrorRef
+LLVMOrcExecutionSessionCreateJITDylib(LLVMOrcExecutionSessionRef ES,
+                                      LLVMOrcJITDylibRef *Result,
+                                      const char *Name);
+
+/**
+ * Returns the JITDylib with the given name, or NULL if no such JITDylib
+ * exists.
+ */
+LLVMOrcJITDylibRef LLVMOrcExecutionSessionGetJITDylibByName(const char *Name);
+
+/**
+ * Return a reference to a newly created resource tracker associated with JD.
+ * The tracker is returned with an initial ref-count of 1, and must be released
+ * with LLVMOrcReleaseResourceTracker when no longer needed.
+ */
+LLVMOrcResourceTrackerRef
+LLVMOrcJITDylibCreateResourceTracker(LLVMOrcJITDylibRef JD);
+
+/**
+ * Return a reference to the default resource tracker for the given JITDylib.
+ * This operation will increase the retain count of the tracker: Clients should
+ * call LLVMOrcReleaseResourceTracker when the result is no longer needed.
+ */
+LLVMOrcResourceTrackerRef
+LLVMOrcJITDylibGetDefaultResourceTracker(LLVMOrcJITDylibRef JD);
+
+/**
+ * Add the given MaterializationUnit to the given JITDylib.
+ *
+ * If this operation succeeds then JITDylib JD will take ownership of MU.
+ * If the operation fails then ownership remains with the caller who should
+ * call LLVMOrcDisposeMaterializationUnit to destroy it.
+ */
+LLVMErrorRef LLVMOrcJITDylibDefine(LLVMOrcJITDylibRef JD,
+                                   LLVMOrcMaterializationUnitRef MU);
+
+/**
+ * Calls remove on all trackers associated with this JITDylib, see
+ * JITDylib::clear().
+ */
+LLVMErrorRef LLVMOrcJITDylibClear(LLVMOrcJITDylibRef JD);
+
+/**
+ * Add a DefinitionGenerator to the given JITDylib.
  *
  * The JITDylib will take ownership of the given generator: The client is no
  * longer responsible for managing its memory.
  */
 void LLVMOrcJITDylibAddGenerator(LLVMOrcJITDylibRef JD,
-                                 LLVMOrcJITDylibDefinitionGeneratorRef DG);
+                                 LLVMOrcDefinitionGeneratorRef DG);
+
+/**
+ * Create a custom generator.
+ */
+LLVMOrcDefinitionGeneratorRef LLVMOrcCreateCustomCAPIDefinitionGenerator(
+    LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction F, void *Ctx);
 
 /**
  * Get a DynamicLibrarySearchGenerator that will reflect process symbols into
@@ -148,7 +456,7 @@ void LLVMOrcJITDylibAddGenerator(LLVMOrcJITDylibRef JD,
  * the global prefix if present.
  */
 LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
-    LLVMOrcJITDylibDefinitionGeneratorRef *Result, char GlobalPrefx,
+    LLVMOrcDefinitionGeneratorRef *Result, char GlobalPrefx,
     LLVMOrcSymbolPredicate Filter, void *FilterCtx);
 
 /**
@@ -156,7 +464,7 @@ LLVMErrorRef LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
  *
  * Ownership of the underlying ThreadSafeContext data is shared: Clients
  * can and should dispose of their ThreadSafeContext as soon as they no longer
- * need to refer to it directly. Other references (e.g. from ThreadSafeModules
+ * need to refer to it directly. Other references (e.g. from ThreadSafeModules)
  * will keep the data alive as long as it is needed.
  */
 LLVMOrcThreadSafeContextRef LLVMOrcCreateNewThreadSafeContext(void);
@@ -178,7 +486,7 @@ void LLVMOrcDisposeThreadSafeContext(LLVMOrcThreadSafeContextRef TSCtx);
  * after this function returns.
  *
  * Ownership of the ThreadSafeModule is unique: If it is transferred to the JIT
- * (e.g. by LLVMOrcLLJITAddLLVMIRModule), in which case the client is no longer
+ * (e.g. by LLVMOrcLLJITAddLLVMIRModule) then the client is no longer
  * responsible for it. If it is not transferred to the JIT then the client
  * should call LLVMOrcDisposeThreadSafeModule to dispose of it.
  */
@@ -221,114 +529,9 @@ void LLVMOrcDisposeJITTargetMachineBuilder(
     LLVMOrcJITTargetMachineBuilderRef JTMB);
 
 /**
- * Create an LLJITTargetMachineBuilder.
- *
- * The client owns the resulting LLJITBuilder and should dispose of it using
- * LLVMOrcDisposeLLJITBuilder once they are done with it.
+ * Dispose of an ObjectLayer.
  */
-LLVMOrcLLJITBuilderRef LLVMOrcCreateLLJITBuilder(void);
-
-/**
- * Dispose of an LLVMOrcLLJITBuilderRef. This should only be called if ownership
- * has not been passed to LLVMOrcCreateLLJIT (e.g. because some error prevented
- * that function from being called).
- */
-void LLVMOrcDisposeLLJITBuilder(LLVMOrcLLJITBuilderRef Builder);
-
-/**
- * Set the JITTargetMachineBuilder to be used when constructing the LLJIT
- * instance. Calling this function is optional: if it is not called then the
- * LLJITBuilder will use JITTargeTMachineBuilder::detectHost to construct a
- * JITTargetMachineBuilder.
- */
-void LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(
-    LLVMOrcLLJITBuilderRef Builder, LLVMOrcJITTargetMachineBuilderRef JTMB);
-
-/**
- * Create an LLJIT instance from an LLJITBuilder.
- *
- * This operation takes ownership of the Builder argument: clients should not
- * dispose of the builder after calling this function (even if the function
- * returns an error). If a null Builder argument is provided then a
- * default-constructed LLJITBuilder will be used.
- *
- * On success the resulting LLJIT instance is uniquely owned by the client and
- * automatically manages the memory of all JIT'd code and all modules that are
- * transferred to it (e.g. via LLVMOrcLLJITAddLLVMIRModule). Disposing of the
- * LLJIT instance will free all memory managed by the JIT, including JIT'd code
- * and not-yet compiled modules.
- */
-LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,
-                                LLVMOrcLLJITBuilderRef Builder);
-
-/**
- * Dispose of an LLJIT instance.
- */
-LLVMErrorRef LLVMOrcDisposeLLJIT(LLVMOrcLLJITRef J);
-
-/**
- * Get a reference to the ExecutionSession for this LLJIT instance.
- *
- * The ExecutionSession is owned by the LLJIT instance. The client is not
- * responsible for managing its memory.
- */
-LLVMOrcExecutionSessionRef LLVMOrcLLJITGetExecutionSession(LLVMOrcLLJITRef J);
-
-/**
- * Return a reference to the Main JITDylib.
- *
- * The JITDylib is owned by the LLJIT instance. The client is not responsible
- * for managing its memory.
- */
-LLVMOrcJITDylibRef LLVMOrcLLJITGetMainJITDylib(LLVMOrcLLJITRef J);
-
-/**
- * Return the target triple for this LLJIT instance. This string is owned by
- * the LLJIT instance and should not be freed by the client.
- */
-const char *LLVMOrcLLJITGetTripleString(LLVMOrcLLJITRef J);
-
-/**
- * Returns the global prefix character according to the LLJIT's DataLayout.
- */
-char LLVMOrcLLJITGetGlobalPrefix(LLVMOrcLLJITRef J);
-
-/**
- * Mangles the given string according to the LLJIT instance's DataLayout, then
- * interns the result in the SymbolStringPool and returns a reference to the
- * pool entry. Clients should call LLVMOrcReleaseSymbolStringPoolEntry to
- * decrement the ref-count on the pool entry once they are finished with this
- * value.
- */
-LLVMOrcSymbolStringPoolEntryRef
-LLVMOrcLLJITMangleAndIntern(LLVMOrcLLJITRef J, const char *UnmangledName);
-
-/**
- * Add a buffer representing an object file to the given JITDylib in the given
- * LLJIT instance. This operation transfers ownership of the buffer to the
- * LLJIT instance. The buffer should not be disposed of or referenced once this
- * function returns.
- */
-LLVMErrorRef LLVMOrcLLJITAddObjectFile(LLVMOrcLLJITRef J, LLVMOrcJITDylibRef JD,
-                                       LLVMMemoryBufferRef ObjBuffer);
-
-/**
- * Add an IR module to the given JITDylib of the given LLJIT instance. This
- * operation transfers ownership of the TSM argument to the LLJIT instance.
- * The TSM argument should not be 3disposed of or referenced once this
- * function returns.
- */
-LLVMErrorRef LLVMOrcLLJITAddLLVMIRModule(LLVMOrcLLJITRef J,
-                                         LLVMOrcJITDylibRef JD,
-                                         LLVMOrcThreadSafeModuleRef TSM);
-/**
- * Look up the given symbol in the main JITDylib of the given LLJIT instance.
- *
- * This operation does not take ownership of the Name argument.
- */
-LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,
-                                LLVMOrcJITTargetAddress *Result,
-                                const char *Name);
+void LLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer);
 
 LLVM_C_EXTERN_C_END
 
