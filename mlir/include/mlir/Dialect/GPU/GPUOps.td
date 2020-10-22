@@ -18,10 +18,6 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-// Type constraint accepting standard integers, indices.
-def IntOrIndex : TypeConstraint<
-  Or<[AnySignlessInteger.predicate, Index.predicate]>, "integer or index">;
-
 //===----------------------------------------------------------------------===//
 // GPU Dialect operations.
 //===----------------------------------------------------------------------===//
@@ -296,9 +292,9 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
 }
 
 def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
-    Arguments<(ins IntOrIndex:$gridSizeX, IntOrIndex:$gridSizeY,
-               IntOrIndex:$gridSizeZ, IntOrIndex:$blockSizeX,
-               IntOrIndex:$blockSizeY, IntOrIndex:$blockSizeZ,
+    Arguments<(ins SymbolRefAttr:$kernel,
+               Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
+               Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
                Variadic<AnyType>:$operands)>,
     Results<(outs)> {
   let summary = "Launches a function as a GPU kernel";
@@ -312,16 +308,14 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
     function is required to be a gpu.module. And finally, the module containing
     the kernel module (which thus cannot be the top-level module) is required
     to have the `gpu.container_module` attribute. The `gpu.launch_func`
-    operation has a symbol attribute named `kernel` to identify the fully specified
-    kernel function to launch (both the gpu.module and func).
+    operation has a symbol attribute named `kernel` to identify the fully 
+    specified kernel function to launch (both the gpu.module and func).
 
     The operation takes at least six operands, with the first three operands
     being grid sizes along x,y,z dimensions and the following three being block
     sizes along x,y,z dimensions. When a lower-dimensional kernel is required,
     unused sizes must be explicitly set to `1`. The remaining operands are
     passed as arguments to the kernel function.
-
-    A custom syntax for this operation is currently not available.
 
     Example:
 
@@ -357,13 +351,11 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
         }
       }
 
-      "gpu.launch_func"(%cst, %cst, %cst,  // Grid sizes.
-                        %cst, %cst, %cst,  // Block sizes.
-                        %arg0, %arg1)      // Arguments passed to the kernel.
-            { kernel_module = @kernels,    // Module containing the kernel.
-              kernel = "kernel_1" }        // Kernel function.
-            : (index, index, index, index, index, index, f32, memref<?xf32, 1>)
-              -> ()
+      gpu.launch_func
+          @kernels::@kernel_1                          // Kernel function.
+          blocks in (%cst, %cst, %cst)                 // Grid size.
+          threads in (%cst, %cst, %cst)                // Block size.
+          args(%arg0 : f32, %arg1 : memref<?xf32, 1>)  // Kernel arguments.
     }
     ```
   }];
@@ -372,18 +364,11 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
 
   let builders = [
     OpBuilder<"GPUFuncOp kernelFunc, "
-              "Value gridSizeX, Value gridSizeY, Value gridSizeZ, "
-              "Value blockSizeX, Value blockSizeY, Value blockSizeZ, "
-              "ValueRange kernelOperands">,
-    OpBuilder<"GPUFuncOp kernelFunc, "
               "KernelDim3 gridSize, KernelDim3 blockSize, "
               "ValueRange kernelOperands">
   ];
 
   let extraClassDeclaration = [{
-    /// The kernel function specified by the operation's `kernel` attribute.
-    SymbolRefAttr kernel();
-
     /// The number of operands passed to the kernel function.
     unsigned getNumKernelOperands();
 
@@ -416,6 +401,13 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func">,
   }];
 
   let verifier = [{ return ::verify(*this); }];
+  let assemblyFormat = [{
+      $kernel
+      `blocks` `in` ` ` `(`$gridSizeX`,` $gridSizeY`,` $gridSizeZ`)`
+      `threads` `in` ` ` `(`$blockSizeX`,` $blockSizeY`,` $blockSizeZ`)`
+      custom<LaunchFuncOperands>($operands, type($operands))
+      attr-dict
+  }];
 }
 
 def GPU_LaunchOp : GPU_Op<"launch">,
