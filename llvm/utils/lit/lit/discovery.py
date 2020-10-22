@@ -125,7 +125,8 @@ def getLocalConfig(ts, path_in_suite, litConfig, cache):
 
     return search(path_in_suite)
 
-def getTests(path, litConfig, testSuiteCache, localConfigCache):
+def getTests(path, litConfig, testSuiteCache,
+             localConfigCache, indirectlyRunCheck):
     # Find the test suite for this input and its relative path.
     ts,path_in_suite = getTestSuite(path, litConfig, testSuiteCache)
     if ts is None:
@@ -137,10 +138,10 @@ def getTests(path, litConfig, testSuiteCache, localConfigCache):
                                                         path_in_suite))
 
     return ts, getTestsInSuite(ts, path_in_suite, litConfig,
-                               testSuiteCache, localConfigCache)
+                               testSuiteCache, localConfigCache, indirectlyRunCheck)
 
 def getTestsInSuite(ts, path_in_suite, litConfig,
-                    testSuiteCache, localConfigCache):
+                    testSuiteCache, localConfigCache, indirectlyRunCheck):
     # Check that the source path exists (errors here are reported by the
     # caller).
     source_path = ts.getSourcePath(path_in_suite)
@@ -149,8 +150,30 @@ def getTestsInSuite(ts, path_in_suite, litConfig,
 
     # Check if the user named a test directly.
     if not os.path.isdir(source_path):
-        lc = getLocalConfig(ts, path_in_suite[:-1], litConfig, localConfigCache)
-        yield Test.Test(ts, path_in_suite, lc)
+        test_dir_in_suite = path_in_suite[:-1]
+        lc = getLocalConfig(ts, test_dir_in_suite, litConfig, localConfigCache)
+        test = Test.Test(ts, path_in_suite, lc)
+
+        # Issue a error if the specified test would not be run if
+        # the user had specified the containing directory instead of
+        # of naming the test directly. This helps to avoid writing
+        # tests which are not executed. The check adds some performance
+        # overhead which might be important if a large number of tests
+        # are being run directly.
+        # --no-indirectly-run-check: skips this check.
+        if indirectlyRunCheck and lc.test_format is not None:
+            found = False
+            for res in lc.test_format.getTestsInDirectory(ts, test_dir_in_suite,
+                                                          litConfig, lc):
+                if test.getFullName() == res.getFullName():
+                    found = True
+                    break
+            if not found:
+                litConfig.error(
+                    '%r would not be run indirectly: change name or LIT config'
+                    % test.getFullName())
+
+        yield test
         return
 
     # Otherwise we have a directory to search for tests, start by getting the
@@ -196,10 +219,11 @@ def getTestsInSuite(ts, path_in_suite, litConfig,
         # Otherwise, load from the nested test suite, if present.
         if sub_ts is not None:
             subiter = getTestsInSuite(sub_ts, subpath_in_suite, litConfig,
-                                      testSuiteCache, localConfigCache)
+                                      testSuiteCache, localConfigCache,
+                                      indirectlyRunCheck)
         else:
             subiter = getTestsInSuite(ts, subpath, litConfig, testSuiteCache,
-                                      localConfigCache)
+                                      localConfigCache, indirectlyRunCheck)
 
         N = 0
         for res in subiter:
@@ -208,7 +232,7 @@ def getTestsInSuite(ts, path_in_suite, litConfig,
         if sub_ts and not N:
             litConfig.warning('test suite %r contained no tests' % sub_ts.name)
 
-def find_tests_for_inputs(lit_config, inputs):
+def find_tests_for_inputs(lit_config, inputs, indirectlyRunCheck):
     """
     find_tests_for_inputs(lit_config, inputs) -> [Test]
 
@@ -237,8 +261,8 @@ def find_tests_for_inputs(lit_config, inputs):
     local_config_cache = {}
     for input in actual_inputs:
         prev = len(tests)
-        tests.extend(getTests(input, lit_config,
-                              test_suite_cache, local_config_cache)[1])
+        tests.extend(getTests(input, lit_config, test_suite_cache,
+                              local_config_cache, indirectlyRunCheck)[1])
         if prev == len(tests):
             lit_config.warning('input %r contained no tests' % input)
 
