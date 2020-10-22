@@ -145,6 +145,7 @@ using TypeLocMatcher = internal::Matcher<TypeLoc>;
 using NestedNameSpecifierMatcher = internal::Matcher<NestedNameSpecifier>;
 using NestedNameSpecifierLocMatcher = internal::Matcher<NestedNameSpecifierLoc>;
 using CXXCtorInitializerMatcher = internal::Matcher<CXXCtorInitializer>;
+using TemplateArgumentMatcher = internal::Matcher<TemplateArgument>;
 using TemplateArgumentLocMatcher = internal::Matcher<TemplateArgumentLoc>;
 /// @}
 
