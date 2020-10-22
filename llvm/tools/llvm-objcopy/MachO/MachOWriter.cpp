@@ -121,6 +121,12 @@ size_t MachOWriter::totalSize() const {
   // Otherwise, use the last section / reloction.
   for (const LoadCommand &LC : O.LoadCommands)
     for (const std::unique_ptr<Section> &S : LC.Sections) {
+      if (S->isVirtualSection()) {
+        assert((S->Offset == 0) && "Zero-fill section's offset must be zero");
+        continue;
+      }
+      assert((S->Offset != 0) &&
+             "Non-zero-fill section's offset cannot be zero");
       Ends.push_back(S->Offset + S->Size);
       if (S->RelOff)
         Ends.push_back(S->RelOff +
