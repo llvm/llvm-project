@@ -136,8 +136,7 @@ MacroExpander::~MacroExpander() = default;
 void MacroExpander::parseDefinition(const std::string &Macro) {
   Buffers.push_back(
       llvm::MemoryBuffer::getMemBufferCopy(Macro, "<scratch space>"));
-  clang::FileID FID =
-      SourceMgr.createFileID(SourceManager::Unowned, Buffers.back().get());
+  clang::FileID FID = SourceMgr.createFileID(Buffers.back()->getMemBufferRef());
   FormatTokenLexer Lex(SourceMgr, FID, 0, Style, encoding::Encoding_UTF8,
                        Allocator, IdentTable);
   const auto Tokens = Lex.lex();

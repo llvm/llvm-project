@@ -98,3 +98,69 @@ for.end:
         EXPECT_EQ(IndDesc.getUnsafeAlgebraInst(), nullptr);
       });
 }
+
+// Depending on how SCEV deals with ptrtoint cast, the step of a phi could be
+// a pointer, and InductionDescriptor used to fail with an assertion.
+// So just check that it doesn't assert.
+TEST(IVDescriptorsTest, LoopWithPtrToInt) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M = parseIR(Context, R"(
+      target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+      target triple = "thumbv6m-arm-none-eabi"
+
+      declare void @widget()
+      declare void @wobble(i32)
+
+      define void @barney(i8* %arg, i8* %arg18, i32 %arg19) {
+      bb:
+        %tmp = ptrtoint i8* %arg to i32
+        %tmp20 = ptrtoint i8* %arg18 to i32
+        %tmp21 = or i32 %tmp20, %tmp
+        %tmp22 = and i32 %tmp21, 3
+        %tmp23 = icmp eq i32 %tmp22, 0
+        br i1 %tmp23, label %bb24, label %bb25
+
+      bb24:
+        tail call void @widget()
+        br label %bb34
+
+      bb25:
+        %tmp26 = sub i32 %tmp, %tmp20
+        %tmp27 = icmp ult i32 %tmp26, %arg19
+        br i1 %tmp27, label %bb28, label %bb34
+
+      bb28:
+        br label %bb29
+
+      bb29:
+        %tmp30 = phi i32 [ %tmp31, %bb29 ], [ %arg19, %bb28 ]
+        tail call void @wobble(i32 %tmp26)
+        %tmp31 = sub i32 %tmp30, %tmp26
+        %tmp32 = icmp ugt i32 %tmp31, %tmp26
+        br i1 %tmp32, label %bb29, label %bb33
+
+      bb33:
+        br label %bb34
+
+      bb34:
+        ret void
+      })");
+
+  runWithLoopInfoAndSE(
+      *M, "barney", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+        Function::iterator FI = F.begin();
+        // First basic block is entry - skip it.
+        BasicBlock *Header = &*(++(++(++(++FI))));
+        assert(Header->getName() == "bb29");
+        Loop *L = LI.getLoopFor(Header);
+        EXPECT_NE(L, nullptr);
+        PHINode *Inst_i = dyn_cast<PHINode>(&Header->front());
+        assert(Inst_i->getName() == "tmp30");
+        InductionDescriptor IndDesc;
+        bool IsInductionPHI =
+            InductionDescriptor::isInductionPHI(Inst_i, L, &SE, IndDesc);
+        EXPECT_TRUE(IsInductionPHI);
+      });
+}

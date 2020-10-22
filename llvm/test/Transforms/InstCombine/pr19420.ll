@@ -101,11 +101,10 @@ define i32 @lshr_add_and_shl(i32 %x, i32 %y)  {
 
 define <2 x i32> @lshr_add_and_shl_v2i32(<2 x i32> %x, <2 x i32> %y)  {
 ; CHECK-LABEL: @lshr_add_and_shl_v2i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 5, i32 5>
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 127, i32 127>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i32> [[TMP2]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shl <2 x i32> [[TMP3]], <i32 5, i32 5>
-; CHECK-NEXT:    ret <2 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[Y:%.*]], <i32 5, i32 5>
+; CHECK-NEXT:    [[X_MASK:%.*]] = and <2 x i32> [[X:%.*]], <i32 4064, i32 4064>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[X_MASK]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %1 = lshr <2 x i32> %x, <i32 5, i32 5>
   %2 = and <2 x i32> %1, <i32 127, i32 127>
@@ -160,10 +159,9 @@ define i32 @shl_add_and_lshr(i32 %x, i32 %y) {
 
 define <2 x i32> @shl_add_and_lshr_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @shl_add_and_lshr_v2i32(
-; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 4, i32 4>
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> [[A]], <i32 8, i32 8>
-; CHECK-NEXT:    [[C:%.*]] = add <2 x i32> [[B]], [[Y:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = shl <2 x i32> [[C]], <i32 4, i32 4>
+; CHECK-NEXT:    [[C1:%.*]] = shl <2 x i32> [[Y:%.*]], <i32 4, i32 4>
+; CHECK-NEXT:    [[X_MASK:%.*]] = and <2 x i32> [[X:%.*]], <i32 128, i32 128>
+; CHECK-NEXT:    [[D:%.*]] = add <2 x i32> [[X_MASK]], [[C1]]
 ; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %a = lshr <2 x i32> %x, <i32 4, i32 4>

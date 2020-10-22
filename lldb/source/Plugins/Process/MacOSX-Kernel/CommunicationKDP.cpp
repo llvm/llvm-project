@@ -238,6 +238,7 @@ bool CommunicationKDP::CheckForPacket(const uint8_t *src, size_t src_len,
     if (log && log->GetVerbose()) {
       PacketStreamType log_strm;
       DumpHexBytes(&log_strm, src, src_len, UINT32_MAX, LLDB_INVALID_ADDRESS);
+      log_strm.PutChar('\0');
       LLDB_LOGF(log, "CommunicationKDP::%s adding %u bytes: %s", __FUNCTION__,
                 (uint32_t)src_len, log_strm.GetData());
     }

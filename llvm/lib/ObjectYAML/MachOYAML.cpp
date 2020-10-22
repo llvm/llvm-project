@@ -305,12 +305,12 @@ void MappingTraits<MachOYAML::Section>::mapping(IO &IO,
   IO.mapOptional("relocations", Section.relocations);
 }
 
-StringRef
+std::string
 MappingTraits<MachOYAML::Section>::validate(IO &IO,
                                             MachOYAML::Section &Section) {
   if (Section.content && Section.size < Section.content->binary_size())
     return "Section size must be greater than or equal to the content size";
-  return {};
+  return "";
 }
 
 void MappingTraits<MachO::build_tool_version>::mapping(

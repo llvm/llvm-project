@@ -66,4 +66,4 @@ entry:
 }
 
 ; CHECK: declare <9 x double> @llvm.matrix.column.major.load.v9f64(double* nocapture, i64, i1 immarg, i32 immarg, i32 immarg) [[READONLY]]
-; CHECK: attributes [[READONLY]] = { argmemonly nosync nounwind readonly willreturn }
+; CHECK: attributes [[READONLY]] = { argmemonly nofree nosync nounwind readonly willreturn }

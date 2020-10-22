@@ -123,6 +123,11 @@ be reduced to ``N`` via:
 - lld-link:
   ``/opt:lldltojobs=N``
 
+Other possible values for ``N`` are:
+- 0: Use one thread per physical core (default)
+- 1: Use a single thread only (disable multi-threading)
+- all: Use one thread per logical core (uses all hyper-threads)
+
 Incremental
 -----------
 .. _incremental:

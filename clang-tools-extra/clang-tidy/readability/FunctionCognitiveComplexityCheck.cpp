@@ -501,9 +501,9 @@ void FunctionCognitiveComplexityCheck::storeOptions(
 
 void FunctionCognitiveComplexityCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      functionDecl(
-          allOf(isDefinition(), unless(anyOf(isDefaulted(), isDeleted(),
-                                             isImplicit(), isInstantiated()))))
+      functionDecl(isDefinition(),
+                   unless(anyOf(isDefaulted(), isDeleted(), isImplicit(),
+                                isInstantiated(), isWeak())))
           .bind("func"),
       this);
 }

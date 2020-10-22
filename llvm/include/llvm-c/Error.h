@@ -62,6 +62,11 @@ void LLVMDisposeErrorMessage(char *ErrMsg);
  */
 LLVMErrorTypeId LLVMGetStringErrorTypeId(void);
 
+/**
+ * Create a StringError.
+ */
+LLVMErrorRef LLVMCreateStringError(const char *ErrMsg);
+
 LLVM_C_EXTERN_C_END
 
 #endif

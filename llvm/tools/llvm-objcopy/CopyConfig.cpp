@@ -953,6 +953,9 @@ parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
   for (auto *Arg : InputArgs.filtered(INSTALL_NAME_TOOL_change))
     Config.InstallNamesToUpdate.insert({Arg->getValue(0), Arg->getValue(1)});
 
+  Config.RemoveAllRpaths =
+      InputArgs.hasArg(INSTALL_NAME_TOOL_delete_all_rpaths);
+
   SmallVector<StringRef, 2> Positional;
   for (auto Arg : InputArgs.filtered(INSTALL_NAME_TOOL_UNKNOWN))
     return createStringError(errc::invalid_argument, "unknown argument '%s'",

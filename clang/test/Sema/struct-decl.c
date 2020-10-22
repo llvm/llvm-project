@@ -5,8 +5,8 @@ struct bar {
 };
 
 struct foo {
-  char name[(int)&((struct bar *)0)->n];
-  char name2[(int)&((struct bar *)0)->n - 1]; //expected-error{{'name2' declared as an array with a negative size}}
+  char name[(int)&((struct bar *)0)->n]; // expected-warning {{folded to constant}}
+  char name2[(int)&((struct bar *)0)->n - 1]; // expected-error {{array size is negative}}
 };
 
 // PR3430

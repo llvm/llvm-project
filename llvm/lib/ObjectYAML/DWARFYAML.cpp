@@ -304,11 +304,11 @@ void MappingTraits<DWARFYAML::ListEntries<EntryType>>::mapping(
 }
 
 template <typename EntryType>
-StringRef MappingTraits<DWARFYAML::ListEntries<EntryType>>::validate(
+std::string MappingTraits<DWARFYAML::ListEntries<EntryType>>::validate(
     IO &IO, DWARFYAML::ListEntries<EntryType> &ListEntries) {
   if (ListEntries.Entries && ListEntries.Content)
     return "Entries and Content can't be used together";
-  return StringRef();
+  return "";
 }
 
 template <typename EntryType>

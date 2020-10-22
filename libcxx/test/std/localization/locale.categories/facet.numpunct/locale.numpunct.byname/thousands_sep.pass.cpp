@@ -21,7 +21,6 @@
 
 #include <locale>
 #include <cassert>
-#include <iostream> // FIXME: for debugging purposes only
 
 #include "test_macros.h"
 #include "platform_support.h" // locale name macros
@@ -67,11 +66,6 @@ int main(int, char**)
         {
             typedef char C;
             const std::numpunct<C>& np = std::use_facet<std::numpunct<C> >(l);
-            if (np.thousands_sep() != sep) {
-              std::cout << "np.thousands_sep() = '" << np.thousands_sep() << "'\n";
-              std::cout << "sep = '" << sep << "'\n";
-              std::cout << std::endl;
-            }
             assert(np.thousands_sep() == sep);
         }
         {
@@ -81,5 +75,5 @@ int main(int, char**)
         }
     }
 
-  return 0;
+    return 0;
 }

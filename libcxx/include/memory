@@ -3271,13 +3271,7 @@ public:
     long use_count() const _NOEXCEPT {return __shared_count::use_count();}
     __shared_weak_count* lock() _NOEXCEPT;
 
-    // Define the function out only if we build static libc++ without RTTI.
-    // Otherwise we may break clients who need to compile their projects with
-    // -fno-rtti and yet link against a libc++.dylib compiled
-    // without -fno-rtti.
-#if !defined(_LIBCPP_NO_RTTI) || !defined(_LIBCPP_BUILD_STATIC)
     virtual const void* __get_deleter(const type_info&) const _NOEXCEPT;
-#endif
 private:
     virtual void __on_zero_shared_weak() _NOEXCEPT = 0;
 };

@@ -7897,10 +7897,13 @@ struct AANoUndefImpl : AANoUndef {
                        AANoUndef::StateType &State) {
     const Value *UseV = U->get();
     const DominatorTree *DT = nullptr;
-    if (Function *F = getAnchorScope())
-      DT = A.getInfoCache().getAnalysisResultForFunction<DominatorTreeAnalysis>(
-          *F);
-    State.setKnown(isGuaranteedNotToBeUndefOrPoison(UseV, I, DT));
+    AssumptionCache *AC = nullptr;
+    InformationCache &InfoCache = A.getInfoCache();
+    if (Function *F = getAnchorScope()) {
+      DT = InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*F);
+      AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
+    }
+    State.setKnown(isGuaranteedNotToBeUndefOrPoison(UseV, AC, I, DT));
     bool TrackUse = false;
     // Track use for instructions which must produce undef or poison bits when
     // at least one operand contains such bits.

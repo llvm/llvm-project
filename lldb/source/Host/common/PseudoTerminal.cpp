@@ -65,80 +65,45 @@ void PseudoTerminal::CloseSecondaryFileDescriptor() {
   }
 }
 
-// Open the first available pseudo terminal with OFLAG as the permissions. The
-// file descriptor is stored in this object and can be accessed with the
-// PrimaryFileDescriptor() accessor. The ownership of the primary file
-// descriptor can be released using the ReleasePrimaryFileDescriptor() accessor.
-// If this object has a valid primary files descriptor when its destructor is
-// called, it will close the primary file descriptor, therefore clients must
-// call ReleasePrimaryFileDescriptor() if they wish to use the primary file
-// descriptor after this object is out of scope or destroyed.
-//
-// RETURNS:
-//  True when successful, false indicating an error occurred.
-bool PseudoTerminal::OpenFirstAvailablePrimary(int oflag, char *error_str,
-                                               size_t error_len) {
-  if (error_str)
-    error_str[0] = '\0';
-
+llvm::Error PseudoTerminal::OpenFirstAvailablePrimary(int oflag) {
 #if LLDB_ENABLE_POSIX
   // Open the primary side of a pseudo terminal
   m_primary_fd = ::posix_openpt(oflag);
   if (m_primary_fd < 0) {
-    if (error_str)
-      ErrnoToStr(error_str, error_len);
-    return false;
+    return llvm::errorCodeToError(
+        std::error_code(errno, std::generic_category()));
   }
 
   // Grant access to the secondary pseudo terminal
   if (::grantpt(m_primary_fd) < 0) {
-    if (error_str)
-      ErrnoToStr(error_str, error_len);
+    std::error_code EC(errno, std::generic_category());
     ClosePrimaryFileDescriptor();
-    return false;
+    return llvm::errorCodeToError(EC);
   }
 
   // Clear the lock flag on the secondary pseudo terminal
   if (::unlockpt(m_primary_fd) < 0) {
-    if (error_str)
-      ErrnoToStr(error_str, error_len);
+    std::error_code EC(errno, std::generic_category());
     ClosePrimaryFileDescriptor();
-    return false;
+    return llvm::errorCodeToError(EC);
   }
 
-  return true;
+  return llvm::Error::success();
 #else
-  if (error_str)
-    ::snprintf(error_str, error_len, "%s", "pseudo terminal not supported");
-  return false;
+  return llvm::errorCodeToError(llvm::errc::not_supported);
 #endif
 }
 
-// Open the secondary pseudo terminal for the current primary pseudo terminal. A
-// primary pseudo terminal should already be valid prior to calling this
-// function (see OpenFirstAvailablePrimary()). The file descriptor is stored
-// this object's member variables and can be accessed via the
-// GetSecondaryFileDescriptor(), or released using the
-// ReleaseSecondaryFileDescriptor() member function.
-//
-// RETURNS:
-//  True when successful, false indicating an error occurred.
-bool PseudoTerminal::OpenSecondary(int oflag, char *error_str,
-                                   size_t error_len) {
-  if (error_str)
-    error_str[0] = '\0';
-
+llvm::Error PseudoTerminal::OpenSecondary(int oflag) {
   CloseSecondaryFileDescriptor();
 
   std::string name = GetSecondaryName();
   m_secondary_fd = llvm::sys::RetryAfterSignal(-1, ::open, name.c_str(), oflag);
-  if (m_secondary_fd < 0) {
-    if (error_str)
-      ErrnoToStr(error_str, error_len);
-    return false;
-  }
+  if (m_secondary_fd >= 0)
+    return llvm::Error::success();
 
-  return true;
+  return llvm::errorCodeToError(
+      std::error_code(errno, std::generic_category()));
 }
 
 std::string PseudoTerminal::GetSecondaryName() const {
@@ -180,54 +145,54 @@ lldb::pid_t PseudoTerminal::Fork(char *error_str, size_t error_len) {
     error_str[0] = '\0';
   pid_t pid = LLDB_INVALID_PROCESS_ID;
 #if LLDB_ENABLE_POSIX
-  int flags = O_RDWR;
-  flags |= O_CLOEXEC;
-  if (OpenFirstAvailablePrimary(flags, error_str, error_len)) {
-    // Successfully opened our primary pseudo terminal
+  if (llvm::Error Err = OpenFirstAvailablePrimary(O_RDWR | O_CLOEXEC)) {
+    snprintf(error_str, error_len, "%s", toString(std::move(Err)).c_str());
+    return LLDB_INVALID_PROCESS_ID;
+  }
 
-    pid = ::fork();
-    if (pid < 0) {
-      // Fork failed
-      if (error_str)
-        ErrnoToStr(error_str, error_len);
-    } else if (pid == 0) {
-      // Child Process
-      ::setsid();
+  pid = ::fork();
+  if (pid < 0) {
+    // Fork failed
+    if (error_str)
+      ErrnoToStr(error_str, error_len);
+  } else if (pid == 0) {
+    // Child Process
+    ::setsid();
 
-      if (OpenSecondary(O_RDWR, error_str, error_len)) {
-        // Successfully opened secondary
+    if (llvm::Error Err = OpenSecondary(O_RDWR)) {
+      snprintf(error_str, error_len, "%s", toString(std::move(Err)).c_str());
+      return LLDB_INVALID_PROCESS_ID;
+    }
 
-        // Primary FD should have O_CLOEXEC set, but let's close it just in
-        // case...
-        ClosePrimaryFileDescriptor();
+    // Primary FD should have O_CLOEXEC set, but let's close it just in
+    // case...
+    ClosePrimaryFileDescriptor();
 
 #if defined(TIOCSCTTY)
-        // Acquire the controlling terminal
-        if (::ioctl(m_secondary_fd, TIOCSCTTY, (char *)0) < 0) {
-          if (error_str)
-            ErrnoToStr(error_str, error_len);
-        }
-#endif
-        // Duplicate all stdio file descriptors to the secondary pseudo terminal
-        if (::dup2(m_secondary_fd, STDIN_FILENO) != STDIN_FILENO) {
-          if (error_str && !error_str[0])
-            ErrnoToStr(error_str, error_len);
-        }
-
-        if (::dup2(m_secondary_fd, STDOUT_FILENO) != STDOUT_FILENO) {
-          if (error_str && !error_str[0])
-            ErrnoToStr(error_str, error_len);
-        }
-
-        if (::dup2(m_secondary_fd, STDERR_FILENO) != STDERR_FILENO) {
-          if (error_str && !error_str[0])
-            ErrnoToStr(error_str, error_len);
-        }
-      }
-    } else {
-      // Parent Process
-      // Do nothing and let the pid get returned!
+    // Acquire the controlling terminal
+    if (::ioctl(m_secondary_fd, TIOCSCTTY, (char *)0) < 0) {
+      if (error_str)
+        ErrnoToStr(error_str, error_len);
     }
+#endif
+    // Duplicate all stdio file descriptors to the secondary pseudo terminal
+    if (::dup2(m_secondary_fd, STDIN_FILENO) != STDIN_FILENO) {
+      if (error_str && !error_str[0])
+        ErrnoToStr(error_str, error_len);
+    }
+
+    if (::dup2(m_secondary_fd, STDOUT_FILENO) != STDOUT_FILENO) {
+      if (error_str && !error_str[0])
+        ErrnoToStr(error_str, error_len);
+    }
+
+    if (::dup2(m_secondary_fd, STDERR_FILENO) != STDERR_FILENO) {
+      if (error_str && !error_str[0])
+        ErrnoToStr(error_str, error_len);
+    }
+  } else {
+    // Parent Process
+    // Do nothing and let the pid get returned!
   }
 #endif
   return pid;

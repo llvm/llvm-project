@@ -23,9 +23,9 @@ entry-block:
 define i64* @function(i64* noalias nocapture readonly dereferenceable(8)) {
 ; CHECK-LABEL: @function(
 ; CHECK-NEXT:  entry-block:
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[TMP0:%.*]] to i64**
-; CHECK-NEXT:    [[LOADED1:%.*]] = load i64*, i64** [[TMP1]], align 8, !nonnull !0
-; CHECK-NEXT:    ret i64* [[LOADED1]]
+; CHECK-NEXT:    [[LOADED:%.*]] = load i64, i64* [[TMP0:%.*]], align 8, [[RNG0:!range !.*]]
+; CHECK-NEXT:    [[INTTOPTR:%.*]] = inttoptr i64 [[LOADED]] to i64*
+; CHECK-NEXT:    ret i64* [[INTTOPTR]]
 ;
 entry-block:
   %loaded = load i64, i64* %0, align 8, !range !1

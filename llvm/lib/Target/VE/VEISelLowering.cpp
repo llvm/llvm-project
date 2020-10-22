@@ -634,24 +634,69 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::f64, &VE::I64RegClass);
   addRegisterClass(MVT::f128, &VE::F128RegClass);
 
+  addRegisterClass(MVT::v2i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v4i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v8i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v16i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v32i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v64i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v128i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v256i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v512i32, &VE::V64RegClass);
+
+  addRegisterClass(MVT::v2i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v4i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v8i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v16i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v32i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v64i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v128i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v256i64, &VE::V64RegClass);
+
+  addRegisterClass(MVT::v2f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v4f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v8f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v16f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v32f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v64f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v128f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v256f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v512f32, &VE::V64RegClass);
+
+  addRegisterClass(MVT::v2f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v4f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v8f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v16f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v32f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v64f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v128f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v256f64, &VE::V64RegClass);
+
+  addRegisterClass(MVT::v256i1, &VE::VMRegClass);
+  addRegisterClass(MVT::v512i1, &VE::VM512RegClass);
+
   /// Load & Store {
-  for (MVT FPVT : MVT::fp_valuetypes()) {
-    for (MVT OtherFPVT : MVT::fp_valuetypes()) {
-      // Turn FP extload into load/fpextend
-      setLoadExtAction(ISD::EXTLOAD, FPVT, OtherFPVT, Expand);
 
-      // Turn FP truncstore into trunc + store.
-      setTruncStoreAction(FPVT, OtherFPVT, Expand);
-    }
-  }
-
-  // VE doesn't have i1 sign extending load
+  // VE doesn't have i1 sign extending load.
   for (MVT VT : MVT::integer_valuetypes()) {
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
     setTruncStoreAction(VT, MVT::i1, Expand);
   }
+
+  // VE doesn't have floating point extload/truncstore, so expand them.
+  for (MVT FPVT : MVT::fp_valuetypes()) {
+    for (MVT OtherFPVT : MVT::fp_valuetypes()) {
+      setLoadExtAction(ISD::EXTLOAD, FPVT, OtherFPVT, Expand);
+      setTruncStoreAction(FPVT, OtherFPVT, Expand);
+    }
+  }
+
+  // VE doesn't have fp128 load/store, so expand them in custom lower.
+  setOperationAction(ISD::LOAD, MVT::f128, Custom);
+  setOperationAction(ISD::STORE, MVT::f128, Custom);
+
   /// } Load & Store
 
   // Custom legalize address nodes into LO/HI parts.
@@ -675,6 +720,11 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
   /// } Stack
 
+  /// Branch {
+  // VE doesn't have BRCOND
+  setOperationAction(ISD::BRCOND, MVT::Other, Expand);
+  /// } Branch
+
   /// Int Ops {
   for (MVT IntVT : {MVT::i32, MVT::i64}) {
     // VE has no REM or DIVREM operations.
@@ -682,6 +732,11 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SREM, IntVT, Expand);
     setOperationAction(ISD::SDIVREM, IntVT, Expand);
     setOperationAction(ISD::UDIVREM, IntVT, Expand);
+
+    // VE has no SHL_PARTS/SRA_PARTS/SRL_PARTS operations.
+    setOperationAction(ISD::SHL_PARTS, IntVT, Expand);
+    setOperationAction(ISD::SRA_PARTS, IntVT, Expand);
+    setOperationAction(ISD::SRL_PARTS, IntVT, Expand);
 
     // VE has no MULHU/S or U/SMUL_LOHI operations.
     // TODO: Use MPD instruction to implement SMUL_LOHI for i32 type.
@@ -731,19 +786,36 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   /// } Conversion
 
   /// Floating-point Ops {
+  /// Note: Floating-point operations are fneg, fadd, fsub, fmul, fdiv, frem,
+  ///       and fcmp.
+
+  // VE doesn't have following floating point operations.
+  for (MVT VT : MVT::fp_valuetypes()) {
+    setOperationAction(ISD::FNEG, VT, Expand);
+    setOperationAction(ISD::FREM, VT, Expand);
+  }
 
   // VE doesn't have fdiv of f128.
   setOperationAction(ISD::FDIV, MVT::f128, Expand);
-
-  // VE doesn't have load/store of f128, so use custom-lowering.
-  setOperationAction(ISD::LOAD, MVT::f128, Custom);
-  setOperationAction(ISD::STORE, MVT::f128, Custom);
 
   for (MVT FPVT : {MVT::f32, MVT::f64}) {
     // f32 and f64 uses ConstantFP.  f128 uses ConstantPool.
     setOperationAction(ISD::ConstantFP, FPVT, Legal);
   }
   /// } Floating-point Ops
+
+  /// Floating-point math functions {
+
+  // VE doesn't have following floating point math functions.
+  for (MVT VT : MVT::fp_valuetypes()) {
+    setOperationAction(ISD::FABS, VT, Expand);
+    setOperationAction(ISD::FCOPYSIGN, VT, Expand);
+    setOperationAction(ISD::FCOS, VT, Expand);
+    setOperationAction(ISD::FSIN, VT, Expand);
+    setOperationAction(ISD::FSQRT, VT, Expand);
+  }
+
+  /// } Floating-point math functions
 
   setStackPointerRegisterToSaveRestore(VE::SX11);
 

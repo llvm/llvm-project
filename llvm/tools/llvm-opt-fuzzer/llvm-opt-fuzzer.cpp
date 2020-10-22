@@ -224,7 +224,8 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(
     exit(1);
   }
 
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
+  TargetOptions Options =
+      codegen::InitTargetOptionsFromCodeGenFlags(TargetTriple);
   TM.reset(TheTarget->createTargetMachine(
       TargetTriple.getTriple(), codegen::getCPUStr(), codegen::getFeaturesStr(),
       Options, codegen::getExplicitRelocModel(),

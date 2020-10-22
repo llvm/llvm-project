@@ -230,6 +230,48 @@ def OpenACC_TerminatorOp : OpenACC_Op<"terminator", [Terminator]> {
 }
 
 //===----------------------------------------------------------------------===//
+// 2.6.6 Enter Data Directive
+//===----------------------------------------------------------------------===//
+
+def OpenACC_EnterDataOp : OpenACC_Op<"enter_data", [AttrSizedOperandSegments]> {
+  let summary = "enter data operation";
+
+  let description = [{
+    The "acc.enter_data" operation represents the OpenACC enter data directive.
+
+    Example:
+
+    ```mlir
+    acc.enter_data create(%d1 : memref<10xf32>) attributes {async}
+    ```
+  }];
+
+  let arguments = (ins Optional<I1>:$ifCond,
+                       Optional<IntOrIndex>:$asyncOperand,
+                       UnitAttr:$async,
+                       Optional<IntOrIndex>:$waitDevnum,
+                       Variadic<IntOrIndex>:$waitOperands,
+                       UnitAttr:$wait,
+                       Variadic<AnyType>:$copyinOperands,
+                       Variadic<AnyType>:$createOperands,
+                       Variadic<AnyType>:$createZeroOperands,
+                       Variadic<AnyType>:$attachOperands);
+
+  let assemblyFormat = [{
+    ( `if` `(` $ifCond^ `)` )?
+    ( `async` `(` $asyncOperand^ `:` type($asyncOperand) `)` )?
+    ( `wait_devnum` `(` $waitDevnum^ `:` type($waitDevnum) `)` )?
+    ( `wait` `(` $waitOperands^ `:` type($waitOperands) `)` )?
+    ( `copyin` `(` $copyinOperands^ `:` type($copyinOperands) `)` )?
+    ( `create` `(` $createOperands^ `:` type($createOperands) `)` )?
+    ( `create_zero` `(` $createZeroOperands^ `:`
+        type($createZeroOperands) `)` )?
+    ( `attach` `(` $attachOperands^ `:` type($attachOperands) `)` )?
+    attr-dict-with-keyword
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // 2.6.6 Exit Data Directive
 //===----------------------------------------------------------------------===//
 
@@ -349,8 +391,7 @@ def OpenACC_YieldOp : OpenACC_Op<"yield", [Terminator,
   let arguments = (ins Variadic<AnyType>:$operands);
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result",
-              [{ /* nothing to do */ }]>
+    OpBuilder<"", [{ /* nothing to do */ }]>
   ];
 
   let verifier = ?;

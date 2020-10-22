@@ -477,7 +477,6 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(i32 addrspace(1)* %out,
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, 2, v0
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; CI-NEXT:    v_add_i32_e32 v0, vcc, 0, v0
 ; CI-NEXT:    v_mov_b32_e32 v1, 9
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    ds_inc_rtn_u32 v3, v0, v1 offset:8
@@ -495,7 +494,6 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(i32 addrspace(1)* %out,
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, 2, v0
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 0, v0
 ; VI-NEXT:    v_mov_b32_e32 v1, 9
 ; VI-NEXT:    s_mov_b32 m0, -1
 ; VI-NEXT:    ds_inc_rtn_u32 v3, v0, v1 offset:8
@@ -513,7 +511,6 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i32(i32 addrspace(1)* %out,
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX9-NEXT:    v_add_u32_e32 v2, 2, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-NEXT:    v_add_u32_e32 v0, 0, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 9
 ; GFX9-NEXT:    ds_inc_rtn_u32 v3, v0, v1 offset:8
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1216,8 +1213,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(i64 addrspace(1)* %out,
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; CI-NEXT:    v_add_i32_e32 v4, vcc, 2, v0
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; CI-NEXT:    v_add_i32_e32 v2, vcc, 0, v0
+; CI-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; CI-NEXT:    v_mov_b32_e32 v0, 9
 ; CI-NEXT:    v_mov_b32_e32 v1, 0
 ; CI-NEXT:    s_mov_b32 m0, -1
@@ -1235,8 +1231,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(i64 addrspace(1)* %out,
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, 2, v0
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; VI-NEXT:    v_add_u32_e32 v2, vcc, 0, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, 9
 ; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_mov_b32 m0, -1
@@ -1254,8 +1249,7 @@ define amdgpu_kernel void @atomic_inc_shl_base_lds_0_i64(i64 addrspace(1)* %out,
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX9-NEXT:    v_add_u32_e32 v4, 2, v0
-; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; GFX9-NEXT:    v_add_u32_e32 v2, 0, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 9
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    ds_inc_rtn_u64 v[0:1], v2, v[0:1] offset:16

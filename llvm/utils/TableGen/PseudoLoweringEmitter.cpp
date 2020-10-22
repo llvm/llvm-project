@@ -293,17 +293,9 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
 }
 
 void PseudoLoweringEmitter::run(raw_ostream &o) {
-  Record *ExpansionClass = Records.getClass("PseudoInstExpansion");
-  Record *InstructionClass = Records.getClass("Instruction");
-  assert(ExpansionClass && "PseudoInstExpansion class definition missing!");
-  assert(InstructionClass && "Instruction class definition missing!");
-
-  std::vector<Record*> Insts;
-  for (const auto &D : Records.getDefs()) {
-    if (D.second->isSubClassOf(ExpansionClass) &&
-        D.second->isSubClassOf(InstructionClass))
-      Insts.push_back(D.second.get());
-  }
+  StringRef Classes[] = {"PseudoInstExpansion", "Instruction"};
+  std::vector<Record *> Insts =
+      Records.getAllDerivedDefinitions(makeArrayRef(Classes));
 
   // Process the pseudo expansion definitions, validating them as we do so.
   for (unsigned i = 0, e = Insts.size(); i != e; ++i)

@@ -13,6 +13,16 @@
 // pattern needs to be written. The infrastructure in this file assists in
 // defining these conversion patterns in a composable way.
 //
+// Bufferization conversion patterns should generally use the ordinary
+// conversion pattern classes (e.g. OpConversionPattern). A TypeConverter
+// (accessible with getTypeConverter()) available on such patterns is sufficient
+// for most cases (if needed at all).
+//
+// But some patterns require access to the extra functions on
+// BufferizeTypeConverter that don't exist on the base TypeConverter class. For
+// those cases, BufferizeConversionPattern and its related classes should be
+// used, which provide access to a BufferizeTypeConverter directly.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_TRANSFORMS_BUFFERIZE_H
@@ -31,7 +41,7 @@ namespace mlir {
 /// A helper type converter class for using inside Buffer Assignment operation
 /// conversion patterns. The default constructor keeps all the types intact
 /// except for the ranked-tensor types which is converted to memref types.
-class BufferAssignmentTypeConverter : public TypeConverter {
+class BufferizeTypeConverter : public TypeConverter {
 public:
   /// This enum is for showing how buffer placement operation converters should
   /// conduct with certain result type after type conversion. This value can be
@@ -39,7 +49,7 @@ public:
   /// getResultConversionKind.
   enum ResultConversionKind { AppendToArgumentsList, KeepAsFunctionResult };
 
-  BufferAssignmentTypeConverter();
+  BufferizeTypeConverter();
 
   /// This method tries to decompose a value of a certain type using provided
   /// decompose callback functions. If it is unable to do so, the original value
@@ -133,32 +143,43 @@ private:
   SmallVector<DecomposeTypeConversionCallFn, 2> decomposeTypeConversions;
 };
 
-/// Helper conversion pattern that encapsulates a BufferAssignmentTypeConverter
+/// Helper conversion pattern that encapsulates a BufferizeTypeConverter
 /// instance.
 template <typename SourceOp>
-class BufferAssignmentOpConversionPattern
-    : public OpConversionPattern<SourceOp> {
+class BufferizeOpConversionPattern : public OpConversionPattern<SourceOp> {
 public:
-  explicit BufferAssignmentOpConversionPattern(
-      MLIRContext *context, BufferAssignmentTypeConverter *converter,
-      PatternBenefit benefit = 1)
-      : OpConversionPattern<SourceOp>(context, benefit), converter(converter) {
-    assert(converter && "The type converter has not been defined");
-  }
+  explicit BufferizeOpConversionPattern(MLIRContext *context,
+                                        BufferizeTypeConverter &converter,
+                                        PatternBenefit benefit = 1)
+      : OpConversionPattern<SourceOp>(context, benefit), converter(converter) {}
 
 protected:
-  BufferAssignmentTypeConverter *converter;
+  BufferizeTypeConverter &converter;
 };
 
-/// Converts the signature of the function using BufferAssignmentTypeConverter.
+/// Helper conversion pattern that encapsulates a BufferizeTypeConverter
+/// instance and that operates on Operation* to be compatible with OpInterfaces.
+/// This allows avoiding to instantiate N patterns for ops that can be subsumed
+/// by a single op interface (e.g. Linalg named ops).
+class BufferizeConversionPattern : public ConversionPattern {
+public:
+  explicit BufferizeConversionPattern(MLIRContext *context,
+                                      BufferizeTypeConverter &converter,
+                                      PatternBenefit benefit = 1)
+      : ConversionPattern(benefit, converter, MatchAnyOpTypeTag()),
+        converter(converter) {}
+
+protected:
+  BufferizeTypeConverter &converter;
+};
+
+/// Converts the signature of the function using BufferizeTypeConverter.
 /// Each result type of the function is kept as a function result or appended to
 /// the function arguments list based on ResultConversionKind for the converted
 /// result type.
-class BufferAssignmentFuncOpConverter
-    : public BufferAssignmentOpConversionPattern<FuncOp> {
+class BufferizeFuncOpConverter : public BufferizeOpConversionPattern<FuncOp> {
 public:
-  using BufferAssignmentOpConversionPattern<
-      FuncOp>::BufferAssignmentOpConversionPattern;
+  using BufferizeOpConversionPattern<FuncOp>::BufferizeOpConversionPattern;
 
   /// Performs the actual signature rewriting step.
   LogicalResult matchAndRewrite(mlir::FuncOp, ArrayRef<Value>,
@@ -171,11 +192,11 @@ public:
 /// operation from the operand to the target function argument is inserted.
 template <typename ReturnOpSourceTy, typename ReturnOpTargetTy,
           typename CopyOpTy>
-class BufferAssignmentReturnOpConverter
-    : public BufferAssignmentOpConversionPattern<ReturnOpSourceTy> {
+class BufferizeReturnOpConverter
+    : public BufferizeOpConversionPattern<ReturnOpSourceTy> {
 public:
-  using BufferAssignmentOpConversionPattern<
-      ReturnOpSourceTy>::BufferAssignmentOpConversionPattern;
+  using BufferizeOpConversionPattern<
+      ReturnOpSourceTy>::BufferizeOpConversionPattern;
 
   /// Performs the actual return-op conversion step.
   LogicalResult
@@ -191,19 +212,19 @@ public:
     OpBuilder builder(returnOp);
     for (auto operand : llvm::enumerate(operands)) {
       SmallVector<Value, 2> values;
-      this->converter->tryDecomposeValue(
-          builder, loc, operand.value().getType(), operand.value(), values);
+      this->converter.tryDecomposeValue(builder, loc, operand.value().getType(),
+                                        operand.value(), values);
       Type type = returnOp.getOperand(operand.index()).getType();
       SmallVector<Type, 2> originTypes;
-      this->converter->tryDecomposeType(type, originTypes);
+      this->converter.tryDecomposeType(type, originTypes);
       for (auto value : llvm::enumerate(values)) {
         Type origin = originTypes[value.index()];
         Type converted = value.value().getType();
-        auto kind = this->converter->getResultConversionKind(origin, converted);
-        if (kind == BufferAssignmentTypeConverter::KeepAsFunctionResult)
+        auto kind = this->converter.getResultConversionKind(origin, converted);
+        if (kind == BufferizeTypeConverter::KeepAsFunctionResult)
           newOperands.push_back(value.value());
         else
-          // kind = BufferAssignmentTypeConverter::AppendToArgumentsList
+          // kind = BufferizeTypeConverter::AppendToArgumentsList
           needCopyOperands.push_back(value.value());
       }
     }
@@ -230,12 +251,10 @@ public:
 
 /// Rewrites the `CallOp` to match its operands and results with the signature
 /// of the callee after rewriting the callee with
-/// BufferAssignmentFuncOpConverter.
-class BufferAssignmentCallOpConverter
-    : public BufferAssignmentOpConversionPattern<CallOp> {
+/// BufferizeFuncOpConverter.
+class BufferizeCallOpConverter : public BufferizeOpConversionPattern<CallOp> {
 public:
-  using BufferAssignmentOpConversionPattern<
-      CallOp>::BufferAssignmentOpConversionPattern;
+  using BufferizeOpConversionPattern<CallOp>::BufferizeOpConversionPattern;
 
   /// Performs the actual rewriting step.
   LogicalResult matchAndRewrite(CallOp, ArrayRef<Value>,
@@ -246,18 +265,155 @@ public:
 /// assignment.
 template <typename ReturnOpSourceTy, typename ReturnOpTargetTy,
           typename CopyOpTy>
-static void populateWithBufferAssignmentOpConversionPatterns(
-    MLIRContext *context, BufferAssignmentTypeConverter *converter,
-    OwningRewritePatternList *patterns) {
+static void
+populateWithBufferizeOpConversionPatterns(MLIRContext *context,
+                                          BufferizeTypeConverter &converter,
+                                          OwningRewritePatternList &patterns) {
   // clang-format off
-  patterns->insert<
-    BufferAssignmentCallOpConverter,
-    BufferAssignmentFuncOpConverter,
-    BufferAssignmentReturnOpConverter
+  patterns.insert<
+    BufferizeCallOpConverter,
+    BufferizeFuncOpConverter,
+    BufferizeReturnOpConverter
       <ReturnOpSourceTy, ReturnOpTargetTy, CopyOpTy>
   >(context, converter);
   // clang-format on
 }
+
+/// A straight-forward alias analysis which ensures that all aliases of all
+/// values will be determined. This is a requirement for the BufferPlacement
+/// class since you need to determine safe positions to place alloc and
+/// deallocs.
+class BufferPlacementAliasAnalysis {
+public:
+  using ValueSetT = SmallPtrSet<Value, 16>;
+  using ValueMapT = llvm::DenseMap<Value, ValueSetT>;
+
+public:
+  /// Constructs a new alias analysis using the op provided.
+  BufferPlacementAliasAnalysis(Operation *op);
+
+  /// Find all immediate aliases this value could potentially have.
+  ValueMapT::const_iterator find(Value value) const {
+    return aliases.find(value);
+  }
+
+  /// Returns the begin iterator to iterate over all aliases.
+  ValueMapT::const_iterator begin() const { return aliases.begin(); }
+
+  /// Returns the end iterator that can be used in combination with find.
+  ValueMapT::const_iterator end() const { return aliases.end(); }
+
+  /// Find all immediate and indirect aliases this value could potentially
+  /// have. Note that the resulting set will also contain the value provided as
+  /// it is an alias of itself.
+  ValueSetT resolve(Value value) const;
+
+  /// Removes the given values from all alias sets.
+  void remove(const SmallPtrSetImpl<Value> &aliasValues);
+
+private:
+  /// This function constructs a mapping from values to its immediate aliases.
+  void build(Operation *op);
+
+  /// Maps values to all immediate aliases this value can have.
+  ValueMapT aliases;
+};
+
+/// A simple analysis that detects allocation operations.
+class BufferPlacementAllocs {
+public:
+  /// Represents a tuple of allocValue and deallocOperation.
+  using AllocEntry = std::tuple<Value, Operation *>;
+
+  /// Represents a list containing all alloc entries.
+  using AllocEntryList = SmallVector<AllocEntry, 8>;
+
+  /// Get the start operation to place the given alloc value withing the
+  // specified placement block.
+  static Operation *getStartOperation(Value allocValue, Block *placementBlock,
+                                      const Liveness &liveness);
+
+  /// Find an associated dealloc operation that is linked to the given
+  /// allocation node (if any).
+  static Operation *findDealloc(Value allocValue);
+
+public:
+  /// Initializes the internal list by discovering all supported allocation
+  /// nodes.
+  BufferPlacementAllocs(Operation *op);
+
+  /// Returns the begin iterator to iterate over all allocations.
+  AllocEntryList::const_iterator begin() const { return allocs.begin(); }
+
+  /// Returns the end iterator that can be used in combination with begin.
+  AllocEntryList::const_iterator end() const { return allocs.end(); }
+
+  /// Returns the begin iterator to iterate over all allocations.
+  AllocEntryList::iterator begin() { return allocs.begin(); }
+
+  /// Returns the end iterator that can be used in combination with begin.
+  AllocEntryList::iterator end() { return allocs.end(); }
+
+  /// Registers a new allocation entry.
+  void registerAlloc(const AllocEntry &entry) { allocs.push_back(entry); }
+
+private:
+  /// Searches for and registers all supported allocation entries.
+  void build(Operation *op);
+
+private:
+  /// Maps allocation nodes to their associated blocks.
+  AllocEntryList allocs;
+};
+
+/// The base class for all BufferPlacement transformations.
+class BufferPlacementTransformationBase {
+public:
+  using ValueSetT = BufferPlacementAliasAnalysis::ValueSetT;
+
+  /// Finds a common dominator for the given value while taking the positions
+  /// of the values in the value set into account. It supports dominator and
+  /// post-dominator analyses via template arguments.
+  template <typename DominatorT>
+  static Block *findCommonDominator(Value value, const ValueSetT &values,
+                                    const DominatorT &doms) {
+    // Start with the current block the value is defined in.
+    Block *dom = value.getParentBlock();
+    // Iterate over all aliases and their uses to find a safe placement block
+    // according to the given dominator information.
+    for (Value childValue : values) {
+      for (Operation *user : childValue.getUsers()) {
+        // Move upwards in the dominator tree to find an appropriate
+        // dominator block that takes the current use into account.
+        dom = doms.findNearestCommonDominator(dom, user->getBlock());
+      }
+      // Take values without any users into account.
+      dom = doms.findNearestCommonDominator(dom, childValue.getParentBlock());
+    }
+    return dom;
+  }
+
+  /// Returns true if the given operation represents a loop by testing whether
+  /// it implements the `LoopLikeOpInterface` or the `RegionBranchOpInterface`.
+  /// In the case of a `RegionBranchOpInterface`, it checks all region-based
+  /// control-flow edges for cycles.
+  static bool isLoop(Operation *op);
+
+  /// Constructs a new operation base using the given root operation.
+  BufferPlacementTransformationBase(Operation *op);
+
+protected:
+  /// Alias information that can be updated during the insertion of copies.
+  BufferPlacementAliasAnalysis aliases;
+
+  /// Stores all internally managed allocations.
+  BufferPlacementAllocs allocs;
+
+  /// The underlying liveness analysis to compute fine grained information
+  /// about alloc and dealloc positions.
+  Liveness liveness;
+};
+
 } // end namespace mlir
 
 #endif // MLIR_TRANSFORMS_BUFFERIZE_H

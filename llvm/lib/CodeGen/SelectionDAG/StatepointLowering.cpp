@@ -544,9 +544,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     SI.StatepointFlags & (uint64_t)StatepointFlags::DeoptLiveIn;
 
   // Decide which deriver pointers will go on VRegs
-  const unsigned MaxTiedRegs = 15; // Max  number of tied regs MI can have.
-  unsigned MaxVRegPtrs =
-      std::min(MaxTiedRegs, MaxRegistersForGCPointers.getValue());
+  unsigned MaxVRegPtrs = MaxRegistersForGCPointers.getValue();
 
   LLVM_DEBUG(dbgs() << "Deciding how to lower GC Pointers:\n");
 

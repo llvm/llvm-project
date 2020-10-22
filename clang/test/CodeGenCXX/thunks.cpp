@@ -30,7 +30,7 @@ struct B {
 
 struct C : A, B {
   virtual void c();
-  
+
   virtual void f();
 };
 
@@ -83,7 +83,7 @@ struct A {
 
 struct B : A {
   virtual void b();
-  
+
   virtual V2 *f();
 };
 
@@ -107,7 +107,7 @@ struct B {
 
 struct __attribute__((visibility("protected"))) C : A, B {
   virtual void c();
-  
+
   virtual void f();
 };
 
@@ -142,8 +142,8 @@ namespace Test4B {
   void C::f() {}
 
   // Force C::f to be used.
-  void f() { 
-    C c; 
+  void f() {
+    C c;
     c.f();
   }
 }
@@ -206,13 +206,13 @@ namespace Test6 {
   // CHECK-LABEL: define void @_ZThn16_N5Test66Thunks1fEv
 	// CHECK-DBG-NOT: dbg.declare
   // CHECK-NOT: memcpy
-  // CHECK: {{call void @_ZN5Test66Thunks1fEv.*sret align 1}}
+  // CHECK: {{call void @_ZN5Test66Thunks1fEv.*sret(.+) align 1}}
   // CHECK: ret void
   X Thunks::f() { return X(); }
 
-  // WIN64-LABEL: define linkonce_odr dso_local void @"?f@Thunks@Test6@@WBA@EAA?AUX@2@XZ"({{.*}} sret align 1 %{{.*}})
+  // WIN64-LABEL: define linkonce_odr dso_local void @"?f@Thunks@Test6@@WBA@EAA?AUX@2@XZ"({{.*}} sret({{.*}}) align 1 %{{.*}})
   // WIN64-NOT: memcpy
-  // WIN64: tail call void @"?f@Thunks@Test6@@UEAA?AUX@2@XZ"({{.*}} sret align 1 %{{.*}})
+  // WIN64: tail call void @"?f@Thunks@Test6@@UEAA?AUX@2@XZ"({{.*}} sret({{.*}}) align 1 %{{.*}})
 }
 
 namespace Test7 {

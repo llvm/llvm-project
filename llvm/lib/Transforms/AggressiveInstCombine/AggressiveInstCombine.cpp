@@ -203,8 +203,8 @@ static bool matchAndOrChain(Value *V, MaskOps &MOps) {
   // We need a shift-right or a bare value representing a compare of bit 0 of
   // the original source operand.
   Value *Candidate;
-  uint64_t BitIndex = 0;
-  if (!match(V, m_LShr(m_Value(Candidate), m_ConstantInt(BitIndex))))
+  const APInt *BitIndex = nullptr;
+  if (!match(V, m_LShr(m_Value(Candidate), m_APInt(BitIndex))))
     Candidate = V;
 
   // Initialize result source operand.
@@ -212,11 +212,11 @@ static bool matchAndOrChain(Value *V, MaskOps &MOps) {
     MOps.Root = Candidate;
 
   // The shift constant is out-of-range? This code hasn't been simplified.
-  if (BitIndex >= MOps.Mask.getBitWidth())
+  if (BitIndex && BitIndex->uge(MOps.Mask.getBitWidth()))
     return false;
 
   // Fill in the mask bit derived from the shift constant.
-  MOps.Mask.setBit(BitIndex);
+  MOps.Mask.setBit(BitIndex ? BitIndex->getZExtValue() : 0);
   return MOps.Root == Candidate;
 }
 

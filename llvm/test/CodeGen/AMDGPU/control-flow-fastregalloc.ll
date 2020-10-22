@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -march=amdgcn -amdgpu-spill-sgpr-to-vgpr=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=VMEM -check-prefix=GCN %s
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -march=amdgcn -amdgpu-spill-sgpr-to-vgpr=1 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=VGPR -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -march=amdgcn --amdhsa-code-object-version=2 -amdgpu-spill-sgpr-to-vgpr=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=VMEM -check-prefix=GCN %s
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -march=amdgcn --amdhsa-code-object-version=2 -amdgpu-spill-sgpr-to-vgpr=1 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=VGPR -check-prefix=GCN %s
 
 ; Verify registers used for tracking exec mask changes when all
 ; registers are spilled at the end of the block. The SGPR spill
@@ -196,19 +196,20 @@ end:
 
 ; Regular spill value restored after exec modification
 ; GCN: buffer_load_dword [[FLOW_VAL:v[0-9]+]], off, s[0:3], 0 offset:[[FLOW_VAL_OFFSET:[0-9]+]] ; 4-byte Folded Reload
+; Followed by spill
+; GCN: buffer_store_dword [[FLOW_VAL]], off, s[0:3], 0 offset:[[RESULT_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 
+; GCN: s_and_b64 s{{\[}}[[FLOW_AND_EXEC_LO:[0-9]+]]:[[FLOW_AND_EXEC_HI:[0-9]+]]{{\]}}, exec, s{{\[}}[[FLOW_S_RELOAD_SAVEEXEC_LO_SAVEEXEC]]:[[FLOW_S_RELOAD_SAVEEXEC_HI_SAVEEXEC]]{{\]}}
 
 ; Spill saved exec
-; VGPR: v_writelane_b32 [[SPILL_VGPR]], s[[FLOW_S_RELOAD_SAVEEXEC_LO_SAVEEXEC]], [[FLOW_SAVEEXEC_LO_LANE:[0-9]+]]
-; VGPR: v_writelane_b32 [[SPILL_VGPR]], s[[FLOW_S_RELOAD_SAVEEXEC_HI_SAVEEXEC]], [[FLOW_SAVEEXEC_HI_LANE:[0-9]+]]
+; VGPR: v_writelane_b32 [[SPILL_VGPR]], s[[FLOW_AND_EXEC_LO]], [[FLOW_SAVEEXEC_LO_LANE:[0-9]+]]
+; VGPR: v_writelane_b32 [[SPILL_VGPR]], s[[FLOW_AND_EXEC_HI]], [[FLOW_SAVEEXEC_HI_LANE:[0-9]+]]
 
-
-; VMEM: v_writelane_b32 v[[FLOW_V_SAVEEXEC:[0-9]+]], s[[FLOW_S_RELOAD_SAVEEXEC_LO_SAVEEXEC]], 0
-; VMEM: v_writelane_b32 v[[FLOW_V_SAVEEXEC]], s[[FLOW_S_RELOAD_SAVEEXEC_HI_SAVEEXEC]], 1
+; VMEM: v_writelane_b32 v[[FLOW_V_SAVEEXEC:[0-9]+]], s[[FLOW_AND_EXEC_LO]], 0
+; VMEM: v_writelane_b32 v[[FLOW_V_SAVEEXEC]], s[[FLOW_AND_EXEC_HI]], 1
 ; VMEM: buffer_store_dword v[[FLOW_V_SAVEEXEC]], off, s[0:3], 0 offset:[[FLOW_SAVEEXEC_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 
-; GCN: buffer_store_dword [[FLOW_VAL]], off, s[0:3], 0 offset:[[RESULT_OFFSET:[0-9]+]] ; 4-byte Folded Spill
-; GCN: s_xor_b64 exec, exec, s{{\[}}[[FLOW_S_RELOAD_SAVEEXEC_LO_SAVEEXEC]]:[[FLOW_S_RELOAD_SAVEEXEC_HI_SAVEEXEC]]{{\]}}
+; GCN: s_xor_b64 exec, exec, s{{\[}}[[FLOW_AND_EXEC_LO]]:[[FLOW_AND_EXEC_HI]]{{\]}}
 ; GCN-NEXT: s_cbranch_execz [[ENDIF:BB[0-9]+_[0-9]+]]
 
 

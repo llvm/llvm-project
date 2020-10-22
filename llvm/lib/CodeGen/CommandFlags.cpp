@@ -461,7 +461,8 @@ codegen::getBBSectionsMode(llvm::TargetOptions &Options) {
 
 // Common utility function tightly tied to the options listed here. Initializes
 // a TargetOptions object with CodeGen flags and returns it.
-TargetOptions codegen::InitTargetOptionsFromCodeGenFlags() {
+TargetOptions
+codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
   Options.AllowFPOpFusion = getFuseFPOps();
   Options.UnsafeFPMath = getEnableUnsafeFPMath();
@@ -485,7 +486,8 @@ TargetOptions codegen::InitTargetOptionsFromCodeGenFlags() {
   Options.StackSymbolOrdering = getStackSymbolOrdering();
   Options.UseInitArray = !getUseCtors();
   Options.RelaxELFRelocations = getRelaxELFRelocations();
-  Options.DataSections = getDataSections();
+  Options.DataSections =
+      getExplicitDataSections().getValueOr(TheTriple.hasDefaultDataSections());
   Options.FunctionSections = getFunctionSections();
   Options.IgnoreXCOFFVisibility = getIgnoreXCOFFVisibility();
   Options.BBSections = getBBSectionsMode(Options);

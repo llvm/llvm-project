@@ -25,11 +25,6 @@ NativeRegisterContextFreeBSD::NativeRegisterContextFreeBSD(
     RegisterInfoInterface *reg_info_interface_p)
     : NativeRegisterContextRegisterInfo(native_thread, reg_info_interface_p) {}
 
-Status NativeRegisterContextFreeBSD::DoRegisterSet(int ptrace_req, void *buf) {
-  return NativeProcessFreeBSD::PtraceWrapper(ptrace_req, GetProcessPid(), buf,
-                                             m_thread.GetID());
-}
-
 NativeProcessFreeBSD &NativeRegisterContextFreeBSD::GetProcess() {
   return static_cast<NativeProcessFreeBSD &>(m_thread.GetProcess());
 }

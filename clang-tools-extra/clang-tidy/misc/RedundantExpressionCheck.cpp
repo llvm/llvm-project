@@ -794,14 +794,14 @@ static bool areExprsFromDifferentMacros(const Expr *LhsExpr,
       SM.getDecomposedLoc(SM.getExpansionLoc(Lsr.getBegin()));
   std::pair<FileID, unsigned> RsrLocInfo =
       SM.getDecomposedLoc(SM.getExpansionLoc(Rsr.getBegin()));
-  const llvm::MemoryBuffer *MB = SM.getBuffer(LsrLocInfo.first);
+  llvm::MemoryBufferRef MB = SM.getBufferOrFake(LsrLocInfo.first);
 
-  const char *LTokenPos = MB->getBufferStart() + LsrLocInfo.second;
-  const char *RTokenPos = MB->getBufferStart() + RsrLocInfo.second;
+  const char *LTokenPos = MB.getBufferStart() + LsrLocInfo.second;
+  const char *RTokenPos = MB.getBufferStart() + RsrLocInfo.second;
   Lexer LRawLex(SM.getLocForStartOfFile(LsrLocInfo.first), LO,
-                MB->getBufferStart(), LTokenPos, MB->getBufferEnd());
+                MB.getBufferStart(), LTokenPos, MB.getBufferEnd());
   Lexer RRawLex(SM.getLocForStartOfFile(RsrLocInfo.first), LO,
-                MB->getBufferStart(), RTokenPos, MB->getBufferEnd());
+                MB.getBufferStart(), RTokenPos, MB.getBufferEnd());
 
   Token LTok, RTok;
   do { // Compare the expressions token-by-token.

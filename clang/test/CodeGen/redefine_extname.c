@@ -30,3 +30,9 @@ static int foo_static() { return 1; }
 int baz() { return foo_static(); }
 // CHECK-NOT: call i32 @bar_static()
 
+// Check that pragma redefine_extname applies to builtin functions.
+typedef unsigned long size_t;
+extern void *memcpy(void *, const void *, size_t);
+#pragma redefine_extname memcpy __GI_memcpy
+void *test_memcpy(void *dst, const void *src, size_t n) { return memcpy(dst, src, n); }
+// CHECK: call i8* @__GI_memcpy(

@@ -46,8 +46,19 @@ entry:
   call void @llvm.coro.destroy(i8* %hdl)
   ret i32 0
 ; CHECK:      call void @ctor
+; CHECK-NEXT: %dec1.spill.addr.i = getelementptr inbounds i8, i8* %call.i, i64 20
+; CHECK-NEXT: bitcast i8* %dec1.spill.addr.i to i32*
+; CHECK-NEXT: store i32 4
 ; CHECK-NEXT: call void @print(i32 4)
+; CHECK-NEXT: %index.addr12.i = getelementptr inbounds i8, i8* %call.i, i64 24
+; CHECK-NEXT: bitcast i8* %index.addr12.i to i1*
+; CHECK-NEXT: store i1 false
+; CHECK-NEXT: store i32 3
+; CHECK-NEXT: store i32 3
 ; CHECK-NEXT: call void @print(i32 3)
+; CHECK-NEXT: store i1 false
+; CHECK-NEXT: store i32 2
+; CHECK-NEXT: store i32 2
 ; CHECK-NEXT: call void @print(i32 2)
 ; CHECK:      ret i32 0
 }

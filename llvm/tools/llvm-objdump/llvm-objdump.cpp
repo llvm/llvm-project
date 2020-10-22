@@ -353,6 +353,10 @@ static cl::opt<bool>
          cl::cat(ObjdumpCat));
 static cl::alias WideShort("w", cl::Grouping, cl::aliasopt(Wide));
 
+cl::opt<std::string> objdump::Prefix("prefix",
+                                     cl::desc("Add prefix to absolute paths"),
+                                     cl::cat(ObjdumpCat));
+
 enum DebugVarsFormat {
   DVDisabled,
   DVUnicode,
@@ -1029,6 +1033,13 @@ void SourcePrinter::printSourceLine(formatted_raw_ostream &OS,
       reportWarning(Warning, ObjectFilename);
       WarnedNoDebugInfo = true;
     }
+  }
+
+  if (!Prefix.empty() && sys::path::is_absolute_gnu(LineInfo.FileName)) {
+    SmallString<128> FilePath;
+    sys::path::append(FilePath, Prefix, LineInfo.FileName);
+
+    LineInfo.FileName = std::string(FilePath);
   }
 
   if (PrintLines)
@@ -2960,6 +2971,10 @@ int main(int argc, char **argv) {
   // Defaults to a.out if no filenames specified.
   if (InputFilenames.empty())
     InputFilenames.push_back("a.out");
+
+  // Removes trailing separators from prefix.
+  while (!Prefix.empty() && sys::path::is_separator(Prefix.back()))
+    Prefix.pop_back();
 
   if (AllHeaders)
     ArchiveHeaders = FileHeaders = PrivateHeaders = Relocations =

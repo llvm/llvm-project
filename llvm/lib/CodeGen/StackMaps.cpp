@@ -384,7 +384,7 @@ void StackMaps::parseStatepointOpers(const MachineInstr &MI,
 
   // Record Deopt Args.
   unsigned NumDeoptArgs = Locations.back().Offset;
-  assert(Locations.back().Type = Location::Constant);
+  assert(Locations.back().Type == Location::Constant);
   assert(NumDeoptArgs == SO.getNumDeoptArgs());
 
   while (NumDeoptArgs--)

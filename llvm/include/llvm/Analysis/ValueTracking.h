@@ -630,10 +630,11 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// and returns true if it is guaranteed to be never undef or poison
   /// immediately before the CtxI.
   bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
+                                        AssumptionCache *AC = nullptr,
                                         const Instruction *CtxI = nullptr,
                                         const DominatorTree *DT = nullptr,
                                         unsigned Depth = 0);
-  bool isGuaranteedNotToBePoison(const Value *V,
+  bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC = nullptr,
                                  const Instruction *CtxI = nullptr,
                                  const DominatorTree *DT = nullptr,
                                  unsigned Depth = 0);

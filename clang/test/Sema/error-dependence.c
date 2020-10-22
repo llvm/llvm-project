@@ -10,6 +10,9 @@ void test1(int s) {
   // verify diagnostic "operand of type '<dependent type>' where arithmetic or
   // pointer type is required" is not emitted.
   (float)call(); // expected-error {{too few arguments to function call}}
+  // verify disgnostic "called object type '<dependent type>' is not a function
+  // or function pointer" is not emitted.
+  (*__builtin_classify_type)(1); // expected-error {{builtin functions must be directly called}}
 }
 
 void test2(int* ptr, float f) {

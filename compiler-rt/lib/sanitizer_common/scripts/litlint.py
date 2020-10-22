@@ -10,6 +10,7 @@
 import optparse
 import re
 import sys
+from io import open
 
 # Compile regex once for all files
 runRegex = re.compile(r'(?<!-o)(?<!%run) %t\s')

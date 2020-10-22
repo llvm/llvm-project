@@ -58,8 +58,8 @@ A *p;
 // NO_NOALIAS: define void @_Z4take1A(%struct.A* %arg)
 void take(A arg) {}
 
-// WITH_NOALIAS: define void @_Z7CreateAPP1A(%struct.A* noalias sret align 1 %agg.result, %struct.A** %where)
-// NO_NOALIAS: define void @_Z7CreateAPP1A(%struct.A* noalias sret align 1 %agg.result, %struct.A** %where)
+// WITH_NOALIAS: define void @_Z7CreateAPP1A(%struct.A* noalias sret(%struct.A) align 1 %agg.result, %struct.A** %where)
+// NO_NOALIAS: define void @_Z7CreateAPP1A(%struct.A* noalias sret(%struct.A) align 1 %agg.result, %struct.A** %where)
 A CreateA(A **where) {
   A justlikethis;
   *where = &justlikethis; //Escaped pointer 2 (should also be UB, then)

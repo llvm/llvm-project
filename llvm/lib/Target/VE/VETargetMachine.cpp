@@ -23,7 +23,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ve"
 
-extern "C" void LLVMInitializeVETarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETarget() {
   // Register the target.
   RegisterTargetMachine<VETargetMachine> X(getTheVETarget());
 }

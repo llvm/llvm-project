@@ -455,7 +455,7 @@ int AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
 
   // The destination type should be larger than the element type. If not, get
   // the default cost for the extend.
-  if (DstVT.getSizeInBits() < SrcVT.getSizeInBits())
+  if (DstVT.getFixedSizeInBits() < SrcVT.getFixedSizeInBits())
     return Cost + getCastInstrCost(Opcode, Dst, Src, TTI::CastContextHint::None,
                                    CostKind);
 

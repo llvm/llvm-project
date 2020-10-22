@@ -15,6 +15,22 @@
 
 using namespace llvm;
 
+FileCollectorBase::FileCollectorBase() = default;
+FileCollectorBase::~FileCollectorBase() = default;
+
+void FileCollectorBase::addFile(const Twine &File) {
+  std::lock_guard<std::mutex> lock(Mutex);
+  std::string FileStr = File.str();
+  if (markAsSeen(FileStr))
+    addFileImpl(FileStr);
+}
+
+void FileCollectorBase::addDirectory(const Twine &Dir) {
+  assert(sys::fs::is_directory(Dir));
+  std::error_code EC;
+  addDirectoryImpl(Dir, vfs::getRealFileSystem(), EC);
+}
+
 static bool isCaseSensitivePath(StringRef Path) {
   SmallString<256> TmpDest = Path, UpperDest, RealDest;
 
@@ -59,19 +75,6 @@ bool FileCollector::getRealPath(StringRef SrcPath,
   sys::path::append(RealPath, FileName);
   Result.swap(RealPath);
   return true;
-}
-
-void FileCollector::addFile(const Twine &File) {
-  std::lock_guard<std::mutex> lock(Mutex);
-  std::string FileStr = File.str();
-  if (markAsSeen(FileStr))
-    addFileImpl(FileStr);
-}
-
-void FileCollector::addDirectory(const Twine &Dir) {
-  assert(sys::fs::is_directory(Dir));
-  std::error_code EC;
-  addDirectoryImpl(Dir, vfs::getRealFileSystem(), EC);
 }
 
 void FileCollector::addFileImpl(StringRef SrcPath) {

@@ -49,7 +49,7 @@ TEST_CASE(test_error_reporting)
     {
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try {
-            space(f);
+            (void)space(f);
             return false;
         } catch (filesystem_error const& err) {
             return err.path1() == f
@@ -86,7 +86,7 @@ TEST_CASE(basic_space_test)
     // should have the same expected result. Compute this expected result
     // one and check that it looks semi-sane.
     struct statvfs expect;
-    TEST_REQUIRE(::statvfs(static_env.Dir.c_str(), &expect) != -1);
+    TEST_REQUIRE(::statvfs(static_env.Dir.string().c_str(), &expect) != -1);
     TEST_CHECK(expect.f_bavail > 0);
     TEST_CHECK(expect.f_bfree > 0);
     TEST_CHECK(expect.f_bsize > 0);

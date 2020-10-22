@@ -7,12 +7,12 @@ define void @test1(float* %a, float* readnone %a_end, i64* %b.i64) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult float* [[A:%.*]], [[A_END:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[B_I64:%.*]] to float**
-; CHECK-NEXT:    [[B1:%.*]] = load float*, float** [[TMP0]], align 8
+; CHECK-NEXT:    [[B:%.*]] = load i64, i64* [[B_I64:%.*]], align 8
+; CHECK-NEXT:    [[B_PTR:%.*]] = inttoptr i64 [[B]] to float*
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_03:%.*]] = phi float* [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[A]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[B_ADDR_02_PTR:%.*]] = phi float* [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[B1]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[B_ADDR_02_PTR:%.*]] = phi float* [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[B_PTR]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[B_ADDR_02_PTR]], align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], float* [[A_ADDR_03]], align 4
@@ -114,11 +114,13 @@ define void @test2(float* %a, float* readnone %a_end, float** %b.float) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult float* [[A:%.*]], [[A_END:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[B1:%.*]] = load float*, float** [[B_FLOAT:%.*]], align 8
+; CHECK-NEXT:    [[B_I64:%.*]] = bitcast float** [[B_FLOAT:%.*]] to i64*
+; CHECK-NEXT:    [[B:%.*]] = load i64, i64* [[B_I64]], align 8
+; CHECK-NEXT:    [[B_PTR:%.*]] = inttoptr i64 [[B]] to float*
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_03:%.*]] = phi float* [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[A]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[B_ADDR_02_PTR:%.*]] = phi float* [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[B1]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[B_ADDR_02_PTR:%.*]] = phi float* [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[B_PTR]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[B_ADDR_02_PTR]], align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], float* [[A_ADDR_03]], align 4
@@ -164,12 +166,13 @@ define void @test3(float* %a, float* readnone %a_end, i8** %b.i8p) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult float* [[A:%.*]], [[A_END:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8** [[B_I8P:%.*]] to float**
-; CHECK-NEXT:    [[B1:%.*]] = load float*, float** [[TMP0]], align 8
+; CHECK-NEXT:    [[B_I64:%.*]] = bitcast i8** [[B_I8P:%.*]] to i64*
+; CHECK-NEXT:    [[B:%.*]] = load i64, i64* [[B_I64]], align 8
+; CHECK-NEXT:    [[B_PTR:%.*]] = inttoptr i64 [[B]] to float*
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_03:%.*]] = phi float* [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[A]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[B_ADDR_02_PTR:%.*]] = phi float* [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[B1]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[B_ADDR_02_PTR:%.*]] = phi float* [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[B_PTR]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[B_ADDR_02_PTR]], align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], float* [[A_ADDR_03]], align 4
@@ -215,15 +218,15 @@ define void @test4(float* %a, float* readnone %a_end, float** %b.float) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult float* [[A:%.*]], [[A_END:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[B_F12:%.*]] = load float*, float** [[B_FLOAT:%.*]], align 8
+; CHECK-NEXT:    [[B_F:%.*]] = load float*, float** [[B_FLOAT:%.*]], align 8
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_03:%.*]] = phi float* [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[A]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[B_ADDR_02_PTR:%.*]] = phi float* [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[B_F12]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[B_ADDR_02_PTR]], align 4
+; CHECK-NEXT:    [[B_ADDR_02_IN:%.*]] = phi float* [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[B_F]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[B_ADDR_02_IN]], align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], float* [[A_ADDR_03]], align 4
-; CHECK-NEXT:    [[ADD]] = getelementptr inbounds float, float* [[B_ADDR_02_PTR]], i64 1
+; CHECK-NEXT:    [[ADD]] = getelementptr inbounds float, float* [[B_ADDR_02_IN]], i64 1
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, float* [[A_ADDR_03]], i64 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult float* [[INCDEC_PTR]], [[A_END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]

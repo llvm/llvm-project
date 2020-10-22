@@ -81,6 +81,7 @@
       <item> argmemonly </item>
       <item> convergent </item>
       <item> inlinehint </item>
+      <item> mustprogress </item>
       <item> naked </item>
       <item> nobuiltin </item>
       <item> noimplicitfloat </item>

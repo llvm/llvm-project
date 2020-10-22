@@ -5,7 +5,7 @@
 
 // For 32 bit LSan it's pretty likely that large chunks are "reachable" from some
 // internal data structures (e.g. Glibc global data).
-// UNSUPPORTED: x86, arm, i686
+// UNSUPPORTED: x86, arm
 
 #include <stdio.h>
 #include <stdlib.h>

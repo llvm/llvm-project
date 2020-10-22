@@ -51,7 +51,7 @@ STATISTIC(NumFnWithExactDefinition,
           "Number of functions with exact definitions");
 STATISTIC(NumFnWithoutExactDefinition,
           "Number of functions without exact definitions");
-STATISTIC(NumFnShallowWrapperCreated, "Number of shallow wrappers created");
+STATISTIC(NumFnShallowWrappersCreated, "Number of shallow wrappers created");
 STATISTIC(NumAttributesTimedOut,
           "Number of abstract attributes timed out before fixpoint");
 STATISTIC(NumAttributesValidFixpoint,
@@ -1415,23 +1415,7 @@ ChangeStatus Attributor::updateAA(AbstractAttribute &AA) {
   return CS;
 }
 
-/// Create a shallow wrapper for \p F such that \p F has internal linkage
-/// afterwards. It also sets the original \p F 's name to anonymous
-///
-/// A wrapper is a function with the same type (and attributes) as \p F
-/// that will only call \p F and return the result, if any.
-///
-/// Assuming the declaration of looks like:
-///   rty F(aty0 arg0, ..., atyN argN);
-///
-/// The wrapper will then look as follows:
-///   rty wrapper(aty0 arg0, ..., atyN argN) {
-///     return F(arg0, ..., argN);
-///   }
-///
-static void createShallowWrapper(Function &F) {
-  assert(AllowShallowWrappers &&
-         "Cannot create a wrapper if it is not allowed!");
+void Attributor::createShallowWrapper(Function &F) {
   assert(!F.isDeclaration() && "Cannot create a wrapper around a declaration!");
 
   Module &M = *F.getParent();
@@ -1475,7 +1459,7 @@ static void createShallowWrapper(Function &F) {
   CI->addAttribute(AttributeList::FunctionIndex, Attribute::NoInline);
   ReturnInst::Create(Ctx, CI->getType()->isVoidTy() ? nullptr : CI, EntryBB);
 
-  NumFnShallowWrapperCreated++;
+  NumFnShallowWrappersCreated++;
 }
 
 /// Make another copy of the function \p F such that the copied version has
@@ -2279,7 +2263,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   if (AllowShallowWrappers)
     for (Function *F : Functions)
       if (!A.isFunctionIPOAmendable(*F))
-        createShallowWrapper(*F);
+        Attributor::createShallowWrapper(*F);
 
   // Internalize non-exact functions
   // TODO: for now we eagerly internalize functions without calculating the

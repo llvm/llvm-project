@@ -139,6 +139,11 @@ public:
     logTensorValue(RawLogData.size() - 1, &Value);
   }
 
+  template <typename T> void logFinalReward(T Value) {
+    assert(RawLogData.back().empty());
+    logReward(Value);
+  }
+
   template <typename T>
   void logTensorValue(size_t FeatureID, const T *Value, size_t Size = 1) {
     const char *Start = reinterpret_cast<const char *>(Value);

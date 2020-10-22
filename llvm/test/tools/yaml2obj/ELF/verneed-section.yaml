@@ -82,42 +82,10 @@ DynamicSymbols:
   - Name:    f1
     Binding: STB_GLOBAL
 
-## Check we can use "Content" to describe the content.
+## Check we can omit "Content", "Size" and "Dependencies" fields to
+## produce an empty SHT_GNU_verneed section.
 
-# RUN: yaml2obj --docnum=2 %s -o %t2
-# RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefix=CONTENT
-
-# CONTENT:      Name: .gnu.version_r
-# CONTENT-NEXT: Type: SHT_GNU_verneed
-# CONTENT-NEXT: Flags [ (0x2)
-# CONTENT-NEXT:   SHF_ALLOC (0x2)
-# CONTENT-NEXT: ]
-# CONTENT-NEXT: Address: 0x0
-# CONTENT-NEXT: Offset: 0x40
-# CONTENT-NEXT: Size: 3
-# CONTENT-NEXT: Link: 0
-# CONTENT-NEXT: Info: 1
-# CONTENT-NEXT: AddressAlignment: 0
-# CONTENT-NEXT: EntrySize: 0
-# CONTENT-NEXT: SectionData (
-# CONTENT-NEXT:   0000: 112233
-# CONTENT-NEXT: )
-
---- !ELF
-FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_EXEC
-Sections:
-  - Name:    .gnu.version_r
-    Type:    SHT_GNU_verneed
-    Flags:   [ SHF_ALLOC ]
-    Info:    0x1
-    Content: "112233"
-
-## Check we can omit "Content" and "Dependencies" fields to produce an empty SHT_GNU_verneed section.
-
-# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: yaml2obj --docnum=2 %s -o %t3
 # RUN: llvm-readelf --sections %t3 | FileCheck %s --check-prefix=NO-PROPS
 
 # NO-PROPS: [Nr] Name           Type    Address          Off    Size
@@ -133,22 +101,48 @@ Sections:
     Type:  SHT_GNU_verneed
     Flags: [ SHF_ALLOC ]
     Info:  0x0
+    Size:         [[SIZE=<none>]]
+    Content:      [[CONTENT=<none>]]
+    Dependencies: [[DEPS=<none>]]
 
-## Check we can't use both "Dependencies" and "Content" together.
+## Check we can use the "Content" key with the "Size" key when the size is greater
+## than or equal to the content size.
 
-# RUN: not yaml2obj --docnum=4 %s 2>&1 | FileCheck %s --check-prefix=BOTH
+# RUN: not yaml2obj --docnum=2 -DCONTENT="'00'" -DSIZE=0 %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CONTENT-SIZE-ERR
 
-# BOTH: error: SHT_GNU_verneed: "Dependencies" and "Content" can't be used together
+# CONTENT-SIZE-ERR: error: Section size must be greater than or equal to the content size
 
---- !ELF
-FileHeader:
-  Class: ELFCLASS64
-  Data:  ELFDATA2LSB
-  Type:  ET_EXEC
-Sections:
-  - Name:         .gnu.version_r
-    Type:         SHT_GNU_verneed
-    Flags:        [ SHF_ALLOC ]
-    Info:         0x0
-    Content:      ""
-    Dependencies: []
+# RUN: yaml2obj --docnum=2 -DCONTENT="'00'" -DSIZE=1 %s -o %t.cont.size.eq.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.eq.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="00"
+
+# RUN: yaml2obj --docnum=2 -DCONTENT="'00'" -DSIZE=2 %s -o %t.cont.size.gr.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.gr.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="0000"
+
+# CHECK-CONTENT:      Name: .gnu.version_r
+# CHECK-CONTENT:      SectionData (
+# CHECK-CONTENT-NEXT:   0000: [[DATA]] |
+# CHECK-CONTENT-NEXT: )
+
+## Check we can use the "Size" key alone to create the section.
+
+# RUN: yaml2obj --docnum=2 -DSIZE=3 %s -o %t.size.o
+# RUN: llvm-readobj --sections --section-data %t.size.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="000000"
+
+## Check we can use the "Content" key alone to create the section.
+
+# RUN: yaml2obj --docnum=2 -DCONTENT="'112233'" %s -o %t.content.o
+# RUN: llvm-readobj --sections --section-data %t.content.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="112233"
+
+## Check we can't use the "Dependencies" key together with the "Content" or "Size" keys.
+
+# RUN: not yaml2obj --docnum=2 -DSIZE=0 -DDEPS="[]" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DEPS-ERR
+# RUN: not yaml2obj --docnum=2 -DCONTENT="'00'" -DDEPS="[]" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DEPS-ERR
+
+# DEPS-ERR: error: "Dependencies" cannot be used with "Content" or "Size"

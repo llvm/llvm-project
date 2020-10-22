@@ -16,6 +16,7 @@ def run(f):
 def testParseSuccess():
   ctx = mlir.ir.Context()
   module = ctx.parse_module(r"""module @successfulParse {}""")
+  assert module.context is ctx
   print("CLEAR CONTEXT")
   ctx = None  # Ensure that module captures the context.
   gc.collect()
@@ -40,6 +41,21 @@ def testParseError():
 run(testParseError)
 
 
+# Verify successful parse.
+# CHECK-LABEL: TEST: testCreateEmpty
+# CHECK: module {
+def testCreateEmpty():
+  ctx = mlir.ir.Context()
+  loc = ctx.get_unknown_location()
+  module = ctx.create_module(loc)
+  print("CLEAR CONTEXT")
+  ctx = None  # Ensure that module captures the context.
+  gc.collect()
+  print(str(module))
+
+run(testCreateEmpty)
+
+
 # Verify round-trip of ASM that contains unicode.
 # Note that this does not test that the print path converts unicode properly
 # because MLIR asm always normalizes it to the hex encoding.
@@ -61,6 +77,7 @@ run(testRoundtripUnicode)
 def testModuleOperation():
   ctx = mlir.ir.Context()
   module = ctx.parse_module(r"""module @successfulParse {}""")
+  assert ctx._get_live_module_count() == 1
   op1 = module.operation
   assert ctx._get_live_operation_count() == 1
   # CHECK: module @successfulParse
@@ -82,6 +99,7 @@ def testModuleOperation():
   gc.collect()
   print("LIVE OPERATIONS:", ctx._get_live_operation_count())
   assert ctx._get_live_operation_count() == 0
+  assert ctx._get_live_module_count() == 0
 
 run(testModuleOperation)
 
@@ -90,7 +108,19 @@ run(testModuleOperation)
 def testModuleCapsule():
   ctx = mlir.ir.Context()
   module = ctx.parse_module(r"""module @successfulParse {}""")
+  assert ctx._get_live_module_count() == 1
   # CHECK: "mlir.ir.Module._CAPIPtr"
-  print(module._CAPIPtr)
+  module_capsule = module._CAPIPtr
+  print(module_capsule)
+  module_dup = mlir.ir.Module._CAPICreate(module_capsule)
+  assert module is module_dup
+  assert module_dup.context is ctx
+  # Gc and verify destructed.
+  module = None
+  module_capsule = None
+  module_dup = None
+  gc.collect()
+  assert ctx._get_live_module_count() == 0
+
 
 run(testModuleCapsule)

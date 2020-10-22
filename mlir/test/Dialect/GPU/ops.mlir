@@ -149,4 +149,21 @@ module attributes {gpu.container_module} {
     // CHECK: return {{.*}} : !gpu.async.token
     return %arg0 : !gpu.async.token
   }
+
+  func @async_wait() {
+    // CHECK-LABEL: func @async_wait
+    // CHECK: %[[t0:.*]] = gpu.wait async
+    %0 = gpu.wait async
+    // CHECK: %[[t1:.*]] = gpu.wait async [%[[t0]]]
+    %1 = gpu.wait async [%0]
+    // CHECK: %{{.*}} = gpu.wait async [%[[t0]], %[[t1]]]
+    %2 = gpu.wait async [%0, %1]
+    // CHECK: gpu.wait [%[[t0]], %[[t1]]]
+    // CHECK-NOT: async
+    gpu.wait [%0, %1]
+    // CHECK: gpu.wait
+    // CHECK-NOT: async
+    gpu.wait // Valid, but a no-op.
+    return
+  }
 }

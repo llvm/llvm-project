@@ -32,54 +32,54 @@ bb:
 }
 
 define void @no_promote(<4 x i64>* %arg) #1 {
-; IS__TUNIT_OPM: Function Attrs: argmemonly nosync nounwind uwtable willreturn
+; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind uwtable willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@no_promote
-; IS__TUNIT_OPM-SAME: (<4 x i64>* nocapture writeonly [[ARG:%.*]]) [[ATTR1:#.*]] {
+; IS__TUNIT_OPM-SAME: (<4 x i64>* nocapture nofree writeonly [[ARG:%.*]]) [[ATTR1:#.*]] {
 ; IS__TUNIT_OPM-NEXT:  bb:
 ; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64>* [[TMP]] to i8*
-; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR4:#.*]]
-; IS__TUNIT_OPM-NEXT:    call fastcc void @no_promote_avx2(<4 x i64>* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64>* nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) [[ATTR5:#.*]]
+; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR3:#.*]]
+; IS__TUNIT_OPM-NEXT:    call fastcc void @no_promote_avx2(<4 x i64>* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64>* nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) [[ATTR4:#.*]]
 ; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 32
 ; IS__TUNIT_OPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind uwtable willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@no_promote
-; IS__TUNIT_NPM-SAME: (<4 x i64>* nocapture writeonly [[ARG:%.*]]) [[ATTR1:#.*]] {
+; IS__TUNIT_NPM-SAME: (<4 x i64>* nocapture nofree writeonly [[ARG:%.*]]) [[ATTR1:#.*]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64>* [[TMP]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR4:#.*]]
-; IS__TUNIT_NPM-NEXT:    call fastcc void @no_promote_avx2(<4 x i64>* noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64>* noalias nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) [[ATTR5:#.*]]
+; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR3:#.*]]
+; IS__TUNIT_NPM-NEXT:    call fastcc void @no_promote_avx2(<4 x i64>* noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64>* noalias nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) [[ATTR4:#.*]]
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 32
 ; IS__TUNIT_NPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: argmemonly nosync nounwind uwtable willreturn
+; IS__CGSCC_OPM: Function Attrs: argmemonly nofree nosync nounwind uwtable willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@no_promote
-; IS__CGSCC_OPM-SAME: (<4 x i64>* nocapture nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) [[ATTR1:#.*]] {
+; IS__CGSCC_OPM-SAME: (<4 x i64>* nocapture nofree nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) [[ATTR1:#.*]] {
 ; IS__CGSCC_OPM-NEXT:  bb:
 ; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64>* [[TMP]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR4:#.*]]
-; IS__CGSCC_OPM-NEXT:    call fastcc void @no_promote_avx2(<4 x i64>* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64>* nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) [[ATTR5:#.*]]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR3:#.*]]
+; IS__CGSCC_OPM-NEXT:    call fastcc void @no_promote_avx2(<4 x i64>* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64>* nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) [[ATTR4:#.*]]
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 32
 ; IS__CGSCC_OPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly nofree nosync nounwind uwtable willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@no_promote
-; IS__CGSCC_NPM-SAME: (<4 x i64>* nocapture nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) [[ATTR1:#.*]] {
+; IS__CGSCC_NPM-SAME: (<4 x i64>* nocapture nofree nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) [[ATTR1:#.*]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
 ; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64>* [[TMP]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR4:#.*]]
-; IS__CGSCC_NPM-NEXT:    call fastcc void @no_promote_avx2(<4 x i64>* noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64>* noalias nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) [[ATTR5:#.*]]
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR3:#.*]]
+; IS__CGSCC_NPM-NEXT:    call fastcc void @no_promote_avx2(<4 x i64>* noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64>* noalias nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) [[ATTR4:#.*]]
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 32
 ; IS__CGSCC_NPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__CGSCC_NPM-NEXT:    ret void
@@ -121,56 +121,56 @@ bb:
 }
 
 define void @promote(<4 x i64>* %arg) #0 {
-; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@promote
-; IS__TUNIT_OPM-SAME: (<4 x i64>* nocapture writeonly [[ARG:%.*]]) [[ATTR2:#.*]] {
+; IS__TUNIT_OPM-SAME: (<4 x i64>* nocapture nofree writeonly [[ARG:%.*]]) [[ATTR0:#.*]] {
 ; IS__TUNIT_OPM-NEXT:  bb:
 ; IS__TUNIT_OPM-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64>* [[TMP]] to i8*
-; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR4]]
-; IS__TUNIT_OPM-NEXT:    call fastcc void @promote_avx2(<4 x i64>* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64>* nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) [[ATTR5]]
+; IS__TUNIT_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR3]]
+; IS__TUNIT_OPM-NEXT:    call fastcc void @promote_avx2(<4 x i64>* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64>* nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) [[ATTR4]]
 ; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 32
 ; IS__TUNIT_OPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint norecurse nosync nounwind uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@promote
-; IS__TUNIT_NPM-SAME: (<4 x i64>* nocapture writeonly [[ARG:%.*]]) [[ATTR2:#.*]] {
+; IS__TUNIT_NPM-SAME: (<4 x i64>* nocapture nofree writeonly [[ARG:%.*]]) [[ATTR0:#.*]] {
 ; IS__TUNIT_NPM-NEXT:  bb:
 ; IS__TUNIT_NPM-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64>* [[TMP]] to i8*
-; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR4]]
+; IS__TUNIT_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR3]]
 ; IS__TUNIT_NPM-NEXT:    [[TMP0:%.*]] = load <4 x i64>, <4 x i64>* [[TMP]], align 32
-; IS__TUNIT_NPM-NEXT:    call fastcc void @promote_avx2(<4 x i64>* noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64> [[TMP0]]) [[ATTR5]]
+; IS__TUNIT_NPM-NEXT:    call fastcc void @promote_avx2(<4 x i64>* noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64> [[TMP0]]) [[ATTR4]]
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 32
 ; IS__TUNIT_NPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
-; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_OPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@promote
-; IS__CGSCC_OPM-SAME: (<4 x i64>* nocapture nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) [[ATTR2:#.*]] {
+; IS__CGSCC_OPM-SAME: (<4 x i64>* nocapture nofree nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) [[ATTR0:#.*]] {
 ; IS__CGSCC_OPM-NEXT:  bb:
 ; IS__CGSCC_OPM-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; IS__CGSCC_OPM-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64>* [[TMP]] to i8*
-; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR4]]
-; IS__CGSCC_OPM-NEXT:    call fastcc void @promote_avx2(<4 x i64>* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64>* nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) [[ATTR5]]
+; IS__CGSCC_OPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR3]]
+; IS__CGSCC_OPM-NEXT:    call fastcc void @promote_avx2(<4 x i64>* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64>* nocapture nofree noundef nonnull readonly align 32 dereferenceable(32) [[TMP]]) [[ATTR4]]
 ; IS__CGSCC_OPM-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 32
 ; IS__CGSCC_OPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint norecurse nosync nounwind uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind uwtable willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@promote
-; IS__CGSCC_NPM-SAME: (<4 x i64>* nocapture nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) [[ATTR2:#.*]] {
+; IS__CGSCC_NPM-SAME: (<4 x i64>* nocapture nofree nonnull writeonly align 2 dereferenceable(32) [[ARG:%.*]]) [[ATTR0:#.*]] {
 ; IS__CGSCC_NPM-NEXT:  bb:
 ; IS__CGSCC_NPM-NEXT:    [[TMP:%.*]] = alloca <4 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = alloca <4 x i64>, align 32
 ; IS__CGSCC_NPM-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64>* [[TMP]] to i8*
-; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR4]]
+; IS__CGSCC_NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP3]], i8 noundef 0, i64 noundef 32, i1 noundef false) [[ATTR3]]
 ; IS__CGSCC_NPM-NEXT:    [[TMP0:%.*]] = load <4 x i64>, <4 x i64>* [[TMP]], align 32
-; IS__CGSCC_NPM-NEXT:    call fastcc void @promote_avx2(<4 x i64>* noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64> [[TMP0]]) [[ATTR5]]
+; IS__CGSCC_NPM-NEXT:    call fastcc void @promote_avx2(<4 x i64>* noalias nocapture nofree noundef nonnull writeonly align 32 dereferenceable(32) [[TMP2]], <4 x i64> [[TMP0]]) [[ATTR4]]
 ; IS__CGSCC_NPM-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 32
 ; IS__CGSCC_NPM-NEXT:    store <4 x i64> [[TMP4]], <4 x i64>* [[ARG]], align 2
 ; IS__CGSCC_NPM-NEXT:    ret void

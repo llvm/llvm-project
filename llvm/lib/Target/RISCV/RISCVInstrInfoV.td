@@ -216,7 +216,7 @@ class VALUrVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                 (ins VRegOp:$vs1, VRegOp:$vs2, VMaskOp:$vm),
                 opcodestr, "$vd, $vs1, $vs2$vm">;
 
-// op vd, vs1, vs2
+// op vd, vs2, vs1
 class VALUVVNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : RVInstVV<funct6, opv, (outs VRegOp:$vd),
                (ins VRegOp:$vs2, VRegOp:$vs1),

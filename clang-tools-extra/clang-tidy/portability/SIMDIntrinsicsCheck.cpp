@@ -82,8 +82,8 @@ SIMDIntrinsicsCheck::SIMDIntrinsicsCheck(StringRef Name,
       Suggest(Options.get("Suggest", false)) {}
 
 void SIMDIntrinsicsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "Std", "");
-  Options.store(Opts, "Suggest", 0);
+  Options.store(Opts, "Std", Std);
+  Options.store(Opts, "Suggest", Suggest);
 }
 
 void SIMDIntrinsicsCheck::registerMatchers(MatchFinder *Finder) {

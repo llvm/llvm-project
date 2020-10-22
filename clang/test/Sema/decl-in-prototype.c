@@ -49,7 +49,7 @@ void f(struct q *, struct __attribute__((aligned(4))) q *); // expected-warning 
 // function.
 enum { BB = 0 };
 void enum_in_fun_in_fun(void (*fp)(enum { AA, BB } e)) { // expected-warning {{will not be visible}}
-  SA(1, AA == 5);
+  SA(1, AA == 5); // expected-error {{variable-sized object may not be initialized}}
   SA(2, BB == 0);
 }
 

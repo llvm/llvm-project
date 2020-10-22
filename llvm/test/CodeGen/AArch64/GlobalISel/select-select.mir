@@ -20,7 +20,7 @@ body:             |
     ; CHECK: [[COPY2:%[0-9]+]]:fpr32 = COPY $s1
     ; CHECK: [[COPY3:%[0-9]+]]:fpr32 = COPY [[COPY]]
     ; CHECK: [[COPY4:%[0-9]+]]:gpr32 = COPY [[COPY3]]
-    ; CHECK: $wzr = ANDSWri [[COPY4]], 0, implicit-def $nzcv
+    ; CHECK: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY4]], 0, implicit-def $nzcv
     ; CHECK: [[FCSELSrrr:%[0-9]+]]:fpr32 = FCSELSrrr [[COPY1]], [[COPY2]], 1, implicit $nzcv
     ; CHECK: $s0 = COPY [[FCSELSrrr]]
     ; CHECK: RET_ReallyLR implicit $s0
@@ -52,7 +52,7 @@ body:             |
     ; CHECK: [[COPY2:%[0-9]+]]:fpr64 = COPY $d1
     ; CHECK: [[COPY3:%[0-9]+]]:fpr32 = COPY [[COPY]]
     ; CHECK: [[COPY4:%[0-9]+]]:gpr32 = COPY [[COPY3]]
-    ; CHECK: $wzr = ANDSWri [[COPY4]], 0, implicit-def $nzcv
+    ; CHECK: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY4]], 0, implicit-def $nzcv
     ; CHECK: [[FCSELDrrr:%[0-9]+]]:fpr64 = FCSELDrrr [[COPY1]], [[COPY2]], 1, implicit $nzcv
     ; CHECK: $d0 = COPY [[FCSELDrrr]]
     ; CHECK: RET_ReallyLR implicit $d0

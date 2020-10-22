@@ -319,25 +319,26 @@ MlirAttribute mlirDenseElementsAttrDoubleSplatGet(MlirType shapedType,
  * of a specific type. Expects the element type of the shaped type to match the
  * data element type. */
 MlirAttribute mlirDenseElementsAttrBoolGet(MlirType shapedType,
-                                           intptr_t numElements, int *elements);
+                                           intptr_t numElements,
+                                           const int *elements);
 MlirAttribute mlirDenseElementsAttrUInt32Get(MlirType shapedType,
                                              intptr_t numElements,
-                                             uint32_t *elements);
+                                             const uint32_t *elements);
 MlirAttribute mlirDenseElementsAttrInt32Get(MlirType shapedType,
                                             intptr_t numElements,
-                                            int32_t *elements);
+                                            const int32_t *elements);
 MlirAttribute mlirDenseElementsAttrUInt64Get(MlirType shapedType,
                                              intptr_t numElements,
-                                             uint64_t *elements);
+                                             const uint64_t *elements);
 MlirAttribute mlirDenseElementsAttrInt64Get(MlirType shapedType,
                                             intptr_t numElements,
-                                            int64_t *elements);
+                                            const int64_t *elements);
 MlirAttribute mlirDenseElementsAttrFloatGet(MlirType shapedType,
                                             intptr_t numElements,
-                                            float *elements);
+                                            const float *elements);
 MlirAttribute mlirDenseElementsAttrDoubleGet(MlirType shapedType,
                                              intptr_t numElements,
-                                             double *elements);
+                                             const double *elements);
 
 /** Creates a dense elements attribute with the given shaped type from string
  * elements. The strings need not be null-terminated and their lengths are

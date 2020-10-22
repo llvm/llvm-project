@@ -81,31 +81,31 @@ define <16 x i8> @sdiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 
 define void @sdiv_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-LABEL: sdiv_v32i8:
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,32)]]
-; VBITS_GE_512-NEXT: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_512-NEXT: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
-; VBITS_GE_256: ptrue [[PG1:p[0-9]+]].s, vl[[#min(VBYTES,8)]]
-; VBITS_GE_256-NEXT: sunpkhi [[OP1_HI:z[0-9]+]].h, [[OP1]].b
-; VBITS_GE_256-NEXT: sunpkhi [[OP2_HI:z[0-9]+]].h, [[OP2]].b
-; VBITS_GE_256-NEXT: sunpklo [[OP2_LO:z[0-9]+]].h, [[OP2]].b
-; VBITS_GE_256-NEXT: sunpklo [[OP1_LO:z[0-9]+]].h, [[OP1]].b
-; VBITS_GE_256-NEXT: sunpkhi [[OP2_HI_HI:z[0-9]]].s, [[OP2_HI]].h
-; VBITS_GE_256-NEXT: sunpkhi [[OP1_HI_HI:z[0-9]]].s, [[OP1_HI]].h
-; VBITS_GE_256-NEXT: sunpklo [[OP2_HI_LO:z[0-9]+]].s, [[OP2_HI]].h
-; VBITS_GE_256-NEXT: sunpklo [[OP1_HI_LO:z[0-9]+]].s, [[OP1_HI]].h
-; VBITS_GE_256-NEXT: sdivr   [[RES_HI_HI:z[0-9]+]].s, [[PG1]]/m, [[OP2_HI_HI]].s, [[OP1_HI_HI]].s
-; VBITS_GE_256-NEXT: sunpkhi [[OP2_LO_HI:z[0-9]+]].s, [[OP2_LO]].h
-; VBITS_GE_256-NEXT: sdivr   [[RES_HI_LO:z[0-9]+]].s, [[PG1]]/m, [[OP2_HI_LO]].s, [[OP1_HI_LO]].s
-; VBITS_GE_256-NEXT: sunpkhi [[OP1_LO_HI:z[0-9]+]].s, [[OP1_LO]].h
-; VBITS_GE_256-NEXT: sunpklo [[OP2_LO_LO:z[0-9]+]].s, [[OP2_LO]].h
-; VBITS_GE_256-NEXT: sunpklo [[OP1_LO_LO:z[0-9]+]].s, [[OP1_LO]].h
-; VBITS_GE_256-NEXT: sdiv    [[RES_LO_HI:z[0-9]+]].s, [[PG1]]/m, [[OP1_LO_HI]].s, [[OP2_LO_HI]].s
-; VBITS_GE_256-NEXT: sdiv    [[RES_LO_LO:z[0-9]+]].s, [[PG1]]/m, [[OP1_LO_LO]].s, [[OP2_LO_LO]].s
-; VBITS_GE_256-NEXT: uzp1    [[RES_HI:z[0-9]+]].h, [[RES_HI_LO]].h, [[RES_HI_HI]].h
-; VBITS_GE_256-NEXT: uzp1    [[RES_LO:z[0-9]+]].h, [[RES_LO_LO]].h, [[RES_LO_HI]].h
-; VBITS_GE_256-NEXT: uzp1    [[RES:z[0-9]+]].b, [[RES_LO]].b, [[RES_HI]].b
-; VBITS_GE_256-NEXT: st1b    { [[RES]].b }, [[PG]], [x0]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,32)]]
+; CHECK-NEXT: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
+; CHECK-NEXT: ptrue [[PG1:p[0-9]+]].s, vl[[#min(VBYTES,8)]]
+; CHECK-NEXT: sunpkhi [[OP1_HI:z[0-9]+]].h, [[OP1]].b
+; CHECK-NEXT: sunpkhi [[OP2_HI:z[0-9]+]].h, [[OP2]].b
+; CHECK-NEXT: sunpklo [[OP2_LO:z[0-9]+]].h, [[OP2]].b
+; CHECK-NEXT: sunpklo [[OP1_LO:z[0-9]+]].h, [[OP1]].b
+; CHECK-NEXT: sunpkhi [[OP2_HI_HI:z[0-9]]].s, [[OP2_HI]].h
+; CHECK-NEXT: sunpkhi [[OP1_HI_HI:z[0-9]]].s, [[OP1_HI]].h
+; CHECK-NEXT: sunpklo [[OP2_HI_LO:z[0-9]+]].s, [[OP2_HI]].h
+; CHECK-NEXT: sunpklo [[OP1_HI_LO:z[0-9]+]].s, [[OP1_HI]].h
+; CHECK-NEXT: sdivr   [[RES_HI_HI:z[0-9]+]].s, [[PG1]]/m, [[OP2_HI_HI]].s, [[OP1_HI_HI]].s
+; CHECK-NEXT: sunpkhi [[OP2_LO_HI:z[0-9]+]].s, [[OP2_LO]].h
+; CHECK-NEXT: sdivr   [[RES_HI_LO:z[0-9]+]].s, [[PG1]]/m, [[OP2_HI_LO]].s, [[OP1_HI_LO]].s
+; CHECK-NEXT: sunpkhi [[OP1_LO_HI:z[0-9]+]].s, [[OP1_LO]].h
+; CHECK-NEXT: sunpklo [[OP2_LO_LO:z[0-9]+]].s, [[OP2_LO]].h
+; CHECK-NEXT: sunpklo [[OP1_LO_LO:z[0-9]+]].s, [[OP1_LO]].h
+; CHECK-NEXT: sdiv    [[RES_LO_HI:z[0-9]+]].s, [[PG1]]/m, [[OP1_LO_HI]].s, [[OP2_LO_HI]].s
+; CHECK-NEXT: sdiv    [[RES_LO_LO:z[0-9]+]].s, [[PG1]]/m, [[OP1_LO_LO]].s, [[OP2_LO_LO]].s
+; CHECK-NEXT: uzp1    [[RES_HI:z[0-9]+]].h, [[RES_HI_LO]].h, [[RES_HI_HI]].h
+; CHECK-NEXT: uzp1    [[RES_LO:z[0-9]+]].h, [[RES_LO_LO]].h, [[RES_LO_HI]].h
+; CHECK-NEXT: uzp1    [[RES:z[0-9]+]].b, [[RES_LO]].b, [[RES_HI]].b
+; CHECK-NEXT: st1b    { [[RES]].b }, [[PG]], [x0]
+; CHECK-NEXT: ret
   %op1 = load <32 x i8>, <32 x i8>* %a
   %op2 = load <32 x i8>, <32 x i8>* %b
   %res = sdiv <32 x i8> %op1, %op2
@@ -248,19 +248,19 @@ define <8 x i16> @sdiv_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 
 define void @sdiv_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-LABEL: sdiv_v16i16:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),16)]]
-; VBITS_GE_256-NEXT: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_256-NEXT: ptrue [[PG1:p[0-9]+]].s, vl[[#min(div(VBYTES,2),8)]]
-; VBITS_GE_256-NEXT: sunpkhi [[OP1_HI:z[0-9]+]].s, [[OP1]].h
-; VBITS_GE_256-NEXT: sunpkhi [[OP2_HI:z[0-9]+]].s, [[OP2]].h
-; VBITS_GE_256-NEXT: sunpklo [[OP2_LO:z[0-9]+]].s, [[OP2]].h
-; VBITS_GE_256-NEXT: sunpklo [[OP1_LO:z[0-9]+]].s, [[OP1]].h
-; VBITS_GE_256-NEXT: sdivr   [[RES_HI:z[0-9]+]].s, [[PG1]]/m, [[OP2_HI]].s, [[OP1_HI]].s
-; VBITS_GE_256-NEXT: sdiv    [[RES_LO:z[0-9]+]].s, [[PG1]]/m, [[OP1_LO]].s, [[OP2_LO]].s
-; VBITS_GE_256-NEXT: uzp1 [[RES:z[0-9]+]].h, [[RES_LO]].h, [[RES_HI]].h
-; VBITS_GE_256-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),16)]]
+; CHECK-NEXT: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; CHECK-NEXT: ptrue [[PG1:p[0-9]+]].s, vl[[#min(div(VBYTES,2),8)]]
+; CHECK-NEXT: sunpkhi [[OP1_HI:z[0-9]+]].s, [[OP1]].h
+; CHECK-NEXT: sunpkhi [[OP2_HI:z[0-9]+]].s, [[OP2]].h
+; CHECK-NEXT: sunpklo [[OP2_LO:z[0-9]+]].s, [[OP2]].h
+; CHECK-NEXT: sunpklo [[OP1_LO:z[0-9]+]].s, [[OP1]].h
+; CHECK-NEXT: sdivr   [[RES_HI:z[0-9]+]].s, [[PG1]]/m, [[OP2_HI]].s, [[OP1_HI]].s
+; CHECK-NEXT: sdiv    [[RES_LO:z[0-9]+]].s, [[PG1]]/m, [[OP1_LO]].s, [[OP2_LO]].s
+; CHECK-NEXT: uzp1 [[RES:z[0-9]+]].h, [[RES_LO]].h, [[RES_HI]].h
+; CHECK-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK-NEXT: ret
   %op1 = load <16 x i16>, <16 x i16>* %a
   %op2 = load <16 x i16>, <16 x i16>* %b
   %res = sdiv <16 x i16> %op1, %op2
@@ -356,12 +356,12 @@ define <4 x i32> @sdiv_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
 
 define void @sdiv_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-LABEL: sdiv_v8i32:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
-; VBITS_GE_256-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_256-NEXT: sdiv [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
-; VBITS_GE_256-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
+; CHECK-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; CHECK-NEXT: sdiv [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; CHECK-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK-NEXT: ret
   %op1 = load <8 x i32>, <8 x i32>* %a
   %op2 = load <8 x i32>, <8 x i32>* %b
   %res = sdiv <8 x i32> %op1, %op2
@@ -436,12 +436,12 @@ define <2 x i64> @sdiv_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
 
 define void @sdiv_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 ; CHECK-LABEL: sdiv_v4i64:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),4)]]
-; VBITS_GE_256-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
-; VBITS_GE_256-NEXT: sdiv [[RES:z[0-9]+]].d, [[PG]]/m, [[OP1]].d, [[OP2]].d
-; VBITS_GE_256-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),4)]]
+; CHECK-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
+; CHECK-NEXT: sdiv [[RES:z[0-9]+]].d, [[PG]]/m, [[OP1]].d, [[OP2]].d
+; CHECK-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK-NEXT: ret
   %op1 = load <4 x i64>, <4 x i64>* %a
   %op2 = load <4 x i64>, <4 x i64>* %b
   %res = sdiv <4 x i64> %op1, %op2
@@ -555,31 +555,31 @@ define <16 x i8> @udiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) #0 {
 
 define void @udiv_v32i8(<32 x i8>* %a, <32 x i8>* %b) #0 {
 ; CHECK-LABEL: udiv_v32i8:
-; VBITS_GE_512: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,32)]]
-; VBITS_GE_512-NEXT: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
-; VBITS_GE_512-NEXT: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
-; VBITS_GE_256: ptrue [[PG1:p[0-9]+]].s, vl[[#min(VBYTES,8)]]
-; VBITS_GE_256-NEXT: uunpkhi [[OP1_HI:z[0-9]+]].h, [[OP1]].b
-; VBITS_GE_256-NEXT: uunpkhi [[OP2_HI:z[0-9]+]].h, [[OP2]].b
-; VBITS_GE_256-NEXT: uunpklo [[OP2_LO:z[0-9]+]].h, [[OP2]].b
-; VBITS_GE_256-NEXT: uunpklo [[OP1_LO:z[0-9]+]].h, [[OP1]].b
-; VBITS_GE_256-NEXT: uunpkhi [[OP2_HI_HI:z[0-9]]].s, [[OP2_HI]].h
-; VBITS_GE_256-NEXT: uunpkhi [[OP1_HI_HI:z[0-9]]].s, [[OP1_HI]].h
-; VBITS_GE_256-NEXT: uunpklo [[OP2_HI_LO:z[0-9]+]].s, [[OP2_HI]].h
-; VBITS_GE_256-NEXT: uunpklo [[OP1_HI_LO:z[0-9]+]].s, [[OP1_HI]].h
-; VBITS_GE_256-NEXT: udivr   [[RES_HI_HI:z[0-9]+]].s, [[PG1]]/m, [[OP2_HI_HI]].s, [[OP1_HI_HI]].s
-; VBITS_GE_256-NEXT: uunpkhi [[OP2_LO_HI:z[0-9]+]].s, [[OP2_LO]].h
-; VBITS_GE_256-NEXT: udivr   [[RES_HI_LO:z[0-9]+]].s, [[PG1]]/m, [[OP2_HI_LO]].s, [[OP1_HI_LO]].s
-; VBITS_GE_256-NEXT: uunpkhi [[OP1_LO_HI:z[0-9]+]].s, [[OP1_LO]].h
-; VBITS_GE_256-NEXT: uunpklo [[OP2_LO_LO:z[0-9]+]].s, [[OP2_LO]].h
-; VBITS_GE_256-NEXT: uunpklo [[OP1_LO_LO:z[0-9]+]].s, [[OP1_LO]].h
-; VBITS_GE_256-NEXT: udiv    [[RES_LO_HI:z[0-9]+]].s, [[PG1]]/m, [[OP1_LO_HI]].s, [[OP2_LO_HI]].s
-; VBITS_GE_256-NEXT: udiv    [[RES_LO_LO:z[0-9]+]].s, [[PG1]]/m, [[OP1_LO_LO]].s, [[OP2_LO_LO]].s
-; VBITS_GE_256-NEXT: uzp1    [[RES_HI:z[0-9]+]].h, [[RES_HI_LO]].h, [[RES_HI_HI]].h
-; VBITS_GE_256-NEXT: uzp1    [[RES_LO:z[0-9]+]].h, [[RES_LO_LO]].h, [[RES_LO_HI]].h
-; VBITS_GE_256-NEXT: uzp1    [[RES:z[0-9]+]].b, [[RES_LO]].b, [[RES_HI]].b
-; VBITS_GE_256-NEXT: st1b    { [[RES]].b }, [[PG]], [x0]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].b, vl[[#min(VBYTES,32)]]
+; CHECK-NEXT: ld1b { [[OP1:z[0-9]+]].b }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1b { [[OP2:z[0-9]+]].b }, [[PG]]/z, [x1]
+; CHECK-NEXT: ptrue [[PG1:p[0-9]+]].s, vl[[#min(VBYTES,8)]]
+; CHECK-NEXT: uunpkhi [[OP1_HI:z[0-9]+]].h, [[OP1]].b
+; CHECK-NEXT: uunpkhi [[OP2_HI:z[0-9]+]].h, [[OP2]].b
+; CHECK-NEXT: uunpklo [[OP2_LO:z[0-9]+]].h, [[OP2]].b
+; CHECK-NEXT: uunpklo [[OP1_LO:z[0-9]+]].h, [[OP1]].b
+; CHECK-NEXT: uunpkhi [[OP2_HI_HI:z[0-9]]].s, [[OP2_HI]].h
+; CHECK-NEXT: uunpkhi [[OP1_HI_HI:z[0-9]]].s, [[OP1_HI]].h
+; CHECK-NEXT: uunpklo [[OP2_HI_LO:z[0-9]+]].s, [[OP2_HI]].h
+; CHECK-NEXT: uunpklo [[OP1_HI_LO:z[0-9]+]].s, [[OP1_HI]].h
+; CHECK-NEXT: udivr   [[RES_HI_HI:z[0-9]+]].s, [[PG1]]/m, [[OP2_HI_HI]].s, [[OP1_HI_HI]].s
+; CHECK-NEXT: uunpkhi [[OP2_LO_HI:z[0-9]+]].s, [[OP2_LO]].h
+; CHECK-NEXT: udivr   [[RES_HI_LO:z[0-9]+]].s, [[PG1]]/m, [[OP2_HI_LO]].s, [[OP1_HI_LO]].s
+; CHECK-NEXT: uunpkhi [[OP1_LO_HI:z[0-9]+]].s, [[OP1_LO]].h
+; CHECK-NEXT: uunpklo [[OP2_LO_LO:z[0-9]+]].s, [[OP2_LO]].h
+; CHECK-NEXT: uunpklo [[OP1_LO_LO:z[0-9]+]].s, [[OP1_LO]].h
+; CHECK-NEXT: udiv    [[RES_LO_HI:z[0-9]+]].s, [[PG1]]/m, [[OP1_LO_HI]].s, [[OP2_LO_HI]].s
+; CHECK-NEXT: udiv    [[RES_LO_LO:z[0-9]+]].s, [[PG1]]/m, [[OP1_LO_LO]].s, [[OP2_LO_LO]].s
+; CHECK-NEXT: uzp1    [[RES_HI:z[0-9]+]].h, [[RES_HI_LO]].h, [[RES_HI_HI]].h
+; CHECK-NEXT: uzp1    [[RES_LO:z[0-9]+]].h, [[RES_LO_LO]].h, [[RES_LO_HI]].h
+; CHECK-NEXT: uzp1    [[RES:z[0-9]+]].b, [[RES_LO]].b, [[RES_HI]].b
+; CHECK-NEXT: st1b    { [[RES]].b }, [[PG]], [x0]
+; CHECK-NEXT: ret
   %op1 = load <32 x i8>, <32 x i8>* %a
   %op2 = load <32 x i8>, <32 x i8>* %b
   %res = udiv <32 x i8> %op1, %op2
@@ -722,19 +722,19 @@ define <8 x i16> @udiv_v8i16(<8 x i16> %op1, <8 x i16> %op2) #0 {
 
 define void @udiv_v16i16(<16 x i16>* %a, <16 x i16>* %b) #0 {
 ; CHECK-LABEL: udiv_v16i16:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),16)]]
-; VBITS_GE_256-NEXT: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
-; VBITS_GE_256-NEXT: ptrue [[PG1:p[0-9]+]].s, vl[[#min(div(VBYTES,2),8)]]
-; VBITS_GE_256-NEXT: uunpkhi [[OP1_HI:z[0-9]+]].s, [[OP1]].h
-; VBITS_GE_256-NEXT: uunpkhi [[OP2_HI:z[0-9]+]].s, [[OP2]].h
-; VBITS_GE_256-NEXT: uunpklo [[OP2_LO:z[0-9]+]].s, [[OP2]].h
-; VBITS_GE_256-NEXT: uunpklo [[OP1_LO:z[0-9]+]].s, [[OP1]].h
-; VBITS_GE_256-NEXT: udivr   [[RES_HI:z[0-9]+]].s, [[PG1]]/m, [[OP2_HI]].s, [[OP1_HI]].s
-; VBITS_GE_256-NEXT: udiv    [[RES_LO:z[0-9]+]].s, [[PG1]]/m, [[OP1_LO]].s, [[OP2_LO]].s
-; VBITS_GE_256-NEXT: uzp1 [[RES:z[0-9]+]].h, [[RES_LO]].h, [[RES_HI]].h
-; VBITS_GE_256-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),16)]]
+; CHECK-NEXT: ld1h { [[OP1:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1h { [[OP2:z[0-9]+]].h }, [[PG]]/z, [x1]
+; CHECK-NEXT: ptrue [[PG1:p[0-9]+]].s, vl[[#min(div(VBYTES,2),8)]]
+; CHECK-NEXT: uunpkhi [[OP1_HI:z[0-9]+]].s, [[OP1]].h
+; CHECK-NEXT: uunpkhi [[OP2_HI:z[0-9]+]].s, [[OP2]].h
+; CHECK-NEXT: uunpklo [[OP2_LO:z[0-9]+]].s, [[OP2]].h
+; CHECK-NEXT: uunpklo [[OP1_LO:z[0-9]+]].s, [[OP1]].h
+; CHECK-NEXT: udivr   [[RES_HI:z[0-9]+]].s, [[PG1]]/m, [[OP2_HI]].s, [[OP1_HI]].s
+; CHECK-NEXT: udiv    [[RES_LO:z[0-9]+]].s, [[PG1]]/m, [[OP1_LO]].s, [[OP2_LO]].s
+; CHECK-NEXT: uzp1 [[RES:z[0-9]+]].h, [[RES_LO]].h, [[RES_HI]].h
+; CHECK-NEXT: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK-NEXT: ret
   %op1 = load <16 x i16>, <16 x i16>* %a
   %op2 = load <16 x i16>, <16 x i16>* %b
   %res = udiv <16 x i16> %op1, %op2
@@ -830,12 +830,12 @@ define <4 x i32> @udiv_v4i32(<4 x i32> %op1, <4 x i32> %op2) #0 {
 
 define void @udiv_v8i32(<8 x i32>* %a, <8 x i32>* %b) #0 {
 ; CHECK-LABEL: udiv_v8i32:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
-; VBITS_GE_256-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
-; VBITS_GE_256-NEXT: udiv [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
-; VBITS_GE_256-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
+; CHECK-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1w { [[OP2:z[0-9]+]].s }, [[PG]]/z, [x1]
+; CHECK-NEXT: udiv [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; CHECK-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK-NEXT: ret
   %op1 = load <8 x i32>, <8 x i32>* %a
   %op2 = load <8 x i32>, <8 x i32>* %b
   %res = udiv <8 x i32> %op1, %op2
@@ -910,12 +910,12 @@ define <2 x i64> @udiv_v2i64(<2 x i64> %op1, <2 x i64> %op2) #0 {
 
 define void @udiv_v4i64(<4 x i64>* %a, <4 x i64>* %b) #0 {
 ; CHECK-LABEL: udiv_v4i64:
-; VBITS_GE_256: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),4)]]
-; VBITS_GE_256-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
-; VBITS_GE_256-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
-; VBITS_GE_256-NEXT: udiv [[RES:z[0-9]+]].d, [[PG]]/m, [[OP1]].d, [[OP2]].d
-; VBITS_GE_256-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
-; VBITS_GE_256-NEXT: ret
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),4)]]
+; CHECK-NEXT: ld1d { [[OP1:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: ld1d { [[OP2:z[0-9]+]].d }, [[PG]]/z, [x1]
+; CHECK-NEXT: udiv [[RES:z[0-9]+]].d, [[PG]]/m, [[OP1]].d, [[OP2]].d
+; CHECK-NEXT: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK-NEXT: ret
   %op1 = load <4 x i64>, <4 x i64>* %a
   %op2 = load <4 x i64>, <4 x i64>* %b
   %res = udiv <4 x i64> %op1, %op2

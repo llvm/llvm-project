@@ -15,10 +15,10 @@
 // resizes or shrinks at the correct time.
 
 #include <deque>
-#include <iostream>
+#include <cstdio>
 #include <memory>
-#include <stack>
 #include <queue>
+#include <stack>
 
 #include "min_allocator.h"
 #include "rapid-cxx-test.h"
@@ -31,12 +31,12 @@ struct ContainerAdaptor : public Adaptor {
 
 template <class Deque>
 static void print(const Deque& d) {
-  std::cout << d.size()
-            << " : __front_spare() == " << d.__front_spare()
-            << " : __back_spare() == " << d.__back_spare()
-            << " : __capacity() == " << d.__capacity()
-            << " : bytes allocated == "
-            << malloc_allocator_base::outstanding_bytes << '\n';
+  std::printf("%zu : __front_spare() == %zu"
+              " : __back_spare() == %zu"
+              " : __capacity() == %zu"
+              " : bytes allocated == %zu\n",
+              d.size(), d.__front_spare(), d.__back_spare(), d.__capacity(),
+              malloc_allocator_base::outstanding_bytes);
 }
 
 template <class T>

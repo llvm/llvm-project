@@ -475,13 +475,14 @@ body:             |
   ; GCN: bb.2:
   ; GCN:   successors: %bb.3(0x40000000), %bb.6(0x40000000)
   ; GCN:   [[S_OR_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_OR_SAVEEXEC_B64 [[S_XOR_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
-  ; GCN:   $exec = S_XOR_B64_term $exec, [[S_OR_SAVEEXEC_B64_]], implicit-def $scc
+  ; GCN:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[S_OR_SAVEEXEC_B64_]], implicit-def $scc
+  ; GCN:   $exec = S_XOR_B64_term $exec, [[S_AND_B64_1]], implicit-def $scc
   ; GCN:   S_CBRANCH_EXECZ %bb.6, implicit $exec
   ; GCN: bb.3:
   ; GCN:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
   ; GCN:   [[COPY1:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
-  ; GCN:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY1]], undef %4:sreg_64, implicit-def dead $scc
-  ; GCN:   $exec = S_MOV_B64_term killed [[S_AND_B64_1]]
+  ; GCN:   [[S_AND_B64_2:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY1]], undef %4:sreg_64, implicit-def dead $scc
+  ; GCN:   $exec = S_MOV_B64_term killed [[S_AND_B64_2]]
   ; GCN:   S_CBRANCH_EXECZ %bb.3, implicit $exec
   ; GCN: bb.4:
   ; GCN:   successors: %bb.5(0x80000000)
@@ -489,7 +490,7 @@ body:             |
   ; GCN:   successors: %bb.6(0x80000000)
   ; GCN:   $exec = S_OR_B64 $exec, [[COPY1]], implicit-def $scc
   ; GCN: bb.6:
-  ; GCN:   $exec = S_OR_B64 $exec, [[S_OR_SAVEEXEC_B64_]], implicit-def $scc
+  ; GCN:   $exec = S_OR_B64 $exec, [[S_AND_B64_1]], implicit-def $scc
   ; GCN:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.2
@@ -502,7 +503,7 @@ body:             |
 
   bb.2:
     successors: %bb.3, %bb.6
-    %2:sreg_64 = SI_ELSE %0:sreg_64, %bb.6, 0, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %2:sreg_64 = SI_ELSE %0:sreg_64, %bb.6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
 
   bb.3:
     successors: %bb.3, %bb.4
@@ -580,5 +581,121 @@ body:             |
     %2:sreg_64 = SI_IF undef %3:sreg_64, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.0
     S_ENDPGM 0
+
+...
+
+---
+# redundant MBB removal correctness test:
+# we can keep bb.2 fallthrough to the  new succ because after bb.3 gets removed
+# new succ (bb.4) becomes bb.2's layout successor
+name: removed_succ_fallthrough_but_layout_successor
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  ; GCN-LABEL: name: removed_succ_fallthrough_but_layout_successor
+  ; GCN: bb.0:
+  ; GCN:   successors: %bb.1(0x40000000), %bb.4(0x40000000)
+  ; GCN:   [[COPY:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
+  ; GCN:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], undef %1:sreg_64, implicit-def dead $scc
+  ; GCN:   $exec = S_MOV_B64_term killed [[S_AND_B64_]]
+  ; GCN:   S_CBRANCH_EXECZ %bb.4, implicit $exec
+  ; GCN: bb.1:
+  ; GCN:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
+  ; GCN:   [[COPY1:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
+  ; GCN:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY1]], undef %3:sreg_64, implicit-def dead $scc
+  ; GCN:   $exec = S_MOV_B64_term killed [[S_AND_B64_1]]
+  ; GCN:   S_CBRANCH_EXECZ %bb.4, implicit $exec
+  ; GCN: bb.2:
+  ; GCN:   successors: %bb.4(0x80000000)
+  ; GCN: bb.4:
+  ; GCN:   successors: %bb.5(0x80000000)
+  ; GCN:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GCN: bb.5:
+  ; GCN:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1, %bb.4
+
+    %0:sreg_64 = SI_IF undef %1:sreg_64, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    %2:sreg_64 = SI_IF undef %3:sreg_64, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+
+  bb.2:
+
+  bb.3:
+    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+
+
+  bb.4:
+    SI_END_CF %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+
+  bb.5:
+    S_ENDPGM 0
+
+...
+
+---
+# redundant MBB removal correctness test:
+# If one of the remdundant block preds has a fallthrough path, but the only redundant block succ is not
+# going to be a layout successor to that pred after redundant block removal, we should not rearrange
+# blocks to keep pred's fallthrough path, if the succ has fallthrough path to one of it's succ too.
+
+name: deleted_succ_fallthrough_not_layout_successor
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  ; GCN-LABEL: name: deleted_succ_fallthrough_not_layout_successor
+  ; GCN: bb.0:
+  ; GCN:   successors: %bb.1(0x40000000), %bb.4(0x40000000)
+  ; GCN:   [[COPY:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
+  ; GCN:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], undef %1:sreg_64, implicit-def dead $scc
+  ; GCN:   $exec = S_MOV_B64_term killed [[S_AND_B64_]]
+  ; GCN:   S_CBRANCH_EXECZ %bb.4, implicit $exec
+  ; GCN: bb.1:
+  ; GCN:   successors: %bb.2(0x40000000), %bb.5(0x40000000)
+  ; GCN:   [[COPY1:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
+  ; GCN:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY1]], undef %3:sreg_64, implicit-def dead $scc
+  ; GCN:   $exec = S_MOV_B64_term killed [[S_AND_B64_1]]
+  ; GCN:   S_CBRANCH_EXECZ %bb.5, implicit $exec
+  ; GCN: bb.2:
+  ; GCN:   successors: %bb.5(0x80000000)
+  ; GCN:   S_BRANCH %bb.5
+  ; GCN: bb.4:
+  ; GCN:   S_ENDPGM 0
+  ; GCN: bb.5:
+  ; GCN:   successors: %bb.6(0x80000000)
+  ; GCN:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GCN: bb.6:
+  ; GCN:   successors: %bb.4(0x80000000)
+  ; GCN:   S_BRANCH %bb.4
+  bb.0:
+    successors: %bb.1, %bb.4
+
+    %0:sreg_64 = SI_IF undef %1:sreg_64, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    %2:sreg_64 = SI_IF undef %3:sreg_64, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+
+  bb.2:
+
+  bb.3:
+    SI_END_CF %2:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.5
+
+  bb.4:
+    S_ENDPGM 0
+
+
+  bb.5:
+    SI_END_CF %0:sreg_64, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+
+  bb.6:
+    S_BRANCH %bb.4
 
 ...

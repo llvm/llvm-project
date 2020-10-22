@@ -238,7 +238,7 @@ constexpr int f_c(int i) {
 // expected-note@-1 {{declared here}}
   int t = f(i);
 // expected-error@-1 {{is not a constant expression}}
-// expected-note@-2 {{read of non-const variable}}
+// expected-note@-2 {{function parameter}}
   return f(0);  
 }
 
@@ -254,7 +254,7 @@ auto l1 = [](int i) constexpr {
 // expected-note@-1 {{declared here}}
   int t = f(i);
 // expected-error@-1 {{is not a constant expression}}
-// expected-note@-2 {{read of non-const variable}}
+// expected-note@-2 {{function parameter}}
   return f(0);  
 };
 

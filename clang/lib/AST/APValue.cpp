@@ -77,7 +77,7 @@ QualType APValue::LValueBase::getDynamicAllocType() const {
   return QualType::getFromOpaquePtr(DynamicAllocType);
 }
 
-void APValue::LValueBase::profile(llvm::FoldingSetNodeID &ID) const {
+void APValue::LValueBase::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.AddPointer(Ptr.getOpaqueValue());
   if (is<TypeInfoLValue>() || is<DynamicAllocLValue>())
     return;
@@ -103,7 +103,7 @@ APValue::LValuePathEntry::LValuePathEntry(BaseOrMemberType BaseOrMember) {
   Value = reinterpret_cast<uintptr_t>(BaseOrMember.getOpaqueValue());
 }
 
-void APValue::LValuePathEntry::profile(llvm::FoldingSetNodeID &ID) const {
+void APValue::LValuePathEntry::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.AddInteger(Value);
 }
 
@@ -414,7 +414,7 @@ void APValue::swap(APValue &RHS) {
   std::swap(Data, RHS.Data);
 }
 
-void APValue::profile(llvm::FoldingSetNodeID &ID) const {
+void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.AddInteger(Kind);
 
   switch (Kind) {
@@ -430,10 +430,10 @@ void APValue::profile(llvm::FoldingSetNodeID &ID) const {
   case Struct:
     ID.AddInteger(getStructNumBases());
     for (unsigned I = 0, N = getStructNumBases(); I != N; ++I)
-      getStructBase(I).profile(ID);
+      getStructBase(I).Profile(ID);
     ID.AddInteger(getStructNumFields());
     for (unsigned I = 0, N = getStructNumFields(); I != N; ++I)
-      getStructField(I).profile(ID);
+      getStructField(I).Profile(ID);
     return;
 
   case Union:
@@ -442,7 +442,7 @@ void APValue::profile(llvm::FoldingSetNodeID &ID) const {
       return;
     }
     ID.AddPointer(getUnionField()->getCanonicalDecl());
-    getUnionValue().profile(ID);
+    getUnionValue().Profile(ID);
     return;
 
   case Array: {
@@ -459,9 +459,9 @@ void APValue::profile(llvm::FoldingSetNodeID &ID) const {
     //   ['a', 'c', 'x', 'x', 'x'] is profiled as
     //   [5, 'x', 3, 'c', 'a']
     llvm::FoldingSetNodeID FillerID;
-    (hasArrayFiller() ? getArrayFiller() :
-     getArrayInitializedElt(getArrayInitializedElts() -
-       1)).profile(FillerID);
+    (hasArrayFiller() ? getArrayFiller()
+                      : getArrayInitializedElt(getArrayInitializedElts() - 1))
+        .Profile(FillerID);
     ID.AddNodeID(FillerID);
     unsigned NumFillers = getArraySize() - getArrayInitializedElts();
     unsigned N = getArrayInitializedElts();
@@ -481,7 +481,7 @@ void APValue::profile(llvm::FoldingSetNodeID &ID) const {
       // element.
       if (N != getArraySize()) {
         llvm::FoldingSetNodeID ElemID;
-        getArrayInitializedElt(N - 1).profile(ElemID);
+        getArrayInitializedElt(N - 1).Profile(ElemID);
         if (ElemID != FillerID) {
           ID.AddInteger(NumFillers);
           ID.AddNodeID(ElemID);
@@ -497,14 +497,14 @@ void APValue::profile(llvm::FoldingSetNodeID &ID) const {
 
     // Emit the remaining elements.
     for (; N != 0; --N)
-      getArrayInitializedElt(N - 1).profile(ID);
+      getArrayInitializedElt(N - 1).Profile(ID);
     return;
   }
 
   case Vector:
     ID.AddInteger(getVectorLength());
     for (unsigned I = 0, N = getVectorLength(); I != N; ++I)
-      getVectorElt(I).profile(ID);
+      getVectorElt(I).Profile(ID);
     return;
 
   case Int:
@@ -533,7 +533,7 @@ void APValue::profile(llvm::FoldingSetNodeID &ID) const {
     return;
 
   case LValue:
-    getLValueBase().profile(ID);
+    getLValueBase().Profile(ID);
     ID.AddInteger(getLValueOffset().getQuantity());
     ID.AddInteger(isNullPointer());
     ID.AddInteger(isLValueOnePastTheEnd());
@@ -541,7 +541,7 @@ void APValue::profile(llvm::FoldingSetNodeID &ID) const {
     // to union members, but we don't have the type here so we don't know
     // how to interpret the entries.
     for (LValuePathEntry E : getLValuePath())
-      E.profile(ID);
+      E.Profile(ID);
     return;
 
   case MemberPointer:

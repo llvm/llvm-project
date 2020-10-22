@@ -22,8 +22,6 @@
 #include "filesystem_test_helper.h"
 #include "rapid-cxx-test.h"
 
-#include <iostream>
-
 #include "test_macros.h"
 
 TEST_SUITE(directory_entry_obs_testsuite)

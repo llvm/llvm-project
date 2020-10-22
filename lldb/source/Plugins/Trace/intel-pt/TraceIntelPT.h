@@ -59,15 +59,18 @@ public:
 
   llvm::StringRef GetSchema() override;
 
-  TraceIntelPT(const pt_cpu &pt_cpu, const std::vector<lldb::TargetSP> &targets)
-      : m_pt_cpu(pt_cpu) {
-    for (const lldb::TargetSP &target_sp : targets)
-      m_targets.push_back(target_sp);
-  }
-
 private:
+  friend class TraceIntelPTSessionFileParser;
+
+  /// \param[in] trace_threads
+  ///     ThreadTrace instances, which are not live-processes and whose trace
+  ///     files are fixed.
+  TraceIntelPT(const pt_cpu &pt_cpu,
+               const std::vector<std::shared_ptr<ThreadTrace>> &traced_threads);
+
   pt_cpu m_pt_cpu;
-  std::vector<std::weak_ptr<Target>> m_targets;
+  std::map<std::pair<lldb::pid_t, lldb::tid_t>, std::shared_ptr<ThreadTrace>>
+      m_trace_threads;
 };
 
 } // namespace trace_intel_pt

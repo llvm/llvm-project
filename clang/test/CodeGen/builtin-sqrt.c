@@ -11,5 +11,5 @@ float foo(float X) {
 // HAS_ERRNO-NOT: attributes [[ATTR]] = {{{.*}} readnone
 
 // NO_ERRNO: declare float @llvm.sqrt.f32(float) [[ATTR:#[0-9]+]]
-// NO_ERRNO: attributes [[ATTR]] = { nounwind readnone {{.*}}}
+// NO_ERRNO: attributes [[ATTR]] = { nofree nosync nounwind readnone {{.*}}}
 

@@ -105,6 +105,7 @@ unittest("ClangdTests") {
     "support/ContextTests.cpp",
     "support/FunctionTests.cpp",
     "support/MarkupTests.cpp",
+    "support/MemoryTreeTests.cpp",
     "support/TestTracer.cpp",
     "support/ThreadingTests.cpp",
     "support/TraceTests.cpp",

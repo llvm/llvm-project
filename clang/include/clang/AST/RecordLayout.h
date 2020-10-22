@@ -248,6 +248,8 @@ public:
   /// getBaseClassOffset - Get the offset, in chars, for the given base class.
   CharUnits getBaseClassOffset(const CXXRecordDecl *Base) const {
     assert(CXXInfo && "Record layout does not have C++ specific info!");
+
+    Base = Base->getDefinition();
     assert(CXXInfo->BaseOffsets.count(Base) && "Did not find base!");
 
     return CXXInfo->BaseOffsets[Base];
@@ -256,6 +258,8 @@ public:
   /// getVBaseClassOffset - Get the offset, in chars, for the given base class.
   CharUnits getVBaseClassOffset(const CXXRecordDecl *VBase) const {
     assert(CXXInfo && "Record layout does not have C++ specific info!");
+
+    VBase = VBase->getDefinition();
     assert(CXXInfo->VBaseOffsets.count(VBase) && "Did not find base!");
 
     return CXXInfo->VBaseOffsets[VBase].VBaseOffset;

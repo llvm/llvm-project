@@ -70,6 +70,7 @@ class StructType;
 class TargetLibraryInfo;
 class Type;
 class Value;
+enum SCEVTypes : unsigned short;
 
 /// This class represents an analyzed expression in the program.  These are
 /// opaque objects that the client is not allowed to do much with directly.
@@ -82,7 +83,7 @@ class SCEV : public FoldingSetNode {
   FoldingSetNodeIDRef FastID;
 
   // The SCEV baseclass this node corresponds to
-  const unsigned short SCEVType;
+  const SCEVTypes SCEVType;
 
 protected:
   // Estimated complexity of this node's expression tree size.
@@ -119,13 +120,13 @@ public:
     NoWrapMask = (1 << 3) - 1
   };
 
-  explicit SCEV(const FoldingSetNodeIDRef ID, unsigned SCEVTy,
+  explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                 unsigned short ExpressionSize)
       : FastID(ID), SCEVType(SCEVTy), ExpressionSize(ExpressionSize) {}
   SCEV(const SCEV &) = delete;
   SCEV &operator=(const SCEV &) = delete;
 
-  unsigned getSCEVType() const { return SCEVType; }
+  SCEVTypes getSCEVType() const { return SCEVType; }
 
   /// Return the LLVM type of this SCEV expression.
   Type *getType() const;
@@ -572,7 +573,9 @@ public:
   /// \p IndexExprs The expressions for the indices.
   const SCEV *getGEPExpr(GEPOperator *GEP,
                          const SmallVectorImpl<const SCEV *> &IndexExprs);
-  const SCEV *getMinMaxExpr(unsigned Kind,
+  const SCEV *getAbsExpr(const SCEV *Op, bool IsNSW);
+  const SCEV *getSignumExpr(const SCEV *Op);
+  const SCEV *getMinMaxExpr(SCEVTypes Kind,
                             SmallVectorImpl<const SCEV *> &Operands);
   const SCEV *getSMaxExpr(const SCEV *LHS, const SCEV *RHS);
   const SCEV *getSMaxExpr(SmallVectorImpl<const SCEV *> &Operands);
@@ -590,6 +593,11 @@ public:
 
   /// Return a SCEV for the constant 1 of a specific type.
   const SCEV *getOne(Type *Ty) { return getConstant(Ty, 1); }
+
+  /// Return a SCEV for the constant -1 of a specific type.
+  const SCEV *getMinusOne(Type *Ty) {
+    return getConstant(Ty, -1, /*isSigned=*/true);
+  }
 
   /// Return an expression for sizeof AllocTy that is type IntTy
   const SCEV *getSizeOfExpr(Type *IntTy, Type *AllocTy);
@@ -1489,6 +1497,13 @@ private:
   ConstantRange getRangeForAffineAR(const SCEV *Start, const SCEV *Stop,
                                     const SCEV *MaxBECount, unsigned BitWidth);
 
+  /// Determines the range for the affine non-self-wrapping SCEVAddRecExpr {\p
+  /// Start,+,\p Stop}<nw>.
+  ConstantRange getRangeForAffineNoSelfWrappingAR(const SCEVAddRecExpr *AddRec,
+                                                  const SCEV *MaxBECount,
+                                                  unsigned BitWidth,
+                                                  RangeSignHint SignHint);
+
   /// Try to compute a range for the affine SCEVAddRecExpr {\p Start,+,\p
   /// Stop} by "factoring out" a ternary expression from the add recurrence.
   /// Helper called by \c getRange.
@@ -1688,10 +1703,20 @@ private:
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the given FoundCondValue value evaluates to true in given
   /// Context. If Context is nullptr, then the found predicate is true
-  /// everywhere.
+  /// everywhere. LHS and FoundLHS may have different type width.
   bool isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS,
                      const Value *FoundCondValue, bool Inverse,
                      const Instruction *Context = nullptr);
+
+  /// Test whether the condition described by Pred, LHS, and RHS is true
+  /// whenever the given FoundCondValue value evaluates to true in given
+  /// Context. If Context is nullptr, then the found predicate is true
+  /// everywhere. LHS and FoundLHS must have same type width.
+  bool isImpliedCondBalancedTypes(ICmpInst::Predicate Pred, const SCEV *LHS,
+                                  const SCEV *RHS,
+                                  ICmpInst::Predicate FoundPred,
+                                  const SCEV *FoundLHS, const SCEV *FoundRHS,
+                                  const Instruction *Context);
 
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the condition described by FoundPred, FoundLHS, FoundRHS is
@@ -1941,7 +1966,7 @@ private:
   /// constructed to look up the SCEV and the third component is the insertion
   /// point.
   std::tuple<SCEV *, FoldingSetNodeID, void *>
-  findExistingSCEVInCache(int SCEVType, ArrayRef<const SCEV *> Ops);
+  findExistingSCEVInCache(SCEVTypes SCEVType, ArrayRef<const SCEV *> Ops);
 
   FoldingSet<SCEV> UniqueSCEVs;
   FoldingSet<SCEVPredicate> UniquePreds;

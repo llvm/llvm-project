@@ -18,8 +18,41 @@
 #include "VPlan.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/Support/CfgTraits.h"
 
 namespace llvm {
+
+/// Partial CFG traits for VPlan's CFG, without a value type.
+class VPCfgTraitsBase : public CfgTraitsBase {
+public:
+  using ParentType = VPRegionBlock;
+  using BlockRef = VPBlockBase *;
+  using ValueRef = void;
+
+  static CfgBlockRef wrapRef(BlockRef block) {
+    return makeOpaque<CfgBlockRefTag>(block);
+  }
+  static BlockRef unwrapRef(CfgBlockRef block) {
+    return static_cast<BlockRef>(getOpaque(block));
+  }
+};
+
+class VPCfgTraits : public CfgTraits<VPCfgTraitsBase, VPCfgTraits> {
+public:
+  static VPRegionBlock *getBlockParent(VPBlockBase *block) {
+    return block->getParent();
+  }
+
+  static auto predecessors(VPBlockBase *block) {
+    return llvm::inverse_children<VPBlockBase *>(block);
+  }
+
+  static auto successors(VPBlockBase *block) {
+    return llvm::children<VPBlockBase *>(block);
+  }
+};
+
+template <> struct CfgTraitsFor<VPBlockBase> { using CfgTraits = VPCfgTraits; };
 
 /// Template specialization of the standard LLVM dominator tree utility for
 /// VPBlockBases.

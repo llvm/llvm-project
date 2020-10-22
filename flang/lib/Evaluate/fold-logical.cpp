@@ -46,6 +46,18 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
         return Expr<T>{result};
       }
     }
+  } else if (name == "associated") {
+    bool gotConstant{true};
+    const Expr<SomeType> *firstArgExpr{args[0]->UnwrapExpr()};
+    if (!firstArgExpr || !IsNullPointer(*firstArgExpr)) {
+      gotConstant = false;
+    } else if (args[1]) { // There's a second argument
+      const Expr<SomeType> *secondArgExpr{args[1]->UnwrapExpr()};
+      if (!secondArgExpr || !IsNullPointer(*secondArgExpr)) {
+        gotConstant = false;
+      }
+    }
+    return gotConstant ? Expr<T>{false} : Expr<T>{std::move(funcRef)};
   } else if (name == "bge" || name == "bgt" || name == "ble" || name == "blt") {
     using LargestInt = Type<TypeCategory::Integer, 16>;
     static_assert(std::is_same_v<Scalar<LargestInt>, BOZLiteralConstant>);

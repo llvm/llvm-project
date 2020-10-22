@@ -4,16 +4,8 @@ set(lldbBase_SOURCES
     lldb.cpp
   )
 
-foreach(file
-        "${LLDB_SOURCE_DIR}/.git/logs/HEAD" # Git
-        "${LLDB_SOURCE_DIR}/.svn/wc.db"     # SVN 1.7
-        "${LLDB_SOURCE_DIR}/.svn/entries"   # SVN 1.6
-        )
-  if(EXISTS "${file}")
-    set(lldb_vc "${file}")
-    break()
-  endif()
-endforeach()
+
+find_first_existing_vc_file("${LLDB_SOURCE_DIR}" lldb_vc)
 
 set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/VCSVersion.inc")
 set(generate_vcs_version_script "${LLVM_CMAKE_PATH}/GenerateVersionFromVCS.cmake")

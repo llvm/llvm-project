@@ -13,10 +13,10 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     // CHECK: {{%.*}} = spv.undef : !spv.array<4 x !spv.array<4 x i32>>
     %5 = spv.undef : !spv.array<4x!spv.array<4xi32>>
     %6 = spv.CompositeExtract %5[1 : i32, 2 : i32] : !spv.array<4x!spv.array<4xi32>>
-    // CHECK: {{%.*}} = spv.undef : !spv.ptr<!spv.struct<f32>, StorageBuffer>
-    %7 = spv.undef : !spv.ptr<!spv.struct<f32>, StorageBuffer>
+    // CHECK: {{%.*}} = spv.undef : !spv.ptr<!spv.struct<(f32)>, StorageBuffer>
+    %7 = spv.undef : !spv.ptr<!spv.struct<(f32)>, StorageBuffer>
     %8 = spv.constant 0 : i32
-    %9 = spv.AccessChain %7[%8] : !spv.ptr<!spv.struct<f32>, StorageBuffer>, i32
+    %9 = spv.AccessChain %7[%8] : !spv.ptr<!spv.struct<(f32)>, StorageBuffer>, i32
     spv.Return
   }
 }

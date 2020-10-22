@@ -239,8 +239,8 @@ TEST(RemoteMarshallingTest, IncludeHeaderURIs) {
 
   clangd::Symbol::IncludeHeaderWithReferences Header;
   // Add only valid headers.
-  Header.IncludeHeader = Strings.save(
-      URI::createFile("/usr/local/user/home/project/Header.h").toString());
+  Header.IncludeHeader =
+      Strings.save(URI::createFile(testPath("project/Header.h")).toString());
   Header.References = 21;
   Sym.IncludeHeaders.push_back(Header);
   Header.IncludeHeader = Strings.save("<iostream>");
@@ -250,7 +250,7 @@ TEST(RemoteMarshallingTest, IncludeHeaderURIs) {
   Header.References = 200;
   Sym.IncludeHeaders.push_back(Header);
 
-  Marshaller ProtobufMarshaller(convert_to_slash("/"), convert_to_slash("/"));
+  Marshaller ProtobufMarshaller(testPath(""), testPath(""));
 
   auto Serialized = ProtobufMarshaller.toProtobuf(Sym);
   ASSERT_TRUE(bool(Serialized));

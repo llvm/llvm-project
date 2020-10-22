@@ -411,15 +411,12 @@ static Status HandleFileAction(ProcessLaunchInfo &launch_info,
           if (file_spec == secondary_spec) {
             int secondary_fd =
                 launch_info.GetPTY().GetSecondaryFileDescriptor();
-            if (secondary_fd == PseudoTerminal::invalid_fd)
-              secondary_fd =
-                  launch_info.GetPTY().OpenSecondary(O_RDWR, nullptr, 0);
             if (secondary_fd == PseudoTerminal::invalid_fd) {
-              std::string secondary_path = secondary_spec.GetPath();
-              error.SetErrorStringWithFormat(
-                  "unable to open secondary pty '%s'", secondary_path.c_str());
-              return error; // Failure
+              if (llvm::Error Err = launch_info.GetPTY().OpenSecondary(O_RDWR))
+                return Status(std::move(Err));
             }
+            secondary_fd = launch_info.GetPTY().GetSecondaryFileDescriptor();
+            assert(secondary_fd != PseudoTerminal::invalid_fd);
             [options setValue:[NSNumber numberWithInteger:secondary_fd]
                        forKey:key];
             return error; // Success

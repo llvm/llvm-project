@@ -26,7 +26,7 @@ if (clang_enable_per_target_runtime_dir) {
   if (current_os == "android") {
     crt_current_target_suffix += "-android"
   }
-} else if (current_os == "mac") {
+} else if (current_os == "ios" || current_os == "mac") {
   crt_current_out_dir = "$clang_resource_dir/lib/darwin"
 } else {
   assert(false, "unimplemented current_os " + current_os)

@@ -160,3 +160,41 @@ define i32 @ctpop_ne_one(i64 %x) nounwind readnone {
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
+
+define i1 @ctpop_trunc_non_power2(i255 %x) nounwind {
+; CHECK-LABEL: ctpop_trunc_non_power2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
+; CHECK-NEXT:    movq %rcx, %r9
+; CHECK-NEXT:    andq %r8, %r9
+; CHECK-NEXT:    movq %rdi, %r11
+; CHECK-NEXT:    addq $-1, %r11
+; CHECK-NEXT:    movq %rsi, %r10
+; CHECK-NEXT:    adcq $-1, %r10
+; CHECK-NEXT:    movq %rdx, %rax
+; CHECK-NEXT:    adcq $-1, %rax
+; CHECK-NEXT:    movq %rcx, %rbx
+; CHECK-NEXT:    adcq %r8, %rbx
+; CHECK-NEXT:    andq %rdi, %r11
+; CHECK-NEXT:    andq %rdx, %rax
+; CHECK-NEXT:    orq %r11, %rax
+; CHECK-NEXT:    andq %rsi, %r10
+; CHECK-NEXT:    andq %r8, %rbx
+; CHECK-NEXT:    andq %rcx, %rbx
+; CHECK-NEXT:    orq %r10, %rbx
+; CHECK-NEXT:    orq %rax, %rbx
+; CHECK-NEXT:    sete %cl
+; CHECK-NEXT:    orq %rdx, %rdi
+; CHECK-NEXT:    orq %rsi, %r9
+; CHECK-NEXT:    orq %rdi, %r9
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    andb %cl, %al
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    retq
+  %a = call i255 @llvm.ctpop.i255(i255 %x)
+  %b = trunc i255 %a to i8 ; largest value from ctpop is 255, fits in 8 bits.
+  %c = icmp eq i8 %b, 1
+  ret i1 %c
+}
+declare i255 @llvm.ctpop.i255(i255)

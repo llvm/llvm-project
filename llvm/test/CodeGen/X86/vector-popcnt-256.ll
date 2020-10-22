@@ -341,6 +341,1124 @@ define <32 x i8> @foldv32i8() nounwind {
   ret <32 x i8> %out
 }
 
+define <4 x i64> @ult_2_v4i64(<4 x i64> %0) {
+; AVX1-LABEL: ult_2_v4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddq %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqq %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddq %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqq %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ult_2_v4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: ult_2_v4i64:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpopcntq %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [2,2,2,2]
+; AVX512VPOPCNTDQ-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: ult_2_v4i64:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltuq {{.*}}(%rip){1to4}, %ymm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: ult_2_v4i64:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; BITALG_NOVLX-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
+; BITALG_NOVLX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG_NOVLX-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: ult_2_v4i64:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; BITALG-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
+; BITALG-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %0)
+  %3 = icmp ult <4 x i64> %2, <i64 2, i64 2, i64 2, i64 2>
+  %4 = sext <4 x i1> %3 to <4 x i64>
+  ret <4 x i64> %4
+}
+
+define <4 x i64> @ugt_1_v4i64(<4 x i64> %0) {
+; AVX1-LABEL: ugt_1_v4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddq %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqq %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddq %xmm2, %xmm0, %xmm4
+; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqq %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ugt_1_v4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpeqq %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: ugt_1_v4i64:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpopcntq %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
+; AVX512VPOPCNTDQ-NEXT:    vpcmpgtq %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: ugt_1_v4i64:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleuq {{.*}}(%rip){1to4}, %ymm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa64 %ymm0, %ymm0 {%k1} {z}
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: ugt_1_v4i64:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; BITALG_NOVLX-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
+; BITALG_NOVLX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG_NOVLX-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: ugt_1_v4i64:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; BITALG-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
+; BITALG-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %0)
+  %3 = icmp ugt <4 x i64> %2, <i64 1, i64 1, i64 1, i64 1>
+  %4 = sext <4 x i1> %3 to <4 x i64>
+  ret <4 x i64> %4
+}
+
+define <4 x i64> @eq_1_v4i64(<4 x i64> %0) {
+; AVX1-LABEL: eq_1_v4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpaddq %xmm4, %xmm1, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddq %xmm4, %xmm0, %xmm4
+; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vandnps %ymm0, %ymm3, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: eq_1_v4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX2-NEXT:    vpaddq %ymm3, %ymm0, %ymm3
+; AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpandn %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: eq_1_v4i64:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpopcntq %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: eq_1_v4i64:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: eq_1_v4i64:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG_NOVLX-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm2
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; BITALG_NOVLX-NEXT:    vpaddq %ymm3, %ymm0, %ymm3
+; BITALG_NOVLX-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpandn %ymm0, %ymm2, %ymm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: eq_1_v4i64:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm2
+; BITALG-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; BITALG-NEXT:    vpaddq %ymm3, %ymm0, %ymm3
+; BITALG-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    vpandn %ymm0, %ymm2, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %0)
+  %3 = icmp eq <4 x i64> %2, <i64 1, i64 1, i64 1, i64 1>
+  %4 = sext <4 x i1> %3 to <4 x i64>
+  ret <4 x i64> %4
+}
+
+define <4 x i64> @ne_1_v4i64(<4 x i64> %0) {
+; AVX1-LABEL: ne_1_v4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpaddq %xmm4, %xmm1, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddq %xmm4, %xmm0, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm0, %ymm3, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ne_1_v4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX2-NEXT:    vpaddq %ymm3, %ymm0, %ymm4
+; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: ne_1_v4i64:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpopcntq %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: ne_1_v4i64:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpopcntq %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: ne_1_v4i64:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG_NOVLX-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm2
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; BITALG_NOVLX-NEXT:    vpaddq %ymm3, %ymm0, %ymm3
+; BITALG_NOVLX-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: ne_1_v4i64:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm2
+; BITALG-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; BITALG-NEXT:    vpaddq %ymm3, %ymm0, %ymm4
+; BITALG-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    vpternlogq $222, %ymm3, %ymm2, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %0)
+  %3 = icmp ne <4 x i64> %2, <i64 1, i64 1, i64 1, i64 1>
+  %4 = sext <4 x i1> %3 to <4 x i64>
+  ret <4 x i64> %4
+}
+
+define <8 x i32> @ult_2_v8i32(<8 x i32> %0) {
+; AVX1-LABEL: ult_2_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ult_2_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: ult_2_v8i32:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpopcntd %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [2,2,2,2,2,2,2,2]
+; AVX512VPOPCNTDQ-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: ult_2_v8i32:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpltud {{.*}}(%rip){1to8}, %ymm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: ult_2_v8i32:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; BITALG_NOVLX-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
+; BITALG_NOVLX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: ult_2_v8i32:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; BITALG-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
+; BITALG-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <8 x i32> @llvm.ctpop.v8i32(<8 x i32> %0)
+  %3 = icmp ult <8 x i32> %2, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+  %4 = sext <8 x i1> %3 to <8 x i32>
+  ret <8 x i32> %4
+}
+
+define <8 x i32> @ugt_1_v8i32(<8 x i32> %0) {
+; AVX1-LABEL: ugt_1_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm4
+; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ugt_1_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: ugt_1_v8i32:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpopcntd %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
+; AVX512VPOPCNTDQ-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: ugt_1_v8i32:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpnleud {{.*}}(%rip){1to8}, %ymm0, %k1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: ugt_1_v8i32:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; BITALG_NOVLX-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
+; BITALG_NOVLX-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: ugt_1_v8i32:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; BITALG-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
+; BITALG-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <8 x i32> @llvm.ctpop.v8i32(<8 x i32> %0)
+  %3 = icmp ugt <8 x i32> %2, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %4 = sext <8 x i1> %3 to <8 x i32>
+  ret <8 x i32> %4
+}
+
+define <8 x i32> @eq_1_v8i32(<8 x i32> %0) {
+; AVX1-LABEL: eq_1_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpaddd %xmm4, %xmm1, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm4
+; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vandnps %ymm0, %ymm3, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: eq_1_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX2-NEXT:    vpaddd %ymm3, %ymm0, %ymm3
+; AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpandn %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: eq_1_v8i32:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpopcntd %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: eq_1_v8i32:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: eq_1_v8i32:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm2
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; BITALG_NOVLX-NEXT:    vpaddd %ymm3, %ymm0, %ymm3
+; BITALG_NOVLX-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpandn %ymm0, %ymm2, %ymm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: eq_1_v8i32:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm2
+; BITALG-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; BITALG-NEXT:    vpaddd %ymm3, %ymm0, %ymm3
+; BITALG-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    vpandn %ymm0, %ymm2, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <8 x i32> @llvm.ctpop.v8i32(<8 x i32> %0)
+  %3 = icmp eq <8 x i32> %2, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %4 = sext <8 x i1> %3 to <8 x i32>
+  ret <8 x i32> %4
+}
+
+define <8 x i32> @ne_1_v8i32(<8 x i32> %0) {
+; AVX1-LABEL: ne_1_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpaddd %xmm4, %xmm1, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm0, %ymm3, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ne_1_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX2-NEXT:    vpaddd %ymm3, %ymm0, %ymm4
+; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: ne_1_v8i32:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpopcntd %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: ne_1_v8i32:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpopcntd %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: ne_1_v8i32:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm2
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; BITALG_NOVLX-NEXT:    vpaddd %ymm3, %ymm0, %ymm3
+; BITALG_NOVLX-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: ne_1_v8i32:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BITALG-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm2
+; BITALG-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; BITALG-NEXT:    vpaddd %ymm3, %ymm0, %ymm4
+; BITALG-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; BITALG-NEXT:    vpternlogd $222, %ymm3, %ymm2, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <8 x i32> @llvm.ctpop.v8i32(<8 x i32> %0)
+  %3 = icmp ne <8 x i32> %2, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %4 = sext <8 x i1> %3 to <8 x i32>
+  ret <8 x i32> %4
+}
+
+define <16 x i16> @ult_2_v16i16(<16 x i16> %0) {
+; AVX1-LABEL: ult_2_v16i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddw %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddw %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ult_2_v16i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddw %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: ult_2_v16i16:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512VPOPCNTDQ-NEXT:    vpaddw %ymm1, %ymm0, %ymm1
+; AVX512VPOPCNTDQ-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: ult_2_v16i16:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512VPOPCNTDQVL-NEXT:    vpaddw %ymm1, %ymm0, %ymm1
+; AVX512VPOPCNTDQVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: ult_2_v16i16:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; BITALG_NOVLX-NEXT:    vpopcntw %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    vmovdqa {{.*#+}} ymm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; BITALG_NOVLX-NEXT:    vpcmpgtw %ymm0, %ymm1, %ymm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: ult_2_v16i16:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpopcntw %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpltuw {{.*}}(%rip), %ymm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <16 x i16> @llvm.ctpop.v16i16(<16 x i16> %0)
+  %3 = icmp ult <16 x i16> %2, <i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2, i16 2>
+  %4 = sext <16 x i1> %3 to <16 x i16>
+  ret <16 x i16> %4
+}
+
+define <16 x i16> @ugt_1_v16i16(<16 x i16> %0) {
+; AVX1-LABEL: ugt_1_v16i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddw %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddw %xmm2, %xmm0, %xmm4
+; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqw %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ugt_1_v16i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddw %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpeqw %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: ugt_1_v16i16:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512VPOPCNTDQ-NEXT:    vpaddw %ymm1, %ymm0, %ymm1
+; AVX512VPOPCNTDQ-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: ugt_1_v16i16:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512VPOPCNTDQVL-NEXT:    vpaddw %ymm1, %ymm0, %ymm1
+; AVX512VPOPCNTDQVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: ugt_1_v16i16:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; BITALG_NOVLX-NEXT:    vpopcntw %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    vpcmpgtw {{.*}}(%rip), %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: ugt_1_v16i16:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpopcntw %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpnleuw {{.*}}(%rip), %ymm0, %k0
+; BITALG-NEXT:    vpmovm2w %k0, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <16 x i16> @llvm.ctpop.v16i16(<16 x i16> %0)
+  %3 = icmp ugt <16 x i16> %2, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %4 = sext <16 x i1> %3 to <16 x i16>
+  ret <16 x i16> %4
+}
+
+define <16 x i16> @eq_1_v16i16(<16 x i16> %0) {
+; AVX1-LABEL: eq_1_v16i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpaddw %xmm4, %xmm1, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddw %xmm4, %xmm0, %xmm4
+; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vandnps %ymm0, %ymm3, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: eq_1_v16i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX2-NEXT:    vpaddw %ymm3, %ymm0, %ymm3
+; AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpandn %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: eq_1_v16i16:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm2
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512VPOPCNTDQ-NEXT:    vpaddw %ymm3, %ymm0, %ymm3
+; AVX512VPOPCNTDQ-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpandn %ymm0, %ymm2, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: eq_1_v16i16:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm2
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512VPOPCNTDQVL-NEXT:    vpaddw %ymm3, %ymm0, %ymm3
+; AVX512VPOPCNTDQVL-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpandn %ymm0, %ymm2, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: eq_1_v16i16:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; BITALG_NOVLX-NEXT:    vpopcntw %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    vpcmpeqw {{.*}}(%rip), %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: eq_1_v16i16:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpopcntw %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpeqw {{.*}}(%rip), %ymm0, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <16 x i16> @llvm.ctpop.v16i16(<16 x i16> %0)
+  %3 = icmp eq <16 x i16> %2, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %4 = sext <16 x i1> %3 to <16 x i16>
+  ret <16 x i16> %4
+}
+
+define <16 x i16> @ne_1_v16i16(<16 x i16> %0) {
+; AVX1-LABEL: ne_1_v16i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpaddw %xmm4, %xmm1, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddw %xmm4, %xmm0, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm0, %ymm3, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ne_1_v16i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX2-NEXT:    vpaddw %ymm3, %ymm0, %ymm4
+; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: ne_1_v16i16:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm2
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512VPOPCNTDQ-NEXT:    vpaddw %ymm3, %ymm0, %ymm3
+; AVX512VPOPCNTDQ-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: ne_1_v16i16:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm2
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512VPOPCNTDQVL-NEXT:    vpaddw %ymm3, %ymm0, %ymm4
+; AVX512VPOPCNTDQVL-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpternlogq $222, %ymm3, %ymm2, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: ne_1_v16i16:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; BITALG_NOVLX-NEXT:    vpopcntw %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    vpcmpeqw {{.*}}(%rip), %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: ne_1_v16i16:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpopcntw %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpeqw {{.*}}(%rip), %ymm0, %ymm0
+; BITALG-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <16 x i16> @llvm.ctpop.v16i16(<16 x i16> %0)
+  %3 = icmp ne <16 x i16> %2, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %4 = sext <16 x i1> %3 to <16 x i16>
+  ret <16 x i16> %4
+}
+
+define <32 x i8> @ult_2_v32i8(<32 x i8> %0) {
+; AVX1-LABEL: ult_2_v32i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddb %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ult_2_v32i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddb %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: ult_2_v32i8:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512VPOPCNTDQ-NEXT:    vpaddb %ymm1, %ymm0, %ymm1
+; AVX512VPOPCNTDQ-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: ult_2_v32i8:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512VPOPCNTDQVL-NEXT:    vpaddb %ymm1, %ymm0, %ymm1
+; AVX512VPOPCNTDQVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: ult_2_v32i8:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; BITALG_NOVLX-NEXT:    vpopcntb %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    vmovdqa {{.*#+}} ymm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; BITALG_NOVLX-NEXT:    vpcmpgtb %ymm0, %ymm1, %ymm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: ult_2_v32i8:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpltub {{.*}}(%rip), %ymm0, %k0
+; BITALG-NEXT:    vpmovm2b %k0, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <32 x i8> @llvm.ctpop.v32i8(<32 x i8> %0)
+  %3 = icmp ult <32 x i8> %2, <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
+  %4 = sext <32 x i1> %3 to <32 x i8>
+  ret <32 x i8> %4
+}
+
+define <32 x i8> @ugt_1_v32i8(<32 x i8> %0) {
+; AVX1-LABEL: ugt_1_v32i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddb %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm4
+; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ugt_1_v32i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddb %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpand %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: ugt_1_v32i8:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512VPOPCNTDQ-NEXT:    vpaddb %ymm1, %ymm0, %ymm1
+; AVX512VPOPCNTDQ-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: ugt_1_v32i8:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX512VPOPCNTDQVL-NEXT:    vpaddb %ymm1, %ymm0, %ymm1
+; AVX512VPOPCNTDQVL-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: ugt_1_v32i8:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; BITALG_NOVLX-NEXT:    vpopcntb %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    vpcmpgtb {{.*}}(%rip), %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: ugt_1_v32i8:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpnleub {{.*}}(%rip), %ymm0, %k0
+; BITALG-NEXT:    vpmovm2b %k0, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <32 x i8> @llvm.ctpop.v32i8(<32 x i8> %0)
+  %3 = icmp ugt <32 x i8> %2, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %4 = sext <32 x i1> %3 to <32 x i8>
+  ret <32 x i8> %4
+}
+
+define <32 x i8> @eq_1_v32i8(<32 x i8> %0) {
+; AVX1-LABEL: eq_1_v32i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpaddb %xmm4, %xmm1, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddb %xmm4, %xmm0, %xmm4
+; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vandnps %ymm0, %ymm3, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: eq_1_v32i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX2-NEXT:    vpaddb %ymm3, %ymm0, %ymm3
+; AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpandn %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: eq_1_v32i8:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm2
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512VPOPCNTDQ-NEXT:    vpaddb %ymm3, %ymm0, %ymm3
+; AVX512VPOPCNTDQ-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpandn %ymm0, %ymm2, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: eq_1_v32i8:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm2
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512VPOPCNTDQVL-NEXT:    vpaddb %ymm3, %ymm0, %ymm3
+; AVX512VPOPCNTDQVL-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpandn %ymm0, %ymm2, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: eq_1_v32i8:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; BITALG_NOVLX-NEXT:    vpopcntb %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    vpcmpeqb {{.*}}(%rip), %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: eq_1_v32i8:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpeqb {{.*}}(%rip), %ymm0, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <32 x i8> @llvm.ctpop.v32i8(<32 x i8> %0)
+  %3 = icmp eq <32 x i8> %2, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %4 = sext <32 x i1> %3 to <32 x i8>
+  ret <32 x i8> %4
+}
+
+define <32 x i8> @ne_1_v32i8(<32 x i8> %0) {
+; AVX1-LABEL: ne_1_v32i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
+; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX1-NEXT:    vpaddb %xmm4, %xmm1, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddb %xmm4, %xmm0, %xmm5
+; AVX1-NEXT:    vpand %xmm5, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm0, %ymm3, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: ne_1_v32i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm2
+; AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX2-NEXT:    vpaddb %ymm3, %ymm0, %ymm4
+; AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VPOPCNTDQ-LABEL: ne_1_v32i8:
+; AVX512VPOPCNTDQ:       # %bb.0:
+; AVX512VPOPCNTDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm2
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512VPOPCNTDQ-NEXT:    vpaddb %ymm3, %ymm0, %ymm3
+; AVX512VPOPCNTDQ-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512VPOPCNTDQ-NEXT:    vpor %ymm0, %ymm2, %ymm0
+; AVX512VPOPCNTDQ-NEXT:    retq
+;
+; AVX512VPOPCNTDQVL-LABEL: ne_1_v32i8:
+; AVX512VPOPCNTDQVL:       # %bb.0:
+; AVX512VPOPCNTDQVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm2
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; AVX512VPOPCNTDQVL-NEXT:    vpaddb %ymm3, %ymm0, %ymm4
+; AVX512VPOPCNTDQVL-NEXT:    vpand %ymm4, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    vpternlogq $222, %ymm3, %ymm2, %ymm0
+; AVX512VPOPCNTDQVL-NEXT:    retq
+;
+; BITALG_NOVLX-LABEL: ne_1_v32i8:
+; BITALG_NOVLX:       # %bb.0:
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; BITALG_NOVLX-NEXT:    vpopcntb %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    vpcmpeqb {{.*}}(%rip), %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; BITALG_NOVLX-NEXT:    retq
+;
+; BITALG-LABEL: ne_1_v32i8:
+; BITALG:       # %bb.0:
+; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpeqb {{.*}}(%rip), %ymm0, %ymm0
+; BITALG-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
+; BITALG-NEXT:    retq
+  %2 = tail call <32 x i8> @llvm.ctpop.v32i8(<32 x i8> %0)
+  %3 = icmp ne <32 x i8> %2, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %4 = sext <32 x i1> %3 to <32 x i8>
+  ret <32 x i8> %4
+}
+
 declare <4 x i64> @llvm.ctpop.v4i64(<4 x i64>)
 declare <8 x i32> @llvm.ctpop.v8i32(<8 x i32>)
 declare <16 x i16> @llvm.ctpop.v16i16(<16 x i16>)

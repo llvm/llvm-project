@@ -18,6 +18,7 @@
 // RUN:     {key: readability-identifier-naming.ConstexprVariableCase, value: lower_case}, \
 // RUN:     {key: readability-identifier-naming.EnumCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.EnumPrefix, value: 'E'}, \
+// RUN:     {key: readability-identifier-naming.ScopedEnumConstantCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.EnumConstantCase, value: UPPER_CASE}, \
 // RUN:     {key: readability-identifier-naming.FunctionCase, value: camelBack}, \
 // RUN:     {key: readability-identifier-naming.GlobalConstantCase, value: UPPER_CASE}, \
@@ -160,6 +161,18 @@ enum my_enumeration {
 // CHECK-FIXES: {{^}}    THIS_CONST_VALUE = 1,{{$}}
 };
 
+enum class EMyEnumeration {
+    myConstant = 1,
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for scoped enum constant 'myConstant'
+// CHECK-FIXES: {{^}}    MyConstant = 1,{{$}}
+    your_CONST = 1,
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for scoped enum constant 'your_CONST'
+// CHECK-FIXES: {{^}}    YourConst = 1,{{$}}
+    THIS_ConstValue = 1,
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for scoped enum constant 'THIS_ConstValue'
+// CHECK-FIXES: {{^}}    ThisConstValue = 1,{{$}}
+};
+
 constexpr int ConstExpr_variable = MyConstant;
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: invalid case style for constexpr variable 'ConstExpr_variable'
 // CHECK-FIXES: {{^}}constexpr int const_expr_variable = MY_CONSTANT;{{$}}
@@ -266,13 +279,31 @@ public:
   virtual ~AOverridden() = default;
   virtual void BadBaseMethod() = 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for virtual method 'BadBaseMethod'
+  // CHECK-FIXES: {{^}}  virtual void v_Bad_Base_Method() = 0;
 };
 
 class COverriding : public AOverridden {
 public:
   // Overriding a badly-named base isn't a new violation.
   void BadBaseMethod() override {}
+  // CHECK-FIXES: {{^}}  void v_Bad_Base_Method() override {}
+  
+  void foo() {
+    BadBaseMethod();
+    // CHECK-FIXES: {{^}}    v_Bad_Base_Method();
+    this->BadBaseMethod();
+    // CHECK-FIXES: {{^}}    this->v_Bad_Base_Method();
+    AOverridden::BadBaseMethod();
+    // CHECK-FIXES: {{^}}    AOverridden::v_Bad_Base_Method();
+    COverriding::BadBaseMethod();
+    // CHECK-FIXES: {{^}}    COverriding::v_Bad_Base_Method();
+  }
 };
+
+void VirtualCall(AOverridden &a_vItem) {
+  a_vItem.BadBaseMethod();
+  // CHECK-FIXES: {{^}}  a_vItem.v_Bad_Base_Method();
+}
 
 template <typename derived_t>
 class CRTPBase {

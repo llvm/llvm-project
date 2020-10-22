@@ -302,11 +302,8 @@ define <8 x i32> @max_gt_v8i32(<8 x i32> %a, <8 x i32> %b) {
 define <8 x i16> @max_gt_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; SSE2-LABEL: max_gt_v8i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pmaxsw %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    psubusw %xmm0, %xmm1
+; SSE2-NEXT:    paddw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: max_gt_v8i16:
@@ -331,15 +328,10 @@ define <8 x i16> @max_gt_v8i16(<8 x i16> %a, <8 x i16> %b) {
 define <16 x i16> @max_gt_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; SSE2-LABEL: max_gt_v16i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm4, %xmm2
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pmaxsw %xmm2, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm3
-; SSE2-NEXT:    pxor %xmm4, %xmm1
-; SSE2-NEXT:    pmaxsw %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm4, %xmm1
+; SSE2-NEXT:    psubusw %xmm0, %xmm2
+; SSE2-NEXT:    paddw %xmm2, %xmm0
+; SSE2-NEXT:    psubusw %xmm1, %xmm3
+; SSE2-NEXT:    paddw %xmm3, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: max_gt_v16i16:
@@ -717,11 +709,8 @@ define <8 x i32> @max_ge_v8i32(<8 x i32> %a, <8 x i32> %b) {
 define <8 x i16> @max_ge_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; SSE2-LABEL: max_ge_v8i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pmaxsw %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    psubusw %xmm0, %xmm1
+; SSE2-NEXT:    paddw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: max_ge_v8i16:
@@ -746,15 +735,10 @@ define <8 x i16> @max_ge_v8i16(<8 x i16> %a, <8 x i16> %b) {
 define <16 x i16> @max_ge_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; SSE2-LABEL: max_ge_v16i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm4, %xmm2
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pmaxsw %xmm2, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm3
-; SSE2-NEXT:    pxor %xmm4, %xmm1
-; SSE2-NEXT:    pmaxsw %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm4, %xmm1
+; SSE2-NEXT:    psubusw %xmm0, %xmm2
+; SSE2-NEXT:    paddw %xmm2, %xmm0
+; SSE2-NEXT:    psubusw %xmm1, %xmm3
+; SSE2-NEXT:    paddw %xmm3, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: max_ge_v16i16:
@@ -1130,11 +1114,9 @@ define <8 x i32> @min_lt_v8i32(<8 x i32> %a, <8 x i32> %b) {
 define <8 x i16> @min_lt_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; SSE2-LABEL: min_lt_v8i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pminsw %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    psubusw %xmm1, %xmm2
+; SSE2-NEXT:    psubw %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: min_lt_v8i16:
@@ -1159,15 +1141,12 @@ define <8 x i16> @min_lt_v8i16(<8 x i16> %a, <8 x i16> %b) {
 define <16 x i16> @min_lt_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; SSE2-LABEL: min_lt_v16i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm4, %xmm2
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pminsw %xmm2, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm3
-; SSE2-NEXT:    pxor %xmm4, %xmm1
-; SSE2-NEXT:    pminsw %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm4, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    psubusw %xmm2, %xmm4
+; SSE2-NEXT:    psubw %xmm4, %xmm0
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    psubusw %xmm3, %xmm2
+; SSE2-NEXT:    psubw %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: min_lt_v16i16:
@@ -1543,11 +1522,9 @@ define <8 x i32> @min_le_v8i32(<8 x i32> %a, <8 x i32> %b) {
 define <8 x i16> @min_le_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; SSE2-LABEL: min_le_v8i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    pminsw %xmm1, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    psubusw %xmm1, %xmm2
+; SSE2-NEXT:    psubw %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: min_le_v8i16:
@@ -1572,15 +1549,12 @@ define <8 x i16> @min_le_v8i16(<8 x i16> %a, <8 x i16> %b) {
 define <16 x i16> @min_le_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; SSE2-LABEL: min_le_v16i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm4, %xmm2
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pminsw %xmm2, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm3
-; SSE2-NEXT:    pxor %xmm4, %xmm1
-; SSE2-NEXT:    pminsw %xmm3, %xmm1
-; SSE2-NEXT:    pxor %xmm4, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
+; SSE2-NEXT:    psubusw %xmm2, %xmm4
+; SSE2-NEXT:    psubw %xmm4, %xmm0
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    psubusw %xmm3, %xmm2
+; SSE2-NEXT:    psubw %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: min_le_v16i16:

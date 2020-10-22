@@ -218,10 +218,9 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   // do for now.
   open_flags |= O_CLOEXEC;
 #endif
-  if (!m_pty->OpenFirstAvailablePrimary(open_flags, nullptr, 0)) {
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "PTY::OpenFirstAvailablePrimary failed");
-  }
+  if (llvm::Error Err = m_pty->OpenFirstAvailablePrimary(open_flags))
+    return Err;
+
   const FileSpec secondary_file_spec(m_pty->GetSecondaryName());
 
   // Only use the secondary tty if we don't have anything specified for

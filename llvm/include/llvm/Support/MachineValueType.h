@@ -980,9 +980,7 @@ namespace llvm {
 
     /// Returns true if the number of bits for the type is a multiple of an
     /// 8-bit byte.
-    bool isByteSized() const {
-      return getSizeInBits().isByteSized();
-    }
+    bool isByteSized() const { return getSizeInBits().isKnownMultipleOf(8); }
 
     /// Return true if we know at compile time this has more bits than VT.
     bool knownBitsGT(MVT VT) const {

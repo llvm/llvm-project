@@ -216,3 +216,10 @@ void ownership_transfer_in_cast(void *vp, Block *pblk) {
 
 // Make sure we don't crash.
 void writeback_test(NSString & &) {} // expected-error {{type name declared as a reference to a reference}}
+
+void test_strong_opaque() {
+  __strong NSString *sptr;
+  void *vptr;
+
+  (void)(0 ? sptr : vptr); // expected-error{{operands to conditional of types 'NSString *' and 'void *' are incompatible in ARC mode}}
+}

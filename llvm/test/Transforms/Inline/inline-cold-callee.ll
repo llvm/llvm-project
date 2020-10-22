@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -inlinecold-threshold=0 -S | FileCheck %s
+; RUN: opt < %s -inline -inlinecold-threshold=0 -S -enable-new-pm=0 | FileCheck %s
 
 ; This tests that a cold callee gets the (lower) inlinecold-threshold even without
 ; Cold hint and does not get inlined because the cost exceeds the inlinecold-threshold.

@@ -314,10 +314,9 @@ protected:
   bool FastDenormalF32;
   bool HalfRate64Ops;
 
-  // Dynamially set bits that enable features.
+  // Dynamically set bits that enable features.
   bool FlatForGlobal;
   bool AutoWaitcntBeforeBarrier;
-  bool CodeObjectV3;
   bool UnalignedScratchAccess;
   bool UnalignedBufferAccess;
   bool UnalignedAccessMode;
@@ -701,11 +700,6 @@ public:
     return AutoWaitcntBeforeBarrier;
   }
 
-  bool hasCodeObjectV3() const {
-    // FIXME: Need to add code object v3 support for mesa and pal.
-    return isAmdHsaOS() ? CodeObjectV3 : false;
-  }
-
   bool hasUnalignedBufferAccess() const {
     return UnalignedBufferAccess;
   }
@@ -756,6 +750,13 @@ public:
 
   bool hasFlatScratchInsts() const {
     return FlatScratchInsts;
+  }
+
+  // Check if target supports ST addressing mode with FLAT scratch instructions.
+  // The ST addressing mode means no registers are used, either VGPR or SGPR,
+  // but only immediate offset is swizzled and added to the FLAT scratch base.
+  bool hasFlatScratchSTMode() const {
+    return hasFlatScratchInsts() && hasGFX10_3Insts();
   }
 
   bool hasScalarFlatScratchInsts() const {

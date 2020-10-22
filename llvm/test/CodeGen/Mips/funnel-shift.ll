@@ -19,15 +19,13 @@ declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 define i16 @fshl_i16(i16 %x, i16 %y, i16 %z) {
 ; CHECK-LABEL: fshl_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi $1, $6, 15
-; CHECK-NEXT:    sllv $2, $4, $1
-; CHECK-NEXT:    sll $3, $5, 16
-; CHECK-NEXT:    srl $3, $3, 1
-; CHECK-NEXT:    not $1, $1
-; CHECK-NEXT:    andi $1, $1, 31
-; CHECK-NEXT:    srlv $1, $3, $1
+; CHECK-NEXT:    andi $1, $5, 65535
+; CHECK-NEXT:    sll $2, $4, 16
+; CHECK-NEXT:    or $1, $2, $1
+; CHECK-NEXT:    andi $2, $6, 15
+; CHECK-NEXT:    sllv $1, $1, $2
 ; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    or $2, $2, $1
+; CHECK-NEXT:    srl $2, $1, 16
   %f = call i16 @llvm.fshl.i16(i16 %x, i16 %y, i16 %z)
   ret i16 %f
 }
@@ -288,15 +286,12 @@ define i8 @fshl_i8_const_fold() {
 define i16 @fshr_i16(i16 %x, i16 %y, i16 %z) {
 ; CHECK-LABEL: fshr_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sll $1, $5, 16
+; CHECK-NEXT:    andi $1, $5, 65535
+; CHECK-NEXT:    sll $2, $4, 16
+; CHECK-NEXT:    or $1, $2, $1
 ; CHECK-NEXT:    andi $2, $6, 15
-; CHECK-NEXT:    ori $3, $2, 16
-; CHECK-NEXT:    srlv $1, $1, $3
-; CHECK-NEXT:    sll $3, $4, 1
-; CHECK-NEXT:    xori $2, $2, 15
-; CHECK-NEXT:    sllv $2, $3, $2
 ; CHECK-NEXT:    jr $ra
-; CHECK-NEXT:    or $2, $2, $1
+; CHECK-NEXT:    srlv $2, $1, $2
   %f = call i16 @llvm.fshr.i16(i16 %x, i16 %y, i16 %z)
   ret i16 %f
 }

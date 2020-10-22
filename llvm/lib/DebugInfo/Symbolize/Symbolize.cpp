@@ -68,7 +68,8 @@ LLVMSymbolizer::symbolizeCode(const ObjectFile &Obj,
   if (I != Modules.end())
     return symbolizeCodeCommon(I->second.get(), ModuleOffset);
 
-  std::unique_ptr<DIContext> Context = DWARFContext::create(Obj);
+  std::unique_ptr<DIContext> Context =
+      DWARFContext::create(Obj, nullptr, "", Opts.RecoverableErrorHandler);
   Expected<SymbolizableModule *> InfoOrErr =
                      createModuleInfo(&Obj, std::move(Context), ModuleName);
   if (!InfoOrErr)
@@ -572,7 +573,8 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
     }
   }
   if (!Context)
-    Context = DWARFContext::create(*Objects.second, nullptr, Opts.DWPName);
+    Context = DWARFContext::create(*Objects.second, nullptr, Opts.DWPName,
+                                   Opts.RecoverableErrorHandler);
   return createModuleInfo(Objects.first, std::move(Context), ModuleName);
 }
 

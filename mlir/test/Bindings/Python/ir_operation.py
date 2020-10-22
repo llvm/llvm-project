@@ -23,6 +23,7 @@ def testTraverseOpRegionBlockIterators():
     }
   """)
   op = module.operation
+  assert op.context is ctx
   # Get the block using iterators off of the named collections.
   regions = list(op.regions)
   blocks = list(regions[0].blocks)

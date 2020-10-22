@@ -9,7 +9,7 @@
 #include "llvm-c/Core.h"
 #include "llvm-c/Error.h"
 #include "llvm-c/Initialization.h"
-#include "llvm-c/Orc.h"
+#include "llvm-c/LLJIT.h"
 #include "llvm-c/Support.h"
 #include "llvm-c/Target.h"
 
@@ -27,7 +27,7 @@ int32_t add(int32_t X, int32_t Y) { return X + Y; }
 
 int32_t mul(int32_t X, int32_t Y) { return X * Y; }
 
-int allowedSymbols(LLVMOrcSymbolStringPoolEntryRef Sym, void *Ctx) {
+int allowedSymbols(void *Ctx, LLVMOrcSymbolStringPoolEntryRef Sym) {
   assert(Ctx && "Cannot call allowedSymbols with a null context");
 
   LLVMOrcSymbolStringPoolEntryRef *AllowList =
@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
       LLVMOrcLLJITMangleAndIntern(J, "add"), 0};
 
   {
-    LLVMOrcJITDylibDefinitionGeneratorRef ProcessSymbolsGenerator = 0;
+    LLVMOrcDefinitionGeneratorRef ProcessSymbolsGenerator = 0;
     LLVMErrorRef Err;
     if ((Err = LLVMOrcCreateDynamicLibrarySearchGeneratorForProcess(
              &ProcessSymbolsGenerator, LLVMOrcLLJITGetGlobalPrefix(J),

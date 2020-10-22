@@ -65,11 +65,15 @@ class BuilderDarwin(Builder):
         if configuration.dsymutil:
             args['DSYMUTIL'] = configuration.dsymutil
 
-        operating_system, _ = get_os_and_env()
+        operating_system, env = get_os_and_env()
         if operating_system and operating_system != "macosx":
             builder_dir = os.path.dirname(os.path.abspath(__file__))
             test_dir = os.path.dirname(builder_dir)
-            entitlements = os.path.join(test_dir, 'make', 'entitlements.plist')
+            if env == "simulator":
+              entitlements_file = 'entitlements-simulator.plist'
+            else:
+              entitlements_file = 'entitlements.plist'
+            entitlements = os.path.join(test_dir, 'make', entitlements_file)
             args['CODESIGN'] = 'codesign --entitlements {}'.format(
                 entitlements)
 

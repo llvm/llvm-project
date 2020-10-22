@@ -39,7 +39,7 @@ def StructuredOpTraits : NativeOpTrait<"linalg::StructuredOpTraits">;
 def NamedStructuredOpTrait : NativeOpTrait<"linalg::NamedStructuredOpTrait">;
 
 // Base Tablegen class for Linalg ops.
-// Linalg ops that correspond to library calls operate on linalg::View as their
+// Linalg ops that correspond to library calls operate on ShapedType as their
 // first operands. These may be optionally followed by non-view operands
 // depending on the specific Linalg op.
 class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
@@ -129,9 +129,9 @@ def CopyOp : LinalgStructured_Op<"copy", [
   // TODO: this should go away once the usage of OptionalAttr triggers emission
   // of builders with default arguments left unspecified.
   let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, Value input, Value output", [{
+    "Value input, Value output", [{
     return build(
-      builder, result, input, output, AffineMapAttr(), AffineMapAttr());
+      $_builder, $_state, input, output, AffineMapAttr(), AffineMapAttr());
   }]>];
 
   let extraClassDeclaration = libraryCallName # [{
@@ -663,24 +663,23 @@ def GenericOp : GenericOpBase<"generic"> {
 
   let builders = [
     OpBuilder<
-      "OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,"
+      "TypeRange resultTensorTypes,"
       "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
       "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
       "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">,
     OpBuilder<
-      "OpBuilder &builder, OperationState &result, "
       "ValueRange inputs, ValueRange outputBuffers, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
       "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
       "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">,
     OpBuilder<
-      "OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,"
+      "TypeRange resultTensorTypes,"
       "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
       "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">,
     OpBuilder<
-      "OpBuilder &builder, OperationState &result, ValueRange inputs, "
+      "ValueRange inputs, "
       "ValueRange outputBuffers, ArrayRef<AffineMap> indexingMaps, "
       "ArrayRef<StringRef> iteratorTypes, "
       "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">
@@ -842,24 +841,23 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
 
   let builders = [
     OpBuilder<
-      "OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,"
+      "TypeRange resultTensorTypes,"
       "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
       "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
       "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> = nullptr">,
     OpBuilder<
-      "OpBuilder &builder, OperationState &result, "
       "ValueRange inputs, ValueRange outputBuffers, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
       "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
       "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> = nullptr">,
     OpBuilder<
-      "OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,"
+      "TypeRange resultTensorTypes,"
       "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
       "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
       "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> = nullptr">,
     OpBuilder<
-      "OpBuilder &builder, OperationState &result, ValueRange inputs, "
+      "ValueRange inputs, "
       "ValueRange outputBuffers, ArrayRef<AffineMap> indexingMaps, "
       "ArrayRef<StringRef> iteratorTypes, "
       "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> = nullptr">

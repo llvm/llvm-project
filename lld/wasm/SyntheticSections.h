@@ -197,21 +197,35 @@ public:
   uint32_t numGlobals() const {
     assert(isSealed);
     return inputGlobals.size() + dataAddressGlobals.size() +
-           staticGotSymbols.size();
+           internalGotSymbols.size();
   }
   bool isNeeded() const override { return numGlobals() > 0; }
   void assignIndexes() override;
   void writeBody() override;
   void addGlobal(InputGlobal *global);
   void addDataAddressGlobal(DefinedData *global);
-  void addStaticGOTEntry(Symbol *sym);
+
+  // Add an internal GOT entry global that corresponds to the given symbol.
+  // Normally GOT entries are imported and assigned by the external dynamic
+  // linker.  However, when linking PIC code statically or when linking with
+  // -Bsymbolic we can internalize GOT entries by declaring globals the hold
+  // symbol addresses.
+  //
+  // For the static linking case these internal globals can be completely
+  // eliminated by a post-link optimizer such as wasm-opt.
+  //
+  // TODO(sbc): Another approach to optimizing these away could be to use
+  // specific relocation types combined with linker relaxation which could
+  // transform a `global.get` to an `i32.const`.
+  void addInternalGOTEntry(Symbol *sym);
+  void generateRelocationCode(raw_ostream &os) const;
 
   std::vector<const DefinedData *> dataAddressGlobals;
 
 protected:
   bool isSealed = false;
   std::vector<InputGlobal *> inputGlobals;
-  std::vector<Symbol *> staticGotSymbols;
+  std::vector<Symbol *> internalGotSymbols;
 };
 
 class ExportSection : public SyntheticSection {

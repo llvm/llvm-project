@@ -123,7 +123,9 @@ New Pragmas in Clang
 Attribute Changes in Clang
 --------------------------
 
-- ...
+- Added support for the C++20 likelihood attributes ``[[likely]]`` and
+  ``[[unlikely]]``. As an extension they can be used in C++11 and newer.
+  This extension is enabled by default.
 
 Windows Support
 ---------------
@@ -188,7 +190,10 @@ X86 Support in Clang
 - The x86 intrinsics ``__rorb``, ``__rorw``, ``__rord``, ``__rorq`, ``_rotr``,
   ``_rotwr`` and ``_lrotr`` may now be used within constant expressions.
 
-- Support for -march=sapphirerapids was added.
+- Support for ``-march=sapphirerapids`` was added.
+
+- Support for ``-march=x86-64-v[234]`` has been added.
+  See :doc:`UsersManual` for details about these micro-architecture levels.
 
 - The -mtune command line option is no longer ignored for X86. This can be used
   to request microarchitectural optimizations independent on -march. -march=<cpu>

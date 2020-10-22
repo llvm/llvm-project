@@ -16,6 +16,7 @@
 #define MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES_H_
 
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/Bufferize.h"
 
 namespace mlir {
 
@@ -26,6 +27,13 @@ std::unique_ptr<Pass> createExpandAtomicPass();
 
 void populateExpandTanhPattern(OwningRewritePatternList &patterns,
                                MLIRContext *ctx);
+
+void populateStdBufferizePatterns(MLIRContext *context,
+                                  BufferizeTypeConverter &typeConverter,
+                                  OwningRewritePatternList &patterns);
+
+/// Creates an instance of std bufferization pass.
+std::unique_ptr<Pass> createStdBufferizePass();
 
 //===----------------------------------------------------------------------===//
 // Registration

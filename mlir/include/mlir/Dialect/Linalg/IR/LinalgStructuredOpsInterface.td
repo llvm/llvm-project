@@ -628,7 +628,9 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     InterfaceMethod<
       /*desc=*/[{
         Clone the current operation with the given location and operands. This
-        is used to abstract away the optional underlying region creation.
+        is used to abstract away the optional underlying region creation. This 
+        does not change the balance between input, output_buffer and 
+        init_tensors operands.
       }],
       /*retTy=*/"Operation *",
       /*methodName=*/"clone",
@@ -665,6 +667,23 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
                "expected scalar or vector type");
       }
       return res;
+    }
+    //========================================================================//
+    // Helper functions to mutate the `operand_segment_sizes` attribute.
+    // These are useful when cloning and changing operand types.
+    //========================================================================//
+    void setNumInputs(unsigned num) { setOperandSegmentAt(0, num); }
+    void setNumOutputBuffers(unsigned num) { setOperandSegmentAt(1, num); }
+    void setNumInitTensors(unsigned num) { setOperandSegmentAt(2, num); }
+
+    private:
+    void setOperandSegmentAt(unsigned idx, unsigned val) {
+      auto attr = getOperation()->getAttr("operand_segment_sizes")
+        .cast<DenseIntElementsAttr>();
+      unsigned i = 0;
+      auto newAttr = attr.mapValues(IntegerType::get(32, getContext()),
+        [&](const APInt &v) { return (i++ == idx) ? APInt(32, val) : v; });
+      getOperation()->setAttr("operand_segment_sizes", newAttr);
     }
   }];
 }

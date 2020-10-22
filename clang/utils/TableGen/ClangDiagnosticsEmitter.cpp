@@ -1294,6 +1294,11 @@ void clang::EmitClangDiagsDefs(RecordKeeper &Records, raw_ostream &OS,
     else
       OS << ", false";
 
+    if (R.getValueAsBit("Deferrable"))
+      OS << ", true";
+    else
+      OS << ", false";
+
     // Category number.
     OS << ", " << CategoryIDs.getID(getDiagnosticCategory(&R, DGParentMap));
     OS << ")\n";

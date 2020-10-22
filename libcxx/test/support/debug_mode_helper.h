@@ -30,7 +30,6 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include "test_macros.h"
-#include "assert_checkpoint.h"
 #include "test_allocator.h"
 
 #if TEST_STD_VER < 11

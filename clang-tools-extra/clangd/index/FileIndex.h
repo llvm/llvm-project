@@ -24,6 +24,7 @@
 #include "index/Relation.h"
 #include "index/Serialization.h"
 #include "index/Symbol.h"
+#include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -87,6 +88,8 @@ public:
              DuplicateHandling DuplicateHandle = DuplicateHandling::PickOne,
              size_t *Version = nullptr);
 
+  void profile(MemoryTree &MT) const;
+
 private:
   struct RefSlabAndCountReferences {
     std::shared_ptr<RefSlab> Slab;
@@ -115,6 +118,8 @@ public:
   /// Update symbols and references from main file \p Path with
   /// `indexMainDecls`.
   void updateMain(PathRef Path, ParsedAST &AST);
+
+  void profile(MemoryTree &MT) const;
 
 private:
   bool UseDex; // FIXME: this should be always on.

@@ -310,7 +310,7 @@ opt<bool> CrossFileRename{
 opt<bool> RecoveryAST{
     "recovery-ast",
     cat(Features),
-    desc("Preserve expressions in AST for broken code (C++ only)."),
+    desc("Preserve expressions in AST for broken code."),
     init(ClangdServer::Options().BuildRecoveryAST),
 };
 

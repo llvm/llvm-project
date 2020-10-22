@@ -1,4 +1,6 @@
-; RUN: opt -analyze -module-debuginfo < %s | FileCheck %s
+; RUN: opt -analyze -module-debuginfo -enable-new-pm=0 < %s | FileCheck %s
+; RUN: opt -passes='print<module-debuginfo>' -disable-output 2>&1 < %s \
+; RUN:   | FileCheck %s
 
 ; Produced from linking:
 ;   /tmp/test1.c containing f()

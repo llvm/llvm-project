@@ -32,7 +32,8 @@ namespace lldb_private {
 /// Processor trace information can also be fetched through the process
 /// interfaces during a live debug session if your process supports gathering
 /// this information.
-class Trace : public PluginInterface {
+class Trace : public PluginInterface,
+              public std::enable_shared_from_this<Trace> {
 public:
   /// Dump the trace data that this plug-in has access to.
   ///
@@ -96,6 +97,27 @@ public:
   /// \return
   ///     The JSON schema of this Trace plug-in.
   virtual llvm::StringRef GetSchema() = 0;
+
+  /// Dump \a count instructions of the given thread's \a Trace starting at the
+  /// \a start_position position in reverse order.
+  ///
+  /// The instructions are indexed in reverse order, which means that the \a
+  /// start_position 0 represents the last instruction of the trace
+  /// chronologically.
+  ///
+  /// \param[in] thread
+  ///     The thread whose trace will be dumped.
+  ///
+  /// \param[in] s
+  ///     The stream object where the instructions are printed.
+  ///
+  /// \param[in] count
+  ///     The number of instructions to print.
+  ///
+  /// \param[in] start_position
+  ///     The position of the first instruction to print.
+  void DumpTraceInstructions(Thread &thread, Stream &s, size_t count,
+                             size_t start_position) const;
 };
 
 } // namespace lldb_private

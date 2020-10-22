@@ -324,10 +324,6 @@ bool conflictInNamespace(const ASTContext &AST, llvm::StringRef QualifiedSymbol,
   return false;
 }
 
-AST_MATCHER(EnumDecl, isScoped) {
-    return Node.isScoped();
-}
-
 bool isTemplateParameter(TypeLoc Type) {
   while (!Type.isNull()) {
     if (Type.getTypeLocClass() == TypeLoc::SubstTemplateTypeParm)
