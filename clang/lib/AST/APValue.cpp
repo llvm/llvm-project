@@ -441,7 +441,7 @@ void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
       ID.AddPointer(nullptr);
       return;
     }
-    ID.AddPointer(getUnionField()->getCanonicalDecl());
+    ID.AddPointer(getUnionField());
     getUnionValue().Profile(ID);
     return;
 
@@ -902,6 +902,13 @@ void APValue::setLValue(LValueBase B, const CharUnits &O,
       setLValueUninit(B, O, Path.size(), IsOnePastTheEnd, IsNullPtr);
   memcpy(InternalPath.data(), Path.data(),
          Path.size() * sizeof(LValuePathEntry));
+}
+
+void APValue::setUnion(const FieldDecl *Field, const APValue &Value) {
+  assert(isUnion() && "Invalid accessor");
+  ((UnionData *)(char *)Data.buffer)->Field =
+      Field ? Field->getCanonicalDecl() : nullptr;
+  *((UnionData*)(char*)Data.buffer)->Value = Value;
 }
 
 const ValueDecl *APValue::getMemberPointerDecl() const {
