@@ -182,13 +182,20 @@ end subroutine iand_test
 subroutine ichar_test(c)
   character(1) :: c
   character :: str(10)
-  ! CHECK: %[[BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.char<1>>
-  ! CHECK: %{{.*}} = fir.convert %[[BOX]] : (!fir.char<1>) -> i32
+  ! CHECK-DAG: %[[unbox:.*]]:2 = fir.unboxchar
+  ! CHECK-DAG: %[[J:.*]] = fir.alloca i32 {name = "{{.*}}Ej"}
+  ! CHECK-DAG: %[[STR:.*]] = fir.alloca !fir.array{{.*}} {name = "{{.*}}Estr"}
+  ! CHECK: %[[BOX:.*]] = fir.load %[[unbox]]#0 : !fir.ref<!fir.char<1>>
+  ! CHECK: = fir.convert %[[BOX]] : (!fir.char<1>) -> i32
   print *, ichar(c)
+  ! CHECK: fir.call @{{.*}}EndIoStatement
 
-  ! CHECK: %[[ARRV:.*]] = fir.extract_value %{{.*}}, %{{.*}} : (!fir.array<1x!fir.char<1>>, i32) -> !fir.char<1>
-  ! CHECK: %{{.*}} = fir.convert %[[ARRV]] : (!fir.char<1>) -> i32
+  ! CHECK: %{{.*}} = fir.load %[[J]] : !fir.ref<i32>
+  ! CHECK: %[[ptr:.*]] = fir.coordinate_of %[[STR]], %
+  ! CHECK: %[[cast:.*]] = fir.convert %[[ptr]]
+  ! CHECK: fir.load %[[cast]] : !fir.ref<!fir.char<1>>
   print *, ichar(str(J))
+  ! CHECK: fir.call @{{.*}}EndIoStatement
 end subroutine
 
 ! IEOR

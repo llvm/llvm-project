@@ -276,38 +276,7 @@ private:
   fir::ExtendedValue genLoad(const fir::ExtendedValue &addr) {
     auto loc = getLoc();
     return addr.match(
-        [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
-          auto buffer = box.getBuffer();
-          auto len = dyn_cast<mlir::ConstantOp>(box.getLen().getDefiningOp());
-          if (!len) {
-            // TODO: return an emboxchar?
-            // Not sure an emboxchar would help, it would simply
-            // indirects the memory reference, so it fakes the load and then
-            // makes it harder to work with the character due to the
-            // indirection. Solutions I see are:
-            //  1. create a temp and returns a CharBoxValue pointing to it.
-            //  2. create a dynamic vector fir type that can abstract 1.
-            mlir::emitError(loc, "cannot load a variable length char");
-            return {};
-          }
-          auto lenAttr = len.value().dyn_cast<mlir::IntegerAttr>();
-          if (!lenAttr) {
-            mlir::emitError(loc, "length must be integer");
-            return {};
-          }
-          auto lenConst = lenAttr.getValue().getSExtValue();
-          fir::SequenceType::Shape shape = {lenConst};
-          auto baseTy =
-              Fortran::lower::CharacterExprHelper::getCharacterType(box);
-          auto charTy =
-              builder.getRefType(fir::SequenceType::get(shape, baseTy));
-          auto casted = builder.createConvert(loc, charTy, buffer);
-          auto val = builder.create<fir::LoadOp>(loc, casted);
-          return fir::CharBoxValue{val, box.getLen()};
-        },
-        [&](const fir::CharArrayBoxValue &v) -> fir::ExtendedValue {
-          TODO("loading character array");
-        },
+        [](const fir::CharBoxValue &box) -> fir::ExtendedValue { return box; },
         [&](const fir::UnboxedValue &v) -> fir::ExtendedValue {
           return builder.create<fir::LoadOp>(loc, fir::getBase(v));
         },
