@@ -1797,6 +1797,45 @@ define i1 @icmp_nsw_2(i32 %V) {
   ret i1 %cmp
 }
 
+define i1 @icmp_nsw_commute(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_commute(
+; CHECK-NEXT:    [[ADD5:%.*]] = add i32 5, [[V:%.*]]
+; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[V]], 6
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD5]], [[ADD6]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add5 = add i32 5, %V
+  %add6 = add nsw i32 %V, 6
+  %cmp = icmp slt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_commute2(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_commute2(
+; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[V:%.*]], 5
+; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 6, [[V]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD5]], [[ADD6]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add5 = add i32 %V, 5
+  %add6 = add nsw i32 6, %V
+  %cmp = icmp slt i32 %add5, %add6
+  ret i1 %cmp
+}
+
+define i1 @icmp_nsw_commute3(i32 %V) {
+; CHECK-LABEL: @icmp_nsw_commute3(
+; CHECK-NEXT:    [[ADD5:%.*]] = add i32 5, [[V:%.*]]
+; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 6, [[V]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD5]], [[ADD6]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add5 = add i32 5, %V
+  %add6 = add nsw i32 6, %V
+  %cmp = icmp slt i32 %add5, %add6
+  ret i1 %cmp
+}
+
 define i1 @icmp_nsw_22(i32 %V) {
 ; CHECK-LABEL: @icmp_nsw_22(
 ; CHECK-NEXT:    ret i1 true
