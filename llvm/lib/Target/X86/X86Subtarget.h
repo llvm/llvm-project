@@ -415,6 +415,9 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   bool HasAMXBF16 = false;
   bool HasAMXINT8 = false;
 
+  /// Processor supports User Level Interrupt instructions
+  bool HasUINTR = false;
+
   /// Processor has a single uop BEXTR implementation.
   bool HasFastBEXTR = false;
 
@@ -742,6 +745,7 @@ public:
   bool hasHRESET() const { return HasHRESET; }
   bool hasSERIALIZE() const { return HasSERIALIZE; }
   bool hasTSXLDTRK() const { return HasTSXLDTRK; }
+  bool hasUINTR() const { return HasUINTR; }
   bool useRetpolineIndirectCalls() const { return UseRetpolineIndirectCalls; }
   bool useRetpolineIndirectBranches() const {
     return UseRetpolineIndirectBranches;

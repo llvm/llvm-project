@@ -204,7 +204,8 @@ constexpr FeatureBitset FeaturesSapphireRapids =
     FeaturesICLServer | FeatureAMX_TILE | FeatureAMX_INT8 | FeatureAMX_BF16 |
     FeatureAVX512BF16 | FeatureAVX512VP2INTERSECT | FeatureCLDEMOTE |
     FeatureENQCMD | FeatureMOVDIR64B | FeatureMOVDIRI | FeaturePTWRITE |
-    FeatureSERIALIZE | FeatureSHSTK | FeatureTSXLDTRK | FeatureWAITPKG;
+    FeatureSERIALIZE | FeatureSHSTK | FeatureTSXLDTRK | FeatureUINTR |
+    FeatureWAITPKG;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -481,6 +482,7 @@ constexpr FeatureBitset ImpliedFeaturesSGX = {};
 constexpr FeatureBitset ImpliedFeaturesSHSTK = {};
 constexpr FeatureBitset ImpliedFeaturesTBM = {};
 constexpr FeatureBitset ImpliedFeaturesTSXLDTRK = {};
+constexpr FeatureBitset ImpliedFeaturesUINTR = {};
 constexpr FeatureBitset ImpliedFeaturesWAITPKG = {};
 constexpr FeatureBitset ImpliedFeaturesWBNOINVD = {};
 constexpr FeatureBitset ImpliedFeaturesVZEROUPPER = {};

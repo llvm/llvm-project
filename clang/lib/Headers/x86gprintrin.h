@@ -15,4 +15,9 @@
 #include <hresetintrin.h>
 #endif
 
+#if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
+    defined(__UINTR__)
+#include <uintrintrin.h>
+#endif
+
 #endif /* __X86GPRINTRIN_H */
