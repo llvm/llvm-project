@@ -195,7 +195,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     DESTINATION include
     FILES_MATCHING
     PATTERN "*.h"
-    PATTERN ".svn" EXCLUDE
     )
 endif()
 

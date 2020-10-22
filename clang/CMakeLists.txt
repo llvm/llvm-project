@@ -446,7 +446,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "*.def"
     PATTERN "*.h"
     PATTERN "config.h" EXCLUDE
-    PATTERN ".svn" EXCLUDE
     )
 
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/clang
