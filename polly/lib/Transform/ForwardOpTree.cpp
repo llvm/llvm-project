@@ -696,7 +696,7 @@ public:
       }
     }
 
-    auto ExecAction = [this, TargetStmt, UseInst, DefStmt]() {
+    auto ExecAction = [this, TargetStmt, UseInst]() {
       // To ensure the right order, prepend this instruction before its
       // operands. This ensures that its operands are inserted before the
       // instruction using them.
