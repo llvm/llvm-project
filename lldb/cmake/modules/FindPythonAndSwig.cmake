@@ -48,7 +48,7 @@ else()
   get_property(MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
   if ("${Python3_VERSION}" VERSION_GREATER_EQUAL "3.7" AND
       "${SWIG_VERSION}" VERSION_LESS "4.0" AND WIN32 AND (
-      ${MULTI_CONFIG} OR (${uppercase_CMAKE_BUILD_TYPE} STREQUAL "DEBUG")))
+      ${MULTI_CONFIG} OR (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")))
     # Technically this can happen with non-Windows builds too, but we are not
     # able to detect whether Python was built with assertions, and only Windows
     # has the requirement that Debug LLDB must use Debug Python.
