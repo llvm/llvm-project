@@ -453,12 +453,14 @@ static Cl::Kinds ClassifyDecl(ASTContext &Ctx, const Decl *D) {
 
   bool islvalue;
   if (const auto *NTTParm = dyn_cast<NonTypeTemplateParmDecl>(D))
-    islvalue = NTTParm->getType()->isReferenceType();
+    islvalue = NTTParm->getType()->isReferenceType() ||
+               NTTParm->getType()->isRecordType();
   else
     islvalue = isa<VarDecl>(D) || isa<FieldDecl>(D) ||
                isa<IndirectFieldDecl>(D) ||
                isa<BindingDecl>(D) ||
                isa<MSGuidDecl>(D) ||
+               isa<TemplateParamObjectDecl>(D) ||
                (Ctx.getLangOpts().CPlusPlus &&
                 (isa<FunctionDecl>(D) || isa<MSPropertyDecl>(D) ||
                  isa<FunctionTemplateDecl>(D)));

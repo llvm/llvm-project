@@ -970,6 +970,10 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
     OCED->getInit()->IgnoreImpCasts()->printPretty(OS, nullptr, Policy);
     return;
   }
+  if (const auto *TPOD = dyn_cast<TemplateParamObjectDecl>(Node->getDecl())) {
+    TPOD->printAsExpr(OS);
+    return;
+  }
   if (NestedNameSpecifier *Qualifier = Node->getQualifier())
     Qualifier->print(OS, Policy);
   if (Node->hasTemplateKeyword())
