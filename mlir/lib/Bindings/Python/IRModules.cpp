@@ -72,9 +72,6 @@ use the dedicated print method, which supports keyword arguments to customize
 behavior.
 )";
 
-static const char kTypeStrDunderDocstring[] =
-    R"(Prints the assembly form of the type.)";
-
 static const char kDumpDocstring[] =
     R"(Dumps a debug representation of the object to stderr.)";
 
@@ -1978,7 +1975,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
                                printAccum.getUserData());
             return printAccum.join();
           },
-          kTypeStrDunderDocstring);
+          "Returns the assembly form of the operation.");
 
   // Mapping of PyRegion.
   py::class_<PyRegion>(m, "Region")
@@ -2047,9 +2044,9 @@ void mlir::python::populateIRSubmodule(py::module &m) {
                            printAccum.getUserData());
             return printAccum.join();
           },
-          kTypeStrDunderDocstring);
+          "Returns the assembly form of the block.");
 
-  // Mapping of Type.
+  // Mapping of PyAttribute.
   py::class_<PyAttribute>(m, "Attribute")
       .def_property_readonly(
           "context",
@@ -2086,7 +2083,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
                                printAccum.getUserData());
             return printAccum.join();
           },
-          kTypeStrDunderDocstring)
+          "Returns the assembly form of the Attribute.")
       .def("__repr__", [](PyAttribute &self) {
         // Generally, assembly formats are not printed for __repr__ because
         // this can cause exceptionally long debug output and exceptions.
@@ -2139,7 +2136,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyStringAttribute::bind(m);
   PyDenseElementsAttribute::bind(m);
 
-  // Mapping of Type.
+  // Mapping of PyType.
   py::class_<PyType>(m, "Type")
       .def_property_readonly(
           "context", [](PyType &self) { return self.getContext().getObject(); },
@@ -2163,7 +2160,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
                           printAccum.getUserData());
             return printAccum.join();
           },
-          kTypeStrDunderDocstring)
+          "Returns the assembly form of the type.")
       .def("__repr__", [](PyType &self) {
         // Generally, assembly formats are not printed for __repr__ because
         // this can cause exceptionally long debug output and exceptions.
