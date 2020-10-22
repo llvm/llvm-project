@@ -1,0 +1,199 @@
+# RUN: llc -mtriple=s390x-linux-gnu -start-before=prologepilog %s -o - -print-after=prologepilog \
+# RUN:  -verify-machineinstrs 2>&1 | FileCheck %s
+# REQUIRES: asserts
+#
+# Test that R6 when used for an argument is modelled as being live throughout
+# the function when not saved in the prologue..
+
+# CHECK:      # *** IR Dump After Prologue/Epilogue Insertion & Frame Finalization ***:
+# CHECK-NEXT: # Machine code for function fun0:
+# CHECK-LABEL: bb.0:
+# CHECK: liveins:{{.*}} $r6d
+# CHECK: STMG killed $r7d, killed $r15d
+# CHECK: STG renamable $r6d
+# CHECK: End machine code for function fun0.
+
+
+--- |
+  
+  @g_181 = external dso_local global i32, align 4
+  @g_1390 = external dso_local constant i64*, align 8
+  
+  define internal i8 @fun0(i8 %arg, i8 %arg1, i32 %arg2, i8 %arg3, i32* %arg4, float %F0, float %F1) #0 {
+    ret i8 0
+  }
+  
+  ; Same function but in a single block which will make the verifier complain
+  ; if R6 is killed by the original store before the point where the
+  ; RegScavenger inserts its (killing) store of R6.
+  define internal i8 @fun1(i8 %arg, i8 %arg1, i32 %arg2, i8 %arg3, i32* %arg4) #0 {
+    ret i8 0
+  }
+  
+  attributes #0 = { "frame-pointer"="all" }
+
+...
+---
+name:            fun0
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r6d' }
+  - { reg: '$f0s' }
+  - { reg: '$f2s' }
+frameInfo:
+  maxAlignment:    8
+stack:
+  - { id: 0, size: 96, alignment: 8 }
+  - { id: 1, size: 1960, alignment: 8 }
+  - { id: 2, size: 8, alignment: 8 }
+  - { id: 3, size: 320, alignment: 8 }
+  - { id: 4, size: 4, alignment: 4 }
+  - { id: 5, size: 8, alignment: 8 }
+  - { id: 6, size: 8, alignment: 8 }
+  - { id: 7, size: 4, alignment: 4 }
+  - { id: 8, size: 8, alignment: 8 }
+  - { id: 9, size: 4, alignment: 4 }
+  - { id: 10, size: 8, alignment: 8 }
+  - { id: 11, size: 8, alignment: 8 }
+  - { id: 12, size: 8, alignment: 8 }
+  - { id: 13, size: 8, alignment: 8 }
+  - { id: 14, size: 24, alignment: 4 }
+  - { id: 15, size: 4, alignment: 4 }
+  - { id: 16, size: 1792, alignment: 8 }
+  - { id: 17, size: 8, alignment: 8 }
+  - { id: 18, size: 8, alignment: 8 }
+  - { id: 19, size: 8, alignment: 8 }
+  - { id: 20, size: 1, alignment: 2 }
+  - { id: 21, size: 672, alignment: 8 }
+  - { id: 22, size: 4, alignment: 4 }
+  - { id: 23, size: 4, alignment: 4 }
+  - { id: 24, size: 4, alignment: 4 }
+  - { id: 25, size: 64, alignment: 8 }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0s, $f2s, $r6d
+  
+    STG killed renamable $r6d, undef renamable $r1d, 0, $noreg :: (store 8 into `i32** undef`)
+    renamable $r0d = LARL @g_181
+    nofpexcept CEBR renamable $f0s, renamable $f2s, implicit-def $cc, implicit $fpc
+    STG renamable $r0d, undef renamable $r1d, 0, $noreg :: (store 8 into `i32** undef`)
+    BRC 15, 4, %bb.2, implicit killed $cc
+  
+  bb.1:
+    liveins: $f2s, $r0d
+  
+    renamable $f0s = COPY killed renamable $f2s
+  
+  bb.2:
+    liveins: $f0s, $r0d
+  
+    STE killed renamable $f0s, undef renamable $r1d, 0, $noreg :: (volatile store 4 into `float* undef`)
+    renamable $r1d = nuw LA %stack.0, 16, $noreg
+    renamable $r2d = nuw LA %stack.0, 24, $noreg
+    renamable $r3d = LA %stack.0, 40, $noreg
+    renamable $r4d = LARL @g_1390
+    STG renamable $r4d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    renamable $r5d = nuw LA %stack.0, 48, $noreg
+    renamable $r14d = LA %stack.0, 72, $noreg
+    renamable $r13d = LA %stack.0, 80, $noreg
+    renamable $r12d = LA %stack.0, 56, $noreg
+    renamable $r10d = LA %stack.0, 0, $noreg
+    STG renamable $r10d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    renamable $r9d = LA %stack.0, 64, $noreg
+    renamable $r8d = LA %stack.0, 88, $noreg
+    renamable $r7d = nuw LA %stack.0, 8, $noreg
+    MVGHI %stack.1, 904, 0
+    STG killed renamable $r9d, $noreg, 0, $noreg :: (store 8 into `i64*** null`)
+    STG killed renamable $r3d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r14d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r7d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r1d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r4d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r2d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r5d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r8d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r12d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r13d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r10d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    $r2l = LHI 0
+    STG killed renamable $r0d, undef renamable $r1d, 0, $noreg :: (store 8 into `i32** undef`)
+    Return implicit $r2l
+
+...
+---
+name:            fun1
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r6d' }
+frameInfo:
+  maxAlignment:    8
+stack:
+  - { id: 0, size: 96, alignment: 8 }
+  - { id: 1, size: 1960, alignment: 8 }
+  - { id: 2, size: 8, alignment: 8 }
+  - { id: 3, size: 320, alignment: 8 }
+  - { id: 4, size: 4, alignment: 4 }
+  - { id: 5, size: 8, alignment: 8 }
+  - { id: 6, size: 8, alignment: 8 }
+  - { id: 7, size: 4, alignment: 4 }
+  - { id: 8, size: 8, alignment: 8 }
+  - { id: 9, size: 4, alignment: 4 }
+  - { id: 10, size: 8, alignment: 8 }
+  - { id: 11, size: 8, alignment: 8 }
+  - { id: 12, size: 8, alignment: 8 }
+  - { id: 13, size: 8, alignment: 8 }
+  - { id: 14, size: 24, alignment: 4 }
+  - { id: 15, size: 4, alignment: 4 }
+  - { id: 16, size: 1792, alignment: 8 }
+  - { id: 17, size: 8, alignment: 8 }
+  - { id: 18, size: 8, alignment: 8 }
+  - { id: 19, size: 8, alignment: 8 }
+  - { id: 20, size: 1, alignment: 2 }
+  - { id: 21, size: 672, alignment: 8 }
+  - { id: 22, size: 4, alignment: 4 }
+  - { id: 23, size: 4, alignment: 4 }
+  - { id: 24, size: 4, alignment: 4 }
+  - { id: 25, size: 64, alignment: 8 }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $r6d
+  
+    STG killed renamable $r6d, undef renamable $r1d, 0, $noreg :: (store 8 into `i32** undef`)
+    renamable $r0d = LARL @g_181
+    STG renamable $r0d, undef renamable $r1d, 0, $noreg :: (store 8 into `i32** undef`)
+    renamable $r1d = nuw LA %stack.0, 16, $noreg
+    renamable $r2d = nuw LA %stack.0, 24, $noreg
+    renamable $r3d = LA %stack.0, 40, $noreg
+    renamable $r4d = LARL @g_1390
+    STG renamable $r4d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    renamable $r5d = nuw LA %stack.0, 48, $noreg
+    renamable $r14d = LA %stack.0, 72, $noreg
+    renamable $r13d = LA %stack.0, 80, $noreg
+    renamable $r12d = LA %stack.0, 56, $noreg
+    renamable $r10d = LA %stack.0, 0, $noreg
+    STG renamable $r10d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    renamable $r9d = LA %stack.0, 64, $noreg
+    renamable $r8d = LA %stack.0, 88, $noreg
+    renamable $r7d = nuw LA %stack.0, 8, $noreg
+    MVGHI %stack.1, 904, 0
+    STG killed renamable $r9d, $noreg, 0, $noreg :: (store 8 into `i64*** null`)
+    STG killed renamable $r3d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r14d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r7d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r1d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r4d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r2d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r5d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r8d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r12d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r13d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    STG killed renamable $r10d, undef renamable $r1d, 0, $noreg :: (store 8 into `i64*** undef`)
+    $r2l = LHI 0
+    STG killed renamable $r0d, undef renamable $r1d, 0, $noreg :: (store 8 into `i32** undef`)
+    Return implicit $r2l
+
+...
