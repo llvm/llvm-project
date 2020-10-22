@@ -262,11 +262,9 @@ config("include_config") {
 }
 
 group("include") {
-  if (current_toolchain == default_toolchain) {
-    deps = [
-      ":copy_headers",
-      ":write_config_site",
-    ]
-  }
+  deps = [
+    ":copy_headers($default_toolchain)",
+    ":write_config_site($default_toolchain)",
+  ]
   public_configs = [ ":include_config" ]
 }
