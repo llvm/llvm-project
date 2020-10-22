@@ -201,6 +201,7 @@
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/FixIrreducible.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
+#include "llvm/Transforms/Utils/InstructionNamer.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
