@@ -2045,7 +2045,14 @@ SDValue SelectionDAG::CreateStackTemporary(EVT VT, unsigned minAlign) {
 }
 
 SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
-  TypeSize Bytes = std::max(VT1.getStoreSize(), VT2.getStoreSize());
+  TypeSize VT1Size = VT1.getStoreSize();
+  TypeSize VT2Size = VT2.getStoreSize();
+  assert(VT1Size.isScalable() == VT2Size.isScalable() &&
+         "Don't know how to choose the maximum size when creating a stack "
+         "temporary");
+  TypeSize Bytes =
+      VT1Size.getKnownMinSize() > VT2Size.getKnownMinSize() ? VT1Size : VT2Size;
+
   Type *Ty1 = VT1.getTypeForEVT(*getContext());
   Type *Ty2 = VT2.getTypeForEVT(*getContext());
   const DataLayout &DL = getDataLayout();
