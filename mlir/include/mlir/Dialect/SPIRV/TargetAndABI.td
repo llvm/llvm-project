@@ -36,6 +36,25 @@ def SPV_ExtensionArrayAttr : TypedArrayAttrBase<
 def SPV_CapabilityArrayAttr : TypedArrayAttrBase<
     SPV_CapabilityAttr, "SPIR-V capability array attribute">;
 
+// Description of cooperative matrix operations supported on the
+// target. Represents `VkCooperativeMatrixPropertiesNV`. See
+// https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkCooperativeMatrixPropertiesNV.html
+def SPV_CooperativeMatrixPropertiesNVAttr :
+    StructAttr<"CooperativeMatrixPropertiesNVAttr", SPIRV_Dialect, [
+    StructFieldAttr<"m_size", I32Attr>,
+    StructFieldAttr<"n_size", I32Attr>,
+    StructFieldAttr<"k_size", I32Attr>,
+    StructFieldAttr<"a_type", TypeAttr>,
+    StructFieldAttr<"b_type", TypeAttr>,
+    StructFieldAttr<"c_type", TypeAttr>,
+    StructFieldAttr<"result_type", TypeAttr>,
+    StructFieldAttr<"scope", SPV_ScopeAttr>
+]>;
+
+def SPV_CooperativeMatrixPropertiesNVArrayAttr :
+    TypedArrayAttrBase<SPV_CooperativeMatrixPropertiesNVAttr,
+                       "CooperativeMatrixPropertiesNV array attribute">;
+
 // This attribute specifies the limits for various resources on the target
 // architecture.
 //
@@ -60,7 +79,13 @@ def SPV_ResourceLimitsAttr : StructAttr<"ResourceLimitsAttr", SPIRV_Dialect, [
 
     // The default number of invocations in each subgroup.
     // 0x7FFFFFFF means unknown.
-    StructFieldAttr<"subgroup_size", DefaultValuedAttr<I32Attr, "0x7FFFFFFF">>
+    StructFieldAttr<"subgroup_size", DefaultValuedAttr<I32Attr, "0x7FFFFFFF">>,
+
+    // The configurations of cooperative matrix operations
+    // supported. Default is an empty list.
+    StructFieldAttr<
+        "cooperative_matrix_properties_nv",
+        DefaultValuedAttr<SPV_CooperativeMatrixPropertiesNVArrayAttr, "{}">>
 ]>;
 
 #endif // SPIRV_TARGET_AND_ABI

@@ -4647,6 +4647,17 @@ AST_MATCHER(FunctionDecl, isDefaulted) {
   return Node.isDefaulted();
 }
 
+/// Matches weak function declarations.
+///
+/// Given:
+/// \code
+///   void foo() __attribute__((__weakref__("__foo")));
+///   void bar();
+/// \endcode
+/// functionDecl(isWeak())
+///   matches the weak declaration "foo", but not "bar".
+AST_MATCHER(FunctionDecl, isWeak) { return Node.isWeak(); }
+
 /// Matches functions that have a dynamic exception specification.
 ///
 /// Given:

@@ -63,9 +63,13 @@ Changes to the LLVM IR
 * Added the ``byref`` attribute to better represent argument passing
   for the `amdgpu_kernel` calling convention.
 
+* Added type parameter to the ``sret`` attribute to continue work on
+  removing pointer element types.
+
 * The ``llvm.experimental.vector.reduce`` family of intrinsics have been renamed
   to drop the "experimental" from the name, reflecting their now fully supported
   status in the IR.
+
 
 Changes to building LLVM
 ------------------------
@@ -105,7 +109,7 @@ During this release ...
 * The 'mpx' feature was removed from the backend. It had been removed from clang
   frontend in 10.0. Mention of the 'mpx' feature in an IR file will print a
   message to stderr, but IR should still compile.
-* Support for -march=sapphirerapids was added.
+* Support for ``-march=sapphirerapids`` and ``-march=x86-64-v[234]`` has been added.
 * The assembler now has support for {disp32} and {disp8} pseudo prefixes for
   controlling displacement size for memory operands and jump displacements. The
   assembler also supports the .d32 and .d8 mnemonic suffixes to do the same.
@@ -114,6 +118,7 @@ During this release ...
   the "target-cpu" attribute or TargetMachine CPU which will be used to select
   Instruction Set. If the attribute is not present, the tune CPU will follow
   the target CPU.
+* Support for ISA HRESET has been added.
 
 Changes to the AMDGPU Target
 -----------------------------

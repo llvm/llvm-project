@@ -13,6 +13,8 @@
 #include "Plugins/Process/Utility/lldb-mips-freebsd-register-enums.h"
 #include "RegisterContextPOSIX.h"
 
+class ProcessMonitor;
+
 class RegisterContextPOSIXProcessMonitor_mips64
     : public RegisterContextPOSIX_mips64,
       public POSIXBreakpointProtocol {
@@ -73,7 +75,7 @@ protected:
 
 private:
   uint64_t 
-  m_gpr_mips64[k_num_gpr_registers_mips64]; // general purpose registers.
+  m_gpr_mips64[lldb_private::k_num_gpr_registers_mips64]; // general purpose registers.
   ProcessMonitor &GetMonitor();
 };
 

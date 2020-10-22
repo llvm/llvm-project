@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-code-object-v3 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,HSA %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -mattr=-code-object-v3 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MESA %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,HSA %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MESA %s
 
 ; GCN-LABEL: {{^}}kernel_implicitarg_ptr_empty:
 ; GCN: enable_sgpr_kernarg_segment_ptr = 1

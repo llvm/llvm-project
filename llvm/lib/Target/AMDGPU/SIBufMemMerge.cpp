@@ -332,11 +332,12 @@ void SIBufMemMerge::processSubSection(const SmallVector<SimpleMI, 8> &Candidates
 
       // We know that the old sub registers for this subrange will be contained
       // entirely as this is one the constraints on construction
+      auto RI = TII->getRegisterInfo();
       auto I = StartIdx;
       while (SubOffset <  nextSize) {
-        unsigned SubRegIdx =
-          TII->getRegisterInfo().calcSubRegIdx(Candidates[I].getDestRC(TII),
-                                               SubOffset);
+        unsigned SubSize =
+          RI.getRegSizeInBits(*Candidates[I].getDestRC(TII)) / 32;
+        unsigned SubRegIdx = RI.getSubRegFromChannel(SubOffset, SubSize);
         const auto *Dest = Candidates[I].getDest(TII);
         BuildMI(*MBB, InsertElt->Inst, DL, CopyDesc)
              .add(*Dest)

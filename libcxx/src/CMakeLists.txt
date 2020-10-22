@@ -27,7 +27,6 @@ set(LIBCXX_SOURCES
   mutex_destructor.cpp
   new.cpp
   optional.cpp
-  random.cpp
   random_shuffle.cpp
   regex.cpp
   shared_mutex.cpp
@@ -58,6 +57,12 @@ set(LIBCXX_SOURCES
 if (LIBCXX_ENABLE_DEBUG_MODE_SUPPORT)
   list(APPEND LIBCXX_SOURCES
     debug.cpp
+    )
+endif()
+
+if (LIBCXX_ENABLE_RANDOM_DEVICE)
+  list(APPEND LIBCXX_SOURCES
+    random.cpp
     )
 endif()
 
@@ -217,11 +222,6 @@ if (LIBCXX_ENABLE_SHARED)
       "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.v${LIBCXX_LIBCPPABI_VERSION}.exp"
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
       "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
-
-    if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-      target_link_libraries(cxx_shared PRIVATE
-        "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../../libcxxabi/lib/new-delete.exp")
-    endif()
   endif()
 
   # Generate a linker script in place of a libc++.so symlink.

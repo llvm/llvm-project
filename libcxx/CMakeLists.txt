@@ -28,6 +28,10 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
+set(LIBCXX_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
+set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
+set(LIBCXX_BINARY_INCLUDE_DIR "${LIBCXX_BINARY_DIR}/include/c++build")
+
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXX_STANDALONE_BUILD)
   project(libcxx CXX C)
 
@@ -35,6 +39,12 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXX_STANDALONE_BUIL
   set(PACKAGE_VERSION 12.0.0git)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
+
+  # In a standalone build, we don't have llvm to automatically generate the
+  # llvm-lit script for us.  So we need to provide an explicit directory that
+  # the configurator should write the script into.
+  set(LIBCXX_STANDALONE_BUILD 1)
+  set(LLVM_LIT_OUTPUT_DIR "${LIBCXX_BINARY_DIR}/bin")
 
   # Find the LLVM sources and simulate LLVM CMake options.
   include(HandleOutOfTreeLLVM)
@@ -99,6 +109,12 @@ option(LIBCXX_ENABLE_DEBUG_MODE_SUPPORT
    By default, this is turned on. If you turn it off and try to enable the
    debug mode when compiling a program against libc++, it will fail to link
    since the required support isn't provided in the library." ON)
+option(LIBCXX_ENABLE_RANDOM_DEVICE
+  "Whether to include support for std::random_device in the library. Disabling
+   this can be useful when building the library for platforms that don't have
+   a source of randomness, such as some embedded platforms. When this is not
+   supported, most of <random> will still be available, but std::random_device
+   will not." ON)
 option(LIBCXX_TEST_GDB_PRETTY_PRINTERS "Test gdb pretty printers." OFF)
 set(LIBCXX_TEST_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/test/configs/legacy.cfg.in" CACHE STRING
     "The Lit testing configuration to use when running the tests.")
@@ -216,10 +232,10 @@ option(LIBCXX_ENABLE_ABI_LINKER_SCRIPT
       ${ENABLE_LINKER_SCRIPT_DEFAULT_VALUE})
 
 option(LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS
-    "Build libc++ with definitions for operator new/delete. This option can
-     be used to disable the definitions when libc++abi is expected to provide
-     them" ON)
-
+  "Build libc++ with definitions for operator new/delete. These are normally
+   defined in libc++abi, but this option can be used to define them in libc++
+   instead. If you define them in libc++, make sure they are NOT defined in
+   libc++abi. Doing otherwise is an ODR violation." OFF)
 # Build libc++abi with libunwind. We need this option to determine whether to
 # link with libunwind or libgcc_s while running the test cases.
 option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
@@ -381,10 +397,6 @@ endif ()
 # Configure System
 #===============================================================================
 
-set(LIBCXX_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
-set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
-set(LIBCXX_BINARY_INCLUDE_DIR "${LIBCXX_BINARY_DIR}/include/c++build")
-
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
   set(LIBCXX_HEADER_DIR ${LLVM_BINARY_DIR})
@@ -478,7 +490,7 @@ if (NOT LIBCXX_STANDALONE_BUILD)
   remove_flags(-DNDEBUG -UNDEBUG -D_DEBUG
                -lc++abi)
 endif()
-remove_flags(-stdlib=libc++ -stdlib=libstdc++)
+remove_flags(--stdlib=libc++ -stdlib=libc++ --stdlib=libstdc++ -stdlib=libstdc++)
 
 # FIXME: Remove all debug flags and flags that change which Windows
 # default libraries are linked. Currently we only support linking the
@@ -830,6 +842,7 @@ config_define_if(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY _LIBCPP_HAS_THREAD_LIBRARY
 config_define_if(LIBCXX_HAS_MUSL_LIBC _LIBCPP_HAS_MUSL_LIBC)
 config_define_if(LIBCXX_NO_VCRUNTIME _LIBCPP_NO_VCRUNTIME)
 config_define_if(LIBCXX_ENABLE_PARALLEL_ALGORITHMS _LIBCPP_HAS_PARALLEL_ALGORITHMS)
+config_define_if_not(LIBCXX_ENABLE_RANDOM_DEVICE _LIBCPP_HAS_NO_RANDOM_DEVICE)
 
 if (LIBCXX_ABI_DEFINES)
   set(abi_defines)

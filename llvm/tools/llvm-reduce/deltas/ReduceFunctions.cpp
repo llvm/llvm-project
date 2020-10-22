@@ -30,7 +30,12 @@ static void extractFunctionsFromModule(const std::vector<Chunk> &ChunksToKeep,
   // Record all out-of-chunk functions.
   std::vector<std::reference_wrapper<Function>> FuncsToRemove;
   copy_if(Program->functions(), std::back_inserter(FuncsToRemove),
-          [&O](auto &unused) { return !O.shouldKeep(); });
+          [&O](Function &F) {
+            // Intrinsics don't have function bodies that are useful to
+            // reduce. Additionally, intrinsics may have additional operand
+            // constraints.
+            return !F.isIntrinsic() && !O.shouldKeep();
+          });
 
   // Then, drop body of each of them. We want to batch this and do nothing else
   // here so that minimal number of remaining exteranal uses will remain.
@@ -53,8 +58,12 @@ static int countFunctions(Module *Program) {
   errs() << "----------------------------\n";
   errs() << "Function Index Reference:\n";
   int FunctionCount = 0;
-  for (auto &F : *Program)
-    errs() << "\t" << ++FunctionCount << ": " << F.getName() << "\n";
+  for (auto &F : *Program) {
+    if (F.isIntrinsic())
+      continue;
+
+    errs() << '\t' << ++FunctionCount << ": " << F.getName() << '\n';
+  }
 
   errs() << "----------------------------\n";
   return FunctionCount;

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64 -mattr=+mte | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 -mattr=+mte -aarch64-order-frame-objects=0 | FileCheck %s
 
 declare void @use(i8* %p)
 declare void @llvm.aarch64.settag(i8* %p, i64 %a)

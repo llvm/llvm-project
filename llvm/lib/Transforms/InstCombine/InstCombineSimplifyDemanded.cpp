@@ -278,26 +278,25 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     // are flipping are known to be set, then the xor is just resetting those
     // bits to zero.  We can just knock out bits from the 'and' and the 'xor',
     // simplifying both of them.
-    if (Instruction *LHSInst = dyn_cast<Instruction>(I->getOperand(0)))
+    if (Instruction *LHSInst = dyn_cast<Instruction>(I->getOperand(0))) {
+      ConstantInt *AndRHS, *XorRHS;
       if (LHSInst->getOpcode() == Instruction::And && LHSInst->hasOneUse() &&
-          isa<ConstantInt>(I->getOperand(1)) &&
-          isa<ConstantInt>(LHSInst->getOperand(1)) &&
+          match(I->getOperand(1), m_ConstantInt(XorRHS)) &&
+          match(LHSInst->getOperand(1), m_ConstantInt(AndRHS)) &&
           (LHSKnown.One & RHSKnown.One & DemandedMask) != 0) {
-        ConstantInt *AndRHS = cast<ConstantInt>(LHSInst->getOperand(1));
-        ConstantInt *XorRHS = cast<ConstantInt>(I->getOperand(1));
         APInt NewMask = ~(LHSKnown.One & RHSKnown.One & DemandedMask);
 
         Constant *AndC =
-          ConstantInt::get(I->getType(), NewMask & AndRHS->getValue());
+            ConstantInt::get(I->getType(), NewMask & AndRHS->getValue());
         Instruction *NewAnd = BinaryOperator::CreateAnd(I->getOperand(0), AndC);
         InsertNewInstWith(NewAnd, *I);
 
         Constant *XorC =
-          ConstantInt::get(I->getType(), NewMask & XorRHS->getValue());
+            ConstantInt::get(I->getType(), NewMask & XorRHS->getValue());
         Instruction *NewXor = BinaryOperator::CreateXor(NewAnd, XorC);
         return InsertNewInstWith(NewXor, *I);
       }
-
+    }
     break;
   }
   case Instruction::Select: {
@@ -340,7 +339,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     // we can. This helps not break apart (or helps put back together)
     // canonical patterns like min and max.
     auto CanonicalizeSelectConstant = [](Instruction *I, unsigned OpNo,
-                                         APInt DemandedMask) {
+                                         const APInt &DemandedMask) {
       const APInt *SelC;
       if (!match(I->getOperand(OpNo), m_APInt(SelC)))
         return false;
@@ -671,8 +670,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     }
     break;
   }
-  case Instruction::SRem:
-    if (ConstantInt *Rem = dyn_cast<ConstantInt>(I->getOperand(1))) {
+  case Instruction::SRem: {
+    ConstantInt *Rem;
+    if (match(I->getOperand(1), m_ConstantInt(Rem))) {
       // X % -1 demands all the bits because we don't want to introduce
       // INT_MIN % -1 (== undef) by accident.
       if (Rem->isMinusOne())
@@ -715,6 +715,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         Known.makeNonNegative();
     }
     break;
+  }
   case Instruction::URem: {
     KnownBits Known2(BitWidth);
     APInt AllOnes = APInt::getAllOnesValue(BitWidth);

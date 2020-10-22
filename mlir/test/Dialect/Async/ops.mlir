@@ -106,3 +106,17 @@ func @empty_tokens_or_values_operands() {
   %token4 = async.execute [] { async.yield }
   return
 }
+
+// CHECK-LABEL: @await_token
+func @await_token(%arg0: !async.token) {
+  // CHECK: async.await %arg0
+  async.await %arg0 : !async.token
+  return
+}
+
+// CHECK-LABEL: @await_value
+func @await_value(%arg0: !async.value<f32>) -> f32 {
+  // CHECK: async.await %arg0
+  %0 = async.await %arg0 : !async.value<f32>
+  return %0 : f32
+}

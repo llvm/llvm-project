@@ -31,3 +31,12 @@ struct B {
 };
 
 int &r = B().operator<=>(0);
+
+namespace PR47893 {
+  struct A {
+    void operator<=>(const A&) const;
+  };
+  template<typename T> auto f(T a, T b) -> decltype(a < b) = delete;
+  int &f(...);
+  int &r = f(A(), A());
+}

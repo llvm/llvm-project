@@ -171,17 +171,12 @@ namespace {
 llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   auto &SM = Ctx.getSourceManager();
 
-  SourceLocation NameLoc = nameLocation(ND, SM);
   SourceLocation BeginLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getBeginLoc()));
   SourceLocation EndLoc = SM.getSpellingLoc(SM.getFileLoc(ND.getEndLoc()));
   const auto SymbolRange =
       toHalfOpenFileRange(SM, Ctx.getLangOpts(), {BeginLoc, EndLoc});
   if (!SymbolRange)
     return llvm::None;
-
-  Position NameBegin = sourceLocToPosition(SM, NameLoc);
-  Position NameEnd = sourceLocToPosition(
-      SM, Lexer::getLocForEndOfToken(NameLoc, 0, SM, Ctx.getLangOpts()));
 
   index::SymbolInfo SymInfo = index::getSymbolInfo(&ND);
   // FIXME: this is not classifying constructors, destructors and operators
@@ -194,10 +189,35 @@ llvm::Optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   SI.deprecated = ND.isDeprecated();
   SI.range = Range{sourceLocToPosition(SM, SymbolRange->getBegin()),
                    sourceLocToPosition(SM, SymbolRange->getEnd())};
-  SI.selectionRange = Range{NameBegin, NameEnd};
+
+  SourceLocation NameLoc = ND.getLocation();
+  SourceLocation FallbackNameLoc;
+  if (NameLoc.isMacroID()) {
+    if (isSpelledInSource(NameLoc, SM)) {
+      // Prefer the spelling loc, but save the expansion loc as a fallback.
+      FallbackNameLoc = SM.getExpansionLoc(NameLoc);
+      NameLoc = SM.getSpellingLoc(NameLoc);
+    } else {
+      NameLoc = SM.getExpansionLoc(NameLoc);
+    }
+  }
+  auto ComputeSelectionRange = [&](SourceLocation L) -> Range {
+    Position NameBegin = sourceLocToPosition(SM, L);
+    Position NameEnd = sourceLocToPosition(
+        SM, Lexer::getLocForEndOfToken(L, 0, SM, Ctx.getLangOpts()));
+    return Range{NameBegin, NameEnd};
+  };
+
+  SI.selectionRange = ComputeSelectionRange(NameLoc);
+  if (!SI.range.contains(SI.selectionRange) && FallbackNameLoc.isValid()) {
+    // 'selectionRange' must be contained in 'range'. In cases where clang
+    // reports unrelated ranges, we first try falling back to the expansion
+    // loc for the selection range.
+    SI.selectionRange = ComputeSelectionRange(FallbackNameLoc);
+  }
   if (!SI.range.contains(SI.selectionRange)) {
-    // 'selectionRange' must be contained in 'range', so in cases where clang
-    // reports unrelated ranges we need to reconcile somehow.
+    // If the containment relationship still doesn't hold, throw away
+    // 'range' and use 'selectionRange' for both.
     SI.range = SI.selectionRange;
   }
   return SI;

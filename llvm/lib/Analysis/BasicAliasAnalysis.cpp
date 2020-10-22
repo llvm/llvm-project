@@ -115,50 +115,6 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
 // Useful predicates
 //===----------------------------------------------------------------------===//
 
-/// Returns true if the pointer is to a function-local object that never
-/// escapes from the function.
-static bool isNonEscapingLocalObject(
-    const Value *V,
-    SmallDenseMap<const Value *, bool, 8> *IsCapturedCache = nullptr) {
-  SmallDenseMap<const Value *, bool, 8>::iterator CacheIt;
-  if (IsCapturedCache) {
-    bool Inserted;
-    std::tie(CacheIt, Inserted) = IsCapturedCache->insert({V, false});
-    if (!Inserted)
-      // Found cached result, return it!
-      return CacheIt->second;
-  }
-
-  // If this is a local allocation, check to see if it escapes.
-  if (isa<AllocaInst>(V) || isNoAliasCall(V)) {
-    // Set StoreCaptures to True so that we can assume in our callers that the
-    // pointer is not the result of a load instruction. Currently
-    // PointerMayBeCaptured doesn't have any special analysis for the
-    // StoreCaptures=false case; if it did, our callers could be refined to be
-    // more precise.
-    auto Ret = !PointerMayBeCaptured(V, false, /*StoreCaptures=*/true);
-    if (IsCapturedCache)
-      CacheIt->second = Ret;
-    return Ret;
-  }
-
-  // If this is an argument that corresponds to a byval or noalias argument,
-  // then it has not escaped before entering the function.  Check if it escapes
-  // inside the function.
-  if (const Argument *A = dyn_cast<Argument>(V))
-    if (A->hasByValAttr() || A->hasNoAliasAttr()) {
-      // Note even if the argument is marked nocapture, we still need to check
-      // for copies made inside the function. The nocapture attribute only
-      // specifies that there are no copies made that outlive the function.
-      auto Ret = !PointerMayBeCaptured(V, false, /*StoreCaptures=*/true);
-      if (IsCapturedCache)
-        CacheIt->second = Ret;
-      return Ret;
-    }
-
-  return false;
-}
-
 /// Returns true if the pointer is one which would have been considered an
 /// escape by isNonEscapingLocalObject.
 static bool isEscapeSource(const Value *V) {
@@ -455,11 +411,10 @@ static unsigned getMaxPointerSize(const DataLayout &DL) {
 /// specified amount, but which may have other unrepresented high bits. As
 /// such, the gep cannot necessarily be reconstructed from its decomposed form.
 ///
-/// When DataLayout is around, this function is capable of analyzing everything
-/// that getUnderlyingObject can look through. To be able to do that
-/// getUnderlyingObject and DecomposeGEPExpression must use the same search
-/// depth (MaxLookupSearchDepth). When DataLayout not is around, it just looks
-/// through pointer casts.
+/// This function is capable of analyzing everything that getUnderlyingObject
+/// can look through. To be able to do that getUnderlyingObject and
+/// DecomposeGEPExpression must use the same search depth
+/// (MaxLookupSearchDepth).
 bool BasicAAResult::DecomposeGEPExpression(const Value *V,
        DecomposedGEP &Decomposed, const DataLayout &DL, AssumptionCache *AC,
        DominatorTree *DT) {
@@ -1352,24 +1307,16 @@ AliasResult BasicAAResult::aliasGEP(
         aliasCheck(UnderlyingV1, LocationSize::unknown(), AAMDNodes(),
                    UnderlyingV2, LocationSize::unknown(), AAMDNodes(), AAQI);
 
-    // Check for geps of non-aliasing underlying pointers where the offsets are
-    // identical.
-    if ((BaseAlias == MayAlias) && V1Size == V2Size) {
-      // Do the base pointers alias assuming type and size.
+    // For GEPs with identical sizes and offsets, we can preserve the size
+    // and AAInfo when performing the alias check on the underlying objects.
+    if (BaseAlias == MayAlias && V1Size == V2Size &&
+        GEP1BaseOffset == GEP2BaseOffset &&
+        DecompGEP1.VarIndices == DecompGEP2.VarIndices &&
+        !GEP1MaxLookupReached && !GEP2MaxLookupReached) {
       AliasResult PreciseBaseAlias = aliasCheck(
           UnderlyingV1, V1Size, V1AAInfo, UnderlyingV2, V2Size, V2AAInfo, AAQI);
-      if (PreciseBaseAlias == NoAlias) {
-        // See if the computed offset from the common pointer tells us about the
-        // relation of the resulting pointer.
-        // If the max search depth is reached the result is undefined
-        if (GEP2MaxLookupReached || GEP1MaxLookupReached)
-          return MayAlias;
-
-        // Same offsets.
-        if (GEP1BaseOffset == GEP2BaseOffset &&
-            DecompGEP1.VarIndices == DecompGEP2.VarIndices)
-          return NoAlias;
-      }
+      if (PreciseBaseAlias == NoAlias)
+        return NoAlias;
     }
 
     // If we get a No or May, then return it immediately, no amount of analysis
@@ -1630,12 +1577,8 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
       }
 
       // Reset if speculation failed.
-      if (Alias != NoAlias) {
-        auto Pair =
-            AAQI.AliasCache.insert(std::make_pair(Locs, OrigAliasResult));
-        assert(!Pair.second && "Entry must have existed");
-        Pair.first->second = OrigAliasResult;
-      }
+      if (Alias != NoAlias)
+        AAQI.updateResult(Locs, OrigAliasResult);
       return Alias;
     }
 
@@ -1742,8 +1685,9 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
 /// Provides a bunch of ad-hoc rules to disambiguate in common cases, such as
 /// array references.
 AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
-                                      AAMDNodes V1AAInfo, const Value *V2,
-                                      LocationSize V2Size, AAMDNodes V2AAInfo,
+                                      const AAMDNodes &V1AAInfo,
+                                      const Value *V2, LocationSize V2Size,
+                                      const AAMDNodes &V2AAInfo,
                                       AAQueryInfo &AAQI, const Value *O1,
                                       const Value *O2) {
   // If either of the memory references is empty, it doesn't matter what the
@@ -1845,53 +1789,40 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
 
   // FIXME: This isn't aggressively handling alias(GEP, PHI) for example: if the
   // GEP can't simplify, we don't even look at the PHI cases.
-  if (!isa<GEPOperator>(V1) && isa<GEPOperator>(V2)) {
-    std::swap(V1, V2);
-    std::swap(V1Size, V2Size);
-    std::swap(O1, O2);
-    std::swap(V1AAInfo, V2AAInfo);
-  }
   if (const GEPOperator *GV1 = dyn_cast<GEPOperator>(V1)) {
     AliasResult Result =
         aliasGEP(GV1, V1Size, V1AAInfo, V2, V2Size, V2AAInfo, O1, O2, AAQI);
-    if (Result != MayAlias) {
-      auto ItInsPair = AAQI.AliasCache.insert(std::make_pair(Locs, Result));
-      assert(!ItInsPair.second && "Entry must have existed");
-      ItInsPair.first->second = Result;
-      return Result;
-    }
+    if (Result != MayAlias)
+      return AAQI.updateResult(Locs, Result);
+  } else if (const GEPOperator *GV2 = dyn_cast<GEPOperator>(V2)) {
+    AliasResult Result =
+        aliasGEP(GV2, V2Size, V2AAInfo, V1, V1Size, V1AAInfo, O2, O1, AAQI);
+    if (Result != MayAlias)
+      return AAQI.updateResult(Locs, Result);
   }
 
-  if (isa<PHINode>(V2) && !isa<PHINode>(V1)) {
-    std::swap(V1, V2);
-    std::swap(O1, O2);
-    std::swap(V1Size, V2Size);
-    std::swap(V1AAInfo, V2AAInfo);
-  }
   if (const PHINode *PN = dyn_cast<PHINode>(V1)) {
     AliasResult Result =
         aliasPHI(PN, V1Size, V1AAInfo, V2, V2Size, V2AAInfo, O2, AAQI);
-    if (Result != MayAlias) {
-      Pair = AAQI.AliasCache.try_emplace(Locs, Result);
-      assert(!Pair.second && "Entry must have existed");
-      return Pair.first->second = Result;
-    }
+    if (Result != MayAlias)
+      return AAQI.updateResult(Locs, Result);
+  } else if (const PHINode *PN = dyn_cast<PHINode>(V2)) {
+    AliasResult Result =
+        aliasPHI(PN, V2Size, V2AAInfo, V1, V1Size, V1AAInfo, O1, AAQI);
+    if (Result != MayAlias)
+      return AAQI.updateResult(Locs, Result);
   }
 
-  if (isa<SelectInst>(V2) && !isa<SelectInst>(V1)) {
-    std::swap(V1, V2);
-    std::swap(O1, O2);
-    std::swap(V1Size, V2Size);
-    std::swap(V1AAInfo, V2AAInfo);
-  }
   if (const SelectInst *S1 = dyn_cast<SelectInst>(V1)) {
     AliasResult Result =
         aliasSelect(S1, V1Size, V1AAInfo, V2, V2Size, V2AAInfo, O2, AAQI);
-    if (Result != MayAlias) {
-      Pair = AAQI.AliasCache.try_emplace(Locs, Result);
-      assert(!Pair.second && "Entry must have existed");
-      return Pair.first->second = Result;
-    }
+    if (Result != MayAlias)
+      return AAQI.updateResult(Locs, Result);
+  } else if (const SelectInst *S2 = dyn_cast<SelectInst>(V2)) {
+    AliasResult Result =
+        aliasSelect(S2, V2Size, V2AAInfo, V1, V1Size, V1AAInfo, O1, AAQI);
+    if (Result != MayAlias)
+      return AAQI.updateResult(Locs, Result);
   }
 
   // If both pointers are pointing into the same object and one of them
@@ -1899,19 +1830,14 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (O1 == O2)
     if (V1Size.isPrecise() && V2Size.isPrecise() &&
         (isObjectSize(O1, V1Size.getValue(), DL, TLI, NullIsValidLocation) ||
-         isObjectSize(O2, V2Size.getValue(), DL, TLI, NullIsValidLocation))) {
-      Pair = AAQI.AliasCache.try_emplace(Locs, PartialAlias);
-      assert(!Pair.second && "Entry must have existed");
-      return Pair.first->second = PartialAlias;
-    }
+         isObjectSize(O2, V2Size.getValue(), DL, TLI, NullIsValidLocation)))
+      return AAQI.updateResult(Locs, PartialAlias);
 
   // Recurse back into the best AA results we have, potentially with refined
   // memory locations. We have already ensured that BasicAA has a MayAlias
   // cache result for these, so any recursion back into BasicAA won't loop.
   AliasResult Result = getBestAAResults().alias(Locs.first, Locs.second, AAQI);
-  Pair = AAQI.AliasCache.try_emplace(Locs, Result);
-  assert(!Pair.second && "Entry must have existed");
-  return Pair.first->second = Result;
+  return AAQI.updateResult(Locs, Result);
 }
 
 /// Check whether two Values can be considered equivalent.

@@ -884,13 +884,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
 }
 
 void RISCVCompressInstEmitter::run(raw_ostream &o) {
-  Record *CompressClass = Records.getClass("CompressPat");
-  assert(CompressClass && "Compress class definition missing!");
-  std::vector<Record *> Insts;
-  for (const auto &D : Records.getDefs()) {
-    if (D.second->isSubClassOf(CompressClass))
-      Insts.push_back(D.second.get());
-  }
+  std::vector<Record *> Insts = Records.getAllDerivedDefinitions("CompressPat");
 
   // Process the CompressPat definitions, validating them as we do so.
   for (unsigned i = 0, e = Insts.size(); i != e; ++i)

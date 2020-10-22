@@ -994,6 +994,10 @@ public:
   void printRegionBuilder(llvm::raw_ostream &os, StringRef cppOpName,
                           ComprehensionParsingState &state);
 
+  /// Print the C++ impl for named ops canonicalizers and fodlers.
+  void printCanonicalizersAndFolders(llvm::raw_ostream &os,
+                                     StringRef cppOpName);
+
 private:
   //===--------------------------------------------------------------------===//
   // Internal bookkeeping of tensors.
@@ -1430,6 +1434,7 @@ LogicalResult TCParser::parseAndEmitODSDef(llvm::raw_ostream &os) {
     printReferenceIterators(ss, cppOpName, state);
     printReferenceIndexingMaps(ss, cppOpName, state);
     printRegionBuilder(ss, cppOpName, state);
+    printCanonicalizersAndFolders(ss, cppOpName);
     ss.flush();
     os << extraMethods << "\n";
   }
@@ -1457,51 +1462,51 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
 
       let skipDefaultBuilders = 1;
       let builders = [ OpBuilder<
-        "OpBuilder &b, OperationState &result, "
         "ValueRange inputs, ValueRange outputBuffers",
         [{{
-          result.addOperands(inputs);
-          result.addOperands(outputBuffers);
-          result.addAttribute(
+          $_state.addOperands(inputs);
+          $_state.addOperands(outputBuffers);
+          $_state.addAttribute(
             "operand_segment_sizes",
-            b.getI32VectorAttr({{static_cast<int32_t>(inputs.size()),
-                                static_cast<int32_t>(outputBuffers.size()),
-                                static_cast<int32_t>(0)}));
+            $_builder.getI32VectorAttr({{
+              static_cast<int32_t>(inputs.size()),
+              static_cast<int32_t>(outputBuffers.size()),
+              static_cast<int32_t>(0)}));
           buildNamedStructuredOpRegionAndAttributes<{0}>(
-            b,
-            result,
+            $_builder,
+            $_state,
             TypeRange(inputs),
             TypeRange(outputBuffers),
             TypeRange(),
             TypeRange());
         }]>, OpBuilder<
-        "OpBuilder &b, OperationState &result, TypeRange resultTensorTypes,"
-        "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors",
+        "TypeRange resultTensorTypes, ValueRange inputs, "
+        "ValueRange outputBuffers, ValueRange initTensors",
         [{{
-          result.addOperands(inputs);
-          result.addOperands(outputBuffers);
-          result.addOperands(initTensors);
-          result.addTypes(resultTensorTypes);
-          result.addAttribute(
+          $_state.addOperands(inputs);
+          $_state.addOperands(outputBuffers);
+          $_state.addOperands(initTensors);
+          $_state.addTypes(resultTensorTypes);
+          $_state.addAttribute(
             "operand_segment_sizes",
-            b.getI32VectorAttr({{static_cast<int32_t>(inputs.size()),
-                                static_cast<int32_t>(outputBuffers.size()),
-                                static_cast<int32_t>(initTensors.size())}));
+            $_builder.getI32VectorAttr({{
+              static_cast<int32_t>(inputs.size()),
+              static_cast<int32_t>(outputBuffers.size()),
+              static_cast<int32_t>(initTensors.size())}));
           buildNamedStructuredOpRegionAndAttributes<{0}>(
-            b,
-            result,
+            $_builder,
+            $_state,
             TypeRange(inputs),
             TypeRange(outputBuffers),
             TypeRange(initTensors),
             resultTensorTypes);
         }]>, OpBuilder<
-        "OpBuilder &b, OperationState &result, TypeRange resultTensorTypes,"
-        "ValueRange operands, ArrayRef<NamedAttribute> attributes = {{}",
+        "TypeRange resultTensorTypes, ValueRange operands, ArrayRef<NamedAttribute> attributes = {{}",
         [{{
-          result.addOperands(operands);
-          result.addAttributes(attributes);
-          result.addTypes(resultTensorTypes);
-          (void)result.addRegion();
+          $_state.addOperands(operands);
+          $_state.addAttributes(attributes);
+          $_state.addTypes(resultTensorTypes);
+          (void)$_state.addRegion();
         }]>
       ];
       let printer = [{{ return ::printNamedStructuredOp(p, *this); }];
@@ -1569,6 +1574,22 @@ void TCParser::printReferenceIterators(llvm::raw_ostream &os,
   ss.flush();
 
   os << llvm::formatv(referenceReferenceIteratorsFmt, cppOpName, iteratorsStr);
+}
+
+void TCParser::printCanonicalizersAndFolders(llvm::raw_ostream &os,
+                                             StringRef cppOpName) {
+  const char *canonicalizersAndFoldersFmt = R"FMT(
+    void {0}::getCanonicalizationPatterns(
+        OwningRewritePatternList &results,
+        MLIRContext *context) {{
+      results.insert<EraseDeadLinalgOp>();
+      results.insert<FoldTensorCastOp>();
+    }
+    LogicalResult {0}::fold(ArrayRef<Attribute>,
+                            SmallVectorImpl<OpFoldResult> &) {{
+      return foldMemRefCast(*this);
+    })FMT";
+  os << llvm::formatv(canonicalizersAndFoldersFmt, cppOpName);
 }
 
 /// Print the C++ StructuredOpsInterface impl of `referenceIndexingMaps`.

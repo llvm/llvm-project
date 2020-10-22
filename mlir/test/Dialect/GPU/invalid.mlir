@@ -435,3 +435,17 @@ module {
     } ) {gpu.kernel, sym_name = "kernel_1", type = (f32, memref<?xf32>) -> (), workgroup_attributions = 3: i64} : () -> ()
   }
 }
+
+// -----
+
+func @sync_wait_with_result() {
+  // expected-error @+1 {{cannot name an operation with no results}}
+  %t = gpu.wait
+}
+
+// -----
+
+func @async_wait_without_result() {
+  // expected-error @+1 {{custom op 'gpu.wait' needs to be named when marked 'async'}}
+  gpu.wait async
+}

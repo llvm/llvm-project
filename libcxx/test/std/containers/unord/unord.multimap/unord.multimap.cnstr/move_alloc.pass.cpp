@@ -16,8 +16,6 @@
 
 // unordered_multimap(unordered_multimap&& u, const allocator_type& a);
 
-#include <iostream>
-
 #include <unordered_map>
 #include <string>
 #include <set>
@@ -272,5 +270,5 @@ int main(int, char**)
         assert(c0.empty());
     }
 
-  return 0;
+    return 0;
 }

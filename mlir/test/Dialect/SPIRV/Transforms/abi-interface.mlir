@@ -7,13 +7,13 @@ module attributes {
 
 // CHECK-LABEL: spv.module
 spv.module Logical GLSL450 {
-  // CHECK-DAG:    spv.globalVariable [[VAR0:@.*]] bind(0, 0) : !spv.ptr<!spv.struct<f32 [0]>, StorageBuffer>
-  // CHECK-DAG:    spv.globalVariable [[VAR1:@.*]] bind(0, 1) : !spv.ptr<!spv.struct<!spv.array<12 x f32, stride=4> [0]>, StorageBuffer>
+  // CHECK-DAG:    spv.globalVariable [[VAR0:@.*]] bind(0, 0) : !spv.ptr<!spv.struct<(f32 [0])>, StorageBuffer>
+  // CHECK-DAG:    spv.globalVariable [[VAR1:@.*]] bind(0, 1) : !spv.ptr<!spv.struct<(!spv.array<12 x f32, stride=4> [0])>, StorageBuffer>
   // CHECK:    spv.func [[FN:@.*]]()
   spv.func @kernel(
     %arg0: f32
            {spv.interface_var_abi = #spv.interface_var_abi<(0, 0), StorageBuffer>},
-    %arg1: !spv.ptr<!spv.struct<!spv.array<12 x f32>>, StorageBuffer>
+    %arg1: !spv.ptr<!spv.struct<(!spv.array<12 x f32>)>, StorageBuffer>
            {spv.interface_var_abi = #spv.interface_var_abi<(0, 1)>}) "None"
   attributes {spv.entry_point_abi = {local_size = dense<[32, 1, 1]> : vector<3xi32>}} {
     // CHECK: [[ARG1:%.*]] = spv._address_of [[VAR1]]

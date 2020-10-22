@@ -171,6 +171,16 @@ struct TypeInfo {
       : Width(Width), Align(Align), AlignIsRequired(AlignIsRequired) {}
 };
 
+struct TypeInfoChars {
+  CharUnits Width;
+  CharUnits Align;
+  bool AlignIsRequired : 1;
+
+  TypeInfoChars() : AlignIsRequired(false) {}
+  TypeInfoChars(CharUnits Width, CharUnits Align, bool AlignIsRequired)
+      : Width(Width), Align(Align), AlignIsRequired(AlignIsRequired) {}
+};
+
 /// Holds long-lived AST nodes (such as types and decls) that can be
 /// referred to throughout the semantic analysis of a file.
 class ASTContext : public RefCountedBase<ASTContext> {
@@ -563,7 +573,7 @@ private:
   mutable llvm::BumpPtrAllocator BumpAlloc;
 
   /// Allocator for partial diagnostics.
-  PartialDiagnostic::StorageAllocator DiagAllocator;
+  PartialDiagnostic::DiagStorageAllocator DiagAllocator;
 
   /// The current C++ ABI.
   std::unique_ptr<CXXABI> ABI;
@@ -642,7 +652,7 @@ public:
   /// Return the total memory used for various side tables.
   size_t getSideTableAllocatedMemory() const;
 
-  PartialDiagnostic::StorageAllocator &getDiagAllocator() {
+  PartialDiagnostic::DiagStorageAllocator &getDiagAllocator() {
     return DiagAllocator;
   }
 
@@ -2169,10 +2179,10 @@ public:
 
   // getTypeInfoDataSizeInChars - Return the size of a type, in chars. If the
   // type is a record, its data size is returned.
-  std::pair<CharUnits, CharUnits> getTypeInfoDataSizeInChars(QualType T) const;
+  TypeInfoChars getTypeInfoDataSizeInChars(QualType T) const;
 
-  std::pair<CharUnits, CharUnits> getTypeInfoInChars(const Type *T) const;
-  std::pair<CharUnits, CharUnits> getTypeInfoInChars(QualType T) const;
+  TypeInfoChars getTypeInfoInChars(const Type *T) const;
+  TypeInfoChars getTypeInfoInChars(QualType T) const;
 
   /// Determine if the alignment the type has was required using an
   /// alignment attribute.
@@ -3086,8 +3096,8 @@ private:
 };
 
 /// Insertion operator for diagnostics.
-const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                    const ASTContext::SectionInfo &Section);
+const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                      const ASTContext::SectionInfo &Section);
 
 /// Utility function for constructing a nullary selector.
 inline Selector GetNullarySelector(StringRef name, ASTContext &Ctx) {

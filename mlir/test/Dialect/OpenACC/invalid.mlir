@@ -170,12 +170,31 @@ acc.exit_data async(%cst: index) delete(%value : memref<10xf32>) attributes {asy
 
 %cst = constant 1 : index
 %value = alloc() : memref<10xf32>
+// expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
+acc.exit_data wait_devnum(%cst: index) delete(%value : memref<10xf32>)
+
+// -----
+
+// expected-error@+1 {{at least one operand in copyin, create, create_zero or attach must appear on the enter data operation}}
+acc.enter_data attributes {async}
+
+// -----
+
+%cst = constant 1 : index
+%value = alloc() : memref<10xf32>
+// expected-error@+1 {{async attribute cannot appear with asyncOperand}}
+acc.enter_data async(%cst: index) create(%value : memref<10xf32>) attributes {async}
+
+// -----
+
+%cst = constant 1 : index
+%value = alloc() : memref<10xf32>
 // expected-error@+1 {{wait attribute cannot appear with waitOperands}}
-acc.exit_data wait(%cst: index) delete(%value : memref<10xf32>) attributes {wait}
+acc.enter_data wait(%cst: index) create(%value : memref<10xf32>) attributes {wait}
 
 // -----
 
 %cst = constant 1 : index
 %value = alloc() : memref<10xf32>
 // expected-error@+1 {{wait_devnum cannot appear without waitOperands}}
-acc.exit_data wait_devnum(%cst: index) delete(%value : memref<10xf32>)
+acc.enter_data wait_devnum(%cst: index) create(%value : memref<10xf32>)

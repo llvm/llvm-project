@@ -215,7 +215,7 @@ if (LIBCXXABI_ENABLE_SHARED)
     export_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-base.exp")
 
     if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
-      export_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
+      reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
     endif()
 
     if (LIBCXXABI_ENABLE_EXCEPTIONS)

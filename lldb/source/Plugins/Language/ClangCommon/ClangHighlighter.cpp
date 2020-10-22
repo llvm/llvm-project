@@ -178,7 +178,7 @@ void ClangHighlighter::Highlight(const HighlightStyle &options,
   Opts.CPlusPlus17 = true;
   Opts.LineComment = true;
 
-  Lexer lex(FID, buf.get(), SM, Opts);
+  Lexer lex(FID, buf->getMemBufferRef(), SM, Opts);
   // The lexer should keep whitespace around.
   lex.SetKeepWhitespaceMode(true);
 

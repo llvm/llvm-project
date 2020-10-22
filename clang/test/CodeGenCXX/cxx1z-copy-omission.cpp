@@ -19,7 +19,7 @@ void g() {
   // CHECK: %[[A:.*]] = alloca
   // CHECK-NOT: alloca
   // CHECK-NOT: call
-  // CHECK: call {{.*}} @_Z1fv({{.*}}* sret align 4 %[[A]])
+  // CHECK: call {{.*}} @_Z1fv({{.*}}* sret({{.*}}) align 4 %[[A]])
   A a = A( A{ f() } );
   // CHECK-NOT: call
 
@@ -40,7 +40,7 @@ void h() {
   // CHECK-NOT: alloca
   // CHECK-NOT: call
 
-  // CHECK: call {{.*}} @_Z1fv({{.*}}* sret align 4 %[[A]])
+  // CHECK: call {{.*}} @_Z1fv({{.*}}* sret({{.*}}) align 4 %[[A]])
   // CHECK-NOT: call
   // CHECK: call {{.*}} @_Z1f1A({{.*}}* %[[A]])
   f(f());

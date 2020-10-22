@@ -3,16 +3,13 @@
 
 // RUN: rm -f %t.supp
 // RUN: touch %t.supp
-// RUN: %push_to_device %t.supp %device_rundir/%t.supp
-// RUN: %env_lsan_opts="$LSAN_BASE:suppressions='%device_rundir/%t.supp'" not %run %t 2>&1 | FileCheck %s --check-prefix=NOSUPP
+// RUN: %env_lsan_opts="$LSAN_BASE:suppressions='%t.supp'" not %run %t 2>&1 | FileCheck %s --check-prefix=NOSUPP
 
 // RUN: echo "leak:*LSanTestLeakingFunc*" > %t.supp
-// RUN: %push_to_device  %t.supp %device_rundir/%t.supp
-// RUN: %env_lsan_opts="$LSAN_BASE:suppressions='%device_rundir/%t.supp'" not %run %t 2>&1 | FileCheck %s
-//
+// RUN: %env_lsan_opts="$LSAN_BASE:suppressions='%t.supp'" not %run %t 2>&1 | FileCheck %s
+
 // RUN: echo "leak:%t" > %t.supp
-// RUN: %push_to_device  %t.supp %device_rundir/%t.supp
-// RUN: %env_lsan_opts="$LSAN_BASE:suppressions='%device_rundir/%t.supp':symbolize=false" %run %t
+// RUN: %env_lsan_opts="$LSAN_BASE:suppressions='%t.supp':symbolize=false" %run %t
 
 #include <stdio.h>
 #include <stdlib.h>

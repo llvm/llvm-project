@@ -18,9 +18,9 @@
 //           error_code& ec) noexcept;
 
 #include "filesystem_include.h"
-#include <type_traits>
-#include <chrono>
 #include <cassert>
+#include <fstream>
+#include <string>
 
 #include "test_macros.h"
 #include "rapid-cxx-test.h"
@@ -29,14 +29,6 @@
 using namespace fs;
 
 TEST_SUITE(filesystem_copy_file_test_suite)
-
-static std::string random_hex_chars(uintmax_t size) {
-  std::string data;
-  data.reserve(size);
-  for (uintmax_t I = 0; I < size; ++I)
-    data.push_back(random_utils::random_hex_char());
-  return data;
-}
 
 // This test is intended to test 'sendfile's 2gb limit for a single call, and
 // to ensure that libc++ correctly copies files larger than that limit.
@@ -57,14 +49,12 @@ TEST_CASE(large_file) {
     TEST_UNSUPPORTED();
   }
 
-  // Use python to create a file right at the size limit.
+  // Create a file right at the size limit. The file is full of '\0's.
   const path file = env.create_file("source", sendfile_size_limit);
-  // Create some random data that looks different than the data before the
-  // size limit.
-  const std::string additional_data = random_hex_chars(additional_size);
-  // Append this known data to the end of the source file.
+  const std::string additional_data(additional_size, 'x');
+  // Append known data to the end of the source file.
   {
-    std::ofstream outf(file.native(), std::ios_base::app);
+    std::ofstream outf(file.string(), std::ios_base::app);
     TEST_REQUIRE(outf.good());
     outf << additional_data;
     TEST_REQUIRE(outf);
@@ -84,7 +74,7 @@ TEST_CASE(large_file) {
   std::string out_data;
   out_data.reserve(additional_size);
   {
-    std::ifstream dest_file(dest.native());
+    std::ifstream dest_file(dest.string());
     TEST_REQUIRE(dest_file);
     dest_file.seekg(sendfile_size_limit);
     TEST_REQUIRE(dest_file);

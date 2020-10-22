@@ -527,7 +527,7 @@ class PBQPVirtRegAuxInfo final : public VirtRegAuxInfo {
   }
 
 public:
-  PBQPVirtRegAuxInfo(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap *VRM,
+  PBQPVirtRegAuxInfo(MachineFunction &MF, LiveIntervals &LIS, VirtRegMap &VRM,
                      const MachineLoopInfo &Loops,
                      const MachineBlockFrequencyInfo &MBFI)
       : VirtRegAuxInfo(MF, LIS, VRM, Loops, MBFI) {}
@@ -799,7 +799,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
 
   VirtRegMap &VRM = getAnalysis<VirtRegMap>();
 
-  PBQPVirtRegAuxInfo VRAI(MF, LIS, &VRM, getAnalysis<MachineLoopInfo>(), MBFI);
+  PBQPVirtRegAuxInfo VRAI(MF, LIS, VRM, getAnalysis<MachineLoopInfo>(), MBFI);
   VRAI.calculateSpillWeightsAndHints();
 
   std::unique_ptr<Spiller> VRegSpiller(createInlineSpiller(*this, MF, VRM));

@@ -5,7 +5,7 @@ module attributes {gpu.container_module} {
     // CHECK:       spv.module @{{.*}} Logical GLSL450 {
     // CHECK-LABEL: spv.func @basic_module_structure
     // CHECK-SAME: {{%.*}}: f32 {spv.interface_var_abi = #spv.interface_var_abi<(0, 0), StorageBuffer>}
-    // CHECK-SAME: {{%.*}}: !spv.ptr<!spv.struct<!spv.array<12 x f32, stride=4> [0]>, StorageBuffer> {spv.interface_var_abi = #spv.interface_var_abi<(0, 1)>}
+    // CHECK-SAME: {{%.*}}: !spv.ptr<!spv.struct<(!spv.array<12 x f32, stride=4> [0])>, StorageBuffer> {spv.interface_var_abi = #spv.interface_var_abi<(0, 1)>}
     // CHECK-SAME: spv.entry_point_abi = {local_size = dense<[32, 4, 1]> : vector<3xi32>}
     gpu.func @basic_module_structure(%arg0 : f32, %arg1 : memref<12xf32>) kernel
       attributes {spv.entry_point_abi = {local_size = dense<[32, 4, 1]>: vector<3xi32>}} {
@@ -32,7 +32,7 @@ module attributes {gpu.container_module} {
     // CHECK-LABEL: spv.func @basic_module_structure_preset_ABI
     // CHECK-SAME: {{%[a-zA-Z0-9_]*}}: f32
     // CHECK-SAME: spv.interface_var_abi = #spv.interface_var_abi<(1, 2), StorageBuffer>
-    // CHECK-SAME: !spv.ptr<!spv.struct<!spv.array<12 x f32, stride=4> [0]>, StorageBuffer>
+    // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<12 x f32, stride=4> [0])>, StorageBuffer>
     // CHECK-SAME: spv.interface_var_abi = #spv.interface_var_abi<(3, 0)>
     // CHECK-SAME: spv.entry_point_abi = {local_size = dense<[32, 4, 1]> : vector<3xi32>}
     gpu.func @basic_module_structure_preset_ABI(

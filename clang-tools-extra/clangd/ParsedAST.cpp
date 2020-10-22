@@ -164,7 +164,7 @@ private:
                    SrcMgr::CharacteristicKind Kind, FileID PrevFID) override {
     // It'd be nice if there was a better way to identify built-in headers...
     if (Reason == FileChangeReason::ExitFile &&
-        SM.getBuffer(PrevFID)->getBufferIdentifier() == "<built-in>")
+        SM.getBufferOrFake(PrevFID).getBufferIdentifier() == "<built-in>")
       replay();
   }
 

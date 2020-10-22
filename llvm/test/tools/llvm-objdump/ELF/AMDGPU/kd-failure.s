@@ -2,14 +2,14 @@
 ;; setting the bytes, because one can't create a malformed KD using the
 ;; assembler directives.
 
-; RUN: llvm-mc %s -mattr=+code-object-v3 --triple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=obj -o %t.o
+; RUN: llvm-mc %s --triple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=obj -o %t.o
 
 ; RUN: printf ".type  my_kernel.kd, @object \nmy_kernel.kd:\n.size my_kernel.kd, 64\n" > %t1.sym_info
 ; RUN: llvm-objdump --disassemble-symbols=my_kernel.kd %t.o \
 ; RUN: | tail -n +9 > %t1.sym_content
 ; RUN: cat %t1.sym_info %t1.sym_content > %t1.s
 
-; RUN: llvm-mc %t1.s -mattr=+code-object-v3 --triple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=obj -o %t-re-assemble.o
+; RUN: llvm-mc %t1.s --triple=amdgcn-amd-amdhsa -mcpu=gfx908 -filetype=obj -o %t-re-assemble.o
 ; RUN: diff %t.o %t-re-assemble.o
 
 ;; Test failure by setting one of the reserved bytes to non-zero value.

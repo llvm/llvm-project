@@ -367,7 +367,7 @@ class syntax::TreeBuilder {
 public:
   TreeBuilder(syntax::Arena &Arena) : Arena(Arena), Pending(Arena) {
     for (const auto &T : Arena.getTokenBuffer().expandedTokens())
-      LocationToToken.insert({T.location().getRawEncoding(), &T});
+      LocationToToken.insert({T.location(), &T});
   }
 
   llvm::BumpPtrAllocator &allocator() { return Arena.getAllocator(); }
@@ -689,8 +689,7 @@ private:
 
   syntax::Arena &Arena;
   /// To quickly find tokens by their start location.
-  llvm::DenseMap</*SourceLocation*/ unsigned, const syntax::Token *>
-      LocationToToken;
+  llvm::DenseMap<SourceLocation, const syntax::Token *> LocationToToken;
   Forest Pending;
   llvm::DenseSet<Decl *> DeclsWithoutSemicolons;
   ASTToSyntaxMapping Mapping;
@@ -1708,7 +1707,7 @@ void syntax::TreeBuilder::markExprChild(Expr *Child, NodeRole Role) {
 const syntax::Token *syntax::TreeBuilder::findToken(SourceLocation L) const {
   if (L.isInvalid())
     return nullptr;
-  auto It = LocationToToken.find(L.getRawEncoding());
+  auto It = LocationToToken.find(L);
   assert(It != LocationToToken.end());
   return It->second;
 }

@@ -4584,7 +4584,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   // FIXME: LateAttrs et al.?
   VarTemplateSpecializationDecl *Decl = BuildVarTemplateInstantiation(
       Template, InstantiationPattern, *InstantiationArgs, TemplateArgs,
-      Converted, TemplateNameLoc, InsertPos /*, LateAttrs, StartingScope*/);
+      Converted, TemplateNameLoc /*, LateAttrs, StartingScope*/);
   if (!Decl)
     return true;
 
@@ -7105,8 +7105,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
         }
       } Diagnoser(ArgType);
 
-      Arg = VerifyIntegerConstantExpression(Arg, &Value, Diagnoser,
-                                            false).get();
+      Arg = VerifyIntegerConstantExpression(Arg, &Value, Diagnoser).get();
       if (!Arg)
         return ExprError();
     }

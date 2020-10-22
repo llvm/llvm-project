@@ -4052,8 +4052,8 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
         if (strcmp (err_str, "unable to start the exception thread") == 0) {
           snprintf (err_str, sizeof (err_str) - 1,
                     "Not allowed to attach to process.  Look in the console "
-                    "messages (Console.app), near the debugserver entries "
-                    "when the attached failed.  The subsystem that denied "
+                    "messages (Console.app), near the debugserver entries, "
+                    "when the attach failed.  The subsystem that denied "
                     "the attach permission will likely have logged an "
                     "informative message about why it was denied.");
           err_str[sizeof (err_str) - 1] = '\0';

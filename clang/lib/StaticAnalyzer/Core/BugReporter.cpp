@@ -1570,9 +1570,8 @@ static Optional<size_t> getLengthOnSingleLine(const SourceManager &SM,
   if (FID != SM.getFileID(ExpansionRange.getEnd()))
     return None;
 
-  bool Invalid;
-  const llvm::MemoryBuffer *Buffer = SM.getBuffer(FID, &Invalid);
-  if (Invalid)
+  Optional<MemoryBufferRef> Buffer = SM.getBufferOrNone(FID);
+  if (!Buffer)
     return None;
 
   unsigned BeginOffset = SM.getFileOffset(ExpansionRange.getBegin());

@@ -140,7 +140,7 @@ body:             |
   ; WAVE64:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; WAVE64:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; WAVE64:   [[ICMP:%[0-9]+]]:sreg_64_xexec(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; WAVE64:   [[SI_ELSE:%[0-9]+]]:sreg_64_xexec(s64) = SI_ELSE [[ICMP]](s1), %bb.1, 0, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE64:   [[SI_ELSE:%[0-9]+]]:sreg_64_xexec(s64) = SI_ELSE [[ICMP]](s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE64:   G_BR %bb.1
   ; WAVE64: bb.1:
   ; WAVE32-LABEL: name: brcond_si_else
@@ -149,7 +149,7 @@ body:             |
   ; WAVE32:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; WAVE32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; WAVE32:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; WAVE32:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec(s64) = SI_ELSE [[ICMP]](s1), %bb.1, 0, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE32:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec(s64) = SI_ELSE [[ICMP]](s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE32:   G_BR %bb.1
   ; WAVE32: bb.1:
   bb.0:

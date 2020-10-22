@@ -438,7 +438,7 @@ private:
   /// the stack) and not when they end (when we pop a macro from the stack).
   /// To workaround this limitation, we rely on source location information
   /// stored in this map.
-  using PPExpansions = llvm::DenseMap</*SourceLocation*/ int, SourceLocation>;
+  using PPExpansions = llvm::DenseMap<SourceLocation, SourceLocation>;
   class Builder;
   class CollectPPExpansions;
 

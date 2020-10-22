@@ -43,6 +43,37 @@ short _Accum sa_const6 = -2;
 short _Accum sa_const7 = -256;
 // CHECK-DAG: @sa_const7 = {{.*}}global i16 -32768, align 2
 
+// Fixed point to floating point
+float fl_const = 1.0hk;
+// CHECK-DAG: @fl_const = {{.*}}global float 1.000000e+00, align 4
+float fl_const2 = -128.0k;
+// CHECK-DAG: @fl_const2 = {{.*}}global float -1.280000e+02, align 4
+float fl_const3 = 0.0872802734375k;
+// CHECK-DAG: @fl_const3 = {{.*}}global float 0x3FB6580000000000, align 4
+float fl_const4 = 192.5k;
+// CHECK-DAG: @fl_const4 = {{.*}}global float 1.925000e+02, align 4
+float fl_const5 = -192.5k;
+// CHECK-DAG: @fl_const5 = {{.*}}global float -1.925000e+02, align 4
+
+// Floating point to fixed point
+_Accum a_fl_const = 1.0f;
+// CHECK-DAG: @a_fl_const = {{.*}}global i32 32768, align 4
+_Accum a_fl_const2 = -128.0f;
+// CHECK-DAG: @a_fl_const2 = {{.*}}global i32 -4194304, align 4
+_Accum a_fl_const3 = 0.0872802734375f;
+// CHECK-DAG: @a_fl_const3 = {{.*}}global i32 2860, align 4
+_Accum a_fl_const4 = 0.0872802734375;
+// CHECK-DAG: @a_fl_const4 = {{.*}}global i32 2860, align 4
+_Accum a_fl_const5 = -0.0872802734375f;
+// CHECK-DAG: @a_fl_const5 = {{.*}}global i32 -2860, align 4
+_Fract f_fl_const = 0.5f;
+// CHECK-DAG: @f_fl_const = {{.*}}global i16 16384, align 2
+_Fract f_fl_const2 = -0.75;
+// CHECK-DAG: @f_fl_const2 = {{.*}}global i16 -24576, align 2
+unsigned short _Accum usa_fl_const = 48.75f;
+// SIGNED-DAG: @usa_fl_const = {{.*}}global i16 12480, align 2
+// UNSIGNED-DAG: @usa_fl_const = {{.*}}global i16 6240, align 2
+
 // Signedness
 unsigned short _Accum usa_const2 = 2.5hk;
 // SIGNED-DAG: @usa_const2  = {{.*}}global i16 640, align 2

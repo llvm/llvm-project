@@ -741,10 +741,9 @@ template <typename T> Value toJSON(const llvm::Optional<T> &Opt) {
 /// \code
 ///   bool fromJSON(const Value &E, MyStruct &R, Path P) {
 ///     ObjectMapper O(E, P);
-///     if (!O || !O.map("mandatory_field", R.MandatoryField))
-///       return false; // error details are already reported
-///     O.map("optional_field", R.OptionalField);
-///     return true;
+///     // When returning false, error details were already reported.
+///     return O && O.map("mandatory_field", R.MandatoryField) &&
+///         O.mapOptional("optional_field", R.OptionalField);
 ///   }
 /// \endcode
 class ObjectMapper {
@@ -777,6 +776,16 @@ public:
     if (const Value *E = O->get(Prop))
       return fromJSON(*E, Out, P.field(Prop));
     Out = llvm::None;
+    return true;
+  }
+
+  /// Maps a property to a field, if it exists.
+  /// If the property exists and is invalid, reports an error.
+  /// If the property does not exist, Out is unchanged.
+  template <typename T> bool mapOptional(StringLiteral Prop, T &Out) {
+    assert(*this && "Must check this is an object before calling map()");
+    if (const Value *E = O->get(Prop))
+      return fromJSON(*E, Out, P.field(Prop));
     return true;
   }
 

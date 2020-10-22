@@ -204,6 +204,7 @@ patterns:
             \\bmodule\\b|\
             \\bmonotonic\\b|\
             \\bmsp430_intrcc\\b|\
+            \\bmustprogress\\b|\
             \\bmusttail\\b|\
             \\bnaked\\b|\
             \\bnest\\b|\

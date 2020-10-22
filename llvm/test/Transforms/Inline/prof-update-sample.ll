@@ -1,4 +1,5 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -inline -S -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s -passes='require<profile-summary>,cgscc(inline)' -S | FileCheck %s
 ; Checks if inliner updates branch_weights annotation for call instructions.
 
 declare void @ext();

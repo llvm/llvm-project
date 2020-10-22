@@ -23,8 +23,8 @@ void print(int n, int a, int b, int c, int d) {
 void test(int n) {
   S array_t[n][n+1];
 # ifdef PE
-   // expected-error@-2 {{variable length arrays are a C99 feature}} expected-note@-2 {{read of non-const}} expected-note@-3 {{here}}
-   // expected-error@-3 {{variable length arrays are a C99 feature}} expected-note@-3 {{read of non-const}} expected-note@-4 {{here}}
+   // expected-error@-2 {{variable length arrays are a C99 feature}} expected-note@-2 {{parameter}} expected-note@-3 {{here}}
+   // expected-error@-3 {{variable length arrays are a C99 feature}} expected-note@-3 {{parameter}} expected-note@-4 {{here}}
 # endif
   int sizeof_S = sizeof(S);
   int sizeof_array_t_0_0 = sizeof(array_t[0][0]);

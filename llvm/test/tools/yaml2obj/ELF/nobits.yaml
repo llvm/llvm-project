@@ -1,0 +1,36 @@
+## Check how SHT_NOBITS sections are created.
+
+## Check we can use the "Size" key alone to create the section.
+
+# RUN: yaml2obj -DSIZE=3 %s -o %t.size.o
+# RUN: llvm-readelf --sections --section-data %t.size.o | FileCheck %s
+
+# CHECK: [Nr] Name    Type   Address          Off    Size   ES Flg Lk Inf Al
+# CHECK: [ 1] .nobits NOBITS 0000000000000000 000040 000003 00      0   0  0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .nobits
+    Type:    SHT_NOBITS
+    Size:    [[SIZE=<none>]]
+    Content: [[CONTENT=<none>]]
+
+## Check we can't use the "Content" key.
+
+# RUN: not yaml2obj -DCONTENT="'112233'" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CONTENT-ERR
+
+# CONTENT-ERR: error: SHT_NOBITS section cannot have "Content"
+
+## Check we create an empty section when neither of "Size" nor "Content" are specified.
+
+# RUN: yaml2obj %s -o %t.empty.o
+# RUN: llvm-readelf --sections --section-data %t.empty.o | \
+# RUN:   FileCheck %s --check-prefix=EMPTY-SEC
+
+# EMPTY-SEC: [Nr] Name    Type   Address          Off    Size
+# EMPTY-SEC: [ 1] .nobits NOBITS 0000000000000000 000040 000000

@@ -241,8 +241,6 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
                             !DefMIDesc->hasImplicitDefOfPhysReg(MO.getReg()));
   for (MCRegAliasIterator Alias(MO.getReg(), TRI, true);
        Alias.isValid(); ++Alias) {
-    if (!Uses.contains(*Alias))
-      continue;
     for (Reg2SUnitsMap::iterator I = Uses.find(*Alias); I != Uses.end(); ++I) {
       SUnit *UseSU = I->SU;
       if (UseSU == SU)

@@ -103,7 +103,8 @@ void InstructionInfoView::collectData(
 
     // Try to solve variant scheduling classes.
     while (SchedClassID && SM.getSchedClassDesc(SchedClassID)->isVariant())
-      SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &Inst, CPUID);
+      SchedClassID =
+          STI.resolveVariantSchedClass(SchedClassID, &Inst, &MCII, CPUID);
 
     const MCSchedClassDesc &SCDesc = *SM.getSchedClassDesc(SchedClassID);
     IIVDEntry.NumMicroOpcodes = SCDesc.NumMicroOps;

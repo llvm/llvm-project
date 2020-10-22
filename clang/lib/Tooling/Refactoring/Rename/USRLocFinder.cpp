@@ -21,7 +21,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Tooling/Core/Lookup.h"
+#include "clang/Tooling/Refactoring/Lookup.h"
 #include "clang/Tooling/Refactoring/RecursiveSymbolVisitor.h"
 #include "clang/Tooling/Refactoring/Rename/SymbolName.h"
 #include "clang/Tooling/Refactoring/Rename/USRFinder.h"

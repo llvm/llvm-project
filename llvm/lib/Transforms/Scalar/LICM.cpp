@@ -1782,7 +1782,7 @@ class LoopPromoter : public LoadAndStorePromoter {
   SmallVectorImpl<Instruction *> &LoopInsertPts;
   SmallVectorImpl<MemoryAccess *> &MSSAInsertPts;
   PredIteratorCache &PredCache;
-  AliasSetTracker &AST;
+  AliasSetTracker *AST;
   MemorySSAUpdater *MSSAU;
   LoopInfo &LI;
   DebugLoc DL;
@@ -1812,7 +1812,7 @@ public:
                SmallVectorImpl<BasicBlock *> &LEB,
                SmallVectorImpl<Instruction *> &LIP,
                SmallVectorImpl<MemoryAccess *> &MSSAIP, PredIteratorCache &PIC,
-               AliasSetTracker &ast, MemorySSAUpdater *MSSAU, LoopInfo &li,
+               AliasSetTracker *ast, MemorySSAUpdater *MSSAU, LoopInfo &li,
                DebugLoc dl, int alignment, bool UnorderedAtomic,
                const AAMDNodes &AATags, ICFLoopSafetyInfo &SafetyInfo)
       : LoadAndStorePromoter(Insts, S), SomePtr(SP), PointerMustAliases(PMA),
@@ -1869,11 +1869,13 @@ public:
 
   void replaceLoadWithValue(LoadInst *LI, Value *V) const override {
     // Update alias analysis.
-    AST.copyValue(LI, V);
+    if (AST)
+      AST->copyValue(LI, V);
   }
   void instructionDeleted(Instruction *I) const override {
     SafetyInfo.removeInstruction(I);
-    AST.deleteValue(I);
+    if (AST)
+      AST->deleteValue(I);
     if (MSSAU)
       MSSAU->removeMemoryAccess(I);
   }
@@ -1919,7 +1921,7 @@ bool llvm::promoteLoopAccessesToScalars(
     ICFLoopSafetyInfo *SafetyInfo, OptimizationRemarkEmitter *ORE) {
   // Verify inputs.
   assert(LI != nullptr && DT != nullptr && CurLoop != nullptr &&
-         CurAST != nullptr && SafetyInfo != nullptr &&
+         SafetyInfo != nullptr &&
          "Unexpected Input to promoteLoopAccessesToScalars");
 
   Value *SomePtr = *PointerMustAliases.begin();
@@ -2147,7 +2149,7 @@ bool llvm::promoteLoopAccessesToScalars(
   SmallVector<PHINode *, 16> NewPHIs;
   SSAUpdater SSA(&NewPHIs);
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, PointerMustAliases, ExitBlocks,
-                        InsertPts, MSSAInsertPts, PIC, *CurAST, MSSAU, *LI, DL,
+                        InsertPts, MSSAInsertPts, PIC, CurAST, MSSAU, *LI, DL,
                         Alignment.value(), SawUnorderedAtomic, AATags,
                         *SafetyInfo);
 

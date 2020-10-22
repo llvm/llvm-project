@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 -show-encoding %s | FileCheck %s --check-prefix=GFX10
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 %s 2>&1 | FileCheck -check-prefix=NOGFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck %s --check-prefix=GFX10
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck -check-prefix=NOGFX10 --implicit-check-not=error: %s
 
 i1=1
 

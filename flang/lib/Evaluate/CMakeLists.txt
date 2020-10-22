@@ -44,6 +44,9 @@ add_flang_library(FortranEvaluate
   FortranParser
   ${LIBPGMATH}
 
+  LINK_COMPONENTS
+  Support
+
   DEPENDS
   acc_gen
   omp_gen

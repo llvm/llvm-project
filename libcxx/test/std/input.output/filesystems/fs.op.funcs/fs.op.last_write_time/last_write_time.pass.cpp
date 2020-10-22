@@ -19,18 +19,16 @@
 #include "filesystem_include.h"
 #include <type_traits>
 #include <chrono>
-#include <fstream>
+#include <cstdio>
 #include <cstdlib>
 
 #include "test_macros.h"
 #include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
-#include <sys/stat.h>
-#include <iostream>
-
 #include <fcntl.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 
 using namespace fs;
 
@@ -108,12 +106,11 @@ struct Times {
 
 Times GetTimes(path const& p) {
     StatT st;
-    if (::stat(p.c_str(), &st) == -1) {
+    if (::stat(p.string().c_str(), &st) == -1) {
         std::error_code ec(errno, std::generic_category());
 #ifndef TEST_HAS_NO_EXCEPTIONS
         throw ec;
 #else
-        std::cerr << ec.message() << std::endl;
         std::exit(EXIT_FAILURE);
 #endif
     }
@@ -126,12 +123,11 @@ TimeSpec LastWriteTime(path const& p) { return GetTimes(p).write; }
 
 Times GetSymlinkTimes(path const& p) {
   StatT st;
-  if (::lstat(p.c_str(), &st) == -1) {
+  if (::lstat(p.string().c_str(), &st) == -1) {
     std::error_code ec(errno, std::generic_category());
 #ifndef TEST_HAS_NO_EXCEPTIONS
         throw ec;
 #else
-        std::cerr << ec.message() << std::endl;
         std::exit(EXIT_FAILURE);
 #endif
     }
@@ -399,9 +395,9 @@ TEST_CASE(get_last_write_time_dynamic_env_test)
     SleepFor(Sec(2));
 
     // update file and add a file to the directory. Make sure the times increase.
-    std::ofstream of(file, std::ofstream::app);
-    of << "hello";
-    of.close();
+    std::FILE* of = std::fopen(file.string().c_str(), "a");
+    std::fwrite("hello", 1, sizeof("hello"), of);
+    std::fclose(of);
     env.create_file("dir/file1", 1);
 
     file_time_type ftime2 = last_write_time(file);
@@ -454,7 +450,6 @@ TEST_CASE(set_last_write_time_dynamic_env_test)
         {"dir, just_before_epoch_time", dir, just_before_epoch_time}
     };
     for (const auto& TC : cases) {
-        std::cerr << "Test Case = " << TC.case_name << "\n";
         const auto old_times = GetTimes(TC.p);
         file_time_type old_time;
         TEST_REQUIRE(ConvertFromTimeSpec(old_time, old_times.write));

@@ -217,13 +217,17 @@ Status NativeProcessWindows::WriteMemory(lldb::addr_t addr, const void *buf,
   return ProcessDebugger::WriteMemory(addr, buf, size, bytes_written);
 }
 
-Status NativeProcessWindows::AllocateMemory(size_t size, uint32_t permissions,
-                                            lldb::addr_t &addr) {
-  return ProcessDebugger::AllocateMemory(size, permissions, addr);
+llvm::Expected<lldb::addr_t>
+NativeProcessWindows::AllocateMemory(size_t size, uint32_t permissions) {
+  lldb::addr_t addr;
+  Status ST = ProcessDebugger::AllocateMemory(size, permissions, addr);
+  if (ST.Success())
+    return addr;
+  return ST.ToError();
 }
 
-Status NativeProcessWindows::DeallocateMemory(lldb::addr_t addr) {
-  return ProcessDebugger::DeallocateMemory(addr);
+llvm::Error NativeProcessWindows::DeallocateMemory(lldb::addr_t addr) {
+  return ProcessDebugger::DeallocateMemory(addr).ToError();
 }
 
 lldb::addr_t NativeProcessWindows::GetSharedLibraryInfoAddress() { return 0; }

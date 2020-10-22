@@ -30,17 +30,45 @@ define i1 @will_not_overflow(i64 %arg, i64 %arg1) {
 ; SIMPLIFYCFG-NEXT:    [[T6:%.*]] = phi i1 [ false, [[BB:%.*]] ], [ [[T4]], [[BB2]] ]
 ; SIMPLIFYCFG-NEXT:    ret i1 [[T6]]
 ;
-; INSTCOMBINE-LABEL: @will_not_overflow(
-; INSTCOMBINE-NEXT:  bb:
-; INSTCOMBINE-NEXT:    [[T0:%.*]] = icmp eq i64 [[ARG:%.*]], 0
-; INSTCOMBINE-NEXT:    br i1 [[T0]], label [[BB5:%.*]], label [[BB2:%.*]]
-; INSTCOMBINE:       bb2:
-; INSTCOMBINE-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG]], i64 [[ARG1:%.*]])
-; INSTCOMBINE-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
-; INSTCOMBINE-NEXT:    br label [[BB5]]
-; INSTCOMBINE:       bb5:
-; INSTCOMBINE-NEXT:    [[T6:%.*]] = phi i1 [ false, [[BB:%.*]] ], [ [[UMUL_OV]], [[BB2]] ]
-; INSTCOMBINE-NEXT:    ret i1 [[T6]]
+; INSTCOMBINEONLY-LABEL: @will_not_overflow(
+; INSTCOMBINEONLY-NEXT:  bb:
+; INSTCOMBINEONLY-NEXT:    [[T0:%.*]] = icmp eq i64 [[ARG:%.*]], 0
+; INSTCOMBINEONLY-NEXT:    br i1 [[T0]], label [[BB5:%.*]], label [[BB2:%.*]]
+; INSTCOMBINEONLY:       bb2:
+; INSTCOMBINEONLY-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG]], i64 [[ARG1:%.*]])
+; INSTCOMBINEONLY-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
+; INSTCOMBINEONLY-NEXT:    br label [[BB5]]
+; INSTCOMBINEONLY:       bb5:
+; INSTCOMBINEONLY-NEXT:    [[T6:%.*]] = phi i1 [ false, [[BB:%.*]] ], [ [[UMUL_OV]], [[BB2]] ]
+; INSTCOMBINEONLY-NEXT:    ret i1 [[T6]]
+;
+; INSTCOMBINESIMPLIFYCFGONLY-LABEL: @will_not_overflow(
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:  bb:
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[T0:%.*]] = icmp eq i64 [[ARG:%.*]], 0
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG]], i64 [[ARG1:%.*]])
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[T6:%.*]] = select i1 [[T0]], i1 false, i1 [[UMUL_OV]]
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    ret i1 [[T6]]
+;
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-LABEL: @will_not_overflow(
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:  bb:
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG:%.*]], i64 [[ARG1:%.*]])
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    ret i1 [[UMUL_OV]]
+;
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-LABEL: @will_not_overflow(
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-NEXT:  bb:
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-NEXT:    [[T0:%.*]] = icmp eq i64 [[ARG:%.*]], 0
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG]], i64 [[ARG1:%.*]])
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-NEXT:    [[T6:%.*]] = select i1 [[T0]], i1 false, i1 [[UMUL_OV]]
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-NEXT:    ret i1 [[T6]]
+;
+; INSTCOMBINESIMPLIFYCFGCOSTLYINSTCOMBINE-LABEL: @will_not_overflow(
+; INSTCOMBINESIMPLIFYCFGCOSTLYINSTCOMBINE-NEXT:  bb:
+; INSTCOMBINESIMPLIFYCFGCOSTLYINSTCOMBINE-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG:%.*]], i64 [[ARG1:%.*]])
+; INSTCOMBINESIMPLIFYCFGCOSTLYINSTCOMBINE-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
+; INSTCOMBINESIMPLIFYCFGCOSTLYINSTCOMBINE-NEXT:    ret i1 [[UMUL_OV]]
 ;
 bb:
   %t0 = icmp eq i64 %arg, 0
@@ -72,18 +100,50 @@ define i1 @will_overflow(i64 %arg, i64 %arg1) {
 ; SIMPLIFYCFG-NEXT:    [[T7:%.*]] = xor i1 [[T6]], true
 ; SIMPLIFYCFG-NEXT:    ret i1 [[T7]]
 ;
-; INSTCOMBINE-LABEL: @will_overflow(
-; INSTCOMBINE-NEXT:  bb:
-; INSTCOMBINE-NEXT:    [[T0:%.*]] = icmp eq i64 [[ARG:%.*]], 0
-; INSTCOMBINE-NEXT:    br i1 [[T0]], label [[BB5:%.*]], label [[BB2:%.*]]
-; INSTCOMBINE:       bb2:
-; INSTCOMBINE-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG]], i64 [[ARG1:%.*]])
-; INSTCOMBINE-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
-; INSTCOMBINE-NEXT:    [[PHITMP:%.*]] = xor i1 [[UMUL_OV]], true
-; INSTCOMBINE-NEXT:    br label [[BB5]]
-; INSTCOMBINE:       bb5:
-; INSTCOMBINE-NEXT:    [[T6:%.*]] = phi i1 [ true, [[BB:%.*]] ], [ [[PHITMP]], [[BB2]] ]
-; INSTCOMBINE-NEXT:    ret i1 [[T6]]
+; INSTCOMBINEONLY-LABEL: @will_overflow(
+; INSTCOMBINEONLY-NEXT:  bb:
+; INSTCOMBINEONLY-NEXT:    [[T0:%.*]] = icmp eq i64 [[ARG:%.*]], 0
+; INSTCOMBINEONLY-NEXT:    br i1 [[T0]], label [[BB5:%.*]], label [[BB2:%.*]]
+; INSTCOMBINEONLY:       bb2:
+; INSTCOMBINEONLY-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG]], i64 [[ARG1:%.*]])
+; INSTCOMBINEONLY-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
+; INSTCOMBINEONLY-NEXT:    [[PHITMP:%.*]] = xor i1 [[UMUL_OV]], true
+; INSTCOMBINEONLY-NEXT:    br label [[BB5]]
+; INSTCOMBINEONLY:       bb5:
+; INSTCOMBINEONLY-NEXT:    [[T6:%.*]] = phi i1 [ true, [[BB:%.*]] ], [ [[PHITMP]], [[BB2]] ]
+; INSTCOMBINEONLY-NEXT:    ret i1 [[T6]]
+;
+; INSTCOMBINESIMPLIFYCFGONLY-LABEL: @will_overflow(
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:  bb:
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[T0:%.*]] = icmp eq i64 [[ARG:%.*]], 0
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG]], i64 [[ARG1:%.*]])
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[PHITMP:%.*]] = xor i1 [[UMUL_OV]], true
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[T6:%.*]] = select i1 [[T0]], i1 true, i1 [[PHITMP]]
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    ret i1 [[T6]]
+;
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-LABEL: @will_overflow(
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:  bb:
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG:%.*]], i64 [[ARG1:%.*]])
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[PHITMP:%.*]] = xor i1 [[UMUL_OV]], true
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    ret i1 [[PHITMP]]
+;
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-LABEL: @will_overflow(
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-NEXT:  bb:
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-NEXT:    [[T0:%.*]] = icmp eq i64 [[ARG:%.*]], 0
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG]], i64 [[ARG1:%.*]])
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-NEXT:    [[PHITMP:%.*]] = xor i1 [[UMUL_OV]], true
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-NEXT:    [[T6:%.*]] = select i1 [[T0]], i1 true, i1 [[PHITMP]]
+; INSTCOMBINESIMPLIFYCFGCOSTLYONLY-NEXT:    ret i1 [[T6]]
+;
+; INSTCOMBINESIMPLIFYCFGCOSTLYINSTCOMBINE-LABEL: @will_overflow(
+; INSTCOMBINESIMPLIFYCFGCOSTLYINSTCOMBINE-NEXT:  bb:
+; INSTCOMBINESIMPLIFYCFGCOSTLYINSTCOMBINE-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG:%.*]], i64 [[ARG1:%.*]])
+; INSTCOMBINESIMPLIFYCFGCOSTLYINSTCOMBINE-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
+; INSTCOMBINESIMPLIFYCFGCOSTLYINSTCOMBINE-NEXT:    [[PHITMP:%.*]] = xor i1 [[UMUL_OV]], true
+; INSTCOMBINESIMPLIFYCFGCOSTLYINSTCOMBINE-NEXT:    ret i1 [[PHITMP]]
 ;
 bb:
   %t0 = icmp eq i64 %arg, 0

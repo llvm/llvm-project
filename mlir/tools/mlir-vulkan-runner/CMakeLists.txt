@@ -86,12 +86,10 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
   add_llvm_tool(mlir-vulkan-runner
     mlir-vulkan-runner.cpp
 
-    LINK_COMPONENTS
-    Core
-    Support
+    DEPENDS
+    vulkan-runtime-wrappers
   )
-  add_dependencies(mlir-vulkan-runner vulkan-runtime-wrappers)
   llvm_update_compile_flags(mlir-vulkan-runner)
-  target_link_libraries(mlir-vulkan-runner PRIVATE ${FULL_LINK_LIBS} ${LIBS})
+  target_link_libraries(mlir-vulkan-runner PRIVATE ${LIBS})
 
 endif()

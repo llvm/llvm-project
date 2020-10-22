@@ -65,7 +65,7 @@ class PropertiesRewriter {
   };
 
   typedef SmallVector<PropData, 2> PropsTy;
-  typedef std::map<unsigned, PropsTy> AtPropDeclsTy;
+  typedef std::map<SourceLocation, PropsTy> AtPropDeclsTy;
   AtPropDeclsTy AtProps;
   llvm::DenseMap<IdentifierInfo *, PropActionKind> ActionOnProp;
 
@@ -76,13 +76,13 @@ public:
   static void collectProperties(ObjCContainerDecl *D, AtPropDeclsTy &AtProps,
                                 AtPropDeclsTy *PrevAtProps = nullptr) {
     for (auto *Prop : D->instance_properties()) {
-      if (Prop->getAtLoc().isInvalid())
+      SourceLocation Loc = Prop->getAtLoc();
+      if (Loc.isInvalid())
         continue;
-      unsigned RawLoc = Prop->getAtLoc().getRawEncoding();
       if (PrevAtProps)
-        if (PrevAtProps->find(RawLoc) != PrevAtProps->end())
+        if (PrevAtProps->find(Loc) != PrevAtProps->end())
           continue;
-      PropsTy &props = AtProps[RawLoc];
+      PropsTy &props = AtProps[Loc];
       props.push_back(Prop);
     }
   }
@@ -113,8 +113,7 @@ public:
       ObjCIvarDecl *ivarD = implD->getPropertyIvarDecl();
       if (!ivarD || ivarD->isInvalidDecl())
         continue;
-      unsigned rawAtLoc = propD->getAtLoc().getRawEncoding();
-      AtPropDeclsTy::iterator findAtLoc = AtProps.find(rawAtLoc);
+      AtPropDeclsTy::iterator findAtLoc = AtProps.find(propD->getAtLoc());
       if (findAtLoc == AtProps.end())
         continue;
 
@@ -130,7 +129,7 @@ public:
 
     for (AtPropDeclsTy::iterator
            I = AtProps.begin(), E = AtProps.end(); I != E; ++I) {
-      SourceLocation atLoc = SourceLocation::getFromRawEncoding(I->first);
+      SourceLocation atLoc = I->first;
       PropsTy &props = I->second;
       if (!getPropertyType(props)->isObjCRetainableType())
         continue;
@@ -338,7 +337,7 @@ private:
       return false;
     if (props.empty())
       return false;
-    return MigrateCtx.AtPropsWeak.count(atLoc.getRawEncoding());
+    return MigrateCtx.AtPropsWeak.count(atLoc);
   }
 
   bool isUserDeclared(ObjCIvarDecl *ivarD) const {

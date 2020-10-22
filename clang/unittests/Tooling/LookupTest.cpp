@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Tooling/Refactoring/Lookup.h"
 #include "TestVisitor.h"
-#include "clang/Tooling/Core/Lookup.h"
 using namespace clang;
 
 namespace {

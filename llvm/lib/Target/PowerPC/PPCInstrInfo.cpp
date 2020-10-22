@@ -672,6 +672,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case PPC::V_SETALLONES:
   case PPC::CRSET:
   case PPC::CRUNSET:
+  case PPC::XXSETACCZ:
     return true;
   }
   return false;
@@ -1340,6 +1341,22 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   else if (PPC::VSFRCRegClass.contains(DestReg, SrcReg) ||
            PPC::VSSRCRegClass.contains(DestReg, SrcReg))
     Opc = (Subtarget.hasP9Vector()) ? PPC::XSCPSGNDP : PPC::XXLORf;
+  else if (Subtarget.pairedVectorMemops() &&
+           PPC::VSRpRCRegClass.contains(DestReg, SrcReg)) {
+    if (SrcReg > PPC::VSRp15)
+      SrcReg = PPC::V0 + (SrcReg - PPC::VSRp16) * 2;
+    else
+      SrcReg = PPC::VSL0 + (SrcReg - PPC::VSRp0) * 2;
+    if (DestReg > PPC::VSRp15)
+      DestReg = PPC::V0 + (DestReg - PPC::VSRp16) * 2;
+    else
+      DestReg = PPC::VSL0 + (DestReg - PPC::VSRp0) * 2;
+    BuildMI(MBB, I, DL, get(PPC::XXLOR), DestReg).
+      addReg(SrcReg).addReg(SrcReg, getKillRegState(KillSrc));
+    BuildMI(MBB, I, DL, get(PPC::XXLOR), DestReg + 1).
+      addReg(SrcReg + 1).addReg(SrcReg + 1, getKillRegState(KillSrc));
+    return;
+  }
   else if (PPC::CRBITRCRegClass.contains(DestReg, SrcReg))
     Opc = PPC::CROR;
   else if (PPC::SPERCRegClass.contains(DestReg, SrcReg))

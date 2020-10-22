@@ -50,7 +50,7 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
                                           sibmem:$src2), []>;
       def PTILESTORED : PseudoI<(outs), (ins i8mem:$dst, u8imm:$src), []>;
       def PTILEZERO : PseudoI<(outs), (ins u8imm:$src),
-                              [(int_x86_tilezero imm:$src)]>;
+                              [(int_x86_tilezero timm:$src)]>;
     }
   } // SchedRW
 } // HasAMXTILE
@@ -81,20 +81,20 @@ let Predicates = [HasAMXINT8, In64BitMode] in {
       // To be translated to the actual instructions in X86ISelLowering.cpp
       def PTDPBSSD : PseudoI<(outs), (ins u8imm:$src1,
                              u8imm:$src2, u8imm:$src3),
-                             [(int_x86_tdpbssd imm:$src1,
-                               imm:$src2, imm:$src3)]>;
+                             [(int_x86_tdpbssd timm:$src1,
+                               timm:$src2, timm:$src3)]>;
       def PTDPBSUD : PseudoI<(outs), (ins u8imm:$src1,
                              u8imm:$src2, u8imm:$src3),
-                             [(int_x86_tdpbsud imm:$src1,
-                               imm:$src2, imm:$src3)]>;
+                             [(int_x86_tdpbsud timm:$src1,
+                               timm:$src2, timm:$src3)]>;
       def PTDPBUSD : PseudoI<(outs), (ins u8imm:$src1,
                              u8imm:$src2, u8imm:$src3),
-                             [(int_x86_tdpbusd imm:$src1,
-                               imm:$src2, imm:$src3)]>;
+                             [(int_x86_tdpbusd timm:$src1,
+                               timm:$src2, timm:$src3)]>;
       def PTDPBUUD : PseudoI<(outs), (ins u8imm:$src1,
                              u8imm:$src2, u8imm:$src3),
-                             [(int_x86_tdpbuud imm:$src1,
-                               imm:$src2, imm:$src3)]>;
+                             [(int_x86_tdpbuud timm:$src1,
+                               timm:$src2, timm:$src3)]>;
     }
   }
 } // HasAMXTILE
@@ -112,8 +112,8 @@ let Predicates = [HasAMXBF16, In64BitMode] in {
       // To be translated to the actual instructions in X86ISelLowering.cpp
       def PTDPBF16PS : PseudoI<(outs), (ins u8imm:$src1,
                                u8imm:$src2, u8imm:$src3),
-                               [(int_x86_tdpbf16ps imm:$src1,
-                                 imm:$src2, imm:$src3)]>;
+                               [(int_x86_tdpbf16ps timm:$src1,
+                                 timm:$src2, timm:$src3)]>;
     }
   }
 } // HasAMXTILE, HasAMXBF16

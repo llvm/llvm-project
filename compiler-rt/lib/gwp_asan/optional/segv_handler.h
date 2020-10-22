@@ -1,4 +1,4 @@
-//===-- crash_handler.h -----------------------------------------*- C++ -*-===//
+//===-- segv_handler.h ------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef GWP_ASAN_OPTIONAL_CRASH_HANDLER_H_
-#define GWP_ASAN_OPTIONAL_CRASH_HANDLER_H_
+#ifndef GWP_ASAN_OPTIONAL_SEGV_HANDLER_H_
+#define GWP_ASAN_OPTIONAL_SEGV_HANDLER_H_
 
 #include "gwp_asan/guarded_pool_allocator.h"
 #include "gwp_asan/options.h"
@@ -87,4 +87,4 @@ void dumpReport(uintptr_t ErrorPtr, const gwp_asan::AllocatorState *State,
 } // namespace crash_handler
 } // namespace gwp_asan
 
-#endif // GWP_ASAN_OPTIONAL_CRASH_HANDLER_H_
+#endif // GWP_ASAN_OPTIONAL_SEGV_HANDLER_H_

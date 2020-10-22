@@ -38,66 +38,7 @@
 #include "Debug.h"
 #include "omptargetplugin.h"
 
-// Get static gpu grid values from clang target-specific constants managed
-// in the header file llvm/Frontend/OpenMP/OMPGridValues.h
-// Copied verbatim to meet the requirement that libomptarget builds without
-// a copy of llvm checked out nearby
-namespace llvm {
-namespace omp {
-enum GVIDX {
-  /// The maximum number of workers in a kernel.
-  /// (THREAD_ABSOLUTE_LIMIT) - (GV_Warp_Size), might be issue for blockDim.z
-  GV_Threads,
-  /// The size reserved for data in a shared memory slot.
-  GV_Slot_Size,
-  /// The default value of maximum number of threads in a worker warp.
-  GV_Warp_Size,
-  /// Alternate warp size for some AMDGCN architectures. Same as GV_Warp_Size
-  /// for NVPTX.
-  GV_Warp_Size_32,
-  /// The number of bits required to represent the max number of threads in warp
-  GV_Warp_Size_Log2,
-  /// GV_Warp_Size * GV_Slot_Size,
-  GV_Warp_Slot_Size,
-  /// the maximum number of teams.
-  GV_Max_Teams,
-  /// Global Memory Alignment
-  GV_Mem_Align,
-  /// (~0u >> (GV_Warp_Size - GV_Warp_Size_Log2))
-  GV_Warp_Size_Log2_Mask,
-  // An alternative to the heavy data sharing infrastructure that uses global
-  // memory is one that uses device __shared__ memory.  The amount of such space
-  // (in bytes) reserved by the OpenMP runtime is noted here.
-  GV_SimpleBufferSize,
-  // The absolute maximum team size for a working group
-  GV_Max_WG_Size,
-  // The default maximum team size for a working group
-  GV_Default_WG_Size,
-  // This is GV_Max_WG_Size / GV_WarpSize. 32 for NVPTX and 16 for AMDGCN.
-  GV_Max_Warp_Number,
-  /// The slot size that should be reserved for a working warp.
-  /// (~0u >> (GV_Warp_Size - GV_Warp_Size_Log2))
-  GV_Warp_Size_Log2_MaskL
-};
-
-static constexpr unsigned AMDGPUGpuGridValues[] = {
-    448,       // GV_Threads
-    256,       // GV_Slot_Size
-    64,        // GV_Warp_Size
-    32,        // GV_Warp_Size_32
-    6,         // GV_Warp_Size_Log2
-    64 * 256,  // GV_Warp_Slot_Size
-    128,       // GV_Max_Teams
-    256,       // GV_Mem_Align
-    63,        // GV_Warp_Size_Log2_Mask
-    896,       // GV_SimpleBufferSize
-    1024,      // GV_Max_WG_Size,
-    256,       // GV_Defaut_WG_Size
-    1024 / 64, // GV_Max_WG_Size / GV_WarpSize
-    63         // GV_Warp_Size_Log2_MaskL
-};
-} // namespace omp
-} // namespace llvm
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 #ifndef TARGET_NAME
 #define TARGET_NAME AMDHSA
@@ -394,15 +335,27 @@ public:
   static const int Default_WG_Size =
       llvm::omp::AMDGPUGpuGridValues[llvm::omp::GVIDX::GV_Default_WG_Size];
 
-  atmi_status_t freesignalpool_memcpy(void *dest, const void *src,
-                                      size_t size) {
+  using MemcpyFunc = atmi_status_t(hsa_signal_t, void *, const void *,
+                                   size_t size);
+  atmi_status_t freesignalpool_memcpy(void *dest, const void *src, size_t size,
+                                      MemcpyFunc Func) {
     hsa_signal_t s = FreeSignalPool.pop();
     if (s.handle == 0) {
       return ATMI_STATUS_ERROR;
     }
-    atmi_status_t r = atmi_memcpy(s, dest, src, size);
+    atmi_status_t r = Func(s, dest, src, size);
     FreeSignalPool.push(s);
     return r;
+  }
+
+  atmi_status_t freesignalpool_memcpy_d2h(void *dest, const void *src,
+                                          size_t size) {
+    return freesignalpool_memcpy(dest, src, size, atmi_memcpy_d2h);
+  }
+
+  atmi_status_t freesignalpool_memcpy_h2d(void *dest, const void *src,
+                                          size_t size) {
+    return freesignalpool_memcpy(dest, src, size, atmi_memcpy_h2d);
   }
 
   // Record entry point associated with device
@@ -597,7 +550,7 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
      (long long unsigned)(Elf64_Addr)TgtPtr,
      (long long unsigned)(Elf64_Addr)HstPtr);
 
-  err = DeviceInfo.freesignalpool_memcpy(HstPtr, TgtPtr, (size_t)Size);
+  err = DeviceInfo.freesignalpool_memcpy_d2h(HstPtr, TgtPtr, (size_t)Size);
 
   if (err != ATMI_STATUS_SUCCESS) {
     DP("Error when copying data from device to host. Pointers: "
@@ -623,7 +576,7 @@ int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
   DP("Submit data %ld bytes, (hst:%016llx) -> (tgt:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)HstPtr,
      (long long unsigned)(Elf64_Addr)TgtPtr);
-  err = DeviceInfo.freesignalpool_memcpy(TgtPtr, HstPtr, (size_t)Size);
+  err = DeviceInfo.freesignalpool_memcpy_h2d(TgtPtr, HstPtr, (size_t)Size);
   if (err != ATMI_STATUS_SUCCESS) {
     DP("Error when copying data from host to device. Pointers: "
        "host = 0x%016lx, device = 0x%016lx, size = %lld\n",
@@ -1080,7 +1033,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     }
 
     // write ptr to device memory so it can be used by later kernels
-    err = DeviceInfo.freesignalpool_memcpy(state_ptr, &ptr, sizeof(void *));
+    err = DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &ptr, sizeof(void *));
     if (err != ATMI_STATUS_SUCCESS) {
       fprintf(stderr, "memcpy install of state_ptr failed\n");
       return NULL;
@@ -1149,7 +1102,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
         // If unified memory is present any target link variables
         // can access host addresses directly. There is no longer a
         // need for device copies.
-        err = DeviceInfo.freesignalpool_memcpy(varptr, e->addr, sizeof(void *));
+        err = DeviceInfo.freesignalpool_memcpy_h2d(varptr, e->addr,
+                                                   sizeof(void *));
         if (err != ATMI_STATUS_SUCCESS)
           DP("Error when copying USM\n");
         DP("Copy linked variable host address (" DPxMOD ")"
@@ -1577,8 +1531,8 @@ static void *AllocateNestedParallelCallMemory(int MaxParLevel, int NumGroups,
   void *TgtPtr = NULL;
   atmi_status_t err =
       atmi_malloc(&TgtPtr, NestedMemSize, get_gpu_mem_place(device_id));
-  err =
-      DeviceInfo.freesignalpool_memcpy(CallStackAddr, &TgtPtr, sizeof(void *));
+  err = DeviceInfo.freesignalpool_memcpy_h2d(CallStackAddr, &TgtPtr,
+                                             sizeof(void *));
   if (print_kernel_trace > 2)
     fprintf(stderr, "CallSck %lx TgtPtr %lx *TgtPtr %lx \n",
             (long)CallStackAddr, (long)&TgtPtr, (long)TgtPtr);

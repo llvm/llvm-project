@@ -12,7 +12,7 @@ char w[__builtin_constant_p(expr) ? expr : 1];
 char v[sizeof(__builtin_constant_p(0)) == sizeof(int) ? 1 : -1];
 
 int implicitConversion = 1.0;
-char floatArith[(int)(1.0+2.0)]; // expected-warning {{must be an integer constant expression}}
+char floatArith[(int)(1.0+2.0)]; // expected-warning {{variable length array folded to constant array as an extension}}
 
 // __builtin_constant_p as the condition of ?: allows arbitrary foldable
 // constants to be transmogrified into i-c-e's.
@@ -57,7 +57,7 @@ char z[__builtin_constant_p(4) ? 1 : -1];
 int comma1[0?1,2:3];
 int comma2[1||(1,2)]; // expected-warning {{use of logical '||' with constant operand}} \
                       // expected-note {{use '|' for a bitwise operation}}
-int comma3[(1,2)]; // expected-warning {{size of static array must be an integer constant expression}}
+int comma3[(1,2)]; // expected-warning {{variable length array folded to constant array as an extension}}
 
 // Pointer + __builtin_constant_p
 char pbcp[__builtin_constant_p(4) ? (intptr_t)&expr : 0]; // expected-error {{variable length array declaration not allowed at file scope}}

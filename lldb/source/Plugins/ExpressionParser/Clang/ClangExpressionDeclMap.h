@@ -102,6 +102,8 @@ public:
 
   void InstallCodeGenerator(clang::ASTConsumer *code_gen);
 
+  void InstallDiagnosticManager(DiagnosticManager &diag_manager);
+
   /// Disable the state needed for parsing and IR transformation.
   void DidParse();
 
@@ -330,6 +332,8 @@ private:
     clang::ASTConsumer *m_code_gen = nullptr; ///< If non-NULL, a code generator
                                               ///that receives new top-level
                                               ///functions.
+    DiagnosticManager *m_diagnostics = nullptr;
+
   private:
     ParserVars(const ParserVars &) = delete;
     const ParserVars &operator=(const ParserVars &) = delete;

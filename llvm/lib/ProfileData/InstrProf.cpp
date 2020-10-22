@@ -1112,29 +1112,6 @@ bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken) {
   return true;
 }
 
-// FIXME: This is to be removed after switching to the new memop value
-// profiling.
-// Parse the value profile options.
-void getMemOPSizeRangeFromOption(StringRef MemOPSizeRange, int64_t &RangeStart,
-                                 int64_t &RangeLast) {
-  static const int64_t DefaultMemOPSizeRangeStart = 0;
-  static const int64_t DefaultMemOPSizeRangeLast = 8;
-  RangeStart = DefaultMemOPSizeRangeStart;
-  RangeLast = DefaultMemOPSizeRangeLast;
-
-  if (!MemOPSizeRange.empty()) {
-    auto Pos = MemOPSizeRange.find(':');
-    if (Pos != std::string::npos) {
-      if (Pos > 0)
-        MemOPSizeRange.substr(0, Pos).getAsInteger(10, RangeStart);
-      if (Pos < MemOPSizeRange.size() - 1)
-        MemOPSizeRange.substr(Pos + 1).getAsInteger(10, RangeLast);
-    } else
-      MemOPSizeRange.getAsInteger(10, RangeLast);
-  }
-  assert(RangeLast >= RangeStart);
-}
-
 // Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
 // aware this is an ir_level profile so it can set the version flag.
 void createIRLevelProfileFlagVar(Module &M, bool IsCS,

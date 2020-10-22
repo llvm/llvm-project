@@ -53,6 +53,7 @@ struct Limits {
 struct Table {
   TableType ElemType;
   Limits TableLimits;
+  uint32_t Index;
 };
 
 struct Export {

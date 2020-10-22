@@ -121,6 +121,8 @@ static char getInvokeSig(wasm::ValType VT) {
     return 'V';
   case wasm::ValType::EXNREF:
     return 'E';
+  case wasm::ValType::FUNCREF:
+    return 'F';
   case wasm::ValType::EXTERNREF:
     return 'X';
   }

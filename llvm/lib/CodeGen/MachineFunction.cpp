@@ -943,6 +943,41 @@ void MachineFunction::moveCallSiteInfo(const MachineInstr *Old,
   CallSitesInfo[New] = CSInfo;
 }
 
+void MachineFunction::setDebugInstrNumberingCount(unsigned Num) {
+  DebugInstrNumberingCount = Num;
+}
+
+void MachineFunction::makeDebugValueSubstitution(DebugInstrOperandPair A,
+                                                 DebugInstrOperandPair B) {
+  auto Result = DebugValueSubstitutions.insert(std::make_pair(A, B));
+  (void)Result;
+  assert(Result.second && "Substitution for an already substituted value?");
+}
+
+void MachineFunction::substituteDebugValuesForInst(const MachineInstr &Old,
+                                                   MachineInstr &New) {
+  // If the Old instruction wasn't tracked at all, there is no work to do.
+  unsigned OldInstrNum = Old.peekDebugInstrNum();
+  if (!OldInstrNum)
+    return;
+
+  // Iterate over all operands looking for defs to create substitutions for.
+  // Avoid creating new instr numbers unless we create a new substitution.
+  // While this has no functional effect, it risks confusing someone reading
+  // MIR output.
+  for (unsigned int I = 0; I < Old.getNumOperands(); ++I) {
+    const auto &OldMO = Old.getOperand(I);
+
+    if (!OldMO.isReg() || !OldMO.isDef())
+      continue;
+    assert(Old.getOperand(I).isDef());
+
+    unsigned NewInstrNum = New.getDebugInstrNum();
+    makeDebugValueSubstitution(std::make_pair(OldInstrNum, I),
+                               std::make_pair(NewInstrNum, I));
+  }
+}
+
 /// \}
 
 //===----------------------------------------------------------------------===//

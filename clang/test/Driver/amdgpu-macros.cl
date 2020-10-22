@@ -414,6 +414,7 @@
 // GFX1012-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32
 // GFX1030-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32
 // GFX1031-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32
+// GFX1032-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32
 
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mwavefrontsize64 \
 // RUN:   %s 2>&1 | FileCheck --check-prefixes=WAVE64 %s

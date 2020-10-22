@@ -740,34 +740,33 @@ Block *BranchOp::getSuccessorForOperands(ArrayRef<Attribute>) { return dest(); }
 // CallOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(CallOp op) {
+LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Check that the callee attribute was specified.
-  auto fnAttr = op.getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr = getAttrOfType<FlatSymbolRefAttr>("callee");
   if (!fnAttr)
-    return op.emitOpError("requires a 'callee' symbol reference attribute");
-  auto fn =
-      op.getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(fnAttr.getValue());
+    return emitOpError("requires a 'callee' symbol reference attribute");
+  FuncOp fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(*this, fnAttr);
   if (!fn)
-    return op.emitOpError() << "'" << fnAttr.getValue()
-                            << "' does not reference a valid function";
+    return emitOpError() << "'" << fnAttr.getValue()
+                         << "' does not reference a valid function";
 
   // Verify that the operand and result types match the callee.
   auto fnType = fn.getType();
-  if (fnType.getNumInputs() != op.getNumOperands())
-    return op.emitOpError("incorrect number of operands for callee");
+  if (fnType.getNumInputs() != getNumOperands())
+    return emitOpError("incorrect number of operands for callee");
 
   for (unsigned i = 0, e = fnType.getNumInputs(); i != e; ++i)
-    if (op.getOperand(i).getType() != fnType.getInput(i))
-      return op.emitOpError("operand type mismatch: expected operand type ")
+    if (getOperand(i).getType() != fnType.getInput(i))
+      return emitOpError("operand type mismatch: expected operand type ")
              << fnType.getInput(i) << ", but provided "
-             << op.getOperand(i).getType() << " for operand number " << i;
+             << getOperand(i).getType() << " for operand number " << i;
 
-  if (fnType.getNumResults() != op.getNumResults())
-    return op.emitOpError("incorrect number of results for callee");
+  if (fnType.getNumResults() != getNumResults())
+    return emitOpError("incorrect number of results for callee");
 
   for (unsigned i = 0, e = fnType.getNumResults(); i != e; ++i)
-    if (op.getResult(i).getType() != fnType.getResult(i))
-      return op.emitOpError("result type mismatch");
+    if (getResult(i).getType() != fnType.getResult(i))
+      return emitOpError("result type mismatch");
 
   return success();
 }
@@ -1064,12 +1063,58 @@ struct SimplifyCondBranchIdenticalSuccessors
     return success();
   }
 };
+
+///   ...
+///   cond_br %cond, ^bb1(...), ^bb2(...)
+/// ...
+/// ^bb1: // has single predecessor
+///   ...
+///   cond_br %cond, ^bb3(...), ^bb4(...)
+///
+/// ->
+///
+///   ...
+///   cond_br %cond, ^bb1(...), ^bb2(...)
+/// ...
+/// ^bb1: // has single predecessor
+///   ...
+///   br ^bb3(...)
+///
+struct SimplifyCondBranchFromCondBranchOnSameCondition
+    : public OpRewritePattern<CondBranchOp> {
+  using OpRewritePattern<CondBranchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CondBranchOp condbr,
+                                PatternRewriter &rewriter) const override {
+    // Check that we have a single distinct predecessor.
+    Block *currentBlock = condbr.getOperation()->getBlock();
+    Block *predecessor = currentBlock->getSinglePredecessor();
+    if (!predecessor)
+      return failure();
+
+    // Check that the predecessor terminates with a conditional branch to this
+    // block and that it branches on the same condition.
+    auto predBranch = dyn_cast<CondBranchOp>(predecessor->getTerminator());
+    if (!predBranch || condbr.getCondition() != predBranch.getCondition())
+      return failure();
+
+    // Fold this branch to an unconditional branch.
+    if (currentBlock == predBranch.trueDest())
+      rewriter.replaceOpWithNewOp<BranchOp>(condbr, condbr.trueDest(),
+                                            condbr.trueDestOperands());
+    else
+      rewriter.replaceOpWithNewOp<BranchOp>(condbr, condbr.falseDest(),
+                                            condbr.falseDestOperands());
+    return success();
+  }
+};
 } // end anonymous namespace
 
 void CondBranchOp::getCanonicalizationPatterns(
     OwningRewritePatternList &results, MLIRContext *context) {
   results.insert<SimplifyConstCondBranchPred, SimplifyPassThroughCondBranch,
-                 SimplifyCondBranchIdenticalSuccessors>(context);
+                 SimplifyCondBranchIdenticalSuccessors,
+                 SimplifyCondBranchFromCondBranchOnSameCondition>(context);
 }
 
 Optional<MutableOperandRange>
@@ -2531,8 +2576,10 @@ parseListOfOperandsOrIntegers(OpAsmParser &parser, OperationState &result,
   if (failed(parser.parseLSquare()))
     return failure();
   // 0-D.
-  if (succeeded(parser.parseOptionalRSquare()))
+  if (succeeded(parser.parseOptionalRSquare())) {
+    result.addAttribute(attrName, parser.getBuilder().getArrayAttr({}));
     return success();
+  }
 
   SmallVector<int64_t, 4> attrVals;
   while (true) {
@@ -2956,6 +3003,7 @@ static LogicalResult produceSubViewErrorMsg(SubViewVerificationResult result,
            << expectedType
            << " or a rank-reduced version. (mismatch of result affine map)";
   }
+  llvm_unreachable("unexpected subview verification result");
 }
 
 template <typename OpType>
@@ -3333,6 +3381,13 @@ void SubViewOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                  SubViewOpMemRefCastFolder>(context);
 }
 
+OpFoldResult SubViewOp::fold(ArrayRef<Attribute> operands) {
+  if (getResultRank() == 0 && getSourceRank() == 0)
+    return getViewSource();
+
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // SubTensorOp
 //===----------------------------------------------------------------------===//
@@ -3592,7 +3647,7 @@ void TensorCastOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// Helpers for Tensor[Load|Store]Op
+// Helpers for Tensor[Load|Store]Op and TensorToMemrefOp
 //===----------------------------------------------------------------------===//
 
 static Type getTensorTypeFromMemRefType(Type type) {
@@ -3601,6 +3656,27 @@ static Type getTensorTypeFromMemRefType(Type type) {
   if (auto memref = type.dyn_cast<UnrankedMemRefType>())
     return UnrankedTensorType::get(memref.getElementType());
   return NoneType::get(type.getContext());
+}
+
+//===----------------------------------------------------------------------===//
+// TensorLoadOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult TensorLoadOp::fold(ArrayRef<Attribute>) {
+  if (auto tensorToMemref = memref().getDefiningOp<TensorToMemrefOp>())
+    return tensorToMemref.tensor();
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// TensorToMemrefOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult TensorToMemrefOp::fold(ArrayRef<Attribute>) {
+  if (auto tensorLoad = tensor().getDefiningOp<TensorLoadOp>())
+    if (tensorLoad.memref().getType() == getType())
+      return tensorLoad.memref();
+  return {};
 }
 
 //===----------------------------------------------------------------------===//

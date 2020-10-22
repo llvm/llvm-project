@@ -258,3 +258,10 @@ union U {
 U u;
 // CHECK-GLOBAL: @_ZN11IndirectPDM1uE = global %"union.IndirectPDM::U" { %union.anon { i64 -1 } }, align 8
 }
+
+namespace PR47864 {
+  struct B;
+  struct B {};
+  struct D : B { int m; };
+  auto x = (int B::*)&D::m;
+}

@@ -427,7 +427,7 @@ public:
   virtual TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const {
     // The default action for one element vectors is to scalarize
-    if (VT.getVectorElementCount() == 1)
+    if (VT.getVectorElementCount().isScalar())
       return TypeScalarizeVector;
     // The default action for an odd-width vector is to widen.
     if (!VT.isPow2VectorType())

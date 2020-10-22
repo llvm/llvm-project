@@ -147,38 +147,6 @@ OptionValueProperties::GetSubValue(const ExecutionContext *exe_ctx,
     }
     return return_val_sp;
   }
-  case '{':
-    // Predicate matching for predicates like
-    // "<setting-name>{<predicate>}"
-    // strings are parsed by the current OptionValueProperties subclass to mean
-    // whatever they want to. For instance a subclass of OptionValueProperties
-    // for a lldb_private::Target might implement: "target.run-
-    // args{arch==i386}"   -- only set run args if the arch is i386 "target
-    // .run-args{path=/tmp/a/b/c/a.out}" -- only set run args if the path
-    // matches "target.run-args{basename==test&&arch==x86_64}" -- only set run
-    // args if executable basename is "test" and arch is "x86_64"
-    if (sub_name[1]) {
-      llvm::StringRef predicate_start = sub_name.drop_front();
-      size_t pos = predicate_start.find('}');
-      if (pos != llvm::StringRef::npos) {
-        auto predicate = predicate_start.take_front(pos);
-        auto rest = predicate_start.drop_front(pos);
-        if (PredicateMatches(exe_ctx, predicate)) {
-          if (!rest.empty()) {
-            // Still more subvalue string to evaluate
-            return value_sp->GetSubValue(exe_ctx, rest,
-                                          will_modify, error);
-          } else {
-            // We have a match!
-            break;
-          }
-        }
-      }
-    }
-    // Predicate didn't match or wasn't correctly formed
-    value_sp.reset();
-    break;
-
   case '[':
     // Array or dictionary access for subvalues like: "[12]"       -- access
     // 12th array element "['hello']"  -- dictionary access of key named hello

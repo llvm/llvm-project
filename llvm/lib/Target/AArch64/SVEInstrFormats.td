@@ -5653,7 +5653,7 @@ class sve_int_rdffr_pred<bit s, string asm>
   let Inst{4}     = 0;
   let Inst{3-0}   = Pd;
 
-  let Defs = !if(!eq (s, 1), [NZCV], []);
+  let Defs = !if(s, [NZCV], []);
   let Uses = [FFR];
 }
 
@@ -6155,8 +6155,8 @@ class sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
   let Inst{4-0}   = Zt;
 
   let mayLoad = 1;
-  let Uses = !if(!eq(nf, 1), [FFR], []);
-  let Defs = !if(!eq(nf, 1), [FFR], []);
+  let Uses = !if(nf, [FFR], []);
+  let Defs = !if(nf, [FFR], []);
 }
 
 multiclass sve_mem_cld_si_base<bits<4> dtype, bit nf, string asm,
@@ -6358,8 +6358,8 @@ class sve_mem_cld_ss_base<bits<4> dtype, bit ff, dag iops, string asm,
   let Inst{4-0}   = Zt;
 
   let mayLoad = 1;
-  let Uses = !if(!eq(ff, 1), [FFR], []);
-  let Defs = !if(!eq(ff, 1), [FFR], []);
+  let Uses = !if(ff, [FFR], []);
+  let Defs = !if(ff, [FFR], []);
 }
 
 multiclass sve_mem_cld_ss<bits<4> dtype, string asm, RegisterOperand listty,
@@ -7361,7 +7361,7 @@ class sve_int_brkn<bit S, string asm>
   let Inst{3-0}   = Pdm;
 
   let Constraints = "$Pdm = $_Pdm";
-  let Defs = !if(!eq (S, 0b1), [NZCV], []);
+  let Defs = !if(S, [NZCV], []);
 }
 
 multiclass sve_int_brkn<bits<1> opc, string asm, SDPatternOperator op> {

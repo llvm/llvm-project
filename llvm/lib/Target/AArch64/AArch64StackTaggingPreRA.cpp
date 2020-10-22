@@ -13,7 +13,6 @@
 #include "AArch64InstrInfo.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -50,6 +49,12 @@ cl::opt<UncheckedLdStMode> ClUncheckedLdSt(
             "apply unchecked-ld-st when the target is definitely within range"),
         clEnumValN(UncheckedAlways, "always", "always apply unchecked-ld-st")));
 
+static cl::opt<bool>
+    ClFirstSlot("stack-tagging-first-slot-opt", cl::Hidden, cl::init(true),
+                cl::ZeroOrMore,
+                cl::desc("Apply first slot optimization for stack tagging "
+                         "(eliminate ADDG Rt, Rn, 0, 0)."));
+
 namespace {
 
 class AArch64StackTaggingPreRA : public MachineFunctionPass {
@@ -71,6 +76,7 @@ public:
   bool mayUseUncheckedLoadStore();
   void uncheckUsesOf(unsigned TaggedReg, int FI);
   void uncheckLoadsAndStores();
+  Optional<int> findFirstSlotCandidate();
 
   bool runOnMachineFunction(MachineFunction &Func) override;
   StringRef getPassName() const override {
@@ -197,6 +203,141 @@ void AArch64StackTaggingPreRA::uncheckLoadsAndStores() {
   }
 }
 
+struct SlotWithTag {
+  int FI;
+  int Tag;
+  SlotWithTag(int FI, int Tag) : FI(FI), Tag(Tag) {}
+  explicit SlotWithTag(const MachineInstr &MI)
+      : FI(MI.getOperand(1).getIndex()), Tag(MI.getOperand(4).getImm()) {}
+  bool operator==(const SlotWithTag &Other) const {
+    return FI == Other.FI && Tag == Other.Tag;
+  }
+};
+
+namespace llvm {
+template <> struct DenseMapInfo<SlotWithTag> {
+  static inline SlotWithTag getEmptyKey() { return {-2, -2}; }
+  static inline SlotWithTag getTombstoneKey() { return {-3, -3}; }
+  static unsigned getHashValue(const SlotWithTag &V) {
+    return hash_combine(DenseMapInfo<int>::getHashValue(V.FI),
+                        DenseMapInfo<int>::getHashValue(V.Tag));
+  }
+  static bool isEqual(const SlotWithTag &A, const SlotWithTag &B) {
+    return A == B;
+  }
+};
+} // namespace llvm
+
+static bool isSlotPreAllocated(MachineFrameInfo *MFI, int FI) {
+  return MFI->getUseLocalStackAllocationBlock() &&
+         MFI->isObjectPreAllocated(FI);
+}
+
+// Pin one of the tagged slots to offset 0 from the tagged base pointer.
+// This would make its address available in a virtual register (IRG's def), as
+// opposed to requiring an ADDG instruction to materialize. This effectively
+// eliminates a vreg (by replacing it with direct uses of IRG, which is usually
+// live almost everywhere anyway), and therefore needs to happen before
+// regalloc.
+Optional<int> AArch64StackTaggingPreRA::findFirstSlotCandidate() {
+  // Find the best (FI, Tag) pair to pin to offset 0.
+  // Looking at the possible uses of a tagged address, the advantage of pinning
+  // is:
+  // - COPY to physical register.
+  //   Does not matter, this would trade a MOV instruction for an ADDG.
+  // - ST*G matter, but those mostly appear near the function prologue where all
+  //   the tagged addresses need to be materialized anyway; also, counting ST*G
+  //   uses would overweight large allocas that require more than one ST*G
+  //   instruction.
+  // - Load/Store instructions in the address operand do not require a tagged
+  //   pointer, so they also do not benefit. These operands have already been
+  //   eliminated (see uncheckLoadsAndStores) so all remaining load/store
+  //   instructions count.
+  // - Any other instruction may benefit from being pinned to offset 0.
+  LLVM_DEBUG(dbgs() << "AArch64StackTaggingPreRA::findFirstSlotCandidate\n");
+  if (!ClFirstSlot)
+    return None;
+
+  DenseMap<SlotWithTag, int> RetagScore;
+  SlotWithTag MaxScoreST{-1, -1};
+  int MaxScore = -1;
+  for (auto *I : ReTags) {
+    SlotWithTag ST{*I};
+    if (isSlotPreAllocated(MFI, ST.FI))
+      continue;
+
+    Register RetagReg = I->getOperand(0).getReg();
+    if (!Register::isVirtualRegister(RetagReg))
+      continue;
+
+    int Score = 0;
+    SmallVector<Register, 8> WorkList;
+    WorkList.push_back(RetagReg);
+
+    while (!WorkList.empty()) {
+      Register UseReg = WorkList.back();
+      WorkList.pop_back();
+      for (auto &UseI : MRI->use_instructions(UseReg)) {
+        unsigned Opcode = UseI.getOpcode();
+        if (Opcode == AArch64::STGOffset || Opcode == AArch64::ST2GOffset ||
+            Opcode == AArch64::STZGOffset || Opcode == AArch64::STZ2GOffset ||
+            Opcode == AArch64::STGPi || Opcode == AArch64::STGloop ||
+            Opcode == AArch64::STZGloop || Opcode == AArch64::STGloop_wback ||
+            Opcode == AArch64::STZGloop_wback)
+          continue;
+        if (UseI.isCopy()) {
+          Register DstReg = UseI.getOperand(0).getReg();
+          if (Register::isVirtualRegister(DstReg))
+            WorkList.push_back(DstReg);
+          continue;
+        }
+        LLVM_DEBUG(dbgs() << "[" << ST.FI << ":" << ST.Tag << "] use of %"
+                          << Register::virtReg2Index(UseReg) << " in " << UseI
+                          << "\n");
+        Score++;
+      }
+    }
+
+    int TotalScore = RetagScore[ST] += Score;
+    if (TotalScore > MaxScore ||
+        (TotalScore == MaxScore && ST.FI > MaxScoreST.FI)) {
+      MaxScore = TotalScore;
+      MaxScoreST = ST;
+    }
+  }
+
+  if (MaxScoreST.FI < 0)
+    return None;
+
+  // If FI's tag is already 0, we are done.
+  if (MaxScoreST.Tag == 0)
+    return MaxScoreST.FI;
+
+  // Otherwise, find a random victim pair (FI, Tag) where Tag == 0.
+  SlotWithTag SwapST{-1, -1};
+  for (auto *I : ReTags) {
+    SlotWithTag ST{*I};
+    if (ST.Tag == 0) {
+      SwapST = ST;
+      break;
+    }
+  }
+
+  // Swap tags between the victim and the highest scoring pair.
+  // If SwapWith is still (-1, -1), that's fine, too - we'll simply take tag for
+  // the highest score slot without changing anything else.
+  for (auto *&I : ReTags) {
+    SlotWithTag ST{*I};
+    MachineOperand &TagOp = I->getOperand(4);
+    if (ST == MaxScoreST) {
+      TagOp.setImm(0);
+    } else if (ST == SwapST) {
+      TagOp.setImm(MaxScoreST.Tag);
+    }
+  }
+  return MaxScoreST.FI;
+}
+
 bool AArch64StackTaggingPreRA::runOnMachineFunction(MachineFunction &Func) {
   MF = &Func;
   MRI = &MF->getRegInfo();
@@ -225,11 +366,35 @@ bool AArch64StackTaggingPreRA::runOnMachineFunction(MachineFunction &Func) {
     }
   }
 
+  // Take over from SSP. It does nothing for tagged slots, and should not really
+  // have been enabled in the first place.
+  for (int FI : TaggedSlots)
+    MFI->setObjectSSPLayout(FI, MachineFrameInfo::SSPLK_None);
+
   if (ReTags.empty())
     return false;
 
   if (mayUseUncheckedLoadStore())
     uncheckLoadsAndStores();
+
+  // Find a slot that is used with zero tag offset, like ADDG #fi, 0.
+  // If the base tagged pointer is set up to the address of this slot,
+  // the ADDG instruction can be eliminated.
+  Optional<int> BaseSlot = findFirstSlotCandidate();
+  if (BaseSlot)
+    AFI->setTaggedBasePointerIndex(*BaseSlot);
+
+  for (auto *I : ReTags) {
+    int FI = I->getOperand(1).getIndex();
+    int Tag = I->getOperand(4).getImm();
+    Register Base = I->getOperand(3).getReg();
+    if (Tag == 0 && FI == BaseSlot) {
+      BuildMI(*I->getParent(), I, {}, TII->get(AArch64::COPY),
+              I->getOperand(0).getReg())
+          .addReg(Base);
+      I->eraseFromParent();
+    }
+  }
 
   return true;
 }

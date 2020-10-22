@@ -74,7 +74,7 @@ int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
 
   unsigned CPUID = getProcessorID();
   while (SCDesc->isVariant()) {
-    SchedClass = STI.resolveVariantSchedClass(SchedClass, &Inst, CPUID);
+    SchedClass = STI.resolveVariantSchedClass(SchedClass, &Inst, &MCII, CPUID);
     SCDesc = getSchedClassDesc(SchedClass);
   }
 
@@ -120,7 +120,7 @@ MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
 
   unsigned CPUID = getProcessorID();
   while (SCDesc->isVariant()) {
-    SchedClass = STI.resolveVariantSchedClass(SchedClass, &Inst, CPUID);
+    SchedClass = STI.resolveVariantSchedClass(SchedClass, &Inst, &MCII, CPUID);
     SCDesc = getSchedClassDesc(SchedClass);
   }
 

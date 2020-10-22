@@ -1013,3 +1013,5 @@ void functionThatCallsTemplatedFunctions() {
 
   templatedFunction<void*>();
 }
+
+static void pr47779_dont_crash_on_weak() __attribute__((__weakref__("__pr47779_dont_crash_on_weak")));

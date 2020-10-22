@@ -106,7 +106,7 @@ EnablePartialStoreMerging("enable-dse-partial-store-merging",
   cl::desc("Enable partial store merging in DSE"));
 
 static cl::opt<bool>
-    EnableMemorySSA("enable-dse-memoryssa", cl::init(false), cl::Hidden,
+    EnableMemorySSA("enable-dse-memoryssa", cl::init(true), cl::Hidden,
                     cl::desc("Use the new MemorySSA-backed DSE."));
 
 static cl::opt<unsigned>
@@ -1519,9 +1519,9 @@ namespace {
 //   3. StartDef completely overwrites CurrentDef.
 // 4. Erase CurrentDef from the function and MemorySSA.
 
-// Returns true if \p M is an intrisnic that does not read or write memory.
-bool isNoopIntrinsic(MemoryUseOrDef *M) {
-  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(M->getMemoryInst())) {
+// Returns true if \p I is an intrisnic that does not read or write memory.
+bool isNoopIntrinsic(Instruction *I) {
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
@@ -1564,7 +1564,7 @@ bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
     return true;
 
   // Skip intrinsics that do not really read or modify memory.
-  if (isNoopIntrinsic(D))
+  if (isNoopIntrinsic(D->getMemoryInst()))
     return true;
 
   return false;
@@ -1701,6 +1701,11 @@ struct DSEState {
       return {MemoryLocation::getForDest(MTI)};
 
     if (auto *CB = dyn_cast<CallBase>(I)) {
+      // If the functions may write to memory we do not know about, bail out.
+      if (!CB->onlyAccessesArgMemory() &&
+          !CB->onlyAccessesInaccessibleMemOrArgMem())
+        return None;
+
       LibFunc LF;
       if (TLI.getLibFunc(*CB, LF) && TLI.has(LF)) {
         switch (LF) {
@@ -1849,6 +1854,9 @@ struct DSEState {
 
   // Returns true if \p Use may read from \p DefLoc.
   bool isReadClobber(MemoryLocation DefLoc, Instruction *UseInst) {
+    if (isNoopIntrinsic(UseInst))
+      return false;
+
     // Monotonic or weaker atomic stores can be re-ordered and do not need to be
     // treated as read clobber.
     if (auto SI = dyn_cast<StoreInst>(UseInst))
@@ -2132,16 +2140,20 @@ struct DSEState {
         continue;
       }
 
-      if (isNoopIntrinsic(cast<MemoryUseOrDef>(UseAccess))) {
+      // A memory terminator kills all preceeding MemoryDefs and all succeeding
+      // MemoryAccesses. We do not have to check it's users.
+      if (isMemTerminator(DefLoc, KillingI, UseInst)) {
+        LLVM_DEBUG(
+            dbgs()
+            << " ... skipping, memterminator invalidates following accesses\n");
+        continue;
+      }
+
+      if (isNoopIntrinsic(cast<MemoryUseOrDef>(UseAccess)->getMemoryInst())) {
         LLVM_DEBUG(dbgs() << "    ... adding uses of intrinsic\n");
         PushMemUses(UseAccess);
         continue;
       }
-
-      // A memory terminator kills all preceeding MemoryDefs and all succeeding
-      // MemoryAccesses. We do not have to check it's users.
-      if (isMemTerminator(DefLoc, KillingI, UseInst))
-        continue;
 
       if (UseInst->mayThrow() && !isInvisibleToCallerBeforeRet(DefUO)) {
         LLVM_DEBUG(dbgs() << "  ... found throwing instruction\n");

@@ -1489,20 +1489,20 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     break;
   }
   case TargetOpcode::G_VECREDUCE_SEQ_FADD:
-  case TargetOpcode::G_VECREDUCE_SEQ_FMUL:
-  case TargetOpcode::G_VECREDUCE_FADD:
-  case TargetOpcode::G_VECREDUCE_FMUL: {
+  case TargetOpcode::G_VECREDUCE_SEQ_FMUL: {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT Src1Ty = MRI->getType(MI->getOperand(1).getReg());
     LLT Src2Ty = MRI->getType(MI->getOperand(2).getReg());
     if (!DstTy.isScalar())
       report("Vector reduction requires a scalar destination type", MI);
     if (!Src1Ty.isScalar())
-      report("FADD/FMUL vector reduction requires a scalar 1st operand", MI);
+      report("Sequential FADD/FMUL vector reduction requires a scalar 1st operand", MI);
     if (!Src2Ty.isVector())
-      report("FADD/FMUL vector reduction must have a vector 2nd operand", MI);
+      report("Sequential FADD/FMUL vector reduction must have a vector 2nd operand", MI);
     break;
   }
+  case TargetOpcode::G_VECREDUCE_FADD:
+  case TargetOpcode::G_VECREDUCE_FMUL:
   case TargetOpcode::G_VECREDUCE_FMAX:
   case TargetOpcode::G_VECREDUCE_FMIN:
   case TargetOpcode::G_VECREDUCE_ADD:
@@ -1555,6 +1555,11 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   if (MI->isDebugValue() && MI->getNumOperands() == 4)
     if (!MI->getDebugLoc())
       report("Missing DebugLoc for debug instruction", MI);
+
+  // Meta instructions should never be the subject of debug value tracking,
+  // they don't create a value in the output program at all.
+  if (MI->isMetaInstruction() && MI->peekDebugInstrNum())
+    report("Metadata instruction should not have a value tracking number", MI);
 
   // Check the MachineMemOperands for basic consistency.
   for (MachineMemOperand *Op : MI->memoperands()) {
@@ -2519,6 +2524,21 @@ void MachineVerifier::visitMachineFunctionAfter() {
   for (auto CSInfo : MF->getCallSitesInfo())
     if (!CSInfo.first->isCall())
       report("Call site info referencing instruction that is not call", MF);
+
+  // If there's debug-info, check that we don't have any duplicate value
+  // tracking numbers.
+  if (MF->getFunction().getSubprogram()) {
+    DenseSet<unsigned> SeenNumbers;
+    for (auto &MBB : *MF) {
+      for (auto &MI : MBB) {
+        if (auto Num = MI.peekDebugInstrNum()) {
+          auto Result = SeenNumbers.insert((unsigned)Num);
+          if (!Result.second)
+            report("Instruction has a duplicated value tracking number", &MI);
+        }
+      }
+    }
+  }
 }
 
 void MachineVerifier::verifyLiveVariables() {

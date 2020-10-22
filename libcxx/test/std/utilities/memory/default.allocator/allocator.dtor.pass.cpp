@@ -26,10 +26,14 @@ constexpr bool test() {
 int main(int, char**)
 {
     test<int>();
+#ifdef _LIBCPP_VERSION // extension
     test<int const>();
+#endif // _LIBCPP_VERSION
 
     static_assert(test<int>());
+#ifdef _LIBCPP_VERSION // extension
     static_assert(test<int const>());
+#endif // _LIBCPP_VERSION
 
     return 0;
 }

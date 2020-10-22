@@ -646,10 +646,47 @@ bool LowOverheadLoop::ValidateTailPredicate() {
     return false;
   }
 
+  // The element count register maybe defined after InsertPt, in which case we
+  // need to try to move either InsertPt or the def so that the [w|d]lstp can
+  // use the value.
+
+  if (StartInsertPt != StartInsertBB->end() &&
+      !RDA.isReachingDefLiveOut(&*StartInsertPt, NumElements)) {
+    if (auto *ElemDef = RDA.getLocalLiveOutMIDef(StartInsertBB, NumElements)) {
+      if (RDA.isSafeToMoveForwards(ElemDef, &*StartInsertPt)) {
+        ElemDef->removeFromParent();
+        StartInsertBB->insert(StartInsertPt, ElemDef);
+        LLVM_DEBUG(dbgs() << "ARM Loops: Moved element count def: "
+                   << *ElemDef);
+      } else if (RDA.isSafeToMoveBackwards(&*StartInsertPt, ElemDef)) {
+        StartInsertPt->removeFromParent();
+        StartInsertBB->insertAfter(MachineBasicBlock::iterator(ElemDef),
+                                   &*StartInsertPt);
+        LLVM_DEBUG(dbgs() << "ARM Loops: Moved start past: " << *ElemDef);
+      } else {
+        // If we fail to move an instruction and the element count is provided
+        // by a mov, use the mov operand if it will have the same value at the
+        // insertion point
+        MachineOperand Operand = ElemDef->getOperand(1);
+        if (isMovRegOpcode(ElemDef->getOpcode()) &&
+            RDA.getUniqueReachingMIDef(ElemDef, Operand.getReg()) ==
+               RDA.getUniqueReachingMIDef(&*StartInsertPt, Operand.getReg())) {
+          TPNumElements = Operand;
+          NumElements = TPNumElements.getReg();
+        } else {
+          LLVM_DEBUG(dbgs()
+                     << "ARM Loops: Unable to move element count to loop "
+                     << "start instruction.\n");
+          return false;
+        }
+      }
+    }
+  }
+
   // Could inserting the [W|D]LSTP cause some unintended affects? In a perfect
   // world the [w|d]lstp instruction would be last instruction in the preheader
   // and so it would only affect instructions within the loop body. But due to
-  // scheduling, and/or the logic in this pass, the insertion point can
+  // scheduling, and/or the logic in this pass (above), the insertion point can
   // be moved earlier. So if the Loop Start isn't the last instruction in the
   // preheader, and if the initial element count is smaller than the vector
   // width, the Loop Start instruction will immediately generate one or more
@@ -1068,35 +1105,12 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
     return true;
   };
 
-  // We know that we can define safely LR at InsertPt, but maybe we could
-  // push the insertion point to later on in the basic block.
-  auto TryAdjustInsertionPoint = [](MachineBasicBlock::iterator &InsertPt,
-                                    MachineInstr *Start,
-                                    ReachingDefAnalysis &RDA) {
-
-    MachineBasicBlock *MBB = InsertPt->getParent();
-    MachineBasicBlock::iterator FirstNonTerminator =
-      MBB->getFirstTerminator();
-    unsigned CountReg = Start->getOperand(0).getReg();
-
-    // Get the latest possible insertion point and check whether the semantics
-    // will be maintained if Start was inserted there.
-    if (FirstNonTerminator == MBB->end()) {
-      if (RDA.isReachingDefLiveOut(Start, CountReg) &&
-          RDA.isReachingDefLiveOut(Start, ARM::LR))
-        InsertPt = FirstNonTerminator;
-    } else if (RDA.hasSameReachingDef(Start, &*FirstNonTerminator, CountReg) &&
-               RDA.hasSameReachingDef(Start, &*FirstNonTerminator, ARM::LR))
-      InsertPt = FirstNonTerminator;
-  };
-
   if (!FindStartInsertionPoint(Start, Dec, StartInsertPt, StartInsertBB, RDA,
                                ToRemove)) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Unable to find safe insertion point.\n");
     Revert = true;
     return;
   }
-  TryAdjustInsertionPoint(StartInsertPt, Start, RDA);
   LLVM_DEBUG(if (StartInsertPt == StartInsertBB->end())
                dbgs() << "ARM Loops: Will insert LoopStart at end of block\n";
              else

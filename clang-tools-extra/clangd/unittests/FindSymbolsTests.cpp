@@ -639,19 +639,27 @@ TEST(DocumentSymbols, FromMacro) {
     #define FF(name) \
       class name##_Test {};
 
-    $expansion[[FF]](abc);
+    $expansion1[[FF]](abc);
 
     #define FF2() \
-      class $spelling[[Test]] {};
+      class Test {};
 
-    FF2();
+    $expansion2[[FF2]]();
+
+    #define FF3() \
+      void waldo()
+
+    $fullDef[[FF3() {
+      int var = 42;
+    }]]
   )");
   TU.Code = Main.code().str();
   EXPECT_THAT(
       getSymbols(TU.build()),
       ElementsAre(
-          AllOf(WithName("abc_Test"), SymNameRange(Main.range("expansion"))),
-          AllOf(WithName("Test"), SymNameRange(Main.range("spelling")))));
+          AllOf(WithName("abc_Test"), SymNameRange(Main.range("expansion1"))),
+          AllOf(WithName("Test"), SymNameRange(Main.range("expansion2"))),
+          AllOf(WithName("waldo"), SymRange(Main.range("fullDef")))));
 }
 
 TEST(DocumentSymbols, FuncTemplates) {

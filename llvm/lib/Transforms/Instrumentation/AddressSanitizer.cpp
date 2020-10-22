@@ -1083,7 +1083,9 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
         !ConstantInt::isValueValidForType(IntptrTy, SizeValue))
       return;
     // Find alloca instruction that corresponds to llvm.lifetime argument.
-    AllocaInst *AI = findAllocaForValue(II.getArgOperand(1));
+    // Currently we can only handle lifetime markers pointing to the
+    // beginning of the alloca.
+    AllocaInst *AI = findAllocaForValue(II.getArgOperand(1), true);
     if (!AI) {
       HasUntracedLifetimeIntrinsic = true;
       return;

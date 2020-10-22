@@ -695,6 +695,11 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
     return &*MIB;
   }
 
+  // Attempt to produce a DBG_INSTR_REF if we've been asked to.
+  if (EmitDebugInstrRefs)
+    if (auto *InstrRef = EmitDbgInstrRef(SD, VRBaseMap))
+      return InstrRef;
+
   if (SD->getKind() == SDDbgValue::FRAMEIX) {
     // Stack address; this needs to be lowered in target-dependent fashion.
     // EmitTargetCodeForFrameDebugValue is responsible for allocation.
@@ -759,6 +764,63 @@ InstrEmitter::EmitDbgValue(SDDbgValue *SD,
   MIB.addMetadata(Expr);
 
   return &*MIB;
+}
+
+MachineInstr *
+InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
+                              DenseMap<SDValue, Register> &VRBaseMap) {
+  // Instruction referencing is still in a prototype state: for now we're only
+  // going to support SDNodes within a block. Copies are not supported, they
+  // don't actually define a value.
+  if (SD->getKind() != SDDbgValue::SDNODE)
+    return nullptr;
+
+  SDNode *Node = SD->getSDNode();
+  SDValue Op = SDValue(Node, SD->getResNo());
+  DenseMap<SDValue, Register>::iterator I = VRBaseMap.find(Op);
+  if (I==VRBaseMap.end())
+    return nullptr; // undef value: let EmitDbgValue produce a DBG_VALUE $noreg.
+
+  MDNode *Var = SD->getVariable();
+  MDNode *Expr = SD->getExpression();
+  DebugLoc DL = SD->getDebugLoc();
+
+  // Try to pick out a defining instruction at this point.
+  unsigned VReg = getVR(Op, VRBaseMap);
+  MachineInstr *ResultInstr = nullptr;
+
+  // No definition corresponds to scenarios where a vreg is live-in to a block,
+  // and doesn't have a defining instruction (yet). This can be patched up
+  // later; at this early stage of implementation, fall back to using DBG_VALUE.
+  if (!MRI->hasOneDef(VReg))
+    return nullptr;
+
+  MachineInstr &DefMI = *MRI->def_instr_begin(VReg);
+  // Some target specific opcodes can become copies. As stated above, we're
+  // ignoring those for now.
+  if (DefMI.isCopy() || DefMI.getOpcode() == TargetOpcode::SUBREG_TO_REG)
+    return nullptr;
+
+  const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_INSTR_REF);
+  auto MIB = BuildMI(*MF, DL, RefII);
+
+  // Find the operand which defines the specified VReg.
+  unsigned OperandIdx = 0;
+  for (const auto &MO : DefMI.operands()) {
+    if (MO.isReg() && MO.isDef() && MO.getReg() == VReg)
+      break;
+    ++OperandIdx;
+  }
+  assert(OperandIdx < DefMI.getNumOperands());
+
+  // Make the DBG_INSTR_REF refer to that instruction, and that operand.
+  unsigned InstrNum = DefMI.getDebugInstrNum();
+  MIB.addImm(InstrNum);
+  MIB.addImm(OperandIdx);
+  MIB.addMetadata(Var);
+  MIB.addMetadata(Expr);
+  ResultInstr = &*MIB;
+  return ResultInstr;
 }
 
 MachineInstr *
@@ -1177,10 +1239,12 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
 
 /// InstrEmitter - Construct an InstrEmitter and set it to start inserting
 /// at the given position in the given block.
-InstrEmitter::InstrEmitter(MachineBasicBlock *mbb,
+InstrEmitter::InstrEmitter(const TargetMachine &TM, MachineBasicBlock *mbb,
                            MachineBasicBlock::iterator insertpos)
     : MF(mbb->getParent()), MRI(&MF->getRegInfo()),
       TII(MF->getSubtarget().getInstrInfo()),
       TRI(MF->getSubtarget().getRegisterInfo()),
       TLI(MF->getSubtarget().getTargetLowering()), MBB(mbb),
-      InsertPos(insertpos) {}
+      InsertPos(insertpos) {
+  EmitDebugInstrRefs = TM.Options.ValueTrackingVariableLocations;
+}

@@ -102,7 +102,8 @@ static std::string OptLLVM(const std::string &IR, CodeGenOpt::Level OLvl) {
     ErrorAndExit("Could not parse IR");
 
   Triple ModuleTriple(M->getTargetTriple());
-  const TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
+  const TargetOptions Options =
+      codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple);
   std::string E;
   const Target *TheTarget =
       TargetRegistry::lookupTarget(codegen::getMArch(), ModuleTriple, E);
@@ -165,7 +166,10 @@ static void CreateAndRunJITFunc(const std::string &IR, CodeGenOpt::Level OLvl) {
   builder.setEngineKind(EngineKind::JIT);
   builder.setMCJITMemoryManager(std::make_unique<SectionMemoryManager>());
   builder.setOptLevel(OLvl);
-  builder.setTargetOptions(codegen::InitTargetOptionsFromCodeGenFlags());
+
+  Triple ModuleTriple(M->getTargetTriple());
+  builder.setTargetOptions(
+      codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple));
 
   std::unique_ptr<ExecutionEngine> EE(builder.create());
   if (!EE)

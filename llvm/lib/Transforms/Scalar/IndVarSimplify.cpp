@@ -743,7 +743,6 @@ protected:
 
   bool widenLoopCompare(NarrowIVDefUse DU);
   bool widenWithVariantUse(NarrowIVDefUse DU);
-  void widenWithVariantUseCodegen(NarrowIVDefUse DU);
 
   void pushNarrowIVUsers(Instruction *NarrowDef, Instruction *WideDef);
 };
@@ -1115,21 +1114,16 @@ bool WidenIV::widenWithVariantUse(NarrowIVDefUse DU) {
 
   // The operand that is not defined by NarrowDef of DU. Let's call it the
   // other operand.
-  unsigned ExtendOperIdx = DU.NarrowUse->getOperand(0) == NarrowDef ? 1 : 0;
-  assert(DU.NarrowUse->getOperand(1 - ExtendOperIdx) == DU.NarrowDef &&
+  assert((NarrowUse->getOperand(0) == NarrowDef ||
+          NarrowUse->getOperand(1) == NarrowDef) &&
          "bad DU");
 
-  const SCEV *ExtendOperExpr = nullptr;
   const OverflowingBinaryOperator *OBO =
     cast<OverflowingBinaryOperator>(NarrowUse);
   ExtendKind ExtKind = getExtendKind(NarrowDef);
-  if (ExtKind == SignExtended && OBO->hasNoSignedWrap())
-    ExtendOperExpr = SE->getSignExtendExpr(
-      SE->getSCEV(NarrowUse->getOperand(ExtendOperIdx)), WideType);
-  else if (ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap())
-    ExtendOperExpr = SE->getZeroExtendExpr(
-      SE->getSCEV(NarrowUse->getOperand(ExtendOperIdx)), WideType);
-  else
+  bool CanSignExtend = ExtKind == SignExtended && OBO->hasNoSignedWrap();
+  bool CanZeroExtend = ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap();
+  if (!CanSignExtend && !CanZeroExtend)
     return false;
 
   // Verifying that Defining operand is an AddRec
@@ -1137,14 +1131,6 @@ bool WidenIV::widenWithVariantUse(NarrowIVDefUse DU) {
   const SCEVAddRecExpr *AddRecOp1 = dyn_cast<SCEVAddRecExpr>(Op1);
   if (!AddRecOp1 || AddRecOp1->getLoop() != L)
     return false;
-  // Verifying that other operand is an Extend.
-  if (ExtKind == SignExtended) {
-    if (!isa<SCEVSignExtendExpr>(ExtendOperExpr))
-      return false;
-  } else {
-    if (!isa<SCEVZeroExtendExpr>(ExtendOperExpr))
-      return false;
-  }
 
   if (ExtKind == SignExtended) {
     for (Use &U : NarrowUse->uses()) {
@@ -1159,18 +1145,6 @@ bool WidenIV::widenWithVariantUse(NarrowIVDefUse DU) {
         return false;
     }
   }
-
-  return true;
-}
-
-/// Special Case for widening with loop variant (see
-/// WidenIV::widenWithVariant). This is the code generation part.
-void WidenIV::widenWithVariantUseCodegen(NarrowIVDefUse DU) {
-  Instruction *NarrowUse = DU.NarrowUse;
-  Instruction *NarrowDef = DU.NarrowDef;
-  Instruction *WideDef = DU.WideDef;
-
-  ExtendKind ExtKind = getExtendKind(NarrowDef);
 
   LLVM_DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
 
@@ -1190,25 +1164,22 @@ void WidenIV::widenWithVariantUseCodegen(NarrowIVDefUse DU) {
   IRBuilder<> Builder(NarrowUse);
   Builder.Insert(WideBO);
   WideBO->copyIRFlags(NarrowBO);
-
-  assert(ExtKind != Unknown && "Unknown ExtKind not handled");
-
   ExtendKindMap[NarrowUse] = ExtKind;
 
   for (Use &U : NarrowUse->uses()) {
     Instruction *User = nullptr;
     if (ExtKind == SignExtended)
-      User = dyn_cast<SExtInst>(U.getUser());
+      User = cast<SExtInst>(U.getUser());
     else
-      User = dyn_cast<ZExtInst>(U.getUser());
-    if (User && User->getType() == WideType) {
-      LLVM_DEBUG(dbgs() << "INDVARS: eliminating " << *User << " replaced by "
-                        << *WideBO << "\n");
-      ++NumElimExt;
-      User->replaceAllUsesWith(WideBO);
-      DeadInsts.emplace_back(User);
-    }
+      User = cast<ZExtInst>(U.getUser());
+    assert(User->getType() == WideType && "Checked before!");
+    LLVM_DEBUG(dbgs() << "INDVARS: eliminating " << *User << " replaced by "
+                      << *WideBO << "\n");
+    ++NumElimExt;
+    User->replaceAllUsesWith(WideBO);
+    DeadInsts.emplace_back(User);
   }
+  return true;
 }
 
 /// Determine whether an individual user of the narrow IV can be widened. If so,
@@ -1313,10 +1284,8 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
     // in WideAddRec.first does not indicate a polynomial induction expression.
     // In that case, look at the operands of the use instruction to determine
     // if we can still widen the use instead of truncating its operand.
-    if (widenWithVariantUse(DU)) {
-      widenWithVariantUseCodegen(DU);
+    if (widenWithVariantUse(DU))
       return nullptr;
-    }
 
     // This user does not evaluate to a recurrence after widening, so don't
     // follow it. Instead insert a Trunc to kill off the original use,

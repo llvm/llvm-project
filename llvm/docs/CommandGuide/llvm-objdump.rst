@@ -167,6 +167,11 @@ OPTIONS
 
   When disassembling, do not print the raw bytes of each instruction.
 
+.. option:: --prefix=<prefix>
+
+  When disassembling with the :option:`--source` option, prepend ``prefix`` to
+  absolute paths.
+
 .. option:: --print-imm-hex
 
   Use hex format when printing immediate values in disassembly output.

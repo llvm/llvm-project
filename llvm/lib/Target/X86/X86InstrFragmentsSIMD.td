@@ -87,16 +87,16 @@ def X86multishift   : SDNode<"X86ISD::MULTISHIFT",
                                       SDTCisSameAs<1,2>]>>;
 def X86pextrb  : SDNode<"X86ISD::PEXTRB",
                  SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisVT<1, v16i8>,
-                                      SDTCisPtrTy<2>]>>;
+                                      SDTCisVT<2, i8>]>>;
 def X86pextrw  : SDNode<"X86ISD::PEXTRW",
                  SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisVT<1, v8i16>,
-                                      SDTCisPtrTy<2>]>>;
+                                      SDTCisVT<2, i8>]>>;
 def X86pinsrb  : SDNode<"X86ISD::PINSRB",
                  SDTypeProfile<1, 3, [SDTCisVT<0, v16i8>, SDTCisSameAs<0,1>,
-                                      SDTCisVT<2, i32>, SDTCisPtrTy<3>]>>;
+                                      SDTCisVT<2, i32>, SDTCisVT<3, i8>]>>;
 def X86pinsrw  : SDNode<"X86ISD::PINSRW",
                  SDTypeProfile<1, 3, [SDTCisVT<0, v8i16>, SDTCisSameAs<0,1>,
-                                      SDTCisVT<2, i32>, SDTCisPtrTy<3>]>>;
+                                      SDTCisVT<2, i32>, SDTCisVT<3, i8>]>>;
 def X86insertps : SDNode<"X86ISD::INSERTPS",
                  SDTypeProfile<1, 3, [SDTCisVT<0, v4f32>, SDTCisSameAs<0,1>,
                                       SDTCisVT<2, v4f32>, SDTCisVT<3, i8>]>>;

@@ -29,12 +29,13 @@ int main(int, char**) {
   const std::string s("we really really really really really really really "
                       "really really long string so that we allocate");
   assert(globalMemCounter.checkOutstandingNewEq(1));
+  const fs::path::string_type ps(s.begin(), s.end());
   path p(s);
   {
     DisableAllocationGuard g;
     path p2(std::move(p));
-    assert(p2.native() == s);
-    assert(p.native() != s); // Testing moved from state
+    assert(p2.native() == ps);
+    assert(p.native() != ps); // Testing moved from state
   }
 
   return 0;

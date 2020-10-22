@@ -214,6 +214,29 @@ add_lit_testsuite(check-lldb-reproducers
   DEPENDS lldb-test-deps)
 add_dependencies(check-lldb-reproducers check-lldb-reproducers-capture)
 
+# Targets for running the test suite on the different Apple simulators.
+add_lit_testsuite(check-lldb-simulator-ios
+  "Running lldb test suite on the iOS simulator"
+  ${CMAKE_CURRENT_BINARY_DIR}/API
+  PARAMS "lldb-run-with-simulator=ios"
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS lldb-test-deps)
+
+add_lit_testsuite(check-lldb-simulator-watchos
+  "Running lldb test suite on the watchOS simulator"
+  ${CMAKE_CURRENT_BINARY_DIR}/API
+  PARAMS "lldb-run-with-simulator=watchos"
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS lldb-test-deps)
+
+add_lit_testsuite(check-lldb-simulator-tvos
+  "Running lldb test suite on the tvOS simulator"
+  ${CMAKE_CURRENT_BINARY_DIR}/API
+  PARAMS "lldb-run-with-simulator=tvos"
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS lldb-test-deps)
+
+
 if(LLDB_BUILT_STANDALONE)
   # This has to happen *AFTER* add_lit_testsuite.
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/llvm-lit)

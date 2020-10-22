@@ -131,6 +131,9 @@ namespace ValidButUnsupported {
   typedef struct { // expected-error {{unsupported}}
     enum X {};
     int arr[&f<X> ? 1 : 2];
+#if __cplusplus < 201103L
+    // expected-warning@-2 {{folded to constant}}
+#endif
   } C; // expected-note {{by this typedef}}
 }
 

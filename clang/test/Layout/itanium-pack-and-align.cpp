@@ -16,11 +16,11 @@ T t;
 // CHECK:          0 | struct T
 // CHECK-NEXT:          0 |   char x
 // CHECK-NEXT:          1 |   int y
-// CHECK-NEXT:            | [sizeof=8, dsize=8, align=8,
-// CHECK-NEXT:            |  nvsize=8, nvalign=8]
+// CHECK-NEXT:            | [sizeof=8, dsize=8, align=8,{{( preferredalign=8,)?}}
+// CHECK-NEXT:            |  nvsize=8, nvalign=8{{(, preferrednvalign=8)?}}]
 
 // CHECK:          0 | struct S
 // CHECK-NEXT:          0 |   char x
 // CHECK-NEXT:          1 |   int y
-// CHECK-NEXT:            | [sizeof=8, dsize=8, align=8,
-// CHECK-NEXT:            |  nvsize=8, nvalign=8]
+// CHECK-NEXT:            | [sizeof=8, dsize=8, align=8,{{( preferredalign=8,)?}}
+// CHECK-NEXT:            |  nvsize=8, nvalign=8{{(, preferrednvalign=8)?}}]

@@ -24,6 +24,11 @@ llvm::cl::opt<std::string> StandardHeader(
     "header",
     llvm::cl::desc("The standard header file which is to be generated."),
     llvm::cl::value_desc("<header file>"));
+llvm::cl::list<std::string> EntrypointNamesOption(
+    "e", llvm::cl::value_desc("<list of entrypoints>"),
+    llvm::cl::desc(
+        "Each --e is one entrypoint (generated from entrypoints.txt)"),
+    llvm::cl::OneOrMore);
 llvm::cl::list<std::string> ReplacementValues(
     "args", llvm::cl::desc("Command separated <argument name>=<value> pairs."),
     llvm::cl::value_desc("<name=value>[,name=value]"));
@@ -42,7 +47,7 @@ namespace llvm_libc {
 bool HeaderGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
   std::unordered_map<std::string, std::string> ArgMap;
   ParseArgValuePairs(ArgMap);
-  Generator G(HeaderDefFile, StandardHeader, ArgMap);
+  Generator G(HeaderDefFile, EntrypointNamesOption, StandardHeader, ArgMap);
   G.generate(OS, Records);
 
   return false;

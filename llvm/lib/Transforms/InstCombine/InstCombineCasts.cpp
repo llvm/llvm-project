@@ -515,9 +515,9 @@ static Instruction *foldVecTruncToExtElt(TruncInst &Trunc,
   return ExtractElementInst::Create(VecInput, IC.Builder.getInt32(Elt));
 }
 
-/// Rotate left/right may occur in a wider type than necessary because of type
-/// promotion rules. Try to narrow the inputs and convert to funnel shift.
-Instruction *InstCombinerImpl::narrowRotate(TruncInst &Trunc) {
+/// Funnel/Rotate left/right may occur in a wider type than necessary because of
+/// type promotion rules. Try to narrow the inputs and convert to funnel shift.
+Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
   assert((isa<VectorType>(Trunc.getSrcTy()) ||
           shouldChangeType(Trunc.getSrcTy(), Trunc.getType())) &&
          "Don't narrow to an illegal scalar type");
@@ -529,32 +529,38 @@ Instruction *InstCombinerImpl::narrowRotate(TruncInst &Trunc) {
   if (!isPowerOf2_32(NarrowWidth))
     return nullptr;
 
-  // First, find an or'd pair of opposite shifts with the same shifted operand:
-  // trunc (or (lshr ShVal, ShAmt0), (shl ShVal, ShAmt1))
-  Value *Or0, *Or1;
-  if (!match(Trunc.getOperand(0), m_OneUse(m_Or(m_Value(Or0), m_Value(Or1)))))
+  // First, find an or'd pair of opposite shifts:
+  // trunc (or (lshr ShVal0, ShAmt0), (shl ShVal1, ShAmt1))
+  BinaryOperator *Or0, *Or1;
+  if (!match(Trunc.getOperand(0), m_OneUse(m_Or(m_BinOp(Or0), m_BinOp(Or1)))))
     return nullptr;
 
-  Value *ShVal, *ShAmt0, *ShAmt1;
-  if (!match(Or0, m_OneUse(m_LogicalShift(m_Value(ShVal), m_Value(ShAmt0)))) ||
-      !match(Or1, m_OneUse(m_LogicalShift(m_Specific(ShVal), m_Value(ShAmt1)))))
+  Value *ShVal0, *ShVal1, *ShAmt0, *ShAmt1;
+  if (!match(Or0, m_OneUse(m_LogicalShift(m_Value(ShVal0), m_Value(ShAmt0)))) ||
+      !match(Or1, m_OneUse(m_LogicalShift(m_Value(ShVal1), m_Value(ShAmt1)))) ||
+      Or0->getOpcode() == Or1->getOpcode())
     return nullptr;
 
-  auto ShiftOpcode0 = cast<BinaryOperator>(Or0)->getOpcode();
-  auto ShiftOpcode1 = cast<BinaryOperator>(Or1)->getOpcode();
-  if (ShiftOpcode0 == ShiftOpcode1)
-    return nullptr;
+  // Canonicalize to or(shl(ShVal0, ShAmt0), lshr(ShVal1, ShAmt1)).
+  if (Or0->getOpcode() == BinaryOperator::LShr) {
+    std::swap(Or0, Or1);
+    std::swap(ShVal0, ShVal1);
+    std::swap(ShAmt0, ShAmt1);
+  }
+  assert(Or0->getOpcode() == BinaryOperator::Shl &&
+         Or1->getOpcode() == BinaryOperator::LShr &&
+         "Illegal or(shift,shift) pair");
 
-  // Match the shift amount operands for a rotate pattern. This always matches
-  // a subtraction on the R operand.
+  // Match the shift amount operands for a funnel/rotate pattern. This always
+  // matches a subtraction on the R operand.
   auto matchShiftAmount = [](Value *L, Value *R, unsigned Width) -> Value * {
     // The shift amounts may add up to the narrow bit width:
-    // (shl ShVal, L) | (lshr ShVal, Width - L)
+    // (shl ShVal0, L) | (lshr ShVal1, Width - L)
     if (match(R, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(L)))))
       return L;
 
     // The shift amount may be masked with negation:
-    // (shl ShVal, (X & (Width - 1))) | (lshr ShVal, ((-X) & (Width - 1)))
+    // (shl ShVal0, (X & (Width - 1))) | (lshr ShVal1, ((-X) & (Width - 1)))
     Value *X;
     unsigned Mask = Width - 1;
     if (match(L, m_And(m_Value(X), m_SpecificInt(Mask))) &&
@@ -569,11 +575,16 @@ Instruction *InstCombinerImpl::narrowRotate(TruncInst &Trunc) {
     return nullptr;
   };
 
+  // TODO: Add support for funnel shifts (ShVal0 != ShVal1).
+  if (ShVal0 != ShVal1)
+    return nullptr;
+  Value *ShVal = ShVal0;
+
   Value *ShAmt = matchShiftAmount(ShAmt0, ShAmt1, NarrowWidth);
-  bool SubIsOnLHS = false;
+  bool IsFshl = true; // Sub on LSHR.
   if (!ShAmt) {
     ShAmt = matchShiftAmount(ShAmt1, ShAmt0, NarrowWidth);
-    SubIsOnLHS = true;
+    IsFshl = false; // Sub on SHL.
   }
   if (!ShAmt)
     return nullptr;
@@ -591,8 +602,6 @@ Instruction *InstCombinerImpl::narrowRotate(TruncInst &Trunc) {
   // llvm.fshl.i8(trunc(ShVal), trunc(ShVal), trunc(ShAmt))
   Value *NarrowShAmt = Builder.CreateTrunc(ShAmt, DestTy);
   Value *X = Builder.CreateTrunc(ShVal, DestTy);
-  bool IsFshl = (!SubIsOnLHS && ShiftOpcode0 == BinaryOperator::Shl) ||
-                (SubIsOnLHS && ShiftOpcode1 == BinaryOperator::Shl);
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
   Function *F = Intrinsic::getDeclaration(Trunc.getModule(), IID, DestTy);
   return IntrinsicInst::Create(F, { X, X, NarrowShAmt });
@@ -650,7 +659,7 @@ Instruction *InstCombinerImpl::narrowBinOp(TruncInst &Trunc) {
   default: break;
   }
 
-  if (Instruction *NarrowOr = narrowRotate(Trunc))
+  if (Instruction *NarrowOr = narrowFunnelShift(Trunc))
     return NarrowOr;
 
   return nullptr;
@@ -810,8 +819,6 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
 
     // If the shift is small enough, all zero bits created by the shift are
     // removed by the trunc.
-    // TODO: Support passing through undef shift amounts - these currently get
-    // clamped to MaxAmt.
     if (match(C, m_SpecificInt_ICMP(ICmpInst::ICMP_ULE,
                                     APInt(SrcWidth, MaxShiftAmt)))) {
       // trunc (lshr (sext A), C) --> ashr A, C
@@ -819,6 +826,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
         Constant *MaxAmt = ConstantInt::get(SrcTy, DestWidth - 1, false);
         Constant *ShAmt = ConstantExpr::getUMin(C, MaxAmt);
         ShAmt = ConstantExpr::getTrunc(ShAmt, A->getType());
+        ShAmt = Constant::mergeUndefsWith(ShAmt, C);
         return IsExact ? BinaryOperator::CreateExactAShr(A, ShAmt)
                        : BinaryOperator::CreateAShr(A, ShAmt);
       }
@@ -841,13 +849,12 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
 
     // If the shift is small enough, all zero/sign bits created by the shift are
     // removed by the trunc.
-    // TODO: Support passing through undef shift amounts - these currently get
-    // zero'd by getIntegerCast.
     if (match(C, m_SpecificInt_ICMP(ICmpInst::ICMP_ULE,
                                     APInt(SrcWidth, MaxShiftAmt)))) {
       auto *OldShift = cast<Instruction>(Src);
-      auto *ShAmt = ConstantExpr::getIntegerCast(C, A->getType(), true);
       bool IsExact = OldShift->isExact();
+      auto *ShAmt = ConstantExpr::getIntegerCast(C, A->getType(), true);
+      ShAmt = Constant::mergeUndefsWith(ShAmt, C);
       Value *Shift =
           OldShift->getOpcode() == Instruction::AShr
               ? Builder.CreateAShr(A, ShAmt, OldShift->getName(), IsExact)

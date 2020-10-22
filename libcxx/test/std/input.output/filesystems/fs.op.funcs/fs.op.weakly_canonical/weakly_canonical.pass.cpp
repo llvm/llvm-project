@@ -14,10 +14,8 @@
 // path weakly_canonical(const path& p, error_code& ec);
 
 #include "filesystem_include.h"
-#include <type_traits>
-#include <vector>
-#include <iostream>
-#include <cassert>
+#include <cstdio>
+#include <string>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -31,8 +29,8 @@ int main(int, char**) {
 
   // clang-format off
   struct {
-    std::string input;
-    std::string expect;
+    fs::path input;
+    fs::path expect;
   } TestCases[] = {
       {"", fs::current_path()},
       {".", fs::current_path()},
@@ -67,11 +65,12 @@ int main(int, char**) {
     const fs::path output = fs::weakly_canonical(p);
     if (!PathEq(output, TC.expect)) {
       Failed = true;
-      std::cerr << "TEST CASE #" << ID << " FAILED: \n";
-      std::cerr << "  Input: '" << TC.input << "'\n";
-      std::cerr << "  Expected: '" << TC.expect << "'\n";
-      std::cerr << "  Output: '" << output.native() << "'";
-      std::cerr << std::endl;
+      std::fprintf(stderr, "TEST CASE #%d FAILED:\n"
+                  "  Input: '%s'\n"
+                  "  Expected: '%s'\n"
+                  "  Output: '%s'\n",
+        ID, TC.input.string().c_str(), TC.expect.string().c_str(),
+        output.string().c_str());
     }
   }
   return Failed;

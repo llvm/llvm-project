@@ -231,7 +231,7 @@ TokenVerifier::TokenVerifier(std::string body) {
   Opts.CPlusPlus17 = true;
   Opts.LineComment = true;
 
-  Lexer lex(FID, buf.get(), SM, Opts);
+  Lexer lex(FID, buf->getMemBufferRef(), SM, Opts);
 
   Token token;
   bool exit = false;

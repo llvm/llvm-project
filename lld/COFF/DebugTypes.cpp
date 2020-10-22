@@ -1088,7 +1088,8 @@ void TypeMerger::mergeTypesWithGHash() {
   }
   parallelSort(entries, std::less<GHashCell>());
   log(formatv("ghash table load factor: {0:p} (size {1} / capacity {2})\n",
-              double(entries.size()) / tableSize, entries.size(), tableSize));
+              tableSize ? double(entries.size()) / tableSize : 0,
+              entries.size(), tableSize));
 
   // Find out how many type and item indices there are.
   auto mid =

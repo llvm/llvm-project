@@ -817,7 +817,7 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
         // since 'O' packets can really slow down debugging if the inferior
         // does a lot of output.
         if ((!stdin_file_spec || !stdout_file_spec || !stderr_file_spec) &&
-            pty.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY, nullptr, 0)) {
+            !errorToBool(pty.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY))) {
           FileSpec secondary_name(pty.GetSecondaryName());
 
           if (!stdin_file_spec)

@@ -9,8 +9,10 @@
 #ifndef LLVM_SUPPORT_LINEITERATOR_H
 #define LLVM_SUPPORT_LINEITERATOR_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include <iterator>
 
 namespace llvm {
@@ -30,7 +32,7 @@ class MemoryBuffer;
 /// Note that this iterator requires the buffer to be nul terminated.
 class line_iterator
     : public std::iterator<std::forward_iterator_tag, StringRef> {
-  const MemoryBuffer *Buffer = nullptr;
+  Optional<MemoryBufferRef> Buffer;
   char CommentMarker = '\0';
   bool SkipBlanks = true;
 
@@ -40,6 +42,10 @@ class line_iterator
 public:
   /// Default construct an "end" iterator.
   line_iterator() = default;
+
+  /// Construct a new iterator around an unowned memory buffer.
+  explicit line_iterator(const MemoryBufferRef &Buffer, bool SkipBlanks = true,
+                         char CommentMarker = '\0');
 
   /// Construct a new iterator around some memory buffer.
   explicit line_iterator(const MemoryBuffer &Buffer, bool SkipBlanks = true,

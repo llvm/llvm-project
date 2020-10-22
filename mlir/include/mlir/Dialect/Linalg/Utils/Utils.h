@@ -91,9 +91,9 @@ Optional<FusionInfo> fuseProducerOf(OpBuilder &b, LinalgOp consumer,
 
 /// Fuse linalg operation on tensors, with the producer of the operand at
 /// position `consumerIdx` of the consumer.
-Operation *fuseTensorOps(PatternRewriter &rewriter, Operation *consumer,
-                         unsigned consumerIdx,
-                         OperationFolder *folder = nullptr);
+Optional<SmallVector<Value, 1>>
+fuseTensorOps(PatternRewriter &rewriter, Operation *consumer,
+              unsigned consumerIdx, OperationFolder *folder = nullptr);
 
 /// Returns the linearized list of all shape dimensions in a `linalgOp`.
 /// Applying the inverse, concatenated loopToOperandRangeMaps to this list

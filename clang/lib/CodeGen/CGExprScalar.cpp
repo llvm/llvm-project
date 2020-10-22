@@ -2241,6 +2241,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_IntegralToFloating:
   case CK_FloatingToIntegral:
   case CK_FloatingCast:
+  case CK_FixedPointToFloating:
+  case CK_FloatingToFixedPoint:
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
   case CK_BooleanToSignedIntegral: {

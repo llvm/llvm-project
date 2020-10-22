@@ -235,42 +235,49 @@ class FLAT_Global_Store_AddTid_Pseudo <string opName, RegisterClass vdataClass,
 
 class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
   bit HasTiedOutput = 0,
-  bit EnableSaddr = 0>: FLAT_Pseudo<
+  bit EnableSaddr = 0,
+  bit EnableVaddr = !not(EnableSaddr)>
+  : FLAT_Pseudo<
   opName,
   (outs regClass:$vdst),
   !con(
-    !if(EnableSaddr,
-        (ins SReg_32_XEXEC_HI:$saddr, flat_offset:$offset),
-        (ins VGPR_32:$vaddr, flat_offset:$offset)),
-    !if(HasTiedOutput, (ins GLC:$glc, SLC:$slc, DLC:$dlc, regClass:$vdst_in),
-                       (ins GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc))),
-  " $vdst, "#!if(EnableSaddr, "off", "$vaddr")#!if(EnableSaddr, ", $saddr", ", off")#"$offset$glc$slc$dlc"> {
+     !if(EnableSaddr,
+       (ins SReg_32_XEXEC_HI:$saddr, flat_offset:$offset),
+       !if(EnableVaddr,
+         (ins VGPR_32:$vaddr, flat_offset:$offset),
+         (ins flat_offset:$offset))),
+     !if(HasTiedOutput, (ins GLC:$glc, SLC:$slc, DLC:$dlc, regClass:$vdst_in),
+                        (ins GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc))),
+  " $vdst, "#!if(EnableVaddr, "$vaddr, ", "off, ")#!if(EnableSaddr, "$saddr", "off")#"$offset$glc$slc$dlc"> {
   let has_data = 0;
   let mayLoad = 1;
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
-  let has_vaddr = !if(EnableSaddr, 0, 1);
-  let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
+  let has_vaddr = EnableVaddr;
+  let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST"));
   let maybeAtomic = 1;
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
 }
 
-class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit EnableSaddr = 0> : FLAT_Pseudo<
+class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit EnableSaddr = 0,
+  bit EnableVaddr = !not(EnableSaddr)> : FLAT_Pseudo<
   opName,
   (outs),
   !if(EnableSaddr,
     (ins vdataClass:$vdata, SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc),
-    (ins vdataClass:$vdata, VGPR_32:$vaddr, flat_offset:$offset, GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc)),
-  " "#!if(EnableSaddr, "off", "$vaddr")#", $vdata, "#!if(EnableSaddr, "$saddr", "off")#"$offset$glc$slc$dlc"> {
+    !if(EnableVaddr,
+      (ins vdataClass:$vdata, VGPR_32:$vaddr, flat_offset:$offset, GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc),
+      (ins vdataClass:$vdata, flat_offset:$offset, GLC_0:$glc, SLC_0:$slc, DLC_0:$dlc))),
+  " "#!if(EnableVaddr, "$vaddr", "off")#", $vdata, "#!if(EnableSaddr, "$saddr", "off")#"$offset$glc$slc$dlc"> {
   let mayLoad  = 0;
   let mayStore = 1;
   let has_vdst = 0;
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
-  let has_vaddr = !if(EnableSaddr, 0, 1);
-  let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
+  let has_vaddr = EnableVaddr;
+  let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST"));
   let maybeAtomic = 1;
 }
 
@@ -278,6 +285,9 @@ multiclass FLAT_Scratch_Load_Pseudo<string opName, RegisterClass regClass, bit H
   let is_flat_scratch = 1 in {
     def "" : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput>;
     def _SADDR : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 1>;
+
+    let SubtargetPredicate = HasFlatScratchSTMode in
+    def _ST  : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 0, 0>;
   }
 }
 
@@ -285,6 +295,9 @@ multiclass FLAT_Scratch_Store_Pseudo<string opName, RegisterClass regClass> {
   let is_flat_scratch = 1 in {
     def "" : FLAT_Scratch_Store_Pseudo<opName, regClass>;
     def _SADDR : FLAT_Scratch_Store_Pseudo<opName, regClass, 1>;
+
+    let SubtargetPredicate = HasFlatScratchSTMode in
+    def _ST  : FLAT_Scratch_Store_Pseudo<opName, regClass, 0, 0>;
   }
 }
 
@@ -1362,6 +1375,13 @@ multiclass FLAT_Real_SADDR_RTN_gfx10<bits<7> op> {
     FLAT_Real_gfx10<op, !cast<FLAT_Pseudo>(NAME#"_SADDR_RTN")>;
 }
 
+multiclass FLAT_Real_ST_gfx10<bits<7> op> {
+  def _ST_gfx10 :
+    FLAT_Real_gfx10<op, !cast<FLAT_Pseudo>(NAME#"_ST")> {
+      let Inst{54-48} = !cast<int>(EXEC_HI.HWEncoding);
+      let OtherPredicates = [HasFlatScratchSTMode];
+    }
+}
 
 multiclass FLAT_Real_AllAddr_gfx10<bits<7> op> :
   FLAT_Real_Base_gfx10<op>,
@@ -1379,6 +1399,11 @@ multiclass FLAT_Real_GlblAtomics_gfx10<bits<7> op> :
 multiclass FLAT_Real_GlblAtomics_RTN_gfx10<bits<7> op> :
   FLAT_Real_RTN_gfx10<op>,
   FLAT_Real_SADDR_RTN_gfx10<op>;
+
+multiclass FLAT_Real_ScratchAllAddr_gfx10<bits<7> op> :
+  FLAT_Real_Base_gfx10<op>,
+  FLAT_Real_SADDR_gfx10<op>,
+  FLAT_Real_ST_gfx10<op>;
 
 // ENC_FLAT.
 defm FLAT_LOAD_UBYTE            : FLAT_Real_Base_gfx10<0x008>;
@@ -1497,28 +1522,28 @@ defm GLOBAL_LOAD_DWORD_ADDTID   : FLAT_Real_Base_gfx10<0x016>;
 defm GLOBAL_STORE_DWORD_ADDTID  : FLAT_Real_Base_gfx10<0x017>;
 
 // ENC_FLAT_SCRATCH.
-defm SCRATCH_LOAD_UBYTE         : FLAT_Real_AllAddr_gfx10<0x008>;
-defm SCRATCH_LOAD_SBYTE         : FLAT_Real_AllAddr_gfx10<0x009>;
-defm SCRATCH_LOAD_USHORT        : FLAT_Real_AllAddr_gfx10<0x00a>;
-defm SCRATCH_LOAD_SSHORT        : FLAT_Real_AllAddr_gfx10<0x00b>;
-defm SCRATCH_LOAD_DWORD         : FLAT_Real_AllAddr_gfx10<0x00c>;
-defm SCRATCH_LOAD_DWORDX2       : FLAT_Real_AllAddr_gfx10<0x00d>;
-defm SCRATCH_LOAD_DWORDX4       : FLAT_Real_AllAddr_gfx10<0x00e>;
-defm SCRATCH_LOAD_DWORDX3       : FLAT_Real_AllAddr_gfx10<0x00f>;
-defm SCRATCH_STORE_BYTE         : FLAT_Real_AllAddr_gfx10<0x018>;
-defm SCRATCH_STORE_BYTE_D16_HI  : FLAT_Real_AllAddr_gfx10<0x019>;
-defm SCRATCH_STORE_SHORT        : FLAT_Real_AllAddr_gfx10<0x01a>;
-defm SCRATCH_STORE_SHORT_D16_HI : FLAT_Real_AllAddr_gfx10<0x01b>;
-defm SCRATCH_STORE_DWORD        : FLAT_Real_AllAddr_gfx10<0x01c>;
-defm SCRATCH_STORE_DWORDX2      : FLAT_Real_AllAddr_gfx10<0x01d>;
-defm SCRATCH_STORE_DWORDX4      : FLAT_Real_AllAddr_gfx10<0x01e>;
-defm SCRATCH_STORE_DWORDX3      : FLAT_Real_AllAddr_gfx10<0x01f>;
-defm SCRATCH_LOAD_UBYTE_D16     : FLAT_Real_AllAddr_gfx10<0x020>;
-defm SCRATCH_LOAD_UBYTE_D16_HI  : FLAT_Real_AllAddr_gfx10<0x021>;
-defm SCRATCH_LOAD_SBYTE_D16     : FLAT_Real_AllAddr_gfx10<0x022>;
-defm SCRATCH_LOAD_SBYTE_D16_HI  : FLAT_Real_AllAddr_gfx10<0x023>;
-defm SCRATCH_LOAD_SHORT_D16     : FLAT_Real_AllAddr_gfx10<0x024>;
-defm SCRATCH_LOAD_SHORT_D16_HI  : FLAT_Real_AllAddr_gfx10<0x025>;
+defm SCRATCH_LOAD_UBYTE         : FLAT_Real_ScratchAllAddr_gfx10<0x008>;
+defm SCRATCH_LOAD_SBYTE         : FLAT_Real_ScratchAllAddr_gfx10<0x009>;
+defm SCRATCH_LOAD_USHORT        : FLAT_Real_ScratchAllAddr_gfx10<0x00a>;
+defm SCRATCH_LOAD_SSHORT        : FLAT_Real_ScratchAllAddr_gfx10<0x00b>;
+defm SCRATCH_LOAD_DWORD         : FLAT_Real_ScratchAllAddr_gfx10<0x00c>;
+defm SCRATCH_LOAD_DWORDX2       : FLAT_Real_ScratchAllAddr_gfx10<0x00d>;
+defm SCRATCH_LOAD_DWORDX4       : FLAT_Real_ScratchAllAddr_gfx10<0x00e>;
+defm SCRATCH_LOAD_DWORDX3       : FLAT_Real_ScratchAllAddr_gfx10<0x00f>;
+defm SCRATCH_STORE_BYTE         : FLAT_Real_ScratchAllAddr_gfx10<0x018>;
+defm SCRATCH_STORE_BYTE_D16_HI  : FLAT_Real_ScratchAllAddr_gfx10<0x019>;
+defm SCRATCH_STORE_SHORT        : FLAT_Real_ScratchAllAddr_gfx10<0x01a>;
+defm SCRATCH_STORE_SHORT_D16_HI : FLAT_Real_ScratchAllAddr_gfx10<0x01b>;
+defm SCRATCH_STORE_DWORD        : FLAT_Real_ScratchAllAddr_gfx10<0x01c>;
+defm SCRATCH_STORE_DWORDX2      : FLAT_Real_ScratchAllAddr_gfx10<0x01d>;
+defm SCRATCH_STORE_DWORDX4      : FLAT_Real_ScratchAllAddr_gfx10<0x01e>;
+defm SCRATCH_STORE_DWORDX3      : FLAT_Real_ScratchAllAddr_gfx10<0x01f>;
+defm SCRATCH_LOAD_UBYTE_D16     : FLAT_Real_ScratchAllAddr_gfx10<0x020>;
+defm SCRATCH_LOAD_UBYTE_D16_HI  : FLAT_Real_ScratchAllAddr_gfx10<0x021>;
+defm SCRATCH_LOAD_SBYTE_D16     : FLAT_Real_ScratchAllAddr_gfx10<0x022>;
+defm SCRATCH_LOAD_SBYTE_D16_HI  : FLAT_Real_ScratchAllAddr_gfx10<0x023>;
+defm SCRATCH_LOAD_SHORT_D16     : FLAT_Real_ScratchAllAddr_gfx10<0x024>;
+defm SCRATCH_LOAD_SHORT_D16_HI  : FLAT_Real_ScratchAllAddr_gfx10<0x025>;
 
 let SubtargetPredicate = HasAtomicFaddInsts in {
 

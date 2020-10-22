@@ -17,12 +17,9 @@ define i1 @and_consts(i32 %k, i32 %c1, i32 %c2) {
 
 define <2 x i1> @and_consts_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @and_consts_vector(
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[K:%.*]], <i32 4, i32 4>
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T1]], zeroinitializer
-; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[K]], <i32 8, i32 8>
-; CHECK-NEXT:    [[T6:%.*]] = icmp eq <2 x i32> [[T5]], zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[T2]], [[T6]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[K:%.*]], <i32 12, i32 12>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], <i32 12, i32 12>
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %t1 = and <2 x i32> <i32 4, i32 4>, %k
   %t2 = icmp eq <2 x i32> %t1, zeroinitializer
@@ -55,12 +52,10 @@ define <2 x i1> @foo1_and_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @foo1_and_vector(
 ; CHECK-NEXT:    [[T:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[C2:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[T]], [[K:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T1]], zeroinitializer
-; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T4]], [[K]]
-; CHECK-NEXT:    [[T6:%.*]] = icmp eq <2 x i32> [[T5]], zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[T2]], [[T6]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
 ;
   %t = shl <2 x i32> <i32 1, i32 1>, %c1
   %t4 = shl <2 x i32> <i32 1, i32 1>, %c2
@@ -99,12 +94,10 @@ define <2 x i1> @foo1_and_commuted_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32>
 ; CHECK-NEXT:    [[K2:%.*]] = mul <2 x i32> [[K:%.*]], [[K]]
 ; CHECK-NEXT:    [[T:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[C2:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[K2]], [[T]]
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T1]], zeroinitializer
-; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T4]], [[K2]]
-; CHECK-NEXT:    [[T6:%.*]] = icmp eq <2 x i32> [[T5]], zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[T2]], [[T6]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[K2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
 ;
   %k2 = mul <2 x i32> %k, %k ; to trick the complexity sorting
   %t = shl <2 x i32> <i32 1, i32 1>, %c1
@@ -133,12 +126,9 @@ define i1 @or_consts(i32 %k, i32 %c1, i32 %c2) {
 
 define <2 x i1> @or_consts_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @or_consts_vector(
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[K:%.*]], <i32 4, i32 4>
-; CHECK-NEXT:    [[T2:%.*]] = icmp ne <2 x i32> [[T1]], zeroinitializer
-; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[K]], <i32 8, i32 8>
-; CHECK-NEXT:    [[T6:%.*]] = icmp ne <2 x i32> [[T5]], zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = and <2 x i1> [[T2]], [[T6]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[K:%.*]], <i32 12, i32 12>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 12, i32 12>
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %t1 = and <2 x i32> <i32 4, i32 4>, %k
   %t2 = icmp ne <2 x i32> %t1, zeroinitializer
@@ -171,12 +161,10 @@ define <2 x i1> @foo1_or_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> %c2) {
 ; CHECK-LABEL: @foo1_or_vector(
 ; CHECK-NEXT:    [[T:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[C2:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[T]], [[K:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = icmp ne <2 x i32> [[T1]], zeroinitializer
-; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T4]], [[K]]
-; CHECK-NEXT:    [[T6:%.*]] = icmp ne <2 x i32> [[T5]], zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = and <2 x i1> [[T2]], [[T6]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i32> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
 ;
   %t = shl <2 x i32> <i32 1, i32 1>, %c1
   %t4 = shl <2 x i32> <i32 1, i32 1>, %c2
@@ -215,12 +203,10 @@ define <2 x i1> @foo1_or_commuted_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i32> 
 ; CHECK-NEXT:    [[K2:%.*]] = mul <2 x i32> [[K:%.*]], [[K]]
 ; CHECK-NEXT:    [[T:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[C2:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[K2]], [[T]]
-; CHECK-NEXT:    [[T2:%.*]] = icmp ne <2 x i32> [[T1]], zeroinitializer
-; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T4]], [[K2]]
-; CHECK-NEXT:    [[T6:%.*]] = icmp ne <2 x i32> [[T5]], zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = and <2 x i1> [[T2]], [[T6]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[K2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i32> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
 ;
   %k2 = mul <2 x i32> %k, %k ; to trick the complexity sorting
   %t = shl <2 x i32> <i32 1, i32 1>, %c1
@@ -256,12 +242,10 @@ define <2 x i1> @foo1_and_signbit_lshr_vector(<2 x i32> %k, <2 x i32> %c1, <2 x 
 ; CHECK-LABEL: @foo1_and_signbit_lshr_vector(
 ; CHECK-NEXT:    [[T:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = lshr <2 x i32> <i32 -2147483648, i32 -2147483648>, [[C2:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[T]], [[K:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq <2 x i32> [[T1]], zeroinitializer
-; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T4]], [[K]]
-; CHECK-NEXT:    [[T6:%.*]] = icmp eq <2 x i32> [[T5]], zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[T2]], [[T6]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
 ;
   %t = shl <2 x i32> <i32 1, i32 1>, %c1
   %t4 = lshr <2 x i32> <i32 -2147483648, i32 -2147483648>, %c2
@@ -296,12 +280,10 @@ define <2 x i1> @foo1_or_signbit_lshr_vector(<2 x i32> %k, <2 x i32> %c1, <2 x i
 ; CHECK-LABEL: @foo1_or_signbit_lshr_vector(
 ; CHECK-NEXT:    [[T:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[C1:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = lshr <2 x i32> <i32 -2147483648, i32 -2147483648>, [[C2:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and <2 x i32> [[T]], [[K:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = icmp ne <2 x i32> [[T1]], zeroinitializer
-; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T4]], [[K]]
-; CHECK-NEXT:    [[T6:%.*]] = icmp ne <2 x i32> [[T5]], zeroinitializer
-; CHECK-NEXT:    [[OR:%.*]] = and <2 x i1> [[T2]], [[T6]]
-; CHECK-NEXT:    ret <2 x i1> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[T]], [[T4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[K:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i32> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
 ;
   %t = shl <2 x i32> <i32 1, i32 1>, %c1
   %t4 = lshr <2 x i32> <i32 -2147483648, i32 -2147483648>, %c2

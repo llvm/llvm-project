@@ -221,18 +221,13 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   // Any DebugInfoKind implies GenDwarfForAssembly.
   Opts.GenDwarfForAssembly = Args.hasArg(OPT_debug_info_kind_EQ);
 
-  if (const Arg *A = Args.getLastArg(OPT_compress_debug_sections,
-                                     OPT_compress_debug_sections_EQ)) {
-    if (A->getOption().getID() == OPT_compress_debug_sections) {
-      Opts.CompressDebugSections = llvm::DebugCompressionType::Z;
-    } else {
-      Opts.CompressDebugSections =
-          llvm::StringSwitch<llvm::DebugCompressionType>(A->getValue())
-              .Case("none", llvm::DebugCompressionType::None)
-              .Case("zlib", llvm::DebugCompressionType::Z)
-              .Case("zlib-gnu", llvm::DebugCompressionType::GNU)
-              .Default(llvm::DebugCompressionType::None);
-    }
+  if (const Arg *A = Args.getLastArg(OPT_compress_debug_sections_EQ)) {
+    Opts.CompressDebugSections =
+        llvm::StringSwitch<llvm::DebugCompressionType>(A->getValue())
+            .Case("none", llvm::DebugCompressionType::None)
+            .Case("zlib", llvm::DebugCompressionType::Z)
+            .Case("zlib-gnu", llvm::DebugCompressionType::GNU)
+            .Default(llvm::DebugCompressionType::None);
   }
 
   Opts.RelaxELFRelocations = Args.hasArg(OPT_mrelax_relocations);

@@ -391,8 +391,8 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
 
     llvm::BasicBlock *codeGenIPBB = codeGenIP.getBlock();
     llvm::Instruction *codeGenIPBBTI = codeGenIPBB->getTerminator();
+    ompContinuationIPStack.push_back(&continuationIP);
 
-    builder.SetInsertPoint(codeGenIPBB);
     // ParallelOp has only `1` region associated with it.
     auto &region = cast<omp::ParallelOp>(opInst).getRegion();
     for (auto &bb : region) {
@@ -407,22 +407,22 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
     for (auto indexedBB : llvm::enumerate(blocks)) {
       Block *bb = indexedBB.value();
       llvm::BasicBlock *curLLVMBB = blockMapping[bb];
-      if (bb->isEntryBlock())
+      if (bb->isEntryBlock()) {
+        assert(codeGenIPBBTI->getNumSuccessors() == 1 &&
+               "OpenMPIRBuilder provided entry block has multiple successors");
+        assert(codeGenIPBBTI->getSuccessor(0) == &continuationIP &&
+               "ContinuationIP is not the successor of OpenMPIRBuilder "
+               "provided entry block");
         codeGenIPBBTI->setSuccessor(0, curLLVMBB);
+      }
 
       // TODO: Error not returned up the hierarchy
       if (failed(convertBlock(*bb, /*ignoreArguments=*/indexedBB.index() == 0)))
         return;
-
-      // If this block has the terminator then add a jump to
-      // continuation bb
-      for (auto &op : *bb) {
-        if (isa<omp::TerminatorOp>(op)) {
-          builder.SetInsertPoint(curLLVMBB);
-          builder.CreateBr(&continuationIP);
-        }
-      }
     }
+
+    ompContinuationIPStack.pop_back();
+
     // Finally, after all blocks have been traversed and values mapped,
     // connect the PHI nodes to the results of preceding blocks.
     connectPHINodes(region, valueMapping, blockMapping);
@@ -498,7 +498,10 @@ ModuleTranslation::convertOmpOperation(Operation &opInst,
         ompBuilder->CreateFlush(builder.saveIP());
         return success();
       })
-      .Case([&](omp::TerminatorOp) { return success(); })
+      .Case([&](omp::TerminatorOp) {
+        builder.CreateBr(ompContinuationIPStack.back());
+        return success();
+      })
       .Case(
           [&](omp::ParallelOp) { return convertOmpParallel(opInst, builder); })
       .Default([&](Operation *inst) {

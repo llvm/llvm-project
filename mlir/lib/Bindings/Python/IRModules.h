@@ -113,7 +113,8 @@ public:
 
   /// Creates a PyMlirContext from the MlirContext wrapped by a capsule.
   /// Note that PyMlirContext instances are uniqued, so the returned object
-  /// may be a pre-existing object.
+  /// may be a pre-existing object. Ownership of the underlying MlirContext
+  /// is taken by calling this function.
   static pybind11::object createFromCapsule(pybind11::object capsule);
 
   /// Gets the count of live context objects. Used for testing.
@@ -122,6 +123,10 @@ public:
   /// Gets the count of live operations associated with this context.
   /// Used for testing.
   size_t getLiveOperationCount();
+
+  /// Gets the count of live modules associated with this context.
+  /// Used for testing.
+  size_t getLiveModuleCount();
 
   /// Creates an operation. See corresponding python docstring.
   pybind11::object
@@ -142,6 +147,14 @@ private:
   using LiveContextMap = llvm::DenseMap<void *, PyMlirContext *>;
   static LiveContextMap &getLiveContexts();
 
+  // Interns all live modules associated with this context. Modules tracked
+  // in this map are valid. When a module is invalidated, it is removed
+  // from this map, and while it still exists as an instance, any
+  // attempt to access it will raise an error.
+  using LiveModuleMap =
+      llvm::DenseMap<const void *, std::pair<pybind11::handle, PyModule *>>;
+  LiveModuleMap liveModules;
+
   // Interns all live operations associated with this context. Operations
   // tracked in this map are valid. When an operation is invalidated, it is
   // removed from this map, and while it still exists as an instance, any
@@ -151,6 +164,7 @@ private:
   LiveOperationMap liveOperations;
 
   MlirContext context;
+  friend class PyModule;
   friend class PyOperation;
 };
 
@@ -186,13 +200,12 @@ class PyModule;
 using PyModuleRef = PyObjectRef<PyModule>;
 class PyModule : public BaseContextObject {
 public:
-  /// Creates a reference to the module
-  static PyModuleRef create(PyMlirContextRef contextRef, MlirModule module);
+  /// Returns a PyModule reference for the given MlirModule. This may return
+  /// a pre-existing or new object.
+  static PyModuleRef forModule(MlirModule module);
   PyModule(PyModule &) = delete;
-  ~PyModule() {
-    if (module.ptr)
-      mlirModuleDestroy(module);
-  }
+  PyModule(PyMlirContext &&) = delete;
+  ~PyModule();
 
   /// Gets the backing MlirModule.
   MlirModule get() { return module; }
@@ -209,9 +222,14 @@ public:
   /// instances, which is not currently done.
   pybind11::object getCapsule();
 
+  /// Creates a PyModule from the MlirModule wrapped by a capsule.
+  /// Note that PyModule instances are uniqued, so the returned object
+  /// may be a pre-existing object. Ownership of the underlying MlirModule
+  /// is taken by calling this function.
+  static pybind11::object createFromCapsule(pybind11::object capsule);
+
 private:
-  PyModule(PyMlirContextRef contextRef, MlirModule module)
-      : BaseContextObject(std::move(contextRef)), module(module) {}
+  PyModule(PyMlirContextRef contextRef, MlirModule module);
   MlirModule module;
   pybind11::handle handle;
 };

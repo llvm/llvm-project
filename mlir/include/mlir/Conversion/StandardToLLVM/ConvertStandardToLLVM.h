@@ -470,6 +470,10 @@ protected:
   Value getSizeInBytes(Location loc, Type type,
                        ConversionPatternRewriter &rewriter) const;
 
+  /// Computes total number of elements for the given shape.
+  Value getNumElements(Location loc, ArrayRef<Value> shape,
+                       ConversionPatternRewriter &rewriter) const;
+
   /// Computes total size in bytes of to store the given shape.
   Value getCumulativeSizeInBytes(Location loc, Type elementType,
                                  ArrayRef<Value> shape,

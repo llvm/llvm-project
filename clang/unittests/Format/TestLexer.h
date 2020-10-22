@@ -62,8 +62,8 @@ public:
   TokenList lex(llvm::StringRef Code) {
     Buffers.push_back(
         llvm::MemoryBuffer::getMemBufferCopy(Code, "<scratch space>"));
-    clang::FileID FID = SourceMgr.get().createFileID(SourceManager::Unowned,
-                                                     Buffers.back().get());
+    clang::FileID FID =
+        SourceMgr.get().createFileID(Buffers.back()->getMemBufferRef());
     FormatTokenLexer Lex(SourceMgr.get(), FID, 0, Style, Encoding, Allocator,
                          IdentTable);
     auto Result = Lex.lex();

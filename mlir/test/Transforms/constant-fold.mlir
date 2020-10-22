@@ -744,3 +744,12 @@ func @splat_fold() -> (vector<4xf32>, tensor<4xf32>) {
   // CHECK-NEXT: [[T:%.*]] = constant dense<1.000000e+00> : tensor<4xf32>
   // CHECK-NEXT: return [[V]], [[T]] : vector<4xf32>, tensor<4xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @subview_scalar_fold
+func @subview_scalar_fold(%arg0: memref<f32>) -> memref<f32> {
+  // CHECK-NOT: subview
+  %c = subview %arg0[] [] [] : memref<f32> to memref<f32>
+  return %c : memref<f32>
+}

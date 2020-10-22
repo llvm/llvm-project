@@ -178,23 +178,23 @@ func @contains_regions(%cond : i1) {
 // block is used in another.
 
 // CHECK-LABEL: func @mismatch_loop(
-// CHECK-SAME: %[[ARG:.*]]: i1
-func @mismatch_loop(%cond : i1) {
-  // CHECK: cond_br %{{.*}}, ^bb1(%[[ARG]] : i1), ^bb2
+// CHECK-SAME: %[[ARG:.*]]: i1, %[[ARG2:.*]]: i1
+func @mismatch_loop(%cond : i1, %cond2 : i1) {
+  // CHECK: cond_br %{{.*}}, ^bb1(%[[ARG2]] : i1), ^bb2
 
   cond_br %cond, ^bb2, ^bb3
 
 ^bb1:
-  // CHECK: ^bb1(%[[ARG2:.*]]: i1):
+  // CHECK: ^bb1(%[[ARG3:.*]]: i1):
   // CHECK-NEXT: %[[LOOP_CARRY:.*]] = "foo.op"
-  // CHECK-NEXT: cond_br %[[ARG2]], ^bb1(%[[LOOP_CARRY]] : i1), ^bb2
+  // CHECK-NEXT: cond_br %[[ARG3]], ^bb1(%[[LOOP_CARRY]] : i1), ^bb2
 
   %ignored = "foo.op"() : () -> (i1)
-  cond_br %cond2, ^bb1, ^bb3
+  cond_br %cond3, ^bb1, ^bb3
 
 ^bb2:
-  %cond2 = "foo.op"() : () -> (i1)
-  cond_br %cond, ^bb1, ^bb3
+  %cond3 = "foo.op"() : () -> (i1)
+  cond_br %cond2, ^bb1, ^bb3
 
 ^bb3:
   // CHECK: ^bb2:

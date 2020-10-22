@@ -55,7 +55,9 @@
 using namespace llvm;
 
 ARMBaseRegisterInfo::ARMBaseRegisterInfo()
-    : ARMGenRegisterInfo(ARM::LR, 0, 0, ARM::PC) {}
+    : ARMGenRegisterInfo(ARM::LR, 0, 0, ARM::PC) {
+  ARM_MC::initLLVMToCVRegMapping(this);
+}
 
 static unsigned getFramePointerReg(const ARMSubtarget &STI) {
   return STI.useR7AsFramePointer() ? ARM::R7 : ARM::R11;

@@ -1133,7 +1133,7 @@ public:
       // AsmParser::parseDirectiveSet() cannot be specialized for specific target.
       AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
       MCContext &Ctx = getContext();
-      if (ISA.Major >= 6 && AMDGPU::IsaInfo::hasCodeObjectV3(&getSTI())) {
+      if (ISA.Major >= 6 && isHsaAbiVersion3(&getSTI())) {
         MCSymbol *Sym =
             Ctx.getOrCreateSymbol(Twine(".amdgcn.gfx_generation_number"));
         Sym->setVariableValue(MCConstantExpr::create(ISA.Major, Ctx));
@@ -1150,7 +1150,7 @@ public:
         Sym = Ctx.getOrCreateSymbol(Twine(".option.machine_version_stepping"));
         Sym->setVariableValue(MCConstantExpr::create(ISA.Stepping, Ctx));
       }
-      if (ISA.Major >= 6 && AMDGPU::IsaInfo::hasCodeObjectV3(&getSTI())) {
+      if (ISA.Major >= 6 && isHsaAbiVersion3(&getSTI())) {
         initializeGprCountSymbol(IS_VGPR);
         initializeGprCountSymbol(IS_SGPR);
       } else
@@ -2499,7 +2499,7 @@ AMDGPUAsmParser::parseRegister(bool RestoreOnFailure) {
   if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth)) {
     return nullptr;
   }
-  if (AMDGPU::IsaInfo::hasCodeObjectV3(&getSTI())) {
+  if (isHsaAbiVersion3(&getSTI())) {
     if (!updateGprCountSymbols(RegKind, RegNum, RegWidth))
       return nullptr;
   } else
@@ -4458,8 +4458,8 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUHsaKernel() {
   getTargetStreamer().EmitAMDGPUSymbolType(KernelName,
                                            ELF::STT_AMDGPU_HSA_KERNEL);
   Lex();
-  if (!AMDGPU::IsaInfo::hasCodeObjectV3(&getSTI()))
-    KernelScope.initialize(getContext());
+
+  KernelScope.initialize(getContext());
   return false;
 }
 
@@ -4492,7 +4492,7 @@ bool AMDGPUAsmParser::ParseDirectiveHSAMetadata() {
   const char *AssemblerDirectiveBegin;
   const char *AssemblerDirectiveEnd;
   std::tie(AssemblerDirectiveBegin, AssemblerDirectiveEnd) =
-      AMDGPU::IsaInfo::hasCodeObjectV3(&getSTI())
+      isHsaAbiVersion3(&getSTI())
           ? std::make_tuple(HSAMD::V3::AssemblerDirectiveBegin,
                             HSAMD::V3::AssemblerDirectiveEnd)
           : std::make_tuple(HSAMD::AssemblerDirectiveBegin,
@@ -4509,7 +4509,7 @@ bool AMDGPUAsmParser::ParseDirectiveHSAMetadata() {
                           HSAMetadataString))
     return true;
 
-  if (IsaInfo::hasCodeObjectV3(&getSTI())) {
+  if (isHsaAbiVersion3(&getSTI())) {
     if (!getTargetStreamer().EmitHSAMetadataV3(HSAMetadataString))
       return Error(getParser().getTok().getLoc(), "invalid HSA metadata");
   } else {
@@ -4666,7 +4666,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPULDS() {
 bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getString();
 
-  if (AMDGPU::IsaInfo::hasCodeObjectV3(&getSTI())) {
+  if (isHsaAbiVersion3(&getSTI())) {
     if (IDVal == ".amdgcn_target")
       return ParseDirectiveAMDGCNTarget();
 
@@ -6903,6 +6903,7 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
       Opc == AMDGPU::V_MAC_F16_e64_vi ||
       Opc == AMDGPU::V_FMAC_F32_e64_gfx10 ||
       Opc == AMDGPU::V_FMAC_F32_e64_vi ||
+      Opc == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
       Opc == AMDGPU::V_FMAC_F16_e64_gfx10) {
     auto it = Inst.begin();
     std::advance(it, AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers));

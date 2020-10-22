@@ -140,13 +140,13 @@ public:
   /// successors.
   struct LiveInReg {
     /// The virtual register required, or a register unit.
-    unsigned Reg;
+    Register Reg;
 
     /// For virtual registers: Minimum height of the defining instruction.
     /// For regunits: Height of the highest user in the trace.
     unsigned Height;
 
-    LiveInReg(unsigned Reg, unsigned Height = 0) : Reg(Reg), Height(Height) {}
+    LiveInReg(Register Reg, unsigned Height = 0) : Reg(Reg), Height(Height) {}
   };
 
   /// Per-basic block information that relates to a specific trace through the

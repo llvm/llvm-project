@@ -34,14 +34,14 @@ struct coro {
 };
 
 // Verify that the NRVO is applied to the Gro object.
-// CHECK-LABEL: define void @_Z1fi(%struct.coro* noalias sret align 8 %agg.result, i32 %0)
+// CHECK-LABEL: define void @_Z1fi(%struct.coro* noalias sret(%struct.coro) align 8 %agg.result, i32 %0)
 coro f(int) {
 // CHECK: %call = call noalias nonnull i8* @_Znwm(
 // CHECK-NEXT: br label %[[CoroInit:.*]]
 
 // CHECK: {{.*}}[[CoroInit]]:
 // CHECK: store i1 false, i1* %gro.active
-// CHECK: call void @{{.*get_return_objectEv}}(%struct.coro* sret align 8 %agg.result
+// CHECK: call void @{{.*get_return_objectEv}}(%struct.coro* sret(%struct.coro) align 8 %agg.result
 // CHECK-NEXT: store i1 true, i1* %gro.active
   co_return;
 }
@@ -65,7 +65,7 @@ struct coro_two {
 };
 
 // Verify that the NRVO is applied to the Gro object.
-// CHECK-LABEL: define void @_Z1hi(%struct.coro_two* noalias sret align 8 %agg.result, i32 %0)
+// CHECK-LABEL: define void @_Z1hi(%struct.coro_two* noalias sret(%struct.coro_two) align 8 %agg.result, i32 %0)
  coro_two h(int) {
 
 // CHECK: %call = call noalias i8* @_ZnwmRKSt9nothrow_t
@@ -73,12 +73,12 @@ struct coro_two {
 // CHECK-NEXT: br i1 %[[CheckNull]], label %[[InitOnSuccess:.*]], label %[[InitOnFailure:.*]]
 
 // CHECK: {{.*}}[[InitOnFailure]]:
-// CHECK-NEXT: call void @{{.*get_return_object_on_allocation_failureEv}}(%struct.coro_two* sret align 8 %agg.result
+// CHECK-NEXT: call void @{{.*get_return_object_on_allocation_failureEv}}(%struct.coro_two* sret(%struct.coro_two) align 8 %agg.result
 // CHECK-NEXT: br label %[[RetLabel:.*]]
 
 // CHECK: {{.*}}[[InitOnSuccess]]:
 // CHECK: store i1 false, i1* %gro.active
-// CHECK: call void @{{.*get_return_objectEv}}(%struct.coro_two* sret align 8 %agg.result
+// CHECK: call void @{{.*get_return_objectEv}}(%struct.coro_two* sret(%struct.coro_two) align 8 %agg.result
 // CHECK-NEXT: store i1 true, i1* %gro.active
 
 // CHECK: [[RetLabel]]:

@@ -10,6 +10,8 @@
 #ifndef __IMMINTRIN_H
 #define __IMMINTRIN_H
 
+#include <x86gprintrin.h>
+
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
     defined(__MMX__)
 #include <mmintrin.h>

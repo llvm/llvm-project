@@ -556,8 +556,8 @@ define void @ptr_iv_v8f16_mult(half* noalias nocapture readonly %A, half* noalia
 ; CHECK-NEXT:    vmov.f16 r1, s0
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
 ; CHECK-NEXT:    adr r2, .LCPI9_1
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:  .LBB9_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q2, [r0, q0, uxtw #1]

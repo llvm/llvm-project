@@ -14,6 +14,8 @@ std::string llvm::wasm::toString(wasm::WasmSymbolType Type) {
     return "WASM_SYMBOL_TYPE_FUNCTION";
   case wasm::WASM_SYMBOL_TYPE_GLOBAL:
     return "WASM_SYMBOL_TYPE_GLOBAL";
+  case wasm::WASM_SYMBOL_TYPE_TABLE:
+    return "WASM_SYMBOL_TYPE_TABLE";
   case wasm::WASM_SYMBOL_TYPE_DATA:
     return "WASM_SYMBOL_TYPE_DATA";
   case wasm::WASM_SYMBOL_TYPE_SECTION:

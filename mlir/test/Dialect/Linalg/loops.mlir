@@ -17,6 +17,8 @@
 // CHECKLOOP-DAG: #[[$convLowerBound:.*]] = affine_map<()[s0] -> (s0 floordiv 2)>
 // CHECKLOOP-DAG: #[[$convUpperBound:.*]] = affine_map<()[s0, s1] -> (s1 + s0 floordiv 2 - s0 + 1)>
 // CHECKLOOP-DAG: #[[$convMap:.*]] = affine_map<(d0, d1)[s0] -> (d0 + d1 - s0 floordiv 2)>
+// CHECKLOOP-DAG: #[[$stride1Dilation1Padding1:.*]] = affine_map<(d0, d1) -> (d0 + d1 - 1)>
+// CHECKLOOP-DAG: #[[$stride1Dilation1Padding2:.*]] = affine_map<(d0, d1) -> (d0 + d1 - 2)>
 
 // CHECKPARALLEL-DAG: #[[$strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 // CHECKPARALLEL-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
@@ -31,6 +33,8 @@
 // CHECKPARALLEL-DAG: #[[$convLowerBound:.*]] = affine_map<()[s0] -> (s0 floordiv 2)>
 // CHECKPARALLEL-DAG: #[[$convUpperBound:.*]] = affine_map<()[s0, s1] -> (s1 + s0 floordiv 2 - s0 + 1)>
 // CHECKPARALLEL-DAG: #[[$convMap:.*]] = affine_map<(d0, d1)[s0] -> (d0 + d1 - s0 floordiv 2)>
+// CHECKPARALLEL-DAG: #[[$stride1Dilation1Padding1:.*]] = affine_map<(d0, d1) -> (d0 + d1 - 1)>
+// CHECKPARALLEL-DAG: #[[$stride1Dilation1Padding2:.*]] = affine_map<(d0, d1) -> (d0 + d1 - 2)>
 
 
 func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
@@ -470,6 +474,102 @@ func @pooling_max(%arg0: memref<?x?xf32>,
 //       CHECKPARALLEL:         %[[RES:.*]] = select %{{.*}}, %{{.*}}, %{{.*}} : f32
 //       CHECKPARALLEL:         store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
 
+func @pooling_max_padding(%arg0: memref<?x?xf32>,
+                          %arg1: memref<?x?xi32>,
+                          %arg2: memref<?x?xf32>) {
+  linalg.pooling_max(%arg0, %arg1, %arg2) { padding = dense<[[2, 2], [1, 1]]> : tensor<2x2xi64> } :
+    memref<?x?xf32>, memref<?x?xi32>, memref<?x?xf32>
+  return
+}
+// CHECKLOOP-LABEL: func @pooling_max_padding
+//       CHECKLOOP:   %[[PAD:.*]] = constant 0xFF800000 : f32
+//       CHECKLOOP:   %[[WX:.*]] = dim %arg1, %c0 : memref<?x?xi32>
+//       CHECKLOOP:   %[[WY:.*]] = dim %arg1, %c1 : memref<?x?xi32>
+//       CHECKLOOP:   %[[OX:.*]] = dim %arg2, %c0 : memref<?x?xf32>
+//       CHECKLOOP:   %[[OY:.*]] = dim %arg2, %c1 : memref<?x?xf32>
+//       CHECKLOOP:   scf.for %{{.*}} = %{{.*}} to %[[OX]] step %{{.*}} {
+//       CHECKLOOP:     scf.for %{{.*}} = %{{.*}} to %[[OY]] step %{{.*}} {
+//       CHECKLOOP:       scf.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECKLOOP:         scf.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECKLOOP:           %[[IX:.*]] = affine.apply #[[$stride1Dilation1Padding2]](%{{.*}}, %{{.*}})
+//       CHECKLOOP:           %[[IY:.*]] = affine.apply #[[$stride1Dilation1Padding1]](%{{.*}}, %{{.*}})
+//       CHECKLOOP:           %[[RHS:.*]] = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+//       CHECKLOOP:           %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[IX]])
+//       CHECKLOOP:           %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[IY]])
+//       CHECKLOOP:           %[[LHS:.*]] = load %{{.*}}[%[[IDX]], %[[IDY]]] : memref<?x?xf32>
+//       CHECKLOOP:           %[[SEL:.*]] = select %{{.*}}, %[[PAD]], %[[LHS]] : f32
+//       CHECKLOOP:           %[[CMP:.*]] = cmpf "ogt", %[[RHS]], %[[SEL]] : f32
+//       CHECKLOOP:           %[[RES:.*]] = select %{{.*}}, %[[RHS]], %[[SEL]] : f32
+//       CHECKLOOP:           store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+
+// CHECKPARALLEL-LABEL: func @pooling_max_padding
+//       CHECKPARALLEL:   %[[PAD:.*]] = constant 0xFF800000 : f32
+//       CHECKPARALLEL:   %[[WX:.*]] = dim %arg1, %c0 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[WY:.*]] = dim %arg1, %c1 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[OX:.*]] = dim %arg2, %c0 : memref<?x?xf32>
+//       CHECKPARALLEL:   %[[OY:.*]] = dim %arg2, %c1 : memref<?x?xf32>
+//       CHECKPARALLEL:   scf.parallel (%{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}) to (%[[OX]], %[[OY]]) step (%{{.*}}, %{{.*}}) {
+//       CHECKPARALLEL:     scf.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECKPARALLEL:       scf.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECKPARALLEL:         %[[IX:.*]] = affine.apply #[[$stride1Dilation1Padding2]](%{{.*}}, %{{.*}})
+//       CHECKPARALLEL:         %[[IY:.*]] = affine.apply #[[$stride1Dilation1Padding1]](%{{.*}}, %{{.*}})
+//       CHECKPARALLEL:         %[[RHS:.*]] = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+//       CHECKPARALLEL:         %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[IX]])
+//       CHECKPARALLEL:         %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[IY]])
+//       CHECKPARALLEL:         %[[LHS:.*]] = load %{{.*}}[%[[IDX]], %[[IDY]]] : memref<?x?xf32>
+//       CHECKPARALLEL:         %[[SEL:.*]] = select %{{.*}}, %[[PAD]], %[[LHS]] : f32
+//       CHECKPARALLEL:         %[[CMP:.*]] = cmpf "ogt", %[[RHS]], %[[SEL]] : f32
+//       CHECKPARALLEL:         %[[RES:.*]] = select %{{.*}}, %[[RHS]], %[[SEL]] : f32
+//       CHECKPARALLEL:         store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+
+func @pooling_max_padding_i32(%arg0: memref<?x?xi32>,
+                              %arg1: memref<?x?xi32>,
+                              %arg2: memref<?x?xi32>) {
+  linalg.pooling_max(%arg0, %arg1, %arg2) { padding = dense<[[2, 2], [1, 1]]> : tensor<2x2xi64> } :
+    memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>
+  return
+}
+// CHECKLOOP-LABEL: func @pooling_max_padding_i32
+//       CHECKLOOP:   %[[PAD:.*]] = constant -2147483648 : i32
+//       CHECKLOOP:   %[[WX:.*]] = dim %arg1, %c0 : memref<?x?xi32>
+//       CHECKLOOP:   %[[WY:.*]] = dim %arg1, %c1 : memref<?x?xi32>
+//       CHECKLOOP:   %[[OX:.*]] = dim %arg2, %c0 : memref<?x?xi32>
+//       CHECKLOOP:   %[[OY:.*]] = dim %arg2, %c1 : memref<?x?xi32>
+//       CHECKLOOP:   scf.for %{{.*}} = %{{.*}} to %[[OX]] step %{{.*}} {
+//       CHECKLOOP:     scf.for %{{.*}} = %{{.*}} to %[[OY]] step %{{.*}} {
+//       CHECKLOOP:       scf.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECKLOOP:         scf.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECKLOOP:           %[[IX:.*]] = affine.apply #[[$stride1Dilation1Padding2]](%{{.*}}, %{{.*}})
+//       CHECKLOOP:           %[[IY:.*]] = affine.apply #[[$stride1Dilation1Padding1]](%{{.*}}, %{{.*}})
+//       CHECKLOOP:           %[[RHS:.*]] = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xi32>
+//       CHECKLOOP:           %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[IX]])
+//       CHECKLOOP:           %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[IY]])
+//       CHECKLOOP:           %[[LHS:.*]] = load %{{.*}}[%[[IDX]], %[[IDY]]] : memref<?x?xi32>
+//       CHECKLOOP:           %[[SEL:.*]] = select %{{.*}}, %[[PAD]], %[[LHS]] : i32
+//       CHECKLOOP:           %[[CMP:.*]] = cmpi "sgt", %[[RHS]], %[[SEL]] : i32
+//       CHECKLOOP:           %[[RES:.*]] = select %{{.*}}, %[[RHS]], %[[SEL]] : i32
+//       CHECKLOOP:           store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xi32>
+
+// CHECKPARALLEL-LABEL: func @pooling_max_padding_i32
+//       CHECKPARALLEL:   %[[PAD:.*]] = constant -2147483648 : i32
+//       CHECKPARALLEL:   %[[WX:.*]] = dim %arg1, %c0 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[WY:.*]] = dim %arg1, %c1 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[OX:.*]] = dim %arg2, %c0 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[OY:.*]] = dim %arg2, %c1 : memref<?x?xi32>
+//       CHECKPARALLEL:   scf.parallel (%{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}) to (%[[OX]], %[[OY]]) step (%{{.*}}, %{{.*}}) {
+//       CHECKPARALLEL:     scf.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECKPARALLEL:       scf.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECKPARALLEL:         %[[IX:.*]] = affine.apply #[[$stride1Dilation1Padding2]](%{{.*}}, %{{.*}})
+//       CHECKPARALLEL:         %[[IY:.*]] = affine.apply #[[$stride1Dilation1Padding1]](%{{.*}}, %{{.*}})
+//       CHECKPARALLEL:         %[[RHS:.*]] = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xi32>
+//       CHECKPARALLEL:         %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[IX]])
+//       CHECKPARALLEL:         %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[IY]])
+//       CHECKPARALLEL:         %[[LHS:.*]] = load %{{.*}}[%[[IDX]], %[[IDY]]] : memref<?x?xi32>
+//       CHECKPARALLEL:         %[[SEL:.*]] = select %{{.*}}, %[[PAD]], %[[LHS]] : i32
+//       CHECKPARALLEL:         %[[CMP:.*]] = cmpi "sgt", %[[RHS]], %[[SEL]] : i32
+//       CHECKPARALLEL:         %[[RES:.*]] = select %{{.*}}, %[[RHS]], %[[SEL]] : i32
+//       CHECKPARALLEL:         store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xi32>
+
 func @pooling_min(%arg0: memref<?x?xf32>,
                   %arg1: memref<?x?xi32>,
                   %arg2: memref<?x?xf32>) {
@@ -508,6 +608,102 @@ func @pooling_min(%arg0: memref<?x?xf32>,
 //       CHECKPARALLEL:         %[[RES:.*]] = select %{{.*}}, %{{.*}}, %{{.*}} : f32
 //       CHECKPARALLEL:         store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
 
+func @pooling_min_padding(%arg0: memref<?x?xf32>,
+                          %arg1: memref<?x?xi32>,
+                          %arg2: memref<?x?xf32>) {
+  linalg.pooling_min(%arg0, %arg1, %arg2) { padding = dense<[[2, 2], [1, 1]]> : tensor<2x2xi64> } :
+    memref<?x?xf32>, memref<?x?xi32>, memref<?x?xf32>
+  return
+}
+// CHECKLOOP-LABEL: func @pooling_min_padding
+//       CHECKLOOP:   %[[PAD:.*]] = constant 0x7F800000 : f32
+//       CHECKLOOP:   %[[WX:.*]] = dim %arg1, %c0 : memref<?x?xi32>
+//       CHECKLOOP:   %[[WY:.*]] = dim %arg1, %c1 : memref<?x?xi32>
+//       CHECKLOOP:   %[[OX:.*]] = dim %arg2, %c0 : memref<?x?xf32>
+//       CHECKLOOP:   %[[OY:.*]] = dim %arg2, %c1 : memref<?x?xf32>
+//       CHECKLOOP:   scf.for %{{.*}} = %{{.*}} to %[[OX]] step %{{.*}} {
+//       CHECKLOOP:     scf.for %{{.*}} = %{{.*}} to %[[OY]] step %{{.*}} {
+//       CHECKLOOP:       scf.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECKLOOP:         scf.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECKLOOP:           %[[IX:.*]] = affine.apply #[[$stride1Dilation1Padding2]](%{{.*}}, %{{.*}})
+//       CHECKLOOP:           %[[IY:.*]] = affine.apply #[[$stride1Dilation1Padding1]](%{{.*}}, %{{.*}})
+//       CHECKLOOP:           %[[RHS:.*]] = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+//       CHECKLOOP:           %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[IX]])
+//       CHECKLOOP:           %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[IY]])
+//       CHECKLOOP:           %[[LHS:.*]] = load %{{.*}}[%[[IDX]], %[[IDY]]] : memref<?x?xf32>
+//       CHECKLOOP:           %[[SEL:.*]] = select %{{.*}}, %[[PAD]], %[[LHS]] : f32
+//       CHECKLOOP:           %[[CMP:.*]] = cmpf "olt", %[[RHS]], %[[SEL]] : f32
+//       CHECKLOOP:           %[[RES:.*]] = select %{{.*}}, %[[RHS]], %[[SEL]] : f32
+//       CHECKLOOP:           store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+
+// CHECKPARALLEL-LABEL: func @pooling_min_padding
+//       CHECKPARALLEL:   %[[PAD:.*]] = constant 0x7F800000 : f32
+//       CHECKPARALLEL:   %[[WX:.*]] = dim %arg1, %c0 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[WY:.*]] = dim %arg1, %c1 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[OX:.*]] = dim %arg2, %c0 : memref<?x?xf32>
+//       CHECKPARALLEL:   %[[OY:.*]] = dim %arg2, %c1 : memref<?x?xf32>
+//       CHECKPARALLEL:   scf.parallel (%{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}) to (%[[OX]], %[[OY]]) step (%{{.*}}, %{{.*}}) {
+//       CHECKPARALLEL:     scf.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECKPARALLEL:       scf.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECKPARALLEL:         %[[IX:.*]] = affine.apply #[[$stride1Dilation1Padding2]](%{{.*}}, %{{.*}})
+//       CHECKPARALLEL:         %[[IY:.*]] = affine.apply #[[$stride1Dilation1Padding1]](%{{.*}}, %{{.*}})
+//       CHECKPARALLEL:         %[[RHS:.*]] = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+//       CHECKPARALLEL:         %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[IX]])
+//       CHECKPARALLEL:         %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[IY]])
+//       CHECKPARALLEL:         %[[LHS:.*]] = load %{{.*}}[%[[IDX]], %[[IDY]]] : memref<?x?xf32>
+//       CHECKPARALLEL:         %[[SEL:.*]] = select %{{.*}}, %[[PAD]], %[[LHS]] : f32
+//       CHECKPARALLEL:         %[[CMP:.*]] = cmpf "olt", %[[RHS]], %[[SEL]] : f32
+//       CHECKPARALLEL:         %[[RES:.*]] = select %{{.*}}, %[[RHS]], %[[SEL]] : f32
+//       CHECKPARALLEL:         store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+
+func @pooling_min_padding_i32(%arg0: memref<?x?xi32>,
+                              %arg1: memref<?x?xi32>,
+                              %arg2: memref<?x?xi32>) {
+  linalg.pooling_min(%arg0, %arg1, %arg2) { padding = dense<[[2, 2], [1, 1]]> : tensor<2x2xi64> } :
+    memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>
+  return
+}
+// CHECKLOOP-LABEL: func @pooling_min_padding_i32
+//       CHECKLOOP:   %[[PAD:.*]] = constant 2147483647 : i32
+//       CHECKLOOP:   %[[WX:.*]] = dim %arg1, %c0 : memref<?x?xi32>
+//       CHECKLOOP:   %[[WY:.*]] = dim %arg1, %c1 : memref<?x?xi32>
+//       CHECKLOOP:   %[[OX:.*]] = dim %arg2, %c0 : memref<?x?xi32>
+//       CHECKLOOP:   %[[OY:.*]] = dim %arg2, %c1 : memref<?x?xi32>
+//       CHECKLOOP:   scf.for %{{.*}} = %{{.*}} to %[[OX]] step %{{.*}} {
+//       CHECKLOOP:     scf.for %{{.*}} = %{{.*}} to %[[OY]] step %{{.*}} {
+//       CHECKLOOP:       scf.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECKLOOP:         scf.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECKLOOP:           %[[IX:.*]] = affine.apply #[[$stride1Dilation1Padding2]](%{{.*}}, %{{.*}})
+//       CHECKLOOP:           %[[IY:.*]] = affine.apply #[[$stride1Dilation1Padding1]](%{{.*}}, %{{.*}})
+//       CHECKLOOP:           %[[RHS:.*]] = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xi32>
+//       CHECKLOOP:           %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[IX]])
+//       CHECKLOOP:           %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[IY]])
+//       CHECKLOOP:           %[[LHS:.*]] = load %{{.*}}[%[[IDX]], %[[IDY]]] : memref<?x?xi32>
+//       CHECKLOOP:           %[[SEL:.*]] = select %{{.*}}, %[[PAD]], %[[LHS]] : i32
+//       CHECKLOOP:           %[[CMP:.*]] = cmpi "slt", %[[RHS]], %[[SEL]] : i32
+//       CHECKLOOP:           %[[RES:.*]] = select %{{.*}}, %[[RHS]], %[[SEL]] : i32
+//       CHECKLOOP:           store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xi32>
+
+// CHECKPARALLEL-LABEL: func @pooling_min_padding_i32
+//       CHECKPARALLEL:   %[[PAD:.*]] = constant 2147483647 : i32
+//       CHECKPARALLEL:   %[[WX:.*]] = dim %arg1, %c0 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[WY:.*]] = dim %arg1, %c1 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[OX:.*]] = dim %arg2, %c0 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[OY:.*]] = dim %arg2, %c1 : memref<?x?xi32>
+//       CHECKPARALLEL:   scf.parallel (%{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}) to (%[[OX]], %[[OY]]) step (%{{.*}}, %{{.*}}) {
+//       CHECKPARALLEL:     scf.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECKPARALLEL:       scf.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECKPARALLEL:         %[[IX:.*]] = affine.apply #[[$stride1Dilation1Padding2]](%{{.*}}, %{{.*}})
+//       CHECKPARALLEL:         %[[IY:.*]] = affine.apply #[[$stride1Dilation1Padding1]](%{{.*}}, %{{.*}})
+//       CHECKPARALLEL:         %[[RHS:.*]] = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xi32>
+//       CHECKPARALLEL:         %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[IX]])
+//       CHECKPARALLEL:         %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[IY]])
+//       CHECKPARALLEL:         %[[LHS:.*]] = load %{{.*}}[%[[IDX]], %[[IDY]]] : memref<?x?xi32>
+//       CHECKPARALLEL:         %[[SEL:.*]] = select %{{.*}}, %[[PAD]], %[[LHS]] : i32
+//       CHECKPARALLEL:         %[[CMP:.*]] = cmpi "slt", %[[RHS]], %[[SEL]] : i32
+//       CHECKPARALLEL:         %[[RES:.*]] = select %{{.*}}, %[[RHS]], %[[SEL]] : i32
+//       CHECKPARALLEL:         store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xi32>
+
 func @pooling_sum(%arg0: memref<?x?xf32>,
                   %arg1: memref<?x?xi32>,
                   %arg2: memref<?x?xf32>) {
@@ -545,6 +741,98 @@ func @pooling_sum(%arg0: memref<?x?xf32>,
 //       CHECKPARALLEL:         %[[LHS:.*]] = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
 //       CHECKPARALLEL:         %[[RES:.*]] = addf %[[LHS]], %[[RHS]] : f32
 //       CHECKPARALLEL:         store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+
+func @pooling_sum_padding(%arg0: memref<?x?xf32>,
+                          %arg1: memref<?x?xi32>,
+                          %arg2: memref<?x?xf32>) {
+  linalg.pooling_sum(%arg0, %arg1, %arg2) { padding = dense<[[2, 2], [1, 1]]> : tensor<2x2xi64> } :
+    memref<?x?xf32>, memref<?x?xi32>, memref<?x?xf32>
+  return
+}
+// CHECKLOOP-LABEL: func @pooling_sum_padding
+//       CHECKLOOP:   %[[PAD:.*]] = constant 0.000000e+00 : f32
+//       CHECKLOOP:   %[[WX:.*]] = dim %arg1, %c0 : memref<?x?xi32>
+//       CHECKLOOP:   %[[WY:.*]] = dim %arg1, %c1 : memref<?x?xi32>
+//       CHECKLOOP:   %[[OX:.*]] = dim %arg2, %c0 : memref<?x?xf32>
+//       CHECKLOOP:   %[[OY:.*]] = dim %arg2, %c1 : memref<?x?xf32>
+//       CHECKLOOP:   scf.for %{{.*}} = %{{.*}} to %[[OX]] step %{{.*}} {
+//       CHECKLOOP:     scf.for %{{.*}} = %{{.*}} to %[[OY]] step %{{.*}} {
+//       CHECKLOOP:       scf.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECKLOOP:         scf.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECKLOOP:           %[[IX:.*]] = affine.apply #[[$stride1Dilation1Padding2]](%{{.*}}, %{{.*}})
+//       CHECKLOOP:           %[[IY:.*]] = affine.apply #[[$stride1Dilation1Padding1]](%{{.*}}, %{{.*}})
+//       CHECKLOOP:           %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[IX]])
+//       CHECKLOOP:           %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[IY]])
+//       CHECKLOOP:           %[[LHS:.*]] = load %{{.*}}[%[[IDX]], %[[IDY]]] : memref<?x?xf32>
+//       CHECKLOOP:           %[[SEL:.*]] = select %{{.*}}, %[[PAD]], %[[LHS]] : f32
+//       CHECKLOOP:           %[[RHS:.*]] = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+//       CHECKLOOP:           %[[RES:.*]] = addf %[[RHS]], %[[SEL]] : f32
+//       CHECKLOOP:           store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+
+// CHECKPARALLEL-LABEL: func @pooling_sum_padding
+//       CHECKPARALLEL:   %[[PAD:.*]] = constant 0.000000e+00 : f32
+//       CHECKPARALLEL:   %[[WX:.*]] = dim %arg1, %c0 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[WY:.*]] = dim %arg1, %c1 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[OX:.*]] = dim %arg2, %c0 : memref<?x?xf32>
+//       CHECKPARALLEL:   %[[OY:.*]] = dim %arg2, %c1 : memref<?x?xf32>
+//       CHECKPARALLEL:   scf.parallel (%{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}) to (%[[OX]], %[[OY]]) step (%{{.*}}, %{{.*}}) {
+//       CHECKPARALLEL:     scf.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECKPARALLEL:       scf.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECKPARALLEL:         %[[IX:.*]] = affine.apply #[[$stride1Dilation1Padding2]](%{{.*}}, %{{.*}})
+//       CHECKPARALLEL:         %[[IY:.*]] = affine.apply #[[$stride1Dilation1Padding1]](%{{.*}}, %{{.*}})
+//       CHECKPARALLEL:         %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[IX]])
+//       CHECKPARALLEL:         %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[IY]])
+//       CHECKPARALLEL:         %[[LHS:.*]] = load %{{.*}}[%[[IDX]], %[[IDY]]] : memref<?x?xf32>
+//       CHECKPARALLEL:         %[[SEL:.*]] = select %{{.*}}, %[[PAD]], %[[LHS]] : f32
+//       CHECKPARALLEL:         %[[RHS:.*]] = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+//       CHECKPARALLEL:         %[[RES:.*]] = addf %[[RHS]], %[[SEL]] : f32
+//       CHECKPARALLEL:         store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
+
+func @pooling_sum_padding_i32(%arg0: memref<?x?xi32>,
+                              %arg1: memref<?x?xi32>,
+                              %arg2: memref<?x?xi32>) {
+  linalg.pooling_sum(%arg0, %arg1, %arg2) { padding = dense<[[2, 2], [1, 1]]> : tensor<2x2xi64> } :
+    memref<?x?xi32>, memref<?x?xi32>, memref<?x?xi32>
+  return
+}
+// CHECKLOOP-LABEL: func @pooling_sum_padding_i32
+//       CHECKLOOP:   %[[PAD:.*]] = constant 0 : i32
+//       CHECKLOOP:   %[[WX:.*]] = dim %arg1, %c0 : memref<?x?xi32>
+//       CHECKLOOP:   %[[WY:.*]] = dim %arg1, %c1 : memref<?x?xi32>
+//       CHECKLOOP:   %[[OX:.*]] = dim %arg2, %c0 : memref<?x?xi32>
+//       CHECKLOOP:   %[[OY:.*]] = dim %arg2, %c1 : memref<?x?xi32>
+//       CHECKLOOP:   scf.for %{{.*}} = %{{.*}} to %[[OX]] step %{{.*}} {
+//       CHECKLOOP:     scf.for %{{.*}} = %{{.*}} to %[[OY]] step %{{.*}} {
+//       CHECKLOOP:       scf.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECKLOOP:         scf.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECKLOOP:           %[[IX:.*]] = affine.apply #[[$stride1Dilation1Padding2]](%{{.*}}, %{{.*}})
+//       CHECKLOOP:           %[[IY:.*]] = affine.apply #[[$stride1Dilation1Padding1]](%{{.*}}, %{{.*}})
+//       CHECKLOOP:           %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[IX]])
+//       CHECKLOOP:           %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[IY]])
+//       CHECKLOOP:           %[[LHS:.*]] = load %{{.*}}[%[[IDX]], %[[IDY]]] : memref<?x?xi32>
+//       CHECKLOOP:           %[[SEL:.*]] = select %{{.*}}, %[[PAD]], %[[LHS]] : i32
+//       CHECKLOOP:           %[[RHS:.*]] = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xi32>
+//       CHECKLOOP:           %[[RES:.*]] = addi %[[RHS]], %[[SEL]] : i32
+//       CHECKLOOP:           store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xi32>
+
+// CHECKPARALLEL-LABEL: func @pooling_sum_padding_i32
+//       CHECKPARALLEL:   %[[PAD:.*]] = constant 0 : i32
+//       CHECKPARALLEL:   %[[WX:.*]] = dim %arg1, %c0 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[WY:.*]] = dim %arg1, %c1 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[OX:.*]] = dim %arg2, %c0 : memref<?x?xi32>
+//       CHECKPARALLEL:   %[[OY:.*]] = dim %arg2, %c1 : memref<?x?xi32>
+//       CHECKPARALLEL:   scf.parallel (%{{.*}}, %{{.*}}) = (%{{.*}}, %{{.*}}) to (%[[OX]], %[[OY]]) step (%{{.*}}, %{{.*}}) {
+//       CHECKPARALLEL:     scf.for %{{.*}} = %{{.*}} to %[[WX]] step %{{.*}} {
+//       CHECKPARALLEL:       scf.for %{{.*}} = %{{.*}} to %[[WY]] step %{{.*}} {
+//       CHECKPARALLEL:         %[[IX:.*]] = affine.apply #[[$stride1Dilation1Padding2]](%{{.*}}, %{{.*}})
+//       CHECKPARALLEL:         %[[IY:.*]] = affine.apply #[[$stride1Dilation1Padding1]](%{{.*}}, %{{.*}})
+//       CHECKPARALLEL:         %[[IDX:.*]] = affine.max #[[$clampMinMap]](%[[IX]])
+//       CHECKPARALLEL:         %[[IDY:.*]] = affine.max #[[$clampMinMap]](%[[IY]])
+//       CHECKPARALLEL:         %[[LHS:.*]] = load %{{.*}}[%[[IDX]], %[[IDY]]] : memref<?x?xi32>
+//       CHECKPARALLEL:         %[[SEL:.*]] = select %{{.*}}, %[[PAD]], %[[LHS]] : i32
+//       CHECKPARALLEL:         %[[RHS:.*]] = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xi32>
+//       CHECKPARALLEL:         %[[RES:.*]] = addi %[[RHS]], %[[SEL]] : i32
+//       CHECKPARALLEL:         store %[[RES]], %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xi32>
 
 #accesses = [
   affine_map<(i, j, k) -> (i, j)>,

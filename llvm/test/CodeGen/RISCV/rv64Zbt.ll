@@ -109,14 +109,13 @@ declare i32 @llvm.fshl.i32(i32, i32, i32)
 define signext i32 @fshl_i32(i32 signext %a, i32 signext %b, i32 signext %c) nounwind {
 ; RV64I-LABEL: fshl_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a2, a2, 31
-; RV64I-NEXT:    sll a0, a0, a2
-; RV64I-NEXT:    not a2, a2
+; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    srli a1, a1, 1
-; RV64I-NEXT:    srl a1, a1, a2
+; RV64I-NEXT:    srli a1, a1, 32
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    andi a1, a2, 31
+; RV64I-NEXT:    sll a0, a0, a1
+; RV64I-NEXT:    srai a0, a0, 32
 ; RV64I-NEXT:    ret
 ;
 ; RV64IB-LABEL: fshl_i32:
@@ -162,14 +161,12 @@ declare i32 @llvm.fshr.i32(i32, i32, i32)
 define signext i32 @fshr_i32(i32 signext %a, i32 signext %b, i32 signext %c) nounwind {
 ; RV64I-LABEL: fshr_i32:
 ; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
 ; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    andi a2, a2, 31
-; RV64I-NEXT:    ori a3, a2, 32
-; RV64I-NEXT:    srl a1, a1, a3
-; RV64I-NEXT:    slli a0, a0, 1
-; RV64I-NEXT:    xori a2, a2, 31
-; RV64I-NEXT:    sll a0, a0, a2
+; RV64I-NEXT:    srli a1, a1, 32
 ; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    andi a1, a2, 31
+; RV64I-NEXT:    srl a0, a0, a1
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ;

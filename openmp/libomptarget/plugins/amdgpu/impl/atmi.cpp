@@ -35,7 +35,26 @@ atmi_status_t atmi_module_register_from_memory_to_place(
  */
 atmi_status_t atmi_memcpy(hsa_signal_t sig, void *dest, const void *src,
                           size_t size) {
+  hsa_status_t rc = hsa_memory_copy(dest, src, size);
+
+  // hsa_memory_copy sometimes fails in situations where
+  // allocate + copy succeeds. Looks like it might be related to
+  // locking part of a read only segment. Fall back for now.
+  if (rc == HSA_STATUS_SUCCESS) {
+    return ATMI_STATUS_SUCCESS;
+  }
+
   return core::Runtime::Memcpy(sig, dest, src, size);
+}
+
+atmi_status_t atmi_memcpy_h2d(hsa_signal_t sig, void *device_dest,
+                              const void *host_src, size_t size) {
+  return atmi_memcpy(sig, device_dest, host_src, size);
+}
+
+atmi_status_t atmi_memcpy_d2h(hsa_signal_t sig, void *host_dest,
+                              const void *device_src, size_t size) {
+  return atmi_memcpy(sig, host_dest, device_src, size);
 }
 
 atmi_status_t atmi_free(void *ptr) { return core::Runtime::Memfree(ptr); }

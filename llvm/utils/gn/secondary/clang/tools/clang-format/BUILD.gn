@@ -3,10 +3,14 @@ executable("clang-format") {
   deps = [
     "//clang/lib/Basic",
     "//clang/lib/Format",
-    "//clang/lib/Frontend",
     "//clang/lib/Rewrite",
     "//clang/lib/Tooling/Core",
     "//llvm/lib/Support",
+  ]
+  assert_no_deps = [
+    "//clang/lib/AST/",
+    "//clang/lib/Frontend/",
+    "//clang/lib/Sema/",
   ]
   sources = [ "ClangFormat.cpp" ]
 }

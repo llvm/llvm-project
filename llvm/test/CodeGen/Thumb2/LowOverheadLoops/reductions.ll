@@ -451,9 +451,9 @@ define dso_local arm_aapcs_vfpcc i32 @two_loops_mul_add_v4i32(i8* nocapture read
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r6, lsr #2
 ; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    vdup.32 q0, r3
 ; CHECK-NEXT:    vmov.32 q0[0], r12
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB6_5: @ %vector.body46
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
@@ -686,8 +686,8 @@ define i32 @wrongop(%struct.date* nocapture readonly %pd) {
 ; CHECK-NEXT:    mla r2, r4, r3, r2
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vdup.32 q0, r3
-; CHECK-NEXT:    vmov.32 q0[0], r0
 ; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    vmov.32 q0[0], r0
 ; CHECK-NEXT:  .LBB8_6: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r1

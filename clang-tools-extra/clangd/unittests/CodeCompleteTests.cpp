@@ -111,8 +111,6 @@ CodeCompleteResult completions(const TestTU &TU, Position Point,
 
   MockFS FS;
   auto Inputs = TU.inputs(FS);
-  Inputs.Opts.BuildRecoveryAST = true;
-  Inputs.Opts.PreserveRecoveryASTType = true;
   IgnoreDiagnostics Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);
   if (!CI) {
@@ -1100,8 +1098,6 @@ SignatureHelp signatures(llvm::StringRef Text, Position Point,
   MockFS FS;
   auto Inputs = TU.inputs(FS);
   Inputs.Index = Index.get();
-  Inputs.Opts.BuildRecoveryAST = true;
-  Inputs.Opts.PreserveRecoveryASTType = true;
   IgnoreDiagnostics Diags;
   auto CI = buildCompilerInvocation(Inputs, Diags);
   if (!CI) {
@@ -2581,6 +2577,29 @@ TEST(CompletionTest, Lambda) {
   EXPECT_EQ(A.Kind, CompletionItemKind::Variable);
   EXPECT_EQ(A.ReturnType, "float");
   EXPECT_EQ(A.SnippetSuffix, "(${1:int a}, ${2:const double &b})");
+}
+
+TEST(CompletionTest, StructuredBinding) {
+  clangd::CodeCompleteOptions Opts = {};
+
+  auto Results = completions(R"cpp(
+    struct S {
+      using Float = float;
+      int x;
+      Float y;
+    };
+    void function() {
+      const auto &[xxx, yyy] = S{};
+      yyy^
+    }
+  )cpp",
+                             {}, Opts);
+
+  ASSERT_EQ(Results.Completions.size(), 1u);
+  const auto &A = Results.Completions.front();
+  EXPECT_EQ(A.Name, "yyy");
+  EXPECT_EQ(A.Kind, CompletionItemKind::Variable);
+  EXPECT_EQ(A.ReturnType, "const Float");
 }
 
 TEST(CompletionTest, ObjectiveCMethodNoArguments) {

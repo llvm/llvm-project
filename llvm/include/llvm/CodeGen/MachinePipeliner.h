@@ -304,7 +304,7 @@ private:
   void checkValidNodeOrder(const NodeSetType &Circuits) const;
   bool schedulePipeline(SMSchedule &Schedule);
   bool computeDelta(MachineInstr &MI, unsigned &Delta);
-  MachineInstr *findDefInLoop(unsigned Reg);
+  MachineInstr *findDefInLoop(Register Reg);
   bool canUseLastOffsetValue(MachineInstr *MI, unsigned &BasePos,
                              unsigned &OffsetPos, unsigned &NewBase,
                              int64_t &NewOffset);

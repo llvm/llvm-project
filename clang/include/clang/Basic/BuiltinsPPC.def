@@ -422,6 +422,10 @@ BUILTIN(__builtin_altivec_vextduwvrx, "V2ULLiV4UiV4UiUi", "")
 BUILTIN(__builtin_altivec_vextddvlx, "V2ULLiV2ULLiV2ULLiUi", "")
 BUILTIN(__builtin_altivec_vextddvrx, "V2ULLiV2ULLiV2ULLiUi", "")
 
+// P10 Vector rotate built-ins.
+BUILTIN(__builtin_altivec_vrlqmi, "V1ULLLiV1ULLLiV1ULLLiV1ULLLi", "")
+BUILTIN(__builtin_altivec_vrlqnm, "V1ULLLiV1ULLLiV1ULLLi", "")
+
 // VSX built-ins.
 
 BUILTIN(__builtin_vsx_lxvd2x, "V2divC*", "")

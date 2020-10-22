@@ -1585,7 +1585,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Intrinsic::ctlz: {
         computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
         // If we have a known 1, its position is our upper bound.
-        unsigned PossibleLZ = Known2.One.countLeadingZeros();
+        unsigned PossibleLZ = Known2.countMaxLeadingZeros();
         // If this call is undefined for 0, the result will be less than 2^n.
         if (II->getArgOperand(1) == ConstantInt::getTrue(II->getContext()))
           PossibleLZ = std::min(PossibleLZ, BitWidth - 1);
@@ -1596,7 +1596,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Intrinsic::cttz: {
         computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
         // If we have a known 1, its position is our upper bound.
-        unsigned PossibleTZ = Known2.One.countTrailingZeros();
+        unsigned PossibleTZ = Known2.countMaxTrailingZeros();
         // If this call is undefined for 0, the result will be less than 2^n.
         if (II->getArgOperand(1) == ConstantInt::getTrue(II->getContext()))
           PossibleTZ = std::min(PossibleTZ, BitWidth - 1);
@@ -1801,7 +1801,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
     }
     break;
   case Instruction::Freeze:
-    if (isGuaranteedNotToBePoison(I->getOperand(0), Q.CxtI, Q.DT, Depth + 1))
+    if (isGuaranteedNotToBePoison(I->getOperand(0), Q.AC, Q.CxtI, Q.DT,
+                                  Depth + 1))
       computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
     break;
   }
@@ -2255,8 +2256,9 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
       // See the comment for IntToPtr/PtrToInt instructions below.
       if (CE->getOpcode() == Instruction::IntToPtr ||
           CE->getOpcode() == Instruction::PtrToInt)
-        if (Q.DL.getTypeSizeInBits(CE->getOperand(0)->getType()) <=
-            Q.DL.getTypeSizeInBits(CE->getType()))
+        if (Q.DL.getTypeSizeInBits(CE->getOperand(0)->getType())
+                .getFixedSize() <=
+            Q.DL.getTypeSizeInBits(CE->getType()).getFixedSize())
           return isKnownNonZero(CE->getOperand(0), Depth, Q);
     }
 
@@ -2353,16 +2355,16 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
       return isKnownNonZero(BCO->getOperand(0), Depth, Q);
 
     if (auto *I2P = dyn_cast<IntToPtrInst>(V))
-      if (Q.DL.getTypeSizeInBits(I2P->getSrcTy()) <=
-          Q.DL.getTypeSizeInBits(I2P->getDestTy()))
+      if (Q.DL.getTypeSizeInBits(I2P->getSrcTy()).getFixedSize() <=
+          Q.DL.getTypeSizeInBits(I2P->getDestTy()).getFixedSize())
         return isKnownNonZero(I2P->getOperand(0), Depth, Q);
   }
 
   // Similar to int2ptr above, we can look through ptr2int here if the cast
   // is a no-op or an extend and not a truncate.
   if (auto *P2I = dyn_cast<PtrToIntInst>(V))
-    if (Q.DL.getTypeSizeInBits(P2I->getSrcTy()) <=
-        Q.DL.getTypeSizeInBits(P2I->getDestTy()))
+    if (Q.DL.getTypeSizeInBits(P2I->getSrcTy()).getFixedSize() <=
+        Q.DL.getTypeSizeInBits(P2I->getDestTy()).getFixedSize())
       return isKnownNonZero(P2I->getOperand(0), Depth, Q);
 
   unsigned BitWidth = getBitWidth(V->getType()->getScalarType(), Q.DL);
@@ -2516,7 +2518,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
   else if (const FreezeInst *FI = dyn_cast<FreezeInst>(V)) {
     auto *Op = FI->getOperand(0);
     if (isKnownNonZero(Op, Depth, Q) &&
-        isGuaranteedNotToBePoison(Op, Q.CxtI, Q.DT, Depth))
+        isGuaranteedNotToBePoison(Op, Q.AC, Q.CxtI, Q.DT, Depth))
       return true;
   }
 
@@ -3058,11 +3060,11 @@ bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
     if (ComputeMultiple(Op0, Base, Mul0, LookThroughSExt, Depth+1)) {
       if (Constant *Op1C = dyn_cast<Constant>(Op1))
         if (Constant *MulC = dyn_cast<Constant>(Mul0)) {
-          if (Op1C->getType()->getPrimitiveSizeInBits() <
-              MulC->getType()->getPrimitiveSizeInBits())
+          if (Op1C->getType()->getPrimitiveSizeInBits().getFixedSize() <
+              MulC->getType()->getPrimitiveSizeInBits().getFixedSize())
             Op1C = ConstantExpr::getZExt(Op1C, MulC->getType());
-          if (Op1C->getType()->getPrimitiveSizeInBits() >
-              MulC->getType()->getPrimitiveSizeInBits())
+          if (Op1C->getType()->getPrimitiveSizeInBits().getFixedSize() >
+              MulC->getType()->getPrimitiveSizeInBits().getFixedSize())
             MulC = ConstantExpr::getZExt(MulC, Op1C->getType());
 
           // V == Base * (Mul0 * Op1), so return (Mul0 * Op1)
@@ -3082,11 +3084,11 @@ bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
     if (ComputeMultiple(Op1, Base, Mul1, LookThroughSExt, Depth+1)) {
       if (Constant *Op0C = dyn_cast<Constant>(Op0))
         if (Constant *MulC = dyn_cast<Constant>(Mul1)) {
-          if (Op0C->getType()->getPrimitiveSizeInBits() <
-              MulC->getType()->getPrimitiveSizeInBits())
+          if (Op0C->getType()->getPrimitiveSizeInBits().getFixedSize() <
+              MulC->getType()->getPrimitiveSizeInBits().getFixedSize())
             Op0C = ConstantExpr::getZExt(Op0C, MulC->getType());
-          if (Op0C->getType()->getPrimitiveSizeInBits() >
-              MulC->getType()->getPrimitiveSizeInBits())
+          if (Op0C->getType()->getPrimitiveSizeInBits().getFixedSize() >
+              MulC->getType()->getPrimitiveSizeInBits().getFixedSize())
             MulC = ConstantExpr::getZExt(MulC, Op0C->getType());
 
           // V == Base * (Mul1 * Op0), so return (Mul1 * Op0)
@@ -4816,6 +4818,7 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
                                             bool PoisonOnly);
 
 static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
+                                             AssumptionCache *AC,
                                              const Instruction *CtxI,
                                              const DominatorTree *DT,
                                              unsigned Depth, bool PoisonOnly) {
@@ -4857,7 +4860,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
     return true;
 
   auto OpCheck = [&](const Value *V) {
-    return isGuaranteedNotToBeUndefOrPoison(V, CtxI, DT, Depth + 1, PoisonOnly);
+    return isGuaranteedNotToBeUndefOrPoison(V, AC, CtxI, DT, Depth + 1,
+                                            PoisonOnly);
   };
 
   if (auto *Opr = dyn_cast<Operator>(V)) {
@@ -4876,8 +4880,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
       bool IsWellDefined = true;
       for (unsigned i = 0; i < Num; ++i) {
         auto *TI = PN->getIncomingBlock(i)->getTerminator();
-        if (!isGuaranteedNotToBeUndefOrPoison(PN->getIncomingValue(i), TI, DT,
-                                              Depth + 1, PoisonOnly)) {
+        if (!isGuaranteedNotToBeUndefOrPoison(PN->getIncomingValue(i), AC, TI,
+                                              DT, Depth + 1, PoisonOnly)) {
           IsWellDefined = false;
           break;
         }
@@ -4887,6 +4891,10 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
     } else if (!canCreateUndefOrPoison(Opr) && all_of(Opr->operands(), OpCheck))
       return true;
   }
+
+  if (auto *I = dyn_cast<LoadInst>(V))
+    if (I->getMetadata(LLVMContext::MD_noundef))
+      return true;
 
   if (programUndefinedIfUndefOrPoison(V, PoisonOnly))
     return true;
@@ -4932,19 +4940,24 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
     Dominator = Dominator->getIDom();
   }
 
+  SmallVector<Attribute::AttrKind, 2> AttrKinds{Attribute::NoUndef};
+  if (getKnowledgeValidInContext(V, AttrKinds, CtxI, DT, AC))
+    return true;
+
   return false;
 }
 
-bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
+bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V, AssumptionCache *AC,
                                             const Instruction *CtxI,
                                             const DominatorTree *DT,
                                             unsigned Depth) {
-  return ::isGuaranteedNotToBeUndefOrPoison(V, CtxI, DT, Depth, false);
+  return ::isGuaranteedNotToBeUndefOrPoison(V, AC, CtxI, DT, Depth, false);
 }
 
-bool llvm::isGuaranteedNotToBePoison(const Value *V, const Instruction *CtxI,
+bool llvm::isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC,
+                                     const Instruction *CtxI,
                                      const DominatorTree *DT, unsigned Depth) {
-  return ::isGuaranteedNotToBeUndefOrPoison(V, CtxI, DT, Depth, true);
+  return ::isGuaranteedNotToBeUndefOrPoison(V, AC, CtxI, DT, Depth, true);
 }
 
 OverflowResult llvm::computeOverflowForSignedAdd(const AddOperator *Add,
