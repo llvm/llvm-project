@@ -1254,6 +1254,21 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   }
   Opts.SSPBufferSize =
       getLastArgIntValue(Args, OPT_stack_protector_buffer_size, 8, Diags);
+
+  Opts.StackProtectorGuard =
+      std::string(Args.getLastArgValue(OPT_mstack_protector_guard_EQ));
+
+  if (Arg *A = Args.getLastArg(OPT_mstack_protector_guard_offset_EQ)) {
+    StringRef Val = A->getValue();
+    unsigned Offset = Opts.StackProtectorGuardOffset;
+    Val.getAsInteger(10, Offset);
+    Opts.StackProtectorGuardOffset = Offset;
+  }
+
+  Opts.StackProtectorGuardReg =
+      std::string(Args.getLastArgValue(OPT_mstack_protector_guard_reg_EQ,
+                                       "none"));
+
   Opts.StackRealignment = Args.hasArg(OPT_mstackrealign);
   if (Arg *A = Args.getLastArg(OPT_mstack_alignment)) {
     StringRef Val = A->getValue();

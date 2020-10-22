@@ -2469,13 +2469,23 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilder<> &IRB) const {
       // <zircon/tls.h> defines ZX_TLS_STACK_GUARD_OFFSET with this value.
       return SegmentOffset(IRB, 0x10, getAddressSpace());
     } else {
+      unsigned AddressSpace = getAddressSpace();
+      // Specially, some users may customize the base reg and offset.
+      unsigned Offset = getTargetMachine().Options.StackProtectorGuardOffset;
+      // If we don't set -stack-protector-guard-offset value:
       // %fs:0x28, unless we're using a Kernel code model, in which case
       // it's %gs:0x28.  gs:0x14 on i386.
-      unsigned Offset = (Subtarget.is64Bit()) ? 0x28 : 0x14;
-      return SegmentOffset(IRB, Offset, getAddressSpace());
+      if (Offset == (unsigned)-1)
+        Offset = (Subtarget.is64Bit()) ? 0x28 : 0x14;
+
+      auto GuardReg = getTargetMachine().Options.StackProtectorGuardReg;
+        if (GuardReg == "fs")
+          AddressSpace = X86AS::FS;
+        else if (GuardReg == "gs")
+          AddressSpace = X86AS::GS;
+      return SegmentOffset(IRB, Offset, AddressSpace);
     }
   }
-
   return TargetLowering::getIRStackGuard(IRB);
 }
 
@@ -2497,8 +2507,13 @@ void X86TargetLowering::insertSSPDeclarations(Module &M) const {
     }
     return;
   }
+
+  auto GuardMode = getTargetMachine().Options.StackProtectorGuard;
+
   // glibc, bionic, and Fuchsia have a special slot for the stack guard.
-  if (hasStackGuardSlotTLS(Subtarget.getTargetTriple()))
+  if ((GuardMode == llvm::StackProtectorGuards::TLS ||
+       GuardMode == llvm::StackProtectorGuards::None)
+      && hasStackGuardSlotTLS(Subtarget.getTargetTriple()))
     return;
   TargetLowering::insertSSPDeclarations(M);
 }
