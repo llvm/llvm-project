@@ -28,31 +28,27 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
         TestBase.setUp(self)
 
     def check_expression(self, expression, expected_result, use_summary=True):
-        value = self.frame().EvaluateExpression(expression)
+        opts = lldb.SBExpressionOptions()
+        opts.SetFetchDynamicValue(lldb.eDynamicCanRunTarget)
+        value = self.frame().EvaluateExpression(expression, opts)
         self.assertTrue(value.IsValid(), expression + "returned a valid value")
         if use_summary:
             answer = value.GetSummary()
         else:
             answer = value.GetValue()
-        report_str = "%s expected: %s got: %s" % (
-            expression, expected_result, answer)
-        self.assertTrue(answer == expected_result, report_str)
+        report_str = value.GetError()
+        self.assertEquals(answer, expected_result, report_str)
 
 
     @swiftTest
     def test_expressions_in_class_functions(self):
         """Test expressions in class func contexts"""
         self.build()
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
+        target = self.dbg.CreateTarget(self.getBuildArtifact())
         self.assertTrue(target, VALID_TARGET)
 
-        breakpoints = [None]
-
         # Set the breakpoints
+        breakpoints = [None]
         for i in range(1, 8):
             breakpoints.append(
                 target.BreakpointCreateBySourceRegex(
@@ -63,7 +59,6 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, os.getcwd())
-
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Check each context
