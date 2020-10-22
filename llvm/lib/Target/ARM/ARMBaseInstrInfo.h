@@ -178,7 +178,6 @@ public:
 
   // CPSR defined in instruction
   static bool isCPSRDefined(const MachineInstr &MI);
-  bool isAddrMode3OpImm(const MachineInstr &MI, unsigned Op) const;
   bool isAddrMode3OpMinusReg(const MachineInstr &MI, unsigned Op) const;
 
   // Load, scaled register offset
