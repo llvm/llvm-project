@@ -3640,7 +3640,7 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
       StringRef RegName = X86IntelInstPrinter::getRegisterName(HReg);
       return Error(Ops[0]->getStartLoc(),
                    "can't encode '" + RegName + "' in an instruction requiring "
-                   "REX prefix.");
+                   "REX prefix");
     }
   }
 
