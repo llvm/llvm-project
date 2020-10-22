@@ -58,7 +58,7 @@ class Configuration(LibcxxConfiguration):
     def configure_compile_flags_header_includes(self):
         cxx_headers = self.get_lit_conf(
             'cxx_headers',
-            os.path.join(self.libcxx_obj_root, 'include', 'c++', 'v1'))
+            os.path.join(self.project_obj_root, 'include', 'c++', 'v1'))
         if cxx_headers == '':
             self.lit_config.note('using the systems c++ headers')
         else:
