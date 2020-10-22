@@ -581,7 +581,7 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 static llvm::Optional<llvm::Error> AddVariableInfo(
     lldb::VariableSP variable_sp, lldb::StackFrameSP &stack_frame_sp,
     SwiftASTContextForExpressions &ast_context,
-    SwiftLanguageRuntime *language_runtime,
+    SwiftLanguageRuntime *runtime,
     llvm::SmallDenseSet<const char *, 8> &processed_variables,
     llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables,
     lldb::DynamicValueType use_dynamic) {
@@ -615,6 +615,11 @@ static llvm::Optional<llvm::Error> AddVariableInfo(
       return {};
     }
     var_type = valobj_sp->GetCompilerType();
+    if (use_dynamic > lldb::eNoDynamicValues) {
+      if (auto *stack_frame = stack_frame_sp.get())
+        var_type =
+            runtime->BindGenericTypeParameters(*stack_frame, var_type);
+    }
   }
 
   if (!var_type.IsValid())
