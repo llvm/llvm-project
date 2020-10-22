@@ -85,6 +85,14 @@ Returns:
   The created block.
 )";
 
+static const char kValueDunderStrDocstring[] =
+    R"(Returns the string form of the value.
+
+If the value is a block argument, this is the assembly form of its type and the
+position in the argument list. If the value is an operation result, this is
+equivalent to printing the operation that produced it.
+)";
+
 //------------------------------------------------------------------------------
 // Conversion utilities.
 //------------------------------------------------------------------------------
@@ -731,6 +739,168 @@ PyNamedAttribute::PyNamedAttribute(MlirAttribute attr, std::string ownedName)
 bool PyType::operator==(const PyType &other) {
   return mlirTypeEqual(type, other.type);
 }
+
+//------------------------------------------------------------------------------
+// PyValue and subclases.
+//------------------------------------------------------------------------------
+
+namespace {
+/// CRTP base class for Python MLIR values that subclass Value and should be
+/// castable from it. The value hierarchy is one level deep and is not supposed
+/// to accommodate other levels unless core MLIR changes.
+template <typename DerivedTy> class PyConcreteValue : public PyValue {
+public:
+  // Derived classes must define statics for:
+  //   IsAFunctionTy isaFunction
+  //   const char *pyClassName
+  // and redefine bindDerived.
+  using ClassTy = py::class_<DerivedTy, PyValue>;
+  using IsAFunctionTy = int (*)(MlirValue);
+
+  PyConcreteValue() = default;
+  PyConcreteValue(PyOperationRef operationRef, MlirValue value)
+      : PyValue(operationRef, value) {}
+  PyConcreteValue(PyValue &orig)
+      : PyConcreteValue(orig.getParentOperation(), castFrom(orig)) {}
+
+  /// Attempts to cast the original value to the derived type and throws on
+  /// type mismatches.
+  static MlirValue castFrom(PyValue &orig) {
+    if (!DerivedTy::isaFunction(orig.get())) {
+      auto origRepr = py::repr(py::cast(orig)).cast<std::string>();
+      throw SetPyError(PyExc_ValueError, llvm::Twine("Cannot cast value to ") +
+                                             DerivedTy::pyClassName +
+                                             " (from " + origRepr + ")");
+    }
+    return orig.get();
+  }
+
+  /// Binds the Python module objects to functions of this class.
+  static void bind(py::module &m) {
+    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    cls.def(py::init<PyValue &>(), py::keep_alive<0, 1>());
+    DerivedTy::bindDerived(cls);
+  }
+
+  /// Implemented by derived classes to add methods to the Python subclass.
+  static void bindDerived(ClassTy &m) {}
+};
+
+/// Python wrapper for MlirBlockArgument.
+class PyBlockArgument : public PyConcreteValue<PyBlockArgument> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirValueIsABlockArgument;
+  static constexpr const char *pyClassName = "BlockArgument";
+  using PyConcreteValue::PyConcreteValue;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_property_readonly("owner", [](PyBlockArgument &self) {
+      return PyBlock(self.getParentOperation(),
+                     mlirBlockArgumentGetOwner(self.get()));
+    });
+    c.def_property_readonly("arg_number", [](PyBlockArgument &self) {
+      return mlirBlockArgumentGetArgNumber(self.get());
+    });
+    c.def("set_type", [](PyBlockArgument &self, PyType type) {
+      return mlirBlockArgumentSetType(self.get(), type);
+    });
+  }
+};
+
+/// Python wrapper for MlirOpResult.
+class PyOpResult : public PyConcreteValue<PyOpResult> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirValueIsAOpResult;
+  static constexpr const char *pyClassName = "OpResult";
+  using PyConcreteValue::PyConcreteValue;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_property_readonly("owner", [](PyOpResult &self) {
+      assert(
+          mlirOperationEqual(self.getParentOperation()->get(),
+                             mlirOpResultGetOwner(self.get())) &&
+          "expected the owner of the value in Python to match that in the IR");
+      return self.getParentOperation();
+    });
+    c.def_property_readonly("result_number", [](PyOpResult &self) {
+      return mlirOpResultGetResultNumber(self.get());
+    });
+  }
+};
+
+/// A list of block arguments. Internally, these are stored as consecutive
+/// elements, random access is cheap. The argument list is associated with the
+/// operation that contains the block (detached blocks are not allowed in
+/// Python bindings) and extends its lifetime.
+class PyBlockArgumentList {
+public:
+  PyBlockArgumentList(PyOperationRef operation, MlirBlock block)
+      : operation(std::move(operation)), block(block) {}
+
+  /// Returns the length of the block argument list.
+  intptr_t dunderLen() {
+    operation->checkValid();
+    return mlirBlockGetNumArguments(block);
+  }
+
+  /// Returns `index`-th element of the block argument list.
+  PyBlockArgument dunderGetItem(intptr_t index) {
+    if (index < 0 || index >= dunderLen()) {
+      throw SetPyError(PyExc_IndexError,
+                       "attempt to access out of bounds region");
+    }
+    PyValue value(operation, mlirBlockGetArgument(block, index));
+    return PyBlockArgument(value);
+  }
+
+  /// Defines a Python class in the bindings.
+  static void bind(py::module &m) {
+    py::class_<PyBlockArgumentList>(m, "BlockArgumentList")
+        .def("__len__", &PyBlockArgumentList::dunderLen)
+        .def("__getitem__", &PyBlockArgumentList::dunderGetItem);
+  }
+
+private:
+  PyOperationRef operation;
+  MlirBlock block;
+};
+
+/// A list of operation results. Internally, these are stored as consecutive
+/// elements, random access is cheap. The result list is associated with the
+/// operation whose results these are, and extends the lifetime of this
+/// operation.
+class PyOpResultList {
+public:
+  PyOpResultList(PyOperationRef operation) : operation(operation) {}
+
+  /// Returns the length of the result list.
+  intptr_t dunderLen() {
+    operation->checkValid();
+    return mlirOperationGetNumResults(operation->get());
+  }
+
+  /// Returns `index`-th element in the result list.
+  PyOpResult dunderGetItem(intptr_t index) {
+    if (index < 0 || index >= dunderLen()) {
+      throw SetPyError(PyExc_IndexError,
+                       "attempt to access out of bounds region");
+    }
+    PyValue value(operation, mlirOperationGetResult(operation->get(), index));
+    return PyOpResult(value);
+  }
+
+  /// Defines a Python class in the bindings.
+  static void bind(py::module &m) {
+    py::class_<PyOpResultList>(m, "OpResultList")
+        .def("__len__", &PyOpResultList::dunderLen)
+        .def("__getitem__", &PyOpResultList::dunderGetItem);
+  }
+
+private:
+  PyOperationRef operation;
+};
+
+} // end namespace
 
 //------------------------------------------------------------------------------
 // Standard attribute subclasses.
@@ -1793,6 +1963,10 @@ void mlir::python::populateIRSubmodule(py::module &m) {
       .def_property_readonly(
           "regions",
           [](PyOperation &self) { return PyRegionList(self.getRef()); })
+      .def_property_readonly(
+          "results",
+          [](PyOperation &self) { return PyOpResultList(self.getRef()); },
+          "Returns the list of Operation results.")
       .def("__iter__",
            [](PyOperation &self) { return PyRegionIterator(self.getRef()); })
       .def(
@@ -1833,6 +2007,12 @@ void mlir::python::populateIRSubmodule(py::module &m) {
 
   // Mapping of PyBlock.
   py::class_<PyBlock>(m, "Block")
+      .def_property_readonly(
+          "arguments",
+          [](PyBlock &self) {
+            return PyBlockArgumentList(self.getParentOperation(), self.get());
+          },
+          "Returns a list of block arguments.")
       .def_property_readonly(
           "operations",
           [](PyBlock &self) {
@@ -2015,11 +2195,40 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyTupleType::bind(m);
   PyFunctionType::bind(m);
 
+  // Mapping of Value.
+  py::class_<PyValue>(m, "Value")
+      .def_property_readonly(
+          "context",
+          [](PyValue &self) { return self.getParentOperation()->getContext(); },
+          "Context in which the value lives.")
+      .def(
+          "dump", [](PyValue &self) { mlirValueDump(self.get()); },
+          kDumpDocstring)
+      .def(
+          "__str__",
+          [](PyValue &self) {
+            PyPrintAccumulator printAccum;
+            printAccum.parts.append("Value(");
+            mlirValuePrint(self.get(), printAccum.getCallback(),
+                           printAccum.getUserData());
+            printAccum.parts.append(")");
+            return printAccum.join();
+          },
+          kValueDunderStrDocstring)
+      .def_property_readonly("type", [](PyValue &self) {
+        return PyType(self.getParentOperation()->getContext(),
+                      mlirValueGetType(self.get()));
+      });
+  PyBlockArgument::bind(m);
+  PyOpResult::bind(m);
+
   // Container bindings.
+  PyBlockArgumentList::bind(m);
   PyBlockIterator::bind(m);
   PyBlockList::bind(m);
   PyOperationIterator::bind(m);
   PyOperationList::bind(m);
+  PyOpResultList::bind(m);
   PyRegionIterator::bind(m);
   PyRegionList::bind(m);
 }
