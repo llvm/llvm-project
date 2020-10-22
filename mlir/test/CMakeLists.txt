@@ -54,6 +54,7 @@ set(MLIR_TEST_DEPENDS
   mlir_test_cblas_interface
   mlir_runner_utils
   mlir_c_runner_utils
+  mlir_async_runtime
   )
 
 if(LLVM_BUILD_EXAMPLES)
