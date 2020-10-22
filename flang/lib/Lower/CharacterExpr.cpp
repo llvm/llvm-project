@@ -632,20 +632,3 @@ Fortran::lower::CharacterExprHelper::readLengthFromBox(mlir::Value box) {
   }
   return size;
 }
-
-bool Fortran::lower::CharacterExprHelper::hasConstantLengthInType(
-    const fir::ExtendedValue &exv) {
-  auto type = fir::getBase(exv).getType();
-  if (auto boxTy = type.dyn_cast<fir::BoxType>())
-    type = boxTy.getEleTy();
-  if (auto eleTy = fir::dyn_cast_ptrEleTy(type))
-    type = eleTy;
-  if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
-    assert(seqTy.getEleTy().isa<fir::CharacterType>() &&
-           "entity is not a character");
-    assert(seqTy.getShape().size() > 0 && "character has empty shape");
-    auto lenVal = seqTy.getShape()[0];
-    return lenVal != fir::SequenceType::getUnknownExtent();
-  }
-  return false;
-}
