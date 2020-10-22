@@ -802,7 +802,8 @@ static uint32_t collectTypeInfo(SwiftASTContext *module_holder,
           swift_flags |= eTypeIsFloat | eTypeIsScalar;
         else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_VEC))
           swift_flags |= eTypeHasChildren | eTypeIsVector;
-        else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_INT))
+        else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_INT) ||
+                 node->getText().startswith(swift::BUILTIN_TYPE_NAME_WORD))
           swift_flags |= eTypeIsInteger | eTypeIsScalar;
       }
       break;
