@@ -98,9 +98,10 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
       Width = SubRegFromChannelTableWidthMap[Width];
       if (Width == 0)
         continue;
-      assert((Width - 1) < SubRegFromChannelTable.size());
-      assert(Offset < SubRegFromChannelTable[Width].size());
-      SubRegFromChannelTable[Width - 1][Offset] = Idx;
+      unsigned TableIdx = Width - 1;
+      assert(TableIdx < SubRegFromChannelTable.size());
+      assert(Offset < SubRegFromChannelTable[TableIdx].size());
+      SubRegFromChannelTable[TableIdx][Offset] = Idx;
     }
   };
 
