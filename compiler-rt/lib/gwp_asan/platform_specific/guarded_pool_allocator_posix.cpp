@@ -25,6 +25,7 @@
 #define PR_SET_VMA_ANON_NAME 0
 #endif // ANDROID
 
+namespace {
 void MaybeSetMappingName(void *Mapping, size_t Size, const char *Name) {
 #ifdef ANDROID
   prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, Mapping, Size, Name);
@@ -32,44 +33,64 @@ void MaybeSetMappingName(void *Mapping, size_t Size, const char *Name) {
   // Anonymous mapping names are only supported on Android.
   return;
 }
+} // anonymous namespace
 
 namespace gwp_asan {
 
 void GuardedPoolAllocator::initPRNG() {
-  ThreadLocals.RandomState = time(nullptr) + getThreadID();
+  ThreadLocals.RandomState =
+      static_cast<uint32_t>(time(nullptr) + getThreadID());
 }
 
-void *GuardedPoolAllocator::mapMemory(size_t Size, const char *Name) const {
-  void *Ptr =
-      mmap(nullptr, Size, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+void *GuardedPoolAllocator::map(size_t Size, const char *Name) const {
+  assert((Size % State.PageSize) == 0);
+  void *Ptr = mmap(nullptr, Size, PROT_READ | PROT_WRITE,
+                   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   Check(Ptr != MAP_FAILED, "Failed to map guarded pool allocator memory");
   MaybeSetMappingName(Ptr, Size, Name);
   return Ptr;
 }
 
-void GuardedPoolAllocator::unmapMemory(void *Ptr, size_t Size,
-                                       const char *Name) const {
+void GuardedPoolAllocator::unmap(void *Ptr, size_t Size) const {
+  assert((reinterpret_cast<uintptr_t>(Ptr) % State.PageSize) == 0);
+  assert((Size % State.PageSize) == 0);
   Check(munmap(Ptr, Size) == 0,
         "Failed to unmap guarded pool allocator memory.");
-  MaybeSetMappingName(Ptr, Size, Name);
 }
 
-void GuardedPoolAllocator::markReadWrite(void *Ptr, size_t Size,
-                                         const char *Name) const {
+void *GuardedPoolAllocator::reserveGuardedPool(size_t Size) {
+  assert((Size % State.PageSize) == 0);
+  void *Ptr =
+      mmap(nullptr, Size, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  Check(Ptr != MAP_FAILED, "Failed to reserve guarded pool allocator memory");
+  MaybeSetMappingName(Ptr, Size, kGwpAsanGuardPageName);
+  return Ptr;
+}
+
+void GuardedPoolAllocator::unreserveGuardedPool() {
+  unmap(reinterpret_cast<void *>(State.GuardedPagePool),
+        State.GuardedPagePoolEnd - State.GuardedPagePool);
+}
+
+void GuardedPoolAllocator::allocateInGuardedPool(void *Ptr, size_t Size) const {
+  assert((reinterpret_cast<uintptr_t>(Ptr) % State.PageSize) == 0);
+  assert((Size % State.PageSize) == 0);
   Check(mprotect(Ptr, Size, PROT_READ | PROT_WRITE) == 0,
-        "Failed to set guarded pool allocator memory at as RW.");
-  MaybeSetMappingName(Ptr, Size, Name);
+        "Failed to allocate in guarded pool allocator memory");
+  MaybeSetMappingName(Ptr, Size, kGwpAsanAliveSlotName);
 }
 
-void GuardedPoolAllocator::markInaccessible(void *Ptr, size_t Size,
-                                            const char *Name) const {
+void GuardedPoolAllocator::deallocateInGuardedPool(void *Ptr,
+                                                   size_t Size) const {
+  assert((reinterpret_cast<uintptr_t>(Ptr) % State.PageSize) == 0);
+  assert((Size % State.PageSize) == 0);
   // mmap() a PROT_NONE page over the address to release it to the system, if
   // we used mprotect() here the system would count pages in the quarantine
   // against the RSS.
   Check(mmap(Ptr, Size, PROT_NONE, MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, -1,
              0) != MAP_FAILED,
-        "Failed to set guarded pool allocator memory as inaccessible.");
-  MaybeSetMappingName(Ptr, Size, Name);
+        "Failed to deallocate in guarded pool allocator memory");
+  MaybeSetMappingName(Ptr, Size, kGwpAsanGuardPageName);
 }
 
 size_t GuardedPoolAllocator::getPlatformPageSize() {
@@ -87,5 +108,4 @@ void GuardedPoolAllocator::installAtFork() {
   };
   pthread_atfork(Disable, Enable, Enable);
 }
-
 } // namespace gwp_asan
