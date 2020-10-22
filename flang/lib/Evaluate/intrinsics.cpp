@@ -1959,6 +1959,19 @@ static bool CheckAssociated(SpecificCall &call,
                     *pointerSymbol);
               } else {
                 // object pointer and target
+                if (const Symbol * targetSymbol{GetLastSymbol(*targetExpr)}) {
+                  if (!(targetSymbol->attrs().test(semantics::Attr::POINTER) ||
+                          targetSymbol->attrs().test(
+                              semantics::Attr::TARGET))) {
+                    AttachDeclaration(
+                        messages.Say("TARGET= argument '%s' must have either "
+                                     "the POINTER or the TARGET "
+                                     "attribute"_err_en_US,
+                            targetName),
+                        *targetSymbol);
+                  }
+                }
+
                 if (const auto pointerType{pointerArg->GetType()}) {
                   if (const auto targetType{targetArg->GetType()}) {
                     ok = pointerType->IsTkCompatibleWith(*targetType);
