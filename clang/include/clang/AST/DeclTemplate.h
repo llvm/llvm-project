@@ -3318,7 +3318,7 @@ public:
   static void Profile(llvm::FoldingSetNodeID &ID, QualType T,
                       const APValue &V) {
     ID.AddPointer(T.getCanonicalType().getAsOpaquePtr());
-    V.profile(ID);
+    V.Profile(ID);
   }
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getType(), getValue());

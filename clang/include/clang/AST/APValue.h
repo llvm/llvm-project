@@ -594,11 +594,7 @@ public:
   void setLValue(LValueBase B, const CharUnits &O,
                  ArrayRef<LValuePathEntry> Path, bool OnePastTheEnd,
                  bool IsNullPtr);
-  void setUnion(const FieldDecl *Field, const APValue &Value) {
-    assert(isUnion() && "Invalid accessor");
-    ((UnionData*)(char*)Data.buffer)->Field = Field;
-    *((UnionData*)(char*)Data.buffer)->Value = Value;
-  }
+  void setUnion(const FieldDecl *Field, const APValue &Value);
   void setAddrLabelDiff(const AddrLabelExpr* LHSExpr,
                         const AddrLabelExpr* RHSExpr) {
     ((AddrLabelDiffData*)(char*)Data.buffer)->LHSExpr = LHSExpr;
