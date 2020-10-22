@@ -16,7 +16,6 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/types.h>
-#include <time.h>
 #include <unistd.h>
 
 #ifdef ANDROID
@@ -34,11 +33,6 @@ void MaybeSetMappingName(void *Mapping, size_t Size, const char *Name) {
 }
 
 namespace gwp_asan {
-
-void GuardedPoolAllocator::initPRNG() {
-  ThreadLocals.RandomState = time(nullptr) + getThreadID();
-}
-
 void *GuardedPoolAllocator::mapMemory(size_t Size, const char *Name) const {
   void *Ptr =
       mmap(nullptr, Size, PROT_NONE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);

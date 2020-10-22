@@ -29,7 +29,7 @@ GWP_ASAN_OPTION(int, MaxSimultaneousAllocations, 16,
 GWP_ASAN_OPTION(int, SampleRate, 5000,
                 "The probability (1 / SampleRate) that an allocation is "
                 "selected for GWP-ASan sampling. Default is 5000. Sample rates "
-                "up to (2^30 - 1) are supported.")
+                "up to (2^31 - 1) are supported.")
 
 // Developer note - This option is not actually processed by GWP-ASan itself. It
 // is included here so that a user can specify whether they want signal handlers
