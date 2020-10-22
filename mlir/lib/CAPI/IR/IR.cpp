@@ -454,6 +454,8 @@ MlirType mlirValueGetType(MlirValue value) {
   return wrap(unwrap(value).getType());
 }
 
+void mlirValueDump(MlirValue value) { unwrap(value).dump(); }
+
 void mlirValuePrint(MlirValue value, MlirStringCallback callback,
                     void *userData) {
   detail::CallbackOstream stream(callback, userData);

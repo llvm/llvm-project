@@ -102,6 +102,35 @@ def testTraverseOpRegionBlockIndices():
 run(testTraverseOpRegionBlockIndices)
 
 
+# CHECK-LABEL: TEST: testBlockArgumentList
+def testBlockArgumentList():
+  ctx = mlir.ir.Context()
+  module = ctx.parse_module(r"""
+    func @f1(%arg0: i32, %arg1: f64, %arg2: index) {
+      return
+    }
+  """)
+  func = module.operation.regions[0].blocks[0].operations[0]
+  entry_block = func.regions[0].blocks[0]
+  assert len(entry_block.arguments) == 3
+  # CHECK: Argument 0, type i32
+  # CHECK: Argument 1, type f64
+  # CHECK: Argument 2, type index
+  for arg in entry_block.arguments:
+    print(f"Argument {arg.arg_number}, type {arg.type}")
+    new_type = mlir.ir.IntegerType.get_signless(ctx, 8 * (arg.arg_number + 1))
+    arg.set_type(new_type)
+
+  # CHECK: Argument 0, type i8
+  # CHECK: Argument 1, type i16
+  # CHECK: Argument 2, type i24
+  for arg in entry_block.arguments:
+    print(f"Argument {arg.arg_number}, type {arg.type}")
+
+
+run(testBlockArgumentList)
+
+
 # CHECK-LABEL: TEST: testDetachedOperation
 def testDetachedOperation():
   ctx = mlir.ir.Context()
@@ -196,3 +225,26 @@ def testOperationWithRegion():
   print(module)
 
 run(testOperationWithRegion)
+
+
+# CHECK-LABEL: TEST: testOperationResultList
+def testOperationResultList():
+  ctx = mlir.ir.Context()
+  module = ctx.parse_module(r"""
+    func @f1() {
+      %0:3 = call @f2() : () -> (i32, f64, index)
+      return
+    }
+    func @f2() -> (i32, f64, index)
+  """)
+  caller = module.operation.regions[0].blocks[0].operations[0]
+  call = caller.regions[0].blocks[0].operations[0]
+  assert len(call.results) == 3
+  # CHECK: Result 0, type i32
+  # CHECK: Result 1, type f64
+  # CHECK: Result 2, type index
+  for res in call.results:
+    print(f"Result {res.result_number}, type {res.type}")
+
+
+run(testOperationResultList)
