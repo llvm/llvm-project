@@ -59,8 +59,7 @@ mlirAsyncRuntimeAwaitToken(AsyncToken *token) {
 
 extern "C" MLIR_ASYNCRUNTIME_EXPORT void
 mlirAsyncRuntimeExecute(CoroHandle handle, CoroResume resume) {
-  std::thread thread([handle, resume]() { (*resume)(handle); });
-  thread.detach();
+  (*resume)(handle);
 }
 
 extern "C" MLIR_ASYNCRUNTIME_EXPORT void
