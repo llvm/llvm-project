@@ -1,8 +1,8 @@
 ; RUN: %llc_dwarf -filetype=obj < %s \
 ; RUN:   | llvm-dwarfdump -debug-info -debug-loclists - | FileCheck %s
-; RUN: llc -mtriple x86_64-pc-linux -split-dwarf-file=foo.dwo -filetype=obj < %s \
+; RUN: llc -mtriple x86_64-pc-linux -split-dwarf-file=foo.dwo -filetype=obj -dwarf-op-convert=Enable < %s \
 ; RUN:   | llvm-dwarfdump -debug-info -debug-loclists - | FileCheck --check-prefix=SPLIT --check-prefix=CHECK %s
-; RUN: llc -mtriple x86_64-pc-linux -split-dwarf-file=foo.dwo -filetype=asm < %s \
+; RUN: llc -mtriple x86_64-pc-linux -split-dwarf-file=foo.dwo -filetype=asm -dwarf-op-convert=Enable < %s \
 ; RUN:   | FileCheck --check-prefix=ASM %s
 
 ; A bit of a brittle test - this is testing the specific DWO_id. The
