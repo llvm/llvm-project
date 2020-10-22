@@ -330,6 +330,7 @@ int main(int, char**)
     doAppendSourceTest<char32_t>(TC);
   }
   for (auto const & TC : LongLHSCases) {
+    (void)TC;
     LIBCPP_ONLY(doAppendSourceAllocTest<char>(TC));
     LIBCPP_ONLY(doAppendSourceAllocTest<wchar_t>(TC));
   }
