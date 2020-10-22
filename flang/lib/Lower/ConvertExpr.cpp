@@ -1682,8 +1682,13 @@ private:
         return exv;
 
       // Since `a` is not itself a valid referent, determine its value and
-      // create a temporary location for referencing.
+      // create a temporary location at the begining of the function for 
+			// referencing.
+			auto func = builder.getFunction();
+			auto initPos = builder.saveInsertionPoint();
+			builder.setInsertionPointToStart(&func.front());
       auto mem = builder.create<fir::AllocaOp>(getLoc(), valBase.getType());
+			builder.restoreInsertionPoint(initPos);
       builder.create<fir::StoreOp>(getLoc(), valBase, mem);
       return fir::substBase(exv, mem.getResult());
     }
