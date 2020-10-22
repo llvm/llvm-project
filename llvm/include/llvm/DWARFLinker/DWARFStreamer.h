@@ -44,7 +44,7 @@ class DwarfStreamer : public DwarfEmitter {
 public:
   DwarfStreamer(OutputFileType OutFileType, raw_pwrite_stream &OutFile,
                 std::function<StringRef(StringRef Input)> Translator,
-                bool Minimize, MessageHandler Error, MessageHandler Warning)
+                bool Minimize, messageHandler Error, messageHandler Warning)
       : OutFile(OutFile), OutFileType(OutFileType), Translator(Translator),
         Minimize(Minimize), ErrorHandler(Error), WarningHandler(Warning) {}
 
@@ -210,8 +210,8 @@ private:
                              const CompileUnit &Unit,
                              const std::vector<CompileUnit::AccelInfo> &Names);
 
-  MessageHandler ErrorHandler;
-  MessageHandler WarningHandler;
+  messageHandler ErrorHandler = nullptr;
+  messageHandler WarningHandler = nullptr;
 };
 
 } // end namespace llvm
