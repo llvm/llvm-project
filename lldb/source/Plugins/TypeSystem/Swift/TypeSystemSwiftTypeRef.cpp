@@ -522,9 +522,6 @@ TypeSystemSwiftTypeRef::GetSwiftified(swift::Demangle::Demangler &dem,
   StringRef ident = GetObjCTypeName(node);
   if (ident.empty())
     return node;
-  auto *Module = GetModule();
-  if (!Module)
-    return node;
 
   // This is an imported Objective-C type; look it up in the
   // debug info.
