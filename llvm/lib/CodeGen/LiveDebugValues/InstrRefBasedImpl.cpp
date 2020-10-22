@@ -497,7 +497,7 @@ public:
     // Always track SP. This avoids the implicit clobbering caused by regmasks
     // from affectings its values. (LiveDebugValues disbelieves calls and
     // regmasks that claim to clobber SP).
-    unsigned SP = TLI.getStackPointerRegisterToSaveRestore();
+    Register SP = TLI.getStackPointerRegisterToSaveRestore();
     if (SP) {
       unsigned ID = getLocID(SP, false);
       (void)lookupOrTrackRegister(ID);
@@ -506,8 +506,8 @@ public:
 
   /// Produce location ID number for indexing LocIDToLocIdx. Takes the register
   /// or spill number, and flag for whether it's a spill or not.
-  unsigned getLocID(unsigned RegOrSpill, bool isSpill) {
-    return (isSpill) ? RegOrSpill + NumRegs - 1 : RegOrSpill;
+  unsigned getLocID(Register RegOrSpill, bool isSpill) {
+    return (isSpill) ? RegOrSpill.id() + NumRegs - 1 : RegOrSpill.id();
   }
 
   /// Accessor for reading the value at Idx.
@@ -640,7 +640,7 @@ public:
   /// later.
   void writeRegMask(const MachineOperand *MO, unsigned CurBB, unsigned InstID) {
     // Ensure SP exists, so that we don't override it later.
-    unsigned SP = TLI.getStackPointerRegisterToSaveRestore();
+    Register SP = TLI.getStackPointerRegisterToSaveRestore();
 
     // Def any register we track have that isn't preserved. The regmask
     // terminates the liveness of a register, meaning its value can't be
@@ -1555,7 +1555,7 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
 
   MachineFunction *MF = MI.getMF();
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
-  unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+  Register SP = TLI->getStackPointerRegisterToSaveRestore();
 
   // Find the regs killed by MI, and find regmasks of preserved regs.
   // Max out the number of statically allocated elements in `DeadRegs`, as this
@@ -1994,7 +1994,7 @@ void InstrRefBasedLDV::produceTransferFunctions(
 
   // Compute a bitvector of all the registers that are tracked in this block.
   const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
-  unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+  Register SP = TLI->getStackPointerRegisterToSaveRestore();
   BitVector UsedRegs(TRI->getNumRegs());
   for (auto Location : MTracker->locations()) {
     unsigned ID = MTracker->LocIdxToLocID[Location.Idx];
