@@ -74,7 +74,6 @@ subroutine assoc()
     lVar = associated(intVar, intVar)
     !ERROR: POINTER= argument of ASSOCIATED() must be a POINTER
     lVar = associated(intAllocVar)
-    lVar = associated(intPointerVar1, intVar) !OK
     !ERROR: Arguments of ASSOCIATED() must be a POINTER and an optional valid target
     lVar = associated(intPointerVar1, targetRealVar)
     lVar = associated(intPointerVar1, targetIntVar1) !OK
@@ -82,6 +81,10 @@ subroutine assoc()
     lVar = associated(intPointerVar1, targetIntVar2)
     lVar = associated(intPointerVar1) !OK
     lVar = associated(intPointerVar1, intPointerVar2) !OK
+    !ERROR: In assignment to object pointer 'intpointervar1', the target 'intvar' is not an object with POINTER or TARGET attributes
+    intPointerVar1 => intVar
+    !ERROR: TARGET= argument 'intvar' must have either the POINTER or the TARGET attribute
+    lVar = associated(intPointerVar1, intVar)
 
     ! Procedure pointer tests
     intprocPointer1 => intProc !OK
