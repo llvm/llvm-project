@@ -143,6 +143,15 @@ private:
   SmallVector<DecomposeTypeConversionCallFn, 2> decomposeTypeConversions;
 };
 
+/// Marks ops used by bufferization for type conversion materializations as
+/// "legal" in the given ConversionTarget.
+///
+/// This function should be called by all bufferization passes using
+/// BufferizeTypeConverter so that materializations work proprely. One exception
+/// is bufferization passes doing "full" conversions, where it can be desirable
+/// for even the materializations to remain illegal so that they are eliminated.
+void populateBufferizeMaterializationLegality(ConversionTarget &target);
+
 /// Helper conversion pattern that encapsulates a BufferizeTypeConverter
 /// instance.
 template <typename SourceOp>
