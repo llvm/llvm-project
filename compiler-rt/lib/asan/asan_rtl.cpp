@@ -45,7 +45,8 @@ static void AsanDie() {
     // Don't die twice - run a busy loop.
     while (1) { }
   }
-  if (common_flags()->print_module_map >= 1) PrintModuleMap();
+  if (common_flags()->print_module_map >= 1)
+    DumpProcessMap();
   if (flags()->sleep_before_dying) {
     Report("Sleeping for %d second(s)\n", flags()->sleep_before_dying);
     SleepForSeconds(flags()->sleep_before_dying);
