@@ -26,10 +26,11 @@ bb5:                                              ; preds = %bb4, %bb1, %bb
 ; CHECK-LABEL: bb:
 ; CHECK-NEXT:  [[CALL26LOC:%.*]] = alloca i8*
 ; CHECK-LABEL: codeRepl.i:
-; CHECK-NEXT:   call void @llvm.lifetime.start.p0p0i8(i64 -1, i8** [[CALL26LOC]])
+; CHECK-NEXT:   %lt.cast.i = bitcast i8** [[CALL26LOC]] to i8*
+; CHECK-NEXT:   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %lt.cast.i)
 ; CHECK-NEXT:   call void @bar.1.bb1(i8** [[CALL26LOC]])
 ; CHECK-NEXT:   %call26.reload.i = load i8*, i8** [[CALL26LOC]]
-; CHECK-NEXT:   call void @llvm.lifetime.end.p0p0i8(i64 -1, i8** [[CALL26LOC]])
+; CHECK-NEXT:   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %lt.cast.i)
 define i8* @dummy_caller(i32 %arg) {
 bb:
   %tmp = tail call i8* @bar(i32 %arg)
