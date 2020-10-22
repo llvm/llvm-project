@@ -66,6 +66,20 @@ if (APPLE OR WIN32 OR NOT OPENMP_HAVE_STD_CPP14_FLAG)
   set(ENABLE_LIBOMPTARGET OFF)
 endif()
 
+# Attempt to locate LLVM source, required by libomptarget
+if (NOT LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR)
+  if (LLVM_MAIN_INCLUDE_DIR)
+    set(LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR ${LLVM_MAIN_INCLUDE_DIR})
+  elseif (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../llvm/include)
+    set(LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../llvm/include)
+  endif()
+endif()
+
+if (NOT LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR)
+  message(STATUS "Missing definition for LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR, disabling libomptarget")
+  set(ENABLE_LIBOMPTARGET OFF)
+endif()
+
 option(OPENMP_ENABLE_LIBOMPTARGET "Enable building libomptarget for offloading."
        ${ENABLE_LIBOMPTARGET})
 if (OPENMP_ENABLE_LIBOMPTARGET)
