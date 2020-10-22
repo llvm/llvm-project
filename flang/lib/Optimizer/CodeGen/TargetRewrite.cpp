@@ -109,7 +109,7 @@ public:
   rewriteCallComplexResultType(A ty, B &newResTys, B &newInTys, C &newOpers) {
     auto m = specifics->complexReturnType(ty.getElementType());
     // Currently targets mandate COMPLEX is a single aggregate or packed
-    // scalar, included the sret case.
+    // scalar, including the sret case.
     assert(m.size() == 1 && "target lowering of complex return not supported");
     auto resTy = std::get<mlir::Type>(m[0]);
     auto attr = std::get<CodeGenSpecifics::Attributes>(m[0]);
@@ -299,6 +299,7 @@ public:
 
   /// Taking the address of a function. Modify the signature as needed.
   void convertAddrOp(AddrOfOp addrOp) {
+    rewriter->setInsertionPoint(addrOp);
     auto addrTy = addrOp.getType().cast<mlir::FunctionType>();
     llvm::SmallVector<mlir::Type, 8> newResTys;
     llvm::SmallVector<mlir::Type, 8> newInTys;
@@ -341,7 +342,9 @@ public:
     auto newTy = rewriter->getFunctionType(newInTys, newResTys);
     auto newOp =
         rewriter->create<AddrOfOp>(addrOp.getLoc(), newTy, addrOp.symbol());
-    replaceOp(addrOp, newOp.getOperation()->getResults());
+    LLVM_DEBUG(llvm::dbgs()
+               << "replacing " << addrOp << " with " << newOp << '\n');
+    replaceOp(addrOp, newOp.getResult());
   }
 
   /// Convert the type signatures on all the functions present in the module.
