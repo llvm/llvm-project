@@ -483,6 +483,11 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   if (OptLevel > 1) {
     MPM.add(createJumpThreadingPass());         // Thread jumps
     MPM.add(createCorrelatedValuePropagationPass());
+  }
+  MPM.add(createAggressiveDCEPass()); // Delete dead instructions
+
+  // TODO: Investigate if this is too expensive at O1.
+  if (OptLevel > 1) {
     MPM.add(createDeadStoreEliminationPass());  // Delete dead stores
     MPM.add(createLICMPass(LicmMssaOptCap, LicmMssaNoAccForPromotionCap));
   }
@@ -492,8 +497,6 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   if (RerollLoops)
     MPM.add(createLoopRerollPass());
 
-  // TODO: Investigate if this is too expensive at O1.
-  MPM.add(createAggressiveDCEPass());         // Delete dead instructions
   MPM.add(createCFGSimplificationPass()); // Merge & remove BBs
   // Clean up after everything.
   MPM.add(createInstructionCombiningPass());
