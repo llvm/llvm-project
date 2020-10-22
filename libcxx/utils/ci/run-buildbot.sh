@@ -12,9 +12,11 @@ set -ex
 BUILDER="${1}"
 MONOREPO_ROOT="$(git rev-parse --show-toplevel)"
 BUILD_DIR="${MONOREPO_ROOT}/build/${BUILDER}"
+INSTALL_DIR="${MONOREPO_ROOT}/build/${BUILDER}/install"
 
 args=()
 args+=("-DLLVM_ENABLE_PROJECTS=libcxx;libunwind;libcxxabi")
+args+=("-DCMAKE_INSTALL_PREFIX=${INSTALL_DIR}")
 args+=("-DLIBCXX_CXX_ABI=libcxxabi")
 
 case "${BUILDER}" in
@@ -147,6 +149,9 @@ ninja -C "${BUILD_DIR}" check-cxx
 
 echo "+++ Running the libc++abi tests"
 ninja -C "${BUILD_DIR}" check-cxxabi
+
+echo "+++ Installing libc++ and libc++abi to a fake location"
+ninja -C "${BUILD_DIR}" install-cxx install-cxxabi
 
 # echo "+++ Running the libc++ benchmarks"
 # ninja -C "${BUILD_DIR}" check-cxx-benchmarks
