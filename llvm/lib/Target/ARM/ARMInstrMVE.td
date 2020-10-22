@@ -2474,7 +2474,7 @@ multiclass MVE_VABSNEG_int_m<string iname, bit negate, bit saturate,
 
   let Predicates = [HasMVEInt] in {
     // VQABS and VQNEG have more difficult isel patterns defined elsewhere
-    if !eq(saturate, 0) then {
+    if !not(saturate) then {
       def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$v))),
                 (VTI.Vec (Inst $v))>;
     }
@@ -4777,7 +4777,7 @@ class MVE_VxMOVxN<string iname, string suffix, bit bit_28, bit bit_17,
   let Inst{16} = 0b1;
   let Inst{12} = T;
   let Inst{8} = 0b0;
-  let Inst{7} = !if(!eq(bit_17, 0), 1, 0);
+  let Inst{7} = !not(bit_17);
   let Inst{0} = 0b1;
   let validForTailPredication = 1;
   let retainsPreviousHalfElement = 1;
@@ -4808,7 +4808,7 @@ multiclass MVE_VMOVN_p<Instruction Inst, bit top,
                                (VTI.Vec MQPR:$Qm), (i32 top))),
             (VTI.Vec (Inst (VTI.Vec MQPR:$Qd_src), (VTI.Vec MQPR:$Qm)))>;
 
-  if !eq(top, 0) then {
+  if !not(top) then {
     // If we see MVEvmovn(a,ARMvrev(b),1), that wants to overwrite the odd
     // lanes of a with the odd lanes of b. In other words, the lanes we're
     // _keeping_ from a are the even ones. So we can flip it round and say that
