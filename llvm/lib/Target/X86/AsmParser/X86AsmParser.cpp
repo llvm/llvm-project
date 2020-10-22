@@ -413,7 +413,7 @@ private:
       return State == IES_RBRAC || State == IES_INTEGER;
     }
     bool hadError() { return State == IES_ERROR; }
-    InlineAsmIdentifierInfo &getIdentifierInfo() { return Info; }
+    const InlineAsmIdentifierInfo &getIdentifierInfo() const { return Info; }
 
     void onOr() {
       IntelExprState CurrState = State;
@@ -2313,7 +2313,7 @@ bool X86AsmParser::ParseIntelOperand(OperandVector &Operands) {
   // and we are parsing a segment override
   if (!SM.isMemExpr() && !RegNo) {
     if (isParsingMSInlineAsm() && SM.isOffsetOperator()) {
-      const InlineAsmIdentifierInfo Info = SM.getIdentifierInfo();
+      const InlineAsmIdentifierInfo &Info = SM.getIdentifierInfo();
       if (Info.isKind(InlineAsmIdentifierInfo::IK_Var)) {
         // Disp includes the address of a variable; make sure this is recorded
         // for later handling.
