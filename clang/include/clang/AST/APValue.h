@@ -235,8 +235,10 @@ public:
   struct UninitArray {};
   struct UninitStruct {};
 
-  friend class ASTReader;
+  friend class ASTRecordReader;
   friend class ASTWriter;
+  friend class ASTImporter;
+  friend class ASTNodeImporter;
 
 private:
   ValueKind Kind;
@@ -569,11 +571,9 @@ public:
     *(APFixedPoint *)(char *)Data.buffer = std::move(FX);
   }
   void setVector(const APValue *E, unsigned N) {
-    assert(isVector() && "Invalid accessor");
-    ((Vec*)(char*)Data.buffer)->Elts = new APValue[N];
-    ((Vec*)(char*)Data.buffer)->NumElts = N;
+    MutableArrayRef<APValue> InternalElts = setVectorUninit(N);
     for (unsigned i = 0; i != N; ++i)
-      ((Vec*)(char*)Data.buffer)->Elts[i] = E[i];
+      InternalElts[i] = E[i];
   }
   void setComplexInt(APSInt R, APSInt I) {
     assert(R.getBitWidth() == I.getBitWidth() &&
@@ -656,6 +656,24 @@ private:
     new ((void*)(char*)Data.buffer) AddrLabelDiffData();
     Kind = AddrLabelDiff;
   }
+
+private:
+  /// The following functions are used as part of initialization, during
+  /// deserialization and importing. Reserve the space so that it can be
+  /// filled in by those steps.
+  MutableArrayRef<APValue> setVectorUninit(unsigned N) {
+    assert(isVector() && "Invalid accessor");
+    Vec *V = ((Vec *)(char *)Data.buffer);
+    V->Elts = new APValue[N];
+    V->NumElts = N;
+    return {V->Elts, V->NumElts};
+  }
+  MutableArrayRef<LValuePathEntry>
+  setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,
+                  bool OnePastTheEnd, bool IsNullPtr);
+  MutableArrayRef<const CXXRecordDecl *>
+  setMemberPointerUninit(const ValueDecl *Member, bool IsDerivedMember,
+                         unsigned Size);
 };
 
 } // end namespace clang.
