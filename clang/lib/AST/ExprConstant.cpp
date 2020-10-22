@@ -9607,7 +9607,7 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
 
   for (const auto *I : RD->fields()) {
     // -- if T is a reference type, no initialization is performed.
-    if (I->getType()->isReferenceType())
+    if (I->isUnnamedBitfield() || I->getType()->isReferenceType())
       continue;
 
     LValue Subobject = This;
