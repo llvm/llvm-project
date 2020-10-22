@@ -1,5 +1,5 @@
 ;RUN: opt < %s -analyze -dot-cfg-only 2>/dev/null
-;RUN: opt < %s -analyze -passes=dot-cfg-only 2>/dev/null
+;RUN: opt < %s -passes=dot-cfg-only 2>/dev/null
 ;RUN: opt < %s -analyze -dot-cfg-only \
 ;RUN:          -cfg-heat-colors=true -cfg-weights=true 2>/dev/null
 ;RUN: opt < %s -analyze -dot-cfg-only \
