@@ -68,7 +68,7 @@ public:
                                       const fir::CharBoxValue &rhs);
 
   /// LEN_TRIM intrinsic.
-  mlir::Value createLenTrim(mlir::Value str);
+  mlir::Value createLenTrim(const fir::CharBoxValue &str);
 
   /// Embox \p addr and \p len and return fir.boxchar.
   /// Take care of type conversions before emboxing.
@@ -163,7 +163,6 @@ private:
   /// FIXME: the implementation also needs a clean-up now that
   /// CharBoxValue are better propagated.
   fir::CharBoxValue materializeValue(mlir::Value str);
-  fir::CharBoxValue toDataLengthPair(mlir::Value character);
   mlir::Type getReferenceType(const fir::CharBoxValue &c) const;
   mlir::Type getReferenceType(mlir::Value str) const;
   mlir::Type getSeqTy(const fir::CharBoxValue &c) const;
@@ -174,7 +173,6 @@ private:
   void createLengthOneAssign(const fir::CharBoxValue &lhs,
                              const fir::CharBoxValue &rhs);
   void createAssign(const fir::CharBoxValue &lhs, const fir::CharBoxValue &rhs);
-  mlir::Value createLenTrim(const fir::CharBoxValue &str);
   mlir::Value createBlankConstantCode(fir::CharacterType type);
 
 private:
