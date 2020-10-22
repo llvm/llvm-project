@@ -1732,7 +1732,6 @@ private:
     auto globalName = mangleName(sym);
     bool isConst = sym.attrs().test(Fortran::semantics::Attr::PARAMETER);
     auto loc = genLocation(sym.name());
-    auto idxTy = builder->getIndexType();
     // FIXME: name returned does not consider subprogram's scope, is not unique
     fir::GlobalOp global = builder->getNamedGlobal(globalName);
     if (global) {

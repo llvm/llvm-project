@@ -21,6 +21,8 @@
 #include "flang/Common/template.h"
 #include "flang/Lower/Utils.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/attr.h"
+#include "flang/Semantics/symbol.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
@@ -32,9 +34,11 @@ namespace semantics {
 class SemanticsContext;
 class Scope;
 } // namespace semantics
+
 namespace lower {
 
 bool definedInCommonBlock(const semantics::Symbol &sym);
+bool defaultRecursiveFunctionSetting();
 
 namespace pft {
 
@@ -551,7 +555,13 @@ struct FunctionLikeUnit : public ProgramUnit {
   FunctionLikeUnit(FunctionLikeUnit &&) = default;
   FunctionLikeUnit(const FunctionLikeUnit &) = delete;
 
-  bool isRecursive() { return isMainProgram() ? false : recursiveFunction; }
+  bool isRecursive() const {
+    auto sym = getSubprogramSymbol();
+    return !isMainProgram() &&
+           (sym.attrs().test(semantics::Attr::RECURSIVE) ||
+            (!sym.attrs().test(semantics::Attr::NON_RECURSIVE) &&
+             defaultRecursiveFunctionSetting()));
+  }
 
   std::vector<Variable> getOrderedSymbolTable() { return varList[0]; }
 
@@ -618,7 +628,6 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
   std::vector<std::vector<Variable>> varList;
-  bool recursiveFunction{};
 };
 
 /// Module-like units contain a list of function-like units.
