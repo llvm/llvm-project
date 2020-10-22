@@ -7,6 +7,7 @@ dotest_args_str = '@LLDB_DOTEST_ARGS_CONFIGURED@'
 arch = '@LLDB_TEST_ARCH@'
 executable = '@LLDB_TEST_EXECUTABLE_CONFIGURED@'
 compiler = '@LLDB_TEST_COMPILER_CONFIGURED@'
+swift_compiler = '@LLDB_SWIFTC@'
 dsymutil = '@LLDB_TEST_DSYMUTIL_CONFIGURED@'
 filecheck = '@LLDB_TEST_FILECHECK_CONFIGURED@'
 yaml2obj = '@LLDB_TEST_YAML2OBJ_CONFIGURED@'
@@ -32,6 +33,8 @@ if __name__ == '__main__':
     cmd.extend(['--yaml2obj', yaml2obj])
     cmd.extend(['--filecheck', filecheck])
     cmd.extend(['--lldb-libs-dir', lldb_libs_dir])
+    if swift_compiler:
+        cmd.extend(['--swift-compiler', swift_compiler])
     if server:
         cmd.extend(['--server', server])
     if lldb_framework_dir:
