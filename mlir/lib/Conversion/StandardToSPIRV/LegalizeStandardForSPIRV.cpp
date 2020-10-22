@@ -67,7 +67,8 @@ void LoadOpOfSubViewFolder<vector::TransferReadOp>::replaceOp(
     vector::TransferReadOp loadOp, SubViewOp subViewOp,
     ArrayRef<Value> sourceIndices, PatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
-      loadOp, loadOp.getVectorType(), subViewOp.source(), sourceIndices);
+      loadOp, loadOp.getVectorType(), subViewOp.source(), sourceIndices,
+      loadOp.permutation_map(), loadOp.padding(), loadOp.maskedAttr());
 }
 
 template <>
@@ -84,7 +85,8 @@ void StoreOpOfSubViewFolder<vector::TransferWriteOp>::replaceOp(
     ArrayRef<Value> sourceIndices, PatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
       tranferWriteOp, tranferWriteOp.vector(), subViewOp.source(),
-      sourceIndices);
+      sourceIndices, tranferWriteOp.permutation_map(),
+      tranferWriteOp.maskedAttr());
 }
 } // namespace
 
