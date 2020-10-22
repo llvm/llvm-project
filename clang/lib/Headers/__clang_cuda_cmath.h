@@ -174,6 +174,9 @@ __DEVICE__ float sinh(float __x) { return ::sinhf(__x); }
 __DEVICE__ float sqrt(float __x) { return ::sqrtf(__x); }
 __DEVICE__ float tan(float __x) { return ::tanf(__x); }
 __DEVICE__ float tanh(float __x) { return ::tanhf(__x); }
+__DEVICE__ float remquo(float __n, float __d, int *__q) {
+  return ::remquof(__n, __d, __q);
+}
 
 // Notably missing above is nexttoward.  We omit it because
 // libdevice doesn't provide an implementation, and we don't want to be in the
