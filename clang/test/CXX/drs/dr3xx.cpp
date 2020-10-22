@@ -906,8 +906,8 @@ namespace dr367 { // dr367: yes
 namespace dr368 { // dr368: yes
   template<typename T, T> struct S {}; // expected-note {{here}}
   template<typename T> int f(S<T, T()> *); // expected-error {{function type}}
-  //template<typename T> int g(S<T, (T())> *); // FIXME: crashes clang
-  template<typename T> int g(S<T, true ? T() : T()> *); // expected-note {{cannot have type 'dr368::X'}}
+  template<typename T> int g(S<T, (T())> *); // expected-note {{type 'dr368::X'}}
+  template<typename T> int g(S<T, true ? T() : T()> *); // expected-note {{type 'dr368::X'}}
   struct X {};
   int n = g<X>(0); // expected-error {{no matching}}
 }

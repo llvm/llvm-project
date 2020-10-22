@@ -835,6 +835,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case ExternCContext:
     case Decomposition:
     case MSGuid:
+    case TemplateParamObject:
 
     case UsingDirective:
     case BuiltinTemplate:
