@@ -626,13 +626,6 @@ bool ARMBaseInstrInfo::isAddrMode3OpMinusReg(const MachineInstr &MI,
   return (isSub && Offset.getReg() != 0);
 }
 
-bool ARMBaseInstrInfo::isLdstScaledReg(const MachineInstr &MI,
-                                       unsigned Op) const {
-  const MachineOperand &Opc = MI.getOperand(Op + 2);
-  unsigned OffImm = Opc.getImm();
-  return ARM_AM::getAM2ShiftOpc(OffImm) != ARM_AM::no_shift;
-}
-
 // Load, scaled register offset, not plus LSL2
 bool ARMBaseInstrInfo::isLdstScaledRegNotPlusLsl2(const MachineInstr &MI,
                                                   unsigned Op) const {
