@@ -1,7 +1,6 @@
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestTransforms
   TestAffineLoopParametricTiling.cpp
-  TestBufferPlacement.cpp
   TestExpandMemRefReshape.cpp
   TestExpandTanh.cpp
   TestCallGraph.cpp
@@ -12,6 +11,7 @@ add_mlir_library(MLIRTestTransforms
   TestConvertGPUKernelToHsaco.cpp
   TestDominance.cpp
   TestDynamicPipeline.cpp
+  TestFinalizingBufferize.cpp
   TestLoopFusion.cpp
   TestGpuMemoryPromotion.cpp
   TestGpuParallelLoopMapping.cpp
