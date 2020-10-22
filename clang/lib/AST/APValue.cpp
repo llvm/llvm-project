@@ -882,17 +882,26 @@ void APValue::setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
   LVal.IsNullPtr = IsNullPtr;
 }
 
-void APValue::setLValue(LValueBase B, const CharUnits &O,
-                        ArrayRef<LValuePathEntry> Path, bool IsOnePastTheEnd,
-                        bool IsNullPtr) {
+MutableArrayRef<APValue::LValuePathEntry>
+APValue::setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,
+                         bool IsOnePastTheEnd, bool IsNullPtr) {
   assert(isLValue() && "Invalid accessor");
-  LV &LVal = *((LV*)(char*)Data.buffer);
+  LV &LVal = *((LV *)(char *)Data.buffer);
   LVal.Base = B;
   LVal.IsOnePastTheEnd = IsOnePastTheEnd;
   LVal.Offset = O;
-  LVal.resizePath(Path.size());
-  memcpy(LVal.getPath(), Path.data(), Path.size() * sizeof(LValuePathEntry));
   LVal.IsNullPtr = IsNullPtr;
+  LVal.resizePath(Size);
+  return {LVal.getPath(), Size};
+}
+
+void APValue::setLValue(LValueBase B, const CharUnits &O,
+                        ArrayRef<LValuePathEntry> Path, bool IsOnePastTheEnd,
+                        bool IsNullPtr) {
+  MutableArrayRef<APValue::LValuePathEntry> InternalPath =
+      setLValueUninit(B, O, Path.size(), IsOnePastTheEnd, IsNullPtr);
+  memcpy(InternalPath.data(), Path.data(),
+         Path.size() * sizeof(LValuePathEntry));
 }
 
 const ValueDecl *APValue::getMemberPointerDecl() const {
@@ -929,15 +938,27 @@ void APValue::MakeArray(unsigned InitElts, unsigned Size) {
   Kind = Array;
 }
 
-void APValue::MakeMemberPointer(const ValueDecl *Member, bool IsDerivedMember,
-                                ArrayRef<const CXXRecordDecl*> Path) {
+MutableArrayRef<APValue::LValuePathEntry>
+setLValueUninit(APValue::LValueBase B, const CharUnits &O, unsigned Size,
+                bool OnePastTheEnd, bool IsNullPtr);
+
+MutableArrayRef<const CXXRecordDecl *>
+APValue::setMemberPointerUninit(const ValueDecl *Member, bool IsDerivedMember,
+                                unsigned Size) {
   assert(isAbsent() && "Bad state change");
-  MemberPointerData *MPD = new ((void*)(char*)Data.buffer) MemberPointerData;
+  MemberPointerData *MPD = new ((void *)(char *)Data.buffer) MemberPointerData;
   Kind = MemberPointer;
   MPD->MemberAndIsDerivedMember.setPointer(
       Member ? cast<ValueDecl>(Member->getCanonicalDecl()) : nullptr);
   MPD->MemberAndIsDerivedMember.setInt(IsDerivedMember);
-  MPD->resizePath(Path.size());
+  MPD->resizePath(Size);
+  return {MPD->getPath(), MPD->PathLength};
+}
+
+void APValue::MakeMemberPointer(const ValueDecl *Member, bool IsDerivedMember,
+                                ArrayRef<const CXXRecordDecl *> Path) {
+  MutableArrayRef<const CXXRecordDecl *> InternalPath =
+      setMemberPointerUninit(Member, IsDerivedMember, Path.size());
   for (unsigned I = 0; I != Path.size(); ++I)
-    MPD->getPath()[I] = Path[I]->getCanonicalDecl();
+    InternalPath[I] = Path[I]->getCanonicalDecl();
 }

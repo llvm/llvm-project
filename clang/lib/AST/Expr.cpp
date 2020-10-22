@@ -360,7 +360,6 @@ llvm::APSInt ConstantExpr::getResultAsAPSInt() const {
 }
 
 APValue ConstantExpr::getAPValueResult() const {
-  assert(hasAPValueResult());
 
   switch (ConstantExprBits.ResultKind) {
   case ConstantExpr::RSK_APValue:
@@ -370,6 +369,8 @@ APValue ConstantExpr::getAPValueResult() const {
         llvm::APSInt(llvm::APInt(ConstantExprBits.BitWidth, Int64Result()),
                      ConstantExprBits.IsUnsigned));
   case ConstantExpr::RSK_None:
+    if (ConstantExprBits.APValueKind == APValue::Indeterminate)
+      return APValue::IndeterminateValue();
     return APValue();
   }
   llvm_unreachable("invalid ResultKind");

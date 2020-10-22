@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_AST_ASTIMPORTER_H
 #define LLVM_CLANG_AST_ASTIMPORTER_H
 
+#include "clang/AST/APValue.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
@@ -502,6 +503,13 @@ class TypeSourceInfo;
     /// \returns The equivalent CXXBaseSpecifier in the source manager of the
     /// "to" context, or the import error.
     llvm::Expected<CXXBaseSpecifier *> Import(const CXXBaseSpecifier *FromSpec);
+
+    /// Import the given APValue from the "from" context into
+    /// the "to" context.
+    ///
+    /// \return the equivalent APValue in the "to" context or the import
+    /// error.
+    llvm::Expected<APValue> Import(const APValue &FromValue);
 
     /// Import the definition of the given declaration, including all of
     /// the declarations it contains.

@@ -1006,9 +1006,6 @@ ASTContext::~ASTContext() {
 
   for (const auto &Value : ModuleInitializers)
     Value.second->~PerModuleInitializers();
-
-  for (APValue *Value : APValueCleanups)
-    Value->~APValue();
 }
 
 void ASTContext::setTraversalScope(const std::vector<Decl *> &TopLevelDecls) {
