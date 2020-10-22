@@ -1732,6 +1732,7 @@ private:
     auto globalName = mangleName(sym);
     bool isConst = sym.attrs().test(Fortran::semantics::Attr::PARAMETER);
     auto loc = genLocation(sym.name());
+    assert(!var.isAlias() && "must be handled in instantiateAlias");
     // FIXME: name returned does not consider subprogram's scope, is not unique
     fir::GlobalOp global = builder->getNamedGlobal(globalName);
     if (global) {
@@ -1741,10 +1742,6 @@ private:
                                                      global.getSymbol());
         mapSymbolAttributes(var, storeMap, addrOf);
       }
-      return;
-    }
-    if (var.isAlias()) {
-      instantiateAlias(var, storeMap);
       return;
     }
     if (const auto *details =
@@ -1908,19 +1905,19 @@ private:
                                        /*isConstant=*/false, initFunc, linkage);
       auto addr = builder->create<fir::AddrOfOp>(loc, agg.resultType(),
                                                  agg.getSymbol());
-      auto varTy = builder->getRefType(genType(*st.vars[0]));
-      auto result = builder->createConvert(loc, varTy, addr);
-      storeMap[off] = result;
-      mapSymbolAttributes(Fortran::lower::pft::Variable{*st.vars[0]}, storeMap,
-                          result);
+      auto size = std::get<1>(var.getInterval());
+      fir::SequenceType::Shape shape(1, size);
+      auto seqTy = fir::SequenceType::get(shape, i8Ty);
+      auto refTy = builder->getRefType(seqTy);
+      storeMap[off] = builder->createConvert(loc, refTy, addr);
       return;
     }
     // Allocate an anonymous block of memory.
     auto size = std::get<1>(var.getInterval());
-    llvm::SmallVector<mlir::Value, 2> shape = {
-        builder->createIntegerConstant(loc, idxTy, size)};
-    auto local =
-        builder->allocateLocal(toLocation(), i8Ty, "", shape, /*target=*/false);
+    fir::SequenceType::Shape shape(1, size);
+    auto seqTy = fir::SequenceType::get(shape, i8Ty);
+    auto local = builder->allocateLocal(toLocation(), seqTy, "", llvm::None,
+                                        /*target=*/false);
     storeMap[off] = local;
   }
 
@@ -1944,11 +1941,9 @@ private:
     auto store = storeMap.find(aliasOffset)->second;
     auto i8Ty = builder->getIntegerType(8);
     auto i8Ptr = builder->getRefType(i8Ty);
-    auto seqTy = builder->getRefType(builder->getVarLenSeqTy(i8Ty));
-    auto base = builder->createConvert(loc, seqTy, store);
     llvm::SmallVector<mlir::Value, 1> offs{
         builder->createIntegerConstant(loc, idxTy, sym.offset() - aliasOffset)};
-    auto ptr = builder->create<fir::CoordinateOp>(loc, i8Ptr, base, offs);
+    auto ptr = builder->create<fir::CoordinateOp>(loc, i8Ptr, store, offs);
     auto preAlloc = builder->createConvert(
         loc, builder->getRefType(genTypeWithCharFixup(sym)), ptr);
 
@@ -2612,10 +2607,10 @@ private:
       instantiateCommon(
           *Fortran::semantics::FindCommonBlockContaining(var.getSymbol()), var,
           storeMap, *cmnBlkMap);
-    } else if (var.isGlobal()) {
-      instantiateGlobal(var, storeMap);
     } else if (var.isAlias()) {
       instantiateAlias(var, storeMap);
+    } else if (var.isGlobal()) {
+      instantiateGlobal(var, storeMap);
     } else {
       instantiateLocal(var, storeMap);
     }

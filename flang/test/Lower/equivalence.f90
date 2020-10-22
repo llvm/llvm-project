@@ -4,9 +4,9 @@
 SUBROUTINE s1
   INTEGER i
   REAL r
-  ! CHECK: = fir.alloca i8, %
+  ! CHECK: = fir.alloca !fir.array<4xi8>
   EQUIVALENCE (r,i)
-  ! CHECK: %[[coor:.*]] = fir.coordinate_of %{{.*}}, %{{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  ! CHECK: %[[coor:.*]] = fir.coordinate_of %{{.*}}, %{{.*}} : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
   ! CHECK: %[[iloc:.*]] = fir.convert %[[coor]] : (!fir.ref<i8>) -> !fir.ref<i32>
   ! CHECK-DAG: fir.store %{{.*}} to %[[iloc]] : !fir.ref<i32>
   i = 4
@@ -19,11 +19,11 @@ END SUBROUTINE s1
 SUBROUTINE s2
   INTEGER i(10)
   REAL r(10)
-  ! CHECK: = fir.alloca i8, %
+  ! CHECK: %[[arr:.*]] = fir.alloca !fir.array<48xi8>
   EQUIVALENCE (r(3),i(5))
   ! CHECK: %[[iarr:.*]] = fir.convert %{{.*}} : (!fir.ref<i8>) -> !fir.ref<!fir.array<10xi32>>
-  ! CHECK: %[[ioff:.*]] = fir.coordinate_of %{{.*}}, %{{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
-  ! CHECK: %[[farr:.*]] = fir.convert %[[ioff]] : (!fir.ref<i8>) -> !fir.ref<!fir.array<10xf32>>
+  ! CHECK: %[[foff:.*]] = fir.coordinate_of %[[arr]], %{{.*}} : (!fir.ref<!fir.array<48xi8>>, index) -> !fir.ref<i8>
+  ! CHECK: %[[farr:.*]] = fir.convert %[[foff]] : (!fir.ref<i8>) -> !fir.ref<!fir.array<10xf32>>
   ! CHECK: %[[ia:.*]] = fir.coordinate_of %[[iarr]], %{{.*}} : (!fir.ref<!fir.array<10xi32>>, i64) -> !fir.ref<i32>
   ! CHECK: fir.store %{{.*}} to %[[ia]] : !fir.ref<i32>
   i(5) = 18
