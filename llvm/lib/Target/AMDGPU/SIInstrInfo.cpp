@@ -5106,9 +5106,8 @@ void SIInstrInfo::legalizeOperands(MachineInstr &MI,
       // Move everything between ADJCALLSTACKUP and ADJCALLSTACKDOWN and
       // following copies, we also need to move copies from and to physical
       // registers into the loop block.
-      const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-      unsigned FrameSetupOpcode = TII.getCallFrameSetupOpcode();
-      unsigned FrameDestroyOpcode = TII.getCallFrameDestroyOpcode();
+      unsigned FrameSetupOpcode = getCallFrameSetupOpcode();
+      unsigned FrameDestroyOpcode = getCallFrameDestroyOpcode();
 
       // Also move the copies to physical registers into the loop block
       MachineBasicBlock &MBB = *MI.getParent();
