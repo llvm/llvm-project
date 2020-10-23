@@ -218,6 +218,14 @@ TEST(DWARFExpression, DW_OP_piece) {
       llvm::HasValue(GetScalar(16, 0xff00, true)));
 }
 
+TEST(DWARFExpression, DW_OP_implicit_value) {
+  unsigned char bytes = 4;
+
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_implicit_value, bytes, 0x11, 0x22, 0x33, 0x44}),
+      llvm::HasValue(GetScalar(8 * bytes, 0x44332211, true)));
+}
+
 TEST(DWARFExpression, DW_OP_unknown) {
   EXPECT_THAT_EXPECTED(
       Evaluate({0xff}),
