@@ -930,7 +930,7 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
 
   # Modules should be built with -G, so we can use runtime linking with
   # plugins.
-  string(APPEND CMAKE_MODULE_LINKER_FLAGS " -G")
+  string(APPEND CMAKE_MODULE_LINKER_FLAGS " -Wl,-G")
 
   # Also set the correct flags for building shared libraries.
   string(APPEND CMAKE_SHARED_LINKER_FLAGS " -shared")
