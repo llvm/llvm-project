@@ -238,6 +238,14 @@ void AMDGPUPALMetadata::setScratchSize(CallingConv::ID CC, unsigned Val) {
   getHwStage(CC)[".scratch_memory_size"] = MsgPackDoc.getNode(Val);
 }
 
+// Set the scratch size in the metadata.
+void AMDGPUPALMetadata::setStackFrameSize(const MachineFunction &MF,
+                                          unsigned Val) {
+  auto Node = MsgPackDoc.getMapNode();
+  Node[".stack_frame_size_in_bytes"] = MsgPackDoc.getNode(Val);
+  getShaderFunctions()[MF.getFunction().getName()] = Node;
+}
+
 // Set the hardware register bit in PAL metadata to enable wave32 on the
 // shader of the given calling convention.
 void AMDGPUPALMetadata::setWave32(unsigned CC) {
@@ -719,6 +727,24 @@ msgpack::MapDocNode AMDGPUPALMetadata::getRegisters() {
   if (Registers.isEmpty())
     Registers = refRegisters();
   return Registers.getMap();
+}
+
+// Reference (create if necessary) the node for the shader functions map.
+msgpack::DocNode &AMDGPUPALMetadata::refShaderFunctions() {
+  auto &N =
+      MsgPackDoc.getRoot()
+          .getMap(/*Convert=*/true)[MsgPackDoc.getNode("amdpal.pipelines")]
+          .getArray(/*Convert=*/true)[0]
+          .getMap(/*Convert=*/true)[MsgPackDoc.getNode(".shader_functions")];
+  N.getMap(/*Convert=*/true);
+  return N;
+}
+
+// Get (create if necessary) the shader functions map.
+msgpack::MapDocNode AMDGPUPALMetadata::getShaderFunctions() {
+  if (ShaderFunctions.isEmpty())
+    ShaderFunctions = refShaderFunctions();
+  return ShaderFunctions.getMap();
 }
 
 // Return the PAL metadata hardware shader stage name.
