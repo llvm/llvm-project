@@ -23,7 +23,7 @@ class MachOLayoutBuilder {
 
   // Points to the __LINKEDIT segment if it exists.
   MachO::macho_load_command *LinkEditLoadCommand = nullptr;
-  StringTableBuilder StrTableBuilder{StringTableBuilder::MachO};
+  StringTableBuilder StrTableBuilder;
 
   uint32_t computeSizeOfCmds() const;
   void constructStringTable();
@@ -33,9 +33,18 @@ class MachOLayoutBuilder {
   uint64_t layoutRelocations(uint64_t Offset);
   Error layoutTail(uint64_t Offset);
 
+  static StringTableBuilder::Kind getStringTableBuilderKind(const Object &O,
+                                                            bool Is64Bit) {
+    if (O.Header.FileType == MachO::HeaderFileType::MH_OBJECT)
+      return Is64Bit ? StringTableBuilder::MachO64 : StringTableBuilder::MachO;
+    return Is64Bit ? StringTableBuilder::MachO64Linked
+                   : StringTableBuilder::MachOLinked;
+  }
+
 public:
   MachOLayoutBuilder(Object &O, bool Is64Bit, uint64_t PageSize)
-      : O(O), Is64Bit(Is64Bit), PageSize(PageSize) {}
+      : O(O), Is64Bit(Is64Bit), PageSize(PageSize),
+        StrTableBuilder(getStringTableBuilderKind(O, Is64Bit)) {}
 
   // Recomputes and updates fields in the given object such as file offsets.
   Error layout();
