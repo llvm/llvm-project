@@ -380,16 +380,14 @@ void SourceManager::initializeForReplay(const SourceManager &Old) {
   }
 }
 
-/// getOrCreateContentCache - Create or return a cached ContentCache for the
-/// specified file.
-const ContentCache *
-SourceManager::getOrCreateContentCache(const FileEntry *FileEnt,
-                                       bool isSystemFile) {
+ContentCache &SourceManager::getOrCreateContentCache(const FileEntry *FileEnt,
+                                                     bool isSystemFile) {
   assert(FileEnt && "Didn't specify a file entry to use?");
 
   // Do we already have information about this file?
   ContentCache *&Entry = FileInfos[FileEnt];
-  if (Entry) return Entry;
+  if (Entry)
+    return *Entry;
 
   // Nope, create a new Cache entry.
   Entry = ContentCacheAlloc.Allocate<ContentCache>();
@@ -412,19 +410,19 @@ SourceManager::getOrCreateContentCache(const FileEntry *FileEnt,
   Entry->IsFileVolatile = UserFilesAreVolatile && !isSystemFile;
   Entry->IsTransient = FilesAreTransient;
 
-  return Entry;
+  return *Entry;
 }
 
 /// Create a new ContentCache for the specified memory buffer.
 /// This does no caching.
-const ContentCache *SourceManager::createMemBufferContentCache(
+ContentCache &SourceManager::createMemBufferContentCache(
     std::unique_ptr<llvm::MemoryBuffer> Buffer) {
   // Add a new ContentCache to the MemBufferInfos list and return it.
   ContentCache *Entry = ContentCacheAlloc.Allocate<ContentCache>();
   new (Entry) ContentCache();
   MemBufferInfos.push_back(Entry);
   Entry->setBuffer(std::move(Buffer));
-  return Entry;
+  return *Entry;
 }
 
 const SrcMgr::SLocEntry &SourceManager::loadSLocEntry(unsigned Index,
@@ -437,7 +435,7 @@ const SrcMgr::SLocEntry &SourceManager::loadSLocEntry(unsigned Index,
     if (!SLocEntryLoaded[Index]) {
       // Try to recover; create a SLocEntry so the rest of clang can handle it.
       LoadedSLocEntryTable[Index] = SLocEntry::get(
-          0, FileInfo::get(SourceLocation(), *getFakeContentCacheForRecovery(),
+          0, FileInfo::get(SourceLocation(), getFakeContentCacheForRecovery(),
                            SrcMgr::C_User, ""));
     }
   }
@@ -461,24 +459,22 @@ SourceManager::AllocateLoadedSLocEntries(unsigned NumSLocEntries,
 
 /// As part of recovering from missing or changed content, produce a
 /// fake, non-empty buffer.
-llvm::MemoryBuffer *SourceManager::getFakeBufferForRecovery() const {
+llvm::MemoryBufferRef SourceManager::getFakeBufferForRecovery() const {
   if (!FakeBufferForRecovery)
     FakeBufferForRecovery =
         llvm::MemoryBuffer::getMemBuffer("<<<INVALID BUFFER>>");
 
-  return FakeBufferForRecovery.get();
+  return *FakeBufferForRecovery;
 }
 
 /// As part of recovering from missing or changed content, produce a
 /// fake content cache.
-const SrcMgr::ContentCache *
-SourceManager::getFakeContentCacheForRecovery() const {
+SrcMgr::ContentCache &SourceManager::getFakeContentCacheForRecovery() const {
   if (!FakeContentCacheForRecovery) {
     FakeContentCacheForRecovery = std::make_unique<SrcMgr::ContentCache>();
-    FakeContentCacheForRecovery->setUnownedBuffer(
-        getFakeBufferForRecovery()->getMemBufferRef());
+    FakeContentCacheForRecovery->setUnownedBuffer(getFakeBufferForRecovery());
   }
-  return FakeContentCacheForRecovery.get();
+  return *FakeContentCacheForRecovery;
 }
 
 /// Returns the previous in-order FileID or an invalid FileID if there
@@ -531,21 +527,19 @@ FileID SourceManager::createFileID(const FileEntry *SourceFile,
                                    SrcMgr::CharacteristicKind FileCharacter,
                                    int LoadedID, unsigned LoadedOffset) {
   assert(SourceFile && "Null source file!");
-  const SrcMgr::ContentCache *IR =
+  SrcMgr::ContentCache &IR =
       getOrCreateContentCache(SourceFile, isSystem(FileCharacter));
-  assert(IR && "getOrCreateContentCache() cannot return NULL");
-  return createFileIDImpl(*IR, SourceFile->getName(), IncludePos, FileCharacter,
-		      LoadedID, LoadedOffset);
+  return createFileIDImpl(IR, SourceFile->getName(), IncludePos, FileCharacter,
+                          LoadedID, LoadedOffset);
 }
 
 FileID SourceManager::createFileID(FileEntryRef SourceFile,
                                    SourceLocation IncludePos,
                                    SrcMgr::CharacteristicKind FileCharacter,
                                    int LoadedID, unsigned LoadedOffset) {
-  const SrcMgr::ContentCache *IR = getOrCreateContentCache(
-      &SourceFile.getFileEntry(), isSystem(FileCharacter));
-  assert(IR && "getOrCreateContentCache() cannot return NULL");
-  return createFileIDImpl(*IR, SourceFile.getName(), IncludePos, FileCharacter,
+  SrcMgr::ContentCache &IR = getOrCreateContentCache(&SourceFile.getFileEntry(),
+                                                     isSystem(FileCharacter));
+  return createFileIDImpl(IR, SourceFile.getName(), IncludePos, FileCharacter,
                           LoadedID, LoadedOffset);
 }
 
@@ -558,7 +552,7 @@ FileID SourceManager::createFileID(std::unique_ptr<llvm::MemoryBuffer> Buffer,
                                    int LoadedID, unsigned LoadedOffset,
                                    SourceLocation IncludeLoc) {
   StringRef Name = Buffer->getBufferIdentifier();
-  return createFileIDImpl(*createMemBufferContentCache(std::move(Buffer)), Name,
+  return createFileIDImpl(createMemBufferContentCache(std::move(Buffer)), Name,
                           IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
 }
 
@@ -587,8 +581,7 @@ SourceManager::getOrCreateFileID(const FileEntry *SourceFile,
 /// createFileID - Create a new FileID for the specified ContentCache and
 /// include position.  This works regardless of whether the ContentCache
 /// corresponds to a file or some other input source.
-FileID SourceManager::createFileIDImpl(const ContentCache &File,
-                                       StringRef Filename,
+FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
                                        SourceLocation IncludePos,
                                        SrcMgr::CharacteristicKind FileCharacter,
                                        int LoadedID, unsigned LoadedOffset) {
@@ -678,19 +671,16 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
 
 llvm::Optional<llvm::MemoryBufferRef>
 SourceManager::getMemoryBufferForFileOrNone(const FileEntry *File) {
-  const SrcMgr::ContentCache *IR = getOrCreateContentCache(File);
-  assert(IR && "getOrCreateContentCache() cannot return NULL");
-  return IR->getBufferOrNone(Diag, getFileManager(), SourceLocation());
+  SrcMgr::ContentCache &IR = getOrCreateContentCache(File);
+  return IR.getBufferOrNone(Diag, getFileManager(), SourceLocation());
 }
 
 void SourceManager::overrideFileContents(
     const FileEntry *SourceFile, std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  auto *IR =
-      const_cast<SrcMgr::ContentCache *>(getOrCreateContentCache(SourceFile));
-  assert(IR && "getOrCreateContentCache() cannot return NULL");
+  SrcMgr::ContentCache &IR = getOrCreateContentCache(SourceFile);
 
-  IR->setBuffer(std::move(Buffer));
-  IR->BufferOverridden = true;
+  IR.setBuffer(std::move(Buffer));
+  IR.BufferOverridden = true;
 
   getOverriddenFilesInfo().OverriddenFilesWithBuffer.insert(SourceFile);
 }
@@ -722,8 +712,7 @@ SourceManager::bypassFileContentsOverride(const FileEntry &File) {
 }
 
 void SourceManager::setFileIsTransient(const FileEntry *File) {
-  const SrcMgr::ContentCache *CC = getOrCreateContentCache(File);
-  const_cast<SrcMgr::ContentCache *>(CC)->IsTransient = true;
+  getOrCreateContentCache(File).IsTransient = true;
 }
 
 Optional<StringRef>
