@@ -39,7 +39,7 @@ static bool isSmallAlloc(Value alloc, unsigned maximumSizeInBytes) {
 /// Checks whether the given aliases leave the allocation scope.
 static bool
 leavesAllocationScope(Region *parentRegion,
-                      const BufferPlacementAliasAnalysis::ValueSetT &aliases) {
+                      const BufferAliasAnalysis::ValueSetT &aliases) {
   for (Value alias : aliases) {
     for (auto *use : alias.getUsers()) {
       // If there is at least one alias that leaves the parent region, we know
@@ -54,9 +54,8 @@ leavesAllocationScope(Region *parentRegion,
 }
 
 /// Checks, if an automated allocation scope for a given alloc value exists.
-static bool
-hasAllocationScope(Value alloc,
-                   const BufferPlacementAliasAnalysis &aliasAnalysis) {
+static bool hasAllocationScope(Value alloc,
+                               const BufferAliasAnalysis &aliasAnalysis) {
   Region *region = alloc.getParentRegion();
   do {
     if (Operation *parentOp = region->getParentOp()) {
