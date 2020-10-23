@@ -18,6 +18,9 @@ def h : Flag<["-"], "h">, Alias<help>;
 def add_rpath : Option<["-", "--"], "add_rpath", KIND_SEPARATE>,
                 HelpText<"Add new rpath">;
 
+def prepend_rpath : Option<["-", "--"], "prepend_rpath", KIND_SEPARATE>,
+                    HelpText<"Add new rpath before other rpaths">;
+
 def delete_rpath: Option<["-", "--"], "delete_rpath", KIND_SEPARATE>,
                   HelpText<"Delete specified rpath">;
 
