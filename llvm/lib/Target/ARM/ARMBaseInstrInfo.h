@@ -180,8 +180,6 @@ public:
   static bool isCPSRDefined(const MachineInstr &MI);
   bool isAddrMode3OpMinusReg(const MachineInstr &MI, unsigned Op) const;
 
-  // Load, scaled register offset
-  bool isLdstScaledReg(const MachineInstr &MI, unsigned Op) const;
   // Load, scaled register offset, not plus LSL2
   bool isLdstScaledRegNotPlusLsl2(const MachineInstr &MI, unsigned Op) const;
   // Minus reg for ldstso addr mode
