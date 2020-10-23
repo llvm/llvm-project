@@ -555,12 +555,15 @@ struct FunctionLikeUnit : public ProgramUnit {
   FunctionLikeUnit(FunctionLikeUnit &&) = default;
   FunctionLikeUnit(const FunctionLikeUnit &) = delete;
 
+  /// Return true iff this function like unit is Fortran recursive (actually
+  /// meaning it's reentrant).
   bool isRecursive() const {
-    auto sym = getSubprogramSymbol();
-    return !isMainProgram() &&
-           (sym.attrs().test(semantics::Attr::RECURSIVE) ||
-            (!sym.attrs().test(semantics::Attr::NON_RECURSIVE) &&
-             defaultRecursiveFunctionSetting()));
+    if (isMainProgram())
+      return false;
+    const auto &sym = getSubprogramSymbol();
+    return sym.attrs().test(semantics::Attr::RECURSIVE) ||
+           (!sym.attrs().test(semantics::Attr::NON_RECURSIVE) &&
+            defaultRecursiveFunctionSetting());
   }
 
   std::vector<Variable> getOrderedSymbolTable() { return varList[0]; }

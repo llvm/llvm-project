@@ -2,7 +2,7 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
-program acc_data
+subroutine acc_data
   real, dimension(10, 10) :: a, b, c
   logical :: ifCondition = .TRUE.
 
@@ -90,5 +90,5 @@ program acc_data
 !CHECK:        acc.terminator
 !CHECK-NEXT: }{{$}}
 
-end program
+end subroutine acc_data
 

@@ -1041,8 +1041,8 @@ namespace {
 /// symbol table, which is sorted by name.
 struct SymbolDependenceDepth {
   explicit SymbolDependenceDepth(
-      std::vector<std::vector<lower::pft::Variable>> &vars)
-      : vars{vars} {}
+      std::vector<std::vector<lower::pft::Variable>> &vars, bool reentrant)
+      : vars{vars}, reentrant{reentrant} {}
 
   // Analyze the equivalence sets. This analysis need not be performed when the
   // scope has no equivalence sets.
@@ -1144,9 +1144,12 @@ struct SymbolDependenceDepth {
 
     // check CHARACTER's length
     if (symTy->category() == semantics::DeclTypeSpec::Character)
-      if (auto e = symTy->characterTypeSpec().length().GetExplicit())
+      if (auto e = symTy->characterTypeSpec().length().GetExplicit()) {
+        // turn variable into a global if this unit is not reentrant
+        global = global || !reentrant;
         for (const auto &s : evaluate::CollectSymbols(*e))
           depth = std::max(analyze(s) + 1, depth);
+      }
 
     if (const auto *details = sym.detailsIf<semantics::ObjectEntityDetails>()) {
       auto doExplicit = [&](const auto &bound) {
@@ -1157,11 +1160,15 @@ struct SymbolDependenceDepth {
         }
       };
       // handle any symbols in array bound declarations
+      if (!details->shape().empty())
+        global = global || !reentrant;
       for (const auto &subs : details->shape()) {
         doExplicit(subs.lbound());
         doExplicit(subs.ubound());
       }
       // handle any symbols in coarray bound declarations
+      if (!details->coshape().empty())
+        global = global || !reentrant;
       for (const auto &subs : details->coshape()) {
         doExplicit(subs.lbound());
         doExplicit(subs.ubound());
@@ -1245,13 +1252,15 @@ private:
   std::vector<std::vector<lower::pft::Variable>> &vars;
   llvm::SmallSet<const semantics::Symbol *, 32> aliasSyms;
   std::vector<lower::pft::Variable::IntervalStore> stores;
+  bool reentrant;
 };
 } // namespace
 
 static void processSymbolTable(
     const semantics::Scope &scope,
-    std::vector<std::vector<Fortran::lower::pft::Variable>> &varList) {
-  SymbolDependenceDepth sdd{varList};
+    std::vector<std::vector<Fortran::lower::pft::Variable>> &varList,
+    bool reentrant) {
+  SymbolDependenceDepth sdd{varList, reentrant};
   if (!scope.equivalenceSets().empty())
     sdd.analyzeAliases(scope);
   sdd.prepareStores();
@@ -1272,12 +1281,12 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
     beginStmt = FunctionStatement(programStmt.value());
     auto symbol = getSymbol(*beginStmt);
     entryPointList[0].first = symbol;
-    processSymbolTable(*symbol->scope(), varList);
+    processSymbolTable(*symbol->scope(), varList, isRecursive());
   } else {
     processSymbolTable(
         semanticsContext.FindScope(
             std::get<parser::Statement<parser::EndProgramStmt>>(func.t).source),
-        varList);
+        varList, isRecursive());
   }
 }
 
@@ -1290,7 +1299,7 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
       endStmt{getFunctionStmt<parser::EndFunctionStmt>(func)} {
   auto symbol = getSymbol(*beginStmt);
   entryPointList[0].first = symbol;
-  processSymbolTable(*symbol->scope(), varList);
+  processSymbolTable(*symbol->scope(), varList, isRecursive());
 }
 
 Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
@@ -1302,7 +1311,7 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
       endStmt{getFunctionStmt<parser::EndSubroutineStmt>(func)} {
   auto symbol = getSymbol(*beginStmt);
   entryPointList[0].first = symbol;
-  processSymbolTable(*symbol->scope(), varList);
+  processSymbolTable(*symbol->scope(), varList, isRecursive());
 }
 
 Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
@@ -1314,7 +1323,7 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
       endStmt{getFunctionStmt<parser::EndMpSubprogramStmt>(func)} {
   auto symbol = getSymbol(*beginStmt);
   entryPointList[0].first = symbol;
-  processSymbolTable(*symbol->scope(), varList);
+  processSymbolTable(*symbol->scope(), varList, isRecursive());
 }
 
 Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
@@ -1322,7 +1331,7 @@ Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
     : ProgramUnit{m, parent}, beginStmt{getModuleStmt<parser::ModuleStmt>(m)},
       endStmt{getModuleStmt<parser::EndModuleStmt>(m)} {
   auto symbol = getSymbol(beginStmt);
-  processSymbolTable(*symbol->scope(), varList);
+  processSymbolTable(*symbol->scope(), varList, /*reentrant=*/false);
 }
 
 Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
@@ -1331,7 +1340,7 @@ Fortran::lower::pft::ModuleLikeUnit::ModuleLikeUnit(
                                   m)},
       endStmt{getModuleStmt<parser::EndSubmoduleStmt>(m)} {
   auto symbol = getSymbol(beginStmt);
-  processSymbolTable(*symbol->scope(), varList);
+  processSymbolTable(*symbol->scope(), varList, /*reentrant=*/false);
 }
 
 Fortran::lower::pft::BlockDataUnit::BlockDataUnit(

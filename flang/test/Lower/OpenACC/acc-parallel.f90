@@ -2,7 +2,7 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
-program acc_parallel
+subroutine acc_parallel
   integer :: i, j
 
   integer :: async = 1
@@ -240,5 +240,5 @@ program acc_parallel
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
-end program
+end subroutine acc_parallel
 
