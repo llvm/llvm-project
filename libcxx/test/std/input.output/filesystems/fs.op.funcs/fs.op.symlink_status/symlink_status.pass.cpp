@@ -83,7 +83,7 @@ TEST_CASE(test_symlink_status_cannot_resolve)
 #ifndef TEST_HAS_NO_EXCEPTIONS
         { // test throwing case
             try {
-                symlink_status(p);
+                (void)symlink_status(p);
             } catch (filesystem_error const& err) {
                 TEST_CHECK(err.path1() == p);
                 TEST_CHECK(err.path2() == "");
