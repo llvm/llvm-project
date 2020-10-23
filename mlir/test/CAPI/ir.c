@@ -11,6 +11,7 @@
  */
 
 #include "mlir-c/IR.h"
+#include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/Registration.h"
@@ -889,6 +890,118 @@ int printAffineMap(MlirContext ctx) {
   return 0;
 }
 
+int printAffineExpr(MlirContext ctx) {
+  MlirAffineExpr affineDimExpr = mlirAffineDimExprGet(ctx, 5);
+  MlirAffineExpr affineSymbolExpr = mlirAffineSymbolExprGet(ctx, 5);
+  MlirAffineExpr affineConstantExpr = mlirAffineConstantExprGet(ctx, 5);
+  MlirAffineExpr affineAddExpr =
+      mlirAffineAddExprGet(affineDimExpr, affineSymbolExpr);
+  MlirAffineExpr affineMulExpr =
+      mlirAffineMulExprGet(affineDimExpr, affineSymbolExpr);
+  MlirAffineExpr affineModExpr =
+      mlirAffineModExprGet(affineDimExpr, affineSymbolExpr);
+  MlirAffineExpr affineFloorDivExpr =
+      mlirAffineFloorDivExprGet(affineDimExpr, affineSymbolExpr);
+  MlirAffineExpr affineCeilDivExpr =
+      mlirAffineCeilDivExprGet(affineDimExpr, affineSymbolExpr);
+
+  // Tests mlirAffineExprDump.
+  mlirAffineExprDump(affineDimExpr);
+  mlirAffineExprDump(affineSymbolExpr);
+  mlirAffineExprDump(affineConstantExpr);
+  mlirAffineExprDump(affineAddExpr);
+  mlirAffineExprDump(affineMulExpr);
+  mlirAffineExprDump(affineModExpr);
+  mlirAffineExprDump(affineFloorDivExpr);
+  mlirAffineExprDump(affineCeilDivExpr);
+
+  // Tests methods of affine binary operation expression, takes add expression
+  // as an example.
+  mlirAffineExprDump(mlirAffineBinaryOpExprGetLHS(affineAddExpr));
+  mlirAffineExprDump(mlirAffineBinaryOpExprGetRHS(affineAddExpr));
+
+  // Tests methods of affine dimension expression.
+  if (mlirAffineDimExprGetPosition(affineDimExpr) != 5)
+    return 1;
+
+  // Tests methods of affine symbol expression.
+  if (mlirAffineSymbolExprGetPosition(affineSymbolExpr) != 5)
+    return 2;
+
+  // Tests methods of affine constant expression.
+  if (mlirAffineConstantExprGetValue(affineConstantExpr) != 5)
+    return 3;
+
+  // Tests methods of affine expression.
+  if (mlirAffineExprIsSymbolicOrConstant(affineDimExpr) ||
+      !mlirAffineExprIsSymbolicOrConstant(affineSymbolExpr) ||
+      !mlirAffineExprIsSymbolicOrConstant(affineConstantExpr) ||
+      mlirAffineExprIsSymbolicOrConstant(affineAddExpr) ||
+      mlirAffineExprIsSymbolicOrConstant(affineMulExpr) ||
+      mlirAffineExprIsSymbolicOrConstant(affineModExpr) ||
+      mlirAffineExprIsSymbolicOrConstant(affineFloorDivExpr) ||
+      mlirAffineExprIsSymbolicOrConstant(affineCeilDivExpr))
+    return 4;
+
+  if (!mlirAffineExprIsPureAffine(affineDimExpr) ||
+      !mlirAffineExprIsPureAffine(affineSymbolExpr) ||
+      !mlirAffineExprIsPureAffine(affineConstantExpr) ||
+      !mlirAffineExprIsPureAffine(affineAddExpr) ||
+      mlirAffineExprIsPureAffine(affineMulExpr) ||
+      mlirAffineExprIsPureAffine(affineModExpr) ||
+      mlirAffineExprIsPureAffine(affineFloorDivExpr) ||
+      mlirAffineExprIsPureAffine(affineCeilDivExpr))
+    return 5;
+
+  if (mlirAffineExprGetLargestKnownDivisor(affineDimExpr) != 1 ||
+      mlirAffineExprGetLargestKnownDivisor(affineSymbolExpr) != 1 ||
+      mlirAffineExprGetLargestKnownDivisor(affineConstantExpr) != 5 ||
+      mlirAffineExprGetLargestKnownDivisor(affineAddExpr) != 1 ||
+      mlirAffineExprGetLargestKnownDivisor(affineMulExpr) != 1 ||
+      mlirAffineExprGetLargestKnownDivisor(affineModExpr) != 1 ||
+      mlirAffineExprGetLargestKnownDivisor(affineFloorDivExpr) != 1 ||
+      mlirAffineExprGetLargestKnownDivisor(affineCeilDivExpr) != 1)
+    return 6;
+
+  if (!mlirAffineExprIsMultipleOf(affineDimExpr, 1) ||
+      !mlirAffineExprIsMultipleOf(affineSymbolExpr, 1) ||
+      !mlirAffineExprIsMultipleOf(affineConstantExpr, 5) ||
+      !mlirAffineExprIsMultipleOf(affineAddExpr, 1) ||
+      !mlirAffineExprIsMultipleOf(affineMulExpr, 1) ||
+      !mlirAffineExprIsMultipleOf(affineModExpr, 1) ||
+      !mlirAffineExprIsMultipleOf(affineFloorDivExpr, 1) ||
+      !mlirAffineExprIsMultipleOf(affineCeilDivExpr, 1))
+    return 7;
+
+  if (!mlirAffineExprIsFunctionOfDim(affineDimExpr, 5) ||
+      mlirAffineExprIsFunctionOfDim(affineSymbolExpr, 5) ||
+      mlirAffineExprIsFunctionOfDim(affineConstantExpr, 5) ||
+      !mlirAffineExprIsFunctionOfDim(affineAddExpr, 5) ||
+      !mlirAffineExprIsFunctionOfDim(affineMulExpr, 5) ||
+      !mlirAffineExprIsFunctionOfDim(affineModExpr, 5) ||
+      !mlirAffineExprIsFunctionOfDim(affineFloorDivExpr, 5) ||
+      !mlirAffineExprIsFunctionOfDim(affineCeilDivExpr, 5))
+    return 8;
+
+  // Tests 'IsA' methods of affine binary operaion expression.
+  if (!mlirAffineExprIsAAdd(affineAddExpr))
+    return 9;
+
+  if (!mlirAffineExprIsAMul(affineMulExpr))
+    return 10;
+
+  if (!mlirAffineExprIsAMod(affineModExpr))
+    return 11;
+
+  if (!mlirAffineExprIsAFloorDiv(affineFloorDivExpr))
+    return 12;
+
+  if (!mlirAffineExprIsACeilDiv(affineCeilDivExpr))
+    return 13;
+
+  return 0;
+}
+
 int registerOnlyStd() {
   MlirContext ctx = mlirContextCreate();
   // The built-in dialect is always loaded.
@@ -1105,6 +1218,23 @@ int main() {
   // clang-format on
   fprintf(stderr, "@affineMap\n");
   errcode = printAffineMap(ctx);
+  fprintf(stderr, "%d\n", errcode);
+
+  // clang-format off
+  // CHECK: d5
+  // CHECK: s5
+  // CHECK: 5
+  // CHECK: d5 + s5
+  // CHECK: d5 * s5
+  // CHECK: d5 mod s5
+  // CHECK: d5 floordiv s5
+  // CHECK: d5 ceildiv s5
+  // CHECK: d5
+  // CHECK: s5
+  // CHECK: 0
+  // clang-format on
+  fprintf(stderr, "@affineExpr\n");
+  errcode = printAffineExpr(ctx);
   fprintf(stderr, "%d\n", errcode);
 
   fprintf(stderr, "@registration\n");
