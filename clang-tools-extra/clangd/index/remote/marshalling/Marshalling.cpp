@@ -11,6 +11,7 @@
 #include "Index.pb.h"
 #include "Protocol.h"
 #include "index/Index.h"
+#include "index/Ref.h"
 #include "index/Serialization.h"
 #include "index/Symbol.h"
 #include "index/SymbolID.h"
@@ -114,7 +115,10 @@ Marshaller::fromProtobuf(const v1::RefsRequest *Message) {
   if (!IDs)
     return IDs.takeError();
   Req.IDs = std::move(*IDs);
-  Req.Filter = static_cast<RefKind>(Message->filter());
+  if (Message->has_filter())
+    Req.Filter = static_cast<clangd::RefKind>(Message->filter());
+  else
+    Req.Filter = clangd::RefKind::All;
   if (Message->limit())
     Req.Limit = Message->limit();
   return Req;
@@ -127,6 +131,8 @@ Marshaller::fromProtobuf(const v1::RelationsRequest *Message) {
   if (!IDs)
     return IDs.takeError();
   Req.Subjects = std::move(*IDs);
+  if (!Message->has_predicate())
+    return error("RelationsRequest requires RelationKind predicate.");
   Req.Predicate = static_cast<RelationKind>(Message->predicate());
   if (Message->limit())
     Req.Limit = Message->limit();
@@ -180,7 +186,7 @@ llvm::Expected<clangd::Ref> Marshaller::fromProtobuf(const v1::Ref &Message) {
   if (!Location)
     return Location.takeError();
   Result.Location = *Location;
-  Result.Kind = static_cast<clangd::RefKind>(Message.kind());
+  Result.Kind = static_cast<RefKind>(Message.kind());
   return Result;
 }
 
