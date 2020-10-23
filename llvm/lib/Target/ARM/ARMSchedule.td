@@ -164,6 +164,10 @@ def IsCPSRDefined : CheckFunctionPredicateWithTII<
 
 def IsCPSRDefinedPred : MCSchedPredicate<IsCPSRDefined>;
 
+let FunctionMapper = "ARM_AM::getAM2ShiftOpc" in {
+  def CheckExtNoShift : CheckImmOperand_s<4, "ARM_AM::no_shift">;
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction Itinerary classes used for ARM
 //
