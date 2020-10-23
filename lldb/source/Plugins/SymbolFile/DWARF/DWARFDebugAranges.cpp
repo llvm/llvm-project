@@ -39,7 +39,7 @@ DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
   Range range;
   while (debug_aranges_data.ValidOffset(offset)) {
     llvm::Error error = set.extract(debug_aranges_data, &offset);
-    if (!error)
+    if (error)
       return error;
 
     const uint32_t num_descriptors = set.NumDescriptors();
