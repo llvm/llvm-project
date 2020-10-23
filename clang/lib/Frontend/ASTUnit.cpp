@@ -69,6 +69,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -1118,6 +1119,19 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   std::unique_ptr<CompilerInstance> Clang(
       new CompilerInstance(std::move(PCHContainerOps)));
 
+  // Clean up on error, disengage it if the function returns successfully.
+  auto CleanOnError = llvm::make_scope_exit([&]() {
+    // Remove the overridden buffer we used for the preamble.
+    SavedMainFileBuffer = nullptr;
+
+    // Keep the ownership of the data in the ASTUnit because the client may
+    // want to see the diagnostics.
+    transferASTDataFromCompilerInstance(*Clang);
+    FailedParseDiagnostics.swap(StoredDiagnostics);
+    StoredDiagnostics.clear();
+    NumStoredDiagnosticsFromDriver = 0;
+  });
+
   // Ensure that Clang has a FileManager with the right VFS, which may have
   // changed above in AddImplicitPreamble.  If VFS is nullptr, rely on
   // createFileManager to create one.
@@ -1200,7 +1214,7 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     ActCleanup(Act.get());
 
   if (!Act->BeginSourceFile(*Clang.get(), Clang->getFrontendOpts().Inputs[0]))
-    goto error;
+    return true;
 
   if (SavedMainFileBuffer)
     TranslateStoredDiagnostics(getFileManager(), getSourceManager(),
@@ -1210,7 +1224,7 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
 
   if (llvm::Error Err = Act->Execute()) {
     consumeError(std::move(Err)); // FIXME this drops errors on the floor.
-    goto error;
+    return true;
   }
 
   transferASTDataFromCompilerInstance(*Clang);
@@ -1219,19 +1233,9 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
 
   FailedParseDiagnostics.clear();
 
+  CleanOnError.release();
+
   return false;
-
-error:
-  // Remove the overridden buffer we used for the preamble.
-  SavedMainFileBuffer = nullptr;
-
-  // Keep the ownership of the data in the ASTUnit because the client may
-  // want to see the diagnostics.
-  transferASTDataFromCompilerInstance(*Clang);
-  FailedParseDiagnostics.swap(StoredDiagnostics);
-  StoredDiagnostics.clear();
-  NumStoredDiagnosticsFromDriver = 0;
-  return true;
 }
 
 static std::pair<unsigned, unsigned>
