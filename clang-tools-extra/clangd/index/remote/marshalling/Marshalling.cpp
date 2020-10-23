@@ -56,17 +56,19 @@ Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
     assert(llvm::sys::path::is_absolute(RemoteIndexRoot));
     this->RemoteIndexRoot = llvm::sys::path::convert_to_slash(
         RemoteIndexRoot, llvm::sys::path::Style::windows);
-    llvm::StringRef Path(*this->RemoteIndexRoot);
-    if (!Path.endswith(PosixSeparator))
-      *this->RemoteIndexRoot += PosixSeparator;
+    llvm::StringRef Path(this->RemoteIndexRoot);
+    if (!is_separator(this->RemoteIndexRoot.back(),
+                      llvm::sys::path::Style::posix))
+      this->RemoteIndexRoot += PosixSeparator;
   }
   if (!LocalIndexRoot.empty()) {
     assert(llvm::sys::path::is_absolute(LocalIndexRoot));
     this->LocalIndexRoot = llvm::sys::path::convert_to_slash(
         LocalIndexRoot, llvm::sys::path::Style::windows);
-    llvm::StringRef Path(*this->LocalIndexRoot);
-    if (!Path.endswith(PosixSeparator))
-      *this->LocalIndexRoot += PosixSeparator;
+    llvm::StringRef Path(this->LocalIndexRoot);
+    if (!is_separator(this->LocalIndexRoot.back(),
+                      llvm::sys::path::Style::posix))
+      this->LocalIndexRoot += PosixSeparator;
   }
   assert(!RemoteIndexRoot.empty() || !LocalIndexRoot.empty());
 }
@@ -83,7 +85,7 @@ Marshaller::fromProtobuf(const v1::LookupRequest *Message) {
 
 llvm::Expected<clangd::FuzzyFindRequest>
 Marshaller::fromProtobuf(const v1::FuzzyFindRequest *Message) {
-  assert(RemoteIndexRoot);
+  assert(!RemoteIndexRoot.empty());
   clangd::FuzzyFindRequest Result;
   Result.Query = Message->query();
   for (const auto &Scope : Message->scopes())
@@ -93,7 +95,7 @@ Marshaller::fromProtobuf(const v1::FuzzyFindRequest *Message) {
     Result.Limit = Message->limit();
   Result.RestrictForCodeCompletion = Message->restricted_for_code_completion();
   for (const auto &Path : Message->proximity_paths()) {
-    llvm::SmallString<256> LocalPath = llvm::StringRef(*RemoteIndexRoot);
+    llvm::SmallString<256> LocalPath = llvm::StringRef(RemoteIndexRoot);
     llvm::sys::path::append(LocalPath, Path);
     // FuzzyFindRequest requires proximity paths to have platform-native format
     // in order for SymbolIndex to process the query correctly.
@@ -204,7 +206,7 @@ v1::LookupRequest Marshaller::toProtobuf(const clangd::LookupRequest &From) {
 
 v1::FuzzyFindRequest
 Marshaller::toProtobuf(const clangd::FuzzyFindRequest &From) {
-  assert(LocalIndexRoot);
+  assert(!LocalIndexRoot.empty());
   v1::FuzzyFindRequest RPCRequest;
   RPCRequest.set_query(From.Query);
   for (const auto &Scope : From.Scopes)
@@ -215,7 +217,7 @@ Marshaller::toProtobuf(const clangd::FuzzyFindRequest &From) {
   RPCRequest.set_restricted_for_code_completion(From.RestrictForCodeCompletion);
   for (const auto &Path : From.ProximityPaths) {
     llvm::SmallString<256> RelativePath = llvm::StringRef(Path);
-    if (llvm::sys::path::replace_path_prefix(RelativePath, *LocalIndexRoot, ""))
+    if (llvm::sys::path::replace_path_prefix(RelativePath, LocalIndexRoot, ""))
       RPCRequest.add_proximity_paths(llvm::sys::path::convert_to_slash(
           RelativePath, llvm::sys::path::Style::windows));
   }
@@ -305,20 +307,20 @@ Marshaller::toProtobuf(const clangd::SymbolID &Subject,
 
 llvm::Expected<std::string>
 Marshaller::relativePathToURI(llvm::StringRef RelativePath) {
-  assert(LocalIndexRoot);
+  assert(!LocalIndexRoot.empty());
   assert(RelativePath == llvm::sys::path::convert_to_slash(RelativePath));
   if (RelativePath.empty())
     return error("Empty relative path.");
   if (llvm::sys::path::is_absolute(RelativePath, llvm::sys::path::Style::posix))
     return error("RelativePath '{0}' is absolute.", RelativePath);
-  llvm::SmallString<256> FullPath = llvm::StringRef(*LocalIndexRoot);
+  llvm::SmallString<256> FullPath = llvm::StringRef(LocalIndexRoot);
   llvm::sys::path::append(FullPath, RelativePath);
   auto Result = URI::createFile(FullPath);
   return Result.toString();
 }
 
 llvm::Expected<std::string> Marshaller::uriToRelativePath(llvm::StringRef URI) {
-  assert(RemoteIndexRoot);
+  assert(!RemoteIndexRoot.empty());
   auto ParsedURI = URI::parse(URI);
   if (!ParsedURI)
     return ParsedURI.takeError();
@@ -330,9 +332,9 @@ llvm::Expected<std::string> Marshaller::uriToRelativePath(llvm::StringRef URI) {
   if (llvm::sys::path::is_absolute(Path.substr(1),
                                    llvm::sys::path::Style::windows))
     Result = Path.drop_front();
-  if (!llvm::sys::path::replace_path_prefix(Result, *RemoteIndexRoot, ""))
+  if (!llvm::sys::path::replace_path_prefix(Result, RemoteIndexRoot, ""))
     return error("File path '{0}' doesn't start with '{1}'.", Result.str(),
-                 *RemoteIndexRoot);
+                 RemoteIndexRoot);
   assert(Result == llvm::sys::path::convert_to_slash(
                        Result, llvm::sys::path::Style::windows));
   return std::string(Result);
