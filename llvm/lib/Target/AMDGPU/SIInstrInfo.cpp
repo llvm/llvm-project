@@ -2284,7 +2284,7 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
     BuildMI(&MBB, DL, get(AMDGPU::S_BRANCH))
       .addMBB(TBB);
     if (BytesAdded)
-      *BytesAdded = 4;
+      *BytesAdded = ST.hasOffset3fBug() ? 8 : 4;
     return 1;
   }
 
@@ -2311,7 +2311,7 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
     fixImplicitOperands(*CondBr);
 
     if (BytesAdded)
-      *BytesAdded = 4;
+      *BytesAdded = ST.hasOffset3fBug() ? 8 : 4;
     return 1;
   }
 
@@ -2328,7 +2328,7 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
   CondReg.setIsKill(Cond[1].isKill());
 
   if (BytesAdded)
-      *BytesAdded = 8;
+    *BytesAdded = ST.hasOffset3fBug() ? 16 : 8;
 
   return 2;
 }
@@ -6628,8 +6628,16 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   // If we have a definitive size, we can use it. Otherwise we need to inspect
   // the operands to know the size.
-  if (isFixedSize(MI))
-    return DescSize;
+  if (isFixedSize(MI)) {
+    unsigned Size = DescSize;
+
+    // If we hit the buggy offset, an extra nop will be inserted in MC so
+    // estimate the worst case.
+    if (MI.isBranch() && ST.hasOffset3fBug())
+      Size += 4;
+
+    return Size;
+  }
 
   // 4-byte instructions may have a 32-bit literal encoded after them. Check
   // operands that coud ever be literals.
