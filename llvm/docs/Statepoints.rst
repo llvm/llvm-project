@@ -817,6 +817,50 @@ In practice, RewriteStatepointsForGC should be run much later in the pass
 pipeline, after most optimization is already done.  This helps to improve 
 the quality of the generated code when compiled with garbage collection support.
 
+.. _RewriteStatepointsForGC_intrinsic_lowering:
+
+RewriteStatepointsForGC intrinsic lowering
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As a part of lowering to the explicit model of relocations
+RewriteStatepointsForGC performs GC specific lowering for
+'``llvm.memcpy.element.unordered.atomic.*``',
+'``llvm.memmove.element.unordered.atomic.*``' intrinsics.
+
+There are two possible lowerings for these copy operations: GC leaf lowering
+and GC parseable lowering. If a call is explicitly marked with
+"gc-leaf-function" attribute the call is lowered to a GC leaf call to
+'``__llvm_memcpy_element_unordered_atomic_*``' or
+'``__llvm_memmove_element_unordered_atomic_*``' symbol. Such a call can not
+take a safepoint. Otherwise, the call is made GC parseable by wrapping the
+call into a statepoint. This makes it possible to take a safepoint during
+copy operation. Note that a GC parseable copy operation is not required to
+take a safepoint. For example, a short copy operation may be performed without
+taking a safepoint.
+
+GC parseable calls to '``llvm.memcpy.element.unordered.atomic.*``',
+'``llvm.memmove.element.unordered.atomic.*``' intrinsics are lowered to calls
+to '``__llvm_memcpy_element_unordered_atomic_safepoint_*``',
+'``__llvm_memmove_element_unordered_atomic_safepoint_*``' symbols respectively.
+This way the runtime can provide implementations of copy operations with and
+without safepoints.
+
+GC parseable lowering also involves adjusting the arguments for the call.
+Memcpy and memmove intrinsics take derived pointers as source and destination
+arguments. If a copy operation takes a safepoint it might need to relocate the
+underlying source and destination objects. This requires the corresponding base
+pointers to be available in the copy operation. In order to make the base
+pointers available RewriteStatepointsForGC replaces derived pointers with base
+pointer and offset pairs. For example:
+
+.. code-block:: llvm
+
+  declare void @__llvm_memcpy_element_unordered_atomic_safepoint_1(
+    i8 addrspace(1)*  %dest_base, i64 %dest_offset,
+    i8 addrspace(1)*  %src_base, i64 %src_offset,
+    i64 %length)
+
+
 .. _PlaceSafepoints:
 
 PlaceSafepoints
