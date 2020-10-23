@@ -29,6 +29,20 @@ define <9 x i8> @umin.v9i8(<9 x i8> %v0, <9 x i8> %v1) {
   ret <9 x i8> %res
 }
 
+; COST-LABEL: umin.v4i16
+; COST-NEXT: Cost Model: Found an estimated cost of 14 for instruction:   %res = call <4 x i16> @llvm.umin.v4i16(<4 x i16> %v0, <4 x i16> %v1)
+
+; CODE-LABEL: umin.v4i16
+; CODE:       bb.0
+; CODE-NEXT:   umin v{{.*}}.4h, v{{.*}}.4h, v{{.*}}.4h
+; CODE-NEXT:   ret
+
+declare <4 x i16> @llvm.umin.v4i16(<4 x i16>, <4 x i16>)
+define <4 x i16> @umin.v4i16(<4 x i16> %v0, <4 x i16> %v1) {
+  %res = call <4 x i16> @llvm.umin.v4i16(<4 x i16> %v0, <4 x i16> %v1)
+  ret <4 x i16> %res
+}
+
 ; COST-LABEL: umin.v16i8
 ; COST-NEXT: Cost Model: Found an estimated cost of 62 for instruction:   %res = call <16 x i8> @llvm.umin.v16i8(<16 x i8> %v0, <16 x i8> %v1)
 
@@ -142,6 +156,20 @@ define <16 x i8> @smin.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
   ret <16 x i8> %res
 }
 
+; COST-LABEL: smin.v4i16
+; COST-NEXT: Cost Model: Found an estimated cost of 14 for instruction:   %res = call <4 x i16> @llvm.smin.v4i16(<4 x i16> %v0, <4 x i16> %v1)
+
+; CODE-LABEL: smin.v4i16
+; CODE:       bb.0
+; CODE-NEXT:   smin v{{.*}}.4h, v{{.*}}.4h, v{{.*}}.4h
+; CODE-NEXT:   ret
+
+declare <4 x i16> @llvm.smin.v4i16(<4 x i16>, <4 x i16>)
+define <4 x i16> @smin.v4i16(<4 x i16> %v0, <4 x i16> %v1) {
+  %res = call <4 x i16> @llvm.smin.v4i16(<4 x i16> %v0, <4 x i16> %v1)
+  ret <4 x i16> %res
+}
+
 ; COST-LABEL: smin.v8i16
 ; COST-NEXT: Cost Model: Found an estimated cost of 30 for instruction:   %res = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %v0, <8 x i16> %v1)
 
@@ -242,6 +270,20 @@ define <16 x i8> @umax.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
   ret <16 x i8> %res
 }
 
+; COST-LABEL: umax.v4i16
+; COST-NEXT: Cost Model: Found an estimated cost of 14 for instruction:   %res = call <4 x i16> @llvm.umax.v4i16(<4 x i16> %v0, <4 x i16> %v1)
+
+; CODE-LABEL: umax.v4i16
+; CODE:       bb.0
+; CODE-NEXT:   umax v{{.*}}.4h, v{{.*}}.4h, v{{.*}}.4h
+; CODE-NEXT:   ret
+
+declare <4 x i16> @llvm.umax.v4i16(<4 x i16>, <4 x i16>)
+define <4 x i16> @umax.v4i16(<4 x i16> %v0, <4 x i16> %v1) {
+  %res = call <4 x i16> @llvm.umax.v4i16(<4 x i16> %v0, <4 x i16> %v1)
+  ret <4 x i16> %res
+}
+
 ; COST-LABEL: umax.v8i16
 ; COST-NEXT: Cost Model: Found an estimated cost of 30 for instruction:   %res = call <8 x i16> @llvm.umax.v8i16(<8 x i16> %v0, <8 x i16> %v1)
 
@@ -339,6 +381,20 @@ declare <16 x i8> @llvm.smax.v16i8(<16 x i8>, <16 x i8>)
 define <16 x i8> @smax.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
   %res = call <16 x i8> @llvm.smax.v16i8(<16 x i8> %v0, <16 x i8> %v1)
   ret <16 x i8> %res
+}
+
+; COST-LABEL: smax.v4i16
+; COST-NEXT: Cost Model: Found an estimated cost of 14 for instruction:   %res = call <4 x i16> @llvm.smax.v4i16(<4 x i16> %v0, <4 x i16> %v1)
+
+; CODE-LABEL: smax.v4i16
+; CODE:       bb.0
+; CODE-NEXT:   smax v{{.*}}.4h, v{{.*}}.4h, v{{.*}}.4h
+; CODE-NEXT:   ret
+
+declare <4 x i16> @llvm.smax.v4i16(<4 x i16>, <4 x i16>)
+define <4 x i16> @smax.v4i16(<4 x i16> %v0, <4 x i16> %v1) {
+  %res = call <4 x i16> @llvm.smax.v4i16(<4 x i16> %v0, <4 x i16> %v1)
+  ret <4 x i16> %res
 }
 
 ; COST-LABEL: smax.v8i16
