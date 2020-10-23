@@ -606,6 +606,24 @@ TwoAddressInstructionPass::convertInstTo3Addr(MachineBasicBlock::iterator &mi,
   if (LIS)
     LIS->ReplaceMachineInstrInMaps(*mi, *NewMI);
 
+  // If the old instruction is debug value tracked, an update is required.
+  if (auto OldInstrNum = mi->peekDebugInstrNum()) {
+    // Sanity check.
+    assert(mi->getNumExplicitDefs() == 1);
+    assert(NewMI->getNumExplicitDefs() == 1);
+
+    // Find the old and new def location.
+    auto OldIt = mi->defs().begin();
+    auto NewIt = NewMI->defs().begin();
+    unsigned OldIdx = mi->getOperandNo(OldIt);
+    unsigned NewIdx = NewMI->getOperandNo(NewIt);
+
+    // Record that one def has been replaced by the other.
+    unsigned NewInstrNum = NewMI->getDebugInstrNum();
+    MF->makeDebugValueSubstitution(std::make_pair(OldInstrNum, OldIdx),
+                                   std::make_pair(NewInstrNum, NewIdx));
+  }
+
   MBB->erase(mi); // Nuke the old inst.
 
   DistanceMap.insert(std::make_pair(NewMI, Dist));

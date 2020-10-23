@@ -491,8 +491,6 @@ void DumpProcessMap() {
 }
 #endif
 
-void PrintModuleMap() { }
-
 void DisableCoreDumperIfNecessary() {
   // Do nothing.
 }

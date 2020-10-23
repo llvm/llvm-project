@@ -15,6 +15,7 @@
 #include "marshalling/Marshalling.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
+#include "clang/Basic/Version.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
@@ -28,7 +29,8 @@ namespace {
 class IndexClient : public clangd::SymbolIndex {
   template <typename RequestT, typename ReplyT>
   using StreamingCall = std::unique_ptr<grpc::ClientReader<ReplyT>> (
-      remote::SymbolIndex::Stub::*)(grpc::ClientContext *, const RequestT &);
+      remote::v1::SymbolIndex::Stub::*)(grpc::ClientContext *,
+                                        const RequestT &);
 
   template <typename RequestT, typename ReplyT, typename ClangdRequestT,
             typename CallbackT>
@@ -40,6 +42,7 @@ class IndexClient : public clangd::SymbolIndex {
     const auto RPCRequest = ProtobufMarshaller->toProtobuf(Request);
     SPAN_ATTACH(Tracer, "Request", RPCRequest.DebugString());
     grpc::ClientContext Context;
+    Context.AddMetadata("version", clang::getClangToolFullVersion("clangd"));
     std::chrono::system_clock::time_point Deadline =
         std::chrono::system_clock::now() + DeadlineWaitingTime;
     Context.set_deadline(Deadline);
@@ -73,7 +76,7 @@ public:
   IndexClient(
       std::shared_ptr<grpc::Channel> Channel, llvm::StringRef ProjectRoot,
       std::chrono::milliseconds DeadlineTime = std::chrono::milliseconds(1000))
-      : Stub(remote::SymbolIndex::NewStub(Channel)),
+      : Stub(remote::v1::SymbolIndex::NewStub(Channel)),
         ProtobufMarshaller(new Marshaller(/*RemoteIndexRoot=*/"",
                                           /*LocalIndexRoot=*/ProjectRoot)),
         DeadlineWaitingTime(DeadlineTime) {
@@ -82,25 +85,26 @@ public:
 
   void lookup(const clangd::LookupRequest &Request,
               llvm::function_ref<void(const clangd::Symbol &)> Callback) const {
-    streamRPC(Request, &remote::SymbolIndex::Stub::Lookup, Callback);
+    streamRPC(Request, &remote::v1::SymbolIndex::Stub::Lookup, Callback);
   }
 
   bool
   fuzzyFind(const clangd::FuzzyFindRequest &Request,
             llvm::function_ref<void(const clangd::Symbol &)> Callback) const {
-    return streamRPC(Request, &remote::SymbolIndex::Stub::FuzzyFind, Callback);
+    return streamRPC(Request, &remote::v1::SymbolIndex::Stub::FuzzyFind,
+                     Callback);
   }
 
   bool refs(const clangd::RefsRequest &Request,
             llvm::function_ref<void(const clangd::Ref &)> Callback) const {
-    return streamRPC(Request, &remote::SymbolIndex::Stub::Refs, Callback);
+    return streamRPC(Request, &remote::v1::SymbolIndex::Stub::Refs, Callback);
   }
 
   void
   relations(const clangd::RelationsRequest &Request,
             llvm::function_ref<void(const SymbolID &, const clangd::Symbol &)>
                 Callback) const {
-    streamRPC(Request, &remote::SymbolIndex::Stub::Relations,
+    streamRPC(Request, &remote::v1::SymbolIndex::Stub::Relations,
               // Unpack protobuf Relation.
               [&](std::pair<SymbolID, clangd::Symbol> SubjectAndObject) {
                 Callback(SubjectAndObject.first, SubjectAndObject.second);
@@ -112,7 +116,7 @@ public:
   size_t estimateMemoryUsage() const { return 0; }
 
 private:
-  std::unique_ptr<remote::SymbolIndex::Stub> Stub;
+  std::unique_ptr<remote::v1::SymbolIndex::Stub> Stub;
   std::unique_ptr<Marshaller> ProtobufMarshaller;
   // Each request will be terminated if it takes too long.
   std::chrono::milliseconds DeadlineWaitingTime;

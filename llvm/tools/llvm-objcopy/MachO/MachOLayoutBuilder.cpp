@@ -252,6 +252,8 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
       sizeof(uint32_t) * O.IndirectSymTable.Symbols.size();
   uint64_t StartOfCodeSignature =
       StartOfSymbolStrings + StrTableBuilder.getSize();
+  if (O.CodeSignatureCommandIndex)
+    StartOfCodeSignature = alignTo(StartOfCodeSignature, 16);
   uint64_t LinkEditSize =
       (StartOfCodeSignature + O.CodeSignature.Data.size()) - StartOfLinkEdit;
 

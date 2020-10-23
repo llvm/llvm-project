@@ -1603,7 +1603,7 @@ namespace {
     }
 
     void setNull(ASTContext &Ctx, QualType PointerTy) {
-      Base = (Expr *)nullptr;
+      Base = (const ValueDecl *)nullptr;
       Offset =
           CharUnits::fromQuantity(Ctx.getTargetNullPointerValue(PointerTy));
       InvalidBase = false;
@@ -1978,6 +1978,8 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
     // ... the address of an object with static storage duration,
     if (const VarDecl *VD = dyn_cast<VarDecl>(D))
       return VD->hasGlobalStorage();
+    if (isa<TemplateParamObjectDecl>(D))
+      return true;
     // ... the address of a function,
     // ... the address of a GUID [MS extension],
     return isa<FunctionDecl>(D) || isa<MSGuidDecl>(D);
@@ -3284,10 +3286,10 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // FIXME: We don't diagnose cases that aren't potentially usable in constant
   // expressions here; doing so would regress diagnostics for things like
   // reading from a volatile constexpr variable.
-  if ((!VD->hasConstantInitialization() &&
+  if ((Info.getLangOpts().CPlusPlus && !VD->hasConstantInitialization() &&
        VD->mightBeUsableInConstantExpressions(Info.Ctx)) ||
-      (Info.getLangOpts().CPlusPlus && !Info.getLangOpts().CPlusPlus11 &&
-       !VD->hasICEInitializer(Info.Ctx))) {
+      ((Info.getLangOpts().CPlusPlus || Info.getLangOpts().OpenCL) &&
+       !Info.getLangOpts().CPlusPlus11 && !VD->hasICEInitializer(Info.Ctx))) {
     Info.CCEDiag(E, diag::note_constexpr_var_init_non_constant, 1) << VD;
     NoteLValueLocation(Info, Base);
   }
@@ -3980,6 +3982,16 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       return CompleteObject(LVal.Base, &V, GD->getType());
     }
 
+    // Allow reading from template parameter objects.
+    if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(D)) {
+      if (isModification(AK)) {
+        Info.FFDiag(E, diag::note_constexpr_modify_global);
+        return CompleteObject();
+      }
+      return CompleteObject(LVal.Base, const_cast<APValue *>(&TPO->getValue()),
+                            TPO->getType());
+    }
+
     // In C++98, const, non-volatile integers initialized with ICEs are ICEs.
     // In C++11, constexpr, non-volatile variables initialized with constant
     // expressions are constant expressions too. Inside constexpr functions,
@@ -3997,10 +4009,7 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       return CompleteObject();
     }
 
-    // In OpenCL if a variable is in constant address space it is a const value.
-    bool IsConstant = BaseType.isConstQualified() ||
-                      (Info.getLangOpts().OpenCL &&
-                       BaseType.getAddressSpace() == LangAS::opencl_constant);
+    bool IsConstant = BaseType.isConstant(Info.Ctx);
 
     // Unless we're looking at a local variable or argument in a constexpr call,
     // the variable we're reading must be const.
@@ -4021,8 +4030,6 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
       } else if (VD->isConstexpr()) {
         // OK, we can read this variable.
       } else if (BaseType->isIntegralOrEnumerationType()) {
-        // In OpenCL if a variable is in constant address space it is a const
-        // value.
         if (!IsConstant) {
           if (!IsAccess)
             return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
@@ -8031,14 +8038,13 @@ static bool EvaluateLValue(const Expr *E, LValue &Result, EvalInfo &Info,
 }
 
 bool LValueExprEvaluator::VisitDeclRefExpr(const DeclRefExpr *E) {
-  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(E->getDecl()))
-    return Success(FD);
-  if (const VarDecl *VD = dyn_cast<VarDecl>(E->getDecl()))
+  const NamedDecl *D = E->getDecl();
+  if (isa<FunctionDecl, MSGuidDecl, TemplateParamObjectDecl>(D))
+    return Success(cast<ValueDecl>(D));
+  if (const VarDecl *VD = dyn_cast<VarDecl>(D))
     return VisitVarDecl(E, VD);
-  if (const BindingDecl *BD = dyn_cast<BindingDecl>(E->getDecl()))
+  if (const BindingDecl *BD = dyn_cast<BindingDecl>(D))
     return Visit(BD->getBinding());
-  if (const MSGuidDecl *GD = dyn_cast<MSGuidDecl>(E->getDecl()))
-    return Success(GD);
   return Error(E);
 }
 
@@ -9601,7 +9607,7 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
 
   for (const auto *I : RD->fields()) {
     // -- if T is a reference type, no initialization is performed.
-    if (I->getType()->isReferenceType())
+    if (I->isUnnamedBitfield() || I->getType()->isReferenceType())
       continue;
 
     LValue Subobject = This;
@@ -9624,6 +9630,8 @@ bool RecordExprEvaluator::ZeroInitialization(const Expr *E, QualType T) {
     // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
     // object's first non-static named data member is zero-initialized
     RecordDecl::field_iterator I = RD->field_begin();
+    while (I != RD->field_end() && (*I)->isUnnamedBitfield())
+      ++I;
     if (I == RD->field_end()) {
       Result = APValue((const FieldDecl*)nullptr);
       return true;
@@ -14834,7 +14842,6 @@ bool Expr::EvalResult::isGlobalLValue() const {
   return IsGlobalLValue(Val.getLValueBase());
 }
 
-
 /// isIntegerConstantExpr - this recursive routine will test if an expression is
 /// an integer constant expression.
 
@@ -15037,15 +15044,20 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
     return CheckICE(cast<CXXRewrittenBinaryOperator>(E)->getSemanticForm(),
                     Ctx);
   case Expr::DeclRefExprClass: {
-    if (isa<EnumConstantDecl>(cast<DeclRefExpr>(E)->getDecl()))
+    const NamedDecl *D = cast<DeclRefExpr>(E)->getDecl();
+    if (isa<EnumConstantDecl>(D))
       return NoDiag();
-    const VarDecl *VD = dyn_cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
-    if (VD && VD->isUsableInConstantExpressions(Ctx)) {
-      // C++ 7.1.5.1p2
-      //   A variable of non-volatile const-qualified integral or enumeration
-      //   type initialized by an ICE can be used in ICEs.
+
+    // C++ and OpenCL (FIXME: spec reference?) allow reading const-qualified
+    // integer variables in constant expressions:
+    //
+    // C++ 7.1.5.1p2
+    //   A variable of non-volatile const-qualified integral or enumeration
+    //   type initialized by an ICE can be used in ICEs.
+    const VarDecl *VD = dyn_cast<VarDecl>(D);
+    if (VD && VD->isUsableInConstantExpressions(Ctx))
       return NoDiag();
-    }
+
     return ICEDiag(IK_NotICE, E->getBeginLoc());
   }
   case Expr::UnaryOperatorClass: {

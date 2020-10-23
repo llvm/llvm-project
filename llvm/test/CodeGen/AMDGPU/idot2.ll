@@ -2731,7 +2731,7 @@ define amdgpu_kernel void @notsdot2_sext8(<2 x i8> addrspace(1)* %src1,
 ; GFX8-NEXT:    flat_load_ushort v0, v[0:1]
 ; GFX8-NEXT:    flat_load_ushort v1, v[2:3]
 ; GFX8-NEXT:    s_load_dword s2, s[0:1], 0x0
-; GFX8-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(0)
+; GFX8-NEXT:    s_waitcnt vmcnt(1)
 ; GFX8-NEXT:    v_bfe_i32 v2, v0, 0, 8
 ; GFX8-NEXT:    v_lshrrev_b16_e32 v0, 8, v0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
@@ -2739,6 +2739,7 @@ define amdgpu_kernel void @notsdot2_sext8(<2 x i8> addrspace(1)* %src1,
 ; GFX8-NEXT:    v_lshrrev_b16_e32 v1, 8, v1
 ; GFX8-NEXT:    v_bfe_i32 v0, v0, 0, 8
 ; GFX8-NEXT:    v_bfe_i32 v1, v1, 0, 8
+; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mad_i32_i24 v0, v1, v0, s2
 ; GFX8-NEXT:    v_mad_i32_i24 v2, v3, v2, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0

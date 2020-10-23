@@ -6,6 +6,7 @@
 #include <sys/stat.h> // for stat, mkdir, mkfifo
 #ifndef _WIN32
 #include <unistd.h> // for ftruncate, link, symlink, getcwd, chdir
+#include <sys/statvfs.h>
 #else
 #include <io.h>
 #include <direct.h>
@@ -52,6 +53,21 @@ namespace utils {
     inline int unsetenv(const char *var) {
         return ::_putenv((std::string(var) + "=").c_str());
     }
+    inline bool space(std::string path, std::uintmax_t &capacity,
+                      std::uintmax_t &free, std::uintmax_t &avail) {
+        ULARGE_INTEGER FreeBytesAvailableToCaller, TotalNumberOfBytes,
+                       TotalNumberOfFreeBytes;
+        if (!GetDiskFreeSpaceExA(path.c_str(), &FreeBytesAvailableToCaller,
+                                 &TotalNumberOfBytes, &TotalNumberOfFreeBytes))
+          return false;
+        capacity = TotalNumberOfBytes.QuadPart;
+        free = TotalNumberOfFreeBytes.QuadPart;
+        avail = FreeBytesAvailableToCaller.QuadPart;
+        assert(capacity > 0);
+        assert(free > 0);
+        assert(avail > 0);
+        return true;
+    }
 #else
     using ::mkdir;
     using ::ftruncate;
@@ -62,6 +78,27 @@ namespace utils {
     }
     inline int unsetenv(const char *var) {
         return ::unsetenv(var);
+    }
+    inline bool space(std::string path, std::uintmax_t &capacity,
+                      std::uintmax_t &free, std::uintmax_t &avail) {
+        struct statvfs expect;
+        if (::statvfs(path.c_str(), &expect) == -1)
+          return false;
+        assert(expect.f_bavail > 0);
+        assert(expect.f_bfree > 0);
+        assert(expect.f_bsize > 0);
+        assert(expect.f_blocks > 0);
+        assert(expect.f_frsize > 0);
+        auto do_mult = [&](std::uintmax_t val) {
+            std::uintmax_t fsize = expect.f_frsize;
+            std::uintmax_t new_val = val * fsize;
+            assert(new_val / fsize == val); // Test for overflow
+            return new_val;
+        };
+        capacity = do_mult(expect.f_blocks);
+        free = do_mult(expect.f_bfree);
+        avail = do_mult(expect.f_bavail);
+        return true;
     }
 #endif
 

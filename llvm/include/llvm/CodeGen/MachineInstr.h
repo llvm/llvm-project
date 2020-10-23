@@ -1784,8 +1784,10 @@ public:
   void setDebugValueUndef() {
     assert(isDebugValue() && "Must be a debug value instruction.");
     for (MachineOperand &MO : debug_operands()) {
-      if (MO.isReg())
+      if (MO.isReg()) {
         MO.setReg(0);
+        MO.setSubReg(0);
+      }
     }
   }
 

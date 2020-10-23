@@ -11,6 +11,11 @@
 
 include "mlir/Pass/PassBase.td"
 
+def SCFBufferize : FunctionPass<"scf-bufferize"> {
+  let summary = "Bufferize the scf dialect.";
+  let constructor = "mlir::createSCFBufferizePass()";
+}
+
 def SCFForLoopSpecialization
     : FunctionPass<"for-loop-specialization"> {
   let summary = "Specialize `for` loops for vectorization";

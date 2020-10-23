@@ -930,7 +930,7 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
 
   # Modules should be built with -G, so we can use runtime linking with
   # plugins.
-  string(APPEND CMAKE_MODULE_LINKER_FLAGS " -G")
+  string(APPEND CMAKE_MODULE_LINKER_FLAGS " -Wl,-G")
 
   # Also set the correct flags for building shared libraries.
   string(APPEND CMAKE_SHARED_LINKER_FLAGS " -shared")
@@ -1104,7 +1104,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "*.td"
     PATTERN "*.inc"
     PATTERN "LICENSE.TXT"
-    PATTERN ".svn" EXCLUDE
     )
 
   install(DIRECTORY ${LLVM_INCLUDE_DIR}/llvm ${LLVM_INCLUDE_DIR}/llvm-c
@@ -1118,7 +1117,6 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     # Exclude include/llvm/CMakeFiles/intrinsics_gen.dir, matched by "*.def"
     PATTERN "CMakeFiles" EXCLUDE
     PATTERN "config.h" EXCLUDE
-    PATTERN ".svn" EXCLUDE
     )
 
   if (LLVM_INSTALL_MODULEMAPS)

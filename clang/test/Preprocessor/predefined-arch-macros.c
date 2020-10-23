@@ -1688,6 +1688,7 @@
 // CHECK_SPR_M32: #define __SSE__ 1
 // CHECK_SPR_M32: #define __SSSE3__ 1
 // CHECK_SPR_M32: #define __TSXLDTRK__ 1
+// CHECK_SPR_M32: #define __UINTR__ 1
 // CHECK_SPR_M32: #define __VAES__ 1
 // CHECK_SPR_M32: #define __VPCLMULQDQ__ 1
 // CHECK_SPR_M32: #define __WAITPKG__ 1
@@ -1757,6 +1758,7 @@
 // CHECK_SPR_M64: #define __SSE__ 1
 // CHECK_SPR_M64: #define __SSSE3__ 1
 // CHECK_SPR_M64: #define __TSXLDTRK__ 1
+// CHECK_SPR_M64: #define __UINTR__ 1
 // CHECK_SPR_M64: #define __VAES__ 1
 // CHECK_SPR_M64: #define __VPCLMULQDQ__ 1
 // CHECK_SPR_M64: #define __WAITPKG__ 1

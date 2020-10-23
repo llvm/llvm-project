@@ -3,7 +3,8 @@
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_workgroup_id_x} : (index, index, index, index, index, index) -> ()
+    gpu.launch_func @kernels::@builtin_workgroup_id_x
+        blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return
   }
 
@@ -26,7 +27,8 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_workgroup_id_y} : (index, index, index, index, index, index) -> ()
+    gpu.launch_func @kernels::@builtin_workgroup_id_y
+        blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return
   }
 
@@ -49,7 +51,8 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_workgroup_id_z} : (index, index, index, index, index, index) -> ()
+    gpu.launch_func @kernels::@builtin_workgroup_id_z
+        blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return
   }
 
@@ -72,7 +75,8 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_workgroup_size_x} : (index, index, index, index, index, index) -> ()
+    gpu.launch_func @kernels::@builtin_workgroup_size_x
+        blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return
   }
 
@@ -96,7 +100,8 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_workgroup_size_y} : (index, index, index, index, index, index) -> ()
+    gpu.launch_func @kernels::@builtin_workgroup_size_y
+        blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return
   }
 
@@ -117,7 +122,8 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_workgroup_size_z} : (index, index, index, index, index, index) -> ()
+    gpu.launch_func @kernels::@builtin_workgroup_size_z
+        blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return
   }
 
@@ -138,7 +144,8 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_local_id_x} : (index, index, index, index, index, index) -> ()
+    gpu.launch_func @kernels::@builtin_local_id_x
+        blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return
   }
 
@@ -161,7 +168,8 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @builtin() {
     %c0 = constant 1 : index
-    "gpu.launch_func"(%c0, %c0, %c0, %c0, %c0, %c0) {kernel = @kernels::@builtin_num_workgroups_x} : (index, index, index, index, index, index) -> ()
+    gpu.launch_func @kernels::@builtin_num_workgroups_x
+        blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0)
     return
   }
 

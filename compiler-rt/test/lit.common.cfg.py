@@ -357,6 +357,14 @@ if config.android:
     config.environment['ANDROID_SERIAL'] = config.android_serial
 
   adb = os.environ.get('ADB', 'adb')
+
+  # These are needed for tests to upload/download temp files, such as
+  # suppression-files, to device.
+  config.substitutions.append( ('%device_rundir', "/data/local/tmp/Output") )
+  config.substitutions.append( ('%push_to_device', "%s -s '%s' push " % (adb, env['ANDROID_SERIAL']) ) )
+  config.substitutions.append( ('%pull_from_device', "%s -s '%s' pull " % (adb, env['ANDROID_SERIAL']) ) )
+  config.substitutions.append( ('%adb_shell ', "%s -s '%s' shell " % (adb, env['ANDROID_SERIAL']) ) )
+
   try:
     android_api_level_str = subprocess.check_output([adb, "shell", "getprop", "ro.build.version.sdk"], env=env).rstrip()
   except (subprocess.CalledProcessError, OSError):
@@ -375,6 +383,11 @@ if config.android:
   subprocess.check_call([adb, "shell", "mkdir", "-p", android_tmpdir], env=env)
   for file in config.android_files_to_push:
     subprocess.check_call([adb, "push", file, android_tmpdir], env=env)
+else:
+  config.substitutions.append( ('%device_rundir', "") )
+  config.substitutions.append( ('%push_to_device', "echo ") )
+  config.substitutions.append( ('%pull_from_device', "echo ") )
+  config.substitutions.append( ('%adb_shell', "echo ") )
 
 if config.host_os == 'Linux':
   # detect whether we are using glibc, and which version

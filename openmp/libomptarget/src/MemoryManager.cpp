@@ -49,7 +49,13 @@ size_t floorToPowerOfTwo(size_t Num) {
   Num |= Num >> 4;
   Num |= Num >> 8;
   Num |= Num >> 16;
+#if INTPTR_MAX == INT64_MAX
   Num |= Num >> 32;
+#elif INTPTR_MAX == INT32_MAX
+  // Do nothing with 32-bit
+#else
+#error Unsupported architecture
+#endif
   Num += 1;
   return Num >> 1;
 }

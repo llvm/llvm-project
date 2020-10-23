@@ -166,12 +166,12 @@ class DS_1A1D_RET <string opName, RegisterClass rc = VGPR_32>
 multiclass DS_1A1D_RET_mc <string opName, RegisterClass rc = VGPR_32,
                            string NoRetOp = ""> {
   def "" : DS_1A1D_RET<opName, rc>,
-    AtomicNoRet<NoRetOp, !if(!eq(NoRetOp, ""), 0, 1)>;
+    AtomicNoRet<NoRetOp, !ne(NoRetOp, "")>;
 
   let has_m0_read = 0 in {
     def _gfx9 : DS_1A1D_RET<opName, rc>,
       AtomicNoRet<!if(!eq(NoRetOp, ""), "", NoRetOp#"_gfx9"),
-                  !if(!eq(NoRetOp, ""), 0, 1)>;
+                  !ne(NoRetOp, "")>;
   }
 }
 
@@ -191,11 +191,11 @@ multiclass DS_1A2D_RET_mc<string opName,
                           string NoRetOp = "",
                           RegisterClass src = rc> {
   def "" : DS_1A2D_RET<opName, rc, src>,
-    AtomicNoRet<NoRetOp, !if(!eq(NoRetOp, ""), 0, 1)>;
+    AtomicNoRet<NoRetOp, !ne(NoRetOp, "")>;
 
   let has_m0_read = 0 in {
     def _gfx9 : DS_1A2D_RET<opName, rc, src>,
-      AtomicNoRet<NoRetOp#"_gfx9", !if(!eq(NoRetOp, ""), 0, 1)>;
+      AtomicNoRet<NoRetOp#"_gfx9", !ne(NoRetOp, "")>;
   }
 }
 

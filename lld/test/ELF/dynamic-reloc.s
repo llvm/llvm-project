@@ -13,6 +13,7 @@
 // CHECK-NEXT: Type: SHT_RELA
 // CHECK-NEXT: Flags [
 // CHECK-NEXT:   SHF_ALLOC
+// CHECK-NEXT:   SHF_INFO_LINK
 // CHECK-NEXT: ]
 // CHECK-NEXT: Address: [[RELAADDR:.*]]
 // CHECK-NEXT: Offset:

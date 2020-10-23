@@ -146,9 +146,10 @@
 ; CHECK-NEXT:         Lazy Value Information Analysis
 ; CHECK-NEXT:         Jump Threading
 ; CHECK-NEXT:         Value Propagation
+; CHECK-NEXT:         Post-Dominator Tree Construction
+; CHECK-NEXT:         Aggressive Dead Code Elimination
 ; CHECK-NEXT:         Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:         Function Alias Analysis Results
-; CHECK-NEXT:         Post-Dominator Tree Construction
 ; CHECK-NEXT:         Memory SSA
 ; CHECK-NEXT:         Dead Store Elimination
 ; CHECK-NEXT:         Natural Loop Information
@@ -161,8 +162,6 @@
 ; CHECK-NEXT:         Lazy Block Frequency Analysis
 ; CHECK-NEXT:         Loop Pass Manager
 ; CHECK-NEXT:           Loop Invariant Code Motion
-; CHECK-NEXT:         Post-Dominator Tree Construction
-; CHECK-NEXT:         Aggressive Dead Code Elimination
 ; CHECK-NEXT:         Simplify the CFG
 ; CHECK-NEXT:         Dominator Tree Construction
 ; CHECK-NEXT:         Basic Alias Analysis (stateless AA impl)

@@ -753,9 +753,13 @@ int main(int argc, char **argv) {
   // but `-enable-new-pm -codegenprepare` will still revert to legacy PM.
   if ((EnableNewPassManager && !CodegenPassSpecifiedInPassList()) ||
       PassPipeline.getNumOccurrences() > 0) {
+    if (AnalyzeOnly) {
+      errs() << "Cannot specify -analyze under new pass manager\n";
+      return 1;
+    }
     if (PassPipeline.getNumOccurrences() > 0 && PassList.size() > 0) {
       errs()
-          << "Cannot specify passes via both -foo-pass and --passes=foo-pass";
+          << "Cannot specify passes via both -foo-pass and --passes=foo-pass\n";
       return 1;
     }
     SmallVector<StringRef, 4> Passes;

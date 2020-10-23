@@ -420,7 +420,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Init &I) {
 }
 
 /// This is the common superclass of types that have a specific,
-/// explicit, type, stored in ValueTy.
+/// explicit type, stored in ValueTy.
 class TypedInit : public Init {
   RecTy *ValueTy;
 
@@ -437,6 +437,7 @@ public:
            I->getKind() <= IK_LastTypedInit;
   }
 
+  /// Get the type of the Init as a RecTy.
   RecTy *getType() const { return ValueTy; }
 
   Init *getCastTo(RecTy *Ty) const override;
@@ -451,7 +452,7 @@ public:
   RecTy *getFieldType(StringInit *FieldName) const override;
 };
 
-/// '?' - Represents an uninitialized value
+/// '?' - Represents an uninitialized value.
 class UnsetInit : public Init {
   UnsetInit() : Init(IK_UnsetInit) {}
 
@@ -463,6 +464,7 @@ public:
     return I->getKind() == IK_UnsetInit;
   }
 
+  /// Get the singleton unset Init.
   static UnsetInit *get();
 
   Init *getCastTo(RecTy *Ty) const override;
@@ -472,8 +474,12 @@ public:
     return const_cast<UnsetInit*>(this);
   }
 
+  /// Is this a complete value with no unset (uninitialized) subvalues?
   bool isComplete() const override { return false; }
+
   bool isConcrete() const override { return true; }
+
+  /// Get the string representation of the Init.
   std::string getAsString() const override { return "?"; }
 };
 
@@ -1395,6 +1401,8 @@ public:
 //  High-Level Classes
 //===----------------------------------------------------------------------===//
 
+/// This class represents a field in a record, including its name, type,
+/// value, and source location.
 class RecordVal {
   friend class Record;
 
@@ -1407,22 +1415,37 @@ public:
   RecordVal(Init *N, RecTy *T, bool P);
   RecordVal(Init *N, SMLoc Loc, RecTy *T, bool P);
 
+  /// Get the name of the field as a StringRef.
   StringRef getName() const;
+
+  /// Get the name of the field as an Init.
   Init *getNameInit() const { return Name; }
 
+  /// Get the name of the field as a std::string.
   std::string getNameInitAsString() const {
     return getNameInit()->getAsUnquotedString();
   }
 
+  /// Get the source location of the point where the field was defined.
   const SMLoc &getLoc() const { return Loc; }
+
   bool getPrefix() const { return TyAndPrefix.getInt(); }
+
+  /// Get the type of the field value as a RecTy.
   RecTy *getType() const { return TyAndPrefix.getPointer(); }
+
+  /// Get the value of the field as an Init.
   Init *getValue() const { return Value; }
 
+  /// Set the value of the field from an Init.
   bool setValue(Init *V);
+
+  /// Set the value and source location of the field.
   bool setValue(Init *V, SMLoc NewLoc);
 
   void dump() const;
+
+  /// Print the value to an output stream, possibly with a semicolon.
   void print(raw_ostream &OS, bool PrintSem = true) const;
 };
 

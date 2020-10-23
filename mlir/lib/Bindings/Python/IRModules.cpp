@@ -64,16 +64,45 @@ static const char kContextGetUnknownLocationDocstring[] =
 static const char kContextGetFileLocationDocstring[] =
     R"(Gets a Location representing a file, line and column)";
 
-static const char kOperationStrDunderDocstring[] =
-    R"(Prints the assembly form of the operation with default options.
+static const char kOperationPrintDocstring[] =
+    R"(Prints the assembly form of the operation to a file like object.
 
-If more advanced control over the assembly formatting or I/O options is needed,
-use the dedicated print method, which supports keyword arguments to customize
-behavior.
+Args:
+  file: The file like object to write to. Defaults to sys.stdout.
+  binary: Whether to write bytes (True) or str (False). Defaults to False.
+  large_elements_limit: Whether to elide elements attributes above this
+    number of elements. Defaults to None (no limit).
+  enable_debug_info: Whether to print debug/location information. Defaults
+    to False.
+  pretty_debug_info: Whether to format debug information for easier reading
+    by a human (warning: the result is unparseable).
+  print_generic_op_form: Whether to print the generic assembly forms of all
+    ops. Defaults to False.
+  use_local_Scope: Whether to print in a way that is more optimized for
+    multi-threaded access but may not be consistent with how the overall
+    module prints.
 )";
 
-static const char kTypeStrDunderDocstring[] =
-    R"(Prints the assembly form of the type.)";
+static const char kOperationGetAsmDocstring[] =
+    R"(Gets the assembly form of the operation with all options available.
+
+Args:
+  binary: Whether to return a bytes (True) or str (False) object. Defaults to
+    False.
+  ... others ...: See the print() method for common keyword arguments for
+    configuring the printout.
+Returns:
+  Either a bytes or str object, depending on the setting of the 'binary'
+  argument.
+)";
+
+static const char kOperationStrDunderDocstring[] =
+    R"(Gets the assembly form of the operation with default options.
+
+If more advanced control over the assembly formatting or I/O options is needed,
+use the dedicated print or get_asm method, which supports keyword arguments to
+customize behavior.
+)";
 
 static const char kDumpDocstring[] =
     R"(Dumps a debug representation of the object to stderr.)";
@@ -83,6 +112,14 @@ static const char kAppendBlockDocstring[] =
 
 Returns:
   The created block.
+)";
+
+static const char kValueDunderStrDocstring[] =
+    R"(Returns the string form of the value.
+
+If the value is a block argument, this is the assembly form of its type and the
+position in the argument list. If the value is an operation result, this is
+equivalent to printing the operation that produced it.
 )";
 
 //------------------------------------------------------------------------------
@@ -111,6 +148,35 @@ struct PyPrintAccumulator {
     py::str delim("", 0);
     return delim.attr("join")(parts);
   }
+};
+
+/// Accumulates int a python file-like object, either writing text (default)
+/// or binary.
+class PyFileAccumulator {
+public:
+  PyFileAccumulator(py::object fileObject, bool binary)
+      : pyWriteFunction(fileObject.attr("write")), binary(binary) {}
+
+  void *getUserData() { return this; }
+
+  MlirStringCallback getCallback() {
+    return [](const char *part, intptr_t size, void *userData) {
+      py::gil_scoped_acquire();
+      PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
+      if (accum->binary) {
+        // Note: Still has to copy and not avoidable with this API.
+        py::bytes pyBytes(part, size);
+        accum->pyWriteFunction(pyBytes);
+      } else {
+        py::str pyStr(part, size); // Decodes as UTF-8 by default.
+        accum->pyWriteFunction(pyStr);
+      }
+    };
+  }
+
+private:
+  py::object pyWriteFunction;
+  bool binary;
 };
 
 /// Accumulates into a python string from a method that is expected to make
@@ -707,6 +773,48 @@ void PyOperation::checkValid() {
   }
 }
 
+void PyOperation::print(py::object fileObject, bool binary,
+                        llvm::Optional<int64_t> largeElementsLimit,
+                        bool enableDebugInfo, bool prettyDebugInfo,
+                        bool printGenericOpForm, bool useLocalScope) {
+  checkValid();
+  if (fileObject.is_none())
+    fileObject = py::module::import("sys").attr("stdout");
+  MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
+  if (largeElementsLimit)
+    mlirOpPrintingFlagsElideLargeElementsAttrs(flags, *largeElementsLimit);
+  if (enableDebugInfo)
+    mlirOpPrintingFlagsEnableDebugInfo(flags, /*prettyForm=*/prettyDebugInfo);
+  if (printGenericOpForm)
+    mlirOpPrintingFlagsPrintGenericOpForm(flags);
+
+  PyFileAccumulator accum(fileObject, binary);
+  py::gil_scoped_release();
+  mlirOperationPrintWithFlags(get(), flags, accum.getCallback(),
+                              accum.getUserData());
+  mlirOpPrintingFlagsDestroy(flags);
+}
+
+py::object PyOperation::getAsm(bool binary,
+                               llvm::Optional<int64_t> largeElementsLimit,
+                               bool enableDebugInfo, bool prettyDebugInfo,
+                               bool printGenericOpForm, bool useLocalScope) {
+  py::object fileObject;
+  if (binary) {
+    fileObject = py::module::import("io").attr("BytesIO")();
+  } else {
+    fileObject = py::module::import("io").attr("StringIO")();
+  }
+  print(fileObject, /*binary=*/binary,
+        /*largeElementsLimit=*/largeElementsLimit,
+        /*enableDebugInfo=*/enableDebugInfo,
+        /*prettyDebugInfo=*/prettyDebugInfo,
+        /*printGenericOpForm=*/printGenericOpForm,
+        /*useLocalScope=*/useLocalScope);
+
+  return fileObject.attr("getvalue")();
+}
+
 //------------------------------------------------------------------------------
 // PyAttribute.
 //------------------------------------------------------------------------------
@@ -733,6 +841,169 @@ bool PyType::operator==(const PyType &other) {
 }
 
 //------------------------------------------------------------------------------
+// PyValue and subclases.
+//------------------------------------------------------------------------------
+
+namespace {
+/// CRTP base class for Python MLIR values that subclass Value and should be
+/// castable from it. The value hierarchy is one level deep and is not supposed
+/// to accommodate other levels unless core MLIR changes.
+template <typename DerivedTy>
+class PyConcreteValue : public PyValue {
+public:
+  // Derived classes must define statics for:
+  //   IsAFunctionTy isaFunction
+  //   const char *pyClassName
+  // and redefine bindDerived.
+  using ClassTy = py::class_<DerivedTy, PyValue>;
+  using IsAFunctionTy = int (*)(MlirValue);
+
+  PyConcreteValue() = default;
+  PyConcreteValue(PyOperationRef operationRef, MlirValue value)
+      : PyValue(operationRef, value) {}
+  PyConcreteValue(PyValue &orig)
+      : PyConcreteValue(orig.getParentOperation(), castFrom(orig)) {}
+
+  /// Attempts to cast the original value to the derived type and throws on
+  /// type mismatches.
+  static MlirValue castFrom(PyValue &orig) {
+    if (!DerivedTy::isaFunction(orig.get())) {
+      auto origRepr = py::repr(py::cast(orig)).cast<std::string>();
+      throw SetPyError(PyExc_ValueError, llvm::Twine("Cannot cast value to ") +
+                                             DerivedTy::pyClassName +
+                                             " (from " + origRepr + ")");
+    }
+    return orig.get();
+  }
+
+  /// Binds the Python module objects to functions of this class.
+  static void bind(py::module &m) {
+    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    cls.def(py::init<PyValue &>(), py::keep_alive<0, 1>());
+    DerivedTy::bindDerived(cls);
+  }
+
+  /// Implemented by derived classes to add methods to the Python subclass.
+  static void bindDerived(ClassTy &m) {}
+};
+
+/// Python wrapper for MlirBlockArgument.
+class PyBlockArgument : public PyConcreteValue<PyBlockArgument> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirValueIsABlockArgument;
+  static constexpr const char *pyClassName = "BlockArgument";
+  using PyConcreteValue::PyConcreteValue;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_property_readonly("owner", [](PyBlockArgument &self) {
+      return PyBlock(self.getParentOperation(),
+                     mlirBlockArgumentGetOwner(self.get()));
+    });
+    c.def_property_readonly("arg_number", [](PyBlockArgument &self) {
+      return mlirBlockArgumentGetArgNumber(self.get());
+    });
+    c.def("set_type", [](PyBlockArgument &self, PyType type) {
+      return mlirBlockArgumentSetType(self.get(), type);
+    });
+  }
+};
+
+/// Python wrapper for MlirOpResult.
+class PyOpResult : public PyConcreteValue<PyOpResult> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirValueIsAOpResult;
+  static constexpr const char *pyClassName = "OpResult";
+  using PyConcreteValue::PyConcreteValue;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_property_readonly("owner", [](PyOpResult &self) {
+      assert(
+          mlirOperationEqual(self.getParentOperation()->get(),
+                             mlirOpResultGetOwner(self.get())) &&
+          "expected the owner of the value in Python to match that in the IR");
+      return self.getParentOperation();
+    });
+    c.def_property_readonly("result_number", [](PyOpResult &self) {
+      return mlirOpResultGetResultNumber(self.get());
+    });
+  }
+};
+
+/// A list of block arguments. Internally, these are stored as consecutive
+/// elements, random access is cheap. The argument list is associated with the
+/// operation that contains the block (detached blocks are not allowed in
+/// Python bindings) and extends its lifetime.
+class PyBlockArgumentList {
+public:
+  PyBlockArgumentList(PyOperationRef operation, MlirBlock block)
+      : operation(std::move(operation)), block(block) {}
+
+  /// Returns the length of the block argument list.
+  intptr_t dunderLen() {
+    operation->checkValid();
+    return mlirBlockGetNumArguments(block);
+  }
+
+  /// Returns `index`-th element of the block argument list.
+  PyBlockArgument dunderGetItem(intptr_t index) {
+    if (index < 0 || index >= dunderLen()) {
+      throw SetPyError(PyExc_IndexError,
+                       "attempt to access out of bounds region");
+    }
+    PyValue value(operation, mlirBlockGetArgument(block, index));
+    return PyBlockArgument(value);
+  }
+
+  /// Defines a Python class in the bindings.
+  static void bind(py::module &m) {
+    py::class_<PyBlockArgumentList>(m, "BlockArgumentList")
+        .def("__len__", &PyBlockArgumentList::dunderLen)
+        .def("__getitem__", &PyBlockArgumentList::dunderGetItem);
+  }
+
+private:
+  PyOperationRef operation;
+  MlirBlock block;
+};
+
+/// A list of operation results. Internally, these are stored as consecutive
+/// elements, random access is cheap. The result list is associated with the
+/// operation whose results these are, and extends the lifetime of this
+/// operation.
+class PyOpResultList {
+public:
+  PyOpResultList(PyOperationRef operation) : operation(operation) {}
+
+  /// Returns the length of the result list.
+  intptr_t dunderLen() {
+    operation->checkValid();
+    return mlirOperationGetNumResults(operation->get());
+  }
+
+  /// Returns `index`-th element in the result list.
+  PyOpResult dunderGetItem(intptr_t index) {
+    if (index < 0 || index >= dunderLen()) {
+      throw SetPyError(PyExc_IndexError,
+                       "attempt to access out of bounds region");
+    }
+    PyValue value(operation, mlirOperationGetResult(operation->get(), index));
+    return PyOpResult(value);
+  }
+
+  /// Defines a Python class in the bindings.
+  static void bind(py::module &m) {
+    py::class_<PyOpResultList>(m, "OpResultList")
+        .def("__len__", &PyOpResultList::dunderLen)
+        .def("__getitem__", &PyOpResultList::dunderGetItem);
+  }
+
+private:
+  PyOperationRef operation;
+};
+
+} // end namespace
+
+//------------------------------------------------------------------------------
 // Standard attribute subclasses.
 //------------------------------------------------------------------------------
 
@@ -749,7 +1020,7 @@ public:
   // Derived classes must define statics for:
   //   IsAFunctionTy isaFunction
   //   const char *pyClassName
-  using ClassTy = py::class_<DerivedTy, PyAttribute>;
+  using ClassTy = py::class_<DerivedTy, BaseTy>;
   using IsAFunctionTy = int (*)(MlirAttribute);
 
   PyConcreteAttribute() = default;
@@ -1793,18 +2064,39 @@ void mlir::python::populateIRSubmodule(py::module &m) {
       .def_property_readonly(
           "regions",
           [](PyOperation &self) { return PyRegionList(self.getRef()); })
+      .def_property_readonly(
+          "results",
+          [](PyOperation &self) { return PyOpResultList(self.getRef()); },
+          "Returns the list of Operation results.")
       .def("__iter__",
            [](PyOperation &self) { return PyRegionIterator(self.getRef()); })
       .def(
           "__str__",
           [](PyOperation &self) {
-            self.checkValid();
-            PyPrintAccumulator printAccum;
-            mlirOperationPrint(self.get(), printAccum.getCallback(),
-                               printAccum.getUserData());
-            return printAccum.join();
+            return self.getAsm(/*binary=*/false,
+                               /*largeElementsLimit=*/llvm::None,
+                               /*enableDebugInfo=*/false,
+                               /*prettyDebugInfo=*/false,
+                               /*printGenericOpForm=*/false,
+                               /*useLocalScope=*/false);
           },
-          kTypeStrDunderDocstring);
+          "Returns the assembly form of the operation.")
+      .def("print", &PyOperation::print,
+           // Careful: Lots of arguments must match up with print method.
+           py::arg("file") = py::none(), py::arg("binary") = false,
+           py::arg("large_elements_limit") = py::none(),
+           py::arg("enable_debug_info") = false,
+           py::arg("pretty_debug_info") = false,
+           py::arg("print_generic_op_form") = false,
+           py::arg("use_local_scope") = false, kOperationPrintDocstring)
+      .def("get_asm", &PyOperation::getAsm,
+           // Careful: Lots of arguments must match up with get_asm method.
+           py::arg("binary") = false,
+           py::arg("large_elements_limit") = py::none(),
+           py::arg("enable_debug_info") = false,
+           py::arg("pretty_debug_info") = false,
+           py::arg("print_generic_op_form") = false,
+           py::arg("use_local_scope") = false, kOperationGetAsmDocstring);
 
   // Mapping of PyRegion.
   py::class_<PyRegion>(m, "Region")
@@ -1833,6 +2125,12 @@ void mlir::python::populateIRSubmodule(py::module &m) {
 
   // Mapping of PyBlock.
   py::class_<PyBlock>(m, "Block")
+      .def_property_readonly(
+          "arguments",
+          [](PyBlock &self) {
+            return PyBlockArgumentList(self.getParentOperation(), self.get());
+          },
+          "Returns a list of block arguments.")
       .def_property_readonly(
           "operations",
           [](PyBlock &self) {
@@ -1867,9 +2165,9 @@ void mlir::python::populateIRSubmodule(py::module &m) {
                            printAccum.getUserData());
             return printAccum.join();
           },
-          kTypeStrDunderDocstring);
+          "Returns the assembly form of the block.");
 
-  // Mapping of Type.
+  // Mapping of PyAttribute.
   py::class_<PyAttribute>(m, "Attribute")
       .def_property_readonly(
           "context",
@@ -1906,7 +2204,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
                                printAccum.getUserData());
             return printAccum.join();
           },
-          kTypeStrDunderDocstring)
+          "Returns the assembly form of the Attribute.")
       .def("__repr__", [](PyAttribute &self) {
         // Generally, assembly formats are not printed for __repr__ because
         // this can cause exceptionally long debug output and exceptions.
@@ -1959,7 +2257,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyStringAttribute::bind(m);
   PyDenseElementsAttribute::bind(m);
 
-  // Mapping of Type.
+  // Mapping of PyType.
   py::class_<PyType>(m, "Type")
       .def_property_readonly(
           "context", [](PyType &self) { return self.getContext().getObject(); },
@@ -1983,7 +2281,7 @@ void mlir::python::populateIRSubmodule(py::module &m) {
                           printAccum.getUserData());
             return printAccum.join();
           },
-          kTypeStrDunderDocstring)
+          "Returns the assembly form of the type.")
       .def("__repr__", [](PyType &self) {
         // Generally, assembly formats are not printed for __repr__ because
         // this can cause exceptionally long debug output and exceptions.
@@ -2015,11 +2313,40 @@ void mlir::python::populateIRSubmodule(py::module &m) {
   PyTupleType::bind(m);
   PyFunctionType::bind(m);
 
+  // Mapping of Value.
+  py::class_<PyValue>(m, "Value")
+      .def_property_readonly(
+          "context",
+          [](PyValue &self) { return self.getParentOperation()->getContext(); },
+          "Context in which the value lives.")
+      .def(
+          "dump", [](PyValue &self) { mlirValueDump(self.get()); },
+          kDumpDocstring)
+      .def(
+          "__str__",
+          [](PyValue &self) {
+            PyPrintAccumulator printAccum;
+            printAccum.parts.append("Value(");
+            mlirValuePrint(self.get(), printAccum.getCallback(),
+                           printAccum.getUserData());
+            printAccum.parts.append(")");
+            return printAccum.join();
+          },
+          kValueDunderStrDocstring)
+      .def_property_readonly("type", [](PyValue &self) {
+        return PyType(self.getParentOperation()->getContext(),
+                      mlirValueGetType(self.get()));
+      });
+  PyBlockArgument::bind(m);
+  PyOpResult::bind(m);
+
   // Container bindings.
+  PyBlockArgumentList::bind(m);
   PyBlockIterator::bind(m);
   PyBlockList::bind(m);
   PyOperationIterator::bind(m);
   PyOperationList::bind(m);
+  PyOpResultList::bind(m);
   PyRegionIterator::bind(m);
   PyRegionList::bind(m);
 }

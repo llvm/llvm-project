@@ -22,8 +22,9 @@ module attributes {
     %0 = "op"() : () -> (f32)
     %1 = "op"() : () -> (memref<12xf32, 11>)
     %cst = constant 1 : index
-    "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1) { kernel = @kernels::@basic_module_structure }
-        : (index, index, index, index, index, index, f32, memref<12xf32, 11>) -> ()
+    gpu.launch_func @kernels::@basic_module_structure
+        blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
+        args(%0 : f32, %1 : memref<12xf32, 11>)
     return
   }
 }

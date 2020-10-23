@@ -63,9 +63,9 @@ class FLAT_Pseudo<string opName, dag outs, dag ins,
   // Buffer instruction; so, they increment both VM_CNT and LGKM_CNT
   // and are not considered done until both have been decremented.
   let VM_CNT = 1;
-  let LGKM_CNT = !if(!or(is_flat_global, is_flat_scratch), 0, 1);
+  let LGKM_CNT = !not(!or(is_flat_global, is_flat_scratch));
 
-  let IsNonFlatSeg = !if(!or(is_flat_global, is_flat_scratch), 1, 0);
+  let IsNonFlatSeg = !or(is_flat_global, is_flat_scratch);
 }
 
 class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :

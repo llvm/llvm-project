@@ -226,6 +226,9 @@ public:
                           omp::IdentFlag Flags = omp::IdentFlag(0),
                           unsigned Reserve2Flags = 0);
 
+  // Get the type corresponding to __kmpc_impl_lanemask_t from the deviceRTL
+  Type *getLanemaskType();
+
   /// Generate control flow and cleanup for cancellation.
   ///
   /// \param CancelFlag Flag indicating if the cancellation is performed.

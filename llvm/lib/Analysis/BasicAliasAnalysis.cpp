@@ -14,6 +14,7 @@
 
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -814,7 +815,7 @@ AliasResult BasicAAResult::alias(const MemoryLocation &LocA,
   AliasResult Alias = aliasCheck(LocA.Ptr, LocA.Size, LocA.AATags, LocB.Ptr,
                                  LocB.Size, LocB.AATags, AAQI);
 
-  VisitedPhiBBs.clear();
+  assert(VisitedPhiBBs.empty());
   return Alias;
 }
 
@@ -1535,10 +1536,6 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
                                     LocationSize V2Size,
                                     const AAMDNodes &V2AAInfo,
                                     const Value *UnderV2, AAQueryInfo &AAQI) {
-  // Track phi nodes we have visited. We use this information when we determine
-  // value equivalence.
-  VisitedPhiBBs.insert(PN->getParent());
-
   // If the values are PHIs in the same block, we can do a more precise
   // as well as efficient check: just check for aliases between the values
   // on corresponding edges.
@@ -1654,6 +1651,15 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   // pointer to.
   if (isRecursive)
     PNSize = LocationSize::unknown();
+
+  // In the recursive alias queries below, we may compare values from two
+  // different loop iterations. Keep track of visited phi blocks, which will
+  // be used when determining value equivalence.
+  auto Pair = VisitedPhiBBs.insert(PN->getParent());
+  auto _ = make_scope_exit([&]() {
+    if (Pair.second)
+      VisitedPhiBBs.erase(PN->getParent());
+  });
 
   AliasResult Alias = aliasCheck(V2, V2Size, V2AAInfo, V1Srcs[0], PNSize,
                                  PNAAInfo, AAQI, UnderV2);

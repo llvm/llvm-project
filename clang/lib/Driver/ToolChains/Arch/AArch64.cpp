@@ -43,6 +43,12 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
   else if (CPU.size())
     return CPU;
 
+  if (Triple.isTargetMachineMac() &&
+      Triple.getArch() == llvm::Triple::aarch64) {
+    // Apple Silicon macs default to A12 CPUs.
+    return "apple-a12";
+  }
+
   // Make sure we pick the appropriate Apple CPU if -arch is used or when
   // targetting a Darwin OS.
   if (Args.getLastArg(options::OPT_arch) || Triple.isOSDarwin())

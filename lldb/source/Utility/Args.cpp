@@ -175,6 +175,11 @@ Args::Args(const StringList &list) : Args() {
     AppendArgument(arg);
 }
 
+Args::Args(llvm::ArrayRef<llvm::StringRef> args) : Args() {
+  for (llvm::StringRef arg : args)
+    AppendArgument(arg);
+}
+
 Args &Args::operator=(const Args &rhs) {
   Clear();
 
@@ -374,9 +379,8 @@ void Args::Clear() {
   m_argv.push_back(nullptr);
 }
 
-const char *Args::GetShellSafeArgument(const FileSpec &shell,
-                                       const char *unsafe_arg,
-                                       std::string &safe_arg) {
+std::string Args::GetShellSafeArgument(const FileSpec &shell,
+                                       llvm::StringRef unsafe_arg) {
   struct ShellDescriptor {
     ConstString m_basename;
     const char *m_escapables;
@@ -398,7 +402,7 @@ const char *Args::GetShellSafeArgument(const FileSpec &shell,
     }
   }
 
-  safe_arg.assign(unsafe_arg);
+  std::string safe_arg(unsafe_arg);
   size_t prev_pos = 0;
   while (prev_pos < safe_arg.size()) {
     // Escape spaces and quotes
@@ -409,7 +413,7 @@ const char *Args::GetShellSafeArgument(const FileSpec &shell,
     } else
       break;
   }
-  return safe_arg.c_str();
+  return safe_arg;
 }
 
 lldb::Encoding Args::StringToEncoding(llvm::StringRef s,

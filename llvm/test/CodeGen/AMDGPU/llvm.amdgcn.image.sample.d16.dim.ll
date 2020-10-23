@@ -60,7 +60,7 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; TONGA-NEXT:    s_waitcnt vmcnt(0)
 ; TONGA-NEXT:    v_mov_b32_e32 v0, v2
 ; TONGA-NEXT:    flat_store_dword v[4:5], v3
-; TONGA-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; TONGA-NEXT:    s_waitcnt vmcnt(0)
 ; TONGA-NEXT:    ; return to shader part epilog
 ;
 ; GFX81-LABEL: image_sample_2d_f16_tfe:
@@ -76,7 +76,7 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX81-NEXT:    s_waitcnt vmcnt(0)
 ; GFX81-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX81-NEXT:    flat_store_dword v[4:5], v3
-; GFX81-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX81-NEXT:    s_waitcnt vmcnt(0)
 ; GFX81-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: image_sample_2d_f16_tfe:

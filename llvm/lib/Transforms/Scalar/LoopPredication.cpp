@@ -439,8 +439,8 @@ static bool isSafeToTruncateWideIVType(const DataLayout &DL,
                                        Type *RangeCheckType) {
   if (!EnableIVTruncation)
     return false;
-  assert(DL.getTypeSizeInBits(LatchCheck.IV->getType()) >
-             DL.getTypeSizeInBits(RangeCheckType) &&
+  assert(DL.getTypeSizeInBits(LatchCheck.IV->getType()).getFixedSize() >
+             DL.getTypeSizeInBits(RangeCheckType).getFixedSize() &&
          "Expected latch check IV type to be larger than range check operand "
          "type!");
   // The start and end values of the IV should be known. This is to guarantee
@@ -460,7 +460,8 @@ static bool isSafeToTruncateWideIVType(const DataLayout &DL,
   // The active bits should be less than the bits in the RangeCheckType. This
   // guarantees that truncating the latch check to RangeCheckType is a safe
   // operation.
-  auto RangeCheckTypeBitSize = DL.getTypeSizeInBits(RangeCheckType);
+  auto RangeCheckTypeBitSize =
+      DL.getTypeSizeInBits(RangeCheckType).getFixedSize();
   return Start->getAPInt().getActiveBits() < RangeCheckTypeBitSize &&
          Limit->getAPInt().getActiveBits() < RangeCheckTypeBitSize;
 }
@@ -477,7 +478,8 @@ static Optional<LoopICmp> generateLoopLatchCheck(const DataLayout &DL,
   if (RangeCheckType == LatchType)
     return LatchCheck;
   // For now, bail out if latch type is narrower than range type.
-  if (DL.getTypeSizeInBits(LatchType) < DL.getTypeSizeInBits(RangeCheckType))
+  if (DL.getTypeSizeInBits(LatchType).getFixedSize() <
+      DL.getTypeSizeInBits(RangeCheckType).getFixedSize())
     return None;
   if (!isSafeToTruncateWideIVType(DL, SE, LatchCheck, RangeCheckType))
     return None;

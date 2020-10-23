@@ -291,6 +291,8 @@ def FeatureSERIALIZE : SubtargetFeature<"serialize", "HasSERIALIZE", "true",
                                         "Has serialize instruction">;
 def FeatureTSXLDTRK : SubtargetFeature<"tsxldtrk", "HasTSXLDTRK", "true",
                                        "Support TSXLDTRK instructions">;
+def FeatureUINTR : SubtargetFeature<"uintr", "HasUINTR", "true",
+                                    "Has UINTR Instructions">;
 // On some processors, instructions that implicitly take two memory operands are
 // slow. In practice, this means that CALL, PUSH, and POP with memory operands
 // should be avoided in favor of a MOV + register CALL/PUSH/POP.
@@ -772,7 +774,8 @@ def ProcessorFeatures {
                                                   FeatureSHSTK,
                                                   FeatureVP2INTERSECT,
                                                   FeatureMOVDIRI,
-                                                  FeatureMOVDIR64B];
+                                                  FeatureMOVDIR64B,
+                                                  FeatureUINTR];
   list<SubtargetFeature> SPRTuning = ICXTuning;
   list<SubtargetFeature> SPRFeatures =
     !listconcat(ICXFeatures, SPRAdditionalFeatures);

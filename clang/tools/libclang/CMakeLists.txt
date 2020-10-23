@@ -174,7 +174,6 @@ install(DIRECTORY ../../include/clang-c
   DESTINATION "${LIBCLANG_HEADERS_INSTALL_DESTINATION}"
   FILES_MATCHING
   PATTERN "*.h"
-  PATTERN ".svn" EXCLUDE
   )
 
 # LLVM_DISTRIBUTION_COMPONENTS requires that each component have both a
