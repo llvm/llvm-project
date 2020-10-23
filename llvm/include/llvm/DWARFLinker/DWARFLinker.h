@@ -221,12 +221,12 @@ public:
 
 typedef std::function<void(const Twine &Warning, StringRef Context,
                            const DWARFDie *DIE)>
-    messageHandler;
+    MessageHandler;
 typedef std::function<ErrorOr<DWARFFile &>(StringRef ContainerName,
                                            StringRef Path)>
-    objFileLoader;
-typedef std::map<std::string, std::string> swiftInterfacesMap;
-typedef std::map<std::string, std::string> objectPrefixMap;
+    ObjectFileLoader;
+typedef std::map<std::string, std::string> SwiftInterfaceMap;
+typedef std::map<std::string, std::string> ObjectPrefixMap;
 
 /// The core of the Dwarf linking logic.
 ///
@@ -295,28 +295,28 @@ public:
   }
 
   /// Set warning handler which would be used to report warnings.
-  void setWarningHandler(messageHandler Handler) {
+  void setWarningHandler(MessageHandler Handler) {
     Options.WarningHandler = Handler;
   }
 
   /// Set error handler which would be used to report errors.
-  void setErrorHandler(messageHandler Handler) {
+  void setErrorHandler(MessageHandler Handler) {
     Options.ErrorHandler = Handler;
   }
 
   /// Set object files loader which would be used to load
   /// additional objects for splitted dwarf.
-  void setObjFileLoader(objFileLoader Loader) {
+  void setObjFileLoader(ObjectFileLoader Loader) {
     Options.ObjFileLoader = Loader;
   }
 
   /// Set map for Swift interfaces.
-  void setSwiftInterfacesMap(swiftInterfacesMap *Map) {
+  void setSwiftInterfaceMap(SwiftInterfaceMap *Map) {
     Options.ParseableSwiftInterfaces = Map;
   }
 
   /// Set prefix map for objects.
-  void setObjectPrefixMap(objectPrefixMap *Map) {
+  void setObjectPrefixMap(ObjectPrefixMap *Map) {
     Options.ObjectPrefixMap = Map;
   }
 
@@ -783,22 +783,22 @@ private:
     std::string PrependPath;
 
     // warning handler
-    messageHandler WarningHandler = nullptr;
+    MessageHandler WarningHandler = nullptr;
 
     // error handler
-    messageHandler ErrorHandler = nullptr;
+    MessageHandler ErrorHandler = nullptr;
 
-    objFileLoader ObjFileLoader = nullptr;
+    ObjectFileLoader ObjFileLoader = nullptr;
 
     /// A list of all .swiftinterface files referenced by the debug
     /// info, mapping Module name to path on disk. The entries need to
     /// be uniqued and sorted and there are only few entries expected
     /// per compile unit, which is why this is a std::map.
     /// this is dsymutil specific fag.
-    swiftInterfacesMap *ParseableSwiftInterfaces = nullptr;
+    SwiftInterfaceMap *ParseableSwiftInterfaces = nullptr;
 
     /// A list of remappings to apply to file paths.
-    objectPrefixMap *ObjectPrefixMap = nullptr;
+    ObjectPrefixMap *ObjectPrefixMap = nullptr;
   } Options;
 };
 
