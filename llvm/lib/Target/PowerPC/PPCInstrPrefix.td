@@ -1398,12 +1398,6 @@ let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops] in {
   def LXVPX : XForm_XTp5_XAB5<31, 333, (outs vsrprc:$XTp), (ins memrr:$src),
                               "lxvpx $XTp, $src", IIC_LdStLFD,
                               []>;
-  let Predicates = [PrefixInstrs] in {
-    defm PLXVP :
-      8LS_DForm_R_XTp5_SI34_MEM_p<1, 58, (outs vsrprc:$XTp), (ins memri34:$D_RA),
-                                  (ins memri34_pcrel:$D_RA), "plxvp $XTp, $D_RA",
-                                  IIC_LdStLFD>;
-  }
 }
 
 let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops] in {
@@ -1413,12 +1407,20 @@ let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops] in {
   def STXVPX : XForm_XTp5_XAB5<31, 461, (outs), (ins vsrprc:$XTp, memrr:$dst),
                                "stxvpx $XTp, $dst", IIC_LdStLFD,
                                []>;
-  let Predicates = [PrefixInstrs] in {
-    defm PSTXVP :
-      8LS_DForm_R_XTp5_SI34_MEM_p<1, 62, (outs), (ins vsrprc:$XTp, memri34:$D_RA),
-                                  (ins vsrprc:$XTp, memri34_pcrel:$D_RA),
-                                  "pstxvp $XTp, $D_RA", IIC_LdStLFD>;
-  }
+}
+
+let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops, PrefixInstrs] in {
+  defm PLXVP :
+    8LS_DForm_R_XTp5_SI34_MEM_p<1, 58, (outs vsrprc:$XTp), (ins memri34:$D_RA),
+                                (ins memri34_pcrel:$D_RA), "plxvp $XTp, $D_RA",
+                                IIC_LdStLFD>;
+}
+
+let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops, PrefixInstrs] in {
+  defm PSTXVP :
+    8LS_DForm_R_XTp5_SI34_MEM_p<1, 62, (outs), (ins vsrprc:$XTp, memri34:$D_RA),
+                                (ins vsrprc:$XTp, memri34_pcrel:$D_RA),
+                                "pstxvp $XTp, $D_RA", IIC_LdStLFD>;
 }
 
 // TODO: We have an added complexity of 500 here. This is only a temporary
