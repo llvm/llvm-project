@@ -33,8 +33,6 @@
 #include <memory>
 #include <thread>
 
-#include "Index.grpc.pb.h"
-
 namespace clang {
 namespace clangd {
 namespace remote {
