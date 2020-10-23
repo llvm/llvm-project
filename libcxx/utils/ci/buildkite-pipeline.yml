@@ -118,6 +118,13 @@ steps:
     agents:
       queue: "libcxx-macos-builders"
 
+  - label: "Benchmarks"
+    command: "libcxx/utils/ci/run-buildbot.sh benchmarks"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+
   # Build with the configuration we use to generate libc++.dylib on Apple platforms
   - label: "Apple system"
     command: "libcxx/utils/ci/run-buildbot.sh x86_64-apple-system"
