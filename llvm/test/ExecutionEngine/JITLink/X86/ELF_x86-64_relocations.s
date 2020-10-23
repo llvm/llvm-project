@@ -39,25 +39,12 @@ test_gotpcrel:
 .Lend_test_gotpcrel:
         .size   test_gotpcrel, .Lend_test_gotpcrel-test_gotpcrel
 
-# Test REX_GOTPCRELX handling. We want to check both the offset to the GOT entry and its
-# contents.
-# jitlink-check: decode_operand(test_rex_gotpcrelx, 4) = \
-# jitlink-check:   got_addr(elf_reloc.o, named_data) - next_pc(test_rex_gotpcrelx)
-
-        .globl test_rex_gotpcrelx
-        .p2align      4, 0x90
-        .type   test_rex_gotpcrelx,@function
-test_rex_gotpcrelx:
-	movq    named_data@GOTPCREL(%rip), %rax
-.Lend_test_rex_gotpcrelx:
-        .size   test_rex_gotpcrelx, .Lend_test_gotpcrel-test_rex_gotpcrelx
-
         .type   named_data,@object
         .data
-        .p2align        3
+        .p2align        2
 named_data:
-        .quad   42
-        .size   named_data, 8
+        .long   42
+        .size   named_data, 4
 
 # Test BSS / zero-fill section handling.
 # llvm-jitlink: *{4}bss_variable = 0
