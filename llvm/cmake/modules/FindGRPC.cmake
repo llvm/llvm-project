@@ -83,27 +83,31 @@ endif()
 
 # Proto headers are generated in ${CMAKE_CURRENT_BINARY_DIR}.
 # Libraries that use these headers should adjust the include path.
-# FIXME(kirillbobyrev): Allow optional generation of gRPC code and give callers
-# control over it via additional parameters.
-function(generate_grpc_protos LibraryName ProtoFile)
+# If the "GRPC" argument is given, services are also generated.
+function(generate_protos LibraryName ProtoFile)
+  cmake_parse_arguments(PARSE_ARGV 2 PROTO "GRPC" "" "")
   get_filename_component(ProtoSourceAbsolutePath "${CMAKE_CURRENT_SOURCE_DIR}/${ProtoFile}" ABSOLUTE)
   get_filename_component(ProtoSourcePath ${ProtoSourceAbsolutePath} PATH)
 
   set(GeneratedProtoSource "${CMAKE_CURRENT_BINARY_DIR}/Index.pb.cc")
   set(GeneratedProtoHeader "${CMAKE_CURRENT_BINARY_DIR}/Index.pb.h")
-  set(GeneratedGRPCSource "${CMAKE_CURRENT_BINARY_DIR}/Index.grpc.pb.cc")
-  set(GeneratedGRPCHeader "${CMAKE_CURRENT_BINARY_DIR}/Index.grpc.pb.h")
+  set(Flags
+    --cpp_out="${CMAKE_CURRENT_BINARY_DIR}"
+    --proto_path="${ProtoSourcePath}")
+  if (PROTO_GRPC)
+    list(APPEND Flags
+      --grpc_out="${CMAKE_CURRENT_BINARY_DIR}"
+      --plugin=protoc-gen-grpc="${GRPC_CPP_PLUGIN}")
+    list(APPEND GeneratedProtoSource "${CMAKE_CURRENT_BINARY_DIR}/Index.grpc.pb.cc")
+    list(APPEND GeneratedProtoHeader "${CMAKE_CURRENT_BINARY_DIR}/Index.grpc.pb.h")
+  endif()
   add_custom_command(
-        OUTPUT "${GeneratedProtoSource}" "${GeneratedProtoHeader}" "${GeneratedGRPCSource}" "${GeneratedGRPCHeader}"
+        OUTPUT ${GeneratedProtoSource} ${GeneratedProtoHeader}
         COMMAND ${PROTOC}
-        ARGS --grpc_out="${CMAKE_CURRENT_BINARY_DIR}"
-          --cpp_out="${CMAKE_CURRENT_BINARY_DIR}"
-          --proto_path="${ProtoSourcePath}"
-          --plugin=protoc-gen-grpc="${GRPC_CPP_PLUGIN}"
-          "${ProtoSourceAbsolutePath}"
-          DEPENDS "${ProtoSourceAbsolutePath}")
+        ARGS ${Flags} "${ProtoSourceAbsolutePath}"
+        DEPENDS "${ProtoSourceAbsolutePath}")
 
-  add_clang_library(${LibraryName} ${GeneratedProtoSource} ${GeneratedGRPCSource}
+  add_clang_library(${LibraryName} ${GeneratedProtoSource}
     PARTIAL_SOURCES_INTENDED
     LINK_LIBS grpc++ protobuf)
 endfunction()
