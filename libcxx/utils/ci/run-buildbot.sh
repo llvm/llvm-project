@@ -23,43 +23,43 @@ case "${BUILDER}" in
 generic-cxx03)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake")
 ;;
 generic-cxx11)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake")
 ;;
 generic-cxx14)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx14.cmake")
 ;;
 generic-cxx17)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx17.cmake")
 ;;
 generic-cxx2a)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2a.cmake")
 ;;
 generic-noexceptions)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake")
 ;;
 generic-32bit)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-32bits.cmake")
 ;;
 generic-gcc)
@@ -67,66 +67,66 @@ generic-gcc)
     export CXX=g++
     # FIXME: Re-enable experimental testing on GCC. GCC cares about the order
     #        in which we link -lc++experimental, which causes issues.
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param enable_experimental=False")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param enable_experimental=False --xunit-xml-output test-results.xml")
 ;;
 generic-asan)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-asan.cmake")
 ;;
 generic-msan)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-msan.cmake")
 ;;
 generic-tsan)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-tsan.cmake")
 ;;
 generic-ubsan)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-ubsan.cmake")
 ;;
 generic-with_llvm_unwinder)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-DLIBCXXABI_USE_LLVM_UNWINDER=ON")
 ;;
 generic-singlethreaded)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-singlethreaded.cmake")
 ;;
 generic-nodebug)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-nodebug.cmake")
 ;;
 generic-no-random_device)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-random_device.cmake")
 ;;
 x86_64-apple-system)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake")
 ;;
 x86_64-apple-system-noexceptions)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported")
+    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
     args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake")
     args+=("-DLIBCXX_ENABLE_EXCEPTIONS=OFF")
     args+=("-DLIBCXXABI_ENABLE_EXCEPTIONS=OFF")
