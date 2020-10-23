@@ -666,6 +666,7 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
 
   // Now promote ref edges into call edges.
   for (Node *CallTarget : PromotedRefTargets) {
+    UR.Devirtualized = true;
     SCC &TargetC = *G.lookupSCC(*CallTarget);
     RefSCC &TargetRC = TargetC.getOuterRefSCC();
 
