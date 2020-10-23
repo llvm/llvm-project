@@ -992,6 +992,27 @@ public:
   /// Temporary cache of DBG_VALUEs to be entered into the Transfers collection.
   SmallVector<MachineInstr *, 4> PendingDbgValues;
 
+  /// Record of a use-before-def: created when a value that's live-in to the
+  /// current block isn't available in any machine location, but it will be
+  /// defined in this block.
+  struct UseBeforeDef {
+    /// Value of this variable, def'd in block.
+    ValueIDNum ID;
+    /// Identity of this variable.
+    DebugVariable Var;
+    /// Additional variable properties.
+    DbgValueProperties Properties;
+  };
+
+  /// Map from instruction index (within the block) to the set of UseBeforeDefs
+  /// that become defined at that instruction.
+  DenseMap<unsigned, SmallVector<UseBeforeDef, 1>> UseBeforeDefs;
+
+  /// The set of variables that are in UseBeforeDefs and can become a location
+  /// once the relevant value is defined. An element being erased from this
+  /// collection prevents the use-before-def materializing.
+  DenseSet<DebugVariable> UseBeforeDefVariables;
+
   const TargetRegisterInfo &TRI;
   const BitVector &CalleeSavedRegs;
 
@@ -1014,6 +1035,8 @@ public:
     ActiveVLocs.clear();
     VarLocs.clear();
     VarLocs.reserve(NumLocs);
+    UseBeforeDefs.clear();
+    UseBeforeDefVariables.clear();
 
     auto isCalleeSaved = [&](LocIdx L) {
       unsigned Reg = MTracker->LocIdxToLocID[L];
@@ -1058,9 +1081,15 @@ public:
       }
 
       // If the value has no location, we can't make a variable location.
-      auto ValuesPreferredLoc = ValueToLoc.find(Var.second.ID);
-      if (ValuesPreferredLoc == ValueToLoc.end())
+      const ValueIDNum &Num = Var.second.ID;
+      auto ValuesPreferredLoc = ValueToLoc.find(Num);
+      if (ValuesPreferredLoc == ValueToLoc.end()) {
+        // If it's a def that occurs in this block, register it as a
+        // use-before-def to be resolved as we step through the block.
+        if (Num.getBlock() == (unsigned)MBB.getNumber() && !Num.isPHI())
+          addUseBeforeDef(Var.first, Var.second.Properties, Num);
         continue;
+      }
 
       LocIdx M = ValuesPreferredLoc->second;
       auto NewValue = LocAndProperties{M, Var.second.Properties};
@@ -1072,6 +1101,44 @@ public:
           MTracker->emitLoc(M, Var.first, Var.second.Properties));
     }
     flushDbgValues(MBB.begin(), &MBB);
+  }
+
+  /// Record that \p Var has value \p ID, a value that becomes available
+  /// later in the function.
+  void addUseBeforeDef(const DebugVariable &Var,
+                       const DbgValueProperties &Properties, ValueIDNum ID) {
+    UseBeforeDef UBD = {ID, Var, Properties};
+    UseBeforeDefs[ID.getInst()].push_back(UBD);
+    UseBeforeDefVariables.insert(Var);
+  }
+
+  /// After the instruction at index \p Inst and position \p pos has been
+  /// processed, check whether it defines a variable value in a use-before-def.
+  /// If so, and the variable value hasn't changed since the start of the
+  /// block, create a DBG_VALUE.
+  void checkInstForNewValues(unsigned Inst, MachineBasicBlock::iterator pos) {
+    auto MIt = UseBeforeDefs.find(Inst);
+    if (MIt == UseBeforeDefs.end())
+      return;
+
+    for (auto &Use : MIt->second) {
+      LocIdx L = Use.ID.getLoc();
+
+      // If something goes very wrong, we might end up labelling a COPY
+      // instruction or similar with an instruction number, where it doesn't
+      // actually define a new value, instead it moves a value. In case this
+      // happens, discard.
+      if (MTracker->LocIdxToIDNum[L] != Use.ID)
+        continue;
+
+      // If a different debug instruction defined the variable value / location
+      // since the start of the block, don't materialize this use-before-def.
+      if (!UseBeforeDefVariables.count(Use.Var))
+        continue;
+
+      PendingDbgValues.push_back(MTracker->emitLoc(L, Use.Var, Use.Properties));
+    }
+    flushDbgValues(pos, nullptr);
   }
 
   /// Helper to move created DBG_VALUEs into Transfers collection.
@@ -1097,6 +1164,8 @@ public:
         ActiveMLocs[It->second.Loc].erase(Var);
         ActiveVLocs.erase(It);
      }
+      // Any use-before-defs no longer apply.
+      UseBeforeDefVariables.erase(Var);
       return;
     }
 
@@ -1112,6 +1181,8 @@ public:
                 Optional<LocIdx> OptNewLoc) {
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
+    // Any use-before-defs no longer apply.
+    UseBeforeDefVariables.erase(Var);
 
     // Erase any previous location,
     auto It = ActiveVLocs.find(Var);
@@ -1658,6 +1729,12 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI) {
 
   // Tell transfer tracker that the variable value has changed.
   TTracker->redefVar(MI, Properties, FoundLoc);
+
+  // If there was a value with no location; but the value is defined in a
+  // later instruction in this block, this is a block-local use-before-def.
+  if (!FoundLoc && NewID && NewID->getBlock() == CurBB &&
+      NewID->getInst() > CurInst)
+    TTracker->addUseBeforeDef(V, {MI.getDebugExpression(), false}, *NewID);
 
   // Produce a DBG_VALUE representing what this DBG_INSTR_REF meant.
   // This DBG_VALUE is potentially a $noreg / undefined location, if
@@ -3069,6 +3146,7 @@ void InstrRefBasedLDV::emitLocations(
     CurInst = 1;
     for (auto &MI : MBB) {
       process(MI);
+      TTracker->checkInstForNewValues(CurInst, MI.getIterator());
       ++CurInst;
     }
   }
