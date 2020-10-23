@@ -27,7 +27,7 @@ header file (``record.h``) and/or the Doxygen documentation.
 
 This document assumes that you have read the :doc:`TableGen Programmer's
 Reference <./ProgRef>`, which provides a detailed reference for coding
-TableGen source files. This document and the relevant Doxygen pages will be
+TableGen source files. This document and the data structure comments will be
 improved over time.
 
 Data Structures
