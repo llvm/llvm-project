@@ -26088,6 +26088,15 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
                           Operation.getValue(7), Operation.getValue(8),
                           Operation.getValue(9)});
     }
+    case Intrinsic::x86_testui: {
+      SDLoc dl(Op);
+      SDValue Chain = Op.getOperand(0);
+      SDVTList VTs = DAG.getVTList(MVT::i32, MVT::Other);
+      SDValue Operation = DAG.getNode(X86ISD::TESTUI, dl, VTs, Chain);
+      SDValue SetCC = getSETCC(X86::COND_B, Operation.getValue(0), dl, DAG);
+      return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), SetCC,
+                         Operation.getValue(1));
+    }
     }
     return SDValue();
   }
@@ -31105,6 +31114,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(AESDECWIDE128KL)
   NODE_NAME_CASE(AESENCWIDE256KL)
   NODE_NAME_CASE(AESDECWIDE256KL)
+  NODE_NAME_CASE(TESTUI)
   }
   return nullptr;
 #undef NODE_NAME_CASE

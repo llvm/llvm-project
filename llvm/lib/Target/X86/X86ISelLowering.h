@@ -711,6 +711,9 @@ namespace llvm {
     // For avx512-vp2intersect
     VP2INTERSECT,
 
+    // User level interrupts - testui
+    TESTUI,
+
     /// X86 strict FP compare instructions.
     STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
     STRICT_FCMPS,

@@ -114,6 +114,7 @@ set(files
   tgmath.h
   tmmintrin.h
   tsxldtrkintrin.h
+  uintrintrin.h
   unwind.h
   vadefs.h
   vaesintrin.h
