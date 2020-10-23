@@ -201,3 +201,22 @@ namespace CTADPartialOrder {
   template<typename T, A<0> a> struct X<T, T, a> { static constexpr int n = 4; };
   static_assert(X<float, float, a>::n == 4);
 }
+
+namespace UnnamedBitfield {
+  struct A {
+    int : 16;
+  };
+  // Make sure we don't distinguish between the unnamed bit-field being
+  // uninitialized and it being zeroed. Those are not distinct states
+  // according to [temp.type]p2.
+  //
+  // FIXME: We shouldn't track a value for unnamed bit-fields, nor number
+  // them when computing field indexes.
+  template <A> struct X {};
+  constexpr A a;
+  using T = X<a>;
+  using T = X<A{}>;
+  using T = X<(A())>;
+  // Once we support bit-casts involving bit-fields, this should be valid too.
+  using T = X<__builtin_bit_cast(A, (unsigned short)0)>; // expected-error {{constant}} expected-note {{not yet supported}}
+}
