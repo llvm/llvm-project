@@ -335,6 +335,33 @@ template <typename Predicate> struct api_pred_ty : public Predicate {
   }
 };
 
+/// This helper class is used to match scalar and vector constants that
+/// satisfy a specified predicate, and bind them to an APFloat.
+/// Undefs are allowed in splat vector constants.
+template <typename Predicate> struct apf_pred_ty : public Predicate {
+  const APFloat *&Res;
+
+  apf_pred_ty(const APFloat *&R) : Res(R) {}
+
+  template <typename ITy> bool match(ITy *V) {
+    if (const auto *CI = dyn_cast<ConstantFP>(V))
+      if (this->isValue(CI->getValue())) {
+        Res = &CI->getValue();
+        return true;
+      }
+    if (V->getType()->isVectorTy())
+      if (const auto *C = dyn_cast<Constant>(V))
+        if (auto *CI = dyn_cast_or_null<ConstantFP>(
+                C->getSplatValue(/* AllowUndef */ true)))
+          if (this->isValue(CI->getValue())) {
+            Res = &CI->getValue();
+            return true;
+          }
+
+    return false;
+  }
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Encapsulate constant value queries for use in templated predicate matchers.
@@ -555,6 +582,15 @@ inline cstfp_pred_ty<is_nan> m_NaN() {
   return cstfp_pred_ty<is_nan>();
 }
 
+struct is_nonnan {
+  bool isValue(const APFloat &C) { return !C.isNaN(); }
+};
+/// Match a non-NaN FP constant.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_nonnan> m_NonNaN() {
+  return cstfp_pred_ty<is_nonnan>();
+}
+
 struct is_inf {
   bool isValue(const APFloat &C) { return C.isInfinity(); }
 };
@@ -563,6 +599,25 @@ struct is_inf {
 inline cstfp_pred_ty<is_inf> m_Inf() {
   return cstfp_pred_ty<is_inf>();
 }
+
+struct is_noninf {
+  bool isValue(const APFloat &C) { return !C.isInfinity(); }
+};
+/// Match a non-infinity FP constant, i.e. finite or NaN.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_noninf> m_NonInf() {
+  return cstfp_pred_ty<is_noninf>();
+}
+
+struct is_finite {
+  bool isValue(const APFloat &C) { return C.isFinite(); }
+};
+/// Match a finite FP constant, i.e. not infinity or NaN.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_finite> m_Finite() {
+  return cstfp_pred_ty<is_finite>();
+}
+inline apf_pred_ty<is_finite> m_Finite(const APFloat *&V) { return V; }
 
 struct is_any_zero_fp {
   bool isValue(const APFloat &C) { return C.isZero(); }
@@ -589,6 +644,15 @@ struct is_neg_zero_fp {
 /// For vectors, this includes constants with undefined elements.
 inline cstfp_pred_ty<is_neg_zero_fp> m_NegZeroFP() {
   return cstfp_pred_ty<is_neg_zero_fp>();
+}
+
+struct is_non_zero_fp {
+  bool isValue(const APFloat &C) { return C.isNonZero(); }
+};
+/// Match a floating-point non-zero.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_non_zero_fp> m_NonZeroFP() {
+  return cstfp_pred_ty<is_non_zero_fp>();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
