@@ -115,7 +115,11 @@ INTERCEPTOR(void*, memalign, uptr alignment, uptr size) {
   return lsan_memalign(alignment, size, stack);
 }
 #define LSAN_MAYBE_INTERCEPT_MEMALIGN INTERCEPT_FUNCTION(memalign)
+#else
+#define LSAN_MAYBE_INTERCEPT_MEMALIGN
+#endif  // SANITIZER_INTERCEPT_MEMALIGN
 
+#if SANITIZER_INTERCEPT___LIBC_MEMALIGN
 INTERCEPTOR(void *, __libc_memalign, uptr alignment, uptr size) {
   ENSURE_LSAN_INITED;
   GET_STACK_TRACE_MALLOC;
@@ -125,9 +129,8 @@ INTERCEPTOR(void *, __libc_memalign, uptr alignment, uptr size) {
 }
 #define LSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN INTERCEPT_FUNCTION(__libc_memalign)
 #else
-#define LSAN_MAYBE_INTERCEPT_MEMALIGN
 #define LSAN_MAYBE_INTERCEPT___LIBC_MEMALIGN
-#endif // SANITIZER_INTERCEPT_MEMALIGN
+#endif  // SANITIZER_INTERCEPT___LIBC_MEMALIGN
 
 #if SANITIZER_INTERCEPT_ALIGNED_ALLOC
 INTERCEPTOR(void*, aligned_alloc, uptr alignment, uptr size) {
