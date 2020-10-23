@@ -917,20 +917,26 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   # configuration, it is still possible the user may force it as part of a
   # compound option.
   if(CMAKE_VERSION VERSION_LESS 3.16)
-    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" "" CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" "" CMAKE_SHARED_LINKER_FLAGS  "${CMAKE_SHARED_LINKER_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" "" CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" "" CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" " " CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" " " CMAKE_SHARED_LINKER_FLAGS  "${CMAKE_SHARED_LINKER_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-brtl([ \t]+|$)" " " CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" " " CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS
       "${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" "" CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
+    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" " " CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
       "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS}")
-    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" "" CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS
+    string(REGEX REPLACE "(^|[ \t]+)(-Wl,)?-G([ \t]+|$)" " " CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS
+      "${CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-G," " -Wl," CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS
+      "${CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-G," " -Wl," CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
+      "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS}")
+    string(REGEX REPLACE "(^|[ \t]+)-Wl,-G," " -Wl," CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS
       "${CMAKE_SHARED_LIBRARY_CREATE_ASM_FLAGS}")
   endif()
 
-  # Modules should be built with -G, so we can use runtime linking with
-  # plugins.
-  string(APPEND CMAKE_MODULE_LINKER_FLAGS " -Wl,-G")
+  # Modules should be built with -shared -Wl,-G, so we can use runtime linking
+  # with plugins.
+  string(APPEND CMAKE_MODULE_LINKER_FLAGS " -shared -Wl,-G")
 
   # Also set the correct flags for building shared libraries.
   string(APPEND CMAKE_SHARED_LINKER_FLAGS " -shared")

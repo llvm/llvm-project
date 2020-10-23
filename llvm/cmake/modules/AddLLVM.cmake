@@ -90,6 +90,8 @@ function(add_llvm_symbol_exports target_name export_file)
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-exported_symbols_list,\"${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}\"")
   elseif(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+    # FIXME: `-Wl,-bE:` bypasses whatever handling there is in the build
+    # compiler driver to defer to the specified export list.
     set(native_export_file "${export_file}")
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-bE:${export_file}")
