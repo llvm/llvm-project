@@ -13,13 +13,22 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ASTReader.h"
 
+#define DEBUG_TYPE "clang-tidy"
+
 namespace clang {
 namespace tooling {
 
 class ExpandModularHeadersPPCallbacks::FileRecorder {
 public:
   /// Records that a given file entry is needed for replaying callbacks.
-  void addNecessaryFile(const FileEntry *File) { FilesToRecord.insert(File); }
+  void addNecessaryFile(const FileEntry *File) {
+    // Don't record modulemap files because it breaks same file detection.
+    if (!(File->getName().endswith("module.modulemap") ||
+          File->getName().endswith("module.private.modulemap") ||
+          File->getName().endswith("module.map") ||
+          File->getName().endswith("module_private.map")))
+      FilesToRecord.insert(File);
+  }
 
   /// Records content for a file and adds it to the FileSystem.
   void recordFileContent(const FileEntry *File,
@@ -44,8 +53,8 @@ public:
   /// `FilesToRecord` should be empty.
   void checkAllFilesRecorded() {
     for (auto FileEntry : FilesToRecord)
-      llvm::errs() << "Did not record contents for input file: "
-                   << FileEntry->getName() << "\n";
+      LLVM_DEBUG(llvm::dbgs() << "Did not record contents for input file: "
+                              << FileEntry->getName() << "\n");
   }
 
 private:
