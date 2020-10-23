@@ -26,7 +26,7 @@ def IsCPSRDefinedAndPredicatedPred :
     MCSchedPredicate<IsCPSRDefinedAndPredicated>;
 
 // Cortex A57 rev. r1p0 or later (false = r0px)
-def IsR1P0AndLaterPred : SchedPredicate<[{false}]>;
+def IsR1P0AndLaterPred : MCSchedPredicate<FalsePred>;
 
 def IsLdrAm3RegOffPred : MCSchedPredicate<CheckInvalidRegOperand<2>>;
 def IsLdrAm3RegOffPredX2 : MCSchedPredicate<CheckInvalidRegOperand<3>>;
