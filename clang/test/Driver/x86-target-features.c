@@ -283,3 +283,8 @@
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-hreset %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-HRESET %s
 // HRESET: "-target-feature" "+hreset"
 // NO-HRESET: "-target-feature" "-hreset"
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -muintr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=UINTR %s
+// RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-uintr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-UINTR %s
+// UINTR: "-target-feature" "+uintr"
+// NO-UINTR: "-target-feature" "-uintr"

@@ -118,7 +118,8 @@ During this release ...
   the "target-cpu" attribute or TargetMachine CPU which will be used to select
   Instruction Set. If the attribute is not present, the tune CPU will follow
   the target CPU.
-* Support for feature ``HRESET`` has been added.
+* Support for ``HRESET`` instructions has been added.
+* Support for ``UINTR`` instructions has been added.
 
 Changes to the AMDGPU Target
 -----------------------------
