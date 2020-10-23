@@ -724,7 +724,8 @@ public:
   /// Given an 'or' instruction, check to see if it is part of a
   /// bswap/bitreverse idiom. If so, return the equivalent bswap/bitreverse
   /// intrinsic.
-  Instruction *matchBSwapOrBitReverse(BinaryOperator &Or);
+  Instruction *matchBSwapOrBitReverse(BinaryOperator &Or, bool MatchBSwaps,
+                                      bool MatchBitReversals);
 
   Instruction *SimplifyAnyMemTransfer(AnyMemTransferInst *MI);
   Instruction *SimplifyAnyMemSet(AnyMemSetInst *MI);
