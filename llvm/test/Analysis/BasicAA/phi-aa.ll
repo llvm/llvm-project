@@ -114,3 +114,39 @@ loop3:
 end:
   ret void
 }
+
+; CHECK-LABEL: phi_and_select
+; CHECK: MayAlias: i32* %p, i32* %s
+define void @phi_and_select(i1 %c, i1 %c2, i32* %x, i32* %y) {
+entry:
+  br i1 %c, label %true, label %false
+
+true:
+  br label %exit
+
+false:
+  br label %exit
+
+exit:
+  %p = phi i32* [ %x, %true ], [ %y, %false ]
+  %s = select i1 %c2, i32* %p, i32* %p
+  store i32 0, i32* %p
+  store i32 0, i32* %s
+  ret void
+}
+
+; CHECK-LABEL: phi_and_phi_cycle
+; CHECK: MayAlias: i32* %p1, i32* %p2
+define void @phi_and_phi_cycle(i32* noalias %x, i32* noalias %y) {
+entry:
+  br label %loop
+
+loop:
+  %p1 = phi i32* [ %x, %entry ], [ %p1.next, %loop ]
+  %p2 = phi i32* [ %y, %entry ], [ %p2.next, %loop ]
+  %p1.next = getelementptr i32, i32* %p1, i64 1
+  %p2.next = getelementptr i32, i32* %p1, i64 2
+  store i32 0, i32* %p1
+  store i32 0, i32* %p2
+  br label %loop
+}
