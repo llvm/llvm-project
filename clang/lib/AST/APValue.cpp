@@ -414,7 +414,18 @@ void APValue::swap(APValue &RHS) {
   std::swap(Data, RHS.Data);
 }
 
+/// Profile the value of an APInt, excluding its bit-width.
+static void profileIntValue(llvm::FoldingSetNodeID &ID, const llvm::APInt &V) {
+  for (unsigned I = 0, N = V.getBitWidth(); I < N; I += 32)
+    ID.AddInteger((uint32_t)V.extractBitsAsZExtValue(std::min(32u, N - I), I));
+}
+
 void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
+  // Note that our profiling assumes that only APValues of the same type are
+  // ever compared. As a result, we don't consider collisions that could only
+  // happen if the types are different. (For example, structs with different
+  // numbers of members could profile the same.)
+
   ID.AddInteger(Kind);
 
   switch (Kind) {
@@ -428,25 +439,22 @@ void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
     return;
 
   case Struct:
-    ID.AddInteger(getStructNumBases());
     for (unsigned I = 0, N = getStructNumBases(); I != N; ++I)
       getStructBase(I).Profile(ID);
-    ID.AddInteger(getStructNumFields());
     for (unsigned I = 0, N = getStructNumFields(); I != N; ++I)
       getStructField(I).Profile(ID);
     return;
 
   case Union:
     if (!getUnionField()) {
-      ID.AddPointer(nullptr);
+      ID.AddInteger(0);
       return;
     }
-    ID.AddPointer(getUnionField());
+    ID.AddInteger(getUnionField()->getFieldIndex() + 1);
     getUnionValue().Profile(ID);
     return;
 
   case Array: {
-    ID.AddInteger(getArraySize());
     if (getArraySize() == 0)
       return;
 
@@ -502,46 +510,46 @@ void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
   }
 
   case Vector:
-    ID.AddInteger(getVectorLength());
     for (unsigned I = 0, N = getVectorLength(); I != N; ++I)
       getVectorElt(I).Profile(ID);
     return;
 
   case Int:
-    // We don't need to include the sign bit; it's implied by the type.
-    getInt().APInt::Profile(ID);
+    profileIntValue(ID, getInt());
     return;
 
   case Float:
-    getFloat().Profile(ID);
+    profileIntValue(ID, getFloat().bitcastToAPInt());
     return;
 
   case FixedPoint:
-    // We don't need to include the fixed-point semantics; they're
-    // implied by the type.
-    getFixedPoint().getValue().APInt::Profile(ID);
+    profileIntValue(ID, getFixedPoint().getValue());
     return;
 
   case ComplexFloat:
-    getComplexFloatReal().Profile(ID);
-    getComplexFloatImag().Profile(ID);
+    profileIntValue(ID, getComplexFloatReal().bitcastToAPInt());
+    profileIntValue(ID, getComplexFloatImag().bitcastToAPInt());
     return;
 
   case ComplexInt:
-    getComplexIntReal().APInt::Profile(ID);
-    getComplexIntImag().APInt::Profile(ID);
+    profileIntValue(ID, getComplexIntReal());
+    profileIntValue(ID, getComplexIntImag());
     return;
 
   case LValue:
     getLValueBase().Profile(ID);
     ID.AddInteger(getLValueOffset().getQuantity());
-    ID.AddInteger(isNullPointer());
-    ID.AddInteger(isLValueOnePastTheEnd());
-    // For uniqueness, we only need to profile the entries corresponding
-    // to union members, but we don't have the type here so we don't know
-    // how to interpret the entries.
-    for (LValuePathEntry E : getLValuePath())
-      E.Profile(ID);
+    ID.AddInteger((isNullPointer() ? 1 : 0) |
+                  (isLValueOnePastTheEnd() ? 2 : 0) |
+                  (hasLValuePath() ? 4 : 0));
+    if (hasLValuePath()) {
+      ID.AddInteger(getLValuePath().size());
+      // For uniqueness, we only need to profile the entries corresponding
+      // to union members, but we don't have the type here so we don't know
+      // how to interpret the entries.
+      for (LValuePathEntry E : getLValuePath())
+        E.Profile(ID);
+    }
     return;
 
   case MemberPointer:
