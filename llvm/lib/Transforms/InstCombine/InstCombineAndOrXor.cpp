@@ -1985,7 +1985,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   return nullptr;
 }
 
-Instruction *InstCombinerImpl::matchBSwap(BinaryOperator &Or) {
+Instruction *InstCombinerImpl::matchBSwapOrBitReverse(BinaryOperator &Or) {
   assert(Or.getOpcode() == Instruction::Or && "bswap requires an 'or'");
   Value *Op0 = Or.getOperand(0), *Op1 = Or.getOperand(1);
 
@@ -2563,7 +2563,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
     return FoldedLogic;
 
-  if (Instruction *BSwap = matchBSwap(I))
+  if (Instruction *BSwap = matchBSwapOrBitReverse(I))
     return BSwap;
 
   if (Instruction *Funnel = matchFunnelShift(I, *this))
