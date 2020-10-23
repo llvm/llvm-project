@@ -73,15 +73,12 @@ static cl::list<std::string> ClInputAddresses(cl::Positional,
                                               cl::desc("<input addresses>..."),
                                               cl::ZeroOrMore);
 
-static bool HasError = false;
-
 template<typename T>
 static bool error(Expected<T> &ResOrErr) {
   if (ResOrErr)
     return false;
   logAllUnhandledErrors(ResOrErr.takeError(), errs(),
                         "LLVMSymbolizer: error reading file: ");
-  HasError = true;
   return true;
 }
 
@@ -293,10 +290,6 @@ int main(int argc, char **argv) {
       Args.hasFlag(OPT_untag_addresses, OPT_no_untag_addresses, !IsAddr2Line);
   Opts.UseNativePDBReader = Args.hasArg(OPT_use_native_pdb_reader);
   Opts.UseSymbolTable = true;
-  Opts.RecoverableErrorHandler = [&](Error E) {
-    HasError = true;
-    WithColor::defaultErrorHandler(std::move(E));
-  };
 
   for (const opt::Arg *A : Args.filtered(OPT_dsym_hint_EQ)) {
     StringRef Hint(A->getValue());
@@ -343,5 +336,5 @@ int main(int argc, char **argv) {
                      Symbolizer, Printer);
   }
 
-  return HasError;
+  return 0;
 }

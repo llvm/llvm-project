@@ -1,5 +1,5 @@
-RUN: not llvm-symbolizer --obj=%p/Inputs/macho-universal 0x1f84 2>&1 | FileCheck --implicit-check-not=main %s
+RUN: llvm-symbolizer --obj=%p/Inputs/macho-universal 0x1f84 | FileCheck %s
 
-CHECK: LLVMSymbolizer: error reading file: Unknown architecture named:
-
+CHECK-NOT: main
 CHECK: ??
+CHECK-NOT: main
