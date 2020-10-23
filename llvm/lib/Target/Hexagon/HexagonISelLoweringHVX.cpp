@@ -94,6 +94,7 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::MUL,            T, Legal);
     setOperationAction(ISD::CTPOP,          T, Legal);
     setOperationAction(ISD::CTLZ,           T, Legal);
+    setOperationAction(ISD::SELECT,         T, Legal);
     setOperationAction(ISD::SPLAT_VECTOR,   T, Legal);
     if (T != ByteV) {
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, T, Legal);
@@ -211,6 +212,7 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::INSERT_VECTOR_ELT,  BoolV, Custom);
     setOperationAction(ISD::EXTRACT_SUBVECTOR,  BoolV, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, BoolV, Custom);
+    setOperationAction(ISD::SELECT,             BoolV, Custom);
     setOperationAction(ISD::AND,                BoolV, Legal);
     setOperationAction(ISD::OR,                 BoolV, Legal);
     setOperationAction(ISD::XOR,                BoolV, Legal);
@@ -1620,6 +1622,26 @@ HexagonTargetLowering::LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue
+HexagonTargetLowering::LowerHvxSelect(SDValue Op, SelectionDAG &DAG) const {
+  MVT ResTy = ty(Op);
+  if (ResTy.getVectorElementType() != MVT::i1)
+    return Op;
+
+  const SDLoc &dl(Op);
+  unsigned HwLen = Subtarget.getVectorLength();
+  unsigned VecLen = ResTy.getVectorNumElements();
+  assert(HwLen % VecLen == 0);
+  unsigned ElemSize = HwLen / VecLen;
+
+  MVT VecTy = MVT::getVectorVT(MVT::getIntegerVT(ElemSize * 8), VecLen);
+  SDValue S =
+      DAG.getNode(ISD::SELECT, dl, VecTy, Op.getOperand(0),
+                  DAG.getNode(HexagonISD::Q2V, dl, VecTy, Op.getOperand(1)),
+                  DAG.getNode(HexagonISD::Q2V, dl, VecTy, Op.getOperand(2)));
+  return DAG.getNode(HexagonISD::V2Q, dl, ResTy, S);
+}
+
+SDValue
 HexagonTargetLowering::LowerHvxShift(SDValue Op, SelectionDAG &DAG) const {
   if (SDValue S = getVectorShiftByInt(Op, DAG))
     return S;
@@ -2031,6 +2053,7 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::SIGN_EXTEND:             return LowerHvxSignExt(Op, DAG);
     case ISD::ZERO_EXTEND:             return LowerHvxZeroExt(Op, DAG);
     case ISD::CTTZ:                    return LowerHvxCttz(Op, DAG);
+    case ISD::SELECT:                  return LowerHvxSelect(Op, DAG);
     case ISD::SRA:
     case ISD::SHL:
     case ISD::SRL:                     return LowerHvxShift(Op, DAG);
@@ -2143,27 +2166,41 @@ HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
+  SmallVector<SDValue, 4> Ops(N->ops().begin(), N->ops().end());
+
   switch (Opc) {
     case ISD::VSELECT: {
       // (vselect (xor x, qtrue), v0, v1) -> (vselect x, v1, v0)
-      SDValue Cond = Op.getOperand(0);
+      SDValue Cond = Ops[0];
       if (Cond->getOpcode() == ISD::XOR) {
         SDValue C0 = Cond.getOperand(0), C1 = Cond.getOperand(1);
         if (C1->getOpcode() == HexagonISD::QTRUE)
-          return DAG.getNode(ISD::VSELECT, dl, ty(Op), C0,
-                             Op.getOperand(2), Op.getOperand(1));
+          return DAG.getNode(ISD::VSELECT, dl, ty(Op), C0, Ops[2], Ops[1]);
       }
       break;
     }
+    case HexagonISD::V2Q:
+      if (Ops[0].getOpcode() == ISD::SPLAT_VECTOR) {
+        if (const auto *C = dyn_cast<ConstantSDNode>(Ops[0].getOperand(0)))
+          return C->isNullValue() ? DAG.getNode(HexagonISD::QFALSE, dl, ty(Op))
+                                  : DAG.getNode(HexagonISD::QTRUE, dl, ty(Op));
+      }
+      break;
+    case HexagonISD::Q2V:
+      if (Ops[0].getOpcode() == HexagonISD::QTRUE)
+        return DAG.getNode(ISD::SPLAT_VECTOR, dl, ty(Op),
+                           DAG.getConstant(-1, dl, MVT::i32));
+      if (Ops[0].getOpcode() == HexagonISD::QFALSE)
+        return getZero(dl, ty(Op), DAG);
+      break;
     case HexagonISD::VINSERTW0:
-      if (isUndef(Op.getOperand(1)))
-        return Op.getOperand(0);
+      if (isUndef(Ops[1]))
+        return Ops[0];;
       break;
     case HexagonISD::VROR: {
-      SDValue Op0 = Op.getOperand(0);
-      if (Op0.getOpcode() == HexagonISD::VROR) {
-        SDValue Vec = Op0.getOperand(0);
-        SDValue Rot0 = Op.getOperand(1), Rot1 = Op0.getOperand(1);
+      if (Ops[0].getOpcode() == HexagonISD::VROR) {
+        SDValue Vec = Ops[0].getOperand(0);
+        SDValue Rot0 = Ops[1], Rot1 = Ops[0].getOperand(1);
         SDValue Rot = DAG.getNode(ISD::ADD, dl, ty(Rot0), {Rot0, Rot1});
         return DAG.getNode(HexagonISD::VROR, dl, ty(Op), {Vec, Rot});
       }
