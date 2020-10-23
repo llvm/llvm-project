@@ -537,7 +537,8 @@ static bool TryRemove(MachineInstr *MI, ReachingDefAnalysis &RDA,
       for (auto &IT : *MBB) {
         if (IT.getOpcode() != ARM::t2IT)
           continue;
-        RDA.getReachingLocalUses(&IT, ARM::ITSTATE, ITBlocks[&IT]);
+        RDA.getReachingLocalUses(&IT, MCRegister::from(ARM::ITSTATE),
+                                 ITBlocks[&IT]);
       }
     }
 
@@ -620,7 +621,7 @@ bool LowOverheadLoop::ValidateTailPredicate() {
   if (StartInsertPt == Start && Start->getOperand(0).getReg() == ARM::LR) {
     if (auto *IterCount = RDA.getMIOperand(Start, 0)) {
       SmallPtrSet<MachineInstr *, 2> Uses;
-      RDA.getGlobalUses(IterCount, ARM::LR, Uses);
+      RDA.getGlobalUses(IterCount, MCRegister::from(ARM::LR), Uses);
       for (auto *Use : Uses) {
         if (Use != Start && Use != Dec) {
           LLVM_DEBUG(dbgs() << " ARM Loops: Found LR use: " << *Use);
@@ -636,7 +637,7 @@ bool LowOverheadLoop::ValidateTailPredicate() {
   // we can use this register at InsertPt.
   MachineInstr *VCTP = VCTPs.back();
   TPNumElements = VCTP->getOperand(1);
-  Register NumElements = TPNumElements.getReg();
+  MCRegister NumElements = TPNumElements.getReg().asMCReg();
 
   // If the register is defined within loop, then we can't perform TP.
   // TODO: Check whether this is just a mov of a register that would be
@@ -669,8 +670,9 @@ bool LowOverheadLoop::ValidateTailPredicate() {
         // insertion point
         MachineOperand Operand = ElemDef->getOperand(1);
         if (isMovRegOpcode(ElemDef->getOpcode()) &&
-            RDA.getUniqueReachingMIDef(ElemDef, Operand.getReg()) ==
-               RDA.getUniqueReachingMIDef(&*StartInsertPt, Operand.getReg())) {
+            RDA.getUniqueReachingMIDef(ElemDef, Operand.getReg().asMCReg()) ==
+                RDA.getUniqueReachingMIDef(&*StartInsertPt,
+                                           Operand.getReg().asMCReg())) {
           TPNumElements = Operand;
           NumElements = TPNumElements.getReg();
         } else {
@@ -711,7 +713,7 @@ bool LowOverheadLoop::ValidateTailPredicate() {
   // preheader, so we need to check that the register isn't redefined
   // before entering the loop.
   auto CannotProvideElements = [this](MachineBasicBlock *MBB,
-                                      Register NumElements) {
+                                      MCRegister NumElements) {
     if (MBB->empty())
       return false;
     // NumElements is redefined in this block.
@@ -748,8 +750,8 @@ bool LowOverheadLoop::ValidateTailPredicate() {
   // tail predicated loop. Explicitly refer to the vctp operand no matter which
   // register NumElements has been assigned to, since that is what the
   // modifications will be using
-  if (auto *Def = RDA.getUniqueReachingMIDef(&MBB->back(),
-                                             VCTP->getOperand(1).getReg())) {
+  if (auto *Def = RDA.getUniqueReachingMIDef(
+          &MBB->back(), VCTP->getOperand(1).getReg().asMCReg())) {
     SmallPtrSet<MachineInstr*, 2> ElementChain;
     SmallPtrSet<MachineInstr*, 2> Ignore;
     unsigned ExpectedVectorWidth = getTailPredVectorWidth(VCTP->getOpcode());
@@ -942,7 +944,7 @@ bool LowOverheadLoop::ValidateLiveOuts() {
   auto HasPredicatedUsers = [this](MachineInstr *MI, const MachineOperand &MO,
                               SmallPtrSetImpl<MachineInstr *> &Predicated) {
     SmallPtrSet<MachineInstr *, 2> Uses;
-    RDA.getGlobalUses(MI, MO.getReg(), Uses);
+    RDA.getGlobalUses(MI, MO.getReg().asMCReg(), Uses);
     for (auto *Use : Uses) {
       if (Use != MI && !Predicated.count(Use))
         return false;
@@ -1058,7 +1060,7 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
       return true;
     }
 
-    unsigned CountReg = Start->getOperand(0).getReg();
+    Register CountReg = Start->getOperand(0).getReg();
     auto IsMoveLR = [&CountReg](MachineInstr *MI) {
       return MI->getOpcode() == ARM::tMOVr &&
              MI->getOperand(0).getReg() == ARM::LR &&
@@ -1069,8 +1071,10 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
     // Find an insertion point:
     // - Is there a (mov lr, Count) before Start? If so, and nothing else
     //   writes to Count before Start, we can insert at start.
-    if (auto *LRDef = RDA.getUniqueReachingMIDef(Start, ARM::LR)) {
-      if (IsMoveLR(LRDef) && RDA.hasSameReachingDef(Start, LRDef, CountReg)) {
+    if (auto *LRDef =
+            RDA.getUniqueReachingMIDef(Start, MCRegister::from(ARM::LR))) {
+      if (IsMoveLR(LRDef) &&
+          RDA.hasSameReachingDef(Start, LRDef, CountReg.asMCReg())) {
         SmallPtrSet<MachineInstr *, 2> Ignore = { Dec };
         if (!TryRemove(LRDef, RDA, ToRemove, Ignore))
           return false;
@@ -1084,7 +1088,8 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
     //   to Count after Start, we can insert at that mov (which will now be
     //   dead).
     MachineBasicBlock *MBB = Start->getParent();
-    if (auto *LRDef = RDA.getLocalLiveOutMIDef(MBB, ARM::LR)) {
+    if (auto *LRDef =
+            RDA.getLocalLiveOutMIDef(MBB, MCRegister::from(ARM::LR))) {
       if (IsMoveLR(LRDef) && RDA.hasSameReachingDef(Start, LRDef, CountReg)) {
         SmallPtrSet<MachineInstr *, 2> Ignore = { Start, Dec };
         if (!TryRemove(LRDef, RDA, ToRemove, Ignore))
@@ -1097,7 +1102,7 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
 
     // We've found no suitable LR def and Start doesn't use LR directly. Can we
     // just define LR anyway?
-    if (!RDA.isSafeToDefRegAt(Start, ARM::LR))
+    if (!RDA.isSafeToDefRegAt(Start, MCRegister::from(ARM::LR)))
       return false;
 
     InsertPt = MachineBasicBlock::iterator(Start);
@@ -1133,7 +1138,7 @@ bool LowOverheadLoop::AddVCTP(MachineInstr *MI) {
   // If it does, store it in the VCTPs set, else refuse it.
   MachineInstr *Prev = VCTPs.back();
   if (!Prev->getOperand(1).isIdenticalTo(MI->getOperand(1)) ||
-      !RDA.hasSameReachingDef(Prev, MI, MI->getOperand(1).getReg())) {
+      !RDA.hasSameReachingDef(Prev, MI, MI->getOperand(1).getReg().asMCReg())) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Found VCTP with a different reaching "
                          "definition from the main VCTP");
     return false;
@@ -1324,7 +1329,7 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
   // Check that the only instruction using LoopDec is LoopEnd.
   // TODO: Check for copy chains that really have no effect.
   SmallPtrSet<MachineInstr*, 2> Uses;
-  RDA->getReachingLocalUses(LoLoop.Dec, ARM::LR, Uses);
+  RDA->getReachingLocalUses(LoLoop.Dec, MCRegister::from(ARM::LR), Uses);
   if (Uses.size() > 1 || !Uses.count(LoLoop.End)) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Unable to remove LoopDec.\n");
     LoLoop.Revert = true;
@@ -1371,7 +1376,8 @@ bool ARMLowOverheadLoops::RevertLoopDec(MachineInstr *MI) const {
   }
 
   // If nothing defines CPSR between LoopDec and LoopEnd, use a t2SUBS.
-  bool SetFlags = RDA->isSafeToDefRegAt(MI, ARM::CPSR, Ignore);
+  bool SetFlags =
+      RDA->isSafeToDefRegAt(MI, MCRegister::from(ARM::CPSR), Ignore);
 
   MachineInstrBuilder MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
                                     TII->get(ARM::t2SUBri));
