@@ -8,7 +8,7 @@
 
 syntax = "proto3";
 
-package clang.clangd.remote;
+package clang.clangd.remote.v1;
 
 // Semantics of SymbolIndex match clangd::SymbolIndex with all required
 // structures corresponding to their clangd::* counterparts.
