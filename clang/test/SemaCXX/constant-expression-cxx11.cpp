@@ -2021,6 +2021,14 @@ namespace Bitfields {
     const HasUnnamedBitfield oneZero{1, 0};
     int b = 1 / oneZero.b; // expected-warning {{division by zero is undefined}}
   }
+
+  union UnionWithUnnamedBitfield {
+    int : 3;
+    int n;
+  };
+  static_assert(UnionWithUnnamedBitfield().n == 0, "");
+  static_assert(UnionWithUnnamedBitfield{}.n == 0, "");
+  static_assert(UnionWithUnnamedBitfield{1}.n == 1, "");
 }
 
 namespace ZeroSizeTypes {
