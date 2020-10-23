@@ -43,9 +43,10 @@ char ClangUtilityFunction::ID;
 ///     The name of the function, as used in the text.
 ClangUtilityFunction::ClangUtilityFunction(ExecutionContextScope &exe_scope,
                                            std::string text, std::string name)
-    : UtilityFunction(exe_scope, std::move(text), std::move(name)) {
-  m_function_text.assign(ClangExpressionSourceCode::g_expression_prefix);
-}
+    : UtilityFunction(
+          exe_scope,
+          std::string(ClangExpressionSourceCode::g_expression_prefix) + text,
+          std::move(name)) {}
 
 ClangUtilityFunction::~ClangUtilityFunction() {}
 
