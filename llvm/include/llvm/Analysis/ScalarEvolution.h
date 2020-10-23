@@ -1383,16 +1383,16 @@ private:
     const SCEV *getExact(const BasicBlock *ExitingBlock,
                          ScalarEvolution *SE) const;
 
-    /// Get the max backedge taken count for the loop.
-    const SCEV *getMax(ScalarEvolution *SE) const;
+    /// Get the constant max backedge taken count for the loop.
+    const SCEV *getConstantMax(ScalarEvolution *SE) const;
 
-    /// Get the max backedge taken count for the particular loop exit.
-    const SCEV *getMax(const BasicBlock *ExitingBlock,
-                       ScalarEvolution *SE) const;
+    /// Get the constant max backedge taken count for the particular loop exit.
+    const SCEV *getConstantMax(const BasicBlock *ExitingBlock,
+                               ScalarEvolution *SE) const;
 
     /// Return true if the number of times this backedge is taken is either the
-    /// value returned by getMax or zero.
-    bool isMaxOrZero(ScalarEvolution *SE) const;
+    /// value returned by getConstantMax or zero.
+    bool isConstantMaxOrZero(ScalarEvolution *SE) const;
 
     /// Return true if any backedge taken count expressions refer to the given
     /// subexpression.
