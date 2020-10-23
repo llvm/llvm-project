@@ -220,10 +220,7 @@ bool IndexingContext::isSystemFile(FileID FID) {
   if (FI.getFileCharacteristic() != SrcMgr::C_User)
     return result(true);
 
-  auto *CC = FI.getContentCache();
-  if (!CC)
-    return result(false);
-  auto *FE = CC->OrigEntry;
+  auto *FE = FI.getContentCache().OrigEntry;
   if (!FE)
     return result(false);
 
