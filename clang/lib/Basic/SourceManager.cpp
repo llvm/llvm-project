@@ -725,11 +725,12 @@ void SourceManager::setFileIsTransient(const FileEntry *File) {
   const_cast<SrcMgr::ContentCache *>(CC)->IsTransient = true;
 }
 
-Optional<FileEntryRef> SourceManager::getFileEntryRefForID(FileID FID) const {
+Optional<StringRef>
+SourceManager::getNonBuiltinFilenameForID(FileID FID) const {
   if (const SrcMgr::SLocEntry *Entry = getSLocEntryForFile(FID))
     if (auto *Content = Entry->getFile().getContentCache())
       if (Content && Content->OrigEntry)
-        return FileEntryRef(Entry->getFile().getName(), *Content->OrigEntry);
+        return Entry->getFile().getName();
   return None;
 }
 
