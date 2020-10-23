@@ -1134,8 +1134,8 @@ public:
                                     const ValueList &arg_value_list,
                                     const char *name) override;
 
-  UtilityFunction *GetUtilityFunction(const char *text,
-                                      const char *name) override;
+  std::unique_ptr<UtilityFunction>
+  CreateUtilityFunction(std::string text, std::string name) override;
 
   PersistentExpressionState *GetPersistentExpressionState() override;
 private:

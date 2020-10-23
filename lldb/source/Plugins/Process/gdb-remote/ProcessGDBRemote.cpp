@@ -2647,7 +2647,7 @@ addr_t ProcessGDBRemote::GetImageInfoAddress() {
     llvm::Expected<LoadedModuleInfoList> list = GetLoadedModuleList();
     if (!list) {
       Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
-      LLDB_LOG_ERROR(log, list.takeError(), "Failed to read module list: {0}");
+      LLDB_LOG_ERROR(log, list.takeError(), "Failed to read module list: {0}.");
     } else {
       addr = list->m_link_map;
     }
