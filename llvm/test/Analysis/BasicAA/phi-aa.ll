@@ -136,7 +136,7 @@ exit:
 }
 
 ; CHECK-LABEL: phi_and_phi_cycle
-; CHECK: MayAlias: i32* %p1, i32* %p2
+; CHECK: NoAlias: i32* %p1, i32* %p2
 define void @phi_and_phi_cycle(i32* noalias %x, i32* noalias %y) {
 entry:
   br label %loop
