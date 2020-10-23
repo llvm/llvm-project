@@ -102,3 +102,53 @@ func @transpose_wrong_type(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off 
   // expected-error @+1 {{output type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>' does not match transposed input type 'memref<?x?xf32, affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>>'}}
   transpose %v (i, j) -> (j, i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>> to memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
 }
+
+// -----
+
+// CHECK-LABEL: memref_reshape_element_type_mismatch
+func @memref_reshape_element_type_mismatch(
+       %buf: memref<*xf32>, %shape: memref<1xi32>) {
+  // expected-error @+1 {{element types of source and destination memref types should be the same}}
+  memref_reshape %buf(%shape) : (memref<*xf32>, memref<1xi32>) -> memref<?xi32>
+}
+
+// -----
+
+// CHECK-LABEL: memref_reshape_dst_ranked_shape_unranked
+func @memref_reshape_dst_ranked_shape_unranked(
+       %buf: memref<*xf32>, %shape: memref<?xi32>) {
+  // expected-error @+1 {{cannot use shape operand with dynamic length to reshape to statically-ranked memref type}}
+  memref_reshape %buf(%shape) : (memref<*xf32>, memref<?xi32>) -> memref<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: memref_reshape_dst_shape_rank_mismatch
+func @memref_reshape_dst_shape_rank_mismatch(
+       %buf: memref<*xf32>, %shape: memref<1xi32>) {
+  // expected-error @+1 {{length of shape operand differs from the result's memref rank}}
+  memref_reshape %buf(%shape)
+    : (memref<*xf32>, memref<1xi32>) -> memref<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: memref_reshape_src_affine_map_is_not_identity
+func @memref_reshape_src_affine_map_is_not_identity(
+        %buf: memref<4x4xf32, offset: 0, strides: [3, 2]>,
+        %shape: memref<1xi32>) {
+  // expected-error @+1 {{source memref type should have identity affine map}}
+  memref_reshape %buf(%shape)
+    : (memref<4x4xf32, offset: 0, strides: [3, 2]>, memref<1xi32>)
+    -> memref<8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: memref_reshape_result_affine_map_is_not_identity
+func @memref_reshape_result_affine_map_is_not_identity(
+        %buf: memref<4x4xf32>, %shape: memref<1xi32>) {
+  // expected-error @+1 {{result memref type should have identity affine map}}
+  memref_reshape %buf(%shape)
+    : (memref<4x4xf32>, memref<1xi32>) -> memref<8xf32, offset: 0, strides: [2]>
+}
