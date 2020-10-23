@@ -3970,6 +3970,7 @@ struct OpenACCAtomicConstruct {
   UNION_CLASS_BOILERPLATE(OpenACCAtomicConstruct);
   std::variant<AccAtomicRead, AccAtomicWrite, AccAtomicCapture, AccAtomicUpdate>
       u;
+  CharBlock source;
 };
 
 struct OpenACCBlockConstruct {
