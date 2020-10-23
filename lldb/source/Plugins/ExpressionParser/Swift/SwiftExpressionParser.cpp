@@ -576,6 +576,22 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   }
 }
 
+/// Returns the Swift type for a ValueObject representing a variable.
+/// An invalid CompilerType is returned on error.
+static CompilerType GetSwiftTypeForVariableValueObject(
+    lldb::ValueObjectSP valobj_sp, lldb::StackFrameSP &stack_frame_sp,
+    SwiftLanguageRuntime *runtime, bool use_dynamic_value) {
+  // Check that the passed ValueObject is valid.
+  if (!valobj_sp || valobj_sp->GetError().Fail())
+    return CompilerType();
+  CompilerType result = valobj_sp->GetCompilerType();
+  if (use_dynamic_value)
+    result = runtime->BindGenericTypeParameters(*stack_frame_sp, result);
+  if (!result.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
+    return CompilerType();
+  return result;
+}
+
 /// Create a \c VariableInfo record for \c variable if there isn't
 /// already shadowing inner declaration in \c processed_variables.
 static llvm::Optional<llvm::Error> AddVariableInfo(
@@ -602,31 +618,30 @@ static llvm::Optional<llvm::Error> AddVariableInfo(
   if (processed_variables.count(overridden_name))
     return {};
 
-  CompilerType var_type;
-  if (stack_frame_sp) {
-    lldb::ValueObjectSP valobj_sp =
-        stack_frame_sp->GetValueObjectForFrameVariable(variable_sp,
-                                                       use_dynamic);
+  if (!stack_frame_sp)
+    return llvm::None;
 
-    if (!valobj_sp || valobj_sp->GetError().Fail()) {
-      // Ignore the variable if we couldn't find its corresponding
-      // value object.  TODO if the expression tries to use an
-      // ignored variable, produce a sensible error.
-      return {};
-    }
-    var_type = valobj_sp->GetCompilerType();
-    if (use_dynamic > lldb::eNoDynamicValues) {
-      if (auto *stack_frame = stack_frame_sp.get())
-        var_type =
-            runtime->BindGenericTypeParameters(*stack_frame, var_type);
-    }
-  }
+  lldb::ValueObjectSP valobj_sp =
+      stack_frame_sp->GetValueObjectForFrameVariable(variable_sp,
+                                                     lldb::eNoDynamicValues);
+
+  const bool use_dynamic_value = use_dynamic > lldb::eNoDynamicValues;
+
+  CompilerType var_type = GetSwiftTypeForVariableValueObject(
+      valobj_sp, stack_frame_sp, runtime, use_dynamic_value);
 
   if (!var_type.IsValid())
     return {};
 
-  if (!var_type.GetTypeSystem()->SupportsLanguage(lldb::eLanguageTypeSwift))
-    return {};
+  // If the type can't be realized and dynamic types are allowed, fall back to
+  // the dynamic type.
+  if (!SwiftASTContext::IsFullyRealized(var_type) && use_dynamic_value) {
+    var_type = GetSwiftTypeForVariableValueObject(
+        valobj_sp->GetDynamicValue(use_dynamic), stack_frame_sp, runtime,
+        use_dynamic_value);
+    if (!var_type.IsValid())
+      return {};
+  }
 
   Status error;
   CompilerType target_type = ast_context.ImportType(var_type, error);
