@@ -294,6 +294,21 @@ void AccStructureChecker::Leave(const parser::OpenACCRoutineConstruct &) {
   dirContext_.pop_back();
 }
 
+void AccStructureChecker::Enter(const parser::OpenACCWaitConstruct &x) {
+  const auto &verbatim{std::get<parser::Verbatim>(x.t)};
+  PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_wait);
+}
+void AccStructureChecker::Leave(const parser::OpenACCWaitConstruct &x) {
+  dirContext_.pop_back();
+}
+
+void AccStructureChecker::Enter(const parser::OpenACCAtomicConstruct &x) {
+  PushContextAndClauseSets(x.source, llvm::acc::Directive::ACCD_atomic);
+}
+void AccStructureChecker::Leave(const parser::OpenACCAtomicConstruct &x) {
+  dirContext_.pop_back();
+}
+
 // Clause checkers
 CHECK_REQ_SCALAR_INT_CONSTANT_CLAUSE(Collapse, ACCC_collapse)
 

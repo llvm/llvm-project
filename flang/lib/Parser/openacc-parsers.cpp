@@ -242,10 +242,11 @@ TYPE_PARSER("ATOMIC" >>
         statement(assignmentStmt), statement(assignmentStmt),
         Parser<AccEndAtomic>{} / endAccLine))
 
-TYPE_PARSER(construct<OpenACCAtomicConstruct>(Parser<AccAtomicRead>{}) ||
-    construct<OpenACCAtomicConstruct>(Parser<AccAtomicCapture>{}) ||
-    construct<OpenACCAtomicConstruct>(Parser<AccAtomicWrite>{}) ||
-    construct<OpenACCAtomicConstruct>(Parser<AccAtomicUpdate>{}))
+TYPE_PARSER(
+    sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicRead>{})) ||
+    sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicCapture>{})) ||
+    sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicWrite>{})) ||
+    sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicUpdate>{})))
 
 // 2.13 Declare constructs
 TYPE_PARSER(sourced(construct<AccDeclarativeDirective>(
