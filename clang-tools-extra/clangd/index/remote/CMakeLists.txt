@@ -1,5 +1,5 @@
 if (CLANGD_ENABLE_REMOTE)
-  generate_grpc_protos(RemoteIndexProtos "Index.proto")
+  generate_protos(RemoteIndexProtos "Index.proto" GRPC)
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../)
 
