@@ -273,14 +273,6 @@ struct CFGSimplifyPass : public FunctionPass {
       return false;
 
     Options.AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    if (F.hasFnAttribute(Attribute::OptForFuzzing)) {
-      Options.setSimplifyCondBranch(false)
-             .setFoldTwoEntryPHINode(false);
-    } else {
-      Options.setSimplifyCondBranch(true)
-             .setFoldTwoEntryPHINode(true);
-    }
-
     auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     return simplifyFunctionCFG(F, TTI, Options);
   }
