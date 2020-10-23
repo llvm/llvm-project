@@ -105,6 +105,85 @@ func @transpose_wrong_type(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off 
 
 // -----
 
+// CHECK-LABEL: func @memref_reinterpret_cast_too_many_offsets
+func @memref_reinterpret_cast_too_many_offsets(%in: memref<?xf32>) {
+  // expected-error @+1 {{expected 1 offset values}}
+  %out = memref_reinterpret_cast %in to
+           offset: [0, 0], sizes: [10, 10], strides: [10, 1]
+           : memref<?xf32> to memref<10x10xf32, offset: 0, strides: [10, 1]>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_reinterpret_cast_incompatible_element_types
+func @memref_reinterpret_cast_incompatible_element_types(%in: memref<*xf32>) {
+  // expected-error @+1 {{different element types specified}}
+  %out = memref_reinterpret_cast %in to
+           offset: [0], sizes: [10], strides: [1]
+         : memref<*xf32> to memref<10xi32, offset: 0, strides: [1]>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_reinterpret_cast_incompatible_memory_space
+func @memref_reinterpret_cast_incompatible_memory_space(%in: memref<*xf32>) {
+  // expected-error @+1 {{different memory spaces specified}}
+  %out = memref_reinterpret_cast %in to
+           offset: [0], sizes: [10], strides: [1]
+         : memref<*xf32> to memref<10xi32, offset: 0, strides: [1], 2>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_reinterpret_cast_offset_mismatch
+func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
+  // expected-error @+1 {{expected result type with offset = 0 instead of 1}}
+  %out = memref_reinterpret_cast %in to
+           offset: [1], sizes: [10], strides: [1]
+         : memref<?xf32> to memref<10xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_reinterpret_cast_size_mismatch
+func @memref_reinterpret_cast_size_mismatch(%in: memref<*xf32>) {
+  // expected-error @+1 {{expected result type with size = 10 instead of 1 in dim = 0}}
+  %out = memref_reinterpret_cast %in to
+           offset: [0], sizes: [10], strides: [1]
+         : memref<*xf32> to memref<1xf32, offset: 0, strides: [1]>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_reinterpret_cast_stride_mismatch
+func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
+  // expected-error @+1 {{expected result type with stride = 2 instead of 1 in dim = 0}}
+  %out = memref_reinterpret_cast %in to
+           offset: [0], sizes: [10], strides: [2]
+         : memref<?xf32> to memref<10xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_reinterpret_cast_dynamic_size_mismatch
+func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
+  %c0 = constant 0 : index
+  %c10 = constant 10 : index
+  // expected-error @+1 {{expected result type with size = 10 instead of -1 in dim = 0}}
+  %out = memref_reinterpret_cast %in to
+           offset: [%c0], sizes: [10, %c10], strides: [%c10, 1]
+           : memref<?xf32> to memref<?x?xf32, offset: ?, strides: [?, 1]>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: memref_reshape_element_type_mismatch
 func @memref_reshape_element_type_mismatch(
        %buf: memref<*xf32>, %shape: memref<1xi32>) {

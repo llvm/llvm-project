@@ -2217,6 +2217,52 @@ def MemRefCastOp : CastOp<"memref_cast", [
   }];
 }
 
+
+//===----------------------------------------------------------------------===//
+// MemRefReinterpretCastOp
+//===----------------------------------------------------------------------===//
+
+def MemRefReinterpretCastOp:
+    BaseOpWithOffsetSizesAndStrides<"memref_reinterpret_cast", [
+      NoSideEffect, ViewLikeOpInterface
+    ]> {
+  let summary = "memref reinterpret cast operation";
+  let description = [{
+    Modify offset, sizes and strides of an unranked/ranked memref.
+
+    Example:
+    ```mlir
+    memref_reinterpret_cast %ranked to
+      offset: [0],
+      sizes: [%size0, 10],
+      strides: [1, %stride1]
+    : memref<?x?xf32> to memref<?x10xf32, offset: 0, strides: [1, ?]>
+
+    memref_reinterpret_cast %unranked to
+      offset: [%offset],
+      sizes: [%size0, %size1],
+      strides: [%stride0, %stride1]
+    : memref<*xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<AnyRankedOrUnrankedMemRef, "", []>:$source,
+    Variadic<Index>:$offsets,
+    Variadic<Index>:$sizes,
+    Variadic<Index>:$strides,
+    I64ArrayAttr:$static_offsets,
+    I64ArrayAttr:$static_sizes,
+    I64ArrayAttr:$static_strides
+  );
+  let results = (outs AnyMemRef:$result);
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
+    // The result of the op is always a ranked memref.
+    MemRefType getType() { return getResult().getType().cast<MemRefType>(); }
+    Value getViewSource() { return source(); }
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // MemRefReshapeOp
 //===----------------------------------------------------------------------===//

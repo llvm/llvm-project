@@ -55,6 +55,17 @@ func @atan2(%arg0 : f32, %arg1 : f32) -> f32 {
   return %result : f32
 }
 
+// CHECK-LABEL: func @memref_reinterpret_cast
+func @memref_reinterpret_cast(%in: memref<?xf32>)
+    -> memref<10x?xf32, offset: ?, strides: [?, 1]> {
+  %c0 = constant 0 : index
+  %c10 = constant 10 : index
+  %out = memref_reinterpret_cast %in to
+           offset: [%c0], sizes: [10, %c10], strides: [%c10, 1]
+           : memref<?xf32> to memref<10x?xf32, offset: ?, strides: [?, 1]>
+  return %out : memref<10x?xf32, offset: ?, strides: [?, 1]>
+}
+
 // CHECK-LABEL: func @memref_reshape(
 func @memref_reshape(%unranked: memref<*xf32>, %shape1: memref<1xi32>,
          %shape2: memref<2xi32>, %shape3: memref<?xi32>) -> memref<*xf32> {
