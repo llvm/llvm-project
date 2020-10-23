@@ -406,7 +406,7 @@ def vabdq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
 }
 
 multiclass VectorVectorArithmetic<string operation, dag extraArgs = (?),
-                                  int wantXVariant = 1> {
+                                  bit wantXVariant = 1> {
   defm "" : IntrinsicMX<
       Vector, (args Vector:$a, Vector:$b, Predicate:$pred),
       !con((IRInt<operation, [Vector, Predicate]> $a, $b),
@@ -415,7 +415,7 @@ multiclass VectorVectorArithmetic<string operation, dag extraArgs = (?),
 
 multiclass VectorScalarArithmetic<string operation, string basename,
                                   dag extraArgs = (?),
-                                  int wantXVariant = 1> {
+                                  bit wantXVariant = 1> {
   defm "" : IntrinsicMXNameOverride<
       Vector, (args Vector:$a, unpromoted<Scalar>:$b, Predicate:$pred),
       !con((IRInt<operation, [Vector, Predicate]> $a, (splat $b)),
@@ -451,7 +451,7 @@ let params = T.Usual in {
 }
 
 multiclass DblVectorVectorArithmetic<string operation, dag extraArgs = (?),
-                                     int wantXVariant = 1> {
+                                     bit wantXVariant = 1> {
   defm "" : IntrinsicMX<
       DblVector, (args Vector:$a, Vector:$b, DblPredicate:$pred),
       !con((IRInt<operation, [DblVector, Vector, DblPredicate]> $a, $b),
@@ -460,7 +460,7 @@ multiclass DblVectorVectorArithmetic<string operation, dag extraArgs = (?),
 
 multiclass DblVectorScalarArithmetic<string operation, string basename,
                                      dag extraArgs = (?),
-                                     int wantXVariant = 1> {
+                                     bit wantXVariant = 1> {
   defm "" : IntrinsicMXNameOverride<
       DblVector, (args Vector:$a, unpromoted<Scalar>:$b, DblPredicate:$pred),
       !con((IRInt<operation, [DblVector, Vector, DblPredicate]> $a, (splat $b)),
