@@ -218,7 +218,7 @@ TEST_F(AliasAnalysisTest, BatchAAPhiCycles) {
   LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyString(R"(
-    define void @f(i8* noalias %a) {
+    define void @f(i8* noalias %a, i1 %c) {
     entry:
       br label %loop
 
@@ -228,6 +228,8 @@ TEST_F(AliasAnalysisTest, BatchAAPhiCycles) {
       %offset2 = add i64 %offset1, 1
       %a1 = getelementptr i8, i8* %a, i64 %offset1
       %a2 = getelementptr i8, i8* %a, i64 %offset2
+      %s1 = select i1 %c, i8* %a1, i8* %phi
+      %s2 = select i1 %c, i8* %a2, i8* %a1
       br label %loop
     }
   )", Err, C);
@@ -236,17 +238,23 @@ TEST_F(AliasAnalysisTest, BatchAAPhiCycles) {
   Instruction *Phi = getInstructionByName(*F, "phi");
   Instruction *A1 = getInstructionByName(*F, "a1");
   Instruction *A2 = getInstructionByName(*F, "a2");
+  Instruction *S1 = getInstructionByName(*F, "s1");
+  Instruction *S2 = getInstructionByName(*F, "s2");
   MemoryLocation PhiLoc(Phi, LocationSize::precise(1));
   MemoryLocation A1Loc(A1, LocationSize::precise(1));
   MemoryLocation A2Loc(A2, LocationSize::precise(1));
+  MemoryLocation S1Loc(S1, LocationSize::precise(1));
+  MemoryLocation S2Loc(S2, LocationSize::precise(1));
 
   auto &AA = getAAResults(*F);
   EXPECT_EQ(NoAlias, AA.alias(A1Loc, A2Loc));
   EXPECT_EQ(MayAlias, AA.alias(PhiLoc, A1Loc));
+  EXPECT_EQ(NoAlias, AA.alias(S1Loc, S2Loc)); // TODO: This is wrong
 
   BatchAAResults BatchAA(AA);
   EXPECT_EQ(NoAlias, BatchAA.alias(A1Loc, A2Loc));
   EXPECT_EQ(NoAlias, BatchAA.alias(PhiLoc, A1Loc)); // TODO: This is wrong.
+  EXPECT_EQ(NoAlias, BatchAA.alias(S1Loc, S2Loc)); // TODO: This is wrong
 }
 
 class AAPassInfraTest : public testing::Test {
