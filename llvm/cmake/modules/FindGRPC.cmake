@@ -88,9 +88,10 @@ function(generate_protos LibraryName ProtoFile)
   cmake_parse_arguments(PARSE_ARGV 2 PROTO "GRPC" "" "")
   get_filename_component(ProtoSourceAbsolutePath "${CMAKE_CURRENT_SOURCE_DIR}/${ProtoFile}" ABSOLUTE)
   get_filename_component(ProtoSourcePath ${ProtoSourceAbsolutePath} PATH)
+  get_filename_component(Basename ${ProtoSourceAbsolutePath} NAME_WLE)
 
-  set(GeneratedProtoSource "${CMAKE_CURRENT_BINARY_DIR}/Index.pb.cc")
-  set(GeneratedProtoHeader "${CMAKE_CURRENT_BINARY_DIR}/Index.pb.h")
+  set(GeneratedProtoSource "${CMAKE_CURRENT_BINARY_DIR}/${Basename}.pb.cc")
+  set(GeneratedProtoHeader "${CMAKE_CURRENT_BINARY_DIR}/${Basename}.pb.h")
   set(Flags
     --cpp_out="${CMAKE_CURRENT_BINARY_DIR}"
     --proto_path="${ProtoSourcePath}")
@@ -98,8 +99,8 @@ function(generate_protos LibraryName ProtoFile)
     list(APPEND Flags
       --grpc_out="${CMAKE_CURRENT_BINARY_DIR}"
       --plugin=protoc-gen-grpc="${GRPC_CPP_PLUGIN}")
-    list(APPEND GeneratedProtoSource "${CMAKE_CURRENT_BINARY_DIR}/Index.grpc.pb.cc")
-    list(APPEND GeneratedProtoHeader "${CMAKE_CURRENT_BINARY_DIR}/Index.grpc.pb.h")
+    list(APPEND GeneratedProtoSource "${CMAKE_CURRENT_BINARY_DIR}/${Basename}.grpc.pb.cc")
+    list(APPEND GeneratedProtoHeader "${CMAKE_CURRENT_BINARY_DIR}/${Basename}.grpc.pb.h")
   endif()
   add_custom_command(
         OUTPUT ${GeneratedProtoSource} ${GeneratedProtoHeader}
