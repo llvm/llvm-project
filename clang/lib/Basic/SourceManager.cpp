@@ -155,7 +155,7 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
 
   // Check that the file's size is the same as in the file entry (which may
   // have come from a stat cache).
-  if (getRawBuffer()->getBufferSize() != (size_t)ContentsEntry->getSize()) {
+  if (Buffer->getBufferSize() != (size_t)ContentsEntry->getSize()) {
     if (Diag.isDiagnosticInFlight())
       Diag.SetDelayedDiagnostic(diag::err_file_modified,
                                 ContentsEntry->getName());
@@ -363,7 +363,7 @@ void SourceManager::initializeForReplay(const SourceManager &Old) {
     Clone->BufferOverridden = Cache->BufferOverridden;
     Clone->IsFileVolatile = Cache->IsFileVolatile;
     Clone->IsTransient = Cache->IsTransient;
-    Clone->setUnownedBuffer(Cache->getRawBuffer());
+    Clone->setUnownedBuffer(Cache->getBufferIfLoaded());
     return Clone;
   };
 
@@ -476,7 +476,8 @@ const SrcMgr::ContentCache *
 SourceManager::getFakeContentCacheForRecovery() const {
   if (!FakeContentCacheForRecovery) {
     FakeContentCacheForRecovery = std::make_unique<SrcMgr::ContentCache>();
-    FakeContentCacheForRecovery->setUnownedBuffer(getFakeBufferForRecovery());
+    FakeContentCacheForRecovery->setUnownedBuffer(
+        getFakeBufferForRecovery()->getMemBufferRef());
   }
   return FakeContentCacheForRecovery.get();
 }
@@ -751,10 +752,7 @@ SourceManager::getBufferDataIfLoaded(FileID FID) const {
   if (!SLoc.isFile() || MyInvalid)
     return None;
 
-  if (const llvm::MemoryBuffer *Buf =
-          SLoc.getFile().getContentCache()->getRawBuffer())
-    return Buf->getBuffer();
-  return None;
+  return SLoc.getFile().getContentCache()->getBufferDataIfLoaded();
 }
 
 llvm::Optional<StringRef> SourceManager::getBufferDataOrNone(FileID FID) const {
