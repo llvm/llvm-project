@@ -1629,6 +1629,81 @@ static LogicalResult verify(ExtractStridedSliceOp op) {
   return success();
 }
 
+// When the source of ExtractStrided comes from a chain of InsertStrided ops try
+// to use the source o the InsertStrided ops if we can detect that the extracted
+// vector is a subset of one of the vector inserted.
+static LogicalResult
+foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
+  // Helper to extract integer out of ArrayAttr.
+  auto getElement = [](ArrayAttr array, int idx) {
+    return array[idx].cast<IntegerAttr>().getInt();
+  };
+  ArrayAttr extractOffsets = op.offsets();
+  ArrayAttr extractStrides = op.strides();
+  ArrayAttr extractSizes = op.sizes();
+  auto insertOp = op.vector().getDefiningOp<InsertStridedSliceOp>();
+  while (insertOp) {
+    if (op.getVectorType().getRank() !=
+        insertOp.getSourceVectorType().getRank())
+      return failure();
+    ArrayAttr insertOffsets = insertOp.offsets();
+    ArrayAttr insertStrides = insertOp.strides();
+    // If the rank of extract is greater than the rank of insert, we are likely
+    // extracting a partial chunk of the vector inserted.
+    if (extractOffsets.size() > insertOffsets.size())
+      return failure();
+    bool patialoverlap = false;
+    bool disjoint = false;
+    SmallVector<int64_t, 4> offsetDiffs;
+    for (unsigned dim = 0, e = extractOffsets.size(); dim < e; ++dim) {
+      if (getElement(extractStrides, dim) != getElement(insertStrides, dim))
+        return failure();
+      int64_t start = getElement(insertOffsets, dim);
+      int64_t end = start + insertOp.getSourceVectorType().getDimSize(dim);
+      int64_t offset = getElement(extractOffsets, dim);
+      int64_t size = getElement(extractSizes, dim);
+      // Check if the start of the extract offset is in the interval inserted.
+      if (start <= offset && offset < end) {
+        // If the extract interval overlaps but is not fully included we may
+        // have a partial overlap that will prevent any folding.
+        if (offset + size > end)
+          patialoverlap = true;
+        offsetDiffs.push_back(offset - start);
+        continue;
+      }
+      disjoint = true;
+      break;
+    }
+    // The extract element chunk is a subset of the insert element.
+    if (!disjoint && !patialoverlap) {
+      op.setOperand(insertOp.source());
+      // OpBuilder is only used as a helper to build an I64ArrayAttr.
+      OpBuilder b(op.getContext());
+      op.setAttr(ExtractStridedSliceOp::getOffsetsAttrName(),
+                 b.getI64ArrayAttr(offsetDiffs));
+      return success();
+    }
+    // If the chunk extracted is disjoint from the chunk inserted, keep looking
+    // in the insert chain.
+    if (disjoint)
+      insertOp = insertOp.dest().getDefiningOp<InsertStridedSliceOp>();
+    else {
+      // The extracted vector partially overlap the inserted vector, we cannot
+      // fold.
+      return failure();
+    }
+  }
+  return failure();
+}
+
+OpFoldResult ExtractStridedSliceOp::fold(ArrayRef<Attribute> operands) {
+  if (getVectorType() == getResult().getType())
+    return vector();
+  if (succeeded(foldExtractStridedOpFromInsertChain(*this)))
+    return getResult();
+  return {};
+}
+
 void ExtractStridedSliceOp::getOffsets(SmallVectorImpl<int64_t> &results) {
   populateFromInt64AttrArray(offsets(), results);
 }
