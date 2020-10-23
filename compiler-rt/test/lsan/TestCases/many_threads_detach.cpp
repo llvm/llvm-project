@@ -1,5 +1,7 @@
 // Test that threads are reused.
-// RUN: %clangxx_lsan %s -o %t -lpthread && %run %t
+// On Android, pthread_* are in libc.so. So the `-lpthread` is not supported.
+// Use `-pthread` so that its driver will DTRT (ie., ignore it).
+// RUN: %clangxx_lsan %s -o %t -pthread && %run %t
 
 #include <pthread.h>
 #include <stdlib.h>

@@ -7,7 +7,11 @@
 
 // Good log_path.
 // RUN: rm -f %t.log.*
-// RUN: %env_lsan_opts="use_stacks=0:log_path='"%t.log"'" not %run %t > %t.out 2>&1
+// RUN: %adb_shell 'rm -f %t.log.*'
+// RUN: %env_lsan_opts="use_stacks=0:log_path='"%device_rundir/%t.log"'" not %run %t > %t.out 2>&1
+// adb-pull doesn't support wild cards so we need to rename the log file.
+// RUN: %adb_shell 'mv %device_rundir/%t.log.* %device_rundir/%t.log'
+// RUN: %pull_from_device %device_rundir/%t.log %t.log.ANDROID
 // RUN: FileCheck %s --check-prefix=CHECK-ERROR < %t.log.*
 
 #include <stdio.h>
