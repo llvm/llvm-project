@@ -91,6 +91,7 @@
   str	r9, [r6, r3]
   str	r8, [r0, -r2]
   str	r7, [r1, r6]!
+  str	r7, [r1, r6, lsl #2]!
   str	r6, [sp, -r1]!
   str	r5, [r3], r9
   str	r4, [r2], -r5
@@ -236,6 +237,7 @@
 # CHECK-NEXT:  1      1     1.00           *            str	r9, [r6, r3]
 # CHECK-NEXT:  1      1     1.00           *            str	r8, [r0, -r2]
 # CHECK-NEXT:  2      1     1.00           *            str	r7, [r1, r6]!
+# CHECK-NEXT:  2      1     1.00           *            str	r7, [r1, r6, lsl #2]!
 # CHECK-NEXT:  2      1     1.00           *            str	r6, [sp, -r1]!
 # CHECK-NEXT:  2      2     1.00           *            str	r5, [r3], r9
 # CHECK-NEXT:  2      2     1.00           *            str	r4, [r2], -r5
@@ -295,7 +297,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT:  -     44.00  44.00  92.00  8.00   54.00   -      -
+# CHECK-NEXT:  -     44.50  44.50  92.00  8.00   55.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    Instructions:
@@ -388,6 +390,7 @@
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     str	r9, [r6, r3]
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     str	r8, [r0, -r2]
 # CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     str	r7, [r1, r6]!
+# CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     str	r7, [r1, r6, lsl #2]!
 # CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     str	r6, [sp, -r1]!
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -     str	r5, [r3], r9
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -     str	r4, [r2], -r5
