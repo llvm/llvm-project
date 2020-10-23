@@ -509,10 +509,9 @@ TEST_F(SourceManagerTest, isMainFile) {
   FileID MainFileID = SourceMgr.getOrCreateFileID(SourceFile, SrcMgr::C_User);
   SourceMgr.setMainFileID(MainFileID);
 
-  EXPECT_TRUE(SourceMgr.isMainFile(FileEntryRef("mainFile.cpp", *SourceFile)));
-  EXPECT_TRUE(
-      SourceMgr.isMainFile(FileEntryRef("anotherName.cpp", *SourceFile)));
-  EXPECT_FALSE(SourceMgr.isMainFile(FileEntryRef("mainFile.cpp", *SecondFile)));
+  EXPECT_TRUE(SourceMgr.isMainFile(*SourceFile));
+  EXPECT_TRUE(SourceMgr.isMainFile(*SourceFile));
+  EXPECT_FALSE(SourceMgr.isMainFile(*SecondFile));
 }
 
 #endif
