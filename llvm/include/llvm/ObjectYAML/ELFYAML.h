@@ -203,6 +203,9 @@ struct Section : public Chunk {
   // The following members are used to override section fields which is
   // useful for creating invalid objects.
 
+  // This can be used to override the sh_addralign field.
+  Optional<llvm::yaml::Hex64> ShAddrAlign;
+
   // This can be used to override the offset stored in the sh_name field.
   // It does not affect the name stored in the string table.
   Optional<llvm::yaml::Hex64> ShName;
