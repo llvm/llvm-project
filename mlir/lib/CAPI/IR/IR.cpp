@@ -26,7 +26,7 @@ using namespace mlir;
 /* ========================================================================== */
 
 MlirContext mlirContextCreate() {
-  auto *context = new MLIRContext;
+  auto *context = new MLIRContext(/*loadAllDialects=*/false);
   return wrap(context);
 }
 

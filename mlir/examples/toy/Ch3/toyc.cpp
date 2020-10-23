@@ -102,7 +102,7 @@ int loadMLIR(llvm::SourceMgr &sourceMgr, mlir::MLIRContext &context,
 }
 
 int dumpMLIR() {
-  mlir::MLIRContext context;
+  mlir::MLIRContext context(/*loadAllDialects=*/false);
   // Load our Dialect in this MLIR Context.
   context.getOrLoadDialect<mlir::toy::ToyDialect>();
 

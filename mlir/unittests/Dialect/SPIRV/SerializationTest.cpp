@@ -36,7 +36,7 @@ using namespace mlir;
 
 class SerializationTest : public ::testing::Test {
 protected:
-  SerializationTest() {
+  SerializationTest() : context(/*loadAllDialects=*/false) {
     context.getOrLoadDialect<mlir::spirv::SPIRVDialect>();
     createModuleOp();
   }

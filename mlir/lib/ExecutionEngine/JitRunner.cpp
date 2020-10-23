@@ -22,7 +22,6 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/StandardTypes.h"
-#include "mlir/InitAllDialects.h"
 #include "mlir/Parser.h"
 #include "mlir/Support/FileUtilities.h"
 
@@ -260,8 +259,8 @@ int mlir::JitRunnerMain(
     }
   }
 
-  MLIRContext context;
-  registerAllDialects(context.getDialectRegistry());
+  MLIRContext context(/*loadAllDialects=*/false);
+  registerAllDialects(&context);
 
   auto m = parseMLIRInput(options.inputFilename, &context);
   if (!m) {

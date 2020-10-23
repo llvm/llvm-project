@@ -144,6 +144,7 @@ void registerTestPasses() {
 #endif
 
 int main(int argc, char **argv) {
+  registerAllDialects();
   registerAllPasses();
 #ifdef MLIR_INCLUDE_TESTS
   registerTestPasses();
