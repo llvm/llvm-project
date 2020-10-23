@@ -545,8 +545,8 @@ multiclass Reduction<Type Accumulator, string basename, list<Type> basetypes,
   defvar intArgsUnpred = !con(intArgsBase,
                               !if(needSign, (? (unsignedflag Scalar)), (?)));
   defvar intArgsPred   = !con(intArgsUnpred, (? $pred));
-  defvar intUnpred     = !setop(intArgsUnpred, IRInt<basename, basetypes>);
-  defvar intPred       = !setop(intArgsPred, IRInt<
+  defvar intUnpred     = !setdagop(intArgsUnpred, IRInt<basename, basetypes>);
+  defvar intPred       = !setdagop(intArgsPred, IRInt<
             basename#"_predicated", !listconcat(basetypes, [Predicate])>);
 
   def "": Intrinsic<
