@@ -7,6 +7,9 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -O2 \
 ; RUN:     -mattr=-pcrelative-memops -ppc-asm-full-reg-names -mcpu=pwr10 < %s | \
 ; RUN:     FileCheck %s --check-prefix=CHECK-NOPCREL
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -O2 \
+; RUN:     -mattr=-prefix-instrs -ppc-asm-full-reg-names -mcpu=pwr10 < %s | \
+; RUN:     FileCheck %s --check-prefix=CHECK-NOPCREL
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -O2 \
 ; RUN:     -ppc-asm-full-reg-names -target-abi=elfv2 -mcpu=pwr10 < %s | \
 ; RUN:     FileCheck %s
