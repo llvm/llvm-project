@@ -47,8 +47,7 @@ int main(int argc, char *argv[]) {
   amd_comgr_action_info_t dataAction;
   amd_comgr_status_t status;
   size_t count;
-  const char *options[] = {"--amdgpu-target=gfx900"
-                           "-hip-path"
+  const char *options[] = {"--amdgpu-target=gfx900", "-hip-path",
                            "/opt/rocm/hip"};
   size_t optionsCount = sizeof(options) / sizeof(options[0]);
 
