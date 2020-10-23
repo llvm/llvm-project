@@ -1761,7 +1761,7 @@ void SourceManager::computeMacroArgsCache(MacroArgsMap &MacroArgsCache,
     if (Invalid)
       return;
     if (Entry.isFile()) {
-      auto File = Entry.getFile();
+      auto& File = Entry.getFile();
       if (File.getFileCharacteristic() == C_User_ModuleMap ||
           File.getFileCharacteristic() == C_System_ModuleMap)
         continue;
