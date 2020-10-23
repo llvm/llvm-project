@@ -186,10 +186,6 @@ public:
   bool isLdstSoMinusReg(const MachineInstr &MI, unsigned Op) const;
   // Scaled register offset in address mode 2
   bool isAm2ScaledReg(const MachineInstr &MI, unsigned Op) const;
-  // Load multiple, base reg in list
-  bool isLDMBaseRegInList(const MachineInstr &MI) const;
-  // get LDM variable defs size
-  unsigned getLDMVariableDefsSize(const MachineInstr &MI) const;
 
   /// GetInstSize - Returns the size of the specified MachineInstr.
   ///

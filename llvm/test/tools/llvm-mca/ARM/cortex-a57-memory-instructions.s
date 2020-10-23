@@ -241,18 +241,18 @@
 # CHECK-NEXT:  2      4     1.00    *                   ldrsht	r3, [r8], #-12
 # CHECK-NEXT:  2      4     1.00    *                   ldrsht	r8, [r9], r5
 # CHECK-NEXT:  2      4     1.00    *                   ldrsht	r2, [r1], -r4
-# CHECK-NEXT:  16     10    16.00   *                   ldm	r2, {r1, r2, r4, r5, r6}
-# CHECK-NEXT:  16     10    16.00   *                   ldm	r2, {r1, r2, r4, r5, r6}
-# CHECK-NEXT:  16     10    16.00   *                   ldm	r2, {r1, r3, r4, r5, r6}
-# CHECK-NEXT:  16     10    16.00   *                   ldmib	r2, {r1, r2}
-# CHECK-NEXT:  16     10    16.00   *                   ldmdb	r2, {r1, r2}
-# CHECK-NEXT:  16     10    16.00   *                   ldmib	r2, {r1, r3}
-# CHECK-NEXT:  16     10    16.00   *                   ldmib	r2, {r1, r3, r5}
-# CHECK-NEXT:  16     10    16.00   *                   ldmib	r2, {r1, r2, r5}
-# CHECK-NEXT:  16     10    16.00   *                   ldmdbeq	r2, {r1, r2}
-# CHECK-NEXT:  16     10    16.00   *                   ldmibeq	r2, {r1, r3}
+# CHECK-NEXT:  12     6     6.00    *                   ldm	r2, {r1, r2, r4, r5, r6}
+# CHECK-NEXT:  12     6     6.00    *                   ldm	r2, {r1, r2, r4, r5, r6}
+# CHECK-NEXT:  6      5     6.00    *                   ldm	r2, {r1, r3, r4, r5, r6}
+# CHECK-NEXT:  4      4     2.00    *                   ldmib	r2, {r1, r2}
+# CHECK-NEXT:  4      4     2.00    *                   ldmdb	r2, {r1, r2}
+# CHECK-NEXT:  2      3     2.00    *                   ldmib	r2, {r1, r3}
+# CHECK-NEXT:  4      4     4.00    *                   ldmib	r2, {r1, r3, r5}
+# CHECK-NEXT:  8      5     4.00    *                   ldmib	r2, {r1, r2, r5}
+# CHECK-NEXT:  4      4     2.00    *                   ldmdbeq	r2, {r1, r2}
+# CHECK-NEXT:  2      3     2.00    *                   ldmibeq	r2, {r1, r3}
 # CHECK-NEXT:  16     10    16.00   *                   ldm	r2, {r0, r1, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, sp, lr, pc}
-# CHECK-NEXT:  16     10    16.00   *                   ldm	r2, {r0, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, sp, lr, pc}
+# CHECK-NEXT:  32     11    16.00   *                   ldm	r2, {r0, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, sp, lr, pc}
 # CHECK-NEXT:  1      1     1.00           *            str	r8, [r12]
 # CHECK-NEXT:  1      1     1.00           *            str	r7, [r1, #12]
 # CHECK-NEXT:  2      1     1.00           *            str	r3, [r5, #40]!
@@ -321,7 +321,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT:  -     44.00  44.00  284.00 9.00   55.00   -      -
+# CHECK-NEXT:  -     63.00  63.00  160.00 9.00   55.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    Instructions:
@@ -406,18 +406,18 @@
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldrsht	r3, [r8], #-12
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldrsht	r8, [r9], r5
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldrsht	r2, [r1], -r4
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldm	r2, {r1, r2, r4, r5, r6}
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldm	r2, {r1, r2, r4, r5, r6}
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldm	r2, {r1, r3, r4, r5, r6}
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldmib	r2, {r1, r2}
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldmdb	r2, {r1, r2}
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldmib	r2, {r1, r3}
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldmib	r2, {r1, r3, r5}
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldmib	r2, {r1, r2, r5}
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldmdbeq	r2, {r1, r2}
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldmibeq	r2, {r1, r3}
+# CHECK-NEXT:  -     3.00   3.00   6.00    -      -      -      -     ldm	r2, {r1, r2, r4, r5, r6}
+# CHECK-NEXT:  -     3.00   3.00   6.00    -      -      -      -     ldm	r2, {r1, r2, r4, r5, r6}
+# CHECK-NEXT:  -      -      -     6.00    -      -      -      -     ldm	r2, {r1, r3, r4, r5, r6}
+# CHECK-NEXT:  -     1.00   1.00   2.00    -      -      -      -     ldmib	r2, {r1, r2}
+# CHECK-NEXT:  -     1.00   1.00   2.00    -      -      -      -     ldmdb	r2, {r1, r2}
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     ldmib	r2, {r1, r3}
+# CHECK-NEXT:  -      -      -     4.00    -      -      -      -     ldmib	r2, {r1, r3, r5}
+# CHECK-NEXT:  -     2.00   2.00   4.00    -      -      -      -     ldmib	r2, {r1, r2, r5}
+# CHECK-NEXT:  -     1.00   1.00   2.00    -      -      -      -     ldmdbeq	r2, {r1, r2}
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     ldmibeq	r2, {r1, r3}
 # CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldm	r2, {r0, r1, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, sp, lr, pc}
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldm	r2, {r0, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, sp, lr, pc}
+# CHECK-NEXT:  -     8.00   8.00   16.00   -      -      -      -     ldm	r2, {r0, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, sp, lr, pc}
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     str	r8, [r12]
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     str	r7, [r1, #12]
 # CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     str	r3, [r5, #40]!
