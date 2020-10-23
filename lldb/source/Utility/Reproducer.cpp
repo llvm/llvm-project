@@ -176,10 +176,12 @@ Generator::Generator(FileSpec root) : m_root(MakeAbsolute(std::move(root))) {
 
 Generator::~Generator() {
   if (!m_done) {
-    if (m_auto_generate)
+    if (m_auto_generate) {
       Keep();
-    else
+      llvm::cantFail(Finalize(GetRoot()));
+    } else {
       Discard();
+    }
   }
 }
 
@@ -358,4 +360,59 @@ void Verifier::Verify(
                      "': " + status.getError().message());
     }
   }
+}
+
+static llvm::Error addPaths(StringRef path,
+                            function_ref<void(StringRef)> callback) {
+  auto buffer = llvm::MemoryBuffer::getFile(path);
+  if (!buffer)
+    return errorCodeToError(buffer.getError());
+
+  SmallVector<StringRef, 0> paths;
+  (*buffer)->getBuffer().split(paths, '\0');
+  for (StringRef p : paths) {
+    if (!p.empty())
+      callback(p);
+  }
+
+  return errorCodeToError(llvm::sys::fs::remove(path));
+}
+
+llvm::Error repro::Finalize(Loader *loader) {
+  if (!loader)
+    return make_error<StringError>("invalid loader",
+                                   llvm::inconvertibleErrorCode());
+
+  FileSpec reproducer_root = loader->GetRoot();
+  std::string files_path =
+      reproducer_root.CopyByAppendingPathComponent("files.txt").GetPath();
+  std::string dirs_path =
+      reproducer_root.CopyByAppendingPathComponent("dirs.txt").GetPath();
+
+  FileCollector collector(
+      reproducer_root.CopyByAppendingPathComponent("root").GetPath(),
+      reproducer_root.GetPath());
+
+  if (Error e =
+          addPaths(files_path, [&](StringRef p) { collector.addFile(p); }))
+    return e;
+
+  if (Error e =
+          addPaths(dirs_path, [&](StringRef p) { collector.addDirectory(p); }))
+    return e;
+
+  FileSpec mapping =
+      reproducer_root.CopyByAppendingPathComponent(FileProvider::Info::file);
+  if (auto ec = collector.copyFiles(/*stop_on_error=*/false))
+    return errorCodeToError(ec);
+  collector.writeMapping(mapping.GetPath());
+
+  return llvm::Error::success();
+}
+
+llvm::Error repro::Finalize(const FileSpec &root) {
+  Loader loader(root);
+  if (Error e = loader.LoadIndex())
+    return e;
+  return Finalize(&loader);
 }
