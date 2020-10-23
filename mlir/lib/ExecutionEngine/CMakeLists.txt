@@ -107,5 +107,6 @@ add_mlir_library(mlir_async_runtime
 
   LINK_LIBS PUBLIC
   mlir_c_runner_utils_static
+  ${LLVM_PTHREAD_LIB}
 )
 target_compile_definitions(mlir_async_runtime PRIVATE mlir_async_runtime_EXPORTS)
