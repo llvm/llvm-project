@@ -18,20 +18,29 @@
 #ifndef MLIR_SUPPORT_JITRUNNER_H_
 #define MLIR_SUPPORT_JITRUNNER_H_
 
+#include "mlir/IR/Module.h"
+
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/Module.h"
 
 namespace mlir {
+
+using TranslationCallback = llvm::function_ref<std::unique_ptr<llvm::Module>(
+    ModuleOp, llvm::LLVMContext &)>;
 
 class ModuleOp;
 struct LogicalResult;
 
 // Entry point for all CPU runners. Expects the common argc/argv arguments for
-// standard C++ main functions and an mlirTransformer.
-// The latter is applied after parsing the input into MLIR IR and before passing
-// the MLIR module to the ExecutionEngine.
+// standard C++ main functions, `mlirTransformer` and `llvmModuleBuilder`.
+/// `mlirTransformer` is applied after parsing the input into MLIR IR and before
+/// passing the MLIR module to the ExecutionEngine.
+/// `llvmModuleBuilder` is a custom function that is passed to ExecutionEngine.
+/// It processes MLIR module and creates LLVM IR module.
 int JitRunnerMain(
     int argc, char **argv,
-    llvm::function_ref<LogicalResult(mlir::ModuleOp)> mlirTransformer);
+    llvm::function_ref<LogicalResult(mlir::ModuleOp)> mlirTransformer,
+    TranslationCallback llvmModuleBuilder = nullptr);
 
 } // namespace mlir
 
