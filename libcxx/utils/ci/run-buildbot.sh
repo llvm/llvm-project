@@ -14,144 +14,157 @@ MONOREPO_ROOT="$(git rev-parse --show-toplevel)"
 BUILD_DIR="${MONOREPO_ROOT}/build/${BUILDER}"
 INSTALL_DIR="${MONOREPO_ROOT}/build/${BUILDER}/install"
 
-args=()
-args+=("-DLLVM_ENABLE_PROJECTS=libcxx;libunwind;libcxxabi")
-args+=("-DCMAKE_INSTALL_PREFIX=${INSTALL_DIR}")
-args+=("-DLIBCXX_CXX_ABI=libcxxabi")
+function generate-cmake() {
+    echo "--- Generating CMake"
+    rm -rf "${BUILD_DIR}"
+    cmake -S "${MONOREPO_ROOT}/llvm" \
+          -B "${BUILD_DIR}" \
+          -GNinja \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLLVM_ENABLE_PROJECTS="libcxx;libunwind;libcxxabi" \
+          -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml" \
+          -DLIBCXX_CXX_ABI=libcxxabi \
+          ${@}
+}
+
+function check-cxx-cxxabi() {
+    echo "+++ Running the libc++ tests"
+    ninja -C "${BUILD_DIR}" check-cxx
+
+    echo "+++ Running the libc++abi tests"
+    ninja -C "${BUILD_DIR}" check-cxxabi
+
+    echo "--- Installing libc++ and libc++abi to a fake location"
+    ninja -C "${BUILD_DIR}" install-cxx install-cxxabi
+}
+
+function check-cxx-benchmarks() {
+    echo "--- Running the benchmarks"
+    ninja -C "${BUILD_DIR}" check-cxx-benchmarks
+}
 
 case "${BUILDER}" in
 generic-cxx03)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake"
+    check-cxx-cxxabi
 ;;
 generic-cxx11)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake"
+    check-cxx-cxxabi
 ;;
 generic-cxx14)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx14.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx14.cmake"
+    check-cxx-cxxabi
 ;;
 generic-cxx17)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx17.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx17.cmake"
+    check-cxx-cxxabi
 ;;
 generic-cxx2a)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2a.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx2a.cmake"
+    check-cxx-cxxabi
 ;;
 generic-noexceptions)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake"
+    check-cxx-cxxabi
 ;;
 generic-32bit)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-32bits.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-32bits.cmake"
+    check-cxx-cxxabi
 ;;
 generic-gcc)
     export CC=gcc
     export CXX=g++
     # FIXME: Re-enable experimental testing on GCC. GCC cares about the order
     #        in which we link -lc++experimental, which causes issues.
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --param enable_experimental=False --xunit-xml-output test-results.xml")
+    generate-cmake -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
+    check-cxx-cxxabi
 ;;
 generic-asan)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-asan.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-asan.cmake"
+    check-cxx-cxxabi
 ;;
 generic-msan)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-msan.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-msan.cmake"
+    check-cxx-cxxabi
 ;;
 generic-tsan)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-tsan.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-tsan.cmake"
+    check-cxx-cxxabi
 ;;
 generic-ubsan)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-ubsan.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-ubsan.cmake"
+    check-cxx-cxxabi
 ;;
 generic-with_llvm_unwinder)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-DLIBCXXABI_USE_LLVM_UNWINDER=ON")
+    generate-cmake -DLIBCXXABI_USE_LLVM_UNWINDER=ON
+    check-cxx-cxxabi
 ;;
 generic-singlethreaded)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-singlethreaded.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-singlethreaded.cmake"
+    check-cxx-cxxabi
 ;;
 generic-nodebug)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-nodebug.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-nodebug.cmake"
+    check-cxx-cxxabi
 ;;
 generic-no-random_device)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-random_device.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-random_device.cmake"
+    check-cxx-cxxabi
 ;;
 x86_64-apple-system)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake"
+    check-cxx-cxxabi
 ;;
 x86_64-apple-system-noexceptions)
     export CC=clang
     export CXX=clang++
-    args+=("-DLLVM_LIT_ARGS=-sv --show-unsupported --xunit-xml-output test-results.xml")
-    args+=("-C${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake")
-    args+=("-DLIBCXX_ENABLE_EXCEPTIONS=OFF")
-    args+=("-DLIBCXXABI_ENABLE_EXCEPTIONS=OFF")
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
+                   -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
+                   -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
+    check-cxx-cxxabi
+;;
+benchmarks)
+    export CC=clang
+    export CXX=clang++
+    generate-cmake
+    check-cxx-benchmarks
 ;;
 *)
     echo "${BUILDER} is not a known configuration"
     exit 1
 ;;
 esac
-
-echo "--- Generating CMake"
-rm -rf "${BUILD_DIR}"
-cmake -S "${MONOREPO_ROOT}/llvm" -B "${BUILD_DIR}" -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo "${args[@]}"
-
-echo "--- Building libc++ and libc++abi"
-ninja -C "${BUILD_DIR}" check-cxx-deps cxxabi
-
-echo "+++ Running the libc++ tests"
-ninja -C "${BUILD_DIR}" check-cxx
-
-echo "+++ Running the libc++abi tests"
-ninja -C "${BUILD_DIR}" check-cxxabi
-
-echo "+++ Installing libc++ and libc++abi to a fake location"
-ninja -C "${BUILD_DIR}" install-cxx install-cxxabi
-
-# echo "+++ Running the libc++ benchmarks"
-# ninja -C "${BUILD_DIR}" check-cxx-benchmarks
