@@ -2215,7 +2215,7 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
       QualType TempType = getType(Base);
       if (TempType.isDestructedType()) {
         Info.FFDiag(MTE->getExprLoc(),
-                    diag::note_constexpr_unsupported_tempoarary_nontrivial_dtor)
+                    diag::note_constexpr_unsupported_temporary_nontrivial_dtor)
             << TempType;
         return false;
       }
