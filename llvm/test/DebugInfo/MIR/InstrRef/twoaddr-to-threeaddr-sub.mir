@@ -1,5 +1,7 @@
 # RUN: llc -run-pass=twoaddressinstruction -mtriple=x86_64-- -o - %s -experimental-debug-variable-locations | FileCheck %s
 #
+# REQUIRES: x86-registered-target
+#
 # Test that a new instruction (LEA) is created when the two-addr add below is
 # converted to three address; and that an appropriate substitution is created.
 # Maybe at some point we'll normalise DBG_INSTR_REFs on output, but until then,
