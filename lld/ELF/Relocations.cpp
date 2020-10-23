@@ -1358,9 +1358,11 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
         cast<Defined>(sym).section->name == ".toc")
       ppc64noTocRelax.insert({&sym, addend});
 
-    if (type == R_PPC64_TLSGD && expr == R_TLSDESC_CALL) {
+    if ((type == R_PPC64_TLSGD && expr == R_TLSDESC_CALL) ||
+        (type == R_PPC64_TLSLD && expr == R_TLSLD_HINT)) {
       if (i == end) {
-        errorOrWarn("R_PPC64_TLSGD may not be the last relocation" +
+        errorOrWarn("R_PPC64_TLSGD/R_PPC64_TLSLD may not be the last "
+                    "relocation" +
                     getLocation(sec, sym, offset));
         return;
       }
