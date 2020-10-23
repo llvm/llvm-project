@@ -192,6 +192,8 @@ public:
                     C2.ScaleCost, C2.ImmCost, C2.SetupCost);
   }
 
+  bool isRegNumMajorCostOfLSR() { return true; }
+
   bool isProfitableLSRChainElement(Instruction *I) { return false; }
 
   bool canMacroFuseCmp() { return false; }

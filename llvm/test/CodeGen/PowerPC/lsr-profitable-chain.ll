@@ -16,85 +16,90 @@ define void @foo(double* readonly %0, double* %1, i64 %2, i64 %3, i64 %4, i64 %5
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    bge 0, .LBB0_6
 ; CHECK-NEXT:  # %bb.1: # %.preheader
-; CHECK-NEXT:    mulld 11, 8, 5
-; CHECK-NEXT:    mulld 12, 9, 8
-; CHECK-NEXT:    sldi 0, 10, 3
-; CHECK-NEXT:    sldi 11, 11, 3
-; CHECK-NEXT:    sldi 12, 12, 3
-; CHECK-NEXT:    add 11, 3, 11
+; CHECK-NEXT:    addi 30, 5, 1
+; CHECK-NEXT:    addi 29, 5, 3
+; CHECK-NEXT:    addi 28, 5, 2
+; CHECK-NEXT:    mulld 12, 8, 5
+; CHECK-NEXT:    addi 3, 3, 16
+; CHECK-NEXT:    mulld 0, 9, 8
+; CHECK-NEXT:    sldi 11, 10, 3
+; CHECK-NEXT:    mulld 30, 8, 30
+; CHECK-NEXT:    mulld 29, 8, 29
+; CHECK-NEXT:    mulld 8, 8, 28
 ; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    add 5, 5, 9
-; CHECK-NEXT:    add 11, 11, 12
+; CHECK-NEXT:    add 12, 12, 0
+; CHECK-NEXT:    add 30, 30, 0
+; CHECK-NEXT:    add 29, 29, 0
+; CHECK-NEXT:    add 8, 8, 0
 ; CHECK-NEXT:    cmpd 5, 7
 ; CHECK-NEXT:    bge 0, .LBB0_6
 ; CHECK-NEXT:  .LBB0_3: # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_5 Depth 2
-; CHECK-NEXT:    sub 30, 5, 10
-; CHECK-NEXT:    cmpd 6, 30
+; CHECK-NEXT:    sub 28, 5, 10
+; CHECK-NEXT:    cmpd 6, 28
 ; CHECK-NEXT:    bge 0, .LBB0_2
 ; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    addi 28, 5, 1
-; CHECK-NEXT:    addi 27, 5, 2
-; CHECK-NEXT:    addi 26, 5, 3
-; CHECK-NEXT:    mulld 29, 5, 8
-; CHECK-NEXT:    sldi 25, 6, 3
-; CHECK-NEXT:    mulld 28, 28, 8
-; CHECK-NEXT:    mulld 27, 27, 8
-; CHECK-NEXT:    mulld 26, 26, 8
+; CHECK-NEXT:    add 26, 6, 12
+; CHECK-NEXT:    add 25, 6, 30
+; CHECK-NEXT:    add 24, 6, 29
+; CHECK-NEXT:    add 23, 6, 8
+; CHECK-NEXT:    sldi 27, 6, 3
+; CHECK-NEXT:    sldi 26, 26, 3
+; CHECK-NEXT:    sldi 25, 25, 3
+; CHECK-NEXT:    sldi 24, 24, 3
+; CHECK-NEXT:    sldi 23, 23, 3
+; CHECK-NEXT:    add 27, 4, 27
+; CHECK-NEXT:    add 26, 3, 26
+; CHECK-NEXT:    add 25, 3, 25
+; CHECK-NEXT:    add 24, 3, 24
+; CHECK-NEXT:    add 23, 3, 23
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_5: # Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    lfdx 0, 4, 25
-; CHECK-NEXT:    lfdx 1, 11, 25
-; CHECK-NEXT:    add 24, 6, 29
-; CHECK-NEXT:    mr 23, 3
-; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    sldi 24, 24, 3
-; CHECK-NEXT:    add 24, 3, 24
-; CHECK-NEXT:    lfd 1, 8(24)
-; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfd 1, 16(24)
-; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfd 1, 24(24)
-; CHECK-NEXT:    add 24, 6, 28
-; CHECK-NEXT:    sldi 24, 24, 3
-; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfdux 1, 23, 24
-; CHECK-NEXT:    add 24, 6, 27
-; CHECK-NEXT:    sldi 24, 24, 3
-; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfd 1, 8(23)
-; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfd 1, 16(23)
-; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfd 1, 24(23)
-; CHECK-NEXT:    mr 23, 3
-; CHECK-NEXT:    lfdux 2, 23, 24
-; CHECK-NEXT:    add 24, 6, 26
+; CHECK-NEXT:    lfd 0, 0(27)
+; CHECK-NEXT:    lfd 1, -16(26)
 ; CHECK-NEXT:    add 6, 6, 10
-; CHECK-NEXT:    sldi 24, 24, 3
-; CHECK-NEXT:    cmpd 6, 30
+; CHECK-NEXT:    cmpd 6, 28
+; CHECK-NEXT:    xsadddp 0, 0, 1
+; CHECK-NEXT:    lfd 1, -8(26)
+; CHECK-NEXT:    xsadddp 0, 0, 1
+; CHECK-NEXT:    lfd 1, 0(26)
+; CHECK-NEXT:    xsadddp 0, 0, 1
+; CHECK-NEXT:    lfd 1, 8(26)
+; CHECK-NEXT:    add 26, 26, 11
+; CHECK-NEXT:    xsadddp 0, 0, 1
+; CHECK-NEXT:    lfd 1, -16(25)
+; CHECK-NEXT:    xsadddp 0, 0, 1
+; CHECK-NEXT:    lfd 1, -8(25)
+; CHECK-NEXT:    xsadddp 0, 0, 1
+; CHECK-NEXT:    lfd 1, 0(25)
+; CHECK-NEXT:    xsadddp 0, 0, 1
+; CHECK-NEXT:    lfd 1, 8(25)
+; CHECK-NEXT:    add 25, 25, 11
+; CHECK-NEXT:    xsadddp 0, 0, 1
+; CHECK-NEXT:    lfd 1, -16(23)
+; CHECK-NEXT:    xsadddp 0, 0, 1
+; CHECK-NEXT:    lfd 1, -8(23)
+; CHECK-NEXT:    xsadddp 0, 0, 1
+; CHECK-NEXT:    lfd 1, 0(23)
 ; CHECK-NEXT:    xsadddp 0, 0, 1
 ; CHECK-NEXT:    lfd 1, 8(23)
-; CHECK-NEXT:    xsadddp 0, 0, 2
+; CHECK-NEXT:    add 23, 23, 11
 ; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfd 1, 16(23)
+; CHECK-NEXT:    lfd 1, -16(24)
 ; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfd 1, 24(23)
-; CHECK-NEXT:    mr 23, 3
+; CHECK-NEXT:    lfd 1, -8(24)
 ; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfdux 1, 23, 24
+; CHECK-NEXT:    lfd 1, 0(24)
 ; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfd 1, 8(23)
+; CHECK-NEXT:    lfd 1, 8(24)
+; CHECK-NEXT:    add 24, 24, 11
 ; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfd 1, 16(23)
-; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    lfd 1, 24(23)
-; CHECK-NEXT:    xsadddp 0, 0, 1
-; CHECK-NEXT:    stfdx 0, 4, 25
-; CHECK-NEXT:    add 25, 25, 0
+; CHECK-NEXT:    stfd 0, 0(27)
+; CHECK-NEXT:    add 27, 27, 11
 ; CHECK-NEXT:    blt 0, .LBB0_5
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_6:
