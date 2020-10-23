@@ -22,6 +22,7 @@
 #include "flang/Lower/IntrinsicCall.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Todo.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
@@ -152,16 +153,21 @@ private:
   mlir::Value genBoolConstant(mlir::MLIRContext *context, bool value) {
     auto i1Type = builder.getI1Type();
     auto attr = builder.getIntegerAttr(i1Type, value ? 1 : 0);
-    return builder.create<mlir::ConstantOp>(getLoc(), i1Type, attr).getResult();
+    return builder.create<mlir::ConstantOp>(getLoc(), i1Type, attr);
   }
 
+  /// Generate a real constant with of `value`.
   template <int KIND>
   mlir::Value genRealConstant(mlir::MLIRContext *context,
                               const llvm::APFloat &value) {
     auto fltTy = Fortran::lower::convertReal(context, KIND);
-    auto attr = builder.getFloatAttr(fltTy, value);
-    auto res = builder.create<mlir::ConstantOp>(getLoc(), fltTy, attr);
-    return res.getResult();
+    if (fltTy.isa<mlir::FloatType>()) {
+      auto attr = builder.getFloatAttr(fltTy, value);
+      return builder.create<mlir::ConstantOp>(getLoc(), fltTy, attr);
+    }
+    // MLIR standard dialect doesn't support floating point larger than double.
+    auto attr = fir::RealAttr::get(context, {KIND, value});
+    return builder.create<fir::ConstfOp>(getLoc(), fltTy, attr);
   }
 
   mlir::Type getSomeKindInteger() { return builder.getIndexType(); }
