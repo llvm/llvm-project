@@ -8,7 +8,7 @@
 
 syntax = "proto2";
 
-package clang.clangd.remote.v1;
+package clang.clangd.remote;
 
 message LookupRequest { repeated string ids = 1; }
 

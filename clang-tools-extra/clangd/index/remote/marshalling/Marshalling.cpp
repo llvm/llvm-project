@@ -76,7 +76,7 @@ Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
 }
 
 llvm::Expected<clangd::LookupRequest>
-Marshaller::fromProtobuf(const v1::LookupRequest *Message) {
+Marshaller::fromProtobuf(const LookupRequest *Message) {
   clangd::LookupRequest Req;
   auto IDs = getIDs(Message->ids());
   if (!IDs)
@@ -86,7 +86,7 @@ Marshaller::fromProtobuf(const v1::LookupRequest *Message) {
 }
 
 llvm::Expected<clangd::FuzzyFindRequest>
-Marshaller::fromProtobuf(const v1::FuzzyFindRequest *Message) {
+Marshaller::fromProtobuf(const FuzzyFindRequest *Message) {
   assert(!RemoteIndexRoot.empty());
   clangd::FuzzyFindRequest Result;
   Result.Query = Message->query();
@@ -110,7 +110,7 @@ Marshaller::fromProtobuf(const v1::FuzzyFindRequest *Message) {
 }
 
 llvm::Expected<clangd::RefsRequest>
-Marshaller::fromProtobuf(const v1::RefsRequest *Message) {
+Marshaller::fromProtobuf(const RefsRequest *Message) {
   clangd::RefsRequest Req;
   auto IDs = getIDs(Message->ids());
   if (!IDs)
@@ -126,7 +126,7 @@ Marshaller::fromProtobuf(const v1::RefsRequest *Message) {
 }
 
 llvm::Expected<clangd::RelationsRequest>
-Marshaller::fromProtobuf(const v1::RelationsRequest *Message) {
+Marshaller::fromProtobuf(const RelationsRequest *Message) {
   clangd::RelationsRequest Req;
   auto IDs = getIDs(Message->subjects());
   if (!IDs)
@@ -140,8 +140,7 @@ Marshaller::fromProtobuf(const v1::RelationsRequest *Message) {
   return Req;
 }
 
-llvm::Expected<clangd::Symbol>
-Marshaller::fromProtobuf(const v1::Symbol &Message) {
+llvm::Expected<clangd::Symbol> Marshaller::fromProtobuf(const Symbol &Message) {
   if (!Message.has_info() || !Message.has_canonical_declaration())
     return error("Missing info or declaration.");
   clangd::Symbol Result;
@@ -179,7 +178,7 @@ Marshaller::fromProtobuf(const v1::Symbol &Message) {
   return Result;
 }
 
-llvm::Expected<clangd::Ref> Marshaller::fromProtobuf(const v1::Ref &Message) {
+llvm::Expected<clangd::Ref> Marshaller::fromProtobuf(const Ref &Message) {
   if (!Message.has_location())
     return error("Missing location.");
   clangd::Ref Result;
@@ -192,7 +191,7 @@ llvm::Expected<clangd::Ref> Marshaller::fromProtobuf(const v1::Ref &Message) {
 }
 
 llvm::Expected<std::pair<clangd::SymbolID, clangd::Symbol>>
-Marshaller::fromProtobuf(const v1::Relation &Message) {
+Marshaller::fromProtobuf(const Relation &Message) {
   auto SubjectID = SymbolID::fromStr(Message.subject_id());
   if (!SubjectID)
     return SubjectID.takeError();
@@ -204,17 +203,16 @@ Marshaller::fromProtobuf(const v1::Relation &Message) {
   return std::make_pair(*SubjectID, *Object);
 }
 
-v1::LookupRequest Marshaller::toProtobuf(const clangd::LookupRequest &From) {
-  v1::LookupRequest RPCRequest;
+LookupRequest Marshaller::toProtobuf(const clangd::LookupRequest &From) {
+  LookupRequest RPCRequest;
   for (const auto &SymbolID : From.IDs)
     RPCRequest.add_ids(SymbolID.str());
   return RPCRequest;
 }
 
-v1::FuzzyFindRequest
-Marshaller::toProtobuf(const clangd::FuzzyFindRequest &From) {
+FuzzyFindRequest Marshaller::toProtobuf(const clangd::FuzzyFindRequest &From) {
   assert(!LocalIndexRoot.empty());
-  v1::FuzzyFindRequest RPCRequest;
+  FuzzyFindRequest RPCRequest;
   RPCRequest.set_query(From.Query);
   for (const auto &Scope : From.Scopes)
     RPCRequest.add_scopes(Scope);
@@ -233,8 +231,8 @@ Marshaller::toProtobuf(const clangd::FuzzyFindRequest &From) {
   return RPCRequest;
 }
 
-v1::RefsRequest Marshaller::toProtobuf(const clangd::RefsRequest &From) {
-  v1::RefsRequest RPCRequest;
+RefsRequest Marshaller::toProtobuf(const clangd::RefsRequest &From) {
+  RefsRequest RPCRequest;
   for (const auto &ID : From.IDs)
     RPCRequest.add_ids(ID.str());
   RPCRequest.set_filter(static_cast<uint32_t>(From.Filter));
@@ -243,9 +241,8 @@ v1::RefsRequest Marshaller::toProtobuf(const clangd::RefsRequest &From) {
   return RPCRequest;
 }
 
-v1::RelationsRequest
-Marshaller::toProtobuf(const clangd::RelationsRequest &From) {
-  v1::RelationsRequest RPCRequest;
+RelationsRequest Marshaller::toProtobuf(const clangd::RelationsRequest &From) {
+  RelationsRequest RPCRequest;
   for (const auto &ID : From.Subjects)
     RPCRequest.add_subjects(ID.str());
   RPCRequest.set_predicate(static_cast<uint32_t>(From.Predicate));
@@ -254,8 +251,8 @@ Marshaller::toProtobuf(const clangd::RelationsRequest &From) {
   return RPCRequest;
 }
 
-llvm::Expected<v1::Symbol> Marshaller::toProtobuf(const clangd::Symbol &From) {
-  v1::Symbol Result;
+llvm::Expected<Symbol> Marshaller::toProtobuf(const clangd::Symbol &From) {
+  Symbol Result;
   Result.set_id(From.ID.str());
   *Result.mutable_info() = toProtobuf(From.SymInfo);
   Result.set_name(From.Name.str());
@@ -290,8 +287,8 @@ llvm::Expected<v1::Symbol> Marshaller::toProtobuf(const clangd::Symbol &From) {
   return Result;
 }
 
-llvm::Expected<v1::Ref> Marshaller::toProtobuf(const clangd::Ref &From) {
-  v1::Ref Result;
+llvm::Expected<Ref> Marshaller::toProtobuf(const clangd::Ref &From) {
+  Ref Result;
   Result.set_kind(static_cast<uint32_t>(From.Kind));
   auto Location = toProtobuf(From.Location);
   if (!Location)
@@ -300,10 +297,9 @@ llvm::Expected<v1::Ref> Marshaller::toProtobuf(const clangd::Ref &From) {
   return Result;
 }
 
-llvm::Expected<v1::Relation>
-Marshaller::toProtobuf(const clangd::SymbolID &Subject,
-                       const clangd::Symbol &Object) {
-  v1::Relation Result;
+llvm::Expected<Relation> Marshaller::toProtobuf(const clangd::SymbolID &Subject,
+                                                const clangd::Symbol &Object) {
+  Relation Result;
   *Result.mutable_subject_id() = Subject.str();
   auto SerializedObject = toProtobuf(Object);
   if (!SerializedObject)
@@ -346,23 +342,22 @@ llvm::Expected<std::string> Marshaller::uriToRelativePath(llvm::StringRef URI) {
 }
 
 clangd::SymbolLocation::Position
-Marshaller::fromProtobuf(const v1::Position &Message) {
+Marshaller::fromProtobuf(const Position &Message) {
   clangd::SymbolLocation::Position Result;
   Result.setColumn(static_cast<uint32_t>(Message.column()));
   Result.setLine(static_cast<uint32_t>(Message.line()));
   return Result;
 }
 
-v1::Position
+Position
 Marshaller::toProtobuf(const clangd::SymbolLocation::Position &Position) {
-  remote::v1::Position Result;
+  remote::Position Result;
   Result.set_column(Position.column());
   Result.set_line(Position.line());
   return Result;
 }
 
-clang::index::SymbolInfo
-Marshaller::fromProtobuf(const v1::SymbolInfo &Message) {
+clang::index::SymbolInfo Marshaller::fromProtobuf(const SymbolInfo &Message) {
   clang::index::SymbolInfo Result;
   Result.Kind = static_cast<clang::index::SymbolKind>(Message.kind());
   Result.SubKind = static_cast<clang::index::SymbolSubKind>(Message.subkind());
@@ -372,8 +367,8 @@ Marshaller::fromProtobuf(const v1::SymbolInfo &Message) {
   return Result;
 }
 
-v1::SymbolInfo Marshaller::toProtobuf(const clang::index::SymbolInfo &Info) {
-  v1::SymbolInfo Result;
+SymbolInfo Marshaller::toProtobuf(const clang::index::SymbolInfo &Info) {
+  SymbolInfo Result;
   Result.set_kind(static_cast<uint32_t>(Info.Kind));
   Result.set_subkind(static_cast<uint32_t>(Info.SubKind));
   Result.set_language(static_cast<uint32_t>(Info.Lang));
@@ -382,7 +377,7 @@ v1::SymbolInfo Marshaller::toProtobuf(const clang::index::SymbolInfo &Info) {
 }
 
 llvm::Expected<clangd::SymbolLocation>
-Marshaller::fromProtobuf(const v1::SymbolLocation &Message) {
+Marshaller::fromProtobuf(const SymbolLocation &Message) {
   clangd::SymbolLocation Location;
   auto URIString = relativePathToURI(Message.file_path());
   if (!URIString)
@@ -393,9 +388,9 @@ Marshaller::fromProtobuf(const v1::SymbolLocation &Message) {
   return Location;
 }
 
-llvm::Expected<v1::SymbolLocation>
+llvm::Expected<SymbolLocation>
 Marshaller::toProtobuf(const clangd::SymbolLocation &Location) {
-  remote::v1::SymbolLocation Result;
+  remote::SymbolLocation Result;
   auto RelativePath = uriToRelativePath(Location.FileURI);
   if (!RelativePath)
     return RelativePath.takeError();
@@ -405,9 +400,9 @@ Marshaller::toProtobuf(const clangd::SymbolLocation &Location) {
   return Result;
 }
 
-llvm::Expected<v1::HeaderWithReferences> Marshaller::toProtobuf(
+llvm::Expected<HeaderWithReferences> Marshaller::toProtobuf(
     const clangd::Symbol::IncludeHeaderWithReferences &IncludeHeader) {
-  v1::HeaderWithReferences Result;
+  HeaderWithReferences Result;
   Result.set_references(IncludeHeader.References);
   const std::string Header = IncludeHeader.IncludeHeader.str();
   if (isLiteralInclude(Header)) {
@@ -422,7 +417,7 @@ llvm::Expected<v1::HeaderWithReferences> Marshaller::toProtobuf(
 }
 
 llvm::Expected<clangd::Symbol::IncludeHeaderWithReferences>
-Marshaller::fromProtobuf(const v1::HeaderWithReferences &Message) {
+Marshaller::fromProtobuf(const HeaderWithReferences &Message) {
   std::string Header = Message.header();
   if (!isLiteralInclude(Header)) {
     auto URIString = relativePathToURI(Header);

@@ -38,33 +38,32 @@ public:
   Marshaller() = delete;
   Marshaller(llvm::StringRef RemoteIndexRoot, llvm::StringRef LocalIndexRoot);
 
-  llvm::Expected<clangd::Symbol> fromProtobuf(const v1::Symbol &Message);
-  llvm::Expected<clangd::Ref> fromProtobuf(const v1::Ref &Message);
+  llvm::Expected<clangd::Symbol> fromProtobuf(const Symbol &Message);
+  llvm::Expected<clangd::Ref> fromProtobuf(const Ref &Message);
   llvm::Expected<std::pair<clangd::SymbolID, clangd::Symbol>>
-  fromProtobuf(const v1::Relation &Message);
+  fromProtobuf(const Relation &Message);
 
   llvm::Expected<clangd::LookupRequest>
-  fromProtobuf(const v1::LookupRequest *Message);
+  fromProtobuf(const LookupRequest *Message);
   llvm::Expected<clangd::FuzzyFindRequest>
-  fromProtobuf(const v1::FuzzyFindRequest *Message);
-  llvm::Expected<clangd::RefsRequest>
-  fromProtobuf(const v1::RefsRequest *Message);
+  fromProtobuf(const FuzzyFindRequest *Message);
+  llvm::Expected<clangd::RefsRequest> fromProtobuf(const RefsRequest *Message);
   llvm::Expected<clangd::RelationsRequest>
-  fromProtobuf(const v1::RelationsRequest *Message);
+  fromProtobuf(const RelationsRequest *Message);
 
   /// toProtobuf() functions serialize native clangd types and strip IndexRoot
   /// from the file paths specific to indexing machine. fromProtobuf() functions
   /// deserialize clangd types and translate relative paths into machine-native
   /// URIs.
-  v1::LookupRequest toProtobuf(const clangd::LookupRequest &From);
-  v1::FuzzyFindRequest toProtobuf(const clangd::FuzzyFindRequest &From);
-  v1::RefsRequest toProtobuf(const clangd::RefsRequest &From);
-  v1::RelationsRequest toProtobuf(const clangd::RelationsRequest &From);
+  LookupRequest toProtobuf(const clangd::LookupRequest &From);
+  FuzzyFindRequest toProtobuf(const clangd::FuzzyFindRequest &From);
+  RefsRequest toProtobuf(const clangd::RefsRequest &From);
+  RelationsRequest toProtobuf(const clangd::RelationsRequest &From);
 
-  llvm::Expected<v1::Symbol> toProtobuf(const clangd::Symbol &From);
-  llvm::Expected<v1::Ref> toProtobuf(const clangd::Ref &From);
-  llvm::Expected<v1::Relation> toProtobuf(const clangd::SymbolID &Subject,
-                                          const clangd::Symbol &Object);
+  llvm::Expected<Symbol> toProtobuf(const clangd::Symbol &From);
+  llvm::Expected<Ref> toProtobuf(const clangd::Ref &From);
+  llvm::Expected<Relation> toProtobuf(const clangd::SymbolID &Subject,
+                                      const clangd::Symbol &Object);
 
   /// Translates \p RelativePath into the absolute path and builds URI for the
   /// user machine. This translation happens on the client side with the
@@ -78,18 +77,18 @@ public:
   llvm::Expected<std::string> uriToRelativePath(llvm::StringRef URI);
 
 private:
-  clangd::SymbolLocation::Position fromProtobuf(const v1::Position &Message);
-  v1::Position toProtobuf(const clangd::SymbolLocation::Position &Position);
-  clang::index::SymbolInfo fromProtobuf(const v1::SymbolInfo &Message);
-  v1::SymbolInfo toProtobuf(const clang::index::SymbolInfo &Info);
+  clangd::SymbolLocation::Position fromProtobuf(const Position &Message);
+  Position toProtobuf(const clangd::SymbolLocation::Position &Position);
+  clang::index::SymbolInfo fromProtobuf(const SymbolInfo &Message);
+  SymbolInfo toProtobuf(const clang::index::SymbolInfo &Info);
   llvm::Expected<clangd::SymbolLocation>
-  fromProtobuf(const v1::SymbolLocation &Message);
-  llvm::Expected<v1::SymbolLocation>
+  fromProtobuf(const SymbolLocation &Message);
+  llvm::Expected<SymbolLocation>
   toProtobuf(const clangd::SymbolLocation &Location);
-  llvm::Expected<v1::HeaderWithReferences>
+  llvm::Expected<HeaderWithReferences>
   toProtobuf(const clangd::Symbol::IncludeHeaderWithReferences &IncludeHeader);
   llvm::Expected<clangd::Symbol::IncludeHeaderWithReferences>
-  fromProtobuf(const v1::HeaderWithReferences &Message);
+  fromProtobuf(const HeaderWithReferences &Message);
 
   /// RemoteIndexRoot and LocalIndexRoot are absolute paths to the project (on
   /// remote and local machine respectively) and include a trailing slash. One
