@@ -1757,7 +1757,7 @@ int main(int argc, char **argv) {
   if (testEmitIncludeTdHeader)
     output->os() << "include \"mlir/Dialect/Linalg/IR/LinalgStructuredOps.td\"";
 
-  MLIRContext context(/*loadAllDialects=*/false);
+  MLIRContext context;
   llvm::SourceMgr mgr;
   mgr.AddNewSourceBuffer(std::move(file), llvm::SMLoc());
   Parser parser(mgr, &context);
