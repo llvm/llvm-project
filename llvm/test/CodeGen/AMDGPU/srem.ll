@@ -1,6 +1,17 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -march=r600 -mcpu=redwood < %s
+; RUN: llc -amdgpu-scalarize-global-loads=false --verify-machineinstrs -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=SI,GFX9 -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -march=r600 -mcpu=redwood -verify-machineinstrs < %s
+
+; FUNC-LABEL: {{^}}srem_i16_7:
+; GFX9: s_movk_i32 {{s[0-9]+}}, 0x4925
+; GFX9: v_mul_i32_i24_sdwa
+define amdgpu_kernel void @srem_i16_7(i16 addrspace(1)* %out, i16 addrspace(1)* %in) {
+  %num = load i16, i16 addrspace(1) * %in
+  %result = srem i16 %num, 7
+  store i16 %result, i16 addrspace(1)* %out
+  ret void
+}
 
 define amdgpu_kernel void @srem_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %den_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
