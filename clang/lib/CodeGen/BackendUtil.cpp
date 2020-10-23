@@ -476,6 +476,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
     Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
     break;
   case LangOptions::FPM_On:
+  case LangOptions::FPM_FastHonorPragmas:
     Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
     break;
   case LangOptions::FPM_Fast:

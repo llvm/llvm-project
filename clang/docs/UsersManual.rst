@@ -1291,15 +1291,16 @@ are listed below.
    The C standard permits intermediate floating-point results within an
    expression to be computed with more precision than their type would
    normally allow. This permits operation fusing, and Clang takes advantage
-   of this by default. This behavior can be controlled with the
-   ``FP_CONTRACT`` pragma. Please refer to the pragma documentation for a
-   description of how the pragma interacts with this option.
+   of this by default. This behavior can be controlled with the ``FP_CONTRACT``
+   and ``clang fp contract`` pragmas. Please refer to the pragma documentation
+   for a description of how the pragmas interact with this option.
 
    Valid values are:
 
-   * ``fast`` (everywhere)
-   * ``on`` (according to FP_CONTRACT pragma, default)
+   * ``fast`` (fuse across statements disregarding pragmas, default for CUDA)
+   * ``on`` (fuse in the same statement unless dictated by pragmas, default for languages other than CUDA/HIP)
    * ``off`` (never fuse)
+   * ``fast-honor-pragmas`` (fuse across statements unless dictated by pragmas, default for HIP)
 
 .. _opt_fhonor-infinities:
 

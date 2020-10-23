@@ -66,6 +66,7 @@
 // FNOSANICOVERALL-NEXT: trace-pc-guard
 // RUN: %clang --autocomplete=-ffp-contract= | FileCheck %s -check-prefix=FFPALL
 // FFPALL: fast
+// FFPALL-NEXT: fast-honor-pragmas 
 // FFPALL-NEXT: off
 // FFPALL-NEXT: on
 // RUN: %clang --autocomplete=-flto= | FileCheck %s -check-prefix=FLTOALL

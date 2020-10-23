@@ -2405,9 +2405,20 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
 
   Opts.HIP = IK.getLanguage() == Language::HIP;
   Opts.CUDA = IK.getLanguage() == Language::CUDA || Opts.HIP;
-  if (Opts.CUDA)
-    // Set default FP_CONTRACT to FAST.
+  if (Opts.HIP) {
+    // HIP toolchain does not support 'Fast' FPOpFusion in backends since it
+    // fuses multiplication/addition instructions without contract flag from
+    // device library functions in LLVM bitcode, which causes accuracy loss in
+    // certain math functions, e.g. tan(-1e20) becomes -0.933 instead of 0.8446.
+    // For device library functions in bitcode to work, 'Strict' or 'Standard'
+    // FPOpFusion options in backends is needed. Therefore 'fast-honor-pragmas'
+    // FP contract option is used to allow fuse across statements in frontend
+    // whereas respecting contract flag in backend.
+    Opts.setDefaultFPContractMode(LangOptions::FPM_FastHonorPragmas);
+  } else if (Opts.CUDA) {
+    // Allow fuse across statements disregarding pragmas.
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
+  }
 
   Opts.RenderScript = IK.getLanguage() == Language::RenderScript;
   if (Opts.RenderScript) {
@@ -3325,6 +3336,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Opts.setDefaultFPContractMode(LangOptions::FPM_On);
     else if (Val == "off")
       Opts.setDefaultFPContractMode(LangOptions::FPM_Off);
+    else if (Val == "fast-honor-pragmas")
+      Opts.setDefaultFPContractMode(LangOptions::FPM_FastHonorPragmas);
     else
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
   }

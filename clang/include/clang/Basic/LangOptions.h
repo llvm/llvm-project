@@ -187,8 +187,11 @@ public:
     // Enable the floating point pragma
     FPM_On,
 
-    // Aggressively fuse FP ops (E.g. FMA).
-    FPM_Fast
+    // Aggressively fuse FP ops (E.g. FMA) disregarding pragmas.
+    FPM_Fast,
+
+    // Aggressively fuse FP ops and honor pragmas.
+    FPM_FastHonorPragmas
   };
 
   /// Alias for RoundingMode::NearestTiesToEven.
@@ -410,7 +413,13 @@ public:
   }
   explicit FPOptions(const LangOptions &LO) {
     Value = 0;
-    setFPContractMode(LO.getDefaultFPContractMode());
+    // The language fp contract option FPM_FastHonorPragmas has the same effect
+    // as FPM_Fast in frontend. For simplicity, use FPM_Fast uniformly in
+    // frontend.
+    auto LangOptContractMode = LO.getDefaultFPContractMode();
+    if (LangOptContractMode == LangOptions::FPM_FastHonorPragmas)
+      LangOptContractMode = LangOptions::FPM_Fast;
+    setFPContractMode(LangOptContractMode);
     setRoundingMode(LO.getFPRoundingMode());
     setFPExceptionMode(LO.getFPExceptionMode());
     setAllowFPReassociate(LO.AllowFPReassoc);
