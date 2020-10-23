@@ -729,7 +729,7 @@ Optional<StringRef>
 SourceManager::getNonBuiltinFilenameForID(FileID FID) const {
   if (const SrcMgr::SLocEntry *Entry = getSLocEntryForFile(FID))
     if (auto *Content = Entry->getFile().getContentCache())
-      if (Content && Content->OrigEntry)
+      if (Content->OrigEntry)
         return Entry->getFile().getName();
   return None;
 }
