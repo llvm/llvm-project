@@ -44,8 +44,9 @@ module attributes {
 
     %cst1 = constant 1 : index
     %cst128 = constant 128 : index
-    "gpu.launch_func"(%cst128, %cst1, %cst1, %cst128, %cst1, %cst1, %arg0, %arg1, %arg2) { kernel = @kernels::@kernel_add }
-        : (index, index, index, index, index, index, memref<16384xf32>, memref<16384xf32>, memref<16384xf32>) -> ()
+    gpu.launch_func @kernels::@kernel_add
+        blocks in (%cst128, %cst1, %cst1) threads in (%cst128, %cst1, %cst1)
+        args(%arg0 : memref<16384xf32>, %arg1 : memref<16384xf32>, %arg2 : memref<16384xf32>)
     %arg6 = memref_cast %arg5 : memref<?xf32> to memref<*xf32>
     return
   }
