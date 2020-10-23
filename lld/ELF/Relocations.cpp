@@ -1319,28 +1319,6 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
   int64_t addend = computeAddend<ELFT>(rel, end, sec, expr, sym.isLocal());
 
   if (config->emachine == EM_PPC64) {
-    // For a call to __tls_get_addr, the instruction needs to be relocated by
-    // two relocations, R_PPC64_TLSGD/R_PPC64_TLSLD and R_PPC64_REL24[_NOTOC].
-    // R_PPC64_TLSGD/R_PPC64_TLSLD should precede R_PPC64_REL24[_NOTOC].
-    if ((type == R_PPC64_REL24 || type == R_PPC64_REL24_NOTOC) &&
-        sym.getName() == "__tls_get_addr") {
-      bool err = i - start < 2;
-      if (!err) {
-        // Subtract 2 to get the previous iterator because we have already done
-        // ++i above. This is now safe because we know that i-1 is not the
-        // start.
-        const RelTy &prevRel = *(i - 2);
-        RelType prevType = prevRel.getType(config->isMips64EL);
-        err = prevRel.r_offset != rel.r_offset ||
-              (prevType != R_PPC64_TLSGD && prevType != R_PPC64_TLSLD);
-      }
-
-      if (err)
-        errorOrWarn("call to __tls_get_addr is missing a "
-                    "R_PPC64_TLSGD/R_PPC64_TLSLD relocation" +
-                    getLocation(sec, sym, offset));
-    }
-
     // We can separate the small code model relocations into 2 categories:
     // 1) Those that access the compiler generated .toc sections.
     // 2) Those that access the linker allocated got entries.
