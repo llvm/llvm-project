@@ -8654,7 +8654,7 @@ Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
     }
     ToID = ToSM.getFileID(MLoc);
   } else {
-    const SrcMgr::ContentCache *Cache = FromSLoc.getFile().getContentCache();
+    const SrcMgr::ContentCache *Cache = &FromSLoc.getFile().getContentCache();
 
     if (!IsBuiltin && !Cache->BufferOverridden) {
       // Include location of this file.
