@@ -1288,7 +1288,7 @@ void DwarfDebug::finalizeModuleInfo() {
                       Asm->TM.Options.MCOptions.SplitDwarfFile);
       // Emit a unique identifier for this CU.
       uint64_t ID =
-          DIEHash(Asm).computeCUSignature(DWOName, TheCU.getUnitDie());
+          DIEHash(Asm, &TheCU).computeCUSignature(DWOName, TheCU.getUnitDie());
       if (getDwarfVersion() >= 5) {
         TheCU.setDWOId(ID);
         SkCU->setDWOId(ID);
