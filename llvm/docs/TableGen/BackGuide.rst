@@ -22,8 +22,8 @@ for C++, but may be any type of file that the backend developer needs.
 This document is a guide to writing a backend for TableGen. It is not a
 complete reference manual, but rather a guide to using the facilities
 provided by TableGen for the backends. For a complete reference to the
-various data structures and functions involved, see the Doxygen
-documentation.
+various data structures and functions involved, see the primary TableGen
+header file (``record.h``) and/or the Doxygen documentation.
 
 This document assumes that you have read the :doc:`TableGen Programmer's
 Reference <./ProgRef>`, which provides a detailed reference for coding
