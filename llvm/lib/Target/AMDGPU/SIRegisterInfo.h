@@ -68,6 +68,7 @@ public:
   const MCPhysReg *getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
+  const uint32_t *getNoPreservedMask() const override;
 
   // Stack access is very expensive. CSRs are also the high registers, and we
   // want to minimize the number of used registers.

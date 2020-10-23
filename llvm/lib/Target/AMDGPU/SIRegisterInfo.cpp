@@ -152,6 +152,10 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   }
 }
 
+const uint32_t *SIRegisterInfo::getNoPreservedMask() const {
+  return CSR_AMDGPU_NoRegs_RegMask;
+}
+
 Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const SIFrameLowering *TFI =
       MF.getSubtarget<GCNSubtarget>().getFrameLowering();
