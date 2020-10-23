@@ -1,4 +1,5 @@
 add_mlir_conversion_library(MLIRSPIRVToLLVM
+  ConvertLaunchFuncToLLVMCalls.cpp
   ConvertSPIRVToLLVM.cpp
   ConvertSPIRVToLLVMPass.cpp
 
@@ -10,6 +11,7 @@ add_mlir_conversion_library(MLIRSPIRVToLLVM
   intrinsics_gen
 
   LINK_LIBS PUBLIC
+  MLIRGPU
   MLIRSPIRV
   MLIRLLVMIR
   MLIRStandardToLLVM
