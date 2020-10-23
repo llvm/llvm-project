@@ -18,7 +18,6 @@
 #include <string>
 #include <chrono>
 #include <vector>
-#include <regex>
 
 #include "test_macros.h"
 #include "rapid-cxx-test.h"
