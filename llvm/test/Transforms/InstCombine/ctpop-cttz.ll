@@ -21,7 +21,7 @@ define i32 @ctpop1(i32 %0) {
 define <2 x i32> @ctpop1v(<2 x i32> %0) {
 ; CHECK-LABEL: @ctpop1v(
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP0:%.*]], i1 false)
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw <2 x i32> <i32 32, i32 32>, [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nuw nsw <2 x i32> <i32 32, i32 32>, [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
 ;
   %2 = sub <2 x i32> zeroinitializer, %0
