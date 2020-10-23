@@ -2322,8 +2322,6 @@ unsigned AArch64AsmParser::matchRegisterNameAlias(StringRef Name,
     if (auto RegNum = StringSwitch<unsigned>(Name.lower())
                     .Case("fp", AArch64::FP)
                     .Case("lr",  AArch64::LR)
-                    .Case("x31", AArch64::XZR)
-                    .Case("w31", AArch64::WZR)
                     .Default(0))
       return Kind == RegKind::Scalar ? RegNum : 0;
 

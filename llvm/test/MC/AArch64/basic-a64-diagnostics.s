@@ -2443,29 +2443,37 @@
 //// 32-bit addresses
         ldr w0, [w20]
         ldrsh x3, [wsp]
+        ldrb   w0, [sp, x31]
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldr w0, [w20]
 // CHECK-ERROR-NEXT:                  ^
 // CHECK-ERROR-NEXT: error: invalid operand for instruction
 // CHECK-ERROR-NEXT:         ldrsh x3, [wsp]
 // CHECK-ERROR-NEXT:                    ^
+// CHECK-ERROR-NEXT: error: index must be an integer in range [-256, 255].
+// CHECK-ERROR-NEXT: ldrb   w0, [sp, x31]
+// CHECK-ERROR-NETX:                 ^
 
 //// Store things
         strb w0, [wsp]
         strh w31, [x23, #1]
         str x5, [x22, #12]
         str w7, [x12, #16384]
+        strb   w0, [sp, x31]
 // CHECK-ERROR: error: invalid operand for instruction
 // CHECK-ERROR-NEXT: strb w0, [wsp]
 // CHECK-ERROR-NEXT:           ^
-// CHECK-ERROR-AARCH64: error: invalid operand for instruction
-// CHECK-ERROR-AARCH64-NEXT:         strh w31, [x23, #1]
-// CHECK-ERROR-AARCH64-NEXT:              ^
+// CHECK-ERROR: error: invalid operand for instruction
+// CHECK-ERROR-NEXT:         strh w31, [x23, #1]
+// CHECK-ERROR-NEXT:              ^
 // CHECK-ERROR-AARCH64-NEXT: error: too few operands for instruction
 // CHECK-ERROR-AARCH64-NEXT:         str x5, [x22, #12]
 // CHECK-ERROR-AARCH64-NEXT:                 ^
 // CHECK-ERROR-NEXT: error: {{expected|index must be an}} integer in range [-256, 255]
 // CHECK-ERROR-NEXT:         str w7, [x12, #16384]
+// CHECK-ERROR-NEXT:                 ^
+// CHECK-ERROR-NEXT: error: index must be an integer in range [-256, 255].
+// CHECK-ERROR-NEXT: strb   w0, [sp, x31]
 // CHECK-ERROR-NEXT:                 ^
 
 //// Bad PRFMs
