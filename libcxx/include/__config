@@ -1460,21 +1460,6 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS  _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS
 #endif
 
-// The stream API was dropped and re-added in the dylib shipped on macOS
-// and iOS. We can only assume the dylib to provide these definitions for
-// macosx >= 10.9 and ios >= 7.0. Otherwise, the definitions are available
-// from the headers, but not from the dylib. Explicit instantiation
-// declarations for streams exist conditionally to this; if we provide
-// an explicit instantiation declaration and we try to deploy to a dylib
-// that does not provide those symbols, we'll get a load-time error.
-#if !defined(_LIBCPP_BUILDING_LIBRARY) &&                                      \
-    ((defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                \
-      __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 1090) ||                 \
-     (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) &&               \
-      __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 70000))
-#  define _LIBCPP_DO_NOT_ASSUME_STREAMS_EXPLICIT_INSTANTIATION_IN_DYLIB
-#endif
-
 #if defined(_LIBCPP_COMPILER_IBM)
 #define _LIBCPP_HAS_NO_PRAGMA_PUSH_POP_MACRO
 #endif
