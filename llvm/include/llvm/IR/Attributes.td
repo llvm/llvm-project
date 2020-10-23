@@ -179,6 +179,9 @@ def StackAlignment : IntAttr<"alignstack">;
 /// Function can be speculated.
 def Speculatable : EnumAttr<"speculatable">;
 
+/// Stack protection explicitly disabled.
+def NoStackProtect : EnumAttr<"nossp">;
+
 /// Stack protection.
 def StackProtect : EnumAttr<"ssp">;
 
