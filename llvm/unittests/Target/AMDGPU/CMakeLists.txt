@@ -7,6 +7,8 @@ set(LLVM_LINK_COMPONENTS
   AMDGPUCodeGen
   AMDGPUDesc
   AMDGPUInfo
+  CodeGen
+  Core
   MC
   Support
   )
