@@ -153,6 +153,7 @@ __OMP_TYPE(Int32Ptr)
 __OMP_TYPE(Int64Ptr)
 
 OMP_TYPE(SizeTy, M.getDataLayout().getIntPtrType(Ctx))
+OMP_TYPE(LanemaskTy, getLanemaskType())
 
 #define __OMP_PTR_TYPE(NAME, BASE) OMP_TYPE(NAME, BASE->getPointerTo())
 
@@ -553,8 +554,9 @@ __OMP_RTL(__kmpc_get_team_static_memory, false, Void, Int16, VoidPtr, SizeTy,
           Int16, VoidPtrPtr)
 __OMP_RTL(__kmpc_restore_team_static_memory, false, Void, Int16, Int16)
 __OMP_RTL(__kmpc_barrier_simple_spmd, false, Void, IdentPtr, Int32)
-__OMP_RTL(__kmpc_warp_active_thread_mask, false, Int32, )
-__OMP_RTL(__kmpc_syncwarp, false, Void, Int32)
+
+__OMP_RTL(__kmpc_warp_active_thread_mask, false, LanemaskTy,)
+__OMP_RTL(__kmpc_syncwarp, false, Void, LanemaskTy)
 
 __OMP_RTL(__last, false, Void, )
 
