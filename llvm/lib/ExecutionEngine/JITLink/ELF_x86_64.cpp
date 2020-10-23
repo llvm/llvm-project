@@ -232,6 +232,7 @@ private:
     case ELF::R_X86_64_64:
       return ELF_x86_64_Edges::ELFX86RelocationKind::Pointer64;
     case ELF::R_X86_64_GOTPCREL:
+    case ELF::R_X86_64_REX_GOTPCRELX:
       return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32GOTLoad;
     }
     return make_error<JITLinkError>("Unsupported x86-64 relocation:" +
