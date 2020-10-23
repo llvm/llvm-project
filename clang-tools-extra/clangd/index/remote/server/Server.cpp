@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Index.pb.h"
+#include "Service.grpc.pb.h"
 #include "index/Index.h"
 #include "index/Serialization.h"
 #include "index/Symbol.h"
