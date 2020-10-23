@@ -140,6 +140,11 @@ public:
         MachineFunctionProperties::Property::NoPHIs);
   }
 
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().set(
+      MachineFunctionProperties::Property::IsSSA);
+  }
+
 private:
   using LI2NodeMap = std::map<const LiveInterval *, unsigned>;
   using Node2LIMap = std::vector<const LiveInterval *>;
