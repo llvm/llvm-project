@@ -1,6 +1,7 @@
 set(LLVM_OPTIONAL_SOURCES
   AffineAnalysis.cpp
   AffineStructures.cpp
+  BufferAliasAnalysis.cpp
   CallGraph.cpp
   Liveness.cpp
   LoopAnalysis.cpp
@@ -11,6 +12,7 @@ set(LLVM_OPTIONAL_SOURCES
   )
 
 add_mlir_library(MLIRAnalysis
+  BufferAliasAnalysis.cpp
   CallGraph.cpp
   Liveness.cpp
   SliceAnalysis.cpp
