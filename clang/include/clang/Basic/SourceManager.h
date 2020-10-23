@@ -997,8 +997,11 @@ public:
     return nullptr;
   }
 
-  /// Returns the FileEntryRef for the provided FileID.
-  Optional<FileEntryRef> getFileEntryRefForID(FileID FID) const;
+  /// Returns the filename for the provided FileID, unless it's a built-in
+  /// buffer that's not represented by a filename.
+  ///
+  /// Returns None for non-files and built-in files.
+  Optional<StringRef> getNonBuiltinFilenameForID(FileID FID) const;
 
   /// Returns the FileEntry record for the provided SLocEntry.
   const FileEntry *getFileEntryForSLocEntry(const SrcMgr::SLocEntry &sloc) const
