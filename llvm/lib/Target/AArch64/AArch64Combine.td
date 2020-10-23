@@ -83,12 +83,21 @@ def vashr_vlshr_imm : GICombineRule<
   (apply [{ applyVAshrLshrImm(*${root}, MRI, ${matchinfo}); }])
 >;
 
+// Post-legalization combines which should happen at all optimization levels.
+// (E.g. ones that facilitate matching for the selector) For example, matching
+// pseudos.
+def AArch64PostLegalizerLoweringHelper
+    : GICombinerHelper<"AArch64GenPostLegalizerLoweringHelper",
+                       [shuffle_vector_pseudos, vashr_vlshr_imm]> {
+  let DisableRuleOption = "aarch64postlegalizerlowering-disable-rule";
+}
 
+// Post-legalization combines which are primarily optimizations.
 def AArch64PostLegalizerCombinerHelper
     : GICombinerHelper<"AArch64GenPostLegalizerCombinerHelper",
                        [copy_prop, erase_undef_store, combines_for_extload,
-                        sext_trunc_sextload, shuffle_vector_pseudos,
+                        sext_trunc_sextload,
                         hoist_logic_op_with_same_opcode_hands,
-                        and_trivial_mask, vashr_vlshr_imm, xor_of_and_with_same_reg]> {
+                        and_trivial_mask, xor_of_and_with_same_reg]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }
