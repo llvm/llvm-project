@@ -19,7 +19,7 @@
 
 # NO-SWIFT-SYMBOLS:      Symbols [
 # NO-SWIFT-SYMBOLS-NEXT:  Symbol {
-# NO-SWIFT-SYMBOLS-NEXT:    Name: _main (1)
+# NO-SWIFT-SYMBOLS-NEXT:    Name: _main (2)
 # NO-SWIFT-SYMBOLS-NEXT:    Extern
 # NO-SWIFT-SYMBOLS-NEXT:    Type: Section (0xE)
 # NO-SWIFT-SYMBOLS-NEXT:    Section: __text (0x1)
@@ -73,7 +73,7 @@
 
 # SWIFT-SYMBOLS:      Symbols [
 # SWIFT-SYMBOLS-NEXT:  Symbol {
-# SWIFT-SYMBOLS-NEXT:    Name: _$S1a13PublicSymbol1Sivp (26)
+# SWIFT-SYMBOLS-NEXT:    Name: _$S1a13PublicSymbol1Sivp (27)
 # SWIFT-SYMBOLS-NEXT:    Extern
 # SWIFT-SYMBOLS-NEXT:    Type: Section (0xE)
 # SWIFT-SYMBOLS-NEXT:    Section: __text (0x1)
@@ -83,7 +83,7 @@
 # SWIFT-SYMBOLS-NEXT:    Value: 0x100001160
 # SWIFT-SYMBOLS-NEXT:  }
 # SWIFT-SYMBOLS-NEXT:  Symbol {
-# SWIFT-SYMBOLS-NEXT:    Name: _$s1a13PublicSymbol2Sivp (1)
+# SWIFT-SYMBOLS-NEXT:    Name: _$s1a13PublicSymbol2Sivp (2)
 # SWIFT-SYMBOLS-NEXT:    Extern
 # SWIFT-SYMBOLS-NEXT:    Type: Section (0xE)
 # SWIFT-SYMBOLS-NEXT:    Section: __text (0x1)
@@ -93,7 +93,7 @@
 # SWIFT-SYMBOLS-NEXT:    Value: 0x100001168
 # SWIFT-SYMBOLS-NEXT:  }
 # SWIFT-SYMBOLS-NEXT:  Symbol {
-# SWIFT-SYMBOLS-NEXT:    Name: _main (51)
+# SWIFT-SYMBOLS-NEXT:    Name: _main (52)
 # SWIFT-SYMBOLS-NEXT:    Extern
 # SWIFT-SYMBOLS-NEXT:    Type: Section (0xE)
 # SWIFT-SYMBOLS-NEXT:    Section: __text (0x1)
