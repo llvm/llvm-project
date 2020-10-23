@@ -85,21 +85,51 @@ SmallVector<Value, 1> unrollSingleResultVectorOp(OpBuilder &builder,
 LogicalResult unrollTransferWriteOp(OpBuilder &builder, Operation *op,
                                     ArrayRef<int64_t> targetShape);
 
+/// Options that control the vector unrolling.
+struct UnrollVectorOptions {
+  using FilterConstraintFnType = std::function<LogicalResult(Operation *op)>;
+  /// Callback function that indicates whether vector unrolling should be
+  /// attempted on the operation.
+  FilterConstraintFnType filterConstraint = nullptr;
+  UnrollVectorOptions &setFilterContraint(FilterConstraintFnType constraint) {
+    filterConstraint = constraint;
+    return *this;
+  }
+
+  using NativeShapeFnType =
+      std::function<Optional<SmallVector<int64_t, 4>>(Operation *op)>;
+  /// Function that returns the shape of the vector to unroll to for a given
+  /// operation. The unrolling is aborted if the function returns `llvm::None`.
+  NativeShapeFnType nativeShape = nullptr;
+  UnrollVectorOptions &setNativeShapeFn(NativeShapeFnType fn) {
+    nativeShape = fn;
+    return *this;
+  }
+
+  /// Set the native shape to use for unrolling.
+  UnrollVectorOptions &setNativeShape(ArrayRef<int64_t> shape) {
+    SmallVector<int64_t, 4> tsShape(shape.begin(), shape.end());
+    nativeShape = [=](Operation *) -> Optional<SmallVector<int64_t, 4>> {
+      return tsShape;
+    };
+    return *this;
+  }
+};
 /// Pattern to apply `unrollSingleResultVectorOp` to a `targetShape`
 /// declaratively.
 template <typename OpTy>
 struct UnrollVectorPattern : public OpRewritePattern<OpTy> {
   using FilterConstraintType = std::function<LogicalResult(OpTy op)>;
-  UnrollVectorPattern(
-      ArrayRef<int64_t> targetShape, MLIRContext *context,
-      FilterConstraintType constraint = [](OpTy op) { return success(); })
-      : OpRewritePattern<OpTy>(context),
-        targetShape(targetShape.begin(), targetShape.end()),
-        filter(constraint) {}
+  UnrollVectorPattern(MLIRContext *context, UnrollVectorOptions options)
+      : OpRewritePattern<OpTy>(context), options(options) {}
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(filter(op)))
+    if (options.filterConstraint && failed(options.filterConstraint(op)))
       return failure();
+    if (!options.nativeShape) {
+      return op.emitError("vector unrolling expects the native shape or native"
+                          "shape call back function to be set");
+    }
     auto unrollableVectorOp =
         dyn_cast<VectorUnrollOpInterface>(op.getOperation());
     if (!unrollableVectorOp)
@@ -107,19 +137,22 @@ struct UnrollVectorPattern : public OpRewritePattern<OpTy> {
     auto maybeUnrollShape = unrollableVectorOp.getShapeForUnroll();
     if (!maybeUnrollShape)
       return failure();
-    auto maybeShapeRatio = shapeRatio(*maybeUnrollShape, targetShape);
+    Optional<SmallVector<int64_t, 4>> targetShape = options.nativeShape(op);
+    if (!targetShape)
+      return op.emitError("failed to get target shape for vector unroll");
+    auto maybeShapeRatio = shapeRatio(*maybeUnrollShape, *targetShape);
     if (!maybeShapeRatio ||
         llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; }))
       return failure();
     if (std::is_same<OpTy, TransferWriteOp>::value) {
-      if (failed(unrollTransferWriteOp(rewriter, op, targetShape)))
+      if (failed(unrollTransferWriteOp(rewriter, op, *targetShape)))
         return failure();
       rewriter.eraseOp(op);
       return success();
     }
     if (op.getOperation()->getNumResults() != 1)
       return failure();
-    auto resultVector = unrollSingleResultVectorOp(rewriter, op, targetShape);
+    auto resultVector = unrollSingleResultVectorOp(rewriter, op, *targetShape);
     if (resultVector.size() != 1)
       return failure();
     rewriter.replaceOp(op, resultVector.front());
@@ -127,8 +160,7 @@ struct UnrollVectorPattern : public OpRewritePattern<OpTy> {
   }
 
 private:
-  SmallVector<int64_t, 4> targetShape;
-  FilterConstraintType filter;
+  UnrollVectorOptions options;
 };
 
 /// Split a vector.transfer operation into an unmasked fastpath and a slowpath.
