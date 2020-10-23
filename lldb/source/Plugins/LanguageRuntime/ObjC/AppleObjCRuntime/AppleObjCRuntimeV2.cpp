@@ -848,7 +848,9 @@ AppleObjCRuntimeV2::CreateExceptionResolver(const BreakpointSP &bkpt,
   return resolver_sp;
 }
 
-UtilityFunction *AppleObjCRuntimeV2::CreateObjectChecker(const char *name) {
+llvm::Expected<std::unique_ptr<UtilityFunction>>
+AppleObjCRuntimeV2::CreateObjectChecker(std::string name,
+                                        ExecutionContext &exe_ctx) {
   char check_function_code[2048];
 
   int len = 0;
@@ -869,7 +871,8 @@ UtilityFunction *AppleObjCRuntimeV2::CreateObjectChecker(const char *name) {
                          if ($responds == (signed char) 0)
                            *((volatile int *)0) = 'ocgc';
                        }
-                     })", name);
+                     })",
+                     name.c_str());
   } else {
     len = ::snprintf(check_function_code, sizeof(check_function_code), R"(
                      extern "C" void *gdb_class_getClass(void *);
@@ -889,15 +892,15 @@ UtilityFunction *AppleObjCRuntimeV2::CreateObjectChecker(const char *name) {
                          if ($responds == (signed char) 0)
                            *((volatile int *)0) = 'ocgc';
                        }
-                     })", name);
+                     })",
+                     name.c_str());
   }
 
   assert(len < (int)sizeof(check_function_code));
   UNUSED_IF_ASSERT_DISABLED(len);
 
-  Status error;
-  return GetTargetRef().GetUtilityFunctionForLanguage(
-      check_function_code, eLanguageTypeObjC, name, error);
+  return GetTargetRef().CreateUtilityFunction(check_function_code, name,
+                                              eLanguageTypeC, exe_ctx);
 }
 
 size_t AppleObjCRuntimeV2::GetByteOffsetForIvar(CompilerType &parent_ast_type,
@@ -1348,8 +1351,6 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
 
   Address function_address;
 
-  DiagnosticManager diagnostics;
-
   const uint32_t addr_size = process->GetAddressByteSize();
 
   Status err;
@@ -1371,28 +1372,16 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
   FunctionCaller *get_class_info_function = nullptr;
 
   if (!m_get_class_info_code) {
-    Status error;
-    m_get_class_info_code.reset(GetTargetRef().GetUtilityFunctionForLanguage(
-        g_get_dynamic_class_info_body, eLanguageTypeObjC,
-        g_get_dynamic_class_info_name, error));
-    if (error.Fail()) {
-      LLDB_LOGF(log,
-                "Failed to get Utility Function for implementation lookup: %s",
-                error.AsCString());
-      m_get_class_info_code.reset();
-    } else {
-      diagnostics.Clear();
-
-      if (!m_get_class_info_code->Install(diagnostics, exe_ctx)) {
-        if (log) {
-          LLDB_LOGF(log, "Failed to install implementation lookup");
-          diagnostics.Dump(log);
-        }
-        m_get_class_info_code.reset();
-      }
-    }
-    if (!m_get_class_info_code)
+    auto utility_fn_or_error = GetTargetRef().CreateUtilityFunction(
+        g_get_dynamic_class_info_body, g_get_dynamic_class_info_name,
+        eLanguageTypeC, exe_ctx);
+    if (!utility_fn_or_error) {
+      LLDB_LOG_ERROR(
+          log, utility_fn_or_error.takeError(),
+          "Failed to get utility function for implementation lookup: {0}");
       return DescriptorMapUpdateResult::Fail();
+    }
+    m_get_class_info_code = std::move(*utility_fn_or_error);
 
     // Next make the runner function for our implementation utility function.
     Value value;
@@ -1406,6 +1395,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
     arguments.PushValue(value);
     arguments.PushValue(value);
 
+    Status error;
     get_class_info_function = m_get_class_info_code->MakeFunctionCaller(
         clang_uint32_t_type, arguments, thread_sp, error);
 
@@ -1418,17 +1408,13 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
   } else {
     get_class_info_function = m_get_class_info_code->GetFunctionCaller();
     if (!get_class_info_function) {
-      if (log) {
-        LLDB_LOGF(log, "Failed to get implementation lookup function caller.");
-        diagnostics.Dump(log);
-      }
-
+      LLDB_LOGF(log, "Failed to get implementation lookup function caller.");
       return DescriptorMapUpdateResult::Fail();
     }
     arguments = get_class_info_function->GetArgumentValues();
   }
 
-  diagnostics.Clear();
+  DiagnosticManager diagnostics;
 
   const uint32_t class_info_byte_size = addr_size + 4;
   const uint32_t class_infos_byte_size = num_classes * class_info_byte_size;
@@ -1608,8 +1594,6 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
 
   Address function_address;
 
-  DiagnosticManager diagnostics;
-
   const uint32_t addr_size = process->GetAddressByteSize();
 
   Status err;
@@ -1671,29 +1655,17 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
 
     shared_class_expression += g_get_shared_cache_class_info_body;
 
-    m_get_shared_cache_class_info_code.reset(
-        GetTargetRef().GetUtilityFunctionForLanguage(
-            shared_class_expression.c_str(), eLanguageTypeObjC,
-            g_get_shared_cache_class_info_name, error));
-    if (error.Fail()) {
-      LLDB_LOGF(log,
-                "Failed to get Utility function for implementation lookup: %s.",
-                error.AsCString());
-      m_get_shared_cache_class_info_code.reset();
-    } else {
-      diagnostics.Clear();
-
-      if (!m_get_shared_cache_class_info_code->Install(diagnostics, exe_ctx)) {
-        if (log) {
-          LLDB_LOGF(log, "Failed to install implementation lookup.");
-          diagnostics.Dump(log);
-        }
-        m_get_shared_cache_class_info_code.reset();
-      }
+    auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
+        std::move(shared_class_expression), g_get_shared_cache_class_info_name,
+        eLanguageTypeC, exe_ctx);
+    if (!utility_fn_or_error) {
+      LLDB_LOG_ERROR(
+          log, utility_fn_or_error.takeError(),
+          "Failed to get utility function for implementation lookup: {0}");
+      return DescriptorMapUpdateResult::Fail();
     }
 
-    if (!m_get_shared_cache_class_info_code)
-      return DescriptorMapUpdateResult::Fail();
+    m_get_shared_cache_class_info_code = std::move(*utility_fn_or_error);
 
     // Next make the function caller for our implementation utility function.
     Value value;
@@ -1722,7 +1694,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
     arguments = get_shared_cache_class_info_function->GetArgumentValues();
   }
 
-  diagnostics.Clear();
+  DiagnosticManager diagnostics;
 
   const uint32_t class_info_byte_size = addr_size + 4;
   const uint32_t class_infos_byte_size = num_classes * class_info_byte_size;

@@ -244,7 +244,6 @@ public:
 
   void UpdateLaunchInfoFromProperties();
 
-
 private:
   // Callbacks for m_launch_info.
   void Arg0ValueChangedCallback();
@@ -1124,14 +1123,10 @@ public:
                                                const ValueList &arg_value_list,
                                                const char *name, Status &error);
 
-  // Creates a UtilityFunction for the given language, the rest of the
-  // parameters have the same meaning as for the UtilityFunction constructor.
-  // Returns a new-ed object which the caller owns.
-
-  UtilityFunction *GetUtilityFunctionForLanguage(const char *expr,
-                                                 lldb::LanguageType language,
-                                                 const char *name,
-                                                 Status &error);
+  /// Creates and installs a UtilityFunction for the given language.
+  llvm::Expected<std::unique_ptr<UtilityFunction>>
+  CreateUtilityFunction(std::string expression, std::string name,
+                        lldb::LanguageType language, ExecutionContext &exe_ctx);
 
 
 #ifdef LLDB_ENABLE_SWIFT
