@@ -619,6 +619,18 @@ inline cstfp_pred_ty<is_finite> m_Finite() {
 }
 inline apf_pred_ty<is_finite> m_Finite(const APFloat *&V) { return V; }
 
+struct is_finitenonzero {
+  bool isValue(const APFloat &C) { return C.isFiniteNonZero(); }
+};
+/// Match a finite non-zero FP constant.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_finitenonzero> m_FiniteNonZero() {
+  return cstfp_pred_ty<is_finitenonzero>();
+}
+inline apf_pred_ty<is_finitenonzero> m_FiniteNonZero(const APFloat *&V) {
+  return V;
+}
+
 struct is_any_zero_fp {
   bool isValue(const APFloat &C) { return C.isZero(); }
 };
