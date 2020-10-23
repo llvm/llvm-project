@@ -68,5 +68,91 @@ body:  |
     ; any successor blocks.
     ; CHECK: DBG_VALUE $rbx, $noreg
 
+    DBG_INSTR_REF 5, 0, !16, !DIExpression(), debug-location !17
+    ; This is a debug use-before-def: the value appears a few instructions
+    ; later. Any earlier value should be terminated here, _and_ we should
+    ; emit a DBG_VALUE when the value becomes available.
+    ; CHECK: DBG_VALUE $noreg, $noreg
+
+    $rax = MOV64ri 1, debug-location !17
+    $rax = MOV64ri 1, debug-location !17
+    $rcx = MOV64ri 1, debug-instr-number 5, debug-location !17
+    ; CHECK: DBG_VALUE $rcx, $noreg
+    $rax = MOV64ri 1, debug-location !17
+
+    DBG_INSTR_REF 6, 0, !16, !DIExpression(), debug-location !17
+    ; Another debug use-before-def, but across block boundaries.
+    ; CHECK: DBG_VALUE $noreg, $noreg
+    JMP_1 %bb.3
+
+    ; CHECK-LABEL: bb.3:
+  bb.3:
+    $rax = MOV64ri 1, debug-location !17
+    $rdx = MOV64ri 1, debug-instr-number 6, debug-location !17
+    ; CHECK: DBG_VALUE $rdx, $noreg
+
+    ; Terminate variable location for next few blocks,
+    DBG_VALUE $noreg, $noreg, !16, !DIExpression(), debug-location !17
+    ; CHECK: DBG_VALUE $noreg, $noreg
+    JMP_1 %bb.4
+
+  bb.4:
+    ; The next three blocks form a debug use-before-def modelling a scenario
+    ; where an instruction is sunk (debug inst in bb5, value in bb6). However,
+    ; because a different path joins bb.6, we should _not_ add any DBG_VALUE.
+    ; A different variable value may enter the block via the other path.
+    $rdx = MOV64ri 1, implicit-def $eflags, debug-location !17
+    JCC_1 %bb.6, 4, implicit $eflags, debug-location !17
+  bb.5:
+    DBG_INSTR_REF 7, 0, !16, !DIExpression(), debug-location !17
+    ; CHECK: DBG_VALUE $noreg, $noreg
+    JMP_1 %bb.6, debug-location !17
+  bb.6:
+    $rsi = MOV64ri 1, debug-instr-number 7, debug-location !17
+    JMP_1 %bb.7, debug-location !17
+
+  ; A use-before-def shouldn't pass another definition of the variable location
+  ; or value.
+  bb.7:
+    DBG_INSTR_REF 8, 0, !16, !DIExpression(), debug-location !17
+    ; CHECK: DBG_VALUE $noreg, $noreg
+    DBG_VALUE $rax, $noreg, !16, !DIExpression(), debug-location !17
+    ; CHECK: DBG_VALUE $rax, $noreg,
+    $rdi = MOV64ri 1, debug-instr-number 8, debug-location !17
+
+  ; Loops: use-before-defs should be live-through loops, assuming that nothing
+  ; in that loop modifies the variable location.
+  bb.8:
+    DBG_INSTR_REF 9, 0, !16, !DIExpression(), debug-location !17
+    ; CHECK: DBG_VALUE $noreg, $noreg
+    JCC_1 %bb.8, 4, implicit $eflags
+  bb.9:
+    $rax = MOV64ri 11, debug-instr-number 9, debug-location !17
+    ; CHECK: DBG_VALUE $rax, $noreg,
+
+  ; Likewise, use-before-defs where anything changes the variable location
+  ; or value in the loop, should be discarded.
+  bb.10:
+    ; live-in,
+    ; CHECK: DBG_VALUE $rax, $noreg,
+    DBG_INSTR_REF 10, 0, !16, !DIExpression(), debug-location !17
+    ; CHECK: DBG_VALUE $noreg, $noreg
+
+  bb.11:
+    $rbx = MOV64ri 1, debug-location !17
+
+  bb.12:
+    DBG_INSTR_REF 9, 0, !16, !DIExpression(), debug-location !17
+    ; This still has a value in $rax,
+    ; CHECK: DBG_VALUE $rax, $noreg
+    JCC_1 %bb.11, 4, implicit $eflags
+
+  bb.13:
+    ; Live in,
+    ; CHECK: DBG_VALUE $rax, $noreg
+    $rbx = MOV64ri 11, debug-instr-number 10, debug-location !17
+    ; This is instruction 10 referred to in bb.10. However, as the variable
+    ; location/value has been modified in the meantime, no DBG_VALUE should be
+    ; generated here.
     RETQ $eax, debug-location !17
 ...
