@@ -228,6 +228,22 @@ static Error processLoadCommands(const CopyConfig &Config, Object &Obj) {
     Obj.LoadCommands.push_back(buildRPathLoadCommand(RPath));
   }
 
+  for (StringRef RPath : Config.RPathToPrepend) {
+    if (RPaths.count(RPath) != 0)
+      return createStringError(errc::invalid_argument,
+                               "rpath " + RPath +
+                                   " would create a duplicate load command");
+
+    RPaths.insert(RPath);
+    Obj.LoadCommands.insert(Obj.LoadCommands.begin(),
+                            buildRPathLoadCommand(RPath));
+  }
+
+  // Unlike appending rpaths, the indexes of subsequent load commands must
+  // be recalculated after prepending one.
+  if (!Config.RPathToPrepend.empty())
+    Obj.updateLoadCommandIndexes();
+
   return Error::success();
 }
 
