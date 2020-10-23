@@ -146,7 +146,7 @@ namespace SrcMgr {
     ///
     /// This is lazily computed.  The lines are owned by the SourceManager
     /// BumpPointerAllocator object.
-    LineOffsetMapping SourceLineCache;
+    mutable LineOffsetMapping SourceLineCache;
 
     /// Indicates whether the buffer itself was provided to override
     /// the actual file contents.
@@ -719,7 +719,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// These ivars serve as a cache used in the getLineNumber
   /// method which is used to speedup getLineNumber calls to nearby locations.
   mutable FileID LastLineNoFileIDQuery;
-  mutable SrcMgr::ContentCache *LastLineNoContentCache;
+  mutable const SrcMgr::ContentCache *LastLineNoContentCache;
   mutable unsigned LastLineNoFilePos;
   mutable unsigned LastLineNoResult;
 
