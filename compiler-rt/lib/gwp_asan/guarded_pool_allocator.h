@@ -13,7 +13,6 @@
 #include "gwp_asan/definitions.h"
 #include "gwp_asan/mutex.h"
 #include "gwp_asan/options.h"
-#include "gwp_asan/random.h"
 #include "gwp_asan/stack_trace_compressor.h"
 
 #include <stddef.h>
@@ -195,17 +194,40 @@ private:
   // the same cache line for performance reasons. These are the most touched
   // variables in GWP-ASan.
   struct alignas(8) ThreadLocalPackedVariables {
-    constexpr ThreadLocalPackedVariables() {}
+    constexpr ThreadLocalPackedVariables()
+        : RandomState(0xff82eb50), NextSampleCounter(0), RecursiveGuard(false) {
+    }
+    // Initialised to a magic constant so that an uninitialised GWP-ASan won't
+    // regenerate its sample counter for as long as possible. The xorshift32()
+    // algorithm used below results in getRandomUnsigned32(0xff82eb50) ==
+    // 0xfffffea4.
+    uint32_t RandomState;
     // Thread-local decrementing counter that indicates that a given allocation
     // should be sampled when it reaches zero.
-    uint32_t NextSampleCounter = 0;
+    uint32_t NextSampleCounter : 31;
     // Guard against recursivity. Unwinders often contain complex behaviour that
     // may not be safe for the allocator (i.e. the unwinder calls dlopen(),
     // which calls malloc()). When recursive behaviour is detected, we will
     // automatically fall back to the supporting allocator to supply the
     // allocation.
-    bool RecursiveGuard = false;
+    bool RecursiveGuard : 1;
   };
+  static_assert(sizeof(ThreadLocalPackedVariables) == sizeof(uint64_t),
+                "thread local data does not fit in a uint64_t");
+
+  class ScopedRecursiveGuard {
+  public:
+    ScopedRecursiveGuard() { ThreadLocals.RecursiveGuard = true; }
+    ~ScopedRecursiveGuard() { ThreadLocals.RecursiveGuard = false; }
+  };
+
+  // Initialise the PRNG, platform-specific.
+  void initPRNG();
+
+  // xorshift (32-bit output), extremely fast PRNG that uses arithmetic
+  // operations only. Seeded using platform-specific mechanisms by initPRNG().
+  uint32_t getRandomUnsigned32();
+
   static GWP_ASAN_TLS_INITIAL_EXEC ThreadLocalPackedVariables ThreadLocals;
 };
 } // namespace gwp_asan
