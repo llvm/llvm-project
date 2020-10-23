@@ -19,6 +19,11 @@
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu -dwarf-version=5 -filetype=obj -O0 < %s -debugger-tune=lldb -dwarf-op-convert=Enable | llvm-dwarfdump - \
 ; RUN:   | FileCheck %s --check-prefix=CONV "--implicit-check-not={{DW_TAG|NULL}}"
 
+; Test DW_OP_convert + Split DWARF
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -dwarf-version=5 -filetype=obj -O0 < %s -debugger-tune=lldb -dwarf-op-convert=Enable -split-dwarf-file=baz.dwo | llvm-dwarfdump - \
+; RUN:   | FileCheck %s --check-prefix=CONV --check-prefix=SPLITCONV --check-prefix=SPLIT "--implicit-check-not={{DW_TAG|NULL}}"
+
+; SPLITCONV: Compile Unit:{{.*}} DWO_id = 0xe91d8d1d7f9782c0
 ; SPLIT: DW_TAG_skeleton_unit
 
 ; CONV: DW_TAG_compile_unit
