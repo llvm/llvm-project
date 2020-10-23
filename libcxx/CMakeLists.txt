@@ -871,6 +871,12 @@ if (DEFINED WIN32 AND LIBCXX_ENABLE_STATIC AND NOT LIBCXX_ENABLE_SHARED)
   config_define(ON _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
 endif()
 
+if (WIN32 AND LIBCXX_ENABLE_STATIC_ABI_LIBRARY)
+  # If linking libcxxabi statically into libcxx, skip the dllimport attributes
+  # on symbols we refer to from libcxxabi.
+  add_definitions(-D_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS)
+endif()
+
 # Setup all common build flags =================================================
 function(cxx_add_common_build_flags target)
   cxx_add_basic_build_flags(${target})
