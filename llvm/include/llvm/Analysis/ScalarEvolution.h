@@ -744,6 +744,8 @@ public:
     Exact,
     /// A constant which provides an upper bound on the exact trip count.
     ConstantMaximum,
+    /// An expression which provides an upper bound on the exact trip count.
+    SymbolicMaximum,
   };
 
   /// Return the number of times the backedge executes before the given exit
@@ -780,12 +782,15 @@ public:
   /// SCEVCouldNotCompute object.
   const SCEV *getConstantMaxBackedgeTakenCount(const Loop *L) {
     return getBackedgeTakenCount(L, ConstantMaximum);
-  } 
+  }
 
-  /// Return a symbolic upper bound for the backedge taken count of the loop.
-  /// This is more general than getConstantMaxBackedgeTakenCount as it returns
-  /// an arbitrary expression as opposed to only constants.
-  const SCEV* computeMaxBackedgeTakenCount(const Loop *L);
+  /// When successful, this returns a SCEV that is greater than or equal
+  /// to (i.e. a "conservative over-approximation") of the value returend by
+  /// getBackedgeTakenCount.  If such a value cannot be computed, it returns the
+  /// SCEVCouldNotCompute object.
+  const SCEV *getSymbolicMaxBackedgeTakenCount(const Loop *L) {
+    return getBackedgeTakenCount(L, SymbolicMaximum);
+  }
 
   /// Return true if the backedge taken count is either the value returned by
   /// getConstantMaxBackedgeTakenCount or zero.
@@ -1317,23 +1322,24 @@ private:
     /// never have more than one computable exit.
     SmallVector<ExitNotTakenInfo, 1> ExitNotTaken;
 
-    /// Expression indicating the least maximum backedge-taken count of the loop
-    /// that is known, or a SCEVCouldNotCompute. This expression is only valid
-    /// if the redicates associated with all loop exits are true.
+    /// Expression indicating the least constant maximum backedge-taken count of
+    /// the loop that is known, or a SCEVCouldNotCompute. This expression is
+    /// only valid if the redicates associated with all loop exits are true.
     const SCEV *ConstantMax;
 
     /// Indicating if \c ExitNotTaken has an element for every exiting block in
     /// the loop.
     bool IsComplete;
 
+    /// Expression indicating the least maximum backedge-taken count of the loop
+    /// that is known, or a SCEVCouldNotCompute. Lazily computed on first query.
+    const SCEV *SymbolicMax = nullptr;
+
     /// True iff the backedge is taken either exactly Max or zero times.
     bool MaxOrZero = false;
 
-    /// \name Helper projection functions on \c ConstantMaxAndComplete.
-    /// @{
     bool isComplete() const { return IsComplete; }
     const SCEV *getConstantMax() const { return ConstantMax; }
-    /// @}
 
   public:
     BackedgeTakenInfo() : ConstantMax(nullptr), IsComplete(false) {}
@@ -1390,6 +1396,9 @@ private:
     /// Get the constant max backedge taken count for the particular loop exit.
     const SCEV *getConstantMax(const BasicBlock *ExitingBlock,
                                ScalarEvolution *SE) const;
+
+    /// Get the symbolic max backedge taken count for the loop.
+    const SCEV *getSymbolicMax(const Loop *L, ScalarEvolution *SE);
 
     /// Return true if the number of times this backedge is taken is either the
     /// value returned by getConstantMax or zero.
@@ -1543,7 +1552,7 @@ private:
   /// Return the BackedgeTakenInfo for the given loop, lazily computing new
   /// values if the loop hasn't been analyzed yet. The returned result is
   /// guaranteed not to be predicated.
-  const BackedgeTakenInfo &getBackedgeTakenInfo(const Loop *L);
+  BackedgeTakenInfo &getBackedgeTakenInfo(const Loop *L);
 
   /// Similar to getBackedgeTakenInfo, but will add predicates as required
   /// with the purpose of returning complete information.
@@ -1575,6 +1584,11 @@ private:
   ExitLimit computeExitLimitFromCond(const Loop *L, Value *ExitCond,
                                      bool ExitIfTrue, bool ControlsExit,
                                      bool AllowPredicates = false);
+
+  /// Return a symbolic upper bound for the backedge taken count of the loop.
+  /// This is more general than getConstantMaxBackedgeTakenCount as it returns
+  /// an arbitrary expression as opposed to only constants.
+  const SCEV *computeSymbolicMaxBackedgeTakenCount(const Loop *L);
 
   // Helper functions for computeExitLimitFromCond to avoid exponential time
   // complexity.
