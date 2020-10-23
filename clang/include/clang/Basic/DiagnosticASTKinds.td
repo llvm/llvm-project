@@ -252,7 +252,7 @@ def note_constexpr_destroy_out_of_lifetime : Note<
   "destroying object '%0' whose lifetime has already ended">;
 def note_constexpr_unsupported_destruction : Note<
   "non-trivial destruction of type %0 in a constant expression is not supported">;
-def note_constexpr_unsupported_tempoarary_nontrivial_dtor : Note<
+def note_constexpr_unsupported_temporary_nontrivial_dtor : Note<
   "non-trivial destruction of lifetime-extended temporary with type %0 "
   "used in the result of a constant expression is not yet supported">;
 def note_constexpr_unsupported_unsized_array : Note<
