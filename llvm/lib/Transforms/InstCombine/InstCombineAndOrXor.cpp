@@ -1985,7 +1985,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   return nullptr;
 }
 
-Instruction *InstCombinerImpl::matchBSwapOrBitReverse(BinaryOperator &Or) {
+Instruction *InstCombinerImpl::matchBSwapOrBitReverse(BinaryOperator &Or,
+                                                      bool MatchBSwaps,
+                                                      bool MatchBitReversals) {
   assert(Or.getOpcode() == Instruction::Or && "bswap requires an 'or'");
   Value *Op0 = Or.getOperand(0), *Op1 = Or.getOperand(1);
 
@@ -2011,8 +2013,9 @@ Instruction *InstCombinerImpl::matchBSwapOrBitReverse(BinaryOperator &Or) {
   if (!OrWithOrs && !OrWithShifts && !OrWithAnds)
     return nullptr;
 
-  SmallVector<Instruction*, 4> Insts;
-  if (!recognizeBSwapOrBitReverseIdiom(&Or, true, false, Insts))
+  SmallVector<Instruction *, 4> Insts;
+  if (!recognizeBSwapOrBitReverseIdiom(&Or, MatchBSwaps, MatchBitReversals,
+                                       Insts))
     return nullptr;
   Instruction *LastInst = Insts.pop_back_val();
   LastInst->removeFromParent();
@@ -2563,7 +2566,8 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
     return FoldedLogic;
 
-  if (Instruction *BSwap = matchBSwapOrBitReverse(I))
+  if (Instruction *BSwap = matchBSwapOrBitReverse(I, /*MatchBSwaps*/ true,
+                                                  /*MatchBitReversals*/ false))
     return BSwap;
 
   if (Instruction *Funnel = matchFunnelShift(I, *this))
