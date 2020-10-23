@@ -206,7 +206,10 @@ def SVELogicalImm64Pat : ComplexPattern<i64, 1, "SelectSVELogicalImm<MVT::i64>",
 
 def SVE8BitLslImm : ComplexPattern<i32, 2, "SelectSVE8BitLslImm", [imm]>;
 
-def SVEArithUImmPat  : ComplexPattern<i32, 1, "SelectSVEArithImm", []>;
+def SVEArithUImm8Pat  : ComplexPattern<i32, 1, "SelectSVEArithImm<MVT::i8>", []>;
+def SVEArithUImm16Pat  : ComplexPattern<i32, 1, "SelectSVEArithImm<MVT::i16>", []>;
+def SVEArithUImm32Pat  : ComplexPattern<i32, 1, "SelectSVEArithImm<MVT::i32>", []>;
+def SVEArithUImm64Pat  : ComplexPattern<i32, 1, "SelectSVEArithImm<MVT::i64>", []>;
 def SVEArithSImmPat  : ComplexPattern<i32, 1, "SelectSVESignedArithImm", []>;
 
 def SVEShiftImmL8  : ComplexPattern<i32, 1, "SelectSVEShiftImm<0, 7>",  []>;
@@ -3981,10 +3984,10 @@ multiclass sve_int_arith_imm1_unsigned<bits<2> opc, string asm, SDPatternOperato
   def _S : sve_int_arith_imm<0b10, { 0b1010, opc }, asm, ZPR32, imm0_255>;
   def _D : sve_int_arith_imm<0b11, { 0b1010, opc }, asm, ZPR64, imm0_255>;
 
-  def : SVE_1_Op_Imm_Arith_Pred_Pat<nxv16i8, nxv16i1, op, ZPR8, i32, SVEArithUImmPat, !cast<Instruction>(NAME # _B)>;
-  def : SVE_1_Op_Imm_Arith_Pred_Pat<nxv8i16, nxv8i1, op, ZPR16, i32, SVEArithUImmPat, !cast<Instruction>(NAME # _H)>;
-  def : SVE_1_Op_Imm_Arith_Pred_Pat<nxv4i32, nxv4i1, op, ZPR32, i32, SVEArithUImmPat, !cast<Instruction>(NAME # _S)>;
-  def : SVE_1_Op_Imm_Arith_Pred_Pat<nxv2i64, nxv2i1, op, ZPR64, i64, SVEArithUImmPat, !cast<Instruction>(NAME # _D)>;
+  def : SVE_1_Op_Imm_Arith_Pred_Pat<nxv16i8, nxv16i1, op, ZPR8, i32, SVEArithUImm8Pat, !cast<Instruction>(NAME # _B)>;
+  def : SVE_1_Op_Imm_Arith_Pred_Pat<nxv8i16, nxv8i1, op, ZPR16, i32, SVEArithUImm16Pat, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Imm_Arith_Pred_Pat<nxv4i32, nxv4i1, op, ZPR32, i32, SVEArithUImm32Pat, !cast<Instruction>(NAME # _S)>;
+  def : SVE_1_Op_Imm_Arith_Pred_Pat<nxv2i64, nxv2i1, op, ZPR64, i64, SVEArithUImm64Pat, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve_int_arith_imm2<string asm, SDPatternOperator op> {
