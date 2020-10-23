@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=aarch64--linux-gnu | FileCheck %s --check-prefix=CODE
 
 ; COST-LABEL: umin.v8i8
-; COST-NEXT: Cost Model: Found an estimated cost of 30 for instruction:   %res = call <8 x i8> @llvm.umin.v8i8(<8 x i8> %v0, <8 x i8> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <8 x i8> @llvm.umin.v8i8(<8 x i8> %v0, <8 x i8> %v1)
 
 ; CODE-LABEL: umin.v8i8
 ; CODE:       bb.0
@@ -16,7 +16,7 @@ define <8 x i8> @umin.v8i8(<8 x i8> %v0, <8 x i8> %v1) {
 }
 
 ; COST-LABEL: umin.v9i8
-; COST-NEXT: Cost Model: Found an estimated cost of 34 for instruction:   %res = call <9 x i8> @llvm.umin.v9i8(<9 x i8> %v0, <9 x i8> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <9 x i8> @llvm.umin.v9i8(<9 x i8> %v0, <9 x i8> %v1)
 
 ; CODE-LABEL: umin.v9i8
 ; CODE:       bb.0
@@ -30,7 +30,7 @@ define <9 x i8> @umin.v9i8(<9 x i8> %v0, <9 x i8> %v1) {
 }
 
 ; COST-LABEL: umin.v4i16
-; COST-NEXT: Cost Model: Found an estimated cost of 14 for instruction:   %res = call <4 x i16> @llvm.umin.v4i16(<4 x i16> %v0, <4 x i16> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <4 x i16> @llvm.umin.v4i16(<4 x i16> %v0, <4 x i16> %v1)
 
 ; CODE-LABEL: umin.v4i16
 ; CODE:       bb.0
@@ -44,7 +44,7 @@ define <4 x i16> @umin.v4i16(<4 x i16> %v0, <4 x i16> %v1) {
 }
 
 ; COST-LABEL: umin.v16i8
-; COST-NEXT: Cost Model: Found an estimated cost of 62 for instruction:   %res = call <16 x i8> @llvm.umin.v16i8(<16 x i8> %v0, <16 x i8> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <16 x i8> @llvm.umin.v16i8(<16 x i8> %v0, <16 x i8> %v1)
 
 ; CODE-LABEL: umin.v16i8
 ; CODE:       bb.0
@@ -58,7 +58,7 @@ define <16 x i8> @umin.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 }
 
 ; COST-LABEL: umin.v8i16
-; COST-NEXT: Cost Model: Found an estimated cost of 30 for instruction:   %res = call <8 x i16> @llvm.umin.v8i16(<8 x i16> %v0, <8 x i16> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <8 x i16> @llvm.umin.v8i16(<8 x i16> %v0, <8 x i16> %v1)
 
 ; CODE-LABEL: umin.v8i16
 ; CODE:       bb.0
@@ -72,7 +72,7 @@ define <8 x i16> @umin.v8i16(<8 x i16> %v0, <8 x i16> %v1) {
 }
 
 ; COST-LABEL: umin.v2i32
-; COST-NEXT: Cost Model: Found an estimated cost of 6 for instruction:   %res = call <2 x i32> @llvm.umin.v2i32(<2 x i32> %v0, <2 x i32> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <2 x i32> @llvm.umin.v2i32(<2 x i32> %v0, <2 x i32> %v1)
 
 ; CODE-LABEL: umin.v2i32
 ; CODE:       bb.0
@@ -86,7 +86,7 @@ define <2 x i32> @umin.v2i32(<2 x i32> %v0, <2 x i32> %v1) {
 }
 
 ; COST-LABEL: umin.v4i32
-; COST-NEXT: Cost Model: Found an estimated cost of 14 for instruction:   %res = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %v0, <4 x i32> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %v0, <4 x i32> %v1)
 
 ; CODE-LABEL: umin.v4i32
 ; CODE:       bb.0
@@ -100,7 +100,7 @@ define <4 x i32> @umin.v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 }
 
 ; COST-LABEL: umin.v8i32
-; COST-NEXT: Cost Model: Found an estimated cost of 10 for instruction:   %res = call <8 x i32> @llvm.umin.v8i32(<8 x i32> %v0, <8 x i32> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %res = call <8 x i32> @llvm.umin.v8i32(<8 x i32> %v0, <8 x i32> %v1)
 
 ; CODE-LABEL: umin.v8i32
 ; CODE:       bb.0
@@ -129,7 +129,7 @@ define <2 x i64> @umin.v2i64(<2 x i64> %v0, <2 x i64> %v1) {
 }
 
 ; COST-LABEL: smin.v8i8
-; COST-NEXT: Cost Model: Found an estimated cost of 30 for instruction:   %res = call <8 x i8> @llvm.smin.v8i8(<8 x i8> %v0, <8 x i8> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <8 x i8> @llvm.smin.v8i8(<8 x i8> %v0, <8 x i8> %v1)
 
 ; CODE-LABEL: smin.v8i8
 ; CODE:       bb.0
@@ -143,7 +143,7 @@ define <8 x i8> @smin.v8i8(<8 x i8> %v0, <8 x i8> %v1) {
 }
 
 ; COST-LABEL: smin.v9i8
-; COST-NEXT: Cost Model: Found an estimated cost of 34 for instruction:   %res = call <9 x i8> @llvm.smin.v9i8(<9 x i8> %v0, <9 x i8> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <9 x i8> @llvm.smin.v9i8(<9 x i8> %v0, <9 x i8> %v1)
 
 ; CODE-LABEL: smin.v9i8
 ; CODE:       bb.0
@@ -157,7 +157,7 @@ define <9 x i8> @smin.v9i8(<9 x i8> %v0, <9 x i8> %v1) {
 }
 
 ; COST-LABEL: smin.v16i8
-; COST-NEXT: Cost Model: Found an estimated cost of 62 for instruction:   %res = call <16 x i8> @llvm.smin.v16i8(<16 x i8> %v0, <16 x i8> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <16 x i8> @llvm.smin.v16i8(<16 x i8> %v0, <16 x i8> %v1)
 
 ; CODE-LABEL: smin.v16i8
 ; CODE:       bb.0
@@ -171,7 +171,7 @@ define <16 x i8> @smin.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 }
 
 ; COST-LABEL: smin.v4i16
-; COST-NEXT: Cost Model: Found an estimated cost of 14 for instruction:   %res = call <4 x i16> @llvm.smin.v4i16(<4 x i16> %v0, <4 x i16> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <4 x i16> @llvm.smin.v4i16(<4 x i16> %v0, <4 x i16> %v1)
 
 ; CODE-LABEL: smin.v4i16
 ; CODE:       bb.0
@@ -185,7 +185,7 @@ define <4 x i16> @smin.v4i16(<4 x i16> %v0, <4 x i16> %v1) {
 }
 
 ; COST-LABEL: smin.v8i16
-; COST-NEXT: Cost Model: Found an estimated cost of 30 for instruction:   %res = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %v0, <8 x i16> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %v0, <8 x i16> %v1)
 
 ; CODE-LABEL: smin.v8i16
 ; CODE:       bb.0
@@ -199,7 +199,7 @@ define <8 x i16> @smin.v8i16(<8 x i16> %v0, <8 x i16> %v1) {
 }
 
 ; COST-LABEL: smin.v2i32
-; COST-NEXT: Cost Model: Found an estimated cost of 6 for instruction:   %res = call <2 x i32> @llvm.smin.v2i32(<2 x i32> %v0, <2 x i32> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <2 x i32> @llvm.smin.v2i32(<2 x i32> %v0, <2 x i32> %v1)
 
 ; CODE-LABEL: smin.v2i32
 ; CODE:       bb.0
@@ -213,7 +213,7 @@ define <2 x i32> @smin.v2i32(<2 x i32> %v0, <2 x i32> %v1) {
 }
 
 ; COST-LABEL: smin.v4i32
-; COST-NEXT: Cost Model: Found an estimated cost of 14 for instruction:   %res = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %v0, <4 x i32> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %v0, <4 x i32> %v1)
 
 ; CODE-LABEL: smin.v4i32
 ; CODE:       bb.0
@@ -227,7 +227,7 @@ define <4 x i32> @smin.v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 }
 
 ; COST-LABEL: smin.v8i32
-; COST-NEXT: Cost Model: Found an estimated cost of 10 for instruction:   %res = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %v0, <8 x i32> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %res = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %v0, <8 x i32> %v1)
 
 ; CODE-LABEL: smin.v8i32
 ; CODE:       bb.0
@@ -256,7 +256,7 @@ define <2 x i64> @smin.v2i64(<2 x i64> %v0, <2 x i64> %v1) {
 }
 
 ; COST-LABEL: umax.v8i8
-; COST-NEXT: Cost Model: Found an estimated cost of 30 for instruction:   %res = call <8 x i8> @llvm.umax.v8i8(<8 x i8> %v0, <8 x i8> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <8 x i8> @llvm.umax.v8i8(<8 x i8> %v0, <8 x i8> %v1)
 
 ; CODE-LABEL: umax.v8i8
 ; CODE:       bb.0
@@ -270,7 +270,7 @@ define <8 x i8> @umax.v8i8(<8 x i8> %v0, <8 x i8> %v1) {
 }
 
 ; COST-LABEL: umax.v9i8
-; COST-NEXT: Cost Model: Found an estimated cost of 34 for instruction:   %res = call <9 x i8> @llvm.umax.v9i8(<9 x i8> %v0, <9 x i8> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <9 x i8> @llvm.umax.v9i8(<9 x i8> %v0, <9 x i8> %v1)
 
 ; CODE-LABEL: umax.v9i8
 ; CODE:       bb.0
@@ -283,9 +283,8 @@ define <9 x i8> @umax.v9i8(<9 x i8> %v0, <9 x i8> %v1) {
   ret <9 x i8> %res
 }
 
-
 ; COST-LABEL: umax.v16i8
-; COST-NEXT: Cost Model: Found an estimated cost of 62 for instruction:   %res = call <16 x i8> @llvm.umax.v16i8(<16 x i8> %v0, <16 x i8> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <16 x i8> @llvm.umax.v16i8(<16 x i8> %v0, <16 x i8> %v1)
 
 ; CODE-LABEL: umax.v16i8
 ; CODE:       bb.0
@@ -299,7 +298,7 @@ define <16 x i8> @umax.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 }
 
 ; COST-LABEL: umax.v4i16
-; COST-NEXT: Cost Model: Found an estimated cost of 14 for instruction:   %res = call <4 x i16> @llvm.umax.v4i16(<4 x i16> %v0, <4 x i16> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <4 x i16> @llvm.umax.v4i16(<4 x i16> %v0, <4 x i16> %v1)
 
 ; CODE-LABEL: umax.v4i16
 ; CODE:       bb.0
@@ -313,7 +312,7 @@ define <4 x i16> @umax.v4i16(<4 x i16> %v0, <4 x i16> %v1) {
 }
 
 ; COST-LABEL: umax.v8i16
-; COST-NEXT: Cost Model: Found an estimated cost of 30 for instruction:   %res = call <8 x i16> @llvm.umax.v8i16(<8 x i16> %v0, <8 x i16> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <8 x i16> @llvm.umax.v8i16(<8 x i16> %v0, <8 x i16> %v1)
 
 ; CODE-LABEL: umax.v8i16
 ; CODE:       bb.0
@@ -327,7 +326,7 @@ define <8 x i16> @umax.v8i16(<8 x i16> %v0, <8 x i16> %v1) {
 }
 
 ; COST-LABEL: umax.v2i32
-; COST-NEXT: Cost Model: Found an estimated cost of 6 for instruction:   %res = call <2 x i32> @llvm.umax.v2i32(<2 x i32> %v0, <2 x i32> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <2 x i32> @llvm.umax.v2i32(<2 x i32> %v0, <2 x i32> %v1)
 
 ; CODE-LABEL: umax.v2i32
 ; CODE:       bb.0
@@ -341,7 +340,7 @@ define <2 x i32> @umax.v2i32(<2 x i32> %v0, <2 x i32> %v1) {
 }
 
 ; COST-LABEL: umax.v4i32
-; COST-NEXT: Cost Model: Found an estimated cost of 14 for instruction:   %res = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %v0, <4 x i32> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %v0, <4 x i32> %v1)
 
 ; CODE-LABEL: umax.v4i32
 ; CODE:       bb.0
@@ -355,7 +354,7 @@ define <4 x i32> @umax.v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 }
 
 ; COST-LABEL: umax.v8i32
-; COST-NEXT: Cost Model: Found an estimated cost of 10 for instruction:   %res = call <8 x i32> @llvm.umax.v8i32(<8 x i32> %v0, <8 x i32> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %res = call <8 x i32> @llvm.umax.v8i32(<8 x i32> %v0, <8 x i32> %v1)
 
 ; CODE-LABEL: umax.v8i32
 ; CODE:       bb.0
@@ -384,7 +383,7 @@ define <2 x i64> @umax.v2i64(<2 x i64> %v0, <2 x i64> %v1) {
 }
 
 ; COST-LABEL: smax.v8i8
-; COST-NEXT: Cost Model: Found an estimated cost of 30 for instruction:   %res = call <8 x i8> @llvm.smax.v8i8(<8 x i8> %v0, <8 x i8> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <8 x i8> @llvm.smax.v8i8(<8 x i8> %v0, <8 x i8> %v1)
 
 ; CODE-LABEL: smax.v8i8
 ; CODE:       bb.0
@@ -398,7 +397,7 @@ define <8 x i8> @smax.v8i8(<8 x i8> %v0, <8 x i8> %v1) {
 }
 
 ; COST-LABEL: smax.v9i8
-; COST-NEXT: Cost Model: Found an estimated cost of 34 for instruction:   %res = call <9 x i8> @llvm.smax.v9i8(<9 x i8> %v0, <9 x i8> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <9 x i8> @llvm.smax.v9i8(<9 x i8> %v0, <9 x i8> %v1)
 
 ; CODE-LABEL: smax.v9i8
 ; CODE:       bb.0
@@ -412,7 +411,7 @@ define <9 x i8> @smax.v9i8(<9 x i8> %v0, <9 x i8> %v1) {
 }
 
 ; COST-LABEL: smax.v16i8
-; COST-NEXT: Cost Model: Found an estimated cost of 62 for instruction:   %res = call <16 x i8> @llvm.smax.v16i8(<16 x i8> %v0, <16 x i8> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <16 x i8> @llvm.smax.v16i8(<16 x i8> %v0, <16 x i8> %v1)
 
 ; CODE-LABEL: smax.v16i8
 ; CODE:       bb.0
@@ -426,7 +425,7 @@ define <16 x i8> @smax.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 }
 
 ; COST-LABEL: smax.v4i16
-; COST-NEXT: Cost Model: Found an estimated cost of 14 for instruction:   %res = call <4 x i16> @llvm.smax.v4i16(<4 x i16> %v0, <4 x i16> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <4 x i16> @llvm.smax.v4i16(<4 x i16> %v0, <4 x i16> %v1)
 
 ; CODE-LABEL: smax.v4i16
 ; CODE:       bb.0
@@ -440,7 +439,7 @@ define <4 x i16> @smax.v4i16(<4 x i16> %v0, <4 x i16> %v1) {
 }
 
 ; COST-LABEL: smax.v8i16
-; COST-NEXT: Cost Model: Found an estimated cost of 30 for instruction:   %res = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %v0, <8 x i16> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %v0, <8 x i16> %v1)
 
 ; CODE-LABEL: smax.v8i16
 ; CODE:       bb.0
@@ -454,7 +453,7 @@ define <8 x i16> @smax.v8i16(<8 x i16> %v0, <8 x i16> %v1) {
 }
 
 ; COST-LABEL: smax.v2i32
-; COST-NEXT: Cost Model: Found an estimated cost of 6 for instruction:   %res = call <2 x i32> @llvm.smax.v2i32(<2 x i32> %v0, <2 x i32> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <2 x i32> @llvm.smax.v2i32(<2 x i32> %v0, <2 x i32> %v1)
 
 ; CODE-LABEL: smax.v2i32
 ; CODE:       bb.0
@@ -468,7 +467,7 @@ define <2 x i32> @smax.v2i32(<2 x i32> %v0, <2 x i32> %v1) {
 }
 
 ; COST-LABEL: smax.v4i32
-; COST-NEXT: Cost Model: Found an estimated cost of 14 for instruction:   %res = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %v0, <4 x i32> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %res = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %v0, <4 x i32> %v1)
 
 ; CODE-LABEL: smax.v4i32
 ; CODE:       bb.0
@@ -482,7 +481,7 @@ define <4 x i32> @smax.v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 }
 
 ; COST-LABEL: smax.v8i32
-; COST-NEXT: Cost Model: Found an estimated cost of 10 for instruction:   %res = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %v0, <8 x i32> %v1)
+; COST-NEXT: Cost Model: Found an estimated cost of 2 for instruction:   %res = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %v0, <8 x i32> %v1)
 
 ; CODE-LABEL: smax.v8i32
 ; CODE:       bb.0
