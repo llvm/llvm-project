@@ -7152,36 +7152,51 @@ bool llvm::execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
   auto *TRI = MRI.getTargetRegisterInfo();
   auto *DefBB = DefMI.getParent();
 
-  const int MaxUseInstScan = 10;
-  int NumUseInst = 0;
+  const int MaxUseScan = 10;
+  int NumUse = 0;
 
-  for (auto &UseInst : MRI.use_nodbg_instructions(VReg)) {
+  for (auto &Use : MRI.use_nodbg_operands(VReg)) {
+    auto &UseInst = *Use.getParent();
     // Don't bother searching between blocks, although it is possible this block
     // doesn't modify exec.
     if (UseInst.getParent() != DefBB)
       return true;
 
-    if (++NumUseInst > MaxUseInstScan)
+    if (++NumUse > MaxUseScan)
       return true;
   }
+
+  if (NumUse == 0)
+    return false;
 
   const int MaxInstScan = 20;
   int NumInst = 0;
 
   // Stop scan when we have seen all the uses.
   for (auto I = std::next(DefMI.getIterator()); ; ++I) {
+    assert(I != DefBB->end());
+
     if (I->isDebugInstr())
       continue;
 
     if (++NumInst > MaxInstScan)
       return true;
 
-    if (I->readsRegister(VReg))
-      if (--NumUseInst == 0)
-        return false;
+    for (const MachineOperand &Op : I->operands()) {
+      // We don't check reg masks here as they're used only on calls:
+      // 1. EXEC is only considered const within one BB
+      // 2. Call should be a terminator instruction if present in a BB
 
-    if (I->modifiesRegister(AMDGPU::EXEC, TRI))
-      return true;
+      if (!Op.isReg())
+        continue;
+
+      Register Reg = Op.getReg();
+      if (Op.isUse()) {
+        if (Reg == VReg && --NumUse == 0)
+          return false;
+      } else if (TRI->regsOverlap(Reg, AMDGPU::EXEC))
+        return true;
+    }
   }
 }
 
