@@ -19,8 +19,8 @@ namespace {
 static void traverse(const syntax::Node *N,
                      llvm::function_ref<void(const syntax::Node *)> Visit) {
   if (auto *T = dyn_cast<syntax::Tree>(N)) {
-    for (const auto *C = T->getFirstChild(); C; C = C->getNextSibling())
-      traverse(C, Visit);
+    for (const syntax::Node &C : T->getChildren())
+      traverse(&C, Visit);
   }
   Visit(N);
 }
@@ -194,21 +194,21 @@ static void dumpNode(raw_ostream &OS, const syntax::Node *N,
   DumpExtraInfo(N);
   OS << "\n";
 
-  for (const auto *It = T->getFirstChild(); It; It = It->getNextSibling()) {
+  for (const syntax::Node &It : T->getChildren()) {
     for (bool Filled : IndentMask) {
       if (Filled)
         OS << "| ";
       else
         OS << "  ";
     }
-    if (!It->getNextSibling()) {
+    if (!It.getNextSibling()) {
       OS << "`-";
       IndentMask.push_back(false);
     } else {
       OS << "|-";
       IndentMask.push_back(true);
     }
-    dumpNode(OS, It, SM, IndentMask);
+    dumpNode(OS, &It, SM, IndentMask);
     IndentMask.pop_back();
   }
 }
@@ -243,22 +243,22 @@ void syntax::Node::assertInvariants() const {
   const auto *T = dyn_cast<Tree>(this);
   if (!T)
     return;
-  for (const auto *C = T->getFirstChild(); C; C = C->getNextSibling()) {
+  for (const Node &C : T->getChildren()) {
     if (T->isOriginal())
-      assert(C->isOriginal());
-    assert(!C->isDetached());
-    assert(C->getParent() == T);
+      assert(C.isOriginal());
+    assert(!C.isDetached());
+    assert(C.getParent() == T);
   }
 
   const auto *L = dyn_cast<List>(T);
   if (!L)
     return;
-  for (const auto *C = T->getFirstChild(); C; C = C->getNextSibling()) {
-    assert(C->getRole() == NodeRole::ListElement ||
-           C->getRole() == NodeRole::ListDelimiter);
-    if (C->getRole() == NodeRole::ListDelimiter) {
+  for (const Node &C : T->getChildren()) {
+    assert(C.getRole() == NodeRole::ListElement ||
+           C.getRole() == NodeRole::ListDelimiter);
+    if (C.getRole() == NodeRole::ListDelimiter) {
       assert(isa<Leaf>(C));
-      assert(cast<Leaf>(C)->getToken()->kind() == L->getDelimiterTokenKind());
+      assert(cast<Leaf>(C).getToken()->kind() == L->getDelimiterTokenKind());
     }
   }
 
@@ -272,10 +272,10 @@ void syntax::Node::assertInvariantsRecursive() const {
 }
 
 const syntax::Leaf *syntax::Tree::findFirstLeaf() const {
-  for (const auto *C = getFirstChild(); C; C = C->getNextSibling()) {
-    if (const auto *L = dyn_cast<syntax::Leaf>(C))
+  for (const Node &C : getChildren()) {
+    if (const auto *L = dyn_cast<syntax::Leaf>(&C))
       return L;
-    if (const auto *L = cast<syntax::Tree>(C)->findFirstLeaf())
+    if (const auto *L = cast<syntax::Tree>(C).findFirstLeaf())
       return L;
   }
   return nullptr;
@@ -283,19 +283,19 @@ const syntax::Leaf *syntax::Tree::findFirstLeaf() const {
 
 const syntax::Leaf *syntax::Tree::findLastLeaf() const {
   const syntax::Leaf *Last = nullptr;
-  for (const auto *C = getFirstChild(); C; C = C->getNextSibling()) {
-    if (const auto *L = dyn_cast<syntax::Leaf>(C))
+  for (const Node &C : getChildren()) {
+    if (const auto *L = dyn_cast<syntax::Leaf>(&C))
       Last = L;
-    else if (const auto *L = cast<syntax::Tree>(C)->findLastLeaf())
+    else if (const auto *L = cast<syntax::Tree>(C).findLastLeaf())
       Last = L;
   }
   return Last;
 }
 
 const syntax::Node *syntax::Tree::findChild(NodeRole R) const {
-  for (const auto *C = FirstChild; C; C = C->getNextSibling()) {
-    if (C->getRole() == R)
-      return C;
+  for (const Node &C : getChildren()) {
+    if (C.getRole() == R)
+      return &C;
   }
   return nullptr;
 }
@@ -318,17 +318,17 @@ syntax::List::getElementsAsNodesAndDelimiters() {
 
   std::vector<syntax::List::ElementAndDelimiter<Node>> Children;
   syntax::Node *ElementWithoutDelimiter = nullptr;
-  for (auto *C = getFirstChild(); C; C = C->getNextSibling()) {
-    switch (C->getRole()) {
+  for (Node &C : getChildren()) {
+    switch (C.getRole()) {
     case syntax::NodeRole::ListElement: {
       if (ElementWithoutDelimiter) {
         Children.push_back({ElementWithoutDelimiter, nullptr});
       }
-      ElementWithoutDelimiter = C;
+      ElementWithoutDelimiter = &C;
       break;
     }
     case syntax::NodeRole::ListDelimiter: {
-      Children.push_back({ElementWithoutDelimiter, cast<syntax::Leaf>(C)});
+      Children.push_back({ElementWithoutDelimiter, cast<syntax::Leaf>(&C)});
       ElementWithoutDelimiter = nullptr;
       break;
     }
@@ -363,13 +363,13 @@ std::vector<syntax::Node *> syntax::List::getElementsAsNodes() {
 
   std::vector<syntax::Node *> Children;
   syntax::Node *ElementWithoutDelimiter = nullptr;
-  for (auto *C = getFirstChild(); C; C = C->getNextSibling()) {
-    switch (C->getRole()) {
+  for (Node &C : getChildren()) {
+    switch (C.getRole()) {
     case syntax::NodeRole::ListElement: {
       if (ElementWithoutDelimiter) {
         Children.push_back(ElementWithoutDelimiter);
       }
-      ElementWithoutDelimiter = C;
+      ElementWithoutDelimiter = &C;
       break;
     }
     case syntax::NodeRole::ListDelimiter: {
