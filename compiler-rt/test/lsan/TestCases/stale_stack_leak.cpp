@@ -6,7 +6,7 @@
 //
 // x86 passes parameters through stack that may lead to false negatives
 // The same applies to s390x register save areas.
-// UNSUPPORTED: x86,powerpc64,arm,s390x
+// UNSUPPORTED: x86,i686,powerpc64,arm,s390x
 
 #include <stdio.h>
 #include <stdlib.h>
