@@ -2860,13 +2860,20 @@ static bool isProfitableChain(IVChain &Chain,
   unsigned NumVarIncrements = 0;
   unsigned NumReusedIncrements = 0;
 
-  if (TTI.isProfitableLSRChainElement(Chain.Incs[0].UserInst))
-    return true;
-
-  for (const IVInc &Inc : Chain) {
+  // If any LSRUse in the chain is marked as profitable by target, mark this
+  // chain as profitable.
+  for (const IVInc &Inc : Chain.Incs)
     if (TTI.isProfitableLSRChainElement(Inc.UserInst))
       return true;
 
+  // If register number is the major cost, we cannot benefit from this
+  // profitable chain which is based on register number.
+  // FIXME: add profitable chain optimization for other kinds major cost, for
+  // example instruction number.
+  if (!TTI.isRegNumMajorCostOfLSR())
+    return false;
+
+  for (const IVInc &Inc : Chain) {
     if (Inc.IncExpr->isZero())
       continue;
 

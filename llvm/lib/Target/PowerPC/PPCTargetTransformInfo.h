@@ -75,6 +75,7 @@ public:
                              TTI::PeelingPreferences &PP);
   bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                      TargetTransformInfo::LSRCost &C2);
+  bool isRegNumMajorCostOfLSR();
 
   /// @}
 

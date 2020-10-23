@@ -264,6 +264,10 @@ public:
     return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
   }
 
+  bool isRegNumMajorCostOfLSR() {
+    return TargetTransformInfoImplBase::isRegNumMajorCostOfLSR();
+  }
+
   bool isProfitableLSRChainElement(Instruction *I) {
     return TargetTransformInfoImplBase::isProfitableLSRChainElement(I);
   }
