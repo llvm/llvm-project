@@ -83,12 +83,24 @@ def vashr_vlshr_imm : GICombineRule<
   (apply [{ applyVAshrLshrImm(*${root}, MRI, ${matchinfo}); }])
 >;
 
+def adjust_icmp_imm_matchdata :
+  GIDefMatchData<"std::pair<uint64_t, CmpInst::Predicate>">;
+def adjust_icmp_imm : GICombineRule <
+  (defs root:$root, adjust_icmp_imm_matchdata:$matchinfo),
+  (match (wip_match_opcode G_ICMP):$root,
+          [{ return matchAdjustICmpImmAndPred(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyAdjustICmpImmAndPred(*${root}, ${matchinfo}, B, Observer); }])
+>;
+
+def icmp_lowering : GICombineGroup<[adjust_icmp_imm]>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
 def AArch64PostLegalizerLoweringHelper
     : GICombinerHelper<"AArch64GenPostLegalizerLoweringHelper",
-                       [shuffle_vector_pseudos, vashr_vlshr_imm]> {
+                       [shuffle_vector_pseudos, vashr_vlshr_imm,
+                        icmp_lowering]> {
   let DisableRuleOption = "aarch64postlegalizerlowering-disable-rule";
 }
 

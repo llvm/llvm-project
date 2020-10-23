@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64TargetMachine.h"
+#include "AArch64GlobalISelUtils.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -39,6 +40,7 @@
 
 using namespace llvm;
 using namespace MIPatternMatch;
+using namespace AArch64GISelUtils;
 
 /// Represents a pseudo instruction which replaces a G_SHUFFLE_VECTOR.
 ///
@@ -413,6 +415,138 @@ static bool applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
   auto ImmDef = MIB.buildConstant(LLT::scalar(32), Imm);
   MIB.buildInstr(NewOpc, {MI.getOperand(0)}, {MI.getOperand(1), ImmDef});
   MI.eraseFromParent();
+  return true;
+}
+
+/// Determine if it is possible to modify the \p RHS and predicate \p P of a
+/// G_ICMP instruction such that the right-hand side is an arithmetic immediate.
+///
+/// \returns A pair containing the updated immediate and predicate which may
+/// be used to optimize the instruction.
+///
+/// \note This assumes that the comparison has been legalized.
+Optional<std::pair<uint64_t, CmpInst::Predicate>>
+tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
+                          const MachineRegisterInfo &MRI) {
+  const auto &Ty = MRI.getType(RHS);
+  if (Ty.isVector())
+    return None;
+  unsigned Size = Ty.getSizeInBits();
+  assert((Size == 32 || Size == 64) && "Expected 32 or 64 bit compare only?");
+
+  // If the RHS is not a constant, or the RHS is already a valid arithmetic
+  // immediate, then there is nothing to change.
+  auto ValAndVReg = getConstantVRegValWithLookThrough(RHS, MRI);
+  if (!ValAndVReg)
+    return None;
+  uint64_t C = ValAndVReg->Value;
+  if (isLegalArithImmed(C))
+    return None;
+
+  // We have a non-arithmetic immediate. Check if adjusting the immediate and
+  // adjusting the predicate will result in a legal arithmetic immediate.
+  switch (P) {
+  default:
+    return None;
+  case CmpInst::ICMP_SLT:
+  case CmpInst::ICMP_SGE:
+    // Check for
+    //
+    // x slt c => x sle c - 1
+    // x sge c => x sgt c - 1
+    //
+    // When c is not the smallest possible negative number.
+    if ((Size == 64 && static_cast<int64_t>(C) == INT64_MIN) ||
+        (Size == 32 && static_cast<int32_t>(C) == INT32_MIN))
+      return None;
+    P = (P == CmpInst::ICMP_SLT) ? CmpInst::ICMP_SLE : CmpInst::ICMP_SGT;
+    C -= 1;
+    break;
+  case CmpInst::ICMP_ULT:
+  case CmpInst::ICMP_UGE:
+    // Check for
+    //
+    // x ult c => x ule c - 1
+    // x uge c => x ugt c - 1
+    //
+    // When c is not zero.
+    if (C == 0)
+      return None;
+    P = (P == CmpInst::ICMP_ULT) ? CmpInst::ICMP_ULE : CmpInst::ICMP_UGT;
+    C -= 1;
+    break;
+  case CmpInst::ICMP_SLE:
+  case CmpInst::ICMP_SGT:
+    // Check for
+    //
+    // x sle c => x slt c + 1
+    // x sgt c => s sge c + 1
+    //
+    // When c is not the largest possible signed integer.
+    if ((Size == 32 && static_cast<int32_t>(C) == INT32_MAX) ||
+        (Size == 64 && static_cast<int64_t>(C) == INT64_MAX))
+      return None;
+    P = (P == CmpInst::ICMP_SLE) ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE;
+    C += 1;
+    break;
+  case CmpInst::ICMP_ULE:
+  case CmpInst::ICMP_UGT:
+    // Check for
+    //
+    // x ule c => x ult c + 1
+    // x ugt c => s uge c + 1
+    //
+    // When c is not the largest possible unsigned integer.
+    if ((Size == 32 && static_cast<uint32_t>(C) == UINT32_MAX) ||
+        (Size == 64 && C == UINT64_MAX))
+      return None;
+    P = (P == CmpInst::ICMP_ULE) ? CmpInst::ICMP_ULT : CmpInst::ICMP_UGE;
+    C += 1;
+    break;
+  }
+
+  // Check if the new constant is valid, and return the updated constant and
+  // predicate if it is.
+  if (Size == 32)
+    C = static_cast<uint32_t>(C);
+  if (!isLegalArithImmed(C))
+    return None;
+  return {{C, P}};
+}
+
+/// Determine whether or not it is possible to update the RHS and predicate of
+/// a G_ICMP instruction such that the RHS will be selected as an arithmetic
+/// immediate.
+///
+/// \p MI - The G_ICMP instruction
+/// \p MatchInfo - The new RHS immediate and predicate on success
+///
+/// See tryAdjustICmpImmAndPred for valid transformations.
+bool matchAdjustICmpImmAndPred(
+    MachineInstr &MI, const MachineRegisterInfo &MRI,
+    std::pair<uint64_t, CmpInst::Predicate> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_ICMP);
+  Register RHS = MI.getOperand(3).getReg();
+  auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+  if (auto MaybeNewImmAndPred = tryAdjustICmpImmAndPred(RHS, Pred, MRI)) {
+    MatchInfo = *MaybeNewImmAndPred;
+    return true;
+  }
+  return false;
+}
+
+bool applyAdjustICmpImmAndPred(
+    MachineInstr &MI, std::pair<uint64_t, CmpInst::Predicate> &MatchInfo,
+    MachineIRBuilder &MIB, GISelChangeObserver &Observer) {
+  MIB.setInstrAndDebugLoc(MI);
+  MachineOperand &RHS = MI.getOperand(3);
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+  auto Cst = MIB.buildConstant(MRI.cloneVirtualRegister(RHS.getReg()),
+                               MatchInfo.first);
+  Observer.changingInstr(MI);
+  RHS.setReg(Cst->getOperand(0).getReg());
+  MI.getOperand(1).setPredicate(MatchInfo.second);
+  Observer.changedInstr(MI);
   return true;
 }
 
