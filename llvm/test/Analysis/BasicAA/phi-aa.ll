@@ -116,7 +116,7 @@ end:
 }
 
 ; CHECK-LABEL: phi_and_select
-; CHECK: MayAlias: i32* %p, i32* %s
+; CHECK: MustAlias: i32* %p, i32* %s
 define void @phi_and_select(i1 %c, i1 %c2, i32* %x, i32* %y) {
 entry:
   br i1 %c, label %true, label %false
