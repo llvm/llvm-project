@@ -337,9 +337,8 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   for (MCPhysReg Reg : MFI->getVGPRSpillAGPRs())
     reserveRegisterTuples(Reserved, Reg);
 
-  if (MFI->VGPRReservedForSGPRSpill)
-    for (auto SSpill : MFI->getSGPRSpillVGPRs())
-      reserveRegisterTuples(Reserved, SSpill.VGPR);
+  for (auto SSpill : MFI->getSGPRSpillVGPRs())
+    reserveRegisterTuples(Reserved, SSpill.VGPR);
 
   return Reserved;
 }
