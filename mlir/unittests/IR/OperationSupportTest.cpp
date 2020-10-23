@@ -26,7 +26,7 @@ static Operation *createOp(MLIRContext *context,
 
 namespace {
 TEST(OperandStorageTest, NonResizable) {
-  MLIRContext context;
+  MLIRContext context(false);
   Builder builder(&context);
 
   Operation *useOp =
@@ -50,7 +50,7 @@ TEST(OperandStorageTest, NonResizable) {
 }
 
 TEST(OperandStorageTest, Resizable) {
-  MLIRContext context;
+  MLIRContext context(false);
   Builder builder(&context);
 
   Operation *useOp =
@@ -78,7 +78,7 @@ TEST(OperandStorageTest, Resizable) {
 }
 
 TEST(OperandStorageTest, RangeReplace) {
-  MLIRContext context;
+  MLIRContext context(false);
   Builder builder(&context);
 
   Operation *useOp =
@@ -114,7 +114,7 @@ TEST(OperandStorageTest, RangeReplace) {
 }
 
 TEST(OperandStorageTest, MutableRange) {
-  MLIRContext context;
+  MLIRContext context(false);
   Builder builder(&context);
 
   Operation *useOp =
@@ -151,7 +151,7 @@ TEST(OperandStorageTest, MutableRange) {
 }
 
 TEST(OperationOrderTest, OrderIsAlwaysValid) {
-  MLIRContext context;
+  MLIRContext context(false);
   Builder builder(&context);
 
   Operation *containerOp =

@@ -26,7 +26,7 @@ namespace mlir {
 //===----------------------------------------------------------------------===//
 
 static MLIRContext &getContext() {
-  static MLIRContext ctx;
+  static MLIRContext ctx(false);
   ctx.getOrLoadDialect<TestDialect>();
   return ctx;
 }

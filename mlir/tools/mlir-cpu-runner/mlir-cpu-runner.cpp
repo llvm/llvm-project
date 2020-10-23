@@ -19,6 +19,7 @@
 #include "llvm/Support/TargetSelect.h"
 
 int main(int argc, char **argv) {
+  mlir::registerAllDialects();
   llvm::InitLLVM y(argc, argv);
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
