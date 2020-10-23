@@ -10,19 +10,6 @@ syntax = "proto2";
 
 package clang.clangd.remote.v1;
 
-// Semantics of SymbolIndex match clangd::SymbolIndex with all required
-// structures corresponding to their clangd::* counterparts.
-// NOTE: Enum values are offset by one to detect missing values.
-service SymbolIndex {
-  rpc Lookup(LookupRequest) returns (stream LookupReply) {}
-
-  rpc FuzzyFind(FuzzyFindRequest) returns (stream FuzzyFindReply) {}
-
-  rpc Refs(RefsRequest) returns (stream RefsReply) {}
-
-  rpc Relations(RelationsRequest) returns (stream RelationsReply) {}
-}
-
 message LookupRequest { repeated string ids = 1; }
 
 // The response is a stream of symbol messages and the terminating message
