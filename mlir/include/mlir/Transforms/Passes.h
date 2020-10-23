@@ -44,6 +44,9 @@ std::unique_ptr<Pass> createBufferLoopHoistingPass();
 std::unique_ptr<Pass>
 createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024);
 
+/// Creates a pass that converts memref function results to out-params.
+std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
+
 /// Creates an instance of the Canonicalizer pass.
 std::unique_ptr<Pass> createCanonicalizerPass();
 
