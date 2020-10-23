@@ -306,6 +306,8 @@ LogicalResult OpPatternRewriteDriver::simplifyLocally(Operation *op,
   // Iterate until convergence or until maxIterations. Deletion of the op as
   // a result of being dead or folded is convergence.
   do {
+    changed = false;
+
     // If the operation is trivially dead - remove it.
     if (isOpTriviallyDead(op)) {
       op->erase();
