@@ -6,21 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-//
-//  TypeSystem.cpp
-//  lldb
-//
-//  Created by Ryan Brown on 3/29/15.
-//
-//
-
 #include "lldb/Symbol/TypeSystem.h"
-
-#include <set>
-
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Language.h"
+
+#include <set>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -177,6 +169,11 @@ std::vector<CompilerDecl>
 TypeSystem::DeclContextFindDeclByName(void *opaque_decl_ctx, ConstString name,
                                       bool ignore_imported_decls) {
   return std::vector<CompilerDecl>();
+}
+
+std::unique_ptr<UtilityFunction>
+TypeSystem::CreateUtilityFunction(std::string text, std::string name) {
+  return {};
 }
 
 #pragma mark TypeSystemMap

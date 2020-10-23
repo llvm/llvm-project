@@ -466,9 +466,7 @@ public:
   }
 
   virtual std::unique_ptr<UtilityFunction>
-  CreateUtilityFunction(std::string text, std::string name) {
-    return {};
-  }
+  CreateUtilityFunction(std::string text, std::string name);
 
   virtual PersistentExpressionState *GetPersistentExpressionState() {
     return nullptr;
