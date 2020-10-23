@@ -82,6 +82,7 @@
     X(PostfixExpr) \
     X(ConditionalExpr) \
     X(MemberExpr) \
+    X(SubobjectExpr) \
     X(EnclosingExpr) \
     X(CastExpr) \
     X(SizeofParamPackExpr) \
@@ -91,6 +92,7 @@
     X(PrefixExpr) \
     X(FunctionParam) \
     X(ConversionExpr) \
+    X(PointerToMemberConversionExpr) \
     X(InitListExpr) \
     X(FoldExpr) \
     X(ThrowExpr) \
@@ -1656,6 +1658,40 @@ public:
   }
 };
 
+class SubobjectExpr : public Node {
+  const Node *Type;
+  const Node *SubExpr;
+  StringView Offset;
+  NodeArray UnionSelectors;
+  bool OnePastTheEnd;
+
+public:
+  SubobjectExpr(const Node *Type_, const Node *SubExpr_, StringView Offset_,
+                NodeArray UnionSelectors_, bool OnePastTheEnd_)
+      : Node(KSubobjectExpr), Type(Type_), SubExpr(SubExpr_), Offset(Offset_),
+        UnionSelectors(UnionSelectors_), OnePastTheEnd(OnePastTheEnd_) {}
+
+  template<typename Fn> void match(Fn F) const {
+    F(Type, SubExpr, Offset, UnionSelectors, OnePastTheEnd);
+  }
+
+  void printLeft(OutputStream &S) const override {
+    SubExpr->print(S);
+    S += ".<";
+    Type->print(S);
+    S += " at offset ";
+    if (Offset.empty()) {
+      S += "0";
+    } else if (Offset[0] == 'n') {
+      S += "-";
+      S += Offset.dropFront();
+    } else {
+      S += Offset;
+    }
+    S += ">";
+  }
+};
+
 class EnclosingExpr : public Node {
   const StringView Prefix;
   const Node *Infix;
@@ -1839,6 +1875,28 @@ public:
     Type->print(S);
     S += ")(";
     Expressions.printWithComma(S);
+    S += ")";
+  }
+};
+
+class PointerToMemberConversionExpr : public Node {
+  const Node *Type;
+  const Node *SubExpr;
+  StringView Offset;
+
+public:
+  PointerToMemberConversionExpr(const Node *Type_, const Node *SubExpr_,
+                                StringView Offset_)
+      : Node(KPointerToMemberConversionExpr), Type(Type_), SubExpr(SubExpr_),
+        Offset(Offset_) {}
+
+  template<typename Fn> void match(Fn F) const { F(Type, SubExpr, Offset); }
+
+  void printLeft(OutputStream &S) const override {
+    S += "(";
+    Type->print(S);
+    S += ")(";
+    SubExpr->print(S);
     S += ")";
   }
 };
@@ -2437,6 +2495,8 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   Node *parseConversionExpr();
   Node *parseBracedExpr();
   Node *parseFoldExpr();
+  Node *parsePointerToMemberConversionExpr();
+  Node *parseSubobjectExpr();
 
   /// Parse the <type> production.
   Node *parseType();
@@ -4404,6 +4464,50 @@ Node *AbstractManglingParser<Derived, Alloc>::parseFoldExpr() {
   return make<FoldExpr>(IsLeftFold, OperatorName, Pack, Init);
 }
 
+// <expression> ::= mc <parameter type> <expr> [<offset number>] E
+//
+// Not yet in the spec: https://github.com/itanium-cxx-abi/cxx-abi/issues/47
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parsePointerToMemberConversionExpr() {
+  Node *Ty = getDerived().parseType();
+  if (!Ty)
+    return nullptr;
+  Node *Expr = getDerived().parseExpr();
+  if (!Expr)
+    return nullptr;
+  StringView Offset = getDerived().parseNumber(true);
+  if (!consumeIf('E'))
+    return nullptr;
+  return make<PointerToMemberConversionExpr>(Ty, Expr, Offset);
+}
+
+// <expression> ::= so <referent type> <expr> [<offset number>] <union-selector>* [p] E
+// <union-selector> ::= _ [<number>]
+//
+// Not yet in the spec: https://github.com/itanium-cxx-abi/cxx-abi/issues/47
+template <typename Derived, typename Alloc>
+Node *AbstractManglingParser<Derived, Alloc>::parseSubobjectExpr() {
+  Node *Ty = getDerived().parseType();
+  if (!Ty)
+    return nullptr;
+  Node *Expr = getDerived().parseExpr();
+  if (!Expr)
+    return nullptr;
+  StringView Offset = getDerived().parseNumber(true);
+  size_t SelectorsBegin = Names.size();
+  while (consumeIf('_')) {
+    Node *Selector = make<NameType>(parseNumber());
+    if (!Selector)
+      return nullptr;
+    Names.push_back(Selector);
+  }
+  bool OnePastTheEnd = consumeIf('p');
+  if (!consumeIf('E'))
+    return nullptr;
+  return make<SubobjectExpr>(
+      Ty, Expr, Offset, popTrailingNodeArray(SelectorsBegin), OnePastTheEnd);
+}
+
 // <expression> ::= <unary operator-name> <expression>
 //              ::= <binary operator-name> <expression> <expression>
 //              ::= <ternary operator-name> <expression> <expression> <expression>
@@ -4661,6 +4765,9 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
     return nullptr;
   case 'm':
     switch (First[1]) {
+    case 'c':
+      First += 2;
+      return parsePointerToMemberConversionExpr();
     case 'i':
       First += 2;
       return getDerived().parseBinaryExpr("-");
@@ -4808,6 +4915,9 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
         return Ex;
       return make<CastExpr>("static_cast", T, Ex);
     }
+    case 'o':
+      First += 2;
+      return parseSubobjectExpr();
     case 'p': {
       First += 2;
       Node *Child = getDerived().parseExpr();
@@ -4975,6 +5085,16 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSpecialName() {
   switch (look()) {
   case 'T':
     switch (look(1)) {
+    // TA <template-arg>    # template parameter object
+    //
+    // Not yet in the spec: https://github.com/itanium-cxx-abi/cxx-abi/issues/63
+    case 'A': {
+      First += 2;
+      Node *Arg = getDerived().parseTemplateArg();
+      if (Arg == nullptr)
+        return nullptr;
+      return make<SpecialName>("template parameter object for ", Arg);
+    }
     // TV <type>    # virtual table
     case 'V': {
       First += 2;
