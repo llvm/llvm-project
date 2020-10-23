@@ -184,8 +184,19 @@ public:
     llvm::SmallVector<mlir::Type, 8> newResTys;
     llvm::SmallVector<mlir::Type, 8> newInTys;
     llvm::SmallVector<mlir::Value, 8> newOpers;
-    // FIXME: if the call is indirect, the first argument must still be the
-    // function to call.
+
+    // If the call is indirect, the first argument must still be the function
+    // to call.
+    int dropFront = 0;
+    if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
+      if (!callOp.callee().hasValue()) {
+        newInTys.push_back(fnTy.getInput(0));
+        newOpers.push_back(callOp.getOperand(0));
+        dropFront = 1;
+      }
+    }
+
+    // Determine the rewrite function, `wrap`, for the result value.
     llvm::Optional<std::function<mlir::Value(mlir::Operation *)>> wrap;
     if (fnTy.getResults().size() == 1) {
       mlir::Type ty = fnTy.getResult(0);
@@ -205,10 +216,12 @@ public:
       newResTys.insert(newResTys.end(), fnTy.getResults().begin(),
                        fnTy.getResults().end());
     }
+
     llvm::SmallVector<mlir::Type, 8> trailingInTys;
     llvm::SmallVector<mlir::Value, 8> trailingOpers;
-    for (auto e :
-         llvm::enumerate(llvm::zip(fnTy.getInputs(), callOp.getOperands()))) {
+    for (auto e : llvm::enumerate(
+             llvm::zip(fnTy.getInputs().drop_front(dropFront),
+                       callOp.getOperands().drop_front(dropFront)))) {
       mlir::Type ty = std::get<0>(e.value());
       mlir::Value oper = std::get<1>(e.value());
       unsigned index = e.index();
@@ -222,6 +235,7 @@ public:
                                            *callOp.callee()));
             } else {
               // TODO: dispatch case; how do we put arguments on a call?
+              // We cannot put both an sret and the dispatch object first.
               sret = false;
               llvm_unreachable("not implemented");
             }
@@ -257,9 +271,17 @@ public:
     newInTys.insert(newInTys.end(), trailingInTys.begin(), trailingInTys.end());
     newOpers.insert(newOpers.end(), trailingOpers.begin(), trailingOpers.end());
     if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
-      assert(callOp.callee().hasValue() && "indirect call not implemented");
-      auto newCall = rewriter->create<A>(loc, callOp.callee().getValue(),
-                                         newResTys, newOpers);
+      fir::CallOp newCall;
+      if (callOp.callee().hasValue()) {
+        newCall = rewriter->create<A>(loc, callOp.callee().getValue(),
+                                      newResTys, newOpers);
+      } else {
+        // Force new type on the input operand.
+        newOpers[0].setType(mlir::FunctionType::get(
+            mlir::TypeRange{newInTys}.drop_front(dropFront), newResTys,
+            callOp.getContext()));
+        newCall = rewriter->create<A>(loc, newResTys, newOpers);
+      }
       LLVM_DEBUG(llvm::dbgs() << "replacing call with " << newCall << '\n');
       if (wrap.hasValue())
         replaceOp(callOp, (*wrap)(newCall.getOperation()));
