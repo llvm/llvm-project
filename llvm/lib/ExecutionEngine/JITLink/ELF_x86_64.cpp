@@ -125,13 +125,14 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
   for (auto *B : G.blocks())
     for (auto &E : B->edges())
       if (E.getKind() == PCRel32GOTLoad) {
+        // Replace GOT load with LEA only for MOVQ instructions.
+        constexpr uint8_t MOVQRIPRel[] = {0x48, 0x8b};
+        if (strncmp(B->getContent().data() + E.getOffset() - 3,
+                    reinterpret_cast<const char *>(MOVQRIPRel), 2) != 0)
+          continue;
+
         assert(E.getOffset() >= 3 && "GOT edge occurs too early in block");
 
-        // Switch the edge kind to PCRel32: Whether we change the edge target
-        // or not this will be the desired kind.
-        E.setKind(PCRel32);
-
-        // Optimize GOT references.
         auto &GOTBlock = E.getTarget().getBlock();
         assert(GOTBlock.getSize() == G.getPointerSize() &&
                "GOT entry block should be pointer sized");
@@ -142,16 +143,13 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
         JITTargetAddress EdgeAddr = B->getAddress() + E.getOffset();
         JITTargetAddress TargetAddr = GOTTarget.getAddress();
 
-        // Check that this is a recognized MOV instruction.
-        // FIXME: Can we assume this?
-        constexpr uint8_t MOVQRIPRel[] = {0x48, 0x8b};
-        if (strncmp(B->getContent().data() + E.getOffset() - 3,
-                    reinterpret_cast<const char *>(MOVQRIPRel), 2) != 0)
-          continue;
-
         int64_t Displacement = TargetAddr - EdgeAddr + 4;
         if (Displacement >= std::numeric_limits<int32_t>::min() &&
             Displacement <= std::numeric_limits<int32_t>::max()) {
+          // Change the edge kind as we don't go through GOT anymore. This is
+          // for formal correctness only. Technically, the two relocation kinds
+          // are resolved the same way.
+          E.setKind(PCRel32);
           E.setTarget(GOTTarget);
           auto *BlockData = reinterpret_cast<uint8_t *>(
               const_cast<char *>(B->getContent().data()));
@@ -636,7 +634,8 @@ private:
     char *FixupPtr = BlockWorkingMem + E.getOffset();
     JITTargetAddress FixupAddress = B.getAddress() + E.getOffset();
     switch (E.getKind()) {
-    case ELFX86RelocationKind::PCRel32: {
+    case ELFX86RelocationKind::PCRel32:
+    case ELFX86RelocationKind::PCRel32GOTLoad: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
       endian::write32le(FixupPtr, Value);
       break;
