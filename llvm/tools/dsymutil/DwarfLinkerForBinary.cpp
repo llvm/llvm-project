@@ -384,7 +384,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
 
         llvm_unreachable("Unhandled DebugMap object");
       });
-  GeneralLinker.setSwiftInterfaceMap(&ParseableSwiftInterfaces);
+  GeneralLinker.setSwiftInterfacesMap(&ParseableSwiftInterfaces);
 
   for (const auto &Obj : Map.objects()) {
     // N_AST objects (swiftmodule files) should get dumped directly into the

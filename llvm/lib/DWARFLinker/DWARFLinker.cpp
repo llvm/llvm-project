@@ -207,7 +207,7 @@ static void resolveRelativeObjectPath(SmallVectorImpl<char> &Buf, DWARFDie CU) {
 /// DW_TAG_module blocks.
 static void analyzeImportedModule(
     const DWARFDie &DIE, CompileUnit &CU,
-    SwiftInterfaceMap *ParseableSwiftInterfaces,
+    swiftInterfacesMap *ParseableSwiftInterfaces,
     std::function<void(const Twine &, const DWARFDie &)> ReportWarning) {
   if (CU.getLanguage() != dwarf::DW_LANG_Swift)
     return;
@@ -252,7 +252,7 @@ static bool analyzeContextInfo(
     const DWARFDie &DIE, unsigned ParentIdx, CompileUnit &CU,
     DeclContext *CurrentDeclContext, UniquingStringPool &StringPool,
     DeclContextTree &Contexts, uint64_t ModulesEndOffset,
-    SwiftInterfaceMap *ParseableSwiftInterfaces,
+    swiftInterfacesMap *ParseableSwiftInterfaces,
     std::function<void(const Twine &, const DWARFDie &)> ReportWarning,
     bool InImportedModule = false) {
   unsigned MyIdx = CU.getOrigUnit().getDIEIndex(DIE);
@@ -1940,7 +1940,7 @@ static uint64_t getDwoId(const DWARFDie &CUDie, const DWARFUnit &Unit) {
 }
 
 static std::string remapPath(StringRef Path,
-                             const ObjectPrefixMap &ObjectPrefixMap) {
+                             const objectPrefixMap &ObjectPrefixMap) {
   if (ObjectPrefixMap.empty())
     return Path.str();
 
