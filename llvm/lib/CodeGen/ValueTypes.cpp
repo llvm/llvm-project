@@ -158,15 +158,17 @@ std::string EVT::getEVTString() const {
     if (isFloatingPoint())
       return "f" + utostr(getSizeInBits());
     llvm_unreachable("Invalid EVT!");
-  case MVT::bf16:    return "bf16";
-  case MVT::ppcf128: return "ppcf128";
-  case MVT::isVoid:  return "isVoid";
-  case MVT::Other:   return "ch";
-  case MVT::Glue:    return "glue";
-  case MVT::x86mmx:  return "x86mmx";
-  case MVT::Metadata:return "Metadata";
-  case MVT::Untyped: return "Untyped";
-  case MVT::exnref : return "exnref";
+  case MVT::bf16:      return "bf16";
+  case MVT::ppcf128:   return "ppcf128";
+  case MVT::isVoid:    return "isVoid";
+  case MVT::Other:     return "ch";
+  case MVT::Glue:      return "glue";
+  case MVT::x86mmx:    return "x86mmx";
+  case MVT::Metadata:  return "Metadata";
+  case MVT::Untyped:   return "Untyped";
+  case MVT::exnref:    return "exnref";
+  case MVT::funcref:   return "funcref";
+  case MVT::externref: return "externref";
   }
 }
 

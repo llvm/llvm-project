@@ -559,6 +559,7 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry,
   case wasm::R_WASM_GLOBAL_INDEX_LEB:
   case wasm::R_WASM_GLOBAL_INDEX_I32:
   case wasm::R_WASM_EVENT_INDEX_LEB:
+  case wasm::R_WASM_TABLE_NUMBER_LEB:
     // Provisional value is function/global/event Wasm index
     assert(WasmIndices.count(RelEntry.Symbol) > 0 && "symbol not found in wasm index space");
     return WasmIndices[RelEntry.Symbol];
@@ -663,6 +664,7 @@ void WasmObjectWriter::applyRelocations(
     case wasm::R_WASM_GLOBAL_INDEX_LEB:
     case wasm::R_WASM_MEMORY_ADDR_LEB:
     case wasm::R_WASM_EVENT_INDEX_LEB:
+    case wasm::R_WASM_TABLE_NUMBER_LEB:
       writePatchableLEB<5>(Stream, Value, Offset);
       break;
     case wasm::R_WASM_MEMORY_ADDR_LEB64:

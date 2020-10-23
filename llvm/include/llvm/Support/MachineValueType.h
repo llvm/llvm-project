@@ -245,9 +245,11 @@ namespace llvm {
                               // will be determined by the opcode.
 
       exnref         = 161,   // WebAssembly's exnref type
+      funcref        = 162,   // WebAssembly's funcref type
+      externref      = 163,   // WebAssembly's externref type
 
       FIRST_VALUETYPE =  1,   // This is always the beginning of the list.
-      LAST_VALUETYPE = 162,   // This always remains at the end of the list.
+      LAST_VALUETYPE = 164,   // This always remains at the end of the list.
 
       // This is the current maximum for LAST_VALUETYPE.
       // MVT::MAX_ALLOWED_VALUETYPE is used for asserts and to size bit vectors
@@ -973,7 +975,9 @@ namespace llvm {
       case v1024f32:  return TypeSize::Fixed(32768);
       case v2048i32:
       case v2048f32:  return TypeSize::Fixed(65536);
-      case exnref: return TypeSize::Fixed(0); // opaque type
+      case exnref:
+      case funcref:
+      case externref: return TypeSize::Fixed(0); // opaque type
       }
     }
 
