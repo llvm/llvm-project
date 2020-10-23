@@ -97,6 +97,9 @@ public:
     return 31;
   }
 
+  unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                 TTI::TargetCostKind CostKind);
+
   unsigned getRegisterBitWidth(bool Vector) const {
     if (Vector) {
       if (ST->hasSVE())
