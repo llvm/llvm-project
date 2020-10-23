@@ -59,6 +59,8 @@
 ; CHECK-O123-NEXT: Running pass: ModuleInlinerWrapperPass
 ; CHECK-O123-NEXT: Running analysis: InlineAdvisorAnalysis
 ; CHECK-O123-NEXT: Starting {{.*}}Module pass manager run.
+; CHECK-O123-NEXT: Running pass: AlwaysInlinerPass
+; CHECK-O123-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-O123-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O123-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O123-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy on (foo)
@@ -73,7 +75,6 @@
 ; CHECK-O123-NEXT: Finished {{.*}}Module pass manager run.
 ; CHECK-O123-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: PGOInstrumentationUse
-; CHECK-O-NEXT: Running analysis: ProfileSummaryAnalysis
 ; These next two can appear in any order since they are accessed as parameters
 ; on the same call to BlockFrequencyInfo::calculate.
 ; CHECK-O-DAG: Running analysis: BranchProbabilityAnalysis on foo
@@ -95,6 +96,7 @@
 ; CHECK-O-NEXT: Running analysis: GlobalsAA
 ; CHECK-O-NEXT: Running analysis: CallGraphAnalysis
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
+; CHECK-O-NEXT: Running pass: AlwaysInlinerPass
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis on foo
