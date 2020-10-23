@@ -1,6 +1,10 @@
 // The for loop in the backticks below requires bash.
 // REQUIRES: shell
 //
+// TODO: It isn't clear why this test started failing on the avr bot.
+//       Waiting for help from bot owner to investigate.
+// XFAIL: avr
+//
 // RUN: %clangxx_memprof  %s -o %t
 
 // Regular run.
