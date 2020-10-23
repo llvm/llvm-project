@@ -345,12 +345,11 @@ void SourceManager::clearIDTables() {
   createExpansionLoc(SourceLocation(), SourceLocation(), SourceLocation(), 1);
 }
 
-bool SourceManager::isMainFile(FileEntryRef SourceFile) {
+bool SourceManager::isMainFile(const FileEntry &SourceFile) {
   assert(MainFileID.isValid() && "expected initialized SourceManager");
-  auto FE = getFileEntryRefForID(MainFileID);
-  if (!FE)
-    return false;
-  return FE->getUID() == SourceFile.getUID();
+  if (auto *FE = getFileEntryForID(MainFileID))
+    return FE->getUID() == SourceFile.getUID();
+  return false;
 }
 
 void SourceManager::initializeForReplay(const SourceManager &Old) {
