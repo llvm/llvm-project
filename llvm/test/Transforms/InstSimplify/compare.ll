@@ -2166,9 +2166,7 @@ declare <2 x i13> @llvm.ctlz.v2i13(<2 x i13>)
 
 define i1 @ctlz_sgt_bitwidth(i11 %x) {
 ; CHECK-LABEL: @ctlz_sgt_bitwidth(
-; CHECK-NEXT:    [[POP:%.*]] = call i11 @llvm.ctlz.i11(i11 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i11 [[POP]], 11
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %pop = call i11 @llvm.ctlz.i11(i11 %x)
   %cmp = icmp sgt i11 %pop, 11
@@ -2177,9 +2175,7 @@ define i1 @ctlz_sgt_bitwidth(i11 %x) {
 
 define i1 @ctlz_sle_minus1(i11 %x) {
 ; CHECK-LABEL: @ctlz_sle_minus1(
-; CHECK-NEXT:    [[POP:%.*]] = call i11 @llvm.ctlz.i11(i11 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i11 [[POP]], -1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %pop = call i11 @llvm.ctlz.i11(i11 %x)
   %cmp = icmp sle i11 %pop, -1
@@ -2188,9 +2184,7 @@ define i1 @ctlz_sle_minus1(i11 %x) {
 
 define i1 @ctlz_ugt_bitwidth(i73 %x) {
 ; CHECK-LABEL: @ctlz_ugt_bitwidth(
-; CHECK-NEXT:    [[POP:%.*]] = call i73 @llvm.ctlz.i73(i73 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i73 [[POP]], 73
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %pop = call i73 @llvm.ctlz.i73(i73 %x)
   %cmp = icmp ugt i73 %pop, 73
@@ -2212,9 +2206,7 @@ define i1 @ctlz_ugt_bitwidth_minus1(i73 %x) {
 
 define <2 x i1> @ctlz_sgt_bitwidth_splat(<2 x i13> %x) {
 ; CHECK-LABEL: @ctlz_sgt_bitwidth_splat(
-; CHECK-NEXT:    [[POP:%.*]] = call <2 x i13> @llvm.ctlz.v2i13(<2 x i13> [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i13> [[POP]], <i13 13, i13 13>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %pop = call <2 x i13> @llvm.ctlz.v2i13(<2 x i13> %x)
   %cmp = icmp sgt <2 x i13> %pop, <i13 13, i13 13>
@@ -2223,9 +2215,7 @@ define <2 x i1> @ctlz_sgt_bitwidth_splat(<2 x i13> %x) {
 
 define i1 @ctlz_ult_plus1_bitwidth(i11 %x) {
 ; CHECK-LABEL: @ctlz_ult_plus1_bitwidth(
-; CHECK-NEXT:    [[POP:%.*]] = call i11 @llvm.ctlz.i11(i11 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i11 [[POP]], 12
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %pop = call i11 @llvm.ctlz.i11(i11 %x)
   %cmp = icmp ult i11 %pop, 12
@@ -2234,9 +2224,7 @@ define i1 @ctlz_ult_plus1_bitwidth(i11 %x) {
 
 define i1 @ctlz_ne_big_bitwidth(i73 %x) {
 ; CHECK-LABEL: @ctlz_ne_big_bitwidth(
-; CHECK-NEXT:    [[POP:%.*]] = call i73 @llvm.ctlz.i73(i73 [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i73 [[POP]], 75
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %pop = call i73 @llvm.ctlz.i73(i73 %x)
   %cmp = icmp ne i73 %pop, 75
@@ -2245,9 +2233,7 @@ define i1 @ctlz_ne_big_bitwidth(i73 %x) {
 
 define <2 x i1> @ctlz_slt_bitwidth_plus1_splat(<2 x i13> %x) {
 ; CHECK-LABEL: @ctlz_slt_bitwidth_plus1_splat(
-; CHECK-NEXT:    [[POP:%.*]] = call <2 x i13> @llvm.ctlz.v2i13(<2 x i13> [[X:%.*]], i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i13> [[POP]], <i13 14, i13 14>
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %pop = call <2 x i13> @llvm.ctlz.v2i13(<2 x i13> %x)
   %cmp = icmp slt <2 x i13> %pop, <i13 14, i13 14>

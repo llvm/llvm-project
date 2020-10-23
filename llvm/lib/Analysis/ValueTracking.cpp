@@ -6461,7 +6461,8 @@ static void setLimitsForIntrinsic(const IntrinsicInst &II, APInt &Lower,
   const APInt *C;
   switch (II.getIntrinsicID()) {
   case Intrinsic::ctpop:
-    // Maximum of set bits is the bit width.
+  case Intrinsic::ctlz:
+    // Maximum of set/clear bits is the bit width.
     assert(Lower == 0 && "Expected lower bound to be zero");
     Upper = Width + 1;
     break;
