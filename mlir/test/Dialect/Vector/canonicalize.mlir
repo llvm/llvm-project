@@ -396,6 +396,39 @@ func @fold_extract_broadcast_negative(%a : f32) -> vector<4xf32> {
 
 // -----
 
+// CHECK-LABEL: func @fold_extract_shapecast
+//  CHECK-SAME: (%[[A0:.*]]: vector<5x1x3x2xf32>, %[[A1:.*]]: vector<8x4x2xf32>
+//       CHECK:   %[[R0:.*]] = vector.extract %[[A0]][1, 0, 1, 1] : vector<5x1x3x2xf32>
+//       CHECK:   %[[R1:.*]] = vector.extract %[[A0]][1, 0, 2] : vector<5x1x3x2xf32>
+//       CHECK:   %[[R2:.*]] = vector.extract %[[A1]][7] : vector<8x4x2xf32>
+//       CHECK:   return %[[R0]], %[[R1]], %[[R2]] : f32, vector<2xf32>, vector<4x2xf32>
+func @fold_extract_shapecast(%arg0 : vector<5x1x3x2xf32>,
+                             %arg1 : vector<8x4x2xf32>)
+  -> (f32, vector<2xf32>, vector<4x2xf32>) {
+  %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<15x2xf32>
+  %1 = vector.shape_cast %arg1 : vector<8x4x2xf32> to vector<4x2x4x2xf32>
+  %r1 = vector.extract %0[4, 1] : vector<15x2xf32>
+  %r2 = vector.extract %0[5] : vector<15x2xf32>
+  %r3 = vector.extract %1[3, 1] : vector<4x2x4x2xf32>
+  return %r1, %r2, %r3 : f32, vector<2xf32>, vector<4x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_shapecast_negative
+//       CHECK:   %[[V:.*]] = vector.shape_cast %{{.*}} : vector<16xf32> to vector<2x4x2xf32>
+//       CHECK:   %[[R:.*]] = vector.extract %[[V]][1] : vector<2x4x2xf32>
+//       CHECK:   return %[[R]] : vector<4x2xf32>
+func @fold_extract_shapecast_negative(%arg0 : vector<16xf32>,
+                             %arg1 : vector<8x4x2xf32>) -> vector<4x2xf32> {
+  %0 = vector.shape_cast %arg0 : vector<16xf32> to vector<2x4x2xf32>
+  %r = vector.extract %0[1] : vector<2x4x2xf32>
+  return %r : vector<4x2xf32>
+}
+
+
+// -----
+
 // CHECK-LABEL: fold_vector_transfers
 func @fold_vector_transfers(%A: memref<?x8xf32>) -> (vector<4x8xf32>, vector<4x9xf32>) {
   %c0 = constant 0 : index
