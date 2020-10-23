@@ -350,7 +350,7 @@ protected:
 public:
   virtual ~CfgPrinter() {}
 
-  const CfgInterface &interface() const { return m_iface; }
+  const CfgInterface &getInterface() const { return m_iface; }
 
   virtual void printBlockName(raw_ostream &out, CfgBlockRef block) const = 0;
   virtual void printValue(raw_ostream &out, CfgValueRef value) const = 0;
