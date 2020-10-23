@@ -34862,7 +34862,7 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
         DAG.computeKnownBits(V1, DemandedZeroV1).isZero() &&
         DAG.computeKnownBits(V2, DemandedZeroV2).isZero()) {
       Shuffle = ISD::OR;
-      SrcVT = DstVT = EVT(MaskVT).changeTypeToInteger().getSimpleVT();
+      SrcVT = DstVT = MaskVT.changeTypeToInteger();
       return true;
     }
   }
