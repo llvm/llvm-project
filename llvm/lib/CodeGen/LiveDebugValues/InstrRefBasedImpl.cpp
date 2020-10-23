@@ -900,12 +900,11 @@ public:
 public:
   VLocTracker() {}
 
-  void defVar(const MachineInstr &MI, Optional<ValueIDNum> ID) {
-    // XXX skipping overlapping fragments for now.
-    assert(MI.isDebugValue());
+  void defVar(const MachineInstr &MI, const DbgValueProperties &Properties,
+              Optional<ValueIDNum> ID) {
+    assert(MI.isDebugValue() || MI.isDebugRef());
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
-    DbgValueProperties Properties(MI);
     DbgValue Rec = (ID) ? DbgValue(*ID, Properties, DbgValue::Def)
                         : DbgValue(Properties, DbgValue::Undef);
 
@@ -917,7 +916,7 @@ public:
   }
 
   void defVar(const MachineInstr &MI, const MachineOperand &MO) {
-    // XXX skipping overlapping fragments for now.
+    // Only DBG_VALUEs can define constant-valued variables.
     assert(MI.isDebugValue());
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
@@ -1083,50 +1082,64 @@ public:
     }
   }
 
-  /// Handle a DBG_VALUE within a block. Terminate the variables current
-  /// location, and record the value its DBG_VALUE refers to, so that we can
-  /// detect location transfers later on.
+  /// Change a variable value after encountering a DBG_VALUE inside a block.
   void redefVar(const MachineInstr &MI) {
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
+    DbgValueProperties Properties(MI);
+
     const MachineOperand &MO = MI.getOperand(0);
 
-    // Erase any previous location,
-    auto It = ActiveVLocs.find(Var);
-    if (It != ActiveVLocs.end()) {
-      ActiveMLocs[It->second.Loc].erase(Var);
-    }
-
-    // Insert a new variable location. Ignore non-register locations, we don't
-    // transfer those, and can't currently describe spill locs independently of
-    // regs.
-    // (This is because a spill location is a DBG_VALUE of the stack pointer).
+    // Ignore non-register locations, we don't transfer those.
     if (!MO.isReg() || MO.getReg() == 0) {
-      if (It != ActiveVLocs.end())
+      auto It = ActiveVLocs.find(Var);
+      if (It != ActiveVLocs.end()) {
+        ActiveMLocs[It->second.Loc].erase(Var);
         ActiveVLocs.erase(It);
+     }
       return;
     }
 
     Register Reg = MO.getReg();
-    LocIdx MLoc = MTracker->getRegMLoc(Reg);
-    DbgValueProperties Properties(MI);
+    LocIdx NewLoc = MTracker->getRegMLoc(Reg);
+    redefVar(MI, Properties, NewLoc);
+  }
+
+  /// Handle a change in variable location within a block. Terminate the
+  /// variables current location, and record the value it now refers to, so
+  /// that we can detect location transfers later on.
+  void redefVar(const MachineInstr &MI, const DbgValueProperties &Properties,
+                Optional<LocIdx> OptNewLoc) {
+    DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
+                      MI.getDebugLoc()->getInlinedAt());
+
+    // Erase any previous location,
+    auto It = ActiveVLocs.find(Var);
+    if (It != ActiveVLocs.end())
+      ActiveMLocs[It->second.Loc].erase(Var);
+
+    // If there _is_ no new location, all we had to do was erase.
+    if (!OptNewLoc)
+      return;
+    LocIdx NewLoc = *OptNewLoc;
 
     // Check whether our local copy of values-by-location in #VarLocs is out of
     // date. Wipe old tracking data for the location if it's been clobbered in
     // the meantime.
-    if (MTracker->getNumAtPos(MLoc) != VarLocs[MLoc.asU64()]) {
-      for (auto &P : ActiveMLocs[MLoc.asU64()]) {
+    if (MTracker->getNumAtPos(NewLoc) != VarLocs[NewLoc.asU64()]) {
+      for (auto &P : ActiveMLocs[NewLoc]) {
         ActiveVLocs.erase(P);
       }
-      ActiveMLocs[MLoc].clear();
-      VarLocs[MLoc.asU64()] = MTracker->getNumAtPos(MLoc);
+      ActiveMLocs[NewLoc.asU64()].clear();
+      VarLocs[NewLoc.asU64()] = MTracker->getNumAtPos(NewLoc);
     }
 
-    ActiveMLocs[MLoc].insert(Var);
+    ActiveMLocs[NewLoc].insert(Var);
     if (It == ActiveVLocs.end()) {
-      ActiveVLocs.insert(std::make_pair(Var, LocAndProperties{MLoc, Properties}));
+      ActiveVLocs.insert(
+          std::make_pair(Var, LocAndProperties{NewLoc, Properties}));
     } else {
-      It->second.Loc = MLoc;
+      It->second.Loc = NewLoc;
       It->second.Properties = Properties;
     }
   }
@@ -1272,6 +1285,13 @@ private:
   DenseMap<MachineBasicBlock *, unsigned int> BBToOrder;
   DenseMap<unsigned, unsigned> BBNumToRPO;
 
+  /// Pair of MachineInstr, and its 1-based offset into the containing block.
+  typedef std::pair<const MachineInstr *, unsigned> InstAndNum;
+  /// Map from debug instruction number to the MachineInstr labelled with that
+  /// number, and its location within the function. Used to transform
+  /// instruction numbers in DBG_INSTR_REFs into machine value numbers.
+  std::map<uint64_t, InstAndNum> DebugInstrNumToInstr;
+
   // Map of overlapping variable fragments.
   OverlapMap OverlapFragments;
   VarToFragments SeenFragments;
@@ -1303,6 +1323,10 @@ private:
   /// Examines whether \p MI is a DBG_VALUE and notifies trackers.
   /// \returns true if MI was recognized and processed.
   bool transferDebugValue(const MachineInstr &MI);
+
+  /// Examines whether \p MI is a DBG_INSTR_REF and notifies trackers.
+  /// \returns true if MI was recognized and processed.
+  bool transferDebugInstrRef(MachineInstr &MI);
 
   /// Examines whether \p MI is copy instruction, and notifies trackers.
   /// \returns true if MI was recognized and processed.
@@ -1497,6 +1521,7 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
          "Expected inlined-at fields to agree");
 
   DebugVariable V(Var, Expr, InlinedAt);
+  DbgValueProperties Properties(MI);
 
   // If there are no instructions in this lexical scope, do no location tracking
   // at all, this variable shouldn't get a legitimate location range.
@@ -1519,9 +1544,9 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
       // Feed defVar the new variable location, or if this is a
       // DBG_VALUE $noreg, feed defVar None.
       if (MO.getReg())
-        VTracker->defVar(MI, MTracker->readReg(MO.getReg()));
+        VTracker->defVar(MI, Properties, MTracker->readReg(MO.getReg()));
       else
-        VTracker->defVar(MI, None);
+        VTracker->defVar(MI, Properties, None);
     } else if (MI.getOperand(0).isImm() || MI.getOperand(0).isFPImm() ||
                MI.getOperand(0).isCImm()) {
       VTracker->defVar(MI, MI.getOperand(0));
@@ -1532,6 +1557,116 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
   // to the TransferTracker too.
   if (TTracker)
     TTracker->redefVar(MI);
+  return true;
+}
+
+bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI) {
+  if (!MI.isDebugRef())
+    return false;
+
+  // Only handle this instruction when we are building the variable value
+  // transfer function.
+  if (!VTracker)
+    return false;
+
+  unsigned InstNo = MI.getOperand(0).getImm();
+  unsigned OpNo = MI.getOperand(1).getImm();
+
+  const DILocalVariable *Var = MI.getDebugVariable();
+  const DIExpression *Expr = MI.getDebugExpression();
+  const DILocation *DebugLoc = MI.getDebugLoc();
+  const DILocation *InlinedAt = DebugLoc->getInlinedAt();
+  assert(Var->isValidLocationForIntrinsic(DebugLoc) &&
+         "Expected inlined-at fields to agree");
+
+  DebugVariable V(Var, Expr, InlinedAt);
+
+  auto *Scope = LS.findLexicalScope(MI.getDebugLoc().get());
+  if (Scope == nullptr)
+    return true; // Handled by doing nothing. This variable is never in scope.
+
+  const MachineFunction &MF = *MI.getParent()->getParent();
+
+  // Various optimizations may have happened to the value during codegen,
+  // recorded in the value substitution table. Apply any substitutions to
+  // the instruction / operand number in this DBG_INSTR_REF.
+  auto Sub = MF.DebugValueSubstitutions.find(std::make_pair(InstNo, OpNo));
+  while (Sub != MF.DebugValueSubstitutions.end()) {
+    InstNo = Sub->second.first;
+    OpNo = Sub->second.second;
+    Sub = MF.DebugValueSubstitutions.find(std::make_pair(InstNo, OpNo));
+  }
+
+  // Default machine value number is <None> -- if no instruction defines
+  // the corresponding value, it must have been optimized out.
+  Optional<ValueIDNum> NewID = None;
+
+  // Try to lookup the instruction number, and find the machine value number
+  // that it defines.
+  auto InstrIt = DebugInstrNumToInstr.find(InstNo);
+  if (InstrIt != DebugInstrNumToInstr.end()) {
+    const MachineInstr &TargetInstr = *InstrIt->second.first;
+    uint64_t BlockNo = TargetInstr.getParent()->getNumber();
+
+    // Pick out the designated operand.
+    assert(OpNo < TargetInstr.getNumOperands());
+    const MachineOperand &MO = TargetInstr.getOperand(OpNo);
+
+    // Today, this can only be a register.
+    assert(MO.isReg() && MO.isDef());
+
+    unsigned LocID = MTracker->getLocID(MO.getReg(), false);
+    LocIdx L = MTracker->LocIDToLocIdx[LocID];
+    NewID = ValueIDNum(BlockNo, InstrIt->second.second, L);
+  }
+
+  // We, we have a value number or None. Tell the variable value tracker about
+  // it. The rest of this LiveDebugValues implementation acts exactly the same
+  // for DBG_INSTR_REFs as DBG_VALUEs (just, the former can refer to values that
+  // aren't immediately available).
+  DbgValueProperties Properties(Expr, false);
+  VTracker->defVar(MI, Properties, NewID);
+
+  // If we're on the final pass through the function, decompose this INSTR_REF
+  // into a plain DBG_VALUE.
+  if (!TTracker)
+    return true;
+
+  // Pick a location for the machine value number, if such a location exists.
+  // (This information could be stored in TransferTracker to make it faster).
+  Optional<LocIdx> FoundLoc = None;
+  for (auto Location : MTracker->locations()) {
+    LocIdx CurL = Location.Idx;
+    ValueIDNum ID = MTracker->LocIdxToIDNum[CurL];
+    if (NewID && ID == NewID) {
+      // If this is the first location with that value, pick it. Otherwise,
+      // consider whether it's a "longer term" location.
+      if (!FoundLoc) {
+        FoundLoc = CurL;
+        continue;
+      }
+
+      if (MTracker->isSpill(CurL))
+        FoundLoc = CurL; // Spills are a longer term location.
+      else if (!MTracker->isSpill(*FoundLoc) &&
+               !MTracker->isSpill(CurL) &&
+               !isCalleeSaved(*FoundLoc) &&
+               isCalleeSaved(CurL))
+        FoundLoc = CurL; // Callee saved regs are longer term than normal.
+    }
+  }
+
+  // Tell transfer tracker that the variable value has changed.
+  TTracker->redefVar(MI, Properties, FoundLoc);
+
+  // Produce a DBG_VALUE representing what this DBG_INSTR_REF meant.
+  // This DBG_VALUE is potentially a $noreg / undefined location, if
+  // FoundLoc is None.
+  // (XXX -- could morph the DBG_INSTR_REF in the future).
+  MachineInstr *DbgMI = MTracker->emitLoc(FoundLoc, V, Properties);
+  TTracker->PendingDbgValues.push_back(DbgMI);
+  TTracker->flushDbgValues(MI.getIterator(), nullptr);
+
   return true;
 }
 
@@ -1916,6 +2051,8 @@ void InstrRefBasedLDV::process(MachineInstr &MI) {
   // definitions.
   if (transferDebugValue(MI))
     return;
+  if (transferDebugInstrRef(MI))
+    return;
   if (transferRegisterCopy(MI))
     return;
   if (transferSpillOrRestoreInst(MI))
@@ -1960,6 +2097,20 @@ void InstrRefBasedLDV::produceMLocTransferFunction(
       // Also accumulate fragment map.
       if (MI.isDebugValue())
         accumulateFragmentMap(MI);
+
+      // Create a map from the instruction number (if present) to the
+      // MachineInstr and its position.
+      if (MI.peekDebugInstrNum()) {
+        uint64_t InstrNo = MI.peekDebugInstrNum();
+        auto InstrAndPos = std::make_pair(&MI, CurInst);
+        auto InsertResult =
+            DebugInstrNumToInstr.insert(std::make_pair(InstrNo, InstrAndPos));
+
+        // There should never be duplicate instruction numbers.
+        assert(InsertResult.second);
+        (void)InsertResult;
+      }
+
       ++CurInst;
     }
 
@@ -3123,6 +3274,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   OrderToBB.clear();
   BBToOrder.clear();
   BBNumToRPO.clear();
+  DebugInstrNumToInstr.clear();
 
   return Changed;
 }
