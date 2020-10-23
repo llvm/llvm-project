@@ -146,27 +146,16 @@ lldb::addr_t AppleGetPendingItemsHandler::SetupGetPendingItemsFunction(
 
     if (!m_get_pending_items_impl_code) {
       if (g_get_pending_items_function_code != nullptr) {
-        Status error;
-        m_get_pending_items_impl_code.reset(
-            exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
-                g_get_pending_items_function_code, eLanguageTypeObjC,
-                g_get_pending_items_function_name, error));
-        if (error.Fail()) {
-          LLDB_LOGF(log,
-                    "Failed to get UtilityFunction for pending-items "
-                    "introspection: %s.",
-                    error.AsCString());
+        auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
+            g_get_pending_items_function_code,
+            g_get_pending_items_function_name, eLanguageTypeC, exe_ctx);
+        if (!utility_fn_or_error) {
+          LLDB_LOG_ERROR(log, utility_fn_or_error.takeError(),
+                         "Failed to create UtilityFunction for pending-items "
+                         "introspection: {0}.");
           return args_addr;
         }
-
-        if (!m_get_pending_items_impl_code->Install(diagnostics, exe_ctx)) {
-          if (log) {
-            LLDB_LOGF(log, "Failed to install pending-items introspection.");
-            diagnostics.Dump(log);
-          }
-          m_get_pending_items_impl_code.reset();
-          return args_addr;
-        }
+        m_get_pending_items_impl_code = std::move(*utility_fn_or_error);
       } else {
         LLDB_LOGF(log, "No pending-items introspection code found.");
         return LLDB_INVALID_ADDRESS;
