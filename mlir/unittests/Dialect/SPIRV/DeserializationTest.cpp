@@ -25,9 +25,6 @@
 
 using namespace mlir;
 
-/// Load the SPIRV dialect.
-static DialectRegistration<spirv::SPIRVDialect> SPIRVRegistration;
-
 using ::testing::StrEq;
 
 //===----------------------------------------------------------------------===//
@@ -38,7 +35,7 @@ using ::testing::StrEq;
 /// diagnostic checking utilities.
 class DeserializationTest : public ::testing::Test {
 protected:
-  DeserializationTest() : context(/*loadAllDialects=*/false) {
+  DeserializationTest() {
     context.getOrLoadDialect<mlir::spirv::SPIRVDialect>();
     // Register a diagnostic handler to capture the diagnostic so that we can
     // check it later.

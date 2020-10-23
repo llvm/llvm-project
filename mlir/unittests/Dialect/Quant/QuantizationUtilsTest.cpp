@@ -75,7 +75,7 @@ UniformQuantizedType getTestQuantizedType(Type storageType, MLIRContext *ctx) {
 }
 
 TEST(QuantizationUtilsTest, convertFloatAttrUniform) {
-  MLIRContext ctx(/*loadAllDialects=*/false);
+  MLIRContext ctx;
   ctx.getOrLoadDialect<QuantizationDialect>();
   IntegerType convertedType = IntegerType::get(8, &ctx);
   auto quantizedType = getTestQuantizedType(convertedType, &ctx);
@@ -93,7 +93,7 @@ TEST(QuantizationUtilsTest, convertFloatAttrUniform) {
 }
 
 TEST(QuantizationUtilsTest, convertRankedDenseAttrUniform) {
-  MLIRContext ctx(/*loadAllDialects=*/false);
+  MLIRContext ctx;
   ctx.getOrLoadDialect<QuantizationDialect>();
   IntegerType convertedType = IntegerType::get(8, &ctx);
   auto quantizedType = getTestQuantizedType(convertedType, &ctx);
@@ -118,7 +118,7 @@ TEST(QuantizationUtilsTest, convertRankedDenseAttrUniform) {
 }
 
 TEST(QuantizationUtilsTest, convertRankedSplatAttrUniform) {
-  MLIRContext ctx(/*loadAllDialects=*/false);
+  MLIRContext ctx;
   ctx.getOrLoadDialect<QuantizationDialect>();
   IntegerType convertedType = IntegerType::get(8, &ctx);
   auto quantizedType = getTestQuantizedType(convertedType, &ctx);
@@ -143,7 +143,7 @@ TEST(QuantizationUtilsTest, convertRankedSplatAttrUniform) {
 }
 
 TEST(QuantizationUtilsTest, convertRankedSparseAttrUniform) {
-  MLIRContext ctx(/*loadAllDialects=*/false);
+  MLIRContext ctx;
   ctx.getOrLoadDialect<QuantizationDialect>();
   IntegerType convertedType = IntegerType::get(8, &ctx);
   auto quantizedType = getTestQuantizedType(convertedType, &ctx);

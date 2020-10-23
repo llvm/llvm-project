@@ -21,7 +21,7 @@ using namespace mlir;
 
 
 static MLIRContext *ctx() {
-  static thread_local MLIRContext context(/*loadAllDialects=*/false);
+  static thread_local MLIRContext context;
   static thread_local bool once =
       (context.getOrLoadDialect<SDBMDialect>(), true);
   (void)once;
