@@ -4093,27 +4093,32 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         assert(MTE->getStorageDuration() == SD_Static &&
                "should have a frame for a non-global materialized temporary");
 
-        // Per C++1y [expr.const]p2:
+        // C++20 [expr.const]p4: [DR2126]
+        //   An object or reference is usable in constant expressions if it is
+        //   - a temporary object of non-volatile const-qualified literal type
+        //     whose lifetime is extended to that of a variable that is usable
+        //     in constant expressions
+        //
+        // C++20 [expr.const]p5:
         //  an lvalue-to-rvalue conversion [is not allowed unless it applies to]
-        //   - a [...] glvalue of integral or enumeration type that refers to
-        //     a non-volatile const object [...]
-        //   [...]
-        //   - a [...] glvalue of literal type that refers to a non-volatile
-        //     object whose lifetime began within the evaluation of e.
+        //   - a non-volatile glvalue that refers to an object that is usable
+        //     in constant expressions, or
+        //   - a non-volatile glvalue of literal type that refers to a
+        //     non-volatile object whose lifetime began within the evaluation
+        //     of E;
         //
         // C++11 misses the 'began within the evaluation of e' check and
         // instead allows all temporaries, including things like:
         //   int &&r = 1;
         //   int x = ++r;
         //   constexpr int k = r;
-        // Therefore we use the C++14 rules in C++11 too.
+        // Therefore we use the C++14-onwards rules in C++11 too.
         //
         // Note that temporaries whose lifetimes began while evaluating a
         // variable's constructor are not usable while evaluating the
         // corresponding destructor, not even if they're of const-qualified
         // types.
-        if (!(BaseType.isConstQualified() &&
-              BaseType->isIntegralOrEnumerationType()) &&
+        if (!MTE->isUsableInConstantExpressions(Info.Ctx) &&
             !lifetimeStartedInEvaluation(Info, LVal.Base)) {
           if (!IsAccess)
             return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
