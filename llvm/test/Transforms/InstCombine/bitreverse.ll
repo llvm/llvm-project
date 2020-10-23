@@ -271,3 +271,67 @@ define <2 x i8> @rev8_xor_vector(<2 x i8> %0) {
   %16 = or <2 x i8> %14, %15
   ret <2 x i8> %16
 }
+
+; bitreverse8(x) = ((x * 0x0202020202ULL) & 0x010884422010ULL) % 1023
+define i8 @rev8_mul_and_urem(i8 %0) {
+; CHECK-LABEL: @rev8_mul_and_urem(
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP0:%.*]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i64 [[TMP2]], 8623620610
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 1136090292240
+; CHECK-NEXT:    [[TMP5:%.*]] = urem i64 [[TMP4]], 1023
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i8
+; CHECK-NEXT:    ret i8 [[TMP6]]
+;
+  %2 = zext i8 %0 to i64
+  %3 = mul nuw nsw i64 %2, 8623620610
+  %4 = and i64 %3, 1136090292240
+  %5 = urem i64 %4, 1023
+  %6 = trunc i64 %5 to i8
+  ret i8 %6
+}
+
+; bitreverse8(x) = ((x * 0x80200802ULL) & 0x0884422110ULL) * 0x0101010101ULL >> 32
+define i8 @rev8_mul_and_mul(i8 %0) {
+; CHECK-LABEL: @rev8_mul_and_mul(
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP0:%.*]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i64 [[TMP2]], 2149582850
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 36578664720
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4311810305
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 32
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; CHECK-NEXT:    ret i8 [[TMP7]]
+;
+  %2 = zext i8 %0 to i64
+  %3 = mul nuw nsw i64 %2, 2149582850
+  %4 = and i64 %3, 36578664720
+  %5 = mul i64 %4, 4311810305
+  %6 = lshr i64 %5, 32
+  %7 = trunc i64 %6 to i8
+  ret i8 %7
+}
+
+; bitreverse8(x) = (((x * 0x0802LU) & 0x22110LU) | ((x * 0x8020LU) & 0x88440LU)) * 0x10101LU >> 16
+define i8 @rev8_mul_and_lshr(i8 %0) {
+; CHECK-LABEL: @rev8_mul_and_lshr(
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP0:%.*]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i64 [[TMP2]], 2050
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 139536
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw i64 [[TMP2]], 32800
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 558144
+; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw nsw i64 [[TMP7]], 65793
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP8]], 16
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP9]] to i8
+; CHECK-NEXT:    ret i8 [[TMP10]]
+;
+  %2 = zext i8 %0 to i64
+  %3 = mul nuw nsw i64 %2, 2050
+  %4 = and i64 %3, 139536
+  %5 = mul nuw nsw i64 %2, 32800
+  %6 = and i64 %5, 558144
+  %7 = or i64 %4, %6
+  %8 = mul nuw nsw i64 %7, 65793
+  %9 = lshr i64 %8, 16
+  %10 = trunc i64 %9 to i8
+  ret i8 %10
+}
