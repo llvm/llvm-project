@@ -1654,6 +1654,85 @@ defm : TRUNC64m<truncstorei8, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
 defm : TRUNC64m<truncstorei16, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
 defm : TRUNC64m<truncstorei32, STLrri, STLrii, STLzri, ST1Bzii>;
 
+// Atomic loads
+multiclass ATMLDm<SDPatternOperator from,
+                  SDPatternOperator torri, SDPatternOperator torii,
+                  SDPatternOperator tozri, SDPatternOperator tozii> {
+  def : Pat<(from ADDRrri:$addr), (torri MEMrri:$addr)>;
+  def : Pat<(from ADDRrii:$addr), (torii MEMrii:$addr)>;
+  def : Pat<(from ADDRzri:$addr), (tozri MEMzri:$addr)>;
+  def : Pat<(from ADDRzii:$addr), (tozii MEMzii:$addr)>;
+}
+defm : ATMLDm<atomic_load_8, LD1BZXrri, LD1BZXrii, LD1BZXzri, LD1BZXzii>;
+defm : ATMLDm<atomic_load_16, LD2BZXrri, LD2BZXrii, LD2BZXzri, LD2BZXzii>;
+defm : ATMLDm<atomic_load_32, LDLZXrri, LDLZXrii, LDLZXzri, LDLZXzii>;
+defm : ATMLDm<atomic_load_64, LDrri, LDrii, LDzri, LDzii>;
+
+def i2l : OutPatFrag<(ops node:$exp),
+                     (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $exp, sub_i32)>;
+
+// Optimized atomic loads with sext
+multiclass SXATMLDm<SDPatternOperator from, Operand TY,
+                    SDPatternOperator torri, SDPatternOperator torii,
+                    SDPatternOperator tozri, SDPatternOperator tozii> {
+  def : Pat<(i64 (sext_inreg (i64 (anyext (from ADDRrri:$addr))), TY)),
+            (i2l (torri MEMrri:$addr))>;
+  def : Pat<(i64 (sext_inreg (i64 (anyext (from ADDRrii:$addr))), TY)),
+            (i2l (torii MEMrii:$addr))>;
+  def : Pat<(i64 (sext_inreg (i64 (anyext (from ADDRzri:$addr))), TY)),
+            (i2l (tozri MEMzri:$addr))>;
+  def : Pat<(i64 (sext_inreg (i64 (anyext (from ADDRzii:$addr))), TY)),
+            (i2l (tozii MEMzii:$addr))>;
+}
+multiclass SXATMLD32m<SDPatternOperator from,
+                      SDPatternOperator torri, SDPatternOperator torii,
+                      SDPatternOperator tozri, SDPatternOperator tozii> {
+  def : Pat<(i64 (sext (from ADDRrri:$addr))),
+            (i2l (torri MEMrri:$addr))>;
+  def : Pat<(i64 (sext (from ADDRrii:$addr))),
+            (i2l (torii MEMrii:$addr))>;
+  def : Pat<(i64 (sext (from ADDRzri:$addr))),
+            (i2l (tozri MEMzri:$addr))>;
+  def : Pat<(i64 (sext (from ADDRzii:$addr))),
+            (i2l (tozii MEMzii:$addr))>;
+}
+defm : SXATMLDm<atomic_load_8, i8, LD1BSXrri, LD1BSXrii, LD1BSXzri, LD1BSXzii>;
+defm : SXATMLDm<atomic_load_16, i16, LD2BSXrri, LD2BSXrii, LD2BSXzri,
+                LD2BSXzii>;
+defm : SXATMLD32m<atomic_load_32, LDLSXrri, LDLSXrii, LDLSXzri, LDLSXzii>;
+
+// Optimized atomic loads with zext
+multiclass ZXATMLDm<SDPatternOperator from, Operand VAL,
+                    SDPatternOperator torri, SDPatternOperator torii,
+                    SDPatternOperator tozri, SDPatternOperator tozii> {
+  def : Pat<(i64 (and (anyext (from ADDRrri:$addr)), VAL)),
+            (i2l (torri MEMrri:$addr))>;
+  def : Pat<(i64 (and (anyext (from ADDRrii:$addr)), VAL)),
+            (i2l (torii MEMrii:$addr))>;
+  def : Pat<(i64 (and (anyext (from ADDRzri:$addr)), VAL)),
+            (i2l (tozri MEMzri:$addr))>;
+  def : Pat<(i64 (and (anyext (from ADDRzii:$addr)), VAL)),
+            (i2l (tozii MEMzii:$addr))>;
+}
+multiclass ZXATMLD32m<SDPatternOperator from, Operand VAL,
+                      SDPatternOperator torri, SDPatternOperator torii,
+                      SDPatternOperator tozri, SDPatternOperator tozii> {
+  def : Pat<(i64 (zext (from ADDRrri:$addr))),
+            (i2l (torri MEMrri:$addr))>;
+  def : Pat<(i64 (zext (from ADDRrii:$addr))),
+            (i2l (torii MEMrii:$addr))>;
+  def : Pat<(i64 (zext (from ADDRzri:$addr))),
+            (i2l (tozri MEMzri:$addr))>;
+  def : Pat<(i64 (zext (from ADDRzii:$addr))),
+            (i2l (tozii MEMzii:$addr))>;
+}
+defm : ZXATMLDm<atomic_load_8, 0xFF, LD1BZXrri, LD1BZXrii, LD1BZXzri,
+                LD1BZXzii>;
+defm : ZXATMLDm<atomic_load_16, 0xFFFF, LD2BZXrri, LD2BZXrii, LD2BZXzri,
+                LD2BZXzii>;
+defm : ZXATMLD32m<atomic_load_32, 0xFFFFFFFF, LDLZXrri, LDLZXrii, LDLZXzri,
+                  LDLZXzii>;
+
 // Address calculation and its optimization
 def : Pat<(VEhi tconstpool:$in), (LEASLzii 0, 0, tconstpool:$in)>;
 def : Pat<(VElo tconstpool:$in),
