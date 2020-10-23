@@ -1,5 +1,6 @@
 ! RUN: bbc -emit-fir -o - %s | FileCheck %s
 
+subroutine loop_test
   ! CHECK-DAG: fir.alloca i16 {name = "i"}
   ! CHECK-DAG: fir.alloca i8 {name = "k"}
   ! CHECK-DAG: fir.alloca i8 {name = "j"}
@@ -59,4 +60,4 @@
   enddo
   ! CHECK: fir.call @_FortranAioBeginExternalFormattedOutput
   print '(X,F3.1,A,I2)', x, ' -', xsum
-end
+end subroutine loop_test
