@@ -1,28 +1,12 @@
 # REQUIRES: ppc
 # RUN: llvm-mc --triple=powerpc64le %s --filetype=obj -o %t1.o
 # RUN: llvm-mc --triple=powerpc64 %s --filetype=obj -o %t2.o
-# RUN: not ld.lld --shared %t1.o -o /dev/null 2>&1 | FileCheck %s
-# RUN: not ld.lld --shared %t2.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld --shared --fatal-warnings %t1.o -o /dev/null
+# RUN: ld.lld --shared --fatal-warnings %t2.o -o /dev/null
 
-# CHECK:      ld.lld: error: call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation
-# CHECK-NEXT:   defined in {{.*}}.o
-# CHECK-NEXT:   referenced by {{.*}}.o:(.text+0x8)
-
-# CHECK:      ld.lld: error: call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation
-# CHECK-NEXT:   defined in {{.*}}.o
-# CHECK-NEXT:   referenced by {{.*}}.o:(.text+0x18)
-
-# CHECK:      ld.lld: error: call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation
-# CHECK-NEXT:   defined in {{.*}}.o
-# CHECK-NEXT:   referenced by {{.*}}.o:(.text+0x28)
-
-# CHECK:      ld.lld: error: call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation
-# CHECK-NEXT:   defined in {{.*}}.o
-# CHECK-NEXT:   referenced by {{.*}}.o:(.text+0x38)
-
-# CHECK:      ld.lld: error: call to __tls_get_addr is missing a R_PPC64_TLSGD/R_PPC64_TLSLD relocation
-# CHECK-NEXT:   defined in {{.*}}.o
-# CHECK-NEXT:   referenced by {{.*}}.o:(.text+0x40)
+## User code can call __tls_get_addr by specifying the tls_index parameter.
+## We need to allow R_PPC64_REL24/R_PPC64_REL24_NOTOC referencing __tls_get_addr
+## without a pairing R_PPC64_TLSGD/R_PPC64_TLSLD.
 
 GeneralDynamic:
   addis 3, 2, x@got@tlsgd@ha
