@@ -563,6 +563,7 @@ option(LLVM_INCLUDE_BENCHMARKS "Generate benchmark targets. If OFF, benchmarks c
 
 option (LLVM_BUILD_DOCS "Build the llvm documentation." OFF)
 option (LLVM_INCLUDE_DOCS "Generate build targets for llvm documentation." ON)
+option (LLVM_INCLUDE_LIB "Generate build targets for llvm libraries." ON)
 option (LLVM_ENABLE_DOXYGEN "Use doxygen to generate llvm API documentation." OFF)
 option (LLVM_ENABLE_SPHINX "Use Sphinx to generate llvm documentation." OFF)
 option (LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." ON)
@@ -987,16 +988,25 @@ if( MINGW AND NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" )
   llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELEASE "-O3" "-O2")
 endif()
 
-# Put this before tblgen. Else we have a circular dependence.
-add_subdirectory(lib/Demangle)
-add_subdirectory(lib/Support)
-add_subdirectory(lib/TableGen)
+if( LLVM_INCLUDE_UTILS AND NOT LLVM_INCLUDE_LIB )
+    message(FATAL_ERROR "Including utils when not building lib will not work.
+    Either set LLVM_INCLUDE_LIB to On, or set LLVM_INCLUDE_UTILS to Off.")
+endif()
 
-add_subdirectory(utils/TableGen)
+if( LLVM_INCLUDE_LIB )
+  # Put this before tblgen. Else we have a circular dependence.
+  add_subdirectory(lib/Demangle)
+  add_subdirectory(lib/Support)
+  add_subdirectory(lib/TableGen)
 
-add_subdirectory(include/llvm)
+  if( LLVM_INCLUDE_UTILS )
+    add_subdirectory(utils/TableGen)
+  endif()
 
-add_subdirectory(lib)
+  add_subdirectory(include/llvm)
+
+  add_subdirectory(lib)
+endif()
 
 if( LLVM_INCLUDE_UTILS )
   add_subdirectory(utils/FileCheck)
