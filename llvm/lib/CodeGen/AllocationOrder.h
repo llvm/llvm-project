@@ -19,7 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/MC/MCRegister.h"
+#include "llvm/CodeGen/Register.h"
 
 namespace llvm {
 
@@ -110,8 +110,13 @@ public:
   /// Get the allocation order without reordered hints.
   ArrayRef<MCPhysReg> getOrder() const { return Order; }
 
-  /// Return true if PhysReg is a preferred register.
-  bool isHint(unsigned PhysReg) const { return is_contained(Hints, PhysReg); }
+  /// Return true if Reg is a preferred physical register.
+  bool isHint(Register Reg) const {
+    assert(!Reg.isPhysical() ||
+           Reg.id() <
+               static_cast<uint32_t>(std::numeric_limits<MCPhysReg>::max()));
+    return Reg.isPhysical() && is_contained(Hints, Reg.id());
+  }
 };
 
 } // end namespace llvm
