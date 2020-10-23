@@ -972,13 +972,10 @@ public:
   /// If there is an error opening this buffer the first time, return None.
   llvm::Optional<llvm::MemoryBufferRef>
   getBufferOrNone(FileID FID, SourceLocation Loc = SourceLocation()) const {
-    bool MyInvalid = false;
-    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &MyInvalid);
-    if (MyInvalid || !Entry.isFile())
-      return None;
-
-    return Entry.getFile().getContentCache()->getBufferOrNone(
-        Diag, getFileManager(), Loc);
+    if (auto *Entry = getSLocEntryForFile(FID))
+      return Entry->getFile().getContentCache()->getBufferOrNone(
+          Diag, getFileManager(), Loc);
+    return None;
   }
 
   /// Return the buffer for the specified FileID.
@@ -994,15 +991,10 @@ public:
 
   /// Returns the FileEntry record for the provided FileID.
   const FileEntry *getFileEntryForID(FileID FID) const {
-    bool MyInvalid = false;
-    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &MyInvalid);
-    if (MyInvalid || !Entry.isFile())
-      return nullptr;
-
-    const SrcMgr::ContentCache *Content = Entry.getFile().getContentCache();
-    if (!Content)
-      return nullptr;
-    return Content->OrigEntry;
+    if (auto *Entry = getSLocEntryForFile(FID))
+      if (auto *Content = Entry->getFile().getContentCache())
+        return Content->OrigEntry;
+    return nullptr;
   }
 
   /// Returns the FileEntryRef for the provided FileID.
@@ -1039,25 +1031,20 @@ public:
   /// Get the number of FileIDs (files and macros) that were created
   /// during preprocessing of \p FID, including it.
   unsigned getNumCreatedFIDsForFileID(FileID FID) const {
-    bool Invalid = false;
-    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
-    if (Invalid || !Entry.isFile())
-      return 0;
-
-    return Entry.getFile().NumCreatedFIDs;
+    if (auto *Entry = getSLocEntryForFile(FID))
+      return Entry->getFile().NumCreatedFIDs;
+    return 0;
   }
 
   /// Set the number of FileIDs (files and macros) that were created
   /// during preprocessing of \p FID, including it.
   void setNumCreatedFIDsForFileID(FileID FID, unsigned NumFIDs,
                                   bool Force = false) const {
-    bool Invalid = false;
-    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
-    if (Invalid || !Entry.isFile())
+    auto *Entry = getSLocEntryForFile(FID);
+    if (!Entry)
       return;
-
-    assert((Force || Entry.getFile().NumCreatedFIDs == 0) && "Already set!");
-    const_cast<SrcMgr::FileInfo &>(Entry.getFile()).NumCreatedFIDs = NumFIDs;
+    assert((Force || Entry->getFile().NumCreatedFIDs == 0) && "Already set!");
+    const_cast<SrcMgr::FileInfo &>(Entry->getFile()).NumCreatedFIDs = NumFIDs;
   }
 
   //===--------------------------------------------------------------------===//
@@ -1086,36 +1073,26 @@ public:
   /// Return the source location corresponding to the first byte of
   /// the specified file.
   SourceLocation getLocForStartOfFile(FileID FID) const {
-    bool Invalid = false;
-    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
-    if (Invalid || !Entry.isFile())
-      return SourceLocation();
-
-    unsigned FileOffset = Entry.getOffset();
-    return SourceLocation::getFileLoc(FileOffset);
+    if (auto *Entry = getSLocEntryForFile(FID))
+      return SourceLocation::getFileLoc(Entry->getOffset());
+    return SourceLocation();
   }
 
   /// Return the source location corresponding to the last byte of the
   /// specified file.
   SourceLocation getLocForEndOfFile(FileID FID) const {
-    bool Invalid = false;
-    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
-    if (Invalid || !Entry.isFile())
-      return SourceLocation();
-
-    unsigned FileOffset = Entry.getOffset();
-    return SourceLocation::getFileLoc(FileOffset + getFileIDSize(FID));
+    if (auto *Entry = getSLocEntryForFile(FID))
+      return SourceLocation::getFileLoc(Entry->getOffset() +
+                                        getFileIDSize(FID));
+    return SourceLocation();
   }
 
   /// Returns the include location if \p FID is a \#include'd file
   /// otherwise it returns an invalid location.
   SourceLocation getIncludeLoc(FileID FID) const {
-    bool Invalid = false;
-    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
-    if (Invalid || !Entry.isFile())
-      return SourceLocation();
-
-    return Entry.getFile().getIncludeLoc();
+    if (auto *Entry = getSLocEntryForFile(FID))
+      return Entry->getFile().getIncludeLoc();
+    return SourceLocation();
   }
 
   // Returns the import location if the given source location is
@@ -1200,14 +1177,13 @@ public:
 
   /// Form a SourceLocation from a FileID and Offset pair.
   SourceLocation getComposedLoc(FileID FID, unsigned Offset) const {
-    bool Invalid = false;
-    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
-    if (Invalid)
+    auto *Entry = getSLocEntryOrNull(FID);
+    if (!Entry)
       return SourceLocation();
 
-    unsigned GlobalOffset = Entry.getOffset() + Offset;
-    return Entry.isFile() ? SourceLocation::getFileLoc(GlobalOffset)
-                          : SourceLocation::getMacroLoc(GlobalOffset);
+    unsigned GlobalOffset = Entry->getOffset() + Offset;
+    return Entry->isFile() ? SourceLocation::getFileLoc(GlobalOffset)
+                           : SourceLocation::getMacroLoc(GlobalOffset);
   }
 
   /// Decompose the specified location into a raw FileID + Offset pair.
@@ -1216,11 +1192,10 @@ public:
   /// start of the buffer of the location.
   std::pair<FileID, unsigned> getDecomposedLoc(SourceLocation Loc) const {
     FileID FID = getFileID(Loc);
-    bool Invalid = false;
-    const SrcMgr::SLocEntry &E = getSLocEntry(FID, &Invalid);
-    if (Invalid)
+    auto *Entry = getSLocEntryOrNull(FID);
+    if (!Entry)
       return std::make_pair(FileID(), 0);
-    return std::make_pair(FID, Loc.getOffset()-E.getOffset());
+    return std::make_pair(FID, Loc.getOffset() - Entry->getOffset());
   }
 
   /// Decompose the specified location into a raw FileID + Offset pair.
@@ -1230,9 +1205,8 @@ public:
   std::pair<FileID, unsigned>
   getDecomposedExpansionLoc(SourceLocation Loc) const {
     FileID FID = getFileID(Loc);
-    bool Invalid = false;
-    const SrcMgr::SLocEntry *E = &getSLocEntry(FID, &Invalid);
-    if (Invalid)
+    auto *E = getSLocEntryOrNull(FID);
+    if (!E)
       return std::make_pair(FileID(), 0);
 
     unsigned Offset = Loc.getOffset()-E->getOffset();
@@ -1249,9 +1223,8 @@ public:
   std::pair<FileID, unsigned>
   getDecomposedSpellingLoc(SourceLocation Loc) const {
     FileID FID = getFileID(Loc);
-    bool Invalid = false;
-    const SrcMgr::SLocEntry *E = &getSLocEntry(FID, &Invalid);
-    if (Invalid)
+    auto *E = getSLocEntryOrNull(FID);
+    if (!E)
       return std::make_pair(FileID(), 0);
 
     unsigned Offset = Loc.getOffset()-E->getOffset();
@@ -1748,6 +1721,19 @@ private:
   const SrcMgr::ContentCache *getFakeContentCacheForRecovery() const;
 
   const SrcMgr::SLocEntry &loadSLocEntry(unsigned Index, bool *Invalid) const;
+
+  const SrcMgr::SLocEntry *getSLocEntryOrNull(FileID FID) const {
+    bool Invalid = false;
+    const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
+    return Invalid ? nullptr : &Entry;
+  }
+
+  const SrcMgr::SLocEntry *getSLocEntryForFile(FileID FID) const {
+    if (auto *Entry = getSLocEntryOrNull(FID))
+      if (Entry->isFile())
+        return Entry;
+    return nullptr;
+  }
 
   /// Get the entry with the given unwrapped FileID.
   /// Invalid will not be modified for Local IDs.
