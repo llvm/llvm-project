@@ -3854,22 +3854,6 @@ ARMBaseInstrInfo::getVLDMDefCycle(const InstrItineraryData *ItinData,
   return DefCycle;
 }
 
-bool ARMBaseInstrInfo::isLDMBaseRegInList(const MachineInstr &MI) const {
-  Register BaseReg = MI.getOperand(0).getReg();
-  for (unsigned i = 1, sz = MI.getNumOperands(); i < sz; ++i) {
-    const auto &Op = MI.getOperand(i);
-    if (Op.isReg() && Op.getReg() == BaseReg)
-      return true;
-  }
-  return false;
-}
-unsigned
-ARMBaseInstrInfo::getLDMVariableDefsSize(const MachineInstr &MI) const {
-  // ins GPR:$Rn, $p (2xOp), reglist:$regs, variable_ops
-  // (outs GPR:$wb), (ins GPR:$Rn, $p (2xOp), reglist:$regs, variable_ops)
-  return MI.getNumOperands() + 1 - MI.getDesc().getNumOperands();
-}
-
 int
 ARMBaseInstrInfo::getLDMDefCycle(const InstrItineraryData *ItinData,
                                  const MCInstrDesc &DefMCID,
