@@ -80,3 +80,15 @@ subroutine control1(n) ! I/O condition specifier control flow
 dimension c(n), d(n,n), e(n,n), f(n)
 read(*,'(F7.2)', iostat=mm, advance='no') a, b, (c(j), (d(k,j), e(k,j), k=1,n), f(j), j=1,n), g
 end
+
+! CHECK-LABEL: func @_QPimpliedformat
+subroutine impliedformat
+  ! CHECK: BeginExternalListInput(%c-1
+  ! CHECK: InputReal32
+  ! CHECK: EndIoStatement(%3) : (!fir.ref<i8>) -> i32
+  read*, x
+  ! CHECK: BeginExternalListOutput(%c-1
+  ! CHECK: OutputReal32
+  ! CHECK: EndIoStatement
+  print*, x
+end
