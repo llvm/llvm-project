@@ -24,7 +24,7 @@ bool ParseDiagnosticArgs(clang::DiagnosticOptions &opts,
 
 class CompilerInvocationBase {
 public:
-  /// Options controlling the diagnostic engine.$
+  /// Options controlling the diagnostic engine.
   llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagnosticOpts_;
 
   CompilerInvocationBase();
