@@ -255,7 +255,7 @@ void initializeLoopUnrollAndJamPass(PassRegistry&);
 void initializeLoopUnrollPass(PassRegistry&);
 void initializeLoopUnswitchPass(PassRegistry&);
 void initializeLoopVectorizePass(PassRegistry&);
-void initializeLoopVersioningLICMPass(PassRegistry&);
+void initializeLoopVersioningLICMLegacyPassPass(PassRegistry &);
 void initializeLoopVersioningLegacyPassPass(PassRegistry &);
 void initializeLowerAtomicLegacyPassPass(PassRegistry&);
 void initializeLowerConstantIntrinsicsPass(PassRegistry&);
