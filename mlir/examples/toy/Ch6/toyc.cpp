@@ -241,8 +241,6 @@ int runJit(mlir::ModuleOp module) {
 }
 
 int main(int argc, char **argv) {
-  mlir::registerAllDialects();
-
   // Register any command line options.
   mlir::registerAsmPrinterCLOptions();
   mlir::registerMLIRContextCLOptions();
@@ -255,7 +253,7 @@ int main(int argc, char **argv) {
 
   // If we aren't dumping the AST, then we are compiling with/to MLIR.
 
-  mlir::MLIRContext context(/*loadAllDialects=*/false);
+  mlir::MLIRContext context;
   // Load our Dialect in this MLIR Context.
   context.getOrLoadDialect<mlir::toy::ToyDialect>();
 

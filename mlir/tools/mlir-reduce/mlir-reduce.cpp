@@ -71,7 +71,6 @@ int main(int argc, char **argv) {
 
   llvm::InitLLVM y(argc, argv);
 
-  registerAllDialects();
   registerMLIRContextCLOptions();
   registerPassManagerCLOptions();
 
