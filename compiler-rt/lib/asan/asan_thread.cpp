@@ -218,6 +218,7 @@ FakeStack *AsanThread::AsyncSignalSafeLazyInitFakeStack() {
 }
 
 void AsanThread::Init(const InitOptions *options) {
+  DCHECK_NE(tid(), ThreadRegistry::kUnknownTid);
   next_stack_top_ = next_stack_bottom_ = 0;
   atomic_store(&stack_switching_, false, memory_order_release);
   CHECK_EQ(this->stack_size(), 0U);
