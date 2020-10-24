@@ -72,6 +72,11 @@ private:
   }
 
 public:
+  ~SimpleJIT() {
+    if (auto Err = ES.endSession())
+      ES.reportError(std::move(Err));
+  }
+
   static Expected<std::unique_ptr<SimpleJIT>> Create() {
     auto JTMB = JITTargetMachineBuilder::detectHost();
     if (!JTMB)
