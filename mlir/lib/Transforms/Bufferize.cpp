@@ -74,7 +74,7 @@ BufferizeTypeConverter::getResultConversionKind(Type origin, Type converted) {
 
 void mlir::populateBufferizeMaterializationLegality(ConversionTarget &target) {
   target.addLegalOp<TensorLoadOp, TensorToMemrefOp>();
-};
+}
 
 //===----------------------------------------------------------------------===//
 // BufferizeFuncOpConverter
