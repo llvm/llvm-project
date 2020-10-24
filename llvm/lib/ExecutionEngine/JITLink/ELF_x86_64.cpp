@@ -510,6 +510,17 @@ private:
         // I am not sure on If this is going to hold as an invariant. Revisit.
         if (!Name)
           return Name.takeError();
+
+        if (SymRef.isCommon()) {
+          // Symbols in SHN_COMMON refer to uninitialized data. The st_value
+          // field holds alignment constraints.
+          Symbol &S =
+              G->addCommonSymbol(*Name, Scope::Default, getCommonSection(), 0,
+                                 SymRef.st_size, SymRef.getValue(), false);
+          JITSymbolTable[SymbolIndex] = &S;
+          continue;
+        }
+
         // TODO: weak and hidden
         if (SymRef.isExternal())
           bindings = {Linkage::Strong, Scope::Default};
@@ -550,18 +561,12 @@ private:
           JITSymbolTable[SymbolIndex] = &S;
         }
 
-        //  }
         // TODO: The following has to be implmented.
         // leaving commented out to save time for future patchs
         /*
           G->addAbsoluteSymbol(*Name, SymRef.getValue(), SymRef.st_size,
           Linkage::Strong, Scope::Default, false);
-
-          if(SymRef.isCommon()) {
-            G->addCommonSymbol(*Name, Scope::Default, getCommonSection(), 0, 0,
-          SymRef.getValue(), false);
-          }
-  */
+        */
       }
     }
     return Error::success();
