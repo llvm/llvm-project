@@ -23,10 +23,6 @@
 #include "Plugins/Process/Utility/NativeRegisterContextWatchpoint_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 
-#if defined(PT_GETXSTATE) && defined(PT_SETXSTATE)
-#define HAVE_XSTATE
-#endif
-
 namespace lldb_private {
 namespace process_netbsd {
 
@@ -57,19 +53,12 @@ public:
 
 private:
   // Private member types.
-  enum { GPRegSet, FPRegSet, XStateRegSet, DBRegSet };
+  enum { GPRegSet, XStateRegSet, DBRegSet };
 
   // Private member variables.
   struct reg m_gpr;
-#if defined(__x86_64__)
-  struct fpreg m_fpr;
-#else
-  struct xmmregs m_fpr;
-#endif
-  struct dbreg m_dbr;
-#ifdef HAVE_XSTATE
   struct xstate m_xstate;
-#endif
+  struct dbreg m_dbr;
 
   int GetSetForNativeRegNum(int reg_num) const;
   int GetDR(int num) const;
