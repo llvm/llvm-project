@@ -553,11 +553,16 @@ Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
 
   // Match the shift amount operands for a funnel/rotate pattern. This always
   // matches a subtraction on the R operand.
-  auto matchShiftAmount = [](Value *L, Value *R, unsigned Width) -> Value * {
+  auto matchShiftAmount = [&](Value *L, Value *R, unsigned Width) -> Value * {
     // The shift amounts may add up to the narrow bit width:
     // (shl ShVal0, L) | (lshr ShVal1, Width - L)
     if (match(R, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(L)))))
       return L;
+
+    // The following patterns currently only work for rotation patterns.
+    // TODO: Add more general funnel-shift compatible patterns.
+    if (ShVal0 != ShVal1)
+      return nullptr;
 
     // The shift amount may be masked with negation:
     // (shl ShVal0, (X & (Width - 1))) | (lshr ShVal1, ((-X) & (Width - 1)))
@@ -575,11 +580,6 @@ Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
     return nullptr;
   };
 
-  // TODO: Add support for funnel shifts (ShVal0 != ShVal1).
-  if (ShVal0 != ShVal1)
-    return nullptr;
-  Value *ShVal = ShVal0;
-
   Value *ShAmt = matchShiftAmount(ShAmt0, ShAmt1, NarrowWidth);
   bool IsFshl = true; // Sub on LSHR.
   if (!ShAmt) {
@@ -593,18 +593,22 @@ Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
   // will be a zext, but it could also be the result of an 'and' or 'shift'.
   unsigned WideWidth = Trunc.getSrcTy()->getScalarSizeInBits();
   APInt HiBitMask = APInt::getHighBitsSet(WideWidth, WideWidth - NarrowWidth);
-  if (!MaskedValueIsZero(ShVal, HiBitMask, 0, &Trunc))
+  if (!MaskedValueIsZero(ShVal0, HiBitMask, 0, &Trunc) ||
+      !MaskedValueIsZero(ShVal1, HiBitMask, 0, &Trunc))
     return nullptr;
 
   // We have an unnecessarily wide rotate!
-  // trunc (or (lshr ShVal, ShAmt), (shl ShVal, BitWidth - ShAmt))
+  // trunc (or (lshr ShVal0, ShAmt), (shl ShVal1, BitWidth - ShAmt))
   // Narrow the inputs and convert to funnel shift intrinsic:
   // llvm.fshl.i8(trunc(ShVal), trunc(ShVal), trunc(ShAmt))
   Value *NarrowShAmt = Builder.CreateTrunc(ShAmt, DestTy);
-  Value *X = Builder.CreateTrunc(ShVal, DestTy);
+  Value *X, *Y;
+  X = Y = Builder.CreateTrunc(ShVal0, DestTy);
+  if (ShVal0 != ShVal1)
+    Y = Builder.CreateTrunc(ShVal1, DestTy);
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
   Function *F = Intrinsic::getDeclaration(Trunc.getModule(), IID, DestTy);
-  return IntrinsicInst::Create(F, { X, X, NarrowShAmt });
+  return IntrinsicInst::Create(F, {X, Y, NarrowShAmt});
 }
 
 /// Try to narrow the width of math or bitwise logic instructions by pulling a
