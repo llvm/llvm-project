@@ -541,21 +541,21 @@ TEST_F(AArch64SelectionDAGTest, getRepeatedSequence_Patterns) {
   BitVector Undefs1111, Undefs1133, Undefs0123, Undefs022, Undefs1_3;
 
   EXPECT_TRUE(BV1111->getRepeatedSequence(Seq1111, &Undefs1111));
-  EXPECT_EQ(Undefs1111.count(), 3);
-  EXPECT_EQ(Seq1111.size(), 1);
+  EXPECT_EQ(Undefs1111.count(), 3u);
+  EXPECT_EQ(Seq1111.size(), 1u);
   EXPECT_EQ(Seq1111[0], Val1);
 
   EXPECT_TRUE(BV1133->getRepeatedSequence(Seq1133, &Undefs1133));
-  EXPECT_EQ(Undefs1133.count(), 2);
-  EXPECT_EQ(Seq1133.size(), 4);
+  EXPECT_EQ(Undefs1133.count(), 2u);
+  EXPECT_EQ(Seq1133.size(), 4u);
   EXPECT_EQ(Seq1133[0], Val1);
   EXPECT_EQ(Seq1133[1], Val1);
   EXPECT_EQ(Seq1133[2], Val3);
   EXPECT_EQ(Seq1133[3], Val3);
 
   EXPECT_TRUE(BV0123->getRepeatedSequence(Seq0123, &Undefs0123));
-  EXPECT_EQ(Undefs0123.count(), 0);
-  EXPECT_EQ(Seq0123.size(), 4);
+  EXPECT_EQ(Undefs0123.count(), 0u);
+  EXPECT_EQ(Seq0123.size(), 4u);
   EXPECT_EQ(Seq0123[0], Val0);
   EXPECT_EQ(Seq0123[1], Val1);
   EXPECT_EQ(Seq0123[2], Val2);
@@ -567,20 +567,20 @@ TEST_F(AArch64SelectionDAGTest, getRepeatedSequence_Patterns) {
   // Try again with DemandedElts masks.
   APInt Mask1111_0 = APInt::getOneBitSet(NumElts, 0);
   EXPECT_TRUE(BV1111->getRepeatedSequence(Mask1111_0, Seq1111, &Undefs1111));
-  EXPECT_EQ(Undefs1111.count(), 0);
-  EXPECT_EQ(Seq1111.size(), 1);
+  EXPECT_EQ(Undefs1111.count(), 0u);
+  EXPECT_EQ(Seq1111.size(), 1u);
   EXPECT_EQ(Seq1111[0], Val1);
 
   APInt Mask1111_1 = APInt::getOneBitSet(NumElts, 2);
   EXPECT_TRUE(BV1111->getRepeatedSequence(Mask1111_1, Seq1111, &Undefs1111));
-  EXPECT_EQ(Undefs1111.count(), 1);
-  EXPECT_EQ(Seq1111.size(), 1);
+  EXPECT_EQ(Undefs1111.count(), 1u);
+  EXPECT_EQ(Seq1111.size(), 1u);
   EXPECT_EQ(Seq1111[0], UndefVal);
 
   APInt Mask0123 = APInt(NumElts, 0x7777);
   EXPECT_TRUE(BV0123->getRepeatedSequence(Mask0123, Seq0123, &Undefs0123));
-  EXPECT_EQ(Undefs0123.count(), 0);
-  EXPECT_EQ(Seq0123.size(), 4);
+  EXPECT_EQ(Undefs0123.count(), 0u);
+  EXPECT_EQ(Seq0123.size(), 4u);
   EXPECT_EQ(Seq0123[0], Val0);
   EXPECT_EQ(Seq0123[1], Val1);
   EXPECT_EQ(Seq0123[2], Val2);
@@ -588,8 +588,8 @@ TEST_F(AArch64SelectionDAGTest, getRepeatedSequence_Patterns) {
 
   APInt Mask1_3 = APInt::getHighBitsSet(16, 8);
   EXPECT_TRUE(BV1_3->getRepeatedSequence(Mask1_3, Seq1_3, &Undefs1_3));
-  EXPECT_EQ(Undefs1_3.count(), 0);
-  EXPECT_EQ(Seq1_3.size(), 1);
+  EXPECT_EQ(Undefs1_3.count(), 0u);
+  EXPECT_EQ(Seq1_3.size(), 1u);
   EXPECT_EQ(Seq1_3[0], Val3);
 }
 
