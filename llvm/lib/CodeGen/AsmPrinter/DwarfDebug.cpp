@@ -2480,7 +2480,8 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       DwarfExpr.addExpression(std::move(ExprCursor));
       return;
   } else if (Value.isConstantFP()) {
-    if (AP.getDwarfVersion() >= 4 && AP.getDwarfDebug()->tuneForGDB()) {
+    if (AP.getDwarfVersion() >= 4 && (AP.getDwarfDebug()->tuneForGDB() ||
+                                      AP.getDwarfDebug()->tuneForLLDB())) {
       DwarfExpr.addConstantFP(Value.getConstantFP()->getValueAPF(), AP);
       return;
     } else if (Value.getConstantFP()
