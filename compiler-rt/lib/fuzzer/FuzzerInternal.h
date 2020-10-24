@@ -69,6 +69,7 @@ public:
   bool RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile = false,
               InputInfo *II = nullptr, bool ForceAddToCorpus = false,
               bool *FoundUniqFeatures = nullptr);
+  void TPCUpdateObservedPCs();
 
   // Merge Corpora[1:] into Corpora[0].
   void Merge(const Vector<std::string> &Corpora);
