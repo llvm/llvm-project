@@ -117,6 +117,11 @@ void LoopVersioning::versionLoop(
   // Adds the necessary PHI nodes for the versioned loops based on the
   // loop-defined values used outside of the loop.
   addPHINodes(DefsUsedOutside);
+  formDedicatedExitBlocks(NonVersionedLoop, DT, LI, nullptr, true);
+  formDedicatedExitBlocks(VersionedLoop, DT, LI, nullptr, true);
+  assert(NonVersionedLoop->isLoopSimplifyForm() &&
+         VersionedLoop->isLoopSimplifyForm() &&
+         "The versioned loops should be in simplify form.");
 }
 
 void LoopVersioning::addPHINodes(
