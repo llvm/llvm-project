@@ -344,7 +344,6 @@ struct OMPInformationCache : public InformationCache {
   /// in OpenMPKinds.def.
   void initializeRuntimeFunctions() {
     Module &M = *((*ModuleSlice.begin())->getParent());
-    Type *LanemaskTy = OMPBuilder.getLanemaskType();
 
     // Helper macros for handling __VA_ARGS__ in OMP_RTL
 #define OMP_TYPE(VarName, ...)                                                 \

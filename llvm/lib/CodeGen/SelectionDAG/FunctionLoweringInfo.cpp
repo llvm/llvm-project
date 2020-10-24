@@ -197,7 +197,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       // Look for inline asm that clobbers the SP register.
       if (auto *Call = dyn_cast<CallBase>(&I)) {
         if (Call->isInlineAsm()) {
-          unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+          Register SP = TLI->getStackPointerRegisterToSaveRestore();
           const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
           std::vector<TargetLowering::AsmOperandInfo> Ops =
               TLI->ParseConstraints(Fn->getParent()->getDataLayout(), TRI,

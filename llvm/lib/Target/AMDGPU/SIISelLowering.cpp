@@ -4006,10 +4006,29 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
       Src2.setReg(RegOp2);
     }
 
-    if (TRI->getRegSizeInBits(*MRI.getRegClass(Src2.getReg())) == 64) {
-      BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
-          .addReg(Src2.getReg())
-          .addImm(0);
+    const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2.getReg());
+    if (TRI->getRegSizeInBits(*Src2RC) == 64) {
+      if (ST.hasScalarCompareEq64()) {
+        BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U64))
+            .addReg(Src2.getReg())
+            .addImm(0);
+      } else {
+        const TargetRegisterClass *SubRC =
+            TRI->getSubRegClass(Src2RC, AMDGPU::sub0);
+        MachineOperand Src2Sub0 = TII->buildExtractSubRegOrImm(
+            MII, MRI, Src2, Src2RC, AMDGPU::sub0, SubRC);
+        MachineOperand Src2Sub1 = TII->buildExtractSubRegOrImm(
+            MII, MRI, Src2, Src2RC, AMDGPU::sub1, SubRC);
+        Register Src2_32 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+        BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_OR_B32), Src2_32)
+            .add(Src2Sub0)
+            .add(Src2Sub1);
+
+        BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMP_LG_U32))
+            .addReg(Src2_32, RegState::Kill)
+            .addImm(0);
+      }
     } else {
       BuildMI(*BB, MII, DL, TII->get(AMDGPU::S_CMPK_LG_U32))
           .addReg(Src2.getReg())

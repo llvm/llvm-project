@@ -52,9 +52,9 @@ COMMON_FLAG(bool, handle_ioctl, false, "Intercept and handle ioctl requests.")
 COMMON_FLAG(int, malloc_context_size, 1,
             "Max number of stack frames kept for each allocation/deallocation.")
 COMMON_FLAG(
-    const char *, log_path, "stderr",
+    const char *, log_path, nullptr,
     "Write logs to \"log_path.pid\". The special values are \"stdout\" and "
-    "\"stderr\". The default is \"stderr\".")
+    "\"stderr\". If unspecified, defaults to \"stderr\".")
 COMMON_FLAG(
     bool, log_exe_name, false,
     "Mention name of executable when reporting error and "
@@ -82,8 +82,9 @@ COMMON_FLAG(bool, print_summary, true,
             "If false, disable printing error summaries in addition to error "
             "reports.")
 COMMON_FLAG(int, print_module_map, 0,
-            "OS X only (0 - don't print, 1 - print only once before process "
-            "exits, 2 - print after each report).")
+            "Print the process module map where supported (0 - don't print, "
+            "1 - print only once before process exits, 2 - print after each "
+            "report).")
 COMMON_FLAG(bool, check_printf, true, "Check printf arguments.")
 #define COMMON_FLAG_HANDLE_SIGNAL_HELP(signal) \
     "Controls custom tool's " #signal " handler (0 - do not registers the " \

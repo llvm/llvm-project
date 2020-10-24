@@ -206,12 +206,11 @@ class AnnotatedLine;
 struct FormatToken {
   FormatToken()
       : HasUnescapedNewline(false), IsMultiline(false), IsFirst(false),
-        MustBreakBefore(false), MustBreakAlignBefore(false),
-        IsUnterminatedLiteral(false), CanBreakBefore(false),
-        ClosesTemplateDeclaration(false), StartsBinaryExpression(false),
-        EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
-        ContinuesLineCommentSection(false), Finalized(false),
-        BlockKind(BK_Unknown), Decision(FD_Unformatted),
+        MustBreakBefore(false), IsUnterminatedLiteral(false),
+        CanBreakBefore(false), ClosesTemplateDeclaration(false),
+        StartsBinaryExpression(false), EndsBinaryExpression(false),
+        PartOfMultiVariableDeclStmt(false), ContinuesLineCommentSection(false),
+        Finalized(false), BlockKind(BK_Unknown), Decision(FD_Unformatted),
         PackingKind(PPK_Inconclusive), Type(TT_Unknown) {}
 
   /// The \c Token.
@@ -247,12 +246,6 @@ struct FormatToken {
   /// This happens for example when a preprocessor directive ended directly
   /// before the token.
   unsigned MustBreakBefore : 1;
-
-  /// Whether to not align across this token
-  ///
-  /// This happens for example when a preprocessor directive ended directly
-  /// before the token, but very rarely otherwise.
-  unsigned MustBreakAlignBefore : 1;
 
   /// Set to \c true if this token is an unterminated literal.
   unsigned IsUnterminatedLiteral : 1;

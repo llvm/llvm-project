@@ -1301,7 +1301,7 @@ void TargetLoweringBase::computeRegisterProperties(
         MVT SVT = (MVT::SimpleValueType) nVT;
         // Promote vectors of integers to vectors with the same number
         // of elements, with a wider element type.
-        if (SVT.getScalarSizeInBits() > EltVT.getSizeInBits() &&
+        if (SVT.getScalarSizeInBits() > EltVT.getFixedSizeInBits() &&
             SVT.getVectorElementCount() == EC && isTypeLegal(SVT)) {
           TransformToType[i] = SVT;
           RegisterTypeForVT[i] = SVT;

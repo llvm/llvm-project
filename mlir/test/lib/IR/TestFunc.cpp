@@ -36,6 +36,30 @@ struct TestFuncEraseArg
   }
 };
 
+/// This is a test pass for verifying FuncOp's eraseResult method.
+struct TestFuncEraseResult
+    : public PassWrapper<TestFuncEraseResult, OperationPass<ModuleOp>> {
+  void runOnOperation() override {
+    auto module = getOperation();
+
+    for (FuncOp func : module.getOps<FuncOp>()) {
+      SmallVector<unsigned, 4> indicesToErase;
+      for (auto resultIndex : llvm::seq<int>(0, func.getNumResults())) {
+        if (func.getResultAttr(resultIndex, "test.erase_this_result")) {
+          // Push back twice to test that duplicate indices are handled
+          // correctly.
+          indicesToErase.push_back(resultIndex);
+          indicesToErase.push_back(resultIndex);
+        }
+      }
+      // Reverse the order to test that unsorted index lists are handled
+      // correctly.
+      std::reverse(indicesToErase.begin(), indicesToErase.end());
+      func.eraseResults(indicesToErase);
+    }
+  }
+};
+
 /// This is a test pass for verifying FuncOp's setType method.
 struct TestFuncSetType
     : public PassWrapper<TestFuncSetType, OperationPass<ModuleOp>> {
@@ -55,10 +79,13 @@ struct TestFuncSetType
 
 namespace mlir {
 void registerTestFunc() {
-  PassRegistration<TestFuncEraseArg> pass("test-func-erase-arg",
-                                          "Test erasing func args.");
+  PassRegistration<TestFuncEraseArg>("test-func-erase-arg",
+                                     "Test erasing func args.");
 
-  PassRegistration<TestFuncSetType> pass2("test-func-set-type",
-                                          "Test FuncOp::setType.");
+  PassRegistration<TestFuncEraseResult>("test-func-erase-result",
+                                        "Test erasing func results.");
+
+  PassRegistration<TestFuncSetType>("test-func-set-type",
+                                    "Test FuncOp::setType.");
 }
 } // namespace mlir

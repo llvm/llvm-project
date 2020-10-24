@@ -159,7 +159,7 @@ void g16(void) {
 }
 
 __attribute__((regparm(3))) struct s12 f17(int a, int b, int c);
-// CHECK: declare void @f17(%struct.s12* inreg sret align 4, i32 inreg, i32 inreg, i32)
+// CHECK: declare void @f17(%struct.s12* inreg sret(%struct.s12) align 4, i32 inreg, i32 inreg, i32)
 void g17(void) {
   f17(41, 42, 43);
 }

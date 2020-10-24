@@ -35,7 +35,7 @@
 template <class CharT>
 void RunTestCase(MultiStringType const& MS) {
   using namespace fs;
-  const char* Expect = MS;
+  const fs::path::value_type* Expect = MS;
   const CharT* TestPath = MS;
   const CharT* TestPathEnd = StrEnd(TestPath);
   const std::size_t Size = TestPathEnd - TestPath;
@@ -211,9 +211,9 @@ void test_sfinae() {
   }
 }
 
-void RunStringMoveTest(const char* Expect) {
+void RunStringMoveTest(const fs::path::value_type* Expect) {
   using namespace fs;
-  std::string ss(Expect);
+  fs::path::string_type ss(Expect);
   path p;
   {
     DisableAllocationGuard g; ((void)g);
@@ -223,7 +223,7 @@ void RunStringMoveTest(const char* Expect) {
   assert(p == Expect);
   {
     // Signature test
-    ASSERT_NOEXCEPT(p = std::move(ss));
+    LIBCPP_ONLY(ASSERT_NOEXCEPT(p = std::move(ss)));
   }
 }
 

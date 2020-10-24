@@ -214,6 +214,11 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
   std::tie(IncludedFlagsBitmask, ExcludedFlagsBitmask) =
       getIncludeExcludeOptionFlagMasks(IsClCompatMode);
 
+  // Make sure that Flang-only options don't pollute the Clang output
+  // TODO: Make sure that Clang-only options don't pollute Flang output
+  if (!IsFlangMode())
+    ExcludedFlagsBitmask |= options::FlangOnlyOption;
+
   unsigned MissingArgIndex, MissingArgCount;
   InputArgList Args =
       getOpts().ParseArgs(ArgStrings, MissingArgIndex, MissingArgCount,
@@ -1607,6 +1612,8 @@ void Driver::PrintHelp(bool ShowHidden) const {
 
   if (IsFlangMode())
     IncludedFlagsBitmask |= options::FlangOption;
+  else
+    ExcludedFlagsBitmask |= options::FlangOnlyOption;
 
   std::string Usage = llvm::formatv("{0} [options] file...", Name).str();
   getOpts().PrintHelp(llvm::outs(), Usage.c_str(), DriverTitle.c_str(),
@@ -1661,6 +1668,11 @@ void Driver::HandleAutocompletions(StringRef PassedFlags) const {
 
   unsigned int DisableFlags =
       options::NoDriverOption | options::Unsupported | options::Ignored;
+
+  // Make sure that Flang-only options don't pollute the Clang output
+  // TODO: Make sure that Clang-only options don't pollute Flang output
+  if (!IsFlangMode())
+    DisableFlags |= options::FlangOnlyOption;
 
   // Distinguish "--autocomplete=-someflag" and "--autocomplete=-someflag,"
   // because the latter indicates that the user put space before pushing tab

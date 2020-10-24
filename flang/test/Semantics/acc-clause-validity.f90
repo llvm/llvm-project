@@ -6,6 +6,7 @@
 !   2.5.2 Kernels
 !   2.5.3 Serial
 !   2.9 Loop
+!   2.12 Atomic
 !   2.13 Declare
 !   2.14.3 Set
 !   2.14.4 Update
@@ -13,6 +14,7 @@
 !   2.11 Parallel Loop
 !   2.11 Kernels Loop
 !   2.11 Serial Loop
+!   2.16.13 Wait
 
 program openacc_clause_validity
 
@@ -424,6 +426,10 @@ program openacc_clause_validity
   !$acc kernels wait(devnum: 1: queues: 1, 2) async(3)
   !$acc end kernels
 
+  !$acc wait
+
+  !$acc wait async
+
   !$acc wait(1)
   !$acc wait(1, 2)
 
@@ -435,6 +441,46 @@ program openacc_clause_validity
 
   !$acc wait(devnum: 1: queues: 3)
   !$acc wait(devnum: 1: queues: 3, 4)
+
+  !$acc wait(1) if(.true.)
+
+  !ERROR: At most one IF clause can appear on the WAIT directive
+  !$acc wait(1) if(.true.) if(.false.)
+
+  !$acc wait(1) if(.true.) async
+
+  !$acc wait(1) if(.true.) async(1)
+
+  !ERROR: At most one ASYNC clause can appear on the WAIT directive
+  !$acc wait(1) if(.true.) async(1) async
+
+  !$acc parallel
+  !$acc atomic update
+  c(i) = c(i) + 1
+
+  !$acc atomic update
+  c(i) = c(i) + 1
+  !$acc end atomic
+
+  !$acc atomic write
+  c(i) = 10
+
+  !$acc atomic write
+  c(i) = 10
+  !$acc end atomic
+
+  !$acc atomic read
+  i = c(i)
+
+  !$acc atomic read
+  i = c(i)
+  !$acc end atomic
+
+  !$acc atomic capture
+  c(i) = i
+  i = i + 1
+  !$acc end atomic
+  !$acc end parallel
 
  contains
 

@@ -16,6 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Utils/UnifyLoopExits.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -28,10 +29,10 @@
 using namespace llvm;
 
 namespace {
-struct UnifyLoopExits : public FunctionPass {
+struct UnifyLoopExitsLegacyPass : public FunctionPass {
   static char ID;
-  UnifyLoopExits() : FunctionPass(ID) {
-    initializeUnifyLoopExitsPass(*PassRegistry::getPassRegistry());
+  UnifyLoopExitsLegacyPass() : FunctionPass(ID) {
+    initializeUnifyLoopExitsLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -47,17 +48,19 @@ struct UnifyLoopExits : public FunctionPass {
 };
 } // namespace
 
-char UnifyLoopExits::ID = 0;
+char UnifyLoopExitsLegacyPass::ID = 0;
 
-FunctionPass *llvm::createUnifyLoopExitsPass() { return new UnifyLoopExits(); }
+FunctionPass *llvm::createUnifyLoopExitsPass() {
+  return new UnifyLoopExitsLegacyPass();
+}
 
-INITIALIZE_PASS_BEGIN(UnifyLoopExits, "unify-loop-exits",
+INITIALIZE_PASS_BEGIN(UnifyLoopExitsLegacyPass, "unify-loop-exits",
                       "Fixup each natural loop to have a single exit block",
                       false /* Only looks at CFG */, false /* Analysis Pass */)
 INITIALIZE_PASS_DEPENDENCY(LowerSwitchLegacyPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(UnifyLoopExits, "unify-loop-exits",
+INITIALIZE_PASS_END(UnifyLoopExitsLegacyPass, "unify-loop-exits",
                     "Fixup each natural loop to have a single exit block",
                     false /* Only looks at CFG */, false /* Analysis Pass */)
 
@@ -204,11 +207,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   return true;
 }
 
-bool UnifyLoopExits::runOnFunction(Function &F) {
-  LLVM_DEBUG(dbgs() << "===== Unifying loop exits in function " << F.getName()
-                    << "\n");
-  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+static bool runImpl(LoopInfo &LI, DominatorTree &DT) {
 
   bool Changed = false;
   auto Loops = LI.getLoopsInPreorder();
@@ -219,3 +218,28 @@ bool UnifyLoopExits::runOnFunction(Function &F) {
   }
   return Changed;
 }
+
+bool UnifyLoopExitsLegacyPass::runOnFunction(Function &F) {
+  LLVM_DEBUG(dbgs() << "===== Unifying loop exits in function " << F.getName()
+                    << "\n");
+  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+
+  return runImpl(LI, DT);
+}
+
+namespace llvm {
+
+PreservedAnalyses UnifyLoopExitsPass::run(Function &F,
+                                          FunctionAnalysisManager &AM) {
+  auto &LI = AM.getResult<LoopAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+
+  if (!runImpl(LI, DT))
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<LoopAnalysis>();
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
+}
+} // namespace llvm

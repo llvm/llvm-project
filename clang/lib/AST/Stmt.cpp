@@ -130,17 +130,28 @@ void Stmt::EnableStatistics() {
   StatisticsEnabled = true;
 }
 
-static std::pair<Stmt::Likelihood, const Attr *> getLikelihood(const Stmt *S) {
-  if (const auto *AS = dyn_cast_or_null<AttributedStmt>(S))
-    for (const auto *A : AS->getAttrs()) {
-      if (isa<LikelyAttr>(A))
-        return std::make_pair(Stmt::LH_Likely, A);
+static std::pair<Stmt::Likelihood, const Attr *>
+getLikelihood(ArrayRef<const Attr *> Attrs) {
+  for (const auto *A : Attrs) {
+    if (isa<LikelyAttr>(A))
+      return std::make_pair(Stmt::LH_Likely, A);
 
-      if (isa<UnlikelyAttr>(A))
-        return std::make_pair(Stmt::LH_Unlikely, A);
-    }
+    if (isa<UnlikelyAttr>(A))
+      return std::make_pair(Stmt::LH_Unlikely, A);
+  }
 
   return std::make_pair(Stmt::LH_None, nullptr);
+}
+
+static std::pair<Stmt::Likelihood, const Attr *> getLikelihood(const Stmt *S) {
+  if (const auto *AS = dyn_cast_or_null<AttributedStmt>(S))
+    return getLikelihood(AS->getAttrs());
+
+  return std::make_pair(Stmt::LH_None, nullptr);
+}
+
+Stmt::Likelihood Stmt::getLikelihood(ArrayRef<const Attr *> Attrs) {
+  return ::getLikelihood(Attrs).first;
 }
 
 Stmt::Likelihood Stmt::getLikelihood(const Stmt *S) {

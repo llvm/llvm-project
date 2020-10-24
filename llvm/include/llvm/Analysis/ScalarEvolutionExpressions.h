@@ -35,7 +35,7 @@ class ConstantRange;
 class Loop;
 class Type;
 
-  enum SCEVTypes {
+  enum SCEVTypes : unsigned short {
     // These should be ordered in terms of increasing complexity to make the
     // folders simpler.
     scConstant, scTruncate, scZeroExtend, scSignExtend, scAddExpr, scMulExpr,
@@ -72,13 +72,13 @@ class Type;
   }
 
   /// This is the base class for unary cast operator classes.
-  class SCEVCastExpr : public SCEV {
+  class SCEVIntegralCastExpr : public SCEV {
   protected:
     std::array<const SCEV *, 1> Operands;
     Type *Ty;
 
-    SCEVCastExpr(const FoldingSetNodeIDRef ID,
-                 unsigned SCEVTy, const SCEV *op, Type *ty);
+    SCEVIntegralCastExpr(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
+                         const SCEV *op, Type *ty);
 
   public:
     const SCEV *getOperand() const { return Operands[0]; }
@@ -105,7 +105,7 @@ class Type;
 
   /// This class represents a truncation of an integer value to a
   /// smaller integer value.
-  class SCEVTruncateExpr : public SCEVCastExpr {
+  class SCEVTruncateExpr : public SCEVIntegralCastExpr {
     friend class ScalarEvolution;
 
     SCEVTruncateExpr(const FoldingSetNodeIDRef ID,
@@ -120,7 +120,7 @@ class Type;
 
   /// This class represents a zero extension of a small integer value
   /// to a larger integer value.
-  class SCEVZeroExtendExpr : public SCEVCastExpr {
+  class SCEVZeroExtendExpr : public SCEVIntegralCastExpr {
     friend class ScalarEvolution;
 
     SCEVZeroExtendExpr(const FoldingSetNodeIDRef ID,
@@ -135,7 +135,7 @@ class Type;
 
   /// This class represents a sign extension of a small integer value
   /// to a larger integer value.
-  class SCEVSignExtendExpr : public SCEVCastExpr {
+  class SCEVSignExtendExpr : public SCEVIntegralCastExpr {
     friend class ScalarEvolution;
 
     SCEVSignExtendExpr(const FoldingSetNodeIDRef ID,
@@ -412,7 +412,7 @@ class Type;
 
   public:
     static bool classof(const SCEV *S) {
-      return isMinMaxType(static_cast<SCEVTypes>(S->getSCEVType()));
+      return isMinMaxType(S->getSCEVType());
     }
 
     static enum SCEVTypes negate(enum SCEVTypes T) {
@@ -567,9 +567,8 @@ class Type;
         return ((SC*)this)->visitUnknown((const SCEVUnknown*)S);
       case scCouldNotCompute:
         return ((SC*)this)->visitCouldNotCompute((const SCEVCouldNotCompute*)S);
-      default:
-        llvm_unreachable("Unknown SCEV type!");
       }
+      llvm_unreachable("Unknown SCEV kind!");
     }
 
     RetVal visitCouldNotCompute(const SCEVCouldNotCompute *S) {
@@ -606,12 +605,12 @@ class Type;
         switch (S->getSCEVType()) {
         case scConstant:
         case scUnknown:
-          break;
+          continue;
         case scTruncate:
         case scZeroExtend:
         case scSignExtend:
-          push(cast<SCEVCastExpr>(S)->getOperand());
-          break;
+          push(cast<SCEVIntegralCastExpr>(S)->getOperand());
+          continue;
         case scAddExpr:
         case scMulExpr:
         case scSMaxExpr:
@@ -621,18 +620,17 @@ class Type;
         case scAddRecExpr:
           for (const auto *Op : cast<SCEVNAryExpr>(S)->operands())
             push(Op);
-          break;
+          continue;
         case scUDivExpr: {
           const SCEVUDivExpr *UDiv = cast<SCEVUDivExpr>(S);
           push(UDiv->getLHS());
           push(UDiv->getRHS());
-          break;
+          continue;
         }
         case scCouldNotCompute:
           llvm_unreachable("Attempt to use a SCEVCouldNotCompute object!");
-        default:
-          llvm_unreachable("Unknown SCEV kind!");
         }
+        llvm_unreachable("Unknown SCEV kind!");
       }
     }
   };

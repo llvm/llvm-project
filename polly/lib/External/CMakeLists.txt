@@ -279,7 +279,6 @@ if (POLLY_BUNDLED_ISL)
       FILES_MATCHING
       PATTERN "*.h"
       PATTERN "CMakeFiles" EXCLUDE
-      PATTERN ".svn" EXCLUDE
       )
   endif()
 

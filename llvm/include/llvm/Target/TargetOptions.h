@@ -73,6 +73,12 @@ namespace llvm {
     None    // Do not use Basic Block Sections.
   };
 
+  enum class StackProtectorGuards {
+    None,
+    TLS,
+    Global
+  };
+
   enum class EABI {
     Unknown,
     Default, // Default means not specified
@@ -306,6 +312,16 @@ namespace llvm {
 
     /// Emit XRay Function Index section
     unsigned XRayOmitFunctionIndex : 1;
+
+    /// Stack protector guard offset to use.
+    unsigned StackProtectorGuardOffset : 32;
+
+    /// Stack protector guard mode to use, e.g. tls, global.
+    StackProtectorGuards StackProtectorGuard =
+                                         StackProtectorGuards::None;
+
+    /// Stack protector guard reg to use, e.g. usually fs or gs in X86.
+    std::string StackProtectorGuardReg = "None";
 
     /// FloatABIType - This setting is set by -float-abi=xxx option is specfied
     /// on the command line. This setting may either be Default, Soft, or Hard.

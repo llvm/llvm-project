@@ -90,6 +90,8 @@ function(add_llvm_symbol_exports target_name export_file)
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-exported_symbols_list,\"${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}\"")
   elseif(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+    # FIXME: `-Wl,-bE:` bypasses whatever handling there is in the build
+    # compiler driver to defer to the specified export list.
     set(native_export_file "${export_file}")
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " -Wl,-bE:${export_file}")
@@ -1227,7 +1229,7 @@ macro(add_llvm_utility name)
 
   add_llvm_executable(${name} DISABLE_LLVM_LINK_LLVM_DYLIB ${ARGN})
   set_target_properties(${name} PROPERTIES FOLDER "Utils")
-  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  if ( ${name} IN_LIST LLVM_TOOLCHAIN_UTILITIES OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     if (LLVM_INSTALL_UTILS AND LLVM_BUILD_UTILS)
       set(export_to_llvmexports)
       if (${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR

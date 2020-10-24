@@ -98,6 +98,9 @@ for arg in llvm_root build_dir symbols_dir install_dir sdk architectures version
 done
 
 # Allow using relative paths
+function realpath() {
+    if [[ $1 = /* ]]; then echo "$1"; else echo "$(pwd)/${1#./}"; fi
+}
 for arg in llvm_root build_dir symbols_dir install_dir cache; do
     path="$(realpath "${!arg}")"
     eval "${arg}=\"${path}\""

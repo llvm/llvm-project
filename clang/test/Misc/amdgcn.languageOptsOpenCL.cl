@@ -29,17 +29,6 @@
 #endif
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics: enable
 
-#ifdef cl_khr_gl_sharing
-#error "Incorrect cl_khr_gl_sharing define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_gl_sharing: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_gl_sharing' - ignoring}}
-
-#ifndef cl_khr_icd
-#error "Missing cl_khr_icd define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_icd: enable
-
 // Core features in CL 1.1
 
 #ifndef cl_khr_byte_addressable_store
@@ -82,13 +71,6 @@
 // expected-warning@-2{{OpenCL extension 'cl_khr_local_int32_extended_atomics' is core feature or supported optional core feature - ignoring}}
 #endif
 
-#ifdef cl_khr_select_fprounding_mode
-#error "Incorrect cl_khr_select_fprounding_mode define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_select_fprounding_mode: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_select_fprounding_mode' - ignoring}}
-
-
 // Core feature in CL 1.2
 #ifndef cl_khr_fp64
 #error "Missing cl_khr_fp64 define"
@@ -107,79 +89,11 @@
 // expected-warning@-2{{OpenCL extension 'cl_khr_3d_image_writes' is core feature or supported optional core feature - ignoring}}
 #endif
 
-
-
-#ifdef cl_khr_gl_event
-#error "Incorrect cl_khr_gl_event define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_gl_event: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_gl_event' - ignoring}}
-
-#ifdef cl_khr_d3d10_sharing
-#error "Incorrect cl_khr_d3d10_sharing define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_d3d10_sharing: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_d3d10_sharing' - ignoring}}
-
-#ifdef cl_khr_context_abort
-#error "Incorrect cl_context_abort define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_context_abort: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_context_abort' - ignoring}}
-
-#ifdef cl_khr_d3d11_sharing
-#error "Incorrect cl_khr_d3d11_sharing define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_d3d11_sharing: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_d3d11_sharing' - ignoring}}
-
-#ifdef cl_khr_dx9_media_sharing
-#error "Incorrect cl_khr_dx9_media_sharing define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_dx9_media_sharing: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_dx9_media_sharing' - ignoring}}
-
-#ifdef cl_khr_image2d_from_buffer
-#error "Incorrect cl_khr_image2d_from_buffer define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_image2d_from_buffer: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_image2d_from_buffer' - ignoring}}
-
-#ifdef cl_khr_initialize_memory
-#error "Incorrect cl_khr_initialize_memory define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_initialize_memory: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_initialize_memory' - ignoring}}
-
-#ifdef cl_khr_gl_depth_images
-#error "Incorrect cl_khr_gl_depth_images define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_gl_depth_images: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_gl_depth_images' - ignoring}}
-
 #ifdef cl_khr_gl_msaa_sharing
 #error "Incorrect cl_khr_gl_msaa_sharing define"
 #endif
 #pragma OPENCL EXTENSION cl_khr_gl_msaa_sharing: enable
 // expected-warning@-1{{unsupported OpenCL extension 'cl_khr_gl_msaa_sharing' - ignoring}}
-
-#ifdef cl_khr_spir
-#error "Incorrect cl_khr_spir define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_spir: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_spir' - ignoring}}
-
-#ifdef cl_khr_egl_event
-#error "Incorrect cl_khr_egl_event define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_egl_event: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_egl_event' - ignoring}}
-
-#ifdef cl_khr_egl_image
-#error "Incorrect cl_khr_egl_image define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_egl_image: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_egl_image' - ignoring}}
 
 #if (__OPENCL_C_VERSION__ >= 200)
 #ifndef cl_khr_mipmap_image
@@ -210,12 +124,6 @@
 // expected-warning@+2{{unsupported OpenCL extension 'cl_khr_subgroups' - ignoring}}
 #endif
 #pragma OPENCL EXTENSION cl_khr_subgroups: enable
-
-#ifdef cl_khr_terminate_context
-#error "Incorrect cl_khr_terminate_context define"
-#endif
-#pragma OPENCL EXTENSION cl_khr_terminate_context: enable
-// expected-warning@-1{{unsupported OpenCL extension 'cl_khr_terminate_context' - ignoring}}
 
 #ifndef cl_amd_media_ops
 #error "Missing cl_amd_media_ops define"

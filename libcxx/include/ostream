@@ -1101,10 +1101,8 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const bitset<_Size>& __x)
                          use_facet<ctype<_CharT> >(__os.getloc()).widen('1'));
 }
 
-#ifndef _LIBCPP_DO_NOT_ASSUME_STREAMS_EXPLICIT_INSTANTIATION_IN_DYLIB
 _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<char>)
 _LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<wchar_t>)
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

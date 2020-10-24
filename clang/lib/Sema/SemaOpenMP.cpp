@@ -1896,27 +1896,27 @@ enum class FunctionEmissionStatus {
 };
 } // anonymous namespace
 
-Sema::DeviceDiagBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
-                                                     unsigned DiagID) {
+Sema::SemaDiagnosticBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
+                                                         unsigned DiagID) {
   assert(LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
          "Expected OpenMP device compilation.");
 
   FunctionDecl *FD = getCurFunctionDecl();
-  DeviceDiagBuilder::Kind Kind = DeviceDiagBuilder::K_Nop;
+  SemaDiagnosticBuilder::Kind Kind = SemaDiagnosticBuilder::K_Nop;
   if (FD) {
     FunctionEmissionStatus FES = getEmissionStatus(FD);
     switch (FES) {
     case FunctionEmissionStatus::Emitted:
-      Kind = DeviceDiagBuilder::K_Immediate;
+      Kind = SemaDiagnosticBuilder::K_Immediate;
       break;
     case FunctionEmissionStatus::Unknown:
       Kind = isOpenMPDeviceDelayedContext(*this)
-                 ? DeviceDiagBuilder::K_Deferred
-                 : DeviceDiagBuilder::K_Immediate;
+                 ? SemaDiagnosticBuilder::K_Deferred
+                 : SemaDiagnosticBuilder::K_Immediate;
       break;
     case FunctionEmissionStatus::TemplateDiscarded:
     case FunctionEmissionStatus::OMPDiscarded:
-      Kind = DeviceDiagBuilder::K_Nop;
+      Kind = SemaDiagnosticBuilder::K_Nop;
       break;
     case FunctionEmissionStatus::CUDADiscarded:
       llvm_unreachable("CUDADiscarded unexpected in OpenMP device compilation");
@@ -1924,30 +1924,30 @@ Sema::DeviceDiagBuilder Sema::diagIfOpenMPDeviceCode(SourceLocation Loc,
     }
   }
 
-  return DeviceDiagBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
+  return SemaDiagnosticBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
 }
 
-Sema::DeviceDiagBuilder Sema::diagIfOpenMPHostCode(SourceLocation Loc,
-                                                   unsigned DiagID) {
+Sema::SemaDiagnosticBuilder Sema::diagIfOpenMPHostCode(SourceLocation Loc,
+                                                       unsigned DiagID) {
   assert(LangOpts.OpenMP && !LangOpts.OpenMPIsDevice &&
          "Expected OpenMP host compilation.");
   FunctionEmissionStatus FES = getEmissionStatus(getCurFunctionDecl());
-  DeviceDiagBuilder::Kind Kind = DeviceDiagBuilder::K_Nop;
+  SemaDiagnosticBuilder::Kind Kind = SemaDiagnosticBuilder::K_Nop;
   switch (FES) {
   case FunctionEmissionStatus::Emitted:
-    Kind = DeviceDiagBuilder::K_Immediate;
+    Kind = SemaDiagnosticBuilder::K_Immediate;
     break;
   case FunctionEmissionStatus::Unknown:
-    Kind = DeviceDiagBuilder::K_Deferred;
+    Kind = SemaDiagnosticBuilder::K_Deferred;
     break;
   case FunctionEmissionStatus::TemplateDiscarded:
   case FunctionEmissionStatus::OMPDiscarded:
   case FunctionEmissionStatus::CUDADiscarded:
-    Kind = DeviceDiagBuilder::K_Nop;
+    Kind = SemaDiagnosticBuilder::K_Nop;
     break;
   }
 
-  return DeviceDiagBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
+  return SemaDiagnosticBuilder(Kind, Loc, DiagID, getCurFunctionDecl(), *this);
 }
 
 static OpenMPDefaultmapClauseKind
@@ -5836,7 +5836,8 @@ Sema::DeclGroupPtrTy Sema::ActOnOpenMPDeclareSimdDirective(
       NewStep = PerformOpenMPImplicitIntegerConversion(Step->getExprLoc(), Step)
                     .get();
       if (NewStep)
-        NewStep = VerifyIntegerConstantExpression(NewStep).get();
+        NewStep =
+            VerifyIntegerConstantExpression(NewStep, /*FIXME*/ AllowFold).get();
     }
     NewSteps.push_back(NewStep);
   }
@@ -12812,7 +12813,8 @@ ExprResult Sema::VerifyPositiveIntegerConstantInClause(Expr *E,
       E->isInstantiationDependent() || E->containsUnexpandedParameterPack())
     return E;
   llvm::APSInt Result;
-  ExprResult ICE = VerifyIntegerConstantExpression(E, &Result);
+  ExprResult ICE =
+      VerifyIntegerConstantExpression(E, &Result, /*FIXME*/ AllowFold);
   if (ICE.isInvalid())
     return ExprError();
   if ((StrictlyPositive && !Result.isStrictlyPositive()) ||

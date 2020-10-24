@@ -6,7 +6,11 @@
 ; RUN:   FileCheck --check-prefix=VECTORIZE %s
 
 ; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info \
-; RUN:   -loop-accesses -analyze < %s | FileCheck %s --check-prefix=ANALYSIS
+; RUN:   -loop-accesses -analyze < %s -enable-new-pm=0 | FileCheck %s --check-prefix=ANALYSIS
+
+; TODO: the following changes the order loop-access printing prints loops, remove legacy RUN and change after NPM switch
+; TODO: opt -aa-pipeline=basic-aa -passes='loop-distribute,print-access-info' -enable-loop-distribute \
+; TODO:   -verify-loop-info -verify-dom-info -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ANALYSIS
 
 ; The memcheck version of basic.ll.  We should distribute and vectorize the
 ; second part of this loop with 5 memchecks (A+1 x {C, D, E} + C x {A, B})
@@ -61,7 +65,7 @@ entry:
 ; CHECK: for.body.ph.lver.orig:
 ; CHECK:     br label %for.body.lver.orig
 ; CHECK: for.body.lver.orig:
-; CHECK:    br i1 %exitcond.lver.orig, label %for.end, label %for.body.lver.orig
+; CHECK:    br i1 %exitcond.lver.orig, label %for.end.loopexit, label %for.body.lver.orig
 
 ; Verify the two distributed loops.
 

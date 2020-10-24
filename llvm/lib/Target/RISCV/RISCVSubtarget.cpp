@@ -30,13 +30,16 @@ using namespace llvm;
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &RISCVSubtarget::initializeSubtargetDependencies(
-    const Triple &TT, StringRef CPU, StringRef FS, StringRef ABIName) {
+    const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS, StringRef ABIName) {
   // Determine default and user-specified characteristics
   bool Is64Bit = TT.isArch64Bit();
   std::string CPUName = std::string(CPU);
+  std::string TuneCPUName = std::string(TuneCPU);
   if (CPUName.empty())
     CPUName = Is64Bit ? "generic-rv64" : "generic-rv32";
-  ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
+  if (TuneCPUName.empty())
+    TuneCPUName = CPUName;
+  ParseSubtargetFeatures(CPUName, TuneCPUName, FS);
   if (Is64Bit) {
     XLenVT = MVT::i64;
     XLen = 64;
@@ -47,11 +50,12 @@ RISCVSubtarget &RISCVSubtarget::initializeSubtargetDependencies(
   return *this;
 }
 
-RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
+RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
+                               StringRef TuneCPU, StringRef FS,
                                StringRef ABIName, const TargetMachine &TM)
-    : RISCVGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
+    : RISCVGenSubtargetInfo(TT, CPU, TuneCPU, FS),
       UserReservedRegister(RISCV::NUM_TARGET_REGS),
-      FrameLowering(initializeSubtargetDependencies(TT, CPU, FS, ABIName)),
+      FrameLowering(initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
       InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
   CallLoweringInfo.reset(new RISCVCallLowering(*getTargetLowering()));
   Legalizer.reset(new RISCVLegalizerInfo(*this));

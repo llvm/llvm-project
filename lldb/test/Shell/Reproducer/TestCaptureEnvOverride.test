@@ -9,8 +9,6 @@
 
 # RUN: LLDB_CAPTURE_REPRODUCER=0 %lldb -b -o 'reproducer status' --capture --capture-path %t.repro | FileCheck %s --check-prefix OFF
 # RUN: LLDB_CAPTURE_REPRODUCER=0 %lldb -b -o 'reproducer status' --capture | FileCheck %s --check-prefix OFF
-# RUN: LLDB_CAPTURE_REPRODUCER=OFF %lldb -b -o 'reproducer status' --capture --capture-path %t.repro | FileCheck %s --check-prefix OFF
-# RUN: LLDB_CAPTURE_REPRODUCER=off %lldb -b -o 'reproducer status' --capture | FileCheck %s --check-prefix OFF
 
 # RUN: LLDB_CAPTURE_REPRODUCER=bogus %lldb -b -o 'reproducer status' --capture | FileCheck %s --check-prefix CAPTURE
 # RUN: LLDB_CAPTURE_REPRODUCER=bogus %lldb -b -o 'reproducer status' | FileCheck %s --check-prefix OFF

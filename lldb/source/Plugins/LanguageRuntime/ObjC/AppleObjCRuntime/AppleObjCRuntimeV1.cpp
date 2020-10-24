@@ -122,58 +122,60 @@ struct BufStruct {
   char contents[2048];
 };
 
-UtilityFunction *AppleObjCRuntimeV1::CreateObjectChecker(const char *name) {
+llvm::Expected<std::unique_ptr<UtilityFunction>>
+AppleObjCRuntimeV1::CreateObjectChecker(std::string name,
+                                        ExecutionContext &exe_ctx) {
   std::unique_ptr<BufStruct> buf(new BufStruct);
 
-  int strformatsize = snprintf(&buf->contents[0], sizeof(buf->contents),
-                  "struct __objc_class                                         "
-                  "           \n"
-                  "{                                                           "
-                  "           \n"
-                  "   struct __objc_class *isa;                                "
-                  "           \n"
-                  "   struct __objc_class *super_class;                        "
-                  "           \n"
-                  "   const char *name;                                        "
-                  "           \n"
-                  "   // rest of struct elided because unused                  "
-                  "           \n"
-                  "};                                                          "
-                  "           \n"
-                  "                                                            "
-                  "           \n"
-                  "struct __objc_object                                        "
-                  "           \n"
-                  "{                                                           "
-                  "           \n"
-                  "   struct __objc_class *isa;                                "
-                  "           \n"
-                  "};                                                          "
-                  "           \n"
-                  "                                                            "
-                  "           \n"
-                  "extern \"C\" void                                           "
-                  "           \n"
-                  "%s(void *$__lldb_arg_obj, void *$__lldb_arg_selector)       "
-                  "           \n"
-                  "{                                                           "
-                  "           \n"
-                  "   struct __objc_object *obj = (struct "
-                  "__objc_object*)$__lldb_arg_obj; \n"
-                  "   if ($__lldb_arg_obj == (void *)0)                     "
-                  "                                \n"
-                  "       return; // nil is ok                              "
-                  "   (int)strlen(obj->isa->name);                             "
-                  "           \n"
-                  "}                                                           "
-                  "           \n",
-                  name);
+  int strformatsize =
+      snprintf(&buf->contents[0], sizeof(buf->contents),
+               "struct __objc_class                                         "
+               "           \n"
+               "{                                                           "
+               "           \n"
+               "   struct __objc_class *isa;                                "
+               "           \n"
+               "   struct __objc_class *super_class;                        "
+               "           \n"
+               "   const char *name;                                        "
+               "           \n"
+               "   // rest of struct elided because unused                  "
+               "           \n"
+               "};                                                          "
+               "           \n"
+               "                                                            "
+               "           \n"
+               "struct __objc_object                                        "
+               "           \n"
+               "{                                                           "
+               "           \n"
+               "   struct __objc_class *isa;                                "
+               "           \n"
+               "};                                                          "
+               "           \n"
+               "                                                            "
+               "           \n"
+               "extern \"C\" void                                           "
+               "           \n"
+               "%s(void *$__lldb_arg_obj, void *$__lldb_arg_selector)       "
+               "           \n"
+               "{                                                           "
+               "           \n"
+               "   struct __objc_object *obj = (struct "
+               "__objc_object*)$__lldb_arg_obj; \n"
+               "   if ($__lldb_arg_obj == (void *)0)                     "
+               "                                \n"
+               "       return; // nil is ok                              "
+               "   (int)strlen(obj->isa->name);                             "
+               "           \n"
+               "}                                                           "
+               "           \n",
+               name.c_str());
   assert(strformatsize < (int)sizeof(buf->contents));
   (void)strformatsize;
 
-  Status error;
-  return GetTargetRef().GetUtilityFunctionForLanguage(
-      buf->contents, eLanguageTypeObjC, name, error);
+  return GetTargetRef().CreateUtilityFunction(buf->contents, std::move(name),
+                                              eLanguageTypeC, exe_ctx);
 }
 
 AppleObjCRuntimeV1::ClassDescriptorV1::ClassDescriptorV1(

@@ -148,19 +148,10 @@ public:
   /// \param[in] oflag
   ///     Flags to use when calling \c open(\a oflag).
   ///
-  /// \param[out] error_str
-  ///     An pointer to an error that can describe any errors that
-  ///     occur. This can be NULL if no error status is desired.
-  ///
-  /// \return
-  ///     \b true when the primary files descriptor is
-  ///         successfully opened.
-  ///     \b false if anything goes wrong.
-  ///
   /// \see PseudoTerminal::OpenFirstAvailablePrimary() @see
   /// PseudoTerminal::GetSecondaryFileDescriptor() @see
   /// PseudoTerminal::ReleaseSecondaryFileDescriptor()
-  bool OpenSecondary(int oflag, char *error_str, size_t error_len);
+  llvm::Error OpenSecondary(int oflag);
 
   /// Release the primary file descriptor.
   ///

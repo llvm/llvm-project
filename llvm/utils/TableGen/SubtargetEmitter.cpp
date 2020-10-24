@@ -1651,9 +1651,9 @@ void SubtargetEmitter::EmitSchedModelHelpers(const std::string &ClassName,
 
   OS << "unsigned " << ClassName
      << "\n::resolveVariantSchedClass(unsigned SchedClass, const MCInst *MI,"
-     << " unsigned CPUID) const {\n"
+     << " const MCInstrInfo *MCII, unsigned CPUID) const {\n"
      << "  return " << Target << "_MC"
-     << "::resolveVariantSchedClassImpl(SchedClass, MI, CPUID);\n"
+     << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, CPUID);\n"
      << "} // " << ClassName << "::resolveVariantSchedClass\n\n";
 
   STIPredicateExpander PE(Target);
@@ -1734,7 +1734,7 @@ void SubtargetEmitter::ParseFeaturesFunction(raw_ostream &OS,
 void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
   OS << "namespace " << Target << "_MC {\n"
      << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,\n"
-     << "    const MCInst *MI, unsigned CPUID) {\n";
+     << "    const MCInst *MI, const MCInstrInfo *MCII, unsigned CPUID) {\n";
   emitSchedModelHelpersImpl(OS, /* OnlyExpandMCPredicates */ true);
   OS << "}\n";
   OS << "} // end namespace " << Target << "_MC\n\n";
@@ -1752,9 +1752,10 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PF, PD,\n"
      << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
-     << "      const MCInst *MI, unsigned CPUID) const override {\n"
+     << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
+     << "      unsigned CPUID) const override {\n"
      << "    return " << Target << "_MC"
-     << "::resolveVariantSchedClassImpl(SchedClass, MI, CPUID); \n";
+     << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, CPUID); \n";
   OS << "  }\n";
   if (TGT.getHwModes().getNumModeIds() > 1)
     OS << "  unsigned getHwMode() const override;\n";
@@ -1871,7 +1872,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << "class DFAPacketizer;\n";
   OS << "namespace " << Target << "_MC {\n"
      << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,"
-     << " const MCInst *MI, unsigned CPUID);\n"
+     << " const MCInst *MI, const MCInstrInfo *MCII, unsigned CPUID);\n"
      << "} // end namespace " << Target << "_MC\n\n";
   OS << "struct " << ClassName << " : public TargetSubtargetInfo {\n"
      << "  explicit " << ClassName << "(const Triple &TT, StringRef CPU, "
@@ -1881,7 +1882,8 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << " const MachineInstr *DefMI,"
      << " const TargetSchedModel *SchedModel) const override;\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,"
-     << " const MCInst *MI, unsigned CPUID) const override;\n"
+     << " const MCInst *MI, const MCInstrInfo *MCII,"
+     << " unsigned CPUID) const override;\n"
      << "  DFAPacketizer *createDFAPacketizer(const InstrItineraryData *IID)"
      << " const;\n";
   if (TGT.getHwModes().getNumModeIds() > 1)

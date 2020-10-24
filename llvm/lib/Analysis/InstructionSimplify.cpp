@@ -2849,6 +2849,42 @@ static Value *simplifyICmpWithBinOpOnLHS(
   return nullptr;
 }
 
+
+// If only one of the icmp's operands has NSW flags, try to prove that:
+//
+//   icmp slt (x + C1), (x +nsw C2)
+//
+// is equivalent to:
+//
+//   icmp slt C1, C2
+//
+// which is true if x + C2 has the NSW flags set and:
+// *) C1 < C2 && C1 >= 0, or
+// *) C2 < C1 && C1 <= 0.
+//
+static bool trySimplifyICmpWithAdds(CmpInst::Predicate Pred, Value *LHS,
+                                    Value *RHS) {
+  // TODO: only support icmp slt for now.
+  if (Pred != CmpInst::ICMP_SLT)
+    return false;
+
+  // Canonicalize nsw add as RHS.
+  if (!match(RHS, m_NSWAdd(m_Value(), m_Value())))
+    std::swap(LHS, RHS);
+  if (!match(RHS, m_NSWAdd(m_Value(), m_Value())))
+    return false;
+
+  Value *X;
+  const APInt *C1, *C2;
+  if (!match(LHS, m_c_Add(m_Value(X), m_APInt(C1))) ||
+      !match(RHS, m_c_Add(m_Specific(X), m_APInt(C2))))
+    return false;
+
+  return (C1->slt(*C2) && C1->isNonNegative()) ||
+         (C2->slt(*C1) && C1->isNonPositive());
+}
+
+
 /// TODO: A large part of this logic is duplicated in InstCombine's
 /// foldICmpBinOp(). We should be able to share that and avoid the code
 /// duplication.
@@ -2898,8 +2934,9 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
         return V;
 
     // icmp (X+Y), (X+Z) -> icmp Y,Z for equalities or if there is no overflow.
-    if (A && C && (A == C || A == D || B == C || B == D) && NoLHSWrapProblem &&
-        NoRHSWrapProblem) {
+    bool CanSimplify = (NoLHSWrapProblem && NoRHSWrapProblem) ||
+                       trySimplifyICmpWithAdds(Pred, LHS, RHS);
+    if (A && C && (A == C || A == D || B == C || B == D) && CanSimplify) {
       // Determine Y and Z in the form icmp (X+Y), (X+Z).
       Value *Y, *Z;
       if (A == C) {
@@ -2936,22 +2973,19 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
 
   // 0 - (zext X) pred C
   if (!CmpInst::isUnsigned(Pred) && match(LHS, m_Neg(m_ZExt(m_Value())))) {
-    if (ConstantInt *RHSC = dyn_cast<ConstantInt>(RHS)) {
-      if (RHSC->getValue().isStrictlyPositive()) {
-        if (Pred == ICmpInst::ICMP_SLT)
-          return ConstantInt::getTrue(RHSC->getContext());
-        if (Pred == ICmpInst::ICMP_SGE)
-          return ConstantInt::getFalse(RHSC->getContext());
-        if (Pred == ICmpInst::ICMP_EQ)
-          return ConstantInt::getFalse(RHSC->getContext());
-        if (Pred == ICmpInst::ICMP_NE)
-          return ConstantInt::getTrue(RHSC->getContext());
+    const APInt *C;
+    if (match(RHS, m_APInt(C))) {
+      if (C->isStrictlyPositive()) {
+        if (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_NE)
+          return ConstantInt::getTrue(GetCompareTy(RHS));
+        if (Pred == ICmpInst::ICMP_SGE || Pred == ICmpInst::ICMP_EQ)
+          return ConstantInt::getFalse(GetCompareTy(RHS));
       }
-      if (RHSC->getValue().isNonNegative()) {
+      if (C->isNonNegative()) {
         if (Pred == ICmpInst::ICMP_SLE)
-          return ConstantInt::getTrue(RHSC->getContext());
+          return ConstantInt::getTrue(GetCompareTy(RHS));
         if (Pred == ICmpInst::ICMP_SGT)
-          return ConstantInt::getFalse(RHSC->getContext());
+          return ConstantInt::getFalse(GetCompareTy(RHS));
       }
     }
   }

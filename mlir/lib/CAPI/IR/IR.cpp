@@ -26,7 +26,7 @@ using namespace mlir;
 /* ========================================================================== */
 
 MlirContext mlirContextCreate() {
-  auto *context = new MLIRContext(/*loadAllDialects=*/false);
+  auto *context = new MLIRContext;
   return wrap(context);
 }
 
@@ -72,6 +72,36 @@ int mlirDialectEqual(MlirDialect dialect1, MlirDialect dialect2) {
 
 MlirStringRef mlirDialectGetNamespace(MlirDialect dialect) {
   return wrap(unwrap(dialect)->getNamespace());
+}
+
+/* ========================================================================== */
+/* Printing flags API.                                                        */
+/* ========================================================================== */
+
+MlirOpPrintingFlags mlirOpPrintingFlagsCreate() {
+  return wrap(new OpPrintingFlags());
+}
+
+void mlirOpPrintingFlagsDestroy(MlirOpPrintingFlags flags) {
+  delete unwrap(flags);
+}
+
+void mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
+                                                intptr_t largeElementLimit) {
+  unwrap(flags)->elideLargeElementsAttrs(largeElementLimit);
+}
+
+void mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags,
+                                        int prettyForm) {
+  unwrap(flags)->enableDebugInfo(/*prettyForm=*/prettyForm);
+}
+
+void mlirOpPrintingFlagsPrintGenericOpForm(MlirOpPrintingFlags flags) {
+  unwrap(flags)->printGenericOpForm();
+}
+
+void mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags) {
+  unwrap(flags)->useLocalScope();
 }
 
 /* ========================================================================== */
@@ -211,6 +241,10 @@ MlirOperation mlirOperationCreate(const MlirOperationState *state) {
 
 void mlirOperationDestroy(MlirOperation op) { unwrap(op)->erase(); }
 
+int mlirOperationEqual(MlirOperation op, MlirOperation other) {
+  return unwrap(op) == unwrap(other);
+}
+
 intptr_t mlirOperationGetNumRegions(MlirOperation op) {
   return static_cast<intptr_t>(unwrap(op)->getNumRegions());
 }
@@ -278,6 +312,13 @@ void mlirOperationPrint(MlirOperation op, MlirStringCallback callback,
   stream.flush();
 }
 
+void mlirOperationPrintWithFlags(MlirOperation op, MlirOpPrintingFlags flags,
+                                 MlirStringCallback callback, void *userData) {
+  detail::CallbackOstream stream(callback, userData);
+  unwrap(op)->print(stream, *unwrap(flags));
+  stream.flush();
+}
+
 void mlirOperationDump(MlirOperation op) { return unwrap(op)->dump(); }
 
 /* ========================================================================== */
@@ -341,6 +382,10 @@ MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType *args) {
   for (intptr_t i = 0; i < nArgs; ++i)
     b->addArgument(unwrap(args[i]));
   return wrap(b);
+}
+
+int mlirBlockEqual(MlirBlock block, MlirBlock other) {
+  return unwrap(block) == unwrap(other);
 }
 
 MlirBlock mlirBlockGetNextInRegion(MlirBlock block) {
@@ -412,9 +457,41 @@ void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
 /* Value API.                                                                 */
 /* ========================================================================== */
 
+int mlirValueIsABlockArgument(MlirValue value) {
+  return unwrap(value).isa<BlockArgument>();
+}
+
+int mlirValueIsAOpResult(MlirValue value) {
+  return unwrap(value).isa<OpResult>();
+}
+
+MlirBlock mlirBlockArgumentGetOwner(MlirValue value) {
+  return wrap(unwrap(value).cast<BlockArgument>().getOwner());
+}
+
+intptr_t mlirBlockArgumentGetArgNumber(MlirValue value) {
+  return static_cast<intptr_t>(
+      unwrap(value).cast<BlockArgument>().getArgNumber());
+}
+
+void mlirBlockArgumentSetType(MlirValue value, MlirType type) {
+  unwrap(value).cast<BlockArgument>().setType(unwrap(type));
+}
+
+MlirOperation mlirOpResultGetOwner(MlirValue value) {
+  return wrap(unwrap(value).cast<OpResult>().getOwner());
+}
+
+intptr_t mlirOpResultGetResultNumber(MlirValue value) {
+  return static_cast<intptr_t>(
+      unwrap(value).cast<OpResult>().getResultNumber());
+}
+
 MlirType mlirValueGetType(MlirValue value) {
   return wrap(unwrap(value).getType());
 }
+
+void mlirValueDump(MlirValue value) { unwrap(value).dump(); }
 
 void mlirValuePrint(MlirValue value, MlirStringCallback callback,
                     void *userData) {
@@ -455,6 +532,10 @@ MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr) {
 
 MlirContext mlirAttributeGetContext(MlirAttribute attribute) {
   return wrap(unwrap(attribute).getContext());
+}
+
+MlirType mlirAttributeGetType(MlirAttribute attribute) {
+  return wrap(unwrap(attribute).getType());
 }
 
 int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2) {

@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/JSON.h"
 #include <chrono>
+#include <cstddef>
 #include <memory>
 
 namespace clang {
@@ -141,6 +142,9 @@ private:
   void onSemanticTokens(const SemanticTokensParams &, Callback<SemanticTokens>);
   void onSemanticTokensDelta(const SemanticTokensDeltaParams &,
                              Callback<SemanticTokensOrDelta>);
+  /// This is a clangd extension. Provides a json tree representing memory usage
+  /// hierarchy.
+  void onMemoryUsage(const NoParams &, Callback<MemoryTree>);
 
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 

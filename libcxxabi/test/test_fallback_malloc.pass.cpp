@@ -73,7 +73,7 @@ void exhaustion_test1 () {
 
 //  Delete in allocation order
     ptrs = alloc_series ( 32 );
-    std::printf("Allocated %lu 32 byte chunks\n", ptrs.size());
+    std::printf("Allocated %zu 32 byte chunks\n", ptrs.size());
     print_free_list ();
     for ( container::iterator iter = ptrs.begin (); iter != ptrs.end (); ++iter )
         fallback_free ( *iter );
@@ -82,7 +82,7 @@ void exhaustion_test1 () {
 
 //  Delete in reverse order
     ptrs = alloc_series ( 32 );
-    std::printf("Allocated %lu 32 byte chunks\n", ptrs.size());
+    std::printf("Allocated %zu 32 byte chunks\n", ptrs.size());
     for ( container::reverse_iterator iter = ptrs.rbegin (); iter != ptrs.rend (); ++iter )
         fallback_free ( *iter );
     print_free_list ();
@@ -90,7 +90,7 @@ void exhaustion_test1 () {
 
 //  Alternate deletions
     ptrs = alloc_series ( 32 );
-    std::printf("Allocated %lu 32 byte chunks\n", ptrs.size());
+    std::printf("Allocated %zu 32 byte chunks\n", ptrs.size());
     while ( ptrs.size () > 0 )
         fallback_free ( pop ( ptrs, ptrs.size () % 1 == 1 ));
     print_free_list ();
@@ -105,7 +105,8 @@ void exhaustion_test2 () {
 //  Delete in allocation order
     ptrs = alloc_series ( 32, 1.5 );
 
-    std::printf("Allocated %lu { 32, 48, 72, 108, 162 ... } byte chunks\n", ptrs.size());
+    std::printf("Allocated %zu { 32, 48, 72, 108, 162 ... } byte chunks\n",
+                ptrs.size());
     print_free_list ();
     for ( container::iterator iter = ptrs.begin (); iter != ptrs.end (); ++iter )
         fallback_free ( *iter );
@@ -115,7 +116,8 @@ void exhaustion_test2 () {
 //  Delete in reverse order
     print_free_list ();
     ptrs = alloc_series ( 32, 1.5 );
-    std::printf("Allocated %lu { 32, 48, 72, 108, 162 ... } byte chunks\n", ptrs.size());
+    std::printf("Allocated %zu { 32, 48, 72, 108, 162 ... } byte chunks\n",
+                ptrs.size());
     for ( container::reverse_iterator iter = ptrs.rbegin (); iter != ptrs.rend (); ++iter )
         fallback_free ( *iter );
     print_free_list ();
@@ -123,7 +125,8 @@ void exhaustion_test2 () {
 
 //  Alternate deletions
     ptrs = alloc_series ( 32, 1.5 );
-    std::printf("Allocated %lu { 32, 48, 72, 108, 162 ... } byte chunks\n", ptrs.size());
+    std::printf("Allocated %zu { 32, 48, 72, 108, 162 ... } byte chunks\n",
+                ptrs.size());
     while ( ptrs.size () > 0 )
         fallback_free ( pop ( ptrs, ptrs.size () % 1 == 1 ));
     print_free_list ();
@@ -139,7 +142,7 @@ void exhaustion_test3 () {
 
 //  Delete in allocation order
     ptrs = alloc_series ( allocs, sizeof ( allocs ) / sizeof ( allocs[0] ));
-    std::printf("Allocated %lu chunks\n", ptrs.size());
+    std::printf("Allocated %zu chunks\n", ptrs.size());
     print_free_list ();
     for ( container::iterator iter = ptrs.begin (); iter != ptrs.end (); ++iter )
         fallback_free ( *iter );
@@ -149,7 +152,7 @@ void exhaustion_test3 () {
 //  Delete in reverse order
     print_free_list ();
     ptrs = alloc_series ( allocs, sizeof ( allocs ) / sizeof ( allocs[0] ));
-    std::printf("Allocated %lu chunks\n", ptrs.size());
+    std::printf("Allocated %zu chunks\n", ptrs.size());
     for ( container::reverse_iterator iter = ptrs.rbegin (); iter != ptrs.rend (); ++iter )
         fallback_free ( *iter );
     print_free_list ();
@@ -157,7 +160,7 @@ void exhaustion_test3 () {
 
 //  Alternate deletions
     ptrs = alloc_series ( allocs, sizeof ( allocs ) / sizeof ( allocs[0] ));
-    std::printf("Allocated %lu chunks\n", ptrs.size());
+    std::printf("Allocated %zu chunks\n", ptrs.size());
     while ( ptrs.size () > 0 )
         fallback_free ( pop ( ptrs, ptrs.size () % 1 == 1 ));
     print_free_list ();

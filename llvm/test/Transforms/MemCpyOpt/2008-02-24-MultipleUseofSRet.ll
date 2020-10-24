@@ -31,7 +31,13 @@ define fastcc void @badly_optimized() nounwind {
 ; CHECK-LABEL: @badly_optimized(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Z:%.*]] = alloca [[TMP0:%.*]], align 8
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [[TMP0]], align 8
+; CHECK-NEXT:    [[MEMTMP:%.*]] = alloca [[TMP0]], align 8
 ; CHECK-NEXT:    call fastcc void @initialize(%0* noalias sret [[Z]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast %0* [[TMP]] to i8*
+; CHECK-NEXT:    [[MEMTMP2:%.*]] = bitcast %0* [[MEMTMP]] to i8*
+; CHECK-NEXT:    [[Z3:%.*]] = bitcast %0* [[Z]] to i8*
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast %0* [[TMP]] to i8*
 ; CHECK-NEXT:    [[TMP5:%.*]] = call fastcc x86_fp80 @passed_uninitialized(%0* [[Z]])
 ; CHECK-NEXT:    ret void
 ;

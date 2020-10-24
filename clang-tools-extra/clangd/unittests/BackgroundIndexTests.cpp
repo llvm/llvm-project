@@ -927,7 +927,7 @@ TEST(BackgroundIndex, Profile) {
   MemoryTree MT(&Alloc);
   Idx.profile(MT);
   ASSERT_THAT(MT.children(),
-              UnorderedElementsAre(Pair("symbols", _), Pair("index", _)));
+              UnorderedElementsAre(Pair("slabs", _), Pair("index", _)));
 }
 
 } // namespace clangd

@@ -1,6 +1,8 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -S -Os -debug -debug-only=loop-rotate 2>&1 | FileCheck %s -check-prefix=OS
 ; RUN: opt < %s -S -Oz -debug -debug-only=loop-rotate 2>&1 | FileCheck %s -check-prefix=OZ
+; RUN: opt < %s -S -passes='default<Os>' -debug -debug-only=loop-rotate 2>&1 | FileCheck %s -check-prefix=OS
+; RUN: opt < %s -S -passes='default<Oz>' -debug -debug-only=loop-rotate 2>&1 | FileCheck %s -check-prefix=OZ
 
 ; Loop should be rotated for -Os but not for -Oz.
 ; OS: rotating Loop at depth 1

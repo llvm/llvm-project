@@ -1594,14 +1594,14 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (!hasUnwindExceptions(LangOpts))
     B.addAttribute(llvm::Attribute::NoUnwind);
 
-  if (!D || !D->hasAttr<NoStackProtectorAttr>()) {
-    if (LangOpts.getStackProtector() == LangOptions::SSPOn)
-      B.addAttribute(llvm::Attribute::StackProtect);
-    else if (LangOpts.getStackProtector() == LangOptions::SSPStrong)
-      B.addAttribute(llvm::Attribute::StackProtectStrong);
-    else if (LangOpts.getStackProtector() == LangOptions::SSPReq)
-      B.addAttribute(llvm::Attribute::StackProtectReq);
-  }
+  if (D && D->hasAttr<NoStackProtectorAttr>())
+    B.addAttribute(llvm::Attribute::NoStackProtect);
+  else if (LangOpts.getStackProtector() == LangOptions::SSPOn)
+    B.addAttribute(llvm::Attribute::StackProtect);
+  else if (LangOpts.getStackProtector() == LangOptions::SSPStrong)
+    B.addAttribute(llvm::Attribute::StackProtectStrong);
+  else if (LangOpts.getStackProtector() == LangOptions::SSPReq)
+    B.addAttribute(llvm::Attribute::StackProtectReq);
 
   if (!D) {
     // If we don't have a declaration to control inlining, the function isn't
@@ -2540,6 +2540,12 @@ ConstantAddress CodeGenModule::GetAddrOfMSGuidDecl(const MSGuidDecl *GD) {
         GV, Ty->getPointerTo(GV->getAddressSpace()));
   }
   return ConstantAddress(Addr, Alignment);
+}
+
+ConstantAddress CodeGenModule::GetAddrOfTemplateParamObject(
+    const TemplateParamObjectDecl *TPO) {
+  ErrorUnsupported(TPO, "template parameter object");
+  return ConstantAddress::invalid();
 }
 
 ConstantAddress CodeGenModule::GetWeakRefReference(const ValueDecl *VD) {

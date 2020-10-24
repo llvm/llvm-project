@@ -139,6 +139,7 @@ constexpr int f(ArrBad) { return 0; } // expected-error {{1st parameter type 'Ar
 constexpr int arb(int n) {
   int a[n]; // expected-error {{variable of non-literal type 'int [n]' cannot be defined in a constexpr function}}
 }
+// expected-warning@+1 {{variable length array folded to constant array as an extension}}
 constexpr long Overflow[ // expected-error {{constexpr variable cannot have non-literal type 'long const[(1 << 30) << 2]'}}
     (1 << 30) << 2]{};   // expected-warning {{requires 34 bits to represent}}
 

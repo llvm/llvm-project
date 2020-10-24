@@ -66,6 +66,7 @@
 ; CHECK-O2-NEXT: Running pass: ModuleInlinerWrapperPass
 ; CHECK-O2-NEXT: Running analysis: InlineAdvisorAnalysis
 ; CHECK-O2-NEXT: Starting llvm::Module pass manager run.
+; CHECK-O2-NEXT: Running pass: AlwaysInlinerPass
 ; CHECK-O2-NEXT: Starting CGSCC pass manager run.
 ; CHECK-O2-NEXT: Running pass: InlinerPass
 ; CHECK-O2-NEXT: Finished CGSCC pass manager run.
@@ -86,6 +87,8 @@
 ; CHECK-O2-NEXT: Running analysis: PhiValuesAnalysis
 ; CHECK-O2-NEXT: Running pass: MemCpyOptPass on foo
 ; CHECK-O2-NEXT: Running pass: DSEPass on foo
+; CHECK-O2-NEXT: Running analysis: MemorySSAAnalysis on foo
+; CHECK-O2-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O2-NEXT: Running pass: InstCombinePass on foo
 ; CHECK-O2-NEXT: Running pass: SimplifyCFGPass on foo
 ; CHECK-O2-NEXT: Running pass: SCCPPass on foo

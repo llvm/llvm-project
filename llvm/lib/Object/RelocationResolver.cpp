@@ -552,6 +552,7 @@ static bool supportsWasm32(uint64_t Type) {
   case wasm::R_WASM_SECTION_OFFSET_I32:
   case wasm::R_WASM_EVENT_INDEX_LEB:
   case wasm::R_WASM_GLOBAL_INDEX_I32:
+  case wasm::R_WASM_TABLE_NUMBER_LEB:
     return true;
   default:
     return false;
@@ -585,6 +586,7 @@ static uint64_t resolveWasm32(RelocationRef R, uint64_t S, uint64_t A) {
   case wasm::R_WASM_SECTION_OFFSET_I32:
   case wasm::R_WASM_EVENT_INDEX_LEB:
   case wasm::R_WASM_GLOBAL_INDEX_I32:
+  case wasm::R_WASM_TABLE_NUMBER_LEB:
     // For wasm section, its offset at 0 -- ignoring Value
     return A;
   default:

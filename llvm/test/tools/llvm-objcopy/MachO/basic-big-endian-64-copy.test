@@ -83,7 +83,7 @@ LoadCommands:
     symoff:          784
     nsyms:           2
     stroff:          816
-    strsize:         36
+    strsize:         40
   - cmd:             LC_DYSYMTAB
     cmdsize:         80
     ilocalsym:       0
@@ -120,5 +120,9 @@ LinkEditData:
     - ''
     - _compilerrt_abort_impl
     - ___absvdi2
+    - ''
+    - ''
+    - ''
+    - ''
     - ''
 ...

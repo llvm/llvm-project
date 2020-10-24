@@ -26,6 +26,8 @@ int main(int, char**)
 {
   using namespace fs;
   const char* const value = "hello world";
+  std::string value_str(value);
+  fs::path::string_type pathstr_value(value_str.begin(), value_str.end());
   { // Check signature
     path p(value);
     ASSERT_SAME_TYPE(path::string_type const&, decltype(p.native()));
@@ -33,7 +35,7 @@ int main(int, char**)
   }
   { // native() is tested elsewhere
     path p(value);
-    assert(p.native() == value);
+    assert(p.native() == pathstr_value);
   }
 
   return 0;

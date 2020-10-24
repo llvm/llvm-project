@@ -25,6 +25,7 @@
 
 #include "URI.h"
 #include "index/SymbolID.h"
+#include "support/MemoryTree.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
@@ -1575,6 +1576,27 @@ struct FoldingRange {
   llvm::Optional<std::string> kind;
 };
 llvm::json::Value toJSON(const FoldingRange &Range);
+
+/// Keys starting with an underscore(_) represent leaves, e.g. _total or _self
+/// for memory usage of whole subtree or only that specific node in bytes. All
+/// other keys represents children. An example:
+///   {
+///     "_self": 0,
+///     "_total": 8,
+///     "child1": {
+///       "_self": 4,
+///       "_total": 4,
+///     }
+///     "child2": {
+///       "_self": 2,
+///       "_total": 4,
+///       "child_deep": {
+///         "_self": 2,
+///         "_total": 2,
+///       }
+///     }
+///   }
+llvm::json::Value toJSON(const MemoryTree &MT);
 
 } // namespace clangd
 } // namespace clang

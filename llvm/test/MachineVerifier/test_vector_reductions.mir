@@ -25,10 +25,10 @@ body:             |
     ; CHECK: Bad machine code: Vector reduction requires a scalar destination type
 
     %dst:_(s64) = G_VECREDUCE_SEQ_FADD %vec_v2s64, %vec_v2s64
-    ; CHECK: Bad machine code: FADD/FMUL vector reduction requires a scalar 1st operand
+    ; CHECK: Bad machine code: Sequential FADD/FMUL vector reduction requires a scalar 1st operand
 
     %dst:_(s64) = G_VECREDUCE_SEQ_FADD %scalar_s64, %scalar_s64
-    ; CHECK: Bad machine code: FADD/FMUL vector reduction must have a vector 2nd operand
+    ; CHECK: Bad machine code: Sequential FADD/FMUL vector reduction must have a vector 2nd operand
 
     %dst2:_(s64) = G_VECREDUCE_MUL %scalar_s64
     ; CHECK: Bad machine code: Vector reduction requires vector source

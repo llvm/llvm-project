@@ -3,10 +3,9 @@
  *
  * This file is distributed under the MIT License. See LICENSE.txt for details.
  *===------------------------------------------------------------------------*/
-#include "rt.h"
-#include "data.h"
 #include "atmi_runtime.h"
 #include "internal.h"
+#include "rt.h"
 #include <hsa.h>
 #include <hsa_ext_amd.h>
 #include <memory>
@@ -77,23 +76,6 @@ struct atmiFreePtrDeletor {
 atmi_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
                               const void *hostSrc, size_t size,
                               hsa_agent_t agent) {
-  // TODO: this check is redundant
-  core::ATLData *src_data = core::g_data_map.find(hostSrc);
-  core::ATLData *dest_data = core::g_data_map.find(deviceDest);
-  if (src_data) {
-    fprintf(stderr, "atmi_memcpy_h2d: Source pointer on device\n");
-    abort();
-  }
-  if (!dest_data) {
-    fprintf(stderr, "atmi_memcpy_h2d: Destination pointer not on device\n");
-    abort();
-  }
-  hsa_agent_t checkAgent = core::get_mem_agent(dest_data->place());
-  if (checkAgent.handle != agent.handle) {
-    fprintf(stderr, "atmi_memcpy_d2h: agent does not match");
-    abort();
-  }
-
   hsa_status_t rc = hsa_memory_copy(deviceDest, hostSrc, size);
 
   // hsa_memory_copy sometimes fails in situations where
@@ -107,14 +89,15 @@ atmi_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
   atmi_mem_place_t CPU = ATMI_MEM_PLACE_CPU_MEM(0, 0, 0);
   atmi_status_t ret = atmi_malloc(&tempHostPtr, size, CPU);
   if (ret != ATMI_STATUS_SUCCESS) {
-    DEBUG_PRINT("atmi_malloc: Unable to alloc %d bytes for temp scratch\n", size);
+    DEBUG_PRINT("atmi_malloc: Unable to alloc %d bytes for temp scratch\n",
+                size);
     return ret;
   }
   std::unique_ptr<void, atmiFreePtrDeletor> del(tempHostPtr);
   memcpy(tempHostPtr, hostSrc, size);
 
-  if (invoke_hsa_copy(signal, deviceDest,  tempHostPtr, size, agent)
-      != HSA_STATUS_SUCCESS) {
+  if (invoke_hsa_copy(signal, deviceDest, tempHostPtr, size, agent) !=
+      HSA_STATUS_SUCCESS) {
     return ATMI_STATUS_ERROR;
   }
   return ATMI_STATUS_SUCCESS;
@@ -123,23 +106,6 @@ atmi_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
 atmi_status_t atmi_memcpy_d2h(hsa_signal_t signal, void *dest,
                               const void *deviceSrc, size_t size,
                               hsa_agent_t agent) {
-  // TODO: this check is redundant
-  core::ATLData *src_data = core::g_data_map.find(deviceSrc);
-  core::ATLData *dest_data = core::g_data_map.find(dest);
-  if (!src_data) {
-    fprintf(stderr, "atmi_memcpy_d2h: Source pointer not on device\n");
-    abort();
-  }
-  if (dest_data) {
-    fprintf(stderr, "atmi_memcpy_d2h: Destination pointer on device");
-    abort();
-  }
-  hsa_agent_t checkAgent = core::get_mem_agent(src_data->place());
-  if (checkAgent.handle != agent.handle) {
-    fprintf(stderr, "atmi_memcpy_d2h: agent does not match");
-    abort();
-  }
-
   hsa_status_t rc = hsa_memory_copy(dest, deviceSrc, size);
 
   // hsa_memory_copy sometimes fails in situations where
@@ -149,18 +115,18 @@ atmi_status_t atmi_memcpy_d2h(hsa_signal_t signal, void *dest,
     return ATMI_STATUS_SUCCESS;
   }
 
-
   void *tempHostPtr;
   atmi_mem_place_t CPU = ATMI_MEM_PLACE_CPU_MEM(0, 0, 0);
   atmi_status_t ret = atmi_malloc(&tempHostPtr, size, CPU);
   if (ret != ATMI_STATUS_SUCCESS) {
-    DEBUG_PRINT("atmi_malloc: Unable to alloc %d bytes for temp scratch\n", size);
+    DEBUG_PRINT("atmi_malloc: Unable to alloc %d bytes for temp scratch\n",
+                size);
     return ret;
   }
   std::unique_ptr<void, atmiFreePtrDeletor> del(tempHostPtr);
 
-  if (invoke_hsa_copy(signal, tempHostPtr,  deviceSrc, size, agent)
-      != HSA_STATUS_SUCCESS) {
+  if (invoke_hsa_copy(signal, tempHostPtr, deviceSrc, size, agent) !=
+      HSA_STATUS_SUCCESS) {
     return ATMI_STATUS_ERROR;
   }
 

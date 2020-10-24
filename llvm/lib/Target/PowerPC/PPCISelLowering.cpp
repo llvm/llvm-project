@@ -892,6 +892,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::SREM, MVT::v1i128, Legal);
       setOperationAction(ISD::UDIV, MVT::v1i128, Legal);
       setOperationAction(ISD::SDIV, MVT::v1i128, Legal);
+      setOperationAction(ISD::ROTL, MVT::v1i128, Legal);
     }
 
     setOperationAction(ISD::MUL, MVT::v8i16, Legal);
@@ -1398,16 +1399,6 @@ bool PPCTargetLowering::hasSPE() const {
 
 bool PPCTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
   return VT.isScalarInteger();
-}
-
-/// isMulhCheaperThanMulShift - Return true if a mulh[s|u] node for a specific
-/// type is cheaper than a multiply followed by a shift.
-/// This is true for words and doublewords on 64-bit PowerPC.
-bool PPCTargetLowering::isMulhCheaperThanMulShift(EVT Type) const {
-  if (Subtarget.isPPC64() && (isOperationLegal(ISD::MULHS, Type) ||
-                              isOperationLegal(ISD::MULHU, Type)))
-    return true;
-  return TargetLowering::isMulhCheaperThanMulShift(Type);
 }
 
 const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -14073,6 +14064,8 @@ SDValue PPCTargetLowering::combineFPToIntToFP(SDNode *N,
   // Don't handle ppc_fp128 here or conversions that are out-of-range capable
   // from the hardware.
   if (Op.getValueType() != MVT::f32 && Op.getValueType() != MVT::f64)
+    return SDValue();
+  if (!Op.getOperand(0).getValueType().isSimple())
     return SDValue();
   if (Op.getOperand(0).getValueType().getSimpleVT() <= MVT(MVT::i1) ||
       Op.getOperand(0).getValueType().getSimpleVT() > MVT(MVT::i64))

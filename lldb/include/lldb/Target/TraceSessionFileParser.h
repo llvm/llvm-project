@@ -11,7 +11,7 @@
 
 #include "llvm/Support/JSON.h"
 
-#include "lldb/lldb-private.h"
+#include "lldb/Target/ThreadTrace.h"
 
 namespace lldb_private {
 
@@ -53,17 +53,28 @@ public:
     std::string type;
   };
 
+  struct JSONTraceSessionBase {
+    std::vector<JSONProcess> processes;
+  };
+
   /// The trace plug-in implementation should provide its own TPluginSettings,
   /// which corresponds to the "trace" section of the schema.
-  template <class TPluginSettings> struct JSONTraceSession {
-    std::vector<JSONProcess> processes;
+  template <class TPluginSettings>
+  struct JSONTraceSession : JSONTraceSessionBase {
     TPluginSettings trace;
   };
   /// \}
 
-  TraceSessionFileParser(llvm::StringRef session_file_dir,
+  /// Helper struct holding the objects created when parsing a process
+  struct ParsedProcess {
+    lldb::TargetSP target_sp;
+    std::vector<ThreadTraceSP> threads;
+  };
+
+  TraceSessionFileParser(Debugger &debugger, llvm::StringRef session_file_dir,
                          llvm::StringRef schema)
-      : m_session_file_dir(session_file_dir), m_schema(schema) {}
+      : m_debugger(debugger), m_session_file_dir(session_file_dir),
+        m_schema(schema) {}
 
   /// Build the full schema for a Trace plug-in.
   ///
@@ -75,10 +86,27 @@ public:
   ///   specific attributes.
   static std::string BuildSchema(llvm::StringRef plugin_schema);
 
+  /// Parse the fields common to all trace session schemas.
+  ///
+  /// \param[in] session
+  ///     The session json objects already deserialized.
+  ///
+  /// \return
+  ///     A list of \a ParsedProcess containing all threads and targets created
+  ///     during the parsing, or an error in case of failures. In case of
+  ///     errors, no side effects are produced.
+  llvm::Expected<std::vector<ParsedProcess>>
+  ParseCommonSessionFile(const JSONTraceSessionBase &session);
+
 protected:
   /// Resolve non-absolute paths relative to the session file folder. It
   /// modifies the given file_spec.
   void NormalizePath(lldb_private::FileSpec &file_spec);
+
+  ThreadTraceSP ParseThread(lldb::ProcessSP &process_sp,
+                            const JSONThread &thread);
+
+  llvm::Expected<ParsedProcess> ParseProcess(const JSONProcess &process);
 
   llvm::Error ParseModule(lldb::TargetSP &target_sp, const JSONModule &module);
 
@@ -96,6 +124,7 @@ protected:
   llvm::Error CreateJSONError(llvm::json::Path::Root &root,
                               const llvm::json::Value &value);
 
+  Debugger &m_debugger;
   std::string m_session_file_dir;
   llvm::StringRef m_schema;
 };
@@ -125,6 +154,11 @@ bool fromJSON(const Value &value,
                   &plugin_settings,
               Path path);
 
+bool fromJSON(
+    const Value &value,
+    lldb_private::TraceSessionFileParser::JSONTraceSessionBase &session,
+    Path path);
+
 template <class TPluginSettings>
 bool fromJSON(
     const Value &value,
@@ -133,7 +167,10 @@ bool fromJSON(
     Path path) {
   ObjectMapper o(value, path);
   return o && o.map("trace", session.trace) &&
-         o.map("processes", session.processes);
+         fromJSON(value,
+                  (lldb_private::TraceSessionFileParser::JSONTraceSessionBase &)
+                      session,
+                  path);
 }
 
 } // namespace json

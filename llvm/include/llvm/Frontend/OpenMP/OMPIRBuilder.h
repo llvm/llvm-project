@@ -430,7 +430,6 @@ public:
   /// values.
   ///
   ///{
-  Type *LanemaskTy = nullptr;
 #define OMP_TYPE(VarName, InitValue) Type *VarName = nullptr;
 #define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
   ArrayType *VarName##Ty = nullptr;                                            \

@@ -635,6 +635,7 @@ def Shape_AssumingOp : Shape_Op<"assuming",
 
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
+  let verifier = [{ return RegionBranchOpInterface::verifyTypes(*this); }];
 
   let extraClassDeclaration = [{
     // Inline the region into the region containing the AssumingOp and delete

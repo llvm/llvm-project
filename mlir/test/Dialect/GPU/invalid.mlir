@@ -45,8 +45,7 @@ func @launch_func_too_few_operands(%sz : index) {
 
 func @launch_func_missing_parent_module_attribute(%sz : index) {
   // expected-error@+1 {{expected the closest surrounding module to have the 'gpu.container_module' attribute}}
-  "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz) {foo = "bar"}
-      : (index, index, index, index, index, index) -> ()
+  gpu.launch_func @foo::@bar blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
   return
 }
 
@@ -54,8 +53,8 @@ func @launch_func_missing_parent_module_attribute(%sz : index) {
 
 module attributes {gpu.container_module} {
   func @launch_func_missing_callee_attribute(%sz : index) {
-    // expected-error@+1 {{symbol reference attribute 'kernel' must be specified}}
-    "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz) {foo = "bar"}
+    // expected-error@+1 {{'gpu.launch_func' op requires attribute 'kernel'}}
+    "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz)
         : (index, index, index, index, index, index) -> ()
     return
   }
@@ -65,9 +64,8 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   func @launch_func_no_function_attribute(%sz : index) {
-    // expected-error@+1 {{symbol reference attribute 'kernel' must be specified}}
-    "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz) {kernel = 10}
-        : (index, index, index, index, index, index) -> ()
+    // expected-error@+1 {{custom op 'gpu.launch_func' invalid kind of attribute specified}}
+    gpu.launch_func "foo" blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
     return
   }
 }
@@ -77,9 +75,7 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   func @launch_func_undefined_module(%sz : index) {
     // expected-error@+1 {{kernel module 'kernels' is undefined}}
-    "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz)
-    { kernel = @kernels::@kernel_1 }
-        : (index, index, index, index, index, index) -> ()
+    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
     return
   }
 }
@@ -103,9 +99,7 @@ module attributes {gpu.container_module} {
 
   func @launch_func_missing_module_attribute(%sz : index) {
     // expected-error@+1 {{kernel module 'kernels' is undefined}}
-    "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz)
-    { kernel = @kernels::@kernel_1 }
-        : (index, index, index, index, index, index) -> ()
+    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
     return
   }
 }
@@ -117,9 +111,7 @@ module attributes {gpu.container_module} {
 
   func @launch_func_undefined_function(%sz : index) {
     // expected-error@+1 {{kernel function '@kernels::@kernel_1' is undefined}}
-    "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz)
-    { kernel = @kernels::@kernel_1 }
-        : (index, index, index, index, index, index) -> ()
+    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
     return
   }
 }
@@ -135,9 +127,7 @@ module attributes {gpu.container_module} {
 
   func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm.ptr<float>) {
     // expected-error@+1 {{kernel module 'kernels' is undefined}}
-    "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz, %arg)
-    {kernel = @kernels::@kernel_1}
-        : (index, index, index, index, index, index, !llvm.ptr<float>) -> ()
+    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%arg : !llvm.ptr<float>)
     return
   }
 }
@@ -153,9 +143,7 @@ module attributes {gpu.container_module} {
 
   func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm.ptr<float>) {
     // expected-error@+1 {{kernel function is missing the 'gpu.kernel' attribute}}
-    "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz, %arg)
-    {kernel = @kernels::@kernel_1}
-        : (index, index, index, index, index, index, !llvm.ptr<float>) -> ()
+    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%arg : !llvm.ptr<float>)
     return
   }
 }
@@ -171,10 +159,7 @@ module attributes {gpu.container_module} {
 
   func @launch_func_kernel_operand_size(%sz : index, %arg : !llvm.ptr<float>) {
     // expected-error@+1 {{got 2 kernel operands but expected 1}}
-    "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz, %arg, %arg)
-        {kernel = @kernels::@kernel_1}
-        : (index, index, index, index, index, index, !llvm.ptr<float>,
-           !llvm.ptr<float>) -> ()
+    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%arg : !llvm.ptr<float>, %arg : !llvm.ptr<float>)
     return
   }
 }
@@ -190,9 +175,17 @@ module attributes {gpu.container_module} {
 
   func @launch_func_kernel_operand_types(%sz : index, %arg : f32) {
     // expected-err@+1 {{type of function argument 0 does not match}}
-    "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz, %arg)
-        {kernel = @kernels::@kernel_1}
-        : (index, index, index, index, index, index, f32) -> ()
+    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%arg : f32)
+    return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  func @launch_func_kernel_operand_attr(%sz : index) {
+    // expected-error@+1 {{expected arguments without attributes}}
+    gpu.launch_func @foo::@bar blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%sz : index {foo})
     return
   }
 }

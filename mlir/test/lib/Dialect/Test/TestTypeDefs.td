@@ -75,7 +75,8 @@ def IntegerType : Test_Type<"TestInteger"> {
     int width;
     if ($_parser.parseInteger(width)) return Type();
     if ($_parser.parseGreater()) return Type();
-    return get(ctxt, signedness, width);
+    Location loc = $_parser.getEncodedSourceLoc($_parser.getNameLoc());
+    return getChecked(loc, signedness, width);
   }];
 
   // Any extra code one wants in the type's class declaration.

@@ -76,6 +76,8 @@ enum OperandType {
   OPERAND_EVENT,
   /// A list of branch targets for br_list.
   OPERAND_BRLIST,
+  /// 32-bit unsigned table number.
+  OPERAND_TABLE,
 };
 } // end namespace WebAssembly
 

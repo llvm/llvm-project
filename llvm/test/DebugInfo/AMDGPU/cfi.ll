@@ -1,3 +1,4 @@
+; XFAIL: *
 ; RUN: llc -mcpu=gfx900 -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - %s | llvm-dwarfdump -debug-frame - | FileCheck %s
 
 ; CHECK: .debug_frame contents:

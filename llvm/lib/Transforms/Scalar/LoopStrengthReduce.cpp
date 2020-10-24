@@ -937,6 +937,8 @@ static bool isHighCostExpansion(const SCEV *S,
   case scSignExtend:
     return isHighCostExpansion(cast<SCEVSignExtendExpr>(S)->getOperand(),
                                Processed, SE);
+  default:
+    break;
   }
 
   if (!Processed.insert(S).second)
@@ -1212,7 +1214,7 @@ static unsigned getSetupCost(const SCEV *Reg, unsigned Depth) {
     return 0;
   if (const auto *S = dyn_cast<SCEVAddRecExpr>(Reg))
     return getSetupCost(S->getStart(), Depth - 1);
-  if (auto S = dyn_cast<SCEVCastExpr>(Reg))
+  if (auto S = dyn_cast<SCEVIntegralCastExpr>(Reg))
     return getSetupCost(S->getOperand(), Depth - 1);
   if (auto S = dyn_cast<SCEVNAryExpr>(Reg))
     return std::accumulate(S->op_begin(), S->op_end(), 0,
@@ -2788,6 +2790,7 @@ static const SCEV *getExprBase(const SCEV *S) {
   case scAddRecExpr:
     return getExprBase(cast<SCEVAddRecExpr>(S)->getStart());
   }
+  llvm_unreachable("Unknown SCEV kind!");
 }
 
 /// Return true if the chain increment is profitable to expand into a loop
@@ -2857,13 +2860,20 @@ static bool isProfitableChain(IVChain &Chain,
   unsigned NumVarIncrements = 0;
   unsigned NumReusedIncrements = 0;
 
-  if (TTI.isProfitableLSRChainElement(Chain.Incs[0].UserInst))
-    return true;
-
-  for (const IVInc &Inc : Chain) {
+  // If any LSRUse in the chain is marked as profitable by target, mark this
+  // chain as profitable.
+  for (const IVInc &Inc : Chain.Incs)
     if (TTI.isProfitableLSRChainElement(Inc.UserInst))
       return true;
 
+  // If register number is the major cost, we cannot benefit from this
+  // profitable chain which is based on register number.
+  // FIXME: add profitable chain optimization for other kinds major cost, for
+  // example instruction number.
+  if (!TTI.isRegNumMajorCostOfLSR())
+    return false;
+
+  for (const IVInc &Inc : Chain) {
     if (Inc.IncExpr->isZero())
       continue;
 
@@ -3403,7 +3413,7 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
 
     if (const SCEVNAryExpr *N = dyn_cast<SCEVNAryExpr>(S))
       Worklist.append(N->op_begin(), N->op_end());
-    else if (const SCEVCastExpr *C = dyn_cast<SCEVCastExpr>(S))
+    else if (const SCEVIntegralCastExpr *C = dyn_cast<SCEVIntegralCastExpr>(S))
       Worklist.push_back(C->getOperand());
     else if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
       Worklist.push_back(D->getLHS());

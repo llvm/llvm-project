@@ -105,7 +105,6 @@ public:
   };
   ScopedExtractDIEs ExtractDIEsScoped();
 
-  DWARFDIE LookupAddress(const dw_addr_t address);
   bool Verify(lldb_private::Stream *s) const;
   virtual void Dump(lldb_private::Stream *s) const = 0;
   /// Get the data that contains the DIE information for this unit.
@@ -167,7 +166,7 @@ public:
 
   void SetBaseAddress(dw_addr_t base_addr);
 
-  DWARFBaseDIE GetUnitDIEOnly() { return DWARFDIE(this, GetUnitDIEPtrOnly()); }
+  DWARFBaseDIE GetUnitDIEOnly() { return {this, GetUnitDIEPtrOnly()}; }
 
   DWARFDIE DIE() { return DWARFDIE(this, DIEPtr()); }
 

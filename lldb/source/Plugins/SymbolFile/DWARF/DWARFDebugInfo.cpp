@@ -199,4 +199,3 @@ DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
     return cu->GetNonSkeletonUnit().GetDIE(die_ref.die_offset());
   return DWARFDIE(); // Not found
 }
-

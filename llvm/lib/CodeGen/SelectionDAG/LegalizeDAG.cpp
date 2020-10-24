@@ -1458,7 +1458,7 @@ void SelectionDAGLegalize::getSignAsIntValue(FloatSignAsInt &State,
                                              const SDLoc &DL,
                                              SDValue Value) const {
   EVT FloatVT = Value.getValueType();
-  unsigned NumBits = FloatVT.getSizeInBits();
+  unsigned NumBits = FloatVT.getScalarSizeInBits();
   State.FloatVT = FloatVT;
   EVT IVT = EVT::getIntegerVT(*DAG.getContext(), NumBits);
   // Convert to an integer of the same size.
@@ -1490,7 +1490,7 @@ void SelectionDAGLegalize::getSignAsIntValue(FloatSignAsInt &State,
     State.IntPointerInfo = State.FloatPointerInfo;
   } else {
     // Advance the pointer so that the loaded byte will contain the sign bit.
-    unsigned ByteOffset = (FloatVT.getSizeInBits() / 8) - 1;
+    unsigned ByteOffset = (NumBits / 8) - 1;
     IntPtr =
         DAG.getMemBasePlusOffset(StackPtr, TypeSize::Fixed(ByteOffset), DL);
     State.IntPointerInfo = MachinePointerInfo::getFixedStack(MF, FI,
@@ -1500,7 +1500,7 @@ void SelectionDAGLegalize::getSignAsIntValue(FloatSignAsInt &State,
   State.IntPtr = IntPtr;
   State.IntValue = DAG.getExtLoad(ISD::EXTLOAD, DL, LoadTy, State.Chain, IntPtr,
                                   State.IntPointerInfo, MVT::i8);
-  State.SignMask = APInt::getOneBitSet(LoadTy.getSizeInBits(), 7);
+  State.SignMask = APInt::getOneBitSet(LoadTy.getScalarSizeInBits(), 7);
   State.SignBit = 7;
 }
 
@@ -1555,7 +1555,8 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
   // Get the signbit at the right position for MagAsInt.
   int ShiftAmount = SignAsInt.SignBit - MagAsInt.SignBit;
   EVT ShiftVT = IntVT;
-  if (SignBit.getValueSizeInBits() < ClearedSign.getValueSizeInBits()) {
+  if (SignBit.getScalarValueSizeInBits() <
+      ClearedSign.getScalarValueSizeInBits()) {
     SignBit = DAG.getNode(ISD::ZERO_EXTEND, DL, MagVT, SignBit);
     ShiftVT = MagVT;
   }
@@ -1566,7 +1567,8 @@ SDValue SelectionDAGLegalize::ExpandFCOPYSIGN(SDNode *Node) const {
     SDValue ShiftCnst = DAG.getConstant(-ShiftAmount, DL, ShiftVT);
     SignBit = DAG.getNode(ISD::SHL, DL, ShiftVT, SignBit, ShiftCnst);
   }
-  if (SignBit.getValueSizeInBits() > ClearedSign.getValueSizeInBits()) {
+  if (SignBit.getScalarValueSizeInBits() >
+      ClearedSign.getScalarValueSizeInBits()) {
     SignBit = DAG.getNode(ISD::TRUNCATE, DL, MagVT, SignBit);
   }
 
@@ -1614,7 +1616,7 @@ SDValue SelectionDAGLegalize::ExpandFABS(SDNode *Node) const {
 
 void SelectionDAGLegalize::ExpandDYNAMIC_STACKALLOC(SDNode* Node,
                                            SmallVectorImpl<SDValue> &Results) {
-  unsigned SPReg = TLI.getStackPointerRegisterToSaveRestore();
+  Register SPReg = TLI.getStackPointerRegisterToSaveRestore();
   assert(SPReg && "Target cannot require DYNAMIC_STACKALLOC expansion and"
           " not tell us which reg is the stack pointer!");
   SDLoc dl(Node);
@@ -2458,11 +2460,18 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
   assert(!isSigned && "Legalize cannot Expand SINT_TO_FP for i64 yet");
 
   // TODO: Generalize this for use with other types.
-  if ((SrcVT == MVT::i32 || SrcVT == MVT::i64) && DestVT == MVT::f32) {
-    LLVM_DEBUG(dbgs() << "Converting unsigned i32/i64 to f32\n");
+  if (((SrcVT == MVT::i32 || SrcVT == MVT::i64) && DestVT == MVT::f32) ||
+      (SrcVT == MVT::i64 && DestVT == MVT::f64)) {
+    LLVM_DEBUG(dbgs() << "Converting unsigned i32/i64 to f32/f64\n");
     // For unsigned conversions, convert them to signed conversions using the
     // algorithm from the x86_64 __floatundisf in compiler_rt. That method
     // should be valid for i32->f32 as well.
+
+    // More generally this transform should be valid if there are 3 more bits
+    // in the integer type than the significand. Rounding uses the first bit
+    // after the width of the significand and the OR of all bits after that. So
+    // we need to be able to OR the shifted out bit into one of the bits that
+    // participate in the OR.
 
     // TODO: This really should be implemented using a branch rather than a
     // select.  We happen to get lucky and machinesink does the right
@@ -3243,7 +3252,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::STACKSAVE:
     // Expand to CopyFromReg if the target set
     // StackPointerRegisterToSaveRestore.
-    if (unsigned SP = TLI.getStackPointerRegisterToSaveRestore()) {
+    if (Register SP = TLI.getStackPointerRegisterToSaveRestore()) {
       Results.push_back(DAG.getCopyFromReg(Node->getOperand(0), dl, SP,
                                            Node->getValueType(0)));
       Results.push_back(Results[0].getValue(1));
@@ -3255,7 +3264,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::STACKRESTORE:
     // Expand to CopyToReg if the target set
     // StackPointerRegisterToSaveRestore.
-    if (unsigned SP = TLI.getStackPointerRegisterToSaveRestore()) {
+    if (Register SP = TLI.getStackPointerRegisterToSaveRestore()) {
       Results.push_back(DAG.getCopyToReg(Node->getOperand(0), dl, SP,
                                          Node->getOperand(1)));
     } else {
@@ -3514,7 +3523,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   case ISD::ROTL:
   case ISD::ROTR:
-    if (TLI.expandROT(Node, Tmp1, DAG))
+    if (TLI.expandROT(Node, true /*AllowVectorOps*/, Tmp1, DAG))
       Results.push_back(Tmp1);
     break;
   case ISD::SADDSAT:

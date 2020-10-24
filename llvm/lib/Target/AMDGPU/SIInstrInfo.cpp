@@ -919,6 +919,10 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   ArrayRef<int16_t> SubIndices = RI.getRegSplitParts(RC, 4);
 
+  // If there is an overlap, we can't kill the super-register on the last
+  // instruction, since it will also kill the components made live by this def.
+  const bool CanKillSuperReg = KillSrc && !RI.regsOverlap(SrcReg, DestReg);
+
   for (unsigned Idx = 0; Idx < SubIndices.size(); ++Idx) {
     unsigned SubIdx;
     if (Forward)
@@ -926,7 +930,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     else
       SubIdx = SubIndices[SubIndices.size() - Idx - 1];
 
-    bool UseKill = KillSrc && Idx == SubIndices.size() - 1;
+    bool UseKill = CanKillSuperReg && Idx == SubIndices.size() - 1;
 
     if (Opcode == AMDGPU::INSTRUCTION_LIST_END) {
       Register ImpDefSuper = Idx == 0 ? Register(DestReg) : Register();
@@ -1559,25 +1563,24 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     .addMemOperand(MMO);
 }
 
-void SIInstrInfo::insertWaitStates(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MI,
-                                   int Count) const {
-  DebugLoc DL = MBB.findDebugLoc(MI);
-  while (Count > 0) {
-    int Arg;
-    if (Count >= 8)
-      Arg = 7;
-    else
-      Arg = Count - 1;
-    Count -= 8;
-    BuildMI(MBB, MI, DL, get(AMDGPU::S_NOP))
-            .addImm(Arg);
-  }
-}
-
 void SIInstrInfo::insertNoop(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MI) const {
-  insertWaitStates(MBB, MI, 1);
+  insertNoops(MBB, MI, 1);
+}
+
+void SIInstrInfo::insertNoops(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              unsigned Quantity) const {
+  DebugLoc DL = MBB.findDebugLoc(MI);
+  while (Quantity > 0) {
+    unsigned Arg;
+    if (Quantity >= 8)
+      Arg = 7;
+    else
+      Arg = Quantity - 1;
+    Quantity -= Arg + 1;
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_NOP)).addImm(Arg);
+  }
 }
 
 void SIInstrInfo::insertReturn(MachineBasicBlock &MBB) const {
@@ -2311,7 +2314,7 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
     BuildMI(&MBB, DL, get(AMDGPU::S_BRANCH))
       .addMBB(TBB);
     if (BytesAdded)
-      *BytesAdded = 4;
+      *BytesAdded = ST.hasOffset3fBug() ? 8 : 4;
     return 1;
   }
 
@@ -2338,7 +2341,7 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
     fixImplicitOperands(*CondBr);
 
     if (BytesAdded)
-      *BytesAdded = 4;
+      *BytesAdded = ST.hasOffset3fBug() ? 8 : 4;
     return 1;
   }
 
@@ -2355,7 +2358,7 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
   CondReg.setIsKill(Cond[1].isKill());
 
   if (BytesAdded)
-      *BytesAdded = 8;
+    *BytesAdded = ST.hasOffset3fBug() ? 16 : 8;
 
   return 2;
 }
@@ -4330,10 +4333,13 @@ bool SIInstrInfo::isLegalRegOperand(const MachineRegisterInfo &MRI,
     return false;
 
   Register Reg = MO.getReg();
-  const TargetRegisterClass *RC =
-      Reg.isVirtual() ? MRI.getRegClass(Reg) : RI.getPhysRegClass(Reg);
 
   const TargetRegisterClass *DRC = RI.getRegClass(OpInfo.RegClass);
+  if (Reg.isPhysical())
+    return DRC->contains(Reg);
+
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+
   if (MO.getSubReg()) {
     const MachineFunction *MF = MO.getParent()->getParent()->getParent();
     const TargetRegisterClass *SuperRC = RI.getLargestLegalSuperClass(RC, *MF);
@@ -5133,9 +5139,8 @@ void SIInstrInfo::legalizeOperands(MachineInstr &MI,
       // Move everything between ADJCALLSTACKUP and ADJCALLSTACKDOWN and
       // following copies, we also need to move copies from and to physical
       // registers into the loop block.
-      const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-      unsigned FrameSetupOpcode = TII.getCallFrameSetupOpcode();
-      unsigned FrameDestroyOpcode = TII.getCallFrameDestroyOpcode();
+      unsigned FrameSetupOpcode = getCallFrameSetupOpcode();
+      unsigned FrameDestroyOpcode = getCallFrameDestroyOpcode();
 
       // Also move the copies to physical registers into the loop block
       MachineBasicBlock &MBB = *MI.getParent();
@@ -6655,8 +6660,16 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   // If we have a definitive size, we can use it. Otherwise we need to inspect
   // the operands to know the size.
-  if (isFixedSize(MI))
-    return DescSize;
+  if (isFixedSize(MI)) {
+    unsigned Size = DescSize;
+
+    // If we hit the buggy offset, an extra nop will be inserted in MC so
+    // estimate the worst case.
+    if (MI.isBranch() && ST.hasOffset3fBug())
+      Size += 4;
+
+    return Size;
+  }
 
   // 4-byte instructions may have a 32-bit literal encoded after them. Check
   // operands that coud ever be literals.
@@ -7172,36 +7185,51 @@ bool llvm::execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
   auto *TRI = MRI.getTargetRegisterInfo();
   auto *DefBB = DefMI.getParent();
 
-  const int MaxUseInstScan = 10;
-  int NumUseInst = 0;
+  const int MaxUseScan = 10;
+  int NumUse = 0;
 
-  for (auto &UseInst : MRI.use_nodbg_instructions(VReg)) {
+  for (auto &Use : MRI.use_nodbg_operands(VReg)) {
+    auto &UseInst = *Use.getParent();
     // Don't bother searching between blocks, although it is possible this block
     // doesn't modify exec.
     if (UseInst.getParent() != DefBB)
       return true;
 
-    if (++NumUseInst > MaxUseInstScan)
+    if (++NumUse > MaxUseScan)
       return true;
   }
+
+  if (NumUse == 0)
+    return false;
 
   const int MaxInstScan = 20;
   int NumInst = 0;
 
   // Stop scan when we have seen all the uses.
   for (auto I = std::next(DefMI.getIterator()); ; ++I) {
+    assert(I != DefBB->end());
+
     if (I->isDebugInstr())
       continue;
 
     if (++NumInst > MaxInstScan)
       return true;
 
-    if (I->readsRegister(VReg))
-      if (--NumUseInst == 0)
-        return false;
+    for (const MachineOperand &Op : I->operands()) {
+      // We don't check reg masks here as they're used only on calls:
+      // 1. EXEC is only considered const within one BB
+      // 2. Call should be a terminator instruction if present in a BB
 
-    if (I->modifiesRegister(AMDGPU::EXEC, TRI))
-      return true;
+      if (!Op.isReg())
+        continue;
+
+      Register Reg = Op.getReg();
+      if (Op.isUse()) {
+        if (Reg == VReg && --NumUse == 0)
+          return false;
+      } else if (TRI->regsOverlap(Reg, AMDGPU::EXEC))
+        return true;
+    }
   }
 }
 

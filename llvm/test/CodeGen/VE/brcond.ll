@@ -1,8 +1,8 @@
 ; RUN: llc < %s -mtriple=ve | FileCheck %s
 
 ; Function Attrs: nounwind
-define void @test_then(i1 zeroext %0) {
-; CHECK-LABEL: test_then:
+define void @brcond_then(i1 zeroext %0) {
+; CHECK-LABEL: brcond_then:
 ; CHECK:       .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:    breq.w 0, %s0, .LBB{{[0-9]+}}_2
 ; CHECK-NEXT:  # %bb.1:
@@ -22,8 +22,8 @@ define void @test_then(i1 zeroext %0) {
 }
 
 ; Function Attrs: nounwind
-define void @test_else(i1 zeroext %0) {
-; CHECK-LABEL: test_else:
+define void @brcond_else(i1 zeroext %0) {
+; CHECK-LABEL: brcond_else:
 ; CHECK:       .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:    brne.w 0, %s0, .LBB{{[0-9]+}}_2
 ; CHECK-NEXT:  # %bb.1:

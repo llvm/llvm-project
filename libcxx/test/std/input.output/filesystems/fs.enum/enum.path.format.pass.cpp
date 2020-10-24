@@ -25,7 +25,7 @@ int main(int, char**) {
 
   // Check that E is a scoped enum by checking for conversions.
   typedef std::underlying_type<E>::type UT;
-  static_assert(!std::is_convertible<E, UT>::value, "");
+  LIBCPP_STATIC_ASSERT(!std::is_convertible<E, UT>::value, "");
 
   LIBCPP_ONLY(static_assert(std::is_same<UT, unsigned char>::value, "")); // Implementation detail
 

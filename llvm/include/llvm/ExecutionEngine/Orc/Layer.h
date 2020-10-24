@@ -34,15 +34,15 @@ public:
   /// SymbolFlags and SymbolToDefinition maps.
   IRMaterializationUnit(ExecutionSession &ES,
                         const IRSymbolMapper::ManglingOptions &MO,
-                        ThreadSafeModule TSM, VModuleKey K);
+                        ThreadSafeModule TSM);
 
   /// Create an IRMaterializationLayer from a module, and pre-existing
   /// SymbolFlags and SymbolToDefinition maps. The maps must provide
   /// entries for each definition in M.
   /// This constructor is useful for delegating work from one
   /// IRMaterializationUnit to another.
-  IRMaterializationUnit(ThreadSafeModule TSM, VModuleKey K,
-                        SymbolFlagsMap SymbolFlags, SymbolStringPtr InitSymbol,
+  IRMaterializationUnit(ThreadSafeModule TSM, SymbolFlagsMap SymbolFlags,
+                        SymbolStringPtr InitSymbol,
                         SymbolNameToDefinitionMap SymbolToDefinition);
 
   /// Return the ModuleIdentifier as the name for this MaterializationUnit.
@@ -94,10 +94,15 @@ public:
   /// Returns the current value of the CloneToNewContextOnEmit flag.
   bool getCloneToNewContextOnEmit() const { return CloneToNewContextOnEmit; }
 
+  /// Add a MaterializatinoUnit representing the given IR to the JITDylib
+  /// targeted by the given tracker.
+  virtual Error add(ResourceTrackerSP RT, ThreadSafeModule TSM);
+
   /// Adds a MaterializationUnit representing the given IR to the given
-  /// JITDylib.
-  virtual Error add(JITDylib &JD, ThreadSafeModule TSM,
-                    VModuleKey K = VModuleKey());
+  /// JITDylib. If RT is not specif
+  Error add(JITDylib &JD, ThreadSafeModule TSM) {
+    return add(JD.getDefaultResourceTracker(), std::move(TSM));
+  }
 
   /// Emit should materialize the given IR.
   virtual void emit(std::unique_ptr<MaterializationResponsibility> R,
@@ -115,13 +120,12 @@ class BasicIRLayerMaterializationUnit : public IRMaterializationUnit {
 public:
   BasicIRLayerMaterializationUnit(IRLayer &L,
                                   const IRSymbolMapper::ManglingOptions &MO,
-                                  ThreadSafeModule TSM, VModuleKey K);
+                                  ThreadSafeModule TSM);
 
 private:
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
 
   IRLayer &L;
-  VModuleKey K;
 };
 
 /// Interface for Layers that accept object files.
@@ -135,8 +139,11 @@ public:
 
   /// Adds a MaterializationUnit representing the given IR to the given
   /// JITDylib.
-  virtual Error add(JITDylib &JD, std::unique_ptr<MemoryBuffer> O,
-                    VModuleKey K = VModuleKey());
+  virtual Error add(ResourceTrackerSP RT, std::unique_ptr<MemoryBuffer> O);
+
+  Error add(JITDylib &JD, std::unique_ptr<MemoryBuffer> O) {
+    return add(JD.getDefaultResourceTracker(), std::move(O));
+  }
 
   /// Emit should materialize the given IR.
   virtual void emit(std::unique_ptr<MaterializationResponsibility> R,
@@ -151,9 +158,9 @@ private:
 class BasicObjectLayerMaterializationUnit : public MaterializationUnit {
 public:
   static Expected<std::unique_ptr<BasicObjectLayerMaterializationUnit>>
-  Create(ObjectLayer &L, VModuleKey K, std::unique_ptr<MemoryBuffer> O);
+  Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> O);
 
-  BasicObjectLayerMaterializationUnit(ObjectLayer &L, VModuleKey K,
+  BasicObjectLayerMaterializationUnit(ObjectLayer &L,
                                       std::unique_ptr<MemoryBuffer> O,
                                       SymbolFlagsMap SymbolFlags,
                                       SymbolStringPtr InitSymbol);

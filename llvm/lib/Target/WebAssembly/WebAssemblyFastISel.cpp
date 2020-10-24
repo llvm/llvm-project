@@ -129,6 +129,8 @@ private:
     case MVT::f32:
     case MVT::f64:
     case MVT::exnref:
+    case MVT::funcref:
+    case MVT::externref:
       return VT;
     case MVT::f16:
       return MVT::f32;
@@ -808,6 +810,12 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
       break;
     case MVT::exnref:
       ResultReg = createResultReg(&WebAssembly::EXNREFRegClass);
+      break;
+    case MVT::funcref:
+      ResultReg = createResultReg(&WebAssembly::FUNCREFRegClass);
+      break;
+    case MVT::externref:
+      ResultReg = createResultReg(&WebAssembly::EXTERNREFRegClass);
       break;
     default:
       return false;

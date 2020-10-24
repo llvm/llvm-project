@@ -189,6 +189,8 @@ module m01
     call intentout(x) ! ok
     !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'x=' must be definable
     call intentout((x))
+    !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'count=' must be definable
+    call system_clock(count=2)
     !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' must be definable
     call intentinout(in)
     !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' must be definable
@@ -198,6 +200,8 @@ module m01
     call intentinout(x) ! ok
     !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' must be definable
     call intentinout((x))
+    !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'exitstat=' must be definable
+    call execute_command_line(command="echo hello", exitstat=0)
   end subroutine
 
   subroutine test12 ! 15.5.2.4(21)

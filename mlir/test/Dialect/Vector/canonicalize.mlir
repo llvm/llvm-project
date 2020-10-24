@@ -90,6 +90,95 @@ func @extract_strided_slice_of_constant_mask() -> (vector<2x1xi1>) {
 
 // -----
 
+// CHECK-LABEL: extract_strided_fold
+//  CHECK-SAME: (%[[ARG:.*]]: vector<4x3xi1>)
+//  CHECK-NEXT:   return %[[ARG]] : vector<4x3xi1>
+func @extract_strided_fold(%arg : vector<4x3xi1>) -> (vector<4x3xi1>) {
+  %0 = vector.extract_strided_slice %arg
+    {offsets = [0, 0], sizes = [4, 3], strides = [1, 1]}
+      : vector<4x3xi1> to vector<4x3xi1>
+  return %0 : vector<4x3xi1>
+}
+
+// -----
+
+// CHECK-LABEL: extract_strided_fold_insert
+//  CHECK-SAME: (%[[ARG:.*]]: vector<4x4xf32>
+//  CHECK-NEXT:   return %[[ARG]] : vector<4x4xf32>
+func @extract_strided_fold_insert(%a: vector<4x4xf32>, %b: vector<8x16xf32>)
+  -> (vector<4x4xf32>) {
+  %0 = vector.insert_strided_slice %a, %b {offsets = [2, 2], strides = [1, 1]}
+    : vector<4x4xf32> into vector<8x16xf32>
+  %1 = vector.extract_strided_slice %0
+    {offsets = [2, 2], sizes = [4, 4], strides = [1, 1]}
+      : vector<8x16xf32> to vector<4x4xf32>
+  return %1 : vector<4x4xf32>
+}
+
+// -----
+
+// Case where the vector inserted is a subset of the vector extracted.
+// CHECK-LABEL: extract_strided_fold_insert
+//  CHECK-SAME: (%[[ARG0:.*]]: vector<6x4xf32>
+//  CHECK-NEXT:   %[[EXT:.*]] = vector.extract_strided_slice %[[ARG0]]
+//  CHECK-SAME:     {offsets = [0, 0], sizes = [4, 4], strides = [1, 1]}
+//  CHECK-SAME:       : vector<6x4xf32> to vector<4x4xf32>
+//  CHECK-NEXT:   return %[[EXT]] : vector<4x4xf32>
+func @extract_strided_fold_insert(%a: vector<6x4xf32>, %b: vector<8x16xf32>)
+  -> (vector<4x4xf32>) {
+  %0 = vector.insert_strided_slice %a, %b {offsets = [2, 2], strides = [1, 1]}
+    : vector<6x4xf32> into vector<8x16xf32>
+  %1 = vector.extract_strided_slice %0
+    {offsets = [2, 2], sizes = [4, 4], strides = [1, 1]}
+      : vector<8x16xf32> to vector<4x4xf32>
+  return %1 : vector<4x4xf32>
+}
+
+// -----
+
+// Negative test where the extract is not a subset of the element inserted.
+// CHECK-LABEL: extract_strided_fold_negative
+//  CHECK-SAME: (%[[ARG0:.*]]: vector<4x4xf32>, %[[ARG1:.*]]: vector<8x16xf32>
+//       CHECK:   %[[INS:.*]] = vector.insert_strided_slice %[[ARG0]], %[[ARG1]]
+//  CHECK-SAME:     {offsets = [2, 2], strides = [1, 1]}
+//  CHECK-SAME:       : vector<4x4xf32> into vector<8x16xf32>
+//       CHECK:   %[[EXT:.*]] = vector.extract_strided_slice %[[INS]]
+//  CHECK-SAME:     {offsets = [2, 2], sizes = [6, 4], strides = [1, 1]}
+//  CHECK-SAME:       : vector<8x16xf32> to vector<6x4xf32>
+//  CHECK-NEXT:   return %[[EXT]] : vector<6x4xf32>
+func @extract_strided_fold_negative(%a: vector<4x4xf32>, %b: vector<8x16xf32>)
+  -> (vector<6x4xf32>) {
+  %0 = vector.insert_strided_slice %a, %b {offsets = [2, 2], strides = [1, 1]}
+    : vector<4x4xf32> into vector<8x16xf32>
+  %1 = vector.extract_strided_slice %0
+    {offsets = [2, 2], sizes = [6, 4], strides = [1, 1]}
+      : vector<8x16xf32> to vector<6x4xf32>
+  return %1 : vector<6x4xf32>
+}
+
+// -----
+
+// Case where we need to go through 2 level of insert element.
+// CHECK-LABEL: extract_strided_fold_insert
+//  CHECK-SAME: (%[[ARG0:.*]]: vector<2x4xf32>, %[[ARG1:.*]]: vector<1x4xf32>,
+//  CHECK-NEXT:   %[[EXT:.*]] = vector.extract_strided_slice %[[ARG1]]
+//  CHECK-SAME:     {offsets = [0, 1], sizes = [1, 1], strides = [1, 1]}
+//  CHECK-SAME:       : vector<1x4xf32> to vector<1x1xf32>
+//  CHECK-NEXT:   return %[[EXT]] : vector<1x1xf32>
+func @extract_strided_fold_insert(%a: vector<2x4xf32>, %b: vector<1x4xf32>,
+                                  %c : vector<1x4xf32>) -> (vector<1x1xf32>) {
+  %0 = vector.insert_strided_slice %b, %a {offsets = [0, 0], strides = [1, 1]}
+    : vector<1x4xf32> into vector<2x4xf32>
+  %1 = vector.insert_strided_slice %c, %0 {offsets = [1, 0], strides = [1, 1]}
+    : vector<1x4xf32> into vector<2x4xf32>
+  %2 = vector.extract_strided_slice %1
+      {offsets = [0, 1], sizes = [1, 1], strides = [1, 1]}
+        : vector<2x4xf32> to vector<1x1xf32>
+  return %2 : vector<1x1xf32>
+}
+
+// -----
+
 // CHECK-LABEL: transpose_1D_identity
 // CHECK-SAME: ([[ARG:%.*]]: vector<4xf32>)
 func @transpose_1D_identity(%arg : vector<4xf32>) -> vector<4xf32> {
@@ -393,6 +482,39 @@ func @fold_extract_broadcast_negative(%a : f32) -> vector<4xf32> {
   %r = vector.extract %b[0, 1] : vector<1x2x4xf32>
   return %r : vector<4xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @fold_extract_shapecast
+//  CHECK-SAME: (%[[A0:.*]]: vector<5x1x3x2xf32>, %[[A1:.*]]: vector<8x4x2xf32>
+//       CHECK:   %[[R0:.*]] = vector.extract %[[A0]][1, 0, 1, 1] : vector<5x1x3x2xf32>
+//       CHECK:   %[[R1:.*]] = vector.extract %[[A0]][1, 0, 2] : vector<5x1x3x2xf32>
+//       CHECK:   %[[R2:.*]] = vector.extract %[[A1]][7] : vector<8x4x2xf32>
+//       CHECK:   return %[[R0]], %[[R1]], %[[R2]] : f32, vector<2xf32>, vector<4x2xf32>
+func @fold_extract_shapecast(%arg0 : vector<5x1x3x2xf32>,
+                             %arg1 : vector<8x4x2xf32>)
+  -> (f32, vector<2xf32>, vector<4x2xf32>) {
+  %0 = vector.shape_cast %arg0 : vector<5x1x3x2xf32> to vector<15x2xf32>
+  %1 = vector.shape_cast %arg1 : vector<8x4x2xf32> to vector<4x2x4x2xf32>
+  %r1 = vector.extract %0[4, 1] : vector<15x2xf32>
+  %r2 = vector.extract %0[5] : vector<15x2xf32>
+  %r3 = vector.extract %1[3, 1] : vector<4x2x4x2xf32>
+  return %r1, %r2, %r3 : f32, vector<2xf32>, vector<4x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_shapecast_negative
+//       CHECK:   %[[V:.*]] = vector.shape_cast %{{.*}} : vector<16xf32> to vector<2x4x2xf32>
+//       CHECK:   %[[R:.*]] = vector.extract %[[V]][1] : vector<2x4x2xf32>
+//       CHECK:   return %[[R]] : vector<4x2xf32>
+func @fold_extract_shapecast_negative(%arg0 : vector<16xf32>,
+                             %arg1 : vector<8x4x2xf32>) -> vector<4x2xf32> {
+  %0 = vector.shape_cast %arg0 : vector<16xf32> to vector<2x4x2xf32>
+  %r = vector.extract %0[1] : vector<2x4x2xf32>
+  return %r : vector<4x2xf32>
+}
+
 
 // -----
 

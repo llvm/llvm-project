@@ -77,10 +77,15 @@ void writeTensorValues(raw_ostream &OutFile, const char *TensorData,
   OutFile << "]";
 }
 
-/// Untyped implementation of the API above.
+/// Write a list of tensors as a sequence of TensorFlow FeatureList protobufs.
+/// The tensors are assumed to be stored contiguously, in row-major format,
+/// in the TensorData buffer. Each tensor has the shape given by Spec. The
+/// feature name in the output is either the provided LoggingName, if
+/// specified, otherwise it's the name of the tensor (as given by Spec).
 void writeRawTensorsAsFeatureLists(raw_ostream &OutFile,
                                    const Logger::LoggedFeatureSpec &LoggedSpec,
-                                   const char *TensorData, size_t TensorCount) {
+                                   const char *TensorData, size_t TensorCount,
+                                   bool FinalReward = false) {
   const char *FieldName = "<invalid>";
   std::function<void(const char *)> ValueWriter;
   const auto &Spec = LoggedSpec.Spec;
@@ -115,28 +120,30 @@ void writeRawTensorsAsFeatureLists(raw_ostream &OutFile,
           << "\" ";
   OutFile << "value: {\n";
   size_t TensorByteSize = Spec.getElementCount() * Spec.getElementByteSize();
-  for (const char *P = TensorData,
-                  *E = TensorData + TensorByteSize * TensorCount;
-       P < E; P += TensorByteSize) {
+
+  auto WriteFeatureProto = [&](const char *P) {
     OutFile << "      feature: { " << FieldName << ": { value: ";
     ValueWriter(P);
     OutFile << " } }\n";
+  };
+
+  const char *CurrentTensor = TensorData;
+  static int64_t Zero = 0;
+  // Write all but the last value. If this is the final reward, don't increment
+  // the CurrentTensor, and just write 0.
+  for (size_t I = 0; I < TensorCount - 1; ++I) {
+    if (FinalReward)
+      WriteFeatureProto(reinterpret_cast<const char *>(&Zero));
+    else {
+      WriteFeatureProto(CurrentTensor);
+      CurrentTensor += TensorByteSize;
+    }
   }
+
+  WriteFeatureProto(CurrentTensor);
+
   OutFile << "    }\n";
   OutFile << "  }\n";
-}
-
-/// Write a list of tensors as a sequence of TensorFlow FeatureList protobufs.
-/// The tensors are assumed to be stored contiguously, in row-major format,
-/// in the TensorData buffer. Each tensor has the shape given by Spec. The
-/// feature name in the output is either the provided LoggingName, if
-/// specified, otherwise it's the name of the tensor (as given by Spec).
-template <typename T>
-void writeTensorsAsFeatureLists(raw_ostream &OutFile,
-                                const Logger::LoggedFeatureSpec &Spec,
-                                const T *TensorData, size_t TensorCount) {
-  writeRawTensorsAsFeatureLists(
-      OutFile, Spec, reinterpret_cast<const char *>(TensorData), TensorCount);
 }
 } // namespace
 
@@ -405,15 +412,19 @@ void Logger::print(raw_ostream &OS) {
   size_t NumberOfRecords = RawLogData[0].size() / Tensor0Size;
   if (NumberOfRecords == 0)
     return;
+  size_t RewardSize =
+      RewardSpec.getElementCount() * RewardSpec.getElementByteSize();
+  size_t NumberOfRewards = RawLogData.back().size() / RewardSize;
 
   OS << "feature_lists: {\n";
   for (size_t I = 0; I < FeatureSpecs.size(); ++I)
-    writeTensorsAsFeatureLists(OS, FeatureSpecs[I], RawLogData[I].data(),
-                               NumberOfRecords);
+    writeRawTensorsAsFeatureLists(OS, FeatureSpecs[I], RawLogData[I].data(),
+                                  NumberOfRecords);
 
   if (IncludeReward)
-    writeTensorsAsFeatureLists(OS, {RewardSpec, None}, RawLogData.back().data(),
-                               NumberOfRecords);
+    writeRawTensorsAsFeatureLists(OS, {RewardSpec, None},
+                                  RawLogData.back().data(), NumberOfRecords,
+                                  NumberOfRewards == 1);
 
   OS << "}\n";
 }

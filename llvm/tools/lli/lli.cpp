@@ -31,7 +31,6 @@
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/OrcMCJITReplacement.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -76,7 +75,7 @@ static codegen::RegisterCodeGenFlags CGF;
 
 namespace {
 
-  enum class JITKind { MCJIT, OrcMCJITReplacement, OrcLazy };
+  enum class JITKind { MCJIT, OrcLazy };
 
   cl::opt<std::string>
   InputFile(cl::desc("<input bitcode>"), cl::Positional, cl::init("-"));
@@ -92,9 +91,6 @@ namespace {
       "jit-kind", cl::desc("Choose underlying JIT kind."),
       cl::init(JITKind::MCJIT),
       cl::values(clEnumValN(JITKind::MCJIT, "mcjit", "MCJIT"),
-                 clEnumValN(JITKind::OrcMCJITReplacement, "orc-mcjit",
-                            "Orc-based MCJIT replacement "
-                            "(deprecated)"),
                  clEnumValN(JITKind::OrcLazy, "orc-lazy",
                             "Orc-based lazy JIT.")));
 
@@ -449,8 +445,6 @@ int main(int argc, char **argv, char * const *envp) {
   builder.setEngineKind(ForceInterpreter
                         ? EngineKind::Interpreter
                         : EngineKind::JIT);
-  builder.setUseOrcMCJITReplacement(AcknowledgeORCv1Deprecation,
-                                    UseJITKind == JITKind::OrcMCJITReplacement);
 
   // If we are supposed to override the target triple, do so now.
   if (!TargetTriple.empty())
@@ -696,14 +690,7 @@ int main(int argc, char **argv, char * const *envp) {
 
     // Forward MCJIT's symbol resolution calls to the remote.
     static_cast<ForwardingMemoryManager *>(RTDyldMM)->setResolver(
-        orc::createLambdaResolver(
-            AcknowledgeORCv1Deprecation,
-            [](const std::string &Name) { return nullptr; },
-            [&](const std::string &Name) {
-              if (auto Addr = ExitOnErr(R->getSymbolAddress(Name)))
-                return JITSymbol(Addr, JITSymbolFlags::Exported);
-              return JITSymbol(nullptr);
-            }));
+        std::make_unique<RemoteResolver<MyRemote>>(*R));
 
     // Grab the target address of the JIT'd main function on the remote and call
     // it.

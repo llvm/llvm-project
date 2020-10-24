@@ -2463,6 +2463,46 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      template <int> void foo();     vs.     template<int> void foo();
 
+**SpaceAroundPointerQualifiers** (``SpaceAroundPointerQualifiersStyle``)
+  Defines in which cases to put a space before or after pointer qualifiers
+
+  Possible values:
+
+  * ``SAPQ_Default`` (in configuration: ``Default``)
+    Don't ensure spaces around pointer qualifiers and use PointerAlignment
+    instead.
+
+    .. code-block:: c++
+
+       PointerAlignment: Left                 PointerAlignment: Right
+       void* const* x = NULL;         vs.     void *const *x = NULL;
+
+  * ``SAPQ_Before`` (in configuration: ``Before``)
+    Ensure that there is a space before pointer qualifiers.
+
+    .. code-block:: c++
+
+       PointerAlignment: Left                 PointerAlignment: Right
+       void* const* x = NULL;         vs.     void * const *x = NULL;
+
+  * ``SAPQ_After`` (in configuration: ``After``)
+    Ensure that there is a space after pointer qualifiers.
+
+    .. code-block:: c++
+
+       PointerAlignment: Left                 PointerAlignment: Right
+       void* const * x = NULL;         vs.     void *const *x = NULL;
+
+  * ``SAPQ_Both`` (in configuration: ``Both``)
+    Ensure that there is a space both before and after pointer qualifiers.
+
+    .. code-block:: c++
+
+       PointerAlignment: Left                 PointerAlignment: Right
+       void* const * x = NULL;         vs.     void * const *x = NULL;
+
+
+
 **SpaceBeforeAssignmentOperators** (``bool``)
   If ``false``, spaces will be removed before assignment operators.
 

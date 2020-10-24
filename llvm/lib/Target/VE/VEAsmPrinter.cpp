@@ -350,6 +350,6 @@ void VEAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 // Force static initialization.
-extern "C" void LLVMInitializeVEAsmPrinter() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEAsmPrinter() {
   RegisterAsmPrinter<VEAsmPrinter> X(getTheVETarget());
 }

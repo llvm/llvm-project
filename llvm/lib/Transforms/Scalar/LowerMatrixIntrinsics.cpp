@@ -1945,7 +1945,8 @@ PreservedAnalyses LowerMatrixIntrinsicsPass::run(Function &F,
   LowerMatrixIntrinsics LMT(F, TTI, &AA, &DT, &LI, &ORE);
   if (LMT.Visit()) {
     PreservedAnalyses PA;
-    PA.preserveSet<CFGAnalyses>();
+    PA.preserve<LoopAnalysis>();
+    PA.preserve<DominatorTreeAnalysis>();
     return PA;
   }
   return PreservedAnalyses::all();

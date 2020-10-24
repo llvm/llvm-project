@@ -326,7 +326,7 @@ private:
   Instruction *narrowBinOp(TruncInst &Trunc);
   Instruction *narrowMaskedBinOp(BinaryOperator &And);
   Instruction *narrowMathIfNoOverflow(BinaryOperator &I);
-  Instruction *narrowRotate(TruncInst &Trunc);
+  Instruction *narrowFunnelShift(TruncInst &Trunc);
   Instruction *optimizeBitCastFromPhi(CastInst &CI, PHINode *PN);
   Instruction *matchSAddSubSat(SelectInst &MinMax1);
 
@@ -721,9 +721,11 @@ public:
   Instruction *PromoteCastOfAllocation(BitCastInst &CI, AllocaInst &AI);
   bool mergeStoreIntoSuccessor(StoreInst &SI);
 
-  /// Given an 'or' instruction, check to see if it is part of a bswap idiom.
-  /// If so, return the equivalent bswap intrinsic.
-  Instruction *matchBSwap(BinaryOperator &Or);
+  /// Given an 'or' instruction, check to see if it is part of a
+  /// bswap/bitreverse idiom. If so, return the equivalent bswap/bitreverse
+  /// intrinsic.
+  Instruction *matchBSwapOrBitReverse(BinaryOperator &Or, bool MatchBSwaps,
+                                      bool MatchBitReversals);
 
   Instruction *SimplifyAnyMemTransfer(AnyMemTransferInst *MI);
   Instruction *SimplifyAnyMemSet(AnyMemSetInst *MI);

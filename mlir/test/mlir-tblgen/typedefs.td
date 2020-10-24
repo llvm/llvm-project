@@ -51,7 +51,7 @@ def B_CompoundTypeA : TestType<"CompoundA"> {
 
 // DECL-LABEL: class CompoundAType: public ::mlir::Type
 // DECL: static ::mlir::LogicalResult verifyConstructionInvariants(Location loc, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims);
-// DECL: static CompoundAType getChecked(Location loc, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims);
+// DECL: static ::mlir::Type getChecked(Location loc, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims);
 // DECL: static ::llvm::StringRef getMnemonic() { return "cmpnd_a"; }
 // DECL: static ::mlir::Type parse(::mlir::MLIRContext* ctxt, ::mlir::DialectAsmParser& parser);
 // DECL: void print(::mlir::DialectAsmPrinter& printer) const;

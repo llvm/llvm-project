@@ -2045,7 +2045,14 @@ SDValue SelectionDAG::CreateStackTemporary(EVT VT, unsigned minAlign) {
 }
 
 SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
-  TypeSize Bytes = std::max(VT1.getStoreSize(), VT2.getStoreSize());
+  TypeSize VT1Size = VT1.getStoreSize();
+  TypeSize VT2Size = VT2.getStoreSize();
+  assert(VT1Size.isScalable() == VT2Size.isScalable() &&
+         "Don't know how to choose the maximum size when creating a stack "
+         "temporary");
+  TypeSize Bytes =
+      VT1Size.getKnownMinSize() > VT2Size.getKnownMinSize() ? VT1Size : VT2Size;
+
   Type *Ty1 = VT1.getTypeForEVT(*getContext());
   Type *Ty2 = VT2.getTypeForEVT(*getContext());
   const DataLayout &DL = getDataLayout();
@@ -5581,8 +5588,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
     // EXTRACT_SUBVECTOR of CONCAT_VECTOR can be simplified if the pieces of
     // the concat have the same type as the extract.
-    if (N2C && N1.getOpcode() == ISD::CONCAT_VECTORS &&
-        N1.getNumOperands() > 0 && VT == N1.getOperand(0).getValueType()) {
+    if (N1.getOpcode() == ISD::CONCAT_VECTORS && N1.getNumOperands() > 0 &&
+        VT == N1.getOperand(0).getValueType()) {
       unsigned Factor = VT.getVectorMinNumElements();
       return N1.getOperand(N2C->getZExtValue() / Factor);
     }
@@ -9861,6 +9868,58 @@ SDValue BuildVectorSDNode::getSplatValue(const APInt &DemandedElts,
 SDValue BuildVectorSDNode::getSplatValue(BitVector *UndefElements) const {
   APInt DemandedElts = APInt::getAllOnesValue(getNumOperands());
   return getSplatValue(DemandedElts, UndefElements);
+}
+
+bool BuildVectorSDNode::getRepeatedSequence(const APInt &DemandedElts,
+                                            SmallVectorImpl<SDValue> &Sequence,
+                                            BitVector *UndefElements) const {
+  unsigned NumOps = getNumOperands();
+  Sequence.clear();
+  if (UndefElements) {
+    UndefElements->clear();
+    UndefElements->resize(NumOps);
+  }
+  assert(NumOps == DemandedElts.getBitWidth() && "Unexpected vector size");
+  if (!DemandedElts || NumOps < 2 || !isPowerOf2_32(NumOps))
+    return false;
+
+  // Set the undefs even if we don't find a sequence (like getSplatValue).
+  if (UndefElements)
+    for (unsigned I = 0; I != NumOps; ++I)
+      if (DemandedElts[I] && getOperand(I).isUndef())
+        (*UndefElements)[I] = true;
+
+  // Iteratively widen the sequence length looking for repetitions.
+  for (unsigned SeqLen = 1; SeqLen < NumOps; SeqLen *= 2) {
+    Sequence.append(SeqLen, SDValue());
+    for (unsigned I = 0; I != NumOps; ++I) {
+      if (!DemandedElts[I])
+        continue;
+      SDValue &SeqOp = Sequence[I % SeqLen];
+      SDValue Op = getOperand(I);
+      if (Op.isUndef()) {
+        if (!SeqOp)
+          SeqOp = Op;
+        continue;
+      }
+      if (SeqOp && !SeqOp.isUndef() && SeqOp != Op) {
+        Sequence.clear();
+        break;
+      }
+      SeqOp = Op;
+    }
+    if (!Sequence.empty())
+      return true;
+  }
+
+  assert(Sequence.empty() && "Failed to empty non-repeating sequence pattern");
+  return false;
+}
+
+bool BuildVectorSDNode::getRepeatedSequence(SmallVectorImpl<SDValue> &Sequence,
+                                            BitVector *UndefElements) const {
+  APInt DemandedElts = APInt::getAllOnesValue(getNumOperands());
+  return getRepeatedSequence(DemandedElts, Sequence, UndefElements);
 }
 
 ConstantSDNode *

@@ -63,9 +63,13 @@ Changes to the LLVM IR
 * Added the ``byref`` attribute to better represent argument passing
   for the `amdgpu_kernel` calling convention.
 
+* Added type parameter to the ``sret`` attribute to continue work on
+  removing pointer element types.
+
 * The ``llvm.experimental.vector.reduce`` family of intrinsics have been renamed
   to drop the "experimental" from the name, reflecting their now fully supported
   status in the IR.
+
 
 Changes to building LLVM
 ------------------------
@@ -114,7 +118,8 @@ During this release ...
   the "target-cpu" attribute or TargetMachine CPU which will be used to select
   Instruction Set. If the attribute is not present, the tune CPU will follow
   the target CPU.
-* Support for ISA HRESET has been added.
+* Support for ``HRESET`` instructions has been added.
+* Support for ``UINTR`` instructions has been added.
 
 Changes to the AMDGPU Target
 -----------------------------

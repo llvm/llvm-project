@@ -631,23 +631,18 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   expr.append(dlopen_wrapper_code);
   Status utility_error;
   DiagnosticManager diagnostics;
-  
-  std::unique_ptr<UtilityFunction> dlopen_utility_func_up(process
-      ->GetTarget().GetUtilityFunctionForLanguage(expr.c_str(),
-                                                  eLanguageTypeObjC,
-                                                  dlopen_wrapper_name,
-                                                  utility_error));
-  if (utility_error.Fail()) {
-    error.SetErrorStringWithFormat("dlopen error: could not make utility"
-                                   "function: %s", utility_error.AsCString());
+
+  auto utility_fn_or_error = process->GetTarget().CreateUtilityFunction(
+      std::move(expr), dlopen_wrapper_name, eLanguageTypeObjC, exe_ctx);
+  if (!utility_fn_or_error) {
+    std::string error_str = llvm::toString(utility_fn_or_error.takeError());
+    error.SetErrorStringWithFormat("dlopen error: could not create utility"
+                                   "function: %s",
+                                   error_str.c_str());
     return nullptr;
   }
-  if (!dlopen_utility_func_up->Install(diagnostics, exe_ctx)) {
-    error.SetErrorStringWithFormat("dlopen error: could not install utility"
-                                   "function: %s", 
-                                   diagnostics.GetString().c_str());
-    return nullptr;
-  }
+  std::unique_ptr<UtilityFunction> dlopen_utility_func_up =
+      std::move(*utility_fn_or_error);
 
   Value value;
   ValueList arguments;

@@ -151,6 +151,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
         PaddedSize = 10;
         break;
       case WebAssembly::OPERAND_FUNCTION32:
+      case WebAssembly::OPERAND_TABLE:
       case WebAssembly::OPERAND_OFFSET32:
       case WebAssembly::OPERAND_SIGNATURE:
       case WebAssembly::OPERAND_TYPEINDEX:

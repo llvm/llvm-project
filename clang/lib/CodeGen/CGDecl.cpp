@@ -117,6 +117,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Label:        // __label__ x;
   case Decl::Import:
   case Decl::MSGuid:    // __declspec(uuid("..."))
+  case Decl::TemplateParamObject:
   case Decl::OMPThreadPrivate:
   case Decl::OMPAllocate:
   case Decl::OMPCapturedExpr:

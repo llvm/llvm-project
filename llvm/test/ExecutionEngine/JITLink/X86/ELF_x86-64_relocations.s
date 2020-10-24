@@ -1,6 +1,7 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent -filetype=obj -o %t/elf_reloc.o %s
-# RUN: llvm-jitlink -noexec -check %s %t/elf_reloc.o
+# RUN: llvm-jitlink -noexec -slab-allocate 100Kb -slab-address 0xfff00000 \
+# RUN:   -define-abs external_data=0x1 -check %s %t/elf_reloc.o
 #
 # Test standard ELF relocations.
 
@@ -39,12 +40,25 @@ test_gotpcrel:
 .Lend_test_gotpcrel:
         .size   test_gotpcrel, .Lend_test_gotpcrel-test_gotpcrel
 
+# Test REX_GOTPCRELX handling. We want to check both the offset to the GOT entry and its
+# contents.
+# jitlink-check: decode_operand(test_rex_gotpcrelx, 4) = \
+# jitlink-check:   got_addr(elf_reloc.o, external_data) - next_pc(test_rex_gotpcrelx)
+
+        .globl test_rex_gotpcrelx
+        .p2align      4, 0x90
+        .type   test_rex_gotpcrelx,@function
+test_rex_gotpcrelx:
+	movq    external_data@GOTPCREL(%rip), %rax
+.Lend_test_rex_gotpcrelx:
+        .size   test_rex_gotpcrelx, .Lend_test_rex_gotpcrelx-test_rex_gotpcrelx
+
         .type   named_data,@object
         .data
-        .p2align        2
+        .p2align        3
 named_data:
-        .long   42
-        .size   named_data, 4
+        .quad   42
+        .size   named_data, 8
 
 # Test BSS / zero-fill section handling.
 # llvm-jitlink: *{4}bss_variable = 0

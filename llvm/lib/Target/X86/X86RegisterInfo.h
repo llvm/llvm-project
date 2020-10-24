@@ -121,9 +121,6 @@ public:
 
   bool canRealignStack(const MachineFunction &MF) const override;
 
-  bool hasReservedSpillSlot(const MachineFunction &MF, Register Reg,
-                            int &FrameIdx) const override;
-
   void eliminateFrameIndex(MachineBasicBlock::iterator MI,
                            int SPAdj, unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;

@@ -1358,24 +1358,32 @@ static void computeKnownBitsFromOperator(const Operator *I,
   case Instruction::GetElementPtr: {
     // Analyze all of the subscripts of this getelementptr instruction
     // to determine if we can prove known low zero bits.
-    KnownBits LocalKnown(BitWidth);
-    computeKnownBits(I->getOperand(0), LocalKnown, Depth + 1, Q);
-    unsigned TrailZ = LocalKnown.countMinTrailingZeros();
+    computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
+    // Accumulate the constant indices in a separate variable
+    // to minimize the number of calls to computeForAddSub.
+    APInt AccConstIndices(BitWidth, 0, /*IsSigned*/ true);
 
     gep_type_iterator GTI = gep_type_begin(I);
+    // If the inbounds keyword is not present, the offsets are added to the
+    // base address with silently-wrapping two’s complement arithmetic.
+    bool IsInBounds = cast<GEPOperator>(I)->isInBounds();
     for (unsigned i = 1, e = I->getNumOperands(); i != e; ++i, ++GTI) {
       // TrailZ can only become smaller, short-circuit if we hit zero.
-      if (TrailZ == 0)
+      if (Known.isUnknown())
         break;
 
       Value *Index = I->getOperand(i);
+
+      // Handle case when index is zero.
+      Constant *CIndex = dyn_cast<Constant>(Index);
+      if (CIndex && CIndex->isZeroValue())
+        continue;
+
       if (StructType *STy = GTI.getStructTypeOrNull()) {
         // Handle struct member offset arithmetic.
 
-        // Handle case when index is vector zeroinitializer
-        Constant *CIndex = cast<Constant>(Index);
-        if (CIndex->isZeroValue())
-          continue;
+        assert(CIndex &&
+               "Access to structure field must be known at compile time");
 
         if (CIndex->getType()->isVectorTy())
           Index = CIndex->getSplatValue();
@@ -1383,26 +1391,58 @@ static void computeKnownBitsFromOperator(const Operator *I,
         unsigned Idx = cast<ConstantInt>(Index)->getZExtValue();
         const StructLayout *SL = Q.DL.getStructLayout(STy);
         uint64_t Offset = SL->getElementOffset(Idx);
-        TrailZ = std::min<unsigned>(TrailZ,
-                                    countTrailingZeros(Offset));
-      } else {
-        // Handle array index arithmetic.
-        Type *IndexedTy = GTI.getIndexedType();
-        if (!IndexedTy->isSized()) {
-          TrailZ = 0;
-          break;
-        }
-        unsigned GEPOpiBits = Index->getType()->getScalarSizeInBits();
-        uint64_t TypeSize = Q.DL.getTypeAllocSize(IndexedTy).getKnownMinSize();
-        LocalKnown.Zero = LocalKnown.One = APInt(GEPOpiBits, 0);
-        computeKnownBits(Index, LocalKnown, Depth + 1, Q);
-        TrailZ = std::min(TrailZ,
-                          unsigned(countTrailingZeros(TypeSize) +
-                                   LocalKnown.countMinTrailingZeros()));
+        AccConstIndices += Offset;
+        continue;
       }
-    }
 
-    Known.Zero.setLowBits(TrailZ);
+      // Handle array index arithmetic.
+      Type *IndexedTy = GTI.getIndexedType();
+      if (!IndexedTy->isSized()) {
+        Known.resetAll();
+        break;
+      }
+
+      unsigned IndexBitWidth = Index->getType()->getScalarSizeInBits();
+      KnownBits IndexBits(IndexBitWidth);
+      computeKnownBits(Index, IndexBits, Depth + 1, Q);
+      TypeSize IndexTypeSize = Q.DL.getTypeAllocSize(IndexedTy);
+      uint64_t TypeSizeInBytes = IndexTypeSize.getKnownMinSize();
+      KnownBits ScalingFactor(IndexBitWidth);
+      // Multiply by current sizeof type.
+      // &A[i] == A + i * sizeof(*A[i]).
+      if (IndexTypeSize.isScalable()) {
+        // For scalable types the only thing we know about sizeof is
+        // that this is a multiple of the minimum size.
+        ScalingFactor.Zero.setLowBits(countTrailingZeros(TypeSizeInBytes));
+      } else if (IndexBits.isConstant()) {
+        APInt IndexConst = IndexBits.getConstant();
+        APInt ScalingFactor(IndexBitWidth, TypeSizeInBytes);
+        IndexConst *= ScalingFactor;
+        AccConstIndices += IndexConst.sextOrTrunc(BitWidth);
+        continue;
+      } else {
+        ScalingFactor.Zero = ~TypeSizeInBytes;
+        ScalingFactor.One = TypeSizeInBytes;
+      }
+      IndexBits = KnownBits::computeForMul(IndexBits, ScalingFactor);
+
+      // If the offsets have a different width from the pointer, according
+      // to the language reference we need to sign-extend or truncate them
+      // to the width of the pointer.
+      IndexBits = IndexBits.sextOrTrunc(BitWidth);
+
+      Known = KnownBits::computeForAddSub(
+          /*Add=*/true,
+          /*NSW=*/IsInBounds, Known, IndexBits);
+    }
+    if (!Known.isUnknown() && !AccConstIndices.isNullValue()) {
+      KnownBits Index(BitWidth);
+      Index.Zero = ~AccConstIndices;
+      Index.One = AccConstIndices;
+      Known = KnownBits::computeForAddSub(
+          /*Add=*/true,
+          /*NSW=*/IsInBounds, Known, Index);
+    }
     break;
   }
   case Instruction::PHI: {
@@ -2256,8 +2296,9 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
       // See the comment for IntToPtr/PtrToInt instructions below.
       if (CE->getOpcode() == Instruction::IntToPtr ||
           CE->getOpcode() == Instruction::PtrToInt)
-        if (Q.DL.getTypeSizeInBits(CE->getOperand(0)->getType()) <=
-            Q.DL.getTypeSizeInBits(CE->getType()))
+        if (Q.DL.getTypeSizeInBits(CE->getOperand(0)->getType())
+                .getFixedSize() <=
+            Q.DL.getTypeSizeInBits(CE->getType()).getFixedSize())
           return isKnownNonZero(CE->getOperand(0), Depth, Q);
     }
 
@@ -2354,16 +2395,16 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
       return isKnownNonZero(BCO->getOperand(0), Depth, Q);
 
     if (auto *I2P = dyn_cast<IntToPtrInst>(V))
-      if (Q.DL.getTypeSizeInBits(I2P->getSrcTy()) <=
-          Q.DL.getTypeSizeInBits(I2P->getDestTy()))
+      if (Q.DL.getTypeSizeInBits(I2P->getSrcTy()).getFixedSize() <=
+          Q.DL.getTypeSizeInBits(I2P->getDestTy()).getFixedSize())
         return isKnownNonZero(I2P->getOperand(0), Depth, Q);
   }
 
   // Similar to int2ptr above, we can look through ptr2int here if the cast
   // is a no-op or an extend and not a truncate.
   if (auto *P2I = dyn_cast<PtrToIntInst>(V))
-    if (Q.DL.getTypeSizeInBits(P2I->getSrcTy()) <=
-        Q.DL.getTypeSizeInBits(P2I->getDestTy()))
+    if (Q.DL.getTypeSizeInBits(P2I->getSrcTy()).getFixedSize() <=
+        Q.DL.getTypeSizeInBits(P2I->getDestTy()).getFixedSize())
       return isKnownNonZero(P2I->getOperand(0), Depth, Q);
 
   unsigned BitWidth = getBitWidth(V->getType()->getScalarType(), Q.DL);
@@ -3059,11 +3100,11 @@ bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
     if (ComputeMultiple(Op0, Base, Mul0, LookThroughSExt, Depth+1)) {
       if (Constant *Op1C = dyn_cast<Constant>(Op1))
         if (Constant *MulC = dyn_cast<Constant>(Mul0)) {
-          if (Op1C->getType()->getPrimitiveSizeInBits() <
-              MulC->getType()->getPrimitiveSizeInBits())
+          if (Op1C->getType()->getPrimitiveSizeInBits().getFixedSize() <
+              MulC->getType()->getPrimitiveSizeInBits().getFixedSize())
             Op1C = ConstantExpr::getZExt(Op1C, MulC->getType());
-          if (Op1C->getType()->getPrimitiveSizeInBits() >
-              MulC->getType()->getPrimitiveSizeInBits())
+          if (Op1C->getType()->getPrimitiveSizeInBits().getFixedSize() >
+              MulC->getType()->getPrimitiveSizeInBits().getFixedSize())
             MulC = ConstantExpr::getZExt(MulC, Op1C->getType());
 
           // V == Base * (Mul0 * Op1), so return (Mul0 * Op1)
@@ -3083,11 +3124,11 @@ bool llvm::ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
     if (ComputeMultiple(Op1, Base, Mul1, LookThroughSExt, Depth+1)) {
       if (Constant *Op0C = dyn_cast<Constant>(Op0))
         if (Constant *MulC = dyn_cast<Constant>(Mul1)) {
-          if (Op0C->getType()->getPrimitiveSizeInBits() <
-              MulC->getType()->getPrimitiveSizeInBits())
+          if (Op0C->getType()->getPrimitiveSizeInBits().getFixedSize() <
+              MulC->getType()->getPrimitiveSizeInBits().getFixedSize())
             Op0C = ConstantExpr::getZExt(Op0C, MulC->getType());
-          if (Op0C->getType()->getPrimitiveSizeInBits() >
-              MulC->getType()->getPrimitiveSizeInBits())
+          if (Op0C->getType()->getPrimitiveSizeInBits().getFixedSize() >
+              MulC->getType()->getPrimitiveSizeInBits().getFixedSize())
             MulC = ConstantExpr::getZExt(MulC, Op0C->getType());
 
           // V == Base * (Mul1 * Op0), so return (Mul1 * Op0)
@@ -4891,6 +4932,10 @@ static bool isGuaranteedNotToBeUndefOrPoison(const Value *V,
       return true;
   }
 
+  if (auto *I = dyn_cast<LoadInst>(V))
+    if (I->getMetadata(LLVMContext::MD_noundef))
+      return true;
+
   if (programUndefinedIfUndefOrPoison(V, PoisonOnly))
     return true;
 
@@ -6415,6 +6460,13 @@ static void setLimitsForIntrinsic(const IntrinsicInst &II, APInt &Lower,
   unsigned Width = Lower.getBitWidth();
   const APInt *C;
   switch (II.getIntrinsicID()) {
+  case Intrinsic::ctpop:
+  case Intrinsic::ctlz:
+  case Intrinsic::cttz:
+    // Maximum of set/clear bits is the bit width.
+    assert(Lower == 0 && "Expected lower bound to be zero");
+    Upper = Width + 1;
+    break;
   case Intrinsic::uadd_sat:
     // uadd.sat(x, C) produces [C, UINT_MAX].
     if (match(II.getOperand(0), m_APInt(C)) ||

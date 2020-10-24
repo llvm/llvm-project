@@ -124,4 +124,4 @@ void test_builtins(double d, float f, long double ld) {
 }
 
 // CHECK-NO-DAG: attributes [[NUW_RN]] = { nounwind readnone{{.*}} }
-// CHECK-NO-DAG: attributes [[NUW_RNI]] = { nounwind readnone speculatable willreturn }
+// CHECK-NO-DAG: attributes [[NUW_RNI]] = { nofree nosync nounwind readnone speculatable willreturn }

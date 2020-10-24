@@ -80,7 +80,7 @@ struct S test_struct(char *fmt, ...) {
   return v;
 }
 
-// CHECK:      define void @test_struct([[STRUCT_S:%[^,=]+]]*{{.*}} noalias sret align 4 [[AGG_RESULT:%.*]], i8*{{.*}} %fmt, ...) {{.*}} {
+// CHECK:      define void @test_struct([[STRUCT_S:%[^,=]+]]*{{.*}} noalias sret({{.*}}) align 4 [[AGG_RESULT:%.*]], i8*{{.*}} %fmt, ...) {{.*}} {
 // CHECK:        [[FMT_ADDR:%[^,=]+]] = alloca i8*, align 4
 // CHECK-NEXT:   [[VA:%[^,=]+]] = alloca i8*, align 4
 // CHECK-NEXT:   store i8* %fmt, i8** [[FMT_ADDR]], align 4
@@ -112,7 +112,7 @@ struct S test_empty_struct(char *fmt, ...) {
   return v;
 }
 
-// CHECK:      define void @test_empty_struct([[STRUCT_S:%[^,=]+]]*{{.*}} noalias sret align 4 [[AGG_RESULT:%.*]], i8*{{.*}} %fmt, ...) {{.*}} {
+// CHECK:      define void @test_empty_struct([[STRUCT_S:%[^,=]+]]*{{.*}} noalias sret([[STRUCT_S]]) align 4 [[AGG_RESULT:%.*]], i8*{{.*}} %fmt, ...) {{.*}} {
 // CHECK:        [[FMT_ADDR:%[^,=]+]] = alloca i8*, align 4
 // CHECK-NEXT:   [[VA:%[^,=]+]] = alloca i8*, align 4
 // CHECK-NEXT:   [[U:%[^,=]+]] = alloca [[STRUCT_Z:%[^,=]+]], align 1

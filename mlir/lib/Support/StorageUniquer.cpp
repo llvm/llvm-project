@@ -9,6 +9,7 @@
 #include "mlir/Support/StorageUniquer.h"
 
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/ThreadLocalCache.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/Support/RWMutex.h"
 
@@ -37,6 +38,8 @@ struct ParametricStorageUniquer {
   /// A utility wrapper object representing a hashed storage object. This class
   /// contains a storage object and an existing computed hash value.
   struct HashedStorage {
+    HashedStorage(unsigned hashValue = 0, BaseStorage *storage = nullptr)
+        : hashValue(hashValue), storage(storage) {}
     unsigned hashValue;
     BaseStorage *storage;
   };
@@ -44,10 +47,10 @@ struct ParametricStorageUniquer {
   /// Storage info for derived TypeStorage objects.
   struct StorageKeyInfo : DenseMapInfo<HashedStorage> {
     static HashedStorage getEmptyKey() {
-      return HashedStorage{0, DenseMapInfo<BaseStorage *>::getEmptyKey()};
+      return HashedStorage(0, DenseMapInfo<BaseStorage *>::getEmptyKey());
     }
     static HashedStorage getTombstoneKey() {
-      return HashedStorage{0, DenseMapInfo<BaseStorage *>::getTombstoneKey()};
+      return HashedStorage(0, DenseMapInfo<BaseStorage *>::getTombstoneKey());
     }
 
     static unsigned getHashValue(const HashedStorage &key) {
@@ -69,6 +72,10 @@ struct ParametricStorageUniquer {
   /// The set containing the allocated storage instances.
   using StorageTypeSet = DenseSet<HashedStorage, StorageKeyInfo>;
   StorageTypeSet instances;
+
+  /// A thread local cache for storage objects. This helps to reduce the lock
+  /// contention when an object already existing in the cache.
+  ThreadLocalCache<StorageTypeSet> localCache;
 
   /// Allocator to use when constructing derived instances.
   StorageAllocator allocator;
@@ -104,25 +111,31 @@ struct StorageUniquerImpl {
     if (!threadingIsEnabled)
       return getOrCreateUnsafe(storageUniquer, lookupKey, ctorFn);
 
+    // Check for a instance of this object in the local cache.
+    auto localIt = storageUniquer.localCache->insert_as({hashValue}, lookupKey);
+    BaseStorage *&localInst = localIt.first->storage;
+    if (localInst)
+      return localInst;
+
     // Check for an existing instance in read-only mode.
     {
       llvm::sys::SmartScopedReader<true> typeLock(storageUniquer.mutex);
       auto it = storageUniquer.instances.find_as(lookupKey);
       if (it != storageUniquer.instances.end())
-        return it->storage;
+        return localInst = it->storage;
     }
 
     // Acquire a writer-lock so that we can safely create the new type instance.
     llvm::sys::SmartScopedWriter<true> typeLock(storageUniquer.mutex);
-    return getOrCreateUnsafe(storageUniquer, lookupKey, ctorFn);
+    return localInst = getOrCreateUnsafe(storageUniquer, lookupKey, ctorFn);
   }
-  /// Get or create an instance of a complex derived type in an thread-unsafe
+  /// Get or create an instance of a param derived type in an thread-unsafe
   /// fashion.
   BaseStorage *
   getOrCreateUnsafe(ParametricStorageUniquer &storageUniquer,
-                    ParametricStorageUniquer::LookupKey &lookupKey,
+                    ParametricStorageUniquer::LookupKey &key,
                     function_ref<BaseStorage *(StorageAllocator &)> ctorFn) {
-    auto existing = storageUniquer.instances.insert_as({}, lookupKey);
+    auto existing = storageUniquer.instances.insert_as({key.hashValue}, key);
     if (!existing.second)
       return existing.first->storage;
 
@@ -130,28 +143,8 @@ struct StorageUniquerImpl {
     // instance.
     BaseStorage *storage = ctorFn(storageUniquer.allocator);
     *existing.first =
-        ParametricStorageUniquer::HashedStorage{lookupKey.hashValue, storage};
+        ParametricStorageUniquer::HashedStorage{key.hashValue, storage};
     return storage;
-  }
-
-  /// Erase an instance of a parametric derived type.
-  void erase(TypeID id, unsigned hashValue,
-             function_ref<bool(const BaseStorage *)> isEqual,
-             function_ref<void(BaseStorage *)> cleanupFn) {
-    assert(parametricUniquers.count(id) &&
-           "erasing unregistered storage instance");
-    ParametricStorageUniquer &storageUniquer = *parametricUniquers[id];
-    ParametricStorageUniquer::LookupKey lookupKey{hashValue, isEqual};
-
-    // Acquire a writer-lock so that we can safely erase the type instance.
-    llvm::sys::SmartScopedWriter<true> lock(storageUniquer.mutex);
-    auto existing = storageUniquer.instances.find_as(lookupKey);
-    if (existing == storageUniquer.instances.end())
-      return;
-
-    // Cleanup the storage and remove it from the map.
-    cleanupFn(existing->storage);
-    storageUniquer.instances.erase(existing);
   }
 
   /// Mutates an instance of a derived storage in a thread-safe way.
@@ -250,14 +243,6 @@ void StorageUniquer::registerSingletonImpl(
   assert(!impl->singletonInstances.count(id) &&
          "storage class already registered");
   impl->singletonInstances.try_emplace(id, ctorFn(impl->singletonAllocator));
-}
-
-/// Implementation for erasing an instance of a derived type with parametric
-/// storage.
-void StorageUniquer::eraseImpl(TypeID id, unsigned hashValue,
-                               function_ref<bool(const BaseStorage *)> isEqual,
-                               function_ref<void(BaseStorage *)> cleanupFn) {
-  impl->erase(id, hashValue, isEqual, cleanupFn);
 }
 
 /// Implementation for mutating an instance of a derived storage.

@@ -1478,21 +1478,6 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
   return true;
 }
 
-static Optional<std::pair<uint32_t, uint32_t>>
-getLikelihoodWeights(Stmt::Likelihood LH) {
-  switch (LH) {
-  case Stmt::LH_Unlikely:
-    return std::pair<uint32_t, uint32_t>(llvm::UnlikelyBranchWeight,
-                                         llvm::LikelyBranchWeight);
-  case Stmt::LH_None:
-    return None;
-  case Stmt::LH_Likely:
-    return std::pair<uint32_t, uint32_t>(llvm::LikelyBranchWeight,
-                                         llvm::UnlikelyBranchWeight);
-  }
-  llvm_unreachable("Unknown Likelihood");
-}
-
 /// EmitBranchOnBoolExpr - Emit a branch on a boolean condition (e.g. for an if
 /// statement) to the specified blocks.  Based on the condition, this might try
 /// to simplify the codegen of the conditional based on the branch.
@@ -1692,12 +1677,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
     }
   }
 
-  llvm::MDNode *Weights = nullptr;
-  Optional<std::pair<uint32_t, uint32_t>> LHW = getLikelihoodWeights(LH);
-  if (LHW) {
-    llvm::MDBuilder MDHelper(CGM.getLLVMContext());
-    Weights = MDHelper.createBranchWeights(LHW->first, LHW->second);
-  }
+  llvm::MDNode *Weights = createBranchWeights(LH);
   if (!Weights) {
     uint64_t CurrentCount = std::max(getCurrentProfileCount(), TrueCount);
     Weights = createProfileWeights(TrueCount, CurrentCount - TrueCount);
@@ -2568,4 +2548,28 @@ llvm::DebugLoc CodeGenFunction::SourceLocToDebugLoc(SourceLocation Location) {
     return DI->SourceLocToDebugLoc(Location);
 
   return llvm::DebugLoc();
+}
+
+static Optional<std::pair<uint32_t, uint32_t>>
+getLikelihoodWeights(Stmt::Likelihood LH) {
+  switch (LH) {
+  case Stmt::LH_Unlikely:
+    return std::pair<uint32_t, uint32_t>(llvm::UnlikelyBranchWeight,
+                                         llvm::LikelyBranchWeight);
+  case Stmt::LH_None:
+    return None;
+  case Stmt::LH_Likely:
+    return std::pair<uint32_t, uint32_t>(llvm::LikelyBranchWeight,
+                                         llvm::UnlikelyBranchWeight);
+  }
+  llvm_unreachable("Unknown Likelihood");
+}
+
+llvm::MDNode *CodeGenFunction::createBranchWeights(Stmt::Likelihood LH) const {
+  Optional<std::pair<uint32_t, uint32_t>> LHW = getLikelihoodWeights(LH);
+  if (!LHW)
+    return nullptr;
+
+  llvm::MDBuilder MDHelper(CGM.getLLVMContext());
+  return MDHelper.createBranchWeights(LHW->first, LHW->second);
 }

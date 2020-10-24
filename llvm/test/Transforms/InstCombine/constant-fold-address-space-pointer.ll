@@ -225,7 +225,7 @@ define i32 @test_cast_gep_large_indices_as() {
 
 define i32 @test_constant_cast_gep_struct_indices_as() {
 ; CHECK-LABEL: @test_constant_cast_gep_struct_indices_as(
-; CHECK-NEXT:    [[Y:%.*]] = load i32, i32 addrspace(3)* getelementptr inbounds (%struct.foo, [[STRUCT_FOO:%.*]] addrspace(3)* @constant_fold_global_ptr, i16 0, i32 2, i16 2), align 8
+; CHECK-NEXT:    [[Y:%.*]] = load i32, i32 addrspace(3)* getelementptr inbounds (%struct.foo, [[STRUCT_FOO:%.*]] addrspace(3)* @constant_fold_global_ptr, i16 0, i32 2, i16 2), align 16
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
   %x = getelementptr %struct.foo, %struct.foo addrspace(3)* @constant_fold_global_ptr, i18 0, i32 2, i12 2

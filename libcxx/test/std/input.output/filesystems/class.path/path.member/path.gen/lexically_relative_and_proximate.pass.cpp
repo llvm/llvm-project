@@ -62,14 +62,14 @@ int main(int, char**) {
     auto ReportErr = [&](const char* Testing, fs::path const& Output,
                                               fs::path const& Expected) {
       Failed = true;
-      std::printf("TEST CASE #%d FAILED:\n"
+      std::fprintf(stderr, "TEST CASE #%d FAILED:\n"
                   "  Testing: %s\n"
                   "  Input: '%s'\n"
                   "  Base: '%s'\n"
                   "  Expected: '%s'\n"
                   "  Output: '%s'\n",
         ID, Testing, TC.input.c_str(), TC.base.c_str(),
-        Expected.c_str(), Output.native().c_str());
+        Expected.string().c_str(), Output.string().c_str());
     };
     if (!PathEq(output, TC.expect))
       ReportErr("path::lexically_relative", output, TC.expect);

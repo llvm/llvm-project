@@ -352,6 +352,8 @@ bool SIMachineFunctionInfo::reserveVGPRforSGPRSpills(MachineFunction &MF) {
 
   Register LaneVGPR = TRI->findUnusedRegister(
       MF.getRegInfo(), &AMDGPU::VGPR_32RegClass, MF, true);
+  if (LaneVGPR == Register())
+    return false;
   SpillVGPRs.push_back(SGPRSpillVGPRCSR(LaneVGPR, None));
   FuncInfo->VGPRReservedForSGPRSpill = LaneVGPR;
   return true;

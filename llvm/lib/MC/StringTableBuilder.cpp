@@ -33,7 +33,12 @@ void StringTableBuilder::initSize() {
   case DWARF:
     Size = 0;
     break;
+  case MachOLinked:
+  case MachO64Linked:
+    Size = 2;
+    break;
   case MachO:
+  case MachO64:
   case ELF:
     // Start the table with a NUL byte.
     Size = 1;
@@ -161,8 +166,16 @@ void StringTableBuilder::finalizeStringTable(bool Optimize) {
     }
   }
 
-  if (K == MachO)
+  if (K == MachO || K == MachOLinked)
     Size = alignTo(Size, 4); // Pad to multiple of 4.
+  if (K == MachO64 || K == MachO64Linked)
+    Size = alignTo(Size, 8); // Pad to multiple of 8.
+
+  // According to ld64 the string table of a final linked Mach-O binary starts
+  // with " ", i.e. the first byte is ' ' and the second byte is zero. In
+  // 'initSize()' we reserved the first two bytes for holding this string.
+  if (K == MachOLinked || K == MachO64Linked)
+    StringIndexMap[CachedHashStringRef(" ")] = 0;
 
   // The first byte in an ELF string table must be null, according to the ELF
   // specification. In 'initSize()' we reserved the first byte to hold null for

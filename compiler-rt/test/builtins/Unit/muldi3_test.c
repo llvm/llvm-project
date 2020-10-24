@@ -11,7 +11,7 @@ int test__muldi3(di_int a, di_int b, di_int expected)
     di_int x = __muldi3(a, b);
     if (x != expected)
         printf("error in __muldi3: %lld * %lld = %lld, expected %lld\n",
-               a, b, __muldi3(a, b), expected);
+               a, b, x, expected);
     return x != expected;
 }
 

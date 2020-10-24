@@ -49,7 +49,11 @@ void checkIteratorConcepts() {
     ASSERT_SAME_TYPE(It, decltype(it--));
     ASSERT_SAME_TYPE(Traits::reference, decltype(*it));
     ASSERT_SAME_TYPE(Traits::pointer, decltype(it.operator->()));
+#ifdef _WIN32
+    ASSERT_SAME_TYPE(std::wstring const&, decltype(it->native()));
+#else
     ASSERT_SAME_TYPE(std::string const&, decltype(it->native()));
+#endif
     ASSERT_SAME_TYPE(bool, decltype(it == it));
     ASSERT_SAME_TYPE(bool, decltype(it != it));
   }

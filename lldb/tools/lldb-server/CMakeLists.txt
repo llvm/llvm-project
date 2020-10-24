@@ -1,3 +1,8 @@
+set(LLVM_TARGET_DEFINITIONS LLGSOptions.td)
+tablegen(LLVM LLGSOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(LLGSOptionsTableGen)
+set_target_properties(LLGSOptionsTableGen PROPERTIES FOLDER "lldb misc")
+
 set(LLDB_PLUGINS)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
@@ -53,8 +58,13 @@ add_lldb_tool(lldb-server
       ${LLDB_SYSTEM_LIBS}
 
     LINK_COMPONENTS
+      Option
       Support
 )
 
+add_dependencies(lldb-server
+  LLGSOptionsTableGen
+  ${tablegen_deps}
+)
 target_include_directories(lldb-server PRIVATE "${LLDB_SOURCE_DIR}/source")
 target_link_libraries(lldb-server PRIVATE ${LLDB_SYSTEM_LIBS})

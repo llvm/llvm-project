@@ -110,47 +110,48 @@ LogicalResult BroadcastOpConverter::matchAndRewrite(
   Value greaterRankOperand =
       rewriter.create<SelectOp>(loc, lhsRankULE, rankErasedRhs, rankErasedLhs);
 
-  // Allocate stack memory for the broadcasted extent tensor.
-  Type memTy = MemRefType::get({ShapedType::kDynamicSize}, indexTy);
-  Value mem = rewriter.create<AllocaOp>(loc, memTy, ValueRange{greaterRank});
-
-  // Copy extents from greater operand that are not challenged.
   Value rankDiff =
       rewriter.create<SubIOp>(loc, indexTy, greaterRank, lesserRank);
-  rewriter.create<ForOp>(loc, zero, rankDiff, one, llvm::None,
-                         [&](OpBuilder &b, Location loc, Value iv, ValueRange) {
-                           Value extent = b.create<ExtractElementOp>(
-                               loc, greaterRankOperand, ValueRange{iv});
-                           b.create<StoreOp>(loc, extent, mem, ValueRange{iv});
-                           b.create<scf::YieldOp>(loc);
-                         });
-
-  // Determine remaining broadcasted extents.
-  rewriter.create<ForOp>(
-      loc, rankDiff, greaterRank, one, llvm::None,
-      [&](OpBuilder &b, Location loc, Value iv, ValueRange) {
-        Value greaterOperandExtent =
-            b.create<ExtractElementOp>(loc, greaterRankOperand, ValueRange{iv});
-        Value greaterOperandExtentIsOne =
-            b.create<CmpIOp>(loc, CmpIPredicate::eq, greaterOperandExtent, one);
+  rewriter.replaceOpWithNewOp<DynamicTensorFromElementsOp>(
+      op, getExtentTensorType(op.getContext()), ValueRange{greaterRank},
+      [&](OpBuilder &b, Location loc, ValueRange args) {
+        Value outputDimension = args[0];
+        Value isUnchallengedDimension = b.create<CmpIOp>(
+            loc, CmpIPredicate::ult, outputDimension, rankDiff);
+        Value greaterRankOperandExtent = b.create<ExtractElementOp>(
+            loc, greaterRankOperand, outputDimension);
+        // The initial dimensions of the greater-rank operand are unchallenged,
+        // so we can take them as-is. Otherwise, we need to do a comparison.
+        // We need an actual branch here (instead of a select) because the
+        // lesser-rank operand might be rank 0, so any extract_element would be
+        // invalid.
         auto ifOp = b.create<IfOp>(
-            loc, TypeRange{indexTy}, greaterOperandExtentIsOne,
+            loc, TypeRange{indexTy}, isUnchallengedDimension,
             [&](OpBuilder &b, Location loc) {
-              Value ivShifted = b.create<SubIOp>(loc, indexTy, iv, rankDiff);
-              Value lesserRankOperandExtent = b.create<ExtractElementOp>(
-                  loc, lesserRankOperand, ValueRange{ivShifted});
-              b.create<scf::YieldOp>(loc, lesserRankOperandExtent);
+              b.create<scf::YieldOp>(loc, greaterRankOperandExtent);
             },
             [&](OpBuilder &b, Location loc) {
-              b.create<scf::YieldOp>(loc, greaterOperandExtent);
+              // The broadcasting logic is:
+              // - if one extent (here we arbitrariliy choose the extent from
+              // the greater-rank operand) is equal to 1, then take the extent
+              // from the other operand
+              // - otherwise, take the extent as-is.
+              // Note that this logic remains correct in the presence of
+              // dimensions of zero extent.
+              Value lesserRankOperandDimension =
+                  b.create<SubIOp>(loc, indexTy, outputDimension, rankDiff);
+              Value lesserRankOperandExtent = b.create<ExtractElementOp>(
+                  loc, lesserRankOperand,
+                  ValueRange{lesserRankOperandDimension});
+              Value greaterRankOperandExtentIsOne = b.create<CmpIOp>(
+                  loc, CmpIPredicate::eq, greaterRankOperandExtent, one);
+              Value broadcastedExtent = b.create<SelectOp>(
+                  loc, greaterRankOperandExtentIsOne, lesserRankOperandExtent,
+                  greaterRankOperandExtent);
+              b.create<scf::YieldOp>(loc, broadcastedExtent);
             });
-        Value extent = ifOp.getResult(0);
-        b.create<StoreOp>(loc, extent, mem, ValueRange{iv});
-        b.create<scf::YieldOp>(loc);
+        b.create<mlir::YieldOp>(loc, ifOp.getResult(0));
       });
-
-  // Load broadcasted shape as an extent tensor.
-  rewriter.replaceOpWithNewOp<TensorLoadOp>(op, mem);
   return success();
 }
 

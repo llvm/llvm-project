@@ -132,6 +132,31 @@ void FuncOp::eraseArguments(ArrayRef<unsigned> argIndices) {
       entry.eraseArgument(originalNumArgs - i - 1);
 }
 
+void FuncOp::eraseResults(ArrayRef<unsigned> resultIndices) {
+  auto oldType = getType();
+  int originalNumResults = oldType.getNumResults();
+  llvm::BitVector eraseIndices(originalNumResults);
+  for (auto index : resultIndices)
+    eraseIndices.set(index);
+  auto shouldEraseResult = [&](int i) { return eraseIndices.test(i); };
+
+  // There are 2 things that need to be updated:
+  // - Function type.
+  // - Result attrs.
+
+  // Update the function type and result attrs.
+  SmallVector<Type, 4> newResultTypes;
+  SmallVector<MutableDictionaryAttr, 4> newResultAttrs;
+  for (int i = 0; i < originalNumResults; i++) {
+    if (shouldEraseResult(i))
+      continue;
+    newResultTypes.emplace_back(oldType.getResult(i));
+    newResultAttrs.emplace_back(getResultAttrDict(i));
+  }
+  setType(FunctionType::get(oldType.getInputs(), newResultTypes, getContext()));
+  setAllResultAttrs(newResultAttrs);
+}
+
 /// Clone the internal blocks from this function into dest and all attributes
 /// from this function to dest.
 void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {

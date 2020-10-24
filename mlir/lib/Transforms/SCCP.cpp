@@ -304,6 +304,9 @@ private:
   /// avoids re-resolving symbol references during propagation. Value based
   /// callables are trivial to resolve, so they can be done in-place.
   DenseMap<Operation *, Operation *> callToSymbolCallable;
+
+  /// A symbol table used for O(1) symbol lookups during simplification.
+  SymbolTableCollection symbolTable;
 };
 } // end anonymous namespace
 
@@ -425,7 +428,7 @@ void SCCPSolver::initializeSymbolCallables(Operation *op) {
       // If the use is a call, track it to avoid the need to recompute the
       // reference later.
       if (auto callOp = dyn_cast<CallOpInterface>(use.getUser())) {
-        Operation *symCallable = callOp.resolveCallable();
+        Operation *symCallable = callOp.resolveCallable(&symbolTable);
         auto callableLatticeIt = callableLatticeState.find(symCallable);
         if (callableLatticeIt != callableLatticeState.end()) {
           callToSymbolCallable.try_emplace(callOp, symCallable);
@@ -438,7 +441,7 @@ void SCCPSolver::initializeSymbolCallables(Operation *op) {
         continue;
       }
       // This use isn't a call, so don't we know all of the callers.
-      auto *symbol = SymbolTable::lookupSymbolIn(op, use.getSymbolRef());
+      auto *symbol = symbolTable.lookupSymbolIn(op, use.getSymbolRef());
       auto it = callableLatticeState.find(symbol);
       if (it != callableLatticeState.end())
         markAllOverdefined(it->second.getCallableArguments());

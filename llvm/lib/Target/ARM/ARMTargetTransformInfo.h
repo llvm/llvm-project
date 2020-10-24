@@ -247,6 +247,13 @@ public:
                                   Align Alignment, TTI::TargetCostKind CostKind,
                                   const Instruction *I = nullptr);
 
+  int getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
+                                 bool IsPairwiseForm,
+                                 TTI::TargetCostKind CostKind);
+
+  int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                            TTI::TargetCostKind CostKind);
+
   bool maybeLoweredToCall(Instruction &I);
   bool isLoweredToCall(const Function *F);
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,

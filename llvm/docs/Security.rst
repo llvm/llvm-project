@@ -26,6 +26,7 @@ The members of the group represent a wide cross-section of the community, and me
 
 * Ahmed Bougacha (Apple)
 * Akila Srinivasan (Apple)
+* Artur Pilipenko (Azul Systems Inc)
 * Dimitry Andric (individual; FreeBSD)
 * Ed Maste (individual; FreeBSD)
 * Josh Eads (Sony)

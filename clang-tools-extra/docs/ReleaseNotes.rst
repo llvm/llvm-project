@@ -114,11 +114,22 @@ New checks
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`modernize-loop-convert
+  <clang-tidy/checks/modernize-loop-convert>` check.
+
+  Now able to transform iterator loops using ``rbegin`` and ``rend`` methods.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability-identifier-naming>` check.
 
   Added an option `GetConfigPerFile` to support including files which use
   different naming styles.
+
+  Now renames overridden virtual methods if the method they override has a
+  style violation.
+  
+  Added support for specifying the style of scoped ``enum`` constants. If 
+  unspecified, will fall back to the style for regular ``enum`` constants.
 
 - Removed `google-runtime-references` check because the rule it checks does
   not exist in the Google Style Guide anymore.

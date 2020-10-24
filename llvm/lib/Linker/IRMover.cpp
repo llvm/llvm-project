@@ -638,14 +638,14 @@ GlobalVariable *IRLinker::copyGlobalVariableProto(const GlobalVariable *SGVar) {
 
 AttributeList IRLinker::mapAttributeTypes(LLVMContext &C, AttributeList Attrs) {
   for (unsigned i = 0; i < Attrs.getNumAttrSets(); ++i) {
-    if (Attrs.hasAttribute(i, Attribute::ByVal)) {
-      Type *Ty = Attrs.getAttribute(i, Attribute::ByVal).getValueAsType();
-      if (!Ty)
-        continue;
-
-      Attrs = Attrs.removeAttribute(C, i, Attribute::ByVal);
-      Attrs = Attrs.addAttribute(
-          C, i, Attribute::getWithByValType(C, TypeMap.get(Ty)));
+    for (Attribute::AttrKind TypedAttr :
+         {Attribute::ByVal, Attribute::StructRet}) {
+      if (Attrs.hasAttribute(i, TypedAttr)) {
+        if (Type *Ty = Attrs.getAttribute(i, TypedAttr).getValueAsType()) {
+          Attrs = Attrs.replaceAttributeType(C, i, TypedAttr, TypeMap.get(Ty));
+          break;
+        }
+      }
     }
   }
   return Attrs;

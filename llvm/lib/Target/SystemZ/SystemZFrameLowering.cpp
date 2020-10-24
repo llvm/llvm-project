@@ -316,6 +316,8 @@ void SystemZFrameLowering::
 processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                     RegScavenger *RS) const {
   MachineFrameInfo &MFFrame = MF.getFrameInfo();
+  SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
+  MachineRegisterInfo *MRI = &MF.getRegInfo();
   bool BackChain = MF.getFunction().hasFnAttribute("backchain");
 
   if (!usePackedStack(MF) || BackChain)
@@ -344,6 +346,14 @@ processFunctionBeforeFrameFinalized(MachineFunction &MF,
     RS->addScavengingFrameIndex(MFFrame.CreateStackObject(8, Align(8), false));
     RS->addScavengingFrameIndex(MFFrame.CreateStackObject(8, Align(8), false));
   }
+
+  // If R6 is used as an argument register it is still callee saved. If it in
+  // this case is not clobbered (and restored) it should never be marked as
+  // killed.
+  if (MF.front().isLiveIn(SystemZ::R6D) &&
+      ZFI->getRestoreGPRRegs().LowGPR != SystemZ::R6D)
+    for (auto &MO : MRI->use_nodbg_operands(SystemZ::R6D))
+      MO.setIsKill(false);
 }
 
 // Emit instructions before MBBI (in MBB) to add NumBytes to Reg.

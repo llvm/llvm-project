@@ -123,6 +123,12 @@ def parse_args():
     execution_group.add_argument("--allow-empty-runs",
             help="Do not fail the run if all tests are filtered out",
             action="store_true")
+    execution_group.add_argument("--no-indirectly-run-check",
+            dest="indirectlyRunCheck",
+            help="Do not error if a test would not be run if the user had "
+                 "specified the containing directory instead of naming the "
+                 "test directly.",
+            action="store_false")
 
     selection_group = parser.add_argument_group("Test Selection")
     selection_group.add_argument("--max-tests",

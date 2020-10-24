@@ -1309,6 +1309,9 @@ bool LLParser::ParseFnAttributeValuePairs(AttrBuilder &B,
     case lltok::kw_inlinehint: B.addAttribute(Attribute::InlineHint); break;
     case lltok::kw_jumptable: B.addAttribute(Attribute::JumpTable); break;
     case lltok::kw_minsize: B.addAttribute(Attribute::MinSize); break;
+    case lltok::kw_mustprogress:
+      B.addAttribute(Attribute::MustProgress);
+      break;
     case lltok::kw_naked: B.addAttribute(Attribute::Naked); break;
     case lltok::kw_nobuiltin: B.addAttribute(Attribute::NoBuiltin); break;
     case lltok::kw_noduplicate: B.addAttribute(Attribute::NoDuplicate); break;
@@ -1335,6 +1338,9 @@ bool LLParser::ParseFnAttributeValuePairs(AttrBuilder &B,
     case lltok::kw_returns_twice:
       B.addAttribute(Attribute::ReturnsTwice); break;
     case lltok::kw_speculatable: B.addAttribute(Attribute::Speculatable); break;
+    case lltok::kw_nossp:
+      B.addAttribute(Attribute::NoStackProtect);
+      break;
     case lltok::kw_ssp: B.addAttribute(Attribute::StackProtect); break;
     case lltok::kw_sspreq: B.addAttribute(Attribute::StackProtectReq); break;
     case lltok::kw_sspstrong:
@@ -1657,9 +1663,16 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
     }
     case lltok::kw_byval: {
       Type *Ty;
-      if (ParseByValWithOptionalType(Ty))
+      if (ParseOptionalTypeAttr(Ty, lltok::kw_byval))
         return true;
       B.addByValAttr(Ty);
+      continue;
+    }
+    case lltok::kw_sret: {
+      Type *Ty;
+      if (ParseOptionalTypeAttr(Ty, lltok::kw_sret))
+        return true;
+      B.addStructRetAttr(Ty);
       continue;
     }
     case lltok::kw_preallocated: {
@@ -1704,7 +1717,6 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
     case lltok::kw_readonly:        B.addAttribute(Attribute::ReadOnly); break;
     case lltok::kw_returned:        B.addAttribute(Attribute::Returned); break;
     case lltok::kw_signext:         B.addAttribute(Attribute::SExt); break;
-    case lltok::kw_sret:            B.addAttribute(Attribute::StructRet); break;
     case lltok::kw_swifterror:      B.addAttribute(Attribute::SwiftError); break;
     case lltok::kw_swiftself:       B.addAttribute(Attribute::SwiftSelf); break;
     case lltok::kw_writeonly:       B.addAttribute(Attribute::WriteOnly); break;
@@ -1718,6 +1730,7 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
     case lltok::kw_inlinehint:
     case lltok::kw_jumptable:
     case lltok::kw_minsize:
+    case lltok::kw_mustprogress:
     case lltok::kw_naked:
     case lltok::kw_nobuiltin:
     case lltok::kw_noduplicate:
@@ -1739,6 +1752,7 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
     case lltok::kw_sanitize_memory:
     case lltok::kw_sanitize_thread:
     case lltok::kw_speculative_load_hardening:
+    case lltok::kw_nossp:
     case lltok::kw_ssp:
     case lltok::kw_sspreq:
     case lltok::kw_sspstrong:
@@ -1822,6 +1836,7 @@ bool LLParser::ParseOptionalReturnAttrs(AttrBuilder &B) {
     case lltok::kw_inlinehint:
     case lltok::kw_jumptable:
     case lltok::kw_minsize:
+    case lltok::kw_mustprogress:
     case lltok::kw_naked:
     case lltok::kw_nobuiltin:
     case lltok::kw_noduplicate:
@@ -1843,6 +1858,7 @@ bool LLParser::ParseOptionalReturnAttrs(AttrBuilder &B) {
     case lltok::kw_sanitize_memory:
     case lltok::kw_sanitize_thread:
     case lltok::kw_speculative_load_hardening:
+    case lltok::kw_nossp:
     case lltok::kw_ssp:
     case lltok::kw_sspreq:
     case lltok::kw_sspstrong:
@@ -2571,9 +2587,9 @@ bool LLParser::ParseParameterList(SmallVectorImpl<ParamInfo> &ArgList,
 /// ParseByValWithOptionalType
 ///   ::= byval
 ///   ::= byval(<ty>)
-bool LLParser::ParseByValWithOptionalType(Type *&Result) {
+bool LLParser::ParseOptionalTypeAttr(Type *&Result, lltok::Kind AttrName) {
   Result = nullptr;
-  if (!EatIfPresent(lltok::kw_byval))
+  if (!EatIfPresent(AttrName))
     return true;
   if (!EatIfPresent(lltok::lparen))
     return false;

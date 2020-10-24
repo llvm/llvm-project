@@ -666,7 +666,12 @@ void CXXNameMangler::mangle(GlobalDecl GD) {
     mangleName(GuidD);
   else if (const BindingDecl *BD = dyn_cast<BindingDecl>(GD.getDecl()))
     mangleName(BD);
-  else
+  else if (isa<TemplateParamObjectDecl>(GD.getDecl())) {
+    DiagnosticsEngine &Diags = Context.getDiags();
+    unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+      "cannot mangle template parameter objects yet");
+    Diags.Report(SourceLocation(), DiagID);
+  } else
     llvm_unreachable("unexpected kind of global decl");
 }
 
@@ -3676,13 +3681,18 @@ void CXXNameMangler::mangleType(const AutoType *T) {
 }
 
 void CXXNameMangler::mangleType(const DeducedTemplateSpecializationType *T) {
-  // FIXME: This is not the right mangling. We also need to include a scope
-  // here in some cases.
-  QualType D = T->getDeducedType();
-  if (D.isNull())
-    mangleUnscopedTemplateName(T->getTemplateName(), nullptr);
-  else
-    mangleType(D);
+  QualType Deduced = T->getDeducedType();
+  if (!Deduced.isNull())
+    mangleType(Deduced);
+  else if (TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl())
+    mangleName(GlobalDecl(TD));
+  else {
+    // For an unresolved template-name, mangle it as if it were a template
+    // specialization but leave off the template arguments.
+    Out << 'N';
+    mangleTemplatePrefix(T->getTemplateName());
+    Out << 'E';
+  }
 }
 
 void CXXNameMangler::mangleType(const AtomicType *T) {

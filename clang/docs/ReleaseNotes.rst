@@ -123,7 +123,9 @@ New Pragmas in Clang
 Attribute Changes in Clang
 --------------------------
 
-- ...
+- Added support for the C++20 likelihood attributes ``[[likely]]`` and
+  ``[[unlikely]]``. As an extension they can be used in C++11 and newer.
+  This extension is enabled by default.
 
 Windows Support
 ---------------
@@ -197,6 +199,10 @@ X86 Support in Clang
   to request microarchitectural optimizations independent on -march. -march=<cpu>
   implies -mtune=<cpu>. -mtune=generic is the default with no -march or -mtune
   specified.
+
+- Support for ``HRESET`` instructions has been added.
+
+- Support for ``UINTR`` instructions has been added.
 
 Internal API Changes
 --------------------

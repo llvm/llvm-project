@@ -252,6 +252,9 @@ public:
     static SymbolInfo getAttr(const Operator *op, int index) {
       return SymbolInfo(op, Kind::Attr, index);
     }
+    static SymbolInfo getAttr() {
+      return SymbolInfo(nullptr, Kind::Attr, llvm::None);
+    }
     static SymbolInfo getOperand(const Operator *op, int index) {
       return SymbolInfo(op, Kind::Operand, index);
     }
@@ -318,6 +321,10 @@ public:
   // Registers the given `symbol` as bound to a value. Returns false if `symbol`
   // is already bound.
   bool bindValue(StringRef symbol);
+
+  // Registers the given `symbol` as bound to an attr. Returns false if `symbol`
+  // is already bound.
+  bool bindAttr(StringRef symbol);
 
   // Returns true if the given `symbol` is bound.
   bool contains(StringRef symbol) const;
@@ -421,6 +428,9 @@ public:
   std::vector<IdentifierLine> getLocation() const;
 
 private:
+  // Helper function to verify variabld binding.
+  void verifyBind(bool result, StringRef symbolName);
+
   // Recursively collects all bound symbols inside the DAG tree rooted
   // at `tree` and updates the given `infoMap`.
   void collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,

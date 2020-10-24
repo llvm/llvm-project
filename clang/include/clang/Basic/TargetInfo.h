@@ -581,8 +581,9 @@ public:
   /// Determine whether constrained floating point is supported on this target.
   virtual bool hasStrictFP() const { return HasStrictFP; }
 
-  /// Return the alignment that is suitable for storing any
-  /// object with a fundamental alignment requirement.
+  /// Return the alignment that is the largest alignment ever used for any
+  /// scalar/SIMD data type on the target machine you are compiling for
+  /// (including types with an extended alignment requirement).
   unsigned getSuitableAlign() const { return SuitableAlign; }
 
   /// Return the default alignment for __attribute__((aligned)) on

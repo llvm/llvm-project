@@ -577,11 +577,11 @@ define internal fastcc double @strtox(i8* %s, i8** %p, i32 %prec) unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct._IO_FILE* [[F]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 144, i8* nocapture noundef nonnull align 8 dereferenceable(240) [[TMP0]]) [[ATTR10:#.*]]
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 144, i8* nocapture nofree noundef nonnull align 8 dereferenceable(240) [[TMP0]]) [[ATTR10:#.*]]
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @sh_fromstring to i32 (%struct._IO_FILE*, i8*)*)(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i8* [[S]])
 ; CHECK-NEXT:    call void @__shlim(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i64 noundef 0)
 ; CHECK-NEXT:    [[CALL1:%.*]] = call double @__floatscan(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i32 noundef 1, i32 noundef 1)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 144, i8* nocapture noundef nonnull align 8 dereferenceable(240) [[TMP0]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 144, i8* nocapture nofree noundef nonnull align 8 dereferenceable(240) [[TMP0]])
 ; CHECK-NEXT:    ret double [[CALL1]]
 ;
 entry:

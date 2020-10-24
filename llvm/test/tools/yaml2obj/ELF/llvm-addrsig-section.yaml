@@ -118,7 +118,7 @@ Sections:
     Type: SHT_LLVM_ADDRSIG
     Content: "1122334455"
 
-## Check we emit an empty section if neither "Content", "Size" not "Symbols" were set.
+## Check we emit an empty section if neither "Content", "Size" nor "Symbols" were set.
 
 # RUN: yaml2obj --docnum=6 %s -o %t6
 # RUN: llvm-readelf --sections %t6 | FileCheck %s --check-prefix=NO-TAGS

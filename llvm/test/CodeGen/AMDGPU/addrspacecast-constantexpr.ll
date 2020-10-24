@@ -98,7 +98,7 @@ define i32 addrspace(3)* @ret_constant_cast_group_gv_gep_to_flat_to_group() #1 {
   ret i32 addrspace(3)* addrspacecast (i32 addrspace(4)* getelementptr ([256 x i32], [256 x i32] addrspace(4)* addrspacecast ([256 x i32] addrspace(3)* @lds.arr to [256 x i32] addrspace(4)*), i64 0, i64 8) to i32 addrspace(3)*)
 }
 
-; HSA: attributes #0 = { argmemonly nounwind willreturn }
+; HSA: attributes #0 = { argmemonly nofree nosync nounwind willreturn }
 ; HSA: attributes #1 = { nounwind }
 ; HSA: attributes #2 = { nounwind "amdgpu-queue-ptr" }
 

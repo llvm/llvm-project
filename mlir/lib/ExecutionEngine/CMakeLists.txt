@@ -2,6 +2,7 @@
 # is a big dependency which most don't need.
 
 set(LLVM_OPTIONAL_SOURCES
+  AsyncRuntime.cpp
   CRunnerUtils.cpp
   SparseUtils.cpp
   ExecutionEngine.cpp
@@ -24,6 +25,7 @@ add_mlir_library(MLIRExecutionEngine
 
   LINK_COMPONENTS
   Core
+  Coroutines
   ExecutionEngine
   Object
   OrcJIT
@@ -44,6 +46,7 @@ add_mlir_library(MLIRExecutionEngine
   MLIRTargetLLVMIR
   )
 
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 add_mlir_library(MLIRJitRunner
   JitRunner.cpp
 
@@ -58,6 +61,7 @@ add_mlir_library(MLIRJitRunner
   JITLink
 
   LINK_LIBS PUBLIC
+  ${dialect_libs}
   MLIRExecutionEngine
   MLIRIR
   MLIRParser
@@ -96,3 +100,15 @@ add_mlir_library(mlir_runner_utils
   mlir_c_runner_utils_static
 )
 target_compile_definitions(mlir_runner_utils PRIVATE mlir_runner_utils_EXPORTS)
+
+add_mlir_library(mlir_async_runtime
+  SHARED
+  AsyncRuntime.cpp
+
+  EXCLUDE_FROM_LIBMLIR
+
+  LINK_LIBS PUBLIC
+  mlir_c_runner_utils_static
+  ${LLVM_PTHREAD_LIB}
+)
+target_compile_definitions(mlir_async_runtime PRIVATE mlir_async_runtime_EXPORTS)

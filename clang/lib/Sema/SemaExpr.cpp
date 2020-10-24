@@ -3226,6 +3226,17 @@ ExprResult Sema::BuildDeclarationNameExpr(
         break;
       }
 
+      // [expr.prim.id.unqual]p2:
+      //   If the entity is a template parameter object for a template
+      //   parameter of type T, the type of the expression is const T.
+      //   [...] The expression is an lvalue if the entity is a [...] template
+      //   parameter object.
+      if (type->isRecordType()) {
+        type = type.getUnqualifiedType().withConst();
+        valueKind = VK_LValue;
+        break;
+      }
+
       // For non-references, we need to strip qualifiers just in case
       // the template parameter was declared as 'const int' or whatever.
       valueKind = VK_RValue;
@@ -3325,8 +3336,9 @@ ExprResult Sema::BuildDeclarationNameExpr(
 
     case Decl::MSProperty:
     case Decl::MSGuid:
-      // FIXME: Should MSGuidDecl be subject to capture in OpenMP,
-      // or duplicated between host and device?
+    case Decl::TemplateParamObject:
+      // FIXME: Should MSGuidDecl and template parameter objects be subject to
+      // capture in OpenMP, or duplicated between host and device?
       valueKind = VK_LValue;
       break;
 
@@ -14989,9 +15001,8 @@ ExprResult Sema::ActOnChooseExpr(SourceLocation BuiltinLoc,
   } else {
     // The conditional expression is required to be a constant expression.
     llvm::APSInt condEval(32);
-    ExprResult CondICE
-      = VerifyIntegerConstantExpression(CondExpr, &condEval,
-          diag::err_typecheck_choose_expr_requires_constant, false);
+    ExprResult CondICE = VerifyIntegerConstantExpression(
+        CondExpr, &condEval, diag::err_typecheck_choose_expr_requires_constant);
     if (CondICE.isInvalid())
       return ExprError();
     CondExpr = CondICE.get();
@@ -15853,7 +15864,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
 }
 
 ExprResult Sema::VerifyIntegerConstantExpression(Expr *E,
-                                                 llvm::APSInt *Result) {
+                                                 llvm::APSInt *Result,
+                                                 AllowFoldKind CanFold) {
   class SimpleICEDiagnoser : public VerifyICEDiagnoser {
   public:
     SemaDiagnosticBuilder diagnoseNotICEType(Sema &S, SourceLocation Loc,
@@ -15866,13 +15878,13 @@ ExprResult Sema::VerifyIntegerConstantExpression(Expr *E,
     }
   } Diagnoser;
 
-  return VerifyIntegerConstantExpression(E, Result, Diagnoser);
+  return VerifyIntegerConstantExpression(E, Result, Diagnoser, CanFold);
 }
 
 ExprResult Sema::VerifyIntegerConstantExpression(Expr *E,
                                                  llvm::APSInt *Result,
                                                  unsigned DiagID,
-                                                 bool AllowFold) {
+                                                 AllowFoldKind CanFold) {
   class IDDiagnoser : public VerifyICEDiagnoser {
     unsigned DiagID;
 
@@ -15885,7 +15897,7 @@ ExprResult Sema::VerifyIntegerConstantExpression(Expr *E,
     }
   } Diagnoser(DiagID);
 
-  return VerifyIntegerConstantExpression(E, Result, Diagnoser, AllowFold);
+  return VerifyIntegerConstantExpression(E, Result, Diagnoser, CanFold);
 }
 
 Sema::SemaDiagnosticBuilder
@@ -15902,7 +15914,7 @@ Sema::VerifyICEDiagnoser::diagnoseFold(Sema &S, SourceLocation Loc) {
 ExprResult
 Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
                                       VerifyICEDiagnoser &Diagnoser,
-                                      bool AllowFold) {
+                                      AllowFoldKind CanFold) {
   SourceLocation DiagLoc = E->getBeginLoc();
 
   if (getLangOpts().CPlusPlus11) {
@@ -16020,7 +16032,7 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
     Notes.clear();
   }
 
-  if (!Folded || !AllowFold) {
+  if (!Folded || !CanFold) {
     if (!Diagnoser.Suppress) {
       Diagnoser.diagnoseNotICE(*this, DiagLoc) << E->getSourceRange();
       for (const PartialDiagnosticAt &Note : Notes)

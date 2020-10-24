@@ -1,0 +1,158 @@
+--- |
+  ; RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - -experimental-debug-variable-locations | FileCheck %s -implicit-check-not=DBG_VALUE
+
+  define i32 @_Z8bb_to_bb() local_unnamed_addr !dbg !12 {
+  entry:
+    ret i32 0, !dbg !17
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!7, !8, !9, !10}
+  !llvm.ident = !{!11}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 10.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !3, debugInfoForProfiling: true, nameTableKind: None)
+  !1 = !DIFile(filename: "main.cpp", directory: "F:\")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
+  !5 = distinct !DIGlobalVariable(name: "start", scope: !0, file: !1, line: 4, type: !6, isLocal: false, isDefinition: true)
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !{i32 2, !"Dwarf Version", i32 4}
+  !8 = !{i32 2, !"Debug Info Version", i32 3}
+  !9 = !{i32 1, !"wchar_size", i32 2}
+  !10 = !{i32 7, !"PIC Level", i32 2}
+  !11 = !{!"clang version 10.0.0"}
+  !12 = distinct !DISubprogram(name: "bb_to_bb", linkageName: "bb_to_bb", scope: !1, file: !1, line: 6, type: !13, scopeLine: 6, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !15)
+  !13 = !DISubroutineType(types: !14)
+  !14 = !{!6, !6}
+  !15 = !{!16}
+  !16 = !DILocalVariable(name: "myVar", scope: !12, file: !1, line: 7, type: !6)
+  !17 = !DILocation(line: 10, scope: !12)
+
+...
+---
+name: _Z8bb_to_bb
+debugValueSubstitutions:
+  - { srcinst: 4, srcop: 0, dstinst: 3, dstop: 0 }
+body:  |
+  bb.0.entry:
+    $rax = MOV64ri 1, debug-instr-number 1, debug-location !17
+    ; This debug instruction should identify the value as being in $rax.
+    DBG_INSTR_REF 1, 0, !16, !DIExpression(), debug-location !17
+    ; CHECK: DBG_VALUE $rax, $noreg
+
+    $rbx = COPY killed $rax, debug-location !17
+    $rax = MOV64ri 1, debug-location !17
+    ; Presently, this COPY isn't followed. Dealing with that is future work.
+
+    DBG_INSTR_REF 2, 0, !16, !DIExpression(), debug-location !17
+    ; No instruction is labelled with the number "2". This should produce an
+    ; empty variable location.
+    ; CHECK: DBG_VALUE $noreg, $noreg
+
+    $rbx = MOV64ri 1, debug-instr-number 3, debug-location !17
+    JMP_1 %bb.1
+
+
+    ; CHECK-LABEL: bb.1:
+  bb.1:
+
+    DBG_INSTR_REF 3, 0, !16, !DIExpression(), debug-location !17
+    ; This refers to a value def'd in a parent block -- but it should be
+    ; tracked into this block.
+    ; CHECK: DBG_VALUE $rbx, $noreg
+    JMP_1 %bb.2
+
+    ; CHECK-LABEL: bb.2:
+  bb.2:
+    ; Just like any other variable location, live-ins should be created for
+    ; any successor blocks.
+    ; CHECK: DBG_VALUE $rbx, $noreg
+
+    DBG_INSTR_REF 5, 0, !16, !DIExpression(), debug-location !17
+    ; This is a debug use-before-def: the value appears a few instructions
+    ; later. Any earlier value should be terminated here, _and_ we should
+    ; emit a DBG_VALUE when the value becomes available.
+    ; CHECK: DBG_VALUE $noreg, $noreg
+
+    $rax = MOV64ri 1, debug-location !17
+    $rax = MOV64ri 1, debug-location !17
+    $rcx = MOV64ri 1, debug-instr-number 5, debug-location !17
+    ; CHECK: DBG_VALUE $rcx, $noreg
+    $rax = MOV64ri 1, debug-location !17
+
+    DBG_INSTR_REF 6, 0, !16, !DIExpression(), debug-location !17
+    ; Another debug use-before-def, but across block boundaries.
+    ; CHECK: DBG_VALUE $noreg, $noreg
+    JMP_1 %bb.3
+
+    ; CHECK-LABEL: bb.3:
+  bb.3:
+    $rax = MOV64ri 1, debug-location !17
+    $rdx = MOV64ri 1, debug-instr-number 6, debug-location !17
+    ; CHECK: DBG_VALUE $rdx, $noreg
+
+    ; Terminate variable location for next few blocks,
+    DBG_VALUE $noreg, $noreg, !16, !DIExpression(), debug-location !17
+    ; CHECK: DBG_VALUE $noreg, $noreg
+    JMP_1 %bb.4
+
+  bb.4:
+    ; The next three blocks form a debug use-before-def modelling a scenario
+    ; where an instruction is sunk (debug inst in bb5, value in bb6). However,
+    ; because a different path joins bb.6, we should _not_ add any DBG_VALUE.
+    ; A different variable value may enter the block via the other path.
+    $rdx = MOV64ri 1, implicit-def $eflags, debug-location !17
+    JCC_1 %bb.6, 4, implicit $eflags, debug-location !17
+  bb.5:
+    DBG_INSTR_REF 7, 0, !16, !DIExpression(), debug-location !17
+    ; CHECK: DBG_VALUE $noreg, $noreg
+    JMP_1 %bb.6, debug-location !17
+  bb.6:
+    $rsi = MOV64ri 1, debug-instr-number 7, debug-location !17
+    JMP_1 %bb.7, debug-location !17
+
+  ; A use-before-def shouldn't pass another definition of the variable location
+  ; or value.
+  bb.7:
+    DBG_INSTR_REF 8, 0, !16, !DIExpression(), debug-location !17
+    ; CHECK: DBG_VALUE $noreg, $noreg
+    DBG_VALUE $rax, $noreg, !16, !DIExpression(), debug-location !17
+    ; CHECK: DBG_VALUE $rax, $noreg,
+    $rdi = MOV64ri 1, debug-instr-number 8, debug-location !17
+
+  ; Loops: use-before-defs should be live-through loops, assuming that nothing
+  ; in that loop modifies the variable location.
+  bb.8:
+    DBG_INSTR_REF 9, 0, !16, !DIExpression(), debug-location !17
+    ; CHECK: DBG_VALUE $noreg, $noreg
+    JCC_1 %bb.8, 4, implicit $eflags
+  bb.9:
+    $rax = MOV64ri 11, debug-instr-number 9, debug-location !17
+    ; CHECK: DBG_VALUE $rax, $noreg,
+
+  ; Likewise, use-before-defs where anything changes the variable location
+  ; or value in the loop, should be discarded.
+  bb.10:
+    ; live-in,
+    ; CHECK: DBG_VALUE $rax, $noreg,
+    DBG_INSTR_REF 10, 0, !16, !DIExpression(), debug-location !17
+    ; CHECK: DBG_VALUE $noreg, $noreg
+
+  bb.11:
+    $rbx = MOV64ri 1, debug-location !17
+
+  bb.12:
+    DBG_INSTR_REF 9, 0, !16, !DIExpression(), debug-location !17
+    ; This still has a value in $rax,
+    ; CHECK: DBG_VALUE $rax, $noreg
+    JCC_1 %bb.11, 4, implicit $eflags
+
+  bb.13:
+    ; Live in,
+    ; CHECK: DBG_VALUE $rax, $noreg
+    $rbx = MOV64ri 11, debug-instr-number 10, debug-location !17
+    ; This is instruction 10 referred to in bb.10. However, as the variable
+    ; location/value has been modified in the meantime, no DBG_VALUE should be
+    ; generated here.
+    RETQ $eax, debug-location !17
+...

@@ -55,9 +55,6 @@ Instruction::~Instruction() {
   //   instructions in a BasicBlock are deleted).
   if (isUsedByMetadata())
     ValueAsMetadata::handleRAUW(this, UndefValue::get(getType()));
-
-  if (hasMetadataHashEntry())
-    clearMetadataHashEntries();
 }
 
 

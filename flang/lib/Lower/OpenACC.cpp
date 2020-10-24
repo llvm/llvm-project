@@ -16,12 +16,11 @@
 #include "flang/Lower/FIRBuilder.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/BoxValue.h"
+#include "flang/Lower/Todo.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
-
-#define TODO() llvm_unreachable("not yet implemented")
 
 static const Fortran::parser::Name *
 getDesignatorNameIfDataRef(const Fortran::parser::Designator &designator) {
@@ -528,22 +527,28 @@ void Fortran::lower::genOpenACCConstruct(
             genACC(converter, eval, blockConstruct);
           },
           [&](const Fortran::parser::OpenACCCombinedConstruct
-                  &combinedConstruct) { TODO(); },
+                  &combinedConstruct) {
+            TODO("OpenACC Combined construct not lowered yet!");
+          },
           [&](const Fortran::parser::OpenACCLoopConstruct &loopConstruct) {
             genACC(converter, eval, loopConstruct);
           },
           [&](const Fortran::parser::OpenACCStandaloneConstruct
-                  &standaloneConstruct) { TODO(); },
+                  &standaloneConstruct) {
+            TODO("OpenACC Standalone construct not lowered yet!");
+          },
           [&](const Fortran::parser::OpenACCRoutineConstruct
-                  &routineConstruct) { TODO(); },
+                  &routineConstruct) {
+            TODO("OpenACC Routine construct not lowered yet!");
+          },
           [&](const Fortran::parser::OpenACCCacheConstruct &cacheConstruct) {
-            TODO();
+            TODO("OpenACC Cache construct not lowered yet!");
           },
           [&](const Fortran::parser::OpenACCWaitConstruct &waitConstruct) {
-            TODO();
+            TODO("OpenACC Wait construct not lowered yet!");
           },
           [&](const Fortran::parser::OpenACCAtomicConstruct &atomicConstruct) {
-            TODO();
+            TODO("OpenACC Atomic construct not lowered yet!");
           },
       },
       accConstruct.u);

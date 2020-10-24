@@ -243,6 +243,9 @@ struct ReplayOptions {
   bool check_version = true;
 };
 
+llvm::Error Finalize(Loader *loader);
+llvm::Error Finalize(const FileSpec &root);
+
 } // namespace repro
 } // namespace lldb_private
 

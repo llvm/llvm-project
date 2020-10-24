@@ -95,8 +95,8 @@ private:
   /// of them can be missing (if the machines are different they don't know each
   /// other's specifics and will only do one-way translation), but both can not
   /// be missing at the same time.
-  llvm::Optional<std::string> RemoteIndexRoot;
-  llvm::Optional<std::string> LocalIndexRoot;
+  std::string RemoteIndexRoot;
+  std::string LocalIndexRoot;
   llvm::BumpPtrAllocator Arena;
   llvm::UniqueStringSaver Strings;
 };

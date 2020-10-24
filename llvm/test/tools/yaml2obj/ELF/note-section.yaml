@@ -172,7 +172,7 @@ Sections:
     Type:    SHT_NOTE
     Content: "1122334455"
 
-## Check we emit an empty section if neither "Content", "Size" not "Notes" were set.
+## Check we emit an empty section if neither "Content", "Size" nor "Notes" were set.
 
 # RUN: yaml2obj --docnum=8 %s -o %t8
 # RUN: llvm-readelf --sections %t8 | FileCheck %s --check-prefix=NO-TAGS

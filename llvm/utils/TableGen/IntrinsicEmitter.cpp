@@ -254,7 +254,7 @@ enum IIT_Info {
 static void EncodeFixedValueType(MVT::SimpleValueType VT,
                                  std::vector<unsigned char> &Sig) {
   if (MVT(VT).isInteger()) {
-    unsigned BitWidth = MVT(VT).getSizeInBits();
+    unsigned BitWidth = MVT(VT).getFixedSizeInBits();
     switch (BitWidth) {
     default: PrintFatalError("unhandled integer type width in intrinsic!");
     case 1: return Sig.push_back(IIT_I1);

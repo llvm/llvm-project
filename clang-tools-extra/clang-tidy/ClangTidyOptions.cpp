@@ -47,14 +47,14 @@ template <> struct MappingTraits<FileFilter> {
     IO.mapRequired("name", File.Name);
     IO.mapOptional("lines", File.LineRanges);
   }
-  static StringRef validate(IO &io, FileFilter &File) {
+  static std::string validate(IO &io, FileFilter &File) {
     if (File.Name.empty())
       return "No file name specified";
     for (const FileFilter::LineRange &Range : File.LineRanges) {
       if (Range.first <= 0 || Range.second <= 0)
         return "Invalid line range";
     }
-    return StringRef();
+    return "";
   }
 };
 

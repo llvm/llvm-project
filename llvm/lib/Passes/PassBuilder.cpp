@@ -49,6 +49,7 @@
 #include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/ModuleDebugInfoPrinter.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/ObjCARCAliasAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -83,6 +84,7 @@
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/ArgumentPromotion.h"
 #include "llvm/Transforms/IPO/Attributor.h"
+#include "llvm/Transforms/IPO/BlockExtractor.h"
 #include "llvm/Transforms/IPO/CalledValuePropagation.h"
 #include "llvm/Transforms/IPO/ConstantMerge.h"
 #include "llvm/Transforms/IPO/CrossDSOCFI.h"
@@ -166,6 +168,7 @@
 #include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
 #include "llvm/Transforms/Scalar/LoopUnrollAndJamPass.h"
 #include "llvm/Transforms/Scalar/LoopUnrollPass.h"
+#include "llvm/Transforms/Scalar/LoopVersioningLICM.h"
 #include "llvm/Transforms/Scalar/LowerAtomic.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
@@ -189,6 +192,7 @@
 #include "llvm/Transforms/Scalar/Sink.h"
 #include "llvm/Transforms/Scalar/SpeculateAroundPHIs.h"
 #include "llvm/Transforms/Scalar/SpeculativeExecution.h"
+#include "llvm/Transforms/Scalar/StructurizeCFG.h"
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
@@ -199,6 +203,7 @@
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/FixIrreducible.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
+#include "llvm/Transforms/Utils/InstructionNamer.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
@@ -211,6 +216,8 @@
 #include "llvm/Transforms/Utils/StripGCRelocates.h"
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
+#include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
+#include "llvm/Transforms/Utils/UnifyLoopExits.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
@@ -673,7 +680,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   LPM1.addPass(LoopInstSimplifyPass());
   LPM1.addPass(LoopSimplifyCFGPass());
 
-  // Rotate Loop - disable header duplication at -Oz
+  // Disable header duplication in loop rotation at -Oz.
   LPM1.addPass(LoopRotatePass(Level != OptimizationLevel::Oz));
   // TODO: Investigate promotion cap for O1.
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap));
@@ -747,6 +754,12 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // redo DCE, etc.
   FPM.addPass(JumpThreadingPass());
   FPM.addPass(CorrelatedValuePropagationPass());
+
+  // Finally, do an expensive DCE pass to catch all the dead code exposed by
+  // the simplifications and basic cleanup after all the simplifications.
+  // TODO: Investigate if this is too expensive.
+  FPM.addPass(ADCEPass());
+
   FPM.addPass(DSEPass());
   FPM.addPass(createFunctionToLoopPassAdaptor(
       LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap),
@@ -758,10 +771,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   for (auto &C : ScalarOptimizerLateEPCallbacks)
     C(FPM, Level);
 
-  // Finally, do an expensive DCE pass to catch all the dead code exposed by
-  // the simplifications and basic cleanup after all the simplifications.
-  // TODO: Investigate if this is too expensive.
-  FPM.addPass(ADCEPass());
   FPM.addPass(SimplifyCFGPass());
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
@@ -827,8 +836,9 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
   MPM.addPass(PGOInstrumentationGen(IsCS));
 
   FunctionPassManager FPM;
+  // Disable header duplication in loop rotation at -Oz.
   FPM.addPass(createFunctionToLoopPassAdaptor(
-      LoopRotatePass(), EnableMSSALoopDependency,
+      LoopRotatePass(Level != OptimizationLevel::Oz), EnableMSSALoopDependency,
       /*UseBlockFrequencyInfo=*/false, DebugLogging));
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
@@ -1158,8 +1168,9 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
     C(OptimizePM, Level);
 
   // First rotate loops that may have been un-rotated by prior passes.
+  // Disable header duplication at -Oz.
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(
-      LoopRotatePass(), EnableMSSALoopDependency,
+      LoopRotatePass(Level != OptimizationLevel::Oz), EnableMSSALoopDependency,
       /*UseBlockFrequencyInfo=*/false, DebugLogging));
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences

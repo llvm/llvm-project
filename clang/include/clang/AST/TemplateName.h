@@ -342,10 +342,8 @@ public:
 
 /// Insertion operator for diagnostics.  This allows sending TemplateName's
 /// into a diagnostic with <<.
-const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                    TemplateName N);
-const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                    TemplateName N);
+const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                      TemplateName N);
 
 /// A structure for storing the information associated with a
 /// substituted template template parameter.

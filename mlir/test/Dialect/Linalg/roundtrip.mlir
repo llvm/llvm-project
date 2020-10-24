@@ -341,6 +341,24 @@ func @generic_with_tensor_input(%arg0: tensor<?x?xvector<3x4xi4>>,
 
 // -----
 
+#map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+func @generic_without_inputs(%arg0 : memref<?x?x?xf32>) {
+  linalg.generic  {indexing_maps = [#map0],
+                   iterator_types = ["parallel", "parallel", "parallel"]}
+                  outs(%arg0 : memref<?x?x?xf32>) {
+   ^bb0(%arg3: f32):  // no predecessors
+      %cst = constant 0.000000e+00 : f32
+      linalg.yield %cst : f32
+    }
+  return
+}
+
+// CHECK-LABEL: func @generic_without_inputs
+//       CHECK:   linalg.generic
+//   CHECK-NOT:     ins
+
+// -----
+
 #accesses = [
   affine_map<(i, j, k) -> (j, i)>,
   affine_map<(i, j, k) -> (i, k, i + j)>,

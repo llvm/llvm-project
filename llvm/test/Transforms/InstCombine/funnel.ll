@@ -200,3 +200,83 @@ define <2 x i64> @fshr_sub_mask_vector(<2 x i64> %x, <2 x i64> %y, <2 x i64> %a)
   %r = or <2 x i64> %shl, %shr
   ret <2 x i64> %r
 }
+
+; PR35155 - these are optionally UB-free funnel shift left/right patterns that are narrowed to a smaller bitwidth.
+
+define i16 @fshl_16bit(i16 %x, i16 %y, i32 %shift) {
+; CHECK-LABEL: @fshl_16bit(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHIFT:%.*]] to i16
+; CHECK-NEXT:    [[CONV2:%.*]] = call i16 @llvm.fshl.i16(i16 [[X:%.*]], i16 [[Y:%.*]], i16 [[TMP1]])
+; CHECK-NEXT:    ret i16 [[CONV2]]
+;
+  %and = and i32 %shift, 15
+  %convx = zext i16 %x to i32
+  %shl = shl i32 %convx, %and
+  %sub = sub i32 16, %and
+  %convy = zext i16 %y to i32
+  %shr = lshr i32 %convy, %sub
+  %or = or i32 %shr, %shl
+  %conv2 = trunc i32 %or to i16
+  ret i16 %conv2
+}
+
+; Commute the 'or' operands and try a vector type.
+
+define <2 x i16> @fshl_commute_16bit_vec(<2 x i16> %x, <2 x i16> %y, <2 x i32> %shift) {
+; CHECK-LABEL: @fshl_commute_16bit_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[SHIFT:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[CONV2:%.*]] = call <2 x i16> @llvm.fshl.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[Y:%.*]], <2 x i16> [[TMP1]])
+; CHECK-NEXT:    ret <2 x i16> [[CONV2]]
+;
+  %and = and <2 x i32> %shift, <i32 15, i32 15>
+  %convx = zext <2 x i16> %x to <2 x i32>
+  %shl = shl <2 x i32> %convx, %and
+  %sub = sub <2 x i32> <i32 16, i32 16>, %and
+  %convy = zext <2 x i16> %y to <2 x i32>
+  %shr = lshr <2 x i32> %convy, %sub
+  %or = or <2 x i32> %shl, %shr
+  %conv2 = trunc <2 x i32> %or to <2 x i16>
+  ret <2 x i16> %conv2
+}
+
+; Change the size, shift direction (the subtract is on the left-shift), and mask op.
+
+define i8 @fshr_8bit(i8 %x, i8 %y, i3 %shift) {
+; CHECK-LABEL: @fshr_8bit(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i3 [[SHIFT:%.*]] to i8
+; CHECK-NEXT:    [[CONV2:%.*]] = call i8 @llvm.fshr.i8(i8 [[Y:%.*]], i8 [[X:%.*]], i8 [[TMP1]])
+; CHECK-NEXT:    ret i8 [[CONV2]]
+;
+  %and = zext i3 %shift to i32
+  %convx = zext i8 %x to i32
+  %shr = lshr i32 %convx, %and
+  %sub = sub i32 8, %and
+  %convy = zext i8 %y to i32
+  %shl = shl i32 %convy, %sub
+  %or = or i32 %shl, %shr
+  %conv2 = trunc i32 %or to i8
+  ret i8 %conv2
+}
+
+; The shifted value does not need to be a zexted value; here it is masked.
+; The shift mask could be less than the bitwidth, but this is still ok.
+
+define i8 @fshr_commute_8bit(i32 %x, i32 %y, i32 %shift) {
+; CHECK-LABEL: @fshr_commute_8bit(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHIFT:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[Y:%.*]] to i8
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[CONV2:%.*]] = call i8 @llvm.fshr.i8(i8 [[TMP3]], i8 [[TMP4]], i8 [[TMP2]])
+; CHECK-NEXT:    ret i8 [[CONV2]]
+;
+  %and = and i32 %shift, 3
+  %convx = and i32 %x, 255
+  %shr = lshr i32 %convx, %and
+  %sub = sub i32 8, %and
+  %convy = and i32 %y, 255
+  %shl = shl i32 %convy, %sub
+  %or = or i32 %shr, %shl
+  %conv2 = trunc i32 %or to i8
+  ret i8 %conv2
+}

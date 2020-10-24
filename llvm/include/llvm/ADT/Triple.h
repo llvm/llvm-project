@@ -486,6 +486,12 @@ public:
     return getEnvironment() == Triple::MacABI;
   }
 
+  /// Returns true for targets that run on a macOS machine.
+  bool isTargetMachineMac() const {
+    return isMacOSX() || (isOSDarwin() && (isSimulatorEnvironment() ||
+                                           isMacCatalystEnvironment()));
+  }
+
   bool isOSNetBSD() const {
     return getOS() == Triple::NetBSD;
   }

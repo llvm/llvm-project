@@ -745,7 +745,7 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
           llvm_unreachable("src_pops_exiting_wave_id should not be used");
 
         case AMDGPU::NoRegister:
-          assert(MI.isDebugInstr());
+          assert(MI.isDebugInstr() && "Instruction uses invalid noreg register");
           continue;
 
         case AMDGPU::VCC:
@@ -993,7 +993,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.FlatUsed = Info.UsesFlatScratch;
   ProgInfo.DynamicCallStack = Info.HasDynamicallySizedStack || Info.HasRecursion;
 
-  if (!isUInt<32>(ProgInfo.ScratchSize)) {
+  const uint64_t MaxScratchPerWorkitem =
+      GCNSubtarget::MaxWaveScratchSize / STM.getWavefrontSize();
+  if (ProgInfo.ScratchSize > MaxScratchPerWorkitem) {
     DiagnosticInfoStackSize DiagStackSize(MF.getFunction(),
                                           ProgInfo.ScratchSize, DS_Error);
     MF.getFunction().getContext().diagnose(DiagStackSize);

@@ -259,26 +259,6 @@ static unsigned getSelectFoldableOperands(BinaryOperator *I) {
   }
 }
 
-/// For the same transformation as the previous function, return the identity
-/// constant that goes into the select.
-static APInt getSelectFoldableConstant(BinaryOperator *I) {
-  switch (I->getOpcode()) {
-  default: llvm_unreachable("This cannot happen!");
-  case Instruction::Add:
-  case Instruction::Sub:
-  case Instruction::Or:
-  case Instruction::Xor:
-  case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
-    return APInt::getNullValue(I->getType()->getScalarSizeInBits());
-  case Instruction::And:
-    return APInt::getAllOnesValue(I->getType()->getScalarSizeInBits());
-  case Instruction::Mul:
-    return APInt(I->getType()->getScalarSizeInBits(), 1);
-  }
-}
-
 /// We have (select c, TI, FI), and we know that TI and FI have the same opcode.
 Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
                                               Instruction *FI) {
@@ -434,14 +414,15 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
         }
 
         if (OpToFold) {
-          APInt CI = getSelectFoldableConstant(TVI);
+          Constant *C = ConstantExpr::getBinOpIdentity(TVI->getOpcode(),
+                                                       TVI->getType(), true);
           Value *OOp = TVI->getOperand(2-OpToFold);
           // Avoid creating select between 2 constants unless it's selecting
           // between 0, 1 and -1.
           const APInt *OOpC;
           bool OOpIsAPInt = match(OOp, m_APInt(OOpC));
-          if (!isa<Constant>(OOp) || (OOpIsAPInt && isSelect01(CI, *OOpC))) {
-            Value *C = ConstantInt::get(OOp->getType(), CI);
+          if (!isa<Constant>(OOp) ||
+              (OOpIsAPInt && isSelect01(C->getUniqueInteger(), *OOpC))) {
             Value *NewSel = Builder.CreateSelect(SI.getCondition(), OOp, C);
             NewSel->takeName(TVI);
             BinaryOperator *BO = BinaryOperator::Create(TVI->getOpcode(),
@@ -465,14 +446,15 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
         }
 
         if (OpToFold) {
-          APInt CI = getSelectFoldableConstant(FVI);
+          Constant *C = ConstantExpr::getBinOpIdentity(FVI->getOpcode(),
+                                                       FVI->getType(), true);
           Value *OOp = FVI->getOperand(2-OpToFold);
           // Avoid creating select between 2 constants unless it's selecting
           // between 0, 1 and -1.
           const APInt *OOpC;
           bool OOpIsAPInt = match(OOp, m_APInt(OOpC));
-          if (!isa<Constant>(OOp) || (OOpIsAPInt && isSelect01(CI, *OOpC))) {
-            Value *C = ConstantInt::get(OOp->getType(), CI);
+          if (!isa<Constant>(OOp) ||
+              (OOpIsAPInt && isSelect01(C->getUniqueInteger(), *OOpC))) {
             Value *NewSel = Builder.CreateSelect(SI.getCondition(), C, OOp);
             NewSel->takeName(FVI);
             BinaryOperator *BO = BinaryOperator::Create(FVI->getOpcode(),
@@ -2337,8 +2319,8 @@ static Instruction *factorizeMinMaxTree(SelectPatternFlavor SPF, Value *LHS,
 static Instruction *foldSelectRotate(SelectInst &Sel,
                                      InstCombiner::BuilderTy &Builder) {
   // The false value of the select must be a rotate of the true value.
-  Value *Or0, *Or1;
-  if (!match(Sel.getFalseValue(), m_OneUse(m_Or(m_Value(Or0), m_Value(Or1)))))
+  BinaryOperator *Or0, *Or1;
+  if (!match(Sel.getFalseValue(), m_OneUse(m_Or(m_BinOp(Or0), m_BinOp(Or1)))))
     return nullptr;
 
   Value *TVal = Sel.getTrueValue();
@@ -2346,16 +2328,20 @@ static Instruction *foldSelectRotate(SelectInst &Sel,
   if (!match(Or0, m_OneUse(m_LogicalShift(m_Specific(TVal),
                                           m_ZExtOrSelf(m_Value(SA0))))) ||
       !match(Or1, m_OneUse(m_LogicalShift(m_Specific(TVal),
-                                          m_ZExtOrSelf(m_Value(SA1))))))
+                                          m_ZExtOrSelf(m_Value(SA1))))) ||
+      Or0->getOpcode() == Or1->getOpcode())
     return nullptr;
 
-  auto ShiftOpcode0 = cast<BinaryOperator>(Or0)->getOpcode();
-  auto ShiftOpcode1 = cast<BinaryOperator>(Or1)->getOpcode();
-  if (ShiftOpcode0 == ShiftOpcode1)
-    return nullptr;
+  // Canonicalize to or(shl(TVal, SA0), lshr(TVal, SA1)).
+  if (Or0->getOpcode() == BinaryOperator::LShr) {
+    std::swap(Or0, Or1);
+    std::swap(SA0, SA1);
+  }
+  assert(Or0->getOpcode() == BinaryOperator::Shl &&
+         Or1->getOpcode() == BinaryOperator::LShr &&
+         "Illegal or(shift,shift) pair");
 
-  // We have one of these patterns so far:
-  // select ?, TVal, (or (lshr TVal, SA0), (shl TVal, SA1))
+  // We should now have this pattern:
   // select ?, TVal, (or (shl TVal, SA0), (lshr TVal, SA1))
   // This must be a power-of-2 rotate for a bitmasking transform to be valid.
   unsigned Width = Sel.getType()->getScalarSizeInBits();
@@ -2380,8 +2366,7 @@ static Instruction *foldSelectRotate(SelectInst &Sel,
 
   // This is a rotate that avoids shift-by-bitwidth UB in a suboptimal way.
   // Convert to funnel shift intrinsic.
-  bool IsFshl = (ShAmt == SA0 && ShiftOpcode0 == BinaryOperator::Shl) ||
-                (ShAmt == SA1 && ShiftOpcode1 == BinaryOperator::Shl);
+  bool IsFshl = (ShAmt == SA0);
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
   Function *F = Intrinsic::getDeclaration(Sel.getModule(), IID, Sel.getType());
   ShAmt = Builder.CreateZExt(ShAmt, Sel.getType());

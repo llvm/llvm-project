@@ -751,7 +751,7 @@ bool IfConverter::CountDuplicatedInstructions(
     // A pred-clobbering instruction in the shared portion prevents
     // if-conversion.
     std::vector<MachineOperand> PredDefs;
-    if (TII->DefinesPredicate(*TIB, PredDefs))
+    if (TII->ClobbersPredicate(*TIB, PredDefs, false))
       return false;
     // If we get all the way to the branch instructions, don't count them.
     if (!TIB->isBranch())
@@ -1146,7 +1146,7 @@ void IfConverter::ScanInstructions(BBInfo &BBI,
     // FIXME: Make use of PredDefs? e.g. ADDC, SUBC sets predicates but are
     // still potentially predicable.
     std::vector<MachineOperand> PredDefs;
-    if (TII->DefinesPredicate(MI, PredDefs))
+    if (TII->ClobbersPredicate(MI, PredDefs, true))
       BBI.ClobbersPred = true;
 
     if (!TII->isPredicable(MI)) {

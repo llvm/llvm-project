@@ -42,4 +42,10 @@ New Features
 
 API Changes
 -----------
-- ...
+- By default, libc++ will _not_ include the definition for new and delete,
+  since those are provided in libc++abi. Vendors wishing to provide new and
+  delete in libc++ can build the library with ``-DLIBCXX_ENABLE_NEW_DELETE_DEFINITIONS=ON``
+  to get back the old behavior. This was done to avoid providing new and delete
+  in both libc++ and libc++abi, which is technically an ODR violation. Also
+  note that we couldn't decide to put the operators in libc++ only, because
+  they are needed from libc++abi (which would create a circular dependency).

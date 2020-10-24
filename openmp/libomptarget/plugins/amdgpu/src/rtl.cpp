@@ -338,14 +338,10 @@ public:
   static const int Default_WG_Size =
       llvm::omp::AMDGPUGpuGridValues[llvm::omp::GVIDX::GV_Default_WG_Size];
 
-  using MemcpyFunc = atmi_status_t (hsa_signal_t,
-                                    void *,
-                                    const void *,
-                                    size_t size,
-                                    hsa_agent_t);
-  atmi_status_t freesignalpool_memcpy(void *dest, const void *src,
-                                      size_t size, MemcpyFunc Func,
-                                      int32_t deviceId) {
+  using MemcpyFunc = atmi_status_t (*)(hsa_signal_t, void *, const void *,
+                                       size_t size, hsa_agent_t);
+  atmi_status_t freesignalpool_memcpy(void *dest, const void *src, size_t size,
+                                      MemcpyFunc Func, int32_t deviceId) {
     hsa_agent_t agent = HSAAgents[deviceId];
     hsa_signal_t s = FreeSignalPool.pop();
     if (s.handle == 0) {
@@ -557,7 +553,8 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
      (long long unsigned)(Elf64_Addr)TgtPtr,
      (long long unsigned)(Elf64_Addr)HstPtr);
 
-  err = DeviceInfo.freesignalpool_memcpy_d2h(HstPtr, TgtPtr, (size_t)Size, DeviceId);
+  err = DeviceInfo.freesignalpool_memcpy_d2h(HstPtr, TgtPtr, (size_t)Size,
+                                             DeviceId);
 
   if (err != ATMI_STATUS_SUCCESS) {
     DP("Error when copying data from device to host. Pointers: "
@@ -583,7 +580,8 @@ int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
   DP("Submit data %ld bytes, (hst:%016llx) -> (tgt:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)HstPtr,
      (long long unsigned)(Elf64_Addr)TgtPtr);
-  err = DeviceInfo.freesignalpool_memcpy_h2d(TgtPtr, HstPtr, (size_t)Size, DeviceId);
+  err = DeviceInfo.freesignalpool_memcpy_h2d(TgtPtr, HstPtr, (size_t)Size,
+                                             DeviceId);
   if (err != ATMI_STATUS_SUCCESS) {
     DP("Error when copying data from host to device. Pointers: "
        "host = 0x%016lx, device = 0x%016lx, size = %lld\n",
@@ -1047,7 +1045,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     }
 
     // write ptr to device memory so it can be used by later kernels
-    err = DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &ptr, sizeof(void *), device_id);
+    err = DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &ptr, sizeof(void *),
+                                               device_id);
     if (err != ATMI_STATUS_SUCCESS) {
       fprintf(stderr, "memcpy install of state_ptr failed\n");
       return NULL;
@@ -1545,8 +1544,8 @@ static void *AllocateNestedParallelCallMemory(int MaxParLevel, int NumGroups,
   void *TgtPtr = NULL;
   atmi_status_t err =
       atmi_malloc(&TgtPtr, NestedMemSize, get_gpu_mem_place(device_id));
-  err =
-      DeviceInfo.freesignalpool_memcpy_h2d(CallStackAddr, &TgtPtr, sizeof(void *), device_id);
+  err = DeviceInfo.freesignalpool_memcpy_h2d(CallStackAddr, &TgtPtr,
+                                             sizeof(void *), device_id);
   if (print_kernel_trace > 2)
     fprintf(stderr, "CallSck %lx TgtPtr %lx *TgtPtr %lx \n",
             (long)CallStackAddr, (long)&TgtPtr, (long)TgtPtr);

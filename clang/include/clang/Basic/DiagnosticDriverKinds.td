@@ -69,7 +69,7 @@ def err_drv_cuda_version_unsupported : Error<
   "install, pass a different GPU arch with --cuda-gpu-arch, or pass "
   "--no-cuda-version-check.">;
 def warn_drv_unknown_cuda_version: Warning<
-  "Unknown CUDA version %0. Assuming the latest supported version %1">,
+  "Unknown CUDA version. %0 Assuming the latest supported version %1">,
   InGroup<CudaUnknownVersion>;
 def err_drv_cuda_host_arch : Error<"unsupported architecture '%0' for host compilation.">;
 def err_drv_mix_cuda_hip : Error<"Mixed Cuda and HIP compilation is not supported.">;
@@ -217,6 +217,7 @@ def err_drv_dllexport_inlines_and_fallback : Error<
 
 def err_drv_invalid_value : Error<"invalid value '%1' in '%0'">;
 def err_drv_invalid_int_value : Error<"invalid integral value '%1' in '%0'">;
+def err_drv_invalid_value_with_suggestion : Error<"invalid value '%1' in '%0','%2'">;
 def err_drv_invalid_remap_file : Error<
     "invalid option '%0' not of the form <from-file>;<to-file>">;
 def err_drv_invalid_gcc_output_type : Error<

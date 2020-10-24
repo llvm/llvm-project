@@ -151,8 +151,26 @@ def : PredicateProlog<[{
   (void)STI;
 }]>;
 
-def IsPredicatedPred : SchedPredicate<[{TII->isPredicated(*MI)}]>;
+def IsPredicated : CheckFunctionPredicateWithTII<
+  "ARM_MC::isPredicated",
+  "isPredicated"
+>;
+def IsPredicatedPred : MCSchedPredicate<IsPredicated>;
 
+def IsCPSRDefined : CheckFunctionPredicateWithTII<
+  "ARM_MC::isCPSRDefined",
+  "ARMBaseInstrInfo::isCPSRDefined"
+>;
+
+def IsCPSRDefinedPred : MCSchedPredicate<IsCPSRDefined>;
+
+let FunctionMapper = "ARM_AM::getAM2ShiftOpc" in {
+  def CheckExtNoShift : CheckImmOperand_s<4, "ARM_AM::no_shift">;
+}
+
+def IsLDMBaseRegInList : CheckFunctionPredicate<
+  "ARM_MC::isLDMBaseRegInList", "ARM_MC::isLDMBaseRegInList"
+>;
 //===----------------------------------------------------------------------===//
 // Instruction Itinerary classes used for ARM
 //

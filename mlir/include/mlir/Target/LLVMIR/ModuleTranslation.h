@@ -127,6 +127,10 @@ private:
   /// OpenMP dialect hasn't been loaded (it is always loaded if there are OpenMP
   /// operations in the module though).
   const Dialect *ompDialect;
+  /// Stack which stores the target block to which a branch a must be added when
+  /// a terminator is seen. A stack is required to handle nested OpenMP parallel
+  /// regions.
+  SmallVector<llvm::BasicBlock *, 4> ompContinuationIPStack;
 
   /// Mappings between llvm.mlir.global definitions and corresponding globals.
   DenseMap<Operation *, llvm::GlobalValue *> globalsMapping;

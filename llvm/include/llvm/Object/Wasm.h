@@ -51,6 +51,8 @@ public:
     return Info.Kind == wasm::WASM_SYMBOL_TYPE_FUNCTION;
   }
 
+  bool isTypeTable() const { return Info.Kind == wasm::WASM_SYMBOL_TYPE_TABLE; }
+
   bool isTypeData() const { return Info.Kind == wasm::WASM_SYMBOL_TYPE_DATA; }
 
   bool isTypeGlobal() const {
@@ -222,6 +224,7 @@ private:
   bool isValidEventIndex(uint32_t Index) const;
   bool isDefinedEventIndex(uint32_t Index) const;
   bool isValidFunctionSymbol(uint32_t Index) const;
+  bool isValidTableSymbol(uint32_t Index) const;
   bool isValidGlobalSymbol(uint32_t Index) const;
   bool isValidEventSymbol(uint32_t Index) const;
   bool isValidDataSymbol(uint32_t Index) const;

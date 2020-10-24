@@ -56,5 +56,8 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   // Execute the frontend actions.
   success = ExecuteCompilerInvocation(flang.get());
 
+  // Delete output files to free Compiler Instance
+  flang->ClearOutputFiles(/*EraseFiles=*/false);
+
   return !success;
 }

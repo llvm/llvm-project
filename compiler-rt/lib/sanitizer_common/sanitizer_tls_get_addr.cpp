@@ -80,8 +80,13 @@ void DTLS_Destroy() {
 #if defined(__powerpc64__) || defined(__mips__)
 // This is glibc's TLS_DTV_OFFSET:
 // "Dynamic thread vector pointers point 0x8000 past the start of each
-//  TLS block."
+//  TLS block." (sysdeps/<arch>/dl-tls.h)
 static const uptr kDtvOffset = 0x8000;
+#elif defined(__riscv)
+// This is glibc's TLS_DTV_OFFSET:
+// "Dynamic thread vector pointers point 0x800 past the start of each
+// TLS block." (sysdeps/riscv/dl-tls.h)
+static const uptr kDtvOffset = 0x800;
 #else
 static const uptr kDtvOffset = 0;
 #endif

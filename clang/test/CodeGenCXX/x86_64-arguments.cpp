@@ -66,14 +66,14 @@ namespace PR7742 { // Also rdar://8250764
   struct s2 {
     float a[2];
   };
-  
+
   struct c2 : public s2 {};
-  
+
   // CHECK-LABEL: define <2 x float> @_ZN6PR77423fooEPNS_2c2E(%"struct.PR7742::c2"* %P)
   c2 foo(c2 *P) {
     return c2();
   }
-  
+
 }
 
 namespace PR5179 {
@@ -101,7 +101,7 @@ namespace test5 {
     Empty empty;
     Y f();
   };
-  struct Y : public X { 
+  struct Y : public X {
     Empty empty;
   };
   X getX();
@@ -176,7 +176,7 @@ namespace test9 {
   // CHECK: define void @_ZN5test93fooEPNS_1SEPNS_1TE([[S:%.*]]* %0, [[T:%.*]]* %1)
   void foo(S*, T*) {}
 
-  // CHECK: define void @_ZN5test91aEiiiiNS_1TEPv([[S]]* noalias sret align 8 {{%.*}}, i32 %0, i32 %1, i32 %2, i32 %3, [[T]]* byval([[T]]) align 8 %4, i8* %5)
+  // CHECK: define void @_ZN5test91aEiiiiNS_1TEPv([[S]]* noalias sret([[S]]) align 8 {{%.*}}, i32 %0, i32 %1, i32 %2, i32 %3, [[T]]* byval([[T]]) align 8 %4, i8* %5)
   S a(int, int, int, int, T, void*) {
     return S();
   }
@@ -186,7 +186,7 @@ namespace test9 {
     return sret;
   }
 
-  // CHECK: define void @_ZN5test91cEiiiNS_1TEPv([[S]]* noalias sret align 8 {{%.*}}, i32 %0, i32 %1, i32 %2, i8* {{%.*}}, i8* {{%.*}}, i8* %3)
+  // CHECK: define void @_ZN5test91cEiiiNS_1TEPv([[S]]* noalias sret([[S]]) align 8 {{%.*}}, i32 %0, i32 %1, i32 %2, i8* {{%.*}}, i8* {{%.*}}, i8* %3)
   S c(int, int, int, T, void*) {
     return S();
   }

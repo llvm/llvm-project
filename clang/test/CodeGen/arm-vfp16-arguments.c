@@ -71,6 +71,6 @@ void test_hfa(hfa_t a) {}
 
 hfa_t ghfa;
 hfa_t test_ret_hfa(void) { return ghfa; }
-// CHECK-SOFT: define void @test_ret_hfa(%struct.hfa_t* noalias nocapture sret align 8 %agg.result)
+// CHECK-SOFT: define void @test_ret_hfa(%struct.hfa_t* noalias nocapture sret(%struct.hfa_t) align 8 %agg.result)
 // CHECK-HARD: define arm_aapcs_vfpcc [2 x <2 x i32>] @test_ret_hfa()
 // CHECK-FULL: define arm_aapcs_vfpcc %struct.hfa_t @test_ret_hfa()

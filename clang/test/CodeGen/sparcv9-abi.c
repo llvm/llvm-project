@@ -53,7 +53,7 @@ struct large {
   int x;
 };
 
-// CHECK-LABEL: define void @f_large(%struct.large* noalias sret align 8 %agg.result, %struct.large* %x)
+// CHECK-LABEL: define void @f_large(%struct.large* noalias sret(%struct.large) align 8 %agg.result, %struct.large* %x)
 struct large f_large(struct large x) {
   x.a += *x.b;
   x.b = 0;

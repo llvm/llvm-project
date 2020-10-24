@@ -2612,32 +2612,15 @@ void UnwrappedLineParser::parseObjCInterfaceOrImplementation() {
   // @interface can be followed by a lightweight generic
   // specialization list, then either a base class or a category.
   if (FormatTok->Tok.is(tok::less)) {
-    // Unlike protocol lists, generic parameterizations support
-    // nested angles:
-    //
-    // @interface Foo<ValueType : id <NSCopying, NSSecureCoding>> :
-    //     NSObject <NSCopying, NSSecureCoding>
-    //
-    // so we need to count how many open angles we have left.
-    unsigned NumOpenAngles = 1;
-    do {
-      nextToken();
-      // Early exit in case someone forgot a close angle.
-      if (FormatTok->isOneOf(tok::semi, tok::l_brace) ||
-          FormatTok->Tok.isObjCAtKeyword(tok::objc_end))
-        break;
-      if (FormatTok->Tok.is(tok::less))
-        ++NumOpenAngles;
-      else if (FormatTok->Tok.is(tok::greater)) {
-        assert(NumOpenAngles > 0 && "'>' makes NumOpenAngles negative");
-        --NumOpenAngles;
-      }
-    } while (!eof() && NumOpenAngles != 0);
-    nextToken(); // Skip '>'.
+    parseObjCLightweightGenerics();
   }
   if (FormatTok->Tok.is(tok::colon)) {
     nextToken();
     nextToken(); // base class name
+    // The base class can also have lightweight generics applied to it.
+    if (FormatTok->Tok.is(tok::less)) {
+      parseObjCLightweightGenerics();
+    }
   } else if (FormatTok->Tok.is(tok::l_paren))
     // Skip category, if present.
     parseParens();
@@ -2656,6 +2639,32 @@ void UnwrappedLineParser::parseObjCInterfaceOrImplementation() {
   addUnwrappedLine();
 
   parseObjCUntilAtEnd();
+}
+
+void UnwrappedLineParser::parseObjCLightweightGenerics() {
+  assert(FormatTok->Tok.is(tok::less));
+  // Unlike protocol lists, generic parameterizations support
+  // nested angles:
+  //
+  // @interface Foo<ValueType : id <NSCopying, NSSecureCoding>> :
+  //     NSObject <NSCopying, NSSecureCoding>
+  //
+  // so we need to count how many open angles we have left.
+  unsigned NumOpenAngles = 1;
+  do {
+    nextToken();
+    // Early exit in case someone forgot a close angle.
+    if (FormatTok->isOneOf(tok::semi, tok::l_brace) ||
+        FormatTok->Tok.isObjCAtKeyword(tok::objc_end))
+      break;
+    if (FormatTok->Tok.is(tok::less))
+      ++NumOpenAngles;
+    else if (FormatTok->Tok.is(tok::greater)) {
+      assert(NumOpenAngles > 0 && "'>' makes NumOpenAngles negative");
+      --NumOpenAngles;
+    }
+  } while (!eof() && NumOpenAngles != 0);
+  nextToken(); // Skip '>'.
 }
 
 // Returns true for the declaration/definition form of @protocol,
@@ -3037,7 +3046,6 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       }
       FormatTok = Tokens->getNextToken();
       FormatTok->MustBreakBefore = true;
-      FormatTok->MustBreakAlignBefore = true;
     }
 
     if (!PPStack.empty() && (PPStack.back().Kind == PP_Unreachable) &&
@@ -3062,7 +3070,6 @@ void UnwrappedLineParser::pushToken(FormatToken *Tok) {
   Line->Tokens.push_back(UnwrappedLineNode(Tok));
   if (MustBreakBeforeNextToken) {
     Line->Tokens.back().Tok->MustBreakBefore = true;
-    Line->Tokens.back().Tok->MustBreakAlignBefore = true;
     MustBreakBeforeNextToken = false;
   }
 }

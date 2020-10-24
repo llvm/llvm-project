@@ -71,6 +71,37 @@ private:
   const llvm::StringMapEntry<llvm::ErrorOr<DirectoryEntry &>> *Entry;
 };
 
+class FileEntry;
+
+/// A reference to a \c FileEntry that includes the name of the file as it was
+/// accessed by the FileManager's client.
+class FileEntryRef {
+public:
+  FileEntryRef() = delete;
+  FileEntryRef(StringRef Name, const FileEntry &Entry)
+      : Name(Name), Entry(&Entry) {}
+
+  const StringRef getName() const { return Name; }
+  const FileEntry &getFileEntry() const { return *Entry; }
+
+  inline bool isValid() const;
+  inline off_t getSize() const;
+  inline unsigned getUID() const;
+  inline const llvm::sys::fs::UniqueID &getUniqueID() const;
+  inline time_t getModificationTime() const;
+
+  friend bool operator==(const FileEntryRef &LHS, const FileEntryRef &RHS) {
+    return LHS.Entry == RHS.Entry && LHS.Name == RHS.Name;
+  }
+  friend bool operator!=(const FileEntryRef &LHS, const FileEntryRef &RHS) {
+    return !(LHS == RHS);
+  }
+
+private:
+  StringRef Name;
+  const FileEntry *Entry;
+};
+
 /// Cached information about one file (either on disk
 /// or in the virtual file system).
 ///
@@ -126,41 +157,19 @@ public:
   bool isOpenForTests() const { return File != nullptr; }
 };
 
-/// A reference to a \c FileEntry that includes the name of the file as it was
-/// accessed by the FileManager's client.
-class FileEntryRef {
-public:
-  FileEntryRef() = delete;
-  FileEntryRef(StringRef Name, const FileEntry &Entry)
-      : Name(Name), Entry(&Entry) {}
+bool FileEntryRef::isValid() const { return getFileEntry().isValid(); }
 
-  const StringRef getName() const { return Name; }
+off_t FileEntryRef::getSize() const { return getFileEntry().getSize(); }
 
-  bool isValid() const { return Entry->isValid(); }
+unsigned FileEntryRef::getUID() const { return getFileEntry().getUID(); }
 
-  const FileEntry &getFileEntry() const { return *Entry; }
+const llvm::sys::fs::UniqueID &FileEntryRef::getUniqueID() const {
+  return getFileEntry().getUniqueID();
+}
 
-  off_t getSize() const { return Entry->getSize(); }
-
-  unsigned getUID() const { return Entry->getUID(); }
-
-  const llvm::sys::fs::UniqueID &getUniqueID() const {
-    return Entry->getUniqueID();
-  }
-
-  time_t getModificationTime() const { return Entry->getModificationTime(); }
-
-  friend bool operator==(const FileEntryRef &LHS, const FileEntryRef &RHS) {
-    return LHS.Entry == RHS.Entry && LHS.Name == RHS.Name;
-  }
-  friend bool operator!=(const FileEntryRef &LHS, const FileEntryRef &RHS) {
-    return !(LHS == RHS);
-  }
-
-private:
-  StringRef Name;
-  const FileEntry *Entry;
-};
+time_t FileEntryRef::getModificationTime() const {
+  return getFileEntry().getModificationTime();
+}
 
 /// Implements support for file system lookup, file system caching,
 /// and directory search management.

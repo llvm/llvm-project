@@ -59,3 +59,37 @@ func @testInhibitInvolution(%arg0: i32) -> i32 {
   // CHECK: return [[OP]]
   return %1: i32
 }
+
+//===----------------------------------------------------------------------===//
+// Test that idempotent folding works correctly
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @testSingleIdempotent
+// CHECK-SAME:  ([[ARG0:%.+]]: i32)
+func @testSingleIdempotent(%arg0 : i32) -> i32 {
+  // CHECK: [[IDEMPOTENT:%.+]] = "test.op_idempotent_trait"([[ARG0]])
+  %0 = "test.op_idempotent_trait"(%arg0) : (i32) -> i32
+  // CHECK: return [[IDEMPOTENT]]
+  return %0: i32
+}
+
+// CHECK-LABEL: func @testDoubleIdempotent
+// CHECK-SAME:  ([[ARG0:%.+]]: i32)
+func @testDoubleIdempotent(%arg0: i32) -> i32 {
+  // CHECK: [[IDEMPOTENT:%.+]] = "test.op_idempotent_trait"([[ARG0]])
+  %0 = "test.op_idempotent_trait"(%arg0) : (i32) -> i32
+  %1 = "test.op_idempotent_trait"(%0) : (i32) -> i32
+  // CHECK: return [[IDEMPOTENT]]
+  return %1: i32
+}
+
+// CHECK-LABEL: func @testTripleIdempotent
+// CHECK-SAME:  ([[ARG0:%.+]]: i32)
+func @testTripleIdempotent(%arg0: i32) -> i32 {
+  // CHECK: [[IDEMPOTENT:%.+]] = "test.op_idempotent_trait"([[ARG0]])
+  %0 = "test.op_idempotent_trait"(%arg0) : (i32) -> i32
+  %1 = "test.op_idempotent_trait"(%0) : (i32) -> i32
+  %2 = "test.op_idempotent_trait"(%1) : (i32) -> i32
+  // CHECK: return [[IDEMPOTENT]]
+  return %2: i32
+}

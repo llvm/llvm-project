@@ -108,7 +108,7 @@ for locale, alts in locales.items():
   # Note: Using alts directly in the lambda body here will bind it to the value at the
   # end of the loop. Assigning it to a default argument works around this issue.
   DEFAULT_FEATURES.append(Feature(name='locale.{}'.format(locale),
-                                  when=lambda cfg, alts=alts: any(hasLocale(cfg, alt) for alt in alts)))
+                                  when=lambda cfg, alts=alts: hasAnyLocale(cfg, alts)))
 
 
 # Add features representing the platform name: darwin, linux, windows, etc...

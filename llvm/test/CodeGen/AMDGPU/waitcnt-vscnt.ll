@@ -5,7 +5,7 @@
 ; GCN-LABEL: barrier_vmcnt_global:
 ; GFX8:         flat_load_dword
 ; GFX9_10:      global_load_dword
-; GFX8:         s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX8:         s_waitcnt vmcnt(0){{$}}
 ; GFX9_10:      s_waitcnt vmcnt(0){{$}}
 ; GCN-NEXT:     s_barrier
 define amdgpu_kernel void @barrier_vmcnt_global(i32 addrspace(1)* %arg) {
@@ -28,7 +28,7 @@ bb:
 ; GCN-LABEL: barrier_vscnt_global:
 ; GFX8:       flat_store_dword
 ; GFX9_10:    global_store_dword
-; GFX8:       s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX8:       s_waitcnt vmcnt(0){{$}}
 ; GFX9:       s_waitcnt vmcnt(0){{$}}
 ; GFX10:      s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:   s_barrier
@@ -54,7 +54,7 @@ bb:
 ; GCN-LABEL: barrier_vmcnt_vscnt_global:
 ; GFX8:         flat_load_dword
 ; GFX9_10:      global_load_dword
-; GFX8:         s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX8:         s_waitcnt vmcnt(0){{$}}
 ; GFX9_10:      s_waitcnt vmcnt(0){{$}}
 ; GFX10:        s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:     s_barrier
@@ -182,7 +182,7 @@ bb:
 ; GCN-LABEL: load_vmcnt_global:
 ; GFX8:     flat_load_dword
 ; GFX9_10:  global_load_dword
-; GFX8:     s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX8:     s_waitcnt vmcnt(0){{$}}
 ; GFX9_10:  s_waitcnt vmcnt(0){{$}}
 ; GCN-NEXT: {{global|flat}}_store_dword
 define amdgpu_kernel void @load_vmcnt_global(i32 addrspace(1)* %arg) {
