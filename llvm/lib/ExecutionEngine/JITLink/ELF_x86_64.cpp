@@ -127,11 +127,10 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
       if (E.getKind() == PCRel32GOTLoad) {
         // Replace GOT load with LEA only for MOVQ instructions.
         constexpr uint8_t MOVQRIPRel[] = {0x48, 0x8b};
-        if (strncmp(B->getContent().data() + E.getOffset() - 3,
+        if (E.getOffset() < 3 ||
+            strncmp(B->getContent().data() + E.getOffset() - 3,
                     reinterpret_cast<const char *>(MOVQRIPRel), 2) != 0)
           continue;
-
-        assert(E.getOffset() >= 3 && "GOT edge occurs too early in block");
 
         auto &GOTBlock = E.getTarget().getBlock();
         assert(GOTBlock.getSize() == G.getPointerSize() &&
