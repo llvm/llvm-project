@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "WasmObjcopy.h"
-#include "Buffer.h"
 #include "CopyConfig.h"
 #include "Object.h"
 #include "Reader.h"
 #include "Writer.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/FileOutputBuffer.h"
 
 namespace llvm {
 namespace objcopy {
@@ -92,7 +92,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
 }
 
 Error executeObjcopyOnBinary(const CopyConfig &Config,
-                             object::WasmObjectFile &In, Buffer &Out) {
+                             object::WasmObjectFile &In, raw_ostream &Out) {
   Reader TheReader(In);
   Expected<std::unique_ptr<Object>> ObjOrErr = TheReader.create();
   if (!ObjOrErr)
