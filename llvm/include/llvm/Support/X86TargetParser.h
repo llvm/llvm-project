@@ -120,6 +120,7 @@ enum CPUKind {
   CK_BDVER4,
   CK_ZNVER1,
   CK_ZNVER2,
+  CK_ZNVER3,
   CK_x86_64,
   CK_x86_64_v2,
   CK_x86_64_v3,
