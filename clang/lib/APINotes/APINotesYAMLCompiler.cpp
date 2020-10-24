@@ -430,22 +430,6 @@ namespace llvm {
     };
 
     template <>
-    struct ScalarTraits<VersionTuple> {
-      static void output(const VersionTuple &value, void*,
-                         llvm::raw_ostream &out) {
-        out << value;
-      }
-      static StringRef input(StringRef scalar, void*, VersionTuple &value) {
-        if (value.tryParse(scalar))
-          return "not a version number in the form XX.YY";
-
-        return StringRef();
-      }
-
-      static QuotingType mustQuote(StringRef) { return QuotingType::None; }
-    };
-
-    template <>
     struct MappingTraits<Param> {
       static void mapping(IO &io, Param& p) {
         io.mapRequired("Position",              p.Position);

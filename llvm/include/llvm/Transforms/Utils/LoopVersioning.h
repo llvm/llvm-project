@@ -24,7 +24,6 @@ namespace llvm {
 class Loop;
 class LoopAccessInfo;
 class LoopInfo;
-class ScalarEvolution;
 struct RuntimeCheckingPtrGroup;
 typedef std::pair<const RuntimeCheckingPtrGroup *,
                   const RuntimeCheckingPtrGroup *>

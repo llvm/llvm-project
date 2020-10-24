@@ -98,8 +98,9 @@ public:
   ExecutionSession &getExecutionSession() const { return ES; }
 
   Error setupJITDylib(JITDylib &JD) override;
-  Error notifyAdding(JITDylib &JD, const MaterializationUnit &MU) override;
-  Error notifyRemoving(JITDylib &JD, VModuleKey K) override;
+  Error notifyAdding(ResourceTracker &RT,
+                     const MaterializationUnit &MU) override;
+  Error notifyRemoving(ResourceTracker &RT) override;
 
   Expected<InitializerSequence> getInitializerSequence(JITDylib &JD);
 
@@ -119,6 +120,19 @@ private:
     LocalDependenciesMap getSyntheticSymbolLocalDependencies(
         MaterializationResponsibility &MR) override;
 
+    // FIXME: We should be tentatively tracking scraped sections and discarding
+    // if the MR fails.
+    Error notifyFailed(MaterializationResponsibility &MR) override {
+      return Error::success();
+    }
+
+    Error notifyRemovingResources(ResourceKey K) override {
+      return Error::success();
+    }
+
+    void notifyTransferringResources(ResourceKey DstKey,
+                                     ResourceKey SrcKey) override {}
+
   private:
     using InitSymbolDepMap =
         DenseMap<MaterializationResponsibility *, JITLinkSymbolVector>;
@@ -135,8 +149,6 @@ private:
     DenseMap<JITDylib *, std::pair<uint32_t, uint32_t>> ObjCImageInfos;
     InitSymbolDepMap InitSymbolDeps;
   };
-
-  static std::vector<JITDylib *> getDFSLinkOrder(JITDylib &JD);
 
   void registerInitInfo(JITDylib &JD, JITTargetAddress ObjCImageInfoAddr,
                         MachOJITDylibInitializers::SectionExtent ModInits,
