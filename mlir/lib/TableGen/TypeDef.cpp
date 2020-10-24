@@ -107,7 +107,7 @@ StringRef TypeParameter::getName() const {
 }
 llvm::Optional<StringRef> TypeParameter::getAllocator() const {
   llvm::Init *parameterType = def->getArg(num);
-  if (auto *stringType = dyn_cast<llvm::StringInit>(parameterType))
+  if (isa<llvm::StringInit>(parameterType))
     return llvm::Optional<StringRef>();
 
   if (auto *typeParameter = dyn_cast<llvm::DefInit>(parameterType)) {
