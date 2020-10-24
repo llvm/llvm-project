@@ -1733,6 +1733,40 @@ defm : ZXATMLDm<atomic_load_16, 0xFFFF, LD2BZXrri, LD2BZXrii, LD2BZXzri,
 defm : ZXATMLD32m<atomic_load_32, 0xFFFFFFFF, LDLZXrri, LDLZXrii, LDLZXzri,
                   LDLZXzii>;
 
+// Atomic stores
+multiclass ATMSTm<SDPatternOperator from, ValueType ty,
+                  SDPatternOperator torri, SDPatternOperator torii,
+                  SDPatternOperator tozri, SDPatternOperator tozii> {
+  def : Pat<(from ADDRrri:$addr, ty:$src), (torri MEMrri:$addr, $src)>;
+  def : Pat<(from ADDRrii:$addr, ty:$src), (torii MEMrii:$addr, $src)>;
+  def : Pat<(from ADDRzri:$addr, ty:$src), (tozri MEMzri:$addr, $src)>;
+  def : Pat<(from ADDRzii:$addr, ty:$src), (tozii MEMzii:$addr, $src)>;
+}
+defm : ATMSTm<atomic_store_8, i32, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
+defm : ATMSTm<atomic_store_16, i32, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
+defm : ATMSTm<atomic_store_32, i32, STLrri, STLrii, STLzri, STLzii>;
+defm : ATMSTm<atomic_store_64, i64, STrri, STrii, STzri, STzii>;
+
+// Optimized atomic stores with truncate
+multiclass TRATMSTm<SDPatternOperator from,
+                  ValueType ty,
+                  SDPatternOperator torri,
+                  SDPatternOperator torii,
+                  SDPatternOperator tozri,
+                  SDPatternOperator tozii> {
+  def : Pat<(from ADDRrri:$addr, (i32 (trunc i64:$src))),
+            (torri MEMrri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+  def : Pat<(from ADDRrii:$addr, (i32 (trunc i64:$src))),
+            (torii MEMrii:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+  def : Pat<(from ADDRzri:$addr, (i32 (trunc i64:$src))),
+            (tozri MEMzri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+  def : Pat<(from ADDRzii:$addr, (i32 (trunc i64:$src))),
+            (tozii MEMzii:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+}
+defm : TRATMSTm<atomic_store_8, i32, ST1Brri, ST1Brii, ST1Bzri, ST1Bzii>;
+defm : TRATMSTm<atomic_store_16, i32, ST2Brri, ST2Brii, ST2Bzri, ST2Bzii>;
+defm : TRATMSTm<atomic_store_32, i32, STLrri, STLrii, STLzri, STLzii>;
+
 // Address calculation and its optimization
 def : Pat<(VEhi tconstpool:$in), (LEASLzii 0, 0, tconstpool:$in)>;
 def : Pat<(VElo tconstpool:$in),
