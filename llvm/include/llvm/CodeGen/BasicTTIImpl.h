@@ -1202,9 +1202,6 @@ public:
     case Intrinsic::vector_reduce_fmin:
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
-      // FIXME: all cost kinds should default to the same thing?
-      if (CostKind != TTI::TCK_RecipThroughput)
-        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, 1, I);
       return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
     }

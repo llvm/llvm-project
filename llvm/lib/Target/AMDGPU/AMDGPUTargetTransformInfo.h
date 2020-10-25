@@ -115,21 +115,26 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
     return TargetTransformInfo::TCC_Basic;
   }
 
-  static inline int getHalfRateInstrCost() {
-    return 2 * TargetTransformInfo::TCC_Basic;
+  static inline int getHalfRateInstrCost(
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) {
+    return CostKind == TTI::TCK_CodeSize ? 2
+                                         : 2 * TargetTransformInfo::TCC_Basic;
   }
 
   // TODO: The size is usually 8 bytes, but takes 4x as many cycles. Maybe
   // should be 2 or 4.
-  static inline int getQuarterRateInstrCost() {
-    return 3 * TargetTransformInfo::TCC_Basic;
+  static inline int getQuarterRateInstrCost(
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) {
+    return CostKind == TTI::TCK_CodeSize ? 2
+                                         : 4 * TargetTransformInfo::TCC_Basic;
   }
 
-   // On some parts, normal fp64 operations are half rate, and others
-   // quarter. This also applies to some integer operations.
-  inline int get64BitInstrCost() const {
-    return ST->hasHalfRate64Ops() ?
-      getHalfRateInstrCost() : getQuarterRateInstrCost();
+  // On some parts, normal fp64 operations are half rate, and others
+  // quarter. This also applies to some integer operations.
+  inline int get64BitInstrCost(
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const {
+    return ST->hasHalfRate64Ops() ? getHalfRateInstrCost(CostKind)
+                                  : getQuarterRateInstrCost(CostKind);
   }
 
 public:

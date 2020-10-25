@@ -127,11 +127,10 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
       if (E.getKind() == PCRel32GOTLoad) {
         // Replace GOT load with LEA only for MOVQ instructions.
         constexpr uint8_t MOVQRIPRel[] = {0x48, 0x8b};
-        if (strncmp(B->getContent().data() + E.getOffset() - 3,
+        if (E.getOffset() < 3 ||
+            strncmp(B->getContent().data() + E.getOffset() - 3,
                     reinterpret_cast<const char *>(MOVQRIPRel), 2) != 0)
           continue;
-
-        assert(E.getOffset() >= 3 && "GOT edge occurs too early in block");
 
         auto &GOTBlock = E.getTarget().getBlock();
         assert(GOTBlock.getSize() == G.getPointerSize() &&
@@ -230,6 +229,7 @@ private:
     case ELF::R_X86_64_64:
       return ELF_x86_64_Edges::ELFX86RelocationKind::Pointer64;
     case ELF::R_X86_64_GOTPCREL:
+    case ELF::R_X86_64_GOTPCRELX:
     case ELF::R_X86_64_REX_GOTPCRELX:
       return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32GOTLoad;
     }
@@ -510,6 +510,17 @@ private:
         // I am not sure on If this is going to hold as an invariant. Revisit.
         if (!Name)
           return Name.takeError();
+
+        if (SymRef.isCommon()) {
+          // Symbols in SHN_COMMON refer to uninitialized data. The st_value
+          // field holds alignment constraints.
+          Symbol &S =
+              G->addCommonSymbol(*Name, Scope::Default, getCommonSection(), 0,
+                                 SymRef.st_size, SymRef.getValue(), false);
+          JITSymbolTable[SymbolIndex] = &S;
+          continue;
+        }
+
         // TODO: weak and hidden
         if (SymRef.isExternal())
           bindings = {Linkage::Strong, Scope::Default};
@@ -550,18 +561,12 @@ private:
           JITSymbolTable[SymbolIndex] = &S;
         }
 
-        //  }
         // TODO: The following has to be implmented.
         // leaving commented out to save time for future patchs
         /*
           G->addAbsoluteSymbol(*Name, SymRef.getValue(), SymRef.st_size,
           Linkage::Strong, Scope::Default, false);
-
-          if(SymRef.isCommon()) {
-            G->addCommonSymbol(*Name, Scope::Default, getCommonSection(), 0, 0,
-          SymRef.getValue(), false);
-          }
-  */
+        */
       }
     }
     return Error::success();
