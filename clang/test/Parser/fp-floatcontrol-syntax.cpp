@@ -26,19 +26,13 @@ void check_stack() {
 double a = 0.0;
 double b = 1.0;
 
-//FIXME At some point this warning will be removed, until then
-//      document the warning
-#ifdef FAST
-// expected-warning@+1{{pragma STDC FENV_ACCESS ON is not supported, ignoring pragma}}
-#pragma STDC FENV_ACCESS ON
-#else
-#pragma STDC FENV_ACCESS ON // expected-warning{{pragma STDC FENV_ACCESS ON is not supported, ignoring pragma}}
-#endif
 #ifdef STRICT
 #pragma float_control(precise, off) // expected-error {{'#pragma float_control(precise, off)' is illegal when except is enabled}}
 #else
-// Currently FENV_ACCESS cannot be enabled by pragma, skip error check
-#pragma float_control(precise, off) // not-expected-error {{'#pragma float_control(precise, off)' is illegal when fenv_access is enabled}}
+#ifndef FAST
+#pragma STDC FENV_ACCESS ON
+#pragma float_control(precise, off) // expected-error {{'#pragma float_control(precise, off)' is illegal when except is enabled}}
+#endif
 #endif
 
 #pragma float_control(precise, on)
