@@ -10,7 +10,7 @@
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Loop deleted because it is invariant
 ; CHECK-NEXT: ...
-define i32 @main() local_unnamed_addr #0 {
+define i32 @main() local_unnamed_addr willreturn {
 entry:
   br label %for.cond, !dbg !9
 

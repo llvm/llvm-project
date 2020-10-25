@@ -4,7 +4,7 @@ declare double @sqrt(double) readnone nounwind
 %empty = type {}
 declare %empty @has_side_effects()
 
-define double @test_0(i32 %param) {
+define double @test_0(i32 %param) willreturn {
 ; CHECK-LABEL: @test_0(
 ; CHECK-NOT: br
 entry:

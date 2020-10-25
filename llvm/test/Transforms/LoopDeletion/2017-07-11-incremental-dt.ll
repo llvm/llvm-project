@@ -15,7 +15,7 @@
 ; DT:     [3] %for.body
 ; DT:       [4] %for.cond3.loopexit
 
-define i32 @fn1() {
+define i32 @fn1() willreturn {
 entry:
   br label %for.cond
 
