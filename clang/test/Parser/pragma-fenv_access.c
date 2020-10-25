@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -ffp-exception-behavior=strict -DSTRICT -fsyntax-only -verify %s
-// RUN: %clang_cc1 -x c++ -DCPP -DSTRICT -ffp-exception-behavior=strict -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -ffp-exception-behavior=strict -DSTRICT -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -x c++ -DCPP -DSTRICT -ffp-exception-behavior=strict -fsyntax-only -verify %s
 #ifdef CPP
 #define CONST constexpr
 #else
