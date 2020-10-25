@@ -142,6 +142,7 @@ public:
   }
 
   unsigned getDiagID() const { return DiagID; }
+  void setDiagID(unsigned ID) { DiagID = ID; }
 
   void Emit(const DiagnosticBuilder &DB) const {
     if (!DiagStorage)
