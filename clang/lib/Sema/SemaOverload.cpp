@@ -5703,11 +5703,16 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
   SmallVector<PartialDiagnosticAt, 8> Notes;
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
-  Expr::ConstExprUsage Usage = CCE == Sema::CCEK_TemplateArg
-                                   ? Expr::EvaluateForMangling
-                                   : Expr::EvaluateForCodeGen;
 
-  if (!Result.get()->EvaluateAsConstantExpr(Eval, Usage, S.Context) ||
+  ConstantExprKind Kind;
+  if (CCE == Sema::CCEK_TemplateArg && T->isRecordType())
+    Kind = ConstantExprKind::ClassTemplateArgument;
+  else if (CCE == Sema::CCEK_TemplateArg)
+    Kind = ConstantExprKind::NonClassTemplateArgument;
+  else
+    Kind = ConstantExprKind::Normal;
+
+  if (!Result.get()->EvaluateAsConstantExpr(Eval, S.Context, Kind) ||
       (RequireInt && !Eval.Val.isInt())) {
     // The expression can't be folded, so we can't keep it at this position in
     // the AST.
@@ -5726,9 +5731,14 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
 
   // It's not a constant expression. Produce an appropriate diagnostic.
   if (Notes.size() == 1 &&
-      Notes[0].second.getDiagID() == diag::note_invalid_subexpr_in_const_expr)
+      Notes[0].second.getDiagID() == diag::note_invalid_subexpr_in_const_expr) {
     S.Diag(Notes[0].first, diag::err_expr_not_cce) << CCE;
-  else {
+  } else if (!Notes.empty() && Notes[0].second.getDiagID() ==
+                                   diag::note_constexpr_invalid_template_arg) {
+    Notes[0].second.setDiagID(diag::err_constexpr_invalid_template_arg);
+    for (unsigned I = 0; I < Notes.size(); ++I)
+      S.Diag(Notes[I].first, Notes[I].second);
+  } else {
     S.Diag(From->getBeginLoc(), diag::err_expr_not_cce)
         << CCE << From->getSourceRange();
     for (unsigned I = 0; I < Notes.size(); ++I)

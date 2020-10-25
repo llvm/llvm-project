@@ -2836,7 +2836,7 @@ bool PassBuilder::isAnalysisPassName(StringRef PassName) {
 #define LOOP_ANALYSIS(NAME, CREATE_PASS)                                       \
   if (PassName == NAME)                                                        \
     return true;
-#define CGSSC_ANALYSIS(NAME, CREATE_PASS)                                      \
+#define CGSCC_ANALYSIS(NAME, CREATE_PASS)                                      \
   if (PassName == NAME)                                                        \
     return true;
 #define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS)                               \

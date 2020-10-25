@@ -1814,8 +1814,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     SmallVector<PartialDiagnosticAt, 8> Notes;
     Expr::EvalResult Eval;
     Eval.Diag = &Notes;
-    if ((!ProbArg->EvaluateAsConstantExpr(Eval, Expr::EvaluateForCodeGen,
-                                          Context)) ||
+    if ((!ProbArg->EvaluateAsConstantExpr(Eval, Context)) ||
         !Eval.Val.isFloat()) {
       Diag(ProbArg->getBeginLoc(), diag::err_probability_not_constant_float)
           << ProbArg->getSourceRange();
@@ -3295,8 +3294,7 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   ArgExpr = Arg.get();
   Expr::EvalResult ArgResult1;
   // Check that sync scope is a constant literal
-  if (!ArgExpr->EvaluateAsConstantExpr(ArgResult1, Expr::EvaluateForCodeGen,
-                                       Context))
+  if (!ArgExpr->EvaluateAsConstantExpr(ArgResult1, Context))
     return Diag(ArgExpr->getExprLoc(), diag::err_expr_not_string_literal)
            << ArgExpr->getType();
 

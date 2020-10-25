@@ -4,10 +4,25 @@
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace dr100 { // dr100: yes
-  template<const char *> struct A {}; // expected-note 0-1{{declared here}}
+  template<const char (*)[4]> struct A {}; // expected-note 0-1{{declared here}}
   template<const char (&)[4]> struct B {}; // expected-note 0-1{{declared here}}
-  A<"foo"> a; // expected-error {{does not refer to any declaration}}
-  B<"bar"> b; // expected-error {{does not refer to any declaration}}
+  template<const char *> struct C {}; // expected-note 0-1{{declared here}}
+  template<const char &> struct D {}; // expected-note 0-1{{declared here}}
+  A<&"foo"> a; // #100a
+  B<"bar"> b; // #100b
+  C<"baz"> c; // #100c
+  D<*"quux"> d; // #100d
+#if __cplusplus < 201703L
+  // expected-error@#100a {{does not refer to any declaration}}
+  // expected-error@#100b {{does not refer to any declaration}}
+  // expected-error@#100c {{does not refer to any declaration}}
+  // expected-error@#100d {{does not refer to any declaration}}
+#else
+  // expected-error@#100a {{pointer to string literal is not allowed in a template argument}}
+  // expected-error@#100b {{reference to string literal is not allowed in a template argument}}
+  // expected-error@#100c {{pointer to subobject of string literal is not allowed in a template argument}}
+  // expected-error@#100d {{reference to subobject of string literal is not allowed in a template argument}}
+#endif
 }
 
 namespace dr101 { // dr101: 3.5

@@ -2,6 +2,10 @@
 
 using size_t = __SIZE_TYPE__;
 
+namespace std {
+  struct type_info;
+}
+
 // floating-point arguments
 template<float> struct Float {};
 using F1 = Float<1.0f>; // FIXME expected-error {{sorry}}
@@ -219,4 +223,72 @@ namespace UnnamedBitfield {
   using T = X<(A())>;
   // Once we support bit-casts involving bit-fields, this should be valid too.
   using T = X<__builtin_bit_cast(A, 0)>; // expected-error {{constant}} expected-note {{not yet supported}}
+}
+
+namespace Temporary {
+  template<const int &> struct A {};
+  A<0> a0; // expected-error {{conversion from 'int' to 'const int &' in converted constant expression would bind reference to a temporary}}
+
+  A<(const int&)1> a1; // expected-error {{reference to temporary object is not allowed in a template argument}}
+  A<(int&&)2> a2; // expected-error {{reference to temporary object is not allowed in a template argument}}
+
+  // FIXME: There's really no good reason to reject these cases.
+  int &&r3 = 3;
+  const int &r4 = 4;
+  A<r3> a3; // expected-error {{reference to temporary object is not allowed in a template argument}}
+  A<r4> a4; // expected-error {{reference to temporary object is not allowed in a template argument}}
+
+  struct X { int a[5]; };
+  X &&x = X{};
+  A<x.a[3]> a5; // expected-error {{reference to subobject of temporary object}}
+
+  template<const int*> struct B {};
+  B<&(int&)(int&&)0> b0; // expected-error {{pointer to temporary object}}
+  B<&r3> b3; // expected-error {{pointer to temporary object}}
+  B<&x.a[3]> b5; // expected-error {{pointer to subobject of temporary object}}
+
+  struct C { const int *p[2]; };
+  template<C> struct D {};
+  D<C{nullptr, &r3}> d; // expected-error {{pointer to temporary object}}
+}
+
+namespace StringLiteral {
+  template<decltype(auto)> struct Y {};
+  Y<&"hello"> y1; // expected-error {{pointer to string literal}}
+  Y<"hello"> y2; // expected-error {{reference to string literal}}
+  Y<+"hello"> y3; // expected-error {{pointer to subobject of string literal}}
+  Y<"hello"[2]> y4; // expected-error {{reference to subobject of string literal}}
+
+  struct A { const char *p; };
+  struct B { const char &r; };
+  Y<A{"hello"}> y5; // expected-error {{pointer to subobject of string literal}}
+  Y<B{"hello"[2]}> y6; // expected-error {{reference to subobject of string literal}}
+}
+
+namespace TypeInfo {
+  template<decltype(auto)> struct Y {};
+  Y<&typeid(int)> y1; // expected-error {{pointer to type_info object}}
+  Y<typeid(int)> y2; // expected-error {{reference to type_info object}}
+
+  struct A { const std::type_info *p; };
+  struct B { const std::type_info &r; };
+  Y<A{&typeid(int)}> y3; // expected-error {{pointer to type_info object}}
+  Y<B{typeid(int)}> y4; // expected-error {{reference to type_info object}}
+}
+
+namespace Predefined {
+  template<decltype(auto)> struct Y {};
+
+  struct A { const char *p; };
+  struct B { const char &r; };
+  void f() {
+    // decltype(__func__) is an array, which decays to a pointer parameter.
+    Y<__func__>(); // expected-error {{pointer to subobject of predefined '__func__' variable}}
+    Y<__PRETTY_FUNCTION__>(); // expected-error {{pointer to subobject}}
+    Y<(__func__)>(); // expected-error {{reference to predefined '__func__' variable}}
+    Y<&__func__>(); // expected-error {{pointer to predefined '__func__' variable}}
+    Y<*&__func__>(); // expected-error {{reference to predefined '__func__' variable}}
+    Y<A{__func__}>(); // expected-error {{pointer to subobject of predefined '__func__' variable}}
+    Y<B{__func__[0]}>(); // expected-error {{reference to subobject of predefined '__func__' variable}}
+  }
 }
