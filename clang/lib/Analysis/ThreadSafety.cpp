@@ -1279,9 +1279,8 @@ bool ThreadSafetyAnalyzer::inCurrentScope(const CapabilityExpr &CapE) {
   if (const auto *P = dyn_cast<til::Project>(SExp)) {
     if (!CurrentMethod)
       return false;
-    const auto *VD = P->clangDecl();
-    if (VD)
-      return VD->getDeclContext() == CurrentMethod->getDeclContext();
+    const ValueDecl *VD = P->clangDecl();
+    return VD->getDeclContext() == CurrentMethod->getDeclContext();
   }
 
   return false;
