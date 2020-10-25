@@ -8,10 +8,10 @@ define i32 @remove_loop(i32 %size) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[SIZE:%.*]], 31
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[SIZE]], 31
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP1]], i32 [[SIZE]], i32 31
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP0]], [[UMAX]]
+; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP1]], i32 [[SIZE]], i32 31
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP0]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 5
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], 5
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i32 [[TMP3]], 5
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK:       while.cond:
 ; CHECK-NEXT:    [[SIZE_ADDR_0:%.*]] = phi i32 [ [[SIZE]], [[ENTRY:%.*]] ], [ [[SUB:%.*]], [[WHILE_COND]] ]
