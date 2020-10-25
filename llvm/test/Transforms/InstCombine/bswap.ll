@@ -687,11 +687,7 @@ define i32 @funnel_binary(i32 %abcd) {
 
 define i32 @funnel_and(i32 %abcd) {
 ; CHECK-LABEL: @funnel_and(
-; CHECK-NEXT:    [[ZZCZ:%.*]] = and i32 [[ABCD:%.*]], 65280
-; CHECK-NEXT:    [[ZCZA:%.*]] = call i32 @llvm.fshl.i32(i32 [[ZZCZ]], i32 [[ABCD]], i32 8)
-; CHECK-NEXT:    [[ZBZZ:%.*]] = and i32 [[ABCD]], 16711680
-; CHECK-NEXT:    [[DZBZ:%.*]] = call i32 @llvm.fshl.i32(i32 [[ABCD]], i32 [[ZBZZ]], i32 24)
-; CHECK-NEXT:    [[DCBA:%.*]] = or i32 [[ZCZA]], [[DZBZ]]
+; CHECK-NEXT:    [[DCBA:%.*]] = call i32 @llvm.bswap.i32(i32 [[ABCD:%.*]])
 ; CHECK-NEXT:    ret i32 [[DCBA]]
 ;
   %zzcz = and i32 %abcd, 65280

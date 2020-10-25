@@ -2010,7 +2010,16 @@ Instruction *InstCombinerImpl::matchBSwapOrBitReverse(BinaryOperator &Or,
   bool OrWithAnds = match(Op0, m_And(m_Value(), m_Value())) ||
                     match(Op1, m_And(m_Value(), m_Value()));
 
-  if (!OrWithOrs && !OrWithShifts && !OrWithAnds)
+  // fshl(A,B,C) | D  and  A | fshl(B,C,D)          -> bswap if possible.
+  // fshr(A,B,C) | D  and  A | fshr(B,C,D)          -> bswap if possible.
+  bool OrWithFunnels = match(Op0, m_FShl(m_Value(), m_Value(), m_Value())) ||
+                       match(Op0, m_FShr(m_Value(), m_Value(), m_Value())) ||
+                       match(Op0, m_FShl(m_Value(), m_Value(), m_Value())) ||
+                       match(Op0, m_FShr(m_Value(), m_Value(), m_Value()));
+
+  // TODO: Do we need all these filtering checks or should we just rely on
+  // recognizeBSwapOrBitReverseIdiom + collectBitParts to reject them quickly?
+  if (!OrWithOrs && !OrWithShifts && !OrWithAnds && !OrWithFunnels)
     return nullptr;
 
   SmallVector<Instruction *, 4> Insts;
