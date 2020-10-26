@@ -3362,6 +3362,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
        !Info.getLangOpts().CPlusPlus11 && !VD->hasICEInitializer(Info.Ctx))) {
     Info.CCEDiag(E, diag::note_constexpr_var_init_non_constant, 1) << VD;
     NoteLValueLocation(Info, Base);
+    Info.addNotes(Notes);
   }
 
   // Never use the initializer of a weak variable, not even for constant
@@ -3374,6 +3375,11 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
 
   Result = VD->getEvaluatedValue();
   return true;
+}
+
+static bool IsConstNonVolatile(QualType T) {
+  Qualifiers Quals = T.getQualifiers();
+  return Quals.hasConst() && !Quals.hasVolatile();
 }
 
 /// Get the base index of the given base class within an APValue representing
@@ -8185,12 +8191,6 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
       return true;
     }
     return Success(VD);
-  }
-
-  if (!Info.getLangOpts().CPlusPlus11) {
-    Info.CCEDiag(E, diag::note_constexpr_ltor_non_integral, 1)
-        << VD << VD->getType();
-    Info.Note(VD->getLocation(), diag::note_declared_at);
   }
 
   APValue *V;

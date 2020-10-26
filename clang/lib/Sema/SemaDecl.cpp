@@ -12958,14 +12958,18 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
 
   // All the following checks are C++ only.
   if (!getLangOpts().CPlusPlus) {
-    // If this variable must be emitted, add it as an initializer for the
-    // current module.
-    if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty())
-      Context.addModuleInitializer(ModuleScopes.back().Module, var);
-    return;
+      // If this variable must be emitted, add it as an initializer for the
+      // current module.
+     if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty())
+       Context.addModuleInitializer(ModuleScopes.back().Module, var);
+     return;
   }
 
+  if (auto *DD = dyn_cast<DecompositionDecl>(var))
+    CheckCompleteDecompositionDeclaration(DD);
+
   QualType type = var->getType();
+  if (type->isDependentType()) return;
 
   if (var->hasAttr<BlocksAttr>())
     getCurFunction()->addByrefBlockVar(var);
@@ -13020,47 +13024,65 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       }
       Diag(DiagLoc, diag::err_constexpr_var_requires_const_init)
           << var << Init->getSourceRange();
-      for (unsigned I = 0, N = Notes.size(); I != N; ++I)
-        Diag(Notes[I].first, Notes[I].second);
-    } else if (GlobalStorage && var->hasAttr<ConstInitAttr>()) {
-      auto *Attr = var->getAttr<ConstInitAttr>();
-      Diag(var->getLocation(), diag::err_require_constant_init_failed)
+        for (unsigned I = 0, N = Notes.size(); I != N; ++I)
+          Diag(Notes[I].first, Notes[I].second);
+      }
+    } else if (var->mightBeUsableInConstantExpressions(Context)) {
+      // Check whether the initializer of a const variable of integral or
+      // enumeration type is an ICE now, since we can't tell whether it was
+      // initialized by a constant expression if we check later.
+      var->checkInitIsICE();
+    }
+
+    // Don't emit further diagnostics about constexpr globals since they
+    // were just diagnosed.
+    if (!var->isConstexpr() && GlobalStorage && var->hasAttr<ConstInitAttr>()) {
+      // FIXME: Need strict checking in C++03 here.
+      bool DiagErr = getLangOpts().CPlusPlus11
+          ? !var->checkInitIsICE() : !checkConstInit();
+      if (DiagErr) {
+        auto *Attr = var->getAttr<ConstInitAttr>();
+        Diag(var->getLocation(), diag::err_require_constant_init_failed)
           << Init->getSourceRange();
-      Diag(Attr->getLocation(), diag::note_declared_required_constant_init_here)
-          << Attr->getRange() << Attr->isConstinit();
-      for (auto &it : Notes)
-        Diag(it.first, it.second);
-    } else if (IsGlobal &&
-               !getDiagnostics().isIgnored(diag::warn_global_constructor,
-                                           var->getLocation())) {
+        Diag(Attr->getLocation(),
+             diag::note_declared_required_constant_init_here)
+            << Attr->getRange() << Attr->isConstinit();
+        if (getLangOpts().CPlusPlus11) {
+          APValue Value;
+          SmallVector<PartialDiagnosticAt, 8> Notes;
+          Init->EvaluateAsInitializer(Value, getASTContext(), var, Notes);
+          for (auto &it : Notes)
+            Diag(it.first, it.second);
+        } else {
+          Diag(CacheCulprit->getExprLoc(),
+               diag::note_invalid_subexpr_in_const_expr)
+              << CacheCulprit->getSourceRange();
+        }
+      }
+    }
+    else if (!var->isConstexpr() && IsGlobal &&
+             !getDiagnostics().isIgnored(diag::warn_global_constructor,
+                                    var->getLocation())) {
       // Warn about globals which don't have a constant initializer.  Don't
       // warn about globals with a non-trivial destructor because we already
       // warned about them.
       CXXRecordDecl *RD = baseType->getAsCXXRecordDecl();
       if (!(RD && !RD->hasTrivialDestructor())) {
-        // checkConstInit() here permits trivial default initialization even in
-        // C++11 onwards, where such an initializer is not a constant initializer
-        // but nonetheless doesn't require a global constructor.
         if (!checkConstInit())
           Diag(var->getLocation(), diag::warn_global_constructor)
-              << Init->getSourceRange();
+            << Init->getSourceRange();
       }
     }
   }
 
   // Require the destructor.
-  if (!type->isDependentType())
-    if (const RecordType *recordType = baseType->getAs<RecordType>())
-      FinalizeVarWithDestructor(var, recordType);
+  if (const RecordType *recordType = baseType->getAs<RecordType>())
+    FinalizeVarWithDestructor(var, recordType);
 
   // If this variable must be emitted, add it as an initializer for the current
   // module.
   if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty())
     Context.addModuleInitializer(ModuleScopes.back().Module, var);
-
-  // Build the bindings if this is a structured binding declaration.
-  if (auto *DD = dyn_cast<DecompositionDecl>(var))
-    CheckCompleteDecompositionDeclaration(DD);
 }
 
 /// Determines if a variable's alignment is dependent.

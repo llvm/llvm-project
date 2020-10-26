@@ -4453,7 +4453,7 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       uint64_t Val = Record.readInt();
       if (Val && !VD->getInit()) {
         VD->setInit(Record.readExpr());
-        if (Val != 1) {
+        if (Val > 1) { // IsInitKnownICE = 1, IsInitNotICE = 2, IsInitICE = 3
           EvaluatedStmt *Eval = VD->ensureEvaluatedStmt();
           Eval->HasConstantInitialization = (Val & 2) != 0;
           Eval->HasConstantDestruction = (Val & 4) != 0;

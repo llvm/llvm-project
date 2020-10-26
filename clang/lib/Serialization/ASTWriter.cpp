@@ -4980,7 +4980,13 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         const VarDecl *VD = cast<VarDecl>(D);
         Record.push_back(VD->isInline());
         Record.push_back(VD->isInlineSpecified());
-        Record.AddVarDeclInit(VD);
+        if (VD->getInit()) {
+          Record.push_back(!VD->isInitKnownICE() ? 1
+                                                 : (VD->isInitICE() ? 3 : 2));
+          Record.AddStmt(const_cast<Expr*>(VD->getInit()));
+        } else {
+          Record.push_back(0);
+        }
         break;
       }
 

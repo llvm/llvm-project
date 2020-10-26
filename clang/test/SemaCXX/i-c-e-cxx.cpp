@@ -19,6 +19,9 @@ void f() {
 
 int a() {
   const int t=t; // expected-note {{declared here}}
+#if __cplusplus <= 199711L
+  // expected-note@-2 {{read of object outside its lifetime}}
+#endif
 
   switch(1) { // do not warn that 1 is not a case value;
               // 't' might have been expected to evalaute to 1

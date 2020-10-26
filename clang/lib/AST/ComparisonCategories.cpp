@@ -42,7 +42,7 @@ clang::getComparisonCategoryForBuiltinCmp(QualType T) {
 
 bool ComparisonCategoryInfo::ValueInfo::hasValidIntValue() const {
   assert(VD && "must have var decl");
-  if (!VD->isUsableInConstantExpressions(VD->getASTContext()))
+  if (!VD->checkInitIsICE())
     return false;
 
   // Before we attempt to get the value of the first field, ensure that we

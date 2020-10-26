@@ -361,9 +361,8 @@ public:
       return !VD->needsDestruction(getContext()) && InitDecl->evaluateValue();
 
     // Otherwise, we need a thread wrapper unless we know that every
-    // translation unit will emit the value as a constant. We rely on the
-    // variable being constant-initialized in every translation unit if it's
-    // constant-initialized in any translation unit, which isn't actually
+    // translation unit will emit the value as a constant. We rely on
+    // ICE-ness not varying between translation units, which isn't actually
     // guaranteed by the standard but is necessary for sanity.
     return InitDecl->hasConstantInitialization();
   }

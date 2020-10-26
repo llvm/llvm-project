@@ -2277,7 +2277,7 @@ void VarDecl::setInit(Expr *I) {
   Init = I;
 }
 
-bool VarDecl::mightBeUsableInConstantExpressions(const ASTContext &C) const {
+bool VarDecl::mightBeUsableInConstantExpressions(ASTContext &C) const {
   const LangOptions &Lang = C.getLangOpts();
 
   // OpenCL permits const integral variables to be used in constant
@@ -2314,7 +2314,7 @@ bool VarDecl::mightBeUsableInConstantExpressions(const ASTContext &C) const {
   return Lang.CPlusPlus11 && isConstexpr();
 }
 
-bool VarDecl::isUsableInConstantExpressions(const ASTContext &Context) const {
+bool VarDecl::isUsableInConstantExpressions(ASTContext &Context) const {
   // C++2a [expr.const]p3:
   //   A variable is usable in constant expressions after its initializing
   //   declaration is encountered...
@@ -2356,10 +2356,6 @@ EvaluatedStmt *VarDecl::ensureEvaluatedStmt() const {
   return Eval;
 }
 
-EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
-  return Init.dyn_cast<EvaluatedStmt *>();
-}
-
 APValue *VarDecl::evaluateValue() const {
   SmallVector<PartialDiagnosticAt, 8> Notes;
   return evaluateValueImpl(Notes, hasConstantInitialization());
@@ -2369,17 +2365,19 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
                                     bool IsConstantInitialization) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
 
-  const auto *Init = cast<Expr>(Eval->Value);
-  assert(!Init->isValueDependent());
-
   // We only produce notes indicating why an initializer is non-constant the
   // first time it is evaluated. FIXME: The notes won't always be emitted the
   // first time we try evaluation, so might not be produced at all.
   if (Eval->WasEvaluated)
     return Eval->Evaluated.isAbsent() ? nullptr : &Eval->Evaluated;
 
+  const auto *Init = cast<Expr>(Eval->Value);
+  assert(!Init->isValueDependent());
+
   if (Eval->IsEvaluating) {
     // FIXME: Produce a diagnostic for self-initialization.
+    Eval->CheckedICE = true;
+    Eval->IsICE = false;
     return nullptr;
   }
 
@@ -2407,11 +2405,18 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   Eval->IsEvaluating = false;
   Eval->WasEvaluated = true;
 
+  // In C++11, we have determined whether the initializer was a constant
+  // expression as a side-effect.
+  if (getASTContext().getLangOpts().CPlusPlus11 && !Eval->CheckedICE) {
+    Eval->CheckedICE = true;
+    Eval->IsICE = Result && Notes.empty();
+  }
+
   return Result ? &Eval->Evaluated : nullptr;
 }
 
 APValue *VarDecl::getEvaluatedValue() const {
-  if (EvaluatedStmt *Eval = getEvaluatedStmt())
+  if (EvaluatedStmt *Eval = Init.dyn_cast<EvaluatedStmt *>())
     if (Eval->WasEvaluated)
       return &Eval->Evaluated;
 
@@ -2617,7 +2622,7 @@ bool VarDecl::isNoDestroy(const ASTContext &Ctx) const {
 
 QualType::DestructionKind
 VarDecl::needsDestruction(const ASTContext &Ctx) const {
-  if (EvaluatedStmt *Eval = getEvaluatedStmt())
+  if (EvaluatedStmt *Eval = Init.dyn_cast<EvaluatedStmt *>())
     if (Eval->HasConstantDestruction)
       return QualType::DK_none;
 

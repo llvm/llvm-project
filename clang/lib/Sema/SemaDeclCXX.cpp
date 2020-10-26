@@ -1250,7 +1250,8 @@ static bool checkTupleLikeDecomposition(Sema &S,
     if (E.isInvalid())
       return true;
     RefVD->setInit(E.get());
-    S.CheckCompleteVariableDeclaration(RefVD);
+    if (!E.get()->isValueDependent())
+      RefVD->checkInitIsICE();
 
     E = S.BuildDeclarationNameExpr(CXXScopeSpec(),
                                    DeclarationNameInfo(B->getDeclName(), Loc),
@@ -11124,8 +11125,8 @@ QualType Sema::CheckComparisonCategoryType(ComparisonCategoryType Kind,
     // Attempt to diagnose reasons why the STL definition of this type
     // might be foobar, including it failing to be a constant expression.
     // TODO Handle more ways the lookup or result can be invalid.
-    if (!VD->isStaticDataMember() ||
-        !VD->isUsableInConstantExpressions(Context))
+    if (!VD->isStaticDataMember() || !VD->isConstexpr() || !VD->hasInit() ||
+        VD->isWeak() || !VD->checkInitIsICE())
       return UnsupportedSTLError(USS_InvalidMember, MemName, VD);
 
     // Attempt to evaluate the var decl as a constant expression and extract
