@@ -27,7 +27,9 @@ static bool uniqueifyInternalLinkageNames(Module &M) {
   Md5.final(R);
   SmallString<32> Str;
   llvm::MD5::stringifyResult(R, Str);
-  std::string ModuleNameHash = (Twine(".") + Twine(Str)).str();
+  // Prepend "__uniq" before the hash for tools like profilers to understand that
+  // this symbol is of internal linkage type.
+  std::string ModuleNameHash = (Twine(".__uniq.") + Twine(Str)).str();
   bool Changed = false;
 
   // Append the module hash to all internal linkage functions.
