@@ -634,13 +634,6 @@ bool ARMBaseInstrInfo::isLdstScaledRegNotPlusLsl2(const MachineInstr &MI,
   return !SimpleScaled;
 }
 
-// Minus reg for ldstso addr mode
-bool ARMBaseInstrInfo::isLdstSoMinusReg(const MachineInstr &MI,
-                                        unsigned Op) const {
-  unsigned OffImm = MI.getOperand(Op + 2).getImm();
-  return ARM_AM::getAM2Op(OffImm) == ARM_AM::sub;
-}
-
 // Load, scaled register offset
 bool ARMBaseInstrInfo::isAm2ScaledReg(const MachineInstr &MI,
                                       unsigned Op) const {
