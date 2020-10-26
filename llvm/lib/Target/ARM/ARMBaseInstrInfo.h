@@ -181,8 +181,6 @@ public:
 
   // Load, scaled register offset, not plus LSL2
   bool isLdstScaledRegNotPlusLsl2(const MachineInstr &MI, unsigned Op) const;
-  // Minus reg for ldstso addr mode
-  bool isLdstSoMinusReg(const MachineInstr &MI, unsigned Op) const;
   // Scaled register offset in address mode 2
   bool isAm2ScaledReg(const MachineInstr &MI, unsigned Op) const;
 
