@@ -62,6 +62,13 @@ func @alloca_non_function_type() {
 
 // -----
 
+func @alloca_non_integer_alignment() {
+  // expected-error@+1 {{expected integer alignment}}
+  llvm.alloca %size x !llvm.i32 {alignment = 3.0} : !llvm.ptr<i32>
+}
+
+// -----
+
 func @gep_missing_input_result_type(%pos : !llvm.i64, %base : !llvm.ptr<float>) {
   // expected-error@+1 {{2 operands present, but expected 0}}
   llvm.getelementptr %base[%pos] : () -> ()
