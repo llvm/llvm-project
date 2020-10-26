@@ -179,9 +179,6 @@ public:
   // CPSR defined in instruction
   static bool isCPSRDefined(const MachineInstr &MI);
 
-  // Load, scaled register offset, not plus LSL2
-  bool isLdstScaledRegNotPlusLsl2(const MachineInstr &MI, unsigned Op) const;
-
   /// GetInstSize - Returns the size of the specified MachineInstr.
   ///
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
