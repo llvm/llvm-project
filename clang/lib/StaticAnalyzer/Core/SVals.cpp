@@ -84,16 +84,12 @@ const FunctionDecl *SVal::getAsFunctionDecl() const {
 /// the first symbolic parent region is returned.
 SymbolRef SVal::getAsLocSymbol(bool IncludeBaseRegions) const {
   // FIXME: should we consider SymbolRef wrapped in CodeTextRegion?
-  if (Optional<nonloc::LocAsInteger> X = getAs<nonloc::LocAsInteger>())
-    return X->getLoc().getAsLocSymbol(IncludeBaseRegions);
-
-  if (Optional<loc::MemRegionVal> X = getAs<loc::MemRegionVal>()) {
-    const MemRegion *R = X->getRegion();
-    if (const SymbolicRegion *SymR = IncludeBaseRegions ?
-                                      R->getSymbolicBase() :
-                                      dyn_cast<SymbolicRegion>(R->StripCasts()))
+  if (const MemRegion *R = getAsRegion())
+    if (const SymbolicRegion *SymR =
+            IncludeBaseRegions ? R->getSymbolicBase()
+                               : dyn_cast<SymbolicRegion>(R->StripCasts()))
       return SymR->getSymbol();
-  }
+
   return nullptr;
 }
 
