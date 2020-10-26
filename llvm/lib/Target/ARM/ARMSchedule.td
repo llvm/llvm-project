@@ -166,10 +166,16 @@ def IsCPSRDefinedPred : MCSchedPredicate<IsCPSRDefined>;
 
 let FunctionMapper = "ARM_AM::getAM2ShiftOpc" in {
   class CheckAM2NoShift<int n> : CheckImmOperand_s<n, "ARM_AM::no_shift">;
+  class CheckAM2ShiftLSL<int n> : CheckImmOperand_s<n, "ARM_AM::lsl">;
 }
 
 let FunctionMapper = "ARM_AM::getAM2Op" in {
+  class CheckAM2OpAdd<int n> : CheckImmOperand_s<n, "ARM_AM::add"> {}
   class CheckAM2OpSub<int n> : CheckImmOperand_s<n, "ARM_AM::sub"> {}
+}
+
+let FunctionMapper = "ARM_AM::getAM2Offset" in {
+  class CheckAM2Offset<int n, int of> : CheckImmOperand<n, of> {}
 }
 
 def IsLDMBaseRegInList : CheckFunctionPredicate<
