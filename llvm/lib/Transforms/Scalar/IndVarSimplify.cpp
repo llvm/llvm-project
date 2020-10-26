@@ -2423,8 +2423,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
         }
         return false;
       };
-      if (OptimizeCond(false, MaxExitCount) ||
-          OptimizeCond(true, MaxExitCount))
+      if (OptimizeCond(false) || OptimizeCond(true))
         Changed = true;
       continue;
     }
