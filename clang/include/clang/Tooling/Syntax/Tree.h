@@ -76,10 +76,20 @@ enum class NodeRole : uint8_t;
 /// A node in a syntax tree. Each node is either a Leaf (representing tokens) or
 /// a Tree (representing language constructrs).
 class Node {
-public:
+protected:
   /// Newly created nodes are detached from a tree, parent and sibling links are
   /// set when the node is added as a child to another one.
   Node(NodeKind Kind);
+  /// Nodes are allocated on Arenas; the destructor is never called.
+  ~Node() = default;
+
+public:
+  /// Nodes cannot simply be copied without violating tree invariants.
+  Node(const Node &) = delete;
+  Node &operator=(const Node &) = delete;
+  /// Idiomatically, nodes are allocated on an Arena and never moved.
+  Node(Node &&) = delete;
+  Node &operator=(Node &&) = delete;
 
   NodeKind getKind() const { return static_cast<NodeKind>(Kind); }
   NodeRole getRole() const { return static_cast<NodeRole>(Role); }
@@ -153,7 +163,6 @@ private:
 /// A node that has children and represents a syntactic language construct.
 class Tree : public Node {
 public:
-  using Node::Node;
   static bool classof(const Node *N);
 
   Node *getFirstChild() { return FirstChild; }
@@ -170,6 +179,7 @@ public:
   }
 
 protected:
+  using Node::Node;
   /// Find the first node with a corresponding role.
   Node *findChild(NodeRole R);
 
