@@ -4404,6 +4404,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, SizeSrc);
       break;
     }
+    case Intrinsic::amdgcn_waterfall_begin_cont: {
+      unsigned SizeDst = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+      unsigned SizeSrc1 = getSizeInBits(MI.getOperand(2).getReg(), MRI, *TRI);
+      unsigned SizeSrc2 = getSizeInBits(MI.getOperand(3).getReg(), MRI, *TRI);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeDst);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeSrc1);
+      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, SizeSrc2);
+      break;
+    }
     case Intrinsic::amdgcn_waterfall_readfirstlane: {
       unsigned SizeDst = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
       unsigned SizeSrc1 = getSizeInBits(MI.getOperand(2).getReg(), MRI, *TRI);

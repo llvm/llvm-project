@@ -798,6 +798,7 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode *N) const {
     case Intrinsic::amdgcn_readlane:
     case Intrinsic::amdgcn_waterfall_readfirstlane:
     case Intrinsic::amdgcn_waterfall_begin:
+    case Intrinsic::amdgcn_waterfall_begin_cont:
     case Intrinsic::amdgcn_waterfall_end:
     case Intrinsic::amdgcn_waterfall_last_use:
       return true;
@@ -809,6 +810,7 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode *N) const {
     switch (IntrID) {
     case Intrinsic::amdgcn_waterfall_readfirstlane:
     case Intrinsic::amdgcn_waterfall_begin:
+    case Intrinsic::amdgcn_waterfall_begin_cont:
     case Intrinsic::amdgcn_waterfall_end:
     case Intrinsic::amdgcn_waterfall_last_use:
       return true;
