@@ -754,6 +754,8 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     return error;
   }
 
+  uint64_t new_xstate_bv = XCR0_X87;  // the most common case
+
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86_64:
     break;
@@ -918,9 +920,11 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     break;
   case lldb_mxcsr_x86_64:
     m_xstate.xs_fxsave.fx_mxcsr = reg_value.GetAsUInt32();
+    new_xstate_bv = XCR0_SSE;
     break;
   case lldb_mxcsrmask_x86_64:
     m_xstate.xs_fxsave.fx_mxcsr_mask = reg_value.GetAsUInt32();
+    new_xstate_bv = XCR0_SSE;
     break;
   case lldb_st0_x86_64:
   case lldb_st1_x86_64:
@@ -966,6 +970,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
     } else {
       ::memcpy(&m_xstate.xs_fxsave.fx_xmm[reg - lldb_xmm0_x86_64],
                reg_value.GetBytes(), reg_value.GetByteSize());
+      new_xstate_bv = XCR0_SSE;
     }
     break;
   case lldb_ymm0_x86_64:
@@ -994,6 +999,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
       ::memcpy(ymm.bytes, reg_value.GetBytes(), reg_value.GetByteSize());
       YMMToXState(ymm, m_xstate.xs_fxsave.fx_xmm[reg_index].xmm_bytes,
                   m_xstate.xs_ymm_hi128.xs_ymm[reg_index].ymm_bytes);
+      new_xstate_bv = XCR0_SSE | XCR0_YMM_Hi128;
     }
     break;
   case lldb_dr0_x86_64:
@@ -1009,6 +1015,9 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
   default:
     llvm_unreachable("Reading unknown/unsupported register");
   }
+
+  if (set == XStateRegSet)
+    m_xstate.xs_xstate_bv |= new_xstate_bv;
 
   return WriteRegisterSet(set);
 }
