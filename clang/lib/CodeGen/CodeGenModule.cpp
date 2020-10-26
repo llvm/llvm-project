@@ -4684,8 +4684,10 @@ void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {
     Aliasee = GetOrCreateLLVMGlobal(AA->getAliasee(),
                                     llvm::PointerType::getUnqual(DeclTy),
                                     /*D=*/nullptr);
-    LT = getLLVMLinkageVarDefinition(cast<VarDecl>(GD.getDecl()),
-                                     D->getType().isConstQualified());
+    if (const auto *VD = dyn_cast<VarDecl>(GD.getDecl()))
+      LT = getLLVMLinkageVarDefinition(VD, D->getType().isConstQualified());
+    else
+      LT = getFunctionLinkage(GD);
   }
 
   // Create the new alias itself, but don't set a name yet.
