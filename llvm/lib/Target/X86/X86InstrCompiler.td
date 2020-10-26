@@ -89,7 +89,7 @@ def VAARG_64 : I<0, Pseudo,
                  (ins i8mem:$ap, i32imm:$size, i8imm:$mode, i32imm:$align),
                  "#VAARG_64 $dst, $ap, $size, $mode, $align",
                  [(set GR64:$dst,
-                    (X86vaarg64 addr:$ap, imm:$size, imm:$mode, imm:$align)),
+                    (X86vaarg64 addr:$ap, timm:$size, timm:$mode, timm:$align)),
                   (implicit EFLAGS)]>;
 
 
