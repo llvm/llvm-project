@@ -692,7 +692,7 @@ enum : unsigned {
 
   // First/last R600-based processors.
   EF_AMDGPU_MACH_R600_FIRST = EF_AMDGPU_MACH_R600_R600,
-  EF_AMDGPU_MACH_R600_LAST = EF_AMDGPU_MACH_R600_TURKS,
+  EF_AMDGPU_MACH_R600_LAST = EF_AMDGPU_MACH_R600_RESERVED_LAST,
 
   // AMDGCN-based processors.
 
@@ -729,12 +729,11 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1032 = 0x038,
 
   // Reserved for AMDGCN-based processors.
-  EF_AMDGPU_MACH_AMDGCN_RESERVED0 = 0x027,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED1 = 0x032,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_LAST = 0x0ff,
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX805,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_RESERVED_LAST,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.

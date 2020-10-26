@@ -10,6 +10,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX801 = 0x028,
   EF_AMDGPU_MACH_AMDGCN_GFX802 = 0x029,
   EF_AMDGPU_MACH_AMDGCN_GFX803 = 0x02a,
+  EF_AMDGPU_MACH_AMDGCN_GFX805 = 0x03c,
   EF_AMDGPU_MACH_AMDGCN_GFX810 = 0x02b,
   // AMDGCN GFX9.
   EF_AMDGPU_MACH_AMDGCN_GFX900 = 0x02c,
@@ -24,14 +25,14 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1012 = 0x035,
   EF_AMDGPU_MACH_AMDGCN_GFX1030 = 0x036,
   EF_AMDGPU_MACH_AMDGCN_GFX1031 = 0x037,
+  EF_AMDGPU_MACH_AMDGCN_GFX1032 = 0x038,
 
   // Reserved for AMDGCN-based processors.
-  EF_AMDGPU_MACH_AMDGCN_RESERVED0 = 0x027,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED1 = 0x032,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_LAST = 0x0ff,
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX801,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX1031,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_RESERVED_LAST,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -64,6 +65,7 @@ static const char* get_elf_mach_gfx_name(__tgt_device_image *image) {
   case EF_AMDGPU_MACH_AMDGCN_GFX801 :  return "gfx801" ;
   case EF_AMDGPU_MACH_AMDGCN_GFX802 :  return "gfx802" ;
   case EF_AMDGPU_MACH_AMDGCN_GFX803 :  return "gfx803" ;
+  case EF_AMDGPU_MACH_AMDGCN_GFX805 :  return "gfx805" ;
   case EF_AMDGPU_MACH_AMDGCN_GFX810 :  return "gfx810" ;
   case EF_AMDGPU_MACH_AMDGCN_GFX900 :  return "gfx900" ;
   case EF_AMDGPU_MACH_AMDGCN_GFX902 :  return "gfx902" ;
@@ -76,6 +78,7 @@ static const char* get_elf_mach_gfx_name(__tgt_device_image *image) {
   case EF_AMDGPU_MACH_AMDGCN_GFX1012 :  return "gfx1012" ;
   case EF_AMDGPU_MACH_AMDGCN_GFX1030 :  return "gfx1030" ;
   case EF_AMDGPU_MACH_AMDGCN_GFX1031 :  return "gfx1031" ;
+  case EF_AMDGPU_MACH_AMDGCN_GFX1032 :  return "gfx1032" ;
   default: return "--unknown gfx";
   }
 }
