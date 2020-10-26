@@ -18,6 +18,19 @@
 #define __has_attribute(_attribute_) 0
 #endif
 
+#if defined(__clang__)
+#  define _LIBCXXABI_COMPILER_CLANG
+#  ifndef __apple_build_version__
+#    define _LIBCXXABI_CLANG_VER (__clang_major__ * 100 + __clang_minor__)
+#  endif
+#elif defined(__GNUC__)
+#  define _LIBCXXABI_COMPILER_GCC
+#elif defined(_MSC_VER)
+#  define _LIBCXXABI_COMPILER_MSVC
+#elif defined(__IBMCPP__)
+#  define _LIBCXXABI_COMPILER_IBM
+#endif
+
 #if defined(_WIN32)
  #if defined(_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS)
   #define _LIBCXXABI_HIDDEN
@@ -53,7 +66,7 @@
  #endif
 #endif
 
-#if defined(_WIN32)
+#if defined(_LIBCXXABI_COMPILER_MSVC)
 #define _LIBCXXABI_WEAK
 #else
 #define _LIBCXXABI_WEAK __attribute__((__weak__))

@@ -31,6 +31,7 @@ _start:
 // CHECK-NEXT:     Type: SHT_REL
 // CHECK-NEXT:     Flags [
 // CHECK-NEXT:       SHF_ALLOC
+// CHECK-NEXT:       SHF_INFO_LINK
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x100F4
 // CHECK-NEXT:     Offset: 0xF4

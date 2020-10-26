@@ -2020,8 +2020,8 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
       // Put pointers at the back and make sure pointer < pointer = false.
       if (!LHS->getType()->isIntegerTy() || !RHS->getType()->isIntegerTy())
         return RHS->getType()->isIntegerTy() && !LHS->getType()->isIntegerTy();
-      return RHS->getType()->getPrimitiveSizeInBits() <
-             LHS->getType()->getPrimitiveSizeInBits();
+      return RHS->getType()->getPrimitiveSizeInBits().getFixedSize() <
+             LHS->getType()->getPrimitiveSizeInBits().getFixedSize();
     });
 
   unsigned NumElim = 0;

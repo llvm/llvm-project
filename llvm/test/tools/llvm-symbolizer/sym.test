@@ -31,8 +31,7 @@ RUN: llvm-symbolizer -i -print-address -p -obj=%p/Inputs/addr.exe < %p/Inputs/ad
 RUN: llvm-symbolizer --inlining=true --print-address -p --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s
 
 RUN: echo "0x1" > %t.input
-## FIXME: Looks like this was meant to have an input file to test, but it isn't present - so this test probably isn't testing what it's intended to test
-RUN: not llvm-symbolizer -obj=%p/Inputs/zero < %t.input | FileCheck -check-prefix="ZERO" %s
+RUN: llvm-symbolizer -obj=%p/Inputs/zero < %t.input | FileCheck -check-prefix="ZERO" %s
 
 RUN: llvm-addr2line -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix=A2L %s
 RUN: llvm-addr2line -a -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2L,A2L_A %s

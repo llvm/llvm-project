@@ -29,7 +29,9 @@ void *thread_code (void *parm) {
         std::printf("Got different globals!\n");
 
     *result = (size_t) glob1;
+#ifndef _LIBCXXABI_HAS_NO_THREADS
     sleep ( 1 );
+#endif
     return parm;
 }
 

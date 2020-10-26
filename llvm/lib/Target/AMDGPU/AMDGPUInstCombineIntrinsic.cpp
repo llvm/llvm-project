@@ -823,6 +823,39 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
+  case Intrinsic::amdgcn_fmul_legacy: {
+    Value *Op0 = II.getArgOperand(0);
+    Value *Op1 = II.getArgOperand(1);
+
+    // The legacy behaviour is that multiplying +/-0.0 by anything, even NaN or
+    // infinity, gives +0.0.
+    // TODO: Move to InstSimplify?
+    if (match(Op0, PatternMatch::m_AnyZeroFP()) ||
+        match(Op1, PatternMatch::m_AnyZeroFP()))
+      return IC.replaceInstUsesWith(II, ConstantFP::getNullValue(II.getType()));
+
+    // If we can prove we don't have one of the special cases then we can use a
+    // normal fmul instruction instead.
+    auto *TLI = &IC.getTargetLibraryInfo();
+    bool CanSimplifyToMul = false;
+    // TODO: Create and use isKnownFiniteNonZero instead of just matching
+    // constants here.
+    if (match(Op0, PatternMatch::m_FiniteNonZero()) ||
+        match(Op1, PatternMatch::m_FiniteNonZero())) {
+      // One operand is not zero or infinity or NaN.
+      CanSimplifyToMul = true;
+    } else if (isKnownNeverInfinity(Op0, TLI) && isKnownNeverNaN(Op0, TLI) &&
+               isKnownNeverInfinity(Op1, TLI) && isKnownNeverNaN(Op1, TLI)) {
+      // Neither operand is infinity or NaN.
+      CanSimplifyToMul = true;
+    }
+    if (CanSimplifyToMul) {
+      auto *FMul = IC.Builder.CreateFMulFMF(Op0, Op1, &II);
+      FMul->takeName(&II);
+      return IC.replaceInstUsesWith(II, FMul);
+    }
+    break;
+  }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(II.getIntrinsicID())) {

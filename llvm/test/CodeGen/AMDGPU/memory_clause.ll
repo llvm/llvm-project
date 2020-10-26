@@ -12,7 +12,6 @@ define amdgpu_kernel void @vector_clause(<4 x i32> addrspace(1)* noalias nocaptu
 ; GCN-NEXT:    global_load_dwordx4 v[4:7], v16, s[2:3] offset:16
 ; GCN-NEXT:    global_load_dwordx4 v[8:11], v16, s[2:3] offset:32
 ; GCN-NEXT:    global_load_dwordx4 v[12:15], v16, s[2:3] offset:48
-; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(3)
 ; GCN-NEXT:    global_store_dwordx4 v16, v[0:3], s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(3)
@@ -52,7 +51,6 @@ define amdgpu_kernel void @scalar_clause(<4 x i32> addrspace(1)* noalias nocaptu
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[16:17], s[0:1], 0x24
 ; GCN-NEXT:    s_load_dwordx2 s[18:19], s[0:1], 0x2c
-; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[16:17], 0x0
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[16:17], 0x10
@@ -124,7 +122,6 @@ define void @mubuf_clause(<4 x i32> addrspace(5)* noalias nocapture readonly %ar
 ; GCN-NEXT:    buffer_load_dword v17, v0, s[0:3], 0 offen offset:56
 ; GCN-NEXT:    v_add_u32_e32 v1, v1, v2
 ; GCN-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen offset:60
-; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(15)
 ; GCN-NEXT:    buffer_store_dword v3, v1, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(15)
@@ -191,7 +188,6 @@ define amdgpu_kernel void @vector_clause_indirect(i64 addrspace(1)* noalias noca
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dwordx2 v[8:9], v0, s[2:3]
-; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_load_dwordx4 v[0:3], v[8:9], off
 ; GCN-NEXT:    global_load_dwordx4 v[4:7], v[8:9], off offset:16
@@ -225,7 +221,6 @@ define void @load_global_d16_hi(i16 addrspace(1)* %in, i16 %reg, <2 x i16> addrs
 ; GCN-NEXT:    global_load_short_d16_hi v5, v[0:1], off
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    global_load_short_d16_hi v2, v[0:1], off offset:64
-; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    global_store_dword v[3:4], v5, off
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
@@ -254,7 +249,6 @@ define void @load_global_d16_lo(i16 addrspace(1)* %in, i32 %reg, <2 x i16> addrs
 ; GCN-NEXT:    global_load_short_d16 v5, v[0:1], off
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    global_load_short_d16 v2, v[0:1], off offset:64
-; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    global_store_dword v[3:4], v5, off
 ; GCN-NEXT:    s_waitcnt vmcnt(1)

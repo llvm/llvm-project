@@ -226,7 +226,7 @@ foreach Type = ["I", "U"] in
   foreach Index = 0-3 in {
     // Defines patterns that extract each Index'ed 8bit from an unsigned
     // 32bit scalar value;
-    def Type#Index#"_8bit" : Extract<!shl(Index, 3), 255, !if (!eq (Type, "U"), 1, 0)>;
+    def Type#Index#"_8bit" : Extract<!shl(Index, 3), 255, !eq (Type, "U")>;
 
     // Defines multiplication patterns where the multiplication is happening on each
     // Index'ed 8bit of a 32bit scalar value.
@@ -254,7 +254,7 @@ foreach Type = ["I", "U"] in
   foreach Index = 0-7 in {
     // Defines patterns that extract each Index'ed 4bit from an unsigned
     // 32bit scalar value;
-    def Type#Index#"_4bit" : Extract<!shl(Index, 2), 15, !if (!eq (Type, "U"), 1, 0)>;
+    def Type#Index#"_4bit" : Extract<!shl(Index, 2), 15, !eq (Type, "U")>;
 
     // Defines multiplication patterns where the multiplication is happening on each
     // Index'ed 8bit of a 32bit scalar value.

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMMCTargetDesc.h"
+#include "ARMAddressingModes.h"
 #include "ARMBaseInfo.h"
 #include "ARMInstPrinter.h"
 #include "ARMMCAsmInfo.h"

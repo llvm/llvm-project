@@ -1208,6 +1208,66 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRangeNoOverlap) {
   EXPECT_EQ(Known.getMaxValue(), 575);
 }
 
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRange) {
+  parseAssembly(
+      "define void @test(i64* %p) {\n"
+      "  %A = load i64, i64* %p, !range !{i64 64, i64 65536}\n"
+      "  %APtr = inttoptr i64 %A to float*"
+      "  %APtrPlus512 = getelementptr float, float* %APtr, i32 128\n"
+      "  %c = icmp ugt float* %APtrPlus512, inttoptr (i32 523 to float*)\n"
+      "  call void @llvm.assume(i1 %c)\n"
+      "  ret void\n"
+      "}\n"
+      "declare void @llvm.assume(i1)\n");
+  AssumptionCache AC(*F);
+  KnownBits Known = computeKnownBits(A, M->getDataLayout(), /* Depth */ 0, &AC,
+                                     F->front().getTerminator());
+  EXPECT_EQ(Known.Zero.getZExtValue(), ~(65536llu - 1));
+  EXPECT_EQ(Known.One.getZExtValue(), 0u);
+  Instruction &APtrPlus512 = findInstructionByName(F, "APtrPlus512");
+  Known = computeKnownBits(&APtrPlus512, M->getDataLayout(), /* Depth */ 0, &AC,
+                           F->front().getTerminator());
+  // We know of one less zero because 512 may have produced a 1 that
+  // got carried all the way to the first trailing zero.
+  EXPECT_EQ(Known.Zero.getZExtValue(), ~(65536llu - 1) << 1);
+  EXPECT_EQ(Known.One.getZExtValue(), 0u);
+  // The known range is not precise given computeKnownBits works
+  // with the masks of zeros and ones, not the ranges.
+  EXPECT_EQ(Known.getMinValue(), 0u);
+  EXPECT_EQ(Known.getMaxValue(), 131071);
+}
+
+// 4*128 + [32, 64) doesn't produce overlapping bits.
+// Make sure we get all the individual bits properly.
+// This test is useful to check that we account for the scaling factor
+// in the gep. Indeed, gep float, [32,64), 128 is not 128 + [32,64).
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRangeNoOverlap) {
+  parseAssembly(
+      "define void @test(i64* %p) {\n"
+      "  %A = load i64, i64* %p, !range !{i64 32, i64 64}\n"
+      "  %APtr = inttoptr i64 %A to float*"
+      "  %APtrPlus512 = getelementptr float, float* %APtr, i32 128\n"
+      "  %c = icmp ugt float* %APtrPlus512, inttoptr (i32 523 to float*)\n"
+      "  call void @llvm.assume(i1 %c)\n"
+      "  ret void\n"
+      "}\n"
+      "declare void @llvm.assume(i1)\n");
+  AssumptionCache AC(*F);
+  KnownBits Known = computeKnownBits(A, M->getDataLayout(), /* Depth */ 0, &AC,
+                                     F->front().getTerminator());
+  EXPECT_EQ(Known.Zero.getZExtValue(), ~(64llu - 1));
+  EXPECT_EQ(Known.One.getZExtValue(), 32u);
+  Instruction &APtrPlus512 = findInstructionByName(F, "APtrPlus512");
+  Known = computeKnownBits(&APtrPlus512, M->getDataLayout(), /* Depth */ 0, &AC,
+                           F->front().getTerminator());
+  EXPECT_EQ(Known.Zero.getZExtValue(), ~512llu & ~(64llu - 1));
+  EXPECT_EQ(Known.One.getZExtValue(), 512u | 32u);
+  // The known range is not precise given computeKnownBits works
+  // with the masks of zeros and ones, not the ranges.
+  EXPECT_EQ(Known.getMinValue(), 544);
+  EXPECT_EQ(Known.getMaxValue(), 575);
+}
+
 class IsBytewiseValueTest : public ValueTrackingTest,
                             public ::testing::WithParamInterface<
                                 std::pair<const char *, const char *>> {

@@ -2248,6 +2248,29 @@ bool DWARFExpression::Evaluate(
       }
       break;
 
+    // OPCODE: DW_OP_implicit_value
+    // OPERANDS: 2
+    //      ULEB128  size of the value block in bytes
+    //      uint8_t* block bytes encoding value in target's memory
+    //      representation
+    // DESCRIPTION: Value is immediately stored in block in the debug info with
+    // the memory representation of the target.
+    case DW_OP_implicit_value: {
+      const uint32_t len = opcodes.GetULEB128(&offset);
+      const void *data = opcodes.GetData(&offset, len);
+
+      if (!data) {
+        LLDB_LOG(log, "Evaluate_DW_OP_implicit_value: could not be read data");
+        LLDB_ERRORF(error_ptr, "Could not evaluate %s.",
+                    DW_OP_value_to_name(op));
+        return false;
+      }
+
+      Value result(data, len);
+      stack.push_back(result);
+      break;
+    }
+
     // OPCODE: DW_OP_push_object_address
     // OPERANDS: none
     // DESCRIPTION: Pushes the address of the object currently being

@@ -129,3 +129,17 @@ long double test_f128(long double f, long double g) {
 // CHECK: [[RESULT:%.*]] = tail call fp128 asm "axbr $0, $2", "=f,0,f"(fp128 %f, fp128 %g)
 // CHECK: store fp128 [[RESULT]], fp128* [[DEST]]
 }
+
+// Test that there are no tied physreg uses. TwoAddress pass cannot deal with them.
+int test_physregs(void) {
+  // CHECK-LABEL: define signext i32 @test_physregs()
+  register int l __asm__("r7") = 0;
+
+  // CHECK: call i32 asm "lr $0, $1", "={r7},{r7}"
+  __asm__("lr %0, %1" : "+r"(l));
+
+  // CHECK: call i32 asm "$0 $1 $2", "={r7},{r7},{r7}"
+  __asm__("%0 %1 %2" : "+r"(l) : "r"(l));
+
+  return l;
+}

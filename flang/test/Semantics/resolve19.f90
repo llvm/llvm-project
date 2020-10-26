@@ -22,3 +22,14 @@ module m2
     end subroutine
   end interface
 end module
+
+module m3
+  interface s
+    subroutine s
+    end
+  end interface
+contains
+  !ERROR: 's' is already declared in this scoping unit
+  subroutine s
+  end subroutine
+end

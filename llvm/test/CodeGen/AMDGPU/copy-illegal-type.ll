@@ -37,7 +37,7 @@ define amdgpu_kernel void @test_copy_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> 
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
 ; VI-NEXT:    s_mov_b32 s0, s4
 ; VI-NEXT:    s_mov_b32 s1, s5
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
@@ -88,7 +88,7 @@ define amdgpu_kernel void @test_copy_v4i8_x2(<4 x i8> addrspace(1)* %out0, <4 x 
 ; VI-NEXT:    s_mov_b32 s11, s3
 ; VI-NEXT:    s_mov_b32 s8, s6
 ; VI-NEXT:    s_mov_b32 s9, s7
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
@@ -145,7 +145,7 @@ define amdgpu_kernel void @test_copy_v4i8_x3(<4 x i8> addrspace(1)* %out0, <4 x 
 ; VI-NEXT:    s_mov_b32 s7, s11
 ; VI-NEXT:    s_mov_b32 s12, s2
 ; VI-NEXT:    s_mov_b32 s13, s3
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; VI-NEXT:    buffer_store_dword v0, off, s[12:15], 0
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -297,7 +297,7 @@ define amdgpu_kernel void @test_copy_v4i8_extra_use(<4 x i8> addrspace(1)* %out0
 ; VI-NEXT:    s_mov_b32 s11, s3
 ; VI-NEXT:    s_mov_b32 s8, s6
 ; VI-NEXT:    s_mov_b32 s9, s7
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; VI-NEXT:    v_and_b32_e32 v4, s12, v1
 ; VI-NEXT:    v_add_u16_e32 v1, 9, v1
@@ -388,7 +388,7 @@ define amdgpu_kernel void @test_copy_v4i8_x2_extra_use(<4 x i8> addrspace(1)* %o
 ; VI-NEXT:    s_mov_b32 s13, s3
 ; VI-NEXT:    s_mov_b32 s6, s10
 ; VI-NEXT:    s_mov_b32 s7, s11
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; VI-NEXT:    v_and_b32_e32 v4, s16, v1
 ; VI-NEXT:    v_add_u16_e32 v1, 9, v1
@@ -448,7 +448,7 @@ define amdgpu_kernel void @test_copy_v3i8_align4(<3 x i8> addrspace(1)* %out, <3
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; VI-NEXT:    buffer_store_byte v1, off, s[0:3], 0 offset:2

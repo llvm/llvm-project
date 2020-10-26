@@ -41,9 +41,9 @@ char UtilityFunction::ID;
 /// \param[in] name
 ///     The name of the function, as used in the text.
 UtilityFunction::UtilityFunction(ExecutionContextScope &exe_scope,
-                                 const char *text, const char *name)
+                                 std::string text, std::string name)
     : Expression(exe_scope), m_execution_unit_sp(), m_jit_module_wp(),
-      m_function_text(), m_function_name(name) {}
+      m_function_text(std::move(text)), m_function_name(std::move(name)) {}
 
 UtilityFunction::~UtilityFunction() {
   lldb::ProcessSP process_sp(m_jit_process_wp.lock());

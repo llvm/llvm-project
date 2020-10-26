@@ -15,20 +15,20 @@ define void @frob() {
 ; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 1), align 4
 ; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 2), align 8
 ; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 1, i64 0), align 4
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 1, i64 1), align 4
+; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 1, i64 1), align 16
 ; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 1, i64 2), align 4
 ; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 0, i64 0), align 8
 ; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 0, i64 1), align 4
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 0, i64 2), align 8
+; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 0, i64 2), align 16
 ; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 1, i64 0), align 4
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 1, i64 1), align 4
+; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 1, i64 1), align 8
 ; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 1, i64 2), align 4
 ; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 0, i64 0), align 16
 ; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 0, i64 1), align 4
 ; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 0, i64 2), align 8
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 1, i64 0), align 8
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 1, i64 1), align 8
-; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 1, i64 2), align 8
+; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 1, i64 0), align 4
+; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 1, i64 1), align 16
+; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 1, i64 2), align 4
 ; CHECK-NEXT:    store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 1, i64 0, i32 0, i64 0), align 8
 ; CHECK-NEXT:    store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 2, i64 0, i32 0, i64 0), align 16
 ; CHECK-NEXT:    store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 1, i64 0, i32 0, i64 1), align 8
@@ -49,9 +49,9 @@ define void @frob() {
   store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 12), align 4
   store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 13), align 4
   store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 14), align 8
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 15), align 8
+  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 15), align 4
   store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 16), align 8
-  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 17), align 8
+  store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 17), align 4
   store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 18), align 8
   store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 36), align 8
   store i32 1, i32* getelementptr ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 19), align 8
@@ -97,4 +97,23 @@ entry:
   %E = ptrtoint i8 addrspace(1)* %D to i16
 
   ret i16 %E
+}
+
+; Check that we improve the alignment information.
+; The base pointer is 16-byte aligned and we access the field at
+; an offset of 8-byte.
+; Every element in the @CallerInfos array is 16-byte aligned so
+; any access from the following gep is 8-byte aligned.
+%struct.CallerInfo = type { i8*, i32 }
+@CallerInfos = global [128 x %struct.CallerInfo] zeroinitializer, align 16
+
+define i32 @test_gep_in_struct(i64 %idx) {
+; CHECK-LABEL: @test_gep_in_struct(
+; CHECK-NEXT:    [[NS7:%.*]] = getelementptr inbounds [128 x %struct.CallerInfo], [128 x %struct.CallerInfo]* @CallerInfos, i64 0, i64 [[IDX:%.*]], i32 1
+; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* [[NS7]], align 8
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %NS7 = getelementptr inbounds [128 x %struct.CallerInfo], [128 x %struct.CallerInfo]* @CallerInfos, i64 0, i64 %idx, i32 1
+  %res = load i32, i32* %NS7, align 1
+  ret i32 %res
 }

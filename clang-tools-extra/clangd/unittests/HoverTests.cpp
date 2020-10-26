@@ -1991,6 +1991,34 @@ TEST(Hover, All) {
             HI.NamespaceScope = "ObjC::"; // FIXME: fix it
             HI.Definition = "char data";
           }},
+      {
+          R"cpp(
+          @interface MYObject
+          @end
+          @interface Interface
+          @property(retain) [[MYOb^ject]] *x;
+          @end
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "MYObject";
+            HI.Kind = index::SymbolKind::Class;
+            HI.NamespaceScope = "";
+            HI.Definition = "@interface MYObject\n@end";
+          }},
+      {
+          R"cpp(
+          @interface MYObject
+          @end
+          @interface Interface
+          - (void)doWith:([[MYOb^ject]] *)object;
+          @end
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "MYObject";
+            HI.Kind = index::SymbolKind::Class;
+            HI.NamespaceScope = "";
+            HI.Definition = "@interface MYObject\n@end";
+          }},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.

@@ -19,13 +19,13 @@
 #endif
 
 #include <__debug>
-#include <utility>
-#include <cstddef>
-#include <cstdlib>
 #include <cassert>
+#include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
 #include <string_view>
-#include <sstream>
-#include <iostream>
+#include <utility>
 
 #include <unistd.h>
 #include <sys/wait.h>
@@ -53,19 +53,15 @@ struct DebugInfoMatcher {
         return true;
     // Write to stdout because that's the file descriptor captured by the parent
     // process.
-    std::cout << "Failed to match debug info!\n"
-              << ToString() << "\n"
-              << "VS\n"
-              << got.what() << "\n";
-      return false;
-    }
+    std::printf("Failed to match debug info!\n%s\nVS\n%s\n", ToString().data(), got.what().data());
+    return false;
+  }
 
   std::string ToString() const {
-    std::stringstream ss;
-    ss << "msg = \"" << msg << "\"\n"
-       << "line = " << (line == any_line ? "'*'" : std::to_string(line)) << "\n"
-       << "file = " << (file == any_file ? "'*'" : any_file) << "";
-    return ss.str();
+    std::string result = "msg = \""; result += msg; result += "\"\n";
+    result += "line = " + (line == any_line ? "'*'" : std::to_string(line)) + "\n";
+    result += "file = " + (file == any_file ? "'*'" : std::string(any_file));
+    return result;
   }
 
   bool empty() const { return is_empty; }
@@ -260,17 +256,15 @@ inline bool ExpectDeath(const char* stmt, Func&& func, DebugInfoMatcher Matcher)
   DeathTest DT(Matcher);
   DeathTest::ResultKind RK = DT.Run(func);
   auto OnFailure = [&](const char* msg) {
-    std::cerr << "EXPECT_DEATH( " << stmt << " ) failed! (" << msg << ")\n\n";
+    std::fprintf(stderr, "EXPECT_DEATH( %s ) failed! (%s)\n\n", stmt, msg);
     if (RK != DeathTest::RK_Unknown) {
-      std::cerr << "child exit code: " << DT.getChildExitCode() << "\n";
+      std::fprintf(stderr, "child exit code: %d\n", DT.getChildExitCode());
     }
     if (!DT.getChildStdErr().empty()) {
-      std::cerr << "---------- standard err ----------\n";
-      std::cerr << DT.getChildStdErr() << "\n";
+      std::fprintf(stderr, "---------- standard err ----------\n%s\n", DT.getChildStdErr().c_str());
     }
     if (!DT.getChildStdOut().empty()) {
-      std::cerr << "---------- standard out ----------\n";
-      std::cerr << DT.getChildStdOut() << "\n";
+      std::fprintf(stderr, "---------- standard out ----------\n%s\n", DT.getChildStdOut().c_str());
     }
     return false;
   };

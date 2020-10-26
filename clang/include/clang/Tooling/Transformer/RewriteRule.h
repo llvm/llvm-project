@@ -107,7 +107,7 @@ struct ASTEdit {
   TextGenerator Replacement;
   TextGenerator Note;
   // Not all transformations will want or need to attach metadata and therefore
-  // should not be requierd to do so.
+  // should not be required to do so.
   AnyGenerator Metadata = [](const ast_matchers::MatchFinder::MatchResult &)
       -> llvm::Expected<llvm::Any> {
     return llvm::Expected<llvm::Any>(llvm::Any());
@@ -130,6 +130,11 @@ EditGenerator editList(llvm::SmallVector<ASTEdit, 1> Edits);
 
 /// Generates no edits.
 inline EditGenerator noEdits() { return editList({}); }
+
+/// Generates a single, no-op edit anchored at the start location of the
+/// specified range. A `noopEdit` may be preferred over `noEdits` to associate a
+/// diagnostic `Explanation` with the rule.
+EditGenerator noopEdit(RangeSelector Anchor);
 
 /// Version of `ifBound` specialized to `ASTEdit`.
 inline EditGenerator ifBound(std::string ID, ASTEdit TrueEdit,

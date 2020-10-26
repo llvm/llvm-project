@@ -446,7 +446,8 @@ void MaybeSpawnBackgroundThread() {
 int Finalize(ThreadState *thr) {
   bool failed = false;
 
-  if (common_flags()->print_module_map == 1) PrintModuleMap();
+  if (common_flags()->print_module_map == 1)
+    DumpProcessMap();
 
   if (flags()->atexit_sleep_ms > 0 && ThreadCount(thr) > 1)
     SleepForMillis(flags()->atexit_sleep_ms);

@@ -63,8 +63,10 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
                    declStmt(
                        has(varDecl(hasLocalStorage(),
                                    hasType(qualType(
-                                       hasCanonicalType(
-                                           matchers::isExpensiveToCopy()),
+                                       hasCanonicalType(allOf(
+                                           matchers::isExpensiveToCopy(),
+                                           unless(hasDeclaration(namedDecl(
+                                               hasName("::std::function")))))),
                                        unless(hasDeclaration(namedDecl(
                                            matchers::matchesAnyListedName(
                                                AllowedTypes)))))),

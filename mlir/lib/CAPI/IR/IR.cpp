@@ -75,6 +75,36 @@ MlirStringRef mlirDialectGetNamespace(MlirDialect dialect) {
 }
 
 /* ========================================================================== */
+/* Printing flags API.                                                        */
+/* ========================================================================== */
+
+MlirOpPrintingFlags mlirOpPrintingFlagsCreate() {
+  return wrap(new OpPrintingFlags());
+}
+
+void mlirOpPrintingFlagsDestroy(MlirOpPrintingFlags flags) {
+  delete unwrap(flags);
+}
+
+void mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
+                                                intptr_t largeElementLimit) {
+  unwrap(flags)->elideLargeElementsAttrs(largeElementLimit);
+}
+
+void mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags,
+                                        int prettyForm) {
+  unwrap(flags)->enableDebugInfo(/*prettyForm=*/prettyForm);
+}
+
+void mlirOpPrintingFlagsPrintGenericOpForm(MlirOpPrintingFlags flags) {
+  unwrap(flags)->printGenericOpForm();
+}
+
+void mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags) {
+  unwrap(flags)->useLocalScope();
+}
+
+/* ========================================================================== */
 /* Location API.                                                              */
 /* ========================================================================== */
 
@@ -282,6 +312,13 @@ void mlirOperationPrint(MlirOperation op, MlirStringCallback callback,
   stream.flush();
 }
 
+void mlirOperationPrintWithFlags(MlirOperation op, MlirOpPrintingFlags flags,
+                                 MlirStringCallback callback, void *userData) {
+  detail::CallbackOstream stream(callback, userData);
+  unwrap(op)->print(stream, *unwrap(flags));
+  stream.flush();
+}
+
 void mlirOperationDump(MlirOperation op) { return unwrap(op)->dump(); }
 
 /* ========================================================================== */
@@ -453,6 +490,8 @@ intptr_t mlirOpResultGetResultNumber(MlirValue value) {
 MlirType mlirValueGetType(MlirValue value) {
   return wrap(unwrap(value).getType());
 }
+
+void mlirValueDump(MlirValue value) { unwrap(value).dump(); }
 
 void mlirValuePrint(MlirValue value, MlirStringCallback callback,
                     void *userData) {

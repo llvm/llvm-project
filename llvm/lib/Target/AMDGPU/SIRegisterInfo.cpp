@@ -98,9 +98,10 @@ SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
       Width = SubRegFromChannelTableWidthMap[Width];
       if (Width == 0)
         continue;
-      assert((Width - 1) < SubRegFromChannelTable.size());
-      assert(Offset < SubRegFromChannelTable[Width].size());
-      SubRegFromChannelTable[Width - 1][Offset] = Idx;
+      unsigned TableIdx = Width - 1;
+      assert(TableIdx < SubRegFromChannelTable.size());
+      assert(Offset < SubRegFromChannelTable[TableIdx].size());
+      SubRegFromChannelTable[TableIdx][Offset] = Idx;
     }
   };
 
@@ -149,6 +150,10 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   default:
     return nullptr;
   }
+}
+
+const uint32_t *SIRegisterInfo::getNoPreservedMask() const {
+  return CSR_AMDGPU_NoRegs_RegMask;
 }
 
 Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
@@ -332,9 +337,8 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   for (MCPhysReg Reg : MFI->getVGPRSpillAGPRs())
     reserveRegisterTuples(Reserved, Reg);
 
-  if (MFI->VGPRReservedForSGPRSpill)
-    for (auto SSpill : MFI->getSGPRSpillVGPRs())
-      reserveRegisterTuples(Reserved, SSpill.VGPR);
+  for (auto SSpill : MFI->getSGPRSpillVGPRs())
+    reserveRegisterTuples(Reserved, SSpill.VGPR);
 
   return Reserved;
 }

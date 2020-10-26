@@ -75,6 +75,8 @@ public:
 
   virtual bool ClearHardwareWatchpoint(uint32_t hw_index);
 
+  virtual Status ClearWatchpointHit(uint32_t hw_index);
+
   virtual Status ClearAllHardwareWatchpoints();
 
   virtual Status IsWatchpointHit(uint32_t wp_index, bool &is_hit);

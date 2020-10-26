@@ -497,7 +497,7 @@ public:
     // Always track SP. This avoids the implicit clobbering caused by regmasks
     // from affectings its values. (LiveDebugValues disbelieves calls and
     // regmasks that claim to clobber SP).
-    unsigned SP = TLI.getStackPointerRegisterToSaveRestore();
+    Register SP = TLI.getStackPointerRegisterToSaveRestore();
     if (SP) {
       unsigned ID = getLocID(SP, false);
       (void)lookupOrTrackRegister(ID);
@@ -506,8 +506,8 @@ public:
 
   /// Produce location ID number for indexing LocIDToLocIdx. Takes the register
   /// or spill number, and flag for whether it's a spill or not.
-  unsigned getLocID(unsigned RegOrSpill, bool isSpill) {
-    return (isSpill) ? RegOrSpill + NumRegs - 1 : RegOrSpill;
+  unsigned getLocID(Register RegOrSpill, bool isSpill) {
+    return (isSpill) ? RegOrSpill.id() + NumRegs - 1 : RegOrSpill.id();
   }
 
   /// Accessor for reading the value at Idx.
@@ -640,7 +640,7 @@ public:
   /// later.
   void writeRegMask(const MachineOperand *MO, unsigned CurBB, unsigned InstID) {
     // Ensure SP exists, so that we don't override it later.
-    unsigned SP = TLI.getStackPointerRegisterToSaveRestore();
+    Register SP = TLI.getStackPointerRegisterToSaveRestore();
 
     // Def any register we track have that isn't preserved. The regmask
     // terminates the liveness of a register, meaning its value can't be
@@ -1324,13 +1324,11 @@ private:
   /// Step through the function, recording register definitions and movements
   /// in an MLocTracker. Convert the observations into a per-block transfer
   /// function in \p MLocTransfer, suitable for using with the machine value
-  /// location dataflow problem. Do the same with VLoc trackers in \p VLocs,
-  /// although the precise machine value numbers can't be known until after
-  /// the machine value number problem is solved.
-  void produceTransferFunctions(MachineFunction &MF,
-                                SmallVectorImpl<MLocTransferMap> &MLocTransfer,
-                                unsigned MaxNumBlocks,
-                                SmallVectorImpl<VLocTracker> &VLocs);
+  /// location dataflow problem.
+  void
+  produceMLocTransferFunction(MachineFunction &MF,
+                              SmallVectorImpl<MLocTransferMap> &MLocTransfer,
+                              unsigned MaxNumBlocks);
 
   /// Solve the machine value location dataflow problem. Takes as input the
   /// transfer functions in \p MLocTransfer. Writes the output live-in and
@@ -1555,7 +1553,7 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
 
   MachineFunction *MF = MI.getMF();
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
-  unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+  Register SP = TLI->getStackPointerRegisterToSaveRestore();
 
   // Find the regs killed by MI, and find regmasks of preserved regs.
   // Max out the number of statically allocated elements in `DeadRegs`, as this
@@ -1925,9 +1923,9 @@ void InstrRefBasedLDV::process(MachineInstr &MI) {
   transferRegisterDef(MI);
 }
 
-void InstrRefBasedLDV::produceTransferFunctions(
+void InstrRefBasedLDV::produceMLocTransferFunction(
     MachineFunction &MF, SmallVectorImpl<MLocTransferMap> &MLocTransfer,
-    unsigned MaxNumBlocks, SmallVectorImpl<VLocTracker> &VLocs) {
+    unsigned MaxNumBlocks) {
   // Because we try to optimize around register mask operands by ignoring regs
   // that aren't currently tracked, we set up something ugly for later: RegMask
   // operands that are seen earlier than the first use of a register, still need
@@ -1955,9 +1953,6 @@ void InstrRefBasedLDV::produceTransferFunctions(
     // production only, this signifies the live-in value to the block.
     MTracker->reset();
     MTracker->setMPhis(CurBB);
-
-    VTracker = &VLocs[CurBB];
-    VTracker->MBB = &MBB;
 
     // Step through each instruction in this block.
     for (auto &MI : MBB) {
@@ -1994,7 +1989,7 @@ void InstrRefBasedLDV::produceTransferFunctions(
 
   // Compute a bitvector of all the registers that are tracked in this block.
   const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
-  unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+  Register SP = TLI->getStackPointerRegisterToSaveRestore();
   BitVector UsedRegs(TRI->getNumRegs());
   for (auto Location : MTracker->locations()) {
     unsigned ID = MTracker->LocIdxToLocID[Location.Idx];
@@ -2809,7 +2804,6 @@ void InstrRefBasedLDV::vlocDataflow(
           CurBB, VarsWeCareAbout, MOutLocs, MInLocs, InScopeBlocks,
           BlocksToExplore, JoinedInLocs);
 
-      auto &VTracker = AllTheVLocs[MBB->getNumber()];
       bool FirstVisit = VLOCVisited.insert(MBB).second;
 
       // Always explore transfer function if inlocs changed, or if we've not
@@ -2821,23 +2815,11 @@ void InstrRefBasedLDV::vlocDataflow(
       if (DowngradeOccurred && OnPending.insert(MBB).second)
         Pending.push(BBToOrder[MBB]);
 
-      // Patch up the variable value transfer function to use the live-in
-      // machine values, now that that problem is solved.
-      if (FirstVisit) {
-        for (auto &Transfer : VTracker.Vars) {
-          if (Transfer.second.Kind == DbgValue::Def &&
-              Transfer.second.ID.getBlock() == CurBB &&
-              Transfer.second.ID.isPHI()) {
-            LocIdx Loc = Transfer.second.ID.getLoc();
-            Transfer.second.ID = MInLocs[CurBB][Loc.asU64()];
-          }
-        }
-      }
-
       if (!InLocsChanged)
         continue;
 
       // Do transfer function.
+      auto &VTracker = AllTheVLocs[MBB->getNumber()];
       for (auto &Transfer : VTracker.Vars) {
         // Is this var we're mangling in this scope?
         if (VarsWeCareAbout.count(Transfer.first)) {
@@ -3035,7 +3017,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
 
   initialSetup(MF);
 
-  produceTransferFunctions(MF, MLocTransfer, MaxNumBlocks, vlocs);
+  produceMLocTransferFunction(MF, MLocTransfer, MaxNumBlocks);
 
   // Allocate and initialize two array-of-arrays for the live-in and live-out
   // machine values. The outer dimension is the block number; while the inner
@@ -3053,6 +3035,22 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   // both live-ins and live-outs for decision making in the variable value
   // dataflow problem.
   mlocDataflow(MInLocs, MOutLocs, MLocTransfer);
+
+  // Walk back through each block / instruction, collecting DBG_VALUE
+  // instructions and recording what machine value their operands refer to.
+  for (auto &OrderPair : OrderToBB) {
+    MachineBasicBlock &MBB = *OrderPair.second;
+    CurBB = MBB.getNumber();
+    VTracker = &vlocs[CurBB];
+    VTracker->MBB = &MBB;
+    MTracker->loadFromArray(MInLocs[CurBB], CurBB);
+    CurInst = 1;
+    for (auto &MI : MBB) {
+      process(MI);
+      ++CurInst;
+    }
+    MTracker->reset();
+  }
 
   // Number all variables in the order that they appear, to be used as a stable
   // insertion order later.

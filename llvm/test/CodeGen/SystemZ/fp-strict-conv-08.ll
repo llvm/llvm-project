@@ -22,7 +22,7 @@ define float @f1(i64 %i) #0 {
 ; Test i64->f64.
 define double @f2(i64 %i) #0 {
 ; CHECK-LABEL: f2:
-; CHECK: ldgr
+; CHECK: cdgbr
 ; CHECK: adbr
 ; CHECK: br %r14
   %conv = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %i,

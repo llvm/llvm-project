@@ -183,15 +183,15 @@ class getMTBUFAsmOps<int addrKind> {
 }
 
 class MTBUF_SetupAddr<int addrKind> {
-  bits<1> offen  = !if(!eq(addrKind, BUFAddrKind.OffEn), 1,
-                   !if(!eq(addrKind, BUFAddrKind.BothEn), 1 , 0));
+  bits<1> offen  = !or(!eq(addrKind, BUFAddrKind.OffEn),
+                       !eq(addrKind, BUFAddrKind.BothEn));
 
-  bits<1> idxen  = !if(!eq(addrKind, BUFAddrKind.IdxEn), 1,
-                   !if(!eq(addrKind, BUFAddrKind.BothEn), 1 , 0));
+  bits<1> idxen  = !or(!eq(addrKind, BUFAddrKind.IdxEn),
+                       !eq(addrKind, BUFAddrKind.BothEn));
 
-  bits<1> addr64 = !if(!eq(addrKind, BUFAddrKind.Addr64), 1, 0);
+  bits<1> addr64 = !eq(addrKind, BUFAddrKind.Addr64);
 
-  bits<1> has_vaddr = !if(!eq(addrKind, BUFAddrKind.Offset), 0, 1);
+  bits<1> has_vaddr = !ne(addrKind, BUFAddrKind.Offset);
 }
 
 class MTBUF_Load_Pseudo <string opName,
@@ -462,15 +462,15 @@ class getMUBUFAsmOps<int addrKind> {
 }
 
 class MUBUF_SetupAddr<int addrKind> {
-  bits<1> offen  = !if(!eq(addrKind, BUFAddrKind.OffEn), 1,
-                   !if(!eq(addrKind, BUFAddrKind.BothEn), 1 , 0));
+  bits<1> offen  = !or(!eq(addrKind, BUFAddrKind.OffEn),
+                       !eq(addrKind, BUFAddrKind.BothEn));
 
-  bits<1> idxen  = !if(!eq(addrKind, BUFAddrKind.IdxEn), 1,
-                   !if(!eq(addrKind, BUFAddrKind.BothEn), 1 , 0));
+  bits<1> idxen  = !or(!eq(addrKind, BUFAddrKind.IdxEn),
+                       !eq(addrKind, BUFAddrKind.BothEn));
 
-  bits<1> addr64 = !if(!eq(addrKind, BUFAddrKind.Addr64), 1, 0);
+  bits<1> addr64 = !eq(addrKind, BUFAddrKind.Addr64);
 
-  bits<1> has_vaddr = !if(!eq(addrKind, BUFAddrKind.Offset), 0, 1);
+  bits<1> has_vaddr = !ne(addrKind, BUFAddrKind.Offset);
 }
 
 class MUBUF_Load_Pseudo <string opName,
@@ -498,7 +498,7 @@ class MUBUF_Load_Pseudo <string opName,
   let mayStore = 0;
   let maybeAtomic = 1;
   let Uses = !if(isLds, [EXEC, M0], [EXEC]);
-  let has_tfe = !if(isLds, 0, 1);
+  let has_tfe = !not(isLds);
   let lds = isLds;
   let elements = getMUBUFElements<vdata_vt>.ret;
 }
@@ -1857,7 +1857,7 @@ class Base_MUBUF_Real_gfx6_gfx7_gfx10<bits<7> op, MUBUF_Pseudo ps, int ef> :
   let Inst{12}    = ps.offen;
   let Inst{13}    = ps.idxen;
   let Inst{14}    = !if(ps.has_glc, glc, ps.glc_value);
-  let Inst{16}    = !if(ps.lds, 1, 0);
+  let Inst{16}    = ps.lds;
   let Inst{24-18} = op;
   let Inst{31-26} = 0x38;
   let Inst{39-32} = !if(ps.has_vaddr, vaddr, ?);
@@ -2208,7 +2208,7 @@ class MUBUF_Real_vi <bits<7> op, MUBUF_Pseudo ps> :
   let Inst{12}    = ps.offen;
   let Inst{13}    = ps.idxen;
   let Inst{14}    = !if(ps.has_glc, glc, ps.glc_value);
-  let Inst{16}    = !if(ps.lds, 1, 0);
+  let Inst{16}    = ps.lds;
   let Inst{17}    = !if(ps.has_slc, slc, ?);
   let Inst{24-18} = op;
   let Inst{31-26} = 0x38; //encoding
@@ -2258,7 +2258,7 @@ class MUBUF_Real_gfx80 <bits<7> op, MUBUF_Pseudo ps> :
   let Inst{12}    = ps.offen;
   let Inst{13}    = ps.idxen;
   let Inst{14}    = !if(ps.has_glc, glc, ps.glc_value);
-  let Inst{16}    = !if(ps.lds, 1, 0);
+  let Inst{16}    = ps.lds;
   let Inst{17}    = !if(ps.has_slc, slc, ?);
   let Inst{24-18} = op;
   let Inst{31-26} = 0x38; //encoding

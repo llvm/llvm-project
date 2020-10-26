@@ -1105,14 +1105,14 @@
 # CHECK-NEXT:  1      2     1.00                        eor	r4, r4, r5, rrx
 # CHECK-NEXT:  0      0     0.00    *      *      U     isb	sy
 # CHECK-NEXT:  0      0     0.00    *      *      U     isb	#0xa
-# CHECK-NEXT:  16     10    16.00   *                   ldm	r2, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  16     10    16.00   *                   ldmib	r2, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  16     10    16.00   *                   ldmda	r2, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  16     10    16.00   *                   ldmdb	r2, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  32     10    16.00   *                   ldm	r2!, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  32     10    16.00   *                   ldmib	r2!, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  32     10    16.00   *                   ldmda	r2!, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  32     10    16.00   *                   ldmdb	r2!, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  6      5     6.00    *                   ldm	r2, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  6      5     6.00    *                   ldmib	r2, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  6      5     6.00    *                   ldmda	r2, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  6      5     6.00    *                   ldmdb	r2, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  12     5     6.00    *                   ldm	r2!, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  12     5     6.00    *                   ldmib	r2!, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  12     5     6.00    *                   ldmda	r2!, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  12     5     6.00    *                   ldmdb	r2!, {r1, r3, r4, r5, r6, sp}
 # CHECK-NEXT:  0      0     0.00    *      *      U     ldrexb	r3, [r4]
 # CHECK-NEXT:  0      0     0.00    *      *      U     ldrexh	r2, [r5]
 # CHECK-NEXT:  0      0     0.00    *      *      U     ldrex	r1, [r7]
@@ -1253,9 +1253,9 @@
 # CHECK-NEXT:  1      2     1.00                        pkhtb	r2, r2, r3, asr #31
 # CHECK-NEXT:  1      2     1.00                        pkhtb	r2, r2, r3, asr #15
 # CHECK-NEXT:  2      4     1.00    *                   pop	{r7}
-# CHECK-NEXT:  32     10    16.00   *                   pop	{r7, r8, r9, r10}
+# CHECK-NEXT:  8      4     4.00    *                   pop	{r7, r8, r9, r10}
 # CHECK-NEXT:  2      1     1.00           *            push	{r7}
-# CHECK-NEXT:  2      2     1.00           *            push	{r7, r8, r9, r10}
+# CHECK-NEXT:  2      3     1.00           *            push	{r7, r8, r9, r10}
 # CHECK-NEXT:  1      2     1.00                  U     qadd	r1, r2, r3
 # CHECK-NEXT:  1      2     1.00                  U     qaddne	r1, r2, r3
 # CHECK-NEXT:  1      2     1.00                  U     qadd16	r1, r2, r3
@@ -1512,16 +1512,16 @@
 # CHECK-NEXT:  2      4     1.00    *      *      U     ssub16ne	r5, r3, r2
 # CHECK-NEXT:  2      2     1.00    *      *      U     ssub8	r9, r2, r4
 # CHECK-NEXT:  2      4     1.00    *      *      U     ssub8eq	r5, r1, r2
-# CHECK-NEXT:  1      2     1.00           *            stm	r2, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  1      2     1.00           *            stm	r3, {r1, r3, r4, r5, r6, lr}
-# CHECK-NEXT:  1      2     1.00           *            stmib	r4, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  1      2     1.00           *            stmda	r5, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  1      2     1.00           *            stmdb	r6, {r1, r3, r4, r5, r6, r8}
-# CHECK-NEXT:  1      2     1.00           *            stmdb	sp, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  2      2     1.00           *            stm	r8!, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  2      2     1.00           *            stmib	r9!, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  2      2     1.00           *            stmda	sp!, {r1, r3, r4, r5, r6}
-# CHECK-NEXT:  2      2     1.00           *            stmdb	r0!, {r1, r5, r7, sp}
+# CHECK-NEXT:  1      3     1.00           *            stm	r2, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  1      3     1.00           *            stm	r3, {r1, r3, r4, r5, r6, lr}
+# CHECK-NEXT:  1      3     1.00           *            stmib	r4, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  1      3     1.00           *            stmda	r5, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  1      3     1.00           *            stmdb	r6, {r1, r3, r4, r5, r6, r8}
+# CHECK-NEXT:  1      3     1.00           *            stmdb	sp, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  2      4     1.00           *            stm	r8!, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  2      4     1.00           *            stmib	r9!, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  2      3     1.00           *            stmda	sp!, {r1, r3, r4, r5, r6}
+# CHECK-NEXT:  2      3     1.00           *            stmdb	r0!, {r1, r5, r7, sp}
 # CHECK-NEXT:  0      0     0.00    *      *      U     strexb	r1, r3, [r4]
 # CHECK-NEXT:  0      0     0.00    *      *      U     strexh	r4, r2, [r5]
 # CHECK-NEXT:  0      0     0.00    *      *      U     strex	r2, r1, [r7]
@@ -1719,7 +1719,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT: 8.00   159.00 159.00 171.00 496.00 12.00   -      -
+# CHECK-NEXT: 8.00   133.00 133.00 79.00  496.00 12.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    Instructions:
@@ -1969,14 +1969,14 @@
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     eor	r4, r4, r5, rrx
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     isb	sy
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     isb	#0xa
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldm	r2, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldmib	r2, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldmda	r2, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  -      -      -     16.00   -      -      -      -     ldmdb	r2, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  -     8.00   8.00   16.00   -      -      -      -     ldm	r2!, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  -     8.00   8.00   16.00   -      -      -      -     ldmib	r2!, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  -     8.00   8.00   16.00   -      -      -      -     ldmda	r2!, {r1, r3, r4, r5, r6, sp}
-# CHECK-NEXT:  -     8.00   8.00   16.00   -      -      -      -     ldmdb	r2!, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  -      -      -     6.00    -      -      -      -     ldm	r2, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  -      -      -     6.00    -      -      -      -     ldmib	r2, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  -      -      -     6.00    -      -      -      -     ldmda	r2, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  -      -      -     6.00    -      -      -      -     ldmdb	r2, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  -     3.00   3.00   6.00    -      -      -      -     ldm	r2!, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  -     3.00   3.00   6.00    -      -      -      -     ldmib	r2!, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  -     3.00   3.00   6.00    -      -      -      -     ldmda	r2!, {r1, r3, r4, r5, r6, sp}
+# CHECK-NEXT:  -     3.00   3.00   6.00    -      -      -      -     ldmdb	r2!, {r1, r3, r4, r5, r6, sp}
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     ldrexb	r3, [r4]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     ldrexh	r2, [r5]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     ldrex	r1, [r7]
@@ -2117,7 +2117,7 @@
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     pkhtb	r2, r2, r3, asr #31
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     pkhtb	r2, r2, r3, asr #15
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     pop	{r7}
-# CHECK-NEXT:  -     8.00   8.00   16.00   -      -      -      -     pop	{r7, r8, r9, r10}
+# CHECK-NEXT:  -     2.00   2.00   4.00    -      -      -      -     pop	{r7, r8, r9, r10}
 # CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     push	{r7}
 # CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     push	{r7, r8, r9, r10}
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     qadd	r1, r2, r3

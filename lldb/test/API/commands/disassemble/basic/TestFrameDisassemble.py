@@ -57,4 +57,6 @@ class FrameDisassembleTestCase(TestBase):
 
         frame = threads[0].GetFrameAtIndex(0)
         disassembly = frame.Disassemble()
-        self.assertNotEqual(len(disassembly), 0, "Disassembly was empty.")
+        self.assertNotEqual(disassembly, "")
+        self.assertNotIn("error", disassembly)
+        self.assertIn(": nop", disassembly)

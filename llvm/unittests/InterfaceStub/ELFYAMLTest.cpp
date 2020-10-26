@@ -144,6 +144,18 @@ TEST(ElfYamlTextAPI, YAMLUnreadableTBE) {
   ASSERT_THAT_ERROR(StubOrErr.takeError(), Failed());
 }
 
+TEST(ElfYamlTextAPI, YAMLUnsupportedVersion) {
+  const char Data[] = "--- !tapi-tbe\n"
+                      "TbeVersion: 9.9.9\n"
+                      "SoName: test.so\n"
+                      "Arch: x86_64\n"
+                      "Symbols: {}\n"
+                      "...\n";
+  Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
+  std::string ErrorMessage = toString(StubOrErr.takeError());
+  EXPECT_EQ("TBE version 9.9.9 is unsupported.", ErrorMessage);
+}
+
 TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
   const char Expected[] =
       "--- !tapi-tbe\n"

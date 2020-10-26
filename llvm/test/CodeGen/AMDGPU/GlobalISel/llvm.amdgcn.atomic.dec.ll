@@ -200,7 +200,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i32(i32 addrspace(1)* %out, i32
 ; CI-NEXT:    flat_atomic_dec v2, v[0:1], v2 glc
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
-; CI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    flat_store_dword v[0:1], v2
 ; CI-NEXT:    s_endpgm
 ;
@@ -214,7 +214,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i32(i32 addrspace(1)* %out, i32
 ; VI-NEXT:    flat_atomic_dec v2, v[0:1], v2 glc
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ; GFX9-LABEL: global_atomic_dec_ret_i32:
@@ -248,7 +248,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i32_offset(i32 addrspace(1)* %o
 ; CI-NEXT:    flat_atomic_dec v2, v[0:1], v2 glc
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
-; CI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    flat_store_dword v[0:1], v2
 ; CI-NEXT:    s_endpgm
 ;
@@ -264,7 +264,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i32_offset(i32 addrspace(1)* %o
 ; VI-NEXT:    flat_atomic_dec v2, v[0:1], v2 glc
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ; GFX9-LABEL: global_atomic_dec_ret_i32_offset:
@@ -379,7 +379,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i32_offset_addr64(i32 addrspace
 ; CI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v4, vcc
 ; CI-NEXT:    v_mov_b32_e32 v4, 42
 ; CI-NEXT:    flat_atomic_dec v2, v[2:3], v4 glc
-; CI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    flat_store_dword v[0:1], v2
 ; CI-NEXT:    s_endpgm
 ;
@@ -400,7 +400,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i32_offset_addr64(i32 addrspace
 ; VI-NEXT:    v_addc_u32_e32 v3, vcc, 0, v4, vcc
 ; VI-NEXT:    v_mov_b32_e32 v4, 42
 ; VI-NEXT:    flat_atomic_dec v2, v[2:3], v4 glc
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ; GFX9-LABEL: global_atomic_dec_ret_i32_offset_addr64:
@@ -1366,7 +1366,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i64(i64 addrspace(1)* %out, i64
 ; CI-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
 ; CI-NEXT:    v_mov_b32_e32 v3, s1
 ; CI-NEXT:    v_mov_b32_e32 v2, s0
-; CI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CI-NEXT:    s_endpgm
 ;
@@ -1381,7 +1381,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i64(i64 addrspace(1)* %out, i64
 ; VI-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
 ; GFX9-LABEL: global_atomic_dec_ret_i64:
@@ -1417,7 +1417,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i64_offset(i64 addrspace(1)* %o
 ; CI-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
 ; CI-NEXT:    v_mov_b32_e32 v3, s1
 ; CI-NEXT:    v_mov_b32_e32 v2, s0
-; CI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CI-NEXT:    s_endpgm
 ;
@@ -1434,7 +1434,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i64_offset(i64 addrspace(1)* %o
 ; VI-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
 ; GFX9-LABEL: global_atomic_dec_ret_i64_offset:
@@ -1557,7 +1557,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i64_offset_addr64(i64 addrspace
 ; CI-NEXT:    v_mov_b32_e32 v4, 42
 ; CI-NEXT:    v_mov_b32_e32 v5, 0
 ; CI-NEXT:    flat_atomic_dec_x2 v[2:3], v[2:3], v[4:5] glc
-; CI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; CI-NEXT:    s_endpgm
 ;
@@ -1579,7 +1579,7 @@ define amdgpu_kernel void @global_atomic_dec_ret_i64_offset_addr64(i64 addrspace
 ; VI-NEXT:    v_mov_b32_e32 v4, 42
 ; VI-NEXT:    v_mov_b32_e32 v5, 0
 ; VI-NEXT:    flat_atomic_dec_x2 v[2:3], v[2:3], v[4:5] glc
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; VI-NEXT:    s_endpgm
 ; GFX9-LABEL: global_atomic_dec_ret_i64_offset_addr64:

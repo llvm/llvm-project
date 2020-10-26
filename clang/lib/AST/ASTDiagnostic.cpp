@@ -1834,7 +1834,14 @@ class TemplateDiff {
     if (VD) {
       if (AddressOf)
         OS << "&";
-      OS << VD->getName();
+      else if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(VD)) {
+        // FIXME: Diffing the APValue would be neat.
+        // FIXME: Suppress this and use the full name of the declaration if the
+        // parameter is a pointer or reference.
+        TPO->printAsInit(OS);
+        return;
+      }
+      VD->printName(OS);
       return;
     }
 
