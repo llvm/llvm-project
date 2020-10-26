@@ -12561,16 +12561,16 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       return false;
 
     assert(E->isComparisonOp() && "Invalid binary operator!");
-    llvm::APFloatBase::cmpResult CmpResult = LHS.compare(RHS);
+    llvm::APFloatBase::cmpResult APFloatCmpResult = LHS.compare(RHS);
     if (!Info.InConstantContext &&
-        CmpResult == APFloat::cmpUnordered &&
+        APFloatCmpResult == APFloat::cmpUnordered &&
         E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).isFPConstrained()) {
       // Note: Compares may raise invalid in some cases involving NaN or sNaN.
       Info.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
       return false;
     }
     auto GetCmpRes = [&]() {
-      switch (CmpResult) {
+      switch (APFloatCmpResult) {
       case APFloat::cmpEqual:
         return CmpResult::Equal;
       case APFloat::cmpLessThan:
