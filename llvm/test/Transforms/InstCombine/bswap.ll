@@ -537,12 +537,7 @@ declare <2 x i32> @llvm.bswap.v2i32(<2 x i32>)
 
 define i16 @partial_bitreverse(i16 %x) {
 ; CHECK-LABEL: @partial_bitreverse(
-; CHECK-NEXT:    [[REV:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[X:%.*]])
-; CHECK-NEXT:    [[LO:%.*]] = and i16 [[REV]], 255
-; CHECK-NEXT:    [[HI:%.*]] = and i16 [[REV]], -256
-; CHECK-NEXT:    [[REVLO:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[LO]])
-; CHECK-NEXT:    [[REVHI:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[HI]])
-; CHECK-NEXT:    [[OR:%.*]] = call i16 @llvm.fshl.i16(i16 [[REVHI]], i16 [[REVLO]], i16 8)
+; CHECK-NEXT:    [[OR:%.*]] = call i16 @llvm.bswap.i16(i16 [[X:%.*]])
 ; CHECK-NEXT:    ret i16 [[OR]]
 ;
   %rev= call i16 @llvm.bitreverse.i16(i16 %x)
