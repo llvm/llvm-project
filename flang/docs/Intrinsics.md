@@ -694,6 +694,46 @@ CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, LOC
 MALLOC
 ```
 
+## Intrinsic Procedure Name Resolution
+
+When the name of a procedure in a program is the same as the one of an intrinsic
+procedure, and nothing other than its usage allows to decide whether the procedure
+is the intrinsic or not (i.e, it does not appear in an INTRINSIC or EXTERNAL attribute
+statement, is not an use/host associated procedure...), Fortran 2018 standard
+section 19.5.1.4 point 6 rules that the procedure is established to be intrinsic if it is
+invoked as an intrinsic procedure.
+
+In case the invocation would be an error if the procedure were the intrinsic
+(e.g. wrong argument number or type), the broad wording of the standard
+leaves two choices to the compiler: emit an error about the intrinsic invocation,
+or consider this is an external procedure and emit no error.
+
+f18 will always consider this case to be the intrinsic and emit errors, unless the procedure
+is used as a function (resp. subroutine) and the intrinsic is a subroutine (resp. function).
+The table below gives some examples of decisions made by Fortran compilers in such case.
+
+| What is ACOS ?     | Bad intrinsic call       | External with warning |  External no warning | Other error |
+| --- | --- | --- | --- | --- |
+| `print*, ACOS()`     | gfortran, nag, xlf, f18  |  ifort                |  nvfortran           | |
+| `print*, ACOS(I)`    | gfortran, nag, xlf, f18  |  ifort                |  nvfortran           | |
+| `print*, ACOS(X=I)`  | gfortran, nag, xlf, f18  |  ifort                |                      | nvfortran (keyword on implicit extrenal )|
+| `print*, ACOS(X, X)` | gfortran, nag, xlf, f18  |  ifort                |  nvfortran           | |
+| `CALL ACOS(X)`       |                          |                       |  gfortran, nag, xlf, nvfortran, ifort, f18  | |
+
+
+The rationale for f18 behavior is that when referring to a procedure with an
+argument number or type that does not match the intrinsic specification, it seems safer to block
+the rather likely case where the user is using the intrinsic the wrong way.
+In case the user wanted to refer to an external function, he can add an explicit EXTERNAL
+statement with no other consequences on the program.
+However, it seems rather unlikely that a user would confuse an intrinsic subroutine for a
+function and vice versa. Given no compiler is issuing an error here, changing the behavior might
+affect existing programs that omit the EXTERNAL attribute in such case.
+
+Also note that in general, the standard gives the compiler the right to consider
+any procedure that is not explicitly external as a non standard intrinsic (section 4.2 point 4).
+So it is highly advised for the programmer to use EXTERNAL statements to prevent any ambiguity.
+
 ## Intrinsic Procedure Support in f18
 This section gives an overview of the support inside f18 libraries for the
 intrinsic procedures listed above.

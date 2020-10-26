@@ -1616,6 +1616,8 @@ public:
   }
 
   bool IsIntrinsic(const std::string &) const;
+  bool IsIntrinsicFunction(const std::string &) const;
+  bool IsIntrinsicSubroutine(const std::string &) const;
 
   IntrinsicClass GetIntrinsicClass(const std::string &) const;
   std::string GetGenericIntrinsicName(const std::string &) const;
@@ -1641,7 +1643,7 @@ private:
   std::multimap<std::string, const IntrinsicInterface *> subroutines_;
 };
 
-bool IntrinsicProcTable::Implementation::IsIntrinsic(
+bool IntrinsicProcTable::Implementation::IsIntrinsicFunction(
     const std::string &name) const {
   auto specificRange{specificFuncs_.equal_range(name)};
   if (specificRange.first != specificRange.second) {
@@ -1651,12 +1653,21 @@ bool IntrinsicProcTable::Implementation::IsIntrinsic(
   if (genericRange.first != genericRange.second) {
     return true;
   }
+  // special cases
+  return name == "null";
+}
+bool IntrinsicProcTable::Implementation::IsIntrinsicSubroutine(
+    const std::string &name) const {
   auto subrRange{subroutines_.equal_range(name)};
   if (subrRange.first != subrRange.second) {
     return true;
   }
   // special cases
-  return name == "null" || name == "__builtin_c_f_pointer";
+  return name == "__builtin_c_f_pointer";
+}
+bool IntrinsicProcTable::Implementation::IsIntrinsic(
+    const std::string &name) const {
+  return IsIntrinsicFunction(name) || IsIntrinsicSubroutine(name);
 }
 
 IntrinsicClass IntrinsicProcTable::Implementation::GetIntrinsicClass(
@@ -2083,6 +2094,11 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
         return specificCall;
       }
     }
+    if (IsIntrinsicFunction(call.name)) {
+      context.messages().Say(
+          "Cannot use intrinsic function '%s' as a subroutine"_err_en_US,
+          call.name);
+    }
     return std::nullopt; // TODO
   }
 
@@ -2171,6 +2187,13 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
     }
   }
 
+  if (specificBuffer.empty() && genericBuffer.empty() &&
+      IsIntrinsicSubroutine(call.name)) {
+    context.messages().Say(
+        "Cannot use intrinsic subroutine '%s' as a function"_err_en_US,
+        call.name);
+  }
+
   // No match; report the right errors, if any
   if (finalBuffer) {
     if (specificBuffer.empty()) {
@@ -2232,6 +2255,12 @@ IntrinsicProcTable IntrinsicProcTable::Configure(
 
 bool IntrinsicProcTable::IsIntrinsic(const std::string &name) const {
   return DEREF(impl_).IsIntrinsic(name);
+}
+bool IntrinsicProcTable::IsIntrinsicFunction(const std::string &name) const {
+  return DEREF(impl_).IsIntrinsicFunction(name);
+}
+bool IntrinsicProcTable::IsIntrinsicSubroutine(const std::string &name) const {
+  return DEREF(impl_).IsIntrinsicSubroutine(name);
 }
 
 IntrinsicClass IntrinsicProcTable::GetIntrinsicClass(

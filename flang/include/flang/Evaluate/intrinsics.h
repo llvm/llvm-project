@@ -77,6 +77,8 @@ public:
   // Check whether a name should be allowed to appear on an INTRINSIC
   // statement.
   bool IsIntrinsic(const std::string &) const;
+  bool IsIntrinsicFunction(const std::string &) const;
+  bool IsIntrinsicSubroutine(const std::string &) const;
 
   // Inquiry intrinsics are defined in section 16.7, table 16.1
   IntrinsicClass GetIntrinsicClass(const std::string &) const;
