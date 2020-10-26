@@ -206,25 +206,6 @@ public:
   uint64_t getFixedSize() const { return getFixedValue(); }
   uint64_t getKnownMinSize() const { return getKnownMinValue(); }
 
-  friend bool operator<(const TypeSize &LHS, const TypeSize &RHS) {
-    assert(LHS.IsScalable == RHS.IsScalable &&
-           "Ordering comparison of scalable and fixed types");
-
-    return LHS.MinVal < RHS.MinVal;
-  }
-
-  friend bool operator>(const TypeSize &LHS, const TypeSize &RHS) {
-    return RHS < LHS;
-  }
-
-  friend bool operator<=(const TypeSize &LHS, const TypeSize &RHS) {
-    return !(RHS < LHS);
-  }
-
-  friend bool operator>=(const TypeSize &LHS, const TypeSize& RHS) {
-    return !(LHS < RHS);
-  }
-
   TypeSize &operator-=(TypeSize RHS) {
     assert(IsScalable == RHS.IsScalable &&
            "Subtraction using mixed scalable and fixed types");
