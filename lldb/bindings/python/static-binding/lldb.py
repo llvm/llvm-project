@@ -2171,6 +2171,10 @@ class SBBreakpoint(object):
         r"""ClearAllBreakpointSites(SBBreakpoint self)"""
         return _lldb.SBBreakpoint_ClearAllBreakpointSites(self)
 
+    def GetTarget(self):
+        r"""GetTarget(SBBreakpoint self) -> SBTarget"""
+        return _lldb.SBBreakpoint_GetTarget(self)
+
     def FindLocationByAddress(self, vm_addr):
         r"""FindLocationByAddress(SBBreakpoint self, lldb::addr_t vm_addr) -> SBBreakpointLocation"""
         return _lldb.SBBreakpoint_FindLocationByAddress(self, vm_addr)

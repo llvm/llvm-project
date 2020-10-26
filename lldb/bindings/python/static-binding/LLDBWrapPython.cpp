@@ -7729,6 +7729,33 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBBreakpoint_GetTarget(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBBreakpoint *arg1 = (lldb::SBBreakpoint *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  lldb::SBTarget result;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBBreakpoint, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBBreakpoint_GetTarget" "', argument " "1"" of type '" "lldb::SBBreakpoint const *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBBreakpoint * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = ((lldb::SBBreakpoint const *)arg1)->GetTarget();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBTarget(static_cast< const lldb::SBTarget& >(result))), SWIGTYPE_p_lldb__SBTarget, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBBreakpoint_FindLocationByAddress(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBBreakpoint *arg1 = (lldb::SBBreakpoint *) 0 ;
@@ -81121,6 +81148,7 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBBreakpoint_IsValid", _wrap_SBBreakpoint_IsValid, METH_O, "SBBreakpoint_IsValid(SBBreakpoint self) -> bool"},
 	 { "SBBreakpoint___nonzero__", _wrap_SBBreakpoint___nonzero__, METH_O, "SBBreakpoint___nonzero__(SBBreakpoint self) -> bool"},
 	 { "SBBreakpoint_ClearAllBreakpointSites", _wrap_SBBreakpoint_ClearAllBreakpointSites, METH_O, "SBBreakpoint_ClearAllBreakpointSites(SBBreakpoint self)"},
+	 { "SBBreakpoint_GetTarget", _wrap_SBBreakpoint_GetTarget, METH_O, "SBBreakpoint_GetTarget(SBBreakpoint self) -> SBTarget"},
 	 { "SBBreakpoint_FindLocationByAddress", _wrap_SBBreakpoint_FindLocationByAddress, METH_VARARGS, "SBBreakpoint_FindLocationByAddress(SBBreakpoint self, lldb::addr_t vm_addr) -> SBBreakpointLocation"},
 	 { "SBBreakpoint_FindLocationIDByAddress", _wrap_SBBreakpoint_FindLocationIDByAddress, METH_VARARGS, "SBBreakpoint_FindLocationIDByAddress(SBBreakpoint self, lldb::addr_t vm_addr) -> lldb::break_id_t"},
 	 { "SBBreakpoint_FindLocationByID", _wrap_SBBreakpoint_FindLocationByID, METH_VARARGS, "SBBreakpoint_FindLocationByID(SBBreakpoint self, lldb::break_id_t bp_loc_id) -> SBBreakpointLocation"},
