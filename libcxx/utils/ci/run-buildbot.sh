@@ -201,7 +201,8 @@ legacy-standalone)
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_PATH="${MONOREPO_ROOT}/llvm" \
           -DLIBCXXABI_LIBCXX_PATH="${MONOREPO_ROOT}/libcxx" \
-          -DLIBCXXABI_LIBCXX_INCLUDES="${MONOREPO_ROOT}/libcxx/include"
+          -DLIBCXXABI_LIBCXX_INCLUDES="${MONOREPO_ROOT}/libcxx/include" \
+          -DLIBCXXABI_LIBCXX_LIBRARY_PATH="${BUILD_DIR}/libcxx/lib"
 
     echo "+++ Building libc++abi"
     ninja -C "${BUILD_DIR}/libcxxabi" cxxabi
