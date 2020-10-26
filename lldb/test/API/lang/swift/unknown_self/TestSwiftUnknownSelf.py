@@ -33,7 +33,6 @@ class TestSwiftUnknownSelf(lldbtest.TestBase):
         self.expect("fr v self", substrs=["hello", "world"])
 
 
-    @skipIf #FIXME: This regressed silently due to 2c911bceb06ed376801251bdfd992905a66f276c
     @skipIf(bugnumber="SR-10216", archs=['ppc64le'])
     @swiftTest
     def test_unknown_self_objc_ref(self):
