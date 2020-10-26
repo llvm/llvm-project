@@ -598,8 +598,8 @@ int main() {
   // CHECK-DEBUG-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-DEBUG-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[ST_INT_ST_VAL]]
   // CHECK-DEBUG-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  //
-  // CHECK-TLS:       [[ST_INT_ST_VAL:%.*]] = load i32, i32* [[ST_INT_ST_ADDR:[^,]+]]
+  // CHECK-TLS:       [[ST_INT_ST_ADDR:%.*]] = call i32* [[ST_INT_ST_TLS_INITD:[^,]+]]
+  // CHECK-TLS-NEXT:  [[ST_INT_ST_VAL:%.*]] = load i32, i32* [[ST_INT_ST_ADDR]]
   // CHECK-TLS-NEXT:  [[RES:%.*]] = load i32, i32* [[RES_ADDR]]
   // CHECK-TLS-NEXT:  [[ADD:%.*]] = add {{.*}} i32 [[RES]], [[ST_INT_ST_VAL]]
   // CHECK-TLS-NEXT:  store i32 [[ADD]], i32* [[RES_ADDR]]
@@ -620,8 +620,8 @@ int main() {
   // CHECK-DEBUG-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-DEBUG-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[FLOAT_TO_INT_CONV]]
   // CHECK-DEBUG-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  //
-  // CHECK-TLS:      [[ST_FLOAT_ST_VAL:%.*]]  = load float, float* [[ST_FLOAT_ST_ADDR:[^,]+]]
+  // CHECK-TLS: [[ST_FLOAT_ST_ADDR:%.*]]  = call float* [[ST_FLOAT_ST_TLS_INITD:[^,]+]]
+  // CHECK-TLS-NEXT: [[ST_FLOAT_ST_VAL:%.*]]  = load float, float* [[ST_FLOAT_ST_ADDR]]
   // CHECK-TLS-NEXT: [[FLOAT_TO_INT_CONV:%.*]] = fptosi float [[ST_FLOAT_ST_VAL]]  to i32
   // CHECK-TLS-NEXT: [[RES:%.*]] = load i32, i32* [[RES_ADDR]]
   // CHECK-TLS-NEXT: [[ADD:%.*]] = add {{.*}} i32 [[RES]], [[FLOAT_TO_INT_CONV]]
@@ -727,14 +727,14 @@ int main() {
 // CHECK-TLS:   call void [[ARR_X_TLS_INIT]]
 // CHECK-TLS:   ret [2 x [3 x [[S1]]]]* [[ARR_X]]
 // CHECK-TLS: }
-//
-//
-//
-//
-//
-//
-//
-//
+// CHECK-TLS: define {{.*}} i32* [[ST_INT_ST_TLS_INITD]] {{#[0-9]+}} comdat {
+// CHECK-TLS-NOT:   call
+// CHECK-TLS:   ret i32* [[ST_INT_ST]]
+// CHECK-TLS: }
+// CHECK-TLS: define {{.*}} float* [[ST_FLOAT_ST_TLS_INITD]] {{#[0-9]+}} comdat {
+// CHECK-TLS-NOT:   call
+// CHECK-TLS:   ret float* [[ST_FLOAT_ST]]
+// CHECK-TLS: }
 // CHECK-TLS: define {{.*}} [[S4]]* [[ST_S4_ST_TLS_INITD]] {{#[0-9]+}} comdat {
 // CHECK-TLS:   call void [[ST_S4_ST_TLS_INIT]]
 // CHECK-TLS:   ret [[S4]]* [[ST_S4_ST]]
@@ -874,8 +874,8 @@ int foobar() {
   // CHECK-DEBUG-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-DEBUG-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[ST_INT_ST_VAL]]
   // CHECK-DEBUG-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  //
-  // OMP45-TLS:      [[ST_INT_ST_VAL:%.*]] = load [[INT]], [[INT]]* [[ST_INT_ST_ADDR:[^,]+]]
+  // OMP45-TLS:      [[ST_INT_ST_ADDR:%.*]] = call i32* [[ST_INT_ST_TLS_INITD]]
+  // OMP45-TLS-NEXT: [[ST_INT_ST_VAL:%.*]] = load [[INT]], [[INT]]* [[ST_INT_ST_ADDR]]
   // OMP45-TLS-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // OMP45-TLS-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[ST_INT_ST_VAL]]
   // OMP45-TLS-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
@@ -896,8 +896,8 @@ int foobar() {
   // CHECK-DEBUG-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-DEBUG-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[FLOAT_TO_INT_CONV]]
   // CHECK-DEBUG-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  //
-  // OMP45-TLS:      [[ST_FLOAT_ST_VAL:%.*]] = load float, float* [[ST_FLOAT_ST_ADDR:[^,]+]]
+  // OMP45-TLS:      [[ST_FLOAT_ST_ADDR:%.*]] = call float* [[ST_FLOAT_ST_TLS_INITD]]
+  // OMP45-TLS-NEXT: [[ST_FLOAT_ST_VAL:%.*]] = load float, float* [[ST_FLOAT_ST_ADDR]]
   // OMP45-TLS-NEXT: [[FLOAT_TO_INT_CONV:%.*]] = fptosi float [[ST_FLOAT_ST_VAL]] to [[INT]]
   // OMP45-TLS-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // OMP45-TLS-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[FLOAT_TO_INT_CONV]]
