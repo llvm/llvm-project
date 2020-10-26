@@ -1009,7 +1009,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
     ScalarEvolution &SE = *PSE.getSE();
     for (Instruction &I : *BB) {
       LoadInst *LI = dyn_cast<LoadInst>(&I);
-      if (LI && !mustSuppressSpeculation(*LI) &&
+      if (LI && !LI->getType()->isVectorTy() && !mustSuppressSpeculation(*LI) &&
           isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT))
         SafePointers.insert(LI->getPointerOperand());
     }
