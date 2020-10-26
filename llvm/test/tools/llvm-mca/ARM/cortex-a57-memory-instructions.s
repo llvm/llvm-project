@@ -202,7 +202,7 @@
 # CHECK-NEXT:  2      4     1.00    *                   ldrbt	r1, [r2], -r6, lsl #12
 # CHECK-NEXT:  2      4     2.00    *                   ldrd	r0, r1, [r5]
 # CHECK-NEXT:  2      4     2.00    *                   ldrd	r0, r1, [r5, r2]
-# CHECK-NEXT:  2      4     2.00    *                   ldrd	r0, r1, [r5, -r2]
+# CHECK-NEXT:  4      5     2.00    *                   ldrd	r0, r1, [r5, -r2]
 # CHECK-NEXT:  2      4     2.00    *                   ldrd	r8, r9, [r2, #15]
 # CHECK-NEXT:  4      5     2.00    *                   ldrd	r2, r3, [r9, #32]!
 # CHECK-NEXT:  4      4     2.00    *                   ldrd	r6, r7, [r1], #8
@@ -218,7 +218,7 @@
 # CHECK-NEXT:  1      4     1.00    *                   ldrh	r1, [r8, #64]!
 # CHECK-NEXT:  2      4     1.00    *                   ldrh	r12, [sp], #4
 # CHECK-NEXT:  1      4     1.00    *                   ldrh	r6, [r5, r4]
-# CHECK-NEXT:  1      4     1.00    *                   ldrh	r6, [r5, -r4]
+# CHECK-NEXT:  2      5     1.00    *                   ldrh	r6, [r5, -r4]
 # CHECK-NEXT:  1      4     1.00    *                   ldrh	r3, [r8, r11]!
 # CHECK-NEXT:  1      4     1.00    *                   ldrh	r1, [r2, -r1]!
 # CHECK-NEXT:  2      4     1.00    *                   ldrh	r9, [r7], r2
@@ -299,7 +299,7 @@
 # CHECK-NEXT:  1      1     1.00           *            strd	r0, r1, [r4]
 # CHECK-NEXT:  1      1     1.00           *            strd	r2, r3, [r6, #1]
 # CHECK-NEXT:  1      1     1.00           *            strd	r2, r3, [r6, r2]
-# CHECK-NEXT:  1      1     1.00           *            strd	r2, r3, [r6, -r2]
+# CHECK-NEXT:  2      3     1.00           *            strd	r2, r3, [r6, -r2]
 # CHECK-NEXT:  2      1     1.00           *            strd	r2, r3, [r7, #22]!
 # CHECK-NEXT:  2      1     1.00           *            strd	r4, r5, [r8], #7
 # CHECK-NEXT:  2      1     1.00           *            strd	r4, r5, [sp], #0
@@ -335,7 +335,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT:  -     63.00  63.00  167.00 9.00   57.00   -      -
+# CHECK-NEXT:  -     65.00  65.00  167.00 9.00   57.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    Instructions:
@@ -374,7 +374,7 @@
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldrbt	r1, [r2], -r6, lsl #12
 # CHECK-NEXT:  -      -      -     2.00    -      -      -      -     ldrd	r0, r1, [r5]
 # CHECK-NEXT:  -      -      -     2.00    -      -      -      -     ldrd	r0, r1, [r5, r2]
-# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     ldrd	r0, r1, [r5, -r2]
+# CHECK-NEXT:  -     1.00   1.00   2.00    -      -      -      -     ldrd	r0, r1, [r5, -r2]
 # CHECK-NEXT:  -      -      -     2.00    -      -      -      -     ldrd	r8, r9, [r2, #15]
 # CHECK-NEXT:  -     1.00   1.00   2.00    -      -      -      -     ldrd	r2, r3, [r9, #32]!
 # CHECK-NEXT:  -     1.00   1.00   2.00    -      -      -      -     ldrd	r6, r7, [r1], #8
@@ -390,7 +390,7 @@
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldrh	r1, [r8, #64]!
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldrh	r12, [sp], #4
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldrh	r6, [r5, r4]
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldrh	r6, [r5, -r4]
+# CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldrh	r6, [r5, -r4]
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldrh	r3, [r8, r11]!
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldrh	r1, [r2, -r1]!
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldrh	r9, [r7], r2
@@ -471,7 +471,7 @@
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     strd	r0, r1, [r4]
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     strd	r2, r3, [r6, #1]
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     strd	r2, r3, [r6, r2]
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     strd	r2, r3, [r6, -r2]
+# CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     strd	r2, r3, [r6, -r2]
 # CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     strd	r2, r3, [r7, #22]!
 # CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     strd	r4, r5, [r8], #7
 # CHECK-NEXT:  -     0.50   0.50    -      -     1.00    -      -     strd	r4, r5, [sp], #0
