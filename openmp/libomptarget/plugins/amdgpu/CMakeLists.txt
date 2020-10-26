@@ -30,8 +30,8 @@ if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_
   return()
 endif()
 
-if (NOT LLVM_MAIN_INCLUDE_DIR)
-  libomptarget_say("Not building AMDGPU plugin: Missing definition for LLVM_MAIN_INCLUDE_DIR")
+if (NOT LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR)
+  libomptarget_say("Not building AMDGPU plugin: Missing definition for LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR")
   return()
 endif()
 
@@ -50,7 +50,7 @@ endif()
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/impl
-  ${LLVM_MAIN_INCLUDE_DIR}
+  ${LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR}
 )
 
 add_library(omptarget.rtl.amdgpu SHARED

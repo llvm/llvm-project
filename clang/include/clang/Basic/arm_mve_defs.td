@@ -519,7 +519,7 @@ class NameOverride<string basename_> {
 // polymorph differently (typically because the type of the inactive
 // parameter can be used as a disambiguator if it's present).
 multiclass IntrinsicMX<Type rettype, dag arguments, dag cg,
-                       int wantXVariant = 1,
+                       bit wantXVariant = 1,
                        string nameSuffix = "",
                        PolymorphicNameType pnt_m = PNT_Type,
                        PolymorphicNameType pnt_x = PNT_Type> {
@@ -532,7 +532,7 @@ multiclass IntrinsicMX<Type rettype, dag arguments, dag cg,
     let pnt = pnt_m;
   }
 
-  foreach unusedVar = !if(!eq(wantXVariant, 1), [1], []<int>) in {
+  if wantXVariant then {
     // The _x variant leaves off that parameter, and simply uses an
     // undef value of the same type.
 
@@ -546,7 +546,7 @@ multiclass IntrinsicMX<Type rettype, dag arguments, dag cg,
 // Same as above, but with an additional parameter 'basename' which overrides
 // the C intrinsic base name
 multiclass IntrinsicMXNameOverride<Type rettype, dag arguments, dag cg,
-                                   string basename, int wantXVariant = 1,
+                                   string basename, bit wantXVariant = 1,
                                    string nameSuffix = "",
                                    PolymorphicNameType pnt_m = PNT_Type,
                                    PolymorphicNameType pnt_x = PNT_Type> {
@@ -556,7 +556,7 @@ multiclass IntrinsicMXNameOverride<Type rettype, dag arguments, dag cg,
     let pnt = pnt_m;
   }
 
-  foreach unusedVar = !if(!eq(wantXVariant, 1), [1], []<int>) in {
+  if wantXVariant then {
     def "_x" # nameSuffix:
       Intrinsic<rettype, arguments, (seq (undef rettype):$inactive, cg)>,
       NameOverride<basename # "_x" # nameSuffix> {

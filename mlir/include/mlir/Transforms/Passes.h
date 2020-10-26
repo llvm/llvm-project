@@ -40,6 +40,10 @@ std::unique_ptr<Pass> createBufferHoistingPass();
 /// reallocations inside of loops.
 std::unique_ptr<Pass> createBufferLoopHoistingPass();
 
+/// Creates a pass that promotes heap-based allocations to stack-based ones.
+std::unique_ptr<Pass>
+createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024);
+
 /// Creates an instance of the Canonicalizer pass.
 std::unique_ptr<Pass> createCanonicalizerPass();
 

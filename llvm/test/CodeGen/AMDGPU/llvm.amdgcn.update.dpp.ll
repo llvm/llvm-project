@@ -5,9 +5,7 @@
 ; GCN-LABEL: {{^}}dpp_test:
 ; GCN:  v_mov_b32_e32 [[DST:v[0-9]+]], s{{[0-9]+}}
 ; GCN:  v_mov_b32_e32 [[SRC:v[0-9]+]], s{{[0-9]+}}
-; GFX8-OPT: s_nop 1
-; GFX8-NOOPT: s_nop 0
-; GFX8-NOOPT-NEXT: s_nop 0
+; GFX8: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1{{$}}
 define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in1, i32 %in2) {
   %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 1, i32 1, i32 1, i1 0) #0
@@ -18,9 +16,7 @@ define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in1, i32 %in2) 
 ; GCN-LABEL: {{^}}dpp_test_bc:
 ; GCN:  v_mov_b32_e32 [[DST:v[0-9]+]], s{{[0-9]+}}
 ; GCN:  v_mov_b32_e32 [[SRC:v[0-9]+]], s{{[0-9]+}}
-; GFX8-OPT: s_nop 1
-; GFX8-NOOPT: s_nop 0
-; GFX8-NOOPT-NEXT: s_nop 0
+; GFX8: s_nop 1
 ; GCN:  v_mov_b32_dpp [[DST]], [[SRC]] quad_perm:[2,0,0,0] row_mask:0x1 bank_mask:0x1 bound_ctrl:0{{$}}
 define amdgpu_kernel void @dpp_test_bc(i32 addrspace(1)* %out, i32 %in1, i32 %in2) {
   %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 2, i32 1, i32 1, i1 1) #0
@@ -34,8 +30,7 @@ define amdgpu_kernel void @dpp_test_bc(i32 addrspace(1)* %out, i32 %in1, i32 %in
 ; GFX8-OPT: v_add_u32_e32 [[REG:v[0-9]+]], vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX8-NOOPT: v_add_u32_e64 [[REG:v[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX8-NOOPT: v_mov_b32_e32 v{{[0-9]+}}, 0
-; GFX8: s_nop 0
-; GFX8-NEXT: s_nop 0
+; GFX8: s_nop 1
 ; GFX8-NEXT: v_mov_b32_dpp {{v[0-9]+}}, [[REG]] quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
 @0 = internal unnamed_addr addrspace(3) global [448 x i32] undef, align 4
 define weak_odr amdgpu_kernel void @dpp_test1(i32* %arg) local_unnamed_addr {

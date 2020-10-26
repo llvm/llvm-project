@@ -417,7 +417,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
                                      DbgValueHistoryMap &DbgValues,
                                      DbgLabelInstrMap &DbgLabels) {
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
-  unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+  Register SP = TLI->getStackPointerRegisterToSaveRestore();
   Register FrameReg = TRI->getFrameRegister(*MF);
   RegDescribedVarsMap RegVars;
   DbgValueEntriesMap LiveEntries;

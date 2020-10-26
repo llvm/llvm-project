@@ -74,3 +74,9 @@ void test_gcc_registers(void) {
     asm volatile("mov r0, r1\n");
     // CHECK: call void asm sideeffect "mov r0, r1\0A", ""()
 }
+
+void test_tied_earlyclobber(void) {
+  register int a asm("x1");
+  asm("" : "+&r"(a));
+  // CHECK: call i32 asm "", "=&{x1},0"(i32 %0)
+}

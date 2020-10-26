@@ -458,6 +458,7 @@ public:
 #endif // NDEBUG
   }
 
+  bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
@@ -1194,12 +1195,50 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   return Modified;
 }
 
-// This is a flat memory operation. Check to see if it has memory
-// tokens for both LDS and Memory, and if so mark it as a flat.
-bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
+// This is a flat memory operation. Check to see if it has memory tokens other
+// than LDS. Other address spaces supported by flat memory operations involve
+// global memory.
+bool SIInsertWaitcnts::mayAccessVMEMThroughFlat(const MachineInstr &MI) const {
+  assert(TII->isFLAT(MI));
+
+  // All flat instructions use the VMEM counter.
+  assert(TII->usesVM_CNT(MI));
+
+  // If there are no memory operands then conservatively assume the flat
+  // operation may access VMEM.
   if (MI.memoperands_empty())
     return true;
 
+  // See if any memory operand specifies an address space that involves VMEM.
+  // Flat operations only supported FLAT, LOCAL (LDS), or address spaces
+  // involving VMEM such as GLOBAL, CONSTANT, PRIVATE (SCRATCH), etc. The REGION
+  // (GDS) address space is not supported by flat operations. Therefore, simply
+  // return true unless only the LDS address space is found.
+  for (const MachineMemOperand *Memop : MI.memoperands()) {
+    unsigned AS = Memop->getAddrSpace();
+    assert(AS != AMDGPUAS::REGION_ADDRESS);
+    if (AS != AMDGPUAS::LOCAL_ADDRESS)
+      return true;
+  }
+
+  return false;
+}
+
+// This is a flat memory operation. Check to see if it has memory tokens for
+// either LDS or FLAT.
+bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
+  assert(TII->isFLAT(MI));
+
+  // Flat instruction such as SCRATCH and GLOBAL do not use the lgkm counter.
+  if (!TII->usesLGKM_CNT(MI))
+    return false;
+
+  // If there are no memory operands then conservatively assume the flat
+  // operation may access LDS.
+  if (MI.memoperands_empty())
+    return true;
+
+  // See if any memory operand specifies an address space that involves LDS.
   for (const MachineMemOperand *Memop : MI.memoperands()) {
     unsigned AS = Memop->getAddrSpace();
     if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS)
@@ -1226,7 +1265,10 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   } else if (TII->isFLAT(Inst)) {
     assert(Inst.mayLoadOrStore());
 
-    if (TII->usesVM_CNT(Inst)) {
+    int FlatASCount = 0;
+
+    if (mayAccessVMEMThroughFlat(Inst)) {
+      ++FlatASCount;
       if (!ST->hasVscnt())
         ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_ACCESS, Inst);
       else if (Inst.mayLoad() &&
@@ -1236,15 +1278,19 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
         ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_WRITE_ACCESS, Inst);
     }
 
-    if (TII->usesLGKM_CNT(Inst)) {
+    if (mayAccessLDSThroughFlat(Inst)) {
+      ++FlatASCount;
       ScoreBrackets->updateByEvent(TII, TRI, MRI, LDS_ACCESS, Inst);
-
-      // This is a flat memory operation, so note it - it will require
-      // that both the VM and LGKM be flushed to zero if it is pending when
-      // a VM or LGKM dependency occurs.
-      if (mayAccessLDSThroughFlat(Inst))
-        ScoreBrackets->setPendingFlat();
     }
+
+    // A Flat memory operation must access at least one address space.
+    assert(FlatASCount);
+
+    // This is a flat memory operation that access both VMEM and LDS, so note it
+    // - it will require that both the VM and LGKM be flushed to zero if it is
+    // pending when a VM or LGKM dependency occurs.
+    if (FlatASCount > 1)
+      ScoreBrackets->setPendingFlat();
   } else if (SIInstrInfo::isVMEM(Inst) &&
              // TODO: get a better carve out.
              Inst.getOpcode() != AMDGPU::BUFFER_WBINVL1 &&

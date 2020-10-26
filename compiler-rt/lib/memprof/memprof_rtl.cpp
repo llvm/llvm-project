@@ -27,6 +27,9 @@
 
 uptr __memprof_shadow_memory_dynamic_address; // Global interface symbol.
 
+// Allow the user to specify a profile output file via the binary.
+SANITIZER_WEAK_ATTRIBUTE char __memprof_profile_filename[1];
+
 namespace __memprof {
 
 static void MemprofDie() {
@@ -172,7 +175,12 @@ static void MemprofInitInternal() {
   AddDieCallback(MemprofDie);
   SetCheckFailedCallback(MemprofCheckFailed);
 
-  __sanitizer_set_report_path(common_flags()->log_path);
+  // Use profile name specified via the binary itself if it exists, and hasn't
+  // been overrriden by a flag at runtime.
+  if (__memprof_profile_filename[0] != 0 && !common_flags()->log_path)
+    __sanitizer_set_report_path(__memprof_profile_filename);
+  else
+    __sanitizer_set_report_path(common_flags()->log_path);
 
   __sanitizer::InitializePlatformEarly();
 

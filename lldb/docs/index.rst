@@ -135,6 +135,7 @@ interesting areas to contribute to lldb.
    use/remote
    use/qemu-testing
    use/troubleshooting
+   use/links
 
 .. toctree::
    :hidden:

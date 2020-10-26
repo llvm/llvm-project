@@ -249,7 +249,7 @@ particular:
 -   Ops must be symbols, i.e. also have the `Symbol` trait;
 -   Ops have a single region with multiple blocks that corresponds to the body
     of the function;
--   the absence of a region corresponds to an external function;
+-   An op with a single empty region corresponds to an external function;
 -   arguments of the first block of the region are treated as function
     arguments;
 -   they can have argument and result attributes that are stored in dictionary

@@ -5527,17 +5527,6 @@ ScalarEvolution::getRangeRef(const SCEV *S,
         ConservativeResult =
             ConservativeResult.intersectWith(RangeFromFactoring, RangeType);
       }
-
-      // Now try symbolic BE count and more powerful methods.
-      MaxBECount = computeMaxBackedgeTakenCount(AddRec->getLoop());
-      if (!isa<SCEVCouldNotCompute>(MaxBECount) &&
-          getTypeSizeInBits(MaxBECount->getType()) <= BitWidth &&
-          AddRec->hasNoSelfWrap()) {
-        auto RangeFromAffineNew = getRangeForAffineNoSelfWrappingAR(
-            AddRec, MaxBECount, BitWidth, SignHint);
-        ConservativeResult =
-            ConservativeResult.intersectWith(RangeFromAffineNew, RangeType);
-      }
     }
 
     return setRange(AddRec, SignHint, std::move(ConservativeResult));
@@ -5705,70 +5694,6 @@ ConstantRange ScalarEvolution::getRangeForAffineAR(const SCEV *Start,
 
   // Finally, intersect signed and unsigned ranges.
   return SR.intersectWith(UR, ConstantRange::Smallest);
-}
-
-ConstantRange ScalarEvolution::getRangeForAffineNoSelfWrappingAR(
-    const SCEVAddRecExpr *AddRec, const SCEV *MaxBECount, unsigned BitWidth,
-    ScalarEvolution::RangeSignHint SignHint) {
-  assert(AddRec->isAffine() && "Non-affine AddRecs are not suppored!\n");
-  assert(AddRec->hasNoSelfWrap() &&
-         "This only works for non-self-wrapping AddRecs!");
-  const bool IsSigned = SignHint == HINT_RANGE_SIGNED;
-  const SCEV *Step = AddRec->getStepRecurrence(*this);
-  // Let's make sure that we can prove that we do not self-wrap during
-  // MaxBECount iterations. We need this because MaxBECount is a maximum
-  // iteration count estimate, and we might infer nw from some exit for which we
-  // do not know max exit count (or any other side reasoning).
-  // TODO: Turn into assert at some point.
-  MaxBECount = getNoopOrZeroExtend(MaxBECount, AddRec->getType());
-  const SCEV *RangeWidth = getNegativeSCEV(getOne(AddRec->getType()));
-  const SCEV *StepAbs = getUMinExpr(Step, getNegativeSCEV(Step));
-  const SCEV *MaxItersWithoutWrap = getUDivExpr(RangeWidth, StepAbs);
-  if (!isKnownPredicate(ICmpInst::ICMP_ULE, MaxBECount, MaxItersWithoutWrap))
-    return ConstantRange::getFull(BitWidth);
-
-  ICmpInst::Predicate LEPred =
-      IsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
-  ICmpInst::Predicate GEPred =
-      IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
-  const SCEV *Start = AddRec->getStart();
-  const SCEV *End = AddRec->evaluateAtIteration(MaxBECount, *this);
-
-  // We know that there is no self-wrap. Let's take Start and End values and
-  // look at all intermediate values V1, V2, ..., Vn that IndVar takes during
-  // the iteration. They either lie inside the range [Min(Start, End),
-  // Max(Start, End)] or outside it:
-  //
-  // Case 1:   RangeMin    ...    Start V1 ... VN End ...           RangeMax;
-  // Case 2:   RangeMin Vk ... V1 Start    ...    End Vn ... Vk + 1 RangeMax;
-  //
-  // No self wrap flag guarantees that the intermediate values cannot be BOTH
-  // outside and inside the range [Min(Start, End), Max(Start, End)]. Using that
-  // knowledge, let's try to prove that we are dealing with Case 1. It is so if
-  // Start <= End and step is positive, or Start >= End and step is negative.
-  ConstantRange StartRange =
-      IsSigned ? getSignedRange(Start) : getUnsignedRange(Start);
-  ConstantRange EndRange =
-      IsSigned ? getSignedRange(End) : getUnsignedRange(End);
-  ConstantRange RangeBetween = StartRange.unionWith(EndRange);
-  // If they already cover full iteration space, we will know nothing useful
-  // even if we prove what we want to prove.
-  if (RangeBetween.isFullSet())
-    return RangeBetween;
-  // Only deal with ranges that do not wrap (i.e. RangeMin < RangeMax).
-  bool IsWrappingRange =
-      IsSigned ? RangeBetween.getLower().sge(RangeBetween.getUpper())
-               : RangeBetween.getLower().uge(RangeBetween.getUpper());
-  if (IsWrappingRange)
-    return ConstantRange::getFull(BitWidth);
-
-  if (isKnownPositive(Step) &&
-      isKnownPredicateViaConstantRanges(LEPred, Start, End))
-    return RangeBetween;
-  else if (isKnownNegative(Step) &&
-           isKnownPredicateViaConstantRanges(GEPred, Start, End))
-    return RangeBetween;
-  return ConstantRange::getFull(BitWidth);
 }
 
 ConstantRange ScalarEvolution::getRangeViaFactoring(const SCEV *Start,
@@ -6583,9 +6508,10 @@ const SCEV *ScalarEvolution::getExitCount(const Loop *L,
                                           ExitCountKind Kind) {
   switch (Kind) {
   case Exact:
+  case SymbolicMaximum:
     return getBackedgeTakenInfo(L).getExact(ExitingBlock, this);
   case ConstantMaximum:
-    return getBackedgeTakenInfo(L).getMax(ExitingBlock, this);
+    return getBackedgeTakenInfo(L).getConstantMax(ExitingBlock, this);
   };
   llvm_unreachable("Invalid ExitCountKind!");
 }
@@ -6602,13 +6528,15 @@ const SCEV *ScalarEvolution::getBackedgeTakenCount(const Loop *L,
   case Exact:
     return getBackedgeTakenInfo(L).getExact(L, this);
   case ConstantMaximum:
-    return getBackedgeTakenInfo(L).getMax(this);
+    return getBackedgeTakenInfo(L).getConstantMax(this);
+  case SymbolicMaximum:
+    return getBackedgeTakenInfo(L).getSymbolicMax(L, this);
   };
   llvm_unreachable("Invalid ExitCountKind!");
 }
 
 bool ScalarEvolution::isBackedgeTakenCountMaxOrZero(const Loop *L) {
-  return getBackedgeTakenInfo(L).isMaxOrZero(this);
+  return getBackedgeTakenInfo(L).isConstantMaxOrZero(this);
 }
 
 /// Push PHI nodes in the header of the given loop onto the given Worklist.
@@ -6638,7 +6566,7 @@ ScalarEvolution::getPredicatedBackedgeTakenInfo(const Loop *L) {
   return PredicatedBackedgeTakenCounts.find(L)->second = std::move(Result);
 }
 
-const ScalarEvolution::BackedgeTakenInfo &
+ScalarEvolution::BackedgeTakenInfo &
 ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // Initially insert an invalid entry for this loop. If the insertion
   // succeeds, proceed to actually compute a backedge-taken count and
@@ -6662,12 +6590,11 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   const SCEV *BEExact = Result.getExact(L, this);
   if (BEExact != getCouldNotCompute()) {
     assert(isLoopInvariant(BEExact, L) &&
-           isLoopInvariant(Result.getMax(this), L) &&
+           isLoopInvariant(Result.getConstantMax(this), L) &&
            "Computed backedge-taken count isn't loop invariant for loop!");
     ++NumTripCountsComputed;
-  }
-  else if (Result.getMax(this) == getCouldNotCompute() &&
-           isa<PHINode>(L->getHeader()->begin())) {
+  } else if (Result.getConstantMax(this) == getCouldNotCompute() &&
+             isa<PHINode>(L->getHeader()->begin())) {
     // Only count loops that have phi nodes as not being computable.
     ++NumTripCountsNotComputed;
   }
@@ -6917,9 +6844,8 @@ ScalarEvolution::BackedgeTakenInfo::getExact(const BasicBlock *ExitingBlock,
   return SE->getCouldNotCompute();
 }
 
-const SCEV *
-ScalarEvolution::BackedgeTakenInfo::getMax(const BasicBlock *ExitingBlock,
-                                           ScalarEvolution *SE) const {
+const SCEV *ScalarEvolution::BackedgeTakenInfo::getConstantMax(
+    const BasicBlock *ExitingBlock, ScalarEvolution *SE) const {
   for (auto &ENT : ExitNotTaken)
     if (ENT.ExitingBlock == ExitingBlock && ENT.hasAlwaysTruePredicate())
       return ENT.MaxNotTaken;
@@ -6927,22 +6853,32 @@ ScalarEvolution::BackedgeTakenInfo::getMax(const BasicBlock *ExitingBlock,
   return SE->getCouldNotCompute();
 }
 
-/// getMax - Get the max backedge taken count for the loop.
+/// getConstantMax - Get the constant max backedge taken count for the loop.
 const SCEV *
-ScalarEvolution::BackedgeTakenInfo::getMax(ScalarEvolution *SE) const {
+ScalarEvolution::BackedgeTakenInfo::getConstantMax(ScalarEvolution *SE) const {
   auto PredicateNotAlwaysTrue = [](const ExitNotTakenInfo &ENT) {
     return !ENT.hasAlwaysTruePredicate();
   };
 
-  if (any_of(ExitNotTaken, PredicateNotAlwaysTrue) || !getMax())
+  if (any_of(ExitNotTaken, PredicateNotAlwaysTrue) || !getConstantMax())
     return SE->getCouldNotCompute();
 
-  assert((isa<SCEVCouldNotCompute>(getMax()) || isa<SCEVConstant>(getMax())) &&
+  assert((isa<SCEVCouldNotCompute>(getConstantMax()) ||
+          isa<SCEVConstant>(getConstantMax())) &&
          "No point in having a non-constant max backedge taken count!");
-  return getMax();
+  return getConstantMax();
 }
 
-bool ScalarEvolution::BackedgeTakenInfo::isMaxOrZero(ScalarEvolution *SE) const {
+const SCEV *
+ScalarEvolution::BackedgeTakenInfo::getSymbolicMax(const Loop *L,
+                                                   ScalarEvolution *SE) {
+  if (!SymbolicMax)
+    SymbolicMax = SE->computeSymbolicMaxBackedgeTakenCount(L);
+  return SymbolicMax;
+}
+
+bool ScalarEvolution::BackedgeTakenInfo::isConstantMaxOrZero(
+    ScalarEvolution *SE) const {
   auto PredicateNotAlwaysTrue = [](const ExitNotTakenInfo &ENT) {
     return !ENT.hasAlwaysTruePredicate();
   };
@@ -6951,8 +6887,8 @@ bool ScalarEvolution::BackedgeTakenInfo::isMaxOrZero(ScalarEvolution *SE) const 
 
 bool ScalarEvolution::BackedgeTakenInfo::hasOperand(const SCEV *S,
                                                     ScalarEvolution *SE) const {
-  if (getMax() && getMax() != SE->getCouldNotCompute() &&
-      SE->hasOperand(getMax(), S))
+  if (getConstantMax() && getConstantMax() != SE->getCouldNotCompute() &&
+      SE->hasOperand(getConstantMax(), S))
     return true;
 
   for (auto &ENT : ExitNotTaken)
@@ -7005,10 +6941,9 @@ ScalarEvolution::ExitLimit::ExitLimit(const SCEV *E, const SCEV *M,
 /// Allocate memory for BackedgeTakenInfo and copy the not-taken count of each
 /// computable exit into a persistent ExitNotTakenInfo array.
 ScalarEvolution::BackedgeTakenInfo::BackedgeTakenInfo(
-    ArrayRef<ScalarEvolution::BackedgeTakenInfo::EdgeExitInfo>
-        ExitCounts,
-    bool Complete, const SCEV *MaxCount, bool MaxOrZero)
-    : MaxAndComplete(MaxCount, Complete), MaxOrZero(MaxOrZero) {
+    ArrayRef<ScalarEvolution::BackedgeTakenInfo::EdgeExitInfo> ExitCounts,
+    bool IsComplete, const SCEV *ConstantMax, bool MaxOrZero)
+    : ConstantMax(ConstantMax), IsComplete(IsComplete), MaxOrZero(MaxOrZero) {
   using EdgeExitInfo = ScalarEvolution::BackedgeTakenInfo::EdgeExitInfo;
 
   ExitNotTaken.reserve(ExitCounts.size());
@@ -7028,7 +6963,8 @@ ScalarEvolution::BackedgeTakenInfo::BackedgeTakenInfo(
         return ExitNotTakenInfo(ExitBB, EL.ExactNotTaken, EL.MaxNotTaken,
                                 std::move(Predicate));
       });
-  assert((isa<SCEVCouldNotCompute>(MaxCount) || isa<SCEVConstant>(MaxCount)) &&
+  assert((isa<SCEVCouldNotCompute>(ConstantMax) ||
+          isa<SCEVConstant>(ConstantMax)) &&
          "No point in having a non-constant max backedge taken count!");
 }
 
@@ -12789,7 +12725,8 @@ bool ScalarEvolution::matchURem(const SCEV *Expr, const SCEV *&LHS,
   return false;
 }
 
-const SCEV* ScalarEvolution::computeMaxBackedgeTakenCount(const Loop *L) {
+const SCEV *
+ScalarEvolution::computeSymbolicMaxBackedgeTakenCount(const Loop *L) {
   SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 

@@ -547,102 +547,117 @@ float __expf(float __x) { return __ocml_native_exp_f32(__x); }
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 float __fadd_rd(float __x, float __y) { return __ocml_add_rtn_f32(__x, __y); }
-#endif
 __DEVICE__
 float __fadd_rn(float __x, float __y) { return __ocml_add_rte_f32(__x, __y); }
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 float __fadd_ru(float __x, float __y) { return __ocml_add_rtp_f32(__x, __y); }
-
 __DEVICE__
 float __fadd_rz(float __x, float __y) { return __ocml_add_rtz_f32(__x, __y); }
-
+#else
 __DEVICE__
-float __fdiv_rd(float __x, float __y) { return __ocml_div_rtn_f32(__x, __y); }
+float __fadd_rn(float __x, float __y) { return __x + __y; }
 #endif
-__DEVICE__
-float __fdiv_rn(float __x, float __y) { return __ocml_div_rte_f32(__x, __y); }
+
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
+float __fdiv_rd(float __x, float __y) { return __ocml_div_rtn_f32(__x, __y); }
+__DEVICE__
+float __fdiv_rn(float __x, float __y) { return __ocml_div_rte_f32(__x, __y); }
+__DEVICE__
 float __fdiv_ru(float __x, float __y) { return __ocml_div_rtp_f32(__x, __y); }
-
 __DEVICE__
 float __fdiv_rz(float __x, float __y) { return __ocml_div_rtz_f32(__x, __y); }
+#else
+__DEVICE__
+float __fdiv_rn(float __x, float __y) { return __x / __y; }
 #endif
+
 __DEVICE__
 float __fdividef(float __x, float __y) { return __x / __y; }
+
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 float __fmaf_rd(float __x, float __y, float __z) {
   return __ocml_fma_rtn_f32(__x, __y, __z);
 }
-#endif
 __DEVICE__
 float __fmaf_rn(float __x, float __y, float __z) {
   return __ocml_fma_rte_f32(__x, __y, __z);
 }
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 float __fmaf_ru(float __x, float __y, float __z) {
   return __ocml_fma_rtp_f32(__x, __y, __z);
 }
-
 __DEVICE__
 float __fmaf_rz(float __x, float __y, float __z) {
   return __ocml_fma_rtz_f32(__x, __y, __z);
 }
+#else
+__DEVICE__
+float __fmaf_rn(float __x, float __y, float __z) {
+  return __ocml_fma_f32(__x, __y, __z);
+}
+#endif
 
+#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 float __fmul_rd(float __x, float __y) { return __ocml_mul_rtn_f32(__x, __y); }
-#endif
 __DEVICE__
 float __fmul_rn(float __x, float __y) { return __ocml_mul_rte_f32(__x, __y); }
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 float __fmul_ru(float __x, float __y) { return __ocml_mul_rtp_f32(__x, __y); }
-
 __DEVICE__
 float __fmul_rz(float __x, float __y) { return __ocml_mul_rtz_f32(__x, __y); }
-
+#else
 __DEVICE__
-float __frcp_rd(float __x) { return __llvm_amdgcn_rcp_f32(__x); }
+float __fmul_rn(float __x, float __y) { return __x * __y; }
 #endif
-__DEVICE__
-float __frcp_rn(float __x) { return __llvm_amdgcn_rcp_f32(__x); }
+
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-float __frcp_ru(float __x) { return __llvm_amdgcn_rcp_f32(__x); }
+float __frcp_rd(float __x) { return __ocml_div_rtn_f32(1.0f, __x); }
+__DEVICE__
+float __frcp_rn(float __x) { return __ocml_div_rte_f32(1.0f, __x); }
+__DEVICE__
+float __frcp_ru(float __x) { return __ocml_div_rtp_f32(1.0f, __x); }
+__DEVICE__
+float __frcp_rz(float __x) { return __ocml_div_rtz_f32(1.0f, __x); }
+#else
+__DEVICE__
+float __frcp_rn(float __x) { return 1.0f / __x; }
+#endif
 
 __DEVICE__
-float __frcp_rz(float __x) { return __llvm_amdgcn_rcp_f32(__x); }
-#endif
-__DEVICE__
 float __frsqrt_rn(float __x) { return __llvm_amdgcn_rsq_f32(__x); }
+
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 float __fsqrt_rd(float __x) { return __ocml_sqrt_rtn_f32(__x); }
-#endif
 __DEVICE__
 float __fsqrt_rn(float __x) { return __ocml_sqrt_rte_f32(__x); }
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 float __fsqrt_ru(float __x) { return __ocml_sqrt_rtp_f32(__x); }
-
 __DEVICE__
 float __fsqrt_rz(float __x) { return __ocml_sqrt_rtz_f32(__x); }
-
+#else
 __DEVICE__
-float __fsub_rd(float __x, float __y) { return __ocml_sub_rtn_f32(__x, __y); }
+float __fsqrt_rn(float __x) { return __ocml_native_sqrt_f32(__x); }
 #endif
-__DEVICE__
-float __fsub_rn(float __x, float __y) { return __ocml_sub_rte_f32(__x, __y); }
+
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
+float __fsub_rd(float __x, float __y) { return __ocml_sub_rtn_f32(__x, __y); }
+__DEVICE__
+float __fsub_rn(float __x, float __y) { return __ocml_sub_rte_f32(__x, __y); }
+__DEVICE__
 float __fsub_ru(float __x, float __y) { return __ocml_sub_rtp_f32(__x, __y); }
-
 __DEVICE__
 float __fsub_rz(float __x, float __y) { return __ocml_sub_rtz_f32(__x, __y); }
+#else
+__DEVICE__
+float __fsub_rn(float __x, float __y) { return __x - __y; }
 #endif
+
 __DEVICE__
 float __log10f(float __x) { return __ocml_native_log10_f32(__x); }
 
@@ -1071,124 +1086,138 @@ __DEVICE__
 double __dadd_rd(double __x, double __y) {
   return __ocml_add_rtn_f64(__x, __y);
 }
-#endif
 __DEVICE__
 double __dadd_rn(double __x, double __y) {
   return __ocml_add_rte_f64(__x, __y);
 }
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 double __dadd_ru(double __x, double __y) {
   return __ocml_add_rtp_f64(__x, __y);
 }
-
 __DEVICE__
 double __dadd_rz(double __x, double __y) {
   return __ocml_add_rtz_f64(__x, __y);
 }
+#else
+__DEVICE__
+double __dadd_rn(double __x, double __y) { return __x + __y; }
+#endif
 
+#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 double __ddiv_rd(double __x, double __y) {
   return __ocml_div_rtn_f64(__x, __y);
 }
-#endif
 __DEVICE__
 double __ddiv_rn(double __x, double __y) {
   return __ocml_div_rte_f64(__x, __y);
 }
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 double __ddiv_ru(double __x, double __y) {
   return __ocml_div_rtp_f64(__x, __y);
 }
-
 __DEVICE__
 double __ddiv_rz(double __x, double __y) {
   return __ocml_div_rtz_f64(__x, __y);
 }
+#else
+__DEVICE__
+double __ddiv_rn(double __x, double __y) { return __x / __y; }
+#endif
 
+#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 double __dmul_rd(double __x, double __y) {
   return __ocml_mul_rtn_f64(__x, __y);
 }
-#endif
 __DEVICE__
 double __dmul_rn(double __x, double __y) {
   return __ocml_mul_rte_f64(__x, __y);
 }
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 double __dmul_ru(double __x, double __y) {
   return __ocml_mul_rtp_f64(__x, __y);
 }
-
 __DEVICE__
 double __dmul_rz(double __x, double __y) {
   return __ocml_mul_rtz_f64(__x, __y);
 }
-
+#else
 __DEVICE__
-double __drcp_rd(double __x) { return __llvm_amdgcn_rcp_f64(__x); }
+double __dmul_rn(double __x, double __y) { return __x * __y; }
 #endif
-__DEVICE__
-double __drcp_rn(double __x) { return __llvm_amdgcn_rcp_f64(__x); }
+
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
-double __drcp_ru(double __x) { return __llvm_amdgcn_rcp_f64(__x); }
-
+double __drcp_rd(double __x) { return __ocml_div_rtn_f64(1.0, __x); }
 __DEVICE__
-double __drcp_rz(double __x) { return __llvm_amdgcn_rcp_f64(__x); }
+double __drcp_rn(double __x) { return __ocml_div_rte_f64(1.0, __x); }
+__DEVICE__
+double __drcp_ru(double __x) { return __ocml_div_rtp_f64(1.0, __x); }
+__DEVICE__
+double __drcp_rz(double __x) { return __ocml_div_rtz_f64(1.0, __x); }
+#else
+__DEVICE__
+double __drcp_rn(double __x) { return 1.0 / __x; }
+#endif
 
+#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 double __dsqrt_rd(double __x) { return __ocml_sqrt_rtn_f64(__x); }
-#endif
 __DEVICE__
 double __dsqrt_rn(double __x) { return __ocml_sqrt_rte_f64(__x); }
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 double __dsqrt_ru(double __x) { return __ocml_sqrt_rtp_f64(__x); }
-
 __DEVICE__
 double __dsqrt_rz(double __x) { return __ocml_sqrt_rtz_f64(__x); }
+#else
+__DEVICE__
+double __dsqrt_rn(double __x) { return __ocml_sqrt_f64(__x); }
+#endif
 
+#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 double __dsub_rd(double __x, double __y) {
   return __ocml_sub_rtn_f64(__x, __y);
 }
-#endif
 __DEVICE__
 double __dsub_rn(double __x, double __y) {
   return __ocml_sub_rte_f64(__x, __y);
 }
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 double __dsub_ru(double __x, double __y) {
   return __ocml_sub_rtp_f64(__x, __y);
 }
-
 __DEVICE__
 double __dsub_rz(double __x, double __y) {
   return __ocml_sub_rtz_f64(__x, __y);
 }
+#else
+__DEVICE__
+double __dsub_rn(double __x, double __y) { return __x - __y; }
+#endif
 
+#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 double __fma_rd(double __x, double __y, double __z) {
   return __ocml_fma_rtn_f64(__x, __y, __z);
 }
-#endif
 __DEVICE__
 double __fma_rn(double __x, double __y, double __z) {
   return __ocml_fma_rte_f64(__x, __y, __z);
 }
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
 __DEVICE__
 double __fma_ru(double __x, double __y, double __z) {
   return __ocml_fma_rtp_f64(__x, __y, __z);
 }
-
 __DEVICE__
 double __fma_rz(double __x, double __y, double __z) {
   return __ocml_fma_rtz_f64(__x, __y, __z);
+}
+#else
+__DEVICE__
+double __fma_rn(double __x, double __y, double __z) {
+  return __ocml_fma_f64(__x, __y, __z);
 }
 #endif
 // END INTRINSICS

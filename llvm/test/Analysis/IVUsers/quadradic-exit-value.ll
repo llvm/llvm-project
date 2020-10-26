@@ -5,7 +5,7 @@
 ; passes *always* work on LCSSA. This should stop using a different set of
 ; checks at that point.
 
-; RUN: opt < %s -analyze -iv-users | FileCheck %s --check-prefixes=CHECK,CHECK-NO-LCSSA
+; RUN: opt < %s -analyze -iv-users -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,CHECK-NO-LCSSA
 ; RUN: opt < %s -disable-output -passes='print<iv-users>' 2>&1 | FileCheck %s
 
 ; Provide legal integer types.

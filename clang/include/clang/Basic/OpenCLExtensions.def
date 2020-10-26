@@ -23,6 +23,16 @@
 //   core - minimum OpenCL version when the extension becomes optional core
 //          feature or core feature. ~0U indicates not a core feature or an
 //          optional core feature.
+//
+// As per The OpenCL Extension Specification, Section 1.2, in this file, an
+// extension is defined if and only it either:
+//  * affects the OpenCL language semantics or its syntax,
+//  * adds built-in functions to the language.
+//
+// For such an extension, a preprocessor #define that matches the extension
+// name must be created and a #pragma is required if and only if the
+// compilation flow is impacted, e.g. due to a difference of syntax or
+// semantics in the language compared to the core standard.
 
 #ifndef OPENCLEXT_INTERNAL
 #ifndef OPENCLEXT
@@ -34,8 +44,6 @@
 
 // OpenCL 1.0.
 OPENCLEXT_INTERNAL(cl_khr_3d_image_writes, 100, 200)
-// fprounding mode is special since it is not mentioned beyond 1.0
-OPENCLEXT_INTERNAL(cl_khr_select_fprounding_mode, 100, 110)
 OPENCLEXT_INTERNAL(cl_khr_byte_addressable_store, 100, 110)
 OPENCLEXT_INTERNAL(cl_khr_fp16, 100, ~0U)
 OPENCLEXT_INTERNAL(cl_khr_fp64, 100, 120)
@@ -45,35 +53,19 @@ OPENCLEXT_INTERNAL(cl_khr_local_int32_base_atomics, 100, 110)
 OPENCLEXT_INTERNAL(cl_khr_local_int32_extended_atomics, 100, 110)
 OPENCLEXT_INTERNAL(cl_khr_int64_base_atomics, 100, ~0U)
 OPENCLEXT_INTERNAL(cl_khr_int64_extended_atomics, 100, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_gl_sharing, 100, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_icd, 100, ~0U)
-
-// OpenCL 1.1.
-OPENCLEXT_INTERNAL(cl_khr_gl_event, 110, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_d3d10_sharing, 110, ~0U)
 
 // EMBEDDED_PROFILE
 OPENCLEXT_INTERNAL(cles_khr_int64, 110, ~0U)
 
 // OpenCL 1.2.
-OPENCLEXT_INTERNAL(cl_khr_context_abort, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_d3d11_sharing, 120, ~0U)
 OPENCLEXT_INTERNAL(cl_khr_depth_images, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_dx9_media_sharing, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_image2d_from_buffer, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_initialize_memory, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_gl_depth_images, 120, ~0U)
 OPENCLEXT_INTERNAL(cl_khr_gl_msaa_sharing, 120, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_spir, 120, ~0U)
 
 // OpenCL 2.0.
-OPENCLEXT_INTERNAL(cl_khr_egl_event, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_egl_image, 200, ~0U)
 OPENCLEXT_INTERNAL(cl_khr_mipmap_image, 200, ~0U)
 OPENCLEXT_INTERNAL(cl_khr_mipmap_image_writes, 200, ~0U)
 OPENCLEXT_INTERNAL(cl_khr_srgb_image_writes, 200, ~0U)
 OPENCLEXT_INTERNAL(cl_khr_subgroups, 200, ~0U)
-OPENCLEXT_INTERNAL(cl_khr_terminate_context, 200, ~0U)
 OPENCLEXT_INTERNAL(cl_khr_subgroup_extended_types, 200, ~0U)
 OPENCLEXT_INTERNAL(cl_khr_subgroup_non_uniform_vote, 200, ~0U)
 OPENCLEXT_INTERNAL(cl_khr_subgroup_ballot, 200, ~0U)

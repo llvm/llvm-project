@@ -913,10 +913,15 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   // Since we're changing the parameter to the callsite, we need to make sure
   // that what would be the new parameter dominates the callsite.
-  // TODO: Support moving instructions like GEPs upwards.
-  if (Instruction *cpyDestInst = dyn_cast<Instruction>(cpyDest))
-    if (!DT->dominates(cpyDestInst, C))
+  if (!DT->dominates(cpyDest, C)) {
+    // Support moving a constant index GEP before the call.
+    auto *GEP = dyn_cast<GetElementPtrInst>(cpyDest);
+    if (GEP && GEP->hasAllConstantIndices() &&
+        DT->dominates(GEP->getPointerOperand(), C))
+      GEP->moveBefore(C);
+    else
       return false;
+  }
 
   // In addition to knowing that the call does not access src in some
   // unexpected manner, for example via a global, which we deduce from

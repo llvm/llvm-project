@@ -2511,7 +2511,7 @@ define i32 @v_extract_v64i32_7(<64 x i32> addrspace(1)* %ptr) {
 ; MOVREL-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
 ; MOVREL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; MOVREL-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
-; MOVREL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; MOVREL-NEXT:    v_mov_b32_e32 v0, v7
 ; MOVREL-NEXT:    s_setpc_b64 s[30:31]
   %vec = load <64 x i32>, <64 x i32> addrspace(1)* %ptr
@@ -2543,7 +2543,7 @@ define i32 @v_extract_v64i32_32(<64 x i32> addrspace(1)* %ptr) {
 ; MOVREL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; MOVREL-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
 ; MOVREL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
-; MOVREL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; MOVREL-NEXT:    s_setpc_b64 s[30:31]
   %vec = load <64 x i32>, <64 x i32> addrspace(1)* %ptr
   %elt = extractelement <64 x i32> %vec, i32 32
@@ -2575,7 +2575,7 @@ define i32 @v_extract_v64i32_33(<64 x i32> addrspace(1)* %ptr) {
 ; MOVREL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; MOVREL-NEXT:    v_addc_u32_e32 v1, vcc, v1, v3, vcc
 ; MOVREL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
-; MOVREL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; MOVREL-NEXT:    v_mov_b32_e32 v0, v1
 ; MOVREL-NEXT:    s_setpc_b64 s[30:31]
   %vec = load <64 x i32>, <64 x i32> addrspace(1)* %ptr
@@ -2610,7 +2610,7 @@ define i32 @v_extract_v64i32_37(<64 x i32> addrspace(1)* %ptr) {
 ; MOVREL-NEXT:    v_add_u32_e32 v0, vcc, 16, v0
 ; MOVREL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; MOVREL-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
-; MOVREL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    s_waitcnt vmcnt(0)
 ; MOVREL-NEXT:    v_mov_b32_e32 v0, v5
 ; MOVREL-NEXT:    s_setpc_b64 s[30:31]
   %vec = load <64 x i32>, <64 x i32> addrspace(1)* %ptr

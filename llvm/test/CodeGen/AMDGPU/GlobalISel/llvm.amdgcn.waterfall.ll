@@ -17,12 +17,11 @@ define amdgpu_ps void @test_waterfall_readlane(i32 addrspace(1)* inreg %out, <2 
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-NEXT:    s_mov_b64 s[2:3], exec
 ; VI-NEXT:  BB0_1: ; =>This Inner Loop Header: Depth=1
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_readfirstlane_b32 s6, v2
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[4:5], s6, v2
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
-; VI-NEXT:    s_nop 0
-; VI-NEXT:    s_nop 0
+; VI-NEXT:    s_nop 1
 ; VI-NEXT:    v_readlane_b32 s6, v1, s6
 ; VI-NEXT:    v_mov_b32_e32 v3, s6
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v3
@@ -51,8 +50,7 @@ define amdgpu_ps void @test_waterfall_readlane(i32 addrspace(1)* inreg %out, <2 
 ; GFX9-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX9-NEXT:    v_cmp_eq_u32_e64 s[4:5], s6, v2
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_readlane_b32 s6, v1, s6
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s6
 ; GFX9-NEXT:    v_or_b32_e32 v0, v0, v3
@@ -297,12 +295,12 @@ define amdgpu_ps <4 x float> @test_waterfall_non_uniform_img_single_read(<8 x i3
 ; VI-NEXT:    v_readfirstlane_b32 s2, v0
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[2:3], s2, v0
 ; VI-NEXT:    s_and_saveexec_b64 s[2:3], s[2:3]
-; VI-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
+; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_readfirstlane_b32 s12, v6
 ; VI-NEXT:    v_readfirstlane_b32 s13, v7
 ; VI-NEXT:    v_readfirstlane_b32 s14, v8
 ; VI-NEXT:    v_readfirstlane_b32 s15, v9
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_readfirstlane_b32 s16, v10
 ; VI-NEXT:    v_readfirstlane_b32 s17, v11
 ; VI-NEXT:    v_readfirstlane_b32 s18, v12
@@ -509,8 +507,7 @@ define amdgpu_ps void @test_multiple_groups(i32 addrspace(1)* inreg %out1, i32 a
 ; VI-NEXT:    v_readfirstlane_b32 s8, v0
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[6:7], s8, v0
 ; VI-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
-; VI-NEXT:    s_nop 0
-; VI-NEXT:    s_nop 0
+; VI-NEXT:    s_nop 1
 ; VI-NEXT:    v_readlane_b32 s8, v2, s8
 ; VI-NEXT:    v_mov_b32_e32 v4, s8
 ; VI-NEXT:    v_or_b32_e32 v3, v3, v4
@@ -527,8 +524,7 @@ define amdgpu_ps void @test_multiple_groups(i32 addrspace(1)* inreg %out1, i32 a
 ; VI-NEXT:    v_readfirstlane_b32 s6, v1
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[4:5], s6, v1
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
-; VI-NEXT:    s_nop 0
-; VI-NEXT:    s_nop 0
+; VI-NEXT:    s_nop 1
 ; VI-NEXT:    v_readlane_b32 s6, v2, s6
 ; VI-NEXT:    v_mov_b32_e32 v3, s6
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v3
@@ -549,8 +545,7 @@ define amdgpu_ps void @test_multiple_groups(i32 addrspace(1)* inreg %out1, i32 a
 ; GFX9-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX9-NEXT:    v_cmp_eq_u32_e64 s[6:7], s8, v0
 ; GFX9-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_readlane_b32 s8, v2, s8
 ; GFX9-NEXT:    v_mov_b32_e32 v4, s8
 ; GFX9-NEXT:    v_or_b32_e32 v3, v3, v4
@@ -567,8 +562,7 @@ define amdgpu_ps void @test_multiple_groups(i32 addrspace(1)* inreg %out1, i32 a
 ; GFX9-NEXT:    v_readfirstlane_b32 s6, v1
 ; GFX9-NEXT:    v_cmp_eq_u32_e64 s[4:5], s6, v1
 ; GFX9-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    s_nop 0
+; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_readlane_b32 s6, v2, s6
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s6
 ; GFX9-NEXT:    v_or_b32_e32 v0, v0, v3
@@ -978,12 +972,12 @@ define amdgpu_ps void @test_waterfall_non_uniform_img_single_store(<8 x i32> add
 ; VI-NEXT:    v_readfirstlane_b32 s0, v0
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[0:1], s0, v0
 ; VI-NEXT:    s_and_saveexec_b64 s[8:9], s[0:1]
-; VI-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
+; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_readfirstlane_b32 s0, v7
 ; VI-NEXT:    v_readfirstlane_b32 s1, v8
 ; VI-NEXT:    v_readfirstlane_b32 s2, v9
 ; VI-NEXT:    v_readfirstlane_b32 s3, v10
-; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_readfirstlane_b32 s4, v11
 ; VI-NEXT:    v_readfirstlane_b32 s5, v12
 ; VI-NEXT:    v_readfirstlane_b32 s6, v13

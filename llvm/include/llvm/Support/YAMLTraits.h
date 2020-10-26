@@ -20,6 +20,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -1708,6 +1709,12 @@ template<>
 struct ScalarTraits<Hex64> {
   static void output(const Hex64 &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, Hex64 &);
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+};
+
+template <> struct ScalarTraits<VersionTuple> {
+  static void output(const VersionTuple &Value, void *, llvm::raw_ostream &Out);
+  static StringRef input(StringRef, void *, VersionTuple &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 

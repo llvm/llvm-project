@@ -203,11 +203,11 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bits<1> DisableVIDecoder = 0;
   field bits<1> DisableDecoder = 0;
 
-  let isAsmParserOnly = !if(!eq(DisableDecoder{0}, {0}), 0, 1);
+  let isAsmParserOnly = !ne(DisableDecoder{0}, {0});
   let AsmVariantName = AMDGPUAsmVariants.Default;
 
   // Avoid changing source registers in a way that violates constant bus read limitations.
-  let hasExtraSrcRegAllocReq = !if(VOP1,1,!if(VOP2,1,!if(VOP3,1,!if(VOPC,1,!if(SDWA,1, !if(VALU,1,0))))));
+  let hasExtraSrcRegAllocReq = !or(VOP1, VOP2, VOP3, VOPC, SDWA, VALU);
 }
 
 class PseudoInstSI<dag outs, dag ins, list<dag> pattern = [], string asm = "">

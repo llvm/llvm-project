@@ -426,6 +426,14 @@ TEST_F(TransformerTest, NoEdits) {
   testRule(makeRule(returnStmt().bind("return"), noEdits()), Input, Input);
 }
 
+TEST_F(TransformerTest, NoopEdit) {
+  using transformer::node;
+  using transformer::noopEdit;
+  std::string Input = "int f(int x) { return x; }";
+  testRule(makeRule(returnStmt().bind("return"), noopEdit(node("return"))),
+           Input, Input);
+}
+
 TEST_F(TransformerTest, IfBound2Args) {
   using transformer::ifBound;
   std::string Input = "int f(int x) { return x; }";

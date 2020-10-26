@@ -352,6 +352,13 @@ void TemplateArgument::print(const PrintingPolicy &Policy,
 
   case Declaration: {
     NamedDecl *ND = getAsDecl();
+    if (getParamTypeForDecl()->isRecordType()) {
+      if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
+        // FIXME: Include the type if it's not obvious from the context.
+        TPO->printAsInit(Out);
+        break;
+      }
+    }
     if (!getParamTypeForDecl()->isReferenceType())
       Out << '&';
     ND->printQualifiedName(Out);

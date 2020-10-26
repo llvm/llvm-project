@@ -2492,38 +2492,54 @@ define double @uifdl(i64 %x) #0 {
 ;
 ; X86-SSE-LABEL: uifdl:
 ; X86-SSE:       # %bb.0: # %entry
-; X86-SSE-NEXT:    subl $12, %esp
-; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    subl $28, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 32
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; X86-SSE-NEXT:    subpd {{\.LCPI.*}}, %xmm0
-; X86-SSE-NEXT:    movapd %xmm0, %xmm1
-; X86-SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; X86-SSE-NEXT:    addpd %xmm0, %xmm1
-; X86-SSE-NEXT:    movlpd %xmm1, (%esp)
+; X86-SSE-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    shrl $31, %eax
+; X86-SSE-NEXT:    fildll {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; X86-SSE-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    wait
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
 ; X86-SSE-NEXT:    fldl (%esp)
 ; X86-SSE-NEXT:    wait
-; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    addl $28, %esp
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE-NEXT:    retl
 ;
 ; SSE-LABEL: uifdl:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movq %rdi, %xmm1
-; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
-; SSE-NEXT:    subpd {{.*}}(%rip), %xmm1
-; SSE-NEXT:    movapd %xmm1, %xmm0
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; SSE-NEXT:    addpd %xmm1, %xmm0
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    shrq %rax
+; SSE-NEXT:    movl %edi, %ecx
+; SSE-NEXT:    andl $1, %ecx
+; SSE-NEXT:    orq %rax, %rcx
+; SSE-NEXT:    testq %rdi, %rdi
+; SSE-NEXT:    cmovnsq %rdi, %rcx
+; SSE-NEXT:    cvtsi2sd %rcx, %xmm0
+; SSE-NEXT:    jns .LBB48_2
+; SSE-NEXT:  # %bb.1:
+; SSE-NEXT:    addsd %xmm0, %xmm0
+; SSE-NEXT:  .LBB48_2: # %entry
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: uifdl:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovq %rdi, %xmm0
-; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; AVX1-NEXT:    vsubpd {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    movq %rdi, %rax
+; AVX1-NEXT:    shrq %rax
+; AVX1-NEXT:    movl %edi, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    orq %rax, %rcx
+; AVX1-NEXT:    testq %rdi, %rdi
+; AVX1-NEXT:    cmovnsq %rdi, %rcx
+; AVX1-NEXT:    vcvtsi2sd %rcx, %xmm0, %xmm0
+; AVX1-NEXT:    jns .LBB48_2
+; AVX1-NEXT:  # %bb.1:
+; AVX1-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:  .LBB48_2: # %entry
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: uifdl:

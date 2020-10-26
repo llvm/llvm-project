@@ -35,7 +35,6 @@
 #include "test_iterators.h"
 #include "count_new.h"
 #include "filesystem_test_helper.h"
-#include "verbose_assert.h"
 
 struct PathCompareTest {
   const char* LHS;
@@ -99,11 +98,10 @@ void test_compare_basic()
       int ret4 = normalize_ret(p1.compare(RV));
 
       g.release();
-      ASSERT_EQ(ret1, ret2);
-      ASSERT_EQ(ret1, ret3);
-      ASSERT_EQ(ret1, ret4);
-      ASSERT_EQ(ret1, E)
-          << DISPLAY(TC.LHS) << DISPLAY(TC.RHS);
+      assert(ret1 == ret2);
+      assert(ret1 == ret3);
+      assert(ret1 == ret4);
+      assert(ret1 == E);
 
       // check signatures
       ASSERT_NOEXCEPT(p1.compare(p2));

@@ -92,26 +92,17 @@ namespace llvm {
     /// with the element type converted to an integer type with the same
     /// bitwidth.
     EVT changeVectorElementTypeToInteger() const {
-      if (!isSimple())
-        return changeExtendedVectorElementTypeToInteger();
-      MVT EltTy = getSimpleVT().getVectorElementType();
-      unsigned BitWidth = EltTy.getSizeInBits();
-      MVT IntTy = MVT::getIntegerVT(BitWidth);
-      MVT VecTy = MVT::getVectorVT(IntTy, getVectorElementCount());
-      assert(VecTy.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
-             "Simple vector VT not representable by simple integer vector VT!");
-      return VecTy;
+      if (isSimple())
+        return getSimpleVT().changeVectorElementTypeToInteger();
+      return changeExtendedVectorElementTypeToInteger();
     }
 
     /// Return a VT for a vector type whose attributes match ourselves
     /// with the exception of the element type that is chosen by the caller.
     EVT changeVectorElementType(EVT EltVT) const {
-      if (!isSimple())
-        return changeExtendedVectorElementType(EltVT);
-      MVT VecTy = MVT::getVectorVT(EltVT.V, getVectorElementCount());
-      assert(VecTy.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
-             "Simple vector VT not representable by simple integer vector VT!");
-      return VecTy;
+      if (isSimple() && EltVT.isSimple())
+        return getSimpleVT().changeVectorElementType(EltVT.getSimpleVT());
+      return changeExtendedVectorElementType(EltVT);
     }
 
     /// Return the type converted to an equivalently sized integer or vector
@@ -122,8 +113,7 @@ namespace llvm {
         return changeVectorElementTypeToInteger();
 
       if (isSimple())
-        return MVT::getIntegerVT(getSizeInBits());
-
+        return getSimpleVT().changeTypeToInteger();
       return changeExtendedTypeToInteger();
     }
 

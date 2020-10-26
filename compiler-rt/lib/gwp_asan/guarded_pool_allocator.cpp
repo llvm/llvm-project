@@ -10,7 +10,6 @@
 
 #include "gwp_asan/optional/segv_handler.h"
 #include "gwp_asan/options.h"
-#include "gwp_asan/random.h"
 #include "gwp_asan/utilities.h"
 
 // RHEL creates the PRIu64 format macro (for printing uint64_t's) only when this
@@ -38,15 +37,6 @@ namespace {
 // referenced by users outside this translation unit, in order to avoid
 // init-order-fiasco.
 GuardedPoolAllocator *SingletonPtr = nullptr;
-
-class ScopedBoolean {
-public:
-  ScopedBoolean(bool &B) : Bool(B) { Bool = true; }
-  ~ScopedBoolean() { Bool = false; }
-
-private:
-  bool &Bool;
-};
 } // anonymous namespace
 
 // Gets the singleton implementation of this class. Thread-compatible until
@@ -64,7 +54,7 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
     return;
 
   Check(Opts.SampleRate >= 0, "GWP-ASan Error: SampleRate is < 0.");
-  Check(Opts.SampleRate <= INT32_MAX, "GWP-ASan Error: SampleRate is > 2^31.");
+  Check(Opts.SampleRate < (1 << 30), "GWP-ASan Error: SampleRate is >= 2^30.");
   Check(Opts.MaxSimultaneousAllocations >= 0,
         "GWP-ASan Error: MaxSimultaneousAllocations is < 0.");
 
@@ -102,7 +92,8 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
 
   initPRNG();
   ThreadLocals.NextSampleCounter =
-      (getRandomUnsigned32() % (AdjustedSampleRatePlusOne - 1)) + 1;
+      ((getRandomUnsigned32() % (AdjustedSampleRatePlusOne - 1)) + 1) &
+      ThreadLocalPackedVariables::NextSampleCounterMask;
 
   State.GuardedPagePool = reinterpret_cast<uintptr_t>(GuardedPoolMemory);
   State.GuardedPagePoolEnd =
@@ -155,13 +146,17 @@ static uintptr_t getPageAddr(uintptr_t Ptr, uintptr_t PageSize) {
 void *GuardedPoolAllocator::allocate(size_t Size) {
   // GuardedPagePoolEnd == 0 when GWP-ASan is disabled. If we are disabled, fall
   // back to the supporting allocator.
-  if (State.GuardedPagePoolEnd == 0)
+  if (State.GuardedPagePoolEnd == 0) {
+    ThreadLocals.NextSampleCounter =
+        (AdjustedSampleRatePlusOne - 1) &
+        ThreadLocalPackedVariables::NextSampleCounterMask;
     return nullptr;
+  }
 
   // Protect against recursivity.
   if (ThreadLocals.RecursiveGuard)
     return nullptr;
-  ScopedBoolean SB(ThreadLocals.RecursiveGuard);
+  ScopedRecursiveGuard SRG;
 
   if (Size == 0 || Size > State.maximumAllocationSize())
     return nullptr;
@@ -241,7 +236,7 @@ void GuardedPoolAllocator::deallocate(void *Ptr) {
     // Ensure that the unwinder is not called if the recursive flag is set,
     // otherwise non-reentrant unwinders may deadlock.
     if (!ThreadLocals.RecursiveGuard) {
-      ScopedBoolean B(ThreadLocals.RecursiveGuard);
+      ScopedRecursiveGuard SRG;
       Meta->DeallocationTrace.RecordBacktrace(Backtrace);
     }
   }
@@ -284,6 +279,15 @@ size_t GuardedPoolAllocator::reserveSlot() {
 void GuardedPoolAllocator::freeSlot(size_t SlotIndex) {
   assert(FreeSlotsLength < State.MaxSimultaneousAllocations);
   FreeSlots[FreeSlotsLength++] = SlotIndex;
+}
+
+uint32_t GuardedPoolAllocator::getRandomUnsigned32() {
+  uint32_t RandomState = ThreadLocals.RandomState;
+  RandomState ^= RandomState << 13;
+  RandomState ^= RandomState >> 17;
+  RandomState ^= RandomState << 5;
+  ThreadLocals.RandomState = RandomState;
+  return RandomState;
 }
 
 GWP_ASAN_TLS_INITIAL_EXEC

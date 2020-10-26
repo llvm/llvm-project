@@ -5043,3 +5043,17 @@ let TargetPrefix = "x86" in {
                         [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
                          ImmArg<ArgIndex<2>>]>;
 }
+
+//===----------------------------------------------------------------------===//
+// UINTR - User Level Interrupt
+
+let TargetPrefix = "x86" in {
+  def int_x86_clui : GCCBuiltin<"__builtin_ia32_clui">,
+              Intrinsic<[], [], []>;
+  def int_x86_stui : GCCBuiltin<"__builtin_ia32_stui">,
+              Intrinsic<[], [], []>;
+  def int_x86_testui : GCCBuiltin<"__builtin_ia32_testui">,
+              Intrinsic<[llvm_i8_ty], [], []>;
+  def int_x86_senduipi : GCCBuiltin<"__builtin_ia32_senduipi">,
+              Intrinsic<[], [llvm_i64_ty], []>;
+}

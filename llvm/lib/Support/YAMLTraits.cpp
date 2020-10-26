@@ -1102,3 +1102,15 @@ StringRef ScalarTraits<Hex64>::input(StringRef Scalar, void *, Hex64 &Val) {
   Val = Num;
   return StringRef();
 }
+
+void ScalarTraits<VersionTuple>::output(const VersionTuple &Val, void *,
+                                        llvm::raw_ostream &Out) {
+  Out << Val.getAsString();
+}
+
+StringRef ScalarTraits<VersionTuple>::input(StringRef Scalar, void *,
+                                            VersionTuple &Val) {
+  if (Val.tryParse(Scalar))
+    return "invalid version format";
+  return StringRef();
+}

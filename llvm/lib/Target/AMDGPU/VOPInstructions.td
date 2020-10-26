@@ -69,7 +69,7 @@ class VOP3Common <dag outs, dag ins, string asm = "",
   let VOP3 = 1;
 
   let AsmVariantName = AMDGPUAsmVariants.VOP3;
-  let AsmMatchConverter = !if(!eq(HasMods,1), "cvtVOP3", "");
+  let AsmMatchConverter = !if(HasMods, "cvtVOP3", "");
 
   let isCodeGenOnly = 0;
 
@@ -129,7 +129,7 @@ class VOP3_Pseudo <string opName, VOPProfile P, list<dag> pattern = [],
   let AsmMatchConverter =
     !if(isVOP3P,
         "cvtVOP3P",
-        !if(!or(P.HasModifiers, !or(P.HasOMod, P.HasIntClamp)),
+        !if(!or(P.HasModifiers, P.HasOMod, P.HasIntClamp),
             "cvtVOP3",
             ""));
 }
@@ -626,7 +626,7 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
   string Mnemonic = OpName;
   string AsmOperands = P.AsmDPP;
 
-  let AsmMatchConverter = !if(!eq(P.HasModifiers,1), "cvtDPP", "");
+  let AsmMatchConverter = !if(P.HasModifiers, "cvtDPP", "");
   let SubtargetPredicate = HasDPP;
   let AssemblerPredicate = HasDPP;
   let AsmVariantName = !if(P.HasExtDPP, AMDGPUAsmVariants.DPP,
@@ -681,7 +681,7 @@ class VOP_DPP <string OpName, VOPProfile P, bit IsDPP16,
   let DPP = 1;
   let Size = 8;
 
-  let AsmMatchConverter = !if(!eq(P.HasModifiers,1), "cvtDPP", "");
+  let AsmMatchConverter = !if(P.HasModifiers, "cvtDPP", "");
   let SubtargetPredicate = HasDPP;
   let AssemblerPredicate = HasDPP;
   let AsmVariantName = !if(P.HasExtDPP, AMDGPUAsmVariants.DPP,

@@ -1487,7 +1487,9 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   uint32_t NumPatchBytes = 0;
   uint32_t Flags = uint32_t(StatepointFlags::None);
 
-  ArrayRef<Use> CallArgs(Call->arg_begin(), Call->arg_end());
+  SmallVector<Value *, 8> CallArgs;
+  for (Value *Arg : Call->args())
+    CallArgs.push_back(Arg);
   Optional<ArrayRef<Use>> DeoptArgs;
   if (auto Bundle = Call->getOperandBundle(LLVMContext::OB_deopt))
     DeoptArgs = Bundle->Inputs;
@@ -1520,7 +1522,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
 
   Value *CallTarget = Call->getCalledOperand();
   if (Function *F = dyn_cast<Function>(CallTarget)) {
-    if (F->getIntrinsicID() == Intrinsic::experimental_deoptimize) {
+    auto IID = F->getIntrinsicID();
+    if (IID == Intrinsic::experimental_deoptimize) {
       // Calls to llvm.experimental.deoptimize are lowered to calls to the
       // __llvm_deoptimize symbol.  We want to resolve this now, since the
       // verifier does not allow taking the address of an intrinsic function.

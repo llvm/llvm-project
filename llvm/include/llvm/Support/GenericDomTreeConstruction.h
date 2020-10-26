@@ -53,6 +53,7 @@ namespace DomTreeBuilder {
 
 template <typename DomTreeT>
 struct SemiNCAInfo {
+  using CfgTraits = typename DomTreeT::CfgTraits;
   using NodePtr = typename DomTreeT::NodePtr;
   using NodeT = typename DomTreeT::NodeType;
   using TreeNodePtr = DomTreeNodeBase<NodeT> *;
@@ -137,7 +138,7 @@ struct SemiNCAInfo {
     // immediate dominator.
     NodePtr IDom = getIDom(BB);
 
-    assert(IDom || DT.DomTreeNodes[nullptr]);
+    assert(IDom || DT.DomTreeNodes[CfgBlockRef{}]);
     TreeNodePtr IDomNode = getNodeForBlock(IDom, DT);
 
     // Add a new tree node for this NodeT, and link it as a child of
@@ -593,7 +594,7 @@ struct SemiNCAInfo {
     NodePtr Root = IsPostDom ? nullptr : DT.Roots[0];
 
     DT.RootNode = DT.createNode(Root);
-    SNCA.attachNewSubtree(DT, DT.RootNode);
+    SNCA.attachNewSubtree(DT, DT.getRootNode());
   }
 
   void attachNewSubtree(DomTreeT& DT, const TreeNodePtr AttachTo) {
@@ -604,7 +605,8 @@ struct SemiNCAInfo {
       NodePtr W = NumToNode[i];
 
       // Don't replace this with 'count', the insertion side effect is important
-      if (DT.DomTreeNodes[W]) continue;  // Haven't calculated this node yet?
+      if (DT.DomTreeNodes[CfgTraits::wrapRef(W)])
+        continue; // Haven't calculated this node yet?
 
       NodePtr ImmDom = getIDom(W);
 
@@ -1142,7 +1144,7 @@ struct SemiNCAInfo {
     std::swap(*ChIt, IDom->Children.back());
     IDom->Children.pop_back();
 
-    DT.DomTreeNodes.erase(TN->getBlock());
+    DT.DomTreeNodes.erase(CfgTraits::wrapRef(TN->getBlock()));
   }
 
   //~~
@@ -1268,7 +1270,8 @@ struct SemiNCAInfo {
     doFullDFSWalk(DT, AlwaysDescend);
 
     for (auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr TN = NodeToTN.second.get();
+      const TreeNodePtr TN =
+          static_cast<const TreeNodePtr>(NodeToTN.second.get());
       const NodePtr BB = TN->getBlock();
 
       // Virtual root has a corresponding virtual CFG node.
@@ -1301,7 +1304,8 @@ struct SemiNCAInfo {
   // Running time: O(N).
   static bool VerifyLevels(const DomTreeT &DT) {
     for (auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr TN = NodeToTN.second.get();
+      const TreeNodePtr TN =
+          static_cast<const TreeNodePtr>(NodeToTN.second.get());
       const NodePtr BB = TN->getBlock();
       if (!BB) continue;
 
@@ -1356,7 +1360,8 @@ struct SemiNCAInfo {
     // For each tree node verify if children's DFS numbers cover their parent's
     // DFS numbers with no gaps.
     for (const auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr Node = NodeToTN.second.get();
+      const TreeNodePtr Node =
+          static_cast<const TreeNodePtr>(NodeToTN.second.get());
 
       // Handle tree leaves.
       if (Node->isLeaf()) {
@@ -1469,7 +1474,8 @@ struct SemiNCAInfo {
   // the nodes it dominated previously will now become unreachable.
   bool verifyParentProperty(const DomTreeT &DT) {
     for (auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr TN = NodeToTN.second.get();
+      const TreeNodePtr TN =
+          static_cast<const TreeNodePtr>(NodeToTN.second.get());
       const NodePtr BB = TN->getBlock();
       if (!BB || TN->isLeaf())
         continue;
@@ -1503,7 +1509,8 @@ struct SemiNCAInfo {
   // siblings will now still be reachable.
   bool verifySiblingProperty(const DomTreeT &DT) {
     for (auto &NodeToTN : DT.DomTreeNodes) {
-      const TreeNodePtr TN = NodeToTN.second.get();
+      const TreeNodePtr TN =
+          static_cast<const TreeNodePtr>(NodeToTN.second.get());
       const NodePtr BB = TN->getBlock();
       if (!BB || TN->isLeaf())
         continue;

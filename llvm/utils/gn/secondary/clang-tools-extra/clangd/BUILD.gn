@@ -25,6 +25,7 @@ gen_decision_forest("CompletionModel") {
   model = "quality/model"
   filename = "CompletionModel"
   cpp_class = "clang::clangd::Example"
+  deps = [ "//clang/lib/Sema" ]
 }
 
 static_library("clangd") {

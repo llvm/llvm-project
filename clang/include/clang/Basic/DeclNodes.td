@@ -41,6 +41,7 @@ def Named : DeclNode<Decl, "named declarations", 1>;
     def OMPDeclareReduction : DeclNode<Value>, DeclContext;
     def OMPDeclareMapper : DeclNode<Value>, DeclContext;
     def MSGuid : DeclNode<Value>;
+    def TemplateParamObject : DeclNode<Value>;
     def Declarator : DeclNode<Value, "declarators", 1>;
       def Field : DeclNode<Declarator, "non-static data members">;
         def ObjCIvar : DeclNode<Field>;

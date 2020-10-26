@@ -133,11 +133,13 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     string(REPLACE "-" "_" canon_name ${projName})
     string(TOUPPER ${canon_name} canon_name)
 
-    # The subdirectories need to treat this as standalone builds. D57992 tried
-    # to get rid of this, but the runtimes treat *_STANDALONE_BUILD=OFF as if
-    # llvm & clang are configured in the same CMake, and setup dependencies
+    # compiler-rt needs to treat this as standalone builds. D57992 tried
+    # to get rid of it for compiler-rt, but it treats *_STANDALONE_BUILD=OFF
+    # as if llvm & clang are configured in the same CMake, and setup dependencies
     # against their targets.
-    set(${canon_name}_STANDALONE_BUILD ON)
+    if ("${canon_name}" STREQUAL "COMPILER_RT")
+      set(${canon_name}_STANDALONE_BUILD ON)
+    endif()
 
     if(LLVM_RUNTIMES_LIBDIR_SUBDIR)
       set(${canon_name}_LIBDIR_SUBDIR "${LLVM_RUNTIMES_LIBDIR_SUBDIR}" CACHE STRING "" FORCE)

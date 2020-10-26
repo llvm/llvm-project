@@ -1616,7 +1616,7 @@ SDValue SelectionDAGLegalize::ExpandFABS(SDNode *Node) const {
 
 void SelectionDAGLegalize::ExpandDYNAMIC_STACKALLOC(SDNode* Node,
                                            SmallVectorImpl<SDValue> &Results) {
-  unsigned SPReg = TLI.getStackPointerRegisterToSaveRestore();
+  Register SPReg = TLI.getStackPointerRegisterToSaveRestore();
   assert(SPReg && "Target cannot require DYNAMIC_STACKALLOC expansion and"
           " not tell us which reg is the stack pointer!");
   SDLoc dl(Node);
@@ -2460,11 +2460,18 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
   assert(!isSigned && "Legalize cannot Expand SINT_TO_FP for i64 yet");
 
   // TODO: Generalize this for use with other types.
-  if ((SrcVT == MVT::i32 || SrcVT == MVT::i64) && DestVT == MVT::f32) {
-    LLVM_DEBUG(dbgs() << "Converting unsigned i32/i64 to f32\n");
+  if (((SrcVT == MVT::i32 || SrcVT == MVT::i64) && DestVT == MVT::f32) ||
+      (SrcVT == MVT::i64 && DestVT == MVT::f64)) {
+    LLVM_DEBUG(dbgs() << "Converting unsigned i32/i64 to f32/f64\n");
     // For unsigned conversions, convert them to signed conversions using the
     // algorithm from the x86_64 __floatundisf in compiler_rt. That method
     // should be valid for i32->f32 as well.
+
+    // More generally this transform should be valid if there are 3 more bits
+    // in the integer type than the significand. Rounding uses the first bit
+    // after the width of the significand and the OR of all bits after that. So
+    // we need to be able to OR the shifted out bit into one of the bits that
+    // participate in the OR.
 
     // TODO: This really should be implemented using a branch rather than a
     // select.  We happen to get lucky and machinesink does the right
@@ -3245,7 +3252,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::STACKSAVE:
     // Expand to CopyFromReg if the target set
     // StackPointerRegisterToSaveRestore.
-    if (unsigned SP = TLI.getStackPointerRegisterToSaveRestore()) {
+    if (Register SP = TLI.getStackPointerRegisterToSaveRestore()) {
       Results.push_back(DAG.getCopyFromReg(Node->getOperand(0), dl, SP,
                                            Node->getValueType(0)));
       Results.push_back(Results[0].getValue(1));
@@ -3257,7 +3264,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::STACKRESTORE:
     // Expand to CopyToReg if the target set
     // StackPointerRegisterToSaveRestore.
-    if (unsigned SP = TLI.getStackPointerRegisterToSaveRestore()) {
+    if (Register SP = TLI.getStackPointerRegisterToSaveRestore()) {
       Results.push_back(DAG.getCopyToReg(Node->getOperand(0), dl, SP,
                                          Node->getOperand(1)));
     } else {

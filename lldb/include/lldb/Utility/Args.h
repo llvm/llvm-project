@@ -66,6 +66,7 @@ public:
 
   Args(const Args &rhs);
   explicit Args(const StringList &list);
+  explicit Args(llvm::ArrayRef<llvm::StringRef> args);
 
   Args &operator=(const Args &rhs);
 
@@ -262,9 +263,8 @@ public:
 
   static uint32_t StringToGenericRegister(llvm::StringRef s);
 
-  static const char *GetShellSafeArgument(const FileSpec &shell,
-                                          const char *unsafe_arg,
-                                          std::string &safe_arg);
+  static std::string GetShellSafeArgument(const FileSpec &shell,
+                                          llvm::StringRef unsafe_arg);
 
   // EncodeEscapeSequences will change the textual representation of common
   // escape sequences like "\n" (two characters) into a single '\n'. It does

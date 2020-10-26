@@ -46,6 +46,9 @@ const char *__memprof_default_options();
 SANITIZER_INTERFACE_ATTRIBUTE
 extern uptr __memprof_shadow_memory_dynamic_address;
 
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE extern char
+    __memprof_profile_filename[1];
+
 SANITIZER_INTERFACE_ATTRIBUTE void __memprof_load(uptr p);
 SANITIZER_INTERFACE_ATTRIBUTE void __memprof_store(uptr p);
 

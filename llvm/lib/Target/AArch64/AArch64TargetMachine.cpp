@@ -184,6 +184,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64SIMDInstrOptPass(*PR);
   initializeAArch64PreLegalizerCombinerPass(*PR);
   initializeAArch64PostLegalizerCombinerPass(*PR);
+  initializeAArch64PostLegalizerLoweringPass(*PR);
   initializeAArch64PromoteConstantPass(*PR);
   initializeAArch64RedundantCopyEliminationPass(*PR);
   initializeAArch64StorePairSuppressPass(*PR);
@@ -550,7 +551,7 @@ bool AArch64PassConfig::addIRTranslator() {
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
   bool IsOptNone = getOptLevel() == CodeGenOpt::None;
-  addPass(createAArch64PreLegalizeCombiner(IsOptNone));
+  addPass(createAArch64PreLegalizerCombiner(IsOptNone));
 }
 
 bool AArch64PassConfig::addLegalizeMachineIR() {
@@ -559,11 +560,10 @@ bool AArch64PassConfig::addLegalizeMachineIR() {
 }
 
 void AArch64PassConfig::addPreRegBankSelect() {
-  // For now we don't add this to the pipeline for -O0. We could do in future
-  // if we split the combines into separate O0/opt groupings.
   bool IsOptNone = getOptLevel() == CodeGenOpt::None;
   if (!IsOptNone)
-    addPass(createAArch64PostLegalizeCombiner(IsOptNone));
+    addPass(createAArch64PostLegalizerCombiner(IsOptNone));
+  addPass(createAArch64PostLegalizerLowering());
 }
 
 bool AArch64PassConfig::addRegBankSelect() {
