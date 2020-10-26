@@ -609,15 +609,9 @@ define i16 @rotateright_16_neg_mask_wide_amount_commute(i16 %v, i32 %shamt) {
 
 define i64 @rotateright_64_zext_neg_mask_amount(i64 %0, i32 %1) {
 ; CHECK-LABEL: @rotateright_64_zext_neg_mask_amount(
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP1:%.*]], 63
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP0:%.*]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw i32 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], 63
-; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[TMP0]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP5]], [[TMP9]]
-; CHECK-NEXT:    ret i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP1:%.*]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP0:%.*]], i64 [[TMP0]], i64 [[TMP3]])
+; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
   %3 = and i32 %1, 63
   %4 = zext i32 %3 to i64
@@ -666,15 +660,9 @@ define i8 @rotateleft_8_neg_mask_wide_amount_commute(i8 %v, i32 %shamt) {
 
 define i64 @rotateleft_64_zext_neg_mask_amount(i64 %0, i32 %1) {
 ; CHECK-LABEL: @rotateleft_64_zext_neg_mask_amount(
-; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP1:%.*]], 63
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP0:%.*]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw i32 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], 63
-; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = lshr i64 [[TMP0]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP5]], [[TMP9]]
-; CHECK-NEXT:    ret i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP1:%.*]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.fshl.i64(i64 [[TMP0:%.*]], i64 [[TMP0]], i64 [[TMP3]])
+; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
   %3 = and i32 %1, 63
   %4 = zext i32 %3 to i64
