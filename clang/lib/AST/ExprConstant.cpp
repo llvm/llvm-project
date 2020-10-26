@@ -15173,8 +15173,12 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
     // C++ 7.1.5.1p2
     //   A variable of non-volatile const-qualified integral or enumeration
     //   type initialized by an ICE can be used in ICEs.
+    //
+    // We sometimes use CheckICE to check the C++98 rules in C++11 mode. In
+    // that mode, use of reference variables should not be allowed.
     const VarDecl *VD = dyn_cast<VarDecl>(D);
-    if (VD && VD->isUsableInConstantExpressions(Ctx))
+    if (VD && VD->isUsableInConstantExpressions(Ctx) &&
+        !VD->getType()->isReferenceType())
       return NoDiag();
 
     return ICEDiag(IK_NotICE, E->getBeginLoc());
