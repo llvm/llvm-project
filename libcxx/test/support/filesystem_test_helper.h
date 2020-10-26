@@ -139,16 +139,17 @@ struct scoped_test_env
     ~scoped_test_env() {
 #ifdef _WIN32
         std::string cmd = "rmdir /s /q " + test_root.string();
-        int ret;
+        int ret = std::system(cmd.c_str());
+        assert(ret == 0);
 #else
         std::string cmd = "chmod -R 777 " + test_root.string();
         int ret = std::system(cmd.c_str());
         assert(ret == 0);
 
         cmd = "rm -r " + test_root.string();
-#endif
         ret = std::system(cmd.c_str());
         assert(ret == 0);
+#endif
     }
 
     scoped_test_env(scoped_test_env const &) = delete;
