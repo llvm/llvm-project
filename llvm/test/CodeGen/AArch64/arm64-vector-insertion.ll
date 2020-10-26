@@ -37,8 +37,8 @@ define <4 x float> @test2(float %a) {
 ; CHECK-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-NEXT:    // kill
 ; CHECK-NEXT:    mov.s  v1[0], v0[0]
-; CHECK-NEXT:    mov.s   v1[1], v0[0]
-; CHECK-NEXT:    mov.s   v1[2], v0[0]
+; CHECK-NEXT:    mov.s  v1[1], v0[0]
+; CHECK-NEXT:    mov.s  v1[2], v0[0]
 ; CHECK-NEXT:    mov.16b v0, v1
 ; CHECK-NEXT:   ret
 ;
@@ -49,9 +49,62 @@ entry:
   ret <4 x float> %vecinit3
 }
 
+define <8 x i16> @test_insert_v8i16_i16_zero(<8 x i16> %a) {
+; CHECK-LABEL: test_insert_v8i16_i16_zero:
+; CHECK:       bb.0:
+; CHECK-NEXT:    mov.h   v0[5], wzr
+; CHECK-NEXT:    ret
+
+entry:
+  %vecinit5 = insertelement <8 x i16> %a, i16 0, i32 5
+  ret <8 x i16> %vecinit5
+}
+
 ; TODO: This should jsut be a mov.s v0[3], wzr
-define <4 x float> @test3(<4 x float> %a) #0 {
-; CHECK-LABEL: test3:
+define <4 x half> @test_insert_v4f16_f16_zero(<4 x half> %a) {
+; CHECK-LABEL: test_insert_v4f16_f16_zero:
+; CHECK:       bb.0:
+; CHECK-NEXT:    adrp    x8, .LCPI4_0
+; CHECK-NEXT:    kill
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI4_0
+; CHECK-NEXT:    ld1.h   { v0 }[0], [x8]
+; CHECK-NEXT:    kill
+; CHECK-NEXT:    ret
+
+entry:
+  %vecinit5 = insertelement <4 x half> %a, half 0.000000e+00, i32 0
+  ret <4 x half> %vecinit5
+}
+
+define <8 x half> @test_insert_v8f16_f16_zero(<8 x half> %a) {
+; CHECK-LABEL: test_insert_v8f16_f16_zero:
+; CHECK:       bb.0:
+; CHECK-NEXT:    adrp    x8, .LCPI5_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI5_0
+; CHECK-NEXT:    ld1.h   { v0 }[6], [x8]
+; CHECK-NEXT:    ret
+
+entry:
+  %vecinit5 = insertelement <8 x half> %a, half 0.000000e+00, i32 6
+  ret <8 x half> %vecinit5
+}
+
+define <2 x float> @test_insert_v2f32_f32_zero(<2 x float> %a) {
+; CHECK-LABEL: test_insert_v2f32_f32_zero:
+; CHECK:       bb.0:
+; CHECK-NEXT:    // kill
+; CHECK-NEXT:    fmov    s1, wzr
+; CHECK-NEXT:    mov.s   v0[0], v1[0]
+; CHECK-NEXT:    // kill
+; CHECK-NEXT:    ret
+
+entry:
+  %vecinit5 = insertelement <2 x float> %a, float 0.000000e+00, i32 0
+  ret <2 x float> %vecinit5
+}
+
+define <4 x float> @test_insert_v4f32_f32_zero(<4 x float> %a) {
+; CHECK-LABEL: test_insert_v4f32_f32_zero:
 ; CHECK:       bb.0:
 ; CHECK-NEXT:    fmov    s1, wzr
 ; CHECK-NEXT:    mov.s   v0[3], v1[0]
@@ -60,4 +113,16 @@ define <4 x float> @test3(<4 x float> %a) #0 {
 entry:
   %vecinit5 = insertelement <4 x float> %a, float 0.000000e+00, i32 3
   ret <4 x float> %vecinit5
+}
+
+define <2 x double> @test_insert_v2f64_f64_zero(<2 x double> %a) {
+; CHECK-LABEL: test_insert_v2f64_f64_zero:
+; CHECK:       bb.0:
+; CHECK-NEXT:    fmov    d1, xzr
+; CHECK-NEXT:    mov.d   v0[1], v1[0]
+; CHECK-NEXT:    ret
+
+entry:
+  %vecinit5 = insertelement <2 x double> %a, double 0.000000e+00, i32 1
+  ret <2 x double> %vecinit5
 }
