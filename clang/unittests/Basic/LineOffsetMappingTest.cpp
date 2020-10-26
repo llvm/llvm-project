@@ -20,7 +20,7 @@ TEST(LineOffsetMappingTest, empty) {
   EXPECT_FALSE(Mapping);
 
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH((void)Mapping.getLines(), "Assertion");
+  EXPECT_DEATH((void)Mapping.getLines(), "Storage");
 #endif
 }
 
@@ -34,7 +34,7 @@ TEST(LineOffsetMappingTest, construct) {
   EXPECT_EQ(20u, Mapping[2]);
 
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH((void)Mapping[3], "Assertion");
+  EXPECT_DEATH((void)Mapping[3], "Invalid index");
 #endif
 }
 
