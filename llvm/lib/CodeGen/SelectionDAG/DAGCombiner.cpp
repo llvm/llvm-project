@@ -17326,12 +17326,11 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
           !ST1->getBasePtr().isUndef() &&
           // BaseIndexOffset and the code below requires knowing the size
           // of a vector, so bail out if MemoryVT is scalable.
-          !ST->getMemoryVT().isScalableVector() &&
           !ST1->getMemoryVT().isScalableVector()) {
         const BaseIndexOffset STBase = BaseIndexOffset::match(ST, DAG);
         const BaseIndexOffset ChainBase = BaseIndexOffset::match(ST1, DAG);
-        unsigned STBitSize = ST->getMemoryVT().getFixedSizeInBits();
-        unsigned ChainBitSize = ST1->getMemoryVT().getFixedSizeInBits();
+        unsigned STBitSize = ST->getMemoryVT().getSizeInBits();
+        unsigned ChainBitSize = ST1->getMemoryVT().getSizeInBits();
         // If this is a store who's preceding store to a subset of the current
         // location and no one other node is chained to that store we can
         // effectively drop the store. Do not remove stores to undef as they may
