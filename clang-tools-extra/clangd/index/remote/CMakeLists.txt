@@ -3,9 +3,10 @@ if (CLANGD_ENABLE_REMOTE)
   generate_protos(RemoteIndexProto "Index.proto")
   target_link_libraries(RemoteIndexServiceProto
 
-    PRIVATE
+    PUBLIC
     RemoteIndexProto
     )
+  add_dependencies(RemoteIndexServiceProto RemoteIndexProto)
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../)
 
