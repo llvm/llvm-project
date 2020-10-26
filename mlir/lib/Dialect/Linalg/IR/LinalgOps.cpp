@@ -461,6 +461,10 @@ static LogicalResult verify(IndexedGenericOp op) { return verifyGenericOp(op); }
 static ArrayAttr collapseReassociationMaps(ArrayRef<AffineMap> mapsProducer,
                                            ArrayRef<AffineMap> mapsConsumer,
                                            MLIRContext *context) {
+  // Handle the corner case of the result being a rank 0 shaped type. Return an
+  // emtpy ArrayAttr.
+  if (mapsConsumer.empty() && !mapsProducer.empty())
+    return ArrayAttr::get(ArrayRef<Attribute>(), context);
   if (mapsProducer.empty() || mapsConsumer.empty() ||
       mapsProducer[0].getNumDims() < mapsConsumer[0].getNumDims() ||
       mapsProducer.size() != mapsConsumer[0].getNumDims())
@@ -500,8 +504,7 @@ struct CollapseReshapeOps : public OpRewritePattern<ReshapeOpTy> {
                                     ShapedType intermediateType,
                                     ShapedType smallerType) -> bool {
       return largerType.getRank() > intermediateType.getRank() &&
-             intermediateType.getRank() > smallerType.getRank() &&
-             smallerType.getRank() > 0;
+             intermediateType.getRank() > smallerType.getRank();
     };
     // Check if producer and consumer are both expanding dims.
     if (areReshapeOpsFoldable(reshapeOp.getResultType(), reshapeOp.getSrcType(),
