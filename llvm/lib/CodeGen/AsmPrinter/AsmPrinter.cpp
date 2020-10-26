@@ -1134,9 +1134,12 @@ void AsmPrinter::emitFunctionBody() {
   bool HasAnyRealCode = false;
   int NumInstsInFunction = 0;
 
+  bool CanDoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
+  const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   for (auto &MBB : *MF) {
     // Print a label for the basic block.
     emitBasicBlockStart(MBB);
+    DenseMap<unsigned, unsigned> OpcodeCounts;
     for (auto &MI : MBB) {
       // Print the assembly for the instruction.
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
@@ -1202,6 +1205,10 @@ void AsmPrinter::emitFunctionBody() {
         break;
       default:
         emitInstruction(&MI);
+        if (CanDoExtraAnalysis) {
+          auto I = OpcodeCounts.insert({MI.getOpcode(), 0u});
+          I.first->second++;
+        }
         break;
       }
 
@@ -1245,6 +1252,35 @@ void AsmPrinter::emitFunctionBody() {
       }
     }
     emitBasicBlockEnd(MBB);
+
+    if (CanDoExtraAnalysis) {
+      // Skip empty blocks.
+      if (MBB.empty())
+        continue;
+
+      MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, "InstructionMix",
+                                          MBB.begin()->getDebugLoc(), &MBB);
+
+      // Generate instruction mix remark. First, convert opcodes to string
+      // names, then sort them in descending order by count and name.
+      SmallVector<std::pair<std::string, unsigned>, 128> OpcodeCountsVec;
+      for (auto &KV : OpcodeCounts) {
+        auto Name = (Twine("INST_") + TII->getName(KV.first)).str();
+        OpcodeCountsVec.emplace_back(Name, KV.second);
+      }
+      sort(OpcodeCountsVec, [](const std::pair<std::string, unsigned> &A,
+                               const std::pair<std::string, unsigned> &B) {
+        if (A.second > B.second)
+          return true;
+        if (A.second == B.second)
+          return A.first < B.first;
+        return false;
+      });
+      R << "BasicBlock: " << ore::NV("BasicBlock", MBB.getName()) << "\n";
+      for (auto &KV : OpcodeCountsVec)
+        R << KV.first << ": " << ore::NV(KV.first, KV.second) << "\n";
+      ORE->emit(R);
+    }
   }
 
   EmittedInsts += NumInstsInFunction;
