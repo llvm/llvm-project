@@ -7,18 +7,18 @@
 #pragma clang attribute pop // expected-note {{'#pragma clang attribute push' regions ends here}}
 
 // Ensure we only report any errors once.
-#pragma clang attribute push (__attribute__((annotate)), apply_to = function) // expected-error 4 {{'annotate' attribute takes one argument}}
+#pragma clang attribute push (__attribute__((annotate)), apply_to = function) // expected-error 4 {{'annotate' attribute takes at least 1 argument}}
 
 void test5_begin(); // expected-note {{when applied to this declaration}}
 void test5_1(); // expected-note {{when applied to this declaration}}
 
-#pragma clang attribute push (__attribute__((annotate())), apply_to = function) // expected-error 2 {{'annotate' attribute takes one argument}}
+#pragma clang attribute push (__attribute__((annotate())), apply_to = function) // expected-error 2 {{'annotate' attribute takes at least 1 argument}}
 
 void test5_2(); // expected-note 2 {{when applied to this declaration}}
 
-#pragma clang attribute push (__attribute__((annotate("hello", "world"))), apply_to = function) // expected-error {{'annotate' attribute takes one argument}}
+#pragma clang attribute push (__attribute__((annotate("hello", "world"))), apply_to = function)
 
-void test5_3(); // expected-note 3 {{when applied to this declaration}}
+void test5_3(); // expected-note 2 {{when applied to this declaration}}
 
 #pragma clang attribute pop
 #pragma clang attribute pop
@@ -38,8 +38,8 @@ __attribute__((always_inline)) void optnone3() { } // expected-warning {{'always
 
 #pragma clang attribute pop
 
-#pragma clang attribute push (__attribute__((annotate())), apply_to = function) // expected-error{{'annotate' attribute takes one argument}}
-#pragma clang attribute (__attribute__((annotate())), apply_to = function) // expected-error{{'annotate' attribute takes one argument}}
+#pragma clang attribute push (__attribute__((annotate())), apply_to = function) // expected-error{{'annotate' attribute takes at least 1 argument}}
+#pragma clang attribute (__attribute__((annotate())), apply_to = function) // expected-error{{'annotate' attribute takes at least 1 argument}}
 
 void fun(); // expected-note 2 {{when applied to this declaration}}
 
@@ -48,11 +48,11 @@ void fun(); // expected-note 2 {{when applied to this declaration}}
 
 
 #pragma clang attribute push
-#pragma clang attribute (__attribute__((annotate())), apply_to = function) // expected-error 2 {{'annotate' attribute takes one argument}}
+#pragma clang attribute (__attribute__((annotate())), apply_to = function) // expected-error 2 {{'annotate' attribute takes at least 1 argument}}
 
 void fun2(); // expected-note {{when applied to this declaration}}
 
-#pragma clang attribute push (__attribute__((annotate())), apply_to = function) // expected-error{{'annotate' attribute takes one argument}}
+#pragma clang attribute push (__attribute__((annotate())), apply_to = function) // expected-error{{'annotate' attribute takes at least 1 argument}}
 void fun3(); // expected-note 2 {{when applied to this declaration}}
 #pragma clang attribute pop
 
