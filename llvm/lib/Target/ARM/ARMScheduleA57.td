@@ -33,13 +33,13 @@ def IsLdrAm3RegOffPredX2 : MCSchedPredicate<CheckInvalidRegOperand<3>>;
 def IsLdrAm3RegOffPredX3 : MCSchedPredicate<CheckInvalidRegOperand<4>>;
 
 // If Addrmode3 contains "minus register"
-def IsLdrAm3NegRegOffPred :
-  SchedPredicate<[{TII->isAddrMode3OpMinusReg(*MI, 1)}]>;
-// The same predicate with operand offset 2 and 3:
-def IsLdrAm3NegRegOffPredX2 :
-  SchedPredicate<[{TII->isAddrMode3OpMinusReg(*MI, 2)}]>;
-def IsLdrAm3NegRegOffPredX3 :
-  SchedPredicate<[{TII->isAddrMode3OpMinusReg(*MI, 3)}]>;
+class Am3NegativeRegOffset<int n> : MCSchedPredicate<CheckAll<[
+                                      CheckValidRegOperand<n>,
+                                      CheckAM3OpSub<!add(n, 1)>]>>;
+
+def IsLdrAm3NegRegOffPred : Am3NegativeRegOffset<2>;
+def IsLdrAm3NegRegOffPredX2 : Am3NegativeRegOffset<3>;
+def IsLdrAm3NegRegOffPredX3 : Am3NegativeRegOffset<4>;
 
 // Load, scaled register offset, not plus LSL2
 def IsLdstsoScaledNotOptimalPredX0 :
@@ -49,18 +49,11 @@ def IsLdstsoScaledNotOptimalPred :
 def IsLdstsoScaledNotOptimalPredX2 :
   SchedPredicate<[{TII->isLdstScaledRegNotPlusLsl2(*MI, 2)}]>;
 
-def IsLdstsoScaledPredX2 : MCSchedPredicate<CheckNot<CheckExtNoShift>>;
+def IsLdstsoScaledPredX2 : MCSchedPredicate<CheckNot<CheckAM2NoShift<4>>>;
 
-def IsLdstsoMinusRegPredX0 :
-  SchedPredicate<[{TII->isLdstSoMinusReg(*MI, 0)}]>;
-def IsLdstsoMinusRegPred :
-  SchedPredicate<[{TII->isLdstSoMinusReg(*MI, 1)}]>;
-def IsLdstsoMinusRegPredX2 :
-  SchedPredicate<[{TII->isLdstSoMinusReg(*MI, 2)}]>;
-
-// Load, scaled register offset
-def IsLdrAm2ScaledPred :
-  SchedPredicate<[{TII->isAm2ScaledReg(*MI, 1)}]>;
+def IsLdstsoMinusRegPredX0 : MCSchedPredicate<CheckAM2OpSub<2>>;
+def IsLdstsoMinusRegPred : MCSchedPredicate<CheckAM2OpSub<3>>;
+def IsLdstsoMinusRegPredX2 : MCSchedPredicate<CheckAM2OpSub<4>>;
 
 // LDM, base reg in list
 def IsLDMBaseRegInListPred : MCSchedPredicate<IsLDMBaseRegInList>;
@@ -467,11 +460,11 @@ def : InstRW<[A57Write_4cyc_1L_1I, A57WrBackTwo], (instregex "LDR_POST_REG",
   "LDRB_POST_REG", "LDR(B?)T_POST$")>;
 
 def A57WriteLdrTRegPost : SchedWriteVariant<[
-  SchedVar<IsLdrAm2ScaledPred, [A57Write_4cyc_1I_1L_1M]>,
+  SchedVar<IsLdstsoScaledPredX2, [A57Write_4cyc_1I_1L_1M]>,
   SchedVar<NoSchedPred,        [A57Write_4cyc_1L_1I]>
 ]>;
 def A57WriteLdrTRegPostWrBack : SchedWriteVariant<[
-  SchedVar<IsLdrAm2ScaledPred, [A57WrBackThree]>,
+  SchedVar<IsLdstsoScaledPredX2, [A57WrBackThree]>,
   SchedVar<NoSchedPred,        [A57WrBackTwo]>
 ]>;
 // 4(3) "I0/I1,L,M" for scaled register, otherwise 4(2) "I0/I1,L"

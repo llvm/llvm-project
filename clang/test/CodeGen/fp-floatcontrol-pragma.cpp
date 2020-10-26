@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -verify -DFENV_ON=1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -DFENV_ON=1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 float fff(float x, float y) {
 // CHECK-LABEL: define float @_Z3fffff{{.*}}
@@ -67,7 +67,6 @@ float test_OperatorCall() {
 // CHECK-LABEL define float  {{.*}}test_OperatorCall{{.*}}
 
 #if FENV_ON
-// expected-warning@+1{{pragma STDC FENV_ACCESS ON is not supported, ignoring pragma}}
 #pragma STDC FENV_ACCESS ON
 #endif
 // CHECK-LABEL: define {{.*}}callt{{.*}}
@@ -75,5 +74,5 @@ float test_OperatorCall() {
 void callt() {
   volatile float z;
   z = z * z;
-//CHECK: = fmul float
+//CHECK-FENV: llvm.experimental.constrained.fmul{{.*}}
 }

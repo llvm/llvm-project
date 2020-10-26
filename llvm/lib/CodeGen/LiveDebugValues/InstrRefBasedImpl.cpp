@@ -109,7 +109,7 @@
 /// a matching machine-location PHI, each input to which is the variables value
 /// in the predecessor block.
 ///
-/// To accomodate this difference, each point on the lattice is split in
+/// To accommodate this difference, each point on the lattice is split in
 /// two: a "proposed" PHI and "definite" PHI. Any PHI that can immediately
 /// have a location determined are "definite" PHIs, and no further work is
 /// needed. Otherwise, a location that all non-backedge predecessors agree

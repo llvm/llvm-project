@@ -16,15 +16,6 @@
 // CHECK: {{^}}#pragma STDC FP_CONTRACT DEFAULT{{$}}
 // CHECK: {{^}}#pragma STDC FP_CONTRACT IN_BETWEEN{{$}}
 
-#pragma STDC FENV_ACCESS ON          // expected-warning {{pragma STDC FENV_ACCESS ON is not supported, ignoring pragma}}
-#pragma STDC FENV_ACCESS OFF
-#pragma STDC FENV_ACCESS DEFAULT
-#pragma STDC FENV_ACCESS IN_BETWEEN   // expected-warning {{expected 'ON' or 'OFF' or 'DEFAULT' in pragma}}
-// CHECK: {{^}}#pragma STDC FENV_ACCESS ON{{$}}
-// CHECK: {{^}}#pragma STDC FENV_ACCESS OFF{{$}}
-// CHECK: {{^}}#pragma STDC FENV_ACCESS DEFAULT{{$}}
-// CHECK: {{^}}#pragma STDC FENV_ACCESS IN_BETWEEN{{$}}
-
 #pragma STDC CX_LIMITED_RANGE ON
 #pragma STDC CX_LIMITED_RANGE OFF
 #pragma STDC CX_LIMITED_RANGE DEFAULT 
