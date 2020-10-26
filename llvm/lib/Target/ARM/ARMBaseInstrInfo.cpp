@@ -35,6 +35,8 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineScheduler.h"
+#include "llvm/CodeGen/MultiHazardRecognizer.h"
 #include "llvm/CodeGen/ScoreboardHazardRecognizer.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -134,9 +136,15 @@ ARMBaseInstrInfo::CreateTargetHazardRecognizer(const TargetSubtargetInfo *STI,
 ScheduleHazardRecognizer *ARMBaseInstrInfo::
 CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
                                    const ScheduleDAG *DAG) const {
+  MultiHazardRecognizer *MHR = new MultiHazardRecognizer();
+
   if (Subtarget.isThumb2() || Subtarget.hasVFP2Base())
-    return new ARMHazardRecognizer(II, DAG);
-  return TargetInstrInfo::CreateTargetPostRAHazardRecognizer(II, DAG);
+    MHR->AddHazardRecognizer(std::make_unique<ARMHazardRecognizerFPMLx>());
+
+  auto BHR = TargetInstrInfo::CreateTargetPostRAHazardRecognizer(II, DAG);
+  if (BHR)
+    MHR->AddHazardRecognizer(std::unique_ptr<ScheduleHazardRecognizer>(BHR));
+  return MHR;
 }
 
 MachineInstr *ARMBaseInstrInfo::convertToThreeAddress(
