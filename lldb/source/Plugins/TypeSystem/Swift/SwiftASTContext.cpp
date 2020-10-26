@@ -1265,6 +1265,7 @@ static const char *getImportFailureString(swift::serialization::Status status) {
     return "The module file was built for a target newer than the current "
            "target.";
   }
+  llvm_unreachable("covered switch");
 }
 
 /// Initialize the compiler invocation with it the search paths from a
@@ -2991,6 +2992,7 @@ class SwiftDWARFImporterDelegate : public swift::DWARFImporterDelegate {
       // described in DWARF.
       return true;
     }
+    llvm_unreachable("covered switch");
   }
 
   clang::Decl *GetDeclForTypeAndKind(clang::QualType qual_type,
