@@ -835,9 +835,14 @@ class VarDecl : public DeclaratorDecl, public Redeclarable<VarDecl> {
 public:
   /// Initialization styles.
   enum InitializationStyle {
+    /// C-style initialization with assignment
     CInit,
 
     /// Call-style initialization (C++98)
+    CallInit,
+
+    /// Direct list-initialization (C++11)
+    ListInit
   };
 
   /// Kinds of thread-local storage.
@@ -1257,14 +1262,15 @@ public:
   /// constant expression, according to the relevant language standard.
   /// This only checks properties of the declaration, and does not check
   /// whether the initializer is in fact a constant expression.
-  bool mightBeUsableInConstantExpressions(ASTContext &C) const;
+  bool mightBeUsableInConstantExpressions(const ASTContext &C) const;
 
   /// Determine whether this variable's value can be used in a
   /// constant expression, according to the relevant language standard,
   /// including checking whether it was initialized by a constant expression.
-  bool isUsableInConstantExpressions(ASTContext &C) const;
+  bool isUsableInConstantExpressions(const ASTContext &C) const;
 
   EvaluatedStmt *ensureEvaluatedStmt() const;
+  EvaluatedStmt *getEvaluatedStmt() const;
 
   /// Attempt to evaluate the value of the initializer attached to this
   /// declaration, and produce notes explaining why it cannot be evaluated.
