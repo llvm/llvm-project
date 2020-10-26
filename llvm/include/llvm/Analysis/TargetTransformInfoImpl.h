@@ -811,7 +811,12 @@ public:
         uint64_t Field = ConstIdx->getZExtValue();
         BaseOffset += DL.getStructLayout(STy)->getElementOffset(Field);
       } else {
-        int64_t ElementSize = DL.getTypeAllocSize(GTI.getIndexedType());
+        // If this operand is a scalable type, bail out early.
+        // TODO: handle scalable vectors
+        if (isa<ScalableVectorType>(TargetType))
+          return TTI::TCC_Basic;
+        int64_t ElementSize =
+            DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize();
         if (ConstIdx) {
           BaseOffset +=
               ConstIdx->getValue().sextOrTrunc(PtrSizeBits) * ElementSize;
