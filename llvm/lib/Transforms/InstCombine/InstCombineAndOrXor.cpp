@@ -2115,6 +2115,10 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
                        m_SpecificInt(Mask))))
       return L;
 
+    if (match(L, m_ZExt(m_And(m_Value(X), m_SpecificInt(Mask)))) &&
+        match(R, m_ZExt(m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask)))))
+      return L;
+
     return nullptr;
   };
 
