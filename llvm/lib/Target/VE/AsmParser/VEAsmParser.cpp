@@ -1374,9 +1374,38 @@ OperandMatchResultTy VEAsmParser::parseOperand(OperandVector &Operands,
     return ResTy;
 
   switch (getLexer().getKind()) {
-  case AsmToken::LParen:
-    // FIXME: Parsing "(" + %vreg + ", " + %vreg + ")"
-    // FALLTHROUGH
+  case AsmToken::LParen: {
+    // Parsing "(" + %vreg + ", " + %vreg + ")"
+    const AsmToken Tok1 = Parser.getTok();
+    Parser.Lex(); // Eat the '('.
+
+    unsigned RegNo1;
+    SMLoc S1, E1;
+    if (tryParseRegister(RegNo1, S1, E1) != MatchOperand_Success) {
+      getLexer().UnLex(Tok1);
+      return MatchOperand_NoMatch;
+    }
+
+    if (!Parser.getTok().is(AsmToken::Comma))
+      return MatchOperand_ParseFail;
+    Parser.Lex(); // Eat the ','.
+
+    unsigned RegNo2;
+    SMLoc S2, E2;
+    if (tryParseRegister(RegNo2, S2, E2) != MatchOperand_Success)
+      return MatchOperand_ParseFail;
+
+    if (!Parser.getTok().is(AsmToken::RParen))
+      return MatchOperand_ParseFail;
+
+    Operands.push_back(VEOperand::CreateToken(Tok1.getString(), Tok1.getLoc()));
+    Operands.push_back(VEOperand::CreateReg(RegNo1, S1, E1));
+    Operands.push_back(VEOperand::CreateReg(RegNo2, S2, E2));
+    Operands.push_back(VEOperand::CreateToken(Parser.getTok().getString(),
+                                              Parser.getTok().getLoc()));
+    Parser.Lex(); // Eat the ')'.
+    break;
+  }
   default: {
     std::unique_ptr<VEOperand> Op;
     ResTy = parseVEAsmOperand(Op);
