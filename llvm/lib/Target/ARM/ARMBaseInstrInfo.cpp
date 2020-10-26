@@ -620,20 +620,6 @@ bool ARMBaseInstrInfo::isCPSRDefined(const MachineInstr &MI) {
   return false;
 }
 
-// Load with negative register offset requires additional 1cyc and +I unit
-// for Cortex A57
-bool ARMBaseInstrInfo::isAddrMode3OpMinusReg(const MachineInstr &MI,
-                                             unsigned Op) const {
-  const MachineOperand &Offset = MI.getOperand(Op + 1);
-  const MachineOperand &Opc = MI.getOperand(Op + 2);
-  assert(Opc.isImm());
-  assert(Offset.isReg());
-  int64_t OpcImm = Opc.getImm();
-
-  bool isSub = ARM_AM::getAM3Op(OpcImm) == ARM_AM::sub;
-  return (isSub && Offset.getReg() != 0);
-}
-
 // Load, scaled register offset, not plus LSL2
 bool ARMBaseInstrInfo::isLdstScaledRegNotPlusLsl2(const MachineInstr &MI,
                                                   unsigned Op) const {

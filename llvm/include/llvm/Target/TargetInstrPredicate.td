@@ -126,6 +126,11 @@ class CheckRegOperand<int Index, Register R> : CheckOperandBase<Index> {
 // Check if register operand at index `Index` is the invalid register.
 class CheckInvalidRegOperand<int Index> : CheckOperandBase<Index>;
 
+// Return true if machine operand at position `Index` is a valid
+// register operand.
+class CheckValidRegOperand<int Index> :
+  CheckNot<CheckInvalidRegOperand<Index>>;
+
 // Check that the operand at position `Index` is immediate `Imm`.
 // If field `FunctionMapper` is a non-empty string, then function
 // `FunctionMapper` is applied to the operand value, and the return value is then
