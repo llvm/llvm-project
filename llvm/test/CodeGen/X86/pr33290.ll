@@ -22,17 +22,16 @@ define void @e() {
 ; X64-LABEL: e:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{.*}}(%rip), %rax
-; X64-NEXT:    movl $a, %esi
 ; X64-NEXT:    .p2align 4, 0x90
 ; X64-NEXT:  .LBB0_1: # %for.cond
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movzbl {{.*}}(%rip), %edx
-; X64-NEXT:    addq %rsi, %rdx
-; X64-NEXT:    setb %cl
-; X64-NEXT:    addq $2, %rdx
-; X64-NEXT:    adcb $0, %cl
-; X64-NEXT:    movb %cl, {{.*}}(%rip)
-; X64-NEXT:    movl %edx, (%rax)
+; X64-NEXT:    movzbl {{.*}}(%rip), %ecx
+; X64-NEXT:    addq $a, %rcx
+; X64-NEXT:    setb %dl
+; X64-NEXT:    addq $2, %rcx
+; X64-NEXT:    adcb $0, %dl
+; X64-NEXT:    movb %dl, {{.*}}(%rip)
+; X64-NEXT:    movl %ecx, (%rax)
 ; X64-NEXT:    jmp .LBB0_1
 entry:
   %0 = load i32*, i32** @b, align 8

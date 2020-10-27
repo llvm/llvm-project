@@ -2729,7 +2729,10 @@ bool X86DAGToDAGISel::isSExtAbsoluteSymbolRef(unsigned Width, SDNode *N) const {
     return false;
 
   Optional<ConstantRange> CR = GA->getGlobal()->getAbsoluteSymbolRange();
-  return CR && CR->getSignedMin().sge(-1ull << Width) &&
+  if (!CR)
+    return Width == 32 && TM.getCodeModel() == CodeModel::Small;
+
+  return CR->getSignedMin().sge(-1ull << Width) &&
          CR->getSignedMax().slt(1ull << Width);
 }
 
@@ -3123,7 +3126,7 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
       bool IsNegOne = isAllOnesConstant(StoredVal.getOperand(1));
       // ADD/SUB with 1/-1 and carry flag isn't used can use inc/dec.
       if ((IsOne || IsNegOne) && hasNoCarryFlagUses(StoredVal.getValue(1))) {
-        unsigned NewOpc = 
+        unsigned NewOpc =
           ((Opc == X86ISD::ADD) == IsOne)
               ? SelectOpcode(X86::INC64m, X86::INC32m, X86::INC16m, X86::INC8m)
               : SelectOpcode(X86::DEC64m, X86::DEC32m, X86::DEC16m, X86::DEC8m);
