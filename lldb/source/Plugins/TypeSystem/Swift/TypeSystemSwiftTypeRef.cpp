@@ -818,8 +818,8 @@ static uint32_t collectTypeInfo(SwiftASTContext *module_holder,
                  node->getText() == swift::BUILTIN_TYPE_NAME_UNKNOWNOBJECT)
           swift_flags |=
               eTypeHasChildren | eTypeIsPointer | eTypeIsScalar | eTypeIsObjC;
-        else if (node->getText() == swift::BUILTIN_TYPE_NAME_FLOAT ||
-                 node->getText() == swift::BUILTIN_TYPE_NAME_FLOAT_PPC)
+        else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT) ||
+                 node->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT_PPC))
           swift_flags |= eTypeIsFloat | eTypeIsScalar;
         else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_VEC))
           swift_flags |= eTypeHasChildren | eTypeIsVector;
