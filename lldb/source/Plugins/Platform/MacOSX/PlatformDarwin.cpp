@@ -1197,7 +1197,7 @@ BreakpointSP PlatformDarwin::SetThreadCreationBreakpoint(Target &target) {
   return bp_sp;
 }
 
-int32_t
+uint32_t
 PlatformDarwin::GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
   const FileSpec &shell = launch_info.GetShell();
   if (!shell)

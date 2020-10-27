@@ -66,7 +66,7 @@ public:
   bool x86GetSupportedArchitectureAtIndex(uint32_t idx,
                                           lldb_private::ArchSpec &arch);
 
-  int32_t GetResumeCountForLaunchInfo(
+  uint32_t GetResumeCountForLaunchInfo(
       lldb_private::ProcessLaunchInfo &launch_info) override;
 
   lldb::ProcessSP DebugProcess(lldb_private::ProcessLaunchInfo &launch_info,
