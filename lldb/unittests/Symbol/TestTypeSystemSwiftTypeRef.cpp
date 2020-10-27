@@ -196,6 +196,20 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
   }
 }
 
+TEST_F(TestTypeSystemSwiftTypeRef, GetTypeInfo) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    std::string float32;
+    llvm::raw_string_ostream(float32) << swift::BUILTIN_TYPE_NAME_FLOAT << "32";
+    NodePointer n = b.GlobalType(b.Node(Node::Kind::BuiltinTypeName, float32));
+    CompilerType p = GetCompilerType(b.Mangle(n));
+    ASSERT_EQ(p.GetTypeInfo() & (eTypeIsFloat | eTypeIsScalar),
+              eTypeIsFloat | eTypeIsScalar);
+  }
+}
+
 TEST_F(TestTypeSystemSwiftTypeRef, Pointer) {
   using namespace swift::Demangle;
   Demangler dem;
