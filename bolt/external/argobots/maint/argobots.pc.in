@@ -1,0 +1,13 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: Argobots
+Description: A Lightweight Low-level Threading/Tasking Framework
+Version: @ABT_VERSION@
+URL: http://www.argobots.org/
+Requires:
+Libs: -L${libdir} -labt
+Libs.private: @LIBS@
+Cflags: -I${includedir}

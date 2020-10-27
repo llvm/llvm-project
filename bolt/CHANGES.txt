@@ -1,0 +1,50 @@
+===============================================================================
+                               Changes in 1.0
+===============================================================================
+
+- Upgraded to LLVM OpenMP 10.0
+- Upgraded Argobots to 1.0
+- Fixed support for untied tasks
+- Added tests for OpenMP task and thread scheduling
+- Support several platforms including OSX and POWER9.
+
+===============================================================================
+                               Changes in 1.0rc3
+===============================================================================
+
+- Upgraded Argobots to 1.0rc2 to solve the TLS-related issue
+- Fixed support for scheduler sleep
+
+===============================================================================
+                               Changes in 1.0rc2
+===============================================================================
+
+- Upgraded to LLVM OpenMP 9.0
+- Improved the performance of nested parallel regions
+- Support the thread affinity
+
+===============================================================================
+                               Changes in 1.0rc1
+===============================================================================
+
+- Upgraded to LLVM OpenMP 7.0
+- Support task depend and taskloop
+- Support OpenMP 4.5 except untied task and cancellation
+- Argobots updated to the latest version and integrated as a git submodule
+
+===============================================================================
+                               Changes in 1.0b1
+===============================================================================
+
+- Fixed missing some global state initialization
+- Fixed bugs related to newer Perl versions
+- Updated the embedded Argobots version
+
+===============================================================================
+                               Changes in 1.0a1
+===============================================================================
+
+# The first release of BOLT, which uses Argobots as a threading layer.
+
+# Support OpenMP 3.1
+

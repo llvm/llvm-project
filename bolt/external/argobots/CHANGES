@@ -1,0 +1,58 @@
+===============================================================================
+                               Changes in 1.0
+===============================================================================
+
+- Added support for restarting xstream
+- Updated the example code
+- Fixed the IBM POWER support
+- Fixed a bug in affinity management
+- Fixed a bug in future operation
+- Fixed a bug in hugepage allocation
+- Removed retain/release APIs of ULTs and tasklets
+- Removed the event interface
+- Updated the code formatting standard to use clang-format
+
+===============================================================================
+                               Changes in 1.0rc2
+===============================================================================
+
+- Added support for stack dump
+- Added support for ucontext to cover more architectures
+- Fixed code that assumes 64-bit OS to support 32bit environments
+- Enhanced performance with --enable-valgrind when Valgrind is not used
+- Fixed a bug in TLS handling
+- Fixed a bug in memory pool
+
+===============================================================================
+                               Changes in 1.0rc1
+===============================================================================
+
+- Added support for dynamically promoted threads, which offer
+better trade-offs than the existing ULT and tasklet methods
+- Reduced the overhead of context switching
+- Fixed the Valgrind support
+- Extended the API with new blocking pool operations
+- Leverage the more efficient GCC `__atomic` builtins when available
+- Fixed a bug in the condition variable implementation
+- Fixed bugs in memory pool
+- Fixed bugs in pool operation
+
+===============================================================================
+                               Changes in 1.0b1
+===============================================================================
+
+- Added new API routines for bulk ULT creation and destruction
+- Reduced the overhead of error checking
+- Fixed bugs in some thread synchronization routines
+- Fixed POWER8 support
+- CPU affinity improvements on Intel KNL
+- Improved the dynamic management of large numbers of execution streams
+- Removed the local-exec TLS option
+- Updated the documentation
+- Added performance benchmarks
+
+===============================================================================
+                               Changes in 1.0a1
+===============================================================================
+
+The first release of Argobots.

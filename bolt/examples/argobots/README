@@ -1,0 +1,87 @@
+                             OpenMP and Argobots
+
+This directory includes OpenMP code examples and their corresponding sample
+implementations with Argobots APIs. These are just examples in order to show
+how Argobots APIs can be used to mimic OpenMP behaviors. Please note that they
+are not intended to provide optimized implementations.
+
+NOTE:
+Examples in this directory are originated from those in examples of Argobots.
+
+1. Build and Testing
+2. Examples
+
+
+-------------------------------------------------------------------------------
+
+1. Build and Testing
+====================
+
+Once configure is done, there should be two Makefiles in this directory -
+Makefile for Argobots examples and Makefile.omp for OpenMP examples.
+
+(a) To build and test Argobots examples:
+
+    build: make
+    test : make testing
+
+
+(b) To build and test OpenMP examples:
+
+    build: make -f Makefile.omp
+    test : make -f Makefile.omp testing
+
+-------------------------------------------------------------------------------
+
+2. Examples
+===========
+
+parallel_for_{omp,abt_task,abt_thread}:
+    -- Implementation sample using a pragma omp parallel for directive
+    -- An Argobots code implementation is included in order to study the
+       performance
+
+nested_parallel_for_{omp,abt_task,abt_thread}:
+    -- Implementation sample using nested parallel constructions
+    -- An Argobots code implementation is included in order to study the
+       performance
+
+nested_parallel_for_irregular_{omp,abt_task,abt_thread}:
+    -- Implementation sample using nested parallel constructions when each iteration 
+       has different workload
+    -- An Argobots code implementation is included in order to study the
+       performance
+
+task_single_producer_{omp,abt_task,abt_thread}:
+    -- Implementation sample where just a thread creates all the work (tasks) and
+       the other threads execute the work generated.
+    -- An Argobots code implementation is also included to study the performance.
+    -- main motivation for the Intel OpenMP Runtime modification
+
+task_multiple_producer_{omp,abt_task,abt_thread}:
+    -- Implementation sample where all thread creates all the work into its own queue
+       or pool and then execute the work generated.
+    -- An Argobots code implementation is also included to study the performance.
+    -- Mainly used in order to understand the cutoff mechanism implemented by
+       GCC and Intel OpemMP Libraries
+
+task_nested_{omp,abt_task}:
+    -- Implementation sample used mainly to know the behavior when a nested task (lvl 1)
+       is created.
+    -- An Argobots code implementation is included in order to study the performance
+
+task_nested_lvl2_{omp,abt_task}:
+    -- Implementation sample used mainly to know the behavior when a nested task (lvl 2)
+       is created.
+    -- An Argobots code implementation is included in order to study the performance
+
+taskwait_omp:
+    -- Implementation sample used to know the behavior when a taskwait directive
+       is used or not
+    -- Mainly used to get the generated code for each compiler
+
+taskyield_omp:
+    -- Implementation sample used to know the behavior when a taskyield directive
+       is used or not
+    -- Mainly used to get the generated code for each compiler
+

@@ -1,0 +1,13 @@
+# examples
+fibonacci_future
+fibonacci_recursive
+hello_world
+hello_world_thread
+sched_predef
+sched_shared_pool
+sched_stack
+sched_user
+sched_and_pool_user
+stencil_task
+stencil_thread
+stencil_thread_cond
