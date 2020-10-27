@@ -2928,7 +2928,7 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       return Result;
     }
 
-    // If this is a zext instruction zero extend the result.
+    // If this is a zext instruction, zero extend the result.
     if (match(V, m_ZExt(m_Value(X)))) {
       const auto &Res =
           collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
@@ -2941,6 +2941,19 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
         Result->Provenance[BitIdx] = Res->Provenance[BitIdx];
       for (unsigned BitIdx = NarrowBitWidth; BitIdx < BitWidth; ++BitIdx)
         Result->Provenance[BitIdx] = BitPart::Unset;
+      return Result;
+    }
+
+    // If this is a trunc instruction, take the lower bits.
+    if (match(V, m_Trunc(m_Value(X)))) {
+      const auto &Res =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      if (!Res)
+        return Result;
+
+      Result = BitPart(Res->Provider, BitWidth);
+      for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx)
+        Result->Provenance[BitIdx] = Res->Provenance[BitIdx];
       return Result;
     }
 
