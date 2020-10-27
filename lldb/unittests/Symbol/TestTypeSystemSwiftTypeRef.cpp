@@ -402,6 +402,20 @@ TEST_F(TestTypeSystemSwiftTypeRef, Tuple) {
     ASSERT_EQ(float_int_tuple.GetMangledTypeName(),
               "$ss0019BuiltinFPIEEE_CJEEdV1f_s0016BuiltinInt_gCJAcV1itD");
   }
+  {
+    NodePointer n = b.GlobalType(
+        b.Node(Node::Kind::Tuple,
+               b.Node(Node::Kind::TupleElement,
+                      b.Node(Node::Kind::TupleElementName, "x"), b.IntType()),
+               b.Node(Node::Kind::TupleElement, b.IntType()),
+               b.Node(Node::Kind::TupleElement,
+                      b.Node(Node::Kind::TupleElementName, "z"), b.IntType())));
+    CompilerType t = GetCompilerType(b.Mangle(n));
+    lldb::opaque_compiler_type_t o = t.GetOpaqueQualType();
+    ASSERT_EQ(m_swift_ts.GetTupleElementName(o, 0), "x");
+    ASSERT_EQ(m_swift_ts.GetTupleElementName(o, 1), "1");
+    ASSERT_EQ(m_swift_ts.GetTupleElementName(o, 2), "z");
+  }
 }
 
 TEST_F(TestTypeSystemSwiftTypeRef, TypeClass) {
