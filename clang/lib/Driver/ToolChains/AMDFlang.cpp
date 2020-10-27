@@ -334,16 +334,16 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Last argument of -g/-gdwarfX should be taken.
   Arg *GArg = Args.getLastArg(options::OPT_g_Flag);
-  Arg *GDwarfArg = Args.getLastArg(options::OPT_gdwarf_2,
-                                   options::OPT_gdwarf_3,
-                                   options::OPT_gdwarf_4,
-                                   options::OPT_gdwarf_5);
+  Arg *GDwarfArg = Args.getLastArg(options::OPT_gdwarf_2, options::OPT_gdwarf_3,
+                                   options::OPT_gdwarf_4, options::OPT_gdwarf_5,
+                                   options::OPT_gpubnames);
 
   if (GArg || GDwarfArg) {
 
-    for (auto Arg : Args.filtered(options::OPT_g_Flag, options::OPT_gdwarf_2,
-	  options::OPT_gdwarf_3, options::OPT_gdwarf_4,
-	  options::OPT_gdwarf_5)) {
+    for (auto Arg :
+         Args.filtered(options::OPT_g_Flag, options::OPT_gdwarf_2,
+                       options::OPT_gdwarf_3, options::OPT_gdwarf_4,
+                       options::OPT_gdwarf_5, options::OPT_gpubnames)) {
       Arg->claim();
     }
 
@@ -360,6 +360,9 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
       CommonCmdArgs.push_back("0x1000000");
     else if (GDwarfArg->getOption().matches(options::OPT_gdwarf_5)) // -gdwarf-5
       CommonCmdArgs.push_back("0x2000000");
+    else if (GDwarfArg->getOption().matches(
+                 options::OPT_gpubnames)) // -gpubnames
+      CommonCmdArgs.push_back("0x40000000");
   }
 
   // -Mipa has no effect
