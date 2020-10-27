@@ -2792,11 +2792,13 @@ Constant *ConstantDataSequential::getImpl(StringRef Elements, Type *Ty) {
   // Okay, we didn't get a hit.  Create a node of the right class, link it in,
   // and return it.
   if (isa<ArrayType>(Ty)) {
+    // Use reset because std::make_unique can't access the constructor.
     Entry->reset(new ConstantDataArray(Ty, Slot.first().data()));
     return Entry->get();
   }
 
   assert(isa<VectorType>(Ty));
+  // Use reset because std::make_unique can't access the constructor.
   Entry->reset(new ConstantDataVector(Ty, Slot.first().data()));
   return Entry->get();
 }
