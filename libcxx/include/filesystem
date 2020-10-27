@@ -568,8 +568,18 @@ struct __can_convert_char<char32_t> {
 template <class _ECharT>
 typename enable_if<__can_convert_char<_ECharT>::value, bool>::type
 __is_separator(_ECharT __e) {
+#if defined(_LIBCPP_WIN32API)
+  return __e == _ECharT('/') || __e == _ECharT('\\');
+#else
   return __e == _ECharT('/');
+#endif
 }
+
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+typedef u8string __u8_string;
+#else
+typedef string __u8_string;
+#endif
 
 struct _NullSentinel {};
 
@@ -672,6 +682,14 @@ struct __is_pathable<_Tp, false, true, false> : __is_pathable_char_array<_Tp> {
 template <class _Tp>
 struct __is_pathable<_Tp, false, false, true> : __is_pathable_iter<_Tp> {};
 
+#if defined(_LIBCPP_WIN32API)
+typedef wstring __path_string;
+typedef wchar_t __path_value;
+#else
+typedef string __path_string;
+typedef char __path_value;
+#endif
+
 template <class _ECharT>
 struct _PathCVT;
 
@@ -682,24 +700,40 @@ struct _PathCVT {
                 "Char type not convertible");
 
   typedef __narrow_to_utf8<sizeof(_ECharT) * __CHAR_BIT__> _Narrower;
+#if defined(_LIBCPP_WIN32API)
+  typedef __widen_from_utf8<sizeof(wchar_t) * __CHAR_BIT__> _Widener;
+#endif
 
-  static void __append_range(string& __dest, _ECharT const* __b,
+  static void __append_range(__path_string& __dest, _ECharT const* __b,
                              _ECharT const* __e) {
+#if defined(_LIBCPP_WIN32API)
+    string __utf8;
+    _Narrower()(back_inserter(__utf8), __b, __e);
+    _Widener()(back_inserter(__dest), __utf8.data(), __utf8.data() + __utf8.size());
+#else
     _Narrower()(back_inserter(__dest), __b, __e);
+#endif
   }
 
   template <class _Iter>
-  static void __append_range(string& __dest, _Iter __b, _Iter __e) {
+  static void __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
     static_assert(!is_same<_Iter, _ECharT*>::value, "Call const overload");
     if (__b == __e)
       return;
     basic_string<_ECharT> __tmp(__b, __e);
+#if defined(_LIBCPP_WIN32API)
+    string __utf8;
+    _Narrower()(back_inserter(__utf8), __tmp.data(),
+                __tmp.data() + __tmp.length());
+    _Widener()(back_inserter(__dest), __utf8.data(), __utf8.data() + __utf8.size());
+#else
     _Narrower()(back_inserter(__dest), __tmp.data(),
                 __tmp.data() + __tmp.length());
+#endif
   }
 
   template <class _Iter>
-  static void __append_range(string& __dest, _Iter __b, _NullSentinel) {
+  static void __append_range(__path_string& __dest, _Iter __b, _NullSentinel) {
     static_assert(!is_same<_Iter, _ECharT*>::value, "Call const overload");
     const _ECharT __sentinel = _ECharT{};
     if (*__b == __sentinel)
@@ -707,12 +741,19 @@ struct _PathCVT {
     basic_string<_ECharT> __tmp;
     for (; *__b != __sentinel; ++__b)
       __tmp.push_back(*__b);
+#if defined(_LIBCPP_WIN32API)
+    string __utf8;
+    _Narrower()(back_inserter(__utf8), __tmp.data(),
+                __tmp.data() + __tmp.length());
+    _Widener()(back_inserter(__dest), __utf8.data(), __utf8.data() + __utf8.size());
+#else
     _Narrower()(back_inserter(__dest), __tmp.data(),
                 __tmp.data() + __tmp.length());
+#endif
   }
 
   template <class _Source>
-  static void __append_source(string& __dest, _Source const& __s) {
+  static void __append_source(__path_string& __dest, _Source const& __s) {
     using _Traits = __is_pathable<_Source>;
     __append_range(__dest, _Traits::__range_begin(__s),
                    _Traits::__range_end(__s));
@@ -721,35 +762,78 @@ struct _PathCVT {
 #endif // !_LIBCPP_HAS_NO_LOCALIZATION
 
 template <>
-struct _PathCVT<char> {
+struct _PathCVT<__path_value> {
 
   template <class _Iter>
   static typename enable_if<__is_exactly_cpp17_input_iterator<_Iter>::value>::type
-  __append_range(string& __dest, _Iter __b, _Iter __e) {
+  __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
     for (; __b != __e; ++__b)
       __dest.push_back(*__b);
   }
 
   template <class _Iter>
   static typename enable_if<__is_cpp17_forward_iterator<_Iter>::value>::type
-  __append_range(string& __dest, _Iter __b, _Iter __e) {
+  __append_range(__path_string& __dest, _Iter __b, _Iter __e) {
     __dest.__append_forward_unsafe(__b, __e);
   }
 
   template <class _Iter>
-  static void __append_range(string& __dest, _Iter __b, _NullSentinel) {
+  static void __append_range(__path_string& __dest, _Iter __b, _NullSentinel) {
     const char __sentinel = char{};
     for (; *__b != __sentinel; ++__b)
       __dest.push_back(*__b);
   }
 
   template <class _Source>
-  static void __append_source(string& __dest, _Source const& __s) {
+  static void __append_source(__path_string& __dest, _Source const& __s) {
     using _Traits = __is_pathable<_Source>;
     __append_range(__dest, _Traits::__range_begin(__s),
                    _Traits::__range_end(__s));
   }
 };
+
+#if defined(_LIBCPP_WIN32API)
+template <class _ECharT>
+struct _PathExport {
+  typedef __narrow_to_utf8<sizeof(wchar_t) * __CHAR_BIT__> _Narrower;
+  typedef __widen_from_utf8<sizeof(_ECharT) * __CHAR_BIT__> _Widener;
+
+  template <class _Str>
+  static void __append(_Str& __dest, const __path_string& __src) {
+    string __utf8;
+    _Narrower()(back_inserter(__utf8), __src.data(), __src.data() + __src.size());
+    _Widener()(back_inserter(__dest), __utf8.data(), __utf8.data() + __utf8.size());
+  }
+};
+
+template <>
+struct _PathExport<wchar_t> {
+  template <class _Str>
+  static void __append(_Str& __dest, const __path_string& __src) {
+    __dest.append(__src.begin(), __src.end());
+  }
+};
+
+template <>
+struct _PathExport<char16_t> {
+  template <class _Str>
+  static void __append(_Str& __dest, const __path_string& __src) {
+    __dest.append(__src.begin(), __src.end());
+  }
+};
+
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+template <>
+struct _PathExport<char8_t> {
+  typedef __narrow_to_utf8<sizeof(wchar_t) * __CHAR_BIT__> _Narrower;
+
+  template <class _Str>
+  static void __append(_Str& __dest, const __path_string& __src) {
+    _Narrower()(back_inserter(__dest), __src.data(), __src.data() + __src.size());
+  }
+};
+#endif /* !_LIBCPP_NO_HAS_CHAR8_T */
+#endif /* _LIBCPP_WIN32API */
 
 class _LIBCPP_TYPE_VIS path {
   template <class _SourceOrIter, class _Tp = path&>
@@ -763,10 +847,15 @@ class _LIBCPP_TYPE_VIS path {
   using _SourceCVT = _PathCVT<_SourceChar<_Tp> >;
 
 public:
+#if defined(_LIBCPP_WIN32API)
+  typedef wchar_t value_type;
+  static constexpr value_type preferred_separator = L'\\';
+#else
   typedef char value_type;
-  typedef basic_string<value_type> string_type;
-  typedef _VSTD::string_view __string_view;
   static constexpr value_type preferred_separator = '/';
+#endif
+  typedef basic_string<value_type> string_type;
+  typedef basic_string_view<value_type> __string_view;
 
   enum class _LIBCPP_ENUM_VIS format : unsigned char {
     auto_format,
@@ -1000,6 +1089,52 @@ public:
 
   _LIBCPP_INLINE_VISIBILITY operator string_type() const { return __pn_; }
 
+#if defined(_LIBCPP_WIN32API)
+  _LIBCPP_INLINE_VISIBILITY _VSTD::wstring wstring() const { return __pn_; }
+
+  _VSTD::wstring generic_wstring() const { return __pn_; }
+
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+  template <class _ECharT, class _Traits = char_traits<_ECharT>,
+            class _Allocator = allocator<_ECharT> >
+  basic_string<_ECharT, _Traits, _Allocator>
+  string(const _Allocator& __a = _Allocator()) const {
+    using _Str = basic_string<_ECharT, _Traits, _Allocator>;
+    _Str __s(__a);
+    __s.reserve(__pn_.size());
+    _PathExport<_ECharT>::__append(__s, __pn_);
+    return __s;
+  }
+
+  _LIBCPP_INLINE_VISIBILITY _VSTD::string string() const {
+    return string<char>();
+  }
+  _LIBCPP_INLINE_VISIBILITY __u8_string u8string() const {
+    return string<__u8_string::value_type>();
+  }
+
+  _LIBCPP_INLINE_VISIBILITY _VSTD::u16string u16string() const {
+    return string<char16_t>();
+  }
+  _LIBCPP_INLINE_VISIBILITY _VSTD::u32string u32string() const {
+    return string<char32_t>();
+  }
+
+  // generic format observers
+  template <class _ECharT, class _Traits = char_traits<_ECharT>,
+            class _Allocator = allocator<_ECharT> >
+  basic_string<_ECharT, _Traits, _Allocator>
+  generic_string(const _Allocator& __a = _Allocator()) const {
+    return string<_ECharT, _Traits, _Allocator>(__a);
+  }
+
+  _VSTD::string generic_string() const { return generic_string<char>(); }
+  _VSTD::u16string generic_u16string() const { return generic_string<char16_t>(); }
+  _VSTD::u32string generic_u32string() const { return generic_string<char32_t>(); }
+  __u8_string generic_u8string() const { return u8string(); }
+#endif /* !_LIBCPP_HAS_NO_LOCALIZATION */
+#else /* _LIBCPP_WIN32API */
+
   _LIBCPP_INLINE_VISIBILITY _VSTD::string string() const { return __pn_; }
 #ifndef _LIBCPP_NO_HAS_CHAR8_T
   _LIBCPP_INLINE_VISIBILITY _VSTD::u8string u8string() const { return _VSTD::u8string(__pn_.begin(), __pn_.end()); }
@@ -1029,7 +1164,7 @@ public:
   _LIBCPP_INLINE_VISIBILITY _VSTD::u32string u32string() const {
     return string<char32_t>();
   }
-#endif
+#endif /* !_LIBCPP_HAS_NO_LOCALIZATION */
 
   // generic format observers
   _VSTD::string generic_string() const { return __pn_; }
@@ -1050,7 +1185,8 @@ public:
   _VSTD::wstring generic_wstring() const { return string<wchar_t>(); }
   _VSTD::u16string generic_u16string() const { return string<char16_t>(); }
   _VSTD::u32string generic_u32string() const { return string<char32_t>(); }
-#endif
+#endif /* !_LIBCPP_HAS_NO_LOCALIZATION */
+#endif /* !_LIBCPP_WIN32API */
 
 private:
   int __compare(__string_view) const;
@@ -1157,8 +1293,8 @@ public:
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
   template <class _CharT, class _Traits>
   _LIBCPP_INLINE_VISIBILITY friend
-      typename enable_if<is_same<_CharT, char>::value &&
-                             is_same<_Traits, char_traits<char> >::value,
+      typename enable_if<is_same<_CharT, value_type>::value &&
+                             is_same<_Traits, char_traits<value_type> >::value,
                          basic_ostream<_CharT, _Traits>&>::type
       operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
     __os << _VSTD::__quoted(__p.native());
@@ -1167,8 +1303,8 @@ public:
 
   template <class _CharT, class _Traits>
   _LIBCPP_INLINE_VISIBILITY friend
-      typename enable_if<!is_same<_CharT, char>::value ||
-                             !is_same<_Traits, char_traits<char> >::value,
+      typename enable_if<!is_same<_CharT, value_type>::value ||
+                             !is_same<_Traits, char_traits<value_type> >::value,
                          basic_ostream<_CharT, _Traits>&>::type
       operator<<(basic_ostream<_CharT, _Traits>& __os, const path& __p) {
     __os << _VSTD::__quoted(__p.string<_CharT, _Traits>());
