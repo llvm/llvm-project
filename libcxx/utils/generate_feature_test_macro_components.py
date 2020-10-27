@@ -493,6 +493,11 @@ lit_markup = {
   "atomic": ["UNSUPPORTED: libcpp-has-no-threads"],
   "shared_mutex": ["UNSUPPORTED: libcpp-has-no-threads"],
   "thread": ["UNSUPPORTED: libcpp-has-no-threads"],
+  "iomanip": ["UNSUPPORTED: libcpp-has-no-localization"],
+  "istream": ["UNSUPPORTED: libcpp-has-no-localization"],
+  "locale": ["UNSUPPORTED: libcpp-has-no-localization"],
+  "ostream": ["UNSUPPORTED: libcpp-has-no-localization"],
+  "regex": ["UNSUPPORTED: libcpp-has-no-localization"],
 }
 
 def get_std_dialects():

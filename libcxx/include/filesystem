@@ -235,15 +235,18 @@
 #include <chrono>
 #include <iterator>
 #include <iosfwd>
-#include <locale>
 #include <memory>
 #include <stack>
 #include <string>
 #include <system_error>
 #include <utility>
-#include <iomanip> // for quoted
 #include <string_view>
 #include <version>
+
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+# include <locale>
+# include <iomanip> // for quoted
+#endif
 
 #include <__debug>
 
@@ -662,6 +665,10 @@ template <class _Tp>
 struct __is_pathable<_Tp, false, false, true> : __is_pathable_iter<_Tp> {};
 
 template <class _ECharT>
+struct _PathCVT;
+
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+template <class _ECharT>
 struct _PathCVT {
   static_assert(__can_convert_char<_ECharT>::value,
                 "Char type not convertible");
@@ -703,6 +710,7 @@ struct _PathCVT {
                    _Traits::__range_end(__s));
   }
 };
+#endif // !_LIBCPP_HAS_NO_LOCALIZATION
 
 template <>
 struct _PathCVT<char> {
@@ -779,12 +787,14 @@ public:
     _PathCVT<_ItVal>::__append_range(__pn_, __first, __last);
   }
 
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
   // TODO Implement locale conversions.
   template <class _Source, class = _EnableIfPathable<_Source, void> >
   path(const _Source& __src, const locale& __loc, format = format::auto_format);
   template <class _InputIt>
   path(_InputIt __first, _InputIt _last, const locale& __loc,
        format = format::auto_format);
+#endif
 
   _LIBCPP_INLINE_VISIBILITY
   ~path() = default;
@@ -983,6 +993,10 @@ public:
 
   _LIBCPP_INLINE_VISIBILITY operator string_type() const { return __pn_; }
 
+  _LIBCPP_INLINE_VISIBILITY std::string string() const { return __pn_; }
+  _LIBCPP_INLINE_VISIBILITY std::string u8string() const { return __pn_; }
+
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
   template <class _ECharT, class _Traits = char_traits<_ECharT>,
             class _Allocator = allocator<_ECharT> >
   basic_string<_ECharT, _Traits, _Allocator>
@@ -995,19 +1009,22 @@ public:
     return __s;
   }
 
-  _LIBCPP_INLINE_VISIBILITY std::string string() const { return __pn_; }
   _LIBCPP_INLINE_VISIBILITY std::wstring wstring() const {
     return string<wchar_t>();
   }
-  _LIBCPP_INLINE_VISIBILITY std::string u8string() const { return __pn_; }
   _LIBCPP_INLINE_VISIBILITY std::u16string u16string() const {
     return string<char16_t>();
   }
   _LIBCPP_INLINE_VISIBILITY std::u32string u32string() const {
     return string<char32_t>();
   }
+#endif
 
   // generic format observers
+  std::string generic_string() const { return __pn_; }
+  std::string generic_u8string() const { return __pn_; }
+
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
   template <class _ECharT, class _Traits = char_traits<_ECharT>,
             class _Allocator = allocator<_ECharT> >
   basic_string<_ECharT, _Traits, _Allocator>
@@ -1015,11 +1032,10 @@ public:
     return string<_ECharT, _Traits, _Allocator>(__a);
   }
 
-  std::string generic_string() const { return __pn_; }
   std::wstring generic_wstring() const { return string<wchar_t>(); }
-  std::string generic_u8string() const { return __pn_; }
   std::u16string generic_u16string() const { return string<char16_t>(); }
   std::u32string generic_u32string() const { return string<char32_t>(); }
+#endif
 
 private:
   int __compare(__string_view) const;
@@ -1123,6 +1139,7 @@ public:
   iterator begin() const;
   iterator end() const;
 
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
   template <class _CharT, class _Traits>
   _LIBCPP_INLINE_VISIBILITY friend
       typename enable_if<is_same<_CharT, char>::value &&
@@ -1151,6 +1168,7 @@ public:
     __p = __tmp;
     return __is;
   }
+#endif // !_LIBCPP_HAS_NO_LOCALIZATION
 
   friend _LIBCPP_INLINE_VISIBILITY bool operator==(const path& __lhs, const path& __rhs) noexcept {
     return __lhs.compare(__rhs) == 0;

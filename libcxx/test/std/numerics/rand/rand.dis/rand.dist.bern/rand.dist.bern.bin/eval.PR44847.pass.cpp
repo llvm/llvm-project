@@ -15,6 +15,9 @@
 
 // Test the fix for https://llvm.org/PR44847.
 
+// Serializing/deserializing the state of the RNG requires iostreams
+// UNSUPPORTED: libcpp-has-no-localization
+
 #include <random>
 #include <numeric>
 #include <vector>

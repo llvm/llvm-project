@@ -19,20 +19,15 @@ set(LIBCXX_SOURCES
   include/atomic_support.h
   include/config_elast.h
   include/refstring.h
-  ios.cpp
-  iostream.cpp
-  locale.cpp
   memory.cpp
   mutex.cpp
   mutex_destructor.cpp
   new.cpp
   optional.cpp
   random_shuffle.cpp
-  regex.cpp
   shared_mutex.cpp
   stdexcept.cpp
   string.cpp
-  strstream.cpp
   support/runtime/exception_fallback.ipp
   support/runtime/exception_glibcxx.ipp
   support/runtime/exception_libcxxabi.ipp
@@ -63,6 +58,16 @@ endif()
 if (LIBCXX_ENABLE_RANDOM_DEVICE)
   list(APPEND LIBCXX_SOURCES
     random.cpp
+    )
+endif()
+
+if (LIBCXX_ENABLE_LOCALIZATION)
+  list(APPEND LIBCXX_SOURCES
+    ios.cpp
+    iostream.cpp
+    locale.cpp
+    regex.cpp
+    strstream.cpp
     )
 endif()
 
