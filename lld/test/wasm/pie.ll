@@ -1,5 +1,5 @@
 ; RUN: llc -relocation-model=pic -mattr=+mutable-globals -filetype=obj %s -o %t.o
-; RUN: wasm-ld --no-gc-sections --allow-undefined -pie -o %t.wasm %t.o
+; RUN: wasm-ld --no-gc-sections --allow-undefined --experimental-pic -pie -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-emscripten"
@@ -29,6 +29,15 @@ entry:
 define void @_start() {
   ret void
 }
+
+;      CHECK: Sections:
+; CHECK-NEXT:   - Type:            CUSTOM
+; CHECK-NEXT:     Name:            dylink
+; CHECK-NEXT:     MemorySize:      16
+; CHECK-NEXT:     MemoryAlignment: 2
+; CHECK-NEXT:     TableSize:       1
+; CHECK-NEXT:     TableAlignment:  0
+; CHECK-NEXT:     Needed:          []
 
 ; CHECK:        - Type:            IMPORT
 ; CHECK-NEXT:     Imports:
