@@ -15,6 +15,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 
@@ -123,7 +124,7 @@ class ConvertShapeConstraints
     OwningRewritePatternList patterns;
     populateConvertShapeConstraintsConversionPatterns(patterns, context);
 
-    if (failed(applyPatternsAndFoldGreedily(func, patterns)))
+    if (failed(applyPatternsAndFoldGreedily(func, std::move(patterns))))
       return signalPassFailure();
   }
 };

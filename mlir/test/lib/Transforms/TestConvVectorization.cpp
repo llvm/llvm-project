@@ -14,6 +14,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LoopUtils.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -93,7 +94,7 @@ void TestConvVectorization::runOnOperation() {
   // VectorTransforms.cpp
   vectorTransferPatterns.insert<VectorTransferFullPartialRewriter>(
       context, vectorTransformsOptions);
-  applyPatternsAndFoldGreedily(module, vectorTransferPatterns);
+  applyPatternsAndFoldGreedily(module, std::move(vectorTransferPatterns));
 
   // Programmatic controlled lowering of linalg.copy and linalg.fill.
   PassManager pm(context);
@@ -105,13 +106,14 @@ void TestConvVectorization::runOnOperation() {
   OwningRewritePatternList vectorContractLoweringPatterns;
   populateVectorContractLoweringPatterns(vectorContractLoweringPatterns,
                                          context, vectorTransformsOptions);
-  applyPatternsAndFoldGreedily(module, vectorContractLoweringPatterns);
+  applyPatternsAndFoldGreedily(module,
+                               std::move(vectorContractLoweringPatterns));
 
   // Programmatic controlled lowering of vector.transfer only.
   OwningRewritePatternList vectorToLoopsPatterns;
   populateVectorToSCFConversionPatterns(vectorToLoopsPatterns, context,
                                         VectorTransferToSCFOptions());
-  applyPatternsAndFoldGreedily(module, vectorToLoopsPatterns);
+  applyPatternsAndFoldGreedily(module, std::move(vectorToLoopsPatterns));
 
   // Ensure we drop the marker in the end.
   module.walk([](linalg::LinalgOp op) {
