@@ -348,7 +348,7 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
     OutStreamer->emitSymbolAttribute(Sym, MCSA_Hidden);
     OutStreamer->emitLabel(Sym);
 
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::UBFMXri)
+    OutStreamer->emitInstruction(MCInstBuilder(AArch64::SBFMXri)
                                      .addReg(AArch64::X16)
                                      .addReg(Reg)
                                      .addImm(4)

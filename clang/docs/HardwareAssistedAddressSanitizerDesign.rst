@@ -96,7 +96,7 @@ Currently, the following sequence is used:
 
   [...]
   __hwasan_check_x0_2_short_v2:
-        ubfx    x16, x0, #4, #52                        // shadow offset
+        sbfx    x16, x0, #4, #52                        // shadow offset
         ldrb    w16, [x20, x16]                         // load shadow tag
         cmp     x16, x0, lsr #56                        // extract address tag, compare with shadow tag
         b.ne    .Ltmp0                                  // jump to short tag handler on mismatch

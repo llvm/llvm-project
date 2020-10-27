@@ -38,7 +38,7 @@ declare void @llvm.hwasan.check.memaccess.shortgranules(i8*, i8*, i32)
 ; CHECK-NEXT: .weak __hwasan_check_x0_2_short_v2
 ; CHECK-NEXT: .hidden __hwasan_check_x0_2_short_v2
 ; CHECK-NEXT: __hwasan_check_x0_2_short_v2:
-; CHECK-NEXT: ubfx x16, x0, #4, #52
+; CHECK-NEXT: sbfx x16, x0, #4, #52
 ; CHECK-NEXT: ldrb w16, [x20, x16]
 ; CHECK-NEXT: cmp x16, x0, lsr #56
 ; CHECK-NEXT: b.ne .Ltmp0
@@ -69,7 +69,7 @@ declare void @llvm.hwasan.check.memaccess.shortgranules(i8*, i8*, i32)
 ; CHECK-NEXT: .weak __hwasan_check_x1_1
 ; CHECK-NEXT: .hidden __hwasan_check_x1_1
 ; CHECK-NEXT: __hwasan_check_x1_1:
-; CHECK-NEXT: ubfx x16, x1, #4, #52
+; CHECK-NEXT: sbfx x16, x1, #4, #52
 ; CHECK-NEXT: ldrb w16, [x9, x16]
 ; CHECK-NEXT: cmp x16, x1, lsr #56
 ; CHECK-NEXT: b.ne .Ltmp3
