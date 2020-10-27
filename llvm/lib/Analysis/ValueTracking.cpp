@@ -670,6 +670,14 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
 
   unsigned BitWidth = Known.getBitWidth();
 
+  // Refine Known set if the pointer alignment is set by assume bundles.
+  if (V->getType()->isPointerTy()) {
+    if (RetainedKnowledge RK = getKnowledgeValidInContext(
+            V, {Attribute::Alignment}, Q.CxtI, Q.DT, Q.AC)) {
+      Known.Zero.setLowBits(Log2_32(RK.ArgValue));
+    }
+  }
+
   // Note that the patterns below need to be kept in sync with the code
   // in AssumptionCache::updateAffectedValues.
 
