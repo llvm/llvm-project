@@ -162,6 +162,19 @@ public:
         whereBody.u);
   }
 
+  // CompilerDirective have special handling in case they are top level
+  // directives (i.e. they do not belong to a ProgramUnit).
+  bool Pre(const parser::CompilerDirective &directive) {
+    assert(parentVariantStack.size() > 0 &&
+           "At least the Program must be a parent");
+    if (parentVariantStack.back().isA<lower::pft::Program>()) {
+      addUnit(lower::pft::CompilerDirectiveUnit(directive,
+                                                parentVariantStack.back()));
+      return false;
+    }
+    return enterConstructOrDirective(directive);
+  }
+
 private:
   /// Initialize a new module-like unit and make it the builder's focus.
   template <typename A>
@@ -828,6 +841,9 @@ public:
                      [&](const lower::pft::ModuleLikeUnit &unit) {
                        dumpModuleLikeUnit(outputStream, unit);
                      },
+                     [&](const lower::pft::CompilerDirectiveUnit &unit) {
+                       dumpCompilerDirectiveUnit(outputStream, unit);
+                     },
                  },
                  unit);
     }
@@ -942,6 +958,17 @@ public:
     for (auto &func : moduleLikeUnit.nestedFunctions)
       dumpFunctionLikeUnit(outputStream, func);
     outputStream << "EndContains\nEndModuleLike\n\n";
+  }
+
+  // Top level directives
+  void dumpCompilerDirectiveUnit(
+      llvm::raw_ostream &outputStream,
+      const lower::pft::CompilerDirectiveUnit &directive) {
+    outputStream << getNodeIndex(directive) << " ";
+    outputStream << "CompilerDirective: !";
+    outputStream << directive.get<Fortran::parser::CompilerDirective>()
+                        .source.ToString();
+    outputStream << "\nEndCompilerDirective\n\n";
   }
 
   template <typename T>
