@@ -720,6 +720,21 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetDemangleTreeForPrinting(
   return canonical;
 }
 
+/// Determine wether this demangle tree contains an unresolved type alias.
+static bool ContainsGenericTypeParameter(swift::Demangle::NodePointer node) {
+  if (!node)
+    return false;
+
+  if (node->getKind() == swift::Demangle::Node::Kind::DependentGenericParamType)
+    return true;
+
+  for (swift::Demangle::NodePointer child : *node)
+    if (ContainsGenericTypeParameter(child))
+      return true;
+
+  return false;
+}
+
 /// Collect TypeInfo flags from a demangle tree. For most attributes
 /// this can stop scanning at the outmost type, however in order to
 /// determine whether a node is generic or not, it needs to visit all
@@ -770,7 +785,6 @@ static uint32_t collectTypeInfo(SwiftASTContext *module_holder,
     }
   else
     switch (node->getKind()) {
-
     case Node::Kind::SugaredOptional:
       swift_flags |= eTypeIsGeneric | eTypeIsBound | eTypeHasChildren |
                      eTypeHasValue | eTypeIsEnumeration;
@@ -841,8 +855,7 @@ static uint32_t collectTypeInfo(SwiftASTContext *module_holder,
       if (node->getNumChildren() != 2)
         break;
       // Bug-for-bug compatibility.
-      if (!(collectTypeInfo(module_holder, dem, node->getChild(1)) &
-            eTypeIsGenericTypeParam))
+      if (!ContainsGenericTypeParameter(node->getChild(1)))
         swift_flags |= eTypeHasValue | eTypeHasChildren;
       auto module = node->getChild(0);
       if (module->hasText() &&
