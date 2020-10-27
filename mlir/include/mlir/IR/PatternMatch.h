@@ -417,11 +417,8 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// Pattern-driven rewriters
-//===----------------------------------------------------------------------===//
-
-//===----------------------------------------------------------------------===//
 // OwningRewritePatternList
+//===----------------------------------------------------------------------===//
 
 class OwningRewritePatternList {
   using PatternListT = std::vector<std::unique_ptr<RewritePattern>>;
@@ -481,98 +478,6 @@ private:
   PatternListT patterns;
 };
 
-//===----------------------------------------------------------------------===//
-// PatternApplicator
-
-/// This class manages the application of a group of rewrite patterns, with a
-/// user-provided cost model.
-class PatternApplicator {
-public:
-  /// The cost model dynamically assigns a PatternBenefit to a particular
-  /// pattern. Users can query contained patterns and pass analysis results to
-  /// applyCostModel. Patterns to be discarded should have a benefit of
-  /// `impossibleToMatch`.
-  using CostModel = function_ref<PatternBenefit(const Pattern &)>;
-
-  explicit PatternApplicator(const OwningRewritePatternList &owningPatternList)
-      : owningPatternList(owningPatternList) {}
-
-  /// Attempt to match and rewrite the given op with any pattern, allowing a
-  /// predicate to decide if a pattern can be applied or not, and hooks for if
-  /// the pattern match was a success or failure.
-  ///
-  /// canApply:  called before each match and rewrite attempt; return false to
-  ///            skip pattern.
-  /// onFailure: called when a pattern fails to match to perform cleanup.
-  /// onSuccess: called when a pattern match succeeds; return failure() to
-  ///            invalidate the match and try another pattern.
-  LogicalResult
-  matchAndRewrite(Operation *op, PatternRewriter &rewriter,
-                  function_ref<bool(const Pattern &)> canApply = {},
-                  function_ref<void(const Pattern &)> onFailure = {},
-                  function_ref<LogicalResult(const Pattern &)> onSuccess = {});
-
-  /// Apply a cost model to the patterns within this applicator.
-  void applyCostModel(CostModel model);
-
-  /// Apply the default cost model that solely uses the pattern's static
-  /// benefit.
-  void applyDefaultCostModel() {
-    applyCostModel([](const Pattern &pattern) { return pattern.getBenefit(); });
-  }
-
-  /// Walk all of the patterns within the applicator.
-  void walkAllPatterns(function_ref<void(const Pattern &)> walk);
-
-private:
-  /// Attempt to match and rewrite the given op with the given pattern, allowing
-  /// a predicate to decide if a pattern can be applied or not, and hooks for if
-  /// the pattern match was a success or failure.
-  LogicalResult
-  matchAndRewrite(Operation *op, const RewritePattern &pattern,
-                  PatternRewriter &rewriter,
-                  function_ref<bool(const Pattern &)> canApply,
-                  function_ref<void(const Pattern &)> onFailure,
-                  function_ref<LogicalResult(const Pattern &)> onSuccess);
-
-  /// The list that owns the patterns used within this applicator.
-  const OwningRewritePatternList &owningPatternList;
-
-  /// The set of patterns to match for each operation, stable sorted by benefit.
-  DenseMap<OperationName, SmallVector<RewritePattern *, 2>> patterns;
-  /// The set of patterns that may match against any operation type, stable
-  /// sorted by benefit.
-  SmallVector<RewritePattern *, 1> anyOpPatterns;
-};
-
-//===----------------------------------------------------------------------===//
-// applyPatternsGreedily
-//===----------------------------------------------------------------------===//
-
-/// Rewrite the regions of the specified operation, which must be isolated from
-/// above, by repeatedly applying the highest benefit patterns in a greedy
-/// work-list driven manner. Return success if no more patterns can be matched
-/// in the result operation regions.
-/// Note: This does not apply patterns to the top-level operation itself. Note:
-///       These methods also perform folding and simple dead-code elimination
-///       before attempting to match any of the provided patterns.
-///
-LogicalResult
-applyPatternsAndFoldGreedily(Operation *op,
-                             const OwningRewritePatternList &patterns);
-/// Rewrite the given regions, which must be isolated from above.
-LogicalResult
-applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
-                             const OwningRewritePatternList &patterns);
-
-/// Applies the specified patterns on `op` alone while also trying to fold it,
-/// by selecting the highest benefits patterns in a greedy manner. Returns
-/// success if no more patterns can be matched. `erased` is set to true if `op`
-/// was folded away or erased as a result of becoming dead. Note: This does not
-/// apply any patterns recursively to the regions of `op`.
-LogicalResult applyOpPatternsAndFold(Operation *op,
-                                     const OwningRewritePatternList &patterns,
-                                     bool *erased = nullptr);
 } // end namespace mlir
 
 #endif // MLIR_PATTERN_MATCH_H
