@@ -459,8 +459,8 @@ define i64 @test38(i32 %a) {
 
 define i16 @test39(i16 %a) {
 ; ALL-LABEL: @test39(
-; ALL-NEXT:    [[REV:%.*]] = call i16 @llvm.bswap.i16(i16 [[A:%.*]])
-; ALL-NEXT:    ret i16 [[REV]]
+; ALL-NEXT:    [[T32:%.*]] = call i16 @llvm.bswap.i16(i16 [[A:%.*]])
+; ALL-NEXT:    ret i16 [[T32]]
 ;
   %t = zext i16 %a to i32
   %t21 = lshr i32 %t, 8
