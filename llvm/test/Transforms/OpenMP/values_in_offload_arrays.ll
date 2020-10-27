@@ -55,13 +55,13 @@ entry:
   store i32* %size.addr, i32** %9, align 8
   %10 = getelementptr inbounds [2 x i64], [2 x i64]* %.offload_sizes, i64 0, i64 1
   store i64 4, i64* %10, align 8
-  call void @__tgt_target_data_begin_mapper(i64 -1, i32 2, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes., i64 0, i64 0), i8** null)
+  call void @__tgt_target_data_begin_mapper(i64 -1, i32 2, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes., i64 0, i64 0), i8** null, i8** null)
   %rem = srem i32 %call, 7
-  call void @__tgt_target_data_end_mapper(i64 -1, i32 2, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes., i64 0, i64 0), i8** null)
+  call void @__tgt_target_data_end_mapper(i64 -1, i32 2, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes., i64 0, i64 0), i8** null, i8** null)
   ret i32 %rem
 }
 
-declare void @__tgt_target_data_begin_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
-declare void @__tgt_target_data_end_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**)
+declare void @__tgt_target_data_begin_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
+declare void @__tgt_target_data_end_mapper(i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
 
 declare dso_local i32 @rand(...)
