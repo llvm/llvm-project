@@ -94,10 +94,9 @@ public:
 
   void Clear();
 
-  bool ConvertArgumentsForLaunchingInShell(Status &error, bool localhost,
-                                           bool will_debug,
+  bool ConvertArgumentsForLaunchingInShell(Status &error, bool will_debug,
                                            bool first_arg_is_full_shell_command,
-                                           int32_t num_resumes);
+                                           uint32_t num_resumes);
 
   void
   SetMonitorProcessCallback(const Host::MonitorChildProcessCallback &callback,

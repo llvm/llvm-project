@@ -241,8 +241,8 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
 }
 
 bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
-    Status &error, bool localhost, bool will_debug,
-    bool first_arg_is_full_shell_command, int32_t num_resumes) {
+    Status &error, bool will_debug, bool first_arg_is_full_shell_command,
+    uint32_t num_resumes) {
   error.Clear();
 
   if (GetFlags().Test(eLaunchFlagLaunchInShell)) {
