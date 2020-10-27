@@ -552,6 +552,8 @@ template <class ELFT>
 static void overrideFields(ELFYAML::Section *From, typename ELFT::Shdr &To) {
   if (!From)
     return;
+  if (From->ShAddrAlign)
+    To.sh_addralign = *From->ShAddrAlign;
   if (From->ShFlags)
     To.sh_flags = *From->ShFlags;
   if (From->ShName)
