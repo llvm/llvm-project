@@ -55,6 +55,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -338,6 +339,15 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
         IsShort ? HwasanTagMismatchV2Ref : HwasanTagMismatchV1Ref;
     MCSymbol *Sym = P.second;
 
+    bool HasMatchAllTag =
+        (AccessInfo >> HWASanAccessInfo::HasMatchAllShift) & 1;
+    uint8_t MatchAllTag =
+        (AccessInfo >> HWASanAccessInfo::MatchAllShift) & 0xff;
+    unsigned Size =
+        1 << ((AccessInfo >> HWASanAccessInfo::AccessSizeShift) & 0xf);
+    bool CompileKernel =
+        (AccessInfo >> HWASanAccessInfo::CompileKernelShift) & 1;
+
     OutStreamer->SwitchSection(OutContext.getELFSection(
         ".text.hot", ELF::SHT_PROGBITS,
         ELF::SHF_EXECINSTR | ELF::SHF_ALLOC | ELF::SHF_GROUP, 0,
@@ -382,6 +392,26 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
         MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
     OutStreamer->emitLabel(HandleMismatchOrPartialSym);
 
+    if (HasMatchAllTag) {
+      OutStreamer->emitInstruction(MCInstBuilder(AArch64::UBFMXri)
+                                       .addReg(AArch64::X16)
+                                       .addReg(Reg)
+                                       .addImm(56)
+                                       .addImm(63),
+                                   *STI);
+      OutStreamer->emitInstruction(MCInstBuilder(AArch64::SUBSXri)
+                                       .addReg(AArch64::XZR)
+                                       .addReg(AArch64::X16)
+                                       .addImm(MatchAllTag)
+                                       .addImm(0),
+                                   *STI);
+      OutStreamer->emitInstruction(
+          MCInstBuilder(AArch64::Bcc)
+              .addImm(AArch64CC::EQ)
+              .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext)),
+          *STI);
+    }
+
     if (IsShort) {
       OutStreamer->emitInstruction(MCInstBuilder(AArch64::SUBSWri)
                                        .addReg(AArch64::WZR)
@@ -402,7 +432,6 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
               .addReg(Reg)
               .addImm(AArch64_AM::encodeLogicalImmediate(0xf, 64)),
           *STI);
-      unsigned Size = 1 << (AccessInfo & 0xf);
       if (Size != 1)
         OutStreamer->emitInstruction(MCInstBuilder(AArch64::ADDXri)
                                          .addReg(AArch64::X17)
@@ -470,32 +499,41 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
                                        .addReg(Reg)
                                        .addImm(0),
                                    *STI);
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::MOVZXi)
-                                     .addReg(AArch64::X1)
-                                     .addImm(AccessInfo)
-                                     .addImm(0),
-                                 *STI);
+    OutStreamer->emitInstruction(
+        MCInstBuilder(AArch64::MOVZXi)
+            .addReg(AArch64::X1)
+            .addImm(AccessInfo & HWASanAccessInfo::RuntimeMask)
+            .addImm(0),
+        *STI);
 
-    // Intentionally load the GOT entry and branch to it, rather than possibly
-    // late binding the function, which may clobber the registers before we have
-    // a chance to save them.
-    OutStreamer->emitInstruction(
-        MCInstBuilder(AArch64::ADRP)
-            .addReg(AArch64::X16)
-            .addExpr(AArch64MCExpr::create(
-                HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_PAGE,
-                OutContext)),
-        *STI);
-    OutStreamer->emitInstruction(
-        MCInstBuilder(AArch64::LDRXui)
-            .addReg(AArch64::X16)
-            .addReg(AArch64::X16)
-            .addExpr(AArch64MCExpr::create(
-                HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_LO12,
-                OutContext)),
-        *STI);
-    OutStreamer->emitInstruction(
-        MCInstBuilder(AArch64::BR).addReg(AArch64::X16), *STI);
+    if (CompileKernel) {
+      // The Linux kernel's dynamic loader doesn't support GOT relative
+      // relocations, but it doesn't support late binding either, so just call
+      // the function directly.
+      OutStreamer->emitInstruction(
+          MCInstBuilder(AArch64::B).addExpr(HwasanTagMismatchRef), *STI);
+    } else {
+      // Intentionally load the GOT entry and branch to it, rather than possibly
+      // late binding the function, which may clobber the registers before we
+      // have a chance to save them.
+      OutStreamer->emitInstruction(
+          MCInstBuilder(AArch64::ADRP)
+              .addReg(AArch64::X16)
+              .addExpr(AArch64MCExpr::create(
+                  HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_PAGE,
+                  OutContext)),
+          *STI);
+      OutStreamer->emitInstruction(
+          MCInstBuilder(AArch64::LDRXui)
+              .addReg(AArch64::X16)
+              .addReg(AArch64::X16)
+              .addExpr(AArch64MCExpr::create(
+                  HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_LO12,
+                  OutContext)),
+          *STI);
+      OutStreamer->emitInstruction(
+          MCInstBuilder(AArch64::BR).addReg(AArch64::X16), *STI);
+    }
   }
 }
 

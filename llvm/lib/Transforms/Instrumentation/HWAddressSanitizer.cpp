@@ -283,8 +283,12 @@ private:
 
   bool CompileKernel;
   bool Recover;
+  bool OutlinedChecks;
   bool UseShortGranules;
   bool InstrumentLandingPads;
+
+  bool HasMatchAllTag = false;
+  uint8_t MatchAllTag = 0;
 
   Function *HwasanCtorFunction;
 
@@ -496,6 +500,19 @@ void HWAddressSanitizer::initializeModule() {
 
   UseShortGranules =
       ClUseShortGranules.getNumOccurrences() ? ClUseShortGranules : NewRuntime;
+  OutlinedChecks =
+      TargetTriple.isAArch64() && TargetTriple.isOSBinFormatELF() &&
+      (ClInlineAllChecks.getNumOccurrences() ? !ClInlineAllChecks : !Recover);
+
+  if (ClMatchAllTag.getNumOccurrences()) {
+    if (ClMatchAllTag != -1) {
+      HasMatchAllTag = true;
+      MatchAllTag = ClMatchAllTag & 0xFF;
+    }
+  } else if (CompileKernel) {
+    HasMatchAllTag = true;
+    MatchAllTag = 0xFF;
+  }
 
   // If we don't have personality function support, fall back to landing pads.
   InstrumentLandingPads = ClInstrumentLandingPads.getNumOccurrences()
@@ -706,11 +723,16 @@ Value *HWAddressSanitizer::memToShadow(Value *Mem, IRBuilder<> &IRB) {
 void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
                                                    unsigned AccessSizeIndex,
                                                    Instruction *InsertBefore) {
-  const int64_t AccessInfo = Recover * 0x20 + IsWrite * 0x10 + AccessSizeIndex;
+  const int64_t AccessInfo =
+      (CompileKernel << HWASanAccessInfo::CompileKernelShift) +
+      (HasMatchAllTag << HWASanAccessInfo::HasMatchAllShift) +
+      (MatchAllTag << HWASanAccessInfo::MatchAllShift) +
+      (Recover << HWASanAccessInfo::RecoverShift) +
+      (IsWrite << HWASanAccessInfo::IsWriteShift) +
+      (AccessSizeIndex << HWASanAccessInfo::AccessSizeShift);
   IRBuilder<> IRB(InsertBefore);
 
-  if (!ClInlineAllChecks && TargetTriple.isAArch64() &&
-      TargetTriple.isOSBinFormatELF() && !Recover) {
+  if (OutlinedChecks) {
     Module *M = IRB.GetInsertBlock()->getParent()->getParent();
     Ptr = IRB.CreateBitCast(Ptr, Int8PtrTy);
     IRB.CreateCall(Intrinsic::getDeclaration(
@@ -729,11 +751,9 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   Value *MemTag = IRB.CreateLoad(Int8Ty, Shadow);
   Value *TagMismatch = IRB.CreateICmpNE(PtrTag, MemTag);
 
-  int matchAllTag = ClMatchAllTag.getNumOccurrences() > 0 ?
-      ClMatchAllTag : (CompileKernel ? 0xFF : -1);
-  if (matchAllTag != -1) {
-    Value *TagNotIgnored = IRB.CreateICmpNE(PtrTag,
-        ConstantInt::get(PtrTag->getType(), matchAllTag));
+  if (HasMatchAllTag) {
+    Value *TagNotIgnored = IRB.CreateICmpNE(
+        PtrTag, ConstantInt::get(PtrTag->getType(), MatchAllTag));
     TagMismatch = IRB.CreateAnd(TagMismatch, TagNotIgnored);
   }
 
@@ -773,7 +793,9 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
       // The signal handler will find the data address in rdi.
       Asm = InlineAsm::get(
           FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
-          "int3\nnopl " + itostr(0x40 + AccessInfo) + "(%rax)",
+          "int3\nnopl " +
+              itostr(0x40 + (AccessInfo & HWASanAccessInfo::RuntimeMask)) +
+              "(%rax)",
           "{rdi}",
           /*hasSideEffects=*/true);
       break;
@@ -782,7 +804,8 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
       // The signal handler will find the data address in x0.
       Asm = InlineAsm::get(
           FunctionType::get(IRB.getVoidTy(), {PtrLong->getType()}, false),
-          "brk #" + itostr(0x900 + AccessInfo),
+          "brk #" +
+              itostr(0x900 + (AccessInfo & HWASanAccessInfo::RuntimeMask)),
           "{x0}",
           /*hasSideEffects=*/true);
       break;
