@@ -99,7 +99,6 @@ static_library("CodeGen") {
     "MachineBlockPlacement.cpp",
     "MachineBranchProbabilityInfo.cpp",
     "MachineCSE.cpp",
-    "MachineCfgTraits.cpp",
     "MachineCombiner.cpp",
     "MachineCopyPropagation.cpp",
     "MachineDebugify.cpp",
