@@ -271,29 +271,29 @@ void syntax::Node::assertInvariantsRecursive() const {
 #endif
 }
 
-syntax::Leaf *syntax::Tree::findFirstLeaf() {
-  for (auto *C = getFirstChild(); C; C = C->getNextSibling()) {
-    if (auto *L = dyn_cast<syntax::Leaf>(C))
+const syntax::Leaf *syntax::Tree::findFirstLeaf() const {
+  for (const auto *C = getFirstChild(); C; C = C->getNextSibling()) {
+    if (const auto *L = dyn_cast<syntax::Leaf>(C))
       return L;
-    if (auto *L = cast<syntax::Tree>(C)->findFirstLeaf())
+    if (const auto *L = cast<syntax::Tree>(C)->findFirstLeaf())
       return L;
   }
   return nullptr;
 }
 
-syntax::Leaf *syntax::Tree::findLastLeaf() {
-  syntax::Leaf *Last = nullptr;
-  for (auto *C = getFirstChild(); C; C = C->getNextSibling()) {
-    if (auto *L = dyn_cast<syntax::Leaf>(C))
+const syntax::Leaf *syntax::Tree::findLastLeaf() const {
+  const syntax::Leaf *Last = nullptr;
+  for (const auto *C = getFirstChild(); C; C = C->getNextSibling()) {
+    if (const auto *L = dyn_cast<syntax::Leaf>(C))
       Last = L;
-    else if (auto *L = cast<syntax::Tree>(C)->findLastLeaf())
+    else if (const auto *L = cast<syntax::Tree>(C)->findLastLeaf())
       Last = L;
   }
   return Last;
 }
 
-syntax::Node *syntax::Tree::findChild(NodeRole R) {
-  for (auto *C = FirstChild; C; C = C->getNextSibling()) {
+const syntax::Node *syntax::Tree::findChild(NodeRole R) const {
+  for (const auto *C = FirstChild; C; C = C->getNextSibling()) {
     if (C->getRole() == R)
       return C;
   }
