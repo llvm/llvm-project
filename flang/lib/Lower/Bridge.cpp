@@ -169,6 +169,12 @@ public:
               [&](Fortran::lower::pft::FunctionLikeUnit &f) { lowerFunc(f); },
               [&](Fortran::lower::pft::ModuleLikeUnit &m) { lowerMod(m); },
               [&](Fortran::lower::pft::BlockDataUnit &b) { lowerBlockData(b); },
+              [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {
+                setCurrentPosition(
+                    d.get<Fortran::parser::CompilerDirective>().source);
+                mlir::emitWarning(toLocation(),
+                                  "ignoring all compiler directives");
+              },
           },
           u);
     }
@@ -188,6 +194,9 @@ public:
                      },
                      [&](Fortran::lower::pft::BlockDataUnit &) {
                        // No functions defined in block data.
+                     },
+                     [&](Fortran::lower::pft::CompilerDirectiveUnit &) {
+                       // No functions defined.
                      },
                  },
                  u);

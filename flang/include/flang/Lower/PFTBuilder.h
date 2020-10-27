@@ -353,7 +353,7 @@ using ProgramVariant =
     ReferenceVariant<parser::MainProgram, parser::FunctionSubprogram,
                      parser::SubroutineSubprogram, parser::Module,
                      parser::Submodule, parser::SeparateModuleSubprogram,
-                     parser::BlockData>;
+                     parser::BlockData, parser::CompilerDirective>;
 /// A program is a list of program units.
 /// These units can be function like, module like, or block data.
 struct ProgramUnit : ProgramVariant {
@@ -672,9 +672,19 @@ struct BlockDataUnit : public ProgramUnit {
   const Fortran::semantics::Scope &symTab; // symbol table
 };
 
+// Top level compiler directives
+struct CompilerDirectiveUnit : public ProgramUnit {
+  CompilerDirectiveUnit(const parser::CompilerDirective &directive,
+                        const ParentVariant &parentVariant)
+      : ProgramUnit{directive, parentVariant} {};
+  CompilerDirectiveUnit(CompilerDirectiveUnit &&) = default;
+  CompilerDirectiveUnit(const CompilerDirectiveUnit &) = delete;
+};
+
 /// A Program is the top-level root of the PFT.
 struct Program {
-  using Units = std::variant<FunctionLikeUnit, ModuleLikeUnit, BlockDataUnit>;
+  using Units = std::variant<FunctionLikeUnit, ModuleLikeUnit, BlockDataUnit,
+                             CompilerDirectiveUnit>;
 
   Program() = default;
   Program(Program &&) = default;

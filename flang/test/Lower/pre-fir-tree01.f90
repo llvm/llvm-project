@@ -143,6 +143,20 @@ subroutine test_directive()
 end subroutine
 ! CHECK: EndSubroutine
 
+! Test top level directives
+!DIR$ INTEGER=64
+! CHECK: CompilerDirective:
+! CHECK: EndCompilerDirective
+
+! Test nested directive
+! CHECK: Subroutine test_directive
+subroutine test_directive()
+  !DIR$ INTEGER=64
+  ! CHECK: <<CompilerDirective>>
+  ! CHECK: <<End CompilerDirective>>
+end subroutine
+! CHECK: EndSubroutine
+
 ! CHECK: Program <anonymous>
   ! check specification parts are not part of the PFT.
   ! CHECK-NOT: node
