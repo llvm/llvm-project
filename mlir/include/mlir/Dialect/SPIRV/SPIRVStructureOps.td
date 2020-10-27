@@ -60,7 +60,7 @@ def SPV_AddressOfOp : SPV_Op<"_address_of", [InFunctionScope, NoSideEffect]> {
 
   let autogenSerialization = 0;
 
-  let builders = [OpBuilder<[{spirv::GlobalVariableOp var}]>];
+  let builders = [OpBuilderDAG<(ins "spirv::GlobalVariableOp":$var)>];
 
   let assemblyFormat = "$variable attr-dict `:` type($pointer)";
 }
@@ -188,9 +188,9 @@ def SPV_EntryPointOp : SPV_Op<"EntryPoint", [InModuleScope]> {
 
   let autogenSerialization = 0;
 
-  let builders = [OpBuilder<[{spirv::ExecutionModel executionModel,
-                              spirv::FuncOp function,
-                              ArrayRef<Attribute> interfaceVars}]>];
+  let builders = [
+    OpBuilderDAG<(ins "spirv::ExecutionModel":$executionModel,
+      "spirv::FuncOp":$function, "ArrayRef<Attribute>":$interfaceVars)>];
 }
 
 // -----
@@ -241,11 +241,10 @@ def SPV_FuncOp : SPV_Op<"func", [
 
   let verifier = [{ return success(); }];
 
-  let builders = [OpBuilder<[{
-    StringRef name, FunctionType type,
-    spirv::FunctionControl control = spirv::FunctionControl::None,
-    ArrayRef<NamedAttribute> attrs = {}
-  }]>];
+  let builders = [
+    OpBuilderDAG<(ins "StringRef":$name, "FunctionType":$type,
+      CArg<"spirv::FunctionControl", "spirv::FunctionControl::None">:$control,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
 
   let hasOpcode = 0;
 
@@ -330,14 +329,15 @@ def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
   let results = (outs);
 
   let builders = [
-    OpBuilder<
-      "TypeAttr type, ArrayRef<NamedAttribute> namedAttrs", [{
+    OpBuilderDAG<(ins "TypeAttr":$type, "ArrayRef<NamedAttribute>":$namedAttrs),
+    [{
       $_state.addAttribute("type", type);
       $_state.addAttributes(namedAttrs);
     }]>,
-    OpBuilder<[{Type type, StringRef name, unsigned descriptorSet,
-                unsigned binding}]>,
-    OpBuilder<[{Type type, StringRef name, spirv::BuiltIn builtin}]>
+    OpBuilderDAG<(ins "Type":$type, "StringRef":$name,
+      "unsigned":$descriptorSet, "unsigned":$binding)>,
+    OpBuilderDAG<(ins "Type":$type, "StringRef":$name,
+      "spirv::BuiltIn":$builtin)>
   ];
 
   let hasOpcode = 0;
@@ -413,10 +413,10 @@ def SPV_ModuleOp : SPV_Op<"module",
   let regions = (region SizedRegion<1>:$body);
 
   let builders = [
-    OpBuilder<[{Optional<StringRef> name = llvm::None}]>,
-    OpBuilder<[{spirv::AddressingModel addressing_model,
-                spirv::MemoryModel memory_model,
-                Optional<StringRef> name = llvm::None}]>
+    OpBuilderDAG<(ins CArg<"Optional<StringRef>", "llvm::None">:$name)>,
+    OpBuilderDAG<(ins "spirv::AddressingModel":$addressing_model,
+      "spirv::MemoryModel":$memory_model,
+      CArg<"Optional<StringRef>", "llvm::None">:$name)>
   ];
 
   // We need to ensure the block inside the region is properly terminated;

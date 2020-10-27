@@ -1232,6 +1232,11 @@ void OpEmitter::genBuilder() {
         llvm::Optional<StringRef> params =
             builderDef->getValueAsOptionalString("params");
         FmtContext fctx;
+        if (params.hasValue()) {
+          PrintWarning(op.getLoc(),
+                       "Op uses a deprecated, string-based OpBuilder format; "
+                       "use OpBuilderDAG with '(ins <...>)' instead");
+        }
         std::string paramStr =
             params.hasValue() ? builderSignatureFromString(params->trim(), fctx)
                               : builderSignatureFromDAG(

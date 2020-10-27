@@ -1461,8 +1461,8 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
       let regions = (region AnyRegion:$region);
 
       let skipDefaultBuilders = 1;
-      let builders = [ OpBuilder<
-        "ValueRange inputs, ValueRange outputBuffers",
+      let builders = [ OpBuilderDAG<
+        (ins "ValueRange":$inputs, "ValueRange":$outputBuffers),
         [{{
           $_state.addOperands(inputs);
           $_state.addOperands(outputBuffers);
@@ -1479,9 +1479,9 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
             TypeRange(outputBuffers),
             TypeRange(),
             TypeRange());
-        }]>, OpBuilder<
-        "TypeRange resultTensorTypes, ValueRange inputs, "
-        "ValueRange outputBuffers, ValueRange initTensors",
+        }]>, OpBuilderDAG<
+        (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+             "ValueRange":$outputBuffers, "ValueRange":$initTensors),
         [{{
           $_state.addOperands(inputs);
           $_state.addOperands(outputBuffers);
@@ -1500,8 +1500,9 @@ void TCParser::printODS(llvm::raw_ostream &os, StringRef cppOpName,
             TypeRange(outputBuffers),
             TypeRange(initTensors),
             resultTensorTypes);
-        }]>, OpBuilder<
-        "TypeRange resultTensorTypes, ValueRange operands, ArrayRef<NamedAttribute> attributes = {{}",
+        }]>, OpBuilderDAG<
+        (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
+             CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
         [{{
           $_state.addOperands(operands);
           $_state.addAttributes(attributes);
