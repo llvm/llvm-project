@@ -41,7 +41,7 @@ void LinalgToSPIRVPass::runOnOperation() {
            typeConverter.isLegal(&op.getBody());
   });
 
-  if (failed(applyFullConversion(module, *target, patterns)))
+  if (failed(applyFullConversion(module, *target, std::move(patterns))))
     return signalPassFailure();
 }
 

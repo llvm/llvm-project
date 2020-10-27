@@ -60,6 +60,8 @@ void TestConvVectorization::runOnOperation() {
 
   SmallVector<OwningRewritePatternList, 4> stage1Patterns;
   linalg::populateConvVectorizationPatterns(context, stage1Patterns, tileSizes);
+  SmallVector<FrozenRewritePatternList, 4> frozenStage1Patterns;
+  llvm::move(stage1Patterns, std::back_inserter(frozenStage1Patterns));
 
   OwningRewritePatternList stage2Patterns =
       linalg::getLinalgTilingCanonicalizationPatterns(context);
@@ -78,8 +80,8 @@ void TestConvVectorization::runOnOperation() {
     return success();
   };
 
-  linalg::applyStagedPatterns(module, stage1Patterns, stage2Patterns,
-                              stage3Transforms);
+  linalg::applyStagedPatterns(module, frozenStage1Patterns,
+                              std::move(stage2Patterns), stage3Transforms);
 
   //===--------------------------------------------------------------------===//
   // Post staged patterns transforms

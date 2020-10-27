@@ -107,12 +107,10 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
 
   // TODO: Change the type for the indirect users such as spv.Load, spv.Store,
   // spv.FunctionCall and so on.
-
-  for (auto spirvModule : module.getOps<spirv::ModuleOp>()) {
-    if (failed(applyFullConversion(spirvModule, target, patterns))) {
+  FrozenRewritePatternList frozenPatterns(std::move(patterns));
+  for (auto spirvModule : module.getOps<spirv::ModuleOp>())
+    if (failed(applyFullConversion(spirvModule, target, frozenPatterns)))
       signalPassFailure();
-    }
-  }
 }
 
 std::unique_ptr<OperationPass<ModuleOp>>

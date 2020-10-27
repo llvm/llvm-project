@@ -14,7 +14,7 @@
 #ifndef MLIR_TRANSFORMS_GREEDYPATTERNREWRITEDRIVER_H_
 #define MLIR_TRANSFORMS_GREEDYPATTERNREWRITEDRIVER_H_
 
-#include "mlir/IR/PatternMatch.h"
+#include "mlir/Rewrite/FrozenRewritePatternList.h"
 
 namespace mlir {
 
@@ -32,11 +32,11 @@ namespace mlir {
 ///
 LogicalResult
 applyPatternsAndFoldGreedily(Operation *op,
-                             const OwningRewritePatternList &patterns);
+                             const FrozenRewritePatternList &patterns);
 /// Rewrite the given regions, which must be isolated from above.
 LogicalResult
 applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
-                             const OwningRewritePatternList &patterns);
+                             const FrozenRewritePatternList &patterns);
 
 /// Applies the specified patterns on `op` alone while also trying to fold it,
 /// by selecting the highest benefits patterns in a greedy manner. Returns
@@ -44,7 +44,7 @@ applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
 /// was folded away or erased as a result of becoming dead. Note: This does not
 /// apply any patterns recursively to the regions of `op`.
 LogicalResult applyOpPatternsAndFold(Operation *op,
-                                     const OwningRewritePatternList &patterns,
+                                     const FrozenRewritePatternList &patterns,
                                      bool *erased = nullptr);
 
 } // end namespace mlir

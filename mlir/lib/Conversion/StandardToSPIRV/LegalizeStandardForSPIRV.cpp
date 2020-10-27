@@ -203,7 +203,8 @@ void SPIRVLegalization::runOnOperation() {
   OwningRewritePatternList patterns;
   auto *context = &getContext();
   populateStdLegalizationPatternsForSPIRVLowering(context, patterns);
-  applyPatternsAndFoldGreedily(getOperation()->getRegions(), patterns);
+  applyPatternsAndFoldGreedily(getOperation()->getRegions(),
+                               std::move(patterns));
 }
 
 std::unique_ptr<Pass> mlir::createLegalizeStdOpsForSPIRVLoweringPass() {

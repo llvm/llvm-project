@@ -440,6 +440,11 @@ public:
   PatternListT::size_type size() const { return patterns.size(); }
   void clear() { patterns.clear(); }
 
+  /// Take ownership of the patterns held by this list.
+  std::vector<std::unique_ptr<RewritePattern>> takePatterns() {
+    return std::move(patterns);
+  }
+
   //===--------------------------------------------------------------------===//
   // Pattern Insertion
   //===--------------------------------------------------------------------===//

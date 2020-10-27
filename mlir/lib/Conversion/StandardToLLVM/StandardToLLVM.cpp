@@ -3788,7 +3788,7 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     LLVMConversionTarget target(getContext());
-    if (failed(applyPartialConversion(m, target, patterns)))
+    if (failed(applyPartialConversion(m, target, std::move(patterns))))
       signalPassFailure();
     m.setAttr(LLVM::LLVMDialect::getDataLayoutAttrName(),
               StringAttr::get(this->dataLayout, m.getContext()));

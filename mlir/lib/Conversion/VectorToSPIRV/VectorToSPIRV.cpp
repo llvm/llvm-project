@@ -109,7 +109,7 @@ void LowerVectorToSPIRVPass::runOnOperation() {
   target->addLegalOp<ModuleOp, ModuleTerminatorOp>();
   target->addLegalOp<FuncOp>();
 
-  if (failed(applyFullConversion(module, *target, patterns)))
+  if (failed(applyFullConversion(module, *target, std::move(patterns))))
     return signalPassFailure();
 }
 

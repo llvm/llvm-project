@@ -59,16 +59,15 @@ struct LowerGpuOpsToROCDLOpsPass
                                   /*useAlignedAlloc =*/false};
     LLVMTypeConverter converter(m.getContext(), options);
 
-    OwningRewritePatternList patterns;
+    OwningRewritePatternList patterns, llvmPatterns;
 
     populateGpuRewritePatterns(m.getContext(), patterns);
-    applyPatternsAndFoldGreedily(m, patterns);
-    patterns.clear();
+    applyPatternsAndFoldGreedily(m, std::move(patterns));
 
-    populateVectorToLLVMConversionPatterns(converter, patterns);
-    populateVectorToROCDLConversionPatterns(converter, patterns);
-    populateStdToLLVMConversionPatterns(converter, patterns);
-    populateGpuToROCDLConversionPatterns(converter, patterns);
+    populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
+    populateVectorToROCDLConversionPatterns(converter, llvmPatterns);
+    populateStdToLLVMConversionPatterns(converter, llvmPatterns);
+    populateGpuToROCDLConversionPatterns(converter, llvmPatterns);
     LLVMConversionTarget target(getContext());
     target.addIllegalDialect<gpu::GPUDialect>();
     target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::FAbsOp, LLVM::FCeilOp,
@@ -78,7 +77,7 @@ struct LowerGpuOpsToROCDLOpsPass
     target.addLegalDialect<ROCDL::ROCDLDialect>();
     // TODO: Remove once we support replacing non-root ops.
     target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
-    if (failed(applyPartialConversion(m, target, patterns)))
+    if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
   }
 };
