@@ -740,12 +740,11 @@ void Lexer::lexHTMLEndTag(Token &T) {
 
 Lexer::Lexer(llvm::BumpPtrAllocator &Allocator, DiagnosticsEngine &Diags,
              const CommandTraits &Traits, SourceLocation FileLoc,
-             const char *BufferStart, const char *BufferEnd,
-             bool ParseCommands)
+             const char *BufferStart, const char *BufferEnd, bool ParseCommands)
     : Allocator(Allocator), Diags(Diags), Traits(Traits),
-      BufferStart(BufferStart), BufferEnd(BufferEnd), FileLoc(FileLoc),
-      BufferPtr(BufferStart), CommentState(LCS_BeforeComment), State(LS_Normal),
-      ParseCommands(ParseCommands) {}
+      BufferStart(BufferStart), BufferEnd(BufferEnd), BufferPtr(BufferStart),
+      FileLoc(FileLoc), ParseCommands(ParseCommands),
+      CommentState(LCS_BeforeComment), State(LS_Normal) {}
 
 void Lexer::lex(Token &T) {
 again:
