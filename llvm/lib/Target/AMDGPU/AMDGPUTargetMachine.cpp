@@ -236,6 +236,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUPromoteAllocaToVectorPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
+  initializeAMDGPULateCodeGenPreparePass(*PR);
   initializeAMDGPUPropagateAttributesEarlyPass(*PR);
   initializeAMDGPUPropagateAttributesLatePass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
@@ -865,6 +866,7 @@ ScheduleDAGInstrs *GCNPassConfig::createMachineScheduler(
 bool GCNPassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
 
+  addPass(createAMDGPULateCodeGenPreparePass());
   if (EnableAtomicOptimizations) {
     addPass(createAMDGPUAtomicOptimizerPass());
   }
