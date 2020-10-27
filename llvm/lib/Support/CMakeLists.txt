@@ -97,7 +97,6 @@ add_llvm_component_library(LLVMSupport
   BranchProbability.cpp
   BuryPointer.cpp
   CachePruning.cpp
-  CfgTraits.cpp
   circular_raw_ostream.cpp
   Chrono.cpp
   COM.cpp
