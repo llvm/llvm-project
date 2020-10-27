@@ -488,8 +488,8 @@ locateSymbolTextually(const SpelledWord &Word, ParsedAST &AST,
       Located.Definition = *MaybeDefLoc;
     }
 
-    if (ScoredResults.size() >= 3) {
-      // If we have more than 3 results, don't return anything,
+    if (ScoredResults.size() >= 5) {
+      // If we have more than 5 results, don't return anything,
       // as confidence is too low.
       // FIXME: Alternatively, try a stricter query?
       TooMany = true;
