@@ -4665,11 +4665,9 @@ void GNUStyle<ELFT>::printVersionSymbolSection(const Elf_Shdr *Sec) {
     Expected<StringRef> NameOrErr =
         this->dumper().getSymbolVersionByIndex(Ndx, IsDefault);
     if (!NameOrErr) {
-      if (!NameOrErr)
-        this->reportUniqueWarning(
-            createError("unable to get a version for entry " + Twine(I) +
-                        " of " + describe(this->Obj, *Sec) + ": " +
-                        toString(NameOrErr.takeError())));
+      this->reportUniqueWarning(createError(
+          "unable to get a version for entry " + Twine(I) + " of " +
+          describe(this->Obj, *Sec) + ": " + toString(NameOrErr.takeError())));
       Versions.emplace_back("<corrupt>");
       continue;
     }
