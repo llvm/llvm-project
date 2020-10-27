@@ -587,7 +587,7 @@ public:
   PragmaStack<StringLiteral *> CodeSegStack;
 
   // This stack tracks the current state of Sema.CurFPFeatures.
-  PragmaStack<unsigned> FpPragmaStack;
+  PragmaStack<FPOptionsOverride::storage_type> FpPragmaStack;
   FPOptionsOverride CurFPFeatureOverrides() {
     FPOptionsOverride result;
     if (!FpPragmaStack.hasValue()) {
@@ -1405,12 +1405,12 @@ public:
       S.CurFPFeatures = OldFPFeaturesState;
       S.FpPragmaStack.CurrentValue = OldOverrides;
     }
-    unsigned getOverrides() { return OldOverrides; }
+    FPOptionsOverride::storage_type getOverrides() { return OldOverrides; }
 
   private:
     Sema& S;
     FPOptions OldFPFeaturesState;
-    unsigned OldOverrides;
+    FPOptionsOverride::storage_type OldOverrides;
   };
 
   void addImplicitTypedef(StringRef Name, QualType T);
@@ -1997,7 +1997,10 @@ public:
   bool RequireCompleteSizedType(SourceLocation Loc, QualType T, unsigned DiagID,
                                 const Ts &... Args) {
     SizelessTypeDiagnoser<Ts...> Diagnoser(DiagID, Args...);
-    return RequireCompleteType(Loc, T, CompleteTypeKind::Normal, Diagnoser);
+    CompleteTypeKind Kind = CompleteTypeKind::Normal;
+    if (T->isVLST())
+      Kind = CompleteTypeKind::AcceptSizeless;
+    return RequireCompleteType(Loc, T, Kind, Diagnoser);
   }
 
   void completeExprArrayBound(Expr *E);
@@ -2015,7 +2018,10 @@ public:
   bool RequireCompleteSizedExprType(Expr *E, unsigned DiagID,
                                     const Ts &... Args) {
     SizelessTypeDiagnoser<Ts...> Diagnoser(DiagID, Args...);
-    return RequireCompleteExprType(E, CompleteTypeKind::Normal, Diagnoser);
+    CompleteTypeKind Kind = CompleteTypeKind::Normal;
+    if (E->getType()->isVLST())
+      Kind = CompleteTypeKind::AcceptSizeless;
+    return RequireCompleteExprType(E, Kind, Diagnoser);
   }
 
   bool RequireLiteralType(SourceLocation Loc, QualType T,
@@ -2111,9 +2117,11 @@ public:
     /// resolved. ActOnNameClassifiedAsDependentNonType should be called to
     /// convert the result to an expression.
     NC_DependentNonType,
-    /// The name was classified as a non-type, and an expression representing
-    /// that name has been formed.
-    NC_ContextIndependentExpr,
+    /// The name was classified as an overload set, and an expression
+    /// representing that overload set has been formed.
+    /// ActOnNameClassifiedAsOverloadSet should be called to form a suitable
+    /// expression referencing the overload set.
+    NC_OverloadSet,
     /// The name was classified as a template whose specializations are types.
     NC_TypeTemplate,
     /// The name was classified as a variable template name.
@@ -2150,8 +2158,8 @@ public:
       return NameClassification(NC_Unknown);
     }
 
-    static NameClassification ContextIndependentExpr(ExprResult E) {
-      NameClassification Result(NC_ContextIndependentExpr);
+    static NameClassification OverloadSet(ExprResult E) {
+      NameClassification Result(NC_OverloadSet);
       Result.Expr = E;
       return Result;
     }
@@ -2203,7 +2211,7 @@ public:
     NameClassificationKind getKind() const { return Kind; }
 
     ExprResult getExpression() const {
-      assert(Kind == NC_ContextIndependentExpr);
+      assert(Kind == NC_OverloadSet);
       return Expr;
     }
 
@@ -2283,6 +2291,8 @@ public:
                                           NamedDecl *Found,
                                           SourceLocation NameLoc,
                                           const Token &NextToken);
+  /// Act on the result of classifying a name as an overload set.
+  ExprResult ActOnNameClassifiedAsOverloadSet(Scope *S, Expr *OverloadSet);
 
   /// Describes the detailed kind of a template name. Used in diagnostics.
   enum class TemplateNameKindForDiagnostics {
@@ -4840,11 +4850,10 @@ public:
       Expr *baseObjectExpr = nullptr,
       SourceLocation opLoc = SourceLocation());
 
-  ExprResult BuildPossibleImplicitMemberExpr(const CXXScopeSpec &SS,
-                                             SourceLocation TemplateKWLoc,
-                                             LookupResult &R,
-                                const TemplateArgumentListInfo *TemplateArgs,
-                                             const Scope *S);
+  ExprResult BuildPossibleImplicitMemberExpr(
+      const CXXScopeSpec &SS, SourceLocation TemplateKWLoc, LookupResult &R,
+      const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
+      UnresolvedLookupExpr *AsULE = nullptr);
   ExprResult BuildImplicitMemberExpr(const CXXScopeSpec &SS,
                                      SourceLocation TemplateKWLoc,
                                      LookupResult &R,
@@ -6965,7 +6974,7 @@ public:
 
   /// DiagnoseAbsenceOfOverrideControl - Diagnose if 'override' keyword was
   /// not used in the declaration of an overriding method.
-  void DiagnoseAbsenceOfOverrideControl(NamedDecl *D);
+  void DiagnoseAbsenceOfOverrideControl(NamedDecl *D, bool Inconsistent);
 
   /// CheckForFunctionMarkedFinal - Checks whether a virtual member function
   /// overrides a virtual member function marked 'final', according to
@@ -8170,6 +8179,8 @@ public:
   /// Completely replace the \c auto in \p TypeWithAuto by
   /// \p Replacement. This does not retain any \c auto type sugar.
   QualType ReplaceAutoType(QualType TypeWithAuto, QualType Replacement);
+  TypeSourceInfo *ReplaceAutoTypeSourceInfo(TypeSourceInfo *TypeWithAuto,
+                                            QualType Replacement);
 
   /// Result type of DeduceAutoType.
   enum DeduceAutoResult {
@@ -10714,7 +10725,9 @@ public:
       DeclarationNameInfo &ReductionOrMapperId, int ExtraModifier,
       ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
       ArrayRef<SourceLocation> MapTypeModifiersLoc, bool IsMapTypeImplicit,
-      SourceLocation ExtraModifierLoc);
+      SourceLocation ExtraModifierLoc,
+      ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+      ArrayRef<SourceLocation> MotionModifiersLoc);
   /// Called on well-formed 'inclusive' clause.
   OMPClause *ActOnOpenMPInclusiveClause(ArrayRef<Expr *> VarList,
                                         SourceLocation StartLoc,
@@ -10851,15 +10864,20 @@ public:
       SourceLocation KindLoc, SourceLocation EndLoc);
   /// Called on well-formed 'to' clause.
   OMPClause *
-  ActOnOpenMPToClause(ArrayRef<Expr *> VarList, CXXScopeSpec &MapperIdScopeSpec,
-                      DeclarationNameInfo &MapperId,
-                      const OMPVarListLocTy &Locs,
+  ActOnOpenMPToClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+                      ArrayRef<SourceLocation> MotionModifiersLoc,
+                      CXXScopeSpec &MapperIdScopeSpec,
+                      DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
+                      ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
                       ArrayRef<Expr *> UnresolvedMappers = llvm::None);
   /// Called on well-formed 'from' clause.
-  OMPClause *ActOnOpenMPFromClause(
-      ArrayRef<Expr *> VarList, CXXScopeSpec &MapperIdScopeSpec,
-      DeclarationNameInfo &MapperId, const OMPVarListLocTy &Locs,
-      ArrayRef<Expr *> UnresolvedMappers = llvm::None);
+  OMPClause *
+  ActOnOpenMPFromClause(ArrayRef<OpenMPMotionModifierKind> MotionModifiers,
+                        ArrayRef<SourceLocation> MotionModifiersLoc,
+                        CXXScopeSpec &MapperIdScopeSpec,
+                        DeclarationNameInfo &MapperId, SourceLocation ColonLoc,
+                        ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
+                        ArrayRef<Expr *> UnresolvedMappers = llvm::None);
   /// Called on well-formed 'use_device_ptr' clause.
   OMPClause *ActOnOpenMPUseDevicePtrClause(ArrayRef<Expr *> VarList,
                                            const OMPVarListLocTy &Locs);
@@ -12166,6 +12184,7 @@ private:
   bool SemaBuiltinVAStartARMMicrosoft(CallExpr *Call);
   bool SemaBuiltinUnorderedCompare(CallExpr *TheCall);
   bool SemaBuiltinFPClassification(CallExpr *TheCall, unsigned NumArgs);
+  bool SemaBuiltinComplex(CallExpr *TheCall);
   bool SemaBuiltinVSX(CallExpr *TheCall);
   bool SemaBuiltinOSLogFormat(CallExpr *TheCall);
 

@@ -10,17 +10,17 @@ define dso_local i32* @foo() local_unnamed_addr {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, x@toc@ha
-; CHECK-NEXT:    addi r5, r5, x@toc@l
-; CHECK-NEXT:    addi r5, r5, -8
 ; CHECK-NEXT:    addis r6, r2, y@toc@ha
 ; CHECK-NEXT:    li r7, 340
+; CHECK-NEXT:    addi r5, r5, x@toc@l
+; CHECK-NEXT:    addi r5, r5, -8
 ; CHECK-NEXT:    addi r3, r6, y@toc@l
 ; CHECK-NEXT:    lwz r6, y@toc@l(r6)
 ; CHECK-NEXT:    mtctr r7
+; CHECK-NEXT:    addi r4, r3, -8
 ; CHECK-NEXT:    lwzu r7, 12(r5)
 ; CHECK-NEXT:    maddld r6, r7, r7, r6
 ; CHECK-NEXT:    lwz r7, 4(r5)
-; CHECK-NEXT:    addi r4, r3, -8
 ; CHECK-NEXT:    stwu r6, 12(r4)
 ; CHECK-NEXT:    maddld r6, r7, r7, r6
 ; CHECK-NEXT:    lwz r7, 8(r5)
@@ -29,12 +29,12 @@ define dso_local i32* @foo() local_unnamed_addr {
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    maddld r7, r7, r7, r6
 ; CHECK-NEXT:    lwzu r8, 12(r5)
-; CHECK-NEXT:    maddld r8, r8, r8, r7
 ; CHECK-NEXT:    stw r6, 4(r4)
 ; CHECK-NEXT:    lwz r6, 4(r5)
-; CHECK-NEXT:    maddld r6, r6, r6, r8
+; CHECK-NEXT:    maddld r8, r8, r8, r7
 ; CHECK-NEXT:    stw r7, 8(r4)
 ; CHECK-NEXT:    lwz r7, 8(r5)
+; CHECK-NEXT:    maddld r6, r6, r6, r8
 ; CHECK-NEXT:    stwu r8, 12(r4)
 ; CHECK-NEXT:    bdnz .LBB0_1
 ; CHECK-NEXT:  # %bb.2:

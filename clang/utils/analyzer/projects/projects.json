@@ -103,5 +103,40 @@
     "source": "git",
     "origin": "https://github.com/google/re2.git",
     "commit": "2b25567"
+  },
+  {
+    "name": "cppcheck",
+    "mode": 1,
+    "source": "git",
+    "origin": "https://github.com/danmar/cppcheck.git",
+    "commit": "5fa3d53"
+  },
+  {
+    "name": "harfbuzz",
+    "mode": 1,
+    "source": "git",
+    "origin": "https://github.com/harfbuzz/harfbuzz.git",
+    "commit": "f8d345e"
+  },
+  {
+    "name": "capnproto",
+    "mode": 1,
+    "source": "git",
+    "origin": "https://github.com/capnproto/capnproto.git",
+    "commit": "8be1c9f"
+  },
+  {
+    "name": "tmux",
+    "mode": 1,
+    "source": "git",
+    "origin": "https://github.com/tmux/tmux.git",
+    "commit": "a5f99e1"
+  },
+  {
+    "name": "faiss",
+    "mode": 1,
+    "source": "git",
+    "origin": "https://github.com/facebookresearch/faiss.git",
+    "commit": "9e5d5b7"
   }
 ]

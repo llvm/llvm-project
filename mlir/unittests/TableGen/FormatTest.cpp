@@ -19,14 +19,14 @@ TEST(FormatTest, EmptyFmtStr) {
   EXPECT_TRUE(result.empty());
 }
 
-// Allow extra unused positional parameters
+/// Allow extra unused positional parameters.
 TEST(FormatTest, EmptyFmtStrExtraParams) {
   FmtContext ctx;
   std::string result = std::string(tgfmt("", &ctx, "a", "b", "c"));
   EXPECT_TRUE(result.empty());
 }
 
-// Allow unused placeholder substitution in context
+/// Allow unused placeholder substitution in context.
 TEST(FormatTest, EmptyFmtStrPopulatedCtx) {
   FmtContext ctx;
   ctx.withBuilder("builder");
@@ -40,21 +40,21 @@ TEST(FormatTest, LiteralFmtStr) {
   EXPECT_THAT(result, StrEq("void foo {}"));
 }
 
-// Print single dollar literally
+/// Print single dollar literally.
 TEST(FormatTest, AdjacentDollar) {
   FmtContext ctx;
   std::string result = std::string(tgfmt("$", &ctx));
   EXPECT_THAT(result, StrEq("$"));
 }
 
-// Print dangling dollar literally
+/// Print dangling dollar literally.
 TEST(FormatTest, DanglingDollar) {
   FmtContext ctx;
   std::string result = std::string(tgfmt("foo bar baz$", &ctx));
   EXPECT_THAT(result, StrEq("foo bar baz$"));
 }
 
-// Allow escape dollars with '$$'
+/// Allow escape dollars with '$$'.
 TEST(FormatTest, EscapeDollars) {
   FmtContext ctx;
   std::string result =
@@ -72,14 +72,14 @@ TEST(FormatTest, PositionalFmtStr) {
   EXPECT_THAT(result, StrEq("a b 43 d"));
 }
 
-// Output the placeholder if missing substitution
+/// Output the placeholder if missing substitution.
 TEST(FormatTest, PositionalFmtStrMissingParams) {
   FmtContext ctx;
   std::string result = std::string(tgfmt("$0 %1 $2", &ctx));
   EXPECT_THAT(result, StrEq("$0<no-subst-found> %1 $2<no-subst-found>"));
 }
 
-// Allow flexible reference of positional parameters
+/// Allow flexible reference of positional parameters.
 TEST(FormatTest, PositionalFmtStrFlexibleRef) {
   FmtContext ctx;
   std::string result = std::string(tgfmt("$2 $0 $2", &ctx, "a", "b", "c"));
@@ -122,7 +122,7 @@ TEST(FormatTest, PlaceHolderMissingSubst) {
   EXPECT_THAT(result, StrEq("$_op<no-subst-found>"));
 }
 
-// Test commonly used delimiters in C++
+/// Test commonly used delimiters in C++.
 TEST(FormatTest, PlaceHolderFmtStrDelimiter) {
   FmtContext ctx;
   ctx.addSubst("m", "");
@@ -130,7 +130,7 @@ TEST(FormatTest, PlaceHolderFmtStrDelimiter) {
   EXPECT_THAT(result, StrEq("{([])}|"));
 }
 
-// Test allowed characters in placeholder symbol
+/// Test allowed characters in placeholder symbol.
 TEST(FormatTest, CustomPlaceHolderFmtStrPlaceHolderChars) {
   FmtContext ctx;
   ctx.addSubst("m", "0 ");

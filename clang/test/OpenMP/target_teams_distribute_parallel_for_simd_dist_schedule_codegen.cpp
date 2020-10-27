@@ -26,19 +26,19 @@ struct SS{
   // CK1: define {{.*}}i32 @{{.+}}foo{{.+}}(
   int foo(void) {
 
-  // CK1: call i32 @__tgt_target_teams(
+  // CK1: call i32 @__tgt_target_teams_mapper(
   // CK1: call void @[[OFFL1:.+]](
     #pragma omp target teams distribute parallel for simd
     for(int i = 0; i < X; i++) {
       a[i] = (T)0;
     }
-  // CK1: call i32 @__tgt_target_teams(
+  // CK1: call i32 @__tgt_target_teams_mapper(
   // CK1: call void @[[OFFL2:.+]](
     #pragma omp target teams distribute parallel for simd dist_schedule(static)
     for(int i = 0; i < X; i++) {
       a[i] = (T)0;
     }
-  // CK1: call i32 @__tgt_target_teams(
+  // CK1: call i32 @__tgt_target_teams_mapper(
   // CK1: call void @[[OFFL3:.+]](
     #pragma omp target teams distribute parallel for simd dist_schedule(static, X/2)
     for(int i = 0; i < X; i++) {
@@ -157,11 +157,11 @@ int main (int argc, char **argv) {
 }
 
 // CK2: define {{.*}}i32 @{{[^,]+}}(i{{.+}}{{.+}} %[[ARGC:.+]], {{.+}})
-// CK2: call i32 @__tgt_target_teams(
+// CK2: call i32 @__tgt_target_teams_mapper(
 // CK2: call void @[[OFFL1:.+]]({{.+}})
-// CK2: call i32 @__tgt_target_teams(
+// CK2: call i32 @__tgt_target_teams_mapper(
 // CK2: call void @[[OFFL2:.+]]({{.+}})
-// CK2: call i32 @__tgt_target_teams(
+// CK2: call i32 @__tgt_target_teams_mapper(
 // CK2: call void @[[OFFL3:.+]]({{.+}})
 // CK2: {{%.+}} = call{{.*}} i32 @[[TMAIN:.+]]({{.+}})
 // CK2: ret
@@ -212,11 +212,11 @@ int main (int argc, char **argv) {
 // CK2: ret void
 
 // CK2: define {{.*}}i32 @[[TMAIN]]({{.+}})
-// CK2: call i32 @__tgt_target_teams(
+// CK2: call i32 @__tgt_target_teams_mapper(
 // CK2: call void @[[OFFLT1:.+]]({{.+}})
-// CK2: call i32 @__tgt_target_teams(
+// CK2: call i32 @__tgt_target_teams_mapper(
 // CK2: call void @[[OFFLT2:.+]]({{.+}})
-// CK2: call i32 @__tgt_target_teams(
+// CK2: call i32 @__tgt_target_teams_mapper(
 // CK2: call void @[[OFFLT3:.+]]({{.+}})
 // CK2:  ret
 // CK2-NEXT: }

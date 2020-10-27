@@ -185,7 +185,7 @@ ScopedNoAliasAAResult ScopedNoAliasAA::run(Function &F,
 
 char ScopedNoAliasAAWrapperPass::ID = 0;
 
-INITIALIZE_PASS(ScopedNoAliasAAWrapperPass, "scoped-noalias",
+INITIALIZE_PASS(ScopedNoAliasAAWrapperPass, "scoped-noalias-aa",
                 "Scoped NoAlias Alias Analysis", false, true)
 
 ImmutablePass *llvm::createScopedNoAliasAAWrapperPass() {

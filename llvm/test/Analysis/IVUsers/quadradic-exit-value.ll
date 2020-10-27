@@ -6,7 +6,7 @@
 ; checks at that point.
 
 ; RUN: opt < %s -analyze -iv-users | FileCheck %s --check-prefixes=CHECK,CHECK-NO-LCSSA
-; RUN: opt < %s -disable-output -passes='print<ivusers>' 2>&1 | FileCheck %s
+; RUN: opt < %s -disable-output -passes='print<iv-users>' 2>&1 | FileCheck %s
 
 ; Provide legal integer types.
 target datalayout = "n8:16:32:64"

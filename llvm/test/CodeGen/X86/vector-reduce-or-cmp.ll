@@ -823,7 +823,7 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 define i1 @trunc_v2i64(<2 x i64> %a0) {
 ; SSE2-LABEL: trunc_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    por %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    testw %ax, %ax

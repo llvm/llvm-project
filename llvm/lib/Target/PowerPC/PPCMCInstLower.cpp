@@ -100,6 +100,8 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
         MIOpcode == PPC::BL8_NOTOC) {
       RefKind = MCSymbolRefExpr::VK_PPC_NOTOC;
     }
+    if (MO.getTargetFlags() == PPCII::MO_PCREL_OPT_FLAG)
+      RefKind = MCSymbolRefExpr::VK_PPC_PCREL_OPT;
   }
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, RefKind, Ctx);

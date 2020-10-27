@@ -498,6 +498,18 @@ def SubReg_i32_lane : SDNodeXForm<imm, [{
 }]>;
 
 
+def ARMimmAllZerosV: PatLeaf<(bitconvert (v4i32 (ARMvmovImm (i32 0))))>;
+def ARMimmAllZerosD: PatLeaf<(bitconvert (v2i32 (ARMvmovImm (i32 0))))>;
+def ARMimmAllOnesV: PatLeaf<(bitconvert (v16i8 (ARMvmovImm (i32 0xEFF))))>;
+def ARMimmAllOnesD: PatLeaf<(bitconvert (v8i8 (ARMvmovImm (i32 0xEFF))))>;
+
+def ARMimmOneV: PatLeaf<(ARMvmovImm (i32 timm)), [{
+  ConstantSDNode *ConstVal = cast<ConstantSDNode>(N->getOperand(0));
+  unsigned EltBits = 0;
+  uint64_t EltVal = ARM_AM::decodeVMOVModImm(ConstVal->getZExtValue(), EltBits);
+  return (EltBits == N->getValueType(0).getScalarSizeInBits() && EltVal == 0x01);
+}]>;
+
 
 //===----------------------------------------------------------------------===//
 // Operand Definitions.
@@ -812,7 +824,9 @@ def mod_imm_neg : Operand<i32>, PatLeaf<(imm), [{
 def arm_i32imm : IntImmLeaf<i32, [{
   if (Subtarget->useMovt())
     return true;
-  return ARM_AM::isSOImmTwoPartVal(Imm.getZExtValue());
+  if (ARM_AM::isSOImmTwoPartVal(Imm.getZExtValue()))
+    return true;
+  return ARM_AM::isSOImmTwoPartValNeg(Imm.getZExtValue());
 }]>;
 
 /// imm0_1 predicate - Immediate in the range [0,1].

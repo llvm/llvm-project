@@ -44,8 +44,24 @@ class FrameRecognizerTestCase(TestBase):
 
         self.runCmd("frame recognizer delete 0")
 
+        # Test that it deleted the recognizer with id 0.
         self.expect("frame recognizer list",
                     substrs=['1: recognizer.MyOtherFrameRecognizer, module a.out, symbol bar (regexp)'])
+        self.expect("frame recognizer list", matching=False,
+                    substrs=['MyFrameRecognizer'])
+
+        # Test that an invalid index and deleting the same index again
+        # is an error and doesn't do any changes.
+        self.expect("frame recognizer delete 2", error=True,
+                    substrs=["error: '2' is not a valid recognizer id."])
+        self.expect("frame recognizer delete 0", error=True,
+                    substrs=["error: '0' is not a valid recognizer id."])
+        # Recognizers should have the same state as above.
+        self.expect("frame recognizer list",
+                    substrs=['1: recognizer.MyOtherFrameRecognizer, module a.out, symbol bar (regexp)'])
+        self.expect("frame recognizer list", matching=False,
+                    substrs=['MyFrameRecognizer'])
+
 
         self.runCmd("frame recognizer clear")
 
@@ -142,6 +158,50 @@ class FrameRecognizerTestCase(TestBase):
                                                                  exe_name = exe)
         frame = thread.GetSelectedFrame()
 
+        self.expect("frame recognizer info 0",
+                    substrs=['frame 0 is recognized by recognizer.MyFrameRecognizer'])
+
+    @skipUnlessDarwin
+    def test_frame_recognizer_target_specific(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        # Clear internal & plugins recognizers that get initialized at launch
+        self.runCmd("frame recognizer clear")
+
+        # Create a target.
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "foo",
+                                                                 exe_name = exe)
+
+        self.runCmd("command script import " + os.path.join(self.getSourceDir(), "recognizer.py"))
+
+        # Check that this doesn't contain our own FrameRecognizer somehow.
+        self.expect("frame recognizer list",
+                    matching=False, substrs=['MyFrameRecognizer'])
+
+        # Add a frame recognizer in that target.
+        self.runCmd("frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n foo -n bar")
+
+        self.expect("frame recognizer list",
+                    substrs=['recognizer.MyFrameRecognizer, module a.out, symbol foo, symbol bar'])
+
+        self.expect("frame recognizer info 0",
+                    substrs=['frame 0 is recognized by recognizer.MyFrameRecognizer'])
+
+        # Create a second target. That one shouldn't have the frame recognizer.
+        target, process, thread, _ = lldbutil.run_to_name_breakpoint(self, "bar",
+                                                                 exe_name = exe)
+
+        self.expect("frame recognizer info 0",
+                    substrs=['frame 0 not recognized by any recognizer'])
+
+        # Add a frame recognizer to the new target.
+        self.runCmd("frame recognizer add -l recognizer.MyFrameRecognizer -s a.out -n bar")
+
+        self.expect("frame recognizer list",
+                    substrs=['recognizer.MyFrameRecognizer, module a.out, symbol bar'])
+
+        # Now the new target should also recognize the frame.
         self.expect("frame recognizer info 0",
                     substrs=['frame 0 is recognized by recognizer.MyFrameRecognizer'])
 

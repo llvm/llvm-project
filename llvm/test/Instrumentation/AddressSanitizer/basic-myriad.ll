@@ -1,6 +1,7 @@
 ; Test basic address sanitizer instrumentation for Myriad.
 ;
-; RUN: opt -asan -asan-module -S  < %s | FileCheck %s
+; RUN: opt -asan -asan-module -enable-new-pm=0 -S  < %s | FileCheck %s
+; RUN: opt -passes='asan-pipeline' -S  < %s | FileCheck %s
 
 target triple = "sparc-myriad-rtems"
 target datalayout = "E-m:e-p:32:32-i64:64-f128:64-n32-S64"

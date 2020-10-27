@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 def SGPRRegBank : RegisterBank<"SGPR",
-  [SReg_LO16, SReg_32, SReg_64, SReg_128, SReg_160, SReg_192, SReg_256, SReg_512, SReg_1024]
+  [SReg_LO16, SReg_32, SReg_64, SReg_96, SReg_128, SReg_160, SReg_192, SReg_256, SReg_512, SReg_1024]
 >;
 
 def VGPRRegBank : RegisterBank<"VGPR",

@@ -77,3 +77,25 @@ body: |
     $w0 = COPY %1
     $w1 = COPY %2
 ...
+---
+name: test_implicit_def_v16s8
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_v16s8
+    ; CHECK: [[DEF:%[0-9]+]]:_(<16 x s8>) = G_IMPLICIT_DEF
+    ; CHECK: $q0 = COPY [[DEF]](<16 x s8>)
+    %0:_(<16 x s8>) = G_IMPLICIT_DEF
+    $q0 = COPY %0
+...
+---
+name: test_implicit_def_v8s16
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_v8s16
+    ; CHECK: [[DEF:%[0-9]+]]:_(<8 x s16>) = G_IMPLICIT_DEF
+    ; CHECK: $q0 = COPY [[DEF]](<8 x s16>)
+    %0:_(<8 x s16>) = G_IMPLICIT_DEF
+    $q0 = COPY %0
+...

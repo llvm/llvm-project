@@ -1,5 +1,7 @@
-; RUN: opt < %s -asan -asan-module -asan-globals-live-support=1 -S | FileCheck %s
-; RUN: opt < %s -asan -asan-module -asan-globals-live-support=1 -asan-mapping-scale=5 -S | FileCheck %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-globals-live-support=1 -S | FileCheck %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-globals-live-support=1 -S | FileCheck %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-globals-live-support=1 -asan-mapping-scale=5 -S | FileCheck %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-globals-live-support=1 -asan-mapping-scale=5 -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -27,10 +29,6 @@ target triple = "x86_64-unknown-linux-gnu"
 ; The metadata has to be inserted to llvm.compiler.used to avoid being stripped
 ; during LTO.
 ; CHECK: @llvm.compiler.used {{.*}} @__asan_global_global {{.*}} section "llvm.metadata"
-
-; Check that start and stop symbols will be accessed as dso_local.
-; CHECK: @__start_asan_globals = external hidden global i64
-; CHECK: @__stop_asan_globals = external hidden global i64
 
 ; Check that location descriptors and global names were passed into __asan_register_globals:
 ; CHECK: call void @__asan_register_elf_globals(i64 ptrtoint (i64* @___asan_globals_registered to i64), i64 ptrtoint (i64* @__start_asan_globals to i64), i64 ptrtoint (i64* @__stop_asan_globals to i64))

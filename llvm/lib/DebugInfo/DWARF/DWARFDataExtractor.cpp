@@ -104,10 +104,10 @@ DWARFDataExtractor::getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
     Result = getSigned(Offset, 2);
     break;
   case dwarf::DW_EH_PE_sdata4:
-    Result = getSigned(Offset, 4);
+    Result = SignExtend64<32>(getRelocatedValue(4, Offset));
     break;
   case dwarf::DW_EH_PE_sdata8:
-    Result = getSigned(Offset, 8);
+    Result = getRelocatedValue(8, Offset);
     break;
   default:
     return None;

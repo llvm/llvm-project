@@ -6,6 +6,7 @@ namespace clang {
 namespace tidy {
 namespace test {
 
+namespace {
 class TestCheck : public ClangTidyCheck {
 public:
   TestCheck(StringRef Name, ClangTidyContext *Context)
@@ -20,6 +21,7 @@ public:
     diag(Var->getTypeSpecStartLoc(), "type specifier");
   }
 };
+} // namespace
 
 TEST(ClangTidyDiagnosticConsumer, SortsErrors) {
   std::vector<ClangTidyError> Errors;

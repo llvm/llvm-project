@@ -16,10 +16,6 @@
 ; NEW-PM: Running pass: IPSCCPPass
 ; NEW-PM-DAG: Running analysis: AssumptionAnalysis on f1
 ; NEW-PM-DAG: Running analysis: AssumptionAnalysis on f2
-; NEW-PM-NEXT: Invalidating all non-preserved analyses for:
-; NEW-PM-NEXT: Invalidating all non-preserved analyses for: f1
-; NEW-PM-NEXT: Invalidating all non-preserved analyses for: f2
-; NEW-PM-NEXT: Running pass: ModuleToFunctionPassAdaptor
 ; NEW-PM-NOT: Running analysis:
 
 ; IR-LABEL: @f1

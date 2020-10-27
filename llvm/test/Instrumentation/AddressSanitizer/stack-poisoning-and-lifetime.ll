@@ -1,8 +1,10 @@
 ; Regular stack poisoning.
-; RUN: opt < %s -asan -asan-module -asan-use-after-scope=0 -S | FileCheck --check-prefixes=CHECK,ENTRY,EXIT %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-scope=0 -S | FileCheck --check-prefixes=CHECK,ENTRY,EXIT %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-scope=0 -S | FileCheck --check-prefixes=CHECK,ENTRY,EXIT %s
 
 ; Stack poisoning with stack-use-after-scope.
-; RUN: opt < %s -asan -asan-module -asan-use-after-scope=1 -S | FileCheck --check-prefixes=CHECK,ENTRY-UAS,EXIT-UAS %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-use-after-scope=1 -S | FileCheck --check-prefixes=CHECK,ENTRY-UAS,EXIT-UAS %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-scope=1 -S | FileCheck --check-prefixes=CHECK,ENTRY-UAS,EXIT-UAS %s
 
 target datalayout = "e-i64:64-f80:128-s:64-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

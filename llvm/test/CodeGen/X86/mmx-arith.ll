@@ -151,7 +151,7 @@ define void @test1(x86_mmx* %A, x86_mmx* %B) {
 ; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; X32-NEXT:    pmuludq %xmm0, %xmm1
-; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X32-NEXT:    pmuludq %xmm0, %xmm2
 ; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
 ; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]

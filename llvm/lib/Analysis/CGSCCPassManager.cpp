@@ -78,9 +78,6 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     if (!PI.runBeforePass(*Pass, *C))
       continue;
 
-    if (DebugLogging)
-      dbgs() << "Running pass: " << Pass->name() << " on " << *C << "\n";
-
     PreservedAnalyses PassPA;
     {
       TimeTraceScope TimeScope(Pass->name());

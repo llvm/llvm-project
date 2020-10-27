@@ -675,10 +675,11 @@ bool JumpThreadingPass::ComputeValueKnownInPredecessorsImpl(
   }
 
   // Handle Cast instructions.  Only see through Cast when the source operand is
-  // PHI or Cmp to save the compilation time.
+  // PHI, Cmp, or Freeze to save the compilation time.
   if (CastInst *CI = dyn_cast<CastInst>(I)) {
     Value *Source = CI->getOperand(0);
-    if (!isa<PHINode>(Source) && !isa<CmpInst>(Source))
+    if (!isa<PHINode>(Source) && !isa<CmpInst>(Source) &&
+        !isa<FreezeInst>(Source))
       return false;
     ComputeValueKnownInPredecessorsImpl(Source, BB, Result, Preference,
                                         RecursionSet, CxtI);
@@ -690,6 +691,22 @@ bool JumpThreadingPass::ComputeValueKnownInPredecessorsImpl(
       R.first = ConstantExpr::getCast(CI->getOpcode(), R.first, CI->getType());
 
     return true;
+  }
+
+  // Handle Freeze instructions, in a manner similar to Cast.
+  if (FreezeInst *FI = dyn_cast<FreezeInst>(I)) {
+    Value *Source = FI->getOperand(0);
+    if (!isa<PHINode>(Source) && !isa<CmpInst>(Source) &&
+        !isa<CastInst>(Source))
+      return false;
+    ComputeValueKnownInPredecessorsImpl(Source, BB, Result, Preference,
+                                        RecursionSet, CxtI);
+
+    erase_if(Result, [](auto &Pair) {
+      return !isGuaranteedNotToBeUndefOrPoison(Pair.first);
+    });
+
+    return !Result.empty();
   }
 
   // Handle some boolean conditions.
@@ -1040,9 +1057,11 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
     }
   }
 
-  // If the terminator is branching on an undef, we can pick any of the
-  // successors to branch to.  Let GetBestDestForJumpOnUndef decide.
-  if (isa<UndefValue>(Condition)) {
+  // If the terminator is branching on an undef or freeze undef, we can pick any
+  // of the successors to branch to.  Let GetBestDestForJumpOnUndef decide.
+  auto *FI = dyn_cast<FreezeInst>(Condition);
+  if (isa<UndefValue>(Condition) ||
+      (FI && isa<UndefValue>(FI->getOperand(0)) && FI->hasOneUse())) {
     unsigned BestSucc = GetBestDestForJumpOnUndef(BB);
     std::vector<DominatorTree::UpdateType> Updates;
 
@@ -1061,6 +1080,8 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
     BranchInst::Create(BBTerm->getSuccessor(BestSucc), BBTerm);
     BBTerm->eraseFromParent();
     DTU->applyUpdatesPermissive(Updates);
+    if (FI)
+      FI->eraseFromParent();
     return true;
   }
 
@@ -1147,6 +1168,11 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
   // we see one, check to see if it's partially redundant.  If so, insert a PHI
   // which can then be used to thread the values.
   Value *SimplifyValue = CondInst;
+
+  if (auto *FI = dyn_cast<FreezeInst>(SimplifyValue))
+    // Look into freeze's operand
+    SimplifyValue = FI->getOperand(0);
+
   if (CmpInst *CondCmp = dyn_cast<CmpInst>(SimplifyValue))
     if (isa<Constant>(CondCmp->getOperand(1)))
       SimplifyValue = CondCmp->getOperand(0);
@@ -1858,6 +1884,14 @@ bool JumpThreadingPass::ProcessBranchOnXOR(BinaryOperator *BO) {
 
     return true;
   }
+
+  // If any of predecessors end with an indirect goto, we can't change its
+  // destination. Same for CallBr.
+  if (any_of(BlocksToFoldInto, [](BasicBlock *Pred) {
+        return isa<IndirectBrInst>(Pred->getTerminator()) ||
+               isa<CallBrInst>(Pred->getTerminator());
+      }))
+    return false;
 
   // Try to duplicate BB into PredBB.
   return DuplicateCondBranchOnPHIIntoPred(BB, BlocksToFoldInto);

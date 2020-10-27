@@ -20,4 +20,5 @@ clang_target_link_libraries(clangd-indexer
 target_link_libraries(clangd-indexer
   PRIVATE
   clangDaemon
+  clangdSupport
 )

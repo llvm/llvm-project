@@ -2,6 +2,7 @@
 // RUN: %libomptarget-compile-powerpc64-ibm-linux-gnu -DSHARED -fPIC -shared -o %t.so && %clang %flags %s -o %t-powerpc64-ibm-linux-gnu -ldl && %libomptarget-run-powerpc64-ibm-linux-gnu %t.so 2>&1 | %fcheck-powerpc64-ibm-linux-gnu
 // RUN: %libomptarget-compile-powerpc64le-ibm-linux-gnu -DSHARED -fPIC -shared -o %t.so && %clang %flags %s -o %t-powerpc64le-ibm-linux-gnu -ldl && %libomptarget-run-powerpc64le-ibm-linux-gnu %t.so 2>&1 | %fcheck-powerpc64le-ibm-linux-gnu
 // RUN: %libomptarget-compile-x86_64-pc-linux-gnu -DSHARED -fPIC -shared -o %t.so && %clang %flags %s -o %t-x86_64-pc-linux-gnu -ldl && %libomptarget-run-x86_64-pc-linux-gnu %t.so 2>&1 | %fcheck-x86_64-pc-linux-gnu
+// RUN: %libomptarget-compile-nvptx64-nvidia-cuda -DSHARED -fPIC -shared -o %t.so && %clang %flags %s -o %t-nvptx64-nvidia-cuda -ldl && %libomptarget-run-nvptx64-nvidia-cuda %t.so 2>&1 | %fcheck-nvptx64-nvidia-cuda
 
 #ifdef SHARED
 #include <stdio.h>

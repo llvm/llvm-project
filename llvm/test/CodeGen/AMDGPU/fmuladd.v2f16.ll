@@ -27,6 +27,39 @@ define amdgpu_kernel void @fmuladd_v2f16(<2 x half> addrspace(1)* %out, <2 x hal
   ret void
 }
 
+; GCN-LABEL: {{^}}fmul_fadd_v2f16:
+; GFX9-DENORM-STRICT: v_pk_mul_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+; GFX9-DENORM-STRICT: v_pk_add_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+
+; GFX9-DENORM-CONTRACT: v_pk_fma_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+define amdgpu_kernel void @fmul_fadd_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in1,
+                         <2 x half> addrspace(1)* %in2, <2 x half> addrspace(1)* %in3) #0 {
+  %r0 = load <2 x half>, <2 x half> addrspace(1)* %in1
+  %r1 = load <2 x half>, <2 x half> addrspace(1)* %in2
+  %r2 = load <2 x half>, <2 x half> addrspace(1)* %in3
+  %r3 = fmul <2 x half> %r0, %r1
+  %r4 = fadd <2 x half> %r3, %r2
+  store <2 x half> %r4, <2 x half> addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}fmul_fadd_contract_v2f16:
+; GFX9-FLUSH: v_pk_mul_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+; GFX9-FLUSH: v_pk_add_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+
+; GFX9-DENORM: v_pk_fma_f16 {{v[0-9]+, v[0-9]+, v[0-9]+}}
+define amdgpu_kernel void @fmul_fadd_contract_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in1,
+                         <2 x half> addrspace(1)* %in2, <2 x half> addrspace(1)* %in3) #0 {
+  %r0 = load <2 x half>, <2 x half> addrspace(1)* %in1
+  %r1 = load <2 x half>, <2 x half> addrspace(1)* %in2
+  %r2 = load <2 x half>, <2 x half> addrspace(1)* %in3
+  %r3 = fmul <2 x half> %r0, %r1
+  %r4 = fadd contract <2 x half> %r3, %r2
+  store <2 x half> %r4, <2 x half> addrspace(1)* %out
+  ret void
+}
+
+
 ; GCN-LABEL: {{^}}fmuladd_2.0_a_b_v2f16:
 ; GCN: {{buffer|flat|global}}_load_dword [[R1:v[0-9]+]],
 ; GCN: {{buffer|flat|global}}_load_dword [[R2:v[0-9]+]],

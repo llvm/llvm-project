@@ -37,6 +37,11 @@ public:
 
   /// Query xcrun to find an Xcode SDK directory.
   static llvm::StringRef GetXcodeSDKPath(XcodeSDK sdk);
+
+  /// Shared cache utilities
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(llvm::StringRef image_name);
+
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static void ComputeHostArchitectureSupport(ArchSpec &arch_32,

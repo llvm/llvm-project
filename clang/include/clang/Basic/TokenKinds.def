@@ -757,10 +757,10 @@ ANNOTATION(non_type_undeclared) // annotation for an undeclared identifier that
                                 // was assumed to be an ADL-only function name
 ANNOTATION(non_type_dependent)  // annotation for an assumed non-type member of
                                 // a dependent base class
-ANNOTATION(primary_expr) // annotation for a primary expression
-ANNOTATION(
-    uneval_primary_expr) // annotation for a primary expression which should be
-                         // transformed to potentially evaluated
+ANNOTATION(overload_set) // annotation for an unresolved overload set
+ANNOTATION(primary_expr) // annotation for a primary expression, used when
+                         // tentatively parsing a lambda init-capture or ObjC
+                         // message send
 ANNOTATION(decltype)     // annotation for a decltype expression,
                          // e.g., "decltype(foo.bar())"
 

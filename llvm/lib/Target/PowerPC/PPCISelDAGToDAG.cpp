@@ -4142,7 +4142,7 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
   // Altivec Vector compare instructions do not set any CR register by default and
   // vector compare operations return the same type as the operands.
   if (LHS.getValueType().isVector()) {
-    if (Subtarget->hasQPX() || Subtarget->hasSPE())
+    if (Subtarget->hasSPE())
       return false;
 
     EVT VecVT = LHS.getValueType();
@@ -4813,8 +4813,6 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
         assert((!isSExt || LoadedVT == MVT::i16) && "Invalid sext update load");
         switch (LoadedVT.getSimpleVT().SimpleTy) {
           default: llvm_unreachable("Invalid PPC load type!");
-          case MVT::v4f64: Opcode = PPC::QVLFDUX; break; // QPX
-          case MVT::v4f32: Opcode = PPC::QVLFSUX; break; // QPX
           case MVT::f64: Opcode = PPC::LFDUX; break;
           case MVT::f32: Opcode = PPC::LFSUX; break;
           case MVT::i32: Opcode = PPC::LWZUX; break;
@@ -5095,12 +5093,6 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       SelectCCOp = PPC::SELECT_CC_F16;
     else if (Subtarget->hasSPE())
       SelectCCOp = PPC::SELECT_CC_SPE;
-    else if (Subtarget->hasQPX() && N->getValueType(0) == MVT::v4f64)
-      SelectCCOp = PPC::SELECT_CC_QFRC;
-    else if (Subtarget->hasQPX() && N->getValueType(0) == MVT::v4f32)
-      SelectCCOp = PPC::SELECT_CC_QSRC;
-    else if (Subtarget->hasQPX() && N->getValueType(0) == MVT::v4i1)
-      SelectCCOp = PPC::SELECT_CC_QBRC;
     else if (N->getValueType(0) == MVT::v2f64 ||
              N->getValueType(0) == MVT::v2i64)
       SelectCCOp = PPC::SELECT_CC_VSRC;
@@ -5856,9 +5848,6 @@ void PPCDAGToDAGISel::PeepholeCROps() {
       case PPC::SELECT_I8:
       case PPC::SELECT_F4:
       case PPC::SELECT_F8:
-      case PPC::SELECT_QFRC:
-      case PPC::SELECT_QSRC:
-      case PPC::SELECT_QBRC:
       case PPC::SELECT_SPE:
       case PPC::SELECT_SPE4:
       case PPC::SELECT_VRRC:
@@ -6177,9 +6166,6 @@ void PPCDAGToDAGISel::PeepholeCROps() {
       case PPC::SELECT_I8:
       case PPC::SELECT_F4:
       case PPC::SELECT_F8:
-      case PPC::SELECT_QFRC:
-      case PPC::SELECT_QSRC:
-      case PPC::SELECT_QBRC:
       case PPC::SELECT_SPE:
       case PPC::SELECT_SPE4:
       case PPC::SELECT_VRRC:

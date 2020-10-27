@@ -453,10 +453,9 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner *prescanner) {
           dir.GetIntervalProvenanceRange(dirOffset, tokens - dirOffset),
           "# missing or invalid name"_err_en_US);
     } else {
-      j = dir.SkipBlanks(j + 1);
-      if (j != tokens) {
+      if (dir.IsAnythingLeft(++j)) {
         prescanner->Say(dir.GetIntervalProvenanceRange(j, tokens - j),
-            "#undef: excess tokens at end of directive"_err_en_US);
+            "#undef: excess tokens at end of directive"_en_US);
       } else {
         definitions_.erase(nameToken);
       }
@@ -468,8 +467,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner *prescanner) {
           dir.GetIntervalProvenanceRange(dirOffset, tokens - dirOffset),
           "#%s: missing name"_err_en_US, dirName);
     } else {
-      j = dir.SkipBlanks(j + 1);
-      if (j != tokens) {
+      if (dir.IsAnythingLeft(++j)) {
         prescanner->Say(dir.GetIntervalProvenanceRange(j, tokens - j),
             "#%s: excess tokens at end of directive"_en_US, dirName);
       }
@@ -489,9 +487,9 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner *prescanner) {
           dir.GetTokenProvenanceRange(dirOffset));
     }
   } else if (dirName == "else") {
-    if (j != tokens) {
+    if (dir.IsAnythingLeft(j)) {
       prescanner->Say(dir.GetIntervalProvenanceRange(j, tokens - j),
-          "#else: excess tokens at end of directive"_err_en_US);
+          "#else: excess tokens at end of directive"_en_US);
     } else if (ifStack_.empty()) {
       prescanner->Say(dir.GetTokenProvenanceRange(dirOffset),
           "#else: not nested within #if, #ifdef, or #ifndef"_err_en_US);
@@ -516,9 +514,9 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner *prescanner) {
           dir.GetTokenProvenanceRange(dirOffset));
     }
   } else if (dirName == "endif") {
-    if (j != tokens) {
+    if (dir.IsAnythingLeft(j)) {
       prescanner->Say(dir.GetIntervalProvenanceRange(j, tokens - j),
-          "#endif: excess tokens at end of directive"_err_en_US);
+          "#endif: excess tokens at end of directive"_en_US);
     } else if (ifStack_.empty()) {
       prescanner->Say(dir.GetTokenProvenanceRange(dirOffset),
           "#endif: no #if, #ifdef, or #ifndef"_err_en_US);

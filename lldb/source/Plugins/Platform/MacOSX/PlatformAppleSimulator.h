@@ -44,6 +44,9 @@ public:
                                lldb_private::Target *target,
                                lldb_private::Status &error) override;
 
+  bool GetSupportedArchitectureAtIndex(uint32_t idx,
+                                       lldb_private::ArchSpec &arch) override;
+
 protected:
   std::mutex m_core_sim_path_mutex;
   llvm::Optional<lldb_private::FileSpec> m_core_simulator_framework_path;
@@ -51,6 +54,9 @@ protected:
   CoreSimulatorSupport::DeviceType::ProductFamilyID m_kind;
 
   lldb_private::FileSpec GetCoreSimulatorPath();
+
+  llvm::Triple::OSType m_os_type = llvm::Triple::UnknownOS;
+  llvm::ArrayRef<llvm::StringRef> m_supported_triples = {};
 
   void LoadCoreSimulator();
 

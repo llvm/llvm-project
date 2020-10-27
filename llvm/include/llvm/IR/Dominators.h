@@ -44,6 +44,9 @@ using BBPostDomTree = PostDomTreeBase<BasicBlock>;
 
 using BBUpdates = ArrayRef<llvm::cfg::Update<BasicBlock *>>;
 
+using BBDomTreeGraphDiff = GraphDiff<BasicBlock *, false>;
+using BBPostDomTreeGraphDiff = GraphDiff<BasicBlock *, true>;
+
 extern template void Calculate<BBDomTree>(BBDomTree &DT);
 extern template void CalculateWithUpdates<BBDomTree>(BBDomTree &DT,
                                                      BBUpdates U);
@@ -62,8 +65,10 @@ extern template void DeleteEdge<BBPostDomTree>(BBPostDomTree &DT,
                                                BasicBlock *From,
                                                BasicBlock *To);
 
-extern template void ApplyUpdates<BBDomTree>(BBDomTree &DT, BBUpdates);
-extern template void ApplyUpdates<BBPostDomTree>(BBPostDomTree &DT, BBUpdates);
+extern template void ApplyUpdates<BBDomTree>(BBDomTree &DT,
+                                             BBDomTreeGraphDiff &);
+extern template void ApplyUpdates<BBPostDomTree>(BBPostDomTree &DT,
+                                                 BBPostDomTreeGraphDiff &);
 
 extern template bool Verify<BBDomTree>(const BBDomTree &DT,
                                        BBDomTree::VerificationLevel VL);

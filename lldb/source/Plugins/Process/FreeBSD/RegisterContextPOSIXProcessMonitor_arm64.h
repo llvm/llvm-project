@@ -71,6 +71,11 @@ protected:
   uint32_t NumSupportedHardwareWatchpoints();
 
 private:
+  RegisterInfoPOSIX_arm64::GPR m_gpr_arm64; // 64-bit general purpose registers.
+
+  RegisterInfoPOSIX_arm64::FPU
+      m_fpr; // floating-point registers including extended register sets.
+
   ProcessMonitor &GetMonitor();
 };
 

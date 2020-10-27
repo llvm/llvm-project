@@ -1,7 +1,7 @@
 // RUN: llvm-mc -triple=armv7-linux-gnueabi \
 // RUN:    -mcpu=cortex-a8 -mattr=-neon -mattr=+vfp2  \
 // RUN:    -filetype=obj %s -o - | \
-// RUN:   llvm-readobj -r | FileCheck -check-prefix=OBJ %s
+// RUN:   llvm-readobj -r - | FileCheck -check-prefix=OBJ %s
 
 // Ensure no regression on ARM/gcc compatibility for
 // emitting explicit symbol relocs for nonexternal symbols

@@ -49,6 +49,10 @@
 // RUN: llvm-profdata merge %S/Inputs/gcc-flag-compatibility_IR.proftext -o %t.dir/some/path/file.prof
 // RUN: %clang %s -o - -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof -fno-experimental-new-pass-manager | FileCheck -check-prefix=PROFILE-USE-IR %s
 // RUN: %clang %s -o - -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof -fexperimental-new-pass-manager | FileCheck -check-prefix=PROFILE-USE-IR %s
+//
+// RUN: llvm-profdata merge %S/Inputs/gcc-flag-compatibility_IR_entry.proftext -o %t.dir/some/path/file.prof
+// RUN: %clang %s -o - -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof -fno-experimental-new-pass-manager | FileCheck -check-prefix=PROFILE-USE-IR %s
+// RUN: %clang %s -o - -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof -fexperimental-new-pass-manager | FileCheck -check-prefix=PROFILE-USE-IR %s
 
 // PROFILE-USE-IR: = !{!"branch_weights", i32 100, i32 1}
 

@@ -721,7 +721,7 @@ define i8 @shuf8i1__9_6_1_10_3_7_7_1(i8 %a) {
 ; AVX512VL-NEXT:    kmovw %edi, %k1
 ; AVX512VL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
-; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; AVX512VL-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],mem[1,2,3,4,5,6,7]
 ; AVX512VL-NEXT:    vptestmd %ymm0, %ymm0, %k0
 ; AVX512VL-NEXT:    kmovw %k0, %eax
@@ -733,7 +733,7 @@ define i8 @shuf8i1__9_6_1_10_3_7_7_1(i8 %a) {
 ; VL_BW_DQ:       # %bb.0:
 ; VL_BW_DQ-NEXT:    kmovd %edi, %k0
 ; VL_BW_DQ-NEXT:    vpmovm2d %k0, %ymm0
-; VL_BW_DQ-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; VL_BW_DQ-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; VL_BW_DQ-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0],mem[1,2,3,4,5,6,7]
 ; VL_BW_DQ-NEXT:    vpmovd2m %ymm0, %k0
 ; VL_BW_DQ-NEXT:    kmovd %k0, %eax

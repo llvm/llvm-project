@@ -39,7 +39,7 @@ protected:
 #define GET_TARGET_REGBANK_CLASS
 #include "AMDGPUGenRegisterBank.inc"
 };
-class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
+class AMDGPURegisterBankInfo final : public AMDGPUGenRegisterBankInfo {
 public:
   const GCNSubtarget &Subtarget;
   const SIRegisterInfo *TRI;
@@ -105,7 +105,6 @@ public:
   getInstrMappingForLoad(const MachineInstr &MI) const;
 
   unsigned getRegBankID(Register Reg, const MachineRegisterInfo &MRI,
-                        const TargetRegisterInfo &TRI,
                         unsigned Default = AMDGPU::VGPRRegBankID) const;
 
   // Return a value mapping for an operand that is required to be an SGPR.

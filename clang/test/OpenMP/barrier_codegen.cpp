@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
 // IRBUILDER:          ; Function Attrs: nounwind
 // IRBUILDER-NEXT:     declare i32 @__kmpc_global_thread_num(%struct.ident_t*) #
 // IRBUILDER_OPT:      ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
-// IRBUILDER_OPT-NEXT: declare i32 @__kmpc_global_thread_num(%struct.ident_t*) #
+// IRBUILDER_OPT-NEXT: declare i32 @__kmpc_global_thread_num(%struct.ident_t* nocapture nofree readonly) #
 
 // CHECK: define {{.+}} [[TMAIN_INT]](
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T]]* [[LOC]])

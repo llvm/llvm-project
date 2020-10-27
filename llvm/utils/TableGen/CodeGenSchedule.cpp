@@ -248,8 +248,7 @@ void CodeGenSchedModels::checkSTIPredicates() const {
     }
 
     PrintError(R->getLoc(), "STIPredicate " + Name + " multiply declared.");
-    PrintNote(It->second->getLoc(), "Previous declaration was here.");
-    PrintFatalError(R->getLoc(), "Invalid STIPredicateDecl found.");
+    PrintFatalNote(It->second->getLoc(), "Previous declaration was here.");
   }
 
   // Disallow InstructionEquivalenceClasses with an empty instruction list.
@@ -454,10 +453,8 @@ void CodeGenSchedModels::checkMCInstPredicates() const {
 
     PrintError(TIIPred->getLoc(),
                "TIIPredicate " + Name + " is multiply defined.");
-    PrintNote(It->second->getLoc(),
-              " Previous definition of " + Name + " was here.");
-    PrintFatalError(TIIPred->getLoc(),
-                    "Found conflicting definitions of TIIPredicate.");
+    PrintFatalNote(It->second->getLoc(),
+                   " Previous definition of " + Name + " was here.");
   }
 }
 
@@ -1083,13 +1080,14 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
             if (RWD->getValueAsDef("SchedModel") == RWModelDef &&
                 RWModelDef->getValueAsBit("FullInstRWOverlapCheck")) {
               assert(!InstDefs.empty()); // Checked at function start.
-              PrintFatalError
-                  (InstRWDef->getLoc(),
-                   "Overlapping InstRW definition for \"" +
-                   InstDefs.front()->getName() +
-                   "\" also matches previous \"" +
-                   RWD->getValue("Instrs")->getValue()->getAsString() +
-                   "\".");
+              PrintError(
+                  InstRWDef->getLoc(),
+                  "Overlapping InstRW definition for \"" +
+                      InstDefs.front()->getName() +
+                      "\" also matches previous \"" +
+                      RWD->getValue("Instrs")->getValue()->getAsString() +
+                      "\".");
+              PrintFatalNote(RWD->getLoc(), "Previous match was here.");
             }
           }
           LLVM_DEBUG(dbgs() << "InstRW: Reuse SC " << OldSCIdx << ":"
@@ -1118,13 +1116,13 @@ void CodeGenSchedModels::createInstRWClass(Record *InstRWDef) {
       for (Record *OldRWDef : SchedClasses[OldSCIdx].InstRWs) {
         if (OldRWDef->getValueAsDef("SchedModel") == RWModelDef) {
           assert(!InstDefs.empty()); // Checked at function start.
-          PrintFatalError
-              (InstRWDef->getLoc(),
-               "Overlapping InstRW definition for \"" +
-               InstDefs.front()->getName() +
-               "\" also matches previous \"" +
-               OldRWDef->getValue("Instrs")->getValue()->getAsString() +
-               "\".");
+          PrintError(
+              InstRWDef->getLoc(),
+              "Overlapping InstRW definition for \"" +
+                  InstDefs.front()->getName() + "\" also matches previous \"" +
+                  OldRWDef->getValue("Instrs")->getValue()->getAsString() +
+                  "\".");
+          PrintFatalNote(OldRWDef->getLoc(), "Previous match was here.");
         }
         assert(OldRWDef != InstRWDef &&
                "SchedClass has duplicate InstRW def");

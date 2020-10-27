@@ -39,7 +39,7 @@ namespace syntax {
 class Arena {
 public:
   Arena(SourceManager &SourceMgr, const LangOptions &LangOpts,
-        TokenBuffer Tokens);
+        const TokenBuffer &Tokens);
 
   const SourceManager &sourceManager() const { return SourceMgr; }
   const LangOptions &langOptions() const { return LangOpts; }
@@ -56,7 +56,7 @@ public:
 private:
   SourceManager &SourceMgr;
   const LangOptions &LangOpts;
-  TokenBuffer Tokens;
+  const TokenBuffer &Tokens;
   /// IDs and storage for additional tokenized files.
   llvm::DenseMap<FileID, std::vector<syntax::Token>> ExtraTokens;
   /// Keeps all the allocated nodes and their intermediate data structures.

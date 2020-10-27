@@ -45,7 +45,7 @@ int main() {
 }
 
 // CHECK-LABEL: main
-// CHECK: call{{.+}} @__tgt_target_teams(
+// CHECK: call{{.+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[OFFL:@.+]](
 // CHECK: call{{.+}} [[TMAIN:@.+]](i{{32|64}}
 // CHECK: ret
@@ -64,7 +64,7 @@ int main() {
 // CHECK: ret void
 
 // CHECK: define{{.+}} [[TMAIN]](i{{32|64}}
-// CHECK: call{{.+}} @__tgt_target_teams(
+// CHECK: call{{.+}} @__tgt_target_teams_mapper(
 // CHECK: call void [[TOFFL:@.+]](
 // CHECK: ret
 

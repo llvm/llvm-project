@@ -120,7 +120,8 @@ static constexpr std::pair<llvm::StringRef, llvm::Regex::RegexFlags>
         {"BasicRegex", llvm::Regex::RegexFlags::BasicRegex},
 };
 
-llvm::Optional<llvm::Regex::RegexFlags> getRegexFlag(llvm::StringRef Flag) {
+static llvm::Optional<llvm::Regex::RegexFlags>
+getRegexFlag(llvm::StringRef Flag) {
   for (const auto &StringFlag : RegexMap) {
     if (Flag == StringFlag.first)
       return StringFlag.second;
@@ -128,7 +129,8 @@ llvm::Optional<llvm::Regex::RegexFlags> getRegexFlag(llvm::StringRef Flag) {
   return llvm::None;
 }
 
-llvm::Optional<llvm::StringRef> getCloseRegexMatch(llvm::StringRef Flag) {
+static llvm::Optional<llvm::StringRef>
+getCloseRegexMatch(llvm::StringRef Flag) {
   for (const auto &StringFlag : RegexMap) {
     if (Flag.edit_distance(StringFlag.first) < 3)
       return StringFlag.first;

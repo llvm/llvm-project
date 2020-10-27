@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -101,6 +102,12 @@ bool Argument::hasByValAttr() const {
   return hasAttribute(Attribute::ByVal);
 }
 
+bool Argument::hasByRefAttr() const {
+  if (!getType()->isPointerTy())
+    return false;
+  return hasAttribute(Attribute::ByRef);
+}
+
 bool Argument::hasSwiftSelfAttr() const {
   return getParent()->hasParamAttribute(getArgNo(), Attribute::SwiftSelf);
 }
@@ -120,7 +127,7 @@ bool Argument::hasPreallocatedAttr() const {
   return hasAttribute(Attribute::Preallocated);
 }
 
-bool Argument::hasPassPointeeByValueAttr() const {
+bool Argument::hasPassPointeeByValueCopyAttr() const {
   if (!getType()->isPointerTy()) return false;
   AttributeList Attrs = getParent()->getAttributes();
   return Attrs.hasParamAttribute(getArgNo(), Attribute::ByVal) ||
@@ -128,25 +135,50 @@ bool Argument::hasPassPointeeByValueAttr() const {
          Attrs.hasParamAttribute(getArgNo(), Attribute::Preallocated);
 }
 
-uint64_t Argument::getPassPointeeByValueCopySize(const DataLayout &DL) const {
-  AttributeSet ParamAttrs
-    = getParent()->getAttributes().getParamAttributes(getArgNo());
+bool Argument::hasPointeeInMemoryValueAttr() const {
+  if (!getType()->isPointerTy())
+    return false;
+  AttributeList Attrs = getParent()->getAttributes();
+  return Attrs.hasParamAttribute(getArgNo(), Attribute::ByVal) ||
+         Attrs.hasParamAttribute(getArgNo(), Attribute::InAlloca) ||
+         Attrs.hasParamAttribute(getArgNo(), Attribute::Preallocated) ||
+         Attrs.hasParamAttribute(getArgNo(), Attribute::ByRef);
+}
 
+/// For a byval, inalloca, or preallocated parameter, get the in-memory
+/// parameter type.
+static Type *getMemoryParamAllocType(AttributeSet ParamAttrs, Type *ArgTy) {
   // FIXME: All the type carrying attributes are mutually exclusive, so there
   // should be a single query to get the stored type that handles any of them.
   if (Type *ByValTy = ParamAttrs.getByValType())
-    return DL.getTypeAllocSize(ByValTy);
+    return ByValTy;
+  if (Type *ByRefTy = ParamAttrs.getByRefType())
+    return ByRefTy;
   if (Type *PreAllocTy = ParamAttrs.getPreallocatedType())
-    return DL.getTypeAllocSize(PreAllocTy);
+    return PreAllocTy;
 
   // FIXME: inalloca always depends on pointee element type. It's also possible
   // for byval to miss it.
   if (ParamAttrs.hasAttribute(Attribute::InAlloca) ||
       ParamAttrs.hasAttribute(Attribute::ByVal) ||
       ParamAttrs.hasAttribute(Attribute::Preallocated))
-    return DL.getTypeAllocSize(cast<PointerType>(getType())->getElementType());
+    return cast<PointerType>(ArgTy)->getElementType();
 
+  return nullptr;
+}
+
+uint64_t Argument::getPassPointeeByValueCopySize(const DataLayout &DL) const {
+  AttributeSet ParamAttrs =
+      getParent()->getAttributes().getParamAttributes(getArgNo());
+  if (Type *MemTy = getMemoryParamAllocType(ParamAttrs, getType()))
+    return DL.getTypeAllocSize(MemTy);
   return 0;
+}
+
+Type *Argument::getPointeeInMemoryValueType() const {
+  AttributeSet ParamAttrs =
+      getParent()->getAttributes().getParamAttributes(getArgNo());
+  return getMemoryParamAllocType(ParamAttrs, getType());
 }
 
 unsigned Argument::getParamAlignment() const {
@@ -162,6 +194,11 @@ MaybeAlign Argument::getParamAlign() const {
 Type *Argument::getParamByValType() const {
   assert(getType()->isPointerTy() && "Only pointers have byval types");
   return getParent()->getParamByValType(getArgNo());
+}
+
+Type *Argument::getParamByRefType() const {
+  assert(getType()->isPointerTy() && "Only pointers have byval types");
+  return getParent()->getParamByRefType(getArgNo());
 }
 
 uint64_t Argument::getDereferenceableBytes() const {
@@ -580,6 +617,10 @@ static const char * const IntrinsicNameTable[] = {
 #define GET_INTRINSIC_TARGET_DATA
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_TARGET_DATA
+
+bool Function::isTargetIntrinsic() const {
+  return IntID > TargetInfos[0].Count;
+}
 
 /// Find the segment of \c IntrinsicNameTable for intrinsics with the same
 /// target as \c Name, or the generic table if \c Name is not target specific.
@@ -1484,12 +1525,21 @@ Optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
 }
 
 /// hasAddressTaken - returns true if there are any uses of this function
-/// other than direct calls or invokes to it.
-bool Function::hasAddressTaken(const User* *PutOffender) const {
+/// other than direct calls or invokes to it. Optionally ignores callback
+/// uses.
+bool Function::hasAddressTaken(const User **PutOffender,
+                               bool IgnoreCallbackUses) const {
   for (const Use &U : uses()) {
     const User *FU = U.getUser();
     if (isa<BlockAddress>(FU))
       continue;
+
+    if (IgnoreCallbackUses) {
+      AbstractCallSite ACS(&U);
+      if (ACS && ACS.isCallbackCall())
+        continue;
+    }
+
     const auto *Call = dyn_cast<CallBase>(FU);
     if (!Call) {
       if (PutOffender)

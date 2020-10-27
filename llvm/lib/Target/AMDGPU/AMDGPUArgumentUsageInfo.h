@@ -27,7 +27,7 @@ private:
   friend class AMDGPUArgumentUsageInfo;
 
   union {
-    Register Reg;
+    MCRegister Reg;
     unsigned StackOffset;
   };
 
@@ -69,7 +69,7 @@ public:
     return !IsStack;
   }
 
-  Register getRegister() const {
+  MCRegister getRegister() const {
     assert(!IsStack);
     return Reg;
   }

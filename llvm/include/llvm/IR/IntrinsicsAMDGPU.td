@@ -1667,7 +1667,8 @@ class AMDGPUGlobalAtomicRtn<LLVMType vt> : Intrinsic <
   [vt],
   [llvm_anyptr_ty,    // vaddr
    vt],               // vdata(VGPR)
-  [IntrArgMemOnly, NoCapture<ArgIndex<0>>], "", [SDNPMemOperand]>;
+  [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>], "",
+  [SDNPMemOperand]>;
 
 def int_amdgcn_global_atomic_csub : AMDGPUGlobalAtomicRtn<llvm_i32_ty>;
 

@@ -1,0 +1,17 @@
+# RUN: not llc -o - %s -mtriple=arm64-eabi -mattr=+jsconv -run-pass=legalizer 2>&1 | FileCheck %s
+
+# CHECK: [[@LINE+11]]:49: missing implicit register operand 'implicit-def $nzcv'
+
+...
+---
+name:            test_jcvt
+liveins:
+  - { reg: '$d0' }
+body:             |
+  bb.0:
+    liveins: $d0
+
+    renamable $w0 = FJCVTZS killed renamable $d0
+    RET undef $lr, implicit killed $w0
+
+...

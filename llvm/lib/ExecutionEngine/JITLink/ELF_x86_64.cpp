@@ -11,17 +11,194 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
+#include "BasicGOTAndStubsBuilder.h"
 #include "JITLinkGeneric.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/Endian.h"
 
 #define DEBUG_TYPE "jitlink"
 
 using namespace llvm;
 using namespace llvm::jitlink;
+using namespace llvm::jitlink::ELF_x86_64_Edges;
+
+namespace {
+class ELF_x86_64_GOTAndStubsBuilder
+    : public BasicGOTAndStubsBuilder<ELF_x86_64_GOTAndStubsBuilder> {
+public:
+  static const uint8_t NullGOTEntryContent[8];
+  static const uint8_t StubContent[6];
+
+  ELF_x86_64_GOTAndStubsBuilder(LinkGraph &G)
+      : BasicGOTAndStubsBuilder<ELF_x86_64_GOTAndStubsBuilder>(G) {}
+
+  bool isGOTEdge(Edge &E) const {
+    return E.getKind() == PCRel32GOT || E.getKind() == PCRel32GOTLoad;
+  }
+
+  Symbol &createGOTEntry(Symbol &Target) {
+    auto &GOTEntryBlock = G.createContentBlock(
+        getGOTSection(), getGOTEntryBlockContent(), 0, 8, 0);
+    GOTEntryBlock.addEdge(Pointer64, 0, Target, 0);
+    return G.addAnonymousSymbol(GOTEntryBlock, 0, 8, false, false);
+  }
+
+  void fixGOTEdge(Edge &E, Symbol &GOTEntry) {
+    assert((E.getKind() == PCRel32GOT || E.getKind() == PCRel32GOTLoad) &&
+           "Not a GOT edge?");
+    // If this is a PCRel32GOT then change it to an ordinary PCRel32. If it is
+    // a PCRel32GOTLoad then leave it as-is for now. We will use the kind to
+    // check for GOT optimization opportunities in the
+    // optimizeMachO_x86_64_GOTAndStubs pass below.
+    if (E.getKind() == PCRel32GOT)
+      E.setKind(PCRel32);
+
+    E.setTarget(GOTEntry);
+    // Leave the edge addend as-is.
+  }
+
+  bool isExternalBranchEdge(Edge &E) {
+    return E.getKind() == Branch32 && !E.getTarget().isDefined();
+  }
+
+  Symbol &createStub(Symbol &Target) {
+    auto &StubContentBlock =
+        G.createContentBlock(getStubsSection(), getStubBlockContent(), 0, 1, 0);
+    // Re-use GOT entries for stub targets.
+    auto &GOTEntrySymbol = getGOTEntrySymbol(Target);
+    StubContentBlock.addEdge(PCRel32, 2, GOTEntrySymbol, 0);
+    return G.addAnonymousSymbol(StubContentBlock, 0, 6, true, false);
+  }
+
+  void fixExternalBranchEdge(Edge &E, Symbol &Stub) {
+    assert(E.getKind() == Branch32 && "Not a Branch32 edge?");
+    assert(E.getAddend() == 0 && "Branch32 edge has non-zero addend?");
+
+    // Set the edge kind to Branch32ToStub. We will use this to check for stub
+    // optimization opportunities in the optimize ELF_x86_64_GOTAndStubs pass
+    // below.
+    E.setKind(Branch32ToStub);
+    E.setTarget(Stub);
+  }
+
+private:
+  Section &getGOTSection() {
+    if (!GOTSection)
+      GOTSection = &G.createSection("$__GOT", sys::Memory::MF_READ);
+    return *GOTSection;
+  }
+
+  Section &getStubsSection() {
+    if (!StubsSection) {
+      auto StubsProt = static_cast<sys::Memory::ProtectionFlags>(
+          sys::Memory::MF_READ | sys::Memory::MF_EXEC);
+      StubsSection = &G.createSection("$__STUBS", StubsProt);
+    }
+    return *StubsSection;
+  }
+
+  StringRef getGOTEntryBlockContent() {
+    return StringRef(reinterpret_cast<const char *>(NullGOTEntryContent),
+                     sizeof(NullGOTEntryContent));
+  }
+
+  StringRef getStubBlockContent() {
+    return StringRef(reinterpret_cast<const char *>(StubContent),
+                     sizeof(StubContent));
+  }
+
+  Section *GOTSection = nullptr;
+  Section *StubsSection = nullptr;
+};
+} // namespace
+
+const uint8_t ELF_x86_64_GOTAndStubsBuilder::NullGOTEntryContent[8] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+const uint8_t ELF_x86_64_GOTAndStubsBuilder::StubContent[6] = {
+    0xFF, 0x25, 0x00, 0x00, 0x00, 0x00};
 
 static const char *CommonSectionName = "__common";
+static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
+  LLVM_DEBUG(dbgs() << "Optimizing GOT entries and stubs:\n");
 
+  for (auto *B : G.blocks())
+    for (auto &E : B->edges())
+      if (E.getKind() == PCRel32GOTLoad) {
+        assert(E.getOffset() >= 3 && "GOT edge occurs too early in block");
+
+        // Switch the edge kind to PCRel32: Whether we change the edge target
+        // or not this will be the desired kind.
+        E.setKind(PCRel32);
+
+        // Optimize GOT references.
+        auto &GOTBlock = E.getTarget().getBlock();
+        assert(GOTBlock.getSize() == G.getPointerSize() &&
+               "GOT entry block should be pointer sized");
+        assert(GOTBlock.edges_size() == 1 &&
+               "GOT entry should only have one outgoing edge");
+
+        auto &GOTTarget = GOTBlock.edges().begin()->getTarget();
+        JITTargetAddress EdgeAddr = B->getAddress() + E.getOffset();
+        JITTargetAddress TargetAddr = GOTTarget.getAddress();
+
+        // Check that this is a recognized MOV instruction.
+        // FIXME: Can we assume this?
+        constexpr uint8_t MOVQRIPRel[] = {0x48, 0x8b};
+        if (strncmp(B->getContent().data() + E.getOffset() - 3,
+                    reinterpret_cast<const char *>(MOVQRIPRel), 2) != 0)
+          continue;
+
+        int64_t Displacement = TargetAddr - EdgeAddr + 4;
+        if (Displacement >= std::numeric_limits<int32_t>::min() &&
+            Displacement <= std::numeric_limits<int32_t>::max()) {
+          E.setTarget(GOTTarget);
+          auto *BlockData = reinterpret_cast<uint8_t *>(
+              const_cast<char *>(B->getContent().data()));
+          BlockData[E.getOffset() - 2] = 0x8d;
+          LLVM_DEBUG({
+            dbgs() << "  Replaced GOT load wih LEA:\n    ";
+            printEdge(dbgs(), *B, E, getELFX86RelocationKindName(E.getKind()));
+            dbgs() << "\n";
+          });
+        }
+      } else if (E.getKind() == Branch32ToStub) {
+
+        // Switch the edge kind to PCRel32: Whether we change the edge target
+        // or not this will be the desired kind.
+        E.setKind(Branch32);
+
+        auto &StubBlock = E.getTarget().getBlock();
+        assert(StubBlock.getSize() ==
+                   sizeof(ELF_x86_64_GOTAndStubsBuilder::StubContent) &&
+               "Stub block should be stub sized");
+        assert(StubBlock.edges_size() == 1 &&
+               "Stub block should only have one outgoing edge");
+
+        auto &GOTBlock = StubBlock.edges().begin()->getTarget().getBlock();
+        assert(GOTBlock.getSize() == G.getPointerSize() &&
+               "GOT block should be pointer sized");
+        assert(GOTBlock.edges_size() == 1 &&
+               "GOT block should only have one outgoing edge");
+
+        auto &GOTTarget = GOTBlock.edges().begin()->getTarget();
+        JITTargetAddress EdgeAddr = B->getAddress() + E.getOffset();
+        JITTargetAddress TargetAddr = GOTTarget.getAddress();
+
+        int64_t Displacement = TargetAddr - EdgeAddr + 4;
+        if (Displacement >= std::numeric_limits<int32_t>::min() &&
+            Displacement <= std::numeric_limits<int32_t>::max()) {
+          E.setTarget(GOTTarget);
+          LLVM_DEBUG({
+            dbgs() << "  Replaced stub branch with direct branch:\n    ";
+            printEdge(dbgs(), *B, E, getELFX86RelocationKindName(E.getKind()));
+            dbgs() << "\n";
+          });
+        }
+      }
+
+  return Error::success();
+}
 namespace llvm {
 namespace jitlink {
 
@@ -35,7 +212,8 @@ private:
   // Find a better way
   using SymbolTable = object::ELFFile<object::ELF64LE>::Elf_Shdr;
   // For now we just assume
-  std::map<int32_t, Symbol *> JITSymbolTable;
+  using SymbolMap = std::map<int32_t, Symbol *>;
+  SymbolMap JITSymbolTable;
 
   Section &getCommonSection() {
     if (!CommonSection) {
@@ -51,6 +229,10 @@ private:
     switch (Type) {
     case ELF::R_X86_64_PC32:
       return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32;
+    case ELF::R_X86_64_64:
+      return ELF_x86_64_Edges::ELFX86RelocationKind::Pointer64;
+    case ELF::R_X86_64_GOTPCREL:
+      return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32GOTLoad;
     }
     return make_error<JITLinkError>("Unsupported x86-64 relocation:" +
                                     formatv("{0:d}", Type));
@@ -101,10 +283,6 @@ private:
 
       for (auto SymRef : *Symbols) {
         Optional<StringRef> Name;
-        uint64_t Size = 0;
-
-        // FIXME: Read size.
-        (void)Size;
 
         if (auto NameOrErr = SymRef.getName(*StringTable))
           Name = *NameOrErr;
@@ -120,7 +298,8 @@ private:
           dbgs() << ": value = " << formatv("{0:x16}", SymRef.getValue())
                  << ", type = " << formatv("{0:x2}", SymRef.getType())
                  << ", binding = " << SymRef.getBinding()
-                 << ", size =" << Size;
+                 << ", size =" << SymRef.st_size
+                 << ", info =" << SymRef.st_info;
           dbgs() << "\n";
         });
       }
@@ -147,8 +326,8 @@ private:
       uint64_t Flags = SecRef.sh_flags;
       uint64_t Alignment = SecRef.sh_addralign;
       const char *Data = nullptr;
-      // TODO: figure out what it is that has 0 size no name and address
-      // 0000-0000
+      // for now we just use this to skip the "undefined" section, probably need
+      // to revist
       if (Size == 0)
         continue;
 
@@ -229,13 +408,22 @@ private:
           dbgs() << "Relocation Type: " << Type << "\n"
                  << "Name: " << Obj.getRelocationTypeName(Type) << "\n";
         });
-
+        auto SymbolIndex = Rela.getSymbol(false);
         auto Symbol = Obj.getRelocationSymbol(&Rela, &SymTab);
         if (!Symbol)
           return Symbol.takeError();
 
         auto BlockToFix = *(JITSection->blocks().begin());
-        auto TargetSymbol = JITSymbolTable[(*Symbol)->st_shndx];
+        auto *TargetSymbol = JITSymbolTable[SymbolIndex];
+
+        if (!TargetSymbol) {
+          return make_error<llvm::StringError>(
+              "Could not find symbol at given index, did you add it to "
+              "JITSymbolTable? index: " +
+                  std::to_string((*Symbol)->st_shndx) +
+                  " Size of table: " + std::to_string(JITSymbolTable.size()),
+              llvm::inconvertibleErrorCode());
+        }
         uint64_t Addend = Rela.r_addend;
         JITTargetAddress FixupAddress =
             (*UpdateSection)->sh_addr + Rela.r_offset;
@@ -251,8 +439,8 @@ private:
         LLVM_DEBUG({
           Edge GE(*Kind, FixupAddress - BlockToFix->getAddress(), *TargetSymbol,
                   Addend);
-          // TODO a mapping of KIND => type then call getRelocationTypeName4
-          printEdge(dbgs(), *BlockToFix, GE, StringRef(""));
+          printEdge(dbgs(), *BlockToFix, GE,
+                    getELFX86RelocationKindName(*Kind));
           dbgs() << "\n";
         });
         BlockToFix->addEdge(*Kind, FixupAddress - BlockToFix->getAddress(),
@@ -299,10 +487,12 @@ private:
       if (blocks.empty())
         return make_error<llvm::StringError>("Section has no block",
                                              llvm::inconvertibleErrorCode());
-
+      int SymbolIndex = -1;
       for (auto SymRef : *Symbols) {
+        ++SymbolIndex;
         auto Type = SymRef.getType();
-        if (Type == ELF::STT_NOTYPE || Type == ELF::STT_FILE)
+
+        if (Type == ELF::STT_FILE || SymbolIndex == 0)
           continue;
         // these should do it for now
         // if(Type != ELF::STT_NOTYPE &&
@@ -324,7 +514,8 @@ private:
           bindings = {Linkage::Strong, Scope::Local};
 
         if (SymRef.isDefined() &&
-            (Type == ELF::STT_FUNC || Type == ELF::STT_OBJECT)) {
+            (Type == ELF::STT_FUNC || Type == ELF::STT_OBJECT ||
+             Type == ELF::STT_SECTION)) {
 
           auto DefinedSection = Obj.getSection(SymRef.st_shndx);
           if (!DefinedSection)
@@ -344,13 +535,19 @@ private:
 
           auto B = *bs.begin();
           LLVM_DEBUG({ dbgs() << "  " << *Name << ": "; });
-
+          if (SymRef.getType() == ELF::STT_SECTION)
+            *Name = *sectName;
           auto &S = G->addDefinedSymbol(
               *B, SymRef.getValue(), *Name, SymRef.st_size, bindings.first,
               bindings.second, SymRef.getType() == ELF::STT_FUNC, false);
-          JITSymbolTable[SymRef.st_shndx] = &S;
+          JITSymbolTable[SymbolIndex] = &S;
+        } else if (SymRef.isUndefined() && SymRef.isExternal()) {
+          auto &S = G->addExternalSymbol(*Name, SymRef.st_size, bindings.first);
+          JITSymbolTable[SymbolIndex] = &S;
         }
-        //TODO: The following has to be implmented.
+
+        //  }
+        // TODO: The following has to be implmented.
         // leaving commented out to save time for future patchs
         /*
           G->addAbsoluteSymbol(*Name, SymRef.getValue(), SymRef.st_size,
@@ -360,9 +557,6 @@ private:
             G->addCommonSymbol(*Name, Scope::Default, getCommonSection(), 0, 0,
           SymRef.getValue(), false);
           }
-
-
-          //G->addExternalSymbol(*Name, SymRef.st_size, Linkage::Strong);
   */
       }
     }
@@ -413,7 +607,9 @@ public:
       : JITLinker(std::move(Ctx), std::move(PassConfig)) {}
 
 private:
-  StringRef getEdgeKindName(Edge::Kind R) const override { return StringRef(); }
+  StringRef getEdgeKindName(Edge::Kind R) const override {
+    return getELFX86RelocationKindName(R);
+  }
 
   Expected<std::unique_ptr<LinkGraph>>
   buildGraph(MemoryBufferRef ObjBuffer) override {
@@ -430,15 +626,20 @@ private:
 
   Error applyFixup(Block &B, const Edge &E, char *BlockWorkingMem) const {
     using namespace ELF_x86_64_Edges;
+    using namespace llvm::support;
     char *FixupPtr = BlockWorkingMem + E.getOffset();
     JITTargetAddress FixupAddress = B.getAddress() + E.getOffset();
     switch (E.getKind()) {
-
-    case ELFX86RelocationKind::PCRel32:
+    case ELFX86RelocationKind::PCRel32: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
-      // verify
-      *(support::little32_t *)FixupPtr = Value;
+      endian::write32le(FixupPtr, Value);
       break;
+    }
+    case ELFX86RelocationKind::Pointer64: {
+      int64_t Value = E.getTarget().getAddress() + E.getAddend();
+      endian::write64le(FixupPtr, Value);
+      break;
+    }
     }
     return Error::success();
   }
@@ -454,10 +655,30 @@ void jitLink_ELF_x86_64(std::unique_ptr<JITLinkContext> Ctx) {
   else
     Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
+  // Add an in-place GOT/Stubs pass.
+  Config.PostPrunePasses.push_back([](LinkGraph &G) -> Error {
+    ELF_x86_64_GOTAndStubsBuilder(G).run();
+    return Error::success();
+  });
+
+  // Add GOT/Stubs optimizer pass.
+  Config.PostAllocationPasses.push_back(optimizeELF_x86_64_GOTAndStubs);
+
   if (auto Err = Ctx->modifyPassConfig(TT, Config))
     return Ctx->notifyFailed(std::move(Err));
 
   ELFJITLinker_x86_64::link(std::move(Ctx), std::move(Config));
+}
+StringRef getELFX86RelocationKindName(Edge::Kind R) {
+  switch (R) {
+  case PCRel32:
+    return "PCRel32";
+  case Pointer64:
+    return "Pointer64";
+  case PCRel32GOTLoad:
+    return "PCRel32GOTLoad";
+  }
+  return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
 }
 } // end namespace jitlink
 } // end namespace llvm

@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -S | FileCheck %s
+; RUN: opt < %s -simplifycfg -hoist-common-insts=true -S | FileCheck %s
 
 define void @foo(i1 %c, i8* %p) {
 ; CHECK: if:

@@ -1,9 +1,9 @@
 ; This check verifies that stack depth instrumentation works correctly.
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=1 \
-; RUN:     -sanitizer-coverage-stack-depth -S | FileCheck %s
+; RUN:     -sanitizer-coverage-stack-depth -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=3 \
 ; RUN:     -sanitizer-coverage-stack-depth -sanitizer-coverage-trace-pc-guard \
-; RUN:     -S | FileCheck %s
+; RUN:     -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=1 \
 ; RUN:     -sanitizer-coverage-stack-depth -S | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 \

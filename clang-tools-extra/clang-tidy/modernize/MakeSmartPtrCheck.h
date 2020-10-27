@@ -46,8 +46,7 @@ protected:
   static const char PointerType[];
 
 private:
-  std::unique_ptr<utils::IncludeInserter> Inserter;
-  const utils::IncludeSorter::IncludeStyle IncludeStyle;
+  utils::IncludeInserter Inserter;
   const std::string MakeSmartPtrFunctionHeader;
   const std::string MakeSmartPtrFunctionName;
   const bool IgnoreMacros;

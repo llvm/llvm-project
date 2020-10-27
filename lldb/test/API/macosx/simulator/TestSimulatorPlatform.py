@@ -27,18 +27,28 @@ class TestSimulatorPlatformLaunching(TestBase):
         """scan the debugserver packet log"""
         logfile = open(log, "r")
         dylib_info = None
-        response = False
+        process_info_ostype = None
+        expect_dylib_info_response = False
+        expect_process_info_response = False
         for line in logfile:
-            if response:
+            if expect_dylib_info_response:
                 while line[0] != '$':
                     line = line[1:]
                 line = line[1:]
                 # Unescape '}'.
                 dylib_info = json.loads(line.replace('}]','}')[:-4])
-                response = False
+                expect_dylib_info_response = False
             if 'send packet: $jGetLoadedDynamicLibrariesInfos:{' in line:
-                response = True
+                expect_dylib_info_response = True
+            if expect_process_info_response:
+                for pair in line.split(';'):
+                    keyval = pair.split(':')
+                    if len(keyval) == 2 and keyval[0] == 'ostype':
+                        process_info_ostype = keyval[1]
+            if 'send packet: $qProcessInfo#' in line:
+                expect_process_info_response = True
 
+        self.assertEquals(process_info_ostype, expected_platform)
         self.assertTrue(dylib_info)
         aout_info = None
         for image in dylib_info['images']:

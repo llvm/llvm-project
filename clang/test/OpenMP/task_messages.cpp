@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd -ferror-limit 200 -std=c++11 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=50 -fopenmp-simd -ferror-limit 200 -std=c++11 -o - %s -Wuninitialized
 
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=51 -DOMP51 -fopenmp -ferror-limit 100 -std=c++11 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-version=51 -DOMP51 -fopenmp-simd -ferror-limit 100 -std=c++11 -o - %s -Wuninitialized
+
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
 #pragma omp task
@@ -16,6 +19,10 @@ void foo() {
 }
 
 typedef unsigned long omp_event_handle_t;
+namespace {
+static int y = 0;
+}
+static int x = 0;
 
 #pragma omp task // expected-error {{unexpected OpenMP directive '#pragma omp task'}}
 
@@ -52,6 +59,15 @@ int foo() {
 #pragma omp task default(none) // expected-note 2 {{explicit data sharing attribute requested here}}
 #pragma omp task default(shared)
   ++a; // expected-error 2 {{variable 'a' must have explicitly specified data sharing attributes}}
+#ifdef OMP51
+#pragma omp task default(firstprivate) // expected-note 4 {{explicit data sharing attribute requested here}}
+#pragma omp task
+  {
+    ++x; // expected-error 2 {{variable 'x' must have explicitly specified data sharing attributes}}
+    ++y; // expected-error 2 {{variable 'y' must have explicitly specified data sharing attributes}}
+  }
+#endif
+
 #pragma omp task default(none) // expected-note 2 {{explicit data sharing attribute requested here}}
 #pragma omp task
   // expected-error@+1 {{calling a private constructor of class 'S'}}

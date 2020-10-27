@@ -1,7 +1,7 @@
 // The purpose of this test is to see if the COFF object writer is emitting the
 // proper relocations for multiple pieces of data in a single data fragment.
 
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 %s | llvm-readobj -h -S --sr --sd --symbols | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-win32 %s | llvm-readobj -h -S --sr --sd --symbols - | FileCheck %s
 
 .def	 _main;
 	.scl	2;

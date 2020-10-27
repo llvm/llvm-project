@@ -1,13 +1,13 @@
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -mattr=+msa,+fp64 -filetype=obj -o - | \
-# RUN:   llvm-readobj -S --section-data | \
+# RUN:   llvm-readobj -S --section-data - | \
 # RUN:     FileCheck %s -check-prefix=ELF32
 
 # RUN: llvm-mc %s -arch=mips64 -mcpu=mips64r2 -mattr=+msa,+fp64 -target-abi n32 -filetype=obj -o - | \
-# RUN:   llvm-readobj -S --section-data | \
+# RUN:   llvm-readobj -S --section-data - | \
 # RUN:     FileCheck %s -check-prefix=ELF32
 
 # RUN: llvm-mc %s -arch=mips64 -mcpu=mips64r2 -mattr=+msa,+fp64 -target-abi n64 -filetype=obj -o - | \
-# RUN:   llvm-readobj -S --section-data | \
+# RUN:   llvm-readobj -S --section-data - | \
 # RUN:     FileCheck %s -check-prefix=ELF64
 
 # ELF32:   Section {

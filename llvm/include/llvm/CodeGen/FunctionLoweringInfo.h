@@ -91,13 +91,33 @@ public:
   /// Track virtual registers created for exception pointers.
   DenseMap<const Value *, Register> CatchPadExceptionPointers;
 
-  /// Keep track of frame indices allocated for statepoints as they could be
-  /// used across basic block boundaries (e.g. for an invoke).  For each
-  /// gc.statepoint instruction, maps uniqued llvm IR values to the slots they
-  /// were spilled in.  If a value is mapped to None it means we visited the
-  /// value but didn't spill it (because it was a constant, for instance).
-  using StatepointSpillMapTy = DenseMap<const Value *, Optional<int>>;
-  DenseMap<const Instruction *, StatepointSpillMapTy> StatepointSpillMaps;
+  /// Helper object to track which of three possible relocation mechanisms are
+  /// used for a particular value being relocated over a statepoint.
+  struct StatepointRelocationRecord {
+    enum RelocType {
+      // Value did not need to be relocated and can be used directly.
+      NoRelocate,
+      // Value was spilled to stack and needs filled at the gc.relocate.
+      Spill,
+      // Value was lowered to tied def and gc.relocate should be replaced with
+      // copy from vreg.
+      VReg,
+    } type = NoRelocate;
+    // Payload contains either frame index of the stack slot in which the value
+    // was spilled, or virtual register which contains the re-definition.
+    union payload_t {
+      payload_t() : FI(-1) {}
+      int FI;
+      Register Reg;
+    } payload;
+  };
+
+  /// Keep track of each value which was relocated and the strategy used to
+  /// relocate that value.  This information is required when visiting
+  /// gc.relocates which may appear in following blocks.
+  using StatepointSpillMapTy =
+    DenseMap<const Value *, StatepointRelocationRecord>;
+  DenseMap<const Instruction *, StatepointSpillMapTy> StatepointRelocationMaps;
 
   /// StaticAllocaMap - Keep track of frame indices for fixed sized allocas in
   /// the entry block.  This allows the allocas to be efficiently referenced

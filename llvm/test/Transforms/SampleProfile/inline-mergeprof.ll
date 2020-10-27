@@ -3,8 +3,12 @@
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true -S | FileCheck -check-prefix=SCALE %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=false -S | FileCheck -check-prefix=SCALE %s
 
-; Test we properly merge not inlined profile properly with '-sample-profile-merge-inlinee'
+; Test we properly merge not inlined profile with '-sample-profile-merge-inlinee'
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true -S | FileCheck -check-prefix=MERGE  %s
+
+; Test we properly merge not inlined profile with '-sample-profile-merge-inlinee'
+; when the profile uses md5.
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.md5.prof -sample-profile-merge-inlinee=true -S | FileCheck -check-prefix=MERGE  %s
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 

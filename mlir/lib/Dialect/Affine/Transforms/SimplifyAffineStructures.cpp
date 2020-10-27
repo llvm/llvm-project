@@ -96,13 +96,4 @@ void SimplifyAffineStructures::runOnFunction() {
     if (isa<AffineForOp, AffineIfOp, AffineApplyOp>(op))
       applyOpPatternsAndFold(op, patterns);
   });
-
-  // Turn memrefs' non-identity layouts maps into ones with identity. Collect
-  // alloc ops first and then process since normalizeMemRef replaces/erases ops
-  // during memref rewriting.
-  SmallVector<AllocOp, 4> allocOps;
-  func.walk([&](AllocOp op) { allocOps.push_back(op); });
-  for (auto allocOp : allocOps) {
-    normalizeMemRef(allocOp);
-  }
 }

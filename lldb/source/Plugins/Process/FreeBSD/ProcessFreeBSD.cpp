@@ -683,6 +683,9 @@ ProcessFreeBSD::GetSoftwareBreakpointTrapOpcode(BreakpointSite *bp_site) {
 }
 
 Status ProcessFreeBSD::EnableBreakpointSite(BreakpointSite *bp_site) {
+  if (bp_site->HardwareRequired())
+    return Status("Hardware breakpoints are not supported.");
+
   return EnableSoftwareBreakpoint(bp_site);
 }
 

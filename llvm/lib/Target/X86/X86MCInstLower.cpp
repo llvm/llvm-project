@@ -1079,29 +1079,30 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   }
 }
 
-/// Return the longest nop which can be efficiently decoded for the given
-/// target cpu.  15-bytes is the longest single NOP instruction, but some
-/// platforms can't decode the longest forms efficiently.
-static unsigned maxLongNopLength(const X86Subtarget *Subtarget) {
-  if (Subtarget->getFeatureBits()[X86::ProcIntelSLM])
-    return 7;
-  if (Subtarget->getFeatureBits()[X86::FeatureFast15ByteNOP])
-    return 15;
-  if (Subtarget->getFeatureBits()[X86::FeatureFast11ByteNOP])
-    return 11;
-  if (Subtarget->getFeatureBits()[X86::FeatureNOPL] || Subtarget->is64Bit())
-    return 10;
-  if (Subtarget->is32Bit())
-    return 2;
-  return 1;
-}
-
 /// Emit the largest nop instruction smaller than or equal to \p NumBytes
 /// bytes.  Return the size of nop emitted.
 static unsigned emitNop(MCStreamer &OS, unsigned NumBytes,
                         const X86Subtarget *Subtarget) {
+  // Determine the longest nop which can be efficiently decoded for the given
+  // target cpu.  15-bytes is the longest single NOP instruction, but some
+  // platforms can't decode the longest forms efficiently.
+  unsigned MaxNopLength = 1;
+  if (Subtarget->is64Bit()) {
+    // FIXME: We can use NOOPL on 32-bit targets with FeatureNOPL, but the
+    // IndexReg/BaseReg below need to be updated.
+    if (Subtarget->hasFeature(X86::FeatureFast7ByteNOP))
+      MaxNopLength = 7;
+    else if (Subtarget->hasFeature(X86::FeatureFast15ByteNOP))
+      MaxNopLength = 15;
+    else if (Subtarget->hasFeature(X86::FeatureFast11ByteNOP))
+      MaxNopLength = 11;
+    else
+      MaxNopLength = 10;
+  } if (Subtarget->is32Bit())
+    MaxNopLength = 2;
+
   // Cap a single nop emission at the profitable value for the target
-  NumBytes = std::min(NumBytes, maxLongNopLength(Subtarget));
+  NumBytes = std::min(NumBytes, MaxNopLength);
 
   unsigned NopSize;
   unsigned Opc, BaseReg, ScaleVal, IndexReg, Displacement, SegmentReg;

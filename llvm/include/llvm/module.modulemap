@@ -388,7 +388,7 @@ module LLVM_Utils {
 
     umbrella "Support"
     module * { export * }
-    
+
     // Exclude this; it should only be used on Windows.
     exclude header "Support/Windows/WindowsSupport.h"
 
@@ -397,8 +397,9 @@ module LLVM_Utils {
     exclude header "Support/Solaris/sys/regset.h"
 
     // These are intended for textual inclusion.
-    textual header "Support/ARMTargetParser.def"
     textual header "Support/AArch64TargetParser.def"
+    textual header "Support/ARMTargetParser.def"
+    textual header "Support/RISCVTargetParser.def"
     textual header "Support/TargetOpcodes.def"
     textual header "Support/X86TargetParser.def"
   }

@@ -257,7 +257,7 @@ auto ComputeOffsetsHelper::GetElementSize(const Symbol &symbol)
   // TODO: The size of procedure pointers is not yet known
   // and is independent of rank (and probably also the number
   // of length type parameters).
-  if (IsDescriptor(symbol) || IsProcedure(symbol)) {
+  if (IsDescriptor(symbol) || IsProcedurePointer(symbol)) {
     int lenParams{0};
     if (const DerivedTypeSpec * derived{type->AsDerived()}) {
       lenParams = CountLenParameters(*derived);
@@ -265,6 +265,9 @@ auto ComputeOffsetsHelper::GetElementSize(const Symbol &symbol)
     std::size_t size{
         runtime::Descriptor::SizeInBytes(symbol.Rank(), false, lenParams)};
     return {size, maxAlignment};
+  }
+  if (IsProcedure(symbol)) {
+    return {};
   }
   SizeAndAlignment result;
   if (const IntrinsicTypeSpec * intrinsic{type->AsIntrinsic()}) {

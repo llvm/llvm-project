@@ -49,7 +49,7 @@ void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
                                           bool IsAligned, bool InPPDirective) {
   if (Tok.Finalized)
     return;
-  Tok.Decision = (Newlines > 0) ? FD_Break : FD_Continue;
+  Tok.setDecision((Newlines > 0) ? FD_Break : FD_Continue);
   Changes.push_back(Change(Tok, /*CreateReplacement=*/true, Tok.WhitespaceRange,
                            Spaces, StartOfTokenColumn, Newlines, "", "",
                            IsAligned, InPPDirective && !Tok.IsFirst,

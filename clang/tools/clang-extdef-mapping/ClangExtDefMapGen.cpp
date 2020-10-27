@@ -104,7 +104,7 @@ void MapExtDefNamesConsumer::addIfInMain(const DeclaratorDecl *DD,
 class MapExtDefNamesAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 llvm::StringRef) {
+                                                 llvm::StringRef) override {
     return std::make_unique<MapExtDefNamesConsumer>(CI.getASTContext());
   }
 };

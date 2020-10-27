@@ -74,14 +74,13 @@ class XunitReport(object):
         self.skipped_codes = {lit.Test.EXCLUDED,
                               lit.Test.SKIPPED, lit.Test.UNSUPPORTED}
 
-    # TODO(yln): elapsed unused, put it somewhere?
     def write_results(self, tests, elapsed):
         tests.sort(key=by_suite_and_test_path)
         tests_by_suite = itertools.groupby(tests, lambda t: t.suite)
 
         with open(self.output_file, 'w') as file:
             file.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-            file.write('<testsuites>\n')
+            file.write('<testsuites time="{time:.2f}">\n'.format(time=elapsed))
             for suite, test_iter in tests_by_suite:
                 self._write_testsuite(file, suite, list(test_iter))
             file.write('</testsuites>\n')
@@ -128,7 +127,7 @@ class XunitReport(object):
     def _get_skip_reason(self, test):
         code = test.result.code
         if code == lit.Test.EXCLUDED:
-            return 'Test not selected (--filter, --max-tests, --run-shard)'
+            return 'Test not selected (--filter, --max-tests)'
         if code == lit.Test.SKIPPED:
             return 'User interrupt'
 

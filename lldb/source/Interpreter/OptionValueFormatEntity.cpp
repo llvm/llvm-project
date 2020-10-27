@@ -29,11 +29,10 @@ OptionValueFormatEntity::OptionValueFormatEntity(const char *default_format)
   }
 }
 
-bool OptionValueFormatEntity::Clear() {
+void OptionValueFormatEntity::Clear() {
   m_current_entry = m_default_entry;
   m_current_format = m_default_format;
   m_value_was_set = false;
-  return true;
 }
 
 static void EscapeBackticks(llvm::StringRef str, std::string &dst) {
@@ -85,7 +84,7 @@ Status OptionValueFormatEntity::SetValueFromString(llvm::StringRef value_str,
       if (first_char == '"' || first_char == '\'') {
         const size_t trimmed_len = trimmed_value_str.size();
         if (trimmed_len == 1 || value_str[trimmed_len - 1] != first_char) {
-          error.SetErrorStringWithFormat("mismatched quotes");
+          error.SetErrorString("mismatched quotes");
           return error;
         }
         value_str = trimmed_value_str.substr(1, trimmed_len - 2);

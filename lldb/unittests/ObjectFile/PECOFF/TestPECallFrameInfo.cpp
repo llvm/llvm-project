@@ -192,7 +192,7 @@ symbols:         []
 )");
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
 
-  ModuleSP module_sp = std::make_shared<Module>(ModuleSpec(FileSpec(ExpectedFile->name())));
+  ModuleSP module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
   ObjectFile *object_file = module_sp->GetObjectFile();
   ASSERT_NE(object_file, nullptr);
 

@@ -1,5 +1,5 @@
 ; Test -sanitizer-coverage-trace-compares=1 API declarations on a non-x86_64 arch
-; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -sanitizer-coverage-trace-compares=1  -S | FileCheck %s
+; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -sanitizer-coverage-trace-compares=1  -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=1 -sanitizer-coverage-trace-compares=1  -S | FileCheck %s
 
 target triple = "i386-unknown-linux-gnu"

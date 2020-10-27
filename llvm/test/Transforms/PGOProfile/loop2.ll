@@ -1,8 +1,13 @@
-; RUN: opt < %s -pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
-; RUN: opt < %s -passes=pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
+; RUN: opt < %s -pgo-instr-gen -pgo-instrument-entry=false -S | FileCheck %s --check-prefixes=GEN,NOTENTRY
+; RUN: opt < %s -passes=pgo-instr-gen -pgo-instrument-entry=false -S | FileCheck %s --check-prefixes=GEN,NOTENTRY
 ; RUN: llvm-profdata merge %S/Inputs/loop2.proftext -o %t.profdata
-; RUN: opt < %s -pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
-; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
+; RUN: opt < %s -pgo-instr-use -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
+; RUN: opt < %s -passes=pgo-instr-use -pgo-instrument-entry=false -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
+; RUN: opt < %s -pgo-instr-gen -pgo-instrument-entry=true -S | FileCheck %s --check-prefixes=GEN,ENTRY
+; RUN: opt < %s -passes=pgo-instr-gen -pgo-instrument-entry=true -S | FileCheck %s --check-prefixes=GEN,ENTRY
+; RUN: llvm-profdata merge %S/Inputs/loop2_entry.proftext -o %t.profdata
+; RUN: opt < %s -pgo-instr-use -pgo-instrument-entry=true -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
+; RUN: opt < %s -passes=pgo-instr-use -pgo-instrument-entry=true -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=USE
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -13,7 +18,8 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @test_nested_for(i32 %r, i32 %s) {
 entry:
 ; GEN: entry:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_nested_for, i32 0, i32 0), i64 53929068288, i32 3, i32 2)
+; NOTENTRY: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_nested_for, i32 0, i32 0), i64 {{[0-9]+}}, i32 3, i32 2)
+; ENTRY: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_nested_for, i32 0, i32 0), i64 {{[0-9]+}}, i32 3, i32 0)
   br label %for.cond.outer
 
 for.cond.outer:
@@ -49,7 +55,8 @@ for.body.inner:
 
 for.inc.inner:
 ; GEN: for.inc.inner:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_nested_for, i32 0, i32 0), i64 53929068288, i32 3, i32 0)
+; NOTENTRY: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_nested_for, i32 0, i32 0), i64 {{[0-9]+}}, i32 3, i32 0)
+; ENTRY: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_nested_for, i32 0, i32 0), i64 {{[0-9]+}}, i32 3, i32 1)
   %inc.1 = add nsw i32 %j.0, 1
   br label %for.cond.inner
 
@@ -59,7 +66,8 @@ for.end.inner:
 
 for.inc.outer:
 ; GEN: for.inc.outer:
-; GEN: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_nested_for, i32 0, i32 0), i64 53929068288, i32 3, i32 1)
+; NOTENTRY: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_nested_for, i32 0, i32 0), i64 {{[0-9]+}}, i32 3, i32 1)
+; ENTRY: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @__profn_test_nested_for, i32 0, i32 0), i64 {{[0-9]+}}, i32 3, i32 2)
   %inc.2 = add nsw i32 %i.0, 1
   br label %for.cond.outer
 

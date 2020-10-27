@@ -93,7 +93,7 @@ def main():
     parser.add_argument(
         '-L', dest='search_paths',
         help='Paths to search for the libraries along', action='append',
-        nargs=1)
+        nargs=1, default=[])
     parser.add_argument(
         '--ar', dest='ar_exe', required=False,
         help='The ar executable to use, finds \'ar\' in the path if not given',

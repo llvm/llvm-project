@@ -1,5 +1,4 @@
-; RUN: llc -mtriple=arm-apple-ios -print-machineinstrs=branch-folder \
-; RUN: %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=arm-apple-ios -stop-after=branch-folder | FileCheck %s
 
 ; Branch probability of tailed-merged block:
 ;
@@ -8,11 +7,9 @@
 ; p(L0_L1 -> L3) = p(entry -> L0) * p(L0 -> L3) + p(entry -> L1) * p(L1 -> L3)
 ;                = 0.2 * 0.4 + 0.8 * 0.7 = 0.64
 
-; CHECK: # Machine code for function test0:
 ; CHECK: successors: %bb.{{[0-9]+}}(0x1999999a), %bb.{{[0-9]+}}(0x66666666)
 ; CHECK: bb.{{[0-9]+}}{{[0-9a-zA-Z.]*}}:
 ; CHECK: bb.{{[0-9]+}}{{[0-9a-zA-Z.]*}}:
-; CHECK: # End machine code for function test0.
 
 define i32 @test0(i32 %n, i32 %m, i32* nocapture %a, i32* nocapture %b) {
 entry:

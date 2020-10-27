@@ -37,63 +37,146 @@ public:
   virtual uint32_t GetCurrentRevision() = 0;
 };
 
-// if the user tries to add formatters for, say, "struct Foo" those will not
-// match any type because of the way we strip qualifiers from typenames this
-// method looks for the case where the user is adding a "class","struct","enum"
-// or "union" Foo and strips the unnecessary qualifier
-static inline ConstString GetValidTypeName_Impl(ConstString type) {
-  if (type.IsEmpty())
-    return type;
+/// Class for matching type names.
+class TypeMatcher {
+  RegularExpression m_type_name_regex;
+  ConstString m_type_name;
+  /// False if m_type_name_regex should be used for matching. False if this is
+  /// just matching by comparing with m_type_name string.
+  bool m_is_regex;
 
-  std::string type_cstr(type.AsCString());
-  StringLexer type_lexer(type_cstr);
+  // if the user tries to add formatters for, say, "struct Foo" those will not
+  // match any type because of the way we strip qualifiers from typenames this
+  // method looks for the case where the user is adding a
+  // "class","struct","enum" or "union" Foo and strips the unnecessary qualifier
+  static ConstString StripTypeName(ConstString type) {
+    if (type.IsEmpty())
+      return type;
 
-  type_lexer.AdvanceIf("class ");
-  type_lexer.AdvanceIf("enum ");
-  type_lexer.AdvanceIf("struct ");
-  type_lexer.AdvanceIf("union ");
+    std::string type_cstr(type.AsCString());
+    StringLexer type_lexer(type_cstr);
 
-  while (type_lexer.NextIf({' ', '\t', '\v', '\f'}).first)
-    ;
+    type_lexer.AdvanceIf("class ");
+    type_lexer.AdvanceIf("enum ");
+    type_lexer.AdvanceIf("struct ");
+    type_lexer.AdvanceIf("union ");
 
-  return ConstString(type_lexer.GetUnlexed());
-}
+    while (type_lexer.NextIf({' ', '\t', '\v', '\f'}).first)
+      ;
 
-template <typename KeyType, typename ValueType> class FormattersContainer;
+    return ConstString(type_lexer.GetUnlexed());
+  }
 
-template <typename KeyType, typename ValueType> class FormatMap {
 public:
-  typedef typename ValueType::SharedPointer ValueSP;
-  typedef std::vector<std::pair<KeyType, ValueSP>> MapType;
-  typedef typename MapType::iterator MapIterator;
-  typedef std::function<bool(const KeyType &, const ValueSP &)> ForEachCallback;
+  TypeMatcher() = delete;
+  /// Creates a matcher that accepts any type with exactly the given type name.
+  TypeMatcher(ConstString type_name)
+      : m_type_name(type_name), m_is_regex(false) {}
+  /// Creates a matcher that accepts any type matching the given regex.
+  TypeMatcher(RegularExpression regex)
+      : m_type_name_regex(regex), m_is_regex(true) {}
 
-  FormatMap(IFormatChangeListener *lst)
-      : m_map(), m_map_mutex(), listener(lst) {}
+  /// True iff this matches the given type name.
+  bool Matches(ConstString type_name) const {
+    if (m_is_regex)
+      return m_type_name_regex.Execute(type_name.GetStringRef());
+    return m_type_name == type_name ||
+           StripTypeName(m_type_name) == StripTypeName(type_name);
+  }
 
-  void Add(KeyType name, const ValueSP &entry) {
+  /// Returns the underlying match string for this TypeMatcher.
+  ConstString GetMatchString() const {
+    if (m_is_regex)
+      return ConstString(m_type_name_regex.GetText());
+    return StripTypeName(m_type_name);
+  }
+
+  /// Returns true if this TypeMatcher and the given one were most created by
+  /// the same match string.
+  /// The main purpose of this function is to find existing TypeMatcher
+  /// instances by the user input that created them. This is necessary as LLDB
+  /// allows referencing existing TypeMatchers in commands by the user input
+  /// that originally created them:
+  /// (lldb) type summary add --summary-string \"A\" -x TypeName
+  /// (lldb) type summary delete TypeName
+  bool CreatedBySameMatchString(TypeMatcher other) const {
+    return GetMatchString() == other.GetMatchString();
+  }
+};
+
+template <typename ValueType> class FormattersContainer {
+public:
+  typedef typename std::shared_ptr<ValueType> ValueSP;
+  typedef std::vector<std::pair<TypeMatcher, ValueSP>> MapType;
+  typedef std::function<bool(const TypeMatcher &, const ValueSP &)>
+      ForEachCallback;
+  typedef typename std::shared_ptr<FormattersContainer<ValueType>>
+      SharedPointer;
+
+  friend class TypeCategoryImpl;
+
+  FormattersContainer(IFormatChangeListener *lst) : listener(lst) {}
+
+  void Add(TypeMatcher matcher, const ValueSP &entry) {
     if (listener)
       entry->GetRevision() = listener->GetCurrentRevision();
     else
       entry->GetRevision() = 0;
 
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-    Delete(name);
-    m_map.emplace_back(std::move(name), std::move(entry));
+    Delete(matcher);
+    m_map.emplace_back(std::move(matcher), std::move(entry));
     if (listener)
       listener->Changed();
   }
 
-  bool Delete(const KeyType &name) {
+  bool Delete(TypeMatcher matcher) {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-    for (MapIterator iter = m_map.begin(); iter != m_map.end(); ++iter)
-      if (iter->first == name) {
+    for (auto iter = m_map.begin(); iter != m_map.end(); ++iter)
+      if (iter->first.CreatedBySameMatchString(matcher)) {
         m_map.erase(iter);
         if (listener)
           listener->Changed();
         return true;
       }
     return false;
+  }
+
+  bool Get(ConstString type, ValueSP &entry) {
+    std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
+    for (auto &formatter : llvm::reverse(m_map)) {
+      if (formatter.first.Matches(type)) {
+        entry = formatter.second;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool GetExact(TypeMatcher matcher, ValueSP &entry) {
+    std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
+    for (const auto &pos : m_map)
+      if (pos.first.CreatedBySameMatchString(matcher)) {
+        entry = pos.second;
+        return true;
+      }
+    return false;
+  }
+
+  ValueSP GetAtIndex(size_t index) {
+    std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
+    if (index >= m_map.size())
+      return ValueSP();
+    return m_map[index].second;
+  }
+
+  lldb::TypeNameSpecifierImplSP GetTypeNameSpecifierAtIndex(size_t index) {
+    std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
+    if (index >= m_map.size())
+      return lldb::TypeNameSpecifierImplSP();
+    TypeMatcher type_matcher = m_map[index].first;
+    return std::make_shared<TypeNameSpecifierImpl>(
+        type_matcher.GetMatchString().GetStringRef(), true);
   }
 
   void Clear() {
@@ -103,210 +186,27 @@ public:
       listener->Changed();
   }
 
-  bool Get(const KeyType &name, ValueSP &entry) {
-    std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-    for (const auto &pos : m_map)
-      if (pos.first == name) {
-        entry = pos.second;
-        return true;
-      }
-    return false;
-  }
-
   void ForEach(ForEachCallback callback) {
     if (callback) {
       std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
       for (const auto &pos : m_map) {
-        const KeyType &type = pos.first;
+        const TypeMatcher &type = pos.first;
         if (!callback(type, pos.second))
           break;
       }
     }
   }
 
-  uint32_t GetCount() { return m_map.size(); }
-
-  ValueSP GetValueAtIndex(size_t index) {
+  uint32_t GetCount() {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-    if (index >= m_map.size())
-      return ValueSP();
-    return m_map[index].second;
-  }
-
-  // If caller holds the mutex we could return a reference without copy ctor.
-  KeyType GetKeyAtIndex(size_t index) {
-    std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
-    if (index >= m_map.size())
-      return {};
-    return m_map[index].first;
+    return m_map.size();
   }
 
 protected:
-  MapType m_map;
-  std::recursive_mutex m_map_mutex;
-  IFormatChangeListener *listener;
-
-  MapType &map() { return m_map; }
-
-  std::recursive_mutex &mutex() { return m_map_mutex; }
-
-  friend class FormattersContainer<KeyType, ValueType>;
-  friend class FormatManager;
-};
-
-template <typename KeyType, typename ValueType> class FormattersContainer {
-protected:
-  typedef FormatMap<KeyType, ValueType> BackEndType;
-
-public:
-  typedef typename BackEndType::MapType MapType;
-  typedef typename MapType::iterator MapIterator;
-  typedef KeyType MapKeyType;
-  typedef std::shared_ptr<ValueType> MapValueType;
-  typedef typename BackEndType::ForEachCallback ForEachCallback;
-  typedef typename std::shared_ptr<FormattersContainer<KeyType, ValueType>>
-      SharedPointer;
-
-  friend class TypeCategoryImpl;
-
-  FormattersContainer(std::string name, IFormatChangeListener *lst)
-      : m_format_map(lst), m_name(name) {}
-
-  void Add(MapKeyType type, const MapValueType &entry) {
-    Add_Impl(std::move(type), entry, static_cast<KeyType *>(nullptr));
-  }
-
-  bool Delete(ConstString type) {
-    return Delete_Impl(type, static_cast<KeyType *>(nullptr));
-  }
-
-  bool Get(ValueObject &valobj, MapValueType &entry,
-           lldb::DynamicValueType use_dynamic) {
-    CompilerType ast_type(valobj.GetCompilerType());
-    bool ret = Get(valobj, ast_type, entry, use_dynamic);
-    if (ret)
-      entry = MapValueType(entry);
-    else
-      entry = MapValueType();
-    return ret;
-  }
-
-  bool Get(ConstString type, MapValueType &entry) {
-    return Get_Impl(type, entry, static_cast<KeyType *>(nullptr));
-  }
-
-  bool GetExact(ConstString type, MapValueType &entry) {
-    return GetExact_Impl(type, entry, static_cast<KeyType *>(nullptr));
-  }
-
-  MapValueType GetAtIndex(size_t index) {
-    return m_format_map.GetValueAtIndex(index);
-  }
-
-  lldb::TypeNameSpecifierImplSP GetTypeNameSpecifierAtIndex(size_t index) {
-    return GetTypeNameSpecifierAtIndex_Impl(index,
-                                            static_cast<KeyType *>(nullptr));
-  }
-
-  void Clear() { m_format_map.Clear(); }
-
-  void ForEach(ForEachCallback callback) { m_format_map.ForEach(callback); }
-
-  uint32_t GetCount() { return m_format_map.GetCount(); }
-
-protected:
-  BackEndType m_format_map;
-  std::string m_name;
-
   FormattersContainer(const FormattersContainer &) = delete;
   const FormattersContainer &operator=(const FormattersContainer &) = delete;
 
-  void Add_Impl(MapKeyType type, const MapValueType &entry,
-                RegularExpression *dummy) {
-    m_format_map.Add(std::move(type), entry);
-  }
-
-  void Add_Impl(ConstString type, const MapValueType &entry,
-                ConstString *dummy) {
-    m_format_map.Add(GetValidTypeName_Impl(type), entry);
-  }
-
-  bool Delete_Impl(ConstString type, ConstString *dummy) {
-    return m_format_map.Delete(type);
-  }
-
-  bool Delete_Impl(ConstString type, RegularExpression *dummy) {
-    std::lock_guard<std::recursive_mutex> guard(m_format_map.mutex());
-    MapIterator pos, end = m_format_map.map().end();
-    for (pos = m_format_map.map().begin(); pos != end; pos++) {
-      const RegularExpression &regex = pos->first;
-      if (type.GetStringRef() == regex.GetText()) {
-        m_format_map.map().erase(pos);
-        if (m_format_map.listener)
-          m_format_map.listener->Changed();
-        return true;
-      }
-    }
-    return false;
-  }
-
-  bool Get_Impl(ConstString type, MapValueType &entry, ConstString *dummy) {
-    return m_format_map.Get(type, entry);
-  }
-
-  bool GetExact_Impl(ConstString type, MapValueType &entry,
-                     ConstString *dummy) {
-    return Get_Impl(type, entry, static_cast<KeyType *>(nullptr));
-  }
-
-  lldb::TypeNameSpecifierImplSP
-  GetTypeNameSpecifierAtIndex_Impl(size_t index, ConstString *dummy) {
-    ConstString key = m_format_map.GetKeyAtIndex(index);
-    if (key)
-      return lldb::TypeNameSpecifierImplSP(
-          new TypeNameSpecifierImpl(key.GetStringRef(), false));
-    else
-      return lldb::TypeNameSpecifierImplSP();
-  }
-
-  lldb::TypeNameSpecifierImplSP
-  GetTypeNameSpecifierAtIndex_Impl(size_t index, RegularExpression *dummy) {
-    RegularExpression regex = m_format_map.GetKeyAtIndex(index);
-    if (regex == RegularExpression())
-      return lldb::TypeNameSpecifierImplSP();
-    return lldb::TypeNameSpecifierImplSP(
-        new TypeNameSpecifierImpl(regex.GetText().str().c_str(), true));
-  }
-
-  bool Get_Impl(ConstString key, MapValueType &value,
-                RegularExpression *dummy) {
-    llvm::StringRef key_str = key.GetStringRef();
-    std::lock_guard<std::recursive_mutex> guard(m_format_map.mutex());
-    // Patterns are matched in reverse-chronological order.
-    for (const auto &pos : llvm::reverse(m_format_map.map())) {
-      const RegularExpression &regex = pos.first;
-      if (regex.Execute(key_str)) {
-        value = pos.second;
-        return true;
-      }
-    }
-    return false;
-  }
-
-  bool GetExact_Impl(ConstString key, MapValueType &value,
-                     RegularExpression *dummy) {
-    std::lock_guard<std::recursive_mutex> guard(m_format_map.mutex());
-    for (const auto &pos : m_format_map.map()) {
-      const RegularExpression &regex = pos.first;
-      if (regex.GetText() == key.GetStringRef()) {
-        value = pos.second;
-        return true;
-      }
-    }
-    return false;
-  }
-
-  bool Get(const FormattersMatchVector &candidates, MapValueType &entry) {
+  bool Get(const FormattersMatchVector &candidates, ValueSP &entry) {
     for (const FormattersMatchCandidate &candidate : candidates) {
       if (Get(candidate.GetTypeName(), entry)) {
         if (candidate.IsMatch(entry) == false) {
@@ -319,6 +219,10 @@ protected:
     }
     return false;
   }
+
+  MapType m_map;
+  std::recursive_mutex m_map_mutex;
+  IFormatChangeListener *listener;
 };
 
 } // namespace lldb_private

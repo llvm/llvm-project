@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "llvm/Analysis/InlineCost.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
@@ -206,6 +207,12 @@ public:
 #ifdef LLVM_HAVE_TF_AOT
 std::unique_ptr<InlineAdvisor>
 getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM);
+#endif
+
+#ifdef LLVM_HAVE_TF_API
+std::unique_ptr<InlineAdvisor>
+getDevelopmentModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
+                          std::function<bool(CallBase &)> GetDefaultAdvice);
 #endif
 
 // Default (manual policy) decision making helper APIs. Shared with the legacy

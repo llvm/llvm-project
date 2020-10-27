@@ -29,6 +29,7 @@ def CallOpInterface : OpInterface<"CallOpInterface"> {
     indirect calls to other operations `call_indirect %foo`. An operation that
     uses this interface, must *not* also provide the `CallableOpInterface`.
   }];
+  let cppNamespace = "::mlir";
 
   let methods = [
     InterfaceMethod<[{
@@ -70,6 +71,7 @@ def CallableOpInterface : OpInterface<"CallableOpInterface"> {
     `%foo = dialect.create_function(...)`. These operations may only contain a
     single region, or subroutine.
   }];
+  let cppNamespace = "::mlir";
 
   let methods = [
     InterfaceMethod<[{

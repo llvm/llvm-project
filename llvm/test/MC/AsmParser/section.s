@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple i386-pc-linux-gnu -filetype=obj -o %t %s
-# RUN: llvm-readobj -S --sd < %t | FileCheck %s
+# RUN: llvm-readobj -S --sd < %t - | FileCheck %s
 .section test1
 .byte 1
 .section test2

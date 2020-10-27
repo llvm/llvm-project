@@ -624,12 +624,12 @@ entry:
 define <4 x i32> @H(<4 x i32> %a) {
 ; X32-LABEL: H:
 ; X32:       ## %bb.0: ## %entry
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: H:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; X64-NEXT:    retq
 entry:
   %x = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>

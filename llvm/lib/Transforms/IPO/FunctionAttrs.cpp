@@ -63,7 +63,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "functionattrs"
+#define DEBUG_TYPE "function-attrs"
 
 STATISTIC(NumReadNone, "Number of functions marked readnone");
 STATISTIC(NumReadOnly, "Number of functions marked readonly");
@@ -1477,11 +1477,11 @@ struct PostOrderFunctionAttrsLegacyPass : public CallGraphSCCPass {
 } // end anonymous namespace
 
 char PostOrderFunctionAttrsLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(PostOrderFunctionAttrsLegacyPass, "functionattrs",
+INITIALIZE_PASS_BEGIN(PostOrderFunctionAttrsLegacyPass, "function-attrs",
                       "Deduce function attributes", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
-INITIALIZE_PASS_END(PostOrderFunctionAttrsLegacyPass, "functionattrs",
+INITIALIZE_PASS_END(PostOrderFunctionAttrsLegacyPass, "function-attrs",
                     "Deduce function attributes", false, false)
 
 Pass *llvm::createPostOrderFunctionAttrsLegacyPass() {
@@ -1542,11 +1542,13 @@ struct ReversePostOrderFunctionAttrsLegacyPass : public ModulePass {
 
 char ReversePostOrderFunctionAttrsLegacyPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(ReversePostOrderFunctionAttrsLegacyPass, "rpo-functionattrs",
-                      "Deduce function attributes in RPO", false, false)
+INITIALIZE_PASS_BEGIN(ReversePostOrderFunctionAttrsLegacyPass,
+                      "rpo-function-attrs", "Deduce function attributes in RPO",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
-INITIALIZE_PASS_END(ReversePostOrderFunctionAttrsLegacyPass, "rpo-functionattrs",
-                    "Deduce function attributes in RPO", false, false)
+INITIALIZE_PASS_END(ReversePostOrderFunctionAttrsLegacyPass,
+                    "rpo-function-attrs", "Deduce function attributes in RPO",
+                    false, false)
 
 Pass *llvm::createReversePostOrderFunctionAttrsPass() {
   return new ReversePostOrderFunctionAttrsLegacyPass();

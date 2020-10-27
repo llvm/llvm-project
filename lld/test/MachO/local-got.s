@@ -12,12 +12,12 @@
 ## address offset and the contents at that address very similarly, so am using
 ## --match-full-lines to make sure we match on the right thing.
 # CHECK:      Contents of section __cstring:
-# CHECK-NEXT: 1000003cc {{.*}}
+# CHECK-NEXT: 1000003ec {{.*}}
 
 ## 1st 8 bytes refer to the start of __cstring + 0xe, 2nd 8 bytes refer to the
 ## start of __cstring
 # CHECK:      Contents of section __got:
-# CHECK-NEXT: [[#%X,ADDR:]]  da030000 01000000 cc030000 01000000 {{.*}}
+# CHECK-NEXT: [[#%X,ADDR:]]  fa030000 01000000 ec030000 01000000 {{.*}}
 # CHECK-NEXT: [[#ADDR + 16]] 00000000 00000000 {{.*}}
 
 ## Check that a non-locally-defined symbol is still bound at the correct offset:

@@ -82,7 +82,7 @@ void parallel_atomic_ewc() {
     }
 }
 
-int &foo() { return a; }
+int &foo() { extern void mayThrow(); mayThrow(); return a; }
 
 // TERM_DEBUG-LABEL: parallel_atomic
 void parallel_atomic() {

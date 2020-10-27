@@ -38,7 +38,7 @@ InternalIoStatementState<DIR, CHAR>::InternalIoStatementState(
 
 template <Direction DIR, typename CHAR>
 bool InternalIoStatementState<DIR, CHAR>::Emit(
-    const CharType *data, std::size_t chars) {
+    const CharType *data, std::size_t chars, std::size_t /*elementBytes*/) {
   if constexpr (DIR == Direction::Input) {
     Crash("InternalIoStatementState<Direction::Input>::Emit() called");
     return false;
@@ -162,10 +162,12 @@ void OpenStatementState::set_path(
 }
 
 int OpenStatementState::EndIoStatement() {
-  if (wasExtant_ && status_ != OpenStatus::Old) {
-    SignalError("OPEN statement for connected unit must have STATUS='OLD'");
+  if (wasExtant_ && status_ && *status_ != OpenStatus::Old) {
+    SignalError("OPEN statement for connected unit may not have STATUS= other "
+                "than 'OLD'");
   }
-  unit().OpenUnit(status_, position_, std::move(path_), pathLength_, *this);
+  unit().OpenUnit(status_.value_or(OpenStatus::Unknown), action_, position_,
+      std::move(path_), pathLength_, convert_, *this);
   return ExternalIoStatementBase::EndIoStatement();
 }
 
@@ -193,11 +195,12 @@ template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
 }
 
 template <Direction DIR>
-bool ExternalIoStatementState<DIR>::Emit(const char *data, std::size_t chars) {
+bool ExternalIoStatementState<DIR>::Emit(
+    const char *data, std::size_t bytes, std::size_t elementBytes) {
   if constexpr (DIR == Direction::Input) {
     Crash("ExternalIoStatementState::Emit(char) called for input statement");
   }
-  return unit().Emit(data, chars * sizeof(*data), *this);
+  return unit().Emit(data, bytes, elementBytes, *this);
 }
 
 template <Direction DIR>
@@ -208,8 +211,8 @@ bool ExternalIoStatementState<DIR>::Emit(
         "ExternalIoStatementState::Emit(char16_t) called for input statement");
   }
   // TODO: UTF-8 encoding
-  return unit().Emit(
-      reinterpret_cast<const char *>(data), chars * sizeof(*data), *this);
+  return unit().Emit(reinterpret_cast<const char *>(data), chars * sizeof *data,
+      static_cast<int>(sizeof *data), *this);
 }
 
 template <Direction DIR>
@@ -220,8 +223,8 @@ bool ExternalIoStatementState<DIR>::Emit(
         "ExternalIoStatementState::Emit(char32_t) called for input statement");
   }
   // TODO: UTF-8 encoding
-  return unit().Emit(
-      reinterpret_cast<const char *>(data), chars * sizeof(*data), *this);
+  return unit().Emit(reinterpret_cast<const char *>(data), chars * sizeof *data,
+      static_cast<int>(sizeof *data), *this);
 }
 
 template <Direction DIR>
@@ -275,8 +278,10 @@ std::optional<DataEdit> IoStatementState::GetNextDataEdit(int n) {
       [&](auto &x) { return x.get().GetNextDataEdit(*this, n); }, u_);
 }
 
-bool IoStatementState::Emit(const char *data, std::size_t n) {
-  return std::visit([=](auto &x) { return x.get().Emit(data, n); }, u_);
+bool IoStatementState::Emit(
+    const char *data, std::size_t n, std::size_t elementBytes) {
+  return std::visit(
+      [=](auto &x) { return x.get().Emit(data, n, elementBytes); }, u_);
 }
 
 std::optional<char32_t> IoStatementState::GetCurrentChar() {
@@ -352,7 +357,7 @@ std::optional<char32_t> IoStatementState::SkipSpaces(
     std::optional<int> &remaining) {
   while (!remaining || *remaining > 0) {
     if (auto ch{GetCurrentChar()}) {
-      if (*ch != ' ') {
+      if (*ch != ' ' && *ch != '\t') {
         return ch;
       }
       HandleRelativePosition(1);
@@ -372,6 +377,7 @@ std::optional<char32_t> IoStatementState::NextInField(
     if (auto next{GetCurrentChar()}) {
       switch (*next) {
       case ' ':
+      case '\t':
       case ',':
       case ';':
       case '/':
@@ -414,7 +420,7 @@ std::optional<char32_t> IoStatementState::NextInField(
 
 std::optional<char32_t> IoStatementState::GetNextNonBlank() {
   auto ch{GetCurrentChar()};
-  while (ch.value_or(' ') == ' ') {
+  while (!ch || *ch == ' ' || *ch == '\t') {
     if (ch) {
       HandleRelativePosition(1);
     } else if (!AdvanceRecord()) {
@@ -472,6 +478,10 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     edit.descriptor = DataEdit::ListDirectedNullValue;
     return edit;
   }
+  char32_t comma{','};
+  if (io.mutableModes().editingFlags & decimalComma) {
+    comma = ';';
+  }
   if (remaining_ > 0 && !realPart_) { // "r*c" repetition in progress
     while (connection.currentRecordNumber > initialRecordNumber_) {
       io.BackspaceRecord();
@@ -479,6 +489,11 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     connection.HandleAbsolutePosition(initialPositionInRecord_);
     if (!imaginaryPart_) {
       edit.repeat = std::min<int>(remaining_, maxRepeat);
+      auto ch{io.GetNextNonBlank()};
+      if (!ch || *ch == ' ' || *ch == '\t' || *ch == comma) {
+        // "r*" repeated null
+        edit.descriptor = DataEdit::ListDirectedNullValue;
+      }
     }
     remaining_ -= edit.repeat;
     return edit;
@@ -494,6 +509,7 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   } else if (realPart_) {
     realPart_ = false;
     imaginaryPart_ = true;
+    edit.descriptor = DataEdit::ListDirectedImaginaryPart;
   }
   if (!ch) {
     return std::nullopt;
@@ -502,10 +518,6 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     hitSlash_ = true;
     edit.descriptor = DataEdit::ListDirectedNullValue;
     return edit;
-  }
-  char32_t comma{','};
-  if (io.mutableModes().editingFlags & decimalComma) {
-    comma = ';';
   }
   bool isFirstItem{isFirstItem_};
   isFirstItem_ = false;
@@ -544,9 +556,13 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     if (r > 0 && ch && *ch == '*') { // subtle: r must be nonzero
       io.HandleRelativePosition(1);
       ch = io.GetCurrentChar();
-      if (!ch || *ch == ' ' || *ch == comma || *ch == '/') { // "r*" null
+      if (ch && *ch == '/') { // r*/
+        hitSlash_ = true;
         edit.descriptor = DataEdit::ListDirectedNullValue;
         return edit;
+      }
+      if (!ch || *ch == ' ' || *ch == '\t' || *ch == comma) { // "r*" null
+        edit.descriptor = DataEdit::ListDirectedNullValue;
       }
       edit.repeat = std::min<int>(r, maxRepeat);
       remaining_ = r - edit.repeat;
@@ -559,17 +575,29 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   if (!imaginaryPart_ && ch && *ch == '(') {
     realPart_ = true;
     io.HandleRelativePosition(1);
+    edit.descriptor = DataEdit::ListDirectedRealPart;
   }
   return edit;
 }
 
 template <Direction DIR>
-bool UnformattedIoStatementState<DIR>::Receive(char *data, std::size_t bytes) {
+bool UnformattedIoStatementState<DIR>::Receive(
+    char *data, std::size_t bytes, std::size_t elementBytes) {
   if constexpr (DIR == Direction::Output) {
     this->Crash(
         "UnformattedIoStatementState::Receive() called for output statement");
   }
-  return this->unit().Receive(data, bytes, *this);
+  return this->unit().Receive(data, bytes, elementBytes, *this);
+}
+
+template <Direction DIR>
+bool UnformattedIoStatementState<DIR>::Emit(
+    const char *data, std::size_t bytes, std::size_t elementBytes) {
+  if constexpr (DIR == Direction::Input) {
+    this->Crash(
+        "UnformattedIoStatementState::Emit() called for input statement");
+  }
+  return ExternalIoStatementState<DIR>::Emit(data, bytes, elementBytes);
 }
 
 template <Direction DIR>

@@ -556,7 +556,9 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry,
   switch (RelEntry.Type) {
   case wasm::R_WASM_TABLE_INDEX_REL_SLEB:
   case wasm::R_WASM_TABLE_INDEX_SLEB:
-  case wasm::R_WASM_TABLE_INDEX_I32: {
+  case wasm::R_WASM_TABLE_INDEX_SLEB64:
+  case wasm::R_WASM_TABLE_INDEX_I32:
+  case wasm::R_WASM_TABLE_INDEX_I64: {
     // Provisional value is table address of the resolved symbol itself
     const MCSymbolWasm *Base =
         cast<MCSymbolWasm>(Layout.getBaseSymbol(*RelEntry.Symbol));
@@ -688,6 +690,7 @@ void WasmObjectWriter::applyRelocations(
     case wasm::R_WASM_GLOBAL_INDEX_I32:
       patchI32(Stream, Value, Offset);
       break;
+    case wasm::R_WASM_TABLE_INDEX_I64:
     case wasm::R_WASM_MEMORY_ADDR_I64:
       patchI64(Stream, Value, Offset);
       break;
@@ -697,6 +700,7 @@ void WasmObjectWriter::applyRelocations(
     case wasm::R_WASM_MEMORY_ADDR_REL_SLEB:
       writePatchableSLEB<5>(Stream, Value, Offset);
       break;
+    case wasm::R_WASM_TABLE_INDEX_SLEB64:
     case wasm::R_WASM_MEMORY_ADDR_SLEB64:
     case wasm::R_WASM_MEMORY_ADDR_REL_SLEB64:
       writePatchableSLEB<10>(Stream, Value, Offset);
@@ -1599,7 +1603,9 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
       // purely to make the object file's provisional values readable, and is
       // ignored by the linker, which re-calculates the relocations itself.
       if (Rel.Type != wasm::R_WASM_TABLE_INDEX_I32 &&
+          Rel.Type != wasm::R_WASM_TABLE_INDEX_I64 &&
           Rel.Type != wasm::R_WASM_TABLE_INDEX_SLEB &&
+          Rel.Type != wasm::R_WASM_TABLE_INDEX_SLEB64 &&
           Rel.Type != wasm::R_WASM_TABLE_INDEX_REL_SLEB)
         return;
       assert(Rel.Symbol->isFunction());

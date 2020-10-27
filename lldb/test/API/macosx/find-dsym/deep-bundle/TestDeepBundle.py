@@ -36,7 +36,6 @@ class DeepBundleTestCase(TestBase):
         exe = self.getBuildArtifact(exe_name)
         self.build()
         popen = self.spawnSubprocess(exe, [self.getBuildDir()])
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         # Give the inferior time to start up, dlopen a bundle, remove the bundle it linked in
         sleep(5)

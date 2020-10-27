@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=arm64-apple-ios -filetype=obj < %s | \
-// RUN: llvm-readobj --expand-relocs -S --section-relocations --section-data | \
+// RUN: llvm-readobj --expand-relocs -S --section-relocations --section-data - | \
 // RUN: FileCheck %s
 //
 // rdar://13070556

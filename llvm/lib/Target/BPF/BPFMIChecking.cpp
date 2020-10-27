@@ -143,12 +143,10 @@ static bool hasLiveDefs(const MachineInstr &MI, const TargetRegisterInfo *TRI) {
     return true;
 
   // Otherwise, return true if any aliased SuperReg of GPR32 is not dead.
-  std::vector<unsigned>::iterator search_begin = GPR64DeadDefs.begin();
-  std::vector<unsigned>::iterator search_end = GPR64DeadDefs.end();
   for (auto I : GPR32LiveDefs)
     for (MCSuperRegIterator SR(I, TRI); SR.isValid(); ++SR)
-       if (std::find(search_begin, search_end, *SR) == search_end)
-         return true;
+      if (!llvm::is_contained(GPR64DeadDefs, *SR))
+        return true;
 
   return false;
 }

@@ -613,7 +613,7 @@ std::string ArchSpec::GetTargetABI() const {
   return abi;
 }
 
-void ArchSpec::SetFlags(std::string elf_abi) {
+void ArchSpec::SetFlags(const std::string &elf_abi) {
 
   uint32_t flag = GetFlags();
   if (IsMIPS()) {
@@ -846,6 +846,15 @@ bool ArchSpec::ContainsOnlyArch(const llvm::Triple &normalized_triple) {
 }
 
 void ArchSpec::MergeFrom(const ArchSpec &other) {
+  // ios-macabi always wins over macosx.
+  if ((GetTriple().getOS() == llvm::Triple::MacOSX ||
+       GetTriple().getOS() == llvm::Triple::UnknownOS) &&
+      other.GetTriple().getOS() == llvm::Triple::IOS &&
+      other.GetTriple().getEnvironment() == llvm::Triple::MacABI) {
+    (*this) = other;
+    return;
+  }
+
   if (!TripleVendorWasSpecified() && other.TripleVendorWasSpecified())
     GetTriple().setVendor(other.GetTriple().getVendor());
   if (!TripleOSWasSpecified() && other.TripleOSWasSpecified())
@@ -978,6 +987,12 @@ static bool IsCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
   if (lhs == rhs)
     return true;
 
+  // Apple simulators are a different platform than what they simulate.
+  // As the environments are different at this point, if one of them is a
+  // simulator, then they are different.
+  if (lhs == llvm::Triple::Simulator || rhs == llvm::Triple::Simulator)
+    return false;
+
   // If any of the environment is unknown then they are compatible
   if (lhs == llvm::Triple::UnknownEnvironment ||
       rhs == llvm::Triple::UnknownEnvironment)
@@ -1001,58 +1016,70 @@ static bool IsCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
 bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
   // explicitly ignoring m_distribution_id in this method.
 
-  if (GetByteOrder() != rhs.GetByteOrder())
+  if (GetByteOrder() != rhs.GetByteOrder() ||
+      !cores_match(GetCore(), rhs.GetCore(), true, exact_match))
     return false;
 
-  const ArchSpec::Core lhs_core = GetCore();
-  const ArchSpec::Core rhs_core = rhs.GetCore();
+  const llvm::Triple &lhs_triple = GetTriple();
+  const llvm::Triple &rhs_triple = rhs.GetTriple();
 
-  const bool core_match = cores_match(lhs_core, rhs_core, true, exact_match);
+  const llvm::Triple::VendorType lhs_triple_vendor = lhs_triple.getVendor();
+  const llvm::Triple::VendorType rhs_triple_vendor = rhs_triple.getVendor();
+  if (lhs_triple_vendor != rhs_triple_vendor) {
+    const bool rhs_vendor_specified = rhs.TripleVendorWasSpecified();
+    const bool lhs_vendor_specified = TripleVendorWasSpecified();
+    // Both architectures had the vendor specified, so if they aren't equal
+    // then we return false
+    if (rhs_vendor_specified && lhs_vendor_specified)
+      return false;
 
-  if (core_match) {
-    const llvm::Triple &lhs_triple = GetTriple();
-    const llvm::Triple &rhs_triple = rhs.GetTriple();
-
-    const llvm::Triple::VendorType lhs_triple_vendor = lhs_triple.getVendor();
-    const llvm::Triple::VendorType rhs_triple_vendor = rhs_triple.getVendor();
-    if (lhs_triple_vendor != rhs_triple_vendor) {
-      const bool rhs_vendor_specified = rhs.TripleVendorWasSpecified();
-      const bool lhs_vendor_specified = TripleVendorWasSpecified();
-      // Both architectures had the vendor specified, so if they aren't equal
-      // then we return false
-      if (rhs_vendor_specified && lhs_vendor_specified)
-        return false;
-
-      // Only fail if both vendor types are not unknown
-      if (lhs_triple_vendor != llvm::Triple::UnknownVendor &&
-          rhs_triple_vendor != llvm::Triple::UnknownVendor)
-        return false;
-    }
-
-    const llvm::Triple::OSType lhs_triple_os = lhs_triple.getOS();
-    const llvm::Triple::OSType rhs_triple_os = rhs_triple.getOS();
-    if (lhs_triple_os != rhs_triple_os) {
-      const bool rhs_os_specified = rhs.TripleOSWasSpecified();
-      const bool lhs_os_specified = TripleOSWasSpecified();
-      // Both architectures had the OS specified, so if they aren't equal then
-      // we return false
-      if (rhs_os_specified && lhs_os_specified)
-        return false;
-
-      // Only fail if both os types are not unknown
-      if (lhs_triple_os != llvm::Triple::UnknownOS &&
-          rhs_triple_os != llvm::Triple::UnknownOS)
-        return false;
-    }
-
-    const llvm::Triple::EnvironmentType lhs_triple_env =
-        lhs_triple.getEnvironment();
-    const llvm::Triple::EnvironmentType rhs_triple_env =
-        rhs_triple.getEnvironment();
-
-    return IsCompatibleEnvironment(lhs_triple_env, rhs_triple_env);
+    // Only fail if both vendor types are not unknown
+    if (lhs_triple_vendor != llvm::Triple::UnknownVendor &&
+        rhs_triple_vendor != llvm::Triple::UnknownVendor)
+      return false;
   }
-  return false;
+
+  const llvm::Triple::OSType lhs_triple_os = lhs_triple.getOS();
+  const llvm::Triple::OSType rhs_triple_os = rhs_triple.getOS();
+  const llvm::Triple::EnvironmentType lhs_triple_env =
+      lhs_triple.getEnvironment();
+  const llvm::Triple::EnvironmentType rhs_triple_env =
+      rhs_triple.getEnvironment();
+
+  if (!exact_match) {
+    // x86_64-apple-ios-macabi, x86_64-apple-macosx are compatible, no match.
+    if ((lhs_triple_os == llvm::Triple::IOS &&
+         lhs_triple_env == llvm::Triple::MacABI &&
+         rhs_triple_os == llvm::Triple::MacOSX) ||
+        (lhs_triple_os == llvm::Triple::MacOSX &&
+         rhs_triple_os == llvm::Triple::IOS &&
+         rhs_triple_env == llvm::Triple::MacABI))
+      return true;
+  }
+
+  if (lhs_triple_os != rhs_triple_os) {
+    const bool rhs_os_specified = rhs.TripleOSWasSpecified();
+    const bool lhs_os_specified = TripleOSWasSpecified();
+    // Both architectures had the OS specified, so if they aren't equal then
+    // we return false
+    if (rhs_os_specified && lhs_os_specified)
+      return false;
+
+    // Only fail if both os types are not unknown
+    if (lhs_triple_os != llvm::Triple::UnknownOS &&
+        rhs_triple_os != llvm::Triple::UnknownOS)
+      return false;
+  }
+
+  // x86_64-apple-ios-macabi and x86_64-apple-ios are not compatible.
+  if (lhs_triple_os == llvm::Triple::IOS &&
+      rhs_triple_os == llvm::Triple::IOS &&
+      (lhs_triple_env == llvm::Triple::MacABI ||
+       rhs_triple_env == llvm::Triple::MacABI) &&
+      lhs_triple_env != rhs_triple_env)
+    return false;
+
+  return IsCompatibleEnvironment(lhs_triple_env, rhs_triple_env);
 }
 
 void ArchSpec::UpdateCore() {

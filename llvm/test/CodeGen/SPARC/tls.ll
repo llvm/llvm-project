@@ -3,10 +3,10 @@
 ; RUN: llc <%s -mtriple=sparc-unknown-linux   -relocation-model=pic    | FileCheck %s --check-prefix=pic
 ; RUN: llc <%s -mtriple=sparcv9-unknown-linux -relocation-model=pic    | FileCheck %s --check-prefix=pic
 
-; RUN: llc <%s -mtriple=sparc-unknown-linux   -relocation-model=static -filetype=obj | llvm-readobj -r --symbols | FileCheck %s --check-prefix=v8abs-obj
-; RUN: llc <%s -mtriple=sparcv9-unknown-linux -relocation-model=static -filetype=obj | llvm-readobj -r --symbols | FileCheck %s --check-prefix=v9abs-obj
-; RUN: llc <%s -mtriple=sparc-unknown-linux   -relocation-model=pic    -filetype=obj | llvm-readobj -r --symbols | FileCheck %s --check-prefix=pic-obj
-; RUN: llc <%s -mtriple=sparcv9-unknown-linux -relocation-model=pic    -filetype=obj | llvm-readobj -r --symbols | FileCheck %s --check-prefix=pic-obj
+; RUN: llc <%s -mtriple=sparc-unknown-linux   -relocation-model=static -filetype=obj | llvm-readobj -r --symbols - | FileCheck %s --check-prefix=v8abs-obj
+; RUN: llc <%s -mtriple=sparcv9-unknown-linux -relocation-model=static -filetype=obj | llvm-readobj -r --symbols - | FileCheck %s --check-prefix=v9abs-obj
+; RUN: llc <%s -mtriple=sparc-unknown-linux   -relocation-model=pic    -filetype=obj | llvm-readobj -r --symbols - | FileCheck %s --check-prefix=pic-obj
+; RUN: llc <%s -mtriple=sparcv9-unknown-linux -relocation-model=pic    -filetype=obj | llvm-readobj -r --symbols - | FileCheck %s --check-prefix=pic-obj
 
 @local_symbol = internal thread_local global i32 0
 @extern_symbol = external thread_local global i32

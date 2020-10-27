@@ -276,7 +276,7 @@ define <8 x i32> @elt7_v8i32(i32 %x) {
 ; X64AVX1-LABEL: elt7_v8i32:
 ; X64AVX1:       # %bb.0:
 ; X64AVX1-NEXT:    vmovd %edi, %xmm0
-; X64AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,2,0]
+; X64AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64AVX1-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4,5,6],ymm0[7]
 ; X64AVX1-NEXT:    retq

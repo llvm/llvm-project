@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-apple-macos %s -filetype=obj -o - | llvm-readobj --macho-version-min | FileCheck %s
+// RUN: llvm-mc -triple x86_64-apple-macos %s -filetype=obj -o - | llvm-readobj --macho-version-min - | FileCheck %s
 
 // Test the formation of the sdk_version component of the version load
 // command in the MachO.

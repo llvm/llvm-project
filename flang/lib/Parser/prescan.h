@@ -166,6 +166,7 @@ private:
   const char *IsPreprocessorDirectiveLine(const char *) const;
   const char *FixedFormContinuationLine(bool mightNeedSpace);
   const char *FreeFormContinuationLine(bool ampersand);
+  bool IsImplicitContinuation() const;
   bool FixedFormContinuation(bool mightNeedSpace);
   bool FreeFormContinuation();
   bool Continuation(bool mightNeedFixedFormSpace);
@@ -220,8 +221,6 @@ private:
       cooked_.allSources().CompilerInsertionProvenance(' ')};
   const Provenance backslashProvenance_{
       cooked_.allSources().CompilerInsertionProvenance('\\')};
-  const ProvenanceRange sixSpaceProvenance_{
-      cooked_.allSources().AddCompilerInsertion("      "s)};
 
   // To avoid probing the set of active compiler directive sentinel strings
   // on every comment line, they're checked first with a cheap Bloom filter.

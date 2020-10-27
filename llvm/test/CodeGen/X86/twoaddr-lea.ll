@@ -68,8 +68,9 @@ bb2:
   br label %bb6
 
 bb3:
-; CHECK: subl %e[[REG0:[a-z0-9]+]],
-; CHECK: addq $4, %r[[REG0]]
+; CHECK: LBB3_3:
+; CHECK: addq $4, %r
+; CHECK: subl %e
   %tmp14 = phi i64 [ %tmp15, %bb5 ], [ 0, %bb1 ]
   %tmp15 = add nuw i64 %tmp14, 4
   %tmp16 = trunc i64 %tmp14 to i32

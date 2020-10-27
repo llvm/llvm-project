@@ -1,4 +1,5 @@
-; RUN: opt < %s -S -analyze -scalar-evolution | FileCheck %s
+; RUN: opt < %s -S -analyze -enable-new-pm=0 -scalar-evolution | FileCheck %s
+; RUN: opt < %s -S -disable-output "-passes=print<scalar-evolution>" 2>&1 | FileCheck %s
 
 ; copied from flags-from-poison.ll
 ; CHECK-LABEL: @test-add-nuw

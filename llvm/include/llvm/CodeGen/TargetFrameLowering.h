@@ -134,6 +134,12 @@ public:
   /// was called).
   virtual unsigned getStackAlignmentSkew(const MachineFunction &MF) const;
 
+  /// This method returns whether or not it is safe for an object with the
+  /// given stack id to be bundled into the local area.
+  virtual bool isStackIdSafeForLocalArea(unsigned StackId) const {
+    return true;
+  }
+
   /// getOffsetOfLocalArea - This method returns the offset of the local area
   /// from the stack pointer on entrance to a function.
   ///
@@ -201,6 +207,17 @@ public:
                             MachineBasicBlock &MBB) const = 0;
   virtual void emitEpilogue(MachineFunction &MF,
                             MachineBasicBlock &MBB) const = 0;
+
+  /// With basic block sections, emit callee saved frame moves for basic blocks
+  /// that are in a different section.
+  virtual void
+  emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MBBI) const {}
+
+  virtual void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI,
+                                         const DebugLoc &DL,
+                                         bool IsPrologue) const {}
 
   /// Replace a StackProbe stub (if any) with the actual probe code inline
   virtual void inlineStackProbe(MachineFunction &MF,

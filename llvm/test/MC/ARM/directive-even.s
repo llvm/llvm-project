@@ -1,4 +1,5 @@
-@ RUN: llvm-mc -triple armv7-eabi -filetype obj -o - %s | llvm-readobj -S --sd \
+@ RUN: llvm-mc -triple armv7-eabi -filetype obj -o - %s \
+@ RUN:   | llvm-readobj -S --sd - \
 @ RUN:   | FileCheck %s
 
 	.syntax unified

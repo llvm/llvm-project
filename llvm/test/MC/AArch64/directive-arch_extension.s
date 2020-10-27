@@ -59,3 +59,7 @@ at s1e1wp, x2
 .arch_extension ccpp
 dc cvap, x7
 // CHECK: dc cvap, x7
+
+.arch_extension rcpc
+ldapr x0, [x1]
+// CHECK: ldapr x0, [x1]

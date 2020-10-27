@@ -369,7 +369,7 @@ define <2 x i32> @v_srem_v2i32_pow2k_denom(<2 x i32> %num) {
 ; CGP-NEXT:    s_movk_i32 s4, 0x1000
 ; CGP-NEXT:    v_ashrrev_i32_e32 v2, 31, v0
 ; CGP-NEXT:    v_mov_b32_e32 v3, 0x1000
-; CGP-NEXT:    s_mov_b32 s5, 0xfffff000
+; CGP-NEXT:    s_movk_i32 s5, 0xf000
 ; CGP-NEXT:    v_mov_b32_e32 v4, 0xfffff000
 ; CGP-NEXT:    v_ashrrev_i32_e32 v5, 31, v1
 ; CGP-NEXT:    v_add_i32_e32 v0, vcc, v0, v2

@@ -659,8 +659,8 @@ static AliasResult underlyingObjectsAlias(AAResults *AA,
     return NoAlias;
 
   // Check the underlying objects are the same
-  const Value *AObj = GetUnderlyingObject(LocA.Ptr, DL);
-  const Value *BObj = GetUnderlyingObject(LocB.Ptr, DL);
+  const Value *AObj = getUnderlyingObject(LocA.Ptr);
+  const Value *BObj = getUnderlyingObject(LocB.Ptr);
 
   // If the underlying objects are the same, they must alias
   if (AObj == BObj)

@@ -20,6 +20,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     Encodes properties of a loop. Operations that implement this interface will
     be considered by loop-invariant code motion.
   }];
+  let cppNamespace = "::mlir";
 
   let methods = [
     InterfaceMethod<[{

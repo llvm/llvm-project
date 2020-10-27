@@ -1,0 +1,22 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -run-pass=si-fold-operands  %s -o - | FileCheck -check-prefix=GCN %s
+
+# We were storing fold candidate uses in an unsigned char, which this exceeds.
+# The use operand overflows and the expected register operand hits the immediate 0.
+# We never have more than a handful of non-implicit operands, so don't try to fold into
+# implicit operands to avoid this problem.
+
+---
+name: op_idx_overflows_uchar
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr12_sgpr13_sgpr14_sgpr15
+
+    ; GCN-LABEL: name: op_idx_overflows_uchar
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]]
+    %0:sreg_32 = S_MOV_B32 0
+    %1:vgpr_32 = COPY %0
+    S_ENDPGM 0, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1, implicit %1
+...

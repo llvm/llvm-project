@@ -67,7 +67,7 @@ way to model this. Again, this tutorial won't dwell on good software
 engineering practices: for our purposes, adding a virtual method is
 simplest.
 
-The second thing we want is an "LogError" method like we used for the
+The second thing we want is a "LogError" method like we used for the
 parser, which will be used to report errors found during code generation
 (for example, use of an undeclared parameter):
 

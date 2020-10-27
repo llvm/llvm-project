@@ -72,3 +72,4 @@ int main(int argc, const char *argv[]) {
 // CHECK-SYMBOLS-NOT: {{ }}_free
 // CHECK-SYMBOLS-NOT: {{ }}free
 // CHECK-SYMBOLS-NOT: {{ }}_open
+// CHECK-SYMBOLS-NOT: {{ }}_getpagesize

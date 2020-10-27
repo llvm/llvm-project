@@ -1,4 +1,5 @@
-@ RUN: llvm-mc -triple armv7-linux-gnu -filetype obj -o - %s | llvm-readobj -r \
+@ RUN: llvm-mc -triple armv7-linux-gnu -filetype obj -o - %s \
+@ RUN:   | llvm-readobj -r - \
 @ RUN:   | FileCheck %s
 @ RUN: llvm-mc -triple armv7-linux-gnu -filetype asm -o - %s \
 @ RUN:   | FileCheck -check-prefix CHECK-ASM %s

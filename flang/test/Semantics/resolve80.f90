@@ -26,7 +26,7 @@ module m
     !WARNING: Attribute 'PASS' cannot be used more than once
     procedure(subPass), pass, deferred, pass :: passBinding
     !ERROR: Attributes 'PASS' and 'NOPASS' conflict with each other
-    procedure(subPassNopass), pass, deferred, nopass :: passNopassBinding
+    procedure(subPassNopass), pass, deferred, nopass :: passNopassBinding  ! C781
   end type boundProcType
 
 contains

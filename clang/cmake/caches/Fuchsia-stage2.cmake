@@ -233,14 +233,17 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-ar
   llvm-cov
   llvm-cxxfilt
+  llvm-dlltool
   llvm-dwarfdump
   llvm-dwp
   llvm-gsymutil
   llvm-lib
+  llvm-mt
   llvm-nm
   llvm-objcopy
   llvm-objdump
   llvm-profdata
+  llvm-rc
   llvm-ranlib
   llvm-readelf
   llvm-readobj

@@ -22,24 +22,6 @@
 
 namespace __asan {
 
-// ---------------------- mmap -------------------- {{{1
-// Reserve memory range [beg, end].
-// We need to use inclusive range because end+1 may not be representable.
-void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name) {
-  CHECK_EQ((beg % GetMmapGranularity()), 0);
-  CHECK_EQ(((end + 1) % GetMmapGranularity()), 0);
-  uptr size = end - beg + 1;
-  DecreaseTotalMmap(size);  // Don't count the shadow against mmap_limit_mb.
-  if (!MmapFixedSuperNoReserve(beg, size, name)) {
-    Report(
-        "ReserveShadowMemoryRange failed while trying to map 0x%zx bytes. "
-        "Perhaps you're using ulimit -v\n",
-        size);
-    Abort();
-  }
-  if (common_flags()->use_madv_dontdump) DontDumpShadowMemory(beg, size);
-}
-
 static void ProtectGap(uptr addr, uptr size) {
   if (!flags()->protect_shadow_gap) {
     // The shadow gap is unprotected, so there is a chance that someone
@@ -57,26 +39,8 @@ static void ProtectGap(uptr addr, uptr size) {
                              "unprotected gap shadow");
     return;
   }
-  void *res = MmapFixedNoAccess(addr, size, "shadow gap");
-  if (addr == (uptr)res) return;
-  // A few pages at the start of the address space can not be protected.
-  // But we really want to protect as much as possible, to prevent this memory
-  // being returned as a result of a non-FIXED mmap().
-  if (addr == kZeroBaseShadowStart) {
-    uptr step = GetMmapGranularity();
-    while (size > step && addr < kZeroBaseMaxShadowStart) {
-      addr += step;
-      size -= step;
-      void *res = MmapFixedNoAccess(addr, size, "shadow gap");
-      if (addr == (uptr)res) return;
-    }
-  }
-
-  Report(
-      "ERROR: Failed to protect the shadow gap. "
-      "ASan cannot proceed correctly. ABORTING.\n");
-  DumpProcessMap();
-  Die();
+  __sanitizer::ProtectGap(addr, size, kZeroBaseShadowStart,
+                          kZeroBaseMaxShadowStart);
 }
 
 static void MaybeReportLinuxPIEBug() {
@@ -99,8 +63,6 @@ void InitializeShadowMemory() {
   // |kDefaultShadowSentinel|.
   bool full_shadow_is_available = false;
   if (shadow_start == kDefaultShadowSentinel) {
-    __asan_shadow_memory_dynamic_address = 0;
-    CHECK_EQ(0, kLowShadowBeg);
     shadow_start = FindDynamicShadowStart();
     if (SANITIZER_LINUX) full_shadow_is_available = true;
   }

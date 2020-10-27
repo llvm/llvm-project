@@ -1,3 +1,9 @@
+add_header_library(
+  errno_setter_matcher
+  HDRS
+    ErrnoSetterMatcher.h
+)
+
 add_custom_target(check-libc)
 
 add_subdirectory(config)

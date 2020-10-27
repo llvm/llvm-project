@@ -1,7 +1,7 @@
 # :ir is the flag to indicate this is IR level profile.
 :ir
 test_criticalEdge
-82323253069
+93478046750287693
 8
 2
 1
@@ -13,7 +13,7 @@ test_criticalEdge
 1
 
 <stdin>:bar
-12884901887
+742261418966908927
 1
 7
 

@@ -125,28 +125,28 @@ uint64_t test_vcvtpd_u64_f64(float64_t a) {
 }
 
 // CHECK-LABEL: define i32 @test_vcvts_s32_f32(float %a) #0 {
-// CHECK:   [[TMP0:%.*]] = fptosi float %a to i32
+// CHECK:   [[TMP0:%.*]] = call i32 @llvm.aarch64.neon.fcvtzs.i32.f32(float %a)
 // CHECK:   ret i32 [[TMP0]]
 int32_t test_vcvts_s32_f32(float32_t a) {
   return (int32_t)vcvts_s32_f32(a);
 }
 
 // CHECK-LABEL: define i64 @test_vcvtd_s64_f64(double %a) #0 {
-// CHECK:   [[TMP0:%.*]] = fptosi double %a to i64
+// CHECK:   [[TMP0:%.*]] = call i64 @llvm.aarch64.neon.fcvtzs.i64.f64(double %a)
 // CHECK:   ret i64 [[TMP0]]
 int64_t test_vcvtd_s64_f64(float64_t a) {
   return (int64_t)vcvtd_s64_f64(a);
 }
 
 // CHECK-LABEL: define i32 @test_vcvts_u32_f32(float %a) #0 {
-// CHECK:   [[TMP0:%.*]] = fptoui float %a to i32
+// CHECK:   [[TMP0:%.*]] = call i32 @llvm.aarch64.neon.fcvtzu.i32.f32(float %a)
 // CHECK:   ret i32 [[TMP0]]
 uint32_t test_vcvts_u32_f32(float32_t a) {
   return (uint32_t)vcvts_u32_f32(a);
 }
 
 // CHECK-LABEL: define i64 @test_vcvtd_u64_f64(double %a) #0 {
-// CHECK:   [[TMP0:%.*]] = fptoui double %a to i64
+// CHECK:   [[TMP0:%.*]] = call i64 @llvm.aarch64.neon.fcvtzu.i64.f64(double %a)
 // CHECK:   ret i64 [[TMP0]]
 uint64_t test_vcvtd_u64_f64(float64_t a) {
   return (uint64_t)vcvtd_u64_f64(a);

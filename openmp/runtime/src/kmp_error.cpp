@@ -415,9 +415,6 @@ void __kmp_pop_sync(int gtid, enum cons_type ct, ident_t const *ident) {
     __kmp_error_construct2(kmp_i18n_msg_CnsExpectedEnd, ct, ident,
                            &p->stack_data[tos]);
   }
-  if (gtid < 0) {
-    __kmp_check_null_func();
-  }
   KE_TRACE(100, (POP_MSG(p)));
   p->s_top = p->stack_data[tos].prev;
   p->stack_data[tos].type = ct_none;

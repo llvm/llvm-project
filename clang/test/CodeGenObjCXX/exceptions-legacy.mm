@@ -63,10 +63,16 @@ void test1(id obj, bool *failed) {
 //   Body.
 // CHECK:      invoke void @_Z3foov()
 
+//   Catch handler.  Reload of 'failed' address is unnecessary.
+// CHECK:      [[T0:%.*]] = load i8*, i8**
+// CHECK-NEXT: store i8 1, i8* [[T0]],
+// CHECK-NEXT: br label
+
 //   Leave the @try.
 // CHECK:      call void @objc_exception_try_exit([[BUF_T]]* nonnull [[BUF]])
 // CHECK-NEXT: br label
 // CHECK:      ret void
+
 
 //   Real EH cleanup.
 // CHECK:      [[T0:%.*]] = landingpad
@@ -74,7 +80,3 @@ void test1(id obj, bool *failed) {
 // CHECK-NEXT: call void @objc_exception_try_exit([[BUF_T]]* nonnull [[BUF]])
 // CHECK-NEXT: resume
 
-//   Catch handler.  Reload of 'failed' address is unnecessary.
-// CHECK:      [[T0:%.*]] = load i8*, i8**
-// CHECK-NEXT: store i8 1, i8* [[T0]],
-// CHECK-NEXT: br label

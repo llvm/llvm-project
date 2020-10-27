@@ -196,7 +196,7 @@ body:             |
     successors: %bb.30(0x30000000), %bb.36(0x50000000)
 
     %53 = COPY killed %62
-    %47 = V_ADD_I32_e32 -1, %46, implicit-def dead $vcc, implicit $exec
+    %47 = V_ADD_CO_U32_e32 -1, %46, implicit-def dead $vcc, implicit $exec
     %48 = V_OR_B32_e32 killed %47, %26, implicit $exec
     %49 = COPY %53
     %49.sub2 = COPY undef %48

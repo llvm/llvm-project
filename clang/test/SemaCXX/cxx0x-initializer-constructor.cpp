@@ -163,7 +163,7 @@ namespace objects {
     // (for the second phase, no constructor is viable)
     G g1{1, 2, 3}; // expected-error {{no matching constructor}}
     (void) new G{1, 2, 3}; // expected-error {{no matching constructor}}
-    (void) G{1, 2, 3} // expected-error {{no matching constructor}}
+    (void) G{1, 2, 3}; // expected-error {{no matching constructor}}
 
     // valid (T deduced to <>).
     G g2({1, 2, 3});

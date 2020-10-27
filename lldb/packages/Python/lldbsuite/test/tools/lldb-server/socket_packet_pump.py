@@ -6,7 +6,6 @@ import re
 import select
 import threading
 import traceback
-import codecs
 
 from six.moves import queue
 from lldbsuite.support import seven
@@ -25,7 +24,7 @@ def _handle_output_packet_string(packet_contents):
 
 def _dump_queue(the_queue):
     while not the_queue.empty():
-        print(codecs.encode(the_queue.get(True), "string_escape"))
+        print(repr(the_queue.get(True)))
         print("\n")
 
 

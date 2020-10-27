@@ -1,13 +1,13 @@
 ; RUN: llc -relocation-model=static -verify-machineinstrs -O0 -mcpu=pwr7 -code-model=medium -filetype=obj -fast-isel=false %s -o - | \
-; RUN: llvm-readobj -r | FileCheck -check-prefix=MEDIUM %s
+; RUN: llvm-readobj -r - | FileCheck -check-prefix=MEDIUM %s
 ; RUN: llc -relocation-model=static -verify-machineinstrs -O0 -mcpu=pwr7 -code-model=large -filetype=obj -fast-isel=false %s -o - | \
-; RUN: llvm-readobj -r | FileCheck -check-prefix=LARGE %s
+; RUN: llvm-readobj -r - | FileCheck -check-prefix=LARGE %s
 
 ; Run jump table test separately since jump tables aren't generated at -O0.
 ; RUN: llc -relocation-model=static -verify-machineinstrs -mcpu=pwr7 -code-model=medium -filetype=obj -fast-isel=false %s -o - | \
-; RUN: llvm-readobj -r | FileCheck -check-prefix=MEDIUM-JT %s
+; RUN: llvm-readobj -r - | FileCheck -check-prefix=MEDIUM-JT %s
 ; RUN: llc -relocation-model=static -verify-machineinstrs -mcpu=pwr7 -code-model=large -filetype=obj -fast-isel=false %s -o - | \
-; RUN: llvm-readobj -r | FileCheck -check-prefix=LARGE-JT %s
+; RUN: llvm-readobj -r - | FileCheck -check-prefix=LARGE-JT %s
 
 ; FIXME: When asm-parse is available, could make this an assembly test.
 

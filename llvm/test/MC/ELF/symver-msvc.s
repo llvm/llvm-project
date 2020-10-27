@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-windows-elf %s -o - | llvm-readobj -r --symbols | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-windows-elf %s -o - | llvm-readobj -r --symbols - | FileCheck %s
 
 // Verify that MSVC C++ mangled symbols are not affected by the ELF
 // GNU-style symbol versioning. The ELF format is used on Windows by

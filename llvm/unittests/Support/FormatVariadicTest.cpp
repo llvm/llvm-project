@@ -60,6 +60,18 @@ TEST(FormatVariadicTest, EscapedBrace) {
   ASSERT_EQ(1u, Replacements.size());
   EXPECT_EQ("{{{", Replacements[0].Spec);
   EXPECT_EQ(ReplacementType::Literal, Replacements[0].Type);
+
+  // } does not require doubling up.
+  Replacements = formatv_object_base::parseFormatString("}");
+  ASSERT_EQ(1u, Replacements.size());
+  EXPECT_EQ("}", Replacements[0].Spec);
+  EXPECT_EQ(ReplacementType::Literal, Replacements[0].Type);
+
+  // } does not require doubling up.
+  Replacements = formatv_object_base::parseFormatString("}}}");
+  ASSERT_EQ(1u, Replacements.size());
+  EXPECT_EQ("}}}", Replacements[0].Spec);
+  EXPECT_EQ(ReplacementType::Literal, Replacements[0].Type);
 }
 
 TEST(FormatVariadicTest, ValidReplacementSequence) {

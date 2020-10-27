@@ -204,7 +204,7 @@ void SymbolContext::GetDescription(Stream *s, lldb::DescriptionLevel level,
     Type *func_type = function->GetType();
     if (func_type) {
       s->Indent("   FuncType: ");
-      func_type->GetDescription(s, level, false);
+      func_type->GetDescription(s, level, false, target);
       s->EOL();
     }
   }

@@ -74,9 +74,9 @@
 ; 32BIT-DAG:     renamable $r11 = ADDI %fixed-stack.0, 0
 ; 32BIT-DAG:     STW renamable $r11, 0, %stack.0.arg1 :: (store 4 into %ir.0)
 ; 32BIT-DAG:     STW renamable $r4, 0, %stack.0.arg1 :: (store 4 into %ir.arg1)
-; 32BIT-DAG:     renamable $r5 = LWZ 0, %fixed-stack.0 :: (load 4 from %ir.2)
+; 32BIT-DAG:     renamable $r6 = LWZ 0, %fixed-stack.0 :: (load 4 from %ir.2)
 ; 32BIT-DAG:     renamable $r4 = LWZ 0, %fixed-stack.0 :: (load 4 from %ir.4)
-; 32BIT-DAG:     renamable $r3 = nsw ADD4 killed renamable $r5, killed renamable $r3
+; 32BIT-DAG:     renamable $r3 = nsw ADD4 killed renamable $r6, killed renamable $r3
 ; 32BIT-DAG:     renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r4
 ; 32BIT-DAG:     BLR implicit $lr, implicit $rm, implicit $r3
 

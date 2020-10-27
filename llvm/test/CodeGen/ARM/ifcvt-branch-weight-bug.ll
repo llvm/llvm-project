@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=armv4t--linux-androideabi -print-machineinstrs=if-converter -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=armv4t--linux-androideabi -stop-after=if-converter | FileCheck %s
 ; Fix a bug triggered in IfConverterTriangle when CvtBB has multiple
 ; predecessors.
 ; PR18752

@@ -77,7 +77,7 @@ define <1 x i128> @add_v1i128(<1 x i128> %x, <1 x i128> %y) nounwind {
 ; X64-NEXT:    movq %rax, %xmm0
 ; X64-NEXT:    movq %rsi, %xmm1
 ; X64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X64-NEXT:    movq %xmm0, %rdx
 ; X64-NEXT:    addq $1, %rax
 ; X64-NEXT:    adcq $0, %rdx

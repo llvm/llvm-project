@@ -47,6 +47,14 @@ struct LLVMTypeStorage;
 struct LLVMDialectImpl;
 } // namespace detail
 
+class LLVMType;
+
+/// Converts an MLIR LLVM dialect type to LLVM IR type. Note that this function
+/// exists exclusively for the purpose of gradual transition to the first-party
+/// modeling of LLVM types. It should not be used outside MLIR-to-LLVM
+/// translation.
+llvm::Type *convertLLVMType(LLVMType type);
+
 class LLVMType : public mlir::Type::TypeBase<LLVMType, mlir::Type,
                                              detail::LLVMTypeStorage> {
 public:
@@ -59,26 +67,32 @@ public:
   static bool kindof(unsigned kind) { return kind == LLVM_TYPE; }
 
   LLVMDialect &getDialect();
-  llvm::Type *getUnderlyingType() const;
 
   /// Utilities to identify types.
   bool isBFloatTy() { return getUnderlyingType()->isBFloatTy(); }
   bool isHalfTy() { return getUnderlyingType()->isHalfTy(); }
   bool isFloatTy() { return getUnderlyingType()->isFloatTy(); }
   bool isDoubleTy() { return getUnderlyingType()->isDoubleTy(); }
-  bool isIntegerTy() { return getUnderlyingType()->isIntegerTy(); }
-  bool isIntegerTy(unsigned bitwidth) {
-    return getUnderlyingType()->isIntegerTy(bitwidth);
-  }
+  bool isFloatingPointTy() { return getUnderlyingType()->isFloatingPointTy(); }
 
   /// Array type utilities.
   LLVMType getArrayElementType();
   unsigned getArrayNumElements();
   bool isArrayTy();
 
+  /// Integer type utilities.
+  unsigned getIntegerBitWidth() {
+    return getUnderlyingType()->getIntegerBitWidth();
+  }
+  bool isIntegerTy() { return getUnderlyingType()->isIntegerTy(); }
+  bool isIntegerTy(unsigned bitwidth) {
+    return getUnderlyingType()->isIntegerTy(bitwidth);
+  }
+
   /// Vector type utilities.
   LLVMType getVectorElementType();
   unsigned getVectorNumElements();
+  llvm::ElementCount getVectorElementCount();
   bool isVectorTy();
 
   /// Function type utilities.
@@ -86,11 +100,13 @@ public:
   unsigned getFunctionNumParams();
   LLVMType getFunctionResultType();
   bool isFunctionTy();
+  bool isFunctionVarArg();
 
   /// Pointer type utilities.
   LLVMType getPointerTo(unsigned addrSpace = 0);
   LLVMType getPointerElementTy();
   bool isPointerTy();
+  static bool isValidPointerElementType(LLVMType type);
 
   /// Struct type utilities.
   LLVMType getStructElementType(unsigned i);
@@ -194,6 +210,14 @@ public:
 
 private:
   friend LLVMDialect;
+  friend llvm::Type *convertLLVMType(LLVMType type);
+
+  /// Get the underlying LLVM IR type.
+  llvm::Type *getUnderlyingType() const;
+
+  /// Get the underlying LLVM IR types for the given array of types.
+  static void getUnderlyingTypes(ArrayRef<LLVMType> types,
+                                 SmallVectorImpl<llvm::Type *> &result);
 
   /// Get an LLVMType with a pre-existing llvm type.
   static LLVMType get(MLIRContext *context, llvm::Type *llvmType);

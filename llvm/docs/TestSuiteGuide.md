@@ -71,8 +71,8 @@ Quickstart
 6. Show and compare result files (optional):
 
    ```bash
-   # Make sure pandas is installed. Prepend `sudo` if necessary.
-   % pip install pandas
+   # Make sure pandas and scipy are installed. Prepend `sudo` if necessary.
+   % pip install pandas scipy
    # Show a single result file:
    % test-suite/utils/compare.py results.json
    # Compare two result files:

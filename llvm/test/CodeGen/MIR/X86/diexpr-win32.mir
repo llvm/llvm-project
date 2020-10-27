@@ -1,4 +1,4 @@
-# RUN: llc -start-after=prologepilog -filetype=obj -O0 %s -o - | llvm-readobj --codeview | FileCheck %s
+# RUN: llc -start-after=prologepilog -filetype=obj -O0 %s -o - | llvm-readobj --codeview - | FileCheck %s
 
 # Offsets are now CFA, or VFRAME, relative. Both the NRVO sret pointer and the
 # string* parameter are on the stack, NRVO at offset 4 (after RA), and Str at

@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=+code-object-v3 < %s | FileCheck --check-prefixes=ALL-ASM,OSABI-AMDHSA-ASM %s
-; RUN: llc -filetype=obj -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=+code-object-v3 < %s | llvm-readelf --notes -relocations -sections -symbols | FileCheck --check-prefixes=ALL-ELF,OSABI-AMDHSA-ELF %s
+; RUN: llc -filetype=obj -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -mattr=+code-object-v3 < %s | llvm-readelf --notes -relocations -sections -symbols - | FileCheck --check-prefixes=ALL-ELF,OSABI-AMDHSA-ELF %s
 
 ; ALL-ASM-LABEL: {{^}}fadd:
 

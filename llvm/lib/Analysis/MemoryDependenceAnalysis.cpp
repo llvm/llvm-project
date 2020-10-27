@@ -406,8 +406,6 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
       isInvariantLoad = true;
   }
 
-  const DataLayout &DL = BB->getModule()->getDataLayout();
-
   // Return "true" if and only if the instruction I is either a non-simple
   // load or a non-simple store.
   auto isNonSimpleLoadOrStore = [](Instruction *I) -> bool {
@@ -576,7 +574,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     // looking for a clobber in many cases; that's an alias property and is
     // handled by BasicAA.
     if (isa<AllocaInst>(Inst) || isNoAliasFn(Inst, &TLI)) {
-      const Value *AccessPtr = GetUnderlyingObject(MemLoc.Ptr, DL);
+      const Value *AccessPtr = getUnderlyingObject(MemLoc.Ptr);
       if (AccessPtr == Inst || AA.isMustAlias(Inst, AccessPtr))
         return MemDepResult::getDef(Inst);
     }

@@ -502,6 +502,29 @@ def run_break_set_by_source_regexp(
 
     return get_bpno_from_match(break_results)
 
+def run_break_set_by_file_colon_line(
+        test,
+        specifier,
+        path,
+        line_number,
+        column_number = 0,
+        extra_options=None,
+        num_expected_locations=-1):
+    command = 'breakpoint set -y "%s"'%(specifier)
+    if extra_options:
+        command += " " + extra_options
+
+    print("About to run: '%s'", command)
+    break_results = run_break_set_command(test, command)
+    check_breakpoint_result(
+        test,
+        break_results,
+        num_locations = num_expected_locations,
+        file_name = path,
+        line_number = line_number,
+        column_number = column_number)
+    
+    return get_bpno_from_match(break_results)
 
 def run_break_set_command(test, command):
     """Run the command passed in - it must be some break set variant - and analyze the result.
@@ -515,6 +538,7 @@ def run_break_set_command(test, command):
     If there is only one location, the dictionary MAY contain:
         file          - source file name
         line_no       - source line number
+        column        - source column number
         symbol        - symbol name
         inline_symbol - inlined symbol name
         offset        - offset from the original symbol
@@ -566,6 +590,7 @@ def check_breakpoint_result(
         break_results,
         file_name=None,
         line_number=-1,
+        column_number=0,
         symbol_name=None,
         symbol_match_exact=True,
         module_name=None,
@@ -604,6 +629,17 @@ def check_breakpoint_result(
             "Breakpoint line number %s doesn't match resultant line %s." %
             (line_number,
              out_line_number))
+
+    if column_number != 0:
+        out_column_number = 0
+        if 'column' in break_results:
+            out_column_number = break_results['column']
+
+        test.assertTrue(
+            column_number == out_column_number,
+            "Breakpoint column number %s doesn't match resultant column %s." %
+            (column_number,
+             out_column_number))
 
     if symbol_name:
         out_symbol_name = ""

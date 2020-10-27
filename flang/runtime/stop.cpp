@@ -40,6 +40,7 @@ static void DescribeIEEESignaledExceptions() {
     if (excepts & FE_UNDERFLOW) {
       std::fputs(" UNDERFLOW", stderr);
     }
+    std::fputc('\n', stderr);
   }
 }
 
@@ -52,10 +53,11 @@ static void CloseAllExternalUnits(const char *why) {
     int code, bool isErrorStop, bool quiet) {
   CloseAllExternalUnits("STOP statement");
   if (!quiet) {
+    std::fprintf(stderr, "Fortran %s", isErrorStop ? "ERROR STOP" : "STOP");
     if (code != EXIT_SUCCESS) {
-      std::fprintf(stderr, "Fortran %s: code %d\n",
-          isErrorStop ? "ERROR STOP" : "STOP", code);
+      std::fprintf(stderr, ": code %d\n", code);
     }
+    std::fputc('\n', stderr);
     DescribeIEEESignaledExceptions();
   }
   std::exit(code);

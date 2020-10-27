@@ -1181,8 +1181,7 @@ PartialInlinerImpl::FunctionCloner::doSingleRegionFunctionOutlining() {
   // (i.e. not to be extracted to the out of line function)
   auto ToBeInlined = [&, this](BasicBlock *BB) {
     return BB == ClonedOI->ReturnBlock ||
-           (std::find(ClonedOI->Entries.begin(), ClonedOI->Entries.end(), BB) !=
-            ClonedOI->Entries.end());
+           llvm::is_contained(ClonedOI->Entries, BB);
   };
 
   assert(ClonedOI && "Expecting OutlineInfo for single region outline");

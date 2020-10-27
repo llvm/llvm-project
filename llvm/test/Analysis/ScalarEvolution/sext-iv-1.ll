@@ -1,5 +1,5 @@
-; RUN: opt < %s -scalar-evolution -analyze \
-; RUN:  | FileCheck %s
+; RUN: opt < %s -scalar-evolution -analyze -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s "-passes=print<scalar-evolution>" -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: -->  (sext i{{.}} {{{.*}},+,{{.*}}}<%bb1> to i64)
 ; CHECK: -->  (sext i{{.}} {{{.*}},+,{{.*}}}<%bb1> to i64)

@@ -48,19 +48,19 @@ protected:
       state = process->GetState();
 
       if (process->IsAlive() && state != eStateConnected) {
-        char message[1024];
+        std::string message;
         if (process->GetState() == eStateAttaching)
-          ::snprintf(message, sizeof(message),
-                     "There is a pending attach, abort it and %s?",
-                     m_new_process_action.c_str());
+          message =
+              llvm::formatv("There is a pending attach, abort it and {0}?",
+                            m_new_process_action);
         else if (process->GetShouldDetach())
-          ::snprintf(message, sizeof(message),
-                     "There is a running process, detach from it and %s?",
-                     m_new_process_action.c_str());
+          message = llvm::formatv(
+              "There is a running process, detach from it and {0}?",
+              m_new_process_action);
         else
-          ::snprintf(message, sizeof(message),
-                     "There is a running process, kill it and %s?",
-                     m_new_process_action.c_str());
+          message =
+              llvm::formatv("There is a running process, kill it and {0}?",
+                            m_new_process_action);
 
         if (!m_interpreter.Confirm(message, true)) {
           result.SetStatus(eReturnStatusFailed);
@@ -820,9 +820,15 @@ protected:
     Status error;
     Debugger &debugger = GetDebugger();
     PlatformSP platform_sp = m_interpreter.GetPlatform(true);
-    ProcessSP process_sp = platform_sp->ConnectProcess(
-        command.GetArgumentAtIndex(0), plugin_name, debugger,
-        debugger.GetSelectedTarget().get(), error);
+    ProcessSP process_sp =
+        debugger.GetAsyncExecution()
+            ? platform_sp->ConnectProcess(
+                  command.GetArgumentAtIndex(0), plugin_name, debugger,
+                  debugger.GetSelectedTarget().get(), error)
+            : platform_sp->ConnectProcessSynchronous(
+                  command.GetArgumentAtIndex(0), plugin_name, debugger,
+                  result.GetOutputStream(), debugger.GetSelectedTarget().get(),
+                  error);
     if (error.Fail() || process_sp == nullptr) {
       result.AppendError(error.AsCString("Error connecting to the process"));
       result.SetStatus(eReturnStatusFailed);

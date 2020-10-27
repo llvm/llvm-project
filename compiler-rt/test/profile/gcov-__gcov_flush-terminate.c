@@ -10,11 +10,13 @@
 // CHECK:             -:    0:Runs:1
 // CHECK-NEXT:        -:    0:Programs:1
 
-void __gcov_flush(void);
+void __gcov_dump(void);
+void __gcov_reset(void);
 
 int main(void) {                   // CHECK:      1: [[#@LINE]]:int main(void)
   int i = 22;                      // CHECK-NEXT: 1: [[#@LINE]]:
-  __gcov_flush();                  // CHECK-NEXT: 1: [[#@LINE]]:
+  __gcov_dump();                   // CHECK-NEXT: 1: [[#@LINE]]:
+  __gcov_reset();                  // CHECK-NEXT: 1: [[#@LINE]]:
   i = 42;                          // CHECK-NEXT: 1: [[#@LINE]]:
   __builtin_trap();                // CHECK-NEXT: 1: [[#@LINE]]:
   i = 84;                          // CHECK-NEXT: 1: [[#@LINE]]:

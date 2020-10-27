@@ -54,13 +54,6 @@ class FPR<bits<5> num, string n> : PPCReg<n> {
   let HWEncoding{4-0} = num;
 }
 
-// QFPR - One of the 32 256-bit floating-point vector registers (used for QPX)
-class QFPR<FPR SubReg, string n> : PPCReg<n> {
-  let HWEncoding = SubReg.HWEncoding;
-  let SubRegs = [SubReg];
-  let SubRegIndices = [sub_64];
-}
-
 // VF - One of the 32 64-bit floating-point subregisters of the vector
 // registers (used by VSX).
 class VF<bits<5> num, string n> : PPCReg<n> {
@@ -130,12 +123,6 @@ foreach Index = 0-31 in {
 foreach Index = 0-31 in {
   def VF#Index : VF<Index, "v" #Index>,
                  DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
-}
-
-// QPX Floating-point registers
-foreach Index = 0-31 in {
-  def QF#Index : QFPR<!cast<FPR>("F"#Index), "q"#Index>,
-                 DwarfRegNum<[!add(Index, 32), !add(Index, 32)]>;
 }
 
 // Vector registers
@@ -342,16 +329,6 @@ def SPILLTOVSRRC : RegisterClass<"PPC", [i64, f64], 64, (add G8RC, (sub VSFRC,
 
 // Register class for single precision scalars in VSX registers
 def VSSRC : RegisterClass<"PPC", [f32], 32, (add VSFRC)>;
-
-// For QPX
-def QFRC : RegisterClass<"PPC", [v4f64], 256, (add (sequence "QF%u", 0, 13),
-                                                (sequence "QF%u", 31, 14))>;
-def QSRC : RegisterClass<"PPC", [v4f32], 128, (add QFRC)>;
-def QBRC : RegisterClass<"PPC", [v4i1], 256, (add QFRC)> {
-  // These are actually stored as floating-point values where a positive
-  // number is true and anything else (including NaN) is false.
-  let Size = 256;
-}
 
 def CRBITRC : RegisterClass<"PPC", [i1], 32,
   (add CR2LT, CR2GT, CR2EQ, CR2UN,

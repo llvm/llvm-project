@@ -44,6 +44,7 @@ struct VersionBase {
     return major > other.major ||
            (major == other.major && minor >= other.minor);
   }
+  bool operator<(const VersionType &other) const { return !(*this >= other); }
 };
 
 struct MacosVersion : VersionBase<MacosVersion> {

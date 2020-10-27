@@ -1,4 +1,4 @@
-; RUN: opt < %s -functionattrs -S | FileCheck %s
+; RUN: opt < %s -function-attrs -S | FileCheck %s
 ; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
 
 @x = global i32 0

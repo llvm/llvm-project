@@ -1,7 +1,11 @@
-; RUN: opt < %s -asan -asan-module -asan-globals-live-support=0 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
-; RUN: opt < %s -asan -asan-module -asan-globals-live-support=0 -mtriple=x86_64-apple-macosx10.11.0 -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
-; RUN: opt < %s -asan -asan-module -asan-globals-live-support=0 -mtriple=x86_64-pc-windows-msvc19.0.24215 -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
-; RUN: opt < %s -asan -asan-module -asan-globals-live-support=0 -asan-mapping-scale=5 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-globals-live-support=0 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-globals-live-support=0 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-globals-live-support=0 -mtriple=x86_64-apple-macosx10.11.0 -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-globals-live-support=0 -mtriple=x86_64-apple-macosx10.11.0 -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-globals-live-support=0 -mtriple=x86_64-pc-windows-msvc19.0.24215 -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-globals-live-support=0 -mtriple=x86_64-pc-windows-msvc19.0.24215 -S | FileCheck --check-prefixes=CHECK,CHECK-S3 %s
+; RUN: opt < %s -asan -asan-module -enable-new-pm=0 -asan-globals-live-support=0 -asan-mapping-scale=5 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
+; RUN: opt < %s -passes='asan-pipeline' -asan-globals-live-support=0 -asan-mapping-scale=5 -mtriple=x86_64-unknown-linux-gnu -S | FileCheck --check-prefixes=CHECK,CHECK-S5 %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

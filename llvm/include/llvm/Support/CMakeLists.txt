@@ -16,18 +16,32 @@ if(LLVM_APPEND_VC_REV)
   endif()
 endif()
 
+set(generated_files "${version_inc}")
+if (fake_version_inc)
+  list(APPEND generated_files "${fake_version_inc}")
+endif()
+
 # Create custom target to generate the VC revision include.
-add_custom_command(OUTPUT "${version_inc}" "${fake_version_inc}"
-  DEPENDS "${llvm_vc}" "${generate_vcs_version_script}"
-  COMMAND ${CMAKE_COMMAND} "-DNAMES=LLVM"
-                           "-DLLVM_SOURCE_DIR=${llvm_source_dir}"
-                           "-DHEADER_FILE=${version_inc}"
-                           -P "${generate_vcs_version_script}")
+if (fake_version_inc)
+  add_custom_command(OUTPUT "${version_inc}" "${fake_version_inc}"
+    DEPENDS "${llvm_vc}" "${generate_vcs_version_script}"
+    COMMAND ${CMAKE_COMMAND} "-DNAMES=LLVM"
+                             "-DLLVM_SOURCE_DIR=${llvm_source_dir}"
+                             "-DHEADER_FILE=${version_inc}"
+                             -P "${generate_vcs_version_script}")
+else()
+  add_custom_command(OUTPUT "${version_inc}"
+    DEPENDS "${llvm_vc}" "${generate_vcs_version_script}"
+    COMMAND ${CMAKE_COMMAND} "-DNAMES=LLVM"
+                             "-DLLVM_SOURCE_DIR=${llvm_source_dir}"
+                             "-DHEADER_FILE=${version_inc}"
+                             -P "${generate_vcs_version_script}")
+endif()
 
 # Mark the generated header as being generated.
 set_source_files_properties("${version_inc}"
   PROPERTIES GENERATED TRUE
              HEADER_FILE_ONLY TRUE)
 
-add_custom_target(llvm_vcsrevision_h ALL DEPENDS "${version_inc}" "${fake_version_inc}")
+add_custom_target(llvm_vcsrevision_h ALL DEPENDS "${generated_files}")
 set_target_properties(llvm_vcsrevision_h PROPERTIES FOLDER "Misc")

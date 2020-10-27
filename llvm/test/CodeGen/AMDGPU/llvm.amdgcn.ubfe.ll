@@ -1559,24 +1559,22 @@ define amdgpu_kernel void @simplify_bfe_u32_multi_use_arg(i32 addrspace(1)* %out
 ; VI-LABEL: simplify_bfe_u32_multi_use_arg:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; VI-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x34
-; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_mov_b32 s10, s2
-; VI-NEXT:    s_mov_b32 s11, s3
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; VI-NEXT:    s_mov_b32 s11, 0xf000
+; VI-NEXT:    s_mov_b32 s10, -1
+; VI-NEXT:    s_mov_b32 s2, s10
+; VI-NEXT:    s_mov_b32 s3, s11
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v0, off, s[8:11], 0
-; VI-NEXT:    s_mov_b32 s0, s4
-; VI-NEXT:    s_mov_b32 s1, s5
-; VI-NEXT:    s_mov_b32 s4, s6
-; VI-NEXT:    s_mov_b32 s5, s7
-; VI-NEXT:    s_mov_b32 s6, s2
-; VI-NEXT:    s_mov_b32 s7, s3
+; VI-NEXT:    buffer_load_dword v0, off, s[0:3], 0
+; VI-NEXT:    s_mov_b32 s8, s4
+; VI-NEXT:    s_mov_b32 s9, s5
+; VI-NEXT:    s_mov_b32 s0, s6
+; VI-NEXT:    s_mov_b32 s1, s7
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_and_b32_e32 v0, 63, v0
 ; VI-NEXT:    v_bfe_u32 v1, v0, 2, 2
-; VI-NEXT:    buffer_store_dword v1, off, s[0:3], 0
-; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; VI-NEXT:    buffer_store_dword v1, off, s[8:11], 0
+; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
                                             i32 addrspace(1)* %out1,
                                             i32 addrspace(1)* %in) #0 {

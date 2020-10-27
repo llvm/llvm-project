@@ -523,6 +523,33 @@ TEST(TypeHierarchy, DeriveFromTemplate) {
                                    WithKind(SymbolKind::Struct), Children()))));
 }
 
+TEST(TypeHierarchy, Preamble) {
+  Annotations SourceAnnotations(R"cpp(
+struct Ch^ild : Parent {
+  int b;
+};)cpp");
+
+  Annotations HeaderInPreambleAnnotations(R"cpp(
+struct [[Parent]] {
+  int a;
+};)cpp");
+
+  TestTU TU = TestTU::withCode(SourceAnnotations.code());
+  TU.HeaderCode = HeaderInPreambleAnnotations.code().str();
+  auto AST = TU.build();
+
+  llvm::Optional<TypeHierarchyItem> Result = getTypeHierarchy(
+      AST, SourceAnnotations.point(), 1, TypeHierarchyDirection::Parents);
+
+  ASSERT_TRUE(Result);
+  EXPECT_THAT(
+      *Result,
+      AllOf(WithName("Child"),
+            Parents(AllOf(WithName("Parent"),
+                          SelectionRangeIs(HeaderInPreambleAnnotations.range()),
+                          Parents()))));
+}
+
 SymbolID findSymbolIDByName(SymbolIndex *Index, llvm::StringRef Name,
                             llvm::StringRef TemplateArgs = "") {
   SymbolID Result;

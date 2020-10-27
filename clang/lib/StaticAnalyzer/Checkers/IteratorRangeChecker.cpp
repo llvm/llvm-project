@@ -169,6 +169,8 @@ void IteratorRangeChecker::checkPreStmt(const BinaryOperator *BO,
     verifyDereference(C, LVal);
   } else if (isRandomIncrOrDecrOperator(OK)) {
     SVal RVal = State->getSVal(BO->getRHS(), C.getLocationContext());
+    if (!BO->getRHS()->getType()->isIntegralOrEnumerationType())
+      return;
     verifyRandomIncrOrDecr(C, BinaryOperator::getOverloadedOperator(OK), LVal,
                            RVal);
   }

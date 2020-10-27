@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s
-template<typename T> struct X; // expected-note {{'X' is incomplete}}
+template <typename T> struct X; // expected-note {{'X<X<X<int>>>' is incomplete}}
 template<int I> struct Y;
 
 X<X<int>> *x1;
@@ -14,8 +14,8 @@ typedef X<int> X_int;
 struct Z : X_int { };
 
 void f(const X<int> x) {
-  (void)reinterpret_cast<X<int>>(x); // expected-error{{reinterpret_cast from}}
-  (void)reinterpret_cast<X<X<X<int>>>>(x); // expected-error{{reinterpret_cast from}}
+  (void)reinterpret_cast<X<int>>(x);       // expected-error{{reinterpret_cast from 'const X<int>' to 'X<int>' is not allowed}}
+  (void)reinterpret_cast<X<X<X<int>>>>(x); // expected-error{{reinterpret_cast from 'const X<int>' to 'X<X<X<int>>>' is not allowed}}
 
   X<X<int>> *x1;
 }

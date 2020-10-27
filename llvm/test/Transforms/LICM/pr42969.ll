@@ -1,4 +1,4 @@
-; RUN: opt %s -S -scoped-noalias -enable-mssa-loop-dependency=true -licm | FileCheck %s
+; RUN: opt %s -S -scoped-noalias-aa -enable-mssa-loop-dependency=true -licm | FileCheck %s
 
 define i16 @main(i1 %a_b_mayalias, i16* %a, i16* %b) {
 ; CHECK:       scalar.body:

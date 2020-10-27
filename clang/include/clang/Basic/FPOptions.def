@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // This file defines the Floating Point language options. Users of this file
-//  must define the FPOPT macro to make use of this information.
+//  must define the OPTION macro to make use of this information.
 #ifndef OPTION
 #  error Define the OPTION macro to handle floating point language options
 #endif

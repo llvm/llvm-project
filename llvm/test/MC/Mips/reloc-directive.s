@@ -5,13 +5,13 @@
 # RUN: llvm-mc -triple mips64-unknown-linux < %s -show-encoding -target-abi=n64 \
 # RUN:     | FileCheck -check-prefix=ASM %s
 # RUN: llvm-mc -triple mips-unknown-linux < %s -show-encoding -target-abi=o32 \
-# RUN:     -filetype=obj | llvm-readobj --sections --section-data -r | \
+# RUN:     -filetype=obj | llvm-readobj --sections --section-data -r - | \
 # RUN:     FileCheck -check-prefix=OBJ-O32 %s
 # RUN: llvm-mc -triple mips64-unknown-linux < %s -show-encoding -target-abi=n32 \
-# RUN:     -filetype=obj | llvm-readobj --sections --section-data -r | \
+# RUN:     -filetype=obj | llvm-readobj --sections --section-data -r - | \
 # RUN:     FileCheck -check-prefix=OBJ-N32 %s
 # RUN: llvm-mc -triple mips64-unknown-linux < %s -show-encoding -target-abi=n64 \
-# RUN:     -filetype=obj | llvm-readobj --sections --section-data -r | \
+# RUN:     -filetype=obj | llvm-readobj --sections --section-data -r - | \
 # RUN:     FileCheck -check-prefix=OBJ-N64 %s
 	.text
 foo:

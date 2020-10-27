@@ -293,18 +293,17 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
             Err = DWARFYAML::emitDebugStr(OS, Obj.DWARF);
           else if (0 == strncmp(&Sec.sectname[0], "__debug_abbrev", 16))
             Err = DWARFYAML::emitDebugAbbrev(OS, Obj.DWARF);
-          else if (0 == strncmp(&Sec.sectname[0], "__debug_aranges", 16))
-            Err = DWARFYAML::emitDebugAranges(OS, Obj.DWARF);
-          else if (0 == strncmp(&Sec.sectname[0], "__debug_ranges", 16))
+          else if (0 == strncmp(&Sec.sectname[0], "__debug_aranges", 16)) {
+            if (Obj.DWARF.DebugAranges)
+              Err = DWARFYAML::emitDebugAranges(OS, Obj.DWARF);
+          } else if (0 == strncmp(&Sec.sectname[0], "__debug_ranges", 16))
             Err = DWARFYAML::emitDebugRanges(OS, Obj.DWARF);
           else if (0 == strncmp(&Sec.sectname[0], "__debug_pubnames", 16)) {
             if (Obj.DWARF.PubNames)
-              Err = DWARFYAML::emitPubSection(OS, *Obj.DWARF.PubNames,
-                                              Obj.IsLittleEndian);
+              Err = DWARFYAML::emitDebugPubnames(OS, Obj.DWARF);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_pubtypes", 16)) {
             if (Obj.DWARF.PubTypes)
-              Err = DWARFYAML::emitPubSection(OS, *Obj.DWARF.PubTypes,
-                                              Obj.IsLittleEndian);
+              Err = DWARFYAML::emitDebugPubtypes(OS, Obj.DWARF);
           } else if (0 == strncmp(&Sec.sectname[0], "__debug_info", 16))
             Err = DWARFYAML::emitDebugInfo(OS, Obj.DWARF);
           else if (0 == strncmp(&Sec.sectname[0], "__debug_line", 16))

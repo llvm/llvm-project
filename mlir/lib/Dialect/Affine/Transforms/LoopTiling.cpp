@@ -218,9 +218,8 @@ mlir::tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
   FlatAffineConstraints cst;
   getIndexSet(input, &cst);
   if (!cst.isHyperRectangular(0, width)) {
-    llvm::dbgs() << "tiled code generation unimplemented for the "
-                    "non-hyperrectangular case, op:"
-                 << *rootAffineForOp << "\n";
+    rootAffineForOp.emitError("tiled code generation unimplemented for the "
+                              "non-hyperrectangular case");
     return failure();
   }
 

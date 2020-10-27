@@ -30,7 +30,7 @@ public:
   StringRef getBaseEffectName() const;
 
   // Return the name of the Interface that the effect belongs to.
-  StringRef getInterfaceTrait() const;
+  std::string getInterfaceTrait() const;
 
   // Return the name of the resource class.
   StringRef getResource() const;

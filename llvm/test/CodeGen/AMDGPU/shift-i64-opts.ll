@@ -54,8 +54,8 @@ define amdgpu_kernel void @lshr_i64_32(i64 addrspace(1)* %out, i64 addrspace(1)*
 ; after 64-bit shift is split.
 
 ; GCN-LABEL: {{^}}lshr_and_i64_35:
-; GCN: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
-; GCN: buffer_load_dword v[[LO:[0-9]+]]
+; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
+; GCN-DAG: buffer_load_dword v[[LO:[0-9]+]]
 ; GCN: v_bfe_u32 v[[BFE:[0-9]+]], v[[LO]], 8, 23
 ; GCN: buffer_store_dwordx2 v{{\[}}[[BFE]]:[[ZERO]]{{\]}}
 define amdgpu_kernel void @lshr_and_i64_35(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {

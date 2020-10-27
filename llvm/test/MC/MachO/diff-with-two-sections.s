@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj --file-headers -S --sd -r --macho-segment --macho-version-min | FileCheck %s
+// RUN: llvm-mc -triple i386-apple-darwin9 %s -filetype=obj -o - | llvm-readobj --file-headers -S --sd -r --macho-segment --macho-version-min - | FileCheck %s
 
 	.section	__TEXT,__text,regular,pure_instructions
 Leh_func_begin0:

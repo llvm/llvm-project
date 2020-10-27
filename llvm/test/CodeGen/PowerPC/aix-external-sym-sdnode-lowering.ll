@@ -14,5 +14,5 @@ entry:
 
 declare double @llvm.ceil.f64(double)
 
-; 32BIT: BL_NOP <mcsymbol .ceil>
-; 64BIT: BL8_NOP <mcsymbol .ceil>
+; 32BIT: BL_NOP &.ceil
+; 64BIT: BL8_NOP &.ceil

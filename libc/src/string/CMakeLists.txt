@@ -60,6 +60,40 @@ add_entrypoint_object(
     strchr.h
 )
 
+add_entrypoint_object(
+  strstr
+  SRCS
+    strstr.cpp
+  HDRS
+    strstr.h
+)
+
+add_entrypoint_object(
+  strnlen
+  SRCS
+    strnlen.cpp
+  HDRS
+    strnlen.h
+  DEPENDS
+    .memchr
+)
+
+add_entrypoint_object(
+  memrchr
+  SRCS
+    memrchr.cpp
+  HDRS
+    memrchr.h
+)
+
+add_entrypoint_object(
+  strrchr
+  SRCS
+    strrchr.cpp
+  HDRS
+    strrchr.h
+)
+
 # Helper to define a function with multiple implementations
 # - Computes flags to satisfy required/rejected features and arch,
 # - Declares an entry point,

@@ -284,7 +284,7 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
   // The opening "{" of a braced list has to be on the same line as the first
   // element if it is nested in another braced init list or function call.
   if (!Current.MustBreakBefore && Previous.is(tok::l_brace) &&
-      Previous.isNot(TT_DictLiteral) && Previous.BlockKind == BK_BracedInit &&
+      Previous.isNot(TT_DictLiteral) && Previous.is(BK_BracedInit) &&
       Previous.Previous &&
       Previous.Previous->isOneOf(tok::l_brace, tok::l_paren, tok::comma))
     return false;
@@ -501,7 +501,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   // The following could be precomputed as they do not depend on the state.
   // However, as they should take effect only if the UnwrappedLine does not fit
   // into the ColumnLimit, they are checked here in the ContinuationIndenter.
-  if (Style.ColumnLimit != 0 && Previous.BlockKind == BK_Block &&
+  if (Style.ColumnLimit != 0 && Previous.is(BK_Block) &&
       Previous.is(tok::l_brace) && !Current.isOneOf(tok::r_brace, tok::comment))
     return true;
 
@@ -627,7 +627,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // opening parenthesis. Don't break if it doesn't conserve columns.
   if (Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak &&
       (Previous.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) ||
-       (Previous.is(tok::l_brace) && Previous.BlockKind != BK_Block &&
+       (Previous.is(tok::l_brace) && Previous.isNot(BK_Block) &&
         Style.Cpp11BracedListStyle)) &&
       State.Column > getNewLineColumn(State) &&
       (!Previous.Previous || !Previous.Previous->isOneOf(
@@ -648,7 +648,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   if (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign &&
       !State.Stack.back().IsCSharpGenericTypeConstraint &&
       Previous.opensScope() && Previous.isNot(TT_ObjCMethodExpr) &&
-      (Current.isNot(TT_LineComment) || Previous.BlockKind == BK_BracedInit)) {
+      (Current.isNot(TT_LineComment) || Previous.is(BK_BracedInit))) {
     State.Stack.back().Indent = State.Column + Spaces;
     State.Stack.back().IsAligned = true;
   }
@@ -972,7 +972,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return (Style.IndentWidth * State.Line->First->IndentLevel) +
            Style.IndentWidth;
 
-  if (NextNonComment->is(tok::l_brace) && NextNonComment->BlockKind == BK_Block)
+  if (NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block))
     return Current.NestingLevel == 0 ? State.FirstIndent
                                      : State.Stack.back().Indent;
   if ((Current.isOneOf(tok::r_brace, tok::r_square) ||
@@ -982,8 +982,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       State.Stack.size() > 1) {
     if (Current.closesBlockOrBlockTypeList(Style))
       return State.Stack[State.Stack.size() - 2].NestedBlockIndent;
-    if (Current.MatchingParen &&
-        Current.MatchingParen->BlockKind == BK_BracedInit)
+    if (Current.MatchingParen && Current.MatchingParen->is(BK_BracedInit))
       return State.Stack[State.Stack.size() - 2].LastSpace;
     return State.FirstIndent;
   }
@@ -1417,7 +1416,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
       State.Stack.back().IsCSharpGenericTypeConstraint)
     return;
 
-  if (Current.MatchingParen && Current.BlockKind == BK_Block) {
+  if (Current.MatchingParen && Current.is(BK_Block)) {
     moveStateToNewBlock(State);
     return;
   }
@@ -1486,9 +1485,8 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
         (State.Line->MustBeDeclaration && !BinPackDeclaration) ||
         (!State.Line->MustBeDeclaration && !Style.BinPackArguments) ||
         (Style.ExperimentalAutoDetectBinPacking &&
-         (Current.PackingKind == PPK_OnePerLine ||
-          (!BinPackInconclusiveFunctions &&
-           Current.PackingKind == PPK_Inconclusive)));
+         (Current.is(PPK_OnePerLine) ||
+          (!BinPackInconclusiveFunctions && Current.is(PPK_Inconclusive))));
 
     if (Current.is(TT_ObjCMethodExpr) && Current.MatchingParen &&
         Style.ObjCBreakBeforeNestedBlockParam) {

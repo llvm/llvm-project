@@ -1,7 +1,3 @@
-if (MSVC)
-  set_source_files_properties(PassBuilder.cpp PROPERTIES COMPILE_FLAGS /bigobj)
-endif()
-
 add_llvm_component_library(LLVMPasses
   PassBuilder.cpp
   PassPlugin.cpp

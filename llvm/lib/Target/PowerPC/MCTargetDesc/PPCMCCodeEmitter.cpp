@@ -104,18 +104,34 @@ unsigned PPCMCCodeEmitter::getImm16Encoding(const MCInst &MI, unsigned OpNo,
   return 0;
 }
 
-uint64_t
-PPCMCCodeEmitter::getImm34Encoding(const MCInst &MI, unsigned OpNo,
-                                   SmallVectorImpl<MCFixup> &Fixups,
-                                   const MCSubtargetInfo &STI) const {
+uint64_t PPCMCCodeEmitter::getImm34Encoding(const MCInst &MI, unsigned OpNo,
+                                            SmallVectorImpl<MCFixup> &Fixups,
+                                            const MCSubtargetInfo &STI,
+                                            MCFixupKind Fixup) const {
   const MCOperand &MO = MI.getOperand(OpNo);
-  if (MO.isReg() || MO.isImm())
+  assert(!MO.isReg() && "Not expecting a register for this operand.");
+  if (MO.isImm())
     return getMachineOpValue(MI, MO, Fixups, STI);
 
   // Add a fixup for the immediate field.
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   (MCFixupKind)PPC::fixup_ppc_pcrel34));
+  Fixups.push_back(MCFixup::create(0, MO.getExpr(), Fixup));
   return 0;
+}
+
+uint64_t
+PPCMCCodeEmitter::getImm34EncodingNoPCRel(const MCInst &MI, unsigned OpNo,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
+  return getImm34Encoding(MI, OpNo, Fixups, STI,
+                          (MCFixupKind)PPC::fixup_ppc_imm34);
+}
+
+uint64_t
+PPCMCCodeEmitter::getImm34EncodingPCRel(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  return getImm34Encoding(MI, OpNo, Fixups, STI,
+                          (MCFixupKind)PPC::fixup_ppc_pcrel34);
 }
 
 unsigned PPCMCCodeEmitter::getMemRIEncoding(const MCInst &MI, unsigned OpNo,

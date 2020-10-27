@@ -1,5 +1,5 @@
 ; Checks that a function with no-return in the entry block is not instrumented.
-; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard -S | FileCheck %s
+; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=3 -sanitizer-coverage-trace-pc-guard -S | FileCheck %s
 ; CHECK-NOT: call void @__sanitizer_cov_trace_pc_guard
 

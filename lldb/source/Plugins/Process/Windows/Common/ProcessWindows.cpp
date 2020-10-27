@@ -150,6 +150,9 @@ lldb_private::ConstString ProcessWindows::GetPluginName() {
 uint32_t ProcessWindows::GetPluginVersion() { return 1; }
 
 Status ProcessWindows::EnableBreakpointSite(BreakpointSite *bp_site) {
+  if (bp_site->HardwareRequired())
+    return Status("Hardware breakpoints are not supported.");
+
   Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_BREAKPOINTS);
   LLDB_LOG(log, "bp_site = {0:x}, id={1}, addr={2:x}", bp_site,
            bp_site->GetID(), bp_site->GetLoadAddress());

@@ -47,6 +47,10 @@ using namespace llvm::AMDGPU;
 #define DEBUG_TYPE "si-memory-legalizer"
 #define PASS_NAME "SI Memory Legalizer"
 
+static cl::opt<bool> AmdgcnSkipCacheInvalidations(
+    "amdgcn-skip-cache-invalidations", cl::init(false), cl::Hidden,
+    cl::desc("Use this to skip inserting cache invalidating instructions."));
+
 namespace {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
@@ -254,7 +258,7 @@ protected:
 
   IsaVersion IV;
 
-  /// Whether to insert cache invalidation instructions.
+  /// Whether to insert cache invalidating instructions.
   bool InsertCacheInv;
 
   SICacheControl(const GCNSubtarget &ST);
@@ -653,7 +657,7 @@ Optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
 SICacheControl::SICacheControl(const GCNSubtarget &ST) {
   TII = ST.getInstrInfo();
   IV = getIsaVersion(ST.getCPU());
-  InsertCacheInv = !ST.isAmdPalOS();
+  InsertCacheInv = !AmdgcnSkipCacheInvalidations;
 }
 
 /* static */

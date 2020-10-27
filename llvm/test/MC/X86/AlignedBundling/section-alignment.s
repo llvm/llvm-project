@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - \
-# RUN:   | llvm-readobj --sections | FileCheck %s
+# RUN:   | llvm-readobj --sections - | FileCheck %s
 
 # Test that bundle-aligned sections with instructions are aligned
 

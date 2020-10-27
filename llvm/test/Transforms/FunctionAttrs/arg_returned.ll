@@ -1,4 +1,4 @@
-; RUN: opt -functionattrs -S < %s | FileCheck %s --check-prefix=FNATTR
+; RUN: opt -function-attrs -S < %s | FileCheck %s --check-prefix=FNATTR
 ;
 ; Test cases specifically designed for the "returned" argument attribute.
 ; We use FIXME's to indicate problems and missing attributes.

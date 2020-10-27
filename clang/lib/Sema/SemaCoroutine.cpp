@@ -449,7 +449,8 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
   if (!AwaitSuspend->getType()->isDependentType()) {
     // [expr.await]p3 [...]
     //   - await-suspend is the expression e.await_suspend(h), which shall be
-    //     a prvalue of type void or bool.
+    //     a prvalue of type void, bool, or std::coroutine_handle<Z> for some
+    //     type Z.
     QualType RetType = AwaitSuspend->getCallReturnType(S.Context);
 
     // Experimental support for coroutine_handle returning await_suspend.

@@ -42,7 +42,9 @@ def parse_args():
             help="Suppress no error output",
             action="store_true")
     format_group.add_argument("-s", "--succinct",
-            help="Reduce amount of output",
+            help="Reduce amount of output."
+                 " Additionally, show a progress bar,"
+                 " unless --no-progress-bar is specified.",
             action="store_true")
     format_group.add_argument("-v", "--verbose",
             dest="showOutput",

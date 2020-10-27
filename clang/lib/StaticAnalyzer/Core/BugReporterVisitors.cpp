@@ -2813,7 +2813,7 @@ UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
 //===----------------------------------------------------------------------===//
 
 FalsePositiveRefutationBRVisitor::FalsePositiveRefutationBRVisitor()
-    : Constraints(ConstraintRangeTy::Factory().getEmptyMap()) {}
+    : Constraints(ConstraintMap::Factory().getEmptyMap()) {}
 
 void FalsePositiveRefutationBRVisitor::finalizeVisitor(
     BugReporterContext &BRC, const ExplodedNode *EndPathNode,
@@ -2855,9 +2855,8 @@ void FalsePositiveRefutationBRVisitor::finalizeVisitor(
 void FalsePositiveRefutationBRVisitor::addConstraints(
     const ExplodedNode *N, bool OverwriteConstraintsOnExistingSyms) {
   // Collect new constraints
-  const ConstraintRangeTy &NewCs = N->getState()->get<ConstraintRange>();
-  ConstraintRangeTy::Factory &CF =
-      N->getState()->get_context<ConstraintRange>();
+  ConstraintMap NewCs = getConstraintMap(N->getState());
+  ConstraintMap::Factory &CF = N->getState()->get_context<ConstraintMap>();
 
   // Add constraints if we don't have them yet
   for (auto const &C : NewCs) {

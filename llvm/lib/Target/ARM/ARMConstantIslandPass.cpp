@@ -491,7 +491,11 @@ ARMConstantIslands::doInitialConstPlacement(std::vector<MachineInstr*> &CPEMIs) 
 
   // The function needs to be as aligned as the basic blocks. The linker may
   // move functions around based on their alignment.
-  MF->ensureAlignment(BB->getAlignment());
+  // Special case: halfword literals still need word alignment on the function.
+  Align FuncAlign = MaxAlign;
+  if (MaxAlign == 2)
+    FuncAlign = Align(4);
+  MF->ensureAlignment(FuncAlign);
 
   // Order the entries in BB by descending alignment.  That ensures correct
   // alignment of all entries as long as BB is sufficiently aligned.  Keep

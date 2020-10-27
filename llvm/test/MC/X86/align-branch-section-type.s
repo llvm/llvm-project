@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple x86_64 --x86-align-branch-boundary=32 --x86-align-branch=ret %s | llvm-readobj -S | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple x86_64 --x86-align-branch-boundary=32 --x86-align-branch=ret %s | llvm-readobj -S - | FileCheck %s
 
 ## Check we only pad in a text section
 

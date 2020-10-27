@@ -86,21 +86,17 @@ enum OpenMPMapModifierKind {
 static constexpr unsigned NumberOfOMPMapClauseModifiers =
     OMPC_MAP_MODIFIER_last - OMPC_MAP_MODIFIER_unknown - 1;
 
-/// OpenMP modifier kind for 'to' clause.
-enum OpenMPToModifierKind {
-#define OPENMP_TO_MODIFIER_KIND(Name) \
-  OMPC_TO_MODIFIER_##Name,
+/// OpenMP modifier kind for 'to' or 'from' clause.
+enum OpenMPMotionModifierKind {
+#define OPENMP_MOTION_MODIFIER_KIND(Name) \
+  OMPC_MOTION_MODIFIER_##Name,
 #include "clang/Basic/OpenMPKinds.def"
-  OMPC_TO_MODIFIER_unknown
+  OMPC_MOTION_MODIFIER_unknown
 };
 
-/// OpenMP modifier kind for 'from' clause.
-enum OpenMPFromModifierKind {
-#define OPENMP_FROM_MODIFIER_KIND(Name) \
-  OMPC_FROM_MODIFIER_##Name,
-#include "clang/Basic/OpenMPKinds.def"
-  OMPC_FROM_MODIFIER_unknown
-};
+/// Number of allowed motion-modifiers.
+static constexpr unsigned NumberOfOMPMotionModifiers =
+    OMPC_MOTION_MODIFIER_unknown;
 
 /// OpenMP attributes for 'dist_schedule' clause.
 enum OpenMPDistScheduleClauseKind {
@@ -170,7 +166,8 @@ enum OpenMPReductionClauseModifier {
   OMPC_REDUCTION_unknown,
 };
 
-unsigned getOpenMPSimpleClauseType(OpenMPClauseKind Kind, llvm::StringRef Str);
+unsigned getOpenMPSimpleClauseType(OpenMPClauseKind Kind, llvm::StringRef Str,
+                                   unsigned OpenMPVersion);
 const char *getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind, unsigned Type);
 
 /// Checks if the specified directive is a directive with an associated

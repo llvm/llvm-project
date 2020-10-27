@@ -611,6 +611,41 @@ int bar() {
 }
 }
 
+namespace testIncludeTypeInTemplateArgument {
+template <typename T, typename U>
+void foo(T t = {}, U = {}); // expected-note {{candidate template ignored}}
+
+class AddObservation {}; // expected-note {{declared here}}
+int bar1() {
+  // should resolve to a class.
+  foo<AddObservationFn, int>(); // expected-error {{unknown type name 'AddObservationFn'; did you mean 'AddObservation'?}}
+
+  // should not resolve to a class.
+  foo(AddObservationFn, 1);    // expected-error-re {{use of undeclared identifier 'AddObservationFn'{{$}}}}
+  int a = AddObservationFn, b; // expected-error-re {{use of undeclared identifier 'AddObservationFn'{{$}}}}
+
+  int AddObservation; // expected-note 3{{declared here}}
+  // should resolve to a local variable.
+  foo(AddObservationFn, 1);    // expected-error {{use of undeclared identifier 'AddObservationFn'; did you mean}}
+  int c = AddObservationFn, d; // expected-error {{use of undeclared identifier 'AddObservationFn'; did you mean}}
+
+  // FIXME: would be nice to not resolve to a variable.
+  foo<AddObservationFn, int>(); // expected-error {{use of undeclared identifier 'AddObservationFn'; did you mean}} \
+                                   expected-error {{no matching function for call}}
+}
+} // namespace testIncludeTypeInTemplateArgument
+
+namespace testNoCrashOnNullNNSTypoCorrection {
+int AddObservation();
+template <typename T, typename... Args>
+class UsingImpl {};
+class AddObservation { // expected-note {{declared here}}
+  using Using =
+      // should resolve to a class.
+      UsingImpl<AddObservationFn, const int>; // expected-error {{unknown type name 'AddObservationFn'; did you mean}}
+};
+} // namespace testNoCrashOnNullNNSTypoCorrection
+
 namespace testNonStaticMemberHandling {
 struct Foo {
   bool usesMetadata;  // expected-note {{'usesMetadata' declared here}}

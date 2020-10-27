@@ -420,7 +420,8 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
       (thread_data->td.td_deque_tail + 1) & TASK_DEQUE_MASK(thread_data->td);
   TCW_4(thread_data->td.td_deque_ntasks,
         TCR_4(thread_data->td.td_deque_ntasks) + 1); // Adjust task count
-
+  KMP_FSYNC_RELEASING(thread->th.th_current_task); // releasing self
+  KMP_FSYNC_RELEASING(taskdata); // releasing child
   KA_TRACE(20, ("__kmp_push_task: T#%d returning TASK_SUCCESSFULLY_PUSHED: "
                 "task=%p ntasks=%d head=%u tail=%u\n",
                 gtid, taskdata, thread_data->td.td_deque_ntasks,
@@ -983,6 +984,7 @@ static void __kmpc_omp_task_complete_if0_template(ident_t *loc_ref,
                                                   kmp_task_t *task) {
   KA_TRACE(10, ("__kmpc_omp_task_complete_if0(enter): T#%d loc=%p task=%p\n",
                 gtid, loc_ref, KMP_TASK_TO_TASKDATA(task)));
+  __kmp_assert_valid_gtid(gtid);
   // this routine will provide task to resume
   __kmp_task_finish<ompt>(gtid, task, NULL);
 
@@ -1380,10 +1382,9 @@ kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                                   kmp_routine_entry_t task_entry) {
   kmp_task_t *retval;
   kmp_tasking_flags_t *input_flags = (kmp_tasking_flags_t *)&flags;
-
+  __kmp_assert_valid_gtid(gtid);
   input_flags->native = FALSE;
 // __kmp_task_alloc() sets up all other runtime flags
-
   KA_TRACE(10, ("__kmpc_omp_task_alloc(enter): T#%d loc=%p, flags=(%s %s %s) "
                 "sizeof_task=%ld sizeof_shared=%ld entry=%p\n",
                 gtid, loc_ref, input_flags->tiedness ? "tied  " : "untied",
@@ -1560,6 +1561,7 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
       else
         kmp_itt_count_task = 0; // thread is not on a barrier - skip timing
     }
+    KMP_FSYNC_ACQUIRED(taskdata); // acquired self (new task)
 #endif
 
 #ifdef KMP_GOMP_COMPAT
@@ -1577,10 +1579,11 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
       // Barrier imbalance - adjust arrive time with the task duration
       thread->th.th_bar_arrive_time += (__itt_get_timestamp() - cur_time);
     }
+    KMP_FSYNC_CANCEL(taskdata); // destroy self (just executed)
+    KMP_FSYNC_RELEASING(taskdata->td_parent); // releasing parent
 #endif
 
   }
-
 
   // Proxy tasks are not handled by the runtime
   if (taskdata->td_flags.proxy != TASK_PROXY) {
@@ -1713,6 +1716,7 @@ kmp_int32 __kmpc_omp_task(ident_t *loc_ref, kmp_int32 gtid,
 #endif
   KA_TRACE(10, ("__kmpc_omp_task(enter): T#%d loc=%p task=%p\n", gtid, loc_ref,
                 new_taskdata));
+  __kmp_assert_valid_gtid(gtid);
 
 #if OMPT_SUPPORT
   kmp_taskdata_t *parent = NULL;
@@ -1821,6 +1825,7 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
   KMP_SET_THREAD_STATE_BLOCK(TASKWAIT);
 
   KA_TRACE(10, ("__kmpc_omp_taskwait(enter): T#%d loc=%p\n", gtid, loc_ref));
+  __kmp_assert_valid_gtid(gtid);
 
   if (__kmp_tasking_mode != tskm_immediate_exec) {
     thread = __kmp_threads[gtid];
@@ -1883,6 +1888,7 @@ static kmp_int32 __kmpc_omp_taskwait_template(ident_t *loc_ref, kmp_int32 gtid,
 #if USE_ITT_BUILD
     if (itt_sync_obj != NULL)
       __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
+    KMP_FSYNC_ACQUIRED(taskdata); // acquire self - sync with children
 #endif /* USE_ITT_BUILD */
 
     // Debugger:  The taskwait is completed. Location remains, but thread is
@@ -1949,6 +1955,7 @@ kmp_int32 __kmpc_omp_taskyield(ident_t *loc_ref, kmp_int32 gtid, int end_part) {
 
   KA_TRACE(10, ("__kmpc_omp_taskyield(enter): T#%d loc=%p end_part = %d\n",
                 gtid, loc_ref, end_part));
+  __kmp_assert_valid_gtid(gtid);
 
   if (__kmp_tasking_mode != tskm_immediate_exec && __kmp_init_parallel) {
     thread = __kmp_threads[gtid];
@@ -2104,6 +2111,7 @@ void __kmp_call_init<kmp_taskred_input_t>(kmp_taskred_data_t &item,
 
 template <typename T>
 void *__kmp_task_reduction_init(int gtid, int num, T *data) {
+  __kmp_assert_valid_gtid(gtid);
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskgroup_t *tg = thread->th.th_current_task->td_taskgroup;
   kmp_int32 nth = thread->th.th_team_nproc;
@@ -2219,6 +2227,7 @@ void __kmp_task_reduction_init_copy(kmp_info_t *thr, int num, T *data,
 Get thread-specific location of data item
 */
 void *__kmpc_task_reduction_get_th_data(int gtid, void *tskgrp, void *data) {
+  __kmp_assert_valid_gtid(gtid);
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_int32 nth = thread->th.th_team_nproc;
   if (nth == 1)
@@ -2324,6 +2333,7 @@ static void __kmp_task_reduction_clean(kmp_info_t *th, kmp_taskgroup_t *tg) {
 template <typename T>
 void *__kmp_task_reduction_modifier_init(ident_t *loc, int gtid, int is_ws,
                                          int num, T *data) {
+  __kmp_assert_valid_gtid(gtid);
   kmp_info_t *thr = __kmp_threads[gtid];
   kmp_int32 nth = thr->th.th_team_nproc;
   __kmpc_taskgroup(loc, gtid); // form new taskgroup first
@@ -2419,6 +2429,7 @@ void __kmpc_task_reduction_modifier_fini(ident_t *loc, int gtid, int is_ws) {
 
 // __kmpc_taskgroup: Start a new taskgroup
 void __kmpc_taskgroup(ident_t *loc, int gtid) {
+  __kmp_assert_valid_gtid(gtid);
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskdata_t *taskdata = thread->th.th_current_task;
   kmp_taskgroup_t *tg_new =
@@ -2451,6 +2462,7 @@ void __kmpc_taskgroup(ident_t *loc, int gtid) {
 // __kmpc_end_taskgroup: Wait until all tasks generated by the current task
 //                       and its descendants are complete
 void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
+  __kmp_assert_valid_gtid(gtid);
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskdata_t *taskdata = thread->th.th_current_task;
   kmp_taskgroup_t *taskgroup = taskdata->td_taskgroup;
@@ -2521,6 +2533,7 @@ void __kmpc_end_taskgroup(ident_t *loc, int gtid) {
 #if USE_ITT_BUILD
     if (itt_sync_obj != NULL)
       __kmp_itt_taskwait_finished(gtid, itt_sync_obj);
+    KMP_FSYNC_ACQUIRED(taskdata); // acquire self - sync with descendants
 #endif /* USE_ITT_BUILD */
   }
   KMP_DEBUG_ASSERT(taskgroup->count == 0);
@@ -3341,15 +3354,25 @@ static kmp_task_team_t *__kmp_allocate_task_team(kmp_info_t *thread,
     KE_TRACE(10, ("__kmp_allocate_task_team: T#%d allocating "
                   "task team for team %p\n",
                   __kmp_gtid_from_thread(thread), team));
-    // Allocate a new task team if one is not available.
-    // Cannot use __kmp_thread_malloc() because threads not around for
-    // kmp_reap_task_team( ).
+    // Allocate a new task team if one is not available. Cannot use
+    // __kmp_thread_malloc because threads not around for kmp_reap_task_team.
     task_team = (kmp_task_team_t *)__kmp_allocate(sizeof(kmp_task_team_t));
     __kmp_init_bootstrap_lock(&task_team->tt.tt_threads_lock);
-    // AC: __kmp_allocate zeroes returned memory
-    // task_team -> tt.tt_threads_data = NULL;
-    // task_team -> tt.tt_max_threads = 0;
-    // task_team -> tt.tt_next = NULL;
+#if USE_ITT_BUILD && USE_ITT_NOTIFY && KMP_DEBUG
+    // suppress race conditions detection on synchronization flags in debug mode
+    // this helps to analyze library internals eliminating false positives
+    __itt_suppress_mark_range(
+        __itt_suppress_range, __itt_suppress_threading_errors,
+        &task_team->tt.tt_found_tasks, sizeof(task_team->tt.tt_found_tasks));
+    __itt_suppress_mark_range(__itt_suppress_range,
+                              __itt_suppress_threading_errors,
+                              CCAST(kmp_uint32 *, &task_team->tt.tt_active),
+                              sizeof(task_team->tt.tt_active));
+#endif /* USE_ITT_BUILD && USE_ITT_NOTIFY && KMP_DEBUG */
+    // Note: __kmp_allocate zeroes returned memory, othewise we would need:
+    // task_team->tt.tt_threads_data = NULL;
+    // task_team->tt.tt_max_threads = 0;
+    // task_team->tt.tt_next = NULL;
   }
 
   TCW_4(task_team->tt.tt_found_tasks, FALSE);
@@ -3792,7 +3815,7 @@ void __kmpc_proxy_task_completed(kmp_int32 gtid, kmp_task_t *ptask) {
   KA_TRACE(
       10, ("__kmp_proxy_task_completed(enter): T#%d proxy task %p completing\n",
            gtid, taskdata));
-
+  __kmp_assert_valid_gtid(gtid);
   KMP_DEBUG_ASSERT(taskdata->td_flags.proxy == TASK_PROXY);
 
   __kmp_first_top_half_finish_proxy(taskdata);
@@ -4424,7 +4447,7 @@ void __kmpc_taskloop(ident_t *loc, int gtid, kmp_task_t *task, int if_val,
                      int sched, kmp_uint64 grainsize, void *task_dup) {
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
   KMP_DEBUG_ASSERT(task != NULL);
-
+  __kmp_assert_valid_gtid(gtid);
   if (nogroup == 0) {
 #if OMPT_SUPPORT && OMPT_OPTIONAL
     OMPT_STORE_RETURN_ADDRESS(gtid);

@@ -19,12 +19,8 @@ if (COMPILER_RT_INCLUDE_TESTS AND COMPILER_RT_HAS_GWP_ASAN AND NOT ANDROID)
   configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.site.cfg.py.in
     ${CMAKE_CURRENT_BINARY_DIR}/unit/lit.site.cfg.py)
-  add_lit_testsuite(check-gwp_asan-unit "Running GWP-ASan unit tests"
-    ${CMAKE_CURRENT_BINARY_DIR}/unit
-    DEPENDS ${GWP_ASAN_TEST_DEPS})
-  set_target_properties(check-gwp_asan-unit PROPERTIES FOLDER
-    "Compiler-RT Tests")
-    list(APPEND GWP_ASAN_TEST_DEPS check-gwp_asan-unit)
+  list(APPEND GWP_ASAN_TEST_DEPS ${GWP_ASAN_TEST_DEPS})
+  list(APPEND GWP_ASAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/unit)
 endif()
 
 configure_lit_site_cfg(

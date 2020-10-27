@@ -88,7 +88,7 @@ entry:
 ; 32BIT-DAG:      $r3 = COPY %0
 ; 32BIT-DAG:      $r4 = COPY %1
 ; 32BIT-DAG:      $r5 = COPY %2
-; 32BIT-NEXT:     BL_NOP <mcsymbol .memcpy>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
+; 32BIT-NEXT:     BL_NOP &.memcpy, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
 ; 32BIT-NEXT:     ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT:          ADJCALLSTACKDOWN 312, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-DAG:      $r3 = COPY %{{[0-9]+}}
@@ -120,7 +120,7 @@ entry:
 ; 64BIT-DAG:      $x3 = COPY %0
 ; 64BIT-DAG:      $x4 = COPY %1
 ; 64BIT-DAG:      $x5 = COPY %2
-; 64BIT-NEXT:     BL8_NOP <mcsymbol .memcpy>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
+; 64BIT-NEXT:     BL8_NOP &.memcpy, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
 ; 64BIT-NEXT:     ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT:          ADJCALLSTACKDOWN 368, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-DAG:      $x3 = COPY %{{[0-9]+}}
@@ -187,7 +187,7 @@ entry:
 ; 32BIT-DAG:      $r3 = COPY %2
 ; 32BIT-DAG:      $r4 = COPY %1
 ; 32BIT-DAG:      $r5 = COPY %3
-; 32BIT-NEXT:     BL_NOP <mcsymbol .memcpy>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
+; 32BIT-NEXT:     BL_NOP &.memcpy, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
 ; 32BIT-NEXT:     ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT:          ADJCALLSTACKDOWN 92, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-DAG:      $r3 = COPY %{{[0-9]+}}
@@ -305,7 +305,7 @@ entry:
 ; 32BIT-DAG:      $r3 = COPY %3
 ; 32BIT-DAG:      $r4 = COPY %4
 ; 32BIT-DAG:      $r5 = COPY %5
-; 32BIT-NEXT:     BL_NOP <mcsymbol .memcpy>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
+; 32BIT-NEXT:     BL_NOP &.memcpy, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
 ; 32BIT-NEXT:     ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT:          ADJCALLSTACKDOWN 316, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-DAG:      $r3 = COPY %{{[0-9]+}}
@@ -349,7 +349,7 @@ entry:
 ; 64BIT-DAG:      $x3 = COPY %2
 ; 64BIT-DAG:      $x4 = COPY %1
 ; 64BIT-DAG:      $x5 = COPY %3
-; 64BIT-NEXT:     BL8_NOP <mcsymbol .memcpy>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
+; 64BIT-NEXT:     BL8_NOP &.memcpy, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
 ; 64BIT-NEXT:     ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT:          ADJCALLSTACKDOWN 344, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-DAG:      $x3 = COPY %{{[0-9]+}}

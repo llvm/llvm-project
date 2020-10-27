@@ -76,6 +76,16 @@ TEST(URITest, Create) {
 #endif
 }
 
+TEST(URITest, CreateUNC) {
+#ifdef _WIN32
+  EXPECT_THAT(createOrDie("\\\\test.org\\x\\y\\z"), "file://test.org/x/y/z");
+  EXPECT_THAT(createOrDie("\\\\10.0.0.1\\x\\y\\z"), "file://10.0.0.1/x/y/z");
+#else
+  EXPECT_THAT(createOrDie("//test.org/x/y/z"), "file://test.org/x/y/z");
+  EXPECT_THAT(createOrDie("//10.0.0.1/x/y/z"), "file://10.0.0.1/x/y/z");
+#endif
+}
+
 TEST(URITest, FailedCreate) {
   EXPECT_ERROR(URI::create("/x/y/z", "no"));
   // Path has to be absolute.
@@ -127,13 +137,30 @@ TEST(URITest, Resolve) {
   EXPECT_THAT(resolveOrDie(parseOrDie("file:///c:/x/y/z")), "c:\\x\\y\\z");
 #else
   EXPECT_EQ(resolveOrDie(parseOrDie("file:/a/b/c")), "/a/b/c");
-  EXPECT_EQ(resolveOrDie(parseOrDie("file://auth/a/b/c")), "/a/b/c");
+  EXPECT_EQ(resolveOrDie(parseOrDie("file://auth/a/b/c")), "//auth/a/b/c");
   EXPECT_THAT(resolveOrDie(parseOrDie("file://au%3dth/%28x%29/y/%20z")),
-              "/(x)/y/ z");
+              "//au=th/(x)/y/ z");
   EXPECT_THAT(resolveOrDie(parseOrDie("file:///c:/x/y/z")), "c:/x/y/z");
 #endif
   EXPECT_EQ(resolveOrDie(parseOrDie("unittest:///a"), testPath("x")),
             testPath("a"));
+}
+
+TEST(URITest, ResolveUNC) {
+#ifdef _WIN32
+  EXPECT_THAT(resolveOrDie(parseOrDie("file://example.com/x/y/z")),
+              "\\\\example.com\\x\\y\\z");
+  EXPECT_THAT(resolveOrDie(parseOrDie("file://127.0.0.1/x/y/z")),
+              "\\\\127.0.0.1\\x\\y\\z");
+  // Ensure non-traditional file URI still resolves to correct UNC path.
+  EXPECT_THAT(resolveOrDie(parseOrDie("file:////127.0.0.1/x/y/z")),
+              "\\\\127.0.0.1\\x\\y\\z");
+#else
+  EXPECT_THAT(resolveOrDie(parseOrDie("file://example.com/x/y/z")),
+              "//example.com/x/y/z");
+  EXPECT_THAT(resolveOrDie(parseOrDie("file://127.0.0.1/x/y/z")),
+              "//127.0.0.1/x/y/z");
+#endif
 }
 
 std::string resolvePathOrDie(llvm::StringRef AbsPath,

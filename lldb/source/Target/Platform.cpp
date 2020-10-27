@@ -12,9 +12,6 @@
 #include <memory>
 #include <vector>
 
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
-
 #include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
@@ -40,8 +37,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
-
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 
 // Define these constants from POSIX mman.h rather than include the file so
 // that they will be correct even when compiled on Linux.
@@ -1774,9 +1771,23 @@ Status Platform::UnloadImage(lldb_private::Process *process,
 
 lldb::ProcessSP Platform::ConnectProcess(llvm::StringRef connect_url,
                                          llvm::StringRef plugin_name,
-                                         lldb_private::Debugger &debugger,
-                                         lldb_private::Target *target,
-                                         lldb_private::Status &error) {
+                                         Debugger &debugger, Target *target,
+                                         Status &error) {
+  return DoConnectProcess(connect_url, plugin_name, debugger, nullptr, target,
+                          error);
+}
+
+lldb::ProcessSP Platform::ConnectProcessSynchronous(
+    llvm::StringRef connect_url, llvm::StringRef plugin_name,
+    Debugger &debugger, Stream &stream, Target *target, Status &error) {
+  return DoConnectProcess(connect_url, plugin_name, debugger, &stream, target,
+                          error);
+}
+
+lldb::ProcessSP Platform::DoConnectProcess(llvm::StringRef connect_url,
+                                           llvm::StringRef plugin_name,
+                                           Debugger &debugger, Stream *stream,
+                                           Target *target, Status &error) {
   error.Clear();
 
   if (!target) {
@@ -1803,12 +1814,34 @@ lldb::ProcessSP Platform::ConnectProcess(llvm::StringRef connect_url,
 
   lldb::ProcessSP process_sp =
       target->CreateProcess(debugger.GetListener(), plugin_name, nullptr);
+
   if (!process_sp)
     return nullptr;
 
-  error = process_sp->ConnectRemote(&debugger.GetOutputStream(), connect_url);
-  if (error.Fail())
+  // If this private method is called with a stream we are synchronous.
+  const bool synchronous = stream != nullptr;
+
+  ListenerSP listener_sp(
+      Listener::MakeListener("lldb.Process.ConnectProcess.hijack"));
+  if (synchronous)
+    process_sp->HijackProcessEvents(listener_sp);
+
+  error = process_sp->ConnectRemote(connect_url);
+  if (error.Fail()) {
+    if (synchronous)
+      process_sp->RestoreProcessEvents();
     return nullptr;
+  }
+
+  if (synchronous) {
+    EventSP event_sp;
+    process_sp->WaitForProcessToStop(llvm::None, &event_sp, true, listener_sp,
+                                     nullptr);
+    process_sp->RestoreProcessEvents();
+    bool pop_process_io_handler = false;
+    Process::HandleProcessStateChangedEvent(event_sp, stream,
+                                            pop_process_io_handler);
+  }
 
   return process_sp;
 }

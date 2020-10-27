@@ -34,6 +34,11 @@ AutoExporter::AutoExporter() {
       "libclang_rt.builtins-arm",
       "libclang_rt.builtins-i386",
       "libclang_rt.builtins-x86_64",
+      "libclang_rt.profile",
+      "libclang_rt.profile-aarch64",
+      "libclang_rt.profile-arm",
+      "libclang_rt.profile-i386",
+      "libclang_rt.profile-x86_64",
       "libc++",
       "libc++abi",
       "libunwind",
@@ -57,6 +62,10 @@ AutoExporter::AutoExporter() {
       "__builtin_",
       // Artificial symbols such as .refptr
       ".",
+      // profile generate symbols
+      "__profc_",
+      "__profd_",
+      "__profvp_",
   };
 
   excludeSymbolSuffixes = {

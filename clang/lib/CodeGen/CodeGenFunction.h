@@ -124,6 +124,7 @@ enum TypeEvaluationKind {
   SANITIZER_CHECK(FunctionTypeMismatch, function_type_mismatch, 1)             \
   SANITIZER_CHECK(ImplicitConversion, implicit_conversion, 0)                  \
   SANITIZER_CHECK(InvalidBuiltin, invalid_builtin, 0)                          \
+  SANITIZER_CHECK(InvalidObjCCast, invalid_objc_cast, 0)                       \
   SANITIZER_CHECK(LoadInvalidValue, load_invalid_value, 0)                     \
   SANITIZER_CHECK(MissingReturn, missing_return, 0)                            \
   SANITIZER_CHECK(MulOverflow, mul_overflow, 0)                                \
@@ -263,6 +264,9 @@ public:
 
   CodeGenModule &CGM;  // Per-module state.
   const TargetInfo &Target;
+
+  // For EH/SEH outlined funclets, this field points to parent's CGF
+  CodeGenFunction *ParentCGF = nullptr;
 
   typedef std::pair<llvm::Value *, llvm::Value *> ComplexPairTy;
   LoopInfoStack LoopStack;
@@ -3330,12 +3334,15 @@ public:
     Address BasePointersArray = Address::invalid();
     Address PointersArray = Address::invalid();
     Address SizesArray = Address::invalid();
+    Address MappersArray = Address::invalid();
     unsigned NumberOfTargetItems = 0;
     explicit OMPTargetDataInfo() = default;
     OMPTargetDataInfo(Address BasePointersArray, Address PointersArray,
-                      Address SizesArray, unsigned NumberOfTargetItems)
+                      Address SizesArray, Address MappersArray,
+                      unsigned NumberOfTargetItems)
         : BasePointersArray(BasePointersArray), PointersArray(PointersArray),
-          SizesArray(SizesArray), NumberOfTargetItems(NumberOfTargetItems) {}
+          SizesArray(SizesArray), MappersArray(MappersArray),
+          NumberOfTargetItems(NumberOfTargetItems) {}
   };
   void EmitOMPTargetTaskBasedDirective(const OMPExecutableDirective &S,
                                        const RegionCodeGenTy &BodyGen,

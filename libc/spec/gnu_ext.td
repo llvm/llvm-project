@@ -12,8 +12,22 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
         >,
       ]
   >;
+  
+  HeaderSpec String = HeaderSpec<
+      "string.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      [ 
+        FunctionSpec<
+            "memrchr",
+            RetValSpec<VoidPtr>,
+            [ArgSpec<VoidPtr>, ArgSpec<IntType>, ArgSpec<SizeTType>]
+        >,
+      ]
+  >;
 
   let Headers = [
-    Math,
+    Math, String,
   ];
 }

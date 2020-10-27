@@ -1,15 +1,15 @@
 ; RUN: llc -O0 < %s -mtriple armv7-linux-gnueabi -o - \
 ; RUN:   | llvm-mc -triple armv7-linux-gnueabi -filetype=obj -o - \
-; RUN:    | llvm-readobj -r | FileCheck --check-prefix LINUX %s
+; RUN:    | llvm-readobj -r - | FileCheck --check-prefix LINUX %s
 
 ; RUN: llc -O0 < %s -mtriple armv7-linux-android -o - \
 ; RUN:   | llvm-mc -triple armv7-linux-android -filetype=obj -o - \
-; RUN:    | llvm-readobj -r | FileCheck --check-prefix LINUX %s
+; RUN:    | llvm-readobj -r - | FileCheck --check-prefix LINUX %s
 
 
 ; RUN: llc -O0 < %s -mtriple armv7-apple-ios -o - \
 ; RUN:   | llvm-mc -triple armv7-apple-ios -filetype=obj -o - \
-; RUN:    | llvm-readobj -r | FileCheck --check-prefix IOS %s
+; RUN:    | llvm-readobj -r - | FileCheck --check-prefix IOS %s
 
 
 define void @thumb_caller() #0 {

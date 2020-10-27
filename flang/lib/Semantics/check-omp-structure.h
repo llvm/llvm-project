@@ -19,6 +19,8 @@
 #include "flang/Semantics/semantics.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
+#include <unordered_map>
+
 using OmpDirectiveSet = Fortran::common::EnumSet<llvm::omp::Directive,
     llvm::omp::Directive_enumSize>;
 

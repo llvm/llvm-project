@@ -223,7 +223,7 @@ body:             |
 # ADDR64: %16:sgpr_32 = S_MOV_B32 0
 # ADDR64: %17:sgpr_32 = S_MOV_B32 61440
 # ADDR64: %18:sgpr_128 = REG_SEQUENCE %15, %subreg.sub0_sub1, %16, %subreg.sub2, %17, %subreg.sub3
-# ADDR64: %9:vgpr_32, %12:sreg_64_xexec = V_ADD_I32_e64 %14.sub0, %4.sub0, 0, implicit $exec
+# ADDR64: %9:vgpr_32, %12:sreg_64_xexec = V_ADD_CO_U32_e64 %14.sub0, %4.sub0, 0, implicit $exec
 # ADDR64: %10:vgpr_32, dead %13:sreg_64_xexec = V_ADDC_U32_e64 %14.sub1, %4.sub1, killed %12, 0, implicit $exec
 # ADDR64: %11:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %10, %subreg.sub1
 # ADDR64: {{[0-9]+}}:vgpr_32 = BUFFER_LOAD_FORMAT_X_ADDR64 %11, killed %18, 0, 0, 0, 0, 0, 0, 0, implicit $exec

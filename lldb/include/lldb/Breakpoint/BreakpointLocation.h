@@ -13,7 +13,7 @@
 #include <mutex>
 
 #include "lldb/Breakpoint/BreakpointOptions.h"
-#include "lldb/Breakpoint/StoppointLocation.h"
+#include "lldb/Breakpoint/StoppointHitCounter.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
@@ -35,15 +35,14 @@ namespace lldb_private {
 /// be useful if you've set options on the locations.
 
 class BreakpointLocation
-    : public std::enable_shared_from_this<BreakpointLocation>,
-      public StoppointLocation {
+    : public std::enable_shared_from_this<BreakpointLocation> {
 public:
-  ~BreakpointLocation() override;
+  ~BreakpointLocation();
 
   /// Gets the load address for this breakpoint location \return
   ///     Returns breakpoint location load address, \b
   ///     LLDB_INVALID_ADDRESS if not yet set.
-  lldb::addr_t GetLoadAddress() const override;
+  lldb::addr_t GetLoadAddress() const;
 
   /// Gets the Address for this breakpoint location \return
   ///     Returns breakpoint location Address.
@@ -63,7 +62,7 @@ public:
   /// \return
   ///     \b true if this breakpoint location thinks we should stop,
   ///     \b false otherwise.
-  bool ShouldStop(StoppointCallbackContext *context) override;
+  bool ShouldStop(StoppointCallbackContext *context);
 
   // The next section deals with various breakpoint options.
 
@@ -85,11 +84,14 @@ public:
   ///     \b true if the breakpoint is set to auto-continue, \b false if not.
   bool IsAutoContinue() const;
 
+  /// Return the current Hit Count.
+  uint32_t GetHitCount() const { return m_hit_counter.GetValue(); }
+
   /// Return the current Ignore Count.
   ///
   /// \return
   ///     The number of breakpoint hits to be ignored.
-  uint32_t GetIgnoreCount();
+  uint32_t GetIgnoreCount() const;
 
   /// Set the breakpoint to ignore the next \a count breakpoint hits.
   ///
@@ -192,7 +194,7 @@ public:
   void GetDescription(Stream *s, lldb::DescriptionLevel level);
 
   /// Standard "Dump" method.  At present it does nothing.
-  void Dump(Stream *s) const override;
+  void Dump(Stream *s) const;
 
   /// Use this to set location specific breakpoint options.
   ///
@@ -268,6 +270,9 @@ public:
   ///     \b true or \b false as given in the description above.
   bool EquivalentToLocation(BreakpointLocation &location);
 
+  /// Returns the breakpoint location ID.
+  lldb::break_id_t GetID() const { return m_loc_id; }
+
 protected:
   friend class BreakpointSite;
   friend class BreakpointLocationList;
@@ -338,6 +343,9 @@ private:
                                 /// multiple processes.
   size_t m_condition_hash; ///< For testing whether the condition source code
                            ///changed.
+  lldb::break_id_t m_loc_id; ///< Breakpoint location ID.
+  StoppointHitCounter m_hit_counter; ///< Number of times this breakpoint
+                                     /// location has been hit.
 
   void SetShouldResolveIndirectFunctions(bool do_resolve) {
     m_should_resolve_indirect_functions = do_resolve;

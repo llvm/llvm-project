@@ -91,7 +91,6 @@ class HelloWorldTestCase(TestBase):
             if os.path.exists(token):
                 os.remove(token)
         popen = self.spawnSubprocess(self.getBuildArtifact(exe), [token])
-        self.addTearDownHook(self.cleanupSubprocesses)
         lldbutil.wait_for_file_on_target(self, token)
 
         listener = lldb.SBListener("my.attach.listener")
@@ -126,7 +125,6 @@ class HelloWorldTestCase(TestBase):
             if os.path.exists(token):
                 os.remove(token)
         popen = self.spawnSubprocess(self.getBuildArtifact(exe), [token])
-        self.addTearDownHook(self.cleanupSubprocesses)
         lldbutil.wait_for_file_on_target(self, token)
 
         listener = lldb.SBListener("my.attach.listener")

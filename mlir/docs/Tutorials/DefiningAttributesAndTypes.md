@@ -47,7 +47,8 @@ namespace MyTypes {
 enum Kinds {
   // These kinds will be used in the examples below.
   Simple = Type::Kind::FIRST_PRIVATE_EXPERIMENTAL_0_TYPE,
-  Complex
+  Complex,
+  Recursive
 };
 }
 ```
@@ -58,13 +59,17 @@ As described above, `Type` objects in MLIR are value-typed and rely on having an
 implicitly internal storage object that holds the actual data for the type. When
 defining a new `Type` it isn't always necessary to define a new storage class.
 So before defining the derived `Type`, it's important to know which of the two
-classes of `Type` we are defining. Some types are `primitives` meaning they do
+classes of `Type` we are defining. Some types are _primitives_ meaning they do
 not have any parameters and are singletons uniqued by kind, like the
 [`index` type](LangRef.md#index-type). Parametric types on the other hand, have
 additional information that differentiates different instances of the same
 `Type` kind. For example the [`integer` type](LangRef.md#integer-type) has a
 bitwidth, making `i8` and `i16` be different instances of
-[`integer` type](LangRef.md#integer-type).
+[`integer` type](LangRef.md#integer-type). Types can also have a mutable
+component, which can be used, for example, to construct self-referring recursive
+types. The mutable component _cannot_ be used to differentiate types within the
+same kind, so usually such types are also parametric where the parameters serve
+to identify them.
 
 #### Simple non-parametric types
 
@@ -236,6 +241,126 @@ public:
   IntegerType getParameterType() {
     // 'getImpl' returns a pointer to our internal storage instance.
     return getImpl()->integerType;
+  }
+};
+```
+
+#### Types with a mutable component
+
+Types with a mutable component require defining a type storage class regardless
+of being parametric. The storage contains both the parameters and the mutable
+component and is accessed in a thread-safe way by the type support
+infrastructure.
+
+##### Defining a type storage
+
+In addition to the requirements for the type storage class for parametric types,
+the storage class for types with a mutable component must additionally obey the
+following.
+
+*   The mutable component must not participate in the storage key.
+*   Provide a mutation method that is used to modify an existing instance of the
+    storage. This method modifies the mutable component based on arguments,
+    using `allocator` for any new dynamically-allocated storage, and indicates
+    whether the modification was successful.
+    -   `LogicalResult mutate(StorageAllocator &allocator, Args ...&& args)`
+
+Let's define a simple storage for recursive types, where a type is identified by
+its name and can contain another type including itself.
+
+```c++
+/// Here we define a storage class for a RecursiveType that is identified by its
+/// name and contains another type.
+struct RecursiveTypeStorage : public TypeStorage {
+  /// The type is uniquely identified by its name. Note that the contained type
+  /// is _not_ a part of the key.
+  using KeyTy = StringRef;
+
+  /// Construct the storage from the type name. Explicitly initialize the
+  /// containedType to nullptr, which is used as marker for the mutable
+  /// component being not yet initialized.
+  RecursiveTypeStorage(StringRef name) : name(name), containedType(nullptr) {}
+
+  /// Define the comparison function.
+  bool operator==(const KeyTy &key) const { return key == name; }
+
+  /// Define a construction method for creating a new instance of the storage.
+  static RecursiveTypeStorage *construct(StorageAllocator &allocator,
+                                         const KeyTy &key) {
+    // Note that the key string is copied into the allocator to ensure it
+    // remains live as long as the storage itself.
+    return new (allocator.allocate<RecursiveTypeStorage>())
+        RecursiveTypeStorage(allocator.copyInto(key));
+  }
+
+  /// Define a mutation method for changing the type after it is created. In
+  /// many cases, we only want to set the mutable component once and reject
+  /// any further modification, which can be achieved by returning failure from
+  /// this function.
+  LogicalResult mutate(StorageAllocator &, Type body) {
+    // If the contained type has been initialized already, and the call tries
+    // to change it, reject the change.
+    if (containedType && containedType != body)
+      return failure();
+
+    // Change the body successfully.
+    containedType = body;
+    return success();
+  }
+
+  StringRef name;
+  Type containedType;
+};
+```
+
+##### Type class definition
+
+Having defined the storage class, we can define the type class itself. This is
+similar to parametric types. `Type::TypeBase` provides a `mutate` method that
+forwards its arguments to the `mutate` method of the storage and ensures the
+modification happens under lock.
+
+```c++
+class RecursiveType : public Type::TypeBase<RecursiveType, Type,
+                                            RecursiveTypeStorage> {
+public:
+  /// Inherit parent constructors.
+  using Base::Base;
+
+  /// This static method is used to support type inquiry through isa, cast,
+  /// and dyn_cast.
+  static bool kindof(unsigned kind) { return kind == MyTypes::Recursive; }
+
+  /// Creates an instance of the Recursive type. This only takes the type name
+  /// and returns the type with uninitialized body.
+  static RecursiveType get(MLIRContext *ctx, StringRef name) {
+    // Call into the base to get a uniqued instance of this type. The parameter
+    // (name) is passed after the kind.
+    return Base::get(ctx, MyTypes::Recursive, name);
+  }
+
+  /// Now we can change the mutable component of the type. This is an instance
+  /// method callable on an already existing RecursiveType.
+  void setBody(Type body) {
+    // Call into the base to mutate the type.
+    LogicalResult result = Base::mutate(body);
+    // Most types expect mutation to always succeed, but types can implement
+    // custom logic for handling mutation failures.
+    assert(succeeded(result) &&
+           "attempting to change the body of an already-initialized type");
+    // Avoid unused-variable warning when building without assertions.
+    (void) result;
+  }
+
+  /// Returns the contained type, which may be null if it has not been
+  /// initialized yet.
+  Type getBody() {
+    return getImpl()->containedType;
+  }
+
+  /// Returns the name.
+  StringRef getName() {
+    return getImpl()->name;
   }
 };
 ```

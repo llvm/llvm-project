@@ -620,3 +620,11 @@ namespace PR33222 {
   // FIXME: suppress this follow-on error: expected-error@-1 {{cannot initialize}}
   template<> int B<char[3]>::q() { return 0; } // expected-error {{return type}}
 }
+
+namespace PR46637 {
+  using A = auto () -> auto; // expected-error {{'auto' not allowed in type alias}}
+  using B = auto (*)() -> auto; // expected-error {{'auto' not allowed in type alias}}
+  template<auto (*)() -> auto> struct X {}; // expected-error {{'auto' not allowed in template parameter until C++17}}
+  template<typename T> struct Y { T x; };
+  Y<auto() -> auto> y; // expected-error {{'auto' not allowed in template argument}}
+}

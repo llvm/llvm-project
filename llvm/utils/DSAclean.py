@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/env python
 
 #changelog: 
 #10/13/2005b: replaced the # in tmp(.#*)* with alphanumeric and _, this will then remove

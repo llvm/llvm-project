@@ -161,6 +161,30 @@ OPTIONS
  coverage for the optimized target. This option can only be used with
  sample-based profile in extbinary format.
 
+.. option:: -supplement-instr-with-sample=path_to_sample_profile
+
+ Supplement an instrumentation profile with sample profile. The sample profile
+ is the input of the flag. Output will be in instrumentation format (only works
+ with -instr).
+
+.. option:: -zero-counter-threshold=threshold_float_number
+
+ For the function which is cold in instr profile but hot in sample profile, if
+ the ratio of the number of zero counters divided by the the total number of
+ counters is above the threshold, the profile of the function will be regarded
+ as being harmful for performance and will be dropped.
+
+.. option:: -instr-prof-cold-threshold=threshold_int_number
+
+ User specified cold threshold for instr profile which will override the cold
+ threshold got from profile summary.
+
+.. option:: -suppl-min-size-threshold=threshold_int_number
+
+ If the size of a function is smaller than the threshold, assume it can be
+ inlined by PGO early inliner and it will not be adjusted based on sample
+ profile.
+
 EXAMPLES
 ^^^^^^^^
 Basic Usage

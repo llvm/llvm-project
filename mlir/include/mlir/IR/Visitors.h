@@ -76,7 +76,7 @@ WalkResult walkOperations(Operation *op,
 // upon the type of the callback function.
 
 /// Walk all of the operations nested under and including the given operation.
-/// This method is selected for callbacks that operation on Operation*.
+/// This method is selected for callbacks that operate on Operation*.
 ///
 /// Example:
 ///   op->walk([](Operation *op) { ... });

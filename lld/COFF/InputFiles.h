@@ -191,6 +191,8 @@ public:
 
   const coff_section *addrsigSec = nullptr;
 
+  const coff_section *callgraphSec = nullptr;
+
   // When using Microsoft precompiled headers, this is the PCH's key.
   // The same key is used by both the precompiled object, and objects using the
   // precompiled object. Any difference indicates out-of-date objects.

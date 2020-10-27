@@ -2837,7 +2837,7 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
       case Sema::NC_Unknown:
       case Sema::NC_NonType:
       case Sema::NC_DependentNonType:
-      case Sema::NC_ContextIndependentExpr:
+      case Sema::NC_OverloadSet:
       case Sema::NC_VarTemplate:
       case Sema::NC_FunctionTemplate:
       case Sema::NC_Concept:

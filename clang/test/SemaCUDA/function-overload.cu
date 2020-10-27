@@ -1,8 +1,8 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fsyntax-only -fcuda-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify=host,expected %s
+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fsyntax-only -fcuda-is-device -verify=dev,expected %s
 
 #include "Inputs/cuda.h"
 
@@ -75,37 +75,37 @@ extern "C" __host__ __device__ int chhd2() { return 0; }
 
 // Helper functions to verify calling restrictions.
 __device__ DeviceReturnTy d() { return DeviceReturnTy(); }
-// expected-note@-1 1+ {{'d' declared here}}
+// host-note@-1 1+ {{'d' declared here}}
 // expected-note@-2 1+ {{candidate function not viable: call to __device__ function from __host__ function}}
 // expected-note@-3 0+ {{candidate function not viable: call to __device__ function from __host__ __device__ function}}
 
 __host__ HostReturnTy h() { return HostReturnTy(); }
-// expected-note@-1 1+ {{'h' declared here}}
+// dev-note@-1 1+ {{'h' declared here}}
 // expected-note@-2 1+ {{candidate function not viable: call to __host__ function from __device__ function}}
 // expected-note@-3 0+ {{candidate function not viable: call to __host__ function from __host__ __device__ function}}
 // expected-note@-4 1+ {{candidate function not viable: call to __host__ function from __global__ function}}
 
 __global__ void g() {}
-// expected-note@-1 1+ {{'g' declared here}}
+// dev-note@-1 1+ {{'g' declared here}}
 // expected-note@-2 1+ {{candidate function not viable: call to __global__ function from __device__ function}}
 // expected-note@-3 0+ {{candidate function not viable: call to __global__ function from __host__ __device__ function}}
 // expected-note@-4 1+ {{candidate function not viable: call to __global__ function from __global__ function}}
 
 extern "C" __device__ DeviceReturnTy cd() { return DeviceReturnTy(); }
-// expected-note@-1 1+ {{'cd' declared here}}
+// host-note@-1 1+ {{'cd' declared here}}
 // expected-note@-2 1+ {{candidate function not viable: call to __device__ function from __host__ function}}
 // expected-note@-3 0+ {{candidate function not viable: call to __device__ function from __host__ __device__ function}}
 
 extern "C" __host__ HostReturnTy ch() { return HostReturnTy(); }
-// expected-note@-1 1+ {{'ch' declared here}}
+// dev-note@-1 1+ {{'ch' declared here}}
 // expected-note@-2 1+ {{candidate function not viable: call to __host__ function from __device__ function}}
 // expected-note@-3 0+ {{candidate function not viable: call to __host__ function from __host__ __device__ function}}
 // expected-note@-4 1+ {{candidate function not viable: call to __host__ function from __global__ function}}
 
 __host__ void hostf() {
-  DeviceFnPtr fp_d = d;         // expected-error {{reference to __device__ function 'd' in __host__ function}}
+  DeviceFnPtr fp_d = d;         // host-error {{reference to __device__ function 'd' in __host__ function}}
   DeviceReturnTy ret_d = d();   // expected-error {{no matching function for call to 'd'}}
-  DeviceFnPtr fp_cd = cd;       // expected-error {{reference to __device__ function 'cd' in __host__ function}}
+  DeviceFnPtr fp_cd = cd;       // host-error {{reference to __device__ function 'cd' in __host__ function}}
   DeviceReturnTy ret_cd = cd(); // expected-error {{no matching function for call to 'cd'}}
 
   HostFnPtr fp_h = h;
@@ -129,9 +129,9 @@ __device__ void devicef() {
   DeviceFnPtr fp_cd = cd;
   DeviceReturnTy ret_cd = cd();
 
-  HostFnPtr fp_h = h;         // expected-error {{reference to __host__ function 'h' in __device__ function}}
+  HostFnPtr fp_h = h;         // dev-error {{reference to __host__ function 'h' in __device__ function}}
   HostReturnTy ret_h = h();   // expected-error {{no matching function for call to 'h'}}
-  HostFnPtr fp_ch = ch;       // expected-error {{reference to __host__ function 'ch' in __device__ function}}
+  HostFnPtr fp_ch = ch;       // dev-error {{reference to __host__ function 'ch' in __device__ function}}
   HostReturnTy ret_ch = ch(); // expected-error {{no matching function for call to 'ch'}}
 
   DeviceFnPtr fp_dh = dh;
@@ -139,9 +139,9 @@ __device__ void devicef() {
   DeviceFnPtr fp_cdh = cdh;
   DeviceReturnTy ret_cdh = cdh();
 
-  GlobalFnPtr fp_g = g; // expected-error {{reference to __global__ function 'g' in __device__ function}}
+  GlobalFnPtr fp_g = g; // dev-error {{reference to __global__ function 'g' in __device__ function}}
   g(); // expected-error {{no matching function for call to 'g'}}
-  g<<<0,0>>>(); // expected-error {{reference to __global__ function 'g' in __device__ function}}
+  g<<<0,0>>>(); // dev-error {{reference to __global__ function 'g' in __device__ function}}
 }
 
 __global__ void globalf() {
@@ -150,9 +150,9 @@ __global__ void globalf() {
   DeviceFnPtr fp_cd = cd;
   DeviceReturnTy ret_cd = cd();
 
-  HostFnPtr fp_h = h;         // expected-error {{reference to __host__ function 'h' in __global__ function}}
+  HostFnPtr fp_h = h;         // dev-error {{reference to __host__ function 'h' in __global__ function}}
   HostReturnTy ret_h = h();   // expected-error {{no matching function for call to 'h'}}
-  HostFnPtr fp_ch = ch;       // expected-error {{reference to __host__ function 'ch' in __global__ function}}
+  HostFnPtr fp_ch = ch;       // dev-error {{reference to __host__ function 'ch' in __global__ function}}
   HostReturnTy ret_ch = ch(); // expected-error {{no matching function for call to 'ch'}}
 
   DeviceFnPtr fp_dh = dh;
@@ -160,9 +160,9 @@ __global__ void globalf() {
   DeviceFnPtr fp_cdh = cdh;
   DeviceReturnTy ret_cdh = cdh();
 
-  GlobalFnPtr fp_g = g; // expected-error {{reference to __global__ function 'g' in __global__ function}}
+  GlobalFnPtr fp_g = g; // dev-error {{reference to __global__ function 'g' in __global__ function}}
   g(); // expected-error {{no matching function for call to 'g'}}
-  g<<<0,0>>>(); // expected-error {{reference to __global__ function 'g' in __global__ function}}
+  g<<<0,0>>>(); // dev-error {{reference to __global__ function 'g' in __global__ function}}
 }
 
 __host__ __device__ void hostdevicef() {

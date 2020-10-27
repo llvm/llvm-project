@@ -162,16 +162,17 @@
 #endif
 
 // Sniff out to see if the underlying C library has C11 features
-// Note that at this time (July 2018), MacOS X and iOS do NOT.
 // This is cribbed from __config; but lives here as well because we can't assume libc++
 #if __ISO_C_VISIBLE >= 2011 || TEST_STD_VER >= 11
 #  if defined(__FreeBSD__)
 //  Specifically, FreeBSD does NOT have timespec_get, even though they have all
 //  the rest of C11 - this is PR#38495
 #    define TEST_HAS_ALIGNED_ALLOC
-#    define TEST_HAS_C11_FEATURES
+#    define TEST_HAS_QUICK_EXIT
 #  elif defined(__BIONIC__)
-#    define TEST_HAS_C11_FEATURES
+#    if __ANDROID_API__ >= 21
+#      define TEST_HAS_QUICK_EXIT
+#    endif
 #    if __ANDROID_API__ >= 28
 #      define TEST_HAS_ALIGNED_ALLOC
 #    endif
@@ -179,8 +180,8 @@
 #      define TEST_HAS_TIMESPEC_GET
 #    endif
 #  elif defined(__Fuchsia__) || defined(__wasi__) || defined(__NetBSD__)
+#    define TEST_HAS_QUICK_EXIT
 #    define TEST_HAS_ALIGNED_ALLOC
-#    define TEST_HAS_C11_FEATURES
 #    define TEST_HAS_TIMESPEC_GET
 #  elif defined(__linux__)
 // This block preserves the old behavior used by include/__config:
@@ -188,23 +189,35 @@
 // available. The configuration here may be too vague though, as Bionic, uClibc,
 // newlib, etc may all support these features but need to be configured.
 #    if defined(TEST_GLIBC_PREREQ)
+#      if TEST_GLIBC_PREREQ(2, 15)
+#        define TEST_HAS_QUICK_EXIT
+#      endif
 #      if TEST_GLIBC_PREREQ(2, 17)
 #        define TEST_HAS_ALIGNED_ALLOC
 #        define TEST_HAS_TIMESPEC_GET
-#        define TEST_HAS_C11_FEATURES
 #      endif
 #    elif defined(_LIBCPP_HAS_MUSL_LIBC)
+#      define TEST_HAS_QUICK_EXIT
 #      define TEST_HAS_ALIGNED_ALLOC
-#      define TEST_HAS_C11_FEATURES
 #      define TEST_HAS_TIMESPEC_GET
 #    endif
 #  elif defined(_WIN32)
 #    if defined(_MSC_VER) && !defined(__MINGW32__)
+#      define TEST_HAS_QUICK_EXIT
 #      define TEST_HAS_ALIGNED_ALLOC
-#      define TEST_HAS_C11_FEATURES // Using Microsoft's C Runtime library
 #      define TEST_HAS_TIMESPEC_GET
 #    endif
-#  endif
+#  elif defined(__APPLE__)
+     // timespec_get and aligned_alloc were introduced in macOS 10.15 and
+     // aligned releases
+#    if (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 101500 || \
+         __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 130000 || \
+         __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 130000 || \
+         __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 60000)
+#      define TEST_HAS_ALIGNED_ALLOC
+#      define TEST_HAS_TIMESPEC_GET
+#    endif
+#  endif // __APPLE__
 #endif
 
 /* Features that were introduced in C++14 */

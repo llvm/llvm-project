@@ -157,6 +157,9 @@ public:
     /// Enable notification-based semantic highlighting.
     bool TheiaSemanticHighlighting = false;
 
+    /// Enable preview of FoldingRanges feature.
+    bool FoldingRanges = false;
+
     /// Returns true if the tweak should be enabled.
     std::function<bool(const Tweak &)> TweakFilter = [](const Tweak &T) {
       return !T.hidden(); // only enable non-hidden tweaks.
@@ -245,6 +248,9 @@ public:
   /// Retrieve the symbols within the specified file.
   void documentSymbols(StringRef File,
                        Callback<std::vector<DocumentSymbol>> CB);
+
+  /// Retrieve ranges that can be used to fold code within the specified file.
+  void foldingRanges(StringRef File, Callback<std::vector<FoldingRange>> CB);
 
   /// Retrieve locations for symbol references.
   void findReferences(PathRef File, Position Pos, uint32_t Limit,

@@ -18,7 +18,7 @@ define amdgpu_kernel void @test_wave32(i32 %arg0, [8 x i32], i32 %saved) {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:  BB0_2: ; %bb
-; GCN-NEXT:    v_nop
+; GCN-NEXT:    s_waitcnt_depctr 0xffe3
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off

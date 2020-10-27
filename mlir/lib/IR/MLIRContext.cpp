@@ -331,6 +331,12 @@ public:
 
 public:
   MLIRContextImpl() : identifiers(identifierAllocator) {}
+  ~MLIRContextImpl() {
+    for (auto typeMapping : registeredTypes)
+      typeMapping.second->~AbstractType();
+    for (auto attrMapping : registeredAttributes)
+      attrMapping.second->~AbstractAttribute();
+  }
 };
 } // end namespace mlir
 

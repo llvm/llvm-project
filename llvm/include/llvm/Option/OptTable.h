@@ -59,6 +59,7 @@ private:
   /// The option information table.
   std::vector<Info> OptionInfos;
   bool IgnoreCase;
+  bool GroupedShortOptions = false;
 
   unsigned TheInputOptionID = 0;
   unsigned TheUnknownOptionID = 0;
@@ -78,6 +79,8 @@ private:
     assert(id > 0 && id - 1 < getNumOptions() && "Invalid Option ID.");
     return OptionInfos[id - 1];
   }
+
+  Arg *parseOneArgGrouped(InputArgList &Args, unsigned &Index) const;
 
 protected:
   OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
@@ -119,6 +122,9 @@ public:
   const char *getOptionMetaVar(OptSpecifier id) const {
     return getInfo(id).MetaVar;
   }
+
+  /// Support grouped short options. e.g. -ab represents -a -b.
+  void setGroupedShortOptions(bool Value) { GroupedShortOptions = Value; }
 
   /// Find possible value for given flags. This is used for shell
   /// autocompletion.

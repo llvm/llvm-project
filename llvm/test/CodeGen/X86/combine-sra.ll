@@ -152,7 +152,7 @@ define <4 x i32> @combine_vec_ashr_trunc_and(<4 x i32> %x, <4 x i64> %y) {
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm1[2,3,3,3,4,5,6,7]
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    psrad %xmm2, %xmm3
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm2[2,3,3,3,4,5,6,7]
 ; SSE-NEXT:    movdqa %xmm0, %xmm5
 ; SSE-NEXT:    psrad %xmm4, %xmm5
@@ -196,14 +196,13 @@ define <4 x i32> @combine_vec_ashr_trunc_lshr(<4 x i64> %x) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    psrad $2, %xmm1
+; SSE-NEXT:    psrad $2, %xmm2
+; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; SSE-NEXT:    psrad $1, %xmm0
+; SSE-NEXT:    psrad $3, %xmm1
 ; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1,2,3],xmm1[4,5,6,7]
-; SSE-NEXT:    psrad $3, %xmm0
-; SSE-NEXT:    psrad $1, %xmm2
-; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm0[4,5,6,7]
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; SSE-NEXT:    movdqa %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: combine_vec_ashr_trunc_lshr:
@@ -235,14 +234,13 @@ define <4 x i32> @combine_vec_ashr_trunc_ashr(<4 x i64> %x) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    psrad $2, %xmm1
+; SSE-NEXT:    psrad $2, %xmm2
+; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; SSE-NEXT:    psrad $1, %xmm0
+; SSE-NEXT:    psrad $3, %xmm1
 ; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1,2,3],xmm1[4,5,6,7]
-; SSE-NEXT:    psrad $3, %xmm0
-; SSE-NEXT:    psrad $1, %xmm2
-; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm0[4,5,6,7]
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; SSE-NEXT:    movdqa %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: combine_vec_ashr_trunc_ashr:
@@ -274,7 +272,7 @@ define <4 x i32> @combine_vec_ashr_positive(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm1[2,3,3,3,4,5,6,7]
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    psrld %xmm2, %xmm3
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,0,1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm4 = xmm2[2,3,3,3,4,5,6,7]
 ; SSE-NEXT:    movdqa %xmm0, %xmm5
 ; SSE-NEXT:    psrld %xmm4, %xmm5

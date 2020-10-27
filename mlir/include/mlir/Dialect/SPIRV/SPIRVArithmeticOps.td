@@ -452,6 +452,31 @@ def SPV_SModOp : SPV_ArithmeticBinaryOp<"SMod", SPV_Integer, []> {
 
 // -----
 
+def SPV_SNegateOp : SPV_ArithmeticUnaryOp<"SNegate", SPV_Integer, []> {
+  let summary = "Signed-integer subtract of Operand from zero.";
+
+  let description = [{
+    Result Type must be a scalar or vector of integer type.
+
+    Operand’s type  must be a scalar or vector of integer type.  It must
+    have the same number of components as Result Type.  The component width
+    must equal the component width in Result Type.
+
+     Results are computed per component.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %1 = spv.SNegate %0 : i32
+    %3 = spv.SNegate %2 : vector<4xi32>
+    ```
+  }];
+}
+
+// -----
+
 def SPV_SRemOp : SPV_ArithmeticBinaryOp<"SRem", SPV_Integer, []> {
   let summary = [{
     Signed remainder operation for the remainder whose sign matches the sign

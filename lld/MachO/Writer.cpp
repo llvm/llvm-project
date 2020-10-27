@@ -53,7 +53,7 @@ public:
   std::unique_ptr<FileOutputBuffer> &buffer;
   uint64_t addr = 0;
   uint64_t fileOff = 0;
-  MachHeaderSection *headerSection = nullptr;
+  MachHeaderSection *header = nullptr;
   LazyBindingSection *lazyBindingSection = nullptr;
   ExportSection *exportSection = nullptr;
   StringTableSection *stringTableSection = nullptr;
@@ -134,7 +134,11 @@ public:
     c->nsects = seg->numNonHiddenSections();
 
     for (OutputSection *osec : seg->getSections()) {
-      c->filesize += osec->getFileSize();
+      if (!isZeroFill(osec->flags)) {
+        assert(osec->fileOff >= seg->fileOff);
+        c->filesize = std::max(
+            c->filesize, osec->fileOff + osec->getFileSize() - seg->fileOff);
+      }
 
       if (osec->isHidden())
         continue;
@@ -260,20 +264,18 @@ void Writer::scanRelocations() {
 }
 
 void Writer::createLoadCommands() {
-  headerSection->addLoadCommand(
+  in.header->addLoadCommand(
       make<LCDyldInfo>(in.binding, lazyBindingSection, exportSection));
-  headerSection->addLoadCommand(
-      make<LCSymtab>(symtabSection, stringTableSection));
-  headerSection->addLoadCommand(make<LCDysymtab>());
+  in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
+  in.header->addLoadCommand(make<LCDysymtab>());
 
   switch (config->outputType) {
   case MH_EXECUTE:
-    headerSection->addLoadCommand(make<LCMain>());
-    headerSection->addLoadCommand(make<LCLoadDylinker>());
+    in.header->addLoadCommand(make<LCMain>());
+    in.header->addLoadCommand(make<LCLoadDylinker>());
     break;
   case MH_DYLIB:
-    headerSection->addLoadCommand(
-        make<LCDylib>(LC_ID_DYLIB, config->installName));
+    in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName));
     break;
   default:
     llvm_unreachable("unhandled output file type");
@@ -281,19 +283,19 @@ void Writer::createLoadCommands() {
 
   uint8_t segIndex = 0;
   for (OutputSegment *seg : outputSegments) {
-    headerSection->addLoadCommand(make<LCSegment>(seg->name, seg));
+    in.header->addLoadCommand(make<LCSegment>(seg->name, seg));
     seg->index = segIndex++;
   }
 
   uint64_t dylibOrdinal = 1;
   for (InputFile *file : inputFiles) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
-      headerSection->addLoadCommand(
+      in.header->addLoadCommand(
           make<LCDylib>(LC_LOAD_DYLIB, dylibFile->dylibName));
       dylibFile->ordinal = dylibOrdinal++;
 
       if (dylibFile->reexport)
-        headerSection->addLoadCommand(
+        in.header->addLoadCommand(
             make<LCDylib>(LC_REEXPORT_DYLIB, dylibFile->dylibName));
     }
   }
@@ -351,7 +353,8 @@ static int sectionOrder(OutputSection *osec) {
       return -1;
   } else if (segname == segment_names::linkEdit) {
     return StringSwitch<int>(osec->name)
-        .Case(section_names::binding, -4)
+        .Case(section_names::binding, -5)
+        .Case(section_names::lazyBinding, -4)
         .Case(section_names::export_, -3)
         .Case(section_names::symbolTable, -2)
         .Case(section_names::stringTable, -1)
@@ -402,7 +405,6 @@ static void sortSegmentsAndSections() {
 
 void Writer::createOutputSections() {
   // First, create hidden sections
-  headerSection = make<MachHeaderSection>();
   lazyBindingSection = make<LazyBindingSection>();
   stringTableSection = make<StringTableSection>();
   symtabSection = make<SymtabSection>(*stringTableSection);
@@ -454,6 +456,8 @@ void Writer::assignAddresses(OutputSegment *seg) {
   seg->fileOff = fileOff;
 
   for (auto *osec : seg->getSections()) {
+    if (!osec->isNeeded())
+      continue;
     addr = alignTo(addr, osec->align);
     fileOff = alignTo(fileOff, osec->align);
     osec->addr = addr;
@@ -533,6 +537,7 @@ void Writer::run() {
 void macho::writeResult() { Writer().run(); }
 
 void macho::createSyntheticSections() {
+  in.header = make<MachHeaderSection>();
   in.binding = make<BindingSection>();
   in.got = make<GotSection>();
   in.lazyPointers = make<LazyPointerSection>();

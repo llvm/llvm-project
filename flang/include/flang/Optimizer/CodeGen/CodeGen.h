@@ -28,12 +28,9 @@ std::unique_ptr<mlir::Pass> createFIRToLLVMPass(NameUniquer &uniquer);
 std::unique_ptr<mlir::Pass>
 createLLVMDialectToLLVMPass(llvm::raw_ostream &output);
 
-inline void registerOptCodeGenPasses() {
-  using mlir::Pass;
 // declarative passes
 #define GEN_PASS_REGISTRATION
 #include "flang/Optimizer/CodeGen/CGPasses.h.inc"
-}
 
 } // namespace fir
 

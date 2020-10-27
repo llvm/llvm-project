@@ -191,6 +191,12 @@ void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
   UNIMPLEMENTED();
 }
 
+void FlushUnneededASanShadowMemory(uptr p, uptr size) {
+  // Since asan's mapping is compacting, the shadow chunk may be
+  // not page-aligned, so we only flush the page-aligned portion.
+  ReleaseMemoryPagesToOS(MemToShadow(p), MemToShadow(p + size));
+}
+
 // ---------------------- TSD ---------------- {{{
 static bool tsd_key_inited = false;
 
@@ -247,15 +253,8 @@ void *AsanDoesNotSupportStaticLinkage() {
 }
 
 uptr FindDynamicShadowStart() {
-  uptr granularity = GetMmapGranularity();
-  uptr alignment = 8 * granularity;
-  uptr left_padding = granularity;
-  uptr space_size = kHighShadowEnd + left_padding;
-  uptr shadow_start = FindAvailableMemoryRange(space_size, alignment,
-                                               granularity, nullptr, nullptr);
-  CHECK_NE((uptr)0, shadow_start);
-  CHECK(IsAligned(shadow_start, alignment));
-  return shadow_start;
+  return MapDynamicShadow(MemToShadowSize(kHighMemEnd), SHADOW_SCALE,
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
 }
 
 void AsanCheckDynamicRTPrereqs() {}

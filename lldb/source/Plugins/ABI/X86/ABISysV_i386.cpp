@@ -387,7 +387,7 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
   {
     value.SetValueType(Value::eValueTypeScalar);
     llvm::Optional<uint64_t> byte_size =
-        return_compiler_type.GetByteSize(nullptr);
+        return_compiler_type.GetByteSize(&thread);
     if (!byte_size)
       return return_valobj_sp;
     bool success = false;
@@ -512,7 +512,7 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
   } else if (type_flags & eTypeIsVector) // 'Packed'
   {
     llvm::Optional<uint64_t> byte_size =
-        return_compiler_type.GetByteSize(nullptr);
+        return_compiler_type.GetByteSize(&thread);
     if (byte_size && *byte_size > 0) {
       const RegisterInfo *vec_reg = reg_ctx->GetRegisterInfoByName("xmm0", 0);
       if (vec_reg == nullptr)

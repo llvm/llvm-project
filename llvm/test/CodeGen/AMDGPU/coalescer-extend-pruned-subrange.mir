@@ -104,7 +104,7 @@ body: |
 
   bb.11:
     successors: %bb.2, %bb.1
-    %42:vgpr_32 = V_ADD_I32_e32 32, %9, implicit-def dead $vcc, implicit $exec
+    %42:vgpr_32 = V_ADD_CO_U32_e32 32, %9, implicit-def dead $vcc, implicit $exec
     V_CMP_EQ_U32_e32 0, %42, implicit-def $vcc, implicit $exec
     %43:vgpr_32 = COPY %42
     $vcc = S_AND_B64 $exec, killed $vcc, implicit-def dead $scc

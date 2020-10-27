@@ -1,4 +1,5 @@
-; RUN: opt -scalar-evolution-max-arith-depth=0 -scalar-evolution-max-cast-depth=0 -analyze -scalar-evolution < %s | FileCheck %s
+; RUN: opt -scalar-evolution-max-arith-depth=0 -scalar-evolution-max-cast-depth=0 -analyze -enable-new-pm=0 -scalar-evolution < %s | FileCheck %s
+; RUN: opt -scalar-evolution-max-arith-depth=0 -scalar-evolution-max-cast-depth=0 -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 | FileCheck %s
 
 ; Check that depth set to 0 prevents getAddExpr and getMulExpr from making
 ; transformations in SCEV. We expect the result to be very straightforward.

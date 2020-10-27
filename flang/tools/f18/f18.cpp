@@ -88,6 +88,7 @@ struct DriverOptions {
   bool forcedForm{false}; // -Mfixed or -Mfree appeared
   bool warnOnNonstandardUsage{false}; // -Mstandard
   bool warningsAreErrors{false}; // -Werror
+  bool byteswapio{false}; // -byteswapio
   Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
   bool parseOnly{false};
   bool dumpProvenance{false};
@@ -101,8 +102,8 @@ struct DriverOptions {
   bool debugNoSemantics{false};
   bool debugModuleWriter{false};
   bool measureTree{false};
-  bool unparseTypedExprsToPGF90{false};
-  std::vector<std::string> pgf90Args;
+  bool unparseTypedExprsToF18_FC{false};
+  std::vector<std::string> F18_FCArgs;
   const char *prefix{nullptr};
   bool getDefinition{false};
   GetDefinitionArgs getDefinitionArgs{0, 0, 0};
@@ -137,8 +138,8 @@ void Exec(std::vector<char *> &argv, bool verbose = false) {
 
 void RunOtherCompiler(DriverOptions &driver, char *source, char *relo) {
   std::vector<char *> argv;
-  for (size_t j{0}; j < driver.pgf90Args.size(); ++j) {
-    argv.push_back(driver.pgf90Args[j].data());
+  for (size_t j{0}; j < driver.F18_FCArgs.size(); ++j) {
+    argv.push_back(driver.F18_FCArgs[j].data());
   }
   char dashC[3] = "-c", dashO[3] = "-o";
   argv.push_back(dashC);
@@ -342,7 +343,7 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
         options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes),
         nullptr /* action before each statement */,
-        driver.unparseTypedExprsToPGF90 ? &asFortran : nullptr);
+        driver.unparseTypedExprsToF18_FC ? &asFortran : nullptr);
   }
 
   if (ParentProcess()) {
@@ -368,19 +369,23 @@ std::string CompileOtherLanguage(std::string path, DriverOptions &driver) {
   return {};
 }
 
-void Link(std::vector<std::string> &relocatables, DriverOptions &driver) {
+void Link(std::vector<std::string> &liblist, std::vector<std::string> &objects,
+    DriverOptions &driver) {
   if (!ParentProcess()) {
     std::vector<char *> argv;
-    for (size_t j{0}; j < driver.pgf90Args.size(); ++j) {
-      argv.push_back(driver.pgf90Args[j].data());
+    for (size_t j{0}; j < driver.F18_FCArgs.size(); ++j) {
+      argv.push_back(driver.F18_FCArgs[j].data());
     }
-    for (auto &relo : relocatables) {
-      argv.push_back(relo.data());
+    for (auto &obj : objects) {
+      argv.push_back(obj.data());
     }
     if (!driver.outputPath.empty()) {
       char dashO[3] = "-o";
       argv.push_back(dashO);
       argv.push_back(driver.outputPath.data());
+    }
+    for (auto &lib : liblist) {
+      argv.push_back(lib.data());
     }
     Exec(argv, driver.verbose);
   }
@@ -391,11 +396,12 @@ int main(int argc, char *const argv[]) {
   atexit(CleanUpAtExit);
 
   DriverOptions driver;
-  const char *pgf90{getenv("F18_FC")};
-  driver.pgf90Args.push_back(pgf90 ? pgf90 : "pgf90");
-  bool isPGF90{driver.pgf90Args.back().rfind("pgf90") != std::string::npos};
+  const char *F18_FC{getenv("F18_FC")};
+  driver.F18_FCArgs.push_back(F18_FC ? F18_FC : "gfortran");
+  bool isPGF90{driver.F18_FCArgs.back().rfind("pgf90") != std::string::npos};
 
   std::list<std::string> args{argList(argc, argv)};
+  std::vector<std::string> objlist, liblist;
   std::string prefix{args.front()};
   args.pop_front();
   prefix += ": ";
@@ -412,32 +418,37 @@ int main(int argc, char *const argv[]) {
 
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
 
-  std::vector<std::string> fortranSources, otherSources, relocatables;
+  std::vector<std::string> fortranSources, otherSources;
   bool anyFiles{false};
 
   while (!args.empty()) {
     std::string arg{std::move(args.front())};
+    auto dot{arg.rfind(".")};
+    std::string suffix{arg.substr(dot + 1)};
+    std::string prefix{arg.substr(0, 2)};
     args.pop_front();
     if (arg.empty()) {
     } else if (arg.at(0) != '-') {
       anyFiles = true;
-      auto dot{arg.rfind(".")};
       if (dot == std::string::npos) {
-        driver.pgf90Args.push_back(arg);
+        driver.F18_FCArgs.push_back(arg);
       } else {
-        std::string suffix{arg.substr(dot + 1)};
         if (suffix == "f" || suffix == "F" || suffix == "ff" ||
             suffix == "f90" || suffix == "F90" || suffix == "ff90" ||
             suffix == "f95" || suffix == "F95" || suffix == "ff95" ||
             suffix == "cuf" || suffix == "CUF" || suffix == "f18" ||
             suffix == "F18" || suffix == "ff18") {
           fortranSources.push_back(arg);
-        } else if (suffix == "o" || suffix == "a") {
-          relocatables.push_back(arg);
+        } else if (suffix == "o" || suffix == "so") {
+          objlist.push_back(arg);
+        } else if (suffix == "a") {
+          liblist.push_back(arg);
         } else {
           otherSources.push_back(arg);
         }
       }
+    } else if (prefix == "-l" || suffix == "a") {
+      liblist.push_back(arg);
     } else if (arg == "-") {
       fortranSources.push_back("-");
     } else if (arg == "--") {
@@ -446,15 +457,17 @@ int main(int argc, char *const argv[]) {
         args.pop_front();
       }
       break;
-    } else if (arg == "-Mfixed") {
+    } else if (arg == "-Mfixed" || arg == "-ffixed-form") {
       driver.forcedForm = true;
       options.isFixedForm = true;
-    } else if (arg == "-Mfree") {
+    } else if (arg == "-Mfree" || arg == "-ffree-form") {
       driver.forcedForm = true;
       options.isFixedForm = false;
-    } else if (arg == "-Mextend") {
+    } else if (arg == "-Mextend" || arg == "-ffixed-line-length-132") {
       options.fixedFormColumns = 132;
-    } else if (arg == "-Munlimited") {
+    } else if (arg == "-Munlimited" || arg == "-ffree-line-length-none" ||
+        arg == "-ffree-line-length-0" || arg == "-ffixed-line-length-none" ||
+        arg == "-ffixed-line-length-0") {
       // For reparsing f18's -E output of fixed-form cooked character stream
       options.fixedFormColumns = 1000000;
     } else if (arg == "-Mbackslash") {
@@ -463,8 +476,12 @@ int main(int argc, char *const argv[]) {
     } else if (arg == "-Mnobackslash") {
       options.features.Enable(
           Fortran::common::LanguageFeature::BackslashEscapes, true);
-    } else if (arg == "-Mstandard") {
+    } else if (arg == "-Mstandard" || arg == "-std=f95" ||
+        arg == "-std=f2003" || arg == "-std=f2008" || arg == "-std=legacy") {
       driver.warnOnNonstandardUsage = true;
+    } else if (arg == "-fopenacc") {
+      options.features.Enable(Fortran::common::LanguageFeature::OpenACC);
+      options.predefinitions.emplace_back("_OPENACC", "201911");
     } else if (arg == "-fopenmp") {
       options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
       options.predefinitions.emplace_back("_OPENMP", "201511");
@@ -510,8 +527,8 @@ int main(int argc, char *const argv[]) {
       driver.dumpUnparse = true;
     } else if (arg == "-funparse-with-symbols") {
       driver.dumpUnparseWithSymbols = true;
-    } else if (arg == "-funparse-typed-exprs-to-pgf90") {
-      driver.unparseTypedExprsToPGF90 = true;
+    } else if (arg == "-funparse-typed-exprs-to-f18-fc") {
+      driver.unparseTypedExprsToF18_FC = true;
     } else if (arg == "-fparse-only") {
       driver.parseOnly = true;
     } else if (arg == "-c") {
@@ -530,12 +547,19 @@ int main(int argc, char *const argv[]) {
     } else if (arg.substr(0, 2) == "-U") {
       options.predefinitions.emplace_back(
           arg.substr(2), std::optional<std::string>{});
+    } else if (arg == "-fdefault-double-8") {
+      defaultKinds.set_defaultRealKind(4);
     } else if (arg == "-r8" || arg == "-fdefault-real-8") {
       defaultKinds.set_defaultRealKind(8);
     } else if (arg == "-i8" || arg == "-fdefault-integer-8") {
       defaultKinds.set_defaultIntegerKind(8);
       defaultKinds.set_subscriptIntegerKind(8);
       defaultKinds.set_sizeIntegerKind(8);
+      if (isPGF90) {
+        driver.F18_FCArgs.push_back("-i8");
+      } else {
+        driver.F18_FCArgs.push_back("-fdefault-integer-8");
+      }
     } else if (arg == "-Mlargearray") {
     } else if (arg == "-Mnolargearray") {
     } else if (arg == "-flarge-sizes") {
@@ -577,18 +601,35 @@ int main(int argc, char *const argv[]) {
       driver.getDefinitionArgs = {arguments[0], arguments[1], arguments[2]};
     } else if (arg == "-fget-symbols-sources") {
       driver.getSymbolsSources = true;
-    } else if (arg == "-help" || arg == "--help" || arg == "-?") {
+    } else if (arg == "-byteswapio") {
+      driver.byteswapio = true; // TODO: Pass to lowering, generate call
+    } else if (arg == "-h" || arg == "-help" || arg == "--help" || arg == "-?") {
       llvm::errs()
+          << "f18: LLVM Fortran compiler\n"
+          << "\n"
+          << "Usage: f18 [options] <input files>\n"
+          << "\n"
+          << "Defaults:\n"
+          << "  When invoked with input files, and no options to tell\n"
+          << "  it otherwise, f18 will unparse its input and pass that on to an\n"
+          << "  external compiler to continue the compilation.\n"
+          << "  The external compiler is specified by the F18_FC environment\n"
+          << "  variable. The default is 'gfortran'.\n"
+          << "  If invoked with no input files, f18 reads source code from\n"
+          << "  stdin and runs with -fdebug-measure-parse-tree -funparse.\n"
+          << "\n"
           << "f18 options:\n"
-          << "  -Mfixed | -Mfree     force the source form\n"
-          << "  -Mextend             132-column fixed form\n"
+          << "  -Mfixed | -Mfree | -ffixed-form | -ffree-form   force the "
+             "source form\n"
+          << "  -Mextend | -ffixed-line-length-132   132-column fixed form\n"
           << "  -f[no-]backslash     enable[disable] \\escapes in literals\n"
           << "  -M[no]backslash      disable[enable] \\escapes in literals\n"
           << "  -Mstandard           enable conformance warnings\n"
+          << "  -std=<standard>      enable conformance warnings\n"
           << "  -fenable=<feature>   enable a language feature\n"
           << "  -fdisable=<feature>  disable a language feature\n"
-          << "  -r8 | -fdefault-real-8 | -i8 | -fdefault-integer-8  "
-             "change default kinds of intrinsic types\n"
+          << "  -r8 | -fdefault-real-8 | -i8 | -fdefault-integer-8 | "
+             "-fdefault-double-8   change default kinds of intrinsic types\n"
           << "  -Werror              treat warnings as errors\n"
           << "  -ed                  enable fixed form D lines\n"
           << "  -E                   prescan & preprocess only\n"
@@ -610,17 +651,18 @@ int main(int argc, char *const argv[]) {
           << "  -fget-symbols-sources\n"
           << "  -v -c -o -I -D -U    have their usual meanings\n"
           << "  -help                print this again\n"
-          << "Other options are passed through to the compiler.\n";
+          << "Unrecognised options are passed through to the external compiler\n"
+          << "set by F18_FC (see defaults).\n";
       return exitStatus;
     } else if (arg == "-V") {
       llvm::errs() << "\nf18 compiler (under development)\n";
       return exitStatus;
     } else {
-      driver.pgf90Args.push_back(arg);
+      driver.F18_FCArgs.push_back(arg);
       if (arg == "-v") {
         driver.verbose = true;
       } else if (arg == "-I") {
-        driver.pgf90Args.push_back(args.front());
+        driver.F18_FCArgs.push_back(args.front());
         driver.searchDirectories.push_back(args.front());
         args.pop_front();
       } else if (arg.substr(0, 2) == "-I") {
@@ -632,44 +674,51 @@ int main(int argc, char *const argv[]) {
   if (driver.warnOnNonstandardUsage) {
     options.features.WarnOnAllNonstandard();
   }
-  if (options.features.IsEnabled(Fortran::common::LanguageFeature::OpenMP)) {
-    driver.pgf90Args.push_back("-mp");
-  }
   if (isPGF90) {
     if (!options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes)) {
-      driver.pgf90Args.push_back(
+      driver.F18_FCArgs.push_back(
           "-Mbackslash"); // yes, this *disables* them in pgf90
     }
+    if (options.features.IsEnabled(Fortran::common::LanguageFeature::OpenMP)) {
+      driver.F18_FCArgs.push_back("-mp");
+    }
+
     Fortran::parser::useHexadecimalEscapeSequences = false;
   } else {
     if (options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes)) {
-      driver.pgf90Args.push_back("-fbackslash");
+      driver.F18_FCArgs.push_back("-fbackslash");
     }
+    if (options.features.IsEnabled(Fortran::common::LanguageFeature::OpenMP)) {
+      driver.F18_FCArgs.push_back("-fopenmp");
+    }
+
     Fortran::parser::useHexadecimalEscapeSequences = true;
   }
 
   if (!anyFiles) {
     driver.measureTree = true;
     driver.dumpUnparse = true;
+    llvm::outs() << "Enter Fortran source\n"
+                 << "Use EOF character (^D) to end file\n";
     CompileFortran("-", options, driver, defaultKinds);
     return exitStatus;
   }
   for (const auto &path : fortranSources) {
     std::string relo{CompileFortran(path, options, driver, defaultKinds)};
     if (!driver.compileOnly && !relo.empty()) {
-      relocatables.push_back(relo);
+      objlist.push_back(relo);
     }
   }
   for (const auto &path : otherSources) {
     std::string relo{CompileOtherLanguage(path, driver)};
     if (!driver.compileOnly && !relo.empty()) {
-      relocatables.push_back(relo);
+      objlist.push_back(relo);
     }
   }
-  if (!relocatables.empty()) {
-    Link(relocatables, driver);
+  if (!objlist.empty()) {
+    Link(liblist, objlist, driver);
   }
   return exitStatus;
 }

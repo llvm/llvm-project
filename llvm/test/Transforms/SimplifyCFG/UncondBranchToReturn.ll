@@ -2,7 +2,7 @@
 ; a PHI node and a return.  Make sure the simplify cfg can straighten out this
 ; important case.  This is basically the most trivial form of tail-duplication.
 
-; RUN: opt < %s -simplifycfg -S | \
+; RUN: opt < %s -simplifycfg -hoist-common-insts=true -S | \
 ; RUN:    not grep "br label"
 
 define i32 @test(i1 %B, i32 %A, i32 %B.upgrd.1) {

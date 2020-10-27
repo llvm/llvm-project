@@ -167,3 +167,28 @@ TEST(SmallSetTest, EqualityComparisonTest) {
   EXPECT_NE(s1small, s4large);
   EXPECT_NE(s4large, s3large);
 }
+
+TEST(SmallSetTest, Contains) {
+  SmallSet<int, 2> Set;
+  EXPECT_FALSE(Set.contains(0));
+  EXPECT_FALSE(Set.contains(1));
+
+  Set.insert(0);
+  Set.insert(1);
+  EXPECT_TRUE(Set.contains(0));
+  EXPECT_TRUE(Set.contains(1));
+
+  Set.insert(1);
+  EXPECT_TRUE(Set.contains(0));
+  EXPECT_TRUE(Set.contains(1));
+
+  Set.erase(1);
+  EXPECT_TRUE(Set.contains(0));
+  EXPECT_FALSE(Set.contains(1));
+
+  Set.insert(1);
+  Set.insert(2);
+  EXPECT_TRUE(Set.contains(0));
+  EXPECT_TRUE(Set.contains(1));
+  EXPECT_TRUE(Set.contains(2));
+}

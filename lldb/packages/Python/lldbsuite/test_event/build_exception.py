@@ -4,8 +4,7 @@ class BuildError(Exception):
         super(BuildError, self).__init__("Error when building test subject")
         self.command = called_process_error.lldb_extensions.get(
             "command", "<command unavailable>")
-        self.build_error = called_process_error.lldb_extensions.get(
-            "stderr_content", "<error output unavailable>")
+        self.build_error = called_process_error.lldb_extensions["combined_output"]
 
     def __str__(self):
         return self.format_build_error(self.command, self.build_error)

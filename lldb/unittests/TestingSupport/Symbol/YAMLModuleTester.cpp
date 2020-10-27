@@ -93,7 +93,7 @@ public:
 
 YAMLModuleTester::YAMLModuleTester(llvm::StringRef yaml_data,
                                    llvm::StringRef triple) {
-  auto sections_map = llvm::DWARFYAML::emitDebugSections(yaml_data, true);
+  auto sections_map = llvm::DWARFYAML::emitDebugSections(yaml_data);
   if (!sections_map)
     return;
   m_sections_map = std::move(*sections_map);

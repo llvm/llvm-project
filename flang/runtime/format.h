@@ -63,7 +63,7 @@ struct DataEdit {
 struct DefaultFormatControlCallbacks : public IoErrorHandler {
   using IoErrorHandler::IoErrorHandler;
   DataEdit GetNextDataEdit(int = 1);
-  bool Emit(const char *, std::size_t);
+  bool Emit(const char *, std::size_t, std::size_t elementBytes = 0);
   bool Emit(const char16_t *, std::size_t);
   bool Emit(const char32_t *, std::size_t);
   std::optional<char32_t> GetCurrentChar();

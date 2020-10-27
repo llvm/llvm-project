@@ -617,6 +617,35 @@ really need to access ``argv``/``argc``.
     return 0;
    }
 
+Using libFuzzer as a library
+----------------------------
+If the code being fuzzed must provide its own `main`, it's possible to
+invoke libFuzzer as a library. Be sure to pass ``-fsanitize=fuzzer-no-link``
+during compilation, and link your binary against the no-main version of
+libFuzzer. On Linux installations, this is typically located at:
+
+.. code-block:: bash
+
+  /usr/lib/<llvm-version>/lib/clang/<clang-version>/lib/linux/libclang_rt.fuzzer_no_main-<architecture>.a
+
+If building libFuzzer from source, this is located at the following path
+in the build output directory:
+
+.. code-block:: bash
+
+  lib/linux/libclang_rt.fuzzer_no_main-<architecture>.a
+
+From here, the code can do whatever setup it requires, and when it's ready
+to start fuzzing, it can call `LLVMFuzzerRunDriver`, passing in the program
+arguments and a callback. This callback is invoked just like
+`LLVMFuzzerTestOneInput`, and has the same signature.
+
+.. code-block:: c++
+
+  extern "C" int LLVMFuzzerRunDriver(int *argc, char ***argv,
+                    int (*UserCb)(const uint8_t *Data, size_t Size));
+
+
 
 Leaks
 -----

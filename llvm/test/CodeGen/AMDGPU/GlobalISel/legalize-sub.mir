@@ -501,3 +501,45 @@ body: |
 #     %5:_(s64) = G_ANYEXT %4
 #     $vgpr0_vgpr1 = COPY %5
 # ...
+
+---
+name: test_sub_s96
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
+
+    ; GFX6-LABEL: name: test_sub_s96
+    ; GFX6: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX6: [[COPY1:%[0-9]+]]:_(s96) = COPY $vgpr3_vgpr4_vgpr5
+    ; GFX6: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
+    ; GFX6: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s96)
+    ; GFX6: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[UV3]]
+    ; GFX6: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV4]], [[USUBO1]]
+    ; GFX6: [[USUBE2:%[0-9]+]]:_(s32), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[UV2]], [[UV5]], [[USUBE1]]
+    ; GFX6: [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32), [[USUBE2]](s32)
+    ; GFX6: $vgpr0_vgpr1_vgpr2 = COPY [[MV]](s96)
+    ; GFX8-LABEL: name: test_sub_s96
+    ; GFX8: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX8: [[COPY1:%[0-9]+]]:_(s96) = COPY $vgpr3_vgpr4_vgpr5
+    ; GFX8: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
+    ; GFX8: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s96)
+    ; GFX8: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[UV3]]
+    ; GFX8: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV4]], [[USUBO1]]
+    ; GFX8: [[USUBE2:%[0-9]+]]:_(s32), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[UV2]], [[UV5]], [[USUBE1]]
+    ; GFX8: [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32), [[USUBE2]](s32)
+    ; GFX8: $vgpr0_vgpr1_vgpr2 = COPY [[MV]](s96)
+    ; GFX9-LABEL: name: test_sub_s96
+    ; GFX9: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX9: [[COPY1:%[0-9]+]]:_(s96) = COPY $vgpr3_vgpr4_vgpr5
+    ; GFX9: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
+    ; GFX9: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](s96)
+    ; GFX9: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV]], [[UV3]]
+    ; GFX9: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV1]], [[UV4]], [[USUBO1]]
+    ; GFX9: [[USUBE2:%[0-9]+]]:_(s32), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[UV2]], [[UV5]], [[USUBE1]]
+    ; GFX9: [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32), [[USUBE2]](s32)
+    ; GFX9: $vgpr0_vgpr1_vgpr2 = COPY [[MV]](s96)
+    %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(s96) = COPY $vgpr3_vgpr4_vgpr5
+    %2:_(s96) = G_SUB %0, %1
+    $vgpr0_vgpr1_vgpr2 = COPY %2
+...

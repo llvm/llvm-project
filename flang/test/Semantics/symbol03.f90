@@ -11,7 +11,14 @@ contains
  !REF: /main/s
  subroutine s
   !DEF: /main/s/y (Implicit) ObjectEntity REAL(4)
-  !REF: /main/x
+  !DEF: /main/s/x HostAssoc INTEGER(4)
   y = x
+ contains
+  !DEF: /main/s/s2 (Subroutine) Subprogram
+  subroutine s2
+   !DEF: /main/s/s2/z (Implicit) ObjectEntity REAL(4)
+   !DEF: /main/s/s2/x HostAssoc INTEGER(4)
+   z = x
+  end subroutine
  end subroutine
 end program

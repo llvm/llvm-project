@@ -272,6 +272,8 @@ void IteratorModeling::checkPostStmt(const BinaryOperator *BO,
     handleComparison(C, BO, Result, LVal, RVal,
                      BinaryOperator::getOverloadedOperator(OK));
   } else if (isRandomIncrOrDecrOperator(OK)) {
+    if (!BO->getRHS()->getType()->isIntegralOrEnumerationType())
+      return;
     handlePtrIncrOrDecr(C, BO->getLHS(),
                         BinaryOperator::getOverloadedOperator(OK), RVal);
   }
@@ -461,6 +463,12 @@ void IteratorModeling::handleComparison(CheckerContext &C, const Expr *CE,
     RPos = getIteratorPosition(State, RVal);
   }
 
+  // If the value for which we just tried to set a new iterator position is
+  // an `SVal`for which no iterator position can be set then the setting was
+  // unsuccessful. We cannot handle the comparison in this case.
+  if (!LPos || !RPos)
+    return;
+
   // We cannot make assumptions on `UnknownVal`. Let us conjure a symbol
   // instead.
   if (RetVal.isUnknown()) {
@@ -599,6 +607,9 @@ void IteratorModeling::handlePtrIncrOrDecr(CheckerContext &C,
                                            const Expr *Iterator,
                                            OverloadedOperatorKind OK,
                                            SVal Offset) const {
+  if (!Offset.getAs<DefinedSVal>())
+    return;
+
   QualType PtrType = Iterator->getType();
   if (!PtrType->isPointerType())
     return;
@@ -612,13 +623,11 @@ void IteratorModeling::handlePtrIncrOrDecr(CheckerContext &C,
     return;
 
   SVal NewVal;
-  if (OK == OO_Plus || OK == OO_PlusEqual)
+  if (OK == OO_Plus || OK == OO_PlusEqual) {
     NewVal = State->getLValue(ElementType, Offset, OldVal);
-  else {
-    const llvm::APSInt &OffsetInt =
-      Offset.castAs<nonloc::ConcreteInt>().getValue();
-    auto &BVF = C.getSymbolManager().getBasicVals();
-    SVal NegatedOffset = nonloc::ConcreteInt(BVF.getValue(-OffsetInt));
+  } else {
+    auto &SVB = C.getSValBuilder();
+    SVal NegatedOffset = SVB.evalMinus(Offset.castAs<NonLoc>());
     NewVal = State->getLValue(ElementType, NegatedOffset, OldVal);
   }
 
@@ -684,9 +693,14 @@ bool IteratorModeling::noChangeInAdvance(CheckerContext &C, SVal Iter,
 
   const auto StateBefore = N->getState();
   const auto *PosBefore = getIteratorPosition(StateBefore, Iter);
-
-  assert(PosBefore && "`std::advance() should not create new iterator "
-         "position but change existing ones");
+  // FIXME: `std::advance()` should not create a new iterator position but
+  //        change existing ones. However, in case of iterators implemented as
+  //        pointers the handling of parameters in `std::advance()`-like
+  //        functions is still incomplete which may result in cases where
+  //        the new position is assigned to the wrong pointer. This causes
+  //        crash if we use an assertion here.
+  if (!PosBefore)
+    return false;
 
   return PosBefore->getOffset() == PosAfter->getOffset();
 }

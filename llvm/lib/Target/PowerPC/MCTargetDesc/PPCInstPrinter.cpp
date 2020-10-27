@@ -49,18 +49,6 @@ FullRegNamesWithPercent("ppc-reg-with-percent-prefix", cl::Hidden,
 
 void PPCInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   const char *RegName = getRegisterName(RegNo);
-  if (RegName[0] == 'q' /* QPX */) {
-    // The system toolchain on the BG/Q does not understand QPX register names
-    // in .cfi_* directives, so print the name of the floating-point
-    // subregister instead.
-    std::string RN(RegName);
-
-    RN[0] = 'f';
-    OS << RN;
-
-    return;
-  }
-
   OS << RegName;
 }
 
@@ -90,6 +78,36 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     printOperand(MI, 1, O);
     O << ")";
     return;
+  }
+
+  // Check if the last operand is an expression with the variant kind
+  // VK_PPC_PCREL_OPT. If this is the case then this is a linker optimization
+  // relocation and the .reloc directive needs to be added.
+  unsigned LastOp = MI->getNumOperands() - 1;
+  if (MI->getNumOperands() > 1) {
+    const MCOperand &Operand = MI->getOperand(LastOp);
+    if (Operand.isExpr()) {
+      const MCExpr *Expr = Operand.getExpr();
+      const MCSymbolRefExpr *SymExpr =
+          static_cast<const MCSymbolRefExpr *>(Expr);
+
+      if (SymExpr && SymExpr->getKind() == MCSymbolRefExpr::VK_PPC_PCREL_OPT) {
+        const MCSymbol &Symbol = SymExpr->getSymbol();
+        if (MI->getOpcode() == PPC::PLDpc) {
+          printInstruction(MI, Address, O);
+          O << "\n";
+          Symbol.print(O, &MAI);
+          O << ":";
+          return;
+        } else {
+          O << "\t.reloc ";
+          Symbol.print(O, &MAI);
+          O << "-8,R_PPC64_PCREL_OPT,.-(";
+          Symbol.print(O, &MAI);
+          O << "-8)\n";
+        }
+      }
+    }
   }
 
   // Check for slwi/srwi mnemonics.

@@ -206,10 +206,10 @@ def OptionalInvalidB : TestFormat_Op<"optional_invalid_b", [{
 def OptionalInvalidC : TestFormat_Op<"optional_invalid_c", [{
   ($attr)? attr-dict
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
-// CHECK: error: first element of an operand group must be a literal or operand
+// CHECK: error: first element of an operand group must be an attribute, literal, or operand
 def OptionalInvalidD : TestFormat_Op<"optional_invalid_d", [{
-  ($attr^)? attr-dict
-}]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
+  (type($operand) $operand^)? attr-dict
+}]>, Arguments<(ins Optional<I64>:$operand)>;
 // CHECK: error: type directive can only refer to variables within the optional group
 def OptionalInvalidE : TestFormat_Op<"optional_invalid_e", [{
   (`,` $attr^ type(operands))? attr-dict

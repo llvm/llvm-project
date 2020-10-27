@@ -16,6 +16,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace mlir;
@@ -137,19 +138,73 @@ TestDialect::TestDialect(MLIRContext *context)
       >();
   addInterfaces<TestOpAsmInterface, TestOpFolderDialectInterface,
                 TestInlinerInterface>();
-  addTypes<TestType>();
+  addTypes<TestType, TestRecursiveType>();
   allowUnknownOperations();
 }
 
-Type TestDialect::parseType(DialectAsmParser &parser) const {
-  if (failed(parser.parseKeyword("test_type")))
+static Type parseTestType(DialectAsmParser &parser,
+                          llvm::SetVector<Type> &stack) {
+  StringRef typeTag;
+  if (failed(parser.parseKeyword(&typeTag)))
     return Type();
-  return TestType::get(getContext());
+
+  if (typeTag == "test_type")
+    return TestType::get(parser.getBuilder().getContext());
+
+  if (typeTag != "test_rec")
+    return Type();
+
+  StringRef name;
+  if (parser.parseLess() || parser.parseKeyword(&name))
+    return Type();
+  auto rec = TestRecursiveType::create(parser.getBuilder().getContext(), name);
+
+  // If this type already has been parsed above in the stack, expect just the
+  // name.
+  if (stack.contains(rec)) {
+    if (failed(parser.parseGreater()))
+      return Type();
+    return rec;
+  }
+
+  // Otherwise, parse the body and update the type.
+  if (failed(parser.parseComma()))
+    return Type();
+  stack.insert(rec);
+  Type subtype = parseTestType(parser, stack);
+  stack.pop_back();
+  if (!subtype || failed(parser.parseGreater()) || failed(rec.setBody(subtype)))
+    return Type();
+
+  return rec;
+}
+
+Type TestDialect::parseType(DialectAsmParser &parser) const {
+  llvm::SetVector<Type> stack;
+  return parseTestType(parser, stack);
+}
+
+static void printTestType(Type type, DialectAsmPrinter &printer,
+                          llvm::SetVector<Type> &stack) {
+  if (type.isa<TestType>()) {
+    printer << "test_type";
+    return;
+  }
+
+  auto rec = type.cast<TestRecursiveType>();
+  printer << "test_rec<" << rec.getName();
+  if (!stack.contains(rec)) {
+    printer << ", ";
+    stack.insert(rec);
+    printTestType(rec.getBody(), printer, stack);
+    stack.pop_back();
+  }
+  printer << ">";
 }
 
 void TestDialect::printType(Type type, DialectAsmPrinter &printer) const {
-  assert(type.isa<TestType>() && "unexpected type");
-  printer << "test_type";
+  llvm::SetVector<Type> stack;
+  printTestType(type, printer, stack);
 }
 
 LogicalResult TestDialect::verifyOperationAttribute(Operation *op,
@@ -234,6 +289,34 @@ static void print(OpAsmPrinter &p, IsolatedRegionOp op) {
   p.printOperand(op.getOperand());
   p.shadowRegionArgs(op.region(), op.getOperand());
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
+}
+
+//===----------------------------------------------------------------------===//
+// Test SSACFGRegionOp
+//===----------------------------------------------------------------------===//
+
+RegionKind SSACFGRegionOp::getRegionKind(unsigned index) {
+  return RegionKind::SSACFG;
+}
+
+//===----------------------------------------------------------------------===//
+// Test GraphRegionOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseGraphRegionOp(OpAsmParser &parser,
+                                      OperationState &result) {
+  // Parse the body region, and reuse the operand info as the argument info.
+  Region *body = result.addRegion();
+  return parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{});
+}
+
+static void print(OpAsmPrinter &p, GraphRegionOp op) {
+  p << "test.graph_region ";
+  p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
+}
+
+RegionKind GraphRegionOp::getRegionKind(unsigned index) {
+  return RegionKind::Graph;
 }
 
 //===----------------------------------------------------------------------===//
@@ -368,7 +451,7 @@ OpFoldResult TestOpInPlaceFold::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
-LogicalResult mlir::OpWithInferTypeInterfaceOp::inferReturnTypes(
+LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
     MLIRContext *, Optional<Location> location, ValueRange operands,
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
@@ -401,7 +484,7 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::reifyReturnTypeShapes(
     OpBuilder &builder, llvm::SmallVectorImpl<Value> &shapes) {
   shapes = SmallVector<Value, 1>{
-      builder.createOrFold<mlir::DimOp>(getLoc(), getOperand(0), 0)};
+      builder.createOrFold<DimOp>(getLoc(), getOperand(0), 0)};
   return success();
 }
 
@@ -608,7 +691,7 @@ void RegionIfOp::getSuccessorRegions(
 //===----------------------------------------------------------------------===//
 
 // Static initialization for Test dialect registration.
-static mlir::DialectRegistration<mlir::TestDialect> testDialect;
+static DialectRegistration<TestDialect> testDialect;
 
 #include "TestOpEnums.cpp.inc"
 #include "TestOpStructs.cpp.inc"

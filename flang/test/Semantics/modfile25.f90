@@ -22,6 +22,9 @@ module m1
     real, intent(in) :: x(:,:)
     integer, intent(in) :: n1(3), n2(:)
     real, allocatable :: a(:,:,:)
+    ! the following fail if we don't handle empty strings
+    Character(0) :: ch1(1,2,3) = Reshape([('',n=1,1*2*3)],[1,2,3])
+    Character(0) :: ch2(3) = reshape(['','',''], [3])
     a = reshape(x,n1)
     a = reshape(x,n2(10:30:9)) ! fails if we can't figure out triplet shape
   end subroutine

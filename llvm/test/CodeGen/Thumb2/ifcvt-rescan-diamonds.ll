@@ -22,7 +22,8 @@ while.cond38:                                     ; preds = %if.end111, %entry
 ; CHECK-NEXT: it eq
 ; CHECK-NEXT: ldreq
 ; CHECK-NEXT: it ne
-; CHECK-NEXT: movsne
+  ; N.b. 16-bit mov instruction in IT block does not set flags.
+; CHECK-NEXT: movne
 ; CHECK-NEXT: mvns
 ; CHECK-NEXT: b
 cond.true77:                                      ; preds = %while.cond38

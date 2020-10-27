@@ -56,14 +56,21 @@ public:
     return false;
   }
   bool store(UNUSED LargeBlock::Header *H) { return false; }
-  static bool canCache(UNUSED uptr Size) { return false; }
+  bool canCache(UNUSED uptr Size) { return false; }
   void disable() {}
   void enable() {}
   void releaseToOS() {}
-  void setReleaseToOsIntervalMs(UNUSED s32 Interval) {}
+  bool setOption(Option O, UNUSED sptr Value) {
+    if (O == Option::ReleaseInterval || O == Option::MaxCacheEntriesCount ||
+        O == Option::MaxCacheEntrySize)
+      return false;
+    // Not supported by the Secondary Cache, but not an error either.
+    return true;
+  }
 };
 
-template <uptr MaxEntriesCount = 32U, uptr MaxEntrySize = 1UL << 19,
+template <u32 EntriesArraySize = 32U, u32 DefaultMaxEntriesCount = 32U,
+          uptr DefaultMaxEntrySize = 1UL << 19,
           s32 MinReleaseToOsIntervalMs = INT32_MIN,
           s32 MaxReleaseToOsIntervalMs = INT32_MAX>
 class MapAllocatorCache {
@@ -71,10 +78,17 @@ public:
   // Fuchsia doesn't allow releasing Secondary blocks yet. Note that 0 length
   // arrays are an extension for some compilers.
   // FIXME(kostyak): support (partially) the cache on Fuchsia.
-  static_assert(!SCUDO_FUCHSIA || MaxEntriesCount == 0U, "");
+  static_assert(!SCUDO_FUCHSIA || EntriesArraySize == 0U, "");
+
+  // Ensure the default maximum specified fits the array.
+  static_assert(DefaultMaxEntriesCount <= EntriesArraySize, "");
 
   void initLinkerInitialized(s32 ReleaseToOsInterval) {
-    setReleaseToOsIntervalMs(ReleaseToOsInterval);
+    setOption(Option::MaxCacheEntriesCount,
+              static_cast<sptr>(DefaultMaxEntriesCount));
+    setOption(Option::MaxCacheEntrySize,
+              static_cast<sptr>(DefaultMaxEntrySize));
+    setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
   void init(s32 ReleaseToOsInterval) {
     memset(this, 0, sizeof(*this));
@@ -85,13 +99,14 @@ public:
     bool EntryCached = false;
     bool EmptyCache = false;
     const u64 Time = getMonotonicTime();
+    const u32 MaxCount = atomic_load(&MaxEntriesCount, memory_order_relaxed);
     {
       ScopedLock L(Mutex);
-      if (EntriesCount == MaxEntriesCount) {
+      if (EntriesCount >= MaxCount) {
         if (IsFullEvents++ == 4U)
           EmptyCache = true;
       } else {
-        for (uptr I = 0; I < MaxEntriesCount; I++) {
+        for (u32 I = 0; I < MaxCount; I++) {
           if (Entries[I].Block)
             continue;
           if (I != 0)
@@ -111,17 +126,19 @@ public:
     s32 Interval;
     if (EmptyCache)
       empty();
-    else if ((Interval = getReleaseToOsIntervalMs()) >= 0)
+    else if ((Interval = atomic_load(&ReleaseToOsIntervalMs,
+                                     memory_order_relaxed)) >= 0)
       releaseOlderThan(Time - static_cast<u64>(Interval) * 1000000);
     return EntryCached;
   }
 
   bool retrieve(uptr Size, LargeBlock::Header **H) {
     const uptr PageSize = getPageSizeCached();
+    const u32 MaxCount = atomic_load(&MaxEntriesCount, memory_order_relaxed);
     ScopedLock L(Mutex);
     if (EntriesCount == 0)
       return false;
-    for (uptr I = 0; I < MaxEntriesCount; I++) {
+    for (u32 I = 0; I < MaxCount; I++) {
       if (!Entries[I].Block)
         continue;
       const uptr BlockSize = Entries[I].BlockEnd - Entries[I].Block;
@@ -141,17 +158,31 @@ public:
     return false;
   }
 
-  static bool canCache(uptr Size) {
-    return MaxEntriesCount != 0U && Size <= MaxEntrySize;
+  bool canCache(uptr Size) {
+    return atomic_load(&MaxEntriesCount, memory_order_relaxed) != 0U &&
+           Size <= atomic_load(&MaxEntrySize, memory_order_relaxed);
   }
 
-  void setReleaseToOsIntervalMs(s32 Interval) {
-    if (Interval >= MaxReleaseToOsIntervalMs) {
-      Interval = MaxReleaseToOsIntervalMs;
-    } else if (Interval <= MinReleaseToOsIntervalMs) {
-      Interval = MinReleaseToOsIntervalMs;
+  bool setOption(Option O, sptr Value) {
+    if (O == Option::ReleaseInterval) {
+      const s32 Interval =
+          Max(Min(static_cast<s32>(Value), MaxReleaseToOsIntervalMs),
+              MinReleaseToOsIntervalMs);
+      atomic_store(&ReleaseToOsIntervalMs, Interval, memory_order_relaxed);
+      return true;
+    } else if (O == Option::MaxCacheEntriesCount) {
+      const u32 MaxCount = static_cast<u32>(Value);
+      if (MaxCount > EntriesArraySize)
+        return false;
+      atomic_store(&MaxEntriesCount, MaxCount, memory_order_relaxed);
+      return true;
+    } else if (O == Option::MaxCacheEntrySize) {
+      atomic_store(&MaxEntrySize, static_cast<uptr>(Value),
+                   memory_order_relaxed);
+      return true;
     }
-    atomic_store(&ReleaseToOsIntervalMs, Interval, memory_order_relaxed);
+    // Not supported by the Secondary Cache, but not an error either.
+    return true;
   }
 
   void releaseToOS() { releaseOlderThan(UINT64_MAX); }
@@ -166,11 +197,11 @@ private:
       void *MapBase;
       uptr MapSize;
       MapPlatformData Data;
-    } MapInfo[MaxEntriesCount];
+    } MapInfo[EntriesArraySize];
     uptr N = 0;
     {
       ScopedLock L(Mutex);
-      for (uptr I = 0; I < MaxEntriesCount; I++) {
+      for (uptr I = 0; I < EntriesArraySize; I++) {
         if (!Entries[I].Block)
           continue;
         MapInfo[N].MapBase = reinterpret_cast<void *>(Entries[I].MapBase);
@@ -191,7 +222,7 @@ private:
     ScopedLock L(Mutex);
     if (!EntriesCount)
       return;
-    for (uptr I = 0; I < MaxEntriesCount; I++) {
+    for (uptr I = 0; I < EntriesArraySize; I++) {
       if (!Entries[I].Block || !Entries[I].Time || Entries[I].Time > Time)
         continue;
       releasePagesToOS(Entries[I].Block, 0,
@@ -199,10 +230,6 @@ private:
                        &Entries[I].Data);
       Entries[I].Time = 0;
     }
-  }
-
-  s32 getReleaseToOsIntervalMs() {
-    return atomic_load(&ReleaseToOsIntervalMs, memory_order_relaxed);
   }
 
   struct CachedBlock {
@@ -215,8 +242,10 @@ private:
   };
 
   HybridMutex Mutex;
-  CachedBlock Entries[MaxEntriesCount];
+  CachedBlock Entries[EntriesArraySize];
   u32 EntriesCount;
+  atomic_u32 MaxEntriesCount;
+  atomic_uptr MaxEntrySize;
   uptr LargestSize;
   u32 IsFullEvents;
   atomic_s32 ReleaseToOsIntervalMs;
@@ -265,11 +294,9 @@ public:
       Callback(reinterpret_cast<uptr>(&H) + LargeBlock::getHeaderSize());
   }
 
-  static uptr canCache(uptr Size) { return CacheT::canCache(Size); }
+  uptr canCache(uptr Size) { return Cache.canCache(Size); }
 
-  void setReleaseToOsIntervalMs(s32 Interval) {
-    Cache.setReleaseToOsIntervalMs(Interval);
-  }
+  bool setOption(Option O, sptr Value) { return Cache.setOption(O, Value); }
 
   void releaseToOS() { Cache.releaseToOS(); }
 
@@ -306,7 +333,7 @@ void *MapAllocator<CacheT>::allocate(uptr Size, uptr AlignmentHint,
   const uptr RoundedSize =
       roundUpTo(Size + LargeBlock::getHeaderSize(), PageSize);
 
-  if (AlignmentHint < PageSize && CacheT::canCache(RoundedSize)) {
+  if (AlignmentHint < PageSize && Cache.canCache(RoundedSize)) {
     LargeBlock::Header *H;
     if (Cache.retrieve(RoundedSize, &H)) {
       if (BlockEnd)
@@ -400,7 +427,7 @@ template <class CacheT> void MapAllocator<CacheT>::deallocate(void *Ptr) {
     Stats.sub(StatAllocated, CommitSize);
     Stats.sub(StatMapped, H->MapSize);
   }
-  if (CacheT::canCache(CommitSize) && Cache.store(H))
+  if (Cache.canCache(CommitSize) && Cache.store(H))
     return;
   void *Addr = reinterpret_cast<void *>(H->MapBase);
   const uptr Size = H->MapSize;

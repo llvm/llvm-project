@@ -1218,7 +1218,7 @@ Expected<size_t> Pattern::match(StringRef Buffer, size_t &MatchLen,
         Format.valueFromStringRepr(MatchedValue, SM);
     if (!Value)
       return Value.takeError();
-    DefinedNumericVariable->setValue(*Value);
+    DefinedNumericVariable->setValue(*Value, MatchedValue);
   }
 
   // Like CHECK-NEXT, CHECK-EMPTY's match range is considered to start after
@@ -1247,7 +1247,9 @@ unsigned Pattern::computeMatchDistance(StringRef Buffer) const {
 }
 
 void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
-                                 SMRange MatchRange) const {
+                                 SMRange Range,
+                                 FileCheckDiag::MatchType MatchTy,
+                                 std::vector<FileCheckDiag> *Diags) const {
   // Print what we know about substitutions.
   if (!Substitutions.empty()) {
     for (const auto &Substitution : Substitutions) {
@@ -1280,13 +1282,67 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
         OS.write_escaped(*MatchedValue) << "\"";
       }
 
-      if (MatchRange.isValid())
-        SM.PrintMessage(MatchRange.Start, SourceMgr::DK_Note, OS.str(),
-                        {MatchRange});
+      // We report only the start of the match/search range to suggest we are
+      // reporting the substitutions as set at the start of the match/search.
+      // Indicating a non-zero-length range might instead seem to imply that the
+      // substitution matches or was captured from exactly that range.
+      if (Diags)
+        Diags->emplace_back(SM, CheckTy, getLoc(), MatchTy,
+                            SMRange(Range.Start, Range.Start), OS.str());
       else
-        SM.PrintMessage(SMLoc::getFromPointer(Buffer.data()),
-                        SourceMgr::DK_Note, OS.str());
+        SM.PrintMessage(Range.Start, SourceMgr::DK_Note, OS.str());
     }
+  }
+}
+
+void Pattern::printVariableDefs(const SourceMgr &SM,
+                                FileCheckDiag::MatchType MatchTy,
+                                std::vector<FileCheckDiag> *Diags) const {
+  if (VariableDefs.empty() && NumericVariableDefs.empty())
+    return;
+  // Build list of variable captures.
+  struct VarCapture {
+    StringRef Name;
+    SMRange Range;
+  };
+  SmallVector<VarCapture, 2> VarCaptures;
+  for (const auto &VariableDef : VariableDefs) {
+    VarCapture VC;
+    VC.Name = VariableDef.first;
+    StringRef Value = Context->GlobalVariableTable[VC.Name];
+    SMLoc Start = SMLoc::getFromPointer(Value.data());
+    SMLoc End = SMLoc::getFromPointer(Value.data() + Value.size());
+    VC.Range = SMRange(Start, End);
+    VarCaptures.push_back(VC);
+  }
+  for (const auto &VariableDef : NumericVariableDefs) {
+    VarCapture VC;
+    VC.Name = VariableDef.getKey();
+    StringRef StrValue = VariableDef.getValue()
+                             .DefinedNumericVariable->getStringValue()
+                             .getValue();
+    SMLoc Start = SMLoc::getFromPointer(StrValue.data());
+    SMLoc End = SMLoc::getFromPointer(StrValue.data() + StrValue.size());
+    VC.Range = SMRange(Start, End);
+    VarCaptures.push_back(VC);
+  }
+  // Sort variable captures by the order in which they matched the input.
+  // Ranges shouldn't be overlapping, so we can just compare the start.
+  std::sort(VarCaptures.begin(), VarCaptures.end(),
+            [](const VarCapture &A, const VarCapture &B) {
+              assert(A.Range.Start != B.Range.Start &&
+                     "unexpected overlapping variable captures");
+              return A.Range.Start.getPointer() < B.Range.Start.getPointer();
+            });
+  // Create notes for the sorted captures.
+  for (const VarCapture &VC : VarCaptures) {
+    SmallString<256> Msg;
+    raw_svector_ostream OS(Msg);
+    OS << "captured var \"" << VC.Name << "\"";
+    if (Diags)
+      Diags->emplace_back(SM, CheckTy, getLoc(), MatchTy, VC.Range, OS.str());
+    else
+      SM.PrintMessage(VC.Range.Start, SourceMgr::DK_Note, OS.str(), VC.Range);
   }
 }
 
@@ -1295,14 +1351,17 @@ static SMRange ProcessMatchResult(FileCheckDiag::MatchType MatchTy,
                                   Check::FileCheckType CheckTy,
                                   StringRef Buffer, size_t Pos, size_t Len,
                                   std::vector<FileCheckDiag> *Diags,
-                                  bool AdjustPrevDiag = false) {
+                                  bool AdjustPrevDiags = false) {
   SMLoc Start = SMLoc::getFromPointer(Buffer.data() + Pos);
   SMLoc End = SMLoc::getFromPointer(Buffer.data() + Pos + Len);
   SMRange Range(Start, End);
   if (Diags) {
-    if (AdjustPrevDiag)
-      Diags->rbegin()->MatchTy = MatchTy;
-    else
+    if (AdjustPrevDiags) {
+      SMLoc CheckLoc = Diags->rbegin()->CheckLoc;
+      for (auto I = Diags->rbegin(), E = Diags->rend();
+           I != E && I->CheckLoc == CheckLoc; ++I)
+        I->MatchTy = MatchTy;
+    } else
       Diags->emplace_back(SM, CheckTy, Loc, MatchTy, Range);
   }
   return Range;
@@ -1455,8 +1514,8 @@ StringRef FileCheck::CanonicalizeFile(MemoryBuffer &MB,
 FileCheckDiag::FileCheckDiag(const SourceMgr &SM,
                              const Check::FileCheckType &CheckTy,
                              SMLoc CheckLoc, MatchType MatchTy,
-                             SMRange InputRange)
-    : CheckTy(CheckTy), CheckLoc(CheckLoc), MatchTy(MatchTy) {
+                             SMRange InputRange, StringRef Note)
+    : CheckTy(CheckTy), CheckLoc(CheckLoc), MatchTy(MatchTy), Note(Note) {
   auto Start = SM.getLineAndColumn(InputRange.Start);
   auto End = SM.getLineAndColumn(InputRange.End);
   InputStartLine = Start.first;
@@ -1863,10 +1922,15 @@ static void PrintMatch(bool ExpectedMatch, const SourceMgr &SM,
     // diagnostics.
     PrintDiag = !Diags;
   }
-  SMRange MatchRange = ProcessMatchResult(
-      ExpectedMatch ? FileCheckDiag::MatchFoundAndExpected
-                    : FileCheckDiag::MatchFoundButExcluded,
-      SM, Loc, Pat.getCheckTy(), Buffer, MatchPos, MatchLen, Diags);
+  FileCheckDiag::MatchType MatchTy = ExpectedMatch
+                                         ? FileCheckDiag::MatchFoundAndExpected
+                                         : FileCheckDiag::MatchFoundButExcluded;
+  SMRange MatchRange = ProcessMatchResult(MatchTy, SM, Loc, Pat.getCheckTy(),
+                                          Buffer, MatchPos, MatchLen, Diags);
+  if (Diags) {
+    Pat.printSubstitutions(SM, Buffer, MatchRange, MatchTy, Diags);
+    Pat.printVariableDefs(SM, MatchTy, Diags);
+  }
   if (!PrintDiag)
     return;
 
@@ -1881,7 +1945,8 @@ static void PrintMatch(bool ExpectedMatch, const SourceMgr &SM,
       Loc, ExpectedMatch ? SourceMgr::DK_Remark : SourceMgr::DK_Error, Message);
   SM.PrintMessage(MatchRange.Start, SourceMgr::DK_Note, "found here",
                   {MatchRange});
-  Pat.printSubstitutions(SM, Buffer, MatchRange);
+  Pat.printSubstitutions(SM, Buffer, MatchRange, MatchTy, nullptr);
+  Pat.printVariableDefs(SM, MatchTy, nullptr);
 }
 
 static void PrintMatch(bool ExpectedMatch, const SourceMgr &SM,
@@ -1914,10 +1979,13 @@ static void PrintNoMatch(bool ExpectedMatch, const SourceMgr &SM,
   // If the current position is at the end of a line, advance to the start of
   // the next line.
   Buffer = Buffer.substr(Buffer.find_first_not_of(" \t\n\r"));
-  SMRange SearchRange = ProcessMatchResult(
-      ExpectedMatch ? FileCheckDiag::MatchNoneButExpected
-                    : FileCheckDiag::MatchNoneAndExcluded,
-      SM, Loc, Pat.getCheckTy(), Buffer, 0, Buffer.size(), Diags);
+  FileCheckDiag::MatchType MatchTy = ExpectedMatch
+                                         ? FileCheckDiag::MatchNoneButExpected
+                                         : FileCheckDiag::MatchNoneAndExcluded;
+  SMRange SearchRange = ProcessMatchResult(MatchTy, SM, Loc, Pat.getCheckTy(),
+                                           Buffer, 0, Buffer.size(), Diags);
+  if (Diags)
+    Pat.printSubstitutions(SM, Buffer, SearchRange, MatchTy, Diags);
   if (!PrintDiag) {
     consumeError(std::move(MatchErrors));
     return;
@@ -1945,7 +2013,7 @@ static void PrintNoMatch(bool ExpectedMatch, const SourceMgr &SM,
   SM.PrintMessage(SearchRange.Start, SourceMgr::DK_Note, "scanning from here");
 
   // Allow the pattern to print additional information if desired.
-  Pat.printSubstitutions(SM, Buffer);
+  Pat.printSubstitutions(SM, Buffer, SearchRange, MatchTy, nullptr);
 
   if (ExpectedMatch)
     Pat.printFuzzyMatch(SM, Buffer, Diags);
@@ -2248,8 +2316,12 @@ size_t FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
           SM.PrintMessage(OldStart, SourceMgr::DK_Note,
                           "match discarded, overlaps earlier DAG match here",
                           {OldRange});
-        } else
-          Diags->rbegin()->MatchTy = FileCheckDiag::MatchFoundButDiscarded;
+        } else {
+          SMLoc CheckLoc = Diags->rbegin()->CheckLoc;
+          for (auto I = Diags->rbegin(), E = Diags->rend();
+               I != E && I->CheckLoc == CheckLoc; ++I)
+            I->MatchTy = FileCheckDiag::MatchFoundButDiscarded;
+        }
       }
       MatchPos = MI->End;
     }

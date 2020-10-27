@@ -1,6 +1,6 @@
 @ RUN: llvm-mc -triple armv7-elf -filetype asm -o - %s | FileCheck %s
 @ RUN: llvm-mc < %s -triple armv7-unknown-linux-gnueabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj --arch-specific | FileCheck %s --check-prefix=CHECK-OBJ
+@ RUN:   | llvm-readobj --arch-specific - | FileCheck %s --check-prefix=CHECK-OBJ
 
         .syntax unified
         .thumb

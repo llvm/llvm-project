@@ -71,6 +71,11 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %0 = spv.SMod %arg0, %arg1 : vector<4xi32>
     spv.Return
   }
+  spv.func @snegate(%arg0 : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spv.SNegate {{%.*}} : vector<4xi32>
+    %0 = spv.SNegate %arg0 : vector<4xi32>
+    spv.Return
+  }
   spv.func @srem(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
     // CHECK: {{%.*}} = spv.SRem {{%.*}}, {{%.*}} : vector<4xi32>
     %0 = spv.SRem %arg0, %arg1 : vector<4xi32>

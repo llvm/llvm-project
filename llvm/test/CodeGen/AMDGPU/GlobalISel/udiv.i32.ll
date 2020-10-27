@@ -311,7 +311,7 @@ define <2 x i32> @v_udiv_v2i32_pow2k_denom(<2 x i32> %num) {
 ; CGP-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CGP-NEXT:    s_movk_i32 s4, 0x1000
 ; CGP-NEXT:    v_mov_b32_e32 v2, 0x1000
-; CGP-NEXT:    s_mov_b32 s5, 0xfffff000
+; CGP-NEXT:    s_movk_i32 s5, 0xf000
 ; CGP-NEXT:    v_mov_b32_e32 v3, 0xfffff000
 ; CGP-NEXT:    v_cvt_f32_u32_e32 v4, s4
 ; CGP-NEXT:    v_cvt_f32_u32_e32 v5, v2

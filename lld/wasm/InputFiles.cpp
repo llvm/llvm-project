@@ -126,7 +126,9 @@ uint64_t ObjFile::calcNewAddend(const WasmRelocation &reloc) const {
 uint64_t ObjFile::calcExpectedValue(const WasmRelocation &reloc) const {
   switch (reloc.Type) {
   case R_WASM_TABLE_INDEX_I32:
-  case R_WASM_TABLE_INDEX_SLEB: {
+  case R_WASM_TABLE_INDEX_I64:
+  case R_WASM_TABLE_INDEX_SLEB:
+  case R_WASM_TABLE_INDEX_SLEB64: {
     const WasmSymbol &sym = wasmObj->syms()[reloc.Index];
     return tableEntries[sym.Info.ElementIndex];
   }
@@ -195,7 +197,9 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc) const {
 
   switch (reloc.Type) {
   case R_WASM_TABLE_INDEX_I32:
+  case R_WASM_TABLE_INDEX_I64:
   case R_WASM_TABLE_INDEX_SLEB:
+  case R_WASM_TABLE_INDEX_SLEB64:
   case R_WASM_TABLE_INDEX_REL_SLEB: {
     if (!getFunctionSymbol(reloc.Index)->hasTableIndex())
       return 0;
@@ -576,10 +580,16 @@ void BitcodeFile::parse() {
   obj = check(lto::InputFile::create(MemoryBufferRef(
       mb.getBuffer(), saver.save(archiveName + mb.getBufferIdentifier()))));
   Triple t(obj->getTargetTriple());
-  if (t.getArch() != Triple::wasm32) {
-    error(toString(this) + ": machine type must be wasm32");
+  if (!t.isWasm()) {
+    error(toString(this) + ": machine type must be wasm32 or wasm64");
     return;
   }
+  bool is64 = t.getArch() == Triple::wasm64;
+  if (config->is64.hasValue() && *config->is64 != is64) {
+    error(toString(this) + ": machine type for all bitcode files must match");
+    return;
+  }
+  config->is64 = is64;
   std::vector<bool> keptComdats;
   for (StringRef s : obj->getComdatTable())
     keptComdats.push_back(symtab->addComdat(s));

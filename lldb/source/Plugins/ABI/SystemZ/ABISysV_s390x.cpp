@@ -508,7 +508,7 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectSimple(
     if (type_flags & eTypeIsInteger) {
       // Extract the register context so we can read arguments from registers.
       llvm::Optional<uint64_t> byte_size =
-          return_compiler_type.GetByteSize(nullptr);
+          return_compiler_type.GetByteSize(&thread);
       if (!byte_size)
         return return_valobj_sp;
       uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(
@@ -555,7 +555,7 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectSimple(
         // Don't handle complex yet.
       } else {
         llvm::Optional<uint64_t> byte_size =
-            return_compiler_type.GetByteSize(nullptr);
+            return_compiler_type.GetByteSize(&thread);
         if (byte_size && *byte_size <= sizeof(long double)) {
           const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
           RegisterValue f0_value;

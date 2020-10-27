@@ -20,13 +20,11 @@ module attributes {gpu.container_module} {
 
     // CHECK: %[[addressof:.*]] = llvm.mlir.addressof @[[global]]
     // CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : index)
-    // CHECK: %[[binary_ptr:.*]] = llvm.getelementptr %[[addressof]][%[[c0]], %[[c0]]]
+    // CHECK: %[[binary:.*]] = llvm.getelementptr %[[addressof]][%[[c0]], %[[c0]]]
     // CHECK-SAME: -> !llvm<"i8*">
-    // CHECK: %[[module_ptr:.*]] = llvm.alloca {{.*}} x !llvm<"i8*"> : (!llvm.i32) -> !llvm<"i8**">
-    // CHECK: llvm.call @mgpuModuleLoad(%[[module_ptr]], %[[binary_ptr]]) : (!llvm<"i8**">, !llvm<"i8*">) -> !llvm.i32
-    // CHECK: %[[func_ptr:.*]] = llvm.alloca {{.*}} x !llvm<"i8*"> : (!llvm.i32) -> !llvm<"i8**">
-    // CHECK: llvm.call @mgpuModuleGetFunction(%[[func_ptr]], {{.*}}, {{.*}}) : (!llvm<"i8**">, !llvm<"i8*">, !llvm<"i8*">) -> !llvm.i32
-    // CHECK: llvm.call @mgpuGetStreamHelper
+    // CHECK: %[[module:.*]] = llvm.call @mgpuModuleLoad(%[[binary]]) : (!llvm<"i8*">) -> !llvm<"i8*">
+    // CHECK: %[[func:.*]] = llvm.call @mgpuModuleGetFunction(%[[module]], {{.*}}) : (!llvm<"i8*">, !llvm<"i8*">) -> !llvm<"i8*">
+    // CHECK: llvm.call @mgpuStreamCreate
     // CHECK: llvm.call @mgpuLaunchKernel
     // CHECK: llvm.call @mgpuStreamSynchronize
     "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1) { kernel = @kernel_module::@kernel }

@@ -4,14 +4,14 @@
 # RUN: llvm-mc -mcpu=mips32 -triple mips-unknown-unknown %s | \
 # RUN:     FileCheck -check-prefix=ASM %s
 # RUN: llvm-mc -filetype=obj -mcpu=mips32 -triple mips-unknown-unknown %s | \
-# RUN:     llvm-readobj --symbols | \
+# RUN:     llvm-readobj --symbols - | \
 # RUN:     FileCheck -check-prefixes=OBJ,OBJ-32 %s
 #
 # RUN: llvm-mc -mcpu=mips32 -mattr=micromips -triple mips-unknown-unknown %s | \
 # RUN:     FileCheck -check-prefix=ASM %s
 # RUN: llvm-mc -filetype=obj -mcpu=mips32 -mattr=micromips \
 # RUN:     -triple mips-unknown-unknown %s | \
-# RUN:     llvm-readobj --symbols | \
+# RUN:     llvm-readobj --symbols - | \
 # RUN:     FileCheck -check-prefixes=OBJ,OBJ-MM %s
 #
     .ent a

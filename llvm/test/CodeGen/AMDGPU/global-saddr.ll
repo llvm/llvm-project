@@ -46,8 +46,8 @@ entry:
 
 ; Test various offset boundaries.
 ; GFX9: global_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:4088{{$}}
+; GFX9: global_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+}}:{{[0-9]+}}] offset:2040{{$}}
 ; GFX9: global_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+}}:{{[0-9]+}}] offset:4088{{$}}
-; GFX9: global_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+}}:{{[0-9]+}}] offset:2056{{$}}
   %gep11 = getelementptr inbounds i64, i64 addrspace(1)* %gep, i64 511
   %load11 = load i64, i64 addrspace(1)* %gep11
   %gep12 = getelementptr inbounds i64, i64 addrspace(1)* %gep, i64 1023

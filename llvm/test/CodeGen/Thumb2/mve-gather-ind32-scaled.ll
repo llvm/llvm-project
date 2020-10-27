@@ -294,6 +294,45 @@ entry:
   ret <4 x i32> %gather.sext
 }
 
+define arm_aapcs_vfpcc <4 x i32> @scaled_i32_i32_2gep(i32* %base, <4 x i32>* %offptr) {
+; CHECK-LABEL: scaled_i32_i32_2gep:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    vmov.i32 q0, #0x14
+; CHECK-NEXT:    vshl.i32 q1, q1, #2
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vadd.i32 q1, q1, q0
+; CHECK-NEXT:    vldrw.u32 q0, [q1]
+; CHECK-NEXT:    bx lr
+entry:
+  %offs = load <4 x i32>, <4 x i32>* %offptr, align 4
+  %ptrs = getelementptr inbounds i32, i32* %base, <4 x i32> %offs
+  %ptrs2 = getelementptr inbounds i32, <4 x i32*> %ptrs, i32 5
+  %gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs2, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  ret <4 x i32> %gather
+}
+
+define arm_aapcs_vfpcc <4 x i32> @scaled_i32_i32_2gep2(i32* %base, <4 x i32>* %offptr) {
+; CHECK-LABEL: scaled_i32_i32_2gep2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    adr r1, .LCPI21_0
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, q1, uxtw #2]
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI21_0:
+; CHECK-NEXT:    .long 5 @ 0x5
+; CHECK-NEXT:    .long 8 @ 0x8
+; CHECK-NEXT:    .long 11 @ 0xb
+; CHECK-NEXT:    .long 14 @ 0xe
+entry:
+  %ptrs = getelementptr inbounds i32, i32* %base, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+  %ptrs2 = getelementptr inbounds i32, <4 x i32*> %ptrs, i32 5
+  %gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %ptrs2, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  ret <4 x i32> %gather
+}
+
 declare <4 x i8>  @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*>, i32, <4 x i1>, <4 x i8>)
 declare <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*>, i32, <4 x i1>, <4 x i16>)
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*>, i32, <4 x i1>, <4 x i32>)

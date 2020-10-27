@@ -121,9 +121,6 @@ bool llvm::LowerRISCVMachineOperandToMCOperand(const MachineOperand &MO,
   case MachineOperand::MO_ConstantPoolIndex:
     MCOp = lowerSymbolOperand(MO, AP.GetCPISymbol(MO.getIndex()), AP);
     break;
-  case MachineOperand::MO_MCSymbol:
-    MCOp = lowerSymbolOperand(MO, MO.getMCSymbol(), AP);
-    break;
   }
   return true;
 }

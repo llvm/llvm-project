@@ -14,12 +14,18 @@
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Pass.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace mlir;
 using namespace mlir::tblgen;
+
+static llvm::cl::OptionCategory passGenCat("Options for -gen-pass-decls");
+static llvm::cl::opt<std::string>
+    groupName("name", llvm::cl::desc("The name of this group of passes"),
+              llvm::cl::cat(passGenCat));
 
 //===----------------------------------------------------------------------===//
 // GEN: Pass base class generation
@@ -109,36 +115,49 @@ static void emitPassDecls(ArrayRef<Pass> passes, raw_ostream &os) {
 // GEN: Pass registration generation
 //===----------------------------------------------------------------------===//
 
+/// The code snippet used to generate the start of a pass base class.
+///
+/// {0}: The def name of the pass record.
+/// {1}: The argument of the pass.
+/// {2): The summary of the pass.
+/// {3}: The code for constructing the pass.
+const char *const passRegistrationCode = R"(
+//===----------------------------------------------------------------------===//
+// {0} Registration
+//===----------------------------------------------------------------------===//
+
+inline void register{0}Pass() {{
+  ::mlir::registerPass("{1}", "{2}", []() -> std::unique_ptr<::mlir::Pass> {{
+    return {3};
+  });
+}
+)";
+
+/// {0}: The name of the pass group.
+const char *const passGroupRegistrationCode = R"(
+//===----------------------------------------------------------------------===//
+// {0} Registration
+//===----------------------------------------------------------------------===//
+
+inline void register{0}Passes() {{
+)";
+
 /// Emit the code for registering each of the given passes with the global
 /// PassRegistry.
 static void emitRegistration(ArrayRef<Pass> passes, raw_ostream &os) {
   os << "#ifdef GEN_PASS_REGISTRATION\n";
   for (const Pass &pass : passes) {
-    os << llvm::formatv("#define GEN_PASS_REGISTRATION_{0}\n",
-                        pass.getDef()->getName());
-  }
-  os << "#endif // GEN_PASS_REGISTRATION\n";
-
-  for (const Pass &pass : passes) {
-    os << llvm::formatv("#ifdef GEN_PASS_REGISTRATION_{0}\n",
-                        pass.getDef()->getName());
-    os << llvm::formatv("::mlir::registerPass(\"{0}\", \"{1}\", []() -> "
-                        "std::unique_ptr<::mlir::Pass> {{ return {2}; });\n",
+    os << llvm::formatv(passRegistrationCode, pass.getDef()->getName(),
                         pass.getArgument(), pass.getSummary(),
                         pass.getConstructor());
-    os << llvm::formatv("#endif // GEN_PASS_REGISTRATION_{0}\n",
-                        pass.getDef()->getName());
-    os << llvm::formatv("#undef GEN_PASS_REGISTRATION_{0}\n",
-                        pass.getDef()->getName());
   }
 
-  os << "#ifdef GEN_PASS_REGISTRATION\n";
-  for (const Pass &pass : passes) {
-    os << llvm::formatv("#undef GEN_PASS_REGISTRATION_{0}\n",
-                        pass.getDef()->getName());
-  }
-  os << "#endif // GEN_PASS_REGISTRATION\n";
+  os << llvm::formatv(passGroupRegistrationCode, groupName);
+  for (const Pass &pass : passes)
+    os << "  register" << pass.getDef()->getName() << "Pass();\n";
+  os << "}\n";
   os << "#undef GEN_PASS_REGISTRATION\n";
+  os << "#endif // GEN_PASS_REGISTRATION\n";
 }
 
 //===----------------------------------------------------------------------===//

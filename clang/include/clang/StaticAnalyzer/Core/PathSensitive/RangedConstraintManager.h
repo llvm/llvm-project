@@ -126,6 +126,8 @@ public:
   RangeSet Intersect(BasicValueFactory &BV, Factory &F,
                      const RangeSet &Other) const;
   RangeSet Negate(BasicValueFactory &BV, Factory &F) const;
+  RangeSet Delete(BasicValueFactory &BV, Factory &F,
+                  const llvm::APSInt &Point) const;
 
   void print(raw_ostream &os) const;
 
@@ -134,15 +136,8 @@ public:
   }
 };
 
-class ConstraintRange {};
-using ConstraintRangeTy = llvm::ImmutableMap<SymbolRef, RangeSet>;
-
-template <>
-struct ProgramStateTrait<ConstraintRange>
-  : public ProgramStatePartialTrait<ConstraintRangeTy> {
-  static void *GDMIndex();
-};
-
+using ConstraintMap = llvm::ImmutableMap<SymbolRef, RangeSet>;
+ConstraintMap getConstraintMap(ProgramStateRef State);
 
 class RangedConstraintManager : public SimpleConstraintManager {
 public:
@@ -169,8 +164,8 @@ public:
 protected:
   /// Assume a constraint between a symbolic expression and a concrete integer.
   virtual ProgramStateRef assumeSymRel(ProgramStateRef State, SymbolRef Sym,
-                               BinaryOperator::Opcode op,
-                               const llvm::APSInt &Int);
+                                       BinaryOperator::Opcode op,
+                                       const llvm::APSInt &Int);
 
   //===------------------------------------------------------------------===//
   // Interface that subclasses must implement.
@@ -218,8 +213,9 @@ private:
   static void computeAdjustment(SymbolRef &Sym, llvm::APSInt &Adjustment);
 };
 
-} // end GR namespace
+} // namespace ento
+} // namespace clang
 
-} // end clang namespace
+REGISTER_FACTORY_WITH_PROGRAMSTATE(ConstraintMap)
 
 #endif

@@ -591,7 +591,7 @@ public:
   // dependence.
   void forEachMemRefEdge(ArrayRef<Edge> edges,
                          const std::function<void(Edge)> &callback) {
-    for (auto &edge : edges) {
+    for (const auto &edge : edges) {
       // Skip if 'edge' is not a memref dependence edge.
       if (!edge.value.getType().isa<MemRefType>())
         continue;
@@ -607,7 +607,7 @@ public:
   void print(raw_ostream &os) const {
     os << "\nMemRefDependenceGraph\n";
     os << "\nNodes:\n";
-    for (auto &idAndNode : nodes) {
+    for (const auto &idAndNode : nodes) {
       os << "Node: " << idAndNode.first << "\n";
       auto it = inEdges.find(idAndNode.first);
       if (it != inEdges.end()) {

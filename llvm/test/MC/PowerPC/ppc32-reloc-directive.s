@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple=powerpc-linux-musl %s | FileCheck --check-prefix=PRINT %s
 
-# RUN: llvm-mc -filetype=obj -triple=powerpc-linux-musl %s | llvm-readobj -r | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=powerpc-linux-musl %s | llvm-readobj -r - | FileCheck %s
 
 # PRINT: .reloc 8, R_PPC_NONE, .data
 # PRINT: .reloc 4, R_PPC_NONE, foo+4

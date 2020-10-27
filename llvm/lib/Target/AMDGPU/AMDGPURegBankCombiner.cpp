@@ -39,7 +39,7 @@ namespace {
 #include "AMDGPUGenRegBankGICombiner.inc"
 #undef AMDGPUREGBANKCOMBINERHELPER_GENCOMBINERHELPER_H
 
-class AMDGPURegBankCombinerInfo : public CombinerInfo {
+class AMDGPURegBankCombinerInfo final : public CombinerInfo {
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
 

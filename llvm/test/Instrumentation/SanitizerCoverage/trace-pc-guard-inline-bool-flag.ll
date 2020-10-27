@@ -1,4 +1,4 @@
-; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -sanitizer-coverage-trace-pc-guard -sanitizer-coverage-inline-bool-flag -S | FileCheck %s
+; RUN: opt < %s -sancov -sanitizer-coverage-level=1 -sanitizer-coverage-trace-pc-guard -sanitizer-coverage-inline-bool-flag -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='module(sancov-module)' -sanitizer-coverage-level=1 -sanitizer-coverage-trace-pc-guard -sanitizer-coverage-inline-bool-flag -S | FileCheck %s
 
 ; Module ctors should have stable names across modules, not something like

@@ -364,7 +364,7 @@ def build_function_body_dictionary_for_triple(args, raw_tool_output, triple, pre
   scrubber, function_re = handler
   common.build_function_body_dictionary(
           function_re, scrubber, [args], raw_tool_output, prefixes,
-          func_dict, args.verbose, False)
+          func_dict, args.verbose, False, False)
 
 ##### Generator of assembly CHECK lines
 

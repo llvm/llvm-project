@@ -2,6 +2,7 @@
 // RUN: %libomptarget-compile-run-and-check-powerpc64-ibm-linux-gnu
 // RUN: %libomptarget-compile-run-and-check-powerpc64le-ibm-linux-gnu
 // RUN: %libomptarget-compile-run-and-check-x86_64-pc-linux-gnu
+// RUN: %libomptarget-compile-run-and-check-nvptx64-nvidia-cuda
 
 // Clang 6.0 doesn't use the new map interface, undefined behavior when
 // the compiler emits "old" interface code for structures.

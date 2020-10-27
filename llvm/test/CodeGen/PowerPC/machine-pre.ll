@@ -109,10 +109,10 @@ define dso_local signext i32 @foo(i32 signext %x, i32 signext %y) nounwind {
 ; CHECK-P9-NEXT:    b .LBB1_2
 ; CHECK-P9-NEXT:  .LBB1_7: # %while.end
 ; CHECK-P9-NEXT:    lis r3, -13108
-; CHECK-P9-NEXT:    ori r3, r3, 52429
-; CHECK-P9-NEXT:    mullw r3, r28, r3
 ; CHECK-P9-NEXT:    lis r4, 13107
+; CHECK-P9-NEXT:    ori r3, r3, 52429
 ; CHECK-P9-NEXT:    ori r4, r4, 13108
+; CHECK-P9-NEXT:    mullw r3, r28, r3
 ; CHECK-P9-NEXT:    cmplw r3, r4
 ; CHECK-P9-NEXT:    blt cr0, .LBB1_9
 ; CHECK-P9-NEXT:  # %bb.8: # %if.then8

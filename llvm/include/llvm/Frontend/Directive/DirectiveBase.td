@@ -59,6 +59,9 @@ class Clause<string c> {
   // Optional class holding value of the clause in clang AST.
   string clangClass = ?;
 
+  // Optional class holding value of the clause in flang AST.
+  string flangClass = ?;
+
   // Is clause implicit? If clause is set as implicit, the default kind will
   // be return in get<LanguageName>ClauseKind instead of their own kind.
   bit isImplicit = 0;

@@ -57,3 +57,19 @@ subroutine s1()
   !ERROR: Non-extensible derived type 'inextensible' may not be used with CLASS keyword
   class(inextensible), allocatable :: x
 end subroutine s1
+
+subroutine s2()
+  type t
+    integer i
+  end type t
+  type, extends(t) :: t2
+    real x
+  end type t2
+contains
+  function f1(dummy)
+    class(*) dummy
+    type(t) f1(1)
+    !ERROR: Cannot have an unlimited polymorphic value in an array constructor
+    f1 = [ (dummy) ]
+  end function f1
+end subroutine s2

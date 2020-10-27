@@ -21,6 +21,7 @@ def ViewLikeOpInterface : OpInterface<"ViewLikeOpInterface"> {
     takes in a (view of) buffer (and potentially some other operands) and returns
     another view of buffer.
   }];
+  let cppNamespace = "::mlir";
 
   let methods = [
     InterfaceMethod<

@@ -21,9 +21,9 @@ define void @phi3(i32*) nounwind {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi 7, 30, -4
 ; CHECK-NEXT:    mtctr 3
-; CHECK-NEXT:    lwzu 8, 4(7)
 ; CHECK-NEXT:    addi 4, 29, -8
 ; CHECK-NEXT:    li 5, 0
+; CHECK-NEXT:    lwzu 8, 4(7)
 ; CHECK-NEXT:    bdz .LBB0_5
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    extswsli 6, 5, 5

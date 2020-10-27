@@ -203,9 +203,11 @@ int main() {
 // For + reduction operation initial value of private variable is -1.
 // CHECK: call void [[RED_INIT1:@.+]](float* %{{.+}}, float* %{{.+}})
 
+// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* [[VAR_PRIV]]
 // For & reduction operation initial value of private variable is defined by call of 'init()' function.
 // CHECK: call void [[RED_INIT2:@.+]](
 
+// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* [[VAR1_PRIV]]
 // For && reduction operation initial value of private variable is 1.0.
 // CHECK: call void [[RED_INIT3:@.+]](
 
@@ -599,6 +601,17 @@ int main() {
 
 // Check initialization of private copy.
 // CHECK: [[BEGIN:%.+]] = getelementptr inbounds [10 x [4 x [[S_FLOAT_TY]]]], [10 x [4 x [[S_FLOAT_TY]]]]* [[ARRS_PRIV]], i32 0, i32 0, i32 0
+// CHECK: [[END:%.+]] = getelementptr inbounds [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[BEGIN]], i64 40
+// CHECK: br label %[[CTOR:[^,]+]]
+// CHECK: [[CTOR]]:
+// CHECK: [[CUR:%.+]] = phi [[S_FLOAT_TY]]* [ [[BEGIN]], %{{.+}} ], [ [[NEXT:%.+]], %[[CTOR]] ]
+// CHECK: call void @_ZN1SIfEC1Ev([[S_FLOAT_TY]]* [[CUR]])
+// CHECK: [[NEXT:%.+]] = getelementptr inbounds [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[CUR]], i64 1
+// CHECK: [[IS_DONE:%.+]] = icmp eq [[S_FLOAT_TY]]* [[NEXT]], [[END]]
+// CHECK: br i1 [[IS_DONE]], label %[[DONE:[^,]+]], label %[[CTOR]]
+// CHECK: [[DONE]]:
+
+// CHECK: [[BEGIN:%.+]] = getelementptr inbounds [10 x [4 x [[S_FLOAT_TY]]]], [10 x [4 x [[S_FLOAT_TY]]]]* [[ARRS_PRIV]], i32 0, i32 0, i32 0
 // CHECK: [[LHS_BEGIN:%.+]] = bitcast [10 x [4 x [[S_FLOAT_TY]]]]* %{{.+}} to [[S_FLOAT_TY]]*
 // CHECK: [[END:%.+]] = getelementptr [[S_FLOAT_TY]], [[S_FLOAT_TY]]* [[BEGIN]], i64 40
 // CHECK: [[ISEMPTY:%.+]] = icmp eq [[S_FLOAT_TY]]* [[BEGIN]], [[END]]
@@ -901,9 +914,11 @@ int main() {
 // For + reduction operation initial value of private variable is 0.
 // CHECK: call void [[RED_INIT6:@.+]](
 
+// CHECK: call void @_ZN1SIiEC1Ev([[S_INT_TY]]* [[VAR_PRIV]]
 // For & reduction operation initial value of private variable is ones in all bits.
 // CHECK: call void [[RED_INIT2:@.+]](
 
+// CHECK: call void @_ZN1SIiEC1Ev([[S_INT_TY]]* [[VAR1_PRIV]]
 // For && reduction operation initial value of private variable is 1.0.
 // CHECK: call void [[RED_INIT7:@.+]](
 

@@ -1368,8 +1368,7 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
                          "    Children:        DW_CHILDREN_yes\n"
                          "    Attributes:\n"
                          "debug_info:\n"
-                         "  - Length:          0\n"
-                         "    Version:         4\n"
+                         "  - Version:         4\n"
                          "    AbbrOffset:      0\n"
                          "    AddrSize:        8\n"
                          "    Entries:\n"
@@ -1378,7 +1377,7 @@ TEST(DWARFDebugInfo, TestEmptyChildren) {
                          "      - AbbrCode:        0x00000000\n"
                          "        Values:\n";
 
-  auto ErrOrSections = DWARFYAML::emitDebugSections(StringRef(yamldata), true);
+  auto ErrOrSections = DWARFYAML::emitDebugSections(StringRef(yamldata));
   ASSERT_TRUE((bool)ErrOrSections);
   std::unique_ptr<DWARFContext> DwarfContext =
       DWARFContext::create(*ErrOrSections, 8);

@@ -302,6 +302,7 @@ public:
     VK_PPC_TLSLD,           // symbol@tlsld
     VK_PPC_LOCAL,           // symbol@local
     VK_PPC_NOTOC,           // symbol@notoc
+    VK_PPC_PCREL_OPT,       // .reloc expr, R_PPC64_PCREL_OPT, expr
 
     VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
 
@@ -499,6 +500,7 @@ public:
     Mul,  ///< Multiplication.
     NE,   ///< Inequality comparison.
     Or,   ///< Bitwise or.
+    OrNot, ///< Bitwise or not.
     Shl,  ///< Shift left.
     AShr, ///< Arithmetic shift right.
     LShr, ///< Logical shift right.

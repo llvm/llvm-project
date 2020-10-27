@@ -1,6 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
-target triple = "powerpc64-bgq-linux"
 
 define void @_Z4testSt7complexIfE(float %v0, float %v1, i64* %ref.tmp, float* %_M_value.realp.i.i, float* %_M_value.imagp.i.i) {
 entry:

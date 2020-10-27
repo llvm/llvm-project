@@ -222,6 +222,16 @@ void LowerABIAttributesPass::runOnOperation() {
   spirv::TargetEnv targetEnv(spirv::lookupTargetEnv(module));
 
   SPIRVTypeConverter typeConverter(targetEnv);
+
+  // Insert a bitcast in the case of a pointer type change.
+  typeConverter.addSourceMaterialization([](OpBuilder &builder,
+                                            spirv::PointerType type,
+                                            ValueRange inputs, Location loc) {
+    if (inputs.size() != 1 || !inputs[0].getType().isa<spirv::PointerType>())
+      return Value();
+    return builder.create<spirv::BitcastOp>(loc, type, inputs[0]).getResult();
+  });
+
   OwningRewritePatternList patterns;
   patterns.insert<ProcessInterfaceVarABI>(context, typeConverter);
 

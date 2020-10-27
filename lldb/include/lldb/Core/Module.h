@@ -958,6 +958,12 @@ protected:
                              ///by \a m_file.
   uint64_t m_object_offset;
   llvm::sys::TimePoint<> m_object_mod_time;
+
+  /// DataBuffer containing the module image, if it was provided at
+  /// construction time. Otherwise the data will be retrieved by mapping
+  /// one of the FileSpec members above.
+  lldb::DataBufferSP m_data_sp;
+
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    ///parser for this module as it may or may
                                    ///not be shared with the SymbolFile

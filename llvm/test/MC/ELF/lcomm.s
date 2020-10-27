@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple i386-pc-linux-gnu %s -filetype=obj -o - | llvm-readobj --symbols | FileCheck %s
+// RUN: llvm-mc -triple i386-pc-linux-gnu %s -filetype=obj -o - | llvm-readobj --symbols - | FileCheck %s
 
 .lcomm A, 5
 .lcomm B, 32 << 20

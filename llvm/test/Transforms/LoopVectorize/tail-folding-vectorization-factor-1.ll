@@ -10,7 +10,7 @@
 ; CHECK-REMARKS-NOT:  remark: {{.*}} vectorized loop
 
 define void @VF1-VPlanExe() {
-; CHECK-LABEL: @VF1-VPlanExe
+; CHECK-LABEL: @VF1-VPlanExe(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -21,13 +21,9 @@ define void @VF1-VPlanExe() {
 ; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[INDUCTION2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[INDUCTION3:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[INDUCTION]], 14
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[INDUCTION1]], 14
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[INDUCTION2]], 14
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i64 [[INDUCTION3]], 14
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; CHECK-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -55,7 +51,7 @@ for.body:
 }
 
 define void @VF1-VPWidenCanonicalIVRecipeExe(double* %ptr1) {
-; CHECK-LABEL: @VF1-VPWidenCanonicalIVRecipeExe
+; CHECK-LABEL: @VF1-VPWidenCanonicalIVRecipeExe(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds double, double* [[PTR1:%.*]], i64 15
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -72,17 +68,9 @@ define void @VF1-VPWidenCanonicalIVRecipeExe(double* %ptr1) {
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr double, double* [[PTR1]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr double, double* [[PTR1]], i64 [[TMP3]]
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[VEC_IV4:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[VEC_IV5:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IV6:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[VEC_IV]], 14
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule i64 [[VEC_IV4]], 14
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule i64 [[VEC_IV5]], 14
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ule i64 [[VEC_IV6]], 14
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !3
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
+; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !3
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

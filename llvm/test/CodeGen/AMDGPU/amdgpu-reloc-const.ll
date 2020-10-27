@@ -1,5 +1,9 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -filetype=obj -o %t.o < %s && llvm-readobj -relocations %t.o | FileCheck --check-prefix=ELF %s
+
+; RUN: llc -global-isel -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgcn--amdpal -mcpu=gfx900 -filetype=obj -o %t.o < %s && llvm-readobj -relocations %t.o | FileCheck --check-prefix=ELF %s
+
 ; GCN-LABEL: {{^}}ps_main:
 ; GCN: v_mov_b32_{{.*}} v[[relocreg:[0-9]+]], doff_0_0_b@abs32@lo
 ; GCN-NEXT: exp {{.*}} v[[relocreg]], {{.*}}

@@ -1,5 +1,5 @@
 @ RUN: llvm-mc %s -triple=armv7-unknown-linux-gnueabi -filetype=obj -o - \
-@ RUN:   | llvm-readobj -S --sd --sr --symbols > %t
+@ RUN:   | llvm-readobj -S --sd --sr --symbols - > %t
 @ RUN: FileCheck %s < %t
 @ RUN: FileCheck --check-prefix=RELOC %s < %t
 

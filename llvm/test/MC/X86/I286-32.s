@@ -24,7 +24,7 @@ larl 485498096(%edx), %eax
 // CHECK: encoding: [0x0f,0x02,0x44,0x02,0x40]        
 larl 64(%edx,%eax), %eax 
 
-// CHECK: larl %eax, %eax 
+// CHECK: larl %ax, %eax 
 // CHECK: encoding: [0x0f,0x02,0xc0]        
 larl %eax, %eax 
 
@@ -100,7 +100,7 @@ lsll 485498096(%edx), %eax
 // CHECK: encoding: [0x0f,0x03,0x44,0x02,0x40]        
 lsll 64(%edx,%eax), %eax 
 
-// CHECK: lsll %eax, %eax 
+// CHECK: lsll %ax, %eax 
 // CHECK: encoding: [0x0f,0x03,0xc0]        
 lsll %eax, %eax 
 

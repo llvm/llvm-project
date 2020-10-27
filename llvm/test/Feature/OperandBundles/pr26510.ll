@@ -1,4 +1,4 @@
-; RUN: opt -S -globals-aa -functionattrs < %s | FileCheck %s
+; RUN: opt -S -globals-aa -function-attrs < %s | FileCheck %s
 ; RUN: opt -S -O3 < %s | FileCheck %s
 
 ; Apart from checking for the direct cause of the bug, we also check

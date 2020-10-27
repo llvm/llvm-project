@@ -1,4 +1,4 @@
-; RUN: opt -S -functionattrs < %s | FileCheck %s
+; RUN: opt -S -function-attrs < %s | FileCheck %s
 
 declare void @f_readonly() readonly
 declare void @f_readnone() readnone

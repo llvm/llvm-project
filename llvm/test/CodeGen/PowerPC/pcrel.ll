@@ -1,10 +1,10 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=future -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-S
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=future -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
+; RUN: llc -verify-machineinstrs -target-abi=elfv2 -mtriple=powerpc64-- \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
 ; RUN:   --filetype=obj < %s | \
-; RUN:   llvm-objdump --mcpu=future -dr - | FileCheck %s --check-prefix=CHECK-O
+; RUN:   llvm-objdump --mcpu=pwr10 -dr - | FileCheck %s --check-prefix=CHECK-O
 
 ; Constant Pool Index.
 ; CHECK-S-LABEL: ConstPool
@@ -41,12 +41,15 @@ define dso_local signext i32 @ReadGlobalVarInt() local_unnamed_addr  {
 ; CHECK-S-LABEL: ReadGlobalVarInt
 ; CHECK-S:       # %bb.0: # %entry
 ; CHECK-S-NEXT:    pld r3, valIntGlob@got@pcrel(0), 1
+; CHECK-S-NEXT: .Lpcrel:
+; CHECK-S-NEXT:    .reloc .Lpcrel-8,R_PPC64_PCREL_OPT,.-(.Lpcrel-8)
 ; CHECK-S-NEXT:    lwa r3, 0(r3)
 ; CHECK-S-NEXT:    blr
 
 ; CHECK-O-LABEL: ReadGlobalVarInt
 ; CHECK-O:         pld 3, 0(0), 1
 ; CHECK-O-NEXT:    R_PPC64_GOT_PCREL34 valIntGlob
+; CHECK-O-NEXT:    R_PPC64_PCREL_OPT *ABS*+0x8
 ; CHECK-O-NEXT:    lwa 3, 0(3)
 ; CHECK-O-NEXT:    blr
 entry:

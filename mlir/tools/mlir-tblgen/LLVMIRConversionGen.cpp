@@ -102,7 +102,7 @@ static bool isOperandName(const tblgen::Operator &op, StringRef name) {
 }
 
 // Emit to `os` the operator-name driven check and the call to LLVM IRBuilder
-// for one definition of a LLVM IR Dialect operation.  Return true on success.
+// for one definition of an LLVM IR Dialect operation.  Return true on success.
 static bool emitOneBuilder(const Record &record, raw_ostream &os) {
   auto op = tblgen::Operator(record);
 
@@ -135,8 +135,7 @@ static bool emitOneBuilder(const Record &record, raw_ostream &os) {
     } else if (isResultName(op, name)) {
       bs << formatv("valueMapping[op.{0}()]", name);
     } else if (name == "_resultType") {
-      bs << "op.getResult().getType().cast<LLVM::LLVMType>()."
-            "getUnderlyingType()";
+      bs << "convertType(op.getResult().getType().cast<LLVM::LLVMType>())";
     } else if (name == "_hasResult") {
       bs << "opInst.getNumResults() == 1";
     } else if (name == "_location") {

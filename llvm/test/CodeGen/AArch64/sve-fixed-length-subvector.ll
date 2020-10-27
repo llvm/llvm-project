@@ -13,7 +13,10 @@
 ; RUN: llc -aarch64-sve-vector-bits-min=1664 -aarch64-enable-atomic-cfg-tidy=false < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
 ; RUN: llc -aarch64-sve-vector-bits-min=1792 -aarch64-enable-atomic-cfg-tidy=false < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
 ; RUN: llc -aarch64-sve-vector-bits-min=1920 -aarch64-enable-atomic-cfg-tidy=false < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
-; RUN: llc -aarch64-sve-vector-bits-min=2048 -aarch64-enable-atomic-cfg-tidy=false < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024,VBITS_GE_2048
+; RUN: llc -aarch64-sve-vector-bits-min=2048 -aarch64-enable-atomic-cfg-tidy=false < %s 2>%t | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024,VBITS_GE_2048
+; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+
+; WARN-NOT: warning
 
 ; Test we can code generater patterns of the form:
 ;   fixed_length_vector = ISD::EXTRACT_SUBVECTOR scalable_vector, 0
@@ -83,6 +86,21 @@ define void @subvector_v64i32(<64 x i32> *%in, <64 x i32>* %out) #0 {
 bb1:
   store <64 x i32> %a, <64 x i32>* %out
   ret void
+}
+
+;
+define <8 x i1> @no_warn_dropped_scalable(<8 x i32>* %in) #0 {
+; CHECK-LABEL: no_warn_dropped_scalable:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
+; CHECK: ld1w { z{{[0-9]+}}.s }, [[PG]]/z, [x0]
+; CHECK-COUNT-8: cmp w{{[0-9]+}}, #0
+; CHECK: ret
+  %a = load <8 x i32>, <8 x i32>* %in
+  br label %bb1
+
+bb1:
+  %cond = icmp sgt <8 x i32> %a, zeroinitializer
+  ret <8 x i1> %cond
 }
 
 attributes #0 = { "target-features"="+sve" }

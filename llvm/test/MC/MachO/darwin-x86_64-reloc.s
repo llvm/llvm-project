@@ -1,4 +1,4 @@
-// RUN: llvm-mc -n -triple x86_64-apple-darwin9 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs | FileCheck %s
+// RUN: llvm-mc -n -triple x86_64-apple-darwin9 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs - | FileCheck %s
 
 // These examples are taken from <mach-o/x86_64/reloc.h>.
 

@@ -25,12 +25,14 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NoFolder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -287,7 +289,7 @@ bool DeadArgumentEliminationPass::RemoveDeadArgumentsFromCallers(Function &Fn) {
 
   for (Argument &Arg : Fn.args()) {
     if (!Arg.hasSwiftErrorAttr() && Arg.use_empty() &&
-        !Arg.hasPassPointeeByValueAttr()) {
+        !Arg.hasPassPointeeByValueCopyAttr()) {
       if (Arg.isUsedByMetadata()) {
         Arg.replaceAllUsesWith(UndefValue::get(Arg.getType()));
         Changed = true;
@@ -967,16 +969,16 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
         for (unsigned Ri = 0; Ri != RetCount; ++Ri)
           if (NewRetIdxs[Ri] != -1) {
             Value *V;
+            IRBuilder<NoFolder> IRB(InsertPt);
             if (RetTypes.size() > 1)
               // We are still returning a struct, so extract the value from our
               // return value
-              V = ExtractValueInst::Create(NewCB, NewRetIdxs[Ri], "newret",
-                                           InsertPt);
+              V = IRB.CreateExtractValue(NewCB, NewRetIdxs[Ri], "newret");
             else
               // We are now returning a single element, so just insert that
               V = NewCB;
             // Insert the value at the old position
-            RetVal = InsertValueInst::Create(RetVal, V, Ri, "oldret", InsertPt);
+            RetVal = IRB.CreateInsertValue(RetVal, V, Ri, "oldret");
           }
         // Now, replace all uses of the old call instruction with the return
         // struct we built
@@ -1019,6 +1021,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
   if (F->getReturnType() != NF->getReturnType())
     for (BasicBlock &BB : *NF)
       if (ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator())) {
+        IRBuilder<NoFolder> IRB(RI);
         Value *RetVal = nullptr;
 
         if (!NFTy->getReturnType()->isVoidTy()) {
@@ -1033,14 +1036,14 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
           RetVal = UndefValue::get(NRetTy);
           for (unsigned RetI = 0; RetI != RetCount; ++RetI)
             if (NewRetIdxs[RetI] != -1) {
-              ExtractValueInst *EV =
-                  ExtractValueInst::Create(OldRet, RetI, "oldret", RI);
+              Value *EV = IRB.CreateExtractValue(OldRet, RetI, "oldret");
+
               if (RetTypes.size() > 1) {
                 // We're still returning a struct, so reinsert the value into
                 // our new return value at the new index
 
-                RetVal = InsertValueInst::Create(RetVal, EV, NewRetIdxs[RetI],
-                                                 "newret", RI);
+                RetVal = IRB.CreateInsertValue(RetVal, EV, NewRetIdxs[RetI],
+                                               "newret");
               } else {
                 // We are now only returning a simple value, so just return the
                 // extracted value.

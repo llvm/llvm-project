@@ -107,6 +107,9 @@ public:
   bool matchCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
   void applyCombineIndexedLoadStore(MachineInstr &MI, IndexedLoadStoreMatchInfo &MatchInfo);
 
+  bool matchSextTruncSextLoad(MachineInstr &MI);
+  bool applySextTruncSextLoad(MachineInstr &MI);
+
   bool matchElideBrByInvertingCond(MachineInstr &MI);
   void applyElideBrByInvertingCond(MachineInstr &MI);
   bool tryElideBrByInvertingCond(MachineInstr &MI);
@@ -196,6 +199,14 @@ public:
                                  unsigned &ShiftVal);
   bool applyCombineShiftToUnmerge(MachineInstr &MI, const unsigned &ShiftVal);
   bool tryCombineShiftToUnmerge(MachineInstr &MI, unsigned TargetShiftAmount);
+
+  /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
+  bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg);
+  bool applyCombineI2PToP2I(MachineInstr &MI, Register &Reg);
+
+  /// Transform PtrToInt(IntToPtr(x)) to x.
+  bool matchCombineP2IToI2P(MachineInstr &MI, Register &Reg);
+  bool applyCombineP2IToI2P(MachineInstr &MI, Register &Reg);
 
   /// Return true if any explicit use operand on \p MI is defined by a
   /// G_IMPLICIT_DEF.

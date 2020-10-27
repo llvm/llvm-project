@@ -17,9 +17,11 @@
 // and also provides basic-block coverage for every input.
 //
 // Build:
-//   1. Compile this file (DataFlow.cpp) with -fsanitize=dataflow and -O2.
+//   1. Compile this file (DataFlow.cpp) with -fsanitize=dataflow -mllvm
+//       -dfsan-fast-16-labels and -O2.
 //   2. Compile DataFlowCallbacks.cpp with -O2 -fPIC.
 //   3. Build the fuzz target with -g -fsanitize=dataflow
+//       -mllvm -dfsan-fast-16-labels
 //       -fsanitize-coverage=trace-pc-guard,pc-table,bb,trace-cmp
 //   4. Link those together with -fsanitize=dataflow
 //
@@ -36,7 +38,7 @@
 // Run:
 //   # Collect data flow and coverage for INPUT_FILE
 //   # write to OUTPUT_FILE (default: stdout)
-//   export DFSAN_OPTIONS=fast16labels=1:warn_unimplemented=0
+//   export DFSAN_OPTIONS=warn_unimplemented=0
 //   ./a.out INPUT_FILE [OUTPUT_FILE]
 //
 //   # Print all instrumented functions. llvm-symbolizer must be present in PATH

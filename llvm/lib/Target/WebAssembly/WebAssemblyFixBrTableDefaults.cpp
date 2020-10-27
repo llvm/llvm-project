@@ -41,13 +41,51 @@ public:
 
 char WebAssemblyFixBrTableDefaults::ID = 0;
 
+// Target indepedent selection dag assumes that it is ok to use PointerTy
+// as the index for a "switch", whereas Wasm so far only has a 32-bit br_table.
+// See e.g. SelectionDAGBuilder::visitJumpTableHeader
+// We have a 64-bit br_table in the tablegen defs as a result, which does get
+// selected, and thus we get incorrect truncates/extensions happening on
+// wasm64. Here we fix that.
+void fixBrTableIndex(MachineInstr &MI, MachineBasicBlock *MBB,
+                     MachineFunction &MF) {
+  // Only happens on wasm64.
+  auto &WST = MF.getSubtarget<WebAssemblySubtarget>();
+  if (!WST.hasAddr64())
+    return;
+
+  assert(MI.getDesc().getOpcode() == WebAssembly::BR_TABLE_I64 &&
+         "64-bit br_table pseudo instruction expected");
+
+  // Find extension op, if any. It sits in the previous BB before the branch.
+  auto ExtMI = MF.getRegInfo().getVRegDef(MI.getOperand(0).getReg());
+  if (ExtMI->getOpcode() == WebAssembly::I64_EXTEND_U_I32) {
+    // Unnecessarily extending a 32-bit value to 64, remove it.
+    assert(MI.getOperand(0).getReg() == ExtMI->getOperand(0).getReg());
+    MI.getOperand(0).setReg(ExtMI->getOperand(1).getReg());
+    ExtMI->eraseFromParent();
+  } else {
+    // Incoming 64-bit value that needs to be truncated.
+    Register Reg32 =
+        MF.getRegInfo().createVirtualRegister(&WebAssembly::I32RegClass);
+    BuildMI(*MBB, MI.getIterator(), MI.getDebugLoc(),
+            WST.getInstrInfo()->get(WebAssembly::I32_WRAP_I64), Reg32)
+        .addReg(MI.getOperand(0).getReg());
+    MI.getOperand(0).setReg(Reg32);
+  }
+
+  // We now have a 32-bit operand in all cases, so change the instruction
+  // accordingly.
+  MI.setDesc(WST.getInstrInfo()->get(WebAssembly::BR_TABLE_I32));
+}
+
 // `MI` is a br_table instruction with a dummy default target argument. This
 // function finds and adds the default target argument and removes any redundant
 // range check preceding the br_table. Returns the MBB that the br_table is
 // moved into so it can be removed from further consideration, or nullptr if the
 // br_table cannot be optimized.
-MachineBasicBlock *fixBrTable(MachineInstr &MI, MachineBasicBlock *MBB,
-                              MachineFunction &MF) {
+MachineBasicBlock *fixBrTableDefault(MachineInstr &MI, MachineBasicBlock *MBB,
+                                     MachineFunction &MF) {
   // Get the header block, which contains the redundant range check.
   assert(MBB->pred_size() == 1 && "Expected a single guard predecessor");
   auto *HeaderMBB = *MBB->pred_begin();
@@ -125,7 +163,8 @@ bool WebAssemblyFixBrTableDefaults::runOnMachineFunction(MachineFunction &MF) {
     MBBSet.erase(MBB);
     for (auto &MI : *MBB) {
       if (WebAssembly::isBrTable(MI)) {
-        auto *Fixed = fixBrTable(MI, MBB, MF);
+        fixBrTableIndex(MI, MBB, MF);
+        auto *Fixed = fixBrTableDefault(MI, MBB, MF);
         if (Fixed != nullptr) {
           MBBSet.erase(Fixed);
           Changed = true;

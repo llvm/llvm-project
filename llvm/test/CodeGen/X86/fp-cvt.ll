@@ -1090,3 +1090,55 @@ define x86_fp80 @rint_fp80_ld(x86_fp80 *%a0) nounwind {
 }
 
 declare x86_fp80 @llvm.rint.f80(x86_fp80 %p)
+
+;
+; roundeven
+;
+
+define x86_fp80 @roundeven_fp80(x86_fp80 %a0) nounwind {
+; X86-LABEL: roundeven_fp80:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; X86-NEXT:    fstpt (%esp)
+; X86-NEXT:    calll roundevenl
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: roundeven_fp80:
+; X64:       # %bb.0:
+; X64-NEXT:    subq $24, %rsp
+; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; X64-NEXT:    fstpt (%rsp)
+; X64-NEXT:    callq roundevenl
+; X64-NEXT:    addq $24, %rsp
+; X64-NEXT:    retq
+  %1 = call x86_fp80 @llvm.roundeven.f80(x86_fp80 %a0)
+  ret x86_fp80 %1
+}
+
+define x86_fp80 @roundeven_fp80_ld(x86_fp80 *%a0) nounwind {
+; X86-LABEL: roundeven_fp80_ld:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    fldt (%eax)
+; X86-NEXT:    fstpt (%esp)
+; X86-NEXT:    calll roundevenl
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: roundeven_fp80_ld:
+; X64:       # %bb.0:
+; X64-NEXT:    subq $24, %rsp
+; X64-NEXT:    fldt (%rdi)
+; X64-NEXT:    fstpt (%rsp)
+; X64-NEXT:    callq roundevenl
+; X64-NEXT:    addq $24, %rsp
+; X64-NEXT:    retq
+  %1 = load x86_fp80, x86_fp80 *%a0
+  %2 = call x86_fp80 @llvm.roundeven.f80(x86_fp80 %1)
+  ret x86_fp80 %2
+}
+
+declare x86_fp80 @llvm.roundeven.f80(x86_fp80 %p)

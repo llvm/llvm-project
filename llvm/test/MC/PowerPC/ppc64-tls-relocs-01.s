@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=powerpc64-unknown-linux-gnu -filetype=obj %s | \
-# RUN: llvm-readobj -r | FileCheck %s
+# RUN: llvm-readobj -r - | FileCheck %s
 
         .text
         addis 3, 13, t@tprel@ha

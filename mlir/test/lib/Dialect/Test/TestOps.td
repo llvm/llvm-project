@@ -12,6 +12,7 @@
 include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
+include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -1188,6 +1189,30 @@ def IsolatedRegionOp : TEST_Op<"isolated_region", [IsolatedFromAbove]> {
   let printer = [{ return ::print(p, *this); }];
 }
 
+def SSACFGRegionOp : TEST_Op<"ssacfg_region",  [
+    DeclareOpInterfaceMethods<RegionKindInterface>]> {
+  let summary =  "operation with an SSACFG region";
+  let description = [{
+    Test op that defines an SSACFG region.
+  }];
+
+  let regions = (region VariadicRegion<AnyRegion>:$regions);
+  let arguments = (ins Variadic<AnyType>);
+  let results = (outs Variadic<AnyType>);
+}
+
+def GraphRegionOp : TEST_Op<"graph_region",  [
+    DeclareOpInterfaceMethods<RegionKindInterface>]> {
+  let summary =  "operation with a graph region";
+  let description = [{
+    Test op that defines a graph region.
+  }];
+
+  let regions = (region AnyRegion:$region);
+  let parser = [{ return ::parse$cppClass(parser, result); }];
+  let printer = [{ return ::print(p, *this); }];
+}
+
 def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
   let summary =  "affine scope operation";
   let description = [{
@@ -1253,9 +1278,13 @@ def FormatAttrOp : TEST_Op<"format_attr_op"> {
 }
 
 // Test that we elide optional attributes that are within the syntax.
-def FormatOptAttrOp : TEST_Op<"format_opt_attr_op"> {
+def FormatOptAttrAOp : TEST_Op<"format_opt_attr_op_a"> {
   let arguments = (ins OptionalAttr<I64Attr>:$opt_attr);
-  let assemblyFormat = "(`(`$opt_attr^`)`)? attr-dict";
+  let assemblyFormat = "(`(` $opt_attr^ `)` )? attr-dict";
+}
+def FormatOptAttrBOp : TEST_Op<"format_opt_attr_op_b"> {
+  let arguments = (ins OptionalAttr<I64Attr>:$opt_attr);
+  let assemblyFormat = "($opt_attr^)? attr-dict";
 }
 
 // Test that we elide attributes that are within the syntax.
@@ -1442,6 +1471,38 @@ def RegionIfOp : TEST_Op<"region_if",
     }
     OperandRange getSuccessorEntryOperands(unsigned index);
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// Test TableGen generated build() methods
+//===----------------------------------------------------------------------===//
+
+def TableGenConstant : TEST_Op<"tblgen_constant"> {
+  let results = (outs AnyType);
+}
+
+// No variadic args or results.
+def TableGenBuildOp0 : TEST_Op<"tblgen_build_0"> {
+  let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$result);
+}
+
+// Sigle variadic arg and single variadic results.
+def TableGenBuildOp1 : TEST_Op<"tblgen_build_1"> {
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$results);
+}
+
+// Single variadic arg and non-variadic results.
+def TableGenBuildOp2 : TEST_Op<"tblgen_build_2"> {
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs AnyType:$result);
+}
+
+// Single variadic arg and multiple variadic results.
+def TableGenBuildOp3 : TEST_Op<"tblgen_build_3", [SameVariadicResultSize]> {
+  let arguments = (ins Variadic<AnyType>:$inputs);
+  let results = (outs Variadic<AnyType>:$resultA, Variadic<AnyType>:$resultB);
 }
 
 #endif // TEST_OPS

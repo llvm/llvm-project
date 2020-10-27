@@ -1,0 +1,9 @@
+UNSUPPORTED: darwin, freebsd, windows
+
+RUN: %cpp_compiler -fno-sanitize=address %S/MemcmpTest.cpp -o %t-NoAsanMemcmpTest
+RUN: not %run %t-NoAsanMemcmpTest -seed=1 -runs=10000000   2>&1 | FileCheck %s
+
+RUN: %cpp_compiler -fno-sanitize=address -fno-builtin-calloc %S/CustomAllocator.cpp %S/MemcmpTest.cpp -o %t-NoAsanCustomAllocatorMemcmpTest
+RUN: not %run %t-NoAsanCustomAllocatorMemcmpTest -seed=1 -runs=10000000   2>&1 | FileCheck %s
+
+CHECK: BINGO

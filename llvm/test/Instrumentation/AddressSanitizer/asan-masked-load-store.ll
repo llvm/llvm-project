@@ -1,10 +1,18 @@
-; RUN: opt < %s -asan -asan-instrumentation-with-call-threshold=0 -S \
+; RUN: opt < %s -asan -asan-instrumentation-with-call-threshold=0 -S -enable-new-pm=0 \
 ; RUN:     | FileCheck %s -check-prefix=LOAD -check-prefix=STORE -check-prefix=ALL
-; RUN: opt < %s -asan -asan-instrumentation-with-call-threshold=0 -asan-instrument-reads=0 -S \
+; RUN: opt < %s -passes='asan-function-pipeline' -asan-instrumentation-with-call-threshold=0 -S \
+; RUN:     | FileCheck %s -check-prefix=LOAD -check-prefix=STORE -check-prefix=ALL
+; RUN: opt < %s -asan -asan-instrumentation-with-call-threshold=0 -asan-instrument-reads=0 -S -enable-new-pm=0 \
 ; RUN:     | FileCheck %s -check-prefix=NOLOAD -check-prefix=STORE -check-prefix=ALL
-; RUN: opt < %s -asan -asan-instrumentation-with-call-threshold=0 -asan-instrument-writes=0 -S \
+; RUN: opt < %s -passes='asan-function-pipeline' -asan-instrumentation-with-call-threshold=0 -asan-instrument-reads=0 -S \
+; RUN:     | FileCheck %s -check-prefix=NOLOAD -check-prefix=STORE -check-prefix=ALL
+; RUN: opt < %s -asan -asan-instrumentation-with-call-threshold=0 -asan-instrument-writes=0 -S -enable-new-pm=0 \
 ; RUN:     | FileCheck %s -check-prefix=LOAD -check-prefix=NOSTORE -check-prefix=ALL
-; RUN: opt < %s -asan -asan-instrumentation-with-call-threshold=0 -asan-instrument-reads=0 -asan-instrument-writes=0 -S \
+; RUN: opt < %s -passes='asan-function-pipeline' -asan-instrumentation-with-call-threshold=0 -asan-instrument-writes=0 -S \
+; RUN:     | FileCheck %s -check-prefix=LOAD -check-prefix=NOSTORE -check-prefix=ALL
+; RUN: opt < %s -asan -asan-instrumentation-with-call-threshold=0 -asan-instrument-reads=0 -asan-instrument-writes=0 -S -enable-new-pm=0 \
+; RUN:     | FileCheck %s -check-prefix=NOLOAD -check-prefix=NOSTORE -check-prefix=ALL
+; RUN: opt < %s -passes='asan-function-pipeline' -asan-instrumentation-with-call-threshold=0 -asan-instrument-reads=0 -asan-instrument-writes=0 -S \
 ; RUN:     | FileCheck %s -check-prefix=NOLOAD -check-prefix=NOSTORE -check-prefix=ALL
 ; Support ASan instrumentation for constant-mask llvm.masked.{load,store}
 

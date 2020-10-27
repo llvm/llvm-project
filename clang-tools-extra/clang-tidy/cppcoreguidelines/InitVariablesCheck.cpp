@@ -26,12 +26,12 @@ AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
 InitVariablesCheck::InitVariablesCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IncludeStyle(Options.getLocalOrGlobal("IncludeStyle",
-                                            utils::IncludeSorter::IS_LLVM)),
+      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
+                                               utils::IncludeSorter::IS_LLVM)),
       MathHeader(Options.get("MathHeader", "math.h")) {}
 
 void InitVariablesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IncludeStyle", IncludeStyle);
+  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
   Options.store(Opts, "MathHeader", MathHeader);
 }
 
@@ -51,9 +51,7 @@ void InitVariablesCheck::registerMatchers(MatchFinder *Finder) {
 void InitVariablesCheck::registerPPCallbacks(const SourceManager &SM,
                                              Preprocessor *PP,
                                              Preprocessor *ModuleExpanderPP) {
-  IncludeInserter =
-      std::make_unique<utils::IncludeInserter>(SM, getLangOpts(), IncludeStyle);
-  PP->addPPCallbacks(IncludeInserter->CreatePPCallbacks());
+  IncludeInserter.registerPreprocessor(PP);
 }
 
 void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
@@ -104,7 +102,7 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
                    MatchedDecl->getName().size()),
                InitializationString);
     if (AddMathInclude) {
-      Diagnostic << IncludeInserter->CreateIncludeInsertion(
+      Diagnostic << IncludeInserter.createIncludeInsertion(
           Source.getFileID(MatchedDecl->getBeginLoc()), MathHeader, false);
     }
   }

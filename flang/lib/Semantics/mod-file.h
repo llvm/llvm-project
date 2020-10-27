@@ -32,7 +32,7 @@ class SemanticsContext;
 
 class ModFileWriter {
 public:
-  ModFileWriter(SemanticsContext &context) : context_{context} {}
+  explicit ModFileWriter(SemanticsContext &context) : context_{context} {}
   bool WriteAll();
 
 private:

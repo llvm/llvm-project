@@ -1,4 +1,5 @@
-; RUN: opt < %s -analyze -scalar-evolution
+; RUN: opt < %s -analyze -enable-new-pm=0 -scalar-evolution
+; RUN: opt < %s -disable-output -scalar-evolution
 ; PR4501
 
 define void @test() {

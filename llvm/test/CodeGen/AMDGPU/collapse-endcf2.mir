@@ -38,7 +38,7 @@ body:             |
   ; GCN:   undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, [[COPY1]], implicit $exec
   ; GCN:   %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
   ; GCN:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY %5.sub1
-  ; GCN:   undef %8.sub0:vreg_64, %9:sreg_64_xexec = V_ADD_I32_e64 %5.sub0, %6.sub0, 0, implicit $exec
+  ; GCN:   undef %8.sub0:vreg_64, %9:sreg_64_xexec = V_ADD_CO_U32_e64 %5.sub0, %6.sub0, 0, implicit $exec
   ; GCN:   %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, [[COPY3]], %9, 0, implicit $exec
   ; GCN:   %5.sub3:sgpr_128 = S_MOV_B32 61440
   ; GCN:   %5.sub2:sgpr_128 = S_MOV_B32 0
@@ -87,7 +87,7 @@ body:             |
     undef %6.sub0:vreg_64 = V_LSHLREV_B32_e32 2, %0, implicit $exec
     %6.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
     %7:vgpr_32 = COPY %5.sub1
-    undef %8.sub0:vreg_64, %9:sreg_64_xexec = V_ADD_I32_e64 %5.sub0, %6.sub0, 0, implicit $exec
+    undef %8.sub0:vreg_64, %9:sreg_64_xexec = V_ADD_CO_U32_e64 %5.sub0, %6.sub0, 0, implicit $exec
     %8.sub1:vreg_64, dead %10:sreg_64_xexec = V_ADDC_U32_e64 0, %7, %9, 0, implicit $exec
     %5.sub3:sgpr_128 = S_MOV_B32 61440
     %5.sub2:sgpr_128 = S_MOV_B32 0

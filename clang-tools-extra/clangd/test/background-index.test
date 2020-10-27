@@ -1,23 +1,23 @@
-# We need to splice paths into file:// URIs for this test.
-# UNSUPPORTED: windows-msvc
-
 # Use a copy of inputs, as we'll mutate it (as will the background index).
-# RUN: rm -rf %t
-# RUN: cp -r %S/Inputs/background-index %t
+# RUN: rm -rf %/t
+# RUN: cp -r %/S/Inputs/background-index %/t
 # Need to embed the correct temp path in the actual JSON-RPC requests.
-# RUN: sed -i -e "s|DIRECTORY|%t|" %t/definition.jsonrpc
-# RUN: sed -i -e "s|DIRECTORY|%t|" %t/compile_commands.json
+# RUN: sed -e "s|DIRECTORY|%/t|" %/t/definition.jsonrpc.tmpl > %/t/definition.jsonrpc.1
+# RUN: sed -e "s|DIRECTORY|%/t|" %/t/compile_commands.json.tmpl > %/t/compile_commands.json
+# On Windows, we need the URI in didOpen to look like "uri":"file:///C:/..."
+# (with the extra slash in the front), so we add it here.
+# RUN: sed -E -e 's|"file://([A-Z]):/|"file:///\1:/|g' %/t/definition.jsonrpc.1 > %/t/definition.jsonrpc
 
 # We're editing bar.cpp, which includes foo.h.
 # foo() is declared in foo.h and defined in foo.cpp.
 # The background index should allow us to go-to-definition on foo().
 # We should also see indexing progress notifications.
-# RUN: clangd -background-index -lit-test < %t/definition.jsonrpc | FileCheck %t/definition.jsonrpc --check-prefixes=CHECK,BUILD
+# RUN: clangd -background-index -lit-test < %/t/definition.jsonrpc | FileCheck %/t/definition.jsonrpc --check-prefixes=CHECK,BUILD
 
 # Test that the index is writing files in the expected location.
-# RUN: ls %t/.cache/clangd/index/foo.cpp.*.idx
-# RUN: ls %t/sub_dir/.cache/clangd/index/foo.h.*.idx
+# RUN: ls %/t/.cache/clangd/index/foo.cpp.*.idx
+# RUN: ls %/t/sub_dir/.cache/clangd/index/foo.h.*.idx
 
 # Test the index is read from disk: delete code and restart clangd.
-# RUN: rm %t/foo.cpp
-# RUN: clangd -background-index -lit-test < %t/definition.jsonrpc | FileCheck %t/definition.jsonrpc --check-prefixes=CHECK,USE
+# RUN: rm %/t/foo.cpp
+# RUN: clangd -background-index -lit-test < %/t/definition.jsonrpc | FileCheck %/t/definition.jsonrpc --check-prefixes=CHECK,USE

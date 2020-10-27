@@ -804,8 +804,8 @@ define double @foo3_fmf(double %a) nounwind {
 ; CHECK-P9-LABEL: foo3_fmf:
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    addis 3, 2, .LCPI20_2@toc@ha
-; CHECK-P9-NEXT:    lfd 2, .LCPI20_2@toc@l(3)
 ; CHECK-P9-NEXT:    xsabsdp 0, 1
+; CHECK-P9-NEXT:    lfd 2, .LCPI20_2@toc@l(3)
 ; CHECK-P9-NEXT:    xscmpudp 0, 0, 2
 ; CHECK-P9-NEXT:    xxlxor 0, 0, 0
 ; CHECK-P9-NEXT:    blt 0, .LBB20_2
@@ -899,8 +899,8 @@ define float @goo3_fmf(float %a) nounwind {
 ; CHECK-P9-LABEL: goo3_fmf:
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    addis 3, 2, .LCPI22_2@toc@ha
-; CHECK-P9-NEXT:    lfs 2, .LCPI22_2@toc@l(3)
 ; CHECK-P9-NEXT:    xsabsdp 0, 1
+; CHECK-P9-NEXT:    lfs 2, .LCPI22_2@toc@l(3)
 ; CHECK-P9-NEXT:    fcmpu 0, 0, 2
 ; CHECK-P9-NEXT:    xxlxor 0, 0, 0
 ; CHECK-P9-NEXT:    blt 0, .LBB22_2

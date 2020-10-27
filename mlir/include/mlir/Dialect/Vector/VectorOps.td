@@ -15,7 +15,7 @@
 
 include "mlir/Dialect/Affine/IR/AffineOpsBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/Interfaces/VectorUnrollInterface.td"
+include "mlir/Interfaces/VectorInterfaces.td"
 
 def Vector_Dialect : Dialect {
   let name = "vector";
@@ -905,34 +905,9 @@ def Vector_ExtractStridedSliceOp :
   let assemblyFormat = "$vector attr-dict `:` type($vector) `to` type(results)";
 }
 
-def Vector_TransferOpUtils {
-  code extraTransferDeclaration = [{
-    static StringRef getMaskedAttrName() { return "masked"; }
-    static StringRef getPermutationMapAttrName() { return "permutation_map"; }
-    bool isMaskedDim(unsigned dim) {
-      return !masked() ||
-        masked()->cast<ArrayAttr>()[dim].cast<BoolAttr>().getValue();
-    }
-    MemRefType getMemRefType() {
-      return memref().getType().cast<MemRefType>();
-    }
-    VectorType getVectorType() {
-      return vector().getType().cast<VectorType>();
-    }
-    // Number of dimensions that participate in the permutation map.
-    unsigned getTransferRank() {
-      return permutation_map().getNumResults();
-    }
-    // Number of leading dimensions that do not participate in the permutation
-    // map.
-    unsigned getLeadingMemRefRank() {
-      return getMemRefType().getRank() - permutation_map().getNumResults();
-    }
-  }];
-}
-
 def Vector_TransferReadOp :
   Vector_Op<"transfer_read", [
+      DeclareOpInterfaceMethods<VectorTransferOpInterface>,
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
     ]>,
     Arguments<(ins AnyMemRef:$memref, Variadic<Index>:$indices,
@@ -1090,23 +1065,12 @@ def Vector_TransferReadOp :
               "ArrayRef<bool> maybeMasked = {}">
   ];
 
-  let extraClassDeclaration = Vector_TransferOpUtils.extraTransferDeclaration #
-  [{
-    /// Build the default minor identity map suitable for a vector transfer.
-    /// This also handles the case memref<... x vector<...>> -> vector<...> in
-    /// which the rank of the identity map must take the vector element type
-    /// into account.
-    static AffineMap getTransferMinorIdentityMap(
-      MemRefType memRefType, VectorType vectorType) {
-        return impl::getTransferMinorIdentityMap(memRefType, vectorType);
-      }
-  }];
-
   let hasFolder = 1;
 }
 
 def Vector_TransferWriteOp :
   Vector_Op<"transfer_write", [
+      DeclareOpInterfaceMethods<VectorTransferOpInterface>,
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
     ]>,
     Arguments<(ins AnyVector:$vector, AnyMemRef:$memref,
@@ -1183,19 +1147,122 @@ def Vector_TransferWriteOp :
               "Value memref, ValueRange indices, AffineMap permutationMap">,
   ];
 
-  let extraClassDeclaration = Vector_TransferOpUtils.extraTransferDeclaration #
-  [{
-    /// Build the default minor identity map suitable for a vector transfer.
-    /// This also handles the case memref<... x vector<...>> -> vector<...> in
-    /// which the rank of the identity map must take the vector element type
-    /// into account.
-    static AffineMap getTransferMinorIdentityMap(
-      MemRefType memRefType, VectorType vectorType) {
-        return impl::getTransferMinorIdentityMap(memRefType, vectorType);
-      }
-  }];
-
   let hasFolder = 1;
+}
+
+def Vector_GatherOp :
+  Vector_Op<"gather">,
+    Arguments<(ins AnyMemRef:$base,
+               VectorOfRankAndType<[1], [AnyInteger]>:$indices,
+               VectorOfRankAndType<[1], [I1]>:$mask,
+               Variadic<VectorOfRank<[1]>>:$pass_thru)>,
+    Results<(outs VectorOfRank<[1]>:$result)> {
+
+  let summary = "gathers elements from memory into a vector as defined by an index vector";
+
+  let description = [{
+    The gather operation gathers elements from memory into a 1-D vector as
+    defined by a base and a 1-D index vector, but only if the corresponding
+    bit is set in a 1-D mask vector. Otherwise, the element is taken from a
+    1-D pass-through vector, if provided, or left undefined. Informally the
+    semantics are:
+    ```
+    if (!defined(pass_thru)) pass_thru = [undef, .., undef]
+    result[0] := mask[0] ? MEM[base + index[0]] : pass_thru[0]
+    result[1] := mask[1] ? MEM[base + index[1]] : pass_thru[1]
+    etc.
+    ```
+    The vector dialect leaves out-of-bounds behavior undefined.
+
+    The gather operation can be used directly where applicable, or can be used
+    during progressively lowering to bring other memory operations closer to
+    hardware ISA support for a gather. The semantics of the operation closely
+    correspond to those of the `llvm.masked.gather`
+    [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-gather-intrinsics).
+
+    Example:
+
+    ```mlir
+    %g = vector.gather %base, %indices, %mask, %pass_thru
+        : (memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
+    ```
+
+  }];
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return base().getType().cast<MemRefType>();
+    }
+    VectorType getIndicesVectorType() {
+      return indices().getType().cast<VectorType>();
+    }
+    VectorType getMaskVectorType() {
+      return mask().getType().cast<VectorType>();
+    }
+    VectorType getPassThruVectorType() {
+      return (llvm::size(pass_thru()) == 0)
+        ? VectorType()
+        : (*pass_thru().begin()).getType().cast<VectorType>();
+    }
+    VectorType getResultVectorType() {
+      return result().getType().cast<VectorType>();
+    }
+  }];
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+}
+
+def Vector_ScatterOp :
+  Vector_Op<"scatter">,
+    Arguments<(ins AnyMemRef:$base,
+               VectorOfRankAndType<[1], [AnyInteger]>:$indices,
+               VectorOfRankAndType<[1], [I1]>:$mask,
+               VectorOfRank<[1]>:$value)> {
+
+  let summary = "scatters elements from a vector into memory as defined by an index vector";
+
+  let description = [{
+    The scatter operation scatters elements from a 1-D vector into memory as
+    defined by a base and a 1-D index vector, but only if the corresponding
+    bit in a 1-D mask vector is set. Otherwise, no action is taken for that
+    element. Informally the semantics are:
+    ```
+    if (mask[0]) MEM[base + index[0]] = value[0]
+    if (mask[1]) MEM[base + index[1]] = value[1]
+    etc.
+    ```
+    The vector dialect leaves out-of-bounds and repeated index behavior
+    undefined. Underlying implementations may enforce strict sequential
+    semantics for the latter, though.
+    TODO: enforce the latter always?
+
+    The scatter operation can be used directly where applicable, or can be used
+    during progressively lowering to bring other memory operations closer to
+    hardware ISA support for a scatter. The semantics of the operation closely
+    correspond to those of the `llvm.masked.scatter`
+    [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-scatter-intrinsics).
+
+    Example:
+
+    ```mlir
+    vector.scatter %base, %indices, %mask, %value
+        : vector<16xi32>, vector<16xi1>, vector<16xf32> into memref<?xf32>
+    ```
+  }];
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return base().getType().cast<MemRefType>();
+    }
+    VectorType getIndicesVectorType() {
+      return indices().getType().cast<VectorType>();
+    }
+    VectorType getMaskVectorType() {
+      return mask().getType().cast<VectorType>();
+    }
+    VectorType getValueVectorType() {
+      return value().getType().cast<VectorType>();
+    }
+  }];
+  let assemblyFormat = "$base `,` $indices `,` $mask `,` $value attr-dict `:` "
+    "type($indices) `,` type($mask) `,` type($value) `into` type($base)";
 }
 
 def Vector_ShapeCastOp :

@@ -126,9 +126,6 @@ if(PYTHON_RPATH)
   set_property(TARGET liblldb APPEND PROPERTY BUILD_RPATH   "${PYTHON_RPATH}")
 endif()
 
-if (MSVC)
-  set_source_files_properties(SBReproducer.cpp PROPERTIES COMPILE_FLAGS /bigobj)
-endif()
 
 if(lldb_python_wrapper)
   add_dependencies(liblldb swig_wrapper)

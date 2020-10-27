@@ -200,13 +200,12 @@ declare i32 @llvm.amdgcn.readfirstlane(i32)
 define amdgpu_ps i64 @s_sdiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-LABEL: s_sdiv_i64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_or_b64 s[0:1], s[2:3], s[4:5]
-; CHECK-NEXT:    s_mov_b32 s6, 0
-; CHECK-NEXT:    s_mov_b32 s7, -1
-; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], s[6:7]
-; CHECK-NEXT:    v_cmp_eq_u64_e64 s[6:7], s[0:1], 0
+; CHECK-NEXT:    s_or_b64 s[6:7], s[2:3], s[4:5]
+; CHECK-NEXT:    s_mov_b32 s0, 0
+; CHECK-NEXT:    s_mov_b32 s1, -1
+; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], s[0:1]
+; CHECK-NEXT:    v_cmp_eq_u64_e64 s[6:7], s[6:7], 0
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[8:9], 0, 1
-; CHECK-NEXT:    s_mov_b32 s0, 1
 ; CHECK-NEXT:    s_xor_b64 vcc, s[6:7], s[8:9]
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:    s_cbranch_vccz BB1_2
@@ -354,13 +353,13 @@ define amdgpu_ps i64 @s_sdiv_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
-; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; CHECK-NEXT:    s_xor_b64 s[0:1], s[6:7], s[8:9]
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; CHECK-NEXT:    v_xor_b32_e32 v0, s0, v0
 ; CHECK-NEXT:    v_subrev_i32_e32 v0, vcc, s0, v0
-; CHECK-NEXT:    s_mov_b32 s0, 0
+; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:  BB1_2: ; %Flow
-; CHECK-NEXT:    s_and_b32 s0, s0, 1
+; CHECK-NEXT:    s_and_b32 s0, s1, 1
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    s_cbranch_scc0 BB1_4
 ; CHECK-NEXT:  ; %bb.3:

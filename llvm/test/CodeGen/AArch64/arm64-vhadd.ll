@@ -425,6 +425,96 @@ define void @testLowerToSRHADD4s(<4 x i32> %src1, <4 x i32> %src2, <4 x i32>* %d
   ret void
 }
 
+define void @testLowerToSHADD8b(<8 x i8> %src1, <8 x i8> %src2, <8 x i8>* %dest) nounwind {
+; CHECK-LABEL: testLowerToSHADD8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shadd.8b v0, v0, v1
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    ret
+  %sextsrc1 = sext <8 x i8> %src1 to <8 x i16>
+  %sextsrc2 = sext <8 x i8> %src2 to <8 x i16>
+  %add = add <8 x i16> %sextsrc1, %sextsrc2
+  %resulti16 = lshr <8 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %result = trunc <8 x i16> %resulti16 to <8 x i8>
+  store <8 x i8> %result, <8 x i8>* %dest, align 8
+  ret void
+}
+
+define void @testLowerToSHADD4h(<4 x i16> %src1, <4 x i16> %src2, <4 x i16>* %dest) nounwind {
+; CHECK-LABEL: testLowerToSHADD4h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shadd.4h v0, v0, v1
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    ret
+  %sextsrc1 = sext <4 x i16> %src1 to <4 x i32>
+  %sextsrc2 = sext <4 x i16> %src2 to <4 x i32>
+  %add = add <4 x i32> %sextsrc1, %sextsrc2
+  %resulti16 = lshr <4 x i32> %add, <i32 1, i32 1, i32 1, i32 1>
+  %result = trunc <4 x i32> %resulti16 to <4 x i16>
+  store <4 x i16> %result, <4 x i16>* %dest, align 8
+  ret void
+}
+
+define void @testLowerToSHADD2s(<2 x i32> %src1, <2 x i32> %src2, <2 x i32>* %dest) nounwind {
+; CHECK-LABEL: testLowerToSHADD2s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shadd.2s v0, v0, v1
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    ret
+  %sextsrc1 = sext <2 x i32> %src1 to <2 x i64>
+  %sextsrc2 = sext <2 x i32> %src2 to <2 x i64>
+  %add = add <2 x i64> %sextsrc1, %sextsrc2
+  %resulti16 = lshr <2 x i64> %add, <i64 1, i64 1>
+  %result = trunc <2 x i64> %resulti16 to <2 x i32>
+  store <2 x i32> %result, <2 x i32>* %dest, align 8
+  ret void
+}
+
+define void @testLowerToSHADD16b(<16 x i8> %src1, <16 x i8> %src2, <16 x i8>* %dest) nounwind {
+; CHECK-LABEL: testLowerToSHADD16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shadd.16b v0, v0, v1
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %sextsrc1 = sext <16 x i8> %src1 to <16 x i16>
+  %sextsrc2 = sext <16 x i8> %src2 to <16 x i16>
+  %add = add <16 x i16> %sextsrc1, %sextsrc2
+  %resulti16 = lshr <16 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %result = trunc <16 x i16> %resulti16 to <16 x i8>
+  store <16 x i8> %result, <16 x i8>* %dest, align 16
+  ret void
+}
+
+define void @testLowerToSHADD8h(<8 x i16> %src1, <8 x i16> %src2, <8 x i16>* %dest) nounwind {
+; CHECK-LABEL: testLowerToSHADD8h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shadd.8h v0, v0, v1
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %sextsrc1 = sext <8 x i16> %src1 to <8 x i32>
+  %sextsrc2 = sext <8 x i16> %src2 to <8 x i32>
+  %add = add <8 x i32> %sextsrc1, %sextsrc2
+  %resulti16 = lshr <8 x i32> %add, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %result = trunc <8 x i32> %resulti16 to <8 x i16>
+  store <8 x i16> %result, <8 x i16>* %dest, align 16
+  ret void
+}
+
+define void @testLowerToSHADD4s(<4 x i32> %src1, <4 x i32> %src2, <4 x i32>* %dest) nounwind {
+; CHECK-LABEL: testLowerToSHADD4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shadd.4s v0, v0, v1
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %sextsrc1 = sext <4 x i32> %src1 to <4 x i64>
+  %sextsrc2 = sext <4 x i32> %src2 to <4 x i64>
+  %add = add <4 x i64> %sextsrc1, %sextsrc2
+  %resulti16 = lshr <4 x i64> %add, <i64 1, i64 1, i64 1, i64 1>
+  %result = trunc <4 x i64> %resulti16 to <4 x i32>
+  store <4 x i32> %result, <4 x i32>* %dest, align 16
+  ret void
+}
+
 define void @testLowerToURHADD8b(<8 x i8> %src1, <8 x i8> %src2, <8 x i8>* %dest) nounwind {
 ; CHECK-LABEL: testLowerToURHADD8b:
 ; CHECK:       // %bb.0:
@@ -516,6 +606,96 @@ define void @testLowerToURHADD4s(<4 x i32> %src1, <4 x i32> %src2, <4 x i32>* %d
   %add1 = add <4 x i64> %zextsrc1, %zextsrc2
   %add2 = add <4 x i64> %add1, <i64 1, i64 1, i64 1, i64 1>
   %resulti16 = lshr <4 x i64> %add2, <i64 1, i64 1, i64 1, i64 1>
+  %result = trunc <4 x i64> %resulti16 to <4 x i32>
+  store <4 x i32> %result, <4 x i32>* %dest, align 16
+  ret void
+}
+
+define void @testLowerToUHADD8b(<8 x i8> %src1, <8 x i8> %src2, <8 x i8>* %dest) nounwind {
+; CHECK-LABEL: testLowerToUHADD8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhadd.8b v0, v0, v1
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    ret
+  %zextsrc1 = zext <8 x i8> %src1 to <8 x i16>
+  %zextsrc2 = zext <8 x i8> %src2 to <8 x i16>
+  %add = add <8 x i16> %zextsrc1, %zextsrc2
+  %resulti16 = lshr <8 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %result = trunc <8 x i16> %resulti16 to <8 x i8>
+  store <8 x i8> %result, <8 x i8>* %dest, align 8
+  ret void
+}
+
+define void @testLowerToUHADD4h(<4 x i16> %src1, <4 x i16> %src2, <4 x i16>* %dest) nounwind {
+; CHECK-LABEL: testLowerToUHADD4h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhadd.4h v0, v0, v1
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    ret
+  %zextsrc1 = zext <4 x i16> %src1 to <4 x i32>
+  %zextsrc2 = zext <4 x i16> %src2 to <4 x i32>
+  %add = add <4 x i32> %zextsrc1, %zextsrc2
+  %resulti16 = lshr <4 x i32> %add, <i32 1, i32 1, i32 1, i32 1>
+  %result = trunc <4 x i32> %resulti16 to <4 x i16>
+  store <4 x i16> %result, <4 x i16>* %dest, align 8
+  ret void
+}
+
+define void @testLowerToUHADD2s(<2 x i32> %src1, <2 x i32> %src2, <2 x i32>* %dest) nounwind {
+; CHECK-LABEL: testLowerToUHADD2s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhadd.2s v0, v0, v1
+; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    ret
+  %zextsrc1 = zext <2 x i32> %src1 to <2 x i64>
+  %zextsrc2 = zext <2 x i32> %src2 to <2 x i64>
+  %add = add <2 x i64> %zextsrc1, %zextsrc2
+  %resulti16 = lshr <2 x i64> %add, <i64 1, i64 1>
+  %result = trunc <2 x i64> %resulti16 to <2 x i32>
+  store <2 x i32> %result, <2 x i32>* %dest, align 8
+  ret void
+}
+
+define void @testLowerToUHADD16b(<16 x i8> %src1, <16 x i8> %src2, <16 x i8>* %dest) nounwind {
+; CHECK-LABEL: testLowerToUHADD16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhadd.16b v0, v0, v1
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %zextsrc1 = zext <16 x i8> %src1 to <16 x i16>
+  %zextsrc2 = zext <16 x i8> %src2 to <16 x i16>
+  %add = add <16 x i16> %zextsrc1, %zextsrc2
+  %resulti16 = lshr <16 x i16> %add, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+  %result = trunc <16 x i16> %resulti16 to <16 x i8>
+  store <16 x i8> %result, <16 x i8>* %dest, align 16
+  ret void
+}
+
+define void @testLowerToUHADD8h(<8 x i16> %src1, <8 x i16> %src2, <8 x i16>* %dest) nounwind {
+; CHECK-LABEL: testLowerToUHADD8h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhadd.8h v0, v0, v1
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
+  %zextsrc2 = zext <8 x i16> %src2 to <8 x i32>
+  %add = add <8 x i32> %zextsrc1, %zextsrc2
+  %resulti16 = lshr <8 x i32> %add, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %result = trunc <8 x i32> %resulti16 to <8 x i16>
+  store <8 x i16> %result, <8 x i16>* %dest, align 16
+  ret void
+}
+
+define void @testLowerToUHADD4s(<4 x i32> %src1, <4 x i32> %src2, <4 x i32>* %dest) nounwind {
+; CHECK-LABEL: testLowerToUHADD4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uhadd.4s v0, v0, v1
+; CHECK-NEXT:    str q0, [x0]
+; CHECK-NEXT:    ret
+  %zextsrc1 = zext <4 x i32> %src1 to <4 x i64>
+  %zextsrc2 = zext <4 x i32> %src2 to <4 x i64>
+  %add = add <4 x i64> %zextsrc1, %zextsrc2
+  %resulti16 = lshr <4 x i64> %add, <i64 1, i64 1, i64 1, i64 1>
   %result = trunc <4 x i64> %resulti16 to <4 x i32>
   store <4 x i32> %result, <4 x i32>* %dest, align 16
   ret void

@@ -8,9 +8,9 @@
 
 # GCN-LABEL: name: ds_combine_base_offset{{$}}
 
-# VI: V_ADD_I32_e64 %6, %0,
+# VI: V_ADD_CO_U32_e64 %6, %0,
 # VI-NEXT: DS_WRITE2_B32 killed %7, %0, %3, 0, 8,
-# VI: V_ADD_I32_e64 %10, %3,
+# VI: V_ADD_CO_U32_e64 %10, %3,
 # VI-NEXT: DS_READ2_B32 killed %11, 0, 8,
 
 # GFX9: V_ADD_U32_e64 %6, %0,
@@ -91,9 +91,9 @@ body:             |
 
 # GCN-LABEL: name: ds_combine_base_offset_subreg{{$}}
 
-# VI: V_ADD_I32_e64 %6, %0.sub0,
+# VI: V_ADD_CO_U32_e64 %6, %0.sub0,
 # VI-NEXT: DS_WRITE2_B32 killed %7, %0.sub0, %3.sub0, 0, 8,
-# VI: V_ADD_I32_e64 %10, %3.sub0,
+# VI: V_ADD_CO_U32_e64 %10, %3.sub0,
 # VI-NEXT: DS_READ2_B32 killed %11, 0, 8,
 
 # GFX9: V_ADD_U32_e64 %6, %0.sub0,

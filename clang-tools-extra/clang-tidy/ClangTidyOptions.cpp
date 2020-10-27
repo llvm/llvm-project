@@ -70,7 +70,7 @@ struct NOptionMap {
   NOptionMap(IO &, const ClangTidyOptions::OptionMap &OptionMap) {
     Options.reserve(OptionMap.size());
     for (const auto &KeyValue : OptionMap)
-      Options.emplace_back(KeyValue.first, KeyValue.second.Value);
+      Options.emplace_back(std::string(KeyValue.getKey()), KeyValue.getValue().Value);
   }
   ClangTidyOptions::OptionMap denormalize(IO &) {
     ClangTidyOptions::OptionMap Map;
@@ -114,11 +114,9 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";
   Options.User = llvm::None;
-  unsigned Priority = 0;
   for (const ClangTidyModuleRegistry::entry &Module :
        ClangTidyModuleRegistry::entries())
-    Options =
-        Options.mergeWith(Module.instantiate()->getModuleOptions(), ++Priority);
+    Options = Options.mergeWith(Module.instantiate()->getModuleOptions(), 0);
   return Options;
 }
 
@@ -159,8 +157,10 @@ ClangTidyOptions ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
   mergeVectors(Result.ExtraArgsBefore, Other.ExtraArgsBefore);
 
   for (const auto &KeyValue : Other.CheckOptions) {
-    Result.CheckOptions[KeyValue.first] = ClangTidyValue(
-        KeyValue.second.Value, KeyValue.second.Priority + Priority);
+    Result.CheckOptions.insert_or_assign(
+        KeyValue.getKey(),
+        ClangTidyValue(KeyValue.getValue().Value,
+                       KeyValue.getValue().Priority + Priority));
   }
 
   return Result;

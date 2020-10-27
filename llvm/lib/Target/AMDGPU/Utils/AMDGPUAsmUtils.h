@@ -9,8 +9,11 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUASMUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUASMUTILS_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 namespace AMDGPU {
+
 namespace SendMsg { // Symbolic names for the sendmsg(...) syntax.
 
 extern const char* const IdSymbolic[];
@@ -24,6 +27,17 @@ namespace Hwreg { // Symbolic names for the hwreg(...) syntax.
 extern const char* const IdSymbolic[];
 
 } // namespace Hwreg
+
+namespace MTBUFFormat {
+
+extern StringLiteral const DfmtSymbolic[];
+extern StringLiteral const NfmtSymbolicGFX10[];
+extern StringLiteral const NfmtSymbolicSICI[];
+extern StringLiteral const NfmtSymbolicVI[];
+extern StringLiteral const UfmtSymbolic[];
+extern unsigned const DfmtNfmt2UFmt[];
+
+} // namespace MTBUFFormat
 
 namespace Swizzle { // Symbolic names for the swizzle(...) syntax.
 

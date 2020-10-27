@@ -90,7 +90,6 @@ class TestVSCode_attach(lldbvscode_testcase.VSCodeTestCaseBase):
         self.addTearDownHook(cleanup)
 
         popen = self.spawnSubprocess(program, [pid_file_path])
-        self.addTearDownHook(self.cleanupSubprocesses)
 
         pid = lldbutil.wait_for_file_on_target(self, pid_file_path)
 

@@ -172,8 +172,8 @@ static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
     return false;
 
   int NumElts =
-      cast<VectorType>(Shuf->getOperand(0)->getType())->getNumElements();
-  int NumMaskElts = Shuf->getType()->getNumElements();
+      cast<FixedVectorType>(Shuf->getOperand(0)->getType())->getNumElements();
+  int NumMaskElts = cast<FixedVectorType>(Shuf->getType())->getNumElements();
   DemandedLHS = DemandedRHS = APInt::getNullValue(NumElts);
   if (DemandedElts.isNullValue())
     return true;
@@ -1642,6 +1642,17 @@ static void computeKnownBitsFromOperator(const Operator *I,
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
       default: break;
+      case Intrinsic::abs:
+        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+        // Otherwise, if this call is undefined for INT_MIN, the result is
+        // positive.
+        if (match(II->getArgOperand(1), m_One()))
+          Known.Zero.setSignBit();
+        // Absolute value preserves trailing zero count.
+        Known.Zero.setLowBits(Known2.Zero.countTrailingOnes());
+        // FIXME: Handle known negative/non-negative input?
+        // FIXME: Calculate the negated Known bits and combine them?
+        break;
       case Intrinsic::bitreverse:
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Depth + 1, Q);
         Known.Zero |= Known2.Zero.reverseBits();
@@ -2353,15 +2364,20 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     return false;
 
   // Check for pointer simplifications.
-  if (V->getType()->isPointerTy()) {
+
+  if (PointerType *PtrTy = dyn_cast<PointerType>(V->getType())) {
     // Alloca never returns null, malloc might.
     if (isa<AllocaInst>(V) && Q.DL.getAllocaAddrSpace() == 0)
       return true;
 
-    // A byval, inalloca, or nonnull argument is never null.
-    if (const Argument *A = dyn_cast<Argument>(V))
-      if (A->hasPassPointeeByValueAttr() || A->hasNonNullAttr())
+    // A byval, inalloca may not be null in a non-default addres space. A
+    // nonnull argument is assumed never 0.
+    if (const Argument *A = dyn_cast<Argument>(V)) {
+      if (((A->hasPassPointeeByValueCopyAttr() &&
+            !NullPointerIsDefined(A->getParent(), PtrTy->getAddressSpace())) ||
+           A->hasNonNullAttr()))
         return true;
+    }
 
     // A Load tagged with nonnull metadata is never null.
     if (const LoadInst *LI = dyn_cast<LoadInst>(V))
@@ -2985,6 +3001,19 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
              "Failed to determine minimum sign bits");
       return Tmp;
     }
+    case Instruction::Call: {
+      if (const auto *II = dyn_cast<IntrinsicInst>(U)) {
+        switch (II->getIntrinsicID()) {
+        default: break;
+        case Intrinsic::abs:
+          Tmp = ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+          if (Tmp == 1) break;
+
+          // Absolute value reduces number of sign bits by at most 1.
+          return Tmp - 1;
+        }
+      }
+    }
     }
   }
 
@@ -3133,21 +3162,14 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   if (F->isIntrinsic())
     return F->getIntrinsicID();
 
-  if (!TLI)
-    return Intrinsic::not_intrinsic;
-
+  // We are going to infer semantics of a library function based on mapping it
+  // to an LLVM intrinsic. Check that the library function is available from
+  // this callbase and in this environment.
   LibFunc Func;
-  // We're going to make assumptions on the semantics of the functions, check
-  // that the target knows that it's available in this environment and it does
-  // not have local linkage.
-  if (!F || F->hasLocalLinkage() || !TLI->getLibFunc(*F, Func))
+  if (F->hasLocalLinkage() || !TLI || !TLI->getLibFunc(CB, Func) ||
+      !CB.onlyReadsMemory())
     return Intrinsic::not_intrinsic;
 
-  if (!CB.onlyReadsMemory())
-    return Intrinsic::not_intrinsic;
-
-  // Otherwise check if we have a call to a function that can be turned into a
-  // vector intrinsic.
   switch (Func) {
   default:
     break;
@@ -3368,13 +3390,28 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
     switch (IID) {
     default:
       break;
-    case Intrinsic::maxnum:
-      return (isKnownNeverNaN(I->getOperand(0), TLI) &&
-              cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI,
-                                              SignBitOnly, Depth + 1)) ||
-            (isKnownNeverNaN(I->getOperand(1), TLI) &&
-              cannotBeOrderedLessThanZeroImpl(I->getOperand(1), TLI,
-                                              SignBitOnly, Depth + 1));
+    case Intrinsic::maxnum: {
+      Value *V0 = I->getOperand(0), *V1 = I->getOperand(1);
+      auto isPositiveNum = [&](Value *V) {
+        if (SignBitOnly) {
+          // With SignBitOnly, this is tricky because the result of
+          // maxnum(+0.0, -0.0) is unspecified. Just check if the operand is
+          // a constant strictly greater than 0.0.
+          const APFloat *C;
+          return match(V, m_APFloat(C)) &&
+                 *C > APFloat::getZero(C->getSemantics());
+        }
+
+        // -0.0 compares equal to 0.0, so if this operand is at least -0.0,
+        // maxnum can't be ordered-less-than-zero.
+        return isKnownNeverNaN(V, TLI) &&
+               cannotBeOrderedLessThanZeroImpl(V, TLI, false, Depth + 1);
+      };
+
+      // TODO: This could be improved. We could also check that neither operand
+      //       has its sign bit set (and at least 1 is not-NAN?).
+      return isPositiveNum(V0) || isPositiveNum(V1);
+    }
 
     case Intrinsic::maximum:
       return cannotBeOrderedLessThanZeroImpl(I->getOperand(0), TLI, SignBitOnly,
@@ -3476,9 +3513,10 @@ bool llvm::isKnownNeverInfinity(const Value *V, const TargetLibraryInfo *TLI,
   }
 
   // try to handle fixed width vector constants
-  if (isa<FixedVectorType>(V->getType()) && isa<Constant>(V)) {
+  auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
+  if (VFVTy && isa<Constant>(V)) {
     // For vectors, verify that each element is not infinity.
-    unsigned NumElts = cast<VectorType>(V->getType())->getNumElements();
+    unsigned NumElts = VFVTy->getNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *Elt = cast<Constant>(V)->getAggregateElement(i);
       if (!Elt)
@@ -3580,9 +3618,10 @@ bool llvm::isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
   }
 
   // Try to handle fixed width vector constants
-  if (isa<FixedVectorType>(V->getType()) && isa<Constant>(V)) {
+  auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
+  if (VFVTy && isa<Constant>(V)) {
     // For vectors, verify that each element is not NaN.
-    unsigned NumElts = cast<VectorType>(V->getType())->getNumElements();
+    unsigned NumElts = VFVTy->getNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *Elt = cast<Constant>(V)->getAggregateElement(i);
       if (!Elt)
@@ -4134,8 +4173,7 @@ static bool isSameUnderlyingObjectInLoop(const PHINode *PN,
   return true;
 }
 
-Value *llvm::GetUnderlyingObject(Value *V, const DataLayout &DL,
-                                 unsigned MaxLookup) {
+Value *llvm::getUnderlyingObject(Value *V, unsigned MaxLookup) {
   if (!V->getType()->isPointerTy())
     return V;
   for (unsigned Count = 0; MaxLookup == 0 || Count < MaxLookup; ++Count) {
@@ -4180,16 +4218,15 @@ Value *llvm::GetUnderlyingObject(Value *V, const DataLayout &DL,
   return V;
 }
 
-void llvm::GetUnderlyingObjects(const Value *V,
+void llvm::getUnderlyingObjects(const Value *V,
                                 SmallVectorImpl<const Value *> &Objects,
-                                const DataLayout &DL, LoopInfo *LI,
-                                unsigned MaxLookup) {
+                                LoopInfo *LI, unsigned MaxLookup) {
   SmallPtrSet<const Value *, 4> Visited;
   SmallVector<const Value *, 4> Worklist;
   Worklist.push_back(V);
   do {
     const Value *P = Worklist.pop_back_val();
-    P = GetUnderlyingObject(P, DL, MaxLookup);
+    P = getUnderlyingObject(P, MaxLookup);
 
     if (!Visited.insert(P).second)
       continue;
@@ -4250,19 +4287,18 @@ static const Value *getUnderlyingObjectFromInt(const Value *V) {
   } while (true);
 }
 
-/// This is a wrapper around GetUnderlyingObjects and adds support for basic
+/// This is a wrapper around getUnderlyingObjects and adds support for basic
 /// ptrtoint+arithmetic+inttoptr sequences.
-/// It returns false if unidentified object is found in GetUnderlyingObjects.
+/// It returns false if unidentified object is found in getUnderlyingObjects.
 bool llvm::getUnderlyingObjectsForCodeGen(const Value *V,
-                          SmallVectorImpl<Value *> &Objects,
-                          const DataLayout &DL) {
+                                          SmallVectorImpl<Value *> &Objects) {
   SmallPtrSet<const Value *, 16> Visited;
   SmallVector<const Value *, 4> Working(1, V);
   do {
     V = Working.pop_back_val();
 
     SmallVector<const Value *, 4> Objs;
-    GetUnderlyingObjects(V, Objs, DL);
+    getUnderlyingObjects(V, Objs);
 
     for (const Value *V : Objs) {
       if (!Visited.insert(V).second)
@@ -4275,7 +4311,7 @@ bool llvm::getUnderlyingObjectsForCodeGen(const Value *V,
           continue;
         }
       }
-      // If GetUnderlyingObjects fails to find an identifiable object,
+      // If getUnderlyingObjects fails to find an identifiable object,
       // getUnderlyingObjectsForCodeGen also fails for safety.
       if (!isIdentifiedObject(V)) {
         Objects.clear();
@@ -4287,16 +4323,70 @@ bool llvm::getUnderlyingObjectsForCodeGen(const Value *V,
   return true;
 }
 
-/// Return true if the only users of this pointer are lifetime markers.
-bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
+static AllocaInst *
+findAllocaForValue(Value *V, DenseMap<Value *, AllocaInst *> &AllocaForValue) {
+  if (AllocaInst *AI = dyn_cast<AllocaInst>(V))
+    return AI;
+  // See if we've already calculated (or started to calculate) alloca for a
+  // given value.
+  auto I = AllocaForValue.find(V);
+  if (I != AllocaForValue.end())
+    return I->second;
+  // Store 0 while we're calculating alloca for value V to avoid
+  // infinite recursion if the value references itself.
+  AllocaForValue[V] = nullptr;
+  AllocaInst *Res = nullptr;
+  if (CastInst *CI = dyn_cast<CastInst>(V))
+    Res = findAllocaForValue(CI->getOperand(0), AllocaForValue);
+  else if (PHINode *PN = dyn_cast<PHINode>(V)) {
+    for (Value *IncValue : PN->incoming_values()) {
+      // Allow self-referencing phi-nodes.
+      if (IncValue == PN)
+        continue;
+      AllocaInst *IncValueAI = findAllocaForValue(IncValue, AllocaForValue);
+      // AI for incoming values should exist and should all be equal.
+      if (IncValueAI == nullptr || (Res != nullptr && IncValueAI != Res))
+        return nullptr;
+      Res = IncValueAI;
+    }
+  } else if (GetElementPtrInst *EP = dyn_cast<GetElementPtrInst>(V)) {
+    Res = findAllocaForValue(EP->getPointerOperand(), AllocaForValue);
+  }
+  if (Res)
+    AllocaForValue[V] = Res;
+  return Res;
+}
+
+AllocaInst *llvm::findAllocaForValue(Value *V) {
+  DenseMap<Value *, AllocaInst *> AllocaForValue;
+  return ::findAllocaForValue(V, AllocaForValue);
+}
+
+static bool onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
+    const Value *V, bool AllowLifetime, bool AllowDroppable) {
   for (const User *U : V->users()) {
     const IntrinsicInst *II = dyn_cast<IntrinsicInst>(U);
-    if (!II) return false;
-
-    if (!II->isLifetimeStartOrEnd())
+    if (!II)
       return false;
+
+    if (AllowLifetime && II->isLifetimeStartOrEnd())
+      continue;
+
+    if (AllowDroppable && II->isDroppable())
+      continue;
+
+    return false;
   }
   return true;
+}
+
+bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
+  return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
+      V, /* AllowLifetime */ true, /* AllowDroppable */ false);
+}
+bool llvm::onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V) {
+  return onlyUsedByLifetimeMarkersOrDroppableInstsHelper(
+      V, /* AllowLifetime */ true, /* AllowDroppable */ true);
 }
 
 bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
@@ -4652,31 +4742,30 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
   return llvm::any_of(GuardingBranches, AllUsesGuardedByBranch);
 }
 
-bool llvm::canCreatePoison(const Instruction *I) {
+static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly) {
   // See whether I has flags that may create poison
-  if (isa<OverflowingBinaryOperator>(I) &&
-      (I->hasNoSignedWrap() || I->hasNoUnsignedWrap()))
-    return true;
-  if (isa<PossiblyExactOperator>(I) && I->isExact())
-    return true;
-  if (auto *FP = dyn_cast<FPMathOperator>(I)) {
+  if (const auto *OvOp = dyn_cast<OverflowingBinaryOperator>(Op)) {
+    if (OvOp->hasNoSignedWrap() || OvOp->hasNoUnsignedWrap())
+      return true;
+  }
+  if (const auto *ExactOp = dyn_cast<PossiblyExactOperator>(Op))
+    if (ExactOp->isExact())
+      return true;
+  if (const auto *FP = dyn_cast<FPMathOperator>(Op)) {
     auto FMF = FP->getFastMathFlags();
     if (FMF.noNaNs() || FMF.noInfs())
       return true;
   }
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
-    if (GEP->isInBounds())
-      return true;
 
-  unsigned Opcode = I->getOpcode();
+  unsigned Opcode = Op->getOpcode();
 
-  // Check whether opcode is a poison-generating operation
+  // Check whether opcode is a poison/undef-generating operation
   switch (Opcode) {
   case Instruction::Shl:
   case Instruction::AShr:
   case Instruction::LShr: {
     // Shifts return poison if shiftwidth is larger than the bitwidth.
-    if (auto *C = dyn_cast<Constant>(I->getOperand(1))) {
+    if (auto *C = dyn_cast<Constant>(Op->getOperand(1))) {
       SmallVector<Constant *, 4> ShiftAmounts;
       if (auto *FVTy = dyn_cast<FixedVectorType>(C->getType())) {
         unsigned NumElts = FVTy->getNumElements();
@@ -4702,41 +4791,62 @@ bool llvm::canCreatePoison(const Instruction *I) {
     return true;
   case Instruction::Call:
   case Instruction::CallBr:
-  case Instruction::Invoke:
-    // Function calls can return a poison value even if args are non-poison
-    // values.
-    return true;
+  case Instruction::Invoke: {
+    const auto *CB = cast<CallBase>(Op);
+    return !CB->hasRetAttr(Attribute::NoUndef);
+  }
   case Instruction::InsertElement:
   case Instruction::ExtractElement: {
     // If index exceeds the length of the vector, it returns poison
-    auto *VTy = cast<VectorType>(I->getOperand(0)->getType());
-    unsigned IdxOp = I->getOpcode() == Instruction::InsertElement ? 2 : 1;
-    auto *Idx = dyn_cast<ConstantInt>(I->getOperand(IdxOp));
+    auto *VTy = cast<VectorType>(Op->getOperand(0)->getType());
+    unsigned IdxOp = Op->getOpcode() == Instruction::InsertElement ? 2 : 1;
+    auto *Idx = dyn_cast<ConstantInt>(Op->getOperand(IdxOp));
     if (!Idx || Idx->getZExtValue() >= VTy->getElementCount().Min)
       return true;
     return false;
+  }
+  case Instruction::ShuffleVector: {
+    // shufflevector may return undef.
+    if (PoisonOnly)
+      return false;
+    ArrayRef<int> Mask = isa<ConstantExpr>(Op)
+                             ? cast<ConstantExpr>(Op)->getShuffleMask()
+                             : cast<ShuffleVectorInst>(Op)->getShuffleMask();
+    return any_of(Mask, [](int Elt) { return Elt == UndefMaskElem; });
   }
   case Instruction::FNeg:
   case Instruction::PHI:
   case Instruction::Select:
   case Instruction::URem:
   case Instruction::SRem:
-  case Instruction::ShuffleVector:
   case Instruction::ExtractValue:
   case Instruction::InsertValue:
   case Instruction::Freeze:
   case Instruction::ICmp:
   case Instruction::FCmp:
-  case Instruction::GetElementPtr:
     return false;
-  default:
-    if (isa<CastInst>(I))
+  case Instruction::GetElementPtr: {
+    const auto *GEP = cast<GEPOperator>(Op);
+    return GEP->isInBounds();
+  }
+  default: {
+    const auto *CE = dyn_cast<ConstantExpr>(Op);
+    if (isa<CastInst>(Op) || (CE && CE->isCast()))
       return false;
-    else if (isa<BinaryOperator>(I))
+    else if (Instruction::isBinaryOp(Opcode))
       return false;
     // Be conservative and return true.
     return true;
   }
+  }
+}
+
+bool llvm::canCreateUndefOrPoison(const Operator *Op) {
+  return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/false);
+}
+
+bool llvm::canCreatePoison(const Operator *Op) {
+  return ::canCreateUndefOrPoison(Op, /*PoisonOnly=*/true);
 }
 
 bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
@@ -4746,28 +4856,21 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
   if (Depth >= MaxDepth)
     return false;
 
-  // If the value is a freeze instruction, then it can never
-  // be undef or poison.
-  if (isa<FreezeInst>(V))
-    return true;
-  // TODO: Some instructions are guaranteed to return neither undef
-  // nor poison if their arguments are not poison/undef.
+  if (const auto *A = dyn_cast<Argument>(V)) {
+    if (A->hasAttribute(Attribute::NoUndef))
+      return true;
+  }
 
   if (auto *C = dyn_cast<Constant>(V)) {
-    // TODO: We can analyze ConstExpr by opcode to determine if there is any
-    //       possibility of poison.
-    if (isa<UndefValue>(C) || isa<ConstantExpr>(C))
+    if (isa<UndefValue>(C))
       return false;
 
     if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) || isa<ConstantFP>(V) ||
         isa<ConstantPointerNull>(C) || isa<Function>(C))
       return true;
 
-    if (C->getType()->isVectorTy())
-      return !C->containsUndefElement() && !C->containsConstantExpression();
-
-    // TODO: Recursively analyze aggregates or other constants.
-    return false;
+    if (C->getType()->isVectorTy() && !isa<ConstantExpr>(C))
+      return !C->containsConstantExpression() && !C->containsUndefElement();
   }
 
   // Strip cast operations from a pointer value.
@@ -4787,31 +4890,22 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V,
     return isGuaranteedNotToBeUndefOrPoison(V, CtxI, DT, Depth + 1);
   };
 
-  if (auto *I = dyn_cast<Instruction>(V)) {
-    switch (I->getOpcode()) {
-    case Instruction::GetElementPtr: {
-      auto *GEPI = dyn_cast<GetElementPtrInst>(I);
-      if (!GEPI->isInBounds() && llvm::all_of(GEPI->operands(), OpCheck))
+  if (auto *Opr = dyn_cast<Operator>(V)) {
+    // If the value is a freeze instruction, then it can never
+    // be undef or poison.
+    if (isa<FreezeInst>(V))
+      return true;
+
+    if (const auto *CB = dyn_cast<CallBase>(V)) {
+      if (CB->hasRetAttr(Attribute::NoUndef))
         return true;
-      break;
-    }
-    case Instruction::FCmp: {
-      auto *FI = dyn_cast<FCmpInst>(I);
-      if (FI->getFastMathFlags().none() &&
-          llvm::all_of(FI->operands(), OpCheck))
-        return true;
-      break;
-    }
-    case Instruction::BitCast:
-    case Instruction::PHI:
-    case Instruction::ICmp:
-      if (llvm::all_of(I->operands(), OpCheck))
-        return true;
-      break;
-    default:
-      break;
     }
 
+    if (!canCreateUndefOrPoison(Opr) && all_of(Opr->operands(), OpCheck))
+      return true;
+  }
+
+  if (auto *I = dyn_cast<Instruction>(V)) {
     if (programUndefinedIfPoison(I) && I->getType()->isIntegerTy(1))
       // Note: once we have an agreement that poison is a value-wise concept,
       // we can remove the isIntegerTy(1) constraint.

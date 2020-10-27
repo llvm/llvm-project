@@ -2,16 +2,14 @@ Tests for overflow when merging instrumented profiles.
 
 1- Merge profile having maximum counts with itself and verify overflow detected and saturation occurred
 RUN: llvm-profdata merge -instr %p/Inputs/overflow-instr.proftext %p/Inputs/overflow-instr.proftext -o %t.out 2>&1 | FileCheck %s -check-prefix=MERGE_OVERFLOW
-RUN: llvm-profdata show -instr %t.out | FileCheck %s --check-prefix=SHOW_OVERFLOW
+RUN: llvm-profdata show -instr -all-functions -counts %t.out | FileCheck %s --check-prefix=SHOW_OVERFLOW
 MERGE_OVERFLOW: {{.*}}: overflow: Counter overflow
-SHOW_OVERFLOW: Total functions: 1
-SHOW_OVERFLOW-NEXT: Maximum function count: 18446744073709551615
-SHOW_OVERFLOW-NEXT: Maximum internal block count: 18446744073709551615
+SHOW_OVERFLOW: Function count: 18446744073709551615
+SHOW_OVERFLOW-NEXT: Block counts: [18446744073709551615, 18446744073709551615]
 
 2- Merge profile having maximum counts by itself and verify no overflow
 RUN: llvm-profdata merge -instr %p/Inputs/overflow-instr.proftext -o %t.out 2>&1 | FileCheck %s -check-prefix=MERGE_NO_OVERFLOW -allow-empty
-RUN: llvm-profdata show -instr %t.out | FileCheck %s --check-prefix=SHOW_NO_OVERFLOW
+RUN: llvm-profdata show -instr -all-functions -counts %t.out | FileCheck %s --check-prefix=SHOW_NO_OVERFLOW
 MERGE_NO_OVERFLOW-NOT: {{.*}}: overflow: Counter overflow
-SHOW_NO_OVERFLOW: Total functions: 1
-SHOW_NO_OVERFLOW-NEXT: Maximum function count: 18446744073709551615
-SHOW_NO_OVERFLOW-NEXT: Maximum internal block count: 18446744073709551615
+SHOW_NO_OVERFLOW: Function count: 18446744073709551615
+SHOW_NO_OVERFLOW-NEXT: Block counts: [9223372036854775808, 18446744073709551615]

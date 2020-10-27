@@ -174,6 +174,58 @@ the correct labels are propagated.
     return 0;
   }
 
+fast16labels mode
+=================
+
+If you need 16 or fewer labels, you can use fast16labels instrumentation for
+less CPU and code size overhead.  To use fast16labels instrumentation, you'll
+need to specify `-fsanitize=dataflow -mllvm -dfsan-fast-16-labels` in your
+compile and link commands and use a modified API for creating and managing
+labels.
+
+In fast16labels mode, base labels are simply 16-bit unsigned integers that are
+powers of 2 (i.e. 1, 2, 4, 8, ..., 32768), and union labels are created by ORing
+base labels.  In this mode DFSan does not manage any label metadata, so the
+functions `dfsan_create_label`, `dfsan_union`, `dfsan_get_label_info`,
+`dfsan_has_label`, `dfsan_has_label_with_desc`, `dfsan_get_label_count`, and
+`dfsan_dump_labels` are unsupported.  Instead of using them, the user should
+maintain any necessary metadata about base labels themselves.
+
+For example:
+
+.. code-block:: c++
+
+  #include <sanitizer/dfsan_interface.h>
+  #include <assert.h>
+
+  int main(void) {
+    int i = 100;
+    int j = 200;
+    int k = 300;
+    dfsan_label i_label = 1;
+    dfsan_label j_label = 2;
+    dfsan_label k_label = 4;
+    dfsan_set_label(i_label, &i, sizeof(i));
+    dfsan_set_label(j_label, &j, sizeof(j));
+    dfsan_set_label(k_label, &k, sizeof(k));
+
+    dfsan_label ij_label = dfsan_get_label(i + j);
+
+    assert(ij_label & i_label);  // ij_label has i_label
+    assert(ij_label & j_label);  // ij_label has j_label
+    assert(!(ij_label & k_label));  // ij_label doesn't have k_label
+    assert(ij_label == 3)  // Verifies all of the above
+
+    dfsan_label ijk_label = dfsan_get_label(i + j + k);
+
+    assert(ijk_label & i_label);  // ijk_label has i_label
+    assert(ijk_label & j_label);  // ijk_label has j_label
+    assert(ijk_label & k_label);  // ijk_label has k_label
+    assert(ijk_label == 7);  // Verifies all of the above
+
+    return 0;
+  }
+
 Current status
 ==============
 

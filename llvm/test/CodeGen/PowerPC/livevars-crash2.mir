@@ -1,6 +1,6 @@
-# RUN: not --crash llc -mtriple powerpc64le-unknown-linux-gnu %s -o - 2>&1 \
-# RUN:   -run-pass=livevars,phi-node-elimination -verify-machineinstrs \
-# RUN:   | FileCheck %s
+# RUN: llc -mtriple powerpc64le-unknown-linux-gnu %s -o - 2>&1 \
+# RUN:   -run-pass=livevars,phi-node-elimination -verify-machineinstrs | \
+# RUN:   FileCheck %s
 
 --- |
   define float @testfloatslt(float %c1, float %c2, float %c3, float %c4, float %a1, float %a2) {
@@ -176,20 +176,44 @@ body:             |
     STD %3, 0, %4 :: (store 8 into %ir.p)
     B %bb.1
 
+  ; CHECK-LABEL: name: testfloatslt
+  ; CHECK: bb.0.entry:
+  ; CHECK:   successors: %bb.1(0x80000000)
+  ; CHECK:   liveins: $x3
+
+  ; CHECK:   %4:g8rc_and_g8rc_nox0 = COPY killed $x3
+  ; CHECK:   %0:g8rc = LD 0, %4 :: (dereferenceable load 8 from %ir.p)
+  ; CHECK:   %12:g8rc_and_g8rc_nox0 = COPY killed %0
+
+  ; CHECK: bb.1.loop:
+  ; CHECK:   successors: %bb.1(0x20000000), %bb.2(0x60000000)
+
+  ; CHECK:   %1:g8rc_and_g8rc_nox0 = COPY killed %12
+  ; CHECK:   %5:gprc = LBZ 0, %1 :: (load 1 from %ir.0)
+  ; CHECK:   %6:crrc = CMPWI killed %5, 0
+  ; CEHCK:   %7:crbitrc = COPY killed %6.sub_eq
+  ; CHECK:   %2:g8rc = nuw ADDI8 %1, 1
+  ; CHECK:   STD %2, 0, %4 :: (store 8 into %ir.p)
+  ; CHECK:   %8:gprc = LBZ 1, %1 :: (load 1 from %ir.incdec.ptr)
+  ; CHECK:   %12:g8rc_and_g8rc_nox0 = COPY %2
+  ; CHECK:   BCn killed %7, %bb.1
+  ; CHECK:   B %bb.2
+
+  ; CHECK: bb.2.loop:
+  ; CHECK:   successors: %bb.3(0x55555555), %bb.1(0x2aaaaaab)
+
+  ; CHECK:   %9:crrc = CMPWI killed %8, 0
+  ; CHECK:   %10:crbitrc = COPY killed %9.sub_eq
+  ; CHECK:   %12:g8rc_and_g8rc_nox0 = COPY killed %2
+  ; CHECK:   BC killed %10, %bb.1
+  ; CHECK:   B %bb.3
+
+  ; CHECK: bb.3.if.then3:
+  ; CHECK:   successors: %bb.1(0x80000000)
+
+  ; CHECK:   %3:g8rc = nuw ADDI8 killed %1, 2
+  ; CHECK:   STD %3, 0, %4 :: (store 8 into %ir.p)
+  ; CHECK:   %12:g8rc_and_g8rc_nox0 = COPY killed %3
+  ; CHECK:   B %bb.1
+
 ...
-
-# CHECK-LABEL: Bad machine code: LiveVariables: Block should not be in AliveBlocks
-# CHECK-NEXT:  - function:    testfloatslt
-# CHECK-NEXT:  - basic block: %bb.1 entry
-# CHECK-NEXT:  Virtual register %4 is not needed live through the block.
-
-# CHECK-LABEL: Bad machine code: LiveVariables: Block should not be in AliveBlocks
-# CHECK-NEXT:  - function:    testfloatslt
-# CHECK-NEXT:  - basic block: %bb.1 entry
-# CHECK-NEXT:  Virtual register %5 is not needed live through the block.
-
-# CHECK-LABEL: Bad machine code: LiveVariables: Block should not be in AliveBlocks
-# CHECK-NEXT:  - function:    testfloatslt
-# CHECK-NEXT:  - basic block: %bb.2 entry
-# CHECK-NEXT:  Virtual register %5 is not needed live through the block.
-# CHECK-NEXT:  LLVM ERROR: Found 3 machine code errors.

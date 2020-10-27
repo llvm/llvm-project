@@ -5446,6 +5446,7 @@ class CS<string iname, bits<4> opcode, list<dag> pattern=[]>
   let Inst{3-0} = Rm{3-0};
 
   let Uses = [CPSR];
+  let hasSideEffects = 0;
 }
 
 def t2CSEL  : CS<"csel",  0b1000>;

@@ -22,6 +22,7 @@ add_libc_unittest(
     libc.include.signal
     libc.src.signal.raise
     libc.src.signal.sigaction
+    libc.test.errno_setter_matcher
 )
 
 add_libc_unittest(
@@ -37,6 +38,7 @@ add_libc_unittest(
     libc.src.signal.sigaddset
     libc.src.signal.sigemptyset
     libc.src.signal.sigprocmask
+    libc.test.errno_setter_matcher
 )
 
 add_libc_unittest(
@@ -49,6 +51,7 @@ add_libc_unittest(
     libc.include.errno
     libc.include.signal
     libc.src.signal.sigaddset
+    libc.test.errno_setter_matcher
 )
 
 add_libc_unittest(
@@ -63,6 +66,7 @@ add_libc_unittest(
     libc.src.errno.__errno_location
     libc.src.signal.raise
     libc.src.signal.signal
+    libc.test.errno_setter_matcher
 )
 
 add_libc_unittest(
@@ -77,6 +81,7 @@ add_libc_unittest(
     libc.src.signal.raise
     libc.src.signal.sigfillset
     libc.src.signal.sigprocmask
+    libc.test.errno_setter_matcher
 )
 
 add_libc_unittest(
@@ -92,4 +97,5 @@ add_libc_unittest(
     libc.src.signal.sigdelset
     libc.src.signal.sigfillset
     libc.src.signal.sigprocmask
+    libc.test.errno_setter_matcher
 )

@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=thumbv8.1m.main -mve-tail-predication -disable-mve-tail-predication=false -mattr=+mve,+lob %s -S -o - | FileCheck %s
+; RUN: opt -mtriple=thumbv8.1m.main -mve-tail-predication -tail-predication=enabled -mattr=+mve,+lob %s -S -o - | FileCheck %s
 
 ; The following functions should all fail to become tail-predicated.
 ; CHECK-NOT: call i32 @llvm.arm.vctp

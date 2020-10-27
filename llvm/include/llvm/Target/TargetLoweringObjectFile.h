@@ -247,7 +247,8 @@ public:
 
   /// If supported, return the function entry point symbol.
   /// Otherwise, returns nulltpr.
-  virtual MCSymbol *getFunctionEntryPointSymbol(const Function *F,
+  /// Func must be a function or an alias which has a function as base object.
+  virtual MCSymbol *getFunctionEntryPointSymbol(const GlobalValue *Func,
                                                 const TargetMachine &TM) const {
     return nullptr;
   }

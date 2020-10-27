@@ -1266,6 +1266,17 @@ define float @test_pow_intrin(float %l, float %r) {
   ret float %res
 }
 
+declare float @llvm.powi.f32(float, i32)
+define float @test_powi_intrin(float %l, i32 %r) {
+; CHECK-LABEL: name: test_powi_intrin
+; CHECK: [[LHS:%[0-9]+]]:_(s32) = COPY $s0
+; CHECK: [[RHS:%[0-9]+]]:_(s32) = COPY $w0
+; CHECK: [[RES:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FPOWI [[LHS]], [[RHS]]
+; CHECK: $s0 = COPY [[RES]]
+  %res = call nnan ninf nsz arcp contract afn reassoc float @llvm.powi.f32(float %l, i32 %r)
+  ret float %res
+}
+
 declare float @llvm.fma.f32(float, float, float)
 define float @test_fma_intrin(float %a, float %b, float %c) {
 ; CHECK-LABEL: name: test_fma_intrin
@@ -1378,6 +1389,16 @@ define float @test_intrinsic_round(float %a) {
 ; CHECK: $s0 = COPY [[RES]]
   %res = call float @llvm.round.f32(float %a)
   ret float %res
+}
+
+declare i32 @llvm.lrint.i32.f32(float)
+define i32 @test_intrinsic_lrint(float %a) {
+; CHECK-LABEL: name: test_intrinsic_lrint
+; CHECK: [[A:%[0-9]+]]:_(s32) = COPY $s0
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_INTRINSIC_LRINT [[A]]
+; CHECK: $w0 = COPY [[RES]]
+  %res = call i32 @llvm.lrint.i32.f32(float %a)
+  ret i32 %res
 }
 
 declare i32 @llvm.ctlz.i32(i32, i1)

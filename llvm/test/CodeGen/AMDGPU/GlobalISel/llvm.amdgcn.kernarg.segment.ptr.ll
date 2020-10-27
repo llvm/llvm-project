@@ -115,10 +115,8 @@ define amdgpu_kernel void @opencl_test_implicit_alignment_no_explicit_kernargs_r
 }
 
 ; ALL-LABEL: {{^}}func_kernarg_segment_ptr:
-; ALL: s_mov_b32 [[S_LO:s[0-9]+]], 0{{$}}
-; ALL: s_mov_b32 [[S_HI:s[0-9]+]], 0{{$}}
-; ALL: v_mov_b32_e32 v0, [[S_LO]]{{$}}
-; ALL: v_mov_b32_e32 v1, [[S_HI]]{{$}}
+; ALL: v_mov_b32_e32 v0, 0{{$}}
+; ALL: v_mov_b32_e32 v1, 0{{$}}
 define i8 addrspace(4)* @func_kernarg_segment_ptr() {
   %ptr = call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
   ret i8 addrspace(4)* %ptr

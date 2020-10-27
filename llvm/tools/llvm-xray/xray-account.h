@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "func-id-helper.h"
+#include "llvm/ADT/Bitfields.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/XRay/XRayRecord.h"
@@ -27,12 +28,26 @@ namespace xray {
 
 class LatencyAccountant {
 public:
-  typedef std::map<int32_t, std::vector<uint64_t>> FunctionLatencyMap;
-  typedef std::map<uint32_t, std::pair<uint64_t, uint64_t>>
+  typedef llvm::DenseMap<int32_t, llvm::SmallVector<uint64_t, 0>>
+      FunctionLatencyMap;
+  typedef llvm::DenseMap<uint32_t, std::pair<uint64_t, uint64_t>>
       PerThreadMinMaxTSCMap;
-  typedef std::map<uint8_t, std::pair<uint64_t, uint64_t>> PerCPUMinMaxTSCMap;
-  typedef std::vector<std::pair<int32_t, uint64_t>> FunctionStack;
-  typedef std::map<uint32_t, FunctionStack> PerThreadFunctionStackMap;
+  typedef llvm::DenseMap<uint8_t, std::pair<uint64_t, uint64_t>>
+      PerCPUMinMaxTSCMap;
+  struct FunctionStack {
+    llvm::SmallVector<std::pair<int32_t, uint64_t>, 32> Stack;
+    class RecursionStatus {
+      uint32_t Storage = 0;
+      using Depth = Bitfield::Element<int32_t, 0, 31>;    // Low 31 bits.
+      using IsRecursive = Bitfield::Element<bool, 31, 1>; // Sign bit.
+    public:
+      RecursionStatus &operator++();
+      RecursionStatus &operator--();
+      bool isRecursive() const;
+    };
+    Optional<llvm::DenseMap<int32_t, RecursionStatus>> RecursionDepth;
+  };
+  typedef llvm::DenseMap<uint32_t, FunctionStack> PerThreadFunctionStackMap;
 
 private:
   PerThreadFunctionStackMap PerThreadFunctionStack;
@@ -41,6 +56,7 @@ private:
   PerCPUMinMaxTSCMap PerCPUMinMaxTSC;
   FuncIdConversionHelper &FuncIdHelper;
 
+  bool RecursiveCallsOnly = false;
   bool DeduceSiblingCalls = false;
   uint64_t CurrentMaxTSC = 0;
 
@@ -50,8 +66,9 @@ private:
 
 public:
   explicit LatencyAccountant(FuncIdConversionHelper &FuncIdHelper,
-                             bool DeduceSiblingCalls)
-      : FuncIdHelper(FuncIdHelper), DeduceSiblingCalls(DeduceSiblingCalls) {}
+                             bool RecursiveCallsOnly, bool DeduceSiblingCalls)
+      : FuncIdHelper(FuncIdHelper), RecursiveCallsOnly(RecursiveCallsOnly),
+        DeduceSiblingCalls(DeduceSiblingCalls) {}
 
   const FunctionLatencyMap &getFunctionLatencies() const {
     return FunctionLatencies;

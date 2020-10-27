@@ -26,19 +26,29 @@ CodeGenOpt::Level lld::args::getCGOptLevel(int optLevelLTO) {
   return CodeGenOpt::Default;
 }
 
-int64_t lld::args::getInteger(opt::InputArgList &args, unsigned key,
-                              int64_t Default) {
+static int64_t getInteger(opt::InputArgList &args, unsigned key,
+                          int64_t Default, unsigned base) {
   auto *a = args.getLastArg(key);
   if (!a)
     return Default;
 
   int64_t v;
-  if (to_integer(a->getValue(), v, 10))
+  if (to_integer(a->getValue(), v, base))
     return v;
 
   StringRef spelling = args.getArgString(a->getIndex());
   error(spelling + ": number expected, but got '" + a->getValue() + "'");
   return 0;
+}
+
+int64_t lld::args::getInteger(opt::InputArgList &args, unsigned key,
+                              int64_t Default) {
+  return ::getInteger(args, key, Default, 10);
+}
+
+int64_t lld::args::getHex(opt::InputArgList &args, unsigned key,
+                          int64_t Default) {
+  return ::getInteger(args, key, Default, 16);
 }
 
 std::vector<StringRef> lld::args::getStrings(opt::InputArgList &args, int id) {

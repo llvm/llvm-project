@@ -347,11 +347,9 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
                           << printMBBReference(*Pair.first) << " -- "
                           << printMBBReference(*NewSucc) << " -- "
                           << printMBBReference(*Pair.second) << '\n');
-        if (MBFI) {
-          auto NewSuccFreq = MBFI->getBlockFreq(Pair.first) *
-                             MBPI->getEdgeProbability(Pair.first, NewSucc);
-          MBFI->setBlockFreq(NewSucc, NewSuccFreq.getFrequency());
-        }
+        if (MBFI)
+          MBFI->onEdgeSplit(*Pair.first, *NewSucc, *MBPI);
+
         MadeChange = true;
         ++NumSplit;
       } else

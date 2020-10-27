@@ -154,7 +154,7 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
         Objects.push_back(UnderlyingObjectsVector::value_type(PSV, MayAlias));
       } else if (const Value *V = MMO->getValue()) {
         SmallVector<Value *, 4> Objs;
-        if (!getUnderlyingObjectsForCodeGen(V, Objs, DL))
+        if (!getUnderlyingObjectsForCodeGen(V, Objs))
           return false;
 
         for (Value *V : Objs) {

@@ -1510,6 +1510,23 @@ struct DocumentLink {
 };
 llvm::json::Value toJSON(const DocumentLink &DocumentLink);
 
+// FIXME(kirillbobyrev): Add FoldingRangeClientCapabilities so we can support
+// per-line-folding editors.
+struct FoldingRangeParams {
+  TextDocumentIdentifier textDocument;
+};
+bool fromJSON(const llvm::json::Value &, FoldingRangeParams &);
+
+/// Stores information about a region of code that can be folded.
+struct FoldingRange {
+  unsigned startLine = 0;
+  unsigned startCharacter;
+  unsigned endLine = 0;
+  unsigned endCharacter;
+  llvm::Optional<std::string> kind;
+};
+llvm::json::Value toJSON(const FoldingRange &Range);
+
 } // namespace clangd
 } // namespace clang
 

@@ -109,14 +109,14 @@ getUnaryRangeSelectors() {
 static const llvm::StringMap<RangeSelectorOp<std::string, std::string>> &
 getBinaryStringSelectors() {
   static const llvm::StringMap<RangeSelectorOp<std::string, std::string>> M = {
-      {"encloseNodes", range}};
+      {"encloseNodes", encloseNodes}};
   return M;
 }
 
 static const llvm::StringMap<RangeSelectorOp<RangeSelector, RangeSelector>> &
 getBinaryRangeSelectors() {
   static const llvm::StringMap<RangeSelectorOp<RangeSelector, RangeSelector>>
-      M = {{"enclose", range}};
+      M = {{"enclose", enclose}, {"between", between}};
   return M;
 }
 

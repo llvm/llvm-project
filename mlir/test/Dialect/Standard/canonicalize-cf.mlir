@@ -138,3 +138,26 @@ func @cond_br_pass_through_fail(%cond : i1) {
 ^bb2:
   return
 }
+
+// -----
+
+// Erase assertion if condition is known to be true at compile time.
+// CHECK-LABEL: @assert_true
+func @assert_true() {
+  // CHECK-NOT: assert
+  %true = constant true
+  assert %true, "Computer says no"
+  return
+}
+
+// -----
+
+// Keep assertion if condition unknown at compile time.
+// CHECK-LABEL: @assert
+// CHECK-SAME:  (%[[ARG:.*]]: i1)
+func @assert(%arg : i1) {
+  // CHECK: assert %[[ARG]], "Computer says no"
+  assert %arg, "Computer says no"
+  return
+}
+

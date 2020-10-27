@@ -1,10 +1,12 @@
-RUN: llvm-readobj -A %p/Inputs/reginfo.obj.elf-mipsel | FileCheck %s
+## Check that we are able to dump the SHT_MIPS_REGINFO section using -A properly.
 
-CHECK:      MIPS RegInfo {
-CHECK-NEXT:   GP: 0x7FEF
-CHECK-NEXT:   General Mask: 0xB00001F6
-CHECK-NEXT:   Co-Proc Mask0: 0x0
-CHECK-NEXT:   Co-Proc Mask1: 0x0
-CHECK-NEXT:   Co-Proc Mask2: 0x0
-CHECK-NEXT:   Co-Proc Mask3: 0x0
-CHECK-NEXT: }
+# RUN: llvm-readobj -A %p/Inputs/reginfo.obj.elf-mipsel | FileCheck %s
+
+# CHECK:      MIPS RegInfo {
+# CHECK-NEXT:   GP: 0x7FEF
+# CHECK-NEXT:   General Mask: 0xB00001F6
+# CHECK-NEXT:   Co-Proc Mask0: 0x0
+# CHECK-NEXT:   Co-Proc Mask1: 0x0
+# CHECK-NEXT:   Co-Proc Mask2: 0x0
+# CHECK-NEXT:   Co-Proc Mask3: 0x0
+# CHECK-NEXT: }

@@ -313,9 +313,22 @@ TEST(GlobalCompilationDatabaseTest, NonCanonicalFilenames) {
   llvm::sys::path::append(File, "blabla", "..", "a.cc");
 
   EXPECT_TRUE(DB.getCompileCommand(File));
-  EXPECT_TRUE(DB.getProjectInfo(File));
+  EXPECT_FALSE(DB.getProjectInfo(File));
 }
 
+TEST_F(OverlayCDBTest, GetProjectInfo) {
+  OverlayCDB DB(Base.get());
+  Path File = testPath("foo.cc");
+  Path Header = testPath("foo.h");
+
+  EXPECT_EQ(DB.getProjectInfo(File)->SourceRoot, testRoot());
+  EXPECT_EQ(DB.getProjectInfo(Header)->SourceRoot, testRoot());
+
+  // Shouldn't change after an override.
+  DB.setCompileCommand(File, tooling::CompileCommand());
+  EXPECT_EQ(DB.getProjectInfo(File)->SourceRoot, testRoot());
+  EXPECT_EQ(DB.getProjectInfo(Header)->SourceRoot, testRoot());
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

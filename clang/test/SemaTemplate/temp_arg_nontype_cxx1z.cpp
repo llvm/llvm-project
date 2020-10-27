@@ -448,3 +448,14 @@ namespace PR42108 {
     A<T{}>(); // expected-error {{non-type template argument is not a constant expression}} expected-note 2{{temporary}}
   }
 }
+
+namespace PR46637 {
+  template<auto (*f)() -> auto> struct X { // expected-note {{here}}
+    auto call() { return f(); }
+  };
+  X<nullptr> x; // expected-error {{incompatible initializer}}
+
+  void *f();
+  X<f> y;
+  int n = y.call(); // expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'void *'}}
+}

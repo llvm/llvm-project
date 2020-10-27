@@ -402,6 +402,18 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
     LabelWidth = std::max((std::string::size_type)LabelWidth, A.Label.size());
 
     A.Marker = GetMarker(DiagItr->MatchTy);
+    if (!DiagItr->Note.empty()) {
+      A.Marker.Note = DiagItr->Note;
+      // It's less confusing if notes that don't actually have ranges don't have
+      // markers.  For example, a marker for 'with "VAR" equal to "5"' would
+      // seem to indicate where "VAR" matches, but the location we actually have
+      // for the marker simply points to the start of the match/search range for
+      // the full pattern of which the substitution is potentially just one
+      // component.
+      if (DiagItr->InputStartLine == DiagItr->InputEndLine &&
+          DiagItr->InputStartCol == DiagItr->InputEndCol)
+        A.Marker.Lead = ' ';
+    }
     A.FoundAndExpectedMatch =
         DiagItr->MatchTy == FileCheckDiag::MatchFoundAndExpected;
 

@@ -6,12 +6,12 @@
 # GCN: [[SMOV:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 123
 
 # CI: [[SHIFT:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 16, %{{[0-9]+}}, implicit $exec
-# CI: %{{[0-9]+}}:vgpr_32 = V_ADD_I32_e32 [[SMOV]], killed [[SHIFT]], implicit-def $vcc, implicit $exec
+# CI: %{{[0-9]+}}:vgpr_32 = V_ADD_CO_U32_e32 [[SMOV]], killed [[SHIFT]], implicit-def $vcc, implicit $exec
 
 # VI: [[VMOV:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 [[SMOV]], implicit $exec
-# VI: %{{[0-9]+}}:vgpr_32 = V_ADD_I32_sdwa 0, [[VMOV]], 0, %{{[0-9]+}}, 0, 6, 0, 6, 5, implicit-def $vcc, implicit $exec
+# VI: %{{[0-9]+}}:vgpr_32 = V_ADD_CO_U32_sdwa 0, [[VMOV]], 0, %{{[0-9]+}}, 0, 6, 0, 6, 5, implicit-def $vcc, implicit $exec
 
-# GFX9: %{{[0-9]+}}:vgpr_32 = V_ADD_I32_sdwa 0, [[SMOV]], 0, %{{[0-9]+}}, 0, 6, 0, 6, 5, implicit-def $vcc, implicit $exec
+# GFX9: %{{[0-9]+}}:vgpr_32 = V_ADD_CO_U32_sdwa 0, [[SMOV]], 0, %{{[0-9]+}}, 0, 6, 0, 6, 5, implicit-def $vcc, implicit $exec
 
 ---
 name:            add_shr_i32
@@ -40,7 +40,7 @@ body:             |
     %3 = FLAT_LOAD_DWORD %1, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
     %12 = S_MOV_B32 123
     %10 = V_LSHRREV_B32_e64 16, %3, implicit $exec
-    %11 = V_ADD_I32_e32 %12, killed %10, implicit-def $vcc, implicit $exec
+    %11 = V_ADD_CO_U32_e32 %12, killed %10, implicit-def $vcc, implicit $exec
     FLAT_STORE_DWORD %0, %11, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
     $sgpr30_sgpr31 = COPY %2
     S_SETPC_B64_return $sgpr30_sgpr31

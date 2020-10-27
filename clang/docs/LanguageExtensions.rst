@@ -1719,6 +1719,9 @@ This extension also works in C++ mode, as far as that goes, but does not apply
 to the C++ ``std::complex``.  (In C++11, list initialization allows the same
 syntax to be used with ``std::complex`` with the same meaning.)
 
+For GCC compatibility, ``__builtin_complex(re, im)`` can also be used to
+construct a complex number from the given real and imaginary components.
+
 Builtin Functions
 =================
 

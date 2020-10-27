@@ -183,11 +183,11 @@ class RegisterContextToInfo: public SymbolFile::RegisterInfoResolver {
 public:
   RegisterContextToInfo(RegisterContext &ctx) : m_ctx(ctx) {}
 
-  const RegisterInfo *ResolveName(llvm::StringRef name) const {
+  const RegisterInfo *ResolveName(llvm::StringRef name) const override {
     return m_ctx.GetRegisterInfoByName(name);
   }
   const RegisterInfo *ResolveNumber(lldb::RegisterKind kind,
-                                    uint32_t number) const {
+                                    uint32_t number) const override {
     return m_ctx.GetRegisterInfo(kind, number);
   }
 

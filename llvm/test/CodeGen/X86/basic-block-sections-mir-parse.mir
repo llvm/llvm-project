@@ -1,0 +1,131 @@
+# Start after bbsections0-prepare and check if the right code is generated.
+# RUN: llc -mtriple x86_64-unknown-linux-gnu -start-after=bbsections-prepare  %s -o - | FileCheck %s -check-prefix=CHECK
+
+
+# How to generate the input:
+# foo.cc
+# int foo(bool k) {
+#  if (k) return 1;
+#  return 0;
+# }
+#
+# clang -O0 -S -emit-llvm foo.cc
+# llc < foo.ll -stop-after=bbsections-prepare -basic-block-sections=all
+
+--- |
+  ; Function Attrs: noinline nounwind optnone uwtable
+  define dso_local i32 @_Z3foob(i1 zeroext %0) #0 {
+    %2 = alloca i32, align 4
+    %3 = alloca i8, align 1
+    %4 = zext i1 %0 to i8
+    store i8 %4, i8* %3, align 1
+    %5 = load i8, i8* %3, align 1
+    %6 = trunc i8 %5 to i1
+    br i1 %6, label %7, label %8
+  
+  7:                                                ; preds = %1
+    store i32 1, i32* %2, align 4
+    br label %9
+  
+  8:                                                ; preds = %1
+    store i32 0, i32* %2, align 4
+    br label %9
+  
+  9:                                                ; preds = %8, %7
+    %10 = load i32, i32* %2, align 4
+    ret i32 %10
+  }
+  
+  attributes #0 = { "frame-pointer"="all"  "target-cpu"="x86-64" }
+  
+
+...
+---
+name:            _Z3foob
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       8
+  offsetAdjustment: -8
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default, 
+      callee-saved-register: '', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+stack:
+  - { id: 0, type: default, offset: -24, size: 4, 
+      alignment: 4, stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: default, offset: -17, size: 1, 
+      alignment: 1, stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.1, align 4, bbsections 0):
+    successors: %bb.2(0x40000000), %bb.1(0x40000000)
+    liveins: $edi
+  
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbp, -16
+    $rbp = frame-setup MOV64rr $rsp
+    CFI_INSTRUCTION def_cfa_register $rbp
+    renamable $dil = AND8ri renamable $dil, 1, implicit-def dead $eflags, implicit killed $edi, implicit-def $edi
+    MOV8mr $rbp, 1, $noreg, -1, $noreg, renamable $dil, implicit killed $edi :: (store 1 into %ir.3)
+    TEST8mi $rbp, 1, $noreg, -1, $noreg, 1, implicit-def $eflags :: (load 1 from %ir.3)
+    JCC_1 %bb.2, 4, implicit killed $eflags
+    JMP_1 %bb.1
+  
+  bb.1 (%ir-block.7, bbsections 1):
+    successors: %bb.3(0x80000000)
+  
+    MOV32mi $rbp, 1, $noreg, -8, $noreg, 1 :: (store 4 into %ir.2)
+    JMP_1 %bb.3
+  
+  bb.2 (%ir-block.8, bbsections 2):
+    successors: %bb.3(0x80000000)
+  
+    MOV32mi $rbp, 1, $noreg, -8, $noreg, 0 :: (store 4 into %ir.2)
+    JMP_1 %bb.3
+  
+  bb.3 (%ir-block.9, bbsections 3):
+    renamable $eax = MOV32rm $rbp, 1, $noreg, -8, $noreg :: (load 4 from %ir.2)
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa $rsp, 8
+    RETQ implicit $eax
+
+...
+
+# CHECK: _Z3foob:
+# CHECK: .section	.text,"ax",@progbits,unique
+# CHECK: _Z3foob.1:
+# CHECK: .section	.text,"ax",@progbits,unique
+# CHECK: _Z3foob.2:
+# CHECK: .section	.text,"ax",@progbits,unique
+# CHECK: _Z3foob.3:

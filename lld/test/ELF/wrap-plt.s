@@ -11,6 +11,7 @@
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section ({{.*}}) .rela.plt {
 // CHECK-NEXT:     R_X86_64_JUMP_SLOT __wrap_foo 0x0
+// CHECK-NEXT:     R_X86_64_JUMP_SLOT foo 0x0
 // CHECK-NEXT:     R_X86_64_JUMP_SLOT _start 0x0
 // CHECK-NEXT:   }
 // CHECK-NEXT: ]
@@ -18,6 +19,7 @@
 // DISASM:      <_start>:
 // DISASM-NEXT:   jmp {{.*}} <__wrap_foo@plt>
 // DISASM-NEXT:   jmp {{.*}} <__wrap_foo@plt>
+// DISASM-NEXT:   jmp {{.*}} <foo@plt>
 // DISASM-NEXT:   jmp {{.*}} <_start@plt>
 
 .global foo
@@ -32,4 +34,5 @@ __wrap_foo:
 _start:
   jmp foo@plt
   jmp __wrap_foo@plt
+  jmp __real_foo@plt
   jmp _start@plt

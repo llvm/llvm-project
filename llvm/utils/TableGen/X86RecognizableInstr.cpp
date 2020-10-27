@@ -874,6 +874,7 @@ OperandType RecognizableInstr::typeFromString(const std::string &s,
   TYPE("i16imm",              TYPE_IMM)
   TYPE("i16i8imm",            TYPE_IMM)
   TYPE("GR16",                TYPE_R16)
+  TYPE("GR16orGR32orGR64",    TYPE_R16)
   TYPE("i32mem",              TYPE_M)
   TYPE("i32imm",              TYPE_IMM)
   TYPE("i32i8imm",            TYPE_IMM)
@@ -1035,6 +1036,7 @@ RecognizableInstr::rmRegisterEncodingFromString(const std::string &s,
   ENCODING("RST",             ENCODING_FP)
   ENCODING("RSTi",            ENCODING_FP)
   ENCODING("GR16",            ENCODING_RM)
+  ENCODING("GR16orGR32orGR64",ENCODING_RM)
   ENCODING("GR32",            ENCODING_RM)
   ENCODING("GR32orGR64",      ENCODING_RM)
   ENCODING("GR64",            ENCODING_RM)
@@ -1072,6 +1074,7 @@ OperandEncoding
 RecognizableInstr::roRegisterEncodingFromString(const std::string &s,
                                                 uint8_t OpSize) {
   ENCODING("GR16",            ENCODING_REG)
+  ENCODING("GR16orGR32orGR64",ENCODING_REG)
   ENCODING("GR32",            ENCODING_REG)
   ENCODING("GR32orGR64",      ENCODING_REG)
   ENCODING("GR64",            ENCODING_REG)

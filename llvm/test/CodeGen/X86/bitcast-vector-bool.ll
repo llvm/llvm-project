@@ -515,7 +515,7 @@ define i32 @bitcast_v64i8_to_v2i32(<64 x i8> %a0) nounwind {
 ; SSE2-SSSE3-NEXT:    shlq $32, %rdx
 ; SSE2-SSSE3-NEXT:    orq %rcx, %rdx
 ; SSE2-SSSE3-NEXT:    movq %rdx, %xmm0
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE2-SSSE3-NEXT:    movd %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    addl %ecx, %eax
 ; SSE2-SSSE3-NEXT:    retq

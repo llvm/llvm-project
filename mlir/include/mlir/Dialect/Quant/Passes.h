@@ -16,12 +16,9 @@
 #ifndef MLIR_DIALECT_QUANT_PASSES_H
 #define MLIR_DIALECT_QUANT_PASSES_H
 
-#include <memory>
+#include "mlir/Pass/Pass.h"
 
 namespace mlir {
-class FuncOp;
-template <typename T> class OperationPass;
-
 namespace quant {
 
 /// Creates a pass that converts quantization simulation operations (i.e.
@@ -34,6 +31,14 @@ std::unique_ptr<OperationPass<FuncOp>> createConvertSimulatedQuantPass();
 /// low level representation. Because it modifies the constant, it is
 /// destructive and cannot be undone.
 std::unique_ptr<OperationPass<FuncOp>> createConvertConstPass();
+
+//===----------------------------------------------------------------------===//
+// Registration
+//===----------------------------------------------------------------------===//
+
+/// Generate the code for registering passes.
+#define GEN_PASS_REGISTRATION
+#include "mlir/Dialect/Quant/Passes.h.inc"
 
 } // namespace quant
 } // namespace mlir

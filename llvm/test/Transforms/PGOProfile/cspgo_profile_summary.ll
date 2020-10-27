@@ -1,8 +1,8 @@
 ; Test the profile summary for context sensitive PGO (CSPGO)
 
 ; RUN: llvm-profdata merge %S/Inputs/cspgo.proftext -o %t.profdata
-; RUN: opt < %s -O2 -disable-preinline -pgo-kind=pgo-instr-use-pipeline -profile-file=%t.profdata -S | FileCheck %s --check-prefix=PGOSUMMARY
-; RUN: opt < %s -O2 -disable-preinline -pgo-kind=pgo-instr-use-pipeline -profile-file=%t.profdata -S -cspgo-kind=cspgo-instr-use-pipeline| FileCheck %s --check-prefix=CSPGOSUMMARY
+; RUN: opt < %s -O2 -disable-preinline -pgo-instrument-entry=false -pgo-kind=pgo-instr-use-pipeline -profile-file=%t.profdata -S | FileCheck %s --check-prefix=PGOSUMMARY
+; RUN: opt < %s -O2 -disable-preinline -pgo-instrument-entry=false -pgo-kind=pgo-instr-use-pipeline -profile-file=%t.profdata -S -cspgo-kind=cspgo-instr-use-pipeline| FileCheck %s --check-prefix=CSPGOSUMMARY
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

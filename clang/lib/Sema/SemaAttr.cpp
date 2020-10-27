@@ -300,20 +300,18 @@ void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
   // If specified then alignment must be a "small" power of two.
   unsigned AlignmentVal = 0;
   if (Alignment) {
-    llvm::APSInt Val;
+    Optional<llvm::APSInt> Val;
 
     // pack(0) is like pack(), which just works out since that is what
     // we use 0 for in PackAttr.
-    if (Alignment->isTypeDependent() ||
-        Alignment->isValueDependent() ||
-        !Alignment->isIntegerConstantExpr(Val, Context) ||
-        !(Val == 0 || Val.isPowerOf2()) ||
-        Val.getZExtValue() > 16) {
+    if (Alignment->isTypeDependent() || Alignment->isValueDependent() ||
+        !(Val = Alignment->getIntegerConstantExpr(Context)) ||
+        !(*Val == 0 || Val->isPowerOf2()) || Val->getZExtValue() > 16) {
       Diag(PragmaLoc, diag::warn_pragma_pack_invalid_alignment);
       return; // Ignore
     }
 
-    AlignmentVal = (unsigned) Val.getZExtValue();
+    AlignmentVal = (unsigned)Val->getZExtValue();
   }
   if (Action == Sema::PSK_Show) {
     // Show the current alignment, making sure to show the right value

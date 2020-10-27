@@ -437,3 +437,75 @@ add_math_unittest(
     libc.src.math.modfl
     libc.utils.FPUtil.fputil
 )
+
+add_math_unittest(
+  fminf_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fminf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.fminf
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  fmin_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fmin_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.fmin
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  fminl_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fminl_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.fminl
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  fmaxf_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fmaxf_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.fmaxf
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  fmax_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fmax_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.fmax
+    libc.utils.FPUtil.fputil
+)
+
+add_math_unittest(
+  fmaxl_test
+  SUITE
+    libc_math_unittests
+  SRCS
+    fmaxl_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.fmaxl
+    libc.utils.FPUtil.fputil
+)

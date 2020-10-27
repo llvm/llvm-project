@@ -21,6 +21,7 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/SHA1.h"
 #include <regex>
+#include <unordered_set>
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -376,6 +377,15 @@ static void finalizeShtGroup(OutputSection *os,
   // provides signature of the section group.
   ArrayRef<Symbol *> symbols = section->file->getSymbols();
   os->info = in.symTab->getSymbolIndex(symbols[section->info]);
+
+  // Some group members may be combined or discarded, so we need to compute the
+  // new size. The content will be rewritten in InputSection::copyShtGroup.
+  std::unordered_set<uint32_t> seen;
+  ArrayRef<InputSectionBase *> sections = section->file->getSections();
+  for (const uint32_t &idx : section->getDataAs<uint32_t>().slice(1))
+    if (OutputSection *osec = sections[read32(&idx)]->getOutputSection())
+      seen.insert(osec->sectionIndex);
+  os->size = (1 + seen.size()) * sizeof(uint32_t);
 }
 
 void OutputSection::finalize() {

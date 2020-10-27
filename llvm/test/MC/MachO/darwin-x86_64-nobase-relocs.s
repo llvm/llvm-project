@@ -1,4 +1,4 @@
-// RUN: llvm-mc -n -triple x86_64-apple-darwin9 %s -filetype=obj -o - | llvm-readobj --file-headers -S --sd -r --macho-segment | FileCheck %s
+// RUN: llvm-mc -n -triple x86_64-apple-darwin9 %s -filetype=obj -o - | llvm-readobj --file-headers -S --sd -r --macho-segment - | FileCheck %s
 
 // Test case for rdar://10062261
 

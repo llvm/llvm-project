@@ -1,5 +1,7 @@
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   -mcpu=future -ppc-asm-full-reg-names < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-- \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -target-abi=elfv2 -mtriple=powerpc64-- \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s | FileCheck %s
 
  define float @FloatConstantPool() {
 ; CHECK-LABEL: FloatConstantPool:

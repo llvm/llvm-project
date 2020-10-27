@@ -34,7 +34,7 @@ public:
 
   Type GetType() const override { return eTypeProperties; }
 
-  bool Clear() override;
+  void Clear() override;
 
   lldb::OptionValueSP DeepCopy() const override;
 

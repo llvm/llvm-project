@@ -17,6 +17,18 @@ void langas() {
   // CHECK: VarDecl {{.*}} z_global '__global int *'
   [[clang::opencl_global]] int *z_global;
 
+  // CHECK: VarDecl {{.*}} x_global_device '__global_device int *'
+  __attribute__((opencl_global_device)) int *x_global_device;
+
+  // CHECK: VarDecl {{.*}} z_global_device '__global_device int *'
+  [[clang::opencl_global_device]] int *z_global_device;
+
+  // CHECK: VarDecl {{.*}} x_global_host '__global_host int *'
+  __attribute__((opencl_global_host)) int *x_global_host;
+
+  // CHECK: VarDecl {{.*}} z_global_host '__global_host int *'
+  [[clang::opencl_global_host]] int *z_global_host;
+
   // CHECK: VarDecl {{.*}} x_local '__local int *'
   __attribute__((opencl_local)) int *x_local;
 

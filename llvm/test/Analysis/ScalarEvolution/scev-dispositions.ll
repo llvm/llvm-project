@@ -1,4 +1,5 @@
-; RUN: opt -analyze -scalar-evolution < %s | FileCheck %s
+; RUN: opt -analyze -enable-new-pm=0 -scalar-evolution < %s | FileCheck %s
+; RUN: opt -disable-output "-passes=print<scalar-evolution>" < %s 2>&1 | FileCheck %s
 
 define void @single_loop(i32* %buf, i32 %start) {
 ; CHECK-LABEL: Classifying expressions for: @single_loop

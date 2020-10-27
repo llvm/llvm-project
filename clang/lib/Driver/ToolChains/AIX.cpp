@@ -44,12 +44,6 @@ void aix::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-a64");
   }
 
-  // Accept an undefined symbol as an extern so that an error message is not
-  // displayed. Otherwise, undefined symbols are flagged with error messages.
-  // FIXME: This should be removed when the assembly generation from the
-  // compiler is able to write externs properly.
-  CmdArgs.push_back("-u");
-
   // Accept any mixture of instructions.
   // On Power for AIX and Linux, this behaviour matches that of GCC for both the
   // user-provided assembler source case and the compiler-produced assembler

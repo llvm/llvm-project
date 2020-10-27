@@ -13,13 +13,11 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_KNOWNBITSINFO_H
 #define LLVM_CODEGEN_GLOBALISEL_KNOWNBITSINFO_H
 
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Register.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
 
 namespace llvm {

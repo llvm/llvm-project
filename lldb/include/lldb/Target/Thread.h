@@ -253,9 +253,9 @@ public:
 
   bool ThreadStoppedForAReason();
 
-  static const char *RunModeAsCString(lldb::RunMode mode);
+  static std::string RunModeAsString(lldb::RunMode mode);
 
-  static const char *StopReasonAsCString(lldb::StopReason reason);
+  static std::string StopReasonAsString(lldb::StopReason reason);
 
   virtual const char *GetInfo() { return nullptr; }
 

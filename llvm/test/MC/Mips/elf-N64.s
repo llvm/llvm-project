@@ -1,5 +1,5 @@
-// RUN: llvm-mc -filetype=obj -triple=mips64el-pc-linux -mcpu=mips64  %s -o - | llvm-readobj -r | FileCheck %s
-// RUN: llvm-mc -filetype=obj -triple=mips64-pc-linux -mcpu=mips64  %s -o - | llvm-readobj -r | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple=mips64el-pc-linux -mcpu=mips64  %s -o - | llvm-readobj -r - | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple=mips64-pc-linux -mcpu=mips64  %s -o - | llvm-readobj -r - | FileCheck %s
 
 // Check for N64 relocation production.
 // Check that the appropriate relocations were created.

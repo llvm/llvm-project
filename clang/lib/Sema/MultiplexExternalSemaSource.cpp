@@ -172,13 +172,6 @@ Module *MultiplexExternalSemaSource::getModule(unsigned ID) {
   return nullptr;
 }
 
-bool MultiplexExternalSemaSource::DeclIsFromPCHWithObjectFile(const Decl *D) {
-  for (auto *S : Sources)
-    if (S->DeclIsFromPCHWithObjectFile(D))
-      return true;
-  return false;
-}
-
 bool MultiplexExternalSemaSource::layoutRecordType(const RecordDecl *Record,
                                                    uint64_t &Size,
                                                    uint64_t &Alignment,

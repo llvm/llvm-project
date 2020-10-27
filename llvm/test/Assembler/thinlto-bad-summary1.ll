@@ -2,7 +2,7 @@
 ; summary type label.
 ; RUN: not opt %s 2>&1 | FileCheck %s
 
-; CHECK: error: Expected 'gv', 'module', or 'typeid' at the start of summary entry
+; CHECK: error: Expected 'gv', 'module', 'typeid', 'flags' or 'blockcount' at the start of summary entry
 
 ; ModuleID = 'thinlto-function-summary-callgraph.ll'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

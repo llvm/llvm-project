@@ -15,7 +15,7 @@
 ; Basic test is fully unrolled and we revisit the post-unroll new sibling
 ; loops, including the ones that used to be child loops.
 define void @full_unroll(i1* %ptr) {
-; CHECK-LABEL: FunctionToLoopPassAdaptor{{.*}} on full_unroll
+; CHECK-LABEL: OptimizationRemarkEmitterAnalysis on full_unroll
 ; CHECK-NOT: LoopFullUnrollPass
 
 entry:
@@ -81,7 +81,7 @@ exit:
 ; duplicating child loops without changing their structure and so they aren't by
 ; default visited, but will be visited with a special parameter.
 define void @partial_unroll(i32 %count, i1* %ptr) {
-; CHECK-LABEL: FunctionToLoopPassAdaptor{{.*}} on partial_unroll
+; CHECK-LABEL: OptimizationRemarkEmitterAnalysis on partial_unroll
 ; CHECK-NOT: LoopFullUnrollPass
 
 entry:

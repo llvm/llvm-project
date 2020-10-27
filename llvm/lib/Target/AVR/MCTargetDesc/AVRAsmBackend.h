@@ -22,6 +22,7 @@
 namespace llvm {
 
 class MCAssembler;
+class MCContext;
 struct MCFixupKindInfo;
 
 /// Utilities for manipulating generated AVR machine code.

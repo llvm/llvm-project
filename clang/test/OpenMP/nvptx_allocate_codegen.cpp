@@ -101,7 +101,7 @@ void bar() {
 // CHECK: alloca float,
 // CHECK-NOT: alloca double,
 // CHECK: load float, float* %
-// CHECK: store double {{.+}}, double addrspace(3)* @bar_b,
+// CHECK: store double {{.+}}, double* addrspacecast (double addrspace(3)* @bar_b to double*),
 }
 
 #pragma omp end declare target

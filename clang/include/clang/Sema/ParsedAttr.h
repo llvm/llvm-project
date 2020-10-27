@@ -606,6 +606,10 @@ public:
       return LangAS::opencl_constant;
     case ParsedAttr::AT_OpenCLGlobalAddressSpace:
       return LangAS::opencl_global;
+    case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
+      return LangAS::opencl_global_device;
+    case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
+      return LangAS::opencl_global_host;
     case ParsedAttr::AT_OpenCLLocalAddressSpace:
       return LangAS::opencl_local;
     case ParsedAttr::AT_OpenCLPrivateAddressSpace:

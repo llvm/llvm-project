@@ -567,7 +567,8 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 
   // For a vector, KnownZero will only be true if all values are zero, so check
   // this per component
-  for (unsigned I = 0, N = VecTy->getNumElements(); I != N; ++I) {
+  for (unsigned I = 0, N = cast<FixedVectorType>(VecTy)->getNumElements();
+       I != N; ++I) {
     Constant *Elem = C->getAggregateElement(I);
     if (isa<UndefValue>(Elem))
       return true;
@@ -625,14 +626,17 @@ void Lint::visitIndirectBrInst(IndirectBrInst &I) {
 void Lint::visitExtractElementInst(ExtractElementInst &I) {
   if (ConstantInt *CI = dyn_cast<ConstantInt>(findValue(I.getIndexOperand(),
                                                         /*OffsetOk=*/false)))
-    Assert(CI->getValue().ult(I.getVectorOperandType()->getNumElements()),
-           "Undefined result: extractelement index out of range", &I);
+    Assert(
+        CI->getValue().ult(
+            cast<FixedVectorType>(I.getVectorOperandType())->getNumElements()),
+        "Undefined result: extractelement index out of range", &I);
 }
 
 void Lint::visitInsertElementInst(InsertElementInst &I) {
   if (ConstantInt *CI = dyn_cast<ConstantInt>(findValue(I.getOperand(2),
                                                         /*OffsetOk=*/false)))
-    Assert(CI->getValue().ult(I.getType()->getNumElements()),
+    Assert(CI->getValue().ult(
+               cast<FixedVectorType>(I.getType())->getNumElements()),
            "Undefined result: insertelement index out of range", &I);
 }
 
@@ -669,7 +673,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
   // TODO: Look through eliminable cast pairs.
   // TODO: Look through calls with unique return values.
   // TODO: Look through vector insert/extract/shuffle.
-  V = OffsetOk ? GetUnderlyingObject(V, *DL) : V->stripPointerCasts();
+  V = OffsetOk ? getUnderlyingObject(V) : V->stripPointerCasts();
   if (LoadInst *L = dyn_cast<LoadInst>(V)) {
     BasicBlock::iterator BBI = L->getIterator();
     BasicBlock *BB = L->getParent();

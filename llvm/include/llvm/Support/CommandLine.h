@@ -71,13 +71,6 @@ bool ParseCommandLineOptions(int argc, const char *const *argv,
                              const char *EnvVar = nullptr,
                              bool LongOptionsUseDoubleDash = false);
 
-//===----------------------------------------------------------------------===//
-// ParseEnvironmentOptions - Environment variable option processing alternate
-//                           entry point.
-//
-void ParseEnvironmentOptions(const char *progName, const char *envvar,
-                             const char *Overview = "");
-
 // Function pointer type for printing version information.
 using VersionPrinterTy = std::function<void(raw_ostream &)>;
 

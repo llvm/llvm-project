@@ -16,14 +16,12 @@
 #include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelWorkList.h"
-#include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/CodeGen.h"
 
 namespace llvm {
+class MachineBasicBlock;
 
 /// A class that wraps MachineInstrs and derives from FoldingSetNode in order to
 /// be uniqued in a CSEMap. The tradeoff here is extra memory allocations for

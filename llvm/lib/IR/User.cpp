@@ -29,7 +29,7 @@ void User::replaceUsesOfWith(Value *From, Value *To) {
       // The side effects of this setOperand call include linking to
       // "To", adding "this" to the uses list of To, and
       // most importantly, removing "this" from the use list of "From".
-      setOperand(i, To); // Fix it now...
+      setOperand(i, To);
     }
 }
 

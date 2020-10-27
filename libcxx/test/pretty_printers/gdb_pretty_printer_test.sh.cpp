@@ -383,6 +383,10 @@ void set_test() {
   ComparePrettyPrintToChars(prime_pairs,
       "std::set with 2 elements = {"
       "{first = 3, second = 5}, {first = 5, second = 7}}");
+
+  using using_set = std::set<int>;
+  using_set other{1, 2, 3};
+  ComparePrettyPrintToChars(other, "std::set with 3 elements = {1, 2, 3}");
 }
 
 void stack_test() {

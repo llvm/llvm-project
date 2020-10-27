@@ -963,26 +963,28 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
 
       int CallAddrOpIdx =
           AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
-      RegInterval CallAddrOpInterval =
+
+      if (MI.getOperand(CallAddrOpIdx).isReg()) {
+        RegInterval CallAddrOpInterval =
           ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, CallAddrOpIdx);
 
-      for (int RegNo = CallAddrOpInterval.first;
-           RegNo < CallAddrOpInterval.second; ++RegNo)
-        ScoreBrackets.determineWait(
+        for (int RegNo = CallAddrOpInterval.first;
+             RegNo < CallAddrOpInterval.second; ++RegNo)
+          ScoreBrackets.determineWait(
             LGKM_CNT, ScoreBrackets.getRegScore(RegNo, LGKM_CNT), Wait);
 
-      int RtnAddrOpIdx =
-            AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dst);
-      if (RtnAddrOpIdx != -1) {
-        RegInterval RtnAddrOpInterval =
+        int RtnAddrOpIdx =
+          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dst);
+        if (RtnAddrOpIdx != -1) {
+          RegInterval RtnAddrOpInterval =
             ScoreBrackets.getRegInterval(&MI, TII, MRI, TRI, RtnAddrOpIdx);
 
-        for (int RegNo = RtnAddrOpInterval.first;
-             RegNo < RtnAddrOpInterval.second; ++RegNo)
-          ScoreBrackets.determineWait(
+          for (int RegNo = RtnAddrOpInterval.first;
+               RegNo < RtnAddrOpInterval.second; ++RegNo)
+            ScoreBrackets.determineWait(
               LGKM_CNT, ScoreBrackets.getRegScore(RegNo, LGKM_CNT), Wait);
+        }
       }
-
     } else {
       // FIXME: Should not be relying on memoperands.
       // Look at the source operands of every instruction to see if

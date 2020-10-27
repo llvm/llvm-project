@@ -1,6 +1,5 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr7 < %s | FileCheck  %s -check-prefix=PWR7
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 < %s | FileCheck  %s -check-prefix=PWR8
-; RUN: llc -verify-machineinstrs -mcpu=a2q < %s | FileCheck  %s -check-prefix=A2Q
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -25,12 +24,6 @@ entry:
 ; PWR8: lxvw4x
 ; PWR8: stxvw4x
 ; PWR8: blr
-
-; A2Q-LABEL: @foo1
-; A2Q-NOT: bl memcpy
-; A2Q: ld {{[0-9]+}}, {{[0-9]+}}(4)
-; A2Q: std {{[0-9]+}}, {{[0-9]+}}(3)
-; A2Q: blr
 }
 
 ; Function Attrs: nounwind
@@ -52,12 +45,6 @@ entry:
 ; PWR8: lxvw4x
 ; PWR8: stxvw4x
 ; PWR8: blr
-
-; A2Q-LABEL: @foo2
-; A2Q-NOT: bl memcpy
-; A2Q: ld {{[0-9]+}}, {{[0-9]+}}(4)
-; A2Q: std {{[0-9]+}}, {{[0-9]+}}(3)
-; A2Q: blr
 }
 
 ; Function Attrs: nounwind
@@ -76,11 +63,6 @@ entry:
 ; PWR8-NOT: bl memset
 ; PWR8: stxvw4x
 ; PWR8: blr
-
-; A2Q-LABEL: @bar1
-; A2Q-NOT: bl memset
-; A2Q: std {{[0-9]+}}, {{[0-9]+}}(3)
-; A2Q: blr
 }
 
 ; Function Attrs: nounwind
@@ -99,11 +81,6 @@ entry:
 ; PWR8-NOT: bl memset
 ; PWR8: stxvw4x
 ; PWR8: blr
-
-; A2Q-LABEL: @bar2
-; A2Q-NOT: bl memset
-; A2Q: qvstfdx
-; A2Q: blr
 }
 
 ; Function Attrs: nounwind

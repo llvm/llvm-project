@@ -546,6 +546,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
     NoSignedZerosFPMath(MFI.hasNoSignedZerosFPMath()),
     MemoryBound(MFI.isMemoryBound()),
     WaveLimiter(MFI.needsWaveLimiter()),
+    HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
+    HasSpilledVGPRs(MFI.hasSpilledVGPRs()),
     HighBitsOf32BitAddress(MFI.get32BitAddressHighBits()),
     ScratchRSrcReg(regToString(MFI.getScratchRSrcReg(), TRI)),
     FrameOffsetReg(regToString(MFI.getFrameOffsetReg(), TRI)),
@@ -567,6 +569,8 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   NoSignedZerosFPMath = YamlMFI.NoSignedZerosFPMath;
   MemoryBound = YamlMFI.MemoryBound;
   WaveLimiter = YamlMFI.WaveLimiter;
+  HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;
+  HasSpilledVGPRs = YamlMFI.HasSpilledVGPRs;
   return false;
 }
 

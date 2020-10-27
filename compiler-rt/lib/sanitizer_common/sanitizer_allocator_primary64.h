@@ -199,6 +199,29 @@ class SizeClassAllocator64 {
     return nullptr;
   }
 
+  void *GetBlockBeginDebug(const void *p) {
+    uptr class_id = GetSizeClass(p);
+    uptr size = ClassIdToSize(class_id);
+    Printf("GetBlockBeginDebug1 p %p class_id %p size %p\n", p, class_id, size);
+    if (!size) return nullptr;
+    uptr chunk_idx = GetChunkIdx((uptr)p, size);
+    uptr reg_beg = GetRegionBegin(p);
+    uptr beg = chunk_idx * size;
+    uptr next_beg = beg + size;
+    Printf(
+        "GetBlockBeginDebug2 chunk_idx %p reg_beg %p beg %p next_beg %p "
+        "kNumClasses %p\n",
+        chunk_idx, reg_beg, beg, next_beg, kNumClasses);
+    if (class_id >= kNumClasses) return nullptr;
+    const RegionInfo *region = AddressSpaceView::Load(GetRegionInfo(class_id));
+    Printf("GetBlockBeginDebug3 region %p region->mapped_user %p\n", region,
+           region->mapped_user);
+    if (region->mapped_user >= next_beg)
+      return reinterpret_cast<void*>(reg_beg + beg);
+    return nullptr;
+  }
+
+
   uptr GetActuallyAllocatedSize(void *p) {
     CHECK(PointerIsMine(p));
     return ClassIdToSize(GetSizeClass(p));

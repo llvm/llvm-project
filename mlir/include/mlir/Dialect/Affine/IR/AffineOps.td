@@ -725,8 +725,8 @@ class AffineStoreOpBase<string mnemonic, list<OpTrait> traits = []> :
     Affine_Op<mnemonic, !listconcat(traits,
         [DeclareOpInterfaceMethods<AffineWriteOpInterface>])> {
   code extraClassDeclarationBase = [{
-    /// Get value to be stored by store operation.
-    Value getValueToStore() { return getOperand(0); }
+    /// Returns the operand index of the value to be stored.
+    unsigned getStoredValOperandIndex() { return 0; }
 
     /// Returns the operand index of the memref.
     unsigned getMemRefOperandIndex() { return 1; }

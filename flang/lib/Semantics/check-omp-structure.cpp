@@ -9,7 +9,6 @@
 #include "check-omp-structure.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
-#include <unordered_map>
 
 namespace Fortran::semantics {
 
@@ -45,7 +44,8 @@ bool OmpStructureChecker::HasInvalidWorksharingNesting(
 void OmpStructureChecker::CheckAllowed(llvm::omp::Clause type) {
   if (!GetContext().allowedClauses.test(type) &&
       !GetContext().allowedOnceClauses.test(type) &&
-      !GetContext().allowedExclusiveClauses.test(type)) {
+      !GetContext().allowedExclusiveClauses.test(type) &&
+      !GetContext().requiredClauses.test(type)) {
     context_.Say(GetContext().clauseSource,
         "%s clause is not allowed on the %s directive"_err_en_US,
         parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(type).str()),

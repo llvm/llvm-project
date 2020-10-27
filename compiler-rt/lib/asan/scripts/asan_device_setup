@@ -330,7 +330,7 @@ function generate_zygote_wrapper { # from, to
 ASAN_OPTIONS=$ASAN_OPTIONS \\
 ASAN_ACTIVATION_OPTIONS=include_if_exists=/data/local/tmp/asan.options.%b \\
 LD_PRELOAD=$_ld_preload \\
-exec $_to \$@
+exec $_to "\$@"
 
 EOF
 }

@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -n -triple thumbv7-apple-darwin10 %s -filetype=obj -o %t.obj
-@ RUN: llvm-readobj -S --sd < %t.obj > %t.dump
+@ RUN: llvm-readobj -S --sd - < %t.obj > %t.dump
 @ RUN: FileCheck < %t.dump %s
 
 @ When not using subsections-via-symbols, references to non-local symbols

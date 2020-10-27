@@ -238,7 +238,7 @@ void mlir::impl::printFunctionSignature(OpAsmPrinter &p, Operation *op,
       p << ", ";
 
     if (!isExternal) {
-      p.printOperand(body.front().getArgument(i));
+      p.printOperand(body.getArgument(i));
       p << ": ";
     }
 

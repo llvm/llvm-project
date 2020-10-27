@@ -145,8 +145,7 @@ define arm_aapcs_vfpcc i8 @vmaxv_s_v16i8_i8(<16 x i8> %s1, i8 %s2) {
 ; CHECK-NEXT:    vmaxv.s8 r1, q0
 ; CHECK-NEXT:    sxtb r2, r1
 ; CHECK-NEXT:    cmp r2, r3
-; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, gt
 ; CHECK-NEXT:    bx lr
   %r = call i8 @llvm.experimental.vector.reduce.smax.v16i8(<16 x i8> %s1)
   %c = icmp sgt i8 %r, %s2
@@ -161,8 +160,7 @@ define arm_aapcs_vfpcc i32 @vmaxv_s_v16i8_i32(<16 x i8> %s1, i32 %s2) {
 ; CHECK-NEXT:    vmaxv.s8 r1, q0
 ; CHECK-NEXT:    sxtb r1, r1
 ; CHECK-NEXT:    cmp r1, r0
-; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, gt
 ; CHECK-NEXT:    bx lr
   %r = call i8 @llvm.experimental.vector.reduce.smax.v16i8(<16 x i8> %s1)
   %rs = sext i8 %r to i32
@@ -180,8 +178,7 @@ define arm_aapcs_vfpcc i16 @vmaxv_s_v8i16_i16(<8 x i16> %s1, i16 %s2) {
 ; CHECK-NEXT:    vmaxv.s16 r1, q0
 ; CHECK-NEXT:    sxth r2, r1
 ; CHECK-NEXT:    cmp r2, r3
-; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, gt
 ; CHECK-NEXT:    bx lr
   %r = call i16 @llvm.experimental.vector.reduce.smax.v8i16(<8 x i16> %s1)
   %c = icmp sgt i16 %r, %s2
@@ -197,8 +194,7 @@ define arm_aapcs_vfpcc i32 @vmaxv_s_v8i16_i32(<8 x i16> %s1, i32 %s2) {
 ; CHECK-NEXT:    vmaxv.s16 r1, q0
 ; CHECK-NEXT:    sxth r1, r1
 ; CHECK-NEXT:    cmp r1, r0
-; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, gt
 ; CHECK-NEXT:    bx lr
   %r = call i16 @llvm.experimental.vector.reduce.smax.v8i16(<8 x i16> %s1)
   %rs = sext i16 %r to i32
@@ -213,8 +209,7 @@ define arm_aapcs_vfpcc i32 @vmaxv_s_v4i32_i32(<4 x i32> %s1, i32 %s2) {
 ; CHECK-NEXT:    mov.w r1, #-2147483648
 ; CHECK-NEXT:    vmaxv.s32 r1, q0
 ; CHECK-NEXT:    cmp r1, r0
-; CHECK-NEXT:    it gt
-; CHECK-NEXT:    movgt r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, gt
 ; CHECK-NEXT:    bx lr
   %r = call i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32> %s1)
   %c = icmp sgt i32 %r, %s2
@@ -230,8 +225,7 @@ define arm_aapcs_vfpcc i8 @vmaxv_u_v16i8_i8(<16 x i8> %s1, i8 %s2) {
 ; CHECK-NEXT:    vmaxv.u8 r1, q0
 ; CHECK-NEXT:    uxtb r2, r1
 ; CHECK-NEXT:    cmp r2, r3
-; CHECK-NEXT:    it hi
-; CHECK-NEXT:    movhi r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, hi
 ; CHECK-NEXT:    bx lr
   %r = call i8 @llvm.experimental.vector.reduce.umax.v16i8(<16 x i8> %s1)
   %c = icmp ugt i8 %r, %s2
@@ -246,8 +240,7 @@ define arm_aapcs_vfpcc i32 @vmaxv_u_v16i8_i32(<16 x i8> %s1, i32 %s2) {
 ; CHECK-NEXT:    vmaxv.u8 r1, q0
 ; CHECK-NEXT:    uxtb r1, r1
 ; CHECK-NEXT:    cmp r1, r0
-; CHECK-NEXT:    it hi
-; CHECK-NEXT:    movhi r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, hi
 ; CHECK-NEXT:    bx lr
   %r = call i8 @llvm.experimental.vector.reduce.umax.v16i8(<16 x i8> %s1)
   %rs = zext i8 %r to i32
@@ -264,8 +257,7 @@ define arm_aapcs_vfpcc i16 @vmaxv_u_v8i16_i16(<8 x i16> %s1, i16 %s2) {
 ; CHECK-NEXT:    vmaxv.u16 r1, q0
 ; CHECK-NEXT:    uxth r2, r1
 ; CHECK-NEXT:    cmp r2, r3
-; CHECK-NEXT:    it hi
-; CHECK-NEXT:    movhi r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, hi
 ; CHECK-NEXT:    bx lr
   %r = call i16 @llvm.experimental.vector.reduce.umax.v8i16(<8 x i16> %s1)
   %c = icmp ugt i16 %r, %s2
@@ -280,8 +272,7 @@ define arm_aapcs_vfpcc i32 @vmaxv_u_v8i16_i32(<8 x i16> %s1, i32 %s2) {
 ; CHECK-NEXT:    vmaxv.u16 r1, q0
 ; CHECK-NEXT:    uxth r1, r1
 ; CHECK-NEXT:    cmp r1, r0
-; CHECK-NEXT:    it hi
-; CHECK-NEXT:    movhi r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, hi
 ; CHECK-NEXT:    bx lr
   %r = call i16 @llvm.experimental.vector.reduce.umax.v8i16(<8 x i16> %s1)
   %rs = zext i16 %r to i32
@@ -296,8 +287,7 @@ define arm_aapcs_vfpcc i32 @vmaxv_u_v4i32_i32(<4 x i32> %s1, i32 %s2) {
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    vmaxv.u32 r1, q0
 ; CHECK-NEXT:    cmp r1, r0
-; CHECK-NEXT:    it hi
-; CHECK-NEXT:    movhi r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, hi
 ; CHECK-NEXT:    bx lr
   %r = call i32 @llvm.experimental.vector.reduce.umax.v4i32(<4 x i32> %s1)
   %c = icmp ugt i32 %r, %s2
@@ -313,8 +303,7 @@ define arm_aapcs_vfpcc i8 @vminv_s_v16i8_i8(<16 x i8> %s1, i8 %s2) {
 ; CHECK-NEXT:    vminv.s8 r1, q0
 ; CHECK-NEXT:    sxtb r2, r1
 ; CHECK-NEXT:    cmp r2, r3
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, lt
 ; CHECK-NEXT:    bx lr
   %r = call i8 @llvm.experimental.vector.reduce.smin.v16i8(<16 x i8> %s1)
   %c = icmp slt i8 %r, %s2
@@ -329,8 +318,7 @@ define arm_aapcs_vfpcc i32 @vminv_s_v16i8_i32(<16 x i8> %s1, i32 %s2) {
 ; CHECK-NEXT:    vminv.s8 r1, q0
 ; CHECK-NEXT:    sxtb r1, r1
 ; CHECK-NEXT:    cmp r1, r0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, lt
 ; CHECK-NEXT:    bx lr
   %r = call i8 @llvm.experimental.vector.reduce.smin.v16i8(<16 x i8> %s1)
   %rs = sext i8 %r to i32
@@ -347,8 +335,7 @@ define arm_aapcs_vfpcc i16 @vminv_s_v8i16_i16(<8 x i16> %s1, i16 %s2) {
 ; CHECK-NEXT:    vminv.s16 r1, q0
 ; CHECK-NEXT:    sxth r2, r1
 ; CHECK-NEXT:    cmp r2, r3
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, lt
 ; CHECK-NEXT:    bx lr
   %r = call i16 @llvm.experimental.vector.reduce.smin.v8i16(<8 x i16> %s1)
   %c = icmp slt i16 %r, %s2
@@ -363,8 +350,7 @@ define arm_aapcs_vfpcc i32 @vminv_s_v8i16_i32(<8 x i16> %s1, i32 %s2) {
 ; CHECK-NEXT:    vminv.s16 r1, q0
 ; CHECK-NEXT:    sxth r1, r1
 ; CHECK-NEXT:    cmp r1, r0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, lt
 ; CHECK-NEXT:    bx lr
   %r = call i16 @llvm.experimental.vector.reduce.smin.v8i16(<8 x i16> %s1)
   %rs = sext i16 %r to i32
@@ -379,8 +365,7 @@ define arm_aapcs_vfpcc i32 @vminv_s_v4i32_i32(<4 x i32> %s1, i32 %s2) {
 ; CHECK-NEXT:    mvn r1, #-2147483648
 ; CHECK-NEXT:    vminv.s32 r1, q0
 ; CHECK-NEXT:    cmp r1, r0
-; CHECK-NEXT:    it lt
-; CHECK-NEXT:    movlt r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, lt
 ; CHECK-NEXT:    bx lr
   %r = call i32 @llvm.experimental.vector.reduce.smin.v4i32(<4 x i32> %s1)
   %c = icmp slt i32 %r, %s2
@@ -396,8 +381,7 @@ define arm_aapcs_vfpcc i8 @vminv_u_v16i8_i8(<16 x i8> %s1, i8 %s2) {
 ; CHECK-NEXT:    vminv.u8 r1, q0
 ; CHECK-NEXT:    uxtb r2, r1
 ; CHECK-NEXT:    cmp r2, r3
-; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, lo
 ; CHECK-NEXT:    bx lr
   %r = call i8 @llvm.experimental.vector.reduce.umin.v16i8(<16 x i8> %s1)
   %c = icmp ult i8 %r, %s2
@@ -412,8 +396,7 @@ define arm_aapcs_vfpcc i32 @vminv_u_v16i8_i32(<16 x i8> %s1, i32 %s2) {
 ; CHECK-NEXT:    vminv.u8 r1, q0
 ; CHECK-NEXT:    uxtb r1, r1
 ; CHECK-NEXT:    cmp r1, r0
-; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, lo
 ; CHECK-NEXT:    bx lr
   %r = call i8 @llvm.experimental.vector.reduce.umin.v16i8(<16 x i8> %s1)
   %rs = zext i8 %r to i32
@@ -430,8 +413,7 @@ define arm_aapcs_vfpcc i16 @vminv_u_v8i16_i16(<8 x i16> %s1, i16 %s2) {
 ; CHECK-NEXT:    vminv.u16 r1, q0
 ; CHECK-NEXT:    uxth r2, r1
 ; CHECK-NEXT:    cmp r2, r3
-; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, lo
 ; CHECK-NEXT:    bx lr
   %r = call i16 @llvm.experimental.vector.reduce.umin.v8i16(<8 x i16> %s1)
   %c = icmp ult i16 %r, %s2
@@ -446,8 +428,7 @@ define arm_aapcs_vfpcc i32 @vminv_u_v8i16_i32(<8 x i16> %s1, i32 %s2) {
 ; CHECK-NEXT:    vminv.u16 r1, q0
 ; CHECK-NEXT:    uxth r1, r1
 ; CHECK-NEXT:    cmp r1, r0
-; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, lo
 ; CHECK-NEXT:    bx lr
   %r = call i16 @llvm.experimental.vector.reduce.umin.v8i16(<8 x i16> %s1)
   %rs = zext i16 %r to i32
@@ -462,8 +443,7 @@ define arm_aapcs_vfpcc i32 @vminv_u_v4i32_i32(<4 x i32> %s1, i32 %s2) {
 ; CHECK-NEXT:    mov.w r1, #-1
 ; CHECK-NEXT:    vminv.u32 r1, q0
 ; CHECK-NEXT:    cmp r1, r0
-; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r0, r1
+; CHECK-NEXT:    csel r0, r1, r0, lo
 ; CHECK-NEXT:    bx lr
   %r = call i32 @llvm.experimental.vector.reduce.umin.v4i32(<4 x i32> %s1)
   %c = icmp ult i32 %r, %s2

@@ -70,6 +70,14 @@ add_llvm_library(gtest
   BUILDTREE_ONLY
 )
 
+# The googletest and googlemock sources don't presently use the 'override'
+# keyword, which leads to lots of warnings from -Wsuggest-override. Disable
+# that warning here for any targets that link to gtest.
+if(CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
+  add_definitions("-Wno-suggest-override")
+  set_target_properties(gtest PROPERTIES INTERFACE_COMPILE_OPTIONS "-Wno-suggest-override")
+endif()
+
 add_subdirectory(UnitTestMain)
 
 # When LLVM_LINK_LLVM_DYLIB is enabled, libLLVM.so is added to the interface

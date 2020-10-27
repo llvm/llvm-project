@@ -93,6 +93,14 @@ AffineExpr::replaceDimsAndSymbols(ArrayRef<AffineExpr> dimReplacements,
   llvm_unreachable("Unknown AffineExpr");
 }
 
+/// Replace symbols[0 .. numDims - 1] by symbols[shift .. shift + numDims - 1].
+AffineExpr AffineExpr::shiftSymbols(unsigned numSymbols, unsigned shift) const {
+  SmallVector<AffineExpr, 4> symbols;
+  for (unsigned idx = 0; idx < numSymbols; ++idx)
+    symbols.push_back(getAffineSymbolExpr(idx + shift, getContext()));
+  return replaceDimsAndSymbols({}, symbols);
+}
+
 /// Returns true if this expression is made out of only symbols and
 /// constants (no dimensional identifiers).
 bool AffineExpr::isSymbolicOrConstant() const {

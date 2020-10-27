@@ -114,6 +114,7 @@ class MTBUF_Real <MTBUF_Pseudo ps> :
   let isCodeGenOnly = 0;
 
   // copy relevant pseudo op flags
+  let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SubtargetPredicate = ps.SubtargetPredicate;
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let Constraints        = ps.Constraints;
@@ -168,15 +169,15 @@ class getMTBUFIns<int addrKind, list<RegisterClass> vdataList=[]> {
 
 class getMTBUFAsmOps<int addrKind> {
   string Pfx =
-    !if(!eq(addrKind, BUFAddrKind.Offset), "off, $srsrc, $format, $soffset",
+    !if(!eq(addrKind, BUFAddrKind.Offset), "off, $srsrc,$format $soffset",
     !if(!eq(addrKind, BUFAddrKind.OffEn),
-            "$vaddr, $srsrc, $format, $soffset offen",
+            "$vaddr, $srsrc,$format $soffset offen",
     !if(!eq(addrKind, BUFAddrKind.IdxEn),
-            "$vaddr, $srsrc, $format, $soffset idxen",
+            "$vaddr, $srsrc,$format $soffset idxen",
     !if(!eq(addrKind, BUFAddrKind.BothEn),
-            "$vaddr, $srsrc, $format, $soffset idxen offen",
+            "$vaddr, $srsrc,$format $soffset idxen offen",
     !if(!eq(addrKind, BUFAddrKind.Addr64),
-            "$vaddr, $srsrc, $format, $soffset addr64",
+            "$vaddr, $srsrc,$format $soffset addr64",
     "")))));
   string ret = Pfx # "$offset";
 }
@@ -1006,7 +1007,7 @@ defm BUFFER_ATOMIC_DEC_X2 : MUBUF_Pseudo_Atomics <
 
 let SubtargetPredicate = HasGFX10_BEncoding in
 defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics_RTN <
-  "buffer_atomic_csub", VGPR_32, i32, atomic_csub_global_32
+  "buffer_atomic_csub", VGPR_32, i32, int_amdgcn_global_atomic_csub
 >;
 
 let SubtargetPredicate = isGFX8GFX9 in {

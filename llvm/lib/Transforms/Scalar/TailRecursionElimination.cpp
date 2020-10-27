@@ -81,7 +81,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "tailcallelim"
@@ -93,10 +92,7 @@ STATISTIC(NumAccumAdded, "Number of accumulators introduced");
 /// Scan the specified function for alloca instructions.
 /// If it contains any dynamic allocas, returns false.
 static bool canTRE(Function &F) {
-  // TODO: We don't do TRE if dynamic allocas are used.
-  // Dynamic allocas allocate stack space which should be
-  // deallocated before new iteration started. That is
-  // currently not implemented.
+  // Because of PR962, we don't TRE dynamic allocas.
   return llvm::all_of(instructions(F), [](Instruction &I) {
     auto *AI = dyn_cast<AllocaInst>(&I);
     return !AI || AI->isStaticAlloca();
@@ -189,9 +185,11 @@ struct AllocaDerivedValueTracker {
 };
 }
 
-static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
+static bool markTails(Function &F, bool &AllCallsAreTailCalls,
+                      OptimizationRemarkEmitter *ORE) {
   if (F.callsFunctionThatReturnsTwice())
     return false;
+  AllCallsAreTailCalls = true;
 
   // The local stack holds all alloca instructions and all byval arguments.
   AllocaDerivedValueTracker Tracker;
@@ -274,8 +272,11 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
         }
       }
 
-      if (!IsNoTail && Escaped == UNESCAPED && !Tracker.AllocaUsers.count(CI))
+      if (!IsNoTail && Escaped == UNESCAPED && !Tracker.AllocaUsers.count(CI)) {
         DeferredTails.push_back(CI);
+      } else {
+        AllCallsAreTailCalls = false;
+      }
     }
 
     for (auto *SuccBB : make_range(succ_begin(BB), succ_end(BB))) {
@@ -312,6 +313,8 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
       LLVM_DEBUG(dbgs() << "Marked as tail call candidate: " << *CI << "\n");
       CI->setTailCall();
       Modified = true;
+    } else {
+      AllCallsAreTailCalls = false;
     }
   }
 
@@ -322,16 +325,7 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
 /// instruction from after the call to before the call, assuming that all
 /// instructions between the call and this instruction are movable.
 ///
-static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA,
-                             DenseMap<Value *, AllocaInst *> &AllocaForValue) {
-  if (isa<DbgInfoIntrinsic>(I))
-    return true;
-
-  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
-    if (II->getIntrinsicID() == Intrinsic::lifetime_end &&
-        llvm::findAllocaForValue(II->getArgOperand(1), AllocaForValue))
-      return true;
-
+static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
   // FIXME: We can move load/store/call/free instructions above the call if the
   // call does not mod/ref the memory location being processed.
   if (I->mayHaveSideEffects())  // This also handles volatile loads.
@@ -398,6 +392,7 @@ class TailRecursionEliminator {
   // createTailRecurseLoopHeader the first time we find a call we can eliminate.
   BasicBlock *HeaderBB = nullptr;
   SmallVector<PHINode *, 8> ArgumentPHIs;
+  bool RemovableCallsMustBeMarkedTail = false;
 
   // PHI node to store our return value.
   PHINode *RetPN = nullptr;
@@ -419,15 +414,13 @@ class TailRecursionEliminator {
   // The instruction doing the accumulating.
   Instruction *AccumulatorRecursionInstr = nullptr;
 
-  // The cache for <value, alloca instruction> pairs.
-  DenseMap<Value *, AllocaInst *> AllocaForValue;
-
   TailRecursionEliminator(Function &F, const TargetTransformInfo *TTI,
                           AliasAnalysis *AA, OptimizationRemarkEmitter *ORE,
                           DomTreeUpdater &DTU)
       : F(F), TTI(TTI), AA(AA), ORE(ORE), DTU(DTU) {}
 
-  CallInst *findTRECandidate(Instruction *TI);
+  CallInst *findTRECandidate(Instruction *TI,
+                             bool CannotTailCallElimCallsMarkedTail);
 
   void createTailRecurseLoopHeader(CallInst *CI);
 
@@ -435,9 +428,11 @@ class TailRecursionEliminator {
 
   bool eliminateCall(CallInst *CI);
 
-  bool foldReturnAndProcessPred(ReturnInst *Ret);
+  bool foldReturnAndProcessPred(ReturnInst *Ret,
+                                bool CannotTailCallElimCallsMarkedTail);
 
-  bool processReturningBlock(ReturnInst *Ret);
+  bool processReturningBlock(ReturnInst *Ret,
+                             bool CannotTailCallElimCallsMarkedTail);
 
   void cleanupAndFinalize();
 
@@ -448,7 +443,8 @@ public:
 };
 } // namespace
 
-CallInst *TailRecursionEliminator::findTRECandidate(Instruction *TI) {
+CallInst *TailRecursionEliminator::findTRECandidate(
+    Instruction *TI, bool CannotTailCallElimCallsMarkedTail) {
   BasicBlock *BB = TI->getParent();
 
   if (&BB->front() == TI) // Make sure there is something before the terminator.
@@ -468,9 +464,9 @@ CallInst *TailRecursionEliminator::findTRECandidate(Instruction *TI) {
     --BBI;
   }
 
-  assert((!CI->isTailCall() || !CI->isNoTailCall()) &&
-         "Incompatible call site attributes(Tail,NoTail)");
-  if (!CI->isTailCall())
+  // If this call is marked as a tail call, and if there are dynamic allocas in
+  // the function, we cannot perform this optimization.
+  if (CI->isTailCall() && CannotTailCallElimCallsMarkedTail)
     return nullptr;
 
   // As a special case, detect code like this:
@@ -502,13 +498,26 @@ void TailRecursionEliminator::createTailRecurseLoopHeader(CallInst *CI) {
   BranchInst *BI = BranchInst::Create(HeaderBB, NewEntry);
   BI->setDebugLoc(CI->getDebugLoc());
 
-  // Move all fixed sized allocas from HeaderBB to NewEntry.
-  for (BasicBlock::iterator OEBI = HeaderBB->begin(), E = HeaderBB->end(),
-                            NEBI = NewEntry->begin();
-       OEBI != E;)
-    if (AllocaInst *AI = dyn_cast<AllocaInst>(OEBI++))
-      if (isa<ConstantInt>(AI->getArraySize()))
-        AI->moveBefore(&*NEBI);
+  // If this function has self recursive calls in the tail position where some
+  // are marked tail and some are not, only transform one flavor or another.
+  // We have to choose whether we move allocas in the entry block to the new
+  // entry block or not, so we can't make a good choice for both. We make this
+  // decision here based on whether the first call we found to remove is
+  // marked tail.
+  // NOTE: We could do slightly better here in the case that the function has
+  // no entry block allocas.
+  RemovableCallsMustBeMarkedTail = CI->isTailCall();
+
+  // If this tail call is marked 'tail' and if there are any allocas in the
+  // entry block, move them up to the new entry block.
+  if (RemovableCallsMustBeMarkedTail)
+    // Move all fixed sized allocas from HeaderBB to NewEntry.
+    for (BasicBlock::iterator OEBI = HeaderBB->begin(), E = HeaderBB->end(),
+                              NEBI = NewEntry->begin();
+         OEBI != E;)
+      if (AllocaInst *AI = dyn_cast<AllocaInst>(OEBI++))
+        if (isa<ConstantInt>(AI->getArraySize()))
+          AI->moveBefore(&*NEBI);
 
   // Now that we have created a new block, which jumps to the entry
   // block, insert a PHI node for each argument of the function.
@@ -583,7 +592,7 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   Instruction *AccRecInstr = nullptr;
   BasicBlock::iterator BBI(CI);
   for (++BBI; &*BBI != Ret; ++BBI) {
-    if (canMoveAboveCall(&*BBI, CI, AA, AllocaForValue))
+    if (canMoveAboveCall(&*BBI, CI, AA))
       continue;
 
     // If we can't move the instruction above the call, it might be because it
@@ -610,6 +619,9 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   // create the new entry block, allowing us to branch back to the old entry.
   if (!HeaderBB)
     createTailRecurseLoopHeader(CI);
+
+  if (RemovableCallsMustBeMarkedTail && !CI->isTailCall())
+    return false;
 
   // Ok, now that we know we have a pseudo-entry block WITH all of the
   // required PHI nodes, add entries into the PHI node for the actual
@@ -660,7 +672,8 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
   return true;
 }
 
-bool TailRecursionEliminator::foldReturnAndProcessPred(ReturnInst *Ret) {
+bool TailRecursionEliminator::foldReturnAndProcessPred(
+    ReturnInst *Ret, bool CannotTailCallElimCallsMarkedTail) {
   BasicBlock *BB = Ret->getParent();
 
   bool Change = false;
@@ -685,7 +698,8 @@ bool TailRecursionEliminator::foldReturnAndProcessPred(ReturnInst *Ret) {
   while (!UncondBranchPreds.empty()) {
     BranchInst *BI = UncondBranchPreds.pop_back_val();
     BasicBlock *Pred = BI->getParent();
-    if (CallInst *CI = findTRECandidate(BI)) {
+    if (CallInst *CI =
+            findTRECandidate(BI, CannotTailCallElimCallsMarkedTail)) {
       LLVM_DEBUG(dbgs() << "FOLDING: " << *BB
                         << "INTO UNCOND BRANCH PRED: " << *Pred);
       FoldReturnIntoUncondBranch(Ret, BB, Pred, &DTU);
@@ -706,8 +720,9 @@ bool TailRecursionEliminator::foldReturnAndProcessPred(ReturnInst *Ret) {
   return Change;
 }
 
-bool TailRecursionEliminator::processReturningBlock(ReturnInst *Ret) {
-  CallInst *CI = findTRECandidate(Ret);
+bool TailRecursionEliminator::processReturningBlock(
+    ReturnInst *Ret, bool CannotTailCallElimCallsMarkedTail) {
+  CallInst *CI = findTRECandidate(Ret, CannotTailCallElimCallsMarkedTail);
   if (!CI)
     return false;
 
@@ -795,25 +810,35 @@ bool TailRecursionEliminator::eliminate(Function &F,
     return false;
 
   bool MadeChange = false;
-  MadeChange |= markTails(F, ORE);
+  bool AllCallsAreTailCalls = false;
+  MadeChange |= markTails(F, AllCallsAreTailCalls, ORE);
+  if (!AllCallsAreTailCalls)
+    return MadeChange;
 
   // If this function is a varargs function, we won't be able to PHI the args
   // right, so don't even try to convert it...
   if (F.getFunctionType()->isVarArg())
     return MadeChange;
 
-  if (!canTRE(F))
-    return MadeChange;
+  // If false, we cannot perform TRE on tail calls marked with the 'tail'
+  // attribute, because doing so would cause the stack size to increase (real
+  // TRE would deallocate variable sized allocas, TRE doesn't).
+  bool CanTRETailMarkedCall = canTRE(F);
 
   TailRecursionEliminator TRE(F, TTI, AA, ORE, DTU);
 
   // Change any tail recursive calls to loops.
+  //
+  // FIXME: The code generator produces really bad code when an 'escaping
+  // alloca' is changed from being a static alloca to being a dynamic alloca.
+  // Until this is resolved, disable this transformation if that would ever
+  // happen.  This bug is PR962.
   for (Function::iterator BBI = F.begin(), E = F.end(); BBI != E; /*in loop*/) {
     BasicBlock *BB = &*BBI++; // foldReturnAndProcessPred may delete BB.
     if (ReturnInst *Ret = dyn_cast<ReturnInst>(BB->getTerminator())) {
-      bool Change = TRE.processReturningBlock(Ret);
+      bool Change = TRE.processReturningBlock(Ret, !CanTRETailMarkedCall);
       if (!Change && BB->getFirstNonPHIOrDbg() == Ret)
-        Change = TRE.foldReturnAndProcessPred(Ret);
+        Change = TRE.foldReturnAndProcessPred(Ret, !CanTRETailMarkedCall);
       MadeChange |= Change;
     }
   }

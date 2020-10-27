@@ -200,6 +200,45 @@ body: |
 ...
 
 ---
+name:            extract_sgpr_s32_from_v3s32
+legalized:       true
+regBankSelected: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2
+    ; CHECK-LABEL: name: extract_sgpr_s32_from_v3s32
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr_96 = COPY $sgpr0_sgpr1_sgpr2
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
+    ; CHECK: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub2
+    ; CHECK: S_ENDPGM 0, implicit [[COPY]], implicit [[COPY1]], implicit [[COPY2]]
+    %0:sgpr(<3 x s32>) = COPY $sgpr0_sgpr1_sgpr2
+    %1:sgpr(s32) = G_EXTRACT %0, 0
+    %2:sgpr(s32) = G_EXTRACT %0, 32
+    %3:sgpr(s32) = G_EXTRACT %0, 64
+    S_ENDPGM 0, implicit %0, implicit %2, implicit %3
+
+...
+
+---
+name:            extract_sgpr_v2s32_from_v3s32
+legalized:       true
+regBankSelected: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2
+    ; CHECK-LABEL: name: extract_sgpr_v2s32_from_v3s32
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr_96_with_sub0_sub1 = COPY $sgpr0_sgpr1_sgpr2
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[COPY]].sub0_sub1
+    ; CHECK: S_ENDPGM 0, implicit [[COPY1]]
+    %0:sgpr(<3 x s32>) = COPY $sgpr0_sgpr1_sgpr2
+    %1:sgpr(<2 x s32>) = G_EXTRACT %0, 0
+    S_ENDPGM 0, implicit %1
+
+...
+
+---
 name:            extract_sgpr_v3s32_from_v4s32
 legalized:       true
 regBankSelected: true

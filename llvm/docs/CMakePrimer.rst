@@ -54,7 +54,7 @@ program. The example uses only CMake language-defined functions.
 
 .. code-block:: cmake
 
-   cmake_minimum_required(VERSION 3.2)
+   cmake_minimum_required(VERSION 3.15)
    project(HelloWorld)
    add_executable(HelloWorld HelloWorld.cpp)
 
@@ -64,13 +64,13 @@ block to define "APPLE" when targeting Apple platforms:
 
 .. code-block:: cmake
 
-   cmake_minimum_required(VERSION 3.2)
+   cmake_minimum_required(VERSION 3.15)
    project(HelloWorld)
    add_executable(HelloWorld HelloWorld.cpp)
    if(APPLE)
      target_compile_definitions(HelloWorld PUBLIC APPLE)
    endif()
-   
+
 Variables, Types, and Scope
 ===========================
 
@@ -93,7 +93,7 @@ example:
    set(var_name var1)
    set(${var_name} foo) # same as "set(var1 foo)"
    set(${${var_name}}_var bar) # same as "set(foo_var bar)"
-   
+
 Dereferencing an unset variable results in an empty expansion. It is a common
 pattern in CMake to conditionally set variables knowing that it will be used in
 code paths that the variable isn't set. There are examples of this throughout
@@ -107,7 +107,7 @@ An example of variable empty expansion is:
      set(extra_sources Apple.cpp)
    endif()
    add_executable(HelloWorld HelloWorld.cpp ${extra_sources})
-   
+
 In this example the ``extra_sources`` variable is only defined if you're
 targeting an Apple platform. For all other targets the ``extra_sources`` will be
 evaluated as empty before add_executable is given its arguments.
@@ -124,7 +124,7 @@ defining lists:
    # Creates a list with members a, b, c, and d
    set(my_list a b c d)
    set(my_list "a;b;c;d")
-   
+
    # Creates a string "a b c d"
    set(my_string "a b c d")
 
@@ -141,7 +141,7 @@ make a list of variable names that refer to other lists. For example:
    set(a 1 2 3)
    set(b 4 5 6)
    set(c 7 8 9)
-   
+
 With this layout you can iterate through the list of lists printing each value
 with the following code:
 
@@ -152,7 +152,7 @@ with the following code:
        message(${value})
      endforeach()
    endforeach()
-   
+
 You'll notice that the inner foreach loop's list is doubly dereferenced. This is
 because the first dereference turns ``list_name`` into the name of the sub-list
 (a, b, or c in the example), then the second dereference is to get the value of
@@ -385,7 +385,7 @@ result in some unexpected behavior if using unreferenced variables. For example:
        message("${var}")
      endforeach()
    endmacro()
-   
+
    set(my_list a b c d)
    set(my_list_of_numbers 1 2 3 4)
    print_list(my_list_of_numbers)

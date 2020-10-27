@@ -15,3 +15,18 @@
 
 # RUN: cat %t.repro/cwd.txt | FileCheck %t.check
 # RUN: %lldb --replay %t.repro | FileCheck %t.check
+
+# Make sure the current working directory is recorded even when it's not
+# referenced.
+
+# RUN: rm -rf %t.repro
+# RUN: rm -rf %t
+# RUN: mkdir -p %t/probably_unique
+# RUN: touch %t/probably_unique/dont_include_me
+# RUN: cd %t/probably_unique
+# RUN: %lldb -x -b -o 'reproducer generate' --capture --capture-path %t.repro
+# RUN: cat %t.repro/cwd.txt | FileCheck %s
+# CHECK: probably_unique
+# RUN: cat %t.repro/files.yaml | FileCheck %s --check-prefix VFS
+# VFS: probably_unique
+# VFS-NOT: dont_include_me

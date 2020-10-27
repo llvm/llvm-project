@@ -269,6 +269,19 @@ public:
 
   /// Get the actual, stored name of the declaration, which may be a special
   /// name.
+  ///
+  /// Note that generally in diagnostics, the non-null \p NamedDecl* itself
+  /// should be sent into the diagnostic instead of using the result of
+  /// \p getDeclName().
+  ///
+  /// A \p DeclarationName in a diagnostic will just be streamed to the output,
+  /// which will directly result in a call to \p DeclarationName::print.
+  ///
+  /// A \p NamedDecl* in a diagnostic will also ultimately result in a call to
+  /// \p DeclarationName::print, but with two customisation points along the
+  /// way (\p getNameForDiagnostic and \p printName). These are used to print
+  /// the template arguments if any, and to provide a user-friendly name for
+  /// some entities (such as unnamed variables and anonymous records).
   DeclarationName getDeclName() const { return Name; }
 
   /// Set the name of this declaration.

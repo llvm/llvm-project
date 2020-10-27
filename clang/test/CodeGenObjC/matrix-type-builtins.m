@@ -56,7 +56,7 @@ void test_column_major_load(PtrValue *Ptr, IntValue *Stride) {
   // CHECK:         [[STRIDE:%.*]] = call i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)
   // CHECK-NEXT:    [[STRIDE_EXT:%.*]] = sext i32 [[STRIDE]] to i64
   // CHECK:         [[PTR:%.*]] = call i32* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32* (i8*, i8*)*)
-  // CHECK-NEXT:    call <12 x i32> @llvm.matrix.column.major.load.v12i32.p0i32(i32* align 4 [[PTR]], i64 [[STRIDE_EXT]], i1 false, i32 3, i32 4)
+  // CHECK-NEXT:    call <12 x i32> @llvm.matrix.column.major.load.v12i32(i32* align 4 [[PTR]], i64 [[STRIDE_EXT]], i1 false, i32 3, i32 4)
 
   u3x4 m = __builtin_matrix_column_major_load(Ptr.value, 3, 4, Stride.value);
 }
@@ -67,7 +67,7 @@ void test_column_major_store(UnsignedMatrixValue *M, PtrValue *Ptr, IntValue *St
   // CHECK:         [[PTR:%.*]] = call i32* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32* (i8*, i8*)*)
   // CHECK:         [[IDX:%.*]] = call i32 bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i32 (i8*, i8*)*)
   // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[IDX]] to i64
-  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v12i32.p0i32(<12 x i32> [[M]], i32* align 4 [[PTR]], i64 [[IDX_EXT]], i1 false, i32 3, i32 4)
+  // CHECK-NEXT:    call void @llvm.matrix.column.major.store.v12i32(<12 x i32> [[M]], i32* align 4 [[PTR]], i64 [[IDX_EXT]], i1 false, i32 3, i32 4)
 
   __builtin_matrix_column_major_store(M.value, Ptr.value, Stride.value);
 }

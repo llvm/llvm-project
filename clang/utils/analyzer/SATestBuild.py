@@ -87,10 +87,18 @@ class StreamToLogger:
         return 0
 
 
-Logger = logging.getLogger("main")
 LOCAL = threading.local()
-LOCAL.stdout = StreamToLogger(Logger, logging.INFO)
-LOCAL.stderr = StreamToLogger(Logger, logging.ERROR)
+
+
+def init_logger(name: str):
+    # TODO: use debug levels for VERBOSE messages
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    LOCAL.stdout = StreamToLogger(logger, logging.INFO)
+    LOCAL.stderr = StreamToLogger(logger, logging.ERROR)
+
+
+init_logger("main")
 
 
 def stderr(message: str):
@@ -102,7 +110,6 @@ def stdout(message: str):
 
 
 logging.basicConfig(
-    level=logging.DEBUG,
     format='%(asctime)s:%(levelname)s:%(name)s: %(message)s')
 
 
@@ -298,12 +305,13 @@ class ProjectTester:
     """
     A component aggregating testing for one project.
     """
-    def __init__(self, test_info: TestInfo):
+    def __init__(self, test_info: TestInfo, silent: bool = False):
         self.project = test_info.project
         self.override_compiler = test_info.override_compiler
         self.extra_analyzer_config = test_info.extra_analyzer_config
         self.is_reference_build = test_info.is_reference_build
         self.strictness = test_info.strictness
+        self.silent = silent
 
     def test(self) -> bool:
         """
@@ -312,20 +320,19 @@ class ProjectTester:
         to the :param strictness: criteria.
         """
         if not self.project.enabled:
-            stdout(f" \n\n--- Skipping disabled project {self.project.name}\n")
+            self.out(
+                f" \n\n--- Skipping disabled project {self.project.name}\n")
             return True
 
-        stdout(f" \n\n--- Building project {self.project.name}\n")
+        self.out(f" \n\n--- Building project {self.project.name}\n")
 
         start_time = time.time()
 
         project_dir = self.get_project_dir()
-        if VERBOSE >= 1:
-            stdout(f"  Build directory: {project_dir}.\n")
+        self.vout(f"  Build directory: {project_dir}.\n")
 
         # Set the build results directory.
         output_dir = self.get_output_dir()
-        output_dir = os.path.join(project_dir, output_dir)
 
         self.build(project_dir, output_dir)
         check_build(output_dir)
@@ -336,8 +343,8 @@ class ProjectTester:
         else:
             passed = run_cmp_results(project_dir, self.strictness)
 
-        stdout(f"Completed tests for project {self.project.name} "
-               f"(time: {time.time() - start_time:.2f}).\n")
+        self.out(f"Completed tests for project {self.project.name} "
+                 f"(time: {time.time() - start_time:.2f}).\n")
 
         return passed
 
@@ -346,22 +353,23 @@ class ProjectTester:
 
     def get_output_dir(self) -> str:
         if self.is_reference_build:
-            return REF_PREFIX + OUTPUT_DIR_NAME
+            dirname = REF_PREFIX + OUTPUT_DIR_NAME
         else:
-            return OUTPUT_DIR_NAME
+            dirname = OUTPUT_DIR_NAME
 
-    def build(self, directory: str, output_dir: str):
+        return os.path.join(self.get_project_dir(), dirname)
+
+    def build(self, directory: str, output_dir: str) -> Tuple[float, int]:
         build_log_path = get_build_log_path(output_dir)
 
-        stdout(f"Log file: {build_log_path}\n")
-        stdout(f"Output directory: {output_dir}\n")
+        self.out(f"Log file: {build_log_path}\n")
+        self.out(f"Output directory: {output_dir}\n")
 
         remove_log_file(output_dir)
 
         # Clean up scan build results.
         if os.path.exists(output_dir):
-            if VERBOSE >= 1:
-                stdout(f"  Removing old results: {output_dir}\n")
+            self.vout(f"  Removing old results: {output_dir}\n")
 
             shutil.rmtree(output_dir)
 
@@ -374,7 +382,7 @@ class ProjectTester:
                 self._download_and_patch(directory, build_log_file)
                 run_cleanup_script(directory, build_log_file)
                 build_time, memory = self.scan_build(directory, output_dir,
-                                               build_log_file)
+                                                     build_log_file)
             else:
                 build_time, memory = self.analyze_preprocessed(directory,
                                                                output_dir)
@@ -384,9 +392,11 @@ class ProjectTester:
                 normalize_reference_results(directory, output_dir,
                                             self.project.mode)
 
-        stdout(f"Build complete (time: {utils.time_to_str(build_time)}, "
-               f"peak memory: {utils.memory_to_str(memory)}). "
-               f"See the log for more details: {build_log_path}\n")
+        self.out(f"Build complete (time: {utils.time_to_str(build_time)}, "
+                 f"peak memory: {utils.memory_to_str(memory)}). "
+                 f"See the log for more details: {build_log_path}\n")
+
+        return build_time, memory
 
     def scan_build(self, directory: str, output_dir: str,
                    build_log_file: IO) -> Tuple[float, int]:
@@ -454,8 +464,7 @@ class ProjectTester:
 
                 command_to_run = command_prefix + command
 
-                if VERBOSE >= 1:
-                    stdout(f"  Executing: {command_to_run}\n")
+                self.vout(f"  Executing: {command_to_run}\n")
 
                 time, mem = utils.check_and_measure_call(
                     command_to_run, cwd=cwd,
@@ -522,8 +531,7 @@ class ProjectTester:
             log_path = os.path.join(fail_path, file_name + ".stderr.txt")
             with open(log_path, "w+") as log_file:
                 try:
-                    if VERBOSE >= 1:
-                        stdout(f"  Executing: {command}\n")
+                    self.vout(f"  Executing: {command}\n")
 
                     time, mem = utils.check_and_measure_call(
                         command, cwd=directory, stderr=log_file,
@@ -592,8 +600,10 @@ class ProjectTester:
                 f"for the '{self.project.name}' project")
 
     def _download_from_git(self, directory: str, build_log_file: IO):
+        repo = self.project.origin
         cached_source = os.path.join(directory, CACHED_SOURCE_DIR_NAME)
-        check_call(f"git clone --recursive {self.project.origin} {cached_source}",
+
+        check_call(f"git clone --recursive {repo} {cached_source}",
                    cwd=directory, stderr=build_log_file,
                    stdout=build_log_file, shell=True)
         check_call(f"git checkout --quiet {self.project.commit}",
@@ -624,16 +634,15 @@ class ProjectTester:
                          out=LOCAL.stdout, err=LOCAL.stderr,
                          verbose=VERBOSE)
 
-    @staticmethod
-    def _apply_patch(directory: str, build_log_file: IO):
+    def _apply_patch(self, directory: str, build_log_file: IO):
         patchfile_path = os.path.join(directory, PATCHFILE_NAME)
         patched_source = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
 
         if not os.path.exists(patchfile_path):
-            stdout("  No local patches.\n")
+            self.out("  No local patches.\n")
             return
 
-        stdout("  Applying patch.\n")
+        self.out("  Applying patch.\n")
         try:
             check_call(f"patch -p1 < '{patchfile_path}'",
                        cwd=patched_source,
@@ -645,6 +654,14 @@ class ProjectTester:
             stderr(f"Error: Patch failed. "
                    f"See {build_log_file.name} for details.\n")
             sys.exit(1)
+
+    def out(self, what: str):
+        if not self.silent:
+            stdout(what)
+
+    def vout(self, what: str):
+        if VERBOSE >= 1:
+            self.out(what)
 
 
 class TestProjectThread(threading.Thread):
@@ -668,10 +685,7 @@ class TestProjectThread(threading.Thread):
         while not self.tasks_queue.empty():
             try:
                 test_info = self.tasks_queue.get()
-
-                Logger = logging.getLogger(test_info.project.name)
-                LOCAL.stdout = StreamToLogger(Logger, logging.INFO)
-                LOCAL.stderr = StreamToLogger(Logger, logging.ERROR)
+                init_logger(test_info.project.name)
 
                 tester = ProjectTester(test_info)
                 if not tester.test():

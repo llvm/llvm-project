@@ -1,0 +1,1 @@
+c:@F@testStaticImplicit ctu-import.c.ast

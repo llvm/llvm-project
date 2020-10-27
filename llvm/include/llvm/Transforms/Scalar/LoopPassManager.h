@@ -366,6 +366,8 @@ public:
     return PA;
   }
 
+  static bool isRequired() { return true; }
+
 private:
   LoopPassT Pass;
 
