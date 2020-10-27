@@ -490,14 +490,15 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
   MachineOperand *FIOp =
       TII->getNamedOperand(MI, IsFlat ? AMDGPU::OpName::saddr
                                       : AMDGPU::OpName::vaddr);
+
+  MachineOperand *OffsetOp = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
+  int64_t NewOffset = OffsetOp->getImm() + Offset;
+
 #ifndef NDEBUG
   MachineBasicBlock *MBB = MI.getParent();
   MachineFunction *MF = MBB->getParent();
   assert(FIOp && FIOp->isFI() && "frame index must be address operand");
   assert(TII->isMUBUF(MI) || TII->isFLATScratch(MI));
-
-  MachineOperand *OffsetOp = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
-  int64_t NewOffset = OffsetOp->getImm() + Offset;
 
   if (IsFlat) {
     assert(TII->isLegalFLATOffset(NewOffset, AMDGPUAS::PRIVATE_ADDRESS, true) &&
