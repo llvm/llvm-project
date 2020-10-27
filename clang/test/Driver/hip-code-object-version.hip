@@ -45,7 +45,7 @@
 // RUN:   %s 2>&1 | FileCheck -check-prefix=V4 %s
 
 // V4: "-mllvm" "--amdhsa-code-object-version=4"
-// V4: "-targets=host-x86_64-unknown-linux,hip-amdgcn-amd-amdhsa--gfx906"
+// V4: "-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx906"
 
 // Check bundle ID for code object version default
 
@@ -54,7 +54,7 @@
 // RUN:   %s 2>&1 | FileCheck -check-prefix=VD %s
 
 // VD: "-mllvm" "--amdhsa-code-object-version=4"
-// VD: "-targets=host-x86_64-unknown-linux,hip-amdgcn-amd-amdhsa--gfx906"
+// VD: "-targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx906"
 
 // Check invalid code object version option.
 
