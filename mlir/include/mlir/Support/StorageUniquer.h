@@ -157,8 +157,7 @@ public:
   }
   /// Utility override when the storage type represents the type id.
   template <typename Storage>
-  void registerSingletonStorageType(
-      function_ref<void(Storage *)> initFn = llvm::None) {
+  void registerSingletonStorageType(function_ref<void(Storage *)> initFn = {}) {
     registerSingletonStorageType<Storage>(TypeID::get<Storage>(), initFn);
   }
 
