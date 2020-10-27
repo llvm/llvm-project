@@ -3887,6 +3887,15 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         return false;
       }
     }
+    if ((getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm() &
+         SISrcMods::ABS) ||
+        (getNamedOperand(MI, AMDGPU::OpName::src1_modifiers)->getImm() &
+         SISrcMods::ABS) ||
+        (getNamedOperand(MI, AMDGPU::OpName::src2_modifiers)->getImm() &
+         SISrcMods::ABS)) {
+      ErrInfo = "ABS not allowed in VOP3B instructions";
+      return false;
+    }
   }
 
   if (isSOP2(MI) || isSOPC(MI)) {
