@@ -203,6 +203,30 @@ ResolveTypeAlias(SwiftASTContext *module_holder,
   return {n, {}};
 }
 
+std::string
+TypeSystemSwiftTypeRef::GetTupleElementName(lldb::opaque_compiler_type_t type,
+                                            size_t idx) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer node = TypeSystemSwiftTypeRef::DemangleCanonicalType(dem, type);
+  if (!node || node->getKind() != Node::Kind::Tuple)
+    return "";
+  if (node->getNumChildren() < idx)
+    return "";
+  NodePointer child = node->getChild(idx);
+  if (child->getNumChildren() != 1 &&
+      child->getKind() != Node::Kind::TupleElement)
+    return "";
+  for (NodePointer name : *child) {
+    if (name->getKind() != Node::Kind::TupleElementName)
+      continue;
+    return name->getText().str();
+  }
+  std::string name;
+  llvm::raw_string_ostream(name) << idx;
+  return name;
+}
+
 swift::Demangle::NodePointer TypeSystemSwiftTypeRef::Transform(
     swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
     std::function<swift::Demangle::NodePointer(swift::Demangle::NodePointer)>
