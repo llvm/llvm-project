@@ -914,6 +914,16 @@ StringRef VEAsmParser::splitMnemonic(StringRef Name, SMLoc NameLoc,
     Mnemonic = parseRD(Name, 10, NameLoc, Operands);
   } else if (Name.startswith("cvt.l.d")) {
     Mnemonic = parseRD(Name, 7, NameLoc, Operands);
+  } else if (Name.startswith("vcvt.w.d.sx") || Name.startswith("vcvt.w.d.zx") ||
+             Name.startswith("vcvt.w.s.sx") || Name.startswith("vcvt.w.s.zx")) {
+    Mnemonic = parseRD(Name, 11, NameLoc, Operands);
+  } else if (Name.startswith("vcvt.l.d")) {
+    Mnemonic = parseRD(Name, 8, NameLoc, Operands);
+  } else if (Name.startswith("pvcvt.w.s.lo") ||
+             Name.startswith("pvcvt.w.s.up")) {
+    Mnemonic = parseRD(Name, 12, NameLoc, Operands);
+  } else if (Name.startswith("pvcvt.w.s")) {
+    Mnemonic = parseRD(Name, 9, NameLoc, Operands);
   } else {
     Operands->push_back(VEOperand::CreateToken(Mnemonic, NameLoc));
   }
