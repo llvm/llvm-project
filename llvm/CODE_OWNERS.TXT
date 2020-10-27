@@ -214,7 +214,6 @@ D: MemorySanitizer (LLVM part)
 
 N: Craig Topper
 E: craig.topper@gmail.com
-E: craig.topper@intel.com
 D: X86 Backend
 
 N: Ulrich Weigand
