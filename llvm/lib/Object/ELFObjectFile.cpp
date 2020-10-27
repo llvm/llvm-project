@@ -466,7 +466,10 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1012";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1030:
     return "gfx1030";
-
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1031:
+    return "gfx1031";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1032:
+    return "gfx1032";
   default:
     llvm_unreachable("Unknown EF_AMDGPU_MACH value");
   }
