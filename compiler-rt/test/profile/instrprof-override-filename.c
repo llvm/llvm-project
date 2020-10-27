@@ -20,5 +20,5 @@ int main(int argc, const char *argv[]) {
   bar();
   return 0;
 }
-// FE: ![[PD1]] = !{!"branch_weights", i32 1, i32 2}
-// IR: ![[PD1]] = !{!"branch_weights", i32 0, i32 1}
+// FE: ![[PD1]] = !{!"branch_weights", i64 1, i64 2}
+// IR: ![[PD1]] = !{!"branch_weights", i64 0, i64 1}

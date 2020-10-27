@@ -93,7 +93,7 @@ void emitMisexpectDiagnostic(Instruction *I, LLVMContext &Ctx,
 namespace llvm {
 namespace misexpect {
 
-void verifyMisExpect(Instruction *I, const SmallVector<uint32_t, 4> &Weights,
+void verifyMisExpect(Instruction *I, const SmallVector<uint64_t, 4> &Weights,
                      LLVMContext &Ctx) {
   if (auto *MisExpectData = I->getMetadata(LLVMContext::MD_misexpect)) {
     auto *MisExpectDataName = dyn_cast<MDString>(MisExpectData->getOperand(0));
@@ -161,7 +161,7 @@ void checkFrontendInstrumentation(Instruction &I) {
     // Operand 0 is a string tag "branch_weights"
     if (MDString *Tag = cast<MDString>(MD->getOperand(0))) {
       if (Tag->getString().equals("branch_weights")) {
-        SmallVector<uint32_t, 4> RealWeights(NOps - 1);
+        SmallVector<uint64_t, 4> RealWeights(NOps - 1);
         for (unsigned i = 1; i < NOps; i++) {
           ConstantInt *Value =
               mdconst::dyn_extract<ConstantInt>(MD->getOperand(i));

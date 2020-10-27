@@ -45,12 +45,12 @@ void lambdas() {
   if (i) {}
 }
 
-// PGOUSE-DAG: ![[LW1]] = !{!"branch_weights", i32 2, i32 1}
-// PGOUSE-DAG: ![[LW2]] = !{!"branch_weights", i32 11, i32 2}
-// PGOUSE-DAG: ![[LW3]] = !{!"branch_weights", i32 2, i32 1}
+// PGOUSE-DAG: ![[LW1]] = !{!"branch_weights", i64 2, i64 1}
+// PGOUSE-DAG: ![[LW2]] = !{!"branch_weights", i64 11, i64 2}
+// PGOUSE-DAG: ![[LW3]] = !{!"branch_weights", i64 2, i64 1}
 
-// LMBUSE-DAG: ![[LF1]] = !{!"branch_weights", i32 10, i32 2}
-// LMBUSE-DAG: ![[LF2]] = !{!"branch_weights", i32 10, i32 2}
+// LMBUSE-DAG: ![[LF1]] = !{!"branch_weights", i64 10, i64 2}
+// LMBUSE-DAG: ![[LF2]] = !{!"branch_weights", i64 10, i64 2}
 
 int main(int argc, const char *argv[]) {
   lambdas();

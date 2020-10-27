@@ -31,7 +31,7 @@ public:
     // CTRUSE-NOT: br {{.*}} !prof ![0-9]+
     // CTRUSE: ret
   }
-  // CTRUSE: ![[SC1]] = !{!"branch_weights", i32 100, i32 2}
+  // CTRUSE: ![[SC1]] = !{!"branch_weights", i64 100, i64 2}
 
   // DTRGEN-LABEL: define {{.*}} @_ZN6SimpleD2Ev(
   // DTRUSE-LABEL: define {{.*}} @_ZN6SimpleD2Ev(
@@ -44,7 +44,7 @@ public:
     // DTRUSE-NOT: br {{.*}} !prof ![0-9]+
     // DTRUSE: ret
   }
-  // DTRUSE: ![[SD1]] = !{!"branch_weights", i32 100, i32 2}
+  // DTRUSE: ![[SD1]] = !{!"branch_weights", i64 100, i64 2}
 
   // MTHGEN-LABEL: define {{.*}} @_ZN6Simple6methodEv(
   // MTHUSE-LABEL: define {{.*}} @_ZN6Simple6methodEv(
@@ -57,7 +57,7 @@ public:
     // MTHUSE-NOT: br {{.*}} !prof ![0-9]+
     // MTHUSE: ret
   }
-  // MTHUSE: ![[SM1]] = !{!"branch_weights", i32 100, i32 2}
+  // MTHUSE: ![[SM1]] = !{!"branch_weights", i64 100, i64 2}
 };
 
 class Derived : virtual public Simple {
@@ -73,7 +73,7 @@ public:
     // VCTRUSE-NOT: br {{.*}} !prof ![0-9]+
     // VCTRUSE: ret
   }
-  // VCTRUSE: ![[SC1]] = !{!"branch_weights", i32 100, i32 2}
+  // VCTRUSE: ![[SC1]] = !{!"branch_weights", i64 100, i64 2}
 
   // VDTRGEN-LABEL: define {{.*}} @_ZN7DerivedD2Ev(
   // VDTRUSE-LABEL: define {{.*}} @_ZN7DerivedD2Ev(
@@ -86,7 +86,7 @@ public:
     // VDTRUSE-NOT: br {{.*}} !prof ![0-9]+
     // VDTRUSE: ret
   }
-  // VDTRUSE: ![[SD1]] = !{!"branch_weights", i32 100, i32 2}
+  // VDTRUSE: ![[SD1]] = !{!"branch_weights", i64 100, i64 2}
 };
 
 // WRPGEN-LABEL: define {{.*}} @_Z14simple_wrapperv(
@@ -104,7 +104,7 @@ void simple_wrapper() {
   // WRPUSE-NOT: br {{.*}} !prof ![0-9]+
   // WRPUSE: ret
 }
-// WRPUSE: ![[SW1]] = !{!"branch_weights", i32 101, i32 2}
+// WRPUSE: ![[SW1]] = !{!"branch_weights", i64 101, i64 2}
 
 int main(int argc, const char *argv[]) {
   simple_wrapper();

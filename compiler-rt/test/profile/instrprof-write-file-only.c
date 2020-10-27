@@ -32,4 +32,4 @@ int foo(int X) {
   // CHECK: br i1 %{{.*}}, label %{{.*}}, label %{{[^,]+$}}
   return X <= 0 ? -X : X;
 }
-// CHECK: ![[PD1]] = !{!"branch_weights", i32 1, i32 2}
+// CHECK: ![[PD1]] = !{!"branch_weights", i64 1, i64 2}

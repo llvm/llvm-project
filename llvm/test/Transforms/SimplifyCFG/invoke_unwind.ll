@@ -17,7 +17,7 @@ Rethrow:
         resume { i8*, i32 } %exn
 }
 
-!0 = !{!"branch_weights", i32 369, i32 2}
+!0 = !{!"branch_weights", i64 369, i64 2}
 
 define i32 @test2() personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK-LABEL: @test2(
@@ -76,4 +76,4 @@ lpad2:
 
 declare i32 @__gxx_personality_v0(...)
 
-; CHECK: ![[PROF]] = !{!"branch_weights", i32 371}
+; CHECK: ![[PROF]] = !{!"branch_weights", i64 371}

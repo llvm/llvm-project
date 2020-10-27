@@ -1,3 +1,4 @@
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/entry_counts_cold.prof -S | FileCheck %s
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/entry_counts_cold.prof -S | FileCheck %s
 ; ModuleID = 'temp.bc'
 source_filename = "temp.c"
