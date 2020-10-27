@@ -255,7 +255,7 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
                               const MCRegisterInfo *MRI, bool IsEH,
                               const Instruction &Instr, unsigned OperandIdx,
                               uint64_t Operand) const {
-  assert(OperandIdx < 2);
+  assert(OperandIdx < 3);
   uint8_t Opcode = Instr.Opcode;
   OperandType Type = getOperandTypes()[Opcode][OperandIdx];
 

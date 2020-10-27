@@ -1,4 +1,3 @@
-# XFAIL: *
 # RUN: llvm-mc %s -filetype=obj -triple=i686-pc-linux -o %t
 # RUN: llvm-dwarfdump -v %t | FileCheck %s
 
