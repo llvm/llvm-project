@@ -126,7 +126,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
     CompilerType void_void = GetCompilerType(b.Mangle(n));
     ASSERT_TRUE(void_void.IsFunctionType(nullptr));
     ASSERT_TRUE(void_void.IsFunctionPointerType());
-    ASSERT_EQ(void_void.GetNumberOfFunctionArguments(), 0);
+    ASSERT_EQ(void_void.GetNumberOfFunctionArguments(), 0UL);
   }
   {
     NodePointer n = b.GlobalType(
@@ -134,7 +134,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
                b.Node(Node::Kind::ImplConvention, "@callee_guaranteed")));
     CompilerType impl_void_void = GetCompilerType(b.Mangle(n));
     ASSERT_TRUE(impl_void_void.IsFunctionType(nullptr));
-    ASSERT_EQ(impl_void_void.GetNumberOfFunctionArguments(), 0);
+    ASSERT_EQ(impl_void_void.GetNumberOfFunctionArguments(), 0UL);
   }
   {
     NodePointer n = b.GlobalType(b.Node(
@@ -147,7 +147,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
                b.Node(Node::Kind::Tuple))));
     CompilerType impl_two_args = GetCompilerType(b.Mangle(n));
     ASSERT_TRUE(impl_two_args.IsFunctionType(nullptr));
-    ASSERT_EQ(impl_two_args.GetNumberOfFunctionArguments(), 2);
+    ASSERT_EQ(impl_two_args.GetNumberOfFunctionArguments(), 2UL);
     ASSERT_EQ(impl_two_args.GetFunctionArgumentAtIndex(0), int_type);
     ASSERT_EQ(impl_two_args.GetFunctionArgumentAtIndex(1), void_type);
     ASSERT_EQ(impl_two_args.GetFunctionArgumentTypeAtIndex(0), int_type);
@@ -167,7 +167,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
                b.Node(Node::Kind::Type, b.Node(Node::Kind::Tuple)))));
     CompilerType two_args = GetCompilerType(b.Mangle(n));
     ASSERT_TRUE(two_args.IsFunctionType(nullptr));
-    ASSERT_EQ(two_args.GetNumberOfFunctionArguments(), 2);
+    ASSERT_EQ(two_args.GetNumberOfFunctionArguments(), 2UL);
     ASSERT_EQ(two_args.GetFunctionArgumentAtIndex(0), int_type);
     ASSERT_EQ(two_args.GetFunctionArgumentAtIndex(1), void_type);
     ASSERT_EQ(two_args.GetFunctionArgumentTypeAtIndex(0), int_type);
@@ -306,7 +306,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Scalar) {
     uint32_t count = 99;
     bool is_complex = true;
     ASSERT_FALSE(int_type.IsFloatingPointType(count, is_complex));
-    ASSERT_EQ(count, 0);
+    ASSERT_EQ(count, 0UL);
     ASSERT_EQ(is_complex, false);
     bool is_signed = true;
     ASSERT_TRUE(int_type.IsIntegerType(is_signed));
@@ -318,7 +318,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Scalar) {
     uint32_t count = 99;
     bool is_complex = true;
     ASSERT_TRUE(float_type.IsFloatingPointType(count, is_complex));
-    ASSERT_EQ(count, 1);
+    ASSERT_EQ(count, 1UL);
     ASSERT_EQ(is_complex, false);
     bool is_signed = true;
     ASSERT_FALSE(float_type.IsIntegerType(is_signed));
