@@ -37,10 +37,10 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 ; USE: br i1 %cmp, label %if.then, label %if.end
 ; USE-SAME: !prof ![[BW_ENTRY:[0-9]+]]
-; USE-DAG: ![[BW_ENTRY]] = !{!"branch_weights", i64 2, i64 1}
+; USE-DAG: ![[BW_ENTRY]] = !{!"branch_weights", i32 2, i32 1}
 ; USE-LARGE: br i1 %cmp, label %if.then, label %if.end
 ; USE-LARGE-SAME: !prof ![[BW_L_ENTRY:[0-9]+]]
-; USE-LARGE-DAG: ![[BW_L_ENTRY]] = !{!"branch_weights", i64 2863311530, i64 1431655765}
+; USE-LARGE-DAG: ![[BW_L_ENTRY]] = !{!"branch_weights", i32 -1431655766, i32 1431655765}
 
 if.then:
 ; GEN: if.then:

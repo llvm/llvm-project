@@ -35,5 +35,5 @@ entry:
 ; Should not have a VP annotation on new indirect call (check before and after
 ; branch_weights annotation).
 ; ICALL-PROM-NOT: !"VP"
-; ICALL-PROM: [[BRANCH_WEIGHT]] = !{!"branch_weights", i64 1, i64 0}
+; ICALL-PROM: [[BRANCH_WEIGHT]] = !{!"branch_weights", i32 1, i32 0}
 ; ICALL-PROM-NOT: !"VP"

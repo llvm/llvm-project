@@ -238,7 +238,7 @@ class SimplifyCFGOpt {
                               const TargetTransformInfo &TTI);
   bool SimplifyTerminatorOnSelect(Instruction *OldTerm, Value *Cond,
                                   BasicBlock *TrueBB, BasicBlock *FalseBB,
-                                  uint64_t TrueWeight, uint64_t FalseWeight);
+                                  uint32_t TrueWeight, uint32_t FalseWeight);
   bool SimplifyBranchOnICmpChain(BranchInst *BI, IRBuilder<> &Builder,
                                  const DataLayout &DL);
   bool SimplifySwitchOnSelect(SwitchInst *SI, SelectInst *Select);
@@ -825,19 +825,19 @@ static bool ValuesOverlap(std::vector<ValueEqualityComparisonCase> &C1,
 
 // Set branch weights on SwitchInst. This sets the metadata if there is at
 // least one non-zero weight.
-static void setBranchWeights(SwitchInst *SI, ArrayRef<uint64_t> Weights) {
+static void setBranchWeights(SwitchInst *SI, ArrayRef<uint32_t> Weights) {
   // Check that there is at least one non-zero weight. Otherwise, pass
   // nullptr to setMetadata which will erase the existing metadata.
   MDNode *N = nullptr;
-  if (llvm::any_of(Weights, [](uint64_t W) { return W != 0; }))
+  if (llvm::any_of(Weights, [](uint32_t W) { return W != 0; }))
     N = MDBuilder(SI->getParent()->getContext()).createBranchWeights(Weights);
   SI->setMetadata(LLVMContext::MD_prof, N);
 }
 
 // Similar to the above, but for branch and select instructions that take
 // exactly 2 weights.
-static void setBranchWeights(Instruction *I, uint64_t TrueWeight,
-                             uint64_t FalseWeight) {
+static void setBranchWeights(Instruction *I, uint32_t TrueWeight,
+                             uint32_t FalseWeight) {
   assert(isa<BranchInst>(I) || isa<SelectInst>(I));
   // Check that there is at least one non-zero weight. Otherwise, pass
   // nullptr to setMetadata which will erase the existing metadata.
@@ -1022,6 +1022,16 @@ static void GetBranchWeights(Instruction *TI,
     ICmpInst *ICI = cast<ICmpInst>(BI->getCondition());
     if (ICI->getPredicate() == ICmpInst::ICMP_EQ)
       std::swap(Weights.front(), Weights.back());
+  }
+}
+
+/// Keep halving the weights until all can fit in uint32_t.
+static void FitWeights(MutableArrayRef<uint64_t> Weights) {
+  uint64_t Max = *std::max_element(Weights.begin(), Weights.end());
+  if (Max > UINT_MAX) {
+    unsigned Offset = 32 - countLeadingZeros(Max);
+    for (uint64_t &I : Weights)
+      I >>= Offset;
   }
 }
 
@@ -1210,7 +1220,10 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(Instruction *TI,
         NewSI->addCase(V.Value, V.Dest);
 
       if (PredHasWeights || SuccHasWeights) {
-        SmallVector<uint64_t, 8> MDWeights(Weights.begin(), Weights.end());
+        // Halve the weights if any of them cannot fit in an uint32_t
+        FitWeights(Weights);
+
+        SmallVector<uint32_t, 8> MDWeights(Weights.begin(), Weights.end());
 
         setBranchWeights(NewSI, MDWeights);
       }
@@ -2941,7 +2954,10 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, MemorySSAUpdater *MSSAU,
         PBI->setSuccessor(1, FalseDest);
       }
       if (NewWeights.size() == 2) {
-        SmallVector<uint64_t, 8> MDWeights(NewWeights.begin(),
+        // Halve the weights if any of them cannot fit in an uint32_t
+        FitWeights(NewWeights);
+
+        SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(),
                                            NewWeights.end());
         setBranchWeights(PBI, MDWeights[0], MDWeights[1]);
       } else
@@ -3569,6 +3585,8 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     uint64_t NewWeights[2] = {PredCommon * (SuccCommon + SuccOther) +
                                   PredOther * SuccCommon,
                               PredOther * SuccOther};
+    // Halve the weights if any of them cannot fit in an uint32_t
+    FitWeights(NewWeights);
 
     setBranchWeights(PBI, NewWeights[0], NewWeights[1]);
   }
@@ -3604,6 +3622,8 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
         uint64_t NewWeights[2] = {PredCommon * (SuccCommon + SuccOther),
                                   PredOther * SuccCommon};
 
+        FitWeights(NewWeights);
+
         setBranchWeights(NV, NewWeights[0], NewWeights[1]);
       }
     }
@@ -3625,8 +3645,8 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
 bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
                                                 Value *Cond, BasicBlock *TrueBB,
                                                 BasicBlock *FalseBB,
-                                                uint64_t TrueWeight,
-                                                uint64_t FalseWeight) {
+                                                uint32_t TrueWeight,
+                                                uint32_t FalseWeight) {
   // Remove any superfluous successor edges from the CFG.
   // First, figure out which successors to preserve.
   // If TrueBB and FalseBB are equal, only try to preserve one copy of that
@@ -3700,16 +3720,16 @@ bool SimplifyCFGOpt::SimplifySwitchOnSelect(SwitchInst *SI,
   BasicBlock *FalseBB = SI->findCaseValue(FalseVal)->getCaseSuccessor();
 
   // Get weight for TrueBB and FalseBB.
-  uint64_t TrueWeight = 0, FalseWeight = 0;
+  uint32_t TrueWeight = 0, FalseWeight = 0;
   SmallVector<uint64_t, 8> Weights;
   bool HasWeights = HasBranchWeights(SI);
   if (HasWeights) {
     GetBranchWeights(SI, Weights);
     if (Weights.size() == 1 + SI->getNumCases()) {
       TrueWeight =
-          (uint64_t)Weights[SI->findCaseValue(TrueVal)->getSuccessorIndex()];
+          (uint32_t)Weights[SI->findCaseValue(TrueVal)->getSuccessorIndex()];
       FalseWeight =
-          (uint64_t)Weights[SI->findCaseValue(FalseVal)->getSuccessorIndex()];
+          (uint32_t)Weights[SI->findCaseValue(FalseVal)->getSuccessorIndex()];
     }
   }
 

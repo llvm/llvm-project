@@ -132,6 +132,6 @@ declare i8* @__cxa_begin_catch(i8*)
 
 declare void @__cxa_end_catch()
 
-; USE: ![[BW_BAR_ENTRY]] = !{!"branch_weights", i64 2, i64 1}
-; USE: ![[BW_FOO_ENTRY]] = !{!"branch_weights", i64 3, i64 2}
-; USE: ![[BW_CATCH_DISPATCH]] = !{!"branch_weights", i64 2, i64 0}
+; USE: ![[BW_BAR_ENTRY]] = !{!"branch_weights", i32 2, i32 1}
+; USE: ![[BW_FOO_ENTRY]] = !{!"branch_weights", i32 3, i32 2}
+; USE: ![[BW_CATCH_DISPATCH]] = !{!"branch_weights", i32 2, i32 0}

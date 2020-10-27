@@ -470,82 +470,82 @@ static void static_func() {
   }
 }
 
-// PGOUSE-DAG: ![[SL1]] = !{!"branch_weights", i64 101, i64 2}
-// PGOUSE-DAG: ![[SL2]] = !{!"branch_weights", i64 101, i64 2}
-// PGOUSE-DAG: ![[SL3]] = !{!"branch_weights", i64 76, i64 2}
+// PGOUSE-DAG: ![[SL1]] = !{!"branch_weights", i32 101, i32 2}
+// PGOUSE-DAG: ![[SL2]] = !{!"branch_weights", i32 101, i32 2}
+// PGOUSE-DAG: ![[SL3]] = !{!"branch_weights", i32 76, i32 2}
 
-// PGOUSE-DAG: ![[EE1]] = !{!"branch_weights", i64 1, i64 2}
-// PGOUSE-DAG: ![[EE2]] = !{!"branch_weights", i64 52, i64 1}
-// PGOUSE-DAG: ![[EE3]] = !{!"branch_weights", i64 2, i64 51}
-// PGOUSE-DAG: ![[EE4]] = !{!"branch_weights", i64 26, i64 26}
-// PGOUSE-DAG: ![[EE5]] = !{!"branch_weights", i64 2, i64 1}
-// PGOUSE-DAG: ![[EE6]] = !{!"branch_weights", i64 2, i64 26}
-// PGOUSE-DAG: ![[EE7]] = !{!"branch_weights", i64 26, i64 1}
+// PGOUSE-DAG: ![[EE1]] = !{!"branch_weights", i32 1, i32 2}
+// PGOUSE-DAG: ![[EE2]] = !{!"branch_weights", i32 52, i32 1}
+// PGOUSE-DAG: ![[EE3]] = !{!"branch_weights", i32 2, i32 51}
+// PGOUSE-DAG: ![[EE4]] = !{!"branch_weights", i32 26, i32 26}
+// PGOUSE-DAG: ![[EE5]] = !{!"branch_weights", i32 2, i32 1}
+// PGOUSE-DAG: ![[EE6]] = !{!"branch_weights", i32 2, i32 26}
+// PGOUSE-DAG: ![[EE7]] = !{!"branch_weights", i32 26, i32 1}
 
-// PGOUSE-DAG: ![[IF1]] = !{!"branch_weights", i64 101, i64 2}
-// PGOUSE-DAG: ![[IF2]] = !{!"branch_weights", i64 51, i64 51}
-// PGOUSE-DAG: ![[IF3]] = !{!"branch_weights", i64 51, i64 1}
-// PGOUSE-DAG: ![[IF4]] = !{!"branch_weights", i64 34, i64 18}
-// PGOUSE-DAG: ![[IF5]] = !{!"branch_weights", i64 34, i64 1}
-// PGOUSE-DAG: ![[IF6]] = !{!"branch_weights", i64 17, i64 2}
-// PGOUSE-DAG: ![[IF7]] = !{!"branch_weights", i64 100, i64 2}
-// PGOUSE-DAG: ![[IF8]] = !{!"branch_weights", i64 100, i64 2}
+// PGOUSE-DAG: ![[IF1]] = !{!"branch_weights", i32 101, i32 2}
+// PGOUSE-DAG: ![[IF2]] = !{!"branch_weights", i32 51, i32 51}
+// PGOUSE-DAG: ![[IF3]] = !{!"branch_weights", i32 51, i32 1}
+// PGOUSE-DAG: ![[IF4]] = !{!"branch_weights", i32 34, i32 18}
+// PGOUSE-DAG: ![[IF5]] = !{!"branch_weights", i32 34, i32 1}
+// PGOUSE-DAG: ![[IF6]] = !{!"branch_weights", i32 17, i32 2}
+// PGOUSE-DAG: ![[IF7]] = !{!"branch_weights", i32 100, i32 2}
+// PGOUSE-DAG: ![[IF8]] = !{!"branch_weights", i32 100, i32 2}
 
-// PGOUSE-DAG: ![[JM1]] = !{!"branch_weights", i64 2, i64 1}
-// PGOUSE-DAG: ![[JM2]] = !{!"branch_weights", i64 1, i64 2}
-// PGOUSE-DAG: ![[JM3]] = !{!"branch_weights", i64 1, i64 2}
-// PGOUSE-DAG: ![[JM4]] = !{!"branch_weights", i64 1, i64 2}
-// PGOUSE-DAG: ![[JM5]] = !{!"branch_weights", i64 3, i64 2}
-// PGOUSE-DAG: ![[JM6]] = !{!"branch_weights", i64 1, i64 2}
-// PGOUSE-DAG: ![[JM7]] = !{!"branch_weights", i64 1, i64 2, i64 2, i64 2}
-// PGOUSE-DAG: ![[JM8]] = !{!"branch_weights", i64 11, i64 2}
-// PGOUSE-DAG: ![[JM9]] = !{!"branch_weights", i64 10, i64 2}
+// PGOUSE-DAG: ![[JM1]] = !{!"branch_weights", i32 2, i32 1}
+// PGOUSE-DAG: ![[JM2]] = !{!"branch_weights", i32 1, i32 2}
+// PGOUSE-DAG: ![[JM3]] = !{!"branch_weights", i32 1, i32 2}
+// PGOUSE-DAG: ![[JM4]] = !{!"branch_weights", i32 1, i32 2}
+// PGOUSE-DAG: ![[JM5]] = !{!"branch_weights", i32 3, i32 2}
+// PGOUSE-DAG: ![[JM6]] = !{!"branch_weights", i32 1, i32 2}
+// PGOUSE-DAG: ![[JM7]] = !{!"branch_weights", i32 1, i32 2, i32 2, i32 2}
+// PGOUSE-DAG: ![[JM8]] = !{!"branch_weights", i32 11, i32 2}
+// PGOUSE-DAG: ![[JM9]] = !{!"branch_weights", i32 10, i32 2}
 
-// PGOUSE-DAG: ![[SW1]] = !{!"branch_weights", i64 16, i64 1}
-// PGOUSE-DAG: ![[SW2]] = !{!"branch_weights", i64 6, i64 2, i64 3, i64 4, i64 5}
-// PGOUSE-DAG: ![[SW3]] = !{!"branch_weights", i64 1, i64 2}
-// PGOUSE-DAG: ![[SW4]] = !{!"branch_weights", i64 3, i64 2}
-// PGOUSE-DAG: ![[SW5]] = !{!"branch_weights", i64 4, i64 1}
-// PGOUSE-DAG: ![[SW6]] = !{!"branch_weights", i64 5, i64 1}
-// PGOUSE-DAG: ![[SW7]] = !{!"branch_weights", i64 1, i64 2, i64 2, i64 2, i64 2}
-// PGOUSE-DAG: ![[SW8]] = !{!"branch_weights", i64 5, i64 1}
-// PGOUSE-DAG: ![[SW9]] = !{!"branch_weights", i64 2, i64 5}
+// PGOUSE-DAG: ![[SW1]] = !{!"branch_weights", i32 16, i32 1}
+// PGOUSE-DAG: ![[SW2]] = !{!"branch_weights", i32 6, i32 2, i32 3, i32 4, i32 5}
+// PGOUSE-DAG: ![[SW3]] = !{!"branch_weights", i32 1, i32 2}
+// PGOUSE-DAG: ![[SW4]] = !{!"branch_weights", i32 3, i32 2}
+// PGOUSE-DAG: ![[SW5]] = !{!"branch_weights", i32 4, i32 1}
+// PGOUSE-DAG: ![[SW6]] = !{!"branch_weights", i32 5, i32 1}
+// PGOUSE-DAG: ![[SW7]] = !{!"branch_weights", i32 1, i32 2, i32 2, i32 2, i32 2}
+// PGOUSE-DAG: ![[SW8]] = !{!"branch_weights", i32 5, i32 1}
+// PGOUSE-DAG: ![[SW9]] = !{!"branch_weights", i32 2, i32 5}
 
-// PGOUSE-DAG: ![[BS1]] = !{!"branch_weights", i64 33, i64 2}
-// PGOUSE-DAG: ![[BS2]] = !{!"branch_weights", i64 29, i64 2, i64 2, i64 2, i64 2, i64 1}
-// PGOUSE-DAG: ![[BS3]] = !{!"branch_weights", i64 1, i64 2}
-// PGOUSE-DAG: ![[BS4]] = !{!"branch_weights", i64 2, i64 2}
-// PGOUSE-DAG: ![[BS5]] = !{!"branch_weights", i64 12, i64 1}
-// PGOUSE-DAG: ![[BS6]] = !{!"branch_weights", i64 12, i64 3}
-// PGOUSE-DAG: ![[BS7]] = !{!"branch_weights", i64 2, i64 1}
-// PGOUSE-DAG: ![[BS8]] = !{!"branch_weights", i64 16, i64 1}
-// PGOUSE-DAG: ![[BS9]] = !{!"branch_weights", i64 16, i64 14}
-// PGOUSE-DAG: ![[BS10]] = !{!"branch_weights", i64 2, i64 1}
-// PGOUSE-DAG: ![[BS11]] = !{!"branch_weights", i64 3, i64 1}
+// PGOUSE-DAG: ![[BS1]] = !{!"branch_weights", i32 33, i32 2}
+// PGOUSE-DAG: ![[BS2]] = !{!"branch_weights", i32 29, i32 2, i32 2, i32 2, i32 2, i32 1}
+// PGOUSE-DAG: ![[BS3]] = !{!"branch_weights", i32 1, i32 2}
+// PGOUSE-DAG: ![[BS4]] = !{!"branch_weights", i32 2, i32 2}
+// PGOUSE-DAG: ![[BS5]] = !{!"branch_weights", i32 12, i32 1}
+// PGOUSE-DAG: ![[BS6]] = !{!"branch_weights", i32 12, i32 3}
+// PGOUSE-DAG: ![[BS7]] = !{!"branch_weights", i32 2, i32 1}
+// PGOUSE-DAG: ![[BS8]] = !{!"branch_weights", i32 16, i32 1}
+// PGOUSE-DAG: ![[BS9]] = !{!"branch_weights", i32 16, i32 14}
+// PGOUSE-DAG: ![[BS10]] = !{!"branch_weights", i32 2, i32 1}
+// PGOUSE-DAG: ![[BS11]] = !{!"branch_weights", i32 3, i32 1}
 
-// PGOUSE-DAG: ![[BO1]] = !{!"branch_weights", i64 101, i64 2}
-// PGOUSE-DAG: ![[BO2]] = !{!"branch_weights", i64 67, i64 35}
-// PGOUSE-DAG: ![[BO3]] = !{!"branch_weights", i64 67, i64 35}
-// PGOUSE-DAG: ![[BO4]] = !{!"branch_weights", i64 67, i64 35}
-// PGOUSE-DAG: ![[BO5]] = !{!"branch_weights", i64 18, i64 18}
-// PGOUSE-DAG: ![[BO6]] = !{!"branch_weights", i64 51, i64 51}
-// PGOUSE-DAG: ![[BO7]] = !{!"branch_weights", i64 34, i64 18}
-// PGOUSE-DAG: ![[BL1]] = !{!"branch_weights", i64 52, i64 1}
-// PGOUSE-DAG: ![[BL2]] = !{!"branch_weights", i64 51, i64 2}
-// PGOUSE-DAG: ![[BL3]] = !{!"branch_weights", i64 26, i64 27}
-// PGOUSE-DAG: ![[BL4]] = !{!"branch_weights", i64 51, i64 2}
-// PGOUSE-DAG: ![[BL5]] = !{!"branch_weights", i64 52, i64 1}
-// PGOUSE-DAG: ![[BL6]] = !{!"branch_weights", i64 51, i64 2}
-// PGOUSE-DAG: ![[BL7]] = !{!"branch_weights", i64 26, i64 27}
-// PGOUSE-DAG: ![[BL8]] = !{!"branch_weights", i64 51, i64 2}
-// PGOUSE-DAG: ![[CO1]] = !{!"branch_weights", i64 1, i64 2}
-// PGOUSE-DAG: ![[CO2]] = !{!"branch_weights", i64 2, i64 1}
+// PGOUSE-DAG: ![[BO1]] = !{!"branch_weights", i32 101, i32 2}
+// PGOUSE-DAG: ![[BO2]] = !{!"branch_weights", i32 67, i32 35}
+// PGOUSE-DAG: ![[BO3]] = !{!"branch_weights", i32 67, i32 35}
+// PGOUSE-DAG: ![[BO4]] = !{!"branch_weights", i32 67, i32 35}
+// PGOUSE-DAG: ![[BO5]] = !{!"branch_weights", i32 18, i32 18}
+// PGOUSE-DAG: ![[BO6]] = !{!"branch_weights", i32 51, i32 51}
+// PGOUSE-DAG: ![[BO7]] = !{!"branch_weights", i32 34, i32 18}
+// PGOUSE-DAG: ![[BL1]] = !{!"branch_weights", i32 52, i32 1}
+// PGOUSE-DAG: ![[BL2]] = !{!"branch_weights", i32 51, i32 2}
+// PGOUSE-DAG: ![[BL3]] = !{!"branch_weights", i32 26, i32 27}
+// PGOUSE-DAG: ![[BL4]] = !{!"branch_weights", i32 51, i32 2}
+// PGOUSE-DAG: ![[BL5]] = !{!"branch_weights", i32 52, i32 1}
+// PGOUSE-DAG: ![[BL6]] = !{!"branch_weights", i32 51, i32 2}
+// PGOUSE-DAG: ![[BL7]] = !{!"branch_weights", i32 26, i32 27}
+// PGOUSE-DAG: ![[BL8]] = !{!"branch_weights", i32 51, i32 2}
+// PGOUSE-DAG: ![[CO1]] = !{!"branch_weights", i32 1, i32 2}
+// PGOUSE-DAG: ![[CO2]] = !{!"branch_weights", i32 2, i32 1}
 
-// PGOUSE-DAG: ![[DF1]] = !{!"branch_weights", i64 11, i64 2}
-// PGOUSE-DAG: ![[DF2]] = !{!"branch_weights", i64 3, i64 3}
-// PGOUSE-DAG: ![[DF3]] = !{!"branch_weights", i64 9, i64 5}
+// PGOUSE-DAG: ![[DF1]] = !{!"branch_weights", i32 11, i32 2}
+// PGOUSE-DAG: ![[DF2]] = !{!"branch_weights", i32 3, i32 3}
+// PGOUSE-DAG: ![[DF3]] = !{!"branch_weights", i32 9, i32 5}
 
-// PGOUSE-DAG: ![[ST1]] = !{!"branch_weights", i64 11, i64 2}
+// PGOUSE-DAG: ![[ST1]] = !{!"branch_weights", i32 11, i32 2}
 
 int main(int argc, const char *argv[]) {
   simple_loops();

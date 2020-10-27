@@ -20,7 +20,7 @@ if.then:
 ;NOSELECT-NOT: call void @llvm.instrprof.increment.step
   %s = select i1 %cmp, i32 %add, i32 0
 ;USE: select i1 %cmp{{.*}}, !prof ![[BW_ENTRY:[0-9]+]]
-;USE: ![[BW_ENTRY]] = !{!"branch_weights", i64 1, i64 3}
+;USE: ![[BW_ENTRY]] = !{!"branch_weights", i32 1, i32 3}
 
   br label %if.end
 

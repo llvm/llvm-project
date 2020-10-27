@@ -54,7 +54,7 @@ int main(int argc, const char *argv[]) {
   return fclose(File);
 #endif
 }
-// CHECK: ![[PD1]] = !{!"branch_weights", i64 1, i64 2}
+// CHECK: ![[PD1]] = !{!"branch_weights", i32 1, i32 2}
 
 // CHECK-SYMBOLS-NOT: {{ }}___cxx_global_var_init
 // CHECK-SYMBOLS-NOT: {{ }}___llvm_profile_register_write_file_atexit

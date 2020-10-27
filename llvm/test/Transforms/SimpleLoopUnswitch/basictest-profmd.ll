@@ -16,7 +16,7 @@ loop_begin:
   switch i32 %c, label %default [
       i32 1, label %inc
       i32 2, label %dec
-  ], !prof !{!"branch_weights", i64 99, i64 1, i64 2}
+  ], !prof !{!"branch_weights", i32 99, i32 1, i32 2}
 
 inc:
   call void @incf()
@@ -30,5 +30,5 @@ default:
   ret i32 0
 }
 
-; CHECK: ![[MD0]] = !{!"branch_weights", i64 99, i64 1, i64 2}
-; CHECK: ![[MD1]] = !{!"branch_weights", i64 2, i64 1}
+; CHECK: ![[MD0]] = !{!"branch_weights", i32 99, i32 1, i32 2}
+; CHECK: ![[MD1]] = !{!"branch_weights", i32 2, i32 1}
