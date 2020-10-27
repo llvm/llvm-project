@@ -1611,7 +1611,7 @@ class getOpSelMod <ValueType VT> {
 }
 
 // Return type of input modifiers operand specified input operand for DPP
-class getSrcModExt <ValueType VT> {
+class getSrcModDPP <ValueType VT> {
   bit isFP = isFloatType<VT>.ret;
   Operand ret = !if(isFP, FPVRegInputMods, IntVRegInputMods);
 }
@@ -1893,12 +1893,12 @@ class getInsSDWA <RegisterOperand Src0RC, RegisterOperand Src1RC, int NumSrcArgs
             (ins)/* endif */)));
 }
 
-// Outs for DPP and SDWA
-class getOutsExt <bit HasDst, ValueType DstVT, RegisterOperand DstRCExt> {
+// Outs for DPP
+class getOutsDPP <bit HasDst, ValueType DstVT, RegisterOperand DstRCDPP> {
   dag ret = !if(HasDst,
                 !if(!eq(DstVT.Size, 1),
                     (outs), // no dst for VOPC, we use "vcc"-token as dst in SDWA VOPC instructions
-                    (outs DstRCExt:$vdst)),
+                    (outs DstRCDPP:$vdst)),
                 (outs)); // V_NOP
 }
 
@@ -2137,8 +2137,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field Operand Src0Mod = getSrcMod<Src0VT, EnableF32SrcMods>.ret;
   field Operand Src1Mod = getSrcMod<Src1VT, EnableF32SrcMods>.ret;
   field Operand Src2Mod = getSrcMod<Src2VT, EnableF32SrcMods>.ret;
-  field Operand Src0ModDPP = getSrcModExt<Src0VT>.ret;
-  field Operand Src1ModDPP = getSrcModExt<Src1VT>.ret;
+  field Operand Src0ModDPP = getSrcModDPP<Src0VT>.ret;
+  field Operand Src1ModDPP = getSrcModDPP<Src1VT>.ret;
   field Operand Src0ModSDWA = getSrcModSDWA<Src0VT>.ret;
   field Operand Src1ModSDWA = getSrcModSDWA<Src1VT>.ret;
 
@@ -2202,8 +2202,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   // output. This is manually overridden for them.
   field dag Outs32 = Outs;
   field dag Outs64 = Outs;
-  field dag OutsDPP = getOutsExt<HasDst, DstVT, DstRCDPP>.ret;
-  field dag OutsDPP8 = getOutsExt<HasDst, DstVT, DstRCDPP>.ret;
+  field dag OutsDPP = getOutsDPP<HasDst, DstVT, DstRCDPP>.ret;
+  field dag OutsDPP8 = getOutsDPP<HasDst, DstVT, DstRCDPP>.ret;
   field dag OutsSDWA = getOutsSDWA<HasDst, DstVT, DstRCSDWA>.ret;
 
   field dag Ins32 = getIns32<Src0RC32, Src1RC32, NumSrcArgs>.ret;
