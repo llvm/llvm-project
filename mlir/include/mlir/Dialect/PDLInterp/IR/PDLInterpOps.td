@@ -36,6 +36,16 @@ def PDLInterp_Dialect : Dialect {
   let name = "pdl_interp";
   let cppNamespace = "::mlir::pdl_interp";
   let dependentDialects = ["pdl::PDLDialect"];
+  let extraClassDeclaration = [{
+    /// Returns the name of the function containing the matcher code. This
+    /// function is called by the interpreter when matching an operation.
+    static StringRef getMatcherFunctionName() { return "matcher"; }
+
+    /// Returns the name of the module containing the rewrite functions. These
+    /// functions are invoked by distinct patterns within the matcher function
+    /// to rewrite the IR after a successful match.
+    static StringRef getRewriterModuleName() { return "rewriters"; }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
