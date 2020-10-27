@@ -258,6 +258,10 @@ public:
       bool print_help_if_available, bool print_extensions_if_available,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) override;
 
+  /// Return the nth tuple element's name, if it has one.
+  std::string GetTupleElementName(lldb::opaque_compiler_type_t type,
+                                  size_t idx);
+
   /// Recursively transform the demangle tree starting a \p node by
   /// doing a post-order traversal and replacing each node with
   /// fn(node).
