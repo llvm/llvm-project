@@ -10,11 +10,9 @@
 
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendAction.h"
+#include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <cassert>
-#include <memory>
 
 namespace Fortran::frontend {
 
@@ -25,6 +23,10 @@ class CompilerInstance {
 
   /// Flang file  manager.
   std::shared_ptr<Fortran::parser::AllSources> allSources_;
+
+  std::shared_ptr<Fortran::parser::AllCookedSources> allCookedSources_;
+
+  std::shared_ptr<Fortran::parser::Parsing> parsing_;
 
   /// The diagnostics engine instance.
   llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_;
@@ -74,6 +76,13 @@ public:
   Fortran::parser::AllSources &allSources() const { return *allSources_; }
 
   bool HasAllSources() const { return allSources_ != nullptr; }
+
+  /// }
+  /// @name Parser Operations
+  /// {
+
+  /// Return parsing to be used by Actions.
+  Fortran::parser::Parsing &parsing() const { return *parsing_; }
 
   /// }
   /// @name High-Level Operations

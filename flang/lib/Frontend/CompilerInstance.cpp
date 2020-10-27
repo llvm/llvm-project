@@ -9,6 +9,7 @@
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/TextDiagnosticPrinter.h"
+#include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -20,7 +21,14 @@ using namespace Fortran::frontend;
 
 CompilerInstance::CompilerInstance()
     : invocation_(new CompilerInvocation()),
-      allSources_(new Fortran::parser::AllSources()) {}
+      allSources_(new Fortran::parser::AllSources()),
+      allCookedSources_(new Fortran::parser::AllCookedSources(*allSources_)),
+      parsing_(new Fortran::parser::Parsing(*allCookedSources_)) {
+
+  // TODO: This is a good default during development, but ultimately we should
+  // give the user the opportunity to specify this.
+  allSources_->set_encoding(Fortran::parser::Encoding::UTF_8);
+}
 
 CompilerInstance::~CompilerInstance() {
   assert(outputFiles_.empty() && "Still output files in flight?");
@@ -118,6 +126,10 @@ void CompilerInstance::ClearOutputFiles(bool eraseFiles) {
 }
 
 bool CompilerInstance::ExecuteAction(FrontendAction &act) {
+  // Set some sane defaults for the frontend.
+  // TODO: Instead of defaults we should be setting these options based on the
+  // user input.
+  this->invocation().SetDefaultFortranOpts();
 
   // Connect Input to a CompileInstance
   for (const FrontendInputFile &fif : frontendOpts().inputs_) {

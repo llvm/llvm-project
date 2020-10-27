@@ -22,15 +22,18 @@ enum ActionKind {
   /// -test-io mode
   InputOutputTest,
 
-  // TODO: ADD flags as the Actions are implemented, e.g.
-  // RunPreprocessor, ParserSyntaxOnly, EmitLLVM, EmitLLVMOnly,
-  // EmitCodeGenOnly, EmitAssembly, (...)
+  /// -E mode.
+  PrintPreprocessedInput,
+  /// TODO: RunPreprocessor, ParserSyntaxOnly, EmitLLVM, EmitLLVMOnly,
+  /// EmitCodeGenOnly, EmitAssembly, (...)
 };
 
 inline const char *GetActionKindName(const ActionKind ak) {
   switch (ak) {
   case InputOutputTest:
     return "InputOutputTest";
+  case PrintPreprocessedInput:
+    return "PrintPreprocessedInput";
   default:
     return "<unknown ActionKind>";
     // TODO:
