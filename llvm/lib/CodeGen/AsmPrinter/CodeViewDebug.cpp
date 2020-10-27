@@ -3156,6 +3156,25 @@ void CodeViewDebug::emitStaticConstMemberList() {
   }
 }
 
+static bool isFloatDIType(const DIType *Ty) {
+  if (auto *CTy = dyn_cast<DICompositeType>(Ty))
+    return false;
+
+  if (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
+    dwarf::Tag T = (dwarf::Tag)Ty->getTag();
+    if (T == dwarf::DW_TAG_pointer_type ||
+        T == dwarf::DW_TAG_ptr_to_member_type ||
+        T == dwarf::DW_TAG_reference_type ||
+        T == dwarf::DW_TAG_rvalue_reference_type)
+      return false;
+    assert(DTy->getBaseType() && "Expected valid base type");
+    return isFloatDIType(DTy->getBaseType());
+  }
+
+  auto *BTy = cast<DIBasicType>(Ty);
+  return (BTy->getEncoding() == dwarf::DW_ATE_float);
+}
+
 void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
   const DIGlobalVariable *DIGV = CVGV.DIGV;
 
@@ -3191,7 +3210,12 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     const DIExpression *DIE = CVGV.GVInfo.get<const DIExpression *>();
     assert(DIE->isConstant() &&
            "Global constant variables must contain a constant expression.");
-    uint64_t Val = DIE->getElement(1);
+
+    // Use unsigned for floats.
+    bool isUnsigned = isFloatDIType(DIGV->getType())
+                          ? true
+                          : DebugHandlerBase::isUnsignedDIType(DIGV->getType());
+    APSInt Value(APInt(/*BitWidth=*/64, DIE->getElement(1)), isUnsigned);
 
     MCSymbol *SConstantEnd = beginSymbolRecord(SymbolKind::S_CONSTANT);
     OS.AddComment("Type");
@@ -3202,7 +3226,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
     uint8_t data[10];
     BinaryStreamWriter Writer(data, llvm::support::endianness::little);
     CodeViewRecordIO IO(Writer);
-    cantFail(IO.mapEncodedInteger(Val));
+    cantFail(IO.mapEncodedInteger(Value));
     StringRef SRef((char *)data, Writer.getOffset());
     OS.emitBinaryData(SRef);
 
