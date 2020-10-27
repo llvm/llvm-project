@@ -33,5 +33,5 @@ for.end:
 }
 
 ;USE: ![[ENTRY_COUNT]] = !{!"function_entry_count", i64 3}
-;USE: ![[BW_FOR_BR]] = !{!"branch_weights", i64 800, i64 3}
-;USE: ![[BW_FOR_SELECT]] = !{!"branch_weights", i64 300, i64 500}
+;USE: ![[BW_FOR_BR]] = !{!"branch_weights", i32 800, i32 3}
+;USE: ![[BW_FOR_SELECT]] = !{!"branch_weights", i32 300, i32 500}

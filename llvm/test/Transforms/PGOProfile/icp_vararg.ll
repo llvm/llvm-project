@@ -30,4 +30,4 @@ entry:
 }
 
 !1 = !{!"VP", i32 0, i64 12345, i64 989055279648259519, i64 12345}
-; ICALL-PROM: [[BRANCH_WEIGHT]] = !{!"branch_weights", i64 12345, i64 0}
+; ICALL-PROM: [[BRANCH_WEIGHT]] = !{!"branch_weights", i32 12345, i32 0}

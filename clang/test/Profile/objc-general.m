@@ -79,9 +79,9 @@ void consecutive_objc_for_ranges(NSArray *arr) {
     ++x;
 }
 
-// PGOUSE-DAG: ![[FR1]] = !{!"branch_weights", i64 2, i64 3}
-// PGOUSE-DAG: ![[FR2]] = !{!"branch_weights", i64 3, i64 2}
-// PGOUSE-DAG: ![[BL1]] = !{!"branch_weights", i64 2, i64 2}
+// PGOUSE-DAG: ![[FR1]] = !{!"branch_weights", i32 2, i32 3}
+// PGOUSE-DAG: ![[FR2]] = !{!"branch_weights", i32 3, i32 2}
+// PGOUSE-DAG: ![[BL1]] = !{!"branch_weights", i32 2, i32 2}
 
 int main(int argc, const char *argv[]) {
   A *a = [[A alloc] init];

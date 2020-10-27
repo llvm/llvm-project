@@ -33,10 +33,10 @@ void range_for() {
   if (sum) {}
 }
 
-// PGOUSE-DAG: ![[RF1]] = !{!"branch_weights", i64 5, i64 1}
-// PGOUSE-DAG: ![[RF2]] = !{!"branch_weights", i64 2, i64 4}
-// PGOUSE-DAG: ![[RF3]] = !{!"branch_weights", i64 2, i64 3}
-// PGOUSE-DAG: ![[RF4]] = !{!"branch_weights", i64 2, i64 1}
+// PGOUSE-DAG: ![[RF1]] = !{!"branch_weights", i32 5, i32 1}
+// PGOUSE-DAG: ![[RF2]] = !{!"branch_weights", i32 2, i32 4}
+// PGOUSE-DAG: ![[RF3]] = !{!"branch_weights", i32 2, i32 3}
+// PGOUSE-DAG: ![[RF4]] = !{!"branch_weights", i32 2, i32 1}
 
 int main(int argc, const char *argv[]) {
   range_for();

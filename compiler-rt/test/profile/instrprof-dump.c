@@ -58,5 +58,5 @@ __attribute__((noinline)) int bar(int X) {
 
 /*
 PROF: ![[ENT]] = !{!"function_entry_count", i64 2}  
-PROF: ![[PD1]] = !{!"branch_weights", i64 2, i64 2}
+PROF: ![[PD1]] = !{!"branch_weights", i32 2, i32 2}
 */

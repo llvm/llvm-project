@@ -62,7 +62,7 @@ entry:
 !1 = !{!"VP", i32 0, i64 1600, i64 7651369219802541373, i64 1030, i64 -4377547752858689819, i64 410, i64 -6929281286627296573, i64 150, i64 -2545542355363006406, i64 10}
 !2 = !{!"VP", i32 0, i64 100, i64 7651369219802541373, i64 100}
 
-; ICALL-PROM: [[BRANCH_WEIGHT1]] = !{!"branch_weights", i64 1030, i64 570}
-; ICALL-PROM: [[BRANCH_WEIGHT2]] = !{!"branch_weights", i64 410, i64 160}
-; ICALL-PROM: [[BRANCH_WEIGHT3]] = !{!"branch_weights", i64 150, i64 10}
-; ICALL-PROM: [[BRANCH_WEIGHT4]] = !{!"branch_weights", i64 100, i64 0}
+; ICALL-PROM: [[BRANCH_WEIGHT1]] = !{!"branch_weights", i32 1030, i32 570}
+; ICALL-PROM: [[BRANCH_WEIGHT2]] = !{!"branch_weights", i32 410, i32 160}
+; ICALL-PROM: [[BRANCH_WEIGHT3]] = !{!"branch_weights", i32 150, i32 10}
+; ICALL-PROM: [[BRANCH_WEIGHT4]] = !{!"branch_weights", i32 100, i32 0}

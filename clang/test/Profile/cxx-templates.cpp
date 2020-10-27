@@ -32,8 +32,8 @@ template <unsigned N> void loop() {
   // ALL: ret
 }
 
-// T0USE-DAG: ![[T01]] = !{!"branch_weights", i64 1, i64 2}
-// T100USE-DAG: ![[T1001]] = !{!"branch_weights", i64 101, i64 2}
+// T0USE-DAG: ![[T01]] = !{!"branch_weights", i32 1, i32 2}
+// T100USE-DAG: ![[T1001]] = !{!"branch_weights", i32 101, i32 2}
 
 int main(int argc, const char *argv[]) {
   loop<0>();

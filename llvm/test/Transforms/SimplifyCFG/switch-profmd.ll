@@ -12,7 +12,7 @@ define i32 @test_switch_to_unreachable(i32 %val) {
     i32 0, label %on0
     i32 1, label %on1
     i32 2, label %on2
-  ], !prof !{!"branch_weights", i64 99, i64 0, i64 1, i64 2}
+  ], !prof !{!"branch_weights", i32 99, i32 0, i32 1, i32 2}
 ; CHECK: !prof ![[MD0:[0-9]+]]
 
 otherwise:
@@ -32,4 +32,4 @@ on2:
   ret i32 %result2
 }
 
-; CHECK: ![[MD0]] = !{!"branch_weights", i64 99, i64 2, i64 1}
+; CHECK: ![[MD0]] = !{!"branch_weights", i32 99, i32 2, i32 1}
