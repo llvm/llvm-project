@@ -110,6 +110,9 @@ static cl::opt<bool> GVNEnablePRE("enable-pre", cl::init(true), cl::Hidden);
 static cl::opt<bool> GVNEnableLoadPRE("enable-load-pre", cl::init(true));
 static cl::opt<bool> GVNEnableLoadInLoopPRE("enable-load-in-loop-pre",
                                             cl::init(true));
+static cl::opt<bool>
+GVNEnableSplitBackedgeInLoadPRE("enable-split-backedge-in-load-pre",
+                                cl::init(true));
 static cl::opt<bool> GVNEnableMemDep("enable-gvn-memdep", cl::init(true));
 
 static cl::opt<uint32_t> MaxNumDeps(
@@ -637,6 +640,11 @@ bool GVN::isLoadPREEnabled() const {
 
 bool GVN::isLoadInLoopPREEnabled() const {
   return Options.AllowLoadInLoopPRE.getValueOr(GVNEnableLoadInLoopPRE);
+}
+
+bool GVN::isLoadPRESplitBackedgeEnabled() const {
+  return Options.AllowLoadPRESplitBackedge.getValueOr(
+      GVNEnableSplitBackedgeInLoadPRE);
 }
 
 bool GVN::isMemDepEnabled() const {
@@ -1221,6 +1229,16 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
                    << Pred->getName() << "': " << *LI << '\n');
         return false;
       }
+
+      // Do not split backedge as it will break the canonical loop form.
+      if (!isLoadPRESplitBackedgeEnabled())
+        if (DT->dominates(LoadBB, Pred)) {
+          LLVM_DEBUG(
+              dbgs()
+              << "COULD NOT PRE LOAD BECAUSE OF A BACKEDGE CRITICAL EDGE '"
+              << Pred->getName() << "': " << *LI << '\n');
+          return false;
+        }
 
       CriticalEdgePred.push_back(Pred);
     } else {
