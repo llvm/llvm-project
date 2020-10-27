@@ -434,55 +434,6 @@ void DwarfUnit::addSourceLine(DIE &Die, const DIObjCProperty *Ty) {
   addSourceLine(Die, Ty->getLine(), Ty->getFile());
 }
 
-/// Return true if type encoding is unsigned.
-static bool isUnsignedDIType(DwarfDebug *DD, const DIType *Ty) {
-  if (auto *CTy = dyn_cast<DICompositeType>(Ty)) {
-    // FIXME: Enums without a fixed underlying type have unknown signedness
-    // here, leading to incorrectly emitted constants.
-    if (CTy->getTag() == dwarf::DW_TAG_enumeration_type)
-      return false;
-
-    // (Pieces of) aggregate types that get hacked apart by SROA may be
-    // represented by a constant. Encode them as unsigned bytes.
-    return true;
-  }
-
-  if (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
-    dwarf::Tag T = (dwarf::Tag)Ty->getTag();
-    // Encode pointer constants as unsigned bytes. This is used at least for
-    // null pointer constant emission.
-    // FIXME: reference and rvalue_reference /probably/ shouldn't be allowed
-    // here, but accept them for now due to a bug in SROA producing bogus
-    // dbg.values.
-    if (T == dwarf::DW_TAG_pointer_type ||
-        T == dwarf::DW_TAG_ptr_to_member_type ||
-        T == dwarf::DW_TAG_reference_type ||
-        T == dwarf::DW_TAG_rvalue_reference_type)
-      return true;
-    assert(T == dwarf::DW_TAG_typedef || T == dwarf::DW_TAG_const_type ||
-           T == dwarf::DW_TAG_volatile_type ||
-           T == dwarf::DW_TAG_restrict_type || T == dwarf::DW_TAG_atomic_type);
-    assert(DTy->getBaseType() && "Expected valid base type");
-    return isUnsignedDIType(DD, DTy->getBaseType());
-  }
-
-  auto *BTy = cast<DIBasicType>(Ty);
-  unsigned Encoding = BTy->getEncoding();
-  assert((Encoding == dwarf::DW_ATE_unsigned ||
-          Encoding == dwarf::DW_ATE_unsigned_char ||
-          Encoding == dwarf::DW_ATE_signed ||
-          Encoding == dwarf::DW_ATE_signed_char ||
-          Encoding == dwarf::DW_ATE_float || Encoding == dwarf::DW_ATE_UTF ||
-          Encoding == dwarf::DW_ATE_boolean ||
-          (Ty->getTag() == dwarf::DW_TAG_unspecified_type &&
-           Ty->getName() == "decltype(nullptr)")) &&
-         "Unsupported encoding");
-  return Encoding == dwarf::DW_ATE_unsigned ||
-         Encoding == dwarf::DW_ATE_unsigned_char ||
-         Encoding == dwarf::DW_ATE_UTF || Encoding == dwarf::DW_ATE_boolean ||
-         Ty->getTag() == dwarf::DW_TAG_unspecified_type;
-}
-
 void DwarfUnit::addConstantFPValue(DIE &Die, const MachineOperand &MO) {
   assert(MO.isFPImm() && "Invalid machine operand!");
   DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
@@ -519,11 +470,11 @@ void DwarfUnit::addConstantValue(DIE &Die, const MachineOperand &MO,
                                  const DIType *Ty) {
   assert(MO.isImm() && "Invalid machine operand!");
 
-  addConstantValue(Die, isUnsignedDIType(DD, Ty), MO.getImm());
+  addConstantValue(Die, DD->isUnsignedDIType(Ty), MO.getImm());
 }
 
 void DwarfUnit::addConstantValue(DIE &Die, uint64_t Val, const DIType *Ty) {
-  addConstantValue(Die, isUnsignedDIType(DD, Ty), Val);
+  addConstantValue(Die, DD->isUnsignedDIType(Ty), Val);
 }
 
 void DwarfUnit::addConstantValue(DIE &Die, bool Unsigned, uint64_t Val) {
@@ -534,7 +485,7 @@ void DwarfUnit::addConstantValue(DIE &Die, bool Unsigned, uint64_t Val) {
 }
 
 void DwarfUnit::addConstantValue(DIE &Die, const APInt &Val, const DIType *Ty) {
-  addConstantValue(Die, Val, isUnsignedDIType(DD, Ty));
+  addConstantValue(Die, Val, DD->isUnsignedDIType(Ty));
 }
 
 void DwarfUnit::addConstantValue(DIE &Die, const APInt &Val, bool Unsigned) {
@@ -936,7 +887,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
           DIE &Variant = createAndAddDIE(dwarf::DW_TAG_variant, Buffer);
           if (const ConstantInt *CI =
               dyn_cast_or_null<ConstantInt>(DDTy->getDiscriminantValue())) {
-            if (isUnsignedDIType(DD, Discriminator->getBaseType()))
+            if (DD->isUnsignedDIType(Discriminator->getBaseType()))
               addUInt(Variant, dwarf::DW_AT_discr_value, None, CI->getZExtValue());
             else
               addSInt(Variant, dwarf::DW_AT_discr_value, None, CI->getSExtValue());
@@ -1543,7 +1494,7 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
 
 void DwarfUnit::constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   const DIType *DTy = CTy->getBaseType();
-  bool IsUnsigned = DTy && isUnsignedDIType(DD, DTy);
+  bool IsUnsigned = DTy && DD->isUnsignedDIType(DTy);
   if (DTy) {
     if (DD->getDwarfVersion() >= 3)
       addType(Buffer, DTy);
