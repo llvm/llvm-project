@@ -1066,8 +1066,13 @@ file_t getStdoutHandle() { return 1; }
 file_t getStderrHandle() { return 2; }
 
 Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
+#if defined(__APPLE__)
+  size_t Size = std::min<size_t>(Buf.size(), INT32_MAX);
+#else
+  size_t Size = Buf.size();
+#endif
   ssize_t NumRead =
-      sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Buf.size());
+      sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
   if (ssize_t(NumRead) == -1)
     return errorCodeToError(std::error_code(errno, std::generic_category()));
   return NumRead;
@@ -1075,14 +1080,19 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
 
 Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
                                      uint64_t Offset) {
+#if defined(__APPLE__)
+  size_t Size = std::min<size_t>(Buf.size(), INT32_MAX);
+#else
+  size_t Size = Buf.size();
+#endif
 #ifdef HAVE_PREAD
   ssize_t NumRead =
-      sys::RetryAfterSignal(-1, ::pread, FD, Buf.data(), Buf.size(), Offset);
+      sys::RetryAfterSignal(-1, ::pread, FD, Buf.data(), Size, Offset);
 #else
   if (lseek(FD, Offset, SEEK_SET) == -1)
     return errorCodeToError(std::error_code(errno, std::generic_category()));
   ssize_t NumRead =
-      sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Buf.size());
+      sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
 #endif
   if (NumRead == -1)
     return errorCodeToError(std::error_code(errno, std::generic_category()));
