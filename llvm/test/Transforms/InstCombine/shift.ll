@@ -87,9 +87,8 @@ define i8 @test10a(i8 %A) {
 ;; The shl may be valuable to scalar evolution.
 define i8 @test11(i8 %x) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[B:%.*]] = lshr i8 [[A]], 3
-; CHECK-NEXT:    [[C:%.*]] = shl i8 [[B]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[C:%.*]] = and i8 [[TMP1]], -16
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %a = mul i8 %x, 3
@@ -143,9 +142,8 @@ define i8 @shishi(i8 %x) {
 ;; The shl may be valuable to scalar evolution.
 define i8 @test13(i8 %x) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[A]], 3
-; CHECK-NEXT:    [[C:%.*]] = shl i8 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[C:%.*]] = and i8 [[TMP1]], -16
 ; CHECK-NEXT:    ret i8 [[C]]
 ;
   %a = mul i8 %x, 3
@@ -1089,8 +1087,8 @@ define i32 @test55(i32 %x) {
 
 define i32 @test56(i32 %x) {
 ; CHECK-LABEL: @test56(
-; CHECK-NEXT:    [[SHR2:%.*]] = lshr i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[SHR2]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[SHL:%.*]] = and i32 [[TMP1]], -16
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], 7
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
@@ -1102,8 +1100,8 @@ define i32 @test56(i32 %x) {
 
 define i32 @test57(i32 %x) {
 ; CHECK-LABEL: @test57(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[SHL:%.*]] = and i32 [[TMP1]], -16
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], 7
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
@@ -1139,8 +1137,8 @@ define <2 x i32> @test58_splat_vec(<2 x i32> %x) {
 
 define i32 @test59(i32 %x) {
 ; CHECK-LABEL: @test59(
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[X:%.*]], 4
-; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[SHR]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[SHL:%.*]] = and i32 [[TMP1]], -4
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], 2
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;

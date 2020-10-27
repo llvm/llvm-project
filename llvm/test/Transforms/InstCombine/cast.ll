@@ -684,10 +684,9 @@ define i64 @test49(i64 %A) {
 
 define i64 @test50(i64 %x) {
 ; ALL-LABEL: @test50(
-; ALL-NEXT:    [[A:%.*]] = lshr i64 [[X:%.*]], 2
-; ALL-NEXT:    [[D:%.*]] = shl i64 [[A]], 32
-; ALL-NEXT:    [[SEXT:%.*]] = add i64 [[D]], -4294967296
-; ALL-NEXT:    [[E:%.*]] = ashr exact i64 [[SEXT]], 32
+; ALL-NEXT:    [[TMP1:%.*]] = shl i64 [[X:%.*]], 30
+; ALL-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -4294967296
+; ALL-NEXT:    [[E:%.*]] = ashr i64 [[TMP2]], 32
 ; ALL-NEXT:    ret i64 [[E]]
 ;
   %a = lshr i64 %x, 2
@@ -1318,8 +1317,8 @@ define double @test81(double *%p, float %f) {
 define i64 @test82(i64 %A) {
 ; ALL-LABEL: @test82(
 ; ALL-NEXT:    [[TMP1:%.*]] = shl i64 [[A:%.*]], 1
-; ALL-NEXT:    [[E:%.*]] = and i64 [[TMP1]], 4294966784
-; ALL-NEXT:    ret i64 [[E]]
+; ALL-NEXT:    [[D:%.*]] = and i64 [[TMP1]], 4294966784
+; ALL-NEXT:    ret i64 [[D]]
 ;
   %B = trunc i64 %A to i32
   %C = lshr i32 %B, 8
