@@ -961,17 +961,6 @@ public:
                                 const SCEV *&InvariantLHS,
                                 const SCEV *&InvariantRHS);
 
-  /// Return true if the result of the predicate LHS `Pred` RHS is loop
-  /// invariant with respect to L at given Context during at least first
-  /// MaxIter iterations.  Set InvariantPred, InvariantLHS and InvariantLHS so
-  /// that InvariantLHS `InvariantPred` InvariantRHS is the loop invariant form
-  /// of LHS `Pred` RHS. The predicate should be the loop's exit condition.
-  bool isLoopInvariantExitCondDuringFirstIterations(
-      ICmpInst::Predicate Pred, const SCEV *LHS, const SCEV *RHS, const Loop *L,
-      const Instruction *Context, const SCEV *MaxIter,
-      ICmpInst::Predicate &InvariantPred, const SCEV *&InvariantLHS,
-      const SCEV *&InvariantRHS);
-
   /// Simplify LHS and RHS in a comparison with predicate Pred. Return true
   /// iff any changes were made. If the operands are provably equal or
   /// unequal, LHS and RHS are set to the same value and Pred is set to either

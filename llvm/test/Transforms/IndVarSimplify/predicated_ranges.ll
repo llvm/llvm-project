@@ -71,7 +71,8 @@ define void @test_predicated_simple_signed(i32* %p, i32* %arr) {
 ; CHECK-NEXT:    br i1 [[ZERO_COND]], label [[EXIT:%.*]], label [[RANGE_CHECK_BLOCK:%.*]]
 ; CHECK:       range_check_block:
 ; CHECK-NEXT:    [[IV_NEXT]] = sub i32 [[IV]], 1
-; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[FAIL:%.*]]
+; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp slt i32 [[IV_NEXT]], [[LEN]]
+; CHECK-NEXT:    br i1 [[RANGE_CHECK]], label [[BACKEDGE]], label [[FAIL:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, i32* [[P]], i32 [[IV]]
 ; CHECK-NEXT:    [[EL:%.*]] = load i32, i32* [[EL_PTR]], align 4
