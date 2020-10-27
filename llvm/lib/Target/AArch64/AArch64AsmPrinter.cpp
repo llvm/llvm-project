@@ -302,7 +302,7 @@ void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
     std::string SymName = "__hwasan_check_x" + utostr(Reg - AArch64::X0) + "_" +
                           utostr(AccessInfo);
     if (IsShort)
-      SymName += "_short";
+      SymName += "_short_v2";
     Sym = OutContext.getOrCreateSymbol(SymName);
   }
 
@@ -354,13 +354,14 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
                                      .addImm(4)
                                      .addImm(55),
                                  *STI);
-    OutStreamer->emitInstruction(MCInstBuilder(AArch64::LDRBBroX)
-                                     .addReg(AArch64::W16)
-                                     .addReg(AArch64::X9)
-                                     .addReg(AArch64::X16)
-                                     .addImm(0)
-                                     .addImm(0),
-                                 *STI);
+    OutStreamer->emitInstruction(
+        MCInstBuilder(AArch64::LDRBBroX)
+            .addReg(AArch64::W16)
+            .addReg(IsShort ? AArch64::X20 : AArch64::X9)
+            .addReg(AArch64::X16)
+            .addImm(0)
+            .addImm(0),
+        *STI);
     OutStreamer->emitInstruction(
         MCInstBuilder(AArch64::SUBSXrs)
             .addReg(AArch64::XZR)

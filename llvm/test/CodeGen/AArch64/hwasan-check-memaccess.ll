@@ -18,12 +18,13 @@ define i8* @f1(i8* %x0, i8* %x1) {
 
 define i8* @f2(i8* %x0, i8* %x1) {
   ; CHECK: f2:
-  ; CHECK: str x30, [sp, #-16]!
+  ; CHECK: stp x30, x20, [sp, #-16]!
   ; CHECK-NEXT: .cfi_def_cfa_offset 16
+  ; CHECK-NEXT: .cfi_offset w20, -8
   ; CHECK-NEXT: .cfi_offset w30, -16
-  ; CHECK-NEXT: mov x9, x1
-  ; CHECK-NEXT: bl __hwasan_check_x0_2_short
-  ; CHECK-NEXT: ldr x30, [sp], #16
+  ; CHECK-NEXT: mov x20, x1
+  ; CHECK-NEXT: bl __hwasan_check_x0_2_short_v2
+  ; CHECK-NEXT: ldp x30, x20, [sp], #16
   ; CHECK-NEXT: ret
   call void @llvm.hwasan.check.memaccess.shortgranules(i8* %x1, i8* %x0, i32 2)
   ret i8* %x0
@@ -32,13 +33,13 @@ define i8* @f2(i8* %x0, i8* %x1) {
 declare void @llvm.hwasan.check.memaccess(i8*, i8*, i32)
 declare void @llvm.hwasan.check.memaccess.shortgranules(i8*, i8*, i32)
 
-; CHECK:      .section .text.hot,"axG",@progbits,__hwasan_check_x0_2_short,comdat
-; CHECK-NEXT: .type __hwasan_check_x0_2_short,@function
-; CHECK-NEXT: .weak __hwasan_check_x0_2_short
-; CHECK-NEXT: .hidden __hwasan_check_x0_2_short
-; CHECK-NEXT: __hwasan_check_x0_2_short:
+; CHECK:      .section .text.hot,"axG",@progbits,__hwasan_check_x0_2_short_v2,comdat
+; CHECK-NEXT: .type __hwasan_check_x0_2_short_v2,@function
+; CHECK-NEXT: .weak __hwasan_check_x0_2_short_v2
+; CHECK-NEXT: .hidden __hwasan_check_x0_2_short_v2
+; CHECK-NEXT: __hwasan_check_x0_2_short_v2:
 ; CHECK-NEXT: ubfx x16, x0, #4, #52
-; CHECK-NEXT: ldrb w16, [x9, x16]
+; CHECK-NEXT: ldrb w16, [x20, x16]
 ; CHECK-NEXT: cmp x16, x0, lsr #56
 ; CHECK-NEXT: b.ne .Ltmp0
 ; CHECK-NEXT: .Ltmp1:
