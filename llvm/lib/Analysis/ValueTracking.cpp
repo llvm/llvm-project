@@ -2003,7 +2003,7 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
   // Aligned pointers have trailing zeros - refine Known.Zero set
   if (isa<PointerType>(V->getType())) {
     Align Alignment = V->getPointerAlignment(Q.DL);
-    Known.Zero.setLowBits(countTrailingZeros(Alignment.value()));
+    Known.Zero.setLowBits(Log2(Alignment));
   }
 
   // computeKnownBitsFromAssume strictly refines Known.
