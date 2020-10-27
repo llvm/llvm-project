@@ -8870,10 +8870,8 @@ namespace {
 /// Additional arguments for emitOffloadingArraysArgument function.
 struct ArgumentsOptions {
   bool ForEndCall = false;
-  bool IsTask = false;
   ArgumentsOptions() = default;
-  ArgumentsOptions(bool ForEndCall, bool IsTask)
-      : ForEndCall(ForEndCall), IsTask(IsTask) {}
+  ArgumentsOptions(bool ForEndCall) : ForEndCall(ForEndCall) {}
 };
 } // namespace
 
@@ -8909,9 +8907,9 @@ static void emitOffloadingArraysArgument(
                                                     : Info.MapTypesArray,
         /*Idx0=*/0,
         /*Idx1=*/0);
-    // Always emit the mapper array address in case of a target task for
-    // privatization.
-    if (!Options.IsTask && !Info.HasMapper)
+    // If there is no user-defined mapper, set the mapper array to nullptr to
+    // avoid an unnecessary data privatization
+    if (!Info.HasMapper)
       MappersArrayArg = llvm::ConstantPointerNull::get(CGM.VoidPtrPtrTy);
     else
       MappersArrayArg =
@@ -9664,10 +9662,9 @@ void CGOpenMPRuntime::emitTargetCall(
     TargetDataInfo Info;
     // Fill up the arrays and create the arguments.
     emitOffloadingArrays(CGF, CombinedInfo, Info);
-    emitOffloadingArraysArgument(CGF, Info.BasePointersArray,
-                                 Info.PointersArray, Info.SizesArray,
-                                 Info.MapTypesArray, Info.MappersArray, Info,
-                                 {/*ForEndTask=*/false, RequiresOuterTask});
+    emitOffloadingArraysArgument(
+        CGF, Info.BasePointersArray, Info.PointersArray, Info.SizesArray,
+        Info.MapTypesArray, Info.MappersArray, Info, {/*ForEndTask=*/false});
     InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
     InputInfo.BasePointersArray =
         Address(Info.BasePointersArray, CGM.getPointerAlign());
@@ -10318,8 +10315,7 @@ void CGOpenMPRuntime::emitTargetDataCalls(
     llvm::Value *MappersArrayArg = nullptr;
     emitOffloadingArraysArgument(CGF, BasePointersArrayArg, PointersArrayArg,
                                  SizesArrayArg, MapTypesArrayArg,
-                                 MappersArrayArg, Info,
-                                 {/*ForEndCall=*/true, /*IsTask=*/false});
+                                 MappersArrayArg, Info, {/*ForEndCall=*/true});
 
     // Emit device ID if any.
     llvm::Value *DeviceID = nullptr;
@@ -10518,10 +10514,9 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     // Fill up the arrays and create the arguments.
     emitOffloadingArrays(CGF, CombinedInfo, Info);
     bool HasDependClauses = D.hasClausesOfKind<OMPDependClause>();
-    emitOffloadingArraysArgument(CGF, Info.BasePointersArray,
-                                 Info.PointersArray, Info.SizesArray,
-                                 Info.MapTypesArray, Info.MappersArray, Info,
-                                 {/*ForEndTask=*/false, HasDependClauses});
+    emitOffloadingArraysArgument(
+        CGF, Info.BasePointersArray, Info.PointersArray, Info.SizesArray,
+        Info.MapTypesArray, Info.MappersArray, Info, {/*ForEndTask=*/false});
     InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
     InputInfo.BasePointersArray =
         Address(Info.BasePointersArray, CGM.getPointerAlign());
