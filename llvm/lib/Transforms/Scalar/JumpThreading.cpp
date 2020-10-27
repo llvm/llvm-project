@@ -2236,6 +2236,14 @@ void JumpThreadingPass::ThreadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
   DenseMap<Instruction *, Value *> ValueMapping =
       CloneInstructions(PredBB->begin(), PredBB->end(), NewBB, PredPredBB);
 
+  // Copy the edge probabilities from PredBB to NewBB.
+  if (HasProfileData) {
+    SmallVector<BranchProbability, 4> Probs;
+    for (BasicBlock *Succ : successors(PredBB))
+      Probs.push_back(BPI->getEdgeProbability(PredBB, Succ));
+    BPI->setEdgeProbability(NewBB, Probs);
+  }
+
   // Update the terminator of PredPredBB to jump to NewBB instead of PredBB.
   // This eliminates predecessors from PredPredBB, which requires us to simplify
   // any PHI nodes in PredBB.
@@ -2424,8 +2432,15 @@ BasicBlock *JumpThreadingPass::SplitBlockPreds(BasicBlock *BB,
       if (HasProfileData) // Update frequencies between Pred -> NewBB.
         NewBBFreq += FreqMap.lookup(Pred);
     }
-    if (HasProfileData) // Apply the summed frequency to NewBB.
+    if (HasProfileData) {
+      // Apply the summed frequency to NewBB.
       BFI->setBlockFreq(NewBB, NewBBFreq.getFrequency());
+
+      // NewBB has exactly one successor.
+      SmallVector<BranchProbability, 1> BBSuccProbs;
+      BBSuccProbs.push_back(BranchProbability::getOne());
+      BPI->setEdgeProbability(NewBB, BBSuccProbs);
+    }
   }
 
   DTU->applyUpdatesPermissive(Updates);
@@ -2497,6 +2512,11 @@ void JumpThreadingPass::UpdateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
 
   // Update edge probabilities in BPI.
   BPI->setEdgeProbability(BB, BBSuccProbs);
+
+  // NewBB has exactly one successor.
+  SmallVector<BranchProbability, 1> NewBBSuccProbs;
+  NewBBSuccProbs.push_back(BranchProbability::getOne());
+  BPI->setEdgeProbability(NewBB, NewBBSuccProbs);
 
   // Update the profile metadata as well.
   //
@@ -2708,6 +2728,13 @@ void JumpThreadingPass::UnfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
        PHINode *Phi = dyn_cast<PHINode>(BI); ++BI)
     if (Phi != SIUse)
       Phi->addIncoming(Phi->getIncomingValueForBlock(Pred), NewBB);
+
+  if (HasProfileData) {
+    // NewBB has exactly one successor.
+    SmallVector<BranchProbability, 1> BBSuccProbs;
+    BBSuccProbs.push_back(BranchProbability::getOne());
+    BPI->setEdgeProbability(NewBB, BBSuccProbs);
+  }
 }
 
 bool JumpThreadingPass::TryToUnfoldSelect(SwitchInst *SI, BasicBlock *BB) {
