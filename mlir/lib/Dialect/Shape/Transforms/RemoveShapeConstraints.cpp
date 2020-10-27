@@ -49,7 +49,7 @@ class RemoveShapeConstraintsPass
     OwningRewritePatternList patterns;
     populateRemoveShapeConstraintsPatterns(patterns, &ctx);
 
-    applyPatternsAndFoldGreedily(getFunction(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
 

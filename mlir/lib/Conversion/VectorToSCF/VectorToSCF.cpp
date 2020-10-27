@@ -710,7 +710,7 @@ struct ConvertVectorToSCFPass
     auto *context = getFunction().getContext();
     populateVectorToSCFConversionPatterns(
         patterns, context, VectorTransferToSCFOptions().setUnroll(fullUnroll));
-    applyPatternsAndFoldGreedily(getFunction(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
 

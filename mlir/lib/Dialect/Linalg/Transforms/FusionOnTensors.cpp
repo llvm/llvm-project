@@ -913,7 +913,7 @@ struct FusionOfTensorOpsPass
     OwningRewritePatternList patterns;
     Operation *op = getOperation();
     populateLinalgTensorOpsFusionPatterns(op->getContext(), patterns);
-    applyPatternsAndFoldGreedily(op->getRegions(), patterns);
+    applyPatternsAndFoldGreedily(op->getRegions(), std::move(patterns));
   }
 };
 
@@ -926,7 +926,7 @@ struct FoldReshapeOpsByLinearizationPass
     OwningRewritePatternList patterns;
     Operation *op = getOperation();
     populateFoldReshapeOpsByLinearizationPatterns(op->getContext(), patterns);
-    applyPatternsAndFoldGreedily(op->getRegions(), patterns);
+    applyPatternsAndFoldGreedily(op->getRegions(), std::move(patterns));
   }
 };
 

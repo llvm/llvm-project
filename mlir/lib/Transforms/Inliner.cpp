@@ -503,7 +503,7 @@ static LogicalResult inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
 /// canonicalization patterns.
 static void canonicalizeSCC(CallGraph &cg, CGUseList &useList,
                             CallGraphSCC &currentSCC, MLIRContext *context,
-                            const OwningRewritePatternList &canonPatterns) {
+                            const FrozenRewritePatternList &canonPatterns) {
   // Collect the sets of nodes to canonicalize.
   SmallVector<CallGraphNode *, 4> nodesToCanonicalize;
   for (auto *node : currentSCC) {
@@ -574,7 +574,7 @@ struct InlinerPass : public InlinerBase<InlinerPass> {
   /// the inlining of newly devirtualized calls.
   void inlineSCC(Inliner &inliner, CGUseList &useList, CallGraphSCC &currentSCC,
                  MLIRContext *context,
-                 const OwningRewritePatternList &canonPatterns);
+                 const FrozenRewritePatternList &canonPatterns);
 };
 } // end anonymous namespace
 
@@ -596,13 +596,14 @@ void InlinerPass::runOnOperation() {
   OwningRewritePatternList canonPatterns;
   for (auto *op : context->getRegisteredOperations())
     op->getCanonicalizationPatterns(canonPatterns, context);
+  FrozenRewritePatternList frozenCanonPatterns(std::move(canonPatterns));
 
   // Run the inline transform in post-order over the SCCs in the callgraph.
   SymbolTableCollection symbolTable;
   Inliner inliner(context, cg, symbolTable);
   CGUseList useList(getOperation(), cg, symbolTable);
   runTransformOnCGSCCs(cg, [&](CallGraphSCC &scc) {
-    inlineSCC(inliner, useList, scc, context, canonPatterns);
+    inlineSCC(inliner, useList, scc, context, frozenCanonPatterns);
   });
 
   // After inlining, make sure to erase any callables proven to be dead.
@@ -611,7 +612,7 @@ void InlinerPass::runOnOperation() {
 
 void InlinerPass::inlineSCC(Inliner &inliner, CGUseList &useList,
                             CallGraphSCC &currentSCC, MLIRContext *context,
-                            const OwningRewritePatternList &canonPatterns) {
+                            const FrozenRewritePatternList &canonPatterns) {
   // If we successfully inlined any calls, run some simplifications on the
   // nodes of the scc. Continue attempting to inline until we reach a fixed
   // point, or a maximum iteration count. We canonicalize here as it may

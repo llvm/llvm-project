@@ -22,28 +22,28 @@ void PatternApplicator::applyCostModel(CostModel model) {
   // Separate patterns by root kind to simplify lookup later on.
   patterns.clear();
   anyOpPatterns.clear();
-  for (const auto &pat : owningPatternList) {
+  for (const auto &pat : frozenPatternList.getPatterns()) {
     // If the pattern is always impossible to match, just ignore it.
-    if (pat->getBenefit().isImpossibleToMatch()) {
+    if (pat.getBenefit().isImpossibleToMatch()) {
       LLVM_DEBUG({
         llvm::dbgs()
-            << "Ignoring pattern '" << pat->getRootKind()
+            << "Ignoring pattern '" << pat.getRootKind()
             << "' because it is impossible to match (by pattern benefit)\n";
       });
       continue;
     }
-    if (Optional<OperationName> opName = pat->getRootKind())
-      patterns[*opName].push_back(pat.get());
+    if (Optional<OperationName> opName = pat.getRootKind())
+      patterns[*opName].push_back(&pat);
     else
-      anyOpPatterns.push_back(pat.get());
+      anyOpPatterns.push_back(&pat);
   }
 
   // Sort the patterns using the provided cost model.
-  llvm::SmallDenseMap<RewritePattern *, PatternBenefit> benefits;
-  auto cmp = [&benefits](RewritePattern *lhs, RewritePattern *rhs) {
+  llvm::SmallDenseMap<const Pattern *, PatternBenefit> benefits;
+  auto cmp = [&benefits](const Pattern *lhs, const Pattern *rhs) {
     return benefits[lhs] > benefits[rhs];
   };
-  auto processPatternList = [&](SmallVectorImpl<RewritePattern *> &list) {
+  auto processPatternList = [&](SmallVectorImpl<const RewritePattern *> &list) {
     // Special case for one pattern in the list, which is the most common case.
     if (list.size() == 1) {
       if (model(*list.front()).isImpossibleToMatch()) {
@@ -59,7 +59,7 @@ void PatternApplicator::applyCostModel(CostModel model) {
 
     // Collect the dynamic benefits for the current pattern list.
     benefits.clear();
-    for (RewritePattern *pat : list)
+    for (const Pattern *pat : list)
       benefits.try_emplace(pat, model(*pat));
 
     // Sort patterns with highest benefit first, and remove those that are
@@ -81,8 +81,8 @@ void PatternApplicator::applyCostModel(CostModel model) {
 
 void PatternApplicator::walkAllPatterns(
     function_ref<void(const Pattern &)> walk) {
-  for (auto &it : owningPatternList)
-    walk(*it);
+  for (auto &it : frozenPatternList.getPatterns())
+    walk(it);
 }
 
 LogicalResult PatternApplicator::matchAndRewrite(
@@ -91,7 +91,7 @@ LogicalResult PatternApplicator::matchAndRewrite(
     function_ref<void(const Pattern &)> onFailure,
     function_ref<LogicalResult(const Pattern &)> onSuccess) {
   // Check to see if there are patterns matching this specific operation type.
-  MutableArrayRef<RewritePattern *> opPatterns;
+  MutableArrayRef<const RewritePattern *> opPatterns;
   auto patternIt = patterns.find(op->getName());
   if (patternIt != patterns.end())
     opPatterns = patternIt->second;
@@ -104,7 +104,7 @@ LogicalResult PatternApplicator::matchAndRewrite(
   auto anyIt = anyOpPatterns.begin(), anyE = anyOpPatterns.end();
   while (opIt != opE && anyIt != anyE) {
     // Try to match the pattern providing the most benefit.
-    RewritePattern *pattern;
+    const RewritePattern *pattern;
     if ((*opIt)->getBenefit() >= (*anyIt)->getBenefit())
       pattern = *(opIt++);
     else
@@ -118,7 +118,7 @@ LogicalResult PatternApplicator::matchAndRewrite(
   // If we break from the loop, then only one of the ranges can still have
   // elements. Loop over both without checking given that we don't need to
   // interleave anymore.
-  for (RewritePattern *pattern : llvm::concat<RewritePattern *>(
+  for (const RewritePattern *pattern : llvm::concat<const RewritePattern *>(
            llvm::make_range(opIt, opE), llvm::make_range(anyIt, anyE))) {
     if (succeeded(matchAndRewrite(op, *pattern, rewriter, canApply, onFailure,
                                   onSuccess)))

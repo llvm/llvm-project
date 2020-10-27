@@ -1,4 +1,5 @@
 add_mlir_library(MLIRRewrite
+  FrozenRewritePatternList.cpp
   PatternApplicator.cpp
 
   ADDITIONAL_HEADER_DIRS

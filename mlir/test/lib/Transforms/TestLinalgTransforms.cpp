@@ -208,7 +208,7 @@ static void applyPatterns(FuncOp funcOp) {
       LinalgMarker(Identifier::get("_promote_views_aligned_", ctx),
                    Identifier::get("_views_aligned_promoted_", ctx)));
 
-  applyPatternsAndFoldGreedily(funcOp, patterns);
+  applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 
   // Drop the marker.
   funcOp.walk([](LinalgOp op) {
@@ -431,16 +431,18 @@ applyMatmulToVectorPatterns(FuncOp funcOp,
     fillL1TilingAndMatmulToVectorPatterns(funcOp, Identifier::get("L2", ctx),
                                           stage1Patterns);
   }
-  OwningRewritePatternList stage2Patterns =
+  SmallVector<FrozenRewritePatternList, 4> frozenStage1Patterns;
+  llvm::move(stage1Patterns, std::back_inserter(frozenStage1Patterns));
+  FrozenRewritePatternList stage2Patterns =
       getLinalgTilingCanonicalizationPatterns(ctx);
-  applyStagedPatterns(funcOp, stage1Patterns, stage2Patterns);
+  applyStagedPatterns(funcOp, frozenStage1Patterns, std::move(stage2Patterns));
 }
 
 static void applyVectorTransferForwardingPatterns(FuncOp funcOp) {
   OwningRewritePatternList forwardPattern;
   forwardPattern.insert<LinalgCopyVTRForwardingPattern>(funcOp.getContext());
   forwardPattern.insert<LinalgCopyVTWForwardingPattern>(funcOp.getContext());
-  applyPatternsAndFoldGreedily(funcOp, forwardPattern);
+  applyPatternsAndFoldGreedily(funcOp, std::move(forwardPattern));
 }
 
 static void applyContractionToVectorPatterns(FuncOp funcOp) {
@@ -451,16 +453,18 @@ static void applyContractionToVectorPatterns(FuncOp funcOp) {
                   LinalgVectorizationPattern<VecmatOp>,
                   LinalgVectorizationPattern<DotOp>,
                   LinalgVectorizationPattern<GenericOp>>(funcOp.getContext());
-  applyPatternsAndFoldGreedily(funcOp, patterns);
+  applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
 static void applyAffineMinSCFCanonicalizationPatterns(FuncOp funcOp) {
   OwningRewritePatternList foldPattern;
   foldPattern.insert<AffineMinSCFCanonicalizationPattern>(funcOp.getContext());
+  FrozenRewritePatternList frozenPatterns(std::move(foldPattern));
+
   // Explicitly walk and apply the pattern locally to avoid more general folding
   // on the rest of the IR.
-  funcOp.walk([&foldPattern](AffineMinOp minOp) {
-    applyOpPatternsAndFold(minOp, foldPattern);
+  funcOp.walk([&frozenPatterns](AffineMinOp minOp) {
+    applyOpPatternsAndFold(minOp, frozenPatterns);
   });
 }
 /// Apply transformations specified as patterns.
@@ -475,13 +479,13 @@ void TestLinalgTransforms::runOnFunction() {
   if (testPromotionOptions) {
     OwningRewritePatternList patterns;
     fillPromotionCallBackPatterns(&getContext(), patterns);
-    applyPatternsAndFoldGreedily(getFunction(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
     return;
   }
   if (testTileAndDistributionOptions) {
     OwningRewritePatternList patterns;
     fillTileAndDistributePatterns(&getContext(), patterns);
-    applyPatternsAndFoldGreedily(getFunction(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
     return;
   }
   if (testPatterns)

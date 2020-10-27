@@ -595,7 +595,7 @@ static void applyTilingToLoopPatterns(LinalgTilingLoopType loopType,
   MLIRContext *ctx = funcOp.getContext();
   OwningRewritePatternList patterns;
   insertTilingPatterns(patterns, options, ctx);
-  applyPatternsAndFoldGreedily(funcOp, patterns);
+  applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
   applyPatternsAndFoldGreedily(funcOp,
                                getLinalgTilingCanonicalizationPatterns(ctx));
   // Drop the marker.

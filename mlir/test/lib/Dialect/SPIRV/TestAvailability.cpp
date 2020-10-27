@@ -144,7 +144,7 @@ void ConvertToTargetEnv::runOnFunction() {
                   ConvertToGroupNonUniformBallot, ConvertToModule,
                   ConvertToSubgroupBallot>(context);
 
-  if (failed(applyPartialConversion(fn, *target, patterns)))
+  if (failed(applyPartialConversion(fn, *target, std::move(patterns))))
     return signalPassFailure();
 }
 

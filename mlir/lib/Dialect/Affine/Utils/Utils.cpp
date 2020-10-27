@@ -159,7 +159,8 @@ LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   OwningRewritePatternList patterns;
   AffineIfOp::getCanonicalizationPatterns(patterns, ifOp.getContext());
   bool erased;
-  applyOpPatternsAndFold(ifOp, patterns, &erased);
+  FrozenRewritePatternList frozenPatterns(std::move(patterns));
+  applyOpPatternsAndFold(ifOp, frozenPatterns, &erased);
   if (erased) {
     if (folded)
       *folded = true;
@@ -189,7 +190,7 @@ LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   // a sequence of affine.fors that are all perfectly nested).
   applyPatternsAndFoldGreedily(
       hoistedIfOp.getParentWithTrait<OpTrait::IsIsolatedFromAbove>(),
-      std::move(patterns));
+      frozenPatterns);
 
   return success();
 }
