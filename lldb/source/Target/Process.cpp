@@ -6128,6 +6128,13 @@ UtilityFunction *Process::GetLoadImageUtilityFunction(
   return m_dlopen_utility_func_up.get();
 }
 
+llvm::Expected<TraceTypeInfo> Process::GetSupportedTraceType() {
+  if (!IsLiveDebugSession())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Can't trace a non-live process.");
+  return llvm::make_error<UnimplementedError>();
+}
+
 bool Process::CallVoidArgVoidPtrReturn(const Address *address,
                                        addr_t &returned_func,
                                        bool trap_exceptions) {
