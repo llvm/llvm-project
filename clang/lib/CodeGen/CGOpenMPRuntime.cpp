@@ -9664,11 +9664,10 @@ void CGOpenMPRuntime::emitTargetCall(
     TargetDataInfo Info;
     // Fill up the arrays and create the arguments.
     emitOffloadingArrays(CGF, CombinedInfo, Info);
-    bool HasDependClauses = D.hasClausesOfKind<OMPDependClause>();
     emitOffloadingArraysArgument(CGF, Info.BasePointersArray,
                                  Info.PointersArray, Info.SizesArray,
                                  Info.MapTypesArray, Info.MappersArray, Info,
-                                 {/*ForEndTask=*/false, HasDependClauses});
+                                 {/*ForEndTask=*/false, RequiresOuterTask});
     InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
     InputInfo.BasePointersArray =
         Address(Info.BasePointersArray, CGM.getPointerAlign());
