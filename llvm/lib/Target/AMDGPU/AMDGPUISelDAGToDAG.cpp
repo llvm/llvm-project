@@ -1468,22 +1468,14 @@ static bool isStackPtrRelative(const MachinePointerInfo &PtrInfo) {
 
 std::pair<SDValue, SDValue> AMDGPUDAGToDAGISel::foldFrameIndex(SDValue N) const {
   SDLoc DL(N);
-  const MachineFunction &MF = CurDAG->getMachineFunction();
-  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
-  if (auto FI = dyn_cast<FrameIndexSDNode>(N)) {
-    SDValue TFI = CurDAG->getTargetFrameIndex(FI->getIndex(),
-                                              FI->getValueType(0));
+  auto *FI = dyn_cast<FrameIndexSDNode>(N);
+  SDValue TFI =
+      FI ? CurDAG->getTargetFrameIndex(FI->getIndex(), FI->getValueType(0)) : N;
 
-    // If we can resolve this to a frame index access, this will be relative to
-    // either the stack or frame pointer SGPR.
-    return std::make_pair(
-        TFI, CurDAG->getRegister(Info->getStackPtrOffsetReg(), MVT::i32));
-  }
-
-  // If we don't know this private access is a local stack object, it needs to
-  // be relative to the entry point's scratch wave offset.
-  return std::make_pair(N, CurDAG->getTargetConstant(0, DL, MVT::i32));
+  // We rebase the base address into an absolute stack address and hence
+  // use constant 0 for soffset.
+  return std::make_pair(TFI, CurDAG->getTargetConstant(0, DL, MVT::i32));
 }
 
 bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffen(SDNode *Parent,

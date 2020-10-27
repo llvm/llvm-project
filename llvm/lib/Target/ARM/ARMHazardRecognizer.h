@@ -13,27 +13,17 @@
 #ifndef LLVM_LIB_TARGET_ARM_ARMHAZARDRECOGNIZER_H
 #define LLVM_LIB_TARGET_ARM_ARMHAZARDRECOGNIZER_H
 
-#include "llvm/CodeGen/ScoreboardHazardRecognizer.h"
+#include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 
 namespace llvm {
 
-class ARMBaseInstrInfo;
-class ARMBaseRegisterInfo;
-class ARMSubtarget;
-class MachineInstr;
-
-/// ARMHazardRecognizer handles special constraints that are not expressed in
-/// the scheduling itinerary. This is only used during postRA scheduling. The
-/// ARM preRA scheduler uses an unspecialized instance of the
-/// ScoreboardHazardRecognizer.
-class ARMHazardRecognizer : public ScoreboardHazardRecognizer {
+// Hazards related to FP MLx instructions
+class ARMHazardRecognizerFPMLx : public ScheduleHazardRecognizer {
   MachineInstr *LastMI = nullptr;
   unsigned FpMLxStalls = 0;
 
 public:
-  ARMHazardRecognizer(const InstrItineraryData *ItinData,
-                      const ScheduleDAG *DAG)
-      : ScoreboardHazardRecognizer(ItinData, DAG, "post-RA-sched") {}
+  ARMHazardRecognizerFPMLx() : ScheduleHazardRecognizer() { MaxLookAhead = 1; }
 
   HazardType getHazardType(SUnit *SU, int Stalls) override;
   void Reset() override;

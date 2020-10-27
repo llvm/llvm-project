@@ -2601,6 +2601,14 @@ static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
     return false;
   }
 
+  if ((St != APFloat::opOK) &&
+      (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic ||
+       FPO.getFPExceptionMode() != LangOptions::FPE_Ignore ||
+       FPO.getAllowFEnvAccess())) {
+    Info.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
+    return false;
+  }
+
   if ((St & APFloat::opStatus::opInvalidOp) &&
       FPO.getFPExceptionMode() != LangOptions::FPE_Ignore) {
     // There is no usefully definable result.
@@ -2644,11 +2652,17 @@ static APSInt HandleIntToIntCast(EvalInfo &Info, const Expr *E,
 }
 
 static bool HandleIntToFloatCast(EvalInfo &Info, const Expr *E,
+                                 const FPOptions FPO,
                                  QualType SrcType, const APSInt &Value,
                                  QualType DestType, APFloat &Result) {
   Result = APFloat(Info.Ctx.getFloatTypeSemantics(DestType), 1);
-  Result.convertFromAPInt(Value, Value.isSigned(),
-                          APFloat::rmNearestTiesToEven);
+  APFloat::opStatus St = Result.convertFromAPInt(Value, Value.isSigned(),
+       APFloat::rmNearestTiesToEven);
+  if (!Info.InConstantContext && St != llvm::APFloatBase::opOK &&
+      FPO.isFPConstrained()) {
+    Info.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
+    return false;
+  }
   return true;
 }
 
@@ -4370,9 +4384,11 @@ struct CompoundAssignSubobjectHandler {
       Value = HandleIntToIntCast(Info, E, SubobjType, PromotedLHSType, LHS);
       return true;
     } else if (RHS.isFloat()) {
+      const FPOptions FPO = E->getFPFeaturesInEffect(
+                                    Info.Ctx.getLangOpts());
       APFloat FValue(0.0);
-      return HandleIntToFloatCast(Info, E, SubobjType, Value, PromotedLHSType,
-                                  FValue) &&
+      return HandleIntToFloatCast(Info, E, FPO, SubobjType, Value,
+                                  PromotedLHSType, FValue) &&
              handleFloatFloatBinOp(Info, E, FValue, Opcode, RHS.getFloat()) &&
              HandleFloatToIntCast(Info, E, PromotedLHSType, FValue, SubobjType,
                                   Value);
@@ -12545,8 +12561,16 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       return false;
 
     assert(E->isComparisonOp() && "Invalid binary operator!");
+    llvm::APFloatBase::cmpResult CmpResult = LHS.compare(RHS);
+    if (!Info.InConstantContext &&
+        CmpResult == APFloat::cmpUnordered &&
+        E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).isFPConstrained()) {
+      // Note: Compares may raise invalid in some cases involving NaN or sNaN.
+      Info.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
+      return false;
+    }
     auto GetCmpRes = [&]() {
-      switch (LHS.compare(RHS)) {
+      switch (CmpResult) {
       case APFloat::cmpEqual:
         return CmpResult::Equal;
       case APFloat::cmpLessThan:
@@ -13604,6 +13628,11 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_fabsf:
   case Builtin::BI__builtin_fabsl:
   case Builtin::BI__builtin_fabsf128:
+    // The C standard says "fabs raises no floating-point exceptions,
+    // even if x is a signaling NaN. The returned value is independent of
+    // the current rounding direction mode."  Therefore constant folding can
+    // proceed without regard to the floating point settings.
+    // Reference, WG14 N2478 F.10.4.3
     if (!EvaluateFloat(E->getArg(0), Result, Info))
       return false;
 
@@ -13662,6 +13691,9 @@ bool FloatExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
   case UO_Plus:
     return EvaluateFloat(E->getSubExpr(), Result, Info);
   case UO_Minus:
+    // In C standard, WG14 N2478 F.3 p4
+    // "the unary - raises no floating point exceptions,
+    // even if the operand is signalling."
     if (!EvaluateFloat(E->getSubExpr(), Result, Info))
       return false;
     Result.changeSign();
@@ -13695,9 +13727,11 @@ bool FloatExprEvaluator::VisitCastExpr(const CastExpr *E) {
 
   case CK_IntegralToFloating: {
     APSInt IntResult;
+    const FPOptions FPO = E->getFPFeaturesInEffect(
+                                  Info.Ctx.getLangOpts());
     return EvaluateInteger(SubExpr, IntResult, Info) &&
-           HandleIntToFloatCast(Info, E, SubExpr->getType(), IntResult,
-                                E->getType(), Result);
+           HandleIntToFloatCast(Info, E, FPO, SubExpr->getType(),
+                                IntResult, E->getType(), Result);
   }
 
   case CK_FixedPointToFloating: {
@@ -13936,13 +13970,15 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (!Visit(E->getSubExpr()))
       return false;
 
+    const FPOptions FPO = E->getFPFeaturesInEffect(
+                                  Info.Ctx.getLangOpts());
     QualType To = E->getType()->castAs<ComplexType>()->getElementType();
     QualType From
       = E->getSubExpr()->getType()->castAs<ComplexType>()->getElementType();
     Result.makeComplexFloat();
-    return HandleIntToFloatCast(Info, E, From, Result.IntReal,
+    return HandleIntToFloatCast(Info, E, FPO, From, Result.IntReal,
                                 To, Result.FloatReal) &&
-           HandleIntToFloatCast(Info, E, From, Result.IntImag,
+           HandleIntToFloatCast(Info, E, FPO, From, Result.IntImag,
                                 To, Result.FloatImag);
   }
   }

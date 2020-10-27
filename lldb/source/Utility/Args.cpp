@@ -383,7 +383,7 @@ std::string Args::GetShellSafeArgument(const FileSpec &shell,
                                        llvm::StringRef unsafe_arg) {
   struct ShellDescriptor {
     ConstString m_basename;
-    const char *m_escapables;
+    llvm::StringRef m_escapables;
   };
 
   static ShellDescriptor g_Shells[] = {{ConstString("bash"), " '\"<>()&"},
@@ -391,7 +391,7 @@ std::string Args::GetShellSafeArgument(const FileSpec &shell,
                                        {ConstString("sh"), " '\"<>()&"}};
 
   // safe minimal set
-  const char *escapables = " '\"";
+  llvm::StringRef escapables = " '\"";
 
   if (auto basename = shell.GetFilename()) {
     for (const auto &Shell : g_Shells) {
@@ -402,16 +402,13 @@ std::string Args::GetShellSafeArgument(const FileSpec &shell,
     }
   }
 
-  std::string safe_arg(unsafe_arg);
-  size_t prev_pos = 0;
-  while (prev_pos < safe_arg.size()) {
-    // Escape spaces and quotes
-    size_t pos = safe_arg.find_first_of(escapables, prev_pos);
-    if (pos != std::string::npos) {
-      safe_arg.insert(pos, 1, '\\');
-      prev_pos = pos + 2;
-    } else
-      break;
+  std::string safe_arg;
+  safe_arg.reserve(unsafe_arg.size());
+  // Add a \ before every character that needs to be escaped.
+  for (char c : unsafe_arg) {
+    if (escapables.contains(c))
+      safe_arg.push_back('\\');
+    safe_arg.push_back(c);
   }
   return safe_arg;
 }

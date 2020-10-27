@@ -535,6 +535,23 @@ define <2 x i32> @partial_bswap_vector(<2 x i32> %x) {
 }
 declare <2 x i32> @llvm.bswap.v2i32(<2 x i32>)
 
+define i16 @partial_bitreverse(i16 %x) {
+; CHECK-LABEL: @partial_bitreverse(
+; CHECK-NEXT:    [[OR:%.*]] = call i16 @llvm.bswap.i16(i16 [[X:%.*]])
+; CHECK-NEXT:    ret i16 [[OR]]
+;
+  %rev= call i16 @llvm.bitreverse.i16(i16 %x)
+  %lo = and i16 %rev, 255
+  %hi = and i16 %rev, -256
+  %revlo = call i16 @llvm.bitreverse.i16(i16 %lo)
+  %revhi = call i16 @llvm.bitreverse.i16(i16 %hi)
+  %newlo = lshr i16 %revlo, 8
+  %newhi = shl  i16 %revhi, 8
+  %or = or i16 %newlo, %newhi
+  ret i16 %or
+}
+declare i16 @llvm.bitreverse.i16(i16)
+
 define i64 @bswap_and_mask_0(i64 %0) {
 ; CHECK-LABEL: @bswap_and_mask_0(
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP0:%.*]], -72057594037927681

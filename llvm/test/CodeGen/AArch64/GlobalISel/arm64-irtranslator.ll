@@ -2397,12 +2397,12 @@ define void @test_sideeffect() {
   ret void
 }
 
-declare void @llvm.var.annotation(i8*, i8*, i8*, i32)
+declare void @llvm.var.annotation(i8*, i8*, i8*, i32, i8*)
 define void @test_var_annotation(i8*, i8*, i8*, i32) {
   ; CHECK-LABEL: name:            test_var_annotation
   ; CHECK-NOT: llvm.var.annotation
   ; CHECK: RET_ReallyLR
-  call void @llvm.var.annotation(i8* %0, i8* %1, i8* %2, i32 %3)
+  call void @llvm.var.annotation(i8* %0, i8* %1, i8* %2, i32 %3, i8* null)
   ret void
 }
 

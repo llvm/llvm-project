@@ -10,7 +10,7 @@ define i32 @remove_loop(i32 %size) #0 {
 ; CHECK-V8M-NEXT:    [[UMIN:%.*]] = select i1 [[TMP1]], i32 [[SIZE]], i32 31
 ; CHECK-V8M-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP0]], [[UMIN]]
 ; CHECK-V8M-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 5
-; CHECK-V8M-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], 5
+; CHECK-V8M-NEXT:    [[TMP4:%.*]] = shl nuw i32 [[TMP3]], 5
 ; CHECK-V8M-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK-V8M:       while.cond:
 ; CHECK-V8M-NEXT:    br i1 false, label [[WHILE_COND]], label [[WHILE_END:%.*]]
@@ -25,7 +25,7 @@ define i32 @remove_loop(i32 %size) #0 {
 ; CHECK-V8A-NEXT:    [[UMIN:%.*]] = select i1 [[TMP1]], i32 [[SIZE]], i32 31
 ; CHECK-V8A-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP0]], [[UMIN]]
 ; CHECK-V8A-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 5
-; CHECK-V8A-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], 5
+; CHECK-V8A-NEXT:    [[TMP4:%.*]] = shl nuw i32 [[TMP3]], 5
 ; CHECK-V8A-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK-V8A:       while.cond:
 ; CHECK-V8A-NEXT:    br i1 false, label [[WHILE_COND]], label [[WHILE_END:%.*]]

@@ -11,7 +11,7 @@
 #include "NativeRegisterContextFreeBSD_x86_64.h"
 
 // clang-format off
-#include <machine/fpu.h>
+#include <x86/fpu.h>
 #include <x86/specialreg.h>
 #include <cpuid.h>
 // clang-format on

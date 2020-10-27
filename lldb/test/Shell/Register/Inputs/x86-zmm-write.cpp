@@ -9,10 +9,7 @@ union alignas(64) zmm_t {
 
 int main() {
   constexpr zmm_t zmm_fill = {
-    .as_uint64 = { 0x0F0F0F0F0F0F0F0F, 0x0F0F0F0F0F0F0F0F,
-                   0x0F0F0F0F0F0F0F0F, 0x0F0F0F0F0F0F0F0F,
-                   0x0F0F0F0F0F0F0F0F, 0x0F0F0F0F0F0F0F0F,
-                   0x0F0F0F0F0F0F0F0F, 0x0F0F0F0F0F0F0F0F }
+    .as_uint64 = { 0, 0, 0, 0, 0, 0, 0, 0 }
   };
 
   zmm_t zmm[32];

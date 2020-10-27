@@ -20,7 +20,6 @@
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/Module.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Parser.h"
@@ -31,7 +30,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassNameParser.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/SourceMgr.h"
@@ -134,7 +132,8 @@ static Optional<unsigned> getCommandLineOptLevel(Options &options) {
 
 // JIT-compile the given module and run "entryPoint" with "args" as arguments.
 static Error
-compileAndExecute(Options &options, ModuleOp module, StringRef entryPoint,
+compileAndExecute(Options &options, ModuleOp module,
+                  TranslationCallback llvmModuleBuilder, StringRef entryPoint,
                   std::function<llvm::Error(llvm::Module *)> transformer,
                   void **args) {
   Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel;
@@ -143,8 +142,8 @@ compileAndExecute(Options &options, ModuleOp module, StringRef entryPoint,
         static_cast<llvm::CodeGenOpt::Level>(clOptLevel.getValue());
   SmallVector<StringRef, 4> libs(options.clSharedLibs.begin(),
                                  options.clSharedLibs.end());
-  auto expectedEngine = mlir::ExecutionEngine::create(module, transformer,
-                                                      jitCodeGenOptLevel, libs);
+  auto expectedEngine = mlir::ExecutionEngine::create(
+      module, llvmModuleBuilder, transformer, jitCodeGenOptLevel, libs);
   if (!expectedEngine)
     return expectedEngine.takeError();
 
@@ -165,13 +164,15 @@ compileAndExecute(Options &options, ModuleOp module, StringRef entryPoint,
 }
 
 static Error compileAndExecuteVoidFunction(
-    Options &options, ModuleOp module, StringRef entryPoint,
+    Options &options, ModuleOp module, TranslationCallback llvmModuleBuilder,
+    StringRef entryPoint,
     std::function<llvm::Error(llvm::Module *)> transformer) {
   auto mainFunction = module.lookupSymbol<LLVM::LLVMFuncOp>(entryPoint);
   if (!mainFunction || mainFunction.empty())
     return make_string_error("entry point not found");
   void *empty = nullptr;
-  return compileAndExecute(options, module, entryPoint, transformer, &empty);
+  return compileAndExecute(options, module, llvmModuleBuilder, entryPoint,
+                           transformer, &empty);
 }
 
 template <typename Type>
@@ -196,7 +197,8 @@ Error checkCompatibleReturnType<float>(LLVM::LLVMFuncOp mainFunction) {
 }
 template <typename Type>
 Error compileAndExecuteSingleReturnFunction(
-    Options &options, ModuleOp module, StringRef entryPoint,
+    Options &options, ModuleOp module, TranslationCallback llvmModuleBuilder,
+    StringRef entryPoint,
     std::function<llvm::Error(llvm::Module *)> transformer) {
   auto mainFunction = module.lookupSymbol<LLVM::LLVMFuncOp>(entryPoint);
   if (!mainFunction || mainFunction.isExternal())
@@ -213,8 +215,8 @@ Error compileAndExecuteSingleReturnFunction(
     void *data;
   } data;
   data.data = &res;
-  if (auto error = compileAndExecute(options, module, entryPoint, transformer,
-                                     (void **)&data))
+  if (auto error = compileAndExecute(options, module, llvmModuleBuilder,
+                                     entryPoint, transformer, (void **)&data))
     return error;
 
   // Intentional printing of the output so we can test.
@@ -223,13 +225,16 @@ Error compileAndExecuteSingleReturnFunction(
   return Error::success();
 }
 
-/// Entry point for all CPU runners. Expects the common argc/argv
-/// arguments for standard C++ main functions and an mlirTransformer.
-/// The latter is applied after parsing the input into MLIR IR and
-/// before passing the MLIR module to the ExecutionEngine.
+/// Entry point for all CPU runners. Expects the common argc/argv arguments for
+/// standard C++ main functions, `mlirTransformer` and `llvmModuleBuilder`.
+/// `mlirTransformer` is applied after parsing the input into MLIR IR and before
+/// passing the MLIR module to the ExecutionEngine.
+/// `llvmModuleBuilder` is a custom function that is passed to ExecutionEngine.
+/// It processes MLIR module and creates LLVM IR module.
 int mlir::JitRunnerMain(
     int argc, char **argv,
-    function_ref<LogicalResult(mlir::ModuleOp)> mlirTransformer) {
+    function_ref<LogicalResult(mlir::ModuleOp)> mlirTransformer,
+    TranslationCallback llvmModuleBuilder) {
   // Create the options struct containing the command line options for the
   // runner. This must come before the command line options are parsed.
   Options options;
@@ -289,7 +294,7 @@ int mlir::JitRunnerMain(
 
   // Get the function used to compile and execute the module.
   using CompileAndExecuteFnT =
-      Error (*)(Options &, ModuleOp, StringRef,
+      Error (*)(Options &, ModuleOp, TranslationCallback, StringRef,
                 std::function<llvm::Error(llvm::Module *)>);
   auto compileAndExecuteFn =
       StringSwitch<CompileAndExecuteFnT>(options.mainFuncType.getValue())
@@ -301,7 +306,7 @@ int mlir::JitRunnerMain(
 
   Error error =
       compileAndExecuteFn
-          ? compileAndExecuteFn(options, m.get(),
+          ? compileAndExecuteFn(options, m.get(), llvmModuleBuilder,
                                 options.mainFuncName.getValue(), transformer)
           : make_string_error("unsupported function type");
 
