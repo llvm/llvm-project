@@ -148,8 +148,8 @@ class AttributeInterface
                                AttributeTrait::TraitBase> {
 public:
   using Base = AttributeInterface<ConcreteType, Traits>;
-  using InterfaceBase = detail::Interface<ConcreteType, Type, Traits, Type,
-                                          AttributeTrait::TraitBase>;
+  using InterfaceBase = detail::Interface<ConcreteType, Attribute, Traits,
+                                          Attribute, AttributeTrait::TraitBase>;
   using InterfaceBase::InterfaceBase;
 
 private:
