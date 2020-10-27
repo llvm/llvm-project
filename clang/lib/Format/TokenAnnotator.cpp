@@ -256,16 +256,6 @@ private:
     } else if (Contexts[Contexts.size() - 2].CaretFound) {
       // This is the parameter list of an ObjC block.
       Contexts.back().IsExpression = false;
-    } else if (PrevNonComment && PrevNonComment->is(tok::kw___attribute)) {
-      Left->setType(TT_AttributeParen);
-    } else if (PrevNonComment &&
-               PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
-                                       tok::kw_typeof, tok::kw__Atomic,
-                                       tok::kw___underlying_type)) {
-      Left->setType(TT_TypeDeclarationParen);
-      // decltype() and typeof() usually contain expressions.
-      if (PrevNonComment->isOneOf(tok::kw_decltype, tok::kw_typeof))
-        Contexts.back().IsExpression = true;
     } else if (Left->Previous && Left->Previous->is(TT_ForEachMacro)) {
       // The first argument to a foreach macro is a declaration.
       Contexts.back().IsForEachMacro = true;
@@ -277,6 +267,21 @@ private:
       bool IsForOrCatch =
           Left->Previous && Left->Previous->isOneOf(tok::kw_for, tok::kw_catch);
       Contexts.back().IsExpression = !IsForOrCatch;
+    }
+
+    // Infer the role of the l_paren based on the previous token if we haven't
+    // detected one one yet.
+    if (PrevNonComment && Left->is(TT_Unknown)) {
+      if (PrevNonComment->is(tok::kw___attribute)) {
+        Left->setType(TT_AttributeParen);
+      } else if (PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
+                                         tok::kw_typeof, tok::kw__Atomic,
+                                         tok::kw___underlying_type)) {
+        Left->setType(TT_TypeDeclarationParen);
+        // decltype() and typeof() usually contain expressions.
+        if (PrevNonComment->isOneOf(tok::kw_decltype, tok::kw_typeof))
+          Contexts.back().IsExpression = true;
+      }
     }
 
     if (StartsObjCMethodExpr) {
