@@ -20,8 +20,10 @@ class TokenAnnotatorTest : public ::testing::Test {
 protected:
   TokenList annotate(llvm::StringRef Code,
                      const FormatStyle &Style = getLLVMStyle()) {
-    return TestLexer(Style).annotate(Code);
+    return TestLexer(Allocator, Buffers, Style).annotate(Code);
   }
+  llvm::SpecificBumpPtrAllocator<FormatToken> Allocator;
+  std::vector<std::unique_ptr<llvm::MemoryBuffer>> Buffers;
 };
 
 #define EXPECT_TOKEN_KIND(FormatTok, Kind)                                     \
