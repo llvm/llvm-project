@@ -17,6 +17,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <SourceInfo.h>
+
 #define OFFLOAD_SUCCESS (0)
 #define OFFLOAD_FAIL (~0)
 
@@ -164,14 +166,13 @@ void __tgt_target_data_begin_nowait(int64_t device_id, int32_t arg_num,
 void __tgt_target_data_begin_mapper(int64_t device_id, int32_t arg_num,
                                     void **args_base, void **args,
                                     int64_t *arg_sizes, int64_t *arg_types,
-                                    void **arg_names, void **arg_mappers);
-void __tgt_target_data_begin_nowait_mapper(int64_t device_id, int32_t arg_num,
-                                           void **args_base, void **args,
-                                           int64_t *arg_sizes,
-                                           int64_t *arg_types, void **arg_names,
-                                           void **arg_mappers, int32_t depNum,
-                                           void *depList, int32_t noAliasDepNum,
-                                           void *noAliasDepList);
+                                    map_var_info_t *arg_names,
+                                    void **arg_mappers);
+void __tgt_target_data_begin_nowait_mapper(
+    int64_t device_id, int32_t arg_num, void **args_base, void **args,
+    int64_t *arg_sizes, int64_t *arg_types, map_var_info_t *arg_names,
+    void **arg_mappers, int32_t depNum, void *depList, int32_t noAliasDepNum,
+    void *noAliasDepList);
 
 // passes data from the target, release target memory and destroys the
 // host-target mapping (top entry from the stack of data maps) created by
@@ -186,13 +187,14 @@ void __tgt_target_data_end_nowait(int64_t device_id, int32_t arg_num,
 void __tgt_target_data_end_mapper(int64_t device_id, int32_t arg_num,
                                   void **args_base, void **args,
                                   int64_t *arg_sizes, int64_t *arg_types,
-                                  void **arg_names, void **arg_mappers);
+                                  map_var_info_t *arg_names,
+                                  void **arg_mappers);
 void __tgt_target_data_end_nowait_mapper(int64_t device_id, int32_t arg_num,
                                          void **args_base, void **args,
                                          int64_t *arg_sizes, int64_t *arg_types,
-                                         void **arg_names, void **arg_mappers,
-                                         int32_t depNum, void *depList,
-                                         int32_t noAliasDepNum,
+                                         map_var_info_t *arg_names,
+                                         void **arg_mappers, int32_t depNum,
+                                         void *depList, int32_t noAliasDepNum,
                                          void *noAliasDepList);
 
 /// passes data to/from the target
@@ -208,10 +210,11 @@ void __tgt_target_data_update_nowait(int64_t device_id, int32_t arg_num,
 void __tgt_target_data_update_mapper(int64_t device_id, int32_t arg_num,
                                      void **args_base, void **args,
                                      int64_t *arg_sizes, int64_t *arg_types,
-                                     void **arg_names, void **arg_mappers);
+                                     map_var_info_t *arg_names,
+                                     void **arg_mappers);
 void __tgt_target_data_update_nowait_mapper(
     int64_t device_id, int32_t arg_num, void **args_base, void **args,
-    int64_t *arg_sizes, int64_t *arg_types, void **arg_names,
+    int64_t *arg_sizes, int64_t *arg_types, map_var_info_t *arg_names,
     void **arg_mappers, int32_t depNum, void *depList, int32_t noAliasDepNum,
     void *noAliasDepList);
 
@@ -230,12 +233,12 @@ int __tgt_target_nowait(int64_t device_id, void *host_ptr, int32_t arg_num,
                         int32_t noAliasDepNum, void *noAliasDepList);
 int __tgt_target_mapper(int64_t device_id, void *host_ptr, int32_t arg_num,
                         void **args_base, void **args, int64_t *arg_sizes,
-                        int64_t *arg_types, void **arg_names,
+                        int64_t *arg_types, map_var_info_t *arg_names,
                         void **arg_mappers);
 int __tgt_target_nowait_mapper(int64_t device_id, void *host_ptr,
                                int32_t arg_num, void **args_base, void **args,
                                int64_t *arg_sizes, int64_t *arg_types,
-                               void **arg_names, void **arg_mappers,
+                               map_var_info_t *arg_names, void **arg_mappers,
                                int32_t depNum, void *depList,
                                int32_t noAliasDepNum, void *noAliasDepList);
 
@@ -252,13 +255,14 @@ int __tgt_target_teams_nowait(int64_t device_id, void *host_ptr,
 int __tgt_target_teams_mapper(int64_t device_id, void *host_ptr,
                               int32_t arg_num, void **args_base, void **args,
                               int64_t *arg_sizes, int64_t *arg_types,
-                              void **arg_names, void **arg_mappers,
+                              map_var_info_t *arg_names, void **arg_mappers,
                               int32_t num_teams, int32_t thread_limit);
 int __tgt_target_teams_nowait_mapper(
     int64_t device_id, void *host_ptr, int32_t arg_num, void **args_base,
-    void **args, int64_t *arg_sizes, int64_t *arg_types, void **arg_names,
-    void **arg_mappers, int32_t num_teams, int32_t thread_limit, int32_t depNum,
-    void *depList, int32_t noAliasDepNum, void *noAliasDepList);
+    void **args, int64_t *arg_sizes, int64_t *arg_types,
+    map_var_info_t *arg_names, void **arg_mappers, int32_t num_teams,
+    int32_t thread_limit, int32_t depNum, void *depList, int32_t noAliasDepNum,
+    void *noAliasDepList);
 
 void __kmpc_push_target_tripcount(int64_t device_id, uint64_t loop_tripcount);
 
