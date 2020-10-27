@@ -968,10 +968,10 @@ void GCNPassConfig::addPreRegAlloc() {
   if (LateCFGStructurize) {
     addPass(createAMDGPUMachineCFGStructurizerPass());
   }
-  addPass(createSIWholeQuadModePass());
 }
 
 void GCNPassConfig::addFastRegAlloc() {
+  addPass(createSIWholeQuadModePass());
   // FIXME: We have to disable the verifier here because of PHIElimination +
   // TwoAddressInstructions disabling it.
 
@@ -987,6 +987,11 @@ void GCNPassConfig::addFastRegAlloc() {
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
+  // Allow the scheduler to run before SIWholeQuadMode inserts exec manipulation
+  // instructions that cause scheduling barriers.
+  insertPass(&MachineSchedulerID, &SIWholeQuadModeID);
+  insertPass(&MachineSchedulerID, &SIPreAllocateWWMRegsID);
+
   if (OptExecMaskPreRA)
     insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
   insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
@@ -995,9 +1000,6 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowID, false);
-
-  // This must be run just after RegisterCoalescing.
-  insertPass(&RegisterCoalescerID, &SIPreAllocateWWMRegsID, false);
 
   if (EnableDCEInRA)
     insertPass(&DetectDeadLanesID, &DeadMachineInstructionElimID);

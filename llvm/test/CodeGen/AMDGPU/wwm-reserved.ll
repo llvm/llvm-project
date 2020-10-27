@@ -10,16 +10,18 @@ define amdgpu_cs void @no_cfg(<4 x i32> inreg %tmp14) {
   %tmp105 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %tmp102, i32 0)
   %tmp107 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 %tmp103, i32 0)
 
-; GFX9: v_mov_b32_dpp v[[FIRST_MOV:[0-9]+]], v{{[0-9]+}} row_bcast:31 row_mask:0xc bank_mask:0xf
-; GFX9: v_add_u32_e32 v[[FIRST_ADD:[0-9]+]], v{{[0-9]+}}, v[[FIRST_MOV]]
-; GFX9: v_mov_b32_e32 v[[FIRST:[0-9]+]], v[[FIRST_ADD]]
+; GFX9: s_or_saveexec_b64 s{{\[}}{{[0-9]+}}:{{[0-9]+}}{{\]}}, -1
+
+; GFX9-DAG: v_mov_b32_dpp v[[FIRST_MOV:[0-9]+]], v{{[0-9]+}} row_bcast:31 row_mask:0xc bank_mask:0xf
+; GFX9-DAG: v_add_u32_e32 v[[FIRST_ADD:[0-9]+]], v{{[0-9]+}}, v[[FIRST_MOV]]
+; GFX9-DAG: v_mov_b32_e32 v[[FIRST:[0-9]+]], v[[FIRST_ADD]]
   %tmp120 = tail call i32 @llvm.amdgcn.update.dpp.i32(i32 0, i32 %tmp105, i32 323, i32 12, i32 15, i1 false)
   %tmp121 = add i32 %tmp105, %tmp120
   %tmp122 = tail call i32 @llvm.amdgcn.wwm.i32(i32 %tmp121)
 
-; GFX9: v_mov_b32_dpp v[[SECOND_MOV:[0-9]+]], v{{[0-9]+}} row_bcast:31 row_mask:0xc bank_mask:0xf
-; GFX9: v_add_u32_e32 v[[SECOND_ADD:[0-9]+]], v{{[0-9]+}}, v[[SECOND_MOV]]
-; GFX9: v_mov_b32_e32 v[[SECOND:[0-9]+]], v[[SECOND_ADD]]
+; GFX9-DAG: v_mov_b32_dpp v[[SECOND_MOV:[0-9]+]], v{{[0-9]+}} row_bcast:31 row_mask:0xc bank_mask:0xf
+; GFX9-DAG: v_add_u32_e32 v[[SECOND_ADD:[0-9]+]], v{{[0-9]+}}, v[[SECOND_MOV]]
+; GFX9-DAG: v_mov_b32_e32 v[[SECOND:[0-9]+]], v[[SECOND_ADD]]
   %tmp135 = tail call i32 @llvm.amdgcn.update.dpp.i32(i32 0, i32 %tmp107, i32 323, i32 12, i32 15, i1 false)
   %tmp136 = add i32 %tmp107, %tmp135
   %tmp137 = tail call i32 @llvm.amdgcn.wwm.i32(i32 %tmp136)
@@ -99,7 +101,6 @@ define amdgpu_kernel void @call(<4 x i32> inreg %tmp14, i32 inreg %arg) {
 ; GFX9-O0-DAG: v_mov_b32_e32 v0, [[ARG]]
 
 ; GFX9-O3: v_mov_b32_e32 v2, [[ARG]]
-
 
 ; GFX9-NEXT: s_not_b64 exec, exec
 ; GFX9-O0-NEXT: v_mov_b32_e32 v0, s0
