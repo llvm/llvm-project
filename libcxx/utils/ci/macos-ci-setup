@@ -14,12 +14,6 @@ brew install sphinx-doc python3 buildkite-agent ninja cmake
 
 CFG_DIR="$(brew --prefix)/etc/buildkite-agent"
 
-# Setup the CONDUIT_TOKEN in the BuildKite Agent, and install the Phabricator
-# Python module to allow reporting results back to Phabricator.
-mv "${CFG_DIR}/hooks/environment.sample" "${CFG_DIR}/hooks/environment"
-echo "export CONDUIT_TOKEN=${CONDUIT_TOKEN}" >> "${CFG_DIR}/hooks/environment"
-pip3 install --user phabricator
-
 # Setup the tags of the agent
 echo 'tags="queue=libcxx-macos-builders"' >> "${CFG_DIR}/buildkite-agent.cfg"
 
