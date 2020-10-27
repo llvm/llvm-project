@@ -280,6 +280,20 @@ public:
   bool queryDataLayout(DataLayoutQueryType type, void *inBuffer,
                        void *outBuffer) override {
     switch (type) {
+    // FIXME: add support for case DLQ_GetPtrAuthMask:
+    case DLQ_GetObjCReservedLowBits: {
+      auto *result = static_cast<uint8_t *>(outBuffer);
+      auto &triple = m_process.GetTarget().GetArchitecture().GetTriple();
+      if (triple.isMacOSX() && triple.getArch() == llvm::Triple::x86_64) {
+        // Obj-C reserves low bit on 64-bit Intel macOS only.
+        // Other Apple platforms don't reserve this bit (even when
+        // running on x86_64-based simulators).
+        *result = 1;
+      } else {
+        *result = 0;
+      }
+      break;
+    }
     case DLQ_GetPointerSize: {
       auto result = static_cast<uint8_t *>(outBuffer);
       *result = m_process.GetAddressByteSize();
