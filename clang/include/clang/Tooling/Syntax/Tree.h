@@ -168,20 +168,24 @@ public:
   Node *getFirstChild() { return FirstChild; }
   const Node *getFirstChild() const { return FirstChild; }
 
-  Leaf *findFirstLeaf();
-  const Leaf *findFirstLeaf() const {
-    return const_cast<Tree *>(this)->findFirstLeaf();
+  const Leaf *findFirstLeaf() const;
+  Leaf *findFirstLeaf() {
+    return const_cast<Leaf *>(const_cast<const Tree *>(this)->findFirstLeaf());
   }
 
-  Leaf *findLastLeaf();
-  const Leaf *findLastLeaf() const {
-    return const_cast<Tree *>(this)->findLastLeaf();
+  const Leaf *findLastLeaf() const;
+  Leaf *findLastLeaf() {
+    return const_cast<Leaf *>(const_cast<const Tree *>(this)->findLastLeaf());
+  }
+
+  /// Find the first node with a corresponding role.
+  const Node *findChild(NodeRole R) const;
+  Node *findChild(NodeRole R) {
+    return const_cast<Node *>(const_cast<const Tree *>(this)->findChild(R));
   }
 
 protected:
   using Node::Node;
-  /// Find the first node with a corresponding role.
-  Node *findChild(NodeRole R);
 
 private:
   /// Prepend \p Child to the list of children and and sets the parent pointer.
