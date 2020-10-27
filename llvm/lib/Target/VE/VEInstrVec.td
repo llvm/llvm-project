@@ -1116,3 +1116,73 @@ defm VCVTSD : RVF1m<"vcvt.s.d", 0x9f, V64, VM>;
 
 // Section 8.13.19 - VCVD (Vector Convert to Double-format)
 defm VCVTDS : RVF1m<"vcvt.d.s", 0x8f, V64, VM>;
+
+//-----------------------------------------------------------------------------
+// Section 8.14 - Vector Reduction Instructions
+//-----------------------------------------------------------------------------
+
+// Section 8.14.1 - VSUMS (Vector Sum Single)
+defm VSUMWSX : RVF1m<"vsum.w.sx", 0xea, V64, VM>;
+let cx2 = 1 in defm VSUMWZX : RVF1m<"vsum.w.zx", 0xea, V64, VM>;
+
+// Section 8.14.2 - VSUMX (Vector Sum)
+defm VSUML : RVF1m<"vsum.l", 0xaa, V64, VM>;
+
+// Section 8.14.3 - VFSUM (Vector Floating Sum)
+defm VFSUMD : RVF1m<"vfsum.d", 0xec, V64, VM>;
+let cx = 1 in defm VFSUMS : RVF1m<"vfsum.s", 0xec, V64, VM>;
+
+// Section 8.14.4 - VMAXS (Vector Maximum/Minimum Single)
+let cx2 = 0 in defm VRMAXSWFSTSX : RVF1m<"vrmaxs.w.fst.sx", 0xbb, V64, VM>;
+let cx2 = 1 in defm VRMAXSWFSTZX : RVF1m<"vrmaxs.w.fst.zx", 0xbb, V64, VM>;
+let cs = 1 in {
+  let cx2 = 0 in
+  defm VRMAXSWLSTSX : RVF1m<"vrmaxs.w.lst.sx", 0xbb, V64, VM>;
+  let cx2 = 1 in
+  defm VRMAXSWLSTZX : RVF1m<"vrmaxs.w.lst.zx", 0xbb, V64, VM>;
+}
+let cs2 = 1 in {
+  let cx2 = 0 in
+  defm VRMINSWFSTSX : RVF1m<"vrmins.w.fst.sx", 0xbb, V64, VM>;
+  let cx2 = 1 in
+  defm VRMINSWFSTZX : RVF1m<"vrmins.w.fst.zx", 0xbb, V64, VM>;
+  let cs = 1 in {
+    let cx2 = 0 in
+    defm VRMINSWLSTSX : RVF1m<"vrmins.w.lst.sx", 0xbb, V64, VM>;
+    let cx2 = 1 in
+    defm VRMINSWLSTZX : RVF1m<"vrmins.w.lst.zx", 0xbb, V64, VM>;
+  }
+}
+
+// Section 8.14.5 - VMAXX (Vector Maximum/Minimum)
+let cs = 0 in defm VRMAXSLFST : RVF1m<"vrmaxs.l.fst", 0xab, V64, VM>;
+let cs = 1 in defm VRMAXSLLST : RVF1m<"vrmaxs.l.lst", 0xab, V64, VM>;
+let cs2 = 1 in {
+  let cs = 0 in defm VRMINSLFST : RVF1m<"vrmins.l.fst", 0xab, V64, VM>;
+  let cs = 1 in defm VRMINSLLST : RVF1m<"vrmins.l.lst", 0xab, V64, VM>;
+}
+
+// Section 8.14.6 - VFMAX (Vector Floating Maximum/Minimum)
+let cs = 0 in defm VFRMAXDFST : RVF1m<"vfrmax.d.fst", 0xad, V64, VM>;
+let cs = 1 in defm VFRMAXDLST : RVF1m<"vfrmax.d.lst", 0xad, V64, VM>;
+let cs2 = 1 in {
+  let cs = 0 in defm VFRMINDFST : RVF1m<"vfrmin.d.fst", 0xad, V64, VM>;
+  let cs = 1 in defm VFRMINDLST : RVF1m<"vfrmin.d.lst", 0xad, V64, VM>;
+}
+let cx = 1 in {
+  let cs = 0 in defm VFRMAXSFST : RVF1m<"vfrmax.s.fst", 0xad, V64, VM>;
+  let cs = 1 in defm VFRMAXSLST : RVF1m<"vfrmax.s.lst", 0xad, V64, VM>;
+  let cs2 = 1 in {
+    let cs = 0 in defm VFRMINSFST : RVF1m<"vfrmin.s.fst", 0xad, V64, VM>;
+    let cs = 1 in defm VFRMINSLST : RVF1m<"vfrmin.s.lst", 0xad, V64, VM>;
+  }
+}
+
+// Section 8.14.7 - VRAND (Vector Reduction And)
+defm VRAND : RVF1m<"vrand", 0x88, V64, VM>;
+
+// Section 8.14.8 - VROR (Vector Reduction Or)
+defm VROR : RVF1m<"vror", 0x98, V64, VM>;
+
+// Section 8.14.9 - VRXOR (Vector Reduction Exclusive Or)
+defm VRXOR : RVF1m<"vrxor", 0x89, V64, VM>;
