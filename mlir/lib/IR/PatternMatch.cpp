@@ -16,6 +16,10 @@ using namespace mlir;
 
 #define DEBUG_TYPE "pattern-match"
 
+//===----------------------------------------------------------------------===//
+// PatternBenefit
+//===----------------------------------------------------------------------===//
+
 PatternBenefit::PatternBenefit(unsigned benefit) : representation(benefit) {
   assert(representation == benefit && benefit != ImpossibleToMatchSentinel &&
          "This pattern match benefit is too large to represent");
@@ -27,20 +31,35 @@ unsigned short PatternBenefit::getBenefit() const {
 }
 
 //===----------------------------------------------------------------------===//
-// Pattern implementation
+// Pattern
 //===----------------------------------------------------------------------===//
 
 Pattern::Pattern(StringRef rootName, PatternBenefit benefit,
                  MLIRContext *context)
     : rootKind(OperationName(rootName, context)), benefit(benefit) {}
-Pattern::Pattern(PatternBenefit benefit, MatchAnyOpTypeTag)
+Pattern::Pattern(PatternBenefit benefit, MatchAnyOpTypeTag tag)
     : benefit(benefit) {}
-
-// Out-of-line vtable anchor.
-void Pattern::anchor() {}
+Pattern::Pattern(StringRef rootName, ArrayRef<StringRef> generatedNames,
+                 PatternBenefit benefit, MLIRContext *context)
+    : Pattern(rootName, benefit, context) {
+  generatedOps.reserve(generatedNames.size());
+  std::transform(generatedNames.begin(), generatedNames.end(),
+                 std::back_inserter(generatedOps), [context](StringRef name) {
+                   return OperationName(name, context);
+                 });
+}
+Pattern::Pattern(ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
+                 MLIRContext *context, MatchAnyOpTypeTag tag)
+    : Pattern(benefit, tag) {
+  generatedOps.reserve(generatedNames.size());
+  std::transform(generatedNames.begin(), generatedNames.end(),
+                 std::back_inserter(generatedOps), [context](StringRef name) {
+                   return OperationName(name, context);
+                 });
+}
 
 //===----------------------------------------------------------------------===//
-// RewritePattern and PatternRewriter implementation
+// RewritePattern
 //===----------------------------------------------------------------------===//
 
 void RewritePattern::rewrite(Operation *op, PatternRewriter &rewriter) const {
@@ -52,26 +71,12 @@ LogicalResult RewritePattern::match(Operation *op) const {
   llvm_unreachable("need to implement either match or matchAndRewrite!");
 }
 
-RewritePattern::RewritePattern(StringRef rootName,
-                               ArrayRef<StringRef> generatedNames,
-                               PatternBenefit benefit, MLIRContext *context)
-    : Pattern(rootName, benefit, context) {
-  generatedOps.reserve(generatedNames.size());
-  std::transform(generatedNames.begin(), generatedNames.end(),
-                 std::back_inserter(generatedOps), [context](StringRef name) {
-                   return OperationName(name, context);
-                 });
-}
-RewritePattern::RewritePattern(ArrayRef<StringRef> generatedNames,
-                               PatternBenefit benefit, MLIRContext *context,
-                               MatchAnyOpTypeTag tag)
-    : Pattern(benefit, tag) {
-  generatedOps.reserve(generatedNames.size());
-  std::transform(generatedNames.begin(), generatedNames.end(),
-                 std::back_inserter(generatedOps), [context](StringRef name) {
-                   return OperationName(name, context);
-                 });
-}
+/// Out-of-line vtable anchor.
+void RewritePattern::anchor() {}
+
+//===----------------------------------------------------------------------===//
+// PatternRewriter
+//===----------------------------------------------------------------------===//
 
 PatternRewriter::~PatternRewriter() {
   // Out of line to provide a vtable anchor for the class.
@@ -201,7 +206,7 @@ void PatternRewriter::cloneRegionBefore(Region &region, Block *before) {
 }
 
 //===----------------------------------------------------------------------===//
-// PatternMatcher implementation
+// PatternApplicator
 //===----------------------------------------------------------------------===//
 
 void PatternApplicator::applyCostModel(CostModel model) {
@@ -266,16 +271,16 @@ void PatternApplicator::applyCostModel(CostModel model) {
 }
 
 void PatternApplicator::walkAllPatterns(
-    function_ref<void(const RewritePattern &)> walk) {
+    function_ref<void(const Pattern &)> walk) {
   for (auto &it : owningPatternList)
     walk(*it);
 }
 
 LogicalResult PatternApplicator::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter,
-    function_ref<bool(const RewritePattern &)> canApply,
-    function_ref<void(const RewritePattern &)> onFailure,
-    function_ref<LogicalResult(const RewritePattern &)> onSuccess) {
+    function_ref<bool(const Pattern &)> canApply,
+    function_ref<void(const Pattern &)> onFailure,
+    function_ref<LogicalResult(const Pattern &)> onSuccess) {
   // Check to see if there are patterns matching this specific operation type.
   MutableArrayRef<RewritePattern *> opPatterns;
   auto patternIt = patterns.find(op->getName());
@@ -315,9 +320,9 @@ LogicalResult PatternApplicator::matchAndRewrite(
 
 LogicalResult PatternApplicator::matchAndRewrite(
     Operation *op, const RewritePattern &pattern, PatternRewriter &rewriter,
-    function_ref<bool(const RewritePattern &)> canApply,
-    function_ref<void(const RewritePattern &)> onFailure,
-    function_ref<LogicalResult(const RewritePattern &)> onSuccess) {
+    function_ref<bool(const Pattern &)> canApply,
+    function_ref<void(const Pattern &)> onFailure,
+    function_ref<LogicalResult(const Pattern &)> onSuccess) {
   // Check that the pattern can be applied.
   if (canApply && !canApply(pattern))
     return failure();
