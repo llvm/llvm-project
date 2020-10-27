@@ -3980,8 +3980,12 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     const APInt &C1 = N1C->getAPIntValue();
     EVT ShValTy = N0.getValueType();
 
-    // Fold bit comparisons when we can.
-    if (getBooleanContents(N0.getValueType()) == ZeroOrOneBooleanContent &&
+    // Fold bit comparisons when we can. This will result in an
+    // incorrect value when boolean false is negative one, unless
+    // the bitsize is 1 in which case the false value is the same
+    // in practice regardless of the representation.
+    if ((VT.getSizeInBits() == 1 ||
+         getBooleanContents(N0.getValueType()) == ZeroOrOneBooleanContent) &&
         (Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
         (VT == ShValTy || (isTypeLegal(VT) && VT.bitsLE(ShValTy))) &&
         N0.getOpcode() == ISD::AND) {
