@@ -115,6 +115,11 @@ public:
       return allocator.Allocate(size, alignment);
     }
 
+    /// Returns true if this allocator allocated the provided object pointer.
+    bool allocated(const void *ptr) {
+      return allocator.identifyObject(ptr).hasValue();
+    }
+
   private:
     /// The raw allocator for type storage objects.
     llvm::BumpPtrAllocator allocator;
@@ -227,7 +232,7 @@ public:
       return static_cast<Storage &>(*storage).mutate(
           allocator, std::forward<Args>(args)...);
     };
-    return mutateImpl(id, mutationFn);
+    return mutateImpl(id, storage, mutationFn);
   }
 
 private:
@@ -254,7 +259,7 @@ private:
 
   /// Implementation for mutating an instance of a derived storage.
   LogicalResult
-  mutateImpl(TypeID id,
+  mutateImpl(TypeID id, BaseStorage *storage,
              function_ref<LogicalResult(StorageAllocator &)> mutationFn);
 
   /// The internal implementation class.
