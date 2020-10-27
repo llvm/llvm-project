@@ -2429,14 +2429,15 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // Okay, we do not know the exit count here. Can we at least prove that it
       // will remain the same within iteration space?
       auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
-      auto OptimizeCond = [&](bool Inverted) {
-        if (isTrivialCond(L, BI, SE, Inverted, MaxExitCount)) {
+      auto OptimizeCond = [&](bool Inverted, const SCEV *MaxIter) {
+        if (isTrivialCond(L, BI, SE, Inverted, MaxIter)) {
           FoldExit(ExitingBB, Inverted);
           return true;
         }
         return false;
       };
-      if (OptimizeCond(false) || OptimizeCond(true))
+      if (OptimizeCond(false, MaxExitCount) ||
+          OptimizeCond(true, MaxExitCount))
         Changed = true;
       continue;
     }
