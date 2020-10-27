@@ -126,6 +126,12 @@ template <>
 bool error_value<bool>() {
   return false;
 }
+#if __SIZEOF_SIZE_T__ != __SIZEOF_LONG_LONG__
+template <>
+size_t error_value<size_t>() {
+  return size_t(-1);
+}
+#endif
 template <>
 uintmax_t error_value<uintmax_t>() {
   return uintmax_t(-1);
