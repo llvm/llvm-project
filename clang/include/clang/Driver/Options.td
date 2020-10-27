@@ -2560,6 +2560,10 @@ def mexec_model_EQ : Joined<["-"], "mexec-model=">, Group<m_wasm_Features_Driver
                      Values<"command,reactor">,
                      HelpText<"Execution model (WebAssembly only)">;
 
+def mcode_object_version_EQ : Joined<["-"], "mcode-object-version=">, Group<m_Group>,
+  HelpText<"Specify code object ABI version. Defaults to 4. (AMDGPU only)">,
+  MetaVarName<"<version>">, Values<"2,3,4">;
+
 def mcode_object_v3_legacy : Flag<["-"], "mcode-object-v3">, Group<m_Group>,
   HelpText<"Legacy option to specify code object ABI V2 (-mnocode-object-v3) or V3 (-mcode-object-v3) (AMDGPU only)">;
 def mno_code_object_v3_legacy : Flag<["-"], "mno-code-object-v3">, Group<m_Group>;
