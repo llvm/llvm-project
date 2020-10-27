@@ -78,7 +78,6 @@ static_library("Support") {
     "FoldingSet.cpp",
     "FormatVariadic.cpp",
     "FormattedStream.cpp",
-    "GenericDomTree.cpp",
     "GlobPattern.cpp",
     "GraphWriter.cpp",
     "Hashing.cpp",
