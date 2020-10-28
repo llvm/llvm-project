@@ -744,13 +744,13 @@ entry:
 
 ; GCN-LABEL: {{^}}tail_call_byval_align16:
 ; GCN-NOT: s32
-; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:12
-; GCN: buffer_load_dword v33, off, s[0:3], s32 offset:8
+; GCN: buffer_load_dword [[VREG1:v[0-9]+]], off, s[0:3], s32 offset:8
+; GCN: buffer_load_dword [[VREG2:v[0-9]+]], off, s[0:3], s32 offset:12
 
 ; GCN: s_getpc_b64
 
-; GCN: buffer_store_dword v32, off, s[0:3], s32 offset:4
-; GCN: buffer_store_dword v33, off, s[0:3], s32{{$}}
+; GCN: buffer_store_dword [[VREG2]], off, s[0:3], s32 offset:4
+; GCN: buffer_store_dword [[VREG1]], off, s[0:3], s32{{$}}
 ; GCN-NOT: s32
 ; GCN: s_setpc_b64
 define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
