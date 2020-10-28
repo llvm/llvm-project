@@ -380,7 +380,7 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
         if (Argument *Arg = IRP.getAssociatedArgument())
           IRPositions.emplace_back(IRPosition::argument(*Arg));
         IRPositions.emplace_back(IRPosition::function(*Callee));
-    }
+      }
     }
     IRPositions.emplace_back(IRPosition::value(IRP.getAssociatedValue()));
     return;
