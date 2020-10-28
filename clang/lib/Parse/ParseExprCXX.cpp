@@ -1293,6 +1293,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   }
 
   TypeResult TrailingReturnType;
+  SourceLocation TrailingReturnTypeLoc;
   if (Tok.is(tok::l_paren)) {
     ParseScope PrototypeScope(this,
                               Scope::FunctionPrototypeScope |
@@ -1379,6 +1380,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
       SourceRange Range;
       TrailingReturnType =
           ParseTrailingReturnType(Range, /*MayBeFollowedByDirectInit*/ false);
+      TrailingReturnTypeLoc = Range.getBegin();
       if (Range.getEnd().isValid())
         DeclEndLoc = Range.getEnd();
     }
@@ -1395,7 +1397,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                       NoexceptExpr.isUsable() ? NoexceptExpr.get() : nullptr,
                       /*ExceptionSpecTokens*/ nullptr,
                       /*DeclsInPrototype=*/None, LParenLoc, FunLocalRangeEnd, D,
-                      TrailingReturnType, &DS),
+                      TrailingReturnType, TrailingReturnTypeLoc, &DS),
                   std::move(Attr), DeclEndLoc);
 
     // Parse requires-clause[opt].
