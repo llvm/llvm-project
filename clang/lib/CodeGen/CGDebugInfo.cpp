@@ -752,6 +752,13 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
       return DBuilder.createVectorType(/*Size*/ 0, Align, ElemTy,
                                        SubscriptArray);
     }
+  // It doesn't make sense to generate debug info for PowerPC MMA vector types.
+  // So we return a safe type here to avoid generating an error.
+#define PPC_MMA_VECTOR_TYPE(Name, Id, size) \
+  case BuiltinType::Id:
+#include "clang/Basic/PPCTypes.def"
+    return CreateType(cast<const BuiltinType>(CGM.getContext().IntTy));
+
   case BuiltinType::UChar:
   case BuiltinType::Char_U:
     Encoding = llvm::dwarf::DW_ATE_unsigned_char;

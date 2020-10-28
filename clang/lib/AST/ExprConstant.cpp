@@ -10948,6 +10948,9 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
 #define SVE_TYPE(Name, Id, SingletonId) \
     case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define PPC_MMA_VECTOR_TYPE(Name, Id, Size) \
+    case BuiltinType::Id:
+#include "clang/Basic/PPCTypes.def"
       return GCCTypeClass::None;
 
     case BuiltinType::Dependent:
