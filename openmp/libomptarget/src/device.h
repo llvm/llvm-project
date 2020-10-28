@@ -29,14 +29,11 @@ struct __tgt_target_table;
 struct __tgt_async_info;
 class MemoryManagerTy;
 
-using map_var_info_t = void *;
-
 /// Map between host data and target data.
 struct HostDataToTargetTy {
   uintptr_t HstPtrBase; // host info.
   uintptr_t HstPtrBegin;
   uintptr_t HstPtrEnd; // non-inclusive.
-  map_var_info_t HstPtrName; // Source name of mapped variable
 
   uintptr_t TgtPtrBegin; // target info.
 
@@ -47,8 +44,8 @@ private:
 
 public:
   HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E, uintptr_t TB,
-                     map_var_info_t Name = nullptr, bool IsINF = false)
-      : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E), HstPtrName(Name),
+      bool IsINF = false)
+      : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E),
         TgtPtrBegin(TB), RefCount(IsINF ? INFRefCount : 1) {}
 
   uint64_t getRefCount() const {
@@ -166,9 +163,9 @@ struct DeviceTy {
   uint64_t getMapEntryRefCnt(void *HstPtrBegin);
   LookupResult lookupMapping(void *HstPtrBegin, int64_t Size);
   void *getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
-                         map_var_info_t HstPtrName, bool &IsNew,
-                         bool &IsHostPtr, bool IsImplicit, bool UpdateRefCount,
-                         bool HasCloseModifier, bool HasPresentModifier);
+                         bool &IsNew, bool &IsHostPtr, bool IsImplicit,
+                         bool UpdateRefCount, bool HasCloseModifier,
+                         bool HasPresentModifier);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
                        bool UpdateRefCount, bool &IsHostPtr,
