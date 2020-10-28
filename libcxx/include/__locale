@@ -11,11 +11,6 @@
 #define _LIBCPP___LOCALE
 
 #include <__config>
-
-#if defined(_LIBCPP_HAS_NO_LOCALIZATION)
-#   error "Localization is not supported by this configuration of libc++"
-#endif
-
 #include <string>
 #include <memory>
 #include <utility>
