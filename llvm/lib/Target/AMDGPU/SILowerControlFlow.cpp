@@ -680,60 +680,58 @@ MachineBasicBlock *SILowerControlFlow::process(MachineInstr &MI) {
 }
 
 bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
-  auto getFallThroughSucc = [=](MachineBasicBlock * MBB) {
-    MachineBasicBlock *Ret = nullptr;
-    for (auto S : MBB->successors()) {
-      if (MBB->isLayoutSuccessor(S)) {
-        // The only fallthrough candidate
-        MachineBasicBlock::iterator I(MBB->getFirstInstrTerminator());
-        while (I != MBB->end()) {
-          if (I->isBranch() && TII->getBranchDestBlock(*I) == S)
-            // We have unoptimized branch to layout successor
-            break;
-          I++;
-        }
-        if (I == MBB->end())
-          Ret = S;
-        break;
+  auto GetFallThroughSucc = [=](MachineBasicBlock *B) -> MachineBasicBlock * {
+    auto *S = B->getNextNode();
+    if (!S)
+      return nullptr;
+    if (B->isSuccessor(S)) {
+      // The only fallthrough candidate
+      MachineBasicBlock::iterator I(B->getFirstInstrTerminator());
+      MachineBasicBlock::iterator E = B->end();
+      for (; I != E; I++) {
+        if (I->isBranch() && TII->getBranchDestBlock(*I) == S)
+          // We have unoptimized branch to layout successor
+          return nullptr;
       }
     }
-    return Ret;
+    return S;
   };
-  bool Redundant = true;
+
   for (auto &I : MBB.instrs()) {
     if (!I.isDebugInstr() && !I.isUnconditionalBranch())
-      Redundant = false;
+      return false;
   }
-  if (Redundant) {
-    MachineBasicBlock *Succ = *MBB.succ_begin();
-    SmallVector<MachineBasicBlock *, 2> Preds(MBB.predecessors());
-    MachineBasicBlock *FallThrough = nullptr;
-    for (auto P : Preds) {
-      if (getFallThroughSucc(P) == &MBB)
-        FallThrough = P;
-      P->ReplaceUsesOfBlockWith(&MBB, Succ);
-    }
-    MBB.removeSuccessor(Succ);
-    if (LIS) {
-      for (auto &I : MBB.instrs())
-        LIS->RemoveMachineInstrFromMaps(I);
-    }
-    MBB.clear();
-    MBB.eraseFromParent();
-    if (FallThrough && !FallThrough->isLayoutSuccessor(Succ)) {
-      MachineFunction *MF = FallThrough->getParent();
-      if (!getFallThroughSucc(Succ)) {
-        MachineFunction::iterator InsertPt(FallThrough->getNextNode());
-        MF->splice(InsertPt, Succ);
-      } else
-        BuildMI(*FallThrough, FallThrough->end(),
-                FallThrough->findBranchDebugLoc(), TII->get(AMDGPU::S_BRANCH))
-            .addMBB(Succ);
-    }
 
-    return true;
+  assert(MBB.succ_size() == 1 && "MBB has more than one successor");
+
+  MachineBasicBlock *Succ = *MBB.succ_begin();
+  MachineBasicBlock *FallThrough = nullptr;
+
+  while (!MBB.predecessors().empty()) {
+    MachineBasicBlock *P = *MBB.pred_begin();
+    if (GetFallThroughSucc(P) == &MBB)
+      FallThrough = P;
+    P->ReplaceUsesOfBlockWith(&MBB, Succ);
   }
-  return false;
+  MBB.removeSuccessor(Succ);
+  if (LIS) {
+    for (auto &I : MBB.instrs())
+      LIS->RemoveMachineInstrFromMaps(I);
+  }
+  MBB.clear();
+  MBB.eraseFromParent();
+  if (FallThrough && !FallThrough->isLayoutSuccessor(Succ)) {
+    if (!GetFallThroughSucc(Succ)) {
+      MachineFunction *MF = FallThrough->getParent();
+      MachineFunction::iterator FallThroughPos(FallThrough);
+      MF->splice(std::next(FallThroughPos), Succ);
+    } else
+      BuildMI(*FallThrough, FallThrough->end(),
+              FallThrough->findBranchDebugLoc(), TII->get(AMDGPU::S_BRANCH))
+          .addMBB(Succ);
+  }
+
+  return true;
 }
 
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
