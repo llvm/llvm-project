@@ -7005,7 +7005,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
         child_bitfield_bit_size = 0;
         child_bitfield_bit_offset = 0;
 
-        language_flags |= LanguageFlags::eIgnoreInstancePointerness;
         return superclass_type;
       }
 
