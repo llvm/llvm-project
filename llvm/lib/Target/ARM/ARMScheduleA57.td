@@ -33,13 +33,13 @@ def IsLdrAm3RegOffPredX2 : MCSchedPredicate<CheckInvalidRegOperand<3>>;
 def IsLdrAm3RegOffPredX3 : MCSchedPredicate<CheckInvalidRegOperand<4>>;
 
 // If Addrmode3 contains "minus register"
-def IsLdrAm3NegRegOffPred :
-  SchedPredicate<[{TII->isAddrMode3OpMinusReg(*MI, 1)}]>;
-// The same predicate with operand offset 2 and 3:
-def IsLdrAm3NegRegOffPredX2 :
-  SchedPredicate<[{TII->isAddrMode3OpMinusReg(*MI, 2)}]>;
-def IsLdrAm3NegRegOffPredX3 :
-  SchedPredicate<[{TII->isAddrMode3OpMinusReg(*MI, 3)}]>;
+class Am3NegativeRegOffset<int n> : MCSchedPredicate<CheckAll<[
+                                      CheckValidRegOperand<n>,
+                                      CheckAM3OpSub<!add(n, 1)>]>>;
+
+def IsLdrAm3NegRegOffPred : Am3NegativeRegOffset<2>;
+def IsLdrAm3NegRegOffPredX2 : Am3NegativeRegOffset<3>;
+def IsLdrAm3NegRegOffPredX3 : Am3NegativeRegOffset<4>;
 
 // Load, scaled register offset, not plus LSL2
 def IsLdstsoScaledNotOptimalPredX0 :

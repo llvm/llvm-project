@@ -171,6 +171,10 @@ let FunctionMapper = "ARM_AM::getAM2ShiftOpc" in {
 def IsLDMBaseRegInList : CheckFunctionPredicate<
   "ARM_MC::isLDMBaseRegInList", "ARM_MC::isLDMBaseRegInList"
 >;
+
+let FunctionMapper = "ARM_AM::getAM3Op" in {
+  class CheckAM3OpSub<int n> : CheckImmOperand_s<n, "ARM_AM::sub"> {}
+}
 //===----------------------------------------------------------------------===//
 // Instruction Itinerary classes used for ARM
 //
