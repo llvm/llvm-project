@@ -2118,6 +2118,9 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
 #define SVE_TYPE(Name, Id, SingletonId) \
   case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define PPC_MMA_VECTOR_TYPE(Name, Id, Size) \
+  case BuiltinType::Id:
+#include "clang/Basic/PPCTypes.def"
   case BuiltinType::ShortAccum:
   case BuiltinType::Accum:
   case BuiltinType::LongAccum:
