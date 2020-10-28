@@ -165,7 +165,7 @@ def IsCPSRDefined : CheckFunctionPredicateWithTII<
 def IsCPSRDefinedPred : MCSchedPredicate<IsCPSRDefined>;
 
 let FunctionMapper = "ARM_AM::getAM2ShiftOpc" in {
-  def CheckExtNoShift : CheckImmOperand_s<4, "ARM_AM::no_shift">;
+  class CheckAM2NoShift<int n> : CheckImmOperand_s<n, "ARM_AM::no_shift">;
 }
 
 let FunctionMapper = "ARM_AM::getAM2Op" in {

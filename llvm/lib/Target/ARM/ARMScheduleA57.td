@@ -49,7 +49,7 @@ def IsLdstsoScaledNotOptimalPred :
 def IsLdstsoScaledNotOptimalPredX2 :
   SchedPredicate<[{TII->isLdstScaledRegNotPlusLsl2(*MI, 2)}]>;
 
-def IsLdstsoScaledPredX2 : MCSchedPredicate<CheckNot<CheckExtNoShift>>;
+def IsLdstsoScaledPredX2 : MCSchedPredicate<CheckNot<CheckAM2NoShift<4>>>;
 
 def IsLdstsoMinusRegPredX0 : MCSchedPredicate<CheckAM2OpSub<2>>;
 def IsLdstsoMinusRegPred : MCSchedPredicate<CheckAM2OpSub<3>>;
