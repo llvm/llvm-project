@@ -582,6 +582,12 @@ namespace llvm {
     DISubrange *getOrCreateSubrange(Metadata *Count, Metadata *LowerBound,
                                     Metadata *UpperBound, Metadata *Stride);
 
+    DIGenericSubrange *
+    getOrCreateGenericSubrange(DIGenericSubrange::BoundType Count,
+                               DIGenericSubrange::BoundType LowerBound,
+                               DIGenericSubrange::BoundType UpperBound,
+                               DIGenericSubrange::BoundType Stride);
+
     /// Create a new descriptor for the specified variable.
     /// \param Context     Variable scope.
     /// \param Name        Name of the variable.
