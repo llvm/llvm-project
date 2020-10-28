@@ -3523,7 +3523,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   case ISD::ROTL:
   case ISD::ROTR:
-    if (TLI.expandROT(Node, Tmp1, DAG))
+    if (TLI.expandROT(Node, true /*AllowVectorOps*/, Tmp1, DAG))
       Results.push_back(Tmp1);
     break;
   case ISD::SADDSAT:
