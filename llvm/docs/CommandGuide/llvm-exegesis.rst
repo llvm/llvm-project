@@ -75,8 +75,6 @@ To measure the latency of all instructions for the host architecture, run:
 
     $ llvm-exegesis -mode=latency -opcode-index=-1
 
-FIXME: Provide an :program:`llvm-exegesis` option to test all instructions.
-
 
 EXAMPLE 2: benchmarking a custom code snippet
 ---------------------------------------------
