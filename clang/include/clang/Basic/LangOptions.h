@@ -413,13 +413,20 @@ public:
     setFPContractMode(LO.getDefaultFPContractMode());
     setRoundingMode(LO.getFPRoundingMode());
     setFPExceptionMode(LO.getFPExceptionMode());
-    setAllowFEnvAccess(LangOptions::FPM_Off);
     setAllowFPReassociate(LO.AllowFPReassoc);
     setNoHonorNaNs(LO.NoHonorNaNs);
     setNoHonorInfs(LO.NoHonorInfs);
     setNoSignedZero(LO.NoSignedZero);
     setAllowReciprocal(LO.AllowRecip);
     setAllowApproxFunc(LO.ApproxFunc);
+    if (getFPContractMode() == LangOptions::FPM_On &&
+        getRoundingMode() == llvm::RoundingMode::Dynamic &&
+        getFPExceptionMode() == LangOptions::FPE_Strict)
+      // If the FP settings are set to the "strict" model, then
+      // FENV access is set to true. (ffp-model=strict)
+      setAllowFEnvAccess(true);
+    else
+      setAllowFEnvAccess(LangOptions::FPM_Off);
   }
 
   bool allowFPContractWithinStatement() const {
