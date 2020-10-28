@@ -24,7 +24,7 @@ Members: [[MEMBERS=<none>]]
 # RUN: yaml2obj --docnum=1 -DCONTENT="12" %s -o %t.content.a
 # RUN: od -t x1 -v %t.content.a | FileCheck %s --ignore-case --check-prefix=CONTENT
 
-# CONTENT: 21 3c 61 72 63 68 3e 0a 12{{$}}
+# CONTENT: 21 3c 61 72 63 68 3e 0a 12
 
 ## Check we can specify magic bytes of size greater than the normal size (size of "!<arch>\n").
 
