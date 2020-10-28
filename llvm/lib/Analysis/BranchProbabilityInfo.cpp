@@ -1138,10 +1138,8 @@ void BranchProbabilityInfo::setEdgeProbability(const BasicBlock *Src,
                     << IndexInSuccessors << " successor probability to " << Prob
                     << "\n");
 
-  if (MaxSuccIdx.find(Src) == MaxSuccIdx.end())
-    MaxSuccIdx[Src] = IndexInSuccessors;
-  else
-    MaxSuccIdx[Src] = std::max(MaxSuccIdx[Src], IndexInSuccessors);
+  unsigned &SuccIdx = MaxSuccIdx[Src];
+  SuccIdx = std::max(SuccIdx, IndexInSuccessors);
 }
 
 /// Set the edge probability for all edges at once.
@@ -1179,6 +1177,8 @@ BranchProbabilityInfo::printEdgeProbability(raw_ostream &OS,
 }
 
 void BranchProbabilityInfo::eraseBlock(const BasicBlock *BB) {
+  // Note that we cannot use successors of BB because the terminator of BB may
+  // have changed when eraseBlock is called as a BasicBlockCallbackVH callback.
   auto It = MaxSuccIdx.find(BB);
   if (It == MaxSuccIdx.end())
     return;
