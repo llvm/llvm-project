@@ -22,12 +22,7 @@
 #include <unistd.h>
 #if KMP_OS_DARWIN
 // OS X
-#include <pthread.h>
-static inline long __kmp_gettid() {
-  uint64_t tid64;
-  pthread_threadid_np(NULL, &tid64);
-  return (long)tid64;
-}
+#define __kmp_gettid() pthread_mach_thread_np(pthread_self())
 #elif KMP_OS_FREEBSD
 #include <pthread_np.h>
 #define __kmp_gettid() pthread_getthreadid_np()
