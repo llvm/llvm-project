@@ -19,13 +19,9 @@ using UIntType = FPBits::UIntType;
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
-static const long double zero = FPBits::zero();
-static const long double negZero = FPBits::negZero();
-static const long double nan = FPBits::buildNaN(1);
-static const long double inf = FPBits::inf();
-static const long double negInf = FPBits::negInf();
+DECLARE_SPECIAL_CONSTANTS(long double)
 
-TEST(RemquoTest, SpecialNumbers) {
+TEST(RemquolTest, SpecialNumbers) {
   int exponent;
   long double x, y;
 
@@ -62,7 +58,7 @@ TEST(RemquoTest, SpecialNumbers) {
   EXPECT_FP_EQ(__llvm_libc::remquol(x, y, &exponent), negZero);
 }
 
-TEST(RemquofTest, SubnormalRange) {
+TEST(RemquolTest, SubnormalRange) {
   constexpr UIntType count = 1000001;
   constexpr UIntType step =
       (FPBits::maxSubnormal - FPBits::minSubnormal) / count;
@@ -77,7 +73,7 @@ TEST(RemquofTest, SubnormalRange) {
   }
 }
 
-TEST(RemquofTest, NormalRange) {
+TEST(RemquolTest, NormalRange) {
   constexpr UIntType count = 1000001;
   constexpr UIntType step = (FPBits::maxNormal - FPBits::minNormal) / count;
   for (UIntType v = FPBits::minNormal, w = FPBits::maxNormal;
