@@ -7069,10 +7069,13 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     auto &V = getAssociatedValue();
     if (!AssumedConstantRange.isEmptySet() &&
         !AssumedConstantRange.isSingleElement()) {
-      if (Instruction *I = dyn_cast<Instruction>(&V))
+      if (Instruction *I = dyn_cast<Instruction>(&V)) {
+        assert(I == getCtxI() && "Should not annotate an instruction which is "
+                                 "not the context instruction");
         if (isa<CallInst>(I) || isa<LoadInst>(I))
           if (setRangeMetadataIfisBetterRange(I, AssumedConstantRange))
             Changed = ChangeStatus::CHANGED;
+      }
     }
 
     return Changed;
@@ -7380,6 +7383,11 @@ struct AAValueConstantRangeCallSiteReturned
 struct AAValueConstantRangeCallSiteArgument : AAValueConstantRangeFloating {
   AAValueConstantRangeCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAValueConstantRangeFloating(IRP, A) {}
+
+  /// See AbstractAttribute::manifest()
+  ChangeStatus manifest(Attributor &A) override {
+    return ChangeStatus::UNCHANGED;
+  }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
