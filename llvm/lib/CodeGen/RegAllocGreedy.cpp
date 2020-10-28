@@ -430,6 +430,11 @@ public:
         MachineFunctionProperties::Property::NoPHIs);
   }
 
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().set(
+      MachineFunctionProperties::Property::IsSSA);
+  }
+
   static char ID;
 
 private:

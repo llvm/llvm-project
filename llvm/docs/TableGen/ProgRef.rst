@@ -214,8 +214,8 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !getdagop   !gt          !head        !if          !isa
                : !le         !listconcat  !listsplat   !lt          !mul
                : !ne         !not         !or          !setdagop    !shl
-               : !size       !sra         !srl         !strconcat   !subst
-               : !tail       !xor
+               : !size       !sra         !srl         !strconcat   !sub
+               : !subst      !tail        !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1662,6 +1662,9 @@ and non-0 as true.
     ``!strconcat`` with two arguments.  It can be used to concatenate operands that
     are not strings, in which
     case an implicit ``!cast<string>`` is done on those operands.
+
+``!sub(``\ *a*\ ``,`` *b*\ ``)``
+    This operator subtracts *b* from *a* and produces the arithmetic difference.
 
 ``!subst(``\ *target*\ ``,`` *repl*\ ``,`` *value*\ ``)``
     This operator replaces all occurrences of the *target* in the *value* with
