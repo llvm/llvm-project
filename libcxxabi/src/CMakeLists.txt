@@ -202,6 +202,8 @@ if (LIBCXXABI_ENABLE_SHARED)
     list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
   endif()
 
+  add_library(cxxabi-reexports INTERFACE)
+
   # -exported_symbols_list is only available on Apple platforms
   if (APPLE)
     function(export_symbols file)
@@ -209,7 +211,7 @@ if (LIBCXXABI_ENABLE_SHARED)
     endfunction()
     function(reexport_symbols file)
       export_symbols("${file}")
-      target_link_libraries(cxxabi_shared INTERFACE "-Wl,-reexported_symbols_list,${file}")
+      target_link_libraries(cxxabi-reexports INTERFACE "-Wl,-reexported_symbols_list,${file}")
     endfunction()
 
     export_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-base.exp")
