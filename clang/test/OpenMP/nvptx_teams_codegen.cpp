@@ -30,8 +30,8 @@ int main (int argc, char **argv) {
 }
 
 // SEQ: [[MEM_TY:%.+]] = type { [128 x i8] }
-// SEQ-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
-// SEQ-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
+// SEQ-DAG: [[SHARED_GLOBAL_RD:@.+]] = weak addrspace(3) global [[MEM_TY]] undef
+// SEQ-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* undef
 // SEQ-DAG: [[KERNEL_SIZE1:@.+]] = internal unnamed_addr constant i{{64|32}} 4
 // SEQ-DAG: [[KERNEL_SIZE2:@.+]] = internal unnamed_addr constant i{{64|32}} {{8|4}}
 // SEQ-DAG: [[KERNEL_SHARED1:@.+]] = internal unnamed_addr constant i16 1
@@ -119,8 +119,8 @@ int main (int argc, char **argv) {
 }
 
 // SEQ2: [[MEM_TY:%.+]] = type { [128 x i8] }
-// SEQ2-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
-// SEQ2-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
+// SEQ2-DAG: [[SHARED_GLOBAL_RD:@.+]] = weak addrspace(3) global [[MEM_TY]] undef
+// SEQ2-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* undef
 // SEQ2-DAG: [[KERNEL_SIZE1:@.+]] = internal unnamed_addr constant i{{64|32}} 4
 // SEQ2-DAG: [[KERNEL_SIZE2:@.+]] = internal unnamed_addr constant i{{64|32}} {{8|4}}
 // SEQ2-DAG: [[KERNEL_SHARED1:@.+]] = internal unnamed_addr constant i16 1

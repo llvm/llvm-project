@@ -1208,7 +1208,7 @@ void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
             : new llvm::GlobalVariable(
                   CGM.getModule(), CGM.VoidPtrTy, /*isConstant=*/false,
                   llvm::GlobalValue::InternalLinkage,
-                  llvm::ConstantPointerNull::get(CGM.VoidPtrTy),
+                  llvm::UndefValue::get(CGM.VoidPtrTy),
                   "_openmp_kernel_static_glob_rd$ptr", /*InsertBefore=*/nullptr,
                   llvm::GlobalValue::NotThreadLocal,
                   CGM.getContext().getTargetAddressSpace(LangAS::cuda_shared));
@@ -1351,7 +1351,7 @@ void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
             : new llvm::GlobalVariable(
                   CGM.getModule(), CGM.VoidPtrTy, /*isConstant=*/false,
                   llvm::GlobalValue::InternalLinkage,
-                  llvm::ConstantPointerNull::get(CGM.VoidPtrTy),
+                  llvm::UndefValue::get(CGM.VoidPtrTy),
                   "_openmp_kernel_static_glob_rd$ptr", /*InsertBefore=*/nullptr,
                   llvm::GlobalValue::NotThreadLocal,
                   CGM.getContext().getTargetAddressSpace(LangAS::cuda_shared));
@@ -3085,8 +3085,8 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
                   llvm::GlobalVariable::NotThreadLocal, SharedAddressSpace)
             : new llvm::GlobalVariable(
                   M, Ty,
-                  /*isConstant=*/false, llvm::GlobalVariable::CommonLinkage,
-                  llvm::Constant::getNullValue(Ty), TransferMediumName,
+                  /*isConstant=*/false, llvm::GlobalVariable::WeakAnyLinkage,
+                  llvm::UndefValue::get(Ty), TransferMediumName,
                   /*InsertBefore=*/nullptr,
                   llvm::GlobalVariable::NotThreadLocal, SharedAddressSpace);
     CGM.addCompilerUsedGlobal(TransferMedium);
@@ -5066,8 +5066,8 @@ void CGOpenMPRuntimeGPU::clear() {
                     C.getTargetAddressSpace(LangAS::cuda_shared))
               : new llvm::GlobalVariable(
                     CGM.getModule(), LLVMStaticTy,
-                    /*isConstant=*/false, llvm::GlobalValue::CommonLinkage,
-                    llvm::Constant::getNullValue(LLVMStaticTy),
+                    /*isConstant=*/false, llvm::GlobalValue::WeakAnyLinkage,
+                    llvm::UndefValue::get(LLVMStaticTy),
                     "_openmp_shared_static_glob_rd_$_",
                     /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
                     C.getTargetAddressSpace(LangAS::cuda_shared));
