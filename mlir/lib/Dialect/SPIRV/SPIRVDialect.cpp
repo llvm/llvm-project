@@ -302,7 +302,7 @@ static Type parseArrayType(SPIRVDialect const &dialect,
 }
 
 // cooperative-matrix-type ::= `!spv.coopmatrix` `<` element-type ',' scope ','
-//                                                   rows ',' coloumns>`
+//                                                   rows ',' columns>`
 static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
                                        DialectAsmParser &parser) {
   if (parser.parseLess())
@@ -621,7 +621,7 @@ static Type parseStructType(SPIRVDialect const &dialect,
 
   StringRef identifier;
 
-  // Check if this is an idenitifed struct type.
+  // Check if this is an identified struct type.
   if (succeeded(parser.parseOptionalKeyword(&identifier))) {
     // Check if this is a possible recursive reference.
     if (succeeded(parser.parseOptionalGreater())) {

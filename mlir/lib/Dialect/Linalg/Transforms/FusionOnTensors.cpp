@@ -147,7 +147,7 @@ static void generateFusedTensorOpRegion(PatternRewriter &rewriter,
     }
 
     // If consumer is an indexed_generic op, map the indices to the block
-    // arguments directly. Otherwise, add the same type of arugment and map to
+    // arguments directly. Otherwise, add the same type of argument and map to
     // it.
     if (consumerArg.index() < numConsumerIndices) {
       mapper.map(consumerArg.value(),

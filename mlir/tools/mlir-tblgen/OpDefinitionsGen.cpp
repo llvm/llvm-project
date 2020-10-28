@@ -325,7 +325,7 @@ private:
 //   attribute (the generated function call returns an Attribute);
 // - operandGet corresponds to the name of the function with which to retrieve
 //   an operand (the generated function call returns an OperandRange);
-// - reultGet corresponds to the name of the function to get an result (the
+// - resultGet corresponds to the name of the function to get an result (the
 //   generated function call returns a ValueRange);
 static void populateSubstitutions(const Operator &op, const char *attrGet,
                                   const char *operandGet, const char *resultGet,
@@ -570,7 +570,7 @@ void OpEmitter::genAttrGetters() {
         PrintWarning(
             op.getLoc(),
             formatv(
-                "op has non-materialzable derived attributes '{0}', skipping",
+                "op has non-materializable derived attributes '{0}', skipping",
                 os.str()));
         body << formatv("  emitOpError(\"op has non-materializable derived "
                         "attributes '{0}'\");\n",
@@ -965,7 +965,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
     llvm_unreachable("unhandled TypeParamKind");
   };
 
-  // Some of the build methods generated here may be amiguous, but TableGen's
+  // Some of the build methods generated here may be ambiguous, but TableGen's
   // ambiguous function detection will elide those ones.
   for (auto attrType : attrBuilderType) {
     emit(attrType, TypeParamKind::Separate, /*inferType=*/false);

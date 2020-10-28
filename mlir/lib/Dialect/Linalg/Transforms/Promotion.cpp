@@ -161,7 +161,7 @@ struct LinalgOpInstancePromotionOptions {
   CopyCallbackFn copyInFn;
   CopyCallbackFn copyOutFn;
 
-  /// Allow the use of dynamicaly-sized buffers.
+  /// Allow the use of dynamically-sized buffers.
   bool dynamicBuffers;
   /// Alignment of promoted buffer.
   Optional<unsigned> alignment;

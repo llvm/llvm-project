@@ -981,7 +981,7 @@ int printAffineExpr(MlirContext ctx) {
       !mlirAffineExprIsFunctionOfDim(affineCeilDivExpr, 5))
     return 8;
 
-  // Tests 'IsA' methods of affine binary operaion expression.
+  // Tests 'IsA' methods of affine binary operation expression.
   if (!mlirAffineExprIsAAdd(affineAddExpr))
     return 9;
 
