@@ -1,5 +1,5 @@
-xxx-tblgen: Target Description to C++ Code
-==========================================
+xxx-tblgen - Target Description to C++ Code
+===========================================
 
 .. program:: tblgen
 
