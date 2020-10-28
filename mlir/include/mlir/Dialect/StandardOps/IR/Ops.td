@@ -2265,15 +2265,15 @@ def MemRefReinterpretCastOp:
 
   let builders = [
     // Build a ReinterpretCastOp with mixed static and dynamic entries.
-    OpBuilder<
-      "MemRefType resultType, Value source, int64_t staticOffset, "
-      "ArrayRef<int64_t> staticSizes, ArrayRef<int64_t> staticStrides, "
-      "ValueRange offset, ValueRange sizes, ValueRange strides, "
-      "ArrayRef<NamedAttribute> attrs = {}">,
+    OpBuilderDAG<(ins "MemRefType":$resultType, "Value":$source,
+      "int64_t":$staticOffset, "ArrayRef<int64_t>":$staticSizes,
+      "ArrayRef<int64_t>":$staticStrides, "ValueRange":$offset,
+      "ValueRange":$sizes, "ValueRange":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
     // Build a ReinterpretCastOp with all dynamic entries.
-    OpBuilder<
-      "MemRefType resultType, Value source, Value offset, ValueRange sizes, "
-      "ValueRange strides, ArrayRef<NamedAttribute> attrs = {}">,
+    OpBuilderDAG<(ins "MemRefType":$resultType, "Value":$source,
+      "Value":$offset, "ValueRange":$sizes, "ValueRange":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
   ];
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
