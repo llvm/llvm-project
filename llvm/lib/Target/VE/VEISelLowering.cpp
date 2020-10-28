@@ -721,8 +721,15 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   /// } Stack
 
   /// Branch {
+
   // VE doesn't have BRCOND
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
+
+  // BRIND and BR_JT are not implemented yet.
+  // FIXME: Implement both for the scalar perforamnce.
+  setOperationAction(ISD::BRIND, MVT::Other, Expand);
+  setOperationAction(ISD::BR_JT, MVT::Other, Expand);
+
   /// } Branch
 
   /// Int Ops {
