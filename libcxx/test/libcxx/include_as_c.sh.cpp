@@ -17,6 +17,8 @@
 
 // RUN: %{cxx} -c -xc %s -fsyntax-only %{flags} %{compile_flags} -std=c99
 
+#include <__config>
+
 #include <complex.h>
 #include <ctype.h>
 #include <errno.h>
@@ -24,7 +26,9 @@
 #include <float.h>
 #include <inttypes.h>
 #include <limits.h>
-#include <locale.h>
+#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#   include <locale.h>
+#endif
 #include <math.h>
 #include <setjmp.h>
 #include <stdbool.h>
