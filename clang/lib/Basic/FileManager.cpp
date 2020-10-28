@@ -215,7 +215,8 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
     FileEntryRef::MapValue Value = *SeenFileInsertResult.first->second;
     if (LLVM_LIKELY(Value.V.is<FileEntry *>()))
       return FileEntryRef(*SeenFileInsertResult.first);
-    return FileEntryRef(*Value.V.get<const FileEntryRef::MapEntry *>());
+    return FileEntryRef(*reinterpret_cast<const FileEntryRef::MapEntry *>(
+        Value.V.get<const void *>()));
   }
 
   // We've not seen this before. Fill it in.
@@ -347,7 +348,8 @@ FileManager::getVirtualFile(StringRef Filename, off_t Size,
     FileEntry *FE;
     if (LLVM_LIKELY(FE = Value.V.dyn_cast<FileEntry *>()))
       return FE;
-    return &FileEntryRef(*Value.V.get<const FileEntryRef::MapEntry *>())
+    return &FileEntryRef(*reinterpret_cast<const FileEntryRef::MapEntry *>(
+                             Value.V.get<const void *>()))
                 .getFileEntry();
   }
 
