@@ -58,6 +58,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
 
   // Target cpu features.
   bool HasAltivec = false;
+  bool HasMMA = false;
   bool HasVSX = false;
   bool HasP8Vector = false;
   bool HasP8Crypto = false;
@@ -418,7 +419,7 @@ public:
       ABI = "elfv1";
     }
 
-    if (Triple.isOSFreeBSD() || Triple.isMusl()) {
+    if (Triple.isOSFreeBSD() || Triple.isOSOpenBSD() || Triple.isMusl()) {
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     }

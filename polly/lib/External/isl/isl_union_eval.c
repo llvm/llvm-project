@@ -24,18 +24,16 @@ static __isl_give isl_val *FN(UNION,eval_void)(__isl_take UNION *u,
 	return isl_val_nan(ctx);
 }
 
-/* Is the domain space of "entry" equal to "space"?
+/* Do the tuples of "space" correspond to those of the domain of "part"?
+ * That is, is the domain space of "part" equal to "space", ignoring parameters?
  */
-static isl_bool FN(UNION,has_domain_space)(const void *entry, const void *val)
+static isl_bool FN(UNION,has_domain_space_tuples)(const void *entry,
+	const void *val)
 {
 	PART *part = (PART *)entry;
 	isl_space *space = (isl_space *) val;
 
-	if (isl_space_is_params(space))
-		return isl_space_is_set(part->dim);
-
-	return isl_space_tuple_is_equal(part->dim, isl_dim_in,
-					space, isl_dim_set);
+	return FN(PART,has_domain_space_tuples)(part, space);
 }
 
 __isl_give isl_val *FN(UNION,eval)(__isl_take UNION *u,
@@ -60,7 +58,7 @@ __isl_give isl_val *FN(UNION,eval)(__isl_take UNION *u,
 		goto error;
 	hash = isl_space_get_hash(space);
 	entry = isl_hash_table_find(u->space->ctx, &u->table,
-				    hash, &FN(UNION,has_domain_space),
+				    hash, &FN(UNION,has_domain_space_tuples),
 				    space, 0);
 	isl_space_free(space);
 	if (!entry)

@@ -702,12 +702,12 @@ public:
   }
 
   void SetSummaryFormat(lldb::TypeSummaryImplSP format) {
-    m_type_summary_sp = format;
+    m_type_summary_sp = std::move(format);
     ClearUserVisibleData(eClearUserVisibleDataItemsSummary);
   }
 
   void SetValueFormat(lldb::TypeFormatImplSP format) {
-    m_type_format_sp = format;
+    m_type_format_sp = std::move(format);
     ClearUserVisibleData(eClearUserVisibleDataItemsValue);
   }
 

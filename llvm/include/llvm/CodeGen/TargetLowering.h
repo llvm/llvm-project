@@ -375,6 +375,13 @@ public:
   EVT getShiftAmountTy(EVT LHSTy, const DataLayout &DL,
                        bool LegalTypes = true) const;
 
+  /// Return the preferred type to use for a shift opcode, given the shifted
+  /// amount type is \p ShiftValueTy.
+  LLVM_READONLY
+  virtual LLT getPreferredShiftAmountTy(LLT ShiftValueTy) const {
+    return ShiftValueTy;
+  }
+
   /// Returns the type to be used for the index operand of:
   /// ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
   /// ISD::INSERT_SUBVECTOR, and ISD::EXTRACT_SUBVECTOR
@@ -4182,7 +4189,7 @@ public:
 
   // Lower custom output constraints. If invalid, return SDValue().
   virtual SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Flag,
-                                              SDLoc DL,
+                                              const SDLoc &DL,
                                               const AsmOperandInfo &OpInfo,
                                               SelectionDAG &DAG) const;
 
@@ -4263,7 +4270,7 @@ public:
   /// \param RL Low bits of the RHS of the MUL.  See LL for meaning
   /// \param RH High bits of the RHS of the MUL.  See LL for meaning.
   /// \returns true if the node has been expanded, false if it has not
-  bool expandMUL_LOHI(unsigned Opcode, EVT VT, SDLoc dl, SDValue LHS,
+  bool expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl, SDValue LHS,
                       SDValue RHS, SmallVectorImpl<SDValue> &Result, EVT HiLoVT,
                       SelectionDAG &DAG, MulExpansionKind Kind,
                       SDValue LL = SDValue(), SDValue LH = SDValue(),
@@ -4390,6 +4397,10 @@ public:
   /// Method for building the DAG expansion of ISD::[US][ADD|SUB]SAT. This
   /// method accepts integers as its arguments.
   SDValue expandAddSubSat(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Method for building the DAG expansion of ISD::[US]SHLSAT. This
+  /// method accepts integers as its arguments.
+  SDValue expandShlSat(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Method for building the DAG expansion of ISD::[U|S]MULFIX[SAT]. This
   /// method accepts integers as its arguments.

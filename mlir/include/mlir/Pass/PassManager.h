@@ -9,6 +9,7 @@
 #ifndef MLIR_PASS_PASSMANAGER_H
 #define MLIR_PASS_PASSMANAGER_H
 
+#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/Optional.h"
@@ -46,6 +47,7 @@ struct OpPassManagerImpl;
 /// other OpPassManagers or the top-level PassManager.
 class OpPassManager {
 public:
+  OpPassManager(OperationName name, bool verifyPasses);
   OpPassManager(OpPassManager &&rhs);
   OpPassManager(const OpPassManager &rhs);
   ~OpPassManager();
@@ -53,13 +55,18 @@ public:
 
   /// Iterator over the passes in this pass manager.
   using pass_iterator =
-      llvm::pointee_iterator<std::vector<std::unique_ptr<Pass>>::iterator>;
+      llvm::pointee_iterator<MutableArrayRef<std::unique_ptr<Pass>>::iterator>;
   pass_iterator begin();
   pass_iterator end();
   iterator_range<pass_iterator> getPasses() { return {begin(), end()}; }
 
-  /// Run the held passes over the given operation.
-  LogicalResult run(Operation *op, AnalysisManager am);
+  using const_pass_iterator =
+      llvm::pointee_iterator<ArrayRef<std::unique_ptr<Pass>>::const_iterator>;
+  const_pass_iterator begin() const;
+  const_pass_iterator end() const;
+  iterator_range<const_pass_iterator> getPasses() const {
+    return {begin(), end()};
+  }
 
   /// Nest a new operation pass manager for the given operation kind under this
   /// pass manager.
@@ -100,9 +107,12 @@ public:
   /// Merge the pass statistics of this class into 'other'.
   void mergeStatisticsInto(OpPassManager &other);
 
-private:
-  OpPassManager(OperationName name, bool verifyPasses);
+  /// Register dependent dialects for the current pass manager.
+  /// This is forwarding to every pass in this PassManager, see the
+  /// documentation for the same method on the Pass class.
+  void getDependentDialects(DialectRegistry &dialects) const;
 
+private:
   /// A pointer to an internal implementation instance.
   std::unique_ptr<detail::OpPassManagerImpl> impl;
 

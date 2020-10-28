@@ -36,8 +36,11 @@ declare i32 @_Z3foov() #1
 ; LINUX-SECTIONS-NOT: .section        .text._Z3bazb._Z3bazb.{{[0-9]+}},"ax",@progbits
 ; LINUX-SECTIONS-LABEL: # %bb.1:
 ; LINUX-SECTIONS-NEXT:        callq   _Z3barv
-; LINUX-SECTIONS: .section        .text._Z3bazb._Z3bazb.{{[0-9]+}},"ax",@progbits
-; LINUX-SECTIONS-LABEL: _Z3bazb.{{[0-9]+}}:
+; LINUX-SECTIONS: .section        .text._Z3bazb.[[SECTION_LABEL:_Z3bazb.[0-9]+]],"ax",@progbits
+; LINUX-SECTIONS-NEXT: [[SECTION_LABEL]]:
 ; LINUX-SECTIONS-NEXT:        callq   _Z3foov
-; LINUX-SECTIONS: .Ltmp0:
-; LINUX-SECTIONS-NEXT: .size   _Z3bazb.{{[0-9]+}}, .Ltmp0-_Z3bazb.{{[0-9]+}}
+; LINUX-SECTIONS: .LBB_END0_2:
+; LINUX-SECTIONS-NEXT: .size   [[SECTION_LABEL]], .LBB_END0_2-[[SECTION_LABEL]]
+; LINUX-SECTIONS: .section        .text._Z3bazb,"ax",@progbits
+; LINUX-SECTIONS: .Lfunc_end0:
+; LINUX-SECTIONS-NEXT: .size _Z3bazb, .Lfunc_end0-_Z3bazb

@@ -58,16 +58,28 @@ const char SimplifyConditionDiagnostic[] =
 const char SimplifyConditionalReturnDiagnostic[] =
     "redundant boolean literal in conditional return statement";
 
-const CXXBoolLiteralExpr *getBoolLiteral(const MatchFinder::MatchResult &Result,
-                                         StringRef Id) {
-  const auto *Literal = Result.Nodes.getNodeAs<CXXBoolLiteralExpr>(Id);
-  return (Literal && Literal->getBeginLoc().isMacroID()) ? nullptr : Literal;
+const Expr *getBoolLiteral(const MatchFinder::MatchResult &Result,
+                           StringRef Id) {
+  if (const Expr *Literal = Result.Nodes.getNodeAs<CXXBoolLiteralExpr>(Id))
+    return Literal->getBeginLoc().isMacroID() ? nullptr : Literal;
+  if (const auto *Negated = Result.Nodes.getNodeAs<UnaryOperator>(Id)) {
+    if (Negated->getOpcode() == UO_LNot &&
+        isa<CXXBoolLiteralExpr>(Negated->getSubExpr()))
+      return Negated->getBeginLoc().isMacroID() ? nullptr : Negated;
+  }
+  return nullptr;
+}
+
+internal::BindableMatcher<Stmt> literalOrNegatedBool(bool Value) {
+  return expr(anyOf(cxxBoolLiteral(equals(Value)),
+                    unaryOperator(hasUnaryOperand(ignoringParenImpCasts(
+                                      cxxBoolLiteral(equals(!Value)))),
+                                  hasOperatorName("!"))));
 }
 
 internal::Matcher<Stmt> returnsBool(bool Value, StringRef Id = "ignored") {
-  auto SimpleReturnsBool =
-      returnStmt(has(cxxBoolLiteral(equals(Value)).bind(Id)))
-          .bind("returns-bool");
+  auto SimpleReturnsBool = returnStmt(has(literalOrNegatedBool(Value).bind(Id)))
+                               .bind("returns-bool");
   return anyOf(SimpleReturnsBool,
                compoundStmt(statementCountIs(1), has(SimpleReturnsBool)));
 }
@@ -269,16 +281,25 @@ std::string replacementExpression(const MatchFinder::MatchResult &Result,
   return asBool(getText(Result, *E), NeedsStaticCast);
 }
 
-const CXXBoolLiteralExpr *stmtReturnsBool(const ReturnStmt *Ret, bool Negated) {
+const Expr *stmtReturnsBool(const ReturnStmt *Ret, bool Negated) {
   if (const auto *Bool = dyn_cast<CXXBoolLiteralExpr>(Ret->getRetValue())) {
     if (Bool->getValue() == !Negated)
       return Bool;
+  }
+  if (const auto *Unary = dyn_cast<UnaryOperator>(Ret->getRetValue())) {
+    if (Unary->getOpcode() == UO_LNot) {
+      if (const auto *Bool =
+              dyn_cast<CXXBoolLiteralExpr>(Unary->getSubExpr())) {
+        if (Bool->getValue() == Negated)
+          return Bool;
+      }
+    }
   }
 
   return nullptr;
 }
 
-const CXXBoolLiteralExpr *stmtReturnsBool(const IfStmt *IfRet, bool Negated) {
+const Expr *stmtReturnsBool(const IfStmt *IfRet, bool Negated) {
   if (IfRet->getElse() != nullptr)
     return nullptr;
 
@@ -423,7 +444,7 @@ void SimplifyBooleanExprCheck::matchBoolCondition(MatchFinder *Finder,
                                                   StringRef BooleanId) {
   Finder->addMatcher(
       ifStmt(unless(isInTemplateInstantiation()),
-             hasCondition(cxxBoolLiteral(equals(Value)).bind(BooleanId)))
+             hasCondition(literalOrNegatedBool(Value).bind(BooleanId)))
           .bind(IfStmtId),
       this);
 }
@@ -433,8 +454,8 @@ void SimplifyBooleanExprCheck::matchTernaryResult(MatchFinder *Finder,
                                                   StringRef TernaryId) {
   Finder->addMatcher(
       conditionalOperator(unless(isInTemplateInstantiation()),
-                          hasTrueExpression(cxxBoolLiteral(equals(Value))),
-                          hasFalseExpression(cxxBoolLiteral(equals(!Value))))
+                          hasTrueExpression(literalOrNegatedBool(Value)),
+                          hasFalseExpression(literalOrNegatedBool(!Value)))
           .bind(TernaryId),
       this);
 }
@@ -465,12 +486,12 @@ void SimplifyBooleanExprCheck::matchIfAssignsBool(MatchFinder *Finder,
   auto SimpleThen =
       binaryOperator(hasOperatorName("="), hasLHS(anyOf(VarAssign, MemAssign)),
                      hasLHS(expr().bind(IfAssignVariableId)),
-                     hasRHS(cxxBoolLiteral(equals(Value)).bind(IfAssignLocId)));
+                     hasRHS(literalOrNegatedBool(Value).bind(IfAssignLocId)));
   auto Then = anyOf(SimpleThen, compoundStmt(statementCountIs(1),
                                              hasAnySubstatement(SimpleThen)));
   auto SimpleElse =
       binaryOperator(hasOperatorName("="), hasLHS(anyOf(VarRef, MemRef)),
-                     hasRHS(cxxBoolLiteral(equals(!Value))));
+                     hasRHS(literalOrNegatedBool(!Value)));
   auto Else = anyOf(SimpleElse, compoundStmt(statementCountIs(1),
                                              hasAnySubstatement(SimpleElse)));
   if (ChainedConditionalAssignment)
@@ -495,7 +516,7 @@ void SimplifyBooleanExprCheck::matchCompoundIfReturnsBool(MatchFinder *Finder,
           hasAnySubstatement(
               ifStmt(hasThen(returnsBool(Value)), unless(hasElse(stmt())))),
           hasAnySubstatement(returnStmt(has(ignoringParenImpCasts(
-                                            cxxBoolLiteral(equals(!Value)))))
+                                            literalOrNegatedBool(!Value))))
                                  .bind(CompoundReturnId)))
           .bind(Id),
       this);
@@ -529,10 +550,10 @@ void SimplifyBooleanExprCheck::registerMatchers(MatchFinder *Finder) {
 void SimplifyBooleanExprCheck::check(const MatchFinder::MatchResult &Result) {
   if (Result.Nodes.getNodeAs<TranslationUnitDecl>("top"))
     Visitor(this, Result).TraverseAST(*Result.Context);
-  else if (const CXXBoolLiteralExpr *TrueConditionRemoved =
+  else if (const Expr *TrueConditionRemoved =
                getBoolLiteral(Result, ConditionThenStmtId))
     replaceWithThenStatement(Result, TrueConditionRemoved);
-  else if (const CXXBoolLiteralExpr *FalseConditionRemoved =
+  else if (const Expr *FalseConditionRemoved =
                getBoolLiteral(Result, ConditionElseStmtId))
     replaceWithElseStatement(Result, FalseConditionRemoved);
   else if (const auto *Ternary =
@@ -574,8 +595,7 @@ void SimplifyBooleanExprCheck::issueDiag(
 }
 
 void SimplifyBooleanExprCheck::replaceWithThenStatement(
-    const MatchFinder::MatchResult &Result,
-    const CXXBoolLiteralExpr *TrueConditionRemoved) {
+    const MatchFinder::MatchResult &Result, const Expr *TrueConditionRemoved) {
   const auto *IfStatement = Result.Nodes.getNodeAs<IfStmt>(IfStmtId);
   issueDiag(Result, TrueConditionRemoved->getBeginLoc(),
             SimplifyConditionDiagnostic, IfStatement->getSourceRange(),
@@ -583,8 +603,7 @@ void SimplifyBooleanExprCheck::replaceWithThenStatement(
 }
 
 void SimplifyBooleanExprCheck::replaceWithElseStatement(
-    const MatchFinder::MatchResult &Result,
-    const CXXBoolLiteralExpr *FalseConditionRemoved) {
+    const MatchFinder::MatchResult &Result, const Expr *FalseConditionRemoved) {
   const auto *IfStatement = Result.Nodes.getNodeAs<IfStmt>(IfStmtId);
   const Stmt *ElseStatement = IfStatement->getElse();
   issueDiag(Result, FalseConditionRemoved->getBeginLoc(),
@@ -631,7 +650,7 @@ void SimplifyBooleanExprCheck::replaceCompoundReturnWithCondition(
   for (++After; After != Compound->body_end() && *Current != Ret;
        ++Current, ++After) {
     if (const auto *If = dyn_cast<IfStmt>(*Current)) {
-      if (const CXXBoolLiteralExpr *Lit = stmtReturnsBool(If, Negated)) {
+      if (const Expr *Lit = stmtReturnsBool(If, Negated)) {
         if (*After == Ret) {
           if (!ChainedConditionalReturn && BeforeIf)
             continue;

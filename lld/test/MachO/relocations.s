@@ -19,9 +19,9 @@
 # CHECK:       leaq [[#%u, LSTR_OFF:]](%rip), %rsi
 # CHECK-NEXT:  [[#%x, CSTRING_ADDR + 22 - LSTR_OFF]]
 
-# RUN: llvm-objdump --section=__const --full-contents -d %t | FileCheck %s --check-prefix=NONPCREL
+# RUN: llvm-objdump --section=__const --full-contents %t | FileCheck %s --check-prefix=NONPCREL
 # NONPCREL:      Contents of section __const:
-# NONPCREL-NEXT: 100001000 d0030000 01000000 d0030000 01000000
+# NONPCREL-NEXT: 100001000 f0030000 01000000 f0030000 01000000
 
 .section __TEXT,__text
 .globl _main, _f

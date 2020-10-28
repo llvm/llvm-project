@@ -48,7 +48,7 @@ public:
 
   bool hasBeenUsed() const { return HasBeenUsed; }
 
-  void resetUsedFlag() { HasBeenUsed = false; }
+  void resetUsedFlag(bool HasBeenUsed = false) { this->HasBeenUsed = HasBeenUsed; }
 
   MCSymbol *getLabel() { return AddressTableBaseSym; }
   void setLabel(MCSymbol *Sym) { AddressTableBaseSym = Sym; }

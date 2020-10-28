@@ -54,7 +54,7 @@ body:             |
     %2:_(s32) = COPY $w2
     %3:_(s64) = G_ZEXT %2(s32), debug-location !11
     %4:_(s8) = G_TRUNC %1(s32), debug-location !11
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memset), %0(p0), %4(s8), %3(s64), 0, debug-location !11 :: (store 1 into %ir.ptr)
+    G_MEMSET %0(p0), %4(s8), %3(s64), 0, debug-location !11 :: (store 1 into %ir.ptr)
     RET_ReallyLR debug-location !12
 
 ...

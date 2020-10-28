@@ -1,4 +1,5 @@
-# RUN: llc %s -o - -run-pass=if-converter -debug-only=if-converter 2>%t| FileCheck %s
+# RUN: llc -mtriple=thumbv8a-unknown-linux-gnueabi %s -o - -run-pass=if-converter -debug-only=if-converter | FileCheck %s
+# RUN: llc -mtriple=thumbv7-unknown-linux-gnueabi %s -o - -run-pass=if-converter -debug-only=if-converter 2>%t| FileCheck %s
 # RUN: FileCheck %s < %t --check-prefix=DEBUG
 # REQUIRES: asserts
 
@@ -9,7 +10,6 @@
 # instructions, and selection of the CB(N)Z instructions.
 
 --- |
-  target triple = "thumbv7-unknown-linux-gnueabi"
 
   define void @fn1() minsize {
   entry:

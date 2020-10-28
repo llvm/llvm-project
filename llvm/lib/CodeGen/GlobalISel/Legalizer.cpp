@@ -284,7 +284,7 @@ Legalizer::legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
                                             WrapperObserver)) {
         WorkListObserver.printNewInstrs();
         for (auto *DeadMI : DeadInstructions) {
-          LLVM_DEBUG(dbgs() << *DeadMI << "Is dead\n");
+          LLVM_DEBUG(dbgs() << "Is dead: " << *DeadMI);
           RemoveDeadInstFromLists(DeadMI);
           DeadMI->eraseFromParentAndMarkDBGValuesForRemoval();
         }

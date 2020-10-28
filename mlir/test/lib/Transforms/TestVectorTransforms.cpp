@@ -8,6 +8,9 @@
 
 #include <type_traits>
 
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorTransforms.h"
@@ -122,6 +125,35 @@ struct TestVectorUnrollingPatterns
   }
 };
 
+struct TestVectorTransferFullPartialSplitPatterns
+    : public PassWrapper<TestVectorTransferFullPartialSplitPatterns,
+                         FunctionPass> {
+  TestVectorTransferFullPartialSplitPatterns() = default;
+  TestVectorTransferFullPartialSplitPatterns(
+      const TestVectorTransferFullPartialSplitPatterns &pass) {}
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<AffineDialect, linalg::LinalgDialect, scf::SCFDialect>();
+  }
+
+  Option<bool> useLinalgOps{
+      *this, "use-linalg-copy",
+      llvm::cl::desc("Split using a unmasked vector.transfer + linalg.fill + "
+                     "linalg.copy operations."),
+      llvm::cl::init(false)};
+  void runOnFunction() override {
+    MLIRContext *ctx = &getContext();
+    OwningRewritePatternList patterns;
+    VectorTransformsOptions options;
+    if (useLinalgOps)
+      options.setVectorTransferSplit(VectorTransferSplit::LinalgCopy);
+    else
+      options.setVectorTransferSplit(VectorTransferSplit::VectorTransfer);
+    patterns.insert<VectorTransferFullPartialRewriter>(ctx, options);
+    applyPatternsAndFoldGreedily(getFunction(), patterns);
+  }
+};
+
 } // end anonymous namespace
 
 namespace mlir {
@@ -141,5 +173,10 @@ void registerTestVectorConversions() {
   PassRegistration<TestVectorUnrollingPatterns> contractionUnrollingPass(
       "test-vector-unrolling-patterns",
       "Test conversion patterns to unroll contract ops in the vector dialect");
+
+  PassRegistration<TestVectorTransferFullPartialSplitPatterns>
+      vectorTransformFullPartialPass("test-vector-transfer-full-partial-split",
+                                     "Test conversion patterns to split "
+                                     "transfer ops via scf.if + linalg ops");
 }
 } // namespace mlir

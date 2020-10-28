@@ -2,8 +2,8 @@
 
 #map0 = affine_map<(d0) -> (d0)>
 
-// CHECK-LABEL: func @muliple_results_generic_op
-func @muliple_results_generic_op(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
+// CHECK-LABEL: func @multiple_results_generic_op
+func @multiple_results_generic_op(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
     %0, %1 = linalg.generic {args_in = 1 : i64, args_out = 2 : i64, indexing_maps = [#map0, #map0, #map0], iterator_types = ["parallel"]} %arg0 {
     ^bb0(%gen_arg1: f32):
         %tmp1 = exp %gen_arg1 : f32

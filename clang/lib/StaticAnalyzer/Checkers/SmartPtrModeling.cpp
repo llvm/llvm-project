@@ -17,14 +17,18 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
+#include <string>
 
 using namespace clang;
 using namespace ento;
@@ -33,7 +37,7 @@ namespace {
 class SmartPtrModeling
     : public Checker<eval::Call, check::DeadSymbols, check::RegionChanges> {
 
-  bool isNullAfterMoveMethod(const CallEvent &Call) const;
+  bool isAssignOpMethod(const CallEvent &Call) const;
 
 public:
   // Whether the checker should model for null dereferences of smart pointers.
@@ -49,18 +53,19 @@ public:
                      const LocationContext *LCtx, const CallEvent *Call) const;
 
 private:
-  ProgramStateRef updateTrackedRegion(const CallEvent &Call, CheckerContext &C,
-                                      const MemRegion *ThisValRegion) const;
   void handleReset(const CallEvent &Call, CheckerContext &C) const;
   void handleRelease(const CallEvent &Call, CheckerContext &C) const;
   void handleSwap(const CallEvent &Call, CheckerContext &C) const;
+  void handleGet(const CallEvent &Call, CheckerContext &C) const;
+  bool handleAssignOp(const CallEvent &Call, CheckerContext &C) const;
 
   using SmartPtrMethodHandlerFn =
       void (SmartPtrModeling::*)(const CallEvent &Call, CheckerContext &) const;
   CallDescriptionMap<SmartPtrMethodHandlerFn> SmartPtrMethodHandlers{
       {{"reset"}, &SmartPtrModeling::handleReset},
       {{"release"}, &SmartPtrModeling::handleRelease},
-      {{"swap", 1}, &SmartPtrModeling::handleSwap}};
+      {{"swap", 1}, &SmartPtrModeling::handleSwap},
+      {{"get"}, &SmartPtrModeling::handleGet}};
 };
 } // end of anonymous namespace
 
@@ -119,7 +124,7 @@ static ProgramStateRef updateSwappedRegion(ProgramStateRef State,
   return State;
 }
 
-bool SmartPtrModeling::isNullAfterMoveMethod(const CallEvent &Call) const {
+bool SmartPtrModeling::isAssignOpMethod(const CallEvent &Call) const {
   // TODO: Update CallDescription to support anonymous calls?
   // TODO: Handle other methods, such as .get() or .release().
   // But once we do, we'd need a visitor to explain null dereferences
@@ -130,12 +135,11 @@ bool SmartPtrModeling::isNullAfterMoveMethod(const CallEvent &Call) const {
 
 bool SmartPtrModeling::evalCall(const CallEvent &Call,
                                 CheckerContext &C) const {
-
+  ProgramStateRef State = C.getState();
   if (!smartptr::isStdSmartPtrCall(Call))
     return false;
 
-  if (isNullAfterMoveMethod(Call)) {
-    ProgramStateRef State = C.getState();
+  if (isAssignOpMethod(Call)) {
     const MemRegion *ThisR =
         cast<CXXInstanceCall>(&Call)->getCXXThisVal().getAsRegion();
 
@@ -159,14 +163,51 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
     if (CC->getDecl()->isCopyOrMoveConstructor())
       return false;
 
-    const MemRegion *ThisValRegion = CC->getCXXThisVal().getAsRegion();
-    if (!ThisValRegion)
+    const MemRegion *ThisRegion = CC->getCXXThisVal().getAsRegion();
+    if (!ThisRegion)
       return false;
 
-    auto State = updateTrackedRegion(Call, C, ThisValRegion);
-    C.addTransition(State);
+    if (Call.getNumArgs() == 0) {
+      auto NullVal = C.getSValBuilder().makeNull();
+      State = State->set<TrackedRegionMap>(ThisRegion, NullVal);
+
+      C.addTransition(
+          State, C.getNoteTag([ThisRegion](PathSensitiveBugReport &BR,
+                                           llvm::raw_ostream &OS) {
+            if (&BR.getBugType() != smartptr::getNullDereferenceBugType() ||
+                !BR.isInteresting(ThisRegion))
+              return;
+            OS << "Default constructed smart pointer ";
+            ThisRegion->printPretty(OS);
+            OS << " is null";
+          }));
+    } else {
+      const auto *TrackingExpr = Call.getArgExpr(0);
+      assert(TrackingExpr->getType()->isPointerType() &&
+             "Adding a non pointer value to TrackedRegionMap");
+      auto ArgVal = Call.getArgSVal(0);
+      State = State->set<TrackedRegionMap>(ThisRegion, ArgVal);
+
+      C.addTransition(State, C.getNoteTag([ThisRegion, TrackingExpr,
+                                           ArgVal](PathSensitiveBugReport &BR,
+                                                   llvm::raw_ostream &OS) {
+        if (&BR.getBugType() != smartptr::getNullDereferenceBugType() ||
+            !BR.isInteresting(ThisRegion))
+          return;
+        bugreporter::trackExpressionValue(BR.getErrorNode(), TrackingExpr, BR);
+        OS << "Smart pointer ";
+        ThisRegion->printPretty(OS);
+        if (ArgVal.isZeroConstant())
+          OS << " is constructed using a null value";
+        else
+          OS << " is constructed";
+      }));
+    }
     return true;
   }
+
+  if (handleAssignOp(Call, C))
+    return true;
 
   const SmartPtrMethodHandlerFn *Handler = SmartPtrMethodHandlers.lookup(Call);
   if (!Handler)
@@ -207,37 +248,65 @@ ProgramStateRef SmartPtrModeling::checkRegionChanges(
 
 void SmartPtrModeling::handleReset(const CallEvent &Call,
                                    CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
   const auto *IC = dyn_cast<CXXInstanceCall>(&Call);
   if (!IC)
     return;
 
-  const MemRegion *ThisValRegion = IC->getCXXThisVal().getAsRegion();
-  if (!ThisValRegion)
+  const MemRegion *ThisRegion = IC->getCXXThisVal().getAsRegion();
+  if (!ThisRegion)
     return;
-  auto State = updateTrackedRegion(Call, C, ThisValRegion);
-  C.addTransition(State);
+
+  assert(Call.getArgExpr(0)->getType()->isPointerType() &&
+         "Adding a non pointer value to TrackedRegionMap");
+  State = State->set<TrackedRegionMap>(ThisRegion, Call.getArgSVal(0));
+  const auto *TrackingExpr = Call.getArgExpr(0);
+  C.addTransition(
+      State, C.getNoteTag([ThisRegion, TrackingExpr](PathSensitiveBugReport &BR,
+                                                     llvm::raw_ostream &OS) {
+        if (&BR.getBugType() != smartptr::getNullDereferenceBugType() ||
+            !BR.isInteresting(ThisRegion))
+          return;
+        bugreporter::trackExpressionValue(BR.getErrorNode(), TrackingExpr, BR);
+        OS << "Smart pointer ";
+        ThisRegion->printPretty(OS);
+        OS << " reset using a null value";
+      }));
   // TODO: Make sure to ivalidate the region in the Store if we don't have
   // time to model all methods.
 }
 
 void SmartPtrModeling::handleRelease(const CallEvent &Call,
                                      CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
   const auto *IC = dyn_cast<CXXInstanceCall>(&Call);
   if (!IC)
     return;
 
-  const MemRegion *ThisValRegion = IC->getCXXThisVal().getAsRegion();
-  if (!ThisValRegion)
+  const MemRegion *ThisRegion = IC->getCXXThisVal().getAsRegion();
+  if (!ThisRegion)
     return;
 
-  auto State = updateTrackedRegion(Call, C, ThisValRegion);
+  const auto *InnerPointVal = State->get<TrackedRegionMap>(ThisRegion);
 
-  const auto *InnerPointVal = State->get<TrackedRegionMap>(ThisValRegion);
   if (InnerPointVal) {
     State = State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
                             *InnerPointVal);
   }
-  C.addTransition(State);
+
+  auto ValueToUpdate = C.getSValBuilder().makeNull();
+  State = State->set<TrackedRegionMap>(ThisRegion, ValueToUpdate);
+
+  C.addTransition(State, C.getNoteTag([ThisRegion](PathSensitiveBugReport &BR,
+                                                   llvm::raw_ostream &OS) {
+    if (&BR.getBugType() != smartptr::getNullDereferenceBugType() ||
+        !BR.isInteresting(ThisRegion))
+      return;
+
+    OS << "Smart pointer ";
+    ThisRegion->printPretty(OS);
+    OS << " is released and set to null";
+  }));
   // TODO: Add support to enable MallocChecker to start tracking the raw
   // pointer.
 }
@@ -267,27 +336,126 @@ void SmartPtrModeling::handleSwap(const CallEvent &Call,
   State = updateSwappedRegion(State, ThisRegion, ArgRegionInnerPointerVal);
   State = updateSwappedRegion(State, ArgRegion, ThisRegionInnerPointerVal);
 
+  C.addTransition(
+      State, C.getNoteTag([ThisRegion, ArgRegion](PathSensitiveBugReport &BR,
+                                                  llvm::raw_ostream &OS) {
+        if (&BR.getBugType() != smartptr::getNullDereferenceBugType() ||
+            !BR.isInteresting(ThisRegion))
+          return;
+        BR.markInteresting(ArgRegion);
+        OS << "Swapped null smart pointer ";
+        ArgRegion->printPretty(OS);
+        OS << " with smart pointer ";
+        ThisRegion->printPretty(OS);
+      }));
+}
+
+void SmartPtrModeling::handleGet(const CallEvent &Call,
+                                 CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  const auto *IC = dyn_cast<CXXInstanceCall>(&Call);
+  if (!IC)
+    return;
+
+  const MemRegion *ThisRegion = IC->getCXXThisVal().getAsRegion();
+  if (!ThisRegion)
+    return;
+
+  SVal InnerPointerVal;
+  if (const auto *InnerValPtr = State->get<TrackedRegionMap>(ThisRegion)) {
+    InnerPointerVal = *InnerValPtr;
+  } else {
+    const auto *CallExpr = Call.getOriginExpr();
+    InnerPointerVal = C.getSValBuilder().conjureSymbolVal(
+        CallExpr, C.getLocationContext(), Call.getResultType(), C.blockCount());
+    State = State->set<TrackedRegionMap>(ThisRegion, InnerPointerVal);
+  }
+
+  State = State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
+                          InnerPointerVal);
+  // TODO: Add NoteTag, for how the raw pointer got using 'get' method.
   C.addTransition(State);
 }
 
-ProgramStateRef
-SmartPtrModeling::updateTrackedRegion(const CallEvent &Call, CheckerContext &C,
-                                      const MemRegion *ThisValRegion) const {
-  // TODO: Refactor and clean up handling too many things.
+bool SmartPtrModeling::handleAssignOp(const CallEvent &Call,
+                                      CheckerContext &C) const {
   ProgramStateRef State = C.getState();
-  auto NumArgs = Call.getNumArgs();
+  const auto *OC = dyn_cast<CXXMemberOperatorCall>(&Call);
+  if (!OC)
+    return false;
+  OverloadedOperatorKind OOK = OC->getOverloadedOperator();
+  if (OOK != OO_Equal)
+    return false;
+  const MemRegion *ThisRegion = OC->getCXXThisVal().getAsRegion();
+  if (!ThisRegion)
+    return false;
 
-  if (NumArgs == 0) {
-    auto NullSVal = C.getSValBuilder().makeNull();
-    State = State->set<TrackedRegionMap>(ThisValRegion, NullSVal);
-  } else if (NumArgs == 1) {
-    auto ArgVal = Call.getArgSVal(0);
-    assert(Call.getArgExpr(0)->getType()->isPointerType() &&
-           "Adding a non pointer value to TrackedRegionMap");
-    State = State->set<TrackedRegionMap>(ThisValRegion, ArgVal);
+  const MemRegion *OtherSmartPtrRegion = OC->getArgSVal(0).getAsRegion();
+  // In case of 'nullptr' or '0' assigned
+  if (!OtherSmartPtrRegion) {
+    bool AssignedNull = Call.getArgSVal(0).isZeroConstant();
+    if (!AssignedNull)
+      return false;
+    auto NullVal = C.getSValBuilder().makeNull();
+    State = State->set<TrackedRegionMap>(ThisRegion, NullVal);
+    C.addTransition(State, C.getNoteTag([ThisRegion](PathSensitiveBugReport &BR,
+                                                     llvm::raw_ostream &OS) {
+      if (&BR.getBugType() != smartptr::getNullDereferenceBugType() ||
+          !BR.isInteresting(ThisRegion))
+        return;
+      OS << "Smart pointer ";
+      ThisRegion->printPretty(OS);
+      OS << " is assigned to null";
+    }));
+    return true;
   }
 
-  return State;
+  const auto *OtherInnerPtr = State->get<TrackedRegionMap>(OtherSmartPtrRegion);
+  if (OtherInnerPtr) {
+    State = State->set<TrackedRegionMap>(ThisRegion, *OtherInnerPtr);
+    auto NullVal = C.getSValBuilder().makeNull();
+    State = State->set<TrackedRegionMap>(OtherSmartPtrRegion, NullVal);
+    bool IsArgValNull = OtherInnerPtr->isZeroConstant();
+
+    C.addTransition(
+        State,
+        C.getNoteTag([ThisRegion, OtherSmartPtrRegion, IsArgValNull](
+                         PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
+          if (&BR.getBugType() != smartptr::getNullDereferenceBugType())
+            return;
+          if (BR.isInteresting(OtherSmartPtrRegion)) {
+            OS << "Smart pointer ";
+            OtherSmartPtrRegion->printPretty(OS);
+            OS << " is null after being moved to ";
+            ThisRegion->printPretty(OS);
+          }
+          if (BR.isInteresting(ThisRegion) && IsArgValNull) {
+            OS << "Null pointer value move-assigned to ";
+            ThisRegion->printPretty(OS);
+            BR.markInteresting(OtherSmartPtrRegion);
+          }
+        }));
+    return true;
+  } else {
+    // In case we dont know anything about value we are moving from
+    // remove the entry from map for which smart pointer got moved to.
+    auto NullVal = C.getSValBuilder().makeNull();
+    State = State->remove<TrackedRegionMap>(ThisRegion);
+    State = State->set<TrackedRegionMap>(OtherSmartPtrRegion, NullVal);
+    C.addTransition(State, C.getNoteTag([OtherSmartPtrRegion,
+                                         ThisRegion](PathSensitiveBugReport &BR,
+                                                     llvm::raw_ostream &OS) {
+      if (&BR.getBugType() != smartptr::getNullDereferenceBugType() ||
+          !BR.isInteresting(OtherSmartPtrRegion))
+        return;
+      OS << "Smart pointer ";
+      OtherSmartPtrRegion->printPretty(OS);
+      OS << " is null after; previous value moved to ";
+      ThisRegion->printPretty(OS);
+    }));
+    return true;
+  }
+  return false;
 }
 
 void ento::registerSmartPtrModeling(CheckerManager &Mgr) {

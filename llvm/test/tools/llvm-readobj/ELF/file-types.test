@@ -1,6 +1,6 @@
 ## Check llvm-readobj and llvm-readelf can dump files of the different ELF types.
 
-# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: yaml2obj %s -DTYPE=ET_NONE -o %t1
 # RUN: llvm-readobj -h %t1 | FileCheck %s --match-full-lines --check-prefix LLVM-NONE
 # RUN: llvm-readelf -h %t1 | FileCheck %s --match-full-lines --check-prefix GNU-NONE
 
@@ -12,12 +12,11 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_NONE
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  [[TYPE]]
 
-# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: yaml2obj %s -DTYPE=ET_REL -o %t2
 # RUN: llvm-readobj -h %t2 | FileCheck %s --match-full-lines --check-prefix LLVM-REL
 # RUN: llvm-readelf -h %t2 | FileCheck %s --match-full-lines --check-prefix GNU-REL
 
@@ -27,14 +26,7 @@ FileHeader:
 # GNU-REL: ELF Header:
 # GNU-REL:   Type: REL (Relocatable file)
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-
-# RUN: yaml2obj %s --docnum=3 -o %t3
+# RUN: yaml2obj %s -DTYPE=ET_EXEC -o %t3
 # RUN: llvm-readobj -h %t3 | FileCheck %s --match-full-lines --check-prefix LLVM-EXEC
 # RUN: llvm-readelf -h %t3 | FileCheck %s --match-full-lines --check-prefix GNU-EXEC
 
@@ -44,14 +36,7 @@ FileHeader:
 # GNU-EXEC: ELF Header:
 # GNU-EXEC:   Type: EXEC (Executable file)
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_X86_64
-
-# RUN: yaml2obj %s --docnum=4 -o %t4
+# RUN: yaml2obj %s -DTYPE=ET_DYN -o %t4
 # RUN: llvm-readobj -h %t4 | FileCheck %s --match-full-lines --check-prefix LLVM-DYN
 # RUN: llvm-readelf -h %t4 | FileCheck %s --match-full-lines --check-prefix GNU-DYN
 
@@ -61,14 +46,7 @@ FileHeader:
 # GNU-DYN: ELF Header:
 # GNU-DYN:   Type: DYN (Shared object file)
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-
-# RUN: yaml2obj %s --docnum=5 -o %t5
+# RUN: yaml2obj %s -DTYPE=ET_CORE -o %t5
 # RUN: llvm-readobj -h %t5 | FileCheck %s --match-full-lines --check-prefix LLVM-CORE
 # RUN: llvm-readelf -h %t5 | FileCheck %s --match-full-lines --check-prefix GNU-CORE
 
@@ -78,14 +56,7 @@ FileHeader:
 # GNU-CORE: ELF Header:
 # GNU-CORE:   Type: CORE (Core file)
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_CORE
-  Machine: EM_X86_64
-
-# RUN: yaml2obj %s --docnum=6 -o %t6
+# RUN: yaml2obj %s -DTYPE=0xfe00 -o %t6
 # RUN: llvm-readobj -h %t6 | FileCheck %s --match-full-lines --check-prefix LLVM-LOOS
 # RUN: llvm-readelf -h %t6 | FileCheck %s --match-full-lines --check-prefix GNU-LOOS
 
@@ -95,14 +66,7 @@ FileHeader:
 # GNU-LOOS: ELF Header:
 # GNU-LOOS:   Type: fe00
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    0xfe00
-  Machine: EM_X86_64
-
-# RUN: yaml2obj %s --docnum=7 -o %t7
+# RUN: yaml2obj %s -DTYPE=0xfeff -o %t7
 # RUN: llvm-readobj -h %t7 | FileCheck %s --match-full-lines --check-prefix LLVM-HIOS
 # RUN: llvm-readelf -h %t7 | FileCheck %s --match-full-lines --check-prefix GNU-HIOS
 
@@ -112,14 +76,7 @@ FileHeader:
 # GNU-HIOS: ELF Header:
 # GNU-HIOS:   Type: feff
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    0xfeff
-  Machine: EM_X86_64
-
-# RUN: yaml2obj %s --docnum=8 -o %t8
+# RUN: yaml2obj %s -DTYPE=0xff00 -o %t8
 # RUN: llvm-readobj -h %t8 | FileCheck %s --match-full-lines --check-prefix LLVM-LOPROC
 # RUN: llvm-readelf -h %t8 | FileCheck %s --match-full-lines --check-prefix GNU-LOPROC
 
@@ -129,14 +86,7 @@ FileHeader:
 # GNU-LOPROC: ELF Header:
 # GNU-LOPROC:   Type: ff00
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    0xff00
-  Machine: EM_X86_64
-
-# RUN: yaml2obj %s --docnum=9 -o %t9
+# RUN: yaml2obj %s -DTYPE=0xffff -o %t9
 # RUN: llvm-readobj -h %t9 | FileCheck %s --match-full-lines --check-prefix LLVM-HIPROC
 # RUN: llvm-readelf -h %t9 | FileCheck %s --match-full-lines --check-prefix GNU-HIPROC
 
@@ -145,10 +95,3 @@ FileHeader:
 
 # GNU-HIPROC: ELF Header:
 # GNU-HIPROC:   Type: ffff
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    0xffff
-  Machine: EM_X86_64

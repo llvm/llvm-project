@@ -251,7 +251,7 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
 
   // ARM supports the MachineOutliner.
   setMachineOutliner(true);
-  setSupportsDefaultOutlining(false);
+  setSupportsDefaultOutlining(true);
 }
 
 ARMBaseTargetMachine::~ARMBaseTargetMachine() = default;
@@ -409,8 +409,7 @@ void ARMPassConfig::addIRPasses() {
   // ldrex/strex loops to simplify this, but it needs tidying up.
   if (TM->getOptLevel() != CodeGenOpt::None && EnableAtomicTidy)
     addPass(createCFGSimplificationPass(
-        SimplifyCFGOptions().hoistCommonInsts(true).sinkCommonInsts(true),
-        [this](const Function &F) {
+        SimplifyCFGOptions().sinkCommonInsts(true), [this](const Function &F) {
           const auto &ST = this->TM->getSubtarget<ARMSubtarget>(F);
           return ST.hasAnyDataBarrier() && !ST.isThumb1Only();
         }));

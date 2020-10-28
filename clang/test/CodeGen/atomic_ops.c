@@ -26,6 +26,9 @@ void foo(int x)
 
 }
 
+// LIBCALL: declare void @__atomic_load(i32, i8*, i8*, i32) [[LC_ATTRS:#[0-9]+]]
+// LIBCALL: declare i1 @__atomic_compare_exchange(i32, i8*, i8*, i8*, i32, i32) [[LC_ATTRS:#[0-9]+]]
+
 extern _Atomic _Bool b;
 
 _Bool bar() {
@@ -52,6 +55,8 @@ void baz(int y) {
 
   x += y;
 }
+
+// LIBCALL: declare void @__atomic_store(i32, i8*, i8*, i32) [[LC_ATTRS:#[0-9]+]]
 
 _Atomic(int) compound_add(_Atomic(int) in) {
 // CHECK-LABEL: @compound_add
@@ -107,3 +112,5 @@ _Atomic(int) compound_mul(_Atomic(int) in) {
 
   return (in *= 5);
 }
+
+// LIBCALL: [[LC_ATTRS]] = { nounwind willreturn }

@@ -49,6 +49,7 @@ namespace {
 
 constexpr unsigned DefaultSectionAlign = 4;
 constexpr int16_t MaxSectionIndex = INT16_MAX;
+constexpr uint16_t MaxTOCSizeInARegion = UINT16_MAX;
 
 // Packs the csect's alignment and type into a byte.
 uint8_t getEncodedType(const MCSectionXCOFF *);
@@ -304,6 +305,7 @@ CsectGroup &XCOFFObjectWriter::getCsectGroup(const MCSectionXCOFF *MCSec) {
            "in this CsectGroup.");
     return TOCCsects;
   case XCOFF::XMC_TC:
+  case XCOFF::XMC_TE:
     assert(XCOFF::XTY_SD == MCSec->getCSectType() &&
            "Only an initialized csect can contain TC entry.");
     assert(!TOCCsects.empty() &&
@@ -427,9 +429,15 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
     // The FixedValue should be symbol's virtual address in this object file
     // plus any constant value that we might get.
     FixedValue = getVirtualAddress(SymA, SymASec) + Target.getConstant();
-  else if (Type == XCOFF::RelocationType::R_TOC)
+  else if (Type == XCOFF::RelocationType::R_TOC ||
+           Type == XCOFF::RelocationType::R_TOCL) {
     // The FixedValue should be the TC entry offset from TOC-base.
     FixedValue = SectionMap[SymASec]->Address - TOCCsects.front().Address;
+    if (FixedValue >= MaxTOCSizeInARegion)
+      report_fatal_error(
+          "handling of TOC entries could not fit in the initial TOC "
+          "entry region is not yet supported");
+  }
 
   assert(
       (TargetObjectWriter->is64Bit() ||

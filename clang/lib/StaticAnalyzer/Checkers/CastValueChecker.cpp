@@ -106,8 +106,39 @@ static const NoteTag *getNoteTag(CheckerContext &C,
                                  QualType CastToTy, const Expr *Object,
                                  bool CastSucceeds, bool IsKnownCast) {
   std::string CastToName =
-      CastInfo ? CastInfo->to()->getPointeeCXXRecordDecl()->getNameAsString()
+      CastInfo ? CastInfo->to()->getAsCXXRecordDecl()->getNameAsString()
                : CastToTy->getPointeeCXXRecordDecl()->getNameAsString();
+  Object = Object->IgnoreParenImpCasts();
+
+  return C.getNoteTag(
+      [=]() -> std::string {
+        SmallString<128> Msg;
+        llvm::raw_svector_ostream Out(Msg);
+
+        if (!IsKnownCast)
+          Out << "Assuming ";
+
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(Object)) {
+          Out << '\'' << DRE->getDecl()->getDeclName() << '\'';
+        } else if (const auto *ME = dyn_cast<MemberExpr>(Object)) {
+          Out << (IsKnownCast ? "Field '" : "field '")
+              << ME->getMemberDecl()->getDeclName() << '\'';
+        } else {
+          Out << (IsKnownCast ? "The object" : "the object");
+        }
+
+        Out << ' ' << (CastSucceeds ? "is a" : "is not a") << " '" << CastToName
+            << '\'';
+
+        return std::string(Out.str());
+      },
+      /*IsPrunable=*/true);
+}
+
+static const NoteTag *getNoteTag(CheckerContext &C,
+                                 SmallVector<QualType, 4> CastToTyVec,
+                                 const Expr *Object,
+                                 bool IsKnownCast) {
   Object = Object->IgnoreParenImpCasts();
 
   return C.getNoteTag(
@@ -126,9 +157,19 @@ static const NoteTag *getNoteTag(CheckerContext &C,
         } else {
           Out << (IsKnownCast ? "The object" : "the object");
         }
+        Out << " is";
 
-        Out << ' ' << (CastSucceeds ? "is a" : "is not a") << " '" << CastToName
-            << '\'';
+        bool First = true;
+        for (QualType CastToTy: CastToTyVec) {
+          std::string CastToName =
+            CastToTy->getAsCXXRecordDecl() ?
+            CastToTy->getAsCXXRecordDecl()->getNameAsString() :
+            CastToTy->getPointeeCXXRecordDecl()->getNameAsString();
+          Out << ' ' << ((CastToTyVec.size() == 1) ? "not" :
+                         (First ? "neither" : "nor")) << " a '" << CastToName
+              << '\'';
+          First = false;
+        }
 
         return std::string(Out.str());
       },
@@ -220,40 +261,76 @@ static void addInstanceOfTransition(const CallEvent &Call,
                                     bool IsInstanceOf) {
   const FunctionDecl *FD = Call.getDecl()->getAsFunction();
   QualType CastFromTy = Call.parameters()[0]->getType();
-  QualType CastToTy = FD->getTemplateSpecializationArgs()->get(0).getAsType();
-  if (CastFromTy->isPointerType())
-    CastToTy = C.getASTContext().getPointerType(CastToTy);
-  else if (CastFromTy->isReferenceType())
-    CastToTy = alignReferenceTypes(CastToTy, CastFromTy, C.getASTContext());
-  else
-    return;
-
-  const MemRegion *MR = DV.getAsRegion();
-  const DynamicCastInfo *CastInfo =
-      getDynamicCastInfo(State, MR, CastFromTy, CastToTy);
-
-  bool CastSucceeds;
-  if (CastInfo)
-    CastSucceeds = IsInstanceOf && CastInfo->succeeds();
-  else
-    CastSucceeds = IsInstanceOf || CastFromTy == CastToTy;
-
-  if (isInfeasibleCast(CastInfo, CastSucceeds)) {
-    C.generateSink(State, C.getPredecessor());
-    return;
+  SmallVector<QualType, 4> CastToTyVec;
+  for (unsigned idx = 0; idx < FD->getTemplateSpecializationArgs()->size() - 1;
+       ++idx) {
+    TemplateArgument CastToTempArg =
+      FD->getTemplateSpecializationArgs()->get(idx);
+    switch (CastToTempArg.getKind()) {
+    default:
+      return;
+    case TemplateArgument::Type:
+      CastToTyVec.push_back(CastToTempArg.getAsType());
+      break;
+    case TemplateArgument::Pack:
+      for (TemplateArgument ArgInPack: CastToTempArg.pack_elements())
+        CastToTyVec.push_back(ArgInPack.getAsType());
+      break;
+    }
   }
 
-  // Store the type and the cast information.
-  bool IsKnownCast = CastInfo || CastFromTy == CastToTy;
-  if (!IsKnownCast)
-    State = setDynamicTypeAndCastInfo(State, MR, CastFromTy, CastToTy,
-                                      IsInstanceOf);
+  const MemRegion *MR = DV.getAsRegion();
+  if (MR && CastFromTy->isReferenceType())
+    MR = State->getSVal(DV.castAs<Loc>()).getAsRegion();
 
-  C.addTransition(
-      State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
-                      C.getSValBuilder().makeTruthVal(CastSucceeds)),
-      getNoteTag(C, CastInfo, CastToTy, Call.getArgExpr(0), CastSucceeds,
-                 IsKnownCast));
+  bool Success = false;
+  bool IsAnyKnown = false;
+  for (QualType CastToTy: CastToTyVec) {
+    if (CastFromTy->isPointerType())
+      CastToTy = C.getASTContext().getPointerType(CastToTy);
+    else if (CastFromTy->isReferenceType())
+      CastToTy = alignReferenceTypes(CastToTy, CastFromTy, C.getASTContext());
+    else
+      return;
+
+    const DynamicCastInfo *CastInfo =
+      getDynamicCastInfo(State, MR, CastFromTy, CastToTy);
+
+    bool CastSucceeds;
+    if (CastInfo)
+      CastSucceeds = IsInstanceOf && CastInfo->succeeds();
+    else
+      CastSucceeds = IsInstanceOf || CastFromTy == CastToTy;
+
+    // Store the type and the cast information.
+    bool IsKnownCast = CastInfo || CastFromTy == CastToTy;
+    IsAnyKnown = IsAnyKnown || IsKnownCast;
+    ProgramStateRef NewState = State;
+    if (!IsKnownCast)
+      NewState = setDynamicTypeAndCastInfo(State, MR, CastFromTy, CastToTy,
+                                           IsInstanceOf);
+
+    if (CastSucceeds) {
+      Success = true;
+      C.addTransition(
+          NewState->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
+                             C.getSValBuilder().makeTruthVal(true)),
+          getNoteTag(C, CastInfo, CastToTy, Call.getArgExpr(0), true,
+                     IsKnownCast));
+      if (IsKnownCast)
+        return;
+    } else if (CastInfo && CastInfo->succeeds()) {
+      C.generateSink(NewState, C.getPredecessor());
+      return;
+    }
+  }
+
+  if (!Success) {
+    C.addTransition(
+        State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
+                        C.getSValBuilder().makeTruthVal(false)),
+        getNoteTag(C, CastToTyVec, Call.getArgExpr(0), IsAnyKnown));
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -402,8 +479,9 @@ bool CastValueChecker::evalCall(const CallEvent &Call,
     QualType ParamT = Call.parameters()[0]->getType();
     QualType ResultT = Call.getResultType();
     if (!(ParamT->isPointerType() && ResultT->isPointerType()) &&
-        !(ParamT->isReferenceType() && ResultT->isReferenceType()))
+        !(ParamT->isReferenceType() && ResultT->isReferenceType())) {
       return false;
+    }
 
     DV = Call.getArgSVal(0).getAs<DefinedOrUnknownSVal>();
     break;

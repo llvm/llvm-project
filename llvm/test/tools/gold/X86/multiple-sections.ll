@@ -1,10 +1,8 @@
-; RUN: echo ".text.tin" > %t_order_lto.txt
-; RUN: echo ".text._start" >> %t_order_lto.txt
-; RUN: echo ".text.pat" >> %t_order_lto.txt
-; RUN: llvm-as %s -o %t.o
+; RUN: split-file %s %t
+; RUN: llvm-as %t/a.ll -o %t.o
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     -m elf_x86_64 -o %t.exe %t.o \
-; RUN:     --section-ordering-file=%t_order_lto.txt
+; RUN:     --section-ordering-file=%t/order
 ; RUN: llvm-readelf -s %t.exe | FileCheck %s
 
 ; Check that the order of the sections is tin -> _start -> pat.
@@ -13,6 +11,12 @@
 ; CHECK:      00000000004000b0     1 FUNC    LOCAL  DEFAULT    1 tin
 ; CHECK:      00000000004000c0    15 FUNC    GLOBAL DEFAULT    1 _start
 
+;--- order
+.text.tin
+.text._start
+.text.pat
+
+;--- a.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

@@ -439,8 +439,8 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
             true});
         DIELoc *Loc = new (DIEValueAllocator) DIELoc;
         addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_WASM_location);
-        addSInt(*Loc, dwarf::DW_FORM_sdata, FrameBase.Location.WasmLoc.Kind);
-        addLabel(*Loc, dwarf::DW_FORM_udata, SPSym);
+        addSInt(*Loc, dwarf::DW_FORM_sdata, TI_GLOBAL_RELOC);
+        addLabel(*Loc, dwarf::DW_FORM_data4, SPSym);
         DD->addArangeLabel(SymbolCU(this, SPSym));
         addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_stack_value);
         addBlock(*SPDie, dwarf::DW_AT_frame_base, Loc);
@@ -678,9 +678,9 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
 
   // Add variable address.
 
-  unsigned Offset = DV.getDebugLocListIndex();
-  if (Offset != ~0U) {
-    addLocationList(*VariableDie, dwarf::DW_AT_location, Offset);
+  unsigned Index = DV.getDebugLocListIndex();
+  if (Index != ~0U) {
+    addLocationList(*VariableDie, dwarf::DW_AT_location, Index);
     auto TagOffset = DV.getDebugLocListTagOffset();
     if (TagOffset)
       addUInt(*VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
@@ -1411,8 +1411,8 @@ void DwarfCompileUnit::addAddrTableBase() {
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   MCSymbol *Label = DD->getAddressPool().getLabel();
   addSectionLabel(getUnitDie(),
-                  getDwarfVersion() >= 5 ? dwarf::DW_AT_addr_base
-                                         : dwarf::DW_AT_GNU_addr_base,
+                  DD->getDwarfVersion() >= 5 ? dwarf::DW_AT_addr_base
+                                             : dwarf::DW_AT_GNU_addr_base,
                   Label, TLOF.getDwarfAddrSection()->getBeginSymbol());
 }
 

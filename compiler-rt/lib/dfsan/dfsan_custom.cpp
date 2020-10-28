@@ -607,8 +607,8 @@ unsigned long int __dfsw_strtoul(const char *nptr, char **endptr, int base,
 
 SANITIZER_INTERFACE_ATTRIBUTE
 long long unsigned int __dfsw_strtoull(const char *nptr, char **endptr,
-                                       dfsan_label nptr_label,
-                                       int base, dfsan_label endptr_label,
+                                       int base, dfsan_label nptr_label,
+                                       dfsan_label endptr_label,
                                        dfsan_label base_label,
                                        dfsan_label *ret_label) {
   char *tmp_endptr;

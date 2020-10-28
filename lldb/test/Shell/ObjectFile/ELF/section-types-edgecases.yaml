@@ -2,7 +2,7 @@
 # here to document the existing behavior and to make sure we don't do something
 # completely crazy (like crashing).
 
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: lldb-test object-file %t | FileCheck %s
 
 # The section is called .data, but it has the SHF_EXECINSTR flag set. Have

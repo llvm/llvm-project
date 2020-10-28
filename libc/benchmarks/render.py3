@@ -149,7 +149,7 @@ def setup_graphs(files, display):
             horizontalalignment="right",
             multialignment="left",
             fontsize="small",
-            bbox=dict(boxstyle="round", facecolor="wheat"))
+            bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5))
 
     axes = plt.gca()
     axes.set_title(get_title(get_host(jsons)))

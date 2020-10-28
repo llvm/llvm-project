@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -O1 %s -S -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -O1 %s -S -emit-llvm -o - | opt -ipconstprop -S | FileCheck --check-prefix=IPCP %s
+// RUN: %clang_cc1 %s -S -emit-llvm -o - -disable-llvm-optzns | FileCheck %s
 
 // CHECK: declare !callback ![[cid:[0-9]+]] {{.*}}i32 @pthread_create
 // CHECK: ![[cid]] = !{![[cidb:[0-9]+]]}
@@ -21,14 +20,10 @@ int pthread_create(pthread_t *, const pthread_attr_t *,
 const int GlobalVar = 0;
 
 static void *callee0(void *payload) {
-// IPCP:      define internal i8* @callee0
-// IPCP:        ret i8* null
   return payload;
 }
 
 static void *callee1(void *payload) {
-// IPCP:      define internal i8* @callee1
-// IPCP:        ret i8* bitcast (i32* @GlobalVar to i8*)
   return payload;
 }
 

@@ -12,7 +12,7 @@ void f() {
   T(a)->m = 7;
   int(a)++; // expected-error {{assignment to cast is illegal}}
   __extension__ int(a)++; // expected-error {{assignment to cast is illegal}}
-  __typeof(int)(a,5)<<a; // expected-error {{excess elements in scalar initializer}}
+  __typeof(int)(a,5)<<a; // expected-error {{excess elements in scalar initializer}} expected-warning {{expression result unused}}
   void(a), ++a;
   if (int(a)+1) {}
   for (int(a)+1;;) {} // expected-warning {{expression result unused}}

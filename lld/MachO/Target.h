@@ -44,18 +44,20 @@ public:
 
   // Write code for lazy binding. See the comments on StubsSection for more
   // details.
-  virtual void writeStub(uint8_t *buf, const DylibSymbol &) const = 0;
+  virtual void writeStub(uint8_t *buf, const Symbol &) const = 0;
   virtual void writeStubHelperHeader(uint8_t *buf) const = 0;
   virtual void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
                                     uint64_t entryAddr) const = 0;
 
   // Symbols may be referenced via either the GOT or the stubs section,
   // depending on the relocation type. prepareSymbolRelocation() will set up the
-  // GOT/stubs entries, and getSymbolVA() will return the addresses of those
-  // entries.
-  virtual void prepareSymbolRelocation(Symbol &, const InputSection *,
+  // GOT/stubs entries, and resolveSymbolVA() will return the addresses of those
+  // entries. resolveSymbolVA() may also relax the target instructions to save
+  // on a level of address indirection.
+  virtual void prepareSymbolRelocation(Symbol *, const InputSection *,
                                        const Reloc &) = 0;
-  virtual uint64_t getSymbolVA(const Symbol &, uint8_t type) const = 0;
+  virtual uint64_t resolveSymbolVA(uint8_t *buf, const Symbol &,
+                                   uint8_t type) const = 0;
 
   uint32_t cpuType;
   uint32_t cpuSubtype;

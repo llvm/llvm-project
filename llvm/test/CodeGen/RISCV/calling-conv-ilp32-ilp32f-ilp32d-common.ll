@@ -368,7 +368,6 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV32I-FPELIM-NEXT:    sw zero, 48(sp)
 ; RV32I-FPELIM-NEXT:    sw zero, 44(sp)
 ; RV32I-FPELIM-NEXT:    addi t0, zero, 8
-; RV32I-FPELIM-NEXT:    addi a7, sp, 40
 ; RV32I-FPELIM-NEXT:    addi a0, zero, 1
 ; RV32I-FPELIM-NEXT:    addi a1, zero, 2
 ; RV32I-FPELIM-NEXT:    addi a2, zero, 3
@@ -376,6 +375,7 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV32I-FPELIM-NEXT:    addi a4, zero, 5
 ; RV32I-FPELIM-NEXT:    addi a5, zero, 6
 ; RV32I-FPELIM-NEXT:    addi a6, zero, 7
+; RV32I-FPELIM-NEXT:    addi a7, sp, 40
 ; RV32I-FPELIM-NEXT:    sw t0, 40(sp)
 ; RV32I-FPELIM-NEXT:    call callee_large_scalars_exhausted_regs
 ; RV32I-FPELIM-NEXT:    lw ra, 60(sp)
@@ -401,7 +401,6 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV32I-WITHFP-NEXT:    sw zero, -16(s0)
 ; RV32I-WITHFP-NEXT:    sw zero, -20(s0)
 ; RV32I-WITHFP-NEXT:    addi t0, zero, 8
-; RV32I-WITHFP-NEXT:    addi a7, s0, -24
 ; RV32I-WITHFP-NEXT:    addi a0, zero, 1
 ; RV32I-WITHFP-NEXT:    addi a1, zero, 2
 ; RV32I-WITHFP-NEXT:    addi a2, zero, 3
@@ -409,6 +408,7 @@ define i32 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV32I-WITHFP-NEXT:    addi a4, zero, 5
 ; RV32I-WITHFP-NEXT:    addi a5, zero, 6
 ; RV32I-WITHFP-NEXT:    addi a6, zero, 7
+; RV32I-WITHFP-NEXT:    addi a7, s0, -24
 ; RV32I-WITHFP-NEXT:    sw t0, -24(s0)
 ; RV32I-WITHFP-NEXT:    call callee_large_scalars_exhausted_regs
 ; RV32I-WITHFP-NEXT:    lw s0, 56(sp)
@@ -693,9 +693,9 @@ define void @caller_aligned_stack() nounwind {
 ; RV32I-FPELIM-NEXT:    addi t0, a0, 1311
 ; RV32I-FPELIM-NEXT:    lui a0, 688509
 ; RV32I-FPELIM-NEXT:    addi a5, a0, -2048
-; RV32I-FPELIM-NEXT:    addi a2, sp, 32
 ; RV32I-FPELIM-NEXT:    addi a0, zero, 1
 ; RV32I-FPELIM-NEXT:    addi a1, zero, 11
+; RV32I-FPELIM-NEXT:    addi a2, sp, 32
 ; RV32I-FPELIM-NEXT:    addi a3, zero, 12
 ; RV32I-FPELIM-NEXT:    addi a4, zero, 13
 ; RV32I-FPELIM-NEXT:    addi a6, zero, 4
@@ -736,9 +736,9 @@ define void @caller_aligned_stack() nounwind {
 ; RV32I-WITHFP-NEXT:    addi t0, a0, 1311
 ; RV32I-WITHFP-NEXT:    lui a0, 688509
 ; RV32I-WITHFP-NEXT:    addi a5, a0, -2048
-; RV32I-WITHFP-NEXT:    addi a2, s0, -32
 ; RV32I-WITHFP-NEXT:    addi a0, zero, 1
 ; RV32I-WITHFP-NEXT:    addi a1, zero, 11
+; RV32I-WITHFP-NEXT:    addi a2, s0, -32
 ; RV32I-WITHFP-NEXT:    addi a3, zero, 12
 ; RV32I-WITHFP-NEXT:    addi a4, zero, 13
 ; RV32I-WITHFP-NEXT:    addi a6, zero, 4

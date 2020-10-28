@@ -320,9 +320,12 @@ restartAfterSplit:
   // If we have a vector type, split it.
   if (auto vecTy = dyn_cast_or_null<llvm::VectorType>(type)) {
     auto eltTy = vecTy->getElementType();
-    CharUnits eltSize = (end - begin) / vecTy->getNumElements();
+    CharUnits eltSize =
+        (end - begin) / cast<llvm::FixedVectorType>(vecTy)->getNumElements();
     assert(eltSize == getTypeStoreSize(CGM, eltTy));
-    for (unsigned i = 0, e = vecTy->getNumElements(); i != e; ++i) {
+    for (unsigned i = 0,
+                  e = cast<llvm::FixedVectorType>(vecTy)->getNumElements();
+         i != e; ++i) {
       addEntry(eltTy, begin, begin + eltSize);
       begin += eltSize;
     }
@@ -674,8 +677,9 @@ bool swiftcall::isLegalIntegerType(CodeGenModule &CGM,
 
 bool swiftcall::isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
                                   llvm::VectorType *vectorTy) {
-  return isLegalVectorType(CGM, vectorSize, vectorTy->getElementType(),
-                           vectorTy->getNumElements());
+  return isLegalVectorType(
+      CGM, vectorSize, vectorTy->getElementType(),
+      cast<llvm::FixedVectorType>(vectorTy)->getNumElements());
 }
 
 bool swiftcall::isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
@@ -688,7 +692,7 @@ bool swiftcall::isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
 std::pair<llvm::Type*, unsigned>
 swiftcall::splitLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
                                 llvm::VectorType *vectorTy) {
-  auto numElts = vectorTy->getNumElements();
+  auto numElts = cast<llvm::FixedVectorType>(vectorTy)->getNumElements();
   auto eltTy = vectorTy->getElementType();
 
   // Try to split the vector type in half.
@@ -710,7 +714,7 @@ void swiftcall::legalizeVectorType(CodeGenModule &CGM, CharUnits origVectorSize,
   }
 
   // Try to split the vector into legal subvectors.
-  auto numElts = origVectorTy->getNumElements();
+  auto numElts = cast<llvm::FixedVectorType>(origVectorTy)->getNumElements();
   auto eltTy = origVectorTy->getElementType();
   assert(numElts != 1);
 

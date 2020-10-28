@@ -813,6 +813,7 @@ template <typename A> bool IsAllocatableOrPointer(const A &x) {
 
 // Procedure and pointer detection predicates
 bool IsProcedure(const Expr<SomeType> &);
+bool IsFunction(const Expr<SomeType> &);
 bool IsProcedurePointer(const Expr<SomeType> &);
 bool IsNullPointer(const Expr<SomeType> &);
 
@@ -864,7 +865,7 @@ parser::Message *AttachDeclaration(parser::Message &, const Symbol &);
 parser::Message *AttachDeclaration(parser::Message *, const Symbol &);
 template <typename MESSAGES, typename... A>
 parser::Message *SayWithDeclaration(
-    MESSAGES &messages, const Symbol &symbol, A &&... x) {
+    MESSAGES &messages, const Symbol &symbol, A &&...x) {
   return AttachDeclaration(messages.Say(std::forward<A>(x)...), symbol);
 }
 

@@ -4597,5 +4597,16 @@ void XLCXXABI::emitCXXStermFinalizer(const VarDecl &D, llvm::Function *dtorStub,
 
   CGF.FinishFunction();
 
-  CGM.AddCXXStermFinalizerEntry(StermFinalizer);
+  assert(!D.getAttr<InitPriorityAttr>() &&
+         "Prioritized sinit and sterm functions are not yet supported.");
+
+  if (isTemplateInstantiation(D.getTemplateSpecializationKind()) ||
+      getContext().GetGVALinkageForVariable(&D) == GVA_DiscardableODR)
+    // According to C++ [basic.start.init]p2, class template static data
+    // members (i.e., implicitly or explicitly instantiated specializations)
+    // have unordered initialization. As a consequence, we can put them into
+    // their own llvm.global_dtors entry.
+    CGM.AddCXXStermFinalizerToGlobalDtor(StermFinalizer, 65535);
+  else
+    CGM.AddCXXStermFinalizerEntry(StermFinalizer);
 }

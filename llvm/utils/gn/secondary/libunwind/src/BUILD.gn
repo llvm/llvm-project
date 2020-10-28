@@ -30,6 +30,7 @@ unwind_sources = [
   "RWMutex.hpp",
   "Registers.hpp",
   "Unwind-EHABI.cpp",
+  "Unwind-EHABI.h",
   "Unwind-seh.cpp",
   "Unwind-sjlj.c",
   "UnwindCursor.hpp",

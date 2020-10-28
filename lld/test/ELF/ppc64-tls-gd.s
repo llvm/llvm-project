@@ -16,29 +16,29 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=IE %s
 
 # GD-REL:      .rela.dyn {
-# GD-REL-NEXT:   0x20538 R_PPC64_DTPMOD64 a 0x0
-# GD-REL-NEXT:   0x20540 R_PPC64_DTPREL64 a 0x0
-# GD-REL-NEXT:   0x20548 R_PPC64_DTPMOD64 b 0x0
-# GD-REL-NEXT:   0x20550 R_PPC64_DTPREL64 b 0x0
-# GD-REL-NEXT:   0x20558 R_PPC64_DTPMOD64 c 0x0
-# GD-REL-NEXT:   0x20560 R_PPC64_DTPREL64 c 0x0
+# GD-REL-NEXT:   0x20548 R_PPC64_DTPMOD64 a 0x0
+# GD-REL-NEXT:   0x20550 R_PPC64_DTPREL64 a 0x0
+# GD-REL-NEXT:   0x20558 R_PPC64_DTPMOD64 b 0x0
+# GD-REL-NEXT:   0x20560 R_PPC64_DTPREL64 b 0x0
+# GD-REL-NEXT:   0x20568 R_PPC64_DTPMOD64 c 0x0
+# GD-REL-NEXT:   0x20570 R_PPC64_DTPREL64 c 0x0
 # GD-REL-NEXT: }
 
 ## &DTPMOD(a) - .TOC. = &.got[0] - (.got+0x8000) = -32768
 # GD:      addis 3, 2, 0
 # GD-NEXT: addi 3, 3, -32768
-# GD-NEXT: bl 0x103f4
+# GD-NEXT: bl 0x10400
 # GD-NEXT: ld 2, 24(1)
 
 ## &DTPMOD(b) - .TOC. = &.got[2] - (.got+0x8000) = -32752
 # GD-NEXT: addis 3, 2, 0
 # GD-NEXT: addi 3, 3, -32752
-# GD-NEXT: bl 0x103f4
+# GD-NEXT: bl 0x10400
 # GD-NEXT: ld 2, 24(1)
 
 ## &DTPMOD(b) - .TOC. = &.got[4] - (.got+0x8000) = -32736
 # GD-NEXT: li 3, -32736
-# GD-NEXT: bl 0x103f4
+# GD-NEXT: bl 0x10400
 # GD-NEXT: ld 2, 24(1)
 
 # NOREL: no relocations

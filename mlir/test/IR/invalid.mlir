@@ -17,6 +17,14 @@ func @nestedtensor(tensor<tensor<i8>>) -> () // expected-error {{invalid tensor 
 
 // -----
 
+func @illegalmemrefelementtype(memref<?xtensor<i8>>) -> () // expected-error {{invalid memref element type}}
+
+// -----
+
+func @illegalunrankedmemrefelementtype(memref<*xtensor<i8>>) -> () // expected-error {{invalid memref element type}}
+
+// -----
+
 func @indexvector(vector<4 x index>) -> () // expected-error {{vector elements must be int or float type}}
 
 // -----

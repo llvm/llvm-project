@@ -5653,18 +5653,1193 @@ entry:
   ret <4 x double> %min
 }
 
+define <1 x i32> @constrained_vector_fptosi_v1i32_v1f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v1i32_v1f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI95_0@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI95_0@toc@l(3)
+; PC64LE-NEXT:    xscvdpsxws 0, 0
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v1i32_v1f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI95_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI95_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x i32> @llvm.experimental.constrained.fptosi.v1i32.v1f32(
+                               <1 x float><float 42.0>,
+                               metadata !"fpexcept.strict") #0
+  ret <1 x i32> %result
+}
+
+define <2 x i32> @constrained_vector_fptosi_v2i32_v2f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v2i32_v2f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI96_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI96_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI96_0@toc@l(3)
+; PC64LE-NEXT:    lfs 1, .LCPI96_1@toc@l(4)
+; PC64LE-NEXT:    xscvdpsxws 0, 0
+; PC64LE-NEXT:    xscvdpsxws 1, 1
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtvsrwz 34, 3
+; PC64LE-NEXT:    mtvsrwz 35, 4
+; PC64LE-NEXT:    vmrghw 2, 3, 2
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v2i32_v2f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI96_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI96_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI96_1@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI96_1@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    vmrghw 2, 3, 2
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x i32> @llvm.experimental.constrained.fptosi.v2i32.v2f32(
+                                <2 x float><float 42.0, float 43.0>,
+                                metadata !"fpexcept.strict") #0
+  ret <2 x i32> %result
+}
+
+define <3 x i32> @constrained_vector_fptosi_v3i32_v3f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v3i32_v3f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI97_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI97_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI97_0@toc@l(3)
+; PC64LE-NEXT:    lfs 1, .LCPI97_1@toc@l(4)
+; PC64LE-NEXT:    addis 3, 2, .LCPI97_3@toc@ha
+; PC64LE-NEXT:    lfs 2, .LCPI97_3@toc@l(3)
+; PC64LE-NEXT:    xscvdpsxws 0, 0
+; PC64LE-NEXT:    xscvdpsxws 1, 1
+; PC64LE-NEXT:    xscvdpsxws 2, 2
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtvsrwz 34, 3
+; PC64LE-NEXT:    addis 3, 2, .LCPI97_2@toc@ha
+; PC64LE-NEXT:    mtvsrwz 35, 4
+; PC64LE-NEXT:    addi 3, 3, .LCPI97_2@toc@l
+; PC64LE-NEXT:    mffprwz 4, 2
+; PC64LE-NEXT:    vmrghw 2, 3, 2
+; PC64LE-NEXT:    lvx 3, 0, 3
+; PC64LE-NEXT:    mtvsrwz 36, 4
+; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v3i32_v3f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI97_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI97_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI97_1@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI97_1@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    xscvdpsxws 0, 1
+; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI97_2@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI97_2@toc@l
+; PC64LE9-NEXT:    vmrghw 2, 3, 2
+; PC64LE9-NEXT:    lxvx 35, 0, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI97_3@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI97_3@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 36, 3
+; PC64LE9-NEXT:    vperm 2, 4, 2, 3
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x i32> @llvm.experimental.constrained.fptosi.v3i32.v3f32(
+                                <3 x float><float 42.0, float 43.0,
+                                            float 44.0>,
+                                metadata !"fpexcept.strict") #0
+  ret <3 x i32> %result
+}
+
+define <4 x i32> @constrained_vector_fptosi_v4i32_v4f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v4i32_v4f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI98_0@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI98_0@toc@l
+; PC64LE-NEXT:    lvx 2, 0, 3
+; PC64LE-NEXT:    xvcvspsxws 34, 34
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v4i32_v4f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI98_0@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI98_0@toc@l
+; PC64LE9-NEXT:    lxvx 0, 0, 3
+; PC64LE9-NEXT:    xvcvspsxws 34, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f32(
+                                <4 x float><float 42.0, float 43.0,
+                                            float 44.0, float 45.0>,
+                                metadata !"fpexcept.strict") #0
+  ret <4 x i32> %result
+}
+
+define <1 x i64> @constrained_vector_fptosi_v1i64_v1f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v1i64_v1f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI99_0@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI99_0@toc@l(3)
+; PC64LE-NEXT:    xscvdpsxds 0, 0
+; PC64LE-NEXT:    mffprd 3, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v1i64_v1f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI99_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI99_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxds 0, 0
+; PC64LE9-NEXT:    mffprd 3, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x i64> @llvm.experimental.constrained.fptosi.v1i64.v1f32(
+                               <1 x float><float 42.0>,
+                               metadata !"fpexcept.strict") #0
+  ret <1 x i64> %result
+}
+
+define <2 x i64> @constrained_vector_fptosi_v2i64_v2f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v2i64_v2f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI100_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI100_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI100_0@toc@l(3)
+; PC64LE-NEXT:    lfs 1, .LCPI100_1@toc@l(4)
+; PC64LE-NEXT:    xscvdpsxds 0, 0
+; PC64LE-NEXT:    xscvdpsxds 1, 1
+; PC64LE-NEXT:    mffprd 3, 0
+; PC64LE-NEXT:    mffprd 4, 1
+; PC64LE-NEXT:    mtfprd 0, 3
+; PC64LE-NEXT:    mtfprd 1, 4
+; PC64LE-NEXT:    xxmrghd 34, 1, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v2i64_v2f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI100_0@toc@ha
+; PC64LE9-NEXT:    addis 4, 2, .LCPI100_1@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI100_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxds 0, 0
+; PC64LE9-NEXT:    mffprd 3, 0
+; PC64LE9-NEXT:    lfs 0, .LCPI100_1@toc@l(4)
+; PC64LE9-NEXT:    xscvdpsxds 0, 0
+; PC64LE9-NEXT:    mffprd 4, 0
+; PC64LE9-NEXT:    mtvsrdd 34, 4, 3
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f32(
+                                <2 x float><float 42.0, float 43.0>,
+                                metadata !"fpexcept.strict") #0
+  ret <2 x i64> %result
+}
+
+define <3 x i64> @constrained_vector_fptosi_v3i64_v3f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v3i64_v3f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI101_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI101_1@toc@ha
+; PC64LE-NEXT:    addis 5, 2, .LCPI101_2@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI101_0@toc@l(3)
+; PC64LE-NEXT:    lfs 1, .LCPI101_1@toc@l(4)
+; PC64LE-NEXT:    lfs 2, .LCPI101_2@toc@l(5)
+; PC64LE-NEXT:    xscvdpsxds 0, 0
+; PC64LE-NEXT:    xscvdpsxds 1, 1
+; PC64LE-NEXT:    xscvdpsxds 2, 2
+; PC64LE-NEXT:    mffprd 3, 0
+; PC64LE-NEXT:    mffprd 4, 1
+; PC64LE-NEXT:    mffprd 5, 2
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v3i64_v3f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI101_0@toc@ha
+; PC64LE9-NEXT:    addis 4, 2, .LCPI101_1@toc@ha
+; PC64LE9-NEXT:    addis 5, 2, .LCPI101_2@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI101_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxds 0, 0
+; PC64LE9-NEXT:    mffprd 3, 0
+; PC64LE9-NEXT:    lfs 0, .LCPI101_1@toc@l(4)
+; PC64LE9-NEXT:    xscvdpsxds 0, 0
+; PC64LE9-NEXT:    mffprd 4, 0
+; PC64LE9-NEXT:    lfs 0, .LCPI101_2@toc@l(5)
+; PC64LE9-NEXT:    xscvdpsxds 0, 0
+; PC64LE9-NEXT:    mffprd 5, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x i64> @llvm.experimental.constrained.fptosi.v3i64.v3f32(
+                                <3 x float><float 42.0, float 43.0,
+                                            float 44.0>,
+                                metadata !"fpexcept.strict") #0
+  ret <3 x i64> %result
+}
+
+define <4 x i64> @constrained_vector_fptosi_v4i64_v4f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v4i64_v4f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI102_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI102_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI102_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI102_2@toc@ha
+; PC64LE-NEXT:    lfs 1, .LCPI102_1@toc@l(4)
+; PC64LE-NEXT:    addis 4, 2, .LCPI102_3@toc@ha
+; PC64LE-NEXT:    lfs 2, .LCPI102_2@toc@l(3)
+; PC64LE-NEXT:    lfs 3, .LCPI102_3@toc@l(4)
+; PC64LE-NEXT:    xscvdpsxds 0, 0
+; PC64LE-NEXT:    xscvdpsxds 1, 1
+; PC64LE-NEXT:    xscvdpsxds 2, 2
+; PC64LE-NEXT:    xscvdpsxds 3, 3
+; PC64LE-NEXT:    mffprd 3, 0
+; PC64LE-NEXT:    mffprd 4, 1
+; PC64LE-NEXT:    mtfprd 0, 3
+; PC64LE-NEXT:    mffprd 3, 2
+; PC64LE-NEXT:    mtfprd 1, 4
+; PC64LE-NEXT:    mffprd 4, 3
+; PC64LE-NEXT:    mtfprd 2, 3
+; PC64LE-NEXT:    xxmrghd 34, 1, 0
+; PC64LE-NEXT:    mtfprd 3, 4
+; PC64LE-NEXT:    xxmrghd 35, 3, 2
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v4i64_v4f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI102_0@toc@ha
+; PC64LE9-NEXT:    addis 4, 2, .LCPI102_1@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI102_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxds 0, 0
+; PC64LE9-NEXT:    mffprd 3, 0
+; PC64LE9-NEXT:    lfs 0, .LCPI102_1@toc@l(4)
+; PC64LE9-NEXT:    xscvdpsxds 0, 0
+; PC64LE9-NEXT:    mffprd 4, 0
+; PC64LE9-NEXT:    mtvsrdd 34, 4, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI102_2@toc@ha
+; PC64LE9-NEXT:    addis 4, 2, .LCPI102_3@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI102_2@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxds 0, 0
+; PC64LE9-NEXT:    mffprd 3, 0
+; PC64LE9-NEXT:    lfs 0, .LCPI102_3@toc@l(4)
+; PC64LE9-NEXT:    xscvdpsxds 0, 0
+; PC64LE9-NEXT:    mffprd 4, 0
+; PC64LE9-NEXT:    mtvsrdd 35, 4, 3
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f32(
+                                <4 x float><float 42.0, float 43.0,
+                                            float 44.0, float 45.0>,
+                                metadata !"fpexcept.strict") #0
+  ret <4 x i64> %result
+}
+
+define <1 x i32> @constrained_vector_fptosi_v1i32_v1f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v1i32_v1f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI103_0@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI103_0@toc@l(3)
+; PC64LE-NEXT:    xscvdpsxws 0, 0
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v1i32_v1f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI103_0@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI103_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x i32> @llvm.experimental.constrained.fptosi.v1i32.v1f64(
+                               <1 x double><double 42.1>,
+                               metadata !"fpexcept.strict") #0
+  ret <1 x i32> %result
+}
+
+
+define <2 x i32> @constrained_vector_fptosi_v2i32_v2f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v2i32_v2f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI104_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI104_1@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI104_0@toc@l(3)
+; PC64LE-NEXT:    lfd 1, .LCPI104_1@toc@l(4)
+; PC64LE-NEXT:    xscvdpsxws 0, 0
+; PC64LE-NEXT:    xscvdpsxws 1, 1
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtvsrwz 34, 3
+; PC64LE-NEXT:    mtvsrwz 35, 4
+; PC64LE-NEXT:    vmrghw 2, 3, 2
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v2i32_v2f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI104_0@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI104_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI104_1@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI104_1@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    vmrghw 2, 3, 2
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x i32> @llvm.experimental.constrained.fptosi.v2i32.v2f64(
+                                <2 x double><double 42.1, double 42.2>,
+                                metadata !"fpexcept.strict") #0
+  ret <2 x i32> %result
+}
+
+define <3 x i32> @constrained_vector_fptosi_v3i32_v3f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v3i32_v3f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI105_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI105_1@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI105_0@toc@l(3)
+; PC64LE-NEXT:    lfd 1, .LCPI105_1@toc@l(4)
+; PC64LE-NEXT:    addis 3, 2, .LCPI105_3@toc@ha
+; PC64LE-NEXT:    lfd 2, .LCPI105_3@toc@l(3)
+; PC64LE-NEXT:    xscvdpsxws 0, 0
+; PC64LE-NEXT:    xscvdpsxws 1, 1
+; PC64LE-NEXT:    xscvdpsxws 2, 2
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtvsrwz 34, 3
+; PC64LE-NEXT:    addis 3, 2, .LCPI105_2@toc@ha
+; PC64LE-NEXT:    mtvsrwz 35, 4
+; PC64LE-NEXT:    addi 3, 3, .LCPI105_2@toc@l
+; PC64LE-NEXT:    mffprwz 4, 2
+; PC64LE-NEXT:    vmrghw 2, 3, 2
+; PC64LE-NEXT:    lvx 3, 0, 3
+; PC64LE-NEXT:    mtvsrwz 36, 4
+; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v3i32_v3f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI105_0@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI105_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI105_1@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI105_1@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI105_2@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI105_2@toc@l
+; PC64LE9-NEXT:    vmrghw 2, 3, 2
+; PC64LE9-NEXT:    lxvx 35, 0, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI105_3@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI105_3@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 36, 3
+; PC64LE9-NEXT:    vperm 2, 4, 2, 3
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x i32> @llvm.experimental.constrained.fptosi.v3i32.v3f64(
+                                <3 x double><double 42.1, double 42.2,
+                                             double 42.3>,
+                                metadata !"fpexcept.strict") #0
+  ret <3 x i32> %result
+}
+
+define <4 x i32> @constrained_vector_fptosi_v4i32_v4f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v4i32_v4f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI106_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI106_1@toc@ha
+; PC64LE-NEXT:    addis 5, 2, .LCPI106_2@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI106_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI106_3@toc@ha
+; PC64LE-NEXT:    lfd 1, .LCPI106_1@toc@l(4)
+; PC64LE-NEXT:    lfd 2, .LCPI106_2@toc@l(5)
+; PC64LE-NEXT:    lfd 3, .LCPI106_3@toc@l(3)
+; PC64LE-NEXT:    xscvdpsxws 0, 0
+; PC64LE-NEXT:    xscvdpsxws 1, 1
+; PC64LE-NEXT:    xscvdpsxws 2, 2
+; PC64LE-NEXT:    xscvdpsxws 3, 3
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mffprwz 5, 2
+; PC64LE-NEXT:    mffprwz 6, 3
+; PC64LE-NEXT:    rldimi 4, 3, 32, 0
+; PC64LE-NEXT:    mtfprd 0, 4
+; PC64LE-NEXT:    rldimi 6, 5, 32, 0
+; PC64LE-NEXT:    mtfprd 1, 6
+; PC64LE-NEXT:    xxmrghd 34, 1, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v4i32_v4f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI106_0@toc@ha
+; PC64LE9-NEXT:    addis 4, 2, .LCPI106_1@toc@ha
+; PC64LE9-NEXT:    addis 5, 2, .LCPI106_3@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI106_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    lfd 0, .LCPI106_1@toc@l(4)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 4, 0
+; PC64LE9-NEXT:    rldimi 4, 3, 32, 0
+; PC64LE9-NEXT:    addis 3, 2, .LCPI106_2@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI106_2@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    lfd 0, .LCPI106_3@toc@l(5)
+; PC64LE9-NEXT:    xscvdpsxws 0, 0
+; PC64LE9-NEXT:    mffprwz 5, 0
+; PC64LE9-NEXT:    rldimi 5, 3, 32, 0
+; PC64LE9-NEXT:    mtvsrdd 34, 5, 4
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f64(
+                                <4 x double><double 42.1, double 42.2,
+                                             double 42.3, double 42.4>,
+                                metadata !"fpexcept.strict") #0
+  ret <4 x i32> %result
+}
+
+define <1 x i64> @constrained_vector_fptosi_v1i64_v1f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v1i64_v1f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI107_0@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI107_0@toc@l(3)
+; PC64LE-NEXT:    xscvdpsxds 0, 0
+; PC64LE-NEXT:    mffprd 3, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v1i64_v1f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI107_0@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI107_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxds 0, 0
+; PC64LE9-NEXT:    mffprd 3, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x i64> @llvm.experimental.constrained.fptosi.v1i64.v1f64(
+                               <1 x double><double 42.1>,
+                               metadata !"fpexcept.strict") #0
+  ret <1 x i64> %result
+}
+
+define <2 x i64> @constrained_vector_fptosi_v2i64_v2f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v2i64_v2f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI108_0@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI108_0@toc@l
+; PC64LE-NEXT:    lxvd2x 0, 0, 3
+; PC64LE-NEXT:    xxswapd 0, 0
+; PC64LE-NEXT:    xvcvdpsxds 34, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v2i64_v2f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI108_0@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI108_0@toc@l
+; PC64LE9-NEXT:    lxvx 0, 0, 3
+; PC64LE9-NEXT:    xvcvdpsxds 34, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f64(
+                                <2 x double><double 42.1, double 42.2>,
+                                metadata !"fpexcept.strict") #0
+  ret <2 x i64> %result
+}
+
+define <3 x i64> @constrained_vector_fptosi_v3i64_v3f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v3i64_v3f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI109_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI109_1@toc@ha
+; PC64LE-NEXT:    addis 5, 2, .LCPI109_2@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI109_0@toc@l(3)
+; PC64LE-NEXT:    lfd 1, .LCPI109_1@toc@l(4)
+; PC64LE-NEXT:    lfd 2, .LCPI109_2@toc@l(5)
+; PC64LE-NEXT:    xscvdpsxds 0, 0
+; PC64LE-NEXT:    xscvdpsxds 1, 1
+; PC64LE-NEXT:    xscvdpsxds 2, 2
+; PC64LE-NEXT:    mffprd 3, 0
+; PC64LE-NEXT:    mffprd 4, 1
+; PC64LE-NEXT:    mffprd 5, 2
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v3i64_v3f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI109_0@toc@ha
+; PC64LE9-NEXT:    addis 4, 2, .LCPI109_1@toc@ha
+; PC64LE9-NEXT:    addis 5, 2, .LCPI109_2@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI109_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpsxds 0, 0
+; PC64LE9-NEXT:    mffprd 3, 0
+; PC64LE9-NEXT:    lfd 0, .LCPI109_1@toc@l(4)
+; PC64LE9-NEXT:    xscvdpsxds 0, 0
+; PC64LE9-NEXT:    mffprd 4, 0
+; PC64LE9-NEXT:    lfd 0, .LCPI109_2@toc@l(5)
+; PC64LE9-NEXT:    xscvdpsxds 0, 0
+; PC64LE9-NEXT:    mffprd 5, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x i64> @llvm.experimental.constrained.fptosi.v3i64.v3f64(
+                                <3 x double><double 42.1, double 42.2,
+                                             double 42.3>,
+                                metadata !"fpexcept.strict") #0
+  ret <3 x i64> %result
+}
+
+define <4 x i64> @constrained_vector_fptosi_v4i64_v4f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptosi_v4i64_v4f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI110_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI110_1@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI110_0@toc@l
+; PC64LE-NEXT:    lxvd2x 0, 0, 3
+; PC64LE-NEXT:    addi 3, 4, .LCPI110_1@toc@l
+; PC64LE-NEXT:    lxvd2x 1, 0, 3
+; PC64LE-NEXT:    xxswapd 0, 0
+; PC64LE-NEXT:    xxswapd 1, 1
+; PC64LE-NEXT:    xvcvdpsxds 35, 0
+; PC64LE-NEXT:    xvcvdpsxds 34, 1
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptosi_v4i64_v4f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI110_0@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI110_0@toc@l
+; PC64LE9-NEXT:    lxvx 0, 0, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI110_1@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI110_1@toc@l
+; PC64LE9-NEXT:    xvcvdpsxds 35, 0
+; PC64LE9-NEXT:    lxvx 0, 0, 3
+; PC64LE9-NEXT:    xvcvdpsxds 34, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f64(
+                                <4 x double><double 42.1, double 42.2,
+                                             double 42.3, double 42.4>,
+                                metadata !"fpexcept.strict") #0
+  ret <4 x i64> %result
+}
+
+define <1 x i32> @constrained_vector_fptoui_v1i32_v1f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v1i32_v1f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI111_0@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI111_0@toc@l(3)
+; PC64LE-NEXT:    xscvdpuxws 0, 0
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v1i32_v1f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI111_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI111_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x i32> @llvm.experimental.constrained.fptoui.v1i32.v1f32(
+                               <1 x float><float 42.0>,
+                               metadata !"fpexcept.strict") #0
+  ret <1 x i32> %result
+}
+
+define <2 x i32> @constrained_vector_fptoui_v2i32_v2f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v2i32_v2f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI112_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI112_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI112_0@toc@l(3)
+; PC64LE-NEXT:    lfs 1, .LCPI112_1@toc@l(4)
+; PC64LE-NEXT:    xscvdpuxws 0, 0
+; PC64LE-NEXT:    xscvdpuxws 1, 1
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtvsrwz 34, 3
+; PC64LE-NEXT:    mtvsrwz 35, 4
+; PC64LE-NEXT:    vmrghw 2, 3, 2
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v2i32_v2f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI112_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI112_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI112_1@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI112_1@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    vmrghw 2, 3, 2
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x i32> @llvm.experimental.constrained.fptoui.v2i32.v2f32(
+                                <2 x float><float 42.0, float 43.0>,
+                                metadata !"fpexcept.strict") #0
+  ret <2 x i32> %result
+}
+
+define <3 x i32> @constrained_vector_fptoui_v3i32_v3f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v3i32_v3f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI113_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI113_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI113_0@toc@l(3)
+; PC64LE-NEXT:    lfs 1, .LCPI113_1@toc@l(4)
+; PC64LE-NEXT:    addis 3, 2, .LCPI113_3@toc@ha
+; PC64LE-NEXT:    lfs 2, .LCPI113_3@toc@l(3)
+; PC64LE-NEXT:    xscvdpuxws 0, 0
+; PC64LE-NEXT:    xscvdpuxws 1, 1
+; PC64LE-NEXT:    xscvdpuxws 2, 2
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtvsrwz 34, 3
+; PC64LE-NEXT:    addis 3, 2, .LCPI113_2@toc@ha
+; PC64LE-NEXT:    mtvsrwz 35, 4
+; PC64LE-NEXT:    addi 3, 3, .LCPI113_2@toc@l
+; PC64LE-NEXT:    mffprwz 4, 2
+; PC64LE-NEXT:    vmrghw 2, 3, 2
+; PC64LE-NEXT:    lvx 3, 0, 3
+; PC64LE-NEXT:    mtvsrwz 36, 4
+; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v3i32_v3f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI113_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI113_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI113_1@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI113_1@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    xscvdpuxws 0, 1
+; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI113_2@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI113_2@toc@l
+; PC64LE9-NEXT:    vmrghw 2, 3, 2
+; PC64LE9-NEXT:    lxvx 35, 0, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI113_3@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI113_3@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 36, 3
+; PC64LE9-NEXT:    vperm 2, 4, 2, 3
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x i32> @llvm.experimental.constrained.fptoui.v3i32.v3f32(
+                                <3 x float><float 42.0, float 43.0,
+                                            float 44.0>,
+                                metadata !"fpexcept.strict") #0
+  ret <3 x i32> %result
+}
+
+define <4 x i32> @constrained_vector_fptoui_v4i32_v4f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v4i32_v4f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI114_0@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI114_0@toc@l
+; PC64LE-NEXT:    lvx 2, 0, 3
+; PC64LE-NEXT:    xvcvspuxws 34, 34
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v4i32_v4f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI114_0@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI114_0@toc@l
+; PC64LE9-NEXT:    lxvx 0, 0, 3
+; PC64LE9-NEXT:    xvcvspuxws 34, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f32(
+                                <4 x float><float 42.0, float 43.0,
+                                            float 44.0, float 45.0>,
+                                metadata !"fpexcept.strict") #0
+  ret <4 x i32> %result
+}
+
+define <1 x i64> @constrained_vector_fptoui_v1i64_v1f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v1i64_v1f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI115_0@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI115_0@toc@l(3)
+; PC64LE-NEXT:    xscvdpuxds 0, 0
+; PC64LE-NEXT:    mffprd 3, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v1i64_v1f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI115_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI115_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxds 0, 0
+; PC64LE9-NEXT:    mffprd 3, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x i64> @llvm.experimental.constrained.fptoui.v1i64.v1f32(
+                               <1 x float><float 42.0>,
+                               metadata !"fpexcept.strict") #0
+  ret <1 x i64> %result
+}
+
+define <2 x i64> @constrained_vector_fptoui_v2i64_v2f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v2i64_v2f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI116_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI116_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI116_0@toc@l(3)
+; PC64LE-NEXT:    lfs 1, .LCPI116_1@toc@l(4)
+; PC64LE-NEXT:    xscvdpuxds 0, 0
+; PC64LE-NEXT:    xscvdpuxds 1, 1
+; PC64LE-NEXT:    mffprd 3, 0
+; PC64LE-NEXT:    mffprd 4, 1
+; PC64LE-NEXT:    mtfprd 0, 3
+; PC64LE-NEXT:    mtfprd 1, 4
+; PC64LE-NEXT:    xxmrghd 34, 1, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v2i64_v2f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI116_0@toc@ha
+; PC64LE9-NEXT:    addis 4, 2, .LCPI116_1@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI116_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxds 0, 0
+; PC64LE9-NEXT:    mffprd 3, 0
+; PC64LE9-NEXT:    lfs 0, .LCPI116_1@toc@l(4)
+; PC64LE9-NEXT:    xscvdpuxds 0, 0
+; PC64LE9-NEXT:    mffprd 4, 0
+; PC64LE9-NEXT:    mtvsrdd 34, 4, 3
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f32(
+                                <2 x float><float 42.0, float 43.0>,
+                                metadata !"fpexcept.strict") #0
+  ret <2 x i64> %result
+}
+
+define <3 x i64> @constrained_vector_fptoui_v3i64_v3f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v3i64_v3f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI117_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI117_1@toc@ha
+; PC64LE-NEXT:    addis 5, 2, .LCPI117_2@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI117_0@toc@l(3)
+; PC64LE-NEXT:    lfs 1, .LCPI117_1@toc@l(4)
+; PC64LE-NEXT:    lfs 2, .LCPI117_2@toc@l(5)
+; PC64LE-NEXT:    xscvdpuxds 0, 0
+; PC64LE-NEXT:    xscvdpuxds 1, 1
+; PC64LE-NEXT:    xscvdpuxds 2, 2
+; PC64LE-NEXT:    mffprd 3, 0
+; PC64LE-NEXT:    mffprd 4, 1
+; PC64LE-NEXT:    mffprd 5, 2
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v3i64_v3f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI117_0@toc@ha
+; PC64LE9-NEXT:    addis 4, 2, .LCPI117_1@toc@ha
+; PC64LE9-NEXT:    addis 5, 2, .LCPI117_2@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI117_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxds 0, 0
+; PC64LE9-NEXT:    mffprd 3, 0
+; PC64LE9-NEXT:    lfs 0, .LCPI117_1@toc@l(4)
+; PC64LE9-NEXT:    xscvdpuxds 0, 0
+; PC64LE9-NEXT:    mffprd 4, 0
+; PC64LE9-NEXT:    lfs 0, .LCPI117_2@toc@l(5)
+; PC64LE9-NEXT:    xscvdpuxds 0, 0
+; PC64LE9-NEXT:    mffprd 5, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x i64> @llvm.experimental.constrained.fptoui.v3i64.v3f32(
+                                <3 x float><float 42.0, float 43.0,
+                                            float 44.0>,
+                                metadata !"fpexcept.strict") #0
+  ret <3 x i64> %result
+}
+
+define <4 x i64> @constrained_vector_fptoui_v4i64_v4f32() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v4i64_v4f32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI118_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI118_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI118_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI118_2@toc@ha
+; PC64LE-NEXT:    lfs 1, .LCPI118_1@toc@l(4)
+; PC64LE-NEXT:    addis 4, 2, .LCPI118_3@toc@ha
+; PC64LE-NEXT:    lfs 2, .LCPI118_2@toc@l(3)
+; PC64LE-NEXT:    lfs 3, .LCPI118_3@toc@l(4)
+; PC64LE-NEXT:    xscvdpuxds 0, 0
+; PC64LE-NEXT:    xscvdpuxds 1, 1
+; PC64LE-NEXT:    xscvdpuxds 2, 2
+; PC64LE-NEXT:    xscvdpuxds 3, 3
+; PC64LE-NEXT:    mffprd 3, 0
+; PC64LE-NEXT:    mffprd 4, 1
+; PC64LE-NEXT:    mtfprd 0, 3
+; PC64LE-NEXT:    mffprd 3, 2
+; PC64LE-NEXT:    mtfprd 1, 4
+; PC64LE-NEXT:    mffprd 4, 3
+; PC64LE-NEXT:    mtfprd 2, 3
+; PC64LE-NEXT:    xxmrghd 34, 1, 0
+; PC64LE-NEXT:    mtfprd 3, 4
+; PC64LE-NEXT:    xxmrghd 35, 3, 2
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v4i64_v4f32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI118_0@toc@ha
+; PC64LE9-NEXT:    addis 4, 2, .LCPI118_1@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI118_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxds 0, 0
+; PC64LE9-NEXT:    mffprd 3, 0
+; PC64LE9-NEXT:    lfs 0, .LCPI118_1@toc@l(4)
+; PC64LE9-NEXT:    xscvdpuxds 0, 0
+; PC64LE9-NEXT:    mffprd 4, 0
+; PC64LE9-NEXT:    mtvsrdd 34, 4, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI118_2@toc@ha
+; PC64LE9-NEXT:    addis 4, 2, .LCPI118_3@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI118_2@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxds 0, 0
+; PC64LE9-NEXT:    mffprd 3, 0
+; PC64LE9-NEXT:    lfs 0, .LCPI118_3@toc@l(4)
+; PC64LE9-NEXT:    xscvdpuxds 0, 0
+; PC64LE9-NEXT:    mffprd 4, 0
+; PC64LE9-NEXT:    mtvsrdd 35, 4, 3
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x i64> @llvm.experimental.constrained.fptoui.v4i64.v4f32(
+                                <4 x float><float 42.0, float 43.0,
+                                            float 44.0, float 45.0>,
+                                metadata !"fpexcept.strict") #0
+  ret <4 x i64> %result
+}
+
+define <1 x i32> @constrained_vector_fptoui_v1i32_v1f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v1i32_v1f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI119_0@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI119_0@toc@l(3)
+; PC64LE-NEXT:    xscvdpuxws 0, 0
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v1i32_v1f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI119_0@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI119_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x i32> @llvm.experimental.constrained.fptoui.v1i32.v1f64(
+                               <1 x double><double 42.1>,
+                               metadata !"fpexcept.strict") #0
+  ret <1 x i32> %result
+}
+
+define <2 x i32> @constrained_vector_fptoui_v2i32_v2f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v2i32_v2f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI120_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI120_1@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI120_0@toc@l(3)
+; PC64LE-NEXT:    lfd 1, .LCPI120_1@toc@l(4)
+; PC64LE-NEXT:    xscvdpuxws 0, 0
+; PC64LE-NEXT:    xscvdpuxws 1, 1
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtvsrwz 34, 3
+; PC64LE-NEXT:    mtvsrwz 35, 4
+; PC64LE-NEXT:    vmrghw 2, 3, 2
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v2i32_v2f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI120_0@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI120_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI120_1@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI120_1@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    vmrghw 2, 3, 2
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x i32> @llvm.experimental.constrained.fptoui.v2i32.v2f64(
+                                <2 x double><double 42.1, double 42.2>,
+                                metadata !"fpexcept.strict") #0
+  ret <2 x i32> %result
+}
+
+define <3 x i32> @constrained_vector_fptoui_v3i32_v3f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v3i32_v3f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI121_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI121_1@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI121_0@toc@l(3)
+; PC64LE-NEXT:    lfd 1, .LCPI121_1@toc@l(4)
+; PC64LE-NEXT:    addis 3, 2, .LCPI121_3@toc@ha
+; PC64LE-NEXT:    lfd 2, .LCPI121_3@toc@l(3)
+; PC64LE-NEXT:    xscvdpuxws 0, 0
+; PC64LE-NEXT:    xscvdpuxws 1, 1
+; PC64LE-NEXT:    xscvdpuxws 2, 2
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtvsrwz 34, 3
+; PC64LE-NEXT:    addis 3, 2, .LCPI121_2@toc@ha
+; PC64LE-NEXT:    mtvsrwz 35, 4
+; PC64LE-NEXT:    addi 3, 3, .LCPI121_2@toc@l
+; PC64LE-NEXT:    mffprwz 4, 2
+; PC64LE-NEXT:    vmrghw 2, 3, 2
+; PC64LE-NEXT:    lvx 3, 0, 3
+; PC64LE-NEXT:    mtvsrwz 36, 4
+; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v3i32_v3f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI121_0@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI121_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 34, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI121_1@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI121_1@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 35, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI121_2@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI121_2@toc@l
+; PC64LE9-NEXT:    vmrghw 2, 3, 2
+; PC64LE9-NEXT:    lxvx 35, 0, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI121_3@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI121_3@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    mtvsrws 36, 3
+; PC64LE9-NEXT:    vperm 2, 4, 2, 3
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x i32> @llvm.experimental.constrained.fptoui.v3i32.v3f64(
+                                <3 x double><double 42.1, double 42.2,
+                                             double 42.3>,
+                                metadata !"fpexcept.strict") #0
+  ret <3 x i32> %result
+}
+
+define <4 x i32> @constrained_vector_fptoui_v4i32_v4f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v4i32_v4f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI122_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI122_1@toc@ha
+; PC64LE-NEXT:    addis 5, 2, .LCPI122_2@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI122_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI122_3@toc@ha
+; PC64LE-NEXT:    lfd 1, .LCPI122_1@toc@l(4)
+; PC64LE-NEXT:    lfd 2, .LCPI122_2@toc@l(5)
+; PC64LE-NEXT:    lfd 3, .LCPI122_3@toc@l(3)
+; PC64LE-NEXT:    xscvdpuxws 0, 0
+; PC64LE-NEXT:    xscvdpuxws 1, 1
+; PC64LE-NEXT:    xscvdpuxws 2, 2
+; PC64LE-NEXT:    xscvdpuxws 3, 3
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mffprwz 5, 2
+; PC64LE-NEXT:    mffprwz 6, 3
+; PC64LE-NEXT:    rldimi 4, 3, 32, 0
+; PC64LE-NEXT:    mtfprd 0, 4
+; PC64LE-NEXT:    rldimi 6, 5, 32, 0
+; PC64LE-NEXT:    mtfprd 1, 6
+; PC64LE-NEXT:    xxmrghd 34, 1, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v4i32_v4f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI122_0@toc@ha
+; PC64LE9-NEXT:    addis 4, 2, .LCPI122_1@toc@ha
+; PC64LE9-NEXT:    addis 5, 2, .LCPI122_3@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI122_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    lfd 0, .LCPI122_1@toc@l(4)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 4, 0
+; PC64LE9-NEXT:    rldimi 4, 3, 32, 0
+; PC64LE9-NEXT:    addis 3, 2, .LCPI122_2@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI122_2@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 3, 0
+; PC64LE9-NEXT:    lfd 0, .LCPI122_3@toc@l(5)
+; PC64LE9-NEXT:    xscvdpuxws 0, 0
+; PC64LE9-NEXT:    mffprwz 5, 0
+; PC64LE9-NEXT:    rldimi 5, 3, 32, 0
+; PC64LE9-NEXT:    mtvsrdd 34, 5, 4
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f64(
+                                <4 x double><double 42.1, double 42.2,
+                                             double 42.3, double 42.4>,
+                                metadata !"fpexcept.strict") #0
+  ret <4 x i32> %result
+}
+
+define <1 x i64> @constrained_vector_fptoui_v1i64_v1f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v1i64_v1f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI123_0@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI123_0@toc@l(3)
+; PC64LE-NEXT:    xscvdpuxds 0, 0
+; PC64LE-NEXT:    mffprd 3, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v1i64_v1f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI123_0@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI123_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxds 0, 0
+; PC64LE9-NEXT:    mffprd 3, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x i64> @llvm.experimental.constrained.fptoui.v1i64.v1f64(
+                               <1 x double><double 42.1>,
+                               metadata !"fpexcept.strict") #0
+  ret <1 x i64> %result
+}
+
+define <2 x i64> @constrained_vector_fptoui_v2i64_v2f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v2i64_v2f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI124_0@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI124_0@toc@l
+; PC64LE-NEXT:    lxvd2x 0, 0, 3
+; PC64LE-NEXT:    xxswapd 0, 0
+; PC64LE-NEXT:    xvcvdpuxds 34, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v2i64_v2f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI124_0@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI124_0@toc@l
+; PC64LE9-NEXT:    lxvx 0, 0, 3
+; PC64LE9-NEXT:    xvcvdpuxds 34, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f64(
+                                <2 x double><double 42.1, double 42.2>,
+                                metadata !"fpexcept.strict") #0
+  ret <2 x i64> %result
+}
+
+define <3 x i64> @constrained_vector_fptoui_v3i64_v3f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v3i64_v3f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI125_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI125_1@toc@ha
+; PC64LE-NEXT:    addis 5, 2, .LCPI125_2@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI125_0@toc@l(3)
+; PC64LE-NEXT:    lfd 1, .LCPI125_1@toc@l(4)
+; PC64LE-NEXT:    lfd 2, .LCPI125_2@toc@l(5)
+; PC64LE-NEXT:    xscvdpuxds 0, 0
+; PC64LE-NEXT:    xscvdpuxds 1, 1
+; PC64LE-NEXT:    xscvdpuxds 2, 2
+; PC64LE-NEXT:    mffprd 3, 0
+; PC64LE-NEXT:    mffprd 4, 1
+; PC64LE-NEXT:    mffprd 5, 2
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v3i64_v3f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI125_0@toc@ha
+; PC64LE9-NEXT:    addis 4, 2, .LCPI125_1@toc@ha
+; PC64LE9-NEXT:    addis 5, 2, .LCPI125_2@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI125_0@toc@l(3)
+; PC64LE9-NEXT:    xscvdpuxds 0, 0
+; PC64LE9-NEXT:    mffprd 3, 0
+; PC64LE9-NEXT:    lfd 0, .LCPI125_1@toc@l(4)
+; PC64LE9-NEXT:    xscvdpuxds 0, 0
+; PC64LE9-NEXT:    mffprd 4, 0
+; PC64LE9-NEXT:    lfd 0, .LCPI125_2@toc@l(5)
+; PC64LE9-NEXT:    xscvdpuxds 0, 0
+; PC64LE9-NEXT:    mffprd 5, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x i64> @llvm.experimental.constrained.fptoui.v3i64.v3f64(
+                                <3 x double><double 42.1, double 42.2,
+                                             double 42.3>,
+                                metadata !"fpexcept.strict") #0
+  ret <3 x i64> %result
+}
+
+define <4 x i64> @constrained_vector_fptoui_v4i64_v4f64() #0 {
+; PC64LE-LABEL: constrained_vector_fptoui_v4i64_v4f64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI126_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI126_1@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI126_0@toc@l
+; PC64LE-NEXT:    lxvd2x 0, 0, 3
+; PC64LE-NEXT:    addi 3, 4, .LCPI126_1@toc@l
+; PC64LE-NEXT:    lxvd2x 1, 0, 3
+; PC64LE-NEXT:    xxswapd 0, 0
+; PC64LE-NEXT:    xxswapd 1, 1
+; PC64LE-NEXT:    xvcvdpuxds 35, 0
+; PC64LE-NEXT:    xvcvdpuxds 34, 1
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_fptoui_v4i64_v4f64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI126_0@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI126_0@toc@l
+; PC64LE9-NEXT:    lxvx 0, 0, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI126_1@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI126_1@toc@l
+; PC64LE9-NEXT:    xvcvdpuxds 35, 0
+; PC64LE9-NEXT:    lxvx 0, 0, 3
+; PC64LE9-NEXT:    xvcvdpuxds 34, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x i64> @llvm.experimental.constrained.fptoui.v4i64.v4f64(
+                                <4 x double><double 42.1, double 42.2,
+                                             double 42.3, double 42.4>,
+                                metadata !"fpexcept.strict") #0
+  ret <4 x i64> %result
+}
+
 define <1 x float> @constrained_vector_fptrunc_v1f64() #0 {
 ; PC64LE-LABEL: constrained_vector_fptrunc_v1f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI95_0@toc@ha
-; PC64LE-NEXT:    lfd 0, .LCPI95_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI127_0@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI127_0@toc@l(3)
 ; PC64LE-NEXT:    xsrsp 1, 0
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_fptrunc_v1f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI95_0@toc@ha
-; PC64LE9-NEXT:    lfd 0, .LCPI95_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI127_0@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI127_0@toc@l(3)
 ; PC64LE9-NEXT:    xsrsp 1, 0
 ; PC64LE9-NEXT:    blr
 entry:
@@ -5678,10 +6853,10 @@ entry:
 define <2 x float> @constrained_vector_fptrunc_v2f64() #0 {
 ; PC64LE-LABEL: constrained_vector_fptrunc_v2f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI96_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI96_1@toc@ha
-; PC64LE-NEXT:    lfd 0, .LCPI96_0@toc@l(3)
-; PC64LE-NEXT:    lfd 1, .LCPI96_1@toc@l(4)
+; PC64LE-NEXT:    addis 3, 2, .LCPI128_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI128_1@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI128_0@toc@l(3)
+; PC64LE-NEXT:    lfd 1, .LCPI128_1@toc@l(4)
 ; PC64LE-NEXT:    xsrsp 0, 0
 ; PC64LE-NEXT:    xsrsp 1, 1
 ; PC64LE-NEXT:    xscvdpspn 0, 0
@@ -5693,13 +6868,13 @@ define <2 x float> @constrained_vector_fptrunc_v2f64() #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_fptrunc_v2f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI96_0@toc@ha
-; PC64LE9-NEXT:    lfd 0, .LCPI96_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI96_1@toc@ha
+; PC64LE9-NEXT:    addis 3, 2, .LCPI128_0@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI128_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI128_1@toc@ha
 ; PC64LE9-NEXT:    xsrsp 0, 0
 ; PC64LE9-NEXT:    xscvdpspn 0, 0
 ; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    lfd 0, .LCPI96_1@toc@l(3)
+; PC64LE9-NEXT:    lfd 0, .LCPI128_1@toc@l(3)
 ; PC64LE9-NEXT:    xsrsp 0, 0
 ; PC64LE9-NEXT:    xscvdpspn 0, 0
 ; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
@@ -5716,16 +6891,16 @@ entry:
 define <3 x float> @constrained_vector_fptrunc_v3f64() #0 {
 ; PC64LE-LABEL: constrained_vector_fptrunc_v3f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI97_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI97_1@toc@ha
-; PC64LE-NEXT:    lfd 0, .LCPI97_0@toc@l(3)
-; PC64LE-NEXT:    lfd 1, .LCPI97_1@toc@l(4)
-; PC64LE-NEXT:    addis 3, 2, .LCPI97_3@toc@ha
+; PC64LE-NEXT:    addis 3, 2, .LCPI129_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI129_1@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI129_0@toc@l(3)
+; PC64LE-NEXT:    lfd 1, .LCPI129_1@toc@l(4)
+; PC64LE-NEXT:    addis 3, 2, .LCPI129_3@toc@ha
 ; PC64LE-NEXT:    xsrsp 0, 0
-; PC64LE-NEXT:    lfd 2, .LCPI97_3@toc@l(3)
-; PC64LE-NEXT:    addis 3, 2, .LCPI97_2@toc@ha
+; PC64LE-NEXT:    lfd 2, .LCPI129_3@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI129_2@toc@ha
 ; PC64LE-NEXT:    xsrsp 1, 1
-; PC64LE-NEXT:    addi 3, 3, .LCPI97_2@toc@l
+; PC64LE-NEXT:    addi 3, 3, .LCPI129_2@toc@l
 ; PC64LE-NEXT:    xsrsp 2, 2
 ; PC64LE-NEXT:    xscvdpspn 0, 0
 ; PC64LE-NEXT:    xscvdpspn 1, 1
@@ -5740,22 +6915,22 @@ define <3 x float> @constrained_vector_fptrunc_v3f64() #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_fptrunc_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI97_0@toc@ha
-; PC64LE9-NEXT:    lfd 0, .LCPI97_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI97_1@toc@ha
+; PC64LE9-NEXT:    addis 3, 2, .LCPI129_0@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI129_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI129_1@toc@ha
 ; PC64LE9-NEXT:    xsrsp 0, 0
 ; PC64LE9-NEXT:    xscvdpspn 0, 0
 ; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
-; PC64LE9-NEXT:    lfd 0, .LCPI97_1@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI97_2@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI97_2@toc@l
+; PC64LE9-NEXT:    lfd 0, .LCPI129_1@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI129_2@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI129_2@toc@l
 ; PC64LE9-NEXT:    xsrsp 0, 0
 ; PC64LE9-NEXT:    xscvdpspn 0, 0
 ; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
 ; PC64LE9-NEXT:    vmrghw 2, 3, 2
 ; PC64LE9-NEXT:    lxvx 35, 0, 3
-; PC64LE9-NEXT:    addis 3, 2, .LCPI97_3@toc@ha
-; PC64LE9-NEXT:    lfd 0, .LCPI97_3@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI129_3@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI129_3@toc@l(3)
 ; PC64LE9-NEXT:    xsrsp 0, 0
 ; PC64LE9-NEXT:    xscvdpspn 0, 0
 ; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
@@ -5773,14 +6948,14 @@ entry:
 define <4 x float> @constrained_vector_fptrunc_v4f64() #0 {
 ; PC64LE-LABEL: constrained_vector_fptrunc_v4f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI98_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI98_1@toc@ha
-; PC64LE-NEXT:    addis 5, 2, .LCPI98_2@toc@ha
-; PC64LE-NEXT:    addis 6, 2, .LCPI98_3@toc@ha
-; PC64LE-NEXT:    lfd 0, .LCPI98_0@toc@l(3)
-; PC64LE-NEXT:    lfd 1, .LCPI98_1@toc@l(4)
-; PC64LE-NEXT:    lfd 2, .LCPI98_2@toc@l(5)
-; PC64LE-NEXT:    lfd 3, .LCPI98_3@toc@l(6)
+; PC64LE-NEXT:    addis 3, 2, .LCPI130_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI130_1@toc@ha
+; PC64LE-NEXT:    addis 5, 2, .LCPI130_2@toc@ha
+; PC64LE-NEXT:    addis 6, 2, .LCPI130_3@toc@ha
+; PC64LE-NEXT:    lfd 0, .LCPI130_0@toc@l(3)
+; PC64LE-NEXT:    lfd 1, .LCPI130_1@toc@l(4)
+; PC64LE-NEXT:    lfd 2, .LCPI130_2@toc@l(5)
+; PC64LE-NEXT:    lfd 3, .LCPI130_3@toc@l(6)
 ; PC64LE-NEXT:    xxmrghd 0, 1, 0
 ; PC64LE-NEXT:    xxmrghd 1, 3, 2
 ; PC64LE-NEXT:    xvcvdpsp 34, 0
@@ -5790,16 +6965,16 @@ define <4 x float> @constrained_vector_fptrunc_v4f64() #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_fptrunc_v4f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI98_0@toc@ha
-; PC64LE9-NEXT:    lfd 0, .LCPI98_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI98_1@toc@ha
-; PC64LE9-NEXT:    lfd 1, .LCPI98_1@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI98_2@toc@ha
+; PC64LE9-NEXT:    addis 3, 2, .LCPI130_0@toc@ha
+; PC64LE9-NEXT:    lfd 0, .LCPI130_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI130_1@toc@ha
+; PC64LE9-NEXT:    lfd 1, .LCPI130_1@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI130_2@toc@ha
 ; PC64LE9-NEXT:    xxmrghd 0, 1, 0
 ; PC64LE9-NEXT:    xvcvdpsp 34, 0
-; PC64LE9-NEXT:    lfd 0, .LCPI98_2@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI98_3@toc@ha
-; PC64LE9-NEXT:    lfd 1, .LCPI98_3@toc@l(3)
+; PC64LE9-NEXT:    lfd 0, .LCPI130_2@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI130_3@toc@ha
+; PC64LE9-NEXT:    lfd 1, .LCPI130_3@toc@l(3)
 ; PC64LE9-NEXT:    xxmrghd 0, 1, 0
 ; PC64LE9-NEXT:    xvcvdpsp 35, 0
 ; PC64LE9-NEXT:    vmrgew 2, 3, 2
@@ -5816,14 +6991,14 @@ entry:
 define <1 x double> @constrained_vector_fpext_v1f32() #0 {
 ; PC64LE-LABEL: constrained_vector_fpext_v1f32:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI99_0@toc@ha
-; PC64LE-NEXT:    lfs 1, .LCPI99_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI131_0@toc@ha
+; PC64LE-NEXT:    lfs 1, .LCPI131_0@toc@l(3)
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_fpext_v1f32:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI99_0@toc@ha
-; PC64LE9-NEXT:    lfs 1, .LCPI99_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI131_0@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI131_0@toc@l(3)
 ; PC64LE9-NEXT:    blr
 entry:
   %result = call <1 x double> @llvm.experimental.constrained.fpext.v1f64.v1f32(
@@ -5835,19 +7010,19 @@ entry:
 define <2 x double> @constrained_vector_fpext_v2f32() #0 {
 ; PC64LE-LABEL: constrained_vector_fpext_v2f32:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI100_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI100_1@toc@ha
-; PC64LE-NEXT:    lfs 0, .LCPI100_0@toc@l(3)
-; PC64LE-NEXT:    lfs 1, .LCPI100_1@toc@l(4)
+; PC64LE-NEXT:    addis 3, 2, .LCPI132_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI132_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI132_0@toc@l(3)
+; PC64LE-NEXT:    lfs 1, .LCPI132_1@toc@l(4)
 ; PC64LE-NEXT:    xxmrghd 34, 1, 0
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_fpext_v2f32:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI100_0@toc@ha
-; PC64LE9-NEXT:    lfs 0, .LCPI100_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI100_1@toc@ha
-; PC64LE9-NEXT:    lfs 1, .LCPI100_1@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI132_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI132_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI132_1@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI132_1@toc@l(3)
 ; PC64LE9-NEXT:    xxmrghd 34, 1, 0
 ; PC64LE9-NEXT:    blr
 entry:
@@ -5860,22 +7035,22 @@ entry:
 define <3 x double> @constrained_vector_fpext_v3f32() #0 {
 ; PC64LE-LABEL: constrained_vector_fpext_v3f32:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI101_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI101_1@toc@ha
-; PC64LE-NEXT:    addis 5, 2, .LCPI101_2@toc@ha
-; PC64LE-NEXT:    lfs 1, .LCPI101_0@toc@l(3)
-; PC64LE-NEXT:    lfs 2, .LCPI101_1@toc@l(4)
-; PC64LE-NEXT:    lfs 3, .LCPI101_2@toc@l(5)
+; PC64LE-NEXT:    addis 3, 2, .LCPI133_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI133_1@toc@ha
+; PC64LE-NEXT:    addis 5, 2, .LCPI133_2@toc@ha
+; PC64LE-NEXT:    lfs 1, .LCPI133_0@toc@l(3)
+; PC64LE-NEXT:    lfs 2, .LCPI133_1@toc@l(4)
+; PC64LE-NEXT:    lfs 3, .LCPI133_2@toc@l(5)
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_fpext_v3f32:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI101_0@toc@ha
-; PC64LE9-NEXT:    lfs 1, .LCPI101_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI101_1@toc@ha
-; PC64LE9-NEXT:    lfs 2, .LCPI101_1@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI101_2@toc@ha
-; PC64LE9-NEXT:    lfs 3, .LCPI101_2@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI133_0@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI133_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI133_1@toc@ha
+; PC64LE9-NEXT:    lfs 2, .LCPI133_1@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI133_2@toc@ha
+; PC64LE9-NEXT:    lfs 3, .LCPI133_2@toc@l(3)
 ; PC64LE9-NEXT:    blr
 entry:
   %result = call <3 x double> @llvm.experimental.constrained.fpext.v3f64.v3f32(
@@ -5888,29 +7063,29 @@ entry:
 define <4 x double> @constrained_vector_fpext_v4f32() #0 {
 ; PC64LE-LABEL: constrained_vector_fpext_v4f32:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI102_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI102_1@toc@ha
-; PC64LE-NEXT:    addis 5, 2, .LCPI102_2@toc@ha
-; PC64LE-NEXT:    addis 6, 2, .LCPI102_3@toc@ha
-; PC64LE-NEXT:    lfs 0, .LCPI102_0@toc@l(3)
-; PC64LE-NEXT:    lfs 1, .LCPI102_1@toc@l(4)
-; PC64LE-NEXT:    lfs 2, .LCPI102_2@toc@l(5)
-; PC64LE-NEXT:    lfs 3, .LCPI102_3@toc@l(6)
+; PC64LE-NEXT:    addis 3, 2, .LCPI134_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI134_1@toc@ha
+; PC64LE-NEXT:    addis 5, 2, .LCPI134_2@toc@ha
+; PC64LE-NEXT:    addis 6, 2, .LCPI134_3@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI134_0@toc@l(3)
+; PC64LE-NEXT:    lfs 1, .LCPI134_1@toc@l(4)
+; PC64LE-NEXT:    lfs 2, .LCPI134_2@toc@l(5)
+; PC64LE-NEXT:    lfs 3, .LCPI134_3@toc@l(6)
 ; PC64LE-NEXT:    xxmrghd 34, 1, 0
 ; PC64LE-NEXT:    xxmrghd 35, 3, 2
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_fpext_v4f32:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI102_0@toc@ha
-; PC64LE9-NEXT:    lfs 0, .LCPI102_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI102_1@toc@ha
-; PC64LE9-NEXT:    lfs 1, .LCPI102_1@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI102_2@toc@ha
+; PC64LE9-NEXT:    addis 3, 2, .LCPI134_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI134_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI134_1@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI134_1@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI134_2@toc@ha
 ; PC64LE9-NEXT:    xxmrghd 34, 1, 0
-; PC64LE9-NEXT:    lfs 0, .LCPI102_2@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI102_3@toc@ha
-; PC64LE9-NEXT:    lfs 1, .LCPI102_3@toc@l(3)
+; PC64LE9-NEXT:    lfs 0, .LCPI134_2@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI134_3@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI134_3@toc@l(3)
 ; PC64LE9-NEXT:    xxmrghd 35, 1, 0
 ; PC64LE9-NEXT:    blr
 entry:
@@ -5924,19 +7099,19 @@ entry:
 define <1 x float> @constrained_vector_ceil_v1f32() #0 {
 ; PC64LE-LABEL: constrained_vector_ceil_v1f32:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI103_0@toc@ha
-; PC64LE-NEXT:    lfs 0, .LCPI103_0@toc@l(3)
-; PC64LE-NEXT:    addis 3, 2, .LCPI103_1@toc@ha
-; PC64LE-NEXT:    lfs 1, .LCPI103_1@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI135_0@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI135_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI135_1@toc@ha
+; PC64LE-NEXT:    lfs 1, .LCPI135_1@toc@l(3)
 ; PC64LE-NEXT:    xsrdpip 0, 0
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_ceil_v1f32:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI103_0@toc@ha
-; PC64LE9-NEXT:    lfs 0, .LCPI103_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI103_1@toc@ha
-; PC64LE9-NEXT:    lfs 1, .LCPI103_1@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI135_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI135_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI135_1@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI135_1@toc@l(3)
 ; PC64LE9-NEXT:    xsrdpip 0, 0
 ; PC64LE9-NEXT:    blr
 entry:
@@ -5949,11 +7124,11 @@ entry:
 define <2 x double> @constrained_vector_ceil_v2f64() #0 {
 ; PC64LE-LABEL: constrained_vector_ceil_v2f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI104_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI104_1@toc@ha
-; PC64LE-NEXT:    addi 3, 3, .LCPI104_0@toc@l
+; PC64LE-NEXT:    addis 3, 2, .LCPI136_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI136_1@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI136_0@toc@l
 ; PC64LE-NEXT:    lxvd2x 0, 0, 3
-; PC64LE-NEXT:    addi 3, 4, .LCPI104_1@toc@l
+; PC64LE-NEXT:    addi 3, 4, .LCPI136_1@toc@l
 ; PC64LE-NEXT:    lxvd2x 1, 0, 3
 ; PC64LE-NEXT:    xvrdpip 0, 0
 ; PC64LE-NEXT:    xxswapd 34, 1
@@ -5961,11 +7136,11 @@ define <2 x double> @constrained_vector_ceil_v2f64() #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_ceil_v2f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI104_0@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI104_0@toc@l
+; PC64LE9-NEXT:    addis 3, 2, .LCPI136_0@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI136_0@toc@l
 ; PC64LE9-NEXT:    lxvx 0, 0, 3
-; PC64LE9-NEXT:    addis 3, 2, .LCPI104_1@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI104_1@toc@l
+; PC64LE9-NEXT:    addis 3, 2, .LCPI136_1@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI136_1@toc@l
 ; PC64LE9-NEXT:    lxvx 34, 0, 3
 ; PC64LE9-NEXT:    xvrdpip 0, 0
 ; PC64LE9-NEXT:    blr
@@ -5979,14 +7154,14 @@ entry:
 define <3 x float> @constrained_vector_ceil_v3f32() #0 {
 ; PC64LE-LABEL: constrained_vector_ceil_v3f32:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI105_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI105_1@toc@ha
-; PC64LE-NEXT:    lfs 0, .LCPI105_0@toc@l(3)
-; PC64LE-NEXT:    addis 3, 2, .LCPI105_2@toc@ha
-; PC64LE-NEXT:    lfs 1, .LCPI105_1@toc@l(4)
-; PC64LE-NEXT:    lfs 2, .LCPI105_2@toc@l(3)
-; PC64LE-NEXT:    addis 3, 2, .LCPI105_3@toc@ha
-; PC64LE-NEXT:    addi 3, 3, .LCPI105_3@toc@l
+; PC64LE-NEXT:    addis 3, 2, .LCPI137_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI137_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI137_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI137_2@toc@ha
+; PC64LE-NEXT:    lfs 1, .LCPI137_1@toc@l(4)
+; PC64LE-NEXT:    lfs 2, .LCPI137_2@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI137_3@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI137_3@toc@l
 ; PC64LE-NEXT:    xsrdpip 0, 0
 ; PC64LE-NEXT:    lvx 2, 0, 3
 ; PC64LE-NEXT:    xsrdpip 0, 1
@@ -5995,16 +7170,16 @@ define <3 x float> @constrained_vector_ceil_v3f32() #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_ceil_v3f32:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI105_0@toc@ha
-; PC64LE9-NEXT:    lfs 0, .LCPI105_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI105_1@toc@ha
+; PC64LE9-NEXT:    addis 3, 2, .LCPI137_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI137_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI137_1@toc@ha
 ; PC64LE9-NEXT:    xsrdpip 0, 0
-; PC64LE9-NEXT:    lfs 0, .LCPI105_1@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI105_2@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI137_1@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI137_2@toc@ha
 ; PC64LE9-NEXT:    xsrdpip 0, 0
-; PC64LE9-NEXT:    lfs 0, .LCPI105_2@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI105_3@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI105_3@toc@l
+; PC64LE9-NEXT:    lfs 0, .LCPI137_2@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI137_3@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI137_3@toc@l
 ; PC64LE9-NEXT:    lxvx 34, 0, 3
 ; PC64LE9-NEXT:    xsrdpip 0, 0
 ; PC64LE9-NEXT:    blr
@@ -6018,29 +7193,29 @@ entry:
 define <3 x double> @constrained_vector_ceil_v3f64() #0 {
 ; PC64LE-LABEL: constrained_vector_ceil_v3f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI106_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI106_1@toc@ha
-; PC64LE-NEXT:    lfs 0, .LCPI106_0@toc@l(3)
-; PC64LE-NEXT:    addi 3, 4, .LCPI106_1@toc@l
+; PC64LE-NEXT:    addis 3, 2, .LCPI138_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI138_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI138_0@toc@l(3)
+; PC64LE-NEXT:    addi 3, 4, .LCPI138_1@toc@l
 ; PC64LE-NEXT:    lxvd2x 1, 0, 3
-; PC64LE-NEXT:    addis 3, 2, .LCPI106_2@toc@ha
+; PC64LE-NEXT:    addis 3, 2, .LCPI138_2@toc@ha
 ; PC64LE-NEXT:    xsrdpip 0, 0
 ; PC64LE-NEXT:    xvrdpip 0, 1
-; PC64LE-NEXT:    lfs 1, .LCPI106_2@toc@l(3)
+; PC64LE-NEXT:    lfs 1, .LCPI138_2@toc@l(3)
 ; PC64LE-NEXT:    fmr 2, 1
 ; PC64LE-NEXT:    fmr 3, 1
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_ceil_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI106_0@toc@ha
-; PC64LE9-NEXT:    lfs 0, .LCPI106_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI106_1@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI106_1@toc@l
+; PC64LE9-NEXT:    addis 3, 2, .LCPI138_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI138_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI138_1@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI138_1@toc@l
 ; PC64LE9-NEXT:    xsrdpip 0, 0
 ; PC64LE9-NEXT:    lxvx 0, 0, 3
-; PC64LE9-NEXT:    addis 3, 2, .LCPI106_2@toc@ha
-; PC64LE9-NEXT:    lfs 1, .LCPI106_2@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI138_2@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI138_2@toc@l(3)
 ; PC64LE9-NEXT:    xvrdpip 0, 0
 ; PC64LE9-NEXT:    fmr 2, 1
 ; PC64LE9-NEXT:    fmr 3, 1
@@ -6055,19 +7230,19 @@ entry:
 define <1 x float> @constrained_vector_floor_v1f32() #0 {
 ; PC64LE-LABEL: constrained_vector_floor_v1f32:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI107_0@toc@ha
-; PC64LE-NEXT:    lfs 0, .LCPI107_0@toc@l(3)
-; PC64LE-NEXT:    addis 3, 2, .LCPI107_1@toc@ha
-; PC64LE-NEXT:    lfs 1, .LCPI107_1@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI139_0@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI139_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI139_1@toc@ha
+; PC64LE-NEXT:    lfs 1, .LCPI139_1@toc@l(3)
 ; PC64LE-NEXT:    xsrdpim 0, 0
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_floor_v1f32:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI107_0@toc@ha
-; PC64LE9-NEXT:    lfs 0, .LCPI107_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI107_1@toc@ha
-; PC64LE9-NEXT:    lfs 1, .LCPI107_1@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI139_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI139_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI139_1@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI139_1@toc@l(3)
 ; PC64LE9-NEXT:    xsrdpim 0, 0
 ; PC64LE9-NEXT:    blr
 entry:
@@ -6081,11 +7256,11 @@ entry:
 define <2 x double> @constrained_vector_floor_v2f64() #0 {
 ; PC64LE-LABEL: constrained_vector_floor_v2f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI108_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI108_1@toc@ha
-; PC64LE-NEXT:    addi 3, 3, .LCPI108_0@toc@l
+; PC64LE-NEXT:    addis 3, 2, .LCPI140_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI140_1@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI140_0@toc@l
 ; PC64LE-NEXT:    lxvd2x 0, 0, 3
-; PC64LE-NEXT:    addi 3, 4, .LCPI108_1@toc@l
+; PC64LE-NEXT:    addi 3, 4, .LCPI140_1@toc@l
 ; PC64LE-NEXT:    lxvd2x 1, 0, 3
 ; PC64LE-NEXT:    xvrdpim 0, 0
 ; PC64LE-NEXT:    xxswapd 34, 1
@@ -6093,11 +7268,11 @@ define <2 x double> @constrained_vector_floor_v2f64() #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_floor_v2f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI108_0@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI108_0@toc@l
+; PC64LE9-NEXT:    addis 3, 2, .LCPI140_0@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI140_0@toc@l
 ; PC64LE9-NEXT:    lxvx 0, 0, 3
-; PC64LE9-NEXT:    addis 3, 2, .LCPI108_1@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI108_1@toc@l
+; PC64LE9-NEXT:    addis 3, 2, .LCPI140_1@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI140_1@toc@l
 ; PC64LE9-NEXT:    lxvx 34, 0, 3
 ; PC64LE9-NEXT:    xvrdpim 0, 0
 ; PC64LE9-NEXT:    blr
@@ -6111,14 +7286,14 @@ entry:
 define <3 x float> @constrained_vector_floor_v3f32() #0 {
 ; PC64LE-LABEL: constrained_vector_floor_v3f32:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI109_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI109_1@toc@ha
-; PC64LE-NEXT:    lfs 0, .LCPI109_0@toc@l(3)
-; PC64LE-NEXT:    addis 3, 2, .LCPI109_2@toc@ha
-; PC64LE-NEXT:    lfs 1, .LCPI109_1@toc@l(4)
-; PC64LE-NEXT:    lfs 2, .LCPI109_2@toc@l(3)
-; PC64LE-NEXT:    addis 3, 2, .LCPI109_3@toc@ha
-; PC64LE-NEXT:    addi 3, 3, .LCPI109_3@toc@l
+; PC64LE-NEXT:    addis 3, 2, .LCPI141_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI141_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI141_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI141_2@toc@ha
+; PC64LE-NEXT:    lfs 1, .LCPI141_1@toc@l(4)
+; PC64LE-NEXT:    lfs 2, .LCPI141_2@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI141_3@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI141_3@toc@l
 ; PC64LE-NEXT:    xsrdpim 0, 0
 ; PC64LE-NEXT:    lvx 2, 0, 3
 ; PC64LE-NEXT:    xsrdpim 0, 1
@@ -6127,16 +7302,16 @@ define <3 x float> @constrained_vector_floor_v3f32() #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_floor_v3f32:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI109_0@toc@ha
-; PC64LE9-NEXT:    lfs 0, .LCPI109_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI109_1@toc@ha
+; PC64LE9-NEXT:    addis 3, 2, .LCPI141_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI141_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI141_1@toc@ha
 ; PC64LE9-NEXT:    xsrdpim 0, 0
-; PC64LE9-NEXT:    lfs 0, .LCPI109_1@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI109_2@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI141_1@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI141_2@toc@ha
 ; PC64LE9-NEXT:    xsrdpim 0, 0
-; PC64LE9-NEXT:    lfs 0, .LCPI109_2@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI109_3@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI109_3@toc@l
+; PC64LE9-NEXT:    lfs 0, .LCPI141_2@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI141_3@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI141_3@toc@l
 ; PC64LE9-NEXT:    lxvx 34, 0, 3
 ; PC64LE9-NEXT:    xsrdpim 0, 0
 ; PC64LE9-NEXT:    blr
@@ -6150,29 +7325,29 @@ entry:
 define <3 x double> @constrained_vector_floor_v3f64() #0 {
 ; PC64LE-LABEL: constrained_vector_floor_v3f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI110_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI110_1@toc@ha
-; PC64LE-NEXT:    lfs 0, .LCPI110_0@toc@l(3)
-; PC64LE-NEXT:    addi 3, 4, .LCPI110_1@toc@l
+; PC64LE-NEXT:    addis 3, 2, .LCPI142_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI142_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI142_0@toc@l(3)
+; PC64LE-NEXT:    addi 3, 4, .LCPI142_1@toc@l
 ; PC64LE-NEXT:    lxvd2x 1, 0, 3
-; PC64LE-NEXT:    addis 3, 2, .LCPI110_2@toc@ha
+; PC64LE-NEXT:    addis 3, 2, .LCPI142_2@toc@ha
 ; PC64LE-NEXT:    xsrdpim 0, 0
 ; PC64LE-NEXT:    xvrdpim 0, 1
-; PC64LE-NEXT:    lfs 1, .LCPI110_2@toc@l(3)
+; PC64LE-NEXT:    lfs 1, .LCPI142_2@toc@l(3)
 ; PC64LE-NEXT:    fmr 2, 1
 ; PC64LE-NEXT:    fmr 3, 1
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_floor_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI110_0@toc@ha
-; PC64LE9-NEXT:    lfs 0, .LCPI110_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI110_1@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI110_1@toc@l
+; PC64LE9-NEXT:    addis 3, 2, .LCPI142_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI142_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI142_1@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI142_1@toc@l
 ; PC64LE9-NEXT:    xsrdpim 0, 0
 ; PC64LE9-NEXT:    lxvx 0, 0, 3
-; PC64LE9-NEXT:    addis 3, 2, .LCPI110_2@toc@ha
-; PC64LE9-NEXT:    lfs 1, .LCPI110_2@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI142_2@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI142_2@toc@l(3)
 ; PC64LE9-NEXT:    xvrdpim 0, 0
 ; PC64LE9-NEXT:    fmr 2, 1
 ; PC64LE9-NEXT:    fmr 3, 1
@@ -6187,19 +7362,19 @@ entry:
 define <1 x float> @constrained_vector_round_v1f32() #0 {
 ; PC64LE-LABEL: constrained_vector_round_v1f32:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI111_0@toc@ha
-; PC64LE-NEXT:    lfs 0, .LCPI111_0@toc@l(3)
-; PC64LE-NEXT:    addis 3, 2, .LCPI111_1@toc@ha
-; PC64LE-NEXT:    lfs 1, .LCPI111_1@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI143_0@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI143_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI143_1@toc@ha
+; PC64LE-NEXT:    lfs 1, .LCPI143_1@toc@l(3)
 ; PC64LE-NEXT:    xsrdpi 0, 0
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_round_v1f32:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI111_0@toc@ha
-; PC64LE9-NEXT:    lfs 0, .LCPI111_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI111_1@toc@ha
-; PC64LE9-NEXT:    lfs 1, .LCPI111_1@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI143_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI143_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI143_1@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI143_1@toc@l(3)
 ; PC64LE9-NEXT:    xsrdpi 0, 0
 ; PC64LE9-NEXT:    blr
 entry:
@@ -6212,11 +7387,11 @@ entry:
 define <2 x double> @constrained_vector_round_v2f64() #0 {
 ; PC64LE-LABEL: constrained_vector_round_v2f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI112_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI112_1@toc@ha
-; PC64LE-NEXT:    addi 3, 3, .LCPI112_0@toc@l
+; PC64LE-NEXT:    addis 3, 2, .LCPI144_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI144_1@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI144_0@toc@l
 ; PC64LE-NEXT:    lxvd2x 0, 0, 3
-; PC64LE-NEXT:    addi 3, 4, .LCPI112_1@toc@l
+; PC64LE-NEXT:    addi 3, 4, .LCPI144_1@toc@l
 ; PC64LE-NEXT:    lxvd2x 1, 0, 3
 ; PC64LE-NEXT:    xvrdpi 0, 0
 ; PC64LE-NEXT:    xxswapd 34, 1
@@ -6224,11 +7399,11 @@ define <2 x double> @constrained_vector_round_v2f64() #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_round_v2f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI112_0@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI112_0@toc@l
+; PC64LE9-NEXT:    addis 3, 2, .LCPI144_0@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI144_0@toc@l
 ; PC64LE9-NEXT:    lxvx 0, 0, 3
-; PC64LE9-NEXT:    addis 3, 2, .LCPI112_1@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI112_1@toc@l
+; PC64LE9-NEXT:    addis 3, 2, .LCPI144_1@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI144_1@toc@l
 ; PC64LE9-NEXT:    lxvx 34, 0, 3
 ; PC64LE9-NEXT:    xvrdpi 0, 0
 ; PC64LE9-NEXT:    blr
@@ -6242,14 +7417,14 @@ entry:
 define <3 x float> @constrained_vector_round_v3f32() #0 {
 ; PC64LE-LABEL: constrained_vector_round_v3f32:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI113_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI113_1@toc@ha
-; PC64LE-NEXT:    lfs 0, .LCPI113_0@toc@l(3)
-; PC64LE-NEXT:    addis 3, 2, .LCPI113_2@toc@ha
-; PC64LE-NEXT:    lfs 1, .LCPI113_1@toc@l(4)
-; PC64LE-NEXT:    lfs 2, .LCPI113_2@toc@l(3)
-; PC64LE-NEXT:    addis 3, 2, .LCPI113_3@toc@ha
-; PC64LE-NEXT:    addi 3, 3, .LCPI113_3@toc@l
+; PC64LE-NEXT:    addis 3, 2, .LCPI145_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI145_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI145_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI145_2@toc@ha
+; PC64LE-NEXT:    lfs 1, .LCPI145_1@toc@l(4)
+; PC64LE-NEXT:    lfs 2, .LCPI145_2@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI145_3@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI145_3@toc@l
 ; PC64LE-NEXT:    xsrdpi 0, 0
 ; PC64LE-NEXT:    lvx 2, 0, 3
 ; PC64LE-NEXT:    xsrdpi 0, 1
@@ -6258,16 +7433,16 @@ define <3 x float> @constrained_vector_round_v3f32() #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_round_v3f32:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI113_0@toc@ha
-; PC64LE9-NEXT:    lfs 0, .LCPI113_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI113_1@toc@ha
+; PC64LE9-NEXT:    addis 3, 2, .LCPI145_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI145_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI145_1@toc@ha
 ; PC64LE9-NEXT:    xsrdpi 0, 0
-; PC64LE9-NEXT:    lfs 0, .LCPI113_1@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI113_2@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI145_1@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI145_2@toc@ha
 ; PC64LE9-NEXT:    xsrdpi 0, 0
-; PC64LE9-NEXT:    lfs 0, .LCPI113_2@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI113_3@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI113_3@toc@l
+; PC64LE9-NEXT:    lfs 0, .LCPI145_2@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI145_3@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI145_3@toc@l
 ; PC64LE9-NEXT:    lxvx 34, 0, 3
 ; PC64LE9-NEXT:    xsrdpi 0, 0
 ; PC64LE9-NEXT:    blr
@@ -6282,32 +7457,32 @@ entry:
 define <3 x double> @constrained_vector_round_v3f64() #0 {
 ; PC64LE-LABEL: constrained_vector_round_v3f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 4, 2, .LCPI114_1@toc@ha
-; PC64LE-NEXT:    addis 3, 2, .LCPI114_0@toc@ha
-; PC64LE-NEXT:    addi 4, 4, .LCPI114_1@toc@l
+; PC64LE-NEXT:    addis 4, 2, .LCPI146_1@toc@ha
+; PC64LE-NEXT:    addis 3, 2, .LCPI146_0@toc@ha
+; PC64LE-NEXT:    addi 4, 4, .LCPI146_1@toc@l
 ; PC64LE-NEXT:    lxvd2x 1, 0, 4
-; PC64LE-NEXT:    addis 4, 2, .LCPI114_3@toc@ha
-; PC64LE-NEXT:    lfs 0, .LCPI114_0@toc@l(3)
-; PC64LE-NEXT:    addis 3, 2, .LCPI114_2@toc@ha
-; PC64LE-NEXT:    lfs 2, .LCPI114_3@toc@l(4)
+; PC64LE-NEXT:    addis 4, 2, .LCPI146_3@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI146_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI146_2@toc@ha
+; PC64LE-NEXT:    lfs 2, .LCPI146_3@toc@l(4)
 ; PC64LE-NEXT:    xsrdpi 0, 0
 ; PC64LE-NEXT:    xvrdpi 0, 1
-; PC64LE-NEXT:    lfs 1, .LCPI114_2@toc@l(3)
+; PC64LE-NEXT:    lfs 1, .LCPI146_2@toc@l(3)
 ; PC64LE-NEXT:    fmr 3, 2
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_round_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI114_0@toc@ha
-; PC64LE9-NEXT:    lfs 0, .LCPI114_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI114_1@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI114_1@toc@l
+; PC64LE9-NEXT:    addis 3, 2, .LCPI146_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI146_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI146_1@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI146_1@toc@l
 ; PC64LE9-NEXT:    xsrdpi 0, 0
 ; PC64LE9-NEXT:    lxvx 0, 0, 3
-; PC64LE9-NEXT:    addis 3, 2, .LCPI114_2@toc@ha
-; PC64LE9-NEXT:    lfs 1, .LCPI114_2@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI114_3@toc@ha
-; PC64LE9-NEXT:    lfs 2, .LCPI114_3@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI146_2@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI146_2@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI146_3@toc@ha
+; PC64LE9-NEXT:    lfs 2, .LCPI146_3@toc@l(3)
 ; PC64LE9-NEXT:    xvrdpi 0, 0
 ; PC64LE9-NEXT:    fmr 3, 2
 ; PC64LE9-NEXT:    blr
@@ -6321,19 +7496,19 @@ entry:
 define <1 x float> @constrained_vector_trunc_v1f32() #0 {
 ; PC64LE-LABEL: constrained_vector_trunc_v1f32:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI115_0@toc@ha
-; PC64LE-NEXT:    lfs 0, .LCPI115_0@toc@l(3)
-; PC64LE-NEXT:    addis 3, 2, .LCPI115_1@toc@ha
-; PC64LE-NEXT:    lfs 1, .LCPI115_1@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI147_0@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI147_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI147_1@toc@ha
+; PC64LE-NEXT:    lfs 1, .LCPI147_1@toc@l(3)
 ; PC64LE-NEXT:    xsrdpiz 0, 0
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_trunc_v1f32:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI115_0@toc@ha
-; PC64LE9-NEXT:    lfs 0, .LCPI115_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI115_1@toc@ha
-; PC64LE9-NEXT:    lfs 1, .LCPI115_1@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI147_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI147_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI147_1@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI147_1@toc@l(3)
 ; PC64LE9-NEXT:    xsrdpiz 0, 0
 ; PC64LE9-NEXT:    blr
 entry:
@@ -6346,11 +7521,11 @@ entry:
 define <2 x double> @constrained_vector_trunc_v2f64() #0 {
 ; PC64LE-LABEL: constrained_vector_trunc_v2f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI116_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI116_1@toc@ha
-; PC64LE-NEXT:    addi 3, 3, .LCPI116_0@toc@l
+; PC64LE-NEXT:    addis 3, 2, .LCPI148_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI148_1@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI148_0@toc@l
 ; PC64LE-NEXT:    lxvd2x 0, 0, 3
-; PC64LE-NEXT:    addi 3, 4, .LCPI116_1@toc@l
+; PC64LE-NEXT:    addi 3, 4, .LCPI148_1@toc@l
 ; PC64LE-NEXT:    lxvd2x 1, 0, 3
 ; PC64LE-NEXT:    xvrdpiz 0, 0
 ; PC64LE-NEXT:    xxswapd 34, 1
@@ -6358,11 +7533,11 @@ define <2 x double> @constrained_vector_trunc_v2f64() #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_trunc_v2f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI116_0@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI116_0@toc@l
+; PC64LE9-NEXT:    addis 3, 2, .LCPI148_0@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI148_0@toc@l
 ; PC64LE9-NEXT:    lxvx 0, 0, 3
-; PC64LE9-NEXT:    addis 3, 2, .LCPI116_1@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI116_1@toc@l
+; PC64LE9-NEXT:    addis 3, 2, .LCPI148_1@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI148_1@toc@l
 ; PC64LE9-NEXT:    lxvx 34, 0, 3
 ; PC64LE9-NEXT:    xvrdpiz 0, 0
 ; PC64LE9-NEXT:    blr
@@ -6376,14 +7551,14 @@ entry:
 define <3 x float> @constrained_vector_trunc_v3f32() #0 {
 ; PC64LE-LABEL: constrained_vector_trunc_v3f32:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI117_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI117_1@toc@ha
-; PC64LE-NEXT:    lfs 0, .LCPI117_0@toc@l(3)
-; PC64LE-NEXT:    addis 3, 2, .LCPI117_2@toc@ha
-; PC64LE-NEXT:    lfs 1, .LCPI117_1@toc@l(4)
-; PC64LE-NEXT:    lfs 2, .LCPI117_2@toc@l(3)
-; PC64LE-NEXT:    addis 3, 2, .LCPI117_3@toc@ha
-; PC64LE-NEXT:    addi 3, 3, .LCPI117_3@toc@l
+; PC64LE-NEXT:    addis 3, 2, .LCPI149_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI149_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI149_0@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI149_2@toc@ha
+; PC64LE-NEXT:    lfs 1, .LCPI149_1@toc@l(4)
+; PC64LE-NEXT:    lfs 2, .LCPI149_2@toc@l(3)
+; PC64LE-NEXT:    addis 3, 2, .LCPI149_3@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI149_3@toc@l
 ; PC64LE-NEXT:    xsrdpiz 0, 0
 ; PC64LE-NEXT:    lvx 2, 0, 3
 ; PC64LE-NEXT:    xsrdpiz 0, 1
@@ -6392,16 +7567,16 @@ define <3 x float> @constrained_vector_trunc_v3f32() #0 {
 ;
 ; PC64LE9-LABEL: constrained_vector_trunc_v3f32:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI117_0@toc@ha
-; PC64LE9-NEXT:    lfs 0, .LCPI117_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI117_1@toc@ha
+; PC64LE9-NEXT:    addis 3, 2, .LCPI149_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI149_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI149_1@toc@ha
 ; PC64LE9-NEXT:    xsrdpiz 0, 0
-; PC64LE9-NEXT:    lfs 0, .LCPI117_1@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI117_2@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI149_1@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI149_2@toc@ha
 ; PC64LE9-NEXT:    xsrdpiz 0, 0
-; PC64LE9-NEXT:    lfs 0, .LCPI117_2@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI117_3@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI117_3@toc@l
+; PC64LE9-NEXT:    lfs 0, .LCPI149_2@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI149_3@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI149_3@toc@l
 ; PC64LE9-NEXT:    lxvx 34, 0, 3
 ; PC64LE9-NEXT:    xsrdpiz 0, 0
 ; PC64LE9-NEXT:    blr
@@ -6415,29 +7590,29 @@ entry:
 define <3 x double> @constrained_vector_trunc_v3f64() #0 {
 ; PC64LE-LABEL: constrained_vector_trunc_v3f64:
 ; PC64LE:       # %bb.0: # %entry
-; PC64LE-NEXT:    addis 3, 2, .LCPI118_0@toc@ha
-; PC64LE-NEXT:    addis 4, 2, .LCPI118_1@toc@ha
-; PC64LE-NEXT:    lfs 0, .LCPI118_0@toc@l(3)
-; PC64LE-NEXT:    addi 3, 4, .LCPI118_1@toc@l
+; PC64LE-NEXT:    addis 3, 2, .LCPI150_0@toc@ha
+; PC64LE-NEXT:    addis 4, 2, .LCPI150_1@toc@ha
+; PC64LE-NEXT:    lfs 0, .LCPI150_0@toc@l(3)
+; PC64LE-NEXT:    addi 3, 4, .LCPI150_1@toc@l
 ; PC64LE-NEXT:    lxvd2x 1, 0, 3
-; PC64LE-NEXT:    addis 3, 2, .LCPI118_2@toc@ha
+; PC64LE-NEXT:    addis 3, 2, .LCPI150_2@toc@ha
 ; PC64LE-NEXT:    xsrdpiz 0, 0
 ; PC64LE-NEXT:    xvrdpiz 0, 1
-; PC64LE-NEXT:    lfs 1, .LCPI118_2@toc@l(3)
+; PC64LE-NEXT:    lfs 1, .LCPI150_2@toc@l(3)
 ; PC64LE-NEXT:    fmr 2, 1
 ; PC64LE-NEXT:    fmr 3, 1
 ; PC64LE-NEXT:    blr
 ;
 ; PC64LE9-LABEL: constrained_vector_trunc_v3f64:
 ; PC64LE9:       # %bb.0: # %entry
-; PC64LE9-NEXT:    addis 3, 2, .LCPI118_0@toc@ha
-; PC64LE9-NEXT:    lfs 0, .LCPI118_0@toc@l(3)
-; PC64LE9-NEXT:    addis 3, 2, .LCPI118_1@toc@ha
-; PC64LE9-NEXT:    addi 3, 3, .LCPI118_1@toc@l
+; PC64LE9-NEXT:    addis 3, 2, .LCPI150_0@toc@ha
+; PC64LE9-NEXT:    lfs 0, .LCPI150_0@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI150_1@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI150_1@toc@l
 ; PC64LE9-NEXT:    xsrdpiz 0, 0
 ; PC64LE9-NEXT:    lxvx 0, 0, 3
-; PC64LE9-NEXT:    addis 3, 2, .LCPI118_2@toc@ha
-; PC64LE9-NEXT:    lfs 1, .LCPI118_2@toc@l(3)
+; PC64LE9-NEXT:    addis 3, 2, .LCPI150_2@toc@ha
+; PC64LE9-NEXT:    lfs 1, .LCPI150_2@toc@l(3)
 ; PC64LE9-NEXT:    xvrdpiz 0, 0
 ; PC64LE9-NEXT:    fmr 2, 1
 ; PC64LE9-NEXT:    fmr 3, 1
@@ -6447,6 +7622,1174 @@ entry:
                           <3 x double> <double 1.1, double 1.9, double 1.5>,
                           metadata !"fpexcept.strict") #1
   ret <3 x double> %trunc
+}
+
+define <1 x double> @constrained_vector_sitofp_v1f64_v1i32(<1 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v1f64_v1i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mtfprwa 0, 3
+; PC64LE-NEXT:    xscvsxddp 1, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v1f64_v1i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mtfprwa 0, 3
+; PC64LE9-NEXT:    xscvsxddp 1, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x double>
+           @llvm.experimental.constrained.sitofp.v1f64.v1i32(<1 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x double> %result
+}
+
+define <1 x float> @constrained_vector_sitofp_v1f32_v1i32(<1 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v1f32_v1i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mtfprwa 0, 3
+; PC64LE-NEXT:    xscvsxdsp 1, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v1f32_v1i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mtfprwa 0, 3
+; PC64LE9-NEXT:    xscvsxdsp 1, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x float>
+           @llvm.experimental.constrained.sitofp.v1f32.v1i32(<1 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x float> %result
+}
+
+define <1 x double> @constrained_vector_sitofp_v1f64_v1i64(<1 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v1f64_v1i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mtfprd 0, 3
+; PC64LE-NEXT:    xscvsxddp 1, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v1f64_v1i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    xscvsxddp 1, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x double>
+           @llvm.experimental.constrained.sitofp.v1f64.v1i64(<1 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x double> %result
+}
+
+define <1 x float> @constrained_vector_sitofp_v1f32_v1i64(<1 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v1f32_v1i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mtfprd 0, 3
+; PC64LE-NEXT:    xscvsxdsp 1, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v1f32_v1i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    xscvsxdsp 1, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x float>
+           @llvm.experimental.constrained.sitofp.v1f32.v1i64(<1 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x float> %result
+}
+
+define <2 x double> @constrained_vector_sitofp_v2f64_v2i16(<2 x i16> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v2f64_v2i16:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI155_0@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI155_0@toc@l
+; PC64LE-NEXT:    lvx 3, 0, 3
+; PC64LE-NEXT:    addis 3, 2, .LCPI155_1@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI155_1@toc@l
+; PC64LE-NEXT:    lxvd2x 0, 0, 3
+; PC64LE-NEXT:    vperm 2, 2, 2, 3
+; PC64LE-NEXT:    xxswapd 35, 0
+; PC64LE-NEXT:    vsld 2, 2, 3
+; PC64LE-NEXT:    vsrad 2, 2, 3
+; PC64LE-NEXT:    xvcvsxddp 34, 34
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v2f64_v2i16:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI155_0@toc@ha
+; PC64LE9-NEXT:    addi 3, 3, .LCPI155_0@toc@l
+; PC64LE9-NEXT:    lxvx 35, 0, 3
+; PC64LE9-NEXT:    vperm 2, 2, 2, 3
+; PC64LE9-NEXT:    vextsh2d 2, 2
+; PC64LE9-NEXT:    xvcvsxddp 34, 34
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x double>
+           @llvm.experimental.constrained.sitofp.v2f64.v2i16(<2 x i16> %x,
+                                                metadata !"round.dynamic",
+                                                metadata !"fpexcept.strict") #0
+  ret <2 x double> %result
+}
+
+define <2 x double> @constrained_vector_sitofp_v2f64_v2i32(<2 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v2f64_v2i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxswapd 0, 34
+; PC64LE-NEXT:    xxsldwi 1, 34, 34, 1
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtfprwa 0, 3
+; PC64LE-NEXT:    mtfprwa 1, 4
+; PC64LE-NEXT:    xscvsxddp 0, 0
+; PC64LE-NEXT:    xscvsxddp 1, 1
+; PC64LE-NEXT:    xxmrghd 34, 1, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v2f64_v2i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    li 3, 0
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    mtfprwa 0, 3
+; PC64LE9-NEXT:    li 3, 4
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    xscvsxddp 0, 0
+; PC64LE9-NEXT:    mtfprwa 1, 3
+; PC64LE9-NEXT:    xscvsxddp 1, 1
+; PC64LE9-NEXT:    xxmrghd 34, 1, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x double>
+           @llvm.experimental.constrained.sitofp.v2f64.v2i32(<2 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x double> %result
+}
+
+define <2 x float> @constrained_vector_sitofp_v2f32_v2i32(<2 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v2f32_v2i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxswapd 0, 34
+; PC64LE-NEXT:    xxsldwi 1, 34, 34, 1
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtfprwa 0, 3
+; PC64LE-NEXT:    mtfprwa 1, 4
+; PC64LE-NEXT:    xscvsxdsp 0, 0
+; PC64LE-NEXT:    xscvsxdsp 1, 1
+; PC64LE-NEXT:    xscvdpspn 0, 0
+; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    vmrghw 2, 3, 2
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v2f32_v2i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    li 3, 0
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    mtfprwa 0, 3
+; PC64LE9-NEXT:    li 3, 4
+; PC64LE9-NEXT:    xscvsxdsp 0, 0
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    mtfprwa 0, 3
+; PC64LE9-NEXT:    xscvsxdsp 0, 0
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    vmrghw 2, 2, 3
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x float>
+           @llvm.experimental.constrained.sitofp.v2f32.v2i32(<2 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x float> %result
+}
+
+define <2 x double> @constrained_vector_sitofp_v2f64_v2i64(<2 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v2f64_v2i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xvcvsxddp 34, 34
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v2f64_v2i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    xvcvsxddp 34, 34
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x double>
+           @llvm.experimental.constrained.sitofp.v2f64.v2i64(<2 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x double> %result
+}
+
+define <2 x float> @constrained_vector_sitofp_v2f32_v2i64(<2 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v2f32_v2i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxswapd 0, 34
+; PC64LE-NEXT:    mfvsrd 3, 34
+; PC64LE-NEXT:    mffprd 4, 0
+; PC64LE-NEXT:    mtfprd 0, 3
+; PC64LE-NEXT:    mtfprd 1, 4
+; PC64LE-NEXT:    xscvsxdsp 0, 0
+; PC64LE-NEXT:    xscvsxdsp 1, 1
+; PC64LE-NEXT:    xscvdpspn 0, 0
+; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    vmrghw 2, 2, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v2f32_v2i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mfvsrld 3, 34
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    mfvsrd 3, 34
+; PC64LE9-NEXT:    xscvsxdsp 0, 0
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    xscvsxdsp 0, 0
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    vmrghw 2, 2, 3
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x float>
+           @llvm.experimental.constrained.sitofp.v2f32.v2i64(<2 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x float> %result
+}
+
+define <3 x double> @constrained_vector_sitofp_v3f64_v3i32(<3 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v3f64_v3i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxswapd 0, 34
+; PC64LE-NEXT:    xxsldwi 1, 34, 34, 1
+; PC64LE-NEXT:    mfvsrwz 3, 34
+; PC64LE-NEXT:    mtfprwa 3, 3
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtfprwa 0, 3
+; PC64LE-NEXT:    mtfprwa 2, 4
+; PC64LE-NEXT:    xscvsxddp 1, 0
+; PC64LE-NEXT:    xscvsxddp 2, 2
+; PC64LE-NEXT:    xscvsxddp 3, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v3f64_v3i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    li 3, 0
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    mtfprwa 0, 3
+; PC64LE9-NEXT:    li 3, 4
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    xscvsxddp 1, 0
+; PC64LE9-NEXT:    mtfprwa 0, 3
+; PC64LE9-NEXT:    mfvsrwz 3, 34
+; PC64LE9-NEXT:    xscvsxddp 2, 0
+; PC64LE9-NEXT:    mtfprwa 0, 3
+; PC64LE9-NEXT:    xscvsxddp 3, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x double>
+           @llvm.experimental.constrained.sitofp.v3f64.v3i32(<3 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x double> %result
+}
+
+define <3 x float> @constrained_vector_sitofp_v3f32_v3i32(<3 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v3f32_v3i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxswapd 0, 34
+; PC64LE-NEXT:    xxsldwi 1, 34, 34, 1
+; PC64LE-NEXT:    addis 3, 2, .LCPI161_0@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI161_0@toc@l
+; PC64LE-NEXT:    mffprwz 4, 0
+; PC64LE-NEXT:    mffprwz 5, 1
+; PC64LE-NEXT:    mtfprwa 0, 4
+; PC64LE-NEXT:    mtfprwa 1, 5
+; PC64LE-NEXT:    xscvsxdsp 0, 0
+; PC64LE-NEXT:    xscvsxdsp 1, 1
+; PC64LE-NEXT:    mfvsrwz 4, 34
+; PC64LE-NEXT:    mtfprwa 2, 4
+; PC64LE-NEXT:    xscvsxdsp 2, 2
+; PC64LE-NEXT:    xscvdpspn 0, 0
+; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE-NEXT:    xscvdpspn 0, 2
+; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    vmrghw 2, 3, 2
+; PC64LE-NEXT:    lvx 3, 0, 3
+; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
+; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v3f32_v3i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    li 3, 0
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    mtfprwa 0, 3
+; PC64LE9-NEXT:    li 3, 4
+; PC64LE9-NEXT:    xscvsxdsp 0, 0
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    mtfprwa 0, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI161_0@toc@ha
+; PC64LE9-NEXT:    xscvsxdsp 0, 0
+; PC64LE9-NEXT:    addi 3, 3, .LCPI161_0@toc@l
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
+; PC64LE9-NEXT:    vmrghw 3, 4, 3
+; PC64LE9-NEXT:    lxvx 36, 0, 3
+; PC64LE9-NEXT:    mfvsrwz 3, 34
+; PC64LE9-NEXT:    mtfprwa 0, 3
+; PC64LE9-NEXT:    xscvsxdsp 0, 0
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    vperm 2, 2, 3, 4
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x float>
+           @llvm.experimental.constrained.sitofp.v3f32.v3i32(<3 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x float> %result
+}
+
+define <3 x double> @constrained_vector_sitofp_v3f64_v3i64(<3 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v3f64_v3i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mtfprd 0, 3
+; PC64LE-NEXT:    mtfprd 2, 4
+; PC64LE-NEXT:    mtfprd 3, 5
+; PC64LE-NEXT:    xscvsxddp 1, 0
+; PC64LE-NEXT:    xscvsxddp 2, 2
+; PC64LE-NEXT:    xscvsxddp 3, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v3f64_v3i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    xscvsxddp 1, 0
+; PC64LE9-NEXT:    mtfprd 0, 4
+; PC64LE9-NEXT:    xscvsxddp 2, 0
+; PC64LE9-NEXT:    mtfprd 0, 5
+; PC64LE9-NEXT:    xscvsxddp 3, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x double>
+           @llvm.experimental.constrained.sitofp.v3f64.v3i64(<3 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x double> %result
+}
+
+define <3 x float> @constrained_vector_sitofp_v3f32_v3i64(<3 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v3f32_v3i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mtfprd 0, 3
+; PC64LE-NEXT:    addis 6, 2, .LCPI163_0@toc@ha
+; PC64LE-NEXT:    mtfprd 1, 4
+; PC64LE-NEXT:    addi 3, 6, .LCPI163_0@toc@l
+; PC64LE-NEXT:    xscvsxdsp 0, 0
+; PC64LE-NEXT:    xscvsxdsp 1, 1
+; PC64LE-NEXT:    mtfprd 2, 5
+; PC64LE-NEXT:    xscvsxdsp 2, 2
+; PC64LE-NEXT:    xscvdpspn 0, 0
+; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE-NEXT:    xscvdpspn 0, 2
+; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    vmrghw 2, 3, 2
+; PC64LE-NEXT:    lvx 3, 0, 3
+; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
+; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v3f32_v3i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI163_0@toc@ha
+; PC64LE9-NEXT:    xscvsxdsp 0, 0
+; PC64LE9-NEXT:    addi 3, 3, .LCPI163_0@toc@l
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    mtfprd 0, 4
+; PC64LE9-NEXT:    xscvsxdsp 0, 0
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    mtfprd 0, 5
+; PC64LE9-NEXT:    xscvsxdsp 0, 0
+; PC64LE9-NEXT:    vmrghw 2, 3, 2
+; PC64LE9-NEXT:    lxvx 35, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
+; PC64LE9-NEXT:    vperm 2, 4, 2, 3
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x float>
+           @llvm.experimental.constrained.sitofp.v3f32.v3i64(<3 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x float> %result
+}
+
+define <4 x double> @constrained_vector_sitofp_v4f64_v4i32(<4 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v4f64_v4i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxswapd 0, 34
+; PC64LE-NEXT:    mfvsrwz 3, 34
+; PC64LE-NEXT:    xxsldwi 1, 34, 34, 1
+; PC64LE-NEXT:    mtfprwa 2, 3
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 3
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtfprwa 1, 3
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mtfprwa 3, 4
+; PC64LE-NEXT:    xscvsxddp 0, 2
+; PC64LE-NEXT:    mtfprwa 2, 3
+; PC64LE-NEXT:    xscvsxddp 1, 1
+; PC64LE-NEXT:    xscvsxddp 3, 3
+; PC64LE-NEXT:    xscvsxddp 2, 2
+; PC64LE-NEXT:    xxmrghd 34, 3, 1
+; PC64LE-NEXT:    xxmrghd 35, 2, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v4f64_v4i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    li 3, 0
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    mtfprwa 0, 3
+; PC64LE9-NEXT:    li 3, 4
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    xscvsxddp 0, 0
+; PC64LE9-NEXT:    mtfprwa 1, 3
+; PC64LE9-NEXT:    li 3, 12
+; PC64LE9-NEXT:    xscvsxddp 1, 1
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    xxmrghd 0, 1, 0
+; PC64LE9-NEXT:    mtfprwa 1, 3
+; PC64LE9-NEXT:    mfvsrwz 3, 34
+; PC64LE9-NEXT:    mtfprwa 2, 3
+; PC64LE9-NEXT:    xscvsxddp 1, 1
+; PC64LE9-NEXT:    xscvsxddp 2, 2
+; PC64LE9-NEXT:    xxlor 34, 0, 0
+; PC64LE9-NEXT:    xxmrghd 35, 1, 2
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x double>
+           @llvm.experimental.constrained.sitofp.v4f64.v4i32(<4 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x double> %result
+}
+
+define <4 x float> @constrained_vector_sitofp_v4f32_v4i16(<4 x i16> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v4f32_v4i16:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    vmrglh 2, 2, 2
+; PC64LE-NEXT:    vspltisw 3, 8
+; PC64LE-NEXT:    vadduwm 3, 3, 3
+; PC64LE-NEXT:    vslw 2, 2, 3
+; PC64LE-NEXT:    vsraw 2, 2, 3
+; PC64LE-NEXT:    xvcvsxwsp 34, 34
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v4f32_v4i16:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    vmrglh 2, 2, 2
+; PC64LE9-NEXT:    vextsh2w 2, 2
+; PC64LE9-NEXT:    xvcvsxwsp 34, 34
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x float>
+         @llvm.experimental.constrained.sitofp.v4f32.v4i16(<4 x i16> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x float> %result
+}
+
+define <4 x float> @constrained_vector_sitofp_v4f32_v4i32(<4 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v4f32_v4i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xvcvsxwsp 34, 34
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v4f32_v4i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    xvcvsxwsp 34, 34
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x float>
+           @llvm.experimental.constrained.sitofp.v4f32.v4i32(<4 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x float> %result
+}
+
+define <4 x double> @constrained_vector_sitofp_v4f64_v4i64(<4 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v4f64_v4i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xvcvsxddp 35, 35
+; PC64LE-NEXT:    xvcvsxddp 34, 34
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v4f64_v4i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    xvcvsxddp 35, 35
+; PC64LE9-NEXT:    xvcvsxddp 34, 34
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x double>
+           @llvm.experimental.constrained.sitofp.v4f64.v4i64(<4 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x double> %result
+}
+
+define <4 x float> @constrained_vector_sitofp_v4f32_v4i64(<4 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_sitofp_v4f32_v4i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxswapd 0, 34
+; PC64LE-NEXT:    mfvsrd 3, 34
+; PC64LE-NEXT:    xxswapd 2, 35
+; PC64LE-NEXT:    mfvsrd 4, 35
+; PC64LE-NEXT:    mtfprd 1, 3
+; PC64LE-NEXT:    mffprd 3, 0
+; PC64LE-NEXT:    mtfprd 0, 4
+; PC64LE-NEXT:    mtfprd 3, 3
+; PC64LE-NEXT:    mffprd 3, 2
+; PC64LE-NEXT:    xscvsxdsp 1, 1
+; PC64LE-NEXT:    mtfprd 2, 3
+; PC64LE-NEXT:    xscvsxdsp 0, 0
+; PC64LE-NEXT:    xscvsxdsp 3, 3
+; PC64LE-NEXT:    xscvsxdsp 2, 2
+; PC64LE-NEXT:    xxmrghd 0, 0, 1
+; PC64LE-NEXT:    xxmrghd 1, 2, 3
+; PC64LE-NEXT:    xvcvdpsp 34, 0
+; PC64LE-NEXT:    xvcvdpsp 35, 1
+; PC64LE-NEXT:    vmrgew 2, 2, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_sitofp_v4f32_v4i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mfvsrld 3, 34
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    mfvsrld 3, 35
+; PC64LE9-NEXT:    xscvsxdsp 0, 0
+; PC64LE9-NEXT:    mtfprd 1, 3
+; PC64LE9-NEXT:    mfvsrd 3, 34
+; PC64LE9-NEXT:    xscvsxdsp 1, 1
+; PC64LE9-NEXT:    xxmrghd 0, 1, 0
+; PC64LE9-NEXT:    xvcvdpsp 36, 0
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    mfvsrd 3, 35
+; PC64LE9-NEXT:    mtfprd 1, 3
+; PC64LE9-NEXT:    xscvsxdsp 0, 0
+; PC64LE9-NEXT:    xscvsxdsp 1, 1
+; PC64LE9-NEXT:    xxmrghd 0, 1, 0
+; PC64LE9-NEXT:    xvcvdpsp 34, 0
+; PC64LE9-NEXT:    vmrgew 2, 2, 4
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x float>
+           @llvm.experimental.constrained.sitofp.v4f32.v4i64(<4 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x float> %result
+}
+
+define <1 x double> @constrained_vector_uitofp_v1f64_v1i32(<1 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v1f64_v1i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mtfprwz 0, 3
+; PC64LE-NEXT:    xscvuxddp 1, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v1f64_v1i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mtfprwz 0, 3
+; PC64LE9-NEXT:    xscvuxddp 1, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x double>
+           @llvm.experimental.constrained.uitofp.v1f64.v1i32(<1 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x double> %result
+}
+
+define <1 x float> @constrained_vector_uitofp_v1f32_v1i32(<1 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v1f32_v1i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mtfprwz 0, 3
+; PC64LE-NEXT:    xscvuxdsp 1, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v1f32_v1i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mtfprwz 0, 3
+; PC64LE9-NEXT:    xscvuxdsp 1, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x float>
+           @llvm.experimental.constrained.uitofp.v1f32.v1i32(<1 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x float> %result
+}
+
+define <1 x double> @constrained_vector_uitofp_v1f64_v1i64(<1 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v1f64_v1i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mtfprd 0, 3
+; PC64LE-NEXT:    xscvuxddp 1, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v1f64_v1i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    xscvuxddp 1, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x double>
+           @llvm.experimental.constrained.uitofp.v1f64.v1i64(<1 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x double> %result
+}
+
+define <1 x float> @constrained_vector_uitofp_v1f32_v1i64(<1 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v1f32_v1i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mtfprd 0, 3
+; PC64LE-NEXT:    xscvuxdsp 1, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v1f32_v1i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    xscvuxdsp 1, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <1 x float>
+           @llvm.experimental.constrained.uitofp.v1f32.v1i64(<1 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <1 x float> %result
+}
+
+define <2 x double> @constrained_vector_uitofp_v2f64_v2i16(<2 x i16> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v2f64_v2i16:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    addis 3, 2, .LCPI173_0@toc@ha
+; PC64LE-NEXT:    xxlxor 36, 36, 36
+; PC64LE-NEXT:    addi 3, 3, .LCPI173_0@toc@l
+; PC64LE-NEXT:    lvx 3, 0, 3
+; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    xvcvuxddp 34, 34
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v2f64_v2i16:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    addis 3, 2, .LCPI173_0@toc@ha
+; PC64LE9-NEXT:    xxlxor 36, 36, 36
+; PC64LE9-NEXT:    addi 3, 3, .LCPI173_0@toc@l
+; PC64LE9-NEXT:    lxvx 35, 0, 3
+; PC64LE9-NEXT:    vperm 2, 4, 2, 3
+; PC64LE9-NEXT:    xvcvuxddp 34, 34
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x double>
+           @llvm.experimental.constrained.uitofp.v2f64.v2i16(<2 x i16> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x double> %result
+}
+
+define <2 x double> @constrained_vector_uitofp_v2f64_v2i32(<2 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v2f64_v2i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxswapd 0, 34
+; PC64LE-NEXT:    xxsldwi 1, 34, 34, 1
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtfprwz 0, 3
+; PC64LE-NEXT:    mtfprwz 1, 4
+; PC64LE-NEXT:    xscvuxddp 0, 0
+; PC64LE-NEXT:    xscvuxddp 1, 1
+; PC64LE-NEXT:    xxmrghd 34, 1, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v2f64_v2i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    li 3, 0
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    mtfprwz 0, 3
+; PC64LE9-NEXT:    li 3, 4
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    xscvuxddp 0, 0
+; PC64LE9-NEXT:    mtfprwz 1, 3
+; PC64LE9-NEXT:    xscvuxddp 1, 1
+; PC64LE9-NEXT:    xxmrghd 34, 1, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x double>
+           @llvm.experimental.constrained.uitofp.v2f64.v2i32(<2 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x double> %result
+}
+
+define <2 x float> @constrained_vector_uitofp_v2f32_v2i32(<2 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v2f32_v2i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxswapd 0, 34
+; PC64LE-NEXT:    xxsldwi 1, 34, 34, 1
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtfprwz 0, 3
+; PC64LE-NEXT:    mtfprwz 1, 4
+; PC64LE-NEXT:    xscvuxdsp 0, 0
+; PC64LE-NEXT:    xscvuxdsp 1, 1
+; PC64LE-NEXT:    xscvdpspn 0, 0
+; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    vmrghw 2, 3, 2
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v2f32_v2i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    li 3, 0
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    mtfprwz 0, 3
+; PC64LE9-NEXT:    li 3, 4
+; PC64LE9-NEXT:    xscvuxdsp 0, 0
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    mtfprwz 0, 3
+; PC64LE9-NEXT:    xscvuxdsp 0, 0
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    vmrghw 2, 2, 3
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x float>
+           @llvm.experimental.constrained.uitofp.v2f32.v2i32(<2 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x float> %result
+}
+
+define <2 x double> @constrained_vector_uitofp_v2f64_v2i64(<2 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v2f64_v2i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xvcvuxddp 34, 34
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v2f64_v2i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    xvcvuxddp 34, 34
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x double>
+           @llvm.experimental.constrained.uitofp.v2f64.v2i64(<2 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x double> %result
+}
+
+define <2 x float> @constrained_vector_uitofp_v2f32_v2i64(<2 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v2f32_v2i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxswapd 0, 34
+; PC64LE-NEXT:    mfvsrd 3, 34
+; PC64LE-NEXT:    mffprd 4, 0
+; PC64LE-NEXT:    mtfprd 0, 3
+; PC64LE-NEXT:    mtfprd 1, 4
+; PC64LE-NEXT:    xscvuxdsp 0, 0
+; PC64LE-NEXT:    xscvuxdsp 1, 1
+; PC64LE-NEXT:    xscvdpspn 0, 0
+; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    vmrghw 2, 2, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v2f32_v2i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mfvsrld 3, 34
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    mfvsrd 3, 34
+; PC64LE9-NEXT:    xscvuxdsp 0, 0
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    xscvuxdsp 0, 0
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    vmrghw 2, 2, 3
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <2 x float>
+           @llvm.experimental.constrained.uitofp.v2f32.v2i64(<2 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <2 x float> %result
+}
+
+define <3 x double> @constrained_vector_uitofp_v3f64_v3i32(<3 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v3f64_v3i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxswapd 0, 34
+; PC64LE-NEXT:    xxsldwi 1, 34, 34, 1
+; PC64LE-NEXT:    mfvsrwz 3, 34
+; PC64LE-NEXT:    mtfprwz 3, 3
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtfprwz 0, 3
+; PC64LE-NEXT:    mtfprwz 2, 4
+; PC64LE-NEXT:    xscvuxddp 1, 0
+; PC64LE-NEXT:    xscvuxddp 2, 2
+; PC64LE-NEXT:    xscvuxddp 3, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v3f64_v3i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    li 3, 0
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    mtfprwz 0, 3
+; PC64LE9-NEXT:    li 3, 4
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    xscvuxddp 1, 0
+; PC64LE9-NEXT:    mtfprwz 0, 3
+; PC64LE9-NEXT:    mfvsrwz 3, 34
+; PC64LE9-NEXT:    xscvuxddp 2, 0
+; PC64LE9-NEXT:    mtfprwz 0, 3
+; PC64LE9-NEXT:    xscvuxddp 3, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x double>
+           @llvm.experimental.constrained.uitofp.v3f64.v3i32(<3 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x double> %result
+}
+
+define <3 x float> @constrained_vector_uitofp_v3f32_v3i32(<3 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v3f32_v3i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxswapd 0, 34
+; PC64LE-NEXT:    xxsldwi 1, 34, 34, 1
+; PC64LE-NEXT:    addis 3, 2, .LCPI179_0@toc@ha
+; PC64LE-NEXT:    addi 3, 3, .LCPI179_0@toc@l
+; PC64LE-NEXT:    mffprwz 4, 0
+; PC64LE-NEXT:    mffprwz 5, 1
+; PC64LE-NEXT:    mtfprwz 0, 4
+; PC64LE-NEXT:    mtfprwz 1, 5
+; PC64LE-NEXT:    xscvuxdsp 0, 0
+; PC64LE-NEXT:    xscvuxdsp 1, 1
+; PC64LE-NEXT:    mfvsrwz 4, 34
+; PC64LE-NEXT:    mtfprwz 2, 4
+; PC64LE-NEXT:    xscvuxdsp 2, 2
+; PC64LE-NEXT:    xscvdpspn 0, 0
+; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE-NEXT:    xscvdpspn 0, 2
+; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    vmrghw 2, 3, 2
+; PC64LE-NEXT:    lvx 3, 0, 3
+; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
+; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v3f32_v3i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    li 3, 0
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    mtfprwz 0, 3
+; PC64LE9-NEXT:    li 3, 4
+; PC64LE9-NEXT:    xscvuxdsp 0, 0
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    mtfprwz 0, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI179_0@toc@ha
+; PC64LE9-NEXT:    xscvuxdsp 0, 0
+; PC64LE9-NEXT:    addi 3, 3, .LCPI179_0@toc@l
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
+; PC64LE9-NEXT:    vmrghw 3, 4, 3
+; PC64LE9-NEXT:    lxvx 36, 0, 3
+; PC64LE9-NEXT:    mfvsrwz 3, 34
+; PC64LE9-NEXT:    mtfprwz 0, 3
+; PC64LE9-NEXT:    xscvuxdsp 0, 0
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    vperm 2, 2, 3, 4
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x float>
+           @llvm.experimental.constrained.uitofp.v3f32.v3i32(<3 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x float> %result
+}
+
+define <3 x double> @constrained_vector_uitofp_v3f64_v3i64(<3 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v3f64_v3i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mtfprd 0, 3
+; PC64LE-NEXT:    mtfprd 2, 4
+; PC64LE-NEXT:    mtfprd 3, 5
+; PC64LE-NEXT:    xscvuxddp 1, 0
+; PC64LE-NEXT:    xscvuxddp 2, 2
+; PC64LE-NEXT:    xscvuxddp 3, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v3f64_v3i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    xscvuxddp 1, 0
+; PC64LE9-NEXT:    mtfprd 0, 4
+; PC64LE9-NEXT:    xscvuxddp 2, 0
+; PC64LE9-NEXT:    mtfprd 0, 5
+; PC64LE9-NEXT:    xscvuxddp 3, 0
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x double>
+           @llvm.experimental.constrained.uitofp.v3f64.v3i64(<3 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x double> %result
+}
+
+define <3 x float> @constrained_vector_uitofp_v3f32_v3i64(<3 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v3f32_v3i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    mtfprd 0, 3
+; PC64LE-NEXT:    addis 6, 2, .LCPI181_0@toc@ha
+; PC64LE-NEXT:    mtfprd 1, 4
+; PC64LE-NEXT:    addi 3, 6, .LCPI181_0@toc@l
+; PC64LE-NEXT:    xscvuxdsp 0, 0
+; PC64LE-NEXT:    xscvuxdsp 1, 1
+; PC64LE-NEXT:    mtfprd 2, 5
+; PC64LE-NEXT:    xscvuxdsp 2, 2
+; PC64LE-NEXT:    xscvdpspn 0, 0
+; PC64LE-NEXT:    xscvdpspn 1, 1
+; PC64LE-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE-NEXT:    xscvdpspn 0, 2
+; PC64LE-NEXT:    xxsldwi 35, 1, 1, 3
+; PC64LE-NEXT:    vmrghw 2, 3, 2
+; PC64LE-NEXT:    lvx 3, 0, 3
+; PC64LE-NEXT:    xxsldwi 36, 0, 0, 3
+; PC64LE-NEXT:    vperm 2, 4, 2, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v3f32_v3i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    addis 3, 2, .LCPI181_0@toc@ha
+; PC64LE9-NEXT:    xscvuxdsp 0, 0
+; PC64LE9-NEXT:    addi 3, 3, .LCPI181_0@toc@l
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 34, 0, 0, 3
+; PC64LE9-NEXT:    mtfprd 0, 4
+; PC64LE9-NEXT:    xscvuxdsp 0, 0
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 35, 0, 0, 3
+; PC64LE9-NEXT:    mtfprd 0, 5
+; PC64LE9-NEXT:    xscvuxdsp 0, 0
+; PC64LE9-NEXT:    vmrghw 2, 3, 2
+; PC64LE9-NEXT:    lxvx 35, 0, 3
+; PC64LE9-NEXT:    xscvdpspn 0, 0
+; PC64LE9-NEXT:    xxsldwi 36, 0, 0, 3
+; PC64LE9-NEXT:    vperm 2, 4, 2, 3
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <3 x float>
+           @llvm.experimental.constrained.uitofp.v3f32.v3i64(<3 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <3 x float> %result
+}
+
+define <4 x double> @constrained_vector_uitofp_v4f64_v4i32(<4 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v4f64_v4i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxswapd 0, 34
+; PC64LE-NEXT:    mfvsrwz 3, 34
+; PC64LE-NEXT:    xxsldwi 1, 34, 34, 1
+; PC64LE-NEXT:    mtfprwz 2, 3
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    xxsldwi 0, 34, 34, 3
+; PC64LE-NEXT:    mffprwz 4, 1
+; PC64LE-NEXT:    mtfprwz 1, 3
+; PC64LE-NEXT:    mffprwz 3, 0
+; PC64LE-NEXT:    mtfprwz 3, 4
+; PC64LE-NEXT:    xscvuxddp 0, 2
+; PC64LE-NEXT:    mtfprwz 2, 3
+; PC64LE-NEXT:    xscvuxddp 1, 1
+; PC64LE-NEXT:    xscvuxddp 3, 3
+; PC64LE-NEXT:    xscvuxddp 2, 2
+; PC64LE-NEXT:    xxmrghd 34, 3, 1
+; PC64LE-NEXT:    xxmrghd 35, 2, 0
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v4f64_v4i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    li 3, 0
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    mtfprwz 0, 3
+; PC64LE9-NEXT:    li 3, 4
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    xscvuxddp 0, 0
+; PC64LE9-NEXT:    mtfprwz 1, 3
+; PC64LE9-NEXT:    li 3, 12
+; PC64LE9-NEXT:    xscvuxddp 1, 1
+; PC64LE9-NEXT:    vextuwrx 3, 3, 2
+; PC64LE9-NEXT:    xxmrghd 0, 1, 0
+; PC64LE9-NEXT:    mtfprwz 1, 3
+; PC64LE9-NEXT:    mfvsrwz 3, 34
+; PC64LE9-NEXT:    mtfprwz 2, 3
+; PC64LE9-NEXT:    xscvuxddp 1, 1
+; PC64LE9-NEXT:    xscvuxddp 2, 2
+; PC64LE9-NEXT:    xxlor 34, 0, 0
+; PC64LE9-NEXT:    xxmrghd 35, 1, 2
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x double>
+           @llvm.experimental.constrained.uitofp.v4f64.v4i32(<4 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x double> %result
+}
+
+define <4 x float> @constrained_vector_uitofp_v4f32_v4i16(<4 x i16> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v4f32_v4i16:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxlxor 35, 35, 35
+; PC64LE-NEXT:    vmrglh 2, 3, 2
+; PC64LE-NEXT:    xvcvuxwsp 34, 34
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v4f32_v4i16:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    xxlxor 35, 35, 35
+; PC64LE9-NEXT:    vmrglh 2, 3, 2
+; PC64LE9-NEXT:    xvcvuxwsp 34, 34
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x float>
+         @llvm.experimental.constrained.uitofp.v4f32.v4i16(<4 x i16> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x float> %result
+}
+
+define <4 x float> @constrained_vector_uitofp_v4f32_v4i32(<4 x i32> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v4f32_v4i32:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xvcvuxwsp 34, 34
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v4f32_v4i32:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    xvcvuxwsp 34, 34
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x float>
+           @llvm.experimental.constrained.uitofp.v4f32.v4i32(<4 x i32> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x float> %result
+}
+
+define <4 x double> @constrained_vector_uitofp_v4f64_v4i64(<4 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v4f64_v4i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xvcvuxddp 35, 35
+; PC64LE-NEXT:    xvcvuxddp 34, 34
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v4f64_v4i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    xvcvuxddp 35, 35
+; PC64LE9-NEXT:    xvcvuxddp 34, 34
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x double>
+           @llvm.experimental.constrained.uitofp.v4f64.v4i64(<4 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x double> %result
+}
+
+define <4 x float> @constrained_vector_uitofp_v4f32_v4i64(<4 x i64> %x) #0 {
+; PC64LE-LABEL: constrained_vector_uitofp_v4f32_v4i64:
+; PC64LE:       # %bb.0: # %entry
+; PC64LE-NEXT:    xxswapd 0, 34
+; PC64LE-NEXT:    mfvsrd 3, 34
+; PC64LE-NEXT:    xxswapd 2, 35
+; PC64LE-NEXT:    mfvsrd 4, 35
+; PC64LE-NEXT:    mtfprd 1, 3
+; PC64LE-NEXT:    mffprd 3, 0
+; PC64LE-NEXT:    mtfprd 0, 4
+; PC64LE-NEXT:    mtfprd 3, 3
+; PC64LE-NEXT:    mffprd 3, 2
+; PC64LE-NEXT:    xscvuxdsp 1, 1
+; PC64LE-NEXT:    mtfprd 2, 3
+; PC64LE-NEXT:    xscvuxdsp 0, 0
+; PC64LE-NEXT:    xscvuxdsp 3, 3
+; PC64LE-NEXT:    xscvuxdsp 2, 2
+; PC64LE-NEXT:    xxmrghd 0, 0, 1
+; PC64LE-NEXT:    xxmrghd 1, 2, 3
+; PC64LE-NEXT:    xvcvdpsp 34, 0
+; PC64LE-NEXT:    xvcvdpsp 35, 1
+; PC64LE-NEXT:    vmrgew 2, 2, 3
+; PC64LE-NEXT:    blr
+;
+; PC64LE9-LABEL: constrained_vector_uitofp_v4f32_v4i64:
+; PC64LE9:       # %bb.0: # %entry
+; PC64LE9-NEXT:    mfvsrld 3, 34
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    mfvsrld 3, 35
+; PC64LE9-NEXT:    xscvuxdsp 0, 0
+; PC64LE9-NEXT:    mtfprd 1, 3
+; PC64LE9-NEXT:    mfvsrd 3, 34
+; PC64LE9-NEXT:    xscvuxdsp 1, 1
+; PC64LE9-NEXT:    xxmrghd 0, 1, 0
+; PC64LE9-NEXT:    xvcvdpsp 36, 0
+; PC64LE9-NEXT:    mtfprd 0, 3
+; PC64LE9-NEXT:    mfvsrd 3, 35
+; PC64LE9-NEXT:    mtfprd 1, 3
+; PC64LE9-NEXT:    xscvuxdsp 0, 0
+; PC64LE9-NEXT:    xscvuxdsp 1, 1
+; PC64LE9-NEXT:    xxmrghd 0, 1, 0
+; PC64LE9-NEXT:    xvcvdpsp 34, 0
+; PC64LE9-NEXT:    vmrgew 2, 2, 4
+; PC64LE9-NEXT:    blr
+entry:
+  %result = call <4 x float>
+           @llvm.experimental.constrained.uitofp.v4f32.v4i64(<4 x i64> %x,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret <4 x float> %result
 }
 
 attributes #0 = { nounwind strictfp noimplicitfloat }
@@ -6472,12 +8815,30 @@ declare <2 x double> @llvm.experimental.constrained.rint.v2f64(<2 x double>, met
 declare <2 x double> @llvm.experimental.constrained.nearbyint.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.maxnum.v2f64(<2 x double>, <2 x double>, metadata)
 declare <2 x double> @llvm.experimental.constrained.minnum.v2f64(<2 x double>, <2 x double>, metadata)
+declare <2 x i32> @llvm.experimental.constrained.fptosi.v2i32.v2f32(<2 x float>, metadata)
+declare <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f32(<2 x float>, metadata)
+declare <2 x i32> @llvm.experimental.constrained.fptosi.v2i32.v2f64(<2 x double>, metadata)
+declare <2 x i64> @llvm.experimental.constrained.fptosi.v2i64.v2f64(<2 x double>, metadata)
+declare <2 x i32> @llvm.experimental.constrained.fptoui.v2i32.v2f32(<2 x float>, metadata)
+declare <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f32(<2 x float>, metadata)
+declare <2 x i32> @llvm.experimental.constrained.fptoui.v2i32.v2f64(<2 x double>, metadata)
+declare <2 x i64> @llvm.experimental.constrained.fptoui.v2i64.v2f64(<2 x double>, metadata)
 declare <2 x float> @llvm.experimental.constrained.fptrunc.v2f32.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.fpext.v2f64.v2f32(<2 x float>, metadata)
 declare <2 x double> @llvm.experimental.constrained.ceil.v2f64(<2 x double>, metadata)
 declare <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double>, metadata)
 declare <2 x double> @llvm.experimental.constrained.round.v2f64(<2 x double>, metadata)
 declare <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double>, metadata)
+declare <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i16(<2 x i16>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i16(<2 x i16>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i32(<2 x i32>, metadata, metadata)
+declare <2 x float> @llvm.experimental.constrained.sitofp.v2f32.v2i32(<2 x i32>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i64(<2 x i64>, metadata, metadata)
+declare <2 x float> @llvm.experimental.constrained.sitofp.v2f32.v2i64(<2 x i64>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i32(<2 x i32>, metadata, metadata)
+declare <2 x float> @llvm.experimental.constrained.uitofp.v2f32.v2i32(<2 x i32>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.uitofp.v2f64.v2i64(<2 x i64>, metadata, metadata)
+declare <2 x float> @llvm.experimental.constrained.uitofp.v2f32.v2i64(<2 x i64>, metadata, metadata)
 
 ; Scalar width declarations
 declare <1 x float> @llvm.experimental.constrained.fadd.v1f32(<1 x float>, <1 x float>, metadata, metadata)
@@ -6499,12 +8860,28 @@ declare <1 x float> @llvm.experimental.constrained.rint.v1f32(<1 x float>, metad
 declare <1 x float> @llvm.experimental.constrained.nearbyint.v1f32(<1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.maxnum.v1f32(<1 x float>, <1 x float>, metadata)
 declare <1 x float> @llvm.experimental.constrained.minnum.v1f32(<1 x float>, <1 x float>, metadata)
+declare <1 x i32> @llvm.experimental.constrained.fptosi.v1i32.v1f32(<1 x float>, metadata)
+declare <1 x i64> @llvm.experimental.constrained.fptosi.v1i64.v1f32(<1 x float>, metadata)
+declare <1 x i32> @llvm.experimental.constrained.fptosi.v1i32.v1f64(<1 x double>, metadata)
+declare <1 x i64> @llvm.experimental.constrained.fptosi.v1i64.v1f64(<1 x double>, metadata)
+declare <1 x i32> @llvm.experimental.constrained.fptoui.v1i32.v1f32(<1 x float>, metadata)
+declare <1 x i64> @llvm.experimental.constrained.fptoui.v1i64.v1f32(<1 x float>, metadata)
+declare <1 x i32> @llvm.experimental.constrained.fptoui.v1i32.v1f64(<1 x double>, metadata)
+declare <1 x i64> @llvm.experimental.constrained.fptoui.v1i64.v1f64(<1 x double>, metadata)
 declare <1 x float> @llvm.experimental.constrained.fptrunc.v1f32.v1f64(<1 x double>, metadata, metadata)
 declare <1 x double> @llvm.experimental.constrained.fpext.v1f64.v1f32(<1 x float>, metadata)
 declare <1 x float> @llvm.experimental.constrained.ceil.v1f32(<1 x float>, metadata)
 declare <1 x float> @llvm.experimental.constrained.floor.v1f32(<1 x float>, metadata)
 declare <1 x float> @llvm.experimental.constrained.round.v1f32(<1 x float>, metadata)
 declare <1 x float> @llvm.experimental.constrained.trunc.v1f32(<1 x float>, metadata)
+declare <1 x double> @llvm.experimental.constrained.sitofp.v1f64.v1i32(<1 x i32>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.sitofp.v1f32.v1i32(<1 x i32>, metadata, metadata)
+declare <1 x double> @llvm.experimental.constrained.sitofp.v1f64.v1i64(<1 x i64>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.sitofp.v1f32.v1i64(<1 x i64>, metadata, metadata)
+declare <1 x double> @llvm.experimental.constrained.uitofp.v1f64.v1i32(<1 x i32>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.uitofp.v1f32.v1i32(<1 x i32>, metadata, metadata)
+declare <1 x double> @llvm.experimental.constrained.uitofp.v1f64.v1i64(<1 x i64>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.uitofp.v1f32.v1i64(<1 x i64>, metadata, metadata)
 
 ; Illegal width declarations
 declare <3 x float> @llvm.experimental.constrained.fadd.v3f32(<3 x float>, <3 x float>, metadata, metadata)
@@ -6545,6 +8922,14 @@ declare <3 x float> @llvm.experimental.constrained.maxnum.v3f32(<3 x float>, <3 
 declare <3 x double> @llvm.experimental.constrained.maxnum.v3f64(<3 x double>, <3 x double>, metadata)
 declare <3 x float> @llvm.experimental.constrained.minnum.v3f32(<3 x float>, <3 x float>, metadata)
 declare <3 x double> @llvm.experimental.constrained.minnum.v3f64(<3 x double>, <3 x double>, metadata)
+declare <3 x i32> @llvm.experimental.constrained.fptosi.v3i32.v3f32(<3 x float>, metadata)
+declare <3 x i64> @llvm.experimental.constrained.fptosi.v3i64.v3f32(<3 x float>, metadata)
+declare <3 x i32> @llvm.experimental.constrained.fptosi.v3i32.v3f64(<3 x double>, metadata)
+declare <3 x i64> @llvm.experimental.constrained.fptosi.v3i64.v3f64(<3 x double>, metadata)
+declare <3 x i32> @llvm.experimental.constrained.fptoui.v3i32.v3f32(<3 x float>, metadata)
+declare <3 x i64> @llvm.experimental.constrained.fptoui.v3i64.v3f32(<3 x float>, metadata)
+declare <3 x i32> @llvm.experimental.constrained.fptoui.v3i32.v3f64(<3 x double>, metadata)
+declare <3 x i64> @llvm.experimental.constrained.fptoui.v3i64.v3f64(<3 x double>, metadata)
 declare <3 x float> @llvm.experimental.constrained.fptrunc.v3f32.v3f64(<3 x double>, metadata, metadata)
 declare <3 x double> @llvm.experimental.constrained.fpext.v3f64.v3f32(<3 x float>, metadata)
 declare <3 x float> @llvm.experimental.constrained.ceil.v3f32(<3 x float>, metadata)
@@ -6555,6 +8940,14 @@ declare <3 x float> @llvm.experimental.constrained.round.v3f32(<3 x float>, meta
 declare <3 x double> @llvm.experimental.constrained.round.v3f64(<3 x double>, metadata)
 declare <3 x float> @llvm.experimental.constrained.trunc.v3f32(<3 x float>, metadata)
 declare <3 x double> @llvm.experimental.constrained.trunc.v3f64(<3 x double>, metadata)
+declare <3 x double> @llvm.experimental.constrained.sitofp.v3f64.v3i32(<3 x i32>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.sitofp.v3f32.v3i32(<3 x i32>, metadata, metadata)
+declare <3 x double> @llvm.experimental.constrained.sitofp.v3f64.v3i64(<3 x i64>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.sitofp.v3f32.v3i64(<3 x i64>, metadata, metadata)
+declare <3 x double> @llvm.experimental.constrained.uitofp.v3f64.v3i32(<3 x i32>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.uitofp.v3f32.v3i32(<3 x i32>, metadata, metadata)
+declare <3 x double> @llvm.experimental.constrained.uitofp.v3f64.v3i64(<3 x i64>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.uitofp.v3f32.v3i64(<3 x i64>, metadata, metadata)
 
 ; Double width declarations
 declare <4 x double> @llvm.experimental.constrained.fadd.v4f64(<4 x double>, <4 x double>, metadata, metadata)
@@ -6576,9 +8969,27 @@ declare <4 x double> @llvm.experimental.constrained.rint.v4f64(<4 x double>, met
 declare <4 x double> @llvm.experimental.constrained.nearbyint.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.maxnum.v4f64(<4 x double>, <4 x double>, metadata)
 declare <4 x double> @llvm.experimental.constrained.minnum.v4f64(<4 x double>, <4 x double>, metadata)
+declare <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f32(<4 x float>, metadata)
+declare <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f32(<4 x float>, metadata)
+declare <4 x i32> @llvm.experimental.constrained.fptosi.v4i32.v4f64(<4 x double>, metadata)
+declare <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f64(<4 x double>, metadata)
+declare <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f32(<4 x float>, metadata)
+declare <4 x i64> @llvm.experimental.constrained.fptoui.v4i64.v4f32(<4 x float>, metadata)
+declare <4 x i32> @llvm.experimental.constrained.fptoui.v4i32.v4f64(<4 x double>, metadata)
+declare <4 x i64> @llvm.experimental.constrained.fptoui.v4i64.v4f64(<4 x double>, metadata)
 declare <4 x float> @llvm.experimental.constrained.fptrunc.v4f32.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float>, metadata)
 declare <4 x double> @llvm.experimental.constrained.ceil.v4f64(<4 x double>, metadata)
 declare <4 x double> @llvm.experimental.constrained.floor.v4f64(<4 x double>, metadata)
 declare <4 x double> @llvm.experimental.constrained.round.v4f64(<4 x double>, metadata)
 declare <4 x double> @llvm.experimental.constrained.trunc.v4f64(<4 x double>, metadata)
+declare <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i16(<4 x i16>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.sitofp.v4f64.v4i32(<4 x i32>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i32(<4 x i32>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.sitofp.v4f64.v4i64(<4 x i64>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i64(<4 x i64>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i16(<4 x i16>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.uitofp.v4f64.v4i32(<4 x i32>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i32(<4 x i32>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.uitofp.v4f64.v4i64(<4 x i64>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i64(<4 x i64>, metadata, metadata)

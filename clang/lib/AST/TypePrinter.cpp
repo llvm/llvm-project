@@ -655,6 +655,24 @@ void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
     printBefore(T->getElementType(), OS);
     break;
   }
+  case VectorType::SveFixedLengthDataVector:
+  case VectorType::SveFixedLengthPredicateVector:
+    // FIXME: We prefer to print the size directly here, but have no way
+    // to get the size of the type.
+    OS << "__attribute__((__arm_sve_vector_bits__(";
+
+    if (T->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
+      // Predicates take a bit per byte of the vector size, multiply by 8 to
+      // get the number of bits passed to the attribute.
+      OS << T->getNumElements() * 8;
+    else
+      OS << T->getNumElements();
+
+    OS << " * sizeof(";
+    print(T->getElementType(), OS, StringRef());
+    // Multiply by 8 for the number of bits.
+    OS << ") * 8))) ";
+    printBefore(T->getElementType(), OS);
   }
 }
 
@@ -702,6 +720,24 @@ void TypePrinter::printDependentVectorBefore(
     printBefore(T->getElementType(), OS);
     break;
   }
+  case VectorType::SveFixedLengthDataVector:
+  case VectorType::SveFixedLengthPredicateVector:
+    // FIXME: We prefer to print the size directly here, but have no way
+    // to get the size of the type.
+    OS << "__attribute__((__arm_sve_vector_bits__(";
+    if (T->getSizeExpr()) {
+      T->getSizeExpr()->printPretty(OS, nullptr, Policy);
+      if (T->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
+        // Predicates take a bit per byte of the vector size, multiply by 8 to
+        // get the number of bits passed to the attribute.
+        OS << " * 8";
+      OS << " * sizeof(";
+      print(T->getElementType(), OS, StringRef());
+      // Multiply by 8 for the number of bits.
+      OS << ") * 8";
+    }
+    OS << "))) ";
+    printBefore(T->getElementType(), OS);
   }
 }
 
@@ -1633,9 +1669,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::ArmMveStrictPolymorphism:
     OS << "__clang_arm_mve_strict_polymorphism";
-    break;
-  case attr::ArmSveVectorBits:
-    OS << "arm_sve_vector_bits";
     break;
   }
   OS << "))";

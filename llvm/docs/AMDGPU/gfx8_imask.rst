@@ -63,4 +63,3 @@ Examples:
     s_set_gpr_idx_mode gpr_idx(SRC0,SRC1,SRC2,DST)      // the same as above
 
     s_set_gpr_idx_mode gpr_idx(DST,SRC1)
-

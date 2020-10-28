@@ -10,7 +10,9 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   generic/lib/SOURCES;
   ptx/lib/SOURCES;
   ptx-nvidiacl/lib/SOURCES;
-  r600/lib/SOURCES
+  r600/lib/SOURCES;
+  spirv/lib/SOURCES;
+  spirv64/lib/SOURCES
 )
 
 # List of all targets
@@ -22,6 +24,8 @@ set( LIBCLC_TARGETS_ALL
   nvptx64--
   nvptx--nvidiacl
   nvptx64--nvidiacl
+  spirv-mesa3d-
+  spirv64-mesa3d-
 )
 
 set( LIBCLC_MIN_LLVM "3.9.0" )
@@ -52,8 +56,6 @@ endif()
 if( LIBCLC_TARGETS_TO_BUILD STREQUAL "all" )
 	set( LIBCLC_TARGETS_TO_BUILD ${LIBCLC_TARGETS_ALL} )
 endif()
-
-list( SORT LIBCLC_TARGETS_TO_BUILD )
 
 execute_process( COMMAND ${LLVM_CONFIG} "--system-libs"
 	OUTPUT_VARIABLE LLVM_SYSTEM_LIBS
@@ -93,15 +95,25 @@ find_program( LLVM_CLANG clang PATHS ${LLVM_BINDIR} NO_DEFAULT_PATH )
 find_program( LLVM_AS llvm-as PATHS ${LLVM_BINDIR} NO_DEFAULT_PATH )
 find_program( LLVM_LINK llvm-link PATHS ${LLVM_BINDIR} NO_DEFAULT_PATH )
 find_program( LLVM_OPT opt PATHS ${LLVM_BINDIR} NO_DEFAULT_PATH )
+find_program( LLVM_SPIRV llvm-spirv PATHS ${LLVM_BINDIR} NO_DEFAULT_PATH )
 
 # Print toolchain
 message( "clang: ${LLVM_CLANG}" )
 message( "llvm-as: ${LLVM_AS}" )
 message( "llvm-link: ${LLVM_LINK}" )
 message( "opt: ${LLVM_OPT}" )
+message( "llvm-spirv: ${LLVM_SPIRV}" )
 message( "" )
 if( NOT LLVM_CLANG OR NOT LLVM_OPT OR NOT LLVM_AS OR NOT LLVM_LINK )
 	message( FATAL_ERROR "toolchain incomplete!" )
+endif()
+
+list( SORT LIBCLC_TARGETS_TO_BUILD )
+
+if( "spirv-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD OR "spirv64-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD )
+	if( NOT LLVM_SPIRV )
+		message( FATAL_ERROR "SPIR-V targets requested, but spirv-tools is not installed" )
+	endif()
 endif()
 
 set( CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake )
@@ -137,6 +149,8 @@ set( nvptx--_devices none )
 set( nvptx64--_devices none )
 set( nvptx--nvidiacl_devices none )
 set( nvptx64--nvidiacl_devices none )
+set( spirv-mesa3d-_devices none )
+set( spirv64-mesa3d-_devices none )
 
 # Setup aliases
 set( cedar_aliases palm sumo sumo2 redwood juniper )
@@ -187,9 +201,14 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 	list( GET TRIPLE 1 VENDOR )
 	list( GET TRIPLE 2 OS )
 
-	set( dirs generic )
+	set( dirs )
+
+	if ( NOT ${ARCH} STREQUAL spirv AND NOT ${ARCH} STREQUAL spirv64 )
+		LIST( APPEND dirs generic )
+	endif()
+
 	if( ${ARCH} STREQUAL r600 OR ${ARCH} STREQUAL amdgcn )
-		set( dirs ${dirs} amdgpu )
+		list( APPEND dirs amdgpu )
 	endif()
 
 	#nvptx is special
@@ -215,10 +234,15 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
 	# Add the generated convert.cl here to prevent adding
 	# the one listed in SOURCES
-	set( rel_files convert.cl )
-	set( objects convert.cl )
-	if( NOT ENABLE_RUNTIME_SUBNORMAL )
-		list( APPEND rel_files generic/lib/subnormal_use_default.ll )
+	if( NOT ${ARCH} STREQUAL "spirv" AND NOT ${ARCH} STREQUAL "spirv64" )
+		set( rel_files convert.cl )
+		set( objects convert.cl )
+		if( NOT ENABLE_RUNTIME_SUBNORMAL )
+			list( APPEND rel_files generic/lib/subnormal_use_default.ll )
+		endif()
+	else()
+		set( rel_files )
+		set( objects )
 	endif()
 
 	foreach( l ${source_list} )
@@ -242,7 +266,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
 	foreach( d ${${t}_devices} )
 		# Some targets don't have a specific GPU to target
-		if( ${d} STREQUAL "none" )
+		if( ${d} STREQUAL "none" OR ${ARCH} STREQUAL "spirv" OR ${ARCH} STREQUAL "spirv64" )
 			set( mcpu )
 			set( arch_suffix "${t}" )
 		else()
@@ -250,6 +274,20 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 			set( arch_suffix "${d}-${t}" )
 		endif()
 		message( "	DEVICE: ${d} ( ${${d}_aliases} )" )
+
+		if ( ${ARCH} STREQUAL "spirv" OR ${ARCH} STREQUAL "spirv64" )
+			if( ${ARCH} STREQUAL "spirv" )
+				set( t "spir--" )
+			else()
+				set( t "spir64--" )
+			endif()
+			set( build_flags -O0 -finline-hint-functions )
+			set( opt_flags )
+			set( spvflags --spirv-max-version=1.1 )
+		else()
+			set( build_flags )
+			set( opt_flags -O3 )
+		endif()
 
 		add_library( builtins.link.${arch_suffix} STATIC ${rel_files} )
 		# Make sure we depend on the pseudo target to prevent
@@ -261,8 +299,11 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 			"generic/include" )
 		target_compile_definitions( builtins.link.${arch_suffix} PRIVATE
 			"__CLC_INTERNAL" )
+		string( TOUPPER "-DCLC_${ARCH}" CLC_TARGET_DEFINE )
+		target_compile_definitions( builtins.link.${arch_suffix} PRIVATE
+			${CLC_TARGET_DEFINE} )
 		target_compile_options( builtins.link.${arch_suffix} PRIVATE  -target
-			${t} ${mcpu} -fno-builtin -nostdlib )
+			${t} ${mcpu} -fno-builtin -nostdlib ${build_flags} )
 		set_target_properties( builtins.link.${arch_suffix} PROPERTIES
 			LINKER_LANGUAGE CLC )
 
@@ -270,42 +311,56 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
 		# Add opt target
 		add_custom_command( OUTPUT "builtins.opt.${obj_suffix}"
-			            COMMAND ${LLVM_OPT} -O3 -o
+				    COMMAND ${LLVM_OPT} ${opt_flags} -o
 				    "builtins.opt.${obj_suffix}"
 				    "builtins.link.${obj_suffix}"
 				    DEPENDS "builtins.link.${arch_suffix}" )
 		add_custom_target( "opt.${obj_suffix}" ALL
 		                   DEPENDS "builtins.opt.${obj_suffix}" )
 
-		# Add prepare target
-		add_custom_command( OUTPUT "${obj_suffix}"
-			            COMMAND prepare_builtins -o
-				    "${obj_suffix}"
-				    "builtins.opt.${obj_suffix}"
-				    DEPENDS "opt.${obj_suffix}"
-				            "builtins.opt.${obj_suffix}"
-				            prepare_builtins )
-		add_custom_target( "prepare-${obj_suffix}" ALL
-		                   DEPENDS "${obj_suffix}" )
-		install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} DESTINATION ${CMAKE_INSTALL_DATADIR}/clc )
-		# nvptx-- targets don't include workitem builtins
-		if( NOT ${t} MATCHES ".*ptx.*--$" )
-			add_test( NAME external-calls-${obj_suffix}
-				  COMMAND ./check_external_calls.sh ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix}
-				  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} )
-			set_tests_properties( external-calls-${obj_suffix}
-				PROPERTIES ENVIRONMENT "LLVM_CONFIG=${LLVM_CONFIG}" )
+		if( ${ARCH} STREQUAL "spirv" OR ${ARCH} STREQUAL "spirv64" )
+			set( spv_suffix ${arch_suffix}.spv )
+			add_custom_command( OUTPUT "${spv_suffix}"
+					    COMMAND ${LLVM_SPIRV} ${spvflags}
+					    -o "${spv_suffix}"
+					    "builtins.link.${obj_suffix}"
+					    DEPENDS "builtins.link.${arch_suffix}" )
+			add_custom_target( "prepare-${spv_suffix}" ALL
+			                   DEPENDS "${spv_suffix}" )
+			install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}
+				 DESTINATION ${CMAKE_INSTALL_DATADIR}/clc )
+		else()
+
+			# Add prepare target
+			add_custom_command( OUTPUT "${obj_suffix}"
+				            COMMAND prepare_builtins -o
+					    "${obj_suffix}"
+					    "builtins.opt.${obj_suffix}"
+					    DEPENDS "opt.${obj_suffix}"
+					            "builtins.opt.${obj_suffix}"
+					            prepare_builtins )
+			add_custom_target( "prepare-${obj_suffix}" ALL
+					   DEPENDS "${obj_suffix}" )
+
+			# nvptx-- targets don't include workitem builtins
+			if( NOT ${t} MATCHES ".*ptx.*--$" )
+				add_test( NAME external-calls-${obj_suffix}
+					  COMMAND ./check_external_calls.sh ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix}
+					  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} )
+				set_tests_properties( external-calls-${obj_suffix}
+					PROPERTIES ENVIRONMENT "LLVM_CONFIG=${LLVM_CONFIG}" )
+			endif()
+
+			install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} DESTINATION ${CMAKE_INSTALL_DATADIR}/clc )
+			foreach( a ${${d}_aliases} )
+				set( alias_suffix "${a}-${t}.bc" )
+				add_custom_target( ${alias_suffix} ALL
+						   COMMAND ${CMAKE_COMMAND} -E
+						   create_symlink ${obj_suffix}
+						   ${alias_suffix}
+				                   DEPENDS "prepare-${obj_suffix}" )
+				install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${alias_suffix} DESTINATION ${CMAKE_INSTALL_DATADIR}/clc )
+			endforeach( a )
 		endif()
-
-
-		foreach( a ${${d}_aliases} )
-			set( alias_suffix "${a}-${t}.bc" )
-			add_custom_target( ${alias_suffix} ALL
-					   COMMAND ${CMAKE_COMMAND} -E
-					   create_symlink ${obj_suffix}
-					   ${alias_suffix}
-			                   DEPENDS "prepare-${obj_suffix}" )
-			install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${alias_suffix} DESTINATION ${CMAKE_INSTALL_DATADIR}/clc )
-		endforeach( a )
 	endforeach( d )
 endforeach( t )

@@ -1,6 +1,6 @@
 # REQUIRES: lld
-# RUN: yaml2obj < %p/export-dllfunc.yaml > %t.export-dllfunc.obj
-# RUN: yaml2obj < %s > %t.obj
+# RUN: yaml2obj %p/export-dllfunc.yaml -o %t.export-dllfunc.obj
+# RUN: yaml2obj %s -o %t.obj
 #
 # RUN: lld-link /machine:x64 /out:%t.export-dllfunc.dll /noentry /nodefaultlib /dll %t.export-dllfunc.obj /export:DllFunc
 # RUN: lld-link /out:%t.exe %t.obj %t.export-dllfunc.lib /nodefaultlib /entry:main /include:DllFunc

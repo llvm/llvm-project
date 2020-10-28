@@ -1,4 +1,4 @@
-; RUN: opt -S -licm -loop-unswitch -licm < %s | FileCheck %s
+; RUN: opt -S -licm -simple-loop-unswitch -licm < %s | FileCheck %s
 
 declare void @llvm.experimental.guard(i1, ...)
 

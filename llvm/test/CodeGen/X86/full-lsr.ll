@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i686-- -mcpu=generic | FileCheck %s
+; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 
 define void @foo(float* nocapture %A, float* nocapture %B, float* nocapture %C, i32 %N) nounwind {
 ; CHECK: foo

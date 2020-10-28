@@ -67,6 +67,7 @@
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
+#include "llvm/Transforms/Instrumentation/HeapProfiler.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
@@ -256,6 +257,8 @@ static bool asanUseGlobalsGC(const Triple &T, const CodeGenOptions &CGOpts) {
     return true;
   case Triple::ELF:
     return CGOpts.DataSections && !CGOpts.DisableIntegratedAS;
+  case Triple::GOFF:
+    llvm::report_fatal_error("ASan not implemented for GOFF");
   case Triple::XCOFF:
     llvm::report_fatal_error("ASan not implemented for XCOFF.");
   case Triple::Wasm:
@@ -263,6 +266,12 @@ static bool asanUseGlobalsGC(const Triple &T, const CodeGenOptions &CGOpts) {
     break;
   }
   return false;
+}
+
+static void addHeapProfilerPasses(const PassManagerBuilder &Builder,
+                                  legacy::PassManagerBase &PM) {
+  PM.add(createHeapProfilerFunctionPass());
+  PM.add(createModuleHeapProfilerLegacyPassPass());
 }
 
 static void addAddressSanitizerPasses(const PassManagerBuilder &Builder,
@@ -518,6 +527,8 @@ static void initTargetOptions(DiagnosticsEngine &Diags,
   Options.EmitAddrsig = CodeGenOpts.Addrsig;
   Options.ForceDwarfFrameSection = CodeGenOpts.ForceDwarfFrameSection;
   Options.EmitCallSiteInfo = CodeGenOpts.EmitCallSiteInfo;
+  Options.ValueTrackingVariableLocations =
+      CodeGenOpts.ValueTrackingVariableLocations;
   Options.XRayOmitFunctionIndex = CodeGenOpts.XRayOmitFunctionIndex;
 
   Options.MCOptions.SplitDwarfFile = CodeGenOpts.SplitDwarfFile;
@@ -657,6 +668,13 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
 
   if (LangOpts.Coroutines)
     addCoroutinePassesToExtensionPoints(PMBuilder);
+
+  if (CodeGenOpts.HeapProf) {
+    PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
+                           addHeapProfilerPasses);
+    PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
+                           addHeapProfilerPasses);
+  }
 
   if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds)) {
     PMBuilder.addExtension(PassManagerBuilder::EP_ScalarOptimizerLate,
@@ -1361,6 +1379,11 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
         MPM = PB.buildPerModuleDefaultPipeline(Level,
                                                CodeGenOpts.DebugPassManager);
       }
+    }
+
+    if (CodeGenOpts.HeapProf) {
+      MPM.addPass(createModuleToFunctionPassAdaptor(HeapProfilerPass()));
+      MPM.addPass(ModuleHeapProfilerPass());
     }
 
     if (LangOpts.Sanitize.has(SanitizerKind::HWAddress)) {

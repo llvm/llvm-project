@@ -221,7 +221,7 @@ function(add_link_opts target_name)
 
     # Pass -O3 to the linker. This enabled different optimizations on different
     # linkers.
-    if(NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin|SunOS|AIX" OR WIN32))
+    if(NOT (CMAKE_SYSTEM_NAME MATCHES "Darwin|SunOS|AIX|OS390" OR WIN32))
       set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                    LINK_FLAGS " -Wl,-O3")
     endif()
@@ -249,11 +249,12 @@ function(add_link_opts target_name)
                        LINK_FLAGS " -Wl,-z,discard-unused=sections")
         endif()
       elseif(NOT WIN32 AND NOT LLVM_LINKER_IS_GOLD AND
-             NOT ${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD|AIX")
+             NOT CMAKE_SYSTEM_NAME MATCHES "OpenBSD|AIX|OS390")
         # Object files are compiled with -ffunction-data-sections.
         # Versions of bfd ld < 2.23.1 have a bug in --gc-sections that breaks
         # tools that use plugins. Always pass --gc-sections once we require
         # a newer linker.
+        # TODO Revisit this later on z/OS.
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,--gc-sections")
       endif()
@@ -1399,19 +1400,6 @@ function(add_unittest test_suite test_name)
   if( NOT LLVM_BUILD_TESTS )
     set(EXCLUDE_FROM_ALL ON)
   endif()
-
-  # Our current version of gtest does not properly recognize C++11 support
-  # with MSVC, so it falls back to tr1 / experimental classes.  Since LLVM
-  # itself requires C++11, we can safely force it on unconditionally so that
-  # we don't have to fight with the buggy gtest check.
-  add_definitions(-DGTEST_LANG_CXX11=1)
-  add_definitions(-DGTEST_HAS_TR1_TUPLE=0)
-
-  include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include)
-  include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googlemock/include)
-  if (NOT LLVM_ENABLE_THREADS)
-    list(APPEND LLVM_COMPILE_DEFINITIONS GTEST_HAS_PTHREAD=0)
-  endif ()
 
   if (SUPPORTS_VARIADIC_MACROS_FLAG)
     list(APPEND LLVM_COMPILE_FLAGS "-Wno-variadic-macros")

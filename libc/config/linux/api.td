@@ -90,9 +90,18 @@ def CTypeAPI : PublicAPI<"ctype.h"> {
   let Functions = [
     "isalnum",
     "isalpha",
+    "isblank",
+    "iscntrl",
     "isdigit",
+    "isgraph",
     "islower",
+    "isprint",
+    "ispunct",
+    "isspace",
     "isupper",
+    "isxdigit",
+    "tolower",
+    "toupper",
   ];
 }
 
@@ -195,6 +204,9 @@ def MathAPI : PublicAPI<"math.h"> {
    "roundl",
    "sincosf",
    "sinf",
+   "sqrt",
+   "sqrtf",
+   "sqrtl",
    "trunc",
    "truncf",
    "truncl",
@@ -227,6 +239,7 @@ def StringAPI : PublicAPI<"string.h"> {
     "strspn",
     "strstr",
     "strtok",
+    "strtok_r",
     "strxfrm",   
   ];
 

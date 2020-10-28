@@ -180,7 +180,7 @@ define i8* @test6() nounwind uwtable ssp {
 ; CHECK-NEXT:    store i8 97, i8* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [2 x i8], [2 x i8]* [[X]], i64 0, i64 1
 ; CHECK-NEXT:    store i8 0, i8* [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @strdup(i8* nocapture nonnull dereferenceable(2) [[ARRAYIDX]])
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @strdup(i8* nocapture noundef nonnull dereferenceable(2) [[ARRAYIDX]])
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %x = alloca [2 x i8], align 1
@@ -254,7 +254,7 @@ define i8* @test8(i32* %0) nounwind uwtable {
 declare void @use_i8(i8* nocapture)
 define internal void @test9a(i8* %a, i8* %b) {
 ; CHECK-LABEL: define {{[^@]+}}@test9a()
-; CHECK-NEXT:    call void @use_i8(i8* noalias nocapture align 536870912 null)
+; CHECK-NEXT:    call void @use_i8(i8* noalias nocapture noundef align 536870912 null)
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i8(i8* null)
@@ -356,8 +356,8 @@ define void @test12_1() {
 ; CHECK-LABEL: define {{[^@]+}}@test12_1()
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 4
 ; CHECK-NEXT:    [[B:%.*]] = tail call noalias i8* @malloc(i64 4)
-; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture nonnull align 4 dereferenceable(1) [[A]])
-; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture nonnull align 4 dereferenceable(1) [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef nonnull align 4 dereferenceable(1) [[A]])
+; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture noundef nonnull align 4 dereferenceable(1) [[A]])
 ; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[B]])
 ; CHECK-NEXT:    tail call void @use_nocapture(i8* noalias nocapture [[B]])
 ; CHECK-NEXT:    ret void
@@ -570,11 +570,11 @@ define internal fastcc double @strtox(i8* %s, i8** %p, i32 %prec) unnamed_addr {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT__IO_FILE:%.*]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct._IO_FILE* [[F]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 144, i8* nocapture nonnull align 8 dereferenceable(240) [[TMP0]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 144, i8* nocapture noundef nonnull align 8 dereferenceable(240) [[TMP0]])
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @sh_fromstring to i32 (%struct._IO_FILE*, i8*)*)(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i8* [[S]])
-; CHECK-NEXT:    call void @__shlim(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i64 0)
-; CHECK-NEXT:    [[CALL1:%.*]] = call double @__floatscan(%struct._IO_FILE* nonnull align 8 dereferenceable(240) [[F]], i32 1, i32 1)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 144, i8* nocapture nonnull align 8 dereferenceable(240) [[TMP0]])
+; CHECK-NEXT:    call void @__shlim(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i64 0)
+; CHECK-NEXT:    [[CALL1:%.*]] = call double @__floatscan(%struct._IO_FILE* noundef nonnull align 8 dereferenceable(240) [[F]], i32 1, i32 1)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 144, i8* nocapture noundef nonnull align 8 dereferenceable(240) [[TMP0]])
 ; CHECK-NEXT:    ret double [[CALL1]]
 ;
 entry:

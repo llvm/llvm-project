@@ -771,6 +771,8 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
 
   kmp_depnode_t node = {0};
   __kmp_init_node(&node);
+  // the stack owns the node
+  __kmp_node_ref(&node);
 
   if (!__kmp_check_deps(gtid, &node, NULL, &current_task->td_dephash,
                         DEP_BARRIER, ndeps, dep_list, ndeps_noalias,

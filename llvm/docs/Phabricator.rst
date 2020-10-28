@@ -49,7 +49,7 @@ The tool to create and review patches in Phabricator is called
 *Differential*.
 
 Note that you can upload patches created through git, but using `arc` on the
-command line (see previous section) is prefered: it adds more metadata to
+command line (see previous section) is preferred: it adds more metadata to
 Phabricator which are useful for the pre-merge testing system and for
 propagating attribution on commits when someone else has to push it for you.
 

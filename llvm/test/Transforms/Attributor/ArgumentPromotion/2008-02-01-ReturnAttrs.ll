@@ -7,7 +7,7 @@
 define internal i32 @deref(i32* %x) nounwind {
 ; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@deref
-; IS__TUNIT_OPM-SAME: (i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[X:%.*]])
+; IS__TUNIT_OPM-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X:%.*]])
 ; IS__TUNIT_OPM-NEXT:  entry:
 ; IS__TUNIT_OPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[X]], align 4
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP2]]
@@ -23,7 +23,7 @@ define internal i32 @deref(i32* %x) nounwind {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@deref
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[X:%.*]])
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X:%.*]])
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = load i32, i32* [[X]], align 4
 ; IS__CGSCC____-NEXT:    ret i32 [[TMP2]]
@@ -40,7 +40,7 @@ define i32 @f(i32 %x) {
 ; IS__TUNIT_OPM-NEXT:  entry:
 ; IS__TUNIT_OPM-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
 ; IS__TUNIT_OPM-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
-; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = call i32 @deref(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[X_ADDR]])
+; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = call i32 @deref(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X_ADDR]])
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP1]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
@@ -59,7 +59,7 @@ define i32 @f(i32 %x) {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
 ; IS__CGSCC____-NEXT:    store i32 [[X]], i32* [[X_ADDR]], align 4
-; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @deref(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[X_ADDR]])
+; IS__CGSCC____-NEXT:    [[TMP1:%.*]] = call i32 @deref(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X_ADDR]])
 ; IS__CGSCC____-NEXT:    ret i32 [[TMP1]]
 ;
 entry:

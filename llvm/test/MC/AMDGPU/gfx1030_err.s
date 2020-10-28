@@ -1,4 +1,5 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1030 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX10 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1031 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX10 %s
 
 v_dot8c_i32_i4 v5, v1, v2
 // GFX10: error:

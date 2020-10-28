@@ -43,9 +43,9 @@
 # LLVM-NEXT:     AddressAlignment: 0
 # LLVM-NEXT:     EntrySize: 0
 # LLVM-NEXT:   }
-# LLVM-NEXT: warning: '[[FILE]]': a section [index 2] has an invalid sh_name (0x1) offset which goes past the end of the section name string table
 # LLVM-NEXT:  Section {
 # LLVM-NEXT:    Index: 2
+# LLVM-NEXT: warning: '[[FILE]]': unable to get the name of SHT_PROGBITS section with index 2: a section [index 2] has an invalid sh_name (0x1) offset which goes past the end of the section name string table
 # LLVM-NEXT:    Name: <?> (1)
 # LLVM-NEXT:    Type: SHT_PROGBITS (0x1)
 # LLVM-NEXT:    Flags [ (0x0)
@@ -58,9 +58,9 @@
 # LLVM-NEXT:    AddressAlignment: 0
 # LLVM-NEXT:    EntrySize: 0
 # LLVM-NEXT:  }
-# LLVM-NEXT: warning: '[[FILE]]': a section [index 3] has an invalid sh_name (0x15) offset which goes past the end of the section name string table
 # LLVM-NEXT:   Section {
 # LLVM-NEXT:     Index: 3
+# LLVM-NEXT: warning: '[[FILE]]': unable to get the name of SHT_STRTAB section with index 3: a section [index 3] has an invalid sh_name (0x15) offset which goes past the end of the section name string table
 # LLVM-NEXT:     Name: <?> (21)
 # LLVM-NEXT:     Type: SHT_STRTAB (0x3)
 # LLVM-NEXT:     Flags [ (0x0)
@@ -73,9 +73,9 @@
 # LLVM-NEXT:     AddressAlignment: 1
 # LLVM-NEXT:     EntrySize: 0
 # LLVM-NEXT:   }
-# LLVM-NEXT: warning: '[[FILE]]': a section [index 4] has an invalid sh_name (0xb) offset which goes past the end of the section name string table
 # LLVM-NEXT:   Section {
 # LLVM-NEXT:     Index: 4
+# LLVM-NEXT: warning: '[[FILE]]': unable to get the name of SHT_STRTAB section with index 4: a section [index 4] has an invalid sh_name (0xb) offset which goes past the end of the section name string table
 # LLVM-NEXT:     Name: <?> (11)
 # LLVM-NEXT:     Type: SHT_STRTAB (0x3)
 # LLVM-NEXT:     Flags [ (0x0)
@@ -95,7 +95,6 @@ FileHeader:
   Class:     ELFCLASS64
   Data:      ELFDATA2LSB
   Type:      ET_DYN
-  Machine:   EM_X86_64
   EShStrNdx: 0
 Sections:
   - Name:   .foo

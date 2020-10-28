@@ -247,6 +247,18 @@ foo.region_op {
 This trait is an important structural property of the IR, and enables operations
 to have [passes](PassManagement.md) scheduled under them.
 
+### MemRefsNormalizable
+
+* `OpTrait::MemRefsNormalizable` -- `MemRefsNormalizable`
+
+This trait is used to flag operations that can accommodate `MemRefs` with
+non-identity memory-layout specifications. This trait indicates that the
+normalization of memory layout can be performed for such operations.
+`MemRefs` normalization consists of replacing an original memory reference
+with layout specifications to an equivalent memory reference where
+the specified memory layout is applied by rewritting accesses and types
+associated with that memory reference.
+
 ### Single Block with Implicit Terminator
 
 *   `OpTrait::SingleBlockImplicitTerminator<typename TerminatorOpType>` :

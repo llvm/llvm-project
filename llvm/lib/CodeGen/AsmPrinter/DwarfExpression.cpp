@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -24,6 +25,8 @@
 #include <cstdint>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "dwarfdebug"
 
 void DwarfExpression::emitConstu(uint64_t Value) {
   if (Value < 32)
@@ -217,6 +220,33 @@ void DwarfExpression::addUnsignedConstant(const APInt &Value) {
     addOpPiece(std::min(Size - Offset, 64u), Offset);
     Offset += 64;
   }
+}
+
+void DwarfExpression::addConstantFP(const APFloat &APF, const AsmPrinter &AP) {
+  assert(isImplicitLocation() || isUnknownLocation());
+  APInt API = APF.bitcastToAPInt();
+  int NumBytes = API.getBitWidth() / 8;
+  if (NumBytes == 4 /*float*/ || NumBytes == 8 /*double*/) {
+    // FIXME: Add support for `long double`.
+    emitOp(dwarf::DW_OP_implicit_value);
+    emitUnsigned(NumBytes /*Size of the block in bytes*/);
+
+    // The loop below is emitting the value starting at least significant byte,
+    // so we need to perform a byte-swap to get the byte order correct in case
+    // of a big-endian target.
+    if (AP.getDataLayout().isBigEndian())
+      API = API.byteSwap();
+
+    for (int i = 0; i < NumBytes; ++i) {
+      emitData1(API.getZExtValue() & 0xFF);
+      API = API.lshr(8);
+    }
+
+    return;
+  }
+  LLVM_DEBUG(
+      dbgs() << "Skipped DW_OP_implicit_value creation for ConstantFP of size: "
+             << API.getBitWidth() << " bits\n");
 }
 
 bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,

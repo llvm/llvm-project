@@ -14,6 +14,8 @@
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
+#include <asm/ptrace.h>
+
 namespace lldb_private {
 namespace process_linux {
 
@@ -97,11 +99,19 @@ protected:
 private:
   bool m_gpr_is_valid;
   bool m_fpu_is_valid;
+  bool m_sve_buffer_is_valid;
+
+  bool m_sve_header_is_valid;
 
   RegisterInfoPOSIX_arm64::GPR m_gpr_arm64; // 64-bit general purpose registers.
 
   RegisterInfoPOSIX_arm64::FPU
       m_fpr; // floating-point registers including extended register sets.
+
+  SVEState m_sve_state;
+  struct user_sve_header m_sve_header;
+  std::vector<uint8_t> m_sve_ptrace_payload;
+
   // Debug register info for hardware breakpoints and watchpoints management.
   struct DREG {
     lldb::addr_t address;  // Breakpoint/watchpoint address value.
@@ -123,6 +133,28 @@ private:
 
   bool IsFPR(unsigned reg) const;
 
+  Status ReadAllSVE();
+
+  Status WriteAllSVE();
+
+  Status ReadSVEHeader();
+
+  Status WriteSVEHeader();
+
+  bool IsSVE(unsigned reg) const;
+
+  uint64_t GetSVERegVG() { return m_sve_header.vl / 8; }
+
+  void SetSVERegVG(uint64_t vg) { m_sve_header.vl = vg * 8; }
+
+  void *GetSVEHeader() { return &m_sve_header; }
+
+  void *GetSVEBuffer();
+
+  size_t GetSVEHeaderSize() { return sizeof(m_sve_header); }
+
+  size_t GetSVEBufferSize() { return m_sve_ptrace_payload.size(); }
+
   Status ReadHardwareDebugInfo();
 
   Status WriteHardwareDebugRegs(int hwbType);
@@ -130,6 +162,10 @@ private:
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
 
   RegisterInfoPOSIX_arm64 &GetRegisterInfo() const;
+
+  void ConfigureRegisterContext();
+
+  uint32_t CalculateSVEOffset(const RegisterInfo *reg_info) const;
 };
 
 } // namespace process_linux

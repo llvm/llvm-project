@@ -172,9 +172,9 @@ define void @caller_aligned_stack() nounwind {
 ; RV32I-FPELIM-NEXT:    addi t0, a0, 1311
 ; RV32I-FPELIM-NEXT:    lui a0, 688509
 ; RV32I-FPELIM-NEXT:    addi a5, a0, -2048
-; RV32I-FPELIM-NEXT:    addi a2, sp, 32
 ; RV32I-FPELIM-NEXT:    addi a0, zero, 1
 ; RV32I-FPELIM-NEXT:    addi a1, zero, 11
+; RV32I-FPELIM-NEXT:    addi a2, sp, 32
 ; RV32I-FPELIM-NEXT:    addi a3, zero, 12
 ; RV32I-FPELIM-NEXT:    addi a4, zero, 13
 ; RV32I-FPELIM-NEXT:    addi a6, zero, 4
@@ -218,9 +218,9 @@ define void @caller_aligned_stack() nounwind {
 ; RV32I-WITHFP-NEXT:    addi t0, a0, 1311
 ; RV32I-WITHFP-NEXT:    lui a0, 688509
 ; RV32I-WITHFP-NEXT:    addi a5, a0, -2048
-; RV32I-WITHFP-NEXT:    addi a2, s0, -32
 ; RV32I-WITHFP-NEXT:    addi a0, zero, 1
 ; RV32I-WITHFP-NEXT:    addi a1, zero, 11
+; RV32I-WITHFP-NEXT:    addi a2, s0, -32
 ; RV32I-WITHFP-NEXT:    addi a3, zero, 12
 ; RV32I-WITHFP-NEXT:    addi a4, zero, 13
 ; RV32I-WITHFP-NEXT:    addi a6, zero, 4

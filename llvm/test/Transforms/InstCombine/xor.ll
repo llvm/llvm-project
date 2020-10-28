@@ -4,6 +4,8 @@
 @G1 = global i32 0
 @G2 = global i32 0
 
+declare void @use(i8)
+
 define i1 @test0(i1 %A) {
 ; CHECK-LABEL: @test0(
 ; CHECK-NEXT:    ret i1 [[A:%.*]]
@@ -600,10 +602,10 @@ define i8 @xor_or_not(i8 %x, i8* %p) {
 
 define i8 @xor_or_not_uses(i8 %x, i8* %p) {
 ; CHECK-LABEL: @xor_or_not_uses(
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[OR:%.*]] = xor i8 [[TMP1]], -8
+; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[NX]], 7
 ; CHECK-NEXT:    store i8 [[OR]], i8* [[P:%.*]], align 1
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP1]], -12
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[OR]], 12
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %nx = xor i8 %x, -1
@@ -911,4 +913,261 @@ define <2 x i32> @test51vec(<2 x i32> %x, <2 x i32> %y) {
   %d = select <2 x i1> %c, <2 x i32> %a, <2 x i32> %b
   %e = xor <2 x i32> %d, <i32 -1, i32 -1>
   ret <2 x i32> %e
+}
+
+define i4 @or_or_xor(i4 %x, i4 %y, i4 %z) {
+; CHECK-LABEL: @or_or_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[Z:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i4 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %o1 = or i4 %z, %x
+  %o2 = or i4 %z, %y
+  %r = xor i4 %o1, %o2
+  ret i4 %r
+}
+
+define i4 @or_or_xor_commute1(i4 %x, i4 %y, i4 %z) {
+; CHECK-LABEL: @or_or_xor_commute1(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[Z:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i4 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %o1 = or i4 %x, %z
+  %o2 = or i4 %z, %y
+  %r = xor i4 %o1, %o2
+  ret i4 %r
+}
+
+define i4 @or_or_xor_commute2(i4 %x, i4 %y, i4 %z) {
+; CHECK-LABEL: @or_or_xor_commute2(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[Z:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i4 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %o1 = or i4 %z, %x
+  %o2 = or i4 %y, %z
+  %r = xor i4 %o1, %o2
+  ret i4 %r
+}
+
+define <2 x i4> @or_or_xor_commute3(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
+; CHECK-LABEL: @or_or_xor_commute3(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i4> [[Z:%.*]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i4> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i4> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %o1 = or <2 x i4> %x, %z
+  %o2 = or <2 x i4> %y, %z
+  %r = xor <2 x i4> %o1, %o2
+  ret <2 x i4> %r
+}
+
+define i4 @or_or_xor_use1(i4 %x, i4 %y, i4 %z, i4* %p) {
+; CHECK-LABEL: @or_or_xor_use1(
+; CHECK-NEXT:    [[O1:%.*]] = or i4 [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    store i4 [[O1]], i4* [[P:%.*]], align 1
+; CHECK-NEXT:    [[O2:%.*]] = or i4 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i4 [[O1]], [[O2]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %o1 = or i4 %z, %x
+  store i4 %o1, i4* %p
+  %o2 = or i4 %z, %y
+  %r = xor i4 %o1, %o2
+  ret i4 %r
+}
+
+define i4 @or_or_xor_use2(i4 %x, i4 %y, i4 %z, i4* %p) {
+; CHECK-LABEL: @or_or_xor_use2(
+; CHECK-NEXT:    [[O1:%.*]] = or i4 [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[O2:%.*]] = or i4 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    store i4 [[O2]], i4* [[P:%.*]], align 1
+; CHECK-NEXT:    [[R:%.*]] = xor i4 [[O1]], [[O2]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %o1 = or i4 %z, %x
+  %o2 = or i4 %z, %y
+  store i4 %o2, i4* %p
+  %r = xor i4 %o1, %o2
+  ret i4 %r
+}
+
+; PR32706 - https://bugs.llvm.org/show_bug.cgi?id=32706
+; Pin an xor constant operand to -1 if possible because 'not' is better for SCEV and codegen.
+
+define i32 @not_is_canonical(i32 %x, i32 %y) {
+; CHECK-LABEL: @not_is_canonical(
+; CHECK-NEXT:    [[SUB:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[ADD]], 2
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %sub = xor i32 %x, 1073741823
+  %add = add i32 %sub, %y
+  %mul = shl i32 %add, 2
+  ret i32 %mul
+}
+
+define i8 @not_shl(i8 %x) {
+; CHECK-LABEL: @not_shl(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[TMP1]], 7
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = shl i8 %x, 7
+  %r = xor i8 %a, 128
+  ret i8 %r
+}
+
+define <2 x i8> @not_shl_vec(<2 x i8> %x) {
+; CHECK-LABEL: @not_shl_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i8> [[TMP1]], <i8 5, i8 5>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = shl <2 x i8> %x, <i8 5, i8 5>
+  %r = xor <2 x i8> %a, <i8 224, i8 224>
+  ret <2 x i8> %r
+}
+
+; negative test
+
+define i8 @not_shl_extra_use(i8 %x) {
+; CHECK-LABEL: @not_shl_extra_use(
+; CHECK-NEXT:    [[A:%.*]] = shl i8 [[X:%.*]], 7
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], -128
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = shl i8 %x, 7
+  call void @use(i8 %a)
+  %r = xor i8 %a, 128
+  ret i8 %r
+}
+
+; negative test
+
+define i8 @not_shl_wrong_const(i8 %x) {
+; CHECK-LABEL: @not_shl_wrong_const(
+; CHECK-NEXT:    [[A:%.*]] = shl i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], -128
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = shl i8 %x, 6
+  %r = xor i8 %a, 128
+  ret i8 %r
+}
+
+define i8 @not_lshr(i8 %x) {
+; CHECK-LABEL: @not_lshr(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[TMP1]], 5
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = lshr i8 %x, 5
+  %r = xor i8 %a, 7
+  ret i8 %r
+}
+
+define <2 x i8> @not_lshr_vec(<2 x i8> %x) {
+; CHECK-LABEL: @not_lshr_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> [[TMP1]], <i8 7, i8 7>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = lshr <2 x i8> %x, <i8 7, i8 7>
+  %r = xor <2 x i8> %a, <i8 1, i8 1>
+  ret <2 x i8> %r
+}
+
+; negative test
+
+define i8 @not_lshr_extra_use(i8 %x) {
+; CHECK-LABEL: @not_lshr_extra_use(
+; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 5
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], 7
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = lshr i8 %x, 5
+  call void @use(i8 %a)
+  %r = xor i8 %a, 7
+  ret i8 %r
+}
+
+; negative test
+
+define i8 @not_lshr_wrong_const(i8 %x) {
+; CHECK-LABEL: @not_lshr_wrong_const(
+; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], 3
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = lshr i8 %x, 5
+  %r = xor i8 %a, 3
+  ret i8 %r
+}
+
+define i8 @ashr_not(i8 %x) {
+; CHECK-LABEL: @ashr_not(
+; CHECK-NEXT:    [[N:%.*]] = ashr i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[N]], -1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %n = xor i8 %x, -1
+  %r = ashr i8 %n, 5
+  ret i8 %r
+}
+
+; Unlike the logicial shifts, 'not' is canonicalized after ashr.
+
+define i8 @not_ashr(i8 %x) {
+; CHECK-LABEL: @not_ashr(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], -1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = ashr i8 %x, 5
+  %r = xor i8 %a, -1
+  ret i8 %r
+}
+
+define <2 x i8> @not_ashr_vec(<2 x i8> %x) {
+; CHECK-LABEL: @not_ashr_vec(
+; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 7, i8 7>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[A]], <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a = ashr <2 x i8> %x, <i8 7, i8 7>
+  %r = xor <2 x i8> %a, <i8 -1, i8 -1>
+  ret <2 x i8> %r
+}
+
+define i8 @not_ashr_extra_use(i8 %x) {
+; CHECK-LABEL: @not_ashr_extra_use(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 5
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], -1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = ashr i8 %x, 5
+  call void @use(i8 %a)
+  %r = xor i8 %a, -1
+  ret i8 %r
+}
+
+define i8 @not_ashr_wrong_const(i8 %x) {
+; CHECK-LABEL: @not_ashr_wrong_const(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], -2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = ashr i8 %x, 5
+  %r = xor i8 %a, -2
+  ret i8 %r
 }

@@ -18,28 +18,11 @@ namespace __llvm_libc {
 namespace testing {
 namespace mpfr {
 
-struct Tolerance {
-  // Number of bits used to represent the fractional
-  // part of a value of type 'float'.
-  static constexpr unsigned int floatPrecision = 23;
-
-  // Number of bits used to represent the fractional
-  // part of a value of type 'double'.
-  static constexpr unsigned int doublePrecision = 52;
-
-  // The base precision of the number. For example, for values of
-  // type float, the base precision is the value |floatPrecision|.
-  unsigned int basePrecision;
-
-  unsigned int width; // Number of valid LSB bits in |value|.
-
-  // The bits in the tolerance value. The tolerance value will be
-  // sum(bits[width - i] * 2 ^ (- basePrecision - i)) for |i| in
-  // range [1, width].
-  uint32_t bits;
-};
-
 enum class Operation : int {
+  // Operations with take a single floating point number as input
+  // and produce a single floating point number as output. The input
+  // and output floating point numbers are of the same kind.
+  BeginUnaryOperationsSingleOutput,
   Abs,
   Ceil,
   Cos,
@@ -48,44 +31,194 @@ enum class Operation : int {
   Floor,
   Round,
   Sin,
-  Trunc
+  Sqrt,
+  Trunc,
+  EndUnaryOperationsSingleOutput,
+
+  // Operations which take a single floating point nubmer as input
+  // but produce two outputs. The first ouput is a floating point
+  // number of the same type as the input. The second output is of type
+  // 'int'.
+  BeginUnaryOperationsTwoOutputs,
+  Frexp, // Floating point output, the first output, is the fractional part.
+  EndUnaryOperationsTwoOutputs,
+
+  // Operations wich take two floating point nubmers of the same type as
+  // input and produce a single floating point number of the same type as
+  // output.
+  BeginBinaryOperationsSingleOutput,
+  // TODO: Add operations like hypot.
+  EndBinaryOperationsSingleOutput,
+
+  // Operations which take two floating point numbers of the same type as
+  // input and produce two outputs. The first output is a floating nubmer of
+  // the same type as the inputs. The second output is af type 'int'.
+  BeginBinaryOperationsTwoOutputs,
+  RemQuo, // The first output, the floating point output, is the remainder.
+  EndBinaryOperationsTwoOutputs,
+
+  BeginTernaryOperationsSingleOuput,
+  // TODO: Add operations like fma.
+  EndTernaryOperationsSingleOutput,
+};
+
+template <typename T> struct BinaryInput {
+  static_assert(
+      __llvm_libc::cpp::IsFloatingPointType<T>::Value,
+      "Template parameter of BinaryInput must be a floating point type.");
+
+  using Type = T;
+  T x, y;
+};
+
+template <typename T> struct TernaryInput {
+  static_assert(
+      __llvm_libc::cpp::IsFloatingPointType<T>::Value,
+      "Template parameter of TernaryInput must be a floating point type.");
+
+  using Type = T;
+  T x, y, z;
+};
+
+template <typename T> struct BinaryOutput {
+  T f;
+  int i;
 };
 
 namespace internal {
 
+template <typename T1, typename T2>
+struct AreMatchingBinaryInputAndBinaryOutput {
+  static constexpr bool value = false;
+};
+
 template <typename T>
-bool compare(Operation op, T input, T libcOutput, const Tolerance &t);
+struct AreMatchingBinaryInputAndBinaryOutput<BinaryInput<T>, BinaryOutput<T>> {
+  static constexpr bool value = cpp::IsFloatingPointType<T>::Value;
+};
 
-template <typename T> class MPFRMatcher : public testing::Matcher<T> {
-  static_assert(__llvm_libc::cpp::IsFloatingPointType<T>::Value,
-                "MPFRMatcher can only be used with floating point values.");
+template <typename T>
+bool compareUnaryOperationSingleOutput(Operation op, T input, T libcOutput,
+                                       double t);
+template <typename T>
+bool compareUnaryOperationTwoOutputs(Operation op, T input,
+                                     const BinaryOutput<T> &libcOutput,
+                                     double t);
+template <typename T>
+bool compareBinaryOperationTwoOutputs(Operation op, const BinaryInput<T> &input,
+                                      const BinaryOutput<T> &libcOutput,
+                                      double t);
 
-  Operation operation;
-  T input;
-  Tolerance tolerance;
-  T matchValue;
+template <typename T>
+void explainUnaryOperationSingleOutputError(Operation op, T input, T matchValue,
+                                            testutils::StreamWrapper &OS);
+template <typename T>
+void explainUnaryOperationTwoOutputsError(Operation op, T input,
+                                          const BinaryOutput<T> &matchValue,
+                                          testutils::StreamWrapper &OS);
+template <typename T>
+void explainBinaryOperationTwoOutputsError(Operation op,
+                                           const BinaryInput<T> &input,
+                                           const BinaryOutput<T> &matchValue,
+                                           testutils::StreamWrapper &OS);
+
+template <Operation op, typename InputType, typename OutputType>
+class MPFRMatcher : public testing::Matcher<OutputType> {
+  InputType input;
+  OutputType matchValue;
+  double ulpTolerance;
 
 public:
-  MPFRMatcher(Operation op, T testInput, Tolerance &t)
-      : operation(op), input(testInput), tolerance(t) {}
+  MPFRMatcher(InputType testInput, double ulpTolerance)
+      : input(testInput), ulpTolerance(ulpTolerance) {}
 
-  bool match(T libcResult) {
+  bool match(OutputType libcResult) {
     matchValue = libcResult;
-    return internal::compare(operation, input, libcResult, tolerance);
+    return match(input, matchValue, ulpTolerance);
   }
 
-  void explainError(testutils::StreamWrapper &OS) override;
+  void explainError(testutils::StreamWrapper &OS) override {
+    explainError(input, matchValue, OS);
+  }
+
+private:
+  template <typename T> static bool match(T in, T out, double tolerance) {
+    return compareUnaryOperationSingleOutput(op, in, out, tolerance);
+  }
+
+  template <typename T>
+  static bool match(T in, const BinaryOutput<T> &out, double tolerance) {
+    return compareUnaryOperationTwoOutputs(op, in, out, tolerance);
+  }
+
+  template <typename T>
+  static bool match(const BinaryInput<T> &in, T out, double tolerance) {
+    // TODO: Implement the comparision function and error reporter.
+  }
+
+  template <typename T>
+  static bool match(BinaryInput<T> in, const BinaryOutput<T> &out,
+                    double tolerance) {
+    return compareBinaryOperationTwoOutputs(op, in, out, tolerance);
+  }
+
+  template <typename T>
+  static bool match(const TernaryInput<T> &in, T out, double tolerance) {
+    // TODO: Implement the comparision function and error reporter.
+  }
+
+  template <typename T>
+  static void explainError(T in, T out, testutils::StreamWrapper &OS) {
+    explainUnaryOperationSingleOutputError(op, in, out, OS);
+  }
+
+  template <typename T>
+  static void explainError(T in, const BinaryOutput<T> &out,
+                           testutils::StreamWrapper &OS) {
+    explainUnaryOperationTwoOutputsError(op, in, out, OS);
+  }
+
+  template <typename T>
+  static void explainError(const BinaryInput<T> &in, const BinaryOutput<T> &out,
+                           testutils::StreamWrapper &OS) {
+    explainBinaryOperationTwoOutputsError(op, in, out, OS);
+  }
 };
 
 } // namespace internal
 
-template <typename T>
+// Return true if the input and ouput types for the operation op are valid
+// types.
+template <Operation op, typename InputType, typename OutputType>
+constexpr bool isValidOperation() {
+  return (Operation::BeginUnaryOperationsSingleOutput < op &&
+          op < Operation::EndUnaryOperationsSingleOutput &&
+          cpp::IsSame<InputType, OutputType>::Value &&
+          cpp::IsFloatingPointType<InputType>::Value) ||
+         (Operation::BeginUnaryOperationsTwoOutputs < op &&
+          op < Operation::EndUnaryOperationsTwoOutputs &&
+          cpp::IsFloatingPointType<InputType>::Value &&
+          cpp::IsSame<OutputType, BinaryOutput<InputType>>::Value) ||
+         (Operation::BeginBinaryOperationsSingleOutput < op &&
+          op < Operation::EndBinaryOperationsSingleOutput &&
+          cpp::IsFloatingPointType<OutputType>::Value &&
+          cpp::IsSame<InputType, BinaryInput<OutputType>>::Value) ||
+         (Operation::BeginBinaryOperationsTwoOutputs < op &&
+          op < Operation::EndBinaryOperationsTwoOutputs &&
+          internal::AreMatchingBinaryInputAndBinaryOutput<InputType,
+                                                          OutputType>::value) ||
+         (Operation::BeginTernaryOperationsSingleOuput < op &&
+          op < Operation::EndTernaryOperationsSingleOutput &&
+          cpp::IsFloatingPointType<OutputType>::Value &&
+          cpp::IsSame<InputType, TernaryInput<OutputType>>::Value);
+}
+
+template <Operation op, typename InputType, typename OutputType>
 __attribute__((no_sanitize("address")))
-internal::MPFRMatcher<T> getMPFRMatcher(Operation op, T input, Tolerance t) {
-  static_assert(
-      __llvm_libc::cpp::IsFloatingPointType<T>::Value,
-      "getMPFRMatcher can only be used to match floating point results.");
-  return internal::MPFRMatcher<T>(op, input, t);
+cpp::EnableIfType<isValidOperation<op, InputType, OutputType>(),
+                  internal::MPFRMatcher<op, InputType, OutputType>>
+getMPFRMatcher(InputType input, OutputType outputUnused, double t) {
+  return internal::MPFRMatcher<op, InputType, OutputType>(input, t);
 }
 
 } // namespace mpfr
@@ -93,11 +226,11 @@ internal::MPFRMatcher<T> getMPFRMatcher(Operation op, T input, Tolerance t) {
 } // namespace __llvm_libc
 
 #define EXPECT_MPFR_MATCH(op, input, matchValue, tolerance)                    \
-  EXPECT_THAT(matchValue, __llvm_libc::testing::mpfr::getMPFRMatcher(          \
-                              op, input, tolerance))
+  EXPECT_THAT(matchValue, __llvm_libc::testing::mpfr::getMPFRMatcher<op>(      \
+                              input, matchValue, tolerance))
 
 #define ASSERT_MPFR_MATCH(op, input, matchValue, tolerance)                    \
-  ASSERT_THAT(matchValue, __llvm_libc::testing::mpfr::getMPFRMatcher(          \
-                              op, input, tolerance))
+  ASSERT_THAT(matchValue, __llvm_libc::testing::mpfr::getMPFRMatcher<op>(      \
+                              input, matchValue, tolerance))
 
 #endif // LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H

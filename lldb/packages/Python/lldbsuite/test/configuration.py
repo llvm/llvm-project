@@ -103,6 +103,10 @@ verbose = 0
 # because it doesn't work under a debugger
 testdirs = [lldbsuite.lldb_test_root]
 
+# The root of the test case tree (where the actual tests reside, not the test
+# infrastructure).
+test_src_root = lldbsuite.lldb_test_root
+
 # Separator string.
 separator = '-' * 70
 
@@ -112,6 +116,9 @@ failed = False
 lldb_platform_name = None
 lldb_platform_url = None
 lldb_platform_working_dir = None
+
+# Apple SDK
+apple_sdk = None
 
 # The base directory in which the tests are being built.
 test_build_dir = None
@@ -127,9 +134,6 @@ test_result = None
 # Reproducers
 capture_path = None
 replay_path = None
-
-# Test rerun configuration vars
-rerun_all_issues = False
 
 # The names of all tests. Used to assert we don't have two tests with the
 # same base name.

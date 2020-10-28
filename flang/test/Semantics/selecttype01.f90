@@ -119,6 +119,7 @@ subroutine CheckC1159b
   integer :: x
   !ERROR: Selector 'x' in SELECT TYPE statement must be polymorphic
   select type (a => x)
+  !ERROR: If selector is not unlimited polymorphic, an intrinsic type specification must not be specified in the type guard statement
   type is (integer)
     print *,'integer ',a
   end select
@@ -127,6 +128,7 @@ end
 subroutine CheckC1159c
   !ERROR: Selector 'x' in SELECT TYPE statement must be polymorphic
   select type (a => x)
+  !ERROR: If selector is not unlimited polymorphic, an intrinsic type specification must not be specified in the type guard statement
   type is (integer)
     print *,'integer ',a
   end select
@@ -164,6 +166,16 @@ subroutine CheckC1162
     type is (extsquare)
     !Handle same types
     type is (rectangle)
+    !ERROR: If selector is not unlimited polymorphic, an intrinsic type specification must not be specified in the type guard statement
+    type is(integer)
+    !ERROR: If selector is not unlimited polymorphic, an intrinsic type specification must not be specified in the type guard statement
+    type is(real)
+    !ERROR: If selector is not unlimited polymorphic, an intrinsic type specification must not be specified in the type guard statement
+    type is(logical)
+    !ERROR: If selector is not unlimited polymorphic, an intrinsic type specification must not be specified in the type guard statement
+    type is(character(len=*))
+    !ERROR: If selector is not unlimited polymorphic, an intrinsic type specification must not be specified in the type guard statement
+    type is(complex)
   end select
 
   !Unlimited polymorphic objects are allowed.
@@ -186,6 +198,12 @@ subroutine CheckC1163
     class is (square)
     !ERROR: Type specification 'square' conflicts with previous type specification
     class is (square)
+  end select
+  select type (unlim_polymorphic)
+    type is (INTEGER(4))
+    type is (shape)
+    !ERROR: Type specification 'INTEGER(4)' conflicts with previous type specification
+    type is (INTEGER(4))
   end select
 end
 

@@ -864,14 +864,11 @@ class DIEUnit {
   /// a valid section depending on the client that is emitting DWARF.
   MCSection *Section;
   uint64_t Offset; /// .debug_info or .debug_types absolute section offset.
-  uint32_t Length; /// The length in bytes of all of the DIEs in this unit.
-  const uint16_t Version; /// The Dwarf version number for this unit.
-  const uint8_t AddrSize; /// The size in bytes of an address for this unit.
 protected:
   virtual ~DIEUnit() = default;
 
 public:
-  DIEUnit(uint16_t Version, uint8_t AddrSize, dwarf::Tag UnitTag);
+  explicit DIEUnit(dwarf::Tag UnitTag);
   DIEUnit(const DIEUnit &RHS) = delete;
   DIEUnit(DIEUnit &&RHS) = delete;
   void operator=(const DIEUnit &RHS) = delete;
@@ -895,17 +892,12 @@ public:
   MCSection *getSection() const { return Section; }
   void setDebugSectionOffset(unsigned O) { Offset = O; }
   unsigned getDebugSectionOffset() const { return Offset; }
-  void setLength(uint64_t L) { Length = L; }
-  uint64_t getLength() const { return Length; }
-  uint16_t getDwarfVersion() const { return Version; }
-  uint16_t getAddressSize() const { return AddrSize; }
   DIE &getUnitDie() { return Die; }
   const DIE &getUnitDie() const { return Die; }
 };
 
 struct BasicDIEUnit final : DIEUnit {
-  BasicDIEUnit(uint16_t Version, uint8_t AddrSize, dwarf::Tag UnitTag)
-      : DIEUnit(Version, AddrSize, UnitTag) {}
+  explicit BasicDIEUnit(dwarf::Tag UnitTag) : DIEUnit(UnitTag) {}
 };
 
 //===--------------------------------------------------------------------===//

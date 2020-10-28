@@ -213,6 +213,13 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
                                                    unsigned long long N)
     : Key(std::string(Key)), Val(utostr(N)) {}
 
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
+                                                   ElementCount EC)
+    : Key(std::string(Key)) {
+  raw_string_ostream OS(Val);
+  EC.print(OS);
+}
+
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, DebugLoc Loc)
     : Key(std::string(Key)), Loc(Loc) {
   if (Loc) {

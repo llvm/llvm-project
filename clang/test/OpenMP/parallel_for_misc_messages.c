@@ -142,11 +142,11 @@ void test_collapse() {
 #pragma omp parallel for collapse(4, 8)
   for (i = 0; i < 16; ++i)
     ; // expected-error {{expected 4 for loops after '#pragma omp parallel for', but found only 1}}
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp parallel for collapse(2.5)
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp parallel for collapse(foo())
   for (i = 0; i < 16; ++i)
     ;

@@ -1,6 +1,7 @@
 import("//compiler-rt/target.gni")
 import("//compiler-rt/test/test.gni")
 import("//llvm/triples.gni")
+import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
@@ -51,11 +52,16 @@ write_cmake_config("lit_common_configured") {
     "SANITIZER_CAN_USE_CXXABI_PYBOOL=True",
     "COMPILER_RT_HAS_LLD_PYBOOL=True",
     "COMPILER_RT_HAS_GWP_ASAN_PYBOOL=False",
-    "LLVM_ENABLE_EXPENSIVE_CHECKS_PYBOOL=False",
     "HAVE_RPC_XDR_H=0",
     "ANDROID_NDK_VERSION=19",
     "ANDROID_SERIAL_FOR_TESTING=$android_serial_for_testing",
   ]
+
+  if (llvm_enable_expensive_checks) {
+    values += [ "LLVM_ENABLE_EXPENSIVE_CHECKS_PYBOOL=True" ]
+  } else {
+    values += [ "LLVM_ENABLE_EXPENSIVE_CHECKS_PYBOOL=False" ]
+  }
 
   if (host_cpu == "x64") {
     values += [ "HOST_ARCH=x86_64" ]

@@ -80,17 +80,17 @@ static bool isAggregateTypeForABI(QualType T) {
          T->isMemberFunctionPointerType();
 }
 
-ABIArgInfo
-ABIInfo::getNaturalAlignIndirect(QualType Ty, bool ByRef, bool Realign,
-                                 llvm::Type *Padding) const {
-  return ABIArgInfo::getIndirect(getContext().getTypeAlignInChars(Ty),
-                                 ByRef, Realign, Padding);
+ABIArgInfo ABIInfo::getNaturalAlignIndirect(QualType Ty, bool ByVal,
+                                            bool Realign,
+                                            llvm::Type *Padding) const {
+  return ABIArgInfo::getIndirect(getContext().getTypeAlignInChars(Ty), ByVal,
+                                 Realign, Padding);
 }
 
 ABIArgInfo
 ABIInfo::getNaturalAlignIndirectInReg(QualType Ty, bool Realign) const {
   return ABIArgInfo::getIndirectInReg(getContext().getTypeAlignInChars(Ty),
-                                      /*ByRef*/ false, Realign);
+                                      /*ByVal*/ false, Realign);
 }
 
 Address ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
@@ -255,6 +255,11 @@ LLVM_DUMP_METHOD void ABIArgInfo::dump() const {
   case Indirect:
     OS << "Indirect Align=" << getIndirectAlign().getQuantity()
        << " ByVal=" << getIndirectByVal()
+       << " Realign=" << getIndirectRealign();
+    break;
+  case IndirectAliased:
+    OS << "Indirect Align=" << getIndirectAlign().getQuantity()
+       << " AadrSpace=" << getIndirectAddrSpace()
        << " Realign=" << getIndirectRealign();
     break;
   case Expand:
@@ -1989,6 +1994,7 @@ static bool isArgInAlloca(const ABIArgInfo &Info) {
   case ABIArgInfo::InAlloca:
     return true;
   case ABIArgInfo::Ignore:
+  case ABIArgInfo::IndirectAliased:
     return false;
   case ABIArgInfo::Indirect:
   case ABIArgInfo::Direct:
@@ -2404,10 +2410,8 @@ public:
   }
 
   /// Disable tail call on x86-64. The epilogue code before the tail jump blocks
-  /// the autoreleaseRV/retainRV optimization.
-  bool shouldSuppressTailCallsOfRetainAutoreleasedReturnValue() const override {
-    return true;
-  }
+  /// autoreleaseRV/retainRV and autoreleaseRV/unsafeClaimRV optimizations.
+  bool markARCOptimizedReturnCallsAsNoTail() const override { return true; }
 
   int getDwarfEHStackPointer(CodeGen::CodeGenModule &CGM) const override {
     return 7;
@@ -5448,6 +5452,7 @@ private:
 
   ABIArgInfo classifyReturnType(QualType RetTy, bool IsVariadic) const;
   ABIArgInfo classifyArgumentType(QualType RetTy) const;
+  ABIArgInfo coerceIllegalVector(QualType Ty) const;
   bool isHomogeneousAggregateBaseType(QualType Ty) const override;
   bool isHomogeneousAggregateSmallEnough(const Type *Ty,
                                          uint64_t Members) const override;
@@ -5581,33 +5586,96 @@ void WindowsAArch64TargetCodeGenInfo::setTargetAttributes(
 }
 }
 
+ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty) const {
+  assert(Ty->isVectorType() && "expected vector type!");
+
+  const auto *VT = Ty->castAs<VectorType>();
+  if (VT->getVectorKind() == VectorType::SveFixedLengthPredicateVector) {
+    assert(VT->getElementType()->isBuiltinType() && "expected builtin type!");
+    assert(VT->getElementType()->castAs<BuiltinType>()->getKind() ==
+               BuiltinType::UChar &&
+           "unexpected builtin type for SVE predicate!");
+    return ABIArgInfo::getDirect(llvm::ScalableVectorType::get(
+        llvm::Type::getInt1Ty(getVMContext()), 16));
+  }
+
+  if (VT->getVectorKind() == VectorType::SveFixedLengthDataVector) {
+    assert(VT->getElementType()->isBuiltinType() && "expected builtin type!");
+
+    const auto *BT = VT->getElementType()->castAs<BuiltinType>();
+    llvm::ScalableVectorType *ResType = nullptr;
+    switch (BT->getKind()) {
+    default:
+      llvm_unreachable("unexpected builtin type for SVE vector!");
+    case BuiltinType::SChar:
+    case BuiltinType::UChar:
+      ResType = llvm::ScalableVectorType::get(
+          llvm::Type::getInt8Ty(getVMContext()), 16);
+      break;
+    case BuiltinType::Short:
+    case BuiltinType::UShort:
+      ResType = llvm::ScalableVectorType::get(
+          llvm::Type::getInt16Ty(getVMContext()), 8);
+      break;
+    case BuiltinType::Int:
+    case BuiltinType::UInt:
+      ResType = llvm::ScalableVectorType::get(
+          llvm::Type::getInt32Ty(getVMContext()), 4);
+      break;
+    case BuiltinType::Long:
+    case BuiltinType::ULong:
+      ResType = llvm::ScalableVectorType::get(
+          llvm::Type::getInt64Ty(getVMContext()), 2);
+      break;
+    case BuiltinType::Float16:
+      ResType = llvm::ScalableVectorType::get(
+          llvm::Type::getHalfTy(getVMContext()), 8);
+      break;
+    case BuiltinType::Float:
+      ResType = llvm::ScalableVectorType::get(
+          llvm::Type::getFloatTy(getVMContext()), 4);
+      break;
+    case BuiltinType::Double:
+      ResType = llvm::ScalableVectorType::get(
+          llvm::Type::getDoubleTy(getVMContext()), 2);
+      break;
+    case BuiltinType::BFloat16:
+      ResType = llvm::ScalableVectorType::get(
+          llvm::Type::getBFloatTy(getVMContext()), 8);
+      break;
+    }
+    return ABIArgInfo::getDirect(ResType);
+  }
+
+  uint64_t Size = getContext().getTypeSize(Ty);
+  // Android promotes <2 x i8> to i16, not i32
+  if (isAndroid() && (Size <= 16)) {
+    llvm::Type *ResType = llvm::Type::getInt16Ty(getVMContext());
+    return ABIArgInfo::getDirect(ResType);
+  }
+  if (Size <= 32) {
+    llvm::Type *ResType = llvm::Type::getInt32Ty(getVMContext());
+    return ABIArgInfo::getDirect(ResType);
+  }
+  if (Size == 64) {
+    auto *ResType =
+        llvm::FixedVectorType::get(llvm::Type::getInt32Ty(getVMContext()), 2);
+    return ABIArgInfo::getDirect(ResType);
+  }
+  if (Size == 128) {
+    auto *ResType =
+        llvm::FixedVectorType::get(llvm::Type::getInt32Ty(getVMContext()), 4);
+    return ABIArgInfo::getDirect(ResType);
+  }
+  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+}
+
 ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
   // Handle illegal vector types here.
-  if (isIllegalVectorType(Ty)) {
-    uint64_t Size = getContext().getTypeSize(Ty);
-    // Android promotes <2 x i8> to i16, not i32
-    if (isAndroid() && (Size <= 16)) {
-      llvm::Type *ResType = llvm::Type::getInt16Ty(getVMContext());
-      return ABIArgInfo::getDirect(ResType);
-    }
-    if (Size <= 32) {
-      llvm::Type *ResType = llvm::Type::getInt32Ty(getVMContext());
-      return ABIArgInfo::getDirect(ResType);
-    }
-    if (Size == 64) {
-      auto *ResType =
-          llvm::FixedVectorType::get(llvm::Type::getInt32Ty(getVMContext()), 2);
-      return ABIArgInfo::getDirect(ResType);
-    }
-    if (Size == 128) {
-      auto *ResType =
-          llvm::FixedVectorType::get(llvm::Type::getInt32Ty(getVMContext()), 4);
-      return ABIArgInfo::getDirect(ResType);
-    }
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
-  }
+  if (isIllegalVectorType(Ty))
+    return coerceIllegalVector(Ty);
 
   if (!isAggregateTypeForABI(Ty)) {
     // Treat an enum type as its underlying type.
@@ -5686,6 +5754,12 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
 
+  if (const auto *VT = RetTy->getAs<VectorType>()) {
+    if (VT->getVectorKind() == VectorType::SveFixedLengthDataVector ||
+        VT->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
+      return coerceIllegalVector(RetTy);
+  }
+
   // Large vector types should be returned via memory.
   if (RetTy->isVectorType() && getContext().getTypeSize(RetTy) > 128)
     return getNaturalAlignIndirect(RetTy);
@@ -5741,6 +5815,13 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
 /// isIllegalVectorType - check whether the vector type is legal for AArch64.
 bool AArch64ABIInfo::isIllegalVectorType(QualType Ty) const {
   if (const VectorType *VT = Ty->getAs<VectorType>()) {
+    // Check whether VT is a fixed-length SVE vector. These types are
+    // represented as scalable vectors in function args/return and must be
+    // coerced from fixed vectors.
+    if (VT->getVectorKind() == VectorType::SveFixedLengthDataVector ||
+        VT->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
+      return true;
+
     // Check whether VT is legal.
     unsigned NumElements = VT->getNumElements();
     uint64_t Size = getContext().getTypeSize(VT);
@@ -8557,7 +8638,7 @@ ABIArgInfo LanaiABIInfo::classifyArgumentType(QualType Ty,
     if (RAA == CGCXXABI::RAA_Indirect) {
       return getIndirectResult(Ty, /*ByVal=*/false, State);
     } else if (RAA == CGCXXABI::RAA_DirectInMemory) {
-      return getNaturalAlignIndirect(Ty, /*ByRef=*/true);
+      return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
     }
   }
 
@@ -8792,16 +8873,29 @@ ABIArgInfo AMDGPUABIInfo::classifyKernelArgumentType(QualType Ty) const {
 
   // TODO: Can we omit empty structs?
 
-  llvm::Type *LTy = nullptr;
   if (const Type *SeltTy = isSingleElementStruct(Ty, getContext()))
-    LTy = CGT.ConvertType(QualType(SeltTy, 0));
+    Ty = QualType(SeltTy, 0);
 
+  llvm::Type *OrigLTy = CGT.ConvertType(Ty);
+  llvm::Type *LTy = OrigLTy;
   if (getContext().getLangOpts().HIP) {
-    if (!LTy)
-      LTy = CGT.ConvertType(Ty);
     LTy = coerceKernelArgumentType(
-        LTy, /*FromAS=*/getContext().getTargetAddressSpace(LangAS::Default),
+        OrigLTy, /*FromAS=*/getContext().getTargetAddressSpace(LangAS::Default),
         /*ToAS=*/getContext().getTargetAddressSpace(LangAS::cuda_device));
+  }
+
+  // FIXME: Should also use this for OpenCL, but it requires addressing the
+  // problem of kernels being called.
+  //
+  // FIXME: This doesn't apply the optimization of coercing pointers in structs
+  // to global address space when using byref. This would require implementing a
+  // new kind of coercion of the in-memory type when for indirect arguments.
+  if (!getContext().getLangOpts().OpenCL && LTy == OrigLTy &&
+      isAggregateTypeForABI(Ty)) {
+    return ABIArgInfo::getIndirectAliased(
+        getContext().getTypeAlignInChars(Ty),
+        getContext().getTargetAddressSpace(LangAS::opencl_constant),
+        false /*Realign*/, nullptr /*Padding*/);
   }
 
   // If we set CanBeFlattened to true, CodeGen will expand the struct to its
@@ -9379,6 +9473,7 @@ Address SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   }
 
   case ABIArgInfo::Indirect:
+  case ABIArgInfo::IndirectAliased:
     Stride = SlotSize;
     ArgAddr = Builder.CreateElementBitCast(Addr, ArgPtrTy, "indirect");
     ArgAddr = Address(Builder.CreateLoad(ArgAddr, "indirect.arg"),
@@ -9744,6 +9839,7 @@ Address XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     ArgSize = ArgSize.alignTo(SlotSize);
     break;
   case ABIArgInfo::Indirect:
+  case ABIArgInfo::IndirectAliased:
     Val = Builder.CreateElementBitCast(AP, ArgPtrTy);
     Val = Address(Builder.CreateLoad(Val), TypeAlign);
     ArgSize = SlotSize;
@@ -10745,21 +10841,24 @@ private:
 } // end anonymous namespace
 
 ABIArgInfo VEABIInfo::classifyReturnType(QualType Ty) const {
-  if (Ty->isAnyComplexType()) {
+  if (Ty->isAnyComplexType())
     return ABIArgInfo::getDirect();
-  }
+  uint64_t Size = getContext().getTypeSize(Ty);
+  if (Size < 64 && Ty->isIntegerType())
+    return ABIArgInfo::getExtend(Ty);
   return DefaultABIInfo::classifyReturnType(Ty);
 }
 
 ABIArgInfo VEABIInfo::classifyArgumentType(QualType Ty) const {
-  if (Ty->isAnyComplexType()) {
+  if (Ty->isAnyComplexType())
     return ABIArgInfo::getDirect();
-  }
+  uint64_t Size = getContext().getTypeSize(Ty);
+  if (Size < 64 && Ty->isIntegerType())
+    return ABIArgInfo::getExtend(Ty);
   return DefaultABIInfo::classifyArgumentType(Ty);
 }
 
 void VEABIInfo::computeInfo(CGFunctionInfo &FI) const {
-
   FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
   for (auto &Arg : FI.arguments())
     Arg.info = classifyArgumentType(Arg.type);

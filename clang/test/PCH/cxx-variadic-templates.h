@@ -23,3 +23,8 @@ template<typename...Ts> struct outer {
   };
 };
 template struct outer<int, int>;
+
+template<typename ...T> void take_nondependent_pack(int (...arr)[sizeof(sizeof(T))]);
+
+template<typename T> using hide = int;
+template<typename ...T> void take_nondependent_pack_2(outer<hide<T>...>);

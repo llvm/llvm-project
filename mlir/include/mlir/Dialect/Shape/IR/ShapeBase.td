@@ -45,8 +45,8 @@ def Shape_ComponentType : DialectType<ShapeDialect,
     CPred<"$_self.isa<::mlir::shape::ComponentType>()">, "component type">,
     BuildableType<"$_builder.getType<::mlir::shape::ComponentType>()"> {
   let typeDescription = [{
-    `shape.element_type` represents the element type of the ShapedType. It may
-    be unknown, error or regular element type supported by ShapedType.
+    `shape.component_type` represents the tuple of shape, element type and
+    attribute.
   }];
 }
 

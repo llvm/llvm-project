@@ -233,11 +233,15 @@ X86TargetMachine::~X86TargetMachine() = default;
 const X86Subtarget *
 X86TargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute TuneAttr = F.getFnAttribute("tune-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
 
   StringRef CPU = !CPUAttr.hasAttribute(Attribute::None)
                       ? CPUAttr.getValueAsString()
                       : (StringRef)TargetCPU;
+  StringRef TuneCPU = !TuneAttr.hasAttribute(Attribute::None)
+                      ? TuneAttr.getValueAsString()
+                      : (StringRef)CPU;
   StringRef FS = !FSAttr.hasAttribute(Attribute::None)
                      ? FSAttr.getValueAsString()
                      : (StringRef)TargetFS;
@@ -250,8 +254,9 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
 
   // Extract prefer-vector-width attribute.
   unsigned PreferVectorWidthOverride = 0;
-  if (F.hasFnAttribute("prefer-vector-width")) {
-    StringRef Val = F.getFnAttribute("prefer-vector-width").getValueAsString();
+  Attribute PreferVecWidthAttr = F.getFnAttribute("prefer-vector-width");
+  if (!PreferVecWidthAttr.hasAttribute(Attribute::None)) {
+    StringRef Val = PreferVecWidthAttr.getValueAsString();
     unsigned Width;
     if (!Val.getAsInteger(0, Width)) {
       Key += "prefer-vector-width=";
@@ -262,9 +267,9 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
 
   // Extract min-legal-vector-width attribute.
   unsigned RequiredVectorWidth = UINT32_MAX;
-  if (F.hasFnAttribute("min-legal-vector-width")) {
-    StringRef Val =
-        F.getFnAttribute("min-legal-vector-width").getValueAsString();
+  Attribute MinLegalVecWidthAttr = F.getFnAttribute("min-legal-vector-width");
+  if (!MinLegalVecWidthAttr.hasAttribute(Attribute::None)) {
+    StringRef Val = MinLegalVecWidthAttr.getValueAsString();
     unsigned Width;
     if (!Val.getAsInteger(0, Width)) {
       Key += "min-legal-vector-width=";
@@ -275,6 +280,10 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
 
   // Add CPU to the Key.
   Key += CPU;
+
+  // Add tune CPU to the Key.
+  Key += "tune=";
+  Key += TuneCPU;
 
   // Keep track of the start of the feature portion of the string.
   unsigned FSStart = Key.size();
@@ -304,7 +313,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = std::make_unique<X86Subtarget>(
-        TargetTriple, CPU, FS, *this,
+        TargetTriple, CPU, TuneCPU, FS, *this,
         MaybeAlign(Options.StackAlignmentOverride), PreferVectorWidthOverride,
         RequiredVectorWidth);
   }

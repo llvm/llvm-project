@@ -104,6 +104,11 @@ TYPE_PARSER(construct<OmpReductionOperator>(Parser<DefinedOperator>{}) ||
 TYPE_PARSER(construct<OmpReductionClause>(
     Parser<OmpReductionOperator>{} / ":", nonemptyList(designator)))
 
+// OMP 5.0 2.11.4  ALLOCATE ([allocator:] variable-name-list)
+TYPE_PARSER(construct<OmpAllocateClause>(
+    maybe(construct<OmpAllocateClause::Allocator>(scalarIntExpr) / ":"),
+    Parser<OmpObjectList>{}))
+
 // 2.13.9 DEPEND (SOURCE | SINK : vec | (IN | OUT | INOUT) : list
 TYPE_PARSER(construct<OmpDependSinkVecLength>(
     Parser<DefinedOperator>{}, scalarIntConstantExpr))
@@ -164,7 +169,7 @@ TYPE_PARSER("ALIGNED" >>
     "DEVICE" >> construct<OmpClause>(construct<OmpClause::Device>(
                     parenthesized(scalarIntExpr))) ||
     "DIST_SCHEDULE" >>
-        construct<OmpClause>(construct<OmpClause::DistSchedule>(
+        construct<OmpClause>(construct<OmpDistScheduleClause>(
             parenthesized("STATIC" >> maybe("," >> scalarIntExpr)))) ||
     "FINAL" >> construct<OmpClause>(construct<OmpClause::Final>(
                    parenthesized(scalarLogicalExpr))) ||
@@ -206,6 +211,8 @@ TYPE_PARSER("ALIGNED" >>
         construct<OmpClause>(parenthesized(Parser<OmpProcBindClause>{})) ||
     "REDUCTION" >>
         construct<OmpClause>(parenthesized(Parser<OmpReductionClause>{})) ||
+    "ALLOCATE" >>
+        construct<OmpClause>(parenthesized(Parser<OmpAllocateClause>{})) ||
     "SAFELEN" >> construct<OmpClause>(construct<OmpClause::Safelen>(
                      parenthesized(scalarIntConstantExpr))) ||
     "SCHEDULE" >>

@@ -96,6 +96,7 @@ LiveDebugVariables::LiveDebugVariables() : MachineFunctionPass(ID) {
 
 enum : unsigned { UndefLocNo = ~0U };
 
+namespace {
 /// Describes a debug variable value by location number and expression along
 /// with some flags about the original usage of the location.
 class DbgVariableValue {
@@ -136,6 +137,7 @@ private:
   unsigned WasIndirect : 1;
   const DIExpression *Expression = nullptr;
 };
+} // namespace
 
 /// Map of where a user value is live to that value.
 using LocMap = IntervalMap<SlotIndex, DbgVariableValue, 4>;

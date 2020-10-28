@@ -1,5 +1,5 @@
-# RUN: yaml2obj < %s > %t.main.obj
-# RUN: yaml2obj < %p/Inputs/include1c.yaml > %t.lib.obj
+# RUN: yaml2obj %s -o %t.main.obj
+# RUN: yaml2obj %p/Inputs/include1c.yaml -o %t.lib.obj
 # RUN: rm -f %t.lib.lib
 # RUN: llvm-ar cru %t.lib.lib %t.lib.obj
 # RUN: lld-link /out:%t.exe /entry:main /includeoptional:bar /includeoptional:actuallymissing %t.main.obj %t.lib.lib /verbose >& %t.log

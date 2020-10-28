@@ -57,20 +57,22 @@ const uint8_t *RegisterContextCorePOSIX_arm64::GetSVEBuffer(uint64_t offset) {
 }
 
 void RegisterContextCorePOSIX_arm64::ConfigureRegisterContext() {
-  if (m_sveregset.GetByteSize() > sizeof(user_sve_header)) {
+  if (m_sveregset.GetByteSize() > sizeof(sve::user_sve_header)) {
     uint64_t sve_header_field_offset = 8;
     m_sve_vector_length = m_sveregset.GetU16(&sve_header_field_offset);
     sve_header_field_offset = 12;
     uint16_t sve_header_flags_field =
         m_sveregset.GetU16(&sve_header_field_offset);
-    if ((sve_header_flags_field & SVE_PT_REGS_MASK) == SVE_PT_REGS_FPSIMD)
+    if ((sve_header_flags_field & sve::ptrace_regs_mask) ==
+        sve::ptrace_regs_fpsimd)
       m_sve_state = SVEState::FPSIMD;
-    else if ((sve_header_flags_field & SVE_PT_REGS_MASK) == SVE_PT_REGS_SVE)
+    else if ((sve_header_flags_field & sve::ptrace_regs_mask) ==
+             sve::ptrace_regs_sve)
       m_sve_state = SVEState::Full;
 
-    if (sve_vl_valid(m_sve_vector_length))
+    if (sve::vl_valid(m_sve_vector_length))
       m_register_info_up->ConfigureVectorRegisterInfos(
-          sve_vq_from_vl(m_sve_vector_length));
+          sve::vq_from_vl(m_sve_vector_length));
     else {
       m_sve_state = SVEState::Disabled;
       m_sve_vector_length = 0;
@@ -85,11 +87,11 @@ uint32_t RegisterContextCorePOSIX_arm64::CalculateSVEOffset(
   uint32_t sve_reg_offset = LLDB_INVALID_INDEX32;
   if (m_sve_state == SVEState::FPSIMD) {
     const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
-    sve_reg_offset = SVE_PT_FPSIMD_OFFSET + (reg - GetRegNumSVEZ0()) * 16;
+    sve_reg_offset = sve::ptrace_fpsimd_offset + (reg - GetRegNumSVEZ0()) * 16;
   } else if (m_sve_state == SVEState::Full) {
     uint32_t sve_z0_offset = GetGPRSize() + 8;
     sve_reg_offset =
-        SVE_SIG_REGS_OFFSET + reg_info->byte_offset - sve_z0_offset;
+        sve::SigRegsOffset() + reg_info->byte_offset - sve_z0_offset;
   }
 
   return sve_reg_offset;
@@ -132,15 +134,15 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
       if (reg == GetRegNumFPSR()) {
         sve_reg_num = reg;
         if (m_sve_state == SVEState::Full)
-          offset = SVE_PT_SVE_FPSR_OFFSET(sve_vq_from_vl(m_sve_vector_length));
+          offset = sve::PTraceFPSROffset(sve::vq_from_vl(m_sve_vector_length));
         else if (m_sve_state == SVEState::FPSIMD)
-          offset = SVE_PT_FPSIMD_OFFSET + (32 * 16);
+          offset = sve::ptrace_fpsimd_offset + (32 * 16);
       } else if (reg == GetRegNumFPCR()) {
         sve_reg_num = reg;
         if (m_sve_state == SVEState::Full)
-          offset = SVE_PT_SVE_FPCR_OFFSET(sve_vq_from_vl(m_sve_vector_length));
+          offset = sve::PTraceFPCROffset(sve::vq_from_vl(m_sve_vector_length));
         else if (m_sve_state == SVEState::FPSIMD)
-          offset = SVE_PT_FPSIMD_OFFSET + (32 * 16) + 4;
+          offset = sve::ptrace_fpsimd_offset + (32 * 16) + 4;
       } else {
         // Extract SVE Z register value register number for this reg_info
         if (reg_info->value_regs &&

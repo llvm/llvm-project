@@ -202,7 +202,6 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV64I-NEXT:    sd zero, 64(sp)
 ; RV64I-NEXT:    sd zero, 56(sp)
 ; RV64I-NEXT:    addi t0, zero, 8
-; RV64I-NEXT:    addi a7, sp, 48
 ; RV64I-NEXT:    addi a0, zero, 1
 ; RV64I-NEXT:    addi a1, zero, 2
 ; RV64I-NEXT:    addi a2, zero, 3
@@ -210,6 +209,7 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; RV64I-NEXT:    addi a4, zero, 5
 ; RV64I-NEXT:    addi a5, zero, 6
 ; RV64I-NEXT:    addi a6, zero, 7
+; RV64I-NEXT:    addi a7, sp, 48
 ; RV64I-NEXT:    sd t0, 48(sp)
 ; RV64I-NEXT:    call callee_large_scalars_exhausted_regs
 ; RV64I-NEXT:    ld ra, 88(sp)

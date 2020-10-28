@@ -527,6 +527,9 @@ void __msan_dump_shadow(const void *x, uptr size) {
 sptr __msan_test_shadow(const void *x, uptr size) {
   if (!MEM_IS_APP(x)) return -1;
   unsigned char *s = (unsigned char *)MEM_TO_SHADOW((uptr)x);
+  if (__sanitizer::mem_is_zero((const char *)s, size))
+    return -1;
+  // Slow path: loop through again to find the location.
   for (uptr i = 0; i < size; ++i)
     if (s[i])
       return i;
@@ -690,6 +693,37 @@ void __sanitizer_unaligned_store64(uu64 *p, u64 x) {
 
 void __msan_set_death_callback(void (*callback)(void)) {
   SetUserDieCallback(callback);
+}
+
+void __msan_start_switch_fiber(const void *bottom, uptr size) {
+  MsanThread *t = GetCurrentThread();
+  if (!t) {
+    VReport(1, "__msan_start_switch_fiber called from unknown thread\n");
+    return;
+  }
+  t->StartSwitchFiber((uptr)bottom, size);
+}
+
+void __msan_finish_switch_fiber(const void **bottom_old, uptr *size_old) {
+  MsanThread *t = GetCurrentThread();
+  if (!t) {
+    VReport(1, "__msan_finish_switch_fiber called from unknown thread\n");
+    return;
+  }
+  t->FinishSwitchFiber((uptr *)bottom_old, (uptr *)size_old);
+
+  internal_memset(__msan_param_tls, 0, sizeof(__msan_param_tls));
+  internal_memset(__msan_retval_tls, 0, sizeof(__msan_retval_tls));
+  internal_memset(__msan_va_arg_tls, 0, sizeof(__msan_va_arg_tls));
+
+  if (__msan_get_track_origins()) {
+    internal_memset(__msan_param_origin_tls, 0,
+                    sizeof(__msan_param_origin_tls));
+    internal_memset(&__msan_retval_origin_tls, 0,
+                    sizeof(__msan_retval_origin_tls));
+    internal_memset(__msan_va_arg_origin_tls, 0,
+                    sizeof(__msan_va_arg_origin_tls));
+  }
 }
 
 #if !SANITIZER_SUPPORTS_WEAK_HOOKS

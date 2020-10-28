@@ -2,7 +2,7 @@
 
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir/build1 %t.dir/build2 %t.dir/build3
-# RUN: yaml2obj < %p/Inputs/hello32.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
 
 # RUN: cd %t.dir/build1
 # RUN: lld-link %t.obj %p/Inputs/std32.lib /subsystem:console \

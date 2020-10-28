@@ -212,19 +212,21 @@ RNBRunLoopMode RNBRunLoopLaunchInferior(RNBRemote *remote,
     // Our default launch method is posix spawn
     launch_flavor = eLaunchFlavorPosixSpawn;
 
+    const bool dot_app = is_dot_app(inferior_argv[0]);
+    (void)dot_app;
 #if defined WITH_FBS
     // Check if we have an app bundle, if so launch using BackBoard Services.
-    if (is_dot_app(inferior_argv[0])) {
+    if (dot_app) {
       launch_flavor = eLaunchFlavorFBS;
     }
 #elif defined WITH_BKS
     // Check if we have an app bundle, if so launch using BackBoard Services.
-    if (is_dot_app(inferior_argv[0])) {
+    if (dot_app) {
       launch_flavor = eLaunchFlavorBKS;
     }
 #elif defined WITH_SPRINGBOARD
     // Check if we have an app bundle, if so launch using SpringBoard.
-    if (is_dot_app(inferior_argv[0])) {
+    if (dot_app) {
       launch_flavor = eLaunchFlavorSpringBoard;
     }
 #endif

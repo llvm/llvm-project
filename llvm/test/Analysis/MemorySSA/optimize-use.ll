@@ -1,5 +1,5 @@
-; RUN: opt -basic-aa -print-memoryssa -verify-memoryssa -analyze < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOLIMIT
-; RUN: opt -memssa-check-limit=0 -basic-aa -print-memoryssa -verify-memoryssa -analyze < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LIMIT
+; RUN: opt -basic-aa -print-memoryssa -verify-memoryssa -enable-new-pm=0 -analyze < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOLIMIT
+; RUN: opt -memssa-check-limit=0 -basic-aa -print-memoryssa -verify-memoryssa -enable-new-pm=0 -analyze < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LIMIT
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOLIMIT
 ; RUN: opt -memssa-check-limit=0 -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LIMIT
 

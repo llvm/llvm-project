@@ -155,6 +155,21 @@ def HasStdExtV : Predicate<"Subtarget->hasStdExtV()">,
                            AssemblerPredicate<(all_of FeatureStdExtV),
                            "'V' (Vector Instructions)">;
 
+def FeatureStdExtZvlsseg
+    : SubtargetFeature<"experimental-zvlsseg", "HasStdExtZvlsseg", "true",
+                       "'Zvlsseg' (Vector segment load/store instructions)",
+                       [FeatureStdExtV]>;
+def HasStdExtZvlsseg : Predicate<"Subtarget->hasStdExtZvlsseg()">,
+                        AssemblerPredicate<(all_of FeatureStdExtZvlsseg),
+                        "'Zvlsseg' (Vector segment load/store instructions)">;
+def FeatureExtZvamo
+    : SubtargetFeature<"experimental-zvamo", "HasStdExtZvamo", "true",
+                       "'Zvamo'(Vector AMO Operations)",
+                       [FeatureStdExtV]>;
+def HasStdExtZvamo : Predicate<"Subtarget->hasStdExtZvamo()">,
+                              AssemblerPredicate<(all_of FeatureExtZvamo),
+                              "'Zvamo'(Vector AMO Operations)">;
+
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasRV64", "true", "Implements RV64">;
 def IsRV64 : Predicate<"Subtarget->is64Bit()">,

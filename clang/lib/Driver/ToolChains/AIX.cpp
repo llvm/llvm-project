@@ -141,6 +141,9 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
+  if (getToolChain().ShouldLinkCXXStdlib(Args))
+    getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     // Support POSIX threads if "-pthreads" or "-pthread" is present.
     if (Args.hasArg(options::OPT_pthreads, options::OPT_pthread))
@@ -195,6 +198,23 @@ void AIX::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   SmallString<128> UP(Sysroot);
   path::append(UP, "/usr/include");
   addSystemInclude(DriverArgs, CC1Args, UP.str());
+}
+
+void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &DriverArgs,
+                              llvm::opt::ArgStringList &CC1Args) const {
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx:
+    CC1Args.push_back("-lc++");
+    return;
+  case ToolChain::CST_Libstdcxx:
+    llvm::report_fatal_error("linking libstdc++ unimplemented on AIX");
+  }
+
+  llvm_unreachable("Unexpected C++ library type; only libc++ is supported.");
+}
+
+ToolChain::CXXStdlibType AIX::GetDefaultCXXStdlibType() const {
+  return ToolChain::CST_Libcxx;
 }
 
 auto AIX::buildAssembler() const -> Tool * { return new aix::Assembler(*this); }

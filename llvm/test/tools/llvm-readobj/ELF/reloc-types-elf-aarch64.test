@@ -136,14 +136,8 @@ FileHeader:
   Type:    ET_REL
   Machine: EM_AARCH64
 Sections:
-  - Name:    .text
-    Type:    SHT_PROGBITS
-    Content: 00
-  - Name:         .rela.text
-    Type:         SHT_RELA
-    AddressAlign: 0x0000000000000008
-    EntSize:      0x0000000000000018
-    Info:         .text
+  - Name: .rela.text
+    Type: SHT_RELA
     Relocations:
       - Type: R_AARCH64_NONE
       - Type: R_AARCH64_ABS64

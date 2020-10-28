@@ -1,6 +1,6 @@
 ; RUN: llc -O0 %s -o - -filetype=obj \
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
-; CHECK: "version":5
+; CHECK: "version": 6,
 
 ; namespace test {
 ;  extern int a;
@@ -23,6 +23,11 @@
 ;
 ; int boo(int, int) {}
 
+; struct T {
+;   void empty();
+; };
+; void T::empty() {}
+
 ; Following variables/arguments/members should be counted:
 ;     - GlobalConst,
 ;     - Global,
@@ -30,29 +35,30 @@
 ;     - square::i,
 ;     - cube::i, cube::squared
 ;     - boo::1, boo::2
+;     - this in T::empty()
 ; Skipped entities:
 ;     - declaration of test::a,
 ;     - non-constant member S:fn,
 ;     - arguments of S:fn.
 
-; CHECK: "#unique source variables":9
+; CHECK:      "#unique source variables": 10,
 ; +1 extra inline i.
-; CHECK: "#source variables":10
+; CHECK:      "#source variables": 11,
 ; -1 square::i
-; CHECK: "#source variables with location":9
-; CHECK: "sum_all_local_vars(#bytes in parent scope)":[[BYTES:[0-9]+]]
+; CHECK:      "#source variables with location": 10,
+; CHECK:      "sum_all_local_vars(#bytes in parent scope)": [[BYTES:[0-9]+]]
 ; Because of the dbg.value in the middle of the function, the pc range coverage
 ; must be below 100%.
-; CHECK-NOT: "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)":0
-; CHECK-NOT: "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)":[[BYTES]]
-; CHECK: "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)":
-; CHECK: "#bytes witin functions":[[FUNCSIZE:[0-9]+]]
-; CHECK: "#bytes witin inlined functions":[[INLINESIZE:[0-9]+]]
-; CHECK: "#bytes in __debug_info":380
-; CHECK: "#bytes in __debug_loc":35
-; CHECK: "#bytes in __debug_abbrev":303
-; CHECK: "#bytes in __debug_line":117
-; CHECK: "#bytes in __debug_str":204
+; CHECK-NOT:  "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)": 0,
+; CHECK-NOT:  "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)": [[BYTES]]
+; CHECK:      "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)":
+; CHECK:      "#bytes within functions": [[FUNCSIZE:[0-9]+]]
+; CHECK:      "#bytes within inlined functions": [[INLINESIZE:[0-9]+]]
+; CHECK:      "#bytes in __debug_info": 459,
+; CHECK-NEXT: "#bytes in __debug_loc": 35,
+; CHECK-NEXT: "#bytes in __debug_abbrev": 384,
+; CHECK-NEXT: "#bytes in __debug_line": 126,
+; CHECK-NEXT: "#bytes in __debug_str": 231,
 
 ; ModuleID = '/tmp/quality.cpp'
 source_filename = "/tmp/quality.cpp"
@@ -116,6 +122,17 @@ entry:
   store i32 %1, i32* %.addr1, align 4
   call void @llvm.dbg.declare(metadata i32* %.addr1, metadata !57, metadata !DIExpression()), !dbg !58
   ret i32 0, !dbg !58
+}
+
+%struct.T = type { i8 }
+
+define void @_ZN1T5emptyEv(%struct.T* %this) #2 !dbg !59 {
+entry:
+  %this.addr = alloca %struct.T*, align 8
+  store %struct.T* %this, %struct.T** %this.addr, align 8
+  call void @llvm.dbg.declare(metadata %struct.T** %this.addr, metadata !67, metadata !DIExpression()), !dbg !69
+  %this1 = load %struct.T*, %struct.T** %this.addr, align 8
+  ret void, !dbg !70
 }
 
 attributes #0 = { alwaysinline nounwind ssp uwtable }
@@ -185,3 +202,16 @@ attributes #2 = { noinline nounwind optnone ssp uwtable }
 !56 = !DILocation(line: 10, column: 12, scope: !52)
 !57 = !DILocalVariable(arg: 2, scope: !52, file: !3, line: 10, type: !8)
 !58 = !DILocation(line: 10, column: 17, scope: !52)
+
+!59 = distinct !DISubprogram(name: "empty", linkageName: "_ZN1T5emptyEv", scope: !60, file: !3, line: 25, type: !63, scopeLine: 25, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !2, declaration: !62, retainedNodes: !4)
+!60 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "T", file: !3, line: 22, size: 8, flags: DIFlagTypePassByValue, elements: !61, identifier: "_ZTS1T")
+!61 = !{!62}
+!62 = !DISubprogram(name: "empty", linkageName: "_ZN1T5emptyEv", scope: !60, file: !3, line: 23, type: !63, scopeLine: 23, flags: DIFlagPrototyped, spFlags: 0)
+!63 = !DISubroutineType(types: !64)
+!64 = !{!65, !66}
+!65 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
+!66 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !60, size: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
+!67 = !DILocalVariable(name: "this", arg: 1, scope: !59, type: !68, flags: DIFlagArtificial | DIFlagObjectPointer)
+!68 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !60, size: 64)
+!69 = !DILocation(line: 0, scope: !59)
+!70 = !DILocation(line: 25, column: 19, scope: !59)

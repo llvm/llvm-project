@@ -1,4 +1,4 @@
-; RUN: opt -print-cfg-sccs -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -enable-new-pm=0 -print-cfg-sccs -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK: SCCs for Function test in PostOrder:
 ; CHECK-NEXT: SCC #1 : %exit,

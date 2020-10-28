@@ -15,9 +15,10 @@ class TestMultipleSimultaneousDebuggers(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # This test case fails non-deterministically.
+    NO_DEBUG_INFO_TESTCASE = True
+
     @skipIfNoSBHeaders
-    @expectedFailureAll(bugnumber="llvm.org/pr20282")
+    @skipIfWindows
     def test_multiple_debuggers(self):
         env = {self.dylibPath: self.getLLDBLibraryEnvVal()}
 
@@ -30,9 +31,9 @@ class TestMultipleSimultaneousDebuggers(TestBase):
         self.buildDriver('testprog.cpp', self.inferior_exe)
         self.addTearDownHook(lambda: os.remove(self.inferior_exe))
 
-# check_call will raise a CalledProcessError if multi-process-driver doesn't return
-# exit code 0 to indicate success.  We can let this exception go - the test harness
-# will recognize it as a test failure.
+        # check_call will raise a CalledProcessError if multi-process-driver
+        # doesn't return exit code 0 to indicate success.  We can let this
+        # exception go - the test harness will recognize it as a test failure.
 
         if self.TraceOn():
             print("Running test %s" % self.driver_exe)

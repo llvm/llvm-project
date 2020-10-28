@@ -1,4 +1,4 @@
-# RUN: yaml2obj < %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 #
 # RUN: lld-link /out:%t.exe /entry:func1 /subsystem:console %t.obj
 # RUN: llvm-objdump -s --section=.pdata %t.exe | FileCheck --check-prefix=PDATA %s

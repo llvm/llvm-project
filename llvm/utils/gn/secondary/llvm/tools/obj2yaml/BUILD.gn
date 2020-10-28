@@ -7,7 +7,6 @@ executable("obj2yaml") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "Error.cpp",
     "coff2yaml.cpp",
     "dwarf2yaml.cpp",
     "elf2yaml.cpp",

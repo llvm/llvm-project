@@ -36,6 +36,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/config.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Support/ExitCodes.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
@@ -46,7 +47,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <string>
-#include <sysexits.h>
 #ifdef HAVE_BACKTRACE
 # include BACKTRACE_HEADER         // For backtrace().
 #endif
@@ -382,8 +382,7 @@ static RETSIGTYPE SignalHandler(int Sig) {
               OneShotPipeSignalFunction.exchange(nullptr))
         return OldOneShotPipeFunction();
 
-    if (std::find(std::begin(IntSigs), std::end(IntSigs), Sig)
-        != std::end(IntSigs)) {
+    if (llvm::is_contained(IntSigs, Sig)) {
       if (auto OldInterruptFunction = InterruptFunction.exchange(nullptr))
         return OldInterruptFunction();
 
@@ -554,7 +553,7 @@ static int unwindBacktrace(void **StackTrace, int MaxEntries) {
 //
 // On glibc systems we have the 'backtrace' function, which works nicely, but
 // doesn't demangle symbols.
-void llvm::sys::PrintStackTrace(raw_ostream &OS) {
+void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
 #if ENABLE_BACKTRACES
   static void *StackTrace[256];
   int depth = 0;
@@ -571,8 +570,11 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS) {
 #endif
   if (!depth)
     return;
-
-  if (printSymbolizedStackTrace(Argv0, StackTrace, depth, OS))
+  // If "Depth" is not provided by the caller, use the return value of
+  // backtrace() for printing a symbolized stack trace.
+  if (!Depth)
+    Depth = depth;
+  if (printSymbolizedStackTrace(Argv0, StackTrace, Depth, OS))
     return;
 #if HAVE_DLFCN_H && HAVE_DLADDR
   int width = 0;
@@ -615,7 +617,7 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS) {
     OS << '\n';
   }
 #elif defined(HAVE_BACKTRACE)
-  backtrace_symbols_fd(StackTrace, depth, STDERR_FILENO);
+  backtrace_symbols_fd(StackTrace, Depth, STDERR_FILENO);
 #endif
 #endif
 }

@@ -2,6 +2,9 @@
 
 # RUN: cp %S/Inputs/basic-cplusplus.cpp %t.cpp && %update_cc_test_checks %t.cpp
 # RUN: diff -u %S/Inputs/basic-cplusplus.cpp.expected %t.cpp
+## Check that it also works with the --llvm-bin flag instead of --clang
+# RUN: cp %S/Inputs/basic-cplusplus.cpp %t.cpp && %update_cc_test_checks --clang='' --llvm-bin=%clang_tools_dir %t.cpp
+# RUN: diff -u %S/Inputs/basic-cplusplus.cpp.expected %t.cpp
 ## Check that re-running update_cc_test_checks doesn't change the output
 # RUN: %update_cc_test_checks %t.cpp
 # RUN: diff -u %S/Inputs/basic-cplusplus.cpp.expected %t.cpp

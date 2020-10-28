@@ -103,7 +103,7 @@ public:
   /// with the specified value.
   void BackpatchWord(uint64_t BitNo, unsigned NewWord) {
     using namespace llvm::support;
-    unsigned ByteNo = BitNo / 8;
+    uint64_t ByteNo = BitNo / 8;
     assert((!endian::readAtBitAlignment<uint32_t, little, unaligned>(
                &Out[ByteNo], BitNo & 7)) &&
            "Expected to be patching over 0-value placeholders");

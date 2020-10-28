@@ -1,16 +1,16 @@
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -std=c++98 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -std=c++11 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -std=c++98 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -std=c++11 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -std=c++98 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -std=c++11 -o - %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -std=c++98 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -std=c++11 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -std=c++98 -o - %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -std=c++11 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -std=c++98 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -std=c++11 -o - %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void xxx(int argc) {

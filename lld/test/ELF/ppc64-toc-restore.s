@@ -29,7 +29,7 @@ _start:
   nop
   bl bar_local
 // CHECK-LABEL: <_start>:
-// CHECK-NEXT:  100102c8:       bl 0x10010304
+// CHECK-NEXT:  100102c8:       bl 0x10010310
 // CHECK-NEXT:  100102cc:       ld 2, 24(1)
 // CHECK-NEXT:  100102d0:       bl 0x100102c0
 // CHECK-EMPTY:
@@ -61,5 +61,5 @@ last:
   bl foo
   nop
 // CHECK-LABEL: <last>:
-// CHECK-NEXT:  100102e4:       bl 0x10010304
+// CHECK-NEXT:  100102e4:       bl 0x10010310
 // CHECK-NEXT:  100102e8:       ld 2, 24(1)

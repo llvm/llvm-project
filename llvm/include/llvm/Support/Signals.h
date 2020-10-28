@@ -50,7 +50,9 @@ namespace sys {
   void DisableSystemDialogsOnCrash();
 
   /// Print the stack trace using the given \c raw_ostream object.
-  void PrintStackTrace(raw_ostream &OS);
+  /// \param Depth refers to the number of stackframes to print. If not
+  ///        specified, the entire frame is printed.
+  void PrintStackTrace(raw_ostream &OS, int Depth = 0);
 
   // Run all registered signal handlers.
   void RunSignalHandlers();

@@ -76,10 +76,9 @@ enum isl_lp_result isl_basic_map_solve_lp(__isl_keep isl_basic_map *bmap,
 	return isl_tab_solve_lp(bmap, max, f, d, opt, opt_denom, sol);
 }
 
-enum isl_lp_result isl_basic_set_solve_lp(struct isl_basic_set *bset, int max,
-				      isl_int *f, isl_int d, isl_int *opt,
-				      isl_int *opt_denom,
-				      struct isl_vec **sol)
+enum isl_lp_result isl_basic_set_solve_lp(__isl_keep isl_basic_set *bset,
+	int max, isl_int *f, isl_int d, isl_int *opt, isl_int *opt_denom,
+	__isl_give isl_vec **sol)
 {
 	return isl_basic_map_solve_lp(bset_to_bmap(bset), max,
 					f, d, opt, opt_denom, sol);
@@ -88,7 +87,7 @@ enum isl_lp_result isl_basic_set_solve_lp(struct isl_basic_set *bset, int max,
 enum isl_lp_result isl_map_solve_lp(__isl_keep isl_map *map, int max,
 				      isl_int *f, isl_int d, isl_int *opt,
 				      isl_int *opt_denom,
-				      struct isl_vec **sol)
+				      __isl_give isl_vec **sol)
 {
 	int i;
 	isl_int o;
@@ -199,7 +198,7 @@ done:
 enum isl_lp_result isl_set_solve_lp(__isl_keep isl_set *set, int max,
 				      isl_int *f, isl_int d, isl_int *opt,
 				      isl_int *opt_denom,
-				      struct isl_vec **sol)
+				      __isl_give isl_vec **sol)
 {
 	return isl_map_solve_lp(set_to_map(set), max,
 					f, d, opt, opt_denom, sol);

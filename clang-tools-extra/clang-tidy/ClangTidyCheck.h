@@ -268,7 +268,7 @@ public:
       if (llvm::Expected<T> ValueOr = get<T>(LocalName))
         return *ValueOr;
       else
-        logErrToStdErr(ValueOr.takeError());
+        logIfOptionParsingError(ValueOr.takeError());
       return Default;
     }
 
@@ -314,7 +314,7 @@ public:
       if (llvm::Expected<T> ValueOr = getLocalOrGlobal<T>(LocalName))
         return *ValueOr;
       else
-        logErrToStdErr(ValueOr.takeError());
+        logIfOptionParsingError(ValueOr.takeError());
       return Default;
     }
 
@@ -353,7 +353,7 @@ public:
       if (auto ValueOr = get<T>(LocalName, IgnoreCase))
         return *ValueOr;
       else
-        logErrToStdErr(ValueOr.takeError());
+        logIfOptionParsingError(ValueOr.takeError());
       return Default;
     }
 
@@ -395,8 +395,33 @@ public:
       if (auto ValueOr = getLocalOrGlobal<T>(LocalName, IgnoreCase))
         return *ValueOr;
       else
-        logErrToStdErr(ValueOr.takeError());
+        logIfOptionParsingError(ValueOr.takeError());
       return Default;
+    }
+
+    /// Returns the value for the option \p LocalName represented as a ``T``.
+    /// If the option is missing returns None, if the option can't be parsed
+    /// as a ``T``, log that to stderr and return None.
+    template <typename T = std::string>
+    llvm::Optional<T> getOptional(StringRef LocalName) const {
+      if (auto ValueOr = get<T>(LocalName))
+        return *ValueOr;
+      else
+        logIfOptionParsingError(ValueOr.takeError());
+      return llvm::None;
+    }
+
+    /// Returns the value for the local or global option \p LocalName
+    /// represented as a ``T``.
+    /// If the option is missing returns None, if the
+    /// option can't be parsed as a ``T``, log that to stderr and return None.
+    template <typename T = std::string>
+    llvm::Optional<T> getOptionalLocalOrGlobal(StringRef LocalName) const {
+      if (auto ValueOr = getLocalOrGlobal<T>(LocalName))
+        return *ValueOr;
+      else
+        logIfOptionParsingError(ValueOr.takeError());
+      return llvm::None;
     }
 
     /// Stores an option with the check-local name \p LocalName with
@@ -456,7 +481,8 @@ public:
     void storeInt(ClangTidyOptions::OptionMap &Options, StringRef LocalName,
                   int64_t Value) const;
 
-    static void logErrToStdErr(llvm::Error &&Err);
+    /// Logs an Error to stderr if a \p Err is not a MissingOptionError.
+    static void logIfOptionParsingError(llvm::Error &&Err);
 
     std::string NamePrefix;
     const ClangTidyOptions::OptionMap &CheckOptions;
@@ -523,6 +549,19 @@ template <>
 void ClangTidyCheck::OptionsView::store<bool>(
     ClangTidyOptions::OptionMap &Options, StringRef LocalName,
     bool Value) const;
+
+/// Returns the value for the option \p LocalName.
+/// If the option is missing returns None.
+template <>
+Optional<std::string> ClangTidyCheck::OptionsView::getOptional<std::string>(
+    StringRef LocalName) const;
+
+/// Returns the value for the local or global option \p LocalName.
+/// If the option is missing returns None.
+template <>
+Optional<std::string>
+ClangTidyCheck::OptionsView::getOptionalLocalOrGlobal<std::string>(
+    StringRef LocalName) const;
 
 } // namespace tidy
 } // namespace clang

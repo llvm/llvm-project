@@ -13,10 +13,12 @@
 #ifndef MLIR_TARGET_NVVMIR_H
 #define MLIR_TARGET_NVVMIR_H
 
+#include "llvm/ADT/StringRef.h"
 #include <memory>
 
 // Forward-declare LLVM classes.
 namespace llvm {
+class LLVMContext;
 class Module;
 } // namespace llvm
 
@@ -28,7 +30,9 @@ class Operation;
 /// context from the registered LLVM IR dialect.  In case of error, report it to
 /// the error handler registered with the MLIR context, if any (obtained from
 /// the MLIR module), and return `nullptr`.
-std::unique_ptr<llvm::Module> translateModuleToNVVMIR(Operation *m);
+std::unique_ptr<llvm::Module>
+translateModuleToNVVMIR(Operation *m, llvm::LLVMContext &llvmContext,
+                        llvm::StringRef name = "LLVMDialectModule");
 
 } // namespace mlir
 

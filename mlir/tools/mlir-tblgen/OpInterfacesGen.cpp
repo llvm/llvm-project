@@ -115,7 +115,7 @@ struct AttrInterfaceGenerator : public InterfaceGenerator {
                             "(*static_cast<const ConcreteAttr *>(this))");
   }
 };
-/// A specialized generator for operaton interfaces.
+/// A specialized generator for operation interfaces.
 struct OpInterfaceGenerator : public InterfaceGenerator {
   OpInterfaceGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
       : InterfaceGenerator(getAllOpInterfaceDefinitions(records), os) {

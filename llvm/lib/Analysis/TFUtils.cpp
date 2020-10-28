@@ -13,9 +13,10 @@
 #include "llvm/Config/config.h"
 #if defined(LLVM_HAVE_TF_API)
 
-#include "llvm/Analysis/Utils/TFUtils.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/Utils/TFUtils.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -23,6 +24,7 @@
 #include "tensorflow/c/c_api_experimental.h"
 
 #include <cassert>
+#include <numeric>
 
 using namespace llvm;
 
@@ -82,6 +84,51 @@ private:
   const size_t OutputSize;
   std::vector<TF_Tensor *> Output;
 };
+
+size_t TensorSpec::getElementByteSize() const {
+  return TF_DataTypeSize(static_cast<TF_DataType>(TypeIndex));
+}
+
+TensorSpec::TensorSpec(const std::string &Name, int Port, int TypeIndex,
+                       const std::vector<int64_t> &Shape)
+    : Name(Name), Port(Port), TypeIndex(TypeIndex), Shape(Shape),
+      ElementCount(std::accumulate(Shape.begin(), Shape.end(), 1,
+                                   std::multiplies<int64_t>())) {}
+
+Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
+                                           const json::Value &Value) {
+  auto EmitError = [&](const llvm::Twine &Message) -> Optional<TensorSpec> {
+    std::string S;
+    llvm::raw_string_ostream OS(S);
+    OS << Value;
+    Ctx.emitError("Unable to parse JSON Value as spec (" + Message + "): " + S);
+    return None;
+  };
+  json::ObjectMapper Mapper(Value);
+  if (!Mapper)
+    return EmitError("Value is not a dict");
+
+  std::string TensorName;
+  int TensorPort = -1;
+  std::string TensorType;
+  std::vector<int64_t> TensorShape;
+
+  if (!Mapper.map<std::string>("name", TensorName))
+    return EmitError("'name' property not present or not a string");
+  if (!Mapper.map<std::string>("type", TensorType))
+    return EmitError("'type' property not present or not a string");
+  if (!Mapper.map<int>("port", TensorPort))
+    return EmitError("'port' property not present or not an int");
+  if (!Mapper.map<std::vector<int64_t>>("shape", TensorShape))
+    return EmitError("'shape' property not present or not an int array");
+
+#define PARSE_TYPE(T, E)                                                       \
+  if (TensorType == #T)                                                        \
+    return TensorSpec::createSpec<T>(TensorName, TensorShape, TensorPort);
+  TFUTILS_SUPPORTED_TYPES(PARSE_TYPE)
+#undef PARSE_TYPE
+  return None;
+}
 
 class TFModelEvaluatorImpl {
 public:
@@ -245,29 +292,27 @@ TFModelEvaluator::EvaluationResult::EvaluationResult(
 TFModelEvaluator::EvaluationResult::EvaluationResult(EvaluationResult &&Other)
     : Impl(std::move(Other.Impl)) {}
 
+TFModelEvaluator::EvaluationResult &
+TFModelEvaluator::EvaluationResult::operator=(EvaluationResult &&Other) {
+  Impl = std::move(Other.Impl);
+  return *this;
+}
+
 void *TFModelEvaluator::EvaluationResult::getUntypedTensorValue(size_t Index) {
   return TF_TensorData(Impl->getOutput()[Index]);
 }
 
-template <> int TensorSpec::getDataType<float>() { return TF_FLOAT; }
+const void *
+TFModelEvaluator::EvaluationResult::getUntypedTensorValue(size_t Index) const {
+  return TF_TensorData(Impl->getOutput()[Index]);
+}
 
-template <> int TensorSpec::getDataType<double>() { return TF_DOUBLE; }
+#define TFUTILS_GETDATATYPE_IMPL(T, E)                                         \
+  template <> int TensorSpec::getDataType<T>() { return E; }
 
-template <> int TensorSpec::getDataType<int8_t>() { return TF_INT8; }
+TFUTILS_SUPPORTED_TYPES(TFUTILS_GETDATATYPE_IMPL)
 
-template <> int TensorSpec::getDataType<uint8_t>() { return TF_UINT8; }
-
-template <> int TensorSpec::getDataType<int16_t>() { return TF_INT16; }
-
-template <> int TensorSpec::getDataType<uint16_t>() { return TF_UINT16; }
-
-template <> int TensorSpec::getDataType<int32_t>() { return TF_INT32; }
-
-template <> int TensorSpec::getDataType<uint32_t>() { return TF_UINT32; }
-
-template <> int TensorSpec::getDataType<int64_t>() { return TF_INT64; }
-
-template <> int TensorSpec::getDataType<uint64_t>() { return TF_UINT64; }
+#undef TFUTILS_GETDATATYPE_IMPL
 
 TFModelEvaluator::EvaluationResult::~EvaluationResult() {}
 TFModelEvaluator::~TFModelEvaluator() {}

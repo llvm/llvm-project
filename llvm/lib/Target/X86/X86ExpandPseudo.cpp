@@ -442,6 +442,29 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     MBB.erase(MBBI);
     return true;
   }
+  case X86::MWAITX_SAVE_EBX:
+  case X86::MWAITX_SAVE_RBX: {
+    // Perform the following transformation.
+    // SaveRbx = pseudomwaitx InArg, SaveRbx
+    // =>
+    // [E|R]BX = InArg
+    // actualmwaitx
+    // [E|R]BX = SaveRbx
+    const MachineOperand &InArg = MBBI->getOperand(1);
+    // Copy the input argument of the pseudo into the argument of the
+    // actual instruction.
+    TII->copyPhysReg(MBB, MBBI, DL, X86::EBX, InArg.getReg(), InArg.isKill());
+    // Create the actual instruction.
+    BuildMI(MBB, MBBI, DL, TII->get(X86::MWAITXrrr));
+    // Finally, restore the value of RBX.
+    Register SaveRbx = MBBI->getOperand(2).getReg();
+    unsigned BasePointer = Opcode == X86::MWAITX_SAVE_EBX ? X86::EBX : X86::RBX;
+    TII->copyPhysReg(MBB, MBBI, DL, BasePointer, SaveRbx,
+                     /*SrcIsKill*/ true);
+    // Delete the pseudo.
+    MBBI->eraseFromParent();
+    return true;
+  }
   case TargetOpcode::ICALL_BRANCH_FUNNEL:
     ExpandICallBranchFunnel(&MBB, MBBI);
     return true;

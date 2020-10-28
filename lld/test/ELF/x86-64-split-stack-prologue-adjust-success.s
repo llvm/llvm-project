@@ -45,12 +45,12 @@ prologue2_calls_\function_to_call\register:
 	.size	prologue2_calls_\function_to_call\register,. - prologue2_calls_\function_to_call\register
 .endm
 
+	.section .text,"ax",@progbits,unique,0
 	.local foo
 foo:
-	.section .text,"ax",@progbits
 	.quad foo
 
-	.text
+	.section .text,"ax",@progbits,unique,1
 
 # For split-stack code calling split-stack code, ensure prologue v1 still
 # calls plain __morestack, and that any raw bytes written to the prologue

@@ -176,4 +176,9 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
   # Finally link the target.
   add_llvm_library(LLVM-C SHARED INSTALL_WITH_TOOLCHAIN ${SOURCES} DEPENDS intrinsics_gen)
 
+  if (LLVM_INTEGRATED_CRT_ALLOC AND MSVC)
+    # Make sure we search LLVMSupport first, before the CRT libs
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -INCLUDE:malloc")
+  endif()
+  
 endif()

@@ -11,7 +11,7 @@ define i64 @atomic_max_i64() nounwind {
 ; LINUX-NEXT:    pushl %esi
 ; LINUX-NEXT:    movl sc64+4, %edx
 ; LINUX-NEXT:    movl sc64, %eax
-; LINUX-NEXT:    movl $4, %esi
+; LINUX-NEXT:    movl $5, %esi
 ; LINUX-NEXT:    .p2align 4, 0x90
 ; LINUX-NEXT:  .LBB0_1: # %atomicrmw.start
 ; LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -40,7 +40,7 @@ define i64 @atomic_max_i64() nounwind {
 ; PIC-NEXT:    movl L_sc64$non_lazy_ptr-L0$pb(%eax), %esi
 ; PIC-NEXT:    movl (%esi), %eax
 ; PIC-NEXT:    movl 4(%esi), %edx
-; PIC-NEXT:    movl $4, %edi
+; PIC-NEXT:    movl $5, %edi
 ; PIC-NEXT:    .p2align 4, 0x90
 ; PIC-NEXT:  LBB0_1: ## %atomicrmw.start
 ; PIC-NEXT:    ## =>This Inner Loop Header: Depth=1

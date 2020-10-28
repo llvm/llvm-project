@@ -57,7 +57,7 @@ R600Subtarget::initializeSubtargetDependencies(const Triple &TT,
                                                StringRef GPU, StringRef FS) {
   SmallString<256> FullFS("+promote-alloca,");
   FullFS += FS;
-  ParseSubtargetFeatures(GPU, FullFS);
+  ParseSubtargetFeatures(GPU, /*TuneCPU*/ GPU, FullFS);
 
   HasMulU24 = getGeneration() >= EVERGREEN;
   HasMulI24 = hasCaymanISA();
@@ -81,7 +81,7 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   SmallString<256> FullFS("+promote-alloca,+load-store-opt,+enable-ds128,+sram-ecc,+xnack,");
 
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
-    FullFS += "+flat-for-global,+unaligned-buffer-access,+trap-handler,";
+    FullFS += "+flat-for-global,+unaligned-access-mode,+trap-handler,";
 
   FullFS += "+enable-prt-strict-null,"; // This is overridden by a disable in FS
 
@@ -97,7 +97,7 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   FullFS += FS;
 
-  ParseSubtargetFeatures(GPU, FullFS);
+  ParseSubtargetFeatures(GPU, /*TuneCPU*/ GPU, FullFS);
 
   // We don't support FP64 for EG/NI atm.
   assert(!hasFP64() || (getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS));
@@ -170,7 +170,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) :
 
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
                            const GCNTargetMachine &TM) :
-    AMDGPUGenSubtargetInfo(TT, GPU, FS),
+    AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
     TargetTriple(TT),
     Gen(TT.getOS() == Triple::AMDHSA ? SEA_ISLANDS : SOUTHERN_ISLANDS),
@@ -186,7 +186,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     AutoWaitcntBeforeBarrier(false),
     CodeObjectV3(false),
     UnalignedScratchAccess(false),
-    UnalignedBufferAccess(false),
+    UnalignedAccessMode(false),
 
     HasApertureRegs(false),
     EnableXNACK(false),
@@ -257,6 +257,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HasUnpackedD16VMem(false),
     LDSMisalignedBug(false),
     HasMFMAInlineLiteralBug(false),
+    UnalignedBufferAccess(false),
+    UnalignedDSAccess(false),
 
     ScalarizeGlobal(false),
 
@@ -436,6 +438,21 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getWavesPerEU(
   return Requested;
 }
 
+static unsigned getReqdWorkGroupSize(const Function &Kernel, unsigned Dim) {
+  auto Node = Kernel.getMetadata("reqd_work_group_size");
+  if (Node && Node->getNumOperands() == 3)
+    return mdconst::extract<ConstantInt>(Node->getOperand(Dim))->getZExtValue();
+  return std::numeric_limits<unsigned>::max();
+}
+
+unsigned AMDGPUSubtarget::getMaxWorkitemID(const Function &Kernel,
+                                           unsigned Dimension) const {
+  unsigned ReqdSize = getReqdWorkGroupSize(Kernel, Dimension);
+  if (ReqdSize != std::numeric_limits<unsigned>::max())
+    return ReqdSize - 1;
+  return getFlatWorkGroupSizes(Kernel).second - 1;
+}
+
 bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
   Function *Kernel = I->getParent()->getParent();
   unsigned MinSize = 0;
@@ -472,11 +489,11 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
       default:
         break;
       }
+
       if (Dim <= 3) {
-        if (auto Node = Kernel->getMetadata("reqd_work_group_size"))
-          if (Node->getNumOperands() == 3)
-            MinSize = MaxSize = mdconst::extract<ConstantInt>(
-                                  Node->getOperand(Dim))->getZExtValue();
+        unsigned ReqdSize = getReqdWorkGroupSize(*Kernel, Dim);
+        if (ReqdSize != std::numeric_limits<unsigned>::max())
+          MinSize = MaxSize = ReqdSize;
       }
     }
   }
@@ -541,7 +558,7 @@ unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
 
 R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
                              const TargetMachine &TM) :
-  R600GenSubtargetInfo(TT, GPU, FS),
+  R600GenSubtargetInfo(TT, GPU, /*TuneCPU*/GPU, FS),
   AMDGPUSubtarget(TT),
   InstrInfo(*this),
   FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),

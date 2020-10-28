@@ -1567,8 +1567,8 @@ namespace RecursiveOpaqueExpr {
 
 namespace VLASizeof {
 
-  void f(int k) {
-    int arr[k]; // expected-warning {{C99}}
+  void f(int k) { // expected-note {{here}}
+    int arr[k]; // expected-warning {{C99}} expected-note {{non-const variable 'k'}}
     constexpr int n = 1 +
         sizeof(arr) // expected-error {{constant expression}}
         * 3;
@@ -2342,4 +2342,9 @@ namespace flexible_array {
   // If we ever start to accept this, we'll need to ensure we can
   // constant-evaluate it properly.
   constexpr A c = {1, 2, 3}; // expected-error {{initialization of flexible array member}}
+}
+
+void local_constexpr_var() {
+  constexpr int a = 0; // expected-note {{address of non-static constexpr variable 'a' may differ on each invocation of the enclosing function; add 'static' to give it a constant address}}
+  constexpr const int *p = &a; // expected-error {{constant expression}} expected-note {{pointer to 'a' is not a constant expression}}
 }

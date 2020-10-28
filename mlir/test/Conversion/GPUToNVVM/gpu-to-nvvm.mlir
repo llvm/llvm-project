@@ -120,9 +120,9 @@ gpu.module @test_module {
     // CHECK: %[[#SHL:]] = llvm.shl %[[#ONE]], %[[#WIDTH]] : !llvm.i32
     // CHECK: %[[#MASK:]] = llvm.sub %[[#SHL]], %[[#ONE]] : !llvm.i32
     // CHECK: %[[#CLAMP:]] = llvm.sub %[[#WIDTH]], %[[#ONE]] : !llvm.i32
-    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync.bfly %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#CLAMP]] : !llvm<"{ float, i1 }">
-    // CHECK: llvm.extractvalue %[[#SHFL]][0 : index] : !llvm<"{ float, i1 }">
-    // CHECK: llvm.extractvalue %[[#SHFL]][1 : index] : !llvm<"{ float, i1 }">
+    // CHECK: %[[#SHFL:]] = nvvm.shfl.sync.bfly %[[#MASK]], %[[#VALUE]], %[[#OFFSET]], %[[#CLAMP]] : !llvm.struct<(float, i1)>
+    // CHECK: llvm.extractvalue %[[#SHFL]][0 : index] : !llvm.struct<(float, i1)>
+    // CHECK: llvm.extractvalue %[[#SHFL]][1 : index] : !llvm.struct<(float, i1)>
     %shfl, %pred = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = "xor" } : (f32, i32, i32) -> (f32, i1)
 
     std.return %shfl : f32
@@ -166,6 +166,21 @@ gpu.module @test_module {
     // CHECK: llvm.call @__nv_ceilf(%{{.*}}) : (!llvm.float) -> !llvm.float
     %result64 = std.ceilf %arg_f64 : f64
     // CHECK: llvm.call @__nv_ceil(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return %result32, %result64 : f32, f64
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+  // CHECK: llvm.func @__nv_floorf(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__nv_floor(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_floor
+  func @gpu_floor(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
+    %result32 = std.floorf %arg_f32 : f32
+    // CHECK: llvm.call @__nv_floorf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.floorf %arg_f64 : f64
+    // CHECK: llvm.call @__nv_floor(%{{.*}}) : (!llvm.double) -> !llvm.double
     std.return %result32, %result64 : f32, f64
   }
 }

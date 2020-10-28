@@ -11,6 +11,7 @@
 define void @selects() {
   ; Scalar values
 ; CHECK-MVE-RECIP-LABEL: 'selects'
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = select i1 undef, i1 undef, i1 undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = select i1 undef, i8 undef, i8 undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2 = select i1 undef, i16 undef, i16 undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3 = select i1 undef, i32 undef, i32 undef
@@ -39,8 +40,10 @@ define void @selects() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v20 = select <1 x i1> undef, <1 x i32> undef, <1 x i32> undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v21 = select <3 x i1> undef, <3 x float> undef, <3 x float> undef
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %v22 = select <5 x i1> undef, <5 x double> undef, <5 x double> undef
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-NEON-RECIP-LABEL: 'selects'
+; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = select i1 undef, i1 undef, i1 undef
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = select i1 undef, i8 undef, i8 undef
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2 = select i1 undef, i16 undef, i16 undef
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3 = select i1 undef, i32 undef, i32 undef
@@ -69,8 +72,10 @@ define void @selects() {
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v20 = select <1 x i1> undef, <1 x i32> undef, <1 x i32> undef
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v21 = select <3 x i1> undef, <3 x float> undef, <3 x float> undef
 ; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v22 = select <5 x i1> undef, <5 x double> undef, <5 x double> undef
+; CHECK-NEON-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-THUMB1-RECIP-LABEL: 'selects'
+; CHECK-THUMB1-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = select i1 undef, i1 undef, i1 undef
 ; CHECK-THUMB1-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = select i1 undef, i8 undef, i8 undef
 ; CHECK-THUMB1-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2 = select i1 undef, i16 undef, i16 undef
 ; CHECK-THUMB1-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3 = select i1 undef, i32 undef, i32 undef
@@ -99,8 +104,10 @@ define void @selects() {
 ; CHECK-THUMB1-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v20 = select <1 x i1> undef, <1 x i32> undef, <1 x i32> undef
 ; CHECK-THUMB1-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v21 = select <3 x i1> undef, <3 x float> undef, <3 x float> undef
 ; CHECK-THUMB1-RECIP-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v22 = select <5 x i1> undef, <5 x double> undef, <5 x double> undef
+; CHECK-THUMB1-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-THUMB2-RECIP-LABEL: 'selects'
+; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v0 = select i1 undef, i1 undef, i1 undef
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = select i1 undef, i8 undef, i8 undef
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2 = select i1 undef, i16 undef, i16 undef
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3 = select i1 undef, i32 undef, i32 undef
@@ -129,14 +136,16 @@ define void @selects() {
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v20 = select <1 x i1> undef, <1 x i32> undef, <1 x i32> undef
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v21 = select <3 x i1> undef, <3 x float> undef, <3 x float> undef
 ; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v22 = select <5 x i1> undef, <5 x double> undef, <5 x double> undef
+; CHECK-THUMB2-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-MVE-SIZE-LABEL: 'selects'
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = select i1 undef, i8 undef, i8 undef
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2 = select i1 undef, i16 undef, i16 undef
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3 = select i1 undef, i32 undef, i32 undef
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4 = select i1 undef, i64 undef, i64 undef
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5 = select i1 undef, float undef, float undef
-; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v6 = select i1 undef, double undef, double undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v0 = select i1 undef, i1 undef, i1 undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v1 = select i1 undef, i8 undef, i8 undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2 = select i1 undef, i16 undef, i16 undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3 = select i1 undef, i32 undef, i32 undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4 = select i1 undef, i64 undef, i64 undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v5 = select i1 undef, float undef, float undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v6 = select i1 undef, double undef, double undef
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v7 = select <2 x i1> undef, <2 x i8> undef, <2 x i8> undef
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8 = select <4 x i1> undef, <4 x i8> undef, <4 x i8> undef
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v9 = select <8 x i1> undef, <8 x i8> undef, <8 x i8> undef
@@ -159,14 +168,16 @@ define void @selects() {
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v20 = select <1 x i1> undef, <1 x i32> undef, <1 x i32> undef
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v21 = select <3 x i1> undef, <3 x float> undef, <3 x float> undef
 ; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v22 = select <5 x i1> undef, <5 x double> undef, <5 x double> undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-NEON-SIZE-LABEL: 'selects'
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = select i1 undef, i8 undef, i8 undef
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2 = select i1 undef, i16 undef, i16 undef
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3 = select i1 undef, i32 undef, i32 undef
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4 = select i1 undef, i64 undef, i64 undef
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5 = select i1 undef, float undef, float undef
-; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v6 = select i1 undef, double undef, double undef
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v0 = select i1 undef, i1 undef, i1 undef
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v1 = select i1 undef, i8 undef, i8 undef
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2 = select i1 undef, i16 undef, i16 undef
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3 = select i1 undef, i32 undef, i32 undef
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4 = select i1 undef, i64 undef, i64 undef
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v5 = select i1 undef, float undef, float undef
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v6 = select i1 undef, double undef, double undef
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v7 = select <2 x i1> undef, <2 x i8> undef, <2 x i8> undef
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8 = select <4 x i1> undef, <4 x i8> undef, <4 x i8> undef
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v9 = select <8 x i1> undef, <8 x i8> undef, <8 x i8> undef
@@ -189,14 +200,16 @@ define void @selects() {
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v20 = select <1 x i1> undef, <1 x i32> undef, <1 x i32> undef
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v21 = select <3 x i1> undef, <3 x float> undef, <3 x float> undef
 ; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v22 = select <5 x i1> undef, <5 x double> undef, <5 x double> undef
+; CHECK-NEON-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-THUMB1-SIZE-LABEL: 'selects'
-; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = select i1 undef, i8 undef, i8 undef
-; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2 = select i1 undef, i16 undef, i16 undef
-; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3 = select i1 undef, i32 undef, i32 undef
-; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4 = select i1 undef, i64 undef, i64 undef
-; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5 = select i1 undef, float undef, float undef
-; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v6 = select i1 undef, double undef, double undef
+; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v0 = select i1 undef, i1 undef, i1 undef
+; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v1 = select i1 undef, i8 undef, i8 undef
+; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2 = select i1 undef, i16 undef, i16 undef
+; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3 = select i1 undef, i32 undef, i32 undef
+; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4 = select i1 undef, i64 undef, i64 undef
+; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v5 = select i1 undef, float undef, float undef
+; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v6 = select i1 undef, double undef, double undef
 ; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v7 = select <2 x i1> undef, <2 x i8> undef, <2 x i8> undef
 ; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8 = select <4 x i1> undef, <4 x i8> undef, <4 x i8> undef
 ; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v9 = select <8 x i1> undef, <8 x i8> undef, <8 x i8> undef
@@ -219,14 +232,16 @@ define void @selects() {
 ; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v20 = select <1 x i1> undef, <1 x i32> undef, <1 x i32> undef
 ; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v21 = select <3 x i1> undef, <3 x float> undef, <3 x float> undef
 ; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v22 = select <5 x i1> undef, <5 x double> undef, <5 x double> undef
+; CHECK-THUMB1-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-THUMB2-SIZE-LABEL: 'selects'
-; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v1 = select i1 undef, i8 undef, i8 undef
-; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2 = select i1 undef, i16 undef, i16 undef
-; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3 = select i1 undef, i32 undef, i32 undef
-; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4 = select i1 undef, i64 undef, i64 undef
-; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v5 = select i1 undef, float undef, float undef
-; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v6 = select i1 undef, double undef, double undef
+; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v0 = select i1 undef, i1 undef, i1 undef
+; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v1 = select i1 undef, i8 undef, i8 undef
+; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2 = select i1 undef, i16 undef, i16 undef
+; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3 = select i1 undef, i32 undef, i32 undef
+; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v4 = select i1 undef, i64 undef, i64 undef
+; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v5 = select i1 undef, float undef, float undef
+; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v6 = select i1 undef, double undef, double undef
 ; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v7 = select <2 x i1> undef, <2 x i8> undef, <2 x i8> undef
 ; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8 = select <4 x i1> undef, <4 x i8> undef, <4 x i8> undef
 ; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v9 = select <8 x i1> undef, <8 x i8> undef, <8 x i8> undef
@@ -249,7 +264,9 @@ define void @selects() {
 ; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v20 = select <1 x i1> undef, <1 x i32> undef, <1 x i32> undef
 ; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v21 = select <3 x i1> undef, <3 x float> undef, <3 x float> undef
 ; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v22 = select <5 x i1> undef, <5 x double> undef, <5 x double> undef
+; CHECK-THUMB2-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
+  %v0 = select i1 undef, i1 undef, i1 undef
   %v1 = select i1 undef, i8 undef, i8 undef
   %v2 = select i1 undef, i16 undef, i16 undef
   %v3 = select i1 undef, i32 undef, i32 undef

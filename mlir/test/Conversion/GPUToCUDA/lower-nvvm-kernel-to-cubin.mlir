@@ -2,7 +2,7 @@
 
 // CHECK: attributes {nvvm.cubin = "CUBIN"}
 gpu.module @foo {
-  llvm.func @kernel(%arg0 : !llvm.float, %arg1 : !llvm<"float*">)
+  llvm.func @kernel(%arg0 : !llvm.float, %arg1 : !llvm.ptr<float>)
     // CHECK: attributes  {gpu.kernel}
     attributes  { gpu.kernel } {
     llvm.return

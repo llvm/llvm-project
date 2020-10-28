@@ -36,11 +36,9 @@ syntax::Arena::Arena(SourceManager &SourceMgr, const LangOptions &LangOpts,
                      const TokenBuffer &Tokens)
     : SourceMgr(SourceMgr), LangOpts(LangOpts), Tokens(Tokens) {}
 
-const clang::syntax::TokenBuffer &syntax::Arena::tokenBuffer() const {
-  return Tokens;
-}
+const syntax::TokenBuffer &syntax::Arena::tokenBuffer() const { return Tokens; }
 
-std::pair<FileID, llvm::ArrayRef<syntax::Token>>
+std::pair<FileID, ArrayRef<syntax::Token>>
 syntax::Arena::lexBuffer(std::unique_ptr<llvm::MemoryBuffer> Input) {
   auto FID = SourceMgr.createFileID(std::move(Input));
   auto It = ExtraTokens.try_emplace(FID, tokenize(FID, SourceMgr, LangOpts));
@@ -135,46 +133,45 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
 }
 
 namespace {
-static void dumpTokens(llvm::raw_ostream &OS, ArrayRef<syntax::Token> Tokens,
-                       const SourceManager &SM) {
-  assert(!Tokens.empty());
-  bool First = true;
-  for (const auto &T : Tokens) {
-    if (!First)
-      OS << " ";
-    else
-      First = false;
-    // Handle 'eof' separately, calling text() on it produces an empty string.
-    if (T.kind() == tok::eof) {
-      OS << "<eof>";
-      continue;
-    }
-    OS << T.text(SM);
-  }
+static void dumpLeaf(raw_ostream &OS, const syntax::Leaf *L,
+                     const SourceManager &SM) {
+  assert(L);
+  const auto *Token = L->token();
+  assert(Token);
+  // Handle 'eof' separately, calling text() on it produces an empty string.
+  if (Token->kind() == tok::eof)
+    OS << "<eof>";
+  else
+    OS << Token->text(SM);
 }
 
-static void dumpTree(llvm::raw_ostream &OS, const syntax::Node *N,
-                     const syntax::Arena &A, std::vector<bool> IndentMask) {
-  std::string Marks;
-  if (!N->isOriginal())
-    Marks += "M";
-  if (N->role() == syntax::NodeRole::Detached)
-    Marks += "*"; // FIXME: find a nice way to print other roles.
-  if (!N->canModify())
-    Marks += "I";
-  if (!Marks.empty())
-    OS << Marks << ": ";
+static void dumpNode(raw_ostream &OS, const syntax::Node *N,
+                     const SourceManager &SM, std::vector<bool> IndentMask) {
+  auto dumpExtraInfo = [&OS](const syntax::Node *N) {
+    if (N->role() != syntax::NodeRole::Unknown)
+      OS << " " << N->role();
+    if (!N->isOriginal())
+      OS << " synthesized";
+    if (!N->canModify())
+      OS << " unmodifiable";
+  };
 
-  if (auto *L = llvm::dyn_cast<syntax::Leaf>(N)) {
-    dumpTokens(OS, *L->token(), A.sourceManager());
+  assert(N);
+  if (const auto *L = dyn_cast<syntax::Leaf>(N)) {
+    OS << "'";
+    dumpLeaf(OS, L, SM);
+    OS << "'";
+    dumpExtraInfo(N);
     OS << "\n";
     return;
   }
 
-  auto *T = llvm::cast<syntax::Tree>(N);
-  OS << T->kind() << "\n";
+  const auto *T = cast<syntax::Tree>(N);
+  OS << T->kind();
+  dumpExtraInfo(N);
+  OS << "\n";
 
-  for (auto It = T->firstChild(); It != nullptr; It = It->nextSibling()) {
+  for (const auto *It = T->firstChild(); It; It = It->nextSibling()) {
     for (bool Filled : IndentMask) {
       if (Filled)
         OS << "| ";
@@ -188,28 +185,27 @@ static void dumpTree(llvm::raw_ostream &OS, const syntax::Node *N,
       OS << "|-";
       IndentMask.push_back(true);
     }
-    dumpTree(OS, It, A, IndentMask);
+    dumpNode(OS, It, SM, IndentMask);
     IndentMask.pop_back();
   }
 }
 } // namespace
 
-std::string syntax::Node::dump(const Arena &A) const {
+std::string syntax::Node::dump(const SourceManager &SM) const {
   std::string Str;
   llvm::raw_string_ostream OS(Str);
-  dumpTree(OS, this, A, /*IndentMask=*/{});
+  dumpNode(OS, this, SM, /*IndentMask=*/{});
   return std::move(OS.str());
 }
 
-std::string syntax::Node::dumpTokens(const Arena &A) const {
+std::string syntax::Node::dumpTokens(const SourceManager &SM) const {
   std::string Storage;
   llvm::raw_string_ostream OS(Storage);
   traverse(this, [&](const syntax::Node *N) {
-    auto *L = llvm::dyn_cast<syntax::Leaf>(N);
-    if (!L)
-      return;
-    ::dumpTokens(OS, *L->token(), A.sourceManager());
-    OS << " ";
+    if (const auto *L = dyn_cast<syntax::Leaf>(N)) {
+      dumpLeaf(OS, L, SM);
+      OS << " ";
+    }
   });
   return OS.str();
 }
@@ -269,4 +265,132 @@ syntax::Node *syntax::Tree::findChild(NodeRole R) {
       return C;
   }
   return nullptr;
+}
+
+std::vector<syntax::List::ElementAndDelimiter<syntax::Node>>
+syntax::List::getElementsAsNodesAndDelimiters() {
+  if (!firstChild())
+    return {};
+
+  auto children = std::vector<syntax::List::ElementAndDelimiter<Node>>();
+  syntax::Node *elementWithoutDelimiter = nullptr;
+  for (auto *C = firstChild(); C; C = C->nextSibling()) {
+    switch (C->role()) {
+    case syntax::NodeRole::ListElement: {
+      if (elementWithoutDelimiter) {
+        children.push_back({elementWithoutDelimiter, nullptr});
+      }
+      elementWithoutDelimiter = C;
+      break;
+    }
+    case syntax::NodeRole::ListDelimiter: {
+      children.push_back({elementWithoutDelimiter, cast<syntax::Leaf>(C)});
+      elementWithoutDelimiter = nullptr;
+      break;
+    }
+    default:
+      llvm_unreachable(
+          "A list can have only elements and delimiters as children.");
+    }
+  }
+
+  switch (getTerminationKind()) {
+  case syntax::List::TerminationKind::Separated: {
+    children.push_back({elementWithoutDelimiter, nullptr});
+    break;
+  }
+  case syntax::List::TerminationKind::Terminated:
+  case syntax::List::TerminationKind::MaybeTerminated: {
+    if (elementWithoutDelimiter) {
+      children.push_back({elementWithoutDelimiter, nullptr});
+    }
+    break;
+  }
+  }
+
+  return children;
+}
+
+// Almost the same implementation of `getElementsAsNodesAndDelimiters` but
+// ignoring delimiters
+std::vector<syntax::Node *> syntax::List::getElementsAsNodes() {
+  if (!firstChild())
+    return {};
+
+  auto children = std::vector<syntax::Node *>();
+  syntax::Node *elementWithoutDelimiter = nullptr;
+  for (auto *C = firstChild(); C; C = C->nextSibling()) {
+    switch (C->role()) {
+    case syntax::NodeRole::ListElement: {
+      if (elementWithoutDelimiter) {
+        children.push_back(elementWithoutDelimiter);
+      }
+      elementWithoutDelimiter = C;
+      break;
+    }
+    case syntax::NodeRole::ListDelimiter: {
+      children.push_back(elementWithoutDelimiter);
+      elementWithoutDelimiter = nullptr;
+      break;
+    }
+    default:
+      llvm_unreachable("A list has only elements or delimiters.");
+    }
+  }
+
+  switch (getTerminationKind()) {
+  case syntax::List::TerminationKind::Separated: {
+    children.push_back(elementWithoutDelimiter);
+    break;
+  }
+  case syntax::List::TerminationKind::Terminated:
+  case syntax::List::TerminationKind::MaybeTerminated: {
+    if (elementWithoutDelimiter) {
+      children.push_back(elementWithoutDelimiter);
+    }
+    break;
+  }
+  }
+
+  return children;
+}
+
+clang::tok::TokenKind syntax::List::getDelimiterTokenKind() {
+  switch (this->kind()) {
+  case NodeKind::NestedNameSpecifier:
+    return clang::tok::coloncolon;
+  case NodeKind::CallArguments:
+  case NodeKind::ParametersAndQualifiers:
+    return clang::tok::comma;
+  default:
+    llvm_unreachable("This is not a subclass of List, thus "
+                     "getDelimiterTokenKind() cannot be called");
+  }
+}
+
+syntax::List::TerminationKind syntax::List::getTerminationKind() {
+  switch (this->kind()) {
+  case NodeKind::NestedNameSpecifier:
+    return TerminationKind::Terminated;
+  case NodeKind::CallArguments:
+  case NodeKind::ParametersAndQualifiers:
+    return TerminationKind::Separated;
+  default:
+    llvm_unreachable("This is not a subclass of List, thus "
+                     "getTerminationKind() cannot be called");
+  }
+}
+
+bool syntax::List::canBeEmpty() {
+  switch (this->kind()) {
+  case NodeKind::NestedNameSpecifier:
+    return false;
+  case NodeKind::CallArguments:
+    return true;
+  case NodeKind::ParametersAndQualifiers:
+    return true;
+  default:
+    llvm_unreachable("This is not a subclass of List, thus canBeEmpty() "
+                     "cannot be called");
+  }
 }

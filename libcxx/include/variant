@@ -354,9 +354,9 @@ struct __valueless_t {};
 
 enum class _Trait { _TriviallyAvailable, _Available, _Unavailable };
 
-template <typename _Tp,
-          template <typename> class _IsTriviallyAvailable,
-          template <typename> class _IsAvailable>
+template <class _Tp,
+          template <class> class _IsTriviallyAvailable,
+          template <class> class _IsAvailable>
 constexpr _Trait __trait =
     _IsTriviallyAvailable<_Tp>::value
         ? _Trait::_TriviallyAvailable
@@ -373,7 +373,7 @@ constexpr _Trait __common_trait(initializer_list<_Trait> __traits) {
   return __result;
 }
 
-template <typename... _Types>
+template <class... _Types>
 struct __traits {
   static constexpr _Trait __copy_constructible_trait =
       __common_trait({__trait<_Types,
@@ -434,182 +434,269 @@ struct __variant {
 
 namespace __visitation {
 
+#define _LIBCPP_VARIANT_CASES_4(_Case, _Base)                                  \
+  _Case(_Base + 0)                                                             \
+  _Case(_Base + 1)                                                             \
+  _Case(_Base + 2)                                                             \
+  _Case(_Base + 3)
+
+#define _LIBCPP_VARIANT_CASES_16(_Case, _Base)                                 \
+  _LIBCPP_VARIANT_CASES_4(_Case, _Base + 4 * 0)                                \
+  _LIBCPP_VARIANT_CASES_4(_Case, _Base + 4 * 1)                                \
+  _LIBCPP_VARIANT_CASES_4(_Case, _Base + 4 * 2)                                \
+  _LIBCPP_VARIANT_CASES_4(_Case, _Base + 4 * 3)
+
+#define _LIBCPP_VARIANT_CASES_64(_Case, _Base)                                 \
+  _LIBCPP_VARIANT_CASES_16(_Case, _Base + 16 * 0)                              \
+  _LIBCPP_VARIANT_CASES_16(_Case, _Base + 16 * 1)                              \
+  _LIBCPP_VARIANT_CASES_16(_Case, _Base + 16 * 2)                              \
+  _LIBCPP_VARIANT_CASES_16(_Case, _Base + 16 * 3)
+
+#define _LIBCPP_VARIANT_CASES_256(_Case, _Base)                                \
+  _LIBCPP_VARIANT_CASES_64(_Case, _Base + 64 * 0)                              \
+  _LIBCPP_VARIANT_CASES_64(_Case, _Base + 64 * 1)                              \
+  _LIBCPP_VARIANT_CASES_64(_Case, _Base + 64 * 2)                              \
+  _LIBCPP_VARIANT_CASES_64(_Case, _Base + 64 * 3)
+
+#define _LIBCPP_VARIANT_CASES(_NumCases, _Case)                                \
+  _LIBCPP_CONCAT(_LIBCPP_VARIANT_CASES_, _NumCases)(_Case, 0)
+
+#define _LIBCPP_VARIANT_SWITCH_MAX 256
+
+template <class _Iter, class _Fp, size_t... _Is>
+inline _LIBCPP_INLINE_VISIBILITY
+static constexpr void __fill_cartesian_impl(
+    _Iter __iter, _Fp __f, index_sequence<_Is...>) {
+  *__iter = __f(integral_constant<size_t, _Is>{}...);
+}
+
+template <class _Iter, class _Fp, size_t... _Is, size_t... _Js, class... _Ls>
+inline _LIBCPP_INLINE_VISIBILITY
+static constexpr void __fill_cartesian_impl(
+    _Iter __iter, _Fp __f, index_sequence<_Is...>, index_sequence<_Js...>, _Ls... __ls) {
+  constexpr size_t _Mp = (1 * ... * _Ls::size());
+  (__fill_cartesian_impl(
+      __iter + _Js * _Mp, __f, index_sequence<_Is..., _Js>{}, __ls...), ...);
+}
+
+template <size_t... _Ns, class _Iter, class _Fp>
+inline _LIBCPP_INLINE_VISIBILITY
+static constexpr void __fill_cartesian(_Iter __iter, _Fp __f) {
+  __fill_cartesian_impl(
+      __iter, __f, index_sequence<>{}, make_index_sequence<_Ns>{}...);
+}
+
+template <size_t _Np, size_t... _Ns>
+struct __multi {
+  inline _LIBCPP_INLINE_VISIBILITY
+  static constexpr size_t __size = (_Np * ... * _Ns);
+
+  inline _LIBCPP_INLINE_VISIBILITY
+  static constexpr size_t
+  __index(const size_t (&__is)[sizeof...(_Ns) + 1]) noexcept {
+    constexpr size_t __ns[] = {_Ns..., 1};
+    size_t __result = 0;
+    for (size_t __i = 0; __i < sizeof...(_Ns) + 1; ++__i) {
+      if (__is[__i] == variant_npos) {
+        return variant_npos;
+      }
+      __result += __is[__i];
+      __result *= __ns[__i];
+    }
+    return __result;
+  }
+};
+
+template <size_t... _Ns>
+struct __indices {
+  inline _LIBCPP_INLINE_VISIBILITY
+  static constexpr auto __value = [] {
+    using _Tp = array<size_t, sizeof...(_Ns)>;
+    array<_Tp, (1 * ... * _Ns)> __result = {};
+    __fill_cartesian<_Ns...>(__result.begin(),
+                             [](auto... __is) -> _Tp { return {__is...}; });
+    return __result;
+  }();
+};
+
+template <size_t... _Ns, class _Fp, class _Rp, class... _Args>
+inline _LIBCPP_INLINE_VISIBILITY
+static constexpr auto __make_vtable_impl(_Fp __f, _Rp (*)(_Args...)) {
+  array<_Rp (*)(_Args...), (1 * ... * _Ns) + 1> __result = {
+      [](_Args...) -> _Rp { __throw_bad_variant_access(); }
+  };
+  __fill_cartesian<_Ns...>(__result.begin() + 1, __f);
+  return __result;
+}
+
+template <size_t... _Ns, class _Fp>
+inline _LIBCPP_INLINE_VISIBILITY
+static constexpr auto __make_vtable(_Fp __f) {
+  using _Tp = decltype(__f(integral_constant<size_t, (_Ns, 0)>{}...));
+  return __make_vtable_impl<_Ns...>(__f, _Tp{});
+}
+
 struct __base {
-  template <class _Visitor, class... _Vs>
+  template <class _Vis, class _Vp, class _Wp>
   inline _LIBCPP_INLINE_VISIBILITY
   static constexpr decltype(auto)
-  __visit_alt_at(size_t __index, _Visitor&& __visitor, _Vs&&... __vs) {
-    constexpr auto __fdiagonal =
-        __make_fdiagonal<_Visitor&&,
-                         decltype(_VSTD::forward<_Vs>(__vs).__as_base())...>();
-    return __fdiagonal[__index](_VSTD::forward<_Visitor>(__visitor),
-                                _VSTD::forward<_Vs>(__vs).__as_base()...);
-  }
-
-  template <class _Visitor, class... _Vs>
-  inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr decltype(auto) __visit_alt(_Visitor&& __visitor,
-                                              _Vs&&... __vs) {
-    constexpr auto __fmatrix =
-        __make_fmatrix<_Visitor&&,
-                       decltype(_VSTD::forward<_Vs>(__vs).__as_base())...>();
-    return __at(__fmatrix, __vs.index()...)(
-        _VSTD::forward<_Visitor>(__visitor),
-        _VSTD::forward<_Vs>(__vs).__as_base()...);
-  }
-
-private:
-  template <class _Tp>
-  inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr const _Tp& __at(const _Tp& __elem) { return __elem; }
-
-  template <class _Tp, size_t _Np, typename... _Indices>
-  inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr auto&& __at(const array<_Tp, _Np>& __elems,
-                               size_t __index, _Indices... __indices) {
-    return __at(__elems[__index], __indices...);
-  }
-
-  template <class _Fp, class... _Fs>
-  static constexpr void __std_visit_visitor_return_type_check() {
-    static_assert(
-        __all<is_same_v<_Fp, _Fs>...>::value,
-        "`std::visit` requires the visitor to have a single return type.");
-  }
-
-  template <class... _Fs>
-  inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr auto __make_farray(_Fs&&... __fs) {
-    __std_visit_visitor_return_type_check<__uncvref_t<_Fs>...>();
-    using __result = array<common_type_t<__uncvref_t<_Fs>...>, sizeof...(_Fs)>;
-    return __result{{_VSTD::forward<_Fs>(__fs)...}};
-  }
-
-  template <std::size_t... _Is>
-  struct __dispatcher {
-    template <class _Fp, class... _Vs>
-    inline _LIBCPP_INLINE_VISIBILITY
-    static constexpr decltype(auto) __dispatch(_Fp __f, _Vs... __vs) {
+  __visit_alt_at(size_t __index, _Vis&& __vis, _Vp&& __v, _Wp&& __w) {
+    constexpr size_t __size = __uncvref_t<_Vp>::__size();
+    static_assert(__size == __uncvref_t<_Wp>::__size());
+    constexpr auto __dispatch = [](auto __i) {
+      return +[](_Vis&& __vis_, _Vp&& __v_, _Wp&& __w_) -> decltype(auto) {
+        constexpr size_t _Ip = decltype(__i)::value;
         return __invoke_constexpr(
-            static_cast<_Fp>(__f),
-            __access::__base::__get_alt<_Is>(static_cast<_Vs>(__vs))...);
+            _VSTD::forward<_Vis>(__vis_),
+            __access::__base::__get_alt<_Ip>(_VSTD::forward<_Vp>(__v_)),
+            __access::__base::__get_alt<_Ip>(_VSTD::forward<_Wp>(__w_)));
+      };
+    };
+#define _LIBCPP_VARIANT_CASE(_Ip)                                              \
+  case _Ip: {                                                                  \
+    if constexpr (_Ip < __size) {                                              \
+      return __dispatch(integral_constant<size_t, _Ip>{})(                     \
+          _VSTD::forward<_Vis>(__vis),                                         \
+          _VSTD::forward<_Vp>(__v),                                            \
+          _VSTD::forward<_Wp>(__w));                                           \
+    } else {                                                                   \
+      _LIBCPP_UNREACHABLE();                                                   \
+    }                                                                          \
+  }
+    if constexpr (__size <= _LIBCPP_VARIANT_SWITCH_MAX) {
+      switch (__index) {
+        _LIBCPP_VARIANT_CASES(_LIBCPP_VARIANT_SWITCH_MAX, _LIBCPP_VARIANT_CASE)
+        default: __throw_bad_variant_access();
+      }
+    } else {
+      constexpr auto __vtable = __make_vtable<__size>(__dispatch);
+      return __vtable[__index + 1](_VSTD::forward<_Vis>(__vis),
+                                   _VSTD::forward<_Vp>(__v),
+                                   _VSTD::forward<_Wp>(__w));
     }
-  };
-
-  template <class _Fp, class... _Vs, size_t... _Is>
-  inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr auto __make_dispatch(index_sequence<_Is...>) {
-    return __dispatcher<_Is...>::template __dispatch<_Fp, _Vs...>;
+#undef _LIBCPP_VARIANT_CASE
   }
 
-  template <size_t _Ip, class _Fp, class... _Vs>
+  template <size_t... _Is, class _Vis, class... _Vs>
   inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr auto __make_fdiagonal_impl() {
-    return __make_dispatch<_Fp, _Vs...>(
-        index_sequence<(__identity<_Vs>{}, _Ip)...>{});
+  static constexpr decltype(auto) __visit_alt(_Vis&& __vis, _Vs&&... __vs) {
+    if constexpr (sizeof...(_Vs) == 0) {
+      return __invoke_constexpr(_VSTD::forward<_Vis>(__vis));
+    } else {
+      return __visit_alt_impl(index_sequence_for<_Vs...>{},
+                              _VSTD::forward<_Vis>(__vis),
+                              _VSTD::forward<_Vs>(__vs)...);
+    }
   }
 
-  template <class _Fp, class... _Vs, size_t... _Is>
+  template <size_t... _Is, class _Vis, class... _Vs>
   inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr auto __make_fdiagonal_impl(index_sequence<_Is...>) {
-    return __base::__make_farray(__make_fdiagonal_impl<_Is, _Fp, _Vs...>()...);
+  static constexpr decltype(auto)
+  __visit_alt_impl(index_sequence<_Is...>, _Vis&& __vis, _Vs&&... __vs) {
+    using __multi = __multi<__uncvref_t<_Vs>::__size()...>;
+    constexpr auto __dispatch = [](auto... __is) {
+      return +[](_Vis&& __vis_, _Vs&&... __vs_) -> decltype(auto) {
+        return __invoke_constexpr(
+            _VSTD::forward<_Vis>(__vis_),
+            __access::__base::__get_alt<decltype(__is)::value>(
+                _VSTD::forward<_Vs>(__vs_))...);
+      };
+    };
+#define _LIBCPP_VARIANT_CASE(_Ip)                                              \
+  case _Ip: {                                                                  \
+    if constexpr (_Ip < __multi::__size) {                                     \
+      return __dispatch(integral_constant<size_t, __itable[_Ip][_Is]>{}...)(   \
+          _VSTD::forward<_Vis>(__vis), _VSTD::forward<_Vs>(__vs)...);          \
+    } else {                                                                   \
+      _LIBCPP_UNREACHABLE();                                                   \
+    }                                                                          \
   }
-
-  template <class _Fp, class _Vp, class... _Vs>
-  inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr auto __make_fdiagonal() {
-    constexpr size_t _Np = __uncvref_t<_Vp>::__size();
-    static_assert(__all<(_Np == __uncvref_t<_Vs>::__size())...>::value);
-    return __make_fdiagonal_impl<_Fp, _Vp, _Vs...>(make_index_sequence<_Np>{});
-  }
-
-  template <class _Fp, class... _Vs, size_t... _Is>
-  inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr auto __make_fmatrix_impl(index_sequence<_Is...> __is) {
-    return __make_dispatch<_Fp, _Vs...>(__is);
-  }
-
-  template <class _Fp, class... _Vs, size_t... _Is, size_t... _Js, class... _Ls>
-  inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr auto __make_fmatrix_impl(index_sequence<_Is...>,
-                                            index_sequence<_Js...>,
-                                            _Ls... __ls) {
-    return __base::__make_farray(__make_fmatrix_impl<_Fp, _Vs...>(
-        index_sequence<_Is..., _Js>{}, __ls...)...);
-  }
-
-  template <class _Fp, class... _Vs>
-  inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr auto __make_fmatrix() {
-    return __make_fmatrix_impl<_Fp, _Vs...>(
-        index_sequence<>{}, make_index_sequence<__uncvref_t<_Vs>::__size()>{}...);
+    if constexpr (__multi::__size <= _LIBCPP_VARIANT_SWITCH_MAX) {
+      constexpr const auto& __itable =
+          __indices<__uncvref_t<_Vs>::__size()...>::__value;
+      switch (__multi::__index({__vs.index()...})) {
+        _LIBCPP_VARIANT_CASES(_LIBCPP_VARIANT_SWITCH_MAX, _LIBCPP_VARIANT_CASE)
+        default: __throw_bad_variant_access();
+      }
+    } else {
+      constexpr auto __vtable =
+          __make_vtable<__uncvref_t<_Vs>::__size()...>(__dispatch);
+      return __vtable[__multi::__index({__vs.index()...}) + 1](
+          _VSTD::forward<_Vis>(__vis), _VSTD::forward<_Vs>(__vs)...);
+    }
+#undef _LIBCPP_VARIANT_CASE
   }
 };
 
 struct __variant {
-  template <class _Visitor, class... _Vs>
+  template <class _Vis, class _Vp, class _Wp>
   inline _LIBCPP_INLINE_VISIBILITY
   static constexpr decltype(auto)
-  __visit_alt_at(size_t __index, _Visitor&& __visitor, _Vs&&... __vs) {
+  __visit_alt_at(size_t __index, _Vis&& __vis, _Vp&& __v, _Wp&& __w) {
     return __base::__visit_alt_at(__index,
-                                  _VSTD::forward<_Visitor>(__visitor),
-                                  _VSTD::forward<_Vs>(__vs).__impl...);
+                                  _VSTD::forward<_Vis>(__vis),
+                                  _VSTD::forward<_Vp>(__v).__impl,
+                                  _VSTD::forward<_Wp>(__w).__impl);
   }
 
-  template <class _Visitor, class... _Vs>
+  template <class _Vis, class... _Vs>
   inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr decltype(auto) __visit_alt(_Visitor&& __visitor,
-                                              _Vs&&... __vs) {
-    return __base::__visit_alt(_VSTD::forward<_Visitor>(__visitor),
+  static constexpr decltype(auto) __visit_alt(_Vis&& __vis, _Vs&&... __vs) {
+    return __base::__visit_alt(_VSTD::forward<_Vis>(__vis),
                                _VSTD::forward<_Vs>(__vs).__impl...);
   }
 
-  template <class _Visitor, class... _Vs>
+  template <class _Vis, class _Vp, class _Wp>
   inline _LIBCPP_INLINE_VISIBILITY
   static constexpr decltype(auto)
-  __visit_value_at(size_t __index, _Visitor&& __visitor, _Vs&&... __vs) {
-    return __visit_alt_at(
-        __index,
-        __make_value_visitor(_VSTD::forward<_Visitor>(__visitor)),
-        _VSTD::forward<_Vs>(__vs)...);
+  __visit_value_at(size_t __index, _Vis&& __vis, _Vp&& __v, _Wp&& __w) {
+    return __visit_alt_at(__index,
+                          __make_value_visitor(_VSTD::forward<_Vis>(__vis)),
+                          _VSTD::forward<_Vp>(__v),
+                          _VSTD::forward<_Wp>(__w));
   }
 
-  template <class _Visitor, class... _Vs>
+  template <class _Vis, class... _Vs>
   inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr decltype(auto) __visit_value(_Visitor&& __visitor,
-                                                _Vs&&... __vs) {
-    return __visit_alt(
-        __make_value_visitor(_VSTD::forward<_Visitor>(__visitor)),
-        _VSTD::forward<_Vs>(__vs)...);
+  static constexpr decltype(auto) __visit_value(_Vis&& __vis, _Vs&&... __vs) {
+    return __visit_alt(__make_value_visitor(_VSTD::forward<_Vis>(__vis)),
+                       _VSTD::forward<_Vs>(__vs)...);
   }
 
 private:
-  template <class _Visitor, class... _Values>
+  template <class _Vis, class... _Values>
+  inline _LIBCPP_INLINE_VISIBILITY
   static constexpr void __std_visit_exhaustive_visitor_check() {
-    static_assert(is_invocable_v<_Visitor, _Values...>,
+    static_assert(is_invocable_v<_Vis, _Values...>,
                   "`std::visit` requires the visitor to be exhaustive.");
   }
 
-  template <class _Visitor>
+  template <class _Vis>
   struct __value_visitor {
     template <class... _Alts>
     inline _LIBCPP_INLINE_VISIBILITY
     constexpr decltype(auto) operator()(_Alts&&... __alts) const {
       __std_visit_exhaustive_visitor_check<
-          _Visitor,
-          decltype((_VSTD::forward<_Alts>(__alts).__value))...>();
-      return __invoke_constexpr(_VSTD::forward<_Visitor>(__visitor),
+          _Vis, decltype((_VSTD::forward<_Alts>(__alts).__value))...>();
+      return __invoke_constexpr(_VSTD::forward<_Vis>(__vis),
                                 _VSTD::forward<_Alts>(__alts).__value...);
     }
-    _Visitor&& __visitor;
+    _Vis&& __vis;
   };
 
-  template <class _Visitor>
+  template <class _Vis>
   inline _LIBCPP_INLINE_VISIBILITY
-  static constexpr auto __make_value_visitor(_Visitor&& __visitor) {
-    return __value_visitor<_Visitor>{_VSTD::forward<_Visitor>(__visitor)};
+  static constexpr auto __make_value_visitor(_Vis&& __vis) {
+    return __value_visitor<_Vis>{_VSTD::forward<_Vis>(__vis)};
   }
 };
+
+#undef _LIBCPP_VARIANT_SWITCH_MAX
+#undef _LIBCPP_VARIANT_CASES
+#undef _LIBCPP_VARIANT_CASES_256
+#undef _LIBCPP_VARIANT_CASES_64
+#undef _LIBCPP_VARIANT_CASES_16
+#undef _LIBCPP_VARIANT_CASES_4
 
 } // namespace __visitation
 
@@ -633,7 +720,7 @@ union _LIBCPP_TEMPLATE_VIS __union<_DestructibleTrait, _Index> {};
 
 #define _LIBCPP_VARIANT_UNION(destructible_trait, destructor)                  \
   template <size_t _Index, class _Tp, class... _Types>                         \
-  union _LIBCPP_TEMPLATE_VIS __union<destructible_trait,                      \
+  union _LIBCPP_TEMPLATE_VIS __union<destructible_trait,                       \
                                       _Index,                                  \
                                       _Tp,                                     \
                                       _Types...> {                             \
@@ -787,9 +874,9 @@ protected:
   template <size_t _Ip, class _Tp, class... _Args>
   inline _LIBCPP_INLINE_VISIBILITY
   static _Tp& __construct_alt(__alt<_Ip, _Tp>& __a, _Args&&... __args) {
-    ::new ((void*)_VSTD::addressof(__a))
+    auto* result = ::new ((void*)_VSTD::addressof(__a))
         __alt<_Ip, _Tp>(in_place, _VSTD::forward<_Args>(__args)...);
-    return __a.__value;
+    return result->__value;
   }
 
   template <class _Rhs>
@@ -816,7 +903,7 @@ class _LIBCPP_TEMPLATE_VIS __move_constructor;
 #define _LIBCPP_VARIANT_MOVE_CONSTRUCTOR(move_constructible_trait,             \
                                          move_constructor)                     \
   template <class... _Types>                                                   \
-  class _LIBCPP_TEMPLATE_VIS __move_constructor<__traits<_Types...>,          \
+  class _LIBCPP_TEMPLATE_VIS __move_constructor<__traits<_Types...>,           \
                                                  move_constructible_trait>     \
       : public __constructor<__traits<_Types...>> {                            \
     using __base_type = __constructor<__traits<_Types...>>;                    \
@@ -856,7 +943,7 @@ class _LIBCPP_TEMPLATE_VIS __copy_constructor;
 #define _LIBCPP_VARIANT_COPY_CONSTRUCTOR(copy_constructible_trait,             \
                                          copy_constructor)                     \
   template <class... _Types>                                                   \
-  class _LIBCPP_TEMPLATE_VIS __copy_constructor<__traits<_Types...>,          \
+  class _LIBCPP_TEMPLATE_VIS __copy_constructor<__traits<_Types...>,           \
                                                  copy_constructible_trait>     \
       : public __move_constructor<__traits<_Types...>> {                       \
     using __base_type = __move_constructor<__traits<_Types...>>;               \
@@ -902,7 +989,7 @@ public:
   auto& __emplace(_Args&&... __args) {
     this->__destroy();
     auto& __res = this->__construct_alt(__access::__base::__get_alt<_Ip>(*this),
-                          _VSTD::forward<_Args>(__args)...);
+                                        _VSTD::forward<_Args>(__args)...);
     this->__index = _Ip;
     return __res;
   }
@@ -955,7 +1042,7 @@ class _LIBCPP_TEMPLATE_VIS __move_assignment;
 #define _LIBCPP_VARIANT_MOVE_ASSIGNMENT(move_assignable_trait,                 \
                                         move_assignment)                       \
   template <class... _Types>                                                   \
-  class _LIBCPP_TEMPLATE_VIS __move_assignment<__traits<_Types...>,           \
+  class _LIBCPP_TEMPLATE_VIS __move_assignment<__traits<_Types...>,            \
                                                 move_assignable_trait>         \
       : public __assignment<__traits<_Types...>> {                             \
     using __base_type = __assignment<__traits<_Types...>>;                     \
@@ -996,7 +1083,7 @@ class _LIBCPP_TEMPLATE_VIS __copy_assignment;
 #define _LIBCPP_VARIANT_COPY_ASSIGNMENT(copy_assignable_trait,                 \
                                         copy_assignment)                       \
   template <class... _Types>                                                   \
-  class _LIBCPP_TEMPLATE_VIS __copy_assignment<__traits<_Types...>,           \
+  class _LIBCPP_TEMPLATE_VIS __copy_assignment<__traits<_Types...>,            \
                                                 copy_assignable_trait>         \
       : public __move_assignment<__traits<_Types...>> {                        \
     using __base_type = __move_assignment<__traits<_Types...>>;                \
@@ -1590,18 +1677,12 @@ constexpr bool operator>=(const variant<_Types...>& __lhs,
       __lhs.index(), __convert_to_bool<greater_equal<>>{}, __lhs, __rhs);
 }
 
-template <class _Visitor, class... _Vs>
+template <class _Vis, class... _Vs>
 inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
-constexpr decltype(auto) visit(_Visitor&& __visitor, _Vs&&... __vs) {
+constexpr decltype(auto) visit(_Vis&& __vis, _Vs&&... __vs) {
   using __variant_detail::__visitation::__variant;
-  bool __results[] = {__vs.valueless_by_exception()...};
-  for (bool __result : __results) {
-    if (__result) {
-      __throw_bad_variant_access();
-    }
-  }
-  return __variant::__visit_value(_VSTD::forward<_Visitor>(__visitor),
+  return __variant::__visit_value(_VSTD::forward<_Vis>(__vis),
                                   _VSTD::forward<_Vs>(__vs)...);
 }
 

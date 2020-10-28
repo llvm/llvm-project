@@ -155,7 +155,6 @@ entry:
 ; ARM64:      .data{{$}}
 ; ARM64:      .globl __emutls_v.i4
 ; ARM64-LABEL: __emutls_v.i4:
-; ARM64-NEXT: .L__emutls_v.i4$local:
 ; ARM64-NEXT: .xword 4
 ; ARM64-NEXT: .xword 4
 ; ARM64-NEXT: .xword 0
@@ -163,7 +162,6 @@ entry:
 
 ; ARM64:      .section .rodata,
 ; ARM64-LABEL: __emutls_t.i4:
-; ARM64-NEXT: .L__emutls_t.i4$local:
 ; ARM64-NEXT: .word 15
 
 ; ARM64-NOT:   __emutls_v.i5:

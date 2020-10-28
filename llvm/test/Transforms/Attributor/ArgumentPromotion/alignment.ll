@@ -8,7 +8,7 @@ define void @f() {
 ; NOT_TUNIT_NPM-LABEL: define {{[^@]+}}@f()
 ; NOT_TUNIT_NPM-NEXT:  entry:
 ; NOT_TUNIT_NPM-NEXT:    [[A:%.*]] = alloca i32, align 1
-; NOT_TUNIT_NPM-NEXT:    call void @g(i32* noalias nocapture nonnull readonly dereferenceable(4) [[A]])
+; NOT_TUNIT_NPM-NEXT:    call void @g(i32* noalias nocapture noundef nonnull readonly dereferenceable(4) [[A]])
 ; NOT_TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@f()
@@ -26,7 +26,7 @@ entry:
 
 define internal void @g(i32* %a) {
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@g
-; IS__TUNIT_OPM-SAME: (i32* noalias nocapture nonnull readonly dereferenceable(4) [[A:%.*]])
+; IS__TUNIT_OPM-SAME: (i32* noalias nocapture noundef nonnull readonly dereferenceable(4) [[A:%.*]])
 ; IS__TUNIT_OPM-NEXT:    [[AA:%.*]] = load i32, i32* [[A]], align 1
 ; IS__TUNIT_OPM-NEXT:    call void @z(i32 [[AA]])
 ; IS__TUNIT_OPM-NEXT:    ret void
@@ -40,7 +40,7 @@ define internal void @g(i32* %a) {
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@g
-; IS__CGSCC____-SAME: (i32* nocapture nonnull readonly dereferenceable(4) [[A:%.*]])
+; IS__CGSCC____-SAME: (i32* nocapture noundef nonnull readonly dereferenceable(4) [[A:%.*]])
 ; IS__CGSCC____-NEXT:    [[AA:%.*]] = load i32, i32* [[A]], align 1
 ; IS__CGSCC____-NEXT:    call void @z(i32 [[AA]])
 ; IS__CGSCC____-NEXT:    ret void
@@ -57,7 +57,7 @@ declare void @z(i32)
 define internal i32 @test(i32* %X, i64* %Y) {
 ; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind readonly willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@test
-; IS__TUNIT_OPM-SAME: (i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[X:%.*]], i64* noalias nocapture nofree nonnull readonly align 8 dereferenceable(8) [[Y:%.*]])
+; IS__TUNIT_OPM-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X:%.*]], i64* noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[Y:%.*]])
 ; IS__TUNIT_OPM-NEXT:    [[A:%.*]] = load i32, i32* [[X]], align 4
 ; IS__TUNIT_OPM-NEXT:    [[B:%.*]] = load i64, i64* [[Y]], align 8
 ; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = add i32 [[A]], 1
@@ -89,7 +89,7 @@ define internal i32 @test(i32* %X, i64* %Y) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[X:%.*]], i64* nocapture nofree nonnull readonly align 8 dereferenceable(8) [[Y:%.*]])
+; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[X:%.*]], i64* nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[Y:%.*]])
 ; IS__CGSCC____-NEXT:    [[A:%.*]] = load i32, i32* [[X]], align 4
 ; IS__CGSCC____-NEXT:    [[B:%.*]] = load i64, i64* [[Y]], align 8
 ; IS__CGSCC____-NEXT:    [[C:%.*]] = add i32 [[A]], 1
@@ -116,10 +116,10 @@ Return2:
 define internal i32 @caller(i32* %A) {
 ; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@caller
-; IS__TUNIT_OPM-SAME: (i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A:%.*]])
+; IS__TUNIT_OPM-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]])
 ; IS__TUNIT_OPM-NEXT:    [[B:%.*]] = alloca i64, align 8
 ; IS__TUNIT_OPM-NEXT:    store i64 1, i64* [[B]], align 8
-; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]], i64* noalias nocapture nofree nonnull readonly align 8 dereferenceable(8) [[B]])
+; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = call i32 @test(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i64* noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[B]])
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[C]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn
@@ -136,10 +136,10 @@ define internal i32 @caller(i32* %A) {
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
-; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A:%.*]])
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]])
 ; IS__CGSCC____-NEXT:    [[B:%.*]] = alloca i64, align 8
 ; IS__CGSCC____-NEXT:    store i64 1, i64* [[B]], align 8
-; IS__CGSCC____-NEXT:    [[C:%.*]] = call i32 @test(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]], i64* noalias nocapture nofree nonnull readonly align 8 dereferenceable(8) [[B]])
+; IS__CGSCC____-NEXT:    [[C:%.*]] = call i32 @test(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i64* noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[B]])
 ; IS__CGSCC____-NEXT:    ret i32 [[C]]
 ;
   %B = alloca i64
@@ -153,7 +153,7 @@ define i32 @callercaller() {
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@callercaller()
 ; IS__TUNIT_OPM-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; IS__TUNIT_OPM-NEXT:    store i32 2, i32* [[B]], align 4
-; IS__TUNIT_OPM-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
+; IS__TUNIT_OPM-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]])
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[X]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone
@@ -168,7 +168,7 @@ define i32 @callercaller() {
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@callercaller()
 ; IS__CGSCC____-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; IS__CGSCC____-NEXT:    store i32 2, i32* [[B]], align 4
-; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[B]])
+; IS__CGSCC____-NEXT:    [[X:%.*]] = call i32 @caller(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]])
 ; IS__CGSCC____-NEXT:    ret i32 [[X]]
 ;
   %B = alloca i32

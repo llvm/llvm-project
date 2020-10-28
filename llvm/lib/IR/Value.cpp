@@ -147,6 +147,14 @@ bool Value::hasNUsesOrMore(unsigned N) const {
   return hasNItemsOrMore(use_begin(), use_end(), N);
 }
 
+bool Value::hasOneUser() const {
+  if (use_empty())
+    return false;
+  if (hasOneUse())
+    return true;
+  return std::equal(++user_begin(), user_end(), user_begin());
+}
+
 static bool isUnDroppableUser(const User *U) { return !U->isDroppable(); }
 
 Use *Value::getSingleUndroppableUse() {

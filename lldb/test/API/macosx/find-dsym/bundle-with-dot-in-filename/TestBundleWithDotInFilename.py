@@ -32,15 +32,25 @@ class BundleWithDotInFilenameTestCase(TestBase):
     @skipUnlessDarwin
     # This test is explicitly a dSYM test, it doesn't need to run for any other config.
     @skipIf(debug_info=no_match(["dsym"]))
+    @skipIfReproducer # File synchronization is not supported during replay.
     def test_attach_and_check_dsyms(self):
         """Test attach to binary, see if the bundle dSYM is found"""
         exe = self.getBuildArtifact(exe_name)
         self.build()
         os.chdir(self.getBuildDir());
-        popen = self.spawnSubprocess(exe)
 
-        # Give the inferior time to start up, dlopen a bundle, remove the bundle it linked in
-        sleep(5)
+        # Use a file as a synchronization point between test and inferior.
+        pid_file_path = lldbutil.append_to_process_working_directory(self,
+            "token_pid_%d" % (int(os.getpid())))
+        self.addTearDownHook(
+            lambda: self.run_platform_command(
+                "rm %s" %
+                (pid_file_path)))
+
+        popen = self.spawnSubprocess(exe, [pid_file_path])
+
+        # Wait for the inferior to start up, dlopen a bundle, remove the bundle it linked in
+        pid = lldbutil.wait_for_file_on_target(self, pid_file_path)
 
         # Since the library that was dlopen()'ed is now removed, lldb will need to find the
         # binary & dSYM via target.exec-search-paths
@@ -64,6 +74,3 @@ class BundleWithDotInFilenameTestCase(TestBase):
                 self.assertTrue (dsym_name == 'com.apple.sbd', "Check that we found the dSYM for the bundle that was loaded")
             i=i+1
         os.chdir(self.getSourceDir());
-
-if __name__ == '__main__':
-    unittest.main()

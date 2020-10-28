@@ -13,6 +13,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -27,6 +28,7 @@
 #define DEBUG_TYPE "globalisel-utils"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 Register llvm::constrainRegToClass(MachineRegisterInfo &MRI,
                                    const TargetInstrInfo &TII,
@@ -180,6 +182,14 @@ bool llvm::canReplaceReg(Register DstReg, Register SrcReg,
 
 bool llvm::isTriviallyDead(const MachineInstr &MI,
                            const MachineRegisterInfo &MRI) {
+  // FIXME: This logical is mostly duplicated with
+  // DeadMachineInstructionElim::isDead. Why is LOCAL_ESCAPE not considered in
+  // MachineInstr::isLabel?
+
+  // Don't delete frame allocation labels.
+  if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE)
+    return false;
+
   // If we can move an instruction, we can remove it.  Otherwise, it has
   // a side-effect of some sort.
   bool SawStore = false;
@@ -330,7 +340,7 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
   return ValueAndVReg{Val.getSExtValue(), VReg};
 }
 
-const llvm::ConstantFP *
+const ConstantFP *
 llvm::getConstantFPVRegVal(Register VReg, const MachineRegisterInfo &MRI) {
   MachineInstr *MI = MRI.getVRegDef(VReg);
   if (TargetOpcode::G_FCONSTANT != MI->getOpcode())
@@ -340,12 +350,12 @@ llvm::getConstantFPVRegVal(Register VReg, const MachineRegisterInfo &MRI) {
 
 namespace {
 struct DefinitionAndSourceRegister {
-  llvm::MachineInstr *MI;
+  MachineInstr *MI;
   Register Reg;
 };
 } // namespace
 
-static llvm::Optional<DefinitionAndSourceRegister>
+static Optional<DefinitionAndSourceRegister>
 getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   Register DefSrcReg = Reg;
   auto *DefMI = MRI.getVRegDef(Reg);
@@ -355,7 +365,7 @@ getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   while (DefMI->getOpcode() == TargetOpcode::COPY) {
     Register SrcReg = DefMI->getOperand(1).getReg();
     auto SrcTy = MRI.getType(SrcReg);
-    if (!SrcTy.isValid() || SrcTy != DstTy)
+    if (!SrcTy.isValid())
       break;
     DefMI = MRI.getVRegDef(SrcReg);
     DefSrcReg = SrcReg;
@@ -363,8 +373,8 @@ getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   return DefinitionAndSourceRegister{DefMI, DefSrcReg};
 }
 
-llvm::MachineInstr *llvm::getDefIgnoringCopies(Register Reg,
-                                               const MachineRegisterInfo &MRI) {
+MachineInstr *llvm::getDefIgnoringCopies(Register Reg,
+                                         const MachineRegisterInfo &MRI) {
   Optional<DefinitionAndSourceRegister> DefSrcReg =
       getDefSrcRegIgnoringCopies(Reg, MRI);
   return DefSrcReg ? DefSrcReg->MI : nullptr;
@@ -377,8 +387,8 @@ Register llvm::getSrcRegIgnoringCopies(Register Reg,
   return DefSrcReg ? DefSrcReg->Reg : Register();
 }
 
-llvm::MachineInstr *llvm::getOpcodeDef(unsigned Opcode, Register Reg,
-                                       const MachineRegisterInfo &MRI) {
+MachineInstr *llvm::getOpcodeDef(unsigned Opcode, Register Reg,
+                                 const MachineRegisterInfo &MRI) {
   MachineInstr *DefMI = getDefIgnoringCopies(Reg, MRI);
   return DefMI && DefMI->getOpcode() == Opcode ? DefMI : nullptr;
 }
@@ -487,6 +497,40 @@ Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
   }
 
   return Align(1);
+}
+
+Register llvm::getFunctionLiveInPhysReg(MachineFunction &MF,
+                                        const TargetInstrInfo &TII,
+                                        MCRegister PhysReg,
+                                        const TargetRegisterClass &RC,
+                                        LLT RegTy) {
+  DebugLoc DL; // FIXME: Is no location the right choice?
+  MachineBasicBlock &EntryMBB = MF.front();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  Register LiveIn = MRI.getLiveInVirtReg(PhysReg);
+  if (LiveIn) {
+    MachineInstr *Def = MRI.getVRegDef(LiveIn);
+    if (Def) {
+      // FIXME: Should the verifier check this is in the entry block?
+      assert(Def->getParent() == &EntryMBB && "live-in copy not in entry block");
+      return LiveIn;
+    }
+
+    // It's possible the incoming argument register and copy was added during
+    // lowering, but later deleted due to being/becoming dead. If this happens,
+    // re-insert the copy.
+  } else {
+    // The live in register was not present, so add it.
+    LiveIn = MF.addLiveIn(PhysReg, &RC);
+    if (RegTy.isValid())
+      MRI.setType(LiveIn, RegTy);
+  }
+
+  BuildMI(EntryMBB, EntryMBB.begin(), DL, TII.get(TargetOpcode::COPY), LiveIn)
+    .addReg(PhysReg);
+  if (!EntryMBB.isLiveIn(PhysReg))
+    EntryMBB.addLiveIn(PhysReg);
+  return LiveIn;
 }
 
 Optional<APInt> llvm::ConstantFoldExtOp(unsigned Opcode, const Register Op1,
@@ -624,4 +668,38 @@ Optional<int> llvm::getSplatIndex(MachineInstr &MI) {
     return None;
 
   return SplatValue;
+}
+
+static bool isBuildVectorOp(unsigned Opcode) {
+  return Opcode == TargetOpcode::G_BUILD_VECTOR ||
+         Opcode == TargetOpcode::G_BUILD_VECTOR_TRUNC;
+}
+
+// TODO: Handle mixed undef elements.
+static bool isBuildVectorConstantSplat(const MachineInstr &MI,
+                                       const MachineRegisterInfo &MRI,
+                                       int64_t SplatValue) {
+  if (!isBuildVectorOp(MI.getOpcode()))
+    return false;
+
+  const unsigned NumOps = MI.getNumOperands();
+  for (unsigned I = 1; I != NumOps; ++I) {
+    Register Element = MI.getOperand(I).getReg();
+    int64_t ElementValue;
+    if (!mi_match(Element, MRI, m_ICst(ElementValue)) ||
+        ElementValue != SplatValue)
+      return false;
+  }
+
+  return true;
+}
+
+bool llvm::isBuildVectorAllZeros(const MachineInstr &MI,
+                                 const MachineRegisterInfo &MRI) {
+  return isBuildVectorConstantSplat(MI, MRI, 0);
+}
+
+bool llvm::isBuildVectorAllOnes(const MachineInstr &MI,
+                                const MachineRegisterInfo &MRI) {
+  return isBuildVectorConstantSplat(MI, MRI, -1);
 }

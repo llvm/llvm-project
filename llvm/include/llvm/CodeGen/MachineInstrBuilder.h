@@ -40,20 +40,30 @@ class MDNode;
 
 namespace RegState {
 
-  enum {
-    Define         = 0x2,
-    Implicit       = 0x4,
-    Kill           = 0x8,
-    Dead           = 0x10,
-    Undef          = 0x20,
-    EarlyClobber   = 0x40,
-    Debug          = 0x80,
-    InternalRead   = 0x100,
-    Renamable      = 0x200,
-    DefineNoRead   = Define | Undef,
-    ImplicitDefine = Implicit | Define,
-    ImplicitKill   = Implicit | Kill
-  };
+enum {
+  /// Register definition.
+  Define = 0x2,
+  /// Not emitted register (e.g. carry, or temporary result).
+  Implicit = 0x4,
+  /// The last use of a register.
+  Kill = 0x8,
+  /// Unused definition.
+  Dead = 0x10,
+  /// Value of the register doesn't matter.
+  Undef = 0x20,
+  /// Register definition happens before uses.
+  EarlyClobber = 0x40,
+  /// Register 'use' is for debugging purpose.
+  Debug = 0x80,
+  /// Register reads a value that is defined inside the same instruction or
+  /// bundle.
+  InternalRead = 0x100,
+  /// Register that may be renamed.
+  Renamable = 0x200,
+  DefineNoRead = Define | Undef,
+  ImplicitDefine = Implicit | Define,
+  ImplicitKill = Implicit | Kill
+};
 
 } // end namespace RegState
 

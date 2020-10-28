@@ -11,4 +11,3 @@ imm32
 ===========================
 
 An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value is truncated to 32 bits.
-

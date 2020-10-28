@@ -21,10 +21,6 @@ FileHeader:
   Data:    ELFDATA2LSB
   Type:    ET_DYN
   Machine: EM_X86_64
-## We simulate no section header table by
-## overriding the ELF header properties.
-  EShOff:  0x0
-  EShNum:  0x0
 Sections:
   - Name:    .rela.dyn
     Type:    SHT_RELA
@@ -66,3 +62,5 @@ ProgramHeaders:
   - Type:  PT_DYNAMIC
     Sections:
       - Section: .dynamic
+SectionHeaderTable:
+  NoHeaders: true

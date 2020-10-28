@@ -89,34 +89,24 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 noinst_PROGRAMS = extract_interface$(EXEEXT)
-subdir = interface
+subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/ax_c___attribute__.m4 \
-	$(top_srcdir)/m4/ax_cc_maxopt.m4 \
-	$(top_srcdir)/m4/ax_check_compiler_flags.m4 \
-	$(top_srcdir)/m4/ax_compiler_vendor.m4 \
-	$(top_srcdir)/m4/ax_create_pkgconfig_info.m4 \
-	$(top_srcdir)/m4/ax_create_stdint_h.m4 \
-	$(top_srcdir)/m4/ax_cxx_compile_stdcxx.m4 \
-	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
-	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11_no_override.m4 \
-	$(top_srcdir)/m4/ax_detect_clang.m4 \
-	$(top_srcdir)/m4/ax_detect_git_head.m4 \
-	$(top_srcdir)/m4/ax_detect_gmp.m4 \
-	$(top_srcdir)/m4/ax_detect_imath.m4 \
-	$(top_srcdir)/m4/ax_gcc_archflag.m4 \
-	$(top_srcdir)/m4/ax_gcc_warn_unused_result.m4 \
-	$(top_srcdir)/m4/ax_gcc_x86_cpuid.m4 \
-	$(top_srcdir)/m4/ax_set_warning_flags.m4 \
-	$(top_srcdir)/m4/ax_submodule.m4 $(top_srcdir)/m4/libtool.m4 \
-	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
-	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
-	$(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/../m4/ax_detect_clang.m4 \
+	$(top_srcdir)/../m4/ax_prog_cc_for_build.m4 \
+	$(top_srcdir)/../m4/ax_prog_cxx_for_build.m4 \
+	$(top_srcdir)/../m4/libtool.m4 \
+	$(top_srcdir)/../m4/ltoptions.m4 \
+	$(top_srcdir)/../m4/ltsugar.m4 \
+	$(top_srcdir)/../m4/ltversion.m4 \
+	$(top_srcdir)/../m4/lt~obsolete.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
-DIST_COMMON = $(srcdir)/Makefile.am $(am__DIST_COMMON)
+DIST_COMMON = $(srcdir)/Makefile.am $(top_srcdir)/configure \
+	$(am__configure_deps) $(am__DIST_COMMON)
+am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
+ configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
-CONFIG_HEADER = $(top_builddir)/isl_config.h
+CONFIG_HEADER = isl_config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 PROGRAMS = $(noinst_PROGRAMS)
@@ -128,7 +118,7 @@ am_extract_interface_OBJECTS = extract_interface-generator.$(OBJEXT) \
 extract_interface_OBJECTS = $(am_extract_interface_OBJECTS)
 am__DEPENDENCIES_1 =
 extract_interface_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -196,7 +186,8 @@ am__can_run_installinfo = \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
-am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
+am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) \
+	$(LISP)isl_config.h.in
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
 # *not* preserved.
@@ -215,8 +206,28 @@ am__define_uniq_tagged_files = \
   done | $(am__uniquify_input)`
 ETAGS = etags
 CTAGS = ctags
-am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/depcomp
+CSCOPE = cscope
+AM_RECURSIVE_TARGETS = cscope
+am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/isl_config.h.in \
+	compile config.guess config.sub depcomp install-sh ltmain.sh \
+	missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+distdir = $(PACKAGE)-$(VERSION)
+top_distdir = $(distdir)
+am__remove_distdir = \
+  if test -d "$(distdir)"; then \
+    find "$(distdir)" -type d ! -perm -200 -exec chmod u+w {} ';' \
+      && rm -rf "$(distdir)" \
+      || { sleep 5 && rm -rf "$(distdir)"; }; \
+  else :; fi
+am__post_remove_distdir = $(am__remove_distdir)
+DIST_ARCHIVES = $(distdir).tar.gz
+GZIP_ENV = --best
+DIST_TARGETS = dist-gzip
+distuninstallcheck_listfiles = find . -type f -print
+am__distuninstallcheck_listfiles = $(distuninstallcheck_listfiles) \
+  | sed 's|^\./|$(prefix)/|' | grep -v '$(infodir)/dir$$'
+distcleancheck_listfiles = find . -type f -print
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
@@ -225,9 +236,13 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
+BUILD_EXEEXT = @BUILD_EXEEXT@
+BUILD_OBJEXT = @BUILD_OBJEXT@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
+CC_FOR_BUILD = @CC_FOR_BUILD@
 CFLAGS = @CFLAGS@
+CFLAGS_FOR_BUILD = @CFLAGS_FOR_BUILD@
 CLANG_CXXFLAGS = @CLANG_CXXFLAGS@
 CLANG_LDFLAGS = @CLANG_LDFLAGS@
 CLANG_LIBS = @CLANG_LIBS@
@@ -235,11 +250,16 @@ CLANG_RFLAG = @CLANG_RFLAG@
 CONFIG_STATUS_DEPENDENCIES = @CONFIG_STATUS_DEPENDENCIES@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CPPFLAGS_FOR_BUILD = @CPPFLAGS_FOR_BUILD@
+CPP_FOR_BUILD = @CPP_FOR_BUILD@
 CXX = @CXX@
 CXXCPP = @CXXCPP@
+CXXCPPFLAGS_FOR_BUILD = @CXXCPPFLAGS_FOR_BUILD@
+CXXCPP_FOR_BUILD = @CXXCPP_FOR_BUILD@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
-CYGPATH = @CYGPATH@
+CXXFLAGS_FOR_BUILD = @CXXFLAGS_FOR_BUILD@
+CXX_FOR_BUILD = @CXX_FOR_BUILD@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
@@ -252,11 +272,7 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
-GIT_HEAD = @GIT_HEAD@
-GIT_HEAD_ID = @GIT_HEAD_ID@
-GIT_HEAD_VERSION = @GIT_HEAD_VERSION@
 GREP = @GREP@
-HAVE_CXX11 = @HAVE_CXX11@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -264,10 +280,10 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LDFLAGS_FOR_BUILD = @LDFLAGS_FOR_BUILD@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
-LIB_CLANG_EDIT = @LIB_CLANG_EDIT@
 LIPO = @LIPO@
 LLVM_CONFIG = @LLVM_CONFIG@
 LN_S = @LN_S@
@@ -276,15 +292,10 @@ LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
-MP_CFLAGS = @MP_CFLAGS@
-MP_CPPFLAGS = @MP_CPPFLAGS@
-MP_LDFLAGS = @MP_LDFLAGS@
-MP_LIBS = @MP_LIBS@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
-OS_SRCDIR = @OS_SRCDIR@
 OTOOL = @OTOOL@
 OTOOL64 = @OTOOL64@
 PACKAGE = @PACKAGE@
@@ -295,29 +306,22 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
-PDFLATEX = @PDFLATEX@
-PERL = @PERL@
-POD2HTML = @POD2HTML@
-PRTDIAG = @PRTDIAG@
-PYTHON = @PYTHON@
-PYTHON_EXEC_PREFIX = @PYTHON_EXEC_PREFIX@
-PYTHON_PLATFORM = @PYTHON_PLATFORM@
-PYTHON_PREFIX = @PYTHON_PREFIX@
-PYTHON_VERSION = @PYTHON_VERSION@
 RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
-WARNING_FLAGS = @WARNING_FLAGS@
+XCODE_SELECT = @XCODE_SELECT@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
 ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
+ac_ct_CC_FOR_BUILD = @ac_ct_CC_FOR_BUILD@
 ac_ct_CXX = @ac_ct_CXX@
+ac_ct_CXX_FOR_BUILD = @ac_ct_CXX_FOR_BUILD@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
 am__include = @am__include@
 am__leading_dot = @am__leading_dot@
@@ -353,15 +357,9 @@ mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
 pdfdir = @pdfdir@
-pkgconfig_libdir = @pkgconfig_libdir@
-pkgconfig_libfile = @pkgconfig_libfile@
-pkgpyexecdir = @pkgpyexecdir@
-pkgpythondir = @pkgpythondir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
-pyexecdir = @pyexecdir@
-pythondir = @pythondir@
 runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
@@ -371,7 +369,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-versioninfo = @versioninfo@
+ACLOCAL_AMFLAGS = -I ../m4
 AUTOMAKE_OPTIONS = nostdinc
 includes = -I$(top_builddir) -I$(top_srcdir) \
 	-I$(top_builddir)/include -I$(top_srcdir)/include
@@ -391,45 +389,60 @@ extract_interface_SOURCES = \
 	extract_interface.cc
 
 extract_interface_LDFLAGS = $(CLANG_LDFLAGS) $(CLANG_RFLAG)
-extract_interface_LDADD = \
-	-lclangFrontend -lclangSerialization -lclangParse -lclangSema \
-	$(LIB_CLANG_EDIT) \
-	-lclangAnalysis -lclangAST -lclangLex -lclangBasic -lclangDriver \
-	$(CLANG_LIBS) $(CLANG_LDFLAGS)
-
-all: all-am
+extract_interface_LDADD = $(CLANG_LIBS) $(CLANG_LDFLAGS)
+all: isl_config.h
+	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
 .SUFFIXES: .cc .lo .o .obj
+am--refresh: Makefile
+	@:
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
 	    *$$dep*) \
-	      ( cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh ) \
-	        && { if test -f $@; then exit 0; else break; fi; }; \
+	      echo ' cd $(srcdir) && $(AUTOMAKE) --foreign'; \
+	      $(am__cd) $(srcdir) && $(AUTOMAKE) --foreign \
+		&& exit 0; \
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign interface/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --foreign Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --foreign interface/Makefile
+	  $(AUTOMAKE) --foreign Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
 	  *config.status*) \
-	    cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh;; \
+	    echo ' $(SHELL) ./config.status'; \
+	    $(SHELL) ./config.status;; \
 	  *) \
-	    echo ' cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe)'; \
-	    cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe);; \
+	    echo ' cd $(top_builddir) && $(SHELL) ./config.status $@ $(am__depfiles_maybe)'; \
+	    cd $(top_builddir) && $(SHELL) ./config.status $@ $(am__depfiles_maybe);; \
 	esac;
 
 $(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
-	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
+	$(SHELL) ./config.status --recheck
 
 $(top_srcdir)/configure:  $(am__configure_deps)
-	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
+	$(am__cd) $(srcdir) && $(AUTOCONF)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
-	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
+	$(am__cd) $(srcdir) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
 $(am__aclocal_m4_deps):
+
+isl_config.h: stamp-h1
+	@test -f $@ || rm -f stamp-h1
+	@test -f $@ || $(MAKE) $(AM_MAKEFLAGS) stamp-h1
+
+stamp-h1: $(srcdir)/isl_config.h.in $(top_builddir)/config.status
+	@rm -f stamp-h1
+	cd $(top_builddir) && $(SHELL) ./config.status isl_config.h
+$(srcdir)/isl_config.h.in:  $(am__configure_deps) 
+	($(am__cd) $(top_srcdir) && $(AUTOHEADER))
+	rm -f stamp-h1
+	touch $@
+
+distclean-hdr:
+	-rm -f isl_config.h stamp-h1
 
 clean-noinstPROGRAMS:
 	@list='$(noinst_PROGRAMS)'; test -n "$$list" || exit 0; \
@@ -553,6 +566,9 @@ mostlyclean-libtool:
 clean-libtool:
 	-rm -rf .libs _libs
 
+distclean-libtool:
+	-rm -f libtool config.lt
+
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
 tags: tags-am
@@ -586,6 +602,12 @@ GTAGS:
 	here=`$(am__cd) $(top_builddir) && pwd` \
 	  && $(am__cd) $(top_srcdir) \
 	  && gtags -i $(GTAGS_ARGS) "$$here"
+cscope: cscope.files
+	test ! -s cscope.files \
+	  || $(CSCOPE) -b -q $(AM_CSCOPEFLAGS) $(CSCOPEFLAGS) -i cscope.files $(CSCOPE_ARGS)
+clean-cscope:
+	-rm -f cscope.files
+cscope.files: clean-cscope cscopelist
 cscopelist: cscopelist-am
 
 cscopelist-am: $(am__tagged_files)
@@ -604,8 +626,11 @@ cscopelist-am: $(am__tagged_files)
 
 distclean-tags:
 	-rm -f TAGS ID GTAGS GRTAGS GSYMS GPATH tags
+	-rm -f cscope.out cscope.in.out cscope.po.out cscope.files
 
 distdir: $(DISTFILES)
+	$(am__remove_distdir)
+	test -d "$(distdir)" || mkdir "$(distdir)"
 	@srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
 	list='$(DISTFILES)'; \
@@ -635,9 +660,140 @@ distdir: $(DISTFILES)
 	    || exit 1; \
 	  fi; \
 	done
+	-test -n "$(am__skip_mode_fix)" \
+	|| find "$(distdir)" -type d ! -perm -755 \
+		-exec chmod u+rwx,go+rx {} \; -o \
+	  ! -type d ! -perm -444 -links 1 -exec chmod a+r {} \; -o \
+	  ! -type d ! -perm -400 -exec chmod a+r {} \; -o \
+	  ! -type d ! -perm -444 -exec $(install_sh) -c -m a+r {} {} \; \
+	|| chmod -R a+r "$(distdir)"
+dist-gzip: distdir
+	tardir=$(distdir) && $(am__tar) | eval GZIP= gzip $(GZIP_ENV) -c >$(distdir).tar.gz
+	$(am__post_remove_distdir)
+
+dist-bzip2: distdir
+	tardir=$(distdir) && $(am__tar) | BZIP2=$${BZIP2--9} bzip2 -c >$(distdir).tar.bz2
+	$(am__post_remove_distdir)
+
+dist-lzip: distdir
+	tardir=$(distdir) && $(am__tar) | lzip -c $${LZIP_OPT--9} >$(distdir).tar.lz
+	$(am__post_remove_distdir)
+
+dist-xz: distdir
+	tardir=$(distdir) && $(am__tar) | XZ_OPT=$${XZ_OPT--e} xz -c >$(distdir).tar.xz
+	$(am__post_remove_distdir)
+
+dist-tarZ: distdir
+	@echo WARNING: "Support for distribution archives compressed with" \
+		       "legacy program 'compress' is deprecated." >&2
+	@echo WARNING: "It will be removed altogether in Automake 2.0" >&2
+	tardir=$(distdir) && $(am__tar) | compress -c >$(distdir).tar.Z
+	$(am__post_remove_distdir)
+
+dist-shar: distdir
+	@echo WARNING: "Support for shar distribution archives is" \
+	               "deprecated." >&2
+	@echo WARNING: "It will be removed altogether in Automake 2.0" >&2
+	shar $(distdir) | eval GZIP= gzip $(GZIP_ENV) -c >$(distdir).shar.gz
+	$(am__post_remove_distdir)
+
+dist-zip: distdir
+	-rm -f $(distdir).zip
+	zip -rq $(distdir).zip $(distdir)
+	$(am__post_remove_distdir)
+
+dist dist-all:
+	$(MAKE) $(AM_MAKEFLAGS) $(DIST_TARGETS) am__post_remove_distdir='@:'
+	$(am__post_remove_distdir)
+
+# This target untars the dist file and tries a VPATH configuration.  Then
+# it guarantees that the distribution is self-contained by making another
+# tarfile.
+distcheck: dist
+	case '$(DIST_ARCHIVES)' in \
+	*.tar.gz*) \
+	  eval GZIP= gzip $(GZIP_ENV) -dc $(distdir).tar.gz | $(am__untar) ;;\
+	*.tar.bz2*) \
+	  bzip2 -dc $(distdir).tar.bz2 | $(am__untar) ;;\
+	*.tar.lz*) \
+	  lzip -dc $(distdir).tar.lz | $(am__untar) ;;\
+	*.tar.xz*) \
+	  xz -dc $(distdir).tar.xz | $(am__untar) ;;\
+	*.tar.Z*) \
+	  uncompress -c $(distdir).tar.Z | $(am__untar) ;;\
+	*.shar.gz*) \
+	  eval GZIP= gzip $(GZIP_ENV) -dc $(distdir).shar.gz | unshar ;;\
+	*.zip*) \
+	  unzip $(distdir).zip ;;\
+	esac
+	chmod -R a-w $(distdir)
+	chmod u+w $(distdir)
+	mkdir $(distdir)/_build $(distdir)/_build/sub $(distdir)/_inst
+	chmod a-w $(distdir)
+	test -d $(distdir)/_build || exit 0; \
+	dc_install_base=`$(am__cd) $(distdir)/_inst && pwd | sed -e 's,^[^:\\/]:[\\/],/,'` \
+	  && dc_destdir="$${TMPDIR-/tmp}/am-dc-$$$$/" \
+	  && am__cwd=`pwd` \
+	  && $(am__cd) $(distdir)/_build/sub \
+	  && ../../configure \
+	    $(AM_DISTCHECK_CONFIGURE_FLAGS) \
+	    $(DISTCHECK_CONFIGURE_FLAGS) \
+	    --srcdir=../.. --prefix="$$dc_install_base" \
+	  && $(MAKE) $(AM_MAKEFLAGS) \
+	  && $(MAKE) $(AM_MAKEFLAGS) dvi \
+	  && $(MAKE) $(AM_MAKEFLAGS) check \
+	  && $(MAKE) $(AM_MAKEFLAGS) install \
+	  && $(MAKE) $(AM_MAKEFLAGS) installcheck \
+	  && $(MAKE) $(AM_MAKEFLAGS) uninstall \
+	  && $(MAKE) $(AM_MAKEFLAGS) distuninstallcheck_dir="$$dc_install_base" \
+	        distuninstallcheck \
+	  && chmod -R a-w "$$dc_install_base" \
+	  && ({ \
+	       (cd ../.. && umask 077 && mkdir "$$dc_destdir") \
+	       && $(MAKE) $(AM_MAKEFLAGS) DESTDIR="$$dc_destdir" install \
+	       && $(MAKE) $(AM_MAKEFLAGS) DESTDIR="$$dc_destdir" uninstall \
+	       && $(MAKE) $(AM_MAKEFLAGS) DESTDIR="$$dc_destdir" \
+	            distuninstallcheck_dir="$$dc_destdir" distuninstallcheck; \
+	      } || { rm -rf "$$dc_destdir"; exit 1; }) \
+	  && rm -rf "$$dc_destdir" \
+	  && $(MAKE) $(AM_MAKEFLAGS) dist \
+	  && rm -rf $(DIST_ARCHIVES) \
+	  && $(MAKE) $(AM_MAKEFLAGS) distcleancheck \
+	  && cd "$$am__cwd" \
+	  || exit 1
+	$(am__post_remove_distdir)
+	@(echo "$(distdir) archives ready for distribution: "; \
+	  list='$(DIST_ARCHIVES)'; for i in $$list; do echo $$i; done) | \
+	  sed -e 1h -e 1s/./=/g -e 1p -e 1x -e '$$p' -e '$$x'
+distuninstallcheck:
+	@test -n '$(distuninstallcheck_dir)' || { \
+	  echo 'ERROR: trying to run $@ with an empty' \
+	       '$$(distuninstallcheck_dir)' >&2; \
+	  exit 1; \
+	}; \
+	$(am__cd) '$(distuninstallcheck_dir)' || { \
+	  echo 'ERROR: cannot chdir into $(distuninstallcheck_dir)' >&2; \
+	  exit 1; \
+	}; \
+	test `$(am__distuninstallcheck_listfiles) | wc -l` -eq 0 \
+	   || { echo "ERROR: files left after uninstall:" ; \
+	        if test -n "$(DESTDIR)"; then \
+	          echo "  (check DESTDIR support)"; \
+	        fi ; \
+	        $(distuninstallcheck_listfiles) ; \
+	        exit 1; } >&2
+distcleancheck: distclean
+	@if test '$(srcdir)' = . ; then \
+	  echo "ERROR: distcleancheck can only run from a VPATH build" ; \
+	  exit 1 ; \
+	fi
+	@test `$(distcleancheck_listfiles) | wc -l` -eq 0 \
+	  || { echo "ERROR: files left in build directory after distclean:" ; \
+	       $(distcleancheck_listfiles) ; \
+	       exit 1; } >&2
 check-am: all-am
 check: check-am
-all-am: Makefile $(PROGRAMS)
+all-am: Makefile $(PROGRAMS) isl_config.h
 installdirs:
 install: install-am
 install-exec: install-exec-am
@@ -675,10 +831,11 @@ clean-am: clean-generic clean-libtool clean-noinstPROGRAMS \
 	mostlyclean-am
 
 distclean: distclean-am
+	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf ./$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
-	distclean-tags
+	distclean-hdr distclean-libtool distclean-tags
 
 dvi: dvi-am
 
@@ -721,6 +878,8 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
+	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
+	-rm -rf $(top_srcdir)/autom4te.cache
 	-rm -rf ./$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
@@ -740,21 +899,24 @@ ps-am:
 
 uninstall-am:
 
-.MAKE: install-am install-strip
+.MAKE: all install-am install-strip
 
-.PHONY: CTAGS GTAGS TAGS all all-am check check-am clean clean-generic \
-	clean-libtool clean-noinstPROGRAMS cscopelist-am ctags \
-	ctags-am distclean distclean-compile distclean-generic \
-	distclean-libtool distclean-tags distdir dvi dvi-am html \
-	html-am info info-am install install-am install-data \
-	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags tags-am uninstall uninstall-am
+.PHONY: CTAGS GTAGS TAGS all all-am am--refresh check check-am clean \
+	clean-cscope clean-generic clean-libtool clean-noinstPROGRAMS \
+	cscope cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
+	dist-gzip dist-lzip dist-shar dist-tarZ dist-xz dist-zip \
+	distcheck distclean distclean-compile distclean-generic \
+	distclean-hdr distclean-libtool distclean-tags distcleancheck \
+	distdir distuninstallcheck dvi dvi-am html html-am info \
+	info-am install install-am install-data install-data-am \
+	install-dvi install-dvi-am install-exec install-exec-am \
+	install-html install-html-am install-info install-info-am \
+	install-man install-pdf install-pdf-am install-ps \
+	install-ps-am install-strip installcheck installcheck-am \
+	installdirs maintainer-clean maintainer-clean-generic \
+	mostlyclean mostlyclean-compile mostlyclean-generic \
+	mostlyclean-libtool pdf pdf-am ps ps-am tags tags-am uninstall \
+	uninstall-am
 
 .PRECIOUS: Makefile
 

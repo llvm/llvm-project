@@ -49,3 +49,49 @@ entry:
   %div = sdiv <4 x i32> %a, %b
   ret <4 x i32> %div
 }
+
+; Test the vector divide extended intrinsics.
+declare <4 x i32> @llvm.ppc.altivec.vdivesw(<4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.ppc.altivec.vdiveuw(<4 x i32>, <4 x i32>)
+declare <2 x i64> @llvm.ppc.altivec.vdivesd(<2 x i64>, <2 x i64>)
+declare <2 x i64> @llvm.ppc.altivec.vdiveud(<2 x i64>, <2 x i64>)
+
+define <4 x i32> @test_vdivesw(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: test_vdivesw:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vdivesw v2, v2, v3
+; CHECK-NEXT:    blr
+entry:
+  %div = tail call <4 x i32> @llvm.ppc.altivec.vdivesw(<4 x i32> %a, <4 x i32> %b)
+  ret <4 x i32> %div
+}
+
+define <4 x i32> @test_vdiveuw(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: test_vdiveuw:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vdiveuw v2, v2, v3
+; CHECK-NEXT:    blr
+entry:
+  %div = tail call <4 x i32> @llvm.ppc.altivec.vdiveuw(<4 x i32> %a, <4 x i32> %b)
+  ret <4 x i32> %div
+}
+
+define <2 x i64> @test_vdivesd(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: test_vdivesd:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vdivesd v2, v2, v3
+; CHECK-NEXT:    blr
+entry:
+  %div = tail call <2 x i64> @llvm.ppc.altivec.vdivesd(<2 x i64> %a, <2 x i64> %b)
+  ret <2 x i64> %div
+}
+
+define <2 x i64> @test_vdiveud(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: test_vdiveud:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vdiveud v2, v2, v3
+; CHECK-NEXT:    blr
+entry:
+  %div = tail call <2 x i64> @llvm.ppc.altivec.vdiveud(<2 x i64> %a, <2 x i64> %b)
+  ret <2 x i64> %div
+}

@@ -45,6 +45,8 @@ class StringRef;
 class TargetLibraryInfo;
 class Value;
 
+constexpr unsigned MaxAnalysisRecursionDepth = 6;
+
   /// Determine which bits of V are known to be either zero or one and return
   /// them in the KnownZero/KnownOne bit sets.
   ///
@@ -411,10 +413,12 @@ class Value;
   bool getUnderlyingObjectsForCodeGen(const Value *V,
                                       SmallVectorImpl<Value *> &Objects);
 
-  /// Finds alloca where the value comes from.
-  AllocaInst *findAllocaForValue(Value *V);
-  inline const AllocaInst *findAllocaForValue(const Value *V) {
-    return findAllocaForValue(const_cast<Value *>(V));
+  /// Returns unique alloca where the value comes from, or nullptr.
+  /// If OffsetZero is true check that V points to the begining of the alloca.
+  AllocaInst *findAllocaForValue(Value *V, bool OffsetZero = false);
+  inline const AllocaInst *findAllocaForValue(const Value *V,
+                                              bool OffsetZero = false) {
+    return findAllocaForValue(const_cast<Value *>(V), OffsetZero);
   }
 
   /// Return true if the only users of this pointer are lifetime markers.
@@ -582,10 +586,10 @@ class Value;
   /// getGuaranteedNonPoisonOp.
   bool propagatesPoison(const Instruction *I);
 
-  /// Return either nullptr or an operand of I such that I will trigger
-  /// undefined behavior if I is executed and that operand has a poison
-  /// value.
-  const Value *getGuaranteedNonPoisonOp(const Instruction *I);
+  /// Insert operands of I into Ops such that I will trigger undefined behavior
+  /// if I is executed and that operand has a poison value.
+  void getGuaranteedNonPoisonOps(const Instruction *I,
+                                 SmallPtrSetImpl<const Value *> &Ops);
 
   /// Return true if the given instruction must trigger undefined behavior.
   /// when I is executed with any operands which appear in KnownPoison holding

@@ -74,9 +74,10 @@ public:
   // IRUnits in a safe way, and we might pursue that as soon as there is a
   // useful instrumentation that needs it.
   using BeforePassFunc = bool(StringRef, Any);
+  using BeforeSkippedPassFunc = void(StringRef, Any);
   using BeforeNonSkippedPassFunc = void(StringRef, Any);
-  using AfterPassFunc = void(StringRef, Any);
-  using AfterPassInvalidatedFunc = void(StringRef);
+  using AfterPassFunc = void(StringRef, Any, const PreservedAnalyses &);
+  using AfterPassInvalidatedFunc = void(StringRef, const PreservedAnalyses &);
   using BeforeAnalysisFunc = void(StringRef, Any);
   using AfterAnalysisFunc = void(StringRef, Any);
 
@@ -89,6 +90,11 @@ public:
 
   template <typename CallableT> void registerBeforePassCallback(CallableT C) {
     BeforePassCallbacks.emplace_back(std::move(C));
+  }
+
+  template <typename CallableT>
+  void registerBeforeSkippedPassCallback(CallableT C) {
+    BeforeSkippedPassCallbacks.emplace_back(std::move(C));
   }
 
   template <typename CallableT>
@@ -119,6 +125,8 @@ private:
   friend class PassInstrumentation;
 
   SmallVector<llvm::unique_function<BeforePassFunc>, 4> BeforePassCallbacks;
+  SmallVector<llvm::unique_function<BeforeSkippedPassFunc>, 4>
+      BeforeSkippedPassCallbacks;
   SmallVector<llvm::unique_function<BeforeNonSkippedPassFunc>, 4>
       BeforeNonSkippedPassCallbacks;
   SmallVector<llvm::unique_function<AfterPassFunc>, 4> AfterPassCallbacks;
@@ -179,6 +187,9 @@ public:
     if (ShouldRun) {
       for (auto &C : Callbacks->BeforeNonSkippedPassCallbacks)
         C(Pass.name(), llvm::Any(&IR));
+    } else {
+      for (auto &C : Callbacks->BeforeSkippedPassCallbacks)
+        C(Pass.name(), llvm::Any(&IR));
     }
 
     return ShouldRun;
@@ -188,20 +199,22 @@ public:
   /// just been executed and constant reference to \p IR it operates on.
   /// \p IR is guaranteed to be valid at this point.
   template <typename IRUnitT, typename PassT>
-  void runAfterPass(const PassT &Pass, const IRUnitT &IR) const {
+  void runAfterPass(const PassT &Pass, const IRUnitT &IR,
+                    const PreservedAnalyses &PA) const {
     if (Callbacks)
       for (auto &C : Callbacks->AfterPassCallbacks)
-        C(Pass.name(), llvm::Any(&IR));
+        C(Pass.name(), llvm::Any(&IR), PA);
   }
 
   /// AfterPassInvalidated instrumentation point - takes \p Pass instance
   /// that has just been executed. For use when IR has been invalidated
   /// by \p Pass execution.
   template <typename IRUnitT, typename PassT>
-  void runAfterPassInvalidated(const PassT &Pass) const {
+  void runAfterPassInvalidated(const PassT &Pass,
+                               const PreservedAnalyses &PA) const {
     if (Callbacks)
       for (auto &C : Callbacks->AfterPassInvalidatedCallbacks)
-        C(Pass.name());
+        C(Pass.name(), PA);
   }
 
   /// BeforeAnalysis instrumentation point - takes \p Analysis instance
@@ -231,6 +244,16 @@ public:
   bool invalidate(IRUnitT &, const class llvm::PreservedAnalyses &,
                   ExtraArgsT...) {
     return false;
+  }
+
+  template <typename CallableT>
+  void pushBeforeNonSkippedPassCallback(CallableT C) {
+    if (Callbacks)
+      Callbacks->BeforeNonSkippedPassCallbacks.emplace_back(std::move(C));
+  }
+  void popBeforeNonSkippedPassCallback() {
+    if (Callbacks)
+      Callbacks->BeforeNonSkippedPassCallbacks.pop_back();
   }
 };
 

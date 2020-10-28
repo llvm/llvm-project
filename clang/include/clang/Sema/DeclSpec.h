@@ -2448,6 +2448,8 @@ public:
   /// \brief Sets a trailing requires clause for this declarator.
   void setTrailingRequiresClause(Expr *TRC) {
     TrailingRequiresClause = TRC;
+
+    SetRangeEnd(TRC->getEndLoc());
   }
 
   /// \brief Sets a trailing requires clause for this declarator.

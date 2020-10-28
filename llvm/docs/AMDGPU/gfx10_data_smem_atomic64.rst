@@ -18,4 +18,4 @@ Optionally may serve as an output data:
 
 *Size:* 2 dwords.
 
-*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`
+*Operands:* :ref:`s<amdgpu_synid_s>`, :ref:`vcc<amdgpu_synid_vcc>`, :ref:`ttmp<amdgpu_synid_ttmp>`, :ref:`null<amdgpu_synid_null>`

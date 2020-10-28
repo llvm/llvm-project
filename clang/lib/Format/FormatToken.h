@@ -439,6 +439,12 @@ public:
            (!ColonRequired || (Next && Next->is(tok::colon)));
   }
 
+  bool canBePointerOrReferenceQualifier() const {
+    return isOneOf(tok::kw_const, tok::kw_restrict, tok::kw_volatile,
+                   tok::kw___attribute, tok::kw__Nonnull, tok::kw__Nullable,
+                   tok::kw__Null_unspecified);
+  }
+
   /// Determine whether the token is a simple-type-specifier.
   bool isSimpleTypeSpecifier() const;
 

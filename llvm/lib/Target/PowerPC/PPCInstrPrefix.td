@@ -18,6 +18,15 @@ def PPCxxsplti32dx : SDNode<"PPCISD::XXSPLTI32DX", SDT_PPCSplat32, []>;
 // address computations).
 class isPCRel { bit PCRel = 1; }
 
+// PowerPC specific type constraints.
+def SDT_PPCLXVRZX : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v1i128>, SDTCisPtrTy<1>, SDTCisPtrTy<2>
+]>;
+
+// PPC Specific DAG Nodes.
+def PPClxvrzx : SDNode<"PPCISD::LXVRZX", SDT_PPCLXVRZX,
+                       [SDNPHasChain, SDNPMayLoad]>;
+
 // Top-level class for prefixed instructions.
 class PI<bits<6> pref, bits<6> opcode, dag OOL, dag IOL, string asmstr,
          InstrItinClass itin> : Instruction {
@@ -326,6 +335,22 @@ class VNForm_VTAB5_SD3<bits<6> xo, bits<2> ps, dag OOL, dag IOL, string asmstr,
   let Inst{26-31} = xo;
 }
 
+class VXForm_RD5_MP_VB5<bits<11> xo, bits<4> eo, dag OOL, dag IOL,
+                        string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<4, OOL, IOL, asmstr, itin> {
+  bits<5> RD;
+  bits<5> VB;
+  bit MP;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = RD;
+  let Inst{11-14} = eo;
+  let Inst{15} = MP;
+  let Inst{16-20} = VB;
+  let Inst{21-31} = xo;
+}
+
 // 8RR:D-Form: [ 1 1 0 // // imm0
 //               PO T XO TX imm1 ].
 class 8RR_DForm_IMM32_XT6<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
@@ -488,6 +513,7 @@ multiclass 8LS_DForm_R_SI34_XT6_RA5_p<bits<5> opcode, dag OOL, dag IOL,
 def PrefixInstrs : Predicate<"Subtarget->hasPrefixInstrs()">;
 def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
 def PairedVectorMemops : Predicate<"PPCSubTarget->pairedVectorMemops()">;
+def MMA : Predicate<"PPCSubTarget->hasMMA()">;
 
 let Predicates = [PrefixInstrs] in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
@@ -795,6 +821,9 @@ let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
   // If the PPCmatpcreladdr node is not caught by any other pattern it should be
   // caught here and turned into a paddi instruction to materialize the address.
   def : Pat<(PPCmatpcreladdr pcreladdr:$addr), (PADDI8pc 0, $addr)>;
+  // PPCtlsdynamatpcreladdr node is used for TLS dynamic models to materialize
+  // tls global address with paddi instruction.
+  def : Pat<(PPCtlsdynamatpcreladdr pcreladdr:$addr), (PADDI8pc 0, $addr)>;
 }
 
 let Predicates = [PrefixInstrs] in {
@@ -947,38 +976,139 @@ let Predicates = [IsISA3_1] in {
               [(set v2i64:$vD,
                     (int_ppc_altivec_vinsdrx v2i64:$vDi, i64:$rA, i64:$rB))]>,
               RegConstraint<"$vDi = $vD">, NoEncode<"$vDi">;
+  def VEXTRACTBM : VXForm_RD5_XO5_RS5<1602, 8, (outs gprc:$rD), (ins vrrc:$vB),
+                                      "vextractbm $rD, $vB", IIC_VecGeneral,
+                                      [(set i32:$rD,
+                                      (int_ppc_altivec_vextractbm v16i8:$vB))]>;
+  def VEXTRACTHM : VXForm_RD5_XO5_RS5<1602, 9, (outs gprc:$rD), (ins vrrc:$vB),
+                                      "vextracthm $rD, $vB", IIC_VecGeneral,
+                                      [(set i32:$rD,
+                                      (int_ppc_altivec_vextracthm v8i16:$vB))]>;
+  def VEXTRACTWM : VXForm_RD5_XO5_RS5<1602, 10, (outs gprc:$rD), (ins vrrc:$vB),
+                                      "vextractwm $rD, $vB", IIC_VecGeneral,
+                                      [(set i32:$rD,
+                                      (int_ppc_altivec_vextractwm v4i32:$vB))]>;
+  def VEXTRACTDM : VXForm_RD5_XO5_RS5<1602, 11, (outs gprc:$rD), (ins vrrc:$vB),
+                                      "vextractdm $rD, $vB", IIC_VecGeneral,
+                                      [(set i32:$rD,
+                                      (int_ppc_altivec_vextractdm v2i64:$vB))]>;
+  def VEXTRACTQM : VXForm_RD5_XO5_RS5<1602, 12, (outs gprc:$rD), (ins vrrc:$vB),
+                                      "vextractqm $rD, $vB", IIC_VecGeneral,
+                                      [(set i32:$rD,
+                                      (int_ppc_altivec_vextractqm v1i128:$vB))]>;
+  def VEXPANDBM : VXForm_RD5_XO5_RS5<1602, 0, (outs vrrc:$vD), (ins vrrc:$vB),
+                                     "vexpandbm $vD, $vB", IIC_VecGeneral,
+                                     []>;
+  def VEXPANDHM : VXForm_RD5_XO5_RS5<1602, 1, (outs vrrc:$vD), (ins vrrc:$vB),
+                                     "vexpandhm $vD, $vB", IIC_VecGeneral,
+                                     []>;
+  def VEXPANDWM : VXForm_RD5_XO5_RS5<1602, 2, (outs vrrc:$vD), (ins vrrc:$vB),
+                                     "vexpandwm $vD, $vB", IIC_VecGeneral,
+                                     []>;
+  def VEXPANDDM : VXForm_RD5_XO5_RS5<1602, 3, (outs vrrc:$vD), (ins vrrc:$vB),
+                                     "vexpanddm $vD, $vB", IIC_VecGeneral,
+                                     []>;
+  def VEXPANDQM : VXForm_RD5_XO5_RS5<1602, 4, (outs vrrc:$vD), (ins vrrc:$vB),
+                                     "vexpandqm $vD, $vB", IIC_VecGeneral,
+                                     []>;
+  def MTVSRBM : VXForm_RD5_XO5_RS5<1602, 16, (outs vrrc:$vD), (ins g8rc:$rB),
+                                   "mtvsrbm $vD, $rB", IIC_VecGeneral,
+                                   []>;
+  def MTVSRHM : VXForm_RD5_XO5_RS5<1602, 17, (outs vrrc:$vD), (ins g8rc:$rB),
+                                   "mtvsrhm $vD, $rB", IIC_VecGeneral,
+                                   []>;
+  def MTVSRWM : VXForm_RD5_XO5_RS5<1602, 18, (outs vrrc:$vD), (ins g8rc:$rB),
+                                   "mtvsrwm $vD, $rB", IIC_VecGeneral,
+                                   []>;
+  def MTVSRDM : VXForm_RD5_XO5_RS5<1602, 19, (outs vrrc:$vD), (ins g8rc:$rB),
+                                   "mtvsrdm $vD, $rB", IIC_VecGeneral,
+                                   []>;
+  def MTVSRQM : VXForm_RD5_XO5_RS5<1602, 20, (outs vrrc:$vD), (ins g8rc:$rB),
+                                   "mtvsrqm $vD, $rB", IIC_VecGeneral,
+                                   []>;
+  def MTVSRBMI : DXForm<4, 10, (outs vrrc:$vD), (ins u16imm64:$D),
+                        "mtvsrbmi $vD, $D", IIC_VecGeneral,
+                        []>;
+  def VCNTMBB : VXForm_RD5_MP_VB5<1602, 12, (outs g8rc:$rD),
+                                  (ins vrrc:$vB, u1imm:$MP),
+                                  "vcntmbb $rD, $vB, $MP", IIC_VecGeneral,
+                                  []>;
+  def VCNTMBH : VXForm_RD5_MP_VB5<1602, 13, (outs g8rc:$rD),
+                                  (ins vrrc:$vB, u1imm:$MP),
+                                  "vcntmbh $rD, $vB, $MP", IIC_VecGeneral,
+                                  []>;
+  def VCNTMBW : VXForm_RD5_MP_VB5<1602, 14, (outs g8rc:$rD),
+                                  (ins vrrc:$vB, u1imm:$MP),
+                                  "vcntmbw $rD, $vB, $MP", IIC_VecGeneral,
+                                  []>;
+  def VCNTMBD : VXForm_RD5_MP_VB5<1602, 15, (outs g8rc:$rD),
+                                  (ins vrrc:$vB, u1imm:$MP),
+                                  "vcntmbd $rD, $vB, $MP", IIC_VecGeneral,
+                                  []>;
   def VEXTDUBVLX : VAForm_1a<24, (outs vrrc:$vD),
-                             (ins vrrc:$vA, vrrc:$vB, g8rc:$rC),
+                             (ins vrrc:$vA, vrrc:$vB, gprc:$rC),
                              "vextdubvlx $vD, $vA, $vB, $rC",
-                             IIC_VecGeneral, []>;
+                             IIC_VecGeneral,
+                             [(set v2i64:$vD,
+                                   (int_ppc_altivec_vextdubvlx v16i8:$vA,
+                                                               v16i8:$vB,
+                                                               i32:$rC))]>;
   def VEXTDUBVRX : VAForm_1a<25, (outs vrrc:$vD),
-                             (ins vrrc:$vA, vrrc:$vB, g8rc:$rC),
+                             (ins vrrc:$vA, vrrc:$vB, gprc:$rC),
                              "vextdubvrx $vD, $vA, $vB, $rC",
-                             IIC_VecGeneral, []>;
+                             IIC_VecGeneral,
+                             [(set v2i64:$vD,
+                                   (int_ppc_altivec_vextdubvrx v16i8:$vA,
+                                                               v16i8:$vB,
+                                                               i32:$rC))]>;
   def VEXTDUHVLX : VAForm_1a<26, (outs vrrc:$vD),
-                             (ins vrrc:$vA, vrrc:$vB, g8rc:$rC),
+                             (ins vrrc:$vA, vrrc:$vB, gprc:$rC),
                              "vextduhvlx $vD, $vA, $vB, $rC",
-                             IIC_VecGeneral, []>;
+                             IIC_VecGeneral,
+                             [(set v2i64:$vD,
+                                   (int_ppc_altivec_vextduhvlx v8i16:$vA,
+                                                               v8i16:$vB,
+                                                               i32:$rC))]>;
   def VEXTDUHVRX : VAForm_1a<27, (outs vrrc:$vD),
-                             (ins vrrc:$vA, vrrc:$vB, g8rc:$rC),
+                             (ins vrrc:$vA, vrrc:$vB, gprc:$rC),
                              "vextduhvrx $vD, $vA, $vB, $rC",
-                             IIC_VecGeneral, []>;
+                             IIC_VecGeneral,
+                             [(set v2i64:$vD,
+                                   (int_ppc_altivec_vextduhvrx v8i16:$vA,
+                                                               v8i16:$vB,
+                                                               i32:$rC))]>;
   def VEXTDUWVLX : VAForm_1a<28, (outs vrrc:$vD),
-                             (ins vrrc:$vA, vrrc:$vB, g8rc:$rC),
+                             (ins vrrc:$vA, vrrc:$vB, gprc:$rC),
                              "vextduwvlx $vD, $vA, $vB, $rC",
-                             IIC_VecGeneral, []>;
+                             IIC_VecGeneral,
+                             [(set v2i64:$vD,
+                                   (int_ppc_altivec_vextduwvlx v4i32:$vA,
+                                                               v4i32:$vB,
+                                                               i32:$rC))]>;
   def VEXTDUWVRX : VAForm_1a<29, (outs vrrc:$vD),
-                             (ins vrrc:$vA, vrrc:$vB, g8rc:$rC),
+                             (ins vrrc:$vA, vrrc:$vB, gprc:$rC),
                              "vextduwvrx $vD, $vA, $vB, $rC",
-                             IIC_VecGeneral, []>;
+                             IIC_VecGeneral,
+                             [(set v2i64:$vD,
+                                   (int_ppc_altivec_vextduwvrx v4i32:$vA,
+                                                               v4i32:$vB,
+                                                               i32:$rC))]>;
   def VEXTDDVLX : VAForm_1a<30, (outs vrrc:$vD),
-                            (ins vrrc:$vA, vrrc:$vB, g8rc:$rC),
+                            (ins vrrc:$vA, vrrc:$vB, gprc:$rC),
                             "vextddvlx $vD, $vA, $vB, $rC",
-                            IIC_VecGeneral, []>;
+                            IIC_VecGeneral,
+                            [(set v2i64:$vD,
+                                  (int_ppc_altivec_vextddvlx v2i64:$vA,
+                                                             v2i64:$vB,
+                                                             i32:$rC))]>;
   def VEXTDDVRX : VAForm_1a<31, (outs vrrc:$vD),
-                            (ins vrrc:$vA, vrrc:$vB, g8rc:$rC),
+                            (ins vrrc:$vA, vrrc:$vB, gprc:$rC),
                             "vextddvrx $vD, $vA, $vB, $rC",
-                            IIC_VecGeneral, []>;
+                            IIC_VecGeneral,
+                            [(set v2i64:$vD,
+                                  (int_ppc_altivec_vextddvrx v2i64:$vA,
+                                                             v2i64:$vB,
+                                                             i32:$rC))]>;
    def VPDEPD : VXForm_1<1485, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
                          "vpdepd $vD, $vA, $vB", IIC_VecGeneral,
                          [(set v2i64:$vD,
@@ -1086,13 +1216,21 @@ let Predicates = [IsISA3_1] in {
                         "vdivud $vD, $vA, $vB", IIC_VecGeneral,
                         [(set v2i64:$vD, (udiv v2i64:$vA, v2i64:$vB))]>;
   def VDIVESW : VXForm_1<907, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vdivesw $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vdivesw $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v4i32:$vD, (int_ppc_altivec_vdivesw v4i32:$vA,
+                               v4i32:$vB))]>;
   def VDIVEUW : VXForm_1<651, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vdiveuw $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vdiveuw $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v4i32:$vD, (int_ppc_altivec_vdiveuw v4i32:$vA,
+                               v4i32:$vB))]>;
   def VDIVESD : VXForm_1<971, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vdivesd $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vdivesd $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v2i64:$vD, (int_ppc_altivec_vdivesd v2i64:$vA,
+                               v2i64:$vB))]>;
   def VDIVEUD : VXForm_1<715, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vdiveud $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vdiveud $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v2i64:$vD, (int_ppc_altivec_vdiveud v2i64:$vA,
+                               v2i64:$vB))]>;
   def XVTLSBB : XX2_BF3_XO5_XB6_XO9<60, 2, 475, (outs crrc:$BF), (ins vsrc:$XB),
                                     "xvtlsbb $BF, $XB", IIC_VecGeneral, []>;
 
@@ -1164,6 +1302,15 @@ let Predicates = [IsISA3_1] in {
 
 //---------------------------- Anonymous Patterns ----------------------------//
 let Predicates = [IsISA3_1] in {
+  // Exploit the vector multiply high instructions using intrinsics.
+  def : Pat<(v4i32 (int_ppc_altivec_vmulhsw v4i32:$vA, v4i32:$vB)),
+            (v4i32 (VMULHSW $vA, $vB))>;
+  def : Pat<(v4i32 (int_ppc_altivec_vmulhuw v4i32:$vA, v4i32:$vB)),
+            (v4i32 (VMULHUW $vA, $vB))>;
+  def : Pat<(v2i64 (int_ppc_altivec_vmulhsd v2i64:$vA, v2i64:$vB)),
+            (v2i64 (VMULHSD $vA, $vB))>;
+  def : Pat<(v2i64 (int_ppc_altivec_vmulhud v2i64:$vA, v2i64:$vB)),
+            (v2i64 (VMULHUD $vA, $vB))>;
   def : Pat<(v16i8 (int_ppc_vsx_xxgenpcvbm v16i8:$VRB, imm:$IMM)),
             (v16i8 (COPY_TO_REGCLASS (XXGENPCVBM $VRB, imm:$IMM), VRRC))>;
   def : Pat<(v8i16 (int_ppc_vsx_xxgenpcvhm v8i16:$VRB, imm:$IMM)),
@@ -1176,6 +1323,27 @@ let Predicates = [IsISA3_1] in {
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_lt)>;
   def : Pat<(i32 (int_ppc_vsx_xvtlsbb v16i8:$XB, 0)),
             (EXTRACT_SUBREG (XVTLSBB (COPY_TO_REGCLASS $XB, VSRC)), sub_eq)>;
+  def : Pat<(v1i128 (shl v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSLQ v1i128:$VRA, v1i128:$VRB))>;
+  def : Pat<(v1i128 (PPCshl v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSLQ v1i128:$VRA, v1i128:$VRB))>;
+  def : Pat<(v1i128 (srl v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSRQ v1i128:$VRA, v1i128:$VRB))>;
+  def : Pat<(v1i128 (PPCsrl v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSRQ v1i128:$VRA, v1i128:$VRB))>;
+  def : Pat<(v1i128 (sra v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSRAQ v1i128:$VRA, v1i128:$VRB))>;
+  def : Pat<(v1i128 (PPCsra v1i128:$VRA, v1i128:$VRB)),
+            (v1i128 (VSRAQ v1i128:$VRA, v1i128:$VRB))>;
+
+  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 8)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRBX xoaddr:$src), VRRC))>;
+  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 16)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRHX xoaddr:$src), VRRC))>;
+  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 32)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRWX xoaddr:$src), VRRC))>;
+  def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 64)),
+             (v1i128 (COPY_TO_REGCLASS (LXVRDX xoaddr:$src), VRRC))>;
 }
 
 let AddedComplexity = 400, Predicates = [IsISA3_1] in {

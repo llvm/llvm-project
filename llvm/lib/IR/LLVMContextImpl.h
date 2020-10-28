@@ -57,27 +57,7 @@ class Type;
 class Value;
 class ValueHandleBase;
 
-struct DenseMapAPIntKeyInfo {
-  static inline APInt getEmptyKey() {
-    APInt V(nullptr, 0);
-    V.U.VAL = 0;
-    return V;
-  }
-
-  static inline APInt getTombstoneKey() {
-    APInt V(nullptr, 0);
-    V.U.VAL = 1;
-    return V;
-  }
-
-  static unsigned getHashValue(const APInt &Key) {
-    return static_cast<unsigned>(hash_value(Key));
-  }
-
-  static bool isEqual(const APInt &LHS, const APInt &RHS) {
-    return LHS.getBitWidth() == RHS.getBitWidth() && LHS == RHS;
-  }
-};
+using DenseMapAPIntKeyInfo = DenseMapInfo<APInt>;
 
 struct DenseMapAPFloatKeyInfo {
   static inline APFloat getEmptyKey() { return APFloat(APFloat::Bogus(), 1); }
@@ -415,6 +395,37 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
   unsigned getHashValue() const {
     return hash_combine(Tag, Name, SizeInBits, AlignInBits, Encoding);
   }
+};
+
+template <> struct MDNodeKeyImpl<DIStringType> {
+  unsigned Tag;
+  MDString *Name;
+  Metadata *StringLength;
+  Metadata *StringLengthExp;
+  uint64_t SizeInBits;
+  uint32_t AlignInBits;
+  unsigned Encoding;
+
+  MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *StringLength,
+                Metadata *StringLengthExp, uint64_t SizeInBits,
+                uint32_t AlignInBits, unsigned Encoding)
+      : Tag(Tag), Name(Name), StringLength(StringLength),
+        StringLengthExp(StringLengthExp), SizeInBits(SizeInBits),
+        AlignInBits(AlignInBits), Encoding(Encoding) {}
+  MDNodeKeyImpl(const DIStringType *N)
+      : Tag(N->getTag()), Name(N->getRawName()),
+        StringLength(N->getRawStringLength()),
+        StringLengthExp(N->getRawStringLengthExp()),
+        SizeInBits(N->getSizeInBits()), AlignInBits(N->getAlignInBits()),
+        Encoding(N->getEncoding()) {}
+
+  bool isKeyOf(const DIStringType *RHS) const {
+    return Tag == RHS->getTag() && Name == RHS->getRawName() &&
+           SizeInBits == RHS->getSizeInBits() &&
+           AlignInBits == RHS->getAlignInBits() &&
+           Encoding == RHS->getEncoding();
+  }
+  unsigned getHashValue() const { return hash_combine(Tag, Name, Encoding); }
 };
 
 template <> struct MDNodeKeyImpl<DIDerivedType> {

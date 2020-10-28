@@ -3,17 +3,24 @@
 # This means that we need LLVM libraries to be compiled for these
 # targets as well. Currently, there is no support for such a build strategy.
 
+set(LLVM_TARGET_DEFINITIONS Opts.td)
+tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(SymbolizerOptsTableGen)
+
 set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
   DebugInfoPDB
   Demangle
   Object
+  Option
   Support
   Symbolize
   )
 
 add_llvm_tool(llvm-symbolizer
   llvm-symbolizer.cpp
+  DEPENDS
+  SymbolizerOptsTableGen
   )
 
 add_llvm_tool_symlink(llvm-addr2line llvm-symbolizer)

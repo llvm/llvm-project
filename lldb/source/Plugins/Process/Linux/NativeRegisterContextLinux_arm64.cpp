@@ -21,14 +21,17 @@
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
 // System includes - They have to be included after framework includes because
 // they define some macros which collide with variable names in other modules
 #include <sys/socket.h>
 // NT_PRSTATUS and NT_FPREGSET definition
 #include <elf.h>
-// user_hwdebug_state definition
-#include <asm/ptrace.h>
+
+#ifndef NT_ARM_SVE
+#define NT_ARM_SVE 0x405 /* ARM Scalable Vector Extension */
+#endif
 
 #define REG_CONTEXT_SIZE (GetGPRSize() + GetFPRSize())
 
@@ -59,14 +62,21 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   ::memset(&m_gpr_arm64, 0, sizeof(m_gpr_arm64));
   ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
   ::memset(&m_hbr_regs, 0, sizeof(m_hbr_regs));
+  ::memset(&m_sve_header, 0, sizeof(m_sve_header));
 
   // 16 is just a maximum value, query hardware for actual watchpoint count
   m_max_hwp_supported = 16;
   m_max_hbp_supported = 16;
+
   m_refresh_hwdebug_info = true;
 
   m_gpr_is_valid = false;
   m_fpu_is_valid = false;
+  m_sve_buffer_is_valid = false;
+  m_sve_header_is_valid = false;
+
+  // SVE is not enabled until we query user_sve_header
+  m_sve_state = SVEState::Unknown;
 }
 
 RegisterInfoPOSIX_arm64 &
@@ -108,29 +118,96 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
                                                : "<unknown register>");
 
   uint8_t *src;
-  uint32_t offset;
+  uint32_t offset = LLDB_INVALID_INDEX32;
+  uint64_t sve_vg;
+  std::vector<uint8_t> sve_reg_non_live;
 
   if (IsGPR(reg)) {
-    if (!m_gpr_is_valid) {
-      error = ReadGPR();
-      if (error.Fail())
-        return error;
-    }
+    error = ReadGPR();
+    if (error.Fail())
+      return error;
 
     offset = reg_info->byte_offset;
     assert(offset < GetGPRSize());
     src = (uint8_t *)GetGPRBuffer() + offset;
 
   } else if (IsFPR(reg)) {
-    if (!m_fpu_is_valid) {
-
+    if (m_sve_state == SVEState::Disabled) {
+      // SVE is disabled take legacy route for FPU register access
       error = ReadFPR();
       if (error.Fail())
         return error;
+
+      offset = CalculateFprOffset(reg_info);
+      assert(offset < GetFPRSize());
+      src = (uint8_t *)GetFPRBuffer() + offset;
+    } else {
+      // SVE enabled, we will read and cache SVE ptrace data
+      error = ReadAllSVE();
+      if (error.Fail())
+        return error;
+
+      // FPSR and FPCR will be located right after Z registers in
+      // SVEState::FPSIMD while in SVEState::Full they will be located at the
+      // end of register data after an alignment correction based on currently
+      // selected vector length.
+      uint32_t sve_reg_num = LLDB_INVALID_REGNUM;
+      if (reg == GetRegisterInfo().GetRegNumFPSR()) {
+        sve_reg_num = reg;
+        if (m_sve_state == SVEState::Full)
+          offset = SVE_PT_SVE_FPSR_OFFSET(sve_vq_from_vl(m_sve_header.vl));
+        else if (m_sve_state == SVEState::FPSIMD)
+          offset = SVE_PT_FPSIMD_OFFSET + (32 * 16);
+      } else if (reg == GetRegisterInfo().GetRegNumFPCR()) {
+        sve_reg_num = reg;
+        if (m_sve_state == SVEState::Full)
+          offset = SVE_PT_SVE_FPCR_OFFSET(sve_vq_from_vl(m_sve_header.vl));
+        else if (m_sve_state == SVEState::FPSIMD)
+          offset = SVE_PT_FPSIMD_OFFSET + (32 * 16) + 4;
+      } else {
+        // Extract SVE Z register value register number for this reg_info
+        if (reg_info->value_regs &&
+            reg_info->value_regs[0] != LLDB_INVALID_REGNUM)
+          sve_reg_num = reg_info->value_regs[0];
+        offset = CalculateSVEOffset(GetRegisterInfoAtIndex(sve_reg_num));
+      }
+
+      assert(offset < GetSVEBufferSize());
+      src = (uint8_t *)GetSVEBuffer() + offset;
     }
-    offset = CalculateFprOffset(reg_info);
-    assert(offset < GetFPRSize());
-    src = (uint8_t *)GetFPRBuffer() + offset;
+  } else if (IsSVE(reg)) {
+
+    if (m_sve_state == SVEState::Disabled || m_sve_state == SVEState::Unknown)
+      return Status("SVE disabled or not supported");
+
+    if (GetRegisterInfo().IsSVERegVG(reg)) {
+      sve_vg = GetSVERegVG();
+      src = (uint8_t *)&sve_vg;
+    } else {
+      // SVE enabled, we will read and cache SVE ptrace data
+      error = ReadAllSVE();
+      if (error.Fail())
+        return error;
+
+      if (m_sve_state == SVEState::FPSIMD) {
+        // In FPSIMD state SVE payload mirrors legacy fpsimd struct and so
+        // just copy 16 bytes of v register to the start of z register. All
+        // other SVE register will be set to zero.
+        sve_reg_non_live.resize(reg_info->byte_size, 0);
+        src = sve_reg_non_live.data();
+
+        if (GetRegisterInfo().IsSVEZReg(reg)) {
+          offset = CalculateSVEOffset(reg_info);
+          assert(offset < GetSVEBufferSize());
+          ::memcpy(sve_reg_non_live.data(), (uint8_t *)GetSVEBuffer() + offset,
+                   16);
+        }
+      } else {
+        offset = CalculateSVEOffset(reg_info);
+        assert(offset < GetSVEBufferSize());
+        src = (uint8_t *)GetSVEBuffer() + offset;
+      }
+    }
   } else
     return Status("failed - register wasn't recognized to be a GPR or an FPR, "
                   "write strategy unknown");
@@ -156,38 +233,125 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
                                                : "<unknown register>");
 
   uint8_t *dst;
-  uint32_t offset;
+  uint32_t offset = LLDB_INVALID_INDEX32;
+  std::vector<uint8_t> sve_reg_non_live;
 
   if (IsGPR(reg)) {
-    if (!m_gpr_is_valid) {
-      error = ReadGPR();
-      if (error.Fail())
-        return error;
-    }
+    error = ReadGPR();
+    if (error.Fail())
+      return error;
 
-    offset = reg_info->byte_offset;
-    assert(offset < GetGPRSize());
-    dst = (uint8_t *)GetGPRBuffer() + offset;
-
+    assert(reg_info->byte_offset < GetGPRSize());
+    dst = (uint8_t *)GetGPRBuffer() + reg_info->byte_offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
     return WriteGPR();
   } else if (IsFPR(reg)) {
-    if (!m_fpu_is_valid) {
+    if (m_sve_state == SVEState::Disabled) {
+      // SVE is disabled take legacy route for FPU register access
       error = ReadFPR();
       if (error.Fail())
         return error;
+
+      offset = CalculateFprOffset(reg_info);
+      assert(offset < GetFPRSize());
+      dst = (uint8_t *)GetFPRBuffer() + offset;
+      ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
+
+      return WriteFPR();
+    } else {
+      // SVE enabled, we will read and cache SVE ptrace data
+      error = ReadAllSVE();
+      if (error.Fail())
+        return error;
+
+      // FPSR and FPCR will be located right after Z registers in
+      // SVEState::FPSIMD while in SVEState::Full they will be located at the
+      // end of register data after an alignment correction based on currently
+      // selected vector length.
+      uint32_t sve_reg_num = LLDB_INVALID_REGNUM;
+      if (reg == GetRegisterInfo().GetRegNumFPSR()) {
+        sve_reg_num = reg;
+        if (m_sve_state == SVEState::Full)
+          offset = SVE_PT_SVE_FPSR_OFFSET(sve_vq_from_vl(m_sve_header.vl));
+        else if (m_sve_state == SVEState::FPSIMD)
+          offset = SVE_PT_FPSIMD_OFFSET + (32 * 16);
+      } else if (reg == GetRegisterInfo().GetRegNumFPCR()) {
+        sve_reg_num = reg;
+        if (m_sve_state == SVEState::Full)
+          offset = SVE_PT_SVE_FPCR_OFFSET(sve_vq_from_vl(m_sve_header.vl));
+        else if (m_sve_state == SVEState::FPSIMD)
+          offset = SVE_PT_FPSIMD_OFFSET + (32 * 16) + 4;
+      } else {
+        // Extract SVE Z register value register number for this reg_info
+        if (reg_info->value_regs &&
+            reg_info->value_regs[0] != LLDB_INVALID_REGNUM)
+          sve_reg_num = reg_info->value_regs[0];
+        offset = CalculateSVEOffset(GetRegisterInfoAtIndex(sve_reg_num));
+      }
+
+      assert(offset < GetSVEBufferSize());
+      dst = (uint8_t *)GetSVEBuffer() + offset;
+      ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
+      return WriteAllSVE();
     }
-    offset = CalculateFprOffset(reg_info);
-    assert(offset < GetFPRSize());
-    dst = (uint8_t *)GetFPRBuffer() + offset;
+  } else if (IsSVE(reg)) {
+    if (m_sve_state == SVEState::Disabled || m_sve_state == SVEState::Unknown)
+      return Status("SVE disabled or not supported");
+    else {
+      if (GetRegisterInfo().IsSVERegVG(reg))
+        return Status("SVE state change operation not supported");
 
-    ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
+      // Target has SVE enabled, we will read and cache SVE ptrace data
+      error = ReadAllSVE();
+      if (error.Fail())
+        return error;
 
-    return WriteFPR();
+      // If target supports SVE but currently in FPSIMD mode.
+      if (m_sve_state == SVEState::FPSIMD) {
+        // Here we will check if writing this SVE register enables
+        // SVEState::Full
+        bool set_sve_state_full = false;
+        const uint8_t *reg_bytes = (const uint8_t *)reg_value.GetBytes();
+        if (GetRegisterInfo().IsSVEZReg(reg)) {
+          for (uint32_t i = 16; i < reg_info->byte_size; i++) {
+            if (reg_bytes[i]) {
+              set_sve_state_full = true;
+              break;
+            }
+          }
+        } else if (GetRegisterInfo().IsSVEPReg(reg) ||
+                   reg == GetRegisterInfo().GetRegNumSVEFFR()) {
+          for (uint32_t i = 0; i < reg_info->byte_size; i++) {
+            if (reg_bytes[i]) {
+              set_sve_state_full = true;
+              break;
+            }
+          }
+        }
+
+        if (!set_sve_state_full && GetRegisterInfo().IsSVEZReg(reg)) {
+          // We are writing a Z register which is zero beyond 16 bytes so copy
+          // first 16 bytes only as SVE payload mirrors legacy fpsimd structure
+          offset = CalculateSVEOffset(reg_info);
+          assert(offset < GetSVEBufferSize());
+          dst = (uint8_t *)GetSVEBuffer() + offset;
+          ::memcpy(dst, reg_value.GetBytes(), 16);
+
+          return WriteAllSVE();
+        } else
+          return Status("SVE state change operation not supported");
+      } else {
+        offset = CalculateSVEOffset(reg_info);
+        assert(offset < GetSVEBufferSize());
+        dst = (uint8_t *)GetSVEBuffer() + offset;
+        ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
+        return WriteAllSVE();
+      }
+    }
   }
 
-  return error;
+  return Status("Failed to write register value");
 }
 
 Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
@@ -195,17 +359,15 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   Status error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
-  if (!m_gpr_is_valid) {
-    error = ReadGPR();
-    if (error.Fail())
-      return error;
-  }
 
-  if (!m_fpu_is_valid) {
-    error = ReadFPR();
-    if (error.Fail())
-      return error;
-  }
+  error = ReadGPR();
+  if (error.Fail())
+    return error;
+
+  error = ReadFPR();
+  if (error.Fail())
+    return error;
+
   uint8_t *dst = data_sp->GetBytes();
   ::memcpy(dst, GetGPRBuffer(), GetGPRSize());
   dst += GetGPRSize();
@@ -267,6 +429,13 @@ bool NativeRegisterContextLinux_arm64::IsGPR(unsigned reg) const {
 bool NativeRegisterContextLinux_arm64::IsFPR(unsigned reg) const {
   if (GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
       RegisterInfoPOSIX_arm64::FPRegSet)
+    return true;
+  return false;
+}
+
+bool NativeRegisterContextLinux_arm64::IsSVE(unsigned reg) const {
+  if (GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
+      RegisterInfoPOSIX_arm64::SVERegSet)
     return true;
   return false;
 }
@@ -762,8 +931,10 @@ Status NativeRegisterContextLinux_arm64::WriteHardwareDebugRegs(int hwbType) {
 Status NativeRegisterContextLinux_arm64::ReadGPR() {
   Status error;
 
-  struct iovec ioVec;
+  if (m_gpr_is_valid)
+    return error;
 
+  struct iovec ioVec;
   ioVec.iov_base = GetGPRBuffer();
   ioVec.iov_len = GetGPRSize();
 
@@ -776,12 +947,15 @@ Status NativeRegisterContextLinux_arm64::ReadGPR() {
 }
 
 Status NativeRegisterContextLinux_arm64::WriteGPR() {
+  Status error = ReadGPR();
+  if (error.Fail())
+    return error;
+
   struct iovec ioVec;
-
-  m_gpr_is_valid = false;
-
   ioVec.iov_base = GetGPRBuffer();
   ioVec.iov_len = GetGPRSize();
+
+  m_gpr_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetGPRSize(), NT_PRSTATUS);
 }
@@ -789,8 +963,10 @@ Status NativeRegisterContextLinux_arm64::WriteGPR() {
 Status NativeRegisterContextLinux_arm64::ReadFPR() {
   Status error;
 
-  struct iovec ioVec;
+  if (m_fpu_is_valid)
+    return error;
 
+  struct iovec ioVec;
   ioVec.iov_base = GetFPRBuffer();
   ioVec.iov_len = GetFPRSize();
 
@@ -803,12 +979,15 @@ Status NativeRegisterContextLinux_arm64::ReadFPR() {
 }
 
 Status NativeRegisterContextLinux_arm64::WriteFPR() {
+  Status error = ReadFPR();
+  if (error.Fail())
+    return error;
+
   struct iovec ioVec;
-
-  m_fpu_is_valid = false;
-
   ioVec.iov_base = GetFPRBuffer();
   ioVec.iov_len = GetFPRSize();
+
+  m_fpu_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetFPRSize(), NT_FPREGSET);
 }
@@ -816,11 +995,134 @@ Status NativeRegisterContextLinux_arm64::WriteFPR() {
 void NativeRegisterContextLinux_arm64::InvalidateAllRegisters() {
   m_gpr_is_valid = false;
   m_fpu_is_valid = false;
+  m_sve_buffer_is_valid = false;
+  m_sve_header_is_valid = false;
+
+  // Update SVE registers in case there is change in configuration.
+  ConfigureRegisterContext();
+}
+
+Status NativeRegisterContextLinux_arm64::ReadSVEHeader() {
+  Status error;
+
+  if (m_sve_header_is_valid)
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetSVEHeader();
+  ioVec.iov_len = GetSVEHeaderSize();
+
+  error = ReadRegisterSet(&ioVec, GetSVEHeaderSize(), NT_ARM_SVE);
+
+  m_sve_header_is_valid = true;
+
+  return error;
+}
+
+Status NativeRegisterContextLinux_arm64::WriteSVEHeader() {
+  Status error;
+
+  error = ReadSVEHeader();
+  if (error.Fail())
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetSVEHeader();
+  ioVec.iov_len = GetSVEHeaderSize();
+
+  m_sve_buffer_is_valid = false;
+  m_sve_header_is_valid = false;
+  m_fpu_is_valid = false;
+
+  return WriteRegisterSet(&ioVec, GetSVEHeaderSize(), NT_ARM_SVE);
+}
+
+Status NativeRegisterContextLinux_arm64::ReadAllSVE() {
+  Status error;
+
+  if (m_sve_buffer_is_valid)
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetSVEBuffer();
+  ioVec.iov_len = GetSVEBufferSize();
+
+  error = ReadRegisterSet(&ioVec, GetSVEBufferSize(), NT_ARM_SVE);
+
+  if (error.Success())
+    m_sve_buffer_is_valid = true;
+
+  return error;
+}
+
+Status NativeRegisterContextLinux_arm64::WriteAllSVE() {
+  Status error;
+
+  error = ReadAllSVE();
+  if (error.Fail())
+    return error;
+
+  struct iovec ioVec;
+
+  ioVec.iov_base = GetSVEBuffer();
+  ioVec.iov_len = GetSVEBufferSize();
+
+  m_sve_buffer_is_valid = false;
+  m_sve_header_is_valid = false;
+  m_fpu_is_valid = false;
+
+  return WriteRegisterSet(&ioVec, GetSVEBufferSize(), NT_ARM_SVE);
+}
+
+void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
+  // Read SVE configuration data and configure register infos.
+  if (!m_sve_header_is_valid && m_sve_state != SVEState::Disabled) {
+    Status error = ReadSVEHeader();
+    if (!error.Success() && m_sve_state == SVEState::Unknown) {
+      m_sve_state = SVEState::Disabled;
+      GetRegisterInfo().ConfigureVectorRegisterInfos(
+          RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64);
+    } else {
+      if ((m_sve_header.flags & SVE_PT_REGS_MASK) == SVE_PT_REGS_FPSIMD)
+        m_sve_state = SVEState::FPSIMD;
+      else if ((m_sve_header.flags & SVE_PT_REGS_MASK) == SVE_PT_REGS_SVE)
+        m_sve_state = SVEState::Full;
+
+      uint32_t vq = RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64SVE;
+      if (sve_vl_valid(m_sve_header.vl))
+        vq = sve_vq_from_vl(m_sve_header.vl);
+      GetRegisterInfo().ConfigureVectorRegisterInfos(vq);
+      m_sve_ptrace_payload.resize(SVE_PT_SIZE(vq, SVE_PT_REGS_SVE));
+    }
+  }
 }
 
 uint32_t NativeRegisterContextLinux_arm64::CalculateFprOffset(
     const RegisterInfo *reg_info) const {
   return reg_info->byte_offset - GetGPRSize();
+}
+
+uint32_t NativeRegisterContextLinux_arm64::CalculateSVEOffset(
+    const RegisterInfo *reg_info) const {
+  // Start of Z0 data is after GPRs plus 8 bytes of vg register
+  uint32_t sve_reg_offset = LLDB_INVALID_INDEX32;
+  if (m_sve_state == SVEState::FPSIMD) {
+    const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+    sve_reg_offset =
+        SVE_PT_FPSIMD_OFFSET + (reg - GetRegisterInfo().GetRegNumSVEZ0()) * 16;
+  } else if (m_sve_state == SVEState::Full) {
+    uint32_t sve_z0_offset = GetGPRSize() + 8;
+    sve_reg_offset =
+        SVE_SIG_REGS_OFFSET + reg_info->byte_offset - sve_z0_offset;
+  }
+  return sve_reg_offset;
+}
+
+void *NativeRegisterContextLinux_arm64::GetSVEBuffer() {
+  if (m_sve_state == SVEState::FPSIMD)
+    return m_sve_ptrace_payload.data() + SVE_PT_FPSIMD_OFFSET;
+
+  return m_sve_ptrace_payload.data();
 }
 
 #endif // defined (__arm64__) || defined (__aarch64__)

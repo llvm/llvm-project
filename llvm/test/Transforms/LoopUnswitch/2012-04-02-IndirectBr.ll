@@ -1,6 +1,6 @@
-; RUN: opt < %s -S -loop-unswitch -verify-loop-info -verify-dom-info | FileCheck %s
-; RUN: opt < %s -S -loop-unswitch -verify-loop-info -verify-dom-info -enable-mssa-loop-dependency=true -verify-memoryssa | FileCheck %s
-; PR12343: -loop-unswitch crash on indirect branch
+; RUN: opt < %s -S -loop-unswitch -enable-new-pm=0 -verify-loop-info -verify-dom-info | FileCheck %s
+; RUN: opt < %s -S -loop-unswitch -enable-new-pm=0 -verify-loop-info -verify-dom-info -enable-mssa-loop-dependency=true -verify-memoryssa | FileCheck %s
+; PR12343: -loop-unswitch -enable-new-pm=0 crash on indirect branch
 
 ; CHECK:       %0 = icmp eq i64 undef, 0
 ; CHECK-NEXT:  br i1 %0, label %"5", label %"4"

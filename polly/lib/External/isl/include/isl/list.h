@@ -40,9 +40,11 @@ EXPORT									\
 __isl_give isl_##EL##_list *isl_##EL##_list_add(			\
 	__isl_take isl_##EL##_list *list,				\
 	__isl_take isl_##EL *el);					\
+EXPORT									\
 __isl_give isl_##EL##_list *isl_##EL##_list_insert(			\
 	__isl_take isl_##EL##_list *list, unsigned pos,			\
-	__isl_take struct isl_##EL *el);				\
+	__isl_take isl_##EL *el);					\
+EXPORT									\
 __isl_give isl_##EL##_list *isl_##EL##_list_drop(			\
 	__isl_take isl_##EL##_list *list, unsigned first, unsigned n);	\
 EXPORT									\
@@ -71,6 +73,9 @@ __isl_give struct isl_##EL##_list *isl_##EL##_list_set_##EL(		\
 EXPORT									\
 isl_stat isl_##EL##_list_foreach(__isl_keep isl_##EL##_list *list,	\
 	isl_stat (*fn)(__isl_take isl_##EL *el, void *user),		\
+	void *user);							\
+isl_bool isl_##EL##_list_every(__isl_keep isl_##EL##_list *list,	\
+	isl_bool (*test)(__isl_keep isl_##EL *el, void *user),		\
 	void *user);							\
 __isl_give isl_##EL##_list *isl_##EL##_list_map(			\
 	__isl_take isl_##EL##_list *list,				\

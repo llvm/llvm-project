@@ -202,8 +202,8 @@ let Command = "breakpoint set" in {
     Desc<"Move breakpoints to nearest code. If not set the "
     "target.move-to-nearest-codesetting is used.">;
   def breakpoint_set_file_colon_line : Option<"joint-specifier", "y">, Group<12>, Arg<"FileLineColumn">,
-    Required, Completion<"SourceFile">, 
-    Desc<"A specifier in the form filename:line[:column] for setting file & line breakpoints.">;  
+    Required, Completion<"SourceFile">,
+    Desc<"A specifier in the form filename:line[:column] for setting file & line breakpoints.">;
   /* Don't add this option till it actually does something useful...
   def breakpoint_set_exception_typename : Option<"exception-typename", "O">,
     Arg<"TypeName">, Desc<"The breakpoint will only stop if an "
@@ -324,7 +324,7 @@ let Command = "disassemble" in {
   def disassemble_options_pc : Option<"pc", "p">, Group<5>,
     Desc<"Disassemble around the current pc.">;
   def disassemble_options_line : Option<"line", "l">, Group<6>,
-    Desc<"Disassemble the current frame's current source line instructions if"
+    Desc<"Disassemble the current frame's current source line instructions if "
     "there is debug line table information, else disassemble around the pc.">;
   def disassemble_options_address : Option<"address", "a">, Group<7>,
     Arg<"AddressOrExpression">,
@@ -751,7 +751,7 @@ let Command = "source list" in {
   def source_list_reverse : Option<"reverse", "r">, Group<4>, Desc<"Reverse the"
     " listing to look backwards from the last displayed block of source.">;
   def source_list_file_colon_line : Option<"joint-specifier", "y">, Group<5>,
-    Arg<"FileLineColumn">, Completion<"SourceFile">, 
+    Arg<"FileLineColumn">, Completion<"SourceFile">,
     Desc<"A specifier in the form filename:line[:column] from which to display"
          " source.">;
 }

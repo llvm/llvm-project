@@ -2335,7 +2335,11 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
   auto *context = loops[0].getContext();
 
   FlatAffineConstraints cst;
-  getIndexSet(loops, &cst);
+  SmallVector<Operation *, 8> ops;
+  ops.reserve(loops.size());
+  for (AffineForOp forOp : loops)
+    ops.push_back(forOp);
+  getIndexSet(ops, &cst);
 
   // Remove constraints that are independent of these loop IVs.
   cst.removeIndependentConstraints(/*pos=*/0, /*num=*/loops.size());
@@ -2419,7 +2423,8 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
                  << "[tile separation] non-unit stride not implemented\n");
       return failure();
     }
-    getIndexSet({loop}, &cst);
+    SmallVector<Operation *, 1> loopOp{loop.getOperation()};
+    getIndexSet(loopOp, &cst);
     // We will mark everything other than this loop IV as symbol for getting a
     // pair of <lb, ub> with a constant difference.
     cst.setDimSymbolSeparation(cst.getNumDimAndSymbolIds() - 1);

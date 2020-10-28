@@ -95,18 +95,24 @@ bool BPFPreserveDIType::doTransformation(Module &M) {
   std::string BaseName = "llvm.btf_type_id.";
   int Count = 0;
   for (auto Call : PreserveDITypeCalls) {
-    const ConstantInt *Flag = dyn_cast<ConstantInt>(Call->getArgOperand(2));
+    const ConstantInt *Flag = dyn_cast<ConstantInt>(Call->getArgOperand(1));
     assert(Flag);
     uint64_t FlagValue = Flag->getValue().getZExtValue();
 
     if (FlagValue >= BPFCoreSharedInfo::MAX_BTF_TYPE_ID_FLAG)
       report_fatal_error("Incorrect flag for llvm.bpf.btf.type.id intrinsic");
 
+    MDNode *MD = Call->getMetadata(LLVMContext::MD_preserve_access_index);
+
     uint32_t Reloc;
-    if (FlagValue == BPFCoreSharedInfo::BTF_TYPE_ID_LOCAL_RELOC)
+    if (FlagValue == BPFCoreSharedInfo::BTF_TYPE_ID_LOCAL_RELOC) {
       Reloc = BPFCoreSharedInfo::BTF_TYPE_ID_LOCAL;
-    else
+    } else {
       Reloc = BPFCoreSharedInfo::BTF_TYPE_ID_REMOTE;
+      DIType *Ty = cast<DIType>(MD);
+      if (Ty->getName().empty())
+        report_fatal_error("Empty type name for BTF_TYPE_ID_REMOTE reloc");
+    }
 
     BasicBlock *BB = Call->getParent();
     IntegerType *VarType = Type::getInt32Ty(BB->getContext());
@@ -116,7 +122,6 @@ bool BPFPreserveDIType::doTransformation(Module &M) {
         new GlobalVariable(M, VarType, false, GlobalVariable::ExternalLinkage,
                            NULL, GVName);
     GV->addAttribute(BPFCoreSharedInfo::TypeIdAttr);
-    MDNode *MD = Call->getMetadata(LLVMContext::MD_preserve_access_index);
     GV->setMetadata(LLVMContext::MD_preserve_access_index, MD);
 
     // Load the global variable which represents the type info.

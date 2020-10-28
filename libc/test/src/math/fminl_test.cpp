@@ -9,6 +9,7 @@
 #include "include/math.h"
 #include "src/math/fminl.h"
 #include "utils/FPUtil/FPBits.h"
+#include "utils/FPUtil/TestHelpers.h"
 #include "utils/UnitTest/Test.h"
 
 using FPBits = __llvm_libc::fputil::FPBits<long double>;
@@ -18,36 +19,36 @@ long double inf = static_cast<long double>(FPBits::inf());
 long double negInf = static_cast<long double>(FPBits::negInf());
 
 TEST(FminlTest, NaNArg) {
-  EXPECT_EQ(inf, __llvm_libc::fminl(nan, inf));
-  EXPECT_EQ(negInf, __llvm_libc::fminl(negInf, nan));
-  EXPECT_EQ(0.0L, __llvm_libc::fminl(nan, 0.0L));
-  EXPECT_EQ(-0.0L, __llvm_libc::fminl(-0.0L, nan));
-  EXPECT_EQ(-1.2345L, __llvm_libc::fminl(nan, -1.2345L));
-  EXPECT_EQ(1.2345L, __llvm_libc::fminl(1.2345L, nan));
+  EXPECT_FP_EQ(inf, __llvm_libc::fminl(nan, inf));
+  EXPECT_FP_EQ(negInf, __llvm_libc::fminl(negInf, nan));
+  EXPECT_FP_EQ(0.0L, __llvm_libc::fminl(nan, 0.0L));
+  EXPECT_FP_EQ(-0.0L, __llvm_libc::fminl(-0.0L, nan));
+  EXPECT_FP_EQ(-1.2345L, __llvm_libc::fminl(nan, -1.2345L));
+  EXPECT_FP_EQ(1.2345L, __llvm_libc::fminl(1.2345L, nan));
   EXPECT_NE(isnan(__llvm_libc::fminl(nan, nan)), 0);
 }
 
 TEST(FminlTest, InfArg) {
-  EXPECT_EQ(negInf, __llvm_libc::fminl(negInf, inf));
-  EXPECT_EQ(0.0L, __llvm_libc::fminl(inf, 0.0L));
-  EXPECT_EQ(-0.0L, __llvm_libc::fminl(-0.0L, inf));
-  EXPECT_EQ(1.2345L, __llvm_libc::fminl(inf, 1.2345L));
-  EXPECT_EQ(-1.2345L, __llvm_libc::fminl(-1.2345L, inf));
+  EXPECT_FP_EQ(negInf, __llvm_libc::fminl(negInf, inf));
+  EXPECT_FP_EQ(0.0L, __llvm_libc::fminl(inf, 0.0L));
+  EXPECT_FP_EQ(-0.0L, __llvm_libc::fminl(-0.0L, inf));
+  EXPECT_FP_EQ(1.2345L, __llvm_libc::fminl(inf, 1.2345L));
+  EXPECT_FP_EQ(-1.2345L, __llvm_libc::fminl(-1.2345L, inf));
 }
 
 TEST(FminlTest, NegInfArg) {
-  EXPECT_EQ(negInf, __llvm_libc::fminl(inf, negInf));
-  EXPECT_EQ(negInf, __llvm_libc::fminl(negInf, 0.0L));
-  EXPECT_EQ(negInf, __llvm_libc::fminl(-0.0L, negInf));
-  EXPECT_EQ(negInf, __llvm_libc::fminl(negInf, -1.2345L));
-  EXPECT_EQ(negInf, __llvm_libc::fminl(1.2345L, negInf));
+  EXPECT_FP_EQ(negInf, __llvm_libc::fminl(inf, negInf));
+  EXPECT_FP_EQ(negInf, __llvm_libc::fminl(negInf, 0.0L));
+  EXPECT_FP_EQ(negInf, __llvm_libc::fminl(-0.0L, negInf));
+  EXPECT_FP_EQ(negInf, __llvm_libc::fminl(negInf, -1.2345L));
+  EXPECT_FP_EQ(negInf, __llvm_libc::fminl(1.2345L, negInf));
 }
 
 TEST(FminlTest, BothZero) {
-  EXPECT_EQ(0.0L, __llvm_libc::fminl(0.0L, 0.0L));
-  EXPECT_EQ(-0.0L, __llvm_libc::fminl(-0.0L, 0.0L));
-  EXPECT_EQ(-0.0L, __llvm_libc::fminl(0.0L, -0.0L));
-  EXPECT_EQ(-0.0L, __llvm_libc::fminl(-0.0L, -0.0L));
+  EXPECT_FP_EQ(0.0L, __llvm_libc::fminl(0.0L, 0.0L));
+  EXPECT_FP_EQ(-0.0L, __llvm_libc::fminl(-0.0L, 0.0L));
+  EXPECT_FP_EQ(-0.0L, __llvm_libc::fminl(0.0L, -0.0L));
+  EXPECT_FP_EQ(-0.0L, __llvm_libc::fminl(-0.0L, -0.0L));
 }
 
 TEST(FminlTest, InLongDoubleRange) {
@@ -65,9 +66,9 @@ TEST(FminlTest, InLongDoubleRange) {
       continue;
 
     if (x < y) {
-      ASSERT_EQ(x, __llvm_libc::fminl(x, y));
+      ASSERT_FP_EQ(x, __llvm_libc::fminl(x, y));
     } else {
-      ASSERT_EQ(y, __llvm_libc::fminl(x, y));
+      ASSERT_FP_EQ(y, __llvm_libc::fminl(x, y));
     }
   }
 }

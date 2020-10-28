@@ -10,7 +10,7 @@
 
 using namespace clang;
 
-llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
+raw_ostream &syntax::operator<<(raw_ostream &OS, NodeKind K) {
   switch (K) {
   case NodeKind::Leaf:
     return OS << "Leaf";
@@ -20,6 +20,8 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "UnknownExpression";
   case NodeKind::ParenExpression:
     return OS << "ParenExpression";
+  case NodeKind::ThisExpression:
+    return OS << "ThisExpression";
   case NodeKind::IntegerLiteralExpression:
     return OS << "IntegerLiteralExpression";
   case NodeKind::CharacterLiteralExpression:
@@ -50,6 +52,8 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "UnqualifiedId";
   case NodeKind::IdExpression:
     return OS << "IdExpression";
+  case NodeKind::CallExpression:
+    return OS << "CallExpression";
   case NodeKind::UnknownStatement:
     return OS << "UnknownStatement";
   case NodeKind::DeclarationStatement:
@@ -116,15 +120,27 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
     return OS << "ParametersAndQualifiers";
   case NodeKind::MemberPointer:
     return OS << "MemberPointer";
-  case NodeKind::NameSpecifier:
-    return OS << "NameSpecifier";
+  case NodeKind::GlobalNameSpecifier:
+    return OS << "GlobalNameSpecifier";
+  case NodeKind::DecltypeNameSpecifier:
+    return OS << "DecltypeNameSpecifier";
+  case NodeKind::IdentifierNameSpecifier:
+    return OS << "IdentifierNameSpecifier";
+  case NodeKind::SimpleTemplateNameSpecifier:
+    return OS << "SimpleTemplateNameSpecifier";
   case NodeKind::NestedNameSpecifier:
     return OS << "NestedNameSpecifier";
+  case NodeKind::MemberExpression:
+    return OS << "MemberExpression";
+  case NodeKind::CallArguments:
+    return OS << "CallArguments";
+  case NodeKind::ParameterDeclarationList:
+    return OS << "ParameterDeclarationList";
   }
   llvm_unreachable("unknown node kind");
 }
 
-llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
+raw_ostream &syntax::operator<<(raw_ostream &OS, NodeRole R) {
   switch (R) {
   case syntax::NodeRole::Detached:
     return OS << "Detached";
@@ -142,384 +158,448 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeRole R) {
     return OS << "ArrowToken";
   case syntax::NodeRole::ExternKeyword:
     return OS << "ExternKeyword";
+  case syntax::NodeRole::TemplateKeyword:
+    return OS << "TemplateKeyword";
   case syntax::NodeRole::BodyStatement:
     return OS << "BodyStatement";
-  case syntax::NodeRole::CaseStatement_value:
-    return OS << "CaseStatement_value";
-  case syntax::NodeRole::IfStatement_thenStatement:
-    return OS << "IfStatement_thenStatement";
-  case syntax::NodeRole::IfStatement_elseKeyword:
-    return OS << "IfStatement_elseKeyword";
-  case syntax::NodeRole::IfStatement_elseStatement:
-    return OS << "IfStatement_elseStatement";
-  case syntax::NodeRole::OperatorExpression_operatorToken:
-    return OS << "OperatorExpression_operatorToken";
-  case syntax::NodeRole::UnaryOperatorExpression_operand:
-    return OS << "UnaryOperatorExpression_operand";
-  case syntax::NodeRole::BinaryOperatorExpression_leftHandSide:
-    return OS << "BinaryOperatorExpression_leftHandSide";
-  case syntax::NodeRole::BinaryOperatorExpression_rightHandSide:
-    return OS << "BinaryOperatorExpression_rightHandSide";
-  case syntax::NodeRole::ReturnStatement_value:
-    return OS << "ReturnStatement_value";
-  case syntax::NodeRole::ExpressionStatement_expression:
-    return OS << "ExpressionStatement_expression";
-  case syntax::NodeRole::CompoundStatement_statement:
-    return OS << "CompoundStatement_statement";
-  case syntax::NodeRole::StaticAssertDeclaration_condition:
-    return OS << "StaticAssertDeclaration_condition";
-  case syntax::NodeRole::StaticAssertDeclaration_message:
-    return OS << "StaticAssertDeclaration_message";
-  case syntax::NodeRole::SimpleDeclaration_declarator:
-    return OS << "SimpleDeclaration_declarator";
-  case syntax::NodeRole::TemplateDeclaration_declaration:
-    return OS << "TemplateDeclaration_declaration";
-  case syntax::NodeRole::ExplicitTemplateInstantiation_declaration:
-    return OS << "ExplicitTemplateInstantiation_declaration";
-  case syntax::NodeRole::ArraySubscript_sizeExpression:
-    return OS << "ArraySubscript_sizeExpression";
-  case syntax::NodeRole::TrailingReturnType_declarator:
-    return OS << "TrailingReturnType_declarator";
-  case syntax::NodeRole::ParametersAndQualifiers_parameter:
-    return OS << "ParametersAndQualifiers_parameter";
-  case syntax::NodeRole::ParametersAndQualifiers_trailingReturn:
-    return OS << "ParametersAndQualifiers_trailingReturn";
-  case syntax::NodeRole::IdExpression_id:
-    return OS << "IdExpression_id";
-  case syntax::NodeRole::IdExpression_qualifier:
-    return OS << "IdExpression_qualifier";
-  case syntax::NodeRole::NestedNameSpecifier_specifier:
-    return OS << "NestedNameSpecifier_specifier";
-  case syntax::NodeRole::ParenExpression_subExpression:
-    return OS << "ParenExpression_subExpression";
+  case syntax::NodeRole::ListElement:
+    return OS << "ListElement";
+  case syntax::NodeRole::ListDelimiter:
+    return OS << "ListDelimiter";
+  case syntax::NodeRole::CaseValue:
+    return OS << "CaseValue";
+  case syntax::NodeRole::ReturnValue:
+    return OS << "ReturnValue";
+  case syntax::NodeRole::ThenStatement:
+    return OS << "ThenStatement";
+  case syntax::NodeRole::ElseKeyword:
+    return OS << "ElseKeyword";
+  case syntax::NodeRole::ElseStatement:
+    return OS << "ElseStatement";
+  case syntax::NodeRole::OperatorToken:
+    return OS << "OperatorToken";
+  case syntax::NodeRole::Operand:
+    return OS << "Operand";
+  case syntax::NodeRole::LeftHandSide:
+    return OS << "LeftHandSide";
+  case syntax::NodeRole::RightHandSide:
+    return OS << "RightHandSide";
+  case syntax::NodeRole::Expression:
+    return OS << "Expression";
+  case syntax::NodeRole::Statement:
+    return OS << "Statement";
+  case syntax::NodeRole::Condition:
+    return OS << "Condition";
+  case syntax::NodeRole::Message:
+    return OS << "Message";
+  case syntax::NodeRole::Declarator:
+    return OS << "Declarator";
+  case syntax::NodeRole::Declaration:
+    return OS << "Declaration";
+  case syntax::NodeRole::Size:
+    return OS << "Size";
+  case syntax::NodeRole::Parameters:
+    return OS << "Parameters";
+  case syntax::NodeRole::TrailingReturn:
+    return OS << "TrailingReturn";
+  case syntax::NodeRole::UnqualifiedId:
+    return OS << "UnqualifiedId";
+  case syntax::NodeRole::Qualifier:
+    return OS << "Qualifier";
+  case syntax::NodeRole::SubExpression:
+    return OS << "SubExpression";
+  case syntax::NodeRole::Object:
+    return OS << "Object";
+  case syntax::NodeRole::AccessToken:
+    return OS << "AccessToken";
+  case syntax::NodeRole::Member:
+    return OS << "Member";
+  case syntax::NodeRole::Callee:
+    return OS << "Callee";
+  case syntax::NodeRole::Arguments:
+    return OS << "Arguments";
   }
   llvm_unreachable("invalid role");
 }
 
-std::vector<syntax::NameSpecifier *> syntax::NestedNameSpecifier::specifiers() {
+// We could have an interator in list to not pay memory costs of temporary
+// vector
+std::vector<syntax::NameSpecifier *>
+syntax::NestedNameSpecifier::getSpecifiers() {
+  auto specifiersAsNodes = getElementsAsNodes();
   std::vector<syntax::NameSpecifier *> Children;
-  for (auto *C = firstChild(); C; C = C->nextSibling()) {
-    assert(C->role() == syntax::NodeRole::NestedNameSpecifier_specifier);
-    Children.push_back(llvm::cast<syntax::NameSpecifier>(C));
+  for (const auto &element : specifiersAsNodes) {
+    Children.push_back(llvm::cast<syntax::NameSpecifier>(element));
   }
   return Children;
 }
 
-syntax::NestedNameSpecifier *syntax::IdExpression::qualifier() {
-  return llvm::cast_or_null<syntax::NestedNameSpecifier>(
-      findChild(syntax::NodeRole::IdExpression_qualifier));
-}
-
-syntax::UnqualifiedId *syntax::IdExpression::unqualifiedId() {
-  return llvm::cast_or_null<syntax::UnqualifiedId>(
-      findChild(syntax::NodeRole::IdExpression_id));
-}
-
-syntax::Leaf *syntax::ParenExpression::openParen() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::OpenParen));
-}
-
-syntax::Expression *syntax::ParenExpression::subExpression() {
-  return llvm::cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::ParenExpression_subExpression));
-}
-
-syntax::Leaf *syntax::ParenExpression::closeParen() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::CloseParen));
-}
-
-syntax::Leaf *syntax::IntegerLiteralExpression::literalToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::LiteralToken));
-}
-
-syntax::Leaf *syntax::CharacterLiteralExpression::literalToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::LiteralToken));
-}
-
-syntax::Leaf *syntax::FloatingLiteralExpression::literalToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::LiteralToken));
-}
-
-syntax::Leaf *syntax::StringLiteralExpression::literalToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::LiteralToken));
-}
-
-syntax::Leaf *syntax::BoolLiteralExpression::literalToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::LiteralToken));
-}
-
-syntax::Leaf *syntax::CxxNullPtrExpression::nullPtrKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::LiteralToken));
-}
-
-syntax::Leaf *syntax::UserDefinedLiteralExpression::literalToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::LiteralToken));
-}
-
-syntax::Expression *syntax::BinaryOperatorExpression::lhs() {
-  return llvm::cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::BinaryOperatorExpression_leftHandSide));
-}
-
-syntax::Leaf *syntax::UnaryOperatorExpression::operatorToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::OperatorExpression_operatorToken));
-}
-
-syntax::Expression *syntax::UnaryOperatorExpression::operand() {
-  return llvm::cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::UnaryOperatorExpression_operand));
-}
-
-syntax::Leaf *syntax::BinaryOperatorExpression::operatorToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::OperatorExpression_operatorToken));
-}
-
-syntax::Expression *syntax::BinaryOperatorExpression::rhs() {
-  return llvm::cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::BinaryOperatorExpression_rightHandSide));
-}
-
-syntax::Leaf *syntax::SwitchStatement::switchKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
-syntax::Statement *syntax::SwitchStatement::body() {
-  return llvm::cast_or_null<syntax::Statement>(
-      findChild(syntax::NodeRole::BodyStatement));
-}
-
-syntax::Leaf *syntax::CaseStatement::caseKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
-syntax::Expression *syntax::CaseStatement::value() {
-  return llvm::cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::CaseStatement_value));
-}
-
-syntax::Statement *syntax::CaseStatement::body() {
-  return llvm::cast_or_null<syntax::Statement>(
-      findChild(syntax::NodeRole::BodyStatement));
-}
-
-syntax::Leaf *syntax::DefaultStatement::defaultKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
-syntax::Statement *syntax::DefaultStatement::body() {
-  return llvm::cast_or_null<syntax::Statement>(
-      findChild(syntax::NodeRole::BodyStatement));
-}
-
-syntax::Leaf *syntax::IfStatement::ifKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
-syntax::Statement *syntax::IfStatement::thenStatement() {
-  return llvm::cast_or_null<syntax::Statement>(
-      findChild(syntax::NodeRole::IfStatement_thenStatement));
-}
-
-syntax::Leaf *syntax::IfStatement::elseKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IfStatement_elseKeyword));
-}
-
-syntax::Statement *syntax::IfStatement::elseStatement() {
-  return llvm::cast_or_null<syntax::Statement>(
-      findChild(syntax::NodeRole::IfStatement_elseStatement));
-}
-
-syntax::Leaf *syntax::ForStatement::forKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
-syntax::Statement *syntax::ForStatement::body() {
-  return llvm::cast_or_null<syntax::Statement>(
-      findChild(syntax::NodeRole::BodyStatement));
-}
-
-syntax::Leaf *syntax::WhileStatement::whileKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
-syntax::Statement *syntax::WhileStatement::body() {
-  return llvm::cast_or_null<syntax::Statement>(
-      findChild(syntax::NodeRole::BodyStatement));
-}
-
-syntax::Leaf *syntax::ContinueStatement::continueKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
-syntax::Leaf *syntax::BreakStatement::breakKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
-syntax::Leaf *syntax::ReturnStatement::returnKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
-syntax::Expression *syntax::ReturnStatement::value() {
-  return llvm::cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::ReturnStatement_value));
-}
-
-syntax::Leaf *syntax::RangeBasedForStatement::forKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
-syntax::Statement *syntax::RangeBasedForStatement::body() {
-  return llvm::cast_or_null<syntax::Statement>(
-      findChild(syntax::NodeRole::BodyStatement));
-}
-
-syntax::Expression *syntax::ExpressionStatement::expression() {
-  return llvm::cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::ExpressionStatement_expression));
-}
-
-syntax::Leaf *syntax::CompoundStatement::lbrace() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::OpenParen));
-}
-
-std::vector<syntax::Statement *> syntax::CompoundStatement::statements() {
-  std::vector<syntax::Statement *> Children;
-  for (auto *C = firstChild(); C; C = C->nextSibling()) {
-    assert(C->role() == syntax::NodeRole::CompoundStatement_statement);
-    Children.push_back(llvm::cast<syntax::Statement>(C));
+std::vector<syntax::List::ElementAndDelimiter<syntax::NameSpecifier>>
+syntax::NestedNameSpecifier::getSpecifiersAndDoubleColons() {
+  auto specifiersAsNodesAndDoubleColons = getElementsAsNodesAndDelimiters();
+  std::vector<syntax::List::ElementAndDelimiter<syntax::NameSpecifier>>
+      Children;
+  for (const auto &specifierAndDoubleColon : specifiersAsNodesAndDoubleColons) {
+    Children.push_back(
+        {llvm::cast<syntax::NameSpecifier>(specifierAndDoubleColon.element),
+         specifierAndDoubleColon.delimiter});
   }
   return Children;
 }
 
-syntax::Leaf *syntax::CompoundStatement::rbrace() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::CloseParen));
-}
-
-syntax::Expression *syntax::StaticAssertDeclaration::condition() {
-  return llvm::cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::StaticAssertDeclaration_condition));
-}
-
-syntax::Expression *syntax::StaticAssertDeclaration::message() {
-  return llvm::cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::StaticAssertDeclaration_message));
-}
-
-std::vector<syntax::SimpleDeclarator *>
-syntax::SimpleDeclaration::declarators() {
-  std::vector<syntax::SimpleDeclarator *> Children;
-  for (auto *C = firstChild(); C; C = C->nextSibling()) {
-    if (C->role() == syntax::NodeRole::SimpleDeclaration_declarator)
-      Children.push_back(llvm::cast<syntax::SimpleDeclarator>(C));
+std::vector<syntax::Expression *> syntax::CallArguments::getArguments() {
+  auto ArgumentsAsNodes = getElementsAsNodes();
+  std::vector<syntax::Expression *> Children;
+  for (const auto &ArgumentAsNode : ArgumentsAsNodes) {
+    Children.push_back(llvm::cast<syntax::Expression>(ArgumentAsNode));
   }
   return Children;
 }
 
-syntax::Leaf *syntax::TemplateDeclaration::templateKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
-syntax::Declaration *syntax::TemplateDeclaration::declaration() {
-  return llvm::cast_or_null<syntax::Declaration>(
-      findChild(syntax::NodeRole::TemplateDeclaration_declaration));
-}
-
-syntax::Leaf *syntax::ExplicitTemplateInstantiation::templateKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::IntroducerKeyword));
-}
-
-syntax::Leaf *syntax::ExplicitTemplateInstantiation::externKeyword() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::ExternKeyword));
-}
-
-syntax::Declaration *syntax::ExplicitTemplateInstantiation::declaration() {
-  return llvm::cast_or_null<syntax::Declaration>(
-      findChild(syntax::NodeRole::ExplicitTemplateInstantiation_declaration));
-}
-
-syntax::Leaf *syntax::ParenDeclarator::lparen() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::OpenParen));
-}
-
-syntax::Leaf *syntax::ParenDeclarator::rparen() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::CloseParen));
-}
-
-syntax::Leaf *syntax::ArraySubscript::lbracket() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::OpenParen));
-}
-
-syntax::Expression *syntax::ArraySubscript::sizeExpression() {
-  return llvm::cast_or_null<syntax::Expression>(
-      findChild(syntax::NodeRole::ArraySubscript_sizeExpression));
-}
-
-syntax::Leaf *syntax::ArraySubscript::rbracket() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::CloseParen));
-}
-
-syntax::Leaf *syntax::TrailingReturnType::arrowToken() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::ArrowToken));
-}
-
-syntax::SimpleDeclarator *syntax::TrailingReturnType::declarator() {
-  return llvm::cast_or_null<syntax::SimpleDeclarator>(
-      findChild(syntax::NodeRole::TrailingReturnType_declarator));
-}
-
-syntax::Leaf *syntax::ParametersAndQualifiers::lparen() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::OpenParen));
+std::vector<syntax::List::ElementAndDelimiter<syntax::Expression>>
+syntax::CallArguments::getArgumentsAndCommas() {
+  auto ArgumentsAsNodesAndCommas = getElementsAsNodesAndDelimiters();
+  std::vector<syntax::List::ElementAndDelimiter<syntax::Expression>> Children;
+  for (const auto &ArgumentAsNodeAndComma : ArgumentsAsNodesAndCommas) {
+    Children.push_back(
+        {llvm::cast<syntax::Expression>(ArgumentAsNodeAndComma.element),
+         ArgumentAsNodeAndComma.delimiter});
+  }
+  return Children;
 }
 
 std::vector<syntax::SimpleDeclaration *>
-syntax::ParametersAndQualifiers::parameters() {
+syntax::ParameterDeclarationList::getParameterDeclarations() {
+  auto ParametersAsNodes = getElementsAsNodes();
   std::vector<syntax::SimpleDeclaration *> Children;
-  for (auto *C = firstChild(); C; C = C->nextSibling()) {
-    if (C->role() == syntax::NodeRole::ParametersAndQualifiers_parameter)
-      Children.push_back(llvm::cast<syntax::SimpleDeclaration>(C));
+  for (const auto &ParameterAsNode : ParametersAsNodes) {
+    Children.push_back(llvm::cast<syntax::SimpleDeclaration>(ParameterAsNode));
   }
   return Children;
 }
 
-syntax::Leaf *syntax::ParametersAndQualifiers::rparen() {
-  return llvm::cast_or_null<syntax::Leaf>(
-      findChild(syntax::NodeRole::CloseParen));
+std::vector<syntax::List::ElementAndDelimiter<syntax::SimpleDeclaration>>
+syntax::ParameterDeclarationList::getParametersAndCommas() {
+  auto ParametersAsNodesAndCommas = getElementsAsNodesAndDelimiters();
+  std::vector<syntax::List::ElementAndDelimiter<syntax::SimpleDeclaration>>
+      Children;
+  for (const auto &ParameterAsNodeAndComma : ParametersAsNodesAndCommas) {
+    Children.push_back(
+        {llvm::cast<syntax::SimpleDeclaration>(ParameterAsNodeAndComma.element),
+         ParameterAsNodeAndComma.delimiter});
+  }
+  return Children;
 }
 
-syntax::TrailingReturnType *syntax::ParametersAndQualifiers::trailingReturn() {
-  return llvm::cast_or_null<syntax::TrailingReturnType>(
-      findChild(syntax::NodeRole::ParametersAndQualifiers_trailingReturn));
+syntax::Expression *syntax::MemberExpression::getObject() {
+  return cast_or_null<syntax::Expression>(findChild(syntax::NodeRole::Object));
+}
+
+syntax::Leaf *syntax::MemberExpression::getTemplateKeyword() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::TemplateKeyword));
+}
+
+syntax::Leaf *syntax::MemberExpression::getAccessToken() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::AccessToken));
+}
+
+syntax::IdExpression *syntax::MemberExpression::getMember() {
+  return cast_or_null<syntax::IdExpression>(
+      findChild(syntax::NodeRole::Member));
+}
+
+syntax::NestedNameSpecifier *syntax::IdExpression::getQualifier() {
+  return cast_or_null<syntax::NestedNameSpecifier>(
+      findChild(syntax::NodeRole::Qualifier));
+}
+
+syntax::Leaf *syntax::IdExpression::getTemplateKeyword() {
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::TemplateKeyword));
+}
+
+syntax::UnqualifiedId *syntax::IdExpression::getUnqualifiedId() {
+  return cast_or_null<syntax::UnqualifiedId>(
+      findChild(syntax::NodeRole::UnqualifiedId));
+}
+
+syntax::Leaf *syntax::ParenExpression::getOpenParen() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OpenParen));
+}
+
+syntax::Expression *syntax::ParenExpression::getSubExpression() {
+  return cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::SubExpression));
+}
+
+syntax::Leaf *syntax::ParenExpression::getCloseParen() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::CloseParen));
+}
+
+syntax::Leaf *syntax::ThisExpression::getThisKeyword() {
+  return cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntroducerKeyword));
+}
+
+syntax::Leaf *syntax::LiteralExpression::getLiteralToken() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::LiteralToken));
+}
+
+syntax::Expression *syntax::BinaryOperatorExpression::getLhs() {
+  return cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::LeftHandSide));
+}
+
+syntax::Leaf *syntax::UnaryOperatorExpression::getOperatorToken() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OperatorToken));
+}
+
+syntax::Expression *syntax::UnaryOperatorExpression::getOperand() {
+  return cast_or_null<syntax::Expression>(findChild(syntax::NodeRole::Operand));
+}
+
+syntax::Leaf *syntax::BinaryOperatorExpression::getOperatorToken() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OperatorToken));
+}
+
+syntax::Expression *syntax::BinaryOperatorExpression::getRhs() {
+  return cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::RightHandSide));
+}
+
+syntax::Expression *syntax::CallExpression::getCallee() {
+  return cast_or_null<syntax::Expression>(findChild(syntax::NodeRole::Callee));
+}
+
+syntax::Leaf *syntax::CallExpression::getOpenParen() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OpenParen));
+}
+
+syntax::CallArguments *syntax::CallExpression::getArguments() {
+  return cast_or_null<syntax::CallArguments>(
+      findChild(syntax::NodeRole::Arguments));
+}
+
+syntax::Leaf *syntax::CallExpression::getCloseParen() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::CloseParen));
+}
+
+syntax::Leaf *syntax::SwitchStatement::getSwitchKeyword() {
+  return cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntroducerKeyword));
+}
+
+syntax::Statement *syntax::SwitchStatement::getBody() {
+  return cast_or_null<syntax::Statement>(
+      findChild(syntax::NodeRole::BodyStatement));
+}
+
+syntax::Leaf *syntax::CaseStatement::getCaseKeyword() {
+  return cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntroducerKeyword));
+}
+
+syntax::Expression *syntax::CaseStatement::getCaseValue() {
+  return cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::CaseValue));
+}
+
+syntax::Statement *syntax::CaseStatement::getBody() {
+  return cast_or_null<syntax::Statement>(
+      findChild(syntax::NodeRole::BodyStatement));
+}
+
+syntax::Leaf *syntax::DefaultStatement::getDefaultKeyword() {
+  return cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntroducerKeyword));
+}
+
+syntax::Statement *syntax::DefaultStatement::getBody() {
+  return cast_or_null<syntax::Statement>(
+      findChild(syntax::NodeRole::BodyStatement));
+}
+
+syntax::Leaf *syntax::IfStatement::getIfKeyword() {
+  return cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntroducerKeyword));
+}
+
+syntax::Statement *syntax::IfStatement::getThenStatement() {
+  return cast_or_null<syntax::Statement>(
+      findChild(syntax::NodeRole::ThenStatement));
+}
+
+syntax::Leaf *syntax::IfStatement::getElseKeyword() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::ElseKeyword));
+}
+
+syntax::Statement *syntax::IfStatement::getElseStatement() {
+  return cast_or_null<syntax::Statement>(
+      findChild(syntax::NodeRole::ElseStatement));
+}
+
+syntax::Leaf *syntax::ForStatement::getForKeyword() {
+  return cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntroducerKeyword));
+}
+
+syntax::Statement *syntax::ForStatement::getBody() {
+  return cast_or_null<syntax::Statement>(
+      findChild(syntax::NodeRole::BodyStatement));
+}
+
+syntax::Leaf *syntax::WhileStatement::getWhileKeyword() {
+  return cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntroducerKeyword));
+}
+
+syntax::Statement *syntax::WhileStatement::getBody() {
+  return cast_or_null<syntax::Statement>(
+      findChild(syntax::NodeRole::BodyStatement));
+}
+
+syntax::Leaf *syntax::ContinueStatement::getContinueKeyword() {
+  return cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntroducerKeyword));
+}
+
+syntax::Leaf *syntax::BreakStatement::getBreakKeyword() {
+  return cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntroducerKeyword));
+}
+
+syntax::Leaf *syntax::ReturnStatement::getReturnKeyword() {
+  return cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntroducerKeyword));
+}
+
+syntax::Expression *syntax::ReturnStatement::getReturnValue() {
+  return cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::ReturnValue));
+}
+
+syntax::Leaf *syntax::RangeBasedForStatement::getForKeyword() {
+  return cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntroducerKeyword));
+}
+
+syntax::Statement *syntax::RangeBasedForStatement::getBody() {
+  return cast_or_null<syntax::Statement>(
+      findChild(syntax::NodeRole::BodyStatement));
+}
+
+syntax::Expression *syntax::ExpressionStatement::getExpression() {
+  return cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::Expression));
+}
+
+syntax::Leaf *syntax::CompoundStatement::getLbrace() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OpenParen));
+}
+
+std::vector<syntax::Statement *> syntax::CompoundStatement::getStatements() {
+  std::vector<syntax::Statement *> Children;
+  for (auto *C = firstChild(); C; C = C->nextSibling()) {
+    assert(C->role() == syntax::NodeRole::Statement);
+    Children.push_back(cast<syntax::Statement>(C));
+  }
+  return Children;
+}
+
+syntax::Leaf *syntax::CompoundStatement::getRbrace() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::CloseParen));
+}
+
+syntax::Expression *syntax::StaticAssertDeclaration::getCondition() {
+  return cast_or_null<syntax::Expression>(
+      findChild(syntax::NodeRole::Condition));
+}
+
+syntax::Expression *syntax::StaticAssertDeclaration::getMessage() {
+  return cast_or_null<syntax::Expression>(findChild(syntax::NodeRole::Message));
+}
+
+std::vector<syntax::SimpleDeclarator *>
+syntax::SimpleDeclaration::getDeclarators() {
+  std::vector<syntax::SimpleDeclarator *> Children;
+  for (auto *C = firstChild(); C; C = C->nextSibling()) {
+    if (C->role() == syntax::NodeRole::Declarator)
+      Children.push_back(cast<syntax::SimpleDeclarator>(C));
+  }
+  return Children;
+}
+
+syntax::Leaf *syntax::TemplateDeclaration::getTemplateKeyword() {
+  return cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntroducerKeyword));
+}
+
+syntax::Declaration *syntax::TemplateDeclaration::getDeclaration() {
+  return cast_or_null<syntax::Declaration>(
+      findChild(syntax::NodeRole::Declaration));
+}
+
+syntax::Leaf *syntax::ExplicitTemplateInstantiation::getTemplateKeyword() {
+  return cast_or_null<syntax::Leaf>(
+      findChild(syntax::NodeRole::IntroducerKeyword));
+}
+
+syntax::Leaf *syntax::ExplicitTemplateInstantiation::getExternKeyword() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::ExternKeyword));
+}
+
+syntax::Declaration *syntax::ExplicitTemplateInstantiation::getDeclaration() {
+  return cast_or_null<syntax::Declaration>(
+      findChild(syntax::NodeRole::Declaration));
+}
+
+syntax::Leaf *syntax::ParenDeclarator::getLparen() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OpenParen));
+}
+
+syntax::Leaf *syntax::ParenDeclarator::getRparen() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::CloseParen));
+}
+
+syntax::Leaf *syntax::ArraySubscript::getLbracket() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OpenParen));
+}
+
+syntax::Expression *syntax::ArraySubscript::getSize() {
+  return cast_or_null<syntax::Expression>(findChild(syntax::NodeRole::Size));
+}
+
+syntax::Leaf *syntax::ArraySubscript::getRbracket() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::CloseParen));
+}
+
+syntax::Leaf *syntax::TrailingReturnType::getArrowToken() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::ArrowToken));
+}
+
+syntax::SimpleDeclarator *syntax::TrailingReturnType::getDeclarator() {
+  return cast_or_null<syntax::SimpleDeclarator>(
+      findChild(syntax::NodeRole::Declarator));
+}
+
+syntax::Leaf *syntax::ParametersAndQualifiers::getLparen() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::OpenParen));
+}
+
+syntax::ParameterDeclarationList *
+syntax::ParametersAndQualifiers::getParameters() {
+  return cast_or_null<syntax::ParameterDeclarationList>(
+      findChild(syntax::NodeRole::Parameters));
+}
+
+syntax::Leaf *syntax::ParametersAndQualifiers::getRparen() {
+  return cast_or_null<syntax::Leaf>(findChild(syntax::NodeRole::CloseParen));
+}
+
+syntax::TrailingReturnType *
+syntax::ParametersAndQualifiers::getTrailingReturn() {
+  return cast_or_null<syntax::TrailingReturnType>(
+      findChild(syntax::NodeRole::TrailingReturn));
 }

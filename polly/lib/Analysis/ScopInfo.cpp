@@ -1752,7 +1752,7 @@ void Scop::removeFromStmtMap(ScopStmt &Stmt) {
   }
 }
 
-void Scop::removeStmts(std::function<bool(ScopStmt &)> ShouldDelete,
+void Scop::removeStmts(function_ref<bool(ScopStmt &)> ShouldDelete,
                        bool AfterHoisting) {
   for (auto StmtIt = Stmts.begin(), StmtEnd = Stmts.end(); StmtIt != StmtEnd;) {
     if (!ShouldDelete(*StmtIt)) {
@@ -1773,40 +1773,39 @@ void Scop::removeStmts(std::function<bool(ScopStmt &)> ShouldDelete,
 }
 
 void Scop::removeStmtNotInDomainMap() {
-  auto ShouldDelete = [this](ScopStmt &Stmt) -> bool {
+  removeStmts([this](ScopStmt &Stmt) -> bool {
     isl::set Domain = DomainMap.lookup(Stmt.getEntryBlock());
     if (!Domain)
       return true;
     return Domain.is_empty();
-  };
-  removeStmts(ShouldDelete, false);
+  });
 }
 
 void Scop::simplifySCoP(bool AfterHoisting) {
-  auto ShouldDelete = [AfterHoisting](ScopStmt &Stmt) -> bool {
-    // Never delete statements that contain calls to debug functions.
-    if (hasDebugCall(&Stmt))
-      return false;
+  removeStmts(
+      [AfterHoisting](ScopStmt &Stmt) -> bool {
+        // Never delete statements that contain calls to debug functions.
+        if (hasDebugCall(&Stmt))
+          return false;
 
-    bool RemoveStmt = Stmt.isEmpty();
+        bool RemoveStmt = Stmt.isEmpty();
 
-    // Remove read only statements only after invariant load hoisting.
-    if (!RemoveStmt && AfterHoisting) {
-      bool OnlyRead = true;
-      for (MemoryAccess *MA : Stmt) {
-        if (MA->isRead())
-          continue;
+        // Remove read only statements only after invariant load hoisting.
+        if (!RemoveStmt && AfterHoisting) {
+          bool OnlyRead = true;
+          for (MemoryAccess *MA : Stmt) {
+            if (MA->isRead())
+              continue;
 
-        OnlyRead = false;
-        break;
-      }
+            OnlyRead = false;
+            break;
+          }
 
-      RemoveStmt = OnlyRead;
-    }
-    return RemoveStmt;
-  };
-
-  removeStmts(ShouldDelete, AfterHoisting);
+          RemoveStmt = OnlyRead;
+        }
+        return RemoveStmt;
+      },
+      AfterHoisting);
 }
 
 InvariantEquivClassTy *Scop::lookupInvariantEquivClass(Value *Val) {

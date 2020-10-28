@@ -116,7 +116,7 @@ Examples of reasons for resolving are:
     clearly understand the problem being reported (e.g. not reproducible). It is
     fine to resolve such a bug e.g. with resolution WORKSFORME and leaving a
     comment to encourage the reporter to reopen the bug with more information
-    if it's still reproducable on their end.
+    if it's still reproducible on their end.
 
 If a bug is resolved, please fill in the revision number it was fixed in in the
 "Fixed by Commit(s)" field.

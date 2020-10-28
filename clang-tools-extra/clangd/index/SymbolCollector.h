@@ -78,6 +78,8 @@ public:
     /// Collect symbols local to main-files, such as static functions
     /// and symbols inside an anonymous namespace.
     bool CollectMainFileSymbols = true;
+    /// Collect references to main-file symbols.
+    bool CollectMainFileRefs = false;
     /// If set to true, SymbolCollector will collect doc for all symbols.
     /// Note that documents of symbols being indexed for completion will always
     /// be collected regardless of this option.

@@ -13,6 +13,7 @@
 
 #ifdef LLVM_HAVE_TF_API
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/JSON.h"
 
 #include <memory>
 #include <vector>
@@ -58,10 +59,25 @@ public:
   int typeIndex() const { return TypeIndex; }
   const std::vector<int64_t> &shape() const { return Shape; }
 
+  bool operator==(const TensorSpec &Other) const {
+    return Name == Other.Name && Port == Other.Port &&
+           TypeIndex == Other.TypeIndex && Shape == Other.Shape;
+  }
+
+  bool operator!=(const TensorSpec &Other) const { return !(*this == Other); }
+
+  /// Get the number of elements in a tensor with this shape.
+  size_t getElementCount() const { return ElementCount; }
+  /// Get the size, in bytes, of one element.
+  size_t getElementByteSize() const;
+
+  template <typename T> bool isElementType() const {
+    return getDataType<T>() == TypeIndex;
+  }
+
 private:
   TensorSpec(const std::string &Name, int Port, int TypeIndex,
-             const std::vector<int64_t> &Shape)
-      : Name(Name), Port(Port), TypeIndex(TypeIndex), Shape(Shape) {}
+             const std::vector<int64_t> &Shape);
 
   template <typename T> static int getDataType() {
     llvm_unreachable("Undefined tensor type");
@@ -71,7 +87,18 @@ private:
   int Port = 0;
   int TypeIndex = 0;
   std::vector<int64_t> Shape;
+  size_t ElementCount = 0;
 };
+
+/// Construct a TensorSpec from a JSON dictionary of the form:
+/// { "name": <string>,
+///   "port": <int>,
+///   "type": <string. Use LLVM's types, e.g. float, double, int64_t>,
+///   "shape": <array of ints> }
+/// For the "type" field, see the C++ primitive types used in
+/// TFUTILS_SUPPORTED_TYPES.
+Optional<TensorSpec> getTensorSpecFromJSON(LLVMContext &Ctx,
+                                           const json::Value &Value);
 
 class TFModelEvaluator final {
 public:
@@ -81,18 +108,29 @@ public:
   class EvaluationResult {
   public:
     EvaluationResult(const EvaluationResult &) = delete;
+    EvaluationResult &operator=(const EvaluationResult &Other) = delete;
+
     EvaluationResult(EvaluationResult &&Other);
+    EvaluationResult &operator=(EvaluationResult &&Other);
+
     ~EvaluationResult();
 
-    /// Get a pointer to the first element of the tensor at Index.
+    /// Get a (const) pointer to the first element of the tensor at Index.
     template <typename T> T *getTensorValue(size_t Index) {
       return static_cast<T *>(getUntypedTensorValue(Index));
     }
 
+    template <typename T> const T *getTensorValue(size_t Index) const {
+      return static_cast<T *>(getUntypedTensorValue(Index));
+    }
+
+    /// Get a (const) pointer to the untyped data of the tensor.
+    void *getUntypedTensorValue(size_t Index);
+    const void *getUntypedTensorValue(size_t Index) const;
+
   private:
     friend class TFModelEvaluator;
     EvaluationResult(std::unique_ptr<EvaluationResultImpl> Impl);
-    void *getUntypedTensorValue(size_t Index);
     std::unique_ptr<EvaluationResultImpl> Impl;
   };
 
@@ -124,17 +162,27 @@ private:
   std::unique_ptr<TFModelEvaluatorImpl> Impl;
 };
 
-template <> int TensorSpec::getDataType<float>();
-template <> int TensorSpec::getDataType<double>();
-template <> int TensorSpec::getDataType<int8_t>();
-template <> int TensorSpec::getDataType<uint8_t>();
-template <> int TensorSpec::getDataType<int16_t>();
-template <> int TensorSpec::getDataType<uint16_t>();
-template <> int TensorSpec::getDataType<int32_t>();
-template <> int TensorSpec::getDataType<uint32_t>();
-template <> int TensorSpec::getDataType<int64_t>();
-template <> int TensorSpec::getDataType<uint64_t>();
+/// List of supported types, as a pair:
+/// - C++ type
+/// - enum name (implementation-specific)
+#define TFUTILS_SUPPORTED_TYPES(M)                                             \
+  M(float, TF_FLOAT)                                                           \
+  M(double, TF_DOUBLE)                                                         \
+  M(int8_t, TF_INT8)                                                           \
+  M(uint8_t, TF_UINT8)                                                         \
+  M(int16_t, TF_INT16)                                                         \
+  M(uint16_t, TF_UINT16)                                                       \
+  M(int32_t, TF_INT32)                                                         \
+  M(uint32_t, TF_UINT32)                                                       \
+  M(int64_t, TF_INT64)                                                         \
+  M(uint64_t, TF_UINT64)
 
+#define TFUTILS_GETDATATYPE_DEF(T, E)                                          \
+  template <> int TensorSpec::getDataType<T>();
+
+TFUTILS_SUPPORTED_TYPES(TFUTILS_GETDATATYPE_DEF)
+
+#undef TFUTILS_GETDATATYPE_DEF
 } // namespace llvm
 
 #endif // LLVM_HAVE_TF_API

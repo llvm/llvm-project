@@ -166,8 +166,6 @@ public:
     clang::Decl *decl;
   };
 
-  typedef llvm::DenseMap<const clang::Decl *, DeclOrigin> OriginMap;
-
   /// Listener interface used by the ASTImporterDelegate to inform other code
   /// about decls that have been imported the first time.
   struct NewDeclListener {
@@ -259,17 +257,61 @@ public:
   typedef llvm::DenseMap<const clang::NamespaceDecl *, NamespaceMapSP>
       NamespaceMetaMap;
 
-  struct ASTContextMetadata {
-    ASTContextMetadata(clang::ASTContext *dst_ctx)
-        : m_dst_ctx(dst_ctx), m_delegates(), m_origins(), m_namespace_maps(),
-          m_map_completer(nullptr) {}
+  class ASTContextMetadata {
+    typedef llvm::DenseMap<const clang::Decl *, DeclOrigin> OriginMap;
+
+  public:
+    ASTContextMetadata(clang::ASTContext *dst_ctx) : m_dst_ctx(dst_ctx) {}
 
     clang::ASTContext *m_dst_ctx;
     DelegateMap m_delegates;
-    OriginMap m_origins;
 
     NamespaceMetaMap m_namespace_maps;
-    MapCompleter *m_map_completer;
+    MapCompleter *m_map_completer = nullptr;
+
+    /// Sets the DeclOrigin for the given Decl and overwrites any existing
+    /// DeclOrigin.
+    void setOrigin(const clang::Decl *decl, DeclOrigin origin) {
+      m_origins[decl] = origin;
+    }
+
+    /// Removes any tracked DeclOrigin for the given decl.
+    void removeOrigin(const clang::Decl *decl) { m_origins.erase(decl); }
+
+    /// Remove all DeclOrigin entries that point to the given ASTContext.
+    /// Useful when an ASTContext is about to be deleted and all the dangling
+    /// pointers to it need to be removed.
+    void removeOriginsWithContext(clang::ASTContext *ctx) {
+      for (OriginMap::iterator iter = m_origins.begin();
+           iter != m_origins.end();) {
+        if (iter->second.ctx == ctx)
+          m_origins.erase(iter++);
+        else
+          ++iter;
+      }
+    }
+
+    /// Returns the DeclOrigin for the given Decl or an invalid DeclOrigin
+    /// instance if there no known DeclOrigin for the given Decl.
+    DeclOrigin getOrigin(const clang::Decl *decl) const {
+      auto iter = m_origins.find(decl);
+      if (iter == m_origins.end())
+        return DeclOrigin();
+      return iter->second;
+    }
+
+    /// Returns true there is a known DeclOrigin for the given Decl.
+    bool hasOrigin(const clang::Decl *decl) const {
+      return getOrigin(decl).Valid();
+    }
+
+  private:
+    /// Maps declarations to the ASTContext/Decl from which they were imported
+    /// from. If a declaration is from an ASTContext which has been deleted
+    /// since the declaration was imported or the declaration wasn't created by
+    /// the ASTImporter, then it doesn't have a DeclOrigin and will not be
+    /// tracked here.
+    OriginMap m_origins;
   };
 
   typedef std::shared_ptr<ASTContextMetadata> ASTContextMetadataSP;

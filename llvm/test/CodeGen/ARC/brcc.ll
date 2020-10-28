@@ -1,7 +1,9 @@
 ; RUN: llc -march=arc < %s | FileCheck %s
 
-; CHECK-LABEL: brcc1
-; CHECK: brne %r0, %r1
+; CHECK-LABEL: brcc1:
+; CHECK:         breq %r0, %r1, @.LBB0_1
+; CHECK:       .LBB0_1:
+; CHECK-NEXT:    add %r0, %r0, 4
 define i32 @brcc1(i32 %a, i32 %b) nounwind {
 entry:
   %wb = icmp eq i32 %a, %b

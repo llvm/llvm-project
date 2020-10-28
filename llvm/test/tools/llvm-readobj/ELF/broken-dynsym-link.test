@@ -2,7 +2,7 @@
 ## .dynsym section's sh_link field is broken.
 
 ## Case 1: sh_link is set to 0.
-# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: yaml2obj --docnum=1 -DLINK=0 %s -o %t1
 # RUN: llvm-readobj -S %t1 2>&1 | FileCheck %s -DFILE=%t1 --check-prefixes=LLVM,ERR
 # RUN: llvm-readelf -S %t1 2>&1 | FileCheck %s -DFILE=%t1 --check-prefixes=GNU,ERR
 
@@ -25,32 +25,21 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name: .dynsym
     Type: SHT_DYNSYM
+    Link: [[LINK]]
 
 ## Case 2: sh_link is set to 255, which is larger than the number of the sections.
-# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: yaml2obj --docnum=1 -DLINK=255 %s -o %t2
 
 # RUN: llvm-readobj -S %t2 2>&1 | FileCheck -DFILE=%t2 %s --check-prefixes=LLVM2,ERR2
 # RUN: llvm-readelf -S %t2 2>&1 | FileCheck -DFILE=%t2 %s --check-prefixes=GNU2,ERR2
 
-# ERR2: warning: '[[FILE]]': invalid section index
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name: .dynsym
-    Type: SHT_DYNSYM
-    Link: 255
+# ERR2: warning: '[[FILE]]': invalid section index: 255
 
 # LLVM2:      Name: .dynsym
 # LLVM2-NEXT:  Type: SHT_DYNSYM

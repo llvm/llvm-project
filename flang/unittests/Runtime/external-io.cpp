@@ -137,7 +137,7 @@ void TestSequentialFixedUnformatted() {
   //   FORM='UNFORMATTED',RECL=8,STATUS='SCRATCH')
   auto io{IONAME(BeginOpenNewUnit)(__FILE__, __LINE__)};
   IONAME(SetAccess)
-      (io, "SEQUENTIAL", 10) || (Fail() << "SetAccess(SEQUENTIAL)", 0);
+  (io, "SEQUENTIAL", 10) || (Fail() << "SetAccess(SEQUENTIAL)", 0);
   IONAME(SetAction)
   (io, "READWRITE", 9) || (Fail() << "SetAction(READWRITE)", 0);
   IONAME(SetForm)

@@ -11,10 +11,10 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %two = spv.constant 2: i32
     %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
 
-// CHECK-NEXT:   spv.selection {
+// CHECK-NEXT:   spv.selection control(Flatten)
 // CHECK-NEXT:     spv.constant 0
 // CHECK-NEXT:     spv.Variable
-    spv.selection {
+    spv.selection control(Flatten) {
 // CHECK-NEXT: spv.BranchConditional %{{.*}} [5, 10], ^bb1, ^bb2
       spv.BranchConditional %cond [5, 10], ^then, ^else
 

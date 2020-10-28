@@ -33,12 +33,12 @@
 
 #include <isl_list_templ.c>
 
-static unsigned pos(__isl_keep isl_space *dim, enum isl_dim_type type)
+static unsigned pos(__isl_keep isl_space *space, enum isl_dim_type type)
 {
 	switch (type) {
 	case isl_dim_param:	return 0;
-	case isl_dim_in:	return dim->nparam;
-	case isl_dim_out:	return dim->nparam + dim->n_in;
+	case isl_dim_in:	return space->nparam;
+	case isl_dim_out:	return space->nparam + space->n_in;
 	default:		return 0;
 	}
 }
@@ -408,19 +408,19 @@ __isl_give isl_poly_rec *isl_poly_alloc_rec(isl_ctx *ctx, int var, int size)
 }
 
 __isl_give isl_qpolynomial *isl_qpolynomial_reset_domain_space(
-	__isl_take isl_qpolynomial *qp, __isl_take isl_space *dim)
+	__isl_take isl_qpolynomial *qp, __isl_take isl_space *space)
 {
 	qp = isl_qpolynomial_cow(qp);
-	if (!qp || !dim)
+	if (!qp || !space)
 		goto error;
 
 	isl_space_free(qp->dim);
-	qp->dim = dim;
+	qp->dim = space;
 
 	return qp;
 error:
 	isl_qpolynomial_free(qp);
-	isl_space_free(dim);
+	isl_space_free(space);
 	return NULL;
 }
 
@@ -3374,19 +3374,6 @@ __isl_give isl_qpolynomial *isl_qpolynomial_add_dims(
 	return isl_qpolynomial_insert_dims(qp, type, pos, n);
 }
 
-__isl_give isl_pw_qpolynomial *isl_pw_qpolynomial_add_dims(
-	__isl_take isl_pw_qpolynomial *pwqp,
-	enum isl_dim_type type, unsigned n)
-{
-	isl_size pos;
-
-	pos = isl_pw_qpolynomial_dim(pwqp, type);
-	if (pos < 0)
-		return isl_pw_qpolynomial_free(pwqp);
-
-	return isl_pw_qpolynomial_insert_dims(pwqp, type, pos, n);
-}
-
 static int *reordering_move(isl_ctx *ctx,
 	unsigned len, unsigned dst, unsigned src, unsigned n)
 {
@@ -4752,7 +4739,7 @@ error:
 static __isl_give isl_pw_qpolynomial *constant_on_domain(
 	__isl_take isl_basic_set *bset, int cst)
 {
-	isl_space *dim;
+	isl_space *space;
 	isl_qpolynomial *qp;
 
 	if (cst < 0 && isl_basic_set_is_empty(bset) == isl_bool_true)
@@ -4761,14 +4748,40 @@ static __isl_give isl_pw_qpolynomial *constant_on_domain(
 		return NULL;
 
 	bset = isl_basic_set_params(bset);
-	dim = isl_basic_set_get_space(bset);
+	space = isl_basic_set_get_space(bset);
 	if (cst < 0)
-		qp = isl_qpolynomial_infty_on_domain(dim);
+		qp = isl_qpolynomial_infty_on_domain(space);
 	else if (cst == 0)
-		qp = isl_qpolynomial_zero_on_domain(dim);
+		qp = isl_qpolynomial_zero_on_domain(space);
 	else
-		qp = isl_qpolynomial_one_on_domain(dim);
+		qp = isl_qpolynomial_one_on_domain(space);
 	return isl_pw_qpolynomial_alloc(isl_set_from_basic_set(bset), qp);
+}
+
+/* Internal data structure for multiplicative_call_factor_pw_qpolynomial.
+ * "fn" is the function that is called on each factor.
+ * "pwpq" collects the results.
+ */
+struct isl_multiplicative_call_data_pw_qpolynomial {
+	__isl_give isl_pw_qpolynomial *(*fn)(__isl_take isl_basic_set *bset);
+	isl_pw_qpolynomial *pwqp;
+};
+
+/* isl_factorizer_every_factor_basic_set callback that applies
+ * data->fn to the factor "bset" and multiplies in the result
+ * in data->pwqp.
+ */
+static isl_bool multiplicative_call_factor_pw_qpolynomial(
+	__isl_keep isl_basic_set *bset, void *user)
+{
+	struct isl_multiplicative_call_data_pw_qpolynomial *data = user;
+
+	bset = isl_basic_set_copy(bset);
+	data->pwqp = isl_pw_qpolynomial_mul(data->pwqp, data->fn(bset));
+	if (!data->pwqp)
+		return isl_bool_error;
+
+	return isl_bool_true;
 }
 
 /* Factor bset, call fn on each of the factors and return the product.
@@ -4781,14 +4794,12 @@ static __isl_give isl_pw_qpolynomial *compressed_multiplicative_call(
 	__isl_take isl_basic_set *bset,
 	__isl_give isl_pw_qpolynomial *(*fn)(__isl_take isl_basic_set *bset))
 {
-	int i, n;
+	struct isl_multiplicative_call_data_pw_qpolynomial data = { fn };
 	isl_space *space;
 	isl_set *set;
 	isl_factorizer *f;
 	isl_qpolynomial *qp;
-	isl_pw_qpolynomial *pwqp;
-	isl_size nparam;
-	isl_size nvar;
+	isl_bool every;
 
 	f = isl_basic_set_factorizer(bset);
 	if (!f)
@@ -4798,42 +4809,21 @@ static __isl_give isl_pw_qpolynomial *compressed_multiplicative_call(
 		return fn(bset);
 	}
 
-	nparam = isl_basic_set_dim(bset, isl_dim_param);
-	nvar = isl_basic_set_dim(bset, isl_dim_set);
-	if (nparam < 0 || nvar < 0)
-		bset = isl_basic_set_free(bset);
-
 	space = isl_basic_set_get_space(bset);
 	space = isl_space_params(space);
 	set = isl_set_universe(isl_space_copy(space));
 	qp = isl_qpolynomial_one_on_domain(space);
-	pwqp = isl_pw_qpolynomial_alloc(set, qp);
+	data.pwqp = isl_pw_qpolynomial_alloc(set, qp);
 
-	bset = isl_morph_basic_set(isl_morph_copy(f->morph), bset);
-
-	for (i = 0, n = 0; i < f->n_group; ++i) {
-		isl_basic_set *bset_i;
-		isl_pw_qpolynomial *pwqp_i;
-
-		bset_i = isl_basic_set_copy(bset);
-		bset_i = isl_basic_set_drop_constraints_involving(bset_i,
-			    nparam + n + f->len[i], nvar - n - f->len[i]);
-		bset_i = isl_basic_set_drop_constraints_involving(bset_i,
-			    nparam, n);
-		bset_i = isl_basic_set_drop(bset_i, isl_dim_set,
-			    n + f->len[i], nvar - n - f->len[i]);
-		bset_i = isl_basic_set_drop(bset_i, isl_dim_set, 0, n);
-
-		pwqp_i = fn(bset_i);
-		pwqp = isl_pw_qpolynomial_mul(pwqp, pwqp_i);
-
-		n += f->len[i];
-	}
+	every = isl_factorizer_every_factor_basic_set(f,
+			&multiplicative_call_factor_pw_qpolynomial, &data);
+	if (every < 0)
+		data.pwqp = isl_pw_qpolynomial_free(data.pwqp);
 
 	isl_basic_set_free(bset);
 	isl_factorizer_free(f);
 
-	return pwqp;
+	return data.pwqp;
 error:
 	isl_basic_set_free(bset);
 	return NULL;
@@ -5153,7 +5143,7 @@ __isl_give isl_basic_map *isl_basic_map_from_qpolynomial(
 	__isl_take isl_qpolynomial *qp)
 {
 	int i, k;
-	isl_space *dim;
+	isl_space *space;
 	isl_vec *aff = NULL;
 	isl_basic_map *bmap = NULL;
 	isl_bool is_affine;
@@ -5171,10 +5161,10 @@ __isl_give isl_basic_map *isl_basic_map_from_qpolynomial(
 	aff = isl_qpolynomial_extract_affine(qp);
 	if (!aff)
 		goto error;
-	dim = isl_qpolynomial_get_space(qp);
-	pos = 1 + isl_space_offset(dim, isl_dim_out);
+	space = isl_qpolynomial_get_space(qp);
+	pos = 1 + isl_space_offset(space, isl_dim_out);
 	n_div = qp->div->n_row;
-	bmap = isl_basic_map_alloc_space(dim, n_div, 1, 2 * n_div);
+	bmap = isl_basic_map_alloc_space(space, n_div, 1, 2 * n_div);
 
 	for (i = 0; i < n_div; ++i) {
 		k = isl_basic_map_alloc_div(bmap);

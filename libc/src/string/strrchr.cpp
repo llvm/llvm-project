@@ -13,16 +13,13 @@
 namespace __llvm_libc {
 
 char *LLVM_LIBC_ENTRYPOINT(strrchr)(const char *src, int c) {
-  unsigned char *str =
-      const_cast<unsigned char *>(reinterpret_cast<const unsigned char *>(src));
-  const unsigned char ch = c;
-
-  unsigned char *last_occurrence = nullptr;
+  const char ch = c;
+  char *last_occurrence = nullptr;
   do {
-    if (*str == ch)
-      last_occurrence = str;
-  } while (*str++);
-  return reinterpret_cast<char *>(last_occurrence);
+    if (*src == ch)
+      last_occurrence = const_cast<char *>(src);
+  } while (*src++);
+  return last_occurrence;
 }
 
 } // namespace __llvm_libc

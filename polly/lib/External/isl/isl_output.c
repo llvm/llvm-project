@@ -281,7 +281,7 @@ static isl_bool can_print_div_expr(__isl_keep isl_printer *p,
 	return isl_bool_not(isl_local_div_is_marked_unknown(div, pos));
 }
 
-static __isl_give isl_printer *print_div(__isl_keep isl_space *dim,
+static __isl_give isl_printer *print_div(__isl_keep isl_space *space,
 	__isl_keep isl_mat *div, int pos, __isl_take isl_printer *p);
 
 static __isl_give isl_printer *print_term(__isl_keep isl_space *space,
@@ -317,7 +317,7 @@ static __isl_give isl_printer *print_term(__isl_keep isl_space *space,
 	return p;
 }
 
-static __isl_give isl_printer *print_affine_of_len(__isl_keep isl_space *dim,
+static __isl_give isl_printer *print_affine_of_len(__isl_keep isl_space *space,
 	__isl_keep isl_mat *div,
 	__isl_take isl_printer *p, isl_int *c, int len)
 {
@@ -337,7 +337,7 @@ static __isl_give isl_printer *print_affine_of_len(__isl_keep isl_space *dim,
 				p = isl_printer_print_str(p, " + ");
 		}
 		first = 0;
-		p = print_term(dim, div, c[i], i, p, 0);
+		p = print_term(space, div, c[i], i, p, 0);
 		if (flip)
 			isl_int_neg(c[i], c[i]);
 	}
@@ -439,13 +439,13 @@ static __isl_give isl_printer *print_nested_tuple(__isl_take isl_printer *p,
 	return p;
 }
 
-static __isl_give isl_printer *print_tuple(__isl_keep isl_space *dim,
+static __isl_give isl_printer *print_tuple(__isl_keep isl_space *space,
 	__isl_take isl_printer *p, enum isl_dim_type type,
 	struct isl_print_space_data *data)
 {
-	data->space = dim;
+	data->space = space;
 	data->type = type;
-	return print_nested_tuple(p, dim, type, data, 0);
+	return print_nested_tuple(p, space, type, data, 0);
 }
 
 static __isl_give isl_printer *print_nested_map_dim(__isl_take isl_printer *p,
@@ -871,7 +871,7 @@ error:
 	return NULL;
 }
 
-static __isl_give isl_printer *print_div(__isl_keep isl_space *dim,
+static __isl_give isl_printer *print_div(__isl_keep isl_space *space,
 	__isl_keep isl_mat *div, int pos, __isl_take isl_printer *p)
 {
 	int c;
@@ -881,7 +881,7 @@ static __isl_give isl_printer *print_div(__isl_keep isl_space *dim,
 
 	c = p->output_format == ISL_FORMAT_C;
 	p = isl_printer_print_str(p, c ? "floord(" : "floor((");
-	p = print_affine_of_len(dim, div, p,
+	p = print_affine_of_len(space, div, p,
 				div->row[pos] + 1, div->n_col - 1);
 	p = isl_printer_print_str(p, c ? ", " : ")/");
 	p = isl_printer_print_isl_int(p, div->row[pos][0]);
@@ -1381,7 +1381,7 @@ error:
 }
 
 static int defining_equality(__isl_keep isl_basic_map *eq,
-	__isl_keep isl_space *dim, enum isl_dim_type type, int pos)
+	__isl_keep isl_space *space, enum isl_dim_type type, int pos)
 {
 	int i;
 	isl_size total;
@@ -1390,7 +1390,7 @@ static int defining_equality(__isl_keep isl_basic_map *eq,
 	if (total < 0)
 		return -1;
 
-	pos += isl_space_offset(dim, type);
+	pos += isl_space_offset(space, type);
 
 	for (i = 0; i < eq->n_eq; ++i) {
 		if (isl_seq_last_non_zero(eq->eq[i] + 1, total) != pos)
@@ -1803,16 +1803,16 @@ static __isl_give isl_printer *print_base(__isl_take isl_printer *p,
 }
 
 static __isl_give isl_printer *print_pow(__isl_take isl_printer *p,
-	__isl_keep isl_space *dim, __isl_keep isl_mat *div, int var, int exp)
+	__isl_keep isl_space *space, __isl_keep isl_mat *div, int var, int exp)
 {
-	p = print_base(p, dim, div, var);
+	p = print_base(p, space, div, var);
 	if (exp == 1)
 		return p;
 	if (p->output_format == ISL_FORMAT_C) {
 		int i;
 		for (i = 1; i < exp; ++i) {
 			p = isl_printer_print_str(p, "*");
-			p = print_base(p, dim, div, var);
+			p = print_base(p, space, div, var);
 		}
 	} else {
 		p = isl_printer_print_str(p, "^");

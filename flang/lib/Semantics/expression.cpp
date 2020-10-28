@@ -98,11 +98,10 @@ static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
 class ArgumentAnalyzer {
 public:
   explicit ArgumentAnalyzer(ExpressionAnalyzer &context)
-      : context_{context}, allowAssumedType_{false} {}
+      : context_{context}, isProcedureCall_{false} {}
   ArgumentAnalyzer(ExpressionAnalyzer &context, parser::CharBlock source,
-      bool allowAssumedType = false)
-      : context_{context}, source_{source}, allowAssumedType_{
-                                                allowAssumedType} {}
+      bool isProcedureCall = false)
+      : context_{context}, source_{source}, isProcedureCall_{isProcedureCall} {}
   bool fatalErrors() const { return fatalErrors_; }
   ActualArguments &&GetActuals() {
     CHECK(!fatalErrors_);
@@ -167,7 +166,7 @@ private:
   ActualArguments actuals_;
   parser::CharBlock source_;
   bool fatalErrors_{false};
-  const bool allowAssumedType_;
+  const bool isProcedureCall_; // false for user-defined op or assignment
   const Symbol *sawDefinedOp_{nullptr};
 };
 
@@ -681,7 +680,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
   if (std::optional<int> kind{IsImpliedDo(n.source)}) {
     return AsMaybeExpr(ConvertToKind<TypeCategory::Integer>(
         *kind, AsExpr(ImpliedDoIndex{n.source})));
-  } else if (context_.HasError(n) || !n.symbol) {
+  } else if (context_.HasError(n)) {
+    return std::nullopt;
+  } else if (!n.symbol) {
+    SayAt(n, "Internal error: unresolved name '%s'"_err_en_US, n.source);
     return std::nullopt;
   } else {
     const Symbol &ultimate{n.symbol->GetUltimate()};
@@ -871,21 +873,28 @@ std::optional<Expr<SubscriptInteger>> ExpressionAnalyzer::TripletPart(
 
 std::optional<Subscript> ExpressionAnalyzer::AnalyzeSectionSubscript(
     const parser::SectionSubscript &ss) {
-  return std::visit(common::visitors{
-                        [&](const parser::SubscriptTriplet &t) {
-                          return std::make_optional<Subscript>(
-                              Triplet{TripletPart(std::get<0>(t.t)),
-                                  TripletPart(std::get<1>(t.t)),
-                                  TripletPart(std::get<2>(t.t))});
-                        },
-                        [&](const auto &s) -> std::optional<Subscript> {
-                          if (auto subscriptExpr{AsSubscript(Analyze(s))}) {
-                            return Subscript{std::move(*subscriptExpr)};
-                          } else {
-                            return std::nullopt;
-                          }
-                        },
-                    },
+  return std::visit(
+      common::visitors{
+          [&](const parser::SubscriptTriplet &t) -> std::optional<Subscript> {
+            const auto &lower{std::get<0>(t.t)};
+            const auto &upper{std::get<1>(t.t)};
+            const auto &stride{std::get<2>(t.t)};
+            auto result{Triplet{
+                TripletPart(lower), TripletPart(upper), TripletPart(stride)}};
+            if ((lower && !result.lower()) || (upper && !result.upper())) {
+              return std::nullopt;
+            } else {
+              return std::make_optional<Subscript>(result);
+            }
+          },
+          [&](const auto &s) -> std::optional<Subscript> {
+            if (auto subscriptExpr{AsSubscript(Analyze(s))}) {
+              return Subscript{std::move(*subscriptExpr)};
+            } else {
+              return std::nullopt;
+            }
+          },
+      },
       ss.u);
 }
 
@@ -913,7 +922,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayElement &ae) {
       if (const Symbol * symbol{GetLastSymbol(*baseExpr)}) {
         if (!context_.HasError(symbol)) {
           Say("'%s' is not an array"_err_en_US, symbol->name());
-          context_.SetError(const_cast<Symbol &>(*symbol));
+          context_.SetError(*symbol);
         }
       }
     } else if (std::optional<DataRef> dataRef{
@@ -1815,13 +1824,13 @@ bool ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
         // allowed in specification parts (10.1.11 para 5).
         Say("The module function '%s' may not be referenced recursively in a specification expression"_err_en_US,
             symbol.name());
-        context_.SetError(const_cast<Symbol &>(symbol));
+        context_.SetError(symbol);
         return false;
       }
     } else { // 10.1.11 para 4
       Say("The internal function '%s' may not be referenced in a specification expression"_err_en_US,
           symbol.name());
-      context_.SetError(const_cast<Symbol &>(symbol));
+      context_.SetError(symbol);
       return false;
     }
   }
@@ -1996,7 +2005,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
     std::optional<parser::StructureConstructor> *structureConstructor) {
   const parser::Call &call{funcRef.v};
   auto restorer{GetContextualMessages().SetLocation(call.source)};
-  ArgumentAnalyzer analyzer{*this, call.source, true /* allowAssumedType */};
+  ArgumentAnalyzer analyzer{*this, call.source, true /* isProcedureCall */};
   for (const auto &arg : std::get<std::list<parser::ActualArgSpec>>(call.t)) {
     analyzer.Analyze(arg, false /* not subroutine call */);
   }
@@ -2035,7 +2044,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
 void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
   const parser::Call &call{callStmt.v};
   auto restorer{GetContextualMessages().SetLocation(call.source)};
-  ArgumentAnalyzer analyzer{*this, call.source, true /* allowAssumedType */};
+  ArgumentAnalyzer analyzer{*this, call.source, true /* isProcedureCall */};
   const auto &actualArgList{std::get<std::list<parser::ActualArgSpec>>(call.t)};
   for (const auto &arg : actualArgList) {
     analyzer.Analyze(arg, true /* is subroutine call */);
@@ -2704,10 +2713,22 @@ void ArgumentAnalyzer::Analyze(const parser::Variable &x) {
       actuals_.emplace_back(std::move(*expr));
       return;
     }
-    const Symbol *symbol{GetFirstSymbol(*expr)};
-    context_.Say(x.GetSource(),
-        "Assignment to constant '%s' is not allowed"_err_en_US,
-        symbol ? symbol->name() : x.GetSource());
+    const Symbol *symbol{GetLastSymbol(*expr)};
+    if (!symbol) {
+      context_.SayAt(x, "Assignment to constant '%s' is not allowed"_err_en_US,
+          x.GetSource());
+    } else if (auto *subp{symbol->detailsIf<semantics::SubprogramDetails>()}) {
+      auto *msg{context_.SayAt(x,
+          "Assignment to subprogram '%s' is not allowed"_err_en_US,
+          symbol->name())};
+      if (subp->isFunction()) {
+        const auto &result{subp->result().name()};
+        msg->Attach(result, "Function result is '%s'"_err_en_US, result);
+      }
+    } else {
+      context_.SayAt(x, "Assignment to constant '%s' is not allowed"_err_en_US,
+          symbol->name());
+    }
   }
   fatalErrors_ = true;
 }
@@ -2963,7 +2984,7 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
   source_.ExtendToCover(expr.source);
   if (const Symbol * assumedTypeDummy{AssumedTypeDummy(expr)}) {
     expr.typedExpr.Reset(new GenericExprWrapper{}, GenericExprWrapper::Deleter);
-    if (allowAssumedType_) {
+    if (isProcedureCall_) {
       return ActualArgument{ActualArgument::AssumedType{*assumedTypeDummy}};
     } else {
       context_.SayAt(expr.source,
@@ -2971,6 +2992,16 @@ std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeExpr(
       return std::nullopt;
     }
   } else if (MaybeExpr argExpr{context_.Analyze(expr)}) {
+    if (!isProcedureCall_ && IsProcedure(*argExpr)) {
+      if (IsFunction(*argExpr)) {
+        context_.SayAt(
+            expr.source, "Function call must have argument list"_err_en_US);
+      } else {
+        context_.SayAt(
+            expr.source, "Subroutine name is not allowed here"_err_en_US);
+      }
+      return std::nullopt;
+    }
     return ActualArgument{context_.Fold(std::move(*argExpr))};
   } else {
     return std::nullopt;

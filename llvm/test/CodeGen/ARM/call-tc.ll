@@ -85,6 +85,7 @@ entry:
 ; CHECKT2D-LABEL: t7:
 ; CHECKT2D: it ne
 ; CHECKT2D-NEXT: bne.w _foo
+; CHECKT2D-NEXT: LBB{{.*}}:
 ; CHECKT2D-NEXT: push
 ; CHECKT2D-NEXT: mov r7, sp
 ; CHECKT2D-NEXT: bl _foo

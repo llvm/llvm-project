@@ -55,7 +55,7 @@ always introduces a new version of the entire memory and is linked with a single
 ``MemoryDef/MemoryPhi`` which is the version of memory that the new
 version is based on. This implies that there is a *single*
 ``Def`` chain that connects all the ``Def``\ s, either directly
-or indireclty. For example in:
+or indirectly. For example in:
 
 .. code-block:: llvm
 

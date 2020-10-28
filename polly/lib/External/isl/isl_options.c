@@ -190,6 +190,8 @@ ISL_ARG_STR(struct isl_options, ast_iterator_type, 0,
 ISL_ARG_BOOL(struct isl_options, ast_always_print_block, 0,
 	"ast-always-print-block", 0, "print for and if bodies as a block "
 	"regardless of the number of statements in the body")
+ISL_ARG_BOOL(struct isl_options, ast_print_outermost_block, 0,
+	"ast-print-outermost-block", 1, "print outermost block node as a block")
 ISL_ARG_BOOL(struct isl_options, ast_print_macro_once, 0,
 	"ast-print-macro-once", 0, "only print macro definitions once")
 ISL_ARG_BOOL(struct isl_options, ast_build_atomic_upper_bound, 0,
@@ -358,6 +360,11 @@ ISL_CTX_SET_BOOL_DEF(isl_options, struct isl_options, isl_options_args,
 	ast_always_print_block)
 ISL_CTX_GET_BOOL_DEF(isl_options, struct isl_options, isl_options_args,
 	ast_always_print_block)
+
+ISL_CTX_SET_BOOL_DEF(isl_options, struct isl_options, isl_options_args,
+	ast_print_outermost_block)
+ISL_CTX_GET_BOOL_DEF(isl_options, struct isl_options, isl_options_args,
+	ast_print_outermost_block)
 
 ISL_CTX_SET_BOOL_DEF(isl_options, struct isl_options, isl_options_args,
 	ast_print_macro_once)

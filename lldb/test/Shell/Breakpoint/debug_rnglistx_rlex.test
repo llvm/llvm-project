@@ -1,4 +1,4 @@
-# RUN: yaml2obj %p/Inputs/debug_rnglistx_rlex.yaml > %ttest
+# RUN: yaml2obj %p/Inputs/debug_rnglistx_rlex.yaml -o %ttest
 # RUN: lldb-test breakpoints %ttest %s | FileCheck %s
 
 # The following code and invocation were used.

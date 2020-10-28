@@ -111,7 +111,7 @@ ParseFPOAndStringify(llvm::StringRef prog) {
       ParseFPOProgram(prog, alloc);
   std::vector<std::pair<std::string, std::string>> result;
   for (const auto &p : parsed)
-    result.emplace_back(p.first, ASTPrinter::Print(p.second));
+    result.emplace_back(p.first.str(), ASTPrinter::Print(p.second));
   return result;
 }
 

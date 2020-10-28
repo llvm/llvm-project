@@ -82,7 +82,7 @@ static cl::opt<bool> UseLegacyDA(
 static cl::opt<unsigned> UnrollMaxBlockToAnalyze(
     "amdgpu-unroll-max-block-to-analyze",
     cl::desc("Inner loop block size threshold to analyze in unroll for AMDGPU"),
-    cl::init(20), cl::Hidden);
+    cl::init(32), cl::Hidden);
 
 static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
                               unsigned Depth = 0) {
@@ -510,11 +510,21 @@ int GCNTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
     // Check possible fuse {fadd|fsub}(a,fmul(b,c)) and return zero cost for
     // fmul(b,c) supposing the fadd|fsub will get estimated cost for the whole
     // fused operation.
-    if (!HasFP32Denormals && SLT == MVT::f32 && CxtI && CxtI->hasOneUse())
+    if (CxtI && CxtI->hasOneUse())
       if (const auto *FAdd = dyn_cast<BinaryOperator>(*CxtI->user_begin())) {
         const int OPC = TLI->InstructionOpcodeToISD(FAdd->getOpcode());
         if (OPC == ISD::FADD || OPC == ISD::FSUB) {
-          return TargetTransformInfo::TCC_Free;
+          if (ST->hasMadMacF32Insts() && SLT == MVT::f32 && !HasFP32Denormals)
+            return TargetTransformInfo::TCC_Free;
+          if (ST->has16BitInsts() && SLT == MVT::f16 && !HasFP64FP16Denormals)
+            return TargetTransformInfo::TCC_Free;
+
+          // Estimate all types may be fused with contract/unsafe flags
+          const TargetOptions &Options = TLI->getTargetMachine().Options;
+          if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
+              Options.UnsafeFPMath ||
+              (FAdd->hasAllowContract() && CxtI->hasAllowContract()))
+            return TargetTransformInfo::TCC_Free;
         }
       }
     LLVM_FALLTHROUGH;

@@ -7,7 +7,7 @@
 # RUN: llvm-objdump -s %t | FileCheck %s
 
 # CHECK:      Contents of section .debug_info:
-# CHECK-NEXT:  0000 ffffffff
+# CHECK-NEXT:  0000 00000000
 
 .globl _start
 _start:

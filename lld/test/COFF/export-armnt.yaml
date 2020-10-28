@@ -1,6 +1,6 @@
 # REQUIRES: arm
 
-# RUN: yaml2obj < %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 #
 # RUN: lld-link /out:%t.dll /dll %t.obj /export:exportfn1 /export:exportfn2 /export:exportdata,data
 # RUN: llvm-objdump -p %t.dll | FileCheck %s

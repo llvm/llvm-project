@@ -49,7 +49,7 @@ PPCSubtarget &PPCSubtarget::initializeSubtargetDependencies(StringRef CPU,
 
 PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS, const PPCTargetMachine &TM)
-    : PPCGenSubtargetInfo(TT, CPU, FS), TargetTriple(TT),
+    : PPCGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), TargetTriple(TT),
       IsPPC64(TargetTriple.getArch() == Triple::ppc64 ||
               TargetTriple.getArch() == Triple::ppc64le),
       TM(TM), FrameLowering(initializeSubtargetDependencies(CPU, FS)),
@@ -73,6 +73,7 @@ void PPCSubtarget::initializeEnvironment() {
   HasP8Crypto = false;
   HasP9Vector = false;
   HasP9Altivec = false;
+  HasMMA = false;
   HasP10Vector = false;
   HasPrefixInstrs = false;
   HasPCRelativeMemops = false;
@@ -139,7 +140,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   InstrItins = getInstrItineraryForCPU(CPUName);
 
   // Parse features string.
-  ParseSubtargetFeatures(CPUName, FS);
+  ParseSubtargetFeatures(CPUName, /*TuneCPU*/ CPUName, FS);
 
   // If the user requested use of 64-bit regs, but the cpu selected doesn't
   // support it, ignore.

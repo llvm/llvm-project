@@ -203,6 +203,9 @@ public:
   /// Parse a `=` token if present.
   virtual ParseResult parseOptionalEqual() = 0;
 
+  /// Parse a quoted string token if present.
+  virtual ParseResult parseOptionalString(StringRef *string) = 0;
+
   /// Parse a given keyword.
   ParseResult parseKeyword(StringRef keyword, const Twine &msg = "") {
     auto loc = getCurrentLocation();
@@ -322,6 +325,9 @@ public:
       return emitError(loc, "invalid kind of type specified");
     return success();
   }
+
+  /// Parse a type if present.
+  virtual OptionalParseResult parseOptionalType(Type &result) = 0;
 
   /// Parse a 'x' separated dimension list. This populates the dimension list,
   /// using -1 for the `?` dimensions if `allowDynamic` is set and errors out on

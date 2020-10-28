@@ -135,7 +135,7 @@ class ProcessIOTestCase(TestBase):
     def create_target(self):
         '''Create the target and launch info that will be used by all tests'''
         self.target = self.dbg.CreateTarget(self.exe)
-        self.launch_info = lldb.SBLaunchInfo([self.exe])
+        self.launch_info = self.target.GetLaunchInfo()
         self.launch_info.SetWorkingDirectory(
             self.get_process_working_directory())
 

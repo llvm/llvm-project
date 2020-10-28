@@ -423,8 +423,7 @@ define amdgpu_kernel void @bfe_u32_test_5(i32 addrspace(1)* %out, i32 addrspace(
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_lshl_b32 s0, s0, 31
-; GFX6-NEXT:    s_ashr_i32 s0, s0, 31
+; GFX6-NEXT:    s_bfe_i32 s0, s0, 0x10000
 ; GFX6-NEXT:    s_bfe_u32 s0, s0, 0x10000
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -950,22 +949,22 @@ define amdgpu_kernel void @bfe_u32_constant_fold_test_18(i32 addrspace(1)* %out)
 define amdgpu_kernel void @simplify_bfe_u32_multi_use_arg(i32 addrspace(1)* %out0,
 ; GFX6-LABEL: simplify_bfe_u32_multi_use_arg:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:        s_load_dwordx2 s[4:5], s[0:1], 0x9
-; GFX6-NEXT:        s_load_dwordx2 s[8:9], s[0:1], 0xb
-; GFX6-NEXT:        s_load_dwordx2 s[0:1], s[0:1], 0xd
-; GFX6-NEXT:        s_mov_b32 s6, -1
-; GFX6-NEXT:        s_mov_b32 s7, 0xf000
-; GFX6-NEXT:        s_mov_b64 s[10:11], s[6:7]
-; GFX6-NEXT:        s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:        s_load_dword s0, s[0:1], 0x0
-; GFX6-NEXT:        s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:        s_and_b32 s0, s0, 63
-; GFX6-NEXT:        s_bfe_u32 s1, s0, 0x20002
-; GFX6-NEXT:        v_mov_b32_e32 v1, s1
-; GFX6-NEXT:        v_mov_b32_e32 v0, s0
-; GFX6-NEXT:        buffer_store_dword v1, off, s[4:7], 0
-; GFX6-NEXT:        buffer_store_dword v0, off, s[8:11], 0
-; GFX6-NEXT:        s_endpgm
+; GFX6-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; GFX6-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0xb
+; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
+; GFX6-NEXT:    s_mov_b32 s6, -1
+; GFX6-NEXT:    s_mov_b32 s7, 0xf000
+; GFX6-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_and_b32 s0, s0, 63
+; GFX6-NEXT:    s_bfe_u32 s1, s0, 0x20002
+; GFX6-NEXT:    v_mov_b32_e32 v1, s1
+; GFX6-NEXT:    v_mov_b32_e32 v0, s0
+; GFX6-NEXT:    buffer_store_dword v1, off, s[4:7], 0
+; GFX6-NEXT:    buffer_store_dword v0, off, s[8:11], 0
+; GFX6-NEXT:    s_endpgm
                                             i32 addrspace(1)* %out1,
                                             i32 addrspace(1)* %in) #0 {
   %src = load i32, i32 addrspace(1)* %in, align 4

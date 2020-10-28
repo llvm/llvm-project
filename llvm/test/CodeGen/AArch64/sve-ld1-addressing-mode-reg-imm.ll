@@ -104,3 +104,40 @@ define <vscale x 2 x i64> @ld1d_inbound(<vscale x 2 x i64>* %a) {
   %load = load <vscale x 2 x i64>, <vscale x 2 x i64>* %base
   ret <vscale x 2 x i64> %load
 }
+
+define void @load_nxv6f16(<vscale x 6 x half>* %a) {
+; CHECK-LABEL: load_nxv6f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld1h { z0.s }, p1/z, [x0]
+; CHECK-NEXT:    ret
+  %val = load volatile <vscale x 6 x half>, <vscale x 6 x half>* %a
+  ret void
+}
+
+define void @load_nxv6f32(<vscale x 6 x float>* %a) {
+; CHECK-LABEL: load_nxv6f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0]
+; CHECK-NEXT:    ret
+  %val = load volatile <vscale x 6 x float>, <vscale x 6 x float>* %a
+  ret void
+}
+
+define void @load_nxv12f16(<vscale x 12 x half>* %a) {
+; CHECK-LABEL: load_nxv12f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-NEXT:    ret
+  %val = load volatile <vscale x 12 x half>, <vscale x 12 x half>* %a
+  ret void
+}
+

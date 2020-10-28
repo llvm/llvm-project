@@ -422,19 +422,20 @@ body: |
   bb.0:
 
     ; CHECK-LABEL: name: test_freeze_v33s32
-    ; CHECK: [[DEF:%[0-9]+]]:_(<33 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<33 x s32>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<528 x s32>) = G_CONCAT_VECTORS [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>)
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<33 x s32>) = G_EXTRACT [[CONCAT_VECTORS]](<528 x s32>), 0
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32), [[UV20:%[0-9]+]]:_(s32), [[UV21:%[0-9]+]]:_(s32), [[UV22:%[0-9]+]]:_(s32), [[UV23:%[0-9]+]]:_(s32), [[UV24:%[0-9]+]]:_(s32), [[UV25:%[0-9]+]]:_(s32), [[UV26:%[0-9]+]]:_(s32), [[UV27:%[0-9]+]]:_(s32), [[UV28:%[0-9]+]]:_(s32), [[UV29:%[0-9]+]]:_(s32), [[UV30:%[0-9]+]]:_(s32), [[UV31:%[0-9]+]]:_(s32), [[UV32:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[EXTRACT]](<33 x s32>)
     ; CHECK: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[UV2]](s32), [[UV3]](s32), [[UV4]](s32), [[UV5]](s32), [[UV6]](s32), [[UV7]](s32), [[UV8]](s32), [[UV9]](s32), [[UV10]](s32), [[UV11]](s32), [[UV12]](s32), [[UV13]](s32), [[UV14]](s32), [[UV15]](s32)
     ; CHECK: [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[UV16]](s32), [[UV17]](s32), [[UV18]](s32), [[UV19]](s32), [[UV20]](s32), [[UV21]](s32), [[UV22]](s32), [[UV23]](s32), [[UV24]](s32), [[UV25]](s32), [[UV26]](s32), [[UV27]](s32), [[UV28]](s32), [[UV29]](s32), [[UV30]](s32), [[UV31]](s32)
     ; CHECK: [[BUILD_VECTOR2:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[UV32]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32), [[DEF1]](s32)
-    ; CHECK: [[DEF2:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
     ; CHECK: [[FREEZE:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[BUILD_VECTOR]]
     ; CHECK: [[FREEZE1:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[BUILD_VECTOR1]]
     ; CHECK: [[FREEZE2:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[BUILD_VECTOR2]]
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<528 x s32>) = G_CONCAT_VECTORS [[FREEZE]](<16 x s32>), [[FREEZE1]](<16 x s32>), [[FREEZE2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>), [[DEF2]](<16 x s32>)
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<33 x s32>) = G_EXTRACT [[CONCAT_VECTORS]](<528 x s32>), 0
-    ; CHECK: S_NOP 0, implicit [[EXTRACT]](<33 x s32>)
+    ; CHECK: [[CONCAT_VECTORS1:%[0-9]+]]:_(<528 x s32>) = G_CONCAT_VECTORS [[FREEZE]](<16 x s32>), [[FREEZE1]](<16 x s32>), [[FREEZE2]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>), [[DEF]](<16 x s32>)
+    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(<33 x s32>) = G_EXTRACT [[CONCAT_VECTORS1]](<528 x s32>), 0
+    ; CHECK: S_NOP 0, implicit [[EXTRACT1]](<33 x s32>)
     %0:_(<33 x s32>) = G_IMPLICIT_DEF
     %1:_(<33 x s32>) = G_FREEZE %0
     S_NOP 0, implicit %1
@@ -447,13 +448,10 @@ body: |
 
     ; CHECK-LABEL: name: test_freeze_v64s32
     ; CHECK: [[DEF:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY [[DEF]](<16 x s32>)
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s32>) = COPY [[DEF]](<16 x s32>)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(<16 x s32>) = COPY [[DEF]](<16 x s32>)
     ; CHECK: [[FREEZE:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[DEF]]
-    ; CHECK: [[FREEZE1:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[COPY]]
-    ; CHECK: [[FREEZE2:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[COPY1]]
-    ; CHECK: [[FREEZE3:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[COPY2]]
+    ; CHECK: [[FREEZE1:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[DEF]]
+    ; CHECK: [[FREEZE2:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[DEF]]
+    ; CHECK: [[FREEZE3:%[0-9]+]]:_(<16 x s32>) = G_FREEZE [[DEF]]
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<64 x s32>) = G_CONCAT_VECTORS [[FREEZE]](<16 x s32>), [[FREEZE1]](<16 x s32>), [[FREEZE2]](<16 x s32>), [[FREEZE3]](<16 x s32>)
     ; CHECK: S_NOP 0, implicit [[CONCAT_VECTORS]](<64 x s32>)
     %0:_(<64 x s32>) = G_IMPLICIT_DEF
@@ -465,38 +463,61 @@ body: |
 name: test_freeze_v2s1
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
 
     ; CHECK-LABEL: name: test_freeze_v2s1
-    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY [[DEF]](<2 x s32>)
-    ; CHECK: [[FREEZE:%[0-9]+]]:_(<2 x s32>) = G_FREEZE [[COPY]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY [[FREEZE]](<2 x s32>)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[COPY1]](<2 x s32>)
-    %0:_(<2 x s1>) = G_IMPLICIT_DEF
-    %1:_(<2 x s1>) = G_FREEZE %0
-    %2:_(<2 x s32>) = G_ANYEXT %1
-    $vgpr0_vgpr1 = COPY %2
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV2]]
+    ; CHECK: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV3]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
+    ; CHECK: [[FREEZE:%[0-9]+]]:_(<2 x s32>) = G_FREEZE [[BUILD_VECTOR]]
+    ; CHECK: [[COPY4:%[0-9]+]]:_(<2 x s32>) = COPY [[FREEZE]](<2 x s32>)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[COPY4]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    %2:_(<2 x s1>) = G_ICMP intpred(ne), %0, %1
+    %3:_(<2 x s1>) = G_FREEZE %2
+    %4:_(<2 x s32>) = G_ANYEXT %3
+    $vgpr0_vgpr1 = COPY %4
 ...
 
 ---
 name: test_freeze_v3s1
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
 
     ; CHECK-LABEL: name: test_freeze_v3s1
-    ; CHECK: [[DEF:%[0-9]+]]:_(<3 x s1>) = G_IMPLICIT_DEF
-    ; CHECK: [[DEF1:%[0-9]+]]:_(<4 x s1>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s1>) = G_INSERT [[DEF1]], [[DEF]](<3 x s1>), 0
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(<4 x s32>) = G_ANYEXT [[INSERT]](<4 x s1>)
-    ; CHECK: [[FREEZE:%[0-9]+]]:_(<4 x s32>) = G_FREEZE [[ANYEXT]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s1>) = G_TRUNC [[FREEZE]](<4 x s32>)
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s1>) = G_EXTRACT [[TRUNC]](<4 x s1>), 0
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(<3 x s32>) = G_ANYEXT [[EXTRACT]](<3 x s1>)
-    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[ANYEXT1]](<3 x s32>)
-    %0:_(<3 x s1>) = G_IMPLICIT_DEF
-    %1:_(<3 x s1>) = G_FREEZE %0
-    %2:_(<3 x s32>) = G_ANYEXT %1
-    $vgpr0_vgpr1_vgpr2 = COPY %2
+    ; CHECK: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
+    ; CHECK: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
+    ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV3]]
+    ; CHECK: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV4]]
+    ; CHECK: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV2]](s32), [[UV5]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
+    ; CHECK: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP2]](s1)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
+    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ANYEXT2]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
+    ; CHECK: [[FREEZE:%[0-9]+]]:_(<3 x s32>) = G_FREEZE [[BUILD_VECTOR]]
+    ; CHECK: [[COPY5:%[0-9]+]]:_(<3 x s32>) = COPY [[FREEZE]](<3 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[COPY5]](<3 x s32>)
+    %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
+    %2:_(<3 x s1>) = G_ICMP intpred(ne), %0, %1
+    %3:_(<3 x s1>) = G_FREEZE %2
+    %4:_(<3 x s32>) = G_ANYEXT %3
+    $vgpr0_vgpr1_vgpr2 = COPY %4
 ...
 
 ---
@@ -530,8 +551,9 @@ body: |
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(<4 x s32>) = G_ANYEXT [[INSERT]](<4 x s8>)
     ; CHECK: [[FREEZE:%[0-9]+]]:_(<4 x s32>) = G_FREEZE [[ANYEXT]]
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[FREEZE]](<4 x s32>)
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s8>) = G_EXTRACT [[TRUNC1]](<4 x s8>), 0
-    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(<3 x s32>) = G_ANYEXT [[EXTRACT]](<3 x s8>)
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<12 x s8>) = G_CONCAT_VECTORS [[TRUNC1]](<4 x s8>), [[DEF]](<4 x s8>), [[DEF]](<4 x s8>)
+    ; CHECK: [[UV:%[0-9]+]]:_(<3 x s8>), [[UV1:%[0-9]+]]:_(<3 x s8>), [[UV2:%[0-9]+]]:_(<3 x s8>), [[UV3:%[0-9]+]]:_(<3 x s8>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<12 x s8>)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(<3 x s32>) = G_ANYEXT [[UV]](<3 x s8>)
     ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[ANYEXT1]](<3 x s32>)
     %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     %1:_(<3 x s8>) = G_TRUNC %0
@@ -573,13 +595,14 @@ body: |
     ; CHECK: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT]](<3 x s16>), 0
     ; CHECK: [[FREEZE:%[0-9]+]]:_(<4 x s16>) = G_FREEZE [[INSERT]]
-    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[FREEZE]](<4 x s16>), 0
-    ; CHECK: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT1]](<3 x s16>), 0
-    ; CHECK: [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT1]](<4 x s16>)
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV3]](<2 x s16>)
+    ; CHECK: [[CONCAT_VECTORS1:%[0-9]+]]:_(<12 x s16>) = G_CONCAT_VECTORS [[FREEZE]](<4 x s16>), [[DEF2]](<4 x s16>), [[DEF2]](<4 x s16>)
+    ; CHECK: [[UV3:%[0-9]+]]:_(<3 x s16>), [[UV4:%[0-9]+]]:_(<3 x s16>), [[UV5:%[0-9]+]]:_(<3 x s16>), [[UV6:%[0-9]+]]:_(<3 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<12 x s16>)
+    ; CHECK: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[UV3]](<3 x s16>), 0
+    ; CHECK: [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT1]](<4 x s16>)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV7]](<2 x s16>)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV4]](<2 x s16>)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV8]](<2 x s16>)
     ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
@@ -628,15 +651,16 @@ body: |
     ; CHECK: [[DEF2:%[0-9]+]]:_(<6 x s16>) = G_IMPLICIT_DEF
     ; CHECK: [[INSERT:%[0-9]+]]:_(<6 x s16>) = G_INSERT [[DEF2]], [[EXTRACT]](<5 x s16>), 0
     ; CHECK: [[FREEZE:%[0-9]+]]:_(<6 x s16>) = G_FREEZE [[INSERT]]
-    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(<5 x s16>) = G_EXTRACT [[FREEZE]](<6 x s16>), 0
-    ; CHECK: [[INSERT1:%[0-9]+]]:_(<6 x s16>) = G_INSERT [[DEF2]], [[EXTRACT1]](<5 x s16>), 0
-    ; CHECK: [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT1]](<6 x s16>)
-    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV5]](<2 x s16>)
+    ; CHECK: [[CONCAT_VECTORS1:%[0-9]+]]:_(<30 x s16>) = G_CONCAT_VECTORS [[FREEZE]](<6 x s16>), [[DEF2]](<6 x s16>), [[DEF2]](<6 x s16>), [[DEF2]](<6 x s16>), [[DEF2]](<6 x s16>)
+    ; CHECK: [[UV5:%[0-9]+]]:_(<5 x s16>), [[UV6:%[0-9]+]]:_(<5 x s16>), [[UV7:%[0-9]+]]:_(<5 x s16>), [[UV8:%[0-9]+]]:_(<5 x s16>), [[UV9:%[0-9]+]]:_(<5 x s16>), [[UV10:%[0-9]+]]:_(<5 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS1]](<30 x s16>)
+    ; CHECK: [[INSERT1:%[0-9]+]]:_(<6 x s16>) = G_INSERT [[DEF2]], [[UV5]](<5 x s16>), 0
+    ; CHECK: [[UV11:%[0-9]+]]:_(<2 x s16>), [[UV12:%[0-9]+]]:_(<2 x s16>), [[UV13:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[INSERT1]](<6 x s16>)
+    ; CHECK: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV11]](<2 x s16>)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV6]](<2 x s16>)
+    ; CHECK: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV12]](<2 x s16>)
     ; CHECK: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
-    ; CHECK: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV7]](<2 x s16>)
+    ; CHECK: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV13]](<2 x s16>)
     ; CHECK: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)

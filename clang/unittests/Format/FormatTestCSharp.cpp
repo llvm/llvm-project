@@ -777,6 +777,20 @@ foreach ((A a, B b) in someList) {
   verifyFormat(R"(private float[ , ] Values;)", Style);
   verifyFormat(R"(string dirPath = args?[ 0 ];)", Style);
   verifyFormat(R"(char[ ,, ] rawCharArray = MakeCharacterGrid();)", Style);
+
+  // Method returning tuple
+  verifyFormat(R"(public (string name, int age) methodTuple() {})", Style);
+  verifyFormat(R"(private (string name, int age) methodTuple() {})", Style);
+  verifyFormat(R"(protected (string name, int age) methodTuple() {})", Style);
+  verifyFormat(R"(virtual (string name, int age) methodTuple() {})", Style);
+  verifyFormat(R"(extern (string name, int age) methodTuple() {})", Style);
+  verifyFormat(R"(static (string name, int age) methodTuple() {})", Style);
+  verifyFormat(R"(internal (string name, int age) methodTuple() {})", Style);
+  verifyFormat(R"(abstract (string name, int age) methodTuple() {})", Style);
+  verifyFormat(R"(sealed (string name, int age) methodTuple() {})", Style);
+  verifyFormat(R"(override (string name, int age) methodTuple() {})", Style);
+  verifyFormat(R"(async (string name, int age) methodTuple() {})", Style);
+  verifyFormat(R"(unsafe (string name, int age) methodTuple() {})", Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpNullableTypes) {

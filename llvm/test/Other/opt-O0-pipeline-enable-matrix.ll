@@ -1,4 +1,4 @@
-; RUN: opt -O0 -enable-matrix -debug-pass=Structure < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt -enable-new-pm=0 -O0 -enable-matrix -debug-pass=Structure < %s -o /dev/null 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 

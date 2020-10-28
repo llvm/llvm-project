@@ -12,10 +12,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_NONE
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:         .tdata
     Type:         SHT_PROGBITS
@@ -38,10 +37,9 @@ ProgramHeaders:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_EXEC
-  Machine: EM_NONE
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
 Sections:
   - Name:         .text
     Type:         SHT_PROGBITS

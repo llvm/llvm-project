@@ -523,6 +523,9 @@ public:
     return UINT64_MAX;
   }
 
+  virtual void AutoCompleteDiskFileOrDirectory(CompletionRequest &request,
+                                               bool only_dir) {}
+
   virtual uint64_t ReadFile(lldb::user_id_t fd, uint64_t offset, void *dst,
                             uint64_t dst_len, Status &error) {
     error.SetErrorStringWithFormat(

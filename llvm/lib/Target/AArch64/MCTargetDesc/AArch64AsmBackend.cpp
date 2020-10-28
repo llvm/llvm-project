@@ -88,8 +88,6 @@ public:
                   uint64_t Value, bool IsResolved,
                   const MCSubtargetInfo *STI) const override;
 
-  bool mayNeedRelaxation(const MCInst &Inst,
-                         const MCSubtargetInfo &STI) const override;
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override;
@@ -461,11 +459,6 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     else
       Data[Offset + 3] |= (1 << 6);
   }
-}
-
-bool AArch64AsmBackend::mayNeedRelaxation(const MCInst &Inst,
-                                          const MCSubtargetInfo &STI) const {
-  return false;
 }
 
 bool AArch64AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,

@@ -122,7 +122,8 @@ public:
   // The ClangTidyContext populates Source and Name for clang-tidy diagnostics.
   std::vector<Diag> take(const clang::tidy::ClangTidyContext *Tidy = nullptr);
 
-  void BeginSourceFile(const LangOptions &Opts, const Preprocessor *) override;
+  void BeginSourceFile(const LangOptions &Opts,
+                       const Preprocessor *PP) override;
   void EndSourceFile() override;
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const clang::Diagnostic &Info) override;
@@ -148,6 +149,7 @@ private:
   llvm::Optional<Diag> LastDiag;
   llvm::Optional<FullSourceLoc> LastDiagLoc; // Valid only when LastDiag is set.
   bool LastDiagOriginallyError = false;      // Valid only when LastDiag is set.
+  SourceManager *OrigSrcMgr = nullptr;
 
   llvm::DenseSet<std::pair<unsigned, unsigned>> IncludedErrorLocations;
   bool LastPrimaryDiagnosticWasSuppressed = false;

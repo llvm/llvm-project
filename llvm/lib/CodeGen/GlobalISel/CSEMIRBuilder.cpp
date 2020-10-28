@@ -62,6 +62,11 @@ void CSEMIRBuilder::profileDstOp(const DstOp &Op,
   case DstOp::DstType::Ty_RC:
     B.addNodeIDRegType(Op.getRegClass());
     break;
+  case DstOp::DstType::Ty_Reg: {
+    // Regs can have LLT&(RB|RC). If those exist, profile them as well.
+    B.addNodeIDReg(Op.getReg());
+    break;
+  }
   default:
     B.addNodeIDRegType(Op.getLLTTy(*getMRI()));
     break;

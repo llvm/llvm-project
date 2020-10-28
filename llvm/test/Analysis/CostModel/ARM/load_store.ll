@@ -85,7 +85,7 @@ define void @stores() {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i16> undef, <8 x i16>* undef, align 1
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x float> undef, <4 x float>* undef, align 1
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x double> undef, <2 x double>* undef, align 1
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-NEON-LABEL: 'stores'
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 undef, i8* undef, align 4
@@ -111,7 +111,7 @@ define void @stores() {
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <8 x i16> undef, <8 x i16>* undef, align 1
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <4 x float> undef, <4 x float>* undef, align 1
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <2 x double> undef, <2 x double>* undef, align 1
-; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-V8-SIZE-LABEL: 'stores'
 ; CHECK-V8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i8 undef, i8* undef, align 4
@@ -272,7 +272,7 @@ define void @loads() {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %21 = load <8 x i16>, <8 x i16>* undef, align 1
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %22 = load <4 x float>, <4 x float>* undef, align 1
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %23 = load <2 x double>, <2 x double>* undef, align 1
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-NEON-LABEL: 'loads'
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load i8, i8* undef, align 4
@@ -298,7 +298,7 @@ define void @loads() {
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %21 = load <8 x i16>, <8 x i16>* undef, align 1
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %22 = load <4 x float>, <4 x float>* undef, align 1
 ; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %23 = load <2 x double>, <2 x double>* undef, align 1
-; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; CHECK-NEON-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-V8-SIZE-LABEL: 'loads'
 ; CHECK-V8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = load i8, i8* undef, align 4

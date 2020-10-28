@@ -1014,9 +1014,9 @@ Include path management
 
 Flags controlling how ``#include``\s are resolved to files.
 
-.. option:: -I<dir>, --include-directory <dir>, --include-directory=<dir>
+.. option:: -I<dir>, --include-directory <arg>, --include-directory=<arg>
 
-Add directory <dir> to the list of include files search paths. If there are multiple -I options, these directories are searched in the order they are given before the standard system directories are searched. If the same directory is in the SYSTEM include search paths, for example if also specified with -isystem, the -I option will be ignored
+Add directory to include search path. If there are multiple -I options, these directories are searched in the order they are given before the standard system directories are searched. If the same directory is in the SYSTEM include search paths, for example if also specified with -isystem, the -I option will be ignored
 
 .. option:: -I-, --include-barrier
 
@@ -2136,7 +2136,7 @@ Enable stack clash protection
 
 .. option:: -fstack-protector, -fno-stack-protector
 
-Enable stack protectors for some functions vulnerable to stack smashing. This uses a loose heuristic which considers functions vulnerable if they contain a char (or 8bit integer) array or constant sized calls to alloca, which are of greater size than ssp-buffer-size (default: 8 bytes). All variable sized calls to alloca are considered vulnerable
+Enable stack protectors for some functions vulnerable to stack smashing. This uses a loose heuristic which considers functions vulnerable if they contain a char (or 8bit integer) array or constant sized calls to alloca , which are of greater size than ssp-buffer-size (default: 8 bytes). All variable sized calls to alloca are considered vulnerable. A function witha stack protector has a guard value added to the stack frame that is checked on function exit. The guard value must be positioned in the stack frame such that a buffer overflow from a vulnerable variable will overwrite the guard value before overwriting the function's return address. The reference stack guard value is stored in a global variable.
 
 .. option:: -fstack-protector-all
 
@@ -2153,6 +2153,10 @@ Emit section containing metadata on function stack sizes
 .. option:: -fstandalone-debug, -fno-limit-debug-info, -fno-standalone-debug
 
 Emit full debug info for all types used by the program
+
+.. option:: -feliminate-unused-debug-types, -fno-eliminate-unused-debug-types
+
+Suppress (or emit) debug info for types that are unused but defined by the program.
 
 .. option:: -fstrict-aliasing, -fno-strict-aliasing
 

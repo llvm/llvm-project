@@ -19,6 +19,10 @@
 #include "mlir/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Reducer/OptReductionPass.h"
+#include "mlir/Reducer/Passes/OpReducer.h"
+#include "mlir/Reducer/ReductionNode.h"
+#include "mlir/Reducer/ReductionTreePass.h"
 #include "mlir/Reducer/Tester.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LogicalResult.h"
@@ -43,6 +47,11 @@ static llvm::cl::opt<std::string>
     outputFilename("o",
                    llvm::cl::desc("Output filename for the reduced test case"),
                    llvm::cl::init("-"));
+
+// TODO: Use PassPipelineCLParser to define pass pieplines in the command line.
+static llvm::cl::opt<std::string>
+    passTestSpecifier("pass-test",
+                      llvm::cl::desc("Indicate a specific pass to be tested"));
 
 // Parse and verify the input MLIR file.
 static LogicalResult loadModule(MLIRContext &context, OwningModuleRef &module,
@@ -83,14 +92,36 @@ int main(int argc, char **argv) {
     llvm::report_fatal_error("Input test case can't be parsed");
 
   // Initialize test environment.
-  Tester test(testFilename, testArguments);
-  test.setMostReduced(moduleRef.get());
+  const Tester test(testFilename, testArguments);
 
   if (!test.isInteresting(inputFilename))
     llvm::report_fatal_error(
         "Input test case does not exhibit interesting behavior");
 
-  test.getMostReduced().print(output->os());
+  // Reduction pass pipeline.
+  PassManager pm(&context);
+
+  if (passTestSpecifier == "DCE") {
+
+    // Opt Reduction Pass with SymbolDCEPass as opt pass.
+    pm.addPass(std::make_unique<OptReductionPass>(test, &context,
+                                                  createSymbolDCEPass()));
+
+  } else if (passTestSpecifier == "function-reducer") {
+
+    // Reduction tree pass with OpReducer variant generation and single path
+    // traversal.
+    pm.addPass(
+        std::make_unique<ReductionTreePass<OpReducer<FuncOp>, SinglePath>>(
+            test));
+  }
+
+  ModuleOp m = moduleRef.get().clone();
+
+  if (failed(pm.run(m)))
+    llvm::report_fatal_error("Error running the reduction pass pipeline");
+
+  m.print(output->os());
   output->keep();
 
   return 0;

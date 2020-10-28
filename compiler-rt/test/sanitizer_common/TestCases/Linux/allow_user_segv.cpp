@@ -1,5 +1,7 @@
 // Regression test for
 // https://code.google.com/p/address-sanitizer/issues/detail?id=180
+// Fails with debug checks: https://bugs.llvm.org/show_bug.cgi?id=46860
+// XFAIL: !compiler-rt-optimized && tsan
 
 // RUN: %clangxx -O0 %s -o %t
 

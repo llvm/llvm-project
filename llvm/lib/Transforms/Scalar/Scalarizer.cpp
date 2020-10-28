@@ -941,13 +941,13 @@ bool ScalarizerVisitor::finish() {
         for (unsigned I = 0; I < Count; ++I)
           Res = Builder.CreateInsertElement(Res, CV[I], Builder.getInt32(I),
                                             Op->getName() + ".upto" + Twine(I));
+        Res->takeName(Op);
       } else {
         assert(CV.size() == 1 && Op->getType() == CV[0]->getType());
         Res = CV[0];
         if (Op == Res)
           continue;
       }
-      Res->takeName(Op);
       Op->replaceAllUsesWith(Res);
     }
     PotentiallyDeadInstrs.emplace_back(Op);

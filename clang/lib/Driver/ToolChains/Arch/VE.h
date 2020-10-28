@@ -22,8 +22,6 @@ namespace ve {
 
 void getVETargetFeatures(const Driver &D, const llvm::opt::ArgList &Args,
                          std::vector<llvm::StringRef> &Features);
-const char *getVEAsmModeForCPU(llvm::StringRef Name,
-                               const llvm::Triple &Triple);
 
 } // end namespace ve
 } // namespace tools

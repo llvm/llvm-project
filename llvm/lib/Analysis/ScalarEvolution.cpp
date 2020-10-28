@@ -447,26 +447,28 @@ ScalarEvolution::getConstant(Type *Ty, uint64_t V, bool isSigned) {
 
 SCEVCastExpr::SCEVCastExpr(const FoldingSetNodeIDRef ID,
                            unsigned SCEVTy, const SCEV *op, Type *ty)
-  : SCEV(ID, SCEVTy, computeExpressionSize(op)), Op(op), Ty(ty) {}
+  : SCEV(ID, SCEVTy, computeExpressionSize(op)), Ty(ty) {
+    Operands[0] = op;
+}
 
 SCEVTruncateExpr::SCEVTruncateExpr(const FoldingSetNodeIDRef ID,
                                    const SCEV *op, Type *ty)
   : SCEVCastExpr(ID, scTruncate, op, ty) {
-  assert(Op->getType()->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
+  assert(getOperand()->getType()->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
          "Cannot truncate non-integer value!");
 }
 
 SCEVZeroExtendExpr::SCEVZeroExtendExpr(const FoldingSetNodeIDRef ID,
                                        const SCEV *op, Type *ty)
   : SCEVCastExpr(ID, scZeroExtend, op, ty) {
-  assert(Op->getType()->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
+  assert(getOperand()->getType()->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
          "Cannot zero extend non-integer value!");
 }
 
 SCEVSignExtendExpr::SCEVSignExtendExpr(const FoldingSetNodeIDRef ID,
                                        const SCEV *op, Type *ty)
   : SCEVCastExpr(ID, scSignExtend, op, ty) {
-  assert(Op->getType()->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
+  assert(getOperand()->getType()->isIntOrPtrTy() && Ty->isIntOrPtrTy() &&
          "Cannot sign extend non-integer value!");
 }
 
@@ -10561,7 +10563,13 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   if (isLoopEntryGuardedByCond(L, Cond, getMinusSCEV(Start, Stride), RHS))
     BECount = BECountIfBackedgeTaken;
   else {
-    End = IsSigned ? getSMaxExpr(RHS, Start) : getUMaxExpr(RHS, Start);
+    // If we know that RHS >= Start in the context of loop, then we know that
+    // max(RHS, Start) = RHS at this point.
+    if (isLoopEntryGuardedByCond(
+            L, IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE, RHS, Start))
+      End = RHS;
+    else
+      End = IsSigned ? getSMaxExpr(RHS, Start) : getUMaxExpr(RHS, Start);
     BECount = computeBECount(getMinusSCEV(End, Start), Stride, false);
   }
 
@@ -10628,8 +10636,15 @@ ScalarEvolution::howManyGreaterThans(const SCEV *LHS, const SCEV *RHS,
 
   const SCEV *Start = IV->getStart();
   const SCEV *End = RHS;
-  if (!isLoopEntryGuardedByCond(L, Cond, getAddExpr(Start, Stride), RHS))
-    End = IsSigned ? getSMinExpr(RHS, Start) : getUMinExpr(RHS, Start);
+  if (!isLoopEntryGuardedByCond(L, Cond, getAddExpr(Start, Stride), RHS)) {
+    // If we know that Start >= RHS in the context of loop, then we know that
+    // min(RHS, Start) = RHS at this point.
+    if (isLoopEntryGuardedByCond(
+            L, IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE, Start, RHS))
+      End = RHS;
+    else
+      End = IsSigned ? getSMinExpr(RHS, Start) : getUMinExpr(RHS, Start);
+  }
 
   const SCEV *BECount = computeBECount(getMinusSCEV(Start, End), Stride, false);
 

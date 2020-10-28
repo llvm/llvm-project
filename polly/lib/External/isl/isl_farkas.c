@@ -12,6 +12,9 @@
 #include <isl/set.h>
 #include <isl_space_private.h>
 #include <isl_seq.h>
+#include <isl_aff_private.h>
+#include <isl_mat_private.h>
+#include <isl_factorization.h>
 
 /*
  * Let C be a cone and define
@@ -222,29 +225,34 @@ static __isl_give isl_basic_set *rational_universe(__isl_take isl_space *space)
  * As explained above, we add an extra dimension to represent
  * the coefficient of the constant term when going from solutions
  * to coefficients (shift == 1) and we drop the extra dimension when going
- * in the opposite direction (shift == -1).  "space" is the space in which
- * the dual should be created.
+ * in the opposite direction (shift == -1).
+ * The dual can be created in an arbitrary space.
+ * The caller is responsible for putting the result in the appropriate space.
  *
  * If "bset" is (obviously) empty, then the way this emptiness
  * is represented by the constraints does not allow for the application
  * of the standard farkas algorithm.  We therefore handle this case
  * specifically and return the universe basic set.
  */
-static __isl_give isl_basic_set *farkas(__isl_take isl_space *space,
-	__isl_take isl_basic_set *bset, int shift)
+static __isl_give isl_basic_set *farkas(__isl_take isl_basic_set *bset,
+	int shift)
 {
 	int i, j, k;
+	isl_ctx *ctx;
+	isl_space *space;
 	isl_basic_set *dual = NULL;
 	isl_size total;
 
+	total = isl_basic_set_dim(bset, isl_dim_all);
+	if (total < 0)
+		return isl_basic_set_free(bset);
+
+	ctx = isl_basic_set_get_ctx(bset);
+	space = isl_space_set_alloc(ctx, 0, total + shift);
 	if (isl_basic_set_plain_is_empty(bset)) {
 		isl_basic_set_free(bset);
 		return rational_universe(space);
 	}
-
-	total = isl_basic_set_dim(bset, isl_dim_all);
-	if (total < 0)
-		space = isl_space_free(space);
 
 	dual = isl_basic_set_alloc_space(space, bset->n_eq + bset->n_ineq,
 					total, bset->n_ineq + (shift > 0));
@@ -307,6 +315,525 @@ error:
 }
 
 /* Construct a basic set containing the tuples of coefficients of all
+ * valid affine constraints on the given basic set, ignoring
+ * the space of input and output and without any further decomposition.
+ */
+static __isl_give isl_basic_set *isl_basic_set_coefficients_base(
+	__isl_take isl_basic_set *bset)
+{
+	return farkas(bset, 1);
+}
+
+/* Return the inverse mapping of "morph".
+ */
+static __isl_give isl_mat *peek_inv(__isl_keep isl_morph *morph)
+{
+	return morph ? morph->inv : NULL;
+}
+
+/* Return a copy of the inverse mapping of "morph".
+ */
+static __isl_give isl_mat *get_inv(__isl_keep isl_morph *morph)
+{
+	return isl_mat_copy(peek_inv(morph));
+}
+
+/* Information about a single factor within isl_basic_set_coefficients_product.
+ *
+ * "start" is the position of the first coefficient (beyond
+ * the one corresponding to the constant term) in this factor.
+ * "dim" is the number of coefficients (other than
+ * the one corresponding to the constant term) in this factor.
+ * "n_line" is the number of lines in "coeff".
+ * "n_ray" is the number of rays (other than lines) in "coeff".
+ * "n_vertex" is the number of vertices in "coeff".
+ *
+ * While iterating over the vertices,
+ * "pos" represents the inequality constraint corresponding
+ * to the current vertex.
+ */
+struct isl_coefficients_factor_data {
+	isl_basic_set *coeff;
+	int start;
+	int dim;
+	int n_line;
+	int n_ray;
+	int n_vertex;
+	int pos;
+};
+
+/* Internal data structure for isl_basic_set_coefficients_product.
+ * "n" is the number of factors in the factorization.
+ * "pos" is the next factor that will be considered.
+ * "start_next" is the position of the first coefficient (beyond
+ * the one corresponding to the constant term) in the next factor.
+ * "factors" contains information about the individual "n" factors.
+ */
+struct isl_coefficients_product_data {
+	int n;
+	int pos;
+	int start_next;
+	struct isl_coefficients_factor_data *factors;
+};
+
+/* Initialize the internal data structure for
+ * isl_basic_set_coefficients_product.
+ */
+static isl_stat isl_coefficients_product_data_init(isl_ctx *ctx,
+	struct isl_coefficients_product_data *data, int n)
+{
+	data->n = n;
+	data->pos = 0;
+	data->start_next = 0;
+	data->factors = isl_calloc_array(ctx,
+					struct isl_coefficients_factor_data, n);
+	if (!data->factors)
+		return isl_stat_error;
+	return isl_stat_ok;
+}
+
+/* Free all memory allocated in "data".
+ */
+static void isl_coefficients_product_data_clear(
+	struct isl_coefficients_product_data *data)
+{
+	int i;
+
+	if (data->factors) {
+		for (i = 0; i < data->n; ++i) {
+			isl_basic_set_free(data->factors[i].coeff);
+		}
+	}
+	free(data->factors);
+}
+
+/* Does inequality "ineq" in the (dual) basic set "bset" represent a ray?
+ * In particular, does it have a zero denominator
+ * (i.e., a zero coefficient for the constant term)?
+ */
+static int is_ray(__isl_keep isl_basic_set *bset, int ineq)
+{
+	return isl_int_is_zero(bset->ineq[ineq][1]);
+}
+
+/* isl_factorizer_every_factor_basic_set callback that
+ * constructs a basic set containing the tuples of coefficients of all
+ * valid affine constraints on the factor "bset" and
+ * extracts further information that will be used
+ * when combining the results over the different factors.
+ */
+static isl_bool isl_basic_set_coefficients_factor(
+	__isl_keep isl_basic_set *bset, void *user)
+{
+	struct isl_coefficients_product_data *data = user;
+	isl_basic_set *coeff;
+	isl_size n_eq, n_ineq, dim;
+	int i, n_ray, n_vertex;
+
+	coeff = isl_basic_set_coefficients_base(isl_basic_set_copy(bset));
+	data->factors[data->pos].coeff = coeff;
+	if (!coeff)
+		return isl_bool_error;
+
+	dim = isl_basic_set_dim(bset, isl_dim_set);
+	n_eq = isl_basic_set_n_equality(coeff);
+	n_ineq = isl_basic_set_n_inequality(coeff);
+	if (dim < 0 || n_eq < 0 || n_ineq < 0)
+		return isl_bool_error;
+	n_ray = n_vertex = 0;
+	for (i = 0; i < n_ineq; ++i) {
+		if (is_ray(coeff, i))
+			n_ray++;
+		else
+			n_vertex++;
+	}
+	data->factors[data->pos].start = data->start_next;
+	data->factors[data->pos].dim = dim;
+	data->factors[data->pos].n_line = n_eq;
+	data->factors[data->pos].n_ray = n_ray;
+	data->factors[data->pos].n_vertex = n_vertex;
+	data->pos++;
+	data->start_next += dim;
+
+	return isl_bool_true;
+}
+
+/* Clear an entry in the product, given that there is a "total" number
+ * of coefficients (other than that of the constant term).
+ */
+static void clear_entry(isl_int *entry, int total)
+{
+	isl_seq_clr(entry, 1 + 1 + total);
+}
+
+/* Set the part of the entry corresponding to factor "data",
+ * from the factor coefficients in "src".
+ */
+static void set_factor(isl_int *entry, isl_int *src,
+	struct isl_coefficients_factor_data *data)
+{
+	isl_seq_cpy(entry + 1 + 1 + data->start, src + 1 + 1, data->dim);
+}
+
+/* Set the part of the entry corresponding to factor "data",
+ * from the factor coefficients in "src" multiplied by "f".
+ */
+static void scale_factor(isl_int *entry, isl_int *src, isl_int f,
+	struct isl_coefficients_factor_data *data)
+{
+	isl_seq_scale(entry + 1 + 1 + data->start, src + 1 + 1, f, data->dim);
+}
+
+/* Add all lines from the given factor to "bset",
+ * given that there is a "total" number of coefficients
+ * (other than that of the constant term).
+ */
+static __isl_give isl_basic_set *add_lines(__isl_take isl_basic_set *bset,
+	struct isl_coefficients_factor_data *factor, int total)
+{
+	int i;
+
+	for (i = 0; i < factor->n_line; ++i) {
+		int k;
+
+		k = isl_basic_set_alloc_equality(bset);
+		if (k < 0)
+			return isl_basic_set_free(bset);
+		clear_entry(bset->eq[k], total);
+		set_factor(bset->eq[k], factor->coeff->eq[i], factor);
+	}
+
+	return bset;
+}
+
+/* Add all rays (other than lines) from the given factor to "bset",
+ * given that there is a "total" number of coefficients
+ * (other than that of the constant term).
+ */
+static __isl_give isl_basic_set *add_rays(__isl_take isl_basic_set *bset,
+	struct isl_coefficients_factor_data *data, int total)
+{
+	int i;
+	int n_ineq = data->n_ray + data->n_vertex;
+
+	for (i = 0; i < n_ineq; ++i) {
+		int k;
+
+		if (!is_ray(data->coeff, i))
+			continue;
+
+		k = isl_basic_set_alloc_inequality(bset);
+		if (k < 0)
+			return isl_basic_set_free(bset);
+		clear_entry(bset->ineq[k], total);
+		set_factor(bset->ineq[k], data->coeff->ineq[i], data);
+	}
+
+	return bset;
+}
+
+/* Move to the first vertex of the given factor starting
+ * at inequality constraint "start", setting factor->pos and
+ * returning 1 if a vertex is found.
+ */
+static int factor_first_vertex(struct isl_coefficients_factor_data *factor,
+	int start)
+{
+	int j;
+	int n = factor->n_ray + factor->n_vertex;
+
+	for (j = start; j < n; ++j) {
+		if (is_ray(factor->coeff, j))
+			continue;
+		factor->pos = j;
+		return 1;
+	}
+
+	return 0;
+}
+
+/* Move to the first constraint in each factor starting at "first"
+ * that represents a vertex.
+ * In particular, skip the initial constraints that correspond to rays.
+ */
+static void first_vertex(struct isl_coefficients_product_data *data, int first)
+{
+	int i;
+
+	for (i = first; i < data->n; ++i)
+		factor_first_vertex(&data->factors[i], 0);
+}
+
+/* Move to the next vertex in the product.
+ * In particular, move to the next vertex of the last factor.
+ * If all vertices of this last factor have already been considered,
+ * then move to the next vertex of the previous factor(s)
+ * until a factor is found that still has a next vertex.
+ * Once such a next vertex has been found, the subsequent
+ * factors are reset to the first vertex.
+ * Return 1 if any next vertex was found.
+ */
+static int next_vertex(struct isl_coefficients_product_data *data)
+{
+	int i;
+
+	for (i = data->n - 1; i >= 0; --i) {
+		struct isl_coefficients_factor_data *factor = &data->factors[i];
+
+		if (!factor_first_vertex(factor, factor->pos + 1))
+			continue;
+		first_vertex(data, i + 1);
+		return 1;
+	}
+
+	return 0;
+}
+
+/* Add a vertex to the product "bset" combining the currently selected
+ * vertices of the factors.
+ *
+ * In the dual representation, the constant term is always zero.
+ * The vertex itself is the sum of the contributions of the factors
+ * with a shared denominator in position 1.
+ *
+ * First compute the shared denominator (lcm) and
+ * then scale the numerators to this shared denominator.
+ */
+static __isl_give isl_basic_set *add_vertex(__isl_take isl_basic_set *bset,
+	struct isl_coefficients_product_data *data)
+{
+	int i;
+	int k;
+	isl_int lcm, f;
+
+	k = isl_basic_set_alloc_inequality(bset);
+	if (k < 0)
+		return isl_basic_set_free(bset);
+
+	isl_int_init(lcm);
+	isl_int_init(f);
+	isl_int_set_si(lcm, 1);
+	for (i = 0; i < data->n; ++i) {
+		struct isl_coefficients_factor_data *factor = &data->factors[i];
+		isl_basic_set *coeff = factor->coeff;
+		int pos = factor->pos;
+		isl_int_lcm(lcm, lcm, coeff->ineq[pos][1]);
+	}
+	isl_int_set_si(bset->ineq[k][0], 0);
+	isl_int_set(bset->ineq[k][1], lcm);
+
+	for (i = 0; i < data->n; ++i) {
+		struct isl_coefficients_factor_data *factor = &data->factors[i];
+		isl_basic_set *coeff = factor->coeff;
+		int pos = factor->pos;
+		isl_int_divexact(f, lcm, coeff->ineq[pos][1]);
+		scale_factor(bset->ineq[k], coeff->ineq[pos], f, factor);
+	}
+
+	isl_int_clear(f);
+	isl_int_clear(lcm);
+
+	return bset;
+}
+
+/* Combine the duals of the factors in the factorization of a basic set
+ * to form the dual of the entire basic set.
+ * The dual share the coefficient of the constant term.
+ * All other coefficients are specific to a factor.
+ * Any constraint not involving the coefficient of the constant term
+ * can therefor simply be copied into the appropriate position.
+ * This includes all equality constraints since the coefficient
+ * of the constant term can always be increased and therefore
+ * never appears in an equality constraint.
+ * The inequality constraints involving the coefficient of
+ * the constant term need to be combined across factors.
+ * In particular, if this coefficient needs to be greater than or equal
+ * to some linear combination of the other coefficients in each factor,
+ * then it needs to be greater than or equal to the sum of
+ * these linear combinations across the factors.
+ *
+ * Alternatively, the constraints of the dual can be seen
+ * as the vertices, rays and lines of the original basic set.
+ * Clearly, rays and lines can simply be copied,
+ * while vertices needs to be combined across factors.
+ * This means that the number of rays and lines in the product
+ * is equal to the sum of the numbers in the factors,
+ * while the number of vertices is the product
+ * of the number of vertices in the factors.  Note that each
+ * factor has at least one vertex.
+ * The only exception is when the factor is the dual of an obviously empty set,
+ * in which case a universe dual is created.
+ * In this case, return a universe dual for the product as well.
+ *
+ * While constructing the vertices, look for the first combination
+ * of inequality constraints that represent a vertex,
+ * construct the corresponding vertex and then move on
+ * to the next combination of inequality constraints until
+ * all combinations have been considered.
+ */
+static __isl_give isl_basic_set *construct_product(isl_ctx *ctx,
+	struct isl_coefficients_product_data *data)
+{
+	int i;
+	int n_line, n_ray, n_vertex;
+	int total;
+	isl_space *space;
+	isl_basic_set *product;
+
+	if (!data->factors)
+		return NULL;
+
+	total = data->start_next;
+
+	n_line = 0;
+	n_ray = 0;
+	n_vertex = 1;
+	for (i = 0; i < data->n; ++i) {
+		n_line += data->factors[i].n_line;
+		n_ray += data->factors[i].n_ray;
+		n_vertex *= data->factors[i].n_vertex;
+	}
+
+	space = isl_space_set_alloc(ctx, 0, 1 + total);
+	if (n_vertex == 0)
+		return rational_universe(space);
+	product = isl_basic_set_alloc_space(space, 0, n_line, n_ray + n_vertex);
+	product = isl_basic_set_set_rational(product);
+
+	for (i = 0; i < data->n; ++i)
+		product = add_lines(product, &data->factors[i], total);
+	for (i = 0; i < data->n; ++i)
+		product = add_rays(product, &data->factors[i], total);
+
+	first_vertex(data, 0);
+	do {
+		product = add_vertex(product, data);
+	} while (next_vertex(data));
+
+	return product;
+}
+
+/* Given a factorization "f" of a basic set,
+ * construct a basic set containing the tuples of coefficients of all
+ * valid affine constraints on the product of the factors, ignoring
+ * the space of input and output.
+ * Note that this product may not be equal to the original basic set,
+ * if a non-trivial transformation is involved.
+ * This is handled by the caller.
+ *
+ * Compute the tuples of coefficients for each factor separately and
+ * then combine the results.
+ */
+static __isl_give isl_basic_set *isl_basic_set_coefficients_product(
+	__isl_take isl_factorizer *f)
+{
+	struct isl_coefficients_product_data data;
+	isl_ctx *ctx;
+	isl_basic_set *coeff;
+	isl_bool every;
+
+	ctx = isl_factorizer_get_ctx(f);
+	if (isl_coefficients_product_data_init(ctx, &data, f->n_group) < 0)
+		f = isl_factorizer_free(f);
+	every = isl_factorizer_every_factor_basic_set(f,
+			&isl_basic_set_coefficients_factor, &data);
+	isl_factorizer_free(f);
+	if (every >= 0)
+		coeff = construct_product(ctx, &data);
+	else
+		coeff = NULL;
+	isl_coefficients_product_data_clear(&data);
+
+	return coeff;
+}
+
+/* Given a factorization "f" of a basic set,
+ * construct a basic set containing the tuples of coefficients of all
+ * valid affine constraints on the basic set, ignoring
+ * the space of input and output.
+ *
+ * The factorization may involve a linear transformation of the basic set.
+ * In particular, the transformed basic set is formulated
+ * in terms of x' = U x, i.e., x = V x', with V = U^{-1}.
+ * The dual is then computed in terms of y' with y'^t [z; x'] >= 0.
+ * Plugging in y' = [1 0; 0 V^t] y yields
+ * y^t [1 0; 0 V] [z; x'] >= 0, i.e., y^t [z; x] >= 0, which is
+ * the desired set of coefficients y.
+ * Note that this transformation to y' only needs to be applied
+ * if U is not the identity matrix.
+ */
+static __isl_give isl_basic_set *isl_basic_set_coefficients_morphed_product(
+	__isl_take isl_factorizer *f)
+{
+	isl_bool is_identity;
+	isl_space *space;
+	isl_mat *inv;
+	isl_multi_aff *ma;
+	isl_basic_set *coeff;
+
+	if (!f)
+		goto error;
+	is_identity = isl_mat_is_scaled_identity(peek_inv(f->morph));
+	if (is_identity < 0)
+		goto error;
+	if (is_identity)
+		return isl_basic_set_coefficients_product(f);
+
+	inv = get_inv(f->morph);
+	inv = isl_mat_transpose(inv);
+	inv = isl_mat_lin_to_aff(inv);
+
+	coeff = isl_basic_set_coefficients_product(f);
+	space = isl_space_map_from_set(isl_basic_set_get_space(coeff));
+	ma = isl_multi_aff_from_aff_mat(space, inv);
+	coeff = isl_basic_set_preimage_multi_aff(coeff, ma);
+
+	return coeff;
+error:
+	isl_factorizer_free(f);
+	return NULL;
+}
+
+/* Construct a basic set containing the tuples of coefficients of all
+ * valid affine constraints on the given basic set, ignoring
+ * the space of input and output.
+ *
+ * The caller has already checked that "bset" does not involve
+ * any local variables.  It may have parameters, though.
+ * Treat them as regular variables internally.
+ * This is especially important for the factorization,
+ * since the (original) parameters should be taken into account
+ * explicitly in this factorization.
+ *
+ * Check if the basic set can be factorized.
+ * If so, compute constraints on the coefficients of the factors
+ * separately and combine the results.
+ * Otherwise, compute the results for the input basic set as a whole.
+ */
+static __isl_give isl_basic_set *basic_set_coefficients(
+	__isl_take isl_basic_set *bset)
+{
+	isl_factorizer *f;
+	isl_size nparam;
+
+	nparam = isl_basic_set_dim(bset, isl_dim_param);
+	if (nparam < 0)
+		return isl_basic_set_free(bset);
+	bset = isl_basic_set_move_dims(bset, isl_dim_set, 0,
+					    isl_dim_param, 0, nparam);
+
+	f = isl_basic_set_factorizer(bset);
+	if (!f)
+		return isl_basic_set_free(bset);
+	if (f->n_group > 0) {
+		isl_basic_set_free(bset);
+		return isl_basic_set_coefficients_morphed_product(f);
+	}
+	isl_factorizer_free(f);
+	return isl_basic_set_coefficients_base(bset);
+}
+
+/* Construct a basic set containing the tuples of coefficients of all
  * valid affine constraints on the given basic set.
  */
 __isl_give isl_basic_set *isl_basic_set_coefficients(
@@ -324,7 +851,9 @@ __isl_give isl_basic_set *isl_basic_set_coefficients(
 	space = isl_basic_set_get_space(bset);
 	space = isl_space_coefficients(space);
 
-	return farkas(space, bset, 1);
+	bset = basic_set_coefficients(bset);
+	bset = isl_basic_set_reset_space(bset, space);
+	return bset;
 error:
 	isl_basic_set_free(bset);
 	return NULL;
@@ -349,7 +878,9 @@ __isl_give isl_basic_set *isl_basic_set_solutions(
 	space = isl_basic_set_get_space(bset);
 	space = isl_space_solutions(space);
 
-	return farkas(space, bset, -1);
+	bset = farkas(bset, -1);
+	bset = isl_basic_set_reset_space(bset, space);
+	return bset;
 error:
 	isl_basic_set_free(bset);
 	return NULL;

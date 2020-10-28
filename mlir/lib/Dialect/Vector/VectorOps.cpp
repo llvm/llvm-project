@@ -30,12 +30,71 @@
 using namespace mlir;
 using namespace mlir::vector;
 
+/// Helper enum to classify mask value.
+enum class MaskFormat {
+  AllTrue = 0,
+  AllFalse = 1,
+  Unknown = 2,
+};
+
+/// Helper method to classify a 1-D mask value. Currently, the method
+/// looks "under the hood" of a constant value with dense attributes
+/// and a constant mask operation (since the client may be called at
+/// various stages during progressive lowering).
+static MaskFormat get1DMaskFormat(Value mask) {
+  if (auto c = mask.getDefiningOp<ConstantOp>()) {
+    // Inspect constant dense values. We count up for bits that
+    // are set, count down for bits that are cleared, and bail
+    // when a mix is detected.
+    if (auto denseElts = c.value().dyn_cast<DenseIntElementsAttr>()) {
+      int64_t val = 0;
+      for (bool b : denseElts.getValues<bool>())
+        if (b && val >= 0)
+          val++;
+        else if (!b && val <= 0)
+          val--;
+        else
+          return MaskFormat::Unknown;
+      if (val > 0)
+        return MaskFormat::AllTrue;
+      if (val < 0)
+        return MaskFormat::AllFalse;
+    }
+  } else if (auto m = mask.getDefiningOp<ConstantMaskOp>()) {
+    // Inspect constant mask index. If the index exceeds the
+    // dimension size, all bits are set. If the index is zero
+    // or less, no bits are set.
+    ArrayAttr masks = m.mask_dim_sizes();
+    assert(masks.size() == 1);
+    int64_t i = masks[0].cast<IntegerAttr>().getInt();
+    int64_t u = m.getType().cast<VectorType>().getDimSize(0);
+    if (i >= u)
+      return MaskFormat::AllTrue;
+    if (i <= 0)
+      return MaskFormat::AllFalse;
+  }
+  return MaskFormat::Unknown;
+}
+
+/// Helper method to cast a 1-D memref<10xf32> "base" into a
+/// memref<vector<10xf32>> in the output parameter "newBase",
+/// using the 'element' vector type "vt". Returns true on success.
+static bool castedToMemRef(Location loc, Value base, MemRefType mt,
+                           VectorType vt, PatternRewriter &rewriter,
+                           Value &newBase) {
+  // The vector.type_cast operation does not accept unknown memref<?xf32>.
+  // TODO: generalize the cast and accept this case too
+  if (!mt.hasStaticShape())
+    return false;
+  newBase = rewriter.create<TypeCastOp>(loc, MemRefType::get({}, vt), base);
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // VectorDialect
 //===----------------------------------------------------------------------===//
 
-VectorDialect::VectorDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context) {
+void VectorDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Vector/VectorOps.cpp.inc"
@@ -184,9 +243,9 @@ static ParseResult parseContractionOp(OpAsmParser &parser,
   auto lhsType = types[0].cast<VectorType>();
   auto rhsType = types[1].cast<VectorType>();
   auto maskElementType = parser.getBuilder().getI1Type();
-  SmallVector<Type, 2> maskTypes;
-  maskTypes.push_back(VectorType::get(lhsType.getShape(), maskElementType));
-  maskTypes.push_back(VectorType::get(rhsType.getShape(), maskElementType));
+  std::array<Type, 2> maskTypes = {
+      VectorType::get(lhsType.getShape(), maskElementType),
+      VectorType::get(rhsType.getShape(), maskElementType)};
   if (parser.resolveOperands(masksInfo, maskTypes, loc, result.operands))
     return failure();
   return success();
@@ -462,12 +521,10 @@ std::vector<std::pair<int64_t, int64_t>> ContractionOp::getBatchDimMap() {
 }
 
 SmallVector<AffineMap, 4> ContractionOp::getIndexingMaps() {
-  SmallVector<AffineMap, 4> res;
-  auto mapAttrs = indexing_maps().getValue();
-  res.reserve(mapAttrs.size());
-  for (auto mapAttr : mapAttrs)
-    res.push_back(mapAttr.cast<AffineMapAttr>().getValue());
-  return res;
+  return llvm::to_vector<4>(
+      llvm::map_range(indexing_maps().getValue(), [](Attribute mapAttr) {
+        return mapAttr.cast<AffineMapAttr>().getValue();
+      }));
 }
 
 Optional<SmallVector<int64_t, 4>> ContractionOp::getShapeForUnroll() {
@@ -1503,37 +1560,33 @@ static LogicalResult verifyTransferOp(Operation *op, MemRefType memrefType,
   if (auto memrefVectorElementType = memrefElementType.dyn_cast<VectorType>()) {
     // Memref has vector element type.
 
-    // Check that 'memrefVectorElementType' and vector element types match.
-    if (memrefVectorElementType.getElementType() != vectorType.getElementType())
+    unsigned memrefVecSize = memrefVectorElementType.getElementTypeBitWidth() *
+                             memrefVectorElementType.getShape().back();
+    unsigned resultVecSize =
+        vectorType.getElementTypeBitWidth() * vectorType.getShape().back();
+    if (resultVecSize % memrefVecSize != 0)
       return op->emitOpError(
-          "requires memref and vector types of the same elemental type");
+          "requires the bitwidth of the minor 1-D vector to be an integral "
+          "multiple of the bitwidth of the minor 1-D vector of the memref");
 
-    // Check that memref vector type is a suffix of 'vectorType.
     unsigned memrefVecEltRank = memrefVectorElementType.getRank();
     unsigned resultVecRank = vectorType.getRank();
     if (memrefVecEltRank > resultVecRank)
       return op->emitOpError(
           "requires memref vector element and vector result ranks to match.");
-    // TODO: Move this to isSuffix in Vector/Utils.h.
     unsigned rankOffset = resultVecRank - memrefVecEltRank;
-    auto memrefVecEltShape = memrefVectorElementType.getShape();
-    auto resultVecShape = vectorType.getShape();
-    for (unsigned i = 0; i < memrefVecEltRank; ++i)
-      if (memrefVecEltShape[i] != resultVecShape[rankOffset + i])
-        return op->emitOpError(
-            "requires memref vector element shape to match suffix of "
-            "vector result shape.");
     // Check that permutation map results match 'rankOffset' of vector type.
     if (permutationMap.getNumResults() != rankOffset)
       return op->emitOpError("requires a permutation_map with result dims of "
                              "the same rank as the vector type");
   } else {
     // Memref has scalar element type.
-
-    // Check that memref and vector element types match.
-    if (memrefType.getElementType() != vectorType.getElementType())
+    unsigned resultVecSize =
+        vectorType.getElementTypeBitWidth() * vectorType.getShape().back();
+    if (resultVecSize % memrefElementType.getIntOrFloatBitWidth() != 0)
       return op->emitOpError(
-          "requires memref and vector types of the same elemental type");
+          "requires the bitwidth of the minor 1-D vector to be an integral "
+          "multiple of the bitwidth of the memref element type");
 
     // Check that permutation map results match rank of vector type.
     if (permutationMap.getNumResults() != vectorType.getRank())
@@ -1563,7 +1616,7 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vector, Value memref, ValueRange indices,
                            AffineMap permutationMap,
                            ArrayRef<bool> maybeMasked) {
-  Type elemType = vector.cast<VectorType>().getElementType();
+  Type elemType = memref.getType().cast<MemRefType>().getElementType();
   Value padding = builder.create<ConstantOp>(result.location, elemType,
                                              builder.getZeroAttr(elemType));
   if (maybeMasked.empty())
@@ -1676,9 +1729,9 @@ static LogicalResult verify(TransferReadOp op) {
       return op.emitOpError("requires valid padding vector elemental type");
 
     // Check that padding type and vector element types match.
-    if (paddingType != vectorType.getElementType())
+    if (paddingType != memrefElementType)
       return op.emitOpError(
-          "requires formal padding and vector of the same elemental type");
+          "requires formal padding and memref of the same elemental type");
   }
 
   return verifyPermutationMap(permutationMap,
@@ -1854,8 +1907,102 @@ LogicalResult TransferWriteOp::fold(ArrayRef<Attribute>,
 }
 
 Optional<SmallVector<int64_t, 4>> TransferWriteOp::getShapeForUnroll() {
-  auto s = getVectorType().getShape();
-  return SmallVector<int64_t, 4>{s.begin(), s.end()};
+  return llvm::to_vector<4>(getVectorType().getShape());
+}
+
+//===----------------------------------------------------------------------===//
+// MaskedLoadOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(MaskedLoadOp op) {
+  VectorType maskVType = op.getMaskVectorType();
+  VectorType passVType = op.getPassThruVectorType();
+  VectorType resVType = op.getResultVectorType();
+
+  if (resVType.getElementType() != op.getMemRefType().getElementType())
+    return op.emitOpError("base and result element type should match");
+
+  if (resVType.getDimSize(0) != maskVType.getDimSize(0))
+    return op.emitOpError("expected result dim to match mask dim");
+  if (resVType != passVType)
+    return op.emitOpError("expected pass_thru of same type as result type");
+  return success();
+}
+
+namespace {
+class MaskedLoadFolder final : public OpRewritePattern<MaskedLoadOp> {
+public:
+  using OpRewritePattern<MaskedLoadOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(MaskedLoadOp load,
+                                PatternRewriter &rewriter) const override {
+    Value newBase;
+    switch (get1DMaskFormat(load.mask())) {
+    case MaskFormat::AllTrue:
+      if (!castedToMemRef(load.getLoc(), load.base(), load.getMemRefType(),
+                          load.getResultVectorType(), rewriter, newBase))
+        return failure();
+      rewriter.replaceOpWithNewOp<LoadOp>(load, newBase);
+      return success();
+    case MaskFormat::AllFalse:
+      rewriter.replaceOp(load, load.pass_thru());
+      return success();
+    case MaskFormat::Unknown:
+      return failure();
+    }
+    llvm_unreachable("Unexpected 1DMaskFormat on MaskedLoad");
+  }
+};
+} // namespace
+
+void MaskedLoadOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<MaskedLoadFolder>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// MaskedStoreOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(MaskedStoreOp op) {
+  VectorType maskVType = op.getMaskVectorType();
+  VectorType valueVType = op.getValueVectorType();
+
+  if (valueVType.getElementType() != op.getMemRefType().getElementType())
+    return op.emitOpError("base and value element type should match");
+
+  if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
+    return op.emitOpError("expected value dim to match mask dim");
+  return success();
+}
+
+namespace {
+class MaskedStoreFolder final : public OpRewritePattern<MaskedStoreOp> {
+public:
+  using OpRewritePattern<MaskedStoreOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(MaskedStoreOp store,
+                                PatternRewriter &rewriter) const override {
+    Value newBase;
+    switch (get1DMaskFormat(store.mask())) {
+    case MaskFormat::AllTrue:
+      if (!castedToMemRef(store.getLoc(), store.base(), store.getMemRefType(),
+                          store.getValueVectorType(), rewriter, newBase))
+        return failure();
+      rewriter.replaceOpWithNewOp<StoreOp>(store, store.value(), newBase);
+      return success();
+    case MaskFormat::AllFalse:
+      rewriter.eraseOp(store);
+      return success();
+    case MaskFormat::Unknown:
+      return failure();
+    }
+    llvm_unreachable("Unexpected 1DMaskFormat on MaskedStore");
+  }
+};
+} // namespace
+
+void MaskedStoreOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<MaskedStoreFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1882,6 +2029,31 @@ static LogicalResult verify(GatherOp op) {
   return success();
 }
 
+namespace {
+class GatherFolder final : public OpRewritePattern<GatherOp> {
+public:
+  using OpRewritePattern<GatherOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(GatherOp gather,
+                                PatternRewriter &rewriter) const override {
+    switch (get1DMaskFormat(gather.mask())) {
+    case MaskFormat::AllTrue:
+      return failure(); // no unmasked equivalent
+    case MaskFormat::AllFalse:
+      rewriter.replaceOp(gather, gather.pass_thru());
+      return success();
+    case MaskFormat::Unknown:
+      return failure();
+    }
+    llvm_unreachable("Unexpected 1DMaskFormat on GatherFolder");
+  }
+};
+} // namespace
+
+void GatherOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                           MLIRContext *context) {
+  results.insert<GatherFolder>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // ScatterOp
 //===----------------------------------------------------------------------===//
@@ -1899,6 +2071,128 @@ static LogicalResult verify(ScatterOp op) {
   if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
     return op.emitOpError("expected value dim to match mask dim");
   return success();
+}
+
+namespace {
+class ScatterFolder final : public OpRewritePattern<ScatterOp> {
+public:
+  using OpRewritePattern<ScatterOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(ScatterOp scatter,
+                                PatternRewriter &rewriter) const override {
+    switch (get1DMaskFormat(scatter.mask())) {
+    case MaskFormat::AllTrue:
+      return failure(); // no unmasked equivalent
+    case MaskFormat::AllFalse:
+      rewriter.eraseOp(scatter);
+      return success();
+    case MaskFormat::Unknown:
+      return failure();
+    }
+    llvm_unreachable("Unexpected 1DMaskFormat on ScatterFolder");
+  }
+};
+} // namespace
+
+void ScatterOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                            MLIRContext *context) {
+  results.insert<ScatterFolder>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// ExpandLoadOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(ExpandLoadOp op) {
+  VectorType maskVType = op.getMaskVectorType();
+  VectorType passVType = op.getPassThruVectorType();
+  VectorType resVType = op.getResultVectorType();
+
+  if (resVType.getElementType() != op.getMemRefType().getElementType())
+    return op.emitOpError("base and result element type should match");
+
+  if (resVType.getDimSize(0) != maskVType.getDimSize(0))
+    return op.emitOpError("expected result dim to match mask dim");
+  if (resVType != passVType)
+    return op.emitOpError("expected pass_thru of same type as result type");
+  return success();
+}
+
+namespace {
+class ExpandLoadFolder final : public OpRewritePattern<ExpandLoadOp> {
+public:
+  using OpRewritePattern<ExpandLoadOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(ExpandLoadOp expand,
+                                PatternRewriter &rewriter) const override {
+    Value newBase;
+    switch (get1DMaskFormat(expand.mask())) {
+    case MaskFormat::AllTrue:
+      if (!castedToMemRef(expand.getLoc(), expand.base(),
+                          expand.getMemRefType(), expand.getResultVectorType(),
+                          rewriter, newBase))
+        return failure();
+      rewriter.replaceOpWithNewOp<LoadOp>(expand, newBase);
+      return success();
+    case MaskFormat::AllFalse:
+      rewriter.replaceOp(expand, expand.pass_thru());
+      return success();
+    case MaskFormat::Unknown:
+      return failure();
+    }
+    llvm_unreachable("Unexpected 1DMaskFormat on ExpandLoadFolder");
+  }
+};
+} // namespace
+
+void ExpandLoadOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<ExpandLoadFolder>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// CompressStoreOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(CompressStoreOp op) {
+  VectorType maskVType = op.getMaskVectorType();
+  VectorType valueVType = op.getValueVectorType();
+
+  if (valueVType.getElementType() != op.getMemRefType().getElementType())
+    return op.emitOpError("base and value element type should match");
+
+  if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
+    return op.emitOpError("expected value dim to match mask dim");
+  return success();
+}
+
+namespace {
+class CompressStoreFolder final : public OpRewritePattern<CompressStoreOp> {
+public:
+  using OpRewritePattern<CompressStoreOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(CompressStoreOp compress,
+                                PatternRewriter &rewriter) const override {
+    Value newBase;
+    switch (get1DMaskFormat(compress.mask())) {
+    case MaskFormat::AllTrue:
+      if (!castedToMemRef(compress.getLoc(), compress.base(),
+                          compress.getMemRefType(),
+                          compress.getValueVectorType(), rewriter, newBase))
+        return failure();
+      rewriter.replaceOpWithNewOp<StoreOp>(compress, compress.value(), newBase);
+      return success();
+    case MaskFormat::AllFalse:
+      rewriter.eraseOp(compress);
+      return success();
+    case MaskFormat::Unknown:
+      return failure();
+    }
+    llvm_unreachable("Unexpected 1DMaskFormat on CompressStoreFolder");
+  }
+};
+} // namespace
+
+void CompressStoreOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
+  results.insert<CompressStoreFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2007,6 +2301,42 @@ OpFoldResult ShapeCastOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// VectorBitCastOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(BitCastOp op) {
+  auto sourceVectorType = op.getSourceVectorType();
+  auto resultVectorType = op.getResultVectorType();
+
+  for (int64_t i = 0, e = sourceVectorType.getRank() - 1; i < e; i++) {
+    if (sourceVectorType.getDimSize(i) != resultVectorType.getDimSize(i))
+      return op.emitOpError("dimension size mismatch at: ") << i;
+  }
+
+  if (sourceVectorType.getElementTypeBitWidth() *
+          sourceVectorType.getShape().back() !=
+      resultVectorType.getElementTypeBitWidth() *
+          resultVectorType.getShape().back())
+    return op.emitOpError(
+        "source/result bitwidth of the minor 1-D vectors must be equal");
+
+  return success();
+}
+
+OpFoldResult BitCastOp::fold(ArrayRef<Attribute> operands) {
+  // Nop cast.
+  if (source().getType() == result().getType())
+    return source();
+
+  // Canceling bitcasts.
+  if (auto otherOp = source().getDefiningOp<BitCastOp>())
+    if (result().getType() == otherOp.source().getType())
+      return otherOp.source();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // TypeCastOp
 //===----------------------------------------------------------------------===//
 
@@ -2014,11 +2344,8 @@ static SmallVector<int64_t, 8> extractShape(MemRefType memRefType) {
   auto vectorType = memRefType.getElementType().dyn_cast<VectorType>();
   SmallVector<int64_t, 8> res(memRefType.getShape().begin(),
                               memRefType.getShape().end());
-  if (vectorType) {
-    res.reserve(memRefType.getRank() + vectorType.getRank());
-    for (auto s : vectorType.getShape())
-      res.push_back(s);
-  }
+  if (vectorType)
+    res.append(vectorType.getShape().begin(), vectorType.getShape().end());
   return res;
 }
 
@@ -2331,7 +2658,9 @@ void CreateMaskOp::getCanonicalizationPatterns(
 
 void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<CreateMaskFolder, StridedSliceConstantMaskFolder,
+  patterns.insert<CreateMaskFolder, MaskedLoadFolder, MaskedStoreFolder,
+                  GatherFolder, ScatterFolder, ExpandLoadFolder,
+                  CompressStoreFolder, StridedSliceConstantMaskFolder,
                   TransposeFolder>(context);
 }
 

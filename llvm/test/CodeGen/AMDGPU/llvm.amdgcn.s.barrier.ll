@@ -51,45 +51,39 @@ define amdgpu_kernel void @test_barrier(i32 addrspace(1)* %out, i32 %size) #0 {
 ; VARIANT2:       ; %bb.0: ; %entry
 ; VARIANT2-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; VARIANT2-NEXT:    s_load_dword s0, s[0:1], 0x2c
-; VARIANT2-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
+; VARIANT2-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VARIANT2-NEXT:    s_waitcnt lgkmcnt(0)
-; VARIANT2-NEXT:    v_mov_b32_e32 v2, s3
-; VARIANT2-NEXT:    v_xad_u32 v3, v0, -1, s0
-; VARIANT2-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
-; VARIANT2-NEXT:    v_add_co_u32_e32 v1, vcc, s2, v1
-; VARIANT2-NEXT:    v_lshlrev_b64 v[3:4], 2, v[3:4]
-; VARIANT2-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v2, vcc
-; VARIANT2-NEXT:    global_store_dword v[1:2], v0, off
-; VARIANT2-NEXT:    v_mov_b32_e32 v0, s3
-; VARIANT2-NEXT:    v_add_co_u32_e32 v3, vcc, s2, v3
-; VARIANT2-NEXT:    v_addc_co_u32_e32 v4, vcc, v0, v4, vcc
+; VARIANT2-NEXT:    global_store_dword v2, v0, s[2:3]
+; VARIANT2-NEXT:    v_xad_u32 v0, v0, -1, s0
+; VARIANT2-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VARIANT2-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
+; VARIANT2-NEXT:    v_mov_b32_e32 v3, s3
+; VARIANT2-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; VARIANT2-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
 ; VARIANT2-NEXT:    s_waitcnt vmcnt(0)
 ; VARIANT2-NEXT:    s_barrier
-; VARIANT2-NEXT:    global_load_dword v0, v[3:4], off
+; VARIANT2-NEXT:    global_load_dword v0, v[0:1], off
 ; VARIANT2-NEXT:    s_waitcnt vmcnt(0)
-; VARIANT2-NEXT:    global_store_dword v[1:2], v0, off
+; VARIANT2-NEXT:    global_store_dword v2, v0, s[2:3]
 ; VARIANT2-NEXT:    s_endpgm
 ;
 ; VARIANT3-LABEL: test_barrier:
 ; VARIANT3:       ; %bb.0: ; %entry
 ; VARIANT3-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; VARIANT3-NEXT:    s_load_dword s0, s[0:1], 0x2c
-; VARIANT3-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
+; VARIANT3-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; VARIANT3-NEXT:    s_waitcnt lgkmcnt(0)
-; VARIANT3-NEXT:    v_mov_b32_e32 v2, s3
-; VARIANT3-NEXT:    v_xad_u32 v3, v0, -1, s0
-; VARIANT3-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
-; VARIANT3-NEXT:    v_add_co_u32_e32 v1, vcc, s2, v1
-; VARIANT3-NEXT:    v_lshlrev_b64 v[3:4], 2, v[3:4]
-; VARIANT3-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v2, vcc
-; VARIANT3-NEXT:    global_store_dword v[1:2], v0, off
-; VARIANT3-NEXT:    v_mov_b32_e32 v0, s3
-; VARIANT3-NEXT:    v_add_co_u32_e32 v3, vcc, s2, v3
-; VARIANT3-NEXT:    v_addc_co_u32_e32 v4, vcc, v0, v4, vcc
+; VARIANT3-NEXT:    global_store_dword v2, v0, s[2:3]
+; VARIANT3-NEXT:    v_xad_u32 v0, v0, -1, s0
+; VARIANT3-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VARIANT3-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
+; VARIANT3-NEXT:    v_mov_b32_e32 v3, s3
+; VARIANT3-NEXT:    v_add_co_u32_e32 v0, vcc, s2, v0
+; VARIANT3-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
 ; VARIANT3-NEXT:    s_barrier
-; VARIANT3-NEXT:    global_load_dword v0, v[3:4], off
+; VARIANT3-NEXT:    global_load_dword v0, v[0:1], off
 ; VARIANT3-NEXT:    s_waitcnt vmcnt(0)
-; VARIANT3-NEXT:    global_store_dword v[1:2], v0, off
+; VARIANT3-NEXT:    global_store_dword v2, v0, s[2:3]
 ; VARIANT3-NEXT:    s_endpgm
 entry:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()

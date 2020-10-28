@@ -15,7 +15,6 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Predicate.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-defines.h"
@@ -32,6 +31,9 @@
 
 namespace lldb_private {
 class Debugger;
+namespace repro {
+class DataRecorder;
+}
 }
 
 namespace curses {
@@ -202,6 +204,9 @@ public:
   virtual void IOHandlerActivated(IOHandler &io_handler, bool interactive) {}
 
   virtual void IOHandlerDeactivated(IOHandler &io_handler) {}
+
+  virtual llvm::Optional<std::string> IOHandlerSuggestion(IOHandler &io_handler,
+                                                          llvm::StringRef line);
 
   virtual void IOHandlerComplete(IOHandler &io_handler,
                                  CompletionRequest &request);
@@ -419,6 +424,9 @@ private:
 
   static int FixIndentationCallback(Editline *editline, const StringList &lines,
                                     int cursor_position, void *baton);
+
+  static llvm::Optional<std::string> SuggestionCallback(llvm::StringRef line,
+                                                        void *baton);
 
   static void AutoCompleteCallback(CompletionRequest &request, void *baton);
 #endif

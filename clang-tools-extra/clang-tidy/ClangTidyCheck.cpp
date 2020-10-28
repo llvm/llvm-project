@@ -10,6 +10,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -126,7 +127,7 @@ bool ClangTidyCheck::OptionsView::get<bool>(StringRef LocalName,
   llvm::Expected<bool> ValueOr = get<bool>(LocalName);
   if (ValueOr)
     return *ValueOr;
-  logErrToStdErr(ValueOr.takeError());
+  logIfOptionParsingError(ValueOr.takeError());
   return Default;
 }
 
@@ -145,7 +146,7 @@ bool ClangTidyCheck::OptionsView::getLocalOrGlobal<bool>(StringRef LocalName,
   llvm::Expected<bool> ValueOr = getLocalOrGlobal<bool>(LocalName);
   if (ValueOr)
     return *ValueOr;
-  logErrToStdErr(ValueOr.takeError());
+  logIfOptionParsingError(ValueOr.takeError());
   return Default;
 }
 
@@ -204,13 +205,33 @@ llvm::Expected<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
                                                       Iter->getValue().Value);
 }
 
-void ClangTidyCheck::OptionsView::logErrToStdErr(llvm::Error &&Err) {
-  llvm::logAllUnhandledErrors(
-      llvm::handleErrors(std::move(Err),
-                         [](const MissingOptionError &) -> llvm::Error {
-                           return llvm::Error::success();
-                         }),
-      llvm::errs(), "warning: ");
+void ClangTidyCheck::OptionsView::logIfOptionParsingError(llvm::Error &&Err) {
+  if (auto RemainingErrors =
+          llvm::handleErrors(std::move(Err), [](const MissingOptionError &) {}))
+    llvm::logAllUnhandledErrors(std::move(RemainingErrors),
+                                llvm::WithColor::warning());
 }
+
+template <>
+Optional<std::string> ClangTidyCheck::OptionsView::getOptional<std::string>(
+    StringRef LocalName) const {
+  if (auto ValueOr = get(LocalName))
+    return *ValueOr;
+  else
+    consumeError(ValueOr.takeError());
+  return llvm::None;
+}
+
+template <>
+Optional<std::string>
+ClangTidyCheck::OptionsView::getOptionalLocalOrGlobal<std::string>(
+    StringRef LocalName) const {
+  if (auto ValueOr = getLocalOrGlobal(LocalName))
+    return *ValueOr;
+  else
+    consumeError(ValueOr.takeError());
+  return llvm::None;
+}
+
 } // namespace tidy
 } // namespace clang

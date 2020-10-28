@@ -342,9 +342,13 @@ DIExpression *salvageDebugInfoImpl(Instruction &I, DIExpression *DIExpr,
 bool replaceAllDbgUsesWith(Instruction &From, Value &To, Instruction &DomPoint,
                            DominatorTree &DT);
 
-/// Remove all instructions from a basic block other than it's terminator
-/// and any present EH pad instructions.
-unsigned removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB);
+/// Remove all instructions from a basic block other than its terminator
+/// and any present EH pad instructions. Returns a pair where the first element
+/// is the number of instructions (excluding debug info instrinsics) that have
+/// been removed, and the second element is the number of debug info intrinsics
+/// that have been removed.
+std::pair<unsigned, unsigned>
+removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB);
 
 /// Insert an unreachable instruction before the specified
 /// instruction, making it and the rest of the code in the block dead.

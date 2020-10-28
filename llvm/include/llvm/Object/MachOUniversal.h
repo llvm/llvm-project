@@ -22,8 +22,11 @@
 
 namespace llvm {
 class StringRef;
+class Module;
+class LLVMContext;
 
 namespace object {
+class IRObjectFile;
 
 class MachOUniversalBinary : public Binary {
   virtual void anchor();
@@ -101,6 +104,8 @@ public:
     }
 
     Expected<std::unique_ptr<MachOObjectFile>> getAsObjectFile() const;
+    Expected<std::unique_ptr<IRObjectFile>>
+    getAsIRObject(LLVMContext &Ctx) const;
 
     Expected<std::unique_ptr<Archive>> getAsArchive() const;
   };
@@ -153,6 +158,9 @@ public:
 
   Expected<std::unique_ptr<MachOObjectFile>>
   getMachOObjectForArch(StringRef ArchName) const;
+
+  Expected<std::unique_ptr<IRObjectFile>>
+  getIRObjectForArch(StringRef ArchName, LLVMContext &Ctx) const;
 
   Expected<std::unique_ptr<Archive>>
   getArchiveForArch(StringRef ArchName) const;

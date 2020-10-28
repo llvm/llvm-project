@@ -15,7 +15,7 @@
 # CHECK-NEXT:       0xe3                ; nop
 # CHECK-NEXT:       0xe3                ; nop
 # CHECK-NEXT:       0x42                ; stp x29, x30, [sp, #16]
-# CHECK-NEXT:       0xd53f              ; str x28, [sp, #256]!
+# CHECK-NEXT:       0xd53f              ; str x28, [sp, #-256]!
 # CHECK-NEXT:       0xe4                ; end
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     EpilogueScopes [

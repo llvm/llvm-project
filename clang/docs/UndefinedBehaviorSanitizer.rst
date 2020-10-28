@@ -153,6 +153,8 @@ Available checks are:
      unsigned overflow in C++. You can use ``-fsanitize=shift-base`` or
      ``-fsanitize=shift-exponent`` to check only left-hand side or
      right-hand side of shift operation, respectively.
+  -  ``-fsanitize=unsigned-shift-base``: check that an unsigned left-hand side of
+     a left shift operation doesn't overflow.
   -  ``-fsanitize=signed-integer-overflow``: Signed integer overflow, where the
      result of a signed integer computation cannot be represented in its type.
      This includes all the checks covered by ``-ftrapv``, as well as checks for

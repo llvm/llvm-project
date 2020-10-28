@@ -372,6 +372,12 @@ def FeatureERMSB
           "ermsb", "HasERMSB", "true",
           "REP MOVS/STOS are fast">;
 
+// Icelake and newer processors have Fast Short REP MOV.
+def FeatureFSRM
+    : SubtargetFeature<
+          "fsrm", "HasFSRM", "true",
+          "REP MOVSB of short lengths is faster">;
+
 // Bulldozer and newer processors can merge CMP/TEST (but not other
 // instructions) with conditional branches.
 def FeatureBranchFusion
@@ -713,7 +719,8 @@ def ProcessorFeatures {
                                                   FeatureVPOPCNTDQ,
                                                   FeatureGFNI,
                                                   FeatureCLWB,
-                                                  FeatureRDPID];
+                                                  FeatureRDPID,
+                                                  FeatureFSRM];
   list<SubtargetFeature> ICLTuning = CNLTuning;
   list<SubtargetFeature> ICLFeatures =
     !listconcat(CNLFeatures, ICLAdditionalFeatures);
@@ -733,6 +740,25 @@ def ProcessorFeatures {
   list<SubtargetFeature> TGLTuning = CNLTuning;
   list<SubtargetFeature> TGLFeatures =
     !listconcat(ICLFeatures, TGLAdditionalFeatures );
+
+  //Sapphirerapids
+  list<SubtargetFeature> SPRAdditionalFeatures = [FeatureAMXTILE,
+                                                  FeatureAMXINT8,
+                                                  FeatureAMXBF16,
+                                                  FeatureBF16,
+                                                  FeatureSERIALIZE,
+                                                  FeatureCLDEMOTE,
+                                                  FeatureWAITPKG,
+                                                  FeaturePTWRITE,
+                                                  FeatureTSXLDTRK,
+                                                  FeatureENQCMD,
+                                                  FeatureSHSTK,
+                                                  FeatureVP2INTERSECT,
+                                                  FeatureMOVDIRI,
+                                                  FeatureMOVDIR64B];
+  list<SubtargetFeature> SPRTuning = ICXTuning;
+  list<SubtargetFeature> SPRFeatures =
+    !listconcat(ICXFeatures, SPRAdditionalFeatures);
 
   // Atom
   list<SubtargetFeature> AtomFeatures = [FeatureX87,
@@ -1018,20 +1044,26 @@ def ProcessorFeatures {
 
 class Proc<string Name, list<SubtargetFeature> Features,
            list<SubtargetFeature> TuneFeatures>
- : ProcessorModel<Name, GenericModel, !listconcat(Features, TuneFeatures)>;
+ : ProcessorModel<Name, GenericModel, Features, TuneFeatures>;
 
 class ProcModel<string Name, SchedMachineModel Model,
                 list<SubtargetFeature> Features,
                 list<SubtargetFeature> TuneFeatures>
- : ProcessorModel<Name, Model, !listconcat(Features, TuneFeatures)>;
+ : ProcessorModel<Name, Model, Features, TuneFeatures>;
 
 // NOTE: CMPXCHG8B is here for legacy compatibility so that it is only disabled
 // if i386/i486 is specifically requested.
 // NOTE: 64Bit is here as "generic" is the default llc CPU. The X86Subtarget
 // constructor checks that any CPU used in 64-bit mode has Feature64Bit enabled.
 // It has no effect on code generation.
-def : Proc<"generic",         [FeatureX87, FeatureCMPXCHG8B, Feature64Bit],
-                              [FeatureSlowUAMem16, FeatureInsertVZEROUPPER]>;
+def : ProcModel<"generic", SandyBridgeModel,
+                [FeatureX87, FeatureCMPXCHG8B, Feature64Bit],
+                [FeatureSlow3OpsLEA,
+                 FeatureSlowDivide64,
+                 FeatureSlowIncDec,
+                 FeatureMacroFusion,
+                 FeatureInsertVZEROUPPER]>;
+
 def : Proc<"i386",            [FeatureX87],
                               [FeatureSlowUAMem16, FeatureInsertVZEROUPPER]>;
 def : Proc<"i486",            [FeatureX87],
@@ -1075,20 +1107,10 @@ def : ProcModel<"pentium-m", GenericPostRAModel,
                 [FeatureSlowUAMem16, FeatureInsertVZEROUPPER]>;
 
 foreach P = ["pentium4", "pentium4m"] in {
-//  def : ProcModel<P, GenericPostRAModel,
-//                  [FeatureX87, FeatureCMPXCHG8B, FeatureMMX, FeatureSSE2,
-//                   FeatureFXSR, FeatureNOPL, FeatureCMOV]>;
-//                  [FeatureSlowUAMem16, FeatureInsertVZEROUPPER]>;
-
-  // Since 'pentium4' is the default 32-bit CPU on Linux and Windows,
-  // give it more modern tunings.
-  // FIXME: This wouldn't be needed if we supported mtune.
-  def : ProcModel<P, SandyBridgeModel,
+  def : ProcModel<P, GenericPostRAModel,
                   [FeatureX87, FeatureCMPXCHG8B, FeatureMMX, FeatureSSE2,
                    FeatureFXSR, FeatureNOPL, FeatureCMOV],
-                  [FeatureSlow3OpsLEA, FeatureSlowDivide64,
-                   FeatureSlowIncDec, FeatureMacroFusion,
-                   FeatureInsertVZEROUPPER]>;
+                  [FeatureSlowUAMem16, FeatureInsertVZEROUPPER]>;
 }
 
 // Intel Quark.
@@ -1230,6 +1252,8 @@ def : ProcModel<"icelake-server", SkylakeServerModel,
                 ProcessorFeatures.ICXFeatures, ProcessorFeatures.ICXTuning>;
 def : ProcModel<"tigerlake", SkylakeServerModel,
                 ProcessorFeatures.TGLFeatures, ProcessorFeatures.TGLTuning>;
+def : ProcModel<"sapphirerapids", SkylakeServerModel,
+                ProcessorFeatures.SPRFeatures, ProcessorFeatures.SPRTuning>;
 
 // AMD CPUs.
 

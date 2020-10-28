@@ -94,65 +94,6 @@ endif
 # from the triple alone
 #----------------------------------------------------------------------
 ARCH_CFLAGS :=
-ifneq "$(TRIPLE)" ""
-	triple_space = $(subst -, ,$(TRIPLE))
-	ARCH =$(word 1, $(triple_space))
-	TRIPLE_VENDOR =$(word 2, $(triple_space))
-	triple_os_and_version =$(shell echo $(word 3, $(triple_space)) | sed 's/\([a-z]*\)\(.*\)/\1 \2/')
-	TRIPLE_OS =$(word 1, $(triple_os_and_version))
-	TRIPLE_VERSION =$(word 2, $(triple_os_and_version))
-	TRIPLE_ENV =$(word 4, $(triple_space))
-	ifeq "$(TRIPLE_VENDOR)" "apple"
-		ifeq "$(TRIPLE_OS)" "ios"
-			ifeq "$(TRIPLE_ENV)" "simulator"
-				SDK_NAME := iphonesimulator
-			else
-			ifeq "$(TRIPLE_ENV)" "macabi"
-				SDK_NAME := macosx
-			else
-				SDK_NAME := iphoneos
-			endif
-			endif
-		endif
-		ifeq "$(TRIPLE_OS)" "tvos"
-			ifeq "$(TRIPLE_ENV)" "simulator"
-				SDK_NAME := appletvsimulator
-			else
-				SDK_NAME := appletvos
-			endif
-		endif
-		ifeq "$(TRIPLE_OS)" "watchos"
-			ifeq "$(TRIPLE_ENV)" "simulator"
-				SDK_NAME := watchsimulator
-			else
-				SDK_NAME := watchos
-			endif
-		endif
-		ifneq "$(TRIPLE_OS)" "macosx"
-			ifeq "$(TRIPLE_ENV)" ""
-				CODESIGN := codesign
-			endif
-		endif
-
-		ifeq "$(SDKROOT)" ""
-			SDKROOT := $(shell xcrun --sdk $(SDK_NAME) --show-sdk-path)
-		endif
-		ifeq "$(TRIPLE_VERSION)" ""
-			ifeq "$(SDK_NAME)" ""
-                               $(error "SDK_NAME is empty")
-			endif
-			TRIPLE_VERSION := $(shell xcrun --sdk $(SDK_NAME) --show-sdk-version)
-		endif
-		ifeq "$(TRIPLE_ENV)" "simulator"
-			ARCH_CFLAGS := -m$(TRIPLE_OS)-simulator-version-min=$(TRIPLE_VERSION)
-		else
-		ifneq "$(TRIPLE_OS)" "macosx"
-			ARCH_CFLAGS := -m$(TRIPLE_OS)-version-min=$(TRIPLE_VERSION)
-		endif
-		endif
-	endif
-	ARCH_CFLAGS += -target $(TRIPLE)
-endif
 ifeq "$(OS)" "Android"
 	include $(THIS_FILE_DIR)/Android.rules
 endif
@@ -172,7 +113,7 @@ endif
 # CC defaults to clang.
 #
 # If you change the defaults of CC, be sure to also change it in the file
-# test/plugins/builder_base.py, which provides a Python way to return the
+# test/builders/builder_base.py, which provides a Python way to return the
 # value of the make variable CC -- getCompiler().
 #
 # See also these functions:

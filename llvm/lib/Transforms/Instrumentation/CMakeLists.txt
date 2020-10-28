@@ -5,6 +5,7 @@ add_llvm_component_library(LLVMInstrumentation
   ControlHeightReduction.cpp
   DataFlowSanitizer.cpp
   GCOVProfiling.cpp
+  HeapProfiler.cpp
   MemorySanitizer.cpp
   IndirectCallPromotion.cpp
   Instrumentation.cpp

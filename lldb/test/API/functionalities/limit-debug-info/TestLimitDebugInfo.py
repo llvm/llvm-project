@@ -63,6 +63,9 @@ class LimitDebugInfoTestCase(TestBase):
         self.expect_expr("get_two().one().member", result_value="124")
         self.expect_expr("get_two().member", result_value="224")
 
+        self.expect_expr("shadowed_one.member", result_value="47")
+        self.expect_expr("shadowed_one.one", result_value="142")
+
     @skipIf(bugnumber="pr46284", debug_info="gmodules")
     @skipIfWindows # Clang emits type info even with -flimit-debug-info
     def test_two_debug(self):

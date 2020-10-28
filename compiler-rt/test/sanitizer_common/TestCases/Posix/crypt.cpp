@@ -6,7 +6,9 @@
 #include <assert.h>
 #include <unistd.h>
 #include <cstring>
+#if __has_include(<crypt.h>)
 #include <crypt.h>
+#endif
 
 int
 main (int argc, char** argv)

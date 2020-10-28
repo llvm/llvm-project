@@ -1,4 +1,4 @@
-// RUN: mlir-cuda-runner %s --print-ir-after-all --shared-libs=%cuda_wrapper_library_dir/libcuda-runtime-wrappers%shlibext,%linalg_test_lib_dir/libmlir_runner_utils%shlibext --entry-point-result=void | FileCheck %s --dump-input=always
+// RUN: mlir-cuda-runner %s --shared-libs=%cuda_wrapper_library_dir/libcuda-runtime-wrappers%shlibext,%linalg_test_lib_dir/libmlir_runner_utils%shlibext --entry-point-result=void | FileCheck %s
 
 // CHECK: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 func @main() {
@@ -8,7 +8,7 @@ func @main() {
   %c0 = constant 0 : index
   %sx = dim %dst, %c0 : memref<?xi32>
   %cast_dst = memref_cast %dst : memref<?xi32> to memref<*xi32>
-  call @mgpuMemHostRegisterInt32(%cast_dst) : (memref<*xi32>) -> ()
+  gpu.host_register %cast_dst : memref<*xi32>
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %one, %grid_y = %one, %grid_z = %one)
              threads(%tx, %ty, %tz) in (%block_x = %sx, %block_y = %one, %block_z = %one) {
     %t0 = index_cast %tx : index to i32
@@ -25,5 +25,4 @@ func @main() {
   return
 }
 
-func @mgpuMemHostRegisterInt32(%memref : memref<*xi32>)
 func @print_memref_i32(%memref : memref<*xi32>)

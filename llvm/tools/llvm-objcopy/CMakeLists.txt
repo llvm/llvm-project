@@ -50,3 +50,7 @@ if(LLVM_INSTALL_BINUTILS_SYMLINKS)
   add_llvm_tool_symlink(objcopy llvm-objcopy)
   add_llvm_tool_symlink(strip llvm-objcopy)
 endif()
+
+if(LLVM_INSTALL_CCTOOLS_SYMLINKS)
+  add_llvm_tool_symlink(install_name_tool llvm-install-name-tool)
+endif()

@@ -1,6 +1,6 @@
 # REQUIRES: x86
-# RUN: yaml2obj < %s > %t1.obj
-# RUN: yaml2obj < %s > %t2.obj
+# RUN: yaml2obj %s -o %t1.obj
+# RUN: yaml2obj %s -o %t2.obj
 # RUN: not lld-link /out:%t.exe %t1.obj %t2.obj 2>&1 | FileCheck --check-prefix=OBJ %s
 
 # RUN: llvm-as -o %t.lto1.obj %S/Inputs/conflict.ll

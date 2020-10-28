@@ -150,7 +150,6 @@ void BigRadixFloatingPointNumber<PREC,
   bool incr{false};
   switch (rounding_) {
   case RoundNearest:
-  case RoundDefault:
     incr = LSD > radix / 2 || (LSD == radix / 2 && digit_[0] % 2 != 0);
     break;
   case RoundUp:
@@ -260,7 +259,6 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
   bool incr{false};
   switch (rounding) {
   case RoundNearest:
-  case RoundDefault:
     incr = guard > oneHalf || (guard == oneHalf && (fraction & 1));
     break;
   case RoundUp:

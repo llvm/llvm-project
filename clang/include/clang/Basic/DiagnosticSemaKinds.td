@@ -91,8 +91,8 @@ def ext_cce_narrowing : ExtWarn<
   "evaluates to %2, which cannot be narrowed to type %3}1">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
 def err_ice_not_integral : Error<
-  "integral constant expression must have integral or unscoped enumeration "
-  "type, not %0">;
+  "%select{integer|integral}1 constant expression must have "
+  "%select{integer|integral or unscoped enumeration}1 type, not %0">;
 def err_ice_incomplete_type : Error<
   "integral constant expression has incomplete class type %0">;
 def err_ice_explicit_conversion : Error<
@@ -2005,6 +2005,8 @@ def err_init_conversion_failed : Error<
   "|: different return type%diff{ ($ vs $)|}5,6"
   "|: different qualifiers (%5 vs %6)"
   "|: different exception specifications}4">;
+def note_forward_class_conversion : Note<"%0 is not defined, but forward "
+  "declared here; conversion would be valid if it was derived from %1">;
 
 def err_lvalue_to_rvalue_ref : Error<"rvalue reference %diff{to type $ cannot "
   "bind to lvalue of type $|cannot bind to incompatible lvalue}0,1">;
@@ -2827,8 +2829,9 @@ def err_attribute_requires_opencl_version : Error<
 def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_target_attribute
-    : Warning<"%select{unsupported|duplicate}0%select{| architecture}1 '%2' in"
-              " the 'target' attribute string; 'target' attribute ignored">,
+    : Warning<"%select{unsupported|duplicate|unknown}0%select{| architecture|"
+              " tune CPU}1 '%2' in the 'target' attribute string; 'target' "
+              "attribute ignored">,
       InGroup<IgnoredAttributes>;
 def err_attribute_unsupported
     : Error<"%0 attribute is not supported for this target">;
@@ -2922,6 +2925,8 @@ def err_attribute_invalid_size : Error<
   "vector size not an integral multiple of component size">;
 def err_attribute_zero_size : Error<"zero %0 size">;
 def err_attribute_size_too_large : Error<"%0 size too large">;
+def err_typecheck_vector_not_convertable_sizeless : Error<
+  "cannot convert between a fixed-length and a sizeless vector (%0 and %1)">;
 def err_typecheck_vector_not_convertable_implict_truncation : Error<
    "cannot convert between %select{scalar|vector}0 type %1 and vector type"
    " %2 as implicit conversion would cause truncation">;
@@ -3000,6 +3005,10 @@ def err_missing_atsign_prefix : Error<
 def warn_objc_string_literal_comparison : Warning<
   "direct comparison of a string literal has undefined behavior">,
   InGroup<ObjCStringComparison>;
+def warn_concatenated_literal_array_init : Warning<
+  "suspicious concatenation of string literals in an array initialization; "
+  "did you mean to separate the elements with a comma?">,
+  InGroup<StringConcatation>, DefaultIgnore;
 def warn_concatenated_nsarray_literal : Warning<
   "concatenated NSString literal for an NSArray expression - "
   "possibly missing a comma">,
@@ -4951,6 +4960,8 @@ def err_mismatched_exception_spec_explicit_instantiation : Error<
 def ext_mismatched_exception_spec_explicit_instantiation : ExtWarn<
   err_mismatched_exception_spec_explicit_instantiation.Text>,
   InGroup<MicrosoftExceptionSpec>;
+def err_explicit_instantiation_dependent : Error<
+  "explicit instantiation has dependent template arguments">;
 
 // C++ typename-specifiers
 def err_typename_nested_not_found : Error<"no type named %0 in %1">;
@@ -5044,8 +5055,8 @@ def err_unexpanded_parameter_pack : Error<
   "size|static assertion|fixed underlying type|enumerator value|"
   "using declaration|friend declaration|qualifier|initializer|default argument|"
   "non-type template parameter type|exception type|partial specialization|"
-  "__if_exists name|__if_not_exists name|lambda|block|type constraint}0 "
-  "contains%plural{0: an|:}1 unexpanded parameter pack"
+  "__if_exists name|__if_not_exists name|lambda|block|type constraint|"
+  "requirement}0 contains%plural{0: an|:}1 unexpanded parameter pack"
   "%plural{0:|1: %2|2:s %2 and %3|:s %2, %3, ...}1">;
 
 def err_pack_expansion_without_parameter_packs : Error<
@@ -6030,9 +6041,8 @@ def err_func_def_incomplete_result : Error<
 def err_atomic_specifier_bad_type
     : Error<"_Atomic cannot be applied to "
             "%select{incomplete |array |function |reference |atomic |qualified "
-            "|sizeless ||integer |integer }0type "
-            "%1 %select{|||||||which is not trivially copyable|with less than "
-            "1 byte of precision|with a non power of 2 precision}0">;
+            "|sizeless ||integer }0type "
+            "%1 %select{|||||||which is not trivially copyable|}0">;
 
 // Expressions.
 def ext_sizeof_alignof_function_type : Extension<
@@ -6139,6 +6149,9 @@ def warn_overloaded_shift_in_comparison :Warning<
   InGroup<OverloadedShiftOpParentheses>;
 def note_evaluate_comparison_first :Note<
   "place parentheses around comparison expression to evaluate it first">;
+
+def note_concatenated_string_literal_silence :Note<
+  "place parentheses around the string literal to silence warning">;
 
 def warn_addition_in_bitshift : Warning<
   "operator '%0' has lower precedence than '%1'; "
@@ -6588,6 +6601,12 @@ def warn_tautological_compare_objc_bool : Warning<
   "result of comparison of constant %0 with expression of type 'BOOL'"
   " is always %1, as the only well defined values for 'BOOL' are YES and NO">,
   InGroup<TautologicalObjCBoolCompare>;
+def subst_int_range : TextSubstitution<"%0-bit %select{signed|unsigned}1 value">;
+def warn_tautological_compare_value_range : Warning<
+  "result of comparison of "
+  "%select{%4|%sub{subst_int_range}1,2}0 %3 "
+  "%select{%sub{subst_int_range}1,2|%4}0 is always %5">,
+  InGroup<TautologicalValueRangeCompare>, DefaultIgnore;
 
 def warn_mixed_sign_comparison : Warning<
   "comparison of integers of different signs: %0 and %1">,
@@ -7950,6 +7969,8 @@ def err_atomic_exclusive_builtin_pointer_size : Error<
   " 1,2,4 or 8 byte type (%0 invalid)">;
 def err_atomic_builtin_ext_int_size : Error<
   "Atomic memory operand must have a power-of-two size">;
+def err_atomic_builtin_ext_int_prohibit : Error<
+  "argument to atomic builtin of type '_ExtInt' is not supported">;
 def err_atomic_op_needs_atomic : Error<
   "address argument to atomic operation must be a pointer to _Atomic "
   "type (%0 invalid)">;
@@ -9459,6 +9480,11 @@ def err_nsconsumed_attribute_mismatch : Error<
 def err_nsreturns_retained_attribute_mismatch : Error<
   "overriding method has mismatched ns_returns_%select{not_retained|retained}0"
   " attributes">;
+def err_nserrordomain_invalid_decl : Error<
+  "domain argument %select{|%1 }0does not refer to global constant">;
+def err_nserrordomain_wrong_type : Error<
+  "domain argument %0 does not point to an NSString constant">;
+
 def warn_nsconsumed_attribute_mismatch : Warning<
   err_nsconsumed_attribute_mismatch.Text>, InGroup<NSConsumedMismatch>;
 def warn_nsreturns_retained_attribute_mismatch : Warning<
@@ -10347,6 +10373,10 @@ def err_omp_allocator_used_in_clauses : Error<
   "data-sharing or data-mapping attribute clauses">;
 def err_omp_allocator_not_in_uses_allocators : Error<
   "allocator must be specified in the 'uses_allocators' clause">;
+def note_omp_protected_structured_block
+    : Note<"jump bypasses OpenMP structured block">;
+def note_omp_exits_structured_block
+    : Note<"jump exits scope of OpenMP structured block">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -10751,9 +10781,12 @@ def err_multiversion_duplicate : Error<
   "multiversioned function redeclarations require identical target attributes">;
 def err_multiversion_noproto : Error<
   "multiversioned function must have a prototype">;
-def err_multiversion_no_other_attrs : Error<
+def err_multiversion_disallowed_other_attr : Error<
   "attribute '%select{target|cpu_specific|cpu_dispatch}0' multiversioning cannot be combined"
-  " with other attributes">;
+  " with attribute %1">;
+def err_multiversion_mismatched_attrs
+    : Error<"attributes on multiversioned functions must all match, attribute "
+            "%0 %select{is missing|has different arguments}1">;
 def err_multiversion_diff : Error<
   "multiversioned function declaration has a different %select{calling convention"
   "|return type|constexpr specification|inline specification|storage class|"
@@ -10862,6 +10895,14 @@ def err_preserve_field_info_not_const: Error<
   "__builtin_preserve_field_info argument %0 not a constant">;
 def err_btf_type_id_not_const: Error<
   "__builtin_btf_type_id argument %0 not a constant">;
+def err_preserve_type_info_invalid : Error<
+  "__builtin_preserve_type_info argument %0 invalid">;
+def err_preserve_type_info_not_const: Error<
+  "__builtin_preserve_type_info argument %0 not a constant">;
+def err_preserve_enum_value_invalid : Error<
+  "__builtin_preserve_enum_value argument %0 invalid">;
+def err_preserve_enum_value_not_const: Error<
+  "__builtin_preserve_enum_value argument %0 not a constant">;
 
 def err_bit_cast_non_trivially_copyable : Error<
   "__builtin_bit_cast %select{source|destination}0 type must be trivially copyable">;

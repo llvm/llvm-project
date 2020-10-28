@@ -1,6 +1,5 @@
 ; RUN: llc < %s -mtriple=armv7-apple-darwin | FileCheck %s
 ; PHI elimination shouldn't break backedge.
-; rdar://8263994
 
 %struct.list_data_s = type { i16, i16 }
 %struct.list_head = type { %struct.list_head*, %struct.list_data_s* }
@@ -12,6 +11,7 @@ entry:
   br i1 %0, label %bb2, label %bb
 
 bb:
+; CHECK: LBB0_1:
 ; CHECK: LBB0_[[LABEL:[0-9]]]:
 ; CHECK: bne LBB0_[[LABEL]]
 ; CHECK-NOT: b LBB0_[[LABEL]]
@@ -30,7 +30,6 @@ bb2:
 }
 
 ; Optimize loop entry, eliminate intra loop branches
-; rdar://8117827
 define i32 @t2(i32 %passes, i32* nocapture %src, i32 %size) nounwind readonly {
 entry:
 ; CHECK-LABEL: t2:

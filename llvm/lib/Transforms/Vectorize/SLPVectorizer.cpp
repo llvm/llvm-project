@@ -29,6 +29,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator.h"
@@ -285,7 +286,8 @@ static bool isCommutative(Instruction *I) {
 static Optional<TargetTransformInfo::ShuffleKind>
 isShuffle(ArrayRef<Value *> VL) {
   auto *EI0 = cast<ExtractElementInst>(VL[0]);
-  unsigned Size = EI0->getVectorOperandType()->getNumElements();
+  unsigned Size =
+      cast<FixedVectorType>(EI0->getVectorOperandType())->getNumElements();
   Value *Vec1 = nullptr;
   Value *Vec2 = nullptr;
   enum ShuffleMode { Unknown, Select, Permute };
@@ -294,7 +296,7 @@ isShuffle(ArrayRef<Value *> VL) {
     auto *EI = cast<ExtractElementInst>(VL[I]);
     auto *Vec = EI->getVectorOperand();
     // All vector operands must have the same number of vector elements.
-    if (cast<VectorType>(Vec->getType())->getNumElements() != Size)
+    if (cast<FixedVectorType>(Vec->getType())->getNumElements() != Size)
       return None;
     auto *Idx = dyn_cast<ConstantInt>(EI->getIndexOperand());
     if (!Idx)
@@ -1410,7 +1412,7 @@ private:
 
   /// \returns the scalarization cost for this type. Scalarization in this
   /// context means the creation of vectors from a group of scalars.
-  int getGatherCost(VectorType *Ty,
+  int getGatherCost(FixedVectorType *Ty,
                     const DenseSet<unsigned> &ShuffledIndices) const;
 
   /// \returns the scalarization cost for this list of values. Assuming that
@@ -1423,7 +1425,7 @@ private:
   void setInsertPointAfterBundle(TreeEntry *E);
 
   /// \returns a vector from a collection of scalars in \p VL.
-  Value *Gather(ArrayRef<Value *> VL, VectorType *Ty);
+  Value *Gather(ArrayRef<Value *> VL, FixedVectorType *Ty);
 
   /// \returns whether the VectorizableTree is fully vectorizable and will
   /// be beneficial even the tree height is tiny.
@@ -3028,7 +3030,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
       VFShape Shape = VFShape::get(
-          *CI, {static_cast<unsigned int>(VL.size()), false /*Scalable*/},
+          *CI, ElementCount::getFixed(static_cast<unsigned int>(VL.size())),
           false /*HasGlobalPred*/);
       Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
 
@@ -3165,7 +3167,7 @@ unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
       N *= AT->getNumElements();
       EltTy = AT->getElementType();
     } else {
-      auto *VT = cast<VectorType>(EltTy);
+      auto *VT = cast<FixedVectorType>(EltTy);
       N *= VT->getNumElements();
       EltTy = VT->getElementType();
     }
@@ -3203,7 +3205,7 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
     if (!LI || !LI->isSimple() || !LI->hasNUses(VL.size()))
       return false;
   } else {
-    NElts = cast<VectorType>(Vec->getType())->getNumElements();
+    NElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
   }
 
   if (NElts != VL.size())
@@ -3254,8 +3256,8 @@ bool BoUpSLP::areAllUsersVectorized(Instruction *I) const {
 }
 
 static std::pair<unsigned, unsigned>
-getVectorCallCosts(CallInst *CI, VectorType *VecTy, TargetTransformInfo *TTI,
-                   TargetLibraryInfo *TLI) {
+getVectorCallCosts(CallInst *CI, FixedVectorType *VecTy,
+                   TargetTransformInfo *TTI, TargetLibraryInfo *TLI) {
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
   // Calculate the cost of the scalar and vector calls.
@@ -3263,9 +3265,9 @@ getVectorCallCosts(CallInst *CI, VectorType *VecTy, TargetTransformInfo *TTI,
   int IntrinsicCost =
     TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
 
-  auto Shape =
-      VFShape::get(*CI, {static_cast<unsigned>(VecTy->getNumElements()), false},
-                   false /*HasGlobalPred*/);
+  auto Shape = VFShape::get(*CI, ElementCount::getFixed(static_cast<unsigned>(
+                                     VecTy->getNumElements())),
+                            false /*HasGlobalPred*/);
   Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
   int LibCost = IntrinsicCost;
   if (!CI->isNoBuiltin() && VecFunc) {
@@ -3768,11 +3770,24 @@ int BoUpSLP::getSpillCost() const {
   SmallPtrSet<Instruction*, 4> LiveValues;
   Instruction *PrevInst = nullptr;
 
+  // The entries in VectorizableTree are not necessarily ordered by their
+  // position in basic blocks. Collect them and order them by dominance so later
+  // instructions are guaranteed to be visited first. For instructions in
+  // different basic blocks, we only scan to the beginning of the block, so
+  // their order does not matter, as long as all instructions in a basic block
+  // are grouped together. Using dominance ensures a deterministic order.
+  SmallVector<Instruction *, 16> OrderedScalars;
   for (const auto &TEPtr : VectorizableTree) {
     Instruction *Inst = dyn_cast<Instruction>(TEPtr->Scalars[0]);
     if (!Inst)
       continue;
+    OrderedScalars.push_back(Inst);
+  }
+  llvm::stable_sort(OrderedScalars, [this](Instruction *A, Instruction *B) {
+    return DT->dominates(B, A);
+  });
 
+  for (Instruction *Inst : OrderedScalars) {
     if (!PrevInst) {
       PrevInst = Inst;
       continue;
@@ -3898,22 +3913,23 @@ int BoUpSLP::getTreeCost() {
   int SpillCost = getSpillCost();
   Cost += SpillCost + ExtractCost;
 
-  std::string Str;
+#ifndef NDEBUG
+  SmallString<256> Str;
   {
-    raw_string_ostream OS(Str);
+    raw_svector_ostream OS(Str);
     OS << "SLP: Spill Cost = " << SpillCost << ".\n"
        << "SLP: Extract Cost = " << ExtractCost << ".\n"
        << "SLP: Total Cost = " << Cost << ".\n";
   }
   LLVM_DEBUG(dbgs() << Str);
-
   if (ViewSLPTree)
     ViewGraph(this, "SLP" + F->getName(), false, Str);
+#endif
 
   return Cost;
 }
 
-int BoUpSLP::getGatherCost(VectorType *Ty,
+int BoUpSLP::getGatherCost(FixedVectorType *Ty,
                            const DenseSet<unsigned> &ShuffledIndices) const {
   unsigned NumElts = Ty->getNumElements();
   APInt DemandedElts = APInt::getNullValue(NumElts);
@@ -4026,7 +4042,7 @@ void BoUpSLP::setInsertPointAfterBundle(TreeEntry *E) {
   Builder.SetCurrentDebugLocation(Front->getDebugLoc());
 }
 
-Value *BoUpSLP::Gather(ArrayRef<Value *> VL, VectorType *Ty) {
+Value *BoUpSLP::Gather(ArrayRef<Value *> VL, FixedVectorType *Ty) {
   Value *Vec = UndefValue::get(Ty);
   // Generate the 'InsertElement' instruction.
   for (unsigned i = 0; i < Ty->getNumElements(); ++i) {
@@ -4538,9 +4554,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       Function *CF;
       if (!UseIntrinsic) {
-        VFShape Shape = VFShape::get(
-            *CI, {static_cast<unsigned>(VecTy->getNumElements()), false},
-            false /*HasGlobalPred*/);
+        VFShape Shape =
+            VFShape::get(*CI, ElementCount::getFixed(static_cast<unsigned>(
+                                  VecTy->getNumElements())),
+                         false /*HasGlobalPred*/);
         CF = VFDatabase(*CI).getVectorizedFunction(Shape);
       } else {
         Type *Tys[] = {FixedVectorType::get(CI->getType(), E->Scalars.size())};
@@ -7084,6 +7101,94 @@ private:
 
 } // end anonymous namespace
 
+static Optional<unsigned> getAggregateSize(Instruction *InsertInst) {
+  if (auto *IE = dyn_cast<InsertElementInst>(InsertInst))
+    return cast<FixedVectorType>(IE->getType())->getNumElements();
+
+  unsigned AggregateSize = 1;
+  auto *IV = cast<InsertValueInst>(InsertInst);
+  Type *CurrentType = IV->getType();
+  do {
+    if (auto *ST = dyn_cast<StructType>(CurrentType)) {
+      for (auto *Elt : ST->elements())
+        if (Elt != ST->getElementType(0)) // check homogeneity
+          return None;
+      AggregateSize *= ST->getNumElements();
+      CurrentType = ST->getElementType(0);
+    } else if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
+      AggregateSize *= AT->getNumElements();
+      CurrentType = AT->getElementType();
+    } else if (auto *VT = dyn_cast<FixedVectorType>(CurrentType)) {
+      AggregateSize *= VT->getNumElements();
+      return AggregateSize;
+    } else if (CurrentType->isSingleValueType()) {
+      return AggregateSize;
+    } else {
+      return None;
+    }
+  } while (true);
+}
+
+static Optional<unsigned> getOperandIndex(Instruction *InsertInst,
+                                          unsigned OperandOffset) {
+  unsigned OperandIndex = OperandOffset;
+  if (auto *IE = dyn_cast<InsertElementInst>(InsertInst)) {
+    if (auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2))) {
+      auto *VT = cast<FixedVectorType>(IE->getType());
+      OperandIndex *= VT->getNumElements();
+      OperandIndex += CI->getZExtValue();
+      return OperandIndex;
+    }
+    return None;
+  }
+
+  auto *IV = cast<InsertValueInst>(InsertInst);
+  Type *CurrentType = IV->getType();
+  for (unsigned int Index : IV->indices()) {
+    if (auto *ST = dyn_cast<StructType>(CurrentType)) {
+      OperandIndex *= ST->getNumElements();
+      CurrentType = ST->getElementType(Index);
+    } else if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
+      OperandIndex *= AT->getNumElements();
+      CurrentType = AT->getElementType();
+    } else {
+      return None;
+    }
+    OperandIndex += Index;
+  }
+  return OperandIndex;
+}
+
+static bool findBuildAggregate_rec(Instruction *LastInsertInst,
+                                   TargetTransformInfo *TTI,
+                                   SmallVectorImpl<Value *> &BuildVectorOpds,
+                                   SmallVectorImpl<Value *> &InsertElts,
+                                   unsigned OperandOffset) {
+  do {
+    Value *InsertedOperand = LastInsertInst->getOperand(1);
+    Optional<unsigned> OperandIndex =
+        getOperandIndex(LastInsertInst, OperandOffset);
+    if (!OperandIndex)
+      return false;
+    if (isa<InsertElementInst>(InsertedOperand) ||
+        isa<InsertValueInst>(InsertedOperand)) {
+      if (!findBuildAggregate_rec(cast<Instruction>(InsertedOperand), TTI,
+                                  BuildVectorOpds, InsertElts, *OperandIndex))
+        return false;
+    } else {
+      BuildVectorOpds[*OperandIndex] = InsertedOperand;
+      InsertElts[*OperandIndex] = LastInsertInst;
+    }
+    if (isa<UndefValue>(LastInsertInst->getOperand(0)))
+      return true;
+    LastInsertInst = dyn_cast<Instruction>(LastInsertInst->getOperand(0));
+  } while (LastInsertInst != nullptr &&
+           (isa<InsertValueInst>(LastInsertInst) ||
+            isa<InsertElementInst>(LastInsertInst)) &&
+           LastInsertInst->hasOneUse());
+  return false;
+}
+
 /// Recognize construction of vectors like
 ///  %ra = insertelement <4 x float> undef, float %s0, i32 0
 ///  %rb = insertelement <4 x float> %ra, float %s1, i32 1
@@ -7091,54 +7196,41 @@ private:
 ///  %rd = insertelement <4 x float> %rc, float %s3, i32 3
 ///  starting from the last insertelement or insertvalue instruction.
 ///
-/// Also recognize aggregates like {<2 x float>, <2 x float>},
+/// Also recognize homogeneous aggregates like {<2 x float>, <2 x float>},
 /// {{float, float}, {float, float}}, [2 x {float, float}] and so on.
 /// See llvm/test/Transforms/SLPVectorizer/X86/pr42022.ll for examples.
 ///
 /// Assume LastInsertInst is of InsertElementInst or InsertValueInst type.
 ///
 /// \return true if it matches.
-static bool findBuildAggregate(Value *LastInsertInst, TargetTransformInfo *TTI,
+static bool findBuildAggregate(Instruction *LastInsertInst,
+                               TargetTransformInfo *TTI,
                                SmallVectorImpl<Value *> &BuildVectorOpds,
                                SmallVectorImpl<Value *> &InsertElts) {
+
   assert((isa<InsertElementInst>(LastInsertInst) ||
           isa<InsertValueInst>(LastInsertInst)) &&
          "Expected insertelement or insertvalue instruction!");
-  do {
-    Value *InsertedOperand;
-    auto *IE = dyn_cast<InsertElementInst>(LastInsertInst);
-    if (IE) {
-      InsertedOperand = IE->getOperand(1);
-      LastInsertInst = IE->getOperand(0);
-    } else {
-      auto *IV = cast<InsertValueInst>(LastInsertInst);
-      InsertedOperand = IV->getInsertedValueOperand();
-      LastInsertInst = IV->getAggregateOperand();
-    }
-    if (isa<InsertElementInst>(InsertedOperand) ||
-        isa<InsertValueInst>(InsertedOperand)) {
-      SmallVector<Value *, 8> TmpBuildVectorOpds;
-      SmallVector<Value *, 8> TmpInsertElts;
-      if (!findBuildAggregate(InsertedOperand, TTI, TmpBuildVectorOpds,
-                              TmpInsertElts))
-        return false;
-      BuildVectorOpds.append(TmpBuildVectorOpds.rbegin(),
-                             TmpBuildVectorOpds.rend());
-      InsertElts.append(TmpInsertElts.rbegin(), TmpInsertElts.rend());
-    } else {
-      BuildVectorOpds.push_back(InsertedOperand);
-      InsertElts.push_back(IE);
-    }
-    if (isa<UndefValue>(LastInsertInst))
-      break;
-    if ((!isa<InsertValueInst>(LastInsertInst) &&
-         !isa<InsertElementInst>(LastInsertInst)) ||
-        !LastInsertInst->hasOneUse())
-      return false;
-  } while (true);
-  std::reverse(BuildVectorOpds.begin(), BuildVectorOpds.end());
-  std::reverse(InsertElts.begin(), InsertElts.end());
-  return true;
+
+  assert((BuildVectorOpds.empty() && InsertElts.empty()) &&
+         "Expected empty result vectors!");
+
+  Optional<unsigned> AggregateSize = getAggregateSize(LastInsertInst);
+  if (!AggregateSize)
+    return false;
+  BuildVectorOpds.resize(*AggregateSize);
+  InsertElts.resize(*AggregateSize);
+
+  if (findBuildAggregate_rec(LastInsertInst, TTI, BuildVectorOpds, InsertElts,
+                             0)) {
+    llvm::erase_if(BuildVectorOpds,
+                   [](const Value *V) { return V == nullptr; });
+    llvm::erase_if(InsertElts, [](const Value *V) { return V == nullptr; });
+    if (BuildVectorOpds.size() >= 2)
+      return true;
+  }
+
+  return false;
 }
 
 static bool PhiTypeSorterFunc(Value *V, Value *V2) {
@@ -7308,8 +7400,7 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
 
   SmallVector<Value *, 16> BuildVectorOpds;
   SmallVector<Value *, 16> BuildVectorInsts;
-  if (!findBuildAggregate(IVI, TTI, BuildVectorOpds, BuildVectorInsts) ||
-      BuildVectorOpds.size() < 2)
+  if (!findBuildAggregate(IVI, TTI, BuildVectorOpds, BuildVectorInsts))
     return false;
 
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IVI << "\n");
@@ -7324,7 +7415,6 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
   SmallVector<Value *, 16> BuildVectorInsts;
   SmallVector<Value *, 16> BuildVectorOpds;
   if (!findBuildAggregate(IEI, TTI, BuildVectorOpds, BuildVectorInsts) ||
-      BuildVectorOpds.size() < 2 ||
       (llvm::all_of(BuildVectorOpds,
                     [](Value *V) { return isa<ExtractElementInst>(V); }) &&
        isShuffle(BuildVectorOpds)))

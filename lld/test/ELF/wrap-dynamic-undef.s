@@ -8,10 +8,9 @@
 # Test that the dynamic relocation uses foo. We used to produce a
 # relocation with __real_foo.
 
-# CHECK:      Symbol table '.dynsym' contains 3 entries:
+# CHECK:      Symbol table '.dynsym' contains 2 entries:
 # CHECK:      NOTYPE  LOCAL  DEFAULT  UND
 # CHECK-NEXT: NOTYPE  GLOBAL DEFAULT  UND foo
-# CHECK-NEXT: NOTYPE  GLOBAL DEFAULT  UND __wrap_foo
 
 .global _start
 _start:

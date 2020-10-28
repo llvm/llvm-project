@@ -70,7 +70,7 @@ defm LOAD_F64 : WebAssemblyLoad<F64, "f64.load", 0x2b, []>;
 multiclass LoadPatNoOffset<ValueType ty, PatFrag kind, string inst> {
   def : Pat<(ty (kind I32:$addr)), (!cast<NI>(inst # "_A32") 0, 0, I32:$addr)>,
         Requires<[HasAddr32]>;
-  def : Pat<(ty (kind I64:$addr)), (!cast<NI>(inst # "_A64") 0, 0, I64:$addr)>,
+  def : Pat<(ty (kind (i64 I64:$addr))), (!cast<NI>(inst # "_A64") 0, 0, I64:$addr)>,
         Requires<[HasAddr64]>;
 }
 

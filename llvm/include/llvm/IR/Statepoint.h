@@ -136,7 +136,7 @@ public:
   /// Return an end iterator of the arguments to the underlying call
   const_op_iterator actual_arg_end() const {
     auto I = actual_arg_begin() + actual_arg_size();
-    assert((arg_end() - I) >= 0);
+    assert((arg_end() - I) == 2);
     return I;
   }
   /// range adapter for actual call arguments
@@ -147,16 +147,12 @@ public:
   const_op_iterator gc_transition_args_begin() const {
     if (auto Opt = getOperandBundle(LLVMContext::OB_gc_transition))
       return Opt->Inputs.begin();
-    auto I = actual_arg_end() + 1;
-    assert((arg_end() - I) >= 0);
-    return I;
+    return arg_end();
   }
   const_op_iterator gc_transition_args_end() const {
     if (auto Opt = getOperandBundle(LLVMContext::OB_gc_transition))
       return Opt->Inputs.end();
-    auto I = gc_transition_args_begin() + getNumDeoptArgs();
-    assert((arg_end() - I) >= 0);
-    return I;
+    return arg_end();
   }
 
   /// range adapter for GC transition arguments
@@ -167,19 +163,12 @@ public:
   const_op_iterator deopt_begin() const {
     if (auto Opt = getOperandBundle(LLVMContext::OB_deopt))
       return Opt->Inputs.begin();
-    // The current format has two length prefix bundles between call args and
-    // start of gc args.  This will be removed in the near future.
-    uint64_t NumTrans = getNumGCTransitionArgs();
-    const_op_iterator I = actual_arg_end() + 2 + NumTrans;
-    assert((arg_end() - I) >= 0);
-    return I;
+    return arg_end();
   }
   const_op_iterator deopt_end() const {
     if (auto Opt = getOperandBundle(LLVMContext::OB_deopt))
       return Opt->Inputs.end();
-    auto I = deopt_begin() + getNumDeoptArgs();
-    assert((arg_end() - I) >= 0);
-    return I;
+    return arg_end();
   }
 
   /// range adapter for vm state arguments
@@ -192,28 +181,14 @@ public:
   const_op_iterator gc_args_begin() const {
     if (auto Opt = getOperandBundle(LLVMContext::OB_gc_live))
       return Opt->Inputs.begin();
-
-    // The current format has two length prefix bundles between call args and
-    // start of gc args.  This will be removed in the near future.
-    uint64_t NumTrans = getNumGCTransitionArgs();
-    uint64_t NumDeopt = getNumDeoptArgs();
-    auto I = actual_arg_end() + 2 + NumTrans + NumDeopt;
-    assert((arg_end() - I) >= 0);
-    return I;
+    return arg_end();
   }
 
   /// Return an end iterator for the gc argument range
   const_op_iterator gc_args_end() const {
     if (auto Opt = getOperandBundle(LLVMContext::OB_gc_live))
       return Opt->Inputs.end();
-
     return arg_end();
-  }
-
-  /// Return the operand index at which the gc args begin
-  unsigned gcArgsStartIdx() const {
-    assert(!getOperandBundle(LLVMContext::OB_gc_live));
-    return gc_args_begin() - op_begin();
   }
 
   /// range adapter for gc arguments
@@ -235,19 +210,6 @@ public:
       if (auto *GRI = dyn_cast<GCResultInst>(U))
         return GRI;
     return nullptr;
-  }
-
-private:
-  int getNumGCTransitionArgs() const {
-    const Value *NumGCTransitionArgs = *actual_arg_end();
-    return cast<ConstantInt>(NumGCTransitionArgs)->getZExtValue();
-  }
-
-  int getNumDeoptArgs() const {
-    uint64_t NumTrans = getNumGCTransitionArgs();
-    const_op_iterator trans_end = actual_arg_end() + 1 + NumTrans;
-    const Value *NumDeoptArgs = *trans_end;
-    return cast<ConstantInt>(NumDeoptArgs)->getZExtValue();
   }
 };
 

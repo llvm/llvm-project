@@ -15,6 +15,9 @@ class AsanTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @expectedFailureAll(
+        oslist=["linux"],
+        bugnumber="non-core functionality, need to reenable and fix later (DES 2014.11.07)")
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @expectedFailureNetBSD
     @skipUnlessAddressSanitizer

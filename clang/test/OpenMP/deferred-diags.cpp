@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -triple x86_64 -verify=expected,dev -std=c++11\
 // RUN:            -verify-ignore-unexpected=note \
-// RUN:            -fopenmp -fopenmp-version=50 -o - %s
+// RUN:            -fopenmp -fopenmp-version=45 -o - %s
+
+// RUN: %clang_cc1 -triple x86_64 -verify=expected,dev -std=c++11\
+// RUN:            -verify-ignore-unexpected=note \
+// RUN:            -fopenmp -o - %s
 
 // expected-no-diagnostics
 

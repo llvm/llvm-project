@@ -133,7 +133,7 @@ struct S5 {
 
 // CHECK-DAG:  [[GS1:@.+]] = internal global [[S1]] zeroinitializer
 // CHECK-DAG:  [[GS1]].cache. = common global i8** null
-// CHECK-DAG:  [[DEFAULT_LOC:@.+]] = private unnamed_addr global [[IDENT]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* {{@.+}}, i32 0, i32 0) }
+// CHECK-DAG:  [[DEFAULT_LOC:@.+]] = private unnamed_addr constant [[IDENT]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* {{@.+}}, i32 0, i32 0) }
 // CHECK-DAG:  [[GS2:@.+]] = internal global [[S2]] zeroinitializer
 // CHECK-DAG:  [[ARR_X:@.+]] = global [2 x [3 x [[S1]]]] zeroinitializer
 // CHECK-DAG:  [[ARR_X]].cache. = common global i8** null
@@ -164,7 +164,9 @@ struct S5 {
 // CHECK-DEBUG-DAG: [[ST_S4_ST:@.+]] = linkonce_odr global %struct.S4 zeroinitializer
 
 // CHECK-DEBUG-DAG: [[LOC1:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;;249;1;;\00"
+// CHECK-DEBUG-DAG: [[ID1:@.*]] = private unnamed_addr constant %struct.ident_t { {{.*}} [[LOC1]]
 // CHECK-DEBUG-DAG: [[LOC2:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;;304;1;;\00"
+// CHECK-DEBUG-DAG: [[ID2:@.*]] = private unnamed_addr constant %struct.ident_t { {{.*}} [[LOC2]]
 // CHECK-DEBUG-DAG: [[LOC3:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;;422;19;;\00"
 // CHECK-DEBUG-DAG: [[LOC4:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;459;1;;\00"
 // CHECK-DEBUG-DAG: [[LOC5:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;main;476;9;;\00"
@@ -199,9 +201,7 @@ struct S5 {
 // CHECK-TLS-DAG:  @__dso_handle = external hidden global i8
 // CHECK-TLS-DAG:  [[GS1_TLS_INIT:@_ZTHL3gs1]] = internal alias void (), void ()* @__tls_init
 // CHECK-TLS-DAG:  [[ARR_X_TLS_INIT:@_ZTH5arr_x]] = alias void (), void ()* @__tls_init
-
 // CHECK-TLS-DAG:  [[ST_S4_ST_TLS_INIT:@_ZTHN2STI2S4E2stE]] = linkonce_odr alias void (), void ()* [[ST_S4_ST_CXX_INIT:@[^, ]*]]
-
 
 // OMP50-TLS: define internal void [[GS1_CXX_INIT:@.*]]()
 // OMP50-TLS: call void [[GS1_CTOR1:@.*]]([[S1]]* [[GS1]], i32 5)
@@ -269,11 +269,11 @@ static S1 gs1(5);
 // CHECK:      call {{.*}}void @__kmpc_threadprivate_register([[IDENT]]* [[DEFAULT_LOC]], i8* bitcast ([[S1]]* [[GS1]] to i8*), i8* (i8*)* [[GS1_CTOR]], i8* (i8*, i8*)* null, void (i8*)* [[GS1_DTOR]])
 // CHECK-NEXT: ret void
 // CHECK-NEXT: }
-// CHECK-DEBUG:      [[KMPC_LOC_ADDR:%.*]] = alloca [[IDENT]]
-// CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-// CHECK-DEBUG:      store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC1]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
+
+
+
 // CHECK-DEBUG:      @__kmpc_global_thread_num
-// CHECK-DEBUG:      call {{.*}}void @__kmpc_threadprivate_register([[IDENT]]* [[KMPC_LOC_ADDR]], i8* bitcast ([[S1]]* [[GS1]] to i8*), i8* (i8*)* [[GS1_CTOR:@\.__kmpc_global_ctor_\..*]], i8* (i8*, i8*)* null, void (i8*)* [[GS1_DTOR:@\.__kmpc_global_dtor_\..*]])
+// CHECK-DEBUG:      call {{.*}}void @__kmpc_threadprivate_register([[IDENT]]* [[ID1]], i8* bitcast ([[S1]]* [[GS1]] to i8*), i8* (i8*)* [[GS1_CTOR:@\.__kmpc_global_ctor_\..*]], i8* (i8*, i8*)* null, void (i8*)* [[GS1_DTOR:@\.__kmpc_global_dtor_\..*]])
 // CHECK-DEBUG:      define internal {{.*}}i8* [[GS1_CTOR]](i8* %0)
 // CHECK-DEBUG:      store i8* %0, i8** [[ARG_ADDR:%.*]],
 // CHECK-DEBUG:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
@@ -342,11 +342,11 @@ S1 arr_x[2][3] = { { 1, 2, 3 }, { 4, 5, 6 } };
 // CHECK:      call {{.*}}void @__kmpc_threadprivate_register([[IDENT]]* [[DEFAULT_LOC]], i8* bitcast ([2 x [3 x [[S1]]]]* [[ARR_X]] to i8*), i8* (i8*)* [[ARR_X_CTOR]], i8* (i8*, i8*)* null, void (i8*)* [[ARR_X_DTOR]])
 // CHECK-NEXT: ret void
 // CHECK-NEXT: }
-// CHECK-DEBUG:      [[KMPC_LOC_ADDR:%.*]] = alloca [[IDENT]]
-// CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-// CHECK-DEBUG:      store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC2]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
+
+
+
 // CHECK-DEBUG:      @__kmpc_global_thread_num
-// CHECK-DEBUG:      call {{.*}}void @__kmpc_threadprivate_register([[IDENT]]* [[KMPC_LOC_ADDR]], i8* bitcast ([2 x [3 x [[S1]]]]* [[ARR_X]] to i8*), i8* (i8*)* [[ARR_X_CTOR:@\.__kmpc_global_ctor_\..*]], i8* (i8*, i8*)* null, void (i8*)* [[ARR_X_DTOR:@\.__kmpc_global_dtor_\..*]])
+// CHECK-DEBUG:      call {{.*}}void @__kmpc_threadprivate_register([[IDENT]]* [[ID2]], i8* bitcast ([2 x [3 x [[S1]]]]* [[ARR_X]] to i8*), i8* (i8*)* [[ARR_X_CTOR:@\.__kmpc_global_ctor_\..*]], i8* (i8*, i8*)* null, void (i8*)* [[ARR_X_DTOR:@\.__kmpc_global_dtor_\..*]])
 // CHECK-DEBUG:      define internal {{.*}}i8* [[ARR_X_CTOR]](i8* %0)
 // CHECK-DEBUG:      }
 // CHECK-DEBUG:      define internal {{.*}}void [[ARR_X_DTOR]](i8* %0)
@@ -364,11 +364,11 @@ struct ST {
 };
 
 
-// OMP50-DEBUG:      [[KMPC_LOC_ADDR:%.*]] = alloca [[IDENT]]
-// OMP50-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-// OMP50-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC20]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
+
+
+
 // OMP50-DEBUG:      @__kmpc_global_thread_num
-// OMP50-DEBUG:      call {{.*}}void @__kmpc_threadprivate_register([[IDENT]]* [[KMPC_LOC_ADDR]], i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*), i8* (i8*)* [[ST_S4_ST_CTOR:@\.__kmpc_global_ctor_\..+]], i8* (i8*, i8*)* null, void (i8*)* [[ST_S4_ST_DTOR:@\.__kmpc_global_dtor_\..+]])
+// OMP50-DEBUG:      call {{.*}}void @__kmpc_threadprivate_register([[IDENT]]* {{.*}}, i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*), i8* (i8*)* [[ST_S4_ST_CTOR:@\.__kmpc_global_ctor_\..+]], i8* (i8*, i8*)* null, void (i8*)* [[ST_S4_ST_DTOR:@\.__kmpc_global_dtor_\..+]])
 // OMP50-DEBUG:      define internal {{.*}}i8* [[ST_S4_ST_CTOR]](i8* %0)
 // OMP50-DEBUG:      }
 // OMP50-DEBUG:      define {{.*}} [[S4_CTOR:@.*]]([[S4]]* {{.*}},
@@ -400,7 +400,7 @@ T ST<T>::st(23);
 // CHECK-LABEL:  @main()
 // CHECK-DEBUG-LABEL: @main()
 int main() {
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR:%.*]] = alloca [[IDENT]]
+
   int Res;
   struct Smain {
     int a;
@@ -424,21 +424,21 @@ int main() {
 // CHECK:      call {{.*}}i{{.*}} @__cxa_guard_acquire
 // CHECK:      call {{.*}}i32 @__kmpc_global_thread_num([[IDENT]]* [[DEFAULT_LOC]])
 // CHECK:      call {{.*}}void @__kmpc_threadprivate_register([[IDENT]]* [[DEFAULT_LOC]], i8* bitcast ([[SMAIN]]* [[SM]] to i8*), i8* (i8*)* [[SM_CTOR:@\.__kmpc_global_ctor_\..+]], i8* (i8*, i8*)* null, void (i8*)* [[SM_DTOR:@\.__kmpc_global_dtor_\..+]])
-// CHECK:      [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[GS1]].cache.)
+// CHECK:      [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[GS1]].cache.)
 // CHECK-NEXT: [[GS1_ADDR:%.*]] = bitcast i8* [[GS1_TEMP_ADDR]] to [[S1]]*
 // CHECK-NEXT: [[GS1_A_ADDR:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[GS1_ADDR]], i{{.*}} 0, i{{.*}} 0
 // CHECK-NEXT: [[GS1_A:%.*]] = load [[INT]], [[INT]]* [[GS1_A_ADDR]]
 // CHECK-NEXT: invoke {{.*}} [[SMAIN_CTOR:.*]]([[SMAIN]]* [[SM]], [[INT]] {{.*}}[[GS1_A]])
 // CHECK:      call {{.*}}void @__cxa_guard_release
-// CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-// CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC3]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-// CHECK-DEBUG-NEXT: [[THREAD_NUM:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT]]* [[KMPC_LOC_ADDR]])
+
+
+
 // CHECK-DEBUG:      call {{.*}}i{{.*}} @__cxa_guard_acquire
-// CHECK-DEBUG:      call {{.*}}i32 @__kmpc_global_thread_num([[IDENT]]* [[KMPC_LOC_ADDR]])
-// CHECK-DEBUG:      call {{.*}}void @__kmpc_threadprivate_register([[IDENT]]* [[KMPC_LOC_ADDR]], i8* bitcast ([[SMAIN]]* [[SM]] to i8*), i8* (i8*)* [[SM_CTOR:@\.__kmpc_global_ctor_\..+]], i8* (i8*, i8*)* null, void (i8*)* [[SM_DTOR:@\.__kmpc_global_dtor_\..+]])
-// CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-// CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC3]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-// CHECK-DEBUG:      [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+// CHECK-DEBUG:      call {{.*}}i32 @__kmpc_global_thread_num([[IDENT]]* [[KMPC_LOC:@.+]])
+// CHECK-DEBUG:      call {{.*}}void @__kmpc_threadprivate_register([[IDENT]]* [[KMPC_LOC]], i8* bitcast ([[SMAIN]]* [[SM]] to i8*), i8* (i8*)* [[SM_CTOR:@\.__kmpc_global_ctor_\..+]], i8* (i8*, i8*)* null, void (i8*)* [[SM_DTOR:@\.__kmpc_global_dtor_\..+]])
+// CHECK-DEBUG:      [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
 // CHECK-DEBUG-NEXT: [[GS1_ADDR:%.*]] = bitcast i8* [[GS1_TEMP_ADDR]] to [[S1]]*
 // CHECK-DEBUG-NEXT: [[GS1_A_ADDR:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[GS1_ADDR]], i{{.*}} 0, i{{.*}} 0
 // CHECK-DEBUG-NEXT: [[GS1_A:%.*]] = load [[INT]], [[INT]]* [[GS1_A_ADDR]]
@@ -457,14 +457,14 @@ int main() {
 // CHECK-TLS-NEXT: br label %[[INIT_DONE]]
 // CHECK-TLS:      [[INIT_DONE]]
 #pragma omp threadprivate(sm)
-  // CHECK:      [[STATIC_S_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([[S3]]* [[STATIC_S]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[STATIC_S]].cache.)
+  // CHECK:      [[STATIC_S_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([[S3]]* [[STATIC_S]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[STATIC_S]].cache.)
   // CHECK-NEXT: [[STATIC_S_ADDR:%.*]] = bitcast i8* [[STATIC_S_TEMP_ADDR]] to [[S3]]*
   // CHECK-NEXT: [[STATIC_S_A_ADDR:%.*]] = getelementptr inbounds [[S3]], [[S3]]* [[STATIC_S_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-NEXT: [[STATIC_S_A:%.*]] = load [[INT]], [[INT]]* [[STATIC_S_A_ADDR]]
   // CHECK-NEXT: store [[INT]] [[STATIC_S_A]], [[INT]]* [[RES_ADDR:[^,]+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC5]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT: [[STATIC_S_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([[S3]]* [[STATIC_S]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG:[[STATIC_S_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([[S3]]* [[STATIC_S]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
   // CHECK-DEBUG-NEXT: [[STATIC_S_ADDR:%.*]] = bitcast i8* [[STATIC_S_TEMP_ADDR]] to [[S3]]*
   // CHECK-DEBUG-NEXT: [[STATIC_S_A_ADDR:%.*]] = getelementptr inbounds [[S3]], [[S3]]* [[STATIC_S_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-DEBUG-NEXT: [[STATIC_S_A:%.*]] = load [[INT]], [[INT]]* [[STATIC_S_A_ADDR]]
@@ -474,16 +474,16 @@ int main() {
   // CHECK-TLS-NEXT: [[STATIC_S_A:%.*]] = load i32, i32* [[STATIC_S_A_ADDR]]
   // CHECK-TLS-NEXT: store i32 [[STATIC_S_A]], i32* [[RES_ADDR:[^,]+]]
   Res = Static::s.a;
-  // CHECK:      [[SM_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([[SMAIN]]* [[SM]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[SM]].cache.)
+  // CHECK:      [[SM_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([[SMAIN]]* [[SM]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[SM]].cache.)
   // CHECK-NEXT: [[SM_ADDR:%.*]] = bitcast i8* [[SM_TEMP_ADDR]] to [[SMAIN]]*
   // CHECK-NEXT: [[SM_A_ADDR:%.*]] = getelementptr inbounds [[SMAIN]], [[SMAIN]]* [[SM_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-NEXT: [[SM_A:%.*]] = load [[INT]], [[INT]]* [[SM_A_ADDR]]
   // CHECK-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[SM_A]]
   // CHECK-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC6]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT: [[SM_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([[SMAIN]]* [[SM]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG-NEXT: [[SM_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([[SMAIN]]* [[SM]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
   // CHECK-DEBUG-NEXT: [[SM_ADDR:%.*]] = bitcast i8* [[SM_TEMP_ADDR]] to [[SMAIN]]*
   // CHECK-DEBUG-NEXT: [[SM_A_ADDR:%.*]] = getelementptr inbounds [[SMAIN]], [[SMAIN]]* [[SM_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-DEBUG-NEXT: [[SM_A:%.*]] = load [[INT]], [[INT]]* [[SM_A_ADDR]]
@@ -496,16 +496,16 @@ int main() {
   // CHECK-TLS-NEXT: [[ADD:%.*]] = add {{.*}} i32 [[RES]], [[SM_A]]
   // CHECK-TLS-NEXT: store i32 [[ADD]], i32* [[RES_ADDR]]
   Res += sm.a;
-  // CHECK:      [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[GS1]].cache.)
+  // CHECK:      [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[GS1]].cache.)
   // CHECK-NEXT: [[GS1_ADDR:%.*]] = bitcast i8* [[GS1_TEMP_ADDR]] to [[S1]]*
   // CHECK-NEXT: [[GS1_A_ADDR:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[GS1_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-NEXT: [[GS1_A:%.*]] = load [[INT]], [[INT]]* [[GS1_A_ADDR]]
   // CHECK-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[GS1_A]]
   // CHECK-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC7]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT: [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG-NEXT: [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
   // CHECK-DEBUG-NEXT: [[GS1_ADDR:%.*]] = bitcast i8* [[GS1_TEMP_ADDR]] to [[S1]]*
   // CHECK-DEBUG-NEXT: [[GS1_A_ADDR:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[GS1_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-DEBUG-NEXT: [[GS1_A:%.*]] = load [[INT]], [[INT]]* [[GS1_A_ADDR]]
@@ -532,16 +532,16 @@ int main() {
   // CHECK-TLS-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[GS2_A]]
   // CHECK-TLS-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
   Res += gs2.a;
-  // CHECK:      [[GS3_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([[S5]]* [[GS3]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[GS3]].cache.)
+  // CHECK:      [[GS3_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([[S5]]* [[GS3]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[GS3]].cache.)
   // CHECK-NEXT: [[GS3_ADDR:%.*]] = bitcast i8* [[GS3_TEMP_ADDR]] to [[S5]]*
   // CHECK-NEXT: [[GS3_A_ADDR:%.*]] = getelementptr inbounds [[S5]], [[S5]]* [[GS3_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-NEXT: [[GS3_A:%.*]] = load [[INT]], [[INT]]* [[GS3_A_ADDR]]
   // CHECK-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[GS3_A]]
   // CHECK-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC8]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT: [[GS3_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([[S5]]* [[GS3]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG-NEXT: [[GS3_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([[S5]]* [[GS3]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
   // CHECK-DEBUG-NEXT: [[GS3_ADDR:%.*]] = bitcast i8* [[GS3_TEMP_ADDR]] to [[S5]]*
   // CHECK-DEBUG-NEXT: [[GS3_A_ADDR:%.*]] = getelementptr inbounds [[S5]], [[S5]]* [[GS3_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-DEBUG-NEXT: [[GS3_A:%.*]] = load [[INT]], [[INT]]* [[GS3_A_ADDR]]
@@ -555,7 +555,7 @@ int main() {
   // CHECK-TLS-NEXT: [[ADD:%.*]] = add nsw i32 [[RES]], [[GS3_A]]
   // CHECK-TLS-NEXT: store i32 [[ADD]], i32* [[RES_ADDR]]
   Res += gs3.a;
-  // CHECK:      [[ARR_X_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([2 x [3 x [[S1]]]]* [[ARR_X]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ARR_X]].cache.)
+  // CHECK:      [[ARR_X_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([2 x [3 x [[S1]]]]* [[ARR_X]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ARR_X]].cache.)
   // CHECK-NEXT: [[ARR_X_ADDR:%.*]] = bitcast i8* [[ARR_X_TEMP_ADDR]] to [2 x [3 x [[S1]]]]*
   // CHECK-NEXT: [[ARR_X_1_ADDR:%.*]] = getelementptr inbounds [2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X_ADDR]], i{{.*}} 0, i{{.*}} 1
   // CHECK-NEXT: [[ARR_X_1_1_ADDR:%.*]] = getelementptr inbounds [3 x [[S1]]], [3 x [[S1]]]* [[ARR_X_1_ADDR]], i{{.*}} 0, i{{.*}} 1
@@ -564,9 +564,9 @@ int main() {
   // CHECK-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[ARR_X_1_1_A]]
   // CHECK-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC9]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT:      [[ARR_X_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([2 x [3 x [[S1]]]]* [[ARR_X]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG-NEXT:      [[ARR_X_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([2 x [3 x [[S1]]]]* [[ARR_X]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
   // CHECK-DEBUG-NEXT: [[ARR_X_ADDR:%.*]] = bitcast i8* [[ARR_X_TEMP_ADDR]] to [2 x [3 x [[S1]]]]*
   // CHECK-DEBUG-NEXT: [[ARR_X_1_ADDR:%.*]] = getelementptr inbounds [2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X_ADDR]], i{{.*}} 0, i{{.*}} 1
   // CHECK-DEBUG-NEXT: [[ARR_X_1_1_ADDR:%.*]] = getelementptr inbounds [3 x [[S1]]], [3 x [[S1]]]* [[ARR_X_1_ADDR]], i{{.*}} 0, i{{.*}} 1
@@ -584,15 +584,15 @@ int main() {
   // CHECK-TLS-NEXT:  [[ADD:%.*]] = add {{.*}} i32 [[RES]], [[ARR_X_1_1_A]]
   // CHECK-TLS-NEXT:  store i32 [[ADD]], i32* [[RES_ADDR]]
   Res += arr_x[1][1].a;
-  // CHECK:      [[ST_INT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([[INT]]* [[ST_INT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ST_INT_ST]].cache.)
+  // CHECK:      [[ST_INT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([[INT]]* [[ST_INT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ST_INT_ST]].cache.)
   // CHECK-NEXT: [[ST_INT_ST_ADDR:%.*]] = bitcast i8* [[ST_INT_ST_TEMP_ADDR]] to [[INT]]*
   // CHECK-NEXT: [[ST_INT_ST_VAL:%.*]] = load [[INT]], [[INT]]* [[ST_INT_ST_ADDR]]
   // CHECK-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[ST_INT_ST_VAL]]
   // CHECK-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC10]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT: [[ST_INT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([[INT]]* [[ST_INT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG-NEXT: [[ST_INT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([[INT]]* [[ST_INT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
   // CHECK-DEBUG-NEXT: [[ST_INT_ST_ADDR:%.*]] = bitcast i8* [[ST_INT_ST_TEMP_ADDR]] to [[INT]]*
   // CHECK-DEBUG-NEXT: [[ST_INT_ST_VAL:%.*]] = load [[INT]], [[INT]]* [[ST_INT_ST_ADDR]]
   // CHECK-DEBUG-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
@@ -604,16 +604,16 @@ int main() {
   // CHECK-TLS-NEXT:  [[ADD:%.*]] = add {{.*}} i32 [[RES]], [[ST_INT_ST_VAL]]
   // CHECK-TLS-NEXT:  store i32 [[ADD]], i32* [[RES_ADDR]]
   Res += ST<int>::st;
-  // CHECK:      [[ST_FLOAT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast (float* [[ST_FLOAT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ST_FLOAT_ST]].cache.)
+  // CHECK:      [[ST_FLOAT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast (float* [[ST_FLOAT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ST_FLOAT_ST]].cache.)
   // CHECK-NEXT: [[ST_FLOAT_ST_ADDR:%.*]] = bitcast i8* [[ST_FLOAT_ST_TEMP_ADDR]] to float*
   // CHECK-NEXT: [[ST_FLOAT_ST_VAL:%.*]] = load float, float* [[ST_FLOAT_ST_ADDR]]
   // CHECK-NEXT: [[FLOAT_TO_INT_CONV:%.*]] = fptosi float [[ST_FLOAT_ST_VAL]] to [[INT]]
   // CHECK-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[FLOAT_TO_INT_CONV]]
   // CHECK-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC11]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT: [[ST_FLOAT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast (float* [[ST_FLOAT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG-NEXT: [[ST_FLOAT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast (float* [[ST_FLOAT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
   // CHECK-DEBUG-NEXT: [[ST_FLOAT_ST_ADDR:%.*]] = bitcast i8* [[ST_FLOAT_ST_TEMP_ADDR]] to float*
   // CHECK-DEBUG-NEXT: [[ST_FLOAT_ST_VAL:%.*]] = load float, float* [[ST_FLOAT_ST_ADDR]]
   // CHECK-DEBUG-NEXT: [[FLOAT_TO_INT_CONV:%.*]] = fptosi float [[ST_FLOAT_ST_VAL]] to [[INT]]
@@ -627,16 +627,16 @@ int main() {
   // CHECK-TLS-NEXT: [[ADD:%.*]] = add {{.*}} i32 [[RES]], [[FLOAT_TO_INT_CONV]]
   // CHECK-TLS-NEXT: store i32 [[ADD]], i32* [[RES_ADDR]]
   Res += static_cast<int>(ST<float>::st);
-  // CHECK:      [[ST_S4_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ST_S4_ST]].cache.)
+  // CHECK:      [[ST_S4_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ST_S4_ST]].cache.)
   // CHECK-NEXT: [[ST_S4_ST_ADDR:%.*]] = bitcast i8* [[ST_S4_ST_TEMP_ADDR]] to [[S4]]*
   // CHECK-NEXT: [[ST_S4_ST_A_ADDR:%.*]] = getelementptr inbounds [[S4]], [[S4]]* [[ST_S4_ST_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-NEXT: [[ST_S4_ST_A:%.*]] = load [[INT]], [[INT]]* [[ST_S4_ST_A_ADDR]]
   // CHECK-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[ST_S4_ST_A]]
   // CHECK-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC12]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT: [[ST_S4_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG-NEXT: [[ST_S4_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
   // CHECK-DEBUG-NEXT: [[ST_S4_ST_ADDR:%.*]] = bitcast i8* [[ST_S4_ST_TEMP_ADDR]] to [[S4]]*
   // CHECK-DEBUG-NEXT: [[ST_S4_ST_A_ADDR:%.*]] = getelementptr inbounds [[S4]], [[S4]]* [[ST_S4_ST_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-DEBUG-NEXT: [[ST_S4_ST_A:%.*]] = load [[INT]], [[INT]]* [[ST_S4_ST_A_ADDR]]
@@ -665,7 +665,7 @@ int main() {
 // CHECK:      store i8* %0, i8** [[ARG_ADDR:%.*]],
 // CHECK:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK:      [[RES:%.*]] = bitcast i8* [[ARG]] to [[SMAIN]]*
-// CHECK:      [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[GS1]].cache.)
+// CHECK:      [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[GS1]].cache.)
 // CHECK-NEXT: [[GS1_ADDR:%.*]] = bitcast i8* [[GS1_TEMP_ADDR]] to [[S1]]*
 // CHECK-NEXT: [[GS1_A_ADDR:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[GS1_ADDR]], i{{.*}} 0, i{{.*}} 0
 // CHECK-NEXT: [[GS1_A:%.*]] = load [[INT]], [[INT]]* [[GS1_A_ADDR]]
@@ -683,16 +683,16 @@ int main() {
 // CHECK-NEXT: }
 // CHECK:      define {{.*}} [[SMAIN_DTOR]]([[SMAIN]]* {{.*}})
 // CHECK-DEBUG:      define internal {{.*}}i8* [[SM_CTOR]](i8* %0)
-// CHECK-DEBUG:      [[KMPC_LOC_ADDR:%.*]] = alloca [[IDENT]]
-// CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-// CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC3]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-// CHECK-DEBUG-NEXT: [[THREAD_NUM:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT]]* [[KMPC_LOC_ADDR]])
+// CHECK-DEBUG:      [[THREAD_NUM:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT]]* {{.*}})
+
+
+
 // CHECK-DEBUG:      store i8* %0, i8** [[ARG_ADDR:%.*]],
 // CHECK-DEBUG:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK-DEBUG:      [[RES:%.*]] = bitcast i8* [[ARG]] to [[SMAIN]]*
-// CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-// CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC3]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-// CHECK-DEBUG:      [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+// CHECK-DEBUG:      [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
 // CHECK-DEBUG-NEXT: [[GS1_ADDR:%.*]] = bitcast i8* [[GS1_TEMP_ADDR]] to [[S1]]*
 // CHECK-DEBUG-NEXT: [[GS1_A_ADDR:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[GS1_ADDR]], i{{.*}} 0, i{{.*}} 0
 // CHECK-DEBUG-NEXT: [[GS1_A:%.*]] = load [[INT]], [[INT]]* [[GS1_A_ADDR]]
@@ -749,20 +749,20 @@ int main() {
 // CHECK-DEBUG-LABEL: @{{.*}}foobar{{.*}}()
 // CHECK-TLS-LABEL: @{{.*}}foobar{{.*}}()
 int foobar() {
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR:%.*]] = alloca [[IDENT]]
+
   int Res;
   // CHECK:      [[THREAD_NUM:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT]]* [[DEFAULT_LOC]])
-  // CHECK:      [[STATIC_S_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([[S3]]* [[STATIC_S]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[STATIC_S]].cache.)
+  // CHECK:      [[STATIC_S_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([[S3]]* [[STATIC_S]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[STATIC_S]].cache.)
   // CHECK-NEXT: [[STATIC_S_ADDR:%.*]] = bitcast i8* [[STATIC_S_TEMP_ADDR]] to [[S3]]*
   // CHECK-NEXT: [[STATIC_S_A_ADDR:%.*]] = getelementptr inbounds [[S3]], [[S3]]* [[STATIC_S_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-NEXT: [[STATIC_S_A:%.*]] = load [[INT]], [[INT]]* [[STATIC_S_A_ADDR]]
   // CHECK-NEXT: store [[INT]] [[STATIC_S_A]], [[INT]]* [[RES_ADDR:[^,]+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC13]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT: [[THREAD_NUM:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT]]* [[KMPC_LOC_ADDR]])
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC13]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT: [[STATIC_S_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([[S3]]* [[STATIC_S]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG:      [[THREAD_NUM:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT]]* {{.*}})
+  // CHECK-DEBUG:      [[STATIC_S_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([[S3]]* [[STATIC_S]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
+
+
   // CHECK-DEBUG-NEXT: [[STATIC_S_ADDR:%.*]] = bitcast i8* [[STATIC_S_TEMP_ADDR]] to [[S3]]*
   // CHECK-DEBUG-NEXT: [[STATIC_S_A_ADDR:%.*]] = getelementptr inbounds [[S3]], [[S3]]* [[STATIC_S_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-DEBUG-NEXT: [[STATIC_S_A:%.*]] = load [[INT]], [[INT]]* [[STATIC_S_A_ADDR]]
@@ -772,16 +772,16 @@ int foobar() {
   // CHECK-TLS-NEXT: [[STATIC_S_A:%.*]] = load i32, i32* [[STATIC_S_A_ADDR]]
   // CHECK-TLS-NEXT: store i32 [[STATIC_S_A]], i32* [[RES_ADDR:[^,]+]]
   Res = Static::s.a;
-  // CHECK:      [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[GS1]].cache.)
+  // CHECK:      [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[GS1]].cache.)
   // CHECK-NEXT: [[GS1_ADDR:%.*]] = bitcast i8* [[GS1_TEMP_ADDR]] to [[S1]]*
   // CHECK-NEXT: [[GS1_A_ADDR:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[GS1_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-NEXT: [[GS1_A:%.*]] = load [[INT]], [[INT]]* [[GS1_A_ADDR]]
   // CHECK-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[GS1_A]]
   // CHECK-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC14]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT: [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG-NEXT: [[GS1_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([[S1]]* [[GS1]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
   // CHECK-DEBUG-NEXT: [[GS1_ADDR:%.*]] = bitcast i8* [[GS1_TEMP_ADDR]] to [[S1]]*
   // CHECK-DEBUG-NEXT: [[GS1_A_ADDR:%.*]] = getelementptr inbounds [[S1]], [[S1]]* [[GS1_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-DEBUG-NEXT: [[GS1_A:%.*]] = load [[INT]], [[INT]]* [[GS1_A_ADDR]]
@@ -808,16 +808,16 @@ int foobar() {
   // CHECK-TLS-NEXT: [[ADD:%.*]] = add {{.*}} i32 [[RES]], [[GS2_A]]
   // CHECK-TLS-NEXT: store i32 [[ADD]], i32* [[RES:.+]]
   Res += gs2.a;
-  // CHECK:      [[GS3_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([[S5]]* [[GS3]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[GS3]].cache.)
+  // CHECK:      [[GS3_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([[S5]]* [[GS3]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[GS3]].cache.)
   // CHECK-NEXT: [[GS3_ADDR:%.*]] = bitcast i8* [[GS3_TEMP_ADDR]] to [[S5]]*
   // CHECK-NEXT: [[GS3_A_ADDR:%.*]] = getelementptr inbounds [[S5]], [[S5]]* [[GS3_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-NEXT: [[GS3_A:%.*]] = load [[INT]], [[INT]]* [[GS3_A_ADDR]]
   // CHECK-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[GS3_A]]
   // CHECK-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC15]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT: [[GS3_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([[S5]]* [[GS3]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG-NEXT: [[GS3_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([[S5]]* [[GS3]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
   // CHECK-DEBUG-NEXT: [[GS3_ADDR:%.*]] = bitcast i8* [[GS3_TEMP_ADDR]] to [[S5]]*
   // CHECK-DEBUG-NEXT: [[GS3_A_ADDR:%.*]] = getelementptr inbounds [[S5]], [[S5]]* [[GS3_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-DEBUG-NEXT: [[GS3_A:%.*]] = load [[INT]], [[INT]]* [[GS3_A_ADDR]]
@@ -831,7 +831,7 @@ int foobar() {
   // CHECK-TLS-DEBUG: [[ADD:%.*]]= add nsw i32 [[RES]], [[GS3_A]]
   // CHECK-TLS-DEBUG: store i32 [[ADD]], i32* [[RES_ADDR]]
   Res += gs3.a;
-  // CHECK:      [[ARR_X_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([2 x [3 x [[S1]]]]* [[ARR_X]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ARR_X]].cache.)
+  // CHECK:      [[ARR_X_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([2 x [3 x [[S1]]]]* [[ARR_X]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ARR_X]].cache.)
   // CHECK-NEXT: [[ARR_X_ADDR:%.*]] = bitcast i8* [[ARR_X_TEMP_ADDR]] to [2 x [3 x [[S1]]]]*
   // CHECK-NEXT: [[ARR_X_1_ADDR:%.*]] = getelementptr inbounds [2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X_ADDR]], i{{.*}} 0, i{{.*}} 1
   // CHECK-NEXT: [[ARR_X_1_1_ADDR:%.*]] = getelementptr inbounds [3 x [[S1]]], [3 x [[S1]]]* [[ARR_X_1_ADDR]], i{{.*}} 0, i{{.*}} 1
@@ -840,9 +840,9 @@ int foobar() {
   // CHECK-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[ARR_X_1_1_A]]
   // CHECK-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC16]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT:      [[ARR_X_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([2 x [3 x [[S1]]]]* [[ARR_X]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG-NEXT:      [[ARR_X_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([2 x [3 x [[S1]]]]* [[ARR_X]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
   // CHECK-DEBUG-NEXT: [[ARR_X_ADDR:%.*]] = bitcast i8* [[ARR_X_TEMP_ADDR]] to [2 x [3 x [[S1]]]]*
   // CHECK-DEBUG-NEXT: [[ARR_X_1_ADDR:%.*]] = getelementptr inbounds [2 x [3 x [[S1]]]], [2 x [3 x [[S1]]]]* [[ARR_X_ADDR]], i{{.*}} 0, i{{.*}} 1
   // CHECK-DEBUG-NEXT: [[ARR_X_1_1_ADDR:%.*]] = getelementptr inbounds [3 x [[S1]]], [3 x [[S1]]]* [[ARR_X_1_ADDR]], i{{.*}} 0, i{{.*}} 1
@@ -860,15 +860,15 @@ int foobar() {
   // CHECK-TLS-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[ARR_X_1_1_A]]
   // CHECK-TLS-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
   Res += arr_x[1][1].a;
-  // CHECK:      [[ST_INT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([[INT]]* [[ST_INT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ST_INT_ST]].cache.)
+  // CHECK:      [[ST_INT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([[INT]]* [[ST_INT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ST_INT_ST]].cache.)
   // CHECK-NEXT: [[ST_INT_ST_ADDR:%.*]] = bitcast i8* [[ST_INT_ST_TEMP_ADDR]] to [[INT]]*
   // CHECK-NEXT: [[ST_INT_ST_VAL:%.*]] = load [[INT]], [[INT]]* [[ST_INT_ST_ADDR]]
   // CHECK-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[ST_INT_ST_VAL]]
   // CHECK-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC17]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT: [[ST_INT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([[INT]]* [[ST_INT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG-NEXT: [[ST_INT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([[INT]]* [[ST_INT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
   // CHECK-DEBUG-NEXT: [[ST_INT_ST_ADDR:%.*]] = bitcast i8* [[ST_INT_ST_TEMP_ADDR]] to [[INT]]*
   // CHECK-DEBUG-NEXT: [[ST_INT_ST_VAL:%.*]] = load [[INT]], [[INT]]* [[ST_INT_ST_ADDR]]
   // CHECK-DEBUG-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
@@ -880,16 +880,16 @@ int foobar() {
   // OMP45-TLS-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[ST_INT_ST_VAL]]
   // OMP45-TLS-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
   Res += ST<int>::st;
-  // CHECK:      [[ST_FLOAT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast (float* [[ST_FLOAT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ST_FLOAT_ST]].cache.)
+  // CHECK:      [[ST_FLOAT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast (float* [[ST_FLOAT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ST_FLOAT_ST]].cache.)
   // CHECK-NEXT: [[ST_FLOAT_ST_ADDR:%.*]] = bitcast i8* [[ST_FLOAT_ST_TEMP_ADDR]] to float*
   // CHECK-NEXT: [[ST_FLOAT_ST_VAL:%.*]] = load float, float* [[ST_FLOAT_ST_ADDR]]
   // CHECK-NEXT: [[FLOAT_TO_INT_CONV:%.*]] = fptosi float [[ST_FLOAT_ST_VAL]] to [[INT]]
   // CHECK-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[FLOAT_TO_INT_CONV]]
   // CHECK-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC18]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT: [[ST_FLOAT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast (float* [[ST_FLOAT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG-NEXT: [[ST_FLOAT_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast (float* [[ST_FLOAT_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
   // CHECK-DEBUG-NEXT: [[ST_FLOAT_ST_ADDR:%.*]] = bitcast i8* [[ST_FLOAT_ST_TEMP_ADDR]] to float*
   // CHECK-DEBUG-NEXT: [[ST_FLOAT_ST_VAL:%.*]] = load float, float* [[ST_FLOAT_ST_ADDR]]
   // CHECK-DEBUG-NEXT: [[FLOAT_TO_INT_CONV:%.*]] = fptosi float [[ST_FLOAT_ST_VAL]] to [[INT]]
@@ -903,16 +903,16 @@ int foobar() {
   // OMP45-TLS-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[FLOAT_TO_INT_CONV]]
   // OMP45-TLS-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
   Res += static_cast<int>(ST<float>::st);
-  // CHECK:      [[ST_S4_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 [[THREAD_NUM]], i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ST_S4_ST]].cache.)
+  // CHECK:      [[ST_S4_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[DEFAULT_LOC]], i32 {{.*}}, i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8*** [[ST_S4_ST]].cache.)
   // CHECK-NEXT: [[ST_S4_ST_ADDR:%.*]] = bitcast i8* [[ST_S4_ST_TEMP_ADDR]] to [[S4]]*
   // CHECK-NEXT: [[ST_S4_ST_A_ADDR:%.*]] = getelementptr inbounds [[S4]], [[S4]]* [[ST_S4_ST_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-NEXT: [[ST_S4_ST_A:%.*]] = load [[INT]], [[INT]]* [[ST_S4_ST_A_ADDR]]
   // CHECK-NEXT: [[RES:%.*]] = load [[INT]], [[INT]]* [[RES_ADDR]]
   // CHECK-NEXT: [[ADD:%.*]] = add {{.*}} [[INT]] [[RES]], [[ST_S4_ST_A]]
   // CHECK-NEXT: store [[INT]] [[ADD]], [[INT]]* [[RES:.+]]
-  // CHECK-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-  // CHECK-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC19]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
-  // CHECK-DEBUG-NEXT: [[ST_S4_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* [[KMPC_LOC_ADDR]], i32 [[THREAD_NUM]], i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+  // CHECK-DEBUG-NEXT: [[ST_S4_ST_TEMP_ADDR:%.*]] = call {{.*}}i8* @__kmpc_threadprivate_cached([[IDENT]]* {{.*}}, i32 {{.*}}, i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*), i{{.*}} {{[0-9]+}}, i8***
+
+
   // CHECK-DEBUG-NEXT: [[ST_S4_ST_ADDR:%.*]] = bitcast i8* [[ST_S4_ST_TEMP_ADDR]] to [[S4]]*
   // CHECK-DEBUG-NEXT: [[ST_S4_ST_A_ADDR:%.*]] = getelementptr inbounds [[S4]], [[S4]]* [[ST_S4_ST_ADDR]], i{{.*}} 0, i{{.*}} 0
   // CHECK-DEBUG-NEXT: [[ST_S4_ST_A:%.*]] = load [[INT]], [[INT]]* [[ST_S4_ST_A_ADDR]]
@@ -955,11 +955,11 @@ int foobar() {
 // OMP45-NEXT: }
 // OMP45:      define {{.*}} [[S4_DTOR]]([[S4]]* {{.*}})
 
-// OMP45-DEBUG:      [[KMPC_LOC_ADDR:%.*]] = alloca [[IDENT]]
-// OMP45-DEBUG:      [[KMPC_LOC_ADDR_PSOURCE:%.*]] = getelementptr inbounds [[IDENT]], [[IDENT]]* [[KMPC_LOC_ADDR]], i{{.*}} 0, i{{.*}} 4
-// OMP45-DEBUG-NEXT: store i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[LOC20]], i{{.*}} 0, i{{.*}} 0), i8** [[KMPC_LOC_ADDR_PSOURCE]]
+
+
+
 // OMP45-DEBUG:      @__kmpc_global_thread_num
-// OMP45-DEBUG:      call {{.*}}void @__kmpc_threadprivate_register([[IDENT]]* [[KMPC_LOC_ADDR]], i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*), i8* (i8*)* [[ST_S4_ST_CTOR:@\.__kmpc_global_ctor_\..+]], i8* (i8*, i8*)* null, void (i8*)* [[ST_S4_ST_DTOR:@\.__kmpc_global_dtor_\..+]])
+// OMP45-DEBUG:      call {{.*}}void @__kmpc_threadprivate_register([[IDENT]]* {{.*}}, i8* bitcast ([[S4]]* [[ST_S4_ST]] to i8*), i8* (i8*)* [[ST_S4_ST_CTOR:@\.__kmpc_global_ctor_\..+]], i8* (i8*, i8*)* null, void (i8*)* [[ST_S4_ST_DTOR:@\.__kmpc_global_dtor_\..+]])
 // OMP45-DEBUG:      define internal {{.*}}i8* [[ST_S4_ST_CTOR]](i8* %0)
 // OMP45-DEBUG:      }
 // OMP45-DEBUG:      define {{.*}} [[S4_CTOR:@.*]]([[S4]]* {{.*}},

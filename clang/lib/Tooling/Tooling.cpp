@@ -245,27 +245,38 @@ std::string getAbsolutePath(StringRef File) {
 
 void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
                                     StringRef InvokedAs) {
-  if (!CommandLine.empty() && !InvokedAs.empty()) {
-    bool AlreadyHasTarget = false;
-    bool AlreadyHasMode = false;
-    // Skip CommandLine[0].
-    for (auto Token = ++CommandLine.begin(); Token != CommandLine.end();
-         ++Token) {
-      StringRef TokenRef(*Token);
-      AlreadyHasTarget |=
-          (TokenRef == "-target" || TokenRef.startswith("-target="));
-      AlreadyHasMode |= (TokenRef == "--driver-mode" ||
-                         TokenRef.startswith("--driver-mode="));
-    }
-    auto TargetMode =
-        driver::ToolChain::getTargetAndModeFromProgramName(InvokedAs);
-    if (!AlreadyHasMode && TargetMode.DriverMode) {
-      CommandLine.insert(++CommandLine.begin(), TargetMode.DriverMode);
-    }
-    if (!AlreadyHasTarget && TargetMode.TargetIsValid) {
-      CommandLine.insert(++CommandLine.begin(), {"-target",
-                                                 TargetMode.TargetPrefix});
-    }
+  if (CommandLine.empty() || InvokedAs.empty())
+    return;
+  const auto &Table = driver::getDriverOptTable();
+  // --target=X
+  const std::string TargetOPT =
+      Table.getOption(driver::options::OPT_target).getPrefixedName();
+  // -target X
+  const std::string TargetOPTLegacy =
+      Table.getOption(driver::options::OPT_target_legacy_spelling)
+          .getPrefixedName();
+  // --driver-mode=X
+  const std::string DriverModeOPT =
+      Table.getOption(driver::options::OPT_driver_mode).getPrefixedName();
+  auto TargetMode =
+      driver::ToolChain::getTargetAndModeFromProgramName(InvokedAs);
+  // No need to search for target args if we don't have a target/mode to insert.
+  bool ShouldAddTarget = TargetMode.TargetIsValid;
+  bool ShouldAddMode = TargetMode.DriverMode != nullptr;
+  // Skip CommandLine[0].
+  for (auto Token = ++CommandLine.begin(); Token != CommandLine.end();
+       ++Token) {
+    StringRef TokenRef(*Token);
+    ShouldAddTarget = ShouldAddTarget && !TokenRef.startswith(TargetOPT) &&
+                      !TokenRef.equals(TargetOPTLegacy);
+    ShouldAddMode = ShouldAddMode && !TokenRef.startswith(DriverModeOPT);
+  }
+  if (ShouldAddMode) {
+    CommandLine.insert(++CommandLine.begin(), TargetMode.DriverMode);
+  }
+  if (ShouldAddTarget) {
+    CommandLine.insert(++CommandLine.begin(),
+                       TargetOPT + TargetMode.TargetPrefix);
   }
 }
 

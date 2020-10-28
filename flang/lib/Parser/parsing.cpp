@@ -123,24 +123,4 @@ void Parsing::Parse(llvm::raw_ostream &out) {
 
 void Parsing::ClearLog() { log_.clear(); }
 
-bool Parsing::ForTesting(std::string path, llvm::raw_ostream &err) {
-  llvm::raw_null_ostream NullStream;
-  Prescan(path, Options{});
-  if (messages_.AnyFatalError()) {
-    messages_.Emit(err, cooked_);
-    err << "could not scan " << path << '\n';
-    return false;
-  }
-  Parse(NullStream);
-  messages_.Emit(err, cooked_);
-  if (!consumedWholeFile_) {
-    EmitMessage(err, finalRestingPlace_, "parser FAIL; final position");
-    return false;
-  }
-  if (messages_.AnyFatalError() || !parseTree_.has_value()) {
-    err << "could not parse " << path << '\n';
-    return false;
-  }
-  return true;
-}
 } // namespace Fortran::parser

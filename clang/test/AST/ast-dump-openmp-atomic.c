@@ -10,9 +10,5 @@ void test(int i) {
 // CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:11, col:15> col:15 used i 'int'
 // CHECK-NEXT:   `-CompoundStmt {{.*}} <col:18, line:6:1>
 // CHECK-NEXT:     `-OMPAtomicDirective {{.*}} <line:4:1, col:19>
-// CHECK-NEXT:       `-CapturedStmt {{.*}} <line:5:3, col:5>
-// CHECK-NEXT:         |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK-NEXT:         | |-UnaryOperator {{.*}} <col:3, col:5> 'int' prefix '++'
-// CHECK-NEXT:         | | `-DeclRefExpr {{.*}} <col:5> 'int' lvalue ParmVar {{.*}} 'i' 'int'
-// CHECK-NEXT:         | `-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (anonymous at {{.*}}ast-dump-openmp-atomic.c:4:1) *const restrict'
-// CHECK-NEXT:         `-DeclRefExpr {{.*}} <line:5:5> 'int' lvalue ParmVar {{.*}} 'i' 'int'
+// CHECK-NEXT:       `-UnaryOperator {{.*}} <line:5:3, col:5> 'int' prefix '++'
+// CHECK-NEXT:         `-DeclRefExpr {{.*}} <col:5> 'int' lvalue ParmVar {{.*}} 'i' 'int'

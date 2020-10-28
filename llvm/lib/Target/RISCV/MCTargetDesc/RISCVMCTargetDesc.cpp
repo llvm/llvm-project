@@ -68,7 +68,7 @@ static MCSubtargetInfo *createRISCVMCSubtargetInfo(const Triple &TT,
   std::string CPUName = std::string(CPU);
   if (CPUName.empty())
     CPUName = TT.isArch64Bit() ? "generic-rv64" : "generic-rv32";
-  return createRISCVMCSubtargetInfoImpl(TT, CPUName, FS);
+  return createRISCVMCSubtargetInfoImpl(TT, CPUName, /*TuneCPU*/ CPUName, FS);
 }
 
 static MCInstPrinter *createRISCVMCInstPrinter(const Triple &T,

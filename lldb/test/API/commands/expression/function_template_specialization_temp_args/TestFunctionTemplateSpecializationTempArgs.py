@@ -13,5 +13,4 @@ class TestFunctionTemplateSpecializationTempArgs(TestBase):
         (self.target, self.process, _, bkpt) = lldbutil.run_to_source_breakpoint(self, '// break here',
                 lldb.SBFileSpec("main.cpp", False))
 
-        self.expect("expr p0",
-                substrs=['(VType) $0 = {}'])
+        self.expect_expr("p0", result_type="VType", result_children=[])

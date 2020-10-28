@@ -895,7 +895,7 @@ namespace dr367 { // dr367: yes
   // array as being a VLA!
   int a[true ? throw 0 : 4]; // expected-error 2{{variable length array}}
   int b[true ? 4 : throw 0];
-  int c[true ? *new int : 4]; // expected-error 2{{variable length array}}
+  int c[true ? *new int : 4]; // expected-error 2{{variable length array}} expected-note {{read of uninitialized}}
   int d[true ? 4 : *new int];
 #if __cplusplus < 201103L
   // expected-error@-4 {{variable length array}} expected-error@-4 {{constant expression}}

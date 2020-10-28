@@ -64,6 +64,10 @@ InterfaceVarABIAttr getInterfaceVarABIAttr(unsigned descriptorSet,
                                            Optional<StorageClass> storageClass,
                                            MLIRContext *context);
 
+/// Returns whether the given SPIR-V target (described by TargetEnvAttr) needs
+/// ABI attributes for interface variables (spv.interface_var_abi).
+bool needsInterfaceVarABIAttrs(TargetEnvAttr targetAttr);
+
 /// Returns the attribute name for specifying entry point information.
 StringRef getEntryPointABIAttrName();
 
@@ -99,6 +103,17 @@ TargetEnvAttr lookupTargetEnv(Operation *op);
 /// containing the given `op` or returns the default target environment as
 /// returned by getDefaultTargetEnv() if not provided.
 TargetEnvAttr lookupTargetEnvOrDefault(Operation *op);
+
+/// Returns addressing model selected based on target environment.
+AddressingModel getAddressingModel(TargetEnvAttr targetAttr);
+
+/// Returns execution model selected based on target environment.
+/// Returns failure if it cannot be selected.
+FailureOr<ExecutionModel> getExecutionModel(TargetEnvAttr targetAttr);
+
+/// Returns memory model selected based on target environment.
+/// Returns failure if it cannot be selected.
+FailureOr<MemoryModel> getMemoryModel(TargetEnvAttr targetAttr);
 
 } // namespace spirv
 } // namespace mlir

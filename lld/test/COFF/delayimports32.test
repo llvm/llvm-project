@@ -1,5 +1,5 @@
 # REQUIRES: x86
-# RUN: yaml2obj < %p/Inputs/hello32.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
 # RUN: lld-link -safeseh:no %t.obj %p/Inputs/std32.lib /subsystem:console \
 # RUN:   /entry:main@0 /alternatename:___delayLoadHelper2@8=_main@0 \
 # RUN:   /delayload:std32.dll /out:%t.exe

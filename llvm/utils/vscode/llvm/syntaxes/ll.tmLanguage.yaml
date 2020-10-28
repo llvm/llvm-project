@@ -152,6 +152,7 @@ patterns:
             \\bavailable_externally\\b|\
             \\bblockaddress\\b|\
             \\bbuiltin\\b|\
+            \\bbyref\\b|\
             \\bbyval\\b|\
             \\bc\\b|\
             \\bcatch\\b|\
@@ -216,6 +217,7 @@ patterns:
             \\bnorecurse\\b|\
             \\bnoredzone\\b|\
             \\bnoreturn\\b|\
+            \\bnoundef\\b|\
             \\bnounwind\\b|\
             \\boptnone\\b|\
             \\boptsize\\b|\

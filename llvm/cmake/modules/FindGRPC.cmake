@@ -1,8 +1,13 @@
-# This setup requires gRPC to be built from sources using CMake and installed to
-# ${GRPC_INSTALL_PATH} via -DCMAKE_INSTALL_PREFIX=${GRPC_INSTALL_PATH}.
 # FIXME(kirillbobyrev): Check if gRPC and Protobuf headers can be included at
 # configure time.
+find_package(Threads REQUIRED)
 if (GRPC_INSTALL_PATH)
+  # This setup requires gRPC to be built from sources using CMake and installed
+  # to ${GRPC_INSTALL_PATH} via -DCMAKE_INSTALL_PREFIX=${GRPC_INSTALL_PATH}.
+  # Libraries will be linked according to gRPC build policy which generates
+  # static libraries when BUILD_SHARED_LIBS is Off and dynamic libraries when
+  # it's On (NOTE: This is a variable passed to gRPC CMake build invocation,
+  # LLVM's BUILD_SHARED_LIBS has no effect).
   set(protobuf_MODULE_COMPATIBLE TRUE)
   find_package(Protobuf CONFIG REQUIRED HINTS ${GRPC_INSTALL_PATH})
   message(STATUS "Using protobuf ${protobuf_VERSION}")
@@ -21,10 +26,17 @@ if (GRPC_INSTALL_PATH)
   set(GRPC_CPP_PLUGIN $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
   set(PROTOC ${Protobuf_PROTOC_EXECUTABLE})
 else()
+  # This setup requires system-installed gRPC and Protobuf.
+  # We always link dynamically in this mode. While the static libraries are
+  # usually installed, the CMake files telling us *which* static libraries to
+  # link are not.
+  if (NOT BUILD_SHARED_LIBS)
+    message(NOTICE "gRPC and Protobuf will be linked dynamically. If you want static linking, build gRPC from sources with -DBUILD_SHARED_LIBS=Off.")
+  endif()
   find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin)
   find_program(PROTOC protoc)
-  if (GRPC_CPP_PLUGIN-NOTFOUND OR PROTOC-NOTFOUND)
-    message(FATAL_ERROR "gRPC C++ Plugin and Protoc must be on $PATH for Clangd remote index build")
+  if (NOT GRPC_CPP_PLUGIN OR NOT PROTOC)
+    message(FATAL_ERROR "gRPC C++ Plugin and Protoc must be on $PATH for Clangd remote index build.")
   endif()
   # On macOS the libraries are typically installed via Homebrew and are not on
   # the system path.
@@ -32,7 +44,7 @@ else()
     find_program(HOMEBREW brew)
     # If Homebrew is not found, the user might have installed libraries
     # manually. Fall back to the system path.
-    if (NOT HOMEBREW-NOTFOUND)
+    if (HOMEBREW)
       execute_process(COMMAND ${HOMEBREW} --prefix grpc
         OUTPUT_VARIABLE GRPC_HOMEBREW_PATH
         RESULT_VARIABLE GRPC_HOMEBREW_RETURN_CODE

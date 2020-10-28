@@ -131,19 +131,18 @@ public:
     context_ = context_->attachment();
   }
 
-  template <typename... A> void Say(CharBlock range, A &&... args) {
+  template <typename... A> void Say(CharBlock range, A &&...args) {
     if (deferMessages_) {
       anyDeferredMessages_ = true;
     } else {
       messages_.Say(range, std::forward<A>(args)...).SetContext(context_.get());
     }
   }
-  template <typename... A>
-  void Say(const MessageFixedText &text, A &&... args) {
+  template <typename... A> void Say(const MessageFixedText &text, A &&...args) {
     Say(p_, text, std::forward<A>(args)...);
   }
   template <typename... A>
-  void Say(const MessageExpectedText &text, A &&... args) {
+  void Say(const MessageExpectedText &text, A &&...args) {
     Say(p_, text, std::forward<A>(args)...);
   }
 

@@ -14,6 +14,7 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/SPIRV/LayoutUtils.h"
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -22,6 +23,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "spirv-to-llvm-pattern"
 
@@ -179,6 +181,22 @@ static Value processCountOrOffset(Location loc, Value value, Type srcType,
   return optionallyTruncateOrExtend(loc, broadcasted, dstType, rewriter);
 }
 
+/// Converts SPIR-V struct with a regular (according to `VulkanLayoutUtils`)
+/// offset to LLVM struct. Otherwise, the conversion is not supported.
+static Optional<Type>
+convertStructTypeWithOffset(spirv::StructType type,
+                            LLVMTypeConverter &converter) {
+  if (type != VulkanLayoutUtils::decorateType(type))
+    return llvm::None;
+
+  auto elementsVector = llvm::to_vector<8>(
+      llvm::map_range(type.getElementTypes(), [&](Type elementType) {
+        return converter.convertType(elementType).cast<LLVM::LLVMType>();
+      }));
+  return LLVM::LLVMType::getStructTy(type.getContext(), elementsVector,
+                                     /*isPacked=*/false);
+}
+
 /// Converts SPIR-V struct with no offset to packed LLVM struct.
 static Type convertStructTypePacked(spirv::StructType type,
                                     LLVMTypeConverter &converter) {
@@ -186,15 +204,15 @@ static Type convertStructTypePacked(spirv::StructType type,
       llvm::map_range(type.getElementTypes(), [&](Type elementType) {
         return converter.convertType(elementType).cast<LLVM::LLVMType>();
       }));
-  return LLVM::LLVMType::getStructTy(converter.getDialect(), elementsVector,
+  return LLVM::LLVMType::getStructTy(type.getContext(), elementsVector,
                                      /*isPacked=*/true);
 }
 
 /// Creates LLVM dialect constant with the given value.
 static Value createI32ConstantOf(Location loc, PatternRewriter &rewriter,
-                                 LLVMTypeConverter &converter, unsigned value) {
+                                 unsigned value) {
   return rewriter.create<LLVM::ConstantOp>(
-      loc, LLVM::LLVMType::getInt32Ty(converter.getDialect()),
+      loc, LLVM::LLVMType::getInt32Ty(rewriter.getContext()),
       rewriter.getIntegerAttr(rewriter.getI32Type(), value));
 }
 
@@ -223,16 +241,22 @@ static LogicalResult replaceWithLoadOrStore(Operation *op,
 // Type conversion
 //===----------------------------------------------------------------------===//
 
-/// Converts SPIR-V array type to LLVM array. There is no modelling of array
-/// stride at the moment.
+/// Converts SPIR-V array type to LLVM array. Natural stride (according to
+/// `VulkanLayoutUtils`) is also mapped to LLVM array. This has to be respected
+/// when converting ops that manipulate array types.
 static Optional<Type> convertArrayType(spirv::ArrayType type,
                                        TypeConverter &converter) {
-  if (type.getArrayStride() != 0)
+  unsigned stride = type.getArrayStride();
+  Type elementType = type.getElementType();
+  auto sizeInBytes = elementType.cast<spirv::SPIRVType>().getSizeInBytes();
+  if (stride != 0 &&
+      !(sizeInBytes.hasValue() && sizeInBytes.getValue() == stride))
     return llvm::None;
-  auto elementType =
-      converter.convertType(type.getElementType()).cast<LLVM::LLVMType>();
+
+  auto llvmElementType =
+      converter.convertType(elementType).cast<LLVM::LLVMType>();
   unsigned numElements = type.getNumElements();
-  return LLVM::LLVMType::getArrayTy(elementType, numElements);
+  return LLVM::LLVMType::getArrayTy(llvmElementType, numElements);
 }
 
 /// Converts SPIR-V pointer type to LLVM pointer. Pointer's storage class is not
@@ -257,13 +281,15 @@ static Optional<Type> convertRuntimeArrayType(spirv::RuntimeArrayType type,
 }
 
 /// Converts SPIR-V struct to LLVM struct. There is no support of structs with
-/// member decorations or with offset.
+/// member decorations. Also, only natural offset is supported.
 static Optional<Type> convertStructType(spirv::StructType type,
                                         LLVMTypeConverter &converter) {
   SmallVector<spirv::StructType::MemberDecorationInfo, 4> memberDecorations;
   type.getMemberDecorations(memberDecorations);
-  if (type.hasOffset() || !memberDecorations.empty())
+  if (!memberDecorations.empty())
     return llvm::None;
+  if (type.hasOffset())
+    return convertStructTypeWithOffset(type, converter);
   return convertStructTypePacked(type, converter);
 }
 
@@ -272,6 +298,47 @@ static Optional<Type> convertStructType(spirv::StructType type,
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+class AccessChainPattern : public SPIRVToLLVMConversion<spirv::AccessChainOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::AccessChainOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::AccessChainOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = typeConverter.convertType(op.component_ptr().getType());
+    if (!dstType)
+      return failure();
+    // To use GEP we need to add a first 0 index to go through the pointer.
+    auto indices = llvm::to_vector<4>(op.indices());
+    Type indexType = op.indices().front().getType();
+    auto llvmIndexType = typeConverter.convertType(indexType);
+    if (!llvmIndexType)
+      return failure();
+    Value zero = rewriter.create<LLVM::ConstantOp>(
+        op.getLoc(), llvmIndexType, rewriter.getIntegerAttr(indexType, 0));
+    indices.insert(indices.begin(), zero);
+    rewriter.replaceOpWithNewOp<LLVM::GEPOp>(op, dstType, op.base_ptr(),
+                                             indices);
+    return success();
+  }
+};
+
+class AddressOfPattern : public SPIRVToLLVMConversion<spirv::AddressOfOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::AddressOfOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::AddressOfOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = typeConverter.convertType(op.pointer().getType());
+    if (!dstType)
+      return failure();
+    rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(
+        op, dstType.cast<LLVM::LLVMType>(), op.variable());
+    return success();
+  }
+};
 
 class BitFieldInsertPattern
     : public SPIRVToLLVMConversion<spirv::BitFieldInsertOp> {
@@ -507,6 +574,58 @@ public:
   }
 };
 
+/// Converts `spv.globalVariable` to `llvm.mlir.global`. Note that SPIR-V global
+/// returns a pointer, whereas in LLVM dialect the global holds an actual value.
+/// This difference is handled by `spv._address_of` and `llvm.mlir.addressof`ops
+/// that both return a pointer.
+class GlobalVariablePattern
+    : public SPIRVToLLVMConversion<spirv::GlobalVariableOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::GlobalVariableOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::GlobalVariableOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Currently, there is no support of initialization with a constant value in
+    // SPIR-V dialect. Specialization constants are not considered as well.
+    if (op.initializer())
+      return failure();
+
+    auto srcType = op.type().cast<spirv::PointerType>();
+    auto dstType = typeConverter.convertType(srcType.getPointeeType());
+    if (!dstType)
+      return failure();
+
+    // Limit conversion to the current invocation only or `StorageBuffer`
+    // required by SPIR-V runner.
+    // This is okay because multiple invocations are not supported yet.
+    auto storageClass = srcType.getStorageClass();
+    if (storageClass != spirv::StorageClass::Input &&
+        storageClass != spirv::StorageClass::Private &&
+        storageClass != spirv::StorageClass::Output &&
+        storageClass != spirv::StorageClass::StorageBuffer) {
+      return failure();
+    }
+
+    // LLVM dialect spec: "If the global value is a constant, storing into it is
+    // not allowed.". This corresponds to SPIR-V 'Input' storage class that is
+    // read-only.
+    bool isConstant = storageClass == spirv::StorageClass::Input;
+    // SPIR-V spec: "By default, functions and global variables are private to a
+    // module and cannot be accessed by other modules. However, a module may be
+    // written to export or import functions and global (module scope)
+    // variables.". Therefore, map 'Private' storage class to private linkage,
+    // 'Input' and 'Output' to external linkage.
+    auto linkage = storageClass == spirv::StorageClass::Private
+                       ? LLVM::Linkage::Private
+                       : LLVM::Linkage::External;
+    rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
+        op, dstType.cast<LLVM::LLVMType>(), isConstant, linkage, op.sym_name(),
+        Attribute());
+    return success();
+  }
+};
+
 /// Converts SPIR-V cast ops that do not have straightforward LLVM
 /// equivalent in LLVM dialect.
 template <typename SPIRVOp, typename LLVMExtOp, typename LLVMTruncOp>
@@ -692,6 +811,20 @@ public:
   }
 };
 
+/// A template pattern that erases the given `SPIRVOp`.
+template <typename SPIRVOp>
+class ErasePattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 class ReturnPattern : public SPIRVToLLVMConversion<spirv::ReturnOp> {
 public:
   using SPIRVToLLVMConversion<spirv::ReturnOp>::SPIRVToLLVMConversion;
@@ -718,14 +851,94 @@ public:
   }
 };
 
-class MergePattern : public SPIRVToLLVMConversion<spirv::MergeOp> {
+/// Converts `spv.loop` to LLVM dialect. All blocks within selection should be
+/// reachable for conversion to succeed.
+/// The structure of the loop in LLVM dialect will be the following:
+///
+///      +------------------------------------+
+///      | <code before spv.loop>             |
+///      | llvm.br ^header                    |
+///      +------------------------------------+
+///                           |
+///   +----------------+      |
+///   |                |      |
+///   |                V      V
+///   |  +------------------------------------+
+///   |  | ^header:                           |
+///   |  |   <header code>                    |
+///   |  |   llvm.cond_br %cond, ^body, ^exit |
+///   |  +------------------------------------+
+///   |                    |
+///   |                    |----------------------+
+///   |                    |                      |
+///   |                    V                      |
+///   |  +------------------------------------+   |
+///   |  | ^body:                             |   |
+///   |  |   <body code>                      |   |
+///   |  |   llvm.br ^continue                |   |
+///   |  +------------------------------------+   |
+///   |                    |                      |
+///   |                    V                      |
+///   |  +------------------------------------+   |
+///   |  | ^continue:                         |   |
+///   |  |   <continue code>                  |   |
+///   |  |   llvm.br ^header                  |   |
+///   |  +------------------------------------+   |
+///   |               |                           |
+///   +---------------+    +----------------------+
+///                        |
+///                        V
+///      +------------------------------------+
+///      | ^exit:                             |
+///      |   llvm.br ^remaining               |
+///      +------------------------------------+
+///                        |
+///                        V
+///      +------------------------------------+
+///      | ^remaining:                        |
+///      |   <code after spv.loop>            |
+///      +------------------------------------+
+///
+class LoopPattern : public SPIRVToLLVMConversion<spirv::LoopOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::MergeOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<spirv::LoopOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::MergeOp op, ArrayRef<Value> operands,
+  matchAndRewrite(spirv::LoopOp loopOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.eraseOp(op);
+    // There is no support of loop control at the moment.
+    if (loopOp.loop_control() != spirv::LoopControl::None)
+      return failure();
+
+    Location loc = loopOp.getLoc();
+
+    // Split the current block after `spv.loop`. The remaing ops will be used in
+    // `endBlock`.
+    Block *currentBlock = rewriter.getBlock();
+    auto position = Block::iterator(loopOp);
+    Block *endBlock = rewriter.splitBlock(currentBlock, position);
+
+    // Remove entry block and create a branch in the current block going to the
+    // header block.
+    Block *entryBlock = loopOp.getEntryBlock();
+    assert(entryBlock->getOperations().size() == 1);
+    auto brOp = dyn_cast<spirv::BranchOp>(entryBlock->getOperations().front());
+    if (!brOp)
+      return failure();
+    Block *headerBlock = loopOp.getHeaderBlock();
+    rewriter.setInsertionPointToEnd(currentBlock);
+    rewriter.create<LLVM::BrOp>(loc, brOp.getBlockArguments(), headerBlock);
+    rewriter.eraseBlock(entryBlock);
+
+    // Branch from merge block to end block.
+    Block *mergeBlock = loopOp.getMergeBlock();
+    Operation *terminator = mergeBlock->getTerminator();
+    ValueRange terminatorOperands = terminator->getOperands();
+    rewriter.setInsertionPointToEnd(mergeBlock);
+    rewriter.create<LLVM::BrOp>(loc, terminatorOperands, endBlock);
+
+    rewriter.inlineRegionBefore(loopOp.body(), endBlock);
+    rewriter.replaceOp(loopOp, endBlock->getArguments());
     return success();
   }
 };
@@ -910,7 +1123,7 @@ public:
       return failure();
 
     Location loc = varOp.getLoc();
-    Value size = createI32ConstantOf(loc, rewriter, typeConverter, 1);
+    Value size = createI32ConstantOf(loc, rewriter, 1);
     if (!init) {
       rewriter.replaceOpWithNewOp<LLVM::AllocaOp>(varOp, dstType, size);
       return success();
@@ -1110,10 +1323,15 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
 
       // Control Flow ops
       BranchConversionPattern, BranchConditionalConversionPattern,
-      SelectionPattern, MergePattern,
+      FunctionCallPattern, LoopPattern, SelectionPattern,
+      ErasePattern<spirv::MergeOp>,
 
-      // Function Call op
-      FunctionCallPattern,
+      // Entry points and execution mode
+      // Module generated from SPIR-V could have other "internal" functions, so
+      // having entry point and execution mode metadat can be useful. For now,
+      // simply remove them.
+      // TODO: Support EntryPoint/ExecutionMode properly.
+      ErasePattern<spirv::EntryPointOp>, ErasePattern<spirv::ExecutionModeOp>,
 
       // GLSL extended instruction set ops
       DirectConversionPattern<spirv::GLSLCeilOp, LLVM::FCeilOp>,
@@ -1138,6 +1356,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       NotPattern<spirv::LogicalNotOp>,
 
       // Memory ops
+      AccessChainPattern, AddressOfPattern, GlobalVariablePattern,
       LoadStorePattern<spirv::LoadOp>, LoadStorePattern<spirv::StoreOp>,
       VariablePattern,
 
@@ -1165,4 +1384,43 @@ void mlir::populateSPIRVToLLVMModuleConversionPatterns(
     OwningRewritePatternList &patterns) {
   patterns.insert<ModuleConversionPattern, ModuleEndConversionPattern>(
       context, typeConverter);
+}
+
+//===----------------------------------------------------------------------===//
+// Pre-conversion hooks
+//===----------------------------------------------------------------------===//
+
+/// Hook for descriptor set and binding number encoding.
+static constexpr StringRef kBinding = "binding";
+static constexpr StringRef kDescriptorSet = "descriptor_set";
+void mlir::encodeBindAttribute(ModuleOp module) {
+  auto spvModules = module.getOps<spirv::ModuleOp>();
+  for (auto spvModule : spvModules) {
+    spvModule.walk([&](spirv::GlobalVariableOp op) {
+      IntegerAttr descriptorSet = op.getAttrOfType<IntegerAttr>(kDescriptorSet);
+      IntegerAttr binding = op.getAttrOfType<IntegerAttr>(kBinding);
+      // For every global variable in the module, get the ones with descriptor
+      // set and binding numbers.
+      if (descriptorSet && binding) {
+        // Encode these numbers into the variable's symbolic name. If the
+        // SPIR-V module has a name, add it at the beginning.
+        auto moduleAndName = spvModule.getName().hasValue()
+                                 ? spvModule.getName().getValue().str() + "_" +
+                                       op.sym_name().str()
+                                 : op.sym_name().str();
+        std::string name =
+            llvm::formatv("{0}_descriptor_set{1}_binding{2}", moduleAndName,
+                          std::to_string(descriptorSet.getInt()),
+                          std::to_string(binding.getInt()));
+
+        // Replace all symbol uses and set the new symbol name. Finally, remove
+        // descriptor set and binding attributes.
+        if (failed(SymbolTable::replaceAllSymbolUses(op, name, spvModule)))
+          op.emitError("unable to replace all symbol uses for ") << name;
+        SymbolTable::setSymbolName(op, name);
+        op.removeAttr(kDescriptorSet);
+        op.removeAttr(kBinding);
+      }
+    });
+  }
 }

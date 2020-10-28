@@ -32,7 +32,7 @@
 ; GFX8_9_10: v_mul_f32_e32 [[MUL:v[0-9]+]], [[CVT_LHS]], [[RCP_RHS]]
 ; GFX8_9_10: v_cvt_f16_f32_e32 [[CVT_BACK:v[0-9]+]], [[MUL]]
 ; GFX8_9_10: v_div_fixup_f16 [[RESULT:v[0-9]+]], [[CVT_BACK]], [[RHS]], [[LHS]]
-; GFX8_9_10: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX8_9_10: {{flat|global}}_store_short v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @v_fdiv_f16(
     half addrspace(1)* %r,
     half addrspace(1)* %a,
@@ -55,7 +55,7 @@ entry:
 ; GFX8_9_10-NOT: [[VAL]]
 ; GFX8_9_10: v_rcp_f16_e32 [[RESULT:v[0-9]+]], [[VAL]]
 ; GFX8_9_10-NOT: [[RESULT]]
-; GFX8_9_10: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX8_9_10: {{flat|global}}_store_short v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @v_rcp_f16(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -73,7 +73,7 @@ entry:
 ; GFX8_9_10-NOT: [[VAL]]
 ; GFX8_9_10: v_rcp_f16_e64 [[RESULT:v[0-9]+]], |[[VAL]]|
 ; GFX8_9_10-NOT: [RESULT]]
-; GFX8_9_10: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX8_9_10: {{flat|global}}_store_short v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @v_rcp_f16_abs(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -90,12 +90,12 @@ entry:
 ; We could not do 1/b -> rcp_f16(b) under !fpmath < 1ulp.
 
 ; GCN-LABEL: {{^}}reciprocal_f16_rounded:
-; GFX8_9_10: {{flat|global}}_load_ushort [[VAL16:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}
+; GFX8_9_10: {{flat|global}}_load_ushort [[VAL16:v[0-9]+]], v{{.+}}
 ; GFX8_9_10: v_cvt_f32_f16_e32 [[CVT_TO32:v[0-9]+]], [[VAL16]]
 ; GFX8_9_10: v_rcp_f32_e32 [[RCP32:v[0-9]+]], [[CVT_TO32]]
 ; GFX8_9_10: v_cvt_f16_f32_e32 [[CVT_BACK16:v[0-9]+]], [[RCP32]]
 ; GFX8_9_10: v_div_fixup_f16 [[RESULT:v[0-9]+]], [[CVT_BACK16]], [[VAL16]], 1.0
-; GFX8_9_10: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX8_9_10: {{flat|global}}_store_short v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @reciprocal_f16_rounded(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -113,7 +113,7 @@ entry:
 ; GFX8_9_10-NOT: [[VAL]]
 ; GFX8_9_10: v_rcp_f16_e32 [[RESULT:v[0-9]+]], [[VAL]]
 ; GFX8_9_10-NOT: [[RESULT]]
-; GFX8_9_10: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX8_9_10: {{flat|global}}_store_short v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @v_rcp_f16_afn(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -131,7 +131,7 @@ entry:
 ; GFX8_9_10-NOT: [[VAL]]
 ; GFX8_9_10: v_rcp_f16_e64 [[RESULT:v[0-9]+]], -[[VAL]]
 ; GFX8_9_10-NOT: [RESULT]]
-; GFX8_9_10: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX8_9_10: {{flat|global}}_store_short v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @v_rcp_f16_neg(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -149,7 +149,7 @@ entry:
 ; GFX8_9_10-NOT: [[VAL]]
 ; GFX8_9_10: v_rsq_f16_e32 [[RESULT:v[0-9]+]], [[VAL]]
 ; GFX8_9_10-NOT: [RESULT]]
-; GFX8_9_10: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX8_9_10: {{flat|global}}_store_short v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @v_rsq_f16(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -169,7 +169,7 @@ entry:
 ; GFX8_9_10: v_sqrt_f16_e32 [[SQRT:v[0-9]+]], [[VAL]]
 ; GFX8_9_10-NEXT: v_rcp_f16_e64 [[RESULT:v[0-9]+]], -[[SQRT]]
 ; GFX8_9_10-NOT: [RESULT]]
-; GFX8_9_10: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX8_9_10: {{flat|global}}_store_short v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @v_rsq_f16_neg(half addrspace(1)* %r, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -190,7 +190,7 @@ entry:
 ; GFX8_9_10: v_rcp_f16_e32 [[RCP:v[0-9]+]], [[RHS]]
 ; GFX8_9_10: v_mul_f16_e32 [[RESULT:v[0-9]+]], [[LHS]], [[RCP]]
 
-; GFX8_9_10: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX8_9_10: {{flat|global}}_store_short v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @v_fdiv_f16_afn(half addrspace(1)* %r, half addrspace(1)* %a, half addrspace(1)* %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -212,7 +212,7 @@ entry:
 ; GFX8_9_10: v_rcp_f16_e32 [[RCP:v[0-9]+]], [[RHS]]
 ; GFX8_9_10: v_mul_f16_e32 [[RESULT:v[0-9]+]], [[LHS]], [[RCP]]
 
-; GFX8_9_10: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[RESULT]]
+; GFX8_9_10: {{flat|global}}_store_short v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @v_fdiv_f16_unsafe(half addrspace(1)* %r, half addrspace(1)* %a, half addrspace(1)* %b) #2 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

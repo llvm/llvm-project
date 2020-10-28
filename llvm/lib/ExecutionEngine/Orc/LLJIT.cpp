@@ -928,7 +928,7 @@ LLJIT::PlatformSupport::~PlatformSupport() {}
 
 Error LLJITBuilderState::prepareForConstruction() {
 
-  LLVM_DEBUG(dbgs() << "Preparing to create LLIT instance...\n");
+  LLVM_DEBUG(dbgs() << "Preparing to create LLJIT instance...\n");
 
   if (!JTMB) {
     LLVM_DEBUG({
@@ -984,7 +984,7 @@ Error LLJITBuilderState::prepareForConstruction() {
           ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
               ES, std::make_unique<jitlink::InProcessMemoryManager>());
         ObjLinkingLayer->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-            jitlink::InProcessEHFrameRegistrar::getInstance()));
+            std::make_unique<jitlink::InProcessEHFrameRegistrar>()));
         return std::move(ObjLinkingLayer);
       };
     }

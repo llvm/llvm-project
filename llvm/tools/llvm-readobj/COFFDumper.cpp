@@ -60,10 +60,6 @@ using namespace llvm::codeview;
 using namespace llvm::support;
 using namespace llvm::Win64EH;
 
-static inline Error createError(const Twine &Err) {
-  return make_error<StringError>(Err, object_error::parse_failed);
-}
-
 namespace {
 
 struct LoadConfigTables {
@@ -243,15 +239,9 @@ private:
 
 namespace llvm {
 
-std::error_code createCOFFDumper(const object::ObjectFile *Obj,
-                                 ScopedPrinter &Writer,
-                                 std::unique_ptr<ObjDumper> &Result) {
-  const COFFObjectFile *COFFObj = dyn_cast<COFFObjectFile>(Obj);
-  if (!COFFObj)
-    return readobj_error::unsupported_obj_file_format;
-
-  Result.reset(new COFFDumper(COFFObj, Writer));
-  return readobj_error::success;
+std::unique_ptr<ObjDumper> createCOFFDumper(const object::COFFObjectFile &Obj,
+                                            ScopedPrinter &Writer) {
+  return std::make_unique<COFFDumper>(&Obj, Writer);
 }
 
 } // namespace llvm

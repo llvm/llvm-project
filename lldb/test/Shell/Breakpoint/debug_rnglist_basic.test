@@ -1,4 +1,4 @@
-# RUN: yaml2obj %p/Inputs/debug_rnglist_basic.yaml > %ttest
+# RUN: yaml2obj %p/Inputs/debug_rnglist_basic.yaml -o %ttest
 # RUN: lldb-test breakpoints %ttest %s | FileCheck %s
 
 # The following code and invocation were used to produce yaml file,

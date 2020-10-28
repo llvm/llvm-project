@@ -140,14 +140,14 @@ template <> struct HostTypeHelper<Type<TypeCategory::Integer, 16>> {
 // It should be defined when gcc/clang have a better support for it.
 
 template <> struct HostTypeHelper<Type<TypeCategory::Real, 4>> {
-  // IEE 754 64bits
+  // IEEE 754 64bits
   using Type = std::conditional_t<sizeof(float) == 4 &&
           std::numeric_limits<float>::is_iec559,
       float, UnsupportedType>;
 };
 
 template <> struct HostTypeHelper<Type<TypeCategory::Real, 8>> {
-  // IEE 754 64bits
+  // IEEE 754 64bits
   using Type = std::conditional_t<sizeof(double) == 8 &&
           std::numeric_limits<double>::is_iec559,
       double, UnsupportedType>;
@@ -162,7 +162,7 @@ template <> struct HostTypeHelper<Type<TypeCategory::Real, 10>> {
 };
 
 template <> struct HostTypeHelper<Type<TypeCategory::Real, 16>> {
-  // IEE 754 128bits
+  // IEEE 754 128bits
   using Type = std::conditional_t<sizeof(long double) == 16 &&
           std::numeric_limits<long double>::digits == 113 &&
           std::numeric_limits<long double>::max_exponent == 16384,

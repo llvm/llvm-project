@@ -449,9 +449,7 @@ Syntax:
                        func_type <target>, 
                        i64 <#call args>, i64 <flags>,
                        ... (call parameters),
-                       i64 <# transition args>, ... (transition parameters),
-                       i64 <# deopt args>, ... (deopt parameters),
-                       ... (gc parameters))
+                       i64 0, i64 0)
 
 Overview:
 """""""""
@@ -515,26 +513,11 @@ instruction.  The number of arguments must exactly match what is
 specified in '# call args'.  The types must match the signature of
 'target'.
 
-The 'transition parameters' arguments contain an arbitrary list of
-Values which need to be passed to GC transition code. They will be
-lowered and passed as operands to the appropriate GC_TRANSITION nodes
-in the selection DAG. It is assumed that these arguments must be
-available before and after (but not necessarily during) the execution
-of the callee. The '# transition args' field indicates how many operands
-are to be interpreted as 'transition parameters'.
-
-The 'deopt parameters' arguments contain an arbitrary list of Values
-which is meaningful to the runtime.  The '# deopt args' field
-indicates how many operands are to be interpreted as 'deopt parameters'.
-
-The 'gc parameters' arguments contain every pointer to a garbage
-collector object which potentially needs to be updated by the garbage
-collector.  Note that the argument list must explicitly contain a base
-pointer for every derived pointer listed.  The order of arguments is
-unimportant.  Unlike the other variable length parameter sets, this
-list is not length prefixed.  Use of the 'gc parameters' list is
-deprecated and will eventually be replaced entirely with the
-:ref:`gc-live <ob_gc_live>` operand bundle.
+The 'call parameter' attributes must be followed by two 'i64 0' constants.
+These were originally the length prefixes for 'gc transition parameter' and
+'deopt parameter' arguments, but the role of these parameter sets have been
+entirely replaced with the corresponding operand bundles.  In a future
+revision, these now redundant arguments will be removed.
 
 Semantics:
 """"""""""
@@ -676,13 +659,12 @@ Each statepoint generates the following Locations:
   these identifiers.
 * Constant which describes the flags passed to the statepoint intrinsic
 * Constant which describes number of following deopt *Locations* (not
-  operands)
-* Variable number of Locations, one for each deopt parameter listed in
-  the IR statepoint (same number as described by previous Constant).  At 
-  the moment, only deopt parameters with a bitwidth of 64 bits or less 
-  are supported.  Values of a type larger than 64 bits can be specified 
-  and reported only if a) the value is constant at the call site, and b) 
-  the constant can be represented with less than 64 bits (assuming zero 
+  operands).  Will be 0 if no "deopt" bundle is provided.
+* Variable number of Locations, one for each deopt parameter listed in the
+  "deopt" operand bundle.  At the moment, only deopt parameters with a bitwidth
+  of 64 bits or less are supported.  Values of a type larger than 64 bits can be
+  specified and reported only if a) the value is constant at the call site, and
+  b) the constant can be represented with less than 64 bits (assuming zero 
   extension to the original bitwidth).
 * Variable number of relocation records, each of which consists of 
   exactly two Locations.  Relocation records are described in detail

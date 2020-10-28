@@ -9,10 +9,7 @@ declare void @f3()
 define i32 @simple(i1 %cond) {
 ; CHECK-LABEL: @simple(
 ; CHECK-NEXT:  ENTRY:
-; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[COND:%.*]]
-; CHECK-NEXT:    br i1 [[COND]], label [[A:%.*]], label [[EXIT:%.*]]
-; CHECK:       A:
-; CHECK-NEXT:    br i1 [[COND_FR]], label [[B:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[B:%.*]], label [[EXIT:%.*]]
 ; CHECK:       B:
 ; CHECK-NEXT:    call void @f()
 ; CHECK-NEXT:    ret i32 1
@@ -36,8 +33,8 @@ define void @switch(i32 %cond) {
 ; CHECK-NEXT:  ENTRY:
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i32 [[COND:%.*]]
 ; CHECK-NEXT:    switch i32 [[COND]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[A:%.*]]
-; CHECK-NEXT:    i32 1, label [[B:%.*]]
+; CHECK-NEXT:    i32 0, label [[A_TAKEN:%.*]]
+; CHECK-NEXT:    i32 1, label [[B_TAKEN:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       DEFAULT:
 ; CHECK-NEXT:    switch i32 [[COND_FR]], label [[PRESERVED1:%.*]] [
@@ -49,25 +46,11 @@ define void @switch(i32 %cond) {
 ; CHECK:       PRESERVED2:
 ; CHECK-NEXT:    call void @f2()
 ; CHECK-NEXT:    ret void
-; CHECK:       A:
-; CHECK-NEXT:    switch i32 [[COND_FR]], label [[A_NOTTAKEN:%.*]] [
-; CHECK-NEXT:    i32 0, label [[A_TAKEN:%.*]]
-; CHECK-NEXT:    ]
 ; CHECK:       A_TAKEN:
 ; CHECK-NEXT:    call void @f()
 ; CHECK-NEXT:    ret void
-; CHECK:       A_NOTTAKEN:
-; CHECK-NEXT:    call void @f2()
-; CHECK-NEXT:    ret void
-; CHECK:       B:
-; CHECK-NEXT:    switch i32 [[COND_FR]], label [[B_TAKEN:%.*]] [
-; CHECK-NEXT:    i32 0, label [[B_NOTTAKEN:%.*]]
-; CHECK-NEXT:    ]
 ; CHECK:       B_TAKEN:
 ; CHECK-NEXT:    call void @f()
-; CHECK-NEXT:    ret void
-; CHECK:       B_NOTTAKEN:
-; CHECK-NEXT:    call void @f2()
 ; CHECK-NEXT:    ret void
 ;
 ENTRY:

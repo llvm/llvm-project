@@ -299,6 +299,9 @@ public:
     VK_PPC_GOT_TLSLD_HI,    // symbol@got@tlsld@h
     VK_PPC_GOT_TLSLD_HA,    // symbol@got@tlsld@ha
     VK_PPC_GOT_PCREL,       // symbol@got@pcrel
+    VK_PPC_GOT_TLSGD_PCREL, // symbol@got@tlsgd@pcrel
+    VK_PPC_GOT_TPREL_PCREL, // symbol@got@tprel@pcrel
+    VK_PPC_TLS_PCREL,       // symbol@tls@pcrel
     VK_PPC_TLSLD,           // symbol@tlsld
     VK_PPC_LOCAL,           // symbol@local
     VK_PPC_NOTOC,           // symbol@notoc

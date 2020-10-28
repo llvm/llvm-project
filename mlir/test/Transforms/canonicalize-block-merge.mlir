@@ -202,3 +202,25 @@ func @mismatch_loop(%cond : i1) {
 
   return
 }
+
+// Check that blocks are not merged if the types of the operands differ.
+
+// CHECK-LABEL: func @mismatch_operand_types(
+func @mismatch_operand_types(%arg0 : i1, %arg1 : memref<i32>, %arg2 : memref<i1>) {
+  %c0_i32 = constant 0 : i32
+  %true = constant true
+  br ^bb1
+
+^bb1:
+  cond_br %arg0, ^bb2, ^bb3
+
+^bb2:
+  // CHECK: store %{{.*}}, %{{.*}} : memref<i32>
+  store %c0_i32, %arg1[] : memref<i32>
+  br ^bb1
+
+^bb3:
+  // CHECK: store %{{.*}}, %{{.*}} : memref<i1>
+  store %true, %arg2[] : memref<i1>
+  br ^bb1
+}

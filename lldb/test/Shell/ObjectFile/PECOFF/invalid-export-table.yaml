@@ -1,7 +1,7 @@
 ## Test that errors in loading an exe doesn't crash lldb.
 ## The ExportTable RelativeVirtualAddress is out of bounds here.
 
-# RUN: yaml2obj %s > %t.exe
+# RUN: yaml2obj %s -o %t.exe
 # RUN: %lldb %t.exe 2>&1 | FileCheck %s
 
 # CHECK: error: '{{.*}}' doesn't contain any {{.*}} platform architectures

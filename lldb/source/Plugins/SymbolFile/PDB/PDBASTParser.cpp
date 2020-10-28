@@ -928,7 +928,7 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
                                     : clang::StorageClass::SC_None;
 
     auto decl = m_ast.CreateFunctionDeclaration(
-        decl_context, OptionalClangModuleID(), name.c_str(),
+        decl_context, OptionalClangModuleID(), name,
         type->GetForwardCompilerType(), storage, func->hasInlineAttribute());
 
     std::vector<clang::ParmVarDecl *> params;

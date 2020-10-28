@@ -1056,7 +1056,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ValueMap<Value*, Value*> ShadowMap, OriginMap;
   std::unique_ptr<VarArgHelper> VAHelper;
   const TargetLibraryInfo *TLI;
-  BasicBlock *ActualFnStart;
+  Instruction *FnPrologueEnd;
 
   // The following flags disable parts of MSan instrumentation based on
   // exclusion list contents and command-line options.
@@ -1088,15 +1088,29 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     PoisonStack = SanitizeFunction && ClPoisonStack;
     PoisonUndef = SanitizeFunction && ClPoisonUndef;
 
+    // In the presence of unreachable blocks, we may see Phi nodes with
+    // incoming nodes from such blocks. Since InstVisitor skips unreachable
+    // blocks, such nodes will not have any shadow value associated with them.
+    // It's easier to remove unreachable blocks than deal with missing shadow.
+    removeUnreachableBlocks(F);
+
     MS.initializeCallbacks(*F.getParent());
-    if (MS.CompileKernel)
-      ActualFnStart = insertKmsanPrologue(F);
-    else
-      ActualFnStart = &F.getEntryBlock();
+    FnPrologueEnd = IRBuilder<>(F.getEntryBlock().getFirstNonPHI())
+                        .CreateIntrinsic(Intrinsic::donothing, {}, {});
+
+    if (MS.CompileKernel) {
+      IRBuilder<> IRB(FnPrologueEnd);
+      insertKmsanPrologue(IRB);
+    }
 
     LLVM_DEBUG(if (!InsertChecks) dbgs()
                << "MemorySanitizer is not inserting checks into '"
                << F.getName() << "'\n");
+  }
+
+  bool isInPrologue(Instruction &I) {
+    return I.getParent() == FnPrologueEnd->getParent() &&
+           (&I == FnPrologueEnd || I.comesBefore(FnPrologueEnd));
   }
 
   Value *updateOrigin(Value *V, IRBuilder<> &IRB) {
@@ -1261,10 +1275,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     LLVM_DEBUG(dbgs() << "DONE:\n" << F);
   }
 
-  BasicBlock *insertKmsanPrologue(Function &F) {
-    BasicBlock *ret =
-        SplitBlock(&F.getEntryBlock(), F.getEntryBlock().getFirstNonPHI());
-    IRBuilder<> IRB(F.getEntryBlock().getFirstNonPHI());
+  // Returns the last instruction in the new prologue
+  void insertKmsanPrologue(IRBuilder<> &IRB) {
     Value *ContextState = IRB.CreateCall(MS.MsanGetContextStateFn, {});
     Constant *Zero = IRB.getInt32(0);
     MS.ParamTLS = IRB.CreateGEP(MS.MsanContextStateTy, ContextState,
@@ -1283,21 +1295,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     MS.RetvalOriginTLS =
         IRB.CreateGEP(MS.MsanContextStateTy, ContextState,
                       {Zero, IRB.getInt32(6)}, "retval_origin");
-    return ret;
   }
 
   /// Add MemorySanitizer instrumentation to a function.
   bool runOnFunction() {
-    // In the presence of unreachable blocks, we may see Phi nodes with
-    // incoming nodes from such blocks. Since InstVisitor skips unreachable
-    // blocks, such nodes will not have any shadow value associated with them.
-    // It's easier to remove unreachable blocks than deal with missing shadow.
-    removeUnreachableBlocks(F);
-
     // Iterate all BBs in depth-first order and create shadow instructions
     // for all instructions (where applicable).
     // For PHI nodes we create dummy shadow PHIs which will be finalized later.
-    for (BasicBlock *BB : depth_first(ActualFnStart))
+    for (BasicBlock *BB : depth_first(FnPrologueEnd->getParent()))
       visit(*BB);
 
     // Finalize PHI nodes.
@@ -1664,7 +1669,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       if (*ShadowPtr)
         return *ShadowPtr;
       Function *F = A->getParent();
-      IRBuilder<> EntryIRB(ActualFnStart->getFirstNonPHI());
+      IRBuilder<> EntryIRB(FnPrologueEnd);
       unsigned ArgOffset = 0;
       const DataLayout &DL = F->getParent()->getDataLayout();
       for (auto &FArg : F->args()) {
@@ -1880,8 +1885,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // ------------------- Visitors.
   using InstVisitor<MemorySanitizerVisitor>::visit;
   void visit(Instruction &I) {
-    if (!I.getMetadata("nosanitize"))
-      InstVisitor<MemorySanitizerVisitor>::visit(I);
+    if (I.getMetadata("nosanitize"))
+      return;
+    // Don't want to visit if we're in the prologue
+    if (isInPrologue(I))
+      return;
+    InstVisitor<MemorySanitizerVisitor>::visit(I);
   }
 
   /// Instrument LoadInst
@@ -3494,6 +3503,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void visitLibAtomicLoad(CallBase &CB) {
+    // Since we use getNextNode here, we can't have CB terminate the BB.
+    assert(isa<CallInst>(CB));
+
     IRBuilder<> IRB(&CB);
     Value *Size = CB.getArgOperand(0);
     Value *SrcPtr = CB.getArgOperand(1);
@@ -3567,6 +3579,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // instrumentation.
       switch (LF) {
       case LibFunc_atomic_load:
+        if (!isa<CallInst>(CB)) {
+          llvm::errs() << "MSAN -- cannot instrument invoke of libatomic load."
+                          "Ignoring!\n";
+          break;
+        }
         visitLibAtomicLoad(CB);
         return;
       case LibFunc_atomic_store:
@@ -3584,14 +3601,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // will become a non-readonly function after it is instrumented by us. To
       // prevent this code from being optimized out, mark that function
       // non-readonly in advance.
+      AttrBuilder B;
+      B.addAttribute(Attribute::ReadOnly)
+          .addAttribute(Attribute::ReadNone)
+          .addAttribute(Attribute::WriteOnly)
+          .addAttribute(Attribute::ArgMemOnly)
+          .addAttribute(Attribute::Speculatable);
+
+      Call->removeAttributes(AttributeList::FunctionIndex, B);
       if (Function *Func = Call->getCalledFunction()) {
-        // Clear out readonly/readnone attributes.
-        AttrBuilder B;
-        B.addAttribute(Attribute::ReadOnly)
-            .addAttribute(Attribute::ReadNone)
-            .addAttribute(Attribute::WriteOnly)
-            .addAttribute(Attribute::ArgMemOnly)
-            .addAttribute(Attribute::Speculatable);
         Func->removeAttributes(AttributeList::FunctionIndex, B);
       }
 
@@ -4068,6 +4086,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getCleanOrigin());
   }
 
+  void visitFreezeInst(FreezeInst &I) {
+    // Freeze always returns a fully defined value.
+    setShadow(&I, getCleanShadow(&I));
+    setOrigin(&I, getCleanOrigin());
+  }
+
   void visitInstruction(Instruction &I) {
     // Everything else: stop propagating and check for poisoned shadow.
     if (ClDumpStrictInstructions)
@@ -4291,7 +4315,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
     if (!VAStartInstrumentationList.empty()) {
       // If there is a va_start in this function, make a backup copy of
       // va_arg_tls somewhere in the function entry block.
-      IRBuilder<> IRB(MSV.ActualFnStart->getFirstNonPHI());
+      IRBuilder<> IRB(MSV.FnPrologueEnd);
       VAArgOverflowSize =
           IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
       Value *CopySize =
@@ -4437,7 +4461,7 @@ struct VarArgMIPS64Helper : public VarArgHelper {
   void finalizeInstrumentation() override {
     assert(!VAArgSize && !VAArgTLSCopy &&
            "finalizeInstrumentation called twice");
-    IRBuilder<> IRB(MSV.ActualFnStart->getFirstNonPHI());
+    IRBuilder<> IRB(MSV.FnPrologueEnd);
     VAArgSize = IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
     Value *CopySize = IRB.CreateAdd(ConstantInt::get(MS.IntptrTy, 0),
                                     VAArgSize);
@@ -4630,7 +4654,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
     if (!VAStartInstrumentationList.empty()) {
       // If there is a va_start in this function, make a backup copy of
       // va_arg_tls somewhere in the function entry block.
-      IRBuilder<> IRB(MSV.ActualFnStart->getFirstNonPHI());
+      IRBuilder<> IRB(MSV.FnPrologueEnd);
       VAArgOverflowSize =
           IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
       Value *CopySize =
@@ -4875,7 +4899,7 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
   void finalizeInstrumentation() override {
     assert(!VAArgSize && !VAArgTLSCopy &&
            "finalizeInstrumentation called twice");
-    IRBuilder<> IRB(MSV.ActualFnStart->getFirstNonPHI());
+    IRBuilder<> IRB(MSV.FnPrologueEnd);
     VAArgSize = IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
     Value *CopySize = IRB.CreateAdd(ConstantInt::get(MS.IntptrTy, 0),
                                     VAArgSize);
@@ -5194,7 +5218,7 @@ struct VarArgSystemZHelper : public VarArgHelper {
     if (!VAStartInstrumentationList.empty()) {
       // If there is a va_start in this function, make a backup copy of
       // va_arg_tls somewhere in the function entry block.
-      IRBuilder<> IRB(MSV.ActualFnStart->getFirstNonPHI());
+      IRBuilder<> IRB(MSV.FnPrologueEnd);
       VAArgOverflowSize =
           IRB.CreateLoad(IRB.getInt64Ty(), MS.VAArgOverflowSizeTLS);
       Value *CopySize =

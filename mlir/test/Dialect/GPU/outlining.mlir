@@ -143,7 +143,7 @@ func @function_call(%arg0 : memref<?xf32>) {
                                         %block_z = %cst) {
     call @device_function() : () -> ()
     call @device_function() : () -> ()
-    %0 = llvm.mlir.addressof @global : !llvm<"i64*">
+    %0 = llvm.mlir.addressof @global : !llvm.ptr<i64>
     gpu.terminator
   }
   return
@@ -163,7 +163,7 @@ func @recursive_device_function() {
 // CHECK:   gpu.func @function_call_kernel()
 // CHECK:     call @device_function() : () -> ()
 // CHECK:     call @device_function() : () -> ()
-// CHECK:     llvm.mlir.addressof @global : !llvm<"i64*">
+// CHECK:     llvm.mlir.addressof @global : !llvm.ptr<i64>
 // CHECK:     gpu.return
 //
 // CHECK:   llvm.mlir.global internal @global(42 : i64) : !llvm.i64

@@ -1,4 +1,4 @@
-// RUN: %clang_tsan %s -lc++ -fobjc-arc -lobjc -o %t -framework Foundation %darwin_min_target_with_full_runtime_arc_support
+// RUN: %clang_tsan %s -lc++ -fobjc-arc -lobjc -o %t -framework Foundation
 // RUN: %env_tsan_opts=ignore_interceptors_accesses=1 %run %t 2>&1 | FileCheck %s
 
 // Check that we do not report races between:

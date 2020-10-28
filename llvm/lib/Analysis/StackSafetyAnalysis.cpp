@@ -22,6 +22,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -37,6 +38,25 @@ using namespace llvm;
 STATISTIC(NumAllocaStackSafe, "Number of safe allocas");
 STATISTIC(NumAllocaTotal, "Number of total allocas");
 
+STATISTIC(NumCombinedCalleeLookupTotal,
+          "Number of total callee lookups on combined index.");
+STATISTIC(NumCombinedCalleeLookupFailed,
+          "Number of failed callee lookups on combined index.");
+STATISTIC(NumModuleCalleeLookupTotal,
+          "Number of total callee lookups on module index.");
+STATISTIC(NumModuleCalleeLookupFailed,
+          "Number of failed callee lookups on module index.");
+STATISTIC(NumCombinedParamAccessesBefore,
+          "Number of total param accesses before generateParamAccessSummary.");
+STATISTIC(NumCombinedParamAccessesAfter,
+          "Number of total param accesses after generateParamAccessSummary.");
+STATISTIC(NumCombinedDataFlowNodes,
+          "Number of total nodes in combined index for dataflow processing.");
+STATISTIC(NumIndexCalleeUnhandled, "Number of index callee which are unhandled.");
+STATISTIC(NumIndexCalleeMultipleWeak, "Number of index callee non-unique weak.");
+STATISTIC(NumIndexCalleeMultipleExternal, "Number of index callee non-unique external.");
+
+
 static cl::opt<int> StackSafetyMaxIterations("stack-safety-max-iterations",
                                              cl::init(20), cl::Hidden);
 
@@ -48,26 +68,48 @@ static cl::opt<bool> StackSafetyRun("stack-safety-run", cl::init(false),
 
 namespace {
 
+// Check if we should bailout for such ranges.
+bool isUnsafe(const ConstantRange &R) {
+  return R.isEmptySet() || R.isFullSet() || R.isUpperSignWrapped();
+}
+
+ConstantRange addOverflowNever(const ConstantRange &L, const ConstantRange &R) {
+  assert(!L.isSignWrappedSet());
+  assert(!R.isSignWrappedSet());
+  if (L.signedAddMayOverflow(R) !=
+      ConstantRange::OverflowResult::NeverOverflows)
+    return ConstantRange::getFull(L.getBitWidth());
+  ConstantRange Result = L.add(R);
+  assert(!Result.isSignWrappedSet());
+  return Result;
+}
+
+ConstantRange unionNoWrap(const ConstantRange &L, const ConstantRange &R) {
+  assert(!L.isSignWrappedSet());
+  assert(!R.isSignWrappedSet());
+  auto Result = L.unionWith(R);
+  // Two non-wrapped sets can produce wrapped.
+  if (Result.isSignWrappedSet())
+    Result = ConstantRange::getFull(Result.getBitWidth());
+  return Result;
+}
+
 /// Describes use of address in as a function call argument.
 template <typename CalleeTy> struct CallInfo {
   /// Function being called.
   const CalleeTy *Callee = nullptr;
   /// Index of argument which pass address.
   size_t ParamNo = 0;
-  // Offset range of address from base address (alloca or calling function
-  // argument).
-  // Range should never set to empty-set, that is an invalid access range
-  // that can cause empty-set to be propagated with ConstantRange::add
-  ConstantRange Offset;
-  CallInfo(const CalleeTy *Callee, size_t ParamNo, const ConstantRange &Offset)
-      : Callee(Callee), ParamNo(ParamNo), Offset(Offset) {}
-};
 
-template <typename CalleeTy>
-raw_ostream &operator<<(raw_ostream &OS, const CallInfo<CalleeTy> &P) {
-  return OS << "@" << P.Callee->getName() << "(arg" << P.ParamNo << ", "
-            << P.Offset << ")";
-}
+  CallInfo(const CalleeTy *Callee, size_t ParamNo)
+      : Callee(Callee), ParamNo(ParamNo) {}
+
+  struct Less {
+    bool operator()(const CallInfo &L, const CallInfo &R) const {
+      return std::tie(L.ParamNo, L.Callee) < std::tie(R.ParamNo, R.Callee);
+    }
+  };
+};
 
 /// Describe uses of address (alloca or parameter) inside of the function.
 template <typename CalleeTy> struct UseInfo {
@@ -76,35 +118,26 @@ template <typename CalleeTy> struct UseInfo {
   ConstantRange Range;
 
   // List of calls which pass address as an argument.
-  SmallVector<CallInfo<CalleeTy>, 4> Calls;
+  // Value is offset range of address from base address (alloca or calling
+  // function argument). Range should never set to empty-set, that is an invalid
+  // access range that can cause empty-set to be propagated with
+  // ConstantRange::add
+  std::map<CallInfo<CalleeTy>, ConstantRange, typename CallInfo<CalleeTy>::Less>
+      Calls;
 
   UseInfo(unsigned PointerSize) : Range{PointerSize, false} {}
 
-  void updateRange(const ConstantRange &R) {
-    assert(!R.isUpperSignWrapped());
-    Range = Range.unionWith(R);
-    assert(!Range.isUpperSignWrapped());
-  }
+  void updateRange(const ConstantRange &R) { Range = unionNoWrap(Range, R); }
 };
 
 template <typename CalleeTy>
 raw_ostream &operator<<(raw_ostream &OS, const UseInfo<CalleeTy> &U) {
   OS << U.Range;
   for (auto &Call : U.Calls)
-    OS << ", " << Call;
+    OS << ", "
+       << "@" << Call.first.Callee->getName() << "(arg" << Call.first.ParamNo
+       << ", " << Call.second << ")";
   return OS;
-}
-
-// Check if we should bailout for such ranges.
-bool isUnsafe(const ConstantRange &R) {
-  return R.isEmptySet() || R.isFullSet() || R.isUpperSignWrapped();
-}
-
-ConstantRange addOverflowNever(const ConstantRange &L, const ConstantRange &R) {
-  if (L.signedAddMayOverflow(R) !=
-      ConstantRange::OverflowResult::NeverOverflows)
-    return ConstantRange(L.getBitWidth(), true);
-  return L.add(R);
 }
 
 /// Calculate the allocation size of a given alloca. Returns empty range
@@ -174,6 +207,7 @@ template <typename CalleeTy> struct FunctionInfo {
     } else {
       assert(Allocas.empty());
     }
+    O << "\n";
   }
 };
 
@@ -384,7 +418,11 @@ bool StackSafetyLocalAnalysis::analyzeAllUses(Value *Ptr,
         }
 
         assert(isa<Function>(Callee) || isa<GlobalAlias>(Callee));
-        US.Calls.emplace_back(Callee, ArgNo, offsetFrom(UI, Ptr));
+        ConstantRange Offsets = offsetFrom(UI, Ptr);
+        auto Insert =
+            US.Calls.emplace(CallInfo<GlobalValue>(Callee, ArgNo), Offsets);
+        if (!Insert.second)
+          Insert.first->second = Insert.first->second.unionWith(Offsets);
         break;
       }
 
@@ -490,18 +528,18 @@ template <typename CalleeTy>
 bool StackSafetyDataFlowAnalysis<CalleeTy>::updateOneUse(UseInfo<CalleeTy> &US,
                                                          bool UpdateToFullSet) {
   bool Changed = false;
-  for (auto &CS : US.Calls) {
-    assert(!CS.Offset.isEmptySet() &&
+  for (auto &KV : US.Calls) {
+    assert(!KV.second.isEmptySet() &&
            "Param range can't be empty-set, invalid offset range");
 
     ConstantRange CalleeRange =
-        getArgumentAccessRange(CS.Callee, CS.ParamNo, CS.Offset);
+        getArgumentAccessRange(KV.first.Callee, KV.first.ParamNo, KV.second);
     if (!US.Range.contains(CalleeRange)) {
       Changed = true;
       if (UpdateToFullSet)
         US.Range = UnknownRange;
       else
-        US.Range = US.Range.unionWith(CalleeRange);
+        US.updateRange(CalleeRange);
     }
   }
   return Changed;
@@ -535,7 +573,7 @@ void StackSafetyDataFlowAnalysis<CalleeTy>::runDataFlow() {
     auto &FS = F.second;
     for (auto &KV : FS.Params)
       for (auto &CS : KV.second.Calls)
-        Callees.push_back(CS.Callee);
+        Callees.push_back(CS.first.Callee);
 
     llvm::sort(Callees);
     Callees.erase(std::unique(Callees.begin(), Callees.end()), Callees.end());
@@ -570,14 +608,52 @@ StackSafetyDataFlowAnalysis<CalleeTy>::run() {
   return Functions;
 }
 
-FunctionSummary *resolveCallee(GlobalValueSummary *S) {
+FunctionSummary *findCalleeFunctionSummary(ValueInfo VI, StringRef ModuleId) {
+  if (!VI)
+    return nullptr;
+  auto SummaryList = VI.getSummaryList();
+  GlobalValueSummary* S = nullptr;
+  for (const auto& GVS : SummaryList) {
+    if (!GVS->isLive())
+      continue;
+    if (const AliasSummary *AS = dyn_cast<AliasSummary>(GVS.get()))
+      if (!AS->hasAliasee())
+        continue;
+    if (!isa<FunctionSummary>(GVS->getBaseObject()))
+      continue;
+    if (GlobalValue::isLocalLinkage(GVS->linkage())) {
+      if (GVS->modulePath() == ModuleId) {
+        S = GVS.get();
+        break;
+      }
+    } else if (GlobalValue::isExternalLinkage(GVS->linkage())) {
+      if (S) {
+        ++NumIndexCalleeMultipleExternal;
+        return nullptr;
+      }
+      S = GVS.get();
+    } else if (GlobalValue::isWeakLinkage(GVS->linkage())) {
+      if (S) {
+        ++NumIndexCalleeMultipleWeak;
+        return nullptr;
+      }
+      S = GVS.get();
+    } else if (GlobalValue::isAvailableExternallyLinkage(GVS->linkage()) ||
+               GlobalValue::isLinkOnceLinkage(GVS->linkage())) {
+      if (SummaryList.size() == 1)
+        S = GVS.get();
+      // According thinLTOResolvePrevailingGUID these are unlikely prevailing.
+    } else {
+      ++NumIndexCalleeUnhandled;
+    }
+  };
   while (S) {
     if (!S->isLive() || !S->isDSOLocal())
       return nullptr;
     if (FunctionSummary *FS = dyn_cast<FunctionSummary>(S))
       return FS;
     AliasSummary *AS = dyn_cast<AliasSummary>(S);
-    if (!AS)
+    if (!AS || !AS->hasAliasee())
       return nullptr;
     S = AS->getBaseObject();
     if (S == AS)
@@ -602,16 +678,6 @@ const Function *findCalleeInModule(const GlobalValue *GV) {
   return nullptr;
 }
 
-GlobalValueSummary *getGlobalValueSummary(const ModuleSummaryIndex *Index,
-                                          uint64_t ValueGUID) {
-  auto VI = Index->getValueInfo(ValueGUID);
-  if (!VI || VI.getSummaryList().empty())
-    return nullptr;
-  assert(VI.getSummaryList().size() == 1);
-  auto &Summary = VI.getSummaryList()[0];
-  return Summary.get();
-}
-
 const ConstantRange *findParamAccess(const FunctionSummary &FS,
                                      uint32_t ParamNo) {
   assert(FS.isLive());
@@ -625,31 +691,31 @@ const ConstantRange *findParamAccess(const FunctionSummary &FS,
 void resolveAllCalls(UseInfo<GlobalValue> &Use,
                      const ModuleSummaryIndex *Index) {
   ConstantRange FullSet(Use.Range.getBitWidth(), true);
-  for (auto &C : Use.Calls) {
-    const Function *F = findCalleeInModule(C.Callee);
+  auto TmpCalls = std::move(Use.Calls);
+  for (const auto &C : TmpCalls) {
+    const Function *F = findCalleeInModule(C.first.Callee);
     if (F) {
-      C.Callee = F;
+      Use.Calls.emplace(CallInfo<GlobalValue>(F, C.first.ParamNo), C.second);
       continue;
     }
 
     if (!Index)
       return Use.updateRange(FullSet);
-    GlobalValueSummary *GVS = getGlobalValueSummary(Index, C.Callee->getGUID());
-
-    FunctionSummary *FS = resolveCallee(GVS);
-    if (!FS)
+    FunctionSummary *FS =
+        findCalleeFunctionSummary(Index->getValueInfo(C.first.Callee->getGUID()),
+                                  C.first.Callee->getParent()->getModuleIdentifier());
+    ++NumModuleCalleeLookupTotal;
+    if (!FS) {
+      ++NumModuleCalleeLookupFailed;
       return Use.updateRange(FullSet);
-    const ConstantRange *Found = findParamAccess(*FS, C.ParamNo);
-    if (!Found)
+    }
+    const ConstantRange *Found = findParamAccess(*FS, C.first.ParamNo);
+    if (!Found || Found->isFullSet())
       return Use.updateRange(FullSet);
     ConstantRange Access = Found->sextOrTrunc(Use.Range.getBitWidth());
-    Use.updateRange(addOverflowNever(Access, C.Offset));
-    C.Callee = nullptr;
+    if (!Access.isEmptySet())
+      Use.updateRange(addOverflowNever(Access, C.second));
   }
-
-  Use.Calls.erase(std::remove_if(Use.Calls.begin(), Use.Calls.end(),
-                                 [](auto &T) { return !T.Callee; }),
-                  Use.Calls.end());
 }
 
 GVToSSI createGlobalStackSafetyInfo(
@@ -663,8 +729,11 @@ GVToSSI createGlobalStackSafetyInfo(
   auto Copy = Functions;
 
   for (auto &FnKV : Copy)
-    for (auto &KV : FnKV.second.Params)
+    for (auto &KV : FnKV.second.Params) {
       resolveAllCalls(KV.second, Index);
+      if (KV.second.Range.isFullSet())
+        KV.second.Calls.clear();
+    }
 
   uint32_t PointerSize = Copy.begin()
                              ->first->getParent()
@@ -679,8 +748,8 @@ GVToSSI createGlobalStackSafetyInfo(
       auto &A = KV.second;
       resolveAllCalls(A, Index);
       for (auto &C : A.Calls) {
-        A.updateRange(
-            SSDFA.getArgumentAccessRange(C.Callee, C.ParamNo, C.Offset));
+        A.updateRange(SSDFA.getArgumentAccessRange(C.first.Callee,
+                                                   C.first.ParamNo, C.second));
       }
       // FIXME: This is needed only to preserve calls in print() results.
       A.Calls = SrcF.Allocas.find(KV.first)->second.Calls;
@@ -749,7 +818,7 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
 }
 
 std::vector<FunctionSummary::ParamAccess>
-StackSafetyInfo::getParamAccesses() const {
+StackSafetyInfo::getParamAccesses(ModuleSummaryIndex &Index) const {
   // Implementation transforms internal representation of parameter information
   // into FunctionSummary format.
   std::vector<FunctionSummary::ParamAccess> ParamAccesses;
@@ -770,12 +839,20 @@ StackSafetyInfo::getParamAccesses() const {
       // will make ParamAccess::Range as FullSet anyway. So we can drop the
       // entire parameter like we did above.
       // TODO(vitalybuka): Return already filtered parameters from getInfo().
-      if (C.Offset.isFullSet()) {
+      if (C.second.isFullSet()) {
         ParamAccesses.pop_back();
         break;
       }
-      Param.Calls.emplace_back(C.ParamNo, C.Callee->getGUID(), C.Offset);
+      Param.Calls.emplace_back(C.first.ParamNo,
+                               Index.getOrInsertValueInfo(C.first.Callee),
+                               C.second);
     }
+  }
+  for (FunctionSummary::ParamAccess &Param : ParamAccesses) {
+    sort(Param.Calls, [](const FunctionSummary::ParamAccess::Call &L,
+                         const FunctionSummary::ParamAccess::Call &R) {
+      return std::tie(L.ParamNo, L.Callee) < std::tie(R.ParamNo, R.Callee);
+    });
   }
   return ParamAccesses;
 }
@@ -921,14 +998,28 @@ bool llvm::needsParamAccessSummary(const Module &M) {
 }
 
 void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
+  if (!Index.hasParamAccess())
+    return;
   const ConstantRange FullSet(FunctionSummary::ParamAccess::RangeWidth, true);
+
+  auto CountParamAccesses = [&](auto &Stat) {
+    if (!AreStatisticsEnabled())
+      return;
+    for (auto &GVS : Index)
+      for (auto &GV : GVS.second.SummaryList)
+        if (FunctionSummary *FS = dyn_cast<FunctionSummary>(GV.get()))
+          Stat += FS->paramAccesses().size();
+  };
+
+  CountParamAccesses(NumCombinedParamAccessesBefore);
+
   std::map<const FunctionSummary *, FunctionInfo<FunctionSummary>> Functions;
 
   // Convert the ModuleSummaryIndex to a FunctionMap
   for (auto &GVS : Index) {
     for (auto &GV : GVS.second.SummaryList) {
       FunctionSummary *FS = dyn_cast<FunctionSummary>(GV.get());
-      if (!FS)
+      if (!FS || FS->paramAccesses().empty())
         continue;
       if (FS->isLive() && FS->isDSOLocal()) {
         FunctionInfo<FunctionSummary> FI;
@@ -940,14 +1031,17 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
           US.Range = PS.Use;
           for (auto &Call : PS.Calls) {
             assert(!Call.Offsets.isFullSet());
-            FunctionSummary *S = resolveCallee(
-                Index.findSummaryInModule(Call.Callee, FS->modulePath()));
+            FunctionSummary *S =
+                findCalleeFunctionSummary(Call.Callee, FS->modulePath());
+            ++NumCombinedCalleeLookupTotal;
             if (!S) {
+              ++NumCombinedCalleeLookupFailed;
               US.Range = FullSet;
               US.Calls.clear();
               break;
             }
-            US.Calls.emplace_back(S, Call.ParamNo, Call.Offsets);
+            US.Calls.emplace(CallInfo<FunctionSummary>(S, Call.ParamNo),
+                             Call.Offsets);
           }
         }
         Functions.emplace(FS, std::move(FI));
@@ -958,12 +1052,16 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
       FS->setParamAccesses({});
     }
   }
+  NumCombinedDataFlowNodes += Functions.size();
   StackSafetyDataFlowAnalysis<FunctionSummary> SSDFA(
       FunctionSummary::ParamAccess::RangeWidth, std::move(Functions));
   for (auto &KV : SSDFA.run()) {
     std::vector<FunctionSummary::ParamAccess> NewParams;
     NewParams.reserve(KV.second.Params.size());
     for (auto &Param : KV.second.Params) {
+      // It's not needed as FullSet is processed the same as a missing value.
+      if (Param.second.Range.isFullSet())
+        continue;
       NewParams.emplace_back();
       FunctionSummary::ParamAccess &New = NewParams.back();
       New.ParamNo = Param.first;
@@ -972,6 +1070,8 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
     const_cast<FunctionSummary *>(KV.first)->setParamAccesses(
         std::move(NewParams));
   }
+
+  CountParamAccesses(NumCombinedParamAccessesAfter);
 }
 
 static const char LocalPassArg[] = "stack-safety-local";

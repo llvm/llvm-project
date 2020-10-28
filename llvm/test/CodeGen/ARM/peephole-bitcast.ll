@@ -13,6 +13,7 @@ define void @t(float %x) nounwind ssp {
 ; CHECK-NEXT:    movt r1, #32639
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    bxhi lr
+; CHECK-NEXT:  .LBB0_1: @ %if.then
 ; CHECK-NEXT:    b doSomething
 entry:
   %0 = bitcast float %x to i32

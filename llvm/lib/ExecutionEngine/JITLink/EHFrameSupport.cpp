@@ -631,8 +631,8 @@ Expected<Symbol &> EHFrameEdgeFixer::getOrCreateSymbol(ParseContext &PC,
 
 // Determine whether we can register EH tables.
 #if (defined(__GNUC__) && !defined(__ARM_EABI__) && !defined(__ia64__) &&      \
-     !(defined(_AIX) && defined(__ibmxl__)) && !defined(__SEH__) &&            \
-     !defined(__USING_SJLJ_EXCEPTIONS__))
+     !(defined(_AIX) && defined(__ibmxl__)) && !defined(__MVS__) &&            \
+     !defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__))
 #define HAVE_EHTABLE_SUPPORT 1
 #else
 #define HAVE_EHTABLE_SUPPORT 0
@@ -763,12 +763,19 @@ Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
 
 EHFrameRegistrar::~EHFrameRegistrar() {}
 
-InProcessEHFrameRegistrar &InProcessEHFrameRegistrar::getInstance() {
-  static InProcessEHFrameRegistrar Instance;
-  return Instance;
+Error InProcessEHFrameRegistrar::registerEHFrames(
+    JITTargetAddress EHFrameSectionAddr, size_t EHFrameSectionSize) {
+  return registerEHFrameSection(
+      jitTargetAddressToPointer<void *>(EHFrameSectionAddr),
+      EHFrameSectionSize);
 }
 
-InProcessEHFrameRegistrar::InProcessEHFrameRegistrar() {}
+Error InProcessEHFrameRegistrar::deregisterEHFrames(
+    JITTargetAddress EHFrameSectionAddr, size_t EHFrameSectionSize) {
+  return deregisterEHFrameSection(
+      jitTargetAddressToPointer<void *>(EHFrameSectionAddr),
+      EHFrameSectionSize);
+}
 
 LinkGraphPassFunction
 createEHFrameRecorderPass(const Triple &TT,

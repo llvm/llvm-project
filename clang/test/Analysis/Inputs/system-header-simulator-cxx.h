@@ -970,6 +970,7 @@ public:
   T *operator->() const noexcept;
   operator bool() const noexcept;
   unique_ptr<T> &operator=(unique_ptr<T> &&p) noexcept;
+  unique_ptr<T> &operator=(nullptr_t) noexcept;
 };
 
 // TODO :: Once the deleter parameter is added update with additional template parameter.
@@ -1133,4 +1134,9 @@ public:
   operator()( ForwardIt2 first, ForwardIt2 last ) const;
 };
 
-}
+template <typename> class packaged_task;
+template <typename Ret, typename... Args> class packaged_task<Ret(Args...)> {
+  // TODO: Add some actual implementation.
+};
+
+} // namespace std

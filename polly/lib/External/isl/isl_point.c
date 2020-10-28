@@ -670,11 +670,11 @@ __isl_give isl_basic_set *isl_basic_set_box_from_points(
 			isl_space_is_equal(pnt1->dim, pnt2->dim), goto error);
 
 	if (isl_point_is_void(pnt1) && isl_point_is_void(pnt2)) {
-		isl_space *dim = isl_space_copy(pnt1->dim);
+		isl_space *space = isl_space_copy(pnt1->dim);
 		isl_point_free(pnt1);
 		isl_point_free(pnt2);
 		isl_int_clear(t);
-		return isl_basic_set_empty(dim);
+		return isl_basic_set_empty(space);
 	}
 	if (isl_point_is_void(pnt1)) {
 		isl_point_free(pnt1);

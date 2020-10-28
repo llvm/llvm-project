@@ -21,9 +21,9 @@
 # // using `clang-cl /c a.cpp | lld-link a.obj` works
 # // using `cl /c a.cpp | lld-link a.obj` fails without lld/COFF/Writer.cpp/Writer::sortSectionChunks()
 
-# RUN: yaml2obj %s > %t.obj
-# RUN: yaml2obj %S/Inputs/crt-dyn-initializer-order_1.yaml > %t1.obj
-# RUN: yaml2obj %S/Inputs/crt-dyn-initializer-order_2.yaml > %t2.obj
+# RUN: yaml2obj %s -o %t.obj
+# RUN: yaml2obj %S/Inputs/crt-dyn-initializer-order_1.yaml -o %t1.obj
+# RUN: yaml2obj %S/Inputs/crt-dyn-initializer-order_2.yaml -o %t2.obj
 
 # CHECK: Name: .CRT
 # CHECK: Characteristics [

@@ -34,22 +34,30 @@ protected:
   }
 };
 
-std::unique_ptr<llvm::Module> translateLLVMAVX512ModuleToLLVMIR(Operation *m) {
+std::unique_ptr<llvm::Module>
+translateLLVMAVX512ModuleToLLVMIR(Operation *m, llvm::LLVMContext &llvmContext,
+                                  StringRef name) {
   return LLVM::ModuleTranslation::translateModule<LLVMAVX512ModuleTranslation>(
-      m);
+      m, llvmContext, name);
 }
 } // end namespace
 
 namespace mlir {
 void registerAVX512ToLLVMIRTranslation() {
   TranslateFromMLIRRegistration reg(
-      "avx512-mlir-to-llvmir", [](ModuleOp module, raw_ostream &output) {
-        auto llvmModule = translateLLVMAVX512ModuleToLLVMIR(module);
+      "avx512-mlir-to-llvmir",
+      [](ModuleOp module, raw_ostream &output) {
+        llvm::LLVMContext llvmContext;
+        auto llvmModule = translateLLVMAVX512ModuleToLLVMIR(
+            module, llvmContext, "LLVMDialectModule");
         if (!llvmModule)
           return failure();
 
         llvmModule->print(output, nullptr);
         return success();
+      },
+      [](DialectRegistry &registry) {
+        registry.insert<LLVM::LLVMAVX512Dialect, LLVM::LLVMDialect>();
       });
 }
 } // namespace mlir

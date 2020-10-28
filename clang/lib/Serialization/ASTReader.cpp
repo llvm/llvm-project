@@ -390,8 +390,10 @@ static bool checkTargetOptions(const TargetOptions &TargetOpts,
   // We can tolerate different CPUs in many cases, notably when one CPU
   // supports a strict superset of another. When allowing compatible
   // differences skip this check.
-  if (!AllowCompatibleDifferences)
+  if (!AllowCompatibleDifferences) {
     CHECK_TARGET_OPT(CPU, "target CPU");
+    CHECK_TARGET_OPT(TuneCPU, "tune CPU");
+  }
 
 #undef CHECK_TARGET_OPT
 
@@ -3790,7 +3792,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         Error("invalid pragma pack record");
         return Failure;
       }
-      FpPragmaCurrentValue = Record[0];
+      FpPragmaCurrentValue = FPOptionsOverride::getFromOpaqueInt(Record[0]);
       FpPragmaCurrentLocation = ReadSourceLocation(F, Record[1]);
       unsigned NumStackEntries = Record[2];
       unsigned Idx = 3;
@@ -3798,7 +3800,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       FpPragmaStack.clear();
       for (unsigned I = 0; I < NumStackEntries; ++I) {
         FpPragmaStackEntry Entry;
-        Entry.Value = Record[Idx++];
+        Entry.Value = FPOptionsOverride::getFromOpaqueInt(Record[Idx++]);
         Entry.Location = ReadSourceLocation(F, Record[Idx++]);
         Entry.PushLocation = ReadSourceLocation(F, Record[Idx++]);
         FpPragmaStrings.push_back(ReadString(Record, Idx));
@@ -4987,10 +4989,10 @@ void ASTReader::InitializeContext() {
                         /*ImportLoc=*/Import.ImportLoc);
       if (Import.ImportLoc.isValid())
         PP.makeModuleVisible(Imported, Import.ImportLoc);
-      // FIXME: should we tell Sema to make the module visible too?
+      // This updates visibility for Preprocessor only. For Sema, which can be
+      // nullptr here, we do the same later, in UpdateSema().
     }
   }
-  ImportedModules.clear();
 }
 
 void ASTReader::finalizeForWriting() {
@@ -5779,6 +5781,7 @@ bool ASTReader::ParseTargetOptions(const RecordData &Record, bool Complain,
   TargetOptions TargetOpts;
   TargetOpts.Triple = ReadString(Record, Idx);
   TargetOpts.CPU = ReadString(Record, Idx);
+  TargetOpts.TuneCPU = ReadString(Record, Idx);
   TargetOpts.ABI = ReadString(Record, Idx);
   for (unsigned N = Record[Idx++]; N; --N) {
     TargetOpts.FeaturesAsWritten.push_back(ReadString(Record, Idx));
@@ -7842,7 +7845,8 @@ void ASTReader::InitializeSema(Sema &S) {
   // FIXME: What happens if these are changed by a module import?
   if (!FPPragmaOptions.empty()) {
     assert(FPPragmaOptions.size() == 1 && "Wrong number of FP_PRAGMA_OPTIONS");
-    FPOptionsOverride NewOverrides(FPPragmaOptions[0]);
+    FPOptionsOverride NewOverrides =
+        FPOptionsOverride::getFromOpaqueInt(FPPragmaOptions[0]);
     SemaObj->CurFPFeatures =
         NewOverrides.applyOverrides(SemaObj->getLangOpts());
   }
@@ -7940,6 +7944,15 @@ void ASTReader::UpdateSema() {
     } else {
       SemaObj->FpPragmaStack.CurrentValue = *FpPragmaCurrentValue;
       SemaObj->FpPragmaStack.CurrentPragmaLocation = FpPragmaCurrentLocation;
+    }
+  }
+
+  // For non-modular AST files, restore visiblity of modules.
+  for (auto &Import : ImportedModules) {
+    if (Import.ImportLoc.isInvalid())
+      continue;
+    if (Module *Imported = getSubmodule(Import.ID)) {
+      SemaObj->makeModuleVisible(Imported, Import.ImportLoc);
     }
   }
 }
@@ -8940,7 +8953,7 @@ ASTReader::ReadSourceRange(ModuleFile &F, const RecordData &Record,
   return SourceRange(beg, end);
 }
 
-static FixedPointSemantics
+static llvm::FixedPointSemantics
 ReadFixedPointSemantics(const SmallVectorImpl<uint64_t> &Record,
                         unsigned &Idx) {
   unsigned Width = Record[Idx++];
@@ -8949,8 +8962,8 @@ ReadFixedPointSemantics(const SmallVectorImpl<uint64_t> &Record,
   bool IsSigned = Tmp & 0x1;
   bool IsSaturated = Tmp & 0x2;
   bool HasUnsignedPadding = Tmp & 0x4;
-  return FixedPointSemantics(Width, Scale, IsSigned, IsSaturated,
-                             HasUnsignedPadding);
+  return llvm::FixedPointSemantics(Width, Scale, IsSigned, IsSaturated,
+                                   HasUnsignedPadding);
 }
 
 static const llvm::fltSemantics &
@@ -8973,8 +8986,8 @@ APValue ASTRecordReader::readAPValue() {
     return APValue(readAPFloat(FloatSema));
   }
   case APValue::FixedPoint: {
-    FixedPointSemantics FPSema = ReadFixedPointSemantics(Record, Idx);
-    return APValue(APFixedPoint(readAPInt(), FPSema));
+    llvm::FixedPointSemantics FPSema = ReadFixedPointSemantics(Record, Idx);
+    return APValue(llvm::APFixedPoint(readAPInt(), FPSema));
   }
   case APValue::ComplexInt: {
     llvm::APSInt First = readAPSInt();
@@ -12931,4 +12944,21 @@ OMPTraitInfo *ASTRecordReader::readOMPTraitInfo() {
     }
   }
   return &TI;
+}
+
+void ASTRecordReader::readOMPChildren(OMPChildren *Data) {
+  if (!Data)
+    return;
+  if (Reader->ReadingKind == ASTReader::Read_Stmt) {
+    // Skip NumClauses, NumChildren and HasAssociatedStmt fields.
+    skipInts(3);
+  }
+  SmallVector<OMPClause *, 4> Clauses(Data->getNumClauses());
+  for (unsigned I = 0, E = Data->getNumClauses(); I < E; ++I)
+    Clauses[I] = readOMPClause();
+  Data->setClauses(Clauses);
+  if (Data->hasAssociatedStmt())
+    Data->setAssociatedStmt(readStmt());
+  for (unsigned I = 0, E = Data->getNumChildren(); I < E; ++I)
+    Data->getChildren()[I] = readStmt();
 }

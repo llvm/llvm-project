@@ -225,11 +225,11 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                                  names.
      ``gfx906``                  ``amdgcn``   dGPU  - xnack                   - Radeon Instinct MI50
                                                       [off]                   - Radeon Instinct MI60
-                                                                              - Radeon VII
-                                                                              - Radeon Pro VII
+                                                    - sram-ecc                - Radeon VII
+                                                      [off]                   - Radeon Pro VII
      ``gfx908``                  ``amdgcn``   dGPU  - xnack                   *TBA*
                                                       [off]
-                                                      sram-ecc
+                                                    - sram-ecc
                                                       [on]
                                                                               .. TODO::
                                                                                  Add product
@@ -260,6 +260,15 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                     - cumode
                                                       [off]
      ``gfx1030``                 ``amdgcn``   dGPU  - wavefrontsize64         *TBA*
+                                                      [off]
+                                                    - cumode
+                                                      [off]
+                                                                              .. TODO
+                                                                                 Add product
+                                                                                 names.
+     ``gfx1031``                 ``amdgcn``   dGPU  - xnack                   *TBA*
+                                                      [off]
+                                                    - wavefrontsize64
                                                       [off]
                                                     - cumode
                                                       [off]
@@ -810,6 +819,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1011`` 0x034      ``gfx1011``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1012`` 0x035      ``gfx1012``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1030`` 0x036      ``gfx1030``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1031`` 0x037      ``gfx1031``
      ================================= ========== =============================
 
 Sections
@@ -1129,7 +1139,7 @@ The loaded code object path URI syntax is defined by the following BNF syntax:
 **file_path**
   Is the file's path specified as a URI encoded UTF-8 string. In URI encoding,
   every character that is not in the regular expression ``[a-zA-Z0-9/_.~-]`` is
-  encoded as two uppercase hexidecimal digits proceeded by "%".  Directories in
+  encoded as two uppercase hexadecimal digits proceeded by "%".  Directories in
   the path are separated by "/".
 
 **offset**
@@ -1227,7 +1237,7 @@ mapping.
                                              Registers.
    96-127         *Reserved*                 *Reserved for frequently accessed
                                              registers using DWARF 1-byte ULEB.*
-   128            SCC               32       Scalar Condition Code Register.
+   128            STATUS            32       Status Register.
    129-511        *Reserved*                 *Reserved for future Scalar
                                              Architectural Registers.*
    512            VCC_32            32       Vector Condition Code Register
@@ -1236,7 +1246,7 @@ mapping.
    513-1023       *Reserved*                 *Reserved for future Vector
                                              Architectural Registers when
                                              executing in wavefront 32 mode.*
-   768            VCC_64            32       Vector Condition Code Register
+   768            VCC_64            64       Vector Condition Code Register
                                              when executing in wavefront 64
                                              mode.
    769-1023       *Reserved*                 *Reserved for future Vector
@@ -6426,7 +6436,7 @@ Call Convention
 
 .. note::
 
-  This section is currently incomplete and has inakkuracies. It is WIP that will
+  This section is currently incomplete and has inaccuracies. It is WIP that will
   be updated as information is determined.
 
 See :ref:`amdgpu-dwarf-address-space-identifier` for information on swizzled
@@ -6558,7 +6568,7 @@ On exit from a function:
       VGPR232-239
       VGPR248-255
 
-        *Except the argument registers, the VGPR cloberred and the preserved
+        *Except the argument registers, the VGPR clobbered and the preserved
         registers are intermixed at regular intervals in order to
         get a better occupancy.*
 
@@ -7307,7 +7317,7 @@ in :ref:`amdgpu-processors`.
 Set to zero each time a
 :ref:`amdgpu-amdhsa-assembler-directive-amdgpu_hsa_kernel` directive is
 encountered. At each instruction, if the current value of this symbol is less
-than or equal to the maximum VPGR number explicitly referenced within that
+than or equal to the maximum VGPR number explicitly referenced within that
 instruction then the symbol value is updated to equal that VGPR number plus
 one.
 
@@ -7317,7 +7327,7 @@ one.
 Set to zero each time a
 :ref:`amdgpu-amdhsa-assembler-directive-amdgpu_hsa_kernel` directive is
 encountered. At each instruction, if the current value of this symbol is less
-than or equal to the maximum VPGR number explicitly referenced within that
+than or equal to the maximum VGPR number explicitly referenced within that
 instruction then the symbol value is updated to equal that SGPR number plus
 one.
 
@@ -7484,7 +7494,7 @@ of this symbol is less than or equal to the maximum VGPR number explicitly
 referenced within that instruction then the symbol value is updated to equal
 that VGPR number plus one.
 
-May be used to set the `.amdhsa_next_free_vpgr` directive in
+May be used to set the `.amdhsa_next_free_vgpr` directive in
 :ref:`amdhsa-kernel-directives-table`.
 
 May be set at any time, e.g. manually set to zero at the start of each kernel.

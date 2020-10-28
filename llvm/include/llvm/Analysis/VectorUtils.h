@@ -99,7 +99,8 @@ struct VFShape {
   // Retrieve the VFShape that can be used to map a (scalar) function to itself,
   // with VF = 1.
   static VFShape getScalarShape(const CallInst &CI) {
-    return VFShape::get(CI, /*EC*/ {1, false}, /*HasGlobalPredicate*/ false);
+    return VFShape::get(CI, ElementCount::getFixed(1),
+                        /*HasGlobalPredicate*/ false);
   }
 
   // Retrieve the basic vectorization shape of the function, where all
@@ -114,7 +115,7 @@ struct VFShape {
       Parameters.push_back(
           VFParameter({CI.arg_size(), VFParamKind::GlobalPredicate}));
 
-    return {EC.Min, EC.Scalable, Parameters};
+    return {EC.getKnownMinValue(), EC.isScalable(), Parameters};
   }
   /// Sanity check on the Parameters in the VFShape.
   bool hasValidParameterList() const;
@@ -299,13 +300,17 @@ namespace Intrinsic {
 typedef unsigned ID;
 }
 
-/// A helper function for converting Scalar types to vector types.
-/// If the incoming type is void, we return void. If the VF is 1, we return
-/// the scalar type.
-inline Type *ToVectorTy(Type *Scalar, unsigned VF, bool isScalable = false) {
-  if (Scalar->isVoidTy() || VF == 1)
+/// A helper function for converting Scalar types to vector types. If
+/// the incoming type is void, we return void. If the EC represents a
+/// scalar, we return the scalar type.
+inline Type *ToVectorTy(Type *Scalar, ElementCount EC) {
+  if (Scalar->isVoidTy() || EC.isScalar())
     return Scalar;
-  return VectorType::get(Scalar, {VF, isScalable});
+  return VectorType::get(Scalar, EC);
+}
+
+inline Type *ToVectorTy(Type *Scalar, unsigned VF) {
+  return ToVectorTy(Scalar, ElementCount::getFixed(VF));
 }
 
 /// Identify if the intrinsic is trivially vectorizable.

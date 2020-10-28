@@ -70,4 +70,3 @@ Examples:
     s_getreg_b32 s2, hwreg(15)
     s_getreg_b32 s2, hwreg(51, 1, 31)
     s_getreg_b32 s2, hwreg(HW_REG_LDS_ALLOC, 0, 1)
-

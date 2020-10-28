@@ -452,8 +452,6 @@ bool mips::isNaN2008(const ArgList &Args, const llvm::Triple &Triple) {
   return llvm::StringSwitch<bool>(getCPUName(Args, Triple))
       .Cases("mips32r6", "mips64r6", true)
       .Default(false);
-
-  return false;
 }
 
 bool mips::isFP64ADefault(const llvm::Triple &Triple, StringRef CPUName) {

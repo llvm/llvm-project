@@ -83,6 +83,12 @@ static cl::opt<unsigned>
     UnrollThreshold("unroll-threshold", cl::Hidden,
                     cl::desc("The cost threshold for loop unrolling"));
 
+static cl::opt<unsigned>
+    UnrollOptSizeThreshold(
+      "unroll-optsize-threshold", cl::init(0), cl::Hidden,
+      cl::desc("The cost threshold for loop unrolling when optimizing for "
+               "size"));
+
 static cl::opt<unsigned> UnrollPartialThreshold(
     "unroll-partial-threshold", cl::Hidden,
     cl::desc("The cost threshold for partial loop unrolling"));
@@ -188,9 +194,9 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.Threshold =
       OptLevel > 2 ? UnrollThresholdAggressive : UnrollThresholdDefault;
   UP.MaxPercentThresholdBoost = 400;
-  UP.OptSizeThreshold = 0;
+  UP.OptSizeThreshold = UnrollOptSizeThreshold;
   UP.PartialThreshold = 150;
-  UP.PartialOptSizeThreshold = 0;
+  UP.PartialOptSizeThreshold = UnrollOptSizeThreshold;
   UP.Count = 0;
   UP.DefaultUnrollRuntimeCount = 8;
   UP.MaxCount = std::numeric_limits<unsigned>::max();
@@ -381,6 +387,10 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
     assert(CostWorklist.empty() && "Must start with an empty cost list");
     assert(PHIUsedList.empty() && "Must start with an empty phi used list");
     CostWorklist.push_back(&RootI);
+    TargetTransformInfo::TargetCostKind CostKind =
+      RootI.getFunction()->hasMinSize() ?
+      TargetTransformInfo::TCK_CodeSize :
+      TargetTransformInfo::TCK_SizeAndLatency;
     for (;; --Iteration) {
       do {
         Instruction *I = CostWorklist.pop_back_val();
@@ -421,7 +431,7 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
         // First accumulate the cost of this instruction.
         if (!Cost.IsFree) {
-          UnrolledCost += TTI.getUserCost(I, TargetTransformInfo::TCK_CodeSize);
+          UnrolledCost += TTI.getUserCost(I, CostKind);
           LLVM_DEBUG(dbgs() << "Adding cost of instruction (iteration "
                             << Iteration << "): ");
           LLVM_DEBUG(I->dump());
@@ -461,6 +471,9 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
   LLVM_DEBUG(dbgs() << "Starting LoopUnroll profitability analysis...\n");
 
+  TargetTransformInfo::TargetCostKind CostKind =
+    L->getHeader()->getParent()->hasMinSize() ?
+    TargetTransformInfo::TCK_CodeSize : TargetTransformInfo::TCK_SizeAndLatency;
   // Simulate execution of each iteration of the loop counting instructions,
   // which would be simplified.
   // Since the same load will take different values on different iterations,
@@ -514,7 +527,7 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
         // Track this instruction's expected baseline cost when executing the
         // rolled loop form.
-        RolledDynamicCost += TTI.getUserCost(&I, TargetTransformInfo::TCK_CodeSize);
+        RolledDynamicCost += TTI.getUserCost(&I, CostKind);
 
         // Visit the instruction to analyze its loop cost after unrolling,
         // and if the visitor returns true, mark the instruction as free after

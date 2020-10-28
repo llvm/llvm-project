@@ -40,9 +40,6 @@ private:
   //typedef DenseMap<MachineBasicBlock*, Register> AvailableValsTy;
   void *AV = nullptr;
 
-  /// VR - Current virtual register whose uses are being updated.
-  Register VR;
-
   /// VRC - Register class of the current virtual register.
   const TargetRegisterClass *VRC;
 
@@ -65,6 +62,7 @@ public:
   /// Initialize - Reset this object to get ready for a new set of SSA
   /// updates.
   void Initialize(Register V);
+  void Initialize(const TargetRegisterClass *RC);
 
   /// AddAvailableValue - Indicate that a rewritten value is available at the
   /// end of the specified block with the specified value.

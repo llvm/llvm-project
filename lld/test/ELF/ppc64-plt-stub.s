@@ -15,8 +15,8 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 ## DT_PLTGOT points to .plt
-# SEC: .plt NOBITS 00000000100303e8 0003e8 000018
-# SEC: 0x0000000000000003 (PLTGOT) 0x100303e8
+# SEC: .plt NOBITS 00000000100303f0 0003f0 000018
+# SEC: 0x0000000000000003 (PLTGOT) 0x100303f0
 
 ## .plt[0] holds the address of _dl_runtime_resolve.
 ## .plt[1] holds the link map.
@@ -24,9 +24,9 @@
 # RELOC: 0x10030010 R_PPC64_JMP_SLOT foo 0x0
 
 # CHECK:      <_start>:
-# CHECK:      10010298: bl 0x100102a8
+# CHECK:      10010298: bl 0x100102b0
 
-# CHECK-LABEL: 00000000100102a8 <__plt_foo>:
+# CHECK-LABEL: 00000000100102b0 <__plt_foo>:
 # CHECK-NEXT:      std 2, 24(1)
 # CHECK-NEXT:      addis 12, 2, 1
 # CHECK-NEXT:      ld 12, -32744(12)

@@ -196,8 +196,10 @@ static LogicalResult createHsaco(const Blob &isaBlob, StringRef name,
   return success();
 }
 
-static std::unique_ptr<llvm::Module> compileModuleToROCDLIR(Operation *m) {
-  auto llvmModule = translateModuleToROCDLIR(m);
+static std::unique_ptr<llvm::Module>
+compileModuleToROCDLIR(Operation *m, llvm::LLVMContext &llvmContext,
+                       StringRef name) {
+  auto llvmModule = translateModuleToROCDLIR(m, llvmContext, name);
   // TODO: Link with ROCm-Device-Libs in case needed (ex: the Module
   // depends on math functions).
   return llvmModule;
@@ -299,16 +301,15 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   // Configure target features per ROCm / HIP version.
   configTargetFeatures();
 
+  const char gpuBinaryAnnotation[] = "rocdl.hsaco";
   pm.addPass(createGpuKernelOutliningPass());
   auto &kernelPm = pm.nest<gpu::GPUModuleOp>();
   kernelPm.addPass(createStripDebugInfoPass());
   kernelPm.addPass(createLowerGpuOpsToROCDLOpsPass());
   kernelPm.addPass(createConvertGPUKernelToBlobPass(
       compileModuleToROCDLIR, compileISAToHsaco, tripleName, targetChip,
-      features, /*gpuBinaryAnnotation=*/"rocdl.hsaco"));
-  pm.addPass(createLowerToLLVMPass());
-  pm.addPass(createConvertGpuLaunchFuncToGpuRuntimeCallsPass(
-      /*gpuBinaryAnnotation=*/"rocdl.hsaco"));
+      features, gpuBinaryAnnotation));
+  pm.addPass(createGpuToLLVMConversionPass(gpuBinaryAnnotation));
 
   return pm.run(m);
 }

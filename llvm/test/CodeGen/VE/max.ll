@@ -69,8 +69,6 @@ define float @max2f32(float, float) {
 define float @maxuf32(float, float) {
 ; CHECK-LABEL: maxuf32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sf1 killed $sf1 def $sx1
-; CHECK-NEXT:    # kill: def $sf0 killed $sf0 def $sx0
 ; CHECK-NEXT:    fcmp.s %s2, %s0, %s1
 ; CHECK-NEXT:    cmov.s.gtnan %s1, %s0, %s2
 ; CHECK-NEXT:    or %s0, 0, %s1
@@ -83,8 +81,6 @@ define float @maxuf32(float, float) {
 define float @max2uf32(float, float) {
 ; CHECK-LABEL: max2uf32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sf1 killed $sf1 def $sx1
-; CHECK-NEXT:    # kill: def $sf0 killed $sf0 def $sx0
 ; CHECK-NEXT:    fcmp.s %s2, %s0, %s1
 ; CHECK-NEXT:    cmov.s.genan %s1, %s0, %s2
 ; CHECK-NEXT:    or %s0, 0, %s1
@@ -161,8 +157,6 @@ define i32 @max2i32(i32, i32) {
 define i32 @maxu32(i32, i32) {
 ; CHECK-LABEL: maxu32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw1 killed $sw1 def $sx1
-; CHECK-NEXT:    # kill: def $sw0 killed $sw0 def $sx0
 ; CHECK-NEXT:    cmpu.w %s2, %s0, %s1
 ; CHECK-NEXT:    cmov.w.gt %s1, %s0, %s2
 ; CHECK-NEXT:    or %s0, 0, %s1
@@ -175,8 +169,6 @@ define i32 @maxu32(i32, i32) {
 define i32 @max2u32(i32, i32) {
 ; CHECK-LABEL: max2u32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw1 killed $sw1 def $sx1
-; CHECK-NEXT:    # kill: def $sw0 killed $sw0 def $sx0
 ; CHECK-NEXT:    cmpu.w %s2, %s0, %s1
 ; CHECK-NEXT:    cmov.w.ge %s1, %s0, %s2
 ; CHECK-NEXT:    or %s0, 0, %s1

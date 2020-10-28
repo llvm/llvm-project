@@ -192,10 +192,9 @@ another_bb:
 ; CHECK: alloca { i32, [12 x i8] }, align 16
 ; CHECK: call { i32, [12 x i8] }* @llvm.aarch64.tagp
 ; CHECK: call void @llvm.aarch64.settag(
-; SSI: alloca i32, align 4
-; NOSSI: alloca { i32, [12 x i8] }, align 16
-; NOSSI: call { i32, [12 x i8] }* @llvm.aarch64.tagp
-; NOSSI: call void @llvm.aarch64.settag(
+; CHECK: alloca { i32, [12 x i8] }, align 16
+; CHECK: call { i32, [12 x i8] }* @llvm.aarch64.tagp
+; CHECK: call void @llvm.aarch64.settag(
 ; CHECK: store i32
 ; CHECK: call void @noUse32(i32*
 ; CHECK: store i32
@@ -203,7 +202,7 @@ another_bb:
 ; CHECK: call void @noUse32(i32*
 ; CHECK: call void @llvm.aarch64.settag(
 ; CHECK: call void @llvm.aarch64.settag(
-; NOSSI: call void @llvm.aarch64.settag(
+; CHECK: call void @llvm.aarch64.settag(
 ; CHECK: ret void
 
 !0 = !{}

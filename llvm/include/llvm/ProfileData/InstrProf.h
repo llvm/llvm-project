@@ -75,8 +75,16 @@ inline StringRef getInstrProfValueProfFuncName() {
 }
 
 /// Return the name profile runtime entry point to do value range profiling.
+// FIXME: This is to be removed after switching to the new memop value
+// profiling.
 inline StringRef getInstrProfValueRangeProfFuncName() {
   return INSTR_PROF_VALUE_RANGE_PROF_FUNC_STR;
+}
+
+/// Return the name profile runtime entry point to do memop size value
+/// profiling.
+inline StringRef getInstrProfValueProfMemOpFuncName() {
+  return INSTR_PROF_VALUE_PROF_MEMOP_FUNC_STR;
 }
 
 /// Return the name prefix of variables containing instrumented function names.

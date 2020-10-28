@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=0 -mtriple=aarch64-none-eabi | FileCheck %s
+; RUN: llc < %s -asm-verbose=0 -mtriple=aarch64-none-eabi -mattr=+bf16 | FileCheck %s
 
 define <4 x i16> @v4bf16_to_v4i16(float, <4 x bfloat> %a) nounwind {
 ; CHECK-LABEL: v4bf16_to_v4i16:

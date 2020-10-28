@@ -21,8 +21,8 @@ static Value chooseOperand(Value input1, Value input2, BoolAttr choice) {
   return choice.getValue() ? input1 : input2;
 }
 
-static void createOpI(PatternRewriter &rewriter, Value input) {
-  rewriter.create<OpI>(rewriter.getUnknownLoc(), input);
+static void createOpI(PatternRewriter &rewriter, Location loc, Value input) {
+  rewriter.create<OpI>(loc, input);
 }
 
 static void handleNoResultOp(PatternRewriter &rewriter,
@@ -63,7 +63,7 @@ public:
     // upon construction. The operation being created through the folder has an
     // in-place folder, and it should be still present in the output.
     // Furthermore, the folder should not crash when attempting to recover the
-    // (unchanged) opeation result.
+    // (unchanged) operation result.
     OperationFolder folder(op->getContext());
     Value result = folder.create<TestOpInPlaceFold>(
         rewriter, op->getLoc(), rewriter.getIntegerType(32), op->getOperand(0),
@@ -254,7 +254,7 @@ struct TestCreateBlock : public RewritePattern {
   }
 };
 
-/// A simple pattern that creates a block containing an invalid operaiton in
+/// A simple pattern that creates a block containing an invalid operation in
 /// order to trigger the block creation undo mechanism.
 struct TestCreateIllegalBlock : public RewritePattern {
   TestCreateIllegalBlock(MLIRContext *ctx)
@@ -768,6 +768,10 @@ struct TestTypeConversionProducer
 
 struct TestTypeConversionDriver
     : public PassWrapper<TestTypeConversionDriver, OperationPass<ModuleOp>> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<TestDialect>();
+  }
+
   void runOnOperation() override {
     // Initialize the type converter.
     TypeConverter converter;
@@ -834,6 +838,114 @@ struct TestTypeConversionDriver
 };
 } // end anonymous namespace
 
+namespace {
+/// A rewriter pattern that tests that blocks can be merged.
+struct TestMergeBlock : public OpConversionPattern<TestMergeBlocksOp> {
+  using OpConversionPattern<TestMergeBlocksOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(TestMergeBlocksOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    Block &firstBlock = op.body().front();
+    Operation *branchOp = firstBlock.getTerminator();
+    Block *secondBlock = &*(std::next(op.body().begin()));
+    auto succOperands = branchOp->getOperands();
+    SmallVector<Value, 2> replacements(succOperands);
+    rewriter.eraseOp(branchOp);
+    rewriter.mergeBlocks(secondBlock, &firstBlock, replacements);
+    rewriter.updateRootInPlace(op, [] {});
+    return success();
+  }
+};
+
+/// A rewrite pattern to tests the undo mechanism of blocks being merged.
+struct TestUndoBlocksMerge : public ConversionPattern {
+  TestUndoBlocksMerge(MLIRContext *ctx)
+      : ConversionPattern("test.undo_blocks_merge", /*benefit=*/1, ctx) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    Block &firstBlock = op->getRegion(0).front();
+    Operation *branchOp = firstBlock.getTerminator();
+    Block *secondBlock = &*(std::next(op->getRegion(0).begin()));
+    rewriter.setInsertionPointToStart(secondBlock);
+    rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
+    auto succOperands = branchOp->getOperands();
+    SmallVector<Value, 2> replacements(succOperands);
+    rewriter.eraseOp(branchOp);
+    rewriter.mergeBlocks(secondBlock, &firstBlock, replacements);
+    rewriter.updateRootInPlace(op, [] {});
+    return success();
+  }
+};
+
+/// A rewrite mechanism to inline the body of the op into its parent, when both
+/// ops can have a single block.
+struct TestMergeSingleBlockOps
+    : public OpConversionPattern<SingleBlockImplicitTerminatorOp> {
+  using OpConversionPattern<
+      SingleBlockImplicitTerminatorOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(SingleBlockImplicitTerminatorOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    SingleBlockImplicitTerminatorOp parentOp =
+        op.getParentOfType<SingleBlockImplicitTerminatorOp>();
+    if (!parentOp)
+      return failure();
+    Block &innerBlock = op.region().front();
+    TerminatorOp innerTerminator =
+        cast<TerminatorOp>(innerBlock.getTerminator());
+    rewriter.mergeBlockBefore(&innerBlock, op);
+    rewriter.eraseOp(innerTerminator);
+    rewriter.eraseOp(op);
+    rewriter.updateRootInPlace(op, [] {});
+    return success();
+  }
+};
+
+struct TestMergeBlocksPatternDriver
+    : public PassWrapper<TestMergeBlocksPatternDriver,
+                         OperationPass<ModuleOp>> {
+  void runOnOperation() override {
+    mlir::OwningRewritePatternList patterns;
+    MLIRContext *context = &getContext();
+    patterns
+        .insert<TestMergeBlock, TestUndoBlocksMerge, TestMergeSingleBlockOps>(
+            context);
+    ConversionTarget target(*context);
+    target.addLegalOp<FuncOp, ModuleOp, ModuleTerminatorOp, TerminatorOp,
+                      TestBranchOp, TestTypeConsumerOp, TestTypeProducerOp,
+                      TestReturnOp>();
+    target.addIllegalOp<ILLegalOpF>();
+
+    /// Expect the op to have a single block after legalization.
+    target.addDynamicallyLegalOp<TestMergeBlocksOp>(
+        [&](TestMergeBlocksOp op) -> bool {
+          return llvm::hasSingleElement(op.body());
+        });
+
+    /// Only allow `test.br` within test.merge_blocks op.
+    target.addDynamicallyLegalOp<TestBranchOp>([&](TestBranchOp op) -> bool {
+      return op.getParentOfType<TestMergeBlocksOp>();
+    });
+
+    /// Expect that all nested test.SingleBlockImplicitTerminator ops are
+    /// inlined.
+    target.addDynamicallyLegalOp<SingleBlockImplicitTerminatorOp>(
+        [&](SingleBlockImplicitTerminatorOp op) -> bool {
+          return !op.getParentOfType<SingleBlockImplicitTerminatorOp>();
+        });
+
+    DenseSet<Operation *> unlegalizedOps;
+    (void)applyPartialConversion(getOperation(), target, patterns,
+                                 &unlegalizedOps);
+    for (auto *op : unlegalizedOps)
+      op->emitRemark() << "op '" << op->getName() << "' is not legalizable";
+  }
+};
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // PassRegistration
 //===----------------------------------------------------------------------===//
@@ -866,5 +978,9 @@ void registerPatternsTestPass() {
   PassRegistration<TestTypeConversionDriver>(
       "test-legalize-type-conversion",
       "Test various type conversion functionalities in DialectConversion");
+
+  PassRegistration<TestMergeBlocksPatternDriver>{
+      "test-merge-blocks",
+      "Test Merging operation in ConversionPatternRewriter"};
 }
 } // namespace mlir

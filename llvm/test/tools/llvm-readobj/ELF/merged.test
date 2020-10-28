@@ -1,13 +1,59 @@
-# Check merged args produce identical output to when not merged.
-RUN: llvm-readelf -aeWhSrnudlVgIs %p/Inputs/trivial.obj.elf-i386 > %t.merged
-RUN: llvm-readelf -a -e -W -h -S -r -n -u -d -l -V -g -I -s %p/Inputs/trivial.obj.elf-i386 > %t.not-merged
-RUN: cmp %t.merged %t.not-merged
-RUN: FileCheck %s --input-file %t.merged
+## In this test we check that short command line options can be merged.
 
-# llvm-readobj does not support merged args, because it also supports some old
-# flags (-st, -sd, etc.), and it would be confusing if only some merged args
-# were supported.
-RUN: not llvm-readobj -aeWhSrnudlVgIs %p/Inputs/trivial.obj.elf-i386 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+## Check merged args produce identical output to when not merged.
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readelf -aeWhSrnudlVgIs %t.o > %t.merged
+# RUN: llvm-readelf -a -e -W -h -S -r -n -u -d -l -V -g -I -s %t.o > %t.not-merged
+# RUN: cmp %t.merged %t.not-merged
+# RUN: FileCheck %s --input-file %t.merged
 
-CHECK-NOT: Unknown command line argument
-UNKNOWN:   for the --section-headers option: may only occur zero or one times!
+## Check that the output without -a (--all) option is the same. We do it
+## to verify that each of the options is handled, and not just the first
+## one nor just -a, which triggers all other options.
+# RUN: llvm-readelf -eWhSrnudlVgIs %t.o > %t.merged.no.a
+# RUN: cmp %t.merged %t.merged.no.a
+
+## -e (--headers) is equivalent to setting --file-headers (-h),
+## --program-headers (-l) and --section-headers (-S).
+## Check that the output without -e is equal to the output with it.
+## We do not use -a in this test either.
+# RUN: llvm-readelf -WhSrnudlVgIs %t.o > %t.merged.no.ae
+# RUN: cmp %t.merged %t.merged.no.ae
+
+## An arbitrary YAML description that triggers an output for each of
+## the short option from the test sequence.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .note.ABI-tag
+    Type:    SHT_NOTE
+## An arbitrary valid note content.
+    Content: 040000001000000001000000474E550000000000020000000600000020000000
+  - Name: .eh_frame
+    Type: SHT_PROGBITS
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_NULL
+        Value: 0
+  - Name:    .gnu.version
+    Type:    SHT_GNU_versym
+    Flags:   [ SHF_ALLOC ]
+    Link:    .dynsym
+    Entries: [ 0, 1 ]
+DynamicSymbols:
+  - Name:    foo
+    Binding: STB_GLOBAL
+
+## llvm-readobj does not support merged args, because it also supports some old
+## flags (-st, -sd, etc.), and it would be confusing if only some merged args
+## were supported.
+# RUN: not llvm-readobj -aeWhSrnudlVgIs %t.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+
+# CHECK-NOT: Unknown command line argument
+# UNKNOWN:   for the --section-headers option: may only occur zero or one times!

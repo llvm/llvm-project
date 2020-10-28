@@ -155,10 +155,28 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
   unsigned Imm = MI->getOperand(OpNo).getImm();
   unsigned Sew = (Imm >> 2) & 0x7;
   unsigned Lmul = Imm & 0x3;
+  bool Fractional = (Imm >> 5) & 0x1;
 
-  Lmul = 0x1 << Lmul;
   Sew = 0x1 << (Sew + 3);
-  O << "e" << Sew << ",m" << Lmul;
+  O << "e" << Sew;
+  if (Fractional) {
+    Lmul = 4 - Lmul;
+    Lmul = 0x1 << Lmul;
+    O << ",mf" << Lmul;
+  } else {
+    Lmul = 0x1 << Lmul;
+    O << ",m" << Lmul;
+  }
+  bool TailAgnostic = Imm & 0x40;
+  bool MaskedoffAgnostic = Imm & 0x80;
+  if (TailAgnostic)
+    O << ",ta";
+  else
+    O << ",tu";
+  if (MaskedoffAgnostic)
+    O << ",ma";
+  else
+    O << ",mu";
 }
 
 void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,

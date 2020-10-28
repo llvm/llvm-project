@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -std=c++11 -triple x86_64-unknown-linux -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-unknown-linux -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-linux -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-linux -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=50 -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -debug-info-kind=limited -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 #ifndef HEADER
@@ -19,9 +19,9 @@ int main(int argc, char **argv) {
   }
 }
 
-// CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @{{.+}}, i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i8***)* [[OUTLINED:@.+]] to void (i32*, i32*, ...)*), i32* %{{.+}}, i8*** %{{.+}})
+// CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @{{.+}}, i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i8**)* [[OUTLINED:@.+]] to void (i32*, i32*, ...)*), i32* %{{.+}}, i8** %{{.+}})
 
-// CHECK: define internal void [[OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* {{.+}}, i8*** {{.+}})
+// CHECK: define internal void [[OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* {{.+}}, i8** {{.+}})
 // CHECK: [[ARGC_FP_ADDR:%.+]] = alloca i32,
 // CHECK: [[TR:%.+]] = alloca [2 x %struct.kmp_taskred_input_t],
 // CHECK: [[TG:%.+]] = alloca i8*,
@@ -122,7 +122,6 @@ int main(int argc, char **argv) {
 // CHECK_DAG: [[TG]] = load i8*, i8** [[TG_ADDR]],
 // CHECK-DAG: [[ARGV_REF]] = load i8*, i8** [[ARGV_ADDR:%.+]],
 // CHECK-DAG: [[ARGV_ADDR]] = load i8**, i8*** [[ARGV_ADDR_REF:%.+]],
-// CHECK-DAG: [[ARGV_ADDR_REF:%.+]] = load i8***, i8**** [[ARGV:%.+]],
-// CHECK-DAG: [[ARGV]] = getelementptr inbounds [[CAPS_TY]], [[CAPS_TY]]* [[CAP]], i32 0, i32 2
+// CHECK-DAG: [[ARGV_ADDR_REF]] = getelementptr inbounds [[CAPS_TY]], [[CAPS_TY]]* [[CAP]], i32 0, i32 2
 
 #endif

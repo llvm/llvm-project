@@ -79,7 +79,7 @@ main:
 	.uleb128 0x2	# (DIE (0x2d) DW_TAG_subprogram)
 			# DW_AT_external
 	.asciz "main"	# DW_AT_name: "main"
-	.long	.Ltype_int	# DW_AT_type
+	.long	.Ltype_int - .Ldebug_info0	# DW_AT_type
 	.quad	.LFB2	# DW_AT_low_pc
 	.quad	.LFE2-.LFB2	# DW_AT_high_pc
 	.uleb128 0x1	# DW_AT_frame_base
@@ -87,7 +87,7 @@ main:
 			# DW_AT_GNU_all_call_sites
 	.uleb128 0x3	# (DIE (0x4f) DW_TAG_GNU_call_site)
 	.quad	.LVL4	# DW_AT_low_pc
-	.long	.Lfunc_a	# DW_AT_abstract_origin
+	.long	.Lfunc_a - .Ldebug_info0	# DW_AT_abstract_origin
 	.uleb128 0x4	# (DIE (0x5c) DW_TAG_GNU_call_site_parameter)
 	.uleb128 0x1	# DW_AT_location
 	.byte	0x55	# DW_OP_reg5
@@ -111,7 +111,7 @@ main:
 			# DW_AT_GNU_all_call_sites
 	.uleb128 0x7	# (DIE (0x86) DW_TAG_formal_parameter)
 	.asciz "p"	# DW_AT_name
-	.long	.Ltype_int	# DW_AT_type
+	.long	.Ltype_int - .Ldebug_info0	# DW_AT_type
 	.long	.LLST0	# DW_AT_location
 	.byte	0	# end of children of DIE 0x6a
 	.byte	0	# end of children of DIE 0xb

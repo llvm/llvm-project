@@ -164,7 +164,7 @@ for f in test_source_files:
                 self.skipTest("Inferior not supported")
             self.standard_unwind_tests()
 
-        test_name = "test_unwind_" + str(f)
+        test_name = "test_unwind_" + str(os.path.basename(f))
         for c in ".=()/\\":
             test_name = test_name.replace(c, '_')
 

@@ -75,17 +75,19 @@ extern "C" void mgpuMemHostRegister(void *ptr, uint64_t sizeBytes) {
   CUDA_REPORT_IF_ERROR(cuMemHostRegister(ptr, sizeBytes, /*flags=*/0));
 }
 
-// Allows to register a MemRef with the CUDA runtime. Initializes array with
-// value. Helpful until we have transfer functions implemented.
-template <typename T>
-void mgpuMemHostRegisterMemRef(const DynamicMemRefType<T> &memRef, T value) {
-  llvm::SmallVector<int64_t, 4> denseStrides(memRef.rank);
-  llvm::ArrayRef<int64_t> sizes(memRef.sizes, memRef.rank);
-  llvm::ArrayRef<int64_t> strides(memRef.strides, memRef.rank);
+// Allows to register a MemRef with the CUDA runtime. Helpful until we have
+// transfer functions implemented.
+extern "C" void
+mgpuMemHostRegisterMemRef(int64_t rank, StridedMemRefType<char, 1> *descriptor,
+                          int64_t elementSizeBytes) {
+
+  llvm::SmallVector<int64_t, 4> denseStrides(rank);
+  llvm::ArrayRef<int64_t> sizes(descriptor->sizes, rank);
+  llvm::ArrayRef<int64_t> strides(sizes.end(), rank);
 
   std::partial_sum(sizes.rbegin(), sizes.rend(), denseStrides.rbegin(),
                    std::multiplies<int64_t>());
-  auto count = denseStrides.front();
+  auto sizeBytes = denseStrides.front() * elementSizeBytes;
 
   // Only densely packed tensors are currently supported.
   std::rotate(denseStrides.begin(), denseStrides.begin() + 1,
@@ -93,17 +95,6 @@ void mgpuMemHostRegisterMemRef(const DynamicMemRefType<T> &memRef, T value) {
   denseStrides.back() = 1;
   assert(strides == llvm::makeArrayRef(denseStrides));
 
-  auto *pointer = memRef.data + memRef.offset;
-  std::fill_n(pointer, count, value);
-  mgpuMemHostRegister(pointer, count * sizeof(T));
-}
-
-extern "C" void mgpuMemHostRegisterFloat(int64_t rank, void *ptr) {
-  UnrankedMemRefType<float> memRef = {rank, ptr};
-  mgpuMemHostRegisterMemRef(DynamicMemRefType<float>(memRef), 1.23f);
-}
-
-extern "C" void mgpuMemHostRegisterInt32(int64_t rank, void *ptr) {
-  UnrankedMemRefType<int32_t> memRef = {rank, ptr};
-  mgpuMemHostRegisterMemRef(DynamicMemRefType<int32_t>(memRef), 123);
+  auto ptr = descriptor->data + descriptor->offset * elementSizeBytes;
+  mgpuMemHostRegister(ptr, sizeBytes);
 }

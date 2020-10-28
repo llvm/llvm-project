@@ -1,6 +1,6 @@
 # REQUIRES: x86
 
-# RUN: yaml2obj %S/Inputs/unwind-via-stack-cfi.yaml > %t
+# RUN: yaml2obj %S/Inputs/unwind-via-stack-cfi.yaml -o %t
 # RUN: %lldb -c %t -o "target symbols add %S/Inputs/unwind-via-stack-cfi.syms" \
 # RUN:   -s %s -b | FileCheck %s
 
@@ -12,6 +12,7 @@ image show-unwind -n bar
 # CHECK-NEXT: This UnwindPlan originally sourced from breakpad STACK CFI
 # CHECK-NEXT: This UnwindPlan is sourced from the compiler: yes.
 # CHECK-NEXT: This UnwindPlan is valid at all instruction locations: no.
+# CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
 # CHECK-NEXT: Address range of this UnwindPlan: [unwind-via-stack-cfi..module_image + 1056-0x0000000000000449)
 # CHECK-NEXT: row[0]: 0: CFA=DW_OP_breg6 +0, DW_OP_deref => rbp=DW_OP_pick 0x0, DW_OP_deref rsp=DW_OP_pick 0x0, DW_OP_consts +16, DW_OP_plus rip=DW_OP_pick 0x0, DW_OP_consts +8, DW_OP_plus, DW_OP_deref
 

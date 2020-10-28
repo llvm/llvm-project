@@ -171,7 +171,7 @@ body: |
     liveins: $vgpr0
 
     ; VI-LABEL: name: test_addrspacecast_p5_to_p0
-    ; VI: [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+    ; VI: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
     ; VI: [[COPY1:%[0-9]+]]:_(p5) = COPY $vgpr0
     ; VI: [[C:%[0-9]+]]:_(p5) = G_CONSTANT i32 -1
     ; VI: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
@@ -254,7 +254,7 @@ body: |
     liveins: $vgpr0
 
     ; VI-LABEL: name: test_addrspacecast_p3_to_p0
-    ; VI: [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+    ; VI: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
     ; VI: [[COPY1:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; VI: [[C:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
     ; VI: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
@@ -459,7 +459,7 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; VI-LABEL: name: test_addrspacecast_v2p3_to_v2p0
-    ; VI: [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+    ; VI: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
     ; VI: [[COPY1:%[0-9]+]]:_(<2 x p3>) = COPY $vgpr0_vgpr1
     ; VI: [[UV:%[0-9]+]]:_(p3), [[UV1:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[COPY1]](<2 x p3>)
     ; VI: [[C:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1

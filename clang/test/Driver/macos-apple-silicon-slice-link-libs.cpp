@@ -1,5 +1,6 @@
 // RUN: %clang -### -target arm64-apple-macos10.7 %s 2>&1 | FileCheck -check-prefix=ARM64-10_7 %s
 // RUN: %clang -### -target x86_64-apple-macos10.7 %s 2>&1 | FileCheck -check-prefix=x86_64-10_7 %s
+// RUN: %clang -### -target arm64-apple-darwin6 %s 2>&1 | FileCheck -check-prefix=ARM64-10_7 %s
 
 // RUN: %clang -### -target arm64-apple-macos10.5 %s 2>&1 | FileCheck -check-prefix=ARM64-10_5 %s
 // RUN: %clang -### -target x86_64-apple-macos10.5 %s 2>&1 | FileCheck -check-prefix=x86_64-10_5 %s

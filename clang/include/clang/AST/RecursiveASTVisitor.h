@@ -1777,8 +1777,17 @@ DEF_TRAVERSE_DECL(TemplateTypeParmDecl, {
   // D is the "T" in something like "template<typename T> class vector;"
   if (D->getTypeForDecl())
     TRY_TO(TraverseType(QualType(D->getTypeForDecl(), 0)));
-  if (const auto *TC = D->getTypeConstraint())
-    TRY_TO(TraverseConceptReference(*TC));
+  if (const auto *TC = D->getTypeConstraint()) {
+    if (Expr *IDC = TC->getImmediatelyDeclaredConstraint()) {
+      TRY_TO(TraverseStmt(IDC));
+    } else {
+      // Avoid traversing the ConceptReference in the TypeCosntraint
+      // if we have an immediately-declared-constraint, otherwise
+      // we'll end up visiting the concept and the arguments in
+      // the TC twice.
+      TRY_TO(TraverseConceptReference(*TC));
+    }
+  }
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited())
     TRY_TO(TraverseTypeLoc(D->getDefaultArgumentInfo()->getTypeLoc()));
 })

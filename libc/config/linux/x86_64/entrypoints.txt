@@ -5,9 +5,18 @@ set(TARGET_LIBC_ENTRYPOINTS
     # ctype.h entrypoints
     libc.src.ctype.isalnum
     libc.src.ctype.isalpha
+    libc.src.ctype.isblank
+    libc.src.ctype.iscntrl
     libc.src.ctype.isdigit
+    libc.src.ctype.isgraph
     libc.src.ctype.islower
+    libc.src.ctype.isprint
+    libc.src.ctype.ispunct
+    libc.src.ctype.isspace
     libc.src.ctype.isupper
+    libc.src.ctype.isxdigit
+    libc.src.ctype.tolower
+    libc.src.ctype.toupper
 
     # errno.h entrypoints
     libc.src.errno.__errno_location
@@ -36,10 +45,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strchr
     libc.src.string.strcmp
     libc.src.string.strcpy
+    libc.src.string.strcspn
     libc.src.string.strlen
     libc.src.string.strnlen
+    libc.src.string.strpbrk
     libc.src.string.strrchr
+    libc.src.string.strspn
     libc.src.string.strstr
+    libc.src.string.strtok
+    libc.src.string.strtok_r
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
@@ -94,6 +108,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.roundl
     libc.src.math.sincosf
     libc.src.math.sinf
+    libc.src.math.sqrt
+    libc.src.math.sqrtf
+    libc.src.math.sqrtl
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl

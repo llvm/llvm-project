@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -verify=expected,omp50 %s -Wuninitialized
 
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -verify=expected,omp45 %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -verify=expected,omp50 %s -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify=expected,omp50 %s -Wuninitialized
 
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp parallel for simd'}}
 #pragma omp parallel for simd
@@ -149,11 +149,11 @@ void test_safelen() {
 #pragma omp parallel for simd safelen(4, 8)
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp parallel for simd safelen(2.5)
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp parallel for simd safelen(foo())
   for (i = 0; i < 16; ++i)
     ;
@@ -234,11 +234,11 @@ void test_simdlen() {
 #pragma omp parallel for simd simdlen(4, 8)
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp parallel for simd simdlen(2.5)
   for (i = 0; i < 16; ++i)
     ;
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp parallel for simd simdlen(foo())
   for (i = 0; i < 16; ++i)
     ;
@@ -350,12 +350,12 @@ void test_collapse() {
   for (i = 0; i < 16; ++i)
     ; // expected-error {{expected 4 for loops after '#pragma omp parallel for simd', but found only 1}}
 #pragma omp parallel
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp parallel for simd collapse(2.5)
   for (i = 0; i < 16; ++i)
     ;
 #pragma omp parallel
-// expected-error@+1 {{expression is not an integer constant expression}}
+// expected-error@+1 {{integer constant expression}}
 #pragma omp parallel for simd collapse(foo())
   for (i = 0; i < 16; ++i)
     ;

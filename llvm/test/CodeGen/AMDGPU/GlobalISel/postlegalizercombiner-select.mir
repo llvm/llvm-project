@@ -6,19 +6,23 @@ name:            select_from_different_results_of_unmerge_values
 tracksRegLiveness: true
 body:             |
   bb.0:
+    liveins: $vgpr0
 
     ; GCN-LABEL: name: select_from_different_results_of_unmerge_values
+    ; GCN: liveins: $vgpr0
     ; GCN: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-    ; GCN: [[DEF1:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
+    ; GCN: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; GCN: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY]](s32)
     ; GCN: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<2 x s32>)
-    ; GCN: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[DEF1]](s1), [[UV]], [[UV1]]
+    ; GCN: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[UV]], [[UV1]]
     ; GCN: $vgpr0 = COPY [[SELECT]](s32)
     ; GCN: SI_RETURN_TO_EPILOG $vgpr0
-    %2:_(<2 x s32>) = G_IMPLICIT_DEF
-    %4:_(s1) = G_IMPLICIT_DEF
-    %0:_(s32), %1:_(s32) = G_UNMERGE_VALUES %2:_(<2 x s32>)
-    %3:_(s32) = G_SELECT %4:_(s1), %0:_, %1:_
-    $vgpr0 = COPY %3
+    %0:_(<2 x s32>) = G_IMPLICIT_DEF
+    %1:_(s32) = COPY $vgpr0
+    %2:_(s1) = G_TRUNC %1:_(s32)
+    %3:_(s32), %4:_(s32) = G_UNMERGE_VALUES %0:_(<2 x s32>)
+    %5:_(s32) = G_SELECT %2:_(s1), %3:_, %4:_
+    $vgpr0 = COPY %5
     SI_RETURN_TO_EPILOG $vgpr0
 
 ...
@@ -28,17 +32,20 @@ name:            select_from_same_results_of_unmerge_values
 tracksRegLiveness: true
 body:             |
   bb.0:
+    liveins: $vgpr0
 
     ; GCN-LABEL: name: select_from_same_results_of_unmerge_values
+    ; GCN: liveins: $vgpr0
     ; GCN: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
     ; GCN: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<2 x s32>)
     ; GCN: $vgpr0 = COPY [[UV]](s32)
     ; GCN: SI_RETURN_TO_EPILOG $vgpr0
-    %2:_(<2 x s32>) = G_IMPLICIT_DEF
-    %4:_(s1) = G_IMPLICIT_DEF
-    %0:_(s32), %1:_(s32) = G_UNMERGE_VALUES %2:_(<2 x s32>)
-    %3:_(s32) = G_SELECT %4:_(s1), %0:_, %0:_
-    $vgpr0 = COPY %3
+    %0:_(<2 x s32>) = G_IMPLICIT_DEF
+    %1:_(s32) = COPY $vgpr0
+    %2:_(s1) = G_TRUNC %1:_(s32)
+    %3:_(s32), %4:_(s32) = G_UNMERGE_VALUES %0:_(<2 x s32>)
+    %5:_(s32) = G_SELECT %2:_(s1), %3:_, %3:_
+    $vgpr0 = COPY %5
     SI_RETURN_TO_EPILOG $vgpr0
 
 ...

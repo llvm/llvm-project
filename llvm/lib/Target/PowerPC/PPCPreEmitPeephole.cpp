@@ -39,6 +39,10 @@ STATISTIC(NumFrameOffFoldInPreEmit,
           "Number of folding frame offset by using r+r in pre-emit peephole");
 
 static cl::opt<bool>
+EnablePCRelLinkerOpt("ppc-pcrel-linker-opt", cl::Hidden, cl::init(true),
+                     cl::desc("enable PC Relative linker optimization"));
+
+static cl::opt<bool>
 RunPreEmitPeephole("ppc-late-peephole", cl::Hidden, cl::init(true),
                    cl::desc("Run pre-emit peephole optimizations."));
 
@@ -234,6 +238,10 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
 
     bool addLinkerOpt(MachineBasicBlock &MBB, const TargetRegisterInfo *TRI) {
       MachineFunction *MF = MBB.getParent();
+      // If the linker opt is disabled then just return.
+      if (!EnablePCRelLinkerOpt)
+        return false;
+
       // Add this linker opt only if we are using PC Relative memops.
       if (!MF->getSubtarget<PPCSubtarget>().isUsingPCRelativeCalls())
         return false;

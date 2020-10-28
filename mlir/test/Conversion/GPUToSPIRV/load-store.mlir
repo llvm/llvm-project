@@ -21,7 +21,7 @@ module attributes {
     return
   }
 
-  // CHECK-LABEL: spv.module Logical GLSL450
+  // CHECK-LABEL: spv.module @{{.*}} Logical GLSL450
   gpu.module @kernels {
     // CHECK-DAG: spv.globalVariable @[[NUMWORKGROUPSVAR:.*]] built_in("NumWorkgroups") : !spv.ptr<vector<3xi32>, Input>
     // CHECK-DAG: spv.globalVariable @[[$LOCALINVOCATIONIDVAR:.*]] built_in("LocalInvocationId") : !spv.ptr<vector<3xi32>, Input>

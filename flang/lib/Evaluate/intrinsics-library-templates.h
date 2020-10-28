@@ -78,7 +78,7 @@ template <int Kind> struct Flusher<Type<TypeCategory::Complex, Kind>> {
 template <typename TR, typename... ArgInfo> struct CallableHostWrapper {
   static Scalar<TR> scalarCallable(FoldingContext &context,
       HostFuncPointer<TR, ArgInfo...> func,
-      const Scalar<typename ArgInfo::Type> &... x) {
+      const Scalar<typename ArgInfo::Type> &...x) {
     if constexpr (host::HostTypeExists<TR, typename ArgInfo::Type...>()) {
       host::HostFloatingPointEnvironment hostFPE;
       hostFPE.SetUpHostFloatingPointEnvironment(context);
@@ -192,7 +192,7 @@ HostIntrinsicProceduresLibrary::GetHostProcedureWrapper(
         if (match) {
           return {HostProcedureWrapper<ConstantContainer, TR, TA...>{
               [=](FoldingContext &context,
-                  const ConstantContainer<TA> &... args) {
+                  const ConstantContainer<TA> &...args) {
                 auto callable{FromGenericFunctionPointer<ConstantContainer<TR>,
                     FoldingContext &, GenericFunctionPointer,
                     const ConstantContainer<TA> &...>(iter->second.callable)};

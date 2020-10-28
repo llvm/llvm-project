@@ -38,14 +38,15 @@ TEST_F(XcodeSDKModuleTests, TestModuleGetXcodeSDK) {
 debug_str:
   - MacOSX10.9.sdk
 debug_abbrev:
-  - Code:            0x00000001
-    Tag:             DW_TAG_compile_unit
-    Children:        DW_CHILDREN_no
-    Attributes:
-      - Attribute:       DW_AT_language
-        Form:            DW_FORM_data2
-      - Attribute:       DW_AT_APPLE_sdk
-        Form:            DW_FORM_strp
+  - Table:
+      - Code:            0x00000001
+        Tag:             DW_TAG_compile_unit
+        Children:        DW_CHILDREN_no
+        Attributes:
+          - Attribute:       DW_AT_language
+            Form:            DW_FORM_data2
+          - Attribute:       DW_AT_APPLE_sdk
+            Form:            DW_FORM_strp
 debug_info:
   - Length:          8
     Version:         2

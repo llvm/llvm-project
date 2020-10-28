@@ -695,6 +695,14 @@ static __isl_give isl_val *isl_pw_aff_opt_val(__isl_take isl_pw_aff *pa,
 	return data.res;
 }
 
+#undef TYPE
+#define TYPE isl_pw_multi_aff
+#include "isl_ilp_opt_multi_val_templ.c"
+
+#undef TYPE
+#define TYPE isl_multi_pw_aff
+#include "isl_ilp_opt_multi_val_templ.c"
+
 /* Internal data structure for isl_union_pw_aff_opt_val.
  *
  * "max" is set if the maximum should be computed.
@@ -861,6 +869,10 @@ __isl_give isl_multi_val *isl_multi_union_pw_aff_max_multi_val(
 	return isl_multi_union_pw_aff_opt_multi_val(mupa, 1);
 }
 
+#undef BASE
+#define BASE	basic_set
+#include "isl_ilp_opt_val_templ.c"
+
 /* Return the maximal value attained by the given set dimension,
  * independently of the parameter values and of any other dimensions.
  *
@@ -870,20 +882,31 @@ __isl_give isl_multi_val *isl_multi_union_pw_aff_max_multi_val(
 __isl_give isl_val *isl_basic_set_dim_max_val(__isl_take isl_basic_set *bset,
 	int pos)
 {
-	isl_local_space *ls;
-	isl_aff *obj;
-	isl_val *v;
+	return isl_basic_set_dim_opt_val(bset, 1, pos);
+}
 
-	if (isl_basic_set_check_range(bset, isl_dim_set, pos, 1) < 0)
-		goto error;
-	ls = isl_local_space_from_space(isl_basic_set_get_space(bset));
-	obj = isl_aff_var_on_domain(ls, isl_dim_set, pos);
-	v = isl_basic_set_max_val(bset, obj);
-	isl_aff_free(obj);
-	isl_basic_set_free(bset);
+#undef BASE
+#define BASE	set
+#include "isl_ilp_opt_val_templ.c"
 
-	return v;
-error:
-	isl_basic_set_free(bset);
-	return NULL;
+/* Return the minimal value attained by the given set dimension,
+ * independently of the parameter values and of any other dimensions.
+ *
+ * Return negative infinity if the optimal value is unbounded and
+ * NaN if "set" is empty.
+ */
+__isl_give isl_val *isl_set_dim_min_val(__isl_take isl_set *set, int pos)
+{
+	return isl_set_dim_opt_val(set, 0, pos);
+}
+
+/* Return the maximal value attained by the given set dimension,
+ * independently of the parameter values and of any other dimensions.
+ *
+ * Return infinity if the optimal value is unbounded and
+ * NaN if "set" is empty.
+ */
+__isl_give isl_val *isl_set_dim_max_val(__isl_take isl_set *set, int pos)
+{
+	return isl_set_dim_opt_val(set, 1, pos);
 }

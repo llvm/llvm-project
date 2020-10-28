@@ -239,3 +239,97 @@ body: |
     S_ENDPGM 0, implicit %2
 
 ...
+
+---
+
+name:            copy_s64_to_vcc
+legalized:       true
+regBankSelected: true
+
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    ; WAVE64-LABEL: name: copy_s64_to_vcc
+    ; WAVE64: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; WAVE64: $vcc = COPY [[COPY]]
+    ; WAVE64: S_ENDPGM 0, implicit $vcc
+    ; WAVE32-LABEL: name: copy_s64_to_vcc
+    ; WAVE32: $vcc_hi = IMPLICIT_DEF
+    ; WAVE32: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; WAVE32: $vcc = COPY [[COPY]]
+    ; WAVE32: S_ENDPGM 0, implicit $vcc_lo
+    %0:sgpr(s64) = COPY $sgpr0_sgpr1
+    $vcc = COPY %0
+    S_ENDPGM 0, implicit $vcc
+
+...
+
+---
+
+name:            copy_s32_to_vcc_lo
+legalized:       true
+regBankSelected: true
+
+
+body: |
+  bb.0:
+    liveins: $sgpr0
+    ; WAVE64-LABEL: name: copy_s32_to_vcc_lo
+    ; WAVE64: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; WAVE64: $vcc_lo = COPY [[COPY]]
+    ; WAVE64: S_ENDPGM 0, implicit $vcc
+    ; WAVE32-LABEL: name: copy_s32_to_vcc_lo
+    ; WAVE32: $vcc_hi = IMPLICIT_DEF
+    ; WAVE32: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; WAVE32: $vcc_lo = COPY [[COPY]]
+    ; WAVE32: S_ENDPGM 0, implicit $vcc_lo
+    %0:sgpr(s32) = COPY $sgpr0
+    $vcc_lo = COPY %0
+    S_ENDPGM 0, implicit $vcc
+
+...
+
+---
+
+name:            copy_vcc_to_s64
+legalized:       true
+regBankSelected: true
+
+
+body: |
+  bb.0:
+    liveins: $vcc
+    ; WAVE64-LABEL: name: copy_vcc_to_s64
+    ; WAVE64: [[COPY:%[0-9]+]]:sreg_64 = COPY $vcc
+    ; WAVE64: S_ENDPGM 0, implicit [[COPY]]
+    ; WAVE32-LABEL: name: copy_vcc_to_s64
+    ; WAVE32: $vcc_hi = IMPLICIT_DEF
+    ; WAVE32: [[COPY:%[0-9]+]]:sreg_64 = COPY $vcc
+    ; WAVE32: S_ENDPGM 0, implicit [[COPY]]
+    %0:sgpr(s64) = COPY $vcc
+    S_ENDPGM 0, implicit %0
+
+...
+
+---
+
+name:            copy_vcc_lo_to_s32
+legalized:       true
+regBankSelected: true
+
+
+body: |
+  bb.0:
+    liveins: $vcc
+    ; WAVE64-LABEL: name: copy_vcc_lo_to_s32
+    ; WAVE64: [[COPY:%[0-9]+]]:sreg_32 = COPY $vcc_lo
+    ; WAVE64: S_ENDPGM 0, implicit [[COPY]]
+    ; WAVE32-LABEL: name: copy_vcc_lo_to_s32
+    ; WAVE32: $vcc_hi = IMPLICIT_DEF
+    ; WAVE32: [[COPY:%[0-9]+]]:sreg_32 = COPY $vcc_lo
+    ; WAVE32: S_ENDPGM 0, implicit [[COPY]]
+    %0:sgpr(s32) = COPY $vcc_lo
+    S_ENDPGM 0, implicit %0
+
+...

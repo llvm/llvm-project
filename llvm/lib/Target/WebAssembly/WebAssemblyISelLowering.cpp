@@ -274,7 +274,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
 
   // Define the emscripten name for return address helper.
-  // TODO: when implementing other WASM backends, make this generic or only do
+  // TODO: when implementing other Wasm backends, make this generic or only do
   // this on emscripten depending on what they end up doing.
   setLibcallName(RTLIB::RETURN_ADDRESS, "emscripten_return_address");
 
@@ -674,6 +674,15 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = Align(8);
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
+    return true;
+  case Intrinsic::wasm_load32_zero:
+  case Intrinsic::wasm_load64_zero:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = Intrinsic == Intrinsic::wasm_load32_zero ? MVT::i32 : MVT::i64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = Info.memVT == MVT::i32 ? Align(4) : Align(8);
+    Info.flags = MachineMemOperand::MOLoad;
     return true;
   default:
     return false;

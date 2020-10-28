@@ -628,40 +628,40 @@ TEST_F(CommentParserTest, Basic3) {
 
 TEST_F(CommentParserTest, ParagraphSplitting1) {
   const char *Sources[] = {
-    "// Aaa\n"
+    ("// Aaa\n"
     "//\n"
-    "// Bbb",
+    "// Bbb"),
 
-    "// Aaa\n"
+    ("// Aaa\n"
     "// \n"
-    "// Bbb",
+    "// Bbb"),
 
-    "// Aaa\n"
+    ("// Aaa\n"
     "//\t\n"
-    "// Bbb",
+    "// Bbb"),
 
-    "// Aaa\n"
+    ("// Aaa\n"
     "//\n"
     "//\n"
-    "// Bbb",
+    "// Bbb"),
 
-    "/**\n"
+    ("/**\n"
     " Aaa\n"
     "\n"
     " Bbb\n"
-    "*/",
+    "*/"),
 
-    "/**\n"
+    ("/**\n"
     " Aaa\n"
     " \n"
     " Bbb\n"
-    "*/",
+    "*/"),
 
-    "/**\n"
+    ("/**\n"
     " Aaa\n"
     "\t \n"
     " Bbb\n"
-    "*/",
+    "*/"),
   };
 
   for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
@@ -793,12 +793,12 @@ TEST_F(CommentParserTest, ParamCommand2) {
 TEST_F(CommentParserTest, ParamCommand3) {
   const char *Sources[] = {
     "// \\param aaa Bbb\n",
-    "// \\param\n"
-    "//     aaa Bbb\n",
-    "// \\param \n"
-    "//     aaa Bbb\n",
-    "// \\param aaa\n"
-    "// Bbb\n"
+    ("// \\param\n"
+    "//     aaa Bbb\n"),
+    ("// \\param \n"
+    "//     aaa Bbb\n"),
+    ("// \\param aaa\n"
+    "// Bbb\n")
   };
 
   for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
@@ -823,12 +823,12 @@ TEST_F(CommentParserTest, ParamCommand4) {
   const char *Sources[] = {
     "// \\param [in] aaa Bbb\n",
     "// \\param[in] aaa Bbb\n",
-    "// \\param\n"
-    "//     [in] aaa Bbb\n",
-    "// \\param [in]\n"
-    "//     aaa Bbb\n",
-    "// \\param [in] aaa\n"
-    "// Bbb\n",
+    ("// \\param\n"
+    "//     [in] aaa Bbb\n"),
+    ("// \\param [in]\n"
+    "//     aaa Bbb\n"),
+    ("// \\param [in] aaa\n"
+    "// Bbb\n"),
   };
 
   for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
@@ -853,12 +853,12 @@ TEST_F(CommentParserTest, ParamCommand5) {
   const char *Sources[] = {
     "// \\param [out] aaa Bbb\n",
     "// \\param[out] aaa Bbb\n",
-    "// \\param\n"
-    "//     [out] aaa Bbb\n",
-    "// \\param [out]\n"
-    "//     aaa Bbb\n",
-    "// \\param [out] aaa\n"
-    "// Bbb\n",
+    ("// \\param\n"
+    "//     [out] aaa Bbb\n"),
+    ("// \\param [out]\n"
+    "//     aaa Bbb\n"),
+    ("// \\param [out] aaa\n"
+    "// Bbb\n"),
   };
 
   for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {

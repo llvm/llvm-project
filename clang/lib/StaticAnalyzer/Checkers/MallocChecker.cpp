@@ -3301,14 +3301,16 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
             OS << "reallocated by call to '";
             const Stmt *S = RSCurr->getStmt();
             if (const auto *MemCallE = dyn_cast<CXXMemberCallExpr>(S)) {
-              OS << MemCallE->getMethodDecl()->getNameAsString();
+              OS << MemCallE->getMethodDecl()->getDeclName();
             } else if (const auto *OpCallE = dyn_cast<CXXOperatorCallExpr>(S)) {
-              OS << OpCallE->getDirectCallee()->getNameAsString();
+              OS << OpCallE->getDirectCallee()->getDeclName();
             } else if (const auto *CallE = dyn_cast<CallExpr>(S)) {
               auto &CEMgr = BRC.getStateManager().getCallEventManager();
               CallEventRef<> Call = CEMgr.getSimpleCall(CallE, state, CurrentLC);
-              const auto *D = dyn_cast_or_null<NamedDecl>(Call->getDecl());
-              OS << (D ? D->getNameAsString() : "unknown");
+              if (const auto *D = dyn_cast_or_null<NamedDecl>(Call->getDecl()))
+                OS << D->getDeclName();
+              else
+                OS << "unknown";
             }
             OS << "'";
             StackHint = std::make_unique<StackHintGeneratorForSymbol>(

@@ -1,0 +1,15 @@
+# REQUIRES: asserts
+# RUN: not --crash llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+
+# CHECK: MachineFunctionProperties required by InstructionSelect pass are not met by function subreg_def_is_not_ssa.
+# CHECK-NEXT: Required properties: IsSSA
+# CHECK-NEXT: Current properties: NoPHIs
+# CHECK-NEXT: MachineFunctionProperties check failed
+
+---
+name: subreg_def_is_not_ssa
+body: |
+  bb.0:
+    %0.sub0:vreg_64 = V_MOV_B32_e32 0, implicit $exec
+
+...

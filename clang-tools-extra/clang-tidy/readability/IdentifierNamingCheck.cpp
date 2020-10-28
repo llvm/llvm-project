@@ -8,6 +8,7 @@
 
 #include "IdentifierNamingCheck.h"
 
+#include "../GlobList.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
@@ -15,7 +16,8 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 
 #define DEBUG_TYPE "clang-tidy"
@@ -119,54 +121,59 @@ static StringRef const StyleNames[] = {
 #undef NAMING_KEYS
 // clang-format on
 
+static std::vector<llvm::Optional<IdentifierNamingCheck::NamingStyle>>
+getNamingStyles(const ClangTidyCheck::OptionsView &Options) {
+  std::vector<llvm::Optional<IdentifierNamingCheck::NamingStyle>> Styles;
+  Styles.reserve(array_lengthof(StyleNames));
+  for (auto const &StyleName : StyleNames) {
+    auto CaseOptional = Options.getOptional<IdentifierNamingCheck::CaseType>(
+        (StyleName + "Case").str());
+    auto Prefix = Options.get((StyleName + "Prefix").str(), "");
+    auto Postfix = Options.get((StyleName + "Suffix").str(), "");
+
+    if (CaseOptional || !Prefix.empty() || !Postfix.empty())
+      Styles.emplace_back(IdentifierNamingCheck::NamingStyle{
+          std::move(CaseOptional), std::move(Prefix), std::move(Postfix)});
+    else
+      Styles.emplace_back(llvm::None);
+  }
+  return Styles;
+}
+
 IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
                                              ClangTidyContext *Context)
-    : RenamerClangTidyCheck(Name, Context),
+    : RenamerClangTidyCheck(Name, Context), Context(Context), CheckName(Name),
+      GetConfigPerFile(Options.get("GetConfigPerFile", true)),
       IgnoreFailedSplit(Options.get("IgnoreFailedSplit", false)),
       IgnoreMainLikeFunctions(Options.get("IgnoreMainLikeFunctions", false)) {
 
-  for (auto const &Name : StyleNames) {
-    auto CaseOptional = [&]() -> llvm::Optional<CaseType> {
-      auto ValueOr = Options.get<CaseType>((Name + "Case").str());
-      if (ValueOr)
-        return *ValueOr;
-      llvm::logAllUnhandledErrors(
-          llvm::handleErrors(ValueOr.takeError(),
-                             [](const MissingOptionError &) -> llvm::Error {
-                               return llvm::Error::success();
-                             }),
-          llvm::errs(), "warning: ");
-      return llvm::None;
-    }();
-
-    auto prefix = Options.get((Name + "Prefix").str(), "");
-    auto postfix = Options.get((Name + "Suffix").str(), "");
-
-    if (CaseOptional || !prefix.empty() || !postfix.empty()) {
-      NamingStyles.push_back(NamingStyle(CaseOptional, prefix, postfix));
-    } else {
-      NamingStyles.push_back(llvm::None);
-    }
-  }
+  auto IterAndInserted = NamingStylesCache.try_emplace(
+      llvm::sys::path::parent_path(Context->getCurrentFile()),
+      getNamingStyles(Options));
+  assert(IterAndInserted.second && "Couldn't insert Style");
+  // Holding a reference to the data in the vector is safe as it should never
+  // move.
+  MainFileStyle = IterAndInserted.first->getValue();
 }
 
 IdentifierNamingCheck::~IdentifierNamingCheck() = default;
 
 void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   RenamerClangTidyCheck::storeOptions(Opts);
-  for (size_t i = 0; i < SK_Count; ++i) {
-    if (NamingStyles[i]) {
-      if (NamingStyles[i]->Case) {
-        Options.store(Opts, (StyleNames[i] + "Case").str(),
-                      *NamingStyles[i]->Case);
-      }
-      Options.store(Opts, (StyleNames[i] + "Prefix").str(),
-                    NamingStyles[i]->Prefix);
-      Options.store(Opts, (StyleNames[i] + "Suffix").str(),
-                    NamingStyles[i]->Suffix);
-    }
+  ArrayRef<llvm::Optional<NamingStyle>> NamingStyles =
+      getStyleForFile(Context->getCurrentFile());
+  for (size_t I = 0; I < SK_Count; ++I) {
+    if (!NamingStyles[I])
+      continue;
+    if (NamingStyles[I]->Case)
+      Options.store(Opts, (StyleNames[I] + "Case").str(),
+                    *NamingStyles[I]->Case);
+    Options.store(Opts, (StyleNames[I] + "Prefix").str(),
+                  NamingStyles[I]->Prefix);
+    Options.store(Opts, (StyleNames[I] + "Suffix").str(),
+                  NamingStyles[I]->Suffix);
   }
-
+  Options.store(Opts, "GetConfigPerFile", GetConfigPerFile);
   Options.store(Opts, "IgnoreFailedSplit", IgnoreFailedSplit);
   Options.store(Opts, "IgnoreMainLikeFunctions", IgnoreMainLikeFunctions);
 }
@@ -183,14 +190,9 @@ static bool matchesStyle(StringRef Name,
       llvm::Regex("^[a-z]([a-z0-9]*(_[A-Z])?)*"),
   };
 
-  if (Name.startswith(Style.Prefix))
-    Name = Name.drop_front(Style.Prefix.size());
-  else
+  if (!Name.consume_front(Style.Prefix))
     return false;
-
-  if (Name.endswith(Style.Suffix))
-    Name = Name.drop_back(Style.Suffix.size());
-  else
+  if (!Name.consume_back(Style.Suffix))
     return false;
 
   // Ensure the name doesn't have any extra underscores beyond those specified
@@ -213,9 +215,10 @@ static std::string fixupWithCase(StringRef Name,
   Name.split(Substrs, "_", -1, false);
 
   SmallVector<StringRef, 8> Words;
+  SmallVector<StringRef, 8> Groups;
   for (auto Substr : Substrs) {
     while (!Substr.empty()) {
-      SmallVector<StringRef, 8> Groups;
+      Groups.clear();
       if (!Splitter.match(Substr, &Groups))
         break;
 
@@ -233,12 +236,12 @@ static std::string fixupWithCase(StringRef Name,
   }
 
   if (Words.empty())
-    return std::string(Name);
+    return Name.str();
 
-  std::string Fixup;
+  SmallString<128> Fixup;
   switch (Case) {
   case IdentifierNamingCheck::CT_AnyCase:
-    Fixup += Name;
+    return Name.str();
     break;
 
   case IdentifierNamingCheck::CT_LowerCase:
@@ -259,7 +262,7 @@ static std::string fixupWithCase(StringRef Name,
 
   case IdentifierNamingCheck::CT_CamelCase:
     for (auto const &Word : Words) {
-      Fixup += Word.substr(0, 1).upper();
+      Fixup += toupper(Word.front());
       Fixup += Word.substr(1).lower();
     }
     break;
@@ -269,7 +272,7 @@ static std::string fixupWithCase(StringRef Name,
       if (&Word == &Words.front()) {
         Fixup += Word.lower();
       } else {
-        Fixup += Word.substr(0, 1).upper();
+        Fixup += toupper(Word.front());
         Fixup += Word.substr(1).lower();
       }
     }
@@ -279,7 +282,7 @@ static std::string fixupWithCase(StringRef Name,
     for (auto const &Word : Words) {
       if (&Word != &Words.front())
         Fixup += "_";
-      Fixup += Word.substr(0, 1).upper();
+      Fixup += toupper(Word.front());
       Fixup += Word.substr(1).lower();
     }
     break;
@@ -288,16 +291,16 @@ static std::string fixupWithCase(StringRef Name,
     for (auto const &Word : Words) {
       if (&Word != &Words.front()) {
         Fixup += "_";
-        Fixup += Word.substr(0, 1).upper();
+        Fixup += toupper(Word.front());
       } else {
-        Fixup += Word.substr(0, 1).lower();
+        Fixup += tolower(Word.front());
       }
       Fixup += Word.substr(1).lower();
     }
     break;
   }
 
-  return Fixup;
+  return Fixup.str().str();
 }
 
 static bool isParamInMainLikeFunction(const ParmVarDecl &ParmDecl,
@@ -374,8 +377,7 @@ fixupWithStyle(StringRef Name,
 
 static StyleKind findStyleKind(
     const NamedDecl *D,
-    const std::vector<llvm::Optional<IdentifierNamingCheck::NamingStyle>>
-        &NamingStyles,
+    ArrayRef<llvm::Optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
     bool IgnoreMainLikeFunctions) {
   assert(D && D->getIdentifier() && !D->getName().empty() && !D->isImplicit() &&
          "Decl must be an explicit identifier with a name.");
@@ -652,72 +654,80 @@ static StyleKind findStyleKind(
   return SK_Invalid;
 }
 
-llvm::Optional<RenamerClangTidyCheck::FailureInfo>
-IdentifierNamingCheck::GetDeclFailureInfo(const NamedDecl *Decl,
-                                          const SourceManager &SM) const {
-  StyleKind SK = findStyleKind(Decl, NamingStyles, IgnoreMainLikeFunctions);
-  if (SK == SK_Invalid)
+static llvm::Optional<RenamerClangTidyCheck::FailureInfo> getFailureInfo(
+    StringRef Name, SourceLocation Location,
+    ArrayRef<llvm::Optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
+    StyleKind SK, const SourceManager &SM, bool IgnoreFailedSplit) {
+  if (SK == SK_Invalid || !NamingStyles[SK])
     return None;
 
-  if (!NamingStyles[SK])
-    return None;
-
-  const NamingStyle &Style = *NamingStyles[SK];
-  StringRef Name = Decl->getName();
+  const IdentifierNamingCheck::NamingStyle &Style = *NamingStyles[SK];
   if (matchesStyle(Name, Style))
     return None;
 
-  std::string KindName = fixupWithCase(StyleNames[SK], CT_LowerCase);
+  std::string KindName =
+      fixupWithCase(StyleNames[SK], IdentifierNamingCheck::CT_LowerCase);
   std::replace(KindName.begin(), KindName.end(), '_', ' ');
 
   std::string Fixup = fixupWithStyle(Name, Style);
   if (StringRef(Fixup).equals(Name)) {
     if (!IgnoreFailedSplit) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << Decl->getBeginLoc().printToString(SM)
-                 << llvm::format(": unable to split words for %s '%s'\n",
-                                 KindName.c_str(), Name.str().c_str()));
+      LLVM_DEBUG(Location.print(llvm::dbgs(), SM);
+                 llvm::dbgs()
+                 << llvm::formatv(": unable to split words for {0} '{1}'\n",
+                                  KindName, Name));
     }
     return None;
   }
-  return FailureInfo{std::move(KindName), std::move(Fixup)};
+  return RenamerClangTidyCheck::FailureInfo{std::move(KindName),
+                                            std::move(Fixup)};
+}
+
+llvm::Optional<RenamerClangTidyCheck::FailureInfo>
+IdentifierNamingCheck::GetDeclFailureInfo(const NamedDecl *Decl,
+                                          const SourceManager &SM) const {
+  SourceLocation Loc = Decl->getLocation();
+  ArrayRef<llvm::Optional<NamingStyle>> NamingStyles =
+      getStyleForFile(SM.getFilename(Loc));
+
+  return getFailureInfo(
+      Decl->getName(), Loc, NamingStyles,
+      findStyleKind(Decl, NamingStyles, IgnoreMainLikeFunctions), SM,
+      IgnoreFailedSplit);
 }
 
 llvm::Optional<RenamerClangTidyCheck::FailureInfo>
 IdentifierNamingCheck::GetMacroFailureInfo(const Token &MacroNameTok,
                                            const SourceManager &SM) const {
-  if (!NamingStyles[SK_MacroDefinition])
-    return None;
+  SourceLocation Loc = MacroNameTok.getLocation();
 
-  StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
-  const NamingStyle &Style = *NamingStyles[SK_MacroDefinition];
-  if (matchesStyle(Name, Style))
-    return None;
-
-  std::string KindName =
-      fixupWithCase(StyleNames[SK_MacroDefinition], CT_LowerCase);
-  std::replace(KindName.begin(), KindName.end(), '_', ' ');
-
-  std::string Fixup = fixupWithStyle(Name, Style);
-  if (StringRef(Fixup).equals(Name)) {
-    if (!IgnoreFailedSplit) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << MacroNameTok.getLocation().printToString(SM)
-                 << llvm::format(": unable to split words for %s '%s'\n",
-                                 KindName.c_str(), Name.str().c_str()));
-    }
-    return None;
-  }
-  return FailureInfo{std::move(KindName), std::move(Fixup)};
+  return getFailureInfo(MacroNameTok.getIdentifierInfo()->getName(), Loc,
+                        getStyleForFile(SM.getFilename(Loc)),
+                        SK_MacroDefinition, SM, IgnoreFailedSplit);
 }
 
 RenamerClangTidyCheck::DiagInfo
 IdentifierNamingCheck::GetDiagInfo(const NamingCheckId &ID,
                                    const NamingCheckFailure &Failure) const {
   return DiagInfo{"invalid case style for %0 '%1'",
-                  [&](DiagnosticBuilder &diag) {
-                    diag << Failure.Info.KindName << ID.second;
+                  [&](DiagnosticBuilder &Diag) {
+                    Diag << Failure.Info.KindName << ID.second;
                   }};
+}
+
+ArrayRef<llvm::Optional<IdentifierNamingCheck::NamingStyle>>
+IdentifierNamingCheck::getStyleForFile(StringRef FileName) const {
+  if (!GetConfigPerFile)
+    return MainFileStyle;
+  auto &Styles = NamingStylesCache[llvm::sys::path::parent_path(FileName)];
+  if (Styles.empty()) {
+    ClangTidyOptions Options = Context->getOptionsForFile(FileName);
+    if (Options.Checks && GlobList(*Options.Checks).contains(CheckName))
+      Styles = getNamingStyles({CheckName, Options.CheckOptions});
+    else
+      Styles.resize(SK_Count, None);
+  }
+  return Styles;
 }
 
 } // namespace readability

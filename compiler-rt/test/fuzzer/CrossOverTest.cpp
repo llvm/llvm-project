@@ -4,10 +4,11 @@
 
 // Test for a fuzzer. The fuzzer must find the string
 // ABCDEFGHIJ
-// We use it as a test for CrossOver functionality
-// by passing two inputs to it:
-// ABCDE00000
-// ZZZZZFGHIJ
+// We use it as a test for each of CrossOver functionalities
+// by passing the following sets of two inputs to it:
+// {ABCDE00000, ZZZZZFGHIJ}
+// {ABCDEHIJ, ZFG} to specifically test InsertPartOf
+// {ABCDE00HIJ, ZFG} to specifically test CopyPartOf
 //
 #include <assert.h>
 #include <cstddef>
@@ -42,13 +43,11 @@ static const uint32_t ExpectedHash = 0xe1677acb;
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   // fprintf(stderr, "ExpectedHash: %x\n", ExpectedHash);
-  if (Size != 10) return 0;
+  if (Size == 10 && ExpectedHash == simple_hash(Data, Size))
+    *NullPtr = 0;
   if (*Data == 'A')
     Sink++;
   if (*Data == 'Z')
     Sink--;
-  if (ExpectedHash == simple_hash(Data, Size))
-    *NullPtr = 0;
   return 0;
 }
-

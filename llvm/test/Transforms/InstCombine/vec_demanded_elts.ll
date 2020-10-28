@@ -21,7 +21,7 @@ define i32 @test2(float %f) {
 define void @get_image() nounwind {
 ; CHECK-LABEL: @get_image(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @fgetc(i8* null) #0
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @fgetc(i8* null) [[ATTR0:#.*]]
 ; CHECK-NEXT:    br i1 false, label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
@@ -745,4 +745,106 @@ define <4 x i8> @select_cond_(<4 x i8> %x, <4 x i8> %min, <4 x i1> %cmp, i1 %poi
   %vecins = shufflevector <4 x i8> %x, <4 x i8> %min, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   %r = select <4 x i1> %ins, <4 x i8> %vecins, <4 x i8> %x
   ret <4 x i8> %r
+}
+
+define <4 x float> @ins_of_ext(<4 x float> %x, float %y) {
+; CHECK-LABEL: @ins_of_ext(
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[X:%.*]], float [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I1]], float [[Y]], i32 2
+; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[Y]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[I3]]
+;
+  %e0 = extractelement <4 x float> %x, i32 0
+  %i0 = insertelement <4 x float> undef, float %e0, i32 0
+  %i1 = insertelement <4 x float> %i0, float %y, i32 1
+  %i2 = insertelement <4 x float> %i1, float %y, i32 2
+  %i3 = insertelement <4 x float> %i2, float %y, i32 3
+  ret <4 x float> %i3
+}
+
+define <4 x float> @ins_of_ext_twice(<4 x float> %x, float %y) {
+; CHECK-LABEL: @ins_of_ext_twice(
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[X:%.*]], float [[Y:%.*]], i32 2
+; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[Y]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[I3]]
+;
+  %e0 = extractelement <4 x float> %x, i32 0
+  %i0 = insertelement <4 x float> undef, float %e0, i32 0
+  %e1 = extractelement <4 x float> %x, i32 1
+  %i1 = insertelement <4 x float> %i0, float %e1, i32 1
+  %i2 = insertelement <4 x float> %i1, float %y, i32 2
+  %i3 = insertelement <4 x float> %i2, float %y, i32 3
+  ret <4 x float> %i3
+}
+
+; Negative test - element 3 of the result must be undef to be poison safe.
+; TODO: Could convert insert/extract to identity shuffle with undef mask elements.
+
+define <4 x float> @ins_of_ext_wrong_demand(<4 x float> %x, float %y) {
+; CHECK-LABEL: @ins_of_ext_wrong_demand(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[E0]], i32 0
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I1]], float [[Y]], i32 2
+; CHECK-NEXT:    ret <4 x float> [[I2]]
+;
+  %e0 = extractelement <4 x float> %x, i32 0
+  %i0 = insertelement <4 x float> undef, float %e0, i32 0
+  %i1 = insertelement <4 x float> %i0, float %y, i32 1
+  %i2 = insertelement <4 x float> %i1, float %y, i32 2
+  ret <4 x float> %i2
+}
+
+; Negative test - can't replace i0 with x.
+; TODO: Could convert insert/extract to identity shuffle with undef mask elements.
+
+define <4 x float> @ins_of_ext_wrong_type(<5 x float> %x, float %y) {
+; CHECK-LABEL: @ins_of_ext_wrong_type(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <5 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[I0:%.*]] = insertelement <4 x float> undef, float [[E0]], i32 0
+; CHECK-NEXT:    [[I1:%.*]] = insertelement <4 x float> [[I0]], float [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[I2:%.*]] = insertelement <4 x float> [[I1]], float [[Y]], i32 2
+; CHECK-NEXT:    [[I3:%.*]] = insertelement <4 x float> [[I2]], float [[Y]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[I3]]
+;
+  %e0 = extractelement <5 x float> %x, i32 0
+  %i0 = insertelement <4 x float> undef, float %e0, i32 0
+  %i1 = insertelement <4 x float> %i0, float %y, i32 1
+  %i2 = insertelement <4 x float> %i1, float %y, i32 2
+  %i3 = insertelement <4 x float> %i2, float %y, i32 3
+  ret <4 x float> %i3
+}
+
+; This should reduce, but the shuffle mask must remain as-is (no extra undef).
+
+define <4 x i4> @ins_of_ext_undef_elts_propagation(<4 x i4> %v, <4 x i4> %v2, i4 %x) {
+; CHECK-LABEL: @ins_of_ext_undef_elts_propagation(
+; CHECK-NEXT:    [[T2:%.*]] = insertelement <4 x i4> [[V:%.*]], i4 [[X:%.*]], i32 2
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i4> [[T2]], <4 x i4> [[V2:%.*]], <4 x i32> <i32 0, i32 6, i32 2, i32 7>
+; CHECK-NEXT:    ret <4 x i4> [[R]]
+;
+  %v0 = extractelement <4 x i4> %v, i32 0
+  %t0 = insertelement <4 x i4> undef, i4 %v0, i32 0
+  %t2 = insertelement <4 x i4> %t0, i4 %x, i32 2
+  %r = shufflevector <4 x i4> %t2, <4 x i4> %v2, <4 x i32> <i32 0, i32 6, i32 2, i32 7>
+  ret <4 x i4> %r
+}
+
+; Similar to above, but more ops/uses to verify things work in more complicated cases.
+
+define <8 x i4> @ins_of_ext_undef_elts_propagation2(<8 x i4> %v, <8 x i4> %v2, i4 %x) {
+; CHECK-LABEL: @ins_of_ext_undef_elts_propagation2(
+; CHECK-NEXT:    [[I19:%.*]] = insertelement <8 x i4> [[V:%.*]], i4 [[X:%.*]], i32 2
+; CHECK-NEXT:    [[I20:%.*]] = shufflevector <8 x i4> [[I19]], <8 x i4> [[V2:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 11, i32 10, i32 9, i32 8, i32 undef>
+; CHECK-NEXT:    [[I21:%.*]] = shufflevector <8 x i4> [[I20]], <8 x i4> [[V]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
+; CHECK-NEXT:    ret <8 x i4> [[I21]]
+;
+  %i15 = extractelement <8 x i4> %v, i32 0
+  %i16 = insertelement <8 x i4> undef, i4 %i15, i32 0
+  %i17 = extractelement <8 x i4> %v, i32 1
+  %i18 = insertelement <8 x i4> %i16, i4 %i17, i32 1
+  %i19 = insertelement <8 x i4> %i18, i4 %x, i32 2
+  %i20 = shufflevector <8 x i4> %i19, <8 x i4> %v2, <8 x i32> <i32 0, i32 1, i32 2, i32 11, i32 10, i32 9, i32 8, i32 undef>
+  %i21 = shufflevector <8 x i4> %i20, <8 x i4> %v, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 15>
+  ret <8 x i4> %i21
 }
