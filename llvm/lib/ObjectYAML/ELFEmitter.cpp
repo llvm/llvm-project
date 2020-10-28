@@ -903,7 +903,8 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
 
   assignSectionAddress(SHeader, YAMLSec);
 
-  SHeader.sh_offset = alignToOffset(CBA, SHeader.sh_addralign, /*Offset=*/None);
+  SHeader.sh_offset =
+      alignToOffset(CBA, SHeader.sh_addralign, RawSec ? RawSec->Offset : None);
 
   if (RawSec && (RawSec->Content || RawSec->Size)) {
     assert(Symbols.empty());
