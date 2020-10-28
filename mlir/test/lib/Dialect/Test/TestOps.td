@@ -1638,6 +1638,14 @@ def FormatCustomDirectiveAttributes
   }];
 }
 
+def FormatCustomDirectiveAttrDict
+    : TEST_Op<"format_custom_directive_attrdict"> {
+  let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$optAttr);
+  let assemblyFormat = [{
+    custom<CustomDirectiveAttrDict>( attr-dict )
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // AllTypesMatch type inference
 
