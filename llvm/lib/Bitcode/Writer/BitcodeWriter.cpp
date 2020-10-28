@@ -4819,7 +4819,7 @@ static const char *getSectionNameForCommandline(const Triple &T) {
 
 void llvm::EmbedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
                                 bool EmbedBitcode, bool EmbedMarker,
-                                const std::vector<uint8_t> *CmdArgs) {
+                                const std::vector<uint8_t> &CmdArgs) {
   // Save llvm.compiler.used and remove it.
   SmallVector<Constant *, 2> UsedArray;
   SmallPtrSet<GlobalValue *, 4> UsedGlobals;
@@ -4878,8 +4878,8 @@ void llvm::EmbedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
   // Skip if only bitcode needs to be embedded.
   if (EmbedMarker) {
     // Embed command-line options.
-    ArrayRef<uint8_t> CmdData(const_cast<uint8_t *>(CmdArgs->data()),
-                              CmdArgs->size());
+    ArrayRef<uint8_t> CmdData(const_cast<uint8_t *>(CmdArgs.data()),
+                              CmdArgs.size());
     llvm::Constant *CmdConstant =
         llvm::ConstantDataArray::get(M.getContext(), CmdData);
     GV = new llvm::GlobalVariable(M, CmdConstant->getType(), true,
