@@ -382,9 +382,10 @@ public:
   virtual bool useRelaxRelocations() const;
 
   /// GetDefaultStackProtectorLevel - Get the default stack protector level for
-  /// this tool chain (0=off, 1=on, 2=strong, 3=all).
-  virtual unsigned GetDefaultStackProtectorLevel(bool KernelOrKext) const {
-    return 0;
+  /// this tool chain.
+  virtual LangOptions::StackProtectorMode
+  GetDefaultStackProtectorLevel(bool KernelOrKext) const {
+    return LangOptions::SSPOff;
   }
 
   /// Get the default trivial automatic variable initialization.
