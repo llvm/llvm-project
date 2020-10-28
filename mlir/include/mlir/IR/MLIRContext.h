@@ -24,6 +24,7 @@ class InFlightDiagnostic;
 class Location;
 class MLIRContextImpl;
 class StorageUniquer;
+DialectRegistry &getGlobalDialectRegistry();
 
 /// MLIRContext is the top-level object for a collection of MLIR modules.  It
 /// holds immortal uniqued objects like types, and the tables used to unique
@@ -39,7 +40,7 @@ public:
   /// The loadAllDialects parameters allows to load all dialects from the global
   /// registry on Context construction. It is deprecated and will be removed
   /// soon.
-  explicit MLIRContext();
+  explicit MLIRContext(bool loadAllDialects = true);
   ~MLIRContext();
 
   /// Return information about all IR dialects loaded in the context.
@@ -86,6 +87,11 @@ public:
     getOrLoadDialect<Dialect>();
     loadDialect<OtherDialect, MoreDialects...>();
   }
+
+  /// Deprecated: load all globally registered dialects into this context.
+  /// This method will be removed soon, it can be used temporarily as we're
+  /// phasing out the global registry.
+  void loadAllGloballyRegisteredDialects();
 
   /// Get (or create) a dialect for the given derived dialect name.
   /// The dialect will be loaded from the registry if no dialect is found.

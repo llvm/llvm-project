@@ -22,6 +22,7 @@
 #include "Standalone/StandaloneDialect.h"
 
 int main(int argc, char **argv) {
+  mlir::registerAllDialects();
   mlir::registerAllPasses();
   // TODO: Register standalone passes here.
 

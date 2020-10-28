@@ -361,7 +361,7 @@ public:
 };
 } // end namespace mlir
 
-MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
+MLIRContext::MLIRContext(bool loadAllDialects) : impl(new MLIRContextImpl()) {
   // Initialize values based on the command line flags if they were provided.
   if (clOptions.isConstructed()) {
     disableMultithreading(clOptions->disableThreading);
@@ -369,8 +369,10 @@ MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
     printStackTraceOnDiagnostic(clOptions->printStackTraceOnDiagnostic);
   }
 
-  // Ensure the builtin dialect is always pre-loaded.
+  // Register dialects with this context.
   getOrLoadDialect<BuiltinDialect>();
+  if (loadAllDialects)
+    loadAllGloballyRegisteredDialects();
 
   // Initialize several common attributes and types to avoid the need to lock
   // the context when accessing them.
@@ -516,6 +518,12 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
                              "' has already been registered");
 
   return dialect.get();
+}
+
+void MLIRContext::loadAllGloballyRegisteredDialects() {
+  if (!isGlobalDialectRegistryEnabled())
+    return;
+  getGlobalDialectRegistry().loadAll(this);
 }
 
 bool MLIRContext::allowsUnregisteredDialects() {
