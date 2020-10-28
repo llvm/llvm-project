@@ -1,6 +1,3 @@
-// FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
-// I'm not sure this is actually *that* issue, but this seems oddly similar to the other XFAIL'ed cases.
-// XFAIL: android
 // UNSUPPORTED: ios
 
 // All of these don't actually silence it:
