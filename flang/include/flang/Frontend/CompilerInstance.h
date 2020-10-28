@@ -58,20 +58,20 @@ public:
   /// @name Compiler Invocation
   /// {
 
-  CompilerInvocation &GetInvocation() {
+  CompilerInvocation &invocation() {
     assert(invocation_ && "Compiler instance has no invocation!");
     return *invocation_;
   };
 
   /// Replace the current invocation.
-  void SetInvocation(std::shared_ptr<CompilerInvocation> value);
+  void set_invocation(std::shared_ptr<CompilerInvocation> value);
 
   /// }
   /// @name File manager
   /// {
 
   /// Return the current allSources.
-  Fortran::parser::AllSources &GetAllSources() const { return *allSources_; }
+  Fortran::parser::AllSources &allSources() const { return *allSources_; }
 
   bool HasAllSources() const { return allSources_ != nullptr; }
 
@@ -96,9 +96,9 @@ public:
     return invocation_->GetDiagnosticOpts();
   }
 
-  FrontendOptions &GetFrontendOpts() { return invocation_->GetFrontendOpts(); }
-  const FrontendOptions &GetFrontendOpts() const {
-    return invocation_->GetFrontendOpts();
+  FrontendOptions &frontendOpts() { return invocation_->frontendOpts(); }
+  const FrontendOptions &frontendOpts() const {
+    return invocation_->frontendOpts();
   }
 
   /// }
@@ -108,24 +108,15 @@ public:
   bool HasDiagnostics() const { return diagnostics_ != nullptr; }
 
   /// Get the current diagnostics engine.
-  clang::DiagnosticsEngine &GetDiagnostics() const {
+  clang::DiagnosticsEngine &diagnostics() const {
     assert(diagnostics_ && "Compiler instance has no diagnostics!");
     return *diagnostics_;
   }
-
-  /// Replace the current diagnostics engine.
-  void SetDiagnostics(clang::DiagnosticsEngine *value);
 
   clang::DiagnosticConsumer &GetDiagnosticClient() const {
     assert(diagnostics_ && diagnostics_->getClient() &&
         "Compiler instance has no diagnostic client!");
     return *diagnostics_->getClient();
-  }
-
-  /// Get the current diagnostics engine.
-  clang::DiagnosticsEngine &getDiagnostics() const {
-    assert(diagnostics_ && "Compiler instance has no diagnostics!");
-    return *diagnostics_;
   }
 
   /// {
@@ -192,7 +183,7 @@ public:
   /// }
   /// @name Output Stream Methods
   /// {
-  void SetOutputStream(std::unique_ptr<llvm::raw_pwrite_stream> outStream) {
+  void set_outputStream(std::unique_ptr<llvm::raw_pwrite_stream> outStream) {
     outputStream_ = std::move(outStream);
   }
 

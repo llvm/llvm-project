@@ -45,9 +45,9 @@ TEST(FrontendAction, TestInputOutputTestAction) {
   CompilerInstance compInst;
   compInst.CreateDiagnostics();
   auto invocation = std::make_shared<CompilerInvocation>();
-  invocation->GetFrontendOpts().programAction_ = InputOutputTest;
-  compInst.SetInvocation(std::move(invocation));
-  compInst.GetFrontendOpts().inputs_.push_back(
+  invocation->frontendOpts().programAction_ = InputOutputTest;
+  compInst.set_invocation(std::move(invocation));
+  compInst.frontendOpts().inputs_.push_back(
       FrontendInputFile(/*File=*/testFilePath, Language::Fortran));
 
   // 3. Set-up the output stream. Using output buffer wrapped as an output
@@ -55,7 +55,7 @@ TEST(FrontendAction, TestInputOutputTestAction) {
   llvm::SmallVector<char, 256> outputFileBuffer;
   std::unique_ptr<llvm::raw_pwrite_stream> outputFileStream(
       new llvm::raw_svector_ostream(outputFileBuffer));
-  compInst.SetOutputStream(std::move(outputFileStream));
+  compInst.set_outputStream(std::move(outputFileStream));
 
   // 4. Run the earlier defined FrontendAction
   bool success = ExecuteCompilerInvocation(&compInst);

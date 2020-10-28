@@ -23,8 +23,8 @@ void InputOutputTestAction::ExecuteAction() {
   bool binaryMode = true;
 
   // Set/store input file info into CompilerInstance.
-  CompilerInstance &ci = GetCompilerInstance();
-  Fortran::parser::AllSources &allSources{ci.GetAllSources()};
+  CompilerInstance &ci = instance();
+  Fortran::parser::AllSources &allSources{ci.allSources()};
   const Fortran::parser::SourceFile *sf;
   sf = allSources.Open(path, error_stream);
   llvm::ArrayRef<char> fileContent = sf->content();
