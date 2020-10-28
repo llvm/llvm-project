@@ -252,9 +252,6 @@ enum NodeType : unsigned {
   EORV_PRED,
   ANDV_PRED,
 
-  // Vector bitwise negation
-  NOT,
-
   // Vector bitwise insertion
   BIT,
 

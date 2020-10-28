@@ -40,8 +40,7 @@ define <16 x i8> @v16i8_select_sgt(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) {
 ; CODE-LABEL: v4i16_select_ne
 ; CODE:       bb.0
 ; CODE-NEXT:    cmeq  v{{.+}}.4h, v{{.+}}.4h, v{{.+}}.4h
-; CODE-NEXT:    mvn   v{{.+}}.8b, v{{.+}}.8b
-; CODE-NEXT:    bif   v{{.+}}.8b, v{{.+}}.8b, v{{.+}}.8b
+; CODE-NEXT:    bit   v{{.+}}.8b, v{{.+}}.8b, v{{.+}}.8b
 ; CODE-NEXT:    ret
 
 define <4 x i16> @v4i16_select_ne(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
