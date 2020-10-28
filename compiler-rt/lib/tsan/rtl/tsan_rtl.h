@@ -458,22 +458,22 @@ struct ThreadState {
 ThreadState *cur_thread();
 void set_cur_thread(ThreadState *thr);
 void cur_thread_finalize();
-INLINE void cur_thread_init() { }
+inline void cur_thread_init() { }
 #else
 __attribute__((tls_model("initial-exec")))
 extern THREADLOCAL char cur_thread_placeholder[];
-INLINE ThreadState *cur_thread() {
+inline ThreadState *cur_thread() {
   return reinterpret_cast<ThreadState *>(cur_thread_placeholder)->current;
 }
-INLINE void cur_thread_init() {
+inline void cur_thread_init() {
   ThreadState *thr = reinterpret_cast<ThreadState *>(cur_thread_placeholder);
   if (UNLIKELY(!thr->current))
     thr->current = thr;
 }
-INLINE void set_cur_thread(ThreadState *thr) {
+inline void set_cur_thread(ThreadState *thr) {
   reinterpret_cast<ThreadState *>(cur_thread_placeholder)->current = thr;
 }
-INLINE void cur_thread_finalize() { }
+inline void cur_thread_finalize() { }
 #endif  // SANITIZER_MAC || SANITIZER_ANDROID
 #endif  // SANITIZER_GO
 

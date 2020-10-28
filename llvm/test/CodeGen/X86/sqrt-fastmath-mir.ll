@@ -96,7 +96,7 @@ define float @rsqrt_ieee(float %f) #0 {
   ; CHECK:   liveins: $xmm0
   ; CHECK:   [[COPY:%[0-9]+]]:fr32 = COPY $xmm0
   ; CHECK:   [[DEF:%[0-9]+]]:fr32 = IMPLICIT_DEF
-  ; CHECK:   [[VRSQRTSSr:%[0-9]+]]:fr32 = VRSQRTSSr killed [[DEF]], [[COPY]]
+  ; CHECK:   [[VRSQRTSSr:%[0-9]+]]:fr32 = nnan ninf nsz arcp contract afn reassoc VRSQRTSSr killed [[DEF]], [[COPY]]
   ; CHECK:   %3:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VMULSSrr [[COPY]], [[VRSQRTSSr]], implicit $mxcsr
   ; CHECK:   [[VMOVSSrm_alt:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load 4 from constant-pool)
   ; CHECK:   %5:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VFMADD213SSr [[VRSQRTSSr]], killed %3, [[VMOVSSrm_alt]], implicit $mxcsr
@@ -120,7 +120,7 @@ define float @rsqrt_daz(float %f) #1 {
   ; CHECK:   liveins: $xmm0
   ; CHECK:   [[COPY:%[0-9]+]]:fr32 = COPY $xmm0
   ; CHECK:   [[DEF:%[0-9]+]]:fr32 = IMPLICIT_DEF
-  ; CHECK:   [[VRSQRTSSr:%[0-9]+]]:fr32 = VRSQRTSSr killed [[DEF]], [[COPY]]
+  ; CHECK:   [[VRSQRTSSr:%[0-9]+]]:fr32 = nnan ninf nsz arcp contract afn reassoc VRSQRTSSr killed [[DEF]], [[COPY]]
   ; CHECK:   %3:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VMULSSrr [[COPY]], [[VRSQRTSSr]], implicit $mxcsr
   ; CHECK:   [[VMOVSSrm_alt:%[0-9]+]]:fr32 = VMOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load 4 from constant-pool)
   ; CHECK:   %5:fr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept VFMADD213SSr [[VRSQRTSSr]], killed %3, [[VMOVSSrm_alt]], implicit $mxcsr

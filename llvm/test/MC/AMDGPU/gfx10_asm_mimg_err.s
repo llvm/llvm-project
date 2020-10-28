@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -show-encoding %s 2>&1 | FileCheck --check-prefixes=NOGFX10 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=NOGFX10 --implicit-check-not=error: %s
 
 ; TODO: more helpful error message for missing dim operand
 image_load v[0:3], v0, s[0:7] dmask:0xf unorm

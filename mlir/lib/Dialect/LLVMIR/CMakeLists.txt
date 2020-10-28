@@ -18,12 +18,10 @@ add_mlir_dialect_library(MLIRLLVMIR
   BitReader
   BitWriter
   Core
-  FrontendOpenMP
 
   LINK_LIBS PUBLIC
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
-  MLIROpenMP
   MLIRIR
   MLIRSideEffectInterfaces
   MLIRSupport

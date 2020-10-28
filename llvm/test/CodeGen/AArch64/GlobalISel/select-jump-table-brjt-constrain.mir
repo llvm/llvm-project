@@ -35,7 +35,6 @@ body:             |
   ; CHECK:   BR %6
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   B %bb.3
   ; CHECK: bb.3:
   ; CHECK:   RET_ReallyLR
   bb.1:

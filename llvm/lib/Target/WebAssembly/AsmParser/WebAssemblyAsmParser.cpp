@@ -689,11 +689,24 @@ public:
       auto Type = parseType(TypeName);
       if (!Type)
         return error("Unknown type in .globaltype directive: ", TypeTok);
+      // Optional mutable modifier. Default to mutable for historical reasons.
+      // Ideally we would have gone with immutable as the default and used `mut`
+      // as the modifier to match the `.wat` format.
+      bool Mutable = true;
+      if (isNext(AsmToken::Comma)) {
+        TypeTok = Lexer.getTok();
+        auto Id = expectIdent();
+        if (Id == "immutable")
+          Mutable = false;
+        else
+          // Should we also allow `mutable` and `mut` here for clarity?
+          return error("Unknown type in .globaltype modifier: ", TypeTok);
+      }
       // Now set this symbol with the correct type.
       auto WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
       WasmSym->setGlobalType(
-          wasm::WasmGlobalType{uint8_t(Type.getValue()), true});
+          wasm::WasmGlobalType{uint8_t(Type.getValue()), Mutable});
       // And emit the directive again.
       TOut.emitGlobalType(WasmSym);
       return expect(AsmToken::EndOfStatement, "EOL");

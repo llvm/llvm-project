@@ -9,10 +9,13 @@
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 #include <vector>
 
 using namespace llvm;
+using llvm::unittest::TempFile;
+
 namespace {
 
 struct UstarHeader {
@@ -38,21 +41,19 @@ struct UstarHeader {
 class TarWriterTest : public ::testing::Test {};
 
 static std::vector<uint8_t> createTar(StringRef Base, StringRef Filename) {
-  // Create a temporary file.
-  SmallString<128> Path;
-  std::error_code EC =
-      sys::fs::createTemporaryFile("TarWriterTest", "tar", Path);
-  EXPECT_FALSE((bool)EC);
+  TempFile TarWriterTest("TarWriterTest", "tar", "", /*Unique*/ true);
 
   // Create a tar file.
-  Expected<std::unique_ptr<TarWriter>> TarOrErr = TarWriter::create(Path, Base);
+  Expected<std::unique_ptr<TarWriter>> TarOrErr =
+      TarWriter::create(TarWriterTest.path(), Base);
   EXPECT_TRUE((bool)TarOrErr);
   std::unique_ptr<TarWriter> Tar = std::move(*TarOrErr);
   Tar->append(Filename, "contents");
   Tar.reset();
 
   // Read the tar file.
-  ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr = MemoryBuffer::getFile(Path);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
+      MemoryBuffer::getFile(TarWriterTest.path());
   EXPECT_TRUE((bool)MBOrErr);
   std::unique_ptr<MemoryBuffer> MB = std::move(*MBOrErr);
   std::vector<uint8_t> Buf((const uint8_t *)MB->getBufferStart(),
@@ -61,7 +62,6 @@ static std::vector<uint8_t> createTar(StringRef Base, StringRef Filename) {
   // Windows does not allow us to remove a mmap'ed files, so
   // unmap first and then remove the temporary file.
   MB = nullptr;
-  sys::fs::remove(Path);
 
   return Buf;
 }
@@ -123,30 +123,26 @@ TEST_F(TarWriterTest, Pax) {
 }
 
 TEST_F(TarWriterTest, SingleFile) {
-  SmallString<128> Path;
-  std::error_code EC =
-      sys::fs::createTemporaryFile("TarWriterTest", "tar", Path);
-  EXPECT_FALSE((bool)EC);
+  TempFile TarWriterTest("TarWriterTest", "tar", "", /*Unique*/ true);
 
-  Expected<std::unique_ptr<TarWriter>> TarOrErr = TarWriter::create(Path, "");
+  Expected<std::unique_ptr<TarWriter>> TarOrErr =
+      TarWriter::create(TarWriterTest.path(), "");
   EXPECT_TRUE((bool)TarOrErr);
   std::unique_ptr<TarWriter> Tar = std::move(*TarOrErr);
   Tar->append("FooPath", "foo");
   Tar.reset();
 
   uint64_t TarSize;
-  EC = sys::fs::file_size(Path, TarSize);
+  std::error_code EC = sys::fs::file_size(TarWriterTest.path(), TarSize);
   EXPECT_FALSE((bool)EC);
   EXPECT_EQ(TarSize, 2048ULL);
 }
 
 TEST_F(TarWriterTest, NoDuplicate) {
-  SmallString<128> Path;
-  std::error_code EC =
-      sys::fs::createTemporaryFile("TarWriterTest", "tar", Path);
-  EXPECT_FALSE((bool)EC);
+  TempFile TarWriterTest("TarWriterTest", "tar", "", /*Unique*/ true);
 
-  Expected<std::unique_ptr<TarWriter>> TarOrErr = TarWriter::create(Path, "");
+  Expected<std::unique_ptr<TarWriter>> TarOrErr =
+      TarWriter::create(TarWriterTest.path(), "");
   EXPECT_TRUE((bool)TarOrErr);
   std::unique_ptr<TarWriter> Tar = std::move(*TarOrErr);
   Tar->append("FooPath", "foo");
@@ -154,18 +150,16 @@ TEST_F(TarWriterTest, NoDuplicate) {
   Tar.reset();
 
   uint64_t TarSize;
-  EC = sys::fs::file_size(Path, TarSize);
+  std::error_code EC = sys::fs::file_size(TarWriterTest.path(), TarSize);
   EXPECT_FALSE((bool)EC);
   EXPECT_EQ(TarSize, 3072ULL);
 }
 
 TEST_F(TarWriterTest, Duplicate) {
-  SmallString<128> Path;
-  std::error_code EC =
-      sys::fs::createTemporaryFile("TarWriterTest", "tar", Path);
-  EXPECT_FALSE((bool)EC);
+  TempFile TarWriterTest("TarWriterTest", "tar", "", /*Unique*/ true);
 
-  Expected<std::unique_ptr<TarWriter>> TarOrErr = TarWriter::create(Path, "");
+  Expected<std::unique_ptr<TarWriter>> TarOrErr =
+      TarWriter::create(TarWriterTest.path(), "");
   EXPECT_TRUE((bool)TarOrErr);
   std::unique_ptr<TarWriter> Tar = std::move(*TarOrErr);
   Tar->append("FooPath", "foo");
@@ -173,7 +167,7 @@ TEST_F(TarWriterTest, Duplicate) {
   Tar.reset();
 
   uint64_t TarSize;
-  EC = sys::fs::file_size(Path, TarSize);
+  std::error_code EC = sys::fs::file_size(TarWriterTest.path(), TarSize);
   EXPECT_FALSE((bool)EC);
   EXPECT_EQ(TarSize, 2048ULL);
 }

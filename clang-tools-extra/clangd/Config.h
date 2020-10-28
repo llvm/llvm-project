@@ -62,6 +62,14 @@ struct Config {
     /// Whether this TU should be indexed.
     BackgroundPolicy Background = BackgroundPolicy::Build;
   } Index;
+
+  /// Style of the codebase.
+  struct {
+    // Namespaces that should always be fully qualified, meaning no "using"
+    // declarations, always spell out the whole name (with or without leading
+    // ::). All nested namespaces are affected as well.
+    std::vector<std::string> FullyQualifiedNamespaces;
+  } Style;
 };
 
 } // namespace clangd

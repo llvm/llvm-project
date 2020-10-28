@@ -52,6 +52,10 @@ std::unique_ptr<MCObjectWriter>
 createWasmObjectWriter(std::unique_ptr<MCWasmObjectTargetWriter> MOTW,
                        raw_pwrite_stream &OS);
 
+std::unique_ptr<MCObjectWriter>
+createWasmDwoObjectWriter(std::unique_ptr<MCWasmObjectTargetWriter> MOTW,
+                          raw_pwrite_stream &OS, raw_pwrite_stream &DwoOS);
+
 } // namespace llvm
 
 #endif

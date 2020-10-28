@@ -16,6 +16,14 @@
 ; LE-NEXT: .space 5
 ; LE-NEXT: .size bigCst, 16
 
+; BE-LABEL: notSoBigCst:
+; BE-NEXT:  .8byte  72057594037927935
+; BE-NEXT:  .size   notSoBigCst, 8
+
+; LE-LABEL: notSoBigCst:
+; LE-NEXT:  .8byte  72057594037927935
+; LE-NEXT:  .size   notSoBigCst, 8
+
 ; BE-LABEL: smallCst:
 ; BE-NEXT: .2byte 4386
 ; BE-NEXT: .byte 51
@@ -35,6 +43,16 @@ define void @accessBig(i64* %storage) {
   %bigLoadedCst = load volatile i82, i82* @bigCst
   %tmp = add i82 %bigLoadedCst, 1
   store i82 %tmp, i82* %addr
+  ret void
+}
+
+@notSoBigCst = internal constant i57 72057594037927935
+
+define void @accessNotSoBig(i64* %storage) {
+  %addr = bitcast i64* %storage to i57*
+  %bigLoadedCst = load volatile i57, i57* @notSoBigCst
+  %tmp = add i57 %bigLoadedCst, 1
+  store i57 %tmp, i57* %addr
   ret void
 }
 

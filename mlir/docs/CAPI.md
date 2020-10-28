@@ -97,37 +97,32 @@ as follows.
     its first argument is `Y`, and it is the responsibility of the caller to
     ensure it is indeed the case.
 
-### Returning String References
+### Auxiliary Types
+
+#### `StringRef`
 
 Numerous MLIR functions return instances of `StringRef` to refer to a non-owning
 segment of a string. This segment may or may not be null-terminated. In C API,
-these functions take an additional callback argument of type
-`MlirStringCallback` (pointer to a function with signature `void (*)(const char
-*, intptr_t, void *)`) and a pointer to user-defined data. This callback is
-invoked with a pointer to the string segment, its size and is forwarded the
-user-defined data. The caller is in charge of managing the string segment
-according to its memory model: for strings owned by the object (e.g., string
-attributes), the caller can store the pointer and the size and use them directly
-as long as the parent object is live or copy the string to a new location with a
-null terminator if expected; for generated strings (e.g., in printing), the
-caller is expected to copy the string segment if it intends to use it later.
+these are represented as instances of `MlirStringRef` structure that contains a
+pointer to the first character of the string fragment (`str`) and the fragment
+length (`length`). Note that the fragment is _not necessarily_ null-terminated,
+the `length` field must be used to identify the last character. `MlirStringRef`
+is a non-owning pointer, the caller is in charge of perfoming the copy or
+ensuring that the pointee outlives all uses of `MlirStringRef`.
 
-**Note:** this interface may be revised in the near future.
+### Printing
 
-### Conversion To String and Printing
-
-IR objects can be converted to a string representation, for example for
-printing, using `mlirXPrint(MlirX, MlirStringCallback, void *)` functions. These
-functions accept take arguments a callback with signature `void (*)(const char
-*, intptr_t, void *)` and a pointer to user-defined data. They call the callback
-and supply it with chunks of the string representation, provided as a pointer to
-the first character and a length, and forward the user-defined data unmodified.
-It is up to the caller to allocate memory if the string representation must be
-stored and perform the copy. There is no guarantee that the pointer supplied to
-the callback points to a null-terminated string, the size argument should be
-used to find the end of the string. The callback may be called multiple times
-with consecutive chunks of the string representation (the printing itself is
-buffered).
+IR objects can be printed using `mlirXPrint(MlirX, MlirStringCallback, void *)`
+functions. These functions accept take arguments a callback with signature `void
+(*)(const char *, intptr_t, void *)` and a pointer to user-defined data. They
+call the callback and supply it with chunks of the string representation,
+provided as a pointer to the first character and a length, and forward the
+user-defined data unmodified. It is up to the caller to allocate memory if the
+string representation must be stored and perform the copy. There is no guarantee
+that the pointer supplied to the callback points to a null-terminated string,
+the size argument should be used to find the end of the string. The callback may
+be called multiple times with consecutive chunks of the string representation
+(the printing itself is buffered).
 
 *Rationale*: this approach allows the caller to have full control of the
 allocation and avoid unnecessary allocation and copying inside the printer.

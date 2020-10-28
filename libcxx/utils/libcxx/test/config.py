@@ -8,7 +8,6 @@
 
 import copy
 import os
-import platform
 import pkgutil
 import pipes
 import re
@@ -72,7 +71,6 @@ class Configuration(object):
         self.link_shared = self.get_lit_bool('enable_shared', default=True)
         self.debug_build = self.get_lit_bool('debug_build',   default=False)
         self.exec_env = dict()
-        self.use_target = False
         self.use_system_cxx_lib = self.get_lit_bool('use_system_cxx_lib', False)
         self.use_clang_verify = False
 
@@ -123,7 +121,6 @@ class Configuration(object):
         self.executor = self.get_lit_conf('executor')
         self.configure_cxx()
         self.configure_triple()
-        self.configure_deployment()
         self.configure_src_root()
         self.configure_obj_root()
         self.cxx_stdlib_under_test = self.get_lit_conf('cxx_stdlib_under_test', 'libc++')
@@ -147,6 +144,8 @@ class Configuration(object):
             self.config,
             self.lit_config
         )
+
+        self.lit_config.note("All available features: {}".format(self.config.available_features))
 
     def print_config_info(self):
         if self.cxx.use_modules:
@@ -246,22 +245,12 @@ class Configuration(object):
         # XFAIL markers for tests that are known to fail with versions of
         # libc++ as were shipped with a particular triple.
         if self.use_system_cxx_lib:
-            self.config.available_features.add('with_system_cxx_lib=%s' % self.config.target_triple)
+            (arch, vendor, platform) = self.config.target_triple.split('-', 2)
+            (sysname, version) = re.match(r'([^0-9]+)([0-9\.]*)', platform).groups()
 
-            # Add available features for more generic versions of the target
-            # triple attached to  with_system_cxx_lib.
-            if self.use_deployment:
-                (_, name, version) = self.config.deployment
-                self.config.available_features.add('with_system_cxx_lib=%s' % name)
-                self.config.available_features.add('with_system_cxx_lib=%s%s' % (name, version))
-
-        # Configure the availability feature. Availability is only enabled
-        # with libc++, because other standard libraries do not provide
-        # availability markup.
-        if self.use_deployment and self.cxx_stdlib_under_test == 'libc++':
-            (_, name, version) = self.config.deployment
-            self.config.available_features.add('availability=%s' % name)
-            self.config.available_features.add('availability=%s%s' % (name, version))
+            self.config.available_features.add('with_system_cxx_lib={}-{}-{}{}'.format(arch, vendor, sysname, version))
+            self.config.available_features.add('with_system_cxx_lib={}{}'.format(sysname, version))
+            self.config.available_features.add('with_system_cxx_lib={}'.format(sysname))
 
         if self.target_info.is_windows():
             if self.cxx_stdlib_under_test == 'libc++':
@@ -297,6 +286,7 @@ class Configuration(object):
         # Configure include paths
         self.configure_compile_flags_header_includes()
         self.target_info.add_cxx_compile_flags(self.cxx.compile_flags)
+        self.target_info.add_cxx_flags(self.cxx.flags)
         # Configure feature flags.
         enable_32bit = self.get_lit_bool('enable_32bit', False)
         if enable_32bit:
@@ -315,19 +305,18 @@ class Configuration(object):
         # being elided.
         if self.target_info.is_windows() and self.debug_build:
             self.cxx.compile_flags += ['-D_DEBUG']
-        if self.use_target:
-            if not self.cxx.addFlagIfSupported(
-                    ['--target=' + self.config.target_triple]):
-                self.lit_config.warning('use_target is true but --target is '\
-                        'not supported by the compiler')
-        if self.use_deployment:
-            arch, name, version = self.config.deployment
-            self.cxx.flags += ['-arch', arch]
-            self.cxx.flags += ['-m' + name + '-version-min=' + version]
+        if not self.cxx.addFlagIfSupported(['--target=' + self.config.target_triple]):
+            self.lit_config.warning('Not adding any target triple -- the compiler does '
+                                    'not support --target=<triple>')
 
         # Add includes for support headers used in the tests.
         support_path = os.path.join(self.libcxx_src_root, 'test/support')
         self.cxx.compile_flags += ['-I' + support_path]
+
+        # If we're testing the upstream LLVM libc++, disable availability markup,
+        # which is not relevant for non-shipped flavors of libc++.
+        if not self.use_system_cxx_lib:
+            self.cxx.compile_flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
 
         # Add includes for the PSTL headers
         pstl_src_root = self.get_lit_conf('pstl_src_root')
@@ -639,37 +628,15 @@ class Configuration(object):
         if self.get_lit_conf('libcxx_gdb'):
             sub.append(('%{libcxx_gdb}', self.get_lit_conf('libcxx_gdb')))
 
-    def can_use_deployment(self):
-        # Check if the host is on an Apple platform using clang.
-        if not self.target_info.is_darwin():
-            return False
-        if not self.target_info.is_host_macosx():
-            return False
-        if not self.cxx.type.endswith('clang'):
-            return False
-        return True
-
     def configure_triple(self):
         # Get or infer the target triple.
         target_triple = self.get_lit_conf('target_triple')
-        self.use_target = self.get_lit_bool('use_target', False)
-        if self.use_target and target_triple:
-            self.lit_config.warning('use_target is true but no triple is specified')
-
-        # Use deployment if possible.
-        self.use_deployment = not self.use_target and self.can_use_deployment()
-        if self.use_deployment:
-            return
-
-        # Save the triple (and warn on Apple platforms).
-        self.config.target_triple = target_triple
-        if self.use_target and 'apple' in target_triple:
-            self.lit_config.warning('consider using arch and platform instead'
-                                    ' of target_triple on Apple platforms')
 
         # If no target triple was given, try to infer it from the compiler
         # under test.
-        if not self.config.target_triple:
+        if not target_triple:
+            self.lit_config.note('Trying to infer the target_triple because none was specified')
+
             target_triple = self.cxx.getTriple()
             # Drop sub-major version components from the triple, because the
             # current XFAIL handling expects exact matches for feature checks.
@@ -684,44 +651,10 @@ class Configuration(object):
             if (target_triple.endswith('redhat-linux') or
                 target_triple.endswith('suse-linux')):
                 target_triple += '-gnu'
-            self.config.target_triple = target_triple
-            self.lit_config.note(
-                "inferred target_triple as: %r" % self.config.target_triple)
 
-    def configure_deployment(self):
-        assert not self.use_deployment is None
-        assert not self.use_target is None
-        if not self.use_deployment:
-            # Warn about ignored parameters.
-            if self.get_lit_conf('arch'):
-                self.lit_config.warning('ignoring arch, using target_triple')
-            if self.get_lit_conf('platform'):
-                self.lit_config.warning('ignoring platform, using target_triple')
-            return
-
-        assert not self.use_target
-        assert self.target_info.is_host_macosx()
-
-        # Always specify deployment explicitly on Apple platforms, since
-        # otherwise a platform is picked up from the SDK.  If the SDK version
-        # doesn't match the system version, tests that use the system library
-        # may fail spuriously.
-        arch = self.get_lit_conf('arch')
-        if not arch:
-            arch = self.cxx.getTriple().split('-', 1)[0]
-
-        _, name, version = self.target_info.get_platform()
-        self.config.deployment = (arch, name, version)
-
-        # Set the target triple for use by lit.
-        self.config.target_triple = arch + '-apple-' + name + version
-        self.lit_config.note(
-            "computed target_triple as: %r" % self.config.target_triple)
-
-        # If we're testing the upstream LLVM libc++, disable availability markup,
-        # which is not relevant for non-shipped flavors of libc++.
-        if not self.use_system_cxx_lib:
-            self.cxx.compile_flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
+        # Save the triple
+        self.lit_config.note("Setting target_triple to {}".format(target_triple))
+        self.config.target_triple = target_triple
 
     def configure_env(self):
         self.config.environment = dict(os.environ)

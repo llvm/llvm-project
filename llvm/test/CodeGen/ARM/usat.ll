@@ -22,10 +22,10 @@ define i32 @unsigned_sat_base_32bit(i32 %x) #0 {
 ; V6T2: usat r0, #23, r0
 ; V4T-NOT: usat
 entry:
-  %cmpLow = icmp slt i32 %x, 0
-  %cmpUp = icmp sgt i32 %x, 8388607
-  %saturateUp = select i1 %cmpUp, i32 8388607, i32 %x
-  %saturateLow = select i1 %cmpLow, i32 0, i32 %saturateUp
+  %0 = icmp slt i32 %x, 8388607
+  %saturateUp = select i1 %0, i32 %x, i32 8388607
+  %1 = icmp sgt i32 %saturateUp, 0
+  %saturateLow = select i1 %1, i32 %saturateUp, i32 0
   ret i32 %saturateLow
 }
 
@@ -37,10 +37,10 @@ define i16 @unsigned_sat_base_16bit(i16 %x) #0 {
 ; V6T2: usat r0, #11, r0
 ; V4T-NOT: usat
 entry:
-  %cmpLow = icmp slt i16 %x, 0
-  %cmpUp = icmp sgt i16 %x, 2047
-  %saturateUp = select i1 %cmpUp, i16 2047, i16 %x
-  %saturateLow = select i1 %cmpLow, i16 0, i16 %saturateUp
+  %0 = icmp slt i16 %x, 2047
+  %saturateUp = select i1 %0, i16 %x, i16 2047
+  %1 = icmp sgt i16 %saturateUp, 0
+  %saturateLow = select i1 %1, i16 %saturateUp, i16 0
   ret i16 %saturateLow
 }
 
@@ -52,10 +52,10 @@ define i8 @unsigned_sat_base_8bit(i8 %x) #0 {
 ; V6T2: usat r0, #5, r0
 ; V4T-NOT: usat
 entry:
-  %cmpLow = icmp slt i8 %x, 0
-  %cmpUp = icmp sgt i8 %x, 31
-  %saturateUp = select i1 %cmpUp, i8 31, i8 %x
-  %saturateLow = select i1 %cmpLow, i8 0, i8 %saturateUp
+  %0 = icmp slt i8 %x, 31
+  %saturateUp = select i1 %0, i8 %x, i8 31
+  %1 = icmp sgt i8 %saturateUp, 0
+  %saturateLow = select i1 %1, i8 %saturateUp, i8 0
   ret i8 %saturateLow
 }
 
@@ -71,10 +71,10 @@ define i32 @unsigned_sat_lower_upper_1(i32 %x) #0 {
 ; V6T2: usat r0, #23, r0
 ; V4T-NOT: usat
 entry:
-  %cmpLow = icmp slt i32 %x, 0
   %cmpUp = icmp slt i32 %x, 8388607
   %saturateUp = select i1 %cmpUp, i32 %x, i32 8388607
-  %saturateLow = select i1 %cmpLow, i32 0, i32 %saturateUp
+  %0 = icmp sgt i32 %saturateUp, 0
+  %saturateLow = select i1 %0, i32 %saturateUp, i32 0
   ret i32 %saturateLow
 }
 
@@ -85,10 +85,10 @@ define i32 @unsigned_sat_lower_upper_2(i32 %x) #0 {
 ; V6T2: usat    r0, #23, r0
 ; V4T-NOT: usat
 entry:
-  %cmpLow = icmp sgt i32 %x, 0
-  %cmpUp = icmp sgt i32 %x, 8388607
-  %saturateUp = select i1 %cmpUp, i32 8388607, i32 %x
-  %saturateLow = select i1 %cmpLow, i32 %saturateUp, i32 0
+  %0 = icmp slt i32 %x, 8388607
+  %saturateUp = select i1 %0, i32 %x, i32 8388607
+  %1 = icmp sgt i32 %saturateUp, 0
+  %saturateLow = select i1 %1, i32 %saturateUp, i32 0
   ret i32 %saturateLow
 }
 
@@ -99,10 +99,10 @@ define i32 @unsigned_sat_upper_lower_1(i32 %x) #0 {
 ; V6T2: usat    r0, #23, r0
 ; V4T-NOT: usat
 entry:
-  %cmpUp = icmp slt i32 %x, 8388607
-  %cmpLow = icmp slt i32 %x, 0
-  %saturateLow = select i1 %cmpLow, i32 0, i32 %x
-  %saturateUp = select i1 %cmpUp, i32 %saturateLow, i32 8388607
+  %0 = icmp sgt i32 %x, 0
+  %saturateLow = select i1 %0, i32 %x, i32 0
+  %1 = icmp slt i32 %saturateLow, 8388607
+  %saturateUp = select i1 %1, i32 %saturateLow, i32 8388607
   ret i32 %saturateUp
 }
 
@@ -113,10 +113,10 @@ define i32 @unsigned_sat_upper_lower_2(i32 %x) #0 {
 ; V6T2: usat    r0, #23, r0
 ; V4T-NOT: usat
 entry:
-  %cmpUp = icmp sgt i32 %x, 8388607
-  %cmpLow = icmp slt i32 %x, 0
-  %saturateLow = select i1 %cmpLow, i32 0, i32 %x
-  %saturateUp = select i1 %cmpUp, i32 8388607, i32 %saturateLow
+  %0 = icmp sgt i32 %x, 0
+  %saturateLow = select i1 %0, i32 %x, i32 0
+  %1 = icmp slt i32 %saturateLow, 8388607
+  %saturateUp = select i1 %1, i32 %saturateLow, i32 8388607
   ret i32 %saturateUp
 }
 
@@ -127,10 +127,10 @@ define i32 @unsigned_sat_upper_lower_3(i32 %x) #0 {
 ; V6T2: usat    r0, #23, r0
 ; V4T-NOT: usat
 entry:
-  %cmpUp = icmp slt i32 8388607, %x
   %cmpLow = icmp sgt i32 %x, 0
   %saturateLow = select i1 %cmpLow, i32 %x, i32 0
-  %saturateUp = select i1 %cmpUp, i32 8388607, i32 %saturateLow
+  %0 = icmp slt i32 %saturateLow, 8388607
+  %saturateUp = select i1 %0, i32 %saturateLow, i32 8388607
   ret i32 %saturateUp
 }
 
@@ -145,8 +145,8 @@ define i32 @no_unsigned_sat_missing_lower(i32 %x) #0 {
 ; CHECK-NOT: usat
 entry:
   %cmpUp = icmp sgt i32 %x, 8388607
-  %cmpLow = icmp sgt i32 %x, 0
-  %saturateLow = select i1 %cmpLow, i32 0, i32 %x
+  %0 = icmp slt i32 %x, 0
+  %saturateLow = select i1 %0, i32 %x, i32 0
   %saturateUp = select i1 %cmpUp, i32 8388607, i32 %saturateLow
   ret i32 %saturateUp
 }
@@ -158,8 +158,8 @@ define i32 @no_unsigned_sat_missing_upper(i32 %x) #0 {
 ; CHECK-NOT: usat
 entry:
   %cmpUp = icmp slt i32 %x, 8388607
-  %cmpLow = icmp slt i32 %x, 0
-  %saturateLow = select i1 %cmpLow, i32 0, i32 %x
+  %0 = icmp sgt i32 %x, 0
+  %saturateLow = select i1 %0, i32 %x, i32 0
   %saturateUp = select i1 %cmpUp, i32 8388607, i32 %saturateLow
   ret i32 %saturateUp
 }
@@ -169,10 +169,22 @@ define i32 @no_unsigned_sat_incorrect_constant(i32 %x) #0 {
 ; CHECK-LABEL: no_unsigned_sat_incorrect_constant:
 ; CHECK-NOT: usat
 entry:
-  %cmpUp = icmp sgt i32 %x, 8388607
-  %cmpLow = icmp slt i32 %x, 0
-  %saturateLow = select i1 %cmpLow, i32 -1, i32 %x
-  %saturateUp = select i1 %cmpUp, i32 8388607, i32 %saturateLow
+  %cmpLow.inv = icmp sgt i32 %x, -1
+  %saturateLow = select i1 %cmpLow.inv, i32 %x, i32 -1
+  %0 = icmp slt i32 %saturateLow, 8388607
+  %saturateUp = select i1 %0, i32 %saturateLow, i32 8388607
+  ret i32 %saturateUp
+}
+
+; The interval is [0, k] but k+1 is not a power of 2
+define i32 @no_unsigned_sat_incorrect_constant2(i32 %x) #0 {
+; CHECK-LABEL: no_unsigned_sat_incorrect_constant2:
+; CHECK-NOT: usat
+entry:
+  %0 = icmp sgt i32 %x, 0
+  %saturateLow = select i1 %0, i32 %x, i32 0
+  %1 = icmp slt i32 %saturateLow, 8388609
+  %saturateUp = select i1 %1, i32 %saturateLow, i32 8388609
   ret i32 %saturateUp
 }
 
@@ -181,10 +193,10 @@ define i32 @no_unsigned_sat_incorrect_interval(i32 %x) #0 {
 ; CHECK-LABEL: no_unsigned_sat_incorrect_interval:
 ; CHECK-NOT: usat
 entry:
-  %cmpUp = icmp sgt i32 %x, 8388607
-  %cmpLow = icmp slt i32 %x, -4
-  %saturateLow = select i1 %cmpLow, i32 -4, i32 %x
-  %saturateUp = select i1 %cmpUp, i32 8388607, i32 %saturateLow
+  %0 = icmp sgt i32 %x, -4
+  %saturateLow = select i1 %0, i32 %x, i32 -4
+  %1 = icmp slt i32 %saturateLow, 8388607
+  %saturateUp = select i1 %1, i32 %saturateLow, i32 8388607
   ret i32 %saturateUp
 }
 

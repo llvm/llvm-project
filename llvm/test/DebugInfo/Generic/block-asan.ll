@@ -1,4 +1,5 @@
-; RUN: opt -S -asan %s | FileCheck %s
+; RUN: opt -S -asan -enable-new-pm=0 %s | FileCheck %s
+; RUN: opt -S -passes=asan-function-pipeline %s | FileCheck %s
 
 ; The IR of this testcase is generated from the following C code:
 ; void bar (int);

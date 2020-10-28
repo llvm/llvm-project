@@ -21,7 +21,15 @@
 // CHECK-PPC64: "-cc1" "-triple" "powerpc64-pc-freebsd8"
 // CHECK-PPC64: ld{{.*}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-PPC64: "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld-elf{{.*}}" "-o" "a.out" "{{.*}}crt1.o" "{{.*}}crti.o" "{{.*}}crtbegin.o" "-L[[SYSROOT]]/usr/lib" "{{.*}}.o" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "{{.*}}crtend.o" "{{.*}}crtn.o"
-//
+
+// RUN: %clang -no-canonical-prefixes \
+// RUN:   -target powerpc64le-unknown-freebsd13 %s \
+// RUN:   --sysroot=%S/Inputs/basic_freebsd64_tree -### 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PPC64LE %s
+// CHECK-PPC64LE: "-cc1" "-triple" "powerpc64le-unknown-freebsd13"
+// CHECK-PPC64LE: ld{{.*}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-PPC64LE: "--eh-frame-hdr" "-dynamic-linker" "{{.*}}ld-elf{{.*}}" "-o" "a.out" "{{.*}}crt1.o" "{{.*}}crti.o" "{{.*}}crtbegin.o" "-L[[SYSROOT]]/usr/lib" "{{.*}}.o" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "{{.*}}crtend.o" "{{.*}}crtn.o"
+
 //
 // Check that -m32 properly adjusts the toolchain flags.
 //
@@ -168,7 +176,7 @@
 // RUN: %clang -mcpu=ultrasparc -target sparc64-unknown-freebsd8 %s -### -no-integrated-as 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-SPARC-CPU %s
 // CHECK-SPARC-CPU: cc1{{.*}}" "-target-cpu" "ultrasparc"
-// CHECK-SPARC-CPU: as{{.*}}" "-Av9
+// CHECK-SPARC-CPU: as{{.*}}" "-Av9a
 
 // Check that -G flags are passed to the linker for mips
 // RUN: %clang -target mips-unknown-freebsd %s -### -G0 2>&1 \

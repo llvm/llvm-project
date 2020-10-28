@@ -694,6 +694,10 @@ ExprDependence clang::computeDependence(CXXConstructExpr *E) {
   return D;
 }
 
+ExprDependence clang::computeDependence(CXXDefaultInitExpr *E) {
+  return E->getExpr()->getDependence();
+}
+
 ExprDependence clang::computeDependence(LambdaExpr *E,
                                         bool ContainsUnexpandedParameterPack) {
   auto D = toExprDependence(E->getType()->getDependence());

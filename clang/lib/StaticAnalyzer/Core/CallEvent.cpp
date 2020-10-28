@@ -687,7 +687,7 @@ void CXXInstanceCall::getExtraInvalidatedValues(
     // base class decl, rather than the class of the instance which needs to be
     // checked for mutable fields.
     // TODO: We might as well look at the dynamic type of the object.
-    const Expr *Ex = getCXXThisExpr()->ignoreParenBaseCasts();
+    const Expr *Ex = getCXXThisExpr()->IgnoreParenBaseCasts();
     QualType T = Ex->getType();
     if (T->isPointerType()) // Arrow or implicit-this syntax?
       T = T->getPointeeType();

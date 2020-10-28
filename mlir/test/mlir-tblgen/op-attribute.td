@@ -107,7 +107,7 @@ def BOp : NS_Op<"b_op", []> {
     StrAttr:$str_attr,
     ElementsAttr:$elements_attr,
     FlatSymbolRefAttr:$function_attr,
-    SomeTypeAttr:$type_attr,
+    SomeTypeAttr:$some_type_attr,
     ArrayAttr:$array_attr,
     TypedArrayAttrBase<SomeAttr, "SomeAttr array">:$some_attr_array,
     TypeAttr:$type_attr
@@ -128,7 +128,7 @@ def BOp : NS_Op<"b_op", []> {
 // DEF: if (!((tblgen_str_attr.isa<::mlir::StringAttr>())))
 // DEF: if (!((tblgen_elements_attr.isa<::mlir::ElementsAttr>())))
 // DEF: if (!((tblgen_function_attr.isa<::mlir::FlatSymbolRefAttr>())))
-// DEF: if (!(((tblgen_type_attr.isa<::mlir::TypeAttr>())) && ((tblgen_type_attr.cast<::mlir::TypeAttr>().getValue().isa<SomeType>()))))
+// DEF: if (!(((tblgen_some_type_attr.isa<::mlir::TypeAttr>())) && ((tblgen_some_type_attr.cast<::mlir::TypeAttr>().getValue().isa<SomeType>()))))
 // DEF: if (!((tblgen_array_attr.isa<::mlir::ArrayAttr>())))
 // DEF: if (!(((tblgen_some_attr_array.isa<::mlir::ArrayAttr>())) && (::llvm::all_of(tblgen_some_attr_array.cast<::mlir::ArrayAttr>(), [](::mlir::Attribute attr) { return (some-condition); }))))
 // DEF: if (!(((tblgen_type_attr.isa<::mlir::TypeAttr>())) && ((tblgen_type_attr.cast<::mlir::TypeAttr>().getValue().isa<::mlir::Type>()))))
@@ -138,14 +138,14 @@ def BOp : NS_Op<"b_op", []> {
 
 // DEF: ::mlir::Attribute BOp::any_attr()
 // DEF: bool BOp::bool_attr()
-// DEF: ::llvm::APInt BOp::i32_attr()
-// DEF: ::llvm::APInt BOp::i64_attr()
+// DEF: uint32_t BOp::i32_attr()
+// DEF: uint64_t BOp::i64_attr()
 // DEF: ::llvm::APFloat BOp::f32_attr()
 // DEF: ::llvm::APFloat BOp::f64_attr()
 // DEF: ::llvm::StringRef BOp::str_attr()
 // DEF: ::mlir::ElementsAttr BOp::elements_attr()
 // DEF: ::llvm::StringRef BOp::function_attr()
-// DEF: SomeType BOp::type_attr()
+// DEF: SomeType BOp::some_type_attr()
 // DEF: ::mlir::ArrayAttr BOp::array_attr()
 // DEF: ::mlir::ArrayAttr BOp::some_attr_array()
 // DEF: ::mlir::Type BOp::type_attr()
@@ -196,7 +196,7 @@ def DOp : NS_Op<"d_op", []> {
 }
 
 // DECL-LABEL: DOp declarations
-// DECL: static void build({{.*}}, ::llvm::APInt i32_attr, ::llvm::APFloat f64_attr, ::llvm::StringRef str_attr, bool bool_attr, ::SomeI32Enum enum_attr, ::llvm::APInt dv_i32_attr, ::llvm::APFloat dv_f64_attr, ::llvm::StringRef dv_str_attr = "abc", bool dv_bool_attr = true, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
+// DECL: static void build({{.*}}, uint32_t i32_attr, ::llvm::APFloat f64_attr, ::llvm::StringRef str_attr, bool bool_attr, ::SomeI32Enum enum_attr, uint32_t dv_i32_attr, ::llvm::APFloat dv_f64_attr, ::llvm::StringRef dv_str_attr = "abc", bool dv_bool_attr = true, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
 
 // DEF-LABEL: DOp definitions
 // DEF: odsState.addAttribute("str_attr", odsBuilder.getStringAttr(str_attr));
@@ -238,7 +238,7 @@ def EOp : NS_Op<"e_op", []> {
 }
 
 // DECL-LABEL: EOp declarations
-// DECL: static void build({{.*}}, ::llvm::APInt i32_attr, ::llvm::APInt dv_i32_attr, ::llvm::APFloat f64_attr, ::llvm::APFloat dv_f64_attr, ::llvm::StringRef str_attr, ::llvm::StringRef dv_str_attr, bool bool_attr, bool dv_bool_attr, ::SomeI32Enum enum_attr, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
+// DECL: static void build({{.*}}, uint32_t i32_attr, uint32_t dv_i32_attr, ::llvm::APFloat f64_attr, ::llvm::APFloat dv_f64_attr, ::llvm::StringRef str_attr, ::llvm::StringRef dv_str_attr, bool bool_attr, bool dv_bool_attr, ::SomeI32Enum enum_attr, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
 
 // Test mixing operands and attributes in arbitrary order
 // ---
@@ -275,3 +275,19 @@ def SomeTypedArrayAttr : TypedArrayAttrBase<SomeAttr, "SomeAttr array">;
 
 // RECORD-LABEL: def SomeTypedArrayAttr
 // RECORD: Attr elementAttr = SomeAttr;
+
+def Test_Dialect_2 : Dialect {
+  let name = "dialect_2";
+}
+def MyStruct : StructAttr<"MyStruct", Test_Dialect_2, 
+[StructFieldAttr<"potatoes", I64ElementsAttr>]> {
+  let description = "A structure describing a number of potatoes.";
+}
+
+def StructAttrOp : NS_Op<"struct_attr_op", []> {
+  let arguments = (ins
+    MyStruct:$potatoes
+  );
+}
+
+// DECL: dialect_2::MyStruct potatoes();

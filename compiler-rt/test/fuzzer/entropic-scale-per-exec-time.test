@@ -1,0 +1,8 @@
+REQUIRES: linux, x86_64
+RUN: %cpp_compiler %S/EntropicScalePerExecTimeTest.cpp -o %t-EntropicScalePerExecTimeTest
+RUN: not %run %t-EntropicScalePerExecTimeTest -entropic=1 -entropic_scale_per_exec_time=1 -seed=1 -runs=100000 -max_len=10
+
+# The following test is added as a comment here for reference, which should
+# take more runs than with -entropic_scale_per_exec_time=1 to find the crash.
+# (it takes 126,633 runs)
+# RUN: not %run %t-EntropicScalePerExecTimeTest -entropic=1 -seed=1 -runs=200000 -max_len=10

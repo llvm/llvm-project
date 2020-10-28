@@ -237,7 +237,7 @@ protected:
         return ConstantFP::getAllOnesValue(Tp);
       return ConstantFP::getNullValue(Tp);
     } else if (Tp->isVectorTy()) {
-      VectorType *VTp = cast<VectorType>(Tp);
+      auto *VTp = cast<FixedVectorType>(Tp);
 
       std::vector<Constant*> TempValues;
       TempValues.reserve(VTp->getNumElements());
@@ -482,10 +482,13 @@ struct ExtractElementModifier: public Modifier {
 
   void Act() override {
     Value *Val0 = getRandomVectorValue();
-    Value *V = ExtractElementInst::Create(Val0,
-             ConstantInt::get(Type::getInt32Ty(BB->getContext()),
-             getRandom() % cast<VectorType>(Val0->getType())->getNumElements()),
-             "E", BB->getTerminator());
+    Value *V = ExtractElementInst::Create(
+        Val0,
+        ConstantInt::get(
+            Type::getInt32Ty(BB->getContext()),
+            getRandom() %
+                cast<FixedVectorType>(Val0->getType())->getNumElements()),
+        "E", BB->getTerminator());
     return PT->push_back(V);
   }
 };
@@ -498,7 +501,7 @@ struct ShuffModifier: public Modifier {
     Value *Val0 = getRandomVectorValue();
     Value *Val1 = getRandomValue(Val0->getType());
 
-    unsigned Width = cast<VectorType>(Val0->getType())->getNumElements();
+    unsigned Width = cast<FixedVectorType>(Val0->getType())->getNumElements();
     std::vector<Constant*> Idxs;
 
     Type *I32 = Type::getInt32Ty(BB->getContext());
@@ -526,10 +529,13 @@ struct InsertElementModifier: public Modifier {
     Value *Val0 = getRandomVectorValue();
     Value *Val1 = getRandomValue(Val0->getType()->getScalarType());
 
-    Value *V = InsertElementInst::Create(Val0, Val1,
-              ConstantInt::get(Type::getInt32Ty(BB->getContext()),
-              getRandom() % cast<VectorType>(Val0->getType())->getNumElements()),
-              "I",  BB->getTerminator());
+    Value *V = InsertElementInst::Create(
+        Val0, Val1,
+        ConstantInt::get(
+            Type::getInt32Ty(BB->getContext()),
+            getRandom() %
+                cast<FixedVectorType>(Val0->getType())->getNumElements()),
+        "I", BB->getTerminator());
     return PT->push_back(V);
   }
 };
@@ -545,7 +551,7 @@ struct CastModifier: public Modifier {
 
     // Handle vector casts vectors.
     if (VTy->isVectorTy()) {
-      VectorType *VecTy = cast<VectorType>(VTy);
+      auto *VecTy = cast<FixedVectorType>(VTy);
       DestTy = pickVectorType(VecTy->getNumElements());
     }
 

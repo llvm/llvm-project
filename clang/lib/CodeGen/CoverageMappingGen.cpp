@@ -31,40 +31,61 @@
 // is textually included.
 #define COVMAP_V3
 
+static llvm::cl::opt<bool> EmptyLineCommentCoverage(
+    "emptyline-comment-coverage",
+    llvm::cl::desc("Emit emptylines and comment lines as skipped regions (only "
+                   "disable it on test)"),
+    llvm::cl::init(true), llvm::cl::Hidden);
+
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::coverage;
 
 CoverageSourceInfo *
 CoverageMappingModuleGen::setUpCoverageCallbacks(Preprocessor &PP) {
-  CoverageSourceInfo *CoverageInfo = new CoverageSourceInfo();
+  CoverageSourceInfo *CoverageInfo =
+      new CoverageSourceInfo(PP.getSourceManager());
   PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(CoverageInfo));
-  PP.addCommentHandler(CoverageInfo);
-  PP.setPreprocessToken(true);
-  PP.setTokenWatcher([CoverageInfo](clang::Token Tok) {
-    // Update previous token location.
-    CoverageInfo->PrevTokLoc = Tok.getLocation();
-    if (Tok.getKind() != clang::tok::eod)
-      CoverageInfo->updateNextTokLoc(Tok.getLocation());
-  });
+  if (EmptyLineCommentCoverage) {
+    PP.addCommentHandler(CoverageInfo);
+    PP.setEmptylineHandler(CoverageInfo);
+    PP.setPreprocessToken(true);
+    PP.setTokenWatcher([CoverageInfo](clang::Token Tok) {
+      // Update previous token location.
+      CoverageInfo->PrevTokLoc = Tok.getLocation();
+      if (Tok.getKind() != clang::tok::eod)
+        CoverageInfo->updateNextTokLoc(Tok.getLocation());
+    });
+  }
   return CoverageInfo;
 }
 
+void CoverageSourceInfo::AddSkippedRange(SourceRange Range) {
+  if (EmptyLineCommentCoverage && !SkippedRanges.empty() &&
+      PrevTokLoc == SkippedRanges.back().PrevTokLoc &&
+      SourceMgr.isWrittenInSameFile(SkippedRanges.back().Range.getEnd(),
+                                    Range.getBegin()))
+    SkippedRanges.back().Range.setEnd(Range.getEnd());
+  else
+    SkippedRanges.push_back({Range, PrevTokLoc});
+}
+
 void CoverageSourceInfo::SourceRangeSkipped(SourceRange Range, SourceLocation) {
-  SkippedRanges.push_back({Range});
+  AddSkippedRange(Range);
+}
+
+void CoverageSourceInfo::HandleEmptyline(SourceRange Range) {
+  AddSkippedRange(Range);
 }
 
 bool CoverageSourceInfo::HandleComment(Preprocessor &PP, SourceRange Range) {
-  SkippedRanges.push_back({Range, PrevTokLoc});
-  AfterComment = true;
+  AddSkippedRange(Range);
   return false;
 }
 
 void CoverageSourceInfo::updateNextTokLoc(SourceLocation Loc) {
-  if (AfterComment) {
+  if (!SkippedRanges.empty() && SkippedRanges.back().NextTokLoc.isInvalid())
     SkippedRanges.back().NextTokLoc = Loc;
-    AfterComment = false;
-  }
 }
 
 namespace {
@@ -311,24 +332,17 @@ public:
                                               SourceLocation PrevTokLoc,
                                               SourceLocation NextTokLoc) {
     SpellingRegion SR{SM, LocStart, LocEnd};
-    // If Range begin location is invalid, it's not a comment region.
-    if (PrevTokLoc.isInvalid())
+    SR.ColumnStart = 1;
+    if (PrevTokLoc.isValid() && SM.isWrittenInSameFile(LocStart, PrevTokLoc) &&
+        SR.LineStart == SM.getSpellingLineNumber(PrevTokLoc))
+      SR.LineStart++;
+    if (NextTokLoc.isValid() && SM.isWrittenInSameFile(LocEnd, NextTokLoc) &&
+        SR.LineEnd == SM.getSpellingLineNumber(NextTokLoc)) {
+      SR.LineEnd--;
+      SR.ColumnEnd++;
+    }
+    if (SR.isInSourceOrder())
       return SR;
-    unsigned PrevTokLine = SM.getSpellingLineNumber(PrevTokLoc);
-    unsigned NextTokLine = SM.getSpellingLineNumber(NextTokLoc);
-    SpellingRegion newSR(SR);
-    if (SM.isWrittenInSameFile(LocStart, PrevTokLoc) &&
-        SR.LineStart == PrevTokLine) {
-      newSR.LineStart = SR.LineStart + 1;
-      newSR.ColumnStart = 1;
-    }
-    if (SM.isWrittenInSameFile(LocEnd, NextTokLoc) &&
-        SR.LineEnd == NextTokLine) {
-      newSR.LineEnd = SR.LineEnd - 1;
-      newSR.ColumnEnd = SR.ColumnStart + 1;
-    }
-    if (newSR.isInSourceOrder())
-      return newSR;
     return None;
   }
 

@@ -521,8 +521,8 @@ bool AMDGPUDAGToDAGISel::isNoNanSrc(SDValue N) const {
     return true;
 
   // TODO: Move into isKnownNeverNaN
-  if (N->getFlags().isDefined())
-    return N->getFlags().hasNoNaNs();
+  if (N->getFlags().hasNoNaNs())
+    return true;
 
   return CurDAG->isKnownNeverNaN(N);
 }

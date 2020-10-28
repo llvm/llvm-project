@@ -15,6 +15,7 @@
 #define MLIR_IR_OPERATION_SUPPORT_H
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BlockSupport.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/TypeRange.h"
@@ -28,7 +29,6 @@
 #include <memory>
 
 namespace mlir {
-class Block;
 class Dialect;
 class Operation;
 struct OperationState;
@@ -42,7 +42,6 @@ class Pattern;
 class Region;
 class ResultRange;
 class RewritePattern;
-class SuccessorRange;
 class Type;
 class Value;
 class ValueRange;
@@ -82,7 +81,7 @@ public:
   using OperationProperties = uint32_t;
 
   /// This is the name of the operation.
-  const StringRef name;
+  const Identifier name;
 
   /// This is the dialect that this operation belongs to.
   Dialect &dialect;
@@ -140,7 +139,7 @@ public:
     return interfaceMap.lookup<T>();
   }
 
-  /// Returns if the operation has a particular trait.
+  /// Returns true if the operation has a particular trait.
   template <template <typename T> class Trait> bool hasTrait() const {
     return hasRawTrait(TypeID::get<Trait>());
   }
@@ -171,13 +170,7 @@ private:
                                 SmallVectorImpl<OpFoldResult> &results),
       void (&getCanonicalizationPatterns)(OwningRewritePatternList &results,
                                           MLIRContext *context),
-      detail::InterfaceMap &&interfaceMap, bool (&hasTrait)(TypeID traitID))
-      : name(name), dialect(dialect), typeID(typeID),
-        parseAssembly(parseAssembly), printAssembly(printAssembly),
-        verifyInvariants(verifyInvariants), foldHook(foldHook),
-        getCanonicalizationPatterns(getCanonicalizationPatterns),
-        opProperties(opProperties), interfaceMap(std::move(interfaceMap)),
-        hasRawTrait(hasTrait) {}
+      detail::InterfaceMap &&interfaceMap, bool (&hasTrait)(TypeID traitID));
 
   /// The properties of the operation.
   const OperationProperties opProperties;
@@ -302,8 +295,11 @@ public:
   /// Return the operation name with dialect name stripped, if it has one.
   StringRef stripDialect() const;
 
-  /// Return the name of this operation.  This always succeeds.
+  /// Return the name of this operation. This always succeeds.
   StringRef getStringRef() const;
+
+  /// Return the name of this operation as an identifier. This always succeeds.
+  Identifier getIdentifier() const;
 
   /// If this operation has a registered operation description, return it.
   /// Otherwise return null.
@@ -367,8 +363,8 @@ public:
   OperationState(Location location, OperationName name);
 
   OperationState(Location location, StringRef name, ValueRange operands,
-                 ArrayRef<Type> types, ArrayRef<NamedAttribute> attributes,
-                 ArrayRef<Block *> successors = {},
+                 TypeRange types, ArrayRef<NamedAttribute> attributes,
+                 BlockRange successors = {},
                  MutableArrayRef<std::unique_ptr<Region>> regions = {});
 
   void addOperands(ValueRange newOperands);
@@ -397,12 +393,8 @@ public:
     attributes.append(newAttributes);
   }
 
-  /// Add an array of successors.
-  void addSuccessors(ArrayRef<Block *> newSuccessors) {
-    successors.append(newSuccessors.begin(), newSuccessors.end());
-  }
   void addSuccessors(Block *successor) { successors.push_back(successor); }
-  void addSuccessors(SuccessorRange newSuccessors);
+  void addSuccessors(BlockRange newSuccessors);
 
   /// Create a region that should be attached to the operation.  These regions
   /// can be filled in immediately without waiting for Operation to be
@@ -413,6 +405,10 @@ public:
   /// region will be transferred when the Operation is constructed.  If the
   /// region is null, a new empty region will be attached to the Operation.
   void addRegion(std::unique_ptr<Region> &&region);
+
+  /// Take ownership of a set of regions that should be attached to the
+  /// Operation.
+  void addRegions(MutableArrayRef<std::unique_ptr<Region>> regions);
 
   /// Get the context held by this operation state.
   MLIRContext *getContext() const { return location->getContext(); }

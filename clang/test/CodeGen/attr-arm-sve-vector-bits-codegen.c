@@ -3,7 +3,7 @@
 
 #include <arm_sve.h>
 
-#define N __ARM_FEATURE_SVE_BITS_EXPERIMENTAL
+#define N __ARM_FEATURE_SVE_BITS
 
 typedef svint32_t fixed_int32_t __attribute__((arm_sve_vector_bits(N)));
 typedef svbool_t fixed_bool_t __attribute__((arm_sve_vector_bits(N)));

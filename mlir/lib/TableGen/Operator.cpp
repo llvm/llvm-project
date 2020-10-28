@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -278,7 +279,7 @@ void Operator::populateTypeInferenceInfo(
 
   // Skip cases currently being custom generated.
   // TODO: Remove special cases.
-  if (getTrait("OpTrait::SameOperandsAndResultType"))
+  if (getTrait("::mlir::OpTrait::SameOperandsAndResultType"))
     return;
 
   // We create equivalence classes of argument/result types where arguments

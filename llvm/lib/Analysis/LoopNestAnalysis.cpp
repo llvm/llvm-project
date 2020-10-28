@@ -53,8 +53,8 @@ std::unique_ptr<LoopNest> LoopNest::getLoopNest(Loop &Root,
 
 bool LoopNest::arePerfectlyNested(const Loop &OuterLoop, const Loop &InnerLoop,
                                   ScalarEvolution &SE) {
-  assert(!OuterLoop.getSubLoops().empty() && "Outer loop should have subloops");
-  assert(InnerLoop.getParentLoop() && "Inner loop should have a parent");
+  assert(!OuterLoop.isInnermost() && "Outer loop should have subloops");
+  assert(!InnerLoop.isOutermost() && "Inner loop should have a parent");
   LLVM_DEBUG(dbgs() << "Checking whether loop '" << OuterLoop.getName()
                     << "' and '" << InnerLoop.getName()
                     << "' are perfectly nested.\n");

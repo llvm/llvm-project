@@ -28,7 +28,7 @@ InitVariablesCheck::InitVariablesCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM)),
-      MathHeader(Options.get("MathHeader", "math.h")) {}
+      MathHeader(Options.get("MathHeader", "<math.h>")) {}
 
 void InitVariablesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
@@ -103,7 +103,7 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
                InitializationString);
     if (AddMathInclude) {
       Diagnostic << IncludeInserter.createIncludeInsertion(
-          Source.getFileID(MatchedDecl->getBeginLoc()), MathHeader, false);
+          Source.getFileID(MatchedDecl->getBeginLoc()), MathHeader);
     }
   }
 }

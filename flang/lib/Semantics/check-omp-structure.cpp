@@ -456,6 +456,9 @@ void OmpStructureChecker::Enter(const parser::OmpAlignedClause &x) {
   }
   // 2.8.1 TODO: list-item attribute check
 }
+void OmpStructureChecker::Enter(const parser::OmpAllocateClause &) {
+  CheckAllowed(llvm::omp::Clause::OMPC_allocate);
+}
 void OmpStructureChecker::Enter(const parser::OmpDefaultClause &) {
   CheckAllowed(llvm::omp::Clause::OMPC_default);
 }

@@ -3472,7 +3472,7 @@ define void @truncstore_v8i32_v8i16(<8 x i32> %x, <8 x i16>* %p, <8 x i32> %mask
 ; AVX1-LABEL: truncstore_v8i32_v8i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = <0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u>
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
@@ -4431,7 +4431,7 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, <32 x i8>* %p, <32 x i8> %ma
 ; SSE2-LABEL: truncstore_v32i16_v32i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm7, %xmm7
-; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [255,255,255,255,255,255,255,255]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; SSE2-NEXT:    pand %xmm6, %xmm1
 ; SSE2-NEXT:    pand %xmm6, %xmm0
 ; SSE2-NEXT:    packuswb %xmm1, %xmm0
@@ -4648,7 +4648,7 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, <32 x i8>* %p, <32 x i8> %ma
 ; SSE4-LABEL: truncstore_v32i16_v32i8:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm7, %xmm7
-; SSE4-NEXT:    movdqa {{.*#+}} xmm6 = [255,255,255,255,255,255,255,255]
+; SSE4-NEXT:    movdqa {{.*#+}} xmm6 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; SSE4-NEXT:    pand %xmm6, %xmm1
 ; SSE4-NEXT:    pand %xmm6, %xmm0
 ; SSE4-NEXT:    packuswb %xmm1, %xmm0
@@ -5634,7 +5634,7 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, <16 x i8>* %p, <16 x i8> %ma
 ; SSE2-LABEL: truncstore_v16i16_v16i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; SSE2-NEXT:    pand %xmm4, %xmm1
 ; SSE2-NEXT:    pand %xmm4, %xmm0
 ; SSE2-NEXT:    packuswb %xmm1, %xmm0
@@ -5746,7 +5746,7 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, <16 x i8>* %p, <16 x i8> %ma
 ; SSE4-LABEL: truncstore_v16i16_v16i8:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pxor %xmm3, %xmm3
-; SSE4-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
+; SSE4-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; SSE4-NEXT:    pand %xmm4, %xmm1
 ; SSE4-NEXT:    pand %xmm4, %xmm0
 ; SSE4-NEXT:    packuswb %xmm1, %xmm0

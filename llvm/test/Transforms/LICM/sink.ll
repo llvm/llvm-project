@@ -1,8 +1,10 @@
-; RUN: opt -S -licm < %s | FileCheck %s --check-prefix=CHECK-LICM
+; RUN: opt -S -licm -licm-coldness-threshold=0 < %s | FileCheck %s --check-prefix=CHECK-LICM
+; RUN: opt -S -licm < %s | FileCheck %s --check-prefix=CHECK-BFI-LICM
 ; RUN: opt -S -licm < %s | opt -S -loop-sink | FileCheck %s --check-prefix=CHECK-SINK
 ; RUN: opt -S < %s -passes='require<opt-remark-emit>,loop(licm),loop-sink' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-SINK
-; RUN: opt -S -licm -enable-mssa-loop-dependency=true -verify-memoryssa < %s | FileCheck %s --check-prefix=CHECK-LICM
+; RUN: opt -S -licm -licm-coldness-threshold=0 -enable-mssa-loop-dependency=true -verify-memoryssa < %s | FileCheck %s --check-prefix=CHECK-LICM
+; RUN: opt -S -licm -enable-mssa-loop-dependency=true -verify-memoryssa < %s | FileCheck %s --check-prefix=CHECK-BFI-LICM
 
 ; Original source code:
 ; int g;
@@ -28,6 +30,10 @@ define i32 @foo(i32, i32) #0 !prof !2 {
 ; CHECK-LICM: .lr.ph.preheader:
 ; CHECK-LICM: load i32, i32* @g
 ; CHECK-LICM: br label %.lr.ph
+
+; CHECK-BFI-LICM: .lr.ph.preheader:
+; CHECK-BFI-LICM-NOT: load i32, i32* @g
+; CHECK-BFI-LICM: br label %.lr.ph
 
 .lr.ph:
   %.03 = phi i32 [ %8, %.combine ], [ 0, %.lr.ph.preheader ]

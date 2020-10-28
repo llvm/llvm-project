@@ -36,7 +36,7 @@ public:
     assert(Role != NodeRole::Detached);
 
     New->setRole(Role);
-    auto *P = Anchor->parent();
+    auto *P = Anchor->getParent();
     P->replaceChildRangeLowLevel(Anchor, Anchor, New);
 
     P->assertInvariants();
@@ -52,16 +52,16 @@ public:
     assert(New->isDetached());
 
     New->Role = Old->Role;
-    auto *P = Old->parent();
-    P->replaceChildRangeLowLevel(findPrevious(Old), Old->nextSibling(), New);
+    auto *P = Old->getParent();
+    P->replaceChildRangeLowLevel(findPrevious(Old), Old->getNextSibling(), New);
 
     P->assertInvariants();
   }
 
   /// Completely remove the node from its parent.
   static void remove(syntax::Node *N) {
-    auto *P = N->parent();
-    P->replaceChildRangeLowLevel(findPrevious(N), N->nextSibling(),
+    auto *P = N->getParent();
+    P->replaceChildRangeLowLevel(findPrevious(N), N->getNextSibling(),
                                  /*New=*/nullptr);
 
     P->assertInvariants();
@@ -70,11 +70,11 @@ public:
 
 private:
   static syntax::Node *findPrevious(syntax::Node *N) {
-    if (N->parent()->firstChild() == N)
+    if (N->getParent()->getFirstChild() == N)
       return nullptr;
-    for (syntax::Node *C = N->parent()->firstChild(); C != nullptr;
-         C = C->nextSibling()) {
-      if (C->nextSibling() == N)
+    for (syntax::Node *C = N->getParent()->getFirstChild(); C != nullptr;
+         C = C->getNextSibling()) {
+      if (C->getNextSibling() == N)
         return C;
     }
     llvm_unreachable("could not find a child node");
@@ -85,7 +85,7 @@ void syntax::removeStatement(syntax::Arena &A, syntax::Statement *S) {
   assert(S);
   assert(S->canModify());
 
-  if (isa<CompoundStatement>(S->parent())) {
+  if (isa<CompoundStatement>(S->getParent())) {
     // A child of CompoundStatement can just be safely removed.
     MutationsImpl::remove(S);
     return;

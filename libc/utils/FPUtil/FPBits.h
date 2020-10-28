@@ -73,6 +73,14 @@ template <typename T> struct __attribute__((packed)) FPBits {
   static constexpr int exponentBias = (1 << (ExponentWidth<T>::value - 1)) - 1;
   static constexpr int maxExponent = (1 << ExponentWidth<T>::value) - 1;
 
+  static constexpr UIntType minSubnormal = UIntType(1);
+  static constexpr UIntType maxSubnormal =
+      (UIntType(1) << MantissaWidth<T>::value) - 1;
+  static constexpr UIntType minNormal =
+      (UIntType(1) << MantissaWidth<T>::value);
+  static constexpr UIntType maxNormal =
+      ((UIntType(maxExponent) - 1) << MantissaWidth<T>::value) | maxSubnormal;
+
   // We don't want accidental type promotions/conversions so we require exact
   // type match.
   template <typename XType,

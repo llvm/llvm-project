@@ -1,5 +1,5 @@
 ===========================
-openmp 11.0.0 Release Notes
+OpenMP 11.0.0 Release Notes
 ===========================
 
 .. contents::

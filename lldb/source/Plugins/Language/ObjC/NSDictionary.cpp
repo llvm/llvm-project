@@ -388,7 +388,7 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
     return false;
 
   ObjCLanguageRuntime::ClassDescriptorSP descriptor(
-      runtime->GetClassDescriptor(valobj));
+      runtime->GetNonKVOClassDescriptor(valobj));
 
   if (!descriptor || !descriptor->IsValid())
     return false;

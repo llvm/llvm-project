@@ -1,10 +1,13 @@
-RUN: lld -flavor darwinnew -v \
+RUN: %lld -v \
 RUN:   -demangle \
 RUN:   -dynamic \
 RUN:   -no_deduplicate \
 RUN:   -lto_library /lib/foo \
 RUN:   -macosx_version_min 0 \
 RUN:   -dependency_info /path/to/dependency_info.dat \
-RUN:   -syslibroot /path/to/MacOSX.platform/Developer/SDKs/MacOSX.sdk
-RUN: not lld -flavor darwinnew -v --not-an-ignored-argument 2>&1 | FileCheck %s
+RUN:   -mllvm -time-passes \
+RUN:   -objc_abi_version 2 \
+RUN:   -ios_simulator_version_min 9.0.0 \
+RUN:   -sdk_version 13.2
+RUN: not %lld -v --not-an-ignored-argument 2>&1 | FileCheck %s
 CHECK: error: unknown argument: --not-an-ignored-argument

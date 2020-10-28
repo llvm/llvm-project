@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s -test-linalg-transform-patterns=test-affine-min-scf-canonicalization-patterns
-//| FileCheck %s
+// RUN: mlir-opt %s -test-linalg-transform-patterns=test-affine-min-scf-canonicalization-patterns | FileCheck %s
 
 // CHECK-LABEL: scf_for
 func @scf_for(%A : memref<i64>, %step : index) {

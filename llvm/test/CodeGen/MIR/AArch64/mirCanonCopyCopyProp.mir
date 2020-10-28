@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=arm64-apple-ios11.0.0 -o - -verify-machineinstrs -run-pass mir-canonicalizer %s | FileCheck %s
+# RUN: llc -mtriple=arm64-apple-ios11.0.0 -o - -verify-machineinstrs -mir-vreg-namer-use-stable-hash -run-pass mir-canonicalizer %s | FileCheck %s
 
 ...
 ---

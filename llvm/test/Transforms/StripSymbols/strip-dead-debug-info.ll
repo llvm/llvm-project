@@ -1,4 +1,5 @@
 ; RUN: opt -strip-dead-debug-info -verify %s -S | FileCheck %s
+; RUN: opt -passes='strip-dead-debug-info,verify' %s -S | FileCheck %s
 
 ; CHECK: ModuleID = '{{.*}}'
 ; CHECK-NOT: "bar"

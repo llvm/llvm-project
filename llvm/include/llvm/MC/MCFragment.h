@@ -64,6 +64,10 @@ private:
   /// The layout order of this fragment.
   unsigned LayoutOrder;
 
+  /// The subsection this fragment belongs to. This is 0 if the fragment is not
+  // in any subsection.
+  unsigned SubsectionNumber = 0;
+
   FragmentType Kind;
 
   /// Whether fragment is being laid out.
@@ -102,6 +106,9 @@ public:
   bool hasInstructions() const { return HasInstructions; }
 
   void dump() const;
+
+  void setSubsectionNumber(unsigned Value) { SubsectionNumber = Value; }
+  unsigned getSubsectionNumber() const { return SubsectionNumber; }
 };
 
 class MCDummyFragment : public MCFragment {

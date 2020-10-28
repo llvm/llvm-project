@@ -397,6 +397,15 @@ int OpenFile::PendingResult(const Terminator &terminator, int iostat) {
 
 bool IsATerminal(int fd) { return ::isatty(fd); }
 
+#ifdef WIN32
+// Access flags are normally defined in unistd.h, which unavailable under
+// Windows. Instead, define the flags as documented at
+// https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/access-waccess
+#define F_OK 00
+#define W_OK 02
+#define R_OK 04
+#endif
+
 bool IsExtant(const char *path) { return ::access(path, F_OK) == 0; }
 bool MayRead(const char *path) { return ::access(path, R_OK) == 0; }
 bool MayWrite(const char *path) { return ::access(path, W_OK) == 0; }

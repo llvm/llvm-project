@@ -174,7 +174,7 @@ namespace {
 struct Action {
   Record *R = nullptr;
   unsigned I = 0;
-  std::string S = nullptr;
+  std::string S;
 
   Action() = default;
   Action(Record *R, unsigned I, std::string S) : R(R), I(I), S(S) {}

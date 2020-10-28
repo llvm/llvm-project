@@ -13,6 +13,7 @@
 #include "resolve-names-utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/type.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
@@ -226,7 +227,8 @@ public:
   }
 
   bool Pre(const parser::OpenMPBlockConstruct &);
-  void Post(const parser::OpenMPBlockConstruct &) { PopContext(); }
+  void Post(const parser::OpenMPBlockConstruct &);
+
   void Post(const parser::OmpBeginBlockDirective &) {
     GetContext().withinConstruct = true;
   }
@@ -254,6 +256,11 @@ public:
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpPrivate);
     return false;
   }
+  bool Pre(const parser::OmpAllocateClause &x) {
+    const auto &objectList{std::get<parser::OmpObjectList>(x.t)};
+    ResolveOmpObjectList(objectList, Symbol::Flag::OmpAllocate);
+    return false;
+  }
   bool Pre(const parser::OmpClause::Firstprivate &x) {
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpFirstPrivate);
     return false;
@@ -273,6 +280,10 @@ private:
       Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
       Symbol::Flag::OmpReduction, Symbol::Flag::OmpLinear};
 
+  static constexpr Symbol::Flags privateDataSharingAttributeFlags{
+      Symbol::Flag::OmpPrivate, Symbol::Flag::OmpFirstPrivate,
+      Symbol::Flag::OmpLastPrivate};
+
   static constexpr Symbol::Flags ompFlagsRequireNewSymbol{
       Symbol::Flag::OmpPrivate, Symbol::Flag::OmpLinear,
       Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
@@ -280,6 +291,21 @@ private:
 
   static constexpr Symbol::Flags ompFlagsRequireMark{
       Symbol::Flag::OmpThreadprivate};
+
+  std::vector<const parser::Name *> allocateNames_; // on one directive
+  SymbolSet privateDataSharingAttributeObjects_; // on one directive
+
+  void AddAllocateName(const parser::Name *&object) {
+    allocateNames_.push_back(object);
+  }
+  void ClearAllocateNames() { allocateNames_.clear(); }
+
+  void AddPrivateDataSharingAttributeObjects(SymbolRef object) {
+    privateDataSharingAttributeObjects_.insert(object);
+  }
+  void ClearPrivateDataSharingAttributeObjects() {
+    privateDataSharingAttributeObjects_.clear();
+  }
 
   // Predetermined DSA rules
   void PrivatizeAssociatedLoopIndex(const parser::OpenMPLoopConstruct &);
@@ -632,7 +658,47 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
     break;
   }
   ClearDataSharingAttributeObjects();
+  ClearPrivateDataSharingAttributeObjects();
+  ClearAllocateNames();
   return true;
+}
+
+void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
+  const auto &beginBlockDir{std::get<parser::OmpBeginBlockDirective>(x.t)};
+  const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
+  switch (beginDir.v) {
+  case llvm::omp::Directive::OMPD_parallel:
+  case llvm::omp::Directive::OMPD_single:
+  case llvm::omp::Directive::OMPD_target:
+  case llvm::omp::Directive::OMPD_task:
+  case llvm::omp::Directive::OMPD_teams:
+  case llvm::omp::Directive::OMPD_parallel_workshare:
+  case llvm::omp::Directive::OMPD_target_teams:
+  case llvm::omp::Directive::OMPD_target_parallel: {
+    bool hasPrivate;
+    for (const auto *allocName : allocateNames_) {
+      hasPrivate = false;
+      for (auto privateObj : privateDataSharingAttributeObjects_) {
+        const Symbol &symbolPrivate{*privateObj};
+        if (allocName->source == symbolPrivate.name()) {
+          hasPrivate = true;
+          break;
+        }
+      }
+      if (!hasPrivate) {
+        context_.Say(allocName->source,
+            "The ALLOCATE clause requires that '%s' must be listed in a "
+            "private "
+            "data-sharing attribute clause on the same directive"_err_en_US,
+            allocName->ToString());
+      }
+    }
+    break;
+  }
+  default:
+    break;
+  }
+  PopContext();
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
@@ -879,6 +945,9 @@ void OmpAttributeVisitor::ResolveOmpObject(
                 if (dataSharingAttributeFlags.test(ompFlag)) {
                   CheckMultipleAppearances(*name, *symbol, ompFlag);
                 }
+                if (ompFlag == Symbol::Flag::OmpAllocate) {
+                  AddAllocateName(name);
+                }
               }
             } else {
               // Array sections to be changed to substrings as needed
@@ -976,6 +1045,9 @@ void OmpAttributeVisitor::CheckMultipleAppearances(
         name.ToString());
   } else {
     AddDataSharingAttributeObject(*target);
+    if (privateDataSharingAttributeFlags.test(ompFlag)) {
+      AddPrivateDataSharingAttributeObjects(*target);
+    }
   }
 }
 

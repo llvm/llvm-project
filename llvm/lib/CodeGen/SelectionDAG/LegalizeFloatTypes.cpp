@@ -134,6 +134,12 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::UINT_TO_FP:  R = SoftenFloatRes_XINT_TO_FP(N); break;
     case ISD::UNDEF:       R = SoftenFloatRes_UNDEF(N); break;
     case ISD::VAARG:       R = SoftenFloatRes_VAARG(N); break;
+    case ISD::VECREDUCE_FADD:
+    case ISD::VECREDUCE_FMUL:
+    case ISD::VECREDUCE_FMIN:
+    case ISD::VECREDUCE_FMAX:
+      R = SoftenFloatRes_VECREDUCE(N);
+      break;
   }
 
   // If R is null, the sub-method took care of registering the result.
@@ -770,6 +776,12 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_XINT_TO_FP(SDNode *N) {
   if (IsStrict)
     ReplaceValueWith(SDValue(N, 1), Tmp.second);
   return Tmp.first;
+}
+
+SDValue DAGTypeLegalizer::SoftenFloatRes_VECREDUCE(SDNode *N) {
+  // Expand and soften recursively.
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduce(N, DAG));
+  return SDValue();
 }
 
 
@@ -1608,6 +1620,10 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
   SDLoc dl(N);
   SDValue Chain = Strict ? N->getOperand(0) : DAG.getEntryNode();
 
+  // TODO: Any other flags to propagate?
+  SDNodeFlags Flags;
+  Flags.setNoFPExcept(N->getFlags().hasNoFPExcept());
+
   // First do an SINT_TO_FP, whether the original was signed or unsigned.
   // When promoting partial word types to i32 we must honor the signedness,
   // though.
@@ -1618,8 +1634,8 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
     Lo = DAG.getConstantFP(APFloat(DAG.EVTToAPFloatSemantics(NVT),
                                    APInt(NVT.getSizeInBits(), 0)), dl, NVT);
     if (Strict) {
-      Hi = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, {NVT, MVT::Other},
-                       {Chain, Src});
+      Hi = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl,
+                       DAG.getVTList(NVT, MVT::Other), {Chain, Src}, Flags);
       Chain = Hi.getValue(1);
     } else
       Hi = DAG.getNode(ISD::SINT_TO_FP, dl, NVT, Src);
@@ -1678,12 +1694,12 @@ void DAGTypeLegalizer::ExpandFloatRes_XINT_TO_FP(SDNode *N, SDValue &Lo,
     break;
   }
 
-  // TODO: Are there fast-math-flags to propagate to this FADD?
+  // TODO: Are there other fast-math-flags to propagate to this FADD?
   SDValue NewLo = DAG.getConstantFP(
       APFloat(APFloat::PPCDoubleDouble(), APInt(128, Parts)), dl, MVT::ppcf128);
   if (Strict) {
-    Lo = DAG.getNode(ISD::STRICT_FADD, dl, {VT, MVT::Other},
-                     {Chain, Hi, NewLo});
+    Lo = DAG.getNode(ISD::STRICT_FADD, dl, DAG.getVTList(VT, MVT::Other),
+                     {Chain, Hi, NewLo}, Flags);
     Chain = Lo.getValue(1);
     ReplaceValueWith(SDValue(N, 1), Chain);
   } else
@@ -1777,17 +1793,18 @@ void DAGTypeLegalizer::FloatExpandSetCCOperands(SDValue &NewLHS,
   // The following can be improved, but not that much.
   SDValue Tmp1, Tmp2, Tmp3, OutputChain;
   Tmp1 = DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()), LHSHi,
-                      RHSHi, ISD::SETOEQ, Chain, IsSignaling);
+                      RHSHi, ISD::SETOEQ, SDNodeFlags(), Chain, IsSignaling);
   OutputChain = Tmp1->getNumValues() > 1 ? Tmp1.getValue(1) : SDValue();
   Tmp2 = DAG.getSetCC(dl, getSetCCResultType(LHSLo.getValueType()), LHSLo,
-                      RHSLo, CCCode, OutputChain, IsSignaling);
+                      RHSLo, CCCode, SDNodeFlags(), OutputChain, IsSignaling);
   OutputChain = Tmp2->getNumValues() > 1 ? Tmp2.getValue(1) : SDValue();
   Tmp3 = DAG.getNode(ISD::AND, dl, Tmp1.getValueType(), Tmp1, Tmp2);
-  Tmp1 = DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()), LHSHi,
-                      RHSHi, ISD::SETUNE, OutputChain, IsSignaling);
+  Tmp1 =
+      DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()), LHSHi, RHSHi,
+                   ISD::SETUNE, SDNodeFlags(), OutputChain, IsSignaling);
   OutputChain = Tmp1->getNumValues() > 1 ? Tmp1.getValue(1) : SDValue();
   Tmp2 = DAG.getSetCC(dl, getSetCCResultType(LHSHi.getValueType()), LHSHi,
-                      RHSHi, CCCode, OutputChain, IsSignaling);
+                      RHSHi, CCCode, SDNodeFlags(), OutputChain, IsSignaling);
   OutputChain = Tmp2->getNumValues() > 1 ? Tmp2.getValue(1) : SDValue();
   Tmp1 = DAG.getNode(ISD::AND, dl, Tmp1.getValueType(), Tmp1, Tmp2);
   NewLHS = DAG.getNode(ISD::OR, dl, Tmp1.getValueType(), Tmp1, Tmp3);
@@ -2231,6 +2248,12 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::UINT_TO_FP: R = PromoteFloatRes_XINT_TO_FP(N); break;
     case ISD::UNDEF:      R = PromoteFloatRes_UNDEF(N); break;
     case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
+    case ISD::VECREDUCE_FADD:
+    case ISD::VECREDUCE_FMUL:
+    case ISD::VECREDUCE_FMIN:
+    case ISD::VECREDUCE_FMAX:
+      R = PromoteFloatRes_VECREDUCE(N);
+      break;
   }
 
   if (R.getNode())
@@ -2462,6 +2485,15 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_UNDEF(SDNode *N) {
                                                N->getValueType(0)));
 }
 
+SDValue DAGTypeLegalizer::PromoteFloatRes_VECREDUCE(SDNode *N) {
+  // Expand and promote recursively.
+  // TODO: This is non-optimal, but dealing with the concurrently happening
+  // vector-legalization is non-trivial. We could do something similar to
+  // PromoteFloatRes_EXTRACT_VECTOR_ELT here.
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduce(N, DAG));
+  return SDValue();
+}
+
 SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
   EVT VT = N->getValueType(0);
 
@@ -2570,6 +2602,12 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::UINT_TO_FP:  R = SoftPromoteHalfRes_XINT_TO_FP(N); break;
   case ISD::UNDEF:       R = SoftPromoteHalfRes_UNDEF(N); break;
   case ISD::ATOMIC_SWAP: R = BitcastToInt_ATOMIC_SWAP(N); break;
+  case ISD::VECREDUCE_FADD:
+  case ISD::VECREDUCE_FMUL:
+  case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMAX:
+    R = SoftPromoteHalfRes_VECREDUCE(N);
+    break;
   }
 
   if (R.getNode())
@@ -2760,6 +2798,12 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_BinOp(SDNode *N) {
 
   // Convert back to FP16 as an integer.
   return DAG.getNode(ISD::FP_TO_FP16, dl, MVT::i16, Res);
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_VECREDUCE(SDNode *N) {
+  // Expand and soften recursively.
+  ReplaceValueWith(SDValue(N, 0), TLI.expandVecReduce(N, DAG));
+  return SDValue();
 }
 
 //===----------------------------------------------------------------------===//

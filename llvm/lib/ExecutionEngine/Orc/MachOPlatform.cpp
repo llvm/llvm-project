@@ -185,19 +185,19 @@ MachOPlatform::getInitializerSequence(JITDylib &JD) {
            << JD.getName() << "\n";
   });
 
-  std::vector<JITDylib *> DFSLinkOrder;
+  std::vector<std::shared_ptr<JITDylib>> DFSLinkOrder;
 
   while (true) {
 
     DenseMap<JITDylib *, SymbolLookupSet> NewInitSymbols;
 
     ES.runSessionLocked([&]() {
-      DFSLinkOrder = getDFSLinkOrder(JD);
+      DFSLinkOrder = JD.getDFSLinkOrder();
 
-      for (auto *InitJD : DFSLinkOrder) {
-        auto RISItr = RegisteredInitSymbols.find(InitJD);
+      for (auto &InitJD : DFSLinkOrder) {
+        auto RISItr = RegisteredInitSymbols.find(InitJD.get());
         if (RISItr != RegisteredInitSymbols.end()) {
-          NewInitSymbols[InitJD] = std::move(RISItr->second);
+          NewInitSymbols[InitJD.get()] = std::move(RISItr->second);
           RegisteredInitSymbols.erase(RISItr);
         }
       }
@@ -229,14 +229,14 @@ MachOPlatform::getInitializerSequence(JITDylib &JD) {
   InitializerSequence FullInitSeq;
   {
     std::lock_guard<std::mutex> Lock(InitSeqsMutex);
-    for (auto *InitJD : reverse(DFSLinkOrder)) {
+    for (auto &InitJD : reverse(DFSLinkOrder)) {
       LLVM_DEBUG({
         dbgs() << "MachOPlatform: Appending inits for \"" << InitJD->getName()
                << "\" to sequence\n";
       });
-      auto ISItr = InitSeqs.find(InitJD);
+      auto ISItr = InitSeqs.find(InitJD.get());
       if (ISItr != InitSeqs.end()) {
-        FullInitSeq.emplace_back(InitJD, std::move(ISItr->second));
+        FullInitSeq.emplace_back(InitJD.get(), std::move(ISItr->second));
         InitSeqs.erase(ISItr);
       }
     }
@@ -247,37 +247,17 @@ MachOPlatform::getInitializerSequence(JITDylib &JD) {
 
 Expected<MachOPlatform::DeinitializerSequence>
 MachOPlatform::getDeinitializerSequence(JITDylib &JD) {
-  std::vector<JITDylib *> DFSLinkOrder = getDFSLinkOrder(JD);
+  std::vector<std::shared_ptr<JITDylib>> DFSLinkOrder = JD.getDFSLinkOrder();
 
   DeinitializerSequence FullDeinitSeq;
   {
     std::lock_guard<std::mutex> Lock(InitSeqsMutex);
-    for (auto *DeinitJD : DFSLinkOrder) {
-      FullDeinitSeq.emplace_back(DeinitJD, MachOJITDylibDeinitializers());
+    for (auto &DeinitJD : DFSLinkOrder) {
+      FullDeinitSeq.emplace_back(DeinitJD.get(), MachOJITDylibDeinitializers());
     }
   }
 
   return FullDeinitSeq;
-}
-
-std::vector<JITDylib *> MachOPlatform::getDFSLinkOrder(JITDylib &JD) {
-  std::vector<JITDylib *> Result, WorkStack({&JD});
-  DenseSet<JITDylib *> Visited;
-
-  while (!WorkStack.empty()) {
-    auto *NextJD = WorkStack.back();
-    WorkStack.pop_back();
-    if (Visited.count(NextJD))
-      continue;
-    Visited.insert(NextJD);
-    Result.push_back(NextJD);
-    NextJD->withLinkOrderDo([&](const JITDylibSearchOrder &LO) {
-      for (auto &KV : LO)
-        WorkStack.push_back(KV.first);
-    });
-  }
-
-  return Result;
 }
 
 void MachOPlatform::registerInitInfo(
@@ -319,13 +299,16 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
     MaterializationResponsibility &MR, const Triple &TT,
     jitlink::PassConfiguration &Config) {
 
+  if (!MR.getInitializerSymbol())
+    return;
+
   Config.PrePrunePasses.push_back([this, &MR](jitlink::LinkGraph &G) -> Error {
     JITLinkSymbolVector InitSectionSymbols;
     preserveInitSectionIfPresent(InitSectionSymbols, G, "__mod_init_func");
     preserveInitSectionIfPresent(InitSectionSymbols, G, "__objc_selrefs");
     preserveInitSectionIfPresent(InitSectionSymbols, G, "__objc_classlist");
 
-    if (!InitSymbolDeps.empty()) {
+    if (!InitSectionSymbols.empty()) {
       std::lock_guard<std::mutex> Lock(InitScraperMutex);
       InitSymbolDeps[&MR] = std::move(InitSectionSymbols);
     }
@@ -343,10 +326,8 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
 
     JITTargetAddress ObjCImageInfoAddr = 0;
     if (auto *ObjCImageInfoSec = G.findSectionByName("__objc_image_info")) {
-      if (auto Addr = jitlink::SectionRange(*ObjCImageInfoSec).getStart()) {
+      if (auto Addr = jitlink::SectionRange(*ObjCImageInfoSec).getStart())
         ObjCImageInfoAddr = Addr;
-        dbgs() << "Recorded __objc_imageinfo @ " << formatv("{0:x16}", Addr);
-      }
     }
 
     // Record __mod_init_func.

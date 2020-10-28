@@ -17,6 +17,7 @@ namespace llvm {
 namespace ARM {
 namespace WinEH {
 class RuntimeFunction;
+class RuntimeFunctionARM64;
 
 class Decoder {
   static const size_t PDataEntrySize;
@@ -120,6 +121,14 @@ class Decoder {
                     bool Prologue);
   bool opcode_save_next(const uint8_t *Opcodes, unsigned &Offset,
                         unsigned Length, bool Prologue);
+  bool opcode_trap_frame(const uint8_t *Opcodes, unsigned &Offset,
+                         unsigned Length, bool Prologue);
+  bool opcode_machine_frame(const uint8_t *Opcodes, unsigned &Offset,
+                            unsigned Length, bool Prologue);
+  bool opcode_context(const uint8_t *Opcodes, unsigned &Offset, unsigned Length,
+                      bool Prologue);
+  bool opcode_clear_unwound_to_call(const uint8_t *Opcodes, unsigned &Offset,
+                                    unsigned Length, bool Prologue);
 
   void decodeOpcodes(ArrayRef<uint8_t> Opcodes, unsigned Offset,
                      bool Prologue);
@@ -146,6 +155,9 @@ class Decoder {
   bool dumpPackedEntry(const object::COFFObjectFile &COFF,
                        const object::SectionRef Section, uint64_t Offset,
                        unsigned Index, const RuntimeFunction &Entry);
+  bool dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
+                            const object::SectionRef Section, uint64_t Offset,
+                            unsigned Index, const RuntimeFunctionARM64 &Entry);
   bool dumpProcedureDataEntry(const object::COFFObjectFile &COFF,
                               const object::SectionRef Section, unsigned Entry,
                               ArrayRef<uint8_t> Contents);

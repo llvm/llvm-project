@@ -205,18 +205,15 @@ llvm::Expected<std::string> qualifyAllDecls(const FunctionDecl *FD,
     }
   });
 
-  if (HadErrors) {
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "define inline: Failed to compute qualifiers see logs for details.");
-  }
+  if (HadErrors)
+    return error(
+        "define inline: Failed to compute qualifiers. See logs for details.");
 
   // Get new begin and end positions for the qualified body.
   auto OrigBodyRange = toHalfOpenFileRange(
       SM, FD->getASTContext().getLangOpts(), FD->getBody()->getSourceRange());
   if (!OrigBodyRange)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Couldn't get range func body.");
+    return error("Couldn't get range func body.");
 
   unsigned BodyBegin = SM.getFileOffset(OrigBodyRange->getBegin());
   unsigned BodyEnd = Replacements.getShiftedCodePosition(
@@ -311,9 +308,7 @@ renameParameters(const FunctionDecl *Dest, const FunctionDecl *Source) {
         ReplaceRange = Lexer::makeFileCharRange(ReplaceRange, SM, LangOpts);
         // Bail out if we need to replace macro bodies.
         if (ReplaceRange.isInvalid()) {
-          auto Err = llvm::createStringError(
-              llvm::inconvertibleErrorCode(),
-              "Cant rename parameter inside macro body.");
+          auto Err = error("Cant rename parameter inside macro body.");
           elog("define inline: {0}", Err);
           return std::move(Err);
         }
@@ -450,11 +445,8 @@ public:
     const auto &SM = AST.getSourceManager();
 
     auto Semicolon = getSemicolonForDecl(Target);
-    if (!Semicolon) {
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          "Couldn't find semicolon for target declaration.");
-    }
+    if (!Semicolon)
+      return error("Couldn't find semicolon for target declaration.");
 
     auto AddInlineIfNecessary = addInlineIfInHeader(Target);
     auto ParamReplacements = renameParameters(Target, Source);
@@ -479,10 +471,8 @@ public:
         SM.getExpansionRange(CharSourceRange::getCharRange(getBeginLoc(Source),
                                                            Source->getEndLoc()))
             .getAsRange());
-    if (!DefRange) {
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Couldn't get range for the source.");
-    }
+    if (!DefRange)
+      return error("Couldn't get range for the source.");
     unsigned int SourceLen = SM.getFileOffset(DefRange->getEnd()) -
                              SM.getFileOffset(DefRange->getBegin());
     const tooling::Replacement DeleteFuncBody(SM, DefRange->getBegin(),

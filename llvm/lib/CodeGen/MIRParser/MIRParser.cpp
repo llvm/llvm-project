@@ -451,10 +451,8 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   }
   // Check Basic Block Section Flags.
   if (MF.getTarget().getBBSectionsType() == BasicBlockSection::Labels) {
-    MF.createBBLabels();
     MF.setBBSectionsType(BasicBlockSection::Labels);
   } else if (MF.hasBBSections()) {
-    MF.createBBLabels();
     MF.assignBeginEndSections();
   }
   PFS.SM = &SM;
@@ -639,6 +637,12 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
 
   // Compute MachineRegisterInfo::UsedPhysRegMask
   for (const MachineBasicBlock &MBB : MF) {
+    // Make sure MRI knows about registers clobbered by unwinder.
+    const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+    if (MBB.isEHPad())
+      if (auto *RegMask = TRI->getCustomEHPadPreservedMask(MF))
+        MRI.addPhysRegsUsedFromRegMask(RegMask);
+
     for (const MachineInstr &MI : MBB) {
       for (const MachineOperand &MO : MI.operands()) {
         if (!MO.isRegMask())

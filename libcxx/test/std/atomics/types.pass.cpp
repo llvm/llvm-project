@@ -30,15 +30,43 @@
 
 #include "test_macros.h"
 
-template <class A>
-void
-test_atomic()
+template <class A, bool Integral>
+struct test_atomic
 {
-    A a; (void)a;
+    test_atomic()
+    {
+        A a; (void)a;
 #if TEST_STD_VER >= 17
-    static_assert((std::is_same<typename A::value_type, decltype(a.load())>::value), "");
+    static_assert((std::is_same_v<typename A::value_type, decltype(a.load())>), "");
 #endif
-}
+    }
+};
+
+template <class A>
+struct test_atomic<A, true>
+{
+    test_atomic()
+    {
+        A a; (void)a;
+#if TEST_STD_VER >= 17
+    static_assert((std::is_same_v<typename A::value_type, decltype(a.load())>), "");
+    static_assert((std::is_same_v<typename A::value_type, typename A::difference_type>), "");
+#endif
+    }
+};
+
+template <class A>
+struct test_atomic<A*, false>
+{
+    test_atomic()
+    {
+        A a; (void)a;
+#if TEST_STD_VER >= 17
+    static_assert((std::is_same_v<typename A::value_type, decltype(a.load())>), "");
+    static_assert((std::is_same_v<typename A::difference_type, ptrdiff_t>), "");
+#endif
+    }
+};
 
 template <class T>
 void
@@ -46,13 +74,28 @@ test()
 {
     using A = std::atomic<T>;
 #if TEST_STD_VER >= 17
-    static_assert((std::is_same<typename A::value_type, T>::value), "");
+    static_assert((std::is_same_v<typename A::value_type, T>), "");
 #endif
-    test_atomic<A>();
+    test_atomic<A, std::is_integral<T>::value && !std::is_same<T, bool>::value>();
 }
 
 struct TriviallyCopyable {
     int i_;
+};
+
+struct WeirdTriviallyCopyable
+{
+    char i, j, k; /* the 3 chars of doom */
+};
+
+struct PaddedTriviallyCopyable
+{
+    char i; int j; /* probably lock-free? */
+};
+
+struct LargeTriviallyCopyable
+{
+    int i, j[127]; /* decidedly not lock-free */
 };
 
 int main(int, char**)
@@ -111,13 +154,23 @@ int main(int, char**)
     test<uintmax_t> ();
 
     test<TriviallyCopyable>();
+    test<PaddedTriviallyCopyable>();
+#ifndef __APPLE__ // Apple doesn't ship libatomic
+    /*
+        These aren't going to be lock-free,
+        so some libatomic.a is necessary.
+    */
+    test<WeirdTriviallyCopyable>();
+    test<LargeTriviallyCopyable>();
+#endif
+
     test<std::thread::id>();
     test<std::chrono::nanoseconds>();
     test<float>();
 
 #if TEST_STD_VER >= 20
-    test_atomic<std::atomic_signed_lock_free>();
-    test_atomic<std::atomic_unsigned_lock_free>();
+    test<std::atomic_signed_lock_free>();
+    test<std::atomic_unsigned_lock_free>();
 /*
     test<std::shared_ptr<int>>();
 */

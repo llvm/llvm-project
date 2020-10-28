@@ -261,6 +261,10 @@ public:
 
   StackMaps(AsmPrinter &AP);
 
+  /// Get index of next meta operand.
+  /// Similar to parseOperand, but does not actually parses operand meaning.
+  static unsigned getNextMetaArgIdx(MachineInstr *MI, unsigned CurIdx);
+
   void reset() {
     CSInfos.clear();
     ConstPool.clear();

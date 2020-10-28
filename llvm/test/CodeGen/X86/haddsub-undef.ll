@@ -1051,7 +1051,7 @@ define <4 x float> @PR34724_add_v4f32_0u23(<4 x float> %0, <4 x float> %1) {
 ; SSE-SLOW-NEXT:    addps %xmm1, %xmm2
 ; SSE-SLOW-NEXT:    movsldup {{.*#+}} xmm3 = xmm1[0,0,2,2]
 ; SSE-SLOW-NEXT:    addps %xmm1, %xmm3
-; SSE-SLOW-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,0],xmm2[0,0]
+; SSE-SLOW-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,1],xmm2[0,3]
 ; SSE-SLOW-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm3[2,0]
 ; SSE-SLOW-NEXT:    retq
 ;

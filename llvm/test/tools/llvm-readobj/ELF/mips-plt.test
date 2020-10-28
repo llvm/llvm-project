@@ -140,3 +140,91 @@ DynamicSymbols: []
 # RUN: not llvm-readobj -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o -check-prefix ERR7
 
 # ERR7: error: '[[FILE]]': unable to get a string table for the SHT_DYNAMIC section with index 1: invalid sh_type for symbol table, expected SHT_SYMTAB or SHT_DYNSYM
+
+## Check how we print PLT entries when they are unnamed section symbols.
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readobj -A %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=SEC-SYMS-LLVM
+# RUN: llvm-readelf -A %t3 2>&1 | FileCheck %s -DFILE=%t3 --check-prefix=SEC-SYMS-GNU
+
+# SEC-SYMS-LLVM:      PLT GOT {
+# SEC-SYMS-LLVM:        Entries [
+# SEC-SYMS-LLVM:          Entry {
+# SEC-SYMS-LLVM:            Section: Absolute (0xFFF1)
+# SEC-SYMS-LLVM-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff1 (SHN_ABS)
+# SEC-SYMS-LLVM-NEXT:       Name: <?> (0)
+# SEC-SYMS-LLVM-NEXT:     }
+# SEC-SYMS-LLVM-NEXT:     Entry {
+# SEC-SYMS-LLVM:            Section: .got.plt (0x2)
+# SEC-SYMS-LLVM-NEXT:       Name: .got.plt (0)
+# SEC-SYMS-LLVM-NEXT:     }
+# SEC-SYMS-LLVM-NEXT:     Entry {
+# SEC-SYMS-LLVM:            Section: Common (0xFFF2)
+# SEC-SYMS-LLVM-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff2 (SHN_COMMON)
+# SEC-SYMS-LLVM-NEXT:       Name: <?> (0)
+# SEC-SYMS-LLVM-NEXT:     }
+# SEC-SYMS-LLVM-NEXT:     Entry {
+# SEC-SYMS-LLVM:            Type: Section (0x3)
+# SEC-SYMS-LLVM-NEXT: warning: '[[FILE]]': extended symbol index (4) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# SEC-SYMS-LLVM-NEXT:       Section: Reserved (0xFFFF)
+# SEC-SYMS-LLVM-NEXT:       Name: <?> (0)
+# SEC-SYMS-LLVM-NEXT:     }
+# SEC-SYMS-LLVM-NEXT:   ]
+# SEC-SYMS-LLVM-NEXT: }
+
+# SEC-SYMS-GNU:      PLT GOT:
+# SEC-SYMS-GNU:       Entries:
+# SEC-SYMS-GNU-NEXT:   Address          {{.*}} Ndx Name
+# SEC-SYMS-GNU-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff1 (SHN_ABS)
+# SEC-SYMS-GNU-NEXT:   0000000000002010 {{.*}} ABS <?>
+# SEC-SYMS-GNU-NEXT:   0000000000002018 {{.*}}   2 .got.plt
+# SEC-SYMS-GNU-NEXT: warning: '[[FILE]]': unable to get section index for symbol with st_shndx = 0xfff2 (SHN_COMMON)
+# SEC-SYMS-GNU-NEXT:   0000000000002020 {{.*}} COM <?>
+# SEC-SYMS-GNU-NEXT: warning: '[[FILE]]': extended symbol index (4) is past the end of the SHT_SYMTAB_SHNDX section of size 0
+# SEC-SYMS-GNU-NEXT:   0000000000002028 {{.*}} RSV[0xffff] <?>
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+Sections:
+  - Name:    .rel.plt
+    Type:    SHT_REL
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x1000
+    Link:    .dynsym
+    Relocations:
+      - Offset: 0x1
+        Symbol: 1
+        Type:   R_MIPS_JUMP_SLOT
+      - Offset: 0x2
+        Symbol: 2
+        Type:   R_MIPS_JUMP_SLOT
+      - Offset: 0x2
+        Symbol: 3
+        Type:   R_MIPS_JUMP_SLOT
+      - Offset: 0x3
+        Symbol: 4
+        Type:   R_MIPS_JUMP_SLOT
+  - Name:    .got.plt
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_WRITE, SHF_ALLOC ]
+    Address: 0x2000
+    Size:    48 ## (dynamic symbols number + 2) * 8
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_JMPREL
+        Value: 0x1000
+      - Tag:   DT_MIPS_PLTGOT
+        Value: 0x2000
+DynamicSymbols:
+  - Type:    STT_SECTION
+    Index:   SHN_ABS
+  - Type:    STT_SECTION
+    Section: .got.plt
+  - Type:    STT_SECTION
+    Index:   SHN_COMMON
+  - Type:    STT_SECTION
+    Index:   SHN_XINDEX

@@ -45,6 +45,7 @@ static cl::opt<bool, true>
                          cl::location(DisableSymbolicationFlag), cl::Hidden);
 
 constexpr char DisableSymbolizationEnv[] = "LLVM_DISABLE_SYMBOLIZATION";
+constexpr char LLVMSymbolizerPathEnv[] = "LLVM_SYMBOLIZER_PATH";
 
 // Callbacks to run in signal handler must be lock-free because a signal handler
 // could be running as we add new callbacks. We don't add unbounded numbers of
@@ -119,7 +120,9 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
   // Use llvm-symbolizer tool to symbolize the stack traces. First look for it
   // alongside our binary, then in $PATH.
   ErrorOr<std::string> LLVMSymbolizerPathOrErr = std::error_code();
-  if (!Argv0.empty()) {
+  if (const char *Path = getenv(LLVMSymbolizerPathEnv)) {
+    LLVMSymbolizerPathOrErr = sys::findProgramByName(Path);
+  } else if (!Argv0.empty()) {
     StringRef Parent = llvm::sys::path::parent_path(Argv0);
     if (!Parent.empty())
       LLVMSymbolizerPathOrErr = sys::findProgramByName("llvm-symbolizer", Parent);

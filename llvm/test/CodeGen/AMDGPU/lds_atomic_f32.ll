@@ -1,9 +1,9 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
-declare float @llvm.amdgcn.ds.fadd(float addrspace(3)* nocapture, float, i32, i32, i1)
-declare float @llvm.amdgcn.ds.fmin(float addrspace(3)* nocapture, float, i32, i32, i1)
-declare float @llvm.amdgcn.ds.fmax(float addrspace(3)* nocapture, float, i32, i32, i1)
+declare float @llvm.amdgcn.ds.fadd.f32(float addrspace(3)* nocapture, float, i32, i32, i1)
+declare float @llvm.amdgcn.ds.fmin.f32(float addrspace(3)* nocapture, float, i32, i32, i1)
+declare float @llvm.amdgcn.ds.fmax.f32(float addrspace(3)* nocapture, float, i32, i32, i1)
 
 ; GCN-LABEL: {{^}}lds_ds_fadd:
 ; VI-DAG: s_mov_b32 m0
@@ -19,9 +19,9 @@ define amdgpu_kernel void @lds_ds_fadd(float addrspace(1)* %out, float addrspace
   %shl1 = shl i32 %idx.add, 4
   %ptr0 = inttoptr i32 %shl0 to float addrspace(3)*
   %ptr1 = inttoptr i32 %shl1 to float addrspace(3)*
-  %a1 = call float @llvm.amdgcn.ds.fadd(float addrspace(3)* %ptr0, float 4.2e+1, i32 0, i32 0, i1 false)
-  %a2 = call float @llvm.amdgcn.ds.fadd(float addrspace(3)* %ptr1, float 4.2e+1, i32 0, i32 0, i1 false)
-  %a3 = call float @llvm.amdgcn.ds.fadd(float addrspace(3)* %ptrf, float %a1, i32 0, i32 0, i1 false)
+  %a1 = call float @llvm.amdgcn.ds.fadd.f32(float addrspace(3)* %ptr0, float 4.2e+1, i32 0, i32 0, i1 false)
+  %a2 = call float @llvm.amdgcn.ds.fadd.f32(float addrspace(3)* %ptr1, float 4.2e+1, i32 0, i32 0, i1 false)
+  %a3 = call float @llvm.amdgcn.ds.fadd.f32(float addrspace(3)* %ptrf, float %a1, i32 0, i32 0, i1 false)
   store float %a3, float addrspace(1)* %out
   ret void
 }
@@ -40,9 +40,9 @@ define amdgpu_kernel void @lds_ds_fmin(float addrspace(1)* %out, float addrspace
   %shl1 = shl i32 %idx.add, 4
   %ptr0 = inttoptr i32 %shl0 to float addrspace(3)*
   %ptr1 = inttoptr i32 %shl1 to float addrspace(3)*
-  %a1 = call float @llvm.amdgcn.ds.fmin(float addrspace(3)* %ptr0, float 4.2e+1, i32 0, i32 0, i1 false)
-  %a2 = call float @llvm.amdgcn.ds.fmin(float addrspace(3)* %ptr1, float 4.2e+1, i32 0, i32 0, i1 false)
-  %a3 = call float @llvm.amdgcn.ds.fmin(float addrspace(3)* %ptrf, float %a1, i32 0, i32 0, i1 false)
+  %a1 = call float @llvm.amdgcn.ds.fmin.f32(float addrspace(3)* %ptr0, float 4.2e+1, i32 0, i32 0, i1 false)
+  %a2 = call float @llvm.amdgcn.ds.fmin.f32(float addrspace(3)* %ptr1, float 4.2e+1, i32 0, i32 0, i1 false)
+  %a3 = call float @llvm.amdgcn.ds.fmin.f32(float addrspace(3)* %ptrf, float %a1, i32 0, i32 0, i1 false)
   store float %a3, float addrspace(1)* %out
   ret void
 }
@@ -61,9 +61,9 @@ define amdgpu_kernel void @lds_ds_fmax(float addrspace(1)* %out, float addrspace
   %shl1 = shl i32 %idx.add, 4
   %ptr0 = inttoptr i32 %shl0 to float addrspace(3)*
   %ptr1 = inttoptr i32 %shl1 to float addrspace(3)*
-  %a1 = call float @llvm.amdgcn.ds.fmax(float addrspace(3)* %ptr0, float 4.2e+1, i32 0, i32 0, i1 false)
-  %a2 = call float @llvm.amdgcn.ds.fmax(float addrspace(3)* %ptr1, float 4.2e+1, i32 0, i32 0, i1 false)
-  %a3 = call float @llvm.amdgcn.ds.fmax(float addrspace(3)* %ptrf, float %a1, i32 0, i32 0, i1 false)
+  %a1 = call float @llvm.amdgcn.ds.fmax.f32(float addrspace(3)* %ptr0, float 4.2e+1, i32 0, i32 0, i1 false)
+  %a2 = call float @llvm.amdgcn.ds.fmax.f32(float addrspace(3)* %ptr1, float 4.2e+1, i32 0, i32 0, i1 false)
+  %a3 = call float @llvm.amdgcn.ds.fmax.f32(float addrspace(3)* %ptrf, float %a1, i32 0, i32 0, i1 false)
   store float %a3, float addrspace(1)* %out
   ret void
 }

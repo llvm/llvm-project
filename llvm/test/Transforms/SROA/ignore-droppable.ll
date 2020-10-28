@@ -38,9 +38,8 @@ define void @negative_assume_condition_use() {
 
 define void @positive_multiple_assume_uses() {
 ; CHECK-LABEL: @positive_multiple_assume_uses(
-; CHECK-NEXT:    [[A:%.*]] = alloca { i8, i16 }, align 8
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"({ i8, i16 }* [[A]], i64 8), "align"({ i8, i16 }* [[A]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"({ i8, i16 }* [[A]]), "align"({ i8, i16 }* [[A]], i64 2) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "ignore"({ i8, i16 }* undef, i64 8), "ignore"({ i8, i16 }* undef, i64 16) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "ignore"({ i8, i16 }* undef), "ignore"({ i8, i16 }* undef, i64 2) ]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca {i8, i16}
@@ -52,10 +51,8 @@ define void @positive_multiple_assume_uses() {
 
 define void @positive_gep_assume_uses() {
 ; CHECK-LABEL: @positive_gep_assume_uses(
-; CHECK-NEXT:    [[A:%.*]] = alloca { i8, i16 }, align 8
-; CHECK-NEXT:    [[B:%.*]] = getelementptr { i8, i16 }, { i8, i16 }* [[A]], i32 0, i32 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[B]], i64 8), "align"(i8* [[B]], i64 16) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i8* [[B]]), "align"(i8* [[B]], i64 2) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "ignore"(i8* undef, i64 8), "ignore"(i8* undef, i64 16) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "ignore"(i8* undef), "ignore"(i8* undef, i64 2) ]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca {i8, i16}

@@ -18,6 +18,7 @@
 #include "FuzzerSHA1.h"
 #include "FuzzerTracePC.h"
 #include <algorithm>
+#include <chrono>
 #include <numeric>
 #include <random>
 #include <unordered_set>
@@ -26,6 +27,7 @@ namespace fuzzer {
 
 struct InputInfo {
   Unit U;  // The actual input data.
+  std::chrono::microseconds TimeOfUnit;
   uint8_t Sha1[kSHA1NumBytes];  // Checksum.
   // Number of features that this input has and no smaller input has.
   size_t NumFeatures = 0;
@@ -33,6 +35,7 @@ struct InputInfo {
   // Stats.
   size_t NumExecutedMutations = 0;
   size_t NumSuccessfullMutations = 0;
+  bool NeverReduce = false;
   bool MayDeleteFile = false;
   bool Reduced = false;
   bool HasFocusFunction = false;
@@ -61,11 +64,15 @@ struct InputInfo {
   }
 
   // Assign more energy to a high-entropy seed, i.e., that reveals more
-  // information about the globally rare features in the neighborhood
-  // of the seed. Since we do not know the entropy of a seed that has
-  // never been executed we assign fresh seeds maximum entropy and
-  // let II->Energy approach the true entropy from above.
-  void UpdateEnergy(size_t GlobalNumberOfFeatures) {
+  // information about the globally rare features in the neighborhood of the
+  // seed. Since we do not know the entropy of a seed that has never been
+  // executed we assign fresh seeds maximum entropy and let II->Energy approach
+  // the true entropy from above. If ScalePerExecTime is true, the computed
+  // entropy is scaled based on how fast this input executes compared to the
+  // average execution time of inputs. The faster an input executes, the more
+  // energy gets assigned to the input.
+  void UpdateEnergy(size_t GlobalNumberOfFeatures, bool ScalePerExecTime,
+                    std::chrono::microseconds AverageUnitExecutionTime) {
     Energy = 0.0;
     SumIncidence = 0;
 
@@ -88,6 +95,27 @@ struct InputInfo {
     // Normalize.
     if (SumIncidence != 0)
       Energy = (Energy / SumIncidence) + logl(SumIncidence);
+
+    if (ScalePerExecTime) {
+      // Scaling to favor inputs with lower execution time.
+      uint32_t PerfScore = 100;
+      if (TimeOfUnit.count() > AverageUnitExecutionTime.count() * 10)
+        PerfScore = 10;
+      else if (TimeOfUnit.count() > AverageUnitExecutionTime.count() * 4)
+        PerfScore = 25;
+      else if (TimeOfUnit.count() > AverageUnitExecutionTime.count() * 2)
+        PerfScore = 50;
+      else if (TimeOfUnit.count() * 3 > AverageUnitExecutionTime.count() * 4)
+        PerfScore = 75;
+      else if (TimeOfUnit.count() * 4 < AverageUnitExecutionTime.count())
+        PerfScore = 300;
+      else if (TimeOfUnit.count() * 3 < AverageUnitExecutionTime.count())
+        PerfScore = 200;
+      else if (TimeOfUnit.count() * 2 < AverageUnitExecutionTime.count())
+        PerfScore = 150;
+
+      Energy *= PerfScore;
+    }
   }
 
   // Increment the frequency of the feature Idx.
@@ -120,6 +148,7 @@ struct EntropicOptions {
   bool Enabled;
   size_t NumberOfRarestFeatures;
   size_t FeatureFrequencyThreshold;
+  bool ScalePerExecTime;
 };
 
 class InputCorpus {
@@ -177,7 +206,8 @@ public:
   bool empty() const { return Inputs.empty(); }
   const Unit &operator[] (size_t Idx) const { return Inputs[Idx]->U; }
   InputInfo *AddToCorpus(const Unit &U, size_t NumFeatures, bool MayDeleteFile,
-                         bool HasFocusFunction,
+                         bool HasFocusFunction, bool NeverReduce,
+                         std::chrono::microseconds TimeOfUnit,
                          const Vector<uint32_t> &FeatureSet,
                          const DataFlowTrace &DFT, const InputInfo *BaseII) {
     assert(!U.empty());
@@ -187,6 +217,8 @@ public:
     InputInfo &II = *Inputs.back();
     II.U = U;
     II.NumFeatures = NumFeatures;
+    II.NeverReduce = NeverReduce;
+    II.TimeOfUnit = TimeOfUnit;
     II.MayDeleteFile = MayDeleteFile;
     II.UniqFeatureSet = FeatureSet;
     II.HasFocusFunction = HasFocusFunction;
@@ -264,6 +296,15 @@ public:
   bool HasUnit(const std::string &H) { return Hashes.count(H); }
   InputInfo &ChooseUnitToMutate(Random &Rand) {
     InputInfo &II = *Inputs[ChooseUnitIdxToMutate(Rand)];
+    assert(!II.U.empty());
+    return II;
+  }
+
+  InputInfo &ChooseUnitToCrossOverWith(Random &Rand, bool UniformDist) {
+    if (!UniformDist) {
+      return ChooseUnitToMutate(Rand);
+    }
+    InputInfo &II = *Inputs[Rand(Inputs.size())];
     assert(!II.U.empty());
     return II;
   }
@@ -460,12 +501,19 @@ private:
     Weights.resize(N);
     std::iota(Intervals.begin(), Intervals.end(), 0);
 
+    std::chrono::microseconds AverageUnitExecutionTime(0);
+    for (auto II : Inputs) {
+      AverageUnitExecutionTime += II->TimeOfUnit;
+    }
+    AverageUnitExecutionTime /= N;
+
     bool VanillaSchedule = true;
     if (Entropic.Enabled) {
       for (auto II : Inputs) {
         if (II->NeedsEnergyUpdate && II->Energy != 0.0) {
           II->NeedsEnergyUpdate = false;
-          II->UpdateEnergy(RareFeatures.size());
+          II->UpdateEnergy(RareFeatures.size(), Entropic.ScalePerExecTime,
+                           AverageUnitExecutionTime);
         }
       }
 

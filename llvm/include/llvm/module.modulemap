@@ -65,6 +65,7 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/ELFRelocs/ARC.def"
     textual header "BinaryFormat/ELFRelocs/AVR.def"
     textual header "BinaryFormat/ELFRelocs/BPF.def"
+    textual header "BinaryFormat/ELFRelocs/CSKY.def"
     textual header "BinaryFormat/ELFRelocs/Hexagon.def"
     textual header "BinaryFormat/ELFRelocs/i386.def"
     textual header "BinaryFormat/ELFRelocs/Lanai.def"
@@ -193,6 +194,13 @@ module LLVM_ExecutionEngine {
   exclude header "ExecutionEngine/Orc/RPC/RPCSerialization.h"
   exclude header "ExecutionEngine/Orc/RPC/RawByteChannel.h"
 
+}
+
+module LLVM_FileCheck {
+  requires cplusplus
+
+  umbrella "FileCheck"
+  module * { export * }
 }
 
 // Orc utilities that don't depend only on Support (not ExecutionEngine or

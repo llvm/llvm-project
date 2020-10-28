@@ -146,6 +146,7 @@ interesting areas to contribute to lldb.
    resources/test
    resources/bots
    resources/reproducers
+   resources/structureddataplugins
    resources/sbapi
    resources/caveats
 

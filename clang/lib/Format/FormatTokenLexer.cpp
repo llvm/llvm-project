@@ -39,6 +39,8 @@ FormatTokenLexer::FormatTokenLexer(
 
   for (const std::string &ForEachMacro : Style.ForEachMacros)
     Macros.insert({&IdentTable.get(ForEachMacro), TT_ForEachMacro});
+  for (const std::string &AttributeMacro : Style.AttributeMacros)
+    Macros.insert({&IdentTable.get(AttributeMacro), TT_AttributeMacro});
   for (const std::string &StatementMacro : Style.StatementMacros)
     Macros.insert({&IdentTable.get(StatementMacro), TT_StatementMacro});
   for (const std::string &TypenameMacro : Style.TypenameMacros)
@@ -399,7 +401,7 @@ bool FormatTokenLexer::tryTransformTryUsageForC() {
   if (!Try->is(tok::kw_try))
     return false;
   auto &Next = *(Tokens.end() - 1);
-  if (Next->isOneOf(tok::l_brace, tok::colon))
+  if (Next->isOneOf(tok::l_brace, tok::colon, tok::hash, tok::comment))
     return false;
 
   if (Tokens.size() > 2) {

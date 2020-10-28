@@ -11,6 +11,7 @@ config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.lldb_obj_root = "@LLDB_BINARY_DIR@"
 config.lldb_src_root = "@LLDB_SOURCE_DIR@"
 config.lldb_libs_dir = "@LLDB_LIBS_DIR@"
+config.lldb_framework_dir = "@LLDB_FRAMEWORK_DIR@"
 config.cmake_cxx_compiler = "@CMAKE_CXX_COMPILER@"
 config.host_os = "@HOST_OS@"
 config.host_triple = "@LLVM_HOST_TRIPLE@"
@@ -18,9 +19,9 @@ config.shared_libs = @LLVM_ENABLE_SHARED_LIBS@
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.lldb_build_directory = "@LLDB_TEST_BUILD_DIRECTORY@"
+config.lldb_trace_directory = "@LLDB_TEST_TRACE_DIRECTORY@"
 config.lldb_reproducer_directory = os.path.join("@LLDB_TEST_BUILD_DIRECTORY@", "reproducers")
 config.python_executable = "@Python3_EXECUTABLE@"
-config.dotest_path = "@LLDB_SOURCE_DIR@/test/API/dotest.py"
 config.dotest_args_str = "@LLDB_DOTEST_ARGS@"
 config.lldb_enable_python = @LLDB_ENABLE_PYTHON@
 config.dotest_lit_args_str = None
@@ -31,6 +32,7 @@ config.test_compiler = '@LLDB_TEST_COMPILER@'
 config.dsymutil = '@LLDB_TEST_DSYMUTIL@'
 config.filecheck = '@LLDB_TEST_FILECHECK@'
 config.yaml2obj = '@LLDB_TEST_YAML2OBJ@'
+config.server = '@LLDB_TEST_SERVER@'
 # The API tests use their own module caches.
 config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-api")
 config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-api")
@@ -58,10 +60,13 @@ try:
     config.test_compiler = config.test_compiler % lit_config.params
     config.dsymutil = config.dsymutil % lit_config.params
     config.filecheck = config.filecheck % lit_config.params
+    config.yaml2obj = config.yaml2obj % lit_config.params
+    config.server = config.server % lit_config.params
+    config.lldb_framework_dir = config.lldb_framework_dir % lit_config.params
     config.dotest_args_str = config.dotest_args_str % lit_config.params
 except KeyError as e:
     key, = e.args
     lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@LLDB_SOURCE_DIR@/test/API/lit.cfg.py")
+lit_config.load_config(config, os.path.join(config.lldb_src_root, "test", "API", "lit.cfg.py"))

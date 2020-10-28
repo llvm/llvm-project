@@ -62,13 +62,6 @@ func @alloca_non_function_type() {
 
 // -----
 
-func @alloca_nonpositive_alignment(%size : !llvm.i64) {
-  // expected-error@+1 {{expected positive alignment}}
-  llvm.alloca %size x !llvm.i32 {alignment = -1} : (!llvm.i64) -> (!llvm.ptr<i32>)
-}
-
-// -----
-
 func @gep_missing_input_result_type(%pos : !llvm.i64, %base : !llvm.ptr<float>) {
   // expected-error@+1 {{2 operands present, but expected 0}}
   llvm.getelementptr %base[%pos] : () -> ()
@@ -401,7 +394,7 @@ func @nvvm_invalid_mma_7(%a0 : !llvm.vec<2 x half>, %a1 : !llvm.vec<2 x half>,
 
 // CHECK-LABEL: @atomicrmw_expected_ptr
 func @atomicrmw_expected_ptr(%f32 : !llvm.float) {
-  // expected-error@+1 {{expected LLVM IR pointer type for operand #0}}
+  // expected-error@+1 {{operand #0 must be LLVM pointer to floating point LLVM type or LLVM integer type}}
   %0 = "llvm.atomicrmw"(%f32, %f32) {bin_op=11, ordering=1} : (!llvm.float, !llvm.float) -> !llvm.float
   llvm.return
 }
@@ -455,7 +448,7 @@ func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr<float>, %f32 : !llvm.float) {
 
 // CHECK-LABEL: @cmpxchg_expected_ptr
 func @cmpxchg_expected_ptr(%f32_ptr : !llvm.ptr<float>, %f32 : !llvm.float) {
-  // expected-error@+1 {{expected LLVM IR pointer type for operand #0}}
+  // expected-error@+1 {{op operand #0 must be LLVM pointer to LLVM integer type or LLVM pointer type}}
   %0 = "llvm.cmpxchg"(%f32, %f32, %f32) {success_ordering=2,failure_ordering=2} : (!llvm.float, !llvm.float, !llvm.float) -> !llvm.struct<(float, i1)>
   llvm.return
 }

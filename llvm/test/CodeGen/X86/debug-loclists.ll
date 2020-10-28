@@ -1,42 +1,61 @@
 ; RUN: llc -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t < %s
-; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | FileCheck %s
+; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
+; RUN:   FileCheck %s --check-prefixes=CHECK,DWARF32
+
+; RUN: llc -dwarf64 -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t < %s
+; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
+; RUN:   FileCheck %s --check-prefixes=CHECK,DWARF64
 
 ; RUN: llc -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t < %s
-; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | FileCheck %s --check-prefix=DWO
+; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
+; RUN:   FileCheck %s --check-prefixes=DWO,DWO32
 
-; CHECK:      DW_TAG_variable
-; CHECK-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x0) loclist = 0x00000018:
-; CHECK-NEXT:     [0x0000000000000000, 0x0000000000000003) ".text._Z2f1ii": DW_OP_consts +3, DW_OP_stack_value
-; CHECK-NEXT:     [0x0000000000000003, 0x0000000000000004) ".text._Z2f1ii": DW_OP_consts +4, DW_OP_stack_value)
-; CHECK-NEXT:   DW_AT_name {{.*}} "y"
+; RUN: llc -dwarf64 -dwarf-version=5 -split-dwarf-file=foo.dwo -mtriple=x86_64-pc-linux -filetype=obj -function-sections -o %t < %s
+; RUN: llvm-dwarfdump -v -debug-info -debug-loclists %t | \
+; RUN:   FileCheck %s --check-prefixes=DWO,DWO64
 
-; CHECK:      DW_TAG_variable
-; CHECK-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x1) loclist = 0x00000029:
-; CHECK-NEXT:     [0x0000000000000000, 0x0000000000000003) ".text._Z2f1ii": DW_OP_consts +5, DW_OP_stack_value)
-; CHECK-NEXT:   DW_AT_name {{.*}} "x"
+; CHECK:        DW_TAG_variable
+; DWARF32-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x0) loclist = 0x00000018:
+; DWARF64-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x0) loclist = 0x0000002c:
+; CHECK-NEXT:       [0x0000000000000000, 0x0000000000000003) ".text._Z2f1ii": DW_OP_consts +3, DW_OP_stack_value
+; CHECK-NEXT:       [0x0000000000000003, 0x0000000000000004) ".text._Z2f1ii": DW_OP_consts +4, DW_OP_stack_value)
+; CHECK-NEXT:     DW_AT_name {{.*}} "y"
 
-; CHECK:      DW_TAG_variable
-; CHECK-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x2) loclist = 0x00000031:
-; CHECK-NEXT:     [0x0000000000000003, 0x0000000000000004) ".text._Z2f1ii": DW_OP_reg0 RAX)
-; CHECK-NEXT:   DW_AT_name {{.*}} "r"
+; CHECK:        DW_TAG_variable
+; DWARF32-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x1) loclist = 0x00000029:
+; DWARF64-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x1) loclist = 0x0000003d:
+; CHECK-NEXT:       [0x0000000000000000, 0x0000000000000003) ".text._Z2f1ii": DW_OP_consts +5, DW_OP_stack_value)
+; CHECK-NEXT:     DW_AT_name {{.*}} "x"
 
-; CHECK:      .debug_loclists contents:
-; CHECK-NEXT: 0x00000000: locations list header: length = 0x00000035, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000003
+; CHECK:        DW_TAG_variable
+; DWARF32-NEXT:   DW_AT_location [DW_FORM_loclistx]   (indexed (0x2) loclist = 0x00000031:
+; DWARF64-NEXT:   DW_AT_location [DW_FORM_loclistx]	(indexed (0x2) loclist = 0x00000045:
+; CHECK-NEXT:       [0x0000000000000003, 0x0000000000000004) ".text._Z2f1ii": DW_OP_reg0 RAX)
+; CHECK-NEXT:     DW_AT_name {{.*}} "r"
+
+; CHECK:        .debug_loclists contents:
+; DWARF32-NEXT: 0x00000000: locations list header: length = 0x00000035, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000003
+; DWARF64-NEXT: 0x00000000: locations list header: length = 0x0000000000000041, format = DWARF64, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000003
 
 ; DWO:      .debug_loclists.dwo contents:
-; DWO-NEXT: 0x00000000: locations list header: length = 0x00000035, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000003
+; DWO32-NEXT: 0x00000000: locations list header: length = 0x00000035, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000003
+; DWO64-NEXT: 0x00000000: locations list header: length = 0x0000000000000041, format = DWARF64, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000003
 
-; CHECK-NEXT: offsets: [
-; CHECK-NEXT: 0x0000000c => 0x00000018
-; CHECK-NEXT: 0x0000001d => 0x00000029
-; CHECK-NEXT: 0x00000025 => 0x00000031
-; CHECK-NEXT: ]
+; CHECK-NEXT:   offsets: [
+; DWARF32-NEXT: 0x0000000c => 0x00000018
+; DWARF32-NEXT: 0x0000001d => 0x00000029
+; DWARF32-NEXT: 0x00000025 => 0x00000031
+; DWARF64-NEXT: 0x0000000000000018 => 0x0000002c
+; DWARF64-NEXT: 0x0000000000000029 => 0x0000003d
+; DWARF64-NEXT: 0x0000000000000031 => 0x00000045
+; CHECK-NEXT:   ]
 
 ; Don't use startx_length if there's more than one entry, because the shared
 ; base address will be useful for both the range that does start at the start of
 ; the function, and the one that doesn't.
 
-; CHECK-NEXT: 0x00000018:
+; DWARF32-NEXT: 0x00000018:
+; DWARF64-NEXT: 0x0000002c:
 ; CHECK-NEXT:             DW_LLE_base_addressx (0x0000000000000000)
 ; CHECK-NEXT:             DW_LLE_offset_pair   (0x0000000000000000, 0x0000000000000003): DW_OP_consts +3, DW_OP_stack_value
 ; CHECK-NEXT:             DW_LLE_offset_pair   (0x0000000000000003, 0x0000000000000004): DW_OP_consts +4, DW_OP_stack_value
@@ -44,14 +63,16 @@
 
 ; Show that startx_length can be used when the address range starts at the start of the function.
 
-; CHECK:      0x00000029:
+; DWARF32:      0x00000029:
+; DWARF64:      0x0000003d:
 ; CHECK-NEXT:             DW_LLE_startx_length (0x0000000000000000, 0x0000000000000003): DW_OP_consts +5, DW_OP_stack_value
 ; CHECK-NEXT:             DW_LLE_end_of_list   ()
 
 ; And use a base address when the range doesn't start at an existing/useful
 ; address in the pool.
 
-; CHECK:      0x00000031:
+; DWARF32:      0x00000031:
+; DWARF64:      0x00000045:
 ; CHECK-NEXT:             DW_LLE_base_addressx (0x0000000000000000)
 ; CHECK-NEXT:             DW_LLE_offset_pair   (0x0000000000000003, 0x0000000000000004): DW_OP_reg0 RAX
 ; CHECK-NEXT:             DW_LLE_end_of_list   ()

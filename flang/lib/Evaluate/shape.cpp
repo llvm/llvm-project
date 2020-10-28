@@ -684,9 +684,9 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
 
 bool CheckConformance(parser::ContextualMessages &messages, const Shape &left,
     const Shape &right, const char *leftIs, const char *rightIs) {
-  if (!left.empty() && !right.empty()) {
-    int n{GetRank(left)};
-    int rn{GetRank(right)};
+  int n{GetRank(left)};
+  int rn{GetRank(right)};
+  if (n != 0 && rn != 0) {
     if (n != rn) {
       messages.Say("Rank of %1$s is %2$d, but %3$s has rank %4$d"_err_en_US,
           leftIs, n, rightIs, rn);

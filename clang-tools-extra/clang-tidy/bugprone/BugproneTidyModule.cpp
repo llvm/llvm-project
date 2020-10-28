@@ -38,6 +38,7 @@
 #include "NotNullTerminatedResultCheck.h"
 #include "ParentVirtualCallCheck.h"
 #include "PosixReturnCheck.h"
+#include "RedundantBranchConditionCheck.h"
 #include "ReservedIdentifierCheck.h"
 #include "SignedCharMisuseCheck.h"
 #include "SizeofContainerCheck.h"
@@ -119,6 +120,8 @@ public:
         "bugprone-move-forwarding-reference");
     CheckFactories.registerCheck<MultipleStatementMacroCheck>(
         "bugprone-multiple-statement-macro");
+    CheckFactories.registerCheck<RedundantBranchConditionCheck>(
+        "bugprone-redundant-branch-condition");
     CheckFactories.registerCheck<cppcoreguidelines::NarrowingConversionsCheck>(
         "bugprone-narrowing-conversions");
     CheckFactories.registerCheck<NoEscapeCheck>("bugprone-no-escape");

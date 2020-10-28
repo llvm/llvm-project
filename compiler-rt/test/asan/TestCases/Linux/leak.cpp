@@ -9,8 +9,7 @@
 int *t;
 
 int main(int argc, char **argv) {
-  t = new int[argc - 1];
+  t = new int[argc - 1] - 100000;
   printf("t: %p\n", t);
-  t = 0;
 }
 // CHECK: LeakSanitizer: detected memory leaks

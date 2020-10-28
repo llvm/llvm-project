@@ -3,6 +3,7 @@
 ; RUN: -aarch64-neon-syntax=apple -global-isel -global-isel-abort=2 2>&1 | \
 ; RUN: FileCheck %s --check-prefixes=FALLBACK,CHECK
 
+; FALLBACK-NOT: remark{{.*}}fcvtas_2s
 define <2 x i32> @fcvtas_2s(<2 x float> %A) nounwind {
 ;CHECK-LABEL: fcvtas_2s:
 ;CHECK-NOT: ld1
@@ -12,6 +13,7 @@ define <2 x i32> @fcvtas_2s(<2 x float> %A) nounwind {
 	ret <2 x i32> %tmp3
 }
 
+; FALLBACK-NOT: remark{{.*}}fcvtas_4s
 define <4 x i32> @fcvtas_4s(<4 x float> %A) nounwind {
 ;CHECK-LABEL: fcvtas_4s:
 ;CHECK-NOT: ld1
@@ -21,6 +23,7 @@ define <4 x i32> @fcvtas_4s(<4 x float> %A) nounwind {
 	ret <4 x i32> %tmp3
 }
 
+; FALLBACK-NOT: remark{{.*}}fcvtas_2d
 define <2 x i64> @fcvtas_2d(<2 x double> %A) nounwind {
 ;CHECK-LABEL: fcvtas_2d:
 ;CHECK-NOT: ld1

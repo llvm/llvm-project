@@ -875,8 +875,6 @@ define half @h1(half (half)* nocapture %hptr) "cmse_nonsecure_entry" nounwind {
 ; CHECK-MVE-NEXT:    push {r7, lr}
 ; CHECK-MVE-NEXT:    sub sp, #4
 ; CHECK-MVE-NEXT:    vmov.f16 s0, #1.000000e+01
-; CHECK-MVE-NEXT:    vmov.f16 r1, s0
-; CHECK-MVE-NEXT:    vmov s0, r1
 ; CHECK-MVE-NEXT:    blx r0
 ; CHECK-MVE-NEXT:    vmov.f16 r0, s0
 ; CHECK-MVE-NEXT:    vmov s0, r0
@@ -953,8 +951,6 @@ define half @h2(half (half)* nocapture %hptr) nounwind {
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    push {r7, lr}
 ; CHECK-MVE-NEXT:    vmov.f16 s0, #1.000000e+01
-; CHECK-MVE-NEXT:    vmov.f16 r1, s0
-; CHECK-MVE-NEXT:    vmov s0, r1
 ; CHECK-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-MVE-NEXT:    bic r0, r0, #1
 ; CHECK-MVE-NEXT:    vpush {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
@@ -1034,8 +1030,6 @@ define half @h3(half (half)* nocapture %hptr) nounwind {
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    push {r7, lr}
 ; CHECK-MVE-NEXT:    vmov.f16 s0, #1.000000e+01
-; CHECK-MVE-NEXT:    vmov.f16 r1, s0
-; CHECK-MVE-NEXT:    vmov s0, r1
 ; CHECK-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-MVE-NEXT:    bic r0, r0, #1
 ; CHECK-MVE-NEXT:    vpush {s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31}
@@ -1158,8 +1152,6 @@ define half @h1_minsize(half (half)* nocapture %hptr) "cmse_nonsecure_entry" min
 ; CHECK-MVE-NEXT:    vstr fpcxtns, [sp, #-4]!
 ; CHECK-MVE-NEXT:    push {r6, r7, lr}
 ; CHECK-MVE-NEXT:    vmov.f16 s0, #1.000000e+01
-; CHECK-MVE-NEXT:    vmov.f16 r1, s0
-; CHECK-MVE-NEXT:    vmov s0, r1
 ; CHECK-MVE-NEXT:    blx r0
 ; CHECK-MVE-NEXT:    vmov.f16 r0, s0
 ; CHECK-MVE-NEXT:    vmov s0, r0

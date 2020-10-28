@@ -64,31 +64,33 @@ Testing
 Some parameters can be passed to lit to run the test-suite and exercise the
 availability.
 
-* The `platform` parameter controls the deployment target. For example lit can
-  be invoked with `--param=platform=macosx10.12`. Default is the current host.
-* The `use_system_cxx_lib` parameter indicates that the test suite is being run
-  against a system library.
+* The `target_triple` parameter controls the deployment target. For example lit
+  can be invoked with `--param=target_triple=x86_64-apple-macosx10.12`.
+  Default is the current host.
+* The `use_system_cxx_lib` parameter indicates that the test suite is being
+  compiled with the intent of being run against the system library for the
+  given triple, AND that it is being run against it.
 
-Tests can be marked as XFAIL based on multiple features made available by lit:
-
-* if `--param=platform=macosx10.12` is passed, the following features will be available:
-
-  - availability=macosx
-  - availability=macosx10.12
-
-  This feature is used to XFAIL a test that *is* using a class or a method marked
-  as unavailable *and* that is expected to *fail* if deployed on an older system.
-
-* if `use_system_cxx_lib` and `--param=platform=macosx10.12` are passed to lit,
-  the following features will also be available:
+Tests can be marked as XFAIL based on multiple features made available by lit.
+If `use_system_cxx_lib` is true, then assuming `target_triple=x86_64-apple-macosx10.12`,
+the following features will be made available:
 
   - with_system_cxx_lib=macosx
   - with_system_cxx_lib=macosx10.12
   - with_system_cxx_lib=x86_64-apple-macosx10.12
 
-  This feature is used to XFAIL a test that is *not* using a class or a method
-  marked as unavailable *but* that is expected to fail if deployed on an older
-  system. For example, if the test exhibits a bug in the libc on a particular
-  system version, or if the test uses a symbol that is not available on an
-  older version of the dylib (but for which there is no availability markup,
-  otherwise the XFAIL should use `availability` above).
+These features are used to XFAIL a test that fails when deployed on (or is
+compiled for) an older system. For example, if the test exhibits a bug in the
+libc on a particular system version, or if the test uses a symbol that is not
+available on an older version of the dylib, it can be marked as XFAIL with
+one of the above features.
+
+It is sometimes useful to check that a test fails specifically when compiled
+for a given deployment target. For example, this is the case when testing
+availability markup, where we want to make sure that using the annotated
+facility on a deployment target that doesn't support it will fail at compile
+time, not at runtime. This can be achieved by creating a `.compile.pass.cpp`
+and XFAILing it for the right deployment target. If the test doesn't fail at
+compile-time like it's supposed to, the test will XPASS. Another option is to
+create a `.verify.cpp` test that checks for the right errors, and mark that
+test as requiring `with_system_cxx_lib=<something>`.

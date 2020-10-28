@@ -1449,11 +1449,16 @@ def VCTZD : VX_VT5_EO5_VB5<1538, 31, "vctzd",
                            [(set v2i64:$vD, (cttz v2i64:$vB))]>;
 
 // Vector Extend Sign
-def VEXTSB2W : VX_VT5_EO5_VB5<1538, 16, "vextsb2w", []>;
-def VEXTSH2W : VX_VT5_EO5_VB5<1538, 17, "vextsh2w", []>;
-def VEXTSB2D : VX_VT5_EO5_VB5<1538, 24, "vextsb2d", []>;
-def VEXTSH2D : VX_VT5_EO5_VB5<1538, 25, "vextsh2d", []>;
-def VEXTSW2D : VX_VT5_EO5_VB5<1538, 26, "vextsw2d", []>;
+def VEXTSB2W : VX_VT5_EO5_VB5<1538, 16, "vextsb2w",
+                              [(set v4i32:$vD, (int_ppc_altivec_vextsb2w v16i8:$vB))]>;
+def VEXTSH2W : VX_VT5_EO5_VB5<1538, 17, "vextsh2w",
+                              [(set v4i32:$vD, (int_ppc_altivec_vextsh2w v8i16:$vB))]>;
+def VEXTSB2D : VX_VT5_EO5_VB5<1538, 24, "vextsb2d",
+                              [(set v2i64:$vD, (int_ppc_altivec_vextsb2d v16i8:$vB))]>;
+def VEXTSH2D : VX_VT5_EO5_VB5<1538, 25, "vextsh2d",
+                              [(set v2i64:$vD, (int_ppc_altivec_vextsh2d v8i16:$vB))]>;
+def VEXTSW2D : VX_VT5_EO5_VB5<1538, 26, "vextsw2d",
+                              [(set v2i64:$vD, (int_ppc_altivec_vextsw2d v4i32:$vB))]>;
 let isCodeGenOnly = 1 in {
   def VEXTSB2Ws : VX_VT5_EO5_VB5s<1538, 16, "vextsb2w", []>;
   def VEXTSH2Ws : VX_VT5_EO5_VB5s<1538, 17, "vextsh2w", []>;

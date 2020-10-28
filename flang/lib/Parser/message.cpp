@@ -165,43 +165,43 @@ std::string Message::ToString() const {
       text_);
 }
 
-void Message::ResolveProvenances(const CookedSource &cooked) {
+void Message::ResolveProvenances(const AllCookedSources &allCooked) {
   if (CharBlock * cb{std::get_if<CharBlock>(&location_)}) {
     if (std::optional<ProvenanceRange> resolved{
-            cooked.GetProvenanceRange(*cb)}) {
+            allCooked.GetProvenanceRange(*cb)}) {
       location_ = *resolved;
     }
   }
   if (Message * attachment{attachment_.get()}) {
-    attachment->ResolveProvenances(cooked);
+    attachment->ResolveProvenances(allCooked);
   }
 }
 
 std::optional<ProvenanceRange> Message::GetProvenanceRange(
-    const CookedSource &cooked) const {
+    const AllCookedSources &allCooked) const {
   return std::visit(
       common::visitors{
-          [&](CharBlock cb) { return cooked.GetProvenanceRange(cb); },
+          [&](CharBlock cb) { return allCooked.GetProvenanceRange(cb); },
           [](const ProvenanceRange &pr) { return std::make_optional(pr); },
       },
       location_);
 }
 
-void Message::Emit(llvm::raw_ostream &o, const CookedSource &cooked,
+void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
     bool echoSourceLine) const {
-  std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(cooked)};
+  std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(allCooked)};
   std::string text;
   if (IsFatal()) {
     text += "error: ";
   }
   text += ToString();
-  const AllSources &sources{cooked.allSources()};
+  const AllSources &sources{allCooked.allSources()};
   sources.EmitMessage(o, provenanceRange, text, echoSourceLine);
   if (attachmentIsContext_) {
     for (const Message *context{attachment_.get()}; context;
          context = context->attachment_.get()) {
       std::optional<ProvenanceRange> contextProvenance{
-          context->GetProvenanceRange(cooked)};
+          context->GetProvenanceRange(allCooked)};
       text = "in the context: ";
       text += context->ToString();
       // TODO: don't echo the source lines of a context when it's the
@@ -213,7 +213,7 @@ void Message::Emit(llvm::raw_ostream &o, const CookedSource &cooked,
   } else {
     for (const Message *attachment{attachment_.get()}; attachment;
          attachment = attachment->attachment_.get()) {
-      sources.EmitMessage(o, attachment->GetProvenanceRange(cooked),
+      sources.EmitMessage(o, attachment->GetProvenanceRange(allCooked),
           attachment->ToString(), echoSourceLine);
     }
   }
@@ -300,13 +300,13 @@ void Messages::Copy(const Messages &that) {
   }
 }
 
-void Messages::ResolveProvenances(const CookedSource &cooked) {
+void Messages::ResolveProvenances(const AllCookedSources &allCooked) {
   for (Message &m : messages_) {
-    m.ResolveProvenances(cooked);
+    m.ResolveProvenances(allCooked);
   }
 }
 
-void Messages::Emit(llvm::raw_ostream &o, const CookedSource &cooked,
+void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
     bool echoSourceLines) const {
   std::vector<const Message *> sorted;
   for (const auto &msg : messages_) {
@@ -315,7 +315,7 @@ void Messages::Emit(llvm::raw_ostream &o, const CookedSource &cooked,
   std::stable_sort(sorted.begin(), sorted.end(),
       [](const Message *x, const Message *y) { return x->SortBefore(*y); });
   for (const Message *msg : sorted) {
-    msg->Emit(o, cooked, echoSourceLines);
+    msg->Emit(o, allCooked, echoSourceLines);
   }
 }
 

@@ -23,33 +23,19 @@ define void @insert_v7i8_v2i16_2(<7 x i8> *%a0, <2 x i16> *%a1) nounwind {
 ; SSE-NEXT:    movd %xmm1, (%rdi)
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: insert_v7i8_v2i16_2:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    movl (%rsi), %eax
-; AVX1-NEXT:    vmovd %eax, %xmm0
-; AVX1-NEXT:    movq (%rdi), %rcx
-; AVX1-NEXT:    vmovq %rcx, %xmm1
-; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; AVX1-NEXT:    shrq $48, %rcx
-; AVX1-NEXT:    movb %cl, 6(%rdi)
-; AVX1-NEXT:    shrl $16, %eax
-; AVX1-NEXT:    movw %ax, 4(%rdi)
-; AVX1-NEXT:    vmovd %xmm0, (%rdi)
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: insert_v7i8_v2i16_2:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    movl (%rsi), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    movq (%rdi), %rcx
-; AVX2-NEXT:    vmovq %rcx, %xmm1
-; AVX2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; AVX2-NEXT:    shrq $48, %rcx
-; AVX2-NEXT:    movb %cl, 6(%rdi)
-; AVX2-NEXT:    shrl $16, %eax
-; AVX2-NEXT:    movw %ax, 4(%rdi)
-; AVX2-NEXT:    vmovd %xmm0, (%rdi)
-; AVX2-NEXT:    retq
+; AVX-LABEL: insert_v7i8_v2i16_2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movl (%rsi), %eax
+; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    movq (%rdi), %rcx
+; AVX-NEXT:    vmovq %rcx, %xmm1
+; AVX-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; AVX-NEXT:    shrq $48, %rcx
+; AVX-NEXT:    movb %cl, 6(%rdi)
+; AVX-NEXT:    shrl $16, %eax
+; AVX-NEXT:    movw %ax, 4(%rdi)
+; AVX-NEXT:    vmovd %xmm0, (%rdi)
+; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: insert_v7i8_v2i16_2:
 ; AVX512:       # %bb.0:
@@ -64,20 +50,6 @@ define void @insert_v7i8_v2i16_2(<7 x i8> *%a0, <2 x i16> *%a1) nounwind {
 ; AVX512-NEXT:    movw %ax, 4(%rdi)
 ; AVX512-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
-;
-; XOP-LABEL: insert_v7i8_v2i16_2:
-; XOP:       # %bb.0:
-; XOP-NEXT:    movl (%rsi), %eax
-; XOP-NEXT:    vmovd %eax, %xmm0
-; XOP-NEXT:    movq (%rdi), %rcx
-; XOP-NEXT:    vmovq %rcx, %xmm1
-; XOP-NEXT:    insertq {{.*#+}} xmm1 = xmm1[0,1],xmm0[0,1,2,3],xmm1[6,7,u,u,u,u,u,u,u,u]
-; XOP-NEXT:    shrq $48, %rcx
-; XOP-NEXT:    movb %cl, 6(%rdi)
-; XOP-NEXT:    shrl $16, %eax
-; XOP-NEXT:    movw %ax, 4(%rdi)
-; XOP-NEXT:    vmovd %xmm1, (%rdi)
-; XOP-NEXT:    retq
   %1 = load <2 x i16>, <2 x i16> *%a1
   %2 = bitcast <2 x i16> %1 to <4 x i8>
   %3 = shufflevector <4 x i8> %2, <4 x i8> undef, <7 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef>

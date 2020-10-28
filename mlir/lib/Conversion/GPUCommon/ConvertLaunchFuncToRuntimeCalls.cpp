@@ -125,7 +125,7 @@ protected:
        llvmIntPtrType /* intptr_t elementSizeBytes */}};
 };
 
-/// A rewrite patter to convert gpu.host_register operations into a GPU runtime
+/// A rewrite pattern to convert gpu.host_register operations into a GPU runtime
 /// call. Currently it supports CUDA and ROCm (HIP).
 class ConvertHostRegisterOpToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::HostRegisterOp> {

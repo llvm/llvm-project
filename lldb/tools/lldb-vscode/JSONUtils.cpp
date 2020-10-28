@@ -354,9 +354,7 @@ static uint64_t GetDebugInfoSize(lldb::SBModule module) {
 
 static std::string ConvertDebugInfoSizeToString(uint64_t debug_info) {
   std::ostringstream oss;
-  oss << " (";
   oss << std::fixed << std::setprecision(1);
-
   if (debug_info < 1024) {
     oss << debug_info << "B";
   } else if (debug_info < 1024 * 1024) {
@@ -368,9 +366,7 @@ static std::string ConvertDebugInfoSizeToString(uint64_t debug_info) {
   } else {
     double gb = double(debug_info) / (1024.0 * 1024.0 * 1024.0);
     oss << gb << "GB";
-    ;
   }
-  oss << ")";
   return oss.str();
 }
 llvm::json::Value CreateModule(lldb::SBModule &module) {
@@ -386,11 +382,13 @@ llvm::json::Value CreateModule(lldb::SBModule &module) {
   object.try_emplace("path", module_path);
   if (module.GetNumCompileUnits() > 0) {
     std::string symbol_str = "Symbols loaded.";
+    std::string debug_info_size;
     uint64_t debug_info = GetDebugInfoSize(module);
     if (debug_info > 0) {
-      symbol_str += ConvertDebugInfoSizeToString(debug_info);
+      debug_info_size = ConvertDebugInfoSizeToString(debug_info);
     }
     object.try_emplace("symbolStatus", symbol_str);
+    object.try_emplace("debugInfoSize", debug_info_size);
     char symbol_path_arr[PATH_MAX];
     module.GetSymbolFileSpec().GetPath(symbol_path_arr,
                                        sizeof(symbol_path_arr));
@@ -998,6 +996,46 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit unit) {
   std::string unit_path(unit_path_arr);
   object.try_emplace("compileUnitPath", unit_path);
   return llvm::json::Value(std::move(object));
+}
+
+/// See
+/// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
+llvm::json::Object
+CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request) {
+  llvm::json::Object reverse_request;
+  reverse_request.try_emplace("type", "request");
+  reverse_request.try_emplace("command", "runInTerminal");
+
+  llvm::json::Object run_in_terminal_args;
+  // This indicates the IDE to open an embedded terminal, instead of opening the
+  // terminal in a new window.
+  run_in_terminal_args.try_emplace("kind", "integrated");
+
+  auto launch_request_arguments = launch_request.getObject("arguments");
+  std::vector<std::string> args = GetStrings(launch_request_arguments, "args");
+  // The program path must be the first entry in the "args" field
+  args.insert(args.begin(),
+              GetString(launch_request_arguments, "program").str());
+  run_in_terminal_args.try_emplace("args", args);
+
+  const auto cwd = GetString(launch_request_arguments, "cwd");
+  if (!cwd.empty())
+    run_in_terminal_args.try_emplace("cwd", cwd);
+
+  // We need to convert the input list of environments variables into a
+  // dictionary
+  std::vector<std::string> envs = GetStrings(launch_request_arguments, "env");
+  llvm::json::Object environment;
+  for (const std::string &env : envs) {
+    size_t index = env.find("=");
+    environment.try_emplace(env.substr(0, index), env.substr(index + 1));
+  }
+  run_in_terminal_args.try_emplace("env",
+                                   llvm::json::Value(std::move(environment)));
+
+  reverse_request.try_emplace(
+      "arguments", llvm::json::Value(std::move(run_in_terminal_args)));
+  return reverse_request;
 }
 
 } // namespace lldb_vscode

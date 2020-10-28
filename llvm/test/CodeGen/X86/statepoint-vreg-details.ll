@@ -16,6 +16,8 @@ declare void @consume(i32 addrspace(1)*)
 declare void @consume2(i32 addrspace(1)*, i32 addrspace(1)*)
 declare void @consume5(i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*)
 declare void @use1(i32 addrspace(1)*, i8 addrspace(1)*)
+declare i32* @fake_personality_function()
+declare i32 @foo(i32, i8 addrspace(1)*, i32, i32, i32)
 
 ; test most simple relocate
 define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
@@ -197,11 +199,10 @@ define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
 ; CHECK-VREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
 ; CHECK-VREG:    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-; CHECK-VREG:    %2:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 2, %0, 2, 4278124286, 1, 8, %stack.0, 0, %0(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+; CHECK-VREG:    %1:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 2, %0, 2, 4278124286, 1, 8, %stack.0, 0, %0(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
 ; CHECK-VREG:    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-; CHECK-VREG:    %1:gr64 = COPY %2
 ; CHECK-VREG:    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-; CHECK-VREG:    $rdi = COPY %2
+; CHECK-VREG:    $rdi = COPY %1
 ; CHECK-VREG:    $rsi = COPY %1
 ; CHECK-VREG:    CALL64pcrel32 @use1, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp
 
@@ -222,9 +223,6 @@ define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example
   ret void
 }
 
-;
-; Cross-basicblock relocates are handled with spilling for now.
-; No need to check post-RA output
 define i1 @test_cross_bb(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_cross_bb
 ; CHECK-VREG:  bb.0.entry:
@@ -340,78 +338,53 @@ entry:
   ret void
 }
 
+; Different IR Values which maps to the same SDValue must be assigned to the same VReg.
+; This is test is similar to test_gcptr_uniqueing but explicitly uses invokes for which this is important
+; Otherwise we may get a copy of statepoint result, inserted at the end ot statepoint block and used at landing pad
+define void @test_duplicate_ir_values() gc "statepoint-example" personality i32* ()* @fake_personality_function{
+;CHECK-VREG-LABEL: name:            test_duplicate_ir_values
+;CHECK-VREG:   bb.0.entry:
+;CHECK-VREG:     %0:gr64 = STATEPOINT 1, 16, 5, %8, $edi, $rsi, $edx, $ecx, $r8d, 2, 0, 2, 0, 2, 0, 1, 8, %stack.0, 0, %1(tied-def 0), csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $eax :: (volatile load store 8 on %stack.0)
+;CHECK-VREG:     JMP_1 %bb.1
+;CHECK-VREG:   bb.1.normal_continue:
+;CHECK-VREG:     MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
+;CHECK-VREG:     %13:gr32 = MOV32ri 10
+;CHECK-VREG:     $edi = COPY %13
+;CHECK-VREG:     STATEPOINT 2882400000, 0, 1, @__llvm_deoptimize, $edi, 2, 0, 2, 2, 2, 2, 1, 8, %stack.0, 0, 1, 8, %stack.0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+;CHECK-VREG:   bb.2.exceptional_return (landing-pad):
+;CHECK-VREG:     EH_LABEL <mcsymbol >
+;CHECK-VREG:     MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
+;CHECK-VREG:     %12:gr32 = MOV32ri -271
+;CHECK-VREG:     $edi = COPY %12
+;CHECK-VREG:     STATEPOINT 2882400000, 0, 1, @__llvm_deoptimize, $edi, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+
+entry:
+  %local.0 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef, align 8
+  %local.9 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* undef, align 8
+  %statepoint_token1 = invoke token (i64, i32, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 1, i32 16, i32 (i32, i8 addrspace(1)*, i32, i32, i32)* nonnull @foo, i32 5, i32 0, i32 undef, i8 addrspace(1)* undef, i32 undef, i32 undef, i32 undef, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* %local.0, i8 addrspace(1)* %local.9) ]
+          to label %normal_continue unwind label %exceptional_return
+
+normal_continue: ; preds = %entry
+  %local.0.relocated1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token1, i32 0, i32 0) ; (%local.0, %local.0)
+  %local.9.relocated1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint_token1, i32 1, i32 1) ; (%local.9, %local.9)
+  %safepoint_token2 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull @__llvm_deoptimize, i32 1, i32 2, i32 10, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* %local.0.relocated1, i8 addrspace(1)* %local.9.relocated1), "gc-live"() ]
+  unreachable
+
+exceptional_return:                         ; preds = %entry
+  %lpad_token11090 = landingpad token
+          cleanup
+  %local.9.relocated2 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %lpad_token11090, i32 1, i32 1) ; (%local.9, %local.9)
+  %safepoint_token3 = call token (i64, i32, void (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 2882400000, i32 0, void (i32)* nonnull @__llvm_deoptimize, i32 1, i32 0, i32 -271, i32 0, i32 0) [ "deopt"(i8 addrspace(1)* %local.9.relocated2), "gc-live"() ]
+  unreachable
+}
+
 declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
 declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
 declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
 declare <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token, i32, i32)
 declare i1 @llvm.experimental.gc.result.i1(token)
+declare void @__llvm_deoptimize(i32)
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidi32f(i64 immarg, i32 immarg, void (i32)*, i32 immarg, i32 immarg, ...)
+declare token @llvm.experimental.gc.statepoint.p0f_i32i32p1i8i32i32i32f(i64 immarg, i32 immarg, i32 (i32, i8 addrspace(1)*, i32, i32, i32)*, i32 immarg, i32 immarg, ...)
 
-; Entry for test_relocate
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 0
-; Location 4 Register $rbx
-; Location 5 Register $rbx
-;  Entry for test_mixed
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 0
-; Location 4 Register $r14
-; Location 5 Register $r14
-; Location 6 Constant 0
-; Location 7 Constant 0
-; Location 8 Register $r15
-; Location 9 Register $r15
-; Location 10 Register $rbx
-; Location 11 Register $rbx
-; Entry for test_alloca
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 0
-; Location 4 Register $rbx
-; Location 5 Register $rbx
-; Location 6 Direct $rsp + 0
-; Entry for test_base_derive
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 0
-; Location 4 Indirect $rsp + 8
-; Location 5 Register $rbx
-; Entry for test_deopt_gcpointer
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 1
-; Location 4Indirect $rsp + 8
-; Location 5 Register $rbx
-; Location 6
-; Entry for test_gcrelocate_uniqueing
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 2
-; Location 4 Register $rbx
-; Location 5 Constant Index 0
-; Location 6 Register $rbx
-; Location 7 Register $rbx
-; Entry for test_gcptr_uniqueing
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 2
-; Location 4 Register $rbx
-; Location 5 Constant Index 0
-; Location 6 Register $rbx
-; Location 7 Register $rbx
-; Entry for test_cross_bb
-; Num locations
-; Location 1 Constant 0
-; Location 2 Constant 0
-; Location 3 Constant 0
-; Location 4 Indirect $rsp + 0
-; Location 5 Indirect $rsp + 0

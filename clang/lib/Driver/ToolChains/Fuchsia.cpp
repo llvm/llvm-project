@@ -95,6 +95,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     std::string Dyld = D.DyldPrefix;
     if (SanArgs.needsAsanRt() && SanArgs.needsSharedRt())
       Dyld += "asan/";
+    if (SanArgs.needsTsanRt() && SanArgs.needsSharedRt())
+      Dyld += "tsan/";
     Dyld += "ld.so.1";
     CmdArgs.push_back("-dynamic-linker");
     CmdArgs.push_back(Args.MakeArgString(Dyld));
@@ -349,6 +351,7 @@ SanitizerMask Fuchsia::getSupportedSanitizers() const {
   Res |= SanitizerKind::Leak;
   Res |= SanitizerKind::SafeStack;
   Res |= SanitizerKind::Scudo;
+  Res |= SanitizerKind::Thread;
   return Res;
 }
 

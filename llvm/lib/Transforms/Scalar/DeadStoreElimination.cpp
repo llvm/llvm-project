@@ -114,9 +114,9 @@ static cl::opt<unsigned>
                        cl::desc("The number of memory instructions to scan for "
                                 "dead store elimination (default = 100)"));
 static cl::opt<unsigned> MemorySSAUpwardsStepLimit(
-    "dse-memoryssa-walklimit", cl::init(70), cl::Hidden,
+    "dse-memoryssa-walklimit", cl::init(90), cl::Hidden,
     cl::desc("The maximum number of steps while walking upwards to find "
-             "MemoryDefs that may be killed (default = 70)"));
+             "MemoryDefs that may be killed (default = 90)"));
 
 static cl::opt<unsigned> MemorySSAPartialStoreLimit(
     "dse-memoryssa-partial-store-limit", cl::init(5), cl::Hidden,
@@ -229,11 +229,13 @@ static bool hasAnalyzableMemoryWrite(Instruction *I,
     case Intrinsic::memset:
     case Intrinsic::memmove:
     case Intrinsic::memcpy:
+    case Intrinsic::memcpy_inline:
     case Intrinsic::memcpy_element_unordered_atomic:
     case Intrinsic::memmove_element_unordered_atomic:
     case Intrinsic::memset_element_unordered_atomic:
     case Intrinsic::init_trampoline:
     case Intrinsic::lifetime_end:
+    case Intrinsic::masked_store:
       return true;
     }
   }
@@ -257,8 +259,8 @@ static bool hasAnalyzableMemoryWrite(Instruction *I,
 /// Return a Location stored to by the specified instruction. If isRemovable
 /// returns true, this function and getLocForRead completely describe the memory
 /// operations for this instruction.
-static MemoryLocation getLocForWrite(Instruction *Inst) {
-
+static MemoryLocation getLocForWrite(Instruction *Inst,
+                                     const TargetLibraryInfo &TLI) {
   if (StoreInst *SI = dyn_cast<StoreInst>(Inst))
     return MemoryLocation::get(SI);
 
@@ -274,6 +276,8 @@ static MemoryLocation getLocForWrite(Instruction *Inst) {
       return MemoryLocation(); // Unhandled intrinsic.
     case Intrinsic::init_trampoline:
       return MemoryLocation(II->getArgOperand(0));
+    case Intrinsic::masked_store:
+      return MemoryLocation::getForArgument(II, 1, TLI);
     case Intrinsic::lifetime_end: {
       uint64_t Len = cast<ConstantInt>(II->getArgOperand(0))->getZExtValue();
       return MemoryLocation(II->getArgOperand(1), Len);
@@ -320,11 +324,13 @@ static bool isRemovable(Instruction *I) {
     case Intrinsic::memset:
     case Intrinsic::memmove:
     case Intrinsic::memcpy:
+    case Intrinsic::memcpy_inline:
       // Don't remove volatile memory intrinsics.
       return !cast<MemIntrinsic>(II)->isVolatile();
     case Intrinsic::memcpy_element_unordered_atomic:
     case Intrinsic::memmove_element_unordered_atomic:
     case Intrinsic::memset_element_unordered_atomic:
+    case Intrinsic::masked_store:
       return true;
     }
   }
@@ -370,9 +376,10 @@ static bool isShortenableAtTheBeginning(Instruction *I) {
 }
 
 /// Return the pointer that is being written to.
-static Value *getStoredPointerOperand(Instruction *I) {
+static Value *getStoredPointerOperand(Instruction *I,
+                                      const TargetLibraryInfo &TLI) {
   //TODO: factor this to reuse getLocForWrite
-  MemoryLocation Loc = getLocForWrite(I);
+  MemoryLocation Loc = getLocForWrite(I, TLI);
   assert(Loc.Ptr &&
          "unable to find pointer written for analyzable instruction?");
   // TODO: most APIs don't expect const Value *
@@ -404,22 +411,53 @@ enum OverwriteResult {
 
 } // end anonymous namespace
 
-/// Return 'OW_Complete' if a store to the 'Later' location completely
-/// overwrites a store to the 'Earlier' location. Return OW_MaybePartial
-/// if \p Later does not completely overwrite \p Earlier, but they both
-/// write to the same underlying object. In that case, use isPartialOverwrite to
-/// check if \p Later partially overwrites \p Earlier. Returns 'OW_Unknown' if
-/// nothing can be determined.
+/// Check if two instruction are masked stores that completely
+/// overwrite one another. More specifically, \p Later has to
+/// overwrite \p Earlier.
+template <typename AATy>
+static OverwriteResult isMaskedStoreOverwrite(const Instruction *Later,
+                                              const Instruction *Earlier,
+                                              AATy &AA) {
+  const auto *IIL = dyn_cast<IntrinsicInst>(Later);
+  const auto *IIE = dyn_cast<IntrinsicInst>(Earlier);
+  if (IIL == nullptr || IIE == nullptr)
+    return OW_Unknown;
+  if (IIL->getIntrinsicID() != Intrinsic::masked_store ||
+      IIE->getIntrinsicID() != Intrinsic::masked_store)
+    return OW_Unknown;
+  // Pointers.
+  Value *LP = IIL->getArgOperand(1)->stripPointerCasts();
+  Value *EP = IIE->getArgOperand(1)->stripPointerCasts();
+  if (LP != EP && !AA.isMustAlias(LP, EP))
+    return OW_Unknown;
+  // Masks.
+  // TODO: check that Later's mask is a superset of the Earlier's mask.
+  if (IIL->getArgOperand(3) != IIE->getArgOperand(3))
+    return OW_Unknown;
+  return OW_Complete;
+}
+
+/// Return 'OW_Complete' if a store to the 'Later' location (by \p LaterI
+/// instruction) completely overwrites a store to the 'Earlier' location.
+/// (by \p EarlierI instruction).
+/// Return OW_MaybePartial if \p Later does not completely overwrite
+/// \p Earlier, but they both write to the same underlying object. In that
+/// case, use isPartialOverwrite to check if \p Later partially overwrites
+/// \p Earlier. Returns 'OW_Unknown' if nothing can be determined.
 template <typename AATy>
 static OverwriteResult
-isOverwrite(const MemoryLocation &Later, const MemoryLocation &Earlier,
+isOverwrite(const Instruction *LaterI, const Instruction *EarlierI,
+            const MemoryLocation &Later, const MemoryLocation &Earlier,
             const DataLayout &DL, const TargetLibraryInfo &TLI,
             int64_t &EarlierOff, int64_t &LaterOff, AATy &AA,
             const Function *F) {
   // FIXME: Vet that this works for size upper-bounds. Seems unlikely that we'll
   // get imprecise values here, though (except for unknown sizes).
-  if (!Later.Size.isPrecise() || !Earlier.Size.isPrecise())
-    return OW_Unknown;
+  if (!Later.Size.isPrecise() || !Earlier.Size.isPrecise()) {
+    // Masked stores have imprecise locations, but we can reason about them
+    // to some extent.
+    return isMaskedStoreOverwrite(LaterI, EarlierI, AA);
+  }
 
   const uint64_t LaterSize = Later.Size.getValue();
   const uint64_t EarlierSize = Earlier.Size.getValue();
@@ -796,7 +834,7 @@ static bool handleFree(CallInst *F, AliasAnalysis *AA,
         break;
 
       Value *DepPointer =
-          getUnderlyingObject(getStoredPointerOperand(Dependency));
+          getUnderlyingObject(getStoredPointerOperand(Dependency, *TLI));
 
       // Check for aliasing.
       if (!AA->isMustAlias(F->getArgOperand(0), DepPointer))
@@ -902,7 +940,7 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
     if (hasAnalyzableMemoryWrite(&*BBI, *TLI) && isRemovable(&*BBI)) {
       // See through pointer-to-pointer bitcasts
       SmallVector<const Value *, 4> Pointers;
-      getUnderlyingObjects(getStoredPointerOperand(&*BBI), Pointers);
+      getUnderlyingObjects(getStoredPointerOperand(&*BBI, *TLI), Pointers);
 
       // Stores to stack values are valid candidates for removal.
       bool AllDead = true;
@@ -1119,11 +1157,12 @@ static bool tryToShortenBegin(Instruction *EarlierWrite,
 }
 
 static bool removePartiallyOverlappedStores(const DataLayout &DL,
-                                            InstOverlapIntervalsTy &IOL) {
+                                            InstOverlapIntervalsTy &IOL,
+                                            const TargetLibraryInfo &TLI) {
   bool Changed = false;
   for (auto OI : IOL) {
     Instruction *EarlierWrite = OI.first;
-    MemoryLocation Loc = getLocForWrite(EarlierWrite);
+    MemoryLocation Loc = getLocForWrite(EarlierWrite, TLI);
     assert(isRemovable(EarlierWrite) && "Expect only removable instruction");
 
     const Value *Ptr = Loc.Ptr->stripPointerCasts();
@@ -1284,7 +1323,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
       continue;
 
     // Figure out what location is being stored to.
-    MemoryLocation Loc = getLocForWrite(Inst);
+    MemoryLocation Loc = getLocForWrite(Inst, *TLI);
 
     // If we didn't get a useful location, fail.
     if (!Loc.Ptr)
@@ -1308,7 +1347,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
       Instruction *DepWrite = InstDep.getInst();
       if (!hasAnalyzableMemoryWrite(DepWrite, *TLI))
         break;
-      MemoryLocation DepLoc = getLocForWrite(DepWrite);
+      MemoryLocation DepLoc = getLocForWrite(DepWrite, *TLI);
       // If we didn't get a useful location, or if it isn't a size, bail out.
       if (!DepLoc.Ptr)
         break;
@@ -1350,8 +1389,9 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
       if (isRemovable(DepWrite) &&
           !isPossibleSelfRead(Inst, Loc, DepWrite, *TLI, *AA)) {
         int64_t InstWriteOffset, DepWriteOffset;
-        OverwriteResult OR = isOverwrite(Loc, DepLoc, DL, *TLI, DepWriteOffset,
-                                         InstWriteOffset, *AA, BB.getParent());
+        OverwriteResult OR = isOverwrite(Inst, DepWrite, Loc, DepLoc, DL, *TLI,
+                                         DepWriteOffset, InstWriteOffset, *AA,
+                                         BB.getParent());
         if (OR == OW_MaybePartial)
           OR = isPartialOverwrite(Loc, DepLoc, DepWriteOffset, InstWriteOffset,
                                   DepWrite, IOL);
@@ -1433,7 +1473,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
   }
 
   if (EnablePartialOverwriteTracking)
-    MadeChange |= removePartiallyOverlappedStores(DL, IOL);
+    MadeChange |= removePartiallyOverlappedStores(DL, IOL, *TLI);
 
   // If this block ends in a return, unwind, or unreachable, all allocas are
   // dead at its end, which means stores to them are also dead.
@@ -1676,6 +1716,8 @@ struct DSEState {
       switch (CB->getIntrinsicID()) {
       case Intrinsic::init_trampoline:
         return {MemoryLocation(CB->getArgOperand(0))};
+      case Intrinsic::masked_store:
+        return {MemoryLocation::getForArgument(CB, 1, TLI)};
       default:
         break;
       }
@@ -1685,8 +1727,10 @@ struct DSEState {
     return MemoryLocation::getOrNone(I);
   }
 
-  /// Returns true if \p Use completely overwrites \p DefLoc.
-  bool isCompleteOverwrite(MemoryLocation DefLoc, Instruction *UseInst) {
+  /// Returns true if \p UseInst completely overwrites \p DefLoc
+  /// (stored by \p DefInst).
+  bool isCompleteOverwrite(MemoryLocation DefLoc, Instruction *DefInst,
+                           Instruction *UseInst) {
     // UseInst has a MemoryDef associated in MemorySSA. It's possible for a
     // MemoryDef to not write to memory, e.g. a volatile load is modeled as a
     // MemoryDef.
@@ -1698,9 +1742,10 @@ struct DSEState {
         return false;
 
     int64_t InstWriteOffset, DepWriteOffset;
-    auto CC = getLocForWriteEx(UseInst);
-    return CC && isOverwrite(*CC, DefLoc, DL, TLI, DepWriteOffset,
-                             InstWriteOffset, BatchAA, &F) == OW_Complete;
+    if (auto CC = getLocForWriteEx(UseInst))
+      return isOverwrite(UseInst, DefInst, *CC, DefLoc, DL, TLI, DepWriteOffset,
+                         InstWriteOffset, BatchAA, &F) == OW_Complete;
+    return false;
   }
 
   /// Returns true if \p Def is not read before returning from the function.
@@ -1731,10 +1776,12 @@ struct DSEState {
       }
 
       MemoryAccess *UseAccess = WorkList[I];
-      if (isa<MemoryPhi>(UseAccess)) {
-        PushMemUses(UseAccess);
-        continue;
-      }
+      // Simply adding the users of MemoryPhi to the worklist is not enough,
+      // because we might miss read clobbers in different iterations of a loop,
+      // for example.
+      // TODO: Add support for phi translation to handle the loop case.
+      if (isa<MemoryPhi>(UseAccess))
+        return false;
 
       // TODO: Checking for aliasing is expensive. Consider reducing the amount
       // of times this is called and/or caching it.
@@ -1777,9 +1824,10 @@ struct DSEState {
            isFreeCall(I, &TLI);
   }
 
-  /// Returns true if \p MaybeTerm is a memory terminator for the same
-  /// underlying object as \p DefLoc.
-  bool isMemTerminator(MemoryLocation DefLoc, Instruction *MaybeTerm) {
+  /// Returns true if \p MaybeTerm is a memory terminator for \p Loc from
+  /// instruction \p AccessI.
+  bool isMemTerminator(MemoryLocation Loc, Instruction *AccessI,
+                       Instruction *MaybeTerm) {
     Optional<std::pair<MemoryLocation, bool>> MaybeTermLoc =
         getLocForTerminator(MaybeTerm);
 
@@ -1788,13 +1836,24 @@ struct DSEState {
 
     // If the terminator is a free-like call, all accesses to the underlying
     // object can be considered terminated.
-    if (MaybeTermLoc->second)
-      DefLoc = MemoryLocation(getUnderlyingObject(DefLoc.Ptr));
-    return BatchAA.isMustAlias(MaybeTermLoc->first, DefLoc);
+    if (getUnderlyingObject(Loc.Ptr) !=
+        getUnderlyingObject(MaybeTermLoc->first.Ptr))
+      return false;
+
+    int64_t InstWriteOffset, DepWriteOffset;
+    return MaybeTermLoc->second ||
+           isOverwrite(MaybeTerm, AccessI, MaybeTermLoc->first, Loc, DL, TLI,
+                       DepWriteOffset, InstWriteOffset, BatchAA,
+                       &F) == OW_Complete;
   }
 
   // Returns true if \p Use may read from \p DefLoc.
   bool isReadClobber(MemoryLocation DefLoc, Instruction *UseInst) {
+    // Monotonic or weaker atomic stores can be re-ordered and do not need to be
+    // treated as read clobber.
+    if (auto SI = dyn_cast<StoreInst>(UseInst))
+      return isStrongerThan(SI->getOrdering(), AtomicOrdering::Monotonic);
+
     if (!UseInst->mayReadFromMemory())
       return false;
 
@@ -1807,6 +1866,32 @@ struct DSEState {
     // be expensive compared to the benefits in practice. For now, avoid more
     // expensive analysis to limit compile-time.
     return isRefSet(BatchAA.getModRefInfo(UseInst, DefLoc));
+  }
+
+  /// Returns true if \p Ptr is guaranteed to be loop invariant for any possible
+  /// loop. In particular, this guarantees that it only references a single
+  /// MemoryLocation during execution of the containing function.
+  bool IsGuaranteedLoopInvariant(Value *Ptr) {
+    auto IsGuaranteedLoopInvariantBase = [this](Value *Ptr) {
+      Ptr = Ptr->stripPointerCasts();
+      if (auto *I = dyn_cast<Instruction>(Ptr)) {
+        if (isa<AllocaInst>(Ptr))
+          return true;
+
+        if (isAllocLikeFn(I, &TLI))
+          return true;
+
+        return false;
+      }
+      return true;
+    };
+
+    Ptr = Ptr->stripPointerCasts();
+    if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
+      return IsGuaranteedLoopInvariantBase(GEP->getPointerOperand()) &&
+             GEP->hasAllConstantIndices();
+    }
+    return IsGuaranteedLoopInvariantBase(Ptr);
   }
 
   // Find a MemoryDef writing to \p DefLoc and dominating \p StartAccess, with
@@ -1828,27 +1913,42 @@ struct DSEState {
     MemoryAccess *Current = StartAccess;
     Instruction *KillingI = KillingDef->getMemoryInst();
     bool StepAgain;
-    LLVM_DEBUG(dbgs() << "  trying to get dominating access for "
-                      << *StartAccess << "\n");
+    LLVM_DEBUG(dbgs() << "  trying to get dominating access\n");
 
     // Find the next clobbering Mod access for DefLoc, starting at StartAccess.
     do {
       StepAgain = false;
+      LLVM_DEBUG({
+        dbgs() << "   visiting " << *Current;
+        if (!MSSA.isLiveOnEntryDef(Current) && isa<MemoryUseOrDef>(Current))
+          dbgs() << " (" << *cast<MemoryUseOrDef>(Current)->getMemoryInst()
+                 << ")";
+        dbgs() << "\n";
+      });
+
       // Reached TOP.
-      if (MSSA.isLiveOnEntryDef(Current))
+      if (MSSA.isLiveOnEntryDef(Current)) {
+        LLVM_DEBUG(dbgs() << "   ...  found LiveOnEntryDef\n");
         return None;
+      }
 
       // Cost of a step. Accesses in the same block are more likely to be valid
       // candidates for elimination, hence consider them cheaper.
       unsigned StepCost = KillingDef->getBlock() == Current->getBlock()
                               ? MemorySSASameBBStepCost
                               : MemorySSAOtherBBStepCost;
-      if (WalkerStepLimit <= StepCost)
+      if (WalkerStepLimit <= StepCost) {
+        LLVM_DEBUG(dbgs() << "   ...  hit walker step limit\n");
         return None;
+      }
       WalkerStepLimit -= StepCost;
 
-      if (isa<MemoryPhi>(Current))
-        break;
+      // Return for MemoryPhis. They cannot be eliminated directly and the
+      // caller is responsible for traversing them.
+      if (isa<MemoryPhi>(Current)) {
+        LLVM_DEBUG(dbgs() << "   ...  found MemoryPhi\n");
+        return Current;
+      }
 
       // Below, check if CurrentDef is a valid candidate to be eliminated by
       // KillingDef. If it is not, check the next candidate.
@@ -1886,6 +1986,18 @@ struct DSEState {
         return None;
       }
 
+      // Quick check if there are direct uses that are read-clobbers.
+      if (any_of(Current->uses(), [this, &DefLoc, StartAccess](Use &U) {
+            if (auto *UseOrDef = dyn_cast<MemoryUseOrDef>(U.getUser()))
+              return !MSSA.dominates(StartAccess, UseOrDef) &&
+                     isReadClobber(DefLoc, UseOrDef->getMemoryInst());
+            return false;
+          })) {
+        Cache.KnownReads.insert(Current);
+        LLVM_DEBUG(dbgs() << "   ...  found a read clobber\n");
+        return None;
+      }
+
       // If Current cannot be analyzed or is not removable, check the next
       // candidate.
       if (!hasAnalyzableMemoryWrite(CurrentI, TLI) || !isRemovable(CurrentI)) {
@@ -1894,24 +2006,38 @@ struct DSEState {
         continue;
       }
 
+      // If Current does not have an analyzable write location, skip it
       auto CurrentLoc = getLocForWriteEx(CurrentI);
-      if (!CurrentLoc)
-        break;
+      if (!CurrentLoc) {
+        StepAgain = true;
+        Current = CurrentDef->getDefiningAccess();
+        continue;
+      }
 
       if (IsMemTerm) {
         // If the killing def is a memory terminator (e.g. lifetime.end), check
         // the next candidate if the current Current does not write the same
         // underlying object as the terminator.
-        const Value *NIUnd = getUnderlyingObject(CurrentLoc->Ptr);
-        if (DefUO != NIUnd) {
+        if (!isMemTerminator(*CurrentLoc, CurrentI, KillingI)) {
           StepAgain = true;
           Current = CurrentDef->getDefiningAccess();
         }
         continue;
       } else {
+        // AliasAnalysis does not account for loops. Limit elimination to
+        // candidates for which we can guarantee they always store to the same
+        // memory location and not multiple locations in a loop.
+        if (Current->getBlock() != KillingDef->getBlock() &&
+            !IsGuaranteedLoopInvariant(const_cast<Value *>(CurrentLoc->Ptr))) {
+          StepAgain = true;
+          Current = CurrentDef->getDefiningAccess();
+          WalkerStepLimit -= 1;
+          continue;
+        }
+
         int64_t InstWriteOffset, DepWriteOffset;
-        auto OR = isOverwrite(DefLoc, *CurrentLoc, DL, TLI, DepWriteOffset,
-                              InstWriteOffset, BatchAA, &F);
+        auto OR = isOverwrite(KillingI, CurrentI, DefLoc, *CurrentLoc, DL, TLI,
+                              DepWriteOffset, InstWriteOffset, BatchAA, &F);
         // If Current does not write to the same object as KillingDef, check
         // the next candidate.
         if (OR == OW_Unknown) {
@@ -1933,24 +2059,17 @@ struct DSEState {
       }
     } while (StepAgain);
 
-    MemoryAccess *EarlierAccess = Current;
     // Accesses to objects accessible after the function returns can only be
     // eliminated if the access is killed along all paths to the exit. Collect
     // the blocks with killing (=completely overwriting MemoryDefs) and check if
     // they cover all paths from EarlierAccess to any function exit.
     SmallPtrSet<Instruction *, 16> KillingDefs;
     KillingDefs.insert(KillingDef->getMemoryInst());
+    MemoryAccess *EarlierAccess = Current;
     Instruction *EarlierMemInst =
-        isa<MemoryDef>(EarlierAccess)
-            ? cast<MemoryDef>(EarlierAccess)->getMemoryInst()
-            : nullptr;
-    LLVM_DEBUG({
-      dbgs() << "  Checking for reads of " << *EarlierAccess;
-      if (EarlierMemInst)
-        dbgs() << " (" << *EarlierMemInst << ")\n";
-      else
-        dbgs() << ")\n";
-    });
+        cast<MemoryDef>(EarlierAccess)->getMemoryInst();
+    LLVM_DEBUG(dbgs() << "  Checking for reads of " << *EarlierAccess << " ("
+                      << *EarlierMemInst << ")\n");
 
     SmallSetVector<MemoryAccess *, 32> WorkList;
     auto PushMemUses = [&WorkList](MemoryAccess *Acc) {
@@ -1962,7 +2081,7 @@ struct DSEState {
     // Optimistically collect all accesses for reads. If we do not find any
     // read clobbers, add them to the cache.
     SmallPtrSet<MemoryAccess *, 16> KnownNoReads;
-    if (!EarlierMemInst || !EarlierMemInst->mayReadFromMemory())
+    if (!EarlierMemInst->mayReadFromMemory())
       KnownNoReads.insert(EarlierAccess);
     // Check if EarlierDef may be read.
     for (unsigned I = 0; I < WorkList.size(); I++) {
@@ -2021,8 +2140,16 @@ struct DSEState {
 
       // A memory terminator kills all preceeding MemoryDefs and all succeeding
       // MemoryAccesses. We do not have to check it's users.
-      if (isMemTerminator(DefLoc, UseInst))
+      if (isMemTerminator(DefLoc, KillingI, UseInst))
         continue;
+
+      if (UseInst->mayThrow() && !isInvisibleToCallerBeforeRet(DefUO)) {
+        LLVM_DEBUG(dbgs() << "  ... found throwing instruction\n");
+        Cache.KnownReads.insert(UseAccess);
+        Cache.KnownReads.insert(StartAccess);
+        Cache.KnownReads.insert(EarlierAccess);
+        return None;
+      }
 
       // Uses which may read the original MemoryDef mean we cannot eliminate the
       // original MD. Stop walk.
@@ -2054,7 +2181,7 @@ struct DSEState {
       //   3 = Def(1)   ; <---- Current  (3, 2) = NoAlias, (3,1) = MayAlias,
       //                  stores [0,1]
       if (MemoryDef *UseDef = dyn_cast<MemoryDef>(UseAccess)) {
-        if (isCompleteOverwrite(DefLoc, UseInst)) {
+        if (isCompleteOverwrite(DefLoc, KillingI, UseInst)) {
           if (!isInvisibleToCallerAfterRet(DefUO) &&
               UseAccess != EarlierAccess) {
             BasicBlock *MaybeKillingBlock = UseInst->getParent();
@@ -2411,7 +2538,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
         // Check if NI overwrites SI.
         int64_t InstWriteOffset, DepWriteOffset;
         OverwriteResult OR =
-            isOverwrite(SILoc, NILoc, State.DL, TLI, DepWriteOffset,
+            isOverwrite(SI, NI, SILoc, NILoc, State.DL, TLI, DepWriteOffset,
                         InstWriteOffset, State.BatchAA, &F);
         if (OR == OW_MaybePartial) {
           auto Iter = State.IOLs.insert(
@@ -2462,7 +2589,7 @@ bool eliminateDeadStoresMemorySSA(Function &F, AliasAnalysis &AA,
 
   if (EnablePartialOverwriteTracking)
     for (auto &KV : State.IOLs)
-      MadeChange |= removePartiallyOverlappedStores(State.DL, KV.second);
+      MadeChange |= removePartiallyOverlappedStores(State.DL, KV.second, TLI);
 
   MadeChange |= State.eliminateDeadWritesAtEndOfFunction();
   return MadeChange;

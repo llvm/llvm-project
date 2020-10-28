@@ -5,15 +5,14 @@ func @linalg_generic_sum(%lhs: memref<2x2xf32>,
                          %rhs: memref<2x2xf32>,
                          %sum: memref<2x2xf32>) {
   linalg.generic {
-    args_in = 2 : i64,
-    args_out = 1 : i64,
     indexing_maps = [#map0, #map0, #map0],
-    iterator_types = ["parallel", "parallel"]
-  } %lhs, %rhs, %sum {
+    iterator_types = ["parallel", "parallel"]}
+      ins(%lhs, %rhs : memref<2x2xf32>, memref<2x2xf32>)
+     outs(%sum : memref<2x2xf32>) {
     ^bb0(%lhs_in: f32, %rhs_in: f32, %sum_out: f32):   // no predecessors
       %0 = addf %lhs_in, %rhs_in : f32
       linalg.yield %0 : f32
-  }: memref<2x2xf32>, memref<2x2xf32>, memref<2x2xf32>
+  }
   return
 }
 // CHECK-LABEL: @linalg_generic_sum
@@ -35,17 +34,17 @@ func @linalg_generic_sum(%lhs: memref<2x2xf32>,
   affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
 ]
 #trait = {
-  args_in = 1,
-  args_out = 1,
   iterator_types = ["parallel", "parallel", "reduction", "parallel"],
   indexing_maps = #accesses
 }
 
 func @lower_outer_parallel(%A: memref<?x?x?x?xf32>, %B: memref<?x?x?xf32>) {
-  linalg.generic #trait %A, %B {
+  linalg.generic #trait
+      ins(%A : memref<?x?x?x?xf32>)
+     outs(%B : memref<?x?x?xf32>) {
     ^bb0(%a: f32, %b: f32):
       linalg.yield %a: f32
-  } : memref<?x?x?x?xf32>, memref<?x?x?xf32>
+  }
   return
 }
 // CHECK-LABEL: @lower_outer_parallel
@@ -68,17 +67,17 @@ func @lower_outer_parallel(%A: memref<?x?x?x?xf32>, %B: memref<?x?x?xf32>) {
   affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d2, d4, d5)>
 ]
 #trait = {
-  args_in = 1,
-  args_out = 1,
   iterator_types = ["parallel", "parallel", "reduction", "parallel", "parallel", "reduction"],
   indexing_maps = #accesses
 }
 
 func @lower_mixed_parallel(%A: memref<?x?x?x?x?x?xf32>, %B: memref<?x?x?x?xf32>) {
-  linalg.generic #trait %A, %B {
+  linalg.generic #trait
+      ins(%A : memref<?x?x?x?x?x?xf32>)
+     outs(%B : memref<?x?x?x?xf32>) {
     ^bb0(%a: f32, %b: f32):
       linalg.yield %a: f32
-  } : memref<?x?x?x?x?x?xf32>, memref<?x?x?x?xf32>
+  }
   return
 }
 // CHECK-LABEL: @lower_mixed_parallel

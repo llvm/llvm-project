@@ -73,6 +73,9 @@ public:
   ///
   StringRef getInstNamespace() const;
 
+  /// getRegNamespace - Return the target-specific register namespace.
+  StringRef getRegNamespace() const;
+
   /// getInstructionSet - Return the InstructionSet object.
   ///
   Record *getInstructionSet() const;

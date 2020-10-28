@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AST.h"
+#include "Config.h"
 #include "FindTarget.h"
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
@@ -169,8 +170,7 @@ findInsertionPoint(const Tweak::Selection &Inputs,
       return Tok.kind() == tok::l_brace;
     });
     if (Tok == Toks.end() || Tok->endLocation().isInvalid()) {
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Namespace with no {");
+      return error("Namespace with no {");
     }
     if (!Tok->endLocation().isMacroID()) {
       InsertionPointData Out;
@@ -183,13 +183,25 @@ findInsertionPoint(const Tweak::Selection &Inputs,
   // top level decl.
   auto TLDs = Inputs.AST->getLocalTopLevelDecls();
   if (TLDs.empty()) {
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Cannot find place to insert \"using\"");
+    return error("Cannot find place to insert \"using\"");
   }
   InsertionPointData Out;
   Out.Loc = SM.getExpansionLoc(TLDs[0]->getBeginLoc());
   Out.Suffix = "\n\n";
   return Out;
+}
+
+bool isNamespaceForbidden(const Tweak::Selection &Inputs,
+                          const NestedNameSpecifier &Namespace) {
+  std::string NamespaceStr = printNamespaceScope(*Namespace.getAsNamespace());
+
+  for (StringRef Banned : Config::current().Style.FullyQualifiedNamespaces) {
+    StringRef PrefixMatch = NamespaceStr;
+    if (PrefixMatch.consume_front(Banned) && PrefixMatch.consume_front("::"))
+      return true;
+  }
+
+  return false;
 }
 
 bool AddUsing::prepare(const Selection &Inputs) {
@@ -250,6 +262,9 @@ bool AddUsing::prepare(const Selection &Inputs) {
     return false;
   }
 
+  if (isNamespaceForbidden(Inputs, *QualifierToRemove.getNestedNameSpecifier()))
+    return false;
+
   // Macros are difficult. We only want to offer code action when what's spelled
   // under the cursor is a namespace qualifier. If it's a macro that expands to
   // a qualifier, user would not know what code action will actually change.
@@ -272,9 +287,7 @@ Expected<Tweak::Effect> AddUsing::apply(const Selection &Inputs) {
   auto SpelledTokens = TB.spelledForExpanded(
       TB.expandedTokens(QualifierToRemove.getSourceRange()));
   if (!SpelledTokens) {
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "Could not determine length of the qualifier");
+    return error("Could not determine length of the qualifier");
   }
   unsigned Length =
       syntax::Token::range(SM, SpelledTokens->front(), SpelledTokens->back())

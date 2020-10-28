@@ -77,6 +77,19 @@ void WriteToFile(const uint8_t *Data, size_t Size, const std::string &Path) {
   fclose(Out);
 }
 
+void AppendToFile(const std::string &Data, const std::string &Path) {
+  AppendToFile(reinterpret_cast<const uint8_t *>(Data.data()), Data.size(),
+               Path);
+}
+
+void AppendToFile(const uint8_t *Data, size_t Size, const std::string &Path) {
+  FILE *Out = fopen(Path.c_str(), "a");
+  if (!Out)
+    return;
+  fwrite(Data, sizeof(Data[0]), Size, Out);
+  fclose(Out);
+}
+
 void ReadDirToVectorOfUnits(const char *Path, Vector<Unit> *V,
                             long *Epoch, size_t MaxSize, bool ExitOnError) {
   long E = Epoch ? *Epoch : 0;
@@ -142,6 +155,38 @@ void VPrintf(bool Verbose, const char *Fmt, ...) {
   vfprintf(OutputFile, Fmt, ap);
   va_end(ap);
   fflush(OutputFile);
+}
+
+static bool MkDirRecursiveInner(const std::string &Leaf) {
+  // Prevent chance of potential infinite recursion
+  if (Leaf == ".")
+    return true;
+
+  const std::string &Dir = DirName(Leaf);
+
+  if (IsDirectory(Dir)) {
+    MkDir(Leaf);
+    return IsDirectory(Leaf);
+  }
+
+  bool ret = MkDirRecursiveInner(Dir);
+  if (!ret) {
+    // Give up early if a previous MkDir failed
+    return ret;
+  }
+
+  MkDir(Leaf);
+  return IsDirectory(Leaf);
+}
+
+bool MkDirRecursive(const std::string &Dir) {
+  if (Dir.empty())
+    return false;
+
+  if (IsDirectory(Dir))
+    return true;
+
+  return MkDirRecursiveInner(Dir);
 }
 
 void RmDirRecursive(const std::string &Dir) {

@@ -360,3 +360,36 @@ loop:
 loopexit:
   ret i32 %sum
 }
+
+; We can't hoist the invariant load out of the loop because
+; the marker is given a variable size (-1).
+define i32 @test_fence5(i8* %addr, i32 %n, i8* %volatile) {
+; CHECK-LABEL: @test_fence5
+; CHECK-LABEL: entry
+; CHECK: invariant.start
+; CHECK-NOT: %addrld = load atomic i32, i32* %addr.i unordered, align 8
+; CHECK: br label %loop
+entry:
+  %gep = getelementptr inbounds i8, i8* %addr, i64 8
+  %addr.i = bitcast i8* %gep to i32 *
+  store atomic i32 5, i32 * %addr.i unordered, align 8
+  fence release
+  %invst = call {}* @llvm.invariant.start.p0i8(i64 -1, i8* %gep)
+  br label %loop
+
+loop:
+  %indvar = phi i32 [ %indvar.next, %loop ], [ 0, %entry ]
+  %sum = phi i32 [ %sum.next, %loop ], [ 0, %entry ]
+  %volload = load atomic i8, i8* %volatile unordered, align 8
+  fence acquire
+  %volchk = icmp eq i8 %volload, 0
+  %addrld = load atomic i32, i32* %addr.i unordered, align 8
+  %sel = select i1 %volchk, i32 0, i32 %addrld
+  %sum.next = add i32 %sel, %sum
+  %indvar.next = add i32 %indvar, 1
+  %cond = icmp slt i32 %indvar.next, %n
+  br i1 %cond, label %loop, label %loopexit
+
+loopexit:
+  ret i32 %sum
+}

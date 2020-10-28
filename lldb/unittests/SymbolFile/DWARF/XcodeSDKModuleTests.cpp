@@ -48,9 +48,7 @@ debug_abbrev:
           - Attribute:       DW_AT_APPLE_sdk
             Form:            DW_FORM_strp
 debug_info:
-  - Length:          8
-    Version:         2
-    AbbrOffset:      0
+  - Version:         2
     AddrSize:        8
     Entries:
       - AbbrCode:        0x00000001
@@ -58,7 +56,6 @@ debug_info:
           - Value:           0x000000000000000C
           - Value:           0x0000000000000000
       - AbbrCode:        0x00000000
-        Values:          []
 ...
 )";
 

@@ -461,6 +461,10 @@ LLVM-specific variables
 **LLVM_PARALLEL_LINK_JOBS**:STRING
   Define the maximum number of concurrent link jobs.
 
+**LLVM_EXTERNALIZE_DEBUGINFO**:BOOL
+  Generate dSYM files and strip executables and libraries (Darwin Only).
+  Defaults to OFF.
+
 **LLVM_USE_CRT_{target}**:STRING
   On Windows, tells which version of the C runtime library (CRT) should be used.
   For example, -DLLVM_USE_CRT_RELEASE=MT would statically link the CRT into the
@@ -473,8 +477,12 @@ LLVM-specific variables
   midly improves Clang build times, by about 5-10%. At the moment, rpmalloc,
   snmalloc and mimalloc are supported. Use the path to `git clone` to select
   the respective allocator, for example:
-    D:\git> git clone https://github.com/mjansson/rpmalloc
-    D:\llvm-project> cmake ... -DLLVM_INTEGRATED_CRT_ALLOC=D:\git\rpmalloc
+
+  .. code-block:: console
+
+    $ D:\git> git clone https://github.com/mjansson/rpmalloc
+    $ D:\llvm-project> cmake ... -DLLVM_INTEGRATED_CRT_ALLOC=D:\git\rpmalloc
+  
   This flag needs to be used along with the static CRT, ie. if building the
   Release target, add -DLLVM_USE_CRT_RELEASE=MT.
 
@@ -548,7 +556,7 @@ LLVM-specific variables
 **SPHINX_EXECUTABLE**:STRING
   The path to the ``sphinx-build`` executable detected by CMake.
   For installation instructions, see
-  http://www.sphinx-doc.org/en/latest/usage/installation.html
+  https://www.sphinx-doc.org/en/master/usage/installation.html
 
 **SPHINX_OUTPUT_HTML**:BOOL
   If enabled (and ``LLVM_ENABLE_SPHINX`` is enabled) then the targets for

@@ -46,11 +46,12 @@ class FunctionPass;
 class IntrinsicInst;
 class LoadInst;
 class LoopInfo;
+class MemorySSA;
+class MemorySSAUpdater;
 class OptimizationRemarkEmitter;
 class PHINode;
 class TargetLibraryInfo;
 class Value;
-
 /// A private "module" namespace for types and utilities used by GVN. These
 /// are implementation details and should not be used by clients.
 namespace gvn LLVM_LIBRARY_VISIBILITY {
@@ -211,6 +212,7 @@ private:
   OptimizationRemarkEmitter *ORE = nullptr;
   ImplicitControlFlowTracking *ICF = nullptr;
   LoopInfo *LI = nullptr;
+  MemorySSAUpdater *MSSAU = nullptr;
 
   ValueTable VN;
 
@@ -246,7 +248,7 @@ private:
   bool runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
                const TargetLibraryInfo &RunTLI, AAResults &RunAA,
                MemoryDependenceResults *RunMD, LoopInfo *LI,
-               OptimizationRemarkEmitter *ORE);
+               OptimizationRemarkEmitter *ORE, MemorySSA *MSSA = nullptr);
 
   /// Push a new Value to the LeaderTable onto the list for its value number.
   void addToLeaderTable(uint32_t N, Value *V, const BasicBlock *BB) {

@@ -37,7 +37,7 @@ Options
 .. option:: MakeSmartPtrFunctionHeader
 
    A string specifying the corresponding header of make-unique-ptr function.
-   Default is `memory`.
+   Default is `<memory>`.
 
 .. option:: IncludeStyle
 

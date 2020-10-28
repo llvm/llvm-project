@@ -11,6 +11,7 @@ add_header_library(
     BasicOperations.h
     BitPatterns.h
     ClassificationFunctions.h
+    DivisionAndRemainderOperations.h
     FloatOperations.h
     FloatProperties.h
     FPBits.h

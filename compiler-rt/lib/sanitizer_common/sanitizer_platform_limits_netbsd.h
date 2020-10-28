@@ -21,8 +21,8 @@
 
 namespace __sanitizer {
 void *__sanitizer_get_link_map_by_dlopen_handle(void *handle);
-# define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
-    (link_map *)__sanitizer_get_link_map_by_dlopen_handle(handle)
+#define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
+  (link_map *)__sanitizer_get_link_map_by_dlopen_handle(handle)
 
 extern unsigned struct_utsname_sz;
 extern unsigned struct_stat_sz;
@@ -127,6 +127,12 @@ struct __sanitizer_shmid_ds {
   u64 shm_dtime;
   u64 shm_ctime;
   void *_shm_internal;
+};
+
+struct __sanitizer_protoent {
+  char *p_name;
+  char **p_aliases;
+  int p_proto;
 };
 
 struct __sanitizer_netent {
@@ -1018,11 +1024,9 @@ extern unsigned struct_RF_ProgressInfo_sz;
 extern unsigned struct_nvlist_ref_sz;
 extern unsigned struct_StringList_sz;
 
-
 // A special value to mark ioctls that are not present on the target platform,
 // when it can not be determined without including any system headers.
 extern const unsigned IOCTL_NOT_PRESENT;
-
 
 extern unsigned IOCTL_AFM_ADDFMAP;
 extern unsigned IOCTL_AFM_DELFMAP;

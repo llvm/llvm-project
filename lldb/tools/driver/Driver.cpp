@@ -491,7 +491,7 @@ int Driver::MainLoop() {
   SBCommandInterpreter sb_interpreter = m_debugger.GetCommandInterpreter();
 
   // Before we handle any options from the command line, we parse the
-  // .lldbinit file in the user's home directory.
+  // REPL init file or the default file in the user's home directory.
   SBCommandReturnObject result;
   sb_interpreter.SourceInitFileInHomeDirectory(result, m_option_data.m_repl);
   if (m_option_data.m_debug_mode) {
@@ -800,9 +800,11 @@ EXAMPLES:
 llvm::Optional<int> InitializeReproducer(llvm::StringRef argv0,
                                          opt::InputArgList &input_args) {
   if (auto *replay_path = input_args.getLastArg(OPT_replay)) {
-    const bool no_version_check = input_args.hasArg(OPT_no_version_check);
+    SBReplayOptions replay_options;
+    replay_options.SetCheckVersion(!input_args.hasArg(OPT_no_version_check));
+    replay_options.SetVerify(!input_args.hasArg(OPT_no_verification));
     if (const char *error =
-            SBReproducer::Replay(replay_path->getValue(), no_version_check)) {
+            SBReproducer::Replay(replay_path->getValue(), replay_options)) {
       WithColor::error() << "reproducer replay failed: " << error << '\n';
       return 1;
     }

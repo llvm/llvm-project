@@ -782,34 +782,27 @@ bool AMDGPUTargetLowering::isCheapToSpeculateCtlz() const {
   return true;
 }
 
-bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode * N) const {
+bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode *N) const {
   switch (N->getOpcode()) {
-    default:
-    return false;
-    case ISD::EntryToken:
-    case ISD::TokenFactor:
+  case ISD::EntryToken:
+  case ISD::TokenFactor:
+    return true;
+  case ISD::INTRINSIC_WO_CHAIN: {
+    unsigned IntrID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+    switch (IntrID) {
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane:
       return true;
-    case ISD::INTRINSIC_WO_CHAIN:
-    {
-      unsigned IntrID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
-      switch (IntrID) {
-        default:
-        return false;
-        case Intrinsic::amdgcn_readfirstlane:
-        case Intrinsic::amdgcn_readlane:
-          return true;
-      }
     }
-    break;
-    case ISD::LOAD:
-    {
-      if (cast<LoadSDNode>(N)->getMemOperand()->getAddrSpace() ==
-          AMDGPUAS::CONSTANT_ADDRESS_32BIT)
-        return true;
-      return false;
-    }
-    break;
+    return false;
   }
+  case ISD::LOAD:
+    if (cast<LoadSDNode>(N)->getMemOperand()->getAddrSpace() ==
+        AMDGPUAS::CONSTANT_ADDRESS_32BIT)
+      return true;
+    return false;
+  }
+  return false;
 }
 
 SDValue AMDGPUTargetLowering::getNegatedExpression(
@@ -4164,9 +4157,9 @@ SDValue AMDGPUTargetLowering::loadStackInputValue(SelectionDAG &DAG,
   auto SrcPtrInfo = MachinePointerInfo::getStack(MF, Offset);
   SDValue Ptr = DAG.getFrameIndex(FI, MVT::i32);
 
-  return DAG.getLoad(VT, SL, DAG.getEntryNode(), Ptr, SrcPtrInfo, 4,
+  return DAG.getLoad(VT, SL, DAG.getEntryNode(), Ptr, SrcPtrInfo, Align(4),
                      MachineMemOperand::MODereferenceable |
-                     MachineMemOperand::MOInvariant);
+                         MachineMemOperand::MOInvariant);
 }
 
 SDValue AMDGPUTargetLowering::storeStackInputValue(SelectionDAG &DAG,
@@ -4178,7 +4171,7 @@ SDValue AMDGPUTargetLowering::storeStackInputValue(SelectionDAG &DAG,
   MachinePointerInfo DstInfo = MachinePointerInfo::getStack(MF, Offset);
 
   SDValue Ptr = DAG.getConstant(Offset, SL, MVT::i32);
-  SDValue Store = DAG.getStore(Chain, SL, ArgVal, Ptr, DstInfo, 4,
+  SDValue Store = DAG.getStore(Chain, SL, ArgVal, Ptr, DstInfo, Align(4),
                                MachineMemOperand::MODereferenceable);
   return Store;
 }

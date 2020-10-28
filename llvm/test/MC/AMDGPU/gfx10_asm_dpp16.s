@@ -1,7 +1,7 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+WavefrontSize32,-WavefrontSize64 -show-encoding %s | FileCheck --check-prefixes=GFX10,W32 %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 -show-encoding %s | FileCheck --check-prefixes=GFX10,W64 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+WavefrontSize32,-WavefrontSize64 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX10-ERR,W32-ERR %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX10-ERR,W64-ERR %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+WavefrontSize32,-WavefrontSize64 %s 2>&1 | FileCheck --check-prefixes=GFX10-ERR,W32-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 %s 2>&1 | FileCheck --check-prefixes=GFX10-ERR,W64-ERR --implicit-check-not=error: %s
 
 v_mov_b32_dpp v5, v1 quad_perm:[3,2,1,0] row_mask:0x0 bank_mask:0x0
 // GFX10: [0xfa,0x02,0x0a,0x7e,0x01,0x1b,0x00,0x00]

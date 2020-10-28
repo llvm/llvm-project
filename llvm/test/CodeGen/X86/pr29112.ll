@@ -34,7 +34,7 @@ define <4 x float> @bar(<4 x float>* %a1p, <4 x float>* %a2p, <4 x float> %a3, <
 ; CHECK-NEXT:    vblendps {{.*#+}} xmm4 = xmm1[0,1,2],xmm4[3]
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm2[3,3,3,3]
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm5 = xmm0[0],xmm5[0],xmm0[1],xmm5[1]
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],xmm2[1],xmm5[3]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm5 = xmm5[0,1],xmm2[1,3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1,2],xmm3[1]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm7[0,1],xmm2[1],xmm7[3]
 ; CHECK-NEXT:    vblendps {{.*#+}} xmm7 = xmm0[0,1,2],xmm3[3]
@@ -42,7 +42,7 @@ define <4 x float> @bar(<4 x float>* %a1p, <4 x float>* %a2p, <4 x float> %a3, <
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm1 = xmm8[0,1,2],xmm3[1]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[1]
 ; CHECK-NEXT:    vaddps %xmm1, %xmm0, %xmm8
-; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm11[0,1],xmm2[3],xmm11[3]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm2 = xmm11[0,1],xmm2[3,3]
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm3[2]
 ; CHECK-NEXT:    vaddps %xmm2, %xmm14, %xmm2
 ; CHECK-NEXT:    vmovaps %xmm13, %xmm1

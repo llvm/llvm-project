@@ -6,6 +6,8 @@
 ; RUN: llc -verify-machineinstrs -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
 ; RUN:   < %s -mtriple=powerpc64le-unknown-linux -mcpu=pwr8 -mattr=-vsx | \
 ; RUN:   FileCheck %s -check-prefix=NOVSX
+; RUN: llc -mtriple=powerpc64le-unknown-linux -mcpu=pwr9 < %s -simplify-mir \
+; RUN:   -stop-after=machine-cp | FileCheck %s -check-prefix=MIR
 
 declare i32 @llvm.experimental.constrained.fptosi.i32.f64(double, metadata)
 declare i64 @llvm.experimental.constrained.fptosi.i64.f64(double, metadata)
@@ -325,5 +327,87 @@ entry:
   %conv = tail call float @llvm.experimental.constrained.uitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret float %conv
 }
+
+define void @fptoint_nofpexcept_f64(double %m, i32* %addr1, i64* %addr2) {
+; MIR-LABEL: name: fptoint_nofpexcept_f64
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPSXWS
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPUXWS
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPSXDS
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPUXDS
+entry:
+  %conv1 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %m, metadata !"fpexcept.ignore") #0
+  %conv2 = tail call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %m, metadata !"fpexcept.ignore") #0
+  %conv3 = tail call i64 @llvm.experimental.constrained.fptosi.i64.f64(double %m, metadata !"fpexcept.ignore") #0
+  %conv4 = tail call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %m, metadata !"fpexcept.ignore") #0
+  store volatile i32 %conv1, i32* %addr1, align 4
+  store volatile i32 %conv2, i32* %addr1, align 4
+  store volatile i64 %conv3, i64* %addr2, align 8
+  store volatile i64 %conv4, i64* %addr2, align 8
+  ret void
+}
+
+define void @fptoint_nofpexcept_f32(float %m, i32* %addr1, i64* %addr2) {
+; MIR-LABEL: name: fptoint_nofpexcept_f32
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPSXWS
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPUXWS
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPSXDS
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPUXDS
+entry:
+  %conv1 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %m, metadata !"fpexcept.ignore") #0
+  %conv2 = tail call i32 @llvm.experimental.constrained.fptoui.i32.f32(float %m, metadata !"fpexcept.ignore") #0
+  %conv3 = tail call i64 @llvm.experimental.constrained.fptosi.i64.f32(float %m, metadata !"fpexcept.ignore") #0
+  %conv4 = tail call i64 @llvm.experimental.constrained.fptoui.i64.f32(float %m, metadata !"fpexcept.ignore") #0
+  store volatile i32 %conv1, i32* %addr1, align 4
+  store volatile i32 %conv2, i32* %addr1, align 4
+  store volatile i64 %conv3, i64* %addr2, align 8
+  store volatile i64 %conv4, i64* %addr2, align 8
+  ret void
+}
+
+define void @inttofp_nofpexcept_i32(i32 %m, float* %addr1, double* %addr2) {
+; MIR-LABEL: name: inttofp_nofpexcept_i32
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVSXDSP
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVUXDSP
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVSXDDP
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVUXDDP
+entry:
+  %conv1 = tail call float  @llvm.experimental.constrained.sitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %conv2 = tail call float  @llvm.experimental.constrained.uitofp.f32.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %conv3 = tail call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %conv4 = tail call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  store volatile float  %conv1, float*  %addr1, align 4
+  store volatile float  %conv2, float*  %addr1, align 4
+  store volatile double %conv3, double* %addr2, align 8
+  store volatile double %conv4, double* %addr2, align 8
+  ret void
+}
+
+define void @inttofp_nofpexcept_i64(i64 %m, float* %addr1, double* %addr2) {
+; MIR-LABEL: name: inttofp_nofpexcept_i64
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVSXDSP
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVUXDSP
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVSXDDP
+; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVUXDDP
+entry:
+  %conv1 = tail call float  @llvm.experimental.constrained.sitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %conv2 = tail call float  @llvm.experimental.constrained.uitofp.f32.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %conv3 = tail call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  %conv4 = tail call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  store volatile float  %conv1, float*  %addr1, align 4
+  store volatile float  %conv2, float*  %addr1, align 4
+  store volatile double %conv3, double* %addr2, align 8
+  store volatile double %conv4, double* %addr2, align 8
+  ret void
+}
+
+define <2 x double> @inttofp_nofpexcept_vec(<2 x i16> %m) {
+; MIR-LABEL: name: inttofp_nofpexcept_vec
+; MIR: renamable $v{{[0-9]+}} = nofpexcept XVCVSXDDP
+entry:
+  %conv = tail call <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i16(<2 x i16> %m, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
+  ret <2 x double> %conv
+}
+
+declare <2 x double> @llvm.experimental.constrained.sitofp.v2f64.v2i16(<2 x i16>, metadata, metadata)
 
 attributes #0 = { strictfp }

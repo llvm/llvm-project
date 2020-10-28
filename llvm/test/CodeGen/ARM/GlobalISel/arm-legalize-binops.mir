@@ -16,14 +16,17 @@
   define void @test_and_s8() { ret void }
   define void @test_and_s16() { ret void }
   define void @test_and_s32() { ret void }
+  define void @test_and_s64() { ret void }
 
   define void @test_or_s8() { ret void }
   define void @test_or_s16() { ret void }
   define void @test_or_s32() { ret void }
+  define void @test_or_s64() { ret void }
 
   define void @test_xor_s8() { ret void }
   define void @test_xor_s16() { ret void }
   define void @test_xor_s32() { ret void }
+  define void @test_xor_s64() { ret void }
 
   define void @test_lshr_s32() { ret void }
   define void @test_ashr_s32() { ret void }
@@ -391,6 +394,41 @@ body:             |
 
 ...
 ---
+name:            test_and_s64
+# CHECK-LABEL: name: test_and_s64
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }
+  - { id: 8, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    %2(s32) = COPY $r2
+    %3(s32) = COPY $r3
+    %4(s64) = G_MERGE_VALUES %0(s32), %1(s32)
+    %5(s64) = G_MERGE_VALUES %2(s32), %3(s32)
+    %6(s64) = G_AND %4, %5
+    %7(s32), %8(s32) = G_UNMERGE_VALUES %6(s64)
+    $r0 = COPY %7(s32)
+    $r1 = COPY %8(s32)
+    BX_RET 14, $noreg, implicit $r0, implicit $r1
+
+...
+---
 name:            test_or_s8
 # CHECK-LABEL: name: test_or_s8
 legalized:       false
@@ -480,6 +518,41 @@ body:             |
 
 ...
 ---
+name:            test_or_s64
+# CHECK-LABEL: name: test_or_s64
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }
+  - { id: 8, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    %2(s32) = COPY $r2
+    %3(s32) = COPY $r3
+    %4(s64) = G_MERGE_VALUES %0(s32), %1(s32)
+    %5(s64) = G_MERGE_VALUES %2(s32), %3(s32)
+    %6(s64) = G_OR %4, %5
+    %7(s32), %8(s32) = G_UNMERGE_VALUES %6(s64)
+    $r0 = COPY %7(s32)
+    $r1 = COPY %8(s32)
+    BX_RET 14, $noreg, implicit $r0, implicit $r1
+
+...
+---
 name:            test_xor_s8
 # CHECK-LABEL: name: test_xor_s8
 legalized:       false
@@ -566,6 +639,41 @@ body:             |
     ; CHECK: {{%[0-9]+}}:_(s32) = G_XOR {{%[0-9]+, %[0-9]+}}
     $r0 = COPY %2(s32)
     BX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            test_xor_s64
+# CHECK-LABEL: name: test_xor_s64
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }
+  - { id: 8, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    %2(s32) = COPY $r2
+    %3(s32) = COPY $r3
+    %4(s64) = G_MERGE_VALUES %0(s32), %1(s32)
+    %5(s64) = G_MERGE_VALUES %2(s32), %3(s32)
+    %6(s64) = G_XOR %4, %5
+    %7(s32), %8(s32) = G_UNMERGE_VALUES %6(s64)
+    $r0 = COPY %7(s32)
+    $r1 = COPY %8(s32)
+    BX_RET 14, $noreg, implicit $r0, implicit $r1
 
 ...
 ---

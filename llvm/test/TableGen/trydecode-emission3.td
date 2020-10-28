@@ -28,8 +28,8 @@ def InstBOp : Operand<i32> {
 
 def InstB : TestInstruction {
   bits<2> op;
-  let Inst{7-2} = {0,0,0,0,0,0};
-  let Inst{1-0} = op;
+  let Inst{7...2} = {0,0,0,0,0,0};
+  let Inst{1...0} = op;
   let OutOperandList = (outs InstBOp:$op);
   let AsmString = "InstB";
 }

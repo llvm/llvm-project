@@ -42,16 +42,6 @@ using namespace CodeGen;
 
 namespace {
 
-std::string SymbolNameForMethod( StringRef ClassName,
-     StringRef CategoryName, const Selector MethodName,
-    bool isClassMethod) {
-  std::string MethodNameColonStripped = MethodName.getAsString();
-  std::replace(MethodNameColonStripped.begin(), MethodNameColonStripped.end(),
-      ':', '_');
-  return (Twine(isClassMethod ? "_c_" : "_i_") + ClassName + "_" +
-    CategoryName + "_" + MethodNameColonStripped).str();
-}
-
 /// Class that lazily initialises the runtime function.  Avoids inserting the
 /// types and the function declaration into a module if they're not used, and
 /// avoids constructing the type more than once if it's used more than once.
@@ -2823,9 +2813,7 @@ GenerateMethodList(StringRef ClassName,
   ASTContext &Context = CGM.getContext();
   for (const auto *OMD : Methods) {
     llvm::Constant *FnPtr =
-      TheModule.getFunction(SymbolNameForMethod(ClassName, CategoryName,
-                                                OMD->getSelector(),
-                                                isClassMethodList));
+      TheModule.getFunction(getSymbolNameForMethod(OMD));
     assert(FnPtr && "Can't generate metadata for method that doesn't exist");
     auto Method = MethodArray.beginStruct(ObjCMethodTy);
     if (isV2ABI) {
@@ -3873,18 +3861,10 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
 
 llvm::Function *CGObjCGNU::GenerateMethod(const ObjCMethodDecl *OMD,
                                           const ObjCContainerDecl *CD) {
-  const ObjCCategoryImplDecl *OCD =
-    dyn_cast<ObjCCategoryImplDecl>(OMD->getDeclContext());
-  StringRef CategoryName = OCD ? OCD->getName() : "";
-  StringRef ClassName = CD->getName();
-  Selector MethodName = OMD->getSelector();
-  bool isClassMethod = !OMD->isInstanceMethod();
-
   CodeGenTypes &Types = CGM.getTypes();
   llvm::FunctionType *MethodTy =
     Types.GetFunctionType(Types.arrangeObjCMethodDeclaration(OMD));
-  std::string FunctionName = SymbolNameForMethod(ClassName, CategoryName,
-      MethodName, isClassMethod);
+  std::string FunctionName = getSymbolNameForMethod(OMD);
 
   llvm::Function *Method
     = llvm::Function::Create(MethodTy,

@@ -17,14 +17,14 @@ IRTransformLayer::IRTransformLayer(ExecutionSession &ES, IRLayer &BaseLayer,
     : IRLayer(ES, BaseLayer.getManglingOptions()), BaseLayer(BaseLayer),
       Transform(std::move(Transform)) {}
 
-void IRTransformLayer::emit(MaterializationResponsibility R,
+void IRTransformLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
                             ThreadSafeModule TSM) {
   assert(TSM && "Module must not be null");
 
-  if (auto TransformedTSM = Transform(std::move(TSM), R))
+  if (auto TransformedTSM = Transform(std::move(TSM), *R))
     BaseLayer.emit(std::move(R), std::move(*TransformedTSM));
   else {
-    R.failMaterialization();
+    R->failMaterialization();
     getExecutionSession().reportError(TransformedTSM.takeError());
   }
 }

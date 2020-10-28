@@ -58,14 +58,12 @@ body: |
     ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
     ; CHECK: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
     ; CHECK: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; CHECK: [[DEF:%[0-9]+]]:vgpr(<4 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+    ; CHECK: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; CHECK: [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
     ; CHECK: [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
     ; CHECK: .1:
     ; CHECK: successors: %bb.2(0x40000000), %bb.1(0x40000000)
-    ; CHECK: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.0, %11, %bb.1
-    ; CHECK: [[PHI1:%[0-9]+]]:vgpr(<4 x s32>) = G_PHI [[DEF]](<4 x s32>), %bb.0, %2(<4 x s32>), %bb.1
+    ; CHECK: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.0, %9, %bb.1
     ; CHECK: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub0(s64), implicit $exec
     ; CHECK: [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub1(s64), implicit $exec
     ; CHECK: [[MV:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32)
@@ -105,14 +103,12 @@ body: |
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr4
     ; CHECK: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
     ; CHECK: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; CHECK: [[DEF:%[0-9]+]]:vgpr(<4 x s32>) = G_IMPLICIT_DEF
-    ; CHECK: [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+    ; CHECK: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; CHECK: [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
     ; CHECK: [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
     ; CHECK: .1:
     ; CHECK: successors: %bb.2(0x40000000), %bb.1(0x40000000)
-    ; CHECK: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF1]], %bb.0, %10, %bb.1
-    ; CHECK: [[PHI1:%[0-9]+]]:vgpr(<4 x s32>) = G_PHI [[DEF]](<4 x s32>), %bb.0, %2(<4 x s32>), %bb.1
+    ; CHECK: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.0, %8, %bb.1
     ; CHECK: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub0(s64), implicit $exec
     ; CHECK: [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub1(s64), implicit $exec
     ; CHECK: [[MV:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32)

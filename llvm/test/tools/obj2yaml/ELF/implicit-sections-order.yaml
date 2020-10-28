@@ -34,10 +34,9 @@
 
 # OUTPUT:      --- !ELF
 # OUTPUT-NEXT: FileHeader:
-# OUTPUT-NEXT:   Class:   ELFCLASS64
-# OUTPUT-NEXT:   Data:    ELFDATA2LSB
-# OUTPUT-NEXT:   Type:    ET_DYN
-# OUTPUT-NEXT:   Machine: EM_NONE
+# OUTPUT-NEXT:   Class: ELFCLASS64
+# OUTPUT-NEXT:   Data:  ELFDATA2LSB
+# OUTPUT-NEXT:   Type:  ET_DYN
 # OUTPUT-NEXT: Sections:
 # OUTPUT-NEXT:   - Name: .foo.1
 # OUTPUT-NEXT:     Type: SHT_PROGBITS
@@ -124,10 +123,9 @@ DynamicSymbols:
 ## SHT_STRTAB/SHT_SYMTAB/SHT_DYNSYM sections.
 # OUTPUT2:      --- !ELF
 # OUTPUT2-NEXT: FileHeader:
-# OUTPUT2-NEXT:   Class:   ELFCLASS64
-# OUTPUT2-NEXT:   Data:    ELFDATA2LSB
-# OUTPUT2-NEXT:   Type:    ET_DYN
-# OUTPUT2-NEXT:   Machine: EM_NONE
+# OUTPUT2-NEXT:   Class: ELFCLASS64
+# OUTPUT2-NEXT:   Data:  ELFDATA2LSB
+# OUTPUT2-NEXT:   Type:  ET_DYN
 # OUTPUT2-NEXT: Sections:
 # OUTPUT2-NEXT:   - Name: .foo.1
 # OUTPUT2-NEXT:     Type: SHT_PROGBITS

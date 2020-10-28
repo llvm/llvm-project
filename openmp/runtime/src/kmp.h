@@ -3876,7 +3876,6 @@ extern int __kmpc_get_target_offload();
 
 // Constants used in libomptarget
 #define KMP_DEVICE_DEFAULT -1 // This is libomptarget's default device.
-#define KMP_HOST_DEVICE -10 // This is what it is in libomptarget, go figure.
 #define KMP_DEVICE_ALL -11 // This is libomptarget's "all devices".
 
 // OMP Pause Resource

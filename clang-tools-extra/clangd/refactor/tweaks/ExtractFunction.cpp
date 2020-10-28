@@ -625,9 +625,8 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   CapturedZoneInfo CapturedInfo = captureZoneInfo(ExtZone);
   // Bail out if any break of continue exists
   if (CapturedInfo.BrokenControlFlow)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   +"Cannot extract break/continue without "
-                                    "corresponding loop/switch statement.");
+    return error("Cannot extract break/continue without corresponding "
+                 "loop/switch statement.");
   NewFunction ExtractedFunc(getSemicolonPolicy(ExtZone, SM, LangOpts));
   ExtractedFunc.BodyRange = ExtZone.ZoneRange;
   ExtractedFunc.InsertionPoint = ExtZone.getInsertionPoint();
@@ -637,8 +636,7 @@ llvm::Expected<NewFunction> getExtractedFunction(ExtractionZone &ExtZone,
   if (!createParameters(ExtractedFunc, CapturedInfo) ||
       !generateReturnProperties(ExtractedFunc, *ExtZone.EnclosingFunction,
                                 CapturedInfo))
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   +"Too complex to extract.");
+    return error("Too complex to extract.");
   return ExtractedFunc;
 }
 

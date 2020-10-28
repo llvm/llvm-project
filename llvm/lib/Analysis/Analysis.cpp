@@ -52,12 +52,13 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeIVUsersWrapperPassPass(Registry);
   initializeInstCountLegacyPassPass(Registry);
   initializeIntervalPartitionPass(Registry);
+  initializeIRSimilarityIdentifierWrapperPassPass(Registry);
   initializeLazyBranchProbabilityInfoPassPass(Registry);
   initializeLazyBlockFrequencyInfoPassPass(Registry);
   initializeLazyValueInfoWrapperPassPass(Registry);
   initializeLazyValueInfoPrinterPass(Registry);
   initializeLegacyDivergenceAnalysisPass(Registry);
-  initializeLintPass(Registry);
+  initializeLintLegacyPassPass(Registry);
   initializeLoopInfoWrapperPassPass(Registry);
   initializeMemDepPrinterPass(Registry);
   initializeMemDerefPrinterPass(Registry);

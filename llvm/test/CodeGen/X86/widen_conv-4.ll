@@ -28,15 +28,15 @@ define void @convert_v7i16_v7f32(<7 x float>* %dst.addr, <7 x i16> %src) nounwin
 ; X86-SSE42-LABEL: convert_v7i16_v7f32:
 ; X86-SSE42:       # %bb.0: # %entry
 ; X86-SSE42-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X86-SSE42-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; X86-SSE42-NEXT:    cvtdq2ps %xmm1, %xmm1
-; X86-SSE42-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; X86-SSE42-NEXT:    pxor %xmm1, %xmm1
+; X86-SSE42-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; X86-SSE42-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; X86-SSE42-NEXT:    cvtdq2ps %xmm0, %xmm0
-; X86-SSE42-NEXT:    movups %xmm0, (%eax)
-; X86-SSE42-NEXT:    extractps $2, %xmm1, 24(%eax)
-; X86-SSE42-NEXT:    extractps $1, %xmm1, 20(%eax)
-; X86-SSE42-NEXT:    movss %xmm1, 16(%eax)
+; X86-SSE42-NEXT:    cvtdq2ps %xmm2, %xmm1
+; X86-SSE42-NEXT:    extractps $2, %xmm0, 24(%eax)
+; X86-SSE42-NEXT:    extractps $1, %xmm0, 20(%eax)
+; X86-SSE42-NEXT:    movups %xmm1, (%eax)
+; X86-SSE42-NEXT:    movss %xmm0, 16(%eax)
 ; X86-SSE42-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: convert_v7i16_v7f32:
@@ -55,14 +55,14 @@ define void @convert_v7i16_v7f32(<7 x float>* %dst.addr, <7 x i16> %src) nounwin
 ;
 ; X64-SSE42-LABEL: convert_v7i16_v7f32:
 ; X64-SSE42:       # %bb.0: # %entry
-; X64-SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-SSE42-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; X64-SSE42-NEXT:    cvtdq2ps %xmm1, %xmm1
-; X64-SSE42-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; X64-SSE42-NEXT:    pxor %xmm1, %xmm1
+; X64-SSE42-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; X64-SSE42-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; X64-SSE42-NEXT:    cvtdq2ps %xmm0, %xmm0
-; X64-SSE42-NEXT:    movups %xmm0, (%rdi)
-; X64-SSE42-NEXT:    extractps $2, %xmm1, 24(%rdi)
-; X64-SSE42-NEXT:    movlps %xmm1, 16(%rdi)
+; X64-SSE42-NEXT:    cvtdq2ps %xmm2, %xmm1
+; X64-SSE42-NEXT:    extractps $2, %xmm0, 24(%rdi)
+; X64-SSE42-NEXT:    movlps %xmm0, 16(%rdi)
+; X64-SSE42-NEXT:    movups %xmm1, (%rdi)
 ; X64-SSE42-NEXT:    retq
 entry:
 	%val = uitofp <7 x i16> %src to <7 x float>

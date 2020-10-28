@@ -14,7 +14,7 @@
 
 // RUN: %{cxx} %{flags} %{compile_flags} -c %s -o %t.tu1.o -DTU1
 // RUN: %{cxx} %{flags} %{compile_flags} -c %s -o %t.tu2.o -DTU2
-// RUN: %{cxx} %{flags} %{link_flags} %t.tu1.o %t.tu2.o -o %t.exe
+// RUN: %{cxx} %t.tu1.o %t.tu2.o %{flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
 #include <cassert>

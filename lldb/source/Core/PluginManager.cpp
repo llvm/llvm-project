@@ -1005,6 +1005,30 @@ PluginManager::GetSymbolVendorCreateCallbackAtIndex(uint32_t idx) {
   return GetSymbolVendorInstances().GetCallbackAtIndex(idx);
 }
 
+#pragma mark Trace
+
+typedef PluginInstance<TraceCreateInstance> TraceInstance;
+typedef PluginInstances<TraceInstance> TraceInstances;
+
+static TraceInstances &GetTraceInstances() {
+  static TraceInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(ConstString name, const char *description,
+                                   TraceCreateInstance create_callback) {
+  return GetTraceInstances().RegisterPlugin(name, description, create_callback);
+}
+
+bool PluginManager::UnregisterPlugin(TraceCreateInstance create_callback) {
+  return GetTraceInstances().UnregisterPlugin(create_callback);
+}
+
+TraceCreateInstance
+PluginManager::GetTraceCreateCallback(ConstString plugin_name) {
+  return GetTraceInstances().GetCallbackForName(plugin_name);
+}
+
 #pragma mark UnwindAssembly
 
 typedef PluginInstance<UnwindAssemblyCreateInstance> UnwindAssemblyInstance;

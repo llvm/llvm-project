@@ -3,34 +3,48 @@
 
 module attributes {gpu.container_module} {
 
-  // CHECK: llvm.mlir.global internal constant @[[kernel_name:.*]]("kernel\00")
-  // CHECK: llvm.mlir.global internal constant @[[global:.*]]("CUBIN")
-  // ROCDL: llvm.mlir.global internal constant @[[global:.*]]("HSACO")
+  // CHECK: llvm.mlir.global internal constant @[[KERNEL_NAME:.*]]("kernel\00")
+  // CHECK: llvm.mlir.global internal constant @[[GLOBAL:.*]]("CUBIN")
+  // ROCDL: llvm.mlir.global internal constant @[[GLOBAL:.*]]("HSACO")
 
-  gpu.module @kernel_module attributes {nvvm.cubin = "CUBIN", rocdl.hsaco = "HSACO"} {
-    llvm.func @kernel(%arg0: !llvm.float, %arg1: !llvm.ptr<float>) attributes {gpu.kernel} {
+  gpu.module @kernel_module attributes {
+      nvvm.cubin = "CUBIN", rocdl.hsaco = "HSACO"
+  } {
+    llvm.func @kernel(%arg0: !llvm.i32, %arg1: !llvm.ptr<float>,
+        %arg2: !llvm.ptr<float>, %arg3: !llvm.i64, %arg4: !llvm.i64,
+        %arg5: !llvm.i64) attributes {gpu.kernel} {
       llvm.return
     }
   }
 
-  llvm.func @foo() {
-    %0 = "op"() : () -> (!llvm.float)
-    %1 = "op"() : () -> (!llvm.ptr<float>)
-    %cst = llvm.mlir.constant(8 : index) : !llvm.i64
-
-    // CHECK: %[[addressof:.*]] = llvm.mlir.addressof @[[global]]
-    // CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : index)
-    // CHECK: %[[binary:.*]] = llvm.getelementptr %[[addressof]][%[[c0]], %[[c0]]]
-    // CHECK-SAME: -> !llvm.ptr<i8>
-    // CHECK: %[[module:.*]] = llvm.call @mgpuModuleLoad(%[[binary]]) : (!llvm.ptr<i8>) -> !llvm.ptr<i8>
-    // CHECK: %[[func:.*]] = llvm.call @mgpuModuleGetFunction(%[[module]], {{.*}}) : (!llvm.ptr<i8>, !llvm.ptr<i8>) -> !llvm.ptr<i8>
-    // CHECK: llvm.call @mgpuStreamCreate
-    // CHECK: llvm.call @mgpuLaunchKernel
-    // CHECK: llvm.call @mgpuStreamSynchronize
-    "gpu.launch_func"(%cst, %cst, %cst, %cst, %cst, %cst, %0, %1) { kernel = @kernel_module::@kernel }
-        : (!llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.i64, !llvm.float, !llvm.ptr<float>) -> ()
-
-    llvm.return
+  func @foo(%buffer: memref<?xf32>) {
+    %c8 = constant 8 : index
+    %c32 = constant 32 : i32
+    "gpu.launch_func"(%c8, %c8, %c8, %c8, %c8, %c8, %c32, %buffer) {
+      kernel = @kernel_module::@kernel
+    } : (index, index, index, index, index, index, i32, memref<?xf32>) -> ()
+    return
   }
 
+  // CHECK: [[C8:%.*]] = llvm.mlir.constant(8 : index) : !llvm.i64   
+  // CHECK: [[ADDRESSOF:%.*]] = llvm.mlir.addressof @[[GLOBAL]]
+  // CHECK: [[C0:%.*]] = llvm.mlir.constant(0 : index)
+  // CHECK: [[BINARY:%.*]] = llvm.getelementptr [[ADDRESSOF]]{{\[}}[[C0]], [[C0]]]
+  // CHECK-SAME: -> !llvm.ptr<i8>
+
+  // CHECK: [[MODULE:%.*]] = llvm.call @mgpuModuleLoad([[BINARY]])
+  // CHECK: [[FUNC:%.*]] = llvm.call @mgpuModuleGetFunction([[MODULE]], {{.*}})
+
+  // CHECK: [[C0_I32:%.*]] = llvm.mlir.constant(0 : i32)
+  // CHECK: [[STREAM:%.*]] = llvm.call @mgpuStreamCreate
+
+  // CHECK: [[NUM_PARAMS:%.*]] = llvm.mlir.constant(6 : i32) : !llvm.i32
+  // CHECK-NEXT: [[PARAMS:%.*]] = llvm.alloca [[NUM_PARAMS]] x !llvm.ptr<i8>
+
+  // CHECK: [[EXTRA_PARAMS:%.*]] = llvm.mlir.null : !llvm.ptr<ptr<i8>>
+
+  // CHECK: llvm.call @mgpuLaunchKernel([[FUNC]], [[C8]], [[C8]], [[C8]],
+  // CHECK-SAME: [[C8]], [[C8]], [[C8]], [[C0_I32]], [[STREAM]],
+  // CHECK-SAME: [[PARAMS]], [[EXTRA_PARAMS]])
+  // CHECK: llvm.call @mgpuStreamSynchronize
 }

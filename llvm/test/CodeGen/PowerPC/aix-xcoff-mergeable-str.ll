@@ -41,30 +41,9 @@ entry:
 ; CHECK-NEXT:   .vbyte	4, 0                       # 0x0
 ; CHECK-NEXT:   .csect .rodata.str1.1[RO],2
 ; CHECK-NEXT: L..strA:
-; CHECK-NEXT: .byte   104
-; CHECK-NEXT: .byte   101
-; CHECK-NEXT: .byte   108
-; CHECK-NEXT: .byte   108
-; CHECK-NEXT: .byte   111
-; CHECK-NEXT: .byte   32
-; CHECK-NEXT: .byte   119
-; CHECK-NEXT: .byte   111
-; CHECK-NEXT: .byte   114
-; CHECK-NEXT: .byte   108
-; CHECK-NEXT: .byte   100
-; CHECK-NEXT: .byte   33
-; CHECK-NEXT: .byte   10
-; CHECK-NEXT: .byte   0
+; CHECK-NEXT: .byte   'h,'e,'l,'l,'o,' ,'w,'o,'r,'l,'d,'!,0012,0000
 ; CHECK-NEXT: L...str:
-; CHECK-NEXT: .byte   97
-; CHECK-NEXT: .byte   98
-; CHECK-NEXT: .byte   99
-; CHECK-NEXT: .byte   100
-; CHECK-NEXT: .byte   101
-; CHECK-NEXT: .byte   102
-; CHECK-NEXT: .byte   103
-; CHECK-NEXT: .byte   104
-; CHECK-NEXT: .byte   0
+; CHECK-NEXT: .byte   'a,'b,'c,'d,'e,'f,'g,'h,0000
 
 ; CHECKOBJ:     00000010 <.rodata.str2.2>:
 ; CHECKOBJ-NEXT:       10: 01 08 01 10

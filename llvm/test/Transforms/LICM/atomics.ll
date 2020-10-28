@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -basic-aa -licm -enable-mssa-loop-dependency=false | FileCheck -check-prefixes=CHECK,AST %s
-; RUN: opt < %s -S -basic-aa -licm -enable-mssa-loop-dependency=true  | FileCheck -check-prefixes=CHECK,MSSA %s
+; RUN: opt < %s -S -basic-aa -licm -enable-mssa-loop-dependency=false -enable-new-pm=0 | FileCheck -check-prefixes=CHECK,AST %s
+; RUN: opt < %s -S -basic-aa -licm -enable-mssa-loop-dependency=true -enable-new-pm=0 | FileCheck -check-prefixes=CHECK,MSSA %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<opt-remark-emit>,loop(licm)' < %s -S | FileCheck -check-prefixes=CHECK,AST %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<opt-remark-emit>,loop-mssa(licm)' < %s -S | FileCheck -check-prefixes=CHECK,MSSA %s
 

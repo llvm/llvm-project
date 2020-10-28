@@ -77,9 +77,7 @@ static void reportCoverage(StringRef SourceFile, StringRef ObjectDir,
   if (DumpGCOV)
     GF.print(errs());
 
-  FileInfo FI(Options);
-  GF.collectLineCounts(FI);
-  FI.print(llvm::outs(), SourceFile, GCNO, GCDA, GF);
+  gcovOneInput(Options, SourceFile, GCNO, GCDA, GF);
 }
 
 int gcovMain(int argc, const char *argv[]) {
@@ -117,6 +115,11 @@ int gcovMain(int argc, const char *argv[]) {
                           cl::Grouping, cl::NotHidden,
                           cl::aliasopt(Intermediate));
 
+  cl::opt<bool> Demangle("demangled-names", cl::init(false),
+                         cl::desc("Demangle function names"));
+  cl::alias DemangleA("m", cl::desc("Alias for --demangled-names"),
+                      cl::Grouping, cl::NotHidden, cl::aliasopt(Demangle));
+
   cl::opt<bool> NoOutput("n", cl::Grouping, cl::init(false),
                          cl::desc("Do not output any .gcov files"));
   cl::alias NoOutputA("no-output", cl::aliasopt(NoOutput));
@@ -130,6 +133,14 @@ int gcovMain(int argc, const char *argv[]) {
   cl::opt<bool> PreservePaths("p", cl::Grouping, cl::init(false),
                               cl::desc("Preserve path components"));
   cl::alias PreservePathsA("preserve-paths", cl::aliasopt(PreservePaths));
+
+  cl::opt<bool> RelativeOnly(
+      "r", cl::Grouping,
+      cl::desc("Only dump files with relative paths or absolute paths with the "
+               "prefix specified by -s"));
+  cl::alias RelativeOnlyA("relative-only", cl::aliasopt(RelativeOnly));
+  cl::opt<std::string> SourcePrefix("s", cl::desc("Source prefix to elide"));
+  cl::alias SourcePrefixA("source-prefix", cl::aliasopt(SourcePrefix));
 
   cl::opt<bool> UseStdout("t", cl::Grouping, cl::init(false),
                           cl::desc("Print to stdout"));
@@ -157,7 +168,8 @@ int gcovMain(int argc, const char *argv[]) {
 
   GCOV::Options Options(AllBlocks, BranchProb, BranchCount, FuncSummary,
                         PreservePaths, UncondBranch, Intermediate, LongNames,
-                        NoOutput, UseStdout, HashFilenames);
+                        Demangle, NoOutput, RelativeOnly, UseStdout,
+                        HashFilenames, SourcePrefix);
 
   for (const auto &SourceFile : SourceFiles)
     reportCoverage(SourceFile, ObjectDir, InputGCNO, InputGCDA, DumpGCOV,

@@ -1,5 +1,5 @@
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck -check-prefix=GFX9 -check-prefix=GCN %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding 2>&1 %s | FileCheck -check-prefix=VI-ERR -check-prefix=GCNERR %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga 2>&1 %s | FileCheck -check-prefix=VI-ERR -check-prefix=GCNERR --implicit-check-not=error: %s
 
 ds_read_u8_d16 v8, v2
 // GFX9: ds_read_u8_d16 v8, v2           ; encoding: [0x00,0x00,0xac,0xd8,0x02,0x00,0x00,0x08]

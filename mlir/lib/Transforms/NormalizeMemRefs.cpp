@@ -263,16 +263,23 @@ void NormalizeMemRefs::updateFunctionSignature(FuncOp funcOp,
   // type at the caller site.
   Optional<SymbolTable::UseRange> symbolUses = funcOp.getSymbolUses(moduleOp);
   for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
-    Operation *callOp = symbolUse.getUser();
-    OpBuilder builder(callOp);
-    StringRef callee = cast<CallOp>(callOp).getCallee();
+    Operation *userOp = symbolUse.getUser();
+    OpBuilder builder(userOp);
+    // When `userOp` can not be casted to `CallOp`, it is skipped. This assumes
+    // that the non-CallOp has no memrefs to be replaced.
+    // TODO: Handle cases where a non-CallOp symbol use of a function deals with
+    // memrefs.
+    auto callOp = dyn_cast<CallOp>(userOp);
+    if (!callOp)
+      continue;
+    StringRef callee = callOp.getCallee();
     Operation *newCallOp = builder.create<CallOp>(
-        callOp->getLoc(), resultTypes, builder.getSymbolRefAttr(callee),
-        callOp->getOperands());
+        userOp->getLoc(), resultTypes, builder.getSymbolRefAttr(callee),
+        userOp->getOperands());
     bool replacingMemRefUsesFailed = false;
     bool returnTypeChanged = false;
-    for (unsigned resIndex : llvm::seq<unsigned>(0, callOp->getNumResults())) {
-      OpResult oldResult = callOp->getResult(resIndex);
+    for (unsigned resIndex : llvm::seq<unsigned>(0, userOp->getNumResults())) {
+      OpResult oldResult = userOp->getResult(resIndex);
       OpResult newResult = newCallOp->getResult(resIndex);
       // This condition ensures that if the result is not of type memref or if
       // the resulting memref was already having a trivial map layout then we
@@ -302,8 +309,8 @@ void NormalizeMemRefs::updateFunctionSignature(FuncOp funcOp,
     if (replacingMemRefUsesFailed)
       continue;
     // Replace all uses for other non-memref result types.
-    callOp->replaceAllUsesWith(newCallOp);
-    callOp->erase();
+    userOp->replaceAllUsesWith(newCallOp);
+    userOp->erase();
     if (returnTypeChanged) {
       // Since the return type changed it might lead to a change in function's
       // signature.

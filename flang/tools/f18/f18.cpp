@@ -37,6 +37,8 @@
 #include <string>
 #include <vector>
 
+#include "f18_version.h"
+
 static std::list<std::string> argList(int argc, char *const argv[]) {
   std::list<std::string> result;
   for (int j = 0; j < argc; ++j) {
@@ -186,9 +188,10 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
     DriverOptions &driver,
     const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds) {
   Fortran::parser::AllSources allSources;
+  Fortran::parser::AllCookedSources allCookedSources{allSources};
   allSources.set_encoding(driver.encoding);
   Fortran::semantics::SemanticsContext semanticsContext{
-      defaultKinds, options.features, allSources};
+      defaultKinds, options.features, allCookedSources};
   semanticsContext.set_moduleDirectory(driver.moduleDirectory)
       .set_moduleFileSuffix(driver.moduleFileSuffix)
       .set_searchDirectories(driver.searchDirectories)
@@ -202,12 +205,12 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
     }
   }
   options.searchDirectories = driver.searchDirectories;
-  Fortran::parser::Parsing parsing{semanticsContext.allSources()};
+  Fortran::parser::Parsing parsing{allCookedSources};
   parsing.Prescan(path, options);
   if (!parsing.messages().empty() &&
       (driver.warningsAreErrors || parsing.messages().AnyFatalError())) {
     llvm::errs() << driver.prefix << "could not scan " << path << '\n';
-    parsing.messages().Emit(llvm::errs(), parsing.cooked());
+    parsing.messages().Emit(llvm::errs(), allCookedSources);
     exitStatus = EXIT_FAILURE;
     return {};
   }
@@ -216,7 +219,7 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
     return {};
   }
   if (driver.dumpCookedChars) {
-    parsing.messages().Emit(llvm::errs(), parsing.cooked());
+    parsing.messages().Emit(llvm::errs(), allCookedSources);
     parsing.DumpCookedChars(llvm::outs());
     return {};
   }
@@ -226,7 +229,7 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
     return {};
   }
   parsing.ClearLog();
-  parsing.messages().Emit(llvm::errs(), parsing.cooked());
+  parsing.messages().Emit(llvm::errs(), allCookedSources);
   if (!parsing.consumedWholeFile()) {
     parsing.EmitMessage(llvm::errs(), parsing.finalRestingPlace(),
         "parser FAIL (final position)");
@@ -248,7 +251,7 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
       driver.dumpSymbols || driver.dumpUnparseWithSymbols ||
       driver.getDefinition || driver.getSymbolsSources) {
     Fortran::semantics::Semantics semantics{semanticsContext, parseTree,
-        parsing.cooked(), driver.debugModuleWriter};
+        parsing.cooked().AsCharBlock(), driver.debugModuleWriter};
     semantics.Perform();
     semantics.EmitMessages(llvm::errs());
     if (driver.dumpSymbols) {
@@ -272,7 +275,7 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
       return {};
     }
     if (driver.getDefinition) {
-      if (auto cb{parsing.cooked().GetCharBlockFromLineAndColumns(
+      if (auto cb{allCookedSources.GetCharBlockFromLineAndColumns(
               driver.getDefinitionArgs.line,
               driver.getDefinitionArgs.startColumn,
               driver.getDefinitionArgs.endColumn)}) {
@@ -281,7 +284,7 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
           llvm::errs() << "Found symbol name: " << symbol->name().ToString()
                        << "\n";
           if (auto sourceInfo{
-                  parsing.cooked().GetSourcePositionRange(symbol->name())}) {
+                  allCookedSources.GetSourcePositionRange(symbol->name())}) {
             llvm::outs() << symbol->name().ToString() << ": "
                          << sourceInfo->first.file.path() << ", "
                          << sourceInfo->first.line << ", "
@@ -375,6 +378,13 @@ void Link(std::vector<std::string> &liblist, std::vector<std::string> &objects,
   Exec(argv, driver.verbose);
 }
 
+int printVersion() {
+  llvm::errs() << "\nf18 compiler (under development), version "
+               << __FLANG_MAJOR__ << "." << __FLANG_MINOR__ << "."
+               << __FLANG_PATCHLEVEL__ << "\n";
+  return exitStatus;
+}
+
 int main(int argc, char *const argv[]) {
 
   atexit(CleanUpAtExit);
@@ -396,6 +406,11 @@ int main(int argc, char *const argv[]) {
   options.predefinitions.emplace_back("__F18_MAJOR__", "1");
   options.predefinitions.emplace_back("__F18_MINOR__", "1");
   options.predefinitions.emplace_back("__F18_PATCHLEVEL__", "1");
+  options.predefinitions.emplace_back("__flang__", __FLANG__);
+  options.predefinitions.emplace_back("__flang_major__", __FLANG_MAJOR__);
+  options.predefinitions.emplace_back("__flang_minor__", __FLANG_MINOR__);
+  options.predefinitions.emplace_back(
+      "__flang_patchlevel__", __FLANG_PATCHLEVEL__);
 #if __x86_64__
   options.predefinitions.emplace_back("__x86_64__", "1");
 #endif
@@ -645,13 +660,16 @@ int main(int argc, char *const argv[]) {
           << "Unrecognised options are passed through to the external compiler\n"
           << "set by F18_FC (see defaults).\n";
       return exitStatus;
-    } else if (arg == "-V") {
-      llvm::errs() << "\nf18 compiler (under development)\n";
-      return exitStatus;
+    } else if (arg == "-V" || arg == "--version") {
+      return printVersion();
     } else {
       driver.F18_FCArgs.push_back(arg);
       if (arg == "-v") {
-        driver.verbose = true;
+        if (args.size() > 1) {
+          driver.verbose = true;
+        } else {
+          return printVersion();
+        }
       } else if (arg == "-I") {
         driver.F18_FCArgs.push_back(args.front());
         driver.searchDirectories.push_back(args.front());

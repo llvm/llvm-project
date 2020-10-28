@@ -2678,7 +2678,7 @@ architectures.
 
 DWARF address space identifiers are used by:
 
-* The DWARF expession operations: ``DW_OP_LLVM_aspace_bregx``,
+* The DWARF expression operations: ``DW_OP_LLVM_aspace_bregx``,
   ``DW_OP_LLVM_form_aspace_address``, ``DW_OP_LLVM_implicit_aspace_pointer``,
   and ``DW_OP_xderef*``.
 
@@ -3387,7 +3387,7 @@ Standard Content Descriptions
     provided by the* ``DW_LNCT_path`` *field. When the source field is absent,
     consumers can access the file to get the source text.*
 
-    *This is particularly useful for programing languages that support runtime
+    *This is particularly useful for programming languages that support runtime
     compilation and runtime generation of source text. In these cases, the
     source text does not reside in any permanent file. For example, the OpenCL
     language [:ref:`OpenCL <amdgpu-dwarf-OpenCL>`] supports online compilation.*

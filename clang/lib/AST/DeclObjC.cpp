@@ -1165,6 +1165,14 @@ ObjCInterfaceDecl *ObjCMethodDecl::getClassInterface() {
   llvm_unreachable("unknown method context");
 }
 
+ObjCCategoryDecl *ObjCMethodDecl::getCategory() {
+  if (auto *CD = dyn_cast<ObjCCategoryDecl>(getDeclContext()))
+    return CD;
+  if (auto *IMD = dyn_cast<ObjCCategoryImplDecl>(getDeclContext()))
+    return IMD->getCategoryDecl();
+  return nullptr;
+}
+
 SourceRange ObjCMethodDecl::getReturnTypeSourceRange() const {
   const auto *TSI = getReturnTypeSourceInfo();
   if (TSI)

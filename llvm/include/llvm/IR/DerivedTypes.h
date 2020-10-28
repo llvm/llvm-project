@@ -423,21 +423,11 @@ public:
   /// Get the number of elements in this vector. It does not make sense to call
   /// this function on a scalable vector, and this will be moved into
   /// FixedVectorType in a future commit
-  unsigned getNumElements() const {
-    ElementCount EC = getElementCount();
-#ifdef STRICT_FIXED_SIZE_VECTORS
-    assert(!EC.isScalable() &&
-           "Request for fixed number of elements from scalable vector");
-    return EC.getKnownMinValue();
-#else
-    if (EC.isScalable())
-      WithColor::warning()
-          << "The code that requested the fixed number of elements has made "
-             "the assumption that this vector is not scalable. This assumption "
-             "was not correct, and this may lead to broken code\n";
-    return EC.getKnownMinValue();
-#endif
-  }
+  LLVM_ATTRIBUTE_DEPRECATED(
+      inline unsigned getNumElements() const,
+      "Calling this function via a base VectorType is deprecated. Either call "
+      "getElementCount() and handle the case where Scalable is true or cast to "
+      "FixedVectorType.");
 
   Type *getElementType() const { return ContainedType; }
 
@@ -514,7 +504,8 @@ public:
     auto EltCnt = VTy->getElementCount();
     assert(EltCnt.isKnownEven() &&
            "Cannot halve vector with odd number of elements.");
-    return VectorType::get(VTy->getElementType(), EltCnt/2);
+    return VectorType::get(VTy->getElementType(),
+                           EltCnt.divideCoefficientBy(2));
   }
 
   /// This static method returns a VectorType with twice as many elements as the
@@ -539,6 +530,21 @@ public:
            T->getTypeID() == ScalableVectorTyID;
   }
 };
+
+unsigned VectorType::getNumElements() const {
+  ElementCount EC = getElementCount();
+#ifdef STRICT_FIXED_SIZE_VECTORS
+  assert(!EC.isScalable() &&
+         "Request for fixed number of elements from scalable vector");
+#else
+  if (EC.isScalable())
+    WithColor::warning()
+        << "The code that requested the fixed number of elements has made the "
+           "assumption that this vector is not scalable. This assumption was "
+           "not correct, and this may lead to broken code\n";
+#endif
+  return EC.getKnownMinValue();
+}
 
 /// Class to represent fixed width SIMD vectors
 class FixedVectorType : public VectorType {
@@ -583,6 +589,8 @@ public:
   static bool classof(const Type *T) {
     return T->getTypeID() == FixedVectorTyID;
   }
+
+  unsigned getNumElements() const { return ElementQuantity; }
 };
 
 /// Class to represent scalable SIMD vectors

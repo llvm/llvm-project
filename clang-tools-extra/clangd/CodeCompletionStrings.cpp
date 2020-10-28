@@ -12,6 +12,7 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
+#include "llvm/Support/JSON.h"
 #include <limits>
 #include <utility>
 
@@ -86,7 +87,12 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
   assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
   std::string Doc =
       RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
-  return looksLikeDocComment(Doc) ? Doc : "";
+  if (!looksLikeDocComment(Doc))
+    return "";
+  // Clang requires source to be UTF-8, but doesn't enforce this in comments.
+  if (!llvm::json::isUTF8(Doc))
+    Doc = llvm::json::fixUTF8(Doc);
+  return Doc;
 }
 
 void getSignature(const CodeCompletionString &CCS, std::string *Signature,

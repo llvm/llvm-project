@@ -63,6 +63,13 @@ static constexpr int z2 = 456;
 // externalized nor registered.
 // DEV-DAG: @_ZZ6devfunPPKiE1p = linkonce_odr addrspace(4) constant i32 2, comdat
 
+// Check a static device variable referenced by host function only is externalized.
+// DEV-DAG: @_ZL1w = addrspace(1) externally_initialized global i32 0
+// HOST-DAG: @_ZL1w = internal global i32 undef
+// HOST-DAG: @[[DEVNAMEW:[0-9]+]] = {{.*}}c"_ZL1w\00"
+
+static __device__ int w;
+
 inline __device__ void devfun(const int ** b) {
   const static int p = 2;
   b[0] = &p;
@@ -92,11 +99,13 @@ void foo(const int **a) {
   getDeviceSymbol(&x);
   getDeviceSymbol(&x5);
   getDeviceSymbol(&y);
+  getDeviceSymbol(&w);
   z = 123;
   a[0] = &z2;
 }
 
 // HOST: __hipRegisterVar({{.*}}@_ZL1x {{.*}}@[[DEVNAMEX]]
 // HOST: __hipRegisterVar({{.*}}@_ZL1y {{.*}}@[[DEVNAMEY]]
+// HOST: __hipRegisterVar({{.*}}@_ZL1w {{.*}}@[[DEVNAMEW]]
 // HOST-NOT: __hipRegisterVar({{.*}}@_ZZ6kernelPiPPKiE1w
 // HOST-NOT: __hipRegisterVar({{.*}}@_ZZ6devfunPPKiE1p

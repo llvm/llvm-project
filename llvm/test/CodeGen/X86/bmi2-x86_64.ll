@@ -41,6 +41,18 @@ define i64 @pdep64_load(i64 %x, i64* %y)   {
   ret i64 %tmp
 }
 
+define i64 @pdep64_anyext(i32 %x)   {
+; CHECK-LABEL: pdep64_anyext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    movabsq $6148914691236517205, %rax # imm = 0x5555555555555555
+; CHECK-NEXT:    pdepq %rax, %rdi, %rax
+; CHECK-NEXT:    retq
+  %x1 = sext i32 %x to i64
+  %tmp = tail call i64 @llvm.x86.bmi.pdep.64(i64 %x1, i64 6148914691236517205)
+  ret i64 %tmp
+}
+
 declare i64 @llvm.x86.bmi.pdep.64(i64, i64)
 
 define i64 @pext64(i64 %x, i64 %y)   {
@@ -60,6 +72,17 @@ define i64 @pext64_load(i64 %x, i64* %y)   {
   %y1 = load i64, i64* %y
   %tmp = tail call i64 @llvm.x86.bmi.pext.64(i64 %x, i64 %y1)
   ret i64 %tmp
+}
+
+define i64 @pext64_knownbits(i64 %x, i64 %y)   {
+; CHECK-LABEL: pext64_knownbits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $6148914691236517205, %rax # imm = 0x5555555555555555
+; CHECK-NEXT:    pextq %rax, %rdi, %rax
+; CHECK-NEXT:    retq
+  %tmp = tail call i64 @llvm.x86.bmi.pext.64(i64 %x, i64 6148914691236517205)
+  %tmp2 = and i64 %tmp, 4294967295
+  ret i64 %tmp2
 }
 
 declare i64 @llvm.x86.bmi.pext.64(i64, i64)

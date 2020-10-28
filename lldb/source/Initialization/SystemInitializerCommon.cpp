@@ -79,9 +79,10 @@ static llvm::Error InitializeFileSystem() {
     repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
     FileSystem::Initialize(fp.GetFileCollector());
 
-    repro::WorkingDirectoryProvider &wp =
-        g->GetOrCreate<repro::WorkingDirectoryProvider>();
-    fp.RecordInterestingDirectory(wp.GetDirectory());
+    fp.RecordInterestingDirectory(
+        g->GetOrCreate<repro::WorkingDirectoryProvider>().GetDirectory());
+    fp.RecordInterestingDirectory(
+        g->GetOrCreate<repro::HomeDirectoryProvider>().GetDirectory());
 
     return llvm::Error::success();
   }

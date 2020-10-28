@@ -1,7 +1,6 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-EL,CHECK-ALU64 %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-EB,CHECK-ALU64 %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-EL,CHECK-ALU32 %s
-; RUN: llc -march=bpfeb -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK,CHECK-EB,CHECK-ALU32 %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK,CHECK-EL,CHECK-ALU64 %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK,CHECK-EL,CHECK-ALU32 %s
 ; Source code:
 ;   struct s {
 ;     unsigned long long f1;
@@ -19,7 +18,9 @@
 ;            __builtin_preserve_field_info(arg->bf2, FIELD_TYPE_LSHIFT_U64);
 ;   }
 ; Compilation flag:
-;   clang -target bpf -O2 -g -S -emit-llvm test.c
+;   clang -target bpfel -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
+
+target triple = "bpfel"
 
 %struct.s = type { i64, i32, i32, i32, i8, i8 }
 
@@ -36,12 +37,11 @@ entry:
   ret i32 %add1, !dbg !38
 }
 
-; CHECK:             r1 = 16
-; CHECK:             r0 = 8
+; CHECK:             r1 = 20
+; CHECK:             r0 = 4
 ; CHECK-ALU64:       r0 += r1
 ; CHECK-ALU32:       w0 += w1
-; CHECK-EL:          r1 = 18
-; CHECK-EB:          r1 = 45
+; CHECK-EL:          r1 = 50
 ; CHECK-ALU64:       r0 += r1
 ; CHECK-ALU32:       w0 += w1
 ; CHECK:             exit

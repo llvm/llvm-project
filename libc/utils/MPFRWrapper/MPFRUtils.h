@@ -47,7 +47,7 @@ enum class Operation : int {
   // input and produce a single floating point number of the same type as
   // output.
   BeginBinaryOperationsSingleOutput,
-  // TODO: Add operations like hypot.
+  Hypot,
   EndBinaryOperationsSingleOutput,
 
   // Operations which take two floating point numbers of the same type as
@@ -110,6 +110,10 @@ bool compareBinaryOperationTwoOutputs(Operation op, const BinaryInput<T> &input,
                                       double t);
 
 template <typename T>
+bool compareBinaryOperationOneOutput(Operation op, const BinaryInput<T> &input,
+                                     T libcOutput, double t);
+
+template <typename T>
 void explainUnaryOperationSingleOutputError(Operation op, T input, T matchValue,
                                             testutils::StreamWrapper &OS);
 template <typename T>
@@ -121,6 +125,12 @@ void explainBinaryOperationTwoOutputsError(Operation op,
                                            const BinaryInput<T> &input,
                                            const BinaryOutput<T> &matchValue,
                                            testutils::StreamWrapper &OS);
+
+template <typename T>
+void explainBinaryOperationOneOutputError(Operation op,
+                                          const BinaryInput<T> &input,
+                                          T matchValue,
+                                          testutils::StreamWrapper &OS);
 
 template <Operation op, typename InputType, typename OutputType>
 class MPFRMatcher : public testing::Matcher<OutputType> {
@@ -153,7 +163,7 @@ private:
 
   template <typename T>
   static bool match(const BinaryInput<T> &in, T out, double tolerance) {
-    // TODO: Implement the comparision function and error reporter.
+    return compareBinaryOperationOneOutput(op, in, out, tolerance);
   }
 
   template <typename T>
@@ -182,6 +192,12 @@ private:
   static void explainError(const BinaryInput<T> &in, const BinaryOutput<T> &out,
                            testutils::StreamWrapper &OS) {
     explainBinaryOperationTwoOutputsError(op, in, out, OS);
+  }
+
+  template <typename T>
+  static void explainError(const BinaryInput<T> &in, T out,
+                           testutils::StreamWrapper &OS) {
+    explainBinaryOperationOneOutputError(op, in, out, OS);
   }
 };
 

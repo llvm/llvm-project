@@ -71,6 +71,8 @@ def AffineLoopUnroll : FunctionPass<"affine-loop-unroll"> {
   let options = [
     Option<"unrollFactor", "unroll-factor", "unsigned", /*default=*/"4",
            "Use this unroll factor for all loops being unrolled">,
+    Option<"unrollUpToFactor", "unroll-up-to-factor", "bool",
+           /*default=*/"false", "Allow unrolling up to the factor specified">,
     Option<"unrollFull", "unroll-full", "bool", /*default=*/"false",
            "Fully unroll loops">,
     Option<"numRepetitions", "unroll-num-reps", "unsigned", /*default=*/"1",

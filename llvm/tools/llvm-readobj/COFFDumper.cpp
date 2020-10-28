@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMWinEHPrinter.h"
-#include "Error.h"
 #include "ObjDumper.h"
 #include "StackMapPrinter.h"
 #include "Win64EHDumper.h"
@@ -262,9 +261,9 @@ std::error_code COFFDumper::resolveSymbol(const coff_section *Section,
     }
   }
   if (SymI == Obj->symbol_end())
-    return readobj_error::unknown_symbol;
+    return inconvertibleErrorCode();
   Sym = *SymI;
-  return readobj_error::success;
+  return std::error_code();
 }
 
 // Given a section and an offset into this section the function returns the name
@@ -578,7 +577,7 @@ static std::error_code getSymbolAuxData(const COFFObjectFile *Obj,
   ArrayRef<uint8_t> AuxData = Obj->getSymbolAuxData(Symbol);
   AuxData = AuxData.slice(AuxSymbolIdx * Obj->getSymbolTableEntrySize());
   Aux = reinterpret_cast<const T*>(AuxData.data());
-  return readobj_error::success;
+  return std::error_code();
 }
 
 void COFFDumper::cacheRelocations() {

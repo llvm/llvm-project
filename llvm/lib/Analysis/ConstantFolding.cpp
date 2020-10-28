@@ -2305,6 +2305,25 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
                                          const CallBase *Call) {
   assert(Operands.size() == 2 && "Wrong number of operands.");
 
+  if (Ty->isFloatingPointTy()) {
+    // TODO: We should have undef handling for all of the FP intrinsics that
+    //       are attempted to be folded in this function.
+    bool IsOp0Undef = isa<UndefValue>(Operands[0]);
+    bool IsOp1Undef = isa<UndefValue>(Operands[1]);
+    switch (IntrinsicID) {
+    case Intrinsic::maxnum:
+    case Intrinsic::minnum:
+    case Intrinsic::maximum:
+    case Intrinsic::minimum:
+      // If one argument is undef, return the other argument.
+      if (IsOp0Undef)
+        return Operands[1];
+      if (IsOp1Undef)
+        return Operands[0];
+      break;
+    }
+  }
+
   if (auto *Op1 = dyn_cast<ConstantFP>(Operands[0])) {
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
       return nullptr;

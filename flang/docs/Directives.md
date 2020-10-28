@@ -6,8 +6,9 @@
   
 -->
 
-Compiler directives supported by F18
-====================================
+# Compiler directives supported by Flang
+
+A list of non-standard directives supported by Flang
 
 * `!dir$ fixed` and `!dir$ free` select Fortran source forms.  Their effect
   persists to the end of the current source file.

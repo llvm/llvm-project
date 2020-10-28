@@ -1641,8 +1641,7 @@ void BuildLockset::warnIfMutexNotHeld(const NamedDecl *D, const Expr *Exp,
     // Otherwise the negative requirement must be propagated to the caller.
     LDat = FSet.findLock(Analyzer->FactMan, Cp);
     if (!LDat) {
-      Analyzer->Handler.handleMutexNotHeld("", D, POK, Cp.toString(),
-                                           LK_Shared, Loc);
+      Analyzer->Handler.handleNegativeNotHeld(D, Cp.toString(), Loc);
     }
     return;
   }

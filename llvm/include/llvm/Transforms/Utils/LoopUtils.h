@@ -26,6 +26,7 @@ class AAResults;
 class AliasSet;
 class AliasSetTracker;
 class BasicBlock;
+class BlockFrequencyInfo;
 class IRBuilderBase;
 class Loop;
 class LoopInfo;
@@ -38,7 +39,6 @@ class ScalarEvolution;
 class SCEV;
 class SCEVExpander;
 class TargetLibraryInfo;
-class TargetTransformInfo;
 class LPPassManager;
 class Instruction;
 struct RuntimeCheckingPtrGroup;
@@ -123,12 +123,13 @@ struct SinkAndHoistLICMFlags {
 /// reverse depth first order w.r.t the DominatorTree. This allows us to visit
 /// uses before definitions, allowing us to sink a loop body in one pass without
 /// iteration. Takes DomTreeNode, AAResults, LoopInfo, DominatorTree,
-/// TargetLibraryInfo, Loop, AliasSet information for all
+/// BlockFrequencyInfo, TargetLibraryInfo, Loop, AliasSet information for all
 /// instructions of the loop and loop safety information as
 /// arguments. Diagnostics is emitted via \p ORE. It returns changed status.
 bool sinkRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
-                TargetLibraryInfo *, TargetTransformInfo *, Loop *,
-                AliasSetTracker *, MemorySSAUpdater *, ICFLoopSafetyInfo *,
+                BlockFrequencyInfo *, TargetLibraryInfo *,
+                TargetTransformInfo *, Loop *, AliasSetTracker *,
+                MemorySSAUpdater *, ICFLoopSafetyInfo *,
                 SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *);
 
 /// Walk the specified region of the CFG (defined by all blocks
@@ -136,13 +137,14 @@ bool sinkRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
 /// first order w.r.t the DominatorTree.  This allows us to visit definitions
 /// before uses, allowing us to hoist a loop body in one pass without iteration.
 /// Takes DomTreeNode, AAResults, LoopInfo, DominatorTree,
-/// TargetLibraryInfo, Loop, AliasSet information for all instructions of the
-/// loop and loop safety information as arguments. Diagnostics is emitted via \p
-/// ORE. It returns changed status.
+/// BlockFrequencyInfo, TargetLibraryInfo, Loop, AliasSet information for all
+/// instructions of the loop and loop safety information as arguments.
+/// Diagnostics is emitted via \p ORE. It returns changed status.
 bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
-                 TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                 MemorySSAUpdater *, ScalarEvolution *, ICFLoopSafetyInfo *,
-                 SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *);
+                 BlockFrequencyInfo *, TargetLibraryInfo *, Loop *,
+                 AliasSetTracker *, MemorySSAUpdater *, ScalarEvolution *,
+                 ICFLoopSafetyInfo *, SinkAndHoistLICMFlags &,
+                 OptimizationRemarkEmitter *);
 
 /// This function deletes dead loops. The caller of this function needs to
 /// guarantee that the loop is infact dead.

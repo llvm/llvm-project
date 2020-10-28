@@ -764,7 +764,7 @@ void UnloopUpdater::removeBlocksFromAncestors() {
 
 /// Update the parent loop for all subloops directly nested within unloop.
 void UnloopUpdater::updateSubloopParents() {
-  while (!Unloop.empty()) {
+  while (!Unloop.isInnermost()) {
     Loop *Subloop = *std::prev(Unloop.end());
     Unloop.removeChildLoop(std::prev(Unloop.end()));
 
@@ -862,7 +862,7 @@ void LoopInfo::erase(Loop *Unloop) {
   auto InvalidateOnExit = make_scope_exit([&]() { destroy(Unloop); });
 
   // First handle the special case of no parent loop to simplify the algorithm.
-  if (!Unloop->getParentLoop()) {
+  if (Unloop->isOutermost()) {
     // Since BBLoop had no parent, Unloop blocks are no longer in a loop.
     for (Loop::block_iterator I = Unloop->block_begin(),
                               E = Unloop->block_end();
@@ -887,7 +887,7 @@ void LoopInfo::erase(Loop *Unloop) {
     }
 
     // Move all of the subloops to the top-level.
-    while (!Unloop->empty())
+    while (!Unloop->isInnermost())
       addTopLevelLoop(Unloop->removeChildLoop(std::prev(Unloop->end())));
 
     return;

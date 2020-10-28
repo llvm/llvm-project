@@ -115,6 +115,8 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   Instruction *FramePtr;
   BasicBlock *AllocaSpillBlock;
 
+  bool ReuseFrameSlot;
+
   struct SwitchLoweringStorage {
     SwitchInst *ResumeSwitch;
     AllocaInst *PromiseAlloca;
@@ -238,12 +240,14 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   void emitDealloc(IRBuilder<> &Builder, Value *Ptr, CallGraph *CG) const;
 
   Shape() = default;
-  explicit Shape(Function &F) { buildFrom(F); }
+  explicit Shape(Function &F, bool ReuseFrameSlot = false)
+      : ReuseFrameSlot(ReuseFrameSlot) {
+    buildFrom(F);
+  }
   void buildFrom(Function &F);
 };
 
 void buildCoroutineFrame(Function &F, Shape &Shape);
-
 } // End namespace coro.
 } // End namespace llvm
 

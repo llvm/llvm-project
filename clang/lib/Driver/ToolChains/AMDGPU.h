@@ -90,6 +90,9 @@ public:
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
+  /// Should skip argument.
+  bool shouldSkipArgument(const llvm::opt::Arg *Arg) const;
+
 protected:
   /// Translate -mcpu option containing target ID to cc1 options.
   /// Returns the GPU name.

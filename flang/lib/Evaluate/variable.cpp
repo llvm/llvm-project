@@ -204,9 +204,11 @@ std::optional<Expr<SomeCharacter>> Substring::Fold(FoldingContext &context) {
       *ubi = *length;
     }
     if (lbi && literal) {
-      CHECK(*ubi >= *lbi);
       auto newStaticData{StaticDataObject::Create()};
-      auto items{*ubi - *lbi + 1};
+      auto items{0}; // If the lower bound is greater, the length is 0
+      if (*ubi >= *lbi) {
+        items = *ubi - *lbi + 1;
+      }
       auto width{(*literal)->itemBytes()};
       auto bytes{items * width};
       auto startByte{(*lbi - 1) * width};
@@ -635,9 +637,7 @@ bool NamedEntity::operator==(const NamedEntity &that) const {
     return !that.IsSymbol() && GetComponent() == that.GetComponent();
   }
 }
-template <int KIND>
-bool TypeParamInquiry<KIND>::operator==(
-    const TypeParamInquiry<KIND> &that) const {
+bool TypeParamInquiry::operator==(const TypeParamInquiry &that) const {
   return &*parameter_ == &*that.parameter_ && base_ == that.base_;
 }
 bool Triplet::operator==(const Triplet &that) const {

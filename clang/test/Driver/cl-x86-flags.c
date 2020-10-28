@@ -128,5 +128,9 @@
 // RUN: %clang_cl -m64 -arch:avx512 --target=i386-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=avx51264 %s
 // avx51264: argument unused during compilation
 
+// RUN: %clang_cl -m64 -arch:AVX -tune:haswell --target=x86_64-pc-windows -### -- 2>&1 %s | FileCheck -check-prefix=tune %s
+// tune: "-target-cpu" "sandybridge"
+// tune-SAME: "-tune-cpu" "haswell"
+
 void f() {
 }

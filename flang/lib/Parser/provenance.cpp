@@ -301,6 +301,14 @@ const SourceFile *AllSources::GetSourceFile(
       origin.u);
 }
 
+const char *AllSources::GetSource(ProvenanceRange range) const {
+  Provenance start{range.start()};
+  const Origin &origin{MapToOrigin(start)};
+  return origin.covers.Contains(range)
+      ? &origin[origin.covers.MemberOffset(start)]
+      : nullptr;
+}
+
 std::optional<SourcePosition> AllSources::GetSourcePosition(
     Provenance prov) const {
   const Origin &origin{MapToOrigin(prov)};
@@ -400,12 +408,9 @@ const AllSources::Origin &AllSources::MapToOrigin(Provenance at) const {
   return origin_[low];
 }
 
-CookedSource::CookedSource(AllSources &s) : allSources_{s} {}
-CookedSource::~CookedSource() {}
-
 std::optional<ProvenanceRange> CookedSource::GetProvenanceRange(
     CharBlock cookedRange) const {
-  if (!IsValid(cookedRange)) {
+  if (!AsCharBlock().Contains(cookedRange)) {
     return std::nullopt;
   }
   ProvenanceRange first{provenanceMap_.Map(cookedRange.begin() - &data_[0])};
@@ -414,34 +419,6 @@ std::optional<ProvenanceRange> CookedSource::GetProvenanceRange(
   }
   ProvenanceRange last{provenanceMap_.Map(cookedRange.end() - &data_[0])};
   return {ProvenanceRange{first.start(), last.start() - first.start()}};
-}
-
-std::optional<CharBlock> CookedSource::GetCharBlockFromLineAndColumns(
-    int line, int startColumn, int endColumn) const {
-  // 2nd column is exclusive, meaning it is target column + 1.
-  CHECK(line > 0 && startColumn > 0 && endColumn > 0);
-  CHECK(startColumn < endColumn);
-  auto provenanceStart{allSources_.GetFirstFileProvenance().value().start()};
-  if (auto sourceFile{allSources_.GetSourceFile(provenanceStart)}) {
-    CHECK(line <= static_cast<int>(sourceFile->lines()));
-    return GetCharBlock(ProvenanceRange(sourceFile->GetLineStartOffset(line) +
-            provenanceStart.offset() + startColumn - 1,
-        endColumn - startColumn));
-  }
-  return std::nullopt;
-}
-
-std::optional<std::pair<SourcePosition, SourcePosition>>
-CookedSource::GetSourcePositionRange(CharBlock cookedRange) const {
-  if (auto range{GetProvenanceRange(cookedRange)}) {
-    if (auto firstOffset{allSources_.GetSourcePosition(range->start())}) {
-      if (auto secondOffset{
-              allSources_.GetSourcePosition(range->start() + range->size())}) {
-        return std::pair{*firstOffset, *secondOffset};
-      }
-    }
-  }
-  return std::nullopt;
 }
 
 std::optional<CharBlock> CookedSource::GetCharBlock(
@@ -457,16 +434,17 @@ std::optional<CharBlock> CookedSource::GetCharBlock(
 
 std::size_t CookedSource::BufferedBytes() const { return buffer_.bytes(); }
 
-void CookedSource::Marshal() {
+void CookedSource::Marshal(AllSources &allSources) {
   CHECK(provenanceMap_.SizeInBytes() == buffer_.bytes());
-  provenanceMap_.Put(allSources_.AddCompilerInsertion("(after end of source)"));
+  provenanceMap_.Put(allSources.AddCompilerInsertion("(after end of source)"));
   data_ = buffer_.Marshal();
   buffer_.clear();
 }
 
-void CookedSource::CompileProvenanceRangeToOffsetMappings() {
+void CookedSource::CompileProvenanceRangeToOffsetMappings(
+    AllSources &allSources) {
   if (invertedMap_.empty()) {
-    invertedMap_ = provenanceMap_.Invert(allSources_);
+    invertedMap_ = provenanceMap_.Invert(allSources);
   }
 }
 
@@ -534,12 +512,73 @@ llvm::raw_ostream &AllSources::Dump(llvm::raw_ostream &o) const {
 }
 
 llvm::raw_ostream &CookedSource::Dump(llvm::raw_ostream &o) const {
-  o << "CookedSource:\n";
-  allSources_.Dump(o);
   o << "CookedSource::provenanceMap_:\n";
   provenanceMap_.Dump(o);
   o << "CookedSource::invertedMap_:\n";
   invertedMap_.Dump(o);
   return o;
 }
+
+AllCookedSources::AllCookedSources(AllSources &s) : allSources_{s} {}
+AllCookedSources::~AllCookedSources() {}
+
+CookedSource &AllCookedSources::NewCookedSource() {
+  return cooked_.emplace_back();
+}
+
+std::optional<ProvenanceRange> AllCookedSources::GetProvenanceRange(
+    CharBlock cb) const {
+  if (const CookedSource * c{Find(cb)}) {
+    return c->GetProvenanceRange(cb);
+  } else {
+    return std::nullopt;
+  }
+}
+
+std::optional<CharBlock> AllCookedSources::GetCharBlockFromLineAndColumns(
+    int line, int startColumn, int endColumn) const {
+  // 2nd column is exclusive, meaning it is target column + 1.
+  CHECK(line > 0 && startColumn > 0 && endColumn > 0);
+  CHECK(startColumn < endColumn);
+  auto provenanceStart{allSources_.GetFirstFileProvenance().value().start()};
+  if (auto sourceFile{allSources_.GetSourceFile(provenanceStart)}) {
+    CHECK(line <= static_cast<int>(sourceFile->lines()));
+    return GetCharBlock(ProvenanceRange(sourceFile->GetLineStartOffset(line) +
+            provenanceStart.offset() + startColumn - 1,
+        endColumn - startColumn));
+  }
+  return std::nullopt;
+}
+
+std::optional<std::pair<SourcePosition, SourcePosition>>
+AllCookedSources::GetSourcePositionRange(CharBlock cookedRange) const {
+  if (auto range{GetProvenanceRange(cookedRange)}) {
+    if (auto firstOffset{allSources_.GetSourcePosition(range->start())}) {
+      if (auto secondOffset{
+              allSources_.GetSourcePosition(range->start() + range->size())}) {
+        return std::pair{*firstOffset, *secondOffset};
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<CharBlock> AllCookedSources::GetCharBlock(
+    ProvenanceRange range) const {
+  for (const auto &c : cooked_) {
+    if (auto result{c.GetCharBlock(range)}) {
+      return result;
+    }
+  }
+  return nullptr;
+}
+
+void AllCookedSources::Dump(llvm::raw_ostream &o) const {
+  o << "AllSources:\n";
+  allSources_.Dump(o);
+  for (const auto &c : cooked_) {
+    c.Dump(o);
+  }
+}
+
 } // namespace Fortran::parser

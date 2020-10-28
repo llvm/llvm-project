@@ -116,7 +116,7 @@ struct Object {
   const Symbol *findSymbol(size_t UniqueId) const;
 
   void addSymbols(ArrayRef<Symbol> NewSymbols);
-  void removeSymbols(function_ref<bool(const Symbol &)> ToRemove);
+  Error removeSymbols(function_ref<Expected<bool>(const Symbol &)> ToRemove);
 
   // Set the Referenced field on all Symbols, based on relocations in
   // all sections.

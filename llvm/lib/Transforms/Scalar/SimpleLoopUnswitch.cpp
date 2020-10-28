@@ -50,6 +50,7 @@
 #include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
@@ -1139,8 +1140,21 @@ static BasicBlock *buildClonedLoopBlocks(
   // Replace the cloned branch with an unconditional branch to the cloned
   // unswitched successor.
   auto *ClonedSuccBB = cast<BasicBlock>(VMap.lookup(UnswitchedSuccBB));
-  ClonedParentBB->getTerminator()->eraseFromParent();
+  Instruction *ClonedTerminator = ClonedParentBB->getTerminator();
+  // Trivial Simplification. If Terminator is a conditional branch and
+  // condition becomes dead - erase it.
+  Value *ClonedConditionToErase = nullptr;
+  if (auto *BI = dyn_cast<BranchInst>(ClonedTerminator))
+    ClonedConditionToErase = BI->getCondition();
+  else if (auto *SI = dyn_cast<SwitchInst>(ClonedTerminator))
+    ClonedConditionToErase = SI->getCondition();
+
+  ClonedTerminator->eraseFromParent();
   BranchInst::Create(ClonedSuccBB, ClonedParentBB);
+
+  if (ClonedConditionToErase)
+    RecursivelyDeleteTriviallyDeadInstructions(ClonedConditionToErase, nullptr,
+                                               MSSAU);
 
   // If there are duplicate entries in the PHI nodes because of multiple edges
   // to the unswitched successor, we need to nuke all but one as we replaced it
@@ -1200,7 +1214,7 @@ static Loop *cloneLoopNest(Loop &OrigRootL, Loop *RootParentL,
     LI.addTopLevelLoop(ClonedRootL);
   AddClonedBlocksToLoop(OrigRootL, *ClonedRootL);
 
-  if (OrigRootL.empty())
+  if (OrigRootL.isInnermost())
     return ClonedRootL;
 
   // If we have a nest, we can quickly clone the entire loop nest using an
@@ -2339,12 +2353,12 @@ static void unswitchNontrivialInvariants(
   for (Loop *UpdatedL :
        llvm::concat<Loop *>(NonChildClonedLoops, HoistedLoops)) {
     UpdateLoop(*UpdatedL);
-    if (!UpdatedL->getParentLoop())
+    if (UpdatedL->isOutermost())
       OuterExitL = nullptr;
   }
   if (IsStillLoop) {
     UpdateLoop(L);
-    if (!L.getParentLoop())
+    if (L.isOutermost())
       OuterExitL = nullptr;
   }
 

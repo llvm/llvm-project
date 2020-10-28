@@ -26,6 +26,10 @@
 // same call context of that function (and not split between caller and callee
 // contexts of a directly recursive call, for example).
 //
+// Additionally, these routines can't simplify to the instructions that are not
+// def-reachable, meaning we can't just scan the basic block for instructions
+// to simplify to.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
@@ -287,6 +291,13 @@ Value *SimplifyFreezeInst(Value *Op, const SimplifyQuery &Q);
 /// return null.
 Value *SimplifyInstruction(Instruction *I, const SimplifyQuery &Q,
                            OptimizationRemarkEmitter *ORE = nullptr);
+
+/// See if V simplifies when its operand Op is replaced with RepOp. If not,
+/// return null.
+/// AllowRefinement specifies whether the simplification can be a refinement,
+/// or whether it needs to be strictly identical.
+Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
+                              const SimplifyQuery &Q, bool AllowRefinement);
 
 /// Replace all uses of 'I' with 'SimpleV' and simplify the uses recursively.
 ///

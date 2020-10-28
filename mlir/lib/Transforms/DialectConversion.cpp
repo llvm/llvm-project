@@ -1462,7 +1462,7 @@ public:
   OperationLegalizer(ConversionTarget &targetInfo,
                      const OwningRewritePatternList &patterns);
 
-  /// Returns if the given operation is known to be illegal on the target.
+  /// Returns true if the given operation is known to be illegal on the target.
   bool isIllegal(Operation *op) const;
 
   /// Attempt to legalize the given operation. Returns success if the operation

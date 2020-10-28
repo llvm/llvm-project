@@ -463,15 +463,16 @@ define void @ipra_call_with_stack() #0 {
 ; GCN-LABEL: {{^}}callee_need_to_spill_fp_to_memory:
 ; GCN: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
 ; GCN: v_mov_b32_e32 [[TMP_VGPR1:v[0-9]+]], s33
-; GCN: buffer_store_dword [[TMP_VGPR1]], off, s[0:3], s32 offset:[[OFF:[0-9]+]]
+; GCN: buffer_store_dword [[TMP_VGPR1]], off, s[0:3], s32 offset:4
 ; GCN: s_mov_b64 exec, [[COPY_EXEC1]]
 ; GCN: s_mov_b32 s33, s32
 ; GCN: s_or_saveexec_b64 [[COPY_EXEC2:s\[[0-9]+:[0-9]+\]]], -1{{$}}
-; GCN: buffer_load_dword [[TMP_VGPR2:v[0-9]+]], off, s[0:3], s32 offset:[[OFF]]
+; GCN: buffer_load_dword [[TMP_VGPR2:v[0-9]+]], off, s[0:3], s32 offset:4
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN: v_readfirstlane_b32 s33, [[TMP_VGPR2]]
 ; GCN: s_mov_b64 exec, [[COPY_EXEC2]]
 ; GCN: s_setpc_b64
+; GCN: ScratchSize: 8
 define void @callee_need_to_spill_fp_to_memory() #3 {
   call void asm sideeffect "; clobber nonpreserved SGPRs",
     "~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
@@ -529,8 +530,8 @@ define void @callee_need_to_spill_fp_to_memory_full_reserved_vgpr() #3 {
 ; GCN-LABEL: {{^}}spill_fp_to_memory_scratch_reg_needed_mubuf_offset
 ; GCN: s_or_saveexec_b64 s[4:5], -1
 ; GCN: v_mov_b32_e32 v0, s33
-; GCN-NOT: v_mov_b32_e32 v0, 0x100c
-; GCN-NEXT: v_mov_b32_e32 v1, 0x100c
+; GCN-NOT: v_mov_b32_e32 v0, 0x1008
+; GCN-NEXT: v_mov_b32_e32 v1, 0x1008
 ; GCN-NEXT: buffer_store_dword v0, v1, s[0:3], s32 offen
 define void @spill_fp_to_memory_scratch_reg_needed_mubuf_offset([4096 x i8] addrspace(5)* byval align 4 %arg) #3 {
   %alloca = alloca i32, addrspace(5)

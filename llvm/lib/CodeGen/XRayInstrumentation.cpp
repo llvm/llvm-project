@@ -145,20 +145,18 @@ void XRayInstrumentation::prependRetWithPatchableExit(
 bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
   auto &F = MF.getFunction();
   auto InstrAttr = F.getFnAttribute("function-instrument");
-  bool AlwaysInstrument = !InstrAttr.hasAttribute(Attribute::None) &&
-                          InstrAttr.isStringAttribute() &&
+  bool AlwaysInstrument = InstrAttr.isStringAttribute() &&
                           InstrAttr.getValueAsString() == "xray-always";
   auto ThresholdAttr = F.getFnAttribute("xray-instruction-threshold");
   auto IgnoreLoopsAttr = F.getFnAttribute("xray-ignore-loops");
   unsigned int XRayThreshold = 0;
   if (!AlwaysInstrument) {
-    if (ThresholdAttr.hasAttribute(Attribute::None) ||
-        !ThresholdAttr.isStringAttribute())
+    if (!ThresholdAttr.isStringAttribute())
       return false; // XRay threshold attribute not found.
     if (ThresholdAttr.getValueAsString().getAsInteger(10, XRayThreshold))
       return false; // Invalid value for threshold.
 
-    bool IgnoreLoops = !IgnoreLoopsAttr.hasAttribute(Attribute::None);
+    bool IgnoreLoops = IgnoreLoopsAttr.isValid();
 
     // Count the number of MachineInstr`s in MachineFunction
     int64_t MICount = 0;

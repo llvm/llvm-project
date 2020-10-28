@@ -155,6 +155,15 @@ Value *FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy, bool AtLeastAtomic,
                                  BasicBlock::iterator &ScanFrom,
                                  unsigned MaxInstsToScan, AAResults *AA,
                                  bool *IsLoadCSE, unsigned *NumScanedInst);
+
+/// Returns true if a pointer value \p A can be replace with another pointer
+/// value \B if they are deemed equal through some means (e.g. information from
+/// conditions).
+/// NOTE: the current implementations is incomplete and unsound. It does not
+/// reject all invalid cases yet, but will be made stricter in the future. In
+/// particular this means returning true means unknown if replacement is safe.
+bool canReplacePointersIfEqual(Value *A, Value *B, const DataLayout &DL,
+                               Instruction *CtxI);
 }
 
 #endif

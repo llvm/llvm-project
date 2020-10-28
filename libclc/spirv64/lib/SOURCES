@@ -41,6 +41,10 @@ subnormal_config.cl
 ../../generic/lib/math/exp2.cl
 ../../generic/lib/math/clc_exp10.cl
 ../../generic/lib/math/exp10.cl
+../../generic/lib/math/clc_fma.cl
+math/fma.cl
+../../generic/lib/math/clc_fmod.cl
+../../generic/lib/math/fmod.cl
 ../../generic/lib/math/fract.cl
 ../../generic/lib/math/frexp.cl
 ../../generic/lib/math/half_rsqrt.cl
@@ -48,6 +52,8 @@ subnormal_config.cl
 ../../generic/lib/math/clc_hypot.cl
 ../../generic/lib/math/hypot.cl
 ../../generic/lib/math/ilogb.cl
+../../generic/lib/math/clc_ldexp.cl
+../../generic/lib/math/ldexp.cl
 ../../generic/lib/math/lgamma.cl
 ../../generic/lib/math/lgamma_r.cl
 ../../generic/lib/math/log.cl

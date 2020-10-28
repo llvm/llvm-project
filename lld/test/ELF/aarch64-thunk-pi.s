@@ -1,13 +1,12 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
-// RUN: echo "SECTIONS { \
-// RUN:       .text_low : { *(.text_low) } \
-// RUN:       .text_high 0x10000000 : { *(.text_high) } \
-// RUN:       } " > %t.script
-// RUN: ld.lld --script %t.script --shared %t.o -o %t.so 2>&1
+// RUN: split-file %s %t
+// RUN: llvm-mc -filetype=obj -triple=aarch64 %t/asm -o %t.o
+// RUN: ld.lld --script %t/lds --shared %t.o -o %t.so 2>&1
 // RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t.so | FileCheck %s
 
 // Check that Position Independent thunks are generated for shared libraries.
+
+//--- asm
  .section .text_low, "ax", %progbits
  .globl low_target
  .type low_target, %function
@@ -102,3 +101,13 @@ high_target2:
 // CHECK-NEXT:                 ldr     x17, [x16, #0x130]
 // CHECK-NEXT:                 add     x16, x16, #0x130
 // CHECK-NEXT:                 br      x17
+
+//--- lds
+PHDRS {
+  low PT_LOAD FLAGS(0x1 | 0x4);
+  high PT_LOAD FLAGS(0x1 | 0x4);
+}
+SECTIONS {
+  .text_low : { *(.text_low) } :low
+  .text_high 0x10000000 : { *(.text_high) } :high
+}

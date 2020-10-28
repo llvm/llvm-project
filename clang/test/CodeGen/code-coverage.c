@@ -37,10 +37,10 @@ int test2(int b) {
 }
 
 
-// CHECK: @__llvm_internal_gcov_emit_function_args.0 = internal unnamed_addr constant [2 x %0]
-// CHECK-SAME: [%0 zeroinitializer, %0 { i32 1, i32 0, i32 0 }]
+// CHECK: @__llvm_internal_gcov_emit_function_args.0 = internal unnamed_addr constant [2 x %emit_function_args_ty]
+// CHECK-SAME: [%emit_function_args_ty { i32 0, i32 {{[-0-9]+}}, i32 {{[-0-9]+}} }, %emit_function_args_ty { i32 1, i32 {{[-0-9]+}}, i32 {{[-0-9]+}} }]
 
-// CHECK: @__llvm_internal_gcov_emit_file_info = internal unnamed_addr constant [1 x %2]
+// CHECK: @__llvm_internal_gcov_emit_file_info = internal unnamed_addr constant [1 x %file_info]
 /// 0x3330342a '3' '0' '4' '*'
 // 304-SAME: i32 858797098
 /// 0x3430372a '4' '0' '7' '*'

@@ -67,6 +67,9 @@ ABI getTargetABI(StringRef ABIName) {
 // saved registers and X8 will be used as fp. So we choose X9 as bp.
 Register getBPReg() { return RISCV::X9; }
 
+// Returns the register holding shadow call stack pointer.
+Register getSCSPReg() { return RISCV::X18; }
+
 } // namespace RISCVABI
 
 namespace RISCVFeatures {

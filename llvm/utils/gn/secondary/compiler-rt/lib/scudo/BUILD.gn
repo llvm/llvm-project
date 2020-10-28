@@ -27,6 +27,8 @@ group("scudo") {
 # This target is unused, it only exists to satisfy
 # sync_source_lists_from_cmake.py.
 source_set("sources") {
+  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
   sources = [
     "scudo_allocator.cpp",
     "scudo_allocator.h",

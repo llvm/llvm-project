@@ -1,13 +1,13 @@
 ; Check flattened profile will not be read in thinlto postlink.
-; RUN: opt < %s -O2 -flattened-profile-used -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/flattened.prof -enable-chr=false -perform-thinlto=true -S | FileCheck %s
+; RUN: opt < %s -O2 -flattened-profile-used -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/flattened.prof -enable-chr=false -perform-thinlto=true -enable-new-pm=0 -S | FileCheck %s
 ; RUN: opt < %s -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/flattened.prof -flattened-profile-used -S | FileCheck %s
 ;
 ; Check flattened profile will be read in thinlto prelink.
-; RUN: opt < %s -O2 -flattened-profile-used -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/flattened.prof -enable-chr=false -prepare-for-thinlto=true -S | FileCheck %s --check-prefix=PRELINK
+; RUN: opt < %s -O2 -flattened-profile-used -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/flattened.prof -enable-chr=false -prepare-for-thinlto=true -enable-new-pm=0 -S | FileCheck %s --check-prefix=PRELINK
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/flattened.prof -flattened-profile-used -S | FileCheck %s --check-prefix=PRELINK
 ;
 ; Check flattened profile will be read in non-thinlto mode.
-; RUN: opt < %s -O2 -flattened-profile-used -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/flattened.prof -enable-chr=false -S | FileCheck %s --check-prefix=NOTHINLTO
+; RUN: opt < %s -O2 -flattened-profile-used -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/flattened.prof -enable-chr=false -enable-new-pm=0 -S | FileCheck %s --check-prefix=NOTHINLTO
 ; RUN: opt < %s -passes='default<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/flattened.prof -flattened-profile-used -S | FileCheck %s --check-prefix=NOTHINLTO
 ;
 ; CHECK-NOT: !{!"ProfileFormat", !"SampleProfile"}

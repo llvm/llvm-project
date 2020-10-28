@@ -17,6 +17,11 @@
 2011 format(:2L2)
 2012 format(2L2 : 2L2)
 
+     write(*,2013) 'Hello'
+     if (2+2.eq.4) then
+2013   format(A10) ! ok to reference outside the if block
+     endif
+
      ! C1302 warnings; no errors
 2051 format(1X3/)
 2052 format(1X003/)

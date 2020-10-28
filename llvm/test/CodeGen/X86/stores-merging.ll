@@ -479,6 +479,36 @@ define void @trunc_i32_to_i16(i32 %x, i16* %p) {
   ret void
 }
 
+define void @be_i32_to_i16(i32 %x, i16* %p0) {
+; CHECK-LABEL: be_i32_to_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rorl $16, %edi
+; CHECK-NEXT:    movl %edi, (%rsi)
+; CHECK-NEXT:    retq
+  %sh1 = lshr i32 %x, 16
+  %t0 = trunc i32 %x to i16
+  %t1 = trunc i32 %sh1 to i16
+  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
+  store i16 %t0, i16* %p1, align 2
+  store i16 %t1, i16* %p0, align 2
+  ret void
+}
+
+define void @be_i32_to_i16_order(i32 %x, i16* %p0) {
+; CHECK-LABEL: be_i32_to_i16_order:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rorl $16, %edi
+; CHECK-NEXT:    movl %edi, (%rsi)
+; CHECK-NEXT:    retq
+  %sh1 = lshr i32 %x, 16
+  %t0 = trunc i32 %x to i16
+  %t1 = trunc i32 %sh1 to i16
+  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
+  store i16 %t1, i16* %p0, align 2
+  store i16 %t0, i16* %p1, align 2
+  ret void
+}
+
 define void @trunc_i64_to_i8(i64 %x, i8* %p) {
 ; CHECK-LABEL: trunc_i64_to_i8:
 ; CHECK:       # %bb.0:
@@ -550,5 +580,35 @@ define void @trunc_i64_to_i32(i64 %x, i32* %p) {
   store i32 %t1, i32* %p, align 4
   %p1 = getelementptr inbounds i32, i32* %p, i64 1
   store i32 %t2, i32* %p1, align 4
+  ret void
+}
+
+define void @be_i64_to_i32(i64 %x, i32* %p0) {
+; CHECK-LABEL: be_i64_to_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rorq $32, %rdi
+; CHECK-NEXT:    movq %rdi, (%rsi)
+; CHECK-NEXT:    retq
+  %sh1 = lshr i64 %x, 32
+  %t0 = trunc i64 %x to i32
+  %t1 = trunc i64 %sh1 to i32
+  %p1 = getelementptr inbounds i32, i32* %p0, i64 1
+  store i32 %t0, i32* %p1, align 4
+  store i32 %t1, i32* %p0, align 4
+  ret void
+}
+
+define void @be_i64_to_i32_order(i64 %x, i32* %p0) {
+; CHECK-LABEL: be_i64_to_i32_order:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rorq $32, %rdi
+; CHECK-NEXT:    movq %rdi, (%rsi)
+; CHECK-NEXT:    retq
+  %sh1 = lshr i64 %x, 32
+  %t0 = trunc i64 %x to i32
+  %t1 = trunc i64 %sh1 to i32
+  %p1 = getelementptr inbounds i32, i32* %p0, i64 1
+  store i32 %t1, i32* %p0, align 4
+  store i32 %t0, i32* %p1, align 4
   ret void
 }

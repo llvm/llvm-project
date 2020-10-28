@@ -71,20 +71,20 @@ public:
                               Instruction *CxtI = nullptr);
 
   /// Determine whether the specified value comparison with a constant is known
-  /// to be true or false at the specified instruction
-  /// (from an assume intrinsic). Pred is a CmpInst predicate.
+  /// to be true or false at the specified instruction.
+  /// \p Pred is a CmpInst predicate. If \p UseBlockValue is true, the block
+  /// value is also taken into account.
   Tristate getPredicateAt(unsigned Pred, Value *V, Constant *C,
-                          Instruction *CxtI);
+                          Instruction *CxtI, bool UseBlockValue = false);
 
-  /// Determine whether the specified value is known to be a
-  /// constant at the end of the specified block.  Return null if not.
-  Constant *getConstant(Value *V, BasicBlock *BB, Instruction *CxtI = nullptr);
+  /// Determine whether the specified value is known to be a constant at the
+  /// specified instruction. Return null if not.
+  Constant *getConstant(Value *V, Instruction *CxtI);
 
   /// Return the ConstantRange constraint that is known to hold for the
-  /// specified value at the end of the specified block. This may only be called
+  /// specified value at the specified instruction. This may only be called
   /// on integer-typed Values.
-  ConstantRange getConstantRange(Value *V, BasicBlock *BB,
-                                 Instruction *CxtI = nullptr,
+  ConstantRange getConstantRange(Value *V, Instruction *CxtI,
                                  bool UndefAllowed = true);
 
   /// Determine whether the specified value is known to be a

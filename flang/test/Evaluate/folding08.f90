@@ -18,9 +18,9 @@ module m
     logical, parameter :: test_lba1 = all(lba1 == [0])
     integer, parameter :: lba2(*) = lbound(a2)
     logical, parameter :: test_lba2 = all(lba2 == [0])
-    integer, parameter :: lbtadim(*) = lbound(ta,1)
+    integer, parameter :: lbtadim = lbound(ta,1)
     logical, parameter :: test_lbtadim = lbtadim == 0
-    integer, parameter :: ubtadim(*) = ubound(ta,1)
+    integer, parameter :: ubtadim = ubound(ta,1)
     logical, parameter :: test_ubtadim = ubtadim == 2
     integer, parameter :: lbta1(*) = lbound(ta)
     logical, parameter :: test_lbta1 = all(lbta1 == [0])

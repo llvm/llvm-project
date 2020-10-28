@@ -11,47 +11,60 @@
 // template <class Alloc>
 // struct allocator_traits
 // {
-//     static void deallocate(allocator_type& a, pointer p, size_type n);
+//     static constexpr void deallocate(allocator_type& a, pointer p, size_type n);
 //     ...
 // };
 
 #include <memory>
-#include <cstdint>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 #include "incomplete_type_helper.h"
-
-int called = 0;
 
 template <class T>
 struct A
 {
     typedef T value_type;
 
-    void deallocate(value_type* p, std::size_t n)
+    TEST_CONSTEXPR_CXX20 A(int& called) : called(called) {}
+
+    TEST_CONSTEXPR_CXX20 void deallocate(value_type* p, std::size_t n)
     {
-        assert(p == reinterpret_cast<value_type*>(static_cast<std::uintptr_t>(0xDEADBEEF)));
+        assert(p == &storage);
         assert(n == 10);
         ++called;
     }
+
+    int& called;
+
+    value_type storage;
 };
+
+TEST_CONSTEXPR_CXX20 bool test()
+{
+    {
+        int called = 0;
+        A<int> a(called);
+        std::allocator_traits<A<int> >::deallocate(a, &a.storage, 10);
+        assert(called == 1);
+    }
+    {
+        int called = 0;
+        typedef A<IncompleteHolder*> Alloc;
+        Alloc a(called);
+        std::allocator_traits<Alloc>::deallocate(a, &a.storage, 10);
+        assert(called == 1);
+    }
+
+    return true;
+}
 
 int main(int, char**)
 {
-  {
-    A<int> a;
-    std::allocator_traits<A<int> >::deallocate(a, reinterpret_cast<int*>(static_cast<std::uintptr_t>(0xDEADBEEF)), 10);
-    assert(called == 1);
-  }
-  called = 0;
-  {
-    typedef IncompleteHolder* VT;
-    typedef A<VT> Alloc;
-    Alloc a;
-    std::allocator_traits<Alloc >::deallocate(a, reinterpret_cast<VT*>(static_cast<std::uintptr_t>(0xDEADBEEF)), 10);
-    assert(called == 1);
-  }
-
-  return 0;
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    return 0;
 }

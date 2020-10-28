@@ -432,7 +432,7 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
   auto *NoteTy = StructType::get(Int32Ty, Int32Ty, Int32Ty, Name->getType(),
                                  Int32Ty, Int32Ty);
   auto *Note =
-      new GlobalVariable(M, NoteTy, /*isConstantGlobal=*/true,
+      new GlobalVariable(M, NoteTy, /*isConstant=*/true,
                          GlobalValue::PrivateLinkage, nullptr, kHwasanNoteName);
   Note->setSection(".note.hwasan.globals");
   Note->setComdat(NoteComdat);

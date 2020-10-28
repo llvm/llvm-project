@@ -114,6 +114,9 @@ using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
+STATISTIC(NumWorklistIterations,
+          "Number of instruction combining iterations performed");
+
 STATISTIC(NumCombined , "Number of insts combined");
 STATISTIC(NumConstProp, "Number of constant folds");
 STATISTIC(NumDeadInst , "Number of dead inst eliminated");
@@ -956,7 +959,8 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op,
       return nullptr;
 
     // If vectors, verify that they have the same number of elements.
-    if (SrcTy && SrcTy->getNumElements() != DestTy->getNumElements())
+    if (SrcTy && cast<FixedVectorType>(SrcTy)->getNumElements() !=
+                     cast<FixedVectorType>(DestTy)->getNumElements())
       return nullptr;
   }
 
@@ -1708,9 +1712,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     // values followed by a splat followed by the 2nd binary operation:
     // bo (splat X), (bo Y, OtherOp) --> bo (splat (bo X, Y)), OtherOp
     Value *NewBO = Builder.CreateBinOp(Opcode, X, Y);
-    UndefValue *Undef = UndefValue::get(Inst.getType());
     SmallVector<int, 8> NewMask(MaskC.size(), SplatIndex);
-    Value *NewSplat = Builder.CreateShuffleVector(NewBO, Undef, NewMask);
+    Value *NewSplat = Builder.CreateShuffleVector(NewBO, NewMask);
     Instruction *R = BinaryOperator::Create(Opcode, NewSplat, OtherOp);
 
     // Intersect FMF on both new binops. Other (poison-generating) flags are
@@ -2368,7 +2371,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     // gep (bitcast [c x ty]* X to <c x ty>*), Y, Z --> gep X, Y, Z
     auto areMatchingArrayAndVecTypes = [](Type *ArrTy, Type *VecTy,
                                           const DataLayout &DL) {
-      auto *VecVTy = cast<VectorType>(VecTy);
+      auto *VecVTy = cast<FixedVectorType>(VecTy);
       return ArrTy->getArrayElementType() == VecVTy->getElementType() &&
              ArrTy->getArrayNumElements() == VecVTy->getNumElements() &&
              DL.getTypeAllocSize(ArrTy) == DL.getTypeAllocSize(VecTy);
@@ -2791,6 +2794,30 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
     return replaceOperand(RI, 0,
         Constant::getIntegerValue(VTy, Known.getConstant()));
 
+  return nullptr;
+}
+
+Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
+  // Try to remove the previous instruction if it must lead to unreachable.
+  // This includes instructions like stores and "llvm.assume" that may not get
+  // removed by simple dead code elimination.
+  Instruction *Prev = I.getPrevNonDebugInstruction();
+  if (Prev && !Prev->isEHPad() &&
+      isGuaranteedToTransferExecutionToSuccessor(Prev)) {
+    // Temporarily disable removal of volatile stores preceding unreachable,
+    // pending a potential LangRef change permitting volatile stores to trap.
+    // TODO: Either remove this code, or properly integrate the check into
+    // isGuaranteedToTransferExecutionToSuccessor().
+    if (auto *SI = dyn_cast<StoreInst>(Prev))
+      if (SI->isVolatile())
+        return nullptr;
+
+    // A value may still have uses before we process it here (for example, in
+    // another unreachable block), so convert those to undef.
+    replaceInstUsesWith(*Prev, UndefValue::get(Prev->getType()));
+    eraseInstFromFunction(*Prev);
+    return &I;
+  }
   return nullptr;
 }
 
@@ -3840,6 +3867,7 @@ static bool combineInstructionsOverFunction(
   // Iterate while there is work to do.
   unsigned Iteration = 0;
   while (true) {
+    ++NumWorklistIterations;
     ++Iteration;
 
     if (Iteration > InfiniteLoopDetectionThreshold) {

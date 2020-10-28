@@ -2408,20 +2408,6 @@ with ``__has_feature(cxx_constexpr_string_builtins)``.
 Memory builtins
 ---------------
 
- * ``__builtin_memcpy_inline``
-
-.. code-block:: c
-
-  void __builtin_memcpy_inline(void *dst, const void *src, size_t size);
-
-``__builtin_memcpy_inline(dst, src, size)`` is identical to
-``__builtin_memcpy(dst, src, size)`` except that the generated code is
-guaranteed not to call any external functions. See [LLVM IR ‘llvm.memcpy.inline’
-Intrinsic](https://llvm.org/docs/LangRef.html#llvm-memcpy-inline-intrinsic) for
-more information.
-
-Note that the `size` argument must be a compile time constant.
-
 Clang provides constant expression evaluation support for builtin forms of the
 following functions from the C standard library headers
 ``<string.h>`` and ``<wchar.h>``:
@@ -2439,7 +2425,27 @@ are pointers to arrays with the same trivially copyable element type, and the
 given size is an exact multiple of the element size that is no greater than
 the number of elements accessible through the source and destination operands.
 
-Constant evaluation support is not yet provided for ``__builtin_memcpy_inline``.
+Guaranteed inlined copy
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: c
+
+  void __builtin_memcpy_inline(void *dst, const void *src, size_t size);
+
+
+``__builtin_memcpy_inline`` has been designed as a building block for efficient
+``memcpy`` implementations. It is identical to ``__builtin_memcpy`` but also
+guarantees not to call any external functions. See LLVM IR `llvm.memcpy.inline
+<https://llvm.org/docs/LangRef.html#llvm-memcpy-inline-intrinsic>`_ intrinsic 
+for more information.
+
+This is useful to implement a custom version of ``memcpy``, implemement a
+``libc`` memcpy or work around the absence of a ``libc``.
+
+Note that the `size` argument must be a compile time constant.
+
+Note that this intrinsic cannot yet be called in a ``constexpr`` context.
+
 
 Atomic Min/Max builtins with memory ordering
 --------------------------------------------

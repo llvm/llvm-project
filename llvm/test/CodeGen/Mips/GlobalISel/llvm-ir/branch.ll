@@ -30,21 +30,21 @@ define i32 @Conditional_branch(i1 %cond, i32 %a, i32 %b) {
 ; MIPS32:       # %bb.0:
 ; MIPS32-NEXT:    addiu $sp, $sp, -8
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 8
+; MIPS32-NEXT:    sw $5, 0($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $6, 4($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    andi $1, $4, 1
-; MIPS32-NEXT:    sw $5, 4($sp) # 4-byte Folded Spill
-; MIPS32-NEXT:    sw $6, 0($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    bnez $1, $BB1_2
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  # %bb.1:
 ; MIPS32-NEXT:    j $BB1_3
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB1_2: # %if.then
-; MIPS32-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $2, 0($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    addiu $sp, $sp, 8
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB1_3: # %if.else
-; MIPS32-NEXT:    lw $2, 0($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    addiu $sp, $sp, 8
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop

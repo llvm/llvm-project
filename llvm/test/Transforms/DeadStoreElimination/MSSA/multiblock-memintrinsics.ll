@@ -123,10 +123,18 @@ bb3:
 define void @alloca_1(i1 %c) {
 ; CHECK-LABEL: @alloca_1(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P_ALLOCA:%.*]] = alloca [32 x i32], align 4
+; CHECK-NEXT:    [[P:%.*]] = bitcast [32 x i32]* [[P_ALLOCA]] to i32*
+; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 1
+; CHECK-NEXT:    [[P3:%.*]] = bitcast i32* [[ARRAYIDX0]] to i8*
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8* [[P3]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[TMP0]], i8 0, i64 24, i1 false)
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 1
+; CHECK-NEXT:    store i32 1, i32* [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
@@ -152,10 +160,20 @@ bb3:
 define void @alloca_2(i1 %c) {
 ; CHECK-LABEL: @alloca_2(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P_ALLOCA:%.*]] = alloca [32 x i32], align 4
+; CHECK-NEXT:    [[P:%.*]] = bitcast [32 x i32]* [[P_ALLOCA]] to i32*
+; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 1
+; CHECK-NEXT:    [[P3:%.*]] = bitcast i32* [[ARRAYIDX0]] to i8*
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, i8* [[P3]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[TMP0]], i8 0, i64 24, i1 false)
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 1
+; CHECK-NEXT:    store i32 1, i32* [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 1
+; CHECK-NEXT:    store i32 1, i32* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void

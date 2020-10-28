@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "omptargetplugin.h"
-
 #include <algorithm>
 #include <cassert>
 #include <cerrno>
@@ -25,25 +23,18 @@
 #include <vector>
 #include <veosinfo/veosinfo.h>
 
+#include "Debug.h"
+#include "omptargetplugin.h"
+
+#ifndef TARGET_NAME
+#define TARGET_NAME VE
+#endif
+
+#define DEBUG_PREFIX "Target " GETNAME(TARGET_NAME) " RTL"
+
 #ifndef TARGET_ELF_ID
 #define TARGET_ELF_ID 0
 #endif
-
-#ifdef OMPTARGET_DEBUG
-static int DebugLevel = 0;
-
-#define GETNAME2(name) #name
-#define GETNAME(name) GETNAME2(name)
-#define DP(...)                                                                \
-  do {                                                                         \
-    if (DebugLevel > 0) {                                                      \
-      DEBUGP("Target " GETNAME(TARGET_NAME) " RTL", __VA_ARGS__);              \
-    }                                                                          \
-  } while (false)
-#else // OMPTARGET_DEBUG
-#define DP(...)                                                                \
-  {}
-#endif // OMPTARGET_DEBUG
 
 #include "../../common/elf_common.c"
 
@@ -111,11 +102,6 @@ public:
   }
 
   RTLDeviceInfoTy() {
-#ifdef OMPTARGET_DEBUG
-    if (char *envStr = getenv("LIBOMPTARGET_DEBUG")) {
-      DebugLevel = std::stoi(envStr);
-    }
-#endif // OMPTARGET_DEBUG
 
     struct ve_nodeinfo node_info;
     ve_node_info(&node_info);

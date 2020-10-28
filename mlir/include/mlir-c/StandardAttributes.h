@@ -16,6 +16,7 @@
 
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/Support.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -148,17 +149,13 @@ MlirAttribute mlirOpaqueAttrGet(MlirContext ctx, const char *dialectNamespace,
                                 intptr_t dataLength, const char *data,
                                 MlirType type);
 
-/** Returns the namepsace of the dialect with which the given opaque attribute
+/** Returns the namespace of the dialect with which the given opaque attribute
  * is associated. The namespace string is owned by the context. */
 const char *mlirOpaqueAttrGetDialectNamespace(MlirAttribute attr);
 
-/** Calls the provided callback with the opaque byte data stored in the given
- * opaque attribute. The callback is invoked once, and the data it receives is
- * not necessarily null terminated. The data remains live as long as the context
- * in which the attribute lives. */
-/* TODO: consider exposing StringRef and using it instead of the callback. */
-void mlirOpaqueAttrGetData(MlirAttribute attr, MlirStringCallback callback,
-                           void *userData);
+/** Returns the raw data as a string reference. The data remains live as long as
+ * the context in which the attribute lives. */
+MlirStringRef mlirOpaqueAttrGetData(MlirAttribute attr);
 
 /*============================================================================*/
 /* String attribute.                                                          */
@@ -178,13 +175,9 @@ MlirAttribute mlirStringAttrGet(MlirContext ctx, intptr_t length,
 MlirAttribute mlirStringAttrTypedGet(MlirType type, intptr_t length,
                                      const char *data);
 
-/** Calls the provided callback with the string stored in the given string
- * attribute. The callback is invoked once, and the data it receives is not
- * necessarily null terminated. The data remains live as long as the context in
- * which the attribute lives. */
-/* TODO: consider exposing StringRef and using it instead of the callback. */
-void mlirStringAttrGetValue(MlirAttribute attr, MlirStringCallback callback,
-                            void *userData);
+/** Returns the attribute values as a string reference. The data remains live as
+ * long as the context in which the attribute lives. */
+MlirStringRef mlirStringAttrGetValue(MlirAttribute attr);
 
 /*============================================================================*/
 /* SymbolRef attribute.                                                       */
@@ -201,23 +194,13 @@ MlirAttribute mlirSymbolRefAttrGet(MlirContext ctx, intptr_t length,
                                    const char *symbol, intptr_t numReferences,
                                    MlirAttribute *references);
 
-/** Calls the provided callback with the string containing the root referenced
- * symbol. The callback is invoked once, and the data it receives is not
- * necessarily null terminated. The data remains live as long as the context in
- * which the attribute lives. */
-/* TODO: consider exposing StringRef and using it instead of the callback. */
-void mlirSymbolRefAttrGetRootReference(MlirAttribute attr,
-                                       MlirStringCallback callback,
-                                       void *userData);
+/** Returns the string reference to the root referenced symbol. The data remains
+ * live as long as the context in which the attribute lives. */
+MlirStringRef mlirSymbolRefAttrGetRootReference(MlirAttribute attr);
 
-/** Calls the provided callback with the string containing the leaf referenced
- * symbol. The callback is invoked once, and the data it receives is not
- * necessarily null terminated. The data remains live as long as the context in
- * which the attribute lives. */
-/* TODO: consider exposing StringRef and using it instead of the callback. */
-void mlirSymbolRefAttrGetLeafReference(MlirAttribute attr,
-                                       MlirStringCallback callback,
-                                       void *userData);
+/** Returns the stirng reference to the leaf referenced symbol. The data remains
+ * live as long as the context in which the attribute lives. */
+MlirStringRef mlirSymbolRefAttrGetLeafReference(MlirAttribute attr);
 
 /** Returns the number of references nested in the given symbol reference
  * attribute. */
@@ -240,14 +223,9 @@ int mlirAttributeIsAFlatSymbolRef(MlirAttribute attr);
 MlirAttribute mlirFlatSymbolRefAttrGet(MlirContext ctx, intptr_t length,
                                        const char *symbol);
 
-/** Calls the provided callback with the string containing the referenced
- * symbol. The callback is invoked once, and the data it receives is not
- * necessarily null terminated. The data remains live as long as the context in
- * which the attribute lives. */
-/* TODO: consider exposing StringRef and using it instead of the callback. */
-void mlirFloatSymbolRefAttrGetValue(MlirAttribute attr,
-                                    MlirStringCallback callback,
-                                    void *userData);
+/** Returns the referenced symbol as a string reference. The data remains live
+ * as long as the context in which the attribute lives. */
+MlirStringRef mlirFlatSymbolRefAttrGetValue(MlirAttribute attr);
 
 /*============================================================================*/
 /* Type attribute.                                                            */
@@ -383,10 +361,7 @@ int64_t mlirDenseElementsAttrGetInt64SplatValue(MlirAttribute attr);
 uint64_t mlirDenseElementsAttrGetUInt64SplatValue(MlirAttribute attr);
 float mlirDenseElementsAttrGetFloatSplatValue(MlirAttribute attr);
 double mlirDenseElementsAttrGetDoubleSplatValue(MlirAttribute attr);
-/* TODO: consider exposing StringRef and using it instead of the callback. */
-void mlirDenseElementsAttrGetStringSplatValue(MlirAttribute attr,
-                                              MlirStringCallback callback,
-                                              void *userData);
+MlirStringRef mlirDenseElementsAttrGetStringSplatValue(MlirAttribute attr);
 
 /** Returns the pos-th value (flat contiguous indexing) of a specific type
  * contained by the given dense elements attribute. */
@@ -397,10 +372,8 @@ int64_t mlirDenseElementsAttrGetInt64Value(MlirAttribute attr, intptr_t pos);
 uint64_t mlirDenseElementsAttrGetUInt64Value(MlirAttribute attr, intptr_t pos);
 float mlirDenseElementsAttrGetFloatValue(MlirAttribute attr, intptr_t pos);
 double mlirDenseElementsAttrGetDoubleValue(MlirAttribute attr, intptr_t pos);
-/* TODO: consider exposing StringRef and using it instead of the callback. */
-void mlirDenseElementsAttrGetStringValue(MlirAttribute attr, intptr_t pos,
-                                         MlirStringCallback callback,
-                                         void *userData);
+MlirStringRef mlirDenseElementsAttrGetStringValue(MlirAttribute attr,
+                                                  intptr_t pos);
 
 /*============================================================================*/
 /* Opaque elements attribute.                                                 */

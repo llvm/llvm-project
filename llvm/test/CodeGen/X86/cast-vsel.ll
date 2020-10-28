@@ -86,9 +86,10 @@ define <8 x i32> @zext(<8 x float> %a, <8 x float> %b, <8 x i16> %c, <8 x i16> %
 ; SSE41-NEXT:    cmpltps %xmm2, %xmm0
 ; SSE41-NEXT:    packssdw %xmm1, %xmm0
 ; SSE41-NEXT:    pblendvb %xmm0, %xmm4, %xmm5
+; SSE41-NEXT:    pxor %xmm1, %xmm1
 ; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm5[0],zero,xmm5[1],zero,xmm5[2],zero,xmm5[3],zero
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm5[2,3,2,3]
-; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; SSE41-NEXT:    punpckhwd {{.*#+}} xmm5 = xmm5[4],xmm1[4],xmm5[5],xmm1[5],xmm5[6],xmm1[6],xmm5[7],xmm1[7]
+; SSE41-NEXT:    movdqa %xmm5, %xmm1
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: zext:

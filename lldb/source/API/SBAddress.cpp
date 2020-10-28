@@ -25,11 +25,8 @@ SBAddress::SBAddress() : m_opaque_up(new Address()) {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBAddress);
 }
 
-SBAddress::SBAddress(const Address *lldb_object_ptr)
-    : m_opaque_up(new Address()) {
-  if (lldb_object_ptr)
-    m_opaque_up = std::make_unique<Address>(*lldb_object_ptr);
-}
+SBAddress::SBAddress(const Address &address)
+    : m_opaque_up(std::make_unique<Address>(address)) {}
 
 SBAddress::SBAddress(const SBAddress &rhs) : m_opaque_up(new Address()) {
   LLDB_RECORD_CONSTRUCTOR(SBAddress, (const lldb::SBAddress &), rhs);
@@ -101,12 +98,7 @@ void SBAddress::SetAddress(lldb::SBSection section, lldb::addr_t offset) {
   addr.SetOffset(offset);
 }
 
-void SBAddress::SetAddress(const Address *lldb_object_ptr) {
-  if (lldb_object_ptr)
-    ref() = *lldb_object_ptr;
-  else
-    m_opaque_up = std::make_unique<Address>();
-}
+void SBAddress::SetAddress(const Address &address) { ref() = address; }
 
 lldb::addr_t SBAddress::GetFileAddress() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::addr_t, SBAddress, GetFileAddress);

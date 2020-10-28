@@ -29,13 +29,11 @@ define <4 x i64> @PR45808(<4 x i64> %0, <4 x i64> %1) {
 ; SSE2-NEXT:    pand %xmm7, %xmm4
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm7[1,1,3,3]
 ; SSE2-NEXT:    por %xmm4, %xmm5
-; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,2],xmm6[0,2]
-; SSE2-NEXT:    movaps {{.*#+}} xmm4 = <1,1,u,0>
-; SSE2-NEXT:    xorps %xmm5, %xmm4
-; SSE2-NEXT:    shufps {{.*#+}} xmm5 = xmm5[2,1,3,3]
-; SSE2-NEXT:    psllq $63, %xmm5
-; SSE2-NEXT:    psrad $31, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[0,2,2,3]
+; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm4
+; SSE2-NEXT:    psllq $63, %xmm6
+; SSE2-NEXT:    psrad $31, %xmm6
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm6[1,1,3,3]
 ; SSE2-NEXT:    pand %xmm5, %xmm1
 ; SSE2-NEXT:    pandn %xmm3, %xmm5
 ; SSE2-NEXT:    por %xmm5, %xmm1

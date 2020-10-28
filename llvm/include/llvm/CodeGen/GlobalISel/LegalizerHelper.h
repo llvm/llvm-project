@@ -367,6 +367,9 @@ public:
   LegalizeResult lowerBswap(MachineInstr &MI);
   LegalizeResult lowerBitreverse(MachineInstr &MI);
   LegalizeResult lowerReadWriteRegister(MachineInstr &MI);
+  LegalizeResult lowerSMULH_UMULH(MachineInstr &MI);
+  LegalizeResult lowerSelect(MachineInstr &MI);
+
 };
 
 /// Helper function that creates a libcall to the given \p Name using the given

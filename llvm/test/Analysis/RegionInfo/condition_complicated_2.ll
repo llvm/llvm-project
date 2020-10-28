@@ -1,10 +1,13 @@
 ; REQUIRES: asserts
-; RUN: opt -regions -analyze < %s | FileCheck %s
+; RUN: opt -regions -analyze -enable-new-pm=0 < %s | FileCheck %s
 ; RUN: opt -regions -stats -disable-output < %s 2>&1 | FileCheck -check-prefix=STAT %s
-; RUN: opt -regions -print-region-style=bb  -analyze < %s 2>&1 | FileCheck -check-prefix=BBIT %s
-; RUN: opt -regions -print-region-style=rn  -analyze < %s 2>&1 | FileCheck -check-prefix=RNIT %s
+; RUN: opt -regions -print-region-style=bb  -analyze -enable-new-pm=0 < %s 2>&1 | FileCheck -check-prefix=BBIT %s
+; RUN: opt -regions -print-region-style=rn  -analyze -enable-new-pm=0 < %s 2>&1 | FileCheck -check-prefix=RNIT %s
 
 ; RUN: opt < %s -passes='print<regions>' 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='print<regions>' -stats 2>&1 | FileCheck -check-prefix=STAT %s
+; RUN: opt -passes='print<regions>' -print-region-style=bb < %s 2>&1 | FileCheck -check-prefix=BBIT %s
+; RUN: opt -passes='print<regions>' -print-region-style=rn < %s 2>&1 | FileCheck -check-prefix=RNIT %s
 
 define internal fastcc void @compress() nounwind {
 end33:

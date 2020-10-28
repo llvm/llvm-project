@@ -1,0 +1,125 @@
+## Test how we dump the .debug_str section.
+
+## a) Test dumping a .debug_str section with a default section header.
+
+# RUN: yaml2obj --docnum=1 %s | obj2yaml | \
+# RUN:   FileCheck %s --check-prefix=BASIC --implicit-check-not='Name: .debug_str'
+
+## b) Test dumping a .debug_str section whose section header properties are overridden.
+
+## Override the sh_type field.
+# RUN: yaml2obj --docnum=1 -DTYPE=STRTAB %s | obj2yaml | \
+# RUN:   FileCheck %s --check-prefixes=BASIC,COMMON \
+# RUN:     -DTYPE=STRTAB -DFLAGS="[ SHF_MERGE, SHF_STRINGS ]" -D#%x,ADDRALIGN=1
+
+## Override the sh_flags field.
+# RUN: yaml2obj --docnum=1 -DFLAGS=[SHF_ALLOC] %s | obj2yaml | \
+# RUN:   FileCheck %s --check-prefixes=BASIC,COMMON \
+# RUN:     -DTYPE=PROGBITS -DFLAGS="[ SHF_ALLOC ]" -D#%x,ADDRALIGN=1
+
+## Override the sh_link field.
+# RUN: yaml2obj --docnum=1 -DLINK=.sec %s | obj2yaml | \
+# RUN:   FileCheck %s --check-prefixes=BASIC,COMMON,LINK \
+# RUN:     -DTYPE=PROGBITS -DFLAGS="[ SHF_MERGE, SHF_STRINGS ]" -DLINK=.sec -D#%x,ADDRALIGN=1
+
+## Override the sh_addr field.
+# RUN: yaml2obj --docnum=1 -DADDRESS=0x2020 %s | obj2yaml | \
+# RUN:   FileCheck %s --check-prefixes=BASIC,COMMON,ADDRESS \
+# RUN:     -DTYPE=PROGBITS -DFLAGS="[ SHF_MERGE, SHF_STRINGS ]" -D#%x,ADDRALIGN=1 -D#%x,ADDRESS=0x2020
+
+## Override the sh_addralign field.
+# RUN: yaml2obj --docnum=1 -DADDRALIGN=3 %s | obj2yaml | \
+# RUN:   FileCheck %s --check-prefixes=BASIC,COMMON \
+# RUN:     -DTYPE=PROGBITS -DFLAGS="[ SHF_MERGE, SHF_STRINGS ]" -D#%x,ADDRALIGN=3
+
+## Override the sh_entsize field (sh_entsize=3).
+# RUN: yaml2obj --docnum=1 -DENTSIZE=3 %s | obj2yaml | \
+# RUN:   FileCheck %s --check-prefixes=BASIC,COMMON,ENTSIZE \
+# RUN:     -DTYPE=PROGBITS -DFLAGS="[ SHF_MERGE, SHF_STRINGS ]" -D#%x,ADDRALIGN=1 -D#%x,ENTSIZE=3
+
+## Override the sh_entsize field (sh_entsize=0).
+# RUN: yaml2obj --docnum=1 -DENTSIZE=0 %s | obj2yaml | \
+# RUN:   FileCheck %s --check-prefixes=BASIC,COMMON,ENTSIZE \
+# RUN:     -DTYPE=PROGBITS -DFLAGS="[ SHF_MERGE, SHF_STRINGS ]" -D#%x,ADDRALIGN=1 -D#%x,ENTSIZE=0
+
+## Override the sh_info field.
+# RUN: yaml2obj --docnum=1 -DINFO=3 %s | obj2yaml | \
+# RUN:   FileCheck %s --check-prefixes=BASIC,COMMON,INFO \
+# RUN:     -DTYPE=PROGBITS -DFLAGS="[ SHF_MERGE, SHF_STRINGS ]" -D#%x,INFO=3 -D#%x,ADDRALIGN=1 -D#%x,ENTSIZE=1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .debug_str
+    Type:         SHT_[[TYPE=PROGBITS]]
+    Flags:        [[FLAGS=<none>]]
+    Link:         [[LINK='']]
+    EntSize:      [[ENTSIZE=1]]
+    Info:         [[INFO=<none>]]
+    AddressAlign: [[ADDRALIGN=1]]
+    Address:      [[ADDRESS=<none>]]
+  - Name:         .sec
+    Type:         SHT_PROGBITS
+DWARF:
+  debug_str:
+    - a
+    - b
+    - abc
+
+#       COMMON: - Name:         .debug_str
+#  COMMON-NEXT:   Type:         SHT_[[TYPE]]
+#  COMMON-NEXT:   Flags:        [[FLAGS]]
+#    LINK-NEXT:   Link:         .sec
+# ADDRESS-NEXT:   Address:      0x[[#%.16x,ADDRESS]]
+#  COMMON-NEXT:   AddressAlign: 0x[[#%.16x,ADDRALIGN]]
+# ENTSIZE-NEXT:   EntSize:      0x[[#%.16x,ENTSIZE]]
+#    INFO-NEXT:   Info:         0x[[#%.16x,INFO]]
+#        BASIC: DWARF:
+#   BASIC-NEXT:   debug_str:
+#   BASIC-NEXT:     - a
+#   BASIC-NEXT:     - b
+#   BASIC-NEXT:     - abc
+#   BASIC-NEXT: ...
+
+## c) Test dumping an empty .debug_str section.
+
+# RUN: yaml2obj --docnum=2 %s | obj2yaml | FileCheck %s --check-prefix=EMPTY --implicit-check-not=Sections
+
+#      EMPTY: DWARF:
+# EMPTY-NEXT:   debug_str:       []
+# EMPTY-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_str: []
+
+## d) Test that yaml2obj stops parsing the .debug_str section if it encounters a
+## string without a null terminator. The output uses a raw content section instead of
+## the DWARF tag to represent the broken .debug_str section.
+
+# RUN: yaml2obj --docnum=3 %s | obj2yaml | FileCheck %s --check-prefix=NO-TERMINATOR
+
+#  NO-TERMINATOR-NOT: DWARF:
+#      NO-TERMINATOR: Sections:
+# NO-TERMINATOR-NEXT:   - Name:    .debug_str
+# NO-TERMINATOR-NEXT:     Type:    SHT_PROGBITS
+# NO-TERMINATOR-NEXT:     Flags:   [ SHF_MERGE, SHF_STRINGS ]
+# NO-TERMINATOR-NEXT:     Content: '61626300616263'
+# NO-TERMINATOR-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .debug_str
+    Type:    SHT_PROGBITS
+    Content: "61626300616263" ## "abc\0abc"

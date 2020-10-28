@@ -11,40 +11,52 @@
 // <memory>
 
 // template <class ForwardIt, class Size>
-// ForwardIt destroy_n(ForwardIt, Size s);
+// constexpr ForwardIt destroy_n(ForwardIt, Size s);
 
 #include <memory>
-#include <cstdlib>
 #include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
 
 struct Counted {
-  static int count;
-  static void reset() { count = 0; }
-  Counted() { ++count; }
-  Counted(Counted const&) { ++count; }
-  ~Counted() { --count; }
-  friend void operator&(Counted) = delete;
+    int* counter_;
+    TEST_CONSTEXPR Counted(int* counter) : counter_(counter) { ++*counter_; }
+    TEST_CONSTEXPR Counted(Counted const& other) : counter_(other.counter_) { ++*counter_; }
+    TEST_CONSTEXPR_CXX20 ~Counted() { --*counter_; }
+    friend void operator&(Counted) = delete;
 };
-int Counted::count = 0;
+
+TEST_CONSTEXPR_CXX20 bool test()
+{
+    using Alloc = std::allocator<Counted>;
+    int counter = 0;
+    int const N = 5;
+    Alloc alloc;
+    Counted* pool = std::allocator_traits<Alloc>::allocate(alloc, N);
+
+    for (Counted* p = pool; p != pool + N; ++p)
+        std::allocator_traits<Alloc>::construct(alloc, p, &counter);
+    assert(counter == 5);
+
+    Counted* np = std::destroy_n(pool, 1);
+    assert(np == pool + 1);
+    assert(counter == 4);
+
+    forward_iterator<Counted*> it = std::destroy_n(forward_iterator<Counted*>(pool + 1), 4);
+    assert(it == forward_iterator<Counted*>(pool + 5));
+    assert(counter == 0);
+
+    std::allocator_traits<Alloc>::deallocate(alloc, pool, N);
+
+    return true;
+}
 
 int main(int, char**)
 {
-    using It = forward_iterator<Counted*>;
-    const int N = 5;
-    alignas(Counted) char pool[sizeof(Counted)*N] = {};
-    Counted* p = (Counted*)pool;
-    std::uninitialized_fill(p, p+N, Counted());
-    assert(Counted::count == 5);
-    Counted* np = std::destroy_n(p, 1);
-    assert(np == p+1);
-    assert(Counted::count == 4);
-    p += 1;
-    It it = std::destroy_n(It(p), 4);
-    assert(it == It(p+4));
-    assert(Counted::count == 0);
-
-  return 0;
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
+    return 0;
 }

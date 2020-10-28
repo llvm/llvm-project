@@ -128,6 +128,10 @@ class Lexer : public PreprocessorLexer {
 
   bool HasLeadingEmptyMacro;
 
+  // NewLinePtr - A pointer to new line character '\n' being lexed. For '\r\n',
+  // it also points to '\n.'
+  const char *NewLinePtr;
+
   // CurrentConflictMarkerState - The kind of conflict marker we are handling.
   ConflictMarkerKind CurrentConflictMarkerState;
 

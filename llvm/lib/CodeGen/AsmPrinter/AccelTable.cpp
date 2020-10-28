@@ -190,7 +190,6 @@ public:
 template <typename DataT>
 class Dwarf5AccelTableWriter : public AccelTableWriter {
   struct Header {
-    uint32_t UnitLength = 0;
     uint16_t Version = 5;
     uint16_t Padding = 0;
     uint32_t CompUnitCount;
@@ -271,7 +270,7 @@ void AccelTableWriter::emitOffsets(const MCSymbol *Base) const {
         continue;
       PrevHash = HashValue;
       Asm->OutStreamer->AddComment("Offset in Bucket " + Twine(i));
-      Asm->emitLabelDifference(Hash->Sym, Base, sizeof(uint32_t));
+      Asm->emitLabelDifference(Hash->Sym, Base, Asm->getDwarfOffsetByteSize());
     }
   }
 }
@@ -367,9 +366,8 @@ void Dwarf5AccelTableWriter<DataT>::Header::emit(
   assert(CompUnitCount > 0 && "Index must have at least one CU.");
 
   AsmPrinter *Asm = Ctx.Asm;
-  Asm->OutStreamer->AddComment("Header: unit length");
-  Asm->emitLabelDifference(Ctx.ContributionEnd, Ctx.ContributionStart,
-                           sizeof(uint32_t));
+  Asm->emitDwarfUnitLength(Ctx.ContributionEnd, Ctx.ContributionStart,
+                           "Header: unit length");
   Asm->OutStreamer->emitLabel(Ctx.ContributionStart);
   Asm->OutStreamer->AddComment("Header: version");
   Asm->emitInt16(Version);
@@ -506,7 +504,7 @@ template <typename DataT> void Dwarf5AccelTableWriter<DataT>::emitData() const {
       for (const auto *Value : Hash->Values)
         emitEntry(*static_cast<const DataT *>(Value));
       Asm->OutStreamer->AddComment("End of list: " + Hash->Name.getString());
-      Asm->emitInt32(0);
+      Asm->emitInt8(0);
     }
   }
 }
@@ -593,10 +591,14 @@ void llvm::emitDWARF5AccelTable(
 }
 
 void AppleAccelTableOffsetData::emit(AsmPrinter *Asm) const {
+  assert(Die.getDebugSectionOffset() <= UINT32_MAX &&
+         "The section offset exceeds the limit.");
   Asm->emitInt32(Die.getDebugSectionOffset());
 }
 
 void AppleAccelTableTypeData::emit(AsmPrinter *Asm) const {
+  assert(Die.getDebugSectionOffset() <= UINT32_MAX &&
+         "The section offset exceeds the limit.");
   Asm->emitInt32(Die.getDebugSectionOffset());
   Asm->emitInt16(Die.getTag());
   Asm->emitInt8(0);

@@ -1892,6 +1892,13 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     Warnings.emplace_back(std::move(Warning), getNotes());
   }
 
+  void handleNegativeNotHeld(const NamedDecl *D, Name LockName,
+                             SourceLocation Loc) override {
+    PartialDiagnosticAt Warning(
+        Loc, S.PDiag(diag::warn_fun_requires_negative_cap) << D << LockName);
+    Warnings.emplace_back(std::move(Warning), getNotes());
+  }
+
   void handleFunExcludesLock(StringRef Kind, Name FunName, Name LockName,
                              SourceLocation Loc) override {
     PartialDiagnosticAt Warning(Loc, S.PDiag(diag::warn_fun_excludes_mutex)

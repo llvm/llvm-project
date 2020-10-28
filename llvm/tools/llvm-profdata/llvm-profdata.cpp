@@ -1540,14 +1540,14 @@ void SampleOverlapAggregator::computeSampleProfileOverlap(raw_fd_ostream &OS) {
   StringMap<const FunctionSamples *> BaseFuncProf;
   const auto &BaseProfiles = BaseReader->getProfiles();
   for (const auto &BaseFunc : BaseProfiles) {
-    BaseFuncProf.try_emplace(BaseFunc.second.getFuncName(), &(BaseFunc.second));
+    BaseFuncProf.try_emplace(BaseFunc.second.getName(), &(BaseFunc.second));
   }
   ProfOverlap.UnionCount = BaseFuncProf.size();
 
   const auto &TestProfiles = TestReader->getProfiles();
   for (const auto &TestFunc : TestProfiles) {
     SampleOverlapStats FuncOverlap;
-    FuncOverlap.TestName = TestFunc.second.getFuncName();
+    FuncOverlap.TestName = TestFunc.second.getName();
     assert(TestStats.count(FuncOverlap.TestName) &&
            "TestStats should have records for all functions in test profile "
            "except inlinees");
@@ -1574,7 +1574,7 @@ void SampleOverlapAggregator::computeSampleProfileOverlap(raw_fd_ostream &OS) {
 
       // Two functions match with each other. Compute function-level overlap and
       // aggregate them into profile-level overlap.
-      FuncOverlap.BaseName = Match->second->getFuncName();
+      FuncOverlap.BaseName = Match->second->getName();
       assert(BaseStats.count(FuncOverlap.BaseName) &&
              "BaseStats should have records for all functions in base profile "
              "except inlinees");
@@ -1623,10 +1623,10 @@ void SampleOverlapAggregator::computeSampleProfileOverlap(raw_fd_ostream &OS) {
 
   // Traverse through functions in base profile but not in test profile.
   for (const auto &F : BaseFuncProf) {
-    assert(BaseStats.count(F.second->getFuncName()) &&
+    assert(BaseStats.count(F.second->getName()) &&
            "BaseStats should have records for all functions in base profile "
            "except inlinees");
-    const FuncSampleStats &FuncStats = BaseStats[F.second->getFuncName()];
+    const FuncSampleStats &FuncStats = BaseStats[F.second->getName()];
     ++ProfOverlap.BaseUniqueCount;
     ProfOverlap.BaseUniqueSample += FuncStats.SampleSum;
 
@@ -1657,7 +1657,7 @@ void SampleOverlapAggregator::initializeSampleProfileOverlap() {
     FuncSampleStats FuncStats;
     getFuncSampleStats(I.second, FuncStats, BaseHotThreshold);
     ProfOverlap.BaseSample += FuncStats.SampleSum;
-    BaseStats.try_emplace(I.second.getFuncName(), FuncStats);
+    BaseStats.try_emplace(I.second.getName(), FuncStats);
   }
 
   const auto &TestProf = TestReader->getProfiles();
@@ -1666,7 +1666,7 @@ void SampleOverlapAggregator::initializeSampleProfileOverlap() {
     FuncSampleStats FuncStats;
     getFuncSampleStats(I.second, FuncStats, TestHotThreshold);
     ProfOverlap.TestSample += FuncStats.SampleSum;
-    TestStats.try_emplace(I.second.getFuncName(), FuncStats);
+    TestStats.try_emplace(I.second.getName(), FuncStats);
   }
 
   ProfOverlap.BaseName = StringRef(BaseFilename);
@@ -2297,9 +2297,9 @@ showHotFunctionList(const StringMap<sampleprof::FunctionSamples> &Profiles,
         (ProfileTotalSample > 0)
             ? (Func.getTotalSamples() * 100.0) / ProfileTotalSample
             : 0;
-    PrintValues.emplace_back(HotFuncInfo(
-        Func.getFuncName(), Func.getTotalSamples(), TotalSamplePercent,
-        FuncPair.second.second, Func.getEntrySamples()));
+    PrintValues.emplace_back(
+        HotFuncInfo(Func.getName(), Func.getTotalSamples(), TotalSamplePercent,
+                    FuncPair.second.second, Func.getEntrySamples()));
   }
   dumpHotFunctionList(ColumnTitle, ColumnOffset, PrintValues, HotFuncCount,
                       Profiles.size(), HotFuncSample, ProfileTotalSample,

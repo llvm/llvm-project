@@ -161,13 +161,11 @@ static bool is16BitMemOperand(const MCInst &MI, unsigned Op,
                               const MCSubtargetInfo &STI) {
   const MCOperand &Base = MI.getOperand(Op + X86::AddrBaseReg);
   const MCOperand &Index = MI.getOperand(Op + X86::AddrIndexReg);
-  const MCOperand &Disp = MI.getOperand(Op + X86::AddrDisp);
 
   unsigned BaseReg = Base.getReg();
   unsigned IndexReg = Index.getReg();
 
-  if (STI.hasFeature(X86::Mode16Bit) && BaseReg == 0 && IndexReg == 0 &&
-      Disp.isImm() && Disp.getImm() < 0x10000)
+  if (STI.hasFeature(X86::Mode16Bit) && BaseReg == 0 && IndexReg == 0)
     return true;
   if ((BaseReg != 0 &&
        X86MCRegisterClasses[X86::GR16RegClassID].contains(BaseReg)) ||

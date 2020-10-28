@@ -1,4 +1,4 @@
-; RUN: opt < %s -analyze -basic-aa -da
+; RUN: opt < %s -analyze -enable-new-pm=0 -basic-aa -da
 ; RUN: opt < %s -passes="print<da>"
 
 ; Test that the dependence analysis pass does seg-fault due to a null pointer

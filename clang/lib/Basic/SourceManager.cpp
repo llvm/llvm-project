@@ -1936,6 +1936,11 @@ SourceManager::getMacroArgExpandedLocation(SourceLocation Loc) const {
 
   assert(!MacroArgsCache->empty());
   MacroArgsMap::iterator I = MacroArgsCache->upper_bound(Offset);
+  // In case every element in MacroArgsCache is greater than Offset we can't
+  // decrement the iterator.
+  if (I == MacroArgsCache->begin())
+    return Loc;
+
   --I;
 
   unsigned MacroArgBeginOffs = I->first;

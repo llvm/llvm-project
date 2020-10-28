@@ -24,7 +24,7 @@ using namespace mlir;
 // CallGraphNode
 //===----------------------------------------------------------------------===//
 
-/// Returns if this node refers to the indirect/external node.
+/// Returns true if this node refers to the indirect/external node.
 bool CallGraphNode::isExternal() const { return !callableRegion; }
 
 /// Return the callable region this node represents. This can only be called

@@ -254,6 +254,15 @@ enum {
   /// - OtherOpIdx - Other operand index
   GIM_CheckIsSameOperand,
 
+  /// Predicates with 'let PredicateCodeUsesOperands = 1' need to examine some
+  /// named operands that will be recorded in RecordedOperands. Names of these
+  /// operands are referenced in predicate argument list. Emitter determines
+  /// StoreIdx(corresponds to the order in which names appear in argument list).
+  /// - InsnID - Instruction ID
+  /// - OpIdx - Operand index
+  /// - StoreIdx - Store location in RecordedOperands.
+  GIM_RecordNamedOperand,
+
   /// Fail the current try-block, or completely fail to match if there is no
   /// current try-block.
   GIM_Reject,
@@ -446,6 +455,11 @@ protected:
     std::vector<ComplexRendererFns::value_type> Renderers;
     RecordedMIVector MIs;
     DenseMap<unsigned, unsigned> TempRegisters;
+    /// Named operands that predicate with 'let PredicateCodeUsesOperands = 1'
+    /// referenced in its argument list. Operands are inserted at index set by
+    /// emitter, it corresponds to the order in which names appear in argument
+    /// list. Currently such predicates don't have more then 3 arguments.
+    std::array<const MachineOperand *, 3> RecordedOperands;
 
     MatcherState(unsigned MaxRenderers);
   };
@@ -506,7 +520,9 @@ protected:
     llvm_unreachable(
         "Subclasses must override this with a tablegen-erated function");
   }
-  virtual bool testMIPredicate_MI(unsigned, const MachineInstr &) const {
+  virtual bool testMIPredicate_MI(
+      unsigned, const MachineInstr &,
+      const std::array<const MachineOperand *, 3> &Operands) const {
     llvm_unreachable(
         "Subclasses must override this with a tablegen-erated function");
   }

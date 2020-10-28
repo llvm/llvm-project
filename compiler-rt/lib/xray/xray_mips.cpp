@@ -93,6 +93,7 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
   // When |Enable|==false, we set back the first instruction in the sled to be
   //   B #44
 
+  uint32_t *Address = reinterpret_cast<uint32_t *>(Sled.address());
   if (Enable) {
     uint32_t LoTracingHookAddr =
         reinterpret_cast<int32_t>(TracingHook) & 0xffff;
@@ -100,34 +101,34 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
         (reinterpret_cast<int32_t>(TracingHook) >> 16) & 0xffff;
     uint32_t LoFunctionID = FuncId & 0xffff;
     uint32_t HiFunctionID = (FuncId >> 16) & 0xffff;
-    *reinterpret_cast<uint32_t *>(Sled.Address + 8) = encodeInstruction(
-        PatchOpcodes::PO_SW, RegNum::RN_SP, RegNum::RN_RA, 0x4);
-    *reinterpret_cast<uint32_t *>(Sled.Address + 12) = encodeInstruction(
-        PatchOpcodes::PO_SW, RegNum::RN_SP, RegNum::RN_T9, 0x0);
-    *reinterpret_cast<uint32_t *>(Sled.Address + 16) = encodeInstruction(
-        PatchOpcodes::PO_LUI, 0x0, RegNum::RN_T9, HiTracingHookAddr);
-    *reinterpret_cast<uint32_t *>(Sled.Address + 20) = encodeInstruction(
-        PatchOpcodes::PO_ORI, RegNum::RN_T9, RegNum::RN_T9, LoTracingHookAddr);
-    *reinterpret_cast<uint32_t *>(Sled.Address + 24) = encodeInstruction(
-        PatchOpcodes::PO_LUI, 0x0, RegNum::RN_T0, HiFunctionID);
-    *reinterpret_cast<uint32_t *>(Sled.Address + 28) = encodeSpecialInstruction(
-        PatchOpcodes::PO_JALR, RegNum::RN_T9, 0x0, RegNum::RN_RA, 0X0);
-    *reinterpret_cast<uint32_t *>(Sled.Address + 32) = encodeInstruction(
-        PatchOpcodes::PO_ORI, RegNum::RN_T0, RegNum::RN_T0, LoFunctionID);
-    *reinterpret_cast<uint32_t *>(Sled.Address + 36) = encodeInstruction(
-        PatchOpcodes::PO_LW, RegNum::RN_SP, RegNum::RN_T9, 0x0);
-    *reinterpret_cast<uint32_t *>(Sled.Address + 40) = encodeInstruction(
-        PatchOpcodes::PO_LW, RegNum::RN_SP, RegNum::RN_RA, 0x4);
-    *reinterpret_cast<uint32_t *>(Sled.Address + 44) = encodeInstruction(
-        PatchOpcodes::PO_ADDIU, RegNum::RN_SP, RegNum::RN_SP, 0x8);
+    Address[2] = encodeInstruction(PatchOpcodes::PO_SW, RegNum::RN_SP,
+                                   RegNum::RN_RA, 0x4);
+    Address[3] = encodeInstruction(PatchOpcodes::PO_SW, RegNum::RN_SP,
+                                   RegNum::RN_T9, 0x0);
+    Address[4] = encodeInstruction(PatchOpcodes::PO_LUI, 0x0, RegNum::RN_T9,
+                                   HiTracingHookAddr);
+    Address[5] = encodeInstruction(PatchOpcodes::PO_ORI, RegNum::RN_T9,
+                                   RegNum::RN_T9, LoTracingHookAddr);
+    Address[6] = encodeInstruction(PatchOpcodes::PO_LUI, 0x0, RegNum::RN_T0,
+                                   HiFunctionID);
+    Address[7] = encodeSpecialInstruction(PatchOpcodes::PO_JALR, RegNum::RN_T9,
+                                          0x0, RegNum::RN_RA, 0X0);
+    Address[8] = encodeInstruction(PatchOpcodes::PO_ORI, RegNum::RN_T0,
+                                   RegNum::RN_T0, LoFunctionID);
+    Address[9] = encodeInstruction(PatchOpcodes::PO_LW, RegNum::RN_SP,
+                                   RegNum::RN_T9, 0x0);
+    Address[10] = encodeInstruction(PatchOpcodes::PO_LW, RegNum::RN_SP,
+                                    RegNum::RN_RA, 0x4);
+    Address[11] = encodeInstruction(PatchOpcodes::PO_ADDIU, RegNum::RN_SP,
+                                    RegNum::RN_SP, 0x8);
     uint32_t CreateStackSpaceInstr = encodeInstruction(
         PatchOpcodes::PO_ADDIU, RegNum::RN_SP, RegNum::RN_SP, 0xFFF8);
     std::atomic_store_explicit(
-        reinterpret_cast<std::atomic<uint32_t> *>(Sled.Address),
+        reinterpret_cast<std::atomic<uint32_t> *>(Address),
         uint32_t(CreateStackSpaceInstr), std::memory_order_release);
   } else {
     std::atomic_store_explicit(
-        reinterpret_cast<std::atomic<uint32_t> *>(Sled.Address),
+        reinterpret_cast<std::atomic<uint32_t> *>(Address),
         uint32_t(PatchOpcodes::PO_B44), std::memory_order_release);
   }
   return true;

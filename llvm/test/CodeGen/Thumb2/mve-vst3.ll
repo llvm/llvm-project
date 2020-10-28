@@ -1085,7 +1085,6 @@ define void @vst3_v2i64(<2 x i64> *%src, <6 x i64> *%dst) {
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #16]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    vmov.f64 d6, d5
 ; CHECK-NEXT:    vmov.f32 s13, s11
 ; CHECK-NEXT:    vmov.f32 s14, s2
@@ -1093,10 +1092,10 @@ define void @vst3_v2i64(<2 x i64> *%src, <6 x i64> *%dst) {
 ; CHECK-NEXT:    vmov.f32 s2, s6
 ; CHECK-NEXT:    vmov.f32 s3, s7
 ; CHECK-NEXT:    vmov.f32 s6, s8
-; CHECK-NEXT:    vstrw.32 q0, [r1, #16]
 ; CHECK-NEXT:    vmov.f32 s7, s9
-; CHECK-NEXT:    vstrb.8 q1, [r0], #32
-; CHECK-NEXT:    vstrw.32 q3, [r0]
+; CHECK-NEXT:    vstrb.8 q1, [r1], #32
+; CHECK-NEXT:    vstrw.32 q3, [r1]
+; CHECK-NEXT:    vstrw.32 q0, [r1, #-16]
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <2 x i64>, <2 x i64>* %src, i32 0

@@ -2047,9 +2047,11 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
       Value *Operand = II->getOperand(0);
       II->eraseFromParent();
       // Prune the operand, it's most likely dead.
-      RecursivelyDeleteTriviallyDeadInstructions(
-          Operand, TLInfo, nullptr,
-          [&](Value *V) { removeAllAssertingVHReferences(V); });
+      resetIteratorIfInvalidatedWhileCalling(BB, [&]() {
+        RecursivelyDeleteTriviallyDeadInstructions(
+            Operand, TLInfo, nullptr,
+            [&](Value *V) { removeAllAssertingVHReferences(V); });
+      });
       return true;
     }
 
@@ -5274,22 +5276,11 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   // If we have no uses, recursively delete the value and all dead instructions
   // using it.
   if (Repl->use_empty()) {
-    // This can cause recursive deletion, which can invalidate our iterator.
-    // Use a WeakTrackingVH to hold onto it in case this happens.
-    Value *CurValue = &*CurInstIterator;
-    WeakTrackingVH IterHandle(CurValue);
-    BasicBlock *BB = CurInstIterator->getParent();
-
-    RecursivelyDeleteTriviallyDeadInstructions(
-        Repl, TLInfo, nullptr,
-        [&](Value *V) { removeAllAssertingVHReferences(V); });
-
-    if (IterHandle != CurValue) {
-      // If the iterator instruction was recursively deleted, start over at the
-      // start of the block.
-      CurInstIterator = BB->begin();
-      SunkAddrs.clear();
-    }
+    resetIteratorIfInvalidatedWhileCalling(CurInstIterator->getParent(), [&]() {
+      RecursivelyDeleteTriviallyDeadInstructions(
+          Repl, TLInfo, nullptr,
+          [&](Value *V) { removeAllAssertingVHReferences(V); });
+    });
   }
   ++NumMemoryInsts;
   return true;
@@ -5314,88 +5305,112 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 /// zero index.
 bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
                                                Value *Ptr) {
-  const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
-  if (!GEP || !GEP->hasIndices())
+  // FIXME: Support scalable vectors.
+  if (isa<ScalableVectorType>(Ptr->getType()))
     return false;
-
-  // If the GEP and the gather/scatter aren't in the same BB, don't optimize.
-  // FIXME: We should support this by sinking the GEP.
-  if (MemoryInst->getParent() != GEP->getParent())
-    return false;
-
-  SmallVector<Value *, 2> Ops(GEP->op_begin(), GEP->op_end());
-
-  bool RewriteGEP = false;
-
-  if (Ops[0]->getType()->isVectorTy()) {
-    Ops[0] = const_cast<Value *>(getSplatValue(Ops[0]));
-    if (!Ops[0])
-      return false;
-    RewriteGEP = true;
-  }
-
-  unsigned FinalIndex = Ops.size() - 1;
-
-  // Ensure all but the last index is 0.
-  // FIXME: This isn't strictly required. All that's required is that they are
-  // all scalars or splats.
-  for (unsigned i = 1; i < FinalIndex; ++i) {
-    auto *C = dyn_cast<Constant>(Ops[i]);
-    if (!C)
-      return false;
-    if (isa<VectorType>(C->getType()))
-      C = C->getSplatValue();
-    auto *CI = dyn_cast_or_null<ConstantInt>(C);
-    if (!CI || !CI->isZero())
-      return false;
-    // Scalarize the index if needed.
-    Ops[i] = CI;
-  }
-
-  // Try to scalarize the final index.
-  if (Ops[FinalIndex]->getType()->isVectorTy()) {
-    if (Value *V = const_cast<Value *>(getSplatValue(Ops[FinalIndex]))) {
-      auto *C = dyn_cast<ConstantInt>(V);
-      // Don't scalarize all zeros vector.
-      if (!C || !C->isZero()) {
-        Ops[FinalIndex] = V;
-        RewriteGEP = true;
-      }
-    }
-  }
-
-  // If we made any changes or the we have extra operands, we need to generate
-  // new instructions.
-  if (!RewriteGEP && Ops.size() == 2)
-    return false;
-
-  unsigned NumElts = cast<FixedVectorType>(Ptr->getType())->getNumElements();
-
-  IRBuilder<> Builder(MemoryInst);
-
-  Type *ScalarIndexTy = DL->getIndexType(Ops[0]->getType()->getScalarType());
 
   Value *NewAddr;
 
-  // If the final index isn't a vector, emit a scalar GEP containing all ops
-  // and a vector GEP with all zeroes final index.
-  if (!Ops[FinalIndex]->getType()->isVectorTy()) {
-    NewAddr = Builder.CreateGEP(Ops[0], makeArrayRef(Ops).drop_front());
-    auto *IndexTy = FixedVectorType::get(ScalarIndexTy, NumElts);
-    NewAddr = Builder.CreateGEP(NewAddr, Constant::getNullValue(IndexTy));
-  } else {
-    Value *Base = Ops[0];
-    Value *Index = Ops[FinalIndex];
+  if (const auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+    // Don't optimize GEPs that don't have indices.
+    if (!GEP->hasIndices())
+      return false;
 
-    // Create a scalar GEP if there are more than 2 operands.
-    if (Ops.size() != 2) {
-      // Replace the last index with 0.
-      Ops[FinalIndex] = Constant::getNullValue(ScalarIndexTy);
-      Base = Builder.CreateGEP(Base, makeArrayRef(Ops).drop_front());
+    // If the GEP and the gather/scatter aren't in the same BB, don't optimize.
+    // FIXME: We should support this by sinking the GEP.
+    if (MemoryInst->getParent() != GEP->getParent())
+      return false;
+
+    SmallVector<Value *, 2> Ops(GEP->op_begin(), GEP->op_end());
+
+    bool RewriteGEP = false;
+
+    if (Ops[0]->getType()->isVectorTy()) {
+      Ops[0] = getSplatValue(Ops[0]);
+      if (!Ops[0])
+        return false;
+      RewriteGEP = true;
     }
 
-    // Now create the GEP with scalar pointer and vector index.
-    NewAddr = Builder.CreateGEP(Base, Index);
+    unsigned FinalIndex = Ops.size() - 1;
+
+    // Ensure all but the last index is 0.
+    // FIXME: This isn't strictly required. All that's required is that they are
+    // all scalars or splats.
+    for (unsigned i = 1; i < FinalIndex; ++i) {
+      auto *C = dyn_cast<Constant>(Ops[i]);
+      if (!C)
+        return false;
+      if (isa<VectorType>(C->getType()))
+        C = C->getSplatValue();
+      auto *CI = dyn_cast_or_null<ConstantInt>(C);
+      if (!CI || !CI->isZero())
+        return false;
+      // Scalarize the index if needed.
+      Ops[i] = CI;
+    }
+
+    // Try to scalarize the final index.
+    if (Ops[FinalIndex]->getType()->isVectorTy()) {
+      if (Value *V = getSplatValue(Ops[FinalIndex])) {
+        auto *C = dyn_cast<ConstantInt>(V);
+        // Don't scalarize all zeros vector.
+        if (!C || !C->isZero()) {
+          Ops[FinalIndex] = V;
+          RewriteGEP = true;
+        }
+      }
+    }
+
+    // If we made any changes or the we have extra operands, we need to generate
+    // new instructions.
+    if (!RewriteGEP && Ops.size() == 2)
+      return false;
+
+    unsigned NumElts = cast<FixedVectorType>(Ptr->getType())->getNumElements();
+
+    IRBuilder<> Builder(MemoryInst);
+
+    Type *ScalarIndexTy = DL->getIndexType(Ops[0]->getType()->getScalarType());
+
+    // If the final index isn't a vector, emit a scalar GEP containing all ops
+    // and a vector GEP with all zeroes final index.
+    if (!Ops[FinalIndex]->getType()->isVectorTy()) {
+      NewAddr = Builder.CreateGEP(Ops[0], makeArrayRef(Ops).drop_front());
+      auto *IndexTy = FixedVectorType::get(ScalarIndexTy, NumElts);
+      NewAddr = Builder.CreateGEP(NewAddr, Constant::getNullValue(IndexTy));
+    } else {
+      Value *Base = Ops[0];
+      Value *Index = Ops[FinalIndex];
+
+      // Create a scalar GEP if there are more than 2 operands.
+      if (Ops.size() != 2) {
+        // Replace the last index with 0.
+        Ops[FinalIndex] = Constant::getNullValue(ScalarIndexTy);
+        Base = Builder.CreateGEP(Base, makeArrayRef(Ops).drop_front());
+      }
+
+      // Now create the GEP with scalar pointer and vector index.
+      NewAddr = Builder.CreateGEP(Base, Index);
+    }
+  } else if (!isa<Constant>(Ptr)) {
+    // Not a GEP, maybe its a splat and we can create a GEP to enable
+    // SelectionDAGBuilder to use it as a uniform base.
+    Value *V = getSplatValue(Ptr);
+    if (!V)
+      return false;
+
+    unsigned NumElts = cast<FixedVectorType>(Ptr->getType())->getNumElements();
+
+    IRBuilder<> Builder(MemoryInst);
+
+    // Emit a vector GEP with a scalar pointer and all 0s vector index.
+    Type *ScalarIndexTy = DL->getIndexType(V->getType()->getScalarType());
+    auto *IndexTy = FixedVectorType::get(ScalarIndexTy, NumElts);
+    NewAddr = Builder.CreateGEP(V, Constant::getNullValue(IndexTy));
+  } else {
+    // Constant, SelectionDAGBuilder knows to check if its a splat.
+    return false;
   }
 
   MemoryInst->replaceUsesOfWith(Ptr, NewAddr);
@@ -5794,6 +5809,12 @@ bool CodeGenPrepare::optimizePhiType(
   Visited.insert(I);
   SmallPtrSet<Instruction *, 4> Defs;
   SmallPtrSet<Instruction *, 4> Uses;
+  // This works by adding extra bitcasts between load/stores and removing
+  // existing bicasts. If we have a phi(bitcast(load)) or a store(bitcast(phi))
+  // we can get in the situation where we remove a bitcast in one iteration
+  // just to add it again in the next. We need to ensure that at least one
+  // bitcast we remove are anchored to something that will not change back.
+  bool AnyAnchored = false;
 
   while (!Worklist.empty()) {
     Instruction *II = Worklist.pop_back_val();
@@ -5810,6 +5831,8 @@ bool CodeGenPrepare::optimizePhiType(
             Worklist.push_back(OpPhi);
           }
         } else if (auto *OpLoad = dyn_cast<LoadInst>(V)) {
+          if (!OpLoad->isSimple())
+            return false;
           if (!Defs.count(OpLoad)) {
             Defs.insert(OpLoad);
             Worklist.push_back(OpLoad);
@@ -5827,9 +5850,12 @@ bool CodeGenPrepare::optimizePhiType(
           if (!Defs.count(OpBC)) {
             Defs.insert(OpBC);
             Worklist.push_back(OpBC);
+            AnyAnchored |= !isa<LoadInst>(OpBC->getOperand(0)) &&
+                           !isa<ExtractElementInst>(OpBC->getOperand(0));
           }
-        } else if (!isa<UndefValue>(V))
+        } else if (!isa<UndefValue>(V)) {
           return false;
+        }
       }
     }
 
@@ -5844,7 +5870,7 @@ bool CodeGenPrepare::optimizePhiType(
           Worklist.push_back(OpPhi);
         }
       } else if (auto *OpStore = dyn_cast<StoreInst>(V)) {
-        if (OpStore->getOperand(0) != II)
+        if (!OpStore->isSimple() || OpStore->getOperand(0) != II)
           return false;
         Uses.insert(OpStore);
       } else if (auto *OpBC = dyn_cast<BitCastInst>(V)) {
@@ -5853,12 +5879,15 @@ bool CodeGenPrepare::optimizePhiType(
         if (OpBC->getType() != ConvertTy)
           return false;
         Uses.insert(OpBC);
-      } else
+        AnyAnchored |=
+            any_of(OpBC->users(), [](User *U) { return !isa<StoreInst>(U); });
+      } else {
         return false;
+      }
     }
   }
 
-  if (!ConvertTy || !TLI->shouldConvertPhiType(PhiTy, ConvertTy))
+  if (!ConvertTy || !AnyAnchored || !TLI->shouldConvertPhiType(PhiTy, ConvertTy))
     return false;
 
   LLVM_DEBUG(dbgs() << "Converting " << *I << "\n  and connected nodes to "
@@ -5869,11 +5898,13 @@ bool CodeGenPrepare::optimizePhiType(
   ValueToValueMap ValMap;
   ValMap[UndefValue::get(PhiTy)] = UndefValue::get(ConvertTy);
   for (Instruction *D : Defs) {
-    if (isa<BitCastInst>(D))
+    if (isa<BitCastInst>(D)) {
       ValMap[D] = D->getOperand(0);
-    else
+      DeletedInstrs.insert(D);
+    } else {
       ValMap[D] =
           new BitCastInst(D, ConvertTy, D->getName() + ".bc", D->getNextNode());
+    }
   }
   for (PHINode *Phi : PhiNodes)
     ValMap[Phi] = PHINode::Create(ConvertTy, Phi->getNumIncomingValues(),
@@ -5884,15 +5915,17 @@ bool CodeGenPrepare::optimizePhiType(
     for (int i = 0, e = Phi->getNumIncomingValues(); i < e; i++)
       NewPhi->addIncoming(ValMap[Phi->getIncomingValue(i)],
                           Phi->getIncomingBlock(i));
+    Visited.insert(NewPhi);
   }
   // And finally pipe up the stores and bitcasts
   for (Instruction *U : Uses) {
     if (isa<BitCastInst>(U)) {
       DeletedInstrs.insert(U);
       U->replaceAllUsesWith(ValMap[U->getOperand(0)]);
-    } else
+    } else {
       U->setOperand(0,
                     new BitCastInst(ValMap[U->getOperand(0)], PhiTy, "bc", U));
+    }
   }
 
   // Save the removed phis to be deleted later.

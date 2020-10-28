@@ -300,6 +300,7 @@ public:
     VK_PPC_GOT_TLSLD_HA,    // symbol@got@tlsld@ha
     VK_PPC_GOT_PCREL,       // symbol@got@pcrel
     VK_PPC_GOT_TLSGD_PCREL, // symbol@got@tlsgd@pcrel
+    VK_PPC_GOT_TLSLD_PCREL, // symbol@got@tlsld@pcrel
     VK_PPC_GOT_TPREL_PCREL, // symbol@got@tprel@pcrel
     VK_PPC_TLS_PCREL,       // symbol@tls@pcrel
     VK_PPC_TLSLD,           // symbol@tlsld

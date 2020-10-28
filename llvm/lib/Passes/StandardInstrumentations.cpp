@@ -36,6 +36,14 @@ static cl::opt<bool>
                   cl::desc("Enable skipping optional passes optnone functions "
                            "under new pass manager"));
 
+cl::opt<bool> PreservedCFGCheckerInstrumentation::VerifyPreservedCFG(
+    "verify-cfg-preserved", cl::Hidden,
+#ifdef NDEBUG
+    cl::init(false));
+#else
+    cl::init(true));
+#endif
+
 // FIXME: Change `-debug-pass-manager` from boolean to enum type. Similar to
 // `-debug-pass` in legacy PM.
 static cl::opt<bool>
@@ -338,10 +346,166 @@ void PrintPassInstrumentation::registerCallbacks(
   });
 }
 
+PreservedCFGCheckerInstrumentation::CFG::CFG(const Function *F,
+                                             bool TrackBBLifetime) {
+  if (TrackBBLifetime)
+    BBGuards = DenseMap<intptr_t, BBGuard>(F->size());
+  for (const auto &BB : *F) {
+    if (BBGuards)
+      BBGuards->try_emplace(intptr_t(&BB), &BB);
+    for (auto *Succ : successors(&BB)) {
+      Graph[&BB][Succ]++;
+      if (BBGuards)
+        BBGuards->try_emplace(intptr_t(Succ), Succ);
+    }
+  }
+}
+
+static void printBBName(raw_ostream &out, const BasicBlock *BB) {
+  if (BB->hasName()) {
+    out << BB->getName() << "<" << BB << ">";
+    return;
+  }
+
+  if (!BB->getParent()) {
+    out << "unnamed_removed<" << BB << ">";
+    return;
+  }
+
+  if (BB == &BB->getParent()->getEntryBlock()) {
+    out << "entry"
+        << "<" << BB << ">";
+    return;
+  }
+
+  unsigned FuncOrderBlockNum = 0;
+  for (auto &FuncBB : *BB->getParent()) {
+    if (&FuncBB == BB)
+      break;
+    FuncOrderBlockNum++;
+  }
+  out << "unnamed_" << FuncOrderBlockNum << "<" << BB << ">";
+}
+
+void PreservedCFGCheckerInstrumentation::CFG::printDiff(raw_ostream &out,
+                                                        const CFG &Before,
+                                                        const CFG &After) {
+  assert(!After.isPoisoned());
+
+  // Print function name.
+  const CFG *FuncGraph = nullptr;
+  if (!After.Graph.empty())
+    FuncGraph = &After;
+  else if (!Before.isPoisoned() && !Before.Graph.empty())
+    FuncGraph = &Before;
+
+  if (FuncGraph)
+    out << "In function @"
+        << FuncGraph->Graph.begin()->first->getParent()->getName() << "\n";
+
+  if (Before.isPoisoned()) {
+    out << "Some blocks were deleted\n";
+    return;
+  }
+
+  // Find and print graph differences.
+  if (Before.Graph.size() != After.Graph.size())
+    out << "Different number of non-leaf basic blocks: before="
+        << Before.Graph.size() << ", after=" << After.Graph.size() << "\n";
+
+  for (auto &BB : Before.Graph) {
+    auto BA = After.Graph.find(BB.first);
+    if (BA == After.Graph.end()) {
+      out << "Non-leaf block ";
+      printBBName(out, BB.first);
+      out << " is removed (" << BB.second.size() << " successors)\n";
+    }
+  }
+
+  for (auto &BA : After.Graph) {
+    auto BB = Before.Graph.find(BA.first);
+    if (BB == Before.Graph.end()) {
+      out << "Non-leaf block ";
+      printBBName(out, BA.first);
+      out << " is added (" << BA.second.size() << " successors)\n";
+      continue;
+    }
+
+    if (BB->second == BA.second)
+      continue;
+
+    out << "Different successors of block ";
+    printBBName(out, BA.first);
+    out << " (unordered):\n";
+    out << "- before (" << BB->second.size() << "): ";
+    for (auto &SuccB : BB->second) {
+      printBBName(out, SuccB.first);
+      if (SuccB.second != 1)
+        out << "(" << SuccB.second << "), ";
+      else
+        out << ", ";
+    }
+    out << "\n";
+    out << "- after (" << BA.second.size() << "): ";
+    for (auto &SuccA : BA.second) {
+      printBBName(out, SuccA.first);
+      if (SuccA.second != 1)
+        out << "(" << SuccA.second << "), ";
+      else
+        out << ", ";
+    }
+    out << "\n";
+  }
+}
+
+void PreservedCFGCheckerInstrumentation::registerCallbacks(
+    PassInstrumentationCallbacks &PIC) {
+  if (!VerifyPreservedCFG)
+    return;
+
+  PIC.registerBeforeNonSkippedPassCallback([this](StringRef P, Any IR) {
+    if (any_isa<const Function *>(IR))
+      GraphStackBefore.emplace_back(P, CFG(any_cast<const Function *>(IR)));
+    else
+      GraphStackBefore.emplace_back(P, None);
+  });
+
+  PIC.registerAfterPassInvalidatedCallback(
+      [this](StringRef P, const PreservedAnalyses &PassPA) {
+        auto Before = GraphStackBefore.pop_back_val();
+        assert(Before.first == P &&
+               "Before and After callbacks must correspond");
+        (void)Before;
+      });
+
+  PIC.registerAfterPassCallback([this](StringRef P, Any IR,
+                                       const PreservedAnalyses &PassPA) {
+    auto Before = GraphStackBefore.pop_back_val();
+    assert(Before.first == P && "Before and After callbacks must correspond");
+    auto &GraphBefore = Before.second;
+
+    if (!PassPA.allAnalysesInSetPreserved<CFGAnalyses>())
+      return;
+
+    if (any_isa<const Function *>(IR)) {
+      assert(GraphBefore && "Must be built in BeforePassCallback");
+      CFG GraphAfter(any_cast<const Function *>(IR), false /* NeedsGuard */);
+      if (GraphAfter == *GraphBefore)
+        return;
+
+      dbgs() << "Error: " << P
+             << " reported it preserved CFG, but changes detected:\n";
+      CFG::printDiff(dbgs(), *GraphBefore, GraphAfter);
+      report_fatal_error(Twine("Preserved CFG changed by ", P));
+    }
+  });
+}
+
 void StandardInstrumentations::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
   PrintIR.registerCallbacks(PIC);
   PrintPass.registerCallbacks(PIC);
   TimePasses.registerCallbacks(PIC);
   OptNone.registerCallbacks(PIC);
+  PreservedCFGChecker.registerCallbacks(PIC);
 }

@@ -32,6 +32,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/WindowsManifest/WindowsManifestMerger.h"
+#include <limits>
 #include <memory>
 
 using namespace llvm::COFF;
@@ -673,12 +674,15 @@ void fixupExports() {
 
 void assignExportOrdinals() {
   // Assign unique ordinals if default (= 0).
-  uint16_t max = 0;
+  uint32_t max = 0;
   for (Export &e : config->exports)
-    max = std::max(max, e.ordinal);
+    max = std::max(max, (uint32_t)e.ordinal);
   for (Export &e : config->exports)
     if (e.ordinal == 0)
       e.ordinal = ++max;
+  if (max > std::numeric_limits<uint16_t>::max())
+    fatal("too many exported symbols (max " +
+          Twine(std::numeric_limits<uint16_t>::max()) + ")");
 }
 
 // Parses a string in the form of "key=value" and check

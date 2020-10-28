@@ -502,9 +502,9 @@ public:
       return failure();
 
     // Build std.prefetch memref[expandedMap.results].
-    rewriter.replaceOpWithNewOp<PrefetchOp>(
-        op, op.memref(), *resultOperands, op.isWrite(),
-        op.localityHint().getZExtValue(), op.isDataCache());
+    rewriter.replaceOpWithNewOp<PrefetchOp>(op, op.memref(), *resultOperands,
+                                            op.isWrite(), op.localityHint(),
+                                            op.isDataCache());
     return success();
   }
 };

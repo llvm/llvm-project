@@ -85,8 +85,8 @@ body: |
     ; CHECK: [[AND:%[0-9]+]]:_(<2 x s32>) = G_AND [[BUILD_VECTOR]], [[BUILD_VECTOR2]]
     ; CHECK: [[AND1:%[0-9]+]]:_(<2 x s32>) = G_AND [[BUILD_VECTOR1]], [[BUILD_VECTOR3]]
     ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s32>) = G_CONCAT_VECTORS [[AND]](<2 x s32>), [[AND1]](<2 x s32>), [[DEF1]](<2 x s32>)
-    ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s32>) = G_EXTRACT [[CONCAT_VECTORS]](<6 x s32>), 0
-    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[EXTRACT]](<3 x s32>)
+    ; CHECK: [[UV3:%[0-9]+]]:_(<3 x s32>), [[UV4:%[0-9]+]]:_(<3 x s32>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<6 x s32>)
+    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[UV3]](<3 x s32>)
     %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     %1:_(<3 x s16>) = G_TRUNC %0
     %2:_(<3 x s32>) = G_ZEXT %1

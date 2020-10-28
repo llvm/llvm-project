@@ -156,6 +156,19 @@ bool IsGenericDefinedOp(const Symbol &symbol) {
   }
 }
 
+bool IsDefinedOperator(SourceName name) {
+  const char *begin{name.begin()};
+  const char *end{name.end()};
+  return begin != end && begin[0] == '.' && end[-1] == '.';
+}
+
+std::string MakeOpName(SourceName name) {
+  std::string result{name.ToString()};
+  return IsDefinedOperator(name)         ? "OPERATOR(" + result + ")"
+      : result.find("operator(", 0) == 0 ? parser::ToUpperCaseLetters(result)
+                                         : result;
+}
+
 bool IsCommonBlockContaining(const Symbol &block, const Symbol &object) {
   const auto &objects{block.get<CommonBlockDetails>().objects()};
   auto found{std::find(objects.begin(), objects.end(), object)};
@@ -624,20 +637,23 @@ bool IsFinalizable(const Symbol &symbol) {
 }
 
 bool IsFinalizable(const DerivedTypeSpec &derived) {
-  ScopeComponentIterator components{derived};
-  return std::find_if(components.begin(), components.end(),
-             [](const Symbol &x) { return x.has<FinalProcDetails>(); }) !=
-      components.end();
+  if (!derived.typeSymbol().get<DerivedTypeDetails>().finals().empty()) {
+    return true;
+  }
+  DirectComponentIterator components{derived};
+  return bool{std::find_if(components.begin(), components.end(),
+      [](const Symbol &component) { return IsFinalizable(component); })};
 }
 
-// TODO The following function returns true for all types with FINAL procedures
-// This is because we don't yet fill in the data for FinalProcDetails
 bool HasImpureFinal(const DerivedTypeSpec &derived) {
-  ScopeComponentIterator components{derived};
-  return std::find_if(
-             components.begin(), components.end(), [](const Symbol &x) {
-               return x.has<FinalProcDetails>() && !x.attrs().test(Attr::PURE);
-             }) != components.end();
+  if (const auto *details{
+          derived.typeSymbol().detailsIf<DerivedTypeDetails>()}) {
+    const auto &finals{details->finals()};
+    return std::any_of(finals.begin(), finals.end(),
+        [](const auto &x) { return !x.second->attrs().test(Attr::PURE); });
+  } else {
+    return false;
+  }
 }
 
 bool IsCoarray(const Symbol &symbol) { return symbol.Corank() > 0; }
@@ -688,10 +704,12 @@ bool IsInBlankCommon(const Symbol &symbol) {
 // C722 and C723:  For a function to be assumed length, it must be external and
 // of CHARACTER type
 bool IsExternal(const Symbol &symbol) {
-  return (symbol.has<SubprogramDetails>() && symbol.owner().IsGlobal()) ||
-      symbol.attrs().test(Attr::EXTERNAL);
+  return ClassifyProcedure(symbol) == ProcedureDefinitionClass::External;
 }
 
+bool IsModuleProcedure(const Symbol &symbol) {
+  return ClassifyProcedure(symbol) == ProcedureDefinitionClass::Module;
+}
 const Symbol *IsExternalInPureContext(
     const Symbol &symbol, const Scope &scope) {
   if (const auto *pureProc{FindPureProcedureContaining(scope)}) {
@@ -739,7 +757,6 @@ bool InProtectedContext(const Symbol &symbol, const Scope &currentScope) {
 }
 
 // C1101 and C1158
-// TODO Need to check for a coindexed object (why? C1103?)
 std::optional<parser::MessageFixedText> WhyNotModifiable(
     const Symbol &symbol, const Scope &scope) {
   const Symbol *root{GetAssociationRoot(symbol)};
@@ -991,6 +1008,39 @@ const Symbol *FindSeparateModuleSubprogramInterface(const Symbol *proc) {
     }
   }
   return nullptr;
+}
+
+ProcedureDefinitionClass ClassifyProcedure(const Symbol &symbol) { // 15.2.2
+  const Symbol &ultimate{symbol.GetUltimate()};
+  if (ultimate.attrs().test(Attr::INTRINSIC)) {
+    return ProcedureDefinitionClass::Intrinsic;
+  } else if (ultimate.attrs().test(Attr::EXTERNAL)) {
+    return ProcedureDefinitionClass::External;
+  } else if (const auto *procDetails{ultimate.detailsIf<ProcEntityDetails>()}) {
+    if (procDetails->isDummy()) {
+      return ProcedureDefinitionClass::Dummy;
+    } else if (IsPointer(ultimate)) {
+      return ProcedureDefinitionClass::Pointer;
+    }
+  } else if (const Symbol * subp{FindSubprogram(symbol)}) {
+    if (const auto *subpDetails{subp->detailsIf<SubprogramDetails>()}) {
+      if (subpDetails->stmtFunction()) {
+        return ProcedureDefinitionClass::StatementFunction;
+      }
+    }
+    switch (ultimate.owner().kind()) {
+    case Scope::Kind::Global:
+      return ProcedureDefinitionClass::External;
+    case Scope::Kind::Module:
+      return ProcedureDefinitionClass::Module;
+    case Scope::Kind::MainProgram:
+    case Scope::Kind::Subprogram:
+      return ProcedureDefinitionClass::Internal;
+    default:
+      break;
+    }
+  }
+  return ProcedureDefinitionClass::None;
 }
 
 // ComponentIterator implementation

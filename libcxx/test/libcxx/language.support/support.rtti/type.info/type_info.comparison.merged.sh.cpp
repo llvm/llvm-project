@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: -fno-rtti
+// UNSUPPORTED: no-rtti
 
 // RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.tu1.o -DTU1 -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=1
 // RUN: %{cxx} %s %{flags} %{compile_flags} -c -o %t.tu2.o -DTU2 -D_LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=1

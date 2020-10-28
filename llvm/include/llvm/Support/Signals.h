@@ -117,6 +117,8 @@ namespace sys {
   /// Context is a system-specific failure context: it is the signal type on
   /// Unix; the ExceptionContext on Windows.
   void CleanupOnSignal(uintptr_t Context);
+
+  void unregisterHandlers();
 } // End sys namespace
 } // End llvm namespace
 

@@ -51,11 +51,11 @@ define amdgpu_kernel void @is_local_sgpr(i8* %ptr) {
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x10
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_cmp_eq_u32 s1, s0
+; CI-NEXT:    s_cmp_lg_u32 s1, s0
 ; CI-NEXT:    s_cselect_b32 s0, 1, 0
 ; CI-NEXT:    s_and_b32 s0, s0, 1
 ; CI-NEXT:    s_cmp_lg_u32 s0, 0
-; CI-NEXT:    s_cbranch_scc0 BB1_2
+; CI-NEXT:    s_cbranch_scc1 BB1_2
 ; CI-NEXT:  ; %bb.1: ; %bb0
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-NEXT:    flat_store_dword v[0:1], v0
@@ -68,11 +68,11 @@ define amdgpu_kernel void @is_local_sgpr(i8* %ptr) {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_SH_MEM_BASES, 16, 16)
 ; GFX9-NEXT:    s_lshl_b32 s0, s0, 16
-; GFX9-NEXT:    s_cmp_eq_u32 s1, s0
+; GFX9-NEXT:    s_cmp_lg_u32 s1, s0
 ; GFX9-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX9-NEXT:    s_and_b32 s0, s0, 1
 ; GFX9-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX9-NEXT:    s_cbranch_scc0 BB1_2
+; GFX9-NEXT:    s_cbranch_scc1 BB1_2
 ; GFX9-NEXT:  ; %bb.1: ; %bb0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off

@@ -100,8 +100,8 @@ struct GPUFuncOpLowering : ConvertToLLVMPattern {
         Value address = rewriter.create<LLVM::AddressOfOp>(loc, global);
         auto elementType = global.getType().getArrayElementType();
         Value memory = rewriter.create<LLVM::GEPOp>(
-            loc, elementType.getPointerTo(global.addr_space().getZExtValue()),
-            address, ArrayRef<Value>{zero, zero});
+            loc, elementType.getPointerTo(global.addr_space()), address,
+            ArrayRef<Value>{zero, zero});
 
         // Build a memref descriptor pointing to the buffer to plug with the
         // existing memref infrastructure. This may use more registers than

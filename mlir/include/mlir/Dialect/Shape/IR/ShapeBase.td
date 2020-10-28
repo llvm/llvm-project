@@ -15,8 +15,6 @@
 
 include "mlir/IR/OpBase.td"
 
-def AnyShaped: ShapedContainerType<[AnyType], IsShapedTypePred, "shaped">;
-
 //===----------------------------------------------------------------------===//
 // Shape Inference dialect definitions
 //===----------------------------------------------------------------------===//
@@ -36,7 +34,7 @@ def ShapeDialect : Dialect {
     concatting etc. on how to combine them).
   }];
 
-  let cppNamespace = "shape";
+  let cppNamespace = "::mlir::shape";
 
   let hasConstantMaterializer = 1;
 }

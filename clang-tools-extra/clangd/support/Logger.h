@@ -45,6 +45,8 @@ template <typename... Ts>
 void log(Logger::Level L, const char *Fmt, Ts &&... Vals) {
   detail::log(L, llvm::formatv(Fmt, detail::wrap(std::forward<Ts>(Vals))...));
 }
+
+llvm::Error error(std::error_code, std::string &&);
 } // namespace detail
 
 // Clangd logging functions write to a global logger set by LoggingSession.
@@ -67,6 +69,30 @@ template <typename... Ts> void log(const char *Fmt, Ts &&... Vals) {
 template <typename... Ts> void vlog(const char *Fmt, Ts &&... Vals) {
   detail::log(Logger::Verbose, Fmt, std::forward<Ts>(Vals)...);
 }
+// error() constructs an llvm::Error object, using formatv()-style arguments.
+// It is not automatically logged! (This function is a little out of place).
+// The error simply embeds the message string.
+template <typename... Ts>
+llvm::Error error(std::error_code EC, const char *Fmt, Ts &&... Vals) {
+  // We must render the formatv_object eagerly, while references are valid.
+  return detail::error(
+      EC, llvm::formatv(Fmt, detail::wrap(std::forward<Ts>(Vals))...).str());
+}
+// Overload with no error_code conversion, the error will be inconvertible.
+template <typename... Ts> llvm::Error error(const char *Fmt, Ts &&... Vals) {
+  return detail::error(
+      llvm::inconvertibleErrorCode(),
+      llvm::formatv(Fmt, detail::wrap(std::forward<Ts>(Vals))...).str());
+}
+// Overload to avoid formatv complexity for simple strings.
+inline llvm::Error error(std::error_code EC, std::string Msg) {
+  return detail::error(EC, std::move(Msg));
+}
+// Overload for simple strings with no error_code conversion.
+inline llvm::Error error(std::string Msg) {
+  return detail::error(llvm::inconvertibleErrorCode(), std::move(Msg));
+}
+
 // dlog only logs if --debug was passed, or --debug_only=Basename.
 // This level would be enabled in a targeted way when debugging.
 #define dlog(...)                                                              \

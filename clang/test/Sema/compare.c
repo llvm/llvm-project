@@ -285,6 +285,20 @@ int test5(unsigned int x) {
     && (0 <= x); // expected-warning {{comparison of 0 <= unsigned expression is always true}}
 }
 
+struct bitfield {
+  int a : 3;
+  unsigned b : 3;
+  long c : 40;
+  unsigned long d : 40;
+};
+
+void test5a(struct bitfield a) {
+  if (a.a < 0) {}
+  if (a.b < 0) {} // expected-warning {{comparison of unsigned expression < 0 is always false}}
+  if (a.c < 0) {}
+  if (a.d < 0) {} // expected-warning {{comparison of unsigned expression < 0 is always false}}
+}
+
 int test6(unsigned i, unsigned power) {
   unsigned x = (i < (1 << power) ? i : 0);
   return x != 3 ? 1 << power : i;

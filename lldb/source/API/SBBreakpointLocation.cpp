@@ -80,7 +80,7 @@ SBAddress SBBreakpointLocation::GetAddress() {
 
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
-    return LLDB_RECORD_RESULT(SBAddress(&loc_sp->GetAddress()));
+    return LLDB_RECORD_RESULT(SBAddress(loc_sp->GetAddress()));
   }
 
   return LLDB_RECORD_RESULT(SBAddress());
@@ -218,8 +218,8 @@ SBError SBBreakpointLocation::SetScriptCallbackFunction(
     const char *callback_function_name,
     SBStructuredData &extra_args) {
   LLDB_RECORD_METHOD(SBError, SBBreakpointLocation, SetScriptCallbackFunction,
-                     (const char *, SBStructuredData &), 
-                     callback_function_name, extra_args);
+                     (const char *, SBStructuredData &), callback_function_name,
+                     extra_args);
   SBError sb_error;
   BreakpointLocationSP loc_sp = GetSP();
 
@@ -239,7 +239,7 @@ SBError SBBreakpointLocation::SetScriptCallbackFunction(
       sb_error.SetError(error);
     } else
       sb_error.SetErrorString("invalid breakpoint");
-    
+
     return LLDB_RECORD_RESULT(sb_error);
 }
 

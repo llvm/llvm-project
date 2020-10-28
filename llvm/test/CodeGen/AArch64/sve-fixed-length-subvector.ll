@@ -88,7 +88,6 @@ bb1:
   ret void
 }
 
-;
 define <8 x i1> @no_warn_dropped_scalable(<8 x i32>* %in) #0 {
 ; CHECK-LABEL: no_warn_dropped_scalable:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
@@ -101,6 +100,35 @@ define <8 x i1> @no_warn_dropped_scalable(<8 x i32>* %in) #0 {
 bb1:
   %cond = icmp sgt <8 x i32> %a, zeroinitializer
   ret <8 x i1> %cond
+}
+
+; binop(insert_subvec(a), insert_subvec(b)) -> insert_subvec(binop(a,b)) like
+; combines remove redundant subvector operations. This test ensures it's not
+; performed when the input idiom is the result of operation legalisation. When
+; not prevented the test triggers infinite combine->legalise->combine->...
+define void @no_subvector_binop_hang(<8 x i32>* %in, <8 x i32>* %out, i1 %cond) #0 {
+; CHECK-LABEL: no_subvector_binop_hang:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue [[PG:p[0-9]+]].s, vl8
+; CHECK-NEXT:    ld1w { [[A:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT:    ld1w { [[B:z[0-9]+]].s }, [[PG]]/z, [x1]
+; CHECK-NEXT:    tbz w2, #0, .LBB5_2
+; CHECK-NEXT:  // %bb.1: // %bb.1
+; CHECK-NEXT:    orr [[OR:z[0-9]+]].d, [[A]].d, [[B]].d
+; CHECK-NEXT:    st1w { [[OR]].s }, [[PG]], [x1]
+; CHECK-NEXT:  .LBB5_2: // %bb.2
+; CHECK-NEXT:    ret
+  %a = load <8 x i32>, <8 x i32>* %in
+  %b = load <8 x i32>, <8 x i32>* %out
+  br i1 %cond, label %bb.1, label %bb.2
+
+bb.1:
+  %or = or <8 x i32> %a, %b
+  store <8 x i32> %or, <8 x i32>* %out
+  br label %bb.2
+
+bb.2:
+  ret void
 }
 
 attributes #0 = { "target-features"="+sve" }

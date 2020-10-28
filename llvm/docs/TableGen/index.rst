@@ -9,6 +9,7 @@ TableGen Overview
    :hidden:
 
    BackEnds
+   BackGuide
    ProgRef
    Deficiencies
 
@@ -276,7 +277,9 @@ Pre-processed output should be used if the same information needs to be used
 in different contexts (like Instruction names), so your back-end should print
 a meta-information list that can be shaped into different compile-time formats.
 
-See the `TableGen BackEnds <BackEnds.html>`_ for more information.
+See :doc:`TableGen BackEnds <./BackEnds>` for a list of available
+backends, and see the :doc:`TableGen Backend Developer's Guide <./BackGuide>`
+for information on how to write a new backend.
 
 TableGen Deficiencies
 =====================

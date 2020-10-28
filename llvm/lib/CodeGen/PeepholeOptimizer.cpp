@@ -178,6 +178,11 @@ namespace {
       }
     }
 
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties()
+        .set(MachineFunctionProperties::Property::IsSSA);
+    }
+
     /// Track Def -> Use info used for rewriting copies.
     using RewriteMapTy = SmallDenseMap<RegSubRegPair, ValueTrackerResult>;
 
@@ -210,11 +215,11 @@ namespace {
                               RecurrenceCycle &RC);
 
     /// If copy instruction \p MI is a virtual register copy, track it in
-    /// the set \p CopySrcRegs and \p CopyMIs. If this virtual register was
-    /// previously seen as a copy, replace the uses of this copy with the
-    /// previously seen copy's destination register.
-    bool foldRedundantCopy(MachineInstr &MI, SmallSet<Register, 4> &CopySrcRegs,
-                           DenseMap<Register, MachineInstr *> &CopyMIs);
+    /// the set \p CopyMIs. If this virtual register was previously seen as a
+    /// copy, replace the uses of this copy with the previously seen copy's
+    /// destination register.
+    bool foldRedundantCopy(MachineInstr &MI,
+                           DenseMap<RegSubRegPair, MachineInstr *> &CopyMIs);
 
     /// Is the register \p Reg a non-allocatable physical register?
     bool isNAPhysCopy(Register Reg);
@@ -1387,11 +1392,11 @@ bool PeepholeOptimizer::foldImmediate(
 //
 // Should replace %2 uses with %1:sub1
 bool PeepholeOptimizer::foldRedundantCopy(
-    MachineInstr &MI, SmallSet<Register, 4> &CopySrcRegs,
-    DenseMap<Register, MachineInstr *> &CopyMIs) {
+    MachineInstr &MI, DenseMap<RegSubRegPair, MachineInstr *> &CopyMIs) {
   assert(MI.isCopy() && "expected a COPY machine instruction");
 
   Register SrcReg = MI.getOperand(1).getReg();
+  unsigned SrcSubReg = MI.getOperand(1).getSubReg();
   if (!SrcReg.isVirtual())
     return false;
 
@@ -1399,20 +1404,17 @@ bool PeepholeOptimizer::foldRedundantCopy(
   if (!DstReg.isVirtual())
     return false;
 
-  if (CopySrcRegs.insert(SrcReg).second) {
+  RegSubRegPair SrcPair(SrcReg, SrcSubReg);
+
+  if (CopyMIs.insert(std::make_pair(SrcPair, &MI)).second) {
     // First copy of this reg seen.
-    CopyMIs.insert(std::make_pair(SrcReg, &MI));
     return false;
   }
 
-  MachineInstr *PrevCopy = CopyMIs.find(SrcReg)->second;
+  MachineInstr *PrevCopy = CopyMIs.find(SrcPair)->second;
 
-  unsigned SrcSubReg = MI.getOperand(1).getSubReg();
-  unsigned PrevSrcSubReg = PrevCopy->getOperand(1).getSubReg();
-
-  // Can't replace different subregister extracts.
-  if (SrcSubReg != PrevSrcSubReg)
-    return false;
+  assert(SrcSubReg == PrevCopy->getOperand(1).getSubReg() &&
+         "Unexpected mismatching subreg!");
 
   Register PrevDstReg = PrevCopy->getOperand(0).getReg();
 
@@ -1626,9 +1628,9 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
     // without any intervening re-definition of $physreg.
     DenseMap<Register, MachineInstr *> NAPhysToVirtMIs;
 
-    // Set of virtual registers that are copied from.
-    SmallSet<Register, 4> CopySrcRegs;
-    DenseMap<Register, MachineInstr *> CopySrcMIs;
+    // Set of pairs of virtual registers and their subregs that are copied
+    // from.
+    DenseMap<RegSubRegPair, MachineInstr *> CopySrcMIs;
 
     bool IsLoopHeader = MLI->isLoopHeader(&MBB);
 
@@ -1639,9 +1641,10 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
       ++MII;
       LocalMIs.insert(MI);
 
-      // Skip debug instructions. They should not affect this peephole optimization.
+      // Skip debug instructions. They should not affect this peephole
+      // optimization.
       if (MI->isDebugInstr())
-          continue;
+        continue;
 
       if (MI->isPosition())
         continue;
@@ -1716,9 +1719,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
-      if (MI->isCopy() &&
-          (foldRedundantCopy(*MI, CopySrcRegs, CopySrcMIs) ||
-           foldRedundantNAPhysCopy(*MI, NAPhysToVirtMIs))) {
+      if (MI->isCopy() && (foldRedundantCopy(*MI, CopySrcMIs) ||
+                           foldRedundantNAPhysCopy(*MI, NAPhysToVirtMIs))) {
         LocalMIs.erase(MI);
         LLVM_DEBUG(dbgs() << "Deleting redundant copy: " << *MI << "\n");
         MI->eraseFromParent();

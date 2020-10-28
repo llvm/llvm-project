@@ -15,7 +15,7 @@ define amdgpu_kernel void @call_memory_arg_load(i32 addrspace(3)* %ptr, i32) #0 
 ; GCN-NEXT:    ds_read_b32 v0, v0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func@rel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, func@rel32@hi+12
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    s_endpgm
@@ -41,7 +41,7 @@ define amdgpu_kernel void @call_memory_no_dep(i32 addrspace(1)* %ptr, i32) #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_getpc_b64 s[6:7]
 ; GCN-NEXT:    s_add_u32 s6, s6, func@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s7, s7, func@rel32@hi+4
+; GCN-NEXT:    s_addc_u32 s7, s7, func@rel32@hi+12
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[6:7]
 ; GCN-NEXT:    s_endpgm
@@ -62,7 +62,7 @@ define amdgpu_kernel void @call_no_wait_after_call(i32 addrspace(1)* %ptr, i32) 
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func@rel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, func@rel32@hi+12
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    v_mov_b32_e32 v40, 0
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
@@ -86,7 +86,7 @@ define amdgpu_kernel void @call_no_wait_after_call_return_val(i32 addrspace(1)* 
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func.return@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func.return@rel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, func.return@rel32@hi+12
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v1, s34
@@ -108,7 +108,7 @@ define amdgpu_kernel void @call_got_load(i32 addrspace(1)* %ptr, i32) #0 {
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, got.func@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, got.func@gotpcrel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, got.func@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_mov_b32 s32, 0
@@ -126,7 +126,7 @@ define void @tailcall_got_load(i32 addrspace(1)* %ptr, i32) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, got.func@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, got.func@gotpcrel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, got.func@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -143,7 +143,7 @@ define void @tail_call_memory_arg_load(i32 addrspace(3)* %ptr, i32) #0 {
 ; GCN-NEXT:    ds_read_b32 v0, v0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, func@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s5, s5, func@rel32@hi+4
+; GCN-NEXT:    s_addc_u32 s5, s5, func@rel32@hi+12
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
   %vgpr = load volatile i32, i32 addrspace(3)* %ptr
   tail call void @func(i32 %vgpr)

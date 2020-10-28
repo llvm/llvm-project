@@ -14,10 +14,9 @@
 ; CHECK-O0-LABEL: test
 ; CHECK-O0: st %r2
 ; CHECK-O0: brasl %r14, gen
-; CHECK-O0-DAG: lhr %[[REG1:r[0-9]+]], %r2
+; CHECK-O0-DAG: lhr %r2, %r2
 ; CHECK-O0-DAG: lbr %[[REG2:r[0-9]+]], %r3
-; CHECK-O0: ar %[[REG1]], %[[REG2]]
-; CHECK-O0: lr %r2, %[[REG1]]
+; CHECK-O0: ar %r2, %[[REG2]]
 define i16 @test(i32 %key) {
 entry:
   %key.addr = alloca i32, align 4
@@ -61,7 +60,6 @@ declare swiftcc { i16, i8 } @gen(i32)
 ; CHECK-O0: ar
 ; CHECK-O0: ar
 ; CHECK-O0: ar
-; CHECK-O0: lr %r2
 define i32 @test2(i32 %key) #0 {
 entry:
   %key.addr = alloca i32, align 4

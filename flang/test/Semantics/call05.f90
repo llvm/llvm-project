@@ -89,9 +89,9 @@ module m
     call spp(up)
     !ERROR: Actual argument type 'CLASS(*)' is not compatible with dummy argument type 't'
     call spa(ua)
-    !ERROR: POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type
+    !ERROR: POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type and kind
     call spp(pp2)
-    !ERROR: POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type
+    !ERROR: POINTER or ALLOCATABLE dummy and actual arguments must have the same declared type and kind
     call spa(pa2)
     !ERROR: Rank of dummy argument is 1, but actual argument has rank 2
     call smp(mpmat)

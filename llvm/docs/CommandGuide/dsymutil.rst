@@ -111,7 +111,7 @@ OPTIONS
  debug info. This prints a table after linking with the object file name, the
  size of the debug info in the object file (in bytes) and the size contributed
  (in bytes) to the linked dSYM. The table is sorted by the output size listing
- the obj ect files with the largest contribution first.
+ the object files with the largest contribution first.
 
 .. option:: --symbol-map <bcsymbolmap>
 

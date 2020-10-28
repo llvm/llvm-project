@@ -894,10 +894,9 @@ bool Sema::LookupBuiltin(LookupResult &R) {
             Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID))
           return false;
 
-        if (NamedDecl *D = LazilyCreateBuiltin((IdentifierInfo *)II,
-                                               BuiltinID, TUScope,
-                                               R.isForRedeclaration(),
-                                               R.getNameLoc())) {
+        if (NamedDecl *D =
+                LazilyCreateBuiltin(II, BuiltinID, TUScope,
+                                    R.isForRedeclaration(), R.getNameLoc())) {
           R.addDecl(D);
           return true;
         }
@@ -906,6 +905,24 @@ bool Sema::LookupBuiltin(LookupResult &R) {
   }
 
   return false;
+}
+
+/// Looks up the declaration of "struct objc_super" and
+/// saves it for later use in building builtin declaration of
+/// objc_msgSendSuper and objc_msgSendSuper_stret.
+static void LookupPredefedObjCSuperType(Sema &Sema, Scope *S) {
+  ASTContext &Context = Sema.Context;
+  LookupResult Result(Sema, &Context.Idents.get("objc_super"), SourceLocation(),
+                      Sema::LookupTagName);
+  Sema.LookupName(Result, S);
+  if (Result.getResultKind() == LookupResult::Found)
+    if (const TagDecl *TD = Result.getAsSingle<TagDecl>())
+      Context.setObjCSuperType(Context.getTagDeclType(TD));
+}
+
+void Sema::LookupNecessaryTypesForBuiltin(Scope *S, unsigned ID) {
+  if (ID == Builtin::BIobjc_msgSendSuper)
+    LookupPredefedObjCSuperType(*this, S);
 }
 
 /// Determine whether we can declare a special member function within

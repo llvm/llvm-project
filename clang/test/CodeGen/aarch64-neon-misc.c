@@ -1908,7 +1908,7 @@ int32x2_t test_vqmovun_s64(int64x2_t a) {
 // CHECK:   [[VQMOVUN_V1_I_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqxtun.v8i8(<8 x i16> %b)
 // CHECK:   [[SHUFFLE_I_I:%.*]] = shufflevector <8 x i8> %a, <8 x i8> [[VQMOVUN_V1_I_I]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 // CHECK:   ret <16 x i8> [[SHUFFLE_I_I]]
-int8x16_t test_vqmovun_high_s16(int8x8_t a, int16x8_t b) {
+uint8x16_t test_vqmovun_high_s16(uint8x8_t a, int16x8_t b) {
   return vqmovun_high_s16(a, b);
 }
 
@@ -1918,7 +1918,7 @@ int8x16_t test_vqmovun_high_s16(int8x8_t a, int16x8_t b) {
 // CHECK:   [[VQMOVUN_V2_I_I:%.*]] = bitcast <4 x i16> [[VQMOVUN_V1_I_I]] to <8 x i8>
 // CHECK:   [[SHUFFLE_I_I:%.*]] = shufflevector <4 x i16> %a, <4 x i16> [[VQMOVUN_V1_I_I]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 // CHECK:   ret <8 x i16> [[SHUFFLE_I_I]]
-int16x8_t test_vqmovun_high_s32(int16x4_t a, int32x4_t b) {
+uint16x8_t test_vqmovun_high_s32(uint16x4_t a, int32x4_t b) {
   return vqmovun_high_s32(a, b);
 }
 
@@ -1928,7 +1928,7 @@ int16x8_t test_vqmovun_high_s32(int16x4_t a, int32x4_t b) {
 // CHECK:   [[VQMOVUN_V2_I_I:%.*]] = bitcast <2 x i32> [[VQMOVUN_V1_I_I]] to <8 x i8>
 // CHECK:   [[SHUFFLE_I_I:%.*]] = shufflevector <2 x i32> %a, <2 x i32> [[VQMOVUN_V1_I_I]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK:   ret <4 x i32> [[SHUFFLE_I_I]]
-int32x4_t test_vqmovun_high_s64(int32x2_t a, int64x2_t b) {
+uint32x4_t test_vqmovun_high_s64(uint32x2_t a, int64x2_t b) {
   return vqmovun_high_s64(a, b);
 }
 

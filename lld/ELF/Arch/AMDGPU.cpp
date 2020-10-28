@@ -41,7 +41,7 @@ AMDGPU::AMDGPU() {
 }
 
 static uint32_t getEFlags(InputFile *file) {
-  return cast<ObjFile<ELF64LE>>(file)->getObj().getHeader()->e_flags;
+  return cast<ObjFile<ELF64LE>>(file)->getObj().getHeader().e_flags;
 }
 
 uint32_t AMDGPU::calcEFlags() const {

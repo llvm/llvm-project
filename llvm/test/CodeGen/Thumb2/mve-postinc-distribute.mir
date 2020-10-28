@@ -33,6 +33,43 @@
   define i32* @addUseDom(i32* %x) { unreachable }
   define i32* @addUseKilled(i32* %x) { unreachable }
 
+  define i32* @MVE_VLDRWU32_post(i32* %x) { unreachable }
+  define i32* @MVE_VLDRHU16_post(i32* %x) { unreachable }
+  define i32* @MVE_VLDRBU8_post(i32* %x) { unreachable }
+  define i32* @MVE_VLDRBS32_post(i32* %x) { unreachable }
+  define i32* @MVE_VLDRBU32_post(i32* %x) { unreachable }
+  define i32* @MVE_VLDRHS32_post(i32* %x) { unreachable }
+  define i32* @MVE_VLDRHU32_post(i32* %x) { unreachable }
+  define i32* @MVE_VLDRBS16_post(i32* %x) { unreachable }
+  define i32* @MVE_VLDRBU16_post(i32* %x) { unreachable }
+  define i32* @MVE_VSTRWU32_post(i32* %x, <4 x i32> %y) { unreachable }
+  define i32* @MVE_VSTRHU16_post(i32* %x, <4 x i32> %y) { unreachable }
+  define i32* @MVE_VSTRBU8_post(i32* %x, <4 x i32> %y) { unreachable }
+  define i32* @MVE_VSTRH32_post(i32* %x, <4 x i32> %y) { unreachable }
+  define i32* @MVE_VSTRB32_post(i32* %x, <4 x i32> %y) { unreachable }
+  define i32* @MVE_VSTRB16_post(i32* %x, <4 x i32> %y) { unreachable }
+  define i32* @MVE_VLDRWU32_pre(i32* %x) { unreachable }
+  define i32* @MVE_VLDRHU16_pre(i32* %x) { unreachable }
+  define i32* @MVE_VLDRBU8_pre(i32* %x) { unreachable }
+  define i32* @MVE_VLDRBS32_pre(i32* %x) { unreachable }
+  define i32* @MVE_VLDRBU32_pre(i32* %x) { unreachable }
+  define i32* @MVE_VLDRHS32_pre(i32* %x) { unreachable }
+  define i32* @MVE_VLDRHU32_pre(i32* %x) { unreachable }
+  define i32* @MVE_VLDRBS16_pre(i32* %x) { unreachable }
+  define i32* @MVE_VLDRBU16_pre(i32* %x) { unreachable }
+  define i32* @MVE_VSTRWU32_pre(i32* %x, <4 x i32> %y) { unreachable }
+  define i32* @MVE_VSTRHU16_pre(i32* %x, <4 x i32> %y) { unreachable }
+  define i32* @MVE_VSTRBU8_pre(i32* %x, <4 x i32> %y) { unreachable }
+  define i32* @MVE_VSTRH32_pre(i32* %x, <4 x i32> %y) { unreachable }
+  define i32* @MVE_VSTRB32_pre(i32* %x, <4 x i32> %y) { unreachable }
+  define i32* @MVE_VSTRB16_pre(i32* %x, <4 x i32> %y) { unreachable }
+
+  define i32* @multiple2(i32* %x) { unreachable }
+  define i32* @multiple3(i32* %x) { unreachable }
+  define i32* @multiple4(i32* %x) { unreachable }
+  define i32* @badScale2(i32* %x) { unreachable }
+  define i32* @badRange2(i32* %x) { unreachable }
+
 ...
 ---
 name:            MVE_VLDRWU32
@@ -861,6 +898,1030 @@ body:             |
     %4:rgpr = nuw t2LSRri killed %2, 2, 14, $noreg, $noreg
     %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg :: (load 16, align 8)
     $r0 = COPY %4
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRWU32_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprnopc, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRWU32_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
+    ; CHECK: [[MVE_VLDRWU32_post:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_post1:%[0-9]+]]:mqpr = MVE_VLDRWU32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRWU32_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:gprnopc = COPY $r0
+    %2:rgpr, %1:mqpr = MVE_VLDRWU32_post %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRHU16_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprnopc, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRHU16_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
+    ; CHECK: [[MVE_VLDRHU16_post:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post1:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRHU16_:%[0-9]+]]:mqpr = MVE_VLDRHU16 [[MVE_VLDRHU16_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRHU16_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:gprnopc = COPY $r0
+    %2:rgpr, %1:mqpr = MVE_VLDRHU16_post %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRHU16 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRBU8_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprnopc, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRBU8_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
+    ; CHECK: [[MVE_VLDRBU8_post:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_post1:%[0-9]+]]:mqpr = MVE_VLDRBU8_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBU8_:%[0-9]+]]:mqpr = MVE_VLDRBU8 [[MVE_VLDRBU8_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRBU8_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:gprnopc = COPY $r0
+    %2:rgpr, %1:mqpr = MVE_VLDRBU8_post %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRBU8 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRBS32_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRBS32_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRBS32_post:%[0-9]+]]:tgpr, [[MVE_VLDRBS32_post1:%[0-9]+]]:mqpr = MVE_VLDRBS32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBS32_:%[0-9]+]]:mqpr = MVE_VLDRBS32 [[MVE_VLDRBS32_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRBS32_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:tgpr = COPY $r0
+    %2:tgpr, %1:mqpr = MVE_VLDRBS32_post %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRBS32 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRBU32_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRBU32_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRBU32_post:%[0-9]+]]:tgpr, [[MVE_VLDRBU32_post1:%[0-9]+]]:mqpr = MVE_VLDRBU32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBU32_:%[0-9]+]]:mqpr = MVE_VLDRBU32 [[MVE_VLDRBU32_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRBU32_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:tgpr = COPY $r0
+    %2:tgpr, %1:mqpr = MVE_VLDRBU32_post %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRBU32 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRHS32_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRHS32_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRHS32_post:%[0-9]+]]:tgpr, [[MVE_VLDRHS32_post1:%[0-9]+]]:mqpr = MVE_VLDRHS32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRHS32_:%[0-9]+]]:mqpr = MVE_VLDRHS32 [[MVE_VLDRHS32_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRHS32_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:tgpr = COPY $r0
+    %2:tgpr, %1:mqpr = MVE_VLDRHS32_post %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRHS32 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRHU32_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRHU32_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRHU32_post:%[0-9]+]]:tgpr, [[MVE_VLDRHU32_post1:%[0-9]+]]:mqpr = MVE_VLDRHU32_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRHU32_:%[0-9]+]]:mqpr = MVE_VLDRHU32 [[MVE_VLDRHU32_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRHU32_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:tgpr = COPY $r0
+    %2:tgpr, %1:mqpr = MVE_VLDRHU32_post %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRHU32 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRBS16_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRBS16_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRBS16_post:%[0-9]+]]:tgpr, [[MVE_VLDRBS16_post1:%[0-9]+]]:mqpr = MVE_VLDRBS16_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBS16_:%[0-9]+]]:mqpr = MVE_VLDRBS16 [[MVE_VLDRBS16_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRBS16_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:tgpr = COPY $r0
+    %2:tgpr, %1:mqpr = MVE_VLDRBS16_post %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRBS16 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRBU16_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRBU16_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRBU16_post:%[0-9]+]]:tgpr, [[MVE_VLDRBU16_post1:%[0-9]+]]:mqpr = MVE_VLDRBU16_post [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBU16_:%[0-9]+]]:mqpr = MVE_VLDRBU16 [[MVE_VLDRBU16_post]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRBU16_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:tgpr = COPY $r0
+    %2:tgpr, %1:mqpr = MVE_VLDRBU16_post %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRBU16 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VSTRWU32_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: rgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VSTRWU32_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRWU32_post:%[0-9]+]]:rgpr = MVE_VSTRWU32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRWU32 [[COPY]], [[MVE_VSTRWU32_post]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRWU32_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:rgpr = COPY $r0
+    %2:rgpr = MVE_VSTRWU32_post %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRWU32 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VSTRHU16_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: rgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VSTRHU16_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRHU16_post:%[0-9]+]]:rgpr = MVE_VSTRHU16_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRHU16 [[COPY]], [[MVE_VSTRHU16_post]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRHU16_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:rgpr = COPY $r0
+    %2:rgpr = MVE_VSTRHU16_post %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRHU16 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VSTRBU8_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: rgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VSTRBU8_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRBU8_post:%[0-9]+]]:rgpr = MVE_VSTRBU8_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRBU8 [[COPY]], [[MVE_VSTRBU8_post]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRBU8_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:rgpr = COPY $r0
+    %2:rgpr = MVE_VSTRBU8_post %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRBU8 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VSTRH32_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VSTRH32_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRH32_post:%[0-9]+]]:tgpr = MVE_VSTRH32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRH32 [[COPY]], [[MVE_VSTRH32_post]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRH32_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:tgpr = COPY $r0
+    %2:tgpr = MVE_VSTRH32_post %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRH32 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VSTRB32_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VSTRB32_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRB32_post:%[0-9]+]]:tgpr = MVE_VSTRB32_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRB32 [[COPY]], [[MVE_VSTRB32_post]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRB32_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:tgpr = COPY $r0
+    %2:tgpr = MVE_VSTRB32_post %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRB32 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VSTRB16_post
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VSTRB16_post
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRB16_post:%[0-9]+]]:tgpr = MVE_VSTRB16_post [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_post]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRB16_post]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:tgpr = COPY $r0
+    %2:tgpr = MVE_VSTRB16_post %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRB16 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRWU32_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: rgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRWU32_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRWU32_pre:%[0-9]+]]:rgpr, [[MVE_VLDRWU32_pre1:%[0-9]+]]:mqpr = MVE_VLDRWU32_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRWU32_:%[0-9]+]]:mqpr = MVE_VLDRWU32 [[MVE_VLDRWU32_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRWU32_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:rgpr = COPY $r0
+    %2:rgpr, %1:mqpr = MVE_VLDRWU32_pre %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRWU32 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRHU16_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: rgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRHU16_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRHU16_pre:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_pre1:%[0-9]+]]:mqpr = MVE_VLDRHU16_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRHU16_:%[0-9]+]]:mqpr = MVE_VLDRHU16 [[MVE_VLDRHU16_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRHU16_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:rgpr = COPY $r0
+    %2:rgpr, %1:mqpr = MVE_VLDRHU16_pre %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRHU16 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRBU8_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: rgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRBU8_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRBU8_pre:%[0-9]+]]:rgpr, [[MVE_VLDRBU8_pre1:%[0-9]+]]:mqpr = MVE_VLDRBU8_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBU8_:%[0-9]+]]:mqpr = MVE_VLDRBU8 [[MVE_VLDRBU8_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRBU8_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:rgpr = COPY $r0
+    %2:rgpr, %1:mqpr = MVE_VLDRBU8_pre %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRBU8 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRBS32_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRBS32_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRBS32_pre:%[0-9]+]]:tgpr, [[MVE_VLDRBS32_pre1:%[0-9]+]]:mqpr = MVE_VLDRBS32_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBS32_:%[0-9]+]]:mqpr = MVE_VLDRBS32 [[MVE_VLDRBS32_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRBS32_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:tgpr = COPY $r0
+    %2:tgpr, %1:mqpr = MVE_VLDRBS32_pre %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRBS32 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRBU32_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRBU32_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRBU32_pre:%[0-9]+]]:tgpr, [[MVE_VLDRBU32_pre1:%[0-9]+]]:mqpr = MVE_VLDRBU32_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBU32_:%[0-9]+]]:mqpr = MVE_VLDRBU32 [[MVE_VLDRBU32_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRBU32_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:tgpr = COPY $r0
+    %2:tgpr, %1:mqpr = MVE_VLDRBU32_pre %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRBU32 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRHS32_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRHS32_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRHS32_pre:%[0-9]+]]:tgpr, [[MVE_VLDRHS32_pre1:%[0-9]+]]:mqpr = MVE_VLDRHS32_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRHS32_:%[0-9]+]]:mqpr = MVE_VLDRHS32 [[MVE_VLDRHS32_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRHS32_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:tgpr = COPY $r0
+    %2:tgpr, %1:mqpr = MVE_VLDRHS32_pre %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRHS32 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRHU32_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRHU32_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRHU32_pre:%[0-9]+]]:tgpr, [[MVE_VLDRHU32_pre1:%[0-9]+]]:mqpr = MVE_VLDRHU32_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRHU32_:%[0-9]+]]:mqpr = MVE_VLDRHU32 [[MVE_VLDRHU32_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRHU32_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:tgpr = COPY $r0
+    %2:tgpr, %1:mqpr = MVE_VLDRHU32_pre %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRHU32 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRBS16_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRBS16_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRBS16_pre:%[0-9]+]]:tgpr, [[MVE_VLDRBS16_pre1:%[0-9]+]]:mqpr = MVE_VLDRBS16_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBS16_:%[0-9]+]]:mqpr = MVE_VLDRBS16 [[MVE_VLDRBS16_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRBS16_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:tgpr = COPY $r0
+    %2:tgpr, %1:mqpr = MVE_VLDRBS16_pre %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRBS16 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VLDRBU16_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VLDRBU16_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VLDRBU16_pre:%[0-9]+]]:tgpr, [[MVE_VLDRBU16_pre1:%[0-9]+]]:mqpr = MVE_VLDRBU16_pre [[COPY]], 32, 0, $noreg :: (load 16, align 8)
+    ; CHECK: [[MVE_VLDRBU16_:%[0-9]+]]:mqpr = MVE_VLDRBU16 [[MVE_VLDRBU16_pre]], -16, 0, $noreg :: (load 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VLDRBU16_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:tgpr = COPY $r0
+    %2:tgpr, %1:mqpr = MVE_VLDRBU16_pre %0, 32, 0, $noreg :: (load 16, align 8)
+    %1:mqpr = MVE_VLDRBU16 %0, 16, 0, $noreg :: (load 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VSTRWU32_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: rgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VSTRWU32_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRWU32_pre:%[0-9]+]]:rgpr = MVE_VSTRWU32_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRWU32 [[COPY]], [[MVE_VSTRWU32_pre]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRWU32_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:rgpr = COPY $r0
+    %2:rgpr = MVE_VSTRWU32_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRWU32 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VSTRHU16_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: rgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VSTRHU16_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRHU16_pre:%[0-9]+]]:rgpr = MVE_VSTRHU16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRHU16 [[COPY]], [[MVE_VSTRHU16_pre]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRHU16_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:rgpr = COPY $r0
+    %2:rgpr = MVE_VSTRHU16_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRHU16 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VSTRBU8_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: rgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VSTRBU8_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRBU8_pre:%[0-9]+]]:rgpr = MVE_VSTRBU8_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRBU8 [[COPY]], [[MVE_VSTRBU8_pre]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRBU8_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:rgpr = COPY $r0
+    %2:rgpr = MVE_VSTRBU8_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRBU8 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VSTRH32_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VSTRH32_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRH32_pre:%[0-9]+]]:tgpr = MVE_VSTRH32_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRH32 [[COPY]], [[MVE_VSTRH32_pre]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRH32_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:tgpr = COPY $r0
+    %2:tgpr = MVE_VSTRH32_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRH32 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VSTRB32_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VSTRB32_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRB32_pre:%[0-9]+]]:tgpr = MVE_VSTRB32_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRB32 [[COPY]], [[MVE_VSTRB32_pre]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRB32_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:tgpr = COPY $r0
+    %2:tgpr = MVE_VSTRB32_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRB32 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            MVE_VSTRB16_pre
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: MVE_VSTRB16_pre
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRB16_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:tgpr = COPY $r0
+    %2:tgpr = MVE_VSTRB16_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRB16 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            multiple2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: multiple2
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre]], -16, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre]], -48, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre]], 2, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRB16_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:tgpr = COPY $r0
+    %2:tgpr = MVE_VSTRB16_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRB16 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRB16 %1, %0, -16, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRB16 %1, %0, 34, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            multiple3
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+  - { id: 3, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: multiple3
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[MVE_VSTRB16_pre1:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 64, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[MVE_VSTRB16_pre1]], -48, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRB16_pre1]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:tgpr = COPY $r0
+    %2:tgpr = MVE_VSTRB16_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    %3:tgpr = MVE_VSTRB16_pre %1, %0, 64, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRB16 %1, %0, 16, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %3
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            multiple4
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+  - { id: 3, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: multiple4
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 32, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[COPY1]], 0, 0, $noreg :: (store 16, align 8)
+    ; CHECK: [[t2ADDri:%[0-9]+]]:tgpr = nuw t2ADDri [[COPY1]], 32, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: $r0 = COPY [[t2ADDri]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:tgpr = COPY $r0
+    %2:tgpr = MVE_VSTRB16_pre %1, %0, 32, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRB16 %1, %0, 0, 0, $noreg :: (store 16, align 8)
+    %3:tgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
+    $r0 = COPY %3
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            badScale2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: badScale2
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRBU8_pre:%[0-9]+]]:tgpr = MVE_VSTRBU8_pre [[COPY]], [[COPY1]], 33, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRWU32 [[COPY]], [[COPY1]], 0, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRBU8_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:tgpr = COPY $r0
+    %2:tgpr = MVE_VSTRBU8_pre %1, %0, 33, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRWU32 %1, %0, 0, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            badRange2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: tgpr, preferred-register: '' }
+  - { id: 1, class: mqpr, preferred-register: '' }
+  - { id: 2, class: tgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+  - { reg: '$q0', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $r0, $q0
+
+    ; CHECK-LABEL: name: badRange2
+    ; CHECK: liveins: $r0, $q0
+    ; CHECK: [[COPY:%[0-9]+]]:mqpr = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:tgpr = COPY $r0
+    ; CHECK: [[MVE_VSTRB16_pre:%[0-9]+]]:tgpr = MVE_VSTRB16_pre [[COPY]], [[COPY1]], 100, 0, $noreg :: (store 16, align 8)
+    ; CHECK: MVE_VSTRB16 [[COPY]], [[COPY1]], -100, 0, $noreg :: (store 16, align 8)
+    ; CHECK: $r0 = COPY [[MVE_VSTRB16_pre]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %1:mqpr = COPY $q0
+    %0:tgpr = COPY $r0
+    %2:tgpr = MVE_VSTRB16_pre %1, %0, 100, 0, $noreg :: (store 16, align 8)
+    MVE_VSTRB16 %1, %0, -100, 0, $noreg :: (store 16, align 8)
+    $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
 ...

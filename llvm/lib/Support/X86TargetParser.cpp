@@ -194,7 +194,7 @@ static constexpr FeatureBitset FeaturesICLServer =
     FeaturesICLClient | FeaturePCONFIG | FeatureWBNOINVD;
 static constexpr FeatureBitset FeaturesTigerlake =
     FeaturesICLClient | FeatureAVX512VP2INTERSECT | FeatureMOVDIR64B |
-    FeatureMOVDIRI | FeatureSHSTK;
+    FeatureMOVDIRI | FeatureSHSTK | FeatureKL | FeatureWIDEKL;
 static constexpr FeatureBitset FeaturesSapphireRapids =
     FeaturesICLServer | FeatureAMX_TILE | FeatureAMX_INT8 | FeatureAMX_BF16 |
     FeatureAVX512BF16 | FeatureAVX512VP2INTERSECT | FeatureCLDEMOTE | FeatureENQCMD |
@@ -529,7 +529,7 @@ static constexpr FeatureBitset ImpliedFeaturesAVX5124FMAPS = {};
 static constexpr FeatureBitset ImpliedFeaturesAVX5124VNNIW = {};
 
 // SSE4_A->FMA4->XOP chain.
-static constexpr FeatureBitset ImpliedFeaturesSSE4_A = FeatureSSSE3;
+static constexpr FeatureBitset ImpliedFeaturesSSE4_A = FeatureSSE3;
 static constexpr FeatureBitset ImpliedFeaturesFMA4 = FeatureAVX | FeatureSSE4_A;
 static constexpr FeatureBitset ImpliedFeaturesXOP = FeatureFMA4;
 
@@ -537,6 +537,10 @@ static constexpr FeatureBitset ImpliedFeaturesXOP = FeatureFMA4;
 static constexpr FeatureBitset ImpliedFeaturesAMX_TILE = {};
 static constexpr FeatureBitset ImpliedFeaturesAMX_BF16 = FeatureAMX_TILE;
 static constexpr FeatureBitset ImpliedFeaturesAMX_INT8 = FeatureAMX_TILE;
+
+// Key Locker Features
+static constexpr FeatureBitset ImpliedFeaturesKL = FeatureSSE2;
+static constexpr FeatureBitset ImpliedFeaturesWIDEKL = FeatureKL;
 
 static constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
 #define X86_FEATURE(ENUM, STR) {{STR}, ImpliedFeatures##ENUM},

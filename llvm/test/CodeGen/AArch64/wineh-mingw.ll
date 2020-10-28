@@ -36,8 +36,7 @@ endtryfinally:
 ; WINEH: .seh_proc foo4
 ; WINEH: .seh_handler _d_eh_personality, @unwind, @except
 ; WINEH: ret
-; WINEH: .section .xdata,"dr"
-; WINEH-NEXT: .seh_handlerdata
+; WINEH:      .seh_handlerdata
 ; WINEH-NEXT: .text
 ; WINEH-NEXT: .seh_endproc
 ; WINEH: .section .xdata,"dr"

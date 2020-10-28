@@ -160,7 +160,8 @@ TokenSequence &TokenSequence::ToLowerCase() {
   std::size_t atToken{0};
   for (std::size_t j{0}; j < chars;) {
     std::size_t nextStart{atToken + 1 < tokens ? start_[++atToken] : chars};
-    char *p{&char_[j]}, *limit{&char_[nextStart]};
+    char *p{&char_[j]};
+    char const *limit{char_.data() + nextStart};
     j = nextStart;
     if (IsDecimalDigit(*p)) {
       while (p < limit && IsDecimalDigit(*p)) {

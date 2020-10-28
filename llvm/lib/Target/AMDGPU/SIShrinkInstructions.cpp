@@ -86,13 +86,9 @@ static bool foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
 
         if (MovSrc.isImm() && (isInt<32>(MovSrc.getImm()) ||
                                isUInt<32>(MovSrc.getImm()))) {
-          // It's possible to have only one component of a super-reg defined by
-          // a single mov, so we need to clear any subregister flag.
-          Src0.setSubReg(0);
           Src0.ChangeToImmediate(MovSrc.getImm());
           ConstantFolded = true;
         } else if (MovSrc.isFI()) {
-          Src0.setSubReg(0);
           Src0.ChangeToFrameIndex(MovSrc.getIndex());
           ConstantFolded = true;
         } else if (MovSrc.isGlobal()) {
@@ -276,8 +272,8 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI) {
   // enabled
   int TFEIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::tfe);
   int LWEIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::lwe);
-  unsigned TFEVal = MI.getOperand(TFEIdx).getImm();
-  unsigned LWEVal = MI.getOperand(LWEIdx).getImm();
+  unsigned TFEVal = (TFEIdx == -1) ? 0 : MI.getOperand(TFEIdx).getImm();
+  unsigned LWEVal = (LWEIdx == -1) ? 0 : MI.getOperand(LWEIdx).getImm();
   int ToUntie = -1;
   if (TFEVal || LWEVal) {
     // TFE/LWE is enabled so we need to deal with an implicit tied operand

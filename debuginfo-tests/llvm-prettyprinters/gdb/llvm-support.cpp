@@ -53,8 +53,13 @@ auto SimpleIlist = []() {
   return Result;
 }();
 
-// Check expected instances to avoid compile errors.
-auto CheckExpectedValue = static_cast<bool>(ExpectedValue);
-auto CheckExpectedError = static_cast<bool>(ExpectedError);
-
-int main() { return 0; }
+int main() {
+  // Reference symbols that might otherwise be stripped.
+  ArrayRef[0];
+  MutableArrayRef[0];
+  !ExpectedValue;
+  !ExpectedError;
+  *OptionalValue;
+  *OptionalNone;
+  return 0;
+}

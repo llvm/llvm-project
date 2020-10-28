@@ -449,6 +449,13 @@ public:
     return nullptr;
   }
 
+  /// Return a register mask for the registers preserved by the unwinder,
+  /// or nullptr if no custom mask is needed.
+  virtual const uint32_t *
+  getCustomEHPadPreservedMask(const MachineFunction &MF) const {
+    return nullptr;
+  }
+
   /// Return a register mask that clobbers everything.
   virtual const uint32_t *getNoPreservedMask() const {
     llvm_unreachable("target does not provide no preserved mask");
@@ -969,6 +976,36 @@ public:
   /// go through this expensive splitting heuristic.
   virtual bool shouldRegionSplitForVirtReg(const MachineFunction &MF,
                                            const LiveInterval &VirtReg) const;
+
+  /// Last chance recoloring has a high compile time cost especially for
+  /// targets with a lot of registers.
+  /// This method is used to decide whether or not \p VirtReg should
+  /// go through this expensive heuristic.
+  /// When this target hook is hit, by returning false, there is a high
+  /// chance that the register allocation will fail altogether (usually with
+  /// ran out of registers).
+  /// That said, this error usually points to another problem in the
+  /// optimization pipeline.
+  virtual bool
+  shouldUseLastChanceRecoloringForVirtReg(const MachineFunction &MF,
+                                          const LiveInterval &VirtReg) const {
+    return true;
+  }
+
+  /// Deferred spilling delais the spill insertion of a virtual register
+  /// after every other allocations. By deferring the spilling, it is
+  /// sometimes possible to eliminate that spilling altogether because
+  /// something else could have been eliminated, thus leaving some space
+  /// for the virtual register.
+  /// However, this comes with a compile time impact because it adds one
+  /// more stage to the greedy register allocator.
+  /// This method is used to decide whether \p VirtReg should use the deferred
+  /// spilling stage instead of being spilled right away.
+  virtual bool
+  shouldUseDeferredSpillingForVirtReg(const MachineFunction &MF,
+                                      const LiveInterval &VirtReg) const {
+    return false;
+  }
 
   //===--------------------------------------------------------------------===//
   /// Debug information queries.

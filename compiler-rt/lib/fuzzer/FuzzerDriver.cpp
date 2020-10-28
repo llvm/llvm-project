@@ -250,11 +250,26 @@ static void WorkerThread(const Command &BaseCmd, std::atomic<unsigned> *Counter,
   }
 }
 
-static void ValidateDirectoryExists(const std::string &Path) {
-  if (!Path.empty() && !IsDirectory(Path)) {
-    Printf("ERROR: The required directory \"%s\" does not exist\n", Path.c_str());
+static void ValidateDirectoryExists(const std::string &Path,
+                                    bool CreateDirectory) {
+  if (Path.empty()) {
+    Printf("ERROR: Provided directory path is an empty string\n");
     exit(1);
   }
+
+  if (IsDirectory(Path))
+    return;
+
+  if (CreateDirectory) {
+    if (!MkDirRecursive(Path)) {
+      Printf("ERROR: Failed to create directory \"%s\"\n", Path.c_str());
+      exit(1);
+    }
+    return;
+  }
+
+  Printf("ERROR: The required directory \"%s\" does not exist\n", Path.c_str());
+  exit(1);
 }
 
 std::string CloneArgsWithoutX(const Vector<std::string> &Args,
@@ -656,6 +671,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.Verbosity = Flags.verbosity;
   Options.MaxLen = Flags.max_len;
   Options.LenControl = Flags.len_control;
+  Options.KeepSeed = Flags.keep_seed;
   Options.UnitTimeoutSec = Flags.timeout;
   Options.ErrorExitCode = Flags.error_exitcode;
   Options.TimeoutExitCode = Flags.timeout_exitcode;
@@ -664,6 +680,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
   Options.IgnoreCrashes = Flags.ignore_crashes;
   Options.MaxTotalTimeSec = Flags.max_total_time;
   Options.DoCrossOver = Flags.cross_over;
+  Options.CrossOverUniformDist = Flags.cross_over_uniform_dist;
   Options.MutateDepth = Flags.mutate_depth;
   Options.ReduceDepth = Flags.reduce_depth;
   Options.UseCounters = Flags.use_counters;
@@ -691,7 +708,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     std::string OutputCorpusDir = (*Inputs)[0];
     if (!IsFile(OutputCorpusDir)) {
       Options.OutputCorpus = OutputCorpusDir;
-      ValidateDirectoryExists(Options.OutputCorpus);
+      ValidateDirectoryExists(Options.OutputCorpus, Flags.create_missing_dirs);
     }
   }
   Options.ReportSlowUnits = Flags.report_slow_units;
@@ -705,11 +722,12 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     if (!IsSeparator(ArtifactPathDir[ArtifactPathDir.length() - 1])) {
       ArtifactPathDir = DirName(ArtifactPathDir);
     }
-    ValidateDirectoryExists(ArtifactPathDir);
+    ValidateDirectoryExists(ArtifactPathDir, Flags.create_missing_dirs);
   }
   if (Flags.exact_artifact_path) {
     Options.ExactArtifactPath = Flags.exact_artifact_path;
-    ValidateDirectoryExists(DirName(Options.ExactArtifactPath));
+    ValidateDirectoryExists(DirName(Options.ExactArtifactPath),
+                            Flags.create_missing_dirs);
   }
   Vector<Unit> Dictionary;
   if (Flags.dict)
@@ -735,8 +753,10 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Options.DataFlowTrace = Flags.data_flow_trace;
   if (Flags.features_dir) {
     Options.FeaturesDir = Flags.features_dir;
-    ValidateDirectoryExists(Options.FeaturesDir);
+    ValidateDirectoryExists(Options.FeaturesDir, Flags.create_missing_dirs);
   }
+  if (Flags.mutation_graph_file)
+    Options.MutationGraphFile = Flags.mutation_graph_file;
   if (Flags.collect_data_flow)
     Options.CollectDataFlow = Flags.collect_data_flow;
   if (Flags.stop_file)
@@ -746,21 +766,19 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
       (size_t)Flags.entropic_feature_frequency_threshold;
   Options.EntropicNumberOfRarestFeatures =
       (size_t)Flags.entropic_number_of_rarest_features;
-  if (Options.Entropic) {
-    if (!Options.FocusFunction.empty()) {
-      Printf("ERROR: The parameters `--entropic` and `--focus_function` cannot "
-             "be used together.\n");
-      exit(1);
-    }
+  Options.EntropicScalePerExecTime = Flags.entropic_scale_per_exec_time;
+  if (!Options.FocusFunction.empty())
+    Options.Entropic = false; // FocusFunction overrides entropic scheduling.
+  if (Options.Entropic)
     Printf("INFO: Running with entropic power schedule (0x%X, %d).\n",
            Options.EntropicFeatureFrequencyThreshold,
            Options.EntropicNumberOfRarestFeatures);
-  }
   struct EntropicOptions Entropic;
   Entropic.Enabled = Options.Entropic;
   Entropic.FeatureFrequencyThreshold =
       Options.EntropicFeatureFrequencyThreshold;
   Entropic.NumberOfRarestFeatures = Options.EntropicNumberOfRarestFeatures;
+  Entropic.ScalePerExecTime = Options.EntropicScalePerExecTime;
 
   unsigned Seed = Flags.seed;
   // Initialize Seed.

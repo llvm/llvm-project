@@ -404,6 +404,11 @@ static APInt getIdentityValueForAtomicOp(AtomicRMWInst::BinOp Op,
   }
 }
 
+static Value *buildMul(IRBuilder<> &B, Value *LHS, Value *RHS) {
+  const ConstantInt *CI = dyn_cast<ConstantInt>(LHS);
+  return (CI && CI->isOne()) ? RHS : B.CreateMul(LHS, RHS);
+}
+
 void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
                                            AtomicRMWInst::BinOp Op,
                                            unsigned ValIdx,
@@ -523,7 +528,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
       // old value times the number of active lanes.
       Value *const Ctpop = B.CreateIntCast(
           B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), Ty, false);
-      NewV = B.CreateMul(V, Ctpop);
+      NewV = buildMul(B, V, Ctpop);
       break;
     }
 
@@ -543,7 +548,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
       // old value times the parity of the number of active lanes.
       Value *const Ctpop = B.CreateIntCast(
           B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot), Ty, false);
-      NewV = B.CreateMul(V, B.CreateAnd(Ctpop, 1));
+      NewV = buildMul(B, V, B.CreateAnd(Ctpop, 1));
       break;
     }
   }
@@ -622,7 +627,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
         llvm_unreachable("Unhandled atomic op");
       case AtomicRMWInst::Add:
       case AtomicRMWInst::Sub:
-        LaneOffset = B.CreateMul(V, Mbcnt);
+        LaneOffset = buildMul(B, V, Mbcnt);
         break;
       case AtomicRMWInst::And:
       case AtomicRMWInst::Or:
@@ -633,7 +638,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
         LaneOffset = B.CreateSelect(Cond, Identity, V);
         break;
       case AtomicRMWInst::Xor:
-        LaneOffset = B.CreateMul(V, B.CreateAnd(Mbcnt, 1));
+        LaneOffset = buildMul(B, V, B.CreateAnd(Mbcnt, 1));
         break;
       }
     }

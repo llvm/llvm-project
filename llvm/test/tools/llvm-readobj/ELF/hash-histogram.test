@@ -167,6 +167,7 @@ ProgramHeaders:
 # RUN: llvm-readelf --elf-hash-histogram %t4.3.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR3 -DFILE=%t4.3.o --implicit-check-not="warning:"
 # ERR3: warning: '[[FILE]]': hash table nchain (93) differs from symbol count derived from SHT_DYNSYM section header (1){{$}}
+# ERR3: warning: '[[FILE]]': the size (0x5d0) of the dynamic symbol table at 0x78, derived from the hash table, goes past the end of the file (0x1d4) and will be ignored
 
 ## Case B.2: the hash table ends 1 byte past the EOF. We have a broken nchain
 ##           field that has a value larger than the number of chains.
@@ -174,6 +175,7 @@ ProgramHeaders:
 # RUN: llvm-readelf --elf-hash-histogram %t4.4.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR4 -DFILE=%t4.4.o --implicit-check-not="warning:"
 # ERR4: warning: '[[FILE]]': hash table nchain (94) differs from symbol count derived from SHT_DYNSYM section header (1){{$}}
+# ERR4: warning: '[[FILE]]': the size (0x5e0) of the dynamic symbol table at 0x78, derived from the hash table, goes past the end of the file (0x1d4) and will be ignored
 # ERR4: warning: '[[FILE]]': the hash table at offset 0x54 goes past the end of the file (0x1d4), nbucket = 1, nchain = 94{{$}}
 
 --- !ELF

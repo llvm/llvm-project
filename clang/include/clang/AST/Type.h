@@ -1927,6 +1927,9 @@ public:
   /// (C++11 [basic.types]p10)
   bool isLiteralType(const ASTContext &Ctx) const;
 
+  /// Determine if this type is a structural type, per C++20 [temp.param]p7.
+  bool isStructuralType() const;
+
   /// Test if this type is a standard-layout type.
   /// (C++0x [basic.type]p9)
   bool isStandardLayoutType() const;

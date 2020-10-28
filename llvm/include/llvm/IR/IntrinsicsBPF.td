@@ -32,4 +32,6 @@ let TargetPrefix = "bpf" in {  // All intrinsics start with "llvm.bpf."
   def int_bpf_preserve_enum_value : GCCBuiltin<"__builtin_bpf_preserve_enum_value">,
               Intrinsic<[llvm_i64_ty], [llvm_i32_ty, llvm_ptr_ty, llvm_i64_ty],
               [IntrNoMem]>;
+  def int_bpf_passthrough : GCCBuiltin<"__builtin_bpf_passthrough">,
+              Intrinsic<[llvm_any_ty], [llvm_i32_ty, llvm_any_ty], [IntrNoMem]>;
 }

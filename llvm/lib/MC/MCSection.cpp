@@ -82,6 +82,7 @@ MCSection::getSubsectionInsertionPoint(unsigned Subsection) {
     SubsectionFragmentMap.insert(MI, std::make_pair(Subsection, F));
     getFragmentList().insert(IP, F);
     F->setParent(this);
+    F->setSubsectionNumber(Subsection);
   }
 
   return IP;

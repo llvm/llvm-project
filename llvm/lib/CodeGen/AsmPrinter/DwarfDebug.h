@@ -729,6 +729,12 @@ public:
   /// Returns the Dwarf Version.
   uint16_t getDwarfVersion() const;
 
+  /// Returns a suitable DWARF form to represent a section offset, i.e.
+  /// * DW_FORM_sec_offset for DWARF version >= 4;
+  /// * DW_FORM_data8 for 64-bit DWARFv3;
+  /// * DW_FORM_data4 for 32-bit DWARFv3 and DWARFv2.
+  dwarf::Form getDwarfSectionOffsetForm() const;
+
   /// Returns the previous CU that was being updated
   const DwarfCompileUnit *getPrevCU() const { return PrevCU; }
   void setPrevCU(const DwarfCompileUnit *PrevCU) { this->PrevCU = PrevCU; }

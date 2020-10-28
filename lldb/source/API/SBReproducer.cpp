@@ -30,6 +30,33 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::repro;
 
+SBReplayOptions::SBReplayOptions()
+    : m_opaque_up(std::make_unique<ReplayOptions>()){}
+
+SBReplayOptions::SBReplayOptions(const SBReplayOptions &rhs)
+    : m_opaque_up(std::make_unique<ReplayOptions>(*rhs.m_opaque_up)) {}
+
+SBReplayOptions::~SBReplayOptions() = default;
+
+SBReplayOptions &SBReplayOptions::operator=(const SBReplayOptions &rhs) {
+  if (this == &rhs)
+    return *this;
+  *m_opaque_up = *rhs.m_opaque_up;
+  return *this;
+}
+
+void SBReplayOptions::SetVerify(bool verify) { m_opaque_up->verify = verify; }
+
+bool SBReplayOptions::GetVerify() const { return m_opaque_up->verify; }
+
+void SBReplayOptions::SetCheckVersion(bool check) {
+  m_opaque_up->check_version = check;
+}
+
+bool SBReplayOptions::GetCheckVersion() const {
+  return m_opaque_up->check_version;
+}
+
 SBRegistry::SBRegistry() {
   Registry &R = *this;
 
@@ -163,10 +190,18 @@ const char *SBReproducer::PassiveReplay(const char *path) {
 }
 
 const char *SBReproducer::Replay(const char *path) {
-  return SBReproducer::Replay(path, false);
+  SBReplayOptions options;
+  return SBReproducer::Replay(path, options);
 }
 
 const char *SBReproducer::Replay(const char *path, bool skip_version_check) {
+  SBReplayOptions options;
+  options.SetCheckVersion(!skip_version_check);
+  return SBReproducer::Replay(path, options);
+}
+
+const char *SBReproducer::Replay(const char *path,
+                                 const SBReplayOptions &options) {
   static std::string error;
   if (auto e = Reproducer::Initialize(ReproducerMode::Replay, FileSpec(path))) {
     error = llvm::toString(std::move(e));
@@ -179,7 +214,7 @@ const char *SBReproducer::Replay(const char *path, bool skip_version_check) {
     return error.c_str();
   }
 
-  if (!skip_version_check) {
+  if (options.GetCheckVersion()) {
     llvm::Expected<std::string> version = loader->LoadBuffer<VersionProvider>();
     if (!version) {
       error = llvm::toString(version.takeError());
@@ -191,6 +226,30 @@ const char *SBReproducer::Replay(const char *path, bool skip_version_check) {
       error.append(*version);
       error.append("reproducer replayed with:\n");
       error.append(lldb_private::GetVersion());
+      return error.c_str();
+    }
+  }
+
+  if (options.GetVerify()) {
+    bool verification_failed = false;
+    llvm::raw_string_ostream os(error);
+    auto error_callback = [&](llvm::StringRef error) {
+      verification_failed = true;
+      os << "\nerror: " << error;
+    };
+
+    auto warning_callback = [&](llvm::StringRef warning) {
+      verification_failed = true;
+      os << "\nwarning: " << warning;
+    };
+
+    auto note_callback = [&](llvm::StringRef warning) {};
+
+    Verifier verifier(loader);
+    verifier.Verify(error_callback, warning_callback, note_callback);
+
+    if (verification_failed) {
+      os.flush();
       return error.c_str();
     }
   }

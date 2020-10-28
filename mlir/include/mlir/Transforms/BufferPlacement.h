@@ -24,87 +24,132 @@
 
 namespace mlir {
 
-/// Prepares a buffer placement phase. It can place (user-defined) alloc
-/// nodes. This simplifies the integration of the actual buffer-placement
-/// pass. Sample usage:
-///   BufferAssignmentPlacer baHelper(regionOp);
-///   -> determine alloc positions
-///   auto allocPosition = baHelper.computeAllocPosition(value);
-///   -> place alloc
-///   allocBuilder.setInsertionPoint(positions.getAllocPosition());
-///   <create alloc>
-/// Note: this class is intended to be used during legalization. In order
-/// to move alloc and dealloc nodes into the right places you can use the
-/// createBufferPlacementPass() function.
-class BufferAssignmentPlacer {
-public:
-  /// Creates a new assignment builder.
-  explicit BufferAssignmentPlacer(Operation *op);
-
-  /// Returns the operation this analysis was constructed from.
-  Operation *getOperation() const { return operation; }
-
-  /// Computes the actual position to place allocs for the given result.
-  OpBuilder::InsertPoint computeAllocPosition(OpResult result);
-
-private:
-  /// The operation this analysis was constructed from.
-  Operation *operation;
-};
-
-/// Helper conversion pattern that encapsulates a BufferAssignmentPlacer
-/// instance. Sample usage:
-/// class CustomConversionPattern : public
-///     BufferAssignmentOpConversionPattern<MyOpT>
-/// {
-///   ... matchAndRewrite(...) {
-///     -> Access stored BufferAssignmentPlacer
-///     bufferAssignment->computeAllocPosition(resultOp);
-///   }
-/// };
-template <typename SourceOp>
-class BufferAssignmentOpConversionPattern
-    : public OpConversionPattern<SourceOp> {
-public:
-  explicit BufferAssignmentOpConversionPattern(
-      MLIRContext *context, BufferAssignmentPlacer *bufferAssignment = nullptr,
-      TypeConverter *converter = nullptr, PatternBenefit benefit = 1)
-      : OpConversionPattern<SourceOp>(context, benefit),
-        bufferAssignment(bufferAssignment), converter(converter) {}
-
-protected:
-  BufferAssignmentPlacer *bufferAssignment;
-  TypeConverter *converter;
-};
-
 /// A helper type converter class for using inside Buffer Assignment operation
 /// conversion patterns. The default constructor keeps all the types intact
 /// except for the ranked-tensor types which is converted to memref types.
 class BufferAssignmentTypeConverter : public TypeConverter {
 public:
+  /// This enum is for showing how buffer placement operation converters should
+  /// conduct with certain result type after type conversion. This value can be
+  /// set/get for each specific type using setResultConversionKind or
+  /// getResultConversionKind.
+  enum ResultConversionKind { AppendToArgumentsList, KeepAsFunctionResult };
+
   BufferAssignmentTypeConverter();
 
-  /// A helper function to check if `type` has been converted from non-memref
-  /// type to memref.
-  static bool isConvertedMemref(Type type, Type before);
+  /// This method tries to decompose a value of a certain type using provided
+  /// decompose callback functions. If it is unable to do so, the original value
+  /// is returned.
+  void tryDecomposeValue(OpBuilder &, Location, Type, Value,
+                         SmallVectorImpl<Value> &);
+
+  /// This method tries to decompose a type using provided decompose callback
+  /// functions. If it is unable to do so, the original type is returned.
+  void tryDecomposeType(Type, SmallVectorImpl<Type> &);
+
+  /// This method registers a callback function that will be called to decompose
+  /// a value of a certain type into several values.
+  template <typename FnT,
+            typename T = typename llvm::function_traits<FnT>::template arg_t<2>>
+  void addDecomposeValueConversion(FnT &&callback) {
+    decomposeValueConversions.emplace_back(
+        wrapDecomposeValueConversionCallback<T>(std::forward<FnT>(callback)));
+  }
+
+  /// This method registers a callback function that will be called to decompose
+  /// a type into several types.
+  template <typename FnT,
+            typename T = typename llvm::function_traits<FnT>::template arg_t<0>>
+  void addDecomposeTypeConversion(FnT &&callback) {
+    auto wrapper =
+        wrapDecomposeTypeConversionCallback<T>(std::forward<FnT>(callback));
+    decomposeTypeConversions.emplace_back(wrapper);
+    addConversion(std::forward<FnT>(callback));
+  }
+
+  /// This method returns ResultConversionKind for the mapping from `origin`
+  /// type to `input` type.
+  ResultConversionKind getResultConversionKind(Type origin, Type input);
+
+  /// This method registers ResultConversionKind for the mapping from type 'T'
+  /// to type 'U'.
+  template <typename T, typename U>
+  void setResultConversionKind(ResultConversionKind kind) {
+    assert((kind != AppendToArgumentsList ||
+            llvm::is_one_of<U, MemRefType, UnrankedMemRefType>::value) &&
+           "Only the memref typed values can be set to be appended to the "
+           "function argument list at the moment");
+    resultTypeConversions.emplace_back(
+        [=](Type origin, Type input) -> Optional<ResultConversionKind> {
+          if (origin.template isa<T>() && input.template isa<U>())
+            return kind;
+          return llvm::None;
+        });
+  }
+
+private:
+  using DecomposeValueConversionCallFn = std::function<Optional<LogicalResult>(
+      OpBuilder &, Location, Type, Value, SmallVectorImpl<Value> &)>;
+
+  using DecomposeTypeConversionCallFn =
+      std::function<Optional<LogicalResult>(Type, SmallVectorImpl<Type> &)>;
+
+  using ResultConversionKindFn =
+      std::function<Optional<ResultConversionKind>(Type, Type)>;
+
+  /// Generate a wrapper for the given decompose value conversion callback.
+  template <typename T, typename FnT>
+  DecomposeValueConversionCallFn
+  wrapDecomposeValueConversionCallback(FnT &&callback) {
+    return [callback = std::forward<FnT>(callback)](
+               OpBuilder &builder, Location loc, Type type, Value value,
+               SmallVectorImpl<Value> &newValues) -> Optional<LogicalResult> {
+      if (T derivedType = type.dyn_cast<T>())
+        return callback(builder, loc, derivedType, value, newValues);
+      return llvm::None;
+    };
+  }
+
+  /// Generate a wrapper for the given decompose type conversion callback.
+  template <typename T, typename FnT>
+  DecomposeTypeConversionCallFn
+  wrapDecomposeTypeConversionCallback(FnT &&callback) {
+    return [callback = std::forward<FnT>(callback)](
+               Type type,
+               SmallVectorImpl<Type> &results) -> Optional<LogicalResult> {
+      T derivedType = type.dyn_cast<T>();
+      if (!derivedType)
+        return llvm::None;
+      return callback(derivedType, results);
+    };
+  }
+
+  SmallVector<ResultConversionKindFn, 2> resultTypeConversions;
+  SmallVector<DecomposeValueConversionCallFn, 2> decomposeValueConversions;
+  SmallVector<DecomposeTypeConversionCallFn, 2> decomposeTypeConversions;
 };
 
-namespace detail {
+/// Helper conversion pattern that encapsulates a BufferAssignmentTypeConverter
+/// instance.
+template <typename SourceOp>
+class BufferAssignmentOpConversionPattern
+    : public OpConversionPattern<SourceOp> {
+public:
+  explicit BufferAssignmentOpConversionPattern(
+      MLIRContext *context, BufferAssignmentTypeConverter *converter,
+      PatternBenefit benefit = 1)
+      : OpConversionPattern<SourceOp>(context, benefit), converter(converter) {
+    assert(converter && "The type converter has not been defined");
+  }
 
-/// Converts the signature of the function based on whether the function is
-/// allowed to return memref typed results or not using
-/// `allowMemrefFunctionResults` parameter. If this option is false, then it
-/// adds an extra function argument as an output buffer for each function result
-/// which is going to be a memref type only after type conversion. The
-/// other function result types remain unchanged. If
-/// `allowMemrefFunctionResults` is true, the types are converted in place.
-/// Any changes in function signature need to be applied
-/// to return and caller operations. `BufferAssignmentReturnOpConverter` and
-/// `BufferAssignmentCallOpConverter` are two helper function that match the
-/// return and caller operation with the new function signature. Furthermore,
-/// `BufferAssignmentTypeConverter` is a helper `TypeConverter` for converting
-/// tensor typed values to memref typed ones.
-template <bool allowMemrefFunctionResults>
+protected:
+  BufferAssignmentTypeConverter *converter;
+};
+
+/// Converts the signature of the function using BufferAssignmentTypeConverter.
+/// Each result type of the function is kept as a function result or appended to
+/// the function arguments list based on ResultConversionKind for the converted
+/// result type.
 class BufferAssignmentFuncOpConverter
     : public BufferAssignmentOpConversionPattern<FuncOp> {
 public:
@@ -112,58 +157,16 @@ public:
       FuncOp>::BufferAssignmentOpConversionPattern;
 
   /// Performs the actual signature rewriting step.
-  LogicalResult
-  matchAndRewrite(mlir::FuncOp funcOp, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const final {
-    if (!converter)
-      return funcOp.emitError("The type converter has not been defined for "
-                              "BufferAssignmentFuncOpConverter");
-    auto funcType = funcOp.getType();
-
-    // Convert function arguments using the provided TypeConverter.
-    TypeConverter::SignatureConversion conversion(funcType.getNumInputs());
-    for (auto argType : llvm::enumerate(funcType.getInputs()))
-      conversion.addInputs(argType.index(),
-                           converter->convertType(argType.value()));
-
-    // If allowMemrefFunctionResults is false and a function result type is not
-    // a memref but it would be a memref after type conversion, a new argument
-    // should be appended to the function arguments list for this result.
-    // Otherwise, it remains unchanged as a function result.
-    SmallVector<Type, 2> newResultTypes;
-    newResultTypes.reserve(funcOp.getNumResults());
-    for (Type resType : funcType.getResults()) {
-      Type convertedType = converter->convertType(resType);
-      if (!allowMemrefFunctionResults &&
-          BufferAssignmentTypeConverter::isConvertedMemref(convertedType,
-                                                           resType))
-        conversion.addInputs(convertedType);
-      else
-        newResultTypes.push_back(convertedType);
-    }
-    if (failed(rewriter.convertRegionTypes(&funcOp.getBody(), *converter,
-                                           &conversion)))
-      return failure();
-
-    // Update the signature of the function.
-    rewriter.updateRootInPlace(funcOp, [&] {
-      funcOp.setType(rewriter.getFunctionType(conversion.getConvertedTypes(),
-                                              newResultTypes));
-    });
-    return success();
-  }
+  LogicalResult matchAndRewrite(mlir::FuncOp, ArrayRef<Value>,
+                                ConversionPatternRewriter &) const override;
 };
 
 /// Rewrites the `ReturnOp` to conform with the changed function signature.
-/// if allowMemrefFunctionResults is false, operands that correspond to return
-/// values and have been rewritten from illegal typed results to memref
-/// arguments are dropped. In their place, a corresponding copy operation from
-/// the operand to the output function argument is inserted. Otherwise, the
-/// memref typed operands are returned.
-/// Note: If this pattern rewriter is used with BufferAssignmentFuncOpConverter,
-/// allowMemrefFunctionResults must be set/unset for both.
+/// Operands that correspond to return values and their types have been set to
+/// AppendToArgumentsList are dropped. In their place, a corresponding copy
+/// operation from the operand to the target function argument is inserted.
 template <typename ReturnOpSourceTy, typename ReturnOpTargetTy,
-          typename CopyOpTy, bool allowMemrefFunctionResults>
+          typename CopyOpTy>
 class BufferAssignmentReturnOpConverter
     : public BufferAssignmentOpConversionPattern<ReturnOpSourceTy> {
 public:
@@ -174,44 +177,48 @@ public:
   LogicalResult
   matchAndRewrite(ReturnOpSourceTy returnOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    // If the memref typed results can be returned as function results, the new
-    // `ReturnOp` should only return the type converted operands.
-    if (allowMemrefFunctionResults) {
-      rewriter.replaceOpWithNewOp<ReturnOpTargetTy>(returnOp, operands);
-      return success();
+    Location loc = returnOp.getLoc();
+
+    // Split the operands depending on whether they need a copy operation or
+    // they remain as operands of the return operation. If an operand is
+    // decomposable and a decompose callback function has been provided by the
+    // user, it will be unpacked.
+    SmallVector<Value, 2> newOperands, needCopyOperands;
+    OpBuilder builder(returnOp);
+    for (auto operand : llvm::enumerate(operands)) {
+      SmallVector<Value, 2> values;
+      this->converter->tryDecomposeValue(
+          builder, loc, operand.value().getType(), operand.value(), values);
+      Type type = returnOp.getOperand(operand.index()).getType();
+      SmallVector<Type, 2> originTypes;
+      this->converter->tryDecomposeType(type, originTypes);
+      for (auto value : llvm::enumerate(values)) {
+        Type origin = originTypes[value.index()];
+        Type converted = value.value().getType();
+        auto kind = this->converter->getResultConversionKind(origin, converted);
+        if (kind == BufferAssignmentTypeConverter::KeepAsFunctionResult)
+          newOperands.push_back(value.value());
+        else
+          // kind = BufferAssignmentTypeConverter::AppendToArgumentsList
+          needCopyOperands.push_back(value.value());
+      }
     }
 
-    // Split the operands by their kinds whether they are converted memref or
-    // not.
-    SmallVector<Value, 2> needCopyOperands, newOperands;
-    unsigned operandsSize = operands.size();
-    needCopyOperands.reserve(operandsSize);
-    newOperands.reserve(operandsSize);
-    for (auto operand : llvm::enumerate(operands))
-      if (BufferAssignmentTypeConverter::isConvertedMemref(
-              operand.value().getType(),
-              returnOp.getOperand(operand.index()).getType()))
-        needCopyOperands.push_back(operand.value());
-      else
-        newOperands.push_back(operand.value());
-
+    // Insert Copy operations instead for the operands that have been removed
+    // from operand list and appended to the function arguments list.
     Block &entryBlock = returnOp.getParentRegion()->front();
     unsigned numFuncArgs = entryBlock.getNumArguments();
-
-    // Find the index of the first destination buffer.
-    assert(needCopyOperands.size() <= numFuncArgs &&
-           "The number of operands of return operation is more than the "
-           "number of function arguments.");
+    if (needCopyOperands.size() > numFuncArgs)
+      return returnOp.emitError(
+          "The number of operands that need Copy operations is more "
+          "than the number of target function arguments.");
     unsigned destArgNum = numFuncArgs - needCopyOperands.size();
     rewriter.setInsertionPoint(returnOp);
     for (Value operand : needCopyOperands) {
-      // Insert a `CopyOp` for each converted memref-type operand.
-      rewriter.create<CopyOpTy>(returnOp.getLoc(), operand,
+      rewriter.create<CopyOpTy>(loc, operand,
                                 entryBlock.getArgument(destArgNum));
       ++destArgNum;
     }
-
-    // Insert the new target Return operation.
     rewriter.replaceOpWithNewOp<ReturnOpTargetTy>(returnOp, newOperands);
     return success();
   }
@@ -219,95 +226,32 @@ public:
 
 /// Rewrites the `CallOp` to match its operands and results with the signature
 /// of the callee after rewriting the callee with
-/// BufferAssignmentFuncOpConverter. If allowMemrefFunctionResults is false, a
-/// buffer is allocated as an output buffer only for each memref typed result
-/// that has been rewritten. The new allocated buffer is passed through the
-/// operands list of the new `CallOp`.
-/// Note: If this pattern rewriter is used with BufferAssignmentFuncOpConverter,
-/// allowMemrefFunctionResults must be set/unset for both.
-template <bool allowMemrefFunctionResults>
+/// BufferAssignmentFuncOpConverter.
 class BufferAssignmentCallOpConverter
     : public BufferAssignmentOpConversionPattern<CallOp> {
 public:
   using BufferAssignmentOpConversionPattern<
       CallOp>::BufferAssignmentOpConversionPattern;
 
-  LogicalResult
-  matchAndRewrite(CallOp callOp, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const final {
-    if (!converter)
-      return callOp.emitError("The type converter has not been defined for "
-                              "BufferAssignmentCallOpConverter");
-    Location loc = callOp.getLoc();
-
-    // If the memref typed results can be returned as function results, there is
-    // no need to create output buffers. It is only required to convert the type
-    // of operands and results in place for creating the new `CallOp`.
-    if (allowMemrefFunctionResults) {
-      SmallVector<Type, 2> resultTypes;
-      resultTypes.reserve(callOp.getNumResults());
-      for (Type type : callOp.getResultTypes())
-        resultTypes.push_back(converter->convertType(type));
-      rewriter.replaceOpWithNewOp<CallOp>(callOp, callOp.getCallee(),
-                                          resultTypes, operands);
-      return success();
-    }
-
-    SmallVector<Value, 2> newOperands, replacingValues;
-    SmallVector<Type, 2> newResultTypes;
-    unsigned numResults = callOp.getNumResults();
-    newOperands.reserve(numResults + operands.size());
-    newOperands.append(operands.begin(), operands.end());
-    newResultTypes.reserve(numResults);
-    replacingValues.reserve(numResults);
-
-    // For each memref result of `CallOp` which has not been a memref before
-    // the type conversion, a new buffer is allocated and passed to the operands
-    // list of the new `CallOp`. Otherwise, it remains as a caller result.
-    for (Value result : callOp.getResults()) {
-      Type currType = result.getType();
-      Type newType = converter->convertType(result.getType());
-      if (BufferAssignmentTypeConverter::isConvertedMemref(newType, currType)) {
-        OpBuilder::InsertionGuard guard(rewriter);
-        rewriter.restoreInsertionPoint(bufferAssignment->computeAllocPosition(
-            result.dyn_cast<OpResult>()));
-        Value alloc =
-            rewriter.create<AllocOp>(loc, newType.dyn_cast<MemRefType>());
-        newOperands.push_back(alloc);
-        replacingValues.push_back(alloc);
-      } else {
-        newResultTypes.push_back(currType);
-
-        // No replacing is required.
-        replacingValues.push_back(nullptr);
-      }
-    }
-
-    // Creating the new `CallOp`.
-    rewriter.create<CallOp>(loc, callOp.getCallee(), newResultTypes,
-                            newOperands);
-
-    // Replacing the results of the old `CallOp`.
-    rewriter.replaceOp(callOp, replacingValues);
-    return success();
-  }
+  /// Performs the actual rewriting step.
+  LogicalResult matchAndRewrite(CallOp, ArrayRef<Value>,
+                                ConversionPatternRewriter &) const override;
 };
-} // end namespace detail
 
 /// Populates `patterns` with the conversion patterns of buffer
 /// assignment.
 template <typename ReturnOpSourceTy, typename ReturnOpTargetTy,
-          typename CopyOpTy, bool allowMemrefFunctionResults>
+          typename CopyOpTy>
 static void populateWithBufferAssignmentOpConversionPatterns(
-    MLIRContext *context, BufferAssignmentPlacer *placer,
-    TypeConverter *converter, OwningRewritePatternList *patterns) {
+    MLIRContext *context, BufferAssignmentTypeConverter *converter,
+    OwningRewritePatternList *patterns) {
   // clang-format off
   patterns->insert<
-    detail::BufferAssignmentCallOpConverter<allowMemrefFunctionResults>,
-    detail::BufferAssignmentFuncOpConverter<allowMemrefFunctionResults>,
-    detail::BufferAssignmentReturnOpConverter
-      <ReturnOpSourceTy, ReturnOpTargetTy, CopyOpTy, allowMemrefFunctionResults>
-  >(context, placer, converter);
+    BufferAssignmentCallOpConverter,
+    BufferAssignmentFuncOpConverter,
+    BufferAssignmentReturnOpConverter
+      <ReturnOpSourceTy, ReturnOpTargetTy, CopyOpTy>
+  >(context, converter);
   // clang-format on
 }
 } // end namespace mlir

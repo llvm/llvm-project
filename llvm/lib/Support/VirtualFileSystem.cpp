@@ -1159,6 +1159,17 @@ StringRef RedirectingFileSystem::getExternalContentsPrefixDir() const {
   return ExternalContentsPrefixDir;
 }
 
+void RedirectingFileSystem::setFallthrough(bool Fallthrough) {
+  IsFallthrough = Fallthrough;
+}
+
+std::vector<StringRef> RedirectingFileSystem::getRoots() const {
+  std::vector<StringRef> R;
+  for (const auto &Root : Roots)
+    R.push_back(Root->getName());
+  return R;
+}
+
 void RedirectingFileSystem::dump(raw_ostream &OS) const {
   for (const auto &Root : Roots)
     dumpEntry(OS, Root.get());

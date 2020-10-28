@@ -27,6 +27,10 @@ void AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
                      const llvm::opt::ArgList &Args,
                      llvm::opt::ArgStringList &CmdArgs, const JobAction &JA);
 
+void addLinkerCompressDebugSectionsOption(const ToolChain &TC,
+                                          const llvm::opt::ArgList &Args,
+                                          llvm::opt::ArgStringList &CmdArgs);
+
 void claimNoWarnArgs(const llvm::opt::ArgList &Args);
 
 bool addSanitizerRuntimes(const ToolChain &TC, const llvm::opt::ArgList &Args,
@@ -45,7 +49,7 @@ void AddRunTimeLibs(const ToolChain &TC, const Driver &D,
                     llvm::opt::ArgStringList &CmdArgs,
                     const llvm::opt::ArgList &Args);
 
-const char *SplitDebugName(const llvm::opt::ArgList &Args,
+const char *SplitDebugName(const JobAction &JA, const llvm::opt::ArgList &Args,
                            const InputInfo &Input, const InputInfo &Output);
 
 void SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,

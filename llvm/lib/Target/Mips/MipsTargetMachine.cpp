@@ -163,21 +163,15 @@ MipsTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
 
-  std::string CPU = !CPUAttr.hasAttribute(Attribute::None)
-                        ? CPUAttr.getValueAsString().str()
-                        : TargetCPU;
-  std::string FS = !FSAttr.hasAttribute(Attribute::None)
-                       ? FSAttr.getValueAsString().str()
-                       : TargetFS;
-  bool hasMips16Attr =
-      !F.getFnAttribute("mips16").hasAttribute(Attribute::None);
-  bool hasNoMips16Attr =
-      !F.getFnAttribute("nomips16").hasAttribute(Attribute::None);
+  std::string CPU =
+      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  std::string FS =
+      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+  bool hasMips16Attr = F.getFnAttribute("mips16").isValid();
+  bool hasNoMips16Attr = F.getFnAttribute("nomips16").isValid();
 
-  bool HasMicroMipsAttr =
-      !F.getFnAttribute("micromips").hasAttribute(Attribute::None);
-  bool HasNoMicroMipsAttr =
-      !F.getFnAttribute("nomicromips").hasAttribute(Attribute::None);
+  bool HasMicroMipsAttr = F.getFnAttribute("micromips").isValid();
+  bool HasNoMicroMipsAttr = F.getFnAttribute("nomicromips").isValid();
 
   // FIXME: This is related to the code below to reset the target options,
   // we need to know whether or not the soft float flag is set on the
@@ -322,7 +316,7 @@ void MipsPassConfig::addPreEmitPass() {
 }
 
 bool MipsPassConfig::addIRTranslator() {
-  addPass(new IRTranslator());
+  addPass(new IRTranslator(getOptLevel()));
   return false;
 }
 

@@ -344,4 +344,4 @@ void DecodeVPERMV3Mask(const Constant *C, unsigned ElSize, unsigned Width,
     ShuffleMask.push_back(Index);
   }
 }
-} // llvm namespace
+} // namespace llvm

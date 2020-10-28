@@ -42,7 +42,7 @@ OpFoldResult StructAccessOp::fold(ArrayRef<Attribute> operands) {
   if (!structAttr)
     return nullptr;
 
-  size_t elementIndex = index().getZExtValue();
+  size_t elementIndex = index();
   return structAttr[elementIndex];
 }
 

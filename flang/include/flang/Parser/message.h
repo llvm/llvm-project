@@ -186,14 +186,14 @@ public:
   bool SortBefore(const Message &that) const;
   bool IsFatal() const;
   std::string ToString() const;
-  std::optional<ProvenanceRange> GetProvenanceRange(const CookedSource &) const;
-  void Emit(llvm::raw_ostream &, const CookedSource &,
+  std::optional<ProvenanceRange> GetProvenanceRange(
+      const AllCookedSources &) const;
+  void Emit(llvm::raw_ostream &, const AllCookedSources &,
       bool echoSourceLine = true) const;
 
-  // If this Message or any of its attachments locates itself via a CharBlock
-  // within a particular CookedSource, replace its location with the
-  // corresponding ProvenanceRange.
-  void ResolveProvenances(const CookedSource &);
+  // If this Message or any of its attachments locates itself via a CharBlock,
+  // replace its location with the corresponding ProvenanceRange.
+  void ResolveProvenances(const AllCookedSources &);
 
   bool IsMergeable() const {
     return std::holds_alternative<MessageExpectedText>(text_);
@@ -255,8 +255,8 @@ public:
   bool Merge(const Message &);
   void Merge(Messages &&);
   void Copy(const Messages &);
-  void ResolveProvenances(const CookedSource &);
-  void Emit(llvm::raw_ostream &, const CookedSource &cooked,
+  void ResolveProvenances(const AllCookedSources &);
+  void Emit(llvm::raw_ostream &, const AllCookedSources &,
       bool echoSourceLines = true) const;
   void AttachTo(Message &);
   bool AnyFatalError() const;

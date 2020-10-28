@@ -385,3 +385,28 @@ func @bitcast_folding(%I1: vector<4x8xf32>, %I2: vector<2xi32>) -> (vector<4x8xf
   %2 = vector.bitcast %1 : vector<4xi16> to vector<2xi32>
   return %0, %2 : vector<4x8xf32>, vector<2xi32>
 }
+
+// -----
+
+// CHECK-LABEL: broadcast_folding1
+//       CHECK: %[[CST:.*]] = constant dense<42> : vector<4xi32>
+//   CHECK-NOT: vector.broadcast
+//       CHECK: return %[[CST]]
+func @broadcast_folding1() -> vector<4xi32> {
+  %0 = constant 42 : i32
+  %1 = vector.broadcast %0 : i32 to vector<4xi32>
+  return %1 : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @broadcast_folding2
+//       CHECK: %[[CST:.*]] = constant dense<42> : vector<4x16xi32>
+//   CHECK-NOT: vector.broadcast
+//       CHECK: return %[[CST]]
+func @broadcast_folding2() -> vector<4x16xi32> {
+  %0 = constant 42 : i32
+  %1 = vector.broadcast %0 : i32 to vector<16xi32>
+  %2 = vector.broadcast %1 : vector<16xi32> to vector<4x16xi32>
+  return %2 : vector<4x16xi32>
+}

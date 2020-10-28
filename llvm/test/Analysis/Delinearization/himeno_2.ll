@@ -1,4 +1,5 @@
-; RUN: opt < %s -analyze -delinearize | FileCheck %s
+; RUN: opt < %s -analyze -enable-new-pm=0 -delinearize | FileCheck %s
+; RUN: opt < %s -passes='print<delinearization>' -disable-output 2>&1 | FileCheck %s
 
 ; #define MR(mt,n,r,c,d)  mt->m[(n) * mt->mrows * mt->mcols * mt->mdeps + (r) * mt->mcols* mt->mdeps + (c) * mt->mdeps + (d)]
 ;

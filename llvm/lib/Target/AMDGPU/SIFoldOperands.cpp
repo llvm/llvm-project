@@ -192,8 +192,8 @@ static bool updateOperand(FoldCandidate &Fold,
   if (Fold.isImm()) {
     if (MI->getDesc().TSFlags & SIInstrFlags::IsPacked &&
         !(MI->getDesc().TSFlags & SIInstrFlags::IsMAI) &&
-        AMDGPU::isInlinableLiteralV216(static_cast<uint16_t>(Fold.ImmToFold),
-                                       ST.hasInv2PiInlineImm())) {
+        AMDGPU::isFoldableLiteralV216(Fold.ImmToFold,
+                                      ST.hasInv2PiInlineImm())) {
       // Set op_sel/op_sel_hi on this operand or bail out if op_sel is
       // already set.
       unsigned Opcode = MI->getOpcode();
@@ -209,30 +209,30 @@ static bool updateOperand(FoldCandidate &Fold,
       ModIdx = AMDGPU::getNamedOperandIdx(Opcode, ModIdx);
       MachineOperand &Mod = MI->getOperand(ModIdx);
       unsigned Val = Mod.getImm();
-      if ((Val & SISrcMods::OP_SEL_0) || !(Val & SISrcMods::OP_SEL_1))
-        return false;
-      // Only apply the following transformation if that operand requries
-      // a packed immediate.
-      switch (TII.get(Opcode).OpInfo[OpNo].OperandType) {
-      case AMDGPU::OPERAND_REG_IMM_V2FP16:
-      case AMDGPU::OPERAND_REG_IMM_V2INT16:
-      case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
-      case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
-        // If upper part is all zero we do not need op_sel_hi.
-        if (!isUInt<16>(Fold.ImmToFold)) {
-          if (!(Fold.ImmToFold & 0xffff)) {
-            Mod.setImm(Mod.getImm() | SISrcMods::OP_SEL_0);
+      if (!(Val & SISrcMods::OP_SEL_0) && (Val & SISrcMods::OP_SEL_1)) {
+        // Only apply the following transformation if that operand requries
+        // a packed immediate.
+        switch (TII.get(Opcode).OpInfo[OpNo].OperandType) {
+        case AMDGPU::OPERAND_REG_IMM_V2FP16:
+        case AMDGPU::OPERAND_REG_IMM_V2INT16:
+        case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
+        case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+          // If upper part is all zero we do not need op_sel_hi.
+          if (!isUInt<16>(Fold.ImmToFold)) {
+            if (!(Fold.ImmToFold & 0xffff)) {
+              Mod.setImm(Mod.getImm() | SISrcMods::OP_SEL_0);
+              Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
+              Old.ChangeToImmediate((Fold.ImmToFold >> 16) & 0xffff);
+              return true;
+            }
             Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
-            Old.ChangeToImmediate((Fold.ImmToFold >> 16) & 0xffff);
+            Old.ChangeToImmediate(Fold.ImmToFold & 0xffff);
             return true;
           }
-          Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
-          Old.ChangeToImmediate(Fold.ImmToFold & 0xffff);
-          return true;
+          break;
+        default:
+          break;
         }
-        break;
-      default:
-        break;
       }
     }
   }
@@ -282,9 +282,6 @@ static bool updateOperand(FoldCandidate &Fold,
   assert(!Fold.needsShrink() && "not handled");
 
   if (Fold.isImm()) {
-    // FIXME: ChangeToImmediate should probably clear the subreg flags. It's
-    // reinterpreted as TargetFlags.
-    Old.setSubReg(0);
     Old.ChangeToImmediate(Fold.ImmToFold);
     return true;
   }
@@ -358,10 +355,17 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
     }
 
     // Special case for s_setreg_b32
-    if (Opc == AMDGPU::S_SETREG_B32 && OpToFold->isImm()) {
-      MI->setDesc(TII->get(AMDGPU::S_SETREG_IMM32_B32));
-      appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
-      return true;
+    if (OpToFold->isImm()) {
+      unsigned ImmOpc = 0;
+      if (Opc == AMDGPU::S_SETREG_B32)
+        ImmOpc = AMDGPU::S_SETREG_IMM32_B32;
+      else if (Opc == AMDGPU::S_SETREG_B32_mode)
+        ImmOpc = AMDGPU::S_SETREG_IMM32_B32_mode;
+      if (ImmOpc) {
+        MI->setDesc(TII->get(ImmOpc));
+        appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
+        return true;
+      }
     }
 
     // If we are already folding into another operand of MI, then
@@ -834,8 +838,6 @@ void SIFoldOperands::foldOperand(
 
         UseMI->setDesc(TII->get(AMDGPU::S_MOV_B32));
 
-        // FIXME: ChangeToImmediate should clear subreg
-        UseMI->getOperand(1).setSubReg(0);
         if (OpToFold.isImm())
           UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
         else
@@ -1045,25 +1047,6 @@ static bool tryConstantFoldOp(MachineRegisterInfo &MRI,
 
   if (!Src0->isImm() && !Src1->isImm())
     return false;
-
-  if (MI->getOpcode() == AMDGPU::V_LSHL_OR_B32 ||
-      MI->getOpcode() == AMDGPU::V_LSHL_ADD_U32 ||
-      MI->getOpcode() == AMDGPU::V_AND_OR_B32) {
-    if (Src0->isImm() && Src0->getImm() == 0) {
-      // v_lshl_or_b32 0, X, Y -> copy Y
-      // v_lshl_or_b32 0, X, K -> v_mov_b32 K
-      // v_lshl_add_b32 0, X, Y -> copy Y
-      // v_lshl_add_b32 0, X, K -> v_mov_b32 K
-      // v_and_or_b32 0, X, Y -> copy Y
-      // v_and_or_b32 0, X, K -> v_mov_b32 K
-      bool UseCopy = TII->getNamedOperand(*MI, AMDGPU::OpName::src2)->isReg();
-      MI->RemoveOperand(Src1Idx);
-      MI->RemoveOperand(Src0Idx);
-
-      MI->setDesc(TII->get(UseCopy ? AMDGPU::COPY : AMDGPU::V_MOV_B32_e32));
-      return true;
-    }
-  }
 
   // and k0, k1 -> v_mov_b32 (k0 & k1)
   // or k0, k1 -> v_mov_b32 (k0 | k1)

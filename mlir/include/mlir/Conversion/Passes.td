@@ -239,17 +239,22 @@ def ConvertShapeToStandard : Pass<"convert-shape-to-std", "ModuleOp"> {
   let summary = "Convert operations from the shape dialect into the standard "
                 "dialect";
   let constructor = "mlir::createConvertShapeToStandardPass()";
-  let dependentDialects = ["StandardOpsDialect"];
+  let dependentDialects = ["StandardOpsDialect", "scf::SCFDialect"];
 }
 
-//===----------------------------------------------------------------------===//
-// ShapeToSCF
-//===----------------------------------------------------------------------===//
+def ConvertShapeConstraints: Pass<"convert-shape-constraints", "FuncOp"> {
+  let summary = "Convert shape constraint operations to the standard dialect";
+  let description = [{
+    This pass eliminates shape constraints from the program, converting them to
+    eager (side-effecting) error handling code.
 
-def ConvertShapeToSCF : FunctionPass<"convert-shape-to-scf"> {
-  let summary = "Convert operations from the shape dialect to the SCF dialect";
-  let constructor = "mlir::createConvertShapeToSCFPass()";
-  let dependentDialects = ["scf::SCFDialect"];
+    This pass is separate from the regular convert-shape-to-standard, despite
+    converting between the same dialects, because converting shape constraints
+    can happen at a different part of the program than general shape
+    computation lowering.
+  }];
+  let constructor = "mlir::createConvertShapeConstraintsPass()";
+  let dependentDialects = ["StandardOpsDialect", "scf::SCFDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -358,7 +363,10 @@ def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
   let options = [
     Option<"reassociateFPReductions", "reassociate-fp-reductions",
            "bool", /*default=*/"false",
-           "Allows llvm to reassociate floating-point reductions for speed">
+           "Allows llvm to reassociate floating-point reductions for speed">,
+    Option<"enableIndexOptimizations", "enable-index-optimizations",
+           "bool", /*default=*/"true",
+           "Allows compiler to assume indices fit in 32-bit if that yields faster code">
   ];
 }
 

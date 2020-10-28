@@ -18,9 +18,9 @@ std::optional<Success> DebugParser::Parse(ParseState &state) const {
       std::string note{str_, length_};
       Message message{state.GetLocation(), "parser debug: %s"_en_US, note};
       message.SetContext(state.context().get());
-      message.Emit(*out, ustate->cooked(), true);
+      message.Emit(*out, ustate->allCooked(), true);
     }
   }
-  return {Success{}};
+  return Success{};
 }
 } // namespace Fortran::parser

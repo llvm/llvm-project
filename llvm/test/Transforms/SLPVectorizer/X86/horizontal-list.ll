@@ -266,24 +266,52 @@ entry:
   ret i32 %conv4
 }
 
+; FIXME: Use fmaxnum intrinsics to match what InstCombine creates for fcmp+select
+; with fastmath on the select.
 define float @bar() {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* bitcast ([20 x float]* @arr to <4 x float>*), align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* bitcast ([20 x float]* @arr1 to <4 x float>*), align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.experimental.vector.reduce.fmax.v4f32(<4 x float> [[TMP2]])
-; CHECK-NEXT:    store float [[TMP3]], float* @res, align 4
-; CHECK-NEXT:    ret float [[TMP3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, <2 x float>* bitcast ([20 x float]* @arr to <2 x float>*), align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, <2 x float>* bitcast ([20 x float]* @arr1 to <2 x float>*), align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; CHECK-NEXT:    [[CMP4:%.*]] = fcmp fast ogt float [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[MAX_0_MUL3:%.*]] = select i1 [[CMP4]], float [[TMP3]], float [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr, i64 0, i64 2), align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr1, i64 0, i64 2), align 8
+; CHECK-NEXT:    [[MUL3_1:%.*]] = fmul fast float [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[CMP4_1:%.*]] = fcmp fast ogt float [[MAX_0_MUL3]], [[MUL3_1]]
+; CHECK-NEXT:    [[MAX_0_MUL3_1:%.*]] = select i1 [[CMP4_1]], float [[MAX_0_MUL3]], float [[MUL3_1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr, i64 0, i64 3), align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr1, i64 0, i64 3), align 4
+; CHECK-NEXT:    [[MUL3_2:%.*]] = fmul fast float [[TMP8]], [[TMP7]]
+; CHECK-NEXT:    [[CMP4_2:%.*]] = fcmp fast ogt float [[MAX_0_MUL3_1]], [[MUL3_2]]
+; CHECK-NEXT:    [[MAX_0_MUL3_2:%.*]] = select i1 [[CMP4_2]], float [[MAX_0_MUL3_1]], float [[MUL3_2]]
+; CHECK-NEXT:    store float [[MAX_0_MUL3_2]], float* @res, align 4
+; CHECK-NEXT:    ret float [[MAX_0_MUL3_2]]
 ;
 ; THRESHOLD-LABEL: @bar(
 ; THRESHOLD-NEXT:  entry:
-; THRESHOLD-NEXT:    [[TMP0:%.*]] = load <4 x float>, <4 x float>* bitcast ([20 x float]* @arr to <4 x float>*), align 16
-; THRESHOLD-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* bitcast ([20 x float]* @arr1 to <4 x float>*), align 16
-; THRESHOLD-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP0]]
-; THRESHOLD-NEXT:    [[TMP3:%.*]] = call fast float @llvm.experimental.vector.reduce.fmax.v4f32(<4 x float> [[TMP2]])
-; THRESHOLD-NEXT:    store float [[TMP3]], float* @res, align 4
-; THRESHOLD-NEXT:    ret float [[TMP3]]
+; THRESHOLD-NEXT:    [[TMP0:%.*]] = load <2 x float>, <2 x float>* bitcast ([20 x float]* @arr to <2 x float>*), align 16
+; THRESHOLD-NEXT:    [[TMP1:%.*]] = load <2 x float>, <2 x float>* bitcast ([20 x float]* @arr1 to <2 x float>*), align 16
+; THRESHOLD-NEXT:    [[TMP2:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP0]]
+; THRESHOLD-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; THRESHOLD-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; THRESHOLD-NEXT:    [[CMP4:%.*]] = fcmp fast ogt float [[TMP3]], [[TMP4]]
+; THRESHOLD-NEXT:    [[MAX_0_MUL3:%.*]] = select i1 [[CMP4]], float [[TMP3]], float [[TMP4]]
+; THRESHOLD-NEXT:    [[TMP5:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr, i64 0, i64 2), align 8
+; THRESHOLD-NEXT:    [[TMP6:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr1, i64 0, i64 2), align 8
+; THRESHOLD-NEXT:    [[MUL3_1:%.*]] = fmul fast float [[TMP6]], [[TMP5]]
+; THRESHOLD-NEXT:    [[CMP4_1:%.*]] = fcmp fast ogt float [[MAX_0_MUL3]], [[MUL3_1]]
+; THRESHOLD-NEXT:    [[MAX_0_MUL3_1:%.*]] = select i1 [[CMP4_1]], float [[MAX_0_MUL3]], float [[MUL3_1]]
+; THRESHOLD-NEXT:    [[TMP7:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr, i64 0, i64 3), align 4
+; THRESHOLD-NEXT:    [[TMP8:%.*]] = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr1, i64 0, i64 3), align 4
+; THRESHOLD-NEXT:    [[MUL3_2:%.*]] = fmul fast float [[TMP8]], [[TMP7]]
+; THRESHOLD-NEXT:    [[CMP4_2:%.*]] = fcmp fast ogt float [[MAX_0_MUL3_1]], [[MUL3_2]]
+; THRESHOLD-NEXT:    [[MAX_0_MUL3_2:%.*]] = select i1 [[CMP4_2]], float [[MAX_0_MUL3_1]], float [[MUL3_2]]
+; THRESHOLD-NEXT:    store float [[MAX_0_MUL3_2]], float* @res, align 4
+; THRESHOLD-NEXT:    ret float [[MAX_0_MUL3_2]]
 ;
 entry:
   %0 = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @arr, i64 0, i64 0), align 16

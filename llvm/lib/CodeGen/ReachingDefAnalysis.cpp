@@ -397,7 +397,6 @@ ReachingDefAnalysis::getGlobalReachingDefs(MachineInstr *MI, int PhysReg,
     return;
   }
 
-  SmallPtrSet<MachineBasicBlock *, 2> Visited;
   for (auto *MBB : MI->getParent()->predecessors())
     getLiveOuts(MBB, PhysReg, Defs);
 }
@@ -434,21 +433,17 @@ MachineInstr *ReachingDefAnalysis::getUniqueReachingMIDef(MachineInstr *MI,
   if (LocalDef && InstIds.lookup(LocalDef) < InstIds.lookup(MI))
     return LocalDef;
 
-  SmallPtrSet<MachineBasicBlock*, 4> VisitedBBs;
   SmallPtrSet<MachineInstr*, 2> Incoming;
   MachineBasicBlock *Parent = MI->getParent();
-  VisitedBBs.insert(Parent);
   for (auto *Pred : Parent->predecessors())
-    getLiveOuts(Pred, PhysReg, Incoming, VisitedBBs);
+    getLiveOuts(Pred, PhysReg, Incoming);
 
-  // If we have a local def and an incoming instruction, then there's not a
-  // unique instruction def.
-  if (!Incoming.empty() && LocalDef)
-    return nullptr;
-  else if (Incoming.size() == 1)
+  // Check that we have a single incoming value and that it does not
+  // come from the same block as MI - since it would mean that the def
+  // is executed after MI.
+  if (Incoming.size() == 1 && (*Incoming.begin())->getParent() != Parent)
     return *Incoming.begin();
-  else
-    return LocalDef;
+  return nullptr;
 }
 
 MachineInstr *ReachingDefAnalysis::getMIOperand(MachineInstr *MI,
@@ -545,7 +540,7 @@ static bool mayHaveSideEffects(MachineInstr &MI) {
 template<typename Iterator>
 bool ReachingDefAnalysis::isSafeToMove(MachineInstr *From,
                                        MachineInstr *To) const {
-  if (From->getParent() != To->getParent())
+  if (From->getParent() != To->getParent() || From == To)
     return false;
 
   SmallSet<int, 2> Defs;
@@ -574,12 +569,22 @@ bool ReachingDefAnalysis::isSafeToMove(MachineInstr *From,
 
 bool ReachingDefAnalysis::isSafeToMoveForwards(MachineInstr *From,
                                                MachineInstr *To) const {
-  return isSafeToMove<MachineBasicBlock::reverse_iterator>(From, To);
+  using Iterator = MachineBasicBlock::iterator;
+  // Walk forwards until we find the instruction.
+  for (auto I = Iterator(From), E = From->getParent()->end(); I != E; ++I)
+    if (&*I == To)
+      return isSafeToMove<Iterator>(From, To);
+  return false;
 }
 
 bool ReachingDefAnalysis::isSafeToMoveBackwards(MachineInstr *From,
                                                 MachineInstr *To) const {
-  return isSafeToMove<MachineBasicBlock::iterator>(From, To);
+  using Iterator = MachineBasicBlock::reverse_iterator;
+  // Walk backwards until we find the instruction.
+  for (auto I = Iterator(From), E = From->getParent()->rend(); I != E; ++I)
+    if (&*I == To)
+      return isSafeToMove<Iterator>(From, To);
+  return false;
 }
 
 bool ReachingDefAnalysis::isSafeToRemove(MachineInstr *MI,
@@ -630,6 +635,9 @@ void ReachingDefAnalysis::collectKilledOperands(MachineInstr *MI,
                                                 InstSet &Dead) const {
   Dead.insert(MI);
   auto IsDead = [this, &Dead](MachineInstr *Def, int PhysReg) {
+    if (mayHaveSideEffects(*Def))
+      return false;
+
     unsigned LiveDefs = 0;
     for (auto &MO : Def->operands()) {
       if (!isValidRegDef(MO))
@@ -670,7 +678,7 @@ bool ReachingDefAnalysis::isSafeToDefRegAt(MachineInstr *MI, int PhysReg,
   if (isRegUsedAfter(MI, PhysReg)) {
     if (auto *Def = getReachingLocalMIDef(MI, PhysReg)) {
       SmallPtrSet<MachineInstr*, 2> Uses;
-      getReachingLocalUses(Def, PhysReg, Uses);
+      getGlobalUses(Def, PhysReg, Uses);
       for (auto *Use : Uses)
         if (!Ignore.count(Use))
           return false;

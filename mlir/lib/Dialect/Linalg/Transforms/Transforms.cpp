@@ -126,8 +126,43 @@ LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewrite(
 
   // New marker if specified.
   marker.replaceLinalgMarker(rewriter, res->op.getOperation());
+  return success();
+}
 
-  rewriter.eraseOp(op);
+mlir::linalg::LinalgBaseTileAndFusePattern::LinalgBaseTileAndFusePattern(
+    StringRef opName, MLIRContext *context,
+    const LinalgDependenceGraph &dependenceGraph,
+    LinalgTilingOptions tilingOptions, LinalgFusionOptions fusionOptions,
+    LinalgMarker marker, LinalgMarker fusedOpMarker,
+    LinalgMarker originalOpMarker, PatternBenefit benefit)
+    : RewritePattern(opName, {}, benefit, context),
+      dependenceGraph(dependenceGraph), tilingOptions(tilingOptions),
+      fusionOptions(fusionOptions), marker(marker),
+      fusedOpMarker(fusedOpMarker), originalOpMarker(originalOpMarker) {}
+
+LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
+    Operation *op, PatternRewriter &rewriter) const {
+  LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
+  if (!linalgOp)
+    return failure();
+  if (failed(marker.checkAndNotify(rewriter, linalgOp)))
+    return failure();
+  if (!linalgOp.hasBufferSemantics())
+    return failure();
+
+  Optional<TiledAndFusedLinalgOps> tiledAndFusedOps = tileAndFuseLinalgOps(
+      rewriter, op, dependenceGraph, tilingOptions, fusionOptions);
+  if (!tiledAndFusedOps)
+    return failure();
+  marker.replaceLinalgMarker(rewriter, tiledAndFusedOps->op.getOperation());
+  for (auto fusedOp : tiledAndFusedOps->fusedProducers) {
+    fusedOpMarker.replaceLinalgMarker(rewriter, fusedOp.getOperation());
+  }
+  for (auto origProducerOp : tiledAndFusedOps->originalProducers)
+    originalOpMarker.replaceLinalgMarker(rewriter,
+                                         origProducerOp.getOperation());
+  rewriter.updateRootInPlace(
+      op, [&]() { originalOpMarker.replaceLinalgMarker(rewriter, op); });
   return success();
 }
 

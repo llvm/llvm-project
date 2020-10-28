@@ -113,6 +113,8 @@ public:
 const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
                                         DWARFSectionKind Kind);
 
+bool isCompileUnit(const std::unique_ptr<DWARFUnit> &U);
+
 /// Describe a collection of units. Intended to hold all units either from
 /// .debug_info and .debug_types, or from .debug_info.dwo and .debug_types.dwo.
 class DWARFUnitVector final : public SmallVector<std::unique_ptr<DWARFUnit>, 1> {
@@ -126,6 +128,9 @@ public:
   using UnitVector = SmallVectorImpl<std::unique_ptr<DWARFUnit>>;
   using iterator = typename UnitVector::iterator;
   using iterator_range = llvm::iterator_range<typename UnitVector::iterator>;
+
+  using compile_unit_range =
+      decltype(make_filter_range(std::declval<iterator_range>(), isCompileUnit));
 
   DWARFUnit *getUnitForOffset(uint64_t Offset) const;
   DWARFUnit *getUnitForIndexEntry(const DWARFUnitIndex::Entry &E);
@@ -523,6 +528,10 @@ private:
   /// it was actually constructed.
   bool parseDWO();
 };
+
+inline bool isCompileUnit(const std::unique_ptr<DWARFUnit> &U) {
+  return !U->isTypeUnit();
+}
 
 } // end namespace llvm
 

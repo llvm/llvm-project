@@ -6,28 +6,36 @@
 
 # LLVM:      Relocations [
 # LLVM-NEXT:   Section (3) .rel.text {
-# LLVM-NEXT: warning: '[[FILE]]': unable to print relocation 1 in section 3: unable to access section [index 6] data at 0x17e7e7e8b0: offset goes past the end of file
-# LLVM-NEXT: warning: '[[FILE]]': unable to print relocation 2 in section 3: unable to access section [index 6] data at 0x17e7e7e8b0: offset goes past the end of file
+# LLVM-NEXT: warning: '[[FILE]]': unable to print relocation 1 in SHT_REL section with index 3: unable to access section [index 6] data at 0x17e7e7e8d0: offset goes past the end of file
+# LLVM-NEXT: warning: '[[FILE]]': unable to print relocation 2 in SHT_REL section with index 3: unable to access section [index 6] data at 0x17e7e7e8d0: offset goes past the end of file
 # LLVM-NEXT:     0x2 R_X86_64_NONE - 0x0
-# LLVM-NEXT: warning: '[[FILE]]': unable to print relocation 4 in section 3: invalid section index: 255
-# LLVM-NEXT: warning: '[[FILE]]': unable to print relocation 5 in section 3: a section [index 2] has an invalid sh_name (0xfefefefe) offset which goes past the end of the section name string table
+# LLVM-NEXT:     0x3 R_X86_64_NONE .sec.symbol1 0x0
+# LLVM-NEXT: warning: '[[FILE]]': invalid section index: 255
+# LLVM-NEXT:     0x4 R_X86_64_NONE <section 255> 0x0
+# LLVM-NEXT:     0x5 R_X86_64_NONE .sec.symbol2 0x0
+# LLVM-NEXT: warning: '[[FILE]]': a section [index 2] has an invalid sh_name (0xfefefefe) offset which goes past the end of the section name string table
+# LLVM-NEXT:     0x6 R_X86_64_NONE <section 2> 0x0
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Section (4) .rela.text {
-# LLVM-NEXT: warning: '[[FILE]]': unable to print relocation 1 in section 4: invalid sh_type for symbol table, expected SHT_SYMTAB or SHT_DYNSYM
+# LLVM-NEXT: warning: '[[FILE]]': unable to print relocation 1 in SHT_RELA section with index 4: invalid sh_type for symbol table, expected SHT_SYMTAB or SHT_DYNSYM
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]
 
-# GNU:       Relocation section '.rel.text' at offset 0x41 contains 5 entries:
+# GNU:       Relocation section '.rel.text' at offset 0x41 contains 7 entries:
 # GNU-NEXT:      Offset             Info             Type               Symbol's Value  Symbol's Name
-# GNU-NEXT:  warning: '[[FILE]]': unable to print relocation 1 in section 3: unable to access section [index 6] data at 0x17e7e7e8b0: offset goes past the end of file
-# GNU-NEXT:  warning: '[[FILE]]': unable to print relocation 2 in section 3: unable to access section [index 6] data at 0x17e7e7e8b0: offset goes past the end of file
+# GNU-NEXT:  warning: '[[FILE]]': unable to print relocation 1 in SHT_REL section with index 3: unable to access section [index 6] data at 0x17e7e7e8d0: offset goes past the end of file
+# GNU-NEXT:  warning: '[[FILE]]': unable to print relocation 2 in SHT_REL section with index 3: unable to access section [index 6] data at 0x17e7e7e8d0: offset goes past the end of file
 # GNU-NEXT:  0000000000000002  0000000000000000 R_X86_64_NONE
-# GNU-NEXT:  warning: '[[FILE]]': unable to print relocation 4 in section 3: invalid section index: 255
-# GNU-NEXT:  warning: '[[FILE]]': unable to print relocation 5 in section 3: a section [index 2] has an invalid sh_name (0xfefefefe) offset which goes past the end of the section name string table
+# GNU-NEXT:  0000000000000003  0000000200000000 R_X86_64_NONE 0000000000000000 .sec.symbol1
+# GNU-NEXT:  warning: '[[FILE]]': invalid section index: 255
+# GNU-NEXT:  0000000000000004  0000000400000000 R_X86_64_NONE 0000000000000000 <section 255>
+# GNU-NEXT:  0000000000000005  0000000300000000 R_X86_64_NONE 0000000000000000 .sec.symbol2
+# GNU-NEXT:  warning: '[[FILE]]': a section [index 2] has an invalid sh_name (0xfefefefe) offset which goes past the end of the section name string table
+# GNU-NEXT:  0000000000000006  0000000500000000 R_X86_64_NONE 0000000000000000 <section 2>
 # GNU-EMPTY:
-# GNU-NEXT:  Relocation section '.rela.text' at offset 0x91 contains 1 entries:
+# GNU-NEXT:  Relocation section '.rela.text' at offset 0xb1 contains 1 entries:
 # GNU-NEXT:      Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
-# GNU-NEXT:  warning: '[[FILE]]': unable to print relocation 1 in section 4: invalid sh_type for symbol table, expected SHT_SYMTAB or SHT_DYNSYM
+# GNU-NEXT:  warning: '[[FILE]]': unable to print relocation 1 in SHT_RELA section with index 4: invalid sh_type for symbol table, expected SHT_SYMTAB or SHT_DYNSYM
 
 --- !ELF
 FileHeader:
@@ -55,17 +63,27 @@ Sections:
       - Offset: 0x2
         Symbol: 0
         Type:   R_X86_64_NONE
-## Case 3: Test a relocation against a section symbol that has an invalid
+## Case 3: Test a relocation against a named section symbol that has an invalid
 ##         section index (larger than the number of sections).
       - Offset: 0x3
         Symbol: .sec.symbol1
         Type:   R_X86_64_NONE
-## Case 4: Test a relocation against a section symbol that has an invalid
-##         sh_name offset that goes past the end of the section name string table.
+## Case 4: Test a relocation against an unnamed section symbol that has an invalid
+##         section index (larger than the number of sections).
       - Offset: 0x4
+        Symbol: 4
+        Type:   R_X86_64_NONE
+## Case 4: Test a relocation against a named section symbol with a section with an invalid
+##         sh_name offset that goes past the end of the section name string table.
+      - Offset: 0x5
         Symbol: .sec.symbol2
         Type:   R_X86_64_NONE
-## Case 5: Test a relocation in a section that is linked to a symbol table that
+## Case 5: Test a relocation against an unnamed section symbol with a section with an invalid
+##         sh_name offset that goes past the end of the section name string table.
+      - Offset: 0x6
+        Symbol: 5
+        Type:   R_X86_64_NONE
+## Case 6: Test a relocation in a section that is linked to a symbol table that
 ##         has a section type that is neither SHT_SYMTAB nor SHT_DYNSYM.
 ##         In this case the code fails to find a corresponding symbol string table.
   - Name: .rela.text
@@ -73,7 +91,7 @@ Sections:
     Info: .text
     Link: .fake.symtab
     Relocations:
-      - Offset: 0x5
+      - Offset: 0x7
         Symbol: symbol
         Type:   R_X86_64_NONE
   - Name:    .fake.symtab
@@ -89,4 +107,8 @@ Symbols:
     Index: 0xFF
   - Name:  .sec.symbol2
     Type:  STT_SECTION
+    Index: 0x2
+  - Type:  STT_SECTION
+    Index: 0xFF
+  - Type:  STT_SECTION
     Index: 0x2

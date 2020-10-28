@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -affine-super-vectorizer-test -vector-shape-ratio 4 -vector-shape-ratio 8 2>&1 | FileCheck %s
 // RUN: mlir-opt %s -affine-super-vectorizer-test -vector-shape-ratio 2 -vector-shape-ratio 5 -vector-shape-ratio 2 2>&1 | FileCheck %s -check-prefix=TEST-3x4x5x8
+// RUN: mlir-opt %s -affine-super-vectorizer-test -vectorize-affine-loop-nest 2>&1 | FileCheck %s -check-prefix=VECNEST
 
 func @vector_add_2d(%arg0: index, %arg1: index) -> f32 {
   // Nothing should be matched in this first block.
@@ -35,3 +36,27 @@ func @vector_add_2d(%arg0: index, %arg1: index) -> f32 {
   %9 = load %2[%c7, %c42] : memref<?x?xf32>
   return %9 : f32
 }
+
+// VECNEST-LABEL: func @double_loop_nest
+func @double_loop_nest(%a: memref<20x30xf32>, %b: memref<20xf32>) {
+
+  affine.for %i = 0 to 20 {
+    %b_ld = affine.load %b[%i] : memref<20xf32>
+    affine.for %j = 0 to 30 {
+      %a_ld = affine.load %a[%i, %j] : memref<20x30xf32>
+      affine.store %a_ld, %a[%i, %j] : memref<20x30xf32>
+    }
+    affine.store %b_ld, %b[%i] : memref<20xf32>
+  }
+
+  return
+}
+
+// VECNEST:       affine.for %{{.*}} = 0 to 20 step 4 {
+// VECNEST:         vector.transfer_read
+// VECNEST-NEXT:    affine.for %{{.*}} = 0 to 30 {
+// VECNEST:           vector.transfer_read
+// VECNEST-NEXT:      vector.transfer_write
+// VECNEST-NEXT:    }
+// VECNEST-NEXT:    vector.transfer_write
+// VECNEST:       }

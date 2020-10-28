@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYFORCELINKER_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYFORCELINKER_H
 
-#include "clang/Config/config.h"
+#include "clang-tidy-config.h"
 #include "llvm/Support/Compiler.h"
 
 namespace clang {
@@ -19,6 +19,11 @@ namespace tidy {
 extern volatile int AbseilModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED AbseilModuleAnchorDestination =
     AbseilModuleAnchorSource;
+
+// This anchor is used to force the linker to link the AlteraModule.
+extern volatile int AlteraModuleAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED AlteraModuleAnchorDestination =
+    AlteraModuleAnchorSource;
 
 // This anchor is used to force the linker to link the AndroidModule.
 extern volatile int AndroidModuleAnchorSource;
@@ -90,7 +95,7 @@ extern volatile int ModernizeModuleAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED ModernizeModuleAnchorDestination =
     ModernizeModuleAnchorSource;
 
-#if CLANG_ENABLE_STATIC_ANALYZER &&                                            \
+#if CLANG_TIDY_ENABLE_STATIC_ANALYZER &&                                       \
     !defined(CLANG_TIDY_DISABLE_STATIC_ANALYZER_CHECKS)
 // This anchor is used to force the linker to link the MPIModule.
 extern volatile int MPIModuleAnchorSource;

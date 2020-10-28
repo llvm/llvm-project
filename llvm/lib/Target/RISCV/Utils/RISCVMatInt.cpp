@@ -8,10 +8,8 @@
 
 #include "RISCVMatInt.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/MachineValueType.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/Support/MathExtras.h"
-#include <cstdint>
 
 namespace llvm {
 

@@ -122,6 +122,8 @@ def SPV_ConvertFToSOp : SPV_CastOp<"ConvertFToS", SPV_Integer, SPV_Float, []> {
     %3 = spv.ConvertFToS %2 : vector<3xf32> to vector<3xi32>
     ```
   }];
+
+  let verifier = [{ return verifyCastOp(this->getOperation(), false, true); }];
 }
 
 // -----
@@ -155,6 +157,8 @@ def SPV_ConvertFToUOp : SPV_CastOp<"ConvertFToU", SPV_Integer, SPV_Float, []> {
     %3 = spv.ConvertFToU %2 : vector<3xf32> to vector<3xi32>
     ```
   }];
+
+  let verifier = [{ return verifyCastOp(this->getOperation(), false, true); }];
 }
 
 // -----
@@ -186,6 +190,8 @@ def SPV_ConvertSToFOp : SPV_CastOp<"ConvertSToF", SPV_Float, SPV_Integer, []> {
     %3 = spv.ConvertSToF %2 : vector<3xi32> to vector<3xf32>
     ```
   }];
+
+  let verifier = [{ return verifyCastOp(this->getOperation(), false, true); }];
 }
 
 // -----
@@ -217,6 +223,8 @@ def SPV_ConvertUToFOp : SPV_CastOp<"ConvertUToF", SPV_Float, SPV_Integer, []> {
     %3 = spv.ConvertUToF %2 : vector<3xi32> to vector<3xf32>
     ```
   }];
+
+  let verifier = [{ return verifyCastOp(this->getOperation(), false, true); }];
 }
 
 // -----

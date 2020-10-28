@@ -68,6 +68,29 @@ void LLVMOrcReleaseSymbolStringPoolEntry(LLVMOrcSymbolStringPoolEntryRef S) {
   OrcV2CAPIHelper::releasePoolEntry(unwrap(S));
 }
 
+LLVMOrcJITDylibRef
+LLVMOrcExecutionSessionCreateBareJITDylib(LLVMOrcExecutionSessionRef ES,
+                                          const char *Name) {
+  return wrap(&unwrap(ES)->createBareJITDylib(Name));
+}
+
+LLVMErrorRef
+LLVMOrcExecutionSessionCreateJITDylib(LLVMOrcExecutionSessionRef ES,
+                                      LLVMOrcJITDylibRef *Result,
+                                      const char *Name) {
+  auto JD = unwrap(ES)->createJITDylib(Name);
+  if (!JD)
+    return wrap(JD.takeError());
+  *Result = wrap(&*JD);
+  return LLVMErrorSuccess;
+}
+
+LLVMOrcJITDylibRef
+LLVMOrcExecutionSessionGetJITDylibByName(LLVMOrcExecutionSessionRef ES,
+                                         const char *Name) {
+  return wrap(unwrap(ES)->getJITDylibByName(Name));
+}
+
 void LLVMOrcDisposeJITDylibDefinitionGenerator(
     LLVMOrcJITDylibDefinitionGeneratorRef DG) {
   delete unwrap(DG);

@@ -502,6 +502,17 @@ const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
   llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
+clang::TemplateArgumentLocInfo::TemplateArgumentLocInfo(
+    ASTContext &Ctx, NestedNameSpecifierLoc QualifierLoc,
+    SourceLocation TemplateNameLoc, SourceLocation EllipsisLoc) {
+  TemplateTemplateArgLocInfo *Template = new (Ctx) TemplateTemplateArgLocInfo;
+  Template->Qualifier = QualifierLoc.getNestedNameSpecifier();
+  Template->QualifierLocData = QualifierLoc.getOpaqueData();
+  Template->TemplateNameLoc = TemplateNameLoc.getRawEncoding();
+  Template->EllipsisLoc = EllipsisLoc.getRawEncoding();
+  Pointer = Template;
+}
+
 const ASTTemplateArgumentListInfo *
 ASTTemplateArgumentListInfo::Create(const ASTContext &C,
                                     const TemplateArgumentListInfo &List) {

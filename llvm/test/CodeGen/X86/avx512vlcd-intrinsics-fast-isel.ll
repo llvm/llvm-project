@@ -3,19 +3,11 @@
 ; RUN: llc < %s -fast-isel -mtriple=x86_64-unknown-unknown -mattr=+avx512cd,+avx512vl | FileCheck %s --check-prefixes=CHECK,X64
 
 define <2 x i64> @test_mm_broadcastmb_epi64(<2 x i64> %a, <2 x i64> %b) {
-; X86-LABEL: test_mm_broadcastmb_epi64:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0
-; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    vmovd %eax, %xmm0
-; X86-NEXT:    vpbroadcastq %xmm0, %xmm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm_broadcastmb_epi64:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0
-; X64-NEXT:    vpbroadcastmb2q %k0, %xmm0
-; X64-NEXT:    retq
+; CHECK-LABEL: test_mm_broadcastmb_epi64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0
+; CHECK-NEXT:    vpbroadcastmb2q %k0, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %0 = bitcast <2 x i64> %a to <4 x i32>
   %1 = bitcast <2 x i64> %b to <4 x i32>
@@ -29,19 +21,11 @@ entry:
 }
 
 define <4 x i64> @test_mm256_broadcastmb_epi64(<4 x i64> %a, <4 x i64> %b) {
-; X86-LABEL: test_mm256_broadcastmb_epi64:
-; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpcmpeqq %ymm1, %ymm0, %k0
-; X86-NEXT:    kmovw %k0, %eax
-; X86-NEXT:    vmovd %eax, %xmm0
-; X86-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X86-NEXT:    retl
-;
-; X64-LABEL: test_mm256_broadcastmb_epi64:
-; X64:       # %bb.0: # %entry
-; X64-NEXT:    vpcmpeqq %ymm1, %ymm0, %k0
-; X64-NEXT:    vpbroadcastmb2q %k0, %ymm0
-; X64-NEXT:    retq
+; CHECK-LABEL: test_mm256_broadcastmb_epi64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpcmpeqq %ymm1, %ymm0, %k0
+; CHECK-NEXT:    vpbroadcastmb2q %k0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
 entry:
   %0 = icmp eq <4 x i64> %a, %b
   %1 = shufflevector <4 x i1> %0, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

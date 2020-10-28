@@ -19,13 +19,11 @@ define <2 x i64> @test_mm_abs_epi8(<2 x i64> %a0) {
 ; AVX-NEXT:    vpabsb %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
   %arg = bitcast <2 x i64> %a0 to <16 x i8>
-  %sub = sub <16 x i8> zeroinitializer, %arg
-  %cmp = icmp sgt <16 x i8> %arg, zeroinitializer
-  %sel = select <16 x i1> %cmp, <16 x i8> %arg, <16 x i8> %sub
-  %res = bitcast <16 x i8> %sel to <2 x i64>
+  %abs = call <16 x i8> @llvm.abs.v16i8(<16 x i8> %arg, i1 false)
+  %res = bitcast <16 x i8> %abs to <2 x i64>
   ret <2 x i64> %res
 }
-declare <16 x i8> @llvm.x86.ssse3.pabs.b.128(<16 x i8>) nounwind readnone
+declare <16 x i8> @llvm.abs.v16i8(<16 x i8>, i1) nounwind readnone
 
 define <2 x i64> @test_mm_abs_epi16(<2 x i64> %a0) {
 ; SSE-LABEL: test_mm_abs_epi16:
@@ -38,13 +36,11 @@ define <2 x i64> @test_mm_abs_epi16(<2 x i64> %a0) {
 ; AVX-NEXT:    vpabsw %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
   %arg = bitcast <2 x i64> %a0 to <8 x i16>
-  %sub = sub <8 x i16> zeroinitializer, %arg
-  %cmp = icmp sgt <8 x i16> %arg, zeroinitializer
-  %sel = select <8 x i1> %cmp, <8 x i16> %arg, <8 x i16> %sub
-  %res = bitcast <8 x i16> %sel to <2 x i64>
+  %abs = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %arg, i1 false)
+  %res = bitcast <8 x i16> %abs to <2 x i64>
   ret <2 x i64> %res
 }
-declare <8 x i16> @llvm.x86.ssse3.pabs.w.128(<8 x i16>) nounwind readnone
+declare <8 x i16> @llvm.abs.v8i16(<8 x i16>, i1) nounwind readnone
 
 define <2 x i64> @test_mm_abs_epi32(<2 x i64> %a0) {
 ; SSE-LABEL: test_mm_abs_epi32:
@@ -57,13 +53,11 @@ define <2 x i64> @test_mm_abs_epi32(<2 x i64> %a0) {
 ; AVX-NEXT:    vpabsd %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
   %arg = bitcast <2 x i64> %a0 to <4 x i32>
-  %sub = sub <4 x i32> zeroinitializer, %arg
-  %cmp = icmp sgt <4 x i32> %arg, zeroinitializer
-  %sel = select <4 x i1> %cmp, <4 x i32> %arg, <4 x i32> %sub
-  %res = bitcast <4 x i32> %sel to <2 x i64>
+  %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %arg, i1 false)
+  %res = bitcast <4 x i32> %abs to <2 x i64>
   ret <2 x i64> %res
 }
-declare <4 x i32> @llvm.x86.ssse3.pabs.d.128(<4 x i32>) nounwind readnone
+declare <4 x i32> @llvm.abs.v4i32(<4 x i32>, i1) nounwind readnone
 
 define <2 x i64> @test_mm_alignr_epi8(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE-LABEL: test_mm_alignr_epi8:

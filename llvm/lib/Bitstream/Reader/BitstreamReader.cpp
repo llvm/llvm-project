@@ -187,8 +187,7 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
     SkipToFourByteBoundary();  // 32-bit alignment
 
     // Figure out where the end of this blob will be including tail padding.
-    const size_t NewEnd =
-        GetCurrentBitNo() + ((static_cast<uint64_t>(NumElts) + 3) & ~3) * 8;
+    const size_t NewEnd = GetCurrentBitNo() + alignTo(NumElts, 4) * 8;
 
     // If this would read off the end of the bitcode file, just set the
     // record to empty and return.
@@ -316,8 +315,7 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
 
     // Figure out where the end of this blob will be including tail padding.
     size_t CurBitPos = GetCurrentBitNo();
-    const size_t NewEnd =
-        CurBitPos + ((static_cast<uint64_t>(NumElts) + 3) & ~3) * 8;
+    const size_t NewEnd = CurBitPos + alignTo(NumElts, 4) * 8;
 
     // If this would read off the end of the bitcode file, just set the
     // record to empty and return.

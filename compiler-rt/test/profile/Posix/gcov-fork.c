@@ -17,7 +17,7 @@ int main(void) {                   // CHECK-NEXT: 1: [[#@LINE]]:
   int status;                      // CHECK-NEXT: -: [[#@LINE]]:
   func1();                         // CHECK-NEXT: 1: [[#@LINE]]:
   pid_t pid = fork();              // CHECK-NEXT: 1: [[#@LINE]]:
-  if (pid == -1) return 1;         // CHECK-NEXT: 2: [[#@LINE]]:
+  if (pid == -1) return 1;         // CHECK-NEXT: 1: [[#@LINE]]:
   if (pid)                         // CHECK-NEXT: 2: [[#@LINE]]:
     wait(&status);                 // CHECK-NEXT: 1: [[#@LINE]]:
   func2();                         // CHECK-NEXT: 2: [[#@LINE]]:

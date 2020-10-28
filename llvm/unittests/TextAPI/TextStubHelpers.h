@@ -25,6 +25,7 @@ struct ExportedSymbol {
 using ExportedSymbolSeq = std::vector<ExportedSymbol>;
 using UUIDs = std::vector<std::pair<llvm::MachO::Target, std::string>>;
 using TBDFile = std::unique_ptr<MachO::InterfaceFile>;
+using TBDReexportFile = std::shared_ptr<MachO::InterfaceFile>;
 
 inline bool operator<(const ExportedSymbol &LHS, const ExportedSymbol &RHS) {
   return std::tie(LHS.Kind, LHS.Name) < std::tie(RHS.Kind, RHS.Name);

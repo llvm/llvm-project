@@ -28,6 +28,7 @@
 # CHECK-NEXT:                ]
 # CHECK-NEXT:              }
 # CHECK-NEXT:            },
+# CHECK-NEXT:            "isPreferred": true,
 # CHECK-NEXT:            "kind": "quickfix",
 # CHECK-NEXT:            "title": "change 'union' to 'struct'"
 # CHECK-NEXT:          }

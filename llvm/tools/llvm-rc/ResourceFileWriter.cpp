@@ -138,7 +138,8 @@ enum class NullHandlingMethod {
 };
 
 // Parses an identifier or string and returns a processed version of it:
-//   * String the string boundary quotes.
+//   * Strip the string boundary quotes.
+//   * Convert the input code page characters to UTF16.
 //   * Squash "" to a single ".
 //   * Replace the escape sequences with their processed version.
 // For identifiers, this is no-op.

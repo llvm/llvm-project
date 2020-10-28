@@ -14,7 +14,7 @@
 // RUN:  -target-feature +sve -target-feature +bf16 -msve-vector-bits=2048 \
 // RUN:  | FileCheck %s --check-prefix=CHECK-2048
 
-#define N __ARM_FEATURE_SVE_BITS_EXPERIMENTAL
+#define N __ARM_FEATURE_SVE_BITS
 
 typedef __SVInt8_t fixed_int8_t __attribute__((arm_sve_vector_bits(N)));
 typedef __SVInt16_t fixed_int16_t __attribute__((arm_sve_vector_bits(N)));

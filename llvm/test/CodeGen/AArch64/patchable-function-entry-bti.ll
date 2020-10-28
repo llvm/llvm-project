@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s
 
-define void @f0() "patchable-function-entry"="0" "branch-target-enforcement" {
+define void @f0() "patchable-function-entry"="0" "branch-target-enforcement"="true" {
 ; CHECK-LABEL: f0:
 ; CHECK-NEXT: .Lfunc_begin0:
 ; CHECK:      // %bb.0:
@@ -12,7 +12,7 @@ define void @f0() "patchable-function-entry"="0" "branch-target-enforcement" {
 
 ;; -fpatchable-function-entry=1 -mbranch-protection=bti
 ;; For M=0, place the label .Lpatch0 after the initial BTI.
-define void @f1() "patchable-function-entry"="1" "branch-target-enforcement" {
+define void @f1() "patchable-function-entry"="1" "branch-target-enforcement"="true" {
 ; CHECK-LABEL: f1:
 ; CHECK-NEXT: .Lfunc_begin1:
 ; CHECK-NEXT: .cfi_startproc
@@ -28,7 +28,7 @@ define void @f1() "patchable-function-entry"="1" "branch-target-enforcement" {
 }
 
 ;; -fpatchable-function-entry=2,1 -mbranch-protection=bti
-define void @f2_1() "patchable-function-entry"="1" "patchable-function-prefix"="1" "branch-target-enforcement" {
+define void @f2_1() "patchable-function-entry"="1" "patchable-function-prefix"="1" "branch-target-enforcement"="true" {
 ; CHECK-LABEL: .type f2_1,@function
 ; CHECK-NEXT: .Ltmp0:
 ; CHECK-NEXT:  nop
@@ -50,7 +50,7 @@ define void @f2_1() "patchable-function-entry"="1" "patchable-function-prefix"="
 ;; -fpatchable-function-entry=1 -mbranch-protection=bti
 ;; For M=0, don't create .Lpatch0 if the initial instruction is not BTI,
 ;; even if other basic blocks may have BTI.
-define internal void @f1i(i64 %v) "patchable-function-entry"="1" "branch-target-enforcement" {
+define internal void @f1i(i64 %v) "patchable-function-entry"="1" "branch-target-enforcement"="true" {
 ; CHECK-LABEL: f1i:
 ; CHECK-NEXT: .Lfunc_begin3:
 ; CHECK:      // %bb.0:

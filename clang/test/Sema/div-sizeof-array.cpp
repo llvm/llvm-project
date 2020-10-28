@@ -42,4 +42,8 @@ void test(void) {
 
   float m[4][4];
   int d1 = sizeof(m) / sizeof(**m);
+
+  int array[10];
+  int narray = sizeof(array) / sizeof(int &);
+  int narray2 = sizeof(array) / sizeof(decltype(array[0]));
 }

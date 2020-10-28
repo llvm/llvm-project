@@ -27,7 +27,7 @@ DEFAULT_PARAMETERS = [
   Parameter(name='enable_rtti', choices=[True, False], type=bool, default=True,
             help="Whether to enable RTTI when compiling the test suite.",
             feature=lambda rtti: None if rtti else
-              Feature(name='-fno-rtti', compileFlag='-fno-rtti')),
+              Feature(name='no-rtti', compileFlag='-fno-rtti')),
 
   Parameter(name='stdlib', choices=['libc++', 'libstdc++', 'msvc'], type=str, default='libc++',
             help="The C++ Standard Library implementation being tested.",

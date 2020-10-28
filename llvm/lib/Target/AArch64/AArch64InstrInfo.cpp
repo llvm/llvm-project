@@ -107,6 +107,13 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     NumBytes = PatchPointOpers(&MI).getNumPatchBytes();
     assert(NumBytes % 4 == 0 && "Invalid number of NOP bytes requested!");
     break;
+  case TargetOpcode::STATEPOINT:
+    NumBytes = StatepointOpers(&MI).getNumPatchBytes();
+    assert(NumBytes % 4 == 0 && "Invalid number of NOP bytes requested!");
+    // No patch bytes means a normal call inst is emitted
+    if (NumBytes == 0)
+      NumBytes = 4;
+    break;
   case AArch64::TLSDESC_CALLSEQ:
     // This gets lowered to an instruction sequence which takes 16 bytes
     NumBytes = 16;
@@ -287,6 +294,31 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     }
   }
 
+  // If we're allowed to modify and the block ends in a unconditional branch
+  // which could simply fallthrough, remove the branch.  (Note: This case only
+  // matters when we can't understand the whole sequence, otherwise it's also
+  // handled by BranchFolding.cpp.)
+  if (AllowModify && isUncondBranchOpcode(LastOpc) &&
+      MBB.isLayoutSuccessor(getBranchDestBlock(*LastInst))) {
+    LastInst->eraseFromParent();
+    LastInst = SecondLastInst;
+    LastOpc = LastInst->getOpcode();
+    if (I == MBB.begin() || !isUnpredicatedTerminator(*--I)) {
+      assert(!isUncondBranchOpcode(LastOpc) &&
+             "unreachable unconditional branches removed above");
+
+      if (isCondBranchOpcode(LastOpc)) {
+        // Block ends with fall-through condbranch.
+        parseCondBranch(LastInst, TBB, Cond);
+        return false;
+      }
+      return true; // Can't handle indirect branch.
+    } else {
+      SecondLastInst = &*I;
+      SecondLastOpc = SecondLastInst->getOpcode();
+    }
+  }
+
   // If there are three terminators, we don't know what sort of block this is.
   if (SecondLastInst && I != MBB.begin() && isUnpredicatedTerminator(*--I))
     return true;
@@ -319,6 +351,56 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 
   // Otherwise, can't handle this.
   return true;
+}
+
+bool AArch64InstrInfo::analyzeBranchPredicate(MachineBasicBlock &MBB,
+                                              MachineBranchPredicate &MBP,
+                                              bool AllowModify) const {
+  // For the moment, handle only a block which ends with a cb(n)zx followed by
+  // a fallthrough.  Why this?  Because it is a common form.
+  // TODO: Should we handle b.cc?
+
+  MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
+  if (I == MBB.end())
+    return true;
+
+  // Skip over SpeculationBarrierEndBB terminators
+  if (I->getOpcode() == AArch64::SpeculationBarrierISBDSBEndBB ||
+      I->getOpcode() == AArch64::SpeculationBarrierSBEndBB) {
+    --I;
+  }
+
+  if (!isUnpredicatedTerminator(*I))
+    return true;
+
+  // Get the last instruction in the block.
+  MachineInstr *LastInst = &*I;
+  unsigned LastOpc = LastInst->getOpcode();
+  if (!isCondBranchOpcode(LastOpc))
+    return true;
+
+  switch (LastOpc) {
+  default:
+    return true;
+  case AArch64::CBZW:
+  case AArch64::CBZX:
+  case AArch64::CBNZW:
+  case AArch64::CBNZX:
+    break;
+  };
+
+  MBP.TrueDest = LastInst->getOperand(1).getMBB();
+  assert(MBP.TrueDest && "expected!");
+  MBP.FalseDest = MBB.getNextNode();
+
+  MBP.ConditionDef = nullptr;
+  MBP.SingleUseCondition = false;
+
+  MBP.LHS = LastInst->getOperand(0);
+  MBP.RHS = MachineOperand::CreateImm(0);
+  MBP.Predicate = LastOpc == AArch64::CBNZX ? MachineBranchPredicate::PRED_NE
+                                            : MachineBranchPredicate::PRED_EQ;
+  return false;
 }
 
 bool AArch64InstrInfo::reverseBranchCondition(
@@ -5760,84 +5842,20 @@ AArch64InstrInfo::findRegisterToSaveLRTo(const outliner::Candidate &C) const {
 static bool
 outliningCandidatesSigningScopeConsensus(const outliner::Candidate &a,
                                          const outliner::Candidate &b) {
-  const Function &Fa = a.getMF()->getFunction();
-  const Function &Fb = b.getMF()->getFunction();
+  const auto &MFIa = a.getMF()->getInfo<AArch64FunctionInfo>();
+  const auto &MFIb = b.getMF()->getInfo<AArch64FunctionInfo>();
 
-  // If none of the functions have the "sign-return-address" attribute their
-  // signing behaviour is equal
-  if (!Fa.hasFnAttribute("sign-return-address") &&
-      !Fb.hasFnAttribute("sign-return-address")) {
-    return true;
-  }
-
-  // If both functions have the "sign-return-address" attribute their signing
-  // behaviour is equal, if the values of the attributes are equal
-  if (Fa.hasFnAttribute("sign-return-address") &&
-      Fb.hasFnAttribute("sign-return-address")) {
-    StringRef ScopeA =
-        Fa.getFnAttribute("sign-return-address").getValueAsString();
-    StringRef ScopeB =
-        Fb.getFnAttribute("sign-return-address").getValueAsString();
-    return ScopeA.equals(ScopeB);
-  }
-
-  // If function B doesn't have the "sign-return-address" attribute but A does,
-  // the functions' signing behaviour is equal if A's value for
-  // "sign-return-address" is "none" and vice versa.
-  if (Fa.hasFnAttribute("sign-return-address")) {
-    StringRef ScopeA =
-        Fa.getFnAttribute("sign-return-address").getValueAsString();
-    return ScopeA.equals("none");
-  }
-
-  if (Fb.hasFnAttribute("sign-return-address")) {
-    StringRef ScopeB =
-        Fb.getFnAttribute("sign-return-address").getValueAsString();
-    return ScopeB.equals("none");
-  }
-
-  llvm_unreachable("Unkown combination of sign-return-address attributes");
+  return MFIa->shouldSignReturnAddress(false) == MFIb->shouldSignReturnAddress(false) &&
+         MFIa->shouldSignReturnAddress(true) == MFIb->shouldSignReturnAddress(true);
 }
 
 static bool
 outliningCandidatesSigningKeyConsensus(const outliner::Candidate &a,
                                        const outliner::Candidate &b) {
-  const Function &Fa = a.getMF()->getFunction();
-  const Function &Fb = b.getMF()->getFunction();
+  const auto &MFIa = a.getMF()->getInfo<AArch64FunctionInfo>();
+  const auto &MFIb = b.getMF()->getInfo<AArch64FunctionInfo>();
 
-  // If none of the functions have the "sign-return-address-key" attribute
-  // their keys are equal
-  if (!Fa.hasFnAttribute("sign-return-address-key") &&
-      !Fb.hasFnAttribute("sign-return-address-key")) {
-    return true;
-  }
-
-  // If both functions have the "sign-return-address-key" attribute their
-  // keys are equal if the values of "sign-return-address-key" are equal
-  if (Fa.hasFnAttribute("sign-return-address-key") &&
-      Fb.hasFnAttribute("sign-return-address-key")) {
-    StringRef KeyA =
-        Fa.getFnAttribute("sign-return-address-key").getValueAsString();
-    StringRef KeyB =
-        Fb.getFnAttribute("sign-return-address-key").getValueAsString();
-    return KeyA.equals(KeyB);
-  }
-
-  // If B doesn't have the "sign-return-address-key" attribute, both keys are
-  // equal, if function a has the default key (a_key)
-  if (Fa.hasFnAttribute("sign-return-address-key")) {
-    StringRef KeyA =
-        Fa.getFnAttribute("sign-return-address-key").getValueAsString();
-    return KeyA.equals_lower("a_key");
-  }
-
-  if (Fb.hasFnAttribute("sign-return-address-key")) {
-    StringRef KeyB =
-        Fb.getFnAttribute("sign-return-address-key").getValueAsString();
-    return KeyB.equals_lower("a_key");
-  }
-
-  llvm_unreachable("Unkown combination of sign-return-address-key attributes");
+  return MFIa->shouldSignWithBKey() == MFIb->shouldSignWithBKey();
 }
 
 static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
@@ -5893,9 +5911,10 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
   // v8.3a RET can be replaced by RETAA/RETAB and no AUT instruction is
   // necessary. However, at this point we don't know if the outlined function
   // will have a RET instruction so we assume the worst.
-  const Function &FCF = FirstCand.getMF()->getFunction();
   const TargetRegisterInfo &TRI = getRegisterInfo();
-  if (FCF.hasFnAttribute("sign-return-address")) {
+  if (FirstCand.getMF()
+          ->getInfo<AArch64FunctionInfo>()
+          ->shouldSignReturnAddress(true)) {
     // One PAC and one AUT instructions
     NumBytesToCreateFrame += 8;
 
@@ -6024,7 +6043,7 @@ outliner::OutlinedFunction AArch64InstrInfo::getOutliningCandidateInfo(
   NumBytesToCreateFrame += 4;
 
   bool HasBTI = any_of(RepeatedSequenceLocs, [](outliner::Candidate &C) {
-    return C.getMF()->getFunction().hasFnAttribute("branch-target-enforcement");
+    return C.getMF()->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement();
   });
 
   // We check to see if CFI Instructions are present, and if they are
@@ -6729,27 +6748,11 @@ void AArch64InstrInfo::buildOutlinedFrame(
   // If a bunch of candidates reach this point they must agree on their return
   // address signing. It is therefore enough to just consider the signing
   // behaviour of one of them
-  const Function &CF = OF.Candidates.front().getMF()->getFunction();
-  bool ShouldSignReturnAddr = false;
-  if (CF.hasFnAttribute("sign-return-address")) {
-    StringRef Scope =
-        CF.getFnAttribute("sign-return-address").getValueAsString();
-    if (Scope.equals("all"))
-      ShouldSignReturnAddr = true;
-    else if (Scope.equals("non-leaf") && !IsLeafFunction)
-      ShouldSignReturnAddr = true;
-  }
+  const auto &MFI = *OF.Candidates.front().getMF()->getInfo<AArch64FunctionInfo>();
+  bool ShouldSignReturnAddr = MFI.shouldSignReturnAddress(!IsLeafFunction);
 
   // a_key is the default
-  bool ShouldSignReturnAddrWithAKey = true;
-  if (CF.hasFnAttribute("sign-return-address-key")) {
-    const StringRef Key =
-        CF.getFnAttribute("sign-return-address-key").getValueAsString();
-    // Key can either be a_key or b_key
-    assert((Key.equals_lower("a_key") || Key.equals_lower("b_key")) &&
-           "Return address signing key must be either a_key or b_key");
-    ShouldSignReturnAddrWithAKey = Key.equals_lower("a_key");
-  }
+  bool ShouldSignReturnAddrWithAKey = !MFI.shouldSignWithBKey();
 
   // If this is a tail call outlined function, then there's already a return.
   if (OF.FrameConstructionID == MachineOutlinerTailCall ||

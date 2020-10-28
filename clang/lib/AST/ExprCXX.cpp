@@ -146,6 +146,18 @@ bool CXXTypeidExpr::isPotentiallyEvaluated() const {
   return false;
 }
 
+bool CXXTypeidExpr::isMostDerived(ASTContext &Context) const {
+  assert(!isTypeOperand() && "Cannot call isMostDerived for typeid(type)");
+  const Expr *E = getExprOperand()->IgnoreParenNoopCasts(Context);
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    QualType Ty = DRE->getDecl()->getType();
+    if (!Ty->isPointerType() && !Ty->isReferenceType())
+      return true;
+  }
+
+  return false;
+}
+
 QualType CXXTypeidExpr::getTypeOperand(ASTContext &Context) const {
   assert(isTypeOperand() && "Cannot call getTypeOperand for typeid(expr)");
   Qualifiers Quals;
@@ -690,19 +702,18 @@ const char *CXXNamedCastExpr::getCastName() const {
   }
 }
 
-CXXStaticCastExpr *CXXStaticCastExpr::Create(const ASTContext &C, QualType T,
-                                             ExprValueKind VK,
-                                             CastKind K, Expr *Op,
-                                             const CXXCastPath *BasePath,
-                                             TypeSourceInfo *WrittenTy,
-                                             SourceLocation L,
-                                             SourceLocation RParenLoc,
-                                             SourceRange AngleBrackets) {
+CXXStaticCastExpr *
+CXXStaticCastExpr::Create(const ASTContext &C, QualType T, ExprValueKind VK,
+                          CastKind K, Expr *Op, const CXXCastPath *BasePath,
+                          TypeSourceInfo *WrittenTy, FPOptionsOverride FPO,
+                          SourceLocation L, SourceLocation RParenLoc,
+                          SourceRange AngleBrackets) {
   unsigned PathSize = (BasePath ? BasePath->size() : 0);
-  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
-  auto *E =
-      new (Buffer) CXXStaticCastExpr(T, VK, K, Op, PathSize, WrittenTy, L,
-                                     RParenLoc, AngleBrackets);
+  void *Buffer =
+      C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *, FPOptionsOverride>(
+          PathSize, FPO.requiresTrailingStorage()));
+  auto *E = new (Buffer) CXXStaticCastExpr(T, VK, K, Op, PathSize, WrittenTy,
+                                           FPO, L, RParenLoc, AngleBrackets);
   if (PathSize)
     std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
                               E->getTrailingObjects<CXXBaseSpecifier *>());
@@ -710,9 +721,12 @@ CXXStaticCastExpr *CXXStaticCastExpr::Create(const ASTContext &C, QualType T,
 }
 
 CXXStaticCastExpr *CXXStaticCastExpr::CreateEmpty(const ASTContext &C,
-                                                  unsigned PathSize) {
-  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
-  return new (Buffer) CXXStaticCastExpr(EmptyShell(), PathSize);
+                                                  unsigned PathSize,
+                                                  bool HasFPFeatures) {
+  void *Buffer =
+      C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *, FPOptionsOverride>(
+          PathSize, HasFPFeatures));
+  return new (Buffer) CXXStaticCastExpr(EmptyShell(), PathSize, HasFPFeatures);
 }
 
 CXXDynamicCastExpr *CXXDynamicCastExpr::Create(const ASTContext &C, QualType T,
@@ -823,25 +837,30 @@ CXXAddrspaceCastExpr *CXXAddrspaceCastExpr::CreateEmpty(const ASTContext &C) {
   return new (C) CXXAddrspaceCastExpr(EmptyShell());
 }
 
-CXXFunctionalCastExpr *
-CXXFunctionalCastExpr::Create(const ASTContext &C, QualType T, ExprValueKind VK,
-                              TypeSourceInfo *Written, CastKind K, Expr *Op,
-                              const CXXCastPath *BasePath,
-                              SourceLocation L, SourceLocation R) {
+CXXFunctionalCastExpr *CXXFunctionalCastExpr::Create(
+    const ASTContext &C, QualType T, ExprValueKind VK, TypeSourceInfo *Written,
+    CastKind K, Expr *Op, const CXXCastPath *BasePath, FPOptionsOverride FPO,
+    SourceLocation L, SourceLocation R) {
   unsigned PathSize = (BasePath ? BasePath->size() : 0);
-  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
-  auto *E =
-      new (Buffer) CXXFunctionalCastExpr(T, VK, Written, K, Op, PathSize, L, R);
+  void *Buffer =
+      C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *, FPOptionsOverride>(
+          PathSize, FPO.requiresTrailingStorage()));
+  auto *E = new (Buffer)
+      CXXFunctionalCastExpr(T, VK, Written, K, Op, PathSize, FPO, L, R);
   if (PathSize)
     std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
                               E->getTrailingObjects<CXXBaseSpecifier *>());
   return E;
 }
 
-CXXFunctionalCastExpr *
-CXXFunctionalCastExpr::CreateEmpty(const ASTContext &C, unsigned PathSize) {
-  void *Buffer = C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *>(PathSize));
-  return new (Buffer) CXXFunctionalCastExpr(EmptyShell(), PathSize);
+CXXFunctionalCastExpr *CXXFunctionalCastExpr::CreateEmpty(const ASTContext &C,
+                                                          unsigned PathSize,
+                                                          bool HasFPFeatures) {
+  void *Buffer =
+      C.Allocate(totalSizeToAlloc<CXXBaseSpecifier *, FPOptionsOverride>(
+          PathSize, HasFPFeatures));
+  return new (Buffer)
+      CXXFunctionalCastExpr(EmptyShell(), PathSize, HasFPFeatures);
 }
 
 SourceLocation CXXFunctionalCastExpr::getBeginLoc() const {
@@ -940,7 +959,7 @@ CXXDefaultInitExpr::CXXDefaultInitExpr(const ASTContext &Ctx,
   CXXDefaultInitExprBits.Loc = Loc;
   assert(Field->hasInClassInitializer());
 
-  setDependence(ExprDependence::None);
+  setDependence(computeDependence(this));
 }
 
 CXXTemporary *CXXTemporary::Create(const ASTContext &C,

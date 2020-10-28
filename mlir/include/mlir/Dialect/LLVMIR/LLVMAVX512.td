@@ -21,7 +21,7 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 
 def LLVMAVX512_Dialect : Dialect {
   let name = "llvm_avx512";
-  let cppNamespace = "LLVM";
+  let cppNamespace = "::mlir::LLVM";
 }
 
 //----------------------------------------------------------------------------//

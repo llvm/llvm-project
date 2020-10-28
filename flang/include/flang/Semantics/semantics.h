@@ -30,7 +30,7 @@ class IntrinsicTypeDefaultKinds;
 namespace Fortran::parser {
 struct Name;
 struct Program;
-class CookedSource;
+class AllCookedSources;
 struct AssociateConstruct;
 struct BlockConstruct;
 struct CaseConstruct;
@@ -60,7 +60,7 @@ using ConstructStack = std::vector<ConstructNode>;
 class SemanticsContext {
 public:
   SemanticsContext(const common::IntrinsicTypeDefaultKinds &,
-      const common::LanguageFeatureControl &, parser::AllSources &);
+      const common::LanguageFeatureControl &, parser::AllCookedSources &);
   ~SemanticsContext();
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds() const {
@@ -89,7 +89,7 @@ public:
   Scope &globalScope() { return globalScope_; }
   parser::Messages &messages() { return messages_; }
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
-  parser::AllSources &allSources() { return allSources_; }
+  parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
 
   SemanticsContext &set_location(
       const std::optional<parser::CharBlock> &location) {
@@ -179,7 +179,7 @@ private:
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds_;
   const common::LanguageFeatureControl languageFeatures_;
-  parser::AllSources &allSources_;
+  parser::AllCookedSources &allCookedSources_;
   std::optional<parser::CharBlock> location_;
   std::vector<std::string> searchDirectories_;
   std::string moduleDirectory_{"."s};
@@ -204,10 +204,10 @@ private:
 class Semantics {
 public:
   explicit Semantics(SemanticsContext &context, parser::Program &program,
-      parser::CookedSource &cooked, bool debugModuleWriter = false)
-      : context_{context}, program_{program}, cooked_{cooked} {
+      parser::CharBlock charBlock, bool debugModuleWriter = false)
+      : context_{context}, program_{program} {
     context.set_debugModuleWriter(debugModuleWriter);
-    context.globalScope().AddSourceRange(parser::CharBlock{cooked.data()});
+    context.globalScope().AddSourceRange(charBlock);
   }
 
   SemanticsContext &context() const { return context_; }
@@ -223,7 +223,6 @@ public:
 private:
   SemanticsContext &context_;
   parser::Program &program_;
-  const parser::CookedSource &cooked_;
 };
 
 // Base class for semantics checkers.

@@ -200,10 +200,16 @@ class ImplicitNullChecks : public MachineFunctionPass {
                                        unsigned PointerReg,
                                        ArrayRef<MachineInstr *> PrevInsts);
 
+  /// Returns true if \p DependenceMI can clobber the liveIns in NullSucc block
+  /// if it was hoisted to the NullCheck block. This is used by caller
+  /// canHoistInst to decide if DependenceMI can be hoisted safely.
+  bool canDependenceHoistingClobberLiveIns(MachineInstr *DependenceMI,
+                                           MachineBasicBlock *NullSucc);
+
   /// Return true if \p FaultingMI can be hoisted from after the
   /// instructions in \p InstsSeenSoFar to before them.  Set \p Dependence to a
-  /// non-null value if we also need to (and legally can) hoist a depedency.
-  bool canHoistInst(MachineInstr *FaultingMI, unsigned PointerReg,
+  /// non-null value if we also need to (and legally can) hoist a dependency.
+  bool canHoistInst(MachineInstr *FaultingMI,
                     ArrayRef<MachineInstr *> InstsSeenSoFar,
                     MachineBasicBlock *NullSucc, MachineInstr *&Dependence);
 
@@ -275,12 +281,12 @@ bool ImplicitNullChecks::canReorder(const MachineInstr *A,
   // between A and B here -- for instance, we should not be dealing with heap
   // load-store dependencies here.
 
-  for (auto MOA : A->operands()) {
+  for (const auto &MOA : A->operands()) {
     if (!(MOA.isReg() && MOA.getReg()))
       continue;
 
     Register RegA = MOA.getReg();
-    for (auto MOB : B->operands()) {
+    for (const auto &MOB : B->operands()) {
       if (!(MOB.isReg() && MOB.getReg()))
         continue;
 
@@ -367,19 +373,31 @@ ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
   bool OffsetIsScalable;
   const MachineOperand *BaseOp;
 
+  // Implementation restriction for faulting_op insertion
+  // TODO: This could be relaxed if we find a test case which warrants it.
+  if (MI.getDesc().getNumDefs() > 1)
+   return SR_Unsuitable;
 
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI) ||
-      !BaseOp->isReg() || BaseOp->getReg() != PointerReg)
+  // FIXME: This handles only simple addressing mode.
+  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI))
     return SR_Unsuitable;
 
-  // FIXME: This algorithm assumes instructions have fixed-size offsets.
+  // We need the base of the memory instruction to be same as the register
+  // where the null check is performed (i.e. PointerReg).
+  if (!BaseOp->isReg() || BaseOp->getReg() != PointerReg)
+    return SR_Unsuitable;
+
+  // Scalable offsets are a part of scalable vectors (SVE for AArch64). That
+  // target is in-practice unsupported for ImplicitNullChecks.
   if (OffsetIsScalable)
+    return SR_Unsuitable;
+
+  if (!MI.mayLoadOrStore() || MI.isPredicable())
     return SR_Unsuitable;
 
   // We want the mem access to be issued at a sane offset from PointerReg,
   // so that if PointerReg is null then the access reliably page faults.
-  if (!(MI.mayLoadOrStore() && !MI.isPredicable() &&
-        -PageSize < Offset && Offset < PageSize))
+  if (!(-PageSize < Offset && Offset < PageSize))
     return SR_Unsuitable;
 
   // Finally, check whether the current memory access aliases with previous one.
@@ -393,8 +411,39 @@ ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
   return SR_Suitable;
 }
 
+bool ImplicitNullChecks::canDependenceHoistingClobberLiveIns(
+    MachineInstr *DependenceMI, MachineBasicBlock *NullSucc) {
+  for (const auto &DependenceMO : DependenceMI->operands()) {
+    if (!(DependenceMO.isReg() && DependenceMO.getReg()))
+      continue;
+
+    // Make sure that we won't clobber any live ins to the sibling block by
+    // hoisting Dependency.  For instance, we can't hoist INST to before the
+    // null check (even if it safe, and does not violate any dependencies in
+    // the non_null_block) if %rdx is live in to _null_block.
+    //
+    //    test %rcx, %rcx
+    //    je _null_block
+    //  _non_null_block:
+    //    %rdx = INST
+    //    ...
+    //
+    // This restriction does not apply to the faulting load inst because in
+    // case the pointer loaded from is in the null page, the load will not
+    // semantically execute, and affect machine state.  That is, if the load
+    // was loading into %rax and it faults, the value of %rax should stay the
+    // same as it would have been had the load not have executed and we'd have
+    // branched to NullSucc directly.
+    if (AnyAliasLiveIn(TRI, NullSucc, DependenceMO.getReg()))
+      return true;
+
+  }
+
+  // The dependence does not clobber live-ins in NullSucc block.
+  return false;
+}
+
 bool ImplicitNullChecks::canHoistInst(MachineInstr *FaultingMI,
-                                      unsigned PointerReg,
                                       ArrayRef<MachineInstr *> InstsSeenSoFar,
                                       MachineBasicBlock *NullSucc,
                                       MachineInstr *&Dependence) {
@@ -419,37 +468,8 @@ bool ImplicitNullChecks::canHoistInst(MachineInstr *FaultingMI,
   if (DependenceMI->mayLoadOrStore())
     return false;
 
-  for (auto &DependenceMO : DependenceMI->operands()) {
-    if (!(DependenceMO.isReg() && DependenceMO.getReg()))
-      continue;
-
-    // Make sure that we won't clobber any live ins to the sibling block by
-    // hoisting Dependency.  For instance, we can't hoist INST to before the
-    // null check (even if it safe, and does not violate any dependencies in
-    // the non_null_block) if %rdx is live in to _null_block.
-    //
-    //    test %rcx, %rcx
-    //    je _null_block
-    //  _non_null_block:
-    //    %rdx = INST
-    //    ...
-    //
-    // This restriction does not apply to the faulting load inst because in
-    // case the pointer loaded from is in the null page, the load will not
-    // semantically execute, and affect machine state.  That is, if the load
-    // was loading into %rax and it faults, the value of %rax should stay the
-    // same as it would have been had the load not have executed and we'd have
-    // branched to NullSucc directly.
-    if (AnyAliasLiveIn(TRI, NullSucc, DependenceMO.getReg()))
-      return false;
-
-    // The Dependency can't be re-defining the base register -- then we won't
-    // get the memory operation on the address we want.  This is already
-    // checked in \c IsSuitableMemoryOp.
-    assert(!(DependenceMO.isDef() &&
-             TRI->regsOverlap(DependenceMO.getReg(), PointerReg)) &&
-           "Should have been checked before!");
-  }
+  if (canDependenceHoistingClobberLiveIns(DependenceMI, NullSucc))
+    return false;
 
   auto DepDepResult =
       computeDependence(DependenceMI, {InstsSeenSoFar.begin(), DependenceItr});
@@ -486,9 +506,9 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
          MBP.Predicate == MachineBranchPredicate::PRED_EQ)))
     return false;
 
-  // If we cannot erase the test instruction itself, then making the null check
-  // implicit does not buy us much.
-  if (!MBP.SingleUseCondition)
+  // If there is a separate condition generation instruction, we chose not to
+  // transform unless we can remove both condition and consuming branch.
+  if (MBP.ConditionDef && !MBP.SingleUseCondition)
     return false;
 
   MachineBasicBlock *NotNullSucc, *NullSucc;
@@ -506,32 +526,34 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
   if (NotNullSucc->pred_size() != 1)
     return false;
 
-  // To prevent the invalid transformation of the following code:
-  //
-  //   mov %rax, %rcx
-  //   test %rax, %rax
-  //   %rax = ...
-  //   je throw_npe
-  //   mov(%rcx), %r9
-  //   mov(%rax), %r10
-  //
-  // into:
-  //
-  //   mov %rax, %rcx
-  //   %rax = ....
-  //   faulting_load_op("movl (%rax), %r10", throw_npe)
-  //   mov(%rcx), %r9
-  //
-  // we must ensure that there are no instructions between the 'test' and
-  // conditional jump that modify %rax.
   const Register PointerReg = MBP.LHS.getReg();
 
-  assert(MBP.ConditionDef->getParent() ==  &MBB && "Should be in basic block");
+  if (MBP.ConditionDef) {
+    // To prevent the invalid transformation of the following code:
+    //
+    //   mov %rax, %rcx
+    //   test %rax, %rax
+    //   %rax = ...
+    //   je throw_npe
+    //   mov(%rcx), %r9
+    //   mov(%rax), %r10
+    //
+    // into:
+    //
+    //   mov %rax, %rcx
+    //   %rax = ....
+    //   faulting_load_op("movl (%rax), %r10", throw_npe)
+    //   mov(%rcx), %r9
+    //
+    // we must ensure that there are no instructions between the 'test' and
+    // conditional jump that modify %rax.
+    assert(MBP.ConditionDef->getParent() ==  &MBB &&
+           "Should be in basic block");
 
-  for (auto I = MBB.rbegin(); MBP.ConditionDef != &*I; ++I)
-    if (I->modifiesRegister(PointerReg, TRI))
-      return false;
-
+    for (auto I = MBB.rbegin(); MBP.ConditionDef != &*I; ++I)
+      if (I->modifiesRegister(PointerReg, TRI))
+        return false;
+  }
   // Starting with a code fragment like:
   //
   //   test %rax, %rax
@@ -597,17 +619,15 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
     if (SR == SR_Impossible)
       return false;
     if (SR == SR_Suitable &&
-        canHoistInst(&MI, PointerReg, InstsSeenSoFar, NullSucc, Dependence)) {
+        canHoistInst(&MI, InstsSeenSoFar, NullSucc, Dependence)) {
       NullCheckList.emplace_back(&MI, MBP.ConditionDef, &MBB, NotNullSucc,
                                  NullSucc, Dependence);
       return true;
     }
 
-    // If MI re-defines the PointerReg then we cannot move further.
-    if (llvm::any_of(MI.operands(), [&](MachineOperand &MO) {
-          return MO.isReg() && MO.getReg() && MO.isDef() &&
-                 TRI->regsOverlap(MO.getReg(), PointerReg);
-        }))
+    // If MI re-defines the PointerReg in a way that changes the value of
+    // PointerReg if it was null, then we cannot move further.
+    if (!TII->preservesZeroValueInReg(&MI, PointerReg, TRI))
       return false;
     InstsSeenSoFar.push_back(&MI);
   }
@@ -712,9 +732,11 @@ void ImplicitNullChecks::rewriteNullChecks(
     }
 
     NC.getMemOperation()->eraseFromParent();
-    NC.getCheckOperation()->eraseFromParent();
+    if (auto *CheckOp = NC.getCheckOperation())
+      CheckOp->eraseFromParent();
 
-    // Insert an *unconditional* branch to not-null successor.
+    // Insert an *unconditional* branch to not-null successor - we expect
+    // block placement to remove fallthroughs later.
     TII->insertBranch(*NC.getCheckBlock(), NC.getNotNullSucc(), nullptr,
                       /*Cond=*/None, DL);
 

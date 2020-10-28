@@ -43,6 +43,10 @@ the same `<rpath>` value.
  times to delete multiple rpaths. Throws an error if ``<rpath>`` is not listed in
  the binary.
 
+.. option:: --help, -h
+
+ Print a summary of command line options.
+
 .. option:: -id <name>
 
  Change shared library's identification name under LC_ID_DYLIB to ``<name>`` in the
@@ -54,6 +58,10 @@ the same `<rpath>` value.
  Change an rpath named ``<old_rpath>`` to ``<new_rpath>`` in the specified binary. Can be specified
  multiple times to change multiple rpaths. Throws an error if ``<old_rpath>`` is not listed
  in the binary or ``<new_rpath>`` is already listed in the binary.
+
+.. option:: --version, -V
+
+ Display the version of the :program:`llvm-install-name-tool` executable.
 
 EXIT STATUS
 -----------

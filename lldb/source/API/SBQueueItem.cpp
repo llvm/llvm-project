@@ -80,7 +80,7 @@ SBAddress SBQueueItem::GetAddress() const {
 
   SBAddress result;
   if (m_queue_item_sp) {
-    result.SetAddress(&m_queue_item_sp->GetAddress());
+    result.SetAddress(m_queue_item_sp->GetAddress());
   }
   return LLDB_RECORD_RESULT(result);
 }

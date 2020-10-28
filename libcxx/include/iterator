@@ -1052,9 +1052,19 @@ class _LIBCPP_TEMPLATE_VIS ostream_iterator
     : public iterator<output_iterator_tag, void, void, void, void>
 {
 public:
-    typedef _CharT char_type;
-    typedef _Traits traits_type;
-    typedef basic_ostream<_CharT,_Traits> ostream_type;
+    typedef output_iterator_tag             iterator_category;
+    typedef void                            value_type;
+#if _LIBCPP_STD_VER > 17
+    typedef std::ptrdiff_t                  difference_type;
+#else
+    typedef void                            difference_type;
+#endif
+    typedef void                            pointer;
+    typedef void                            reference;
+    typedef _CharT                          char_type;
+    typedef _Traits                         traits_type;
+    typedef basic_ostream<_CharT, _Traits>  ostream_type;
+
 private:
     ostream_type* __out_stream_;
     const char_type* __delim_;
@@ -1151,10 +1161,20 @@ class _LIBCPP_TEMPLATE_VIS ostreambuf_iterator
     : public iterator<output_iterator_tag, void, void, void, void>
 {
 public:
-    typedef _CharT                          char_type;
-    typedef _Traits                         traits_type;
-    typedef basic_streambuf<_CharT,_Traits> streambuf_type;
-    typedef basic_ostream<_CharT,_Traits>   ostream_type;
+    typedef output_iterator_tag                 iterator_category;
+    typedef void                                value_type;
+#if _LIBCPP_STD_VER > 17
+    typedef std::ptrdiff_t                      difference_type;
+#else
+    typedef void                                difference_type;
+#endif
+    typedef void                                pointer;
+    typedef void                                reference;
+    typedef _CharT                              char_type;
+    typedef _Traits                             traits_type;
+    typedef basic_streambuf<_CharT, _Traits>    streambuf_type;
+    typedef basic_ostream<_CharT, _Traits>      ostream_type;
+
 private:
     streambuf_type* __sbuf_;
 public:
@@ -1373,13 +1393,13 @@ operator+(typename __wrap_iter<_Iter>::difference_type, __wrap_iter<_Iter>) _NOE
 
 template <class _Ip, class _Op> _Op _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 copy(_Ip, _Ip, _Op);
 template <class _B1, class _B2> _B2 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 copy_backward(_B1, _B1, _B2);
-template <class _Ip, class _Op> _Op _LIBCPP_INLINE_VISIBILITY move(_Ip, _Ip, _Op);
-template <class _B1, class _B2> _B2 _LIBCPP_INLINE_VISIBILITY move_backward(_B1, _B1, _B2);
+template <class _Ip, class _Op> _Op _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 move(_Ip, _Ip, _Op);
+template <class _B1, class _B2> _B2 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 move_backward(_B1, _B1, _B2);
 
 #if _LIBCPP_DEBUG_LEVEL < 2
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 typename enable_if
 <
     is_trivially_copy_assignable<_Tp>::value,
@@ -1390,7 +1410,7 @@ __unwrap_iter(__wrap_iter<_Tp*>);
 #else
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 typename enable_if
 <
     is_trivially_copy_assignable<_Tp>::value,
@@ -1584,12 +1604,12 @@ private:
 
     template <class _Ip, class _Op> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _Op copy(_Ip, _Ip, _Op);
     template <class _B1, class _B2> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _B2 copy_backward(_B1, _B1, _B2);
-    template <class _Ip, class _Op> friend _Op move(_Ip, _Ip, _Op);
-    template <class _B1, class _B2> friend _B2 move_backward(_B1, _B1, _B2);
+    template <class _Ip, class _Op> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _Op move(_Ip, _Ip, _Op);
+    template <class _B1, class _B2> friend _LIBCPP_CONSTEXPR_AFTER_CXX17 _B2 move_backward(_B1, _B1, _B2);
 
 #if _LIBCPP_DEBUG_LEVEL < 2
     template <class _Tp>
-    _LIBCPP_CONSTEXPR_IF_NODEBUG friend
+    _LIBCPP_CONSTEXPR friend
     typename enable_if
     <
         is_trivially_copy_assignable<_Tp>::value,
@@ -1598,7 +1618,7 @@ private:
     __unwrap_iter(__wrap_iter<_Tp*>);
 #else
   template <class _Tp>
-  inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+  inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR friend
   typename enable_if
   <
       is_trivially_copy_assignable<_Tp>::value,

@@ -243,8 +243,7 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   IgnoringDiagConsumer IgnoreDiags;
   auto CI = buildCompilerInvocation(PI, IgnoreDiags);
   if (!CI)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "failed to create compiler invocation");
+    return error("failed to create compiler invocation");
   CI->getDiagnosticOpts().IgnoreWarnings = true;
   auto ContentsBuffer = llvm::MemoryBuffer::getMemBuffer(Contents);
   // This means we're scanning (though not preprocessing) the preamble section
@@ -260,14 +259,12 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
       // also implies missing resolved paths for includes.
       FS.view(llvm::None), IgnoreDiags);
   if (Clang->getFrontendOpts().Inputs.empty())
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "compiler instance had no inputs");
+    return error("compiler instance had no inputs");
   // We are only interested in main file includes.
   Clang->getPreprocessorOpts().SingleFileParseMode = true;
   PreprocessOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]))
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "failed BeginSourceFile");
+    return error("failed BeginSourceFile");
   const auto &SM = Clang->getSourceManager();
   Preprocessor &PP = Clang->getPreprocessor();
   IncludeStructure Includes;

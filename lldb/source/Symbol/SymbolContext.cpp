@@ -1010,11 +1010,15 @@ void SymbolContextSpecifier::Clear() {
   m_type = eNothingSpecified;
 }
 
-bool SymbolContextSpecifier::SymbolContextMatches(SymbolContext &sc) {
+bool SymbolContextSpecifier::SymbolContextMatches(const SymbolContext &sc) {
   if (m_type == eNothingSpecified)
     return true;
 
-  if (m_target_sp.get() != sc.target_sp.get())
+  // Only compare targets if this specifier has one and it's not the Dummy
+  // target.  Otherwise if a specifier gets made in the dummy target and
+  // copied over we'll artificially fail the comparision.
+  if (m_target_sp && !m_target_sp->IsDummyTarget() &&
+      m_target_sp != sc.target_sp)
     return false;
 
   if (m_type & eModuleSpecified) {

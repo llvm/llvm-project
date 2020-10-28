@@ -502,7 +502,7 @@ void PopulateLoopsDFS<BlockT, LoopT>::insertIntoLoop(BlockT *Block) {
   if (Subloop && Block == Subloop->getHeader()) {
     // We reach this point once per subloop after processing all the blocks in
     // the subloop.
-    if (Subloop->getParentLoop())
+    if (!Subloop->isOutermost())
       Subloop->getParentLoop()->getSubLoopsVector().push_back(Subloop);
     else
       LI->addTopLevelLoop(Subloop);
@@ -681,7 +681,7 @@ void LoopInfoBase<BlockT, LoopT>::verify(
     const DomTreeBase<BlockT> &DomTree) const {
   DenseSet<const LoopT *> Loops;
   for (iterator I = begin(), E = end(); I != E; ++I) {
-    assert(!(*I)->getParentLoop() && "Top-level loop has a parent!");
+    assert((*I)->isOutermost() && "Top-level loop has a parent!");
     (*I)->verifyLoopNest(&Loops);
   }
 

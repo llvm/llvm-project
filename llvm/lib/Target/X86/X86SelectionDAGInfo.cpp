@@ -24,6 +24,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-selectiondag-info"
 
+static cl::opt<bool>
+    UseFSRMForMemcpy("x86-use-fsrm-for-memcpy", cl::Hidden, cl::init(false),
+                     cl::desc("Use fast short rep mov in memcpy lowering"));
+
 bool X86SelectionDAGInfo::isBaseRegConflictPossible(
     SelectionDAG &DAG, ArrayRef<MCPhysReg> ClobberSet) const {
   // We cannot use TRI->hasBasePointer() until *after* we select all basic
@@ -305,6 +309,10 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
 
   const X86Subtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<X86Subtarget>();
+
+  // If enabled and available, use fast short rep mov.
+  if (UseFSRMForMemcpy && Subtarget.hasFSRM())
+    return emitRepmovs(Subtarget, DAG, dl, Chain, Dst, Src, Size, MVT::i8);
 
   /// Handle constant sizes,
   if (ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size))

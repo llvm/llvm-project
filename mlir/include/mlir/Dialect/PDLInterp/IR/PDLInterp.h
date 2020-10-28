@@ -18,8 +18,6 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
-namespace mlir {
-namespace pdl_interp {
 //===----------------------------------------------------------------------===//
 // PDLInterp Dialect
 //===----------------------------------------------------------------------===//
@@ -32,8 +30,5 @@ namespace pdl_interp {
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/PDLInterp/IR/PDLInterpOps.h.inc"
-
-} // end namespace pdl_interp
-} // end namespace mlir
 
 #endif // MLIR_DIALECT_PDLINTERP_IR_PDLINTERP_H_

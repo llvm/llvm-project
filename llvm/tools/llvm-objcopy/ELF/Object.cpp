@@ -1320,7 +1320,7 @@ void ELFBuilder<ELFT>::readProgramHeaders(const ELFFile<ELFT> &HeadersFile) {
   ElfHdr.Index = Index++;
   ElfHdr.OriginalOffset = ElfHdr.Offset = EhdrOffset;
 
-  const auto &Ehdr = *HeadersFile.getHeader();
+  const typename ELFT::Ehdr &Ehdr = HeadersFile.getHeader();
   auto &PrHdr = Obj.ProgramHdrSegment;
   PrHdr.Type = PT_PHDR;
   PrHdr.Flags = 0;
@@ -1398,7 +1398,7 @@ void ELFBuilder<ELFT>::initSymbolTable(SymbolTableSection *SymTab) {
         const Elf_Shdr &ShndxSec =
             *unwrapOrError(ElfFile.getSection(SymTab->getShndxTable()->Index));
         ShndxData = unwrapOrError(
-            ElfFile.template getSectionContentsAsArray<Elf_Word>(&ShndxSec));
+            ElfFile.template getSectionContentsAsArray<Elf_Word>(ShndxSec));
         if (ShndxData.size() != Symbols.size())
           error("symbol section index table does not have the same number of "
                 "entries as the symbol table");
@@ -1476,7 +1476,7 @@ SectionBase &ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
   case SHT_REL:
   case SHT_RELA:
     if (Shdr.sh_flags & SHF_ALLOC) {
-      Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
+      Data = unwrapOrError(ElfFile.getSectionContents(Shdr));
       return Obj.addSection<DynamicRelocationSection>(Data);
     }
     return Obj.addSection<RelocationSection>();
@@ -1485,7 +1485,7 @@ SectionBase &ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
     // mean altering the memory image. There are no special link types or
     // anything so we can just use a Section.
     if (Shdr.sh_flags & SHF_ALLOC) {
-      Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
+      Data = unwrapOrError(ElfFile.getSectionContents(Shdr));
       return Obj.addSection<Section>(Data);
     }
     return Obj.addSection<StringTableSection>();
@@ -1493,16 +1493,16 @@ SectionBase &ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
   case SHT_GNU_HASH:
     // Hash tables should refer to SHT_DYNSYM which we're not going to change.
     // Because of this we don't need to mess with the hash tables either.
-    Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
+    Data = unwrapOrError(ElfFile.getSectionContents(Shdr));
     return Obj.addSection<Section>(Data);
   case SHT_GROUP:
-    Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
+    Data = unwrapOrError(ElfFile.getSectionContents(Shdr));
     return Obj.addSection<GroupSection>(Data);
   case SHT_DYNSYM:
-    Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
+    Data = unwrapOrError(ElfFile.getSectionContents(Shdr));
     return Obj.addSection<DynamicSymbolTableSection>(Data);
   case SHT_DYNAMIC:
-    Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
+    Data = unwrapOrError(ElfFile.getSectionContents(Shdr));
     return Obj.addSection<DynamicSection>(Data);
   case SHT_SYMTAB: {
     auto &SymTab = Obj.addSection<SymbolTableSection>();
@@ -1517,9 +1517,9 @@ SectionBase &ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
   case SHT_NOBITS:
     return Obj.addSection<Section>(Data);
   default: {
-    Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
+    Data = unwrapOrError(ElfFile.getSectionContents(Shdr));
 
-    StringRef Name = unwrapOrError(ElfFile.getSectionName(&Shdr));
+    StringRef Name = unwrapOrError(ElfFile.getSectionName(Shdr));
     if (Name.startswith(".zdebug") || (Shdr.sh_flags & ELF::SHF_COMPRESSED)) {
       uint64_t DecompressedSize, DecompressedAlign;
       std::tie(DecompressedSize, DecompressedAlign) =
@@ -1541,7 +1541,7 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
       continue;
     }
     auto &Sec = makeSection(Shdr);
-    Sec.Name = std::string(unwrapOrError(ElfFile.getSectionName(&Shdr)));
+    Sec.Name = std::string(unwrapOrError(ElfFile.getSectionName(Shdr)));
     Sec.Type = Sec.OriginalType = Shdr.sh_type;
     Sec.Flags = Sec.OriginalFlags = Shdr.sh_flags;
     Sec.Addr = Shdr.sh_addr;
@@ -1560,7 +1560,7 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
 }
 
 template <class ELFT> void ELFBuilder<ELFT>::readSections(bool EnsureSymtab) {
-  uint32_t ShstrIndex = ElfFile.getHeader()->e_shstrndx;
+  uint32_t ShstrIndex = ElfFile.getHeader().e_shstrndx;
   if (ShstrIndex == SHN_XINDEX)
     ShstrIndex = unwrapOrError(ElfFile.getSection(0))->sh_link;
 
@@ -1602,10 +1602,10 @@ template <class ELFT> void ELFBuilder<ELFT>::readSections(bool EnsureSymtab) {
       auto Shdr = unwrapOrError(ElfFile.sections()).begin() + RelSec->Index;
       if (RelSec->Type == SHT_REL)
         initRelocations(RelSec, Obj.SymbolTable,
-                        unwrapOrError(ElfFile.rels(Shdr)));
+                        unwrapOrError(ElfFile.rels(*Shdr)));
       else
         initRelocations(RelSec, Obj.SymbolTable,
-                        unwrapOrError(ElfFile.relas(Shdr)));
+                        unwrapOrError(ElfFile.relas(*Shdr)));
     } else if (auto GroupSec = dyn_cast<GroupSection>(&Sec)) {
       initGroupSection(GroupSec);
     }
@@ -1622,7 +1622,7 @@ template <class ELFT> void ELFBuilder<ELFT>::build(bool EnsureSymtab) {
   ELFFile<ELFT> HeadersFile = unwrapOrError(ELFFile<ELFT>::create(toStringRef(
       {ElfFile.base() + EhdrOffset, ElfFile.getBufSize() - EhdrOffset})));
 
-  auto &Ehdr = *HeadersFile.getHeader();
+  auto &Ehdr = HeadersFile.getHeader();
   Obj.OSABI = Ehdr.e_ident[EI_OSABI];
   Obj.ABIVersion = Ehdr.e_ident[EI_ABIVERSION];
   Obj.Type = Ehdr.e_type;

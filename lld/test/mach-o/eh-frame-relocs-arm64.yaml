@@ -303,7 +303,7 @@ page-size:       0x00000000
 # correct offset
 # It should be the offset from the fixup location back to the address
 # of the function we are referencing
-# CODE: Contents of section __eh_frame:
+# CODE: Contents of section __TEXT,__eh_frame:
 # This is the CIE:
 # CODE-NEXT: {{[0-9abcdef]*}} 18000000 00000000 037a504c 52000178
 # CODE-NEXT: {{[0-9abcdef]*}} 1e079bd1 ffffff10 100c1f00 28000000

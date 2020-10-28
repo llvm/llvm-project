@@ -603,13 +603,13 @@ template <class AliasAnalysisType> class ClobberWalker {
 
   void addSearches(MemoryPhi *Phi, SmallVectorImpl<ListIndex> &PausedSearches,
                    ListIndex PriorNode) {
-    auto UpwardDefsBegin = upward_defs_begin({Phi, Paths[PriorNode].Loc}, DT);
+    auto UpwardDefsBegin = upward_defs_begin({Phi, Paths[PriorNode].Loc}, DT,
+                                             &PerformedPhiTranslation);
     auto UpwardDefs = make_range(UpwardDefsBegin, upward_defs_end());
     for (const MemoryAccessPair &P : UpwardDefs) {
       PausedSearches.push_back(Paths.size());
       Paths.emplace_back(P.second, P.first, PriorNode);
     }
-    PerformedPhiTranslation |= UpwardDefsBegin.performedPhiTranslation();
   }
 
   /// Represents a search that terminated after finding a clobber. This clobber

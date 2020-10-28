@@ -26,8 +26,8 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -36,6 +36,8 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PHITransAddr.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -46,7 +48,6 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -291,9 +292,9 @@ GVN::Expression GVN::ValueTable::createExpr(Instruction *I) {
   if (I->isCommutative()) {
     // Ensure that commutative instructions that only differ by a permutation
     // of their operands get the same value number by sorting the operand value
-    // numbers.  Since all commutative instructions have two operands it is more
+    // numbers.  Since commutative operands are the 1st two operands it is more
     // efficient to sort by hand rather than using, say, std::sort.
-    assert(I->getNumOperands() == 2 && "Unsupported commutative instruction!");
+    assert(I->getNumOperands() >= 2 && "Unsupported commutative instruction!");
     if (e.varargs[0] > e.varargs[1])
       std::swap(e.varargs[0], e.varargs[1]);
     e.commutative = true;
@@ -408,9 +409,12 @@ uint32_t GVN::ValueTable::lookupOrAddCall(CallInst *C) {
     }
 
     if (local_dep.isDef()) {
-      CallInst* local_cdep = cast<CallInst>(local_dep.getInst());
+      // For masked load/store intrinsics, the local_dep may actully be
+      // a normal load or store instruction.
+      CallInst *local_cdep = dyn_cast<CallInst>(local_dep.getInst());
 
-      if (local_cdep->getNumArgOperands() != C->getNumArgOperands()) {
+      if (!local_cdep ||
+          local_cdep->getNumArgOperands() != C->getNumArgOperands()) {
         valueNumbering[C] = nextValueNumber;
         return nextValueNumber++;
       }
@@ -651,14 +655,18 @@ PreservedAnalyses GVN::run(Function &F, FunctionAnalysisManager &AM) {
   auto *MemDep =
       isMemDepEnabled() ? &AM.getResult<MemoryDependenceAnalysis>(F) : nullptr;
   auto *LI = AM.getCachedResult<LoopAnalysis>(F);
+  auto *MSSA = AM.getCachedResult<MemorySSAAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  bool Changed = runImpl(F, AC, DT, TLI, AA, MemDep, LI, &ORE);
+  bool Changed = runImpl(F, AC, DT, TLI, AA, MemDep, LI, &ORE,
+                         MSSA ? &MSSA->getMSSA() : nullptr);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<GlobalsAA>();
   PA.preserve<TargetLibraryAnalysis>();
+  if (MSSA)
+    PA.preserve<MemorySSAAnalysis>();
   if (LI)
     PA.preserve<LoopAnalysis>();
   return PA;
@@ -1314,8 +1322,7 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
     // Instructions that have been inserted in predecessor(s) to materialize
     // the load address do not retain their original debug locations. Doing
     // so could lead to confusing (but correct) source attributions.
-    if (const DebugLoc &DL = I->getDebugLoc())
-      I->setDebugLoc(DebugLoc::get(0, 0, DL.getScope(), DL.getInlinedAt()));
+    I->updateLocationAfterHoist();
 
     // FIXME: We really _ought_ to insert these value numbers into their
     // parent's availability map.  However, in doing so, we risk getting into
@@ -1333,6 +1340,22 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
         LI->getAlign(), LI->getOrdering(), LI->getSyncScopeID(),
         UnavailablePred->getTerminator());
     NewLoad->setDebugLoc(LI->getDebugLoc());
+    if (MSSAU) {
+      auto *MSSA = MSSAU->getMemorySSA();
+      // Get the defining access of the original load or use the load if it is a
+      // MemoryDef (e.g. because it is volatile). The inserted loads are
+      // guaranteed to load from the same definition.
+      auto *LIAcc = MSSA->getMemoryAccess(LI);
+      auto *DefiningAcc =
+          isa<MemoryDef>(LIAcc) ? LIAcc : LIAcc->getDefiningAccess();
+      auto *NewAccess = MSSAU->createMemoryAccessInBB(
+          NewLoad, DefiningAcc, NewLoad->getParent(),
+          MemorySSA::BeforeTerminator);
+      if (auto *NewDef = dyn_cast<MemoryDef>(NewAccess))
+        MSSAU->insertDef(NewDef, /*RenameUses=*/true);
+      else
+        MSSAU->insertUse(cast<MemoryUse>(NewAccess), /*RenameUses=*/true);
+    }
 
     // Transfer the old load's AA tags to the new load.
     AAMDNodes Tags;
@@ -1549,9 +1572,17 @@ bool GVN::processAssumeIntrinsic(IntrinsicInst *IntrinsicI) {
       // Insert a new store to null instruction before the load to indicate that
       // this code is not reachable.  FIXME: We could insert unreachable
       // instruction directly because we can modify the CFG.
-      new StoreInst(UndefValue::get(Int8Ty),
-                    Constant::getNullValue(Int8Ty->getPointerTo()),
-                    IntrinsicI);
+      auto *NewS = new StoreInst(UndefValue::get(Int8Ty),
+                                 Constant::getNullValue(Int8Ty->getPointerTo()),
+                                 IntrinsicI);
+      if (MSSAU) {
+        // This added store is to null, so it will never executed and we can
+        // just use the LiveOnEntry def as defining access.
+        auto *NewDef = MSSAU->createMemoryAccessInBB(
+            NewS, MSSAU->getMemorySSA()->getLiveOnEntryDef(), NewS->getParent(),
+            MemorySSA::BeforeTerminator);
+        MSSAU->insertDef(cast<MemoryDef>(NewDef), /*RenameUses=*/true);
+      }
     }
     if (isAssumeWithEmptyBundle(*IntrinsicI))
       markInstructionForDeletion(IntrinsicI);
@@ -1578,6 +1609,11 @@ bool GVN::processAssumeIntrinsic(IntrinsicInst *IntrinsicI) {
   // call void @llvm.assume(i1 %cmp)
   // br i1 %cmp, label %bb1, label %bb2 ; will change %cmp to true
   ReplaceOperandsWithMap[V] = True;
+
+  // Similarly, after assume(!NotV) we know that NotV == false.
+  Value *NotV;
+  if (match(V, m_Not(m_Value(NotV))))
+    ReplaceOperandsWithMap[NotV] = ConstantInt::getFalse(V->getContext());
 
   // If we find an equality fact, canonicalize all dominated uses in this block
   // to one of the two values.  We heuristically choice the "oldest" of the
@@ -1685,6 +1721,8 @@ bool GVN::processLoad(LoadInst *L) {
     // Replace the load!
     patchAndReplaceAllUsesWith(L, AvailableValue);
     markInstructionForDeletion(L);
+    if (MSSAU)
+      MSSAU->removeMemoryAccess(L);
     ++NumGVNLoad;
     reportLoadElim(L, AvailableValue, ORE);
     // Tell MDA to rexamine the reused pointer since we might have more
@@ -1806,7 +1844,7 @@ uint32_t GVN::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
   }
 
   if (Exp.commutative) {
-    assert(Exp.varargs.size() == 2 && "Unsupported commutative expression!");
+    assert(Exp.varargs.size() >= 2 && "Unsupported commutative instruction!");
     if (Exp.varargs[0] > Exp.varargs[1]) {
       std::swap(Exp.varargs[0], Exp.varargs[1]);
       uint32_t Opcode = Exp.opcode >> 8;
@@ -2200,7 +2238,7 @@ bool GVN::processInstruction(Instruction *I) {
 bool GVN::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
                   const TargetLibraryInfo &RunTLI, AAResults &RunAA,
                   MemoryDependenceResults *RunMD, LoopInfo *LI,
-                  OptimizationRemarkEmitter *RunORE) {
+                  OptimizationRemarkEmitter *RunORE, MemorySSA *MSSA) {
   AC = &RunAC;
   DT = &RunDT;
   VN.setDomTree(DT);
@@ -2213,6 +2251,8 @@ bool GVN::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   VN.setMemDep(MD);
   ORE = RunORE;
   InvalidBlockRPONumbers = true;
+  MemorySSAUpdater Updater(MSSA);
+  MSSAU = MSSA ? &Updater : nullptr;
 
   bool Changed = false;
   bool ShouldContinue = true;
@@ -2223,7 +2263,7 @@ bool GVN::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ) {
     BasicBlock *BB = &*FI++;
 
-    bool removedBlock = MergeBlockIntoPredecessor(BB, &DTU, LI, nullptr, MD);
+    bool removedBlock = MergeBlockIntoPredecessor(BB, &DTU, LI, MSSAU, MD);
     if (removedBlock)
       ++NumGVNBlocks;
 
@@ -2258,6 +2298,9 @@ bool GVN::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
   // Do not cleanup DeadBlocks in cleanupGlobalSets() as it's called for each
   // iteration.
   DeadBlocks.clear();
+
+  if (MSSA && VerifyMemorySSA)
+    MSSA->verifyMemorySSA();
 
   return Changed;
 }
@@ -2299,6 +2342,8 @@ bool GVN::processBlock(BasicBlock *BB) {
       salvageKnowledge(I, AC);
       salvageDebugInfo(*I);
       if (MD) MD->removeInstruction(I);
+      if (MSSAU)
+        MSSAU->removeMemoryAccess(I);
       LLVM_DEBUG(verifyRemoved(I));
       ICF->removeInstruction(I);
       I->eraseFromParent();
@@ -2529,6 +2574,8 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   LLVM_DEBUG(dbgs() << "GVN PRE removed: " << *CurInst << '\n');
   if (MD)
     MD->removeInstruction(CurInst);
+  if (MSSAU)
+    MSSAU->removeMemoryAccess(CurInst);
   LLVM_DEBUG(verifyRemoved(CurInst));
   // FIXME: Intended to be markInstructionForDeletion(CurInst), but it causes
   // some assertion failures.
@@ -2573,7 +2620,7 @@ BasicBlock *GVN::splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ) {
   // possible.
   BasicBlock *BB = SplitCriticalEdge(
       Pred, Succ,
-      CriticalEdgeSplittingOptions(DT, LI).unsetPreserveLoopSimplify());
+      CriticalEdgeSplittingOptions(DT, LI, MSSAU).unsetPreserveLoopSimplify());
   if (MD)
     MD->invalidateCachedPredecessors();
   InvalidBlockRPONumbers = true;
@@ -2588,7 +2635,7 @@ bool GVN::splitCriticalEdges() {
   do {
     std::pair<Instruction *, unsigned> Edge = toSplit.pop_back_val();
     SplitCriticalEdge(Edge.first, Edge.second,
-                      CriticalEdgeSplittingOptions(DT, LI));
+                      CriticalEdgeSplittingOptions(DT, LI, MSSAU));
   } while (!toSplit.empty());
   if (MD) MD->invalidateCachedPredecessors();
   InvalidBlockRPONumbers = true;
@@ -2787,6 +2834,7 @@ public:
 
     auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
 
+    auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
     return Impl.runImpl(
         F, getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F),
         getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
@@ -2796,7 +2844,8 @@ public:
             ? &getAnalysis<MemoryDependenceWrapperPass>().getMemDep()
             : nullptr,
         LIWP ? &LIWP->getLoopInfo() : nullptr,
-        &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE());
+        &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE(),
+        MSSAWP ? &MSSAWP->getMSSA() : nullptr);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -2807,12 +2856,12 @@ public:
     if (Impl.isMemDepEnabled())
       AU.addRequired<MemoryDependenceWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
-
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addPreserved<TargetLibraryInfoWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
+    AU.addPreserved<MemorySSAWrapperPass>();
   }
 
 private:

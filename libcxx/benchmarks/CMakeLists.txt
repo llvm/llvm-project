@@ -70,18 +70,9 @@ set(BENCHMARK_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(BENCHMARK_LIBCXX_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/benchmark-libcxx)
 set(BENCHMARK_NATIVE_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/benchmark-native)
 
-check_flag_supported("-std=c++17")
-mangle_name("LIBCXX_SUPPORTS_STD_EQ_c++17_FLAG" BENCHMARK_SUPPORTS_STD_CXX17_FLAG)
-if (${BENCHMARK_SUPPORTS_STD_CXX17_FLAG})
-  set(BENCHMARK_DIALECT_FLAG "-std=c++17")
-else()
-  # If the compiler doesn't support -std=c++17, attempt to fall back to -std=c++1z while still
-  # requiring C++17 language features.
-  set(BENCHMARK_DIALECT_FLAG "-std=c++1z")
-endif()
 
 set(BENCHMARK_TEST_COMPILE_FLAGS
-    ${BENCHMARK_DIALECT_FLAG} -O2
+    -O2
     -fsized-deallocation
     -I${BENCHMARK_LIBCXX_INSTALL}/include
     -I${LIBCXX_SOURCE_DIR}/test/support
@@ -90,6 +81,7 @@ set(BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS
     ${BENCHMARK_TEST_COMPILE_FLAGS}
     ${SANITIZER_FLAGS}
     -Wno-user-defined-literals
+    -Wno-suggest-override
 )
 
 set(BENCHMARK_TEST_LIBCXX_LINK_FLAGS
@@ -147,7 +139,10 @@ function(add_benchmark_test name source_file)
           OUTPUT_NAME "${name}.libcxx.out"
           RUNTIME_OUTPUT_DIRECTORY "${BENCHMARK_OUTPUT_DIR}"
           COMPILE_FLAGS "${BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS}"
-          LINK_FLAGS "${BENCHMARK_TEST_LIBCXX_LINK_FLAGS}")
+          LINK_FLAGS "${BENCHMARK_TEST_LIBCXX_LINK_FLAGS}"
+          CXX_STANDARD 17
+          CXX_STANDARD_REQUIRED YES
+          CXX_EXTENSIONS NO)
   cxx_link_system_libraries(${libcxx_target})
   if (LIBCXX_BENCHMARK_NATIVE_STDLIB)
     if (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libstdc++" AND NOT DEFINED LIBSTDCXX_FILESYSTEM_LIB
@@ -174,7 +169,10 @@ function(add_benchmark_test name source_file)
           RUNTIME_OUTPUT_DIRECTORY "${BENCHMARK_OUTPUT_DIR}"
           INCLUDE_DIRECTORIES ""
           COMPILE_FLAGS "${BENCHMARK_TEST_NATIVE_COMPILE_FLAGS}"
-          LINK_FLAGS "${BENCHMARK_TEST_NATIVE_LINK_FLAGS}")
+          LINK_FLAGS "${BENCHMARK_TEST_NATIVE_LINK_FLAGS}"
+          CXX_STANDARD 17
+          CXX_STANDARD_REQUIRED YES
+          CXX_EXTENSIONS NO)
   endif()
 endfunction()
 

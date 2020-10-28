@@ -99,13 +99,13 @@ define void @ldexp_f32_val_nan(i32 %y) {
 
 define void @ldexp_f32_val_nan_strictfp(i32 %y) #0 {
 ; CHECK-LABEL: @ldexp_f32_val_nan_strictfp(
-; CHECK-NEXT:    [[PLUS_QNAN:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0x7FF0001000000000, i32 [[Y:%.*]]) #0
+; CHECK-NEXT:    [[PLUS_QNAN:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0x7FF0001000000000, i32 [[Y:%.*]]) [[ATTR0:#.*]]
 ; CHECK-NEXT:    store volatile float [[PLUS_QNAN]], float addrspace(1)* undef, align 4
-; CHECK-NEXT:    [[NEG_QNAN:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0xFFF0000100000000, i32 [[Y]]) #0
+; CHECK-NEXT:    [[NEG_QNAN:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0xFFF0000100000000, i32 [[Y]]) [[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[NEG_QNAN]], float addrspace(1)* undef, align 4
-; CHECK-NEXT:    [[PLUS_SNAN:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0x7FF0000020000000, i32 [[Y]]) #0
+; CHECK-NEXT:    [[PLUS_SNAN:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0x7FF0000020000000, i32 [[Y]]) [[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[PLUS_SNAN]], float addrspace(1)* undef, align 4
-; CHECK-NEXT:    [[NEG_SNAN:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0xFFF7FFFFE0000000, i32 [[Y]]) #0
+; CHECK-NEXT:    [[NEG_SNAN:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0xFFF7FFFFE0000000, i32 [[Y]]) [[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[NEG_SNAN]], float addrspace(1)* undef, align 4
 ; CHECK-NEXT:    store volatile float 0x7FF8000000000000, float addrspace(1)* undef, align 4
 ; CHECK-NEXT:    ret void
@@ -169,13 +169,13 @@ define void @ldexp_f32_0_strictfp(float %x) #0 {
 ; CHECK-NEXT:    store volatile float 0.000000e+00, float addrspace(1)* undef, align 4
 ; CHECK-NEXT:    store volatile float -0.000000e+00, float addrspace(1)* undef, align 4
 ; CHECK-NEXT:    store volatile float 0.000000e+00, float addrspace(1)* undef, align 4
-; CHECK-NEXT:    [[UNKNOWN_ZERO:%.*]] = call float @llvm.amdgcn.ldexp.f32(float [[X:%.*]], i32 0) #0
+; CHECK-NEXT:    [[UNKNOWN_ZERO:%.*]] = call float @llvm.amdgcn.ldexp.f32(float [[X:%.*]], i32 0) [[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[UNKNOWN_ZERO]], float addrspace(1)* undef, align 4
-; CHECK-NEXT:    [[UNKNOWN_UNDEF:%.*]] = call float @llvm.amdgcn.ldexp.f32(float [[X]], i32 undef) #0
+; CHECK-NEXT:    [[UNKNOWN_UNDEF:%.*]] = call float @llvm.amdgcn.ldexp.f32(float [[X]], i32 undef) [[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[UNKNOWN_UNDEF]], float addrspace(1)* undef, align 4
-; CHECK-NEXT:    [[DENORMAL_0:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0x380FFFFFC0000000, i32 0) #0
+; CHECK-NEXT:    [[DENORMAL_0:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0x380FFFFFC0000000, i32 0) [[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[DENORMAL_0]], float addrspace(1)* undef, align 4
-; CHECK-NEXT:    [[DENORMAL_1:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0x380FFFFFC0000000, i32 1) #0
+; CHECK-NEXT:    [[DENORMAL_1:%.*]] = call float @llvm.amdgcn.ldexp.f32(float 0x380FFFFFC0000000, i32 1) [[ATTR0]]
 ; CHECK-NEXT:    store volatile float [[DENORMAL_1]], float addrspace(1)* undef, align 4
 ; CHECK-NEXT:    ret void
 ;

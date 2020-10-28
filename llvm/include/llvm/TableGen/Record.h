@@ -67,6 +67,7 @@ public:
 
 private:
   RecTyKind Kind;
+  /// ListRecTy of the list that has elements of this type.
   ListRecTy *ListTy = nullptr;
 
 public:
@@ -190,14 +191,14 @@ public:
   bool typeIsConvertibleTo(const RecTy *RHS) const override;
 };
 
-/// 'list<Ty>' - Represent a list of values, all of which must be of
-/// the specified type.
+/// 'list<Ty>' - Represent a list of element values, all of which must be of
+/// the specified type. The type is stored in ElementTy.
 class ListRecTy : public RecTy {
   friend ListRecTy *RecTy::getListTy();
 
-  RecTy *Ty;
+  RecTy *ElementTy;
 
-  explicit ListRecTy(RecTy *T) : RecTy(ListRecTyKind), Ty(T) {}
+  explicit ListRecTy(RecTy *T) : RecTy(ListRecTyKind), ElementTy(T) {}
 
 public:
   static bool classof(const RecTy *RT) {
@@ -205,7 +206,7 @@ public:
   }
 
   static ListRecTy *get(RecTy *T) { return T->getListTy(); }
-  RecTy *getElementType() const { return Ty; }
+  RecTy *getElementType() const { return ElementTy; }
 
   std::string getAsString() const override;
 
@@ -337,6 +338,7 @@ private:
   virtual void anchor();
 
 public:
+  /// Get the kind (type) of the value.
   InitKind getKind() const { return Kind; }
 
 protected:
@@ -347,63 +349,61 @@ public:
   Init &operator=(const Init &) = delete;
   virtual ~Init() = default;
 
-  /// This virtual method should be overridden by values that may
-  /// not be completely specified yet.
+  /// Is this a complete value with no unset (uninitialized) subvalues?
   virtual bool isComplete() const { return true; }
 
   /// Is this a concrete and fully resolved value without any references or
   /// stuck operations? Unset values are concrete.
   virtual bool isConcrete() const { return false; }
 
-  /// Print out this value.
+  /// Print this value.
   void print(raw_ostream &OS) const { OS << getAsString(); }
 
-  /// Convert this value to a string form.
+  /// Convert this value to a literal form.
   virtual std::string getAsString() const = 0;
-  /// Convert this value to a string form,
-  /// without adding quote markers.  This primaruly affects
-  /// StringInits where we will not surround the string value with
-  /// quotes.
+
+  /// Convert this value to a literal form,
+  /// without adding quotes around a string.
   virtual std::string getAsUnquotedString() const { return getAsString(); }
 
-  /// Debugging method that may be called through a debugger, just
+  /// Debugging method that may be called through a debugger; just
   /// invokes print on stderr.
   void dump() const;
 
-  /// If this initializer is convertible to Ty, return an initializer whose
-  /// type is-a Ty, generating a !cast operation if required. Otherwise, return
-  /// nullptr.
+  /// If this value is convertible to type \p Ty, return a value whose
+  /// type is \p Ty, generating a !cast operation if required.
+  /// Otherwise, return null.
   virtual Init *getCastTo(RecTy *Ty) const = 0;
 
-  /// Convert to an initializer whose type is-a Ty, or return nullptr if this
-  /// is not possible (this can happen if the initializer's type is convertible
-  /// to Ty, but there are unresolved references).
+  /// Convert to a value whose type is \p Ty, or return null if this
+  /// is not possible. This can happen if the value's type is convertible
+  /// to \p Ty, but there are unresolved references.
   virtual Init *convertInitializerTo(RecTy *Ty) const = 0;
 
-  /// This method is used to implement the bitrange
-  /// selection operator.  Given an initializer, it selects the specified bits
-  /// out, returning them as a new init of bits type.  If it is not legal to use
-  /// the bit subscript operator on this initializer, return null.
+  /// This function is used to implement the bit range
+  /// selection operator. Given a value, it selects the specified bits,
+  /// returning them as a new \p Init of type \p bits. If it is not legal
+  /// to use the bit selection operator on this value, null is returned.
   virtual Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const {
     return nullptr;
   }
 
-  /// This method is used to implement the list slice
-  /// selection operator.  Given an initializer, it selects the specified list
-  /// elements, returning them as a new init of list type.  If it is not legal
-  /// to take a slice of this, return null.
+  /// This function is used to implement the list slice
+  /// selection operator.  Given a value, it selects the specified list
+  /// elements, returning them as a new \p Init of type \p list. If it
+  /// is not legal to use the slice operator, null is returned.
   virtual Init *convertInitListSlice(ArrayRef<unsigned> Elements) const {
     return nullptr;
   }
 
-  /// This method is used to implement the FieldInit class.
-  /// Implementors of this method should return the type of the named field if
-  /// they are of record type.
+  /// This function is used to implement the FieldInit class.
+  /// Implementors of this method should return the type of the named
+  /// field if they are of type record.
   virtual RecTy *getFieldType(StringInit *FieldName) const {
     return nullptr;
   }
 
-  /// This method is used by classes that refer to other
+  /// This function is used by classes that refer to other
   /// variables which may not be defined at the time the expression is formed.
   /// If a value is set for the variable later, this method will be called on
   /// users of the value to allow the value to propagate out.
@@ -411,8 +411,7 @@ public:
     return const_cast<Init *>(this);
   }
 
-  /// This method is used to return the initializer for the specified
-  /// bit.
+  /// Get the \p Init value of the specified bit.
   virtual Init *getBit(unsigned Bit) const = 0;
 };
 
@@ -420,14 +419,14 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Init &I) {
   I.print(OS); return OS;
 }
 
-/// This is the common super-class of types that have a specific,
-/// explicit, type.
+/// This is the common superclass of types that have a specific,
+/// explicit, type, stored in ValueTy.
 class TypedInit : public Init {
-  RecTy *Ty;
+  RecTy *ValueTy;
 
 protected:
   explicit TypedInit(InitKind K, RecTy *T, uint8_t Opc = 0)
-    : Init(K, Opc), Ty(T) {}
+      : Init(K, Opc), ValueTy(T) {}
 
 public:
   TypedInit(const TypedInit &) = delete;
@@ -438,7 +437,7 @@ public:
            I->getKind() <= IK_LastTypedInit;
   }
 
-  RecTy *getType() const { return Ty; }
+  RecTy *getType() const { return ValueTy; }
 
   Init *getCastTo(RecTy *Ty) const override;
   Init *convertInitializerTo(RecTy *Ty) const override;
@@ -448,8 +447,7 @@ public:
 
   /// This method is used to implement the FieldInit class.
   /// Implementors of this method should return the type of the named field if
-  /// they are of record type.
-  ///
+  /// they are of type record.
   RecTy *getFieldType(StringInit *FieldName) const override;
 };
 
@@ -1401,11 +1399,13 @@ class RecordVal {
   friend class Record;
 
   Init *Name;
+  SMLoc Loc; // Source location of definition of name.
   PointerIntPair<RecTy *, 1, bool> TyAndPrefix;
   Init *Value;
 
 public:
   RecordVal(Init *N, RecTy *T, bool P);
+  RecordVal(Init *N, SMLoc Loc, RecTy *T, bool P);
 
   StringRef getName() const;
   Init *getNameInit() const { return Name; }
@@ -1414,11 +1414,13 @@ public:
     return getNameInit()->getAsUnquotedString();
   }
 
+  const SMLoc &getLoc() const { return Loc; }
   bool getPrefix() const { return TyAndPrefix.getInt(); }
   RecTy *getType() const { return TyAndPrefix.getPointer(); }
   Init *getValue() const { return Value; }
 
   bool setValue(Init *V);
+  bool setValue(Init *V, SMLoc NewLoc);
 
   void dump() const;
   void print(raw_ostream &OS, bool PrintSem = true) const;
@@ -1439,14 +1441,15 @@ class Record {
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
 
-  // All superclasses in the inheritance forest in reverse preorder (yes, it
+  // All superclasses in the inheritance forest in post-order (yes, it
   // must be a forest; diamond-shaped inheritance is not allowed).
   SmallVector<std::pair<Record *, SMRange>, 0> SuperClasses;
 
   // Tracks Record instances. Not owned by Record.
   RecordKeeper &TrackedRecords;
 
-  DefInit *TheInit = nullptr;
+  // The DefInit corresponding to this record.
+  DefInit *CorrespondingDefInit = nullptr;
 
   // Unique record ID.
   unsigned ID;
@@ -1470,8 +1473,8 @@ public:
       : Record(StringInit::get(N), locs, records, false, Class) {}
 
   // When copy-constructing a Record, we must still guarantee a globally unique
-  // ID number.  Don't copy TheInit either since it's owned by the original
-  // record. All other fields can be copied normally.
+  // ID number. Don't copy CorrespondingDefInit either, since it's owned by the
+  // original record. All other fields can be copied normally.
   Record(const Record &O)
     : Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
       Values(O.Values), SuperClasses(O.SuperClasses),
@@ -1585,7 +1588,8 @@ public:
   }
 
   void addSuperClass(Record *R, SMRange Range) {
-    assert(!TheInit && "changing type of record after it has been referenced");
+    assert(!CorrespondingDefInit &&
+           "changing type of record after it has been referenced");
     assert(!isSubClassOf(R) && "Already subclassing record!");
     SuperClasses.push_back(std::make_pair(R, Range));
   }
@@ -1632,6 +1636,16 @@ public:
   /// its value as a string, throwing an exception if the field does not exist
   /// or if the value is not a string.
   StringRef getValueAsString(StringRef FieldName) const;
+
+  /// This method looks up the specified field and returns
+  /// its value as a string, throwing an exception if the field if the value is
+  /// not a string and llvm::Optional() if the field does not exist.
+  llvm::Optional<StringRef> getValueAsOptionalString(StringRef FieldName) const;
+
+  /// This method looks up the specified field and returns
+  /// its value as a string, throwing an exception if the field if the value is
+  /// not a code block and llvm::Optional() if the field does not exist.
+  llvm::Optional<StringRef> getValueAsOptionalCode(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns
   /// its value as a BitsInit, throwing an exception if the field does not exist
@@ -1694,26 +1708,34 @@ raw_ostream &operator<<(raw_ostream &OS, const Record &R);
 
 class RecordKeeper {
   friend class RecordRecTy;
+
   using RecordMap = std::map<std::string, std::unique_ptr<Record>, std::less<>>;
+
   RecordMap Classes, Defs;
   FoldingSet<RecordRecTy> RecordTypePool;
   std::map<std::string, Init *, std::less<>> ExtraGlobals;
   unsigned AnonCounter = 0;
 
 public:
+  /// Get the map of classes.
   const RecordMap &getClasses() const { return Classes; }
+
+  /// Get the map of records (defs).
   const RecordMap &getDefs() const { return Defs; }
 
+  /// Get the class with the specified name.
   Record *getClass(StringRef Name) const {
     auto I = Classes.find(Name);
     return I == Classes.end() ? nullptr : I->second.get();
   }
 
+  /// Get the concrete record with the specified name.
   Record *getDef(StringRef Name) const {
     auto I = Defs.find(Name);
     return I == Defs.end() ? nullptr : I->second.get();
   }
 
+  /// Get the \p Init value of the specified global variable.
   Init *getGlobal(StringRef Name) const {
     if (Record *R = getDef(Name))
       return R->getDefInit();
@@ -1745,11 +1767,10 @@ public:
   Init *getNewAnonymousName();
 
   //===--------------------------------------------------------------------===//
-  // High-level helper methods, useful for tablegen backends...
+  // High-level helper methods, useful for tablegen backends.
 
-  /// This method returns all concrete definitions
-  /// that derive from the specified class name.  A class with the specified
-  /// name must exist.
+  /// Get all the concrete records that inherit from the specified
+  /// class. The class must be defined.
   std::vector<Record *> getAllDerivedDefinitions(StringRef ClassName) const;
 
   void dump() const;

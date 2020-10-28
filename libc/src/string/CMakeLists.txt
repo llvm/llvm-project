@@ -16,8 +16,7 @@ add_entrypoint_object(
     strcat.h
   DEPENDS
     .strcpy
-    .strlen
-    libc.include.string
+    .string_utils
 )
 
 add_entrypoint_object(
@@ -28,8 +27,7 @@ add_entrypoint_object(
     strcpy.h
   DEPENDS
     .memcpy
-    .strlen
-    libc.include.string
+    .string_utils
 )
 
 add_entrypoint_object(
@@ -48,8 +46,6 @@ add_entrypoint_object(
     strcmp.cpp
   HDRS
     strcmp.h
-  DEPENDS
-    libc.include.string
 )
 
 add_entrypoint_object(
@@ -58,6 +54,8 @@ add_entrypoint_object(
     memchr.cpp
   HDRS
     memchr.h
+  DEPENDS
+    .string_utils
 )
 
 add_entrypoint_object(
@@ -83,7 +81,7 @@ add_entrypoint_object(
   HDRS
     strnlen.h
   DEPENDS
-    .memchr
+    .string_utils
 )
 
 add_entrypoint_object(

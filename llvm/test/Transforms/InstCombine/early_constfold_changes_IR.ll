@@ -3,7 +3,7 @@
 
 ; This run line verifies that InstructionCombiningPass::runOnFunction reports
 ; this as a modification of the IR.
-; RUN: opt < %s -instcombine -disable-output -debug-pass=Details 2>&1 | FileCheck %s --check-prefix=DETAILS
+; RUN: opt < %s -instcombine -disable-output -debug-pass=Details -enable-new-pm=0 2>&1 | FileCheck %s --check-prefix=DETAILS
 
 define i32 @foo(i32 %arg) #0 {
 ; CHECK-LABEL: @foo(

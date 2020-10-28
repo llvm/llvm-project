@@ -23,6 +23,47 @@ define i8 @memcpy_constant_arg_ptr_to_alloca([32 x i8] addrspace(4)* noalias rea
   ret i8 %load
 }
 
+; Simple memcpy to alloca from byref constant address space argument.
+define amdgpu_kernel void @memcpy_constant_byref_arg_ptr_to_alloca([32 x i8] addrspace(4)* noalias readonly align 4 byref([32 x i8]) %arg, i8 addrspace(1)* %out, i32 %idx) {
+; CHECK-LABEL: @memcpy_constant_byref_arg_ptr_to_alloca(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [32 x i8], [32 x i8] addrspace(4)* [[ARG:%.*]], i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8 addrspace(4)* [[GEP]], align 1
+; CHECK-NEXT:    store i8 [[LOAD]], i8 addrspace(1)* [[OUT:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca [32 x i8], align 4, addrspace(5)
+  %alloca.cast = bitcast [32 x i8] addrspace(5)* %alloca to i8 addrspace(5)*
+  %arg.cast = bitcast [32 x i8] addrspace(4)* %arg to i8 addrspace(4)*
+  call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* %alloca.cast, i8 addrspace(4)* %arg.cast, i64 32, i1 false)
+  %gep = getelementptr inbounds [32 x i8], [32 x i8] addrspace(5)* %alloca, i32 0, i32 %idx
+  %load = load i8, i8 addrspace(5)* %gep
+  store i8 %load, i8 addrspace(1)* %out
+  ret void
+}
+
+; Simple memcpy to alloca from byref constant address space argument, but not enough bytes are dereferenceable
+define amdgpu_kernel void @memcpy_constant_byref_arg_ptr_to_alloca_too_many_bytes([31 x i8] addrspace(4)* noalias readonly align 4 byref([31 x i8]) %arg, i8 addrspace(1)* %out, i32 %idx) {
+; CHECK-LABEL: @memcpy_constant_byref_arg_ptr_to_alloca_too_many_bytes(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 4, addrspace(5)
+; CHECK-NEXT:    [[ALLOCA_CAST:%.*]] = getelementptr inbounds [32 x i8], [32 x i8] addrspace(5)* [[ALLOCA]], i32 0, i32 0
+; CHECK-NEXT:    [[ARG_CAST:%.*]] = getelementptr inbounds [31 x i8], [31 x i8] addrspace(4)* [[ARG:%.*]], i64 0, i64 0
+; CHECK-NEXT:    call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* align 4 dereferenceable(31) [[ALLOCA_CAST]], i8 addrspace(4)* align 4 dereferenceable(31) [[ARG_CAST]], i64 31, i1 false)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i8], [32 x i8] addrspace(5)* [[ALLOCA]], i32 0, i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8 addrspace(5)* [[GEP]], align 1
+; CHECK-NEXT:    store i8 [[LOAD]], i8 addrspace(1)* [[OUT:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca [32 x i8], align 4, addrspace(5)
+  %alloca.cast = bitcast [32 x i8] addrspace(5)* %alloca to i8 addrspace(5)*
+  %arg.cast = bitcast [31 x i8] addrspace(4)* %arg to i8 addrspace(4)*
+  call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* %alloca.cast, i8 addrspace(4)* %arg.cast, i64 31, i1 false)
+  %gep = getelementptr inbounds [32 x i8], [32 x i8] addrspace(5)* %alloca, i32 0, i32 %idx
+  %load = load i8, i8 addrspace(5)* %gep
+  store i8 %load, i8 addrspace(1)* %out
+  ret void
+}
+
 ; Simple memcpy to alloca from constant address space intrinsic call
 define amdgpu_kernel void @memcpy_constant_intrinsic_ptr_to_alloca(i8 addrspace(1)* %out, i32 %idx) {
 ; CHECK-LABEL: @memcpy_constant_intrinsic_ptr_to_alloca(
@@ -44,18 +85,18 @@ define amdgpu_kernel void @memcpy_constant_intrinsic_ptr_to_alloca(i8 addrspace(
 }
 
 ; Alloca is written through a flat pointer
-define i8 @memcpy_constant_arg_ptr_to_alloca_addrspacecast_to_flat([32 x i8] addrspace(4)* noalias readonly align 4 dereferenceable(32) %arg, i32 %idx) {
+define i8 @memcpy_constant_arg_ptr_to_alloca_addrspacecast_to_flat([31 x i8] addrspace(4)* noalias readonly align 4 dereferenceable(32) %arg, i32 %idx) {
 ; CHECK-LABEL: @memcpy_constant_arg_ptr_to_alloca_addrspacecast_to_flat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [32 x i8], [32 x i8] addrspace(4)* [[ARG:%.*]], i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [31 x i8], [31 x i8] addrspace(4)* [[ARG:%.*]], i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8 addrspace(4)* [[GEP]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
   %alloca = alloca [32 x i8], align 4, addrspace(5)
   %alloca.cast = bitcast [32 x i8] addrspace(5)* %alloca to i8 addrspace(5)*
   %alloca.cast.asc = addrspacecast i8 addrspace(5)* %alloca.cast to i8*
-  %arg.cast = bitcast [32 x i8] addrspace(4)* %arg to i8 addrspace(4)*
-  call void @llvm.memcpy.p0i8.p4i8.i64(i8* %alloca.cast.asc, i8 addrspace(4)* %arg.cast, i64 32, i1 false)
+  %arg.cast = bitcast [31 x i8] addrspace(4)* %arg to i8 addrspace(4)*
+  call void @llvm.memcpy.p0i8.p4i8.i64(i8* %alloca.cast.asc, i8 addrspace(4)* %arg.cast, i64 31, i1 false)
   %gep = getelementptr inbounds [32 x i8], [32 x i8] addrspace(5)* %alloca, i32 0, i32 %idx
   %load = load i8, i8 addrspace(5)* %gep
   ret i8 %load

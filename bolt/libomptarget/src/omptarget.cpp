@@ -11,19 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <omptarget.h>
-
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
 
 #include <cassert>
 #include <vector>
-
-#ifdef OMPTARGET_DEBUG
-int DebugLevel = 0;
-#endif // OMPTARGET_DEBUG
-int InfoLevel = 0;
 
 /* All begin addresses for partially mapped structs must be 8-aligned in order
  * to ensure proper alignment of members. E.g.

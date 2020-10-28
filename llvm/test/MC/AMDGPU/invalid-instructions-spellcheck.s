@@ -10,10 +10,6 @@ v2, v4, v6
 # CHECK-NEXT: v2, v4, v6
 # CHECK-NEXT:   ^
 
-# CHECK:      error: failed parsing operand
-# CHECK-NEXT: v2, v4, v6
-# CHECK-NEXT:     ^
-
 # We don't want to see a suggestion here; the edit distance is too large to
 # give sensible suggestions:
 

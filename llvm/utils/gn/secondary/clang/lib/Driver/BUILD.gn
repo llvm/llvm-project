@@ -90,6 +90,7 @@ static_library("Driver") {
     "ToolChains/VEToolchain.cpp",
     "ToolChains/WebAssembly.cpp",
     "ToolChains/XCore.cpp",
+    "ToolChains/ZOS.cpp",
     "Types.cpp",
     "XRayArgs.cpp",
   ]

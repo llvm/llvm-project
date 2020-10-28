@@ -34,7 +34,7 @@ public:
   /// rather than optimal IR. That is, by default we bypass transformations that
   /// are likely to improve performance but make analysis for other passes more
   /// difficult.
-  SimplifyCFGPass() {}
+  SimplifyCFGPass();
 
   /// Construct a pass with optional optimizations.
   SimplifyCFGPass(const SimplifyCFGOptions &PassOptions);

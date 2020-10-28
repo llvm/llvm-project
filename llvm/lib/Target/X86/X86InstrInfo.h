@@ -317,6 +317,10 @@ public:
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify) const override;
 
+  bool preservesZeroValueInReg(const MachineInstr *MI,
+                               const Register NullValueReg,
+                               const TargetRegisterInfo *TRI) const override;
+
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,

@@ -1,4 +1,4 @@
-; RUN: opt < %s -domtree -break-crit-edges -analyze -domtree | FileCheck %s
+; RUN: opt < %s -domtree -break-crit-edges -analyze -domtree -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='require<domtree>,break-crit-edges,print<domtree>' -disable-output 2>&1| FileCheck %s
 ; PR932
 

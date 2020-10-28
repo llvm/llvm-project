@@ -47,6 +47,18 @@ void affineLoopNestBuilder(
 void affineLoopBuilder(ValueRange lbs, ValueRange ubs, int64_t step,
                        function_ref<void(Value)> bodyBuilderFn = nullptr);
 
+/// Creates a single affine "for" loop, iterating from max(lbs) to min(ubs) with
+/// the given step. Uses the OpBuilder and Location stored in ScopedContext and
+/// assumes they are non-null. "iterArgs" is used to specify the initial values
+/// of the result affine "for" might yield. The optional "bodyBuilderFn"
+/// callback is called to construct the body of the loop and is passed the
+/// induction variable and the iteration arguments. The function is expected to
+/// use the builder and location stored in ScopedContext at the moment of the
+/// call. The function will create the affine terminator op in case "iterArgs"
+/// is empty and "bodyBuilderFn" is not present.
+void affineLoopBuilder(
+    ValueRange lbs, ValueRange ubs, int64_t step, ValueRange iterArgs,
+    function_ref<void(Value, ValueRange)> bodyBuilderFn = nullptr);
 namespace op {
 
 Value operator+(Value lhs, Value rhs);

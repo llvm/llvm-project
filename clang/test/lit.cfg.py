@@ -91,10 +91,6 @@ config.substitutions.append(
     ('%hmaptool', "'%s' %s" % (config.python_executable,
                              os.path.join(config.clang_tools_dir, 'hmaptool'))))
 
-# Strip C++ comments "//"" from tests
-config.substitutions.append(
-    ('%strip_comments', "sed 's/[ \t]*\/\/.*//' %s")
-)
 
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:

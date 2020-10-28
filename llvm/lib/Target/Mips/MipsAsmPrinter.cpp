@@ -1233,7 +1233,7 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
                        .addImm(0x34));
   }
 
-  recordSled(CurSled, MI, Kind);
+  recordSled(CurSled, MI, Kind, 2);
 }
 
 void MipsAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI) {

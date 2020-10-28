@@ -100,7 +100,8 @@ public:
                     VModuleKey K = VModuleKey());
 
   /// Emit should materialize the given IR.
-  virtual void emit(MaterializationResponsibility R, ThreadSafeModule TSM) = 0;
+  virtual void emit(std::unique_ptr<MaterializationResponsibility> R,
+                    ThreadSafeModule TSM) = 0;
 
 private:
   bool CloneToNewContextOnEmit = false;
@@ -117,8 +118,7 @@ public:
                                   ThreadSafeModule TSM, VModuleKey K);
 
 private:
-
-  void materialize(MaterializationResponsibility R) override;
+  void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
 
   IRLayer &L;
   VModuleKey K;
@@ -139,7 +139,7 @@ public:
                     VModuleKey K = VModuleKey());
 
   /// Emit should materialize the given IR.
-  virtual void emit(MaterializationResponsibility R,
+  virtual void emit(std::unique_ptr<MaterializationResponsibility> R,
                     std::unique_ptr<MemoryBuffer> O) = 0;
 
 private:
@@ -162,8 +162,7 @@ public:
   StringRef getName() const override;
 
 private:
-
-  void materialize(MaterializationResponsibility R) override;
+  void materialize(std::unique_ptr<MaterializationResponsibility> R) override;
   void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
 
   ObjectLayer &L;

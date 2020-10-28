@@ -869,3 +869,5 @@ static BOOL WINAPI LLVMConsoleCtrlHandler(DWORD dwCtrlType) {
  #pragma GCC diagnostic warning "-Wformat"
  #pragma GCC diagnostic warning "-Wformat-extra-args"
 #endif
+
+void sys::unregisterHandlers() {}

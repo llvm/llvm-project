@@ -270,6 +270,7 @@ public:
   void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *Node);
   void VisitCXXThisExpr(const CXXThisExpr *Node);
   void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *Node);
+  void VisitCXXStaticCastExpr(const CXXStaticCastExpr *Node);
   void VisitCXXUnresolvedConstructExpr(const CXXUnresolvedConstructExpr *Node);
   void VisitCXXConstructExpr(const CXXConstructExpr *Node);
   void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *Node);

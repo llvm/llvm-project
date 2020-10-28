@@ -7,17 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strnlen.h"
+#include "src/string/string_utils.h"
 
 #include "src/__support/common.h"
-#include "src/string/memchr.h"
 #include <stddef.h>
 
 namespace __llvm_libc {
 
 size_t LLVM_LIBC_ENTRYPOINT(strnlen)(const char *src, size_t n) {
-  const char *temp =
-      reinterpret_cast<char *>(__llvm_libc::memchr(src, '\0', n));
-  return temp ? temp - src : n;
+  const void *temp = internal::find_first_character(
+      reinterpret_cast<const unsigned char *>(src), '\0', n);
+  return temp ? reinterpret_cast<const char *>(temp) - src : n;
 }
 
 } // namespace __llvm_libc

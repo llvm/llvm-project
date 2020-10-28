@@ -63,6 +63,7 @@ void testp()
         A t;
         std::atomic_init(&t, T(1*sizeof(X)));
         assert(std::atomic_fetch_add(&t, 2) == T(1*sizeof(X)));
+        std::atomic_fetch_add<X>(&t, 0);
         assert(t == T(3*sizeof(X)));
     }
     {
@@ -71,6 +72,7 @@ void testp()
         volatile A t;
         std::atomic_init(&t, T(1*sizeof(X)));
         assert(std::atomic_fetch_add(&t, 2) == T(1*sizeof(X)));
+        std::atomic_fetch_add<X>(&t, 0);
         assert(t == T(3*sizeof(X)));
     }
 }

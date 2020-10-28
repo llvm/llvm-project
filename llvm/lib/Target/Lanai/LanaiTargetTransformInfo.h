@@ -67,7 +67,8 @@ public:
   }
 
   int getIntImmCostInst(unsigned Opc, unsigned Idx, const APInt &Imm, Type *Ty,
-                        TTI::TargetCostKind CostKind) {
+                        TTI::TargetCostKind CostKind,
+                        Instruction *Inst = nullptr) {
     return getIntImmCost(Imm, Ty, CostKind);
   }
 

@@ -13,9 +13,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !(defined(_OMPTARGET_H_) && defined(DP))
-#error Include elf_common.c in the plugin source AFTER omptarget.h has been\
- included and macro DP(...) has been defined.
+#if !(defined(_OMPTARGET_DEBUG_H))
+#error Include elf_common.c in the plugin source AFTER Debug.h has\
+ been included.
 #endif
 
 #include <elf.h>

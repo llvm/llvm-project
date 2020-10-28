@@ -297,7 +297,7 @@ static uint32_t getArchFlags(ArrayRef<FileFlags> files) {
 template <class ELFT> uint32_t elf::calcMipsEFlags() {
   std::vector<FileFlags> v;
   for (InputFile *f : objectFiles)
-    v.push_back({f, cast<ObjFile<ELFT>>(f)->getObj().getHeader()->e_flags});
+    v.push_back({f, cast<ObjFile<ELFT>>(f)->getObj().getHeader().e_flags});
   if (v.empty()) {
     // If we don't have any input files, we'll have to rely on the information
     // we can derive from emulation information, since this at least gets us
@@ -363,7 +363,7 @@ uint8_t elf::getMipsFpAbiFlag(uint8_t oldFlag, uint8_t newFlag,
 
 template <class ELFT> static bool isN32Abi(const InputFile *f) {
   if (auto *ef = dyn_cast<ELFFileBase>(f))
-    return ef->template getObj<ELFT>().getHeader()->e_flags & EF_MIPS_ABI2;
+    return ef->template getObj<ELFT>().getHeader().e_flags & EF_MIPS_ABI2;
   return false;
 }
 

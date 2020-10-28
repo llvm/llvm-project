@@ -7856,6 +7856,23 @@ public:
   /// Return a string representation identifying this context selector.
   std::string getMangledName() const;
 
+  /// Check the extension trait \p TP is active.
+  bool isExtensionActive(llvm::omp::TraitProperty TP) {
+    for (const OMPTraitSet &Set : Sets) {
+      if (Set.Kind != llvm::omp::TraitSet::implementation)
+        continue;
+      for (const OMPTraitSelector &Selector : Set.Selectors) {
+        if (Selector.Kind != llvm::omp::TraitSelector::implementation_extension)
+          continue;
+        for (const OMPTraitProperty &Property : Selector.Properties) {
+          if (Property.Kind == TP)
+            return true;
+        }
+      }
+    }
+    return false;
+  }
+
   /// Print a human readable representation into \p OS.
   void print(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const;
 };

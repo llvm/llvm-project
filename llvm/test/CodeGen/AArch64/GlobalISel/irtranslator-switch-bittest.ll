@@ -4,7 +4,7 @@
 define i32 @test_bittest(i16 %p) {
   ; CHECK-LABEL: name: test_bittest
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   successors: %bb.4(0x40000000), %bb.5(0x40000000)
+  ; CHECK:   successors: %bb.4(0x1b6db6db), %bb.5(0x64924925)
   ; CHECK:   liveins: $w0
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
@@ -25,7 +25,7 @@ define i32 @test_bittest(i16 %p) {
   ; CHECK:   G_BRCOND [[ICMP1]](s1), %bb.3
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.5 (%ir-block.0):
-  ; CHECK:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
+  ; CHECK:   successors: %bb.3(0x745d1746), %bb.4(0x0ba2e8ba)
   ; CHECK:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK:   [[SHL:%[0-9]+]]:_(s64) = G_SHL [[C5]], [[ZEXT1]](s64)
   ; CHECK:   [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 866239240827043840
@@ -61,7 +61,7 @@ declare void @callee()
 define void @test_bittest_2_bt(i32 %p) {
   ; CHECK-LABEL: name: test_bittest_2_bt
   ; CHECK: bb.1.entry:
-  ; CHECK:   successors: %bb.5(0x40000000), %bb.6(0x40000000)
+  ; CHECK:   successors: %bb.5(0x345d1746), %bb.6(0x4ba2e8ba)
   ; CHECK:   liveins: $w0
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 176
@@ -71,7 +71,7 @@ define void @test_bittest_2_bt(i32 %p) {
   ; CHECK:   G_BRCOND [[ICMP]](s1), %bb.5
   ; CHECK:   G_BR %bb.6
   ; CHECK: bb.5.entry:
-  ; CHECK:   successors: %bb.4(0x40000000), %bb.7(0x40000000)
+  ; CHECK:   successors: %bb.4(0x0ccccccd), %bb.7(0x73333333)
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK:   [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[COPY]], [[C2]]
   ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[SUB1]](s32)
@@ -80,7 +80,7 @@ define void @test_bittest_2_bt(i32 %p) {
   ; CHECK:   G_BRCOND [[ICMP1]](s1), %bb.4
   ; CHECK:   G_BR %bb.7
   ; CHECK: bb.6.entry:
-  ; CHECK:   successors: %bb.2(0x40000000), %bb.5(0x40000000)
+  ; CHECK:   successors: %bb.2(0x76276276), %bb.5(0x09d89d8a)
   ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C4]], [[SUB]](s32)
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 57351
@@ -90,7 +90,7 @@ define void @test_bittest_2_bt(i32 %p) {
   ; CHECK:   G_BRCOND [[ICMP2]](s1), %bb.2
   ; CHECK:   G_BR %bb.5
   ; CHECK: bb.7.entry:
-  ; CHECK:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
+  ; CHECK:   successors: %bb.3(0x71c71c72), %bb.4(0x0e38e38e)
   ; CHECK:   [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK:   [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[C7]], [[ZEXT]](s64)
   ; CHECK:   [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 365072220160
@@ -134,7 +134,7 @@ sw.default:                                       ; preds = %entry
 define i32 @test_bittest_single_bt_only_with_fallthrough(i16 %p) {
   ; CHECK-LABEL: name: test_bittest_single_bt_only_with_fallthrough
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
+  ; CHECK:   successors: %bb.2(0x0aaaaaab), %bb.4(0x75555555)
   ; CHECK:   liveins: $w0
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
@@ -148,7 +148,7 @@ define i32 @test_bittest_single_bt_only_with_fallthrough(i16 %p) {
   ; CHECK:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ugt), [[SUB]](s32), [[C3]]
   ; CHECK:   G_BRCOND [[ICMP]](s1), %bb.2
   ; CHECK: bb.4 (%ir-block.0):
-  ; CHECK:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   successors: %bb.3(0x745d1746), %bb.2(0x0ba2e8ba)
   ; CHECK:   [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
   ; CHECK:   [[SHL:%[0-9]+]]:_(s64) = G_SHL [[C4]], [[ZEXT1]](s64)
   ; CHECK:   [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 866239240827043840

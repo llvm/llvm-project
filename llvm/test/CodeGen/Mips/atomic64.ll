@@ -95,13 +95,13 @@ define i64 @AtomicLoadAdd(i64 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadAdd)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadAdd)))
-; MIPS64R6O0-NEXT:    ld $1, %got_disp(x)($1)
+; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB0_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    lld $2, 0($1)
-; MIPS64R6O0-NEXT:    daddu $3, $2, $4
-; MIPS64R6O0-NEXT:    scd $3, 0($1)
-; MIPS64R6O0-NEXT:    beqzc $3, .LBB0_1
+; MIPS64R6O0-NEXT:    lld $2, 0($3)
+; MIPS64R6O0-NEXT:    daddu $1, $2, $4
+; MIPS64R6O0-NEXT:    scd $1, 0($3)
+; MIPS64R6O0-NEXT:    beqzc $1, .LBB0_1
 ; MIPS64R6O0-NEXT:    nop
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS64R6O0-NEXT:    jrc $ra
@@ -252,13 +252,13 @@ define i64 @AtomicLoadSub(i64 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadSub)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadSub)))
-; MIPS64R6O0-NEXT:    ld $1, %got_disp(x)($1)
+; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB1_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    lld $2, 0($1)
-; MIPS64R6O0-NEXT:    dsubu $3, $2, $4
-; MIPS64R6O0-NEXT:    scd $3, 0($1)
-; MIPS64R6O0-NEXT:    beqzc $3, .LBB1_1
+; MIPS64R6O0-NEXT:    lld $2, 0($3)
+; MIPS64R6O0-NEXT:    dsubu $1, $2, $4
+; MIPS64R6O0-NEXT:    scd $1, 0($3)
+; MIPS64R6O0-NEXT:    beqzc $1, .LBB1_1
 ; MIPS64R6O0-NEXT:    nop
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS64R6O0-NEXT:    jrc $ra
@@ -409,13 +409,13 @@ define i64 @AtomicLoadAnd(i64 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadAnd)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadAnd)))
-; MIPS64R6O0-NEXT:    ld $1, %got_disp(x)($1)
+; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB2_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    lld $2, 0($1)
-; MIPS64R6O0-NEXT:    and $3, $2, $4
-; MIPS64R6O0-NEXT:    scd $3, 0($1)
-; MIPS64R6O0-NEXT:    beqzc $3, .LBB2_1
+; MIPS64R6O0-NEXT:    lld $2, 0($3)
+; MIPS64R6O0-NEXT:    and $1, $2, $4
+; MIPS64R6O0-NEXT:    scd $1, 0($3)
+; MIPS64R6O0-NEXT:    beqzc $1, .LBB2_1
 ; MIPS64R6O0-NEXT:    nop
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS64R6O0-NEXT:    jrc $ra
@@ -566,13 +566,13 @@ define i64 @AtomicLoadOr(i64 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadOr)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadOr)))
-; MIPS64R6O0-NEXT:    ld $1, %got_disp(x)($1)
+; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB3_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    lld $2, 0($1)
-; MIPS64R6O0-NEXT:    or $3, $2, $4
-; MIPS64R6O0-NEXT:    scd $3, 0($1)
-; MIPS64R6O0-NEXT:    beqzc $3, .LBB3_1
+; MIPS64R6O0-NEXT:    lld $2, 0($3)
+; MIPS64R6O0-NEXT:    or $1, $2, $4
+; MIPS64R6O0-NEXT:    scd $1, 0($3)
+; MIPS64R6O0-NEXT:    beqzc $1, .LBB3_1
 ; MIPS64R6O0-NEXT:    nop
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS64R6O0-NEXT:    jrc $ra
@@ -723,13 +723,13 @@ define i64 @AtomicLoadXor(i64 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadXor)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadXor)))
-; MIPS64R6O0-NEXT:    ld $1, %got_disp(x)($1)
+; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB4_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    lld $2, 0($1)
-; MIPS64R6O0-NEXT:    xor $3, $2, $4
-; MIPS64R6O0-NEXT:    scd $3, 0($1)
-; MIPS64R6O0-NEXT:    beqzc $3, .LBB4_1
+; MIPS64R6O0-NEXT:    lld $2, 0($3)
+; MIPS64R6O0-NEXT:    xor $1, $2, $4
+; MIPS64R6O0-NEXT:    scd $1, 0($3)
+; MIPS64R6O0-NEXT:    beqzc $1, .LBB4_1
 ; MIPS64R6O0-NEXT:    nop
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS64R6O0-NEXT:    jrc $ra
@@ -884,14 +884,14 @@ define i64 @AtomicLoadNand(i64 signext %incr) nounwind {
 ; MIPS64R6O0-NEXT:    lui $1, %hi(%neg(%gp_rel(AtomicLoadNand)))
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicLoadNand)))
-; MIPS64R6O0-NEXT:    ld $1, %got_disp(x)($1)
+; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB5_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    lld $2, 0($1)
-; MIPS64R6O0-NEXT:    and $3, $2, $4
-; MIPS64R6O0-NEXT:    nor $3, $zero, $3
-; MIPS64R6O0-NEXT:    scd $3, 0($1)
-; MIPS64R6O0-NEXT:    beqzc $3, .LBB5_1
+; MIPS64R6O0-NEXT:    lld $2, 0($3)
+; MIPS64R6O0-NEXT:    and $1, $2, $4
+; MIPS64R6O0-NEXT:    nor $1, $zero, $1
+; MIPS64R6O0-NEXT:    scd $1, 0($3)
+; MIPS64R6O0-NEXT:    beqzc $1, .LBB5_1
 ; MIPS64R6O0-NEXT:    nop
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS64R6O0-NEXT:    jrc $ra
@@ -1057,16 +1057,15 @@ define i64 @AtomicSwap64(i64 signext %newval) nounwind {
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicSwap64)))
 ; MIPS64R6O0-NEXT:    sd $4, 8($sp)
-; MIPS64R6O0-NEXT:    ld $2, 8($sp)
-; MIPS64R6O0-NEXT:    ld $1, %got_disp(x)($1)
+; MIPS64R6O0-NEXT:    ld $4, 8($sp)
+; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB6_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    lld $3, 0($1)
-; MIPS64R6O0-NEXT:    move $4, $2
-; MIPS64R6O0-NEXT:    scd $4, 0($1)
-; MIPS64R6O0-NEXT:    beqzc $4, .LBB6_1
+; MIPS64R6O0-NEXT:    lld $2, 0($3)
+; MIPS64R6O0-NEXT:    move $1, $4
+; MIPS64R6O0-NEXT:    scd $1, 0($3)
+; MIPS64R6O0-NEXT:    beqzc $1, .LBB6_1
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
-; MIPS64R6O0-NEXT:    move $2, $3
 ; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;
@@ -1253,19 +1252,18 @@ define i64 @AtomicCmpSwap64(i64 signext %oldval, i64 signext %newval) nounwind {
 ; MIPS64R6O0-NEXT:    daddu $1, $1, $25
 ; MIPS64R6O0-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicCmpSwap64)))
 ; MIPS64R6O0-NEXT:    sd $5, 8($sp)
-; MIPS64R6O0-NEXT:    ld $2, 8($sp)
-; MIPS64R6O0-NEXT:    ld $1, %got_disp(x)($1)
+; MIPS64R6O0-NEXT:    ld $5, 8($sp)
+; MIPS64R6O0-NEXT:    ld $3, %got_disp(x)($1)
 ; MIPS64R6O0-NEXT:  .LBB7_1: # %entry
 ; MIPS64R6O0-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64R6O0-NEXT:    lld $3, 0($1)
-; MIPS64R6O0-NEXT:    bnec $3, $4, .LBB7_3
+; MIPS64R6O0-NEXT:    lld $2, 0($3)
+; MIPS64R6O0-NEXT:    bnec $2, $4, .LBB7_3
 ; MIPS64R6O0-NEXT:  # %bb.2: # %entry
 ; MIPS64R6O0-NEXT:    # in Loop: Header=BB7_1 Depth=1
-; MIPS64R6O0-NEXT:    move $5, $2
-; MIPS64R6O0-NEXT:    scd $5, 0($1)
-; MIPS64R6O0-NEXT:    beqzc $5, .LBB7_1
+; MIPS64R6O0-NEXT:    move $1, $5
+; MIPS64R6O0-NEXT:    scd $1, 0($3)
+; MIPS64R6O0-NEXT:    beqzc $1, .LBB7_1
 ; MIPS64R6O0-NEXT:  .LBB7_3: # %entry
-; MIPS64R6O0-NEXT:    move $2, $3
 ; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;

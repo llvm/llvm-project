@@ -117,7 +117,7 @@ bool LocalStackSlotPass::runOnMachineFunction(MachineFunction &MF) {
 
   // If the target doesn't want/need this pass, or if there are no locals
   // to consider, early exit.
-  if (!TRI->requiresVirtualBaseRegisters(MF) || LocalObjectCount == 0)
+  if (LocalObjectCount == 0 || !TRI->requiresVirtualBaseRegisters(MF))
     return true;
 
   // Make sure we have enough space to store the local offsets.

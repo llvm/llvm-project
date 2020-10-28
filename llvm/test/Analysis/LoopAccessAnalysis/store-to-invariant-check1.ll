@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-accesses -analyze | FileCheck -check-prefix=OLDPM %s
+; RUN: opt < %s -loop-accesses -analyze -enable-new-pm=0 | FileCheck -check-prefix=OLDPM %s
 ; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck -check-prefix=NEWPM %s
 
 ; Test to confirm LAA will find multiple stores to an invariant address in the

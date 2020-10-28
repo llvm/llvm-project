@@ -379,3 +379,14 @@ func @affine_if_with_else_region_args(%N: index) {
   return
 }
 
+// -----
+
+func @affine_for_iter_args_mismatch(%buffer: memref<1024xf32>) -> f32 {
+  %sum_0 = constant 0.0 : f32
+  // expected-error@+1 {{mismatch between the number of loop-carried values and results}}
+  %res = affine.for %i = 0 to 10 step 2 iter_args(%sum_iter = %sum_0) -> (f32, f32) {
+    %t = affine.load %buffer[%i] : memref<1024xf32>
+    affine.yield %t : f32
+  }
+  return %res : f32
+}

@@ -1319,7 +1319,23 @@ MmapArgList Platform::GetMmapArgumentList(const ArchSpec &arch, addr_t addr,
 }
 
 lldb_private::Status Platform::RunShellCommand(
-    const char *command, // Shouldn't be nullptr
+    llvm::StringRef command,
+    const FileSpec &
+        working_dir, // Pass empty FileSpec to use the current working directory
+    int *status_ptr, // Pass nullptr if you don't want the process exit status
+    int *signo_ptr, // Pass nullptr if you don't want the signal that caused the
+                    // process to exit
+    std::string
+        *command_output, // Pass nullptr if you don't want the command output
+    const Timeout<std::micro> &timeout) {
+  return RunShellCommand(llvm::StringRef(), command, working_dir, status_ptr,
+                         signo_ptr, command_output, timeout);
+}
+
+lldb_private::Status Platform::RunShellCommand(
+    llvm::StringRef shell,   // Pass empty if you want to use the default
+                             // shell interpreter
+    llvm::StringRef command, // Shouldn't be empty
     const FileSpec &
         working_dir, // Pass empty FileSpec to use the current working directory
     int *status_ptr, // Pass nullptr if you don't want the process exit status
@@ -1329,8 +1345,8 @@ lldb_private::Status Platform::RunShellCommand(
         *command_output, // Pass nullptr if you don't want the command output
     const Timeout<std::micro> &timeout) {
   if (IsHost())
-    return Host::RunShellCommand(command, working_dir, status_ptr, signo_ptr,
-                                 command_output, timeout);
+    return Host::RunShellCommand(shell, command, working_dir, status_ptr,
+                                 signo_ptr, command_output, timeout);
   else
     return Status("unimplemented");
 }
@@ -1564,19 +1580,27 @@ Status Platform::GetRemoteSharedModule(const ModuleSpec &module_spec,
       if (error.Success() && module_sp)
         break;
     }
-    if (module_sp)
+    if (module_sp) {
+      resolved_module_spec = arch_module_spec;
       got_module_spec = true;
+    }
   }
 
   if (!got_module_spec) {
     // Get module information from a target.
-    if (!GetModuleSpec(module_spec.GetFileSpec(), module_spec.GetArchitecture(),
-                       resolved_module_spec)) {
+    if (GetModuleSpec(module_spec.GetFileSpec(), module_spec.GetArchitecture(),
+                      resolved_module_spec)) {
       if (!module_spec.GetUUID().IsValid() ||
           module_spec.GetUUID() == resolved_module_spec.GetUUID()) {
-        return module_resolver(module_spec);
+        got_module_spec = true;
       }
     }
+  }
+
+  if (!got_module_spec) {
+    // Fall back to the given module resolver, which may have its own
+    // search logic.
+    return module_resolver(module_spec);
   }
 
   // If we are looking for a specific UUID, make sure resolved_module_spec has

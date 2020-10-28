@@ -2,18 +2,18 @@
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/libfoo.s -o %t/libfoo.o
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk -dylib %t/libfoo.o -o %t/libfoo.dylib
-# RUN: lld -flavor darwinnew -syslibroot %S/Inputs/MacOSX.sdk %t/test.o -L%t -lfoo -o %t/test -lSystem
+# RUN: %lld -dylib %t/libfoo.o -o %t/libfoo.dylib
+# RUN: %lld %t/test.o -L%t -lfoo -o %t/test -lSystem
 # RUN: llvm-objdump -d --no-show-raw-insn --bind --lazy-bind --weak-bind --full-contents %t/test | \
 # RUN:   FileCheck %s
 
-# CHECK:      Contents of section __la_symbol_ptr:
+# CHECK:      Contents of section __DATA,__la_symbol_ptr:
 ## Check that this section contains a nonzero pointer. It should point to
 ## _weak_external_fn, but we don't have a good way of testing the exact value as
 ## the bytes here are in little-endian order.
 # CHECK-NEXT: {{[0-9a-f]+}} {{[0-9a-f ]*[1-9a-f]+[0-9a-f ]*}}
 
-# CHECK:      Contents of section __got:
+# CHECK:      Contents of section __DATA_CONST,__got:
 ## Check that this section contains a nonzero pointer. It should point to
 ## _weak_external_for_gotpcrel.
 # CHECK-NEXT: {{[0-9a-f]+}} {{[0-9a-f ]*[1-9a-f]+[0-9a-f ]*}}

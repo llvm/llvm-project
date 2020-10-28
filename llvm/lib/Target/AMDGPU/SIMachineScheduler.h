@@ -455,7 +455,7 @@ public:
   MachineRegisterInfo *getMRI() { return &MRI; }
   const TargetRegisterInfo *getTRI() { return TRI; }
   ScheduleDAGTopologicalSort *GetTopo() { return &Topo; }
-  SUnit& getEntrySU() { return EntrySU; }
+  SUnit &getEntrySU() { return EntrySU; }
   SUnit& getExitSU() { return ExitSU; }
 
   void restoreSULinksLeft();

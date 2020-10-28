@@ -1,5 +1,4 @@
-// RUN: %strip_comments > %t.stripped.cpp
-// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name label.cpp %t.stripped.cpp | FileCheck %s
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name label.cpp %s | FileCheck %s
 
 // CHECK: func
 void func() {                // CHECK-NEXT: File 0, [[@LINE]]:13 -> {{[0-9]+}}:2 = #0

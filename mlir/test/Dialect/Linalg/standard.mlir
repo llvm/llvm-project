@@ -13,9 +13,9 @@
 func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>,
           %arg1: memref<?xf32, offset: ?, strides: [1]>,
           %arg2: memref<f32>) {
-  linalg.dot %arg0, %arg1, %arg2  : (memref<?xf32, offset: ?, strides: [1]>,
-                                     memref<?xf32, offset: ?, strides: [1]>,
-                                     memref<f32>)
+  linalg.dot ins(%arg0, %arg1: memref<?xf32, offset: ?, strides: [1]>,
+                               memref<?xf32, offset: ?, strides: [1]>)
+             outs(%arg2: memref<f32>)
   return
 }
 // CHECK-LABEL: func @dot(
@@ -72,8 +72,6 @@ func @copy_transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %a
   affine_map<(m, n, k) -> (m, n)>
 ]
 #matmul_trait = {
-  args_in = 2,
-  args_out = 1,
   iterator_types = ["parallel", "parallel", "reduction"],
   indexing_maps = #matmul_accesses,
   library_call = "external_outerproduct_matmul"
@@ -88,20 +86,19 @@ func @copy_transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %a
 !matrix_type_C = type memref<?x?x!vector_type_C>
 
 func @matmul_vec_impl(%A: !matrix_type_A, %B: !matrix_type_B, %C: !matrix_type_C) {
-  linalg.generic #matmul_trait %A, %B, %C {
+  linalg.generic #matmul_trait
+      ins(%A, %B : !matrix_type_A, !matrix_type_B)
+     outs(%C : !matrix_type_C) {
     ^bb0(%a: !vector_type_A, %b: !vector_type_B, %c: !vector_type_C):
       %d = vector.outerproduct %a, %b, %c: !vector_type_A, !vector_type_B
       linalg.yield %d: !vector_type_C
-  } : !matrix_type_A, !matrix_type_B, !matrix_type_C
-
+  }
   return
 }
 // CHECK-LABEL: func @matmul_vec_impl(
 // CHECK:  call @external_outerproduct_matmul(%{{.*}}) :
 
 #indexed_matmul_trait = {
-  args_in = 2,
-  args_out = 1,
   iterator_types = ["parallel", "parallel", "reduction"],
   indexing_maps = #matmul_accesses,
   library_call = "external_indexed_outerproduct_matmul"
@@ -109,12 +106,14 @@ func @matmul_vec_impl(%A: !matrix_type_A, %B: !matrix_type_B, %C: !matrix_type_C
 func @matmul_vec_indexed(%A: !matrix_type_A,
                          %B: !matrix_type_B,
                          %C: !matrix_type_C) {
-  linalg.indexed_generic #indexed_matmul_trait %A, %B, %C {
+  linalg.indexed_generic #indexed_matmul_trait
+      ins(%A, %B : !matrix_type_A, !matrix_type_B)
+     outs(%C : !matrix_type_C) {
     ^bb0(%i: index, %j: index, %k: index,
          %a: !vector_type_A, %b: !vector_type_B, %c: !vector_type_C):
       %d = vector.outerproduct %a, %b, %c: !vector_type_A, !vector_type_B
       linalg.yield %d: !vector_type_C
-  } : !matrix_type_A, !matrix_type_B, !matrix_type_C
+  }
   return
 }
 // CHECK-LABEL: func @matmul_vec_indexed(

@@ -18,7 +18,7 @@ CHECK-ABSOLUTE-PATH-REROOTED: Library search paths:
 CHECK-ABSOLUTE-PATH-REROOTED: [[ROOT]]/Library/libxml2-development
 CHECK-ABSOLUTE-PATH-REROOTED: [[ROOT]]/usr/lib
 
-RUN: lld -flavor darwinnew -v -Z -syslibroot %t -L %t/Library/libxml2-development | FileCheck %s -check-prefix CHECK-PATH-WITHOUT-REROOT -DPATH=%t/Library/libxml2-development
+RUN: lld -flavor darwinnew -v -syslibroot %t -L %t/Library/libxml2-development | FileCheck %s -check-prefix CHECK-PATH-WITHOUT-REROOT -DPATH=%t/Library/libxml2-development
 CHECK-PATH-WITHOUT-REROOT:      Library search paths:
 CHECK-PATH-WITHOUT-REROOT-NEXT: [[PATH]]
 

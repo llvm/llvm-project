@@ -59,7 +59,7 @@ define dso_local { i64, i64 } @shl128(i64 %x.coerce0, i64 %x.coerce1, i8 signext
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-NEXT:    mov w2, w2
 ; CHECK-NEXT:    bl __ashlti3
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -86,7 +86,7 @@ define dso_local { i64, i64 } @ashr128(i64 %x.coerce0, i64 %x.coerce1, i8 signex
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-NEXT:    mov w2, w2
 ; CHECK-NEXT:    bl __ashrti3
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -112,7 +112,7 @@ define dso_local { i64, i64 } @lshr128(i64 %x.coerce0, i64 %x.coerce1, i8 signex
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
+; CHECK-NEXT:    mov w2, w2
 ; CHECK-NEXT:    bl __lshrti3
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

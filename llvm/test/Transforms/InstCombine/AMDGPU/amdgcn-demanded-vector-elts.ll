@@ -2161,10 +2161,9 @@ define amdgpu_ps half @extract_elt3_raw_tbuffer_load_v4f16(<4 x i32> inreg %rsrc
   ret half %elt1
 }
 
-; FIXME: Enable load shortening when full support for v3f16 has been added (should expect call <3 x half> @llvm.amdgcn.raw.tbuffer.load.v3f16).
 ; CHECK-LABEL: @extract_elt2_raw_tbuffer_load_v4f16(
-; CHECK-NEXT: %data = call <4 x half> @llvm.amdgcn.raw.tbuffer.load.v4f16(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
-; CHECK-NEXT: %elt1 = extractelement <4 x half> %data, i32 2
+; CHECK-NEXT: %data = call <3 x half> @llvm.amdgcn.raw.tbuffer.load.v3f16(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
+; CHECK-NEXT: %elt1 = extractelement <3 x half> %data, i32 2
 ; CHECK-NEXT: ret half %elt1
 define amdgpu_ps half @extract_elt2_raw_tbuffer_load_v4f16(<4 x i32> inreg %rsrc, i32 %arg0, i32 inreg %arg1) #0 {
   %data = call <4 x half> @llvm.amdgcn.raw.tbuffer.load.v4f16(<4 x i32> %rsrc, i32 %arg0, i32 %arg1, i32 78, i32 0)
@@ -2992,10 +2991,9 @@ define amdgpu_ps half @extract_elt1_image_sample_cd_cl_1d_v4f16_f32_f32(float %d
   ret half %elt0
 }
 
-; FIXME: Enable load shortening when full support for v3f16 has been added (should expect call <3 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v3f16.f32.f32).
 ; CHECK-LABEL: @extract_elt_to3_image_sample_cd_cl_1d_v4f16_f32_f32(
-; CHECK-NEXT: %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
-; CHECK-NEXT: %res = shufflevector <4 x half> %data, <4 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT: %data = call <3 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v3f16.f32.f32(i32 7, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)
+; CHECK-NEXT: %res = shufflevector <3 x half> %data, <3 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
 ; CHECK-NEXT: ret <4 x half> %res
 define amdgpu_ps <4 x half> @extract_elt_to3_image_sample_cd_cl_1d_v4f16_f32_f32(float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> inreg %sampler, <4 x i32> inreg %rsrc) #0 {
   %data = call <4 x half> @llvm.amdgcn.image.sample.cd.cl.1d.v4f16.f32.f32(i32 15, float %dsdh, float %dsdv, float %s, float %clamp, <8 x i32> %sampler, <4 x i32> %rsrc, i1 false, i32 0, i32 0)

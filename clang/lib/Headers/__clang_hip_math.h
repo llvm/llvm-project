@@ -1221,6 +1221,27 @@ __DEVICE__
 inline _Float16 pow(_Float16 __base, int __iexp) {
   return __ocml_pown_f16(__base, __iexp);
 }
+
+__DEVICE__
+inline float remquo(float __x, float __y, int *__quo) {
+  return remquof(__x, __y, __quo);
+}
+
+template <typename __T1, typename __T2>
+__DEVICE__
+    typename __hip_enable_if<std::numeric_limits<__T1>::is_specialized &&
+                                 std::numeric_limits<__T2>::is_specialized,
+                             double>::type
+    remquo(__T1 __x, __T2 __y, int *__quo) {
+  return remquo((double)__x, (double)__y, __quo);
+}
+
+__DEVICE__
+inline float frexp(float __x, int *__nptr) { return frexpf(__x, __nptr); }
+
+__DEVICE__
+inline float modf(float __x, float *__iptr) { return modff(__x, __iptr); }
+
 #endif
 
 #pragma pop_macro("__DEF_FUN1")

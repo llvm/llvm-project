@@ -19,9 +19,9 @@ unequal:
 }
 
 ; CHECK-LABEL: func1:
-; CHECK: cmpld {{([0-9]+,)?}}4, 5
 ; CHECK-DAG: std 3, -[[OFFSET1:[0-9]+]]
 ; CHECK-DAG: std 5, -[[OFFSET2:[0-9]+]]
+; CHECK: cmpld {{([0-9]+,)?}}4, 5
 ; CHECK: ld 3, -[[OFFSET1]](1)
 ; CHECK: ld 3, -[[OFFSET2]](1)
 
@@ -38,13 +38,13 @@ unequal:
   ret i8* %array2_ptr
 }
 ; CHECK-LABEL: func2:
-; CHECK-DAG: cmpld {{([0-9]+,)?}}4, 5
+; CHECK-DAG: cmpld {{([0-9]+,)?}}4, 3
 ; CHECK-DAG: std 6, 72(1)
 ; CHECK-DAG: std 5, 64(1)
-; CHECK-DAG: std 5, -[[OFFSET1:[0-9]+]]
+; CHECK-DAG: std 3, -[[OFFSET1:[0-9]+]]
 ; CHECK-DAG: std 3, -[[OFFSET2:[0-9]+]]
-; CHECK: ld 3, -[[OFFSET2]](1)
 ; CHECK: ld 3, -[[OFFSET1]](1)
+; CHECK: ld 3, -[[OFFSET2]](1)
 
 define i8* @func3({ i64, i8* }* byval %array1, %tarray* byval %array2) {
 entry:
@@ -85,9 +85,9 @@ unequal:
 ; CHECK-LABEL: func4:
 ; CHECK-DAG: ld [[REG2:[0-9]+]], 120(1)
 ; CHECK-DAG: ld [[REG3:[0-9]+]], 136(1)
-; CHECK-DAG: cmpld {{([0-9]+,)?}}[[REG2]], [[REG3]]
-; CHECK: std [[REG2]], -[[OFFSET1:[0-9]+]](1)
+; CHECK-DAG: std [[REG2]], -[[OFFSET1:[0-9]+]](1)
 ; CHECK: std [[REG3]], -[[OFFSET2:[0-9]+]](1)
+; CHECK: cmpld {{([0-9]+,)?}}[[REG2]], [[REG3]]
 ; CHECK: ld 3, -[[OFFSET1]](1)
 ; CHECK: ld 3, -[[OFFSET2]](1)
 

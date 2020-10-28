@@ -34,7 +34,7 @@ static uptr last_dlsym_alloc_size_in_words;
 static const uptr kDlsymAllocPoolSize = SANITIZER_RTEMS ? 4096 : 1024;
 static uptr alloc_memory_for_dlsym[kDlsymAllocPoolSize];
 
-static INLINE bool IsInDlsymAllocPool(const void *ptr) {
+static inline bool IsInDlsymAllocPool(const void *ptr) {
   uptr off = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
   return off < allocated_for_dlsym * sizeof(alloc_memory_for_dlsym[0]);
 }
@@ -95,12 +95,12 @@ bool IsFromLocalPool(const void *ptr) {
 }
 #endif
 
-static INLINE bool MaybeInDlsym() {
+static inline bool MaybeInDlsym() {
   // Fuchsia doesn't use dlsym-based interceptors.
   return !SANITIZER_FUCHSIA && asan_init_is_running;
 }
 
-static INLINE bool UseLocalPool() {
+static inline bool UseLocalPool() {
   return EarlyMalloc() || MaybeInDlsym();
 }
 

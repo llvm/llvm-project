@@ -1184,7 +1184,7 @@ std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
   else if (SU == &ExitSU)
     oss << "<exit>";
   else
-    SU->getInstr()->print(oss, /*SkipOpers=*/true);
+    SU->getInstr()->print(oss, /*IsStandalone=*/true);
   return oss.str();
 }
 

@@ -335,6 +335,22 @@ func @convert_f_to_s_scalar(%arg0 : f32) -> i32 {
 
 // -----
 
+func @convert_f64_to_s32_scalar(%arg0 : f64) -> i32 {
+  // CHECK: {{%.*}} = spv.ConvertFToS {{%.*}} : f64 to i32
+  %0 = spv.ConvertFToS %arg0 : f64 to i32
+  spv.ReturnValue %0 : i32
+}
+
+// -----
+
+func @convert_f_to_s_vector(%arg0 : vector<3xf32>) -> vector<3xi32> {
+  // CHECK: {{%.*}} = spv.ConvertFToS {{%.*}} : vector<3xf32> to vector<3xi32>
+  %0 = spv.ConvertFToS %arg0 : vector<3xf32> to vector<3xi32>
+  spv.ReturnValue %0 : vector<3xi32>
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spv.ConvertFToU
 //===----------------------------------------------------------------------===//
@@ -342,6 +358,14 @@ func @convert_f_to_s_scalar(%arg0 : f32) -> i32 {
 func @convert_f_to_u_scalar(%arg0 : f32) -> i32 {
   // CHECK: {{%.*}} = spv.ConvertFToU {{%.*}} : f32 to i32
   %0 = spv.ConvertFToU %arg0 : f32 to i32
+  spv.ReturnValue %0 : i32
+}
+
+// -----
+
+func @convert_f64_to_u32_scalar(%arg0 : f64) -> i32 {
+  // CHECK: {{%.*}} = spv.ConvertFToU {{%.*}} : f64 to i32
+  %0 = spv.ConvertFToU %arg0 : f64 to i32
   spv.ReturnValue %0 : i32
 }
 
@@ -363,14 +387,6 @@ func @convert_f_to_u_coopmatrix(%arg0 : !spv.coopmatrix<8x16xf32, Subgroup>) {
 
 // -----
 
-func @convert_f_to_u_scalar_invalid(%arg0 : f16) -> i32 {
-  // expected-error @+1 {{expected the same bit widths for operand type and result type, but provided 'f16' and 'i32'}}
-  %0 = spv.ConvertFToU %arg0 : f16 to i32
-  spv.ReturnValue %0 : i32
-}
-
-// -----
-
 //===----------------------------------------------------------------------===//
 // spv.ConvertSToF
 //===----------------------------------------------------------------------===//
@@ -383,6 +399,22 @@ func @convert_s_to_f_scalar(%arg0 : i32) -> f32 {
 
 // -----
 
+func @convert_s64_to_f32_scalar(%arg0 : i64) -> f32 {
+  // CHECK: {{%.*}} = spv.ConvertSToF {{%.*}} : i64 to f32
+  %0 = spv.ConvertSToF %arg0 : i64 to f32
+  spv.ReturnValue %0 : f32
+}
+
+// -----
+
+func @convert_s_to_f_vector(%arg0 : vector<3xi32>) -> vector<3xf32> {
+  // CHECK: {{%.*}} = spv.ConvertSToF {{%.*}} : vector<3xi32> to vector<3xf32>
+  %0 = spv.ConvertSToF %arg0 : vector<3xi32> to vector<3xf32>
+  spv.ReturnValue %0 : vector<3xf32>
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spv.ConvertUToF
 //===----------------------------------------------------------------------===//
@@ -391,6 +423,22 @@ func @convert_u_to_f_scalar(%arg0 : i32) -> f32 {
   // CHECK: {{%.*}} = spv.ConvertUToF {{%.*}} : i32 to f32
   %0 = spv.ConvertUToF %arg0 : i32 to f32
   spv.ReturnValue %0 : f32
+}
+
+// -----
+
+func @convert_u64_to_f32_scalar(%arg0 : i64) -> f32 {
+  // CHECK: {{%.*}} = spv.ConvertUToF {{%.*}} : i64 to f32
+  %0 = spv.ConvertUToF %arg0 : i64 to f32
+  spv.ReturnValue %0 : f32
+}
+
+// -----
+
+func @convert_u_to_f_vector(%arg0 : vector<3xi32>) -> vector<3xf32> {
+  // CHECK: {{%.*}} = spv.ConvertUToF {{%.*}} : vector<3xi32> to vector<3xf32>
+  %0 = spv.ConvertUToF %arg0 : vector<3xi32> to vector<3xf32>
+  spv.ReturnValue %0 : vector<3xf32>
 }
 
 // -----

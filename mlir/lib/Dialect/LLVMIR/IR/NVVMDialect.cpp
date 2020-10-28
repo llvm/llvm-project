@@ -16,7 +16,6 @@
 
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
@@ -146,10 +145,5 @@ void NVVMDialect::initialize() {
   allowUnknownOperations();
 }
 
-namespace mlir {
-namespace NVVM {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMOps.cpp.inc"
-} // namespace NVVM
-} // namespace mlir
-

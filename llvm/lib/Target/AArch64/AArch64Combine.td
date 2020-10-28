@@ -19,7 +19,6 @@ def fconstant_to_constant : GICombineRule<
 
 def AArch64PreLegalizerCombinerHelper: GICombinerHelper<
   "AArch64GenPreLegalizerCombinerHelper", [all_combines,
-                                           elide_br_by_inverting_cond,
                                            fconstant_to_constant]> {
   let DisableRuleOption = "aarch64prelegalizercombiner-disable-rule";
   let StateClass = "AArch64PreLegalizerCombinerHelperState";
@@ -76,11 +75,20 @@ def ext: GICombineRule <
 // instruction.
 def shuffle_vector_pseudos : GICombineGroup<[dup, rev, ext, zip, uzp, trn]>;
 
+def vashr_vlshr_imm_matchdata : GIDefMatchData<"int64_t">;
+def vashr_vlshr_imm : GICombineRule<
+  (defs root:$root, vashr_vlshr_imm_matchdata:$matchinfo),
+  (match (wip_match_opcode G_ASHR, G_LSHR):$root,
+          [{ return matchVAshrLshrImm(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyVAshrLshrImm(*${root}, MRI, ${matchinfo}); }])
+>;
+
+
 def AArch64PostLegalizerCombinerHelper
     : GICombinerHelper<"AArch64GenPostLegalizerCombinerHelper",
                        [copy_prop, erase_undef_store, combines_for_extload,
                         sext_trunc_sextload, shuffle_vector_pseudos,
                         hoist_logic_op_with_same_opcode_hands,
-                        and_trivial_mask]> {
+                        and_trivial_mask, vashr_vlshr_imm, xor_of_and_with_same_reg]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }

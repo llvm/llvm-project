@@ -107,6 +107,29 @@ using namespace llvm;
 STATISTIC(NumMemSet, "Number of memset's formed from loop stores");
 STATISTIC(NumMemCpy, "Number of memcpy's formed from loop load+stores");
 
+bool DisableLIRP::All;
+static cl::opt<bool, true>
+    DisableLIRPAll("disable-" DEBUG_TYPE "-all",
+                   cl::desc("Options to disable Loop Idiom Recognize Pass."),
+                   cl::location(DisableLIRP::All), cl::init(false),
+                   cl::ReallyHidden);
+
+bool DisableLIRP::Memset;
+static cl::opt<bool, true>
+    DisableLIRPMemset("disable-" DEBUG_TYPE "-memset",
+                      cl::desc("Proceed with loop idiom recognize pass, but do "
+                               "not convert loop(s) to memset."),
+                      cl::location(DisableLIRP::Memset), cl::init(false),
+                      cl::ReallyHidden);
+
+bool DisableLIRP::Memcpy;
+static cl::opt<bool, true>
+    DisableLIRPMemcpy("disable-" DEBUG_TYPE "-memcpy",
+                      cl::desc("Proceed with loop idiom recognize pass, but do "
+                               "not convert loop(s) to memcpy."),
+                      cl::location(DisableLIRP::Memcpy), cl::init(false),
+                      cl::ReallyHidden);
+
 static cl::opt<bool> UseLIRCodeSizeHeurs(
     "use-lir-code-size-heurs",
     cl::desc("Use loop idiom recognition code size heuristics when compiling"
@@ -217,6 +240,9 @@ public:
   }
 
   bool runOnLoop(Loop *L, LPPassManager &LPM) override {
+    if (DisableLIRP::All)
+      return false;
+
     if (skipLoop(L))
       return false;
 
@@ -262,6 +288,9 @@ char LoopIdiomRecognizeLegacyPass::ID = 0;
 PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &AR,
                                               LPMUpdater &) {
+  if (DisableLIRP::All)
+    return PreservedAnalyses::all();
+
   const auto *DL = &L.getHeader()->getModule()->getDataLayout();
 
   // For the new PM, we also can't use OptimizationRemarkEmitter as an analysis
@@ -439,8 +468,11 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   Value *StorePtr = SI->getPointerOperand();
 
   // Reject stores that are so large that they overflow an unsigned.
-  uint64_t SizeInBits = DL->getTypeSizeInBits(StoredVal->getType());
-  if ((SizeInBits & 7) || (SizeInBits >> 32) != 0)
+  // When storing out scalable vectors we bail out for now, since the code
+  // below currently only works for constant strides.
+  TypeSize SizeInBits = DL->getTypeSizeInBits(StoredVal->getType());
+  if (SizeInBits.isScalable() || (SizeInBits.getFixedSize() & 7) ||
+      (SizeInBits.getFixedSize() >> 32) != 0)
     return LegalStoreKind::None;
 
   // See if the pointer expression is an AddRec like {base,+,1} on the current
@@ -469,13 +501,13 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
 
   // If we're allowed to form a memset, and the stored value would be
   // acceptable for memset, use it.
-  if (!UnorderedAtomic && HasMemset && SplatValue &&
+  if (!UnorderedAtomic && HasMemset && SplatValue && !DisableLIRP::Memset &&
       // Verify that the stored value is loop invariant.  If not, we can't
       // promote the memset.
       CurLoop->isLoopInvariant(SplatValue)) {
     // It looks like we can use SplatValue.
     return LegalStoreKind::Memset;
-  } else if (!UnorderedAtomic && HasMemsetPattern &&
+  } else if (!UnorderedAtomic && HasMemsetPattern && !DisableLIRP::Memset &&
              // Don't create memset_pattern16s with address spaces.
              StorePtr->getType()->getPointerAddressSpace() == 0 &&
              (PatternValue = getMemSetPatternValue(StoredVal, DL))) {
@@ -484,7 +516,7 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   }
 
   // Otherwise, see if the store can be turned into a memcpy.
-  if (HasMemcpy) {
+  if (HasMemcpy && !DisableLIRP::Memcpy) {
     // Check to see if the stride matches the size of the store.  If so, then we
     // know that every byte is touched in the loop.
     APInt Stride = getStoreStride(StoreEv);
@@ -1179,7 +1211,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
 bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
                                                    bool IsLoopMemset) {
   if (ApplyCodeSizeHeuristics && CurLoop->getNumBlocks() > 1) {
-    if (!CurLoop->getParentLoop() && (!IsMemset || !IsLoopMemset)) {
+    if (CurLoop->isOutermost() && (!IsMemset || !IsLoopMemset)) {
       LLVM_DEBUG(dbgs() << "  " << CurLoop->getHeader()->getParent()->getName()
                         << " : LIR " << (IsMemset ? "Memset" : "Memcpy")
                         << " avoided: multi-block top-level loop\n");

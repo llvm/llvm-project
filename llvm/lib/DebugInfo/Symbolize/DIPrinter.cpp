@@ -84,8 +84,10 @@ void DIPrinter::print(const DILineInfo &Info, bool Inlined) {
     return;
   }
   OS << "  Filename: " << Filename << "\n";
-  if (Info.StartLine)
-    OS << "Function start line: " << Info.StartLine << "\n";
+  if (Info.StartLine) {
+    OS << "  Function start filename: " << Info.StartFileName << "\n";
+    OS << "  Function start line: " << Info.StartLine << "\n";
+  }
   OS << "  Line: " << Info.Line << "\n";
   OS << "  Column: " << Info.Column << "\n";
   if (Info.Discriminator)

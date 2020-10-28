@@ -1347,7 +1347,8 @@ public:
     auto eltType = dstType.getElementType();
     auto dimSizes = op.mask_dim_sizes();
     int64_t rank = dimSizes.size();
-    int64_t trueDim = dimSizes[0].cast<IntegerAttr>().getInt();
+    int64_t trueDim = std::min(dstType.getDimSize(0),
+                               dimSizes[0].cast<IntegerAttr>().getInt());
 
     if (rank == 1) {
       // Express constant 1-D case in explicit vector form:
@@ -1402,21 +1403,8 @@ public:
     int64_t rank = dstType.getRank();
     Value idx = op.getOperand(0);
 
-    if (rank == 1) {
-      // Express dynamic 1-D case in explicit vector form:
-      //   mask = [0,1,..,n-1] < [a,a,..,a]
-      SmallVector<int64_t, 4> values(dim);
-      for (int64_t d = 0; d < dim; d++)
-        values[d] = d;
-      Value indices =
-          rewriter.create<ConstantOp>(loc, rewriter.getI64VectorAttr(values));
-      Value bound =
-          rewriter.create<IndexCastOp>(loc, rewriter.getI64Type(), idx);
-      Value bounds = rewriter.create<SplatOp>(loc, indices.getType(), bound);
-      rewriter.replaceOpWithNewOp<CmpIOp>(op, CmpIPredicate::slt, indices,
-                                          bounds);
-      return success();
-    }
+    if (rank == 1)
+      return failure(); // leave for lowering
 
     VectorType lowType =
         VectorType::get(dstType.getShape().drop_front(), eltType);
@@ -2119,9 +2107,6 @@ LogicalResult mlir::vector::splitFullAndPartialTransferPrecondition(
   // TODO: expand support to these 2 cases.
   if (!xferOp.permutation_map().isMinorIdentity())
     return failure();
-  // TODO: relax this precondition. This will require rank-reducing subviews.
-  if (xferOp.getMemRefType().getRank() != xferOp.getTransferRank())
-    return failure();
   // Must have some masked dimension to be a candidate for splitting.
   if (!xferOp.hasMaskedDim())
     return failure();
@@ -2431,6 +2416,40 @@ LogicalResult mlir::vector::VectorTransferFullPartialRewriter::matchAndRewrite(
   }
   rewriter.cancelRootUpdate(xferOp);
   return failure();
+}
+
+LogicalResult mlir::vector::PointwiseExtractPattern::matchAndRewrite(
+    ExtractMapOp extract, PatternRewriter &rewriter) const {
+  Operation *definedOp = extract.vector().getDefiningOp();
+  if (!definedOp || definedOp->getNumResults() != 1)
+    return failure();
+  // TODO: Create an interfaceOp for elementwise operations.
+  if (!isa<AddFOp>(definedOp))
+    return failure();
+  Location loc = extract.getLoc();
+  SmallVector<Value, 4> extractOperands;
+  for (OpOperand &operand : definedOp->getOpOperands())
+    extractOperands.push_back(rewriter.create<vector::ExtractMapOp>(
+        loc, operand.get(), extract.id(), extract.multiplicity()));
+  Operation *newOp = cloneOpWithOperandsAndTypes(
+      rewriter, loc, definedOp, extractOperands, extract.getResult().getType());
+  rewriter.replaceOp(extract, newOp->getResult(0));
+  return success();
+}
+
+Optional<mlir::vector::DistributeOps>
+mlir::vector::distributPointwiseVectorOp(OpBuilder &builder, Operation *op,
+                                         Value id, int64_t multiplicity) {
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointAfter(op);
+  Location loc = op->getLoc();
+  Value result = op->getResult(0);
+  DistributeOps ops;
+  ops.extract =
+      builder.create<vector::ExtractMapOp>(loc, result, id, multiplicity);
+  ops.insert =
+      builder.create<vector::InsertMapOp>(loc, ops.extract, id, multiplicity);
+  return ops;
 }
 
 // TODO: Add pattern to rewrite ExtractSlices(ConstantMaskOp).

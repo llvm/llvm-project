@@ -16,6 +16,7 @@
 
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
+#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
@@ -63,6 +64,8 @@
 
 // HIP headers.
 #include "hip/hip_version.h"
+
+#include <mutex>
 
 using namespace mlir;
 using namespace llvm;
@@ -145,6 +148,7 @@ static LogicalResult assembleIsa(const std::string isa, StringRef name,
   return success();
 }
 
+static std::mutex mutex;
 static LogicalResult createHsaco(const Blob &isaBlob, StringRef name,
                                  Blob &hsacoBlob) {
   // Save the ISA binary to a temp file.
@@ -174,6 +178,7 @@ static LogicalResult createHsaco(const Blob &isaBlob, StringRef name,
   }
   FileRemover cleanupHsaco(tempHsacoFilename);
 
+  const std::lock_guard<std::mutex> lock(mutex);
   // Invoke lld. Expect a true return value from lld.
   bool ret = lld::elf::link({"ld.lld", "-shared", tempIsaBinaryFilename.c_str(),
                              "-o", tempHsacoFilename.c_str()},
@@ -302,6 +307,7 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   configTargetFeatures();
 
   const char gpuBinaryAnnotation[] = "rocdl.hsaco";
+  pm.addPass(createLowerToCFGPass());
   pm.addPass(createGpuKernelOutliningPass());
   auto &kernelPm = pm.nest<gpu::GPUModuleOp>();
   kernelPm.addPass(createStripDebugInfoPass());

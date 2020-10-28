@@ -54,12 +54,25 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
           if (CB->getCalledFunction() == &F)
             Calls.insert(CB);
 
-      for (CallBase *CB : Calls)
-        // FIXME: We really shouldn't be able to fail to inline at this point!
-        // We should do something to log or check the inline failures here.
-        Changed |=
-            InlineFunction(*CB, IFI, /*CalleeAAR=*/nullptr, InsertLifetime)
-                .isSuccess();
+      for (CallBase *CB : Calls) {
+        Function *Caller = CB->getCaller();
+        OptimizationRemarkEmitter ORE(Caller);
+        auto OIC = shouldInline(
+            *CB,
+            [&](CallBase &CB) {
+              return InlineCost::getAlways("always inline attribute");
+            },
+            ORE);
+        assert(OIC);
+        emitInlinedInto(ORE, CB->getDebugLoc(), CB->getParent(), F, *Caller,
+                        *OIC, false, DEBUG_TYPE);
+
+        InlineResult Res =
+            InlineFunction(*CB, IFI, /*CalleeAAR=*/nullptr, InsertLifetime);
+        assert(Res.isSuccess() && "unexpected failure to inline");
+        (void)Res;
+        Changed = true;
+      }
 
       // Remember to try and delete this function afterward. This both avoids
       // re-walking the rest of the module and avoids dealing with any iterator

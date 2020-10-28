@@ -12284,10 +12284,14 @@
 	niy	524287(%r15), 42
 
 #CHECK: bc	0, 0                    # encoding: [0x47,0x00,0x00,0x00]
+#CHECK: nop                             # encoding: [0x47,0x00,0x00,0x00]
 #CHECK: bcr	0, %r7                  # encoding: [0x07,0x07]
+#CHECK: bcr	0, %r0                  # encoding: [0x07,0x00]
 
 	nop	0
+	nop
 	nopr	%r7
+	nopr
 
 #CHECK: nr	%r0, %r0                # encoding: [0x14,0x00]
 #CHECK: nr	%r0, %r15               # encoding: [0x14,0x0f]

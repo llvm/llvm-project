@@ -104,7 +104,7 @@ const ArchKind ArchKinds[] = {
 };
 
 // FIXME: These should be moved to TargetTuple once it exists
-bool getExtensionFeatures(unsigned Extensions,
+bool getExtensionFeatures(uint64_t Extensions,
                           std::vector<StringRef> &Features);
 bool getArchFeatures(ArchKind AK, std::vector<StringRef> &Features);
 
@@ -117,7 +117,7 @@ StringRef getArchExtFeature(StringRef ArchExt);
 
 // Information by Name
 unsigned getDefaultFPU(StringRef CPU, ArchKind AK);
-unsigned getDefaultExtensions(StringRef CPU, ArchKind AK);
+uint64_t getDefaultExtensions(StringRef CPU, ArchKind AK);
 StringRef getDefaultCPU(StringRef Arch);
 ArchKind getCPUArchKind(StringRef CPU);
 

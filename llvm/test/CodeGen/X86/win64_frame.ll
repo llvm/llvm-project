@@ -13,8 +13,6 @@ define i32 @f1(i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5) "frame-pointer"="all
 ; ALL-NEXT:    movl 48(%rbp), %eax
 ; ALL-NEXT:    popq %rbp
 ; ALL-NEXT:    retq
-; ALL-NEXT:    .seh_handlerdata
-; ALL-NEXT:    .text
 ; ALL-NEXT:    .seh_endproc
   ret i32 %p5
 }
@@ -37,8 +35,6 @@ define void @f2(i32 %p, ...) "frame-pointer"="all" {
 ; ALL-NEXT:    addq $8, %rsp
 ; ALL-NEXT:    popq %rbp
 ; ALL-NEXT:    retq
-; ALL-NEXT:    .seh_handlerdata
-; ALL-NEXT:    .text
 ; ALL-NEXT:    .seh_endproc
   %ap = alloca i8, align 8
   call void @llvm.va_start(i8* %ap)
@@ -56,8 +52,6 @@ define i8* @f3() "frame-pointer"="all" {
 ; ALL-NEXT:    movq 8(%rbp), %rax
 ; ALL-NEXT:    popq %rbp
 ; ALL-NEXT:    retq
-; ALL-NEXT:    .seh_handlerdata
-; ALL-NEXT:    .text
 ; ALL-NEXT:    .seh_endproc
   %ra = call i8* @llvm.returnaddress(i32 0)
   ret i8* %ra
@@ -77,8 +71,6 @@ define i8* @f4() "frame-pointer"="all" {
 ; ALL-NEXT:    addq $304, %rsp # imm = 0x130
 ; ALL-NEXT:    popq %rbp
 ; ALL-NEXT:    retq
-; ALL-NEXT:    .seh_handlerdata
-; ALL-NEXT:    .text
 ; ALL-NEXT:    .seh_endproc
   alloca [300 x i8]
   %ra = call i8* @llvm.returnaddress(i32 0)
@@ -103,8 +95,6 @@ define void @f5() "frame-pointer"="all" {
 ; ALL-NEXT:    addq $336, %rsp # imm = 0x150
 ; ALL-NEXT:    popq %rbp
 ; ALL-NEXT:    retq
-; ALL-NEXT:    .seh_handlerdata
-; ALL-NEXT:    .text
 ; ALL-NEXT:    .seh_endproc
   %a = alloca [300 x i8]
   %gep = getelementptr [300 x i8], [300 x i8]* %a, i32 0, i32 0
@@ -128,8 +118,6 @@ define void @f6(i32 %p, ...) "frame-pointer"="all" {
 ; ALL-NEXT:    addq $336, %rsp # imm = 0x150
 ; ALL-NEXT:    popq %rbp
 ; ALL-NEXT:    retq
-; ALL-NEXT:    .seh_handlerdata
-; ALL-NEXT:    .text
 ; ALL-NEXT:    .seh_endproc
   %a = alloca [300 x i8]
   %gep = getelementptr [300 x i8], [300 x i8]* %a, i32 0, i32 0
@@ -152,8 +140,6 @@ define i32 @f7(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) "frame-pointer"="all" {
 ; ALL-NEXT:    leaq 176(%rbp), %rsp
 ; ALL-NEXT:    popq %rbp
 ; ALL-NEXT:    retq
-; ALL-NEXT:    .seh_handlerdata
-; ALL-NEXT:    .text
 ; ALL-NEXT:    .seh_endproc
   alloca [300 x i8], align 64
   ret i32 %e
@@ -191,8 +177,6 @@ define i32 @f8(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) "frame-pointer"="all" {
 ; ALL-NEXT:    popq %rsi
 ; ALL-NEXT:    popq %rbp
 ; ALL-NEXT:    retq
-; ALL-NEXT:    .seh_handlerdata
-; ALL-NEXT:    .text
 ; ALL-NEXT:    .seh_endproc
   %alloca = alloca [300 x i8], align 64
   alloca i32, i32 %a
@@ -213,8 +197,6 @@ define i64 @f9() {
 ; ALL-NEXT:    popq %rax
 ; ALL-NEXT:    popq %rbp
 ; ALL-NEXT:    retq
-; ALL-NEXT:    .seh_handlerdata
-; ALL-NEXT:    .text
 ; ALL-NEXT:    .seh_endproc
 entry:
   %call = call i64 @llvm.x86.flags.read.u64()
@@ -244,8 +226,6 @@ define i64 @f10(i64* %foo, i64 %bar, i64 %baz) {
 ; ALL-NEXT:    popq %rbx
 ; ALL-NEXT:    popq %rsi
 ; ALL-NEXT:    retq
-; ALL-NEXT:    .seh_handlerdata
-; ALL-NEXT:    .text
 ; ALL-NEXT:    .seh_endproc
   %cx = cmpxchg i64* %foo, i64 %bar, i64 %baz seq_cst seq_cst
   %v = extractvalue { i64, i1 } %cx, 0
@@ -266,8 +246,6 @@ define i8* @f11() "frame-pointer"="all" {
 ; ALL-NEXT:    leaq 8(%rbp), %rax
 ; ALL-NEXT:    popq %rbp
 ; ALL-NEXT:    retq
-; ALL-NEXT:    .seh_handlerdata
-; ALL-NEXT:    .text
 ; ALL-NEXT:    .seh_endproc
   %aora = call i8* @llvm.addressofreturnaddress()
   ret i8* %aora

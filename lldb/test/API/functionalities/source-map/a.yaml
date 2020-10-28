@@ -297,9 +297,7 @@ DWARF:
             - Attribute:       DW_AT_type
               Form:            DW_FORM_ref4
   debug_info:      
-    - Length:          122
-      Version:         4
-      AbbrOffset:      0
+    - Version:         4
       AddrSize:        8
       Entries:         
         - AbbrCode:        0x00000001
@@ -345,7 +343,6 @@ DWARF:
             - Value:           0x0000000000000001
             - Value:           0x0000000000000067
         - AbbrCode:        0x00000000
-          Values:          []
         - AbbrCode:        0x00000004
           Values:          
             - Value:           0x0000000000000059
@@ -366,7 +363,6 @@ DWARF:
             - Value:           0x0000000000000006
             - Value:           0x0000000000000001
         - AbbrCode:        0x00000000
-          Values:          []
   debug_line:      
     - Length:          68
       Version:         4

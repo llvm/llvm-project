@@ -235,6 +235,27 @@ config("compiler_defaults") {
       ]
     }
   }
+
+  if (use_ubsan) {
+    assert(is_clang && current_os == "linux",
+           "ubsan only supported on Linux/Clang")
+    cflags += [ "-fsanitize=undefined" ]
+    ldflags += [ "-fsanitize=undefined" ]
+  }
+
+  if (use_asan) {
+    assert(is_clang && current_os == "linux",
+           "asan only supported on Linux/Clang")
+    cflags += [ "-fsanitize=address" ]
+    ldflags += [ "-fsanitize=address" ]
+  }
+
+  if (use_tsan) {
+    assert(is_clang && current_os == "linux",
+           "tsan only supported on Linux/Clang")
+    cflags += [ "-fsanitize=thread" ]
+    ldflags += [ "-fsanitize=thread" ]
+  }
 }
 
 config("no_exceptions") {

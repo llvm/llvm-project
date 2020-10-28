@@ -46,6 +46,7 @@ void InitializeMainThread();
 
 u32 ThreadCreate(u32 tid, uptr uid, bool detached, void *arg = nullptr);
 void ThreadFinish();
+void ThreadDetach(u32 tid);
 void ThreadJoin(u32 tid);
 u32 ThreadTid(uptr uid);
 

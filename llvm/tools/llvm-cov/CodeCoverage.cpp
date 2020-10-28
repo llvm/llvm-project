@@ -544,8 +544,11 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       cl::Positional, cl::desc("Covered executable or object file."));
 
   cl::list<std::string> CovFilenames(
-      "object", cl::desc("Coverage executable or object file"), cl::ZeroOrMore,
-      cl::CommaSeparated);
+      "object", cl::desc("Coverage executable or object file"), cl::ZeroOrMore);
+
+  cl::opt<bool> DebugDumpCollectedObjects(
+      "dump-collected-objects", cl::Optional, cl::Hidden,
+      cl::desc("Show the collected coverage object files"));
 
   cl::list<std::string> InputSourceFiles(
       cl::Positional, cl::desc("<Source files>"), cl::ZeroOrMore);
@@ -666,6 +669,12 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     if (ObjectFilenames.empty()) {
       errs() << "No filenames specified!\n";
       ::exit(1);
+    }
+
+    if (DebugDumpCollectedObjects) {
+      for (StringRef OF : ObjectFilenames)
+        outs() << OF << '\n';
+      ::exit(0);
     }
 
     ViewOpts.Format = Format;

@@ -413,6 +413,8 @@ llvm::Optional<StringRef> getterVariableName(const CXXMethodDecl *CMD) {
 // If CMD is one of the forms:
 //   void foo(T arg) { FieldName = arg; }
 //   R foo(T arg) { FieldName = arg; return *this; }
+//   void foo(T arg) { FieldName = std::move(arg); }
+//   R foo(T arg) { FieldName = std::move(arg); return *this; }
 // then returns "FieldName"
 llvm::Optional<StringRef> setterVariableName(const CXXMethodDecl *CMD) {
   assert(CMD->hasBody());
@@ -455,6 +457,18 @@ llvm::Optional<StringRef> setterVariableName(const CXXMethodDecl *CMD) {
   } else {
     return llvm::None;
   }
+
+  // Detect the case when the item is moved into the field.
+  if (auto *CE = llvm::dyn_cast<CallExpr>(RHS->IgnoreCasts())) {
+    if (CE->getNumArgs() != 1)
+      return llvm::None;
+    auto *ND = llvm::dyn_cast<NamedDecl>(CE->getCalleeDecl());
+    if (!ND || !ND->getIdentifier() || ND->getName() != "move" ||
+        !ND->isInStdNamespace())
+      return llvm::None;
+    RHS = CE->getArg(0);
+  }
+
   auto *DRE = llvm::dyn_cast<DeclRefExpr>(RHS->IgnoreCasts());
   if (!DRE || DRE->getDecl() != Arg)
     return llvm::None;

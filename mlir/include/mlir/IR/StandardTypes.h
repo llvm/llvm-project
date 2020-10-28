@@ -31,6 +31,7 @@ struct ShapedTypeStorage;
 struct VectorTypeStorage;
 struct RankedTensorTypeStorage;
 struct UnrankedTensorTypeStorage;
+struct BaseMemRefTypeStorage;
 struct MemRefTypeStorage;
 struct UnrankedMemRefTypeStorage;
 struct ComplexTypeStorage;
@@ -451,6 +452,7 @@ public:
 /// Base MemRef for Ranked and Unranked variants
 class BaseMemRefType : public ShapedType {
 public:
+  using ImplType = detail::BaseMemRefTypeStorage;
   using ShapedType::ShapedType;
 
   /// Return true if the specified element type is ok in a memref.
@@ -460,6 +462,9 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(Type type);
+
+  /// Returns the memory space in which data referred to by this memref resides.
+  unsigned getMemorySpace() const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -544,9 +549,6 @@ public:
   /// map composition.
   ArrayRef<AffineMap> getAffineMaps() const;
 
-  /// Returns the memory space in which data referred to by this memref resides.
-  unsigned getMemorySpace() const;
-
   // TODO: merge these two special values in a single one used everywhere.
   // Unfortunately, uses of `-1` have crept deep into the codebase now and are
   // hard to track.
@@ -592,9 +594,6 @@ public:
                                                     unsigned memorySpace);
 
   ArrayRef<int64_t> getShape() const { return llvm::None; }
-
-  /// Returns the memory space in which data referred to by this memref resides.
-  unsigned getMemorySpace() const;
 };
 
 //===----------------------------------------------------------------------===//

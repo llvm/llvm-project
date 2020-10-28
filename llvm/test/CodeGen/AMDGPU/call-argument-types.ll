@@ -66,7 +66,7 @@ declare hidden void @external_void_func_v16i8(<16 x i8>) #0
 
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i1@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1@rel32@hi+12
 ; GCN-DAG: v_mov_b32_e32 v0, 1{{$}}
 ; MESA-DAG: s_mov_b64 s[2:3], s[38:39]
 
@@ -86,7 +86,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_imm() #0 {
 
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i1_signext@rel32@lo+4
-; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1_signext@rel32@hi+4
+; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1_signext@rel32@hi+12
 
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: v_bfe_i32 v0, v0, 0, 1
@@ -109,7 +109,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
 
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i1_zeroext@rel32@lo+4
-; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1_zeroext@rel32@hi+4
+; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1_zeroext@rel32@hi+12
 
 
 ; GCN: s_waitcnt vmcnt(0)
@@ -126,7 +126,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
 
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i8@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8@rel32@hi+12
 ; GCN-DAG: v_mov_b32_e32 v0, 0x7b
 
 ; GCN-DAG: s_mov_b32 s32, 0{{$}}
@@ -144,7 +144,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) #0 {
 ; GCN-DAG: buffer_load_sbyte v0
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i8_signext@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8_signext@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8_signext@rel32@hi+12
 
 ; GCN-DAG: s_mov_b32 s32, 0
 
@@ -162,7 +162,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
 ; GCN-DAG: buffer_load_ubyte v0
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i8_zeroext@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8_zeroext@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8_zeroext@rel32@hi+12
 
 ; GCN-DAG: s_mov_b32 s32, 0
 
@@ -191,7 +191,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_imm() #0 {
 ; GCN-DAG: buffer_load_sshort v0
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i16_signext@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i16_signext@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i16_signext@rel32@hi+12
 
 ; GCN-DAG: s_mov_b32 s32, 0
 
@@ -208,7 +208,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
 
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i16_zeroext@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i16_zeroext@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i16_zeroext@rel32@hi+12
 
 ; GCN-DAG: s_mov_b32 s32, 0
 
@@ -225,7 +225,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
 
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i32@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i32@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i32@rel32@hi+12
 ; GCN-DAG: v_mov_b32_e32 v0, 42
 ; GCN-DAG: s_mov_b32 s32, 0
 
@@ -241,7 +241,7 @@ define amdgpu_kernel void @test_call_external_void_func_i32_imm(i32) #0 {
 ; GCN-DAG: v_mov_b32_e32 v1, 0{{$}}
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i64@rel32@lo+4
-; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i64@rel32@hi+4
+; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i64@rel32@hi+12
 ; GCN: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i64_imm() #0 {
@@ -744,13 +744,13 @@ entry:
 
 ; GCN-LABEL: {{^}}tail_call_byval_align16:
 ; GCN-NOT: s32
-; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:8
-; GCN: buffer_load_dword v33, off, s[0:3], s32 offset:12
+; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:12
+; GCN: buffer_load_dword v33, off, s[0:3], s32 offset:8
 
 ; GCN: s_getpc_b64
 
-; GCN: buffer_store_dword v33, off, s[0:3], s32 offset:4
-; GCN: buffer_store_dword v32, off, s[0:3], s32{{$}}
+; GCN: buffer_store_dword v32, off, s[0:3], s32 offset:4
+; GCN: buffer_store_dword v33, off, s[0:3], s32{{$}}
 ; GCN-NOT: s32
 ; GCN: s_setpc_b64
 define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
@@ -777,12 +777,12 @@ entry:
 
 ; GCN-LABEL: {{^}}stack_12xv3i32:
 ; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
-; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
-; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
-; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
 ; GCN: buffer_store_dword [[REG12]], {{.*$}}
+; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
 ; GCN: buffer_store_dword [[REG13]], {{.*}} offset:4
+; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
 ; GCN: buffer_store_dword [[REG14]], {{.*}} offset:8
+; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
 ; GCN: buffer_store_dword [[REG15]], {{.*}} offset:12
 ; GCN: v_mov_b32_e32 v31, 11
 ; GCN: s_getpc
@@ -806,12 +806,12 @@ entry:
 
 ; GCN-LABEL: {{^}}stack_12xv3f32:
 ; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
-; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
-; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
-; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
 ; GCN: buffer_store_dword [[REG12]], {{.*$}}
+; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
 ; GCN: buffer_store_dword [[REG13]], {{.*}} offset:4
+; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
 ; GCN: buffer_store_dword [[REG14]], {{.*}} offset:8
+; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
 ; GCN: buffer_store_dword [[REG15]], {{.*}} offset:12
 ; GCN: v_mov_b32_e32 v31, 0x41300000
 ; GCN: s_getpc
@@ -836,20 +836,20 @@ entry:
 ; GCN-LABEL: {{^}}stack_8xv5i32:
 
 ; GCN: v_mov_b32_e32 [[REG8:v[0-9]+]], 8
-; GCN: v_mov_b32_e32 [[REG9:v[0-9]+]], 9
-; GCN: v_mov_b32_e32 [[REG10:v[0-9]+]], 10
-; GCN: v_mov_b32_e32 [[REG11:v[0-9]+]], 11
-; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
-; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
-; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
-; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
 ; GCN: buffer_store_dword [[REG8]], {{.*$}}
+; GCN: v_mov_b32_e32 [[REG9:v[0-9]+]], 9
 ; GCN: buffer_store_dword [[REG9]], {{.*}} offset:4
+; GCN: v_mov_b32_e32 [[REG10:v[0-9]+]], 10
 ; GCN: buffer_store_dword [[REG10]], {{.*}} offset:8
+; GCN: v_mov_b32_e32 [[REG11:v[0-9]+]], 11
 ; GCN: buffer_store_dword [[REG11]], {{.*}} offset:12
+; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
 ; GCN: buffer_store_dword [[REG12]], {{.*}} offset:16
+; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
 ; GCN: buffer_store_dword [[REG13]], {{.*}} offset:20
+; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
 ; GCN: buffer_store_dword [[REG14]], {{.*}} offset:24
+; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
 ; GCN: buffer_store_dword [[REG15]], {{.*}} offset:28
 
 ; GCN: v_mov_b32_e32 v31, 7
@@ -870,20 +870,20 @@ entry:
 
 ; GCN-LABEL: {{^}}stack_8xv5f32:
 ; GCN: v_mov_b32_e32 [[REG8:v[0-9]+]], 0x41000000
-; GCN: v_mov_b32_e32 [[REG9:v[0-9]+]], 0x41100000
-; GCN: v_mov_b32_e32 [[REG10:v[0-9]+]], 0x41200000
-; GCN: v_mov_b32_e32 [[REG11:v[0-9]+]], 0x41300000
-; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
-; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
-; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
-; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
 ; GCN: buffer_store_dword [[REG8]], {{.*$}}
+; GCN: v_mov_b32_e32 [[REG9:v[0-9]+]], 0x41100000
 ; GCN: buffer_store_dword [[REG9]], {{.*}} offset:4
+; GCN: v_mov_b32_e32 [[REG10:v[0-9]+]], 0x41200000
 ; GCN: buffer_store_dword [[REG10]], {{.*}} offset:8
+; GCN: v_mov_b32_e32 [[REG11:v[0-9]+]], 0x41300000
 ; GCN: buffer_store_dword [[REG11]], {{.*}} offset:12
+; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
 ; GCN: buffer_store_dword [[REG12]], {{.*}} offset:16
+; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
 ; GCN: buffer_store_dword [[REG13]], {{.*}} offset:20
+; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
 ; GCN: buffer_store_dword [[REG14]], {{.*}} offset:24
+; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
 ; GCN: buffer_store_dword [[REG15]], {{.*}} offset:28
 
 ; GCN: v_mov_b32_e32 v31, 0x40e00000

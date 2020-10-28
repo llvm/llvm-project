@@ -7,6 +7,7 @@
 // RUN: llvm-objdump -d %t.so --start-address=0x2800004 --stop-address=0x2800034 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK2 %s
 // RUN: llvm-objdump -d %t.so --start-address=0x4000000 --stop-address=0x4000010 --triple=thumbv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
 // RUN: llvm-objdump -d %t.so --start-address=0x4000010 --stop-address=0x4000100 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK4 %s
+// RUN: rm %t.so
  .syntax unified
  .thumb
 

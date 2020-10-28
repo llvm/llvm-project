@@ -2516,7 +2516,7 @@ void CXXNameMangler::mangleRefQualifier(RefQualifierKind RefQualifier) {
 }
 
 void CXXNameMangler::mangleObjCMethodName(const ObjCMethodDecl *MD) {
-  Context.mangleObjCMethodName(MD, Out);
+  Context.mangleObjCMethodNameAsSourceName(MD, Out);
 }
 
 static bool isTypeSubstitutable(Qualifiers Quals, const Type *Ty,
@@ -3275,7 +3275,7 @@ static StringRef mangleAArch64VectorBase(const BuiltinType *EltType) {
   case BuiltinType::Double:
     return "Float64";
   case BuiltinType::BFloat16:
-    return "BFloat16";
+    return "Bfloat16";
   default:
     llvm_unreachable("Unexpected vector element base type");
   }
@@ -3388,7 +3388,7 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(const VectorType *T) {
   case BuiltinType::ULong:
     TypeName = "__SVUint64_t";
     break;
-  case BuiltinType::Float16:
+  case BuiltinType::Half:
     TypeName = "__SVFloat16_t";
     break;
   case BuiltinType::Float:

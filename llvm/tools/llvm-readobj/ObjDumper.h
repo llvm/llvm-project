@@ -61,7 +61,7 @@ public:
   virtual void printNeededLibraries() { }
   virtual void printSectionAsHex(StringRef SectionName) {}
   virtual void printHashTable() { }
-  virtual void printGnuHashTable(const object::ObjectFile *Obj) {}
+  virtual void printGnuHashTable() {}
   virtual void printHashSymbols() {}
   virtual void printLoadName() {}
   virtual void printVersionInfo() {}
@@ -100,9 +100,9 @@ public:
 
   virtual void printStackMap() const = 0;
 
-  void printSectionsAsString(const object::ObjectFile *Obj,
+  void printSectionsAsString(const object::ObjectFile &Obj,
                              ArrayRef<std::string> Sections);
-  void printSectionsAsHex(const object::ObjectFile *Obj,
+  void printSectionsAsHex(const object::ObjectFile &Obj,
                           ArrayRef<std::string> Sections);
 
 protected:

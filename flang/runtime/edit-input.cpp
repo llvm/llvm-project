@@ -180,10 +180,11 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       first == 'E' || first == 'D' || first == 'Q') {
     Put('.'); // input field is normalized to a fraction
     auto start{got};
+    bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
     for (; next; next = io.NextInField(remaining)) {
       char32_t ch{*next};
       if (ch == ' ' || ch == '\t') {
-        if (edit.modes.editingFlags & blankZero) {
+        if (bzMode) {
           ch = '0'; // BZ mode - treat blank as if it were zero
         } else {
           continue;
@@ -206,19 +207,29 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
     if (next &&
         (*next == 'e' || *next == 'E' || *next == 'd' || *next == 'D' ||
             *next == 'q' || *next == 'Q')) {
+      // Optional exponent letter.  Blanks are allowed between the
+      // optional exponent letter and the exponent value.
       io.SkipSpaces(remaining);
       next = io.NextInField(remaining);
     }
-    exponent = -edit.modes.scale; // default exponent is -kP
+    // The default exponent is -kP, but the scale factor doesn't affect
+    // an explicit exponent.
+    exponent = -edit.modes.scale;
     if (next &&
-        (*next == '-' || *next == '+' || (*next >= '0' && *next <= '9'))) {
+        (*next == '-' || *next == '+' || (*next >= '0' && *next <= '9') ||
+            (bzMode && (*next == ' ' || *next == '\t')))) {
       bool negExpo{*next == '-'};
       if (negExpo || *next == '+') {
         next = io.NextInField(remaining);
       }
-      for (exponent = 0; next && (*next >= '0' && *next <= '9');
-           next = io.NextInField(remaining)) {
-        exponent = 10 * exponent + *next - '0';
+      for (exponent = 0; next; next = io.NextInField(remaining)) {
+        if (*next >= '0' && *next <= '9') {
+          exponent = 10 * exponent + *next - '0';
+        } else if (bzMode && (*next == ' ' || *next == '\t')) {
+          exponent = 10 * exponent;
+        } else {
+          break;
+        }
       }
       if (negExpo) {
         exponent = -exponent;

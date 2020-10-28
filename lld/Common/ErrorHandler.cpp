@@ -13,14 +13,12 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include <mutex>
 #include <regex>
-
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-#include <unistd.h>
-#endif
 
 using namespace llvm;
 using namespace lld;
@@ -43,12 +41,21 @@ static StringRef getSeparator(const Twine &msg) {
 raw_ostream *lld::stdoutOS;
 raw_ostream *lld::stderrOS;
 
-raw_ostream &lld::outs() { return stdoutOS ? *stdoutOS : llvm::outs(); }
-raw_ostream &lld::errs() { return stderrOS ? *stderrOS : llvm::errs(); }
-
 ErrorHandler &lld::errorHandler() {
   static ErrorHandler handler;
   return handler;
+}
+
+raw_ostream &lld::outs() {
+  if (errorHandler().disableOutput)
+    return llvm::nulls();
+  return stdoutOS ? *stdoutOS : llvm::outs();
+}
+
+raw_ostream &lld::errs() {
+  if (errorHandler().disableOutput)
+    return llvm::nulls();
+  return stderrOS ? *stderrOS : llvm::errs();
 }
 
 void lld::exitLld(int val) {
@@ -60,14 +67,15 @@ void lld::exitLld(int val) {
   // In an LTO build, allows us to get the output of -time-passes.
   // Ensures that the thread pool for the parallel algorithms is stopped to
   // avoid intermittent crashes on Windows when exiting.
-  llvm_shutdown();
+  if (!CrashRecoveryContext::GetCurrent())
+    llvm_shutdown();
 
   {
     std::lock_guard<std::mutex> lock(mu);
     lld::outs().flush();
     lld::errs().flush();
   }
-  _exit(val);
+  llvm::sys::Process::Exit(val);
 }
 
 void lld::diagnosticHandler(const DiagnosticInfo &di) {
@@ -153,13 +161,15 @@ std::string ErrorHandler::getLocation(const Twine &msg) {
 }
 
 void ErrorHandler::log(const Twine &msg) {
-  if (!verbose)
+  if (!verbose || disableOutput)
     return;
   std::lock_guard<std::mutex> lock(mu);
   lld::errs() << logName << ": " << msg << "\n";
 }
 
 void ErrorHandler::message(const Twine &msg) {
+  if (disableOutput)
+    return;
   std::lock_guard<std::mutex> lock(mu);
   lld::outs() << msg << "\n";
   lld::outs().flush();

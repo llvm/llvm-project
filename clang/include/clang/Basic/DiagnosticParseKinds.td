@@ -62,6 +62,20 @@ def warn_misleading_indentation : Warning<
 def note_previous_statement : Note<
   "previous statement is here">;
 
+def subst_compound_token_kind : TextSubstitution<
+  "%select{%1 and |}0%2 tokens "
+  "%select{introducing statement expression|terminating statement expression|"
+  "introducing attribute|terminating attribute|"
+  "forming pointer to member type}3">;
+def warn_compound_token_split_by_macro : Warning<
+  "%sub{subst_compound_token_kind}0,1,2,3 appear in different "
+  "macro expansion contexts">, InGroup<CompoundTokenSplitByMacro>;
+def note_compound_token_split_second_token_here : Note<
+  "%select{|second }0%1 token is here">;
+def warn_compound_token_split_by_whitespace : Warning<
+  "%sub{subst_compound_token_kind}0,1,2,3 are separated by whitespace">,
+  InGroup<CompoundTokenSplitBySpace>, DefaultIgnore;
+
 def ext_thread_before : Extension<"'__thread' before '%0'">;
 def ext_keyword_as_ident : ExtWarn<
   "keyword '%0' will be made available as an identifier "
@@ -695,7 +709,7 @@ def err_ms_property_expected_accessor_name : Error<
 def err_ms_property_expected_comma_or_rparen : Error<
   "expected ',' or ')' at end of property accessor list">;
 def err_ms_property_initializer : Error<
-  "property declaration cannot have an in-class initializer">;
+  "property declaration cannot have a default member initializer">;
 
 def warn_cxx20_compat_explicit_bool : Warning<
   "this expression will be parsed as explicit(bool) in C++20">,
@@ -845,21 +859,23 @@ def warn_cxx98_compat_defaulted_deleted_function : Warning<
   "%select{defaulted|deleted}0 function definitions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 
-// C++11 in-class member initialization
+// C++11 default member initialization
 def ext_nonstatic_member_init : ExtWarn<
-  "in-class initialization of non-static data member is a C++11 extension">,
-  InGroup<CXX11>;
+  "default member initializer for non-static data member is a C++11 "
+  "extension">, InGroup<CXX11>;
 def warn_cxx98_compat_nonstatic_member_init : Warning<
-  "in-class initialization of non-static data members is incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
+  "default member initializer for non-static data members is incompatible with "
+  "C++98">, InGroup<CXX98Compat>, DefaultIgnore;
 def ext_bitfield_member_init: ExtWarn<
   "default member initializer for bit-field is a C++20 extension">,
   InGroup<CXX20>;
 def warn_cxx17_compat_bitfield_member_init: Warning<
   "default member initializer for bit-field is incompatible with "
   "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
+def err_anon_bitfield_member_init : Error<
+  "anonymous bit-field cannot have a default member initializer">;
 def err_incomplete_array_member_init: Error<
-  "array bound cannot be deduced from an in-class initializer">;
+  "array bound cannot be deduced from a default member initializer">;
 
 // C++11 alias-declaration
 def ext_alias_declaration : ExtWarn<
@@ -1122,6 +1138,12 @@ def ext_stdc_pragma_ignored : ExtWarn<"unknown pragma in STDC namespace">,
 def warn_stdc_fenv_access_not_supported :
    Warning<"pragma STDC FENV_ACCESS ON is not supported, ignoring pragma">,
    InGroup<UnknownPragmas>;
+def warn_stdc_fenv_round_not_supported :
+   Warning<"pragma STDC FENV_ROUND is not supported">,
+   InGroup<UnknownPragmas>;
+def warn_stdc_unknown_rounding_mode : Warning<
+  "invalid or unsupported rounding mode in '#pragma STDC FENV_ROUND' - ignored">,
+  InGroup<IgnoredPragmas>;
 // - #pragma comment
 def err_pragma_comment_malformed : Error<
   "pragma comment requires parenthesized identifier and optional string">;
@@ -1273,6 +1295,11 @@ def err_omp_mapper_expected_declarator : Error<
   "expected declarator on 'omp declare mapper' directive">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected '%0' clause on 'omp declare variant' directive">;
+def err_omp_declare_variant_duplicate_nested_trait : Error<
+  "nested OpenMP context selector contains duplicated trait '%0'"
+  " in selector '%1' and set '%2' with different score">;
+def err_omp_declare_variant_nested_user_condition : Error<
+  "nested user conditions in OpenMP context selector not supported (yet)">;
 def warn_omp_declare_variant_string_literal_or_identifier
     : Warning<"expected identifier or string literal describing a context "
               "%select{set|selector|property}0; "

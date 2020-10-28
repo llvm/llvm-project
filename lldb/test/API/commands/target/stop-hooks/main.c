@@ -10,5 +10,6 @@ int step_out_of_me()
 int
 main()
 {
-  return step_out_of_me();
+  int result = step_out_of_me(); // Stop here first
+  return result;
 }

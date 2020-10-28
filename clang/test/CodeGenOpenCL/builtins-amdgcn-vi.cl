@@ -114,19 +114,19 @@ void test_update_dpp(global int* out, int arg1, int arg2)
 }
 
 // CHECK-LABEL: @test_ds_fadd
-// CHECK: call float @llvm.amdgcn.ds.fadd(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
+// CHECK: call float @llvm.amdgcn.ds.fadd.f32(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
 void test_ds_faddf(local float *out, float src) {
   *out = __builtin_amdgcn_ds_faddf(out, src, 0, 0, false);
 }
 
 // CHECK-LABEL: @test_ds_fmin
-// CHECK: call float @llvm.amdgcn.ds.fmin(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
+// CHECK: call float @llvm.amdgcn.ds.fmin.f32(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
 void test_ds_fminf(local float *out, float src) {
   *out = __builtin_amdgcn_ds_fminf(out, src, 0, 0, false);
 }
 
 // CHECK-LABEL: @test_ds_fmax
-// CHECK: call float @llvm.amdgcn.ds.fmax(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
+// CHECK: call float @llvm.amdgcn.ds.fmax.f32(float addrspace(3)* %out, float %src, i32 0, i32 0, i1 false)
 void test_ds_fmaxf(local float *out, float src) {
   *out = __builtin_amdgcn_ds_fmaxf(out, src, 0, 0, false);
 }

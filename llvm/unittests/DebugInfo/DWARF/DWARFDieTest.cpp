@@ -37,7 +37,6 @@ TEST(DWARFDie, getLocations) {
     debug_info:
       - Version:         5
         UnitType:        DW_UT_compile
-        AbbrOffset:      0
         AddrSize:        4
         Entries:
           - AbbrCode:        0x00000001

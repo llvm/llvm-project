@@ -202,7 +202,8 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> UnrollAndJamHintHandler;
   std::unique_ptr<PragmaHandler> NoUnrollAndJamHintHandler;
   std::unique_ptr<PragmaHandler> FPHandler;
-  std::unique_ptr<PragmaHandler> STDCFENVHandler;
+  std::unique_ptr<PragmaHandler> STDCFenvAccessHandler;
+  std::unique_ptr<PragmaHandler> STDCFenvRoundHandler;
   std::unique_ptr<PragmaHandler> STDCCXLIMITHandler;
   std::unique_ptr<PragmaHandler> STDCUnknownHandler;
   std::unique_ptr<PragmaHandler> AttributePragmaHandler;
@@ -746,6 +747,10 @@ private:
   void HandlePragmaFEnvAccess();
 
   /// Handle the annotation token produced for
+  /// #pragma STDC FENV_ROUND...
+  void HandlePragmaFEnvRound();
+
+  /// Handle the annotation token produced for
   /// #pragma float_control
   void HandlePragmaFloatControl();
 
@@ -1045,6 +1050,25 @@ private:
   /// was successful.
   bool expectIdentifier();
 
+  /// Kinds of compound pseudo-tokens formed by a sequence of two real tokens.
+  enum class CompoundToken {
+    /// A '(' '{' beginning a statement-expression.
+    StmtExprBegin,
+    /// A '}' ')' ending a statement-expression.
+    StmtExprEnd,
+    /// A '[' '[' beginning a C++11 or C2x attribute.
+    AttrBegin,
+    /// A ']' ']' ending a C++11 or C2x attribute.
+    AttrEnd,
+    /// A '::' '*' forming a C++ pointer-to-member declaration.
+    MemberPtr,
+  };
+
+  /// Check that a compound operator was written in a "sensible" way, and warn
+  /// if not.
+  void checkCompoundToken(SourceLocation FirstTokLoc,
+                          tok::TokenKind FirstTokKind, CompoundToken Op);
+
 public:
   //===--------------------------------------------------------------------===//
   // Scope manipulation
@@ -1343,7 +1367,7 @@ private:
 
     void ParseLexedMethodDeclarations() override;
 
-    Parser* Self;
+    Parser *Self;
 
     /// Method - The method declaration.
     Decl *Method;
@@ -2780,6 +2804,14 @@ private:
                                        SourceLocation ScopeLoc,
                                        ParsedAttr::Syntax Syntax);
 
+  void ParseSwiftNewTypeAttribute(IdentifierInfo &AttrName,
+                                  SourceLocation AttrNameLoc,
+                                  ParsedAttributes &Attrs,
+                                  SourceLocation *EndLoc,
+                                  IdentifierInfo *ScopeName,
+                                  SourceLocation ScopeLoc,
+                                  ParsedAttr::Syntax Syntax);
+
   void ParseTypeTagForDatatypeAttribute(IdentifierInfo &AttrName,
                                         SourceLocation AttrNameLoc,
                                         ParsedAttributes &Attrs,
@@ -3074,7 +3106,8 @@ private:
 
   /// Parse a `match` clause for an '#pragma omp declare variant'. Return true
   /// if there was an error.
-  bool parseOMPDeclareVariantMatchClause(SourceLocation Loc, OMPTraitInfo &TI);
+  bool parseOMPDeclareVariantMatchClause(SourceLocation Loc, OMPTraitInfo &TI,
+                                         OMPTraitInfo *ParentTI);
 
   /// Parse clauses for '#pragma omp declare variant'.
   void ParseOMPDeclareVariantClauses(DeclGroupPtrTy Ptr, CachedTokens &Toks,

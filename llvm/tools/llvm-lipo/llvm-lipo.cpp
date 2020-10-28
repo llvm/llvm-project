@@ -118,17 +118,17 @@ struct Config {
   LipoAction ActionToPerform;
 };
 
-static Slice createSliceFromArchive(const Archive *A) {
+static Slice createSliceFromArchive(const Archive &A) {
   Expected<Slice> ArchiveOrSlice = Slice::create(A, &LLVMCtx);
   if (!ArchiveOrSlice)
-    reportError(A->getFileName(), ArchiveOrSlice.takeError());
+    reportError(A.getFileName(), ArchiveOrSlice.takeError());
   return *ArchiveOrSlice;
 }
 
-static Slice createSliceFromIR(const IRObjectFile *IRO, unsigned Align) {
+static Slice createSliceFromIR(const IRObjectFile &IRO, unsigned Align) {
   Expected<Slice> IROrErr = Slice::create(IRO, Align);
   if (!IROrErr)
-    reportError(IRO->getFileName(), IROrErr.takeError());
+    reportError(IRO.getFileName(), IROrErr.takeError());
   return *IROrErr;
 }
 
@@ -331,8 +331,8 @@ readInputBinaries(ArrayRef<InputFile> InputFiles) {
       const auto S = B->isMachO()
                          ? Slice(*cast<MachOObjectFile>(B))
                          : B->isArchive()
-                               ? createSliceFromArchive(cast<Archive>(B))
-                               : createSliceFromIR(cast<IRObjectFile>(B), 0);
+                               ? createSliceFromArchive(*cast<Archive>(B))
+                               : createSliceFromIR(*cast<IRObjectFile>(B), 0);
       const auto SpecifiedCPUType = MachO::getCPUTypeFromArchitecture(
                                         MachO::getArchitectureFromName(
                                             Triple(*IF.ArchType).getArchName()))
@@ -396,8 +396,7 @@ static void printBinaryArchs(const Binary *Binary, raw_ostream &OS) {
           O.getAsIRObject(LLVMCtx);
       if (IROrError) {
         consumeError(MachOObjOrError.takeError());
-        Expected<Slice> SliceOrErr =
-            Slice::create(IROrError->get(), O.getAlign());
+        Expected<Slice> SliceOrErr = Slice::create(**IROrError, O.getAlign());
         if (!SliceOrErr) {
           reportError(Binary->getFileName(), SliceOrErr.takeError());
           continue;
@@ -409,8 +408,7 @@ static void printBinaryArchs(const Binary *Binary, raw_ostream &OS) {
       if (ArchiveOrError) {
         consumeError(MachOObjOrError.takeError());
         consumeError(IROrError.takeError());
-        OS << createSliceFromArchive(ArchiveOrError->get()).getArchString()
-           << " ";
+        OS << createSliceFromArchive(**ArchiveOrError).getArchString() << " ";
         continue;
       }
       consumeError(ArchiveOrError.takeError());
@@ -428,7 +426,7 @@ static void printBinaryArchs(const Binary *Binary, raw_ostream &OS) {
 
   // This should be always the case, as this is tested in readInputBinaries
   const auto *IR = cast<IRObjectFile>(Binary);
-  Expected<Slice> SliceOrErr = createSliceFromIR(IR, 0);
+  Expected<Slice> SliceOrErr = createSliceFromIR(*IR, 0);
   if (!SliceOrErr)
     reportError(IR->getFileName(), SliceOrErr.takeError());
   
@@ -575,21 +573,20 @@ buildSlices(ArrayRef<OwningBinary<Binary>> InputBinaries,
             O.getAsIRObject(LLVMCtx);
         if (IROrError) {
           consumeError(BinaryOrError.takeError());
-          Slice S = createSliceFromIR(
-              static_cast<IRObjectFile *>(IROrError.get().get()), O.getAlign());
+          Slice S = createSliceFromIR(**IROrError, O.getAlign());
           ExtractedObjects.emplace_back(std::move(IROrError.get()));
           Slices.emplace_back(std::move(S));
           continue;
         }
         reportError(InputBinary->getFileName(), BinaryOrError.takeError());
       }
-    } else if (auto O = dyn_cast<MachOObjectFile>(InputBinary)) {
+    } else if (const auto *O = dyn_cast<MachOObjectFile>(InputBinary)) {
       Slices.emplace_back(*O);
-    } else if (auto A = dyn_cast<Archive>(InputBinary)) {
-      Slices.push_back(createSliceFromArchive(A));
+    } else if (const auto *A = dyn_cast<Archive>(InputBinary)) {
+      Slices.push_back(createSliceFromArchive(*A));
     } else if (const auto *IRO = dyn_cast<IRObjectFile>(InputBinary)) {
       // Original Apple's lipo set the alignment to 0
-      Expected<Slice> SliceOrErr = Slice::create(IRO, 0);
+      Expected<Slice> SliceOrErr = Slice::create(*IRO, 0);
       if (!SliceOrErr) {
         reportError(InputBinary->getFileName(), SliceOrErr.takeError());
         continue;

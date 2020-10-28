@@ -975,22 +975,14 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
       return ModRefInfo::NoModRef;
   }
 
-  // The semantics of memcpy intrinsics forbid overlap between their respective
-  // operands, i.e., source and destination of any given memcpy must no-alias.
-  // If Loc must-aliases either one of these two locations, then it necessarily
-  // no-aliases the other.
+  // The semantics of memcpy intrinsics either exactly overlap or do not
+  // overlap, i.e., source and destination of any given memcpy are either
+  // no-alias or must-alias.
   if (auto *Inst = dyn_cast<AnyMemCpyInst>(Call)) {
-    AliasResult SrcAA, DestAA;
-
-    if ((SrcAA = getBestAAResults().alias(MemoryLocation::getForSource(Inst),
-                                          Loc, AAQI)) == MustAlias)
-      // Loc is exactly the memcpy source thus disjoint from memcpy dest.
-      return ModRefInfo::Ref;
-    if ((DestAA = getBestAAResults().alias(MemoryLocation::getForDest(Inst),
-                                           Loc, AAQI)) == MustAlias)
-      // The converse case.
-      return ModRefInfo::Mod;
-
+    AliasResult SrcAA =
+        getBestAAResults().alias(MemoryLocation::getForSource(Inst), Loc, AAQI);
+    AliasResult DestAA =
+        getBestAAResults().alias(MemoryLocation::getForDest(Inst), Loc, AAQI);
     // It's also possible for Loc to alias both src and dest, or neither.
     ModRefInfo rv = ModRefInfo::NoModRef;
     if (SrcAA != NoAlias)

@@ -103,7 +103,7 @@ defm FALLTHROUGH_RETURN : I<(outs), (ins variable_ops), (outs), (ins), []>;
 
 } // isReturn = 1
 
-let isTrap = 1 in
+let IsCanonical = 1, isTrap = 1 in
 defm UNREACHABLE : NRI<(outs), (ins), [(trap)], "unreachable", 0x00>;
 
 } // isTerminator = 1

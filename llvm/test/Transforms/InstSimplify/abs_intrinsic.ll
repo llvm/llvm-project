@@ -47,11 +47,14 @@ define i32 @test_abs_abs_3(i32 %x) {
 }
 
 ; If the sign bit is known zero, the abs is not needed.
+; These cases are only folded by InstCombine, to avoid computing known bits
+; twice, for the non-negative and the negative case.
 
 define i32 @zext_abs(i31 %x) {
 ; CHECK-LABEL: @zext_abs(
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i31 [[X:%.*]] to i32
-; CHECK-NEXT:    ret i32 [[ZEXT]]
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[ZEXT]], i1 false)
+; CHECK-NEXT:    ret i32 [[ABS]]
 ;
   %zext = zext i31 %x to i32
   %abs = call i32 @llvm.abs.i32(i32 %zext, i1 false)
@@ -61,7 +64,8 @@ define i32 @zext_abs(i31 %x) {
 define <3 x i82> @lshr_abs(<3 x i82> %x) {
 ; CHECK-LABEL: @lshr_abs(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr <3 x i82> [[X:%.*]], <i82 1, i82 1, i82 1>
-; CHECK-NEXT:    ret <3 x i82> [[LSHR]]
+; CHECK-NEXT:    [[ABS:%.*]] = call <3 x i82> @llvm.abs.v3i82(<3 x i82> [[LSHR]], i1 true)
+; CHECK-NEXT:    ret <3 x i82> [[ABS]]
 ;
   %lshr = lshr <3 x i82> %x, <i82 1, i82 1, i82 1>
   %abs = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %lshr, i1 true)
@@ -71,7 +75,8 @@ define <3 x i82> @lshr_abs(<3 x i82> %x) {
 define i32 @and_abs(i32 %x) {
 ; CHECK-LABEL: @and_abs(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 2147483644
-; CHECK-NEXT:    ret i32 [[AND]]
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[AND]], i1 true)
+; CHECK-NEXT:    ret i32 [[ABS]]
 ;
   %and = and i32 %x, 2147483644
   %abs = call i32 @llvm.abs.i32(i32 %and, i1 true)
@@ -81,7 +86,8 @@ define i32 @and_abs(i32 %x) {
 define <3 x i82> @select_abs(<3 x i1> %cond) {
 ; CHECK-LABEL: @select_abs(
 ; CHECK-NEXT:    [[SEL:%.*]] = select <3 x i1> [[COND:%.*]], <3 x i82> zeroinitializer, <3 x i82> <i82 2147483647, i82 42, i82 1>
-; CHECK-NEXT:    ret <3 x i82> [[SEL]]
+; CHECK-NEXT:    [[ABS:%.*]] = call <3 x i82> @llvm.abs.v3i82(<3 x i82> [[SEL]], i1 false)
+; CHECK-NEXT:    ret <3 x i82> [[ABS]]
 ;
   %sel = select <3 x i1> %cond, <3 x i82> zeroinitializer, <3 x i82> <i82 2147483647, i82 42, i82 1>
   %abs = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %sel, i1 false)
@@ -94,7 +100,8 @@ define i32 @assume_abs(i32 %x) {
 ; CHECK-LABEL: @assume_abs(
 ; CHECK-NEXT:    [[ASSUME:%.*]] = icmp sge i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    ret i32 [[ABS]]
 ;
   %assume = icmp sge i32 %x, 0
   call void @llvm.assume(i1 %assume)
@@ -200,4 +207,54 @@ define i1 @abs_ule_int_min(i8 %x) {
   %abs = call i8 @llvm.abs.i8(i8 %x, i1 false)
   %c = icmp ule i8 %abs, 128
   ret i1 %c
+}
+
+define i32 @select_abs_of_abs_eq(i32 %x) {
+; CHECK-LABEL: @select_abs_of_abs_eq(
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i32 [[ABS]]
+;
+  %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %neg = sub i32 0, %abs
+  %cmp = icmp eq i32 %x, 0
+  %sel = select i1 %cmp, i32 %neg, i32 %abs
+  ret i32 %sel
+}
+
+define i32 @select_abs_of_abs_ne(i32 %x) {
+; CHECK-LABEL: @select_abs_of_abs_ne(
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i32 [[ABS]]
+;
+  %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %neg = sub i32 0, %abs
+  %cmp = icmp ne i32 %x, 0
+  %sel = select i1 %cmp, i32 %abs, i32 %neg
+  ret i32 %sel
+}
+
+define i32 @select_nabs_of_abs_eq(i32 %x) {
+; CHECK-LABEL: @select_nabs_of_abs_eq(
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[ABS]]
+; CHECK-NEXT:    ret i32 [[NEG]]
+;
+  %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %neg = sub i32 0, %abs
+  %cmp = icmp eq i32 %x, 0
+  %sel = select i1 %cmp, i32 %abs, i32 %neg
+  ret i32 %sel
+}
+
+define i32 @select_nabs_of_abs_ne(i32 %x) {
+; CHECK-LABEL: @select_nabs_of_abs_ne(
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[ABS]]
+; CHECK-NEXT:    ret i32 [[NEG]]
+;
+  %abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %neg = sub i32 0, %abs
+  %cmp = icmp ne i32 %x, 0
+  %sel = select i1 %cmp, i32 %neg, i32 %abs
+  ret i32 %sel
 }

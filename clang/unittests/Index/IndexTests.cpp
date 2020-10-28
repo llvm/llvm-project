@@ -334,6 +334,20 @@ TEST(IndexTest, VisitDefaultArgs) {
                              WrittenAt(Position(3, 20)))));
 }
 
+TEST(IndexTest, RelationBaseOf) {
+  std::string Code = R"cpp(
+    class A {};
+    template <typename> class B {};
+    class C : B<A> {};
+  )cpp";
+  auto Index = std::make_shared<Indexer>();
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index), Code);
+  // A should not be the base of anything.
+  EXPECT_THAT(Index->Symbols,
+              Contains(AllOf(QName("A"), HasRole(SymbolRole::Reference),
+                             Not(HasRole(SymbolRole::RelationBaseOf)))));
+}
+
 } // namespace
 } // namespace index
 } // namespace clang

@@ -254,6 +254,16 @@
 // TSXLDTRK: "-target-feature" "+tsxldtrk"
 // NO-TSXLDTRK: "-target-feature" "-tsxldtrk"
 
+// RUN: %clang -target i386-linux-gnu -mkl %s -### -o %t.o 2>&1 | FileCheck -check-prefix=KL %s
+// RUN: %clang -target i386-linux-gnu -mno-kl %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-KL %s
+// KL: "-target-feature" "+kl"
+// NO-KL: "-target-feature" "-kl"
+
+// RUN: %clang -target i386-linux-gnu -mwidekl %s -### -o %t.o 2>&1 | FileCheck -check-prefix=WIDE_KL %s
+// RUN: %clang -target i386-linux-gnu -mno-widekl %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-WIDE_KL %s
+// WIDE_KL: "-target-feature" "+widekl"
+// NO-WIDE_KL: "-target-feature" "-widekl"
+
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mamx-tile %s -### -o %t.o 2>&1 | FileCheck --check-prefix=AMX-TILE %s
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mno-amx-tile %s -### -o %t.o 2>&1 | FileCheck --check-prefix=NO-AMX-TILE %s
 // AMX-TILE: "-target-feature" "+amx-tile"

@@ -122,7 +122,6 @@ enum SpillOpcodeKey {
   SOK_VSXVectorSpill,
   SOK_VectorFloat8Spill,
   SOK_VectorFloat4Spill,
-  SOK_VRSaveSpill,
   SOK_SpillToVSR,
   SOK_SPESpill,
   SOK_LastOpcodeSpill // This must be last on the enum.
@@ -133,20 +132,20 @@ enum SpillOpcodeKey {
   {                                                                            \
     PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,                    \
         PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXVD2X, PPC::LXSDX, PPC::LXSSPX,    \
-        PPC::RESTORE_VRSAVE, PPC::SPILLTOVSR_LD, PPC::EVLDD                    \
+        PPC::SPILLTOVSR_LD, PPC::EVLDD                                         \
   }
 
 #define Pwr9LoadOpcodes                                                        \
   {                                                                            \
     PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,                    \
         PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXV, PPC::DFLOADf64,                \
-        PPC::DFLOADf32, PPC::RESTORE_VRSAVE, PPC::SPILLTOVSR_LD                \
+        PPC::DFLOADf32, PPC::SPILLTOVSR_LD                                     \
   }
 
 #define Pwr8StoreOpcodes                                                       \
   {                                                                            \
     PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR, PPC::SPILL_CRBIT, \
-        PPC::STVX, PPC::STXVD2X, PPC::STXSDX, PPC::STXSSPX, PPC::SPILL_VRSAVE, \
+        PPC::STVX, PPC::STXVD2X, PPC::STXSDX, PPC::STXSSPX,                    \
         PPC::SPILLTOVSR_ST, PPC::EVSTDD                                        \
   }
 
@@ -154,7 +153,7 @@ enum SpillOpcodeKey {
   {                                                                            \
     PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR, PPC::SPILL_CRBIT, \
         PPC::STVX, PPC::STXV, PPC::DFSTOREf64, PPC::DFSTOREf32,                \
-        PPC::SPILL_VRSAVE, PPC::SPILLTOVSR_ST                                  \
+        PPC::SPILLTOVSR_ST                                                     \
   }
 
 // Initialize arrays for load and store spill opcodes on supported subtargets.
@@ -493,6 +492,20 @@ public:
                                     const MachineOperand *&BaseOp,
                                     int64_t &Offset, unsigned &Width,
                                     const TargetRegisterInfo *TRI) const;
+
+  /// Get the base operand and byte offset of an instruction that reads/writes
+  /// memory.
+  bool getMemOperandsWithOffsetWidth(
+      const MachineInstr &LdSt,
+      SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
+      bool &OffsetIsScalable, unsigned &Width,
+      const TargetRegisterInfo *TRI) const override;
+
+  /// Returns true if the two given memory operations should be scheduled
+  /// adjacent.
+  bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                           ArrayRef<const MachineOperand *> BaseOps2,
+                           unsigned NumLoads, unsigned NumBytes) const override;
 
   /// Return true if two MIs access different memory addresses and false
   /// otherwise

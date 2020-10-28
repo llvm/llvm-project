@@ -863,8 +863,8 @@ public:
   /// Emit a diagnostic at the specified location and return failure.
   InFlightDiagnostic emitError(llvm::SMLoc loc, const Twine &message) override {
     emittedError = true;
-    return parser.emitError(loc, "custom op '" + opDefinition->name + "' " +
-                                     message);
+    return parser.emitError(loc, "custom op '" + opDefinition->name.strref() +
+                                     "' " + message);
   }
 
   llvm::SMLoc getCurrentLocation() override {
@@ -1045,7 +1045,6 @@ public:
   }
 
   /// Parse an optional attribute.
-  /// Template utilities to simplify specifying multiple derived overloads.
   template <typename AttrT>
   OptionalParseResult
   parseOptionalAttributeAndAddToList(AttrT &result, Type type,
@@ -1056,25 +1055,15 @@ public:
       attrs.push_back(parser.builder.getNamedAttr(attrName, result));
     return parseResult;
   }
-  template <typename AttrT>
-  OptionalParseResult parseOptionalAttributeAndAddToList(AttrT &result,
-                                                         StringRef attrName,
-                                                         NamedAttrList &attrs) {
-    OptionalParseResult parseResult = parser.parseOptionalAttribute(result);
-    if (parseResult.hasValue() && succeeded(*parseResult))
-      attrs.push_back(parser.builder.getNamedAttr(attrName, result));
-    return parseResult;
-  }
-
   OptionalParseResult parseOptionalAttribute(Attribute &result, Type type,
                                              StringRef attrName,
                                              NamedAttrList &attrs) override {
     return parseOptionalAttributeAndAddToList(result, type, attrName, attrs);
   }
-  OptionalParseResult parseOptionalAttribute(ArrayAttr &result,
+  OptionalParseResult parseOptionalAttribute(ArrayAttr &result, Type type,
                                              StringRef attrName,
                                              NamedAttrList &attrs) override {
-    return parseOptionalAttributeAndAddToList(result, attrName, attrs);
+    return parseOptionalAttributeAndAddToList(result, type, attrName, attrs);
   }
 
   /// Parse a named dictionary into 'result' if it is present.
@@ -1106,7 +1095,7 @@ public:
   // Identifier Parsing
   //===--------------------------------------------------------------------===//
 
-  /// Returns if the current token corresponds to a keyword.
+  /// Returns true if the current token corresponds to a keyword.
   bool isCurrentTokenAKeyword() const {
     return parser.getToken().is(Token::bare_identifier) ||
            parser.getToken().isKeyword();
@@ -1353,6 +1342,23 @@ public:
     if (parser.getToken().isNot(Token::l_brace))
       return success();
     return parseRegion(region, arguments, argTypes, enableNameShadowing);
+  }
+
+  /// Parses a region if present. If the region is present, a new region is
+  /// allocated and placed in `region`. If no region is present, `region`
+  /// remains untouched.
+  OptionalParseResult
+  parseOptionalRegion(std::unique_ptr<Region> &region,
+                      ArrayRef<OperandType> arguments, ArrayRef<Type> argTypes,
+                      bool enableNameShadowing = false) override {
+    if (parser.getToken().isNot(Token::l_brace))
+      return llvm::None;
+    std::unique_ptr<Region> newRegion = std::make_unique<Region>();
+    if (parseRegion(*newRegion, arguments, argTypes, enableNameShadowing))
+      return failure();
+
+    region = std::move(newRegion);
+    return success();
   }
 
   /// Parse a region argument. The type of the argument will be resolved later

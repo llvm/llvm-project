@@ -620,8 +620,8 @@ bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
 }
 
 bool WebAssemblyTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
-  MVT ExtT = ExtVal.getSimpleValueType();
-  MVT MemT = cast<LoadSDNode>(ExtVal->getOperand(0))->getSimpleValueType(0);
+  EVT ExtT = ExtVal.getValueType();
+  EVT MemT = cast<LoadSDNode>(ExtVal->getOperand(0))->getValueType(0);
   return (ExtT == MVT::v8i16 && MemT == MVT::v8i8) ||
          (ExtT == MVT::v4i32 && MemT == MVT::v4i16) ||
          (ExtT == MVT::v2i64 && MemT == MVT::v2i32);
@@ -904,7 +904,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                 DAG.getConstant(Offset, DL, PtrVT));
       Chains.push_back(
           DAG.getStore(Chain, DL, Arg, Add,
-                       MachinePointerInfo::getFixedStack(MF, FI, Offset), 0));
+                       MachinePointerInfo::getFixedStack(MF, FI, Offset)));
     }
     if (!Chains.empty())
       Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
@@ -1331,7 +1331,7 @@ SDValue WebAssemblyTargetLowering::LowerVASTART(SDValue Op,
   SDValue ArgN = DAG.getCopyFromReg(DAG.getEntryNode(), DL,
                                     MFI->getVarargBufferVreg(), PtrVT);
   return DAG.getStore(Op.getOperand(0), DL, ArgN, Op.getOperand(1),
-                      MachinePointerInfo(SV), 0);
+                      MachinePointerInfo(SV));
 }
 
 SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,

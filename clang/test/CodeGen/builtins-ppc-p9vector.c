@@ -1227,3 +1227,32 @@ vector unsigned long long test119(void) {
   return vec_extract4b(vuca, -5);
 }
 
+vector signed int test_vec_signexti_si_sc(void) {
+    // CHECK: @llvm.ppc.altivec.vextsb2w(<16 x i8>
+    // CHECK-NEXT: ret <4 x i32>
+    return vec_signexti(vsca);
+}
+
+vector signed int test_vec_signexti_si_ss(void) {
+    // CHECK: @llvm.ppc.altivec.vextsh2w(<8 x i16>
+    // CHECK-NEXT: ret <4 x i32>
+    return vec_signexti(vssa);
+}
+
+vector signed long long test_vec_signextll_sll_sc(void) {
+    // CHECK: @llvm.ppc.altivec.vextsb2d(<16 x i8>
+    // CHECK-NEXT: ret <2 x i64>
+    return vec_signextll(vsca);
+}
+
+vector signed long long test_vec_signextll_sll_ss(void) {
+    // CHECK: @llvm.ppc.altivec.vextsh2d(<8 x i16>
+    // CHECK-NEXT: ret <2 x i64>
+    return vec_signextll(vssa);
+}
+
+vector signed long long test_vec_signextll_sll_si(void) {
+    // CHECK: @llvm.ppc.altivec.vextsw2d(<4 x i32>
+    // CHECK-NEXT: ret <2 x i64>
+    return vec_signextll(vsia);
+}

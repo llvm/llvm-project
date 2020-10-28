@@ -89,6 +89,8 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   if (C.getDriver().isSaveTempsEnabled())
     LldArgs.push_back("-save-temps");
 
+  addLinkerCompressDebugSectionsOption(TC, Args, LldArgs);
+
   LldArgs.append({"-o", Output.getFilename()});
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
@@ -339,7 +341,8 @@ HIPToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   const OptTable &Opts = getDriver().getOpts();
 
   for (Arg *A : Args) {
-    DAL->append(A);
+    if (!shouldSkipArgument(A))
+      DAL->append(A);
   }
 
   if (!BoundArch.empty()) {

@@ -606,9 +606,7 @@ llvm::raw_ostream &BaseObject::AsFortran(llvm::raw_ostream &o) const {
   return EmitVar(o, u);
 }
 
-template <int KIND>
-llvm::raw_ostream &TypeParamInquiry<KIND>::AsFortran(
-    llvm::raw_ostream &o) const {
+llvm::raw_ostream &TypeParamInquiry::AsFortran(llvm::raw_ostream &o) const {
   if (base_) {
     return base_->AsFortran(o) << '%';
   }

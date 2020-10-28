@@ -210,6 +210,9 @@ FIELD(DefaultedDestructorIsConstexpr, 1, NO_MERGE)
 /// member or base class of non-literal or volatile type.
 FIELD(HasNonLiteralTypeFieldsOrBases, 1, NO_MERGE)
 
+/// True if this class is a structural type, assuming it is a literal type.
+FIELD(StructuralIfLiteral, 1, NO_MERGE)
+
 /// Whether we have a C++11 user-provided default constructor (not
 /// explicitly deleted or defaulted).
 FIELD(UserProvidedDefaultConstructor, 1, NO_MERGE)

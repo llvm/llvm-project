@@ -51,27 +51,29 @@ public:
   // Returns the dialects extra class declaration code.
   llvm::Optional<StringRef> getExtraClassDeclaration() const;
 
-  // Returns if this dialect has a constant materializer or not.
+  // Returns true if this dialect has a constant materializer.
   bool hasConstantMaterializer() const;
 
-  /// Returns if this dialect has an operation attribute verifier.
+  /// Returns true if this dialect has an operation attribute verifier.
   bool hasOperationAttrVerify() const;
 
-  /// Returns if this dialect has a region argument attribute verifier.
+  /// Returns true if this dialect has a region argument attribute verifier.
   bool hasRegionArgAttrVerify() const;
 
-  /// Returns if this dialect has a region result attribute verifier.
+  /// Returns true if this dialect has a region result attribute verifier.
   bool hasRegionResultAttrVerify() const;
 
   // Returns whether two dialects are equal by checking the equality of the
   // underlying record.
   bool operator==(const Dialect &other) const;
 
+  bool operator!=(const Dialect &other) const { return !(*this == other); }
+
   // Compares two dialects by comparing the names of the dialects.
   bool operator<(const Dialect &other) const;
 
   // Returns whether the dialect is defined.
-  operator bool() const { return def != nullptr; }
+  explicit operator bool() const { return def != nullptr; }
 
 private:
   const llvm::Record *def;

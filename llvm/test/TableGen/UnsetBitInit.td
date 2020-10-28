@@ -21,7 +21,7 @@ def A {
   bit P;
   bit Q;
 
-  let Inst{7-2} = 0x3f;
+  let Inst{7...2} = 0x3f;
   let Inst{1} = P;
   let Inst{0} = Q;
 
@@ -34,7 +34,7 @@ class x {
 }
 
 class y<bits<2> B> : x {
-  let A{21-20} = B;
+  let A{21...20} = B;
 }
 
 def z : y<{0,?}>;

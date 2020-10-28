@@ -173,6 +173,18 @@ static DecodeStatus DecodeSPERCRegisterClass(MCInst &Inst, uint64_t RegNo,
   return decodeRegisterClass(Inst, RegNo, SPERegs);
 }
 
+static DecodeStatus DecodeACCRCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                             uint64_t Address,
+                                             const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, ACCRegs);
+}
+
+static DecodeStatus DecodeVSRpRCRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                              uint64_t Address,
+                                              const void *Decoder) {
+  return decodeRegisterClass(Inst, RegNo, VSRpRegs);
+}
+
 #define DecodeQSRCRegisterClass DecodeQFRCRegisterClass
 #define DecodeQBRCRegisterClass DecodeQFRCRegisterClass
 
@@ -197,6 +209,15 @@ static DecodeStatus decodeImmZeroOperand(MCInst &Inst, uint64_t Imm,
   if (Imm != 0)
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeVSRpEvenOperands(MCInst &Inst, uint64_t RegNo,
+                                           uint64_t Address,
+                                           const void *Decoder) {
+  if (RegNo & 1)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createReg(VSRpRegs[RegNo >> 1]));
   return MCDisassembler::Success;
 }
 

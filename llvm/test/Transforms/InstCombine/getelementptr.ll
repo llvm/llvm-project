@@ -538,7 +538,7 @@ define i32 @test27(%struct.compat_siginfo* %to, %struct.siginfo_t* %from) {
 ; CHECK-NEXT:    [[TMP349:%.*]] = getelementptr [[STRUCT_SIGINFO_T:%.*]], %struct.siginfo_t* [[TMP344]], i64 0, i32 3, i32 0, i32 3, i32 0
 ; CHECK-NEXT:    [[TMP349350:%.*]] = bitcast i8** [[TMP349]] to i32*
 ; CHECK-NEXT:    [[TMP351:%.*]] = load i32, i32* [[TMP349350]], align 8
-; CHECK-NEXT:    [[TMP360:%.*]] = call i32 asm sideeffect "...", "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"(i32 [[TMP351]], %struct.__large_struct* null, i32 -14, i32 0) #0
+; CHECK-NEXT:    [[TMP360:%.*]] = call i32 asm sideeffect "...", "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"(i32 [[TMP351]], %struct.__large_struct* null, i32 -14, i32 0) [[ATTR0:#.*]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -566,14 +566,14 @@ define i32 @test28() nounwind  {
 ; CHECK-LABEL: @test28(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ORIENTATIONS:%.*]] = alloca [1 x [1 x %struct.x]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0)) #0
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0)) [[ATTR0]]
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[BB10]] ]
 ; CHECK-NEXT:    [[TMP12_REC:%.*]] = xor i32 [[INDVAR]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[TMP12_REC]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [1 x [1 x %struct.x]], [1 x [1 x %struct.x]]* [[ORIENTATIONS]], i64 1, i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP16:%.*]] = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @.str1, i64 0, i64 0), %struct.x* nonnull [[TMP12]]) #0
+; CHECK-NEXT:    [[TMP16:%.*]] = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([12 x i8], [12 x i8]* @.str1, i64 0, i64 0), %struct.x* nonnull [[TMP12]]) [[ATTR0]]
 ; CHECK-NEXT:    [[TMP84:%.*]] = icmp eq i32 [[INDVAR]], 0
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
 ; CHECK-NEXT:    br i1 [[TMP84]], label [[BB17:%.*]], label [[BB10]]
@@ -648,7 +648,7 @@ define i32 @test30(i32 %m, i32 %n) nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, i64 [[TMP0]], align 4
-; CHECK-NEXT:    call void @test30f(i32* nonnull [[TMP1]]) #0
+; CHECK-NEXT:    call void @test30f(i32* nonnull [[TMP1]]) [[ATTR0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[M:%.*]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, i32* [[TMP1]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[TMP3]], align 4
@@ -787,7 +787,7 @@ entry:
 
 define i32 @test35() nounwind {
 ; CHECK-LABEL: @test35(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([17 x i8], [17 x i8]* @"\01LC8", i64 0, i64 0), i8* getelementptr inbounds (%t0, %t0* @s, i64 0, i32 1, i64 0)) #0
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([17 x i8], [17 x i8]* @"\01LC8", i64 0, i64 0), i8* getelementptr inbounds (%t0, %t0* @s, i64 0, i32 1, i64 0)) [[ATTR0]]
 ; CHECK-NEXT:    ret i32 0
 ;
   call i32 (i8*, ...) @printf(i8* getelementptr ([17 x i8], [17 x i8]* @"\01LC8", i32 0, i32 0),
@@ -833,9 +833,9 @@ define void @pr10322_f1(%pr10322_t* %foo) {
 ; CHECK-LABEL: @pr10322_f1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [[PR10322_T:%.*]], %pr10322_t* [[FOO:%.*]], i64 2
-; CHECK-NEXT:    call void @pr10322_f2(%pr10322_t* nonnull [[ARRAYIDX8]]) #0
+; CHECK-NEXT:    call void @pr10322_f2(%pr10322_t* nonnull [[ARRAYIDX8]]) [[ATTR0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[PR10322_T]], %pr10322_t* [[ARRAYIDX8]], i64 0, i32 0
-; CHECK-NEXT:    call void @pr10322_f3(i8** nonnull [[TMP2]]) #0
+; CHECK-NEXT:    call void @pr10322_f3(i8** nonnull [[TMP2]]) [[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:

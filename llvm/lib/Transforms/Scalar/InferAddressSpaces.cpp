@@ -997,6 +997,12 @@ bool InferAddressSpaces::rewriteWithNewAddressSpaces(
   SmallVector<const Use *, 32> UndefUsesToFix;
   for (Value* V : Postorder) {
     unsigned NewAddrSpace = InferredAddrSpace.lookup(V);
+
+    // In some degenerate cases (e.g. invalid IR in unreachable code), we may
+    // not even infer the value to have its original address space.
+    if (NewAddrSpace == UninitializedAddressSpace)
+      continue;
+
     if (V->getType()->getPointerAddressSpace() != NewAddrSpace) {
       Value *New = cloneValueWithNewAddressSpace(
           V, NewAddrSpace, ValueWithNewAddrSpace, &UndefUsesToFix);

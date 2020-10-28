@@ -338,8 +338,7 @@ void APInt::flipAllBitsSlowCase() {
 /// Toggles a given bit to its opposite value.
 void APInt::flipBit(unsigned bitPosition) {
   assert(bitPosition < BitWidth && "Out of the bit-width range!");
-  if ((*this)[bitPosition]) clearBit(bitPosition);
-  else setBit(bitPosition);
+  setBitVal(bitPosition, !(*this)[bitPosition]);
 }
 
 void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
@@ -393,12 +392,8 @@ void APInt::insertBits(const APInt &subBits, unsigned bitPosition) {
   // General case - set/clear individual bits in dst based on src.
   // TODO - there is scope for optimization here, but at the moment this code
   // path is barely used so prefer readability over performance.
-  for (unsigned i = 0; i != subBitWidth; ++i) {
-    if (subBits[i])
-      setBit(bitPosition + i);
-    else
-      clearBit(bitPosition + i);
-  }
+  for (unsigned i = 0; i != subBitWidth; ++i)
+    setBitVal(bitPosition + i, subBits[i]);
 }
 
 void APInt::insertBits(uint64_t subBits, unsigned bitPosition, unsigned numBits) {

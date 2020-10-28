@@ -52,8 +52,6 @@
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "Plugins/SymbolFile/NativePDB/SymbolFileNativePDB.h"
 
-#include <regex>
-
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::pdb;

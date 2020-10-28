@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: lld -flavor darwinnew -L%S/Inputs/MacOSX.sdk/usr/lib -lSystem -o %t %t.o
+# RUN: %lld -lSystem -o %t %t.o
 # RUN: llvm-objdump --section-headers --syms -d %t | FileCheck %s
 
 # CHECK-LABEL: Sections:
@@ -20,7 +20,7 @@
 # CHECK-NEXT:  [[#%x, CSTRING_ADDR + 22 - LSTR_OFF]]
 
 # RUN: llvm-objdump --section=__const --full-contents %t | FileCheck %s --check-prefix=NONPCREL
-# NONPCREL:      Contents of section __const:
+# NONPCREL:      Contents of section __DATA,__const:
 # NONPCREL-NEXT: 100001000 f0030000 01000000 f0030000 01000000
 
 .section __TEXT,__text

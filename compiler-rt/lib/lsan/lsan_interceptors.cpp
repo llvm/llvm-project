@@ -476,6 +476,15 @@ INTERCEPTOR(int, pthread_join, void *th, void **ret) {
   return res;
 }
 
+INTERCEPTOR(int, pthread_detach, void *th) {
+  ENSURE_LSAN_INITED;
+  int tid = ThreadTid((uptr)th);
+  int res = REAL(pthread_detach)(th);
+  if (res == 0)
+    ThreadDetach(tid);
+  return res;
+}
+
 INTERCEPTOR(void, _exit, int status) {
   if (status == 0 && HasReportedLeaks()) status = common_flags()->exitcode;
   REAL(_exit)(status);
@@ -508,6 +517,7 @@ void InitializeInterceptors() {
   LSAN_MAYBE_INTERCEPT_MALLINFO;
   LSAN_MAYBE_INTERCEPT_MALLOPT;
   INTERCEPT_FUNCTION(pthread_create);
+  INTERCEPT_FUNCTION(pthread_detach);
   INTERCEPT_FUNCTION(pthread_join);
   INTERCEPT_FUNCTION(_exit);
 

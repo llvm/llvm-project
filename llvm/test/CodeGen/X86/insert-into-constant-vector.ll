@@ -85,9 +85,9 @@ define <8 x i16> @elt5_v8i16(i16 %x) {
 define <4 x i32> @elt3_v4i32(i32 %x) {
 ; X32SSE2-LABEL: elt3_v4i32:
 ; X32SSE2:       # %bb.0:
-; X32SSE2-NEXT:    movaps {{.*#+}} xmm0 = <42,1,2,u>
 ; X32SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,0]
+; X32SSE2-NEXT:    movaps {{.*#+}} xmm0 = <42,1,2,u>
+; X32SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
 ; X32SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
 ; X32SSE2-NEXT:    retl
 ;
@@ -95,7 +95,7 @@ define <4 x i32> @elt3_v4i32(i32 %x) {
 ; X64SSE2:       # %bb.0:
 ; X64SSE2-NEXT:    movd %edi, %xmm1
 ; X64SSE2-NEXT:    movaps {{.*#+}} xmm0 = <42,1,2,u>
-; X64SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,0]
+; X64SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
 ; X64SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
 ; X64SSE2-NEXT:    retq
 ;
@@ -166,14 +166,14 @@ define <4 x float> @elt1_v4f32(float %x) {
 ; X32SSE2:       # %bb.0:
 ; X32SSE2-NEXT:    movaps {{.*#+}} xmm1 = <4.2E+1,u,2.0E+0,3.0E+0>
 ; X32SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[0,0]
+; X32SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X32SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[2,3]
 ; X32SSE2-NEXT:    retl
 ;
 ; X64SSE2-LABEL: elt1_v4f32:
 ; X64SSE2:       # %bb.0:
 ; X64SSE2-NEXT:    movaps {{.*#+}} xmm1 = <4.2E+1,u,2.0E+0,3.0E+0>
-; X64SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[0,0]
+; X64SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[2,3]
 ; X64SSE2-NEXT:    retq
 ;
@@ -237,9 +237,9 @@ define <2 x double> @elt1_v2f64(double %x) {
 define <8 x i32> @elt7_v8i32(i32 %x) {
 ; X32SSE2-LABEL: elt7_v8i32:
 ; X32SSE2:       # %bb.0:
-; X32SSE2-NEXT:    movaps {{.*#+}} xmm1 = <4,5,6,u>
 ; X32SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[2,0]
+; X32SSE2-NEXT:    movaps {{.*#+}} xmm1 = <4,5,6,u>
+; X32SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; X32SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,0]
 ; X32SSE2-NEXT:    movaps {{.*#+}} xmm0 = [42,1,2,3]
 ; X32SSE2-NEXT:    retl
@@ -248,7 +248,7 @@ define <8 x i32> @elt7_v8i32(i32 %x) {
 ; X64SSE2:       # %bb.0:
 ; X64SSE2-NEXT:    movd %edi, %xmm0
 ; X64SSE2-NEXT:    movaps {{.*#+}} xmm1 = <4,5,6,u>
-; X64SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[2,0]
+; X64SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; X64SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,0]
 ; X64SSE2-NEXT:    movaps {{.*#+}} xmm0 = [42,1,2,3]
 ; X64SSE2-NEXT:    retq

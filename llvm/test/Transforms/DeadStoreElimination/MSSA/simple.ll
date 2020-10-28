@@ -554,10 +554,12 @@ define void @test37_atomic(i8* %P, i8* %Q, i8* %R) {
   ret void
 }
 
-; The memmove is dead, because memcpy arguments cannot overlap.
+; See PR11763 - LLVM allows memcpy's source and destination to be equal (but not
+; inequal and overlapping).
 define void @test38(i8* %P, i8* %Q, i8* %R) {
 ; CHECK-LABEL: @test38(
-; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P:%.*]], i8* [[R:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memmove.p0i8.p0i8.i64(i8* [[P:%.*]], i8* [[Q:%.*]], i64 12, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[P]], i8* [[R:%.*]], i64 12, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 
@@ -566,10 +568,12 @@ define void @test38(i8* %P, i8* %Q, i8* %R) {
   ret void
 }
 
-; The memmove is dead, because memcpy arguments cannot overlap.
+; See PR11763 - LLVM allows memcpy's source and destination to be equal (but not
+; inequal and overlapping).
 define void @test38_atomic(i8* %P, i8* %Q, i8* %R) {
 ; CHECK-LABEL: @test38_atomic(
-; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[R:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P:%.*]], i8* align 1 [[Q:%.*]], i64 12, i32 1)
+; CHECK-NEXT:    tail call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i64(i8* align 1 [[P]], i8* align 1 [[R:%.*]], i64 12, i32 1)
 ; CHECK-NEXT:    ret void
 ;
 
@@ -748,4 +752,18 @@ define void @test47_volatile(i32* %P) {
   store volatile i32 2, i32* %P, align 4
   store volatile i32 3, i32* %P, align 4
   ret void
+}
+
+define i32 @test48(i32* %P, i32* noalias %Q, i32* %R) {
+; CHECK-LABEL: @test48(
+; CHECK-NEXT:    store i32 2, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 3, i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[R:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[L]]
+;
+  store i32 1, i32* %Q
+  store i32 2, i32* %P
+  store i32 3, i32* %Q
+  %l = load i32, i32* %R
+  ret i32 %l
 }

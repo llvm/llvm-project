@@ -408,7 +408,74 @@ def : EGOrCaymanPat<(i32 (sext_inreg i32:$src, i8)),
 def : EGOrCaymanPat<(i32 (sext_inreg i32:$src, i16)),
   (BFE_INT_eg i32:$src, (i32 ZERO), (MOV_IMM_I32 16))>;
 
-defm : BFIPatterns <BFI_INT_eg, MOV_IMM_I32, R600_Reg64>;
+// BFI patterns
+
+// Definition from ISA doc:
+// (y & x) | (z & ~x)
+def : AMDGPUPat <
+  (or (and i32:$y, i32:$x), (and i32:$z, (not i32:$x))),
+  (BFI_INT_eg $x, $y, $z)
+>;
+
+// 64-bit version
+def : AMDGPUPat <
+  (or (and i64:$y, i64:$x), (and i64:$z, (not i64:$x))),
+  (REG_SEQUENCE R600_Reg64,
+    (BFI_INT_eg (i32 (EXTRACT_SUBREG R600_Reg64:$x, sub0)),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$y, sub0)),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$z, sub0))), sub0,
+    (BFI_INT_eg (i32 (EXTRACT_SUBREG R600_Reg64:$x, sub1)),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$y, sub1)),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$z, sub1))), sub1)
+>;
+
+// SHA-256 Ch function
+// z ^ (x & (y ^ z))
+def : AMDGPUPat <
+  (xor i32:$z, (and i32:$x, (xor i32:$y, i32:$z))),
+  (BFI_INT_eg $x, $y, $z)
+>;
+
+// 64-bit version
+def : AMDGPUPat <
+  (xor i64:$z, (and i64:$x, (xor i64:$y, i64:$z))),
+  (REG_SEQUENCE R600_Reg64,
+    (BFI_INT_eg (i32 (EXTRACT_SUBREG R600_Reg64:$x, sub0)),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$y, sub0)),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$z, sub0))), sub0,
+    (BFI_INT_eg (i32 (EXTRACT_SUBREG R600_Reg64:$x, sub1)),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$y, sub1)),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$z, sub1))), sub1)
+>;
+
+def : AMDGPUPat <
+  (fcopysign f32:$src0, f32:$src1),
+  (BFI_INT_eg (MOV_IMM_I32 (i32 0x7fffffff)), $src0, $src1)
+>;
+
+def : AMDGPUPat <
+  (fcopysign f32:$src0, f64:$src1),
+  (BFI_INT_eg (MOV_IMM_I32 (i32 0x7fffffff)), $src0,
+              (i32 (EXTRACT_SUBREG R600_Reg64:$src1, sub1)))
+>;
+
+def : AMDGPUPat <
+  (fcopysign f64:$src0, f64:$src1),
+  (REG_SEQUENCE R600_Reg64,
+    (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,
+    (BFI_INT_eg (MOV_IMM_I32 (i32 0x7fffffff)),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$src0, sub1)),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$src1, sub1))), sub1)
+>;
+
+def : AMDGPUPat <
+  (fcopysign f64:$src0, f32:$src1),
+  (REG_SEQUENCE R600_Reg64,
+    (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,
+    (BFI_INT_eg (MOV_IMM_I32 (i32 0x7fffffff)),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$src0, sub1)),
+                $src1), sub1)
+>;
 
 def BFM_INT_eg : R600_2OP <0xA0, "BFM_INT",
   [(set i32:$dst, (AMDGPUbfm i32:$src0, i32:$src1))],
@@ -692,8 +759,26 @@ def : EGOrCaymanPat<(fp_to_sint f32:$src0), (FLT_TO_INT_eg (TRUNC $src0))>;
 
 def : EGOrCaymanPat<(fp_to_uint f32:$src0), (FLT_TO_UINT_eg (TRUNC $src0))>;
 
-// SHA-256 Patterns
-defm : SHA256MaPattern <BFI_INT_eg, XOR_INT, R600_Reg64>;
+// SHA-256 Ma patterns
+
+// ((x & z) | (y & (x | z))) -> BFI (XOR x, y), z, y
+def : AMDGPUPat <
+  (or (and i32:$x, i32:$z), (and i32:$y, (or i32:$x, i32:$z))),
+  (BFI_INT_eg (XOR_INT i32:$x, i32:$y), i32:$z, i32:$y)
+>;
+
+def : AMDGPUPat <
+  (or (and i64:$x, i64:$z), (and i64:$y, (or i64:$x, i64:$z))),
+  (REG_SEQUENCE R600_Reg64,
+    (BFI_INT_eg (XOR_INT (i32 (EXTRACT_SUBREG R600_Reg64:$x, sub0)),
+                     (i32 (EXTRACT_SUBREG R600_Reg64:$y, sub0))),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$z, sub0)),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$y, sub0))), sub0,
+    (BFI_INT_eg (XOR_INT (i32 (EXTRACT_SUBREG R600_Reg64:$x, sub1)),
+                     (i32 (EXTRACT_SUBREG R600_Reg64:$y, sub1))),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$z, sub1)),
+                (i32 (EXTRACT_SUBREG R600_Reg64:$y, sub1))), sub1)
+>;
 
 def EG_ExportSwz : ExportSwzInst {
   let Word1{19-16} = 0; // BURST_COUNT

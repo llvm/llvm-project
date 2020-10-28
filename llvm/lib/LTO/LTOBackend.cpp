@@ -50,6 +50,30 @@
 using namespace llvm;
 using namespace lto;
 
+#define DEBUG_TYPE "lto-backend"
+
+enum class LTOBitcodeEmbedding {
+  DoNotEmbed = 0,
+  EmbedOptimized = 1,
+  EmbedPostMergePreOptimized = 2
+};
+
+static cl::opt<LTOBitcodeEmbedding> EmbedBitcode(
+    "lto-embed-bitcode", cl::init(LTOBitcodeEmbedding::DoNotEmbed),
+    cl::values(clEnumValN(LTOBitcodeEmbedding::DoNotEmbed, "none",
+                          "Do not embed"),
+               clEnumValN(LTOBitcodeEmbedding::EmbedOptimized, "optimized",
+                          "Embed after all optimization passes"),
+               clEnumValN(LTOBitcodeEmbedding::EmbedPostMergePreOptimized,
+                          "post-merge-pre-opt",
+                          "Embed post merge, but before optimizations")),
+    cl::desc("Embed LLVM bitcode in object files produced by LTO"));
+
+static cl::opt<bool> ThinLTOAssumeMerged(
+    "thinlto-assume-merged", cl::init(false),
+    cl::desc("Assume the input has already undergone ThinLTO function "
+             "importing and the other pre-optimization pipeline changes."));
+
 LLVM_ATTRIBUTE_NORETURN static void reportOpenError(StringRef Path, Twine Msg) {
   errs() << "failed to open " << Path << ": " << Msg << '\n';
   errs().flush();
@@ -333,7 +357,25 @@ static void runOldPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
 
 bool opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
          bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
-         const ModuleSummaryIndex *ImportSummary) {
+         const ModuleSummaryIndex *ImportSummary,
+         const std::vector<uint8_t> *CmdArgs = nullptr) {
+  if (EmbedBitcode == LTOBitcodeEmbedding::EmbedPostMergePreOptimized) {
+    // FIXME: the motivation for capturing post-merge bitcode and command line
+    // is replicating the compilation environment from bitcode, without needing
+    // to understand the dependencies (the functions to be imported). This
+    // assumes a clang - based invocation, case in which we have the command
+    // line.
+    // It's not very clear how the above motivation would map in the
+    // linker-based case, so we currently don't plumb the command line args in
+    // that case.
+    if (CmdArgs == nullptr)
+      LLVM_DEBUG(
+          dbgs() << "Post-(Thin)LTO merge bitcode embedding was requested, but "
+                    "command line arguments are not available");
+    llvm::EmbedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
+                               /*EmbedBitcode*/ true,
+                               /*EmbedMarker*/ false, CmdArgs);
+  }
   // FIXME: Plumb the combined index into the new pass manager.
   if (!Conf.OptPipeline.empty())
     runNewPMCustomPasses(Conf, Mod, TM, Conf.OptPipeline, Conf.AAPipeline,
@@ -346,30 +388,16 @@ bool opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
-static cl::opt<bool> EmbedBitcode(
-    "lto-embed-bitcode", cl::init(false),
-    cl::desc("Embed LLVM bitcode in object files produced by LTO"));
-
-static void EmitBitcodeSection(Module &M, const Config &Conf) {
-  if (!EmbedBitcode)
-    return;
-  SmallVector<char, 0> Buffer;
-  raw_svector_ostream OS(Buffer);
-  WriteBitcodeToFile(M, OS);
-
-  std::unique_ptr<MemoryBuffer> Buf(
-      new SmallVectorMemoryBuffer(std::move(Buffer)));
-  llvm::EmbedBitcodeInModule(M, Buf->getMemBufferRef(), /*EmbedBitcode*/ true,
-                             /*EmbedMarker*/ false, /*CmdArgs*/ nullptr);
-}
-
 void codegen(const Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
              unsigned Task, Module &Mod,
              const ModuleSummaryIndex &CombinedIndex) {
   if (Conf.PreCodeGenModuleHook && !Conf.PreCodeGenModuleHook(Task, Mod))
     return;
 
-  EmitBitcodeSection(Mod, Conf);
+  if (EmbedBitcode == LTOBitcodeEmbedding::EmbedOptimized)
+    llvm::EmbedBitcodeInModule(Mod, llvm::MemoryBufferRef(),
+                               /*EmbedBitcode*/ true,
+                               /*EmbedMarker*/ false, /*CmdArgs*/ nullptr);
 
   std::unique_ptr<ToolOutputFile> DwoOut;
   SmallString<1024> DwoFile(Conf.SplitDwarfOutput);
@@ -532,7 +560,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        Module &Mod, const ModuleSummaryIndex &CombinedIndex,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
-                       MapVector<StringRef, BitcodeModule> &ModuleMap) {
+                       MapVector<StringRef, BitcodeModule> &ModuleMap,
+                       const std::vector<uint8_t> *CmdArgs) {
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
     return TOrErr.takeError();
@@ -558,6 +587,21 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
 
   if (Conf.PreOptModuleHook && !Conf.PreOptModuleHook(Task, Mod))
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+
+  auto OptimizeAndCodegen =
+      [&](Module &Mod, TargetMachine *TM,
+          std::unique_ptr<ToolOutputFile> DiagnosticOutputFile) {
+        if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
+                 /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
+                 CmdArgs))
+          return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+
+        codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
+        return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+      };
+
+  if (ThinLTOAssumeMerged)
+    return OptimizeAndCodegen(Mod, TM.get(), std::move(DiagnosticOutputFile));
 
   // When linking an ELF shared object, dso_local should be dropped. We
   // conservatively do this for -fpic.
@@ -599,10 +643,81 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
-  if (!opt(Conf, TM.get(), Task, Mod, /*IsThinLTO=*/true,
-           /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex))
-    return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+  return OptimizeAndCodegen(Mod, TM.get(), std::move(DiagnosticOutputFile));
+}
 
-  codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
-  return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
+BitcodeModule *lto::findThinLTOModule(MutableArrayRef<BitcodeModule> BMs) {
+  if (ThinLTOAssumeMerged && BMs.size() == 1)
+    return BMs.begin();
+
+  for (BitcodeModule &BM : BMs) {
+    Expected<BitcodeLTOInfo> LTOInfo = BM.getLTOInfo();
+    if (LTOInfo && LTOInfo->IsThinLTO)
+      return &BM;
+  }
+  return nullptr;
+}
+
+Expected<BitcodeModule> lto::findThinLTOModule(MemoryBufferRef MBRef) {
+  Expected<std::vector<BitcodeModule>> BMsOrErr = getBitcodeModuleList(MBRef);
+  if (!BMsOrErr)
+    return BMsOrErr.takeError();
+
+  // The bitcode file may contain multiple modules, we want the one that is
+  // marked as being the ThinLTO module.
+  if (const BitcodeModule *Bm = lto::findThinLTOModule(*BMsOrErr))
+    return *Bm;
+
+  return make_error<StringError>("Could not find module summary",
+                                 inconvertibleErrorCode());
+}
+
+bool lto::loadReferencedModules(
+    const Module &M, const ModuleSummaryIndex &CombinedIndex,
+    FunctionImporter::ImportMapTy &ImportList,
+    MapVector<llvm::StringRef, llvm::BitcodeModule> &ModuleMap,
+    std::vector<std::unique_ptr<llvm::MemoryBuffer>>
+        &OwnedImportsLifetimeManager) {
+  if (ThinLTOAssumeMerged)
+    return true;
+  // We can simply import the values mentioned in the combined index, since
+  // we should only invoke this using the individual indexes written out
+  // via a WriteIndexesThinBackend.
+  for (const auto &GlobalList : CombinedIndex) {
+    // Ignore entries for undefined references.
+    if (GlobalList.second.SummaryList.empty())
+      continue;
+
+    auto GUID = GlobalList.first;
+    for (const auto &Summary : GlobalList.second.SummaryList) {
+      // Skip the summaries for the importing module. These are included to
+      // e.g. record required linkage changes.
+      if (Summary->modulePath() == M.getModuleIdentifier())
+        continue;
+      // Add an entry to provoke importing by thinBackend.
+      ImportList[Summary->modulePath()].insert(GUID);
+    }
+  }
+
+  for (auto &I : ImportList) {
+    ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MBOrErr =
+        llvm::MemoryBuffer::getFile(I.first());
+    if (!MBOrErr) {
+      errs() << "Error loading imported file '" << I.first()
+             << "': " << MBOrErr.getError().message() << "\n";
+      return false;
+    }
+
+    Expected<BitcodeModule> BMOrErr = findThinLTOModule(**MBOrErr);
+    if (!BMOrErr) {
+      handleAllErrors(BMOrErr.takeError(), [&](ErrorInfoBase &EIB) {
+        errs() << "Error loading imported file '" << I.first()
+               << "': " << EIB.message() << '\n';
+      });
+      return false;
+    }
+    ModuleMap.insert({I.first(), *BMOrErr});
+    OwnedImportsLifetimeManager.push_back(std::move(*MBOrErr));
+  }
+  return true;
 }

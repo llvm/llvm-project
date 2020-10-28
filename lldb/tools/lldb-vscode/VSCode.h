@@ -9,6 +9,7 @@
 #ifndef LLDB_TOOLS_LLDB_VSCODE_VSCODE_H
 #define LLDB_TOOLS_LLDB_VSCODE_VSCODE_H
 
+#include <condition_variable>
 #include <iosfwd>
 #include <map>
 #include <set>
@@ -19,6 +20,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "lldb/API/SBAttachInfo.h"
@@ -65,6 +67,15 @@ enum class OutputType { Console, Stdout, Stderr, Telemetry };
 
 enum VSCodeBroadcasterBits { eBroadcastBitStopEventThread = 1u << 0 };
 
+typedef void (*RequestCallback)(const llvm::json::Object &command);
+
+enum class PacketStatus {
+  Success = 0,
+  EndOfFile,
+  JSONMalformed,
+  JSONNotObject
+};
+
 struct VSCode {
   InputStream input;
   OutputStream output;
@@ -91,6 +102,10 @@ struct VSCode {
   bool sent_terminated_event;
   bool stop_at_entry;
   bool is_attach;
+  uint32_t reverse_request_seq;
+  std::map<std::string, RequestCallback> request_handlers;
+  std::condition_variable request_in_terminal_cv;
+  bool waiting_for_run_in_terminal;
   // Keep track of the last stop thread index IDs as threads won't go away
   // unless we send a "thread" event to indicate the thread exited.
   llvm::DenseSet<lldb::tid_t> thread_ids;
@@ -152,6 +167,36 @@ struct VSCode {
   /// Set given target object as a current target for lldb-vscode and start
   /// listeing for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
+
+  const std::map<std::string, RequestCallback> &GetRequestHandlers();
+
+  PacketStatus GetNextObject(llvm::json::Object &object);
+  bool HandleObject(const llvm::json::Object &object);
+
+  /// Send a Debug Adapter Protocol reverse request to the IDE
+  ///
+  /// \param[in] request
+  ///   The payload of the request to send.
+  ///
+  /// \param[out] response
+  ///   The response of the IDE. It might be undefined if there was an error.
+  ///
+  /// \return
+  ///   A \a PacketStatus object indicating the sucess or failure of the
+  ///   request.
+  PacketStatus SendReverseRequest(llvm::json::Object request,
+                                  llvm::json::Object &response);
+
+  /// Registers a callback handler for a Debug Adapter Protocol request
+  ///
+  /// \param[in] request
+  ///     The name of the request following the Debug Adapter Protocol
+  ///     specification.
+  ///
+  /// \param[in] callback
+  ///     The callback to execute when the given request is triggered by the
+  ///     IDE.
+  void RegisterRequestCallback(std::string request, RequestCallback callback);
 };
 
 extern VSCode g_vsc;

@@ -24,7 +24,8 @@ class MachineFunction;
 class MachineInstr;
 class MCSymbol;
 
-typedef MCSymbol *ExceptionSymbolProvider(AsmPrinter *Asm);
+typedef MCSymbol *ExceptionSymbolProvider(AsmPrinter *Asm,
+                                          const MachineBasicBlock *MBB);
 
 /// Collects and handles AsmPrinter objects required to build debug
 /// or EH information.

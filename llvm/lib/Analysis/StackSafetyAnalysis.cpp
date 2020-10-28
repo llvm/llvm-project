@@ -122,8 +122,9 @@ template <typename CalleeTy> struct UseInfo {
   // function argument). Range should never set to empty-set, that is an invalid
   // access range that can cause empty-set to be propagated with
   // ConstantRange::add
-  std::map<CallInfo<CalleeTy>, ConstantRange, typename CallInfo<CalleeTy>::Less>
-      Calls;
+  using CallsTy = std::map<CallInfo<CalleeTy>, ConstantRange,
+                           typename CallInfo<CalleeTy>::Less>;
+  CallsTy Calls;
 
   UseInfo(unsigned PointerSize) : Range{PointerSize, false} {}
 
@@ -691,7 +692,7 @@ const ConstantRange *findParamAccess(const FunctionSummary &FS,
 void resolveAllCalls(UseInfo<GlobalValue> &Use,
                      const ModuleSummaryIndex *Index) {
   ConstantRange FullSet(Use.Range.getBitWidth(), true);
-  auto TmpCalls = std::move(Use.Calls);
+  UseInfo<GlobalValue>::CallsTy TmpCalls = std::move(Use.Calls);
   for (const auto &C : TmpCalls) {
     const Function *F = findCalleeInModule(C.first.Callee);
     if (F) {

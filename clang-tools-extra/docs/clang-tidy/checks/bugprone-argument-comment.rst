@@ -29,6 +29,7 @@ Options
    account.
 
 .. option:: IgnoreSingleArgument
+
    When true, the check will ignore the single argument.
 
 .. option:: CommentBoolLiterals

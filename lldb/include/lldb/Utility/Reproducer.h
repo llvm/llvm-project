@@ -227,6 +227,22 @@ private:
   mutable std::mutex m_mutex;
 };
 
+class Verifier {
+public:
+  Verifier(Loader *loader) : m_loader(loader) {}
+  void Verify(llvm::function_ref<void(llvm::StringRef)> error_callback,
+              llvm::function_ref<void(llvm::StringRef)> warning_callback,
+              llvm::function_ref<void(llvm::StringRef)> note_callback) const;
+
+private:
+  Loader *m_loader;
+};
+
+struct ReplayOptions {
+  bool verify = true;
+  bool check_version = true;
+};
+
 } // namespace repro
 } // namespace lldb_private
 

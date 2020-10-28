@@ -11,7 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

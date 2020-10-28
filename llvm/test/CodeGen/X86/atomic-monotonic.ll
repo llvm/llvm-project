@@ -14,8 +14,8 @@ define i8 @load_i8(i8* %ptr) {
 define void @store_i8(i8* %ptr, i8 %v) {
 ; CHECK-O0-LABEL: store_i8:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    # kill: def $sil killed $sil killed $esi
-; CHECK-O0-NEXT:    movb %sil, (%rdi)
+; CHECK-O0-NEXT:    movb %sil, %al
+; CHECK-O0-NEXT:    movb %al, (%rdi)
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: store_i8:
@@ -44,8 +44,8 @@ define i16 @load_i16(i16* %ptr) {
 define void @store_i16(i16* %ptr, i16 %v) {
 ; CHECK-O0-LABEL: store_i16:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    # kill: def $si killed $si killed $esi
-; CHECK-O0-NEXT:    movw %si, (%rdi)
+; CHECK-O0-NEXT:    movw %si, %ax
+; CHECK-O0-NEXT:    movw %ax, (%rdi)
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: store_i16:

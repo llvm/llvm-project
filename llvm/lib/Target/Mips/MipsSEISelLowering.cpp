@@ -2307,7 +2307,7 @@ static SDValue lowerMSALoadIntr(SDValue Op, SelectionDAG &DAG, unsigned Intr,
 
   Address = DAG.getNode(ISD::ADD, DL, PtrTy, Address, Offset);
   return DAG.getLoad(ResTy, DL, ChainIn, Address, MachinePointerInfo(),
-                     /* Alignment = */ 16);
+                     Align(16));
 }
 
 SDValue MipsSETargetLowering::lowerINTRINSIC_W_CHAIN(SDValue Op,
@@ -2382,7 +2382,7 @@ static SDValue lowerMSAStoreIntr(SDValue Op, SelectionDAG &DAG, unsigned Intr,
   Address = DAG.getNode(ISD::ADD, DL, PtrTy, Address, Offset);
 
   return DAG.getStore(ChainIn, DL, Value, Address, MachinePointerInfo(),
-                      /* Alignment = */ 16);
+                      Align(16));
 }
 
 SDValue MipsSETargetLowering::lowerINTRINSIC_VOID(SDValue Op,

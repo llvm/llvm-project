@@ -433,13 +433,44 @@ func @vector_print_scalar_i1(%arg0: i1) {
   vector.print %arg0 : i1
   return
 }
+//
+// Type "boolean" always uses zero extension.
+//
 // CHECK-LABEL: llvm.func @vector_print_scalar_i1(
 // CHECK-SAME: %[[A:.*]]: !llvm.i1)
-//       CHECK: %[[T:.*]] = llvm.mlir.constant(1 : i32) : !llvm.i32
-//       CHECK: %[[F:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-//       CHECK: %[[S:.*]] = llvm.select %[[A]], %[[T]], %[[F]] : !llvm.i1, !llvm.i32
-//       CHECK: llvm.call @print_i32(%[[S]]) : (!llvm.i32) -> ()
-//       CHECK: llvm.call @print_newline() : () -> ()
+//       CHECK: %[[S:.*]] = llvm.zext %[[A]] : !llvm.i1 to !llvm.i64
+//       CHECK: llvm.call @printI64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
+
+func @vector_print_scalar_i4(%arg0: i4) {
+  vector.print %arg0 : i4
+  return
+}
+// CHECK-LABEL: llvm.func @vector_print_scalar_i4(
+// CHECK-SAME: %[[A:.*]]: !llvm.i4)
+//       CHECK: %[[S:.*]] = llvm.sext %[[A]] : !llvm.i4 to !llvm.i64
+//       CHECK: llvm.call @printI64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
+
+func @vector_print_scalar_si4(%arg0: si4) {
+  vector.print %arg0 : si4
+  return
+}
+// CHECK-LABEL: llvm.func @vector_print_scalar_si4(
+// CHECK-SAME: %[[A:.*]]: !llvm.i4)
+//       CHECK: %[[S:.*]] = llvm.sext %[[A]] : !llvm.i4 to !llvm.i64
+//       CHECK: llvm.call @printI64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
+
+func @vector_print_scalar_ui4(%arg0: ui4) {
+  vector.print %arg0 : ui4
+  return
+}
+// CHECK-LABEL: llvm.func @vector_print_scalar_ui4(
+// CHECK-SAME: %[[A:.*]]: !llvm.i4)
+//       CHECK: %[[S:.*]] = llvm.zext %[[A]] : !llvm.i4 to !llvm.i64
+//       CHECK: llvm.call @printU64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_i32(%arg0: i32) {
   vector.print %arg0 : i32
@@ -447,8 +478,48 @@ func @vector_print_scalar_i32(%arg0: i32) {
 }
 // CHECK-LABEL: llvm.func @vector_print_scalar_i32(
 // CHECK-SAME: %[[A:.*]]: !llvm.i32)
-//       CHECK:    llvm.call @print_i32(%[[A]]) : (!llvm.i32) -> ()
-//       CHECK:    llvm.call @print_newline() : () -> ()
+//       CHECK: %[[S:.*]] = llvm.sext %[[A]] : !llvm.i32 to !llvm.i64
+//       CHECK: llvm.call @printI64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
+
+func @vector_print_scalar_ui32(%arg0: ui32) {
+  vector.print %arg0 : ui32
+  return
+}
+// CHECK-LABEL: llvm.func @vector_print_scalar_ui32(
+// CHECK-SAME: %[[A:.*]]: !llvm.i32)
+//       CHECK: %[[S:.*]] = llvm.zext %[[A]] : !llvm.i32 to !llvm.i64
+//       CHECK: llvm.call @printU64(%[[S]]) : (!llvm.i64) -> ()
+
+func @vector_print_scalar_i40(%arg0: i40) {
+  vector.print %arg0 : i40
+  return
+}
+// CHECK-LABEL: llvm.func @vector_print_scalar_i40(
+// CHECK-SAME: %[[A:.*]]: !llvm.i40)
+//       CHECK: %[[S:.*]] = llvm.sext %[[A]] : !llvm.i40 to !llvm.i64
+//       CHECK: llvm.call @printI64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
+
+func @vector_print_scalar_si40(%arg0: si40) {
+  vector.print %arg0 : si40
+  return
+}
+// CHECK-LABEL: llvm.func @vector_print_scalar_si40(
+// CHECK-SAME: %[[A:.*]]: !llvm.i40)
+//       CHECK: %[[S:.*]] = llvm.sext %[[A]] : !llvm.i40 to !llvm.i64
+//       CHECK: llvm.call @printI64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
+
+func @vector_print_scalar_ui40(%arg0: ui40) {
+  vector.print %arg0 : ui40
+  return
+}
+// CHECK-LABEL: llvm.func @vector_print_scalar_ui40(
+// CHECK-SAME: %[[A:.*]]: !llvm.i40)
+//       CHECK: %[[S:.*]] = llvm.zext %[[A]] : !llvm.i40 to !llvm.i64
+//       CHECK: llvm.call @printU64(%[[S]]) : (!llvm.i64) -> ()
+//       CHECK: llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_i64(%arg0: i64) {
   vector.print %arg0 : i64
@@ -456,8 +527,26 @@ func @vector_print_scalar_i64(%arg0: i64) {
 }
 // CHECK-LABEL: llvm.func @vector_print_scalar_i64(
 // CHECK-SAME: %[[A:.*]]: !llvm.i64)
-//       CHECK:    llvm.call @print_i64(%[[A]]) : (!llvm.i64) -> ()
-//       CHECK:    llvm.call @print_newline() : () -> ()
+//       CHECK:    llvm.call @printI64(%[[A]]) : (!llvm.i64) -> ()
+//       CHECK:    llvm.call @printNewline() : () -> ()
+
+func @vector_print_scalar_ui64(%arg0: ui64) {
+  vector.print %arg0 : ui64
+  return
+}
+// CHECK-LABEL: llvm.func @vector_print_scalar_ui64(
+// CHECK-SAME: %[[A:.*]]: !llvm.i64)
+//       CHECK:    llvm.call @printU64(%[[A]]) : (!llvm.i64) -> ()
+//       CHECK:    llvm.call @printNewline() : () -> ()
+
+func @vector_print_scalar_index(%arg0: index) {
+  vector.print %arg0 : index
+  return
+}
+// CHECK-LABEL: llvm.func @vector_print_scalar_index(
+// CHECK-SAME: %[[A:.*]]: !llvm.i64)
+//       CHECK:    llvm.call @printU64(%[[A]]) : (!llvm.i64) -> ()
+//       CHECK:    llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_f32(%arg0: f32) {
   vector.print %arg0 : f32
@@ -465,8 +554,8 @@ func @vector_print_scalar_f32(%arg0: f32) {
 }
 // CHECK-LABEL: llvm.func @vector_print_scalar_f32(
 // CHECK-SAME: %[[A:.*]]: !llvm.float)
-//       CHECK:    llvm.call @print_f32(%[[A]]) : (!llvm.float) -> ()
-//       CHECK:    llvm.call @print_newline() : () -> ()
+//       CHECK:    llvm.call @printF32(%[[A]]) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @printNewline() : () -> ()
 
 func @vector_print_scalar_f64(%arg0: f64) {
   vector.print %arg0 : f64
@@ -474,8 +563,8 @@ func @vector_print_scalar_f64(%arg0: f64) {
 }
 // CHECK-LABEL: llvm.func @vector_print_scalar_f64(
 // CHECK-SAME: %[[A:.*]]: !llvm.double)
-//       CHECK:    llvm.call @print_f64(%[[A]]) : (!llvm.double) -> ()
-//       CHECK:    llvm.call @print_newline() : () -> ()
+//       CHECK:    llvm.call @printF64(%[[A]]) : (!llvm.double) -> ()
+//       CHECK:    llvm.call @printNewline() : () -> ()
 
 func @vector_print_vector(%arg0: vector<2x2xf32>) {
   vector.print %arg0 : vector<2x2xf32>
@@ -483,30 +572,30 @@ func @vector_print_vector(%arg0: vector<2x2xf32>) {
 }
 // CHECK-LABEL: llvm.func @vector_print_vector(
 // CHECK-SAME: %[[A:.*]]: !llvm.array<2 x vec<2 x float>>)
-//       CHECK:    llvm.call @print_open() : () -> ()
+//       CHECK:    llvm.call @printOpen() : () -> ()
 //       CHECK:    %[[x0:.*]] = llvm.extractvalue %[[A]][0] : !llvm.array<2 x vec<2 x float>>
-//       CHECK:    llvm.call @print_open() : () -> ()
+//       CHECK:    llvm.call @printOpen() : () -> ()
 //       CHECK:    %[[x1:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 //       CHECK:    %[[x2:.*]] = llvm.extractelement %[[x0]][%[[x1]] : !llvm.i64] : !llvm.vec<2 x float>
-//       CHECK:    llvm.call @print_f32(%[[x2]]) : (!llvm.float) -> ()
-//       CHECK:    llvm.call @print_comma() : () -> ()
+//       CHECK:    llvm.call @printF32(%[[x2]]) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @printComma() : () -> ()
 //       CHECK:    %[[x3:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 //       CHECK:    %[[x4:.*]] = llvm.extractelement %[[x0]][%[[x3]] : !llvm.i64] : !llvm.vec<2 x float>
-//       CHECK:    llvm.call @print_f32(%[[x4]]) : (!llvm.float) -> ()
-//       CHECK:    llvm.call @print_close() : () -> ()
-//       CHECK:    llvm.call @print_comma() : () -> ()
+//       CHECK:    llvm.call @printF32(%[[x4]]) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @printClose() : () -> ()
+//       CHECK:    llvm.call @printComma() : () -> ()
 //       CHECK:    %[[x5:.*]] = llvm.extractvalue %[[A]][1] : !llvm.array<2 x vec<2 x float>>
-//       CHECK:    llvm.call @print_open() : () -> ()
+//       CHECK:    llvm.call @printOpen() : () -> ()
 //       CHECK:    %[[x6:.*]] = llvm.mlir.constant(0 : index) : !llvm.i64
 //       CHECK:    %[[x7:.*]] = llvm.extractelement %[[x5]][%[[x6]] : !llvm.i64] : !llvm.vec<2 x float>
-//       CHECK:    llvm.call @print_f32(%[[x7]]) : (!llvm.float) -> ()
-//       CHECK:    llvm.call @print_comma() : () -> ()
+//       CHECK:    llvm.call @printF32(%[[x7]]) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @printComma() : () -> ()
 //       CHECK:    %[[x8:.*]] = llvm.mlir.constant(1 : index) : !llvm.i64
 //       CHECK:    %[[x9:.*]] = llvm.extractelement %[[x5]][%[[x8]] : !llvm.i64] : !llvm.vec<2 x float>
-//       CHECK:    llvm.call @print_f32(%[[x9]]) : (!llvm.float) -> ()
-//       CHECK:    llvm.call @print_close() : () -> ()
-//       CHECK:    llvm.call @print_close() : () -> ()
-//       CHECK:    llvm.call @print_newline() : () -> ()
+//       CHECK:    llvm.call @printF32(%[[x9]]) : (!llvm.float) -> ()
+//       CHECK:    llvm.call @printClose() : () -> ()
+//       CHECK:    llvm.call @printClose() : () -> ()
+//       CHECK:    llvm.call @printNewline() : () -> ()
 
 func @extract_strided_slice1(%arg0: vector<4xf32>) -> vector<2xf32> {
   %0 = vector.extract_strided_slice %arg0 {offsets = [2], sizes = [2], strides = [1]} : vector<4xf32> to vector<2xf32>
@@ -678,6 +767,17 @@ func @vector_fma(%a: vector<8xf32>, %b: vector<2x4xf32>) -> (vector<8xf32>, vect
   return %0, %1: vector<8xf32>, vector<2x4xf32>
 }
 
+func @reduce_f16(%arg0: vector<16xf16>) -> f16 {
+  %0 = vector.reduction "add", %arg0 : vector<16xf16> into f16
+  return %0 : f16
+}
+// CHECK-LABEL: llvm.func @reduce_f16(
+// CHECK-SAME: %[[A:.*]]: !llvm.vec<16 x half>)
+//      CHECK: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f16) : !llvm.half
+//      CHECK: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.v2.fadd"(%[[C]], %[[A]])
+// CHECK-SAME: {reassoc = false} : (!llvm.half, !llvm.vec<16 x half>) -> !llvm.half
+//      CHECK: llvm.return %[[V]] : !llvm.half
+
 func @reduce_f32(%arg0: vector<16xf32>) -> f32 {
   %0 = vector.reduction "add", %arg0 : vector<16xf32> into f32
   return %0 : f32
@@ -699,6 +799,15 @@ func @reduce_f64(%arg0: vector<16xf64>) -> f64 {
 //      CHECK: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.v2.fadd"(%[[C]], %[[A]])
 // CHECK-SAME: {reassoc = false} : (!llvm.double, !llvm.vec<16 x double>) -> !llvm.double
 //      CHECK: llvm.return %[[V]] : !llvm.double
+
+func @reduce_i8(%arg0: vector<16xi8>) -> i8 {
+  %0 = vector.reduction "add", %arg0 : vector<16xi8> into i8
+  return %0 : i8
+}
+// CHECK-LABEL: llvm.func @reduce_i8(
+// CHECK-SAME: %[[A:.*]]: !llvm.vec<16 x i8>)
+//      CHECK: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.add"(%[[A]])
+//      CHECK: llvm.return %[[V]] : !llvm.i8
 
 func @reduce_i32(%arg0: vector<16xi32>) -> i32 {
   %0 = vector.reduction "add", %arg0 : vector<16xi32> into i32
@@ -749,40 +858,42 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
 //  CHECK-SAME: (!llvm.ptr<float>, !llvm.i64) -> !llvm.ptr<float>
 //       CHECK: %[[vecPtr:.*]] = llvm.bitcast %[[gep]] :
 //  CHECK-SAME: !llvm.ptr<float> to !llvm.ptr<vec<17 x float>>
+//       CHECK: %[[DIM:.*]] = llvm.extractvalue %{{.*}}[3, 0] :
+//  CHECK-SAME: !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
 //
 // 2. Create a vector with linear indices [ 0 .. vector_length - 1 ].
-//       CHECK: %[[linearIndex:.*]] = llvm.mlir.constant(
-//  CHECK-SAME: dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]> :
-//  CHECK-SAME: vector<17xi64>) : !llvm.vec<17 x i64>
+//       CHECK: %[[linearIndex:.*]] = llvm.mlir.constant(dense
+//  CHECK-SAME: <[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]> :
+//  CHECK-SAME: vector<17xi32>) : !llvm.vec<17 x i32>
 //
 // 3. Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
-//       CHECK: %[[offsetVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i64>
+//       CHECK: %[[otrunc:.*]] = llvm.trunc %[[BASE]] : !llvm.i64 to !llvm.i32
+//       CHECK: %[[offsetVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i32>
 //       CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-//       CHECK: %[[offsetVec2:.*]] = llvm.insertelement %[[BASE]], %[[offsetVec]][%[[c0]] :
-//  CHECK-SAME: !llvm.i32] : !llvm.vec<17 x i64>
+//       CHECK: %[[offsetVec2:.*]] = llvm.insertelement %[[otrunc]], %[[offsetVec]][%[[c0]] :
+//  CHECK-SAME: !llvm.i32] : !llvm.vec<17 x i32>
 //       CHECK: %[[offsetVec3:.*]] = llvm.shufflevector %[[offsetVec2]], %{{.*}} [
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32] :
-//  CHECK-SAME: !llvm.vec<17 x i64>, !llvm.vec<17 x i64>
+//  CHECK-SAME: !llvm.vec<17 x i32>, !llvm.vec<17 x i32>
 //       CHECK: %[[offsetVec4:.*]] = llvm.add %[[offsetVec3]], %[[linearIndex]] :
-//  CHECK-SAME: !llvm.vec<17 x i64>
+//  CHECK-SAME: !llvm.vec<17 x i32>
 //
 // 4. Let dim the memref dimension, compute the vector comparison mask:
 //    [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
-//       CHECK: %[[DIM:.*]] = llvm.extractvalue %{{.*}}[3, 0] :
-//  CHECK-SAME: !llvm.struct<(ptr<float>, ptr<float>, i64, array<1 x i64>, array<1 x i64>)>
-//       CHECK: %[[dimVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i64>
+//       CHECK: %[[dtrunc:.*]] = llvm.trunc %[[DIM]] : !llvm.i64 to !llvm.i32
+//       CHECK: %[[dimVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i32>
 //       CHECK: %[[c01:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-//       CHECK: %[[dimVec2:.*]] = llvm.insertelement %[[DIM]], %[[dimVec]][%[[c01]] :
-//  CHECK-SAME:  !llvm.i32] : !llvm.vec<17 x i64>
+//       CHECK: %[[dimVec2:.*]] = llvm.insertelement %[[dtrunc]], %[[dimVec]][%[[c01]] :
+//  CHECK-SAME:  !llvm.i32] : !llvm.vec<17 x i32>
 //       CHECK: %[[dimVec3:.*]] = llvm.shufflevector %[[dimVec2]], %{{.*}} [
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32] :
-//  CHECK-SAME: !llvm.vec<17 x i64>, !llvm.vec<17 x i64>
+//  CHECK-SAME: !llvm.vec<17 x i32>, !llvm.vec<17 x i32>
 //       CHECK: %[[mask:.*]] = llvm.icmp "slt" %[[offsetVec4]], %[[dimVec3]] :
-//  CHECK-SAME: !llvm.vec<17 x i64>
+//  CHECK-SAME: !llvm.vec<17 x i32>
 //
 // 5. Rewrite as a masked read.
 //       CHECK: %[[PASS_THROUGH:.*]] =  llvm.mlir.constant(dense<7.000000e+00> :
@@ -799,15 +910,15 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
 //  CHECK-SAME: !llvm.ptr<float> to !llvm.ptr<vec<17 x float>>
 //
 // 2. Create a vector with linear indices [ 0 .. vector_length - 1 ].
-//       CHECK: %[[linearIndex_b:.*]] = llvm.mlir.constant(
-//  CHECK-SAME: dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]> :
-//  CHECK-SAME:  vector<17xi64>) : !llvm.vec<17 x i64>
+//       CHECK: %[[linearIndex_b:.*]] = llvm.mlir.constant(dense
+//  CHECK-SAME: <[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]> :
+//  CHECK-SAME: vector<17xi32>) : !llvm.vec<17 x i32>
 //
 // 3. Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
 //       CHECK: llvm.shufflevector {{.*}} [0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32] :
-//  CHECK-SAME: !llvm.vec<17 x i64>, !llvm.vec<17 x i64>
+//  CHECK-SAME: !llvm.vec<17 x i32>, !llvm.vec<17 x i32>
 //       CHECK: llvm.add
 //
 // 4. Let dim the memref dimension, compute the vector comparison mask:
@@ -815,8 +926,8 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
 //       CHECK: llvm.shufflevector {{.*}} [0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32] :
-//  CHECK-SAME: !llvm.vec<17 x i64>, !llvm.vec<17 x i64>
-//       CHECK: %[[mask_b:.*]] = llvm.icmp "slt" {{.*}} : !llvm.vec<17 x i64>
+//  CHECK-SAME: !llvm.vec<17 x i32>, !llvm.vec<17 x i32>
+//       CHECK: %[[mask_b:.*]] = llvm.icmp "slt" {{.*}} : !llvm.vec<17 x i32>
 //
 // 5. Rewrite as a masked write.
 //       CHECK: llvm.intr.masked.store %[[loaded]], %[[vecPtr_b]], %[[mask_b]]
@@ -832,32 +943,33 @@ func @transfer_read_2d_to_1d(%A : memref<?x?xf32>, %base0: index, %base1: index)
 }
 // CHECK-LABEL: func @transfer_read_2d_to_1d
 //  CHECK-SAME: %[[BASE_0:[a-zA-Z0-9]*]]: !llvm.i64, %[[BASE_1:[a-zA-Z0-9]*]]: !llvm.i64) -> !llvm.vec<17 x float>
+//       CHECK: %[[DIM:.*]] = llvm.extractvalue %{{.*}}[3, 1] :
+//  CHECK-SAME: !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
 //
 // Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
-//       CHECK: %[[offsetVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i64>
+//       CHECK: %[[trunc:.*]] = llvm.trunc %[[BASE_1]] : !llvm.i64 to !llvm.i32
+//       CHECK: %[[offsetVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i32>
 //       CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-// Here we check we properly use %BASE_1
-//       CHECK: %[[offsetVec2:.*]] = llvm.insertelement %[[BASE_1]], %[[offsetVec]][%[[c0]] :
-//  CHECK-SAME: !llvm.i32] : !llvm.vec<17 x i64>
+//       CHECK: %[[offsetVec2:.*]] = llvm.insertelement %[[trunc]], %[[offsetVec]][%[[c0]] :
+//  CHECK-SAME: !llvm.i32] : !llvm.vec<17 x i32>
 //       CHECK: %[[offsetVec3:.*]] = llvm.shufflevector %[[offsetVec2]], %{{.*}} [
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32] :
+//  CHECK-SAME: !llvm.vec<17 x i32>, !llvm.vec<17 x i32>
 //
 // Let dim the memref dimension, compute the vector comparison mask:
 //    [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
-// Here we check we properly use %DIM[1]
-//       CHECK: %[[DIM:.*]] = llvm.extractvalue %{{.*}}[3, 1] :
-//  CHECK-SAME: !llvm.struct<(ptr<float>, ptr<float>, i64, array<2 x i64>, array<2 x i64>)>
-//       CHECK: %[[dimVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i64>
+//       CHECK: %[[dimtrunc:.*]] = llvm.trunc %[[DIM]] : !llvm.i64 to !llvm.i32
+//       CHECK: %[[dimVec:.*]] = llvm.mlir.undef : !llvm.vec<17 x i32>
 //       CHECK: %[[c01:.*]] = llvm.mlir.constant(0 : i32) : !llvm.i32
-//       CHECK: %[[dimVec2:.*]] = llvm.insertelement %[[DIM]], %[[dimVec]][%[[c01]] :
-//  CHECK-SAME:  !llvm.i32] : !llvm.vec<17 x i64>
+//       CHECK: %[[dimVec2:.*]] = llvm.insertelement %[[dimtrunc]], %[[dimVec]][%[[c01]] :
+//  CHECK-SAME:  !llvm.i32] : !llvm.vec<17 x i32>
 //       CHECK: %[[dimVec3:.*]] = llvm.shufflevector %[[dimVec2]], %{{.*}} [
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32, 0 : i32,
 //  CHECK-SAME:  0 : i32, 0 : i32, 0 : i32] :
-//  CHECK-SAME: !llvm.vec<17 x i64>, !llvm.vec<17 x i64>
+//  CHECK-SAME: !llvm.vec<17 x i32>, !llvm.vec<17 x i32>
 
 func @transfer_read_1d_non_zero_addrspace(%A : memref<?xf32, 3>, %base: index) -> vector<17xf32> {
   %f7 = constant 7.0: f32

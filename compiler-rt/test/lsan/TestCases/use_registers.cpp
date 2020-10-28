@@ -16,6 +16,9 @@ extern "C"
 void *registers_thread_func(void *arg) {
   int *sync = reinterpret_cast<int *>(arg);
   void *p = malloc(1337);
+  print_address("Test alloc: ", 1, p);
+  fflush(stderr);
+
   // To store the pointer, choose a register which is unlikely to be reused by
   // a function call.
 #if defined(__i386__)
@@ -50,8 +53,6 @@ void *registers_thread_func(void *arg) {
 #else
 #error "Test is not supported on this architecture."
 #endif
-  print_address("Test alloc: ", 1, p);
-  fflush(stderr);
   __sync_fetch_and_xor(sync, 1);
   while (true)
     sched_yield();

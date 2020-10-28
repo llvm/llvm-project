@@ -145,6 +145,11 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
 
 WebAssemblyTargetMachine::~WebAssemblyTargetMachine() = default; // anchor.
 
+const WebAssemblySubtarget *WebAssemblyTargetMachine::getSubtargetImpl() const {
+  return getSubtargetImpl(std::string(getTargetCPU()),
+                          std::string(getTargetFeatureString()));
+}
+
 const WebAssemblySubtarget *
 WebAssemblyTargetMachine::getSubtargetImpl(std::string CPU,
                                            std::string FS) const {
@@ -160,12 +165,10 @@ WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
 
-  std::string CPU = !CPUAttr.hasAttribute(Attribute::None)
-                        ? CPUAttr.getValueAsString().str()
-                        : TargetCPU;
-  std::string FS = !FSAttr.hasAttribute(Attribute::None)
-                       ? FSAttr.getValueAsString().str()
-                       : TargetFS;
+  std::string CPU =
+      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  std::string FS =
+      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
   // This needs to be done before we create a new subtarget since any
   // creation will depend on the TM and the code generation flags on the
@@ -193,6 +196,7 @@ public:
     FeatureBitset Features = coalesceFeatures(M);
 
     std::string FeatureStr = getFeatureString(Features);
+    WasmTM->setTargetFeatureString(FeatureStr);
     for (auto &F : M)
       replaceFeatures(F, FeatureStr);
 
@@ -350,7 +354,7 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
 //===----------------------------------------------------------------------===//
 
 void WebAssemblyPassConfig::addIRPasses() {
-  // Runs LowerAtomicPass if necessary
+  // Lower atomics and TLS if necessary
   addPass(new CoalesceFeaturesAndStripAtomics(&getWebAssemblyTargetMachine()));
 
   // This is a no-op if atomics are not used in the module

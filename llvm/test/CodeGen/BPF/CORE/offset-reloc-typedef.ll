@@ -1,7 +1,6 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck %s
-; RUN: llc -march=bpfeb -mattr=+alu32 -filetype=asm -o - %s | FileCheck %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck %s
 ;
 ; Source code:
 ;   struct s { int a; int b; };
@@ -16,8 +15,10 @@
 ;   int test(__arr *arg) {
 ;     return get_value(_(&arg[1]->d.b));
 ;   }
-; clang -target bpf -S -O2 -g -emit-llvm test.c
+; clang -target bpf -S -O2 -g -emit-llvm -Xclang -disable-llvm-passes test.c
 ; The offset reloc offset should be 12 from the base "arg".
+
+target triple = "bpf"
 
 %union.u = type { %struct.s }
 %struct.s = type { i32, i32 }

@@ -40,8 +40,8 @@ std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
   Args.push_back("-fsyntax-only");
 
   // FIXME: We shouldn't have to pass in the path info.
-  driver::Driver TheDriver(Args[0], llvm::sys::getDefaultTargetTriple(),
-                           *Diags, VFS);
+  driver::Driver TheDriver(Args[0], llvm::sys::getDefaultTargetTriple(), *Diags,
+                           "clang LLVM compiler", VFS);
 
   // Don't check that inputs exist, they may have been remapped.
   TheDriver.setCheckInputsExist(false);

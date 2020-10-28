@@ -30,6 +30,18 @@ void MBFIWrapper::setBlockFreq(const MachineBasicBlock *MBB,
   MergedBBFreq[MBB] = F;
 }
 
+Optional<uint64_t>
+MBFIWrapper::getBlockProfileCount(const MachineBasicBlock *MBB) const {
+  auto I = MergedBBFreq.find(MBB);
+
+  // Modified block frequency also impacts profile count. So we should compute
+  // profile count from new block frequency if it has been changed.
+  if (I != MergedBBFreq.end())
+    return MBFI.getProfileCountFromFreq(I->second.getFrequency());
+
+  return MBFI.getBlockProfileCount(MBB);
+}
+
 raw_ostream & MBFIWrapper::printBlockFreq(raw_ostream &OS,
                                           const MachineBasicBlock *MBB) const {
   return MBFI.printBlockFreq(OS, getBlockFreq(MBB));

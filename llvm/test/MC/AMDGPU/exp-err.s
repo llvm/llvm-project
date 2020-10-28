@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck -check-prefix=GCN %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck -check-prefix=GCN %s
+// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck -check-prefix=GCN --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefix=GCN --implicit-check-not=error: %s
 
 exp mrt8 v3, v2, v1, v0
 // GCN: :5: error: invalid exp target

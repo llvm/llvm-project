@@ -366,23 +366,6 @@ areIdsUnique(const FlatAffineConstraints &cst) {
   return true;
 }
 
-// Swap the posA^th identifier with the posB^th identifier.
-static void swapId(FlatAffineConstraints *A, unsigned posA, unsigned posB) {
-  assert(posA < A->getNumIds() && "invalid position A");
-  assert(posB < A->getNumIds() && "invalid position B");
-
-  if (posA == posB)
-    return;
-
-  for (unsigned r = 0, e = A->getNumInequalities(); r < e; r++) {
-    std::swap(A->atIneq(r, posA), A->atIneq(r, posB));
-  }
-  for (unsigned r = 0, e = A->getNumEqualities(); r < e; r++) {
-    std::swap(A->atEq(r, posA), A->atEq(r, posB));
-  }
-  std::swap(A->getId(posA), A->getId(posB));
-}
-
 /// Merge and align the identifiers of A and B starting at 'offset', so that
 /// both constraint systems get the union of the contained identifiers that is
 /// dimension-wise and symbol-wise unique; both constraint systems are updated
@@ -429,7 +412,7 @@ static void mergeAndAlignIds(unsigned offset, FlatAffineConstraints *A,
         assert(loc >= offset && "A's dim appears in B's aligned range");
         assert(loc < B->getNumDimIds() &&
                "A's dim appears in B's non-dim position");
-        swapId(B, d, loc);
+        B->swapId(d, loc);
       } else {
         B->addDimId(d);
         B->setIdValue(d, aDimValue);
@@ -451,7 +434,7 @@ static void mergeAndAlignIds(unsigned offset, FlatAffineConstraints *A,
       if (B->findId(aSymValue, &loc)) {
         assert(loc >= B->getNumDimIds() && loc < B->getNumDimAndSymbolIds() &&
                "A's symbol appears in B's non-symbol position");
-        swapId(B, s, loc);
+        B->swapId(s, loc);
       } else {
         B->addSymbolId(s - B->getNumDimIds());
         B->setIdValue(s, aSymValue);
@@ -619,7 +602,7 @@ LogicalResult FlatAffineConstraints::composeMatchingMap(AffineMap other) {
 static void turnDimIntoSymbol(FlatAffineConstraints *cst, Value id) {
   unsigned pos;
   if (cst->findId(id, &pos) && pos < cst->getNumDimIds()) {
-    swapId(cst, pos, cst->getNumDimIds() - 1);
+    cst->swapId(pos, cst->getNumDimIds() - 1);
     cst->setDimSymbolSeparation(cst->getNumSymbolIds() + 1);
   }
 }
@@ -629,7 +612,7 @@ static void turnSymbolIntoDim(FlatAffineConstraints *cst, Value id) {
   unsigned pos;
   if (cst->findId(id, &pos) && pos >= cst->getNumDimIds() &&
       pos < cst->getNumDimAndSymbolIds()) {
-    swapId(cst, pos, cst->getNumDimIds());
+    cst->swapId(pos, cst->getNumDimIds());
     cst->setDimSymbolSeparation(cst->getNumSymbolIds() - 1);
   }
 }
@@ -1962,6 +1945,20 @@ bool FlatAffineConstraints::containsId(Value id) const {
   return llvm::any_of(ids, [&](const Optional<Value> &mayBeId) {
     return mayBeId.hasValue() && mayBeId.getValue() == id;
   });
+}
+
+void FlatAffineConstraints::swapId(unsigned posA, unsigned posB) {
+  assert(posA < getNumIds() && "invalid position A");
+  assert(posB < getNumIds() && "invalid position B");
+
+  if (posA == posB)
+    return;
+
+  for (unsigned r = 0, e = getNumInequalities(); r < e; r++)
+    std::swap(atIneq(r, posA), atIneq(r, posB));
+  for (unsigned r = 0, e = getNumEqualities(); r < e; r++)
+    std::swap(atEq(r, posA), atEq(r, posB));
+  std::swap(getId(posA), getId(posB));
 }
 
 void FlatAffineConstraints::setDimSymbolSeparation(unsigned newSymbolCount) {

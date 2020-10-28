@@ -173,6 +173,10 @@ public:
                      One.extractBits(NumBits, BitPosition));
   }
 
+  /// Return KnownBits based on this, but updated given that the underlying
+  /// value is known to be greater than or equal to Val.
+  KnownBits makeGE(const APInt &Val) const;
+
   /// Returns the minimum number of trailing zero bits.
   unsigned countMinTrailingZeros() const {
     return Zero.countTrailingOnes();
@@ -241,10 +245,28 @@ public:
   static KnownBits computeForAddSub(bool Add, bool NSW, const KnownBits &LHS,
                                     KnownBits RHS);
 
+  /// Compute known bits for umax(LHS, RHS).
+  static KnownBits umax(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute known bits for umin(LHS, RHS).
+  static KnownBits umin(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute known bits for smax(LHS, RHS).
+  static KnownBits smax(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute known bits for smin(LHS, RHS).
+  static KnownBits smin(const KnownBits &LHS, const KnownBits &RHS);
+
   /// Insert the bits from a smaller known bits starting at bitPosition.
   void insertBits(const KnownBits &SubBits, unsigned BitPosition) {
     Zero.insertBits(SubBits.Zero, BitPosition);
     One.insertBits(SubBits.One, BitPosition);
+  }
+
+  /// Return a subset of the known bits from [bitPosition,bitPosition+numBits).
+  KnownBits extractBits(unsigned NumBits, unsigned BitPosition) {
+    return KnownBits(Zero.extractBits(NumBits, BitPosition),
+                     One.extractBits(NumBits, BitPosition));
   }
 
   /// Update known bits based on ANDing with RHS.
@@ -255,6 +277,17 @@ public:
 
   /// Update known bits based on XORing with RHS.
   KnownBits &operator^=(const KnownBits &RHS);
+
+  /// Compute known bits for the absolute value.
+  KnownBits abs() const;
+
+  KnownBits byteSwap() {
+    return KnownBits(Zero.byteSwap(), One.byteSwap());
+  }
+
+  KnownBits reverseBits() {
+    return KnownBits(Zero.reverseBits(), One.reverseBits());
+  }
 };
 
 inline KnownBits operator&(KnownBits LHS, const KnownBits &RHS) {

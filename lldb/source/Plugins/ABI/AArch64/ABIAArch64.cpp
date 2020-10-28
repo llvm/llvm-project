@@ -33,6 +33,12 @@ ABIAArch64::GetEHAndDWARFNums(llvm::StringRef name) {
   return MCBasedABI::GetEHAndDWARFNums(name);
 }
 
+std::string ABIAArch64::GetMCName(std::string reg) {
+  MapRegisterName(reg, "v", "q");
+  MapRegisterName(reg, "x29", "fp");
+  MapRegisterName(reg, "x30", "lr");
+  return reg;
+}
 uint32_t ABIAArch64::GetGenericNum(llvm::StringRef name) {
   return llvm::StringSwitch<uint32_t>(name)
       .Case("pc", LLDB_REGNUM_GENERIC_PC)

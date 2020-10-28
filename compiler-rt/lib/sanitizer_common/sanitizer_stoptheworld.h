@@ -32,13 +32,11 @@ class SuspendedThreadsList {
 
   // Can't declare pure virtual functions in sanitizer runtimes:
   // __cxa_pure_virtual might be unavailable. Use UNIMPLEMENTED() instead.
-  virtual PtraceRegistersStatus GetRegistersAndSP(uptr index, uptr *buffer,
-                                                  uptr *sp) const {
+  virtual PtraceRegistersStatus GetRegistersAndSP(
+      uptr index, InternalMmapVector<uptr> *buffer, uptr *sp) const {
     UNIMPLEMENTED();
   }
 
-  // The buffer in GetRegistersAndSP should be at least this big.
-  virtual uptr RegisterCount() const { UNIMPLEMENTED(); }
   virtual uptr ThreadCount() const { UNIMPLEMENTED(); }
   virtual tid_t GetThreadID(uptr index) const { UNIMPLEMENTED(); }
 

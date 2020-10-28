@@ -32,6 +32,10 @@ scf::ValueVector loopNestBuilder(Value lb, Value ub, Value step,
 scf::ValueVector loopNestBuilder(
     Value lb, Value ub, Value step, ValueRange iterArgInitValues,
     function_ref<scf::ValueVector(Value, ValueRange)> fun = nullptr);
+scf::ValueVector loopNestBuilder(
+    ValueRange lbs, ValueRange ubs, ValueRange steps,
+    ValueRange iterArgInitValues,
+    function_ref<scf::ValueVector(ValueRange, ValueRange)> fun = nullptr);
 
 /// Adapters for building if conditions using the builder and the location
 /// stored in ScopedContext. 'thenBody' is mandatory, 'elseBody' can be omitted

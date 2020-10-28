@@ -37,8 +37,9 @@ body:             |
     ; GCN-LABEL: name: select_from_same_results_of_unmerge_values
     ; GCN: liveins: $vgpr0
     ; GCN: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-    ; GCN: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<2 x s32>)
-    ; GCN: $vgpr0 = COPY [[UV]](s32)
+    ; GCN: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[DEF]](<2 x s32>)
+    ; GCN: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
+    ; GCN: $vgpr0 = COPY [[TRUNC]](s32)
     ; GCN: SI_RETURN_TO_EPILOG $vgpr0
     %0:_(<2 x s32>) = G_IMPLICIT_DEF
     %1:_(s32) = COPY $vgpr0

@@ -83,8 +83,8 @@ public:
   /// in-memory ABI size copied to the stack for the call. Otherwise, return 0.
   uint64_t getPassPointeeByValueCopySize(const DataLayout &DL) const;
 
-  /// Return true if this argument has the byval, inalloca, preallocated, or
-  /// byref attribute. These attributes represent arguments being passed by
+  /// Return true if this argument has the byval, sret, inalloca, preallocated,
+  /// or byref attribute. These attributes represent arguments being passed by
   /// value (which may or may not involve a stack copy)
   bool hasPointeeInMemoryValueAttr() const;
 
@@ -102,6 +102,9 @@ public:
 
   /// If this is a byval argument, return its type.
   Type *getParamByValType() const;
+
+  /// If this is an sret argument, return its type.
+  Type *getParamStructRetType() const;
 
   /// If this is a byref argument, return its type.
   Type *getParamByRefType() const;

@@ -346,57 +346,40 @@ define i32 @load_partial_illegal_type() {
 }
 
 define void @PR43227(i32* %explicit_0, <8 x i32>* %explicit_1) {
-; SSE2-LABEL: PR43227:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    xorps %xmm2, %xmm2
-; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm0[0]
-; SSE2-NEXT:    movaps %xmm1, 672(%rsi)
-; SSE2-NEXT:    movaps %xmm2, 688(%rsi)
-; SSE2-NEXT:    retq
+; SSE-LABEL: PR43227:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE-NEXT:    psrlq $32, %xmm0
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm1, 672(%rsi)
+; SSE-NEXT:    movdqa %xmm0, 688(%rsi)
+; SSE-NEXT:    retq
 ;
-; SSSE3-LABEL: PR43227:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSSE3-NEXT:    xorps %xmm1, %xmm1
-; SSSE3-NEXT:    xorps %xmm2, %xmm2
-; SSSE3-NEXT:    movss {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3]
-; SSSE3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSSE3-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm0[0]
-; SSSE3-NEXT:    movaps %xmm1, 672(%rsi)
-; SSSE3-NEXT:    movaps %xmm2, 688(%rsi)
-; SSSE3-NEXT:    retq
+; AVX1-LABEL: PR43227:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vmovaps %ymm0, 672(%rsi)
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
 ;
-; SSE41-LABEL: PR43227:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; SSE41-NEXT:    pxor %xmm1, %xmm1
-; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; SSE41-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; SSE41-NEXT:    movdqa %xmm1, 672(%rsi)
-; SSE41-NEXT:    movdqa %xmm0, 688(%rsi)
-; SSE41-NEXT:    retq
-;
-; AVX-LABEL: PR43227:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX-NEXT:    vmovaps %ymm0, 672(%rsi)
-; AVX-NEXT:    vzeroupper
-; AVX-NEXT:    retq
+; AVX2-LABEL: PR43227:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm0
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-NEXT:    vmovdqa %ymm0, 672(%rsi)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
   %1 = getelementptr i32, i32* %explicit_0, i64 63
   %2 = bitcast i32* %1 to <3 x i32>*
   %3 = load <3 x i32>, <3 x i32>* %2, align 1

@@ -41,38 +41,31 @@ define void @foo(i8 %a, i16 %b) nounwind {
 ; ARM: foo
 ; THUMB: foo
 ;; Materialize i1 1
-; ARM: movw r2, #1
+; ARM: movw [[REG0:r[0-9]+]], #1
+; THUMB: movs [[REG0:r[0-9]+]], #1
 ;; zero-ext
-; ARM: and r2, r2, #1
-; THUMB: and r2, r2, #1
+; ARM: and [[REG1:r[0-9]+]], [[REG0]], #1
+; THUMB: and [[REG1:r[0-9]+]], [[REG0]], #1
   %1 = call i32 @t0(i1 zeroext 1)
-; ARM: sxtb	r2, r1
-; ARM: mov r0, r2
-; THUMB: sxtb	r2, r1
-; THUMB: mov r0, r2
+; ARM: sxtb	r0, {{r[0-9]+}}
+; THUMB: sxtb	r0, {{r[0-9]+}}
   %2 = call i32 @t1(i8 signext %a)
-; ARM: and	r2, r1, #255
-; ARM: mov r0, r2
-; THUMB: and	r2, r1, #255
-; THUMB: mov r0, r2
+; ARM: and	r0, {{r[0-9]+}}, #255
+; THUMB: and	r0, {{r[0-9]+}}, #255
   %3 = call i32 @t2(i8 zeroext %a)
-; ARM: sxth	r2, r1
-; ARM: mov r0, r2
-; THUMB: sxth	r2, r1
-; THUMB: mov r0, r2
+; ARM: sxth	r0, {{r[0-9]+}}
+; THUMB: sxth	r0, {{r[0-9]+}}
   %4 = call i32 @t3(i16 signext %b)
-; ARM: uxth	r2, r1
-; ARM: mov r0, r2
-; THUMB: uxth	r2, r1
-; THUMB: mov r0, r2
+; ARM: uxth	r0, {{r[0-9]+}}
+; THUMB: uxth	r0, {{r[0-9]+}}
   %5 = call i32 @t4(i16 zeroext %b)
 
 ;; A few test to check materialization
 ;; Note: i1 1 was materialized with t1 call
-; ARM: movw r1, #255
+; ARM: movw {{r[0-9]+}}, #255
 %6 = call i32 @t2(i8 zeroext 255)
-; ARM: movw r1, #65535
-; THUMB: movw r1, #65535
+; ARM: movw {{r[0-9]+}}, #65535
+; THUMB: movw {{r[0-9]+}}, #65535
 %7 = call i32 @t4(i16 zeroext 65535)
   ret void
 }
@@ -112,10 +105,9 @@ entry:
 ; ARM: bl {{_?}}bar
 ; ARM-LONG-LABEL: @t10
 
-; ARM-LONG-MACHO: {{(movw)|(ldr)}} [[R:l?r[0-9]*]], {{(:lower16:L_bar\$non_lazy_ptr)|(.LCPI)}}
-; ARM-LONG-MACHO: {{(movt [[R]], :upper16:L_bar\$non_lazy_ptr)?}}
-; ARM-LONG-MACHO: str     [[R]], [r7, [[SLOT:#[-0-9]+]]]           @ 4-byte Spill
-; ARM-LONG-MACHO: ldr     [[R:l?r[0-9]*]], [r7, [[SLOT]]]           @ 4-byte Reload
+; ARM-LONG-MACHO: {{(movw)|(ldr)}} [[R1:l?r[0-9]*]], {{(:lower16:L_bar\$non_lazy_ptr)|(.LCPI)}}
+; ARM-LONG-MACHO: {{(movt [[R1]], :upper16:L_bar\$non_lazy_ptr)?}}
+; ARM-LONG-MACHO: ldr [[R:r[0-9]+]], {{\[}}[[R1]]]
 
 ; ARM-LONG-ELF: movw [[R:l?r[0-9]*]], :lower16:bar
 ; ARM-LONG-ELF: {{(movt [[R]], :upper16:L_bar\$non_lazy_ptr)?}}
@@ -138,11 +130,9 @@ entry:
 ; THUMB-DAG: str.w [[R4]], [sp, #4]
 ; THUMB: bl {{_?}}bar
 ; THUMB-LONG-LABEL: @t10
-; THUMB-LONG: {{(movw)|(ldr.n)}} [[R:l?r[0-9]*]], {{(:lower16:L_bar\$non_lazy_ptr)|(.LCPI)}}
-; THUMB-LONG: {{(movt [[R]], :upper16:L_bar\$non_lazy_ptr)?}}
-; THUMB-LONG: ldr{{(.w)?}} [[R]], {{\[}}[[R]]{{\]}}
-; THUMB-LONG: str     [[R]], [sp, [[SLOT:#[-0-9]+]]]           @ 4-byte Spill
-; THUMB-LONG: ldr.w   [[R:l?r[0-9]*]], [sp, [[SLOT]]]           @ 4-byte Reload
+; THUMB-LONG: {{(movw)|(ldr.n)}} [[R1:l?r[0-9]*]], {{(:lower16:L_bar\$non_lazy_ptr)|(.LCPI)}}
+; THUMB-LONG: {{(movt [[R1]], :upper16:L_bar\$non_lazy_ptr)?}}
+; THUMB-LONG: ldr{{(.w)?}} [[R:r[0-9]+]], {{\[}}[[R1]]{{\]}}
 ; THUMB-LONG: blx [[R]]
   %call = call i32 @bar(i8 zeroext 0, i8 zeroext -8, i8 zeroext -69, i8 zeroext 28, i8 zeroext 40, i8 zeroext -70)
   ret i32 0

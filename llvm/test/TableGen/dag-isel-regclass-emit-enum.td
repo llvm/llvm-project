@@ -12,7 +12,7 @@ let Namespace = "TestNamespace" in {
 
 def R0 : Register<"r0">;
 
-foreach i = 0-127 in {
+foreach i = 0...127 in {
 def GPR#i : RegisterClass<"TestTarget", [i32], 32,
                           (add R0)>;
 }

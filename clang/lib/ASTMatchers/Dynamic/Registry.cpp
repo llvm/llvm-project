@@ -202,6 +202,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(cxxUnresolvedConstructExpr);
   REGISTER_MATCHER(decayedType);
   REGISTER_MATCHER(decl);
+  REGISTER_MATCHER(decompositionDecl);
   REGISTER_MATCHER(declCountIs);
   REGISTER_MATCHER(declRefExpr);
   REGISTER_MATCHER(declStmt);
@@ -227,6 +228,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(floatLiteral);
   REGISTER_MATCHER(forEach);
   REGISTER_MATCHER(forEachArgumentWithParam);
+  REGISTER_MATCHER(forEachArgumentWithParamType);
   REGISTER_MATCHER(forEachConstructorInitializer);
   REGISTER_MATCHER(forEachDescendant);
   REGISTER_MATCHER(forEachOverridden);

@@ -3,6 +3,8 @@
 
 target datalayout = "e-p:64:64:64-p1:16:16:16-p2:32:32:32-p3:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
+declare i8 @llvm.abs.i8(i8, i1)
+
 define i32 @test1(i32 %X) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[X_LOBIT:%.*]] = lshr i32 [[X:%.*]], 31
@@ -1088,6 +1090,26 @@ define zeroext i1 @cmpabs2(i64 %val) {
   %sub.val = select i1 %cmp, i64 %val, i64 %sub
   %tobool = icmp ne i64 %sub.val, 0
   ret i1 %tobool
+}
+
+define i1 @abs_intrin_eq_zero(i8 %x) {
+; CHECK-LABEL: @abs_intrin_eq_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %abs = call i8 @llvm.abs.i8(i8 %x, i1 false)
+  %cmp = icmp eq i8 %abs, 0
+  ret i1 %cmp
+}
+
+define i1 @abs_intrin_ne_zero(i8 %x) {
+; CHECK-LABEL: @abs_intrin_ne_zero(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %abs = call i8 @llvm.abs.i8(i8 %x, i1 false)
+  %cmp = icmp ne i8 %abs, 0
+  ret i1 %cmp
 }
 
 define void @test58() {
@@ -3373,58 +3395,6 @@ define i1 @eq_add_constants(i32 %x, i32 %y) {
   %B = add i32 %y, 5
   %C = icmp eq i32 %A, %B
   ret i1 %C
-}
-
-define i1 @eq_mul_constants(i32 %x, i32 %y) {
-; CHECK-LABEL: @eq_mul_constants(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[C]]
-;
-  %A = mul i32 %x, 5
-  %B = mul i32 %y, 5
-  %C = icmp eq i32 %A, %B
-  ret i1 %C
-}
-
-define <2 x i1> @eq_mul_constants_splat(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @eq_mul_constants_splat(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret <2 x i1> [[C]]
-;
-  %A = mul <2 x i32> %x, <i32 5, i32 5>
-  %B = mul <2 x i32> %y, <i32 5, i32 5>
-  %C = icmp ne <2 x i32> %A, %B
-  ret <2 x i1> %C
-}
-
-; If the multiply constant has any trailing zero bits, we get something completely different.
-; We mask off the high bits of each input and then convert:
-; (X&Z) == (Y&Z) -> (X^Y) & Z == 0
-
-define i1 @eq_mul_constants_with_tz(i32 %x, i32 %y) {
-; CHECK-LABEL: @eq_mul_constants_with_tz(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 1073741823
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[TMP2]], 0
-; CHECK-NEXT:    ret i1 [[C]]
-;
-  %A = mul i32 %x, 12
-  %B = mul i32 %y, 12
-  %C = icmp ne i32 %A, %B
-  ret i1 %C
-}
-
-define <2 x i1> @eq_mul_constants_with_tz_splat(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @eq_mul_constants_with_tz_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], <i32 1073741823, i32 1073741823>
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[C]]
-;
-  %A = mul <2 x i32> %x, <i32 12, i32 12>
-  %B = mul <2 x i32> %y, <i32 12, i32 12>
-  %C = icmp eq <2 x i32> %A, %B
-  ret <2 x i1> %C
 }
 
 declare i32 @llvm.bswap.i32(i32)

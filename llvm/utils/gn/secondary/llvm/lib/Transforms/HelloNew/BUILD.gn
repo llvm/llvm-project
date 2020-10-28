@@ -1,0 +1,9 @@
+static_library("HelloNew") {
+  output_name = "LLVMHelloNew"
+  deps = [
+    "//llvm/lib/Analysis",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "HelloWorld.cpp" ]
+}

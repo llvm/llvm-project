@@ -47,12 +47,6 @@ parser::MessageFixedText WithIsFatal(
       msg.text().begin(), msg.text().size(), isFatal};
 }
 
-bool IsDefinedOperator(const SourceName &name) {
-  const char *begin{name.begin()};
-  const char *end{name.end()};
-  return begin != end && begin[0] == '.' && end[-1] == '.';
-}
-
 bool IsIntrinsicOperator(
     const SemanticsContext &context, const SourceName &name) {
   std::string str{name.ToString()};

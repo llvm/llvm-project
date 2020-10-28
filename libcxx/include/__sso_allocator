@@ -11,8 +11,9 @@
 #define _LIBCPP___SSO_ALLOCATOR
 
 #include <__config>
-#include <type_traits>
+#include <memory>
 #include <new>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -54,14 +55,14 @@ public:
             __allocated_ = true;
             return (pointer)&buf_;
         }
-        return static_cast<pointer>(_VSTD::__libcpp_allocate(__n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp)));
+        return allocator<_Tp>().allocate(__n);
     }
     _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type __n)
     {
         if (__p == (pointer)&buf_)
             __allocated_ = false;
         else
-            _VSTD::__libcpp_deallocate(__p, __n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp));
+            allocator<_Tp>().deallocate(__p, __n);
     }
     _LIBCPP_INLINE_VISIBILITY size_type max_size() const throw() {return size_type(~0) / sizeof(_Tp);}
 

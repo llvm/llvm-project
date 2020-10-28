@@ -124,8 +124,6 @@ define void @f_non_leaf(i32 %x, i32 %y) optsize {
 ; WIN64-NEXT:    jmp bar # TAILCALL
 ; WIN64-NEXT:    # encoding: [0xeb,A]
 ; WIN64-NEXT:    # fixup A - offset: 1, value: bar-1, kind: FK_PCRel_1
-; WIN64-NEXT:    .seh_handlerdata
-; WIN64-NEXT:    .text
 ; WIN64-NEXT:    .seh_endproc
 entry:
   ; Force %ebx to be spilled on the stack, turning this into

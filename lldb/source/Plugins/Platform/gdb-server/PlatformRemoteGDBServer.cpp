@@ -711,7 +711,7 @@ bool PlatformRemoteGDBServer::GetFileExists(const FileSpec &file_spec) {
 }
 
 Status PlatformRemoteGDBServer::RunShellCommand(
-    const char *command, // Shouldn't be NULL
+    llvm::StringRef shell, llvm::StringRef command,
     const FileSpec &
         working_dir, // Pass empty FileSpec to use the current working directory
     int *status_ptr, // Pass NULL if you don't want the process exit status

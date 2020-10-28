@@ -1,5 +1,6 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck %s
 ;
 ; Source:
 ;   enum AA { VAL = 100 };
@@ -14,7 +15,9 @@
 ;            __builtin_preserve_type_info(a, 1);
 ;   }
 ; Compiler flag to generate IR:
-;   clang -target bpf -S -O2 -g -emit-llvm t1.c
+;   clang -target bpf -S -O2 -g -emit-llvm -Xclang -disable-llvm-passes t1.c
+
+target triple = "bpf"
 
 ; Function Attrs: nounwind readnone
 define dso_local i32 @test() local_unnamed_addr #0 !dbg !17 {

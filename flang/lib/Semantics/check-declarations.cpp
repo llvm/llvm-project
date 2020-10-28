@@ -21,16 +21,19 @@
 
 namespace Fortran::semantics {
 
-using evaluate::characteristics::DummyArgument;
-using evaluate::characteristics::DummyDataObject;
-using evaluate::characteristics::DummyProcedure;
-using evaluate::characteristics::FunctionResult;
-using evaluate::characteristics::Procedure;
+namespace characteristics = evaluate::characteristics;
+using characteristics::DummyArgument;
+using characteristics::DummyDataObject;
+using characteristics::DummyProcedure;
+using characteristics::FunctionResult;
+using characteristics::Procedure;
 
 class CheckHelper {
 public:
   explicit CheckHelper(SemanticsContext &c) : context_{c} {}
+  CheckHelper(SemanticsContext &c, const Scope &s) : context_{c}, scope_{&s} {}
 
+  SemanticsContext &context() { return context_; }
   void Check() { Check(context_.globalScope()); }
   void Check(const ParamValue &, bool canBeAssumed);
   void Check(const Bound &bound) { CheckSpecExpr(bound.GetExplicit()); }
@@ -42,6 +45,8 @@ public:
   void Check(const DeclTypeSpec &, bool canHaveAssumedTypeParameters);
   void Check(const Symbol &);
   void Check(const Scope &);
+  void CheckInitialization(const Symbol &);
+  const Procedure *Characterize(const Symbol &);
 
 private:
   template <typename A> void CheckSpecExpr(const A &x) {
@@ -61,24 +66,24 @@ private:
   void CheckSubprogram(const Symbol &, const SubprogramDetails &);
   void CheckAssumedTypeEntity(const Symbol &, const ObjectEntityDetails &);
   void CheckDerivedType(const Symbol &, const DerivedTypeDetails &);
-  void CheckHostAssoc(const Symbol &, const HostAssocDetails &);
+  bool CheckFinal(
+      const Symbol &subroutine, SourceName, const Symbol &derivedType);
+  bool CheckDistinguishableFinals(const Symbol &f1, SourceName f1name,
+      const Symbol &f2, SourceName f2name, const Symbol &derivedType);
   void CheckGeneric(const Symbol &, const GenericDetails &);
-  std::optional<std::vector<Procedure>> Characterize(const SymbolVector &);
-  bool CheckDefinedOperator(const SourceName &, const GenericKind &,
-      const Symbol &, const Procedure &);
+  void CheckHostAssoc(const Symbol &, const HostAssocDetails &);
+  bool CheckDefinedOperator(
+      SourceName, GenericKind, const Symbol &, const Procedure &);
   std::optional<parser::MessageFixedText> CheckNumberOfArgs(
       const GenericKind &, std::size_t);
   bool CheckDefinedOperatorArg(
       const SourceName &, const Symbol &, const Procedure &, std::size_t);
   bool CheckDefinedAssignment(const Symbol &, const Procedure &);
   bool CheckDefinedAssignmentArg(const Symbol &, const DummyArgument &, int);
-  void CheckSpecificsAreDistinguishable(
-      const Symbol &, const GenericDetails &, const std::vector<Procedure> &);
+  void CheckSpecificsAreDistinguishable(const Symbol &, const GenericDetails &);
   void CheckEquivalenceSet(const EquivalenceSet &);
   void CheckBlockData(const Scope &);
-
-  void SayNotDistinguishable(
-      const SourceName &, GenericKind, const Symbol &, const Symbol &);
+  void CheckGenericOps(const Scope &);
   bool CheckConflicting(const Symbol &, Attr, Attr);
   bool InPure() const {
     return innermostSymbol_ && IsPureProcedure(*innermostSymbol_);
@@ -95,6 +100,9 @@ private:
     }
   }
   bool IsResultOkToDiffer(const FunctionResult &);
+  bool IsScopePDT() const {
+    return scope_ && scope_->IsParameterizedDerivedType();
+  }
 
   SemanticsContext &context_;
   evaluate::FoldingContext &foldingContext_{context_.foldingContext()};
@@ -103,6 +111,27 @@ private:
   // This symbol is the one attached to the innermost enclosing scope
   // that has a symbol.
   const Symbol *innermostSymbol_{nullptr};
+  // Cache of calls to Procedure::Characterize(Symbol)
+  std::map<SymbolRef, std::optional<Procedure>> characterizeCache_;
+};
+
+class DistinguishabilityHelper {
+public:
+  DistinguishabilityHelper(SemanticsContext &context) : context_{context} {}
+  void Add(const Symbol &, GenericKind, const Symbol &, const Procedure &);
+  void Check();
+
+private:
+  void SayNotDistinguishable(
+      const SourceName &, GenericKind, const Symbol &, const Symbol &);
+
+  SemanticsContext &context_;
+  struct ProcedureInfo {
+    GenericKind kind;
+    const Symbol &symbol;
+    const Procedure &procedure;
+  };
+  std::map<SourceName, std::vector<ProcedureInfo>> nameToInfo_;
 };
 
 void CheckHelper::Check(const ParamValue &value, bool canBeAssumed) {
@@ -450,15 +479,20 @@ void CheckHelper::CheckObjectEntity(
       }
     }
   }
+  bool badInit{false};
   if (symbol.owner().kind() != Scope::Kind::DerivedType &&
       IsInitialized(symbol, true /*ignore DATA, already caught*/)) { // C808
     if (IsAutomatic(symbol)) {
+      badInit = true;
       messages_.Say("An automatic variable must not be initialized"_err_en_US);
     } else if (IsDummy(symbol)) {
+      badInit = true;
       messages_.Say("A dummy argument must not be initialized"_err_en_US);
     } else if (IsFunctionResult(symbol)) {
+      badInit = true;
       messages_.Say("A function result must not be initialized"_err_en_US);
     } else if (IsInBlankCommon(symbol)) {
+      badInit = true;
       messages_.Say(
           "A variable in blank COMMON should not be initialized"_en_US);
     }
@@ -480,6 +514,51 @@ void CheckHelper::CheckObjectEntity(
       messages_.Say("CLASS entity '%s' must be a dummy argument or have "
                     "ALLOCATABLE or POINTER attribute"_err_en_US,
           symbol.name());
+    }
+  }
+  if (!badInit && !IsScopePDT()) {
+    CheckInitialization(symbol);
+  }
+}
+
+void CheckHelper::CheckInitialization(const Symbol &symbol) {
+  const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
+  if (!details) {
+    // not an object
+  } else if (const auto &init{details->init()}) { // 8.2 para 4
+    int initRank{init->Rank()};
+    int symbolRank{details->shape().Rank()};
+    if (IsPointer(symbol)) {
+      // Pointer initialization rank/shape errors are caught earlier in
+      // name resolution
+    } else if (details->shape().IsImpliedShape() ||
+        details->shape().IsDeferredShape()) {
+      if (symbolRank != initRank) {
+        messages_.Say(
+            "%s-shape array '%s' has rank %d, but its initializer has rank %d"_err_en_US,
+            details->shape().IsImpliedShape() ? "Implied" : "Deferred",
+            symbol.name(), symbolRank, initRank);
+      }
+    } else if (symbolRank != initRank && initRank != 0) {
+      // Pointer initializer rank errors are caught elsewhere
+      messages_.Say(
+          "'%s' has rank %d, but its initializer has rank %d"_err_en_US,
+          symbol.name(), symbolRank, initRank);
+    } else if (auto symbolShape{evaluate::GetShape(foldingContext_, symbol)}) {
+      if (!evaluate::AsConstantExtents(foldingContext_, *symbolShape)) {
+        // C762
+        messages_.Say(
+            "Shape of '%s' is not implied, deferred, nor constant"_err_en_US,
+            symbol.name());
+      } else if (auto initShape{evaluate::GetShape(foldingContext_, *init)}) {
+        if (initRank == symbolRank) {
+          evaluate::CheckConformance(
+              messages_, *symbolShape, *initShape, "object", "initializer");
+        } else {
+          CHECK(initRank == 0);
+          // TODO: expand scalar now, or in lowering?
+        }
+      }
     }
   }
 }
@@ -609,12 +688,13 @@ void CheckHelper::CheckProcEntity(
 // - C1551: NON_RECURSIVE prefix
 class SubprogramMatchHelper {
 public:
-  explicit SubprogramMatchHelper(SemanticsContext &context)
-      : context{context} {}
+  explicit SubprogramMatchHelper(CheckHelper &checkHelper)
+      : checkHelper{checkHelper} {}
 
   void Check(const Symbol &, const Symbol &);
 
 private:
+  SemanticsContext &context() { return checkHelper.context(); }
   void CheckDummyArg(const Symbol &, const Symbol &, const DummyArgument &,
       const DummyArgument &);
   void CheckDummyDataObject(const Symbol &, const Symbol &,
@@ -637,7 +717,7 @@ private:
     return parser::ToUpperCaseLetters(DummyProcedure::EnumToString(attr));
   }
 
-  SemanticsContext &context;
+  CheckHelper &checkHelper;
 };
 
 // 15.6.2.6 para 3 - can the result of an ENTRY differ from its function?
@@ -664,7 +744,7 @@ bool CheckHelper::IsResultOkToDiffer(const FunctionResult &result) {
 void CheckHelper::CheckSubprogram(
     const Symbol &symbol, const SubprogramDetails &details) {
   if (const Symbol * iface{FindSeparateModuleSubprogramInterface(&symbol)}) {
-    SubprogramMatchHelper{context_}.Check(symbol, *iface);
+    SubprogramMatchHelper{*this}.Check(symbol, *iface);
   }
   if (const Scope * entryScope{details.entryScope()}) {
     // ENTRY 15.6.2.6, esp. C1571
@@ -705,24 +785,24 @@ void CheckHelper::CheckSubprogram(
 }
 
 void CheckHelper::CheckDerivedType(
-    const Symbol &symbol, const DerivedTypeDetails &details) {
-  const Scope *scope{symbol.scope()};
+    const Symbol &derivedType, const DerivedTypeDetails &details) {
+  const Scope *scope{derivedType.scope()};
   if (!scope) {
     CHECK(details.isForwardReferenced());
     return;
   }
-  CHECK(scope->symbol() == &symbol);
+  CHECK(scope->symbol() == &derivedType);
   CHECK(scope->IsDerivedType());
-  if (symbol.attrs().test(Attr::ABSTRACT) && // C734
-      (symbol.attrs().test(Attr::BIND_C) || details.sequence())) {
+  if (derivedType.attrs().test(Attr::ABSTRACT) && // C734
+      (derivedType.attrs().test(Attr::BIND_C) || details.sequence())) {
     messages_.Say("An ABSTRACT derived type must be extensible"_err_en_US);
   }
-  if (const DeclTypeSpec * parent{FindParentTypeSpec(symbol)}) {
+  if (const DeclTypeSpec * parent{FindParentTypeSpec(derivedType)}) {
     const DerivedTypeSpec *parentDerived{parent->AsDerived()};
     if (!IsExtensibleType(parentDerived)) { // C705
       messages_.Say("The parent type is not extensible"_err_en_US);
     }
-    if (!symbol.attrs().test(Attr::ABSTRACT) && parentDerived &&
+    if (!derivedType.attrs().test(Attr::ABSTRACT) && parentDerived &&
         parentDerived->typeSymbol().attrs().test(Attr::ABSTRACT)) {
       ScopeComponentIterator components{*parentDerived};
       for (const Symbol &component : components) {
@@ -735,7 +815,7 @@ void CheckHelper::CheckDerivedType(
         }
       }
     }
-    DerivedTypeSpec derived{symbol.name(), symbol};
+    DerivedTypeSpec derived{derivedType.name(), derivedType};
     derived.set_scope(*scope);
     if (FindCoarrayUltimateComponent(derived) && // C736
         !(parentDerived && FindCoarrayUltimateComponent(*parentDerived))) {
@@ -743,7 +823,7 @@ void CheckHelper::CheckDerivedType(
           "Type '%s' has a coarray ultimate component so the type at the base "
           "of its type extension chain ('%s') must be a type that has a "
           "coarray ultimate component"_err_en_US,
-          symbol.name(), scope->GetDerivedTypeBase().GetSymbol()->name());
+          derivedType.name(), scope->GetDerivedTypeBase().GetSymbol()->name());
     }
     if (FindEventOrLockPotentialComponent(derived) && // C737
         !(FindEventOrLockPotentialComponent(*parentDerived) ||
@@ -753,13 +833,154 @@ void CheckHelper::CheckDerivedType(
           "at the base of its type extension chain ('%s') must either have an "
           "EVENT_TYPE or LOCK_TYPE component, or be EVENT_TYPE or "
           "LOCK_TYPE"_err_en_US,
-          symbol.name(), scope->GetDerivedTypeBase().GetSymbol()->name());
+          derivedType.name(), scope->GetDerivedTypeBase().GetSymbol()->name());
     }
   }
-  if (HasIntrinsicTypeName(symbol)) { // C729
+  if (HasIntrinsicTypeName(derivedType)) { // C729
     messages_.Say("A derived type name cannot be the name of an intrinsic"
                   " type"_err_en_US);
   }
+  std::map<SourceName, SymbolRef> previous;
+  for (const auto &pair : details.finals()) {
+    SourceName source{pair.first};
+    const Symbol &ref{*pair.second};
+    if (CheckFinal(ref, source, derivedType) &&
+        std::all_of(previous.begin(), previous.end(),
+            [&](std::pair<SourceName, SymbolRef> prev) {
+              return CheckDistinguishableFinals(
+                  ref, source, *prev.second, prev.first, derivedType);
+            })) {
+      previous.emplace(source, ref);
+    }
+  }
+}
+
+// C786
+bool CheckHelper::CheckFinal(
+    const Symbol &subroutine, SourceName finalName, const Symbol &derivedType) {
+  if (!IsModuleProcedure(subroutine)) {
+    SayWithDeclaration(subroutine, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must be a module procedure"_err_en_US,
+        subroutine.name(), derivedType.name());
+    return false;
+  }
+  const Procedure *proc{Characterize(subroutine)};
+  if (!proc) {
+    return false; // error recovery
+  }
+  if (!proc->IsSubroutine()) {
+    SayWithDeclaration(subroutine, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must be a subroutine"_err_en_US,
+        subroutine.name(), derivedType.name());
+    return false;
+  }
+  if (proc->dummyArguments.size() != 1) {
+    SayWithDeclaration(subroutine, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must have a single dummy argument"_err_en_US,
+        subroutine.name(), derivedType.name());
+    return false;
+  }
+  const auto &arg{proc->dummyArguments[0]};
+  const Symbol *errSym{&subroutine};
+  if (const auto *details{subroutine.detailsIf<SubprogramDetails>()}) {
+    if (!details->dummyArgs().empty()) {
+      if (const Symbol * argSym{details->dummyArgs()[0]}) {
+        errSym = argSym;
+      }
+    }
+  }
+  const auto *ddo{std::get_if<DummyDataObject>(&arg.u)};
+  if (!ddo) {
+    SayWithDeclaration(subroutine, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must have a single dummy argument that is a data object"_err_en_US,
+        subroutine.name(), derivedType.name());
+    return false;
+  }
+  bool ok{true};
+  if (arg.IsOptional()) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must not have an OPTIONAL dummy argument"_err_en_US,
+        subroutine.name(), derivedType.name());
+    ok = false;
+  }
+  if (ddo->attrs.test(DummyDataObject::Attr::Allocatable)) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must not have an ALLOCATABLE dummy argument"_err_en_US,
+        subroutine.name(), derivedType.name());
+    ok = false;
+  }
+  if (ddo->attrs.test(DummyDataObject::Attr::Pointer)) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must not have a POINTER dummy argument"_err_en_US,
+        subroutine.name(), derivedType.name());
+    ok = false;
+  }
+  if (ddo->intent == common::Intent::Out) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must not have a dummy argument with INTENT(OUT)"_err_en_US,
+        subroutine.name(), derivedType.name());
+    ok = false;
+  }
+  if (ddo->attrs.test(DummyDataObject::Attr::Value)) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must not have a dummy argument with the VALUE attribute"_err_en_US,
+        subroutine.name(), derivedType.name());
+    ok = false;
+  }
+  if (ddo->type.corank() > 0) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must not have a coarray dummy argument"_err_en_US,
+        subroutine.name(), derivedType.name());
+    ok = false;
+  }
+  if (ddo->type.type().IsPolymorphic()) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must not have a polymorphic dummy argument"_err_en_US,
+        subroutine.name(), derivedType.name());
+    ok = false;
+  } else if (ddo->type.type().category() != TypeCategory::Derived ||
+      &ddo->type.type().GetDerivedTypeSpec().typeSymbol() != &derivedType) {
+    SayWithDeclaration(*errSym, finalName,
+        "FINAL subroutine '%s' of derived type '%s' must have a TYPE(%s) dummy argument"_err_en_US,
+        subroutine.name(), derivedType.name(), derivedType.name());
+    ok = false;
+  } else { // check that all LEN type parameters are assumed
+    for (auto ref : OrderParameterDeclarations(derivedType)) {
+      if (const auto *paramDetails{ref->detailsIf<TypeParamDetails>()}) {
+        if (paramDetails->attr() == common::TypeParamAttr::Len) {
+          const auto *value{
+              ddo->type.type().GetDerivedTypeSpec().FindParameter(ref->name())};
+          if (!value || !value->isAssumed()) {
+            SayWithDeclaration(*errSym, finalName,
+                "FINAL subroutine '%s' of derived type '%s' must have a dummy argument with an assumed LEN type parameter '%s=*'"_err_en_US,
+                subroutine.name(), derivedType.name(), ref->name());
+            ok = false;
+          }
+        }
+      }
+    }
+  }
+  return ok;
+}
+
+bool CheckHelper::CheckDistinguishableFinals(const Symbol &f1,
+    SourceName f1Name, const Symbol &f2, SourceName f2Name,
+    const Symbol &derivedType) {
+  const Procedure *p1{Characterize(f1)};
+  const Procedure *p2{Characterize(f2)};
+  if (p1 && p2) {
+    if (characteristics::Distinguishable(*p1, *p2)) {
+      return true;
+    }
+    if (auto *msg{messages_.Say(f1Name,
+            "FINAL subroutines '%s' and '%s' of derived type '%s' cannot be distinguished by rank or KIND type parameter value"_err_en_US,
+            f1Name, f2Name, derivedType.name())}) {
+      msg->Attach(f2Name, "FINAL declaration of '%s'"_en_US, f2.name())
+          .Attach(f1.name(), "Definition of '%s'"_en_US, f1Name)
+          .Attach(f2.name(), "Definition of '%s'"_en_US, f2Name);
+    }
+  }
+  return false;
 }
 
 void CheckHelper::CheckHostAssoc(
@@ -779,66 +1000,25 @@ void CheckHelper::CheckHostAssoc(
 
 void CheckHelper::CheckGeneric(
     const Symbol &symbol, const GenericDetails &details) {
-  const SymbolVector &specifics{details.specificProcs()};
-  const auto &bindingNames{details.bindingNames()};
-  std::optional<std::vector<Procedure>> procs{Characterize(specifics)};
-  if (!procs) {
-    return;
-  }
-  bool ok{true};
-  if (details.kind().IsIntrinsicOperator()) {
-    for (std::size_t i{0}; i < specifics.size(); ++i) {
-      auto restorer{messages_.SetLocation(bindingNames[i])};
-      ok &= CheckDefinedOperator(
-          symbol.name(), details.kind(), specifics[i], (*procs)[i]);
-    }
-  }
-  if (details.kind().IsAssignment()) {
-    for (std::size_t i{0}; i < specifics.size(); ++i) {
-      auto restorer{messages_.SetLocation(bindingNames[i])};
-      ok &= CheckDefinedAssignment(specifics[i], (*procs)[i]);
-    }
-  }
-  if (ok) {
-    CheckSpecificsAreDistinguishable(symbol, details, *procs);
-  }
+  CheckSpecificsAreDistinguishable(symbol, details);
 }
 
 // Check that the specifics of this generic are distinguishable from each other
-void CheckHelper::CheckSpecificsAreDistinguishable(const Symbol &generic,
-    const GenericDetails &details, const std::vector<Procedure> &procs) {
+void CheckHelper::CheckSpecificsAreDistinguishable(
+    const Symbol &generic, const GenericDetails &details) {
+  GenericKind kind{details.kind()};
   const SymbolVector &specifics{details.specificProcs()};
   std::size_t count{specifics.size()};
-  if (count < 2) {
+  if (count < 2 || !kind.IsName()) {
     return;
   }
-  GenericKind kind{details.kind()};
-  auto distinguishable{kind.IsAssignment() || kind.IsOperator()
-          ? evaluate::characteristics::DistinguishableOpOrAssign
-          : evaluate::characteristics::Distinguishable};
-  for (std::size_t i1{0}; i1 < count - 1; ++i1) {
-    auto &proc1{procs[i1]};
-    for (std::size_t i2{i1 + 1}; i2 < count; ++i2) {
-      auto &proc2{procs[i2]};
-      if (!distinguishable(proc1, proc2)) {
-        SayNotDistinguishable(
-            generic.name(), kind, specifics[i1], specifics[i2]);
-      }
+  DistinguishabilityHelper helper{context_};
+  for (const Symbol &specific : specifics) {
+    if (const Procedure * procedure{Characterize(specific)}) {
+      helper.Add(generic, kind, specific, *procedure);
     }
   }
-}
-
-void CheckHelper::SayNotDistinguishable(const SourceName &name,
-    GenericKind kind, const Symbol &proc1, const Symbol &proc2) {
-  auto &&text{kind.IsDefinedOperator()
-          ? "Generic operator '%s' may not have specific procedures '%s'"
-            " and '%s' as their interfaces are not distinguishable"_err_en_US
-          : "Generic '%s' may not have specific procedures '%s'"
-            " and '%s' as their interfaces are not distinguishable"_err_en_US};
-  auto &msg{
-      context_.Say(name, std::move(text), name, proc1.name(), proc2.name())};
-  evaluate::AttachDeclaration(msg, proc1);
-  evaluate::AttachDeclaration(msg, proc2);
+  helper.Check();
 }
 
 static bool ConflictsWithIntrinsicAssignment(const Procedure &proc) {
@@ -850,6 +1030,9 @@ static bool ConflictsWithIntrinsicAssignment(const Procedure &proc) {
 
 static bool ConflictsWithIntrinsicOperator(
     const GenericKind &kind, const Procedure &proc) {
+  if (!kind.IsIntrinsicOperator()) {
+    return false;
+  }
   auto arg0{std::get<DummyDataObject>(proc.dummyArguments[0].u).type};
   auto type0{arg0.type()};
   if (proc.dummyArguments.size() == 1) { // unary
@@ -887,8 +1070,11 @@ static bool ConflictsWithIntrinsicOperator(
 }
 
 // Check if this procedure can be used for defined operators (see 15.4.3.4.2).
-bool CheckHelper::CheckDefinedOperator(const SourceName &opName,
-    const GenericKind &kind, const Symbol &specific, const Procedure &proc) {
+bool CheckHelper::CheckDefinedOperator(SourceName opName, GenericKind kind,
+    const Symbol &specific, const Procedure &proc) {
+  if (context_.HasError(specific)) {
+    return false;
+  }
   std::optional<parser::MessageFixedText> msg;
   if (specific.attrs().test(Attr::NOPASS)) { // C774
     msg = "%s procedure '%s' may not have NOPASS attribute"_err_en_US;
@@ -907,8 +1093,9 @@ bool CheckHelper::CheckDefinedOperator(const SourceName &opName,
   } else {
     return true; // OK
   }
-  SayWithDeclaration(specific, std::move(msg.value()),
-      parser::ToUpperCaseLetters(opName.ToString()), specific.name());
+  SayWithDeclaration(
+      specific, std::move(*msg), MakeOpName(opName), specific.name());
+  context_.SetError(specific);
   return false;
 }
 
@@ -916,6 +1103,9 @@ bool CheckHelper::CheckDefinedOperator(const SourceName &opName,
 // false and return the error message in msg.
 std::optional<parser::MessageFixedText> CheckHelper::CheckNumberOfArgs(
     const GenericKind &kind, std::size_t nargs) {
+  if (!kind.IsIntrinsicOperator()) {
+    return std::nullopt;
+  }
   std::size_t min{2}, max{2}; // allowed number of args; default is binary
   std::visit(common::visitors{
                  [&](const common::NumericOperator &x) {
@@ -980,6 +1170,9 @@ bool CheckHelper::CheckDefinedOperatorArg(const SourceName &opName,
 // Check if this procedure can be used for defined assignment (see 15.4.3.4.3).
 bool CheckHelper::CheckDefinedAssignment(
     const Symbol &specific, const Procedure &proc) {
+  if (context_.HasError(specific)) {
+    return false;
+  }
   std::optional<parser::MessageFixedText> msg;
   if (specific.attrs().test(Attr::NOPASS)) { // C774
     msg = "Defined assignment procedure '%s' may not have"
@@ -999,6 +1192,7 @@ bool CheckHelper::CheckDefinedAssignment(
     return true; // OK
   }
   SayWithDeclaration(specific, std::move(msg.value()), specific.name());
+  context_.SetError(specific);
   return false;
 }
 
@@ -1031,6 +1225,7 @@ bool CheckHelper::CheckDefinedAssignmentArg(
   }
   if (msg) {
     SayWithDeclaration(symbol, std::move(*msg), symbol.name(), arg.name);
+    context_.SetError(symbol);
     return false;
   }
   return true;
@@ -1047,17 +1242,14 @@ bool CheckHelper::CheckConflicting(const Symbol &symbol, Attr a1, Attr a2) {
   }
 }
 
-std::optional<std::vector<Procedure>> CheckHelper::Characterize(
-    const SymbolVector &specifics) {
-  std::vector<Procedure> result;
-  for (const Symbol &specific : specifics) {
-    auto proc{Procedure::Characterize(specific, context_.intrinsics())};
-    if (!proc || context_.HasError(specific)) {
-      return std::nullopt;
-    }
-    result.emplace_back(*proc);
+const Procedure *CheckHelper::Characterize(const Symbol &symbol) {
+  auto it{characterizeCache_.find(symbol)};
+  if (it == characterizeCache_.end()) {
+    auto pair{characterizeCache_.emplace(SymbolRef{symbol},
+        Procedure::Characterize(symbol, context_.intrinsics()))};
+    it = pair.first;
   }
-  return result;
+  return common::GetPtrFromOptional(it->second);
 }
 
 void CheckHelper::CheckVolatile(const Symbol &symbol, bool isAssociated,
@@ -1243,10 +1435,8 @@ void CheckHelper::CheckProcBinding(
                 ? "A NOPASS type-bound procedure may not override a passed-argument procedure"_err_en_US
                 : "A passed-argument type-bound procedure may not override a NOPASS procedure"_err_en_US);
       } else {
-        auto bindingChars{evaluate::characteristics::Procedure::Characterize(
-            binding.symbol(), context_.intrinsics())};
-        auto overriddenChars{evaluate::characteristics::Procedure::Characterize(
-            overriddenBinding->symbol(), context_.intrinsics())};
+        const auto *bindingChars{Characterize(binding.symbol())};
+        const auto *overriddenChars{Characterize(overriddenBinding->symbol())};
         if (bindingChars && overriddenChars) {
           if (isNopass) {
             if (!bindingChars->CanOverride(*overriddenChars, std::nullopt)) {
@@ -1287,7 +1477,8 @@ void CheckHelper::Check(const Scope &scope) {
   if (const Symbol * symbol{scope.symbol()}) {
     innermostSymbol_ = symbol;
   } else if (scope.IsDerivedType()) {
-    return; // PDT instantiations have null symbol()
+    // PDT instantiations have no symbol.
+    return;
   }
   for (const auto &set : scope.equivalenceSets()) {
     CheckEquivalenceSet(set);
@@ -1301,6 +1492,7 @@ void CheckHelper::Check(const Scope &scope) {
   if (scope.kind() == Scope::Kind::BlockData) {
     CheckBlockData(scope);
   }
+  CheckGenericOps(scope);
 }
 
 void CheckHelper::CheckEquivalenceSet(const EquivalenceSet &set) {
@@ -1361,6 +1553,53 @@ void CheckHelper::CheckBlockData(const Scope &scope) {
   }
 }
 
+// Check distinguishability of generic assignment and operators.
+// For these, generics and generic bindings must be considered together.
+void CheckHelper::CheckGenericOps(const Scope &scope) {
+  DistinguishabilityHelper helper{context_};
+  auto addSpecifics{[&](const Symbol &generic) {
+    const auto *details{generic.GetUltimate().detailsIf<GenericDetails>()};
+    if (!details) {
+      return;
+    }
+    GenericKind kind{details->kind()};
+    if (!kind.IsAssignment() && !kind.IsOperator()) {
+      return;
+    }
+    const SymbolVector &specifics{details->specificProcs()};
+    const std::vector<SourceName> &bindingNames{details->bindingNames()};
+    for (std::size_t i{0}; i < specifics.size(); ++i) {
+      const Symbol &specific{*specifics[i]};
+      if (const Procedure * proc{Characterize(specific)}) {
+        auto restorer{messages_.SetLocation(bindingNames[i])};
+        if (kind.IsAssignment()) {
+          if (!CheckDefinedAssignment(specific, *proc)) {
+            continue;
+          }
+        } else {
+          if (!CheckDefinedOperator(generic.name(), kind, specific, *proc)) {
+            continue;
+          }
+        }
+        helper.Add(generic, kind, specific, *proc);
+      }
+    }
+  }};
+  for (const auto &pair : scope) {
+    const Symbol &symbol{*pair.second};
+    addSpecifics(symbol);
+    const Symbol &ultimate{symbol.GetUltimate()};
+    if (ultimate.has<DerivedTypeDetails>()) {
+      if (const Scope * typeScope{ultimate.scope()}) {
+        for (const auto &pair2 : *typeScope) {
+          addSpecifics(*pair2.second);
+        }
+      }
+    }
+  }
+  helper.Check();
+}
+
 void SubprogramMatchHelper::Check(
     const Symbol &symbol1, const Symbol &symbol2) {
   const auto details1{symbol1.get<SubprogramDetails>()};
@@ -1413,8 +1652,8 @@ void SubprogramMatchHelper::Check(
           string1, string2);
     }
   }
-  auto proc1{Procedure::Characterize(symbol1, context.intrinsics())};
-  auto proc2{Procedure::Characterize(symbol2, context.intrinsics())};
+  const Procedure *proc1{checkHelper.Characterize(symbol1)};
+  const Procedure *proc2{checkHelper.Characterize(symbol2)};
   if (!proc1 || !proc2) {
     return;
   }
@@ -1527,7 +1766,7 @@ bool SubprogramMatchHelper::CheckSameIntent(const Symbol &symbol1,
 template <typename... A>
 void SubprogramMatchHelper::Say(const Symbol &symbol1, const Symbol &symbol2,
     parser::MessageFixedText &&text, A &&...args) {
-  auto &message{context.Say(symbol1.name(), std::move(text), symbol1.name(),
+  auto &message{context().Say(symbol1.name(), std::move(text), symbol1.name(),
       std::forward<A>(args)...)};
   evaluate::AttachDeclaration(message, symbol2);
 }
@@ -1559,7 +1798,7 @@ bool SubprogramMatchHelper::CheckSameAttrs(
 
 bool SubprogramMatchHelper::ShapesAreCompatible(
     const DummyDataObject &obj1, const DummyDataObject &obj2) {
-  return evaluate::characteristics::ShapesAreCompatible(
+  return characteristics::ShapesAreCompatible(
       FoldShape(obj1.type.shape()), FoldShape(obj2.type.shape()));
 }
 
@@ -1567,13 +1806,70 @@ evaluate::Shape SubprogramMatchHelper::FoldShape(const evaluate::Shape &shape) {
   evaluate::Shape result;
   for (const auto &extent : shape) {
     result.emplace_back(
-        evaluate::Fold(context.foldingContext(), common::Clone(extent)));
+        evaluate::Fold(context().foldingContext(), common::Clone(extent)));
   }
   return result;
 }
 
+void DistinguishabilityHelper::Add(const Symbol &generic, GenericKind kind,
+    const Symbol &specific, const Procedure &procedure) {
+  if (!context_.HasError(specific)) {
+    nameToInfo_[generic.name()].emplace_back(
+        ProcedureInfo{kind, specific, procedure});
+  }
+}
+
+void DistinguishabilityHelper::Check() {
+  for (const auto &[name, info] : nameToInfo_) {
+    auto count{info.size()};
+    for (std::size_t i1{0}; i1 < count - 1; ++i1) {
+      const auto &[kind1, symbol1, proc1] = info[i1];
+      for (std::size_t i2{i1 + 1}; i2 < count; ++i2) {
+        const auto &[kind2, symbol2, proc2] = info[i2];
+        auto distinguishable{kind1.IsName()
+                ? evaluate::characteristics::Distinguishable
+                : evaluate::characteristics::DistinguishableOpOrAssign};
+        if (!distinguishable(proc1, proc2)) {
+          SayNotDistinguishable(name, kind1, symbol1, symbol2);
+        }
+      }
+    }
+  }
+}
+
+void DistinguishabilityHelper::SayNotDistinguishable(const SourceName &name,
+    GenericKind kind, const Symbol &proc1, const Symbol &proc2) {
+  std::string name1{proc1.name().ToString()};
+  std::string name2{proc2.name().ToString()};
+  if (kind.IsOperator() || kind.IsAssignment()) {
+    // proc1 and proc2 may come from different scopes so qualify their names
+    if (proc1.owner().IsDerivedType()) {
+      name1 = proc1.owner().GetName()->ToString() + '%' + name1;
+    }
+    if (proc2.owner().IsDerivedType()) {
+      name2 = proc2.owner().GetName()->ToString() + '%' + name2;
+    }
+  }
+  auto &msg{context_.Say(name,
+      "Generic '%s' may not have specific procedures '%s' and '%s'"
+      " as their interfaces are not distinguishable"_err_en_US,
+      MakeOpName(name), name1, name2)};
+  evaluate::AttachDeclaration(msg, proc1);
+  evaluate::AttachDeclaration(msg, proc2);
+}
+
 void CheckDeclarations(SemanticsContext &context) {
   CheckHelper{context}.Check();
+}
+
+void CheckInstantiatedDerivedType(
+    SemanticsContext &context, const DerivedTypeSpec &type) {
+  if (const Scope * scope{type.scope()}) {
+    CheckHelper checker{context};
+    for (const auto &pair : *scope) {
+      checker.CheckInitialization(*pair.second);
+    }
+  }
 }
 
 } // namespace Fortran::semantics

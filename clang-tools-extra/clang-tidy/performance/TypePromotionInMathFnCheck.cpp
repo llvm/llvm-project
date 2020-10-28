@@ -192,7 +192,7 @@ void TypePromotionInMathFnCheck::check(const MatchFinder::MatchResult &Result) {
   if (FnInCmath)
     Diag << IncludeInserter.createIncludeInsertion(
         Result.Context->getSourceManager().getFileID(Call->getBeginLoc()),
-        "cmath", /*IsAngled=*/true);
+        "<cmath>");
 }
 
 } // namespace performance

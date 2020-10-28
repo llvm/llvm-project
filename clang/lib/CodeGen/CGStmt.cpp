@@ -27,6 +27,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -651,6 +652,20 @@ void CodeGenFunction::EmitIndirectGotoStmt(const IndirectGotoStmt &S) {
 
   EmitBranch(IndGotoBB);
 }
+static Optional<std::pair<uint32_t, uint32_t>>
+getLikelihoodWeights(const IfStmt &If) {
+  switch (Stmt::getLikelihood(If.getThen(), If.getElse())) {
+  case Stmt::LH_Unlikely:
+    return std::pair<uint32_t, uint32_t>(llvm::UnlikelyBranchWeight,
+                                         llvm::LikelyBranchWeight);
+  case Stmt::LH_None:
+    return None;
+  case Stmt::LH_Likely:
+    return std::pair<uint32_t, uint32_t>(llvm::LikelyBranchWeight,
+                                         llvm::UnlikelyBranchWeight);
+  }
+  llvm_unreachable("Unknown Likelihood");
+}
 
 void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   // C99 6.8.4.1: The first substatement is executed if the expression compares
@@ -695,8 +710,20 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   if (S.getElse())
     ElseBlock = createBasicBlock("if.else");
 
-  EmitBranchOnBoolExpr(S.getCond(), ThenBlock, ElseBlock,
-                       getProfileCount(S.getThen()));
+  // Prefer the PGO based weights over the likelihood attribute.
+  // When the build isn't optimized the metadata isn't used, so don't generate
+  // it.
+  llvm::MDNode *Weights = nullptr;
+  uint64_t Count = getProfileCount(S.getThen());
+  if (!Count && CGM.getCodeGenOpts().OptimizationLevel) {
+    Optional<std::pair<uint32_t, uint32_t>> LHW = getLikelihoodWeights(S);
+    if (LHW) {
+      llvm::MDBuilder MDHelper(CGM.getLLVMContext());
+      Weights = MDHelper.createBranchWeights(LHW->first, LHW->second);
+    }
+  }
+
+  EmitBranchOnBoolExpr(S.getCond(), ThenBlock, ElseBlock, Count, Weights);
 
   // Emit the 'then' code.
   EmitBlock(ThenBlock);

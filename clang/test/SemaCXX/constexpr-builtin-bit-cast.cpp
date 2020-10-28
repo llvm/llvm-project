@@ -23,6 +23,10 @@ static_assert(sizeof(long long) == 8);
 template <class To, class From>
 constexpr To bit_cast(const From &from) {
   static_assert(sizeof(To) == sizeof(From));
+  // expected-note@+9 {{cannot be represented in type 'bool'}}
+#ifdef __x86_64
+  // expected-note@+7 {{or 'std::byte'; '__int128' is invalid}}
+#endif
 #ifdef __CHAR_UNSIGNED__
   // expected-note@+4 2 {{indeterminate value can only initialize an object of type 'unsigned char', 'char', or 'std::byte'; 'signed char' is invalid}}
 #else
@@ -397,3 +401,65 @@ union IdentityInUnion {
 };
 constexpr IdentityInUnion identity3a = {42};
 constexpr unsigned char identity3b = __builtin_bit_cast(unsigned char, identity3a.n);
+
+namespace test_bool {
+
+constexpr bool test_bad_bool = bit_cast<bool>('A'); // expected-error {{must be initialized by a constant expression}} expected-note{{in call}}
+
+static_assert(round_trip<signed char>(true), "");
+static_assert(round_trip<unsigned char>(false), "");
+static_assert(round_trip<bool>(false), "");
+
+static_assert(round_trip<bool>((char)0), "");
+static_assert(round_trip<bool>((char)1), "");
+}
+
+namespace test_long_double {
+#ifdef __x86_64
+constexpr __int128_t test_cast_to_int128 = bit_cast<__int128_t>((long double)0); // expected-error{{must be initialized by a constant expression}} expected-note{{in call}}
+
+constexpr long double ld = 3.1425926539;
+
+struct bytes {
+  unsigned char d[16];
+};
+
+static_assert(round_trip<bytes>(ld), "");
+
+static_assert(round_trip<long double>(10.0L));
+
+constexpr bool f(bool read_uninit) {
+  bytes b = bit_cast<bytes>(ld);
+  unsigned char ld_bytes[10] = {
+    0x0,  0x48, 0x9f, 0x49, 0xf0,
+    0x3c, 0x20, 0xc9, 0x0,  0x40,
+  };
+
+  for (int i = 0; i != 10; ++i)
+    if (ld_bytes[i] != b.d[i])
+      return false;
+
+  if (read_uninit && b.d[10]) // expected-note{{read of uninitialized object is not allowed in a constant expression}}
+    return false;
+
+  return true;
+}
+
+static_assert(f(/*read_uninit=*/false), "");
+static_assert(f(/*read_uninit=*/true), ""); // expected-error{{static_assert expression is not an integral constant expression}} expected-note{{in call to 'f(true)'}}
+
+constexpr bytes ld539 = {
+  0x0, 0x0,  0x0,  0x0,
+  0x0, 0x0,  0xc0, 0x86,
+  0x8, 0x40, 0x0,  0x0,
+  0x0, 0x0,  0x0,  0x0,
+};
+
+constexpr long double fivehundredandthirtynine = 539.0;
+
+static_assert(bit_cast<long double>(ld539) == fivehundredandthirtynine, "");
+
+#else
+static_assert(round_trip<__int128_t>(34.0L));
+#endif
+}
