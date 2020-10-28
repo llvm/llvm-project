@@ -28,7 +28,7 @@ enum class EHPersonality {
   GNU_CXX_SjLj,
   GNU_ObjC,
   MSVC_X86SEH,
-  MSVC_Win64SEH,
+  MSVC_TableSEH,
   MSVC_CXX,
   CoreCLR,
   Rust,
@@ -51,7 +51,7 @@ inline bool isAsynchronousEHPersonality(EHPersonality Pers) {
   // unknown personalities don't catch asynch exceptions.
   switch (Pers) {
   case EHPersonality::MSVC_X86SEH:
-  case EHPersonality::MSVC_Win64SEH:
+  case EHPersonality::MSVC_TableSEH:
     return true;
   default:
     return false;
@@ -65,7 +65,7 @@ inline bool isFuncletEHPersonality(EHPersonality Pers) {
   switch (Pers) {
   case EHPersonality::MSVC_CXX:
   case EHPersonality::MSVC_X86SEH:
-  case EHPersonality::MSVC_Win64SEH:
+  case EHPersonality::MSVC_TableSEH:
   case EHPersonality::CoreCLR:
     return true;
   default:
@@ -80,7 +80,7 @@ inline bool isScopedEHPersonality(EHPersonality Pers) {
   switch (Pers) {
   case EHPersonality::MSVC_CXX:
   case EHPersonality::MSVC_X86SEH:
-  case EHPersonality::MSVC_Win64SEH:
+  case EHPersonality::MSVC_TableSEH:
   case EHPersonality::CoreCLR:
   case EHPersonality::Wasm_CXX:
     return true;

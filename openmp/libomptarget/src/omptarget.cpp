@@ -135,7 +135,7 @@ static int InitLibrary(DeviceTy& Device) {
             (uintptr_t)CurrHostEntry->addr /*HstPtrBase*/,
             (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
             (uintptr_t)CurrHostEntry->addr + CurrHostEntry->size /*HstPtrEnd*/,
-            (uintptr_t)CurrDeviceEntry->addr /*TgtPtrBegin*/, nullptr,
+            (uintptr_t)CurrDeviceEntry->addr /*TgtPtrBegin*/,
             true /*IsRefCountINF*/);
       }
     }
@@ -158,8 +158,8 @@ static int InitLibrary(DeviceTy& Device) {
         DP("Has pending ctors... call now\n");
         for (auto &entry : lib.second.PendingCtors) {
           void *ctor = entry;
-          int rc = target(device_id, ctor, 0, nullptr, nullptr, nullptr,
-                          nullptr, nullptr, nullptr, 1, 1, true /*team*/);
+          int rc = target(device_id, ctor, 0, NULL, NULL, NULL, NULL, NULL, 1,
+              1, true /*team*/);
           if (rc != OFFLOAD_SUCCESS) {
             REPORT("Running ctor " DPxMOD " failed.\n", DPxPTR(ctor));
             Device.PendingGlobalsMtx.unlock();
@@ -240,7 +240,7 @@ int targetDataMapper(DeviceTy &Device, void *arg_base, void *arg,
   int rc = target_data_function(Device, MapperComponents.Components.size(),
                                 MapperArgsBase.data(), MapperArgs.data(),
                                 MapperArgSizes.data(), MapperArgTypes.data(),
-                                /*arg_names*/ nullptr, /*arg_mappers*/ nullptr,
+                                /*arg_mappers*/ nullptr,
                                 /*__tgt_async_info*/ nullptr);
 
   return rc;
@@ -249,8 +249,7 @@ int targetDataMapper(DeviceTy &Device, void *arg_base, void *arg,
 /// Internal function to do the mapping and transfer the data to the device
 int targetDataBegin(DeviceTy &Device, int32_t arg_num, void **args_base,
                     void **args, int64_t *arg_sizes, int64_t *arg_types,
-                    map_var_info_t *arg_names, void **arg_mappers,
-                    __tgt_async_info *async_info_ptr) {
+                    void **arg_mappers, __tgt_async_info *async_info_ptr) {
   // process each input.
   for (int32_t i = 0; i < arg_num; ++i) {
     // Ignore private variables and arrays - there is no mapping for them.
@@ -280,7 +279,6 @@ int targetDataBegin(DeviceTy &Device, int32_t arg_num, void **args_base,
     void *HstPtrBegin = args[i];
     void *HstPtrBase = args_base[i];
     int64_t data_size = arg_sizes[i];
-    map_var_info_t HstPtrName = (!arg_names) ? nullptr : arg_names[i];
 
     // Adjust for proper alignment if this is a combined entry (for structs).
     // Look at the next argument - if that is MEMBER_OF this one, then this one
@@ -329,9 +327,8 @@ int targetDataBegin(DeviceTy &Device, int32_t arg_num, void **args_base,
       // PTR_AND_OBJ entry is handled below, and so the allocation might fail
       // when HasPresentModifier.
       PointerTgtPtrBegin = Device.getOrAllocTgtPtr(
-          HstPtrBase, HstPtrBase, sizeof(void *), HstPtrName, Pointer_IsNew,
-          IsHostPtr, IsImplicit, UpdateRef, HasCloseModifier,
-          HasPresentModifier);
+          HstPtrBase, HstPtrBase, sizeof(void *), Pointer_IsNew, IsHostPtr,
+          IsImplicit, UpdateRef, HasCloseModifier, HasPresentModifier);
       if (!PointerTgtPtrBegin) {
         REPORT("Call to getOrAllocTgtPtr returned null pointer (%s).\n",
                HasPresentModifier ? "'present' map type modifier"
@@ -348,8 +345,8 @@ int targetDataBegin(DeviceTy &Device, int32_t arg_num, void **args_base,
     }
 
     void *TgtPtrBegin = Device.getOrAllocTgtPtr(
-        HstPtrBegin, HstPtrBase, data_size, HstPtrName, IsNew, IsHostPtr,
-        IsImplicit, UpdateRef, HasCloseModifier, HasPresentModifier);
+        HstPtrBegin, HstPtrBase, data_size, IsNew, IsHostPtr, IsImplicit,
+        UpdateRef, HasCloseModifier, HasPresentModifier);
     // If data_size==0, then the argument could be a zero-length pointer to
     // NULL, so getOrAlloc() returning NULL is not an error.
     if (!TgtPtrBegin && (data_size || HasPresentModifier)) {
@@ -446,8 +443,7 @@ struct DeallocTgtPtrInfo {
 /// Internal function to undo the mapping and retrieve the data from the device.
 int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
                   void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
-                  map_var_info_t *ArgNames, void **ArgMappers,
-                  __tgt_async_info *AsyncInfo) {
+                  void **ArgMappers, __tgt_async_info *AsyncInfo) {
   int Ret;
   std::vector<DeallocTgtPtrInfo> DeallocTgtPtrs;
   // process each input.
@@ -642,10 +638,9 @@ int targetDataEnd(DeviceTy &Device, int32_t ArgNum, void **ArgBases,
 /// Internal function to pass data to/from the target.
 // async_info_ptr is currently unused, added here so target_data_update has the
 // same signature as targetDataBegin and targetDataEnd.
-int target_data_update(DeviceTy &Device, int32_t arg_num, void **args_base,
-                       void **args, int64_t *arg_sizes, int64_t *arg_types,
-                       map_var_info_t *arg_names, void **arg_mappers,
-                       __tgt_async_info *async_info_ptr) {
+int target_data_update(DeviceTy &Device, int32_t arg_num,
+    void **args_base, void **args, int64_t *arg_sizes, int64_t *arg_types,
+    void **arg_mappers, __tgt_async_info *async_info_ptr) {
   // process each input.
   for (int32_t i = 0; i < arg_num; ++i) {
     if ((arg_types[i] & OMP_TGT_MAPTYPE_LITERAL) ||
@@ -837,14 +832,10 @@ class PrivateArgumentManagerTy {
     const char *HstPtrEnd;
     /// Aligned size
     const int64_t AlignedSize;
-    /// Host pointer name
-    const map_var_info_t HstPtrName = nullptr;
 
-    FirstPrivateArgInfoTy(int Index, const void *HstPtr, int64_t Size,
-                          const map_var_info_t HstPtrName = nullptr)
+    FirstPrivateArgInfoTy(int Index, const void *HstPtr, int64_t Size)
         : Index(Index), HstPtrBegin(reinterpret_cast<const char *>(HstPtr)),
-          HstPtrEnd(HstPtrBegin + Size), AlignedSize(Size + Size % Alignment),
-          HstPtrName(HstPtrName) {}
+          HstPtrEnd(HstPtrBegin + Size), AlignedSize(Size + Size % Alignment) {}
   };
 
   /// A vector of target pointers for all private arguments
@@ -872,10 +863,9 @@ public:
   PrivateArgumentManagerTy(DeviceTy &Dev, __tgt_async_info *AsyncInfo)
       : Device(Dev), AsyncInfo(AsyncInfo) {}
 
-  /// Add a private argument
+  /// A a private argument
   int addArg(void *HstPtr, int64_t ArgSize, int64_t ArgOffset,
-             bool IsFirstPrivate, void *&TgtPtr, int TgtArgsIndex,
-             const map_var_info_t HstPtrName = nullptr) {
+             bool IsFirstPrivate, void *&TgtPtr, int TgtArgsIndex) {
     // If the argument is not first-private, or its size is greater than a
     // predefined threshold, we will allocate memory and issue the transfer
     // immediately.
@@ -919,8 +909,7 @@ public:
 
       // Placeholder value
       TgtPtr = nullptr;
-      FirstPrivateArgInfo.emplace_back(TgtArgsIndex, HstPtr, ArgSize,
-                                       HstPtrName);
+      FirstPrivateArgInfo.emplace_back(TgtArgsIndex, HstPtr, ArgSize);
       FirstPrivateArgSize += FirstPrivateArgInfo.back().AlignedSize;
     }
 
@@ -995,14 +984,14 @@ public:
 /// variables.
 int processDataBefore(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
                       void **ArgBases, void **Args, int64_t *ArgSizes,
-                      int64_t *ArgTypes, map_var_info_t *ArgNames,
-                      void **ArgMappers, std::vector<void *> &TgtArgs,
+                      int64_t *ArgTypes, void **ArgMappers,
+                      std::vector<void *> &TgtArgs,
                       std::vector<ptrdiff_t> &TgtOffsets,
                       PrivateArgumentManagerTy &PrivateArgumentManager,
                       __tgt_async_info *AsyncInfo) {
   DeviceTy &Device = Devices[DeviceId];
   int Ret = targetDataBegin(Device, ArgNum, ArgBases, Args, ArgSizes, ArgTypes,
-                            ArgNames, ArgMappers, AsyncInfo);
+                            ArgMappers, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT("Call to targetDataBegin failed, abort target.\n");
     return OFFLOAD_FAIL;
@@ -1060,7 +1049,6 @@ int processDataBefore(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
     void *HstPtrBegin = Args[I];
     void *HstPtrBase = ArgBases[I];
     void *TgtPtrBegin;
-    map_var_info_t HstPtrName = (!ArgNames) ? nullptr : ArgNames[I];
     ptrdiff_t TgtBaseOffset;
     bool IsLast, IsHostPtr; // unused.
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL) {
@@ -1074,9 +1062,9 @@ int processDataBefore(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
       // depend on this one.
       const bool IsFirstPrivate =
           (I >= ArgNum - 1 || !(ArgTypes[I + 1] & OMP_TGT_MAPTYPE_MEMBER_OF));
-      Ret = PrivateArgumentManager.addArg(
-          HstPtrBegin, ArgSizes[I], TgtBaseOffset, IsFirstPrivate, TgtPtrBegin,
-          TgtArgs.size(), HstPtrName);
+      Ret = PrivateArgumentManager.addArg(HstPtrBegin, ArgSizes[I],
+                                          TgtBaseOffset, IsFirstPrivate,
+                                          TgtPtrBegin, TgtArgs.size());
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT("Failed to process %sprivate argument " DPxMOD "\n",
                (IsFirstPrivate ? "first-" : ""), DPxPTR(HstPtrBegin));
@@ -1116,15 +1104,14 @@ int processDataBefore(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
 /// host if needed and deallocating target memory of (first-)private variables.
 int processDataAfter(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
                      void **ArgBases, void **Args, int64_t *ArgSizes,
-                     int64_t *ArgTypes, map_var_info_t *ArgNames,
-                     void **ArgMappers,
+                     int64_t *ArgTypes, void **ArgMappers,
                      PrivateArgumentManagerTy &PrivateArgumentManager,
                      __tgt_async_info *AsyncInfo) {
   DeviceTy &Device = Devices[DeviceId];
 
   // Move data from device.
   int Ret = targetDataEnd(Device, ArgNum, ArgBases, Args, ArgSizes, ArgTypes,
-                          ArgNames, ArgMappers, AsyncInfo);
+                          ArgMappers, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT("Call to targetDataEnd failed, abort target.\n");
     return OFFLOAD_FAIL;
@@ -1148,9 +1135,8 @@ int processDataAfter(int64_t DeviceId, void *HostPtr, int32_t ArgNum,
 /// returns 0 if it was able to transfer the execution to a target and an
 /// integer different from zero otherwise.
 int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum, void **ArgBases,
-           void **Args, int64_t *ArgSizes, int64_t *ArgTypes,
-           map_var_info_t *ArgNames, void **ArgMappers, int32_t TeamNum,
-           int32_t ThreadLimit, int IsTeamConstruct) {
+           void **Args, int64_t *ArgSizes, int64_t *ArgTypes, void **ArgMappers,
+           int32_t TeamNum, int32_t ThreadLimit, int IsTeamConstruct) {
   DeviceTy &Device = Devices[DeviceId];
 
   TableMap *TM = getTableMap(HostPtr);
@@ -1180,7 +1166,7 @@ int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum, void **ArgBases,
 
   // Process data, such as data mapping, before launching the kernel
   int Ret = processDataBefore(DeviceId, HostPtr, ArgNum, ArgBases, Args,
-                              ArgSizes, ArgTypes, ArgNames, ArgMappers, TgtArgs,
+                              ArgSizes, ArgTypes, ArgMappers, TgtArgs,
                               TgtOffsets, PrivateArgumentManager, &AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT("Failed to process data before launching the kernel.\n");
@@ -1211,7 +1197,7 @@ int target(int64_t DeviceId, void *HostPtr, int32_t ArgNum, void **ArgBases,
   // Transfer data back and deallocate target memory for (first-)private
   // variables
   Ret = processDataAfter(DeviceId, HostPtr, ArgNum, ArgBases, Args, ArgSizes,
-                         ArgTypes, ArgNames, ArgMappers, PrivateArgumentManager,
+                         ArgTypes, ArgMappers, PrivateArgumentManager,
                          &AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT("Failed to process data after launching the kernel.\n");

@@ -721,8 +721,15 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   /// } Stack
 
   /// Branch {
+
   // VE doesn't have BRCOND
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
+
+  // BRIND and BR_JT are not implemented yet.
+  // FIXME: Implement both for the scalar perforamnce.
+  setOperationAction(ISD::BRIND, MVT::Other, Expand);
+  setOperationAction(ISD::BR_JT, MVT::Other, Expand);
+
   /// } Branch
 
   /// Int Ops {
@@ -957,7 +964,7 @@ SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
 
 /// Custom Lower {
 
-// The mappings for emitLeading/TrailingFence for VE is designed by folling
+// The mappings for emitLeading/TrailingFence for VE is designed by following
 // http://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html
 Instruction *VETargetLowering::emitLeadingFence(IRBuilder<> &Builder,
                                                 Instruction *Inst,

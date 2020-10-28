@@ -57,8 +57,6 @@ TEST_MACROS();
 TEST_MACROS();
 #include <climits>
 TEST_MACROS();
-#include <clocale>
-TEST_MACROS();
 #include <cmath>
 TEST_MACROS();
 #include <complex>
@@ -126,8 +124,6 @@ TEST_MACROS();
 #include <limits.h>
 TEST_MACROS();
 #include <list>
-TEST_MACROS();
-#include <locale.h>
 TEST_MACROS();
 #include <map>
 TEST_MACROS();
@@ -217,6 +213,8 @@ TEST_MACROS();
 TEST_MACROS();
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#   include <clocale>
+    TEST_MACROS();
 #   include <codecvt>
     TEST_MACROS();
 #   include <fstream>
@@ -230,6 +228,8 @@ TEST_MACROS();
 #   include <istream>
     TEST_MACROS();
 #   include <locale>
+    TEST_MACROS();
+#   include <locale.h>
     TEST_MACROS();
 #   include <ostream>
     TEST_MACROS();

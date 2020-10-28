@@ -228,9 +228,6 @@ public:
   llvm::MemoryBuffer::BufferKind getMemoryBufferKind() const;
 
   /// Return the buffer, only if it has been loaded.
-  /// specified FileID, returning None if it's not yet loaded.
-  ///
-  /// \param FID The file ID whose contents will be returned.
   llvm::Optional<llvm::MemoryBufferRef> getBufferIfLoaded() const {
     if (Buffer)
       return Buffer->getMemBufferRef();

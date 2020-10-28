@@ -78,7 +78,7 @@ multiclass RAT_ATOMIC<bits<6> op_ret, bits<6> op_noret, string name> {
   def  _RTN: CF_MEM_RAT <op_ret, 0, 0xf,
              (ins R600_Reg128:$rw_gpr, R600_TReg32_X:$index_gpr),
              (outs R600_Reg128:$out_gpr),
-             name # "_RTN" # " $rw_gpr, $index_gpr", [] >;
+             name # "_RTN $rw_gpr, $index_gpr", [] >;
   def _NORET: CF_MEM_RAT <op_noret, 0, 0xf,
               (ins R600_Reg128:$rw_gpr, R600_TReg32_X:$index_gpr),
               (outs R600_Reg128:$out_gpr),

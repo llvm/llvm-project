@@ -1,8 +1,3 @@
-// FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
-// I'm not sure this is actually *that* issue, but this seems oddly similar to the other XFAIL'ed cases.
-// XFAIL: android
-// UNSUPPORTED: ios
-
 // All of these don't actually silence it:
 
 // RUN: %clang -fsanitize=implicit-signed-integer-truncation,implicit-integer-sign-change -fno-sanitize-recover=implicit-signed-integer-truncation,implicit-integer-sign-change                           -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --implicit-check-not="implicit conversion"

@@ -157,6 +157,15 @@ def uimm3 : Operand<i32>, PatLeaf<(imm), [{
   let ParserMatchClass = UImm3AsmOperand;
 }
 
+// uimm4 - Generic immediate value.
+def UImm4AsmOperand : AsmOperandClass {
+  let Name = "UImm4";
+}
+def uimm4 : Operand<i32>, PatLeaf<(imm), [{
+    return isUInt<4>(N->getZExtValue()); }], ULO7> {
+  let ParserMatchClass = UImm4AsmOperand;
+}
+
 // uimm6 - Generic immediate value.
 def UImm6AsmOperand : AsmOperandClass {
   let Name = "UImm6";
@@ -778,10 +787,10 @@ multiclass BCbpfm<string opcStr, string cmpStr, bits<8> opc, dag cond,
   let bpf = 0 /* NONE */ in
   def "" : CF<opc, (outs), !con(cond, (ins ADDR:$addr)),
               !strconcat(opcStr, " ", cmpStr, "$addr")>;
-  let bpf = 2 /* NOT TaKEN */ in
+  let bpf = 2 /* NOT TAKEN */ in
   def _nt : CF<opc, (outs), !con(cond, (ins ADDR:$addr)),
                !strconcat(opcStr, ".nt ", cmpStr, "$addr")>;
-  let bpf = 3 /* TaKEN */ in
+  let bpf = 3 /* TAKEN */ in
   def _t : CF<opc, (outs), !con(cond, (ins ADDR:$addr)),
               !strconcat(opcStr, ".t ", cmpStr, "$addr")>;
 }
@@ -810,10 +819,10 @@ multiclass BCRbpfm<string opcStr, string cmpStr, bits<8> opc, dag cond> {
   let bpf = 0 /* NONE */ in
   def "" : CF<opc, (outs), !con(cond, (ins brtarget32:$imm32)),
               !strconcat(opcStr, " ", cmpStr, "$imm32")>;
-  let bpf = 2 /* NOT TaKEN */ in
+  let bpf = 2 /* NOT TAKEN */ in
   def _nt : CF<opc, (outs), !con(cond, (ins brtarget32:$imm32)),
                !strconcat(opcStr, ".nt ", cmpStr, "$imm32")>;
-  let bpf = 3 /* TaKEN */ in
+  let bpf = 3 /* TAKEN */ in
   def _t : CF<opc, (outs), !con(cond, (ins brtarget32:$imm32)),
               !strconcat(opcStr, ".t ", cmpStr, "$imm32")>;
 }

@@ -1730,7 +1730,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::FMINNMV_PRED)
     MAKE_CASE(AArch64ISD::FMUL_PRED)
     MAKE_CASE(AArch64ISD::FSUB_PRED)
-    MAKE_CASE(AArch64ISD::NOT)
     MAKE_CASE(AArch64ISD::BIT)
     MAKE_CASE(AArch64ISD::CBZ)
     MAKE_CASE(AArch64ISD::CBNZ)
@@ -9612,7 +9611,7 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
         Fcmeq = DAG.getNode(AArch64ISD::FCMEQz, dl, VT, LHS);
       else
         Fcmeq = DAG.getNode(AArch64ISD::FCMEQ, dl, VT, LHS, RHS);
-      return DAG.getNode(AArch64ISD::NOT, dl, VT, Fcmeq);
+      return DAG.getNOT(dl, Fcmeq, VT);
     }
     case AArch64CC::EQ:
       if (IsZero)
@@ -9651,7 +9650,7 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
       Cmeq = DAG.getNode(AArch64ISD::CMEQz, dl, VT, LHS);
     else
       Cmeq = DAG.getNode(AArch64ISD::CMEQ, dl, VT, LHS, RHS);
-    return DAG.getNode(AArch64ISD::NOT, dl, VT, Cmeq);
+    return DAG.getNOT(dl, Cmeq, VT);
   }
   case AArch64CC::EQ:
     if (IsZero)
