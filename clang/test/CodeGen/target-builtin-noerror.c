@@ -85,6 +85,7 @@ void verifyfeaturestrings() {
 }
 
 void verifycpustrings() {
+  (void)__builtin_cpu_is("alderlake");
   (void)__builtin_cpu_is("amd");
   (void)__builtin_cpu_is("amdfam10h");
   (void)__builtin_cpu_is("amdfam15h");

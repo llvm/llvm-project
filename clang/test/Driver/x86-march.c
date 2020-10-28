@@ -80,6 +80,10 @@
 // RUN:   | FileCheck %s -check-prefix=tigerlake
 // tigerlake: "-target-cpu" "tigerlake"
 //
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=alderlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=alderlake
+// alderlake: "-target-cpu" "alderlake"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=lakemont 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=lakemont
 // lakemont: "-target-cpu" "lakemont"
