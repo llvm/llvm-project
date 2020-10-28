@@ -11085,9 +11085,9 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
     // Satisfy the operand register constraint when one of the inputs is
     // undefined. Ordinarily each undef value will have its own implicit_def of
     // a vreg, so force these to use a single register.
-    SDValue Src0 = Node->getOperand(0);
-    SDValue Src1 = Node->getOperand(1);
-    SDValue Src2 = Node->getOperand(2);
+    SDValue Src0 = Node->getOperand(1);
+    SDValue Src1 = Node->getOperand(3);
+    SDValue Src2 = Node->getOperand(5);
 
     if ((Src0.isMachineOpcode() &&
          Src0.getMachineOpcode() != AMDGPU::IMPLICIT_DEF) &&
@@ -11122,10 +11122,10 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
     } else
       break;
 
-    SmallVector<SDValue, 4> Ops = { Src0, Src1, Src2 };
-    for (unsigned I = 3, N = Node->getNumOperands(); I != N; ++I)
-      Ops.push_back(Node->getOperand(I));
-
+    SmallVector<SDValue, 9> Ops(Node->op_begin(), Node->op_end());
+    Ops[1] = Src0;
+    Ops[3] = Src1;
+    Ops[5] = Src2;
     Ops.push_back(ImpDef.getValue(1));
     return DAG.getMachineNode(Opcode, SDLoc(Node), Node->getVTList(), Ops);
   }
