@@ -26,7 +26,7 @@ struct AnotherTestDialect : public Dialect {
 };
 
 TEST(DialectDeathTest, MultipleDialectsWithSameNamespace) {
-  MLIRContext context(false);
+  MLIRContext context;
 
   // Registering a dialect with the same namespace twice should result in a
   // failure.

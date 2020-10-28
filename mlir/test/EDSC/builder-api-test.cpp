@@ -36,7 +36,7 @@ using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 
 static MLIRContext &globalContext() {
-  static thread_local MLIRContext context(/*loadAllDialects=*/false);
+  static thread_local MLIRContext context;
   static thread_local bool initOnce = [&]() {
     // clang-format off
     context.loadDialect<AffineDialect,

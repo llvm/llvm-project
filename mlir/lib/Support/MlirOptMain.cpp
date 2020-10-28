@@ -89,7 +89,7 @@ static LogicalResult processBuffer(raw_ostream &os,
   sourceMgr.AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
 
   // Parse the input file.
-  MLIRContext context(/*loadAllDialects=*/preloadDialectsInContext);
+  MLIRContext context;
   registry.appendTo(context.getDialectRegistry());
   if (preloadDialectsInContext)
     registry.loadAll(&context);

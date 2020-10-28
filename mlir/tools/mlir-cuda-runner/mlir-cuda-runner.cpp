@@ -125,7 +125,6 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
 
 int main(int argc, char **argv) {
   registerPassManagerCLOptions();
-  mlir::registerAllDialects();
   llvm::InitLLVM y(argc, argv);
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
