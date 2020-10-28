@@ -484,7 +484,6 @@ def AArch64urshri : SDNode<"AArch64ISD::URSHR_I", SDT_AArch64vshift>;
 def AArch64vsli : SDNode<"AArch64ISD::VSLI", SDT_AArch64vshiftinsert>;
 def AArch64vsri : SDNode<"AArch64ISD::VSRI", SDT_AArch64vshiftinsert>;
 
-def AArch64not: SDNode<"AArch64ISD::NOT", SDT_AArch64unvec>;
 def AArch64bit: SDNode<"AArch64ISD::BIT", SDT_AArch64trivec>;
 def AArch64bsp: SDNode<"AArch64ISD::BSP", SDT_AArch64trivec>;
 
@@ -504,7 +503,7 @@ def AArch64cmgtz: SDNode<"AArch64ISD::CMGTz", SDT_AArch64unvec>;
 def AArch64cmlez: SDNode<"AArch64ISD::CMLEz", SDT_AArch64unvec>;
 def AArch64cmltz: SDNode<"AArch64ISD::CMLTz", SDT_AArch64unvec>;
 def AArch64cmtst : PatFrag<(ops node:$LHS, node:$RHS),
-                        (AArch64not (AArch64cmeqz (and node:$LHS, node:$RHS)))>;
+                        (vnot (AArch64cmeqz (and node:$LHS, node:$RHS)))>;
 
 def AArch64fcmeqz: SDNode<"AArch64ISD::FCMEQz", SDT_AArch64fcmpz>;
 def AArch64fcmgez: SDNode<"AArch64ISD::FCMGEz", SDT_AArch64fcmpz>;
@@ -3950,19 +3949,11 @@ def : Pat<(AArch64neg (v2i32 V64:$Rn)),  (NEGv2i32 V64:$Rn)>;
 def : Pat<(AArch64neg (v4i32 V128:$Rn)), (NEGv4i32 V128:$Rn)>;
 def : Pat<(AArch64neg (v2i64 V128:$Rn)), (NEGv2i64 V128:$Rn)>;
 
-def : Pat<(AArch64not (v8i8 V64:$Rn)),   (NOTv8i8  V64:$Rn)>;
-def : Pat<(AArch64not (v16i8 V128:$Rn)), (NOTv16i8 V128:$Rn)>;
-def : Pat<(AArch64not (v4i16 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;
-def : Pat<(AArch64not (v8i16 V128:$Rn)), (NOTv16i8 V128:$Rn)>;
-def : Pat<(AArch64not (v2i32 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;
-def : Pat<(AArch64not (v1i64 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;
-def : Pat<(AArch64not (v4i32 V128:$Rn)), (NOTv16i8 V128:$Rn)>;
-def : Pat<(AArch64not (v2i64 V128:$Rn)), (NOTv16i8 V128:$Rn)>;
-
 def : Pat<(vnot (v4i16 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;
 def : Pat<(vnot (v8i16 V128:$Rn)), (NOTv16i8 V128:$Rn)>;
 def : Pat<(vnot (v2i32 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;
 def : Pat<(vnot (v4i32 V128:$Rn)), (NOTv16i8 V128:$Rn)>;
+def : Pat<(vnot (v1i64 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;
 def : Pat<(vnot (v2i64 V128:$Rn)), (NOTv16i8 V128:$Rn)>;
 
 defm RBIT   : SIMDTwoVectorB<1, 0b01, 0b00101, "rbit", int_aarch64_neon_rbit>;
