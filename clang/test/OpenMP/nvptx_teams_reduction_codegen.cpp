@@ -17,14 +17,14 @@
 // CHECK-DAG: [[TEAMS_REDUCE_UNION_TY:%.+]] = type { [[TEAM1_REDUCE_TY]] }
 // SEQ-DAG: [[MAP_TY:%.+]] = type { [128 x i8] }
 
-// SEQ-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
+// SEQ-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* undef
 // SEQ-DAG: [[KERNEL_SHARED1:@.+]] = internal unnamed_addr constant i16 1
 // SEQ-DAG: [[KERNEL_SHARED2:@.+]] = internal unnamed_addr constant i16 1
 // SEQ-DAG: [[KERNEL_SIZE1:@.+]] = internal unnamed_addr constant i{{64|32}} {{16|8}}
 // SEQ-DAG: [[KERNEL_SIZE2:@.+]] = internal unnamed_addr constant i{{64|32}} 16
 
 // Check for the data transfer medium in shared memory to transfer the reduction list to the first warp.
-// CHECK-DAG: [[TRANSFER_STORAGE:@.+]] = common addrspace([[SHARED_ADDRSPACE:[0-9]+]]) global [32 x i32]
+// CHECK-DAG: [[TRANSFER_STORAGE:@.+]] = weak addrspace([[SHARED_ADDRSPACE:[0-9]+]]) global [32 x i32]
 
 // Check that the execution mode of 2 target regions is set to Non-SPMD and the 3rd is in SPMD.
 // CHECK-DAG: {{@__omp_offloading_.+l44}}_exec_mode = weak constant i8 1
