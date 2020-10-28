@@ -10,26 +10,19 @@
 
 #include <bitset>
 #include <cassert>
+#include <cstddef>
 
 #include "test_macros.h"
 
-#if defined(TEST_COMPILER_CLANG)
-#pragma clang diagnostic ignored "-Wtautological-compare"
-#elif defined(TEST_COMPILER_C1XX)
-#pragma warning(disable: 6294) // Ill-defined for-loop:  initial condition does not satisfy test.  Loop body not executed.
-#endif
-
 template <std::size_t N>
-void test_set_all()
-{
+void test_set_all() {
     std::bitset<N> v;
     v.set();
-    for (std::size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < v.size(); ++i)
         assert(v[i]);
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
     test_set_all<0>();
     test_set_all<1>();
     test_set_all<31>();
@@ -40,5 +33,5 @@ int main(int, char**)
     test_set_all<65>();
     test_set_all<1000>();
 
-  return 0;
+    return 0;
 }
