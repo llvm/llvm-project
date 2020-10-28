@@ -51,12 +51,9 @@ def IsLdstsoScaledNotOptimalPredX2 :
 
 def IsLdstsoScaledPredX2 : MCSchedPredicate<CheckNot<CheckExtNoShift>>;
 
-def IsLdstsoMinusRegPredX0 :
-  SchedPredicate<[{TII->isLdstSoMinusReg(*MI, 0)}]>;
-def IsLdstsoMinusRegPred :
-  SchedPredicate<[{TII->isLdstSoMinusReg(*MI, 1)}]>;
-def IsLdstsoMinusRegPredX2 :
-  SchedPredicate<[{TII->isLdstSoMinusReg(*MI, 2)}]>;
+def IsLdstsoMinusRegPredX0 : MCSchedPredicate<CheckAM2OpSub<2>>;
+def IsLdstsoMinusRegPred : MCSchedPredicate<CheckAM2OpSub<3>>;
+def IsLdstsoMinusRegPredX2 : MCSchedPredicate<CheckAM2OpSub<4>>;
 
 // Load, scaled register offset
 def IsLdrAm2ScaledPred :
