@@ -106,10 +106,8 @@ def __lldb_init_module(dbg, internal_dict):
 
     # Run the program and stop it when it reaches main().
     if RUN_THE_PROCESS:
-        if doit(dbg, 'breakpoint set -n main') or doit(dbg, 'run'):
-            print(':: Failed to run the process!')
-            dbg.Terminate()
-            return
+        doit(dbg, 'breakpoint set -n main')
+        doit(dbg, 'run')
 
     # Step through the program until it exits.
     gen = 0
