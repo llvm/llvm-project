@@ -53,6 +53,7 @@ static_library("Basic") {
     "DiagnosticIDs.cpp",
     "DiagnosticOptions.cpp",
     "ExpressionTraits.cpp",
+    "FileEntry.cpp",
     "FileManager.cpp",
     "FileSystemStatCache.cpp",
     "IdentifierTable.cpp",

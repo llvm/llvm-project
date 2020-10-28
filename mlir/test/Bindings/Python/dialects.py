@@ -73,7 +73,7 @@ def testCustomOpView():
   f32 = mlir.ir.F32Type.get(ctx)
   loc = ctx.get_unknown_location()
   m = ctx.create_module(loc)
-  m_block = m.operation.regions[0].blocks[0]
+  m_block = m.body
   # TODO: Remove integer insertion in favor of InsertionPoint and/or op-based.
   ip = [0]
   def createInput():

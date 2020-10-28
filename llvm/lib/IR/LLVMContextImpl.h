@@ -346,6 +346,36 @@ template <> struct MDNodeKeyImpl<DISubrange> {
   }
 };
 
+template <> struct MDNodeKeyImpl<DIGenericSubrange> {
+  Metadata *CountNode;
+  Metadata *LowerBound;
+  Metadata *UpperBound;
+  Metadata *Stride;
+
+  MDNodeKeyImpl(Metadata *CountNode, Metadata *LowerBound, Metadata *UpperBound,
+                Metadata *Stride)
+      : CountNode(CountNode), LowerBound(LowerBound), UpperBound(UpperBound),
+        Stride(Stride) {}
+  MDNodeKeyImpl(const DIGenericSubrange *N)
+      : CountNode(N->getRawCountNode()), LowerBound(N->getRawLowerBound()),
+        UpperBound(N->getRawUpperBound()), Stride(N->getRawStride()) {}
+
+  bool isKeyOf(const DIGenericSubrange *RHS) const {
+    return (CountNode == RHS->getRawCountNode()) &&
+           (LowerBound == RHS->getRawLowerBound()) &&
+           (UpperBound == RHS->getRawUpperBound()) &&
+           (Stride == RHS->getRawStride());
+  }
+
+  unsigned getHashValue() const {
+    auto *MD = dyn_cast_or_null<ConstantAsMetadata>(CountNode);
+    if (CountNode && MD)
+      return hash_combine(cast<ConstantInt>(MD->getValue())->getSExtValue(),
+                          LowerBound, UpperBound, Stride);
+    return hash_combine(CountNode, LowerBound, UpperBound, Stride);
+  }
+};
+
 template <> struct MDNodeKeyImpl<DIEnumerator> {
   APInt Value;
   MDString *Name;

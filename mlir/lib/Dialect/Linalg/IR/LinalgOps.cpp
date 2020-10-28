@@ -711,10 +711,10 @@ static SmallVector<SmallVector<AffineExpr, 2>, 2>
 convertReassociationIndicesToMaps(
     OpBuilder &b, ArrayRef<ReassociationIndices> reassociationIndices) {
   SmallVector<SmallVector<AffineExpr, 2>, 2> reassociationMaps;
-  for (const auto &indicies : reassociationIndices) {
+  for (const auto &indices : reassociationIndices) {
     SmallVector<AffineExpr, 2> reassociationMap;
-    reassociationMap.reserve(indicies.size());
-    for (int64_t index : indicies)
+    reassociationMap.reserve(indices.size());
+    for (int64_t index : indices)
       reassociationMap.push_back(b.getAffineDimExpr(index));
     reassociationMaps.push_back(std::move(reassociationMap));
   }

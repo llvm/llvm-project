@@ -8991,14 +8991,18 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   bool isConstant = true;
   bool AllLanesExtractElt = true;
   unsigned NumConstantLanes = 0;
+  unsigned NumDifferentLanes = 0;
+  unsigned NumUndefLanes = 0;
   SDValue Value;
   SDValue ConstantValue;
   for (unsigned i = 0; i < NumElts; ++i) {
     SDValue V = Op.getOperand(i);
     if (V.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
       AllLanesExtractElt = false;
-    if (V.isUndef())
+    if (V.isUndef()) {
+      ++NumUndefLanes;
       continue;
+    }
     if (i > 0)
       isOnlyLowElement = false;
     if (!isa<ConstantFPSDNode>(V) && !isa<ConstantSDNode>(V))
@@ -9014,8 +9018,10 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
     if (!Value.getNode())
       Value = V;
-    else if (V != Value)
+    else if (V != Value) {
       usesOnlyOneValue = false;
+      ++NumDifferentLanes;
+    }
   }
 
   if (!Value.getNode()) {
@@ -9141,11 +9147,20 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     }
   }
 
+  // If we need to insert a small number of different non-constant elements and
+  // the vector width is sufficiently large, prefer using DUP with the common
+  // value and INSERT_VECTOR_ELT for the different lanes. If DUP is preferred,
+  // skip the constant lane handling below.
+  bool PreferDUPAndInsert =
+      !isConstant && NumDifferentLanes >= 1 &&
+      NumDifferentLanes < ((NumElts - NumUndefLanes) / 2) &&
+      NumDifferentLanes >= NumConstantLanes;
+
   // If there was only one constant value used and for more than one lane,
   // start by splatting that value, then replace the non-constant lanes. This
   // is better than the default, which will perform a separate initialization
   // for each lane.
-  if (NumConstantLanes > 0 && usesOnlyOneConstantValue) {
+  if (!PreferDUPAndInsert && NumConstantLanes > 0 && usesOnlyOneConstantValue) {
     // Firstly, try to materialize the splat constant.
     SDValue Vec = DAG.getSplatBuildVector(VT, dl, ConstantValue),
             Val = ConstantBuildVector(Vec, DAG);
@@ -9179,6 +9194,22 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   if (NumElts >= 4) {
     if (SDValue shuffle = ReconstructShuffle(Op, DAG))
       return shuffle;
+  }
+
+  if (PreferDUPAndInsert) {
+    // First, build a constant vector with the common element.
+    SmallVector<SDValue, 8> Ops;
+    for (unsigned I = 0; I < NumElts; ++I)
+      Ops.push_back(Value);
+    SDValue NewVector = LowerBUILD_VECTOR(DAG.getBuildVector(VT, dl, Ops), DAG);
+    // Next, insert the elements that do not match the common value.
+    for (unsigned I = 0; I < NumElts; ++I)
+      if (Op.getOperand(I) != Value)
+        NewVector =
+            DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, NewVector,
+                        Op.getOperand(I), DAG.getConstant(I, dl, MVT::i64));
+
+    return NewVector;
   }
 
   // If all else fails, just use a sequence of INSERT_VECTOR_ELT when we

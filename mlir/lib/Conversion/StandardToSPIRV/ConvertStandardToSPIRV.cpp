@@ -414,7 +414,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts integer compare operation on i1 type opearnds to SPIR-V ops.
+/// Converts integer compare operation on i1 type operands to SPIR-V ops.
 class BoolCmpIOpPattern final : public SPIRVOpLowering<CmpIOp> {
 public:
   using SPIRVOpLowering<CmpIOp>::SPIRVOpLowering;

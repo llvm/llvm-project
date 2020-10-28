@@ -326,7 +326,7 @@ private:
 };
 
 /// Blocks are exposed by the C-API as a forward-only linked list. In Python,
-/// we present them as a more full-featured list-like container but optimzie
+/// we present them as a more full-featured list-like container but optimize
 /// it for forward iteration. Blocks are always owned by a region.
 class PyBlockList {
 public:
@@ -424,7 +424,7 @@ private:
 
 /// Operations are exposed by the C-API as a forward-only linked list. In
 /// Python, we present them as a more full-featured list-like container but
-/// optimzie it for forward iteration. Iterable operations are always owned
+/// optimize it for forward iteration. Iterable operations are always owned
 /// by a block.
 class PyOperationList {
 public:
@@ -2234,6 +2234,16 @@ void mlir::python::populateIRSubmodule(py::module &m) {
                 .releaseObject();
           },
           "Accesses the module as an operation")
+      .def_property_readonly(
+          "body",
+          [](PyModule &self) {
+            PyOperationRef module_op = PyOperation::forOperation(
+                self.getContext(), mlirModuleGetOperation(self.get()),
+                self.getRef().releaseObject());
+            PyBlock returnBlock(module_op, mlirModuleGetBody(self.get()));
+            return returnBlock;
+          },
+          "Return the block for this module")
       .def(
           "dump",
           [](PyModule &self) {

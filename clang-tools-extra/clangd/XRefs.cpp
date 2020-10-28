@@ -171,22 +171,33 @@ SymbolLocation getPreferredLocation(const Location &ASTLoc,
   return Merged.CanonicalDeclaration;
 }
 
+std::vector<std::pair<const NamedDecl *, DeclRelationSet>>
+getDeclAtPositionWithRelations(ParsedAST &AST, SourceLocation Pos,
+                               DeclRelationSet Relations,
+                               ASTNodeKind *NodeKind = nullptr) {
+  unsigned Offset = AST.getSourceManager().getDecomposedSpellingLoc(Pos).second;
+  std::vector<std::pair<const NamedDecl *, DeclRelationSet>> Result;
+  auto ResultFromTree = [&](SelectionTree ST) {
+    if (const SelectionTree::Node *N = ST.commonAncestor()) {
+      if (NodeKind)
+        *NodeKind = N->ASTNode.getNodeKind();
+      llvm::copy_if(allTargetDecls(N->ASTNode), std::back_inserter(Result),
+                    [&](auto &Entry) { return !(Entry.second & ~Relations); });
+    }
+    return !Result.empty();
+  };
+  SelectionTree::createEach(AST.getASTContext(), AST.getTokens(), Offset,
+                            Offset, ResultFromTree);
+  return Result;
+}
+
 std::vector<const NamedDecl *>
 getDeclAtPosition(ParsedAST &AST, SourceLocation Pos, DeclRelationSet Relations,
                   ASTNodeKind *NodeKind = nullptr) {
-  unsigned Offset = AST.getSourceManager().getDecomposedSpellingLoc(Pos).second;
   std::vector<const NamedDecl *> Result;
-  SelectionTree::createEach(AST.getASTContext(), AST.getTokens(), Offset,
-                            Offset, [&](SelectionTree ST) {
-                              if (const SelectionTree::Node *N =
-                                      ST.commonAncestor()) {
-                                if (NodeKind)
-                                  *NodeKind = N->ASTNode.getNodeKind();
-                                llvm::copy(targetDecl(N->ASTNode, Relations),
-                                           std::back_inserter(Result));
-                              }
-                              return !Result.empty();
-                            });
+  for (auto &Entry :
+       getDeclAtPositionWithRelations(AST, Pos, Relations, NodeKind))
+    Result.push_back(Entry.first);
   return Result;
 }
 
@@ -316,8 +327,10 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
   // Emit all symbol locations (declaration or definition) from AST.
   DeclRelationSet Relations =
       DeclRelation::TemplatePattern | DeclRelation::Alias;
-  for (const NamedDecl *D :
-       getDeclAtPosition(AST, CurLoc, Relations, NodeKind)) {
+  auto Candidates =
+      getDeclAtPositionWithRelations(AST, CurLoc, Relations, NodeKind);
+  for (const auto &E : Candidates) {
+    const NamedDecl *D = E.first;
     // Special case: void foo() ^override: jump to the overridden method.
     if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D)) {
       const InheritableAttr *Attr = D->getAttr<OverrideAttr>();
@@ -332,6 +345,18 @@ locateASTReferent(SourceLocation CurLoc, const syntax::Token *TouchedIdentifier,
         continue;
       }
     }
+
+    // Special case: the cursor is on an alias, prefer other results.
+    // This targets "using ns::^Foo", where the target is more interesting.
+    // This does not trigger on renaming aliases:
+    //   `using Foo = ^Bar` already targets Bar via a TypeLoc
+    //   `using ^Foo = Bar` has no other results, as Underlying is filtered.
+    if (E.second & DeclRelation::Alias && Candidates.size() > 1 &&
+        // beginLoc/endLoc are a token range, so rewind the identifier we're in.
+        SM.isPointWithin(TouchedIdentifier ? TouchedIdentifier->location()
+                                           : CurLoc,
+                         D->getBeginLoc(), D->getEndLoc()))
+      continue;
 
     // Special case: the point of declaration of a template specialization,
     // it's more useful to navigate to the template declaration.

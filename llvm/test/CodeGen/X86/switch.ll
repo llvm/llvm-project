@@ -521,11 +521,10 @@ bb2: tail call void @g(i32 2) br label %return
 return: ret void
 
 ; Cases 1,4,7 have a very large branch weight (which shouldn't overflow), so
-; their bit test should come first. 0,3,6 and 2,5,8,9 both have a weight of 12,
-; but the latter set has more cases, so should be tested for earlier.
-; The bit test on 0,3,6 is unnecessary as all cases cover the rage [0, 9].
-; The range check guarantees that cases other than 1,4,7 and 2,5,8,9 must be
-; in 0,3,6.
+; their bit test should come first. 0,3,6 and 2,5,8,9 both have a weight of 20,
+; but the latter set has more cases, so should be tested for earlier. The bit
+; test on 0,3,6 is unnecessary as all cases cover the range [0, 9]. The range
+; check guarantees that cases other than 1,4,7 and 2,5,8,9 must be in 0,3,6.
 
 ; CHECK-LABEL: bt_order_by_weight
 ; 146 = 2^1 + 2^4 + 2^7
@@ -543,11 +542,11 @@ return: ret void
        ; Default:
        i32 1,
        ; Cases 0,3,6:
-       i32 4, i32 4, i32 4,
+       i32 0, i32 0, i32 20,
        ; Cases 1,4,7:
        i32 4294967295, i32 2, i32 4294967295,
        ; Cases 2,5,8,9:
-       i32 3, i32 3, i32 3, i32 3}
+       i32 0, i32 0, i32 0, i32 20}
 
 define void @order_by_weight_and_fallthrough(i32 %x) {
 entry:

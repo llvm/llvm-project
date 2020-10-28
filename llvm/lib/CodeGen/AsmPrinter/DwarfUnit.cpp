@@ -1357,7 +1357,7 @@ void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
   if (auto *CI = SR->getCount().dyn_cast<ConstantInt*>())
     Count = CI->getSExtValue();
 
-  auto addBoundTypeEntry = [&](dwarf::Attribute Attr,
+  auto AddBoundTypeEntry = [&](dwarf::Attribute Attr,
                                DISubrange::BoundType Bound) -> void {
     if (auto *BV = Bound.dyn_cast<DIVariable *>()) {
       if (auto *VarDIE = getDIE(BV))
@@ -1375,7 +1375,7 @@ void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
     }
   };
 
-  addBoundTypeEntry(dwarf::DW_AT_lower_bound, SR->getLowerBound());
+  AddBoundTypeEntry(dwarf::DW_AT_lower_bound, SR->getLowerBound());
 
   if (auto *CV = SR->getCount().dyn_cast<DIVariable*>()) {
     if (auto *CountVarDIE = getDIE(CV))
@@ -1383,9 +1383,45 @@ void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
   } else if (Count != -1)
     addUInt(DW_Subrange, dwarf::DW_AT_count, None, Count);
 
-  addBoundTypeEntry(dwarf::DW_AT_upper_bound, SR->getUpperBound());
+  AddBoundTypeEntry(dwarf::DW_AT_upper_bound, SR->getUpperBound());
 
-  addBoundTypeEntry(dwarf::DW_AT_byte_stride, SR->getStride());
+  AddBoundTypeEntry(dwarf::DW_AT_byte_stride, SR->getStride());
+}
+
+void DwarfUnit::constructGenericSubrangeDIE(DIE &Buffer,
+                                            const DIGenericSubrange *GSR,
+                                            DIE *IndexTy) {
+  DIE &DwGenericSubrange =
+      createAndAddDIE(dwarf::DW_TAG_generic_subrange, Buffer);
+  addDIEEntry(DwGenericSubrange, dwarf::DW_AT_type, *IndexTy);
+
+  int64_t DefaultLowerBound = getDefaultLowerBound();
+
+  auto AddBoundTypeEntry = [&](dwarf::Attribute Attr,
+                               DIGenericSubrange::BoundType Bound) -> void {
+    if (auto *BV = Bound.dyn_cast<DIVariable *>()) {
+      if (auto *VarDIE = getDIE(BV))
+        addDIEEntry(DwGenericSubrange, Attr, *VarDIE);
+    } else if (auto *BE = Bound.dyn_cast<DIExpression *>()) {
+      if (BE->isSignedConstant()) {
+        if (Attr != dwarf::DW_AT_lower_bound || DefaultLowerBound == -1 ||
+            static_cast<int64_t>(BE->getElement(1)) != DefaultLowerBound)
+          addSInt(DwGenericSubrange, Attr, dwarf::DW_FORM_sdata,
+                  BE->getElement(1));
+      } else {
+        DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+        DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
+        DwarfExpr.setMemoryLocationKind();
+        DwarfExpr.addExpression(BE);
+        addBlock(DwGenericSubrange, Attr, DwarfExpr.finalize());
+      }
+    }
+  };
+
+  AddBoundTypeEntry(dwarf::DW_AT_lower_bound, GSR->getLowerBound());
+  AddBoundTypeEntry(dwarf::DW_AT_count, GSR->getCount());
+  AddBoundTypeEntry(dwarf::DW_AT_upper_bound, GSR->getUpperBound());
+  AddBoundTypeEntry(dwarf::DW_AT_byte_stride, GSR->getStride());
 }
 
 DIE *DwarfUnit::getIndexTyDie() {
@@ -1495,9 +1531,13 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   DINodeArray Elements = CTy->getElements();
   for (unsigned i = 0, N = Elements.size(); i < N; ++i) {
     // FIXME: Should this really be such a loose cast?
-    if (auto *Element = dyn_cast_or_null<DINode>(Elements[i]))
+    if (auto *Element = dyn_cast_or_null<DINode>(Elements[i])) {
       if (Element->getTag() == dwarf::DW_TAG_subrange_type)
         constructSubrangeDIE(Buffer, cast<DISubrange>(Element), IdxTy);
+      else if (Element->getTag() == dwarf::DW_TAG_generic_subrange)
+        constructGenericSubrangeDIE(Buffer, cast<DIGenericSubrange>(Element),
+                                    IdxTy);
+    }
   }
 }
 

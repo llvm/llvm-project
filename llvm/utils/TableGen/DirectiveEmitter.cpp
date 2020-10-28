@@ -111,19 +111,66 @@ void GenerateEnumClauseVal(const std::vector<Record *> &Records,
   }
 }
 
-// Generate the declaration section for the enumeration in the directive
-// language
-void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
+bool HasDuplicateClauses(const std::vector<Record *> &Clauses,
+                         const Directive &Directive,
+                         llvm::StringSet<> &CrtClauses) {
+  bool hasError = false;
+  for (const auto &C : Clauses) {
+    VersionedClause VerClause{C};
+    const auto insRes = CrtClauses.insert(VerClause.getClause().getName());
+    if (!insRes.second) {
+      PrintError("Clause " + VerClause.getClause().getRecordName() +
+                 " already defined on directive " + Directive.getRecordName());
+      hasError = true;
+    }
+  }
+  return hasError;
+}
 
+bool HasDuplicateClausesInDirectives(const std::vector<Record *> &Directives) {
+  for (const auto &D : Directives) {
+    Directive Dir{D};
+    llvm::StringSet<> Clauses;
+    if (HasDuplicateClauses(Dir.getAllowedClauses(), Dir, Clauses) ||
+        HasDuplicateClauses(Dir.getAllowedOnceClauses(), Dir, Clauses) ||
+        HasDuplicateClauses(Dir.getAllowedExclusiveClauses(), Dir, Clauses) ||
+        HasDuplicateClauses(Dir.getRequiredClauses(), Dir, Clauses)) {
+      PrintFatalError(
+          "One or more clauses are defined multiple times on directive " +
+          Dir.getRecordName());
+      return true;
+    }
+  }
+  return false;
+}
+
+// Check consitency of records. Return true if an error has been detected.
+// Return false if the records are valid.
+bool CheckRecordsValidity(RecordKeeper &Records) {
   const auto &DirectiveLanguages =
       Records.getAllDerivedDefinitions("DirectiveLanguage");
 
   if (DirectiveLanguages.size() != 1) {
     PrintError("A single definition of DirectiveLanguage is needed.");
-    return;
+    return true;
   }
 
+  const auto &Directives = Records.getAllDerivedDefinitions("Directive");
+  return HasDuplicateClausesInDirectives(Directives);
+}
+
+// Generate the declaration section for the enumeration in the directive
+// language
+void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
+
+  if (CheckRecordsValidity(Records))
+    return;
+
+  const auto &DirectiveLanguages =
+      Records.getAllDerivedDefinitions("DirectiveLanguage");
+
   DirectiveLanguage DirLang{DirectiveLanguages[0]};
+  const auto &Directives = Records.getAllDerivedDefinitions("Directive");
 
   OS << "#ifndef LLVM_" << DirLang.getName() << "_INC\n";
   OS << "#define LLVM_" << DirLang.getName() << "_INC\n";
@@ -145,7 +192,6 @@ void EmitDirectivesDecl(RecordKeeper &Records, raw_ostream &OS) {
     OS << "\nLLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();\n";
 
   // Emit Directive enumeration
-  const auto &Directives = Records.getAllDerivedDefinitions("Directive");
   GenerateEnumClass(Directives, OS, "Directive", DirLang.getDirectivePrefix(),
                     DirLang);
 
@@ -605,15 +651,11 @@ void EmitDirectivesFlangImpl(const std::vector<Record *> &Directives,
 // Generate the implemenation section for the enumeration in the directive
 // language.
 void EmitDirectivesGen(RecordKeeper &Records, raw_ostream &OS) {
+  if (CheckRecordsValidity(Records))
+    return;
 
   const auto &DirectiveLanguages =
       Records.getAllDerivedDefinitions("DirectiveLanguage");
-
-  if (DirectiveLanguages.size() != 1) {
-    PrintError("A single definition of DirectiveLanguage is needed.");
-    return;
-  }
-
   const auto &Directives = Records.getAllDerivedDefinitions("Directive");
   const auto &Clauses = Records.getAllDerivedDefinitions("Clause");
   DirectiveLanguage DirectiveLanguage{DirectiveLanguages[0]};
@@ -623,17 +665,12 @@ void EmitDirectivesGen(RecordKeeper &Records, raw_ostream &OS) {
 // Generate the implemenation for the enumeration in the directive
 // language. This code can be included in library.
 void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
+  if (CheckRecordsValidity(Records))
+    return;
 
   const auto &DirectiveLanguages =
       Records.getAllDerivedDefinitions("DirectiveLanguage");
-
-  if (DirectiveLanguages.size() != 1) {
-    PrintError("A single definition of DirectiveLanguage is needed.");
-    return;
-  }
-
   const auto &Directives = Records.getAllDerivedDefinitions("Directive");
-
   DirectiveLanguage DirLang = DirectiveLanguage{DirectiveLanguages[0]};
 
   const auto &Clauses = Records.getAllDerivedDefinitions("Clause");

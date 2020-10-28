@@ -53,6 +53,7 @@ void registerTestConvertGPUKernelToHsacoPass();
 void registerTestDominancePass();
 void registerTestDialect(DialectRegistry &);
 void registerTestDynamicPipelinePass();
+void registerTestExpandMemRefReshapePass();
 void registerTestExpandTanhPass();
 void registerTestFunc();
 void registerTestGpuMemoryPromotionPass();
@@ -115,6 +116,7 @@ void registerTestPasses() {
   registerTestDynamicPipelinePass();
   registerTestFunc();
   registerTestExpandTanhPass();
+  registerTestExpandMemRefReshapePass();
   registerTestGpuMemoryPromotionPass();
   registerTestInterfaces();
   registerTestLinalgCodegenStrategy();

@@ -589,6 +589,12 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
                                            Info.EC.getKnownMinValue() *
                                                Info.NumVectors);
     }
+#define PPC_MMA_VECTOR_TYPE(Name, Id, Size) \
+    case BuiltinType::Id: \
+      ResultType = \
+        llvm::FixedVectorType::get(ConvertType(Context.BoolTy), Size); \
+      break;
+#include "clang/Basic/PPCTypes.def"
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \

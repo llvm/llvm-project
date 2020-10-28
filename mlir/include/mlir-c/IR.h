@@ -175,6 +175,9 @@ MlirModule mlirModuleCreateParse(MlirContext context, const char *module);
 /** Gets the context that a module was created with. */
 MlirContext mlirModuleGetContext(MlirModule module);
 
+/** Gets the body of the module, i.e. the only block it contains. */
+MlirBlock mlirModuleGetBody(MlirModule module);
+
 /** Checks whether a module is null. */
 static inline int mlirModuleIsNull(MlirModule module) { return !module.ptr; }
 

@@ -16,6 +16,7 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -249,7 +250,7 @@ SmallVector<Type, 2> LLVMTypeConverter::convertUnrankedMemRefSignature() {
 LLVM::LLVMType LLVMTypeConverter::convertFunctionSignature(
     FunctionType funcTy, bool isVariadic,
     LLVMTypeConverter::SignatureConversion &result) {
-  // Select the argument converter depending on the calling convetion.
+  // Select the argument converter depending on the calling convention.
   auto funcArgConverter = options.useBarePtrCallConv
                               ? barePtrFuncArgTypeConverter
                               : structFuncArgTypeConverter;
@@ -3666,6 +3667,7 @@ void mlir::populateStdToLLVMConversionPatterns(
   populateStdToLLVMFuncOpConversionPattern(converter, patterns);
   populateStdToLLVMNonMemoryConversionPatterns(converter, patterns);
   populateStdToLLVMMemoryConversionPatterns(converter, patterns);
+  populateExpandMemRefReshapePattern(patterns, &converter.getContext());
 }
 
 /// Convert a non-empty list of types to be returned from a function into a

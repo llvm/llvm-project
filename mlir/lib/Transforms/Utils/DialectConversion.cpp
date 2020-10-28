@@ -522,7 +522,7 @@ void ArgConverter::insertConversion(Block *newBlock,
 }
 
 //===----------------------------------------------------------------------===//
-// Rewriter and Transation State
+// Rewriter and Translation State
 //===----------------------------------------------------------------------===//
 namespace {
 /// This class contains a snapshot of the current conversion rewriter state.
