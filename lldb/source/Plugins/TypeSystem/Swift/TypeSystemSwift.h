@@ -100,9 +100,7 @@ public:
   class LanguageFlags {
   public:
     enum : uint64_t {
-      eIsIndirectEnumCase = 0x1ULL,
-      // FIXME: This appears to be unused.
-      eIgnoreInstancePointerness = 0x2ULL
+      eIsIndirectEnumCase = 0x1ULL
     };
 
   private:
