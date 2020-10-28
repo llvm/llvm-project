@@ -1,4 +1,5 @@
 ; RUN: opt -debug-only=branch-prob -jump-threading -S %s 2>&1 | FileCheck %s
+; REQUIRES: asserts
 
 ; Make sure that we set the branch probability for the newly created
 ; basic block.
