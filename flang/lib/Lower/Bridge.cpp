@@ -1974,61 +1974,79 @@ private:
     Fortran::lower::BoxAnalyzer sba;
     sba.analyze(sym);
 
+    // compute extent from lower and upper bound.
+    auto computeExtent = [&](mlir::Value lb, mlir::Value ub) -> mlir::Value {
+      // let the folder deal with the common `ub - <const> + 1` case
+      auto diff = builder->create<mlir::SubIOp>(loc, idxTy, ub, lb);
+      auto one = builder->createIntegerConstant(loc, idxTy, 1);
+      return builder->create<mlir::AddIOp>(loc, idxTy, diff, one);
+    };
+
     // The origin must be \vec{1}.
-    auto populateShape = [&](auto &shapes, const auto &bounds) {
-      for (auto *spec : bounds) {
-        if (auto low = spec->lbound().GetExplicit()) {
-          if (auto high = spec->ubound().GetExplicit()) {
-            Fortran::semantics::SomeExpr highEx{*high};
-            auto ub = createFIRExpr(loc, &highEx);
-            shapes.emplace_back(builder->createConvert(loc, idxTy, ub));
-          } else if (spec->ubound().isAssumed()) {
-            shapes.emplace_back(mlir::Value{});
-          } else {
-            TODO("upper bound");
-          }
+    auto populateShape = [&](auto &shapes, const auto &bounds,
+                             mlir::Value box) {
+      for (auto iter : llvm::enumerate(bounds)) {
+        auto *spec = iter.value();
+        assert(spec->lbound().GetExplicit() &&
+               "lbound must be explicit with constant value 1");
+        if (auto high = spec->ubound().GetExplicit()) {
+          Fortran::semantics::SomeExpr highEx{*high};
+          auto ub = createFIRExpr(loc, &highEx);
+          shapes.emplace_back(builder->createConvert(loc, idxTy, ub));
+        } else if (spec->ubound().isDeferred()) {
+          assert(box && "deferred bounds require a descriptor");
+          auto dim = builder->createIntegerConstant(loc, idxTy, iter.index());
+          auto dimInfo = builder->create<fir::BoxDimsOp>(loc, idxTy, idxTy,
+                                                         idxTy, box, dim);
+          shapes.emplace_back(dimInfo.getResult(2));
+        } else if (spec->ubound().isAssumed()) {
+          shapes.emplace_back(mlir::Value{});
         } else {
-          TODO("lower bound");
+          llvm::report_fatal_error("unknown bound category");
         }
       }
     };
 
-    auto genLBoundsAndExtents =
-        [&](const Fortran::semantics::SomeExpr &lowEx,
-            const Fortran::semantics::SomeExpr &highEx) {
-          auto lb = createFIRExpr(loc, &lowEx);
-          auto ub = createFIRExpr(loc, &highEx);
-          auto ty = ub.getType();
-          auto diff = builder->create<mlir::SubIOp>(loc, ty, ub, lb);
-          auto one = builder->createIntegerConstant(loc, ty, 1);
-          auto sz = builder->create<mlir::AddIOp>(loc, ty, diff, one);
-          auto idx = builder->createConvert(loc, idxTy, sz);
-          return std::pair<mlir::Value, mlir::Value>{lb, idx};
-        };
-
     // The origin is not \vec{1}.
     auto populateLBoundsExtents = [&](auto &lbounds, auto &extents,
-                                      const auto &bounds) {
-      for (auto *spec : bounds) {
-        if (auto low = spec->lbound().GetExplicit()) {
-          if (auto high = spec->ubound().GetExplicit()) {
-            // let the folder deal with the common `ub - <const> + 1` case
-            auto [lb, idx] =
-                genLBoundsAndExtents(Fortran::semantics::SomeExpr{*low},
-                                     Fortran::semantics::SomeExpr{*high});
+                                      const auto &bounds, mlir::Value box) {
+      for (auto iter : llvm::enumerate(bounds)) {
+        auto *spec = iter.value();
+        fir::BoxDimsOp dimInfo;
+        mlir::Value ub, lb;
+        if (spec->lbound().isDeferred() || spec->ubound().isDeferred()) {
+          assert(box && "deferred bounds require a descriptor");
+          auto dim = builder->createIntegerConstant(loc, idxTy, iter.index());
+          dimInfo = builder->create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy,
+                                                    box, dim);
+          extents.emplace_back(dimInfo.getResult(2));
+          if (auto low = spec->lbound().GetExplicit()) {
+            auto expr = Fortran::semantics::SomeExpr{*low};
+            auto lb =
+                builder->createConvert(loc, idxTy, createFIRExpr(loc, &expr));
             lbounds.emplace_back(lb);
-            extents.emplace_back(idx);
-            continue;
-          } else if (spec->ubound().isAssumed()) {
-            // An assumed size array. The extent is not computed.
-            Fortran::semantics::SomeExpr lowEx{*low};
-            lbounds.emplace_back(createFIRExpr(loc, &lowEx));
-            extents.emplace_back(mlir::Value{});
           } else {
-            TODO("upper bound");
+            lbounds.emplace_back(dimInfo.getResult(1));
           }
         } else {
-          TODO("lower bound");
+          if (auto low = spec->lbound().GetExplicit()) {
+            auto expr = Fortran::semantics::SomeExpr{*low};
+            lb = builder->createConvert(loc, idxTy, createFIRExpr(loc, &expr));
+          } else {
+            TODO("assumed rank lowering");
+          }
+
+          if (auto high = spec->ubound().GetExplicit()) {
+            auto expr = Fortran::semantics::SomeExpr{*high};
+            ub = builder->createConvert(loc, idxTy, createFIRExpr(loc, &expr));
+            lbounds.emplace_back(lb);
+            extents.emplace_back(computeExtent(lb, ub));
+          } else {
+            // An assumed size array. The extent is not computed.
+            assert(spec->ubound().isAssumed() && "expected assumed size");
+            lbounds.emplace_back(lb);
+            extents.emplace_back(mlir::Value{});
+          }
         }
       }
     };
@@ -2161,12 +2179,19 @@ private:
           // cast to the known constant parts from the declaration
           auto castTy = builder->getRefType(genType(var));
           mlir::Value addr = lookupSymbol(sym).getAddr();
-          if (addr)
+          mlir::Value argBox;
+          if (addr) {
+            if (auto boxTy = addr.getType().dyn_cast<fir::BoxType>()) {
+              argBox = addr;
+              auto refTy = builder->getRefType(boxTy.getEleTy());
+              addr = builder->create<fir::BoxAddrOp>(loc, refTy, argBox);
+            }
             addr = builder->createConvert(loc, castTy, addr);
+          }
           if (x.lboundAllOnes()) {
             // if lower bounds are all ones, build simple shaped object
             llvm::SmallVector<mlir::Value, 8> shapes;
-            populateShape(shapes, x.bounds);
+            populateShape(shapes, x.bounds, argBox);
             if (isDummy || isResult) {
               localSymbols.addSymbolWithShape(sym, addr, shapes, true);
               return;
@@ -2181,7 +2206,7 @@ private:
           // if object is an array process the lower bound and extent values
           llvm::SmallVector<mlir::Value, 8> extents;
           llvm::SmallVector<mlir::Value, 8> lbounds;
-          populateLBoundsExtents(lbounds, extents, x.bounds);
+          populateLBoundsExtents(lbounds, extents, x.bounds, argBox);
           if (isDummy || isResult) {
             localSymbols.addSymbolWithBounds(sym, addr, extents, lbounds, true);
             return;
@@ -2335,12 +2360,18 @@ private:
         [&](const Fortran::lower::details::DynamicArrayStaticChar &x) {
           mlir::Value addr;
           mlir::Value len;
+          mlir::Value argBox;
           auto charLen = x.charLen();
           // if element type is a CHARACTER, determine the LEN value
           if (isDummy || isResult) {
-            auto symBox = lookupSymbol(sym);
-            auto unboxchar = charHelp.createUnboxChar(symBox.getAddr());
-            addr = unboxchar.first;
+            auto actualArg = lookupSymbol(sym).getAddr();
+            if (auto boxTy = actualArg.getType().dyn_cast<fir::BoxType>()) {
+              argBox = actualArg;
+              auto refTy = builder->getRefType(boxTy.getEleTy());
+              addr = builder->create<fir::BoxAddrOp>(loc, refTy, argBox);
+            } else {
+              addr = charHelp.createUnboxChar(actualArg).first;
+            }
             // Set/override LEN with a constant
             len = builder->createIntegerConstant(loc, idxTy, charLen);
           } else {
@@ -2355,7 +2386,7 @@ private:
           if (x.lboundAllOnes()) {
             // if lower bounds are all ones, build simple shaped object
             llvm::SmallVector<mlir::Value, 8> shape;
-            populateShape(shape, x.bounds);
+            populateShape(shape, x.bounds, argBox);
             if (isDummy || isResult) {
               localSymbols.addCharSymbolWithShape(sym, addr, len, shape, true);
               return;
@@ -2368,7 +2399,7 @@ private:
           // if object is an array process the lower bound and extent values
           llvm::SmallVector<mlir::Value, 8> extents;
           llvm::SmallVector<mlir::Value, 8> lbounds;
-          populateLBoundsExtents(lbounds, extents, x.bounds);
+          populateLBoundsExtents(lbounds, extents, x.bounds, argBox);
           if (isDummy || isResult) {
             localSymbols.addCharSymbolWithBounds(sym, addr, len, extents,
                                                  lbounds, true);
@@ -2390,17 +2421,32 @@ private:
         [&](const Fortran::lower::details::DynamicArrayDynamicChar &x) {
           mlir::Value addr;
           mlir::Value len;
+          mlir::Value argBox;
           auto charLen = x.charLen();
           // if element type is a CHARACTER, determine the LEN value
           if (isDummy || isResult) {
-            auto symBox = lookupSymbol(sym);
-            auto unboxchar = charHelp.createUnboxChar(symBox.getAddr());
-            addr = unboxchar.first;
-            if (charLen) {
-              // Set/override LEN with an expression
-              len = createFIRExpr(loc, &*charLen);
+            auto actualArg = lookupSymbol(sym).getAddr();
+            if (auto boxTy = actualArg.getType().dyn_cast<fir::BoxType>()) {
+              argBox = actualArg;
+              auto refTy = builder->getRefType(boxTy.getEleTy());
+              addr = builder->create<fir::BoxAddrOp>(loc, refTy, argBox);
+              if (charLen) {
+                // Set/override LEN with an expression
+                len = createFIRExpr(loc, &*charLen);
+              } else {
+                // FIXME: that is not correct with kind > 1 character, we need
+                // to divide by the character width.
+                len = builder->create<fir::BoxEleSizeOp>(loc, idxTy, argBox);
+              }
             } else {
-              len = unboxchar.second;
+              auto unboxchar = charHelp.createUnboxChar(actualArg);
+              addr = unboxchar.first;
+              if (charLen) {
+                // Set/override LEN with an expression
+                len = createFIRExpr(loc, &*charLen);
+              } else {
+                len = unboxchar.second;
+              }
             }
           } else {
             // local CHARACTER variable
@@ -2417,7 +2463,7 @@ private:
           if (x.lboundAllOnes()) {
             // if lower bounds are all ones, build simple shaped object
             llvm::SmallVector<mlir::Value, 8> shape;
-            populateShape(shape, x.bounds);
+            populateShape(shape, x.bounds, argBox);
             if (isDummy || isResult) {
               localSymbols.addCharSymbolWithShape(sym, addr, len, shape, true);
               return;
@@ -2430,7 +2476,7 @@ private:
           // Process the lower bound and extent values.
           llvm::SmallVector<mlir::Value, 8> extents;
           llvm::SmallVector<mlir::Value, 8> lbounds;
-          populateLBoundsExtents(lbounds, extents, x.bounds);
+          populateLBoundsExtents(lbounds, extents, x.bounds, argBox);
           if (isDummy || isResult) {
             localSymbols.addCharSymbolWithBounds(sym, addr, len, extents,
                                                  lbounds, true);
