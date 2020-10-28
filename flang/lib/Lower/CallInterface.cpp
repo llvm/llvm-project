@@ -12,6 +12,7 @@
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/FIRBuilder.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/symbol.h"
@@ -236,7 +237,7 @@ void Fortran::lower::CallInterface<T>::mapPassedEntities() {
   if constexpr (std::is_same_v<T, Fortran::lower::CalleeInterface>) {
     assert(inputs.size() == func.front().getArguments().size() &&
            "function previously created with different number of arguments");
-    for (auto [fst,snd] : llvm::zip(inputs, func.front().getArguments()))
+    for (auto [fst, snd] : llvm::zip(inputs, func.front().getArguments()))
       mapBackInputToPassedEntity(fst, snd);
   } else {
     // On the caller side, map the index of the mlir argument position
@@ -333,34 +334,18 @@ public:
   void buildImplicitInterface(
       const Fortran::evaluate::characteristics::Procedure &procedure) {
     // Handle result
-    auto resultPosition = FirPlaceHolder::resultEntityPosition;
-    if (const auto &result = procedure.functionResult) {
-      if (result->IsProcedurePointer()) // TODO
-        llvm_unreachable("procedure pointer result not yet handled");
-      const auto *typeAndShape = result->GetTypeAndShape();
-      assert(typeAndShape && "expect type for non proc pointer result");
-      auto dynamicType = typeAndShape->type();
-      // Character result allocated by caller and passed has hidden arguments
-      if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
-        handleImplicitCharacterResult(dynamicType);
-      } else {
-        // All result other than characters are simply returned by value in
-        // implicit interfaces
-        auto mlirType =
-            getConverter().genType(dynamicType.category(), dynamicType.kind());
-        addFirOutput(mlirType, resultPosition, Property::Value);
-      }
-    } else if (interface.side().hasAlternateReturns()) {
-      addFirOutput(mlir::IndexType::get(&mlirContext), resultPosition,
-                   Property::Value);
-    }
+    if (const auto &result = procedure.functionResult)
+      handleImplicitResult(*result);
+    else if (interface.side().hasAlternateReturns())
+      addFirOutput(mlir::IndexType::get(&mlirContext),
+                   FirPlaceHolder::resultEntityPosition, Property::Value);
     // Handle arguments
     const auto &argumentEntities =
         getEntityContainer(interface.side().getCallDescription());
     for (auto pair : llvm::zip(procedure.dummyArguments, argumentEntities)) {
       std::visit(
           Fortran::common::visitors{
-	      [&](const auto &dummy) {
+              [&](const auto &dummy) {
                 const auto &entity = getDataObjectEntity(std::get<1>(pair));
                 handleImplicitDummy(dummy, entity);
               },
@@ -371,13 +356,66 @@ public:
           std::get<0>(pair).u);
     }
   }
+
   void buildExplicitInterface(
       const Fortran::evaluate::characteristics::Procedure &procedure) {
-    // TODO
-    llvm_unreachable("Explicit interface lowering TODO");
+    // Handle result
+    if (const auto &result = procedure.functionResult) {
+      if (result->CanBeReturnedViaImplicitInterface())
+        handleImplicitResult(*result);
+      else
+        handleExplicitResult(*result);
+    } else if (interface.side().hasAlternateReturns()) {
+      addFirOutput(mlir::IndexType::get(&mlirContext),
+                   FirPlaceHolder::resultEntityPosition, Property::Value);
+    }
+    // Handle arguments
+    const auto &argumentEntities =
+        getEntityContainer(interface.side().getCallDescription());
+    for (auto pair : llvm::zip(procedure.dummyArguments, argumentEntities)) {
+      std::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::evaluate::characteristics::DummyDataObject
+                      &dummy) {
+                const auto &entity = getDataObjectEntity(std::get<1>(pair));
+                if (dummy.CanBePassedViaImplicitInterface())
+                  handleImplicitDummy(dummy, entity);
+                else
+                  handleExplicitDummy(dummy, entity);
+              },
+              [&](const Fortran::evaluate::characteristics::DummyProcedure
+                      &dummy) {
+                const auto &entity = getDataObjectEntity(std::get<1>(pair));
+                handleImplicitDummy(dummy, entity);
+              },
+              [&](const Fortran::evaluate::characteristics::AlternateReturn &) {
+                // nothing to do
+              },
+          },
+          std::get<0>(pair).u);
+    }
   }
 
 private:
+  void handleImplicitResult(
+      const Fortran::evaluate::characteristics::FunctionResult &result) {
+    if (result.IsProcedurePointer()) // TODO
+      llvm_unreachable("procedure pointer result not yet handled");
+    const auto *typeAndShape = result.GetTypeAndShape();
+    assert(typeAndShape && "expect type for non proc pointer result");
+    auto dynamicType = typeAndShape->type();
+    // Character result allocated by caller and passed has hidden arguments
+    if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
+      handleImplicitCharacterResult(dynamicType);
+    } else {
+      // All result other than characters are simply returned by value in
+      // implicit interfaces
+      auto mlirType =
+          getConverter().genType(dynamicType.category(), dynamicType.kind());
+      addFirOutput(mlirType, FirPlaceHolder::resultEntityPosition,
+                   Property::Value);
+    }
+  }
   void
   handleImplicitCharacterResult(const Fortran::evaluate::DynamicType &type) {
     auto resultPosition = FirPlaceHolder::resultEntityPosition;
@@ -401,7 +439,10 @@ private:
       auto boxCharTy = fir::BoxCharType::get(&mlirContext, dynamicType.kind());
       addFirInput(boxCharTy, nextPassedArgPosition(), Property::BoxChar);
       addPassedArg(PassEntityBy::BoxChar, entity);
-      // FIXME: non PDT derived type allowed here.
+    } else if (dynamicType.category() ==
+               Fortran::common::TypeCategory::Derived) {
+      //  non PDT derived type allowed in implicit interface.
+      TODO("derived type arguments in implicit interface");
     } else {
       mlir::Type type =
           getConverter().genType(dynamicType.category(), dynamicType.kind());
@@ -412,6 +453,71 @@ private:
 
       addFirInput(refType, nextPassedArgPosition(), Property::BaseAddress);
       addPassedArg(PassEntityBy::BaseAddress, entity);
+    }
+  }
+
+  void handleExplicitDummy(
+      const Fortran::evaluate::characteristics::DummyDataObject &obj,
+      const FortranEntity &entity) {
+    using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
+
+    if (obj.attrs.test(Attrs::Allocatable))
+      TODO("allocatable in procedure interface");
+    else if (obj.attrs.test(Attrs::Pointer))
+      TODO("pointer in procedure interface");
+
+    if (obj.attrs.test(Attrs::Optional))
+      TODO("Optional in procedure interface");
+    if (obj.attrs.test(Attrs::Asynchronous))
+      TODO("Asynchronous in procedure interface");
+    if (obj.attrs.test(Attrs::Contiguous))
+      TODO("Contiguous in procedure interface");
+    if (obj.attrs.test(Attrs::Value))
+      TODO("Value in procedure interface");
+    if (obj.attrs.test(Attrs::Volatile))
+      TODO("Volatile in procedure interface");
+    if (obj.attrs.test(Attrs::Target))
+      TODO("Target in procedure interface");
+
+    using ShapeAttrs = Fortran::evaluate::characteristics::TypeAndShape::Attr;
+    const auto &shapeAttrs = obj.type.attrs();
+    if (shapeAttrs.test(ShapeAttrs::AssumedRank))
+      TODO("Assumed Rank in procedure interface");
+    if (shapeAttrs.test(ShapeAttrs::Coarray))
+      TODO("Coarray in procedure interface");
+
+    // So far assume that if the argument cannot be passed by implicit interface
+    // it must be by box. That may no be always true (e.g for simple optionals)
+
+    auto dynamicType = obj.type.type();
+    if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
+      auto charTy = fir::CharacterType::get(&mlirContext, dynamicType.kind());
+      auto len = fir::SequenceType::getUnknownExtent();
+      if (auto constantLen = toInt64(dynamicType.GetCharLength()))
+        len = *constantLen;
+      fir::SequenceType::Shape shape(1, len);
+      auto bounds = getBounds(obj.type.shape());
+      shape.append(bounds.begin(), bounds.end());
+      auto seqType = fir::SequenceType::get(shape, charTy);
+      auto boxType = fir::BoxType::get(seqType);
+      addFirInput(boxType, nextPassedArgPosition(), Property::Box);
+      addPassedArg(PassEntityBy::Box, entity);
+    } else if (dynamicType.category() ==
+               Fortran::common::TypeCategory::Derived) {
+      TODO("derived type arguments in procedure interface");
+    } else {
+      mlir::Type type =
+          getConverter().genType(dynamicType.category(), dynamicType.kind());
+      fir::SequenceType::Shape bounds = getBounds(obj.type.shape());
+      if (!bounds.empty())
+        type = fir::SequenceType::get(bounds, type);
+      auto boxType = fir::BoxType::get(type);
+
+      // For allocatable and pointer, we will most likely want to pass
+      // a box reference here, but for the rest, a simple box should enforce
+      // the fact that the box is not re-used by the caller after the call.
+      addFirInput(boxType, nextPassedArgPosition(), Property::Box);
+      addPassedArg(PassEntityBy::Box, entity);
     }
   }
 
@@ -435,17 +541,29 @@ private:
     addPassedArg(PassEntityBy::BaseAddress, entity);
   }
 
+  void handleExplicitResult(
+      const Fortran::evaluate::characteristics::FunctionResult &) {
+    TODO("lowering interface with result requiring explicit interface");
+  }
+
   fir::SequenceType::Shape getBounds(const Fortran::evaluate::Shape &shape) {
     fir::SequenceType::Shape bounds;
     for (const auto &extent : shape) {
       auto bound = fir::SequenceType::getUnknownExtent();
-      if (extent)
-        if (auto i = Fortran::evaluate::ToInt64(Fortran::evaluate::Fold(
-                getConverter().getFoldingContext(), AsGenericExpr(*extent))))
-          bound = *i;
+      if (auto i = toInt64(extent))
+        bound = *i;
       bounds.emplace_back(bound);
     }
     return bounds;
+  }
+  std::optional<std::int64_t>
+  toInt64(std::optional<
+          Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>
+              expr) {
+    if (expr)
+      return Fortran::evaluate::ToInt64(Fortran::evaluate::Fold(
+          getConverter().getFoldingContext(), AsGenericExpr(*expr)));
+    return std::nullopt;
   }
   void addFirInput(mlir::Type type, int entityPosition, Property p) {
     interface.inputs.emplace_back(FirPlaceHolder{type, entityPosition, p});

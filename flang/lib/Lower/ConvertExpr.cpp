@@ -1490,7 +1490,7 @@ private:
             });
         caller.placeInput(arg, boxChar);
       } else if (arg.passBy == PassBy::Box) {
-        TODO("passing descriptor in call"); // generate emboxing if need.
+        caller.placeInput(arg, builder.createBox(getLoc(), argRef));
       } else if (arg.passBy == PassBy::AddressAndLength) {
         caller.placeAddressAndLengthInput(arg, fir::getBase(argRef),
                                           fir::getLen(argRef));
