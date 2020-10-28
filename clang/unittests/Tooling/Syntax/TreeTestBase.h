@@ -20,7 +20,9 @@
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "clang/Tooling/Syntax/Tree.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Testing/Support/Annotations.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -53,6 +55,14 @@ protected:
 };
 
 std::vector<TestClangConfig> allTestClangConfigs();
+
+MATCHER_P(role, R, "") {
+  if (arg.getRole() == R)
+    return true;
+  *result_listener << "role is " << llvm::to_string(arg.getRole());
+  return false;
+}
+
 } // namespace syntax
 } // namespace clang
 #endif // LLVM_CLANG_UNITTESTS_TOOLING_SYNTAX_TREETESTBASE_H
