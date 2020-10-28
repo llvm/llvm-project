@@ -2,6 +2,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Bufferize.cpp
   CodegenStrategy.cpp
   DropUnitDims.cpp
+  ElementwiseToLinalg.cpp
   Fusion.cpp
   FusionOnTensors.cpp
   Hoisting.cpp
