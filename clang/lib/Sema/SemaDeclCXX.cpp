@@ -1374,11 +1374,23 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
     if (FD->isUnnamedBitfield())
       continue;
 
-    if (FD->isAnonymousStructOrUnion()) {
-      S.Diag(Src->getLocation(), diag::err_decomp_decl_anon_union_member)
-        << DecompType << FD->getType()->isUnionType();
-      S.Diag(FD->getLocation(), diag::note_declared_at);
-      return true;
+    // All the non-static data members are required to be nameable, so they
+    // must all have names.
+    if (!FD->getDeclName()) {
+      if (RD->isLambda()) {
+        S.Diag(Src->getLocation(), diag::err_decomp_decl_lambda);
+        S.Diag(RD->getLocation(), diag::note_lambda_decl);
+        return true;
+      }
+
+      if (FD->isAnonymousStructOrUnion()) {
+        S.Diag(Src->getLocation(), diag::err_decomp_decl_anon_union_member)
+          << DecompType << FD->getType()->isUnionType();
+        S.Diag(FD->getLocation(), diag::note_declared_at);
+        return true;
+      }
+
+      // FIXME: Are there any other ways we could have an anonymous member?
     }
 
     // We have a real field to bind.
