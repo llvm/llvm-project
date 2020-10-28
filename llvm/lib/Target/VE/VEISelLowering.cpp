@@ -817,6 +817,17 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
 
   /// } Floating-point math functions
 
+  /// Atomic instructions {
+
+  setMaxAtomicSizeInBitsSupported(64);
+  setMinCmpXchgSizeInBits(32);
+  setSupportsUnalignedAtomics(false);
+
+  // Use custom inserter for ATOMIC_FENCE.
+  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
+
+  /// } Atomic isntructions
+
   setStackPointerRegisterToSaveRestore(VE::SX11);
 
   // We have target-specific dag combine patterns for the following nodes:
@@ -843,6 +854,7 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
     TARGET_NODE_CASE(GETFUNPLT)
     TARGET_NODE_CASE(GETSTACKTOP)
     TARGET_NODE_CASE(GETTLSADDR)
+    TARGET_NODE_CASE(MEMBARRIER)
     TARGET_NODE_CASE(CALL)
     TARGET_NODE_CASE(RET_FLAG)
     TARGET_NODE_CASE(GLOBAL_BASE_REG)
@@ -944,6 +956,51 @@ SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
 }
 
 /// Custom Lower {
+
+SDValue VETargetLowering::lowerATOMIC_FENCE(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  AtomicOrdering FenceOrdering = static_cast<AtomicOrdering>(
+      cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue());
+  SyncScope::ID FenceSSID = static_cast<SyncScope::ID>(
+      cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue());
+
+  // VE uses Release consistency, so need a fence instruction if it is a
+  // cross-thread fence.
+  if (FenceSSID == SyncScope::System) {
+    switch (FenceOrdering) {
+    case AtomicOrdering::NotAtomic:
+    case AtomicOrdering::Unordered:
+    case AtomicOrdering::Monotonic:
+      // No need to generate fencem instruction here.
+      break;
+    case AtomicOrdering::Acquire:
+      // Generate "fencem 2" as acquire fence.
+      return SDValue(DAG.getMachineNode(VE::FENCEM, DL, MVT::Other,
+                                        DAG.getTargetConstant(2, DL, MVT::i32),
+                                        Op.getOperand(0)),
+                     0);
+    case AtomicOrdering::Release:
+      // Generate "fencem 1" as release fence.
+      return SDValue(DAG.getMachineNode(VE::FENCEM, DL, MVT::Other,
+                                        DAG.getTargetConstant(1, DL, MVT::i32),
+                                        Op.getOperand(0)),
+                     0);
+    case AtomicOrdering::AcquireRelease:
+    case AtomicOrdering::SequentiallyConsistent:
+      // Generate "fencem 3" as acq_rel and seq_cst fence.
+      // FIXME: "fencem 3" doesn't wait for for PCIe deveices accesses,
+      //        so  seq_cst may require more instruction for them.
+      return SDValue(DAG.getMachineNode(VE::FENCEM, DL, MVT::Other,
+                                        DAG.getTargetConstant(3, DL, MVT::i32),
+                                        Op.getOperand(0)),
+                     0);
+    }
+  }
+
+  // MEMBARRIER is a compiler barrier; it codegens to a no-op.
+  return DAG.getNode(VEISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
+}
 
 SDValue VETargetLowering::lowerGlobalAddress(SDValue Op,
                                              SelectionDAG &DAG) const {
@@ -1263,6 +1320,8 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default:
     llvm_unreachable("Should not custom lower this!");
+  case ISD::ATOMIC_FENCE:
+    return lowerATOMIC_FENCE(Op, DAG);
   case ISD::BlockAddress:
     return lowerBlockAddress(Op, DAG);
   case ISD::ConstantPool:

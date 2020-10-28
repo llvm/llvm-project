@@ -32,6 +32,8 @@ enum NodeType : unsigned {
   GETSTACKTOP, // retrieve address of stack top (first address of
                // locals and temporaries)
 
+  MEMBARRIER, // Compiler barrier only; generate a no-op.
+
   CALL,            // A call instruction.
   RET_FLAG,        // Return with a flag operand.
   GLOBAL_BASE_REG, // Global base reg for PIC.
@@ -77,6 +79,7 @@ public:
   /// Custom Lower {
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
+  SDValue lowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
