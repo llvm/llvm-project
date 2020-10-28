@@ -2180,6 +2180,25 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case ARM::PATCHABLE_TAIL_CALL:
     LowerPATCHABLE_TAIL_CALL(*MI);
     return;
+  case ARM::SpeculationBarrierISBDSBEndBB: {
+    // Print DSB SYS + ISB
+    MCInst TmpInstDSB;
+    TmpInstDSB.setOpcode(ARM::DSB);
+    TmpInstDSB.addOperand(MCOperand::createImm(0xf));
+    EmitToStreamer(*OutStreamer, TmpInstDSB);
+    MCInst TmpInstISB;
+    TmpInstISB.setOpcode(ARM::ISB);
+    TmpInstISB.addOperand(MCOperand::createImm(0xf));
+    EmitToStreamer(*OutStreamer, TmpInstISB);
+    return;
+  }
+  case ARM::SpeculationBarrierSBEndBB: {
+    // Print SB
+    MCInst TmpInstSB;
+    TmpInstSB.setOpcode(ARM::SB);
+    EmitToStreamer(*OutStreamer, TmpInstSB);
+    return;
+  }
   }
 
   MCInst TmpInst;

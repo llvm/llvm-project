@@ -339,8 +339,10 @@ bool ARMBaseInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     // out.
     bool CantAnalyze = false;
 
-    // Skip over DEBUG values and predicated nonterminators.
-    while (I->isDebugInstr() || !I->isTerminator()) {
+    // Skip over DEBUG values, predicated nonterminators and speculation
+    // barrier terminators.
+    while (I->isDebugInstr() || !I->isTerminator() ||
+           isSpeculationBarrierEndBBOpcode(I->getOpcode()) ){
       if (I == MBB.instr_begin())
         return false;
       --I;
@@ -389,6 +391,9 @@ bool ARMBaseInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
         while (DI != MBB.instr_end()) {
           MachineInstr &InstToDelete = *DI;
           ++DI;
+          // Speculation barriers must not be deleted.
+          if (isSpeculationBarrierEndBBOpcode(InstToDelete.getOpcode()))
+            continue;
           InstToDelete.eraseFromParent();
         }
       }
@@ -672,12 +677,19 @@ bool ARMBaseInstrInfo::isPredicable(const MachineInstr &MI) const {
   if (!isEligibleForITBlock(&MI))
     return false;
 
+  const MachineFunction *MF = MI.getParent()->getParent();
   const ARMFunctionInfo *AFI =
-      MI.getParent()->getParent()->getInfo<ARMFunctionInfo>();
+      MF->getInfo<ARMFunctionInfo>();
 
   // Neon instructions in Thumb2 IT blocks are deprecated, see ARMARM.
   // In their ARM encoding, they can't be encoded in a conditional form.
   if ((MI.getDesc().TSFlags & ARMII::DomainMask) == ARMII::DomainNEON)
+    return false;
+
+  // Make indirect control flow changes unpredicable when SLS mitigation is
+  // enabled.
+  const ARMSubtarget &ST = MF->getSubtarget<ARMSubtarget>();
+  if (ST.hardenSlsRetBr() && isIndirectControlFlowNotComingBack(MI))
     return false;
 
   if (AFI->isThumb2Function()) {
@@ -762,6 +774,12 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       Size = alignTo(Size, 4);
     return Size;
   }
+  case ARM::SpeculationBarrierISBDSBEndBB:
+    // This gets lowered to 2 4-byte instructions.
+    return 8;
+  case ARM::SpeculationBarrierSBEndBB:
+    // This gets lowered to 1 4-byte instructions.
+    return 4;
   }
 }
 

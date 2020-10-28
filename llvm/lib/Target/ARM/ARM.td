@@ -563,6 +563,16 @@ foreach i = {0-7} in
                                               [HasCDEOps]>;
 
 //===----------------------------------------------------------------------===//
+// Control codegen mitigation against Straight Line Speculation vulnerability.
+//===----------------------------------------------------------------------===//
+
+def FeatureHardenSlsRetBr : SubtargetFeature<"harden-sls-retbr",
+  "HardenSlsRetBr", "true",
+  "Harden against straight line speculation across RETurn and BranchRegister "
+  "instructions">;
+
+
+//===----------------------------------------------------------------------===//
 // ARM Processor subtarget features.
 //
 
