@@ -2332,7 +2332,7 @@ static bool isTrivialCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
   const SCEV *LHSS = SE->getSCEVAtScope(LHS, L);
   const SCEV *RHSS = SE->getSCEVAtScope(RHS, L);
   // Can we prove it to be trivially true?
-  if (SE->isKnownPredicate(Pred, LHSS, RHSS))
+  if (SE->isKnownPredicateAt(Pred, LHSS, RHSS, BI))
     return true;
 
   return false;
