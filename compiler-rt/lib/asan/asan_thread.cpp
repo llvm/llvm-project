@@ -188,7 +188,7 @@ uptr AsanThread::stack_size() {
   return bounds.top - bounds.bottom;
 }
 
-// We want to create the FakeStack lazyly on the first use, but not eralier
+// We want to create the FakeStack lazily on the first use, but not earlier
 // than the stack size is known and the procedure has to be async-signal safe.
 FakeStack *AsanThread::AsyncSignalSafeLazyInitFakeStack() {
   uptr stack_size = this->stack_size();
@@ -211,6 +211,7 @@ FakeStack *AsanThread::AsyncSignalSafeLazyInitFakeStack() {
     stack_size_log =
         Max(stack_size_log, static_cast<uptr>(flags()->min_uar_stack_size_log));
     fake_stack_ = FakeStack::Create(stack_size_log);
+    DCHECK_EQ(GetCurrentThread(), this);
     SetTLSFakeStack(fake_stack_);
     return fake_stack_;
   }
@@ -230,8 +231,17 @@ void AsanThread::Init(const InitOptions *options) {
   }
   ClearShadowForThreadStackAndTLS();
   fake_stack_ = nullptr;
-  if (__asan_option_detect_stack_use_after_return)
+  if (__asan_option_detect_stack_use_after_return &&
+      tid() == GetCurrentTidOrInvalid()) {
+    // AsyncSignalSafeLazyInitFakeStack makes use of threadlocals and must be
+    // called from the context of the thread it is initializing, not its parent.
+    // Most platforms call AsanThread::Init on the newly-spawned thread, but
+    // Fuchsia calls this function from the parent thread.  To support that
+    // approach, we avoid calling AsyncSignalSafeLazyInitFakeStack here; it will
+    // be called by the new thread when it first attempts to access the fake
+    // stack.
     AsyncSignalSafeLazyInitFakeStack();
+  }
   int local = 0;
   VReport(1, "T%d: stack [%p,%p) size 0x%zx; local=%p\n", tid(),
           (void *)stack_bottom_, (void *)stack_top_, stack_top_ - stack_bottom_,
