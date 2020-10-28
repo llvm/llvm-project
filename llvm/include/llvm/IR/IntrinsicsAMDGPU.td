@@ -682,10 +682,16 @@ class AMDGPUDimGetResInfoProfile<AMDGPUDimProps dim> : AMDGPUDimProfile<"GET_RES
 class AMDGPUImageDimIntrinsicEval<AMDGPUDimProfile P_> {
   int NumDataArgs = !size(P_.DataArgs);
   int NumDmaskArgs = !if(P_.IsAtomic, 0, 1);
+  int NumExtraAddrArgs = !size(P_.ExtraAddrArgs);
   int NumVAddrArgs = !size(P_.AddrArgs);
+  int NumGradientArgs = !if(P_.Gradients, !size(P_.Dim.GradientArgs), 0);
+  int NumCoordArgs = !if(P_.IsSample, !size(P_.Dim.CoordSliceArgs), !size(P_.Dim.CoordSliceIntArgs));
   int NumRSrcArgs = 1;
   int NumSampArgs = !if(P_.IsSample, 2, 0);
   int DmaskArgIndex = NumDataArgs;
+  int VAddrArgIndex = !add(NumDataArgs, NumDmaskArgs);
+  int GradientArgIndex = !add(NumDataArgs, NumDmaskArgs, NumExtraAddrArgs);
+  int CoordArgIndex = !add(NumDataArgs, NumDmaskArgs, NumExtraAddrArgs, NumGradientArgs);
   int UnormArgIndex = !add(NumDataArgs, NumDmaskArgs, NumVAddrArgs, NumRSrcArgs, 1);
   int TexFailCtrlArgIndex = !add(NumDataArgs, NumDmaskArgs, NumVAddrArgs, NumRSrcArgs, NumSampArgs);
   int CachePolicyArgIndex = !add(TexFailCtrlArgIndex, 1);
@@ -973,9 +979,9 @@ class AMDGPUStructBufferStore<LLVMType data_ty = llvm_any_ty> : Intrinsic <
 def int_amdgcn_struct_buffer_store_format : AMDGPUStructBufferStore;
 def int_amdgcn_struct_buffer_store : AMDGPUStructBufferStore;
 
-class AMDGPURawBufferAtomic<LLVMType data_ty = llvm_any_ty> : Intrinsic <
-  [data_ty],
-  [LLVMMatchType<0>,  // vdata(VGPR)
+class AMDGPURawBufferAtomic<LLVMType data_ty = llvm_any_ty, bit NoRtn = 0> : Intrinsic <
+  !if(NoRtn, [], [data_ty]),
+  [!if(NoRtn, data_ty, LLVMMatchType<0>),  // vdata(VGPR)
    llvm_v4i32_ty,     // rsrc(SGPR)
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
    llvm_i32_ty,       // soffset(SGPR/imm, excluded from bounds checking and swizzling)
@@ -1005,9 +1011,12 @@ def int_amdgcn_raw_buffer_atomic_cmpswap : Intrinsic<
   [ImmArg<ArgIndex<5>>, IntrWillReturn], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<2, 0>;
 
-class AMDGPUStructBufferAtomic<LLVMType data_ty = llvm_any_ty> : Intrinsic <
-  [data_ty],
-  [LLVMMatchType<0>,  // vdata(VGPR)
+// gfx908 intrinsic
+def int_amdgcn_raw_buffer_atomic_fadd : AMDGPURawBufferAtomic<llvm_anyfloat_ty, /*NoRtn*/1>;
+
+class AMDGPUStructBufferAtomic<LLVMType data_ty = llvm_any_ty, bit NoRtn = 0> : Intrinsic <
+  !if(NoRtn, [], [data_ty]),
+  [!if(NoRtn, data_ty, LLVMMatchType<0>),  // vdata(VGPR)
    llvm_v4i32_ty,     // rsrc(SGPR)
    llvm_i32_ty,       // vindex(VGPR)
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
@@ -1038,6 +1047,10 @@ def int_amdgcn_struct_buffer_atomic_cmpswap : Intrinsic<
    llvm_i32_ty],      // cachepolicy(imm; bit 1 = slc)
   [ImmArg<ArgIndex<6>>, IntrWillReturn], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<2, 0>;
+
+// gfx908 intrinsic
+def int_amdgcn_struct_buffer_atomic_fadd : AMDGPUStructBufferAtomic<llvm_anyfloat_ty, /*NoRtn*/1>;
+
 
 // Obsolescent tbuffer intrinsics.
 def int_amdgcn_tbuffer_load : Intrinsic <
@@ -1804,8 +1817,10 @@ class AMDGPUGlobalAtomicNoRtn : Intrinsic <
   [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>], "",
   [SDNPMemOperand]>;
 
-def int_amdgcn_buffer_atomic_fadd    : AMDGPUBufferAtomicNoRtn;
 def int_amdgcn_global_atomic_fadd    : AMDGPUGlobalAtomicNoRtn;
+
+// Legacy form of the intrinsic. raw and struct forms should be preferred.
+def int_amdgcn_buffer_atomic_fadd : AMDGPUBufferAtomicNoRtn;
 
 // llvm.amdgcn.mfma.f32.* vdst, srcA, srcB, srcC, cbsz, abid, blgp
 def int_amdgcn_mfma_f32_32x32x1f32 : GCCBuiltin<"__builtin_amdgcn_mfma_f32_32x32x1f32">,

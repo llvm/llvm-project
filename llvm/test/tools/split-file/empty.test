@@ -1,0 +1,4 @@
+# RUN: split-file --no-leading-lines %s %t
+# RUN: count 0 < %t/empty
+
+#--- empty

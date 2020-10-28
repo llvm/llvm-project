@@ -561,6 +561,7 @@ namespace {
       Out.indent(2) << "Target options:\n";
       Out.indent(4) << "  Triple: " << TargetOpts.Triple << "\n";
       Out.indent(4) << "  CPU: " << TargetOpts.CPU << "\n";
+      Out.indent(4) << "  TuneCPU: " << TargetOpts.TuneCPU << "\n";
       Out.indent(4) << "  ABI: " << TargetOpts.ABI << "\n";
 
       if (!TargetOpts.FeaturesAsWritten.empty()) {

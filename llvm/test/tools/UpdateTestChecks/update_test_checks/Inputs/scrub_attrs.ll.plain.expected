@@ -5,7 +5,7 @@ declare void @foo()
 
 define internal void @bar() {
 ; CHECK-LABEL: @bar(
-; CHECK-NEXT:    call void @foo() #0
+; CHECK-NEXT:    call void @foo() [[ATTR0:#.*]]
 ; CHECK-NEXT:    ret void
 ;
   call void @foo() readnone

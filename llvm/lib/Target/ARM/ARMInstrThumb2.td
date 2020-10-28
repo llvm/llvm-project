@@ -2636,6 +2636,15 @@ def : T2Pat<(int_arm_ssat16 GPR:$a, imm1_16:$pos),
             (t2SSAT16 imm1_16:$pos, GPR:$a)>;
 def : T2Pat<(int_arm_usat16 GPR:$a, imm0_15:$pos),
             (t2USAT16 imm0_15:$pos, GPR:$a)>;
+def : T2Pat<(int_arm_ssat (shl GPRnopc:$a, imm0_31:$shft), imm1_32:$pos),
+            (t2SSAT imm1_32:$pos, GPRnopc:$a, imm0_31:$shft)>;
+def : T2Pat<(int_arm_ssat (sra GPRnopc:$a, asr_imm:$shft), imm1_32:$pos),
+            (t2SSAT imm1_32:$pos, GPRnopc:$a, asr_imm:$shft)>;
+def : T2Pat<(int_arm_usat (shl GPRnopc:$a, imm0_31:$shft), imm0_31:$pos),
+            (t2USAT imm0_31:$pos, GPRnopc:$a, imm0_31:$shft)>;
+def : T2Pat<(int_arm_usat (sra GPRnopc:$a, asr_imm:$shft), imm0_31:$pos),
+            (t2USAT imm0_31:$pos, GPRnopc:$a, asr_imm:$shft)>;
+
 
 //===----------------------------------------------------------------------===//
 //  Shift and rotate Instructions.

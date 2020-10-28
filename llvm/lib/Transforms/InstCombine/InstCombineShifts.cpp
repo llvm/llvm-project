@@ -667,9 +667,12 @@ static bool canShiftBinOpWithConstantRHS(BinaryOperator &Shift,
   case Instruction::Add:
     return Shift.getOpcode() == Instruction::Shl;
   case Instruction::Or:
-  case Instruction::Xor:
   case Instruction::And:
     return true;
+  case Instruction::Xor:
+    // Do not change a 'not' of logical shift because that would create a normal
+    // 'xor'. The 'not' is likely better for analysis, SCEV, and codegen.
+    return !(Shift.isLogicalShift() && match(BO, m_Not(m_Value())));
   }
 }
 

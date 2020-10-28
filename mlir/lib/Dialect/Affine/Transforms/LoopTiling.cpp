@@ -157,6 +157,75 @@ constructTiledIndexSetHyperRect(MutableArrayRef<AffineForOp> origLoops,
   }
 }
 
+/// This function checks whether hyper-rectangular loop tiling of the nest
+/// represented by `origLoops` is valid. The validity condition is from Irigoin
+/// and Triolet, which states that two tiles cannot depend on each other. We
+/// simplify such condition to just checking whether there is any negative
+/// dependence direction, since we have the prior knowledge that the tiling
+/// results will be hyper-rectangles, which are scheduled in the
+/// lexicographically increasing order on the vector of loop indices. This
+/// function will return failure when any dependence component is negative along
+/// any of `origLoops`.
+static LogicalResult
+checkTilingLegality(MutableArrayRef<mlir::AffineForOp> origLoops,
+                    ArrayRef<unsigned> tileSizes) {
+  assert(!origLoops.empty() && "no original loops provided");
+
+  // We first find out all dependences we intend to check.
+  SmallVector<Operation *, 8> loadAndStoreOps;
+  origLoops[0].getOperation()->walk([&](Operation *op) {
+    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op))
+      loadAndStoreOps.push_back(op);
+  });
+
+  unsigned numOps = loadAndStoreOps.size();
+  unsigned numLoops = origLoops.size();
+  FlatAffineConstraints dependenceConstraints;
+  for (unsigned d = 1; d <= numLoops + 1; ++d) {
+    for (unsigned i = 0; i < numOps; ++i) {
+      Operation *srcOp = loadAndStoreOps[i];
+      MemRefAccess srcAccess(srcOp);
+      for (unsigned j = 0; j < numOps; ++j) {
+        Operation *dstOp = loadAndStoreOps[j];
+        MemRefAccess dstAccess(dstOp);
+
+        SmallVector<DependenceComponent, 2> depComps;
+        dependenceConstraints.reset();
+        DependenceResult result = checkMemrefAccessDependence(
+            srcAccess, dstAccess, d, &dependenceConstraints, &depComps);
+
+        // Skip if there is no dependence in this case.
+        if (!hasDependence(result))
+          continue;
+
+        // Check whether there is any negative direction vector in the
+        // dependence components found above, which means that dependence is
+        // violated by the default hyper-rect tiling method.
+        LLVM_DEBUG(llvm::dbgs() << "Checking whether tiling legality violated "
+                                   "for dependence at depth: "
+                                << Twine(d) << " between:\n";);
+        LLVM_DEBUG(srcAccess.opInst->dump(););
+        LLVM_DEBUG(dstAccess.opInst->dump(););
+        for (unsigned k = 0, e = depComps.size(); k < e; k++) {
+          DependenceComponent depComp = depComps[k];
+          if (depComp.lb.hasValue() && depComp.ub.hasValue() &&
+              depComp.lb.getValue() < depComp.ub.getValue() &&
+              depComp.ub.getValue() < 0) {
+            LLVM_DEBUG(llvm::dbgs()
+                       << "Dependence component lb = "
+                       << Twine(depComp.lb.getValue())
+                       << " ub = " << Twine(depComp.ub.getValue())
+                       << " is negative  at depth: " << Twine(d)
+                       << " and thus violates the legality rule.\n");
+            return failure();
+          }
+        }
+      }
+    }
+  }
+
+  return success();
+}
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
 /// and intra-tile loops. A band is a contiguous set of loops.
 //  TODO: handle non hyper-rectangular spaces.
@@ -171,6 +240,10 @@ mlir::tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
   assert(isPerfectlyNested(input) && "input loops not perfectly nested");
 
   auto origLoops = input;
+
+  // Perform tiling legality test.
+  if (failed(checkTilingLegality(origLoops, tileSizes)))
+    origLoops[0].emitRemark("tiled code is illegal due to dependences");
 
   AffineForOp rootAffineForOp = origLoops[0];
   auto loc = rootAffineForOp.getLoc();
@@ -216,7 +289,11 @@ mlir::tilePerfectlyNested(MutableArrayRef<AffineForOp> input,
   extractForInductionVars(input, &origLoopIVs);
 
   FlatAffineConstraints cst;
-  getIndexSet(input, &cst);
+  SmallVector<Operation *, 8> ops;
+  ops.reserve(input.size());
+  for (AffineForOp forOp : input)
+    ops.push_back(forOp);
+  getIndexSet(ops, &cst);
   if (!cst.isHyperRectangular(0, width)) {
     rootAffineForOp.emitError("tiled code generation unimplemented for the "
                               "non-hyperrectangular case");

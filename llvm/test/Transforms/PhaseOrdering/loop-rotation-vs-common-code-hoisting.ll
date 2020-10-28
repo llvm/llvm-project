@@ -5,11 +5,14 @@
 ; RUN: opt -O3 -rotation-max-header-size=1 -S < %s                    | FileCheck %s --check-prefixes=HOIST,THR1,FALLBACK2
 ; RUN: opt -passes='default<O3>' -rotation-max-header-size=1 -S < %s  | FileCheck %s --check-prefixes=HOIST,THR1,FALLBACK3
 
-; RUN: opt -O3 -rotation-max-header-size=2 -S < %s                    | FileCheck %s --check-prefixes=ROTATED_LATER,ROTATED_LATER_OLDPM,FALLBACK4
-; RUN: opt -passes='default<O3>' -rotation-max-header-size=2 -S < %s  | FileCheck %s --check-prefixes=ROTATED_LATER,ROTATED_LATER_NEWPM,FALLBACK5
+; RUN: opt -O3 -rotation-max-header-size=2 -S < %s                    | FileCheck %s --check-prefixes=HOIST,THR2,FALLBACK4
+; RUN: opt -passes='default<O3>' -rotation-max-header-size=2 -S < %s  | FileCheck %s --check-prefixes=HOIST,THR2,FALLBACK5
 
-; RUN: opt -O3 -rotation-max-header-size=3 -S < %s                    | FileCheck %s --check-prefixes=ROTATE,ROTATE_OLDPM,FALLBACK6
-; RUN: opt -passes='default<O3>' -rotation-max-header-size=3 -S < %s  | FileCheck %s --check-prefixes=ROTATE,ROTATE_NEWPM,FALLBACK7
+; RUN: opt -O3 -rotation-max-header-size=3 -S < %s                    | FileCheck %s --check-prefixes=ROTATED_LATER,ROTATED_LATER_OLDPM,FALLBACK6
+; RUN: opt -passes='default<O3>' -rotation-max-header-size=3 -S < %s  | FileCheck %s --check-prefixes=ROTATED_LATER,ROTATED_LATER_NEWPM,FALLBACK7
+
+; RUN: opt -O3 -rotation-max-header-size=4 -S < %s                    | FileCheck %s --check-prefixes=ROTATE,ROTATE_OLDPM,FALLBACK8
+; RUN: opt -passes='default<O3>' -rotation-max-header-size=4 -S < %s  | FileCheck %s --check-prefixes=ROTATE,ROTATE_NEWPM,FALLBACK9
 
 ; This example is produced from a very basic C code:
 ;
@@ -58,8 +61,8 @@ define void @_Z4loopi(i32 %width) {
 ; HOIST-NEXT:    br label [[FOR_COND:%.*]]
 ; HOIST:       for.cond:
 ; HOIST-NEXT:    [[I_0:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY:%.*]] ], [ 0, [[FOR_COND_PREHEADER]] ]
-; HOIST-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[I_0]], [[TMP0]]
 ; HOIST-NEXT:    tail call void @f0()
+; HOIST-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[I_0]], [[TMP0]]
 ; HOIST-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; HOIST:       for.cond.cleanup:
 ; HOIST-NEXT:    tail call void @f2()
@@ -77,17 +80,17 @@ define void @_Z4loopi(i32 %width) {
 ; ROTATED_LATER_OLDPM-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; ROTATED_LATER_OLDPM:       for.cond.preheader:
 ; ROTATED_LATER_OLDPM-NEXT:    [[TMP0:%.*]] = add nsw i32 [[WIDTH]], -1
+; ROTATED_LATER_OLDPM-NEXT:    tail call void @f0()
 ; ROTATED_LATER_OLDPM-NEXT:    [[EXITCOND_NOT3:%.*]] = icmp eq i32 [[TMP0]], 0
 ; ROTATED_LATER_OLDPM-NEXT:    br i1 [[EXITCOND_NOT3]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY:%.*]]
 ; ROTATED_LATER_OLDPM:       for.cond.cleanup:
-; ROTATED_LATER_OLDPM-NEXT:    tail call void @f0()
 ; ROTATED_LATER_OLDPM-NEXT:    tail call void @f2()
 ; ROTATED_LATER_OLDPM-NEXT:    br label [[RETURN]]
 ; ROTATED_LATER_OLDPM:       for.body:
 ; ROTATED_LATER_OLDPM-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_COND_PREHEADER]] ]
-; ROTATED_LATER_OLDPM-NEXT:    tail call void @f0()
 ; ROTATED_LATER_OLDPM-NEXT:    tail call void @f1()
 ; ROTATED_LATER_OLDPM-NEXT:    [[INC]] = add nuw i32 [[I_04]], 1
+; ROTATED_LATER_OLDPM-NEXT:    tail call void @f0()
 ; ROTATED_LATER_OLDPM-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[TMP0]]
 ; ROTATED_LATER_OLDPM-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ; ROTATED_LATER_OLDPM:       return:
@@ -99,19 +102,19 @@ define void @_Z4loopi(i32 %width) {
 ; ROTATED_LATER_NEWPM-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; ROTATED_LATER_NEWPM:       for.cond.preheader:
 ; ROTATED_LATER_NEWPM-NEXT:    [[TMP0:%.*]] = add nsw i32 [[WIDTH]], -1
+; ROTATED_LATER_NEWPM-NEXT:    tail call void @f0()
 ; ROTATED_LATER_NEWPM-NEXT:    [[EXITCOND_NOT3:%.*]] = icmp eq i32 [[TMP0]], 0
 ; ROTATED_LATER_NEWPM-NEXT:    br i1 [[EXITCOND_NOT3]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND_PREHEADER_FOR_BODY_CRIT_EDGE:%.*]]
 ; ROTATED_LATER_NEWPM:       for.cond.preheader.for.body_crit_edge:
 ; ROTATED_LATER_NEWPM-NEXT:    [[INC_1:%.*]] = add nuw i32 0, 1
 ; ROTATED_LATER_NEWPM-NEXT:    br label [[FOR_BODY:%.*]]
 ; ROTATED_LATER_NEWPM:       for.cond.cleanup:
-; ROTATED_LATER_NEWPM-NEXT:    tail call void @f0()
 ; ROTATED_LATER_NEWPM-NEXT:    tail call void @f2()
 ; ROTATED_LATER_NEWPM-NEXT:    br label [[RETURN]]
 ; ROTATED_LATER_NEWPM:       for.body:
 ; ROTATED_LATER_NEWPM-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[INC_0:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE:%.*]] ], [ [[INC_1]], [[FOR_COND_PREHEADER_FOR_BODY_CRIT_EDGE]] ]
-; ROTATED_LATER_NEWPM-NEXT:    tail call void @f0()
 ; ROTATED_LATER_NEWPM-NEXT:    tail call void @f1()
+; ROTATED_LATER_NEWPM-NEXT:    tail call void @f0()
 ; ROTATED_LATER_NEWPM-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_PHI]], [[TMP0]]
 ; ROTATED_LATER_NEWPM-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_FOR_BODY_CRIT_EDGE]]
 ; ROTATED_LATER_NEWPM:       for.body.for.body_crit_edge:
@@ -126,19 +129,19 @@ define void @_Z4loopi(i32 %width) {
 ; ROTATE_OLDPM-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; ROTATE_OLDPM:       for.cond.preheader:
 ; ROTATE_OLDPM-NEXT:    [[CMP13_NOT:%.*]] = icmp eq i32 [[WIDTH]], 1
+; ROTATE_OLDPM-NEXT:    tail call void @f0()
 ; ROTATE_OLDPM-NEXT:    br i1 [[CMP13_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; ROTATE_OLDPM:       for.body.preheader:
 ; ROTATE_OLDPM-NEXT:    [[TMP0:%.*]] = add nsw i32 [[WIDTH]], -1
 ; ROTATE_OLDPM-NEXT:    br label [[FOR_BODY:%.*]]
 ; ROTATE_OLDPM:       for.cond.cleanup:
-; ROTATE_OLDPM-NEXT:    tail call void @f0()
 ; ROTATE_OLDPM-NEXT:    tail call void @f2()
 ; ROTATE_OLDPM-NEXT:    br label [[RETURN]]
 ; ROTATE_OLDPM:       for.body:
 ; ROTATE_OLDPM-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; ROTATE_OLDPM-NEXT:    tail call void @f0()
 ; ROTATE_OLDPM-NEXT:    tail call void @f1()
 ; ROTATE_OLDPM-NEXT:    [[INC]] = add nuw nsw i32 [[I_04]], 1
+; ROTATE_OLDPM-NEXT:    tail call void @f0()
 ; ROTATE_OLDPM-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[TMP0]]
 ; ROTATE_OLDPM-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ; ROTATE_OLDPM:       return:
@@ -150,19 +153,19 @@ define void @_Z4loopi(i32 %width) {
 ; ROTATE_NEWPM-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; ROTATE_NEWPM:       for.cond.preheader:
 ; ROTATE_NEWPM-NEXT:    [[CMP13_NOT:%.*]] = icmp eq i32 [[WIDTH]], 1
+; ROTATE_NEWPM-NEXT:    tail call void @f0()
 ; ROTATE_NEWPM-NEXT:    br i1 [[CMP13_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; ROTATE_NEWPM:       for.body.preheader:
 ; ROTATE_NEWPM-NEXT:    [[TMP0:%.*]] = add nsw i32 [[WIDTH]], -1
 ; ROTATE_NEWPM-NEXT:    [[INC_1:%.*]] = add nuw nsw i32 0, 1
 ; ROTATE_NEWPM-NEXT:    br label [[FOR_BODY:%.*]]
 ; ROTATE_NEWPM:       for.cond.cleanup:
-; ROTATE_NEWPM-NEXT:    tail call void @f0()
 ; ROTATE_NEWPM-NEXT:    tail call void @f2()
 ; ROTATE_NEWPM-NEXT:    br label [[RETURN]]
 ; ROTATE_NEWPM:       for.body:
 ; ROTATE_NEWPM-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[INC_0:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE:%.*]] ], [ [[INC_1]], [[FOR_BODY_PREHEADER]] ]
-; ROTATE_NEWPM-NEXT:    tail call void @f0()
 ; ROTATE_NEWPM-NEXT:    tail call void @f1()
+; ROTATE_NEWPM-NEXT:    tail call void @f0()
 ; ROTATE_NEWPM-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_PHI]], [[TMP0]]
 ; ROTATE_NEWPM-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_FOR_BODY_CRIT_EDGE]]
 ; ROTATE_NEWPM:       for.body.for.body_crit_edge:

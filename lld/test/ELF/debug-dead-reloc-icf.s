@@ -9,7 +9,7 @@
 # RUN: llvm-objdump -s %t | FileCheck %s
 
 # CHECK:      Contents of section .debug_info:
-# CHECK-NEXT:  0000 {{[0-9a-f]+}}000 00000000 ffffffff ffffffff
+# CHECK-NEXT:  0000 {{[0-9a-f]+}}000 00000000 00000000 00000000
 # CHECK:      Contents of section .debug_line:
 # CHECK-NEXT:  0000 [[ADDR:[0-9a-f]+]] 00000000
 # CHECK-SAME:                                   [[ADDR]] 00000000

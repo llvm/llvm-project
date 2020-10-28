@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
-; RUN: opt -loop-unswitch -loop-unswitch-threshold 13 -disable-output -stats -info-output-file - < %s | FileCheck --check-prefix=STATS %s
-; RUN: opt -S -loop-unswitch -loop-unswitch-threshold 13 -verify-loop-info -verify-dom-info < %s | FileCheck %s
-; RUN: opt -S -loop-unswitch -loop-unswitch-threshold 13 -verify-loop-info -verify-dom-info -enable-mssa-loop-dependency=true -verify-memoryssa < %s | FileCheck %s
+; RUN: opt -loop-unswitch -enable-new-pm=0 -loop-unswitch-threshold 13 -disable-output -stats -info-output-file - < %s | FileCheck --check-prefix=STATS %s
+; RUN: opt -S -loop-unswitch -enable-new-pm=0 -loop-unswitch-threshold 13 -verify-loop-info -verify-dom-info < %s | FileCheck %s
+; RUN: opt -S -loop-unswitch -enable-new-pm=0 -loop-unswitch-threshold 13 -verify-loop-info -verify-dom-info -enable-mssa-loop-dependency=true -verify-memoryssa < %s | FileCheck %s
 
 ; STATS: 1 loop-unswitch - Number of switches unswitched
 

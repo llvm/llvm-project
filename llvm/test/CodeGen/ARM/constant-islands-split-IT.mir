@@ -99,12 +99,10 @@ body:             |
   ; CHECK:   successors:
   ; CHECK:   CONSTPOOL_ENTRY 7, %const.1, 8
   ; CHECK: bb.7 (align 2):
-  ; CHECK:   successors:
   ; CHECK:   liveins: $r0, $cpsr, $d0, $s0, $s1, $d1, $s2, $s3, $d2, $s4, $s5
   ; CHECK:   t2IT 0, 4, implicit-def $itstate
   ; CHECK:   $sp = tMOVr $r0, 0 /* CC::eq */, $cpsr, implicit $itstate
   ; CHECK:   $sp = t2LDMIA_RET $sp, 0 /* CC::eq */, killed $cpsr, def $r4, def $r5, def $r6, def $r7, def $r8, def $r9, def $r10, def $r11, def $pc, implicit killed $d0, implicit killed $d1, implicit killed $d2, implicit $sp, implicit killed $itstate
-  ; CHECK:   tBL 14 /* CC::al */, $noreg, &__stack_chk_fail, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
   ; CHECK: bb.8 (align 8):
   ; CHECK:   successors:
   ; CHECK:   CONSTPOOL_ENTRY 6, %const.0, 8
@@ -138,7 +136,6 @@ body:             |
     t2IT 0, 4, implicit-def $itstate
     $sp = tMOVr $r0, 0, $cpsr, implicit $itstate
     $sp = t2LDMIA_RET $sp, 0, killed $cpsr, def $r4, def $r5, def $r6, def $r7, def $r8, def $r9, def $r10, def $r11, def $pc, implicit killed $d0, implicit killed $d1, implicit killed $d2, implicit $sp, implicit killed $itstate
-    tBL 14, $noreg, &__stack_chk_fail, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
 
   bb.3:
     successors: %bb.3(0x80000000)

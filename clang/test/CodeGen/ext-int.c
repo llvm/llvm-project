@@ -45,3 +45,16 @@ void OffsetOfTest() {
   // LIN32: store i32 2097156, i32* %{{.+}}
   // WIN32: store i32 2097160, i32* %{{.+}}
 }
+
+void Size1ExtIntParam(unsigned _ExtInt(1) A) {
+  // CHECK: define {{.*}}void @Size1ExtIntParam(i1{{.*}}  %[[PARAM:.+]])
+  // CHECK: %[[PARAM_ADDR:.+]] = alloca i1
+  // CHECK: %[[B:.+]] = alloca [5 x i1]
+  // CHECK: store i1 %[[PARAM]], i1* %[[PARAM_ADDR]]
+  unsigned _ExtInt(1) B[5];
+
+  // CHECK: %[[PARAM_LOAD:.+]] = load i1, i1* %[[PARAM_ADDR]]
+  // CHECK: %[[IDX:.+]] = getelementptr inbounds [5 x i1], [5 x i1]* %[[B]]
+  // CHECK: store i1 %[[PARAM_LOAD]], i1* %[[IDX]]
+  B[2] = A;
+}

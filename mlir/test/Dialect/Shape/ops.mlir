@@ -221,7 +221,7 @@ func @num_elements_shape(%arg : !shape.shape) -> !shape.size {
   return %result : !shape.size
 }
 
-// Testing nvoking shape function from another. shape_equal_shapes is merely
+// Testing invoking shape function from another. shape_equal_shapes is merely
 // a trivial helper function to invoke elsewhere.
 func @shape_equal_shapes(%a : !shape.value_shape, %b : !shape.value_shape) -> !shape.shape {
   %0 = shape.shape_of %a : !shape.value_shape -> !shape.shape
@@ -234,4 +234,27 @@ func @shape_with_shape(%a : !shape.value_shape, %b : !shape.value_shape) -> !sha
   %1 = shape.with_shape %b, %0 : !shape.value_shape, !shape.shape
   %2 = call @shape_equal_shapes(%a, %1) : (!shape.value_shape, !shape.value_shape) -> !shape.shape
   return %2 : !shape.shape
+}
+
+func @any_on_shape(%a : !shape.shape, %b : !shape.shape, %c : !shape.shape)
+    -> !shape.shape {
+  %result = shape.any %a, %b, %c
+      : !shape.shape, !shape.shape, !shape.shape -> !shape.shape
+  return %result : !shape.shape
+}
+
+func @any_on_mixed(%a : tensor<?xindex>,
+                   %b : tensor<?xindex>,
+                   %c : !shape.shape) -> !shape.shape {
+  %result = shape.any %a, %b, %c
+      : tensor<?xindex>, tensor<?xindex>, !shape.shape -> !shape.shape
+  return %result : !shape.shape
+}
+
+func @any_on_extent_tensors(%a : tensor<?xindex>,
+                            %b : tensor<?xindex>,
+                            %c : tensor<?xindex>) -> tensor<?xindex> {
+  %result = shape.any %a, %b, %c
+      : tensor<?xindex>, tensor<?xindex>, tensor<?xindex> -> tensor<?xindex>
+  return %result : tensor<?xindex>
 }

@@ -12,9 +12,14 @@
 
 #include <type_traits>
 
+#include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
+#include "mlir/Dialect/SCF/EDSC/Intrinsics.h"
+#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/Dialect/Vector/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorTransforms.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
@@ -1571,16 +1576,14 @@ namespace mlir {
 //
 /// This only kicks in when VectorTransformsOptions is set to OuterProduct and
 /// the vector.contract op is a row-major matrix multiply.
-LogicalResult
-ContractionOpToMatmulOpLowering::match(vector::ContractionOp op) const {
+LogicalResult ContractionOpToMatmulOpLowering::matchAndRewrite(
+    vector::ContractionOp op, PatternRewriter &rewriter) const {
   // TODO: implement masks
   if (llvm::size(op.masks()) != 0)
     return failure();
-
   if (vectorTransformsOptions.vectorContractLowering !=
       vector::VectorContractLowering::Matmul)
     return failure();
-
   if (failed(filter(op)))
     return failure();
 
@@ -1593,11 +1596,10 @@ ContractionOpToMatmulOpLowering::match(vector::ContractionOp op) const {
   if (!isRowMajorMatmul(op.indexing_maps()))
     return failure();
 
-  return success();
-}
+  Type elementType = op.getLhsType().getElementType();
+  if (!elementType.isIntOrFloat())
+    return failure();
 
-void ContractionOpToMatmulOpLowering::rewrite(vector::ContractionOp op,
-                                              PatternRewriter &rewriter) const {
   VectorType lhsType = op.getLhsType();
   VectorType rhsType = op.getRhsType();
   int64_t lhsRows = lhsType.getDimSize(0);
@@ -1617,12 +1619,12 @@ void ContractionOpToMatmulOpLowering::rewrite(vector::ContractionOp op,
                                                 lhsColumns, rhsColumns);
   mul = rewriter.create<vector::ShapeCastOp>(op.getLoc(), op.acc().getType(),
                                              mul);
-  Type elementType = op.getLhsType().getElementType();
-  assert(elementType.isIntOrFloat());
   if (elementType.isa<IntegerType>())
     rewriter.replaceOpWithNewOp<AddIOp>(op, op.acc(), mul);
   else
     rewriter.replaceOpWithNewOp<AddFOp>(op, op.acc(), mul);
+
+  return success();
 }
 
 /// Progressively lower a `vector.contract %a, %b, %c` with row-major matmul
@@ -1640,8 +1642,8 @@ void ContractionOpToMatmulOpLowering::rewrite(vector::ContractionOp op,
 ///
 /// This only kicks in when VectorTransformsOptions is set to OuterProduct but
 /// otherwise supports any layout permutation of the matrix-multiply.
-LogicalResult
-ContractionOpToOuterProductOpLowering::match(vector::ContractionOp op) const {
+LogicalResult ContractionOpToOuterProductOpLowering::matchAndRewrite(
+    vector::ContractionOp op, PatternRewriter &rewriter) const {
   // TODO: implement masks
   if (llvm::size(op.masks()) != 0)
     return failure();
@@ -1653,50 +1655,6 @@ ContractionOpToOuterProductOpLowering::match(vector::ContractionOp op) const {
   if (failed(filter(op)))
     return failure();
 
-  // Determine if the parallel/reduction structure matches something
-  // that can be expressed a reduction_size unrolled sequence.
-  using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-  auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
-  AffineExpr m, n, k;
-  bindDims(op.getContext(), m, n, k);
-  auto iteratorTypes = op.iterator_types().getValue();
-  SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
-  if (isParallelIterator(iteratorTypes[0]) &&
-      isParallelIterator(iteratorTypes[1]) &&
-      isReductionIterator(iteratorTypes[2])) {
-    //
-    // Two outer parallel, one inner reduction (matmat flavor).
-    // When lowering to outerproduct we can support all permutations.
-    //
-    if (maps != infer({{m, k}, {k, n}, {m, n}}) &&
-        maps != infer({{m, k}, {n, k}, {m, n}}) &&
-        maps != infer({{k, m}, {k, n}, {m, n}}) &&
-        maps != infer({{k, m}, {n, k}, {m, n}}) &&
-        maps != infer({{m, k}, {k, n}, {n, m}}) &&
-        maps != infer({{m, k}, {n, k}, {n, m}}) &&
-        maps != infer({{k, m}, {k, n}, {n, m}}) &&
-        maps != infer({{k, m}, {n, k}, {n, m}}))
-      return failure();
-    return success();
-  } else if (isParallelIterator(iteratorTypes[0]) &&
-             isReductionIterator(iteratorTypes[1])) {
-    //
-    // One outer parallel, one inner reduction (matvec flavor)
-    // See if a series of AXPY operations chained through FMA operations
-    // could replace the default DOT implementation.
-    //
-    if (maps != infer({{m, n}, {n}, {m}}) && // mat-vec
-        maps != infer({{n, m}, {n}, {m}}) && // mat-trans-vec
-        maps != infer({{n}, {m, n}, {m}}) && // vec-mat
-        maps != infer({{n}, {n, m}, {m}}))   // vec-mat-trans
-      return failure();
-    return success();
-  }
-  return failure();
-}
-
-void ContractionOpToOuterProductOpLowering::rewrite(
-    vector::ContractionOp op, PatternRewriter &rewriter) const {
   Location loc = op.getLoc();
   int64_t reductionSize = 0;
   VectorType lhsType = op.getLhsType();
@@ -1707,7 +1665,7 @@ void ContractionOpToOuterProductOpLowering::rewrite(
   auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
   AffineExpr m, n, k;
   bindDims(rewriter.getContext(), m, n, k);
-  SmallVector<int64_t, 2> perm{1, 0};
+  static constexpr std::array<int64_t, 2> perm = {1, 0};
   auto iteratorTypes = op.iterator_types().getValue();
   SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
   if (isParallelIterator(iteratorTypes[0]) &&
@@ -1754,13 +1712,14 @@ void ContractionOpToOuterProductOpLowering::rewrite(
       Value tmp = lhs;
       lhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
       rhs = tmp;
+    } else {
+      return failure();
     }
-  } else {
+  } else if (isParallelIterator(iteratorTypes[0]) &&
+             isReductionIterator(iteratorTypes[1])) {
     //
     // One outer parallel, one inner reduction (matvec flavor)
     //
-    assert(isParallelIterator(iteratorTypes[0]) &&
-           isReductionIterator(iteratorTypes[1]));
     if (maps == infer({{m, n}, {n}, {m}})) {
       // Case mat-vec: transpose.
       reductionSize = lhsType.getDimSize(1);
@@ -1777,7 +1736,11 @@ void ContractionOpToOuterProductOpLowering::rewrite(
       // Case vec-mat-trans: swap and ready to go.
       reductionSize = lhsType.getDimSize(0);
       std::swap(lhs, rhs);
+    } else {
+      return failure();
     }
+  } else {
+    return failure();
   }
   assert(reductionSize > 0);
 
@@ -1788,6 +1751,122 @@ void ContractionOpToOuterProductOpLowering::rewrite(
     res = rewriter.create<vector::OuterProductOp>(op.getLoc(), a, b, res);
   }
   rewriter.replaceOp(op, res);
+  return success();
+}
+
+LogicalResult
+ContractionOpToDotLowering::matchAndRewrite(vector::ContractionOp op,
+                                            PatternRewriter &rewriter) const {
+  // TODO: implement masks
+  if (llvm::size(op.masks()) != 0)
+    return failure();
+
+  if (failed(filter(op)))
+    return failure();
+
+  if (vectorTransformsOptions.vectorContractLowering !=
+      vector::VectorContractLowering::Dot)
+    return failure();
+
+  auto iteratorTypes = op.iterator_types().getValue();
+  static constexpr std::array<int64_t, 2> perm = {1, 0};
+  Location loc = op.getLoc();
+  Value lhs = op.lhs(), rhs = op.rhs();
+
+  using MapList = ArrayRef<ArrayRef<AffineExpr>>;
+  auto infer = [](MapList m) { return AffineMap::inferFromExprList(m); };
+  AffineExpr m, n, k;
+  bindDims(rewriter.getContext(), m, n, k);
+  SmallVector<AffineMap, 4> maps = op.getIndexingMaps();
+  //
+  // In the following we wish to make the reduction dimension innermost so we
+  // can load vectors and just fmul + reduce into a scalar.
+  //
+  if (isParallelIterator(iteratorTypes[0]) &&
+      isParallelIterator(iteratorTypes[1]) &&
+      isReductionIterator(iteratorTypes[2])) {
+    //
+    // Two outer parallel, one inner reduction (matmat flavor).
+    //
+    if (maps == infer({{m, k}, {k, n}, {m, n}})) {
+      rhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
+    } else if (maps == infer({{m, k}, {n, k}, {m, n}})) {
+      // No need to permute anything.
+    } else if (maps == infer({{k, m}, {k, n}, {m, n}})) {
+      lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
+      rhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
+    } else if (maps == infer({{k, m}, {n, k}, {m, n}})) {
+      lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
+    } else if (maps == infer({{m, k}, {k, n}, {n, m}})) {
+      // This is the classical row-major matmul. Just permute the lhs.
+      Value tmp = lhs;
+      lhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
+      rhs = tmp;
+    } else if (maps == infer({{m, k}, {n, k}, {n, m}})) {
+      std::swap(lhs, rhs);
+    } else if (maps == infer({{k, m}, {k, n}, {n, m}})) {
+      Value tmp = lhs;
+      lhs = rewriter.create<vector::TransposeOp>(loc, rhs, perm);
+      rhs = rewriter.create<vector::TransposeOp>(loc, tmp, perm);
+    } else if (maps == infer({{k, m}, {n, k}, {n, m}})) {
+      Value tmp = rhs;
+      rhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
+      lhs = tmp;
+    } else {
+      return failure();
+    }
+  } else if (isParallelIterator(iteratorTypes[0]) &&
+             isReductionIterator(iteratorTypes[1])) {
+    //
+    // One outer parallel, one inner reduction (matvec flavor)
+    //
+    if (maps == infer({{m, n}, {n}, {m}})) {
+      // No need to permute anything.
+    } else if (maps == infer({{n, m}, {n}, {m}})) {
+      lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
+    } else if (maps == infer({{n}, {m, n}, {m}})) {
+      std::swap(lhs, rhs);
+    } else if (maps == infer({{n}, {n, m}, {m}})) {
+      std::swap(lhs, rhs);
+      lhs = rewriter.create<vector::TransposeOp>(loc, lhs, perm);
+    } else {
+      return failure();
+    }
+  } else {
+    return failure();
+  }
+
+  VectorType dstType = op.getResultType().cast<VectorType>();
+  assert(dstType.getRank() >= 1 && dstType.getRank() <= 2 &&
+         "Expected dst type of rank 1 or 2");
+
+  unsigned rank = dstType.getRank();
+  unsigned dstRows = dstType.getShape()[0];
+  unsigned dstColumns = rank == 1 ? 1 : dstType.getShape()[1];
+
+  // ExtractOp does not allow dynamic indexing, we must unroll explicitly.
+  Value res =
+      rewriter.create<ConstantOp>(loc, dstType, rewriter.getZeroAttr(dstType));
+  for (unsigned r = 0; r < dstRows; ++r) {
+    Value a = rewriter.create<vector::ExtractOp>(op.getLoc(), lhs, r);
+    for (unsigned c = 0; c < dstColumns; ++c) {
+      Value b = rank == 1
+                    ? rhs
+                    : rewriter.create<vector::ExtractOp>(op.getLoc(), rhs, c);
+      Value m = rewriter.create<MulFOp>(op.getLoc(), a, b);
+      Value reduced = rewriter.create<vector::ReductionOp>(
+          op.getLoc(), dstType.getElementType(), rewriter.getStringAttr("add"),
+          m, ValueRange{});
+
+      SmallVector<int64_t, 2> pos = rank == 1 ? SmallVector<int64_t, 2>{r}
+                                              : SmallVector<int64_t, 2>{r, c};
+      res = rewriter.create<vector::InsertOp>(op.getLoc(), reduced, res, pos);
+    }
+  }
+  if (auto acc = op.acc())
+    res = rewriter.create<AddFOp>(op.getLoc(), res, acc);
+  rewriter.replaceOp(op, res);
+  return success();
 }
 
 /// Progressive lowering of ContractionOp.
@@ -1810,7 +1889,6 @@ void ContractionOpToOuterProductOpLowering::rewrite(
 LogicalResult
 ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
                                        PatternRewriter &rewriter) const {
-
   // TODO: implement masks.
   if (llvm::size(op.masks()) != 0)
     return failure();
@@ -1827,11 +1905,14 @@ ContractionOpLowering::matchAndRewrite(vector::ContractionOp op,
   // TODO: implement benefits, cost models.
   MLIRContext *ctx = op.getContext();
   ContractionOpToMatmulOpLowering pat1(vectorTransformsOptions, ctx);
-  if (succeeded(pat1.match(op)))
-    return failure();
+  if (succeeded(pat1.matchAndRewrite(op, rewriter)))
+    return success();
   ContractionOpToOuterProductOpLowering pat2(vectorTransformsOptions, ctx);
-  if (succeeded(pat2.match(op)))
-    return failure();
+  if (succeeded(pat2.matchAndRewrite(op, rewriter)))
+    return success();
+  ContractionOpToDotLowering pat3(vectorTransformsOptions, ctx);
+  if (succeeded(pat3.matchAndRewrite(op, rewriter)))
+    return success();
 
   // Find first batch dimension in LHS/RHS, and lower when found.
   std::vector<std::pair<int64_t, int64_t>> batchDimMap = op.getBatchDimMap();
@@ -1911,10 +1992,10 @@ Value ContractionOpLowering::lowerParallel(vector::ContractionOp op,
   assert(lookup.hasValue() && "parallel index not listed in reduction");
   int64_t resIndex = lookup.getValue();
   // Construct new iterator types and affine map array attribute.
-  SmallVector<AffineMap, 4> lowIndexingMaps;
-  lowIndexingMaps.push_back(adjustMap(iMap[0], iterIndex, rewriter));
-  lowIndexingMaps.push_back(adjustMap(iMap[1], iterIndex, rewriter));
-  lowIndexingMaps.push_back(adjustMap(iMap[2], iterIndex, rewriter));
+  std::array<AffineMap, 3> lowIndexingMaps = {
+      adjustMap(iMap[0], iterIndex, rewriter),
+      adjustMap(iMap[1], iterIndex, rewriter),
+      adjustMap(iMap[2], iterIndex, rewriter)};
   auto lowAffine = rewriter.getAffineMapArrayAttr(lowIndexingMaps);
   auto lowIter =
       rewriter.getArrayAttr(adjustIter(op.iterator_types(), iterIndex));
@@ -1962,10 +2043,10 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
                                                 op.acc());
   }
   // Construct new iterator types and affine map array attribute.
-  SmallVector<AffineMap, 4> lowIndexingMaps;
-  lowIndexingMaps.push_back(adjustMap(iMap[0], iterIndex, rewriter));
-  lowIndexingMaps.push_back(adjustMap(iMap[1], iterIndex, rewriter));
-  lowIndexingMaps.push_back(adjustMap(iMap[2], iterIndex, rewriter));
+  std::array<AffineMap, 3> lowIndexingMaps = {
+      adjustMap(iMap[0], iterIndex, rewriter),
+      adjustMap(iMap[1], iterIndex, rewriter),
+      adjustMap(iMap[2], iterIndex, rewriter)};
   auto lowAffine = rewriter.getAffineMapArrayAttr(lowIndexingMaps);
   auto lowIter =
       rewriter.getArrayAttr(adjustIter(op.iterator_types(), iterIndex));
@@ -1984,6 +2065,373 @@ Value ContractionOpLowering::lowerReduction(vector::ContractionOp op,
 }
 
 } // namespace mlir
+
+static Optional<int64_t> extractConstantIndex(Value v) {
+  if (auto cstOp = v.getDefiningOp<ConstantIndexOp>())
+    return cstOp.getValue();
+  if (auto affineApplyOp = v.getDefiningOp<AffineApplyOp>())
+    if (affineApplyOp.getAffineMap().isSingleConstant())
+      return affineApplyOp.getAffineMap().getSingleConstantResult();
+  return None;
+}
+
+// Missing foldings of scf.if make it necessary to perform poor man's folding
+// eagerly, especially in the case of unrolling. In the future, this should go
+// away once scf.if folds properly.
+static Value createScopedFoldedSLE(Value v, Value ub) {
+  using namespace edsc::op;
+  auto maybeCstV = extractConstantIndex(v);
+  auto maybeCstUb = extractConstantIndex(ub);
+  if (maybeCstV && maybeCstUb && *maybeCstV < *maybeCstUb)
+    return Value();
+  return sle(v, ub);
+}
+
+// Operates under a scoped context to build the condition to ensure that a
+// particular VectorTransferOpInterface is unmasked.
+static Value createScopedInBoundsCond(VectorTransferOpInterface xferOp) {
+  assert(xferOp.permutation_map().isMinorIdentity() &&
+         "Expected minor identity map");
+  Value inBoundsCond;
+  xferOp.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
+    // Zip over the resulting vector shape and memref indices.
+    // If the dimension is known to be unmasked, it does not participate in the
+    // construction of `inBoundsCond`.
+    if (!xferOp.isMaskedDim(resultIdx))
+      return;
+    int64_t vectorSize = xferOp.getVectorType().getDimSize(resultIdx);
+    using namespace edsc::op;
+    using namespace edsc::intrinsics;
+    // Fold or create the check that `index + vector_size` <= `memref_size`.
+    Value sum = xferOp.indices()[indicesIdx] + std_constant_index(vectorSize);
+    Value cond =
+        createScopedFoldedSLE(sum, std_dim(xferOp.memref(), indicesIdx));
+    if (!cond)
+      return;
+    // Conjunction over all dims for which we are in-bounds.
+    inBoundsCond = inBoundsCond ? inBoundsCond && cond : cond;
+  });
+  return inBoundsCond;
+}
+
+LogicalResult mlir::vector::splitFullAndPartialTransferPrecondition(
+    VectorTransferOpInterface xferOp) {
+  // TODO: expand support to these 2 cases.
+  if (!xferOp.permutation_map().isMinorIdentity())
+    return failure();
+  // TODO: relax this precondition. This will require rank-reducing subviews.
+  if (xferOp.getMemRefType().getRank() != xferOp.getTransferRank())
+    return failure();
+  // Must have some masked dimension to be a candidate for splitting.
+  if (!xferOp.hasMaskedDim())
+    return failure();
+  // Don't split transfer operations directly under IfOp, this avoids applying
+  // the pattern recursively.
+  // TODO: improve the filtering condition to make it more applicable.
+  if (isa<scf::IfOp>(xferOp.getOperation()->getParentOp()))
+    return failure();
+  return success();
+}
+
+/// Given two MemRefTypes `aT` and `bT`, return a MemRefType to which both can
+/// be cast. If the MemRefTypes don't have the same rank or are not strided,
+/// return null; otherwise:
+///   1. if `aT` and `bT` are cast-compatible, return `aT`.
+///   2. else return a new MemRefType obtained by iterating over the shape and
+///   strides and:
+///     a. keeping the ones that are static and equal across `aT` and `bT`.
+///     b. using a dynamic shape and/or stride for the dimeniosns that don't
+///        agree.
+static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
+  if (MemRefCastOp::areCastCompatible(aT, bT))
+    return aT;
+  if (aT.getRank() != bT.getRank())
+    return MemRefType();
+  int64_t aOffset, bOffset;
+  SmallVector<int64_t, 4> aStrides, bStrides;
+  if (failed(getStridesAndOffset(aT, aStrides, aOffset)) ||
+      failed(getStridesAndOffset(bT, bStrides, bOffset)) ||
+      aStrides.size() != bStrides.size())
+    return MemRefType();
+
+  ArrayRef<int64_t> aShape = aT.getShape(), bShape = bT.getShape();
+  int64_t resOffset;
+  SmallVector<int64_t, 4> resShape(aT.getRank(), 0),
+      resStrides(bT.getRank(), 0);
+  for (int64_t idx = 0, e = aT.getRank(); idx < e; ++idx) {
+    resShape[idx] =
+        (aShape[idx] == bShape[idx]) ? aShape[idx] : MemRefType::kDynamicSize;
+    resStrides[idx] = (aStrides[idx] == bStrides[idx])
+                          ? aStrides[idx]
+                          : MemRefType::kDynamicStrideOrOffset;
+  }
+  resOffset =
+      (aOffset == bOffset) ? aOffset : MemRefType::kDynamicStrideOrOffset;
+  return MemRefType::get(
+      resShape, aT.getElementType(),
+      makeStridedLinearLayoutMap(resStrides, resOffset, aT.getContext()));
+}
+
+/// Operates under a scoped context to build the intersection between the
+/// view `xferOp.memref()` @ `xferOp.indices()` and the view `alloc`.
+// TODO: view intersection/union/differences should be a proper std op.
+static Value createScopedSubViewIntersection(VectorTransferOpInterface xferOp,
+                                             Value alloc) {
+  using namespace edsc::intrinsics;
+  int64_t memrefRank = xferOp.getMemRefType().getRank();
+  // TODO: relax this precondition, will require rank-reducing subviews.
+  assert(memrefRank == alloc.getType().cast<MemRefType>().getRank() &&
+         "Expected memref rank to match the alloc rank");
+  Value one = std_constant_index(1);
+  ValueRange leadingIndices =
+      xferOp.indices().take_front(xferOp.getLeadingMemRefRank());
+  SmallVector<Value, 4> sizes;
+  sizes.append(leadingIndices.begin(), leadingIndices.end());
+  xferOp.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
+    using MapList = ArrayRef<ArrayRef<AffineExpr>>;
+    Value dimMemRef = std_dim(xferOp.memref(), indicesIdx);
+    Value dimAlloc = std_dim(alloc, resultIdx);
+    Value index = xferOp.indices()[indicesIdx];
+    AffineExpr i, j, k;
+    bindDims(xferOp.getContext(), i, j, k);
+    SmallVector<AffineMap, 4> maps =
+        AffineMap::inferFromExprList(MapList{{i - j, k}});
+    // affine_min(%dimMemRef - %index, %dimAlloc)
+    Value affineMin = affine_min(index.getType(), maps[0],
+                                 ValueRange{dimMemRef, index, dimAlloc});
+    sizes.push_back(affineMin);
+  });
+  return std_sub_view(xferOp.memref(), xferOp.indices(), sizes,
+                      SmallVector<Value, 4>(memrefRank, one));
+}
+
+/// Given an `xferOp` for which:
+///   1. `inBoundsCond` and a `compatibleMemRefType` have been computed.
+///   2. a memref of single vector `alloc` has been allocated.
+/// Produce IR resembling:
+/// ```
+///    %1:3 = scf.if (%inBounds) {
+///      memref_cast %A: memref<A...> to compatibleMemRefType
+///      scf.yield %view, ... : compatibleMemRefType, index, index
+///    } else {
+///      %2 = linalg.fill(%alloc, %pad)
+///      %3 = subview %view [...][...][...]
+///      linalg.copy(%3, %alloc)
+///      memref_cast %alloc: memref<B...> to compatibleMemRefType
+///      scf.yield %4, ... : compatibleMemRefType, index, index
+///   }
+/// ```
+/// Return the produced scf::IfOp.
+static scf::IfOp createScopedFullPartialLinalgCopy(
+    vector::TransferReadOp xferOp, TypeRange returnTypes, Value inBoundsCond,
+    MemRefType compatibleMemRefType, Value alloc) {
+  using namespace edsc;
+  using namespace edsc::intrinsics;
+  scf::IfOp fullPartialIfOp;
+  Value zero = std_constant_index(0);
+  Value memref = xferOp.memref();
+  conditionBuilder(
+      returnTypes, inBoundsCond,
+      [&]() -> scf::ValueVector {
+        Value res = memref;
+        if (compatibleMemRefType != xferOp.getMemRefType())
+          res = std_memref_cast(memref, compatibleMemRefType);
+        scf::ValueVector viewAndIndices{res};
+        viewAndIndices.insert(viewAndIndices.end(), xferOp.indices().begin(),
+                              xferOp.indices().end());
+        return viewAndIndices;
+      },
+      [&]() -> scf::ValueVector {
+        linalg_fill(alloc, xferOp.padding());
+        // Take partial subview of memref which guarantees no dimension
+        // overflows.
+        Value memRefSubView = createScopedSubViewIntersection(
+            cast<VectorTransferOpInterface>(xferOp.getOperation()), alloc);
+        linalg_copy(memRefSubView, alloc);
+        Value casted = std_memref_cast(alloc, compatibleMemRefType);
+        scf::ValueVector viewAndIndices{casted};
+        viewAndIndices.insert(viewAndIndices.end(), xferOp.getTransferRank(),
+                              zero);
+        return viewAndIndices;
+      },
+      &fullPartialIfOp);
+  return fullPartialIfOp;
+}
+
+/// Given an `xferOp` for which:
+///   1. `inBoundsCond` and a `compatibleMemRefType` have been computed.
+///   2. a memref of single vector `alloc` has been allocated.
+/// Produce IR resembling:
+/// ```
+///    %1:3 = scf.if (%inBounds) {
+///      memref_cast %A: memref<A...> to compatibleMemRefType
+///      scf.yield %view, ... : compatibleMemRefType, index, index
+///    } else {
+///      %2 = vector.transfer_read %view[...], %pad : memref<A...>, vector<...>
+///      %3 = vector.type_cast %extra_alloc :
+///        memref<...> to memref<vector<...>>
+///      store %2, %3[] : memref<vector<...>>
+///      %4 = memref_cast %alloc: memref<B...> to compatibleMemRefType
+///      scf.yield %4, ... : compatibleMemRefType, index, index
+///   }
+/// ```
+/// Return the produced scf::IfOp.
+static scf::IfOp createScopedFullPartialVectorTransferRead(
+    vector::TransferReadOp xferOp, TypeRange returnTypes, Value inBoundsCond,
+    MemRefType compatibleMemRefType, Value alloc) {
+  using namespace edsc;
+  using namespace edsc::intrinsics;
+  scf::IfOp fullPartialIfOp;
+  Value zero = std_constant_index(0);
+  Value memref = xferOp.memref();
+  conditionBuilder(
+      returnTypes, inBoundsCond,
+      [&]() -> scf::ValueVector {
+        Value res = memref;
+        if (compatibleMemRefType != xferOp.getMemRefType())
+          res = std_memref_cast(memref, compatibleMemRefType);
+        scf::ValueVector viewAndIndices{res};
+        viewAndIndices.insert(viewAndIndices.end(), xferOp.indices().begin(),
+                              xferOp.indices().end());
+        return viewAndIndices;
+      },
+      [&]() -> scf::ValueVector {
+        Operation *newXfer =
+            ScopedContext::getBuilderRef().clone(*xferOp.getOperation());
+        Value vector = cast<VectorTransferOpInterface>(newXfer).vector();
+        std_store(vector, vector_type_cast(
+                              MemRefType::get({}, vector.getType()), alloc));
+
+        Value casted = std_memref_cast(alloc, compatibleMemRefType);
+        scf::ValueVector viewAndIndices{casted};
+        viewAndIndices.insert(viewAndIndices.end(), xferOp.getTransferRank(),
+                              zero);
+
+        return viewAndIndices;
+      },
+      &fullPartialIfOp);
+  return fullPartialIfOp;
+}
+
+/// Split a vector.transfer operation into an unmasked fastpath and a slowpath.
+/// If `ifOp` is not null and the result is `success, the `ifOp` points to the
+/// newly created conditional upon function return.
+/// To accomodate for the fact that the original vector.transfer indexing may be
+/// arbitrary and the slow path indexes @[0...0] in the temporary buffer, the
+/// scf.if op returns a view and values of type index.
+/// At this time, only vector.transfer_read case is implemented.
+///
+/// Example (a 2-D vector.transfer_read):
+/// ```
+///    %1 = vector.transfer_read %0[...], %pad : memref<A...>, vector<...>
+/// ```
+/// is transformed into:
+/// ```
+///    %1:3 = scf.if (%inBounds) {
+///      // fastpath, direct cast
+///      memref_cast %A: memref<A...> to compatibleMemRefType
+///      scf.yield %view : compatibleMemRefType, index, index
+///    } else {
+///      // slowpath, masked vector.transfer or linalg.copy.
+///      memref_cast %alloc: memref<B...> to compatibleMemRefType
+///      scf.yield %4 : compatibleMemRefType, index, index
+//     }
+///    %0 = vector.transfer_read %1#0[%1#1, %1#2] {masked = [false ... false]}
+/// ```
+/// where `alloc` is a top of the function alloca'ed buffer of one vector.
+///
+/// Preconditions:
+///  1. `xferOp.permutation_map()` must be a minor identity map
+///  2. the rank of the `xferOp.memref()` and the rank of the `xferOp.vector()`
+///  must be equal. This will be relaxed in the future but requires
+///  rank-reducing subviews.
+LogicalResult mlir::vector::splitFullAndPartialTransfer(
+    OpBuilder &b, VectorTransferOpInterface xferOp,
+    VectorTransformsOptions options, scf::IfOp *ifOp) {
+  using namespace edsc;
+  using namespace edsc::intrinsics;
+
+  if (options.vectorTransferSplit == VectorTransferSplit::None)
+    return failure();
+
+  SmallVector<bool, 4> bools(xferOp.getTransferRank(), false);
+  auto unmaskedAttr = b.getBoolArrayAttr(bools);
+  if (options.vectorTransferSplit == VectorTransferSplit::ForceUnmasked) {
+    xferOp.setAttr(vector::TransferReadOp::getMaskedAttrName(), unmaskedAttr);
+    return success();
+  }
+
+  assert(succeeded(splitFullAndPartialTransferPrecondition(xferOp)) &&
+         "Expected splitFullAndPartialTransferPrecondition to hold");
+  auto xferReadOp = dyn_cast<vector::TransferReadOp>(xferOp.getOperation());
+
+  // TODO: add support for write case.
+  if (!xferReadOp)
+    return failure();
+
+  OpBuilder::InsertionGuard guard(b);
+  if (xferOp.memref().getDefiningOp())
+    b.setInsertionPointAfter(xferOp.memref().getDefiningOp());
+  else
+    b.setInsertionPoint(xferOp);
+  ScopedContext scope(b, xferOp.getLoc());
+  Value inBoundsCond = createScopedInBoundsCond(
+      cast<VectorTransferOpInterface>(xferOp.getOperation()));
+  if (!inBoundsCond)
+    return failure();
+
+  // Top of the function `alloc` for transient storage.
+  Value alloc;
+  {
+    FuncOp funcOp = xferOp.getParentOfType<FuncOp>();
+    OpBuilder::InsertionGuard guard(b);
+    b.setInsertionPointToStart(&funcOp.getRegion().front());
+    auto shape = xferOp.getVectorType().getShape();
+    Type elementType = xferOp.getVectorType().getElementType();
+    alloc = std_alloca(MemRefType::get(shape, elementType), ValueRange{},
+                       b.getI64IntegerAttr(32));
+  }
+
+  MemRefType compatibleMemRefType = getCastCompatibleMemRefType(
+      xferOp.getMemRefType(), alloc.getType().cast<MemRefType>());
+
+  // Read case: full fill + partial copy -> unmasked vector.xfer_read.
+  SmallVector<Type, 4> returnTypes(1 + xferOp.getTransferRank(),
+                                   b.getIndexType());
+  returnTypes[0] = compatibleMemRefType;
+  scf::IfOp fullPartialIfOp =
+      options.vectorTransferSplit == VectorTransferSplit::VectorTransfer
+          ? createScopedFullPartialVectorTransferRead(
+                xferReadOp, returnTypes, inBoundsCond, compatibleMemRefType,
+                alloc)
+          : createScopedFullPartialLinalgCopy(xferReadOp, returnTypes,
+                                              inBoundsCond,
+                                              compatibleMemRefType, alloc);
+  if (ifOp)
+    *ifOp = fullPartialIfOp;
+
+  // Unmask the existing read op, it always reads from a full buffer.
+  for (unsigned i = 0, e = returnTypes.size(); i != e; ++i)
+    xferReadOp.setOperand(i, fullPartialIfOp.getResult(i));
+  xferOp.setAttr(vector::TransferReadOp::getMaskedAttrName(), unmaskedAttr);
+
+  return success();
+}
+
+LogicalResult mlir::vector::VectorTransferFullPartialRewriter::matchAndRewrite(
+    Operation *op, PatternRewriter &rewriter) const {
+  auto xferOp = dyn_cast<VectorTransferOpInterface>(op);
+  if (!xferOp || failed(splitFullAndPartialTransferPrecondition(xferOp)) ||
+      failed(filter(xferOp)))
+    return failure();
+  rewriter.startRootUpdate(xferOp);
+  if (succeeded(splitFullAndPartialTransfer(rewriter, xferOp, options))) {
+    rewriter.finalizeRootUpdate(xferOp);
+    return success();
+  }
+  rewriter.cancelRootUpdate(xferOp);
+  return failure();
+}
 
 // TODO: Add pattern to rewrite ExtractSlices(ConstantMaskOp).
 // TODO: Add this as DRR pattern.

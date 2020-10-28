@@ -1,8 +1,8 @@
-# RUN: yaml2obj < %p/Inputs/ret42.yaml > %t.o
+# RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.o
 
-# RUN: yaml2obj < %p/Inputs/manifest-lang0.yaml > %t-manifest-lang0.o
-# RUN: yaml2obj < %p/Inputs/manifest-lang1.yaml > %t-manifest-lang1.o
-# RUN: yaml2obj < %p/Inputs/manifest-lang2.yaml > %t-manifest-lang2.o
+# RUN: yaml2obj %p/Inputs/manifest-lang0.yaml -o %t-manifest-lang0.o
+# RUN: yaml2obj %p/Inputs/manifest-lang1.yaml -o %t-manifest-lang1.o
+# RUN: yaml2obj %p/Inputs/manifest-lang2.yaml -o %t-manifest-lang2.o
 
 # RUN: lld-link /lldmingw /out:%t.exe /entry:main %t.o %p/Inputs/manifest-lang0.res %p/Inputs/manifest-lang1.res
 # RUN: llvm-readobj --coff-resources %t.exe | FileCheck %s

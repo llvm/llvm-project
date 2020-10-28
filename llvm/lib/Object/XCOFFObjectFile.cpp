@@ -12,10 +12,14 @@
 
 #include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Support/DataExtractor.h"
 #include <cstddef>
 #include <cstring>
 
 namespace llvm {
+
+using namespace XCOFF;
+
 namespace object {
 
 static const uint8_t FunctionSym = 0x20;
@@ -834,5 +838,216 @@ bool XCOFFSymbolRef::isFunction() const {
 template struct XCOFFSectionHeader<XCOFFSectionHeader32>;
 template struct XCOFFSectionHeader<XCOFFSectionHeader64>;
 
+bool doesXCOFFTracebackTableBegin(ArrayRef<uint8_t> Bytes) {
+  if (Bytes.size() < 4)
+    return false;
+
+  return support::endian::read32be(Bytes.data()) == 0;
+}
+
+static SmallString<32> parseParmsType(uint32_t Value, unsigned ParmsNum) {
+  SmallString<32> ParmsType;
+  for (unsigned I = 0; I < ParmsNum; ++I) {
+    if (I != 0)
+      ParmsType += ", ";
+    if ((Value & TracebackTable::ParmTypeIsFloatingBit) == 0) {
+      // Fixed parameter type.
+      ParmsType += "i";
+      Value <<= 1;
+    } else {
+      if ((Value & TracebackTable::ParmTypeFloatingIsDoubleBit) == 0)
+        // Float parameter type.
+        ParmsType += "f";
+      else
+        // Double parameter type.
+        ParmsType += "d";
+
+      Value <<= 2;
+    }
+  }
+  return ParmsType;
+}
+
+Expected<XCOFFTracebackTable> XCOFFTracebackTable::create(const uint8_t *Ptr,
+                                                          uint64_t &Size) {
+  Error Err = Error::success();
+  XCOFFTracebackTable TBT(Ptr, Size, Err);
+  if (Err)
+    return std::move(Err);
+  return TBT;
+}
+
+XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
+                                         Error &Err)
+    : TBPtr(Ptr) {
+  ErrorAsOutParameter EAO(&Err);
+  DataExtractor DE(ArrayRef<uint8_t>(Ptr, Size), /*IsLittleEndian=*/false,
+                   /*AddressSize=*/0);
+  DataExtractor::Cursor Cur(/*Offset=*/0);
+
+  // Skip 8 bytes of mandatory fields.
+  DE.getU64(Cur);
+
+  // Begin to parse optional fields.
+  if (Cur) {
+    unsigned ParmNum = getNumberOfFixedParms() + getNumberOfFPParms();
+
+    // As long as there are no "fixed-point" or floating-point parameters, this
+    // field remains not present even when hasVectorInfo gives true and
+    // indicates the presence of vector parameters.
+    if (ParmNum > 0) {
+      uint32_t ParamsTypeValue = DE.getU32(Cur);
+      // TODO: when hasVectorInfo() is true, we need to implement a new version
+      // of parsing parameter type for vector info.
+      if (Cur && !hasVectorInfo())
+        ParmsType = parseParmsType(ParamsTypeValue, ParmNum);
+    }
+  }
+
+  if (Cur && hasTraceBackTableOffset())
+    TraceBackTableOffset = DE.getU32(Cur);
+
+  if (Cur && isInterruptHandler())
+    HandlerMask = DE.getU32(Cur);
+
+  if (Cur && hasControlledStorage()) {
+    NumOfCtlAnchors = DE.getU32(Cur);
+    if (Cur && NumOfCtlAnchors) {
+      SmallVector<uint32_t, 8> Disp;
+      Disp.reserve(NumOfCtlAnchors.getValue());
+      for (uint32_t I = 0; I < NumOfCtlAnchors && Cur; ++I)
+        Disp.push_back(DE.getU32(Cur));
+      if (Cur)
+        ControlledStorageInfoDisp = std::move(Disp);
+    }
+  }
+
+  if (Cur && isFuncNamePresent()) {
+    uint16_t FunctionNameLen = DE.getU16(Cur);
+    if (Cur)
+      FunctionName = DE.getBytes(Cur, FunctionNameLen);
+  }
+
+  if (Cur && isAllocaUsed())
+    AllocaRegister = DE.getU8(Cur);
+
+  // TODO: Need to parse vector info and extension table if there is one.
+
+  if (!Cur)
+    Err = Cur.takeError();
+  Size = Cur.tell();
+}
+
+#define GETBITWITHMASK(P, X)                                                   \
+  (support::endian::read32be(TBPtr + (P)) & (TracebackTable::X))
+#define GETBITWITHMASKSHIFT(P, X, S)                                           \
+  ((support::endian::read32be(TBPtr + (P)) & (TracebackTable::X)) >>           \
+   (TracebackTable::S))
+
+uint8_t XCOFFTracebackTable::getVersion() const {
+  return GETBITWITHMASKSHIFT(0, VersionMask, VersionShift);
+}
+
+uint8_t XCOFFTracebackTable::getLanguageID() const {
+  return GETBITWITHMASKSHIFT(0, LanguageIdMask, LanguageIdShift);
+}
+
+bool XCOFFTracebackTable::isGlobalLinkage() const {
+  return GETBITWITHMASK(0, IsGlobaLinkageMask);
+}
+
+bool XCOFFTracebackTable::isOutOfLineEpilogOrPrologue() const {
+  return GETBITWITHMASK(0, IsOutOfLineEpilogOrPrologueMask);
+}
+
+bool XCOFFTracebackTable::hasTraceBackTableOffset() const {
+  return GETBITWITHMASK(0, HasTraceBackTableOffsetMask);
+}
+
+bool XCOFFTracebackTable::isInternalProcedure() const {
+  return GETBITWITHMASK(0, IsInternalProcedureMask);
+}
+
+bool XCOFFTracebackTable::hasControlledStorage() const {
+  return GETBITWITHMASK(0, HasControlledStorageMask);
+}
+
+bool XCOFFTracebackTable::isTOCless() const {
+  return GETBITWITHMASK(0, IsTOClessMask);
+}
+
+bool XCOFFTracebackTable::isFloatingPointPresent() const {
+  return GETBITWITHMASK(0, IsFloatingPointPresentMask);
+}
+
+bool XCOFFTracebackTable::isFloatingPointOperationLogOrAbortEnabled() const {
+  return GETBITWITHMASK(0, IsFloatingPointOperationLogOrAbortEnabledMask);
+}
+
+bool XCOFFTracebackTable::isInterruptHandler() const {
+  return GETBITWITHMASK(0, IsInterruptHandlerMask);
+}
+
+bool XCOFFTracebackTable::isFuncNamePresent() const {
+  return GETBITWITHMASK(0, IsFunctionNamePresentMask);
+}
+
+bool XCOFFTracebackTable::isAllocaUsed() const {
+  return GETBITWITHMASK(0, IsAllocaUsedMask);
+}
+
+uint8_t XCOFFTracebackTable::getOnConditionDirective() const {
+  return GETBITWITHMASKSHIFT(0, OnConditionDirectiveMask,
+                             OnConditionDirectiveShift);
+}
+
+bool XCOFFTracebackTable::isCRSaved() const {
+  return GETBITWITHMASK(0, IsCRSavedMask);
+}
+
+bool XCOFFTracebackTable::isLRSaved() const {
+  return GETBITWITHMASK(0, IsLRSavedMask);
+}
+
+bool XCOFFTracebackTable::isBackChainStored() const {
+  return GETBITWITHMASK(4, IsBackChainStoredMask);
+}
+
+bool XCOFFTracebackTable::isFixup() const {
+  return GETBITWITHMASK(4, IsFixupMask);
+}
+
+uint8_t XCOFFTracebackTable::getNumOfFPRsSaved() const {
+  return GETBITWITHMASKSHIFT(4, FPRSavedMask, FPRSavedShift);
+}
+
+bool XCOFFTracebackTable::hasExtensionTable() const {
+  return GETBITWITHMASK(4, HasExtensionTableMask);
+}
+
+bool XCOFFTracebackTable::hasVectorInfo() const {
+  return GETBITWITHMASK(4, HasVectorInfoMask);
+}
+
+uint8_t XCOFFTracebackTable::getNumofGPRsSaved() const {
+  return GETBITWITHMASKSHIFT(4, GPRSavedMask, GPRSavedShift);
+}
+
+uint8_t XCOFFTracebackTable::getNumberOfFixedParms() const {
+  return GETBITWITHMASKSHIFT(4, NumberOfFixedParmsMask,
+                             NumberOfFixedParmsShift);
+}
+
+uint8_t XCOFFTracebackTable::getNumberOfFPParms() const {
+  return GETBITWITHMASKSHIFT(4, NumberOfFloatingPointParmsMask,
+                             NumberOfFloatingPointParmsShift);
+}
+
+bool XCOFFTracebackTable::hasParmsOnStack() const {
+  return GETBITWITHMASK(4, HasParmsOnStackMask);
+}
+
+#undef GETBITWITHMASK
+#undef GETBITWITHMASKSHIFT
 } // namespace object
 } // namespace llvm

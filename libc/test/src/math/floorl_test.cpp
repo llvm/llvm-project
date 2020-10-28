@@ -9,6 +9,7 @@
 #include "include/math.h"
 #include "src/math/floorl.h"
 #include "utils/FPUtil/FPBits.h"
+#include "utils/FPUtil/TestHelpers.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
 
@@ -16,45 +17,53 @@ using FPBits = __llvm_libc::fputil::FPBits<long double>;
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
-// Zero tolerance; As in, exact match with MPFR result.
-static constexpr mpfr::Tolerance tolerance{mpfr::Tolerance::doublePrecision, 0,
-                                           0};
+static const long double zero = FPBits::zero();
+static const long double negZero = FPBits::negZero();
+static const long double nan = FPBits::buildNaN(1);
+static const long double inf = FPBits::inf();
+static const long double negInf = FPBits::negInf();
+
 TEST(FloorlTest, SpecialNumbers) {
-  ASSERT_TRUE(FPBits::zero() == __llvm_libc::floorl(FPBits::zero()));
-  ASSERT_TRUE(FPBits::negZero() == __llvm_libc::floorl(FPBits::negZero()));
+  EXPECT_FP_EQ(zero, __llvm_libc::floorl(zero));
+  EXPECT_FP_EQ(negZero, __llvm_libc::floorl(negZero));
 
-  ASSERT_TRUE(FPBits::inf() == __llvm_libc::floorl(FPBits::inf()));
-  ASSERT_TRUE(FPBits::negInf() == __llvm_libc::floorl(FPBits::negInf()));
+  EXPECT_FP_EQ(inf, __llvm_libc::floorl(inf));
+  EXPECT_FP_EQ(negInf, __llvm_libc::floorl(negInf));
 
-  long double nan = FPBits::buildNaN(1);
   ASSERT_NE(isnan(nan), 0);
   ASSERT_NE(isnan(__llvm_libc::floorl(nan)), 0);
 }
 
 TEST(FloorlTest, RoundedNumbers) {
-  ASSERT_TRUE(FPBits(1.0l) == __llvm_libc::floorl(1.0l));
-  ASSERT_TRUE(FPBits(-1.0l) == __llvm_libc::floorl(-1.0l));
-  ASSERT_TRUE(FPBits(10.0l) == __llvm_libc::floorl(10.0l));
-  ASSERT_TRUE(FPBits(-10.0l) == __llvm_libc::floorl(-10.0l));
-  ASSERT_TRUE(FPBits(1234.0l) == __llvm_libc::floorl(1234.0l));
-  ASSERT_TRUE(FPBits(-1234.0l) == __llvm_libc::floorl(-1234.0l));
+  EXPECT_FP_EQ(1.0l, __llvm_libc::floorl(1.0l));
+  EXPECT_FP_EQ(-1.0l, __llvm_libc::floorl(-1.0l));
+  EXPECT_FP_EQ(10.0l, __llvm_libc::floorl(10.0l));
+  EXPECT_FP_EQ(-10.0l, __llvm_libc::floorl(-10.0l));
+  EXPECT_FP_EQ(1234.0l, __llvm_libc::floorl(1234.0l));
+  EXPECT_FP_EQ(-1234.0l, __llvm_libc::floorl(-1234.0l));
 }
 
 TEST(FloorlTest, Fractions) {
-  ASSERT_TRUE(FPBits(1.0l) == __llvm_libc::floorl(1.3l));
-  ASSERT_TRUE(FPBits(-2.0l) == __llvm_libc::floorl(-1.3l));
-  ASSERT_TRUE(FPBits(1.0l) == __llvm_libc::floorl(1.5l));
-  ASSERT_TRUE(FPBits(-2.0l) == __llvm_libc::floorl(-1.5l));
-  ASSERT_TRUE(FPBits(1.0l) == __llvm_libc::floorl(1.75l));
-  ASSERT_TRUE(FPBits(-2.0l) == __llvm_libc::floorl(-1.75l));
-  ASSERT_TRUE(FPBits(10.0l) == __llvm_libc::floorl(10.32l));
-  ASSERT_TRUE(FPBits(-11.0l) == __llvm_libc::floorl(-10.32l));
-  ASSERT_TRUE(FPBits(10.0l) == __llvm_libc::floorl(10.65l));
-  ASSERT_TRUE(FPBits(-11.0l) == __llvm_libc::floorl(-10.65l));
-  ASSERT_TRUE(FPBits(1234.0l) == __llvm_libc::floorl(1234.18l));
-  ASSERT_TRUE(FPBits(-1235.0l) == __llvm_libc::floorl(-1234.18l));
-  ASSERT_TRUE(FPBits(1234.0l) == __llvm_libc::floorl(1234.96l));
-  ASSERT_TRUE(FPBits(-1235.0l) == __llvm_libc::floorl(-1234.96l));
+  EXPECT_FP_EQ(0.0l, __llvm_libc::floorl(0.5l));
+  EXPECT_FP_EQ(-1.0l, __llvm_libc::floorl(-0.5l));
+  EXPECT_FP_EQ(0.0l, __llvm_libc::floorl(0.115l));
+  EXPECT_FP_EQ(-1.0l, __llvm_libc::floorl(-0.115l));
+  EXPECT_FP_EQ(0.0l, __llvm_libc::floorl(0.715l));
+  EXPECT_FP_EQ(-1.0l, __llvm_libc::floorl(-0.715l));
+  EXPECT_FP_EQ(1.0l, __llvm_libc::floorl(1.3l));
+  EXPECT_FP_EQ(-2.0l, __llvm_libc::floorl(-1.3l));
+  EXPECT_FP_EQ(1.0l, __llvm_libc::floorl(1.5l));
+  EXPECT_FP_EQ(-2.0l, __llvm_libc::floorl(-1.5l));
+  EXPECT_FP_EQ(1.0l, __llvm_libc::floorl(1.75l));
+  EXPECT_FP_EQ(-2.0l, __llvm_libc::floorl(-1.75l));
+  EXPECT_FP_EQ(10.0l, __llvm_libc::floorl(10.32l));
+  EXPECT_FP_EQ(-11.0l, __llvm_libc::floorl(-10.32l));
+  EXPECT_FP_EQ(10.0l, __llvm_libc::floorl(10.65l));
+  EXPECT_FP_EQ(-11.0l, __llvm_libc::floorl(-10.65l));
+  EXPECT_FP_EQ(1234.0l, __llvm_libc::floorl(1234.38l));
+  EXPECT_FP_EQ(-1235.0l, __llvm_libc::floorl(-1234.38l));
+  EXPECT_FP_EQ(1234.0l, __llvm_libc::floorl(1234.96l));
+  EXPECT_FP_EQ(-1235.0l, __llvm_libc::floorl(-1234.96l));
 }
 
 TEST(FloorlTest, InLongDoubleRange) {
@@ -66,7 +75,6 @@ TEST(FloorlTest, InLongDoubleRange) {
     if (isnan(x) || isinf(x))
       continue;
 
-    ASSERT_MPFR_MATCH(mpfr::Operation::Floor, x, __llvm_libc::floorl(x),
-                      tolerance);
+    ASSERT_MPFR_MATCH(mpfr::Operation::Floor, x, __llvm_libc::floorl(x), 0.0);
   }
 }

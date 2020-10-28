@@ -13,12 +13,17 @@ endif
 syn case match
 
 " Types.
+"
 syn keyword mlirType index f16 f32 f64
-" Integer type.
+" Signless integer types.
 syn match mlirType /\<i\d\+\>/
+" Unsigned integer types.
+syn match mlirType /\<ui\d\+\>/
+" Signed integer types.
+syn match mlirType /\<si\d\+\>/
 
 " Elemental types inside memref, tensor, or vector types.
-syn match mlirType /x\s*\zs\(f16\|f32\|f64\|i\d\+\)/
+syn match mlirType /x\s*\zs\(f16\|f32\|f64\|i\d\+\|ui\d\+\|si\d\+\)/
 
 " Shaped types.
 syn match mlirType /\<memref\ze\s*<.*>/
@@ -29,13 +34,14 @@ syn match mlirType /\<vector\ze\s*<.*>/
 syn match mlirType /x\s*\zsvector/
 
 " Operations.
-" Core ops (not exhaustive yet).
-" TODO: the list is not exhaustive.
-syn keyword mlirOps alloc alloca addf addi call call_indirect cmpf cmpi constant
-syn keyword mlirOps dealloc divf dma_start dma_wait dim extract_element
-syn keyword mlirOps getTensor index_cast load memref_cast memref_shape_cast
-syn keyword mlirOps mulf muli negf prefetch sitofp splat store select subf subi
-syn keyword mlirOps subview tensor_cast view
+" Standard dialect ops.
+" TODO: this list is not exhaustive.
+syn keyword mlirOps alloc alloca addf addi and call call_indirect cmpf cmpi
+syn keyword mlirOps constant dealloc divf dma_start dma_wait dim exp
+syn keyword mlirOps extract_element getTensor index_cast load log memref_cast
+syn keyword mlirOps memref_shape_cast mulf muli negf powf prefetch rsqrt sitofp
+syn keyword mlirOps splat store select sqrt subf subi subview tanh tensor_cast
+syn keyword mlirOps view
 
 " Affine ops.
 syn match mlirOps /\<affine\.apply\>/
@@ -44,6 +50,7 @@ syn match mlirOps /\<affine\.dma_wait\>/
 syn match mlirOps /\<affine\.for\>/
 syn match mlirOps /\<affine\.if\>/
 syn match mlirOps /\<affine\.load\>/
+syn match mlirOps /\<affine\.parallel\>/
 syn match mlirOps /\<affine\.prefetch\>/
 syn match mlirOps /\<affine\.store\>/
 syn match mlirOps /\<loop\.for\>/

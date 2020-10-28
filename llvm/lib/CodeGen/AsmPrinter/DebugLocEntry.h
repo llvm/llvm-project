@@ -178,6 +178,9 @@ public:
                 DebugLocStream::ListBuilder &List,
                 const DIBasicType *BT,
                 DwarfCompileUnit &TheCU);
+
+  void finalize(const AsmPrinter &AP, DebugLocStream::ListBuilder &List,
+                const DIStringType *ST);
 };
 
 /// Compare two DbgValueLocs for equality.

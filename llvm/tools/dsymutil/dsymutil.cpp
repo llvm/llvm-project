@@ -17,6 +17,7 @@
 #include "LinkUtils.h"
 #include "MachOUtils.h"
 #include "Reproducer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -157,9 +158,7 @@ static Error verifyOptions(const DsymutilOptions &Options) {
                                    errc::invalid_argument);
   }
 
-  if (Options.LinkOpts.Update &&
-      std::find(Options.InputFiles.begin(), Options.InputFiles.end(), "-") !=
-          Options.InputFiles.end()) {
+  if (Options.LinkOpts.Update && llvm::is_contained(Options.InputFiles, "-")) {
     // FIXME: We cannot use stdin for an update because stdin will be
     // consumed by the BinaryHolder during the debugmap parsing, and
     // then we will want to consume it again in DwarfLinker. If we

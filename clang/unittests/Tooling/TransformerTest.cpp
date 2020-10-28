@@ -21,6 +21,7 @@ using namespace clang;
 using namespace tooling;
 using namespace ast_matchers;
 namespace {
+using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using transformer::cat;
 using transformer::changeTo;
@@ -194,6 +195,43 @@ TEST_F(TransformerTest, Flag) {
 }
 
 TEST_F(TransformerTest, AddIncludeQuoted) {
+  RewriteRule Rule =
+      makeRule(callExpr(callee(functionDecl(hasName("f")))),
+               {addInclude("clang/OtherLib.h"), changeTo(cat("other()"))});
+
+  std::string Input = R"cc(
+    int f(int x);
+    int h(int x) { return f(x); }
+  )cc";
+  std::string Expected = R"cc(#include "clang/OtherLib.h"
+
+    int f(int x);
+    int h(int x) { return other(); }
+  )cc";
+
+  testRule(Rule, Input, Expected);
+}
+
+TEST_F(TransformerTest, AddIncludeAngled) {
+  RewriteRule Rule = makeRule(
+      callExpr(callee(functionDecl(hasName("f")))),
+      {addInclude("clang/OtherLib.h", transformer::IncludeFormat::Angled),
+       changeTo(cat("other()"))});
+
+  std::string Input = R"cc(
+    int f(int x);
+    int h(int x) { return f(x); }
+  )cc";
+  std::string Expected = R"cc(#include <clang/OtherLib.h>
+
+    int f(int x);
+    int h(int x) { return other(); }
+  )cc";
+
+  testRule(Rule, Input, Expected);
+}
+
+TEST_F(TransformerTest, AddIncludeQuotedForRule) {
   RewriteRule Rule = makeRule(callExpr(callee(functionDecl(hasName("f")))),
                               changeTo(cat("other()")));
   addInclude(Rule, "clang/OtherLib.h");
@@ -211,7 +249,7 @@ TEST_F(TransformerTest, AddIncludeQuoted) {
   testRule(Rule, Input, Expected);
 }
 
-TEST_F(TransformerTest, AddIncludeAngled) {
+TEST_F(TransformerTest, AddIncludeAngledForRule) {
   RewriteRule Rule = makeRule(callExpr(callee(functionDecl(hasName("f")))),
                               changeTo(cat("other()")));
   addInclude(Rule, "clang/OtherLib.h", transformer::IncludeFormat::Angled);
@@ -1179,5 +1217,33 @@ TEST_F(TransformerTest, MultipleFiles) {
       << "Could not update code: " << llvm::toString(UpdatedCode.takeError());
   EXPECT_EQ(format(*UpdatedCode), format(R"cc(#include "input.h"
                         ;)cc"));
+}
+
+TEST_F(TransformerTest, AddIncludeMultipleFiles) {
+  std::string Header = R"cc(void RemoveThisFunction();)cc";
+  std::string Source = R"cc(#include "input.h"
+                            void Foo() {RemoveThisFunction();})cc";
+  Transformer T(
+      makeRule(callExpr(callee(
+                   functionDecl(hasName("RemoveThisFunction")).bind("fun"))),
+               addInclude(node("fun"), "header.h")),
+      consumer());
+  T.registerMatchers(&MatchFinder);
+  auto Factory = newFrontendActionFactory(&MatchFinder);
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      Factory->create(), Source, std::vector<std::string>(), "input.cc",
+      "clang-tool", std::make_shared<PCHContainerOperations>(),
+      {{"input.h", Header}}));
+
+  ASSERT_EQ(Changes.size(), 1U);
+  ASSERT_EQ(Changes[0].getFilePath(), "./input.h");
+  EXPECT_THAT(Changes[0].getInsertedHeaders(), ElementsAre("header.h"));
+  EXPECT_THAT(Changes[0].getRemovedHeaders(), IsEmpty());
+  llvm::Expected<std::string> UpdatedCode =
+      clang::tooling::applyAllReplacements(Header,
+                                           Changes[0].getReplacements());
+  ASSERT_TRUE(static_cast<bool>(UpdatedCode))
+      << "Could not update code: " << llvm::toString(UpdatedCode.takeError());
+  EXPECT_EQ(format(*UpdatedCode), format(Header));
 }
 } // namespace

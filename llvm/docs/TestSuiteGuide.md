@@ -185,7 +185,7 @@ benchmarks. CMake can print a list of them:
 
 - `TEST_SUITE_COLLECT_STATS`
 
-  Collect internal LLVM statistics. Appends `-save-stats=obj` when invocing the
+  Collect internal LLVM statistics. Appends `-save-stats=obj` when invoking the
   compiler and makes the lit runner collect and merge the statistic files.
 
 - `TEST_SUITE_RUN_BENCHMARKS`

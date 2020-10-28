@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: %lldb -c %t -o 'process plugin dump --all' | \
 # RUN:   FileCheck --check-prefix=CHECK-DIR --check-prefix=CHECK-APPDATA \
 # RUN:   --check-prefix=CHECK-BUILD --check-prefix=CHECK-VERSION \

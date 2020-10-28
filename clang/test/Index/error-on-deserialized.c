@@ -10,4 +10,4 @@
 // RUN:    -Xclang -error-on-deserialized-decl=NestedVar1 2>&1 \
 // RUN:  | FileCheck %s
 
-// CHECK: error: NestedVar1 was deserialized
+// CHECK: error: 'NestedVar1' was deserialized

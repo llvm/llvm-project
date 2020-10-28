@@ -12,12 +12,12 @@
 ## address offset and the contents at that address very similarly, so am using
 ## --match-full-lines to make sure we match on the right thing.
 # CHECK:      Contents of section __cstring:
-# CHECK-NEXT: 1000003ec {{.*}}
+# CHECK-NEXT: 10000040c {{.*}}
 
 ## 1st 8 bytes refer to the start of __cstring + 0xe, 2nd 8 bytes refer to the
 ## start of __cstring
 # CHECK:      Contents of section __got:
-# CHECK-NEXT: [[#%X,ADDR:]]  fa030000 01000000 ec030000 01000000 {{.*}}
+# CHECK-NEXT: [[#%X,ADDR:]]  1a040000 01000000 0c040000 01000000 {{.*}}
 # CHECK-NEXT: [[#ADDR + 16]] 00000000 00000000 {{.*}}
 
 ## Check that a non-locally-defined symbol is still bound at the correct offset:
@@ -37,13 +37,16 @@ _main:
 
   movl $0x2000004, %eax # write() syscall
   mov $1, %rdi # stdout
-  movq _hello_world@GOTPCREL(%rip), %rsi
+## We use pushq/popq here instead of movq in order to avoid relaxation.
+  pushq _hello_world@GOTPCREL(%rip)
+  popq %rsi
   mov $13, %rdx # length of str
   syscall
 
   movl $0x2000004, %eax # write() syscall
   mov $1, %rdi # stdout
-  movq _goodbye_world@GOTPCREL(%rip), %rsi
+  pushq _goodbye_world@GOTPCREL(%rip)
+  popq %rsi
   mov $15, %rdx # length of str
   syscall
 

@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs | FileCheck %s -check-prefix=GCN
+; RUN: llc < %s -march=amdgcn -mcpu=gfx1031 -verify-machineinstrs | FileCheck %s -check-prefix=GCN
 
 declare i32 @llvm.amdgcn.buffer.atomic.csub(i32, <4 x i32>, i32, i32, i1)
 declare i32 @llvm.amdgcn.global.atomic.csub(i32 addrspace(1)*, i32)

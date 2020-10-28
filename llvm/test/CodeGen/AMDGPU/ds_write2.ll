@@ -1,5 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,CI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt,+flat-for-global -amdgpu-enable-global-sgpr-addr < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt,+flat-for-global,-unaligned-access-mode < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,GFX9,GFX9-ALIGNED %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt,+flat-for-global,+unaligned-access-mode < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,GFX9,GFX9-UNALIGNED %s
 
 @lds = addrspace(3) global [512 x float] undef, align 4
 @lds.f64 = addrspace(3) global [512 x double] undef, align 8
@@ -9,7 +10,8 @@
 ; GFX9-NOT: m0
 
 ; GCN-DAG: {{buffer|flat|global}}_load_dword [[VAL:v[0-9]+]]
-; GCN-DAG: v_lshlrev_b32_e32 [[VPTR:v[0-9]+]], 2, v{{[0-9]+}}
+; GCN-DAG: v_lshlrev_b32_e32 [[VBASE:v[0-9]+]], 2, v{{[0-9]+}}
+; GCN-DAG: v_add_{{[ui]}}32_e32 [[VPTR:v[0-9]+]], {{(vcc, )?}}lds@abs32@lo, [[VBASE]]
 ; GCN: ds_write2_b32 [[VPTR]], [[VAL]], [[VAL]] offset1:8
 ; GCN: s_endpgm
 define amdgpu_kernel void @simple_write2_one_val_f32(float addrspace(1)* %C, float addrspace(1)* %in) #0 {
@@ -31,10 +33,11 @@ define amdgpu_kernel void @simple_write2_one_val_f32(float addrspace(1)* %C, flo
 ; CI-DAG: buffer_load_dword [[VAL0:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; CI-DAG: buffer_load_dword [[VAL1:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 
-; GFX9-DAG: global_load_dword [[VAL0:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}
-; GFX9-DAG: global_load_dword [[VAL1:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} offset:4
+; GFX9-DAG: global_load_dword [[VAL0:v[0-9]+]], v{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}{{$}}
+; GFX9-DAG: global_load_dword [[VAL1:v[0-9]+]], v{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}} offset:4{{$}}
 
-; GCN-DAG: v_lshlrev_b32_e32 [[VPTR:v[0-9]+]], 2, v{{[0-9]+}}
+; GCN-DAG: v_lshlrev_b32_e32 [[VBASE:v[0-9]+]], 2, v{{[0-9]+}}
+; GCN-DAG: v_add_{{[ui]}}32_e32 [[VPTR:v[0-9]+]], {{(vcc, )?}}lds@abs32@lo, [[VBASE]]
 ; GCN: ds_write2_b32 [[VPTR]], [[VAL0]], [[VAL1]] offset1:8
 ; GCN: s_endpgm
 define amdgpu_kernel void @simple_write2_two_val_f32(float addrspace(1)* %C, float addrspace(1)* %in) #0 {
@@ -194,10 +197,12 @@ define amdgpu_kernel void @simple_write2_two_val_subreg4_f32(float addrspace(1)*
 ; CI-DAG: buffer_load_dword [[VAL0:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; CI-DAG: buffer_load_dword [[VAL1:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 
-; GFX9-DAG: global_load_dword [[VAL0:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}{{$}}
-; GFX9-DAG: global_load_dword [[VAL1:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} offset:4
+; GFX9-DAG: global_load_dword [[VAL0:v[0-9]+]], v{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}{{$}}
+; GFX9-DAG: global_load_dword [[VAL1:v[0-9]+]], v{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}} offset:4{{$}}
 
-; GCN-DAG: v_lshlrev_b32_e32 [[VPTR:v[0-9]+]], 2, v{{[0-9]+}}
+; GCN-DAG: v_lshlrev_b32_e32 [[VBASE:v[0-9]+]], 2, v{{[0-9]+}}
+; GCN-DAG: v_add_{{[ui]}}32_e32 [[VPTR:v[0-9]+]], {{(vcc, )?}}lds@abs32@lo, [[VBASE]]
+
 ; GCN: ds_write2_b32 [[VPTR]], [[VAL0]], [[VAL1]] offset1:255
 ; GCN: s_endpgm
 define amdgpu_kernel void @simple_write2_two_val_max_offset_f32(float addrspace(1)* %C, float addrspace(1)* %in) #0 {
@@ -379,11 +384,11 @@ define amdgpu_kernel void @misaligned_simple_write2_one_val_f64(double addrspace
 ; CI-DAG: buffer_load_dwordx2 [[VAL0:v\[[0-9]+:[0-9]+\]]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; CI-DAG: buffer_load_dwordx2 [[VAL1:v\[[0-9]+:[0-9]+\]]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8
 
-; GFX9-DAG: global_load_dwordx2 [[VAL0:v\[[0-9]+:[0-9]+\]]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}{{$}}
-; GFX9-DAG: global_load_dwordx2 [[VAL1:v\[[0-9]+:[0-9]+\]]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}} offset:8
+; GFX9-DAG: global_load_dwordx2 [[VAL0:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]$}}
+; GFX9-DAG: global_load_dwordx2 [[VAL1:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}} offset:8
 
-
-; GCN-DAG: v_lshlrev_b32_e32 [[VPTR:v[0-9]+]], 3, v{{[0-9]+}}
+; GCN-DAG: v_lshlrev_b32_e32 [[VBASE:v[0-9]+]], 3, v{{[0-9]+}}
+; GCN-DAG: v_add_{{[ui]}}32_e32 [[VPTR:v[0-9]+]], {{(vcc, )?}}lds.f64@abs32@lo, [[VBASE]]
 ; GCN: ds_write2_b64 [[VPTR]], [[VAL0]], [[VAL1]] offset1:8
 ; GCN: s_endpgm
 define amdgpu_kernel void @simple_write2_two_val_f64(double addrspace(1)* %C, double addrspace(1)* %in) #0 {
@@ -434,8 +439,10 @@ define amdgpu_kernel void @store_constant_disjoint_offsets() {
 ; GFX9-NOT: m0
 
 ; GCN-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], bar@abs32@lo{{$}}
-; GCN-DAG: ds_write2_b32 [[PTR]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
-; GCN-DAG: ds_write2_b32 [[PTR]], v{{[0-9]+}}, v{{[0-9]+}} offset0:2 offset1:3
+; CI-DAG: ds_write2_b32 [[PTR]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
+; CI-DAG: ds_write2_b32 [[PTR]], v{{[0-9]+}}, v{{[0-9]+}} offset0:2 offset1:3
+; GFX9-DAG: ds_write_b128 [[PTR]], {{v\[[0-9]+:[0-9]+\]}}
+
 ; GCN: s_endpgm
 define amdgpu_kernel void @store_misaligned64_constant_offsets() {
   store i64 123, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 0), align 4
@@ -505,14 +512,30 @@ define amdgpu_kernel void @write2_sgemm_sequence(float addrspace(1)* %C, i32 %ld
 ; CI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN: ds_write2_b32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}} offset0:2 offset1:3{{$}}
-; GCN: ds_write2_b32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}} offset1:1{{$}}
+; CI: ds_write2_b32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}} offset1:1{{$}}
+; CI: ds_write2_b32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}} offset0:2 offset1:3{{$}}
+; GFX9: ds_write_b128 {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @simple_write2_v4f32_superreg_align4(<4 x float> addrspace(3)* %out, <4 x float> addrspace(1)* %in) #0 {
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %in
   %val0 = load <4 x float>, <4 x float> addrspace(1)* %in.gep, align 4
   %out.gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(3)* %out, i32 %x.i
   store <4 x float> %val0, <4 x float> addrspace(3)* %out.gep, align 4
+  ret void
+}
+
+@v2i32_align1 = internal addrspace(3) global [100 x <2 x i32>] undef, align 1
+
+; GCN-LABEL: {{^}}write2_v2i32_align1_odd_offset:
+; CI-COUNT-8: ds_write_b8
+
+; GFX9-ALIGNED-COUNT-8: ds_write_b8
+
+; GFX9-UNALIGNED: v_mov_b32_e32 [[BASE_ADDR:v[0-9]+]], 0x41{{$}}
+; GFX9-UNALIGNED: ds_write2_b32 [[BASE_ADDR]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1{{$}}
+define amdgpu_kernel void @write2_v2i32_align1_odd_offset() {
+entry:
+  store <2 x i32> <i32 123, i32 456>, <2 x i32> addrspace(3)* bitcast (i8 addrspace(3)* getelementptr (i8, i8 addrspace(3)* bitcast ([100 x <2 x i32>] addrspace(3)* @v2i32_align1 to i8 addrspace(3)*), i32 65) to <2 x i32> addrspace(3)*), align 1
   ret void
 }
 

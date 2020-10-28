@@ -1,5 +1,11 @@
 import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/utils/TableGen/tablegen.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
+
+tablegen("Opts") {
+  visibility = [ ":llvm-symbolizer" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
 
 symlinks = [ "llvm-addr2line" ]
 if (llvm_install_binutils_symlinks) {
@@ -23,11 +29,13 @@ group("symlinks") {
 
 executable("llvm-symbolizer") {
   deps = [
+    ":Opts",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/DebugInfo/PDB",
     "//llvm/lib/DebugInfo/Symbolize",
     "//llvm/lib/Demangle",
     "//llvm/lib/Object",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
   sources = [ "llvm-symbolizer.cpp" ]

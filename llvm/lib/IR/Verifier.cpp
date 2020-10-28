@@ -926,8 +926,13 @@ void Verifier::visitDIEnumerator(const DIEnumerator &N) {
 
 void Verifier::visitDIBasicType(const DIBasicType &N) {
   AssertDI(N.getTag() == dwarf::DW_TAG_base_type ||
-               N.getTag() == dwarf::DW_TAG_unspecified_type,
+               N.getTag() == dwarf::DW_TAG_unspecified_type ||
+               N.getTag() == dwarf::DW_TAG_string_type,
            "invalid tag", &N);
+}
+
+void Verifier::visitDIStringType(const DIStringType &N) {
+  AssertDI(N.getTag() == dwarf::DW_TAG_string_type, "invalid tag", &N);
   AssertDI(!(N.isBigEndian() && N.isLittleEndian()) ,
             "has conflicting flags", &N);
 }
@@ -2123,16 +2128,9 @@ void Verifier::verifyStatepoint(const CallBase &Call) {
          Call);
   const int NumTransitionArgs =
       cast<ConstantInt>(NumTransitionArgsV)->getZExtValue();
-  Assert(NumTransitionArgs >= 0,
-         "gc.statepoint number of transition arguments must be positive", Call);
+  Assert(NumTransitionArgs == 0,
+         "gc.statepoint w/inline transition bundle is deprecated", Call);
   const int EndTransitionArgsInx = EndCallArgsInx + 1 + NumTransitionArgs;
-
-  // We're migrating away from inline operands to operand bundles, enforce
-  // the either/or property during transition.
-  if (Call.getOperandBundle(LLVMContext::OB_gc_transition)) {
-    Assert(NumTransitionArgs == 0,
-           "can't use both deopt operands and deopt bundle on a statepoint");
-  }
 
   const Value *NumDeoptArgsV = Call.getArgOperand(EndTransitionArgsInx + 1);
   Assert(isa<ConstantInt>(NumDeoptArgsV),
@@ -2140,22 +2138,12 @@ void Verifier::verifyStatepoint(const CallBase &Call) {
          "must be constant integer",
          Call);
   const int NumDeoptArgs = cast<ConstantInt>(NumDeoptArgsV)->getZExtValue();
-  Assert(NumDeoptArgs >= 0,
-         "gc.statepoint number of deoptimization arguments "
-         "must be positive",
-         Call);
+  Assert(NumDeoptArgs == 0,
+         "gc.statepoint w/inline deopt operands is deprecated", Call);
 
-  // We're migrating away from inline operands to operand bundles, enforce
-  // the either/or property during transition.
-  if (Call.getOperandBundle(LLVMContext::OB_deopt)) {
-    Assert(NumDeoptArgs == 0,
-           "can't use both deopt operands and deopt bundle on a statepoint");
-  }
-
-  const int ExpectedNumArgs =
-      7 + NumCallArgs + NumTransitionArgs + NumDeoptArgs;
-  Assert(ExpectedNumArgs <= (int)Call.arg_size(),
-         "gc.statepoint too few arguments according to length fields", Call);
+  const int ExpectedNumArgs = 7 + NumCallArgs;
+  Assert(ExpectedNumArgs == (int)Call.arg_size(),
+         "gc.statepoint too many arguments", Call);
 
   // Check that the only uses of this gc.statepoint are gc.result or
   // gc.relocate calls which are tied to this statepoint and thus part
@@ -2930,8 +2918,8 @@ void Verifier::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
   Assert(SrcTy->getPointerAddressSpace() != DestTy->getPointerAddressSpace(),
          "AddrSpaceCast must be between different address spaces", &I);
   if (auto *SrcVTy = dyn_cast<VectorType>(SrcTy))
-    Assert(SrcVTy->getNumElements() ==
-               cast<VectorType>(DestTy)->getNumElements(),
+    Assert(cast<FixedVectorType>(SrcVTy)->getNumElements() ==
+               cast<FixedVectorType>(DestTy)->getNumElements(),
            "AddrSpaceCast vector pointer number of elements mismatch", &I);
   visitInstruction(I);
 }
@@ -4819,45 +4807,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
              "gc.relocate: statepoint base index out of bounds", Call);
       Assert(DerivedIndex < Opt->Inputs.size(),
              "gc.relocate: statepoint derived index out of bounds", Call);
-    } else {
-      Assert(BaseIndex < StatepointCall.arg_size(),
-             "gc.relocate: statepoint base index out of bounds", Call);
-      Assert(DerivedIndex < StatepointCall.arg_size(),
-             "gc.relocate: statepoint derived index out of bounds", Call);
-
-      // Check that BaseIndex and DerivedIndex fall within the 'gc parameters'
-      // section of the statepoint's argument.
-      Assert(StatepointCall.arg_size() > 0,
-             "gc.statepoint: insufficient arguments");
-      Assert(isa<ConstantInt>(StatepointCall.getArgOperand(3)),
-             "gc.statement: number of call arguments must be constant integer");
-      const uint64_t NumCallArgs =
-        cast<ConstantInt>(StatepointCall.getArgOperand(3))->getZExtValue();
-      Assert(StatepointCall.arg_size() > NumCallArgs + 5,
-             "gc.statepoint: mismatch in number of call arguments");
-      Assert(isa<ConstantInt>(StatepointCall.getArgOperand(NumCallArgs + 5)),
-             "gc.statepoint: number of transition arguments must be "
-             "a constant integer");
-      const uint64_t NumTransitionArgs =
-          cast<ConstantInt>(StatepointCall.getArgOperand(NumCallArgs + 5))
-              ->getZExtValue();
-      const uint64_t DeoptArgsStart = 4 + NumCallArgs + 1 + NumTransitionArgs + 1;
-      Assert(isa<ConstantInt>(StatepointCall.getArgOperand(DeoptArgsStart)),
-             "gc.statepoint: number of deoptimization arguments must be "
-             "a constant integer");
-      const uint64_t NumDeoptArgs =
-          cast<ConstantInt>(StatepointCall.getArgOperand(DeoptArgsStart))
-              ->getZExtValue();
-      const uint64_t GCParamArgsStart = DeoptArgsStart + 1 + NumDeoptArgs;
-      const uint64_t GCParamArgsEnd = StatepointCall.arg_size();
-      Assert(GCParamArgsStart <= BaseIndex && BaseIndex < GCParamArgsEnd,
-             "gc.relocate: statepoint base index doesn't fall within the "
-             "'gc parameters' section of the statepoint call",
-             Call);
-      Assert(GCParamArgsStart <= DerivedIndex && DerivedIndex < GCParamArgsEnd,
-             "gc.relocate: statepoint derived index doesn't fall within the "
-             "'gc parameters' section of the statepoint call",
-             Call);
     }
 
     // Relocated value must be either a pointer type or vector-of-pointer type,
@@ -4986,15 +4935,17 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::sadd_sat:
   case Intrinsic::uadd_sat:
   case Intrinsic::ssub_sat:
-  case Intrinsic::usub_sat: {
+  case Intrinsic::usub_sat:
+  case Intrinsic::sshl_sat:
+  case Intrinsic::ushl_sat: {
     Value *Op1 = Call.getArgOperand(0);
     Value *Op2 = Call.getArgOperand(1);
     Assert(Op1->getType()->isIntOrIntVectorTy(),
-           "first operand of [us][add|sub]_sat must be an int type or vector "
-           "of ints");
+           "first operand of [us][add|sub|shl]_sat must be an int type or "
+           "vector of ints");
     Assert(Op2->getType()->isIntOrIntVectorTy(),
-           "second operand of [us][add|sub]_sat must be an int type or vector "
-           "of ints");
+           "second operand of [us][add|sub|shl]_sat must be an int type or "
+           "vector of ints");
     break;
   }
   case Intrinsic::smul_fix:
@@ -5110,7 +5061,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
              "Vector element type mismatch of the result and second operand "
              "vector!", IF);
 
-    Assert(ResultTy->getNumElements() ==
+    Assert(cast<FixedVectorType>(ResultTy)->getNumElements() ==
                NumRows->getZExtValue() * NumColumns->getZExtValue(),
            "Result of a matrix operation does not fit in the returned vector!");
 
@@ -5196,7 +5147,7 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
     Assert(Operand->getType()->isFPOrFPVectorTy(),
            "Intrinsic first argument must be floating point", &FPI);
     if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
-      NumSrcElem = OperandT->getNumElements();
+      NumSrcElem = cast<FixedVectorType>(OperandT)->getNumElements();
     }
 
     Operand = &FPI;
@@ -5205,7 +5156,7 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
     Assert(Operand->getType()->isIntOrIntVectorTy(),
            "Intrinsic result must be an integer", &FPI);
     if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
-      Assert(NumSrcElem == OperandT->getNumElements(),
+      Assert(NumSrcElem == cast<FixedVectorType>(OperandT)->getNumElements(),
              "Intrinsic first argument and result vector lengths must be equal",
              &FPI);
     }
@@ -5219,7 +5170,7 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
     Assert(Operand->getType()->isIntOrIntVectorTy(),
            "Intrinsic first argument must be integer", &FPI);
     if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
-      NumSrcElem = OperandT->getNumElements();
+      NumSrcElem = cast<FixedVectorType>(OperandT)->getNumElements();
     }
 
     Operand = &FPI;
@@ -5228,7 +5179,7 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
     Assert(Operand->getType()->isFPOrFPVectorTy(),
            "Intrinsic result must be a floating point", &FPI);
     if (auto *OperandT = dyn_cast<VectorType>(Operand->getType())) {
-      Assert(NumSrcElem == OperandT->getNumElements(),
+      Assert(NumSrcElem == cast<FixedVectorType>(OperandT)->getNumElements(),
              "Intrinsic first argument and result vector lengths must be equal",
              &FPI);
     }
@@ -5247,9 +5198,8 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
     Assert(OperandTy->isVectorTy() == ResultTy->isVectorTy(),
            "Intrinsic first argument and result disagree on vector use", &FPI);
     if (OperandTy->isVectorTy()) {
-      auto *OperandVecTy = cast<VectorType>(OperandTy);
-      auto *ResultVecTy = cast<VectorType>(ResultTy);
-      Assert(OperandVecTy->getNumElements() == ResultVecTy->getNumElements(),
+      Assert(cast<FixedVectorType>(OperandTy)->getNumElements() ==
+                 cast<FixedVectorType>(ResultTy)->getNumElements(),
              "Intrinsic first argument and result vector lengths must be equal",
              &FPI);
     }

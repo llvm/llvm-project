@@ -1,8 +1,8 @@
 # RUN: rm -rf %t
 # RUN: mkdir %t
 # RUN: cd %t
-# RUN: yaml2obj --docnum=1 %s > test.wasm
-# RUN: yaml2obj --docnum=2 %s > test_sym.wasm
+# RUN: yaml2obj --docnum=1 %s -o test.wasm
+# RUN: yaml2obj --docnum=2 %s -o test_sym.wasm
 # RUN: lldb-test object-file test.wasm | FileCheck %s
 
 # This test checks that SymbolVendorWasm correctly loads DWARF debug sections

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXECUTIONENGINE_ORC_RAWBYTECHANNEL_H
-#define LLVM_EXECUTIONENGINE_ORC_RAWBYTECHANNEL_H
+#ifndef LLVM_EXECUTIONENGINE_ORC_RPC_RAWBYTECHANNEL_H
+#define LLVM_EXECUTIONENGINE_ORC_RPC_RAWBYTECHANNEL_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/RPC/RPCSerialization.h"
@@ -181,4 +181,4 @@ public:
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_RAWBYTECHANNEL_H
+#endif // LLVM_EXECUTIONENGINE_ORC_RPC_RAWBYTECHANNEL_H

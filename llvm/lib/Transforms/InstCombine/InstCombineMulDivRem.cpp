@@ -102,6 +102,9 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
 /// of C.
 /// Return a null pointer otherwise.
 static Constant *getLogBase2(Type *Ty, Constant *C) {
+  // Note that log2(iN undef) is *NOT* iN undef, because log2(iN undef) u< N.
+  // FIXME: just assert that C there is no undef in \p C.
+
   const APInt *IVal;
   if (match(C, m_APInt(IVal)) && IVal->isPowerOf2())
     return ConstantInt::get(Ty, IVal->logBase2());
@@ -217,7 +220,11 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
 
     if (match(&I, m_Mul(m_Value(NewOp), m_Constant(C1)))) {
       // Replace X*(2^C) with X << C, where C is either a scalar or a vector.
-      if (Constant *NewCst = getLogBase2(NewOp->getType(), C1)) {
+      // Note that we need to sanitize undef multipliers to 1,
+      // to avoid introducing poison.
+      Constant *SafeC1 = Constant::replaceUndefsWith(
+          C1, ConstantInt::get(C1->getType()->getScalarType(), 1));
+      if (Constant *NewCst = getLogBase2(NewOp->getType(), SafeC1)) {
         BinaryOperator *Shl = BinaryOperator::CreateShl(NewOp, NewCst);
 
         if (I.hasNoUnsignedWrap())
@@ -233,29 +240,12 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     }
   }
 
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(Op1)) {
-    // (Y - X) * (-(2**n)) -> (X - Y) * (2**n), for positive nonzero n
-    // (Y + const) * (-(2**n)) -> (-constY) * (2**n), for positive nonzero n
-    // The "* (2**n)" thus becomes a potential shifting opportunity.
-    {
-      const APInt &   Val = CI->getValue();
-      const APInt &PosVal = Val.abs();
-      if (Val.isNegative() && PosVal.isPowerOf2()) {
-        Value *X = nullptr, *Y = nullptr;
-        if (Op0->hasOneUse()) {
-          ConstantInt *C1;
-          Value *Sub = nullptr;
-          if (match(Op0, m_Sub(m_Value(Y), m_Value(X))))
-            Sub = Builder.CreateSub(X, Y, "suba");
-          else if (match(Op0, m_Add(m_Value(Y), m_ConstantInt(C1))))
-            Sub = Builder.CreateSub(Builder.CreateNeg(C1), Y, "subc");
-          if (Sub)
-            return
-              BinaryOperator::CreateMul(Sub,
-                                        ConstantInt::get(Y->getType(), PosVal));
-        }
-      }
-    }
+  if (Op0->hasOneUse() && match(Op1, m_NegatedPower2())) {
+    // Interpret  X * (-1<<C)  as  (-X) * (1<<C)  and try to sink the negation.
+    // The "* (1<<C)" thus becomes a potential shifting opportunity.
+    if (Value *NegOp0 = Negator::Negate(/*IsNegation*/ true, Op0, *this))
+      return BinaryOperator::CreateMul(
+          NegOp0, ConstantExpr::getNeg(cast<Constant>(Op1)), I.getName());
   }
 
   if (Instruction *FoldedMul = foldBinOpIntoSelectOrPhi(I))
@@ -946,6 +936,8 @@ static Instruction *foldUDivShl(Value *Op0, Value *Op1, const BinaryOperator &I,
 static size_t visitUDivOperand(Value *Op0, Value *Op1, const BinaryOperator &I,
                                SmallVectorImpl<UDivFoldAction> &Actions,
                                unsigned Depth = 0) {
+  // FIXME: assert that Op1 isn't/doesn't contain undef.
+
   // Check to see if this is an unsigned division with an exact power of 2,
   // if so, convert to a right shift.
   if (match(Op1, m_Power2())) {
@@ -965,6 +957,9 @@ static size_t visitUDivOperand(Value *Op0, Value *Op1, const BinaryOperator &I,
     return 0;
 
   if (SelectInst *SI = dyn_cast<SelectInst>(Op1))
+    // FIXME: missed optimization: if one of the hands of select is/contains
+    //        undef, just directly pick the other one.
+    // FIXME: can both hands contain undef?
     if (size_t LHSIdx =
             visitUDivOperand(Op0, SI->getOperand(1), I, Actions, Depth))
       if (visitUDivOperand(Op0, SI->getOperand(2), I, Actions, Depth)) {
@@ -1119,6 +1114,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     return Common;
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  Type *Ty = I.getType();
   Value *X;
   // sdiv Op0, -1 --> -Op0
   // sdiv Op0, (sext i1 X) --> -Op0 (because if X is 0, the op is undefined)
@@ -1128,16 +1124,26 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
 
   // X / INT_MIN --> X == INT_MIN
   if (match(Op1, m_SignMask()))
-    return new ZExtInst(Builder.CreateICmpEQ(Op0, Op1), I.getType());
+    return new ZExtInst(Builder.CreateICmpEQ(Op0, Op1), Ty);
+
+  // sdiv exact X,  1<<C  -->    ashr exact X, C   iff  1<<C  is non-negative
+  // sdiv exact X, -1<<C  -->  -(ashr exact X, C)
+  if (I.isExact() && ((match(Op1, m_Power2()) && match(Op1, m_NonNegative())) ||
+                      match(Op1, m_NegatedPower2()))) {
+    bool DivisorWasNegative = match(Op1, m_NegatedPower2());
+    if (DivisorWasNegative)
+      Op1 = ConstantExpr::getNeg(cast<Constant>(Op1));
+    auto *AShr = BinaryOperator::CreateExactAShr(
+        Op0, getLogBase2(Ty, cast<Constant>(Op1)), I.getName());
+    if (!DivisorWasNegative)
+      return AShr;
+    Builder.Insert(AShr);
+    AShr->setName(I.getName() + ".neg");
+    return BinaryOperator::CreateNeg(AShr, I.getName());
+  }
 
   const APInt *Op1C;
   if (match(Op1, m_APInt(Op1C))) {
-    // sdiv exact X, C  -->  ashr exact X, log2(C)
-    if (I.isExact() && Op1C->isNonNegative() && Op1C->isPowerOf2()) {
-      Value *ShAmt = ConstantInt::get(Op1->getType(), Op1C->exactLogBase2());
-      return BinaryOperator::CreateExactAShr(Op0, ShAmt, I.getName());
-    }
-
     // If the dividend is sign-extended and the constant divisor is small enough
     // to fit in the source type, shrink the division to the narrower type:
     // (sext X) sdiv C --> sext (X sdiv C)
@@ -1152,7 +1158,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
       Constant *NarrowDivisor =
           ConstantExpr::getTrunc(cast<Constant>(Op1), Op0Src->getType());
       Value *NarrowOp = Builder.CreateSDiv(Op0Src, NarrowDivisor);
-      return new SExtInst(NarrowOp, Op0->getType());
+      return new SExtInst(NarrowOp, Ty);
     }
 
     // -X / C --> X / -C (if the negation doesn't overflow).
@@ -1160,7 +1166,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     //       checking if all elements are not the min-signed-val.
     if (!Op1C->isMinSignedValue() &&
         match(Op0, m_NSWSub(m_Zero(), m_Value(X)))) {
-      Constant *NegC = ConstantInt::get(I.getType(), -(*Op1C));
+      Constant *NegC = ConstantInt::get(Ty, -(*Op1C));
       Instruction *BO = BinaryOperator::CreateSDiv(X, NegC);
       BO->setIsExact(I.isExact());
       return BO;
@@ -1173,9 +1179,19 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
     return BinaryOperator::CreateNSWNeg(
         Builder.CreateSDiv(X, Y, I.getName(), I.isExact()));
 
+  // abs(X) / X --> X > -1 ? 1 : -1
+  // X / abs(X) --> X > -1 ? 1 : -1
+  if (match(&I, m_c_BinOp(
+                    m_OneUse(m_Intrinsic<Intrinsic::abs>(m_Value(X), m_One())),
+                    m_Deferred(X)))) {
+    Constant *NegOne = ConstantInt::getAllOnesValue(Ty);
+    Value *Cond = Builder.CreateICmpSGT(X, NegOne);
+    return SelectInst::Create(Cond, ConstantInt::get(Ty, 1), NegOne);
+  }
+
   // If the sign bits of both operands are zero (i.e. we can prove they are
   // unsigned inputs), turn this into a udiv.
-  APInt Mask(APInt::getSignMask(I.getType()->getScalarSizeInBits()));
+  APInt Mask(APInt::getSignMask(Ty->getScalarSizeInBits()));
   if (MaskedValueIsZero(Op0, Mask, 0, &I)) {
     if (MaskedValueIsZero(Op1, Mask, 0, &I)) {
       // X sdiv Y -> X udiv Y, iff X and Y don't have sign bit set

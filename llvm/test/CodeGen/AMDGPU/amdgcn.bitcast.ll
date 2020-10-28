@@ -298,3 +298,15 @@ define <2 x i64> @bitcast_v4f32_to_v2i64(<2 x i64> %arg) {
   %div = udiv <2 x i64> %cast, %arg
   ret <2 x i64> %div
 }
+
+declare half @llvm.canonicalize.f16(half)
+
+; FUNC-LABEL: {{^}}bitcast_f32_to_v1i32:
+define amdgpu_kernel void @bitcast_f32_to_v1i32(i32 addrspace(1)* %out) {
+  %f16 = call arcp afn half @llvm.canonicalize.f16(half 0xH03F0)
+  %f32 = fpext half %f16 to float
+  %v = bitcast float %f32 to <1 x i32>
+  %v1 = extractelement <1 x i32> %v, i32 0
+  store i32 %v1, i32 addrspace(1)* %out
+  ret void
+}

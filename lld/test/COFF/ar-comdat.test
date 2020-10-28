@@ -1,5 +1,5 @@
-# RUN: yaml2obj %s > %t1.obj
-# RUN: yaml2obj %s > %t2.obj
+# RUN: yaml2obj %s -o %t1.obj
+# RUN: yaml2obj %s -o %t2.obj
 # RUN: llvm-lib /out:%t.lib %t1.obj %t2.obj
 # RUN: lld-link /out:%t.exe /lldmap:%t.map /entry:main /subsystem:console %p/Inputs/ret42.obj %t.lib
 # RUN: FileCheck %s < %t.map

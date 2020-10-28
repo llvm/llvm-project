@@ -1,4 +1,4 @@
-RUN: yaml2obj %S/Inputs/pdb-globals.yaml > %t.obj
+RUN: yaml2obj %S/Inputs/pdb-globals.yaml -o %t.obj
 RUN: lld-link /debug /nodefaultlib /entry:main /force /out:%t.exe /pdb:%t.pdb %t.obj
 RUN: llvm-pdbutil dump -symbols -globals %t.pdb | FileCheck %s
 

@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp -ferror-limit 100 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp45 -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}
@@ -18,9 +18,9 @@ L1:
   // expected-note@+1 {{expected an expression statement}}
   {
     foo();
-    goto L1; // expected-error {{use of undeclared label 'L1'}}
+    goto L1;
   }
-  goto L2; // expected-error {{use of undeclared label 'L2'}}
+  goto L2;
 #pragma omp atomic
   // expected-error@+2 {{the statement for 'atomic' must be an expression statement of form '++x;', '--x;', 'x++;', 'x--;', 'x binop= expr;', 'x = x binop expr' or 'x = expr binop x', where x is an l-value expression with scalar type}}
   // expected-note@+1 {{expected an expression statement}}
@@ -387,9 +387,9 @@ void hint() {
   a += 1;
 #pragma omp atomic hint(+ // omp45-error {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   a += 1;
-#pragma omp atomic hint(a // omp45-error {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{expression is not an integer constant expression}}
+#pragma omp atomic hint(a // omp45-error {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp50-error {{integer constant expression}}
   a += 1;
-#pragma omp atomic hint(a) // omp45-error {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} omp50-error {{expression is not an integer constant expression}}
+#pragma omp atomic hint(a) // omp45-error {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} omp50-error {{integer constant expression}}
   a += 1;
 #pragma omp atomic hint(1) hint(1) // omp45-error 2 {{unexpected OpenMP clause 'hint' in directive '#pragma omp atomic'}} expected-error {{directive '#pragma omp atomic' cannot contain more than one 'hint' clause}}
   a += 1;

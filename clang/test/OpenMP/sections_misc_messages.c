@@ -34,6 +34,20 @@ void test_no_clause() {
     foo();
     foo(); // expected-error {{statement in 'omp sections' directive must be enclosed into a section region}}
   }
+#pragma omp parallel
+#pragma omp sections
+  {
+  {
+    if (i == 6)
+      return; // expected-error {{cannot return from OpenMP region}}
+  }
+#pragma omp section
+  {
+    if (i == 6)
+      return; // expected-error {{cannot return from OpenMP region}}
+  }
+  }
+
 }
 
 void test_branch_protected_scope() {
@@ -48,8 +62,6 @@ L1:
   {
     if (i == 5)
       goto L1; // expected-error {{use of undeclared label 'L1'}}
-    else if (i == 6)
-      return; // expected-error {{cannot return from OpenMP region}}
     else if (i == 7)
       goto L2;
     else if (i == 8) {
@@ -58,9 +70,21 @@ L1:
     }
 #pragma omp section
     if (i == 5)
+      goto L1;
+    else if (i == 7)
+      goto L3;
+    else if (i == 8) {
+    L3:
+      x[i]++;
+    }
+  }
+
+#pragma omp parallel
+#pragma omp sections
+  {
+#pragma omp section
+    if (i == 5)
       goto L1; // expected-error {{use of undeclared label 'L1'}}
-    else if (i == 6)
-      return; // expected-error {{cannot return from OpenMP region}}
     else if (i == 7)
       goto L3;
     else if (i == 8) {

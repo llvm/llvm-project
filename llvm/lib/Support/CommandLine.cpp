@@ -1251,6 +1251,22 @@ bool cl::ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
   return AllExpanded;
 }
 
+bool cl::expandResponseFiles(int Argc, const char *const *Argv,
+                             const char *EnvVar, StringSaver &Saver,
+                             SmallVectorImpl<const char *> &NewArgv) {
+  auto Tokenize = Triple(sys::getProcessTriple()).isOSWindows()
+                      ? cl::TokenizeWindowsCommandLine
+                      : cl::TokenizeGNUCommandLine;
+  // The environment variable specifies initial options.
+  if (EnvVar)
+    if (llvm::Optional<std::string> EnvValue = sys::Process::GetEnv(EnvVar))
+      Tokenize(*EnvValue, Saver, NewArgv, /*MarkEOLs=*/false);
+
+  // Command line options can override the environment variable.
+  NewArgv.append(Argv + 1, Argv + Argc);
+  return ExpandResponseFiles(Saver, Tokenize, NewArgv);
+}
+
 bool cl::readConfigFile(StringRef CfgFile, StringSaver &Saver,
                         SmallVectorImpl<const char *> &Argv) {
   SmallString<128> AbsPath;

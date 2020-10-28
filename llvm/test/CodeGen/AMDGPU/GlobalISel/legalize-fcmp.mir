@@ -116,9 +116,10 @@ body: |
     ; GFX7: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[C]](s32), [[UV1]]
     ; GFX7: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP]](s1)
     ; GFX7: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
-    ; GFX7: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32)
-    ; GFX7: [[TRUNC:%[0-9]+]]:_(<2 x s1>) = G_TRUNC [[BUILD_VECTOR]](<2 x s32>)
-    ; GFX7: S_NOP 0, implicit [[TRUNC]](<2 x s1>)
+    ; GFX7: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; GFX7: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
+    ; GFX7: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32)
+    ; GFX7: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s32>)
     ; GFX8-LABEL: name: test_fcmp_v2s32
     ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GFX8: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
@@ -127,9 +128,10 @@ body: |
     ; GFX8: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[C]](s32), [[UV1]]
     ; GFX8: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP]](s1)
     ; GFX8: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
-    ; GFX8: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32)
-    ; GFX8: [[TRUNC:%[0-9]+]]:_(<2 x s1>) = G_TRUNC [[BUILD_VECTOR]](<2 x s32>)
-    ; GFX8: S_NOP 0, implicit [[TRUNC]](<2 x s1>)
+    ; GFX8: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; GFX8: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
+    ; GFX8: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32)
+    ; GFX8: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s32>)
     ; GFX9-LABEL: name: test_fcmp_v2s32
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GFX9: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
@@ -138,14 +140,14 @@ body: |
     ; GFX9: [[FCMP1:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[C]](s32), [[UV1]]
     ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP]](s1)
     ; GFX9: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
-    ; GFX9: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](s32), [[ANYEXT1]](s32)
-    ; GFX9: [[TRUNC:%[0-9]+]]:_(<2 x s1>) = G_TRUNC [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-    ; GFX9: S_NOP 0, implicit [[TRUNC]](<2 x s1>)
+    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32)
+    ; GFX9: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s32>)
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(<2 x s32>) = G_BUILD_VECTOR %0, %0
     %2:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %3:_(<2 x s1>) = G_FCMP floatpred(oeq), %1, %2
-    S_NOP 0, implicit %3
+    %4:_(<2 x s32>) = G_ANYEXT %3
+    S_NOP 0, implicit %4
 ...
 
 ---
@@ -161,9 +163,10 @@ body: |
     ; GFX7: [[FCMP1:%[0-9]+]]:_(s1) = nnan G_FCMP floatpred(oeq), [[C]](s32), [[UV1]]
     ; GFX7: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP]](s1)
     ; GFX7: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
-    ; GFX7: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32)
-    ; GFX7: [[TRUNC:%[0-9]+]]:_(<2 x s1>) = G_TRUNC [[BUILD_VECTOR]](<2 x s32>)
-    ; GFX7: S_NOP 0, implicit [[TRUNC]](<2 x s1>)
+    ; GFX7: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; GFX7: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
+    ; GFX7: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32)
+    ; GFX7: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s32>)
     ; GFX8-LABEL: name: test_fcmp_v2s32_flags
     ; GFX8: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GFX8: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
@@ -172,9 +175,10 @@ body: |
     ; GFX8: [[FCMP1:%[0-9]+]]:_(s1) = nnan G_FCMP floatpred(oeq), [[C]](s32), [[UV1]]
     ; GFX8: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP]](s1)
     ; GFX8: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
-    ; GFX8: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32)
-    ; GFX8: [[TRUNC:%[0-9]+]]:_(<2 x s1>) = G_TRUNC [[BUILD_VECTOR]](<2 x s32>)
-    ; GFX8: S_NOP 0, implicit [[TRUNC]](<2 x s1>)
+    ; GFX8: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; GFX8: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
+    ; GFX8: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32)
+    ; GFX8: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s32>)
     ; GFX9-LABEL: name: test_fcmp_v2s32_flags
     ; GFX9: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GFX9: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
@@ -183,14 +187,14 @@ body: |
     ; GFX9: [[FCMP1:%[0-9]+]]:_(s1) = nnan G_FCMP floatpred(oeq), [[C]](s32), [[UV1]]
     ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP]](s1)
     ; GFX9: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
-    ; GFX9: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](s32), [[ANYEXT1]](s32)
-    ; GFX9: [[TRUNC:%[0-9]+]]:_(<2 x s1>) = G_TRUNC [[BUILD_VECTOR_TRUNC]](<2 x s16>)
-    ; GFX9: S_NOP 0, implicit [[TRUNC]](<2 x s1>)
+    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32)
+    ; GFX9: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s32>)
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(<2 x s32>) = G_BUILD_VECTOR %0, %0
     %2:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %3:_(<2 x s1>) = nnan G_FCMP floatpred(oeq), %1, %2
-    S_NOP 0, implicit %3
+    %4:_(<2 x s32>) = G_ANYEXT %3
+    S_NOP 0, implicit %4
 ...
 
 ---
@@ -210,9 +214,11 @@ body: |
     ; GFX7: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP]](s1)
     ; GFX7: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
     ; GFX7: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP2]](s1)
-    ; GFX7: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
-    ; GFX7: [[TRUNC:%[0-9]+]]:_(<3 x s1>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
-    ; GFX7: S_NOP 0, implicit [[TRUNC]](<3 x s1>)
+    ; GFX7: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; GFX7: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
+    ; GFX7: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT2]](s32)
+    ; GFX7: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
+    ; GFX7: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s32>)
     ; GFX8-LABEL: name: test_fcmp_v3s32
     ; GFX8: [[DEF:%[0-9]+]]:_(<3 x s32>) = G_IMPLICIT_DEF
     ; GFX8: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
@@ -224,9 +230,11 @@ body: |
     ; GFX8: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP]](s1)
     ; GFX8: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
     ; GFX8: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP2]](s1)
-    ; GFX8: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
-    ; GFX8: [[TRUNC:%[0-9]+]]:_(<3 x s1>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
-    ; GFX8: S_NOP 0, implicit [[TRUNC]](<3 x s1>)
+    ; GFX8: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; GFX8: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
+    ; GFX8: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT2]](s32)
+    ; GFX8: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
+    ; GFX8: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s32>)
     ; GFX9-LABEL: name: test_fcmp_v3s32
     ; GFX9: [[DEF:%[0-9]+]]:_(<3 x s32>) = G_IMPLICIT_DEF
     ; GFX9: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
@@ -237,18 +245,15 @@ body: |
     ; GFX9: [[FCMP2:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[UV2]](s32), [[UV5]]
     ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP]](s1)
     ; GFX9: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
-    ; GFX9: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](s32), [[ANYEXT1]](s32)
     ; GFX9: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP2]](s1)
-    ; GFX9: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; GFX9: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT2]](s32), [[DEF1]](s32)
-    ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-    ; GFX9: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[CONCAT_VECTORS]](<4 x s16>), 0
-    ; GFX9: [[TRUNC:%[0-9]+]]:_(<3 x s1>) = G_TRUNC [[EXTRACT]](<3 x s16>)
-    ; GFX9: S_NOP 0, implicit [[TRUNC]](<3 x s1>)
+    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
+    ; GFX9: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s32>)
     %0:_(<3 x s32>) = G_IMPLICIT_DEF
     %1:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     %2:_(<3 x s1>) = G_FCMP floatpred(oeq), %0, %1
-    S_NOP 0, implicit %2
+    %3:_(<3 x s32>) = G_ANYEXT %2
+    S_NOP 0, implicit %3
+
 ...
 
 ---
@@ -271,9 +276,12 @@ body: |
     ; GFX7: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
     ; GFX7: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP2]](s1)
     ; GFX7: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP3]](s1)
-    ; GFX7: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[ANYEXT3]](s32)
-    ; GFX7: [[TRUNC:%[0-9]+]]:_(<4 x s1>) = G_TRUNC [[BUILD_VECTOR]](<4 x s32>)
-    ; GFX7: S_NOP 0, implicit [[TRUNC]](<4 x s1>)
+    ; GFX7: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; GFX7: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
+    ; GFX7: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT2]](s32)
+    ; GFX7: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ANYEXT3]](s32)
+    ; GFX7: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
+    ; GFX7: S_NOP 0, implicit [[BUILD_VECTOR]](<4 x s32>)
     ; GFX8-LABEL: name: test_fcmp_v4s32
     ; GFX8: [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
     ; GFX8: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[DEF]](p1) :: (volatile load 16)
@@ -288,9 +296,12 @@ body: |
     ; GFX8: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
     ; GFX8: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP2]](s1)
     ; GFX8: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP3]](s1)
-    ; GFX8: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[ANYEXT3]](s32)
-    ; GFX8: [[TRUNC:%[0-9]+]]:_(<4 x s1>) = G_TRUNC [[BUILD_VECTOR]](<4 x s32>)
-    ; GFX8: S_NOP 0, implicit [[TRUNC]](<4 x s1>)
+    ; GFX8: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ANYEXT]](s32)
+    ; GFX8: [[COPY2:%[0-9]+]]:_(s32) = COPY [[ANYEXT1]](s32)
+    ; GFX8: [[COPY3:%[0-9]+]]:_(s32) = COPY [[ANYEXT2]](s32)
+    ; GFX8: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ANYEXT3]](s32)
+    ; GFX8: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
+    ; GFX8: S_NOP 0, implicit [[BUILD_VECTOR]](<4 x s32>)
     ; GFX9-LABEL: name: test_fcmp_v4s32
     ; GFX9: [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
     ; GFX9: [[LOAD:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[DEF]](p1) :: (volatile load 16)
@@ -303,18 +314,16 @@ body: |
     ; GFX9: [[FCMP3:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[UV3]](s32), [[UV7]]
     ; GFX9: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP]](s1)
     ; GFX9: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP1]](s1)
-    ; GFX9: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT]](s32), [[ANYEXT1]](s32)
     ; GFX9: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP2]](s1)
     ; GFX9: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[FCMP3]](s1)
-    ; GFX9: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[ANYEXT2]](s32), [[ANYEXT3]](s32)
-    ; GFX9: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BUILD_VECTOR_TRUNC]](<2 x s16>), [[BUILD_VECTOR_TRUNC1]](<2 x s16>)
-    ; GFX9: [[TRUNC:%[0-9]+]]:_(<4 x s1>) = G_TRUNC [[CONCAT_VECTORS]](<4 x s16>)
-    ; GFX9: S_NOP 0, implicit [[TRUNC]](<4 x s1>)
+    ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[ANYEXT3]](s32)
+    ; GFX9: S_NOP 0, implicit [[BUILD_VECTOR]](<4 x s32>)
     %0:_(p1) = G_IMPLICIT_DEF
     %1:_(<4 x s32>) = G_LOAD %0 :: (volatile load 16)
     %2:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %3:_(<4 x s1>) = G_FCMP floatpred(oeq) , %1, %2
-    S_NOP 0, implicit %3
+    %4:_(<4 x s32>) = G_ANYEXT %3
+    S_NOP 0, implicit %4
 
 ...
 

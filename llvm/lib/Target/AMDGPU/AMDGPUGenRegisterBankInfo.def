@@ -37,8 +37,9 @@ enum PartialMappingIdx {
   PM_AGPR32 = 31,
   PM_AGPR64 = 32,
   PM_AGPR128 = 33,
-  PM_AGPR512 = 34,
-  PM_AGPR1024 = 35
+  PM_AGPR256 = 34,
+  PM_AGPR512 = 35,
+  PM_AGPR1024 = 36
 };
 
 const RegisterBankInfo::PartialMapping PartMappings[] {
@@ -69,6 +70,7 @@ const RegisterBankInfo::PartialMapping PartMappings[] {
   {0, 32, AGPRRegBank}, // AGPR begin
   {0, 64, AGPRRegBank},
   {0, 128, AGPRRegBank},
+  {0, 256, AGPRRegBank},
   {0, 512, AGPRRegBank},
   {0, 1024, AGPRRegBank}
 };
@@ -115,9 +117,9 @@ const RegisterBankInfo::ValueMapping ValMappings[] {
   {&PartMappings[20], 1}, // 32
   {&PartMappings[21], 1}, // 64
   {&PartMappings[22], 1}, // 128
-  {nullptr, 0},
-  {&PartMappings[23], 1}, // 512
-  {&PartMappings[24], 1}  // 1024
+  {&PartMappings[23], 1}, // 256
+  {&PartMappings[24], 1}, // 512
+  {&PartMappings[25], 1}  // 1024
 };
 
 const RegisterBankInfo::PartialMapping SGPROnly64BreakDown[] {

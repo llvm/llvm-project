@@ -89,7 +89,7 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   module @kernels {
     // expected-error@+1 {{'gpu.func' op expects parent op 'gpu.module'}}
-    gpu.func @kernel_1(%arg1 : !llvm<"float*">) {
+    gpu.func @kernel_1(%arg1 : !llvm.ptr<float>) {
       gpu.return
     }
   }
@@ -128,16 +128,16 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   module @kernels {
-    gpu.func @kernel_1(%arg1 : !llvm<"float*">) kernel {
+    gpu.func @kernel_1(%arg1 : !llvm.ptr<float>) kernel {
       gpu.return
     }
   }
 
-  func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm<"float*">) {
+  func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm.ptr<float>) {
     // expected-error@+1 {{kernel module 'kernels' is undefined}}
     "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz, %arg)
     {kernel = @kernels::@kernel_1}
-        : (index, index, index, index, index, index, !llvm<"float*">) -> ()
+        : (index, index, index, index, index, index, !llvm.ptr<float>) -> ()
     return
   }
 }
@@ -146,16 +146,16 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   gpu.module @kernels {
-    gpu.func @kernel_1(%arg1 : !llvm<"float*">) {
+    gpu.func @kernel_1(%arg1 : !llvm.ptr<float>) {
       gpu.return
     }
   }
 
-  func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm<"float*">) {
+  func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm.ptr<float>) {
     // expected-error@+1 {{kernel function is missing the 'gpu.kernel' attribute}}
     "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz, %arg)
     {kernel = @kernels::@kernel_1}
-        : (index, index, index, index, index, index, !llvm<"float*">) -> ()
+        : (index, index, index, index, index, index, !llvm.ptr<float>) -> ()
     return
   }
 }
@@ -164,17 +164,17 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   gpu.module @kernels {
-    gpu.func @kernel_1(%arg1 : !llvm<"float*">) kernel {
+    gpu.func @kernel_1(%arg1 : !llvm.ptr<float>) kernel {
       gpu.return
     }
   }
 
-  func @launch_func_kernel_operand_size(%sz : index, %arg : !llvm<"float*">) {
+  func @launch_func_kernel_operand_size(%sz : index, %arg : !llvm.ptr<float>) {
     // expected-error@+1 {{got 2 kernel operands but expected 1}}
     "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz, %arg, %arg)
         {kernel = @kernels::@kernel_1}
-        : (index, index, index, index, index, index, !llvm<"float*">,
-           !llvm<"float*">) -> ()
+        : (index, index, index, index, index, index, !llvm.ptr<float>,
+           !llvm.ptr<float>) -> ()
     return
   }
 }

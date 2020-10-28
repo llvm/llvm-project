@@ -57,7 +57,7 @@ TEST(VerifierTest, Freeze) {
   ConstantInt *CI = ConstantInt::get(ITy, 0);
 
   // Valid type : freeze(<2 x i32>)
-  Constant *CV = ConstantVector::getSplat({2, false}, CI);
+  Constant *CV = ConstantVector::getSplat(ElementCount::getFixed(2), CI);
   FreezeInst *FI_vec = new FreezeInst(CV);
   FI_vec->insertBefore(RI);
 

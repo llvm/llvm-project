@@ -94,6 +94,26 @@ dumpResult(const MachineInstr &MI, const KnownBits &Known, unsigned Depth) {
          << "\n";
 }
 
+/// Compute known bits for the intersection of \p Src0 and \p Src1
+void GISelKnownBits::computeKnownBitsMin(Register Src0, Register Src1,
+                                         KnownBits &Known,
+                                         const APInt &DemandedElts,
+                                         unsigned Depth) {
+  // Test src1 first, since we canonicalize simpler expressions to the RHS.
+  computeKnownBitsImpl(Src1, Known, DemandedElts, Depth);
+
+  // If we don't know any bits, early out.
+  if (Known.isUnknown())
+    return;
+
+  KnownBits Known2;
+  computeKnownBitsImpl(Src0, Known2, DemandedElts, Depth);
+
+  // Only known if known in both the LHS and RHS.
+  Known.Zero &= Known2.Zero;
+  Known.One &= Known2.One;
+}
+
 void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                                           const APInt &DemandedElts,
                                           unsigned Depth) {
@@ -284,16 +304,16 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_SELECT: {
-    computeKnownBitsImpl(MI.getOperand(3).getReg(), Known, DemandedElts,
-                         Depth + 1);
-    // If we don't know any bits, early out.
-    if (Known.isUnknown())
-      break;
-    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
-                         Depth + 1);
-    // Only known if known in both the LHS and RHS.
-    Known.One &= Known2.One;
-    Known.Zero &= Known2.Zero;
+    computeKnownBitsMin(MI.getOperand(2).getReg(), MI.getOperand(3).getReg(),
+                        Known, DemandedElts, Depth + 1);
+    break;
+  }
+  case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SMAX:
+  case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_UMAX: {
+    computeKnownBitsMin(MI.getOperand(1).getReg(), MI.getOperand(2).getReg(),
+                        Known, DemandedElts, Depth + 1);
     break;
   }
   case TargetOpcode::G_FCMP:
@@ -316,22 +336,20 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   case TargetOpcode::G_ANYEXT: {
     computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
                          Depth + 1);
-    Known = Known.zext(BitWidth);
+    Known = Known.anyext(BitWidth);
     break;
   }
   case TargetOpcode::G_LOAD: {
-    if (MI.hasOneMemOperand()) {
-      const MachineMemOperand *MMO = *MI.memoperands_begin();
-      if (const MDNode *Ranges = MMO->getRanges()) {
-        computeKnownBitsFromRangeMetadata(*Ranges, Known);
-      }
+    const MachineMemOperand *MMO = *MI.memoperands_begin();
+    if (const MDNode *Ranges = MMO->getRanges()) {
+      computeKnownBitsFromRangeMetadata(*Ranges, Known);
     }
+
     break;
   }
   case TargetOpcode::G_ZEXTLOAD: {
     // Everything above the retrieved bits is zero
-    if (MI.hasOneMemOperand())
-      Known.Zero.setBitsFrom((*MI.memoperands_begin())->getSizeInBits());
+    Known.Zero.setBitsFrom((*MI.memoperands_begin())->getSizeInBits());
     break;
   }
   case TargetOpcode::G_ASHR:
@@ -389,6 +407,18 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
       Known.Zero.setBitsFrom(SrcBitWidth);
     break;
   }
+  case TargetOpcode::G_MERGE_VALUES: {
+    Register NumOps = MI.getNumOperands();
+    unsigned OpSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+
+    for (unsigned I = 0; I != NumOps - 1; ++I) {
+      KnownBits SrcOpKnown;
+      computeKnownBitsImpl(MI.getOperand(I + 1).getReg(), SrcOpKnown,
+                           DemandedElts, Depth + 1);
+      Known.insertBits(SrcOpKnown, I * OpSize);
+    }
+    break;
+  }
   }
 
   assert(!Known.hasConflict() && "Bits known to be one AND zero?");
@@ -440,6 +470,13 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
     LLT SrcTy = MRI.getType(Src);
     unsigned Tmp = DstTy.getScalarSizeInBits() - SrcTy.getScalarSizeInBits();
     return computeNumSignBits(Src, DemandedElts, Depth + 1) + Tmp;
+  }
+  case TargetOpcode::G_SEXT_INREG: {
+    // Max of the input and what this extends.
+    Register Src = MI.getOperand(1).getReg();
+    unsigned SrcBits = MI.getOperand(2).getImm();
+    unsigned InRegBits = TyBits - SrcBits + 1;
+    return std::max(computeNumSignBits(Src, DemandedElts, Depth + 1), InRegBits);
   }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();

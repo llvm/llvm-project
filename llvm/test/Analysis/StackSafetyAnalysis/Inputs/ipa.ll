@@ -124,3 +124,44 @@ entry:
   %x = alloca i64, align 4
   ret i64* %x
 }
+
+define dso_local void @Write1Private(i8* %p) #0 {
+entry:
+  call void @Private(i8* %p)
+  ret void
+}
+
+define dso_local void @Write1SameModule(i8* %p) #0 {
+entry:
+  call void @Write1(i8* %p)
+  ret void
+}
+
+declare void @Write1Module0(i8* %p)
+
+define dso_local void @Write1DiffModule(i8* %p) #0 {
+entry:
+  call void @Write1Module0(i8* %p)
+  ret void
+}
+
+define private dso_local void @Private(i8* %p) #0 {
+entry:
+  %p1 = getelementptr i8, i8* %p, i64 -1
+  store i8 0, i8* %p1, align 1
+  ret void
+}
+
+define dso_local void @Write1Weak(i8* %p) #0 {
+entry:
+  call void @Weak(i8* %p)
+  ret void
+}
+
+define weak dso_local void @Weak(i8* %p) #0 {
+entry:
+  %p1 = getelementptr i8, i8* %p, i64 -1
+  store i8 0, i8* %p1, align 1
+  ret void
+}
+

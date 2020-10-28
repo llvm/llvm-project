@@ -5,8 +5,8 @@
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj -o %t
 # RUN: llvm-dwarfdump --statistics %t | FileCheck %s
 
-# CHECK: "sum_all_local_vars(#bytes in parent scope)":12
-# CHECK: "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)":8
+# CHECK: "sum_all_local_vars(#bytes in parent scope)": 12,
+# CHECK: "sum_all_local_vars(#bytes in parent scope covered by DW_AT_location)": 8,
 
         .text
 

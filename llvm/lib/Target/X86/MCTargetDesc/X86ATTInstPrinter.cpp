@@ -16,6 +16,7 @@
 #include "X86InstComments.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Casting.h"
@@ -384,6 +385,16 @@ void X86ATTInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 
 void X86ATTInstPrinter::printMemReference(const MCInst *MI, unsigned Op,
                                           raw_ostream &O) {
+  // Do not print the exact form of the memory operand if it references a known
+  // binary object.
+  if (SymbolizeOperands && MIA) {
+    uint64_t Target;
+    if (MIA->evaluateBranch(*MI, 0, 0, Target))
+      return;
+    if (MIA->evaluateMemoryOperandAddress(*MI, 0, 0))
+      return;
+  }
+
   const MCOperand &BaseReg = MI->getOperand(Op + X86::AddrBaseReg);
   const MCOperand &IndexReg = MI->getOperand(Op + X86::AddrIndexReg);
   const MCOperand &DispSpec = MI->getOperand(Op + X86::AddrDisp);

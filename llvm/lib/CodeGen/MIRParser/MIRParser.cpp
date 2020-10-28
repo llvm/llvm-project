@@ -322,8 +322,13 @@ bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI) {
 static bool isSSA(const MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
-    unsigned Reg = Register::index2VirtReg(I);
+    Register Reg = Register::index2VirtReg(I);
     if (!MRI.hasOneDef(Reg) && !MRI.def_empty(Reg))
+      return false;
+
+    // Subregister defs are invalid in SSA.
+    const MachineOperand *RegDef = MRI.getOneDef(Reg);
+    if (RegDef && RegDef->getSubReg() != 0)
       return false;
   }
   return true;

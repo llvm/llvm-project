@@ -1,0 +1,69 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 -verify-machineinstrs -run-pass greedy,amdgpu-regbanks-reassign,virtregrewriter -o - %s | FileCheck -check-prefix=GCN %s
+
+
+# Test that subreg reassignments are correctly handled when whole register also
+# conflicts.  If this is mishandled stall counts will be incorrect and cause an
+# infinite loop.
+# GCN-LABEL: vgpr64_mixed_use{{$}}
+# GCN: $vgpr0_vgpr1 = IMPLICIT_DEF
+# GCN: $vgpr4_vgpr5 = IMPLICIT_DEF
+# GCN: $vcc = IMPLICIT_DEF
+# GCN: $vgpr2_vgpr3 = IMPLICIT_DEF
+# GCN: $vgpr6_vgpr7 = IMPLICIT_DEF
+# GCN: $vgpr8_vgpr9_vgpr10_vgpr11 = IMPLICIT_DEF
+# GCN: $vgpr12_vgpr13_vgpr14_vgpr15 = IMPLICIT_DEF
+# GCN: $vgpr16_vgpr17_vgpr18_vgpr19 = IMPLICIT_DEF
+# GCN: $vgpr20_vgpr21_vgpr22_vgpr23 = IMPLICIT_DEF
+# GCN: $vgpr24_vgpr25_vgpr26_vgpr27 = IMPLICIT_DEF
+# GCN: $vgpr28_vgpr29_vgpr30_vgpr31 = IMPLICIT_DEF
+# GCN: $vgpr32_vgpr33_vgpr34_vgpr35 = IMPLICIT_DEF
+# GCN: $vgpr36_vgpr37_vgpr38_vgpr39 = IMPLICIT_DEF
+# GCN: $vgpr40_vgpr41_vgpr42_vgpr43 = IMPLICIT_DEF
+# GCN: $vgpr44_vgpr45_vgpr46_vgpr47 = IMPLICIT_DEF
+# GCN: $vgpr2 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr5, $vcc, implicit $exec
+# GCN: $vgpr2 = V_CNDMASK_B32_e64 0, $vgpr0, 0, $vgpr4, killed $vcc, implicit $exec
+# GCN: $sgpr0_sgpr1 = V_CMP_LT_U64_e64 $vgpr4_vgpr5, $vgpr0_vgpr1, implicit $exec
+---
+name:            vgpr64_mixed_use
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vreg_64, preferred-register: '$vgpr0_vgpr1' }
+  - { id: 1, class: vreg_64, preferred-register: '$vgpr4_vgpr5' }
+  - { id: 2, class: sreg_64_xexec, preferred-register: '$vcc' }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: sreg_64_xexec }
+  - { id: 6, class: vreg_64, preferred-register: '$vgpr2_vgpr3' }
+  - { id: 7, class: vreg_64, preferred-register: '$vgpr6_vgpr7' }
+  - { id: 8, class: vreg_128, preferred-register: '$vgpr8_vgpr9_vgpr10_vgpr11' }
+  - { id: 9, class: vreg_128, preferred-register: '$vgpr12_vgpr13_vgpr14_vgpr15' }
+  - { id: 10, class: vreg_128, preferred-register: '$vgpr16_vgpr17_vgpr18_vgpr19' }
+  - { id: 11, class: vreg_128, preferred-register: '$vgpr20_vgpr21_vgpr22_vgpr23' }
+  - { id: 12, class: vreg_128, preferred-register: '$vgpr24_vgpr25_vgpr26_vgpr27' }
+  - { id: 13, class: vreg_128, preferred-register: '$vgpr28_vgpr29_vgpr30_vgpr31' }
+  - { id: 14, class: vreg_128, preferred-register: '$vgpr32_vgpr33_vgpr34_vgpr35' }
+  - { id: 15, class: vreg_128, preferred-register: '$vgpr36_vgpr37_vgpr38_vgpr39' }
+  - { id: 16, class: vreg_128, preferred-register: '$vgpr40_vgpr41_vgpr42_vgpr43' }
+  - { id: 17, class: vreg_128, preferred-register: '$vgpr44_vgpr45_vgpr46_vgpr47' }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    %6 = IMPLICIT_DEF
+    %7 = IMPLICIT_DEF
+    %8 = IMPLICIT_DEF
+    %9 = IMPLICIT_DEF
+    %10 = IMPLICIT_DEF
+    %11 = IMPLICIT_DEF
+    %12 = IMPLICIT_DEF
+    %13 = IMPLICIT_DEF
+    %14 = IMPLICIT_DEF
+    %15 = IMPLICIT_DEF
+    %16 = IMPLICIT_DEF
+    %17 = IMPLICIT_DEF
+    %3 = V_CNDMASK_B32_e64 0, %0.sub1, 0, %1.sub1, %2, implicit $exec
+    %4 = V_CNDMASK_B32_e64 0, %0.sub0, 0, %1.sub0, %2, implicit $exec
+    %5 = V_CMP_LT_U64_e64 %1, %0, implicit $exec
+    S_ENDPGM 0
+...

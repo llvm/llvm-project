@@ -169,38 +169,39 @@ DWARF:
     - stripped2
     - main
   debug_abbrev:
-    - Code:            0x00000001
-      Tag:             DW_TAG_compile_unit
-      Children:        DW_CHILDREN_yes
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_language
-          Form:            DW_FORM_data2
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_ranges
-          Form:            DW_FORM_sec_offset
-    - Code:            0x00000002
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_no
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_data4
-    - Code:            0x00000003
-      Tag:             DW_TAG_subprogram
-      Children:        DW_CHILDREN_no
-      Attributes:
-        - Attribute:       DW_AT_name
-          Form:            DW_FORM_strp
-        - Attribute:       DW_AT_low_pc
-          Form:            DW_FORM_addr
-        - Attribute:       DW_AT_high_pc
-          Form:            DW_FORM_addr
+    - Table:
+        - Code:            0x00000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_ranges
+              Form:            DW_FORM_sec_offset
+        - Code:            0x00000002
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_data4
+        - Code:            0x00000003
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_low_pc
+              Form:            DW_FORM_addr
+            - Attribute:       DW_AT_high_pc
+              Form:            DW_FORM_addr
   debug_ranges:
     - Offset:          0x00000000
       Entries:

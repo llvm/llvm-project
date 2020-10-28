@@ -26,12 +26,6 @@ class Pass;
 
 //===----------------------------------------------------------------------===//
 //
-// ConstantPropagation - A worklist driven constant propagation pass
-//
-FunctionPass *createConstantPropagationPass();
-
-//===----------------------------------------------------------------------===//
-//
 // AlignmentFromAssumptions - Use assume intrinsics to set load/store
 // alignments.
 //
@@ -530,6 +524,13 @@ Pass *createLoopSimplifyCFGPass();
 // transformations.
 //
 Pass *createWarnMissedTransformationsPass();
+
+//===----------------------------------------------------------------------===//
+//
+// This pass does instruction simplification on each
+// instruction in a function.
+//
+FunctionPass *createInstSimplifyLegacyPass();
 } // End llvm namespace
 
 #endif

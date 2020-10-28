@@ -7587,6 +7587,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
 // CHECK-NEXT:        "inner": [
+// CHECK-NEXT:         {},
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
 // CHECK-NEXT:          "kind": "DeclRefExpr",
@@ -7640,6 +7641,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:        "valueCategory": "rvalue",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {},
+// CHECK-NEXT:         {},
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
 // CHECK-NEXT:          "kind": "DeclRefExpr",
@@ -7691,6 +7693,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
 // CHECK-NEXT:        "inner": [
+// CHECK-NEXT:         {},
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
 // CHECK-NEXT:          "kind": "DeclRefExpr",

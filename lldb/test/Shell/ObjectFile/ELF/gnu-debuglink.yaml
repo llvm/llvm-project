@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --strip-all --add-gnu-debuglink=%t %t %t.stripped
 # RUN: lldb-test object-file %t.stripped | FileCheck %s
 

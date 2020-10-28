@@ -21,6 +21,10 @@
 
 using namespace mlir;
 
+void mlir::registerTestDialect(DialectRegistry &registry) {
+  registry.insert<TestDialect>();
+}
+
 //===----------------------------------------------------------------------===//
 // TestDialect Interfaces
 //===----------------------------------------------------------------------===//
@@ -52,8 +56,8 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
   }
 };
 
-struct TestOpFolderDialectInterface : public OpFolderDialectInterface {
-  using OpFolderDialectInterface::OpFolderDialectInterface;
+struct TestDialectFoldInterface : public DialectFoldInterface {
+  using DialectFoldInterface::DialectFoldInterface;
 
   /// Registered hook to check if the given region, which is attached to an
   /// operation that is *not* isolated from above, should be used when
@@ -130,13 +134,12 @@ struct TestInlinerInterface : public DialectInlinerInterface {
 // TestDialect
 //===----------------------------------------------------------------------===//
 
-TestDialect::TestDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context) {
+void TestDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "TestOps.cpp.inc"
       >();
-  addInterfaces<TestOpAsmInterface, TestOpFolderDialectInterface,
+  addInterfaces<TestOpAsmInterface, TestDialectFoldInterface,
                 TestInlinerInterface>();
   addTypes<TestType, TestRecursiveType>();
   allowUnknownOperations();
@@ -157,7 +160,7 @@ static Type parseTestType(DialectAsmParser &parser,
   StringRef name;
   if (parser.parseLess() || parser.parseKeyword(&name))
     return Type();
-  auto rec = TestRecursiveType::create(parser.getBuilder().getContext(), name);
+  auto rec = TestRecursiveType::get(parser.getBuilder().getContext(), name);
 
   // If this type already has been parsed above in the stack, expect just the
   // name.
@@ -685,13 +688,6 @@ void RegionIfOp::getSuccessorRegions(
   regions.push_back(RegionSuccessor(&thenRegion(), getThenArgs()));
   regions.push_back(RegionSuccessor(&elseRegion(), getElseArgs()));
 }
-
-//===----------------------------------------------------------------------===//
-// Dialect Registration
-//===----------------------------------------------------------------------===//
-
-// Static initialization for Test dialect registration.
-static DialectRegistration<TestDialect> testDialect;
 
 #include "TestOpEnums.cpp.inc"
 #include "TestOpStructs.cpp.inc"

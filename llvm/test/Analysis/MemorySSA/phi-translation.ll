@@ -1,5 +1,5 @@
-; RUN: opt -basic-aa -print-memoryssa -verify-memoryssa -analyze < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOLIMIT
-; RUN: opt -memssa-check-limit=0 -basic-aa -print-memoryssa -verify-memoryssa -analyze < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LIMIT
+; RUN: opt -basic-aa -print-memoryssa -verify-memoryssa -enable-new-pm=0 -analyze < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOLIMIT
+; RUN: opt -memssa-check-limit=0 -basic-aa -print-memoryssa -verify-memoryssa -enable-new-pm=0 -analyze < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LIMIT
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOLIMIT
 ; RUN: opt -memssa-check-limit=0 -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LIMIT
 
@@ -287,3 +287,85 @@ the.end:                            ; preds = %for.main.body
   ret void
 
 }
+
+
+@c = local_unnamed_addr global [2 x i16] zeroinitializer, align 2
+
+define i32 @dont_merge_noalias_simple(i32* noalias %ptr) {
+; CHECK-LABEL: define i32 @dont_merge_noalias_simple
+; CHECK-LABEL: entry:
+; CHECK:       ; 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT:  store i16 1, i16* %s1.ptr, align 2
+
+; CHECK-LABEL: %for.body
+; CHECK:       ; MemoryUse(4) MayAlias
+; CHECK-NEXT:    %lv = load i16, i16* %arrayidx, align 2
+
+entry:
+  %s1.ptr = getelementptr inbounds [2 x i16], [2 x i16]* @c, i64 0, i64 0
+  store i16 1, i16* %s1.ptr, align 2
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %storemerge2 = phi i32 [ 1, %entry ], [ %dec, %for.body ]
+  %idxprom1 = zext i32 %storemerge2 to i64
+  %arrayidx = getelementptr inbounds [2 x i16], [2 x i16]* @c, i64 0, i64 %idxprom1
+  %lv = load i16, i16* %arrayidx, align 2
+  %conv = sext i16 %lv to i32
+  store i32 %conv, i32* %ptr, align 4
+  %dec = add nsw i32 %storemerge2, -1
+  %cmp = icmp sgt i32 %storemerge2, 0
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body
+  %s2.ptr = getelementptr inbounds [2 x i16], [2 x i16]* @c, i64 0, i64 0
+  store i16 0, i16* %s2.ptr, align 2
+  ret i32 0
+}
+
+
+define i32 @dont_merge_noalias_complex(i32* noalias %ptr, i32* noalias %another) {
+; CHECK-LABEL: define i32 @dont_merge_noalias_complex
+; CHECK-LABEL: entry:
+; CHECK:       ; 1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT:  store i16 1, i16* %s1.ptr, align 2
+
+; CHECK-LABEL: %for.body
+; CHECK:       ; MemoryUse(7) MayAlias
+; CHECK-NEXT:    %lv = load i16, i16* %arrayidx, align 2
+
+entry:
+  %s1.ptr = getelementptr inbounds [2 x i16], [2 x i16]* @c, i64 0, i64 0
+  store i16 1, i16* %s1.ptr, align 2
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %storemerge2 = phi i32 [ 1, %entry ], [ %dec, %merge.body ]
+  %idxprom1 = zext i32 %storemerge2 to i64
+  %arrayidx = getelementptr inbounds [2 x i16], [2 x i16]* @c, i64 0, i64 %idxprom1
+  %lv = load i16, i16* %arrayidx, align 2
+  %conv = sext i16 %lv to i32
+  store i32 %conv, i32* %ptr, align 4
+  %dec = add nsw i32 %storemerge2, -1
+
+  %cmpif = icmp sgt i32 %storemerge2, 1
+  br i1 %cmpif, label %if.body, label %else.body
+
+if.body:
+  store i32 %conv, i32* %another, align 4
+  br label %merge.body
+
+else.body:
+  store i32 %conv, i32* %another, align 4
+  br label %merge.body
+
+merge.body:
+  %cmp = icmp sgt i32 %storemerge2, 0
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:                                          ; preds = %for.body
+  %s2.ptr = getelementptr inbounds [2 x i16], [2 x i16]* @c, i64 0, i64 0
+  store i16 0, i16* %s2.ptr, align 2
+  ret i32 0
+}
+

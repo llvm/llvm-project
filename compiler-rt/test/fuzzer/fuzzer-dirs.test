@@ -16,6 +16,10 @@ RUN: %run %t-SimpleTest %t/SUB1 -runs=0 2>&1 | FileCheck %s --check-prefix=LONG
 LONG: INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 8192 bytes
 RUN: rm -rf %t/SUB1
 
-RUN: not %run %t-SimpleTest NONEXISTENT_DIR 2>&1 | FileCheck %s --check-prefix=NONEXISTENT_DIR
-NONEXISTENT_DIR: No such file or directory: NONEXISTENT_DIR; exiting
-
+RUN: rm -rf %t.dir && mkdir -p %t.dir
+RUN: not %run %t-SimpleTest -artifact_prefix=%t.dir/NONEXISTENT_DIR/ 2>&1 | FileCheck %s --check-prefix=NONEXISTENT_DIR_RGX
+RUN: not %run %t-SimpleTest -artifact_prefix=%t.dir/NONEXISTENT_DIR/myprefix 2>&1 | FileCheck %s --check-prefix=NONEXISTENT_DIR_RGX
+RUN: not %run %t-SimpleTest -features_dir=%t.dir/NONEXISTENT_DIR/ 2>&1 | FileCheck %s --check-prefix=NONEXISTENT_DIR_RGX
+RUN: not %run %t-SimpleTest %t.dir/NONEXISTENT_DIR 2>&1 | FileCheck %s --check-prefix=NONEXISTENT_DIR_RGX
+RUN: not %run %t-SimpleTest -exact_artifact_path=%t.dir/NONEXISTENT_DIR/myprefix 2>&1 | FileCheck %s --check-prefix=NONEXISTENT_DIR_RGX
+NONEXISTENT_DIR_RGX: ERROR: The required directory "{{.*/NONEXISTENT_DIR/?}}" does not exist

@@ -2418,8 +2418,7 @@ LValue CodeGenFunction::InitCapturedStruct(const CapturedStmt &S) {
        I != E; ++I, ++CurField) {
     LValue LV = EmitLValueForFieldInitialization(SlotLV, *CurField);
     if (CurField->hasCapturedVLAType()) {
-      auto VAT = CurField->getCapturedVLAType();
-      EmitStoreThroughLValue(RValue::get(VLASizeMap[VAT->getSizeExpr()]), LV);
+      EmitLambdaVLACapture(CurField->getCapturedVLAType(), LV);
     } else {
       EmitInitializerForField(*CurField, LV, *I);
     }

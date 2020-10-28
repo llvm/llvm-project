@@ -128,6 +128,28 @@ void PatternRewriter::mergeBlocks(Block *source, Block *dest,
   source->erase();
 }
 
+// Merge the operations of block 'source' before the operation 'op'. Source
+// block should not have existing predecessors or successors.
+void PatternRewriter::mergeBlockBefore(Block *source, Operation *op,
+                                       ValueRange argValues) {
+  assert(source->hasNoPredecessors() &&
+         "expected 'source' to have no predecessors");
+  assert(source->hasNoSuccessors() &&
+         "expected 'source' to have no successors");
+
+  // Split the block containing 'op' into two, one containg all operations
+  // before 'op' (prologue) and another (epilogue) containing 'op' and all
+  // operations after it.
+  Block *prologue = op->getBlock();
+  Block *epilogue = splitBlock(prologue, op->getIterator());
+
+  // Merge the source block at the end of the prologue.
+  mergeBlocks(source, prologue, argValues);
+
+  // Merge the epilogue at the end the prologue.
+  mergeBlocks(epilogue, prologue);
+}
+
 /// Split the operations starting at "before" (inclusive) out of the given
 /// block into a new block, and return it.
 Block *PatternRewriter::splitBlock(Block *block, Block::iterator before) {

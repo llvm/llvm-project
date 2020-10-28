@@ -1157,6 +1157,25 @@ public:
 
   ~CommandObjectTargetModulesSearchPathsInsert() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (!m_exe_ctx.HasTargetScope() || request.GetCursorIndex() != 0)
+      return;
+
+    Target *target = m_exe_ctx.GetTargetPtr();
+    const PathMappingList &list = target->GetImageSearchPathList();
+    const size_t num = list.GetSize();
+    ConstString old_path, new_path;
+    for (size_t i = 0; i < num; ++i) {
+      if (!list.GetPathsAtIndex(i, old_path, new_path))
+        break;
+      StreamString strm;
+      strm << old_path << " -> " << new_path;
+      request.TryCompleteCurrentArg(std::to_string(i), strm.GetString());
+    }
+  }
+
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target = &GetSelectedTarget();
@@ -3402,9 +3421,34 @@ protected:
         continue;
 
       result.GetOutputStream().Printf(
-          "UNWIND PLANS for %s`%s (start addr 0x%" PRIx64 ")\n\n",
+          "UNWIND PLANS for %s`%s (start addr 0x%" PRIx64 ")\n",
           sc.module_sp->GetPlatformFileSpec().GetFilename().AsCString(),
           funcname.AsCString(), start_addr);
+
+      Args args;
+      target->GetUserSpecifiedTrapHandlerNames(args);
+      size_t count = args.GetArgumentCount();
+      for (size_t i = 0; i < count; i++) {
+        const char *trap_func_name = args.GetArgumentAtIndex(i);
+        if (strcmp(funcname.GetCString(), trap_func_name) == 0)
+          result.GetOutputStream().Printf(
+              "This function is "
+              "treated as a trap handler function via user setting.\n");
+      }
+      PlatformSP platform_sp(target->GetPlatform());
+      if (platform_sp) {
+        const std::vector<ConstString> trap_handler_names(
+            platform_sp->GetTrapHandlerSymbolNames());
+        for (ConstString trap_name : trap_handler_names) {
+          if (trap_name == funcname) {
+            result.GetOutputStream().Printf(
+                "This function's "
+                "name is listed by the platform as a trap handler.\n");
+          }
+        }
+      }
+
+      result.GetOutputStream().Printf("\n");
 
       UnwindPlanSP non_callsite_unwind_plan =
           func_unwinders_sp->GetUnwindPlanAtNonCallSite(*target, *thread);
@@ -4703,6 +4747,14 @@ public:
 
   ~CommandObjectTargetStopHookDelete() override = default;
 
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eStopHookIDCompletion,
+        request, nullptr);
+  }
+
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetSelectedOrDummyTarget();
@@ -4750,6 +4802,16 @@ public:
   }
 
   ~CommandObjectTargetStopHookEnableDisable() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    if (request.GetCursorIndex())
+      return;
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eStopHookIDCompletion,
+        request, nullptr);
+  }
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {

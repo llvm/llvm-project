@@ -281,6 +281,9 @@ namespace clang {
     static Decl *getMostRecentDeclImpl(...);
     static Decl *getMostRecentDecl(Decl *D);
 
+    static void mergeInheritableAttributes(ASTReader &Reader, Decl *D,
+                                           Decl *Previous);
+
     template <typename DeclT>
     static void attachPreviousDeclImpl(ASTReader &Reader,
                                        Redeclarable<DeclT> *D, Decl *Previous,
@@ -2652,41 +2655,18 @@ void ASTDeclReader::mergeMergeable(Mergeable<T> *D) {
 }
 
 void ASTDeclReader::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
+  Record.readOMPChildren(D->Data);
   VisitDecl(D);
-  unsigned NumVars = D->varlist_size();
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i) {
-    Vars.push_back(Record.readExpr());
-  }
-  D->setVars(Vars);
 }
 
 void ASTDeclReader::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
+  Record.readOMPChildren(D->Data);
   VisitDecl(D);
-  unsigned NumVars = D->varlist_size();
-  unsigned NumClauses = D->clauselist_size();
-  SmallVector<Expr *, 16> Vars;
-  Vars.reserve(NumVars);
-  for (unsigned i = 0; i != NumVars; ++i) {
-    Vars.push_back(Record.readExpr());
-  }
-  D->setVars(Vars);
-  SmallVector<OMPClause *, 8> Clauses;
-  Clauses.reserve(NumClauses);
-  for (unsigned I = 0; I != NumClauses; ++I)
-    Clauses.push_back(Record.readOMPClause());
-  D->setClauses(Clauses);
 }
 
 void ASTDeclReader::VisitOMPRequiresDecl(OMPRequiresDecl * D) {
+  Record.readOMPChildren(D->Data);
   VisitDecl(D);
-  unsigned NumClauses = D->clauselist_size();
-  SmallVector<OMPClause *, 8> Clauses;
-  Clauses.reserve(NumClauses);
-  for (unsigned I = 0; I != NumClauses; ++I)
-    Clauses.push_back(Record.readOMPClause());
-  D->setClauses(Clauses);
 }
 
 void ASTDeclReader::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
@@ -2707,18 +2687,10 @@ void ASTDeclReader::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
 }
 
 void ASTDeclReader::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
+  Record.readOMPChildren(D->Data);
   VisitValueDecl(D);
-  D->setLocation(readSourceLocation());
-  Expr *MapperVarRefE = Record.readExpr();
-  D->setMapperVarRef(MapperVarRefE);
   D->VarName = Record.readDeclarationName();
   D->PrevDeclInScope = readDeclID();
-  unsigned NumClauses = D->clauselist_size();
-  SmallVector<OMPClause *, 8> Clauses;
-  Clauses.reserve(NumClauses);
-  for (unsigned I = 0; I != NumClauses; ++I)
-    Clauses.push_back(Record.readOMPClause());
-  D->setClauses(Clauses);
 }
 
 void ASTDeclReader::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
@@ -3542,6 +3514,19 @@ Decl *ASTReader::getMostRecentExistingDecl(Decl *D) {
   return ASTDeclReader::getMostRecentDecl(D->getCanonicalDecl());
 }
 
+void ASTDeclReader::mergeInheritableAttributes(ASTReader &Reader, Decl *D,
+                                               Decl *Previous) {
+  InheritableAttr *NewAttr = nullptr;
+  ASTContext &Context = Reader.getContext();
+  const auto *IA = Previous->getAttr<MSInheritanceAttr>();
+
+  if (IA && !D->hasAttr<MSInheritanceAttr>()) {
+    NewAttr = cast<InheritableAttr>(IA->clone(Context));
+    NewAttr->setInherited(true);
+    D->addAttr(NewAttr);
+  }
+}
+
 template<typename DeclT>
 void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
                                            Redeclarable<DeclT> *D,
@@ -3700,6 +3685,12 @@ void ASTDeclReader::attachPreviousDecl(ASTReader &Reader, Decl *D,
   if (auto *TD = dyn_cast<TemplateDecl>(D))
     inheritDefaultTemplateArguments(Reader.getContext(),
                                     cast<TemplateDecl>(Previous), TD);
+
+  // If any of the declaration in the chain contains an Inheritable attribute,
+  // it needs to be added to all the declarations in the redeclarable chain.
+  // FIXME: Only the logic of merging MSInheritableAttr is present, it should
+  // be extended for all inheritable attributes.
+  mergeInheritableAttributes(Reader, D, Previous);
 }
 
 template<typename DeclT>
@@ -4007,24 +3998,35 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     // locations.
     D = ImportDecl::CreateDeserialized(Context, ID, Record.back());
     break;
-  case DECL_OMP_THREADPRIVATE:
-    D = OMPThreadPrivateDecl::CreateDeserialized(Context, ID, Record.readInt());
+  case DECL_OMP_THREADPRIVATE: {
+    Record.skipInts(1);
+    unsigned NumChildren = Record.readInt();
+    Record.skipInts(1);
+    D = OMPThreadPrivateDecl::CreateDeserialized(Context, ID, NumChildren);
     break;
+  }
   case DECL_OMP_ALLOCATE: {
-    unsigned NumVars = Record.readInt();
     unsigned NumClauses = Record.readInt();
+    unsigned NumVars = Record.readInt();
+    Record.skipInts(1);
     D = OMPAllocateDecl::CreateDeserialized(Context, ID, NumVars, NumClauses);
     break;
   }
-  case DECL_OMP_REQUIRES:
-    D = OMPRequiresDecl::CreateDeserialized(Context, ID, Record.readInt());
+  case DECL_OMP_REQUIRES: {
+    unsigned NumClauses = Record.readInt();
+    Record.skipInts(2);
+    D = OMPRequiresDecl::CreateDeserialized(Context, ID, NumClauses);
     break;
+  }
   case DECL_OMP_DECLARE_REDUCTION:
     D = OMPDeclareReductionDecl::CreateDeserialized(Context, ID);
     break;
-  case DECL_OMP_DECLARE_MAPPER:
-    D = OMPDeclareMapperDecl::CreateDeserialized(Context, ID, Record.readInt());
+  case DECL_OMP_DECLARE_MAPPER: {
+    unsigned NumClauses = Record.readInt();
+    Record.skipInts(2);
+    D = OMPDeclareMapperDecl::CreateDeserialized(Context, ID, NumClauses);
     break;
+  }
   case DECL_OMP_CAPTUREDEXPR:
     D = OMPCapturedExprDecl::CreateDeserialized(Context, ID);
     break;
@@ -4664,12 +4666,11 @@ void ASTDeclReader::UpdateDecl(Decl *D,
     }
 
     case UPD_DECL_MARKED_OPENMP_DECLARETARGET: {
-      OMPDeclareTargetDeclAttr::MapTypeTy MapType =
-          static_cast<OMPDeclareTargetDeclAttr::MapTypeTy>(Record.readInt());
-      OMPDeclareTargetDeclAttr::DevTypeTy DevType =
-          static_cast<OMPDeclareTargetDeclAttr::DevTypeTy>(Record.readInt());
+      auto MapType = Record.readEnum<OMPDeclareTargetDeclAttr::MapTypeTy>();
+      auto DevType = Record.readEnum<OMPDeclareTargetDeclAttr::DevTypeTy>();
+      unsigned Level = Record.readInt();
       D->addAttr(OMPDeclareTargetDeclAttr::CreateImplicit(
-          Reader.getContext(), MapType, DevType, readSourceRange(),
+          Reader.getContext(), MapType, DevType, Level, readSourceRange(),
           AttributeCommonInfo::AS_Pragma));
       break;
     }

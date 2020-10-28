@@ -148,6 +148,7 @@ struct CodeGenIntrinsic {
   enum ArgAttrKind {
     NoCapture,
     NoAlias,
+    NoUndef,
     Returned,
     ReadOnly,
     WriteOnly,
@@ -176,6 +177,13 @@ struct CodeGenIntrinsic {
     return Properties & (1 << Prop);
   }
 
+  /// Goes through all IntrProperties that have IsDefault
+  /// value set and sets the property.
+  void setDefaultProperties(Record *R, std::vector<Record *> DefaultProperties);
+
+  /// Helper function to set property \p Name to true;
+  void setProperty(Record *R);
+
   /// Returns true if the parameter at \p ParamIdx is a pointer type. Returns
   /// false if the parameter is not a pointer, or \p ParamIdx is greater than
   /// the size of \p IS.ParamVTs.
@@ -185,7 +193,7 @@ struct CodeGenIntrinsic {
 
   bool isParamImmArg(unsigned ParamIdx) const;
 
-  CodeGenIntrinsic(Record *R);
+  CodeGenIntrinsic(Record *R, std::vector<Record *> DefaultProperties);
 };
 
 class CodeGenIntrinsicTable {

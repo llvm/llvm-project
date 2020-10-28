@@ -309,6 +309,9 @@ static void checkOptions() {
   if (config->tocOptimize && config->emachine != EM_PPC64)
     error("--toc-optimize is only supported on the PowerPC64 target");
 
+  if (config->pcRelOptimize && config->emachine != EM_PPC64)
+    error("--pcrel--optimize is only supported on the PowerPC64 target");
+
   if (config->pie && config->shared)
     error("-shared and -pie may not be used together");
 
@@ -918,6 +921,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->optimizeBBJumps =
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
   config->demangle = args.hasFlag(OPT_demangle, OPT_no_demangle, true);
+  config->dependencyFile = args.getLastArgValue(OPT_dependency_file);
   config->dependentLibraries = args.hasFlag(OPT_dependent_libraries, OPT_no_dependent_libraries, true);
   config->disableVerify = args.hasArg(OPT_disable_verify);
   config->discard = getDiscard(args);
@@ -1287,6 +1291,8 @@ static void setConfigs(opt::InputArgList &args) {
 
   config->tocOptimize =
       args.hasFlag(OPT_toc_optimize, OPT_no_toc_optimize, m == EM_PPC64);
+  config->pcRelOptimize =
+      args.hasFlag(OPT_pcrel_optimize, OPT_no_pcrel_optimize, m == EM_PPC64);
 }
 
 // Returns a value of "-format" option.
@@ -1305,6 +1311,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   std::vector<std::tuple<bool, bool, bool>> stack;
 
   // Iterate over argv to process input files and positional arguments.
+  InputFile::isInGroup = false;
   for (auto *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_library:
@@ -1564,6 +1571,75 @@ static void handleLibcall(StringRef name) {
     sym->fetch();
 }
 
+// Handle --dependency-file=<path>. If that option is given, lld creates a
+// file at a given path with the following contents:
+//
+//   <output-file>: <input-file> ...
+//
+//   <input-file>:
+//
+// where <output-file> is a pathname of an output file and <input-file>
+// ... is a list of pathnames of all input files. `make` command can read a
+// file in the above format and interpret it as a dependency info. We write
+// phony targets for every <input-file> to avoid an error when that file is
+// removed.
+//
+// This option is useful if you want to make your final executable to depend
+// on all input files including system libraries. Here is why.
+//
+// When you write a Makefile, you usually write it so that the final
+// executable depends on all user-generated object files. Normally, you
+// don't make your executable to depend on system libraries (such as libc)
+// because you don't know the exact paths of libraries, even though system
+// libraries that are linked to your executable statically are technically a
+// part of your program. By using --dependency-file option, you can make
+// lld to dump dependency info so that you can maintain exact dependencies
+// easily.
+static void writeDependencyFile() {
+  std::error_code ec;
+  raw_fd_ostream os(config->dependencyFile, ec, sys::fs::F_None);
+  if (ec) {
+    error("cannot open " + config->dependencyFile + ": " + ec.message());
+    return;
+  }
+
+  // We use the same escape rules as Clang/GCC which are accepted by Make/Ninja:
+  // * A space is escaped by a backslash which itself must be escaped.
+  // * A hash sign is escaped by a single backslash.
+  // * $ is escapes as $$.
+  auto printFilename = [](raw_fd_ostream &os, StringRef filename) {
+    llvm::SmallString<256> nativePath;
+    llvm::sys::path::native(filename.str(), nativePath);
+    llvm::sys::path::remove_dots(nativePath, /*remove_dot_dot=*/true);
+    for (unsigned i = 0, e = nativePath.size(); i != e; ++i) {
+      if (nativePath[i] == '#') {
+        os << '\\';
+      } else if (nativePath[i] == ' ') {
+        os << '\\';
+        unsigned j = i;
+        while (j > 0 && nativePath[--j] == '\\')
+          os << '\\';
+      } else if (nativePath[i] == '$') {
+        os << '$';
+      }
+      os << nativePath[i];
+    }
+  };
+
+  os << config->outputFile << ":";
+  for (StringRef path : config->dependencyFiles) {
+    os << " \\\n ";
+    printFilename(os, path);
+  }
+  os << "\n";
+
+  for (StringRef path : config->dependencyFiles) {
+    os << "\n";
+    printFilename(os, path);
+    os << ":\n";
+  }
+}
+
 // Replaces common symbols with defined symbols reside in .bss sections.
 // This function is called after all symbol names are resolved. As a
 // result, the passes after the symbol resolution won't see any
@@ -1782,7 +1858,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
       continue;
 
     Symbol *real = addUndefined(saver.save("__real_" + name));
-    Symbol *wrap = addUndefined(saver.save("__wrap_" + name));
+    Symbol *wrap = addUnusedUndefined(saver.save("__wrap_" + name));
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten
@@ -1792,7 +1868,8 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
 
     // Tell LTO not to eliminate these symbols.
     sym->isUsedInRegularObj = true;
-    wrap->isUsedInRegularObj = true;
+    if (!wrap->isUndefined())
+      wrap->isUsedInRegularObj = true;
   }
   return v;
 }
@@ -2063,6 +2140,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
     return false;
   });
+
+  // Since we now have a complete set of input files, we can create
+  // a .d file to record build dependencies.
+  if (!config->dependencyFile.empty())
+    writeDependencyFile();
 
   // Now that the number of partitions is fixed, save a pointer to the main
   // partition.

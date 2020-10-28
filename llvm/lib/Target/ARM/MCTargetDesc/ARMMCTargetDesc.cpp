@@ -190,7 +190,7 @@ MCSubtargetInfo *ARM_MC::createARMMCSubtargetInfo(const Triple &TT,
       ArchFS = std::string(FS);
   }
 
-  return createARMMCSubtargetInfoImpl(TT, CPU, ArchFS);
+  return createARMMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, ArchFS);
 }
 
 static MCInstrInfo *createARMMCInstrInfo() {

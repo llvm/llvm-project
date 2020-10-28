@@ -345,7 +345,7 @@ bool PointerAssignmentChecker::LhsOkForUnlimitedPoly() const {
 }
 
 template <typename... A>
-parser::Message *PointerAssignmentChecker::Say(A &&... x) {
+parser::Message *PointerAssignmentChecker::Say(A &&...x) {
   auto *msg{context_.messages().Say(std::forward<A>(x)...)};
   if (lhs_) {
     return evaluate::AttachDeclaration(msg, *lhs_);

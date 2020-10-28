@@ -1,6 +1,6 @@
-// RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -latomic -DTEST_STORE -O0 %s -o %t && %run %t 2>&1
-// RUN: %clangxx_msan -fsanitize-memory-track-origins=0 -latomic -DTEST_LOAD -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK
-// RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -latomic -DTEST_LOAD -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-SHADOW
+// RUN: %clang_msan -fsanitize-memory-track-origins=2 -latomic -DTEST_STORE -O0 %s -o %t && %run %t 2>&1
+// RUN: %clang_msan -fsanitize-memory-track-origins=0 -latomic -DTEST_LOAD -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_msan -fsanitize-memory-track-origins=2 -latomic -DTEST_LOAD -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-SHADOW
 
 // PPC has no libatomic
 // UNSUPPORTED: powerpc64-target-arch

@@ -26,6 +26,8 @@ bool isStdSmartPtrCall(const CallEvent &Call);
 /// Returns whether the smart pointer is null or not.
 bool isNullSmartPtr(const ProgramStateRef State, const MemRegion *ThisRegion);
 
+const BugType *getNullDereferenceBugType();
+
 } // namespace smartptr
 } // namespace ento
 } // namespace clang

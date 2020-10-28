@@ -24,7 +24,7 @@ pattern = re.compile(r"(digraph VPlan {.*?\n})",re.DOTALL)
 matches = re.findall(pattern, sys.stdin.read())
 
 for vplan in matches:
-    m = re.search("graph \[.+(VF=.+,UF.+), ", vplan)
+    m = re.search("graph \[.+(VF=.+,UF.+)", vplan)
     if not m:
         raise ValueError("Can't get the right VPlan name")
     name = re.sub('[^a-zA-Z0-9]', '', m.group(1))

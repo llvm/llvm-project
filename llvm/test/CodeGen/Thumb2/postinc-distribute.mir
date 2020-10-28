@@ -12,6 +12,8 @@
   define i32* @t2STRBi12(i32* %x, i32 %y) { unreachable }
 
   define i32* @storedadd(i32* %x, i32 %y) { unreachable }
+  define i32* @minsize2(i32* %x, i32 %y) minsize optsize { unreachable }
+  define i32* @minsize3(i32* %x, i32 %y) minsize optsize { unreachable }
 
 ...
 ---
@@ -57,9 +59,8 @@ body:             |
     ; CHECK-LABEL: name: t2LDRHi12
     ; CHECK: liveins: $r0
     ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK: [[t2LDRHi12_:%[0-9]+]]:rgpr = t2LDRHi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load 4)
-    ; CHECK: [[t2ADDri:%[0-9]+]]:rgpr = nuw t2ADDri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: $r0 = COPY [[t2ADDri]]
+    ; CHECK: [[t2LDRH_POST:%[0-9]+]]:rgpr, [[t2LDRH_POST1:%[0-9]+]]:rgpr = t2LDRH_POST [[COPY]], 32, 14 /* CC::al */, $noreg :: (load 4)
+    ; CHECK: $r0 = COPY [[t2LDRH_POST1]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
     %1:rgpr = t2LDRHi12 %0, 0, 14, $noreg :: (load 4, align 4)
@@ -84,9 +85,8 @@ body:             |
     ; CHECK-LABEL: name: t2LDRSHi12
     ; CHECK: liveins: $r0
     ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK: [[t2LDRSHi12_:%[0-9]+]]:rgpr = t2LDRSHi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load 4)
-    ; CHECK: [[t2ADDri:%[0-9]+]]:rgpr = nuw t2ADDri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: $r0 = COPY [[t2ADDri]]
+    ; CHECK: [[t2LDRSH_POST:%[0-9]+]]:rgpr, [[t2LDRSH_POST1:%[0-9]+]]:rgpr = t2LDRSH_POST [[COPY]], 32, 14 /* CC::al */, $noreg :: (load 4)
+    ; CHECK: $r0 = COPY [[t2LDRSH_POST1]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
     %1:rgpr = t2LDRSHi12 %0, 0, 14, $noreg :: (load 4, align 4)
@@ -111,9 +111,8 @@ body:             |
     ; CHECK-LABEL: name: t2LDRBi12
     ; CHECK: liveins: $r0
     ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK: [[t2LDRBi12_:%[0-9]+]]:rgpr = t2LDRBi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load 4)
-    ; CHECK: [[t2ADDri:%[0-9]+]]:rgpr = nuw t2ADDri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: $r0 = COPY [[t2ADDri]]
+    ; CHECK: [[t2LDRB_POST:%[0-9]+]]:rgpr, [[t2LDRB_POST1:%[0-9]+]]:rgpr = t2LDRB_POST [[COPY]], 32, 14 /* CC::al */, $noreg :: (load 4)
+    ; CHECK: $r0 = COPY [[t2LDRB_POST1]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
     %1:rgpr = t2LDRBi12 %0, 0, 14, $noreg :: (load 4, align 4)
@@ -138,9 +137,8 @@ body:             |
     ; CHECK-LABEL: name: t2LDRSBi12
     ; CHECK: liveins: $r0
     ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
-    ; CHECK: [[t2LDRSBi12_:%[0-9]+]]:rgpr = t2LDRSBi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load 4)
-    ; CHECK: [[t2ADDri:%[0-9]+]]:rgpr = nuw t2ADDri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: $r0 = COPY [[t2ADDri]]
+    ; CHECK: [[t2LDRSB_POST:%[0-9]+]]:rgpr, [[t2LDRSB_POST1:%[0-9]+]]:rgpr = t2LDRSB_POST [[COPY]], 32, 14 /* CC::al */, $noreg :: (load 4)
+    ; CHECK: $r0 = COPY [[t2LDRSB_POST1]]
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
     %1:rgpr = t2LDRSBi12 %0, 0, 14, $noreg :: (load 4, align 4)
@@ -197,9 +195,8 @@ body:             |
     ; CHECK: liveins: $r0, $r1
     ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
-    ; CHECK: t2STRHi12 [[COPY1]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 4)
-    ; CHECK: [[t2ADDri:%[0-9]+]]:rgpr = nuw t2ADDri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: $r0 = COPY [[t2ADDri]]
+    ; CHECK: early-clobber %2:rgpr = t2STRH_POST [[COPY1]], [[COPY]], 32, 14 /* CC::al */, $noreg :: (store 4)
+    ; CHECK: $r0 = COPY %2
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
     %1:rgpr = COPY $r1
@@ -227,9 +224,8 @@ body:             |
     ; CHECK: liveins: $r0, $r1
     ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
     ; CHECK: [[COPY1:%[0-9]+]]:rgpr = COPY $r1
-    ; CHECK: t2STRBi12 [[COPY1]], [[COPY]], 0, 14 /* CC::al */, $noreg :: (store 4)
-    ; CHECK: [[t2ADDri:%[0-9]+]]:rgpr = nuw t2ADDri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: $r0 = COPY [[t2ADDri]]
+    ; CHECK: early-clobber %2:rgpr = t2STRB_POST [[COPY1]], [[COPY]], 32, 14 /* CC::al */, $noreg :: (store 4)
+    ; CHECK: $r0 = COPY %2
     ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
     %0:gprnopc = COPY $r0
     %1:rgpr = COPY $r1
@@ -262,6 +258,68 @@ body:             |
     %1:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
     t2STRi12 %1, %0, 0, 14, $noreg :: (store 4, align 4)
     $r0 = COPY %1
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            minsize2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprnopc, preferred-register: '' }
+  - { id: 1, class: rgpr, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+  - { id: 3, class: rgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    ; CHECK-LABEL: name: minsize2
+    ; CHECK: liveins: $r0
+    ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
+    ; CHECK: [[t2LDRB_POST:%[0-9]+]]:rgpr, [[t2LDRB_POST1:%[0-9]+]]:rgpr = t2LDRB_POST [[COPY]], 32, 14 /* CC::al */, $noreg :: (load 4)
+    ; CHECK: [[t2LDRBi8_:%[0-9]+]]:rgpr = t2LDRBi8 [[t2LDRB_POST1]], -30, 14 /* CC::al */, $noreg :: (load 4)
+    ; CHECK: $r0 = COPY [[t2LDRB_POST1]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:gprnopc = COPY $r0
+    %1:rgpr = t2LDRBi12 %0, 0, 14, $noreg :: (load 4, align 4)
+    %3:rgpr = t2LDRBi12 %0, 2, 14, $noreg :: (load 4, align 4)
+    %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
+    $r0 = COPY %2
+    tBX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            minsize3
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprnopc, preferred-register: '' }
+  - { id: 1, class: rgpr, preferred-register: '' }
+  - { id: 2, class: rgpr, preferred-register: '' }
+  - { id: 3, class: rgpr, preferred-register: '' }
+  - { id: 4, class: rgpr, preferred-register: '' }
+liveins:
+  - { reg: '$r0', virtual-reg: '%0' }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    ; CHECK-LABEL: name: minsize3
+    ; CHECK: liveins: $r0
+    ; CHECK: [[COPY:%[0-9]+]]:gprnopc = COPY $r0
+    ; CHECK: [[t2LDRBi12_:%[0-9]+]]:rgpr = t2LDRBi12 [[COPY]], 0, 14 /* CC::al */, $noreg :: (load 4)
+    ; CHECK: [[t2LDRBi12_1:%[0-9]+]]:rgpr = t2LDRBi12 [[COPY]], 2, 14 /* CC::al */, $noreg :: (load 4)
+    ; CHECK: [[t2LDRBi12_2:%[0-9]+]]:rgpr = t2LDRBi12 [[COPY]], 4, 14 /* CC::al */, $noreg :: (load 4)
+    ; CHECK: [[t2ADDri:%[0-9]+]]:rgpr = nuw t2ADDri [[COPY]], 32, 14 /* CC::al */, $noreg, $noreg
+    ; CHECK: $r0 = COPY [[t2ADDri]]
+    ; CHECK: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:gprnopc = COPY $r0
+    %1:rgpr = t2LDRBi12 %0, 0, 14, $noreg :: (load 4, align 4)
+    %3:rgpr = t2LDRBi12 %0, 2, 14, $noreg :: (load 4, align 4)
+    %4:rgpr = t2LDRBi12 %0, 4, 14, $noreg :: (load 4, align 4)
+    %2:rgpr = nuw t2ADDri %0, 32, 14, $noreg, $noreg
+    $r0 = COPY %2
     tBX_RET 14, $noreg, implicit $r0
 
 ...

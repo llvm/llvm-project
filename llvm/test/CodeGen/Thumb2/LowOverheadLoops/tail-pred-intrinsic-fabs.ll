@@ -9,14 +9,15 @@ define arm_aapcs_vfpcc void @fabs(float* noalias nocapture readonly %pSrcA, floa
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:  .LBB0_1: @ %vector.ph
 ; CHECK-NEXT:    dlstp.32 lr, r2
-; CHECK-NEXT:  .LBB0_1: @ %vector.body
+; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vabs.f32 q0, q0
 ; CHECK-NEXT:    vstrw.32 q0, [r1], #16
-; CHECK-NEXT:    letp lr, .LBB0_1
-; CHECK-NEXT:  @ %bb.2: @ %while.end
+; CHECK-NEXT:    letp lr, .LBB0_2
+; CHECK-NEXT:  @ %bb.3: @ %while.end
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp3 = icmp eq i32 %blockSize, 0
@@ -32,7 +33,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %next.gep = getelementptr float, float* %pDst, i32 %index
   %next.gep13 = getelementptr float, float* %pSrcA, i32 %index
-  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %trip.count.minus.1)
+  %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %blockSize)
   %0 = bitcast float* %next.gep13 to <4 x float>*
   %wide.masked.load = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %0, i32 4, <4 x i1> %active.lane.mask, <4 x float> undef)
   %1 = call fast <4 x float> @llvm.fabs.v4f32(<4 x float> %wide.masked.load)

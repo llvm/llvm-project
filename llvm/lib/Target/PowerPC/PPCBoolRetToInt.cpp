@@ -59,7 +59,7 @@ using namespace llvm;
 
 namespace {
 
-#define DEBUG_TYPE "bool-ret-to-int"
+#define DEBUG_TYPE "ppc-bool-ret-to-int"
 
 STATISTIC(NumBoolRetPromotion,
           "Number of times a bool feeding a RetInst was promoted to an int");
@@ -78,9 +78,9 @@ class PPCBoolRetToInt : public FunctionPass {
       Value *Curr = WorkList.back();
       WorkList.pop_back();
       auto *CurrUser = dyn_cast<User>(Curr);
-      // Operands of CallInst are skipped because they may not be Bool type,
-      // and their positions are defined by ABI.
-      if (CurrUser && !isa<CallInst>(Curr))
+      // Operands of CallInst/Constant are skipped because they may not be Bool
+      // type. For CallInst, their positions are defined by ABI.
+      if (CurrUser && !isa<CallInst>(Curr) && !isa<Constant>(Curr))
         for (auto &Op : CurrUser->operands())
           if (Defs.insert(Op).second)
             WorkList.push_back(Op);
@@ -90,6 +90,9 @@ class PPCBoolRetToInt : public FunctionPass {
 
   // Translate a i1 value to an equivalent i32/i64 value:
   Value *translate(Value *V) {
+    assert(V->getType() == Type::getInt1Ty(V->getContext()) &&
+           "Expect an i1 value");
+
     Type *IntTy = ST->isPPC64() ? Type::getInt64Ty(V->getContext())
                                 : Type::getInt32Ty(V->getContext());
 
@@ -252,9 +255,9 @@ class PPCBoolRetToInt : public FunctionPass {
       auto *First = dyn_cast<User>(Pair.first);
       auto *Second = dyn_cast<User>(Pair.second);
       assert((!First || Second) && "translated from user to non-user!?");
-      // Operands of CallInst are skipped because they may not be Bool type,
-      // and their positions are defined by ABI.
-      if (First && !isa<CallInst>(First))
+      // Operands of CallInst/Constant are skipped because they may not be Bool
+      // type. For CallInst, their positions are defined by ABI.
+      if (First && !isa<CallInst>(First) && !isa<Constant>(First))
         for (unsigned i = 0; i < First->getNumOperands(); ++i)
           Second->setOperand(i, BoolToIntMap[First->getOperand(i)]);
     }
@@ -280,8 +283,8 @@ private:
 } // end anonymous namespace
 
 char PPCBoolRetToInt::ID = 0;
-INITIALIZE_PASS(PPCBoolRetToInt, "bool-ret-to-int",
-                "Convert i1 constants to i32/i64 if they are returned",
-                false, false)
+INITIALIZE_PASS(PPCBoolRetToInt, "ppc-bool-ret-to-int",
+                "Convert i1 constants to i32/i64 if they are returned", false,
+                false)
 
 FunctionPass *llvm::createPPCBoolRetToIntPass() { return new PPCBoolRetToInt(); }

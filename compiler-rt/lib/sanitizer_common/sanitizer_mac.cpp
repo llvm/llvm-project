@@ -137,6 +137,10 @@ int internal_mprotect(void *addr, uptr length, int prot) {
   return mprotect(addr, length, prot);
 }
 
+int internal_madvise(uptr addr, uptr length, int advice) {
+  return madvise((void *)addr, length, advice);
+}
+
 uptr internal_close(fd_t fd) {
   return close(fd);
 }

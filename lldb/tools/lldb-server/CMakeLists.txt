@@ -16,7 +16,7 @@ else()
   list(APPEND LLDB_PLUGINS lldbPluginObjectFileELF)
 endif()
 
-if(IOS)
+if(APPLE_EMBEDDED)
   if(LLDB_CODESIGN_IDENTITY)
     # Use explicit LLDB identity
     set(LLVM_CODESIGNING_IDENTITY ${LLDB_CODESIGN_IDENTITY})

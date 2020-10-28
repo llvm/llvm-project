@@ -37,9 +37,12 @@ function(add_loader_test target_name)
       ${LIBC_BUILD_DIR}/include
   )
 
-  get_fq_deps_list(fq_deps_list ${ADD_LOADER_TEST_DEPENDS})
-  get_object_files_for_test(link_object_files has_skipped_entrypoint_list ${fq_deps_list})
-  target_link_libraries(${fq_target_name} ${link_object_files})
+  if(ADD_LOADER_TEST_DEPENDS)
+    get_fq_deps_list(fq_deps_list ${ADD_LOADER_TEST_DEPENDS})
+    add_dependencies(${fq_target_name} ${fq_deps_list})
+    get_object_files_for_test(link_object_files has_skipped_entrypoint_list ${fq_deps_list})
+    target_link_libraries(${fq_target_name} ${link_object_files})
+  endif()
 
   target_link_options(
     ${fq_target_name}

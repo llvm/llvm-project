@@ -88,7 +88,7 @@ E: hfinkel@anl.gov
 D: The loop reroller, alias analysis and the PowerPC target
 
 N: Dan Gohman
-E: sunfish@mozilla.com
+E: llvm@sunfishcode.online
 D: WebAssembly Backend (lib/Target/WebAssembly/*)
 
 N: Renato Golin
@@ -167,10 +167,6 @@ D: AArch64 backend, misc ARM backend
 N: Diego Novillo
 E: dnovillo@google.com
 D: SampleProfile and related parts of ProfileData
-
-N: Jakob Olesen
-E: stoklund@2pi.dk
-D: TableGen
 
 N: Krzysztof Parzyszek
 E: kparzysz@quicinc.com

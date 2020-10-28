@@ -425,10 +425,10 @@ define <8 x i32> @sdiv_v8i32_undefs(<8 x i32> %a) {
 ; CHECK-NEXT:    [[AB5:%.*]] = sdiv i32 [[A5]], 4
 ; CHECK-NEXT:    [[AB6:%.*]] = sdiv i32 [[A6]], 8
 ; CHECK-NEXT:    [[AB7:%.*]] = sdiv i32 [[A7]], 16
-; CHECK-NEXT:    [[R1:%.*]] = insertelement <8 x i32> undef, i32 [[AB1]], i32 1
-; CHECK-NEXT:    [[R2:%.*]] = insertelement <8 x i32> [[R1]], i32 [[AB2]], i32 2
-; CHECK-NEXT:    [[R3:%.*]] = insertelement <8 x i32> [[R2]], i32 [[AB3]], i32 3
-; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R3]], i32 [[AB5]], i32 5
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> undef, i32 [[AB1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[AB2]], i32 2
+; CHECK-NEXT:    [[R4:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[AB3]], i32 3
+; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x i32> [[R4]], i32 [[AB5]], i32 5
 ; CHECK-NEXT:    [[R6:%.*]] = insertelement <8 x i32> [[R5]], i32 [[AB6]], i32 6
 ; CHECK-NEXT:    [[R7:%.*]] = insertelement <8 x i32> [[R6]], i32 [[AB7]], i32 7
 ; CHECK-NEXT:    ret <8 x i32> [[R7]]

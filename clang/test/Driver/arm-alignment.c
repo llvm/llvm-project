@@ -80,6 +80,9 @@
 // RUN: %clang -target aarch64-none-gnueabi -mkernel -mno-unaligned-access -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-ALIGNED-AARCH64 < %t %s
 
+// RUN: %clang -target aarch64-unknown-openbsd -### %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-ALIGNED-AARCH64 < %t %s
+
 // CHECK-ALIGNED-ARM: "-target-feature" "+strict-align"
 // CHECK-ALIGNED-AARCH64: "-target-feature" "+strict-align"
 

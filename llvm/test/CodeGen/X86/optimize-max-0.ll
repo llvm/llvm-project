@@ -85,7 +85,7 @@ define void @foo(i8* %r, i32 %s, i32 %w, i32 %x, i8* %j, i32 %d) nounwind {
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax ## 4-byte Reload
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    leal 2(%esi), %esi
+; CHECK-NEXT:    addl $2, %esi
 ; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
 ; CHECK-NEXT:    movl (%esp), %esi ## 4-byte Reload
 ; CHECK-NEXT:    addl %esi, %ecx
@@ -513,7 +513,7 @@ define void @bar(i8* %r, i32 %s, i32 %w, i32 %x, i8* %j, i32 %d) nounwind {
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx ## 4-byte Reload
 ; CHECK-NEXT:    addl %eax, %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    leal 2(%edx), %edx
+; CHECK-NEXT:    addl $2, %edx
 ; CHECK-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx ## 4-byte Reload
 ; CHECK-NEXT:    addl %edx, %eax

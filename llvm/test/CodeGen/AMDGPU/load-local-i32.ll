@@ -39,8 +39,9 @@ entry:
 ; SICIVI: s_mov_b32 m0, -1
 ; GFX9-NOT: m0
 
-; GCN-DAG: ds_read_b64
-; GCN-DAG: ds_read_b32
+; SI-DAG: ds_read_b64
+; SI-DAG: ds_read_b32
+; CIVI-DAG: ds_read_b96
 define amdgpu_kernel void @local_load_v3i32(<3 x i32> addrspace(3)* %out, <3 x i32> addrspace(3)* %in) #0 {
 entry:
   %ld = load <3 x i32>, <3 x i32> addrspace(3)* %in

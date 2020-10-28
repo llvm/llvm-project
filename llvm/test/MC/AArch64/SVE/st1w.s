@@ -138,3 +138,27 @@ st1w    { z31.d }, p7, [z31.d, #124]
 // CHECK-ENCODING: [0xff,0xbf,0x5f,0xe5]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff bf 5f e5 <unknown>
+
+st1w    { z0.s }, p7, [z0.s, #0]
+// CHECK-INST: st1w    { z0.s }, p7, [z0.s]
+// CHECK-ENCODING: [0x00,0xbc,0x60,0xe5]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 bc 60 e5 <unknown>
+
+st1w    { z0.s }, p7, [z0.s]
+// CHECK-INST: st1w    { z0.s }, p7, [z0.s]
+// CHECK-ENCODING: [0x00,0xbc,0x60,0xe5]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 bc 60 e5 <unknown>
+
+st1w    { z0.d }, p7, [z0.d, #0]
+// CHECK-INST: st1w    { z0.d }, p7, [z0.d]
+// CHECK-ENCODING: [0x00,0xbc,0x40,0xe5]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 bc 40 e5 <unknown>
+
+st1w    { z0.d }, p7, [z0.d]
+// CHECK-INST: st1w    { z0.d }, p7, [z0.d]
+// CHECK-ENCODING: [0x00,0xbc,0x40,0xe5]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 bc 40 e5 <unknown>

@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.out
+# RUN: yaml2obj %s -o %t.out
 # RUN: lldb-test object-file %t.out | FileCheck %s
 
 # Test that the deployment target is parsed from the load commands.

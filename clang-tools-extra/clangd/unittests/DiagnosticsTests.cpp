@@ -29,6 +29,8 @@ namespace clangd {
 namespace {
 
 using ::testing::_;
+using ::testing::AllOf;
+using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Field;
 using ::testing::IsEmpty;
@@ -278,6 +280,23 @@ TEST(DiagnosticsTest, ClangTidy) {
                   "use a trailing return type for this function")))));
 }
 
+TEST(DiagnosticsTest, ClangTidyEOF) {
+  // clang-format off
+  Annotations Test(R"cpp(
+  [[#]]include <b.h>
+  #include "a.h")cpp");
+  // clang-format on
+  auto TU = TestTU::withCode(Test.code());
+  TU.ExtraArgs = {"-isystem."};
+  TU.AdditionalFiles["a.h"] = TU.AdditionalFiles["b.h"] = "";
+  TU.ClangTidyChecks = "-*, llvm-include-order";
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      Contains(AllOf(Diag(Test.range(), "#includes are not sorted properly"),
+                     DiagSource(Diag::ClangTidy),
+                     DiagName("llvm-include-order"))));
+}
+
 TEST(DiagnosticTest, TemplatesInHeaders) {
   // Diagnostics from templates defined in headers are placed at the expansion.
   Annotations Main(R"cpp(
@@ -436,6 +455,21 @@ TEST(DiagnosticTest, ClangTidySuppressionCommentTrumpsWarningAsError) {
   TU.ClangTidyChecks = "bugprone-integer-division";
   TU.ClangTidyWarningsAsErrors = "bugprone-integer-division";
   EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre());
+}
+
+TEST(DiagnosticTest, ClangTidyNoLiteralDataInMacroToken) {
+  Annotations Main(R"cpp(
+    #define SIGTERM 15
+    using pthread_t = int;
+    int pthread_kill(pthread_t thread, int sig);
+    int func() {
+      pthread_t thread;
+      return pthread_kill(thread, 0);
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.ClangTidyChecks = "-*,bugprone-bad-signal-to-kill-thread";
+  EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre()); // no-crash
 }
 
 TEST(DiagnosticsTest, Preprocessor) {

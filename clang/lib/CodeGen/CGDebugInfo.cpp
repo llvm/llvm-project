@@ -606,6 +606,7 @@ void CGDebugInfo::CreateCompileUnit() {
   case codegenoptions::DebugInfoConstructor:
   case codegenoptions::LimitedDebugInfo:
   case codegenoptions::FullDebugInfo:
+  case codegenoptions::UnusedTypeInfo:
     EmissionKind = llvm::DICompileUnit::FullDebug;
     break;
   }
@@ -719,23 +720,39 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::Id: \
     return getOrCreateStructPtrType("opencl_" #ExtType, Id##Ty);
 #include "clang/Basic/OpenCLExtensionTypes.def"
-  // TODO: real support for SVE types requires more infrastructure
-  // to be added first.  The types have a variable length and are
-  // represented in debug info as types whose length depends on a
-  // target-specific pseudo register.
-#define SVE_TYPE(Name, Id, SingletonId) \
-  case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
-  {
-    unsigned DiagID = CGM.getDiags().getCustomDiagID(
-        DiagnosticsEngine::Error,
-        "cannot yet generate debug info for SVE type '%0'");
-    auto Name = BT->getName(CGM.getContext().getPrintingPolicy());
-    CGM.getDiags().Report(DiagID) << Name;
-    // Return something safe.
-    return CreateType(cast<const BuiltinType>(CGM.getContext().IntTy));
-  }
 
+#define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AArch64SVEACLETypes.def"
+    {
+      ASTContext::BuiltinVectorTypeInfo Info =
+          CGM.getContext().getBuiltinVectorTypeInfo(BT);
+      unsigned NumElemsPerVG = (Info.EC.getKnownMinValue() * Info.NumVectors) / 2;
+
+      // Debuggers can't extract 1bit from a vector, so will display a
+      // bitpattern for svbool_t instead.
+      if (Info.ElementType == CGM.getContext().BoolTy) {
+        NumElemsPerVG /= 8;
+        Info.ElementType = CGM.getContext().UnsignedCharTy;
+      }
+
+      auto *LowerBound =
+          llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+              llvm::Type::getInt64Ty(CGM.getLLVMContext()), 0));
+      SmallVector<int64_t, 9> Expr(
+          {llvm::dwarf::DW_OP_constu, NumElemsPerVG, llvm::dwarf::DW_OP_bregx,
+           /* AArch64::VG */ 46, 0, llvm::dwarf::DW_OP_mul,
+           llvm::dwarf::DW_OP_constu, 1, llvm::dwarf::DW_OP_minus});
+      auto *UpperBound = DBuilder.createExpression(Expr);
+
+      llvm::Metadata *Subscript = DBuilder.getOrCreateSubrange(
+          /*count*/ nullptr, LowerBound, UpperBound, /*stride*/ nullptr);
+      llvm::DINodeArray SubscriptArray = DBuilder.getOrCreateArray(Subscript);
+      llvm::DIType *ElemTy =
+          getOrCreateType(Info.ElementType, TheCU->getFile());
+      auto Align = getTypeAlignIfRequired(BT, CGM.getContext());
+      return DBuilder.createVectorType(/*Size*/ 0, Align, ElemTy,
+                                       SubscriptArray);
+    }
   case BuiltinType::UChar:
   case BuiltinType::Char_U:
     Encoding = llvm::dwarf::DW_ATE_unsigned_char;
@@ -2259,6 +2276,25 @@ static bool hasExplicitMemberDefinition(CXXRecordDecl::method_iterator I,
   return false;
 }
 
+static bool canUseCtorHoming(const CXXRecordDecl *RD) {
+  // Constructor homing can be used for classes that have at least one
+  // constructor and have no trivial or constexpr constructors.
+  // Skip this optimization if the class or any of its methods are marked
+  // dllimport.
+  if (RD->isLambda() || RD->hasConstexprNonCopyMoveConstructor() ||
+      isClassOrMethodDLLImport(RD))
+    return false;
+
+  if (RD->ctors().empty())
+    return false;
+
+  for (const auto *Ctor : RD->ctors())
+    if (Ctor->isTrivial() && !Ctor->isCopyOrMoveConstructor())
+      return false;
+
+  return true;
+}
+
 static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
                                  bool DebugTypeExtRefs, const RecordDecl *RD,
                                  const LangOptions &LangOpts) {
@@ -2293,23 +2329,6 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
       !isClassOrMethodDLLImport(CXXDecl))
     return true;
 
-  // In constructor debug mode, only emit debug info for a class when its
-  // constructor is emitted. Skip this optimization if the class or any of
-  // its methods are marked dllimport.
-  //
-  // This applies to classes that don't have any trivial constructors and have
-  // at least one constructor.
-  if (DebugKind == codegenoptions::DebugInfoConstructor &&
-      !CXXDecl->isLambda() && !CXXDecl->hasConstexprNonCopyMoveConstructor() &&
-      !isClassOrMethodDLLImport(CXXDecl)) {
-    if (CXXDecl->ctors().empty())
-      return false;
-    for (const auto *Ctor : CXXDecl->ctors())
-      if (Ctor->isTrivial() && !Ctor->isCopyOrMoveConstructor())
-        return false;
-    return true;
-  }
-
   TemplateSpecializationKind Spec = TSK_Undeclared;
   if (const auto *SD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
     Spec = SD->getSpecializationKind();
@@ -2317,6 +2336,12 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
   if (Spec == TSK_ExplicitInstantiationDeclaration &&
       hasExplicitMemberDefinition(CXXDecl->method_begin(),
                                   CXXDecl->method_end()))
+    return true;
+
+  // In constructor homing mode, only emit complete debug info for a class
+  // when its constructor is emitted.
+  if ((DebugKind == codegenoptions::DebugInfoConstructor) &&
+      canUseCtorHoming(CXXDecl))
     return true;
 
   return false;
@@ -2544,12 +2569,11 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
     // We use the lower 64 bits for debug info.
 
     uint64_t Signature = 0;
-    if (const auto &ModSig = Mod.getSignature()) {
-      for (unsigned I = 0; I != sizeof(Signature); ++I)
-        Signature |= (uint64_t)ModSig[I] << (I * 8);
-    } else {
+    if (const auto &ModSig = Mod.getSignature())
+      Signature = ModSig.truncatedValue();
+    else
       Signature = ~1ULL;
-    }
+
     llvm::DIBuilder DIB(CGM.getModule());
     SmallString<0> PCM;
     if (!llvm::sys::path::is_absolute(Mod.getASTFile()))
@@ -4960,13 +4984,17 @@ void CGDebugInfo::finalize() {
   DBuilder.finalize();
 }
 
+// Don't ignore in case of explicit cast where it is referenced indirectly.
 void CGDebugInfo::EmitExplicitCastType(QualType Ty) {
-  if (!CGM.getCodeGenOpts().hasReducedDebugInfo())
-    return;
+  if (CGM.getCodeGenOpts().hasReducedDebugInfo())
+    if (auto *DieTy = getOrCreateType(Ty, TheCU->getFile()))
+      DBuilder.retainType(DieTy);
+}
 
-  if (auto *DieTy = getOrCreateType(Ty, TheCU->getFile()))
-    // Don't ignore in case of explicit cast where it is referenced indirectly.
-    DBuilder.retainType(DieTy);
+void CGDebugInfo::EmitAndRetainType(QualType Ty) {
+  if (CGM.getCodeGenOpts().hasMaybeUnusedDebugInfo())
+    if (auto *DieTy = getOrCreateType(Ty, TheCU->getFile()))
+      DBuilder.retainType(DieTy);
 }
 
 llvm::DebugLoc CGDebugInfo::SourceLocToDebugLoc(SourceLocation Loc) {

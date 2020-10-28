@@ -50,16 +50,17 @@ protected:
       bool Changed = false;
       bool NeedFence = true;
       bool Is64Bit = MBB.getParent()->getSubtarget<PPCSubtarget>().isPPC64();
+      bool IsTLSGDPCREL = false;
 
       for (MachineBasicBlock::iterator I = MBB.begin(), IE = MBB.end();
            I != IE;) {
         MachineInstr &MI = *I;
+        IsTLSGDPCREL = isTLSGDPCREL(MI);
 
         if (MI.getOpcode() != PPC::ADDItlsgdLADDR &&
             MI.getOpcode() != PPC::ADDItlsldLADDR &&
             MI.getOpcode() != PPC::ADDItlsgdLADDR32 &&
-            MI.getOpcode() != PPC::ADDItlsldLADDR32) {
-
+            MI.getOpcode() != PPC::ADDItlsldLADDR32 && !IsTLSGDPCREL) {
           // Although we create ADJCALLSTACKDOWN and ADJCALLSTACKUP
           // as scheduling fences, we skip creating fences if we already
           // have existing ADJCALLSTACKDOWN/UP to avoid nesting,
@@ -76,12 +77,16 @@ protected:
         LLVM_DEBUG(dbgs() << "TLS Dynamic Call Fixup:\n    " << MI);
 
         Register OutReg = MI.getOperand(0).getReg();
-        Register InReg = MI.getOperand(1).getReg();
-        DebugLoc DL = MI.getDebugLoc();
+        Register InReg = PPC::NoRegister;
         Register GPR3 = Is64Bit ? PPC::X3 : PPC::R3;
-        unsigned Opc1, Opc2;
-        const Register OrigRegs[] = {OutReg, InReg, GPR3};
+        SmallVector<Register, 3> OrigRegs = {OutReg, GPR3};
+        if (!IsTLSGDPCREL) {
+          InReg = MI.getOperand(1).getReg();
+          OrigRegs.push_back(InReg);
+        }
+        DebugLoc DL = MI.getDebugLoc();
 
+        unsigned Opc1, Opc2;
         switch (MI.getOpcode()) {
         default:
           llvm_unreachable("Opcode inconsistency error");
@@ -101,6 +106,10 @@ protected:
           Opc1 = PPC::ADDItlsldL32;
           Opc2 = PPC::GETtlsldADDR32;
           break;
+        case PPC::PADDI8pc:
+          assert(IsTLSGDPCREL && "Expecting General Dynamic PCRel");
+          Opc1 = PPC::PADDI8pc;
+          Opc2 = PPC::GETtlsADDR;
         }
 
         // We create ADJCALLSTACKUP and ADJCALLSTACKDOWN around _tls_get_addr
@@ -113,9 +122,15 @@ protected:
           BuildMI(MBB, I, DL, TII->get(PPC::ADJCALLSTACKDOWN)).addImm(0)
                                                               .addImm(0);
 
-        // Expand into two ops built prior to the existing instruction.
-        MachineInstr *Addi = BuildMI(MBB, I, DL, TII->get(Opc1), GPR3)
-          .addReg(InReg);
+        MachineInstr *Addi;
+        if (IsTLSGDPCREL) {
+          Addi = BuildMI(MBB, I, DL, TII->get(Opc1), GPR3).addImm(0);
+        } else {
+          // Expand into two ops built prior to the existing instruction.
+          assert(InReg != PPC::NoRegister && "Operand must be a register");
+          Addi = BuildMI(MBB, I, DL, TII->get(Opc1), GPR3).addReg(InReg);
+        }
+
         Addi->addOperand(MI.getOperand(2));
 
         // The ADDItls* instruction is the first instruction in the
@@ -125,7 +140,10 @@ protected:
 
         MachineInstr *Call = (BuildMI(MBB, I, DL, TII->get(Opc2), GPR3)
                               .addReg(GPR3));
-        Call->addOperand(MI.getOperand(3));
+        if (IsTLSGDPCREL)
+          Call->addOperand(MI.getOperand(2));
+        else
+          Call->addOperand(MI.getOperand(3));
 
         if (NeedFence)
           BuildMI(MBB, I, DL, TII->get(PPC::ADJCALLSTACKUP)).addImm(0).addImm(0);
@@ -150,6 +168,11 @@ protected:
     }
 
 public:
+  bool isTLSGDPCREL(const MachineInstr &MI) {
+    return (MI.getOpcode() == PPC::PADDI8pc) &&
+           (MI.getOperand(2).getTargetFlags() ==
+            PPCII::MO_GOT_TLSGD_PCREL_FLAG);
+  }
     bool runOnMachineFunction(MachineFunction &MF) override {
       TII = MF.getSubtarget<PPCSubtarget>().getInstrInfo();
       LIS = &getAnalysis<LiveIntervals>();

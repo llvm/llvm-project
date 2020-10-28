@@ -1167,12 +1167,12 @@ HeaderFileInfo &HeaderSearch::getFileInfo(const FileEntry *FE) {
   HeaderFileInfo *HFI = &FileInfo[FE->getUID()];
   // FIXME: Use a generation count to check whether this is really up to date.
   if (ExternalSource && !HFI->Resolved) {
-    HFI->Resolved = true;
     auto ExternalHFI = ExternalSource->GetHeaderFileInfo(FE);
-
-    HFI = &FileInfo[FE->getUID()];
-    if (ExternalHFI.External)
-      mergeHeaderFileInfo(*HFI, ExternalHFI);
+    if (ExternalHFI.IsValid) {
+      HFI->Resolved = true;
+      if (ExternalHFI.External)
+        mergeHeaderFileInfo(*HFI, ExternalHFI);
+    }
   }
 
   HFI->IsValid = true;
@@ -1199,12 +1199,12 @@ HeaderSearch::getExistingFileInfo(const FileEntry *FE,
     if (!WantExternal && (!HFI->IsValid || HFI->External))
       return nullptr;
     if (!HFI->Resolved) {
-      HFI->Resolved = true;
       auto ExternalHFI = ExternalSource->GetHeaderFileInfo(FE);
-
-      HFI = &FileInfo[FE->getUID()];
-      if (ExternalHFI.External)
-        mergeHeaderFileInfo(*HFI, ExternalHFI);
+      if (ExternalHFI.IsValid) {
+        HFI->Resolved = true;
+        if (ExternalHFI.External)
+          mergeHeaderFileInfo(*HFI, ExternalHFI);
+      }
     }
   } else if (FE->getUID() >= FileInfo.size()) {
     return nullptr;

@@ -119,7 +119,7 @@ static cl::opt<uint32_t> MaxNumDeps(
 static cl::opt<uint32_t> MaxBBSpeculations(
     "gvn-max-block-speculations", cl::Hidden, cl::init(600), cl::ZeroOrMore,
     cl::desc("Max number of blocks we're willing to speculate on (and recurse "
-             "into) when deducing if a value is fully avaliable or not in GVN "
+             "into) when deducing if a value is fully available or not in GVN "
              "(default = 600)"));
 
 struct llvm::GVN::Expression {
@@ -676,7 +676,7 @@ LLVM_DUMP_METHOD void GVN::dump(DenseMap<uint32_t, Value*>& d) const {
 }
 #endif
 
-enum class AvaliabilityState : char {
+enum class AvailabilityState : char {
   /// We know the block *is not* fully available. This is a fixpoint.
   Unavailable = 0,
   /// We know the block *is* fully available. This is a fixpoint.
@@ -698,12 +698,12 @@ enum class AvaliabilityState : char {
 ///      currently speculating that it will be.
 static bool IsValueFullyAvailableInBlock(
     BasicBlock *BB,
-    DenseMap<BasicBlock *, AvaliabilityState> &FullyAvailableBlocks) {
+    DenseMap<BasicBlock *, AvailabilityState> &FullyAvailableBlocks) {
   SmallVector<BasicBlock *, 32> Worklist;
   Optional<BasicBlock *> UnavailableBB;
 
   // The number of times we didn't find an entry for a block in a map and
-  // optimistically inserted an entry marking block as speculatively avaliable.
+  // optimistically inserted an entry marking block as speculatively available.
   unsigned NumNewNewSpeculativelyAvailableBBs = 0;
 
 #ifndef NDEBUG
@@ -716,16 +716,16 @@ static bool IsValueFullyAvailableInBlock(
     BasicBlock *CurrBB = Worklist.pop_back_val(); // LIFO - depth-first!
     // Optimistically assume that the block is Speculatively Available and check
     // to see if we already know about this block in one lookup.
-    std::pair<DenseMap<BasicBlock *, AvaliabilityState>::iterator, bool> IV =
+    std::pair<DenseMap<BasicBlock *, AvailabilityState>::iterator, bool> IV =
         FullyAvailableBlocks.try_emplace(
-            CurrBB, AvaliabilityState::SpeculativelyAvailable);
-    AvaliabilityState &State = IV.first->second;
+            CurrBB, AvailabilityState::SpeculativelyAvailable);
+    AvailabilityState &State = IV.first->second;
 
     // Did the entry already exist for this block?
     if (!IV.second) {
-      if (State == AvaliabilityState::Unavailable) {
+      if (State == AvailabilityState::Unavailable) {
         UnavailableBB = CurrBB;
-        break; // Backpropagate unavaliability info.
+        break; // Backpropagate unavailability info.
       }
 
 #ifndef NDEBUG
@@ -742,9 +742,9 @@ static bool IsValueFullyAvailableInBlock(
     // Also, if this block has no predecessors, the value isn't live-in here.
     if (OutOfBudget || pred_empty(CurrBB)) {
       MaxBBSpeculationCutoffReachedTimes += (int)OutOfBudget;
-      State = AvaliabilityState::Unavailable;
+      State = AvailabilityState::Unavailable;
       UnavailableBB = CurrBB;
-      break; // Backpropagate unavaliability info.
+      break; // Backpropagate unavailability info.
     }
 
     // Tentatively consider this block as speculatively available.
@@ -763,15 +763,15 @@ static bool IsValueFullyAvailableInBlock(
   // If the block isn't marked as fixpoint yet
   // (the Unavailable and Available states are fixpoints)
   auto MarkAsFixpointAndEnqueueSuccessors =
-      [&](BasicBlock *BB, AvaliabilityState FixpointState) {
+      [&](BasicBlock *BB, AvailabilityState FixpointState) {
         auto It = FullyAvailableBlocks.find(BB);
         if (It == FullyAvailableBlocks.end())
           return; // Never queried this block, leave as-is.
-        switch (AvaliabilityState &State = It->second) {
-        case AvaliabilityState::Unavailable:
-        case AvaliabilityState::Available:
+        switch (AvailabilityState &State = It->second) {
+        case AvailabilityState::Unavailable:
+        case AvailabilityState::Available:
           return; // Don't backpropagate further, continue processing worklist.
-        case AvaliabilityState::SpeculativelyAvailable: // Fix it!
+        case AvailabilityState::SpeculativelyAvailable: // Fix it!
           State = FixpointState;
 #ifndef NDEBUG
           assert(NewSpeculativelyAvailableBBs.erase(BB) &&
@@ -792,7 +792,7 @@ static bool IsValueFullyAvailableInBlock(
     Worklist.append(succ_begin(*UnavailableBB), succ_end(*UnavailableBB));
     while (!Worklist.empty())
       MarkAsFixpointAndEnqueueSuccessors(Worklist.pop_back_val(),
-                                         AvaliabilityState::Unavailable);
+                                         AvailabilityState::Unavailable);
   }
 
 #ifndef NDEBUG
@@ -801,7 +801,7 @@ static bool IsValueFullyAvailableInBlock(
     Worklist.append(succ_begin(AvailableBB), succ_end(AvailableBB));
   while (!Worklist.empty())
     MarkAsFixpointAndEnqueueSuccessors(Worklist.pop_back_val(),
-                                       AvaliabilityState::Available);
+                                       AvailabilityState::Available);
 
   assert(NewSpeculativelyAvailableBBs.empty() &&
          "Must have fixed all the new speculatively available blocks.");
@@ -1170,11 +1170,11 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   // Check to see how many predecessors have the loaded value fully
   // available.
   MapVector<BasicBlock *, Value *> PredLoads;
-  DenseMap<BasicBlock *, AvaliabilityState> FullyAvailableBlocks;
+  DenseMap<BasicBlock *, AvailabilityState> FullyAvailableBlocks;
   for (const AvailableValueInBlock &AV : ValuesPerBlock)
-    FullyAvailableBlocks[AV.BB] = AvaliabilityState::Available;
+    FullyAvailableBlocks[AV.BB] = AvailabilityState::Available;
   for (BasicBlock *UnavailableBB : UnavailableBlocks)
-    FullyAvailableBlocks[UnavailableBB] = AvaliabilityState::Unavailable;
+    FullyAvailableBlocks[UnavailableBB] = AvailabilityState::Unavailable;
 
   SmallVector<BasicBlock *, 4> CriticalEdgePred;
   for (BasicBlock *Pred : predecessors(LoadBB)) {

@@ -1498,7 +1498,8 @@ ASTNodeImporter::VisitPackExpansionType(const PackExpansionType *T) {
     return ToPatternOrErr.takeError();
 
   return Importer.getToContext().getPackExpansionType(*ToPatternOrErr,
-                                                      T->getNumExpansions());
+                                                      T->getNumExpansions(),
+                                                      /*ExpactPack=*/false);
 }
 
 ExpectedType ASTNodeImporter::VisitDependentTemplateSpecializationType(
@@ -6066,6 +6067,8 @@ ExpectedStmt ASTNodeImporter::VisitIfStmt(IfStmt *S) {
   auto ToInit = importChecked(Err, S->getInit());
   auto ToConditionVariable = importChecked(Err, S->getConditionVariable());
   auto ToCond = importChecked(Err, S->getCond());
+  auto ToLParenLoc = importChecked(Err, S->getLParenLoc());
+  auto ToRParenLoc = importChecked(Err, S->getRParenLoc());
   auto ToThen = importChecked(Err, S->getThen());
   auto ToElseLoc = importChecked(Err, S->getElseLoc());
   auto ToElse = importChecked(Err, S->getElse());
@@ -6073,8 +6076,8 @@ ExpectedStmt ASTNodeImporter::VisitIfStmt(IfStmt *S) {
     return std::move(Err);
 
   return IfStmt::Create(Importer.getToContext(), ToIfLoc, S->isConstexpr(),
-                        ToInit, ToConditionVariable, ToCond, ToThen, ToElseLoc,
-                        ToElse);
+                        ToInit, ToConditionVariable, ToCond, ToLParenLoc,
+                        ToRParenLoc, ToThen, ToElseLoc, ToElse);
 }
 
 ExpectedStmt ASTNodeImporter::VisitSwitchStmt(SwitchStmt *S) {
@@ -6083,13 +6086,16 @@ ExpectedStmt ASTNodeImporter::VisitSwitchStmt(SwitchStmt *S) {
   auto ToInit = importChecked(Err, S->getInit());
   auto ToConditionVariable = importChecked(Err, S->getConditionVariable());
   auto ToCond = importChecked(Err, S->getCond());
+  auto ToLParenLoc = importChecked(Err, S->getLParenLoc());
+  auto ToRParenLoc = importChecked(Err, S->getRParenLoc());
   auto ToBody = importChecked(Err, S->getBody());
   auto ToSwitchLoc = importChecked(Err, S->getSwitchLoc());
   if (Err)
     return std::move(Err);
 
-  auto *ToStmt = SwitchStmt::Create(Importer.getToContext(), ToInit,
-                                    ToConditionVariable, ToCond);
+  auto *ToStmt =
+      SwitchStmt::Create(Importer.getToContext(), ToInit, ToConditionVariable,
+                         ToCond, ToLParenLoc, ToRParenLoc);
   ToStmt->setBody(ToBody);
   ToStmt->setSwitchLoc(ToSwitchLoc);
 

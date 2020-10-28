@@ -80,6 +80,7 @@
 // CHECK-NEXT: MipsShortCall (SubjectMatchRule_function)
 // CHECK-NEXT: NSConsumed (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: NSConsumesSelf (SubjectMatchRule_objc_method)
+// CHECK-NEXT: NSErrorDomain (SubjectMatchRule_enum)
 // CHECK-NEXT: Naked (SubjectMatchRule_function)
 // CHECK-NEXT: NoBuiltin (SubjectMatchRule_function)
 // CHECK-NEXT: NoCommon (SubjectMatchRule_variable)

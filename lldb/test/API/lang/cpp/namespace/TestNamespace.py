@@ -152,11 +152,11 @@ class NamespaceTestCase(TestBase):
 
         self.runToBkpt("run")
         # Evaluate ns1::value
-        self.expect("expression -- value", startstr="(int) $0 = 100")
+        self.expect_expr("value", result_value="100")
 
         self.runToBkpt("continue")
         # Evaluate ns2::value
-        self.expect("expression -- value", startstr="(int) $1 = 200")
+        self.expect_expr("value", result_value="200")
 
         self.runToBkpt("continue")
         # On Mac OS X, gcc 4.2 emits the wrong debug info with respect to
@@ -206,28 +206,23 @@ class NamespaceTestCase(TestBase):
         # rdar://problem/8660275
         # test/namespace: 'expression -- i+j' not working
         # This has been fixed.
-        self.expect("expression -- i + j",
-                    startstr="(int) $2 = 7")
+        self.expect_expr("i + j", result_type="int", result_value="7")
         # (int) $2 = 7
 
-        self.runCmd("expression -- i")
-        self.runCmd("expression -- j")
+        self.expect_expr("i", result_value="3")
+        self.expect_expr("j", result_value="4")
 
         # rdar://problem/8668674
         # expression command with fully qualified namespace for a variable does
         # not work
-        self.expect("expression -- ::i", VARIABLES_DISPLAYED_CORRECTLY,
-                    patterns=[' = 3'])
-        self.expect("expression -- A::B::j", VARIABLES_DISPLAYED_CORRECTLY,
-                    patterns=[' = 4'])
+        self.expect_expr("::i", result_value="3")
+        self.expect_expr("A::B::j", result_value="4")
 
         # expression command with function in anonymous namespace
-        self.expect("expression -- myanonfunc(3)",
-                    patterns=[' = 6'])
+        self.expect_expr("myanonfunc(3)", result_value="6")
 
         # global namespace qualification with function in anonymous namespace
-        self.expect("expression -- ::myanonfunc(4)",
-                    patterns=[' = 8'])
+        self.expect_expr("myanonfunc(4)", result_value="8")
 
         self.expect("p myanonfunc",
                     patterns=['\(anonymous namespace\)::myanonfunc\(int\)'])

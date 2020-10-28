@@ -51,6 +51,7 @@ private:
   void Compute(Scope &);
   void DoScope(Scope &);
   void DoCommonBlock(Symbol &);
+  void DoEquivalenceBlockBase(Symbol &, SizeAndAlignment &);
   void DoEquivalenceSet(const EquivalenceSet &);
   SymbolAndOffset Resolve(const SymbolAndOffset &);
   std::size_t ComputeOffset(const EquivalenceObject &);
@@ -67,6 +68,8 @@ private:
   std::size_t alignment_{0};
   // symbol -> symbol+offset that determines its location, from EQUIVALENCE
   std::map<MutableSymbolRef, SymbolAndOffset> dependents_;
+  // base symbol -> SizeAndAlignment for each distinct EQUIVALENCE block
+  std::map<MutableSymbolRef, SizeAndAlignment> equivalenceBlock_;
 };
 
 void ComputeOffsetsHelper::Compute(Scope &scope) {
@@ -74,20 +77,13 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
     Compute(child);
   }
   DoScope(scope);
-}
-
-static bool InCommonBlock(const Symbol &symbol) {
-  const auto *details{symbol.detailsIf<ObjectEntityDetails>()};
-  return details && details->commonBlock();
+  dependents_.clear();
+  equivalenceBlock_.clear();
 }
 
 void ComputeOffsetsHelper::DoScope(Scope &scope) {
   if (scope.symbol() && scope.IsParameterizedDerivedType()) {
     return; // only process instantiations of parameterized derived types
-  }
-  // Symbols in common block get offsets from the beginning of the block
-  for (auto &pair : scope.commonBlocks()) {
-    DoCommonBlock(*pair.second);
   }
   // Build dependents_ from equivalences: symbol -> symbol+offset
   for (const EquivalenceSet &set : scope.equivalenceSets()) {
@@ -95,23 +91,54 @@ void ComputeOffsetsHelper::DoScope(Scope &scope) {
   }
   offset_ = 0;
   alignment_ = 0;
-  for (auto &symbol : scope.GetSymbols()) {
-    if (!InCommonBlock(*symbol) &&
-        dependents_.find(symbol) == dependents_.end()) {
-      DoSymbol(*symbol);
+  // Compute a base symbol and overall block size for each
+  // disjoint EQUIVALENCE storage sequence.
+  for (auto &[symbol, dep] : dependents_) {
+    dep = Resolve(dep);
+    CHECK(symbol->size() == 0);
+    auto symInfo{GetSizeAndAlignment(*symbol)};
+    symbol->set_size(symInfo.size);
+    Symbol &base{*dep.symbol};
+    auto iter{equivalenceBlock_.find(base)};
+    std::size_t minBlockSize{dep.offset + symInfo.size};
+    if (iter == equivalenceBlock_.end()) {
+      equivalenceBlock_.emplace(
+          base, SizeAndAlignment{minBlockSize, symInfo.alignment});
+    } else {
+      SizeAndAlignment &blockInfo{iter->second};
+      blockInfo.size = std::max(blockInfo.size, minBlockSize);
+      blockInfo.alignment = std::max(blockInfo.alignment, symInfo.alignment);
     }
   }
-  for (auto &[symbol, dep] : dependents_) {
-    if (symbol->size() == 0) {
-      SizeAndAlignment s{GetSizeAndAlignment(*symbol)};
-      symbol->set_size(s.size);
-      SymbolAndOffset resolved{Resolve(dep)};
-      symbol->set_offset(dep.symbol->offset() + resolved.offset);
-      offset_ = std::max(offset_, symbol->offset() + symbol->size());
+  // Assign offsets for non-COMMON EQUIVALENCE blocks
+  for (auto &[symbol, blockInfo] : equivalenceBlock_) {
+    if (!InCommonBlock(*symbol)) {
+      DoSymbol(*symbol);
+      DoEquivalenceBlockBase(*symbol, blockInfo);
+      offset_ = std::max(offset_, symbol->offset() + blockInfo.size);
+    }
+  }
+  // Process remaining non-COMMON symbols; this is all of them if there
+  // was no use of EQUIVALENCE in the scope.
+  for (auto &symbol : scope.GetSymbols()) {
+    if (!InCommonBlock(*symbol) &&
+        dependents_.find(symbol) == dependents_.end() &&
+        equivalenceBlock_.find(symbol) == equivalenceBlock_.end()) {
+      DoSymbol(*symbol);
     }
   }
   scope.set_size(offset_);
   scope.set_alignment(alignment_);
+  // Assign offsets in COMMON blocks.
+  for (auto &pair : scope.commonBlocks()) {
+    DoCommonBlock(*pair.second);
+  }
+  for (auto &[symbol, dep] : dependents_) {
+    symbol->set_offset(dep.symbol->offset() + dep.offset);
+    if (const auto *block{FindCommonBlockContaining(*dep.symbol)}) {
+      symbol->get<ObjectEntityDetails>().set_commonBlock(*block);
+    }
+  }
 }
 
 auto ComputeOffsetsHelper::Resolve(const SymbolAndOffset &dep)
@@ -131,11 +158,57 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
   auto &details{commonBlock.get<CommonBlockDetails>()};
   offset_ = 0;
   alignment_ = 0;
+  std::size_t minSize{0};
+  std::size_t minAlignment{0};
   for (auto &object : details.objects()) {
-    DoSymbol(*object);
+    Symbol &symbol{*object};
+    DoSymbol(symbol);
+    auto iter{dependents_.find(symbol)};
+    if (iter == dependents_.end()) {
+      // Get full extent of any EQUIVALENCE block into size of COMMON
+      auto eqIter{equivalenceBlock_.find(symbol)};
+      if (eqIter != equivalenceBlock_.end()) {
+        SizeAndAlignment &blockInfo{eqIter->second};
+        DoEquivalenceBlockBase(symbol, blockInfo);
+        minSize = std::max(
+            minSize, std::max(offset_, symbol.offset() + blockInfo.size));
+        minAlignment = std::max(minAlignment, blockInfo.alignment);
+      }
+    } else {
+      SymbolAndOffset &dep{iter->second};
+      Symbol &base{*dep.symbol};
+      auto errorSite{
+          commonBlock.name().empty() ? symbol.name() : commonBlock.name()};
+      if (const auto *baseBlock{FindCommonBlockContaining(base)}) {
+        if (baseBlock == &commonBlock) {
+          context_.Say(errorSite,
+              "'%s' is storage associated with '%s' by EQUIVALENCE elsewhere in COMMON block /%s/"_err_en_US,
+              symbol.name(), base.name(), commonBlock.name());
+        } else { // 8.10.3(1)
+          context_.Say(errorSite,
+              "'%s' in COMMON block /%s/ must not be storage associated with '%s' in COMMON block /%s/ by EQUIVALENCE"_err_en_US,
+              symbol.name(), commonBlock.name(), base.name(),
+              baseBlock->name());
+        }
+      } else if (dep.offset > symbol.offset()) { // 8.10.3(3)
+        context_.Say(errorSite,
+            "'%s' cannot backward-extend COMMON block /%s/ via EQUIVALENCE with '%s'"_err_en_US,
+            symbol.name(), commonBlock.name(), base.name());
+      } else {
+        base.get<ObjectEntityDetails>().set_commonBlock(commonBlock);
+        base.set_offset(symbol.offset() - dep.offset);
+      }
+    }
   }
-  commonBlock.set_size(offset_);
-  details.set_alignment(alignment_);
+  commonBlock.set_size(std::max(minSize, offset_));
+  details.set_alignment(std::max(minAlignment, alignment_));
+}
+
+void ComputeOffsetsHelper::DoEquivalenceBlockBase(
+    Symbol &symbol, SizeAndAlignment &blockInfo) {
+  if (symbol.size() > blockInfo.size) {
+    blockInfo.size = symbol.size();
+  }
 }
 
 void ComputeOffsetsHelper::DoEquivalenceSet(const EquivalenceSet &set) {
@@ -222,9 +295,8 @@ std::size_t ComputeOffsetsHelper::ComputeOffset(
 }
 
 void ComputeOffsetsHelper::DoSymbol(Symbol &symbol) {
-  if (symbol.has<TypeParamDetails>() || symbol.has<SubprogramDetails>() ||
-      symbol.has<UseDetails>() || symbol.has<ProcBindingDetails>()) {
-    return; // these have type but no size
+  if (!symbol.has<ObjectEntityDetails>() && !symbol.has<ProcEntityDetails>()) {
+    return;
   }
   SizeAndAlignment s{GetSizeAndAlignment(symbol)};
   if (s.size == 0) {
@@ -251,7 +323,7 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(const Symbol &symbol)
 auto ComputeOffsetsHelper::GetElementSize(const Symbol &symbol)
     -> SizeAndAlignment {
   const DeclTypeSpec *type{symbol.GetType()};
-  if (!type) {
+  if (!evaluate::DynamicType::From(type).has_value()) {
     return {};
   }
   // TODO: The size of procedure pointers is not yet known
@@ -318,13 +390,14 @@ auto ComputeOffsetsHelper::GetIntrinsicSizeAndAlignment(
   if (category == TypeCategory::Character) {
     return {static_cast<std::size_t>(kind)};
   }
-  std::optional<std::size_t> size{
-      evaluate::DynamicType{category, kind}.MeasureSizeInBytes()};
-  CHECK(size.has_value());
+  auto bytes{evaluate::ToInt64(
+      evaluate::DynamicType{category, kind}.MeasureSizeInBytes())};
+  CHECK(bytes && *bytes > 0);
+  std::size_t size{static_cast<std::size_t>(*bytes)};
   if (category == TypeCategory::Complex) {
-    return {*size, *size >> 1};
+    return {size, size >> 1};
   } else {
-    return {*size};
+    return {size};
   }
 }
 

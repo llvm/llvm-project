@@ -769,6 +769,20 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Value *V = lowerObjectSizeCall(II, DL, &TLI, /*MustSucceed=*/false))
       return replaceInstUsesWith(CI, V);
     return nullptr;
+  case Intrinsic::abs: {
+    Value *IIOperand = II->getArgOperand(0);
+    // abs(-x) -> abs(x)
+    // TODO: Copy nsw if it was present on the neg?
+    Value *X;
+    if (match(IIOperand, m_Neg(m_Value(X))))
+      return replaceOperand(*II, 0, X);
+    if (match(IIOperand, m_Select(m_Value(), m_Value(X), m_Neg(m_Deferred(X)))))
+      return replaceOperand(*II, 0, X);
+    if (match(IIOperand, m_Select(m_Value(), m_Neg(m_Value(X)), m_Deferred(X))))
+      return replaceOperand(*II, 0, X);
+
+    break;
+  }
   case Intrinsic::bswap: {
     Value *IIOperand = II->getArgOperand(0);
     Value *X = nullptr;
@@ -1189,40 +1203,52 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::copysign: {
-    if (SignBitMustBeZero(II->getArgOperand(1), &TLI)) {
+    Value *Mag = II->getArgOperand(0), *Sign = II->getArgOperand(1);
+    if (SignBitMustBeZero(Sign, &TLI)) {
       // If we know that the sign argument is positive, reduce to FABS:
-      // copysign X, Pos --> fabs X
-      Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs,
-                                                 II->getArgOperand(0), II);
+      // copysign Mag, +Sign --> fabs Mag
+      Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
       return replaceInstUsesWith(*II, Fabs);
     }
     // TODO: There should be a ValueTracking sibling like SignBitMustBeOne.
     const APFloat *C;
-    if (match(II->getArgOperand(1), m_APFloat(C)) && C->isNegative()) {
+    if (match(Sign, m_APFloat(C)) && C->isNegative()) {
       // If we know that the sign argument is negative, reduce to FNABS:
-      // copysign X, Neg --> fneg (fabs X)
-      Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs,
-                                                 II->getArgOperand(0), II);
+      // copysign Mag, -Sign --> fneg (fabs Mag)
+      Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, Mag, II);
       return replaceInstUsesWith(*II, Builder.CreateFNegFMF(Fabs, II));
     }
 
     // Propagate sign argument through nested calls:
-    // copysign X, (copysign ?, SignArg) --> copysign X, SignArg
-    Value *SignArg;
-    if (match(II->getArgOperand(1),
-              m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(SignArg))))
-      return replaceOperand(*II, 1, SignArg);
+    // copysign Mag, (copysign ?, X) --> copysign Mag, X
+    Value *X;
+    if (match(Sign, m_Intrinsic<Intrinsic::copysign>(m_Value(), m_Value(X))))
+      return replaceOperand(*II, 1, X);
+
+    // Peek through changes of magnitude's sign-bit. This call rewrites those:
+    // copysign (fabs X), Sign --> copysign X, Sign
+    // copysign (fneg X), Sign --> copysign X, Sign
+    if (match(Mag, m_FAbs(m_Value(X))) || match(Mag, m_FNeg(m_Value(X))))
+      return replaceOperand(*II, 0, X);
 
     break;
   }
   case Intrinsic::fabs: {
-    Value *Cond;
-    Constant *LHS, *RHS;
+    Value *Cond, *TVal, *FVal;
     if (match(II->getArgOperand(0),
-              m_Select(m_Value(Cond), m_Constant(LHS), m_Constant(RHS)))) {
-      CallInst *Call0 = Builder.CreateCall(II->getCalledFunction(), {LHS});
-      CallInst *Call1 = Builder.CreateCall(II->getCalledFunction(), {RHS});
-      return SelectInst::Create(Cond, Call0, Call1);
+              m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
+      // fabs (select Cond, TrueC, FalseC) --> select Cond, AbsT, AbsF
+      if (isa<Constant>(TVal) && isa<Constant>(FVal)) {
+        CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
+        CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
+        return SelectInst::Create(Cond, AbsT, AbsF);
+      }
+      // fabs (select Cond, -FVal, FVal) --> fabs FVal
+      if (match(TVal, m_FNeg(m_Specific(FVal))))
+        return replaceOperand(*II, 0, FVal);
+      // fabs (select Cond, TVal, -TVal) --> fabs TVal
+      if (match(FVal, m_FNeg(m_Specific(TVal))))
+        return replaceOperand(*II, 0, TVal);
     }
 
     LLVM_FALLTHROUGH;
@@ -1464,59 +1490,104 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     AC.updateAffectedValues(II);
     break;
   }
-  case Intrinsic::experimental_gc_relocate: {
-    auto &GCR = *cast<GCRelocateInst>(II);
+  case Intrinsic::experimental_gc_statepoint: {
+    GCStatepointInst &GCSP = *cast<GCStatepointInst>(II);
+    SmallPtrSet<Value *, 32> LiveGcValues;
+    for (const GCRelocateInst *Reloc : GCSP.getGCRelocates()) {
+      GCRelocateInst &GCR = *const_cast<GCRelocateInst *>(Reloc);
 
-    // If we have two copies of the same pointer in the statepoint argument
-    // list, canonicalize to one.  This may let us common gc.relocates.
-    if (GCR.getBasePtr() == GCR.getDerivedPtr() &&
-        GCR.getBasePtrIndex() != GCR.getDerivedPtrIndex()) {
-      auto *OpIntTy = GCR.getOperand(2)->getType();
-      return replaceOperand(*II, 2,
-          ConstantInt::get(OpIntTy, GCR.getBasePtrIndex()));
-    }
-
-    // Translate facts known about a pointer before relocating into
-    // facts about the relocate value, while being careful to
-    // preserve relocation semantics.
-    Value *DerivedPtr = GCR.getDerivedPtr();
-
-    // Remove the relocation if unused, note that this check is required
-    // to prevent the cases below from looping forever.
-    if (II->use_empty())
-      return eraseInstFromFunction(*II);
-
-    // Undef is undef, even after relocation.
-    // TODO: provide a hook for this in GCStrategy.  This is clearly legal for
-    // most practical collectors, but there was discussion in the review thread
-    // about whether it was legal for all possible collectors.
-    if (isa<UndefValue>(DerivedPtr))
-      // Use undef of gc_relocate's type to replace it.
-      return replaceInstUsesWith(*II, UndefValue::get(II->getType()));
-
-    if (auto *PT = dyn_cast<PointerType>(II->getType())) {
-      // The relocation of null will be null for most any collector.
-      // TODO: provide a hook for this in GCStrategy.  There might be some
-      // weird collector this property does not hold for.
-      if (isa<ConstantPointerNull>(DerivedPtr))
-        // Use null-pointer of gc_relocate's type to replace it.
-        return replaceInstUsesWith(*II, ConstantPointerNull::get(PT));
-
-      // isKnownNonNull -> nonnull attribute
-      if (!II->hasRetAttr(Attribute::NonNull) &&
-          isKnownNonZero(DerivedPtr, DL, 0, &AC, II, &DT)) {
-        II->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
-        return II;
+      // Remove the relocation if unused.
+      if (GCR.use_empty()) {
+        eraseInstFromFunction(GCR);
+        continue;
       }
+
+      Value *DerivedPtr = GCR.getDerivedPtr();
+      Value *BasePtr = GCR.getBasePtr();
+
+      // Undef is undef, even after relocation.
+      if (isa<UndefValue>(DerivedPtr) || isa<UndefValue>(BasePtr)) {
+        replaceInstUsesWith(GCR, UndefValue::get(GCR.getType()));
+        eraseInstFromFunction(GCR);
+        continue;
+      }
+
+      if (auto *PT = dyn_cast<PointerType>(GCR.getType())) {
+        // The relocation of null will be null for most any collector.
+        // TODO: provide a hook for this in GCStrategy.  There might be some
+        // weird collector this property does not hold for.
+        if (isa<ConstantPointerNull>(DerivedPtr)) {
+          // Use null-pointer of gc_relocate's type to replace it.
+          replaceInstUsesWith(GCR, ConstantPointerNull::get(PT));
+          eraseInstFromFunction(GCR);
+          continue;
+        }
+
+        // isKnownNonNull -> nonnull attribute
+        if (!GCR.hasRetAttr(Attribute::NonNull) &&
+            isKnownNonZero(DerivedPtr, DL, 0, &AC, II, &DT)) {
+          GCR.addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+          // We discovered new fact, re-check users.
+          Worklist.pushUsersToWorkList(GCR);
+        }
+      }
+
+      // If we have two copies of the same pointer in the statepoint argument
+      // list, canonicalize to one.  This may let us common gc.relocates.
+      if (GCR.getBasePtr() == GCR.getDerivedPtr() &&
+          GCR.getBasePtrIndex() != GCR.getDerivedPtrIndex()) {
+        auto *OpIntTy = GCR.getOperand(2)->getType();
+        GCR.setOperand(2, ConstantInt::get(OpIntTy, GCR.getBasePtrIndex()));
+      }
+
+      // TODO: bitcast(relocate(p)) -> relocate(bitcast(p))
+      // Canonicalize on the type from the uses to the defs
+
+      // TODO: relocate((gep p, C, C2, ...)) -> gep(relocate(p), C, C2, ...)
+      LiveGcValues.insert(BasePtr);
+      LiveGcValues.insert(DerivedPtr);
     }
-
-    // TODO: bitcast(relocate(p)) -> relocate(bitcast(p))
-    // Canonicalize on the type from the uses to the defs
-
-    // TODO: relocate((gep p, C, C2, ...)) -> gep(relocate(p), C, C2, ...)
+    Optional<OperandBundleUse> Bundle =
+        GCSP.getOperandBundle(LLVMContext::OB_gc_live);
+    unsigned NumOfGCLives = LiveGcValues.size();
+    if (!Bundle.hasValue() || NumOfGCLives == Bundle->Inputs.size())
+      break;
+    // We can reduce the size of gc live bundle.
+    DenseMap<Value *, unsigned> Val2Idx;
+    std::vector<Value *> NewLiveGc;
+    for (unsigned I = 0, E = Bundle->Inputs.size(); I < E; ++I) {
+      Value *V = Bundle->Inputs[I];
+      if (Val2Idx.count(V))
+        continue;
+      if (LiveGcValues.count(V)) {
+        Val2Idx[V] = NewLiveGc.size();
+        NewLiveGc.push_back(V);
+      } else
+        Val2Idx[V] = NumOfGCLives;
+    }
+    // Update all gc.relocates
+    for (const GCRelocateInst *Reloc : GCSP.getGCRelocates()) {
+      GCRelocateInst &GCR = *const_cast<GCRelocateInst *>(Reloc);
+      Value *BasePtr = GCR.getBasePtr();
+      assert(Val2Idx.count(BasePtr) && Val2Idx[BasePtr] != NumOfGCLives &&
+             "Missed live gc for base pointer");
+      auto *OpIntTy1 = GCR.getOperand(1)->getType();
+      GCR.setOperand(1, ConstantInt::get(OpIntTy1, Val2Idx[BasePtr]));
+      Value *DerivedPtr = GCR.getDerivedPtr();
+      assert(Val2Idx.count(DerivedPtr) && Val2Idx[DerivedPtr] != NumOfGCLives &&
+             "Missed live gc for derived pointer");
+      auto *OpIntTy2 = GCR.getOperand(2)->getType();
+      GCR.setOperand(2, ConstantInt::get(OpIntTy2, Val2Idx[DerivedPtr]));
+    }
+    // Create new statepoint instruction.
+    OperandBundleDef NewBundle("gc-live", NewLiveGc);
+    if (isa<CallInst>(II))
+      return CallInst::CreateWithReplacedBundle(cast<CallInst>(II), NewBundle);
+    else
+      return InvokeInst::CreateWithReplacedBundle(cast<InvokeInst>(II),
+                                                  NewBundle);
     break;
   }
-
   case Intrinsic::experimental_guard: {
     // Is this guard followed by another guard?  We scan forward over a small
     // fixed window of instructions to handle common cases with conditions

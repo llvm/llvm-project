@@ -1,190 +1,703 @@
-# RUN: llvm-readobj --program-headers %p/../../../Object/Inputs/program-headers.elf-i386 \
-# RUN:     | FileCheck %s -check-prefix ELF-I386
-# RUN: llvm-readobj -l %p/../../../Object/Inputs/program-headers.elf-i386 \
-# RUN:     | FileCheck %s -check-prefix ELF-I386
+## Check how we dump program headers and print sections to segments
+## mapping (llvm-readelf only) with -l, --program-headers and --segments options.
 
-# ELF-I386:      ProgramHeaders [
-# ELF-I386-NEXT:   ProgramHeader {
-# ELF-I386-NEXT:     Type: PT_LOAD (0x1)
-# ELF-I386-NEXT:     Offset: 0x0
-# ELF-I386-NEXT:     VirtualAddress: 0x8048000
-# ELF-I386-NEXT:     PhysicalAddress: 0x8048000
-# ELF-I386-NEXT:     FileSize: 308
-# ELF-I386-NEXT:     MemSize: 308
-# ELF-I386-NEXT:     Flags [ (0x5)
-# ELF-I386-NEXT:       PF_R (0x4)
-# ELF-I386-NEXT:       PF_X (0x1)
-# ELF-I386-NEXT:     ]
-# ELF-I386-NEXT:     Alignment: 4096
-# ELF-I386-NEXT:   }
-# ELF-I386-NEXT:   ProgramHeader {
-# ELF-I386-NEXT:     Type: PT_GNU_STACK (0x6474E551)
-# ELF-I386-NEXT:     Offset: 0x0
-# ELF-I386-NEXT:     VirtualAddress: 0x0
-# ELF-I386-NEXT:     PhysicalAddress: 0x0
-# ELF-I386-NEXT:     FileSize: 0
-# ELF-I386-NEXT:     MemSize: 0
-# ELF-I386-NEXT:     Flags [ (0x6)
-# ELF-I386-NEXT:       PF_R (0x4)
-# ELF-I386-NEXT:       PF_W (0x2)
-# ELF-I386-NEXT:     ]
-# ELF-I386-NEXT:     Alignment: 4
-# ELF-I386-NEXT:   }
-# ELF-I386-NEXT: ]
+## Check that -l, --program-headers and --segments are the same option.
 
-# RUN: llvm-readobj -l %p/../../../Object/Inputs/program-headers.elf-x86-64 \
-# RUN:     | FileCheck %s -check-prefix ELF-X86-64
+## Case A: test llvm-readelf tool.
+# RUN: yaml2obj --docnum=1 -DBITS=32 -DMACHINE=EM_386 %s -o %t32.elf
+# RUN: llvm-readelf -l %t32.elf 2>&1 > %t.readelf-l.txt
+# RUN: llvm-readelf --program-headers %t32.elf 2>&1 > %t.readelf-pheaders.txt
+# RUN: cmp %t.readelf-l.txt %t.readelf-pheaders.txt
+# RUN: llvm-readelf --segments %t32.elf 2>&1 > %t.readelf-segments.txt
+# RUN: cmp %t.readelf-l.txt %t.readelf-segments.txt
 
-# ELF-X86-64:      ProgramHeaders [
-# ELF-X86-64-NEXT:   ProgramHeader {
-# ELF-X86-64-NEXT:     Type: PT_LOAD (0x1)
-# ELF-X86-64-NEXT:     Offset: 0x0
-# ELF-X86-64-NEXT:     VirtualAddress: 0x400000
-# ELF-X86-64-NEXT:     PhysicalAddress: 0x400000
-# ELF-X86-64-NEXT:     FileSize: 312
-# ELF-X86-64-NEXT:     MemSize: 312
-# ELF-X86-64-NEXT:     Flags [ (0x5)
-# ELF-X86-64-NEXT:       PF_R (0x4)
-# ELF-X86-64-NEXT:       PF_X (0x1)
-# ELF-X86-64-NEXT:     ]
-# ELF-X86-64-NEXT:     Alignment: 2097152
-# ELF-X86-64-NEXT:   }
-# ELF-X86-64-NEXT:   ProgramHeader {
-# ELF-X86-64-NEXT:     Type: PT_GNU_EH_FRAME (0x6474E550)
-# ELF-X86-64-NEXT:     Offset: 0xF4
-# ELF-X86-64-NEXT:     VirtualAddress: 0x4000F4
-# ELF-X86-64-NEXT:     PhysicalAddress: 0x4000F4
-# ELF-X86-64-NEXT:     FileSize: 20
-# ELF-X86-64-NEXT:     MemSize: 20
-# ELF-X86-64-NEXT:     Flags [ (0x4)
-# ELF-X86-64-NEXT:       PF_R (0x4)
-# ELF-X86-64-NEXT:     ]
-# ELF-X86-64-NEXT:     Alignment: 4
-# ELF-X86-64-NEXT:   }
-# ELF-X86-64-NEXT:   ProgramHeader {
-# ELF-X86-64-NEXT:     Type: PT_GNU_STACK (0x6474E551)
-# ELF-X86-64-NEXT:     Offset: 0x0
-# ELF-X86-64-NEXT:     VirtualAddress: 0x0
-# ELF-X86-64-NEXT:     PhysicalAddress: 0x0
-# ELF-X86-64-NEXT:     FileSize: 0
-# ELF-X86-64-NEXT:     MemSize: 0
-# ELF-X86-64-NEXT:     Flags [ (0x6)
-# ELF-X86-64-NEXT:       PF_R (0x4)
-# ELF-X86-64-NEXT:       PF_W (0x2)
-# ELF-X86-64-NEXT:     ]
-# ELF-X86-64-NEXT:     Alignment: 8
-# ELF-X86-64-NEXT:   }
-# ELF-X86-64-NEXT: ]
+## Case B: test llvm-readobj tool.
+# RUN: llvm-readobj -l %t32.elf 2>&1 > %t.readobj-l.txt
+# RUN: llvm-readobj --program-headers %t32.elf 2>&1 > %t.readobj-pheaders.txt
+# RUN: cmp %t.readobj-l.txt %t.readobj-pheaders.txt
+# RUN: llvm-readobj --segments %t32.elf 2>&1 > %t.readobj-segments.txt
+# RUN: cmp %t.readobj-l.txt %t.readobj-segments.txt
 
-# RUN: llvm-readobj -l %p/../../../Object/Inputs/program-headers.mips \
-# RUN:     | FileCheck %s -check-prefix ELF-MIPS
+## Check we are able to print program headers of different types.
+# RUN: FileCheck %s --check-prefixes=ELF32,MAPPING \
+# RUN:   --match-full-lines --strict-whitespace --input-file=%t.readelf-l.txt
+# RUN: FileCheck %s --check-prefixes=ELF-LLVM,ELF32-LLVM \
+# RUN:   --match-full-lines --input-file=%t.readobj-l.txt
 
-# ELF-MIPS:      Format: elf32-mips
-# ELF-MIPS-NEXT: Arch: mips
-# ELF-MIPS-NEXT: AddressSize: 32bit
-# ELF-MIPS-NEXT: LoadName:
-# ELF-MIPS-NEXT: ProgramHeaders [
-# ELF-MIPS-NEXT:   ProgramHeader {
-# ELF-MIPS-NEXT:     Type: PT_MIPS_ABIFLAGS (0x70000003)
-# ELF-MIPS-NEXT:     Offset: 0x98
-# ELF-MIPS-NEXT:     VirtualAddress: 0x400098
-# ELF-MIPS-NEXT:     PhysicalAddress: 0x400098
-# ELF-MIPS-NEXT:     FileSize: 24
-# ELF-MIPS-NEXT:     MemSize: 24
-# ELF-MIPS-NEXT:     Flags [ (0x4)
-# ELF-MIPS-NEXT:       PF_R (0x4)
-# ELF-MIPS-NEXT:     ]
-# ELF-MIPS-NEXT:     Alignment: 8
-# ELF-MIPS-NEXT:   }
-# ELF-MIPS-NEXT:   ProgramHeader {
-# ELF-MIPS-NEXT:     Type: PT_MIPS_REGINFO (0x70000000)
-# ELF-MIPS-NEXT:     Offset: 0xB0
-# ELF-MIPS-NEXT:     VirtualAddress: 0x4000B0
-# ELF-MIPS-NEXT:     PhysicalAddress: 0x4000B0
-# ELF-MIPS-NEXT:     FileSize: 24
-# ELF-MIPS-NEXT:     MemSize: 24
-# ELF-MIPS-NEXT:     Flags [ (0x4)
-# ELF-MIPS-NEXT:       PF_R (0x4)
-# ELF-MIPS-NEXT:     ]
-# ELF-MIPS-NEXT:     Alignment: 4
-# ELF-MIPS-NEXT:   }
-# ELF-MIPS-NEXT:   ProgramHeader {
-# ELF-MIPS-NEXT:     Type: PT_LOAD (0x1)
-# ELF-MIPS-NEXT:     Offset: 0x0
-# ELF-MIPS-NEXT:     VirtualAddress: 0x400000
-# ELF-MIPS-NEXT:     PhysicalAddress: 0x400000
-# ELF-MIPS-NEXT:     FileSize: 224
-# ELF-MIPS-NEXT:     MemSize: 224
-# ELF-MIPS-NEXT:     Flags [ (0x5)
-# ELF-MIPS-NEXT:       PF_R (0x4)
-# ELF-MIPS-NEXT:       PF_X (0x1)
-# ELF-MIPS-NEXT:     ]
-# ELF-MIPS-NEXT:     Alignment: 65536
-# ELF-MIPS-NEXT:   }
-# ELF-MIPS-NEXT: ]
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_X86_64 %s -o %t64.elf
+# RUN: llvm-readelf -l %t64.elf | \
+# RUN:   FileCheck %s --check-prefixes=ELF64,MAPPING --strict-whitespace --match-full-lines
+# RUN: llvm-readobj -l %t64.elf | FileCheck %s --check-prefixes=ELF-LLVM,ELF64-LLVM
 
-# RUN: llvm-readobj -l %p/../../../Object/Inputs/program-headers.mips64 \
-# RUN:     | FileCheck %s -check-prefix ELF-MIPS64
+#       ELF32:There are 23 program headers, starting at offset 52
+# ELF32-EMPTY:
+# ELF32-NEXT:Program Headers:
+# ELF32-NEXT:  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+# ELF32-NEXT:  PHDR           0x000314 0x00001000 0x00001000 0x00003 0x00003  W  0x1
+# ELF32-NEXT:  PHDR           0x000317 0x00002000 0x00002000 0x00007 0x00007   E 0x1
+# ELF32-NEXT:  NULL           0x000317 0x00002000 0x00002000 0x00007 0x00007   E 0x1
+# ELF32-NEXT:  DYNAMIC        0x000314 0x00001000 0x00001000 0x00003 0x00003 RWE 0x1
+# ELF32-NEXT:  INTERP         0x00031e 0x00003000 0x00003000 0x00004 0x00004 RW  0x1
+# ELF32-NEXT:      [Requesting program interpreter: ABC]
+# ELF32-NEXT:  NOTE           0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  SHLIB          0x000314 0x00001000 0x00001000 0x00001 0x00001     0x1
+# ELF32-NEXT:  TLS            0x000322 0x00004000 0x00004000 0x00001 0x00001     0x1
+# ELF32-NEXT:  <unknown>: 0x60000000 0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  GNU_EH_FRAME   0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  SUNW_UNWIND    0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  GNU_STACK      0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  GNU_RELRO      0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  GNU_PROPERTY   0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  OPENBSD_RANDOMIZE 0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  OPENBSD_WXNEEDED 0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  OPENBSD_BOOTDATA 0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  <unknown>: 0x6fffffff 0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  <unknown>: 0x70000000 0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  <unknown>: 0x70000001 0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  <unknown>: 0x70000002 0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  <unknown>: 0x70000003 0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-NEXT:  <unknown>: 0x7fffffff 0x000314 0x00001000 0x00001000 0x00003 0x00003     0x1
+# ELF32-EMPTY:
 
-# ELF-MIPS64:      Format: elf64-mips
-# ELF-MIPS64-NEXT: Arch: mips64
-# ELF-MIPS64-NEXT: AddressSize: 64bit
-# ELF-MIPS64-NEXT: LoadName:
-# ELF-MIPS64-NEXT: ProgramHeaders [
-# ELF-MIPS64-NEXT:   ProgramHeader {
-# ELF-MIPS64-NEXT:     Type: PT_LOAD (0x1)
-# ELF-MIPS64-NEXT:     Offset: 0x0
-# ELF-MIPS64-NEXT:     VirtualAddress: 0x120000000
-# ELF-MIPS64-NEXT:     PhysicalAddress: 0x120000000
-# ELF-MIPS64-NEXT:     FileSize: 136
-# ELF-MIPS64-NEXT:     MemSize: 136
-# ELF-MIPS64-NEXT:     Flags [ (0x5)
-# ELF-MIPS64-NEXT:       PF_R (0x4)
-# ELF-MIPS64-NEXT:       PF_X (0x1)
-# ELF-MIPS64-NEXT:     ]
-# ELF-MIPS64-NEXT:     Alignment: 65536
-# ELF-MIPS64-NEXT:   }
-# ELF-MIPS64-NEXT: ]
+#       ELF64:There are 23 program headers, starting at offset 64
+# ELF64-EMPTY:
+# ELF64-NEXT:Program Headers:
+# ELF64-NEXT:  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# ELF64-NEXT:  PHDR           0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003  W  0x1
+# ELF64-NEXT:  PHDR           0x00054b 0x0000000000002000 0x0000000000002000 0x000007 0x000007   E 0x1
+# ELF64-NEXT:  NULL           0x00054b 0x0000000000002000 0x0000000000002000 0x000007 0x000007   E 0x1
+# ELF64-NEXT:  DYNAMIC        0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 RWE 0x1
+# ELF64-NEXT:  INTERP         0x000552 0x0000000000003000 0x0000000000003000 0x000004 0x000004 RW  0x1
+# ELF64-NEXT:      [Requesting program interpreter: ABC]
+# ELF64-NEXT:  NOTE           0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  SHLIB          0x000548 0x0000000000001000 0x0000000000001000 0x000001 0x000001     0x1
+# ELF64-NEXT:  TLS            0x000556 0x0000000000004000 0x0000000000004000 0x000001 0x000001     0x1
+# ELF64-NEXT:  <unknown>: 0x60000000 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  GNU_EH_FRAME   0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  SUNW_UNWIND    0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  GNU_STACK      0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  GNU_RELRO      0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  GNU_PROPERTY   0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  OPENBSD_RANDOMIZE 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  OPENBSD_WXNEEDED 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  OPENBSD_BOOTDATA 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  <unknown>: 0x6fffffff 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  <unknown>: 0x70000000 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  <unknown>: 0x70000001 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  <unknown>: 0x70000002 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  <unknown>: 0x70000003 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-NEXT:  <unknown>: 0x7fffffff 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003     0x1
+# ELF64-EMPTY:
 
-## Test that llvm-readobj dumps OpenBSD specific program headers.
+#      MAPPING: Section to Segment mapping:
+# MAPPING-NEXT:  Segment Sections...
+# MAPPING-NEXT:   00     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   01     .bar.begin .bar.end {{$}}
+# MAPPING-NEXT:   02     .bar.begin .bar.end {{$}}
+# MAPPING-NEXT:   03     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   04     .interp {{$}}
+# MAPPING-NEXT:   05     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   06     .foo.begin {{$}}
+# MAPPING-NEXT:   07     .tls {{$}}
+# MAPPING-NEXT:   08     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   09     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   10     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   11     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   12     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   13     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   14     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   15     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   16     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   17     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   18     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   19     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   20     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   21     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   22     .foo.begin .foo.end {{$}}
+# MAPPING-NEXT:   None   .unused .strtab .shstrtab {{$}}
 
-# RUN: yaml2obj %s -o %t
-# RUN: llvm-readobj -l %t | FileCheck %s --check-prefix=OPENBSD-X86-64
-
-# OPENBSD-X86-64:      ProgramHeader {
-# OPENBSD-X86-64-NEXT:  Type:  PT_OPENBSD_RANDOMIZE
-# OPENBSD-X86-64:      ProgramHeader {
-# OPENBSD-X86-64-NEXT:  Type:  PT_OPENBSD_WXNEEDED
-# OPENBSD-X86-64:      ProgramHeader {
-# OPENBSD-X86-64-NEXT:  Type:  PT_OPENBSD_BOOTDATA
+# ELF-LLVM:      ProgramHeaders [
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_PHDR (0x6)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x2)
+# ELF-LLVM-NEXT:       PF_W (0x2)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_PHDR (0x6)
+# ELF32-LLVM-NEXT:   Offset: 0x317
+# ELF64-LLVM-NEXT:   Offset: 0x54B
+# ELF-LLVM-NEXT:     VirtualAddress: 0x2000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x2000
+# ELF-LLVM-NEXT:     FileSize: 7
+# ELF-LLVM-NEXT:     MemSize: 7
+# ELF-LLVM-NEXT:     Flags [ (0x1)
+# ELF-LLVM-NEXT:       PF_X (0x1)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_NULL (0x0)
+# ELF32-LLVM-NEXT:   Offset: 0x317
+# ELF64-LLVM-NEXT:   Offset: 0x54B
+# ELF-LLVM-NEXT:     VirtualAddress: 0x2000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x2000
+# ELF-LLVM-NEXT:     FileSize: 7
+# ELF-LLVM-NEXT:     MemSize: 7
+# ELF-LLVM-NEXT:     Flags [ (0x1)
+# ELF-LLVM-NEXT:       PF_X (0x1)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_DYNAMIC (0x2)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x7)
+# ELF-LLVM-NEXT:       PF_R (0x4)
+# ELF-LLVM-NEXT:       PF_W (0x2)
+# ELF-LLVM-NEXT:       PF_X (0x1)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_INTERP (0x3)
+# ELF32-LLVM-NEXT:   Offset: 0x31E
+# ELF64-LLVM-NEXT:   Offset: 0x552
+# ELF-LLVM-NEXT:     VirtualAddress: 0x3000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x3000
+# ELF-LLVM-NEXT:     FileSize: 4
+# ELF-LLVM-NEXT:     MemSize: 4
+# ELF-LLVM-NEXT:     Flags [ (0x6)
+# ELF-LLVM-NEXT:       PF_R (0x4)
+# ELF-LLVM-NEXT:       PF_W (0x2)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_NOTE (0x4)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_SHLIB (0x5)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 1
+# ELF-LLVM-NEXT:     MemSize: 1
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_TLS (0x7)
+# ELF32-LLVM-NEXT:   Offset: 0x322
+# ELF64-LLVM-NEXT:   Offset: 0x556
+# ELF-LLVM-NEXT:     VirtualAddress: 0x4000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x4000
+# ELF-LLVM-NEXT:     FileSize: 1
+# ELF-LLVM-NEXT:     MemSize: 1
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: Unknown (0x60000000)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_GNU_EH_FRAME (0x6474E550)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_SUNW_UNWIND (0x6464E550)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_GNU_STACK (0x6474E551)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_GNU_RELRO (0x6474E552)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_GNU_PROPERTY (0x6474E553)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_OPENBSD_RANDOMIZE (0x65A3DBE6)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_OPENBSD_WXNEEDED (0x65A3DBE7)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: PT_OPENBSD_BOOTDATA (0x65A41BE6)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: Unknown (0x6FFFFFFF)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: Unknown (0x70000000)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: Unknown (0x70000001)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: Unknown (0x70000002)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: Unknown (0x70000003)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT:   ProgramHeader {
+# ELF-LLVM-NEXT:     Type: Unknown (0x7FFFFFFF)
+# ELF32-LLVM-NEXT:   Offset: 0x314
+# ELF64-LLVM-NEXT:   Offset: 0x548
+# ELF-LLVM-NEXT:     VirtualAddress: 0x1000
+# ELF-LLVM-NEXT:     PhysicalAddress: 0x1000
+# ELF-LLVM-NEXT:     FileSize: 3
+# ELF-LLVM-NEXT:     MemSize: 3
+# ELF-LLVM-NEXT:     Flags [ (0x0)
+# ELF-LLVM-NEXT:     ]
+# ELF-LLVM-NEXT:     Alignment: 1
+# ELF-LLVM-NEXT:   }
+# ELF-LLVM-NEXT: ]
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
+  Class:   ELFCLASS[[BITS]]
   Data:    ELFDATA2LSB
   Type:    ET_EXEC
-  Machine: EM_X86_64
+  Machine: [[MACHINE]]
+Sections:
+  - Name:    .foo.begin
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x1000
+    Size:    0x1
+  - Name:    .foo.end
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x2
+  - Name:    .bar.begin
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x2000
+    Size:    0x3
+  - Name:    .bar.end
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Size:    0x4
+  - Name:    .interp
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x3000
+    Content: "41424300" ## "ABC"
+  - Name:    .tls
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_TLS ]
+    Address: 0x4000
+    Size:    0x1
+  - Name:    .unused
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_TLS ]
+    Address: 0x5000
+    Size:    0x1
 ProgramHeaders:
+## Case 1: an arbitrary segment with sections.
+  - Type:  PT_PHDR
+    Flags: [ PF_W ]
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 2: another segment with different sections.
+  - Type:  PT_PHDR
+    Flags: [ PF_X ]
+    VAddr: 0x2000
+    Sections:
+      - Section: .bar.begin
+      - Section: .bar.end
+## Case 3: the PT_NULL segment.
+  - Type:  PT_NULL
+    Flags: [ PF_X ]
+    VAddr: 0x2000
+    Sections:
+      - Section: .bar.begin
+      - Section: .bar.end
+## Case 4: the PT_DYNAMIC segment.
+  - Type:  PT_DYNAMIC
+    Flags: [ PF_R, PF_W, PF_X ]
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 5: the PT_INTERP segment.
+  - Type:  PT_INTERP
+    Flags: [ PF_R, PF_W ]
+    VAddr: 0x3000
+    Sections:
+      - Section: .interp
+## Case 6: the PT_NOTE segment.
+  - Type: PT_NOTE
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 7: the PT_SHLIB segment.
+  - Type: PT_SHLIB
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+## Case 8: the PT_TLS segment.
+  - Type: PT_TLS
+    VAddr: 0x4000
+    Sections:
+      - Section: .tls
+## Case 9: the PT_LOOS segment.
+  - Type:  0x60000000 ## PT_LOOS
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 10: the PT_GNU_EH_FRAME segment.
+  - Type: PT_GNU_EH_FRAME
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 11: the PT_SUNW_UNWIND segment.
+  - Type: 0x6464e550 ## PT_SUNW_UNWIND
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 12: the PT_GNU_STACK segment.
+  - Type: PT_GNU_STACK
+    Sections:
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 13: the PT_GNU_RELRO segment.
+  - Type: PT_GNU_RELRO
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 14: the PT_GNU_PROPERTY segment.
+  - Type: PT_GNU_PROPERTY
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 15: the PT_OPENBSD_RANDOMIZE segment.
   - Type: 0x65a3dbe6 ## PT_OPENBSD_RANDOMIZE
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 16: the PT_OPENBSD_WXNEEDED segment.
   - Type: 0x65a3dbe7 ## PT_OPENBSD_WXNEEDED
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 17: the PT_OPENBSD_BOOTDATA segment.
   - Type: 0x65a41be6 ## PT_OPENBSD_BOOTDATA
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 18: the PT_HIOS segment.
+  - Type: 0x6fffffff ## PT_HIOS
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 19: the PT_LOPROC/PT_ARM_ARCHEXT/PT_MIPS_REGINFO segment.
+  - Type: 0x70000000 ## PT_LOPROC/PT_ARM_ARCHEXT/PT_MIPS_REGINFO
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 20: the PT_ARM_EXIDX/PT_MIPS_RTPROC segment.
+  - Type: 0x70000001 ## PT_ARM_EXIDX, PT_MIPS_RTPROC
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 20: the PT_MIPS_OPTIONS segment.
+  - Type: 0x70000002 ## PT_MIPS_OPTIONS
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 21: the PT_MIPS_ABIFLAGS segment.
+  - Type: 0x70000003 ## PT_MIPS_ABIFLAGS
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+## Case 22: the PT_HIPROC segment.
+  - Type: 0x7fffffff ## PT_HIPROC
+    VAddr: 0x1000
+    Sections:
+      - Section: .foo.begin
+      - Section: .foo.end
+
+## Check how we dump ARM specific program headers.
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_ARM %s -o %tarm.elf
+# RUN: llvm-readelf --program-headers %tarm.elf | FileCheck %s --check-prefix=ARM-GNU
+# RUN: llvm-readobj --program-headers %tarm.elf | FileCheck %s --check-prefix=ARM-LLVM
+
+# ARM-GNU:      <unknown>: 0x70000000 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+# ARM-GNU-NEXT:            EXIDX      0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+# ARM-GNU-NEXT: <unknown>: 0x70000002 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+
+# ARM-LLVM:      ProgramHeader {
+# ARM-LLVM:        Type: Unknown (0x70000000)
+# ARM-LLVM:      ProgramHeader {
+# ARM-LLVM-NEXT:   Type: PT_ARM_EXIDX (0x70000001)
+# ARM-LLVM:      ProgramHeader {
+# ARM-LLVM-NEXT:   Type: Unknown (0x70000002)
+
+## Check how we dump MIPS specific program headers.
+# RUN: yaml2obj --docnum=1 -DBITS=64 -DMACHINE=EM_MIPS %s -o %tmips.elf
+# RUN: llvm-readelf --program-headers %tmips.elf | FileCheck %s --check-prefix=MIPS-GNU
+# RUN: llvm-readobj --program-headers %tmips.elf | FileCheck %s --check-prefix=MIPS-LLVM
+
+# MIPS-GNU:      REGINFO  0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+# MIPS-GNU-NEXT: RTPROC   0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+# MIPS-GNU-NEXT: OPTIONS  0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+# MIPS-GNU-NEXT: ABIFLAGS 0x000548 0x0000000000001000 0x0000000000001000 0x000003 0x000003 0x1
+
+# MIPS-LLVM:      ProgramHeader {
+# MIPS-LLVM:        Type: PT_MIPS_REGINFO (0x70000000)
+# MIPS-LLVM:      ProgramHeader {
+# MIPS-LLVM-NEXT:   Type: PT_MIPS_RTPROC (0x70000001)
+# MIPS-LLVM:      ProgramHeader {
+# MIPS-LLVM-NEXT:   Type: PT_MIPS_OPTIONS (0x70000002)
+# MIPS-LLVM:      ProgramHeader {
+# MIPS-LLVM-NEXT:   Type: PT_MIPS_ABIFLAGS (0x70000003)
+
+## Check that llvm-readelf reports a warning when a program interpreter
+## name is non-null-terminated or when PT_INTERP has an offset that
+## goes past the end of the file.
+# RUN: yaml2obj --docnum=2 %s -o %t.err
+
+## Show the size of the output produced. It is used in the YAML below.
+# RUN: wc -c < %t.err | FileCheck %s --check-prefix=SIZE
+# SIZE: 560
+
+## Write the additional 'C', '\0, 'C' bytes to the end.
+# RUN: echo -n -e "C\x00C" >> %t.err
+
+# RUN: llvm-readelf --program-headers %t.err 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.err --check-prefix=ERROR-INTERP
+
+# ERROR-INTERP:      Type           Offset
+# ERROR-INTERP-NEXT: INTERP         0x000[[#%x,OFFSET:0x230]]
+# ERROR-INTERP-NEXT:     [Requesting program interpreter: C]
+# ERROR-INTERP-NEXT: INTERP         0x000[[#OFFSET + 1]]
+# ERROR-INTERP-NEXT:     [Requesting program interpreter: ]
+# ERROR-INTERP-NEXT: INTERP         0x000[[#OFFSET + 2]]
+# ERROR-INTERP-NEXT: warning: '[[FILE]]': unable to read program interpreter name at offset 0x[[#OFFSET+2]]: it is not null-terminated
+# ERROR-INTERP-NEXT: INTERP         0x000[[#OFFSET + 3]]
+# ERROR-INTERP-NEXT: warning: '[[FILE]]': unable to read program interpreter name at offset 0x[[#OFFSET+3]]: it goes past the end of the file (0x[[#OFFSET + 3]])
+# ERROR-INTERP-NEXT: INTERP         0xaabbccddeeff1122
+# ERROR-INTERP-NEXT: warning: '[[FILE]]': unable to read program interpreter name at offset 0xaabbccddeeff1122: it goes past the end of the file (0x[[#OFFSET + 3]])
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+ProgramHeaders:
+## Case 1: the offset points to the first additional byte.
+  - Type:   PT_INTERP
+    Offset: 560
+## Case 1: the offset points to the second additional byte,
+##         which is a null byte.
+  - Type:   PT_INTERP
+    Offset: 561
+## Case 3: the offset points to the third additional
+##         byte, which is the last byte in the file.
+  - Type:   PT_INTERP
+    Offset: 562
+## Case 4: the offset goes 1 byte past the end of the file.
+  - Type:   PT_INTERP
+    Offset: 563
+## Case 5: an arbitrary large offset that goes past the end of the file.
+  - Type:   PT_INTERP
+    Offset: 0xAABBCCDDEEFF1122
 
 ## Check we report a warning when we are unable to read program headers.
-# RUN: yaml2obj --docnum=2 %s -o %t.err
-# RUN: llvm-readobj --program-headers %t.err 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t.err --check-prefix=WARN-PHENTSIZE
+## Case A: the e_phentsize field is invalid.
+# RUN: yaml2obj --docnum=3 -DPHENTSIZE=1 %s -o %t.phdr.err
+# RUN: llvm-readelf --program-headers %t.phdr.err 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err --check-prefix=WARN-PHENTSIZE-GNU
+# RUN: llvm-readobj --program-headers %t.phdr.err 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err --check-prefix=WARN-PHENTSIZE-LLVM
 
-# WARN-PHENTSIZE:      ProgramHeaders [
-# WARN-PHENTSIZE-NEXT: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 1
-# WARN-PHENTSIZE-NEXT: ]
+# WARN-PHENTSIZE-GNU:      Program Headers:
+# WARN-PHENTSIZE-GNU-NEXT:   Type Offset VirtAddr PhysAddr FileSiz  MemSiz Flg Align
+# WARN-PHENTSIZE-GNU-NEXT: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 1
+# WARN-PHENTSIZE-GNU:      Section to Segment mapping:
+# WARN-PHENTSIZE-GNU-NEXT:   Segment Sections...
+# WARN-PHENTSIZE-GNU-NEXT: warning: '[[FILE]]': can't read program headers to build section to segment mapping: invalid e_phentsize: 1
+
+# WARN-PHENTSIZE-LLVM:      ProgramHeaders [
+# WARN-PHENTSIZE-LLVM-NEXT: warning: '[[FILE]]': unable to dump program headers: invalid e_phentsize: 1
+# WARN-PHENTSIZE-LLVM-NEXT: ]
 
 --- !ELF
 FileHeader:
   Class:      ELFCLASS64
   Data:       ELFDATA2LSB
   Type:       ET_EXEC
-  Machine:    EM_X86_64
-  EPhEntSize: 1
+  EPhEntSize: [[PHENTSIZE=<none>]]
+  EPhOff:     [[PHOFF=<none>]]
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
@@ -192,3 +705,37 @@ ProgramHeaders:
   - Type: PT_PHDR
     Sections:
       - Section: .foo
+
+## Case B: the value of the e_phoff field is invalid.
+
+## Check that we do not report a warning when the program header table ends right before the end of the file.
+## 0x160 + size of headers (56) == file size.
+# RUN: yaml2obj --docnum=3 -DPHOFF=0x160 %s -o %t.phdr.no.err2
+# RUN: llvm-readelf %t.phdr.no.err2 --program-headers 2>&1 | FileCheck %s --implicit-check-not=warning:
+# RUN: llvm-readobj %t.phdr.no.err2 --program-headers 2>&1 | FileCheck %s --implicit-check-not=warning:
+
+## Check we report a warning when e_phoff goes 1 byte past the end of the file.
+# RUN: yaml2obj --docnum=3 -DPHOFF=0x161 %s -o %t.phdr.err2
+# RUN: llvm-readelf --program-headers %t.phdr.err2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err2 --check-prefix=WARN-PHOFF-GNU -DOFF=0x161
+# RUN: llvm-readobj --program-headers %t.phdr.err2 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err2 --check-prefix=WARN-PHOFF-LLVM -DOFF=0x161
+
+# WARN-PHOFF-GNU:      Program Headers:
+# WARN-PHOFF-GNU-NEXT:   Type Offset VirtAddr PhysAddr FileSiz MemSiz Flg Align
+# WARN-PHOFF-GNU-NEXT: warning: '[[FILE]]': unable to dump program headers: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
+# WARN-PHOFF-GNU:      Section to Segment mapping:
+# WARN-PHOFF-GNU-NEXT:   Segment Sections...
+# WARN-PHOFF-GNU-NEXT: warning: '[[FILE]]': can't read program headers to build section to segment mapping: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
+
+# WARN-PHOFF-LLVM:      ProgramHeaders [
+# WARN-PHOFF-LLVM-NEXT: warning: '[[FILE]]': unable to dump program headers: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
+# WARN-PHOFF-LLVM-NEXT: ]
+
+## Check we report a warning when the value of e_phoff is so large that
+## e_phoff + e_phnum * e_phentsize > UINT64_MAX.
+# RUN: yaml2obj --docnum=3 -DPHOFF=0xffffffffffffffff %s -o %t.phdr.err3
+# RUN: llvm-readelf --program-headers %t.phdr.err3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err3 --check-prefix=WARN-PHOFF-GNU -DOFF=0xffffffffffffffff
+# RUN: llvm-readobj --program-headers %t.phdr.err3 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.phdr.err3 --check-prefix=WARN-PHOFF-LLVM -DOFF=0xffffffffffffffff

@@ -4,8 +4,24 @@
 @vi16 = common dso_local local_unnamed_addr global i16 0, align 2
 @vi32 = common dso_local local_unnamed_addr global i32 0, align 4
 @vi64 = common dso_local local_unnamed_addr global i64 0, align 8
+@vi128 = common dso_local local_unnamed_addr global i128 0, align 16
 @vf32 = common dso_local local_unnamed_addr global float 0.000000e+00, align 4
 @vf64 = common dso_local local_unnamed_addr global double 0.000000e+00, align 8
+@vf128 = common dso_local local_unnamed_addr global fp128 0xL00000000000000000000000000000000, align 16
+
+; Function Attrs: norecurse nounwind readonly
+define fp128 @loadf128com() {
+; CHECK-LABEL: loadf128com:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    lea %s0, vf128@lo
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    lea.sl %s2, vf128@hi(, %s0)
+; CHECK-NEXT:    ld %s0, 8(, %s2)
+; CHECK-NEXT:    ld %s1, (, %s2)
+; CHECK-NEXT:    or %s11, 0, %s9
+  %1 = load fp128, fp128* @vf128, align 16
+  ret fp128 %1
+}
 
 ; Function Attrs: norecurse nounwind readonly
 define double @loadf64com() {
@@ -31,6 +47,20 @@ define float @loadf32com() {
 ; CHECK-NEXT:    or %s11, 0, %s9
   %1 = load float, float* @vf32, align 4
   ret float %1
+}
+
+; Function Attrs: norecurse nounwind readonly
+define i128 @loadi128com() {
+; CHECK-LABEL: loadi128com:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    lea %s0, vi128@lo
+; CHECK-NEXT:    and %s0, %s0, (32)0
+; CHECK-NEXT:    lea.sl %s1, vi128@hi(, %s0)
+; CHECK-NEXT:    ld %s0, (, %s1)
+; CHECK-NEXT:    ld %s1, 8(, %s1)
+; CHECK-NEXT:    or %s11, 0, %s9
+  %1 = load i128, i128* @vi128, align 16
+  ret i128 %1
 }
 
 ; Function Attrs: norecurse nounwind readonly

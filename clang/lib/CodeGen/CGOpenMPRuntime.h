@@ -105,6 +105,7 @@ struct OMPTaskDataTy final {
   SmallVector<const Expr *, 4> ReductionOrigs;
   SmallVector<const Expr *, 4> ReductionCopies;
   SmallVector<const Expr *, 4> ReductionOps;
+  SmallVector<CanonicalDeclPtr<const VarDecl>, 4> PrivateLocals;
   struct DependData {
     OpenMPDependClauseKind DepKind = OMPC_DEPEND_unknown;
     const Expr *IteratorExpr = nullptr;
@@ -245,6 +246,19 @@ public:
     ~NontemporalDeclsRAII();
   };
 
+  /// Manages list of nontemporal decls for the specified directive.
+  class UntiedTaskLocalDeclsRAII {
+    CodeGenModule &CGM;
+    const bool NeedToPush;
+
+  public:
+    UntiedTaskLocalDeclsRAII(
+        CodeGenModule &CGM,
+        const llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, Address>
+            &LocalVars);
+    ~UntiedTaskLocalDeclsRAII();
+  };
+
   /// Maps the expression for the lastprivate variable to the global copy used
   /// to store new value because original variables are not mapped in inner
   /// parallel regions. Only private copies are captured but we need also to
@@ -374,17 +388,7 @@ protected:
 private:
   /// An OpenMP-IR-Builder instance.
   llvm::OpenMPIRBuilder OMPBuilder;
-  /// Default const ident_t object used for initialization of all other
-  /// ident_t objects.
-  llvm::Constant *DefaultOpenMPPSource = nullptr;
-  using FlagsTy = std::pair<unsigned, unsigned>;
-  /// Map of flags and corresponding default locations.
-  using OpenMPDefaultLocMapTy = llvm::DenseMap<FlagsTy, llvm::Value *>;
-  OpenMPDefaultLocMapTy OpenMPDefaultLocMap;
-  Address getOrCreateDefaultLocation(unsigned Flags);
 
-  QualType IdentQTy;
-  llvm::StructType *IdentTy = nullptr;
   /// Map for SourceLocation and OpenMP runtime library debug locations.
   typedef llvm::DenseMap<unsigned, llvm::Value *> OpenMPDebugLocMapTy;
   OpenMPDebugLocMapTy OpenMPDebugLocMap;
@@ -714,6 +718,10 @@ private:
   /// Stack for list of declarations in current context marked as nontemporal.
   /// The set is the union of all current stack elements.
   llvm::SmallVector<NontemporalDeclsSet, 4> NontemporalDeclsStack;
+
+  using UntiedLocalVarsAddressesMap =
+      llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, Address>;
+  llvm::SmallVector<UntiedLocalVarsAddressesMap, 4> UntiedLocalVarsStack;
 
   /// Stack for list of addresses of declarations in current context marked as
   /// lastprivate conditional. The set is the union of all current stack
@@ -1614,6 +1622,9 @@ public:
   class TargetDataInfo {
     /// Set to true if device pointer information have to be obtained.
     bool RequiresDevicePointerInfo = false;
+    /// Set to true if Clang emits separate runtime calls for the beginning and
+    /// end of the region.  These calls might have separate map type arrays.
+    bool SeparateBeginEndCalls = false;
 
   public:
     /// The array of base pointer passed to the runtime library.
@@ -1622,8 +1633,14 @@ public:
     llvm::Value *PointersArray = nullptr;
     /// The array of sizes passed to the runtime library.
     llvm::Value *SizesArray = nullptr;
-    /// The array of map types passed to the runtime library.
+    /// The array of map types passed to the runtime library for the beginning
+    /// of the region or for the entire region if there are no separate map
+    /// types for the region end.
     llvm::Value *MapTypesArray = nullptr;
+    /// The array of map types passed to the runtime library for the end of the
+    /// region, or nullptr if there are no separate map types for the region
+    /// end.
+    llvm::Value *MapTypesArrayEnd = nullptr;
     /// The array of user-defined mappers passed to the runtime library.
     llvm::Value *MappersArray = nullptr;
     /// Indicate whether any user-defined mapper exists.
@@ -1635,14 +1652,17 @@ public:
     llvm::DenseMap<const ValueDecl *, Address> CaptureDeviceAddrMap;
 
     explicit TargetDataInfo() {}
-    explicit TargetDataInfo(bool RequiresDevicePointerInfo)
-        : RequiresDevicePointerInfo(RequiresDevicePointerInfo) {}
+    explicit TargetDataInfo(bool RequiresDevicePointerInfo,
+                            bool SeparateBeginEndCalls)
+        : RequiresDevicePointerInfo(RequiresDevicePointerInfo),
+          SeparateBeginEndCalls(SeparateBeginEndCalls) {}
     /// Clear information about the data arrays.
     void clearArrayInfo() {
       BasePointersArray = nullptr;
       PointersArray = nullptr;
       SizesArray = nullptr;
       MapTypesArray = nullptr;
+      MapTypesArrayEnd = nullptr;
       MappersArray = nullptr;
       HasMapper = false;
       NumberOfPtrs = 0u;
@@ -1653,6 +1673,7 @@ public:
              MapTypesArray && (!HasMapper || MappersArray) && NumberOfPtrs;
     }
     bool requiresDevicePointerInfo() { return RequiresDevicePointerInfo; }
+    bool separateBeginEndCalls() { return SeparateBeginEndCalls; }
   };
 
   /// Emit the target data mapping code associated with \a D.

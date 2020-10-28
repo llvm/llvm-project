@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fspell-checking-limit 0 -verify -Wno-c++11-extensions %s
-// RUN: %clang_cc1 -fspell-checking-limit 0 -verify -Wno-c++11-extensions -std=c++20 %s
+// RUN: %clang_cc1 -fspell-checking-limit 0 -verify -Wno-c++11-extensions -fcxx-exceptions %s
+// RUN: %clang_cc1 -fspell-checking-limit 0 -verify -Wno-c++11-extensions -fcxx-exceptions -std=c++20 %s
 
 namespace PR21817{
 int a(-rsing[2]); // expected-error {{undeclared identifier 'rsing'; did you mean 'using'?}}
@@ -744,4 +744,16 @@ void ns::create_test2() { // expected-error {{out-of-line definition of 'create_
 // Expected no redefinition error here.
 void ns::create_test() {
 }
+}
+
+namespace PR46487 {
+  bool g_var_bool; // expected-note {{here}}
+  const char g_volatile_char = 5; // expected-note {{here}}
+  // FIXME: We shouldn't suggest a typo-correction to 'g_var_bool' here,
+  // because it doesn't make the expression valid.
+  // expected-error@+2 {{did you mean 'g_var_bool'}}
+  // expected-error@+1 {{assigning to 'bool' from incompatible type 'void'}}
+  enum : decltype((g_var_long = throw))::a {
+    b = g_volatile_uchar // expected-error {{did you mean 'g_volatile_char'}}
+  };
 }

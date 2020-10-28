@@ -18,10 +18,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name:  .gnu.hash
     Type:  SHT_GNU_HASH
@@ -72,10 +71,9 @@ Sections:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
 ## Case 1: Content is less than 16 bytes.
   - Name:   .gnu.hash.tooshort

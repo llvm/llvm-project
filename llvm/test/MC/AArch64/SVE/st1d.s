@@ -78,3 +78,15 @@ st1d    { z31.d }, p7, [z31.d, #248]
 // CHECK-ENCODING: [0xff,0xbf,0xdf,0xe5]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff bf df e5 <unknown>
+
+st1d    { z0.d }, p7, [z0.d, #0]
+// CHECK-INST: st1d    { z0.d }, p7, [z0.d]
+// CHECK-ENCODING: [0x00,0xbc,0xc0,0xe5]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 bc c0 e5 <unknown>
+
+st1d    { z0.d }, p7, [z0.d]
+// CHECK-INST: st1d    { z0.d }, p7, [z0.d]
+// CHECK-ENCODING: [0x00,0xbc,0xc0,0xe5]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 00 bc c0 e5 <unknown>

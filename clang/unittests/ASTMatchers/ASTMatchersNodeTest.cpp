@@ -408,6 +408,15 @@ TEST_P(ASTMatchersTest, TemplateTypeParmDecl) {
   EXPECT_TRUE(notMatches("template <int N> void f();", templateTypeParmDecl()));
 }
 
+TEST_P(ASTMatchersTest, TemplateTemplateParmDecl) {
+  if (!GetParam().isCXX())
+    return;
+  EXPECT_TRUE(matches("template <template <typename> class Z> void f();",
+                      templateTemplateParmDecl(hasName("Z"))));
+  EXPECT_TRUE(notMatches("template <typename, int> void f();",
+                         templateTemplateParmDecl()));
+}
+
 TEST_P(ASTMatchersTest, UserDefinedLiteral) {
   if (!GetParam().isCXX11OrLater()) {
     return;

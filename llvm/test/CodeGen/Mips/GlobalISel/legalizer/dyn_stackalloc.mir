@@ -73,7 +73,7 @@ body:             |
     %8:_(s32) = G_CONSTANT i32 -8
     %9:_(s32) = G_AND %7, %8
     %10:_(p0) = G_DYN_STACKALLOC %9(s32), 0
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memset), %10(p0), %0(s8), %1(s32), 0 :: (store 1 into %ir.vla)
+    G_MEMSET %10(p0), %0(s8), %1(s32), 0 :: (store 1 into %ir.vla)
     %11:_(p0) = G_PTR_ADD %10, %1(s32)
     %12:_(p0) = COPY %11(p0)
     G_STORE %13(s8), %12(p0) :: (store 1 into %ir.arrayidx)

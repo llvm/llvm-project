@@ -1,10 +1,12 @@
 ! RUN: %S/test_errors.sh %s %t %f18
   character*20 c(25), cv
   character(kind=1,len=59) msg
+  character, parameter :: const_round = "c'est quoi?"
   logical*2 v(5), lv
   integer*1 stat1
   integer*2 stat4
   integer*8 stat8, iv
+  integer, parameter :: const_id = 1
 
   inquire(10)
   inquire(file='abc')
@@ -22,6 +24,7 @@
       exist=v(1), named=v(2), opened=v(3), pending=v(4))
   inquire(pending=v(5), file='abc')
   inquire(10, id=id, pending=v(5))
+  inquire(10, id=const_id, pending=v(5))
 
   ! using variable 'cv' multiple times seems to be allowed
   inquire(file='abc', &
@@ -55,6 +58,9 @@
 
   !ERROR: If ID appears, PENDING must also appear
   inquire(file='abc', id=id)
+
+  !ERROR: ROUND variable 'const_round' must be definable
+  inquire(file='abc', round=const_round)
 
 9 continue
 end

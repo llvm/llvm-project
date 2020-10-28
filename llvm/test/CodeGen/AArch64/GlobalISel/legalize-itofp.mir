@@ -249,8 +249,7 @@ body: |
     liveins: $q0
     ; CHECK-LABEL: name: test_uitofp_v2s64_v2i1
     ; CHECK: [[DEF:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:_(s1) = COPY [[DEF]](s1)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s1>) = G_BUILD_VECTOR [[DEF]](s1), [[COPY]](s1)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s1>) = G_BUILD_VECTOR [[DEF]](s1), [[DEF]](s1)
     ; CHECK: [[ZEXT:%[0-9]+]]:_(<2 x s64>) = G_ZEXT [[BUILD_VECTOR]](<2 x s1>)
     ; CHECK: [[UITOFP:%[0-9]+]]:_(<2 x s64>) = G_UITOFP [[ZEXT]](<2 x s64>)
     ; CHECK: $q0 = COPY [[UITOFP]](<2 x s64>)
@@ -266,8 +265,7 @@ body: |
     liveins: $q0
     ; CHECK-LABEL: name: test_sitofp_v2s64_v2i1
     ; CHECK: [[DEF:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:_(s1) = COPY [[DEF]](s1)
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s1>) = G_BUILD_VECTOR [[DEF]](s1), [[COPY]](s1)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s1>) = G_BUILD_VECTOR [[DEF]](s1), [[DEF]](s1)
     ; CHECK: [[SEXT:%[0-9]+]]:_(<2 x s64>) = G_SEXT [[BUILD_VECTOR]](<2 x s1>)
     ; CHECK: [[SITOFP:%[0-9]+]]:_(<2 x s64>) = G_SITOFP [[SEXT]](<2 x s64>)
     ; CHECK: $q0 = COPY [[SITOFP]](<2 x s64>)

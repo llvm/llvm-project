@@ -68,3 +68,40 @@ namespace test4 {
 int &&f(int);  // expected-note {{candidate function not viable}}
 int &&k = f(); // expected-error {{no matching function for call}}
 }
+
+// verify that "type 'double' cannot bind to a value of unrelated type 'int'" diagnostic is suppressed.
+namespace test5 {
+  template<typename T> using U = T; // expected-note {{template parameter is declared here}}
+  template<typename...Ts> U<Ts...>& f(); // expected-error {{pack expansion used as argument for non-pack parameter of alias template}}
+  double &s1 = f(); // expected-error {{no matching function}}
+}
+
+namespace test6 {
+struct T {
+  T() = delete; // expected-note {{has been explicitly marked deleted here}}
+};
+
+void func() {
+  // verify that no -Wunused-value diagnostic.
+  (T(T())); // expected-error {{call to deleted constructor}}
+}
+}
+
+// verify the secondary diagnostic "no matching function" is emitted.
+namespace test7 {
+struct C {
+  C() = delete; // expected-note {{has been explicitly marked deleted}}
+};
+void f(C &); // expected-note {{candidate function not viable: expects an l-value for 1st argument}}
+void test() {
+  f(C()); // expected-error {{call to deleted constructor}} \
+             expected-error {{no matching function for call}}
+}
+}
+
+// verify the secondary diagnostic "cannot initialize" is emitted.
+namespace test8 {
+typedef int arr[];
+int v = arr(); // expected-error {{array types cannot be value-initialized}} \
+                  expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'test8::arr'}}
+}

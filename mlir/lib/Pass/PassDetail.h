@@ -43,6 +43,10 @@ public:
   /// Returns the pass managers held by this adaptor.
   MutableArrayRef<OpPassManager> getPassManagers() { return mgrs; }
 
+  /// Populate the set of dependent dialects for the passes in the current
+  /// adaptor.
+  void getDependentDialects(DialectRegistry &dialects) const override;
+
   /// Return the async pass managers held by this parallel adaptor.
   MutableArrayRef<SmallVector<OpPassManager, 1>> getParallelPassManagers() {
     return asyncExecutors;
@@ -58,12 +62,24 @@ private:
   /// Run this pass adaptor asynchronously.
   void runOnOperationAsyncImpl();
 
+  /// Run the given operation and analysis manager on a single pass.
+  static LogicalResult run(Pass *pass, Operation *op, AnalysisManager am);
+
+  /// Run the given operation and analysis manager on a provided op pass
+  /// manager.
+  static LogicalResult
+  runPipeline(iterator_range<OpPassManager::pass_iterator> passes,
+              Operation *op, AnalysisManager am);
+
   /// A set of adaptors to run.
   SmallVector<OpPassManager, 1> mgrs;
 
   /// A set of executors, cloned from the main executor, that run asynchronously
   /// on different threads. This is used when threading is enabled.
   SmallVector<SmallVector<OpPassManager, 1>, 8> asyncExecutors;
+
+  // For accessing "runPipeline".
+  friend class mlir::PassManager;
 };
 
 } // end namespace detail

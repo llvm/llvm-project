@@ -20,51 +20,52 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-const char *x86::getX86TargetCPU(const ArgList &Args,
+std::string x86::getX86TargetCPU(const ArgList &Args,
                                  const llvm::Triple &Triple) {
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
-    if (StringRef(A->getValue()) != "native")
-      return A->getValue();
+    StringRef CPU = A->getValue();
+    if (CPU != "native")
+      return std::string(CPU);
 
     // FIXME: Reject attempts to use -march=native unless the target matches
     // the host.
     //
     // FIXME: We should also incorporate the detected target features for use
     // with -native.
-    std::string CPU = std::string(llvm::sys::getHostCPUName());
+    CPU = llvm::sys::getHostCPUName();
     if (!CPU.empty() && CPU != "generic")
-      return Args.MakeArgString(CPU);
+      return std::string(CPU);
   }
 
   if (const Arg *A = Args.getLastArgNoClaim(options::OPT__SLASH_arch)) {
     // Mapping built by looking at lib/Basic's X86TargetInfo::initFeatureMap().
     StringRef Arch = A->getValue();
-    const char *CPU = nullptr;
+    StringRef CPU;
     if (Triple.getArch() == llvm::Triple::x86) {  // 32-bit-only /arch: flags.
-      CPU = llvm::StringSwitch<const char *>(Arch)
+      CPU = llvm::StringSwitch<StringRef>(Arch)
                 .Case("IA32", "i386")
                 .Case("SSE", "pentium3")
                 .Case("SSE2", "pentium4")
-                .Default(nullptr);
+                .Default("");
     }
-    if (CPU == nullptr) {  // 32-bit and 64-bit /arch: flags.
-      CPU = llvm::StringSwitch<const char *>(Arch)
+    if (CPU.empty()) {  // 32-bit and 64-bit /arch: flags.
+      CPU = llvm::StringSwitch<StringRef>(Arch)
                 .Case("AVX", "sandybridge")
                 .Case("AVX2", "haswell")
                 .Case("AVX512F", "knl")
                 .Case("AVX512", "skylake-avx512")
-                .Default(nullptr);
+                .Default("");
     }
-    if (CPU) {
+    if (!CPU.empty()) {
       A->claim();
-      return CPU;
+      return std::string(CPU);
     }
   }
 
   // Select the default CPU if none was given (or detection failed).
 
   if (!Triple.isX86())
-    return nullptr; // This routine is only handling x86 targets.
+    return ""; // This routine is only handling x86 targets.
 
   bool Is64Bit = Triple.getArch() == llvm::Triple::x86_64;
 
@@ -93,13 +94,13 @@ const char *x86::getX86TargetCPU(const ArgList &Args,
     return "x86-64";
 
   switch (Triple.getOS()) {
-  case llvm::Triple::FreeBSD:
-    return "i686";
   case llvm::Triple::NetBSD:
-  case llvm::Triple::OpenBSD:
     return "i486";
   case llvm::Triple::Haiku:
+  case llvm::Triple::OpenBSD:
     return "i586";
+  case llvm::Triple::FreeBSD:
+    return "i686";
   default:
     // Fallback to p4.
     return "pentium4";

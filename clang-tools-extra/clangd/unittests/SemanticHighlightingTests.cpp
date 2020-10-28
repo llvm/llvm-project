@@ -345,7 +345,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Class[[Foo]] *$LocalVariable[[FP]] = ($Class[[Foo]]*)$LocalVariable[[B]];
         int $LocalVariable[[I]] = (int)$LocalVariable[[B]];
       }
-    )cpp"
+    )cpp",
       R"cpp(
       struct $Class[[B]] {};
       struct $Class[[A]] {
@@ -503,11 +503,11 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
 
       #define $Macro[[test]]
       #undef $Macro[[test]]
-$InactiveCode[[]]      #ifdef $Macro[[test]]
-$InactiveCode[[]]      #endif
+$InactiveCode[[#ifdef test]]
+$InactiveCode[[#endif]]
 
-$InactiveCode[[]]      #if defined($Macro[[test]])
-$InactiveCode[[]]      #endif
+$InactiveCode[[#if defined(test)]]
+$InactiveCode[[#endif]]
     )cpp",
       R"cpp(
       struct $Class[[S]] {
@@ -515,13 +515,14 @@ $InactiveCode[[]]      #endif
         $Class[[S]] *$Field[[Next]];
       };
       $Class[[S]] $Variable[[Global]][2] = {$Class[[S]](), $Class[[S]]()};
+      auto [$Variable[[G1]], $Variable[[G2]]] = $Variable[[Global]];
       void $Function[[f]]($Class[[S]] $Parameter[[P]]) {
         int $LocalVariable[[A]][2] = {1,2};
-        auto [$Variable[[B1]], $Variable[[B2]]] = $LocalVariable[[A]];
-        auto [$Variable[[G1]], $Variable[[G2]]] = $Variable[[Global]];
-        $Class[[auto]] [$Variable[[P1]], $Variable[[P2]]] = $Parameter[[P]];
+        auto [$LocalVariable[[B1]], $LocalVariable[[B2]]] = $LocalVariable[[A]];
+        auto [$LocalVariable[[G1]], $LocalVariable[[G2]]] = $Variable[[Global]];
+        $Class[[auto]] [$LocalVariable[[P1]], $LocalVariable[[P2]]] = $Parameter[[P]];
         // Highlights references to BindingDecls.
-        $Variable[[B1]]++;
+        $LocalVariable[[B1]]++;
       }
     )cpp",
       R"cpp(
@@ -613,8 +614,8 @@ $InactiveCode[[]]      #endif
       R"cpp(
       // Code in the preamble.
       // Inactive lines get an empty InactiveCode token at the beginning.
-$InactiveCode[[]]      #ifdef $Macro[[test]]
-$InactiveCode[[]]      #endif
+$InactiveCode[[#ifdef test]]
+$InactiveCode[[#endif]]
 
       // A declaration to cause the preamble to end.
       int $Variable[[EndPreamble]];
@@ -622,17 +623,17 @@ $InactiveCode[[]]      #endif
       // Code after the preamble.
       // Code inside inactive blocks does not get regular highlightings
       // because it's not part of the AST.
-$InactiveCode[[]]      #ifdef $Macro[[test]]
-$InactiveCode[[]]      int Inactive2;
-$InactiveCode[[]]      #endif
+$InactiveCode[[#ifdef test]]
+$InactiveCode[[int Inactive2;]]
+$InactiveCode[[#endif]]
 
       #ifndef $Macro[[test]]
       int $Variable[[Active1]];
       #endif
 
-$InactiveCode[[]]      #ifdef $Macro[[test]]
-$InactiveCode[[]]      int Inactive3;
-$InactiveCode[[]]      #else
+$InactiveCode[[#ifdef test]]
+$InactiveCode[[int Inactive3;]]
+$InactiveCode[[#else]]
       int $Variable[[Active2]];
       #endif
     )cpp",
@@ -686,6 +687,14 @@ sizeof...($TemplateParameter[[Elements]]);
       void $Function[[bar]]($TemplateParameter[[T]] $Parameter[[F]]) {
         $Parameter[[F]].$DependentName[[foo]]();
       }
+    )cpp",
+      // Dependent template name
+      R"cpp(
+      template <template <typename> class> struct $Class[[A]] {};
+      template <typename $TemplateParameter[[T]]>
+      using $Typedef[[W]] = $Class[[A]]<
+        $TemplateParameter[[T]]::template $DependentType[[Waldo]]
+      >;
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);

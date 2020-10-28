@@ -414,6 +414,13 @@ def G_UMAX : GenericInstruction {
   let isCommutable = 1;
 }
 
+// Generic integer absolute value.
+def G_ABS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Overflow ops
 //------------------------------------------------------------------------------
@@ -541,6 +548,22 @@ def G_USUBSAT : GenericInstruction {
 def G_SSUBSAT : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+// Generic saturating unsigned left shift.
+def G_USHLSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+// Generic saturating signed left shift.
+def G_SSHLSAT : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
   let hasSideEffects = 0;
   let isCommutable = 0;
 }
@@ -1249,3 +1272,30 @@ def G_STRICT_FDIV : ConstrainedIntruction<G_FDIV>;
 def G_STRICT_FREM : ConstrainedIntruction<G_FREM>;
 def G_STRICT_FMA : ConstrainedIntruction<G_FMA>;
 def G_STRICT_FSQRT : ConstrainedIntruction<G_FSQRT>;
+
+//------------------------------------------------------------------------------
+// Memory intrinsics
+//------------------------------------------------------------------------------
+
+def G_MEMCPY : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$dst_addr, ptype1:$src_addr, type2:$size, untyped_imm_0:$tailcall);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
+def G_MEMMOVE : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$dst_addr, ptype1:$src_addr, type2:$size, untyped_imm_0:$tailcall);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+}
+
+def G_MEMSET : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$dst_addr, type1:$value, type2:$size, untyped_imm_0:$tailcall);
+  let hasSideEffects = 0;
+  let mayStore = 1;
+}

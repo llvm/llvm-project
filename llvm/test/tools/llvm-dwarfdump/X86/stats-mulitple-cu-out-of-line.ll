@@ -18,12 +18,13 @@
 ; #include "test.h"
 ; int far() { return foo(42); }
 
-; CHECK:      "#functions":3
-; CHECK-SAME: "#functions with location":3
-; CHECK-SAME: "#inlined functions":0
-; CHECK-SAME: "#unique source variables":1
-; CHECK-SAME: "#source variables":2
-; CHECK-SAME: "#source variables with location":2
+; CHECK:      "#functions": 3,
+; CHECK-NEXT: "#functions with location": 3,
+; CHECK-NEXT: "#inlined functions": 0,
+; CHECK-NEXT: "#inlined functions with abstract origins": 0,
+; CHECK-NEXT: "#unique source variables": 1,
+; CHECK-NEXT: "#source variables": 2,
+; CHECK-NEXT: "#source variables with location": 2,
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

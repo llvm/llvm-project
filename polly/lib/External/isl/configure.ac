@@ -20,6 +20,7 @@ fi
 
 AC_PROG_CC
 AC_PROG_CXX
+AX_PROG_CC_FOR_BUILD
 
 AX_CC_MAXOPT
 AX_GCC_WARN_UNUSED_RESULT
@@ -112,11 +113,6 @@ if test "x$ac_cv_have_decl_snprintf" = xno -a \
 fi
 
 AX_SUBMODULE(clang,system|no,no)
-case "$with_clang" in
-system)
-	AX_DETECT_CLANG
-	;;
-esac
 AM_CONDITIONAL(HAVE_CLANG, test $with_clang = system)
 AM_CONDITIONAL(HAVE_CPP_ISL_H,
     [(test $with_clang = system -a "x$HAVE_CXX11" = "x1") || \
@@ -133,23 +129,17 @@ AX_CREATE_PKGCONFIG_INFO
 
 AX_DETECT_GIT_HEAD
 
-AC_SUBST([CONFIG_STATUS_DEPENDENCIES], [$LLVM_CONFIG])
 AH_BOTTOM([#include <isl_config_post.h>])
 AC_CONFIG_HEADERS(isl_config.h)
 AC_CONFIG_FILES(isl_srcdir.c)
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES(doc/Makefile)
 if test $with_clang = system; then
-	AC_CONFIG_FILES(interface/Makefile)
+	AC_CONFIG_SUBDIRS(interface)
 fi
 AC_CONFIG_FILES([bound_test.sh], [chmod +x bound_test.sh])
 AC_CONFIG_FILES([codegen_test.sh], [chmod +x codegen_test.sh])
 AC_CONFIG_FILES([pip_test.sh], [chmod +x pip_test.sh])
 AC_CONFIG_FILES([flow_test.sh], [chmod +x flow_test.sh])
 AC_CONFIG_FILES([schedule_test.sh], [chmod +x schedule_test.sh])
-AC_CONFIG_COMMANDS_POST([
-	dnl pass on arguments to subdir configures, but don't
-	dnl add them to config.status
-	ac_configure_args="$ac_configure_args $isl_configure_args"
-])
 AC_OUTPUT

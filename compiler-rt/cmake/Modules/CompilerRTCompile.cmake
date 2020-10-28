@@ -73,7 +73,6 @@ function(clang_compile object_file source)
   if(COMPILER_RT_STANDALONE_BUILD)
     # Only add global flags in standalone build.
     string(REGEX MATCH "[.](cc|cpp)$" is_cxx ${source_rpath})
-    string(REGEX MATCH "[.](m|mm)$" is_objc ${source_rpath})
     if(is_cxx)
       string(REPLACE " " ";" global_flags "${CMAKE_CXX_FLAGS}")
     else()
@@ -87,9 +86,6 @@ function(clang_compile object_file source)
     if (APPLE)
       set(global_flags ${OSX_SYSROOT_FLAG} ${global_flags})
     endif()
-    if (is_objc)
-      list(APPEND global_flags -ObjC)
-    endif()
 
     # Ignore unknown warnings. CMAKE_CXX_FLAGS may contain GCC-specific options
     # which are not supported by Clang.
@@ -98,6 +94,12 @@ function(clang_compile object_file source)
   else()
     set(compile_flags ${SOURCE_CFLAGS})
   endif()
+
+  string(REGEX MATCH "[.](m|mm)$" is_objc ${source_rpath})
+  if (is_objc)
+    list(APPEND compile_flags "-ObjC")
+  endif()
+
   add_custom_command(
     OUTPUT ${object_file}
     COMMAND ${COMPILER_RT_TEST_COMPILER} ${compile_flags} -c

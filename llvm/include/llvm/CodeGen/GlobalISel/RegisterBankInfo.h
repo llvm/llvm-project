@@ -104,36 +104,37 @@ public:
   /// Currently the TableGen-like file would look like:
   /// \code
   /// PartialMapping[] = {
-  /// /*32-bit add*/    {0, 32, GPR}, // Scalar entry repeated for first vec elt.
-  /// /*2x32-bit add*/  {0, 32, GPR}, {32, 32, GPR},
-  /// /*<2x32-bit> vadd {0, 64, VPR}
+  /// /*32-bit add*/      {0, 32, GPR}, // Scalar entry repeated for first
+  ///                                   // vec elt.
+  /// /*2x32-bit add*/    {0, 32, GPR}, {32, 32, GPR},
+  /// /*<2x32-bit> vadd*/ {0, 64, VPR}
   /// }; // PartialMapping duplicated.
   ///
   /// ValueMapping[] {
-  ///   /*plain 32-bit add*/ {&PartialMapping[0], 1},
+  ///   /*plain 32-bit add*/       {&PartialMapping[0], 1},
   ///   /*expanded vadd on 2xadd*/ {&PartialMapping[1], 2},
-  ///   /*plain <2x32-bit> vadd*/ {&PartialMapping[3], 1}
+  ///   /*plain <2x32-bit> vadd*/  {&PartialMapping[3], 1}
   /// };
   /// \endcode
   ///
   /// With the array of pointer, we would have:
   /// \code
   /// PartialMapping[] = {
-  /// /*32-bit add lower */ {0, 32, GPR},
+  /// /*32-bit add lower */ { 0, 32, GPR},
   /// /*32-bit add upper */ {32, 32, GPR},
-  /// /*<2x32-bit> vadd {0, 64, VPR}
+  /// /*<2x32-bit> vadd */  { 0, 64, VPR}
   /// }; // No more duplication.
   ///
   /// BreakDowns[] = {
-  /// /*AddBreakDown*/ &PartialMapping[0],
+  /// /*AddBreakDown*/   &PartialMapping[0],
   /// /*2xAddBreakDown*/ &PartialMapping[0], &PartialMapping[1],
-  /// /*VAddBreakDown*/ &PartialMapping[2]
+  /// /*VAddBreakDown*/  &PartialMapping[2]
   /// }; // Addresses of PartialMapping duplicated (smaller).
   ///
   /// ValueMapping[] {
-  ///   /*plain 32-bit add*/ {&BreakDowns[0], 1},
+  ///   /*plain 32-bit add*/       {&BreakDowns[0], 1},
   ///   /*expanded vadd on 2xadd*/ {&BreakDowns[1], 2},
-  ///   /*plain <2x32-bit> vadd*/ {&BreakDowns[3], 1}
+  ///   /*plain <2x32-bit> vadd*/  {&BreakDowns[3], 1}
   /// };
   /// \endcode
   ///

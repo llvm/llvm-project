@@ -84,6 +84,9 @@ void ScalarTraits<PlatformSet>::output(const PlatformSet &Values, void *IO,
   case PlatformKind::macCatalyst:
     OS << "iosmac";
     break;
+  case PlatformKind::driverKit:
+    OS << "driverkit";
+    break;
   }
 }
 

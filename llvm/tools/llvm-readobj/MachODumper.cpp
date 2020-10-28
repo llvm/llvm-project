@@ -68,15 +68,9 @@ private:
 
 namespace llvm {
 
-std::error_code createMachODumper(const object::ObjectFile *Obj,
-                                  ScopedPrinter &Writer,
-                                  std::unique_ptr<ObjDumper> &Result) {
-  const MachOObjectFile *MachOObj = dyn_cast<MachOObjectFile>(Obj);
-  if (!MachOObj)
-    return readobj_error::unsupported_obj_file_format;
-
-  Result.reset(new MachODumper(MachOObj, Writer));
-  return readobj_error::success;
+std::unique_ptr<ObjDumper> createMachODumper(const object::MachOObjectFile &Obj,
+                                             ScopedPrinter &Writer) {
+  return std::make_unique<MachODumper>(&Obj, Writer);
 }
 
 } // namespace llvm
@@ -161,8 +155,9 @@ static const EnumEntry<uint32_t> MachOHeaderCpuSubtypesARM[] = {
 };
 
 static const EnumEntry<uint32_t> MachOHeaderCpuSubtypesARM64[] = {
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64_ALL),
-  LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64E),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64_ALL),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64_V8),
+    LLVM_READOBJ_ENUM_ENT(MachO, CPU_SUBTYPE_ARM64E),
 };
 
 static const EnumEntry<uint32_t> MachOHeaderCpuSubtypesSPARC[] = {

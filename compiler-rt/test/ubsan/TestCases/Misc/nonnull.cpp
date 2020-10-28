@@ -1,5 +1,5 @@
 // RUN: %clangxx -fsanitize=returns-nonnull-attribute -w %s -O3 -o %t
-// RUN: %run %t foo 2>&1 | count 0
+// RUN: %run %t foo 2>&1 | FileCheck %s --check-prefix=NOERROR --allow-empty --implicit-check-not='runtime error'
 // RUN: %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx -fsanitize=returns-nonnull-attribute -fno-sanitize-recover=returns-nonnull-attribute -w %s -O3 -o %t.abort
 // RUN: not %run %t.abort &> /dev/null
@@ -40,3 +40,5 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+
+// NOERROR-NOT: runtime error

@@ -1,5 +1,4 @@
-//===- SyncDependenceAnalysis.cpp - Divergent Branch Dependence Calculation
-//--===//
+//==- SyncDependenceAnalysis.cpp - Divergent Branch Dependence Calculation -==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -99,10 +98,10 @@
 // loop exit and the loop header (_after_ SSA construction).
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/Analysis/SyncDependenceAnalysis.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/PostDominators.h"
-#include "llvm/Analysis/SyncDependenceAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
@@ -221,7 +220,9 @@ struct DivergencePropagator {
                     SuccessorIterable NodeSuccessors, const Loop *ParentLoop) {
     assert(JoinBlocks);
 
-    LLVM_DEBUG(dbgs() << "SDA:computeJoinPoints. Parent loop: " << (ParentLoop ? ParentLoop->getName() : "<null>") << "\n" );
+    LLVM_DEBUG(dbgs() << "SDA:computeJoinPoints. Parent loop: "
+                      << (ParentLoop ? ParentLoop->getName() : "<null>")
+                      << "\n");
 
     // bootstrap with branch targets
     for (const auto *SuccBlock : NodeSuccessors) {
@@ -236,12 +237,10 @@ struct DivergencePropagator {
       }
     }
 
-    LLVM_DEBUG(
-      dbgs() << "SDA: rpo order:\n";
-      for (const auto * RpoBlock : FuncRPOT) {
-        dbgs() << "- " << RpoBlock->getName() << "\n";
-      }
-    );
+    LLVM_DEBUG(dbgs() << "SDA: rpo order:\n"; for (const auto *RpoBlock
+                                                   : FuncRPOT) {
+      dbgs() << "- " << RpoBlock->getName() << "\n";
+    });
 
     auto ItBeginRPO = FuncRPOT.begin();
     auto ItEndRPO = FuncRPOT.end();
@@ -253,8 +252,7 @@ struct DivergencePropagator {
 
     // propagate definitions at the immediate successors of the node in RPO
     auto ItBlockRPO = ItBeginRPO;
-    while ((++ItBlockRPO != ItEndRPO) &&
-           !PendingUpdates.empty()) {
+    while ((++ItBlockRPO != ItEndRPO) && !PendingUpdates.empty()) {
       const auto *Block = *ItBlockRPO;
       LLVM_DEBUG(dbgs() << "SDA::joins. visiting " << Block->getName() << "\n");
 
@@ -311,7 +309,8 @@ struct DivergencePropagator {
 
       assert(ParentLoop);
       auto ItHeaderDef = DefMap.find(ParentLoopHeader);
-      const auto *HeaderDefBlock = (ItHeaderDef == DefMap.end()) ? nullptr : ItHeaderDef->second;
+      const auto *HeaderDefBlock =
+          (ItHeaderDef == DefMap.end()) ? nullptr : ItHeaderDef->second;
 
       LLVM_DEBUG(printDefs(dbgs()));
       assert(HeaderDefBlock && "no definition at header of carrying loop");

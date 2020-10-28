@@ -242,11 +242,14 @@ public:
 };
 
 static void combineKnownMetadata(Instruction *ReplInst, Instruction *I) {
-  static const unsigned KnownIDs[] = {
-      LLVMContext::MD_tbaa,           LLVMContext::MD_alias_scope,
-      LLVMContext::MD_noalias,        LLVMContext::MD_range,
-      LLVMContext::MD_fpmath,         LLVMContext::MD_invariant_load,
-      LLVMContext::MD_invariant_group, LLVMContext::MD_access_group};
+  static const unsigned KnownIDs[] = {LLVMContext::MD_tbaa,
+                                      LLVMContext::MD_alias_scope,
+                                      LLVMContext::MD_noalias,
+                                      LLVMContext::MD_range,
+                                      LLVMContext::MD_fpmath,
+                                      LLVMContext::MD_invariant_load,
+                                      LLVMContext::MD_invariant_group,
+                                      LLVMContext::MD_access_group};
   combineMetadata(ReplInst, I, KnownIDs, true);
 }
 
@@ -260,43 +263,7 @@ public:
       : DT(DT), PDT(PDT), AA(AA), MD(MD), MSSA(MSSA),
         MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {}
 
-  bool run(Function &F) {
-    NumFuncArgs = F.arg_size();
-    VN.setDomTree(DT);
-    VN.setAliasAnalysis(AA);
-    VN.setMemDep(MD);
-    bool Res = false;
-    // Perform DFS Numbering of instructions.
-    unsigned BBI = 0;
-    for (const BasicBlock *BB : depth_first(&F.getEntryBlock())) {
-      DFSNumber[BB] = ++BBI;
-      unsigned I = 0;
-      for (auto &Inst : *BB)
-        DFSNumber[&Inst] = ++I;
-    }
-
-    int ChainLength = 0;
-
-    // FIXME: use lazy evaluation of VN to avoid the fix-point computation.
-    while (true) {
-      if (MaxChainLength != -1 && ++ChainLength >= MaxChainLength)
-        return Res;
-
-      auto HoistStat = hoistExpressions(F);
-      if (HoistStat.first + HoistStat.second == 0)
-        return Res;
-
-      if (HoistStat.second > 0)
-        // To address a limitation of the current GVN, we need to rerun the
-        // hoisting after we hoisted loads or stores in order to be able to
-        // hoist all scalars dependent on the hoisted ld/st.
-        VN.clear();
-
-      Res = true;
-    }
-
-    return Res;
-  }
+  bool run(Function &F);
 
   // Copied from NewGVN.cpp
   // This function provides global ranking of operations so that we can place
@@ -304,27 +271,7 @@ public:
   // for a complete ordering, as constants all have the same rank.  However,
   // generally, we will simplify an operation with all constants so that it
   // doesn't matter what order they appear in.
-  unsigned int rank(const Value *V) const {
-    // Prefer constants to undef to anything else
-    // Undef is a constant, have to check it first.
-    // Prefer smaller constants to constantexprs
-    if (isa<ConstantExpr>(V))
-      return 2;
-    if (isa<UndefValue>(V))
-      return 1;
-    if (isa<Constant>(V))
-      return 0;
-    else if (auto *A = dyn_cast<Argument>(V))
-      return 3 + A->getArgNo();
-
-    // Need to shift the instruction DFS by number of arguments + 3 to account
-    // for the constant and argument ranking above.
-    auto Result = DFSNumber.lookup(V);
-    if (Result > 0)
-      return 4 + NumFuncArgs + Result;
-    // Unreachable or something else, just return a really large number.
-    return ~0;
-  }
+  unsigned int rank(const Value *V) const;
 
 private:
   GVN::ValueTable VN;
@@ -344,24 +291,7 @@ private:
   enum InsKind { Unknown, Scalar, Load, Store };
 
   // Return true when there are exception handling in BB.
-  bool hasEH(const BasicBlock *BB) {
-    auto It = BBSideEffects.find(BB);
-    if (It != BBSideEffects.end())
-      return It->second;
-
-    if (BB->isEHPad() || BB->hasAddressTaken()) {
-      BBSideEffects[BB] = true;
-      return true;
-    }
-
-    if (BB->getTerminator()->mayThrow()) {
-      BBSideEffects[BB] = true;
-      return true;
-    }
-
-    BBSideEffects[BB] = false;
-    return false;
-  }
+  bool hasEH(const BasicBlock *BB);
 
   // Return true when a successor of BB dominates A.
   bool successorDominate(const BasicBlock *BB, const BasicBlock *A) {
@@ -383,57 +313,10 @@ private:
 
   // Return true when there are memory uses of Def in BB.
   bool hasMemoryUse(const Instruction *NewPt, MemoryDef *Def,
-                    const BasicBlock *BB) {
-    const MemorySSA::AccessList *Acc = MSSA->getBlockAccesses(BB);
-    if (!Acc)
-      return false;
-
-    Instruction *OldPt = Def->getMemoryInst();
-    const BasicBlock *OldBB = OldPt->getParent();
-    const BasicBlock *NewBB = NewPt->getParent();
-    bool ReachedNewPt = false;
-
-    for (const MemoryAccess &MA : *Acc)
-      if (const MemoryUse *MU = dyn_cast<MemoryUse>(&MA)) {
-        Instruction *Insn = MU->getMemoryInst();
-
-        // Do not check whether MU aliases Def when MU occurs after OldPt.
-        if (BB == OldBB && firstInBB(OldPt, Insn))
-          break;
-
-        // Do not check whether MU aliases Def when MU occurs before NewPt.
-        if (BB == NewBB) {
-          if (!ReachedNewPt) {
-            if (firstInBB(Insn, NewPt))
-              continue;
-            ReachedNewPt = true;
-          }
-        }
-        if (MemorySSAUtil::defClobbersUseOrDef(Def, MU, *AA))
-          return true;
-      }
-
-    return false;
-  }
+                    const BasicBlock *BB);
 
   bool hasEHhelper(const BasicBlock *BB, const BasicBlock *SrcBB,
-                   int &NBBsOnAllPaths) {
-    // Stop walk once the limit is reached.
-    if (NBBsOnAllPaths == 0)
-      return true;
-
-    // Impossible to hoist with exceptions on the path.
-    if (hasEH(BB))
-      return true;
-
-    // No such instruction after HoistBarrier in a basic block was
-    // selected for hoisting so instructions selected within basic block with
-    // a hoist barrier can be hoisted.
-    if ((BB != SrcBB) && HoistBarrier.count(BB))
-      return true;
-
-    return false;
-  }
+                   int &NBBsOnAllPaths);
 
   // Return true when there are exception handling or loads of memory Def
   // between Def and NewPt.  This function is only called for stores: Def is
@@ -443,118 +326,19 @@ private:
   // return true when the counter NBBsOnAllPaths reaces 0, except when it is
   // initialized to -1 which is unlimited.
   bool hasEHOrLoadsOnPath(const Instruction *NewPt, MemoryDef *Def,
-                          int &NBBsOnAllPaths) {
-    const BasicBlock *NewBB = NewPt->getParent();
-    const BasicBlock *OldBB = Def->getBlock();
-    assert(DT->dominates(NewBB, OldBB) && "invalid path");
-    assert(DT->dominates(Def->getDefiningAccess()->getBlock(), NewBB) &&
-           "def does not dominate new hoisting point");
-
-    // Walk all basic blocks reachable in depth-first iteration on the inverse
-    // CFG from OldBB to NewBB. These blocks are all the blocks that may be
-    // executed between the execution of NewBB and OldBB. Hoisting an expression
-    // from OldBB into NewBB has to be safe on all execution paths.
-    for (auto I = idf_begin(OldBB), E = idf_end(OldBB); I != E;) {
-      const BasicBlock *BB = *I;
-      if (BB == NewBB) {
-        // Stop traversal when reaching HoistPt.
-        I.skipChildren();
-        continue;
-      }
-
-      if (hasEHhelper(BB, OldBB, NBBsOnAllPaths))
-        return true;
-
-      // Check that we do not move a store past loads.
-      if (hasMemoryUse(NewPt, Def, BB))
-        return true;
-
-      // -1 is unlimited number of blocks on all paths.
-      if (NBBsOnAllPaths != -1)
-        --NBBsOnAllPaths;
-
-      ++I;
-    }
-
-    return false;
-  }
+                          int &NBBsOnAllPaths);
 
   // Return true when there are exception handling between HoistPt and BB.
   // Decrement by 1 NBBsOnAllPaths for each block between HoistPt and BB, and
   // return true when the counter NBBsOnAllPaths reaches 0, except when it is
   // initialized to -1 which is unlimited.
   bool hasEHOnPath(const BasicBlock *HoistPt, const BasicBlock *SrcBB,
-                   int &NBBsOnAllPaths) {
-    assert(DT->dominates(HoistPt, SrcBB) && "Invalid path");
-
-    // Walk all basic blocks reachable in depth-first iteration on
-    // the inverse CFG from BBInsn to NewHoistPt. These blocks are all the
-    // blocks that may be executed between the execution of NewHoistPt and
-    // BBInsn. Hoisting an expression from BBInsn into NewHoistPt has to be safe
-    // on all execution paths.
-    for (auto I = idf_begin(SrcBB), E = idf_end(SrcBB); I != E;) {
-      const BasicBlock *BB = *I;
-      if (BB == HoistPt) {
-        // Stop traversal when reaching NewHoistPt.
-        I.skipChildren();
-        continue;
-      }
-
-      if (hasEHhelper(BB, SrcBB, NBBsOnAllPaths))
-        return true;
-
-      // -1 is unlimited number of blocks on all paths.
-      if (NBBsOnAllPaths != -1)
-        --NBBsOnAllPaths;
-
-      ++I;
-    }
-
-    return false;
-  }
+                   int &NBBsOnAllPaths);
 
   // Return true when it is safe to hoist a memory load or store U from OldPt
   // to NewPt.
   bool safeToHoistLdSt(const Instruction *NewPt, const Instruction *OldPt,
-                       MemoryUseOrDef *U, InsKind K, int &NBBsOnAllPaths) {
-    // In place hoisting is safe.
-    if (NewPt == OldPt)
-      return true;
-
-    const BasicBlock *NewBB = NewPt->getParent();
-    const BasicBlock *OldBB = OldPt->getParent();
-    const BasicBlock *UBB = U->getBlock();
-
-    // Check for dependences on the Memory SSA.
-    MemoryAccess *D = U->getDefiningAccess();
-    BasicBlock *DBB = D->getBlock();
-    if (DT->properlyDominates(NewBB, DBB))
-      // Cannot move the load or store to NewBB above its definition in DBB.
-      return false;
-
-    if (NewBB == DBB && !MSSA->isLiveOnEntryDef(D))
-      if (auto *UD = dyn_cast<MemoryUseOrDef>(D))
-        if (!firstInBB(UD->getMemoryInst(), NewPt))
-          // Cannot move the load or store to NewPt above its definition in D.
-          return false;
-
-    // Check for unsafe hoistings due to side effects.
-    if (K == InsKind::Store) {
-      if (hasEHOrLoadsOnPath(NewPt, cast<MemoryDef>(U), NBBsOnAllPaths))
-        return false;
-    } else if (hasEHOnPath(NewBB, OldBB, NBBsOnAllPaths))
-      return false;
-
-    if (UBB == NewBB) {
-      if (DT->properlyDominates(DBB, NewBB))
-        return true;
-      assert(UBB == DBB);
-      assert(MSSA->locallyDominates(D, U));
-    }
-
-    // No side effects: it is safe to hoist.
-    return true;
-  }
+                       MemoryUseOrDef *U, InsKind K, int &NBBsOnAllPaths);
 
   // Return true when it is safe to hoist scalar instructions from all blocks in
   // WL to HoistBB.
@@ -577,92 +361,21 @@ private:
   // Returns the edge via which an instruction in BB will get the values from.
 
   // Returns true when the values are flowing out to each edge.
-  bool valueAnticipable(CHIArgs C, Instruction *TI) const {
-    if (TI->getNumSuccessors() > (unsigned)size(C))
-      return false; // Not enough args in this CHI.
-
-    for (auto CHI : C) {
-      BasicBlock *Dest = CHI.Dest;
-      // Find if all the edges have values flowing out of BB.
-      bool Found = llvm::any_of(
-          successors(TI), [Dest](const BasicBlock *BB) { return BB == Dest; });
-      if (!Found)
-        return false;
-    }
-    return true;
-  }
+  bool valueAnticipable(CHIArgs C, Instruction *TI) const;
 
   // Check if it is safe to hoist values tracked by CHI in the range
   // [Begin, End) and accumulate them in Safe.
   void checkSafety(CHIArgs C, BasicBlock *BB, InsKind K,
-                   SmallVectorImpl<CHIArg> &Safe) {
-    int NumBBsOnAllPaths = MaxNumberOfBBSInPath;
-    for (auto CHI : C) {
-      Instruction *Insn = CHI.I;
-      if (!Insn) // No instruction was inserted in this CHI.
-        continue;
-      if (K == InsKind::Scalar) {
-        if (safeToHoistScalar(BB, Insn->getParent(), NumBBsOnAllPaths))
-          Safe.push_back(CHI);
-      } else {
-        MemoryUseOrDef *UD = MSSA->getMemoryAccess(Insn);
-        if (safeToHoistLdSt(BB->getTerminator(), Insn, UD, K, NumBBsOnAllPaths))
-          Safe.push_back(CHI);
-      }
-    }
-  }
+                   SmallVectorImpl<CHIArg> &Safe);
 
   using RenameStackType = DenseMap<VNType, SmallVector<Instruction *, 2>>;
 
   // Push all the VNs corresponding to BB into RenameStack.
   void fillRenameStack(BasicBlock *BB, InValuesType &ValueBBs,
-                       RenameStackType &RenameStack) {
-    auto it1 = ValueBBs.find(BB);
-    if (it1 != ValueBBs.end()) {
-      // Iterate in reverse order to keep lower ranked values on the top.
-      for (std::pair<VNType, Instruction *> &VI : reverse(it1->second)) {
-        // Get the value of instruction I
-        LLVM_DEBUG(dbgs() << "\nPushing on stack: " << *VI.second);
-        RenameStack[VI.first].push_back(VI.second);
-      }
-    }
-  }
+                       RenameStackType &RenameStack);
 
   void fillChiArgs(BasicBlock *BB, OutValuesType &CHIBBs,
-                   RenameStackType &RenameStack) {
-    // For each *predecessor* (because Post-DOM) of BB check if it has a CHI
-    for (auto Pred : predecessors(BB)) {
-      auto P = CHIBBs.find(Pred);
-      if (P == CHIBBs.end()) {
-        continue;
-      }
-      LLVM_DEBUG(dbgs() << "\nLooking at CHIs in: " << Pred->getName(););
-      // A CHI is found (BB -> Pred is an edge in the CFG)
-      // Pop the stack until Top(V) = Ve.
-      auto &VCHI = P->second;
-      for (auto It = VCHI.begin(), E = VCHI.end(); It != E;) {
-        CHIArg &C = *It;
-        if (!C.Dest) {
-          auto si = RenameStack.find(C.VN);
-          // The Basic Block where CHI is must dominate the value we want to
-          // track in a CHI. In the PDom walk, there can be values in the
-          // stack which are not control dependent e.g., nested loop.
-          if (si != RenameStack.end() && si->second.size() &&
-              DT->properlyDominates(Pred, si->second.back()->getParent())) {
-            C.Dest = BB;                     // Assign the edge
-            C.I = si->second.pop_back_val(); // Assign the argument
-            LLVM_DEBUG(dbgs()
-                       << "\nCHI Inserted in BB: " << C.Dest->getName() << *C.I
-                       << ", VN: " << C.VN.first << ", " << C.VN.second);
-          }
-          // Move to next CHI of a different value
-          It = std::find_if(It, VCHI.end(),
-                            [It](CHIArg &A) { return A != *It; });
-        } else
-          ++It;
-      }
-    }
-  }
+                   RenameStackType &RenameStack);
 
   // Walk the post-dominator tree top-down and use a stack for each value to
   // store the last value you see. When you hit a CHI from a given edge, the
@@ -692,48 +405,7 @@ private:
   // they form a list of anticipable values. OutValues contains CHIs
   // corresponding to each basic block.
   void findHoistableCandidates(OutValuesType &CHIBBs, InsKind K,
-                               HoistingPointList &HPL) {
-    auto cmpVN = [](const CHIArg &A, const CHIArg &B) { return A.VN < B.VN; };
-
-    // CHIArgs now have the outgoing values, so check for anticipability and
-    // accumulate hoistable candidates in HPL.
-    for (std::pair<BasicBlock *, SmallVector<CHIArg, 2>> &A : CHIBBs) {
-      BasicBlock *BB = A.first;
-      SmallVectorImpl<CHIArg> &CHIs = A.second;
-      // Vector of PHIs contains PHIs for different instructions.
-      // Sort the args according to their VNs, such that identical
-      // instructions are together.
-      llvm::stable_sort(CHIs, cmpVN);
-      auto TI = BB->getTerminator();
-      auto B = CHIs.begin();
-      // [PreIt, PHIIt) form a range of CHIs which have identical VNs.
-      auto PHIIt = std::find_if(CHIs.begin(), CHIs.end(),
-                                 [B](CHIArg &A) { return A != *B; });
-      auto PrevIt = CHIs.begin();
-      while (PrevIt != PHIIt) {
-        // Collect values which satisfy safety checks.
-        SmallVector<CHIArg, 2> Safe;
-        // We check for safety first because there might be multiple values in
-        // the same path, some of which are not safe to be hoisted, but overall
-        // each edge has at least one value which can be hoisted, making the
-        // value anticipable along that path.
-        checkSafety(make_range(PrevIt, PHIIt), BB, K, Safe);
-
-        // List of safe values should be anticipable at TI.
-        if (valueAnticipable(make_range(Safe.begin(), Safe.end()), TI)) {
-          HPL.push_back({BB, SmallVecInsn()});
-          SmallVecInsn &V = HPL.back().second;
-          for (auto B : Safe)
-            V.push_back(B.I);
-        }
-
-        // Check other VNs
-        PrevIt = PHIIt;
-        PHIIt = std::find_if(PrevIt, CHIs.end(),
-                             [PrevIt](CHIArg &A) { return A != *PrevIt; });
-      }
-    }
-  }
+                               HoistingPointList &HPL);
 
   // Compute insertion points for each values which can be fully anticipated at
   // a dominator. HPL contains all such values.
@@ -791,14 +463,14 @@ private:
       }
       // Insert empty CHI node for this VN. This is used to factor out
       // basic blocks where the ANTIC can potentially change.
-      for (auto IDFB : IDFBlocks) {
+      CHIArg EmptyChi = {VN, nullptr, nullptr};
+      for (auto *IDFBB : IDFBlocks) {
         for (unsigned i = 0; i < V.size(); ++i) {
-          CHIArg C = {VN, nullptr, nullptr};
-           // Ignore spurious PDFs.
-          if (DT->properlyDominates(IDFB, V[i]->getParent())) {
-            OutValue[IDFB].push_back(C);
-            LLVM_DEBUG(dbgs() << "\nInsertion a CHI for BB: " << IDFB->getName()
-                              << ", for Insn: " << *V[i]);
+          // Ignore spurious PDFs.
+          if (DT->properlyDominates(IDFBB, V[i]->getParent())) {
+            OutValue[IDFBB].push_back(EmptyChi);
+            LLVM_DEBUG(dbgs() << "\nInserting a CHI for BB: "
+                              << IDFBB->getName() << ", for Insn: " << *V[i]);
           }
         }
       }
@@ -816,329 +488,42 @@ private:
   // a load without hoisting its access function. So before hoisting any
   // expression, make sure that all its operands are available at insert point.
   bool allOperandsAvailable(const Instruction *I,
-                            const BasicBlock *HoistPt) const {
-    for (const Use &Op : I->operands())
-      if (const auto *Inst = dyn_cast<Instruction>(&Op))
-        if (!DT->dominates(Inst->getParent(), HoistPt))
-          return false;
-
-    return true;
-  }
+                            const BasicBlock *HoistPt) const;
 
   // Same as allOperandsAvailable with recursive check for GEP operands.
   bool allGepOperandsAvailable(const Instruction *I,
-                               const BasicBlock *HoistPt) const {
-    for (const Use &Op : I->operands())
-      if (const auto *Inst = dyn_cast<Instruction>(&Op))
-        if (!DT->dominates(Inst->getParent(), HoistPt)) {
-          if (const GetElementPtrInst *GepOp =
-                  dyn_cast<GetElementPtrInst>(Inst)) {
-            if (!allGepOperandsAvailable(GepOp, HoistPt))
-              return false;
-            // Gep is available if all operands of GepOp are available.
-          } else {
-            // Gep is not available if it has operands other than GEPs that are
-            // defined in blocks not dominating HoistPt.
-            return false;
-          }
-        }
-    return true;
-  }
+                               const BasicBlock *HoistPt) const;
 
   // Make all operands of the GEP available.
   void makeGepsAvailable(Instruction *Repl, BasicBlock *HoistPt,
                          const SmallVecInsn &InstructionsToHoist,
-                         Instruction *Gep) const {
-    assert(allGepOperandsAvailable(Gep, HoistPt) &&
-           "GEP operands not available");
+                         Instruction *Gep) const;
 
-    Instruction *ClonedGep = Gep->clone();
-    for (unsigned i = 0, e = Gep->getNumOperands(); i != e; ++i)
-      if (Instruction *Op = dyn_cast<Instruction>(Gep->getOperand(i))) {
-        // Check whether the operand is already available.
-        if (DT->dominates(Op->getParent(), HoistPt))
-          continue;
+  void updateAlignment(Instruction *I, Instruction *Repl);
 
-        // As a GEP can refer to other GEPs, recursively make all the operands
-        // of this GEP available at HoistPt.
-        if (GetElementPtrInst *GepOp = dyn_cast<GetElementPtrInst>(Op))
-          makeGepsAvailable(ClonedGep, HoistPt, InstructionsToHoist, GepOp);
-      }
-
-    // Copy Gep and replace its uses in Repl with ClonedGep.
-    ClonedGep->insertBefore(HoistPt->getTerminator());
-
-    // Conservatively discard any optimization hints, they may differ on the
-    // other paths.
-    ClonedGep->dropUnknownNonDebugMetadata();
-
-    // If we have optimization hints which agree with each other along different
-    // paths, preserve them.
-    for (const Instruction *OtherInst : InstructionsToHoist) {
-      const GetElementPtrInst *OtherGep;
-      if (auto *OtherLd = dyn_cast<LoadInst>(OtherInst))
-        OtherGep = cast<GetElementPtrInst>(OtherLd->getPointerOperand());
-      else
-        OtherGep = cast<GetElementPtrInst>(
-            cast<StoreInst>(OtherInst)->getPointerOperand());
-      ClonedGep->andIRFlags(OtherGep);
-    }
-
-    // Replace uses of Gep with ClonedGep in Repl.
-    Repl->replaceUsesOfWith(Gep, ClonedGep);
-  }
-
-  void updateAlignment(Instruction *I, Instruction *Repl) {
-    if (auto *ReplacementLoad = dyn_cast<LoadInst>(Repl)) {
-      ReplacementLoad->setAlignment(
-          std::min(ReplacementLoad->getAlign(), cast<LoadInst>(I)->getAlign()));
-      ++NumLoadsRemoved;
-    } else if (auto *ReplacementStore = dyn_cast<StoreInst>(Repl)) {
-      ReplacementStore->setAlignment(std::min(ReplacementStore->getAlign(),
-                                              cast<StoreInst>(I)->getAlign()));
-      ++NumStoresRemoved;
-    } else if (auto *ReplacementAlloca = dyn_cast<AllocaInst>(Repl)) {
-      ReplacementAlloca->setAlignment(std::max(
-          ReplacementAlloca->getAlign(), cast<AllocaInst>(I)->getAlign()));
-    } else if (isa<CallInst>(Repl)) {
-      ++NumCallsRemoved;
-    }
-  }
-
-  // Remove all the instructions in Candidates and replace their usage with Repl.
-  // Returns the number of instructions removed.
+  // Remove all the instructions in Candidates and replace their usage with
+  // Repl. Returns the number of instructions removed.
   unsigned rauw(const SmallVecInsn &Candidates, Instruction *Repl,
-                MemoryUseOrDef *NewMemAcc) {
-    unsigned NR = 0;
-    for (Instruction *I : Candidates) {
-      if (I != Repl) {
-        ++NR;
-        updateAlignment(I, Repl);
-        if (NewMemAcc) {
-          // Update the uses of the old MSSA access with NewMemAcc.
-          MemoryAccess *OldMA = MSSA->getMemoryAccess(I);
-          OldMA->replaceAllUsesWith(NewMemAcc);
-          MSSAUpdater->removeMemoryAccess(OldMA);
-        }
-
-        Repl->andIRFlags(I);
-        combineKnownMetadata(Repl, I);
-        I->replaceAllUsesWith(Repl);
-        // Also invalidate the Alias Analysis cache.
-        MD->removeInstruction(I);
-        I->eraseFromParent();
-      }
-    }
-    return NR;
-  }
+                MemoryUseOrDef *NewMemAcc);
 
   // Replace all Memory PHI usage with NewMemAcc.
-  void raMPHIuw(MemoryUseOrDef *NewMemAcc) {
-    SmallPtrSet<MemoryPhi *, 4> UsePhis;
-    for (User *U : NewMemAcc->users())
-      if (MemoryPhi *Phi = dyn_cast<MemoryPhi>(U))
-        UsePhis.insert(Phi);
-
-    for (MemoryPhi *Phi : UsePhis) {
-      auto In = Phi->incoming_values();
-      if (llvm::all_of(In, [&](Use &U) { return U == NewMemAcc; })) {
-        Phi->replaceAllUsesWith(NewMemAcc);
-        MSSAUpdater->removeMemoryAccess(Phi);
-      }
-    }
-  }
+  void raMPHIuw(MemoryUseOrDef *NewMemAcc);
 
   // Remove all other instructions and replace them with Repl.
   unsigned removeAndReplace(const SmallVecInsn &Candidates, Instruction *Repl,
-                            BasicBlock *DestBB, bool MoveAccess) {
-    MemoryUseOrDef *NewMemAcc = MSSA->getMemoryAccess(Repl);
-    if (MoveAccess && NewMemAcc) {
-        // The definition of this ld/st will not change: ld/st hoisting is
-        // legal when the ld/st is not moved past its current definition.
-        MSSAUpdater->moveToPlace(NewMemAcc, DestBB,
-                                 MemorySSA::BeforeTerminator);
-    }
-
-    // Replace all other instructions with Repl with memory access NewMemAcc.
-    unsigned NR = rauw(Candidates, Repl, NewMemAcc);
-
-    // Remove MemorySSA phi nodes with the same arguments.
-    if (NewMemAcc)
-      raMPHIuw(NewMemAcc);
-    return NR;
-  }
+                            BasicBlock *DestBB, bool MoveAccess);
 
   // In the case Repl is a load or a store, we make all their GEPs
   // available: GEPs are not hoisted by default to avoid the address
   // computations to be hoisted without the associated load or store.
   bool makeGepOperandsAvailable(Instruction *Repl, BasicBlock *HoistPt,
-                                const SmallVecInsn &InstructionsToHoist) const {
-    // Check whether the GEP of a ld/st can be synthesized at HoistPt.
-    GetElementPtrInst *Gep = nullptr;
-    Instruction *Val = nullptr;
-    if (auto *Ld = dyn_cast<LoadInst>(Repl)) {
-      Gep = dyn_cast<GetElementPtrInst>(Ld->getPointerOperand());
-    } else if (auto *St = dyn_cast<StoreInst>(Repl)) {
-      Gep = dyn_cast<GetElementPtrInst>(St->getPointerOperand());
-      Val = dyn_cast<Instruction>(St->getValueOperand());
-      // Check that the stored value is available.
-      if (Val) {
-        if (isa<GetElementPtrInst>(Val)) {
-          // Check whether we can compute the GEP at HoistPt.
-          if (!allGepOperandsAvailable(Val, HoistPt))
-            return false;
-        } else if (!DT->dominates(Val->getParent(), HoistPt))
-          return false;
-      }
-    }
+                                const SmallVecInsn &InstructionsToHoist) const;
 
-    // Check whether we can compute the Gep at HoistPt.
-    if (!Gep || !allGepOperandsAvailable(Gep, HoistPt))
-      return false;
-
-    makeGepsAvailable(Repl, HoistPt, InstructionsToHoist, Gep);
-
-    if (Val && isa<GetElementPtrInst>(Val))
-      makeGepsAvailable(Repl, HoistPt, InstructionsToHoist, Val);
-
-    return true;
-  }
-
-  std::pair<unsigned, unsigned> hoist(HoistingPointList &HPL) {
-    unsigned NI = 0, NL = 0, NS = 0, NC = 0, NR = 0;
-    for (const HoistingPointInfo &HP : HPL) {
-      // Find out whether we already have one of the instructions in HoistPt,
-      // in which case we do not have to move it.
-      BasicBlock *DestBB = HP.first;
-      const SmallVecInsn &InstructionsToHoist = HP.second;
-      Instruction *Repl = nullptr;
-      for (Instruction *I : InstructionsToHoist)
-        if (I->getParent() == DestBB)
-          // If there are two instructions in HoistPt to be hoisted in place:
-          // update Repl to be the first one, such that we can rename the uses
-          // of the second based on the first.
-          if (!Repl || firstInBB(I, Repl))
-            Repl = I;
-
-      // Keep track of whether we moved the instruction so we know whether we
-      // should move the MemoryAccess.
-      bool MoveAccess = true;
-      if (Repl) {
-        // Repl is already in HoistPt: it remains in place.
-        assert(allOperandsAvailable(Repl, DestBB) &&
-               "instruction depends on operands that are not available");
-        MoveAccess = false;
-      } else {
-        // When we do not find Repl in HoistPt, select the first in the list
-        // and move it to HoistPt.
-        Repl = InstructionsToHoist.front();
-
-        // We can move Repl in HoistPt only when all operands are available.
-        // The order in which hoistings are done may influence the availability
-        // of operands.
-        if (!allOperandsAvailable(Repl, DestBB)) {
-          // When HoistingGeps there is nothing more we can do to make the
-          // operands available: just continue.
-          if (HoistingGeps)
-            continue;
-
-          // When not HoistingGeps we need to copy the GEPs.
-          if (!makeGepOperandsAvailable(Repl, DestBB, InstructionsToHoist))
-            continue;
-        }
-
-        // Move the instruction at the end of HoistPt.
-        Instruction *Last = DestBB->getTerminator();
-        MD->removeInstruction(Repl);
-        Repl->moveBefore(Last);
-
-        DFSNumber[Repl] = DFSNumber[Last]++;
-      }
-
-      NR += removeAndReplace(InstructionsToHoist, Repl, DestBB, MoveAccess);
-
-      if (isa<LoadInst>(Repl))
-        ++NL;
-      else if (isa<StoreInst>(Repl))
-        ++NS;
-      else if (isa<CallInst>(Repl))
-        ++NC;
-      else // Scalar
-        ++NI;
-    }
-
-    if (MSSA && VerifyMemorySSA)
-      MSSA->verifyMemorySSA();
-
-    NumHoisted += NL + NS + NC + NI;
-    NumRemoved += NR;
-    NumLoadsHoisted += NL;
-    NumStoresHoisted += NS;
-    NumCallsHoisted += NC;
-    return {NI, NL + NC + NS};
-  }
+  std::pair<unsigned, unsigned> hoist(HoistingPointList &HPL);
 
   // Hoist all expressions. Returns Number of scalars hoisted
   // and number of non-scalars hoisted.
-  std::pair<unsigned, unsigned> hoistExpressions(Function &F) {
-    InsnInfo II;
-    LoadInfo LI;
-    StoreInfo SI;
-    CallInfo CI;
-    for (BasicBlock *BB : depth_first(&F.getEntryBlock())) {
-      int InstructionNb = 0;
-      for (Instruction &I1 : *BB) {
-        // If I1 cannot guarantee progress, subsequent instructions
-        // in BB cannot be hoisted anyways.
-        if (!isGuaranteedToTransferExecutionToSuccessor(&I1)) {
-          HoistBarrier.insert(BB);
-          break;
-        }
-        // Only hoist the first instructions in BB up to MaxDepthInBB. Hoisting
-        // deeper may increase the register pressure and compilation time.
-        if (MaxDepthInBB != -1 && InstructionNb++ >= MaxDepthInBB)
-          break;
-
-        // Do not value number terminator instructions.
-        if (I1.isTerminator())
-          break;
-
-        if (auto *Load = dyn_cast<LoadInst>(&I1))
-          LI.insert(Load, VN);
-        else if (auto *Store = dyn_cast<StoreInst>(&I1))
-          SI.insert(Store, VN);
-        else if (auto *Call = dyn_cast<CallInst>(&I1)) {
-          if (auto *Intr = dyn_cast<IntrinsicInst>(Call)) {
-            if (isa<DbgInfoIntrinsic>(Intr) ||
-                Intr->getIntrinsicID() == Intrinsic::assume ||
-                Intr->getIntrinsicID() == Intrinsic::sideeffect)
-              continue;
-          }
-          if (Call->mayHaveSideEffects())
-            break;
-
-          if (Call->isConvergent())
-            break;
-
-          CI.insert(Call, VN);
-        } else if (HoistingGeps || !isa<GetElementPtrInst>(&I1))
-          // Do not hoist scalars past calls that may write to memory because
-          // that could result in spills later. geps are handled separately.
-          // TODO: We can relax this for targets like AArch64 as they have more
-          // registers than X86.
-          II.insert(&I1, VN);
-      }
-    }
-
-    HoistingPointList HPL;
-    computeInsertionPoints(II.getVNTable(), HPL, InsKind::Scalar);
-    computeInsertionPoints(LI.getVNTable(), HPL, InsKind::Load);
-    computeInsertionPoints(SI.getVNTable(), HPL, InsKind::Store);
-    computeInsertionPoints(CI.getScalarVNTable(), HPL, InsKind::Scalar);
-    computeInsertionPoints(CI.getLoadVNTable(), HPL, InsKind::Load);
-    computeInsertionPoints(CI.getStoreVNTable(), HPL, InsKind::Store);
-    return hoist(HPL);
-  }
+  std::pair<unsigned, unsigned> hoistExpressions(Function &F);
 };
 
 class GVNHoistLegacyPass : public FunctionPass {
@@ -1174,6 +559,688 @@ public:
     AU.addPreserved<AAResultsWrapperPass>();
   }
 };
+
+bool GVNHoist::run(Function &F) {
+  NumFuncArgs = F.arg_size();
+  VN.setDomTree(DT);
+  VN.setAliasAnalysis(AA);
+  VN.setMemDep(MD);
+  bool Res = false;
+  // Perform DFS Numbering of instructions.
+  unsigned BBI = 0;
+  for (const BasicBlock *BB : depth_first(&F.getEntryBlock())) {
+    DFSNumber[BB] = ++BBI;
+    unsigned I = 0;
+    for (auto &Inst : *BB)
+      DFSNumber[&Inst] = ++I;
+  }
+
+  int ChainLength = 0;
+
+  // FIXME: use lazy evaluation of VN to avoid the fix-point computation.
+  while (true) {
+    if (MaxChainLength != -1 && ++ChainLength >= MaxChainLength)
+      return Res;
+
+    auto HoistStat = hoistExpressions(F);
+    if (HoistStat.first + HoistStat.second == 0)
+      return Res;
+
+    if (HoistStat.second > 0)
+      // To address a limitation of the current GVN, we need to rerun the
+      // hoisting after we hoisted loads or stores in order to be able to
+      // hoist all scalars dependent on the hoisted ld/st.
+      VN.clear();
+
+    Res = true;
+  }
+
+  return Res;
+}
+
+unsigned int GVNHoist::rank(const Value *V) const {
+  // Prefer constants to undef to anything else
+  // Undef is a constant, have to check it first.
+  // Prefer smaller constants to constantexprs
+  if (isa<ConstantExpr>(V))
+    return 2;
+  if (isa<UndefValue>(V))
+    return 1;
+  if (isa<Constant>(V))
+    return 0;
+  else if (auto *A = dyn_cast<Argument>(V))
+    return 3 + A->getArgNo();
+
+  // Need to shift the instruction DFS by number of arguments + 3 to account
+  // for the constant and argument ranking above.
+  auto Result = DFSNumber.lookup(V);
+  if (Result > 0)
+    return 4 + NumFuncArgs + Result;
+  // Unreachable or something else, just return a really large number.
+  return ~0;
+}
+
+bool GVNHoist::hasEH(const BasicBlock *BB) {
+  auto It = BBSideEffects.find(BB);
+  if (It != BBSideEffects.end())
+    return It->second;
+
+  if (BB->isEHPad() || BB->hasAddressTaken()) {
+    BBSideEffects[BB] = true;
+    return true;
+  }
+
+  if (BB->getTerminator()->mayThrow()) {
+    BBSideEffects[BB] = true;
+    return true;
+  }
+
+  BBSideEffects[BB] = false;
+  return false;
+}
+
+bool GVNHoist::hasMemoryUse(const Instruction *NewPt, MemoryDef *Def,
+                            const BasicBlock *BB) {
+  const MemorySSA::AccessList *Acc = MSSA->getBlockAccesses(BB);
+  if (!Acc)
+    return false;
+
+  Instruction *OldPt = Def->getMemoryInst();
+  const BasicBlock *OldBB = OldPt->getParent();
+  const BasicBlock *NewBB = NewPt->getParent();
+  bool ReachedNewPt = false;
+
+  for (const MemoryAccess &MA : *Acc)
+    if (const MemoryUse *MU = dyn_cast<MemoryUse>(&MA)) {
+      Instruction *Insn = MU->getMemoryInst();
+
+      // Do not check whether MU aliases Def when MU occurs after OldPt.
+      if (BB == OldBB && firstInBB(OldPt, Insn))
+        break;
+
+      // Do not check whether MU aliases Def when MU occurs before NewPt.
+      if (BB == NewBB) {
+        if (!ReachedNewPt) {
+          if (firstInBB(Insn, NewPt))
+            continue;
+          ReachedNewPt = true;
+        }
+      }
+      if (MemorySSAUtil::defClobbersUseOrDef(Def, MU, *AA))
+        return true;
+    }
+
+  return false;
+}
+
+bool GVNHoist::hasEHhelper(const BasicBlock *BB, const BasicBlock *SrcBB,
+                           int &NBBsOnAllPaths) {
+  // Stop walk once the limit is reached.
+  if (NBBsOnAllPaths == 0)
+    return true;
+
+  // Impossible to hoist with exceptions on the path.
+  if (hasEH(BB))
+    return true;
+
+  // No such instruction after HoistBarrier in a basic block was
+  // selected for hoisting so instructions selected within basic block with
+  // a hoist barrier can be hoisted.
+  if ((BB != SrcBB) && HoistBarrier.count(BB))
+    return true;
+
+  return false;
+}
+
+bool GVNHoist::hasEHOrLoadsOnPath(const Instruction *NewPt, MemoryDef *Def,
+                                  int &NBBsOnAllPaths) {
+  const BasicBlock *NewBB = NewPt->getParent();
+  const BasicBlock *OldBB = Def->getBlock();
+  assert(DT->dominates(NewBB, OldBB) && "invalid path");
+  assert(DT->dominates(Def->getDefiningAccess()->getBlock(), NewBB) &&
+         "def does not dominate new hoisting point");
+
+  // Walk all basic blocks reachable in depth-first iteration on the inverse
+  // CFG from OldBB to NewBB. These blocks are all the blocks that may be
+  // executed between the execution of NewBB and OldBB. Hoisting an expression
+  // from OldBB into NewBB has to be safe on all execution paths.
+  for (auto I = idf_begin(OldBB), E = idf_end(OldBB); I != E;) {
+    const BasicBlock *BB = *I;
+    if (BB == NewBB) {
+      // Stop traversal when reaching HoistPt.
+      I.skipChildren();
+      continue;
+    }
+
+    if (hasEHhelper(BB, OldBB, NBBsOnAllPaths))
+      return true;
+
+    // Check that we do not move a store past loads.
+    if (hasMemoryUse(NewPt, Def, BB))
+      return true;
+
+    // -1 is unlimited number of blocks on all paths.
+    if (NBBsOnAllPaths != -1)
+      --NBBsOnAllPaths;
+
+    ++I;
+  }
+
+  return false;
+}
+
+bool GVNHoist::hasEHOnPath(const BasicBlock *HoistPt, const BasicBlock *SrcBB,
+                           int &NBBsOnAllPaths) {
+  assert(DT->dominates(HoistPt, SrcBB) && "Invalid path");
+
+  // Walk all basic blocks reachable in depth-first iteration on
+  // the inverse CFG from BBInsn to NewHoistPt. These blocks are all the
+  // blocks that may be executed between the execution of NewHoistPt and
+  // BBInsn. Hoisting an expression from BBInsn into NewHoistPt has to be safe
+  // on all execution paths.
+  for (auto I = idf_begin(SrcBB), E = idf_end(SrcBB); I != E;) {
+    const BasicBlock *BB = *I;
+    if (BB == HoistPt) {
+      // Stop traversal when reaching NewHoistPt.
+      I.skipChildren();
+      continue;
+    }
+
+    if (hasEHhelper(BB, SrcBB, NBBsOnAllPaths))
+      return true;
+
+    // -1 is unlimited number of blocks on all paths.
+    if (NBBsOnAllPaths != -1)
+      --NBBsOnAllPaths;
+
+    ++I;
+  }
+
+  return false;
+}
+
+bool GVNHoist::safeToHoistLdSt(const Instruction *NewPt,
+                               const Instruction *OldPt, MemoryUseOrDef *U,
+                               GVNHoist::InsKind K, int &NBBsOnAllPaths) {
+  // In place hoisting is safe.
+  if (NewPt == OldPt)
+    return true;
+
+  const BasicBlock *NewBB = NewPt->getParent();
+  const BasicBlock *OldBB = OldPt->getParent();
+  const BasicBlock *UBB = U->getBlock();
+
+  // Check for dependences on the Memory SSA.
+  MemoryAccess *D = U->getDefiningAccess();
+  BasicBlock *DBB = D->getBlock();
+  if (DT->properlyDominates(NewBB, DBB))
+    // Cannot move the load or store to NewBB above its definition in DBB.
+    return false;
+
+  if (NewBB == DBB && !MSSA->isLiveOnEntryDef(D))
+    if (auto *UD = dyn_cast<MemoryUseOrDef>(D))
+      if (!firstInBB(UD->getMemoryInst(), NewPt))
+        // Cannot move the load or store to NewPt above its definition in D.
+        return false;
+
+  // Check for unsafe hoistings due to side effects.
+  if (K == InsKind::Store) {
+    if (hasEHOrLoadsOnPath(NewPt, cast<MemoryDef>(U), NBBsOnAllPaths))
+      return false;
+  } else if (hasEHOnPath(NewBB, OldBB, NBBsOnAllPaths))
+    return false;
+
+  if (UBB == NewBB) {
+    if (DT->properlyDominates(DBB, NewBB))
+      return true;
+    assert(UBB == DBB);
+    assert(MSSA->locallyDominates(D, U));
+  }
+
+  // No side effects: it is safe to hoist.
+  return true;
+}
+
+bool GVNHoist::valueAnticipable(CHIArgs C, Instruction *TI) const {
+  if (TI->getNumSuccessors() > (unsigned)size(C))
+    return false; // Not enough args in this CHI.
+
+  for (auto CHI : C) {
+    BasicBlock *Dest = CHI.Dest;
+    // Find if all the edges have values flowing out of BB.
+    bool Found = llvm::any_of(
+        successors(TI), [Dest](const BasicBlock *BB) { return BB == Dest; });
+    if (!Found)
+      return false;
+  }
+  return true;
+}
+
+void GVNHoist::checkSafety(CHIArgs C, BasicBlock *BB, GVNHoist::InsKind K,
+                           SmallVectorImpl<CHIArg> &Safe) {
+  int NumBBsOnAllPaths = MaxNumberOfBBSInPath;
+  for (auto CHI : C) {
+    Instruction *Insn = CHI.I;
+    if (!Insn) // No instruction was inserted in this CHI.
+      continue;
+    if (K == InsKind::Scalar) {
+      if (safeToHoistScalar(BB, Insn->getParent(), NumBBsOnAllPaths))
+        Safe.push_back(CHI);
+    } else {
+      auto *T = BB->getTerminator();
+      if (MemoryUseOrDef *UD = MSSA->getMemoryAccess(Insn))
+        if (safeToHoistLdSt(T, Insn, UD, K, NumBBsOnAllPaths))
+          Safe.push_back(CHI);
+    }
+  }
+}
+
+void GVNHoist::fillRenameStack(BasicBlock *BB, InValuesType &ValueBBs,
+                               GVNHoist::RenameStackType &RenameStack) {
+  auto it1 = ValueBBs.find(BB);
+  if (it1 != ValueBBs.end()) {
+    // Iterate in reverse order to keep lower ranked values on the top.
+    for (std::pair<VNType, Instruction *> &VI : reverse(it1->second)) {
+      // Get the value of instruction I
+      LLVM_DEBUG(dbgs() << "\nPushing on stack: " << *VI.second);
+      RenameStack[VI.first].push_back(VI.second);
+    }
+  }
+}
+
+void GVNHoist::fillChiArgs(BasicBlock *BB, OutValuesType &CHIBBs,
+                           GVNHoist::RenameStackType &RenameStack) {
+  // For each *predecessor* (because Post-DOM) of BB check if it has a CHI
+  for (auto Pred : predecessors(BB)) {
+    auto P = CHIBBs.find(Pred);
+    if (P == CHIBBs.end()) {
+      continue;
+    }
+    LLVM_DEBUG(dbgs() << "\nLooking at CHIs in: " << Pred->getName(););
+    // A CHI is found (BB -> Pred is an edge in the CFG)
+    // Pop the stack until Top(V) = Ve.
+    auto &VCHI = P->second;
+    for (auto It = VCHI.begin(), E = VCHI.end(); It != E;) {
+      CHIArg &C = *It;
+      if (!C.Dest) {
+        auto si = RenameStack.find(C.VN);
+        // The Basic Block where CHI is must dominate the value we want to
+        // track in a CHI. In the PDom walk, there can be values in the
+        // stack which are not control dependent e.g., nested loop.
+        if (si != RenameStack.end() && si->second.size() &&
+            DT->properlyDominates(Pred, si->second.back()->getParent())) {
+          C.Dest = BB;                     // Assign the edge
+          C.I = si->second.pop_back_val(); // Assign the argument
+          LLVM_DEBUG(dbgs()
+                     << "\nCHI Inserted in BB: " << C.Dest->getName() << *C.I
+                     << ", VN: " << C.VN.first << ", " << C.VN.second);
+        }
+        // Move to next CHI of a different value
+        It = std::find_if(It, VCHI.end(), [It](CHIArg &A) { return A != *It; });
+      } else
+        ++It;
+    }
+  }
+}
+
+void GVNHoist::findHoistableCandidates(OutValuesType &CHIBBs,
+                                       GVNHoist::InsKind K,
+                                       HoistingPointList &HPL) {
+  auto cmpVN = [](const CHIArg &A, const CHIArg &B) { return A.VN < B.VN; };
+
+  // CHIArgs now have the outgoing values, so check for anticipability and
+  // accumulate hoistable candidates in HPL.
+  for (std::pair<BasicBlock *, SmallVector<CHIArg, 2>> &A : CHIBBs) {
+    BasicBlock *BB = A.first;
+    SmallVectorImpl<CHIArg> &CHIs = A.second;
+    // Vector of PHIs contains PHIs for different instructions.
+    // Sort the args according to their VNs, such that identical
+    // instructions are together.
+    llvm::stable_sort(CHIs, cmpVN);
+    auto TI = BB->getTerminator();
+    auto B = CHIs.begin();
+    // [PreIt, PHIIt) form a range of CHIs which have identical VNs.
+    auto PHIIt = std::find_if(CHIs.begin(), CHIs.end(),
+                              [B](CHIArg &A) { return A != *B; });
+    auto PrevIt = CHIs.begin();
+    while (PrevIt != PHIIt) {
+      // Collect values which satisfy safety checks.
+      SmallVector<CHIArg, 2> Safe;
+      // We check for safety first because there might be multiple values in
+      // the same path, some of which are not safe to be hoisted, but overall
+      // each edge has at least one value which can be hoisted, making the
+      // value anticipable along that path.
+      checkSafety(make_range(PrevIt, PHIIt), BB, K, Safe);
+
+      // List of safe values should be anticipable at TI.
+      if (valueAnticipable(make_range(Safe.begin(), Safe.end()), TI)) {
+        HPL.push_back({BB, SmallVecInsn()});
+        SmallVecInsn &V = HPL.back().second;
+        for (auto B : Safe)
+          V.push_back(B.I);
+      }
+
+      // Check other VNs
+      PrevIt = PHIIt;
+      PHIIt = std::find_if(PrevIt, CHIs.end(),
+                           [PrevIt](CHIArg &A) { return A != *PrevIt; });
+    }
+  }
+}
+
+bool GVNHoist::allOperandsAvailable(const Instruction *I,
+                                    const BasicBlock *HoistPt) const {
+  for (const Use &Op : I->operands())
+    if (const auto *Inst = dyn_cast<Instruction>(&Op))
+      if (!DT->dominates(Inst->getParent(), HoistPt))
+        return false;
+
+  return true;
+}
+
+bool GVNHoist::allGepOperandsAvailable(const Instruction *I,
+                                       const BasicBlock *HoistPt) const {
+  for (const Use &Op : I->operands())
+    if (const auto *Inst = dyn_cast<Instruction>(&Op))
+      if (!DT->dominates(Inst->getParent(), HoistPt)) {
+        if (const GetElementPtrInst *GepOp =
+                dyn_cast<GetElementPtrInst>(Inst)) {
+          if (!allGepOperandsAvailable(GepOp, HoistPt))
+            return false;
+          // Gep is available if all operands of GepOp are available.
+        } else {
+          // Gep is not available if it has operands other than GEPs that are
+          // defined in blocks not dominating HoistPt.
+          return false;
+        }
+      }
+  return true;
+}
+
+void GVNHoist::makeGepsAvailable(Instruction *Repl, BasicBlock *HoistPt,
+                                 const SmallVecInsn &InstructionsToHoist,
+                                 Instruction *Gep) const {
+  assert(allGepOperandsAvailable(Gep, HoistPt) && "GEP operands not available");
+
+  Instruction *ClonedGep = Gep->clone();
+  for (unsigned i = 0, e = Gep->getNumOperands(); i != e; ++i)
+    if (Instruction *Op = dyn_cast<Instruction>(Gep->getOperand(i))) {
+      // Check whether the operand is already available.
+      if (DT->dominates(Op->getParent(), HoistPt))
+        continue;
+
+      // As a GEP can refer to other GEPs, recursively make all the operands
+      // of this GEP available at HoistPt.
+      if (GetElementPtrInst *GepOp = dyn_cast<GetElementPtrInst>(Op))
+        makeGepsAvailable(ClonedGep, HoistPt, InstructionsToHoist, GepOp);
+    }
+
+  // Copy Gep and replace its uses in Repl with ClonedGep.
+  ClonedGep->insertBefore(HoistPt->getTerminator());
+
+  // Conservatively discard any optimization hints, they may differ on the
+  // other paths.
+  ClonedGep->dropUnknownNonDebugMetadata();
+
+  // If we have optimization hints which agree with each other along different
+  // paths, preserve them.
+  for (const Instruction *OtherInst : InstructionsToHoist) {
+    const GetElementPtrInst *OtherGep;
+    if (auto *OtherLd = dyn_cast<LoadInst>(OtherInst))
+      OtherGep = cast<GetElementPtrInst>(OtherLd->getPointerOperand());
+    else
+      OtherGep = cast<GetElementPtrInst>(
+          cast<StoreInst>(OtherInst)->getPointerOperand());
+    ClonedGep->andIRFlags(OtherGep);
+  }
+
+  // Replace uses of Gep with ClonedGep in Repl.
+  Repl->replaceUsesOfWith(Gep, ClonedGep);
+}
+
+void GVNHoist::updateAlignment(Instruction *I, Instruction *Repl) {
+  if (auto *ReplacementLoad = dyn_cast<LoadInst>(Repl)) {
+    ReplacementLoad->setAlignment(
+        std::min(ReplacementLoad->getAlign(), cast<LoadInst>(I)->getAlign()));
+    ++NumLoadsRemoved;
+  } else if (auto *ReplacementStore = dyn_cast<StoreInst>(Repl)) {
+    ReplacementStore->setAlignment(
+        std::min(ReplacementStore->getAlign(), cast<StoreInst>(I)->getAlign()));
+    ++NumStoresRemoved;
+  } else if (auto *ReplacementAlloca = dyn_cast<AllocaInst>(Repl)) {
+    ReplacementAlloca->setAlignment(std::max(ReplacementAlloca->getAlign(),
+                                             cast<AllocaInst>(I)->getAlign()));
+  } else if (isa<CallInst>(Repl)) {
+    ++NumCallsRemoved;
+  }
+}
+
+unsigned GVNHoist::rauw(const SmallVecInsn &Candidates, Instruction *Repl,
+                        MemoryUseOrDef *NewMemAcc) {
+  unsigned NR = 0;
+  for (Instruction *I : Candidates) {
+    if (I != Repl) {
+      ++NR;
+      updateAlignment(I, Repl);
+      if (NewMemAcc) {
+        // Update the uses of the old MSSA access with NewMemAcc.
+        MemoryAccess *OldMA = MSSA->getMemoryAccess(I);
+        OldMA->replaceAllUsesWith(NewMemAcc);
+        MSSAUpdater->removeMemoryAccess(OldMA);
+      }
+
+      Repl->andIRFlags(I);
+      combineKnownMetadata(Repl, I);
+      I->replaceAllUsesWith(Repl);
+      // Also invalidate the Alias Analysis cache.
+      MD->removeInstruction(I);
+      I->eraseFromParent();
+    }
+  }
+  return NR;
+}
+
+void GVNHoist::raMPHIuw(MemoryUseOrDef *NewMemAcc) {
+  SmallPtrSet<MemoryPhi *, 4> UsePhis;
+  for (User *U : NewMemAcc->users())
+    if (MemoryPhi *Phi = dyn_cast<MemoryPhi>(U))
+      UsePhis.insert(Phi);
+
+  for (MemoryPhi *Phi : UsePhis) {
+    auto In = Phi->incoming_values();
+    if (llvm::all_of(In, [&](Use &U) { return U == NewMemAcc; })) {
+      Phi->replaceAllUsesWith(NewMemAcc);
+      MSSAUpdater->removeMemoryAccess(Phi);
+    }
+  }
+}
+
+unsigned GVNHoist::removeAndReplace(const SmallVecInsn &Candidates,
+                                    Instruction *Repl, BasicBlock *DestBB,
+                                    bool MoveAccess) {
+  MemoryUseOrDef *NewMemAcc = MSSA->getMemoryAccess(Repl);
+  if (MoveAccess && NewMemAcc) {
+    // The definition of this ld/st will not change: ld/st hoisting is
+    // legal when the ld/st is not moved past its current definition.
+    MSSAUpdater->moveToPlace(NewMemAcc, DestBB, MemorySSA::BeforeTerminator);
+  }
+
+  // Replace all other instructions with Repl with memory access NewMemAcc.
+  unsigned NR = rauw(Candidates, Repl, NewMemAcc);
+
+  // Remove MemorySSA phi nodes with the same arguments.
+  if (NewMemAcc)
+    raMPHIuw(NewMemAcc);
+  return NR;
+}
+
+bool GVNHoist::makeGepOperandsAvailable(
+    Instruction *Repl, BasicBlock *HoistPt,
+    const SmallVecInsn &InstructionsToHoist) const {
+  // Check whether the GEP of a ld/st can be synthesized at HoistPt.
+  GetElementPtrInst *Gep = nullptr;
+  Instruction *Val = nullptr;
+  if (auto *Ld = dyn_cast<LoadInst>(Repl)) {
+    Gep = dyn_cast<GetElementPtrInst>(Ld->getPointerOperand());
+  } else if (auto *St = dyn_cast<StoreInst>(Repl)) {
+    Gep = dyn_cast<GetElementPtrInst>(St->getPointerOperand());
+    Val = dyn_cast<Instruction>(St->getValueOperand());
+    // Check that the stored value is available.
+    if (Val) {
+      if (isa<GetElementPtrInst>(Val)) {
+        // Check whether we can compute the GEP at HoistPt.
+        if (!allGepOperandsAvailable(Val, HoistPt))
+          return false;
+      } else if (!DT->dominates(Val->getParent(), HoistPt))
+        return false;
+    }
+  }
+
+  // Check whether we can compute the Gep at HoistPt.
+  if (!Gep || !allGepOperandsAvailable(Gep, HoistPt))
+    return false;
+
+  makeGepsAvailable(Repl, HoistPt, InstructionsToHoist, Gep);
+
+  if (Val && isa<GetElementPtrInst>(Val))
+    makeGepsAvailable(Repl, HoistPt, InstructionsToHoist, Val);
+
+  return true;
+}
+
+std::pair<unsigned, unsigned> GVNHoist::hoist(HoistingPointList &HPL) {
+  unsigned NI = 0, NL = 0, NS = 0, NC = 0, NR = 0;
+  for (const HoistingPointInfo &HP : HPL) {
+    // Find out whether we already have one of the instructions in HoistPt,
+    // in which case we do not have to move it.
+    BasicBlock *DestBB = HP.first;
+    const SmallVecInsn &InstructionsToHoist = HP.second;
+    Instruction *Repl = nullptr;
+    for (Instruction *I : InstructionsToHoist)
+      if (I->getParent() == DestBB)
+        // If there are two instructions in HoistPt to be hoisted in place:
+        // update Repl to be the first one, such that we can rename the uses
+        // of the second based on the first.
+        if (!Repl || firstInBB(I, Repl))
+          Repl = I;
+
+    // Keep track of whether we moved the instruction so we know whether we
+    // should move the MemoryAccess.
+    bool MoveAccess = true;
+    if (Repl) {
+      // Repl is already in HoistPt: it remains in place.
+      assert(allOperandsAvailable(Repl, DestBB) &&
+             "instruction depends on operands that are not available");
+      MoveAccess = false;
+    } else {
+      // When we do not find Repl in HoistPt, select the first in the list
+      // and move it to HoistPt.
+      Repl = InstructionsToHoist.front();
+
+      // We can move Repl in HoistPt only when all operands are available.
+      // The order in which hoistings are done may influence the availability
+      // of operands.
+      if (!allOperandsAvailable(Repl, DestBB)) {
+        // When HoistingGeps there is nothing more we can do to make the
+        // operands available: just continue.
+        if (HoistingGeps)
+          continue;
+
+        // When not HoistingGeps we need to copy the GEPs.
+        if (!makeGepOperandsAvailable(Repl, DestBB, InstructionsToHoist))
+          continue;
+      }
+
+      // Move the instruction at the end of HoistPt.
+      Instruction *Last = DestBB->getTerminator();
+      MD->removeInstruction(Repl);
+      Repl->moveBefore(Last);
+
+      DFSNumber[Repl] = DFSNumber[Last]++;
+    }
+
+    NR += removeAndReplace(InstructionsToHoist, Repl, DestBB, MoveAccess);
+
+    if (isa<LoadInst>(Repl))
+      ++NL;
+    else if (isa<StoreInst>(Repl))
+      ++NS;
+    else if (isa<CallInst>(Repl))
+      ++NC;
+    else // Scalar
+      ++NI;
+  }
+
+  if (MSSA && VerifyMemorySSA)
+    MSSA->verifyMemorySSA();
+
+  NumHoisted += NL + NS + NC + NI;
+  NumRemoved += NR;
+  NumLoadsHoisted += NL;
+  NumStoresHoisted += NS;
+  NumCallsHoisted += NC;
+  return {NI, NL + NC + NS};
+}
+
+std::pair<unsigned, unsigned> GVNHoist::hoistExpressions(Function &F) {
+  InsnInfo II;
+  LoadInfo LI;
+  StoreInfo SI;
+  CallInfo CI;
+  for (BasicBlock *BB : depth_first(&F.getEntryBlock())) {
+    int InstructionNb = 0;
+    for (Instruction &I1 : *BB) {
+      // If I1 cannot guarantee progress, subsequent instructions
+      // in BB cannot be hoisted anyways.
+      if (!isGuaranteedToTransferExecutionToSuccessor(&I1)) {
+        HoistBarrier.insert(BB);
+        break;
+      }
+      // Only hoist the first instructions in BB up to MaxDepthInBB. Hoisting
+      // deeper may increase the register pressure and compilation time.
+      if (MaxDepthInBB != -1 && InstructionNb++ >= MaxDepthInBB)
+        break;
+
+      // Do not value number terminator instructions.
+      if (I1.isTerminator())
+        break;
+
+      if (auto *Load = dyn_cast<LoadInst>(&I1))
+        LI.insert(Load, VN);
+      else if (auto *Store = dyn_cast<StoreInst>(&I1))
+        SI.insert(Store, VN);
+      else if (auto *Call = dyn_cast<CallInst>(&I1)) {
+        if (auto *Intr = dyn_cast<IntrinsicInst>(Call)) {
+          if (isa<DbgInfoIntrinsic>(Intr) ||
+              Intr->getIntrinsicID() == Intrinsic::assume ||
+              Intr->getIntrinsicID() == Intrinsic::sideeffect)
+            continue;
+        }
+        if (Call->mayHaveSideEffects())
+          break;
+
+        if (Call->isConvergent())
+          break;
+
+        CI.insert(Call, VN);
+      } else if (HoistingGeps || !isa<GetElementPtrInst>(&I1))
+        // Do not hoist scalars past calls that may write to memory because
+        // that could result in spills later. geps are handled separately.
+        // TODO: We can relax this for targets like AArch64 as they have more
+        // registers than X86.
+        II.insert(&I1, VN);
+    }
+  }
+
+  HoistingPointList HPL;
+  computeInsertionPoints(II.getVNTable(), HPL, InsKind::Scalar);
+  computeInsertionPoints(LI.getVNTable(), HPL, InsKind::Load);
+  computeInsertionPoints(SI.getVNTable(), HPL, InsKind::Store);
+  computeInsertionPoints(CI.getScalarVNTable(), HPL, InsKind::Scalar);
+  computeInsertionPoints(CI.getLoadVNTable(), HPL, InsKind::Load);
+  computeInsertionPoints(CI.getStoreVNTable(), HPL, InsKind::Store);
+  return hoist(HPL);
+}
 
 } // end namespace llvm
 

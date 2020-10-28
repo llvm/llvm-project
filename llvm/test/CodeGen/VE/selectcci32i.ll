@@ -3,8 +3,6 @@
 define i32 @selectcceq(i32, i32, i32, i32) {
 ; CHECK-LABEL: selectcceq:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw3 killed $sw3 def $sx3
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
 ; CHECK-NEXT:    or %s1, 12, (0)1
 ; CHECK-NEXT:    cmps.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.eq %s3, %s2, %s0
@@ -18,8 +16,6 @@ define i32 @selectcceq(i32, i32, i32, i32) {
 define i32 @selectccne(i32, i32, i32, i32) {
 ; CHECK-LABEL: selectccne:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw3 killed $sw3 def $sx3
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
 ; CHECK-NEXT:    or %s1, 12, (0)1
 ; CHECK-NEXT:    cmps.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.ne %s3, %s2, %s0
@@ -33,8 +29,6 @@ define i32 @selectccne(i32, i32, i32, i32) {
 define i32 @selectccsgt(i32, i32, i32, i32) {
 ; CHECK-LABEL: selectccsgt:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw3 killed $sw3 def $sx3
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
 ; CHECK-NEXT:    or %s1, 12, (0)1
 ; CHECK-NEXT:    cmps.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.gt %s3, %s2, %s0
@@ -48,8 +42,6 @@ define i32 @selectccsgt(i32, i32, i32, i32) {
 define i32 @selectccsge(i32, i32, i32, i32) {
 ; CHECK-LABEL: selectccsge:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw3 killed $sw3 def $sx3
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
 ; CHECK-NEXT:    or %s1, 11, (0)1
 ; CHECK-NEXT:    cmps.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.gt %s3, %s2, %s0
@@ -63,8 +55,6 @@ define i32 @selectccsge(i32, i32, i32, i32) {
 define i32 @selectccslt(i32, i32, i32, i32) {
 ; CHECK-LABEL: selectccslt:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw3 killed $sw3 def $sx3
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
 ; CHECK-NEXT:    or %s1, 12, (0)1
 ; CHECK-NEXT:    cmps.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.lt %s3, %s2, %s0
@@ -78,8 +68,6 @@ define i32 @selectccslt(i32, i32, i32, i32) {
 define i32 @selectccsle(i32, i32, i32, i32) {
 ; CHECK-LABEL: selectccsle:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw3 killed $sw3 def $sx3
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
 ; CHECK-NEXT:    or %s1, 13, (0)1
 ; CHECK-NEXT:    cmps.w.sx %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.lt %s3, %s2, %s0
@@ -93,8 +81,6 @@ define i32 @selectccsle(i32, i32, i32, i32) {
 define i32 @selectccugt(i32, i32, i32, i32) {
 ; CHECK-LABEL: selectccugt:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw3 killed $sw3 def $sx3
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
 ; CHECK-NEXT:    or %s1, 12, (0)1
 ; CHECK-NEXT:    cmpu.w %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.gt %s3, %s2, %s0
@@ -108,8 +94,6 @@ define i32 @selectccugt(i32, i32, i32, i32) {
 define i32 @selectccuge(i32, i32, i32, i32) {
 ; CHECK-LABEL: selectccuge:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw3 killed $sw3 def $sx3
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
 ; CHECK-NEXT:    or %s1, 11, (0)1
 ; CHECK-NEXT:    cmpu.w %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.gt %s3, %s2, %s0
@@ -123,8 +107,6 @@ define i32 @selectccuge(i32, i32, i32, i32) {
 define i32 @selectccult(i32, i32, i32, i32) {
 ; CHECK-LABEL: selectccult:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw3 killed $sw3 def $sx3
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
 ; CHECK-NEXT:    or %s1, 12, (0)1
 ; CHECK-NEXT:    cmpu.w %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.lt %s3, %s2, %s0
@@ -138,8 +120,6 @@ define i32 @selectccult(i32, i32, i32, i32) {
 define i32 @selectccule(i32, i32, i32, i32) {
 ; CHECK-LABEL: selectccule:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw3 killed $sw3 def $sx3
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
 ; CHECK-NEXT:    or %s1, 13, (0)1
 ; CHECK-NEXT:    cmpu.w %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.lt %s3, %s2, %s0
@@ -153,8 +133,6 @@ define i32 @selectccule(i32, i32, i32, i32) {
 define i32 @selectccugt2(i32, i32, i32, i32) {
 ; CHECK-LABEL: selectccugt2:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw3 killed $sw3 def $sx3
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
 ; CHECK-NEXT:    or %s1, 12, (0)1
 ; CHECK-NEXT:    cmpu.w %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.gt %s3, %s2, %s0
@@ -168,8 +146,6 @@ define i32 @selectccugt2(i32, i32, i32, i32) {
 define i32 @selectccuge2(i32, i32, i32, i32) {
 ; CHECK-LABEL: selectccuge2:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw3 killed $sw3 def $sx3
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
 ; CHECK-NEXT:    or %s1, 11, (0)1
 ; CHECK-NEXT:    cmpu.w %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.gt %s3, %s2, %s0
@@ -183,8 +159,6 @@ define i32 @selectccuge2(i32, i32, i32, i32) {
 define i32 @selectccult2(i32, i32, i32, i32) {
 ; CHECK-LABEL: selectccult2:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw3 killed $sw3 def $sx3
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
 ; CHECK-NEXT:    or %s1, 12, (0)1
 ; CHECK-NEXT:    cmpu.w %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.lt %s3, %s2, %s0
@@ -198,8 +172,6 @@ define i32 @selectccult2(i32, i32, i32, i32) {
 define i32 @selectccule2(i32, i32, i32, i32) {
 ; CHECK-LABEL: selectccule2:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw3 killed $sw3 def $sx3
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
 ; CHECK-NEXT:    or %s1, 13, (0)1
 ; CHECK-NEXT:    cmpu.w %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.w.lt %s3, %s2, %s0

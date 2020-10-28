@@ -25,8 +25,8 @@ int main(int argc, const char *argv[]) {
 // ZERO:  SEGV on unknown address 0x000000000000 (pc
 // LOW1:  SEGV on unknown address 0x000000000fff (pc
 // LOW2:  SEGV on unknown address 0x000000001000 (pc
-// HIGH:  SEGV on unknown address (pc
-// MAX:   SEGV on unknown address (pc
+// HIGH:  {{BUS|SEGV}} on unknown address (pc
+// MAX:   {{BUS|SEGV}} on unknown address (pc
 
 // HINT-PAGE0-NOT: Hint: this fault was caused by a dereference of a high value address
 // HINT-PAGE0:     Hint: address points to the zero page.
@@ -40,8 +40,8 @@ int main(int argc, const char *argv[]) {
 // ZERO:  SCARINESS: 10 (null-deref)
 // LOW1:  SCARINESS: 10 (null-deref)
 // LOW2:  SCARINESS: 20 (wild-addr-read)
-// HIGH:  SCARINESS: 20 (wild-addr-read)
-// MAX:   SCARINESS: 20 (wild-addr-read)
+// HIGH:  SCARINESS: {{(20 \(wild-addr-read\))|(60 \(wild-jump\))}}
+// MAX:   SCARINESS: {{(20 \(wild-addr-read\))|(60 \(wild-jump\))}}
 
 // TODO: Currently, register values are only printed on Mac.  Once this changes,
 //       remove the 'TODO_' prefix in the following lines.

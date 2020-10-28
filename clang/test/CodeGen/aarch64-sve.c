@@ -1,21 +1,5 @@
-// RUN: not %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve \
-// RUN:  -emit-llvm -o - %s -debug-info-kind=limited 2>&1 | FileCheck %s -check-prefix=CHECK-DEBUG
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve \
 // RUN:  -emit-llvm -o - %s 2>&1 | FileCheck %s -check-prefix=CHECK
-
-// CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVInt8_t'
-// CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVInt16_t'
-// CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVInt32_t'
-// CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVInt64_t'
-// CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVUint8_t'
-// CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVUint16_t'
-// CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVUint32_t'
-// CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVUint64_t'
-// CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVFloat16_t'
-// CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVFloat32_t'
-// CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVFloat64_t'
-// CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVBFloat16_t'
-// CHECK-DEBUG: cannot yet generate debug info for SVE type '__SVBool_t'
 
 // CHECK: @ptr = global <vscale x 16 x i8>* null, align 8
 // CHECK: %s8 = alloca <vscale x 16 x i8>, align 16

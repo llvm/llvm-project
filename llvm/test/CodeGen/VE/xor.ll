@@ -112,7 +112,9 @@ define zeroext i32 @funci32z(i32 zeroext %a) {
 define i32 @funci32_another(i32 %0) {
 ; CHECK-LABEL: funci32_another:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    xor %s0, %s0, (33)1
+; CHECK-NEXT:    lea %s1, -2147483648
+; CHECK-NEXT:    and %s1, %s1, (32)0
+; CHECK-NEXT:    xor %s0, %s0, %s1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = xor i32 %0, -2147483648
   ret i32 %2

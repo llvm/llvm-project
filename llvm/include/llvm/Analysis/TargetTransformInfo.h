@@ -128,6 +128,11 @@ public:
 
   IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
                           unsigned Factor);
+  IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
+                          ElementCount Factor)
+      : IntrinsicCostAttributes(Id, CI, Factor.getKnownMinValue()) {
+    assert(!Factor.isScalable());
+  }
 
   IntrinsicCostAttributes(Intrinsic::ID Id, const CallBase &CI,
                           unsigned Factor, unsigned ScalarCost);
@@ -1283,6 +1288,20 @@ public:
   bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
                              ReductionFlags Flags) const;
 
+  /// \returns True if the target prefers reductions select kept in the loop
+  /// when tail folding. i.e.
+  /// loop:
+  ///   p = phi (0, s)
+  ///   a = add (p, x)
+  ///   s = select (mask, a, p)
+  /// vecreduce.add(s)
+  ///
+  /// As opposed to the normal scheme of p = phi (0, a) which allows the select
+  /// to be pulled out of the loop. If the select(.., add, ..) can be predicated
+  /// by the target, this can lead to cleaner code generation.
+  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
+                                       ReductionFlags Flags) const;
+
   /// \returns True if the target wants to expand the given reduction intrinsic
   /// into a shuffle sequence.
   bool shouldExpandReduction(const IntrinsicInst *II) const;
@@ -1573,6 +1592,8 @@ public:
                                         VectorType *VecTy) const = 0;
   virtual bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
                                      ReductionFlags) const = 0;
+  virtual bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
+                                               ReductionFlags) const = 0;
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const = 0;
   virtual unsigned getGISelRematGlobalCost() const = 0;
   virtual bool hasActiveVectorLength() const = 0;
@@ -2072,6 +2093,10 @@ public:
   bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
                              ReductionFlags Flags) const override {
     return Impl.useReductionIntrinsic(Opcode, Ty, Flags);
+  }
+  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
+                                       ReductionFlags Flags) const override {
+    return Impl.preferPredicatedReductionSelect(Opcode, Ty, Flags);
   }
   bool shouldExpandReduction(const IntrinsicInst *II) const override {
     return Impl.shouldExpandReduction(II);

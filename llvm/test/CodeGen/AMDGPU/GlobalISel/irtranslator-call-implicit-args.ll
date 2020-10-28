@@ -115,7 +115,7 @@ define void @test_func_call_external_void_func_i32() #0 {
   ; GFX900-LABEL: name: test_func_call_external_void_func_i32
   ; GFX900: bb.1 (%ir-block.0):
   ; GFX900:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
-  ; GFX900:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr31
+  ; GFX900:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
   ; GFX900:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr14
   ; GFX900:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr13
   ; GFX900:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr12
@@ -153,7 +153,7 @@ define void @test_func_call_external_void_func_i32() #0 {
   ; GFX908-LABEL: name: test_func_call_external_void_func_i32
   ; GFX908: bb.1 (%ir-block.0):
   ; GFX908:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
-  ; GFX908:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr31
+  ; GFX908:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
   ; GFX908:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr14
   ; GFX908:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr13
   ; GFX908:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr12
@@ -373,7 +373,7 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX900-LABEL: name: test_func_call_external_void_func_v32i32
   ; GFX900: bb.1 (%ir-block.1):
   ; GFX900:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
-  ; GFX900:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr31
+  ; GFX900:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
   ; GFX900:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr14
   ; GFX900:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr13
   ; GFX900:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr12
@@ -498,7 +498,7 @@ define void @test_func_call_external_void_func_v32i32([17 x i8]) #0 {
   ; GFX908-LABEL: name: test_func_call_external_void_func_v32i32
   ; GFX908: bb.1 (%ir-block.1):
   ; GFX908:   liveins: $sgpr12, $sgpr13, $sgpr14, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
-  ; GFX908:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr31
+  ; GFX908:   [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr31
   ; GFX908:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr14
   ; GFX908:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr13
   ; GFX908:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr12

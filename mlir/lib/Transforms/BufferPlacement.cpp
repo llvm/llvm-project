@@ -57,6 +57,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/BufferPlacement.h"
+#include "PassDetail.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
@@ -264,12 +265,15 @@ private:
       opInterface.getEffects(effects);
 
       SmallVector<MemoryEffects::EffectInstance, 2> allocateResultEffects;
-      llvm::copy_if(effects, std::back_inserter(allocateResultEffects),
-                    [=](MemoryEffects::EffectInstance &it) {
-                      Value value = it.getValue();
-                      return isa<MemoryEffects::Allocate>(it.getEffect()) &&
-                             value && value.isa<OpResult>();
-                    });
+      llvm::copy_if(
+          effects, std::back_inserter(allocateResultEffects),
+          [=](MemoryEffects::EffectInstance &it) {
+            Value value = it.getValue();
+            return isa<MemoryEffects::Allocate>(it.getEffect()) && value &&
+                   value.isa<OpResult>() &&
+                   it.getResource() !=
+                       SideEffects::AutomaticAllocationScopeResource::get();
+          });
       // If there is one result only, we will be able to move the allocation and
       // (possibly existing) deallocation ops.
       if (allocateResultEffects.size() != 1)
@@ -666,8 +670,7 @@ private:
 /// The actual buffer placement pass that moves alloc and dealloc nodes into
 /// the right positions. It uses the algorithm described at the top of the
 /// file.
-struct BufferPlacementPass
-    : mlir::PassWrapper<BufferPlacementPass, FunctionPass> {
+struct BufferPlacementPass : BufferPlacementBase<BufferPlacementPass> {
 
   void runOnFunction() override {
     // Place all required alloc, copy and dealloc nodes.

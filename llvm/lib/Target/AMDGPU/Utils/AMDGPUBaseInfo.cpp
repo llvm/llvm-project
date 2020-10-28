@@ -578,7 +578,7 @@ bool isReadOnlySegment(const GlobalValue *GV) {
 }
 
 bool shouldEmitConstantsToTextSection(const Triple &TT) {
-  return TT.getOS() == Triple::AMDPAL || TT.getArch() == Triple::r600;
+  return TT.getArch() == Triple::r600;
 }
 
 int getIntegerAttribute(const Function &F, StringRef Name, int Default) {

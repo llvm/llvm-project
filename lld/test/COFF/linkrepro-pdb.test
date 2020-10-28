@@ -14,7 +14,7 @@ RUN: cat repro/response.txt | FileCheck -check-prefix=PDB %s
 PDB: -out:linkrepro-pdb.test.tmp.exe
 PDB-NEXT: -pdb:linkrepro-pdb.test.tmp.pdb
 
-RUN: yaml2obj < %p/Inputs/export.yaml > %t1.obj
+RUN: yaml2obj %p/Inputs/export.yaml -o %t1.obj
 RUN: lld-link /out:%t1.dll /dll %t1.obj /implib:%t1.lib /export:exportfn1 /export:exportfn2 /linkrepro:.
 RUN: tar xf repro.tar
 RUN: cat repro/response.txt | FileCheck -check-prefix=IMP %s

@@ -1,4 +1,4 @@
-## Test the behaviour of --section-mapping when there are no section headers in an object.
+## Test the behaviour of --section-mapping when there are no program headers in an object.
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readelf --section-mapping %t | FileCheck %s --strict-whitespace --match-full-lines
 
@@ -9,10 +9,9 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS

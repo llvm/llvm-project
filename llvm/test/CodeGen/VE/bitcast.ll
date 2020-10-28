@@ -22,9 +22,7 @@ define dso_local double @bitcastl2d(i64 %x) {
 define dso_local float @bitcastw2f(i32 %x) {
 ; CHECK-LABEL: bitcastw2f:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:      # kill: def $sw0 killed $sw0 def $sx0
 ; CHECK-NEXT:    sll %s0, %s0, 32
-; CHECK-NEXT:      # kill: def $sf0 killed $sf0 killed $sx0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = bitcast i32 %x to float
   ret float %r
@@ -34,9 +32,7 @@ define dso_local float @bitcastw2f(i32 %x) {
 define dso_local i32 @bitcastf2w(float %x) {
 ; CHECK-LABEL: bitcastf2w:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:      # kill: def $sf0 killed $sf0 def $sx0
 ; CHECK-NEXT:    sra.l %s0, %s0, 32
-; CHECK-NEXT:      # kill: def $sw0 killed $sw0 killed $sx0
 ; CHECK-NEXT:    or %s11, 0, %s9
   %r = bitcast float %x to i32
   ret i32 %r

@@ -13,7 +13,7 @@
 ;     bpf_log(__builtin_btf_type_id(tmp__abc, 0), &tmp__abc, sizeof(tmp__abc));
 ;   }
 ;   void prog2() {
-;     bpf_log(__builtin_btf_type_id(&tmp__abc, 1), &tmp__abc, sizeof(tmp__abc));
+;     bpf_log(__builtin_btf_type_id(&tmp__abc, 0), &tmp__abc, sizeof(tmp__abc));
 ;   }
 ;   void prog3() {
 ;     bpf_log(__builtin_btf_type_id(tmp__abc.f1[3], 1), &tmp__abc, sizeof(tmp__abc));
@@ -21,25 +21,23 @@
 ; Compilation flag:
 ;   clang -target bpf -O2 -g -S -emit-llvm test.c
 
-%struct.anon = type { [100 x i8], i32 }
-
 @tmp__abc = dso_local global { <{ i8, i8, [98 x i8] }>, i32 } { <{ i8, i8, [98 x i8] }> <{ i8 1, i8 3, [98 x i8] zeroinitializer }>, i32 0 }, align 4, !dbg !0
 
 ; Function Attrs: nounwind
 define dso_local void @prog1() local_unnamed_addr #0 !dbg !28 {
 entry:
-  %0 = tail call i32 @llvm.bpf.btf.type.id.p0s_struct.anons.i32(%struct.anon* bitcast ({ <{ i8, i8, [98 x i8] }>, i32 }* @tmp__abc to %struct.anon*), i32 1, i64 0), !dbg !31, !llvm.preserve.access.index !7
+  %0 = tail call i32 @llvm.bpf.btf.type.id(i32 0, i64 0), !dbg !31, !llvm.preserve.access.index !7
   %call = tail call i32 inttoptr (i64 999 to i32 (i32, i8*, i32)*)(i32 %0, i8* getelementptr inbounds ({ <{ i8, i8, [98 x i8] }>, i32 }, { <{ i8, i8, [98 x i8] }>, i32 }* @tmp__abc, i64 0, i32 0, i32 0), i32 104) #2, !dbg !32
   ret void, !dbg !33
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.bpf.btf.type.id.p0s_struct.anons.i32(%struct.anon*, i32, i64) #1
+declare i32 @llvm.bpf.btf.type.id(i32, i64) #1
 
 ; Function Attrs: nounwind
 define dso_local void @prog2() local_unnamed_addr #0 !dbg !34 {
 entry:
-  %0 = tail call i32 @llvm.bpf.btf.type.id.p0s_struct.anons.i32(%struct.anon* bitcast ({ <{ i8, i8, [98 x i8] }>, i32 }* @tmp__abc to %struct.anon*), i32 0, i64 1), !dbg !35, !llvm.preserve.access.index !6
+  %0 = tail call i32 @llvm.bpf.btf.type.id(i32 1, i64 0), !dbg !35, !llvm.preserve.access.index !6
   %call = tail call i32 inttoptr (i64 999 to i32 (i32, i8*, i32)*)(i32 %0, i8* getelementptr inbounds ({ <{ i8, i8, [98 x i8] }>, i32 }, { <{ i8, i8, [98 x i8] }>, i32 }* @tmp__abc, i64 0, i32 0, i32 0), i32 104) #2, !dbg !36
   ret void, !dbg !37
 }
@@ -47,56 +45,55 @@ entry:
 ; Function Attrs: nounwind
 define dso_local void @prog3() local_unnamed_addr #0 !dbg !38 {
 entry:
-  %0 = tail call i32 @llvm.bpf.btf.type.id.p0i8.i32(i8* getelementptr inbounds ({ <{ i8, i8, [98 x i8] }>, i32 }, { <{ i8, i8, [98 x i8] }>, i32 }* @tmp__abc, i64 0, i32 0, i32 2, i64 1), i32 1, i64 1), !dbg !39, !llvm.preserve.access.index !11
+  %0 = tail call i32 @llvm.bpf.btf.type.id(i32 2, i64 1), !dbg !39, !llvm.preserve.access.index !11
   %call = tail call i32 inttoptr (i64 999 to i32 (i32, i8*, i32)*)(i32 %0, i8* getelementptr inbounds ({ <{ i8, i8, [98 x i8] }>, i32 }, { <{ i8, i8, [98 x i8] }>, i32 }* @tmp__abc, i64 0, i32 0, i32 0), i32 104) #2, !dbg !40
   ret void, !dbg !41
 }
 
-; CHECK-LABEL:   prog1
-; CHECK:         r1 = 3
-; CHECK-LABEL:   prog2
-; CHECK:         r1 = 10
-; CHECK-LABEL:   prog3
-; CHECK:         r1 = 4
-;
-; CHECK:         .long   0                       # BTF_KIND_STRUCT(id = 3)
-; CHECK-NEXT:    .long   67108866                # 0x4000002
-; CHECK-NEXT:    .long   104
-; CHECK-NEXT:    .long   13
-; CHECK-NEXT:    .long   5
-; CHECK-NEXT:    .long   0                       # 0x0
-; CHECK-NEXT:    .long   16
-; CHECK-NEXT:    .long   7
-; CHECK-NEXT:    .long   800                     # 0x320
-; CHECK-NEXT:    .long   19                      # BTF_KIND_INT(id = 4)
-; CHECK-NEXT:    .long   16777216                # 0x1000000
-; CHECK-NEXT:    .long   1
-; CHECK-NEXT:    .long   16777224                # 0x1000008
-; CHECK:         .long   0                       # BTF_KIND_PTR(id = 10)
-; CHECK-NEXT:    .long   33554432                # 0x2000000
-; CHECK-NEXT:    .long   3
+; CHECK-LABEL:       prog1
+; CHECK:             r1 = 3
+; CHECK-LABEL:       prog2
+; CHECK:             r1 = 10
+; CHECK-LABEL:       prog3
+; CHECK:             r1 = 4
 
-; CHECK:         .long   16                      # FieldReloc
-; CHECK-NEXT:    .long   {{[0-9]+}}              # Field reloc section string offset={{[0-9]+}}
-; CHECK-NEXT:    .long   3
-; CHECK-NEXT:    .long   .Ltmp{{[0-9]+}}
-; CHECK-NEXT:    .long   3
-; CHECK-NEXT:    .long   {{[0-9]+}}
-; CHECK-NEXT:    .long   6
-; CHECK-NEXT:    .long   .Ltmp{{[0-9]+}}
-; CHECK-NEXT:    .long   10
-; CHECK-NEXT:    .long   {{[0-9]+}}
-; CHECK-NEXT:    .long   7
-; CHECK-NEXT:    .long   .Ltmp{{[0-9]+}}
-; CHECK-NEXT:    .long   4
-; CHECK-NEXT:    .long   {{[0-9]+}}
-; CHECK-NEXT:    .long   7
+; CHECK:             .long   0                               # BTF_KIND_STRUCT(id = 3)
+; CHECK-NEXT:        .long   67108866                        # 0x4000002
+; CHECK-NEXT:        .long   104
+; CHECK-NEXT:        .long   13
+; CHECK-NEXT:        .long   5
+; CHECK-NEXT:        .long   0                               # 0x0
+; CHECK-NEXT:        .long   16
+; CHECK-NEXT:        .long   7
+; CHECK-NEXT:        .long   800                             # 0x320
+; CHECK:             .long   19                              # BTF_KIND_INT(id = 4)
+; CHECK:             .long   0                               # BTF_KIND_PTR(id = 10)
+; CHECK-NEXT:        .long   33554432                        # 0x2000000
+; CHECK-NEXT:        .long   3
 
+; CHECK:             .ascii  ".text"                         # string offset=7
+; CHECK:             .ascii  "f1"                            # string offset=13
+; CHECK:             .ascii  "f2"                            # string offset=16
+; CHECK:             .ascii  "char"                          # string offset=19
+; CHECK:             .byte   48                              # string offset=48
 
-; Function Attrs: nounwind readnone
-declare i32 @llvm.bpf.btf.type.id.p0i8.i32(i8*, i32, i64) #1
+; CHECK:             .long   16                              # FieldReloc
+; CHECK-NEXT:        .long   7                               # Field reloc section string offset=7
+; CHECK-NEXT:        .long   3
+; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   3
+; CHECK-NEXT:        .long   48
+; CHECK-NEXT:        .long   6
+; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   10
+; CHECK-NEXT:        .long   48
+; CHECK-NEXT:        .long   6
+; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   4
+; CHECK-NEXT:        .long   48
+; CHECK-NEXT:        .long   7
 
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
 
@@ -106,7 +103,7 @@ attributes #2 = { nounwind }
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "tmp__abc", scope: !2, file: !3, line: 5, type: !7, isLocal: false, isDefinition: true)
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 11.0.0 (https://github.com/llvm/llvm-project.git 95253d8f16b8085b4b85cb3a6106ccbfe8a6d9b2)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !5, globals: !16, splitDebugInlining: false, nameTableKind: None)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 12.0.0 (https://github.com/llvm/llvm-project.git f39aae11dca3f8f8c2c755a871726ed2fa82fd57)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, retainedTypes: !5, globals: !16, splitDebugInlining: false, nameTableKind: None)
 !3 = !DIFile(filename: "test.c", directory: "/tmp/home/yhs/work/tests/core")
 !4 = !{}
 !5 = !{!6, !11}
@@ -131,7 +128,7 @@ attributes #2 = { nounwind }
 !24 = !{i32 7, !"Dwarf Version", i32 4}
 !25 = !{i32 2, !"Debug Info Version", i32 3}
 !26 = !{i32 1, !"wchar_size", i32 4}
-!27 = !{!"clang version 11.0.0 (https://github.com/llvm/llvm-project.git 95253d8f16b8085b4b85cb3a6106ccbfe8a6d9b2)"}
+!27 = !{!"clang version 12.0.0 (https://github.com/llvm/llvm-project.git f39aae11dca3f8f8c2c755a871726ed2fa82fd57)"}
 !28 = distinct !DISubprogram(name: "prog1", scope: !3, file: !3, line: 6, type: !29, scopeLine: 6, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !4)
 !29 = !DISubroutineType(types: !30)
 !30 = !{null}

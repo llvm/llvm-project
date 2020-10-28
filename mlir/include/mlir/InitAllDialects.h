@@ -22,7 +22,10 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/PDL/IR/PDL.h"
+#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SDBM/SDBMDialect.h"
@@ -34,29 +37,37 @@
 
 namespace mlir {
 
+// Add all the MLIR dialects to the provided registry.
+inline void registerAllDialects(DialectRegistry &registry) {
+  // clang-format off
+  registry.insert<acc::OpenACCDialect,
+                  AffineDialect,
+                  avx512::AVX512Dialect,
+                  gpu::GPUDialect,
+                  LLVM::LLVMAVX512Dialect,
+                  LLVM::LLVMDialect,
+                  linalg::LinalgDialect,
+                  scf::SCFDialect,
+                  omp::OpenMPDialect,
+                  pdl::PDLDialect,
+                  pdl_interp::PDLInterpDialect,
+                  quant::QuantizationDialect,
+                  spirv::SPIRVDialect,
+                  StandardOpsDialect,
+                  vector::VectorDialect,
+                  NVVM::NVVMDialect,
+                  ROCDL::ROCDLDialect,
+                  SDBMDialect,
+                  shape::ShapeDialect>();
+  // clang-format on
+}
+
 // This function should be called before creating any MLIRContext if one expect
 // all the possible dialects to be made available to the context automatically.
 inline void registerAllDialects() {
-  static bool init_once = []() {
-    registerDialect<AffineDialect>();
-    registerDialect<avx512::AVX512Dialect>();
-    registerDialect<gpu::GPUDialect>();
-    registerDialect<LLVM::LLVMAVX512Dialect>();
-    registerDialect<LLVM::LLVMDialect>();
-    registerDialect<linalg::LinalgDialect>();
-    registerDialect<scf::SCFDialect>();
-    registerDialect<omp::OpenMPDialect>();
-    registerDialect<quant::QuantizationDialect>();
-    registerDialect<spirv::SPIRVDialect>();
-    registerDialect<StandardOpsDialect>();
-    registerDialect<vector::VectorDialect>();
-    registerDialect<NVVM::NVVMDialect>();
-    registerDialect<ROCDL::ROCDLDialect>();
-    registerDialect<SDBMDialect>();
-    registerDialect<shape::ShapeDialect>();
-    return true;
-  }();
-  (void)init_once;
+  static bool initOnce =
+      ([]() { registerAllDialects(getGlobalDialectRegistry()); }(), true);
+  (void)initOnce;
 }
 } // namespace mlir
 

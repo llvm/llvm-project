@@ -25,24 +25,24 @@
 ; BB-SECTIONS-ASM: .Ltmp{{[0-9]+}}:
 ; BB-SECTIONS-ASM-NEXT: .loc 1 2 7 is_stmt
 ; BB-SECTIONS-ASM: _Z3fooi.1:
-; BB-SECTIONS-ASM: .Ltmp{{[0-9]+}}:
-; BB-SECTIONS-ASM: .size	_Z3fooi.1, .Ltmp{{[0-9]+}}-_Z3fooi.1
+; BB-SECTIONS-ASM: .LBB_END0_{{[0-9]+}}:
+; BB-SECTIONS-ASM: .size	_Z3fooi.1, .LBB_END0_{{[0-9]+}}-_Z3fooi.1
 ; BB-SECTIONS-ASM: _Z3fooi.2:
 ; BB-SECTIONS-ASM: .Ltmp{{[0-9]+}}:
-; BB-SECTIONS-ASM-NEXT: .Ltmp{{[0-9]+}}:
-; BB-SECTIONS-ASM: .size	_Z3fooi.2, .Ltmp{{[0-9]+}}-_Z3fooi.2
+; BB-SECTIONS-ASM-NEXT: .LBB_END0_{{[0-9]+}}:
+; BB-SECTIONS-ASM: .size	_Z3fooi.2, .LBB_END0_{{[0-9]+}}-_Z3fooi.2
 ; BB-SECTIONS-ASM: _Z3fooi.3:
 ; BB-SECTIONS-ASM: .Ltmp{{[0-9]+}}:
-; BB-SECTIONS-ASM-NEXT: .Ltmp{{[0-9]+}}:
-; BB-SECTIONS-ASM: .size	_Z3fooi.3, .Ltmp{{[0-9]+}}-_Z3fooi.3
+; BB-SECTIONS-ASM-NEXT: .LBB_END0_{{[0-9]+}}:
+; BB-SECTIONS-ASM: .size	_Z3fooi.3, .LBB_END0_{{[0-9]+}}-_Z3fooi.3
 ; BB-SECTIONS-ASM: .Lfunc_end0:
 ; BB-SECTIONS-ASM: .Ldebug_ranges0:
 ; BB-SECTIONS-ASM-NEXT:	.quad	_Z3fooi.1
-; BB-SECTIONS-ASM-NEXT:	.quad	.Ltmp{{[0-9]+}}
+; BB-SECTIONS-ASM-NEXT:	.quad	.LBB_END0_{{[0-9]+}}
 ; BB-SECTIONS-ASM-NEXT:	.quad	_Z3fooi.2
-; BB-SECTIONS-ASM-NEXT:	.quad	.Ltmp{{[0-9]+}}
+; BB-SECTIONS-ASM-NEXT:	.quad	.LBB_END0_{{[0-9]+}}
 ; BB-SECTIONS-ASM-NEXT:	.quad	_Z3fooi.3
-; BB-SECTIONS-ASM-NEXT:	.quad	.Ltmp{{[0-9]+}}
+; BB-SECTIONS-ASM-NEXT:	.quad	.LBB_END0_{{[0-9]+}}
 ; BB-SECTIONS-ASM-NEXT:	.quad	.Lfunc_begin0
 ; BB-SECTIONS-ASM-NEXT:	.quad	.Lfunc_end0
 ; BB-SECTIONS-ASM-NEXT:	.quad	0

@@ -51,7 +51,8 @@ public:
   /// StackSafety assumes that missing parameter information means possibility
   /// of access to the parameter with any offset, so we can correctly link
   /// code without StackSafety information, e.g. non-ThinLTO.
-  std::vector<FunctionSummary::ParamAccess> getParamAccesses() const;
+  std::vector<FunctionSummary::ParamAccess>
+  getParamAccesses(ModuleSummaryIndex &Index) const;
 };
 
 class StackSafetyGlobalInfo {

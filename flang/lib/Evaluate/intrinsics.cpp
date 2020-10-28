@@ -30,7 +30,7 @@ class FoldingContext;
 
 // This file defines the supported intrinsic procedures and implements
 // their recognition and validation.  It is largely table-driven.  See
-// documentation/intrinsics.md and section 16 of the Fortran 2018 standard
+// docs/intrinsics.md and section 16 of the Fortran 2018 standard
 // for full details on each of the intrinsics.  Be advised, they have
 // complicated details, and the design of these tables has to accommodate
 // that complexity.

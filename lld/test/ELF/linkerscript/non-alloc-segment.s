@@ -29,7 +29,7 @@
 # CHECK-NEXT:   00     .text
 # CHECK-NEXT:   01     .foo
 
-# PHDR: Type:  (0x12345678)
+# PHDR:      Type: Unknown (0x12345678)
 # PHDR-NEXT: Offset: 0x1004
 # PHDR-NEXT: VirtualAddress
 # PHDR-NEXT: PhysicalAddress

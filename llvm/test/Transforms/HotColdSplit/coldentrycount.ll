@@ -1,13 +1,15 @@
+; REQUIRES: x86-registered-target
+; RUN: opt -hotcoldsplit -hotcoldsplit-threshold=0 -codegenprepare -S < %s | FileCheck %s
+
 ; Test to ensure that split cold function gets 0 entry count profile
 ; metadata when compiling with pgo.
-
-; RUN: opt -hotcoldsplit -hotcoldsplit-threshold=0 -S < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
 
-; CHECK-LABEL: @fun
+; CHECK: define {{.*}} @fun{{.*}} ![[HOTPROF:[0-9]+]] {{.*}}section_prefix ![[LIKELY:[0-9]+]]
 ; CHECK: call void @fun.cold.1
+
 define void @fun() !prof !14 {
 entry:
   br i1 undef, label %if.then, label %if.else
@@ -22,8 +24,12 @@ if.else:
 
 declare void @sink() cold
 
-; CHECK: define {{.*}} @fun.cold.1{{.*}} ![[PROF:[0-9]+]]
+; CHECK: define {{.*}} @fun.cold.1{{.*}} ![[PROF:[0-9]+]] {{.*}}section_prefix ![[UNLIKELY:[0-9]+]]
+
+; CHECK: ![[HOTPROF]] = !{!"function_entry_count", i64 100}
+; CHECK: ![[LIKELY]] = !{!"function_section_prefix", !".hot"}
 ; CHECK: ![[PROF]] = !{!"function_entry_count", i64 0}
+; CHECK: ![[UNLIKELY]] = !{!"function_section_prefix", !".unlikely"}
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
@@ -41,3 +47,6 @@ declare void @sink() cold
 !12 = !{i32 999000, i64 100, i32 1}
 !13 = !{i32 999999, i64 1, i32 2}
 !14 = !{!"function_entry_count", i64 100}
+!15 = !{!"function_section_prefix", !".hot"}
+!16 = !{!"function_entry_count", i64 0}
+!17 = !{!"function_section_prefix", !".unlikely"}

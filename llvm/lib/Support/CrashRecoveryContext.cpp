@@ -9,14 +9,12 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ExitCodes.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadLocal.h"
 #include <mutex>
 #include <setjmp.h>
-#if LLVM_ON_UNIX
-#include <sysexits.h> // EX_IOERR
-#endif
 
 using namespace llvm;
 

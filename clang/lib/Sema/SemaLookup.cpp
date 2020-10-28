@@ -2981,7 +2981,6 @@ ObjCProtocolDecl *Sema::LookupProtocol(IdentifierInfo *II,
 }
 
 void Sema::LookupOverloadedOperatorName(OverloadedOperatorKind Op, Scope *S,
-                                        QualType T1, QualType T2,
                                         UnresolvedSetImpl &Functions) {
   // C++ [over.match.oper]p3:
   //     -- The set of non-member candidates is the result of the

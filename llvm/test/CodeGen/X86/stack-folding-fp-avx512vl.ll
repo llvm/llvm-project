@@ -249,12 +249,12 @@ define i8 @stack_fold_cmppd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %res = call <2 x i1> @llvm.x86.avx512.cmp.pd.128(<2 x double> %a0, <2 x double> %a1, i32 0)
+  %res = call <2 x i1> @llvm.x86.avx512.mask.cmp.pd.128(<2 x double> %a0, <2 x double> %a1, i32 0, <2 x i1> <i1 true, i1 true>)
   %2 = shufflevector <2 x i1> %res, <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
   %3 = bitcast <8 x i1> %2 to i8
   ret i8 %3
 }
-declare <2 x i1> @llvm.x86.avx512.cmp.pd.128(<2 x double>, <2 x double>, i32)
+declare <2 x i1> @llvm.x86.avx512.mask.cmp.pd.128(<2 x double>, <2 x double>, i32, <2 x i1>)
 
 define i8 @stack_fold_cmppd_ymm(<4 x double> %a0, <4 x double> %a1) {
 ; CHECK-LABEL: stack_fold_cmppd_ymm:
@@ -269,12 +269,12 @@ define i8 @stack_fold_cmppd_ymm(<4 x double> %a0, <4 x double> %a1) {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %res = call <4 x i1> @llvm.x86.avx512.cmp.pd.256(<4 x double> %a0, <4 x double> %a1, i32 0)
+  %res = call <4 x i1> @llvm.x86.avx512.mask.cmp.pd.256(<4 x double> %a0, <4 x double> %a1, i32 0, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
   %2 = shufflevector <4 x i1> %res, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %3 = bitcast <8 x i1> %2 to i8
   ret i8 %3
 }
-declare <4 x i1> @llvm.x86.avx512.cmp.pd.256(<4 x double>, <4 x double>, i32)
+declare <4 x i1> @llvm.x86.avx512.mask.cmp.pd.256(<4 x double>, <4 x double>, i32, <4 x i1>)
 
 define i8 @stack_fold_cmpps(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: stack_fold_cmpps:
@@ -288,12 +288,12 @@ define i8 @stack_fold_cmpps(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %res = call <4 x i1> @llvm.x86.avx512.cmp.ps.128(<4 x float> %a0, <4 x float> %a1, i32 0)
+  %res = call <4 x i1> @llvm.x86.avx512.mask.cmp.ps.128(<4 x float> %a0, <4 x float> %a1, i32 0, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
   %2 = shufflevector <4 x i1> %res, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %3 = bitcast <8 x i1> %2 to i8
   ret i8 %3
 }
-declare <4 x i1> @llvm.x86.avx512.cmp.ps.128(<4 x float>, <4 x float>, i32)
+declare <4 x i1> @llvm.x86.avx512.mask.cmp.ps.128(<4 x float>, <4 x float>, i32, <4 x i1>)
 
 define i8 @stack_fold_cmpps_ymm(<8 x float> %a0, <8 x float> %a1) {
 ; CHECK-LABEL: stack_fold_cmpps_ymm:
@@ -308,11 +308,11 @@ define i8 @stack_fold_cmpps_ymm(<8 x float> %a0, <8 x float> %a1) {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %res = call <8 x i1> @llvm.x86.avx512.cmp.ps.256(<8 x float> %a0, <8 x float> %a1, i32 0)
+  %res = call <8 x i1> @llvm.x86.avx512.mask.cmp.ps.256(<8 x float> %a0, <8 x float> %a1, i32 0, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
   %2 = bitcast <8 x i1> %res to i8
   ret i8 %2
 }
-declare <8 x i1> @llvm.x86.avx512.cmp.ps.256(<8 x float>, <8 x float>, i32)
+declare <8 x i1> @llvm.x86.avx512.mask.cmp.ps.256(<8 x float>, <8 x float>, i32, <8 x i1>)
 
 define <2 x double> @stack_fold_divpd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: stack_fold_divpd:

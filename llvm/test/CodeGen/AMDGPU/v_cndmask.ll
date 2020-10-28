@@ -49,8 +49,8 @@ define amdgpu_kernel void @v_cnd_nan(float addrspace(1)* %out, i32 %c, float %f)
 ; (select (cmp (sgprX, constant)), constant, sgprZ)
 
 ; GCN-LABEL: {{^}}fcmp_sgprX_k0_select_k1_sgprZ_f32:
-; GCN: s_load_dwordx2
-; GCN: s_load_dwordx2 s{{\[}}[[X:[0-9]+]]:[[Z:[0-9]+]]{{\]}}
+; GCN: s_load_dwordx2 s{{\[}}[[X:[0-9]+]]:[[Z:[0-9]+]]{{\]}}, s[0:1], {{0x4c|0x13}}
+
 ; SIVI-DAG:  v_cmp_nlg_f32_e64 [[CC:vcc]], s[[X]], 0
 ; GFX10-DAG: v_cmp_nlg_f32_e64 [[CC:s\[[0-9:]+\]]], s[[X]], 0
 ; SIVI-DAG:  v_mov_b32_e32 [[VZ:v[0-9]+]], s[[Z]]

@@ -15,12 +15,18 @@ define amdgpu_kernel void @sint_to_fp_i32_to_f64(double addrspace(1)* %out, i32 
 ; uses an SGPR (implicit vcc).
 
 ; GCN-LABEL: {{^}}sint_to_fp_i1_f64:
-; GCN-DAG: s_cmp_eq_u32
-; GCN-DAG: s_cselect_b32 s[[SSEL:[0-9]+]], 0xbff00000, 0
-; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
-; GCN-DAG: v_mov_b32_e32 v[[SEL:[0-9]+]], s[[SSEL]]
-; GCN: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[ZERO]]:[[SEL]]{{\]}}
-; GCN: s_endpgm
+; VI-DAG: s_cmp_eq_u32
+; VI-DAG: s_cselect_b32 s[[SSEL:[0-9]+]], 0xbff00000, 0
+; VI-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
+; VI-DAG: v_mov_b32_e32 v[[SEL:[0-9]+]], s[[SSEL]]
+; VI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[ZERO]]:[[SEL]]{{\]}}
+; VI: s_endpgm
+
+; SI-DAG: v_cmp_eq_u32_e64 vcc,
+; SI-DAG: v_cndmask_b32_e32 v[[SEL:[0-9]+]], 0, v{{[0-9]+}}
+; SI-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
+; SI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[ZERO]]:[[SEL]]{{\]}}
+; SI: s_endpgm
 define amdgpu_kernel void @sint_to_fp_i1_f64(double addrspace(1)* %out, i32 %in) {
   %cmp = icmp eq i32 %in, 0
   %fp = sitofp i1 %cmp to double

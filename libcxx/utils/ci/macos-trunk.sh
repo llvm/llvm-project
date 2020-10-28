@@ -95,6 +95,7 @@ mkdir -p "${LLVM_BUILD_DIR}"
   xcrun cmake \
     -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
     -GNinja \
+    -DCMAKE_MAKE_PROGRAM="$(xcrun --find ninja)" \
     -DCMAKE_INSTALL_PREFIX="${LLVM_INSTALL_DIR}" \
     -DLIBCXX_ENABLE_EXCEPTIONS="${LIBCXX_EXCEPTIONS}" \
     -DLIBCXXABI_ENABLE_EXCEPTIONS=ON \
@@ -108,18 +109,18 @@ echo "@@@@@@"
 
 
 echo "@@@ Building libc++.dylib and libc++abi.dylib from sources (just to make sure it works) @@@"
-ninja -C "${LLVM_BUILD_DIR}" install-cxx install-cxxabi -v
+xcrun ninja -C "${LLVM_BUILD_DIR}" install-cxx install-cxxabi -v
 echo "@@@@@@"
 
 
 echo "@@@ Running tests for libc++ @@@"
 # TODO: We should run check-cxx-abilist too
-ninja -C "${LLVM_BUILD_DIR}" check-cxx
+xcrun ninja -C "${LLVM_BUILD_DIR}" check-cxx
 echo "@@@@@@"
 
 
 echo "@@@ Running tests for libc++abi @@@"
-ninja -C "${LLVM_BUILD_DIR}" check-cxxabi
+xcrun ninja -C "${LLVM_BUILD_DIR}" check-cxxabi
 echo "@@@@@@"
 
 

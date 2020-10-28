@@ -1,9 +1,10 @@
 # REQUIRES: x86, zlib
 
+## NOTE GNU ld makes .debug_str and .debug_info SHF_ALLOC due to `. += 10`.
 # RUN: echo "SECTIONS { \
 # RUN:          .text : { . += 0x10; *(.text) } \
-# RUN:          .debug_str : { . += 0x10; *(.debug_str) } \
-# RUN:          .debug_info : { . += 0x10; *(.debug_info) } \
+# RUN:          .debug_str 0 : { . += 0x10; *(.debug_str) } \
+# RUN:          .debug_info 0 : { . += 0x10; *(.debug_info) } \
 # RUN:          }" > %t.script
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o

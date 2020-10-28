@@ -1441,9 +1441,9 @@ define void @va5_aligned_stack_caller() nounwind {
 ; ILP32-ILP32F-FPELIM-NEXT:    addi a5, a0, 1311
 ; ILP32-ILP32F-FPELIM-NEXT:    lui a0, 688509
 ; ILP32-ILP32F-FPELIM-NEXT:    addi a6, a0, -2048
-; ILP32-ILP32F-FPELIM-NEXT:    addi a2, sp, 32
 ; ILP32-ILP32F-FPELIM-NEXT:    addi a0, zero, 1
 ; ILP32-ILP32F-FPELIM-NEXT:    addi a1, zero, 11
+; ILP32-ILP32F-FPELIM-NEXT:    addi a2, sp, 32
 ; ILP32-ILP32F-FPELIM-NEXT:    addi a3, zero, 12
 ; ILP32-ILP32F-FPELIM-NEXT:    addi a4, zero, 13
 ; ILP32-ILP32F-FPELIM-NEXT:    addi a7, zero, 4
@@ -1486,9 +1486,9 @@ define void @va5_aligned_stack_caller() nounwind {
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a5, a0, 1311
 ; ILP32-ILP32F-WITHFP-NEXT:    lui a0, 688509
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a6, a0, -2048
-; ILP32-ILP32F-WITHFP-NEXT:    addi a2, s0, -32
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a0, zero, 1
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a1, zero, 11
+; ILP32-ILP32F-WITHFP-NEXT:    addi a2, s0, -32
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a3, zero, 12
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a4, zero, 13
 ; ILP32-ILP32F-WITHFP-NEXT:    addi a7, zero, 4
@@ -1530,9 +1530,9 @@ define void @va5_aligned_stack_caller() nounwind {
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a5, a0, 1311
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    lui a0, 688509
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a6, a0, -2048
-; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a2, sp, 32
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a0, zero, 1
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a1, zero, 11
+; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a2, sp, 32
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a3, zero, 12
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a4, zero, 13
 ; RV32D-ILP32-ILP32F-ILP32D-FPELIM-NEXT:    addi a7, zero, 4

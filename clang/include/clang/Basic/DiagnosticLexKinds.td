@@ -695,6 +695,9 @@ def err_mmap_missing_module_unqualified : Error<
   "no module named '%0' visible from '%1'">;
 def err_mmap_missing_module_qualified : Error<
   "no module named '%0' in '%1'">;
+def err_mmap_missing_parent_module: Error<
+  "no module named '%0' %select{found|in '%2'}1, "
+  "parent module must be defined before the submodule">;
 def err_mmap_top_level_inferred_submodule : Error<
   "only submodules and framework modules may be inferred with wildcard syntax">;
 def err_mmap_inferred_no_umbrella : Error<

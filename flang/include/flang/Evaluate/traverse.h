@@ -241,7 +241,7 @@ private:
   }
 
   template <typename A, typename... Bs>
-  Result Combine(const A &x, const Bs &... ys) const {
+  Result Combine(const A &x, const Bs &...ys) const {
     if constexpr (sizeof...(Bs) == 0) {
       return visitor_(x);
     } else {

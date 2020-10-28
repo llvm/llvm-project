@@ -13,6 +13,8 @@
 #ifndef LLVM_OBJECT_XCOFFOBJECTFILE_H
 #define LLVM_OBJECT_XCOFFOBJECTFILE_H
 
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Endian.h"
@@ -370,6 +372,8 @@ public:
 
   Expected<ArrayRef<XCOFFRelocation32>>
   relocations(const XCOFFSectionHeader32 &) const;
+
+  static bool classof(const Binary *B) { return B->isXCOFF(); }
 }; // XCOFFObjectFile
 
 class XCOFFSymbolRef {
@@ -391,6 +395,83 @@ public:
   bool isFunction() const;
 };
 
+/// This class provides methods to extract traceback table data from a buffer.
+/// The various accessors may reference the buffer provided via the constructor.
+
+class XCOFFTracebackTable {
+  const uint8_t *const TBPtr;
+  Optional<SmallString<32>> ParmsType;
+  Optional<uint32_t> TraceBackTableOffset;
+  Optional<uint32_t> HandlerMask;
+  Optional<uint32_t> NumOfCtlAnchors;
+  Optional<SmallVector<uint32_t, 8>> ControlledStorageInfoDisp;
+  Optional<StringRef> FunctionName;
+  Optional<uint8_t> AllocaRegister;
+
+  XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size, Error &Err);
+
+public:
+  /// Parse an XCOFF Traceback Table from \a Ptr with \a Size bytes.
+  /// Returns an XCOFFTracebackTable upon successful parsing, otherwise an
+  /// Error is returned.
+  ///
+  /// \param[in] Ptr
+  ///   A pointer that points just past the initial 4 bytes of zeros at the
+  ///   beginning of an XCOFF Traceback Table.
+  ///
+  /// \param[in, out] Size
+  ///    A pointer that points to the length of the XCOFF Traceback Table.
+  ///    If the XCOFF Traceback Table is not parsed successfully or there are
+  ///    extra bytes that are not recognized, \a Size will be updated to be the
+  ///    size up to the end of the last successfully parsed field of the table.
+  static Expected<XCOFFTracebackTable> create(const uint8_t *Ptr,
+                                              uint64_t &Size);
+  uint8_t getVersion() const;
+  uint8_t getLanguageID() const;
+
+  bool isGlobalLinkage() const;
+  bool isOutOfLineEpilogOrPrologue() const;
+  bool hasTraceBackTableOffset() const;
+  bool isInternalProcedure() const;
+  bool hasControlledStorage() const;
+  bool isTOCless() const;
+  bool isFloatingPointPresent() const;
+  bool isFloatingPointOperationLogOrAbortEnabled() const;
+
+  bool isInterruptHandler() const;
+  bool isFuncNamePresent() const;
+  bool isAllocaUsed() const;
+  uint8_t getOnConditionDirective() const;
+  bool isCRSaved() const;
+  bool isLRSaved() const;
+
+  bool isBackChainStored() const;
+  bool isFixup() const;
+  uint8_t getNumOfFPRsSaved() const;
+
+  bool hasVectorInfo() const;
+  bool hasExtensionTable() const;
+  uint8_t getNumofGPRsSaved() const;
+
+  uint8_t getNumberOfFixedParms() const;
+
+  uint8_t getNumberOfFPParms() const;
+  bool hasParmsOnStack() const;
+
+  const Optional<SmallString<32>> &getParmsType() const { return ParmsType; }
+  const Optional<uint32_t> &getTraceBackTableOffset() const {
+    return TraceBackTableOffset;
+  }
+  const Optional<uint32_t> &getHandlerMask() const { return HandlerMask; }
+  const Optional<uint32_t> &getNumOfCtlAnchors() { return NumOfCtlAnchors; }
+  const Optional<SmallVector<uint32_t, 8>> &getControlledStorageInfoDisp() {
+    return ControlledStorageInfoDisp;
+  }
+  const Optional<StringRef> &getFunctionName() const { return FunctionName; }
+  const Optional<uint8_t> &getAllocaRegister() const { return AllocaRegister; }
+};
+
+bool doesXCOFFTracebackTableBegin(ArrayRef<uint8_t> Bytes);
 } // namespace object
 } // namespace llvm
 

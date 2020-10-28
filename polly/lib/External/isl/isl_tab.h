@@ -190,13 +190,13 @@ __isl_give struct isl_tab *isl_tab_from_basic_map(
 	__isl_keep isl_basic_map *bmap, int track);
 __isl_give struct isl_tab *isl_tab_from_basic_set(
 	__isl_keep isl_basic_set *bset, int track);
-struct isl_tab *isl_tab_from_recession_cone(struct isl_basic_set *bset,
+struct isl_tab *isl_tab_from_recession_cone(__isl_keep isl_basic_set *bset,
 	int parametric);
 isl_bool isl_tab_cone_is_bounded(struct isl_tab *tab);
-struct isl_basic_map *isl_basic_map_update_from_tab(struct isl_basic_map *bmap,
-	struct isl_tab *tab);
-struct isl_basic_set *isl_basic_set_update_from_tab(struct isl_basic_set *bset,
-	struct isl_tab *tab);
+__isl_give isl_basic_map *isl_basic_map_update_from_tab(
+	__isl_take isl_basic_map *bmap, struct isl_tab *tab);
+__isl_give isl_basic_set *isl_basic_set_update_from_tab(
+	__isl_take isl_basic_set *bset, struct isl_tab *tab);
 int isl_tab_detect_implicit_equalities(struct isl_tab *tab) WARN_UNUSED;
 __isl_give isl_basic_map *isl_tab_make_equalities_explicit(struct isl_tab *tab,
 	__isl_take isl_basic_map *bmap);
@@ -223,7 +223,7 @@ int isl_tab_is_equality(struct isl_tab *tab, int con);
 int isl_tab_is_redundant(struct isl_tab *tab, int con);
 
 int isl_tab_sample_is_integer(struct isl_tab *tab);
-struct isl_vec *isl_tab_get_sample_value(struct isl_tab *tab);
+__isl_give isl_vec *isl_tab_get_sample_value(struct isl_tab *tab);
 
 enum isl_ineq_type {
 	isl_ineq_error = -1,

@@ -1,10 +1,18 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix HOST
-// RUN: %clang_cc1 -fopenmp -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=50 %s
-// RUN: %clang_cc1 -fopenmp -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=50 | FileCheck %s --check-prefix HOST
-// RUN: %clang_cc1 -verify -fopenmp -x c -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc -fopenmp-version=50
-// RUN: %clang_cc1 -verify -fopenmp -x c -triple nvptx64-unknown-unknown -aux-triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -fopenmp-version=50 | FileCheck %s --check-prefix GPU
-// RUN: %clang_cc1 -verify -fopenmp -x c -triple nvptx64-unknown-unknown -aux-triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -emit-pch -o %t -fopenmp-version=50
-// RUN: %clang_cc1 -verify -fopenmp -x c -triple nvptx64-unknown-unknown -aux-triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -o - -fopenmp-version=50 | FileCheck %s --check-prefix GPU
+// RUN: %clang_cc1 -fopenmp -x c -triple x86_64-unknown-linux -emit-pch -o %t -fopenmp-version=45 %s
+// RUN: %clang_cc1 -fopenmp -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - -fopenmp-version=45 | FileCheck %s --check-prefix HOST
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc -fopenmp-version=45
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple nvptx64-unknown-unknown -aux-triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -fopenmp-version=45 | FileCheck %s --check-prefix GPU
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple nvptx64-unknown-unknown -aux-triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -emit-pch -o %t -fopenmp-version=45
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple nvptx64-unknown-unknown -aux-triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -o - -fopenmp-version=45 | FileCheck %s --check-prefix GPU
+
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix HOST
+// RUN: %clang_cc1 -fopenmp -x c -triple x86_64-unknown-linux -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c -triple x86_64-unknown-linux -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix HOST
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple nvptx64-unknown-unknown -aux-triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix GPU
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple nvptx64-unknown-unknown -aux-triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -emit-pch -o %t
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple nvptx64-unknown-unknown -aux-triple powerpc64le-unknown-unknown -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -o - | FileCheck %s --check-prefix GPU
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -21,7 +29,7 @@ int base();
 // HOST-LABEL: define void @foo()
 // HOST: call i32 @hst(double -1.000000e+00)
 // HOST: call i32 @hst(double -2.000000e+00)
-// HOST: call void [[OFFL:@.+_foo_l28]]()
+// HOST: call void [[OFFL:@.+_foo_l36]]()
 void foo() {
   base(-1);
   hst(-2);
@@ -36,7 +44,7 @@ void foo() {
 // HOST: call i32 @hst(double -3.000000e+00)
 // HOST: call i32 @dev(double -4.000000e+00)
 
-// GPU: define {{.*}}void @__omp_offloading_{{.+}}_foo_l28()
+// GPU: define {{.*}}void @__omp_offloading_{{.+}}_foo_l36()
 // GPU: call i32 @dev(double -3.000000e+00)
 // GPU: call i32 @dev(double -4.000000e+00)
 

@@ -479,7 +479,7 @@ declare zeroext i8 @test_byval_5Byte(%struct.S5* byval(%struct.S5) align 1)
 ; 32BIT-DAG:   renamable $r[[REG1:[0-9]+]] = LBZ 4, renamable $r[[REGADDR]] :: (load 1)
 ; 32BIT-DAG:   renamable $r3 = LWZ 0, killed renamable $r[[REGADDR]] :: (load 4)
 ; 32BIT-DAG:   renamable $r4 = RLWINM killed renamable $r[[REG1]], 24, 0, 7
-; 32BIT-NEXT:  BL_NOP <mcsymbol .test_byval_5Byte>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r2, implicit-def $r1
+; 32BIT-NEXT:  BL_NOP <mcsymbol .test_byval_5Byte[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r2, implicit-def $r1
 ; 32BIT-NEXT:   ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
 ; CHECKASM-LABEL: .call_test_byval_5Byte:
@@ -490,7 +490,7 @@ declare zeroext i8 @test_byval_5Byte(%struct.S5* byval(%struct.S5) align 1)
 ; ASM32-DAG:   lbz [[REG1:[0-9]+]], 4([[REGADDR]])
 ; ASM32-DAG:   lwz 3, 0([[REGADDR]])
 ; ASM32-DAG:   slwi 4, [[REG1]], 24
-; ASM32-NEXT:  bl .test_byval_5Byte
+; ASM32-NEXT:  bl .test_byval_5Byte[PR]
 ; ASM32-NEXT:  nop
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
@@ -500,7 +500,7 @@ declare zeroext i8 @test_byval_5Byte(%struct.S5* byval(%struct.S5) align 1)
 ; 64BIT-DAG:   renamable $x[[REG2:[0-9]+]] = LBZ8 4, renamable $x[[REGADDR]] :: (load 1)
 ; 64BIT-DAG:   renamable $x3 = RLWINM8 killed renamable $x[[REG2]], 24, 0, 7
 ; 64BIT-DAG:   renamable $x3 = RLDIMI killed renamable $x3, killed renamable $x[[REG1]], 32, 0
-; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_5Byte>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
+; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_5Byte[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
@@ -510,7 +510,7 @@ declare zeroext i8 @test_byval_5Byte(%struct.S5* byval(%struct.S5) align 1)
 ; ASM64-DAG:   lbz [[REG2:[0-9]+]], 4([[REGADDR]])
 ; ASM64-DAG:   rlwinm 3, [[REG2]], 24, 0, 7
 ; ASM64-DAG:   rldimi 3, [[REG1]], 32, 0
-; ASM64-NEXT:  bl .test_byval_5Byte
+; ASM64-NEXT:  bl .test_byval_5Byte[PR]
 ; ASM64-NEXT:  nop
 
 
@@ -534,7 +534,7 @@ declare zeroext i8 @test_byval_6Byte(%struct.S6* byval(%struct.S6) align 1)
 ; 32BIT-DAG:   renamable $r[[REG1:[0-9]+]] = LHZ 4, renamable $r[[REGADDR]] :: (load 2)
 ; 32BIT-DAG:   renamable $r3 = LWZ 0, killed renamable $r[[REGADDR]] :: (load 4)
 ; 32BIT-DAG:   renamable $r4 = RLWINM killed renamable $r[[REG1]], 16, 0, 15
-; 32BIT-NEXT:  BL_NOP <mcsymbol .test_byval_6Byte>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r2, implicit-def $r1
+; 32BIT-NEXT:  BL_NOP <mcsymbol .test_byval_6Byte[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r2, implicit-def $r1
 ; 32BIT-NEXT:  ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
 ; CHECKASM-LABEL: .call_test_byval_6Byte:
@@ -545,7 +545,7 @@ declare zeroext i8 @test_byval_6Byte(%struct.S6* byval(%struct.S6) align 1)
 ; ASM32-DAG:   lhz [[REG1:[0-9]+]], 4([[REGADDR]])
 ; ASM32-DAG:   lwz 3, 0([[REGADDR]])
 ; ASM32-DAG:   slwi 4, [[REG1]], 16
-; ASM32-NEXT:  bl .test_byval_6Byte
+; ASM32-NEXT:  bl .test_byval_6Byte[PR]
 ; ASM32-NEXT:  nop
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
@@ -555,7 +555,7 @@ declare zeroext i8 @test_byval_6Byte(%struct.S6* byval(%struct.S6) align 1)
 ; 64BIT-DAG:   renamable $x[[REG2:[0-9]+]] = LHZ8 4, renamable $x[[REGADDR]] :: (load 2)
 ; 64BIT-DAG:   renamable $x3 = RLWINM8 killed renamable $x[[REG2]], 16, 0, 15
 ; 64BIT-DAG:   renamable $x3 = RLDIMI killed renamable $x3, killed renamable $x[[REG1]], 32, 0
-; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_6Byte>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
+; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_6Byte[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
@@ -565,7 +565,7 @@ declare zeroext i8 @test_byval_6Byte(%struct.S6* byval(%struct.S6) align 1)
 ; ASM64-DAG:   lhz [[REG2:[0-9]+]], 4([[REGADDR]])
 ; ASM64-DAG:   rlwinm 3, [[REG2]], 16, 0, 15
 ; ASM64-DAG:   rldimi 3, [[REG1]], 32, 0
-; ASM64-NEXT:  bl .test_byval_6Byte
+; ASM64-NEXT:  bl .test_byval_6Byte[PR]
 ; ASM64-NEXT:  nop
 
 
@@ -591,7 +591,7 @@ declare zeroext i8 @test_byval_7Byte(%struct.S7* byval(%struct.S7) align 1)
 ; 32BIT-DAG:   renamable $r[[REG2:[0-9]+]] = LBZ 6, renamable $r[[REGADDR]] :: (load 1)
 ; 32BIT-DAG:   renamable $r4 = RLWINM killed renamable $r[[REG2]], 8, 16, 23
 ; 32BIT-DAG:   renamable $r4 = RLWIMI killed renamable $r4, killed renamable $r[[REG1]], 16, 0, 15
-; 32BIT-NEXT:  BL_NOP <mcsymbol .test_byval_7Byte>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r2, implicit-def $r1
+; 32BIT-NEXT:  BL_NOP <mcsymbol .test_byval_7Byte[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r2, implicit-def $r1
 ; 32BIT-NEXT:  ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
 ; CHECKASM-LABEL: .call_test_byval_7Byte:
@@ -604,7 +604,7 @@ declare zeroext i8 @test_byval_7Byte(%struct.S7* byval(%struct.S7) align 1)
 ; ASM32-DAG:   lbz [[REG2:[0-9]+]], 6([[REGADDR]])
 ; ASM32-DAG:   rlwinm 4, [[REG2]], 8, 16, 23
 ; ASM32-DAG:   rlwimi 4, [[REG1]], 16, 0, 15
-; ASM32-NEXT:  bl .test_byval_7Byte
+; ASM32-NEXT:  bl .test_byval_7Byte[PR]
 ; ASM32-NEXT:  nop
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
@@ -616,7 +616,7 @@ declare zeroext i8 @test_byval_7Byte(%struct.S7* byval(%struct.S7) align 1)
 ; 64BIT-DAG:   renamable $x3 = RLWINM8 killed renamable $x[[REG3]], 8, 16, 23
 ; 64BIT-DAG:   renamable $x3 = RLWIMI8 killed renamable $x3, killed renamable $x[[REG2]], 16, 0, 15
 ; 64BIT-DAG:   renamable $x3 = RLDIMI killed renamable $x3, killed renamable $x[[REG1]], 32, 0
-; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_7Byte>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
+; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_7Byte[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
@@ -628,7 +628,7 @@ declare zeroext i8 @test_byval_7Byte(%struct.S7* byval(%struct.S7) align 1)
 ; ASM64-DAG:   rlwinm 3, [[REG3]], 8, 16, 23
 ; ASM64-DAG:   rlwimi 3, [[REG2]], 16, 0, 15
 ; ASM64-DAG:   rldimi 3, [[REG1]], 32, 0
-; ASM64-NEXT:  bl .test_byval_7Byte
+; ASM64-NEXT:  bl .test_byval_7Byte[PR]
 ; ASM64-NEXT:  nop
 
 
@@ -651,7 +651,7 @@ declare zeroext i8 @test_byval_8Byte(%struct.S8* byval(%struct.S8) align 1)
 ; 32BIT-NEXT:  renamable $r[[REGADDR:[0-9]+]] = LWZtoc @gS8, $r2 :: (load 4 from got)
 ; 32BIT-DAG:   renamable $r3 = LWZ 0, killed renamable $r[[REGADDR]] :: (load 4)
 ; 32BIT-DAG:   renamable $r4 = LWZ 4, renamable $r[[REGADDR]] :: (load 4)
-; 32BIT-NEXT:  BL_NOP <mcsymbol .test_byval_8Byte>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r2, implicit-def $r1
+; 32BIT-NEXT:  BL_NOP <mcsymbol .test_byval_8Byte[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r2, implicit-def $r1
 ; 32BIT-NEXT:  ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
 ; CHECKASM-LABEL: .call_test_byval_8Byte:
@@ -661,19 +661,19 @@ declare zeroext i8 @test_byval_8Byte(%struct.S8* byval(%struct.S8) align 1)
 ; ASM32-NEXT:  lwz [[REGADDR:[0-9]+]], L..C{{[0-9]+}}(2)
 ; ASM32-DAG:   lwz 3, 0([[REGADDR]])
 ; ASM32-DAG:   lwz 4, 4([[REGADDR]])
-; ASM32-NEXT:  bl .test_byval_8Byte
+; ASM32-NEXT:  bl .test_byval_8Byte[PR]
 ; ASM32-NEXT:  nop
 
 ; 64BIT:       ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-NEXT:  renamable $x[[REGADDR:[0-9]+]] = LDtoc @gS8, $x2 :: (load 8 from got)
 ; 64BIT-NEXT:  renamable $x3 = LD 0, killed renamable $x[[REGADDR]] :: (load 8)
-; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_8Byte>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
+; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_8Byte[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; ASM64:       stdu 1, -112(1)
 ; ASM64-NEXT:  ld [[REGADDR:[0-9]+]], L..C{{[0-9]+}}(2)
 ; ASM64-NEXT:  ld 3, 0([[REGADDR]])
-; ASM64-NEXT:  bl .test_byval_8Byte
+; ASM64-NEXT:  bl .test_byval_8Byte[PR]
 ; ASM64-NEXT:  nop
 
 
@@ -960,7 +960,7 @@ declare i32 @test_byval_homogeneous_float_struct(%struct.F* byval(%struct.F) ali
 ; 32BIT-DAG:   renamable $r3 = LWZ 0, %stack.0.s :: (load 4 from %stack.0.s, align 8)
 ; 32BIT-DAG:   renamable $r4 = LWZ 4, %stack.0.s :: (load 4 from %stack.0.s + 4)
 ; 32BIT-DAG:   renamable $r5 = LWZ 8, %stack.0.s :: (load 4 from %stack.0.s + 8, align 8)
-; 32BIT-NEXT:  BL_NOP <mcsymbol .test_byval_homogeneous_float_struct>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
+; 32BIT-NEXT:  BL_NOP <mcsymbol .test_byval_homogeneous_float_struct[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
 ; 32BIT-NEXT:  ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
 ; CHECKASM-LABEL: .call_test_byval_homogeneous_float_struct:
@@ -969,7 +969,7 @@ declare i32 @test_byval_homogeneous_float_struct(%struct.F* byval(%struct.F) ali
 ; ASM32-DAG:   lwz 3, 64(1)
 ; ASM32-DAG:   lwz 4, 68(1)
 ; ASM32-DAG:   lwz 5, 72(1)
-; ASM32-NEXT:  bl .test_byval_homogeneous_float_struct
+; ASM32-NEXT:  bl .test_byval_homogeneous_float_struct[PR]
 ; ASM32-NEXT:  nop
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
@@ -977,7 +977,7 @@ declare i32 @test_byval_homogeneous_float_struct(%struct.F* byval(%struct.F) ali
 ; 64BIT-DAG:   renamable $x3 = LD 0, %stack.0.s :: (load 8 from %stack.0.s)
 ; 64BIT-DAG:   renamable $x4 = LWZ8 8, %stack.0.s :: (load 4 from %stack.0.s + 8, align 8)
 ; 64BIT-DAG:   renamable $x4 = RLDICR killed renamable $x4, 32, 31
-; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_homogeneous_float_struct>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x2, implicit-def $r1, implicit-def $x3
+; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_homogeneous_float_struct[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x2, implicit-def $r1, implicit-def $x3
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
@@ -985,5 +985,5 @@ declare i32 @test_byval_homogeneous_float_struct(%struct.F* byval(%struct.F) ali
 ; ASM64-DAG:   ld 3, 112(1)
 ; ASM64-DAG:   lwz 4, 120(1)
 ; ASM64-DAG:   sldi 4, 4, 32
-; ASM64-NEXT:  bl .test_byval_homogeneous_float_struct
+; ASM64-NEXT:  bl .test_byval_homogeneous_float_struct[PR]
 ; ASM64-NEXT:  nop

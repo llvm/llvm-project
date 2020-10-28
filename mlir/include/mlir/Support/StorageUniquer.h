@@ -11,6 +11,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/TypeID.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Allocator.h"
 
@@ -27,22 +28,19 @@ template <typename ImplTy, typename T>
 using has_impltype_hash_t = decltype(ImplTy::hashKey(std::declval<T>()));
 } // namespace detail
 
-/// A utility class to get, or create instances of storage classes. These
-/// storage classes must respect the following constraints:
-///    - Derive from StorageUniquer::BaseStorage.
-///    - Provide an unsigned 'kind' value to be used as part of the unique'ing
-///      process.
+/// A utility class to get or create instances of "storage classes". These
+/// storage classes must derive from 'StorageUniquer::BaseStorage'.
 ///
-/// For non-parametric storage classes, i.e. those that are solely uniqued by
-/// their kind, nothing else is needed. Instances of these classes can be
-/// created by calling `get` without trailing arguments.
+/// For non-parametric storage classes, i.e. singleton classes, nothing else is
+/// needed. Instances of these classes can be created by calling `get` without
+/// trailing arguments.
 ///
 /// Otherwise, the parametric storage classes may be created with `get`,
 /// and must respect the following:
 ///    - Define a type alias, KeyTy, to a type that uniquely identifies the
-///      instance of the storage class within its kind.
+///      instance of the storage class.
 ///      * The key type must be constructible from the values passed into the
-///        getComplex call after the kind.
+///        getComplex call.
 ///      * If the KeyTy does not have an llvm::DenseMapInfo specialization, the
 ///        storage class must define a hashing method:
 ///         'static unsigned hashKey(const KeyTy &)'
@@ -75,30 +73,17 @@ using has_impltype_hash_t = decltype(ImplTy::hashKey(std::declval<T>()));
 ///      value of the function is used to indicate whether the mutation was
 ///      successful, e.g., to limit the number of mutations or enable deferred
 ///      one-time assignment of the mutable component.
+///
+/// All storage classes must be registered with the uniquer via
+/// `registerStorageType` using an appropriate unique `TypeID` for the storage
+/// class.
 class StorageUniquer {
 public:
-  StorageUniquer();
-  ~StorageUniquer();
-
-  /// Set the flag specifying if multi-threading is disabled within the uniquer.
-  void disableMultithreading(bool disable = true);
-
   /// This class acts as the base storage that all storage classes must derived
   /// from.
   class BaseStorage {
-  public:
-    /// Get the kind classification of this storage.
-    unsigned getKind() const { return kind; }
-
   protected:
-    BaseStorage() : kind(0) {}
-
-  private:
-    /// Allow access to the kind field.
-    friend detail::StorageUniquerImpl;
-
-    /// Classification of the subclass, used for type checking.
-    unsigned kind;
+    BaseStorage() = default;
   };
 
   /// This is a utility allocator used to allocate memory for instances of
@@ -135,19 +120,61 @@ public:
     llvm::BumpPtrAllocator allocator;
   };
 
-  /// Gets a uniqued instance of 'Storage'. 'initFn' is an optional parameter
-  /// that can be used to initialize a newly inserted storage instance. This
-  /// function is used for derived types that have complex storage or uniquing
-  /// constraints.
-  template <typename Storage, typename Arg, typename... Args>
-  Storage *get(function_ref<void(Storage *)> initFn, unsigned kind, Arg &&arg,
-               Args &&... args) {
-    // Construct a value of the derived key type.
-    auto derivedKey =
-        getKey<Storage>(std::forward<Arg>(arg), std::forward<Args>(args)...);
+  StorageUniquer();
+  ~StorageUniquer();
 
-    // Create a hash of the kind and the derived key.
-    unsigned hashValue = getHash<Storage>(kind, derivedKey);
+  /// Set the flag specifying if multi-threading is disabled within the uniquer.
+  void disableMultithreading(bool disable = true);
+
+  /// Register a new parametric storage class, this is necessary to create
+  /// instances of this class type. `id` is the type identifier that will be
+  /// used to identify this type when creating instances of it via 'get'.
+  template <typename Storage> void registerParametricStorageType(TypeID id) {
+    registerParametricStorageTypeImpl(id);
+  }
+  /// Utility override when the storage type represents the type id.
+  template <typename Storage> void registerParametricStorageType() {
+    registerParametricStorageType<Storage>(TypeID::get<Storage>());
+  }
+  /// Register a new singleton storage class, this is necessary to get the
+  /// singletone instance. `id` is the type identifier that will be used to
+  /// access the singleton instance via 'get'. An optional initialization
+  /// function may also be provided to initialize the newly created storage
+  /// instance, and used when the singleton instance is created.
+  template <typename Storage>
+  void registerSingletonStorageType(TypeID id,
+                                    function_ref<void(Storage *)> initFn) {
+    auto ctorFn = [&](StorageAllocator &allocator) {
+      auto *storage = new (allocator.allocate<Storage>()) Storage();
+      if (initFn)
+        initFn(storage);
+      return storage;
+    };
+    registerSingletonImpl(id, ctorFn);
+  }
+  template <typename Storage> void registerSingletonStorageType(TypeID id) {
+    registerSingletonStorageType<Storage>(id, llvm::None);
+  }
+  /// Utility override when the storage type represents the type id.
+  template <typename Storage>
+  void registerSingletonStorageType(
+      function_ref<void(Storage *)> initFn = llvm::None) {
+    registerSingletonStorageType<Storage>(TypeID::get<Storage>(), initFn);
+  }
+
+  /// Gets a uniqued instance of 'Storage'. 'id' is the type id used when
+  /// registering the storage instance. 'initFn' is an optional parameter that
+  /// can be used to initialize a newly inserted storage instance. This function
+  /// is used for derived types that have complex storage or uniquing
+  /// constraints.
+  template <typename Storage, typename... Args>
+  Storage *get(function_ref<void(Storage *)> initFn, TypeID id,
+               Args &&...args) {
+    // Construct a value of the derived key type.
+    auto derivedKey = getKey<Storage>(std::forward<Args>(args)...);
+
+    // Create a hash of the derived key.
+    unsigned hashValue = getHash<Storage>(derivedKey);
 
     // Generate an equality function for the derived storage.
     auto isEqual = [&derivedKey](const BaseStorage *existing) {
@@ -163,45 +190,47 @@ public:
     };
 
     // Get an instance for the derived storage.
-    return static_cast<Storage *>(getImpl(kind, hashValue, isEqual, ctorFn));
+    return static_cast<Storage *>(
+        getParametricStorageTypeImpl(id, hashValue, isEqual, ctorFn));
+  }
+  /// Utility override when the storage type represents the type id.
+  template <typename Storage, typename... Args>
+  Storage *get(function_ref<void(Storage *)> initFn, Args &&...args) {
+    return get<Storage>(initFn, TypeID::get<Storage>(),
+                        std::forward<Args>(args)...);
   }
 
-  /// Gets a uniqued instance of 'Storage'. 'initFn' is an optional parameter
-  /// that can be used to initialize a newly inserted storage instance. This
-  /// function is used for derived types that use no additional storage or
-  /// uniquing outside of the kind.
-  template <typename Storage>
-  Storage *get(function_ref<void(Storage *)> initFn, unsigned kind) {
-    auto ctorFn = [&](StorageAllocator &allocator) {
-      auto *storage = new (allocator.allocate<Storage>()) Storage();
-      if (initFn)
-        initFn(storage);
-      return storage;
-    };
-    return static_cast<Storage *>(getImpl(kind, ctorFn));
+  /// Gets a uniqued instance of 'Storage' which is a singleton storage type.
+  /// 'id' is the type id used when registering the storage instance.
+  template <typename Storage> Storage *get(TypeID id) {
+    return static_cast<Storage *>(getSingletonImpl(id));
+  }
+  /// Utility override when the storage type represents the type id.
+  template <typename Storage> Storage *get() {
+    return get<Storage>(TypeID::get<Storage>());
   }
 
   /// Changes the mutable component of 'storage' by forwarding the trailing
   /// arguments to the 'mutate' function of the derived class.
   template <typename Storage, typename... Args>
-  LogicalResult mutate(Storage *storage, Args &&...args) {
+  LogicalResult mutate(TypeID id, Storage *storage, Args &&...args) {
     auto mutationFn = [&](StorageAllocator &allocator) -> LogicalResult {
       return static_cast<Storage &>(*storage).mutate(
           allocator, std::forward<Args>(args)...);
     };
-    return mutateImpl(mutationFn);
+    return mutateImpl(id, mutationFn);
   }
 
   /// Erases a uniqued instance of 'Storage'. This function is used for derived
   /// types that have complex storage or uniquing constraints.
   template <typename Storage, typename Arg, typename... Args>
-  void erase(unsigned kind, Arg &&arg, Args &&... args) {
+  void erase(TypeID id, Arg &&arg, Args &&...args) {
     // Construct a value of the derived key type.
     auto derivedKey =
         getKey<Storage>(std::forward<Arg>(arg), std::forward<Args>(args)...);
 
-    // Create a hash of the kind and the derived key.
-    unsigned hashValue = getHash<Storage>(kind, derivedKey);
+    // Create a hash of the derived key.
+    unsigned hashValue = getHash<Storage>(derivedKey);
 
     // Generate an equality function for the derived storage.
     auto isEqual = [&derivedKey](const BaseStorage *existing) {
@@ -209,32 +238,43 @@ public:
     };
 
     // Attempt to erase the storage instance.
-    eraseImpl(kind, hashValue, isEqual, [](BaseStorage *storage) {
+    eraseImpl(id, hashValue, isEqual, [](BaseStorage *storage) {
       static_cast<Storage *>(storage)->cleanup();
     });
   }
 
 private:
   /// Implementation for getting/creating an instance of a derived type with
-  /// complex storage.
-  BaseStorage *getImpl(unsigned kind, unsigned hashValue,
-                       function_ref<bool(const BaseStorage *)> isEqual,
-                       function_ref<BaseStorage *(StorageAllocator &)> ctorFn);
+  /// parametric storage.
+  BaseStorage *getParametricStorageTypeImpl(
+      TypeID id, unsigned hashValue,
+      function_ref<bool(const BaseStorage *)> isEqual,
+      function_ref<BaseStorage *(StorageAllocator &)> ctorFn);
 
-  /// Implementation for getting/creating an instance of a derived type with
-  /// default storage.
-  BaseStorage *getImpl(unsigned kind,
-                       function_ref<BaseStorage *(StorageAllocator &)> ctorFn);
+  /// Implementation for registering an instance of a derived type with
+  /// parametric storage.
+  void registerParametricStorageTypeImpl(TypeID id);
+
+  /// Implementation for getting an instance of a derived type with default
+  /// storage.
+  BaseStorage *getSingletonImpl(TypeID id);
+
+  /// Implementation for registering an instance of a derived type with default
+  /// storage.
+  void
+  registerSingletonImpl(TypeID id,
+                        function_ref<BaseStorage *(StorageAllocator &)> ctorFn);
 
   /// Implementation for erasing an instance of a derived type with complex
   /// storage.
-  void eraseImpl(unsigned kind, unsigned hashValue,
+  void eraseImpl(TypeID id, unsigned hashValue,
                  function_ref<bool(const BaseStorage *)> isEqual,
                  function_ref<void(BaseStorage *)> cleanupFn);
 
   /// Implementation for mutating an instance of a derived storage.
   LogicalResult
-  mutateImpl(function_ref<LogicalResult(StorageAllocator &)> mutationFn);
+  mutateImpl(TypeID id,
+             function_ref<LogicalResult(StorageAllocator &)> mutationFn);
 
   /// The internal implementation class.
   std::unique_ptr<detail::StorageUniquerImpl> impl;
@@ -249,7 +289,7 @@ private:
   static typename std::enable_if<
       llvm::is_detected<detail::has_impltype_getkey_t, ImplTy, Args...>::value,
       typename ImplTy::KeyTy>::type
-  getKey(Args &&... args) {
+  getKey(Args &&...args) {
     return ImplTy::getKey(args...);
   }
   /// If there is no 'ImplTy::getKey' method, then we try to directly construct
@@ -258,32 +298,31 @@ private:
   static typename std::enable_if<
       !llvm::is_detected<detail::has_impltype_getkey_t, ImplTy, Args...>::value,
       typename ImplTy::KeyTy>::type
-  getKey(Args &&... args) {
+  getKey(Args &&...args) {
     return typename ImplTy::KeyTy(args...);
   }
 
   //===--------------------------------------------------------------------===//
-  // Key and Kind Hashing
+  // Key Hashing
   //===--------------------------------------------------------------------===//
 
-  /// Used to generate a hash for the 'ImplTy::KeyTy' and kind of a storage
-  /// instance if there is an 'ImplTy::hashKey' overload for 'DerivedKey'.
+  /// Used to generate a hash for the 'ImplTy::KeyTy' of a storage instance if
+  /// there is an 'ImplTy::hashKey' overload for 'DerivedKey'.
   template <typename ImplTy, typename DerivedKey>
   static typename std::enable_if<
       llvm::is_detected<detail::has_impltype_hash_t, ImplTy, DerivedKey>::value,
       ::llvm::hash_code>::type
-  getHash(unsigned kind, const DerivedKey &derivedKey) {
-    return llvm::hash_combine(kind, ImplTy::hashKey(derivedKey));
+  getHash(const DerivedKey &derivedKey) {
+    return ImplTy::hashKey(derivedKey);
   }
-  /// If there is no 'ImplTy::hashKey' default to using the
-  /// 'llvm::DenseMapInfo' definition for 'DerivedKey' for generating a hash.
+  /// If there is no 'ImplTy::hashKey' default to using the 'llvm::DenseMapInfo'
+  /// definition for 'DerivedKey' for generating a hash.
   template <typename ImplTy, typename DerivedKey>
   static typename std::enable_if<!llvm::is_detected<detail::has_impltype_hash_t,
                                                     ImplTy, DerivedKey>::value,
                                  ::llvm::hash_code>::type
-  getHash(unsigned kind, const DerivedKey &derivedKey) {
-    return llvm::hash_combine(
-        kind, DenseMapInfo<DerivedKey>::getHashValue(derivedKey));
+  getHash(const DerivedKey &derivedKey) {
+    return DenseMapInfo<DerivedKey>::getHashValue(derivedKey);
   }
 };
 } // end namespace mlir

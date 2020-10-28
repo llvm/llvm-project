@@ -110,7 +110,7 @@ void Prescanner::Statement() {
   case LineClassification::Kind::CompilerDirective:
     directiveSentinel_ = line.sentinel;
     CHECK(InCompilerDirective());
-    BeginSourceLineAndAdvance();
+    BeginStatementAndAdvance();
     if (inFixedForm_) {
       CHECK(IsFixedFormCommentChar(*at_));
     } else {
@@ -144,7 +144,7 @@ void Prescanner::Statement() {
     }
     break;
   case LineClassification::Kind::Source:
-    BeginSourceLineAndAdvance();
+    BeginStatementAndAdvance();
     if (inFixedForm_) {
       LabelField(tokens);
     } else if (skipLeadingAmpersand_) {
@@ -184,7 +184,8 @@ void Prescanner::Statement() {
     case LineClassification::Kind::PreprocessorDirective:
       Say(preprocessed->GetProvenanceRange(),
           "Preprocessed line resembles a preprocessor directive"_en_US);
-      preprocessed->ToLowerCase().Emit(cooked_);
+      preprocessed->ToLowerCase().CheckBadFortranCharacters(messages_).Emit(
+          cooked_);
       break;
     case LineClassification::Kind::CompilerDirective:
       if (preprocessed->HasRedundantBlanks()) {
@@ -193,7 +194,9 @@ void Prescanner::Statement() {
       NormalizeCompilerDirectiveCommentMarker(*preprocessed);
       preprocessed->ToLowerCase();
       SourceFormChange(preprocessed->ToString());
-      preprocessed->ClipComment(true /* skip first ! */).Emit(cooked_);
+      preprocessed->ClipComment(true /* skip first ! */)
+          .CheckBadFortranCharacters(messages_)
+          .Emit(cooked_);
       break;
     case LineClassification::Kind::Source:
       if (inFixedForm_) {
@@ -205,7 +208,10 @@ void Prescanner::Statement() {
           preprocessed->RemoveRedundantBlanks();
         }
       }
-      preprocessed->ToLowerCase().ClipComment().Emit(cooked_);
+      preprocessed->ToLowerCase()
+          .ClipComment()
+          .CheckBadFortranCharacters(messages_)
+          .Emit(cooked_);
       break;
     }
   } else {
@@ -213,7 +219,7 @@ void Prescanner::Statement() {
     if (line.kind == LineClassification::Kind::CompilerDirective) {
       SourceFormChange(tokens.ToString());
     }
-    tokens.Emit(cooked_);
+    tokens.CheckBadFortranCharacters(messages_).Emit(cooked_);
   }
   if (omitNewline_) {
     omitNewline_ = false;
@@ -226,7 +232,7 @@ void Prescanner::Statement() {
 TokenSequence Prescanner::TokenizePreprocessorDirective() {
   CHECK(nextLine_ < limit_ && !inPreprocessorDirective_);
   inPreprocessorDirective_ = true;
-  BeginSourceLineAndAdvance();
+  BeginStatementAndAdvance();
   TokenSequence tokens;
   while (NextToken(tokens)) {
   }
@@ -245,8 +251,9 @@ void Prescanner::NextLine() {
   }
 }
 
-void Prescanner::LabelField(TokenSequence &token, int outCol) {
-  bool badLabel{false};
+void Prescanner::LabelField(TokenSequence &token) {
+  const char *bad{nullptr};
+  int outCol{1};
   for (; *at_ != '\n' && column_ <= 6; ++at_) {
     if (*at_ == '\t') {
       ++at_;
@@ -256,18 +263,26 @@ void Prescanner::LabelField(TokenSequence &token, int outCol) {
     if (*at_ != ' ' &&
         !(*at_ == '0' && column_ == 6)) { // '0' in column 6 becomes space
       EmitChar(token, *at_);
-      if (!IsDecimalDigit(*at_) && !badLabel) {
-        Say(GetProvenance(at_),
-            "Character in fixed-form label field must be a digit"_en_US);
-        badLabel = true;
-      }
       ++outCol;
+      if (!bad && !IsDecimalDigit(*at_)) {
+        bad = at_;
+      }
     }
     ++column_;
   }
-  if (outCol > 1) {
-    token.CloseToken();
+  if (outCol == 1) { // empty label field
+    // Emit a space so that, if the line is rescanned after preprocessing,
+    // a leading 'C' or 'D' won't be left-justified and then accidentally
+    // misinterpreted as a comment card.
+    EmitChar(token, ' ');
+    ++outCol;
+  } else {
+    if (bad && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
+      Say(GetProvenance(bad),
+          "Character in fixed-form label field must be a digit"_en_US);
+    }
   }
+  token.CloseToken();
   SkipToNextSignificantCharacter();
   if (IsDecimalDigit(*at_)) {
     Say(GetProvenance(at_),
@@ -495,12 +510,8 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     } while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_)));
     if (*at_ == '\'' || *at_ == '"') {
       QuotedCharacterLiteral(tokens, start);
-      preventHollerith_ = false;
-    } else {
-      // Subtle: Don't misrecognize labeled DO statement label as Hollerith
-      // when the loop control variable starts with 'H'.
-      preventHollerith_ = true;
     }
+    preventHollerith_ = false;
   } else if (*at_ == '*') {
     if (EmitCharAndAdvance(tokens, '*') == '*') {
       EmitCharAndAdvance(tokens, '*');
@@ -508,7 +519,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       // Subtle ambiguity:
       //  CHARACTER*2H     declares H because *2 is a kind specifier
       //  DATAC/N*2H  /    is repeated Hollerith
-      preventHollerith_ = !slashInCurrentLine_;
+      preventHollerith_ = !slashInCurrentStatement_;
     }
   } else {
     char ch{*at_};
@@ -528,7 +539,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       // token comprises two characters
       EmitCharAndAdvance(tokens, nch);
     } else if (ch == '/') {
-      slashInCurrentLine_ = true;
+      slashInCurrentStatement_ = true;
     }
   }
   tokens.CloseToken();
@@ -1098,6 +1109,15 @@ const char *Prescanner::IsCompilerDirectiveSentinel(
   return iter == compilerDirectiveSentinels_.end() ? nullptr : iter->c_str();
 }
 
+constexpr bool IsDirective(const char *match, const char *dir) {
+  for (; *match; ++match) {
+    if (*match != ToLowerCaseLetter(*dir++)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 Prescanner::LineClassification Prescanner::ClassifyLine(
     const char *start) const {
   if (inFixedForm_) {
@@ -1122,13 +1142,12 @@ Prescanner::LineClassification Prescanner::ClassifyLine(
     return {LineClassification::Kind::IncludeLine, *quoteOffset};
   }
   if (const char *dir{IsPreprocessorDirectiveLine(start)}) {
-    if (std::memcmp(dir, "if", 2) == 0 || std::memcmp(dir, "elif", 4) == 0 ||
-        std::memcmp(dir, "else", 4) == 0 || std::memcmp(dir, "endif", 5) == 0) {
+    if (IsDirective("if", dir) || IsDirective("elif", dir) ||
+        IsDirective("else", dir) || IsDirective("endif", dir)) {
       return {LineClassification::Kind::ConditionalCompilationDirective};
-    } else if (std::memcmp(dir, "include", 7) == 0) {
+    } else if (IsDirective("include", dir)) {
       return {LineClassification::Kind::IncludeDirective};
-    } else if (std::memcmp(dir, "define", 6) == 0 ||
-        std::memcmp(dir, "undef", 5) == 0) {
+    } else if (IsDirective("define", dir) || IsDirective("undef", dir)) {
       return {LineClassification::Kind::DefinitionDirective};
     } else {
       return {LineClassification::Kind::PreprocessorDirective};

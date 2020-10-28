@@ -510,11 +510,41 @@ struct isl_extract_mod_data {
 	int sign;
 };
 
+/* Does
+ *
+ *	arg mod data->d
+ *
+ * represent (a special case of) a test for some linear expression
+ * being even?
+ *
+ * In particular, is it of the form
+ *
+ *	(lin - 1) mod 2
+ *
+ * ?
+ */
+static isl_bool is_even_test(struct isl_extract_mod_data *data,
+	__isl_keep isl_aff *arg)
+{
+	isl_bool res;
+	isl_val *cst;
+
+	res = isl_val_eq_si(data->d, 2);
+	if (res < 0 || !res)
+		return res;
+
+	cst = isl_aff_get_constant_val(arg);
+	res = isl_val_eq_si(cst, -1);
+	isl_val_free(cst);
+
+	return res;
+}
+
 /* Given that data->v * div_i in data->aff is equal to
  *
  *	f * (term - (arg mod d))
  *
- * with data->d * f = data->v, add
+ * with data->d * f = data->v and "arg" non-negative on data->build, add
  *
  *	f * term
  *
@@ -523,12 +553,37 @@ struct isl_extract_mod_data {
  *	abs(f) * (arg mod d)
  *
  * to data->neg or data->pos depending on the sign of -f.
+ *
+ * In the special case that "arg mod d" is of the form "(lin - 1) mod 2",
+ * with "lin" some linear expression, first replace
+ *
+ *	f * (term - ((lin - 1) mod 2))
+ *
+ * by
+ *
+ *	-f * (1 - term - (lin mod 2))
+ *
+ * These two are equal because
+ *
+ *	((lin - 1) mod 2) + (lin mod 2) = 1
+ *
+ * Also, if "lin - 1" is non-negative, then "lin" is non-negative too.
  */
 static int extract_term_and_mod(struct isl_extract_mod_data *data,
 	__isl_take isl_aff *term, __isl_take isl_aff *arg)
 {
+	isl_bool even;
 	isl_ast_expr *expr;
 	int s;
+
+	even = is_even_test(data, arg);
+	if (even < 0) {
+		arg = isl_aff_free(arg);
+	} else if (even) {
+		term = oppose_div_arg(term, isl_val_copy(data->d));
+		data->v = isl_val_neg(data->v);
+		arg = isl_aff_set_constant_si(arg, 0);
+	}
 
 	data->v = isl_val_div(data->v, isl_val_copy(data->d));
 	s = isl_val_sgn(data->v);

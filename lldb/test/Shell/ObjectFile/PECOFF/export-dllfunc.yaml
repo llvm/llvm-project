@@ -1,5 +1,5 @@
 # REQUIRES: lld
-# RUN: yaml2obj < %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 #
 # RUN: lld-link /machine:x64 /out:%t.dll /noentry /nodefaultlib /debug /dll %t.obj /export:DllFunc
 #

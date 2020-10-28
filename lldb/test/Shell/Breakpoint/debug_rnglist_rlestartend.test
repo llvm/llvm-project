@@ -1,4 +1,4 @@
-# RUN: yaml2obj %p/Inputs/debug_rnglist_rlestartend.yaml > %ttest
+# RUN: yaml2obj %p/Inputs/debug_rnglist_rlestartend.yaml -o %ttest
 # RUN: lldb-test breakpoints %ttest %s | FileCheck %s
 
 # Test shows that LDLB is able to handle DW_RLE_start_end entries properly.

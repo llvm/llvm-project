@@ -9,6 +9,10 @@ const int still_cant_be_const __attribute__((loader_uninitialized));
 extern int external_rejected __attribute__((loader_uninitialized));
 // expected-error@-1 {{variable 'external_rejected' cannot be declared both 'extern' and with the 'loader_uninitialized' attribute}}
 
+struct S;
+extern S incomplete_external_rejected __attribute__((loader_uninitialized));
+// expected-error@-1 {{variable 'incomplete_external_rejected' cannot be declared both 'extern' and with the 'loader_uninitialized' attribute}}
+
 int noargs __attribute__((loader_uninitialized(0)));
 // expected-error@-1 {{'loader_uninitialized' attribute takes no arguments}}
 
@@ -58,3 +62,12 @@ struct nontrivial
 
 nontrivial needs_trivial_ctor __attribute__((loader_uninitialized));
 // expected-error@-1 {{variable with 'loader_uninitialized' attribute must have a trivial default constructor}}
+
+struct Incomplete;
+Incomplete incomplete __attribute__((loader_uninitialized));
+// expected-error@-1 {{variable has incomplete type 'Incomplete'}}
+// expected-note@-3 {{forward declaration of 'Incomplete'}}
+
+struct Incomplete s_incomplete __attribute__((loader_uninitialized));
+// expected-error@-1 {{variable has incomplete type 'struct Incomplete'}}
+// expected-note@-7 {{forward declaration of 'Incomplete'}}

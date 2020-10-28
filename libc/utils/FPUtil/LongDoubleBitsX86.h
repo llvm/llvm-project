@@ -96,8 +96,8 @@ template <> struct __attribute__((packed)) FPBits<long double> {
     // there can be garbage bits in the padding. So, we zero the padding bits
     // in |result|.
     static constexpr UIntType mask =
-        (UIntType(1) << (sizeof(long double) -
-                         Padding<sizeof(uintptr_t)>::value / 8)) -
+        (UIntType(1) << (sizeof(long double) * 8 -
+                         Padding<sizeof(uintptr_t)>::value)) -
         1;
     return result & mask;
   }

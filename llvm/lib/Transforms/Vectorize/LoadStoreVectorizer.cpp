@@ -1027,8 +1027,8 @@ bool Vectorizer::vectorizeStoreChain(
   unsigned EltSzInBytes = Sz / 8;
   unsigned SzInBytes = EltSzInBytes * ChainSize;
 
-  VectorType *VecTy;
-  VectorType *VecStoreTy = dyn_cast<VectorType>(StoreTy);
+  FixedVectorType *VecTy;
+  auto *VecStoreTy = dyn_cast<FixedVectorType>(StoreTy);
   if (VecStoreTy)
     VecTy = FixedVectorType::get(StoreTy->getScalarType(),
                                  Chain.size() * VecStoreTy->getNumElements());
@@ -1180,7 +1180,7 @@ bool Vectorizer::vectorizeLoadChain(
   unsigned EltSzInBytes = Sz / 8;
   unsigned SzInBytes = EltSzInBytes * ChainSize;
   VectorType *VecTy;
-  VectorType *VecLoadTy = dyn_cast<VectorType>(LoadTy);
+  auto *VecLoadTy = dyn_cast<FixedVectorType>(LoadTy);
   if (VecLoadTy)
     VecTy = FixedVectorType::get(LoadTy->getScalarType(),
                                  Chain.size() * VecLoadTy->getNumElements());

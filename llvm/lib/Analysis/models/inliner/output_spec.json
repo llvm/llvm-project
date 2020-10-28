@@ -1,0 +1,14 @@
+[
+    {
+        "logging_name": "inlining_decision",
+        "tensor_spec": {
+            "name": "StatefulPartitionedCall",
+            "port": 0,
+            "type": "int64_t",
+            "shape": [
+                1
+            ]
+        }
+    }
+]
+ 

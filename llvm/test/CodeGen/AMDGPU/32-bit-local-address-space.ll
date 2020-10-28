@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=SI,FUNC,GFX7 %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=SI,FUNC,GFX8 %s
 
 ; On Southern Islands GPUs the local address space(3) uses 32-bit pointers and
 ; the global address space(1) uses 64-bit pointers.  These tests check to make sure
@@ -57,9 +57,11 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}null_32bit_lds_ptr:
-; SI: s_cmp_lg_u32
-; SI-NOT: v_cmp_ne_u32
-; SI: s_cselect_b32
+; GFX7 v_cmp_ne_u32
+; GFX7: v_cndmask_b32
+; GFX8: s_cmp_lg_u32
+; GFX8-NOT: v_cmp_ne_u32
+; GFX8: s_cselect_b32
 define amdgpu_kernel void @null_32bit_lds_ptr(i32 addrspace(1)* %out, i32 addrspace(3)* %lds) nounwind {
   %cmp = icmp ne i32 addrspace(3)* %lds, null
   %x = select i1 %cmp, i32 123, i32 456

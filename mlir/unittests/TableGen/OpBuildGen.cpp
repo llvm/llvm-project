@@ -25,11 +25,16 @@ namespace mlir {
 // Test Fixture
 //===----------------------------------------------------------------------===//
 
+static MLIRContext &getContext() {
+  static MLIRContext ctx(false);
+  ctx.getOrLoadDialect<TestDialect>();
+  return ctx;
+}
 /// Test fixture for providing basic utilities for testing.
 class OpBuildGenTest : public ::testing::Test {
 protected:
   OpBuildGenTest()
-      : ctx{}, builder(&ctx), loc(builder.getUnknownLoc()),
+      : ctx(getContext()), builder(&ctx), loc(builder.getUnknownLoc()),
         i32Ty(builder.getI32Type()), f32Ty(builder.getF32Type()),
         cstI32(builder.create<TableGenConstant>(loc, i32Ty)),
         cstF32(builder.create<TableGenConstant>(loc, f32Ty)),
@@ -63,8 +68,30 @@ protected:
     concreteOp.erase();
   }
 
+  // Helper method to test ops with inferred result types and single variadic
+  // input.
+  template <typename OpTy>
+  void testSingleVariadicInputInferredType() {
+    // Test separate arg, separate param build method.
+    auto op = builder.create<OpTy>(loc, i32Ty, ArrayRef<Value>{cstI32, cstI32});
+    verifyOp(std::move(op), {i32Ty}, {cstI32, cstI32}, noAttrs);
+
+    // Test collective params build method.
+    op = builder.create<OpTy>(loc, ArrayRef<Type>{i32Ty},
+                              ArrayRef<Value>{cstI32, cstI32});
+    verifyOp(std::move(op), {i32Ty}, {cstI32, cstI32}, noAttrs);
+
+    // Test build method with no result types, default value of attributes.
+    op = builder.create<OpTy>(loc, ArrayRef<Value>{cstI32, cstI32});
+    verifyOp(std::move(op), {i32Ty}, {cstI32, cstI32}, noAttrs);
+
+    // Test build method with no result types and supplied attributes.
+    op = builder.create<OpTy>(loc, ArrayRef<Value>{cstI32, cstI32}, attrs);
+    verifyOp(std::move(op), {i32Ty}, {cstI32, cstI32}, attrs);
+  }
+
 protected:
-  MLIRContext ctx;
+  MLIRContext &ctx;
   OpBuilder builder;
   Location loc;
   Type i32Ty;
@@ -176,6 +203,21 @@ TEST_F(OpBuildGenTest,
   op = builder.create<TableGenBuildOp3>(loc, ArrayRef<Type>{i32Ty, f32Ty},
                                         ArrayRef<Value>{cstI32}, attrs);
   verifyOp(std::move(op), {i32Ty, f32Ty}, {cstI32}, attrs);
+}
+
+// The next 2 tests test supression of ambiguous build methods for ops that
+// have a single variadic input, and single non-variadic result, and which
+// support the SameOperandsAndResultType trait and and optionally the
+// InferOpTypeInterface interface. For such ops, the ODS framework generates
+// build methods with no result types as they are inferred from the input types.
+TEST_F(OpBuildGenTest, BuildMethodsSameOperandsAndResultTypeSuppression) {
+  testSingleVariadicInputInferredType<TableGenBuildOp4>();
+}
+
+TEST_F(
+    OpBuildGenTest,
+    BuildMethodsSameOperandsAndResultTypeAndInferOpTypeInterfaceSuppression) {
+  testSingleVariadicInputInferredType<TableGenBuildOp5>();
 }
 
 } // namespace mlir

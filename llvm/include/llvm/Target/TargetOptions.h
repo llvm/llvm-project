@@ -67,6 +67,9 @@ namespace llvm {
     Labels, // Do not use Basic Block Sections but label basic blocks.  This
             // is useful when associating profile counts from virtual addresses
             // to basic blocks.
+    Preset, // Similar to list but the blocks are identified by passes which
+            // seek to use Basic Block Sections, e.g. MachineFunctionSplitter.
+            // This option cannot be set via the command line.
     None    // Do not use Basic Block Sections.
   };
 
@@ -124,9 +127,10 @@ namespace llvm {
           TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
           EmulatedTLS(false), ExplicitEmulatedTLS(false), EnableIPRA(false),
           EmitStackSizeSection(false), EnableMachineOutliner(false),
-          SupportsDefaultOutlining(false), EmitAddrsig(false),
-          EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
-          EnableDebugEntryValues(false), ForceDwarfFrameSection(false),
+          EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
+          EmitAddrsig(false), EmitCallSiteInfo(false),
+          SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
+          ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
           XRayOmitFunctionIndex(false),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
 
@@ -257,6 +261,9 @@ namespace llvm {
     /// Enables the MachineOutliner pass.
     unsigned EnableMachineOutliner : 1;
 
+    /// Enables the MachineFunctionSplitter pass.
+    unsigned EnableMachineFunctionSplitter : 1;
+
     /// Set if the target supports default outlining behaviour.
     unsigned SupportsDefaultOutlining : 1;
 
@@ -284,6 +291,11 @@ namespace llvm {
     /// NOTE: There are targets that still do not support the debug entry values
     /// production.
     bool ShouldEmitDebugEntryValues() const;
+
+    // When set to true, use experimental new debug variable location tracking,
+    // which seeks to follow the values of variables rather than their location,
+    // post isel.
+    unsigned ValueTrackingVariableLocations : 1;
 
     /// Emit DWARF debug frame section.
     unsigned ForceDwarfFrameSection : 1;

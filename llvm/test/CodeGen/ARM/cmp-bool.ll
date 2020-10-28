@@ -8,6 +8,7 @@ define void @bool_eq(i1 zeroext %a, i1 zeroext %b, void ()* nocapture %c) nounwi
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    cmp r0, r1
 ; ARM-NEXT:    bxne lr
+; ARM-NEXT:  .LBB0_1: @ %if.then
 ; ARM-NEXT:    bx r2
 ;
 ; THUMB-LABEL: bool_eq:
@@ -25,6 +26,7 @@ define void @bool_eq(i1 zeroext %a, i1 zeroext %b, void ()* nocapture %c) nounwi
 ; THUMB2-NEXT:    cmp r0, r1
 ; THUMB2-NEXT:    it ne
 ; THUMB2-NEXT:    bxne lr
+; THUMB2-NEXT:  .LBB0_1: @ %if.then
 ; THUMB2-NEXT:    bx r2
 entry:
   %0 = xor i1 %a, %b
@@ -43,6 +45,7 @@ define void @bool_ne(i1 zeroext %a, i1 zeroext %b, void ()* nocapture %c) nounwi
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    cmp r0, r1
 ; ARM-NEXT:    bxeq lr
+; ARM-NEXT:  .LBB1_1: @ %if.then
 ; ARM-NEXT:    bx r2
 ;
 ; THUMB-LABEL: bool_ne:
@@ -60,6 +63,7 @@ define void @bool_ne(i1 zeroext %a, i1 zeroext %b, void ()* nocapture %c) nounwi
 ; THUMB2-NEXT:    cmp r0, r1
 ; THUMB2-NEXT:    it eq
 ; THUMB2-NEXT:    bxeq lr
+; THUMB2-NEXT:  .LBB1_1: @ %if.then
 ; THUMB2-NEXT:    bx r2
 entry:
   %cmp = xor i1 %a, %b

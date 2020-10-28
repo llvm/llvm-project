@@ -29,10 +29,10 @@ Known Limitations
 -----------------
 
 The following categories of return types cannot be rewritten currently:
+
 * function pointers
 * member function pointers
 * member pointers
-* decltype, when it is the top level expression
 
 Unqualified names in the return type might erroneously refer to different entities after the rewrite.
 Preventing such errors requires a full lookup of all unqualified names present in the return type in the scope of the trailing return type location.
@@ -43,26 +43,26 @@ Given the following piece of code
 
 .. code-block:: c++
 
-  struct Object { long long value; };
-  Object f(unsigned Object) { return {Object * 2}; }
+  struct S { long long value; };
+  S f(unsigned S) { return {S * 2}; }
   class CC {
-    int Object;
-    struct Object m();
+    int S;
+    struct S m();
   };
-  Object CC::m() { return {0}; }
+  S CC::m() { return {0}; }
 
 a careless rewrite would produce the following output:
 
 .. code-block:: c++
 
-  struct Object { long long value; };
-  auto f(unsigned Object) -> Object { return {Object * 2}; } // error
+  struct S { long long value; };
+  auto f(unsigned S) -> S { return {S * 2}; } // error
   class CC {
-    int Object;
-    auto m() -> struct Object;
+    int S;
+    auto m() -> struct S;
   };
-  auto CC::m() -> Object { return {0}; } // error
+  auto CC::m() -> S { return {0}; } // error
 
-This code fails to compile because the Object in the context of f refers to the equally named function parameter.
-Similarly, the Object in the context of m refers to the equally named class member.
-The check can currently only detect a clash with a function parameter name.
+This code fails to compile because the S in the context of f refers to the equally named function parameter.
+Similarly, the S in the context of m refers to the equally named class member.
+The check can currently only detect and avoid a clash with a function parameter name.

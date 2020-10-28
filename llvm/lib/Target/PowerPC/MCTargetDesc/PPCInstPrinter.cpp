@@ -531,10 +531,17 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
     RefExp = cast<MCSymbolRefExpr>(Op.getExpr());
 
   O << RefExp->getSymbol().getName();
+  // The variant kind VK_PPC_NOTOC needs to be handled as a special case
+  // because we do not want the assembly to print out the @notoc at the
+  // end like __tls_get_addr(x@tlsgd)@notoc. Instead we want it to look
+  // like __tls_get_addr@notoc(x@tlsgd).
+  if (RefExp->getKind() == MCSymbolRefExpr::VK_PPC_NOTOC)
+    O << '@' << MCSymbolRefExpr::getVariantKindName(RefExp->getKind());
   O << '(';
   printOperand(MI, OpNo+1, O);
   O << ')';
-  if (RefExp->getKind() != MCSymbolRefExpr::VK_None)
+  if (RefExp->getKind() != MCSymbolRefExpr::VK_None &&
+      RefExp->getKind() != MCSymbolRefExpr::VK_PPC_NOTOC)
     O << '@' << MCSymbolRefExpr::getVariantKindName(RefExp->getKind());
   if (ConstExp != nullptr)
     O << '+' << ConstExp->getValue();

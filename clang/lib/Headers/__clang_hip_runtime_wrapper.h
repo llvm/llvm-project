@@ -28,6 +28,10 @@
 #define __shared__ __attribute__((shared))
 #define __constant__ __attribute__((constant))
 
+#if !defined(__cplusplus) || __cplusplus < 201103L
+  #define nullptr NULL;
+#endif
+
 #if __HIP_ENABLE_DEVICE_MALLOC__
 extern "C" __device__ void *__hip_malloc(size_t __size);
 extern "C" __device__ void *__hip_free(void *__ptr);

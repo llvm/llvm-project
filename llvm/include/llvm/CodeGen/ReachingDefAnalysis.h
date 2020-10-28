@@ -202,6 +202,11 @@ public:
   void getGlobalUses(MachineInstr *MI, int PhysReg,
                      InstSet &Uses) const;
 
+  /// Collect all possible definitions of the value stored in PhysReg, which is
+  /// used by MI.
+  void getGlobalReachingDefs(MachineInstr *MI, int PhysReg,
+                             InstSet &Defs) const;
+
   /// Return whether From can be moved forwards to just before To.
   bool isSafeToMoveForwards(MachineInstr *From, MachineInstr *To) const;
 

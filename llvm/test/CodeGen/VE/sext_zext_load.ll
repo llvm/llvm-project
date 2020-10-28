@@ -267,8 +267,8 @@ define signext i8 @func37() {
 ; CHECK-LABEL: func37:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    ld1b.zx %s0, 191(, %s11)
-; CHECK-NEXT:    sla.w.sx %s0, %s0, 31
-; CHECK-NEXT:    sra.w.sx %s0, %s0, 31
+; CHECK-NEXT:    sll %s0, %s0, 63
+; CHECK-NEXT:    sra.l %s0, %s0, 63
 ; CHECK-NEXT:    or %s11, 0, %s9
   %a = alloca i1, align 1
   %a.val = load i1, i1* %a, align 1
@@ -280,8 +280,8 @@ define signext i16 @func38() {
 ; CHECK-LABEL: func38:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    ld1b.zx %s0, 191(, %s11)
-; CHECK-NEXT:    sla.w.sx %s0, %s0, 31
-; CHECK-NEXT:    sra.w.sx %s0, %s0, 31
+; CHECK-NEXT:    sll %s0, %s0, 63
+; CHECK-NEXT:    sra.l %s0, %s0, 63
 ; CHECK-NEXT:    or %s11, 0, %s9
   %a = alloca i1, align 1
   %a.val = load i1, i1* %a, align 1
@@ -293,8 +293,8 @@ define signext i32 @func39() {
 ; CHECK-LABEL: func39:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    ld1b.zx %s0, 191(, %s11)
-; CHECK-NEXT:    sla.w.sx %s0, %s0, 31
-; CHECK-NEXT:    sra.w.sx %s0, %s0, 31
+; CHECK-NEXT:    sll %s0, %s0, 63
+; CHECK-NEXT:    sra.l %s0, %s0, 63
 ; CHECK-NEXT:    or %s11, 0, %s9
   %a = alloca i1, align 1
   %a.val = load i1, i1* %a, align 1

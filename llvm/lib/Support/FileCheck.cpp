@@ -15,6 +15,7 @@
 
 #include "llvm/Support/FileCheck.h"
 #include "FileCheckImpl.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CheckedArithmetic.h"
@@ -1578,9 +1579,7 @@ FindCheckType(const FileCheckRequest &Req, StringRef Buffer, StringRef Prefix) {
   StringRef Rest = Buffer.drop_front(Prefix.size() + 1);
 
   // Check for comment.
-  if (Req.CommentPrefixes.end() != std::find(Req.CommentPrefixes.begin(),
-                                             Req.CommentPrefixes.end(),
-                                             Prefix)) {
+  if (llvm::is_contained(Req.CommentPrefixes, Prefix)) {
     if (NextChar == ':')
       return {Check::CheckComment, Rest};
     // Ignore a comment prefix if it has a suffix like "-NOT".
@@ -2198,6 +2197,7 @@ bool FileCheckString::CheckNot(const SourceMgr &SM, StringRef Buffer,
                                const std::vector<const Pattern *> &NotStrings,
                                const FileCheckRequest &Req,
                                std::vector<FileCheckDiag> *Diags) const {
+  bool DirectiveFail = false;
   for (const Pattern *Pat : NotStrings) {
     assert((Pat->getCheckTy() == Check::CheckNot) && "Expect CHECK-NOT!");
 
@@ -2213,11 +2213,11 @@ bool FileCheckString::CheckNot(const SourceMgr &SM, StringRef Buffer,
 
     PrintMatch(false, SM, Prefix, Pat->getLoc(), *Pat, 1, Buffer, Pos, MatchLen,
                Req, Diags);
-
-    return true;
+    DirectiveFail = true;
+    continue;
   }
 
-  return false;
+  return DirectiveFail;
 }
 
 size_t FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,

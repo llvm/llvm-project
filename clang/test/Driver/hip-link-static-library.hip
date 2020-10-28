@@ -25,3 +25,14 @@
 
 // NORDC-NOT: offload bundler
 // NORDC: # "x86_64-unknown-linux-gnu" - "GNU::StaticLibTool", inputs: ["{{.*o}}"], output: "a.out"
+
+// RUN: %clang --hip-link -### -target x86_64-linux-gnu \
+// RUN:   --emit-static-lib -lgcc \
+// RUN:   -Wl,--enable-new-dtags -Wl,--rpath=/opt \
+// RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 -fgpu-rdc %t.o\
+// RUN: 2>&1 | FileCheck -check-prefix=NOFLAG %s
+
+// NOFLAG-NOT: .*lgcc
+// NOFLAG-NOT: .*enable-new-dtags
+// NOFLAG-NOT: .*rpath=/opt
+// NOFLAG: "{{.*}}llvm-ar{{.*}}" "rcsD" "{{.*}}.out" "{{.*o}}" "{{.*o}}"

@@ -133,7 +133,7 @@ const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
 }
 
 Optional<unsigned> DILocation::encodeDiscriminator(unsigned BD, unsigned DF, unsigned CI) {
-  SmallVector<unsigned, 3> Components = {BD, DF, CI};
+  std::array<unsigned, 3> Components = {BD, DF, CI};
   uint64_t RemainingWork = 0U;
   // We use RemainingWork to figure out if we have no remaining components to
   // encode. For example: if BD != 0 but DF == 0 && CI == 0, we don't need to
@@ -468,6 +468,20 @@ Optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
   default:
     return None;
   }
+}
+
+DIStringType *DIStringType::getImpl(LLVMContext &Context, unsigned Tag,
+                                    MDString *Name, Metadata *StringLength,
+                                    Metadata *StringLengthExp,
+                                    uint64_t SizeInBits, uint32_t AlignInBits,
+                                    unsigned Encoding, StorageType Storage,
+                                    bool ShouldCreate) {
+  assert(isCanonical(Name) && "Expected canonical MDString");
+  DEFINE_GETIMPL_LOOKUP(DIStringType, (Tag, Name, StringLength, StringLengthExp,
+                                       SizeInBits, AlignInBits, Encoding));
+  Metadata *Ops[] = {nullptr, nullptr, Name, StringLength, StringLengthExp};
+  DEFINE_GETIMPL_STORE(DIStringType, (Tag, SizeInBits, AlignInBits, Encoding),
+                       Ops);
 }
 
 DIDerivedType *DIDerivedType::getImpl(

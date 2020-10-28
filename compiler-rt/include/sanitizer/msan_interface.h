@@ -114,6 +114,9 @@ extern "C" {
      call to __msan_scoped_disable_interceptor_checks. */
   void __msan_scoped_enable_interceptor_checks(void);
 
+  void __msan_start_switch_fiber(const void *bottom, size_t size);
+  void __msan_finish_switch_fiber(const void **bottom_old, size_t *size_old);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

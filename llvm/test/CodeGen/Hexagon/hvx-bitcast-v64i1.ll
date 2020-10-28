@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon  < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-instsimplify=0 -hexagon-masked-vmem=0 < %s | FileCheck %s
 
 ; Test that LLVM does not assert and bitcast v64i1 to i64 is lowered
 ; without crashing.

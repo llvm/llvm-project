@@ -41,7 +41,7 @@ define dso_local void @predicate_loop_hint(i32* noalias nocapture %A, i32* noali
 ; CHECK:       vector.body:
 ; CHECK:         %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK:         %[[ELEM0:.*]] = add i64 %index, 0
-; CHECK:         %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %[[ELEM0]], i64 429)
+; CHECK:         %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %[[ELEM0]], i64 430)
 ; CHECK:         %[[WML1:.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}<4 x i1> %active.lane.mask
 ; CHECK:         %[[WML2:.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32({{.*}}<4 x i1> %active.lane.mask
 ; CHECK:         %[[ADD:.*]] = add nsw <4 x i32> %[[WML2]], %[[WML1]]

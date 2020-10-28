@@ -622,18 +622,29 @@ static void scalarizeMaskedExpandLoad(CallInst *CI, bool &ModifiedDT) {
   Value *VResult = PassThru;
 
   // Shorten the way if the mask is a vector of constants.
+  // Create a build_vector pattern, with loads/undefs as necessary and then
+  // shuffle blend with the pass through value.
   if (isConstantIntVector(Mask)) {
     unsigned MemIndex = 0;
+    VResult = UndefValue::get(VecType);
+    SmallVector<int, 16> ShuffleMask(VectorWidth, UndefMaskElem);
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
-      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
-        continue;
-      Value *NewPtr = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, MemIndex);
-      LoadInst *Load = Builder.CreateAlignedLoad(EltTy, NewPtr, Align(1),
-                                                 "Load" + Twine(Idx));
-      VResult =
-          Builder.CreateInsertElement(VResult, Load, Idx, "Res" + Twine(Idx));
-      ++MemIndex;
+      Value *InsertElt;
+      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue()) {
+        InsertElt = UndefValue::get(EltTy);
+        ShuffleMask[Idx] = Idx + VectorWidth;
+      } else {
+        Value *NewPtr =
+            Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, MemIndex);
+        InsertElt = Builder.CreateAlignedLoad(EltTy, NewPtr, Align(1),
+                                              "Load" + Twine(Idx));
+        ShuffleMask[Idx] = Idx;
+        ++MemIndex;
+      }
+      VResult = Builder.CreateInsertElement(VResult, InsertElt, Idx,
+                                            "Res" + Twine(Idx));
     }
+    VResult = Builder.CreateShuffleVector(VResult, PassThru, ShuffleMask);
     CI->replaceAllUsesWith(VResult);
     CI->eraseFromParent();
     return;

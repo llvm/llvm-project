@@ -26,7 +26,12 @@ using namespace lld;
 using namespace lld::elf;
 
 template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
-  for (InputSectionBase *sec : obj->getSections()) {
+  // Get the ELF sections to retrieve sh_flags. See the SHF_GROUP comment below.
+  ArrayRef<typename ELFT::Shdr> objSections =
+      CHECK(obj->getObj().sections(), obj);
+  assert(objSections.size() == obj->getSections().size());
+  for (auto it : llvm::enumerate(obj->getSections())) {
+    InputSectionBase *sec = it.value();
     if (!sec)
       continue;
 
@@ -35,7 +40,6 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
                 .Case(".debug_addr", &addrSection)
                 .Case(".debug_gnu_pubnames", &gnuPubnamesSection)
                 .Case(".debug_gnu_pubtypes", &gnuPubtypesSection)
-                .Case(".debug_info", &infoSection)
                 .Case(".debug_loclists", &loclistsSection)
                 .Case(".debug_ranges", &rangesSection)
                 .Case(".debug_rnglists", &rnglistsSection)
@@ -53,6 +57,20 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
       strSection = toStringRef(sec->data());
     else if (sec->name == ".debug_line_str")
       lineStrSection = toStringRef(sec->data());
+    else if (sec->name == ".debug_info" &&
+             !(objSections[it.index()].sh_flags & ELF::SHF_GROUP)) {
+      // In DWARF v5, -fdebug-types-section places type units in .debug_info
+      // sections in COMDAT groups. They are not compile units and thus should
+      // be ignored for .gdb_index/diagnostics purposes.
+      //
+      // We use a simple heuristic: the compile unit does not have the SHF_GROUP
+      // flag. If we place compile units in COMDAT groups in the future, we may
+      // need to perform a lightweight parsing. We drop the SHF_GROUP flag when
+      // the InputSection was created, so we need to retrieve sh_flags from the
+      // associated ELF section header.
+      infoSection.Data = toStringRef(sec->data());
+      infoSection.sec = sec;
+    }
   }
 }
 

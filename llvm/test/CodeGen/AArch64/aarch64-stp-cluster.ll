@@ -194,3 +194,47 @@ entry:
   store i64 %add6.3, i64* %arrayidx5.3, align 8
   ret void
 }
+
+; Verify that the SU(2) and SU(4) are the preds of SU(3)
+; CHECK: ********** MI Scheduling **********
+; CHECK-LABEL: stp_missing_preds_edges:%bb.0
+; CHECK:Cluster ld/st SU(3) - SU(5)
+; CHECK: Copy Pred SU(4)
+; CHECK: Copy Pred SU(2)
+; CHECK:SU(2):   %0:gpr64common = COPY $x0
+; CHECK:SU(3):   STRWui %1:gpr32, %0:gpr64common, 0
+; CHECK:SU(4):   %3:gpr32common = nsw ADDWri %2:gpr32common, 5, 0
+; CHECK:SU(5):   STRWui %3:gpr32common, %0:gpr64common, 1
+define void @stp_missing_preds_edges(i32* %p, i32 %m, i32 %n) {
+entry:
+  store i32 %m, i32* %p, align 4
+  %add = add nsw i32 %n, 5
+  %arrayidx1 = getelementptr inbounds i32, i32* %p, i64 1
+  store i32 %add, i32* %arrayidx1, align 4
+  ret void
+}
+
+; Verify that the SU(4) and SU(7) can be clustered even with
+; different preds
+; CHECK: ********** MI Scheduling **********
+; CHECK-LABEL: cluster_with_different_preds:%bb.0
+; CHECK:Cluster ld/st SU(4) - SU(7)
+; CHECK:SU(3):   STRWui %2:gpr32, %0:gpr64common, 0 ::
+; CHECK:SU(4):   %3:gpr32 = LDRWui %1:gpr64common, 0 ::
+; CHECK:Predecessors:
+; CHECK: SU(3): Ord  Latency=1 Memory
+; CHECK:SU(6):   STRBBui %4:gpr32, %1:gpr64common, 4 ::
+; CHECK:SU(7):   %5:gpr32 = LDRWui %1:gpr64common, 1 ::
+; CHECK:Predecessors:
+; CHECK:SU(6): Ord  Latency=1 Memory
+define i32 @cluster_with_different_preds(i32* %p, i32* %q) {
+entry:
+  store i32 3, i32* %p, align 4
+  %0 = load i32, i32* %q, align 4
+  %add.ptr = getelementptr inbounds i32, i32* %q, i64 1
+  %1 = bitcast i32* %add.ptr to i8*
+  store i8 5, i8* %1, align 1
+  %2 = load i32, i32* %add.ptr, align 4
+  %add = add nsw i32 %2, %0
+  ret i32 %add
+}

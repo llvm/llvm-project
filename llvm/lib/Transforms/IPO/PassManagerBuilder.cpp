@@ -784,13 +784,10 @@ void PassManagerBuilder::populateModulePassManager(
   // convert to more optimized IR using more aggressive simplify CFG options.
   // The extra sinking transform can create larger basic blocks, so do this
   // before SLP vectorization.
-  // FIXME: study whether hoisting and/or sinking of common instructions should
-  //        be delayed until after SLP vectorizer.
   MPM.add(createCFGSimplificationPass(SimplifyCFGOptions()
                                           .forwardSwitchCondToPhi(true)
                                           .convertSwitchToLookupTable(true)
                                           .needCanonicalLoops(false)
-                                          .hoistCommonInsts(true)
                                           .sinkCommonInsts(true)));
 
   if (SLPVectorize) {

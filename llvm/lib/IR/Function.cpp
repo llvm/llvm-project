@@ -714,9 +714,10 @@ static std::string getMangledTypeStr(Type* Ty) {
     Result += "f";
   } else if (VectorType* VTy = dyn_cast<VectorType>(Ty)) {
     ElementCount EC = VTy->getElementCount();
-    if (EC.Scalable)
+    if (EC.isScalable())
       Result += "nx";
-    Result += "v" + utostr(EC.Min) + getMangledTypeStr(VTy->getElementType());
+    Result += "v" + utostr(EC.getKnownMinValue()) +
+              getMangledTypeStr(VTy->getElementType());
   } else if (Ty) {
     switch (Ty->getTypeID()) {
     default: llvm_unreachable("Unhandled type");
@@ -1396,10 +1397,11 @@ static bool matchIntrinsicType(
       // Verify the overloaded type "matches" the Ref type.
       // i.e. Ty is a vector with the same width as Ref.
       // Composed of pointers to the same element type as Ref.
-      VectorType *ReferenceType = dyn_cast<VectorType>(ArgTys[RefArgNumber]);
-      VectorType *ThisArgVecTy = dyn_cast<VectorType>(Ty);
+      auto *ReferenceType = dyn_cast<VectorType>(ArgTys[RefArgNumber]);
+      auto *ThisArgVecTy = dyn_cast<VectorType>(Ty);
       if (!ThisArgVecTy || !ReferenceType ||
-          (ReferenceType->getNumElements() != ThisArgVecTy->getNumElements()))
+          (cast<FixedVectorType>(ReferenceType)->getNumElements() !=
+           cast<FixedVectorType>(ThisArgVecTy)->getNumElements()))
         return true;
       PointerType *ThisArgEltTy =
           dyn_cast<PointerType>(ThisArgVecTy->getElementType());

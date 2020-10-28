@@ -18,6 +18,7 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; GCN-NEXT:    s_add_u32 s0, s0, s9
 ; GCN-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x8
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
+; GCN-NEXT:    s_movk_i32 s32, 0x400
 ; GCN-NEXT:    s_mov_b32 s33, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s8, 0
@@ -89,6 +90,7 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x8
 ; GCN-NEXT:    s_add_u32 s0, s0, s9
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
+; GCN-NEXT:    s_movk_i32 s32, 0x1000
 ; GCN-NEXT:    s_mov_b32 s33, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_lg_u32 s6, 0

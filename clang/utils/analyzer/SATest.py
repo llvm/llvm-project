@@ -37,7 +37,7 @@ def build(parser, args):
 
     SATestBuild.VERBOSE = args.verbose
 
-    projects = get_projects(parser, args.projects)
+    projects = get_projects(parser, args)
     tester = SATestBuild.RegressionTester(args.jobs,
                                           projects,
                                           args.override_compiler,
@@ -78,13 +78,13 @@ def update(parser, args):
 
     project_map = ProjectMap()
     for project in project_map.projects:
-        SATestUpdateDiffs.update_reference_results(project)
+        SATestUpdateDiffs.update_reference_results(project, args.git)
 
 
 def benchmark(parser, args):
     from SATestBenchmark import Benchmark
 
-    projects = get_projects(parser, args.projects)
+    projects = get_projects(parser, args)
     benchmark = Benchmark(projects, args.iterations, args.output)
     benchmark.run()
 
@@ -94,14 +94,19 @@ def benchmark_compare(parser, args):
     SATestBenchmark.compare(args.old, args.new, args.output)
 
 
-def get_projects(parser, projects_str):
-    from ProjectMap import ProjectMap
+def get_projects(parser, args):
+    from ProjectMap import ProjectMap, Size
 
     project_map = ProjectMap()
     projects = project_map.projects
 
-    if projects_str:
-        projects_arg = projects_str.split(",")
+    def filter_projects(projects, predicate, force=False):
+        return [project.with_fields(enabled=(force or project.enabled) and
+                                    predicate(project))
+                for project in projects]
+
+    if args.projects:
+        projects_arg = args.projects.split(",")
         available_projects = [project.name
                               for project in projects]
 
@@ -113,8 +118,17 @@ def get_projects(parser, projects_str):
                              "{all}.".format(project=manual_project,
                                              all=available_projects))
 
-        projects = [project.with_fields(enabled=project.name in projects_arg)
-                    for project in projects]
+        projects = filter_projects(projects, lambda project:
+                                   project.name in projects_arg,
+                                   force=True)
+
+    try:
+        max_size = Size.from_str(args.max_size)
+    except ValueError as e:
+        parser.error("{}".format(e))
+
+    projects = filter_projects(projects, lambda project:
+                               project.size <= max_size)
 
     return projects
 
@@ -238,6 +252,8 @@ def main():
                               help="Arguments passed to to -analyzer-config")
     build_parser.add_argument("--projects", action="store", default="",
                               help="Comma-separated list of projects to test")
+    build_parser.add_argument("--max-size", action="store", default=None,
+                              help="Maximum size for the projects to test")
     build_parser.add_argument("-v", "--verbose", action="count", default=0)
     build_parser.set_defaults(func=build)
 
@@ -277,7 +293,8 @@ def main():
         "update",
         help="Update static analyzer reference results based on the previous "
         "run of SATest build. Assumes that SATest build was just run.")
-    # TODO: add option to decide whether we should use git
+    upd_parser.add_argument("--git", action="store_true",
+                            help="Stage updated results using git.")
     upd_parser.set_defaults(func=update)
 
     # docker subcommand
@@ -317,6 +334,8 @@ def main():
                               help="Output csv file for the benchmark results")
     bench_parser.add_argument("--projects", action="store", default="",
                               help="Comma-separated list of projects to test")
+    bench_parser.add_argument("--max-size", action="store", default=None,
+                              help="Maximum size for the projects to test")
     bench_parser.set_defaults(func=benchmark)
 
     bench_subparsers = bench_parser.add_subparsers()

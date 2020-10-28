@@ -75,6 +75,7 @@ enum class CudaArch {
   GFX1011,
   GFX1012,
   GFX1030,
+  GFX1031,
   LAST,
 };
 

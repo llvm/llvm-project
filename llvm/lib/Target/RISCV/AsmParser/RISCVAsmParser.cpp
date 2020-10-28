@@ -288,11 +288,21 @@ struct RISCVOperand : public MCParsedAsmOperand {
     SEW_1024,
   };
 
-  enum class VLMUL { LMUL_1 = 0, LMUL_2, LMUL_4, LMUL_8 };
+  enum class VLMUL {
+    LMUL_1 = 0,
+    LMUL_2,
+    LMUL_4,
+    LMUL_8,
+    LMUL_F8 = 5,
+    LMUL_F4,
+    LMUL_F2
+  };
 
   struct VTypeOp {
     VSEW Sew;
     VLMUL Lmul;
+    bool TailAgnostic;
+    bool MaskedoffAgnostic;
     unsigned Encoding;
   };
 
@@ -763,7 +773,7 @@ public:
     case VSEW::SEW_1024:
       return "e1024";
     }
-    return "";
+    llvm_unreachable("Unknown SEW.");
   }
 
   static StringRef getLMULStr(VLMUL Lmul) {
@@ -776,8 +786,14 @@ public:
       return "m4";
     case VLMUL::LMUL_8:
       return "m8";
+    case VLMUL::LMUL_F2:
+      return "mf2";
+    case VLMUL::LMUL_F4:
+      return "mf4";
+    case VLMUL::LMUL_F8:
+      return "mf8";
     }
-    return "";
+    llvm_unreachable("Unknown LMUL.");
   }
 
   StringRef getVType(SmallString<32> &Buf) const {
@@ -852,15 +868,31 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand> createVType(APInt Sew, APInt Lmul,
-                                                   SMLoc S, bool IsRV64) {
+  static std::unique_ptr<RISCVOperand>
+  createVType(APInt Sew, APInt Lmul, bool Fractional, bool TailAgnostic,
+              bool MaskedoffAgnostic, SMLoc S, bool IsRV64) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::VType);
     Sew.ashrInPlace(3);
     unsigned SewLog2 = Sew.logBase2();
     unsigned LmulLog2 = Lmul.logBase2();
     Op->VType.Sew = static_cast<VSEW>(SewLog2);
-    Op->VType.Lmul = static_cast<VLMUL>(LmulLog2);
-    Op->VType.Encoding = (SewLog2 << 2) | LmulLog2;
+    if (Fractional) {
+      unsigned Flmul = 8 - LmulLog2;
+      Op->VType.Lmul = static_cast<VLMUL>(Flmul);
+      Op->VType.Encoding =
+          ((Flmul & 0x4) << 3) | ((SewLog2 & 0x7) << 2) | (Flmul & 0x3);
+    } else {
+      Op->VType.Lmul = static_cast<VLMUL>(LmulLog2);
+      Op->VType.Encoding = (SewLog2 << 2) | LmulLog2;
+    }
+    if (TailAgnostic) {
+      Op->VType.Encoding |= 0x40;
+    }
+    if (MaskedoffAgnostic) {
+      Op->VType.Encoding |= 0x80;
+    }
+    Op->VType.TailAgnostic = TailAgnostic;
+    Op->VType.MaskedoffAgnostic = MaskedoffAgnostic;
     Op->StartLoc = S;
     Op->IsRV64 = IsRV64;
     return Op;
@@ -1181,8 +1213,10 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   }
   case Match_InvalidVTypeI: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc,
-                 "operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8]");
+    return Error(
+        ErrorLoc,
+        "operand must be "
+        "e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
   }
   case Match_InvalidVMaskRegister: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
@@ -1549,7 +1583,7 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::Identifier)
     return MatchOperand_NoMatch;
 
-  // Parse "e8,m1"
+  // Parse "e8,m1,t[a|u],m[a|u]"
   StringRef Name = getLexer().getTok().getIdentifier();
   if (!Name.consume_front("e"))
     return MatchOperand_NoMatch;
@@ -1559,13 +1593,6 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
     return MatchOperand_NoMatch;
   getLexer().Lex();
 
-  if (getLexer().getKind() == AsmToken::EndOfStatement) {
-    Operands.push_back(
-        RISCVOperand::createVType(Sew, APInt(16, 1), S, isRV64()));
-
-    return MatchOperand_Success;
-  }
-
   if (!getLexer().is(AsmToken::Comma))
     return MatchOperand_NoMatch;
   getLexer().Lex();
@@ -1573,15 +1600,51 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   Name = getLexer().getTok().getIdentifier();
   if (!Name.consume_front("m"))
     return MatchOperand_NoMatch;
+  // "m" or "mf"
+  bool Fractional = false;
+  if (Name.consume_front("f")) {
+    Fractional = true;
+  }
   APInt Lmul(16, Name, 10);
   if (Lmul != 1 && Lmul != 2 && Lmul != 4 && Lmul != 8)
+    return MatchOperand_NoMatch;
+  getLexer().Lex();
+
+  if (!getLexer().is(AsmToken::Comma))
+    return MatchOperand_NoMatch;
+  getLexer().Lex();
+
+  Name = getLexer().getTok().getIdentifier();
+  // ta or tu
+  bool TailAgnostic;
+  if (Name.consume_front("ta"))
+    TailAgnostic = true;
+  else if (Name.consume_front("tu"))
+    TailAgnostic = false;
+  else
+    return MatchOperand_NoMatch;
+  getLexer().Lex();
+
+  if (!getLexer().is(AsmToken::Comma))
+    return MatchOperand_NoMatch;
+  getLexer().Lex();
+
+  Name = getLexer().getTok().getIdentifier();
+  // ma or mu
+  bool MaskedoffAgnostic;
+  if (Name.consume_front("ma"))
+    MaskedoffAgnostic = true;
+  else if (Name.consume_front("mu"))
+    MaskedoffAgnostic = false;
+  else
     return MatchOperand_NoMatch;
   getLexer().Lex();
 
   if (getLexer().getKind() != AsmToken::EndOfStatement)
     return MatchOperand_NoMatch;
 
-  Operands.push_back(RISCVOperand::createVType(Sew, Lmul, S, isRV64()));
+  Operands.push_back(RISCVOperand::createVType(
+      Sew, Lmul, Fractional, TailAgnostic, MaskedoffAgnostic, S, isRV64()));
 
   return MatchOperand_Success;
 }
@@ -2281,71 +2344,41 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     return false;
 
   unsigned DestReg = Inst.getOperand(0).getReg();
+  unsigned CheckReg;
   // Operands[1] will be the first operand, DestReg.
   SMLoc Loc = Operands[1]->getStartLoc();
-  if ((TargetFlags == RISCV::WidenV) || (TargetFlags == RISCV::WidenW) ||
-      (TargetFlags == RISCV::SlideUp) || (TargetFlags == RISCV::Vrgather) ||
-      (TargetFlags == RISCV::Vcompress)) {
-    if (TargetFlags != RISCV::WidenW) {
-      unsigned Src2Reg = Inst.getOperand(1).getReg();
-      if (DestReg == Src2Reg)
-        return Error(Loc, "The destination vector register group cannot overlap"
-                          " the source vector register group.");
-      if (TargetFlags == RISCV::WidenV) {
-        // Assume DestReg LMUL is 2 at least for widening/narrowing operations.
-        if (DestReg + 1 == Src2Reg)
-          return Error(Loc,
-                       "The destination vector register group cannot overlap"
-                       " the source vector register group.");
-      }
-    }
-    if (Inst.getOperand(2).isReg()) {
-      unsigned Src1Reg = Inst.getOperand(2).getReg();
-      if (DestReg == Src1Reg)
-        return Error(Loc, "The destination vector register group cannot overlap"
-                          " the source vector register group.");
-      if (TargetFlags == RISCV::WidenV || TargetFlags == RISCV::WidenW) {
-        // Assume DestReg LMUL is 2 at least for widening/narrowing operations.
-        if (DestReg + 1 == Src1Reg)
-          return Error(Loc,
-                       "The destination vector register group cannot overlap"
-                       " the source vector register group.");
-      }
-    }
-    if (Inst.getNumOperands() == 4) {
-      unsigned MaskReg = Inst.getOperand(3).getReg();
+  if (TargetFlags & RISCV::VS2Constraint) {
+    CheckReg = Inst.getOperand(1).getReg();
+    if (DestReg == CheckReg)
+      return Error(Loc, "The destination vector register group cannot overlap"
+                        " the source vector register group.");
+  }
+  if ((TargetFlags & RISCV::VS1Constraint) && (Inst.getOperand(2).isReg())) {
+    CheckReg = Inst.getOperand(2).getReg();
+    if (DestReg == CheckReg)
+      return Error(Loc, "The destination vector register group cannot overlap"
+                        " the source vector register group.");
+  }
+  if ((TargetFlags & RISCV::VMConstraint) && (DestReg == RISCV::V0)) {
+    // vadc, vsbc are special cases. These instructions have no mask register.
+    // The destination register could not be V0.
+    unsigned Opcode = Inst.getOpcode();
+    if (Opcode == RISCV::VADC_VVM || Opcode == RISCV::VADC_VXM ||
+        Opcode == RISCV::VADC_VIM || Opcode == RISCV::VSBC_VVM ||
+        Opcode == RISCV::VSBC_VXM)
+      return Error(Loc, "The destination vector register group cannot be V0.");
 
-      if (DestReg == MaskReg)
-        return Error(Loc, "The destination vector register group cannot overlap"
-                          " the mask register.");
-    }
-  } else if (TargetFlags == RISCV::Narrow) {
-    unsigned Src2Reg = Inst.getOperand(1).getReg();
-    if (DestReg == Src2Reg)
+    // Regardless masked or unmasked version, the number of operands is the
+    // same. For example, "viota.m v0, v2" is "viota.m v0, v2, NoRegister"
+    // actually. We need to check the last operand to ensure whether it is
+    // masked or not.
+    if ((TargetFlags & RISCV::OneInput) && (Inst.getNumOperands() == 3))
+      CheckReg = Inst.getOperand(2).getReg();
+    else if (Inst.getNumOperands() == 4)
+      CheckReg = Inst.getOperand(3).getReg();
+    if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
-                        " the source vector register group.");
-    // Assume Src2Reg LMUL is 2 at least for widening/narrowing operations.
-    if (DestReg == Src2Reg + 1)
-      return Error(Loc, "The destination vector register group cannot overlap"
-                        " the source vector register group.");
-  } else if (TargetFlags == RISCV::WidenCvt || TargetFlags == RISCV::Iota) {
-    unsigned Src2Reg = Inst.getOperand(1).getReg();
-    if (DestReg == Src2Reg)
-      return Error(Loc, "The destination vector register group cannot overlap"
-                        " the source vector register group.");
-    if (TargetFlags == RISCV::WidenCvt) {
-      // Assume DestReg LMUL is 2 at least for widening/narrowing operations.
-      if (DestReg + 1 == Src2Reg)
-        return Error(Loc, "The destination vector register group cannot overlap"
-                          " the source vector register group.");
-    }
-    if (Inst.getNumOperands() == 3) {
-      unsigned MaskReg = Inst.getOperand(2).getReg();
-
-      if (DestReg == MaskReg)
-        return Error(Loc, "The destination vector register group cannot overlap"
-                          " the mask register.");
-    }
+                        " the mask register.");
   }
   return false;
 }

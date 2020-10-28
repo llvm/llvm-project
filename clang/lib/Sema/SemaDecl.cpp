@@ -8032,7 +8032,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     return;
   }
 
-  if (!NewVD->hasLocalStorage() && T->isSizelessType() && !T->isVLST()) {
+  if (!NewVD->hasLocalStorage() && T->isSizelessType()) {
     Diag(NewVD->getLocation(), diag::err_sizeless_nonlocal) << T;
     NewVD->setInvalidDecl();
     return;
@@ -10029,31 +10029,50 @@ static bool CheckMultiVersionValue(Sema &S, const FunctionDecl *FD) {
 // multiversion functions.
 static bool AttrCompatibleWithMultiVersion(attr::Kind Kind,
                                            MultiVersionKind MVType) {
+  // Note: this list/diagnosis must match the list in
+  // checkMultiversionAttributesAllSame.
   switch (Kind) {
   default:
     return false;
   case attr::Used:
     return MVType == MultiVersionKind::Target;
+  case attr::NonNull:
+  case attr::NoThrow:
+    return true;
   }
 }
 
-static bool HasNonMultiVersionAttributes(const FunctionDecl *FD,
-                                         MultiVersionKind MVType) {
+static bool checkNonMultiVersionCompatAttributes(Sema &S,
+                                                 const FunctionDecl *FD,
+                                                 const FunctionDecl *CausedFD,
+                                                 MultiVersionKind MVType) {
+  bool IsCPUSpecificCPUDispatchMVType =
+      MVType == MultiVersionKind::CPUDispatch ||
+      MVType == MultiVersionKind::CPUSpecific;
+  const auto Diagnose = [FD, CausedFD, IsCPUSpecificCPUDispatchMVType](
+                            Sema &S, const Attr *A) {
+    S.Diag(FD->getLocation(), diag::err_multiversion_disallowed_other_attr)
+        << IsCPUSpecificCPUDispatchMVType << A;
+    if (CausedFD)
+      S.Diag(CausedFD->getLocation(), diag::note_multiversioning_caused_here);
+    return true;
+  };
+
   for (const Attr *A : FD->attrs()) {
     switch (A->getKind()) {
     case attr::CPUDispatch:
     case attr::CPUSpecific:
       if (MVType != MultiVersionKind::CPUDispatch &&
           MVType != MultiVersionKind::CPUSpecific)
-        return true;
+        return Diagnose(S, A);
       break;
     case attr::Target:
       if (MVType != MultiVersionKind::Target)
-        return true;
+        return Diagnose(S, A);
       break;
     default:
       if (!AttrCompatibleWithMultiVersion(A->getKind(), MVType))
-        return true;
+        return Diagnose(S, A);
       break;
     }
   }
@@ -10187,18 +10206,12 @@ static bool CheckMultiVersionAdditionalRules(Sema &S, const FunctionDecl *OldFD,
       MVType == MultiVersionKind::CPUDispatch ||
       MVType == MultiVersionKind::CPUSpecific;
 
-  // For now, disallow all other attributes.  These should be opt-in, but
-  // an analysis of all of them is a future FIXME.
-  if (CausesMV && OldFD && HasNonMultiVersionAttributes(OldFD, MVType)) {
-    S.Diag(OldFD->getLocation(), diag::err_multiversion_no_other_attrs)
-        << IsCPUSpecificCPUDispatchMVType;
-    S.Diag(NewFD->getLocation(), diag::note_multiversioning_caused_here);
+  if (CausesMV && OldFD &&
+      checkNonMultiVersionCompatAttributes(S, OldFD, NewFD, MVType))
     return true;
-  }
 
-  if (HasNonMultiVersionAttributes(NewFD, MVType))
-    return S.Diag(NewFD->getLocation(), diag::err_multiversion_no_other_attrs)
-           << IsCPUSpecificCPUDispatchMVType;
+  if (checkNonMultiVersionCompatAttributes(S, NewFD, nullptr, MVType))
+    return true;
 
   // Only allow transition to MultiVersion if it hasn't been used.
   if (OldFD && CausesMV && OldFD->isUsed(false))
@@ -12463,18 +12476,23 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     }
 
     if (!Var->isInvalidDecl() && RealDecl->hasAttr<LoaderUninitializedAttr>()) {
+      if (Var->getStorageClass() == SC_Extern) {
+        Diag(Var->getLocation(), diag::err_loader_uninitialized_extern_decl)
+            << Var;
+        Var->setInvalidDecl();
+        return;
+      }
+      if (RequireCompleteType(Var->getLocation(), Var->getType(),
+                              diag::err_typecheck_decl_incomplete_type)) {
+        Var->setInvalidDecl();
+        return;
+      }
       if (CXXRecordDecl *RD = Var->getType()->getAsCXXRecordDecl()) {
         if (!RD->hasTrivialDefaultConstructor()) {
           Diag(Var->getLocation(), diag::err_loader_uninitialized_trivial_ctor);
           Var->setInvalidDecl();
           return;
         }
-      }
-      if (Var->getStorageClass() == SC_Extern) {
-        Diag(Var->getLocation(), diag::err_loader_uninitialized_extern_decl)
-            << Var;
-        Var->setInvalidDecl();
-        return;
       }
     }
 
@@ -12871,6 +12889,54 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       var->addAttr(InitSegAttr::CreateImplicit(Context, CurInitSeg->getString(),
                                                CurInitSegLoc,
                                                AttributeCommonInfo::AS_Pragma));
+  }
+
+  if (!var->getType()->isStructureType() && var->hasInit() &&
+      isa<InitListExpr>(var->getInit())) {
+    const auto *ILE = cast<InitListExpr>(var->getInit());
+    unsigned NumInits = ILE->getNumInits();
+    if (NumInits > 2)
+      for (unsigned I = 0; I < NumInits; ++I) {
+        const auto *Init = ILE->getInit(I);
+        if (!Init)
+          break;
+        const auto *SL = dyn_cast<StringLiteral>(Init->IgnoreImpCasts());
+        if (!SL)
+          break;
+
+        unsigned NumConcat = SL->getNumConcatenated();
+        // Diagnose missing comma in string array initialization.
+        // Do not warn when all the elements in the initializer are concatenated
+        // together. Do not warn for macros too.
+        if (NumConcat == 2 && !SL->getBeginLoc().isMacroID()) {
+          bool OnlyOneMissingComma = true;
+          for (unsigned J = I + 1; J < NumInits; ++J) {
+            const auto *Init = ILE->getInit(J);
+            if (!Init)
+              break;
+            const auto *SLJ = dyn_cast<StringLiteral>(Init->IgnoreImpCasts());
+            if (!SLJ || SLJ->getNumConcatenated() > 1) {
+              OnlyOneMissingComma = false;
+              break;
+            }
+          }
+
+          if (OnlyOneMissingComma) {
+            SmallVector<FixItHint, 1> Hints;
+            for (unsigned i = 0; i < NumConcat - 1; ++i)
+              Hints.push_back(FixItHint::CreateInsertion(
+                  PP.getLocForEndOfToken(SL->getStrTokenLoc(i)), ","));
+
+            Diag(SL->getStrTokenLoc(1),
+                 diag::warn_concatenated_literal_array_init)
+                << Hints;
+            Diag(SL->getBeginLoc(),
+                 diag::note_concatenated_string_literal_silence);
+          }
+          // In any case, stop now.
+          break;
+        }
+      }
   }
 
   // All the following checks are C++ only.

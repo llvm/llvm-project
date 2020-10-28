@@ -341,12 +341,14 @@ private:
   SDValue PromoteIntRes_VAARG(SDNode *N);
   SDValue PromoteIntRes_VSCALE(SDNode *N);
   SDValue PromoteIntRes_XMULO(SDNode *N, unsigned ResNo);
-  SDValue PromoteIntRes_ADDSUBSAT(SDNode *N);
+  SDValue PromoteIntRes_ADDSUBSHLSAT(SDNode *N);
   SDValue PromoteIntRes_MULFIX(SDNode *N);
   SDValue PromoteIntRes_DIVFIX(SDNode *N);
   SDValue PromoteIntRes_FLT_ROUNDS(SDNode *N);
   SDValue PromoteIntRes_VECREDUCE(SDNode *N);
   SDValue PromoteIntRes_ABS(SDNode *N);
+  SDValue PromoteIntRes_Rotate(SDNode *N);
+  SDValue PromoteIntRes_FunnelShift(SDNode *N);
 
   // Integer Operand Promotion.
   bool PromoteIntegerOperand(SDNode *N, unsigned OpNo);
@@ -442,11 +444,15 @@ private:
   void ExpandIntRes_UADDSUBO          (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_XMULO             (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_ADDSUBSAT         (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_SHLSAT            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_MULFIX            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_DIVFIX            (SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_ATOMIC_LOAD       (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_VECREDUCE         (SDNode *N, SDValue &Lo, SDValue &Hi);
+
+  void ExpandIntRes_Rotate            (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_FunnelShift       (SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandShiftByConstant(SDNode *N, const APInt &Amt,
                              SDValue &Lo, SDValue &Hi);
@@ -628,7 +634,8 @@ private:
   SDValue ExpandFloatOp_STORE(SDNode *N, unsigned OpNo);
 
   void FloatExpandSetCCOperands(SDValue &NewLHS, SDValue &NewRHS,
-                                ISD::CondCode &CCCode, const SDLoc &dl);
+                                ISD::CondCode &CCCode, const SDLoc &dl,
+                                SDValue &Chain, bool IsSignaling = false);
 
   //===--------------------------------------------------------------------===//
   // Float promotion support: LegalizeFloatTypes.cpp
@@ -778,8 +785,8 @@ private:
 
   // Helper function for incrementing the pointer when splitting
   // memory operations
-  void IncrementPointer(MemSDNode *N, EVT MemVT,
-                        MachinePointerInfo &MPI, SDValue &Ptr);
+  void IncrementPointer(MemSDNode *N, EVT MemVT, MachinePointerInfo &MPI,
+                        SDValue &Ptr, uint64_t *ScaledOffset = nullptr);
 
   // Vector Result Splitting: <128 x ty> -> 2 x <64 x ty>.
   void SplitVectorResult(SDNode *N, unsigned ResNo);
@@ -864,7 +871,7 @@ private:
   SDValue WidenVecRes_MGATHER(MaskedGatherSDNode* N);
   SDValue WidenVecRes_ScalarOp(SDNode* N);
   SDValue WidenVecRes_SELECT(SDNode* N);
-  SDValue WidenVSELECTAndMask(SDNode *N);
+  SDValue WidenVSELECTMask(SDNode *N);
   SDValue WidenVecRes_SELECT_CC(SDNode* N);
   SDValue WidenVecRes_SETCC(SDNode* N);
   SDValue WidenVecRes_STRICT_FSETCC(SDNode* N);
@@ -881,7 +888,6 @@ private:
   SDValue WidenVecRes_Convert_StrictFP(SDNode *N);
   SDValue WidenVecRes_FCOPYSIGN(SDNode *N);
   SDValue WidenVecRes_POWI(SDNode *N);
-  SDValue WidenVecRes_Shift(SDNode *N);
   SDValue WidenVecRes_Unary(SDNode *N);
   SDValue WidenVecRes_InregOp(SDNode *N);
 

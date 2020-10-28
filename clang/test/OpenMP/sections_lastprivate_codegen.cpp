@@ -44,7 +44,7 @@ volatile int g = 1212;
 
 // CHECK: [[S_FLOAT_TY:%.+]] = type { float }
 // CHECK: [[S_INT_TY:%.+]] = type { i32 }
-// CHECK-DAG: [[SECTIONS_BARRIER_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 194, i32 0, i32 0, i8*
+// CHECK-DAG: [[SECTIONS_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 194, i32 0, i32 0, i8*
 // CHECK-DAG: [[X:@.+]] = global double 0.0
 // OMP50-DAG: [[LAST_IV_X:@.+]] = {{.*}}common global i32 0
 // OMP50-DAG: [[LAST_X:@.+]] = {{.*}}common global double 0.000000e+00,

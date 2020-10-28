@@ -8,9 +8,9 @@
 ; RUN: llvm-nm --radix=o %t | grep posix_absolute_func > %t.posix_absolute_func
 ; RUN: llvm-nm --radix=o %t | grep posix_relative_func > %t.posix_relative_func
 ; RUN: llvm-nm --radix=o %t | grep win_func > %t.win_func
-; RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false --obj %t < %t.posix_absolute_func | FileCheck %s --check-prefix=POSIX_A
-; RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false --obj %t < %t.posix_relative_func | FileCheck %s --check-prefix=POSIX_R
-; RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false --obj %t < %t.win_func | FileCheck %s --check-prefix=WIN
+; RUN: llvm-symbolizer --functions=linkage --inlining --no-demangle --obj %t < %t.posix_absolute_func | FileCheck %s --check-prefix=POSIX_A
+; RUN: llvm-symbolizer --functions=linkage --inlining --no-demangle --obj %t < %t.posix_relative_func | FileCheck %s --check-prefix=POSIX_R
+; RUN: llvm-symbolizer --functions=linkage --inlining --no-demangle --obj %t < %t.win_func | FileCheck %s --check-prefix=WIN
 
 ;POSIX_A: posix_absolute_func
 ;POSIX_A: /absolute/posix/path{{[\/]}}posix.c

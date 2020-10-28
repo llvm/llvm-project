@@ -55,6 +55,7 @@ syn keyword llvmKeyword
       \ available_externally
       \ blockaddress
       \ builtin
+      \ byref
       \ byval
       \ c
       \ catch
@@ -119,6 +120,7 @@ syn keyword llvmKeyword
       \ norecurse
       \ noredzone
       \ noreturn
+      \ noundef
       \ nounwind
       \ optnone
       \ optsize

@@ -4784,17 +4784,16 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
         I.eraseFromParent();
         return true;
       }
+
       MFI.setReturnAddressIsTaken(true);
-      MF.addLiveIn(AArch64::LR, &AArch64::GPR64spRegClass);
+
       // Insert the copy from LR/X30 into the entry block, before it can be
       // clobbered by anything.
-      MachineBasicBlock &EntryBlock = *MF.begin();
-      if (!EntryBlock.isLiveIn(AArch64::LR))
-        EntryBlock.addLiveIn(AArch64::LR);
-      MachineIRBuilder EntryBuilder(MF);
-      EntryBuilder.setInstr(*EntryBlock.begin());
-      EntryBuilder.buildCopy({DstReg}, {Register(AArch64::LR)});
-      MFReturnAddr = DstReg;
+      Register LiveInLR = getFunctionLiveInPhysReg(MF, TII, AArch64::LR,
+                                                   AArch64::GPR64spRegClass);
+      MIRBuilder.buildCopy(DstReg, LiveInLR);
+
+      MFReturnAddr = LiveInLR;
       I.eraseFromParent();
       return true;
     }

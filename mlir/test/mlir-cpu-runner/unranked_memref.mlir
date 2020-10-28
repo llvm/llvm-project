@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-linalg-to-loops -convert-linalg-to-llvm -convert-std-to-llvm | mlir-cpu-runner -e main -entry-point-result=void -shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext,%linalg_test_lib_dir/libmlir_test_cblas%shlibext,%linalg_test_lib_dir/libmlir_test_cblas_interface%shlibext | FileCheck %s
+// RUN: mlir-opt %s -convert-linalg-to-loops -convert-linalg-to-llvm -convert-std-to-llvm | mlir-cpu-runner -e main -entry-point-result=void -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
 
 // CHECK: rank = 2
 // CHECK-SAME: sizes = [10, 3]
@@ -66,6 +66,7 @@ func @main() -> () {
 
     call @return_var_memref_caller() : () -> ()
     call @return_two_var_memref_caller() : () -> ()
+    call @dim_op_of_unranked() : () -> ()
     return
 }
 
@@ -99,4 +100,26 @@ func @return_var_memref_caller() {
 func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> {
   %0 = memref_cast %arg0: memref<4x3xf32> to memref<*xf32>
   return %0 : memref<*xf32>
+}
+
+func @print_i64(index) -> ()
+func @print_newline() -> ()
+
+func @dim_op_of_unranked() {
+  %ranked = alloc() : memref<4x3xf32>
+  %unranked = memref_cast %ranked: memref<4x3xf32> to memref<*xf32>
+
+  %c0 = constant 0 : index
+  %dim_0 = dim %unranked, %c0 : memref<*xf32>
+  call @print_i64(%dim_0) : (index) -> ()
+  call @print_newline() : () -> ()
+  // CHECK: 4
+
+  %c1 = constant 1 : index
+  %dim_1 = dim %unranked, %c1 : memref<*xf32>
+  call @print_i64(%dim_1) : (index) -> ()
+  call @print_newline() : () -> ()
+  // CHECK: 3
+
+  return
 }

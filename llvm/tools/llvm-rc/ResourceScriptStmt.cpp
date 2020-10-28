@@ -118,8 +118,12 @@ raw_ostream &MenuResource::log(raw_ostream &OS) const {
 raw_ostream &StringTableResource::log(raw_ostream &OS) const {
   OS << "StringTable:\n";
   OptStatements->log(OS);
-  for (const auto &String : Table)
-    OS << "  " << String.first << " => " << String.second << "\n";
+  for (const auto &String : Table) {
+    OS << "  " << String.first << " =>";
+    for (const auto &S : String.second)
+      OS << " " << S;
+    OS << "\n";
+  }
   return OS;
 }
 

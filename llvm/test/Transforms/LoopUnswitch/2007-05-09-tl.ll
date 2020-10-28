@@ -1,5 +1,5 @@
-; RUN: opt < %s -loop-unswitch -disable-output
-; RUN: opt < %s -loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -disable-output
+; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -disable-output
+; RUN: opt < %s -loop-unswitch -enable-new-pm=0 -enable-mssa-loop-dependency=true -verify-memoryssa -disable-output
 ; PR1333
 
 define void @pp_cxx_expression() {

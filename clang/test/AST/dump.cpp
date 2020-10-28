@@ -86,4 +86,4 @@ int bar() {
 // CHECK-NEXT:  | `-ReturnStmt {{.+}} <line:[[@LINE-8]]:3, col:10>
 // CHECK-NEXT:  |   `-ImplicitCastExpr {{.+}} <col:10> 'int' <LValueToRValue>
 // CHECK-NEXT:  |     `-DeclRefExpr {{.+}} <col:10> 'int' lvalue Var {{.+}} 'f' 'int'
-// CHECK-NEXT:  `-OMPDeclareTargetDeclAttr {{.+}} <<invalid sloc>> Implicit MT_To
+// CHECK-NEXT:  `-OMPDeclareTargetDeclAttr {{.+}} <line:75:21> Implicit MT_To DT_Any 1

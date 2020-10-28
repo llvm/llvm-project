@@ -3,6 +3,7 @@
 define double @selectf64(i1 zeroext, double, double) {
 ; CHECK-LABEL: selectf64:
 ; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.w.ne %s2, %s1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -13,8 +14,7 @@ define double @selectf64(i1 zeroext, double, double) {
 define float @selectf32(i1 zeroext, float, float) {
 ; CHECK-LABEL: selectf32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sf2 killed $sf2 def $sx2
-; CHECK-NEXT:    # kill: def $sf1 killed $sf1 def $sx1
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.w.ne %s2, %s1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -25,6 +25,7 @@ define float @selectf32(i1 zeroext, float, float) {
 define i64 @selecti64(i1 zeroext, i64, i64) {
 ; CHECK-LABEL: selecti64:
 ; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
 ; CHECK-NEXT:    cmov.w.ne %s2, %s1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -35,8 +36,6 @@ define i64 @selecti64(i1 zeroext, i64, i64) {
 define i32 @selecti32(i1 zeroext, i32, i32) {
 ; CHECK-LABEL: selecti32:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
-; CHECK-NEXT:    # kill: def $sw1 killed $sw1 def $sx1
 ; CHECK-NEXT:    cmov.w.ne %s2, %s1, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    or %s11, 0, %s9
@@ -47,10 +46,8 @@ define i32 @selecti32(i1 zeroext, i32, i32) {
 define zeroext i1 @selecti1(i1 zeroext, i1 zeroext, i1 zeroext) {
 ; CHECK-LABEL: selecti1:
 ; CHECK:       .LBB{{[0-9]+}}_2:
-; CHECK-NEXT:    # kill: def $sw2 killed $sw2 def $sx2
-; CHECK-NEXT:    # kill: def $sw1 killed $sw1 def $sx1
 ; CHECK-NEXT:    cmov.w.ne %s2, %s1, %s0
-; CHECK-NEXT:    or %s0, 0, %s2
+; CHECK-NEXT:    adds.w.zx %s0, %s2, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
   %4 = select i1 %0, i1 %1, i1 %2
   ret i1 %4

@@ -605,7 +605,7 @@ define i32* @calls_unknown_fn(i32* %r) #0 {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@calls_unknown_fn
 ; CHECK-SAME: (i32* nofree readnone returned "no-capture-maybe-returned" [[R:%.*]])
-; CHECK-NEXT:    tail call void @unknown_fn(i32* (i32*)* nonnull @calls_unknown_fn)
+; CHECK-NEXT:    tail call void @unknown_fn(i32* (i32*)* noundef nonnull @calls_unknown_fn)
 ; CHECK-NEXT:    ret i32* [[R]]
 ;
   tail call void @unknown_fn(i32* (i32*)* nonnull @calls_unknown_fn)
@@ -1433,7 +1433,7 @@ define i32* @dont_use_const() #0 {
 ;
 ; IS__CGSCC____: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@dont_use_const()
-; IS__CGSCC____-NEXT:    [[C:%.*]] = musttail call nonnull dereferenceable(1) i32* @ret_const()
+; IS__CGSCC____-NEXT:    [[C:%.*]] = musttail call noundef nonnull dereferenceable(1) i32* @ret_const()
 ; IS__CGSCC____-NEXT:    ret i32* [[C]]
 ;
   %c = musttail call i32* @ret_const()

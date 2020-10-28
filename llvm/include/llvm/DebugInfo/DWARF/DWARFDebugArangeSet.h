@@ -60,7 +60,8 @@ public:
   DWARFDebugArangeSet() { clear(); }
 
   void clear();
-  Error extract(DWARFDataExtractor data, uint64_t *offset_ptr);
+  Error extract(DWARFDataExtractor data, uint64_t *offset_ptr,
+                function_ref<void(Error)> WarningHandler);
   void dump(raw_ostream &OS) const;
 
   uint64_t getCompileUnitDIEOffset() const { return HeaderData.CuOffset; }

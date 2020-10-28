@@ -820,16 +820,6 @@ def SPESTWX       : XForm_8<31, 151, (outs), (ins spe4rc:$rS, memrr:$dst),
 } // HasSPE
 
 let Predicates = [HasSPE] in {
-def : Pat<(f64 (extloadf32 iaddr:$src)),
-          (COPY_TO_REGCLASS (SPELWZ iaddr:$src), SPERC)>;
-def : Pat<(f64 (extloadf32 xaddr:$src)),
-          (COPY_TO_REGCLASS (SPELWZX xaddr:$src), SPERC)>;
-
-def : Pat<(f64 (fpextend f32:$src)),
-          (COPY_TO_REGCLASS $src, SPERC)>;
-}
-
-let Predicates = [HasSPE] in {
 def SELECT_CC_SPE4 : PPCCustomInserterPseudo<(outs spe4rc:$dst),
                             (ins crrc:$cond, spe4rc:$T, spe4rc:$F,
                             i32imm:$BROPC), "#SELECT_CC_SPE4",

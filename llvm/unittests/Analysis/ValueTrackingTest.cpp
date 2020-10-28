@@ -1430,3 +1430,150 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     EXPECT_TRUE(CR2.isFullSet());
   }
 }
+
+struct FindAllocaForValueTestParams {
+  const char *IR;
+  bool AnyOffsetResult;
+  bool ZeroOffsetResult;
+};
+
+class FindAllocaForValueTest
+    : public ValueTrackingTest,
+      public ::testing::WithParamInterface<FindAllocaForValueTestParams> {
+protected:
+};
+
+const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
+    {R"(
+      define void @test() {
+        %a = alloca i64
+        %r = bitcast i64* %a to i32*
+        ret void
+      })",
+     true, true},
+
+    {R"(
+      define void @test() {
+        %a = alloca i32
+        %r = getelementptr i32, i32* %a, i32 1
+        ret void
+      })",
+     true, false},
+
+    {R"(
+      define void @test() {
+        %a = alloca i32
+        %r = getelementptr i32, i32* %a, i32 0
+        ret void
+      })",
+     true, true},
+
+    {R"(
+      define void @test(i1 %cond) {
+      entry:
+        %a = alloca i32
+        br label %bb1
+
+      bb1:
+        %r = phi i32* [ %a, %entry ], [ %r, %bb1 ]
+        br i1 %cond, label %bb1, label %exit
+
+      exit:
+        ret void
+      })",
+     true, true},
+
+    {R"(
+      define void @test(i1 %cond) {
+        %a = alloca i32
+        %r = select i1 %cond, i32* %a, i32* %a
+        ret void
+      })",
+     true, true},
+
+    {R"(
+      define void @test(i1 %cond) {
+        %a = alloca i32
+        %b = alloca i32
+        %r = select i1 %cond, i32* %a, i32* %b
+        ret void
+      })",
+     false, false},
+
+    {R"(
+      define void @test(i1 %cond) {
+      entry:
+        %a = alloca i64
+        %a32 = bitcast i64* %a to i32*
+        br label %bb1
+
+      bb1:
+        %x = phi i32* [ %a32, %entry ], [ %x, %bb1 ]
+        %r = getelementptr i32, i32* %x, i32 1
+        br i1 %cond, label %bb1, label %exit
+
+      exit:
+        ret void
+      })",
+     true, false},
+
+    {R"(
+      define void @test(i1 %cond) {
+      entry:
+        %a = alloca i64
+        %a32 = bitcast i64* %a to i32*
+        br label %bb1
+
+      bb1:
+        %x = phi i32* [ %a32, %entry ], [ %r, %bb1 ]
+        %r = getelementptr i32, i32* %x, i32 1
+        br i1 %cond, label %bb1, label %exit
+
+      exit:
+        ret void
+      })",
+     true, false},
+
+    {R"(
+      define void @test(i1 %cond, i64* %a) {
+      entry:
+        %r = bitcast i64* %a to i32*
+        ret void
+      })",
+     false, false},
+
+    {R"(
+      define void @test(i1 %cond) {
+      entry:
+        %a = alloca i32
+        %b = alloca i32
+        br label %bb1
+
+      bb1:
+        %r = phi i32* [ %a, %entry ], [ %b, %bb1 ]
+        br i1 %cond, label %bb1, label %exit
+
+      exit:
+        ret void
+      })",
+     false, false},
+};
+
+TEST_P(FindAllocaForValueTest, findAllocaForValue) {
+  auto M = parseModule(GetParam().IR);
+  Function *F = M->getFunction("test");
+  Instruction *I = &findInstructionByName(F, "r");
+  const AllocaInst *AI = findAllocaForValue(I);
+  EXPECT_EQ(!!AI, GetParam().AnyOffsetResult);
+}
+
+TEST_P(FindAllocaForValueTest, findAllocaForValueZeroOffset) {
+  auto M = parseModule(GetParam().IR);
+  Function *F = M->getFunction("test");
+  Instruction *I = &findInstructionByName(F, "r");
+  const AllocaInst *AI = findAllocaForValue(I, true);
+  EXPECT_EQ(!!AI, GetParam().ZeroOffsetResult);
+}
+
+INSTANTIATE_TEST_CASE_P(FindAllocaForValueTest, FindAllocaForValueTest,
+                        ::testing::ValuesIn(FindAllocaForValueTests), );

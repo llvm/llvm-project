@@ -49,10 +49,27 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
   /// TODO: We should sort these to minimize wasted space due to alignment
   /// padding. Currently the padding is decided by the first encountered use
   /// during lowering.
-  unsigned Offset = LDSSize = alignTo(LDSSize, Alignment);
+  unsigned Offset = StaticLDSSize = alignTo(StaticLDSSize, Alignment);
 
   Entry.first->second = Offset;
-  LDSSize += DL.getTypeAllocSize(GV.getValueType());
+  StaticLDSSize += DL.getTypeAllocSize(GV.getValueType());
+
+  // Update the LDS size considering the padding to align the dynamic shared
+  // memory.
+  LDSSize = alignTo(StaticLDSSize, DynLDSAlign);
 
   return Offset;
+}
+
+void AMDGPUMachineFunction::setDynLDSAlign(const DataLayout &DL,
+                                           const GlobalVariable &GV) {
+  assert(DL.getTypeAllocSize(GV.getValueType()).isZero());
+
+  Align Alignment =
+      DL.getValueOrABITypeAlignment(GV.getAlign(), GV.getValueType());
+  if (Alignment <= DynLDSAlign)
+    return;
+
+  LDSSize = alignTo(StaticLDSSize, Alignment);
+  DynLDSAlign = Alignment;
 }

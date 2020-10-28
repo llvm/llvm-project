@@ -1,0 +1,240 @@
+## This test checks that a universal file is flattened correctly.
+
+# RUN: yaml2obj %s -o %t-universal.o
+# RUN: yaml2obj %S/Inputs/input1.yaml -o %t-input1.o
+# RUN: yaml2obj %S/Inputs/input2.yaml -o %t-input2.o
+
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-universal.o -arch_only arm64
+
+## Check that the binary is present:
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+
+# CHECK-NAMES: [[PREFIX]]-universal.o
+
+## Check that symbols are present:
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# CHECK-SYMBOLS:      Archive map
+# CHECK-SYMBOLS-NEXT: _arm64 in [[PREFIX]]-universal.o
+# CHECK-SYMBOLS-EMPTY:
+
+## Check that the output archive is in Darwin format:
+# RUN: llvm-objdump --macho --archive-headers %t.lib | \
+# RUN:   FileCheck %s --check-prefix=FORMAT -DPREFIX=%basename_t.tmp -DARCHIVE=%t.lib
+
+# FORMAT:      Archive : [[ARCHIVE]]
+# FORMAT-NEXT: __.SYMDEF
+# FORMAT-NEXT: [[PREFIX]]-universal.o
+# FORMAT-NOT:  {{.}}
+
+## Passing both a universal file and an object file:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-universal.o %t-input1.o -arch_only x86_64
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=BOTH-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=BOTH-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# BOTH-NAMES:      [[PREFIX]]-universal.o
+# BOTH-NAMES-NEXT: [[PREFIX]]-input1.o
+
+# BOTH-SYMBOLS:      Archive map
+# BOTH-SYMBOLS-NEXT: _x86_64 in [[PREFIX]]-universal.o
+# BOTH-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
+# BOTH-SYMBOLS-EMPTY:
+
+## Passing both a universal file and an object file but filtering out the object file:
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-universal.o %t-input1.o -arch_only arm64
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=CHECK-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+## Universal file containing an archive:
+# RUN: rm -f %t.ar
+# RUN: llvm-ar cr %t.ar %t-input1.o %t-input2.o
+# RUN: llvm-lipo %t.ar -create -output %t-fat-with-archive.o
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-fat-with-archive.o -arch_only x86_64
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=ARCHIVE-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=ARCHIVE-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# ARCHIVE-NAMES:      [[PREFIX]]-input1.o
+# ARCHIVE-NAMES-NEXT: [[PREFIX]]-input2.o
+
+# ARCHIVE-SYMBOLS:      Archive map
+# ARCHIVE-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
+# ARCHIVE-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
+# ARCHIVE-SYMBOLS-EMPTY:
+
+## Allow arch_only to be specified more than once (pick the last one):
+# RUN: llvm-libtool-darwin -static -o %t.lib %t-universal.o -arch_only arm64 -arch_only x86_64
+# RUN: llvm-ar t %t.lib | \
+# RUN:   FileCheck %s --check-prefix=DOUBLE-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
+# RUN: llvm-nm --print-armap %t.lib | \
+# RUN:   FileCheck %s --check-prefix=DOUBLE-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+
+# DOUBLE-NAMES: [[PREFIX]]-universal.o
+
+# DOUBLE-SYMBOLS:      Archive map
+# DOUBLE-SYMBOLS-NEXT: _x86_64 in [[PREFIX]]-universal.o
+# DOUBLE-SYMBOLS-EMPTY:
+
+## Invalid architecture:
+# RUN: not llvm-libtool-darwin -static -o %t.lib %t-universal.o -arch_only arch101 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=INVALID-ARCH
+
+# INVALID-ARCH: invalid architecture 'arch101': valid architecture names are
+
+## Empty architecture:
+# RUN: not llvm-libtool-darwin -static -o %t.lib %t-universal.o -arch_only "" 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=EMPTY-ARCH
+
+# EMPTY-ARCH: invalid architecture '': valid architecture names are
+
+## Missing architecture:
+# RUN: not llvm-libtool-darwin -static -o %t.lib %t-universal.o -arch_only ppc 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=MISSING-ARCH
+
+# MISSING-ARCH: error: no library created (no object files in input files matching -arch_only ppc)
+
+## arch_only missing argument:
+# RUN: not llvm-libtool-darwin -static -o %t.lib %t-universal.o -arch_only 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=REQUIRE-ARCH
+
+# REQUIRE-ARCH: for the --arch_only option: requires a value!
+
+## x86_64-arm64-universal.yaml
+--- !fat-mach-o
+FatHeader:
+  magic:           0xCAFEBABE
+  nfat_arch:       2
+FatArchs:
+  - cputype:         0x01000007
+    cpusubtype:      0x00000003
+    offset:          0x0000000000001000
+    size:            352
+    align:           12
+  - cputype:         0x0100000C
+    cpusubtype:      0x00000000
+    offset:          0x0000000000004000
+    size:            384
+    align:           14
+Slices:
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      cputype:         0x01000007
+      cpusubtype:      0x00000003
+      filetype:        0x00000001
+      ncmds:           2
+      sizeofcmds:      176
+      flags:           0x00002000
+      reserved:        0x00000000
+    LoadCommands:
+      - cmd:             LC_SEGMENT_64
+        cmdsize:         152
+        segname:         ''
+        vmaddr:          0
+        vmsize:          15
+        fileoff:         312
+        filesize:        15
+        maxprot:         7
+        initprot:        7
+        nsects:          1
+        flags:           0
+        Sections:
+          - sectname:        __text
+            segname:         __TEXT
+            addr:            0x0000000000000000
+            size:            15
+            offset:          0x00000138
+            align:           4
+            reloff:          0x00000000
+            nreloc:          0
+            flags:           0x80000400
+            reserved1:       0x00000000
+            reserved2:       0x00000000
+            reserved3:       0x00000000
+            content:         554889E531C0C745FC000000005DC3
+      - cmd:             LC_SYMTAB
+        cmdsize:         24
+        symoff:          328
+        nsyms:           1
+        stroff:          344
+        strsize:         8
+    LinkEditData:
+      NameList:
+        - n_strx:          1
+          n_type:          0x0F
+          n_sect:          1
+          n_desc:          0
+          n_value:         0
+      StringTable:
+        - ''
+        - _x86_64
+        - ''
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      cputype:         0x0100000C
+      cpusubtype:      0x00000000
+      filetype:        0x00000001
+      ncmds:           2
+      sizeofcmds:      176
+      flags:           0x00002000
+      reserved:        0x00000000
+    LoadCommands:
+      - cmd:             LC_SEGMENT_64
+        cmdsize:         152
+        segname:         ''
+        vmaddr:          0
+        vmsize:          24
+        fileoff:         312
+        filesize:        24
+        maxprot:         7
+        initprot:        7
+        nsects:          1
+        flags:           0
+        Sections:
+          - sectname:        __text
+            segname:         __TEXT
+            addr:            0x0000000000000000
+            size:            24
+            offset:          0x00000138
+            align:           2
+            reloff:          0x00000000
+            nreloc:          0
+            flags:           0x80000400
+            reserved1:       0x00000000
+            reserved2:       0x00000000
+            reserved3:       0x00000000
+            content:         FF4300D1FF0F00B908008052E00308AAFF430091C0035FD6
+      - cmd:             LC_SYMTAB
+        cmdsize:         24
+        symoff:          336
+        nsyms:           2
+        stroff:          368
+        strsize:         16
+    LinkEditData:
+      NameList:
+        - n_strx:          7
+          n_type:          0x0E
+          n_sect:          1
+          n_desc:          0
+          n_value:         0
+        - n_strx:          1
+          n_type:          0x0F
+          n_sect:          1
+          n_desc:          0
+          n_value:         0
+      StringTable:
+        - ''
+        - _arm64
+        - ltmp0
+        - ''
+        - ''
+        - ''
+...

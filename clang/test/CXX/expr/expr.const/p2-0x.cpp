@@ -12,8 +12,8 @@ struct This {
   int this1 : this1; // expected-error {{undeclared}}
   int this2 : this->this1; // expected-error {{invalid}}
   void this3() {
-    int n1[this->this1]; // expected-warning {{variable length array}}
-    int n2[this1]; // expected-warning {{variable length array}}
+    int n1[this->this1]; // expected-warning {{variable length array}} expected-note {{'this'}}
+    int n2[this1]; // expected-warning {{variable length array}} expected-note {{'this'}}
     (void)n1, (void)n2;
   }
 };

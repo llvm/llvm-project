@@ -107,6 +107,7 @@ SANITIZER("vptr", Vptr)
 
 // IntegerSanitizer
 SANITIZER("unsigned-integer-overflow", UnsignedIntegerOverflow)
+SANITIZER("unsigned-shift-base", UnsignedShiftBase)
 
 // DataFlowSanitizer
 SANITIZER("dataflow", DataFlow)
@@ -171,7 +172,8 @@ SANITIZER_GROUP("implicit-conversion", ImplicitConversion,
 
 SANITIZER_GROUP("integer", Integer,
                 ImplicitConversion | IntegerDivideByZero | Shift |
-                    SignedIntegerOverflow | UnsignedIntegerOverflow)
+                    SignedIntegerOverflow | UnsignedIntegerOverflow |
+                    UnsignedShiftBase)
 
 SANITIZER("local-bounds", LocalBounds)
 SANITIZER_GROUP("bounds", Bounds, ArrayBounds | LocalBounds)

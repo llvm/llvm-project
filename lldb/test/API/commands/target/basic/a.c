@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 int main(int argc, const char* argv[])
 {
     int *null_ptr = 0;

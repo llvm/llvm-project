@@ -11,40 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/KnownBits.h"
+#include "KnownBitsTest.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
 namespace {
-
-template<typename FnTy>
-void ForeachKnownBits(unsigned Bits, FnTy Fn) {
-  unsigned Max = 1 << Bits;
-  KnownBits Known(Bits);
-  for (unsigned Zero = 0; Zero < Max; ++Zero) {
-    for (unsigned One = 0; One < Max; ++One) {
-      Known.Zero = Zero;
-      Known.One = One;
-      if (Known.hasConflict())
-        continue;
-
-      Fn(Known);
-    }
-  }
-}
-
-template<typename FnTy>
-void ForeachNumInKnownBits(const KnownBits &Known, FnTy Fn) {
-  unsigned Bits = Known.getBitWidth();
-  unsigned Max = 1 << Bits;
-  for (unsigned N = 0; N < Max; ++N) {
-    APInt Num(Bits, N);
-    if ((Num & Known.Zero) != 0 || (~Num & Known.One) != 0)
-      continue;
-
-    Fn(Num);
-  }
-}
 
 TEST(KnownBitsTest, AddCarryExhaustive) {
   unsigned Bits = 4;

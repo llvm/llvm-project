@@ -50,7 +50,7 @@ uint32_t isl_mat_get_hash(__isl_keep isl_mat *mat)
 	return hash;
 }
 
-struct isl_mat *isl_mat_alloc(struct isl_ctx *ctx,
+__isl_give isl_mat *isl_mat_alloc(isl_ctx *ctx,
 	unsigned n_row, unsigned n_col)
 {
 	int i;
@@ -86,7 +86,7 @@ error:
 	return NULL;
 }
 
-struct isl_mat *isl_mat_extend(struct isl_mat *mat,
+__isl_give isl_mat *isl_mat_extend(__isl_take isl_mat *mat,
 	unsigned n_row, unsigned n_col)
 {
 	int i;
@@ -580,8 +580,8 @@ error:
 	return NULL;
 }
 
-static void exchange(struct isl_mat *M, struct isl_mat **U,
-	struct isl_mat **Q, unsigned row, unsigned i, unsigned j)
+static void exchange(__isl_keep isl_mat *M, __isl_keep isl_mat **U,
+	__isl_keep isl_mat **Q, unsigned row, unsigned i, unsigned j)
 {
 	int r;
 	for (r = row; r < M->n_row; ++r)
@@ -594,8 +594,8 @@ static void exchange(struct isl_mat *M, struct isl_mat **U,
 		isl_mat_swap_rows(*Q, i, j);
 }
 
-static void subtract(struct isl_mat *M, struct isl_mat **U,
-	struct isl_mat **Q, unsigned row, unsigned i, unsigned j, isl_int m)
+static void subtract(__isl_keep isl_mat *M, __isl_keep isl_mat **U,
+	__isl_keep isl_mat **Q, unsigned row, unsigned i, unsigned j, isl_int m)
 {
 	int r;
 	for (r = row; r < M->n_row; ++r)
@@ -610,8 +610,8 @@ static void subtract(struct isl_mat *M, struct isl_mat **U,
 	}
 }
 
-static void oppose(struct isl_mat *M, struct isl_mat **U,
-	struct isl_mat **Q, unsigned row, unsigned col)
+static void oppose(__isl_keep isl_mat *M, __isl_keep isl_mat **U,
+	__isl_keep isl_mat **Q, unsigned row, unsigned col)
 {
 	int r;
 	for (r = row; r < M->n_row; ++r)
@@ -979,13 +979,13 @@ static isl_stat inv_exchange(__isl_keep isl_mat **left,
 }
 
 static void inv_oppose(
-	struct isl_mat *left, struct isl_mat *right, unsigned row)
+	__isl_keep isl_mat *left, __isl_keep isl_mat *right, unsigned row)
 {
 	isl_seq_neg(left->row[row]+row, left->row[row]+row, left->n_col-row);
 	isl_seq_neg(right->row[row], right->row[row], right->n_col);
 }
 
-static void inv_subtract(struct isl_mat *left, struct isl_mat *right,
+static void inv_subtract(__isl_keep isl_mat *left, __isl_keep isl_mat *right,
 	unsigned row, unsigned i, isl_int m)
 {
 	isl_int_neg(m, m);
@@ -1092,7 +1092,7 @@ error:
 	return NULL;
 }
 
-void isl_mat_col_scale(struct isl_mat *mat, unsigned col, isl_int m)
+void isl_mat_col_scale(__isl_keep isl_mat *mat, unsigned col, isl_int m)
 {
 	int i;
 
@@ -1100,7 +1100,7 @@ void isl_mat_col_scale(struct isl_mat *mat, unsigned col, isl_int m)
 		isl_int_mul(mat->row[i][col], mat->row[i][col], m);
 }
 
-void isl_mat_col_combine(struct isl_mat *mat, unsigned dst,
+void isl_mat_col_combine(__isl_keep isl_mat *mat, unsigned dst,
 	isl_int m1, unsigned src1, isl_int m2, unsigned src2)
 {
 	int i;
@@ -1639,7 +1639,7 @@ __isl_give isl_mat *isl_mat_add_zero_rows(__isl_take isl_mat *mat, unsigned n)
 	return isl_mat_insert_zero_rows(mat, mat->n_row, n);
 }
 
-void isl_mat_col_submul(struct isl_mat *mat,
+void isl_mat_col_submul(__isl_keep isl_mat *mat,
 			int dst_col, isl_int f, int src_col)
 {
 	int i;
@@ -1660,7 +1660,8 @@ void isl_mat_col_add(__isl_keep isl_mat *mat, int dst_col, int src_col)
 			    mat->row[i][dst_col], mat->row[i][src_col]);
 }
 
-void isl_mat_col_mul(struct isl_mat *mat, int dst_col, isl_int f, int src_col)
+void isl_mat_col_mul(__isl_keep isl_mat *mat, int dst_col, isl_int f,
+	int src_col)
 {
 	int i;
 

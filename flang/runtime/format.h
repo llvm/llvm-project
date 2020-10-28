@@ -31,7 +31,7 @@ struct MutableModes {
   enum decimal::FortranRounding round{
       executionEnvironment
           .defaultOutputRoundingMode}; // RP/ROUND='PROCESSOR_DEFAULT'
-  bool pad{false}; // PAD= mode on READ
+  bool pad{true}; // PAD= mode on READ
   char delim{'\0'}; // DELIM=
   short scale{0}; // kP
 };

@@ -406,7 +406,7 @@ ProgramStateRef ObjCDeallocChecker::evalAssume(ProgramStateRef State, SVal Cond,
   if (State->get<UnreleasedIvarMap>().isEmpty())
     return State;
 
-  auto *CondBSE = dyn_cast_or_null<BinarySymExpr>(Cond.getAsSymExpr());
+  auto *CondBSE = dyn_cast_or_null<BinarySymExpr>(Cond.getAsSymbol());
   if (!CondBSE)
     return State;
 

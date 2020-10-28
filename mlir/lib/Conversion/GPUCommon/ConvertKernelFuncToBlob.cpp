@@ -59,14 +59,11 @@ public:
   void runOnOperation() override {
     gpu::GPUModuleOp module = getOperation();
 
-    // Lock access to the llvm context.
-    llvm::sys::SmartScopedLock<true> scopedLock(
-        module.getContext()
-            ->getRegisteredDialect<LLVM::LLVMDialect>()
-            ->getLLVMContextMutex());
-
-    // Lower the module to a llvm module.
-    std::unique_ptr<llvm::Module> llvmModule = loweringCallback(module);
+    // Lower the module to an LLVM IR module using a separate context to enable
+    // multi-threaded processing.
+    llvm::LLVMContext llvmContext;
+    std::unique_ptr<llvm::Module> llvmModule =
+        loweringCallback(module, llvmContext, "LLVMDialectModule");
     if (!llvmModule)
       return signalPassFailure();
 
@@ -109,17 +106,12 @@ GpuKernelToBlobPass::translateModuleToISA(llvm::Module &module,
                                           llvm::TargetMachine &targetMachine) {
   std::string targetISA;
   {
-    // Clone the llvm module into a new context to enable concurrent compilation
-    // with multiple threads.
-    llvm::LLVMContext llvmContext;
-    auto clone = LLVM::cloneModuleIntoNewContext(&llvmContext, &module);
-
     llvm::raw_string_ostream stream(targetISA);
     llvm::buffer_ostream pstream(stream);
     llvm::legacy::PassManager codegenPasses;
     targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr,
                                       llvm::CGFT_AssemblyFile);
-    codegenPasses.run(*clone);
+    codegenPasses.run(module);
   }
 
   return targetISA;

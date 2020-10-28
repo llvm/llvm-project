@@ -32,4 +32,4 @@ configure_lit_site_cfg(
 
 add_lit_testsuite(check-unwind "Running libunwind tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS ${LIBUNWIND_TEST_DEPS})
+  DEPENDS unwind ${LIBUNWIND_TEST_DEPS})

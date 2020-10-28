@@ -148,6 +148,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -399,12 +400,102 @@ static bool ShouldSignReturnAddress(MachineFunction &MF) {
   return false;
 }
 
+// Convenience function to create a DWARF expression for
+//   Expr + NumBytes + NumVGScaledBytes * AArch64::VG
+static void appendVGScaledOffsetExpr(SmallVectorImpl<char> &Expr,
+                                     int NumBytes, int NumVGScaledBytes, unsigned VG,
+                                     llvm::raw_string_ostream &Comment) {
+  uint8_t buffer[16];
+
+  if (NumBytes) {
+    Expr.push_back(dwarf::DW_OP_consts);
+    Expr.append(buffer, buffer + encodeSLEB128(NumBytes, buffer));
+    Expr.push_back((uint8_t)dwarf::DW_OP_plus);
+    Comment << (NumBytes < 0 ? " - " : " + ") << std::abs(NumBytes);
+  }
+
+  if (NumVGScaledBytes) {
+    Expr.push_back((uint8_t)dwarf::DW_OP_consts);
+    Expr.append(buffer, buffer + encodeSLEB128(NumVGScaledBytes, buffer));
+
+    Expr.push_back((uint8_t)dwarf::DW_OP_bregx);
+    Expr.append(buffer, buffer + encodeULEB128(VG, buffer));
+    Expr.push_back(0);
+
+    Expr.push_back((uint8_t)dwarf::DW_OP_mul);
+    Expr.push_back((uint8_t)dwarf::DW_OP_plus);
+
+    Comment << (NumVGScaledBytes < 0 ? " - " : " + ")
+            << std::abs(NumVGScaledBytes) << " * VG";
+  }
+}
+
+// Creates an MCCFIInstruction:
+//    { DW_CFA_def_cfa_expression, ULEB128 (sizeof expr), expr }
+MCCFIInstruction AArch64FrameLowering::createDefCFAExpressionFromSP(
+    const TargetRegisterInfo &TRI, const StackOffset &OffsetFromSP) const {
+  int64_t NumBytes, NumVGScaledBytes;
+  OffsetFromSP.getForDwarfOffset(NumBytes, NumVGScaledBytes);
+
+  std::string CommentBuffer = "sp";
+  llvm::raw_string_ostream Comment(CommentBuffer);
+
+  // Build up the expression (SP + NumBytes + NumVGScaledBytes * AArch64::VG)
+  SmallString<64> Expr;
+  Expr.push_back((uint8_t)(dwarf::DW_OP_breg0 + /*SP*/ 31));
+  Expr.push_back(0);
+  appendVGScaledOffsetExpr(Expr, NumBytes, NumVGScaledBytes,
+                           TRI.getDwarfRegNum(AArch64::VG, true), Comment);
+
+  // Wrap this into DW_CFA_def_cfa.
+  SmallString<64> DefCfaExpr;
+  DefCfaExpr.push_back(dwarf::DW_CFA_def_cfa_expression);
+  uint8_t buffer[16];
+  DefCfaExpr.append(buffer,
+                    buffer + encodeULEB128(Expr.size(), buffer));
+  DefCfaExpr.append(Expr.str());
+  return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(),
+                                        Comment.str());
+}
+
+MCCFIInstruction AArch64FrameLowering::createCfaOffset(
+    const TargetRegisterInfo &TRI, unsigned Reg,
+    const StackOffset &OffsetFromDefCFA) const {
+  int64_t NumBytes, NumVGScaledBytes;
+  OffsetFromDefCFA.getForDwarfOffset(NumBytes, NumVGScaledBytes);
+
+  unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
+
+  // Non-scalable offsets can use DW_CFA_offset directly.
+  if (!NumVGScaledBytes)
+    return MCCFIInstruction::createOffset(nullptr, DwarfReg, NumBytes);
+
+  std::string CommentBuffer;
+  llvm::raw_string_ostream Comment(CommentBuffer);
+  Comment << printReg(Reg, &TRI) << "  @ cfa";
+
+  // Build up expression (NumBytes + NumVGScaledBytes * AArch64::VG)
+  SmallString<64> OffsetExpr;
+  appendVGScaledOffsetExpr(OffsetExpr, NumBytes, NumVGScaledBytes,
+                           TRI.getDwarfRegNum(AArch64::VG, true), Comment);
+
+  // Wrap this into DW_CFA_expression
+  SmallString<64> CfaExpr;
+  CfaExpr.push_back(dwarf::DW_CFA_expression);
+  uint8_t buffer[16];
+  CfaExpr.append(buffer, buffer + encodeULEB128(DwarfReg, buffer));
+  CfaExpr.append(buffer, buffer + encodeULEB128(OffsetExpr.size(), buffer));
+  CfaExpr.append(OffsetExpr.str());
+
+  return MCCFIInstruction::createEscape(nullptr, CfaExpr.str(), Comment.str());
+}
+
 void AArch64FrameLowering::emitCalleeSavedFrameMoves(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetSubtargetInfo &STI = MF.getSubtarget();
-  const MCRegisterInfo *MRI = STI.getRegisterInfo();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
   const TargetInstrInfo *TII = STI.getInstrInfo();
   DebugLoc DL = MBB.findDebugLoc(MBBI);
 
@@ -415,11 +506,26 @@ void AArch64FrameLowering::emitCalleeSavedFrameMoves(
 
   for (const auto &Info : CSI) {
     unsigned Reg = Info.getReg();
-    int64_t Offset =
-        MFI.getObjectOffset(Info.getFrameIdx()) - getOffsetOfLocalArea();
-    unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
-    unsigned CFIIndex = MF.addFrameInst(
-        MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
+
+    // Not all unwinders may know about SVE registers, so assume the lowest
+    // common demoninator.
+    unsigned NewReg;
+    if (static_cast<const AArch64RegisterInfo *>(TRI)->regNeedsCFI(Reg, NewReg))
+      Reg = NewReg;
+    else
+      continue;
+
+    StackOffset Offset;
+    if (MFI.getStackID(Info.getFrameIdx()) == TargetStackID::SVEVector) {
+      AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+      Offset = StackOffset(MFI.getObjectOffset(Info.getFrameIdx()), MVT::nxv1i8) -
+               StackOffset(AFI->getCalleeSavedStackSize(MFI), MVT::i8);
+    } else {
+      Offset = {MFI.getObjectOffset(Info.getFrameIdx()) -
+                    getOffsetOfLocalArea(),
+                MVT::i8};
+    }
+    unsigned CFIIndex = MF.addFrameInst(createCfaOffset(*TRI, Reg, Offset));
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
         .setMIFlags(MachineInstr::FrameSetup);
@@ -918,10 +1024,6 @@ static bool needsWinCFI(const MachineFunction &MF) {
          F.needsUnwindTableEntry();
 }
 
-static bool isTargetDarwin(const MachineFunction &MF) {
-  return MF.getSubtarget<AArch64Subtarget>().isTargetDarwin();
-}
-
 static bool isTargetWindows(const MachineFunction &MF) {
   return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
 }
@@ -1079,7 +1181,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // For funclets the FP belongs to the containing function.
   if (!IsFunclet && HasFP) {
     // Only set up FP if we actually need to.
-    int64_t FPOffset = isTargetDarwin(MF) ? (AFI->getCalleeSavedStackSize() - 16) : 0;
+    int64_t FPOffset = AFI->getCalleeSaveBaseToFrameRecordOffset();
 
     if (CombineSPBump)
       FPOffset += AFI->getLocalStackSize();
@@ -1303,11 +1405,6 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (needsFrameMoves) {
-    const DataLayout &TD = MF.getDataLayout();
-    const int StackGrowth = isTargetDarwin(MF)
-                                ? (2 * -TD.getPointerSize(0))
-                                : -AFI->getCalleeSavedStackSize();
-    Register FramePtr = RegInfo->getFrameRegister(MF);
     // An example of the prologue:
     //
     //     .globl __foo
@@ -1375,17 +1472,31 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     //     .cfi_offset w28, -32
 
     if (HasFP) {
+      const int OffsetToFirstCalleeSaveFromFP =
+          AFI->getCalleeSaveBaseToFrameRecordOffset() -
+          AFI->getCalleeSavedStackSize();
+      Register FramePtr = RegInfo->getFrameRegister(MF);
+
       // Define the current CFA rule to use the provided FP.
       unsigned Reg = RegInfo->getDwarfRegNum(FramePtr, true);
       unsigned CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::cfiDefCfa(nullptr, Reg, FixedObject - StackGrowth));
+          MCCFIInstruction::cfiDefCfa(nullptr, Reg, FixedObject - OffsetToFirstCalleeSaveFromFP));
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
     } else {
-      // Encode the stack size of the leaf function.
-      unsigned CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::cfiDefCfaOffset(nullptr, MFI.getStackSize()));
+      unsigned CFIIndex;
+      if (SVEStackSize) {
+        const TargetSubtargetInfo &STI = MF.getSubtarget();
+        const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+        StackOffset TotalSize =
+            SVEStackSize + StackOffset((int64_t)MFI.getStackSize(), MVT::i8);
+        CFIIndex = MF.addFrameInst(createDefCFAExpressionFromSP(TRI, TotalSize));
+      } else {
+        // Encode the stack size of the leaf function.
+        CFIIndex = MF.addFrameInst(
+            MCCFIInstruction::cfiDefCfaOffset(nullptr, MFI.getStackSize()));
+      }
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
@@ -1579,11 +1690,10 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   StackOffset DeallocateBefore = {}, DeallocateAfter = SVEStackSize;
   MachineBasicBlock::iterator RestoreBegin = LastPopI, RestoreEnd = LastPopI;
   if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
-    RestoreBegin = std::prev(RestoreEnd);;
-    while (IsSVECalleeSave(RestoreBegin) &&
-           RestoreBegin != MBB.begin())
+    RestoreBegin = std::prev(RestoreEnd);
+    while (RestoreBegin != MBB.begin() &&
+           IsSVECalleeSave(std::prev(RestoreBegin)))
       --RestoreBegin;
-    ++RestoreBegin;
 
     assert(IsSVECalleeSave(RestoreBegin) &&
            IsSVECalleeSave(std::prev(RestoreEnd)) && "Unexpected instruction");
@@ -1661,10 +1771,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   // non-post-indexed loads for the restores if we aren't actually going to
   // be able to save any instructions.
   if (!IsFunclet && (MFI.hasVarSizedObjects() || AFI->isStackRealigned())) {
-    int64_t OffsetToFrameRecord =
-        isTargetDarwin(MF) ? (-(int64_t)AFI->getCalleeSavedStackSize() + 16) : 0;
     emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::FP,
-                    {OffsetToFrameRecord, MVT::i8},
+                    {-AFI->getCalleeSaveBaseToFrameRecordOffset(), MVT::i8},
                     TII, MachineInstr::FrameDestroy, false, NeedsWinCFI);
   } else if (NumBytes)
     emitFrameOffset(MBB, LastPopI, DL, AArch64::SP, AArch64::SP,
@@ -1725,11 +1833,11 @@ static StackOffset getFPOffset(const MachineFunction &MF, int64_t ObjectOffset) 
   const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   bool IsWin64 =
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
-
   unsigned FixedObject =
       getFixedObjectSize(MF, AFI, IsWin64, /*IsFunclet=*/false);
-  unsigned FPAdjust = isTargetDarwin(MF)
-                        ? 16 : AFI->getCalleeSavedStackSize(MF.getFrameInfo());
+  int64_t CalleeSaveSize = AFI->getCalleeSavedStackSize(MF.getFrameInfo());
+  int64_t FPAdjust =
+      CalleeSaveSize - AFI->getCalleeSaveBaseToFrameRecordOffset();
   return {ObjectOffset + FixedObject + FPAdjust, MVT::i8};
 }
 
@@ -2006,6 +2114,7 @@ static void computeCalleeSaveRegisterPairs(
   // available unwind codes.  This flag assures that the alignment fixup is done
   // only once, as intened.
   bool FixupDone = false;
+
   for (unsigned i = 0; i < Count; ++i) {
     RegPairInfo RPI;
     RPI.Reg1 = CSI[i].getReg();
@@ -2115,6 +2224,14 @@ static void computeCalleeSaveRegisterPairs(
     assert(((!RPI.isScalable() && RPI.Offset >= -64 && RPI.Offset <= 63) ||
             (RPI.isScalable() && RPI.Offset >= -256 && RPI.Offset <= 255)) &&
            "Offset out of bounds for LDP/STP immediate");
+
+    // Save the offset to frame record so that the FP register can point to the
+    // innermost frame record (spilled FP and LR registers).
+    if (NeedsFrameRecord && ((!IsWindows && RPI.Reg1 == AArch64::LR &&
+                              RPI.Reg2 == AArch64::FP) ||
+                             (IsWindows && RPI.Reg1 == AArch64::FP &&
+                              RPI.Reg2 == AArch64::LR)))
+      AFI->setCalleeSaveBaseToFrameRecordOffset(Offset);
 
     RegPairs.push_back(RPI);
     if (RPI.isPaired())

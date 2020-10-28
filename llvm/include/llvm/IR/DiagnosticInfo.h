@@ -21,6 +21,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <algorithm>
 #include <cstdint>
@@ -434,6 +435,7 @@ public:
     Argument(StringRef Key, unsigned N);
     Argument(StringRef Key, unsigned long N);
     Argument(StringRef Key, unsigned long long N);
+    Argument(StringRef Key, ElementCount EC);
     Argument(StringRef Key, bool B) : Key(Key), Val(B ? "true" : "false") {}
     Argument(StringRef Key, DebugLoc dl);
   };

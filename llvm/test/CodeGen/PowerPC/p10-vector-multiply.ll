@@ -76,3 +76,49 @@ entry:
   %tr = trunc <4 x i64> %shr to <4 x i32>
   ret <4 x i32> %tr
 }
+
+; Test the vector multiply high intrinsics.
+declare <4 x i32> @llvm.ppc.altivec.vmulhsw(<4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.ppc.altivec.vmulhuw(<4 x i32>, <4 x i32>)
+declare <2 x i64> @llvm.ppc.altivec.vmulhsd(<2 x i64>, <2 x i64>)
+declare <2 x i64> @llvm.ppc.altivec.vmulhud(<2 x i64>, <2 x i64>)
+
+define <4 x i32> @test_vmulhsw_intrinsic(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: test_vmulhsw_intrinsic:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vmulhsw v2, v2, v3
+; CHECK-NEXT:    blr
+entry:
+  %mulh = tail call <4 x i32> @llvm.ppc.altivec.vmulhsw(<4 x i32> %a, <4 x i32> %b)
+  ret <4 x i32> %mulh
+}
+
+define <4 x i32> @test_vmulhuw_intrinsic(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: test_vmulhuw_intrinsic:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vmulhuw v2, v2, v3
+; CHECK-NEXT:    blr
+entry:
+  %mulh = tail call <4 x i32> @llvm.ppc.altivec.vmulhuw(<4 x i32> %a, <4 x i32> %b)
+  ret <4 x i32> %mulh
+}
+
+define <2 x i64> @test_vmulhsd_intrinsic(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: test_vmulhsd_intrinsic:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vmulhsd v2, v2, v3
+; CHECK-NEXT:    blr
+entry:
+  %mulh = tail call <2 x i64> @llvm.ppc.altivec.vmulhsd(<2 x i64> %a, <2 x i64> %b)
+  ret <2 x i64> %mulh
+}
+
+define <2 x i64> @test_vmulhud_intrinsic(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: test_vmulhud_intrinsic:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vmulhud v2, v2, v3
+; CHECK-NEXT:    blr
+entry:
+  %mulh = tail call <2 x i64> @llvm.ppc.altivec.vmulhud(<2 x i64> %a, <2 x i64> %b)
+  ret <2 x i64> %mulh
+}

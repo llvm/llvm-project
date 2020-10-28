@@ -113,7 +113,7 @@ void SetTimer(int Seconds) {
 
 void SetSignalHandler(const FuzzingOptions& Options) {
   // setitimer is not implemented in emscripten.
-  if (Options.UnitTimeoutSec > 0 && !LIBFUZZER_EMSCRIPTEN)
+  if (Options.HandleAlrm && Options.UnitTimeoutSec > 0 && !LIBFUZZER_EMSCRIPTEN)
     SetTimer(Options.UnitTimeoutSec / 2 + 1);
   if (Options.HandleInt)
     SetSigaction(SIGINT, InterruptHandler);

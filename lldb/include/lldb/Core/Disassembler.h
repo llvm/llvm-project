@@ -279,9 +279,6 @@ public:
   /// @param[in] start
   ///     The instruction index of the first instruction to check.
   ///
-  /// @param[in] target
-  ///     A LLDB target object that is used to resolve addresses.
-  ///    
   /// @param[in] ignore_calls
   ///     It true, then fine the first branch instruction that isn't
   ///     a function call (a branch that calls and returns to the next
@@ -298,7 +295,6 @@ public:
   ///     found.
   //------------------------------------------------------------------
   uint32_t GetIndexOfNextBranchInstruction(uint32_t start,
-                                           Target &target,
                                            bool ignore_calls,
                                            bool *found_calls) const;
 

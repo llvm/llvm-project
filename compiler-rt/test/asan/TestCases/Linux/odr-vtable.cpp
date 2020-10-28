@@ -1,3 +1,6 @@
+// Fails with debug checks: https://bugs.llvm.org/show_bug.cgi?id=46862
+// XFAIL: !compiler-rt-optimized
+
 // RUN: %clangxx_asan -fno-rtti -DBUILD_SO1 -fPIC -shared %s -o %dynamiclib1
 // RUN: %clangxx_asan -fno-rtti -DBUILD_SO2 -fPIC -shared %s -o %dynamiclib2
 // RUN: %clangxx_asan -fno-rtti %s %ld_flags_rpath_exe1 %ld_flags_rpath_exe2 -o %t

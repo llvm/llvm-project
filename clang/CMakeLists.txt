@@ -121,6 +121,8 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   include(LLVMDistributionSupport)
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
+  set(BUG_REPORT_URL "${LLVM_PACKAGE_BUGREPORT}" CACHE STRING
+    "Default URL where bug reports are to be submitted.")
 
   if (NOT DEFINED LLVM_INCLUDE_TESTS)
     set(LLVM_INCLUDE_TESTS ON)
@@ -257,7 +259,7 @@ set(DEFAULT_SYSROOT "" CACHE STRING
 
 set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
 
-set(ENABLE_X86_RELAX_RELOCATIONS OFF CACHE BOOL
+set(ENABLE_X86_RELAX_RELOCATIONS ON CACHE BOOL
     "enable x86 relax relocations by default")
 
 set(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER FALSE CACHE BOOL
@@ -422,15 +424,15 @@ if (APPLE)
     RESULT_VARIABLE HAD_ERROR
     OUTPUT_VARIABLE LD_V_OUTPUT
   )
-  if (NOT HAD_ERROR)
-    if ("${LD_V_OUTPUT}" MATCHES ".*ld64-([0-9.]+).*")
-      string(REGEX REPLACE ".*ld64-([0-9.]+).*" "\\1" HOST_LINK_VERSION ${LD_V_OUTPUT})
-    elseif ("${LD_V_OUTPUT}" MATCHES "[^0-9]*([0-9.]+).*")
-      string(REGEX REPLACE "[^0-9]*([0-9.]+).*" "\\1" HOST_LINK_VERSION ${LD_V_OUTPUT})
-    endif()
-  else()
+  if (HAD_ERROR)
     message(FATAL_ERROR "${CMAKE_LINKER} failed with status ${HAD_ERROR}")
   endif()
+  if ("${LD_V_OUTPUT}" MATCHES ".*ld64-([0-9.]+).*")
+    string(REGEX REPLACE ".*ld64-([0-9.]+).*" "\\1" HOST_LINK_VERSION ${LD_V_OUTPUT})
+  elseif ("${LD_V_OUTPUT}" MATCHES "[^0-9]*([0-9.]+).*")
+    string(REGEX REPLACE "[^0-9]*([0-9.]+).*" "\\1" HOST_LINK_VERSION ${LD_V_OUTPUT})
+  endif()
+  message(STATUS "Host linker version: ${HOST_LINK_VERSION}")
 endif()
 
 include(CMakeParseArguments)

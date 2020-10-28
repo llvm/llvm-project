@@ -1,7 +1,7 @@
 # REQUIRES: x86
 
 # Make a DLL that exports exportfn1.
-# RUN: yaml2obj < %p/Inputs/export.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/export.yaml -o %t.obj
 # RUN: lld-link /out:%t.dll /dll %t.obj /export:exportfn1 /implib:%t.lib
 
 # Make an obj that takes the address of that exported function.

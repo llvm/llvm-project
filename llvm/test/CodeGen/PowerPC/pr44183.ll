@@ -12,11 +12,14 @@ define void @_ZN1m1nEv(%struct.m.2.5.8.11* %this) local_unnamed_addr nounwind al
 ; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    mr r30, r3
-; CHECK-NEXT:    ld r4, 8(r30)
-; CHECK-NEXT:    lwz r5, 36(r30)
-; CHECK-NEXT:    rldicl r4, r4, 60, 4
+; CHECK-NEXT:    ld r4, 16(r30)
+; CHECK-NEXT:    ld r5, 8(r30)
+; CHECK-NEXT:    lwz r6, 36(r30)
+; CHECK-NEXT:    rldicl r5, r5, 60, 4
+; CHECK-NEXT:    sldi r4, r4, 60
+; CHECK-NEXT:    or r4, r4, r5
 ; CHECK-NEXT:    rlwinm r3, r4, 31, 0, 0
-; CHECK-NEXT:    clrlwi r4, r5, 31
+; CHECK-NEXT:    clrlwi r4, r6, 31
 ; CHECK-NEXT:    or r4, r4, r3
 ; CHECK-NEXT:    bl _ZN1llsE1d
 ; CHECK-NEXT:    nop
@@ -24,7 +27,7 @@ define void @_ZN1m1nEv(%struct.m.2.5.8.11* %this) local_unnamed_addr nounwind al
 ; CHECK-NEXT:    ld r4, 8(r30)
 ; CHECK-NEXT:    rldicl r4, r4, 60, 4
 ; CHECK-NEXT:    sldi r3, r3, 60
-; CHECK-NEXT:    or r3, r4, r3
+; CHECK-NEXT:    or r3, r3, r4
 ; CHECK-NEXT:    sldi r3, r3, 31
 ; CHECK-NEXT:    clrldi r4, r3, 32
 ; CHECK-NEXT:    bl _ZN1llsE1d

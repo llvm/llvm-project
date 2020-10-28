@@ -244,6 +244,11 @@ class Dialect {
   // The description of the dialect.
   string description = ?;
 
+  // A list of dialects this dialect will load on construction as dependencies.
+  // These are dialects that this dialect may involved in canonicalization
+  // pattern or interfaces.
+  list<string> dependentDialects = [];
+
   // The C++ namespace that ops of this dialect should be placed into.
   //
   // By default, uses the name of the dialect as the only namespace. To avoid
@@ -1693,6 +1698,9 @@ def SameOperandsAndResultElementType :
   NativeOpTrait<"SameOperandsAndResultElementType">;
 // Op is a terminator.
 def Terminator : NativeOpTrait<"IsTerminator">;
+// Op can be safely normalized in the presence of MemRefs with
+// non-identity maps.
+def MemRefsNormalizable : NativeOpTrait<"MemRefsNormalizable">;
 
 // Op's regions have a single block with the specified terminator.
 class SingleBlockImplicitTerminator<string op>

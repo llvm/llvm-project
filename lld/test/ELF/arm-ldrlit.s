@@ -1,6 +1,5 @@
 // REQUIRES: arm
 // RUN: llvm-mc --triple=armv7a-none-eabi --arm-add-build-attributes -filetype=obj -o %t.o %s
-// RUN: llvm-objdump -d -r --triple=armv7a-none-eabi %t.o
 // RUN: echo "SECTIONS { \
 // RUN:                 .rodata.low 0x8012  : { *(.rodata.low) } \
 // RUN:                 .text.low   0x8f00  : { *(.text.low) } \

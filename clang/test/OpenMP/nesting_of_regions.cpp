@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45,omp45warn %s
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=50 -verify=expected,omp50 %s
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -verify=expected,omp50 %s
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45 -Wno-openmp %s
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -verify=expected,omp45 -Wno-source-uses-openmp %s
 
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -verify=expected,omp45,omp45warn %s
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=50 -verify=expected,omp50 %s
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify=expected,omp50 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
 void bar();

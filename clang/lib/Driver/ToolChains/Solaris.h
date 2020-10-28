@@ -65,6 +65,11 @@ public:
   SanitizerMask getSupportedSanitizers() const override;
   unsigned GetDefaultDwarfVersion() const override { return 2; }
 
+  const char *getDefaultLinker() const override {
+    // clang currently uses Solaris ld-only options.
+    return "/usr/bin/ld";
+  }
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;

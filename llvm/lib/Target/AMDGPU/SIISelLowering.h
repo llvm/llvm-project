@@ -63,6 +63,11 @@ private:
   SDValue lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc, SDValue Offset,
                        SDValue CachePolicy, SelectionDAG &DAG) const;
 
+  SDValue lowerRawBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
+                                     unsigned NewOpcode) const;
+  SDValue lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
+                                        unsigned NewOpcode) const;
+
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
@@ -255,12 +260,22 @@ public:
                         const SelectionDAG &DAG) const override;
 
   bool allowsMisalignedMemoryAccessesImpl(
-      unsigned Size, unsigned AS, unsigned Align,
+      unsigned Size, unsigned AddrSpace, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *IsFast = nullptr) const;
 
   bool allowsMisalignedMemoryAccesses(
-      EVT VT, unsigned AS, unsigned Align,
+      LLT Ty, unsigned AddrSpace, Align Alignment,
+      MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
+      bool *IsFast = nullptr) const override {
+    if (IsFast)
+      *IsFast = false;
+    return allowsMisalignedMemoryAccessesImpl(Ty.getSizeInBits(), AddrSpace,
+                                              Alignment, Flags, IsFast);
+  }
+
+  bool allowsMisalignedMemoryAccesses(
+      EVT VT, unsigned AS, unsigned Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *IsFast = nullptr) const override;
 
@@ -357,6 +372,8 @@ public:
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override;
+  LLT getPreferredShiftAmountTy(LLT Ty) const override;
+
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT VT) const override;
   bool isFMADLegal(const SelectionDAG &DAG, const SDNode *N) const override;
@@ -403,6 +420,11 @@ public:
   void computeKnownBitsForFrameIndex(int FrameIdx,
                                      KnownBits &Known,
                                      const MachineFunction &MF) const override;
+  void computeKnownBitsForTargetInstr(GISelKnownBits &Analysis, Register R,
+                                      KnownBits &Known,
+                                      const APInt &DemandedElts,
+                                      const MachineRegisterInfo &MRI,
+                                      unsigned Depth = 0) const override;
 
   Align computeKnownAlignForTargetInstr(GISelKnownBits &Analysis, Register R,
                                         const MachineRegisterInfo &MRI,

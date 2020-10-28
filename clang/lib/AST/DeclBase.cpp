@@ -1487,6 +1487,13 @@ static bool shouldBeHidden(NamedDecl *D) {
     if (FD->isFunctionTemplateSpecialization())
       return true;
 
+  // Hide destructors that are invalid. There should always be one destructor,
+  // but if it is an invalid decl, another one is created. We need to hide the
+  // invalid one from places that expect exactly one destructor, like the
+  // serialization code.
+  if (isa<CXXDestructorDecl>(D) && D->isInvalidDecl())
+    return true;
+
   return false;
 }
 

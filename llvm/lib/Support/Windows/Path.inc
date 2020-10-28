@@ -19,7 +19,6 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/WindowsError.h"
 #include <fcntl.h>
-#include <io.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -352,13 +351,13 @@ std::error_code is_local(const Twine &path, bool &result) {
 static std::error_code realPathFromHandle(HANDLE H,
                                           SmallVectorImpl<wchar_t> &Buffer) {
   DWORD CountChars = ::GetFinalPathNameByHandleW(
-      H, Buffer.begin(), Buffer.capacity() - 1, FILE_NAME_NORMALIZED);
-  if (CountChars > Buffer.capacity()) {
+      H, Buffer.begin(), Buffer.capacity(), FILE_NAME_NORMALIZED);
+  if (CountChars && CountChars >= Buffer.capacity()) {
     // The buffer wasn't big enough, try again.  In this case the return value
     // *does* indicate the size of the null terminator.
     Buffer.reserve(CountChars);
     CountChars = ::GetFinalPathNameByHandleW(
-        H, Buffer.data(), Buffer.capacity() - 1, FILE_NAME_NORMALIZED);
+        H, Buffer.begin(), Buffer.capacity(), FILE_NAME_NORMALIZED);
   }
   if (CountChars == 0)
     return mapWindowsError(GetLastError());
@@ -1262,7 +1261,7 @@ Expected<size_t> readNativeFileSlice(file_t FileHandle,
 
 std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
   DWORD Flags = LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY;
-  OVERLAPPED OV = {0};
+  OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
@@ -1281,7 +1280,7 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
 
 std::error_code lockFile(int FD) {
   DWORD Flags = LOCKFILE_EXCLUSIVE_LOCK;
-  OVERLAPPED OV = {0};
+  OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
   if (::LockFileEx(File, Flags, 0, MAXDWORD, MAXDWORD, &OV))
     return std::error_code();
@@ -1290,7 +1289,7 @@ std::error_code lockFile(int FD) {
 }
 
 std::error_code unlockFile(int FD) {
-  OVERLAPPED OV = {0};
+  OVERLAPPED OV = {};
   file_t File = convertFDToNativeFile(FD);
   if (::UnlockFileEx(File, 0, MAXDWORD, MAXDWORD, &OV))
     return std::error_code();

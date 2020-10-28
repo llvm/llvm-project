@@ -587,13 +587,13 @@ public:
   PragmaStack<StringLiteral *> CodeSegStack;
 
   // This stack tracks the current state of Sema.CurFPFeatures.
-  PragmaStack<FPOptionsOverride::storage_type> FpPragmaStack;
+  PragmaStack<FPOptionsOverride> FpPragmaStack;
   FPOptionsOverride CurFPFeatureOverrides() {
     FPOptionsOverride result;
     if (!FpPragmaStack.hasValue()) {
       result = FPOptionsOverride();
     } else {
-      result = FPOptionsOverride(FpPragmaStack.CurrentValue);
+      result = FpPragmaStack.CurrentValue;
     }
     return result;
   }
@@ -1405,12 +1405,12 @@ public:
       S.CurFPFeatures = OldFPFeaturesState;
       S.FpPragmaStack.CurrentValue = OldOverrides;
     }
-    FPOptionsOverride::storage_type getOverrides() { return OldOverrides; }
+    FPOptionsOverride getOverrides() { return OldOverrides; }
 
   private:
     Sema& S;
     FPOptions OldFPFeaturesState;
-    FPOptionsOverride::storage_type OldOverrides;
+    FPOptionsOverride OldOverrides;
   };
 
   void addImplicitTypedef(StringRef Name, QualType T);
@@ -1912,6 +1912,12 @@ public:
 
   bool isModuleVisible(const Module *M, bool ModulePrivate = false);
 
+  // When loading a non-modular PCH files, this is used to restore module
+  // visibility.
+  void makeModuleVisible(Module *Mod, SourceLocation ImportLoc) {
+    VisibleModules.setVisible(Mod, ImportLoc);
+  }
+
   /// Determine whether a declaration is visible to name lookup.
   bool isVisible(const NamedDecl *D) {
     return D->isUnconditionallyVisible() || isVisibleSlow(D);
@@ -1997,10 +2003,7 @@ public:
   bool RequireCompleteSizedType(SourceLocation Loc, QualType T, unsigned DiagID,
                                 const Ts &... Args) {
     SizelessTypeDiagnoser<Ts...> Diagnoser(DiagID, Args...);
-    CompleteTypeKind Kind = CompleteTypeKind::Normal;
-    if (T->isVLST())
-      Kind = CompleteTypeKind::AcceptSizeless;
-    return RequireCompleteType(Loc, T, Kind, Diagnoser);
+    return RequireCompleteType(Loc, T, CompleteTypeKind::Normal, Diagnoser);
   }
 
   void completeExprArrayBound(Expr *E);
@@ -2018,10 +2021,7 @@ public:
   bool RequireCompleteSizedExprType(Expr *E, unsigned DiagID,
                                     const Ts &... Args) {
     SizelessTypeDiagnoser<Ts...> Diagnoser(DiagID, Args...);
-    CompleteTypeKind Kind = CompleteTypeKind::Normal;
-    if (E->getType()->isVLST())
-      Kind = CompleteTypeKind::AcceptSizeless;
-    return RequireCompleteExprType(E, Kind, Diagnoser);
+    return RequireCompleteExprType(E, CompleteTypeKind::Normal, Diagnoser);
   }
 
   bool RequireLiteralType(SourceLocation Loc, QualType T,
@@ -3213,7 +3213,7 @@ public:
     CCEK_CaseValue,   ///< Expression in a case label.
     CCEK_Enumerator,  ///< Enumerator value with fixed underlying type.
     CCEK_TemplateArg, ///< Value of a non-type template parameter.
-    CCEK_NewExpr,     ///< Constant expression in a noptr-new-declarator.
+    CCEK_ArrayBound,  ///< Array bound in array declarator or new-expression.
     CCEK_ConstexprIf, ///< Condition in a constexpr if statement.
     CCEK_ExplicitBool ///< Condition in an explicit(bool) specifier.
   };
@@ -3556,6 +3556,12 @@ public:
                               OverloadCandidateSet *CandidateSet,
                               ExprResult *Result);
 
+  ExprResult CreateUnresolvedLookupExpr(CXXRecordDecl *NamingClass,
+                                        NestedNameSpecifierLoc NNSLoc,
+                                        DeclarationNameInfo DNI,
+                                        const UnresolvedSetImpl &Fns,
+                                        bool PerformADL = true);
+
   ExprResult CreateOverloadedUnaryOp(SourceLocation OpLoc,
                                      UnaryOperatorKind Opc,
                                      const UnresolvedSetImpl &Fns,
@@ -3822,7 +3828,6 @@ public:
   bool LookupInSuper(LookupResult &R, CXXRecordDecl *Class);
 
   void LookupOverloadedOperatorName(OverloadedOperatorKind Op, Scope *S,
-                                    QualType T1, QualType T2,
                                     UnresolvedSetImpl &Functions);
 
   LabelDecl *LookupOrCreateLabel(IdentifierInfo *II, SourceLocation IdentLoc,
@@ -4375,16 +4380,17 @@ public:
 
   class ConditionResult;
   StmtResult ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr,
-                         Stmt *InitStmt,
-                         ConditionResult Cond, Stmt *ThenVal,
-                         SourceLocation ElseLoc, Stmt *ElseVal);
+                         SourceLocation LParenLoc, Stmt *InitStmt,
+                         ConditionResult Cond, SourceLocation RParenLoc,
+                         Stmt *ThenVal, SourceLocation ElseLoc, Stmt *ElseVal);
   StmtResult BuildIfStmt(SourceLocation IfLoc, bool IsConstexpr,
-                         Stmt *InitStmt,
-                         ConditionResult Cond, Stmt *ThenVal,
-                         SourceLocation ElseLoc, Stmt *ElseVal);
+                         SourceLocation LParenLoc, Stmt *InitStmt,
+                         ConditionResult Cond, SourceLocation RParenLoc,
+                         Stmt *ThenVal, SourceLocation ElseLoc, Stmt *ElseVal);
   StmtResult ActOnStartOfSwitchStmt(SourceLocation SwitchLoc,
-                                    Stmt *InitStmt,
-                                    ConditionResult Cond);
+                                    SourceLocation LParenLoc, Stmt *InitStmt,
+                                    ConditionResult Cond,
+                                    SourceLocation RParenLoc);
   StmtResult ActOnFinishSwitchStmt(SourceLocation SwitchLoc,
                                            Stmt *Switch, Stmt *Body);
   StmtResult ActOnWhileStmt(SourceLocation WhileLoc, SourceLocation LParenLoc,
@@ -5166,6 +5172,8 @@ public:
                         BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr);
   ExprResult CreateBuiltinBinOp(SourceLocation OpLoc, BinaryOperatorKind Opc,
                                 Expr *LHSExpr, Expr *RHSExpr);
+  void LookupBinOp(Scope *S, SourceLocation OpLoc, BinaryOperatorKind Opc,
+                   UnresolvedSetImpl &Functions);
 
   void DiagnoseCommaOperator(const Expr *LHS, SourceLocation Loc);
 
@@ -5846,11 +5854,12 @@ public:
                             SourceLocation RParenLoc);
 
   /// Handle a C++1z fold-expression: ( expr op ... op expr ).
-  ExprResult ActOnCXXFoldExpr(SourceLocation LParenLoc, Expr *LHS,
+  ExprResult ActOnCXXFoldExpr(Scope *S, SourceLocation LParenLoc, Expr *LHS,
                               tok::TokenKind Operator,
                               SourceLocation EllipsisLoc, Expr *RHS,
                               SourceLocation RParenLoc);
-  ExprResult BuildCXXFoldExpr(SourceLocation LParenLoc, Expr *LHS,
+  ExprResult BuildCXXFoldExpr(UnresolvedLookupExpr *Callee,
+                              SourceLocation LParenLoc, Expr *LHS,
                               BinaryOperatorKind Operator,
                               SourceLocation EllipsisLoc, Expr *RHS,
                               SourceLocation RParenLoc,
@@ -7334,11 +7343,17 @@ public:
       SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
       StorageClass SC, bool IsPartialSpecialization);
 
+  /// Get the specialization of the given variable template corresponding to
+  /// the specified argument list, or a null-but-valid result if the arguments
+  /// are dependent.
   DeclResult CheckVarTemplateId(VarTemplateDecl *Template,
                                 SourceLocation TemplateLoc,
                                 SourceLocation TemplateNameLoc,
                                 const TemplateArgumentListInfo &TemplateArgs);
 
+  /// Form a reference to the specialization of the given variable template
+  /// corresponding to the specified argument list, or a null-but-valid result
+  /// if the arguments are dependent.
   ExprResult CheckVarTemplateId(const CXXScopeSpec &SS,
                                 const DeclarationNameInfo &NameInfo,
                                 VarTemplateDecl *Template,
@@ -7752,11 +7767,14 @@ public:
     /// Lambda expression.
     UPPC_Lambda,
 
-    /// Block expression,
+    /// Block expression.
     UPPC_Block,
 
-    /// A type constraint,
-    UPPC_TypeConstraint
+    /// A type constraint.
+    UPPC_TypeConstraint,
+
+    // A requirement in a requires-expression.
+    UPPC_Requirement,
   };
 
   /// Diagnose unexpanded parameter packs.
@@ -7794,6 +7812,15 @@ public:
   /// \returns true if an error occurred, false otherwise.
   bool DiagnoseUnexpandedParameterPack(Expr *E,
                        UnexpandedParameterPackContext UPPC = UPPC_Expression);
+
+  /// If the given requirees-expression contains an unexpanded reference to one
+  /// of its own parameter packs, diagnose the error.
+  ///
+  /// \param RE The requiress-expression that is being checked for unexpanded
+  /// parameter packs.
+  ///
+  /// \returns true if an error occurred, false otherwise.
+  bool DiagnoseUnexpandedParameterPackInRequiresExpr(RequiresExpr *RE);
 
   /// If the given nested-name-specifier contains an unexpanded
   /// parameter pack, diagnose the error.
@@ -9149,10 +9176,6 @@ public:
                              bool InstantiatingVarTemplate = false,
                              VarTemplateSpecializationDecl *PrevVTSD = nullptr);
 
-  VarDecl *getVarTemplateSpecialization(
-      VarTemplateDecl *VarTempl, const TemplateArgumentListInfo *TemplateArgs,
-      const DeclarationNameInfo &MemberNameInfo, SourceLocation TemplateKWLoc);
-
   void InstantiateVariableInitializer(
       VarDecl *Var, VarDecl *OldVar,
       const MultiLevelTemplateArgumentList &TemplateArgs);
@@ -9945,7 +9968,7 @@ public:
 private:
   void *VarDataSharingAttributesStack;
   /// Number of nested '#pragma omp declare target' directives.
-  unsigned DeclareTargetNestingLevel = 0;
+  SmallVector<SourceLocation, 4> DeclareTargetNesting;
   /// Initialization of data-sharing attributes stack.
   void InitDataSharingAttributesStack();
   void DestroyDataSharingAttributesStack();
@@ -10167,19 +10190,18 @@ public:
   QualType ActOnOpenMPDeclareMapperType(SourceLocation TyLoc,
                                         TypeResult ParsedType);
   /// Called on start of '#pragma omp declare mapper'.
-  OMPDeclareMapperDecl *ActOnOpenMPDeclareMapperDirectiveStart(
+  DeclGroupPtrTy ActOnOpenMPDeclareMapperDirective(
       Scope *S, DeclContext *DC, DeclarationName Name, QualType MapperType,
       SourceLocation StartLoc, DeclarationName VN, AccessSpecifier AS,
+      Expr *MapperVarRef, ArrayRef<OMPClause *> Clauses,
       Decl *PrevDeclInScope = nullptr);
   /// Build the mapper variable of '#pragma omp declare mapper'.
-  void ActOnOpenMPDeclareMapperDirectiveVarDecl(OMPDeclareMapperDecl *DMD,
-                                                Scope *S, QualType MapperType,
-                                                SourceLocation StartLoc,
-                                                DeclarationName VN);
-  /// Called at the end of '#pragma omp declare mapper'.
-  DeclGroupPtrTy
-  ActOnOpenMPDeclareMapperDirectiveEnd(OMPDeclareMapperDecl *D, Scope *S,
-                                       ArrayRef<OMPClause *> ClauseList);
+  ExprResult ActOnOpenMPDeclareMapperDirectiveVarDecl(Scope *S,
+                                                      QualType MapperType,
+                                                      SourceLocation StartLoc,
+                                                      DeclarationName VN);
+  bool isOpenMPDeclareMapperVarDeclAllowed(const VarDecl *VD) const;
+  const ValueDecl *getOpenMPDeclareMapperVarName() const;
 
   /// Called on the start of target region i.e. '#pragma omp declare target'.
   bool ActOnStartOpenMPDeclareTargetDirective(SourceLocation Loc);
@@ -10206,7 +10228,7 @@ public:
                                      SourceLocation Loc);
   /// Return true inside OpenMP declare target region.
   bool isInOpenMPDeclareTargetContext() const {
-    return DeclareTargetNestingLevel > 0;
+    return !DeclareTargetNesting.empty();
   }
   /// Return true inside OpenMP target region.
   bool isInOpenMPTargetExecutionDirective() const;
@@ -11566,9 +11588,12 @@ public:
 
     VerifyICEDiagnoser(bool Suppress = false) : Suppress(Suppress) { }
 
-    virtual void diagnoseNotICE(Sema &S, SourceLocation Loc, SourceRange SR) =0;
-    virtual void diagnoseFold(Sema &S, SourceLocation Loc, SourceRange SR);
-    virtual ~VerifyICEDiagnoser() { }
+    virtual SemaDiagnosticBuilder
+    diagnoseNotICEType(Sema &S, SourceLocation Loc, QualType T);
+    virtual SemaDiagnosticBuilder diagnoseNotICE(Sema &S,
+                                                 SourceLocation Loc) = 0;
+    virtual SemaDiagnosticBuilder diagnoseFold(Sema &S, SourceLocation Loc);
+    virtual ~VerifyICEDiagnoser() {}
   };
 
   /// VerifyIntegerConstantExpression - Verifies that an expression is an ICE,
@@ -12170,7 +12195,6 @@ private:
   bool CheckX86BuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckX86BuiltinTileArgumentsRange(CallExpr *TheCall,
                                          ArrayRef<int> ArgNums);
-  bool CheckX86BuiltinTileArgumentsRange(CallExpr *TheCall, int ArgNum);
   bool CheckX86BuiltinTileDuplicate(CallExpr *TheCall, ArrayRef<int> ArgNums);
   bool CheckX86BuiltinTileRangeAndDuplicate(CallExpr *TheCall,
                                             ArrayRef<int> ArgNums);

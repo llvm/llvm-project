@@ -30,9 +30,19 @@ define <2 x i64> @fcvtas_2d(<2 x double> %A) nounwind {
 	ret <2 x i64> %tmp3
 }
 
+define <1 x i64> @fcvtas_1d(<1 x double> %A) nounwind {
+;CHECK-LABEL: fcvtas_1d:
+;CHECK-NOT: ld1
+;CHECK: fcvtas d0, d0
+;CHECK-NEXT: ret
+	%tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtas.v1i64.v1f64(<1 x double> %A)
+	ret <1 x i64> %tmp3
+}
+
 declare <2 x i32> @llvm.aarch64.neon.fcvtas.v2i32.v2f32(<2 x float>) nounwind readnone
 declare <4 x i32> @llvm.aarch64.neon.fcvtas.v4i32.v4f32(<4 x float>) nounwind readnone
 declare <2 x i64> @llvm.aarch64.neon.fcvtas.v2i64.v2f64(<2 x double>) nounwind readnone
+declare <1 x i64> @llvm.aarch64.neon.fcvtas.v1i64.v1f64(<1 x double>) nounwind readnone
 
 define <2 x i32> @fcvtau_2s(<2 x float> %A) nounwind {
 ;CHECK-LABEL: fcvtau_2s:
@@ -61,9 +71,19 @@ define <2 x i64> @fcvtau_2d(<2 x double> %A) nounwind {
 	ret <2 x i64> %tmp3
 }
 
+define <1 x i64> @fcvtau_1d(<1 x double> %A) nounwind {
+;CHECK-LABEL: fcvtau_1d:
+;CHECK-NOT: ld1
+;CHECK: fcvtau d0, d0
+;CHECK-NEXT: ret
+	%tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtau.v1i64.v1f64(<1 x double> %A)
+	ret <1 x i64> %tmp3
+}
+
 declare <2 x i32> @llvm.aarch64.neon.fcvtau.v2i32.v2f32(<2 x float>) nounwind readnone
 declare <4 x i32> @llvm.aarch64.neon.fcvtau.v4i32.v4f32(<4 x float>) nounwind readnone
 declare <2 x i64> @llvm.aarch64.neon.fcvtau.v2i64.v2f64(<2 x double>) nounwind readnone
+declare <1 x i64> @llvm.aarch64.neon.fcvtau.v1i64.v1f64(<1 x double>) nounwind readnone
 
 define <2 x i32> @fcvtms_2s(<2 x float> %A) nounwind {
 ;CHECK-LABEL: fcvtms_2s:
@@ -92,9 +112,19 @@ define <2 x i64> @fcvtms_2d(<2 x double> %A) nounwind {
 	ret <2 x i64> %tmp3
 }
 
+define <1 x i64> @fcvtms_1d(<1 x double> %A) nounwind {
+;CHECK-LABEL: fcvtms_1d:
+;CHECK-NOT: ld1
+;CHECK: fcvtms d0, d0
+;CHECK-NEXT: ret
+       %tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtms.v1i64.v1f64(<1 x double> %A)
+       ret <1 x i64> %tmp3
+}
+
 declare <2 x i32> @llvm.aarch64.neon.fcvtms.v2i32.v2f32(<2 x float>) nounwind readnone
 declare <4 x i32> @llvm.aarch64.neon.fcvtms.v4i32.v4f32(<4 x float>) nounwind readnone
 declare <2 x i64> @llvm.aarch64.neon.fcvtms.v2i64.v2f64(<2 x double>) nounwind readnone
+declare <1 x i64> @llvm.aarch64.neon.fcvtms.v1i64.v1f64(<1 x double>) nounwind readnone
 
 define <2 x i32> @fcvtmu_2s(<2 x float> %A) nounwind {
 ;CHECK-LABEL: fcvtmu_2s:
@@ -123,9 +153,19 @@ define <2 x i64> @fcvtmu_2d(<2 x double> %A) nounwind {
 	ret <2 x i64> %tmp3
 }
 
+define <1 x i64> @fcvtmu_1d(<1 x double> %A) nounwind {
+;CHECK-LABEL: fcvtmu_1d:
+;CHECK-NOT: ld1
+;CHECK: fcvtmu d0, d0
+;CHECK-NEXT: ret
+       %tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtmu.v1i64.v1f64(<1 x double> %A)
+       ret <1 x i64> %tmp3
+}
+
 declare <2 x i32> @llvm.aarch64.neon.fcvtmu.v2i32.v2f32(<2 x float>) nounwind readnone
 declare <4 x i32> @llvm.aarch64.neon.fcvtmu.v4i32.v4f32(<4 x float>) nounwind readnone
 declare <2 x i64> @llvm.aarch64.neon.fcvtmu.v2i64.v2f64(<2 x double>) nounwind readnone
+declare <1 x i64> @llvm.aarch64.neon.fcvtmu.v1i64.v1f64(<1 x double>) nounwind readnone
 
 define <2 x i32> @fcvtps_2s(<2 x float> %A) nounwind {
 ;CHECK-LABEL: fcvtps_2s:
@@ -154,9 +194,19 @@ define <2 x i64> @fcvtps_2d(<2 x double> %A) nounwind {
 	ret <2 x i64> %tmp3
 }
 
+define <1 x i64> @fcvtps_1d(<1 x double> %A) nounwind {
+;CHECK-LABEL: fcvtps_1d:
+;CHECK-NOT: ld1
+;CHECK: fcvtps d0, d0
+;CHECK-NEXT: ret
+       %tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtps.v1i64.v1f64(<1 x double> %A)
+       ret <1 x i64> %tmp3
+}
+
 declare <2 x i32> @llvm.aarch64.neon.fcvtps.v2i32.v2f32(<2 x float>) nounwind readnone
 declare <4 x i32> @llvm.aarch64.neon.fcvtps.v4i32.v4f32(<4 x float>) nounwind readnone
 declare <2 x i64> @llvm.aarch64.neon.fcvtps.v2i64.v2f64(<2 x double>) nounwind readnone
+declare <1 x i64> @llvm.aarch64.neon.fcvtps.v1i64.v1f64(<1 x double>) nounwind readnone
 
 define <2 x i32> @fcvtpu_2s(<2 x float> %A) nounwind {
 ;CHECK-LABEL: fcvtpu_2s:
@@ -185,9 +235,19 @@ define <2 x i64> @fcvtpu_2d(<2 x double> %A) nounwind {
 	ret <2 x i64> %tmp3
 }
 
+define <1 x i64> @fcvtpu_1d(<1 x double> %A) nounwind {
+;CHECK-LABEL: fcvtpu_1d:
+;CHECK-NOT: ld1
+;CHECK: fcvtpu d0, d0
+;CHECK-NEXT: ret
+       %tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtpu.v1i64.v1f64(<1 x double> %A)
+       ret <1 x i64> %tmp3
+}
+
 declare <2 x i32> @llvm.aarch64.neon.fcvtpu.v2i32.v2f32(<2 x float>) nounwind readnone
 declare <4 x i32> @llvm.aarch64.neon.fcvtpu.v4i32.v4f32(<4 x float>) nounwind readnone
 declare <2 x i64> @llvm.aarch64.neon.fcvtpu.v2i64.v2f64(<2 x double>) nounwind readnone
+declare <1 x i64> @llvm.aarch64.neon.fcvtpu.v1i64.v1f64(<1 x double>) nounwind readnone
 
 define <2 x i32> @fcvtns_2s(<2 x float> %A) nounwind {
 ;CHECK-LABEL: fcvtns_2s:
@@ -216,9 +276,19 @@ define <2 x i64> @fcvtns_2d(<2 x double> %A) nounwind {
 	ret <2 x i64> %tmp3
 }
 
+define <1 x i64> @fcvtns_1d(<1 x double> %A) nounwind {
+;CHECK-LABEL: fcvtns_1d:
+;CHECK-NOT: ld1
+;CHECK: fcvtns d0, d0
+;CHECK-NEXT: ret
+       %tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtns.v1i64.v1f64(<1 x double> %A)
+       ret <1 x i64> %tmp3
+}
+
 declare <2 x i32> @llvm.aarch64.neon.fcvtns.v2i32.v2f32(<2 x float>) nounwind readnone
 declare <4 x i32> @llvm.aarch64.neon.fcvtns.v4i32.v4f32(<4 x float>) nounwind readnone
 declare <2 x i64> @llvm.aarch64.neon.fcvtns.v2i64.v2f64(<2 x double>) nounwind readnone
+declare <1 x i64> @llvm.aarch64.neon.fcvtns.v1i64.v1f64(<1 x double>) nounwind readnone
 
 define <2 x i32> @fcvtnu_2s(<2 x float> %A) nounwind {
 ;CHECK-LABEL: fcvtnu_2s:
@@ -247,9 +317,19 @@ define <2 x i64> @fcvtnu_2d(<2 x double> %A) nounwind {
 	ret <2 x i64> %tmp3
 }
 
+define <1 x i64> @fcvtnu_1d(<1 x double> %A) nounwind {
+;CHECK-LABEL: fcvtnu_1d:
+;CHECK-NOT: ld1
+;CHECK: fcvtnu d0, d0
+;CHECK-NEXT: ret
+       %tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtnu.v1i64.v1f64(<1 x double> %A)
+       ret <1 x i64> %tmp3
+}
+
 declare <2 x i32> @llvm.aarch64.neon.fcvtnu.v2i32.v2f32(<2 x float>) nounwind readnone
 declare <4 x i32> @llvm.aarch64.neon.fcvtnu.v4i32.v4f32(<4 x float>) nounwind readnone
 declare <2 x i64> @llvm.aarch64.neon.fcvtnu.v2i64.v2f64(<2 x double>) nounwind readnone
+declare <1 x i64> @llvm.aarch64.neon.fcvtnu.v1i64.v1f64(<1 x double>) nounwind readnone
 
 define <2 x i32> @fcvtzs_2s(<2 x float> %A) nounwind {
 ;CHECK-LABEL: fcvtzs_2s:
@@ -278,6 +358,57 @@ define <2 x i64> @fcvtzs_2d(<2 x double> %A) nounwind {
 	ret <2 x i64> %tmp3
 }
 
+; FIXME: Generate "fcvtzs d0, d0"?
+define <1 x i64> @fcvtzs_1d(<1 x double> %A) nounwind {
+;CHECK-LABEL: fcvtzs_1d:
+;CHECK-NOT: ld1
+;CHECK: fcvtzs x8, d0
+;CHECK-NEXT: mov d0, x8
+;CHECK-NEXT: ret
+	%tmp3 = fptosi <1 x double> %A to <1 x i64>
+	ret <1 x i64> %tmp3
+}
+
+define <2 x i32> @fcvtzs_2s_intrinsic(<2 x float> %A) nounwind {
+;CHECK-LABEL: fcvtzs_2s_intrinsic:
+;CHECK-NOT: ld1
+;CHECK: fcvtzs.2s v0, v0
+;CHECK-NEXT: ret
+	%tmp3 = call <2 x i32> @llvm.aarch64.neon.fcvtzs.v2i32.v2f32(<2 x float> %A)
+	ret <2 x i32> %tmp3
+}
+
+define <4 x i32> @fcvtzs_4s_intrinsic(<4 x float> %A) nounwind {
+;CHECK-LABEL: fcvtzs_4s_intrinsic:
+;CHECK-NOT: ld1
+;CHECK: fcvtzs.4s v0, v0
+;CHECK-NEXT: ret
+	%tmp3 = call <4 x i32> @llvm.aarch64.neon.fcvtzs.v4i32.v4f32(<4 x float> %A)
+	ret <4 x i32> %tmp3
+}
+
+define <2 x i64> @fcvtzs_2d_intrinsic(<2 x double> %A) nounwind {
+;CHECK-LABEL: fcvtzs_2d_intrinsic:
+;CHECK-NOT: ld1
+;CHECK: fcvtzs.2d v0, v0
+;CHECK-NEXT: ret
+	%tmp3 = call <2 x i64> @llvm.aarch64.neon.fcvtzs.v2i64.v2f64(<2 x double> %A)
+	ret <2 x i64> %tmp3
+}
+
+define <1 x i64> @fcvtzs_1d_intrinsic(<1 x double> %A) nounwind {
+;CHECK-LABEL: fcvtzs_1d_intrinsic:
+;CHECK-NOT: ld1
+;CHECK: fcvtzs d0, d0
+;CHECK-NEXT: ret
+	%tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtzs.v1i64.v1f64(<1 x double> %A)
+	ret <1 x i64> %tmp3
+}
+
+declare <2 x i32> @llvm.aarch64.neon.fcvtzs.v2i32.v2f32(<2 x float>) nounwind readnone
+declare <4 x i32> @llvm.aarch64.neon.fcvtzs.v4i32.v4f32(<4 x float>) nounwind readnone
+declare <2 x i64> @llvm.aarch64.neon.fcvtzs.v2i64.v2f64(<2 x double>) nounwind readnone
+declare <1 x i64> @llvm.aarch64.neon.fcvtzs.v1i64.v1f64(<1 x double>) nounwind readnone
 
 define <2 x i32> @fcvtzu_2s(<2 x float> %A) nounwind {
 ;CHECK-LABEL: fcvtzu_2s:
@@ -305,6 +436,58 @@ define <2 x i64> @fcvtzu_2d(<2 x double> %A) nounwind {
 	%tmp3 = fptoui <2 x double> %A to <2 x i64>
 	ret <2 x i64> %tmp3
 }
+
+; FIXME: Generate "fcvtzu d0, d0"?
+define <1 x i64> @fcvtzu_1d(<1 x double> %A) nounwind {
+;CHECK-LABEL: fcvtzu_1d:
+;CHECK-NOT: ld1
+;CHECK: fcvtzu x8, d0
+;CHECK-NEXT: mov d0, x8
+;CHECK-NEXT: ret
+	%tmp3 = fptoui <1 x double> %A to <1 x i64>
+	ret <1 x i64> %tmp3
+}
+
+define <2 x i32> @fcvtzu_2s_intrinsic(<2 x float> %A) nounwind {
+;CHECK-LABEL: fcvtzu_2s_intrinsic:
+;CHECK-NOT: ld1
+;CHECK: fcvtzu.2s v0, v0
+;CHECK-NEXT: ret
+	%tmp3 = call <2 x i32> @llvm.aarch64.neon.fcvtzu.v2i32.v2f32(<2 x float> %A)
+	ret <2 x i32> %tmp3
+}
+
+define <4 x i32> @fcvtzu_4s_intrinsic(<4 x float> %A) nounwind {
+;CHECK-LABEL: fcvtzu_4s_intrinsic:
+;CHECK-NOT: ld1
+;CHECK: fcvtzu.4s v0, v0
+;CHECK-NEXT: ret
+	%tmp3 = call <4 x i32> @llvm.aarch64.neon.fcvtzu.v4i32.v4f32(<4 x float> %A)
+	ret <4 x i32> %tmp3
+}
+
+define <2 x i64> @fcvtzu_2d_intrinsic(<2 x double> %A) nounwind {
+;CHECK-LABEL: fcvtzu_2d_intrinsic:
+;CHECK-NOT: ld1
+;CHECK: fcvtzu.2d v0, v0
+;CHECK-NEXT: ret
+	%tmp3 = call <2 x i64> @llvm.aarch64.neon.fcvtzu.v2i64.v2f64(<2 x double> %A)
+	ret <2 x i64> %tmp3
+}
+
+define <1 x i64> @fcvtzu_1d_intrinsic(<1 x double> %A) nounwind {
+;CHECK-LABEL: fcvtzu_1d_intrinsic:
+;CHECK-NOT: ld1
+;CHECK: fcvtzu d0, d0
+;CHECK-NEXT: ret
+	%tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtzu.v1i64.v1f64(<1 x double> %A)
+	ret <1 x i64> %tmp3
+}
+
+declare <2 x i32> @llvm.aarch64.neon.fcvtzu.v2i32.v2f32(<2 x float>) nounwind readnone
+declare <4 x i32> @llvm.aarch64.neon.fcvtzu.v4i32.v4f32(<4 x float>) nounwind readnone
+declare <2 x i64> @llvm.aarch64.neon.fcvtzu.v2i64.v2f64(<2 x double>) nounwind readnone
+declare <1 x i64> @llvm.aarch64.neon.fcvtzu.v1i64.v1f64(<1 x double>) nounwind readnone
 
 define <2 x float> @frinta_2s(<2 x float> %A) nounwind {
 ;CHECK-LABEL: frinta_2s:

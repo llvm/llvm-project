@@ -1155,6 +1155,22 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}atomic_load_i32_negoffset:
+; SI: buffer_load_dword [[RET:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 glc{{$}}
+
+; VI: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0xfffffe00
+; VI-NEXT: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, -1
+; VI: flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+
+; GFX9: global_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}], off offset:-512 glc{{$}}
+define amdgpu_kernel void @atomic_load_i32_negoffset(i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
+entry:
+  %gep = getelementptr i32, i32 addrspace(1)* %in, i64 -128
+  %val = load atomic i32, i32 addrspace(1)* %gep  seq_cst, align 4
+  store i32 %val, i32 addrspace(1)* %out
+  ret void
+}
+
 ; GCN-LABEL: {{^}}atomic_load_f32_offset:
 ; SI: buffer_load_dword [[RET:v[0-9]+]], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:16 glc{{$}}
 ; VI: flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}

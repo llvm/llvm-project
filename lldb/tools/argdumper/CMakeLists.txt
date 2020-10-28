@@ -4,3 +4,5 @@ add_lldb_tool(lldb-argdumper ADD_TO_FRAMEWORK
   LINK_COMPONENTS
     Support
 )
+
+add_dependencies(liblldb lldb-argdumper)

@@ -329,10 +329,12 @@ __isl_give isl_set *isl_set_from_pw_aff(__isl_take isl_pw_aff *pwaff)
 /* Construct a map mapping the domain of the piecewise multi-affine expression
  * to its range, with each dimension in the range equated to the
  * corresponding affine expression on its cell.
+ * If "pma" lives in a set space, then the result is actually a set.
  *
  * If the domain of "pma" is rational, then so is the constructed "map".
  */
-__isl_give isl_map *isl_map_from_pw_multi_aff(__isl_take isl_pw_multi_aff *pma)
+__isl_give isl_map *isl_map_from_pw_multi_aff_internal(
+	__isl_take isl_pw_multi_aff *pma)
 {
 	int i;
 	isl_map *map;
@@ -363,11 +365,22 @@ __isl_give isl_map *isl_map_from_pw_multi_aff(__isl_take isl_pw_multi_aff *pma)
 	return map;
 }
 
+/* Construct a map mapping the domain of the piecewise multi-affine expression
+ * to its range, with each dimension in the range equated to the
+ * corresponding affine expression on its cell.
+ */
+__isl_give isl_map *isl_map_from_pw_multi_aff(__isl_take isl_pw_multi_aff *pma)
+{
+	if (check_input_is_map(isl_pw_multi_aff_peek_space(pma)) < 0)
+		pma = isl_pw_multi_aff_free(pma);
+	return isl_map_from_pw_multi_aff_internal(pma);
+}
+
 __isl_give isl_set *isl_set_from_pw_multi_aff(__isl_take isl_pw_multi_aff *pma)
 {
 	if (check_input_is_set(isl_pw_multi_aff_peek_space(pma)) < 0)
 		pma = isl_pw_multi_aff_free(pma);
-	return set_from_map(isl_map_from_pw_multi_aff(pma));
+	return set_from_map(isl_map_from_pw_multi_aff_internal(pma));
 }
 
 /* Construct a set or map mapping the shared (parameter) domain

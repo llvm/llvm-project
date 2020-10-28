@@ -117,20 +117,23 @@ body:             |
   ; CHECK:   tCMPi8 $r3, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK:   t2IT 0, 8, implicit-def $itstate
   ; CHECK:   tPOP_RET 0 /* CC::eq */, killed $cpsr, def $r7, def $pc, implicit killed $itstate
+  ; CHECK: bb.1.for.body.preheader:
+  ; CHECK:   successors: %bb.2(0x80000000)
+  ; CHECK:   liveins: $r0, $r1, $r2, $r3
   ; CHECK:   renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 4, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = t2DLS killed $r3
-  ; CHECK: bb.1.for.body:
-  ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  ; CHECK: bb.2.for.body:
+  ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2
   ; CHECK:   dead renamable $r3 = SPACE 4070, undef renamable $r0
   ; CHECK:   renamable $r12, renamable $r1 = t2LDR_PRE killed renamable $r1, 4, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep3)
   ; CHECK:   renamable $r3, renamable $r2 = t2LDR_PRE killed renamable $r2, 4, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep7)
   ; CHECK:   renamable $r3 = nsw t2MUL killed renamable $r3, killed renamable $r12, 14 /* CC::al */, $noreg
   ; CHECK:   early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14 /* CC::al */, $noreg :: (store 4 into %ir.scevgep11)
-  ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.1
-  ; CHECK: bb.2.for.cond.cleanup:
+  ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
+  ; CHECK: bb.3.for.cond.cleanup:
   ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc
   bb.0.entry:
     successors: %bb.1(0x80000000)
@@ -143,14 +146,19 @@ body:             |
     tCMPi8 $r3, 0, 14, $noreg, implicit-def $cpsr
     t2IT 0, 8, implicit-def $itstate
     tPOP_RET 0, killed $cpsr, def $r7, def $pc, implicit killed $itstate
+
+  bb.1.for.body.preheader:
+    successors: %bb.2(0x80000000)
+    liveins: $r0, $r1, $r2, $r3, $r7, $lr
+
     renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 4, 14, $noreg
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14, $noreg
     renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 4, 14, $noreg
     $lr = tMOVr $r3, 14, $noreg
     t2DoLoopStart killed $r3
 
-  bb.1.for.body:
-    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  bb.2.for.body:
+    successors: %bb.2(0x7c000000), %bb.3(0x04000000)
     liveins: $lr, $r0, $r1, $r2
 
     dead renamable $r3 = SPACE 4070, undef renamable $r0
@@ -159,10 +167,10 @@ body:             |
     renamable $r3 = nsw t2MUL killed renamable $r3, killed renamable $r12, 14, $noreg
     early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14, $noreg :: (store 4 into %ir.scevgep11)
     renamable $lr = t2LoopDec killed renamable $lr, 1
-    t2LoopEnd renamable $lr, %bb.1, implicit-def dead $cpsr
-    tB %bb.2, 14, $noreg
+    t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr
+    tB %bb.3, 14, $noreg
 
-  bb.2.for.cond.cleanup:
+  bb.3.for.cond.cleanup:
     tPOP_RET 14, $noreg, def $r7, def $pc
 
 ...

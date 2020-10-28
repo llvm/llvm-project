@@ -740,8 +740,10 @@ Value *InstCombinerImpl::SimplifyUsingDistributiveLaws(BinaryOperator &I) {
     Value *A = Op0->getOperand(0), *B = Op0->getOperand(1), *C = RHS;
     Instruction::BinaryOps InnerOpcode = Op0->getOpcode(); // op'
 
-    Value *L = SimplifyBinOp(TopLevelOpcode, A, C, SQ.getWithInstruction(&I));
-    Value *R = SimplifyBinOp(TopLevelOpcode, B, C, SQ.getWithInstruction(&I));
+    // Disable the use of undef because it's not safe to distribute undef.
+    auto SQDistributive = SQ.getWithInstruction(&I).getWithoutUndef();
+    Value *L = SimplifyBinOp(TopLevelOpcode, A, C, SQDistributive);
+    Value *R = SimplifyBinOp(TopLevelOpcode, B, C, SQDistributive);
 
     // Do "A op C" and "B op C" both simplify?
     if (L && R) {
@@ -777,8 +779,10 @@ Value *InstCombinerImpl::SimplifyUsingDistributiveLaws(BinaryOperator &I) {
     Value *A = LHS, *B = Op1->getOperand(0), *C = Op1->getOperand(1);
     Instruction::BinaryOps InnerOpcode = Op1->getOpcode(); // op'
 
-    Value *L = SimplifyBinOp(TopLevelOpcode, A, B, SQ.getWithInstruction(&I));
-    Value *R = SimplifyBinOp(TopLevelOpcode, A, C, SQ.getWithInstruction(&I));
+    // Disable the use of undef because it's not safe to distribute undef.
+    auto SQDistributive = SQ.getWithInstruction(&I).getWithoutUndef();
+    Value *L = SimplifyBinOp(TopLevelOpcode, A, B, SQDistributive);
+    Value *R = SimplifyBinOp(TopLevelOpcode, A, C, SQDistributive);
 
     // Do "A op B" and "A op C" both simplify?
     if (L && R) {
@@ -3387,6 +3391,34 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
       return NV;
   }
 
+  if (match(Op0, m_Undef())) {
+    // If I is freeze(undef), see its uses and fold it to the best constant.
+    // - or: pick -1
+    // - select's condition: pick the value that leads to choosing a constant
+    // - other ops: pick 0
+    Constant *BestValue = nullptr;
+    Constant *NullValue = Constant::getNullValue(I.getType());
+    for (const auto *U : I.users()) {
+      Constant *C = NullValue;
+
+      if (match(U, m_Or(m_Value(), m_Value())))
+        C = Constant::getAllOnesValue(I.getType());
+      else if (const auto *SI = dyn_cast<SelectInst>(U)) {
+        if (SI->getCondition() == &I) {
+          APInt CondVal(1, isa<Constant>(SI->getFalseValue()) ? 0 : 1);
+          C = Constant::getIntegerValue(I.getType(), CondVal);
+        }
+      }
+
+      if (!BestValue)
+        BestValue = C;
+      else if (BestValue != C)
+        BestValue = NullValue;
+    }
+
+    return replaceInstUsesWith(I, BestValue);
+  }
+
   return nullptr;
 }
 
@@ -3615,10 +3647,14 @@ bool InstCombinerImpl::run() {
         BasicBlock *InstParent = I->getParent();
         BasicBlock::iterator InsertPos = I->getIterator();
 
-        // If we replace a PHI with something that isn't a PHI, fix up the
-        // insertion point.
-        if (!isa<PHINode>(Result) && isa<PHINode>(InsertPos))
-          InsertPos = InstParent->getFirstInsertionPt();
+        // Are we replace a PHI with something that isn't a PHI, or vice versa?
+        if (isa<PHINode>(Result) != isa<PHINode>(I)) {
+          // We need to fix up the insertion point.
+          if (isa<PHINode>(I)) // PHI -> Non-PHI
+            InsertPos = InstParent->getFirstInsertionPt();
+          else // Non-PHI -> PHI
+            InsertPos = InstParent->getFirstNonPHI()->getIterator();
+        }
 
         InstParent->getInstList().insert(InsertPos, Result);
 
@@ -3744,8 +3780,12 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
     if (Visited.count(&BB))
       continue;
 
-    unsigned NumDeadInstInBB = removeAllNonTerminatorAndEHPadInstructions(&BB);
-    MadeIRChange |= NumDeadInstInBB > 0;
+    unsigned NumDeadInstInBB;
+    unsigned NumDeadDbgInstInBB;
+    std::tie(NumDeadInstInBB, NumDeadDbgInstInBB) =
+        removeAllNonTerminatorAndEHPadInstructions(&BB);
+
+    MadeIRChange |= NumDeadInstInBB + NumDeadDbgInstInBB > 0;
     NumDeadInst += NumDeadInstInBB;
   }
 

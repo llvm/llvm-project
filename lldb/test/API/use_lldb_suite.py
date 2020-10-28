@@ -4,9 +4,8 @@ import sys
 
 
 def find_lldb_root():
-    lldb_root = os.path.dirname(
-        os.path.abspath(inspect.getfile(inspect.currentframe()))
-    )
+    lldb_root = os.path.realpath(
+        os.path.dirname(inspect.getfile(inspect.currentframe())))
     while True:
         parent = os.path.dirname(lldb_root)
         if parent == lldb_root: # dirname('/') == '/'

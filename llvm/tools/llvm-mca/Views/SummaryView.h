@@ -46,6 +46,18 @@ class SummaryView : public View {
   // The total number of micro opcodes contributed by a block of instructions.
   unsigned NumMicroOps;
 
+  struct DisplayValues {
+    unsigned Instructions;
+    unsigned Iterations;
+    unsigned TotalInstructions;
+    unsigned TotalCycles;
+    unsigned DispatchWidth;
+    unsigned TotalUOps;
+    double IPC;
+    double UOpsPerCycle;
+    double BlockRThroughput;
+  };
+
   // For each processor resource, this vector stores the cumulative number of
   // resource cycles consumed by the analyzed code block.
   llvm::SmallVector<unsigned, 8> ProcResourceUsage;
@@ -64,6 +76,9 @@ class SummaryView : public View {
   //   - NumMicroOps / DispatchWidth
   //   - Total Resource Cycles / #Units   (for every resource consumed).
   double getBlockRThroughput() const;
+
+  /// Compute the data we want to print out in the object DV.
+  void collectData(DisplayValues &DV) const;
 
 public:
   SummaryView(const llvm::MCSchedModel &Model, llvm::ArrayRef<llvm::MCInst> S,

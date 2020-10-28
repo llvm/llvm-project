@@ -1,4 +1,4 @@
-# RUN: yaml2obj < %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 # RUN: lld-link /out:%t.exe /opt:noref /entry:main \
 # RUN:   %t.obj %p/Inputs/imports-mangle.lib
 # RUN: llvm-readobj --coff-imports %t.exe | FileCheck %s

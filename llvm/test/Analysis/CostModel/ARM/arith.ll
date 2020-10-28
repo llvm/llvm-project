@@ -5,6 +5,80 @@
 ; RUN: opt -cost-model -analyze -mtriple=thumbv8m.main-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8M-MAIN
 ; RUN: opt -cost-model -analyze -mtriple=thumbv8m.base-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8M-BASE
 ; RUN: opt -cost-model -analyze -mtriple=armv8r-none-eabi < %s | FileCheck %s --check-prefix=CHECK-V8R
+; RUN: opt -cost-model -cost-kind=code-size -analyze -mtriple=thumbv8.1m.main -mattr=+mve < %s | FileCheck %s --check-prefix=CHECK-MVE-SIZE
+
+define void @i1() {
+; CHECK-LABEL: 'i1'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i1 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = sub i1 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = mul i1 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = ashr i1 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = lshr i1 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = shl i1 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i1 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i1 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i1 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-V8M-MAIN-LABEL: 'i1'
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i1 undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = sub i1 undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = mul i1 undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = ashr i1 undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = lshr i1 undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = shl i1 undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i1 undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i1 undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i1 undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; CHECK-V8M-BASE-LABEL: 'i1'
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i1 undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = sub i1 undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = mul i1 undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = ashr i1 undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = lshr i1 undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = shl i1 undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i1 undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i1 undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i1 undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; CHECK-V8R-LABEL: 'i1'
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i1 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = sub i1 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = mul i1 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = ashr i1 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = lshr i1 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = shl i1 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i1 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i1 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i1 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-SIZE-LABEL: 'i1'
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i1 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = sub i1 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = mul i1 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = ashr i1 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = lshr i1 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = shl i1 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i1 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i1 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i1 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %c = add i1 undef, undef
+  %d = sub i1 undef, undef
+  %e = mul i1 undef, undef
+  %f = ashr i1 undef, undef
+  %g = lshr i1 undef, undef
+  %h = shl i1 undef, undef
+  %i = and i1 undef, undef
+  %j = or i1 undef, undef
+  %k = xor i1 undef, undef
+  ret void
+}
 
 define void @i8() {
 ; CHECK-LABEL: 'i8'
@@ -17,6 +91,7 @@ define void @i8() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i8 undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i8 undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i8 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: 'i8'
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i8 undef, undef
@@ -28,6 +103,7 @@ define void @i8() {
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i8 undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i8 undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i8 undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8M-BASE-LABEL: 'i8'
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i8 undef, undef
@@ -39,6 +115,7 @@ define void @i8() {
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i8 undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i8 undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i8 undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8R-LABEL: 'i8'
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i8 undef, undef
@@ -50,6 +127,19 @@ define void @i8() {
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i8 undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i8 undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i8 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-SIZE-LABEL: 'i8'
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i8 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = sub i8 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = mul i8 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = ashr i8 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = lshr i8 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = shl i8 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i8 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i8 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i8 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %c = add i8 undef, undef
   %d = sub i8 undef, undef
@@ -74,6 +164,7 @@ define void @i16() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i16 undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i16 undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i16 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: 'i16'
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i16 undef, undef
@@ -85,6 +176,7 @@ define void @i16() {
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i16 undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i16 undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i16 undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8M-BASE-LABEL: 'i16'
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i16 undef, undef
@@ -96,6 +188,7 @@ define void @i16() {
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i16 undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i16 undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i16 undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8R-LABEL: 'i16'
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i16 undef, undef
@@ -107,6 +200,19 @@ define void @i16() {
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i16 undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i16 undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i16 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-SIZE-LABEL: 'i16'
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i16 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = sub i16 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = mul i16 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = ashr i16 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = lshr i16 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = shl i16 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i16 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i16 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i16 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %c = add i16 undef, undef
   %d = sub i16 undef, undef
@@ -131,6 +237,7 @@ define void @i32() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i32 undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i32 undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i32 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: 'i32'
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i32 undef, undef
@@ -142,6 +249,7 @@ define void @i32() {
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i32 undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i32 undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i32 undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8M-BASE-LABEL: 'i32'
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i32 undef, undef
@@ -153,6 +261,7 @@ define void @i32() {
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i32 undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i32 undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i32 undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8R-LABEL: 'i32'
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i32 undef, undef
@@ -164,6 +273,19 @@ define void @i32() {
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i32 undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i32 undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i32 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-SIZE-LABEL: 'i32'
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i32 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = sub i32 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = mul i32 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = ashr i32 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = lshr i32 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = shl i32 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i32 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i32 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i32 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %c = add i32 undef, undef
   %d = sub i32 undef, undef
@@ -188,6 +310,7 @@ define void @i64() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i = and i64 undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %j = or i64 undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %k = xor i64 undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: 'i64'
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %c = add i64 undef, undef
@@ -199,6 +322,7 @@ define void @i64() {
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i = and i64 undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %j = or i64 undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %k = xor i64 undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8M-BASE-LABEL: 'i64'
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %c = add i64 undef, undef
@@ -210,6 +334,7 @@ define void @i64() {
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i = and i64 undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %j = or i64 undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %k = xor i64 undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8R-LABEL: 'i64'
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %c = add i64 undef, undef
@@ -221,6 +346,19 @@ define void @i64() {
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i = and i64 undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %j = or i64 undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %k = xor i64 undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-SIZE-LABEL: 'i64'
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c = add i64 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d = sub i64 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e = mul i64 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f = ashr i64 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g = lshr i64 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h = shl i64 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i = and i64 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j = or i64 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k = xor i64 undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %c = add i64 undef, undef
   %d = sub i64 undef, undef
@@ -273,6 +411,7 @@ define void @vi8() {
 ; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i16 = and <16 x i8> undef, undef
 ; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j16 = or <16 x i8> undef, undef
 ; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k16 = xor <16 x i8> undef, undef
+; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-MVE2-LABEL: 'vi8'
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %c2 = add <2 x i8> undef, undef
@@ -311,6 +450,7 @@ define void @vi8() {
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i16 = and <16 x i8> undef, undef
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %j16 = or <16 x i8> undef, undef
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %k16 = xor <16 x i8> undef, undef
+; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-MVE4-LABEL: 'vi8'
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %c2 = add <2 x i8> undef, undef
@@ -349,6 +489,7 @@ define void @vi8() {
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i16 = and <16 x i8> undef, undef
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %j16 = or <16 x i8> undef, undef
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %k16 = xor <16 x i8> undef, undef
+; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: 'vi8'
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %c2 = add <2 x i8> undef, undef
@@ -387,6 +528,7 @@ define void @vi8() {
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %i16 = and <16 x i8> undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %j16 = or <16 x i8> undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %k16 = xor <16 x i8> undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8M-BASE-LABEL: 'vi8'
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %c2 = add <2 x i8> undef, undef
@@ -425,6 +567,7 @@ define void @vi8() {
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %i16 = and <16 x i8> undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %j16 = or <16 x i8> undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %k16 = xor <16 x i8> undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8R-LABEL: 'vi8'
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c2 = add <2 x i8> undef, undef
@@ -463,6 +606,46 @@ define void @vi8() {
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i16 = and <16 x i8> undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j16 = or <16 x i8> undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k16 = xor <16 x i8> undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-SIZE-LABEL: 'vi8'
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c2 = add <2 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d2 = sub <2 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e2 = mul <2 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f2 = ashr <2 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g2 = lshr <2 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h2 = shl <2 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = and <2 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j2 = or <2 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k2 = xor <2 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c4 = add <4 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d4 = sub <4 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e4 = mul <4 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f4 = ashr <4 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g4 = lshr <4 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h4 = shl <4 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i4 = and <4 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j4 = or <4 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k4 = xor <4 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c8 = add <8 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d8 = sub <8 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e8 = mul <8 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f8 = ashr <8 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g8 = lshr <8 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h8 = shl <8 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i8 = and <8 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j8 = or <8 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k8 = xor <8 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c16 = add <16 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d16 = sub <16 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e16 = mul <16 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = ashr <16 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g16 = lshr <16 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h16 = shl <16 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i16 = and <16 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j16 = or <16 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k16 = xor <16 x i8> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %c2 = add <2 x i8> undef, undef
   %d2 = sub <2 x i8> undef, undef
@@ -541,6 +724,7 @@ define void @vi16() {
 ; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i16 = and <16 x i16> undef, undef
 ; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %j16 = or <16 x i16> undef, undef
 ; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %k16 = xor <16 x i16> undef, undef
+; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-MVE2-LABEL: 'vi16'
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %c2 = add <2 x i16> undef, undef
@@ -579,6 +763,7 @@ define void @vi16() {
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i16 = and <16 x i16> undef, undef
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %j16 = or <16 x i16> undef, undef
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %k16 = xor <16 x i16> undef, undef
+; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-MVE4-LABEL: 'vi16'
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %c2 = add <2 x i16> undef, undef
@@ -617,6 +802,7 @@ define void @vi16() {
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %i16 = and <16 x i16> undef, undef
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %j16 = or <16 x i16> undef, undef
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %k16 = xor <16 x i16> undef, undef
+; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: 'vi16'
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %c2 = add <2 x i16> undef, undef
@@ -655,6 +841,7 @@ define void @vi16() {
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %i16 = and <16 x i16> undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %j16 = or <16 x i16> undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %k16 = xor <16 x i16> undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8M-BASE-LABEL: 'vi16'
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %c2 = add <2 x i16> undef, undef
@@ -693,6 +880,7 @@ define void @vi16() {
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %i16 = and <16 x i16> undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %j16 = or <16 x i16> undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %k16 = xor <16 x i16> undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8R-LABEL: 'vi16'
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c2 = add <2 x i16> undef, undef
@@ -731,6 +919,46 @@ define void @vi16() {
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %i16 = and <16 x i16> undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %j16 = or <16 x i16> undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %k16 = xor <16 x i16> undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-SIZE-LABEL: 'vi16'
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c2 = add <2 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d2 = sub <2 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e2 = mul <2 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f2 = ashr <2 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g2 = lshr <2 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h2 = shl <2 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = and <2 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j2 = or <2 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k2 = xor <2 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c4 = add <4 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d4 = sub <4 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e4 = mul <4 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f4 = ashr <4 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g4 = lshr <4 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h4 = shl <4 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i4 = and <4 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j4 = or <4 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k4 = xor <4 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c8 = add <8 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d8 = sub <8 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e8 = mul <8 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f8 = ashr <8 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g8 = lshr <8 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h8 = shl <8 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i8 = and <8 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j8 = or <8 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k8 = xor <8 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c16 = add <16 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d16 = sub <16 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e16 = mul <16 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = ashr <16 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g16 = lshr <16 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h16 = shl <16 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i16 = and <16 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j16 = or <16 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k16 = xor <16 x i16> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %c2 = add <2 x i16> undef, undef
   %d2 = sub <2 x i16> undef, undef
@@ -809,6 +1037,7 @@ define void @vi32() {
 ; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i16 = and <16 x i32> undef, undef
 ; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %j16 = or <16 x i32> undef, undef
 ; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %k16 = xor <16 x i32> undef, undef
+; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-MVE2-LABEL: 'vi32'
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %c2 = add <2 x i32> undef, undef
@@ -847,6 +1076,7 @@ define void @vi32() {
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %i16 = and <16 x i32> undef, undef
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %j16 = or <16 x i32> undef, undef
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %k16 = xor <16 x i32> undef, undef
+; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-MVE4-LABEL: 'vi32'
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %c2 = add <2 x i32> undef, undef
@@ -885,6 +1115,7 @@ define void @vi32() {
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %i16 = and <16 x i32> undef, undef
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %j16 = or <16 x i32> undef, undef
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %k16 = xor <16 x i32> undef, undef
+; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: 'vi32'
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %c2 = add <2 x i32> undef, undef
@@ -923,6 +1154,7 @@ define void @vi32() {
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %i16 = and <16 x i32> undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %j16 = or <16 x i32> undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %k16 = xor <16 x i32> undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8M-BASE-LABEL: 'vi32'
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %c2 = add <2 x i32> undef, undef
@@ -961,6 +1193,7 @@ define void @vi32() {
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %i16 = and <16 x i32> undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %j16 = or <16 x i32> undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %k16 = xor <16 x i32> undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8R-LABEL: 'vi32'
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c2 = add <2 x i32> undef, undef
@@ -999,6 +1232,46 @@ define void @vi32() {
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %i16 = and <16 x i32> undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %j16 = or <16 x i32> undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %k16 = xor <16 x i32> undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-SIZE-LABEL: 'vi32'
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c2 = add <2 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d2 = sub <2 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e2 = mul <2 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f2 = ashr <2 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g2 = lshr <2 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h2 = shl <2 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = and <2 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j2 = or <2 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k2 = xor <2 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c4 = add <4 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d4 = sub <4 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e4 = mul <4 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f4 = ashr <4 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g4 = lshr <4 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h4 = shl <4 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i4 = and <4 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j4 = or <4 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k4 = xor <4 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c8 = add <8 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d8 = sub <8 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e8 = mul <8 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f8 = ashr <8 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g8 = lshr <8 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h8 = shl <8 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i8 = and <8 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j8 = or <8 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k8 = xor <8 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c16 = add <16 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d16 = sub <16 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e16 = mul <16 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = ashr <16 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g16 = lshr <16 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h16 = shl <16 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i16 = and <16 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j16 = or <16 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k16 = xor <16 x i32> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %c2 = add <2 x i32> undef, undef
   %d2 = sub <2 x i32> undef, undef
@@ -1077,6 +1350,7 @@ define void @vi64() {
 ; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %i16 = and <16 x i64> undef, undef
 ; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %j16 = or <16 x i64> undef, undef
 ; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %k16 = xor <16 x i64> undef, undef
+; CHECK-MVE1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-MVE2-LABEL: 'vi64'
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %c2 = add <2 x i64> undef, undef
@@ -1115,6 +1389,7 @@ define void @vi64() {
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %i16 = and <16 x i64> undef, undef
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %j16 = or <16 x i64> undef, undef
 ; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %k16 = xor <16 x i64> undef, undef
+; CHECK-MVE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-MVE4-LABEL: 'vi64'
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %c2 = add <2 x i64> undef, undef
@@ -1153,6 +1428,7 @@ define void @vi64() {
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %i16 = and <16 x i64> undef, undef
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %j16 = or <16 x i64> undef, undef
 ; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %k16 = xor <16 x i64> undef, undef
+; CHECK-MVE4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; CHECK-V8M-MAIN-LABEL: 'vi64'
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %c2 = add <2 x i64> undef, undef
@@ -1191,6 +1467,7 @@ define void @vi64() {
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %i16 = and <16 x i64> undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %j16 = or <16 x i64> undef, undef
 ; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %k16 = xor <16 x i64> undef, undef
+; CHECK-V8M-MAIN-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8M-BASE-LABEL: 'vi64'
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %c2 = add <2 x i64> undef, undef
@@ -1229,6 +1506,7 @@ define void @vi64() {
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %i16 = and <16 x i64> undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %j16 = or <16 x i64> undef, undef
 ; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %k16 = xor <16 x i64> undef, undef
+; CHECK-V8M-BASE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; CHECK-V8R-LABEL: 'vi64'
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c2 = add <2 x i64> undef, undef
@@ -1267,6 +1545,46 @@ define void @vi64() {
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %i16 = and <16 x i64> undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %j16 = or <16 x i64> undef, undef
 ; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %k16 = xor <16 x i64> undef, undef
+; CHECK-V8R-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-MVE-SIZE-LABEL: 'vi64'
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c2 = add <2 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d2 = sub <2 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e2 = mul <2 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f2 = ashr <2 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g2 = lshr <2 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h2 = shl <2 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i2 = and <2 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j2 = or <2 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k2 = xor <2 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c4 = add <4 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d4 = sub <4 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e4 = mul <4 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f4 = ashr <4 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g4 = lshr <4 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h4 = shl <4 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i4 = and <4 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j4 = or <4 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k4 = xor <4 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c8 = add <8 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d8 = sub <8 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e8 = mul <8 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f8 = ashr <8 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g8 = lshr <8 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h8 = shl <8 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i8 = and <8 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j8 = or <8 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k8 = xor <8 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c16 = add <16 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %d16 = sub <16 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %e16 = mul <16 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = ashr <16 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %g16 = lshr <16 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %h16 = shl <16 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %i16 = and <16 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %j16 = or <16 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %k16 = xor <16 x i64> undef, undef
+; CHECK-MVE-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %c2 = add <2 x i64> undef, undef
   %d2 = sub <2 x i64> undef, undef

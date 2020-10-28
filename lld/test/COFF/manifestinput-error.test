@@ -1,7 +1,7 @@
 # UNSUPPORTED: manifest_tool
 # UNSUPPORTED: libxml2
 
-# RUN: yaml2obj %p/Inputs/ret42.yaml > %t.obj
+# RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.obj
 # RUN: not lld-link /out:%t.exe /entry:main \
 # RUN:   /manifest:embed \
 # RUN:   /manifestuac:"level='requireAdministrator'" \

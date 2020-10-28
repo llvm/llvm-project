@@ -390,7 +390,12 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS, uint64_t SHOff) {
   Header.e_ident[EI_OSABI] = Doc.Header.OSABI;
   Header.e_ident[EI_ABIVERSION] = Doc.Header.ABIVersion;
   Header.e_type = Doc.Header.Type;
-  Header.e_machine = Doc.Header.Machine;
+
+  if (Doc.Header.Machine)
+    Header.e_machine = *Doc.Header.Machine;
+  else
+    Header.e_machine = EM_NONE;
+
   Header.e_version = EV_CURRENT;
   Header.e_entry = Doc.Header.Entry;
   Header.e_flags = Doc.Header.Flags;
@@ -1137,10 +1142,10 @@ void ELFState<ELFT>::writeSectionContent(
     SHeader.sh_info = *Section.Info;
 }
 
-static bool isMips64EL(const ELFYAML::Object &Doc) {
-  return Doc.Header.Machine == ELFYAML::ELF_EM(llvm::ELF::EM_MIPS) &&
-         Doc.Header.Class == ELFYAML::ELF_ELFCLASS(ELF::ELFCLASS64) &&
-         Doc.Header.Data == ELFYAML::ELF_ELFDATA(ELF::ELFDATA2LSB);
+static bool isMips64EL(const ELFYAML::Object &Obj) {
+  return Obj.getMachine() == llvm::ELF::EM_MIPS &&
+         Obj.Header.Class == ELFYAML::ELF_ELFCLASS(ELF::ELFCLASS64) &&
+         Obj.Header.Data == ELFYAML::ELF_ELFDATA(ELF::ELFDATA2LSB);
 }
 
 template <class ELFT>

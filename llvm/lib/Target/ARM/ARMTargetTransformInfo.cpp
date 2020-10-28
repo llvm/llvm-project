@@ -52,6 +52,8 @@ extern cl::opt<TailPredication::Mode> EnableTailPredication;
 
 extern cl::opt<bool> EnableMaskedGatherScatters;
 
+extern cl::opt<unsigned> MVEMaxSupportedInterleaveFactor;
+
 /// Convert a vector load intrinsic into a simple llvm load instruction.
 /// This is beneficial when the underlying object being addressed comes
 /// from a constant, since we get constant-folding for free.
@@ -108,6 +110,7 @@ bool ARMTTIImpl::shouldFavorPostInc() const {
 
 Optional<Instruction *>
 ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
+  using namespace PatternMatch;
   Intrinsic::ID IID = II.getIntrinsicID();
   switch (IID) {
   default:
@@ -166,7 +169,7 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       if (auto *CI = dyn_cast<ConstantInt>(XorMask)) {
         if (CI->getValue().trunc(16).isAllOnesValue()) {
           auto TrueVector = IC.Builder.CreateVectorSplat(
-              cast<VectorType>(II.getType())->getNumElements(),
+              cast<FixedVectorType>(II.getType())->getNumElements(),
               IC.Builder.getTrue());
           return BinaryOperator::Create(Instruction::Xor, ArgArg, TrueVector);
         }
@@ -209,6 +212,29 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return &II;
     }
     break;
+  }
+  case Intrinsic::arm_mve_vmldava: {
+    Instruction *I = cast<Instruction>(&II);
+    if (I->hasOneUse()) {
+      auto *User = cast<Instruction>(*I->user_begin());
+      Value *OpZ;
+      if (match(User, m_c_Add(m_Specific(I), m_Value(OpZ))) &&
+          match(I->getOperand(3), m_Zero())) {
+        Value *OpX = I->getOperand(4);
+        Value *OpY = I->getOperand(5);
+        Type *OpTy = OpX->getType();
+
+        IC.Builder.SetInsertPoint(User);
+        Value *V =
+            IC.Builder.CreateIntrinsic(Intrinsic::arm_mve_vmldava, {OpTy},
+                                       {I->getOperand(0), I->getOperand(1),
+                                        I->getOperand(2), OpZ, OpX, OpY});
+
+        IC.replaceInstUsesWith(*User, V);
+        return IC.eraseInstFromFunction(*User);
+      }
+    }
+    return None;
   }
   }
   return None;
@@ -298,6 +324,18 @@ int ARMTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx, const APInt &Im
     return 0;
 
   return getIntImmCost(Imm, Ty, CostKind);
+}
+
+int ARMTTIImpl::getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind) {
+  if (CostKind == TTI::TCK_RecipThroughput &&
+      (ST->hasNEON() || ST->hasMVEIntegerOps())) {
+    // FIXME: The vectorizer is highly sensistive to the cost of these
+    // instructions, which suggests that it may be using the costs incorrectly.
+    // But, for now, just make them free to avoid performance regressions for
+    // vector targets.
+    return 0;
+  }
+  return BaseT::getCFInstrCost(Opcode, CostKind);
 }
 
 int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
@@ -727,11 +765,35 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
 int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
                                    TTI::TargetCostKind CostKind,
                                    const Instruction *I) {
-  // TODO: Handle other cost kinds.
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+
+  // Thumb scalar code size cost for select.
+  if (CostKind == TTI::TCK_CodeSize && ISD == ISD::SELECT &&
+      ST->isThumb() && !ValTy->isVectorTy()) {
+    // Assume expensive structs.
+    if (TLI->getValueType(DL, ValTy, true) == MVT::Other)
+      return TTI::TCC_Expensive;
+
+    // Select costs can vary because they:
+    // - may require one or more conditional mov (including an IT),
+    // - can't operate directly on immediates,
+    // - require live flags, which we can't copy around easily.
+    int Cost = TLI->getTypeLegalizationCost(DL, ValTy).first;
+
+    // Possible IT instruction for Thumb2, or more for Thumb1.
+    ++Cost;
+
+    // i1 values may need rematerialising by using mov immediates and/or
+    // flag setting instructions.
+    if (ValTy->isIntegerTy(1))
+      ++Cost;
+
+    return Cost;
+  }
+
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, CostKind, I);
 
-  int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // On NEON a vector select gets lowered to vbsl.
   if (ST->hasNEON() && ValTy->isVectorTy() && ISD == ISD::SELECT) {
     // Lowering of some vector selects is currently far from perfect.
@@ -1210,7 +1272,7 @@ unsigned ARMTTIImpl::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
   // multiplied by the number of elements being loaded. This is possibly very
   // conservative, but even so we still end up vectorising loops because the
   // cost per iteration for many loops is lower than for scalar loops.
-  unsigned VectorCost = NumElems * LT.first;
+  unsigned VectorCost = NumElems * LT.first * ST->getMVEVectorCostFactor();
   // The scalarization cost should be a lot higher. We use the number of vector
   // elements plus the scalarization overhead.
   unsigned ScalarCost =
@@ -1346,6 +1408,86 @@ bool ARMTTIImpl::isLoweredToCall(const Function *F) {
   return BaseT::isLoweredToCall(F);
 }
 
+bool ARMTTIImpl::maybeLoweredToCall(Instruction &I) {
+  unsigned ISD = TLI->InstructionOpcodeToISD(I.getOpcode());
+  EVT VT = TLI->getValueType(DL, I.getType(), true);
+  if (TLI->getOperationAction(ISD, VT) == TargetLowering::LibCall)
+    return true;
+
+  // Check if an intrinsic will be lowered to a call and assume that any
+  // other CallInst will generate a bl.
+  if (auto *Call = dyn_cast<CallInst>(&I)) {
+    if (isa<IntrinsicInst>(Call)) {
+      if (const Function *F = Call->getCalledFunction())
+        return isLoweredToCall(F);
+    }
+    return true;
+  }
+
+  // FPv5 provides conversions between integer, double-precision,
+  // single-precision, and half-precision formats.
+  switch (I.getOpcode()) {
+  default:
+    break;
+  case Instruction::FPToSI:
+  case Instruction::FPToUI:
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+  case Instruction::FPTrunc:
+  case Instruction::FPExt:
+    return !ST->hasFPARMv8Base();
+  }
+
+  // FIXME: Unfortunately the approach of checking the Operation Action does
+  // not catch all cases of Legalization that use library calls. Our
+  // Legalization step categorizes some transformations into library calls as
+  // Custom, Expand or even Legal when doing type legalization. So for now
+  // we have to special case for instance the SDIV of 64bit integers and the
+  // use of floating point emulation.
+  if (VT.isInteger() && VT.getSizeInBits() >= 64) {
+    switch (ISD) {
+    default:
+      break;
+    case ISD::SDIV:
+    case ISD::UDIV:
+    case ISD::SREM:
+    case ISD::UREM:
+    case ISD::SDIVREM:
+    case ISD::UDIVREM:
+      return true;
+    }
+  }
+
+  // Assume all other non-float operations are supported.
+  if (!VT.isFloatingPoint())
+    return false;
+
+  // We'll need a library call to handle most floats when using soft.
+  if (TLI->useSoftFloat()) {
+    switch (I.getOpcode()) {
+    default:
+      return true;
+    case Instruction::Alloca:
+    case Instruction::Load:
+    case Instruction::Store:
+    case Instruction::Select:
+    case Instruction::PHI:
+      return false;
+    }
+  }
+
+  // We'll need a libcall to perform double precision operations on a single
+  // precision only FPU.
+  if (I.getType()->isDoubleTy() && !ST->hasFP64())
+    return true;
+
+  // Likewise for half precision arithmetic.
+  if (I.getType()->isHalfTy() && !ST->hasFullFP16())
+    return true;
+
+  return false;
+}
+
 bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                           AssumptionCache &AC,
                                           TargetLibraryInfo *LibInfo,
@@ -1380,86 +1522,6 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
 
   // Making a call will trash LR and clear LO_BRANCH_INFO, so there's little
   // point in generating a hardware loop if that's going to happen.
-  auto MaybeCall = [this](Instruction &I) {
-    const ARMTargetLowering *TLI = getTLI();
-    unsigned ISD = TLI->InstructionOpcodeToISD(I.getOpcode());
-    EVT VT = TLI->getValueType(DL, I.getType(), true);
-    if (TLI->getOperationAction(ISD, VT) == TargetLowering::LibCall)
-      return true;
-
-    // Check if an intrinsic will be lowered to a call and assume that any
-    // other CallInst will generate a bl.
-    if (auto *Call = dyn_cast<CallInst>(&I)) {
-      if (isa<IntrinsicInst>(Call)) {
-        if (const Function *F = Call->getCalledFunction())
-          return isLoweredToCall(F);
-      }
-      return true;
-    }
-
-    // FPv5 provides conversions between integer, double-precision,
-    // single-precision, and half-precision formats.
-    switch (I.getOpcode()) {
-    default:
-      break;
-    case Instruction::FPToSI:
-    case Instruction::FPToUI:
-    case Instruction::SIToFP:
-    case Instruction::UIToFP:
-    case Instruction::FPTrunc:
-    case Instruction::FPExt:
-      return !ST->hasFPARMv8Base();
-    }
-
-    // FIXME: Unfortunately the approach of checking the Operation Action does
-    // not catch all cases of Legalization that use library calls. Our
-    // Legalization step categorizes some transformations into library calls as
-    // Custom, Expand or even Legal when doing type legalization. So for now
-    // we have to special case for instance the SDIV of 64bit integers and the
-    // use of floating point emulation.
-    if (VT.isInteger() && VT.getSizeInBits() >= 64) {
-      switch (ISD) {
-      default:
-        break;
-      case ISD::SDIV:
-      case ISD::UDIV:
-      case ISD::SREM:
-      case ISD::UREM:
-      case ISD::SDIVREM:
-      case ISD::UDIVREM:
-        return true;
-      }
-    }
-
-    // Assume all other non-float operations are supported.
-    if (!VT.isFloatingPoint())
-      return false;
-
-    // We'll need a library call to handle most floats when using soft.
-    if (TLI->useSoftFloat()) {
-      switch (I.getOpcode()) {
-      default:
-        return true;
-      case Instruction::Alloca:
-      case Instruction::Load:
-      case Instruction::Store:
-      case Instruction::Select:
-      case Instruction::PHI:
-        return false;
-      }
-    }
-
-    // We'll need a libcall to perform double precision operations on a single
-    // precision only FPU.
-    if (I.getType()->isDoubleTy() && !ST->hasFP64())
-      return true;
-
-    // Likewise for half precision arithmetic.
-    if (I.getType()->isHalfTy() && !ST->hasFullFP16())
-      return true;
-
-    return false;
-  };
 
   auto IsHardwareLoopIntrinsic = [](Instruction &I) {
     if (auto *Call = dyn_cast<IntrinsicInst>(&I)) {
@@ -1481,7 +1543,7 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   auto ScanLoop = [&](Loop *L) {
     for (auto *BB : L->getBlocks()) {
       for (auto &I : *BB) {
-        if (MaybeCall(I) || IsHardwareLoopIntrinsic(I)) {
+        if (maybeLoweredToCall(I) || IsHardwareLoopIntrinsic(I)) {
           LLVM_DEBUG(dbgs() << "ARMHWLoops: Bad instruction: " << I << "\n");
           return false;
         }
@@ -1553,35 +1615,28 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                                  const LoopAccessInfo *LAI) {
   LLVM_DEBUG(dbgs() << "Tail-predication: checking allowed instructions\n");
 
-  // If there are live-out values, it is probably a reduction, which needs a
-  // final reduction step after the loop. MVE has a VADDV instruction to reduce
-  // integer vectors, but doesn't have an equivalent one for float vectors. A
-  // live-out value that is not recognised as a reduction will result in the
-  // tail-predicated loop to be reverted to a non-predicated loop and this is
-  // very expensive, i.e. it has a significant performance impact. So, in this
-  // case it's better not to tail-predicate the loop, which is what we check
-  // here. Thus, we allow only 1 live-out value, which has to be an integer
-  // reduction, which matches the loops supported by ARMLowOverheadLoops.
-  // It is important to keep ARMLowOverheadLoops and canTailPredicateLoop in
-  // sync with each other.
+  // If there are live-out values, it is probably a reduction. We can predicate
+  // most reduction operations freely under MVE using a combination of
+  // prefer-predicated-reduction-select and inloop reductions. We limit this to
+  // floating point and integer reductions, but don't check for operators
+  // specifically here. If the value ends up not being a reduction (and so the
+  // vectorizer cannot tailfold the loop), we should fall back to standard
+  // vectorization automatically.
   SmallVector< Instruction *, 8 > LiveOuts;
   LiveOuts = llvm::findDefsUsedOutsideOfLoop(L);
-  bool IntReductionsDisabled =
+  bool ReductionsDisabled =
       EnableTailPredication == TailPredication::EnabledNoReductions ||
       EnableTailPredication == TailPredication::ForceEnabledNoReductions;
 
   for (auto *I : LiveOuts) {
-    if (!I->getType()->isIntegerTy()) {
-      LLVM_DEBUG(dbgs() << "Don't tail-predicate loop with non-integer "
+    if (!I->getType()->isIntegerTy() && !I->getType()->isFloatTy() &&
+        !I->getType()->isHalfTy()) {
+      LLVM_DEBUG(dbgs() << "Don't tail-predicate loop with non-integer/float "
                            "live-out value\n");
       return false;
     }
-    if (I->getOpcode() != Instruction::Add) {
-      LLVM_DEBUG(dbgs() << "Only add reductions supported\n");
-      return false;
-    }
-    if (IntReductionsDisabled) {
-      LLVM_DEBUG(dbgs() << "Integer add reductions not enabled\n");
+    if (ReductionsDisabled) {
+      LLVM_DEBUG(dbgs() << "Reductions not enabled\n");
       return false;
     }
   }
@@ -1590,7 +1645,6 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   PredicatedScalarEvolution PSE = LAI->getPSE();
   SmallVector<Instruction *, 16> LoadStores;
   int ICmpCount = 0;
-  int Stride = 0;
 
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : BB->instructionsWithoutDebug()) {
@@ -1609,22 +1663,38 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
         LLVM_DEBUG(dbgs() << "Unsupported Type: "; T->dump());
         return false;
       }
-
       if (isa<StoreInst>(I) || isa<LoadInst>(I)) {
         Value *Ptr = isa<LoadInst>(I) ? I.getOperand(0) : I.getOperand(1);
         int64_t NextStride = getPtrStride(PSE, Ptr, L);
-        // TODO: for now only allow consecutive strides of 1. We could support
-        // other strides as long as it is uniform, but let's keep it simple for
-        // now.
-        if (Stride == 0 && NextStride == 1) {
-          Stride = NextStride;
+        if (NextStride == 1) {
+          // TODO: for now only allow consecutive strides of 1. We could support
+          // other strides as long as it is uniform, but let's keep it simple
+          // for now.
           continue;
-        }
-        if (Stride != NextStride) {
-          LLVM_DEBUG(dbgs() << "Different strides found, can't "
-                               "tail-predicate\n.");
+        } else if (NextStride == -1 ||
+                   (NextStride == 2 && MVEMaxSupportedInterleaveFactor >= 2) ||
+                   (NextStride == 4 && MVEMaxSupportedInterleaveFactor >= 4)) {
+          LLVM_DEBUG(dbgs()
+                     << "Consecutive strides of 2 found, vld2/vstr2 can't "
+                        "be tail-predicated\n.");
           return false;
+          // TODO: don't tail predicate if there is a reversed load?
+        } else if (EnableMaskedGatherScatters) {
+          // Gather/scatters do allow loading from arbitrary strides, at
+          // least if they are loop invariant.
+          // TODO: Loop variant strides should in theory work, too, but
+          // this requires further testing.
+          const SCEV *PtrScev =
+              replaceSymbolicStrideSCEV(PSE, llvm::ValueToValueMap(), Ptr);
+          if (auto AR = dyn_cast<SCEVAddRecExpr>(PtrScev)) {
+            const SCEV *Step = AR->getStepRecurrence(*PSE.getSE());
+            if (PSE.getSE()->isLoopInvariant(Step, L))
+              continue;
+          }
         }
+        LLVM_DEBUG(dbgs() << "Bad stride found, can't "
+                             "tail-predicate\n.");
+        return false;
       }
     }
   }
@@ -1745,7 +1815,8 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
       SmallVector<const Value*, 4> Operands(I.value_op_begin(),
                                             I.value_op_end());
-      Cost += getUserCost(&I, Operands, TargetTransformInfo::TCK_CodeSize);
+      Cost +=
+        getUserCost(&I, Operands, TargetTransformInfo::TCK_SizeAndLatency);
     }
   }
 
@@ -1773,4 +1844,11 @@ void ARMTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
 bool ARMTTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
                                        TTI::ReductionFlags Flags) const {
   return ST->hasMVEIntegerOps();
+}
+
+bool ARMTTIImpl::preferPredicatedReductionSelect(
+    unsigned Opcode, Type *Ty, TTI::ReductionFlags Flags) const {
+  if (!ST->hasMVEIntegerOps())
+    return false;
+  return true;
 }

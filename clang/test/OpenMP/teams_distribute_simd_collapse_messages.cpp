@@ -36,7 +36,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
     argv[0][i] = argv[0][i] - argv[0][i-ST];
 
 // expected-error@+4 {{expected ')'}} expected-note@+4 {{to match this '('}}
-// expected-error@+3 2 {{expression is not an integral constant expression}}
+// expected-error@+3 2 {{integral constant expression}}
 // expected-note@+2 2 {{read of non-const variable 'argc' is not allowed in a constant expression}}
 #pragma omp target
 #pragma omp teams distribute simd collapse (argc 
@@ -61,7 +61,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
 
 // expected-error@+7 2 {{directive '#pragma omp teams distribute simd' cannot contain more than one 'collapse' clause}}
 // expected-error@+6 {{argument to 'collapse' clause must be a strictly positive integer value}}
-// expected-error@+5 2 {{expression is not an integral constant expression}}
+// expected-error@+5 2 {{integral constant expression}}
 #if __cplusplus >= 201103L
 // expected-note@+3 2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
 #endif
@@ -75,7 +75,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
     argv[0][i] = argv[0][i] - argv[0][i-ST];
 
 #if __cplusplus <= 199711L
-  // expected-error@+5 2 {{expression is not an integral constant expression}}
+  // expected-error@+5 2 {{integral constant expression}}
 #else
   // expected-error@+3 2 {{integral constant expression must have integral or unscoped enumeration type, not 'char *'}}
 #endif
@@ -130,11 +130,11 @@ int main(int argc, char **argv) {
   // expected-note@+3 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
 #endif
 #pragma omp target
-#pragma omp teams distribute simd collapse (foobool(1) > 0 ? 1 : 2) // expected-error {{expression is not an integral constant expression}}
+#pragma omp teams distribute simd collapse (foobool(1) > 0 ? 1 : 2) // expected-error {{integral constant expression}}
   for (int i = 4; i < 12; i++)
     argv[0][i] = argv[0][i] - argv[0][i-4];
 
-// expected-error@+7 {{expression is not an integral constant expression}}
+// expected-error@+7 {{integral constant expression}}
 // expected-error@+6 2 {{directive '#pragma omp teams distribute simd' cannot contain more than one 'collapse' clause}}
 // expected-error@+5 {{argument to 'collapse' clause must be a strictly positive integer value}}
 #if __cplusplus >= 201103L
@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
 #if __cplusplus >= 201103L
   // expected-error@+5 {{integral constant expression must have integral or unscoped enumeration type, not 'char *'}}
 #else
-  // expected-error@+3 {{expression is not an integral constant expression}}
+  // expected-error@+3 {{integral constant expression}}
 #endif
 #pragma omp target
 #pragma omp teams distribute simd collapse (argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}}

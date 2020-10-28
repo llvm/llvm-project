@@ -196,6 +196,23 @@ bool SBThreadPlan::IsValid() {
   return false;
 }
 
+bool SBThreadPlan::GetStopOthers() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBThreadPlan, GetStopOthers);
+
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp)
+    return thread_plan_sp->StopOthers();
+  return false;
+}
+
+void SBThreadPlan::SetStopOthers(bool stop_others) {
+  LLDB_RECORD_METHOD(void, SBThreadPlan, SetStopOthers, (bool), stop_others);
+
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp)
+    thread_plan_sp->SetStopOthers(stop_others);
+}
+
 // This section allows an SBThreadPlan to push another of the common types of
 // plans...
 //
@@ -463,6 +480,8 @@ void RegisterMethods<SBThreadPlan>(Registry &R) {
   LLDB_REGISTER_METHOD(bool, SBThreadPlan, IsPlanComplete, ());
   LLDB_REGISTER_METHOD(bool, SBThreadPlan, IsPlanStale, ());
   LLDB_REGISTER_METHOD(bool, SBThreadPlan, IsValid, ());
+  LLDB_REGISTER_METHOD(void, SBThreadPlan, SetStopOthers, (bool));
+  LLDB_REGISTER_METHOD(bool, SBThreadPlan, GetStopOthers, ());
   LLDB_REGISTER_METHOD(lldb::SBThreadPlan, SBThreadPlan,
                        QueueThreadPlanForStepOverRange,
                        (lldb::SBAddress &, lldb::addr_t));

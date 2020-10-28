@@ -52,6 +52,7 @@ class ModuleLoadedNotifysTestCase(TestBase):
             True
 
         error = lldb.SBError()
+        flags = target.GetLaunchInfo().GetLaunchFlags()
         process = target.Launch(listener,
                                 None,      # argv
                                 None,      # envp
@@ -59,7 +60,7 @@ class ModuleLoadedNotifysTestCase(TestBase):
                                 None,      # stdout_path
                                 None,      # stderr_path
                                 None,      # working directory
-                                0,         # launch flags
+                                flags,     # launch flags
                                 False,     # Stop at entry
                                 error)     # error
 

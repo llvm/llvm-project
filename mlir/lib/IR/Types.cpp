@@ -19,25 +19,22 @@ using namespace mlir::detail;
 // Type
 //===----------------------------------------------------------------------===//
 
-unsigned Type::getKind() const { return impl->getKind(); }
-
 Dialect &Type::getDialect() const {
   return impl->getAbstractType().getDialect();
 }
 
 MLIRContext *Type::getContext() const { return getDialect().getContext(); }
 
-unsigned Type::getSubclassData() const { return impl->getSubclassData(); }
-void Type::setSubclassData(unsigned val) { impl->setSubclassData(val); }
-
 //===----------------------------------------------------------------------===//
 // FunctionType
 //===----------------------------------------------------------------------===//
 
-FunctionType FunctionType::get(ArrayRef<Type> inputs, ArrayRef<Type> results,
+FunctionType FunctionType::get(TypeRange inputs, TypeRange results,
                                MLIRContext *context) {
-  return Base::get(context, Type::Kind::Function, inputs, results);
+  return Base::get(context, inputs, results);
 }
+
+unsigned FunctionType::getNumInputs() const { return getImpl()->numInputs; }
 
 ArrayRef<Type> FunctionType::getInputs() const {
   return getImpl()->getInputs();
@@ -55,12 +52,12 @@ ArrayRef<Type> FunctionType::getResults() const {
 
 OpaqueType OpaqueType::get(Identifier dialect, StringRef typeData,
                            MLIRContext *context) {
-  return Base::get(context, Type::Kind::Opaque, dialect, typeData);
+  return Base::get(context, dialect, typeData);
 }
 
 OpaqueType OpaqueType::getChecked(Identifier dialect, StringRef typeData,
                                   MLIRContext *context, Location location) {
-  return Base::getChecked(location, Kind::Opaque, dialect, typeData);
+  return Base::getChecked(location, dialect, typeData);
 }
 
 /// Returns the dialect namespace of the opaque type.

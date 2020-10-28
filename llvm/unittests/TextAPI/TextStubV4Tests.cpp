@@ -758,6 +758,30 @@ TEST(TBDv4, Target_i386_watchos_simulator) {
             stripWhitespace(Buffer.c_str()));
 }
 
+TEST(TBDv4, Target_i386_driverkit) {
+  static const char TBDv4i386DriverKit[] = "--- !tapi-tbd\n"
+                                           "tbd-version: 4\n"
+                                           "targets: [  i386-driverkit  ]\n"
+                                           "install-name: Test.dylib\n"
+                                           "...\n";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv4i386DriverKit, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V4, File->getFileType());
+  EXPECT_EQ(ArchitectureSet(AK_i386), File->getArchitectures());
+  EXPECT_EQ(File->getPlatforms().size(), 1U);
+  EXPECT_EQ(PlatformKind::driverKit, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(TBDv4i386DriverKit),
+            stripWhitespace(Buffer.c_str()));
+}
+
 TEST(TBDv4, Swift_1) {
   static const char TBDv4SwiftVersion1[] = "--- !tapi-tbd\n"
                                            "tbd-version: 4\n"

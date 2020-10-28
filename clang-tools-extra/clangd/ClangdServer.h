@@ -111,6 +111,9 @@ public:
     /// on background threads. The index is stored in the project root.
     bool BackgroundIndex = false;
 
+    /// Store refs to main-file symbols in the index.
+    bool CollectMainFileRefs = false;
+
     /// If set, use this index to augment code completion results.
     SymbolIndex *StaticIndex = nullptr;
 
@@ -128,7 +131,7 @@ public:
     bool BuildRecoveryAST = true;
 
     /// If true, turn on the `-frecovery-ast-type` clang flag.
-    bool PreserveRecoveryASTType = false;
+    bool PreserveRecoveryASTType = true;
 
     /// Clangd's workspace root. Relevant for "workspace" operations not bound
     /// to a particular file.
@@ -295,10 +298,6 @@ public:
   void applyTweak(PathRef File, Range Sel, StringRef ID,
                   Callback<Tweak::Effect> CB);
 
-  /// Only for testing purposes.
-  /// Waits until all requests to worker thread are finished and dumps AST for
-  /// \p File. \p File must be in the list of added documents.
-  void dumpAST(PathRef File, llvm::unique_function<void(std::string)> Callback);
   /// Called when an event occurs for a watched file in the workspace.
   void onFileEvent(const DidChangeWatchedFilesParams &Params);
 
@@ -316,6 +315,13 @@ public:
 
   void semanticHighlights(PathRef File,
                           Callback<std::vector<HighlightingToken>>);
+
+  /// Runs an arbitrary action that has access to the AST of the specified file.
+  /// The action will execute on one of ClangdServer's internal threads.
+  /// The AST is only valid for the duration of the callback.
+  /// As with other actions, the file must have been opened.
+  void customAction(PathRef File, llvm::StringRef Name,
+                    Callback<InputsAndAST> Action);
 
   /// Returns estimated memory usage and other statistics for each of the
   /// currently open files.

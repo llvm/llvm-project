@@ -14,6 +14,11 @@
 // CHECK-PG: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"
 // CHECK-PG: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-nopie" "-o" "a.out" "{{.*}}gcrt0.o" "{{.*}}crtbegin.o" "{{.*}}.o" "-lcompiler_rt" "-lpthread_p" "-lc_p" "-lcompiler_rt" "{{.*}}crtend.o"
 
+// Check CPU type for i386
+// RUN: %clang -target i386-unknown-openbsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-i386-CPU %s
+// CHECK-i386-CPU: "-target-cpu" "i586"
+
 // Check CPU type for MIPS64
 // RUN: %clang -target mips64-unknown-openbsd -### -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-MIPS64-CPU %s
@@ -117,8 +122,3 @@
 // RUN: %clang -target powerpc-unknown-openbsd -### -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-POWERPC-SECUREPLT %s
 // CHECK-POWERPC-SECUREPLT: "-target-feature" "+secure-plt"
-
-// Check -fno-init-array
-// RUN: %clang -no-canonical-prefixes -target i686-pc-openbsd %s -### 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-CTORS %s
-// CHECK-CTORS: "-fno-use-init-array"

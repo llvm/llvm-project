@@ -55,13 +55,57 @@ define float @matching_fp_vector(<4 x float>* align 16 dereferenceable(16) %p) {
   ret float %r
 }
 
-define float @matching_fp_vector_gep0(<4 x float>* align 16 dereferenceable(16) %p) {
-; CHECK-LABEL: @matching_fp_vector_gep0(
+define float @matching_fp_vector_gep00(<4 x float>* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @matching_fp_vector_gep00(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[P:%.*]], i64 0, i64 0
 ; CHECK-NEXT:    [[R:%.*]] = load float, float* [[GEP]], align 16
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %gep = getelementptr inbounds <4 x float>, <4 x float>* %p, i64 0, i64 0
+  %r = load float, float* %gep, align 16
+  ret float %r
+}
+
+define float @matching_fp_vector_gep01(<4 x float>* align 16 dereferenceable(20) %p) {
+; CHECK-LABEL: @matching_fp_vector_gep01(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[P:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[R:%.*]] = load float, float* [[GEP]], align 4
+; CHECK-NEXT:    ret float [[R]]
+;
+  %gep = getelementptr inbounds <4 x float>, <4 x float>* %p, i64 0, i64 1
+  %r = load float, float* %gep, align 4
+  ret float %r
+}
+
+define float @matching_fp_vector_gep01_deref(<4 x float>* align 16 dereferenceable(19) %p) {
+; CHECK-LABEL: @matching_fp_vector_gep01_deref(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[P:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[R:%.*]] = load float, float* [[GEP]], align 4
+; CHECK-NEXT:    ret float [[R]]
+;
+  %gep = getelementptr inbounds <4 x float>, <4 x float>* %p, i64 0, i64 1
+  %r = load float, float* %gep, align 4
+  ret float %r
+}
+
+define float @matching_fp_vector_gep10(<4 x float>* align 16 dereferenceable(32) %p) {
+; CHECK-LABEL: @matching_fp_vector_gep10(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[P:%.*]], i64 1, i64 0
+; CHECK-NEXT:    [[R:%.*]] = load float, float* [[GEP]], align 16
+; CHECK-NEXT:    ret float [[R]]
+;
+  %gep = getelementptr inbounds <4 x float>, <4 x float>* %p, i64 1, i64 0
+  %r = load float, float* %gep, align 16
+  ret float %r
+}
+
+define float @matching_fp_vector_gep10_deref(<4 x float>* align 16 dereferenceable(31) %p) {
+; CHECK-LABEL: @matching_fp_vector_gep10_deref(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[P:%.*]], i64 1, i64 0
+; CHECK-NEXT:    [[R:%.*]] = load float, float* [[GEP]], align 16
+; CHECK-NEXT:    ret float [[R]]
+;
+  %gep = getelementptr inbounds <4 x float>, <4 x float>* %p, i64 1, i64 0
   %r = load float, float* %gep, align 16
   ret float %r
 }
@@ -126,4 +170,232 @@ define double @larger_fp_scalar_256bit_vec(<8 x float>* align 32 dereferenceable
   %bc = bitcast <8 x float>* %p to double*
   %r = load double, double* %bc, align 32
   ret double %r
+}
+
+define <4 x float> @load_f32_insert_v4f32(float* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_f32_insert_v4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
+; CHECK-NEXT:    [[R:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %s = load float, float* %p, align 4
+  %r = insertelement <4 x float> undef, float %s, i32 0
+  ret <4 x float> %r
+}
+
+define <4 x float> @casted_load_f32_insert_v4f32(<4 x float>* align 4 dereferenceable(16) %p) {
+; CHECK-LABEL: @casted_load_f32_insert_v4f32(
+; CHECK-NEXT:    [[R:%.*]] = load <4 x float>, <4 x float>* [[P:%.*]], align 4
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %b = bitcast <4 x float>* %p to float*
+  %s = load float, float* %b, align 4
+  %r = insertelement <4 x float> undef, float %s, i32 0
+  ret <4 x float> %r
+}
+
+; Element type does not change cost.
+
+define <4 x i32> @load_i32_insert_v4i32(i32* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_i32_insert_v4i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P:%.*]] to <4 x i32>*
+; CHECK-NEXT:    [[R:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %s = load i32, i32* %p, align 4
+  %r = insertelement <4 x i32> undef, i32 %s, i32 0
+  ret <4 x i32> %r
+}
+
+; Pointer type does not change cost.
+
+define <4 x i32> @casted_load_i32_insert_v4i32(<16 x i8>* align 4 dereferenceable(16) %p) {
+; CHECK-LABEL: @casted_load_i32_insert_v4i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8>* [[P:%.*]] to <4 x i32>*
+; CHECK-NEXT:    [[R:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %b = bitcast <16 x i8>* %p to i32*
+  %s = load i32, i32* %b, align 4
+  %r = insertelement <4 x i32> undef, i32 %s, i32 0
+  ret <4 x i32> %r
+}
+
+; This is canonical form for vector element access.
+
+define <4 x float> @gep00_load_f32_insert_v4f32(<4 x float>* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep00_load_f32_insert_v4f32(
+; CHECK-NEXT:    [[R:%.*]] = load <4 x float>, <4 x float>* [[P:%.*]], align 16
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %gep = getelementptr inbounds <4 x float>, <4 x float>* %p, i64 0, i64 0
+  %s = load float, float* %gep, align 16
+  %r = insertelement <4 x float> undef, float %s, i64 0
+  ret <4 x float> %r
+}
+
+; Should work with addrspace as well.
+
+define <4 x float> @gep00_load_f32_insert_v4f32_addrspace(<4 x float> addrspace(44)* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep00_load_f32_insert_v4f32_addrspace(
+; CHECK-NEXT:    [[R:%.*]] = load <4 x float>, <4 x float> addrspace(44)* [[P:%.*]], align 16
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(44)* %p, i64 0, i64 0
+  %s = load float, float addrspace(44)* %gep, align 16
+  %r = insertelement <4 x float> undef, float %s, i64 0
+  ret <4 x float> %r
+}
+
+; If there are enough dereferenceable bytes, we can offset the vector load.
+
+define <8 x i16> @gep01_load_i16_insert_v8i16(<8 x i16>* align 16 dereferenceable(18) %p) {
+; CHECK-LABEL: @gep01_load_i16_insert_v8i16(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[P:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[GEP]] to <8 x i16>*
+; CHECK-NEXT:    [[R:%.*]] = load <8 x i16>, <8 x i16>* [[TMP1]], align 2
+; CHECK-NEXT:    ret <8 x i16> [[R]]
+;
+  %gep = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i64 0, i64 1
+  %s = load i16, i16* %gep, align 2
+  %r = insertelement <8 x i16> undef, i16 %s, i64 0
+  ret <8 x i16> %r
+}
+
+; Negative test - can't safely load the offset vector, but could load+shuffle.
+
+define <8 x i16> @gep01_load_i16_insert_v8i16_deref(<8 x i16>* align 16 dereferenceable(17) %p) {
+; CHECK-LABEL: @gep01_load_i16_insert_v8i16_deref(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[P:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[S:%.*]] = load i16, i16* [[GEP]], align 2
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i16> undef, i16 [[S]], i64 0
+; CHECK-NEXT:    ret <8 x i16> [[R]]
+;
+  %gep = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i64 0, i64 1
+  %s = load i16, i16* %gep, align 2
+  %r = insertelement <8 x i16> undef, i16 %s, i64 0
+  ret <8 x i16> %r
+}
+
+; If there are enough dereferenceable bytes, we can offset the vector load.
+
+define <8 x i16> @gep10_load_i16_insert_v8i16(<8 x i16>* align 16 dereferenceable(32) %p) {
+; CHECK-LABEL: @gep10_load_i16_insert_v8i16(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[P:%.*]], i64 1, i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[GEP]] to <8 x i16>*
+; CHECK-NEXT:    [[R:%.*]] = load <8 x i16>, <8 x i16>* [[TMP1]], align 16
+; CHECK-NEXT:    ret <8 x i16> [[R]]
+;
+  %gep = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i64 1, i64 0
+  %s = load i16, i16* %gep, align 16
+  %r = insertelement <8 x i16> undef, i16 %s, i64 0
+  ret <8 x i16> %r
+}
+
+; Negative test - can't safely load the offset vector, but could load+shuffle.
+
+define <8 x i16> @gep10_load_i16_insert_v8i16_deref(<8 x i16>* align 16 dereferenceable(31) %p) {
+; CHECK-LABEL: @gep10_load_i16_insert_v8i16_deref(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[P:%.*]], i64 1, i64 0
+; CHECK-NEXT:    [[S:%.*]] = load i16, i16* [[GEP]], align 16
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i16> undef, i16 [[S]], i64 0
+; CHECK-NEXT:    ret <8 x i16> [[R]]
+;
+  %gep = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i64 1, i64 0
+  %s = load i16, i16* %gep, align 16
+  %r = insertelement <8 x i16> undef, i16 %s, i64 0
+  ret <8 x i16> %r
+}
+
+; Negative test - do not alter volatile.
+
+define <4 x float> @load_f32_insert_v4f32_volatile(float* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_f32_insert_v4f32_volatile(
+; CHECK-NEXT:    [[S:%.*]] = load volatile float, float* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> undef, float [[S]], i32 0
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %s = load volatile float, float* %p, align 4
+  %r = insertelement <4 x float> undef, float %s, i32 0
+  ret <4 x float> %r
+}
+
+; Negative test? - pointer is not as aligned as load.
+
+define <4 x float> @load_f32_insert_v4f32_align(float* align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_f32_insert_v4f32_align(
+; CHECK-NEXT:    [[S:%.*]] = load float, float* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> undef, float [[S]], i32 0
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %s = load float, float* %p, align 4
+  %r = insertelement <4 x float> undef, float %s, i32 0
+  ret <4 x float> %r
+}
+
+; Negative test - not enough bytes.
+
+define <4 x float> @load_f32_insert_v4f32_deref(float* align 4 dereferenceable(15) %p) {
+; CHECK-LABEL: @load_f32_insert_v4f32_deref(
+; CHECK-NEXT:    [[S:%.*]] = load float, float* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> undef, float [[S]], i32 0
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %s = load float, float* %p, align 4
+  %r = insertelement <4 x float> undef, float %s, i32 0
+  ret <4 x float> %r
+}
+
+; TODO: Should load v4i32.
+
+define <8 x i32> @load_i32_insert_v8i32(i32* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_i32_insert_v8i32(
+; CHECK-NEXT:    [[S:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i32> undef, i32 [[S]], i32 0
+; CHECK-NEXT:    ret <8 x i32> [[R]]
+;
+  %s = load i32, i32* %p, align 4
+  %r = insertelement <8 x i32> undef, i32 %s, i32 0
+  ret <8 x i32> %r
+}
+
+; TODO: Should load v4i32.
+
+define <8 x i32> @casted_load_i32_insert_v8i32(<4 x i32>* align 4 dereferenceable(16) %p) {
+; CHECK-LABEL: @casted_load_i32_insert_v8i32(
+; CHECK-NEXT:    [[B:%.*]] = bitcast <4 x i32>* [[P:%.*]] to i32*
+; CHECK-NEXT:    [[S:%.*]] = load i32, i32* [[B]], align 4
+; CHECK-NEXT:    [[R:%.*]] = insertelement <8 x i32> undef, i32 [[S]], i32 0
+; CHECK-NEXT:    ret <8 x i32> [[R]]
+;
+  %b = bitcast <4 x i32>* %p to i32*
+  %s = load i32, i32* %b, align 4
+  %r = insertelement <8 x i32> undef, i32 %s, i32 0
+  ret <8 x i32> %r
+}
+
+; TODO: Should load v4f32.
+
+define <16 x float> @load_f32_insert_v16f32(float* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_f32_insert_v16f32(
+; CHECK-NEXT:    [[S:%.*]] = load float, float* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = insertelement <16 x float> undef, float [[S]], i32 0
+; CHECK-NEXT:    ret <16 x float> [[R]]
+;
+  %s = load float, float* %p, align 4
+  %r = insertelement <16 x float> undef, float %s, i32 0
+  ret <16 x float> %r
+}
+
+; TODO: Should load v4f32.
+
+define <2 x float> @load_f32_insert_v2f32(float* align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_f32_insert_v2f32(
+; CHECK-NEXT:    [[S:%.*]] = load float, float* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x float> undef, float [[S]], i32 0
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %s = load float, float* %p, align 4
+  %r = insertelement <2 x float> undef, float %s, i32 0
+  ret <2 x float> %r
 }

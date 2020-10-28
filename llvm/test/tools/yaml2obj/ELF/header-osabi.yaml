@@ -10,18 +10,16 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_NONE
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_NONE
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
 
 # RUN: yaml2obj %s --docnum=3 -o %t.hpux
 # RUN: llvm-readobj --file-headers %t.hpux | FileCheck %s --check-prefix=OSABI-HPUX
@@ -30,11 +28,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_HPUX
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_HPUX
 
 # RUN: yaml2obj %s --docnum=4 -o %t.netbsd
 # RUN: llvm-readobj --file-headers %t.netbsd | FileCheck %s --check-prefix=OSABI-NETBSD
@@ -43,11 +40,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_NETBSD
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_NETBSD
 
 ## Test ELFOSABI_GNU and ELFOSABI_LINUX (historical alias for ELFOSABI_GNU).
 # RUN: yaml2obj %s --docnum=5 -o %t.gnu
@@ -58,19 +54,17 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_GNU
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_GNU
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_LINUX
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_LINUX
 
 # RUN: yaml2obj %s --docnum=7 -o %t.hurd
 # RUN: llvm-readobj --file-headers %t.hurd | FileCheck %s --check-prefix=OSABI-HURD
@@ -79,11 +73,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_HURD
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_HURD
 
 # RUN: yaml2obj %s --docnum=8 -o %t.solaris
 # RUN: llvm-readobj --file-headers %t.solaris | FileCheck %s --check-prefix=OSABI-SOLARIS
@@ -92,11 +85,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_SOLARIS
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_SOLARIS
 
 # RUN: yaml2obj %s --docnum=9 -o %t.aix
 # RUN: llvm-readobj --file-headers %t.aix | FileCheck %s --check-prefix=OSABI-AIX
@@ -105,11 +97,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_AIX
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_AIX
 
 # RUN: yaml2obj %s --docnum=10 -o %t.irix
 # RUN: llvm-readobj --file-headers %t.irix | FileCheck %s --check-prefix=OSABI-IRIX
@@ -118,11 +109,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_IRIX
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_IRIX
 
 # RUN: yaml2obj %s --docnum=11 -o %t.freebsd
 # RUN: llvm-readobj --file-headers %t.freebsd | FileCheck %s --check-prefix=OSABI-FREEBSD
@@ -131,11 +121,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_FREEBSD
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_FREEBSD
 
 # RUN: yaml2obj %s --docnum=12 -o %t.tru64
 # RUN: llvm-readobj --file-headers %t.tru64 | FileCheck %s --check-prefix=OSABI-TRU64
@@ -144,11 +133,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_TRU64
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_TRU64
 
 # RUN: yaml2obj %s --docnum=13 -o %t.modesto
 # RUN: llvm-readobj --file-headers %t.modesto | FileCheck %s --check-prefix=OSABI-MODESTO
@@ -157,11 +145,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_MODESTO
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_MODESTO
 
 # RUN: yaml2obj %s --docnum=14 -o %t.openbsd
 # RUN: llvm-readobj --file-headers %t.openbsd | FileCheck %s --check-prefix=OSABI-OPENBSD
@@ -170,11 +157,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_OPENBSD
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_OPENBSD
 
 # RUN: yaml2obj %s --docnum=15 -o %t.openvms
 # RUN: llvm-readobj --file-headers %t.openvms | FileCheck %s --check-prefix=OSABI-OPENVMS
@@ -183,11 +169,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_OPENVMS
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_OPENVMS
 
 # RUN: yaml2obj %s --docnum=16 -o %t.nsk
 # RUN: llvm-readobj --file-headers %t.nsk | FileCheck %s --check-prefix=OSABI-NSK
@@ -196,11 +181,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_NSK
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_NSK
 
 # RUN: yaml2obj %s --docnum=17 -o %t.aros
 # RUN: llvm-readobj --file-headers %t.aros | FileCheck %s --check-prefix=OSABI-AROS
@@ -209,11 +193,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_AROS
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_AROS
 
 # RUN: yaml2obj %s --docnum=18 -o %t.fenixos
 # RUN: llvm-readobj --file-headers %t.fenixos | FileCheck %s --check-prefix=OSABI-FENIXOS
@@ -222,11 +205,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_FENIXOS
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_FENIXOS
 
 # RUN: yaml2obj %s --docnum=19 -o %t.cloudabi
 # RUN: llvm-readobj --file-headers %t.cloudabi | FileCheck %s --check-prefix=OSABI-CLOUDABI
@@ -235,11 +217,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_CLOUDABI
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_CLOUDABI
 
 # RUN: yaml2obj %s --docnum=20 -o %t.amdhsa
 # RUN: llvm-readobj --file-headers %t.amdhsa | FileCheck %s --check-prefix=OSABI-ARCHSPEC40
@@ -250,19 +231,17 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_AMDGPU_HSA
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_AMDGPU_HSA
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_C6000_ELFABI
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_C6000_ELFABI
 
 # RUN: yaml2obj %s --docnum=22 -o %t.amdpal
 # RUN: llvm-readobj --file-headers %t.amdpal | FileCheck %s --check-prefix=OSABI-ARCHSPEC41
@@ -273,19 +252,17 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_AMDGPU_PAL
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_AMDGPU_PAL
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_C6000_LINUX
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_C6000_LINUX
 
 # RUN: yaml2obj %s --docnum=24 -o %t.amdmesa
 # RUN: llvm-readobj --file-headers %t.amdmesa | FileCheck %s --check-prefix=OSABI-AMD-MESA3D
@@ -294,11 +271,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_AMDGPU_MESA3D
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_AMDGPU_MESA3D
 
 # RUN: yaml2obj %s --docnum=25 -o %t.arm
 # RUN: llvm-readobj --file-headers %t.arm | FileCheck %s --check-prefix=OSABI-ARM
@@ -307,11 +283,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_ARM
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_ARM
 
 # RUN: yaml2obj %s --docnum=26 -o %t.standalone
 # RUN: llvm-readobj --file-headers %t.standalone | FileCheck %s --check-prefix=OSABI-STANDALONE
@@ -320,11 +295,10 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   ELFOSABI_STANDALONE
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: ELFOSABI_STANDALONE
 
 ## Test we can use an arbitrary number for OSABI.
 # RUN: yaml2obj %s --docnum=27 -o %t.number
@@ -333,8 +307,7 @@ FileHeader:
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_REL
-  Machine: EM_X86_64
-  OSABI:   0xFE
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  OSABI: 0xFE

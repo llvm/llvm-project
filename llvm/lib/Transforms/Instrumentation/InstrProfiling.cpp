@@ -57,6 +57,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "instrprof"
 
+// FIXME: These are to be removed after switching to the new memop value
+// profiling.
 // The start and end values of precise value profile range for memory
 // intrinsic sizes
 cl::opt<std::string> MemOPSizeRange(
@@ -71,6 +73,12 @@ cl::opt<unsigned> MemOPSizeLarge(
     cl::desc("Set large value thresthold in memory intrinsic size profiling. "
              "Value of 0 disables the large value profiling."),
     cl::init(8192));
+
+cl::opt<bool> UseOldMemOpValueProf(
+    "use-old-memop-value-prof",
+    cl::desc("Use the old memop value profiling buckets. This is "
+             "transitional and to be removed after switching. "),
+    cl::init(false));
 
 namespace {
 
@@ -411,6 +419,19 @@ private:
   BlockFrequencyInfo *BFI;
 };
 
+enum class ValueProfilingCallType {
+  // Individual values are tracked. Currently used for indiret call target
+  // profiling.
+  Default,
+
+  // The old memop size value profiling. FIXME: To be removed after switching to
+  // the new one.
+  OldMemOp,
+
+  // MemOp: the (new) memop size value profiling with extended buckets.
+  MemOp
+};
+
 } // end anonymous namespace
 
 PreservedAnalyses InstrProfiling::run(Module &M, ModuleAnalysisManager &AM) {
@@ -595,9 +616,9 @@ bool InstrProfiling::run(
   return true;
 }
 
-static FunctionCallee
-getOrInsertValueProfilingCall(Module &M, const TargetLibraryInfo &TLI,
-                              bool IsRange = false) {
+static FunctionCallee getOrInsertValueProfilingCall(
+    Module &M, const TargetLibraryInfo &TLI,
+    ValueProfilingCallType CallType = ValueProfilingCallType::Default) {
   LLVMContext &Ctx = M.getContext();
   auto *ReturnTy = Type::getVoidTy(M.getContext());
 
@@ -605,16 +626,22 @@ getOrInsertValueProfilingCall(Module &M, const TargetLibraryInfo &TLI,
   if (auto AK = TLI.getExtAttrForI32Param(false))
     AL = AL.addParamAttribute(M.getContext(), 2, AK);
 
-  if (!IsRange) {
+  if (CallType == ValueProfilingCallType::Default ||
+      CallType == ValueProfilingCallType::MemOp) {
     Type *ParamTypes[] = {
 #define VALUE_PROF_FUNC_PARAM(ParamType, ParamName, ParamLLVMType) ParamLLVMType
 #include "llvm/ProfileData/InstrProfData.inc"
     };
     auto *ValueProfilingCallTy =
         FunctionType::get(ReturnTy, makeArrayRef(ParamTypes), false);
-    return M.getOrInsertFunction(getInstrProfValueProfFuncName(),
-                                 ValueProfilingCallTy, AL);
+    StringRef FuncName = CallType == ValueProfilingCallType::Default
+                             ? getInstrProfValueProfFuncName()
+                             : getInstrProfValueProfMemOpFuncName();
+    return M.getOrInsertFunction(FuncName, ValueProfilingCallTy, AL);
   } else {
+    // FIXME: This code is to be removed after switching to the new memop value
+    // profiling.
+    assert(CallType == ValueProfilingCallType::OldMemOp);
     Type *RangeParamTypes[] = {
 #define VALUE_RANGE_PROF 1
 #define VALUE_PROF_FUNC_PARAM(ParamType, ParamName, ParamLLVMType) ParamLLVMType
@@ -654,8 +681,8 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
     Index += It->second.NumValueSites[Kind];
 
   IRBuilder<> Builder(Ind);
-  bool IsRange = (Ind->getValueKind()->getZExtValue() ==
-                  llvm::InstrProfValueKind::IPVK_MemOPSize);
+  bool IsMemOpSize = (Ind->getValueKind()->getZExtValue() ==
+                      llvm::InstrProfValueKind::IPVK_MemOPSize);
   CallInst *Call = nullptr;
   auto *TLI = &GetTLI(*Ind->getFunction());
 
@@ -665,12 +692,19 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   // WinEHPrepare pass.
   SmallVector<OperandBundleDef, 1> OpBundles;
   Ind->getOperandBundlesAsDefs(OpBundles);
-  if (!IsRange) {
+  if (!IsMemOpSize) {
     Value *Args[3] = {Ind->getTargetValue(),
                       Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
                       Builder.getInt32(Index)};
     Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI), Args,
                               OpBundles);
+  } else if (!UseOldMemOpValueProf) {
+    Value *Args[3] = {Ind->getTargetValue(),
+                      Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
+                      Builder.getInt32(Index)};
+    Call = Builder.CreateCall(
+        getOrInsertValueProfilingCall(*M, *TLI, ValueProfilingCallType::MemOp),
+        Args, OpBundles);
   } else {
     Value *Args[6] = {
         Ind->getTargetValue(),
@@ -679,7 +713,8 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
         Builder.getInt64(MemOPSizeRangeStart),
         Builder.getInt64(MemOPSizeRangeLast),
         Builder.getInt64(MemOPSizeLarge == 0 ? INT64_MIN : MemOPSizeLarge)};
-    Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI, true),
+    Call = Builder.CreateCall(getOrInsertValueProfilingCall(
+                                  *M, *TLI, ValueProfilingCallType::OldMemOp),
                               Args, OpBundles);
   }
   if (auto AK = TLI->getExtAttrForI32Param(false))
@@ -847,9 +882,11 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
       Visibility = GlobalValue::HiddenVisibility;
     }
   }
+  std::string DataVarName = getVarName(Inc, getInstrProfDataVarPrefix());
   auto MaybeSetComdat = [=](GlobalVariable *GV) {
     if (NeedComdat)
-      GV->setComdat(M->getOrInsertComdat(GV->getName()));
+      GV->setComdat(M->getOrInsertComdat(TT.isOSBinFormatCOFF() ? GV->getName()
+                                                                : DataVarName));
   };
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
@@ -914,9 +951,9 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  auto *Data = new GlobalVariable(*M, DataTy, false, Linkage,
-                                  ConstantStruct::get(DataTy, DataVals),
-                                  getVarName(Inc, getInstrProfDataVarPrefix()));
+  auto *Data =
+      new GlobalVariable(*M, DataTy, false, Linkage,
+                         ConstantStruct::get(DataTy, DataVals), DataVarName);
   Data->setVisibility(Visibility);
   Data->setSection(getInstrProfSectionName(IPSK_data, TT.getObjectFormat()));
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
