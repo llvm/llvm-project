@@ -4,6 +4,7 @@
 
 set -e
 set -u
+set -x
 
 if [[ "$#" != 1 ]]; then
   echo "Usage: $0 /path/to/binary/built/with/tsan"
@@ -37,6 +38,7 @@ nm -S $BIN | grep "__tsan_" > ${NM_CONTENTS}
 for f in $list; do
   file=${OUTPUT_DIR}/asm_$f.s
   get_asm $f > $file
+  echo "Disassemble: $f to $file $(stat $file)"
   tot=$(wc -l < $file)
   size=$(grep __tsan_$f$ ${NM_CONTENTS} | awk --non-decimal-data '{print ("0x"$2)+0}')
   rsp=$(grep '(%rsp)' $file | wc -l)
