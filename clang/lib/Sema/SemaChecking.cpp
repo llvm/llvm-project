@@ -4496,16 +4496,24 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
     DiagnoseCStringFormatDirectiveInCFAPI(*this, FDecl, Args, NumArgs);
 
   unsigned CMId = FDecl->getMemoryFunctionKind();
-  if (CMId == 0)
-    return false;
 
   // Handle memory setting and copying functions.
-  if (CMId == Builtin::BIstrlcpy || CMId == Builtin::BIstrlcat)
+  switch (CMId) {
+  case 0:
+    return false;
+  case Builtin::BIstrlcpy: // fallthrough
+  case Builtin::BIstrlcat:
     CheckStrlcpycatArguments(TheCall, FnInfo);
-  else if (CMId == Builtin::BIstrncat)
+    break;
+  case Builtin::BIstrncat:
     CheckStrncatArguments(TheCall, FnInfo);
-  else
+    break;
+  case Builtin::BIfree:
+    CheckFreeArguments(TheCall);
+    break;
+  default:
     CheckMemaccessArguments(TheCall, CMId, FnInfo);
+  }
 
   return false;
 }
@@ -10096,6 +10104,57 @@ void Sema::CheckStrncatArguments(const CallExpr *CE,
 
   Diag(SL, diag::note_strncat_wrong_size)
     << FixItHint::CreateReplacement(SR, OS.str());
+}
+
+namespace {
+void CheckFreeArgumentsAddressof(Sema &S, const std::string &CalleeName,
+                                 const UnaryOperator *UnaryExpr) {
+  if (UnaryExpr->getOpcode() != UnaryOperator::Opcode::UO_AddrOf)
+    return;
+
+  const auto *Lvalue = dyn_cast<DeclRefExpr>(UnaryExpr->getSubExpr());
+  if (Lvalue == nullptr)
+    return;
+
+  const auto *Var = dyn_cast<VarDecl>(Lvalue->getDecl());
+  if (Var == nullptr)
+    return;
+
+  StorageClass Class = Var->getStorageClass();
+  if (Class == StorageClass::SC_Extern ||
+      Class == StorageClass::SC_PrivateExtern ||
+      Var->getType()->isReferenceType())
+    return;
+
+  S.Diag(UnaryExpr->getBeginLoc(), diag::warn_free_nonheap_object)
+      << CalleeName << Var;
+}
+
+void CheckFreeArgumentsStackArray(Sema &S, const std::string &CalleeName,
+                                  const DeclRefExpr *Lvalue) {
+  if (!Lvalue->getType()->isArrayType())
+    return;
+
+  const auto *Var = dyn_cast<VarDecl>(Lvalue->getDecl());
+  if (Var == nullptr)
+    return;
+
+  S.Diag(Lvalue->getBeginLoc(), diag::warn_free_nonheap_object)
+      << CalleeName << Var;
+}
+} // namespace
+
+/// Alerts the user that they are attempting to free a non-malloc'd object.
+void Sema::CheckFreeArguments(const CallExpr *E) {
+  const Expr *Arg = E->getArg(0)->IgnoreParenCasts();
+  const std::string CalleeName =
+      dyn_cast<FunctionDecl>(E->getCalleeDecl())->getQualifiedNameAsString();
+
+  if (const auto *UnaryExpr = dyn_cast<UnaryOperator>(Arg))
+    return CheckFreeArgumentsAddressof(*this, CalleeName, UnaryExpr);
+
+  if (const auto *Lvalue = dyn_cast<DeclRefExpr>(Arg))
+    return CheckFreeArgumentsStackArray(*this, CalleeName, Lvalue);
 }
 
 void
