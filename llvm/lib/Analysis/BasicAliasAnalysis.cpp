@@ -804,11 +804,10 @@ AliasResult BasicAAResult::alias(const MemoryLocation &LocA,
   // If we have a directly cached entry for these locations, we have recursed
   // through this once, so just return the cached results. Notably, when this
   // happens, we don't clear the cache.
-  auto CacheIt = AAQI.AliasCache.find(AAQueryInfo::LocPair(LocA, LocB));
-  if (CacheIt != AAQI.AliasCache.end())
-    return CacheIt->second;
-
-  CacheIt = AAQI.AliasCache.find(AAQueryInfo::LocPair(LocB, LocA));
+  AAQueryInfo::LocPair Locs(LocA, LocB);
+  if (Locs.first.Ptr > Locs.second.Ptr)
+    std::swap(Locs.first, Locs.second);
+  auto CacheIt = AAQI.AliasCache.find(Locs);
   if (CacheIt != AAQI.AliasCache.end())
     return CacheIt->second;
 
