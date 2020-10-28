@@ -183,8 +183,8 @@ static Error processLoadCommands(const CopyConfig &Config, Object &Obj) {
                                "no LC_RPATH load command with path: " + Old);
     if (RPaths.count(New) != 0)
       return createStringError(errc::invalid_argument,
-                               "rpath " + New +
-                                   " would create a duplicate load command");
+                               "rpath '" + New +
+                                   "' would create a duplicate load command");
   }
 
   // Update load commands.
@@ -222,8 +222,8 @@ static Error processLoadCommands(const CopyConfig &Config, Object &Obj) {
   for (StringRef RPath : Config.RPathToAdd) {
     if (RPaths.count(RPath) != 0)
       return createStringError(errc::invalid_argument,
-                               "rpath " + RPath +
-                                   " would create a duplicate load command");
+                               "rpath '" + RPath +
+                                   "' would create a duplicate load command");
     RPaths.insert(RPath);
     Obj.LoadCommands.push_back(buildRPathLoadCommand(RPath));
   }
@@ -231,8 +231,8 @@ static Error processLoadCommands(const CopyConfig &Config, Object &Obj) {
   for (StringRef RPath : Config.RPathToPrepend) {
     if (RPaths.count(RPath) != 0)
       return createStringError(errc::invalid_argument,
-                               "rpath " + RPath +
-                                   " would create a duplicate load command");
+                               "rpath '" + RPath +
+                                   "' would create a duplicate load command");
 
     RPaths.insert(RPath);
     Obj.LoadCommands.insert(Obj.LoadCommands.begin(),
