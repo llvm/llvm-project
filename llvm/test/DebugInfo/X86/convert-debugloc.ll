@@ -23,31 +23,38 @@
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu -dwarf-version=5 -filetype=obj -O0 < %s -debugger-tune=lldb -dwarf-op-convert=Enable -split-dwarf-file=baz.dwo | llvm-dwarfdump - \
 ; RUN:   | FileCheck %s --check-prefix=CONV --check-prefix=SPLITCONV --check-prefix=SPLIT "--implicit-check-not={{DW_TAG|NULL}}"
 
+; RUN: %llc_dwarf -dwarf-version=5 -filetype=obj -O0 < %s -debugger-tune=gdb  | llvm-dwarfdump -v -debug-info - \
+; RUN:   | FileCheck %s --check-prefix=VERBOSE --check-prefix=CONV "--implicit-check-not={{DW_TAG|NULL}}"
+
+
 ; SPLITCONV: Compile Unit:{{.*}} DWO_id = 0xe91d8d1d7f9782c0
 ; SPLIT: DW_TAG_skeleton_unit
 
 ; CONV: DW_TAG_compile_unit
 ; CONV:[[SIG8:.*]]:   DW_TAG_base_type
-; CONV-NEXT:DW_AT_name ("DW_ATE_signed_8")
-; CONV-NEXT:DW_AT_encoding (DW_ATE_signed)
-; CONV-NEXT:DW_AT_byte_size (0x01)
+; CONV-NEXT:DW_AT_name {{.*}}"DW_ATE_signed_8")
+; CONV-NEXT:DW_AT_encoding {{.*}}DW_ATE_signed)
+; CONV-NEXT:DW_AT_byte_size {{.*}}0x01)
 ; CONV-NOT: DW_AT
 ; CONV:[[SIG32:.*]]:   DW_TAG_base_type
-; CONV-NEXT:DW_AT_name ("DW_ATE_signed_32")
-; CONV-NEXT:DW_AT_encoding (DW_ATE_signed)
-; CONV-NEXT:DW_AT_byte_size (0x04)
+; CONV-NEXT:DW_AT_name {{.*}}"DW_ATE_signed_32")
+; CONV-NEXT:DW_AT_encoding {{.*}}DW_ATE_signed)
+; CONV-NEXT:DW_AT_byte_size {{.*}}0x04)
 ; CONV-NOT: DW_AT
 ; CONV:   DW_TAG_subprogram
 ; CONV:     DW_TAG_formal_parameter
 ; CONV:     DW_TAG_variable
-; CONV:       DW_AT_location (
-; CONV:         {{.*}}, DW_OP_convert ([[SIG8]]) "DW_ATE_signed_8", DW_OP_convert ([[SIG32]]) "DW_ATE_signed_32", DW_OP_stack_value)
-; CONV:       DW_AT_name ("y")
+; CONV:     DW_AT_location {{.*}}DW_OP_constu 0x20, DW_OP_convert (
+; VERBOSE-SAME: [[SIG8]] ->
+; CONV-SAME: [[SIG8]]) "DW_ATE_signed_8", DW_OP_convert (
+; VERBOSE-SAME: [[SIG32]] ->
+; CONV-SAME: [[SIG32]]) "DW_ATE_signed_32", DW_OP_stack_value)
+; CONV:       DW_AT_name {{.*}}"y")
 ; CONV:     NULL
 ; CONV:   DW_TAG_base_type
-; CONV:     DW_AT_name ("signed char")
+; CONV:     DW_AT_name {{.*}}"signed char")
 ; CONV:   DW_TAG_base_type
-; CONV:     DW_AT_name ("int")
+; CONV:     DW_AT_name {{.*}}"int")
 ; CONV:   NULL
 
 ; NOCONV: DW_TAG_compile_unit
