@@ -2221,16 +2221,12 @@ DynamicType IntrinsicProcTable::Implementation::GetSpecificType(
   return DynamicType{category, defaults_.GetDefaultKind(category)};
 }
 
-IntrinsicProcTable::~IntrinsicProcTable() {
-  // Discard the configured tables.
-  delete impl_;
-  impl_ = nullptr;
-}
+IntrinsicProcTable::~IntrinsicProcTable() = default;
 
 IntrinsicProcTable IntrinsicProcTable::Configure(
     const common::IntrinsicTypeDefaultKinds &defaults) {
   IntrinsicProcTable result;
-  result.impl_ = new IntrinsicProcTable::Implementation(defaults);
+  result.impl_ = std::make_unique<IntrinsicProcTable::Implementation>(defaults);
   return result;
 }
 
