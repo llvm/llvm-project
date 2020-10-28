@@ -199,7 +199,7 @@
 # CHECK-NEXT:  2      4     1.00    *                   ldrbt	r3, [r1], #4
 # CHECK-NEXT:  2      4     1.00    *                   ldrbt	r2, [r8], #-8
 # CHECK-NEXT:  2      4     1.00    *                   ldrbt	r8, [r7], r6
-# CHECK-NEXT:  2      4     1.00    *                   ldrbt	r1, [r2], -r6, lsl #12
+# CHECK-NEXT:  3      4     1.00    *                   ldrbt	r1, [r2], -r6, lsl #12
 # CHECK-NEXT:  2      4     2.00    *                   ldrd	r0, r1, [r5]
 # CHECK-NEXT:  2      4     2.00    *                   ldrd	r0, r1, [r5, r2]
 # CHECK-NEXT:  4      5     2.00    *                   ldrd	r0, r1, [r5, -r2]
@@ -335,7 +335,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT:  -     69.00  69.00  167.00 9.00   57.00   -      -
+# CHECK-NEXT:  -     69.00  69.00  167.00 10.00  57.00   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    Instructions:
@@ -371,7 +371,7 @@
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldrbt	r3, [r1], #4
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldrbt	r2, [r8], #-8
 # CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldrbt	r8, [r7], r6
-# CHECK-NEXT:  -     0.50   0.50   1.00    -      -      -      -     ldrbt	r1, [r2], -r6, lsl #12
+# CHECK-NEXT:  -     0.50   0.50   1.00   1.00    -      -      -     ldrbt	r1, [r2], -r6, lsl #12
 # CHECK-NEXT:  -      -      -     2.00    -      -      -      -     ldrd	r0, r1, [r5]
 # CHECK-NEXT:  -      -      -     2.00    -      -      -      -     ldrd	r0, r1, [r5, r2]
 # CHECK-NEXT:  -     1.00   1.00   2.00    -      -      -      -     ldrd	r0, r1, [r5, -r2]

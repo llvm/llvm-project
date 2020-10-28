@@ -634,13 +634,6 @@ bool ARMBaseInstrInfo::isLdstScaledRegNotPlusLsl2(const MachineInstr &MI,
   return !SimpleScaled;
 }
 
-// Load, scaled register offset
-bool ARMBaseInstrInfo::isAm2ScaledReg(const MachineInstr &MI,
-                                      unsigned Op) const {
-  unsigned OffImm = MI.getOperand(Op + 2).getImm();
-  return ARM_AM::getAM2ShiftOpc(OffImm) != ARM_AM::no_shift;
-}
-
 static bool isEligibleForITBlock(const MachineInstr *MI) {
   switch (MI->getOpcode()) {
   default: return true;
