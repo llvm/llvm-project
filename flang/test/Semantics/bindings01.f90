@@ -114,3 +114,28 @@ module m
   end subroutine s7
 end module
 
+module m1
+  implicit none
+  interface g
+    module procedure mp
+  end interface g
+
+  type t
+  contains
+    !ERROR: The binding of 'tbp' ('g') must be either an accessible module procedure or an external procedure with an explicit interface
+    procedure,pass(x) :: tbp => g
+  end type t
+
+contains
+  subroutine mp(x)
+    class(t),intent(in) :: x
+  end subroutine
+end module m1
+
+program test
+  use m1
+  type,extends(t) :: t2
+  end type
+  type(t2) a
+  call a%tbp
+end program
