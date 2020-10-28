@@ -1641,7 +1641,7 @@ static void runThinLTOBackend(
   if (Error E =
           thinBackend(Conf, -1, AddStream, *M, *CombinedIndex, ImportList,
                       ModuleToDefinedGVSummaries[M->getModuleIdentifier()],
-                      ModuleMap, &CGOpts.CmdArgs)) {
+                      ModuleMap, CGOpts.CmdArgs)) {
     handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
       errs() << "Error running ThinLTO backend: " << EIB.message() << '\n';
     });
@@ -1725,5 +1725,5 @@ void clang::EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
   llvm::EmbedBitcodeInModule(
       *M, Buf, CGOpts.getEmbedBitcode() != CodeGenOptions::Embed_Marker,
       CGOpts.getEmbedBitcode() != CodeGenOptions::Embed_Bitcode,
-      &CGOpts.CmdArgs);
+      CGOpts.CmdArgs);
 }
