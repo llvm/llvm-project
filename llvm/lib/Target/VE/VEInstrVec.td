@@ -433,3 +433,167 @@ multiclass VMVm<string opcStr, bits<8>opc, RegisterClass RC,
   defm iv : VMVmm<opcStr, opc, RC, RCM, (ins uimm7:$sy, RC:$vz)>;
 }
 defm VMV : VMVm<"vmv", 0x9c, V64, VM>;
+
+//-----------------------------------------------------------------------------
+// Section 8.10 - Vector Fixed-Point Arithmetic Instructions
+//-----------------------------------------------------------------------------
+
+// Multiclass for generic vector calculation
+let vx = ?, hasSideEffects = 0, Uses = [VL] in
+multiclass RVbm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                dag dag_in, string disEnc = ""> {
+  let DisableEncoding = disEnc in
+  def "" : RV<opc, (outs RC:$vx), dag_in,
+              !strconcat(opcStr, " $vx", argStr)>;
+  let Constraints = "$vx = $base", DisableEncoding = disEnc#"$base",
+      isCodeGenOnly = 1 in
+  def _v : RV<opc, (outs RC:$vx), !con(dag_in, (ins RC:$base)),
+              !strconcat(opcStr, " $vx", argStr)>;
+}
+multiclass RVlm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                dag dag_in> {
+  defm "" : RVbm<opcStr, argStr, opc, RC, dag_in>;
+  let isCodeGenOnly = 1, VE_VLInUse = 1 in {
+    defm l : RVbm<opcStr, argStr, opc, RC, !con(dag_in, (ins I32:$vl)),
+                  "$vl,">;
+    defm L : RVbm<opcStr, argStr, opc, RC, !con(dag_in, (ins VLS:$vl)),
+                  "$vl,">;
+  }
+}
+multiclass RVmm<string opcStr, string argStr, bits<8>opc, RegisterClass RC,
+                RegisterClass RCM, dag dag_in> {
+  defm "" : RVlm<opcStr, argStr, opc, RC, dag_in>;
+  let m = ?, VE_VLWithMask = 1 in
+  defm m : RVlm<opcStr, argStr#", $m", opc, RC, !con(dag_in, (ins RCM:$m))>;
+}
+// Generic RV multiclass with 2 arguments.
+//   e.g. VADD, VSUB, VMPY, and etc.
+let VE_VLIndex = 3 in
+multiclass RVm<string opcStr, bits<8>opc, RegisterClass VRC, RegisterClass RC,
+               RegisterClass RCM, Operand SIMM = simm7> {
+  let cy = 0, sy = 0, vy = ?, vz = ? in
+  defm vv : RVmm<opcStr, ", $vy, $vz", opc, VRC, RCM, (ins VRC:$vy, VRC:$vz)>;
+  let cs = 1, vz = ? in
+  defm rv : RVmm<opcStr, ", $sy, $vz", opc, VRC, RCM, (ins RC:$sy, VRC:$vz)>;
+  let cs = 1, cy = 0, vz = ? in
+  defm iv : RVmm<opcStr, ", $sy, $vz", opc, VRC, RCM, (ins SIMM:$sy, VRC:$vz)>;
+}
+// Special RV multiclass with 2 arguments using cs2.
+//   e.g. VDIV, VDVS, and VDVX.
+let VE_VLIndex = 3 in
+multiclass RVDIVm<string opcStr, bits<8>opc, RegisterClass VRC,
+                  RegisterClass RC, RegisterClass RCM, Operand SIMM = simm7> {
+  let cy = 0, sy = 0, vy = ?, vz = ? in
+  defm vv : RVmm<opcStr, ", $vy, $vz", opc, VRC, RCM, (ins VRC:$vy, VRC:$vz)>;
+  let cs2 = 1, vy = ? in
+  defm vr : RVmm<opcStr, ", $vy, $sy", opc, VRC, RCM, (ins VRC:$vy, RC:$sy)>;
+  let cs2 = 1, cy = 0, vy = ? in
+  defm vi : RVmm<opcStr, ", $vy, $sy", opc, VRC, RCM, (ins VRC:$vy, SIMM:$sy)>;
+  let cs = 1, vz = ? in
+  defm rv : RVmm<opcStr, ", $sy, $vz", opc, VRC, RCM, (ins RC:$sy, VRC:$vz)>;
+  let cs = 1, cy = 0, vz = ? in
+  defm iv : RVmm<opcStr, ", $sy, $vz", opc, VRC, RCM, (ins SIMM:$sy, VRC:$vz)>;
+}
+
+// Section 8.10.1 - VADD (Vector Add)
+let cx = 0, cx2 = 0 in
+defm VADDUL : RVm<"vaddu.l", 0xc8, V64, I64, VM>;
+let cx = 0, cx2 = 1 in {
+  defm PVADDULO : RVm<"pvaddu.lo", 0xc8, V64, I32, VM>;
+  let isCodeGenOnly = 1 in
+  defm VADDUW : RVm<"vaddu.w", 0xc8, V64, I32, VM>;
+}
+let cx = 1, cx2 = 0 in
+defm PVADDUUP : RVm<"pvaddu.up", 0xc8, V64, I64, VM>;
+let cx = 1, cx2 = 1 in
+defm PVADDU : RVm<"pvaddu", 0xc8, V64, I64, VM512>;
+def : MnemonicAlias<"vaddu.w", "pvaddu.lo">;
+
+// Section 8.10.2 - VADS (Vector Add Single)
+let cx = 0, cx2 = 0 in
+defm VADDSWSX : RVm<"vadds.w.sx", 0xca, V64, I32, VM>;
+let cx = 0, cx2 = 1 in {
+  defm PVADDSLO : RVm<"pvadds.lo", 0xca, V64, I32, VM>;
+  let isCodeGenOnly = 1 in
+  defm VADDSWZX : RVm<"vadds.w.zx", 0xca, V64, I32, VM>;
+}
+let cx = 1, cx2 = 0 in
+defm PVADDSUP : RVm<"pvadds.up", 0xca, V64, I64, VM>;
+let cx = 1, cx2 = 1 in
+defm PVADDS : RVm<"pvadds", 0xca, V64, I64, VM512>;
+def : MnemonicAlias<"pvadds.lo.sx", "vadds.w.sx">;
+def : MnemonicAlias<"vadds.w.zx", "pvadds.lo">;
+def : MnemonicAlias<"vadds.w", "pvadds.lo">;
+def : MnemonicAlias<"pvadds.lo.zx", "pvadds.lo">;
+
+// Section 8.10.3 - VADX (Vector Add)
+defm VADDSL : RVm<"vadds.l", 0x8b, V64, I64, VM>;
+
+// Section 8.10.4 - VSUB (Vector Subtract)
+let cx = 0, cx2 = 0 in
+defm VSUBUL : RVm<"vsubu.l", 0xd8, V64, I64, VM>;
+let cx = 0, cx2 = 1 in {
+  defm PVSUBULO : RVm<"pvsubu.lo", 0xd8, V64, I32, VM>;
+  let isCodeGenOnly = 1 in
+  defm VSUBUW : RVm<"vsubu.w", 0xd8, V64, I32, VM>;
+}
+let cx = 1, cx2 = 0 in
+defm PVSUBUUP : RVm<"pvsubu.up", 0xd8, V64, I64, VM>;
+let cx = 1, cx2 = 1 in
+defm PVSUBU : RVm<"pvsubu", 0xd8, V64, I64, VM512>;
+def : MnemonicAlias<"vsubu.w", "pvsubu.lo">;
+
+// Section 8.10.5 - VSBS (Vector Subtract Single)
+let cx = 0, cx2 = 0 in
+defm VSUBSWSX : RVm<"vsubs.w.sx", 0xda, V64, I32, VM>;
+let cx = 0, cx2 = 1 in {
+  defm PVSUBSLO : RVm<"pvsubs.lo", 0xda, V64, I32, VM>;
+  let isCodeGenOnly = 1 in
+  defm VSUBSWZX : RVm<"vsubs.w.zx", 0xda, V64, I32, VM>;
+}
+let cx = 1, cx2 = 0 in
+defm PVSUBSUP : RVm<"pvsubs.up", 0xda, V64, I64, VM>;
+let cx = 1, cx2 = 1 in
+defm PVSUBS : RVm<"pvsubs", 0xda, V64, I64, VM512>;
+def : MnemonicAlias<"pvsubs.lo.sx", "vsubs.w.sx">;
+def : MnemonicAlias<"vsubs.w.zx", "pvsubs.lo">;
+def : MnemonicAlias<"vsubs.w", "pvsubs.lo">;
+def : MnemonicAlias<"pvsubs.lo.zx", "pvsubs.lo">;
+
+// Section 8.10.6 - VSBX (Vector Subtract)
+defm VSUBSL : RVm<"vsubs.l", 0x9b, V64, I64, VM>;
+
+// Section 8.10.7 - VMPY (Vector Multiply)
+let cx2 = 0 in
+defm VMULUL : RVm<"vmulu.l", 0xc9, V64, I64, VM>;
+let cx2 = 1 in
+defm VMULUW : RVm<"vmulu.w", 0xc9, V64, I32, VM>;
+
+// Section 8.10.8 - VMPS (Vector Multiply Single)
+let cx2 = 0 in
+defm VMULSWSX : RVm<"vmuls.w.sx", 0xcb, V64, I32, VM>;
+let cx2 = 1 in
+defm VMULSWZX : RVm<"vmuls.w.zx", 0xcb, V64, I32, VM>;
+def : MnemonicAlias<"vmuls.w", "vmuls.w.zx">;
+
+// Section 8.10.9 - VMPX (Vector Multiply)
+defm VMULSL : RVm<"vmuls.l", 0xdb, V64, I64, VM>;
+
+// Section 8.10.10 - VMPD (Vector Multiply)
+defm VMULSLW : RVm<"vmuls.l.w", 0xd9, V64, I32, VM>;
+
+// Section 8.10.11 - VDIV (Vector Divide)
+let cx2 = 0 in
+defm VDIVUL : RVDIVm<"vdivu.l", 0xe9, V64, I64, VM>;
+let cx2 = 1 in
+defm VDIVUW : RVDIVm<"vdivu.w", 0xe9, V64, I32, VM>;
+
+// Section 8.10.12 - VDVS (Vector Divide Single)
+let cx2 = 0 in
+defm VDIVSWSX : RVDIVm<"vdivs.w.sx", 0xeb, V64, I32, VM>;
+let cx2 = 1 in
+defm VDIVSWZX : RVDIVm<"vdivs.w.zx", 0xeb, V64, I32, VM>;
+def : MnemonicAlias<"vdivs.w", "vdivs.w.zx">;
+
+// Section 8.10.13 - VDVX (Vector Divide)
+defm VDIVSL : RVDIVm<"vdivs.l", 0xfb, V64, I64, VM>;
