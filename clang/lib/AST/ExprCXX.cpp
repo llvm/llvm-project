@@ -1647,6 +1647,20 @@ void MaterializeTemporaryExpr::setExtendingDecl(ValueDecl *ExtendedBy,
   ES->ManglingNumber = ManglingNumber;
 }
 
+bool MaterializeTemporaryExpr::isUsableInConstantExpressions(
+    const ASTContext &Context) const {
+  // C++20 [expr.const]p4:
+  //   An object or reference is usable in constant expressions if it is [...]
+  //   a temporary object of non-volatile const-qualified literal type
+  //   whose lifetime is extended to that of a variable that is usable
+  //   in constant expressions
+  auto *VD = dyn_cast_or_null<VarDecl>(getExtendingDecl());
+  return VD && getType().isConstant(Context) &&
+         !getType().isVolatileQualified() &&
+         getType()->isLiteralType(Context) &&
+         VD->isUsableInConstantExpressions(Context);
+}
+
 TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
                              ArrayRef<TypeSourceInfo *> Args,
                              SourceLocation RParenLoc, bool Value)

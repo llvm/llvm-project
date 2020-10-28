@@ -4519,6 +4519,10 @@ public:
     return getValueKind() == VK_LValue;
   }
 
+  /// Determine whether this temporary object is usable in constant
+  /// expressions, as specified in C++20 [expr.const]p4.
+  bool isUsableInConstantExpressions(const ASTContext &Context) const;
+
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getSubExpr()->getBeginLoc();
   }

@@ -400,6 +400,22 @@ namespace UnemittedTemporaryDecl {
   // CHECK: @_ZN22UnemittedTemporaryDecl4ref2E = constant i32* @_ZGRN22UnemittedTemporaryDecl3refE_
 }
 
+namespace DR2126 {
+  struct A { int &&b; };
+  constexpr const A &a = {42};
+  // CHECK: @_ZGRN6DR21261aE0_ = internal global i32 42
+  // FIXME: This is unused and need not be emitted.
+  // CHECK: @_ZGRN6DR21261aE_ = internal constant {{.*}} { i32* @_ZGRN6DR21261aE0_ }
+  // CHECK: @_ZN6DR21261rE = constant i32* @_ZGRN6DR21261aE0_
+  int &r = a.b;
+
+  // Dynamically initialized: the temporary object bound to 'b' could be
+  // modified (eg, by placement 'new') before the initializer of 's' runs.
+  constexpr A &&b = {42};
+  // CHECK: @_ZN6DR21261sE = global i32* null
+  int &s = b.b;
+}
+
 // CHECK: @_ZZN12LocalVarInit3aggEvE1a = internal constant {{.*}} i32 101
 // CHECK: @_ZZN12LocalVarInit4ctorEvE1a = internal constant {{.*}} i32 102
 // CHECK: @__const._ZN12LocalVarInit8mutable_Ev.a = private unnamed_addr constant {{.*}} i32 103
