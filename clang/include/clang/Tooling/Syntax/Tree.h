@@ -215,6 +215,7 @@ public:
   struct ConstChildIterator
       : ChildIteratorBase<ConstChildIterator, const Node> {
     using Base::ChildIteratorBase;
+    ConstChildIterator() = default;
     ConstChildIterator(const ChildIterator &I) : Base(I.asPointer()) {}
   };
 
