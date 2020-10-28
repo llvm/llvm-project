@@ -125,17 +125,6 @@ private:
 public:
   typedef std::set<TypeOrDecl, EitherComparator> TypesOrDecls;
 
-  class LanguageFlags {
-  public:
-    enum : uint64_t {
-      eIsIndirectEnumCase = 0x1ULL,
-      eIgnoreInstancePointerness = 0x2ULL
-    };
-
-  private:
-    LanguageFlags() = delete;
-  };
-
   /// Provide the global LLVMContext.
   static llvm::LLVMContext &GetGlobalLLVMContext();
 
