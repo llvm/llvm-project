@@ -184,6 +184,37 @@ namespace {
     return E && E->getType()->isPointerType() && tryUnwrapAllocSizeCall(E);
   }
 
+  /// Determines whether the given kind of constant expression is only ever
+  /// used for name mangling. If so, it's permitted to reference things that we
+  /// can't generate code for (in particular, dllimported functions).
+  static bool isForManglingOnly(ConstantExprKind Kind) {
+    switch (Kind) {
+    case ConstantExprKind::Normal:
+    case ConstantExprKind::ClassTemplateArgument:
+    case ConstantExprKind::ImmediateInvocation:
+      // Note that non-type template arguments of class type are emitted as
+      // template parameter objects.
+      return false;
+
+    case ConstantExprKind::NonClassTemplateArgument:
+      return true;
+    }
+    llvm_unreachable("unknown ConstantExprKind");
+  }
+
+  static bool isTemplateArgument(ConstantExprKind Kind) {
+    switch (Kind) {
+    case ConstantExprKind::Normal:
+    case ConstantExprKind::ImmediateInvocation:
+      return false;
+
+    case ConstantExprKind::ClassTemplateArgument:
+    case ConstantExprKind::NonClassTemplateArgument:
+      return true;
+    }
+    llvm_unreachable("unknown ConstantExprKind");
+  }
+
   /// The bound to claim that an array of unknown bound has.
   /// The value in MostDerivedArraySize is undefined in this case. So, set it
   /// to an arbitrary value that's likely to loudly break things if it's used.
@@ -2128,7 +2159,7 @@ using CheckedTemporaries =
 static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
                                   EvalInfo &Info, SourceLocation DiagLoc,
                                   QualType Type, const APValue &Value,
-                                  Expr::ConstExprUsage Usage,
+                                  ConstantExprKind Kind,
                                   SourceLocation SubobjectLoc,
                                   CheckedTemporaries &CheckedTemps);
 
@@ -2137,21 +2168,48 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
 /// can fold this expression, whether or not it's a constant expression.
 static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
                                           QualType Type, const LValue &LVal,
-                                          Expr::ConstExprUsage Usage,
+                                          ConstantExprKind Kind,
                                           CheckedTemporaries &CheckedTemps) {
   bool IsReferenceType = Type->isReferenceType();
 
   APValue::LValueBase Base = LVal.getLValueBase();
   const SubobjectDesignator &Designator = LVal.getLValueDesignator();
 
-  if (auto *VD = LVal.getLValueBase().dyn_cast<const ValueDecl *>()) {
-    if (auto *FD = dyn_cast<FunctionDecl>(VD)) {
-      if (FD->isConsteval()) {
-        Info.FFDiag(Loc, diag::note_consteval_address_accessible)
-            << !Type->isAnyPointerType();
-        Info.Note(FD->getLocation(), diag::note_declared_at);
-        return false;
-      }
+  const Expr *BaseE = Base.dyn_cast<const Expr *>();
+  const ValueDecl *BaseVD = Base.dyn_cast<const ValueDecl*>();
+
+  // Additional restrictions apply in a template argument. We only enforce the
+  // C++20 restrictions here; additional syntactic and semantic restrictions
+  // are applied elsewhere.
+  if (isTemplateArgument(Kind)) {
+    int InvalidBaseKind = -1;
+    StringRef Ident;
+    if (Base.is<TypeInfoLValue>())
+      InvalidBaseKind = 0;
+    else if (isa_and_nonnull<StringLiteral>(BaseE))
+      InvalidBaseKind = 1;
+    else if (isa_and_nonnull<MaterializeTemporaryExpr>(BaseE) ||
+             isa_and_nonnull<LifetimeExtendedTemporaryDecl>(BaseVD))
+      InvalidBaseKind = 2;
+    else if (auto *PE = dyn_cast_or_null<PredefinedExpr>(BaseE)) {
+      InvalidBaseKind = 3;
+      Ident = PE->getIdentKindName();
+    }
+
+    if (InvalidBaseKind != -1) {
+      Info.FFDiag(Loc, diag::note_constexpr_invalid_template_arg)
+          << IsReferenceType << !Designator.Entries.empty() << InvalidBaseKind
+          << Ident;
+      return false;
+    }
+  }
+
+  if (auto *FD = dyn_cast_or_null<FunctionDecl>(BaseVD)) {
+    if (FD->isConsteval()) {
+      Info.FFDiag(Loc, diag::note_consteval_address_accessible)
+          << !Type->isAnyPointerType();
+      Info.Note(FD->getLocation(), diag::note_declared_at);
+      return false;
     }
   }
 
@@ -2195,19 +2253,20 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
     return false;
   }
 
-  if (const ValueDecl *VD = Base.dyn_cast<const ValueDecl*>()) {
-    if (const VarDecl *Var = dyn_cast<const VarDecl>(VD)) {
+  if (BaseVD) {
+    if (const VarDecl *Var = dyn_cast<const VarDecl>(BaseVD)) {
       // Check if this is a thread-local variable.
       if (Var->getTLSKind())
         // FIXME: Diagnostic!
         return false;
 
-      // A dllimport variable never acts like a constant.
-      if (Usage == Expr::EvaluateForCodeGen && Var->hasAttr<DLLImportAttr>())
+      // A dllimport variable never acts like a constant, unless we're
+      // evaluating a value for use only in name mangling.
+      if (!isForManglingOnly(Kind) && Var->hasAttr<DLLImportAttr>())
         // FIXME: Diagnostic!
         return false;
     }
-    if (const auto *FD = dyn_cast<const FunctionDecl>(VD)) {
+    if (const auto *FD = dyn_cast<const FunctionDecl>(BaseVD)) {
       // __declspec(dllimport) must be handled very carefully:
       // We must never initialize an expression with the thunk in C++.
       // Doing otherwise would allow the same id-expression to yield
@@ -2218,13 +2277,13 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
       // The C language has no notion of ODR; furthermore, it has no notion of
       // dynamic initialization.  This means that we are permitted to
       // perform initialization with the address of the thunk.
-      if (Info.getLangOpts().CPlusPlus && Usage == Expr::EvaluateForCodeGen &&
+      if (Info.getLangOpts().CPlusPlus && !isForManglingOnly(Kind) &&
           FD->hasAttr<DLLImportAttr>())
         // FIXME: Diagnostic!
         return false;
     }
-  } else if (const auto *MTE = dyn_cast_or_null<MaterializeTemporaryExpr>(
-                 Base.dyn_cast<const Expr *>())) {
+  } else if (const auto *MTE =
+                 dyn_cast_or_null<MaterializeTemporaryExpr>(BaseE)) {
     if (CheckedTemps.insert(MTE).second) {
       QualType TempType = getType(Base);
       if (TempType.isDestructedType()) {
@@ -2238,7 +2297,7 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
       assert(V && "evasluation result refers to uninitialised temporary");
       if (!CheckEvaluationResult(CheckEvaluationResultKind::ConstantExpression,
                                  Info, MTE->getExprLoc(), TempType, *V,
-                                 Usage, SourceLocation(), CheckedTemps))
+                                 Kind, SourceLocation(), CheckedTemps))
         return false;
     }
   }
@@ -2257,9 +2316,8 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
 
   // Does this refer one past the end of some object?
   if (!Designator.Invalid && Designator.isOnePastTheEnd()) {
-    const ValueDecl *VD = Base.dyn_cast<const ValueDecl*>();
     Info.FFDiag(Loc, diag::note_constexpr_past_end, 1)
-      << !Designator.Entries.empty() << !!VD << VD;
+      << !Designator.Entries.empty() << !!BaseVD << BaseVD;
     NoteLValueLocation(Info, Base);
   }
 
@@ -2272,7 +2330,7 @@ static bool CheckMemberPointerConstantExpression(EvalInfo &Info,
                                                  SourceLocation Loc,
                                                  QualType Type,
                                                  const APValue &Value,
-                                                 Expr::ConstExprUsage Usage) {
+                                                 ConstantExprKind Kind) {
   const ValueDecl *Member = Value.getMemberPointerDecl();
   const auto *FD = dyn_cast_or_null<CXXMethodDecl>(Member);
   if (!FD)
@@ -2282,7 +2340,7 @@ static bool CheckMemberPointerConstantExpression(EvalInfo &Info,
     Info.Note(FD->getLocation(), diag::note_declared_at);
     return false;
   }
-  return Usage == Expr::EvaluateForMangling || FD->isVirtual() ||
+  return isForManglingOnly(Kind) || FD->isVirtual() ||
          !FD->hasAttr<DLLImportAttr>();
 }
 
@@ -2321,7 +2379,7 @@ static bool CheckLiteralType(EvalInfo &Info, const Expr *E,
 static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
                                   EvalInfo &Info, SourceLocation DiagLoc,
                                   QualType Type, const APValue &Value,
-                                  Expr::ConstExprUsage Usage,
+                                  ConstantExprKind Kind,
                                   SourceLocation SubobjectLoc,
                                   CheckedTemporaries &CheckedTemps) {
   if (!Value.hasValue()) {
@@ -2344,20 +2402,20 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
     QualType EltTy = Type->castAsArrayTypeUnsafe()->getElementType();
     for (unsigned I = 0, N = Value.getArrayInitializedElts(); I != N; ++I) {
       if (!CheckEvaluationResult(CERK, Info, DiagLoc, EltTy,
-                                 Value.getArrayInitializedElt(I), Usage,
+                                 Value.getArrayInitializedElt(I), Kind,
                                  SubobjectLoc, CheckedTemps))
         return false;
     }
     if (!Value.hasArrayFiller())
       return true;
     return CheckEvaluationResult(CERK, Info, DiagLoc, EltTy,
-                                 Value.getArrayFiller(), Usage, SubobjectLoc,
+                                 Value.getArrayFiller(), Kind, SubobjectLoc,
                                  CheckedTemps);
   }
   if (Value.isUnion() && Value.getUnionField()) {
     return CheckEvaluationResult(
         CERK, Info, DiagLoc, Value.getUnionField()->getType(),
-        Value.getUnionValue(), Usage, Value.getUnionField()->getLocation(),
+        Value.getUnionValue(), Kind, Value.getUnionField()->getLocation(),
         CheckedTemps);
   }
   if (Value.isStruct()) {
@@ -2366,7 +2424,7 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
       unsigned BaseIndex = 0;
       for (const CXXBaseSpecifier &BS : CD->bases()) {
         if (!CheckEvaluationResult(CERK, Info, DiagLoc, BS.getType(),
-                                   Value.getStructBase(BaseIndex), Usage,
+                                   Value.getStructBase(BaseIndex), Kind,
                                    BS.getBeginLoc(), CheckedTemps))
           return false;
         ++BaseIndex;
@@ -2378,7 +2436,7 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
 
       if (!CheckEvaluationResult(CERK, Info, DiagLoc, I->getType(),
                                  Value.getStructField(I->getFieldIndex()),
-                                 Usage, I->getLocation(), CheckedTemps))
+                                 Kind, I->getLocation(), CheckedTemps))
         return false;
     }
   }
@@ -2387,13 +2445,13 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
       CERK == CheckEvaluationResultKind::ConstantExpression) {
     LValue LVal;
     LVal.setFrom(Info.Ctx, Value);
-    return CheckLValueConstantExpression(Info, DiagLoc, Type, LVal, Usage,
+    return CheckLValueConstantExpression(Info, DiagLoc, Type, LVal, Kind,
                                          CheckedTemps);
   }
 
   if (Value.isMemberPointer() &&
       CERK == CheckEvaluationResultKind::ConstantExpression)
-    return CheckMemberPointerConstantExpression(Info, DiagLoc, Type, Value, Usage);
+    return CheckMemberPointerConstantExpression(Info, DiagLoc, Type, Value, Kind);
 
   // Everything else is fine.
   return true;
@@ -2402,17 +2460,16 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
 /// Check that this core constant expression value is a valid value for a
 /// constant expression. If not, report an appropriate diagnostic. Does not
 /// check that the expression is of literal type.
-static bool
-CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc, QualType Type,
-                        const APValue &Value,
-                        Expr::ConstExprUsage Usage = Expr::EvaluateForCodeGen) {
+static bool CheckConstantExpression(EvalInfo &Info, SourceLocation DiagLoc,
+                                    QualType Type, const APValue &Value,
+                                    ConstantExprKind Kind) {
   // Nothing to check for a constant expression of type 'cv void'.
   if (Type->isVoidType())
     return true;
 
   CheckedTemporaries CheckedTemps;
   return CheckEvaluationResult(CheckEvaluationResultKind::ConstantExpression,
-                               Info, DiagLoc, Type, Value, Usage,
+                               Info, DiagLoc, Type, Value, Kind,
                                SourceLocation(), CheckedTemps);
 }
 
@@ -2423,7 +2480,7 @@ static bool CheckFullyInitialized(EvalInfo &Info, SourceLocation DiagLoc,
   CheckedTemporaries CheckedTemps;
   return CheckEvaluationResult(
       CheckEvaluationResultKind::FullyInitialized, Info, DiagLoc, Type, Value,
-      Expr::EvaluateForCodeGen, SourceLocation(), CheckedTemps);
+      ConstantExprKind::Normal, SourceLocation(), CheckedTemps);
 }
 
 /// Enforce C++2a [expr.const]/4.17, which disallows new-expressions unless
@@ -3226,6 +3283,13 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
     }
   }
 
+  // If we're currently evaluating the initializer of this declaration, use that
+  // in-flight value.
+  if (Info.EvaluatingDecl == Base) {
+    Result = Info.EvaluatingDeclValue;
+    return true;
+  }
+
   if (isa<ParmVarDecl>(VD)) {
     // Assume parameters of a potential constant expression are usable in
     // constant expressions.
@@ -3273,14 +3337,6 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
       NoteLValueLocation(Info, Base);
     }
     return false;
-  }
-
-  // If we're currently evaluating the initializer of this declaration, use that
-  // in-flight value.
-  if (declaresSameEntity(Info.EvaluatingDecl.dyn_cast<const ValueDecl *>(),
-                         VD)) {
-    Result = Info.EvaluatingDeclValue;
-    return true;
   }
 
   // Check that we can fold the initializer. In C++, we will have already done
@@ -3484,26 +3540,20 @@ static bool lifetimeStartedInEvaluation(EvalInfo &Info,
   if (Base.getCallIndex())
     return true;
 
-  auto *Evaluating = Info.EvaluatingDecl.dyn_cast<const ValueDecl*>();
-  if (!Evaluating)
-    return false;
-
-  auto *BaseD = Base.dyn_cast<const ValueDecl*>();
-
   switch (Info.IsEvaluatingDecl) {
   case EvalInfo::EvaluatingDeclKind::None:
     return false;
 
   case EvalInfo::EvaluatingDeclKind::Ctor:
     // The variable whose initializer we're evaluating.
-    if (BaseD)
-      return declaresSameEntity(Evaluating, BaseD);
+    if (Info.EvaluatingDecl == Base)
+      return true;
 
     // A temporary lifetime-extended by the variable whose initializer we're
     // evaluating.
     if (auto *BaseE = Base.dyn_cast<const Expr *>())
       if (auto *BaseMTE = dyn_cast<MaterializeTemporaryExpr>(BaseE))
-        return declaresSameEntity(BaseMTE->getExtendingDecl(), Evaluating);
+        return Info.EvaluatingDecl == BaseMTE->getExtendingDecl();
     return false;
 
   case EvalInfo::EvaluatingDeclKind::Dtor:
@@ -3511,16 +3561,13 @@ static bool lifetimeStartedInEvaluation(EvalInfo &Info,
     //   [during constant destruction] the lifetime of a and its non-mutable
     //   subobjects (but not its mutable subobjects) [are] considered to start
     //   within e.
-    //
+    if (MutableSubobject || Base != Info.EvaluatingDecl)
+      return false;
     // FIXME: We can meaningfully extend this to cover non-const objects, but
     // we will need special handling: we should be able to access only
     // subobjects of such objects that are themselves declared const.
-    if (!BaseD ||
-        !(BaseD->getType().isConstQualified() ||
-          BaseD->getType()->isReferenceType()) ||
-        MutableSubobject)
-      return false;
-    return declaresSameEntity(Evaluating, BaseD);
+    QualType T = getType(Base);
+    return T.isConstQualified() || T->isReferenceType();
   }
 
   llvm_unreachable("unknown evaluating decl kind");
@@ -3972,12 +4019,10 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   APValue *BaseVal = nullptr;
   QualType BaseType = getType(LVal.Base);
 
-  if (const ConstantExpr *CE =
-          dyn_cast_or_null<ConstantExpr>(LVal.Base.dyn_cast<const Expr *>())) {
-    /// Nested immediate invocation have been previously removed so if we found
-    /// a ConstantExpr it can only be the EvaluatingDecl.
-    assert(CE->isImmediateInvocation() && CE == Info.EvaluatingDecl);
-    (void)CE;
+  if (Info.getLangOpts().CPlusPlus14 && LVal.Base == Info.EvaluatingDecl &&
+      lifetimeStartedInEvaluation(Info, LVal.Base)) {
+    // This is the object whose initializer we're evaluating, so its lifetime
+    // started in the current evaluation.
     BaseVal = Info.EvaluatingDeclValue;
   } else if (const ValueDecl *D = LVal.Base.dyn_cast<const ValueDecl *>()) {
     // Allow reading from a GUID declaration.
@@ -12759,7 +12804,8 @@ bool RecordExprEvaluator::VisitBinCmp(const BinaryOperator *E) {
     LV.set(VD);
     if (!handleLValueToRValueConversion(Info, E, E->getType(), LV, Result))
       return false;
-    return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result);
+    return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
+                                   ConstantExprKind::Normal);
   };
   return EvaluateComparisonBinaryOperator(Info, E, OnSuccess, [&]() {
     return ExprEvaluatorBaseTy::VisitBinCmp(E);
@@ -14535,7 +14581,8 @@ static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result) {
   }
 
   // Check this core constant expression is a constant expression.
-  return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result) &&
+  return CheckConstantExpression(Info, E->getExprLoc(), E->getType(), Result,
+                                 ConstantExprKind::Normal) &&
          CheckMemoryLeaks(Info);
 }
 
@@ -14690,15 +14737,36 @@ bool Expr::EvaluateAsLValue(EvalResult &Result, const ASTContext &Ctx,
       Result.HasSideEffects ||
       !CheckLValueConstantExpression(Info, getExprLoc(),
                                      Ctx.getLValueReferenceType(getType()), LV,
-                                     Expr::EvaluateForCodeGen, CheckedTemps))
+                                     ConstantExprKind::Normal, CheckedTemps))
     return false;
 
   LV.moveInto(Result.Val);
   return true;
 }
 
-bool Expr::EvaluateAsConstantExpr(EvalResult &Result, ConstExprUsage Usage,
-                                  const ASTContext &Ctx, bool InPlace) const {
+static bool EvaluateDestruction(const ASTContext &Ctx, APValue::LValueBase Base,
+                                APValue DestroyedValue, QualType Type,
+                                SourceLocation Loc, Expr::EvalStatus &EStatus) {
+  EvalInfo Info(Ctx, EStatus, EvalInfo::EM_ConstantExpression);
+  Info.setEvaluatingDecl(Base, DestroyedValue,
+                         EvalInfo::EvaluatingDeclKind::Dtor);
+  Info.InConstantContext = true;
+
+  LValue LVal;
+  LVal.set(Base);
+
+  if (!HandleDestruction(Info, Loc, Base, DestroyedValue, Type) ||
+      EStatus.HasSideEffects)
+    return false;
+
+  if (!Info.discardCleanups())
+    llvm_unreachable("Unhandled cleanup; missing full expression marker?");
+
+  return true;
+}
+
+bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
+                                  ConstantExprKind Kind) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
@@ -14706,22 +14774,44 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, ConstExprUsage Usage,
   EvalInfo Info(Ctx, Result, EM);
   Info.InConstantContext = true;
 
-  if (InPlace) {
-    Info.setEvaluatingDecl(this, Result.Val);
-    LValue LVal;
-    LVal.set(this);
-    if (!::EvaluateInPlace(Result.Val, Info, LVal, this) ||
-        Result.HasSideEffects)
-      return false;
-  } else if (!::Evaluate(Result.Val, Info, this) || Result.HasSideEffects)
+  // The type of the object we're initializing is 'const T' for a class NTTP.
+  QualType T = getType();
+  if (Kind == ConstantExprKind::ClassTemplateArgument)
+    T.addConst();
+
+  // If we're evaluating a prvalue, fake up a MaterializeTemporaryExpr to
+  // represent the result of the evaluation. CheckConstantExpression ensures
+  // this doesn't escape.
+  MaterializeTemporaryExpr BaseMTE(T, const_cast<Expr*>(this), true);
+  APValue::LValueBase Base(&BaseMTE);
+
+  Info.setEvaluatingDecl(Base, Result.Val);
+  LValue LVal;
+  LVal.set(Base);
+
+  if (!::EvaluateInPlace(Result.Val, Info, LVal, this) || Result.HasSideEffects)
     return false;
 
   if (!Info.discardCleanups())
     llvm_unreachable("Unhandled cleanup; missing full expression marker?");
 
-  return CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
-                                 Result.Val, Usage) &&
-         CheckMemoryLeaks(Info);
+  if (!CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
+                               Result.Val, Kind))
+    return false;
+  if (!CheckMemoryLeaks(Info))
+    return false;
+
+  // If this is a class template argument, it's required to have constant
+  // destruction too.
+  if (Kind == ConstantExprKind::ClassTemplateArgument &&
+      (!EvaluateDestruction(Ctx, Base, Result.Val, T, getBeginLoc(), Result) ||
+       Result.HasSideEffects)) {
+    // FIXME: Prefix a note to indicate that the problem is lack of constant
+    // destruction.
+    return false;
+  }
+
+  return true;
 }
 
 bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
@@ -14770,7 +14860,8 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
     if (!Info.discardCleanups())
       llvm_unreachable("Unhandled cleanup; missing full expression marker?");
   }
-  return CheckConstantExpression(Info, DeclLoc, DeclTy, Value) &&
+  return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
+                                 ConstantExprKind::Normal) &&
          CheckMemoryLeaks(Info);
 }
 
@@ -14788,23 +14879,10 @@ bool VarDecl::evaluateDestruction(
   else if (!getDefaultInitValue(getType(), DestroyedValue))
     return false;
 
-  EvalInfo Info(getASTContext(), EStatus, EvalInfo::EM_ConstantExpression);
-  Info.setEvaluatingDecl(this, DestroyedValue,
-                         EvalInfo::EvaluatingDeclKind::Dtor);
-  Info.InConstantContext = true;
-
-  SourceLocation DeclLoc = getLocation();
-  QualType DeclTy = getType();
-
-  LValue LVal;
-  LVal.set(this);
-
-  if (!HandleDestruction(Info, DeclLoc, LVal.Base, DestroyedValue, DeclTy) ||
+  if (!EvaluateDestruction(getASTContext(), this, std::move(DestroyedValue),
+                           getType(), getLocation(), EStatus) ||
       EStatus.HasSideEffects)
     return false;
-
-  if (!Info.discardCleanups())
-    llvm_unreachable("Unhandled cleanup; missing full expression marker?");
 
   ensureEvaluatedStmt()->HasConstantDestruction = true;
   return true;

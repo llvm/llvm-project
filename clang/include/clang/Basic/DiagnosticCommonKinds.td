@@ -234,6 +234,12 @@ def err_seh___finally_block : Error<
 // Sema && AST
 def note_invalid_subexpr_in_const_expr : Note<
   "subexpression not valid in a constant expression">;
+def note_constexpr_invalid_template_arg : Note<
+  "%select{pointer|reference}0 to %select{|subobject of }1"
+  "%select{type_info object|string literal|temporary object|"
+  "predefined '%3' variable}2 is not allowed in a template argument">;
+def err_constexpr_invalid_template_arg : Error<
+  note_constexpr_invalid_template_arg.Text>;
 
 // Sema && Frontend
 let CategoryName = "Inline Assembly Issue" in {
