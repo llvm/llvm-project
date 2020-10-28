@@ -3902,7 +3902,7 @@ public:
     /// The lookup found an overload set of literal operator templates,
     /// which expect the character type and characters of the spelling of the
     /// string literal token to be passed as template arguments.
-    LOLR_StringTemplate
+    LOLR_StringTemplatePack,
   };
 
   SpecialMemberOverloadResult LookupSpecialMember(CXXRecordDecl *D,
@@ -4010,12 +4010,11 @@ public:
   CXXDestructorDecl *LookupDestructor(CXXRecordDecl *Class);
 
   bool checkLiteralOperatorId(const CXXScopeSpec &SS, const UnqualifiedId &Id);
-  LiteralOperatorLookupResult LookupLiteralOperator(Scope *S, LookupResult &R,
-                                                    ArrayRef<QualType> ArgTys,
-                                                    bool AllowRaw,
-                                                    bool AllowTemplate,
-                                                    bool AllowStringTemplate,
-                                                    bool DiagnoseMissing);
+  LiteralOperatorLookupResult
+  LookupLiteralOperator(Scope *S, LookupResult &R, ArrayRef<QualType> ArgTys,
+                        bool AllowRaw, bool AllowTemplate,
+                        bool AllowStringTemplate, bool DiagnoseMissing,
+                        StringLiteral *StringLit = nullptr);
   bool isKnownName(StringRef name);
 
   /// Status of the function emission on the CUDA/HIP/OpenMP host/device attrs.
