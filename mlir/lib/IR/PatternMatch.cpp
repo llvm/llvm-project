@@ -140,7 +140,7 @@ void PatternRewriter::mergeBlockBefore(Block *source, Operation *op,
   assert(source->hasNoSuccessors() &&
          "expected 'source' to have no successors");
 
-  // Split the block containing 'op' into two, one containg all operations
+  // Split the block containing 'op' into two, one containing all operations
   // before 'op' (prologue) and another (epilogue) containing 'op' and all
   // operations after it.
   Block *prologue = op->getBlock();

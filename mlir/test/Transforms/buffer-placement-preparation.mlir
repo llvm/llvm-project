@@ -302,9 +302,9 @@ func @func_with_unranked_arg(%arg0: tensor<*xf32>) {
 
 // -----
 
-// Test case: Testing BufferAssginmnetCallOpConverter to see if it matches with the
+// Test case: Testing BufferAssignmentCallOpConverter to see if it matches with the
 // signature of the new signature of the callee function when there are tuple typed
-// args and results. BufferAssginmentTypeConverter is set to flatten tuple typed
+// args and results. BufferAssignmentTypeConverter is set to flatten tuple typed
 // arguments. The tuple typed values should be decomposed and composed using
 // get_tuple_element and make_tuple operations of test dialect. Tensor types are
 // converted to Memref. Memref typed function results are appended to the function
@@ -359,10 +359,10 @@ func @caller(%arg0: tuple<tensor<2xf32>,i1, tensor<5xf32>>) -> tuple<tensor<2xf3
 
 // -----
 
-// Test case: Testing BufferAssginmnetFuncOpConverter and
-// BufferAssginmentReturnOpConverter to see if the return operation matches with
+// Test case: Testing BufferAssignmentFuncOpConverter and
+// BufferAssignmentReturnOpConverter to see if the return operation matches with
 // the new function signature when there are tuple typed args and results.
-// BufferAssginmentTypeConverter is set to flatten tuple typed arguments. The tuple
+// BufferAssignmentTypeConverter is set to flatten tuple typed arguments. The tuple
 // typed values should be decomposed and composed using get_tuple_element and
 // make_tuple operations of test dialect. Tensor types are converted to Memref.
 // Memref typed function results are appended to the function arguments list.

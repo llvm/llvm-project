@@ -108,7 +108,7 @@ static Value createFPConstant(Location loc, Type srcType, Type dstType,
       loc, dstType, rewriter.getFloatAttr(floatType, value));
 }
 
-/// Utility function for bitfiled ops:
+/// Utility function for bitfield ops:
 ///   - `BitFieldInsert`
 ///   - `BitFieldSExtract`
 ///   - `BitFieldUExtract`
@@ -163,7 +163,7 @@ static Value optionallyBroadcast(Location loc, Value value, Type srcType,
   return value;
 }
 
-/// Utility function for bitfiled ops: `BitFieldInsert`, `BitFieldSExtract` and
+/// Utility function for bitfield ops: `BitFieldInsert`, `BitFieldSExtract` and
 /// `BitFieldUExtract`.
 /// Broadcast `Offset` and `Count` to match the type of `Base`. If `Base` is of
 /// a vector type, construct a vector that has:
@@ -971,8 +971,8 @@ public:
 
     Location loc = loopOp.getLoc();
 
-    // Split the current block after `spv.loop`. The remaing ops will be used in
-    // `endBlock`.
+    // Split the current block after `spv.loop`. The remaining ops will be used
+    // in `endBlock`.
     Block *currentBlock = rewriter.getBlock();
     auto position = Block::iterator(loopOp);
     Block *endBlock = rewriter.splitBlock(currentBlock, position);
@@ -1028,7 +1028,7 @@ public:
 
     Location loc = op.getLoc();
 
-    // Split the current block after `spv.selection`. The remaing ops will be
+    // Split the current block after `spv.selection`. The remaining ops will be
     // used in `continueBlock`.
     auto *currentBlock = rewriter.getInsertionBlock();
     rewriter.setInsertionPointAfter(op);
@@ -1387,7 +1387,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
 
       // Entry points and execution mode
       // Module generated from SPIR-V could have other "internal" functions, so
-      // having entry point and execution mode metadat can be useful. For now,
+      // having entry point and execution mode metadata can be useful. For now,
       // simply remove them.
       // TODO: Support EntryPoint/ExecutionMode properly.
       ErasePattern<spirv::EntryPointOp>, ErasePattern<spirv::ExecutionModeOp>,

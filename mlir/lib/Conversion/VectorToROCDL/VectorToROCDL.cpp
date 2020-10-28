@@ -100,7 +100,7 @@ public:
       return failure();
 
     // Note that the dataPtr starts at the offset address specified by
-    // indices, so no need to calculat offset size in bytes again in
+    // indices, so no need to calculate offset size in bytes again in
     // the MUBUF instruction.
     Value dataPtr = getDataPtr(loc, memRefType, adaptor.memref(),
                                adaptor.indices(), rewriter);

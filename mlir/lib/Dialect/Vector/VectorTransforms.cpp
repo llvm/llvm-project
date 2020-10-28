@@ -2178,7 +2178,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransferPrecondition(
 ///   2. else return a new MemRefType obtained by iterating over the shape and
 ///   strides and:
 ///     a. keeping the ones that are static and equal across `aT` and `bT`.
-///     b. using a dynamic shape and/or stride for the dimeniosns that don't
+///     b. using a dynamic shape and/or stride for the dimensions that don't
 ///        agree.
 static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
   if (MemRefCastOp::areCastCompatible(aT, bT))

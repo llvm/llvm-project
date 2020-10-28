@@ -51,7 +51,7 @@ public:
   }
 
   /// Re-indents by removing the leading whitespace from the first non-empty
-  /// line from every line of the the string, skipping over empty lines at the
+  /// line from every line of the string, skipping over empty lines at the
   /// start.
   raw_indented_ostream &reindent(StringRef str);
 
