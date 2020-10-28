@@ -1,5 +1,5 @@
 /*
- * parallel-simple.c -- Archer testcase
+ * parallel-nosuppression.c -- Archer testcase
  */
 
 //===----------------------------------------------------------------------===//
@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 
-// RUN: %libarcher-compile-and-run | FileCheck %s
+// RUN: %libarcher-compile-and-run-nosuppression | FileCheck %s
 // REQUIRES: tsan
 #include <omp.h>
 #include <stdio.h>
@@ -36,5 +36,5 @@ int main(int argc, char *argv[]) {
 
 // CHECK-NOT: ThreadSanitizer: data race
 // CHECK-NOT: ThreadSanitizer: reported
-// CHECK-NOT: Warning: please export TSAN_OPTIONS
+// CHECK: Warning: please export TSAN_OPTIONS
 // CHECK: DONE

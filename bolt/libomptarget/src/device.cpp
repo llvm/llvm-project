@@ -17,6 +17,7 @@
 
 #include <cassert>
 #include <climits>
+#include <cstdio>
 #include <string>
 
 /// Map between Device ID (i.e. openmp device id) and its DeviceTy.
@@ -50,7 +51,12 @@ DeviceTy::DeviceTy(RTLInfoTy *RTL)
       ShadowPtrMap(), DataMapMtx(), PendingGlobalsMtx(), ShadowMtx(),
       MemoryManager(nullptr) {}
 
-DeviceTy::~DeviceTy() = default;
+DeviceTy::~DeviceTy() {
+  if (DeviceID == -1 || getInfoLevel() < 1)
+    return;
+
+  dumpTargetPointerMappings(*this);
+}
 
 int DeviceTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size) {
   DataMapMtx.lock();
@@ -214,11 +220,13 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
       HT.incRefCount();
 
     uintptr_t tp = HT.TgtPtrBegin + ((uintptr_t)HstPtrBegin - HT.HstPtrBegin);
-    DP("Mapping exists%s with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD ", "
-        "Size=%" PRId64 ",%s RefCount=%s\n", (IsImplicit ? " (implicit)" : ""),
-        DPxPTR(HstPtrBegin), DPxPTR(tp), Size,
-        (UpdateRefCount ? " updated" : ""),
-        HT.isRefCountInf() ? "INF" : std::to_string(HT.getRefCount()).c_str());
+    INFO(DeviceID,
+         "Mapping exists%s with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
+         ", "
+         "Size=%" PRId64 ",%s RefCount=%s\n",
+         (IsImplicit ? " (implicit)" : ""), DPxPTR(HstPtrBegin), DPxPTR(tp),
+         Size, (UpdateRefCount ? " updated" : ""),
+         HT.isRefCountInf() ? "INF" : std::to_string(HT.getRefCount()).c_str());
     rc = (void *)tp;
   } else if ((lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) && !IsImplicit) {
     // Explicit extension of mapped data - not allowed.

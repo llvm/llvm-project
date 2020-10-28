@@ -50,13 +50,6 @@ endfunction()
 if (${OPENMP_STANDALONE_BUILD})
   find_standalone_test_dependencies()
 
-  # Make sure we can use the console pool for recent CMake and Ninja > 1.5.
-  if (CMAKE_VERSION VERSION_LESS 3.1.20141117)
-    set(cmake_3_2_USES_TERMINAL)
-  else()
-    set(cmake_3_2_USES_TERMINAL USES_TERMINAL)
-  endif()
-
   # Set lit arguments.
   set(DEFAULT_LIT_ARGS "-sv --show-unsupported --show-xfail")
   if (MSVC OR XCODE)
@@ -189,7 +182,7 @@ function(add_openmp_testsuite target comment)
       COMMAND ${PYTHON_EXECUTABLE} ${OPENMP_LLVM_LIT_EXECUTABLE} ${LIT_ARGS} ${ARG_UNPARSED_ARGUMENTS}
       COMMENT ${comment}
       DEPENDS ${ARG_DEPENDS}
-      ${cmake_3_2_USES_TERMINAL}
+      USES_TERMINAL
     )
   else()
     if (ARG_EXCLUDE_FROM_CHECK_ALL)

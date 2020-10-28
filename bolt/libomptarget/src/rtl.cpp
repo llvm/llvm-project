@@ -61,16 +61,6 @@ __attribute__((destructor(101))) void deinit() {
 }
 
 void RTLsTy::LoadRTLs() {
-
-  if (char *envStr = getenv("LIBOMPTARGET_INFO")) {
-    InfoLevel = std::stoi(envStr);
-  }
-#ifdef OMPTARGET_DEBUG
-  if (char *envStr = getenv("LIBOMPTARGET_DEBUG")) {
-    DebugLevel = std::stoi(envStr);
-  }
-#endif // OMPTARGET_DEBUG
-
   // Parse environment variable OMP_TARGET_OFFLOAD (if set)
   TargetOffloadPolicy = (kmp_target_offload_kind_t) __kmpc_get_target_offload();
   if (TargetOffloadPolicy == tgt_disabled) {
