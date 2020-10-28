@@ -21,6 +21,214 @@ target triple = "aarch64-unknown-linux-gnu"
 ; NO_SVE-NOT: ptrue
 
 ;
+; FADDA
+;
+
+; No single instruction NEON support. Use SVE.
+define half @fadda_v4f16(half %start, <4 x half> %a) #0 {
+; CHECK-LABEL: fadda_v4f16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl4
+; CHECK-NEXT: fadda h0, [[PG]], h0, z1.h
+; CHECK-NEXT: ret
+  %res = call half @llvm.vector.reduce.fadd.v4f16(half %start, <4 x half> %a)
+  ret half %res
+}
+
+; No single instruction NEON support. Use SVE.
+define half @fadda_v8f16(half %start, <8 x half> %a) #0 {
+; CHECK-LABEL: fadda_v8f16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl8
+; CHECK-NEXT: fadda h0, [[PG]], h0, z1.h
+; CHECK-NEXT: ret
+  %res = call half @llvm.vector.reduce.fadd.v8f16(half %start, <8 x half> %a)
+  ret half %res
+}
+
+define half @fadda_v16f16(half %start, <16 x half>* %a) #0 {
+; CHECK-LABEL: fadda_v16f16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
+; CHECK-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK-NEXT: fadda h0, [[PG]], h0, [[OP]].h
+; CHECK-NEXT: ret
+  %op = load <16 x half>, <16 x half>* %a
+  %res = call half @llvm.vector.reduce.fadd.v16f16(half %start, <16 x half> %op)
+  ret half %res
+}
+
+define half @fadda_v32f16(half %start, <32 x half>* %a) #0 {
+; CHECK-LABEL: fadda_v32f16:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
+; VBITS_GE_512-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: fadda h0, [[PG]], h0, [[OP]].h
+; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-COUNT-32: fadd
+; VBITS_EQ_256: ret
+  %op = load <32 x half>, <32 x half>* %a
+  %res = call half @llvm.vector.reduce.fadd.v32f16(half %start, <32 x half> %op)
+  ret half %res
+}
+
+define half @fadda_v64f16(half %start, <64 x half>* %a) #0 {
+; CHECK-LABEL: fadda_v64f16:
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl64
+; VBITS_GE_1024-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: fadda h0, [[PG]], h0, [[OP]].h
+; VBITS_GE_1024-NEXT: ret
+  %op = load <64 x half>, <64 x half>* %a
+  %res = call half @llvm.vector.reduce.fadd.v64f16(half %start, <64 x half> %op)
+  ret half %res
+}
+
+define half @fadda_v128f16(half %start, <128 x half>* %a) #0 {
+; CHECK-LABEL: fadda_v128f16:
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].h, vl128
+; VBITS_GE_2048-NEXT: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: fadda h0, [[PG]], h0, [[OP]].h
+; VBITS_GE_2048-NEXT: ret
+  %op = load <128 x half>, <128 x half>* %a
+  %res = call half @llvm.vector.reduce.fadd.v128f16(half %start, <128 x half> %op)
+  ret half %res
+}
+
+; No single instruction NEON support. Use SVE.
+define float @fadda_v2f32(float %start, <2 x float> %a) #0 {
+; CHECK-LABEL: fadda_v2f32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl2
+; CHECK-NEXT: fadda s0, [[PG]], s0, z1.s
+; CHECK-NEXT: ret
+  %res = call float @llvm.vector.reduce.fadd.v2f32(float %start, <2 x float> %a)
+  ret float %res
+}
+
+; No single instruction NEON support. Use SVE.
+define float @fadda_v4f32(float %start, <4 x float> %a) #0 {
+; CHECK-LABEL: fadda_v4f32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl4
+; CHECK-NEXT: fadda s0, [[PG]], s0, z1.s
+; CHECK-NEXT: ret
+  %res = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %a)
+  ret float %res
+}
+
+define float @fadda_v8f32(float %start, <8 x float>* %a) #0 {
+; CHECK-LABEL: fadda_v8f32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
+; CHECK-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: fadda s0, [[PG]], s0, [[OP]].s
+; CHECK-NEXT: ret
+  %op = load <8 x float>, <8 x float>* %a
+  %res = call float @llvm.vector.reduce.fadd.v8f32(float %start, <8 x float> %op)
+  ret float %res
+}
+
+define float @fadda_v16f32(float %start, <16 x float>* %a) #0 {
+; CHECK-LABEL: fadda_v16f32:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
+; VBITS_GE_512-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: fadda s0, [[PG]], s0, [[OP]].s
+; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-COUNT-16: fadd
+; VBITS_EQ_256: ret
+  %op = load <16 x float>, <16 x float>* %a
+  %res = call float @llvm.vector.reduce.fadd.v16f32(float %start, <16 x float> %op)
+  ret float %res
+}
+
+define float @fadda_v32f32(float %start, <32 x float>* %a) #0 {
+; CHECK-LABEL: fadda_v32f32:
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
+; VBITS_GE_1024-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: fadda s0, [[PG]], s0, [[OP]].s
+; VBITS_GE_1024-NEXT: ret
+  %op = load <32 x float>, <32 x float>* %a
+  %res = call float @llvm.vector.reduce.fadd.v32f32(float %start, <32 x float> %op)
+  ret float %res
+}
+
+define float @fadda_v64f32(float %start, <64 x float>* %a) #0 {
+; CHECK-LABEL: fadda_v64f32:
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
+; VBITS_GE_2048-NEXT: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: fadda s0, [[PG]], s0, [[OP]].s
+; VBITS_GE_2048-NEXT: ret
+  %op = load <64 x float>, <64 x float>* %a
+  %res = call float @llvm.vector.reduce.fadd.v64f32(float %start, <64 x float> %op)
+  ret float %res
+}
+
+; No single instruction NEON support. Use SVE.
+define double @fadda_v1f64(double %start, <1 x double> %a) #0 {
+; CHECK-LABEL: fadda_v1f64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl1
+; CHECK-NEXT: fadda d0, [[PG]], d0, z1.d
+; CHECK-NEXT: ret
+  %res = call double @llvm.vector.reduce.fadd.v1f64(double %start, <1 x double> %a)
+  ret double %res
+}
+
+; No single instruction NEON support. Use SVE.
+define double @fadda_v2f64(double %start, <2 x double> %a) #0 {
+; CHECK-LABEL: fadda_v2f64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl2
+; CHECK-NEXT: fadda d0, [[PG]], d0, z1.d
+; CHECK-NEXT: ret
+  %res = call double @llvm.vector.reduce.fadd.v2f64(double %start, <2 x double> %a)
+  ret double %res
+}
+
+define double @fadda_v4f64(double %start, <4 x double>* %a) #0 {
+; CHECK-LABEL: fadda_v4f64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl4
+; CHECK-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK-NEXT: fadda d0, [[PG]], d0, [[OP]].d
+; CHECK-NEXT: ret
+  %op = load <4 x double>, <4 x double>* %a
+  %res = call double @llvm.vector.reduce.fadd.v4f64(double %start, <4 x double> %op)
+  ret double %res
+}
+
+define double @fadda_v8f64(double %start, <8 x double>* %a) #0 {
+; CHECK-LABEL: fadda_v8f64:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
+; VBITS_GE_512-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_512-NEXT: fadda d0, [[PG]], d0, [[OP]].d
+; VBITS_GE_512-NEXT: ret
+
+; Ensure sensible type legalisation.
+; VBITS_EQ_256-COUNT-8: fadd
+; VBITS_EQ_256: ret
+  %op = load <8 x double>, <8 x double>* %a
+  %res = call double @llvm.vector.reduce.fadd.v8f64(double %start, <8 x double> %op)
+  ret double %res
+}
+
+define double @fadda_v16f64(double %start, <16 x double>* %a) #0 {
+; CHECK-LABEL: fadda_v16f64:
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
+; VBITS_GE_1024-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_1024-NEXT: fadda d0, [[PG]], d0, [[OP]].d
+; VBITS_GE_1024-NEXT: ret
+  %op = load <16 x double>, <16 x double>* %a
+  %res = call double @llvm.vector.reduce.fadd.v16f64(double %start, <16 x double> %op)
+  ret double %res
+}
+
+define double @fadda_v32f64(double %start, <32 x double>* %a) #0 {
+; CHECK-LABEL: fadda_v32f64:
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048-NEXT: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; VBITS_GE_2048-NEXT: fadda d0, [[PG]], d0, [[OP]].d
+; VBITS_GE_2048-NEXT: ret
+  %op = load <32 x double>, <32 x double>* %a
+  %res = call double @llvm.vector.reduce.fadd.v32f64(double %start, <32 x double> %op)
+  ret double %res
+}
+
+;
 ; FADDV
 ;
 

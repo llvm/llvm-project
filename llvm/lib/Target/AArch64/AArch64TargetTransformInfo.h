@@ -222,7 +222,15 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const {
     switch (II->getIntrinsicID()) {
-    case Intrinsic::vector_reduce_fadd:
+    case Intrinsic::vector_reduce_fadd: {
+      Value *VecOp = II->getArgOperand(1);
+      EVT VT = TLI->getValueType(getDataLayout(), VecOp->getType());
+      if (ST->hasSVE() &&
+          TLI->useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true))
+        return false;
+
+      return !II->getFastMathFlags().allowReassoc();
+    }
     case Intrinsic::vector_reduce_fmul:
       // We don't have legalization support for ordered FP reductions.
       return !II->getFastMathFlags().allowReassoc();
