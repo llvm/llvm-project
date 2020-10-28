@@ -104,8 +104,8 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
 
 NativeRegisterContextLinux_mips64::NativeRegisterContextLinux_mips64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextLinux(native_thread,
-                                 CreateRegisterInfoInterface(target_arch)) {
+    : NativeRegisterContextRegisterInfo(
+          native_thread, CreateRegisterInfoInterface(target_arch)) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
