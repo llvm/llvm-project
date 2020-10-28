@@ -231,6 +231,7 @@ private:
   lldb::addr_t m_obj_load_address = 0;
   bool m_done_full_type_scan = false;
 
+  std::unique_ptr<llvm::pdb::PDBFile> m_file_up;
   std::unique_ptr<PdbIndex> m_index;
 
   std::unique_ptr<PdbAstBuilder> m_ast;

@@ -128,11 +128,11 @@ def CopyOp : LinalgStructured_Op<"copy", [
 
   // TODO: this should go away once the usage of OptionalAttr triggers emission
   // of builders with default arguments left unspecified.
-  let builders = [OpBuilder<
-    "Value input, Value output", [{
-    return build(
-      $_builder, $_state, input, output, AffineMapAttr(), AffineMapAttr());
-  }]>];
+  let builders = [OpBuilderDAG<(ins "Value":$input, "Value":$output),
+    [{
+      return build(
+        $_builder, $_state, input, output, AffineMapAttr(), AffineMapAttr());
+    }]>];
 
   let extraClassDeclaration = libraryCallName # [{
     // Rank-polymorphic.
@@ -662,27 +662,22 @@ def GenericOp : GenericOpBase<"generic"> {
   }];
 
   let builders = [
-    OpBuilder<
-      "TypeRange resultTensorTypes,"
-      "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
-      "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
-      "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
-      "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">,
-    OpBuilder<
-      "ValueRange inputs, ValueRange outputBuffers, "
-      "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
-      "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
-      "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">,
-    OpBuilder<
-      "TypeRange resultTensorTypes,"
-      "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
-      "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
-      "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">,
-    OpBuilder<
-      "ValueRange inputs, "
-      "ValueRange outputBuffers, ArrayRef<AffineMap> indexingMaps, "
-      "ArrayRef<StringRef> iteratorTypes, "
-      "function_ref<void(OpBuilder &, Location, ValueRange)> = nullptr">
+    OpBuilderDAG<(ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+      "ValueRange":$outputBuffers, "ValueRange":$initTensors,
+      "ArrayRef<AffineMap>":$indexingMaps, "ArrayRef<StringRef>":$iteratorTypes,
+      "StringRef":$doc, "StringRef":$libraryCall, "IntegerAttr":$symbolSource,
+      CArg<"function_ref<void(OpBuilder &, Location, ValueRange)>", "nullptr">)>,
+    OpBuilderDAG<(ins "ValueRange":$inputs, "ValueRange":$outputBuffers,
+      "ArrayRef<AffineMap>":$indexingMaps, "ArrayRef<StringRef>":$iteratorTypes,
+      "StringRef":$doc, "StringRef":$libraryCall, "IntegerAttr":$symbolSource,
+      CArg<"function_ref<void(OpBuilder &, Location, ValueRange)>", "nullptr">)>,
+    OpBuilderDAG<(ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+      "ValueRange":$outputBuffers, "ValueRange":$initTensors,
+      "ArrayRef<AffineMap>":$indexingMaps, "ArrayRef<StringRef>":$iteratorTypes,
+      CArg<"function_ref<void(OpBuilder &, Location, ValueRange)>", "nullptr">)>,
+    OpBuilderDAG<(ins "ValueRange":$inputs, "ValueRange":$outputBuffers,
+      "ArrayRef<AffineMap>":$indexingMaps, "ArrayRef<StringRef>":$iteratorTypes,
+      CArg<"function_ref<void(OpBuilder &, Location, ValueRange)>", "nullptr">)>
   ];
   let verifier = [{ return ::verify(*this); }];
 
@@ -840,27 +835,26 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
   }];
 
   let builders = [
-    OpBuilder<
-      "TypeRange resultTensorTypes,"
-      "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
-      "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
-      "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
-      "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> = nullptr">,
-    OpBuilder<
-      "ValueRange inputs, ValueRange outputBuffers, "
-      "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
-      "StringRef doc, StringRef libraryCall, IntegerAttr symbolSource, "
-      "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> = nullptr">,
-    OpBuilder<
-      "TypeRange resultTensorTypes,"
-      "ValueRange inputs, ValueRange outputBuffers, ValueRange initTensors, "
-      "ArrayRef<AffineMap> indexingMaps, ArrayRef<StringRef> iteratorTypes, "
-      "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> = nullptr">,
-    OpBuilder<
-      "ValueRange inputs, "
-      "ValueRange outputBuffers, ArrayRef<AffineMap> indexingMaps, "
-      "ArrayRef<StringRef> iteratorTypes, "
-      "function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)> = nullptr">
+    OpBuilderDAG<(ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+      "ValueRange":$outputBuffers, "ValueRange":$initTensors,
+      "ArrayRef<AffineMap>":$indexingMaps, "ArrayRef<StringRef>":$iteratorTypes,
+      "StringRef":$doc, "StringRef":$libraryCall, "IntegerAttr":$symbolSource,
+      CArg<"function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>",
+           "nullptr">)>,
+    OpBuilderDAG<(ins "ValueRange":$inputs, "ValueRange":$outputBuffers,
+      "ArrayRef<AffineMap>":$indexingMaps, "ArrayRef<StringRef>":$iteratorTypes,
+      "StringRef":$doc, "StringRef":$libraryCall, "IntegerAttr":$symbolSource,
+      CArg<"function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>",
+           "nullptr">)>,
+    OpBuilderDAG<(ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
+      "ValueRange":$outputBuffers, "ValueRange":$initTensors,
+      "ArrayRef<AffineMap>":$indexingMaps, "ArrayRef<StringRef>":$iteratorTypes,
+      CArg<"function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>",
+           "nullptr">)>,
+    OpBuilderDAG<(ins "ValueRange":$inputs, "ValueRange":$outputBuffers,
+      "ArrayRef<AffineMap>":$indexingMaps, "ArrayRef<StringRef>":$iteratorTypes,
+      CArg<"function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>",
+           "nullptr">)>
   ];
   let verifier = [{ return ::verify(*this); }];
 

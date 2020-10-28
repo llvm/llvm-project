@@ -1272,6 +1272,9 @@ protected:
       case 'r':
         // NO-OP
         break;
+      case 'c':
+        relative_to_command_file = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -1280,11 +1283,13 @@ protected:
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
+      relative_to_command_file = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       return llvm::makeArrayRef(g_script_import_options);
     }
+    bool relative_to_command_file = false;
   };
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -1292,6 +1297,17 @@ protected:
       result.AppendError("command script import needs one or more arguments");
       result.SetStatus(eReturnStatusFailed);
       return false;
+    }
+
+    FileSpec source_dir = {};
+    if (m_options.relative_to_command_file) {
+      source_dir = GetDebugger().GetCommandInterpreter().GetCurrentSourceDir();
+      if (!source_dir) {
+        result.AppendError("command script import -c can only be specified "
+                           "from a command file");
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
     }
 
     for (auto &entry : command.entries()) {
@@ -1308,7 +1324,7 @@ protected:
       // more)
       m_exe_ctx.Clear();
       if (GetDebugger().GetScriptInterpreter()->LoadScriptingModule(
-              entry.c_str(), init_session, error)) {
+              entry.c_str(), init_session, error, nullptr, source_dir)) {
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
         result.AppendErrorWithFormat("module importing failed: %s",

@@ -15,11 +15,9 @@
 namespace lldb_private {
 namespace process_linux {
 
-class NativeRegisterContextLinux : public NativeRegisterContextRegisterInfo {
+class NativeRegisterContextLinux
+    : public virtual NativeRegisterContextRegisterInfo {
 public:
-  NativeRegisterContextLinux(NativeThreadProtocol &native_thread,
-                             RegisterInfoInterface *reg_info_interface_p);
-
   // This function is implemented in the NativeRegisterContextLinux_* subclasses
   // to create a new instance of the host specific NativeRegisterContextLinux.
   // The implementations can't collide as only one NativeRegisterContextLinux_*

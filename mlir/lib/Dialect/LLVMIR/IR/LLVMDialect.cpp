@@ -143,6 +143,17 @@ static ParseResult parseAllocaOp(OpAsmParser &parser, OperationState &result) {
       parser.getCurrentLocation(&trailingTypeLoc) || parser.parseType(type))
     return failure();
 
+  Optional<NamedAttribute> alignmentAttr =
+      result.attributes.getNamed("alignment");
+  if (alignmentAttr.hasValue()) {
+    auto alignmentInt = alignmentAttr.getValue().second.dyn_cast<IntegerAttr>();
+    if (!alignmentInt)
+      return parser.emitError(parser.getNameLoc(),
+                              "expected integer alignment");
+    if (alignmentInt.getValue().isNullValue())
+      result.attributes.erase("alignment");
+  }
+
   // Extract the result type from the trailing function type.
   auto funcType = type.dyn_cast<FunctionType>();
   if (!funcType || funcType.getNumInputs() != 1 ||

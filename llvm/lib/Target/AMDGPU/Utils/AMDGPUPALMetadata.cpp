@@ -45,8 +45,11 @@ void AMDGPUPALMetadata::readFromIR(Module &M) {
   }
   BlobType = ELF::NT_AMD_AMDGPU_PAL_METADATA;
   NamedMD = M.getNamedMetadata("amdgpu.pal.metadata");
-  if (!NamedMD || !NamedMD->getNumOperands())
+  if (!NamedMD || !NamedMD->getNumOperands()) {
+    // Emit msgpack metadata by default
+    BlobType = ELF::NT_AMDGPU_METADATA;
     return;
+  }
   // This is the old reg=value pair format for metadata. It is a NamedMD
   // containing an MDTuple containing a number of MDNodes each of which is an
   // integer value, and each two integer values forms a key=value pair that we

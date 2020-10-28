@@ -1116,7 +1116,7 @@ private:
         M, OMPRTL___tgt_target_data_begin_mapper_issue);
 
     // Change RuntimeCall call site for its asynchronous version.
-    SmallVector<Value *, 8> Args;
+    SmallVector<Value *, 16> Args;
     for (auto &Arg : RuntimeCall.args())
       Args.push_back(Arg.get());
     Args.push_back(Handle);

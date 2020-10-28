@@ -21,11 +21,15 @@ class testClass2 {
 // CHECK: CXXMethodDecl{{.*}} testMethod1
 // CHECK-NEXT: ParmVarDecl{{.*}} param
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-NEXT: StringLiteral
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-NEXT: StringLiteral
 // CHECK-NEXT: CXXConstructorDecl
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-NEXT: StringLiteral
 // CHECK-NEXT: CXXMethodDecl{{.*}} operator->
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-NEXT: StringLiteral
 
 #pragma clang attribute push (__attribute__((annotate("method"))), apply_to=any(record, field, variable, function, namespace, type_alias))
 
@@ -36,19 +40,25 @@ void testClass2::testMethod1(int param) {
 // CHECK-LABEL: CXXMethodDecl{{.*}}prev{{.*}} testMethod1
 // CHECK-NEXT: ParmVarDecl{{.*}} param
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-NEXT: StringLiteral
 // CHECK-NEXT: AnnotateAttr{{.*}} "method"
+// CHECK-NEXT: StringLiteral
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-NEXT: StringLiteral
 // CHECK-NEXT: AnnotateAttr{{.*}} "method"
+// CHECK-NEXT: StringLiteral
 
 namespace testNamespace {
 }
 // CHECK-LABEL: NamespaceDecl{{.*}} testNamespace
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-NEXT: StringLiteral
 
 class testClassForward;
 // CHECK-LABEL: CXXRecordDecl{{.*}} testClassForward
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-NEXT: StringLiteral
 
 namespace testNamespaceAlias = testNamespace;
 // CHECK-LABEL: NamespaceAliasDecl{{.*}} testNamespaceAlias
@@ -68,6 +78,7 @@ void testCatchVariable() {
 // CHECK: CXXCatchStmt
 // CHECK-NEXT: VarDecl{{.*}} testCatch
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-NEXT: StringLiteral
 
 void testLambdaMethod() {
   auto l = [] () { };
@@ -79,6 +90,7 @@ void testLambdaMethod() {
 // CHECK: CXXMethodDecl{{.*}} operator()
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-NEXT: StringLiteral
 
 #pragma clang attribute pop
 

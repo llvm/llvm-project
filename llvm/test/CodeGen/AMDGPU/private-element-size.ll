@@ -132,8 +132,8 @@ entry:
 
 ; HSA-ELTGE8-DAG: buffer_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, {{off|v[0-9]}}, s[0:3], 0 offset:1
 ; HSA-ELTGE8-DAG: buffer_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, {{off|v[0-9]}}, s[0:3], 0 offset:2
-
-; HSA-ELTGE8: buffer_load_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s[0:3], 0 offen
+; HSA-ELTGE8-DAG: buffer_load_dwordx2 [[VAL:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, s[0:3], 0 offen
+; HSA-ELTGE8: flat_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, [[VAL]]
 
 
 ; HSA-ELT4-DAG: buffer_store_dword {{v[0-9]+}}, off, s[0:3], 0 offset:16{{$}}
@@ -141,8 +141,9 @@ entry:
 ; HSA-ELT4-DAG: buffer_store_dword {{v[0-9]+}}, off, s[0:3], 0 offset:24{{$}}
 ; HSA-ELT4-DAG: buffer_store_dword {{v[0-9]+}}, off, s[0:3], 0 offset:28{{$}}
 
-; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen offset:4{{$}}
-; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen{{$}}
+; HSA-ELT4-DAG: buffer_load_dword v[[HI:[0-9]+]], v{{[0-9]+}}, s[0:3], 0 offen offset:4{{$}}
+; HSA-ELT4-DAG: buffer_load_dword v[[LO:[0-9]+]], v{{[0-9]+}}, s[0:3], 0 offen{{$}}
+; HSA-ELT4: flat_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]]
 define amdgpu_kernel void @private_elt_size_i64(i64 addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -168,8 +169,8 @@ entry:
 
 ; HSA-ELTGE8-DAG: buffer_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], 0 offset:16
 ; HSA-ELTGE8-DAG: buffer_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, off, s[0:3], 0 offset:24
-
-; HSA-ELTGE8: buffer_load_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s[0:3], 0 offen
+; HSA-ELTGE8-DAG: buffer_load_dwordx2 [[VAL:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, s[0:3], 0 offen
+; HSA-ELTGE8: flat_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, [[VAL]]
 
 
 ; HSA-ELT4-DAG: buffer_store_dword {{v[0-9]+}}, off, s[0:3], 0 offset:16{{$}}
@@ -177,8 +178,9 @@ entry:
 ; HSA-ELT4-DAG: buffer_store_dword {{v[0-9]+}}, off, s[0:3], 0 offset:24{{$}}
 ; HSA-ELT4-DAG: buffer_store_dword {{v[0-9]+}}, off, s[0:3], 0 offset:28{{$}}
 
-; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen offset:4{{$}}
-; HSA-ELT4: buffer_load_dword {{v[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen{{$}}
+; HSA-ELT4-DAG: buffer_load_dword v[[HI:[0-9]+]], v{{[0-9]+}}, s[0:3], 0 offen offset:4{{$}}
+; HSA-ELT4-DAG: buffer_load_dword v[[LO:[0-9]+]], v{{[0-9]+}}, s[0:3], 0 offen{{$}}
+; HSA-ELT4: flat_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]]
 define amdgpu_kernel void @private_elt_size_f64(double addrspace(1)* %out, i32 addrspace(1)* %index.array) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

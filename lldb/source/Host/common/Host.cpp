@@ -514,11 +514,10 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
 
     launch_info.SetShell(shell);
     launch_info.GetArguments().AppendArguments(args);
-    const bool localhost = true;
     const bool will_debug = false;
     const bool first_arg_is_full_shell_command = false;
     launch_info.ConvertArgumentsForLaunchingInShell(
-        error, localhost, will_debug, first_arg_is_full_shell_command, 0);
+        error, will_debug, first_arg_is_full_shell_command, 0);
   } else {
     // No shell, just run it
     const bool first_arg_is_executable = true;

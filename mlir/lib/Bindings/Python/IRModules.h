@@ -132,6 +132,7 @@ public:
   /// Creates an operation. See corresponding python docstring.
   pybind11::object
   createOperation(std::string name, PyLocation location,
+                  llvm::Optional<std::vector<PyValue *>> operands,
                   llvm::Optional<std::vector<PyType *>> results,
                   llvm::Optional<pybind11::dict> attributes,
                   llvm::Optional<std::vector<PyBlock *>> successors,
@@ -185,6 +186,45 @@ public:
 
 private:
   PyMlirContextRef contextRef;
+};
+
+/// Wrapper around an MlirDialect. This is exported as `DialectDescriptor` in
+/// order to differentiate it from the `Dialect` base class which is extended by
+/// plugins which extend dialect functionality through extension python code.
+/// This should be seen as the "low-level" object and `Dialect` as the
+/// high-level, user facing object.
+class PyDialectDescriptor : public BaseContextObject {
+public:
+  PyDialectDescriptor(PyMlirContextRef contextRef, MlirDialect dialect)
+      : BaseContextObject(std::move(contextRef)), dialect(dialect) {}
+
+  MlirDialect get() { return dialect; }
+
+private:
+  MlirDialect dialect;
+};
+
+/// User-level object for accessing dialects with dotted syntax such as:
+///   ctx.dialect.std
+class PyDialects : public BaseContextObject {
+public:
+  PyDialects(PyMlirContextRef contextRef)
+      : BaseContextObject(std::move(contextRef)) {}
+
+  MlirDialect getDialectForKey(const std::string &key, bool attrError);
+};
+
+/// User-level dialect object. For dialects that have a registered extension,
+/// this will be the base class of the extension dialect type. For un-extended,
+/// objects of this type will be returned directly.
+class PyDialect {
+public:
+  PyDialect(pybind11::object descriptor) : descriptor(std::move(descriptor)) {}
+
+  pybind11::object getDescriptor() { return descriptor; }
+
+private:
+  pybind11::object descriptor;
 };
 
 /// Wrapper around an MlirLocation.
@@ -303,6 +343,24 @@ private:
   pybind11::object parentKeepAlive;
   bool attached = true;
   bool valid = true;
+};
+
+/// A PyOpView is equivalent to the C++ "Op" wrappers: these are the basis for
+/// providing more instance-specific accessors and serve as the base class for
+/// custom ODS-style operation classes. Since this class is subclass on the
+/// python side, it must present an __init__ method that operates in pure
+/// python types.
+class PyOpView {
+public:
+  PyOpView(pybind11::object operation);
+
+  static pybind11::object createRawSubclass(pybind11::object userClass);
+
+  pybind11::object getOperationObject() { return operationObject; }
+
+private:
+  pybind11::object operationObject; // Holds the reference.
+  PyOperation *operation;           // For efficient, cast-free access from C++
 };
 
 /// Wrapper around an MlirRegion.

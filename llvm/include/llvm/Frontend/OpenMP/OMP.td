@@ -298,7 +298,6 @@ def OMPC_Notinbranch : Clause<"notinbranch"> {}
 def OMP_ThreadPrivate : Directive<"threadprivate"> {}
 def OMP_Parallel : Directive<"parallel"> {
   let allowedClauses = [
-    VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_Shared>,
@@ -307,6 +306,7 @@ def OMP_Parallel : Directive<"parallel"> {
     VersionedClause<OMPC_Allocate>
   ];
   let allowedOnceClauses = [
+    VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_ProcBind>,
@@ -314,7 +314,6 @@ def OMP_Parallel : Directive<"parallel"> {
 }
 def OMP_Task : Directive<"task"> {
   let allowedClauses = [
-    VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_Shared>,
@@ -327,6 +326,7 @@ def OMP_Task : Directive<"task"> {
     VersionedClause<OMPC_Affinity, 50>
   ];
   let allowedOnceClauses = [
+    VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Final>,
     VersionedClause<OMPC_Priority>
@@ -808,7 +808,6 @@ def OMP_TaskLoop : Directive<"taskloop"> {
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_LastPrivate>,
-    VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_Untied>,
     VersionedClause<OMPC_Mergeable>,
     VersionedClause<OMPC_NoGroup>,
@@ -817,6 +816,7 @@ def OMP_TaskLoop : Directive<"taskloop"> {
     VersionedClause<OMPC_Allocate>
   ];
   let allowedOnceClauses = [
+    VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Collapse>,
     VersionedClause<OMPC_Final>,

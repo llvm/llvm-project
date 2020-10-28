@@ -38,6 +38,14 @@
 #include <asm/unistd.h>
 #include <sys/types.h>
 #define stat kernel_stat
+#if SANITIZER_GO
+#undef st_atime
+#undef st_mtime
+#undef st_ctime
+#define st_atime st_atim
+#define st_mtime st_mtim
+#define st_ctime st_ctim
+#endif
 #include <asm/stat.h>
 #undef stat
 #endif
@@ -248,9 +256,11 @@ static void stat64_to_stat(struct stat64 *in, struct stat *out) {
 // Undefine compatibility macros from <sys/stat.h>
 // so that they would not clash with the kernel_stat
 // st_[a|m|c]time fields
+#if !SANITIZER_GO
 #undef st_atime
 #undef st_mtime
 #undef st_ctime
+#endif
 #if defined(SANITIZER_ANDROID)
 // Bionic sys/stat.h defines additional macros
 // for compatibility with the old NDKs and

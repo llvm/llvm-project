@@ -404,6 +404,12 @@ define void @f68() mustprogress
   ret void
 }
 
+; CHECK; define void @f69() #42
+define void @f69() nossp
+{
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }
@@ -446,4 +452,5 @@ define void @f68() mustprogress
 ; CHECK: attributes #39 = { sanitize_memtag }
 ; CHECK: attributes #40 = { null_pointer_is_valid }
 ; CHECK: attributes #41 = { mustprogress }
+; CHECK: attributes #42 = { nossp }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

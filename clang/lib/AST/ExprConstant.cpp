@@ -12561,16 +12561,16 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
       return false;
 
     assert(E->isComparisonOp() && "Invalid binary operator!");
-    llvm::APFloatBase::cmpResult CmpResult = LHS.compare(RHS);
+    llvm::APFloatBase::cmpResult APFloatCmpResult = LHS.compare(RHS);
     if (!Info.InConstantContext &&
-        CmpResult == APFloat::cmpUnordered &&
+        APFloatCmpResult == APFloat::cmpUnordered &&
         E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).isFPConstrained()) {
       // Note: Compares may raise invalid in some cases involving NaN or sNaN.
       Info.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
       return false;
     }
     auto GetCmpRes = [&]() {
-      switch (CmpResult) {
+      switch (APFloatCmpResult) {
       case APFloat::cmpEqual:
         return CmpResult::Equal;
       case APFloat::cmpLessThan:
@@ -15173,8 +15173,12 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
     // C++ 7.1.5.1p2
     //   A variable of non-volatile const-qualified integral or enumeration
     //   type initialized by an ICE can be used in ICEs.
+    //
+    // We sometimes use CheckICE to check the C++98 rules in C++11 mode. In
+    // that mode, use of reference variables should not be allowed.
     const VarDecl *VD = dyn_cast<VarDecl>(D);
-    if (VD && VD->isUsableInConstantExpressions(Ctx))
+    if (VD && VD->isUsableInConstantExpressions(Ctx) &&
+        !VD->getType()->isReferenceType())
       return NoDiag();
 
     return ICEDiag(IK_NotICE, E->getBeginLoc());

@@ -983,7 +983,7 @@ public:
   /// go through this expensive heuristic.
   /// When this target hook is hit, by returning false, there is a high
   /// chance that the register allocation will fail altogether (usually with
-  /// ran out of registers).
+  /// "ran out of registers").
   /// That said, this error usually points to another problem in the
   /// optimization pipeline.
   virtual bool
@@ -992,8 +992,8 @@ public:
     return true;
   }
 
-  /// Deferred spilling delais the spill insertion of a virtual register
-  /// after every other allocations. By deferring the spilling, it is
+  /// Deferred spilling delays the spill insertion of a virtual register
+  /// after every other allocation. By deferring the spilling, it is
   /// sometimes possible to eliminate that spilling altogether because
   /// something else could have been eliminated, thus leaving some space
   /// for the virtual register.

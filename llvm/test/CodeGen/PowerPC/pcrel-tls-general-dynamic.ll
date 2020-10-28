@@ -1,9 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   --relocation-model=pic -mcpu=pwr10 -ppc-asm-full-reg-names \
-; RUN:   -enable-ppc-pcrel-tls < %s | FileCheck %s --check-prefix=CHECK-S
+; RUN:   --relocation-model=pic -mcpu=pwr10 -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefix=CHECK-S
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
-; RUN:   --relocation-model=pic -mcpu=pwr10 -ppc-asm-full-reg-names \
-; RUN:   -enable-ppc-pcrel-tls --filetype=obj -o %t.o < %s
+; RUN:   --relocation-model=pic -mcpu=pwr10 -ppc-asm-full-reg-names --filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump --mcpu=pwr10 -dr %t.o |FileCheck %s --check-prefix=CHECK-O
 ; RUN: llvm-readelf -s %t.o | FileCheck %s --check-prefix=CHECK-SYM
 

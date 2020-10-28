@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=tonga -misched=gcn-ilp -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -enable-amdgpu-aa=0 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tonga -enable-amdgpu-aa=0 -misched=gcn-ilp -verify-machineinstrs < %s | FileCheck %s
 
 ; We expect a three digit VGPR usage here since only one wave requested.
 ; CHECK: NumVgprs: {{[0-9][0-9][0-9]$}}

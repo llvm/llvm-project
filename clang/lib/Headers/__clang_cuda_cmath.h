@@ -175,6 +175,15 @@ __DEVICE__ float sqrt(float __x) { return ::sqrtf(__x); }
 __DEVICE__ float tan(float __x) { return ::tanf(__x); }
 __DEVICE__ float tanh(float __x) { return ::tanhf(__x); }
 
+// There was a redefinition error for this this overload in CUDA mode.
+// We restrict it to OpenMP mode for now, that is where it is actually needed
+// anyway.
+#ifdef __OPENMP_NVPTX__
+__DEVICE__ float remquo(float __n, float __d, int *__q) {
+  return ::remquof(__n, __d, __q);
+}
+#endif
+
 // Notably missing above is nexttoward.  We omit it because
 // libdevice doesn't provide an implementation, and we don't want to be in the
 // business of implementing tricky libm functions in this header.

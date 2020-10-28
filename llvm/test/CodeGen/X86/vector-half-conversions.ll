@@ -1422,3 +1422,33 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, <8 x i16>* %a1) nounwind {
   store <8 x i16> %2, <8 x i16>* %a1
   ret void
 }
+
+define void @store_cvt_32f32_to_32f16(<32 x float> %a0, <32 x half>* %a1) nounwind {
+; AVX1-LABEL: store_cvt_32f32_to_32f16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vcvtps2ph $4, %ymm3, 48(%rdi)
+; AVX1-NEXT:    vcvtps2ph $4, %ymm2, 32(%rdi)
+; AVX1-NEXT:    vcvtps2ph $4, %ymm1, 16(%rdi)
+; AVX1-NEXT:    vcvtps2ph $4, %ymm0, (%rdi)
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: store_cvt_32f32_to_32f16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vcvtps2ph $4, %ymm3, 48(%rdi)
+; AVX2-NEXT:    vcvtps2ph $4, %ymm2, 32(%rdi)
+; AVX2-NEXT:    vcvtps2ph $4, %ymm1, 16(%rdi)
+; AVX2-NEXT:    vcvtps2ph $4, %ymm0, (%rdi)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: store_cvt_32f32_to_32f16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vcvtps2ph $4, %zmm1, 32(%rdi)
+; AVX512-NEXT:    vcvtps2ph $4, %zmm0, (%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %1 = fptrunc <32 x float> %a0 to <32 x half>
+  store <32 x half> %1, <32 x half>* %a1
+  ret void
+}

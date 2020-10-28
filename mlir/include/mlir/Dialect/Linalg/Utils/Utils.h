@@ -32,6 +32,9 @@ class PatternRewriter;
 namespace linalg {
 class LinalgDependenceGraph;
 
+/// A struct containing the Linalg producer before and after fusion.
+/// When operating on tensors, `fusedProducer` may feed into a `tensor_cast` op
+/// before the consumer Linalg op, until enough canonicalizations have applied.
 struct FusionInfo {
   LinalgOp originalProducer;
   LinalgOp fusedProducer;
@@ -81,13 +84,25 @@ bool isFusableInto(const LinalgDependenceGraph &graph, LinalgOp consumer,
 
 /// Fuses producer into consumer if the producer is structurally feasible and
 /// the fusion would not violate dependencies.
+/// Implements the fusion part of the "tileAndFuse on buffers"
+/// transformation and thus requires the `consumerdIdx`^th operand of `consumer`
+/// to be a `subview` op (generally obtained by applying the tiling
+/// transformation).
 /// When non-null, the optional pointer `folder` is used to call into the
 /// `createAndFold` builder method. If `folder` is null, the regular `create`
 /// method is called.
-Optional<FusionInfo> fuseProducerOf(OpBuilder &b, LinalgOp consumer,
-                                    unsigned consumerIdx,
-                                    const LinalgDependenceGraph &graph,
-                                    OperationFolder *folder = nullptr);
+Optional<FusionInfo> fuseProducerOfBuffer(OpBuilder &b, LinalgOp consumer,
+                                          unsigned consumerIdx,
+                                          const LinalgDependenceGraph &graph,
+                                          OperationFolder *folder = nullptr);
+/// Tensor counterpart of `fuseProducerOfBuffer`.
+/// This implements the fusion part of the "tileAndFuse on tensors"
+/// transformation and thus requires the `consumerdIdx`^th operand of `consumer`
+/// to be the result of a `subtensor` op (generally obtained by applying the
+/// tiling transformation).
+Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b, LinalgOp consumer,
+                                          unsigned consumerIdx,
+                                          OperationFolder *folder);
 
 /// Fuse linalg operation on tensors, with the producer of the operand at
 /// position `consumerIdx` of the consumer.

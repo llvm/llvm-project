@@ -285,9 +285,18 @@ TEST_F(FileManagerTest, getFileRefReturnsCorrectNameForDifferentStatPath) {
   StatCache->InjectFile("dir/f1-alias.cpp", 41, "dir/f1.cpp");
   StatCache->InjectFile("dir/f2.cpp", 42);
   StatCache->InjectFile("dir/f2-alias.cpp", 42, "dir/f2.cpp");
+
+  // This unintuitive rename-the-file-on-stat behaviour supports how the
+  // RedirectingFileSystem VFS layer responds to stats. However, even if you
+  // have two layers, you should only get a single filename back. As such the
+  // following stat cache behaviour is not supported (the correct stat entry
+  // for a double-redirection would be "dir/f1.cpp") and the getFileRef below
+  // should assert.
+  StatCache->InjectFile("dir/f1-alias-alias.cpp", 41, "dir/f1-alias.cpp");
+
   manager.setStatCache(std::move(StatCache));
 
-  // With F2, test accessing the non-redirected name first.
+  // With F1, test accessing the non-redirected name first.
   auto F1 = manager.getFileRef("dir/f1.cpp");
   auto F1Alias = manager.getFileRef("dir/f1-alias.cpp");
   auto F1Alias2 = manager.getFileRef("dir/f1-alias.cpp");
@@ -300,6 +309,11 @@ TEST_F(FileManagerTest, getFileRefReturnsCorrectNameForDifferentStatPath) {
   EXPECT_EQ("dir/f1.cpp", F1Alias2->getName());
   EXPECT_EQ(&F1->getFileEntry(), &F1Alias->getFileEntry());
   EXPECT_EQ(&F1->getFileEntry(), &F1Alias2->getFileEntry());
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+  EXPECT_DEATH((void)manager.getFileRef("dir/f1-alias-alias.cpp"),
+               "filename redirected to a non-canonical filename?");
+#endif
 
   // With F2, test accessing the redirected name first.
   auto F2Alias = manager.getFileRef("dir/f2-alias.cpp");
@@ -487,29 +501,34 @@ TEST_F(FileManagerTest, getBypassFile) {
   // Set up a virtual file with a different size than FakeStatCache uses.
   const FileEntry *File = Manager.getVirtualFile("/tmp/test", /*Size=*/10, 0);
   ASSERT_TRUE(File);
-  FileEntryRef Ref("/tmp/test", *File);
-  EXPECT_TRUE(Ref.isValid());
-  EXPECT_EQ(Ref.getSize(), 10);
+  const FileEntry &FE = *File;
+  EXPECT_TRUE(FE.isValid());
+  EXPECT_EQ(FE.getSize(), 10);
 
   // Calling a second time should not affect the UID or size.
-  unsigned VirtualUID = Ref.getUID();
-  EXPECT_EQ(*expectedToOptional(Manager.getFileRef("/tmp/test")), Ref);
-  EXPECT_EQ(Ref.getUID(), VirtualUID);
-  EXPECT_EQ(Ref.getSize(), 10);
+  unsigned VirtualUID = FE.getUID();
+  EXPECT_EQ(
+      &FE,
+      &expectedToOptional(Manager.getFileRef("/tmp/test"))->getFileEntry());
+  EXPECT_EQ(FE.getUID(), VirtualUID);
+  EXPECT_EQ(FE.getSize(), 10);
 
   // Bypass the file.
-  llvm::Optional<FileEntryRef> BypassRef = Manager.getBypassFile(Ref);
+  llvm::Optional<FileEntryRef> BypassRef =
+      Manager.getBypassFile(File->getLastRef());
   ASSERT_TRUE(BypassRef);
   EXPECT_TRUE(BypassRef->isValid());
-  EXPECT_EQ(BypassRef->getName(), Ref.getName());
+  EXPECT_EQ("/tmp/test", BypassRef->getName());
 
   // Check that it's different in the right ways.
   EXPECT_NE(&BypassRef->getFileEntry(), File);
   EXPECT_NE(BypassRef->getUID(), VirtualUID);
-  EXPECT_NE(BypassRef->getSize(), Ref.getSize());
+  EXPECT_NE(BypassRef->getSize(), FE.getSize());
 
   // The virtual file should still be returned when searching.
-  EXPECT_EQ(*expectedToOptional(Manager.getFileRef("/tmp/test")), Ref);
+  EXPECT_EQ(
+      &FE,
+      &expectedToOptional(Manager.getFileRef("/tmp/test"))->getFileEntry());
 }
 
 } // anonymous namespace

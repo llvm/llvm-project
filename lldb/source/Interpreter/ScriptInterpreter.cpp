@@ -47,9 +47,11 @@ void ScriptInterpreter::CollectDataForWatchpointCommandCallback(
       "This script interpreter does not support watchpoint callbacks.");
 }
 
-bool ScriptInterpreter::LoadScriptingModule(
-    const char *filename, bool init_session, lldb_private::Status &error,
-    StructuredData::ObjectSP *module_sp) {
+bool ScriptInterpreter::LoadScriptingModule(const char *filename,
+                                            bool init_session,
+                                            lldb_private::Status &error,
+                                            StructuredData::ObjectSP *module_sp,
+                                            FileSpec extra_search_dir) {
   error.SetErrorString(
       "This script interpreter does not support importing modules.");
   return false;

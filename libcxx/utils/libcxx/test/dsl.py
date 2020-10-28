@@ -191,8 +191,12 @@ def compilerMacros(config, flags=''):
   be added to the compiler invocation when generating the macros.
   """
   with _makeConfigTest(config) as test:
+    with open(test.getSourcePath(), 'w') as sourceFile:
+      # Make sure files like <__config> are included, since they can define
+      # additional macros.
+      sourceFile.write("#include <cstddef>")
     unparsedOutput, err, exitCode, timeoutInfo = _executeScriptInternal(test, [
-      "%{{cxx}} -xc++ {} -dM -E %{{flags}} %{{compile_flags}} {}".format(os.devnull, flags)
+      "%{{cxx}} %s -dM -E %{{flags}} %{{compile_flags}} {}".format(flags)
     ])
     parsedMacros = dict()
     defines = (l.strip() for l in unparsedOutput.split('\n') if l.startswith('#define '))

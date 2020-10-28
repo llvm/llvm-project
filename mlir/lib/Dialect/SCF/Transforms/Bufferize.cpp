@@ -30,7 +30,7 @@ struct SCFBufferizePass : public SCFBufferizeBase<SCFBufferizePass> {
     populateBufferizeMaterializationLegality(target);
     populateSCFStructuralTypeConversionsAndLegality(context, typeConverter,
                                                     patterns, target);
-    if (failed(applyPartialConversion(func, target, patterns)))
+    if (failed(applyPartialConversion(func, target, std::move(patterns))))
       return signalPassFailure();
   };
 };

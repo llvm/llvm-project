@@ -118,7 +118,8 @@ def Async_AwaitOp : Async_Op<"await", [NoSideEffect]> {
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilder<"Value operand, ArrayRef<NamedAttribute> attrs = {}">,
+    OpBuilderDAG<(ins "Value":$operand,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
   ];
 
   let extraClassDeclaration = [{

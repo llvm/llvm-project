@@ -16,7 +16,7 @@ def foo : Instruction {
     field bits<16> SoftFail = 0;
     bits<8> factor;
     let factor{0} = 0; // zero initial value
-    let Inst{15-8} = factor{7-0};
+    let Inst{15...8} = factor{7...0};
     }
 
 def bar : Instruction {
@@ -25,7 +25,7 @@ def bar : Instruction {
     field bits<16> SoftFail = 0;
     bits<8> factor;
     let factor{0} = 1; // non-zero initial value
-    let Inst{15-8} = factor{7-0};
+    let Inst{15...8} = factor{7...0};
     }
 
 def bax : Instruction {
@@ -34,7 +34,7 @@ def bax : Instruction {
     field bits<16> SoftFail = 0;
     bits<33> factor;
     let factor{32} = 1; // non-zero initial value
-    let Inst{15-8} = factor{32-25};
+    let Inst{15...8} = factor{32...25};
     }
 
 }

@@ -511,7 +511,7 @@ class NewGVN {
   unsigned int NumFuncArgs = 0;
 
   // RPOOrdering of basic blocks
-  DenseMap<const GenericDomTreeNodeBase *, unsigned> RPOOrdering;
+  DenseMap<const DomTreeNode *, unsigned> RPOOrdering;
 
   // Congruence class info.
 
@@ -3388,10 +3388,8 @@ bool NewGVN::runGVN() {
   for (auto &B : RPOT) {
     auto *Node = DT->getNode(B);
     if (Node->getNumChildren() > 1)
-      llvm::sort(Node->GenericDomTreeNodeBase::begin(),
-                 Node->GenericDomTreeNodeBase::end(),
-                 [&](const GenericDomTreeNodeBase *A,
-                     const GenericDomTreeNodeBase *B) {
+      llvm::sort(Node->begin(), Node->end(),
+                 [&](const DomTreeNode *A, const DomTreeNode *B) {
                    return RPOOrdering[A] < RPOOrdering[B];
                  });
   }

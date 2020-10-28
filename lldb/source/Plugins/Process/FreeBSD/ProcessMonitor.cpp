@@ -821,17 +821,14 @@ bool ProcessMonitor::Launch(LaunchArgs *args) {
   const FileSpec &working_dir = args->m_working_dir;
 
   PseudoTerminal terminal;
-  const size_t err_len = 1024;
-  char err_str[err_len];
-  ::pid_t pid;
 
   // Propagate the environment if one is not supplied.
   Environment::Envp envp =
       (args->m_env.empty() ? Host::GetEnvironment() : args->m_env).getEnvp();
 
-  if ((pid = terminal.Fork(err_str, err_len)) == -1) {
-    args->m_error.SetErrorToGenericError();
-    args->m_error.SetErrorString("Process fork failed.");
+  llvm::Expected<lldb::pid_t> pid = terminal.Fork();
+  if (!pid) {
+    args->m_error = pid.takeError();
     goto FINISH;
   }
 
@@ -847,7 +844,7 @@ bool ProcessMonitor::Launch(LaunchArgs *args) {
   };
 
   // Child process.
-  if (pid == 0) {
+  if (*pid == 0) {
     // Trace this process.
     if (PTRACE(PT_TRACE_ME, 0, NULL, 0) < 0)
       exit(ePtraceFailed);
@@ -892,7 +889,7 @@ bool ProcessMonitor::Launch(LaunchArgs *args) {
   // Wait for the child process to to trap on its call to execve.
   ::pid_t wpid;
   int status;
-  if ((wpid = waitpid(pid, &status, 0)) < 0) {
+  if ((wpid = waitpid(*pid, &status, 0)) < 0) {
     args->m_error.SetErrorToErrno();
     goto FINISH;
   } else if (WIFEXITED(status)) {
@@ -926,13 +923,13 @@ bool ProcessMonitor::Launch(LaunchArgs *args) {
     }
     goto FINISH;
   }
-  assert(WIFSTOPPED(status) && wpid == (::pid_t)pid &&
+  assert(WIFSTOPPED(status) && wpid == (::pid_t)*pid &&
          "Could not sync with inferior process.");
 
 #ifdef notyet
   // Have the child raise an event on exit.  This is used to keep the child in
   // limbo until it is destroyed.
-  if (PTRACE(PTRACE_SETOPTIONS, pid, NULL, PTRACE_O_TRACEEXIT) < 0) {
+  if (PTRACE(PTRACE_SETOPTIONS, *pid, NULL, PTRACE_O_TRACEEXIT) < 0) {
     args->m_error.SetErrorToErrno();
     goto FINISH;
   }
@@ -940,7 +937,7 @@ bool ProcessMonitor::Launch(LaunchArgs *args) {
   // Release the master terminal descriptor and pass it off to the
   // ProcessMonitor instance.  Similarly stash the inferior pid.
   monitor->m_terminal_fd = terminal.ReleasePrimaryFileDescriptor();
-  monitor->m_pid = pid;
+  monitor->m_pid = *pid;
 
   // Set the terminal fd to be in non blocking mode (it simplifies the
   // implementation of ProcessFreeBSD::GetSTDOUT to have a non-blocking
@@ -948,7 +945,7 @@ bool ProcessMonitor::Launch(LaunchArgs *args) {
   if (!EnsureFDFlags(monitor->m_terminal_fd, O_NONBLOCK, args->m_error))
     goto FINISH;
 
-  process.SendMessage(ProcessMessage::Attach(pid));
+  process.SendMessage(ProcessMessage::Attach(*pid));
 
 FINISH:
   return args->m_error.Success();

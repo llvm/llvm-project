@@ -28,12 +28,6 @@ int posix_openpt(int flags);
 
 using namespace lldb_private;
 
-// Write string describing error number
-static void ErrnoToStr(char *error_str, size_t error_len) {
-  std::string strerror = llvm::sys::StrError();
-  ::snprintf(error_str, error_len, "%s", strerror.c_str());
-}
-
 // PseudoTerminal constructor
 PseudoTerminal::PseudoTerminal()
     : m_primary_fd(invalid_fd), m_secondary_fd(invalid_fd) {}
@@ -123,79 +117,47 @@ std::string PseudoTerminal::GetSecondaryName() const {
 #endif
 }
 
-// Fork a child process and have its stdio routed to a pseudo terminal.
-//
-// In the parent process when a valid pid is returned, the primary file
-// descriptor can be used as a read/write access to stdio of the child process.
-//
-// In the child process the stdin/stdout/stderr will already be routed to the
-// secondary pseudo terminal and the primary file descriptor will be closed as
-// it is no longer needed by the child process.
-//
-// This class will close the file descriptors for the primary/secondary when the
-// destructor is called, so be sure to call ReleasePrimaryFileDescriptor() or
-// ReleaseSecondaryFileDescriptor() if any file descriptors are going to be used
-// past the lifespan of this object.
-//
-// RETURNS:
-//  in the parent process: the pid of the child, or -1 if fork fails
-//  in the child process: zero
-lldb::pid_t PseudoTerminal::Fork(char *error_str, size_t error_len) {
-  if (error_str)
-    error_str[0] = '\0';
-  pid_t pid = LLDB_INVALID_PROCESS_ID;
+llvm::Expected<lldb::pid_t> PseudoTerminal::Fork() {
 #if LLDB_ENABLE_POSIX
-  if (llvm::Error Err = OpenFirstAvailablePrimary(O_RDWR | O_CLOEXEC)) {
-    snprintf(error_str, error_len, "%s", toString(std::move(Err)).c_str());
-    return LLDB_INVALID_PROCESS_ID;
+  if (llvm::Error Err = OpenFirstAvailablePrimary(O_RDWR | O_CLOEXEC))
+    return std::move(Err);
+
+  pid_t pid = ::fork();
+  if (pid < 0) {
+    return llvm::errorCodeToError(
+        std::error_code(errno, std::generic_category()));
+  }
+  if (pid > 0) {
+    // Parent process.
+    return pid;
   }
 
-  pid = ::fork();
-  if (pid < 0) {
-    // Fork failed
-    if (error_str)
-      ErrnoToStr(error_str, error_len);
-  } else if (pid == 0) {
-    // Child Process
-    ::setsid();
+  // Child Process
+  ::setsid();
 
-    if (llvm::Error Err = OpenSecondary(O_RDWR)) {
-      snprintf(error_str, error_len, "%s", toString(std::move(Err)).c_str());
-      return LLDB_INVALID_PROCESS_ID;
-    }
+  if (llvm::Error Err = OpenSecondary(O_RDWR))
+    return std::move(Err);
 
-    // Primary FD should have O_CLOEXEC set, but let's close it just in
-    // case...
-    ClosePrimaryFileDescriptor();
+  // Primary FD should have O_CLOEXEC set, but let's close it just in
+  // case...
+  ClosePrimaryFileDescriptor();
 
 #if defined(TIOCSCTTY)
-    // Acquire the controlling terminal
-    if (::ioctl(m_secondary_fd, TIOCSCTTY, (char *)0) < 0) {
-      if (error_str)
-        ErrnoToStr(error_str, error_len);
-    }
-#endif
-    // Duplicate all stdio file descriptors to the secondary pseudo terminal
-    if (::dup2(m_secondary_fd, STDIN_FILENO) != STDIN_FILENO) {
-      if (error_str && !error_str[0])
-        ErrnoToStr(error_str, error_len);
-    }
-
-    if (::dup2(m_secondary_fd, STDOUT_FILENO) != STDOUT_FILENO) {
-      if (error_str && !error_str[0])
-        ErrnoToStr(error_str, error_len);
-    }
-
-    if (::dup2(m_secondary_fd, STDERR_FILENO) != STDERR_FILENO) {
-      if (error_str && !error_str[0])
-        ErrnoToStr(error_str, error_len);
-    }
-  } else {
-    // Parent Process
-    // Do nothing and let the pid get returned!
+  // Acquire the controlling terminal
+  if (::ioctl(m_secondary_fd, TIOCSCTTY, (char *)0) < 0) {
+    return llvm::errorCodeToError(
+        std::error_code(errno, std::generic_category()));
   }
 #endif
-  return pid;
+  // Duplicate all stdio file descriptors to the secondary pseudo terminal
+  for (int fd : {STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO}) {
+    if (::dup2(m_secondary_fd, fd) != fd) {
+      return llvm::errorCodeToError(
+          std::error_code(errno, std::generic_category()));
+    }
+  }
+#endif
+  return 0;
 }
 
 // The primary file descriptor accessor. This object retains ownership of the

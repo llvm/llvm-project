@@ -19,19 +19,41 @@
 #define MLIR_SUPPORT_JITRUNNER_H_
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ExecutionEngine/Orc/Core.h"
+
+namespace llvm {
+class Module;
+class LLVMContext;
+
+namespace orc {
+class MangleAndInterner;
+} // namespace orc
+} // namespace llvm
 
 namespace mlir {
 
 class ModuleOp;
 struct LogicalResult;
 
+struct JitRunnerConfig {
+  /// MLIR transformer applied after parsing the input into MLIR IR and before
+  /// passing the MLIR module to the ExecutionEngine.
+  llvm::function_ref<LogicalResult(mlir::ModuleOp)> mlirTransformer = nullptr;
+
+  /// A custom function that is passed to ExecutionEngine. It processes MLIR
+  /// module and creates LLVM IR module.
+  llvm::function_ref<std::unique_ptr<llvm::Module>(ModuleOp,
+                                                   llvm::LLVMContext &)>
+      llvmModuleBuilder = nullptr;
+
+  /// A callback to register symbols with ExecutionEngine at runtime.
+  llvm::function_ref<llvm::orc::SymbolMap(llvm::orc::MangleAndInterner)>
+      runtimesymbolMap = nullptr;
+};
+
 // Entry point for all CPU runners. Expects the common argc/argv arguments for
-// standard C++ main functions and an mlirTransformer.
-// The latter is applied after parsing the input into MLIR IR and before passing
-// the MLIR module to the ExecutionEngine.
-int JitRunnerMain(
-    int argc, char **argv,
-    llvm::function_ref<LogicalResult(mlir::ModuleOp)> mlirTransformer);
+// standard C++ main functions.
+int JitRunnerMain(int argc, char **argv, JitRunnerConfig config = {});
 
 } // namespace mlir
 

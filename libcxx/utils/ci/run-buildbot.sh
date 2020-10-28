@@ -143,6 +143,12 @@ generic-no-random_device)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-random_device.cmake"
     check-cxx-cxxabi
 ;;
+generic-no-localization)
+    export CC=clang
+    export CXX=clang++
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-localization.cmake"
+    check-cxx-cxxabi
+;;
 x86_64-apple-system)
     export CC=clang
     export CXX=clang++
@@ -162,6 +168,59 @@ benchmarks)
     export CXX=clang++
     generate-cmake
     check-cxx-benchmarks
+;;
+unified-standalone)
+    export CC=clang
+    export CXX=clang++
+
+    echo "--- Generating CMake"
+    rm -rf "${BUILD_DIR}"
+    cmake -S "${MONOREPO_ROOT}/libcxx/utils/ci/runtimes" \
+          -B "${BUILD_DIR}" \
+          -GNinja \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi;libunwind"
+
+    check-cxx-cxxabi
+;;
+legacy-standalone)
+    export CC=clang
+    export CXX=clang++
+
+    echo "--- Generating CMake"
+    rm -rf "${BUILD_DIR}"
+    cmake -S "${MONOREPO_ROOT}/libcxx" \
+          -B "${BUILD_DIR}/libcxx" \
+          -GNinja \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLLVM_PATH="${MONOREPO_ROOT}/llvm" \
+          -DLIBCXX_CXX_ABI=libcxxabi \
+          -DLIBCXX_CXX_ABI_INCLUDE_PATHS="${MONOREPO_ROOT}/libcxxabi/include" \
+          -DLIBCXX_CXX_ABI_LIBRARY_PATH="${BUILD_DIR}/libcxxabi/lib"
+
+    cmake -S "${MONOREPO_ROOT}/libcxxabi" \
+          -B "${BUILD_DIR}/libcxxabi" \
+          -GNinja \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLLVM_PATH="${MONOREPO_ROOT}/llvm" \
+          -DLIBCXXABI_LIBCXX_PATH="${MONOREPO_ROOT}/libcxx" \
+          -DLIBCXXABI_LIBCXX_INCLUDES="${MONOREPO_ROOT}/libcxx/include" \
+          -DLIBCXXABI_LIBCXX_LIBRARY_PATH="${BUILD_DIR}/libcxx/lib"
+
+    echo "+++ Building libc++abi"
+    ninja -C "${BUILD_DIR}/libcxxabi" cxxabi
+
+    echo "+++ Building libc++"
+    ninja -C "${BUILD_DIR}/libcxx" cxx
+
+    echo "+++ Running the libc++ tests"
+    ninja -C "${BUILD_DIR}/libcxx" check-cxx
+
+    echo "+++ Running the libc++abi tests"
+    ninja -C "${BUILD_DIR}/libcxxabi" check-cxxabi
 ;;
 *)
     echo "${BUILDER} is not a known configuration"
