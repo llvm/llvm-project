@@ -875,6 +875,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_OBJC_PROPERTY:
       case bitc::METADATA_IMPORTED_ENTITY:
       case bitc::METADATA_GLOBAL_VAR_EXPR:
+      case bitc::METADATA_GENERIC_SUBRANGE:
         // We don't expect to see any of these, if we see one, give up on
         // lazy-loading and fallback.
         MDStringRef.clear();
@@ -1365,6 +1366,18 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     default:
       return error("Invalid record: Unsupported version of DISubrange");
     }
+
+    MetadataList.assignValue(Val, NextMetadataNo);
+    IsDistinct = Record[0] & 1;
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_GENERIC_SUBRANGE: {
+    Metadata *Val = nullptr;
+    Val = GET_OR_DISTINCT(DIGenericSubrange,
+                          (Context, getMDOrNull(Record[1]),
+                           getMDOrNull(Record[2]), getMDOrNull(Record[3]),
+                           getMDOrNull(Record[4])));
 
     MetadataList.assignValue(Val, NextMetadataNo);
     IsDistinct = Record[0] & 1;
