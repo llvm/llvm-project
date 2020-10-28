@@ -15,7 +15,6 @@ declare void @llvm.init.trampoline(i8*, i8*, i8*)
 define void @test_load_volatile(i32* %Q) {
 ; CHECK-LABEL: @test_load_volatile(
 ; CHECK-NEXT:    [[A:%.*]] = load volatile i32, i32* [[Q:%.*]], align 4
-; CHECK-NEXT:    store i32 [[A]], i32* [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = load volatile i32, i32* %Q
@@ -284,9 +283,7 @@ bb3:
 define void @test_noalias_store_between_load_and_store(i32* noalias %x, i32* noalias %y) {
 ; CHECK-LABEL: @test_noalias_store_between_load_and_store(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[X:%.*]], align 4
 ; CHECK-NEXT:    store i32 0, i32* [[Y:%.*]], align 4
-; CHECK-NEXT:    store i32 [[LV]], i32* [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
