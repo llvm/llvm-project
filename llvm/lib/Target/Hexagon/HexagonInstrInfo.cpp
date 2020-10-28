@@ -2836,6 +2836,8 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::L4_isub_memopw_io:
   case Hexagon::L4_add_memopw_io:
   case Hexagon::L4_sub_memopw_io:
+  case Hexagon::L4_iand_memopw_io:
+  case Hexagon::L4_ior_memopw_io:
   case Hexagon::L4_and_memopw_io:
   case Hexagon::L4_or_memopw_io:
     return (0 <= Offset && Offset <= 255);
@@ -2844,6 +2846,8 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::L4_isub_memoph_io:
   case Hexagon::L4_add_memoph_io:
   case Hexagon::L4_sub_memoph_io:
+  case Hexagon::L4_iand_memoph_io:
+  case Hexagon::L4_ior_memoph_io:
   case Hexagon::L4_and_memoph_io:
   case Hexagon::L4_or_memoph_io:
     return (0 <= Offset && Offset <= 127);
@@ -2852,6 +2856,8 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::L4_isub_memopb_io:
   case Hexagon::L4_add_memopb_io:
   case Hexagon::L4_sub_memopb_io:
+  case Hexagon::L4_iand_memopb_io:
+  case Hexagon::L4_ior_memopb_io:
   case Hexagon::L4_and_memopb_io:
   case Hexagon::L4_or_memopb_io:
     return (0 <= Offset && Offset <= 63);
