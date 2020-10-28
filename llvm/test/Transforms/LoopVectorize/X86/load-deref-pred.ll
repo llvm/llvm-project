@@ -841,7 +841,7 @@ define i32 @test_max_trip_count(i64 %len, i1* %test_base, i64 %n) {
 ; CHECK-NEXT:    call void @init(i32* [[BASE]])
 ; CHECK-NEXT:    [[MIN_CMP:%.*]] = icmp ult i64 4096, [[N:%.*]]
 ; CHECK-NEXT:    [[MIN_N:%.*]] = select i1 [[MIN_CMP]], i64 4096, i64 [[N]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[MIN_N]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[MIN_N]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
