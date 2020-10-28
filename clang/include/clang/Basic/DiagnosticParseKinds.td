@@ -1147,6 +1147,9 @@ def warn_stdc_fenv_round_not_supported :
 def warn_stdc_unknown_rounding_mode : Warning<
   "invalid or unsupported rounding mode in '#pragma STDC FENV_ROUND' - ignored">,
   InGroup<IgnoredPragmas>;
+def warn_pragma_fp_ignored : Warning<
+  "'#pragma %0' is not supported on this target - ignored">,
+  InGroup<IgnoredPragmas>;
 // - #pragma comment
 def err_pragma_comment_malformed : Error<
   "pragma comment requires parenthesized identifier and optional string">;
