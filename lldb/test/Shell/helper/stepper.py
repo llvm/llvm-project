@@ -11,27 +11,27 @@ import lldb
 ###############################################################################
 
 # Only visit unoptimized frames.
-kOnlyUnoptimized = True
+ONLY_VISIT_UNOPTIMIZED = True
 
 # Only visit frames with swift code.
-kOnlySwift = True
+ONLY_VISIT_SWIFT = False
 
 # Skip doing "frame var" on all locals, in each frame.
-kSkipFrameVarAllLocals = False
+SKIP_FRAMEVAR = False
 
 # Skip doing "po" on all locals, in each frame.
-kSkipExprAllLocals = False
+SKIP_PO = False
 
 # Maximum number of times to visit a PC before "finish"ing out.
-kMaxPCVisitCount = 50
+MAX_VISITS_PER_PC = 50
 
 # Run the process. It's useful to set this to False if you have monitor/test
 # lldb's, and the child lldb can't read from stdin to do things like continue
 # at a breakpoint.
-kRunTheProcess = True
+RUN_THE_PROCESS = True
 
 # Skip N frames between each inspection.
-kSkipNBetweenInspections = 100
+SKIP_N_FRAMES_BETWEEN_INSPECTIONS = 0
 
 ###############################################################################
 
@@ -42,9 +42,9 @@ def parse_options():
 
     Update any constants specified in the option string.
     """
-    global kOnlyUnoptimized, kOnlySwift, kSkipFrameVarAllLocals, \
-            kSkipExprAllLocals, kMaxPCVisitCount, kRunTheProcess, \
-            kSkipNBetweenInspections
+    global ONLY_VISIT_UNOPTIMIZED, ONLY_VISIT_SWIFT, SKIP_FRAMEVAR, \
+            SKIP_PO, MAX_VISITS_PER_PC, RUN_THE_PROCESS, \
+            SKIP_N_FRAMES_BETWEEN_INSPECTIONS
     opts = os.getenv('STEPPER_OPTIONS', '').split(';')
     for o in opts:
         m = re.match('(\w+)=([^;]+)', o)
@@ -105,7 +105,7 @@ def __lldb_init_module(dbg, internal_dict):
     dbg.SetAsync(False)
 
     # Run the program and stop it when it reaches main().
-    if kRunTheProcess:
+    if RUN_THE_PROCESS:
         if doit(dbg, 'breakpoint set -n main') or doit(dbg, 'run'):
             print(':: Failed to run the process!')
             dbg.Terminate()
@@ -136,18 +136,19 @@ def __lldb_init_module(dbg, internal_dict):
             do_inspection = False
 
         # Skip optimized frames if asked to do so.
-        if do_inspection and kOnlyUnoptimized and str(frame).endswith(
-                ' [opt]'):
+        if do_inspection and ONLY_VISIT_UNOPTIMIZED and \
+                str(frame).endswith(' [opt]'):
             do_inspection = False
 
         # Skip non-Swift frames if asked to do so.
         skip_inspection_due_to_frame_lang = False
-        if do_inspection and kOnlySwift and \
+        if do_inspection and ONLY_VISIT_SWIFT and \
                 frame.GuessLanguage() != lldb.eLanguageTypeSwift:
             do_inspection = False
             skip_inspection_due_to_frame_lang = True
 
-        if kSkipNBetweenInspections > 0 and gen % kSkipNBetweenInspections != 0:
+        if SKIP_N_FRAMES_BETWEEN_INSPECTIONS > 0 and \
+                gen % SKIP_N_FRAMES_BETWEEN_INSPECTIONS != 0:
             do_inspection = False
 
         # Don't inspect the same PC twice. Some version of this is needed to
@@ -165,11 +166,11 @@ def __lldb_init_module(dbg, internal_dict):
             doit(dbg, 'bt')
 
             # Exercise `frame variable`.
-            if not kSkipFrameVarAllLocals:
+            if not SKIP_FRAMEVAR:
                 doit(dbg, 'frame variable')
 
-            # Exercise `expr -O`.
-            if not kSkipExprAllLocals:
+            # Exercise `po`.
+            if not SKIP_PO:
                 get_args = True
                 get_locals = True
                 get_statics = True
@@ -191,7 +192,7 @@ def __lldb_init_module(dbg, internal_dict):
         # coverage (we may fail to step through certain program paths). That's
         # probably ok, considering that this can help *increase* test coverage
         # by virtue of helping us not get stuck in a hot loop sinkhole.
-        if visit_count >= kMaxPCVisitCount or \
+        if visit_count >= MAX_VISITS_PER_PC or \
                 skip_inspection_due_to_frame_lang or not line_entry.IsValid():
             old_func_name = frame.GetFunctionName()
             if not old_func_name:
