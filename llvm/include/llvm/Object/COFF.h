@@ -576,10 +576,21 @@ struct coff_tls_directory {
 
   uint32_t getAlignment() const {
     // Bit [20:24] contains section alignment.
-    uint32_t Shift = (Characteristics & 0x00F00000) >> 20;
+    uint32_t Shift = (Characteristics & COFF::IMAGE_SCN_ALIGN_MASK) >> 20;
     if (Shift > 0)
       return 1U << (Shift - 1);
     return 0;
+  }
+
+  void setAlignment(uint32_t Align) {
+    uint32_t AlignBits = 0;
+    if (Align) {
+      assert(llvm::isPowerOf2_32(Align) && "alignment is not a power of 2");
+      assert(llvm::Log2_32(Align) <= 13 && "alignment requested is too large");
+      AlignBits = (llvm::Log2_32(Align) + 1) << 20;
+    }
+    Characteristics =
+        (Characteristics & ~COFF::IMAGE_SCN_ALIGN_MASK) | AlignBits;
   }
 };
 
@@ -786,6 +797,8 @@ private:
   const coff_base_reloc_block_header *BaseRelocEnd;
   const debug_directory *DebugDirectoryBegin;
   const debug_directory *DebugDirectoryEnd;
+  const coff_tls_directory32 *TLSDirectory32;
+  const coff_tls_directory64 *TLSDirectory64;
   // Either coff_load_configuration32 or coff_load_configuration64.
   const void *LoadConfig = nullptr;
 
@@ -805,6 +818,7 @@ private:
   Error initExportTablePtr();
   Error initBaseRelocPtr();
   Error initDebugDirectoryPtr();
+  Error initTLSDirectoryPtr();
   Error initLoadConfigPtr();
 
 public:
@@ -974,6 +988,13 @@ public:
   iterator_range<base_reloc_iterator> base_relocs() const;
   iterator_range<const debug_directory *> debug_directories() const {
     return make_range(debug_directory_begin(), debug_directory_end());
+  }
+
+  const coff_tls_directory32 *getTLSDirectory32() const {
+    return TLSDirectory32;
+  }
+  const coff_tls_directory64 *getTLSDirectory64() const {
+    return TLSDirectory64;
   }
 
   const dos_header *getDOSHeader() const {

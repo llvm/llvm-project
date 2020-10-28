@@ -1118,17 +1118,18 @@ TEST(LocateSymbol, Alias) {
       // decls.
       R"cpp(
       namespace ns { class [[Foo]] {}; }
-      using ns::F^oo;
+      // FIXME: don't return the using decl if it touches the cursor position.
+      using ns::[[F^oo]];
     )cpp",
 
       R"cpp(
       namespace ns { int [[x]](char); int [[x]](double); }
-      using ns::^x;
+      using ns::[[^x]];
     )cpp",
 
       R"cpp(
       namespace ns { int [[x]](char); int x(double); }
-      using ns::x;
+      using ns::[[x]];
       int y = ^x('a');
     )cpp",
 
@@ -1156,7 +1157,7 @@ TEST(LocateSymbol, Alias) {
       };
       template <typename T>
       struct Derived : Base<T> {
-        using Base<T>::w^aldo;
+        using Base<T>::[[w^aldo]];
       };
     )cpp",
   };

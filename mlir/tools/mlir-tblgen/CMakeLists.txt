@@ -2,7 +2,7 @@ set(LLVM_LINK_COMPONENTS
   Demangle
   Support
   TableGen
-  )
+)
 
 add_tablegen(mlir-tblgen MLIR
   DialectGen.cpp
@@ -20,11 +20,13 @@ add_tablegen(mlir-tblgen MLIR
   RewriterGen.cpp
   SPIRVUtilsGen.cpp
   StructsGen.cpp
+  TypeDefGen.cpp
   )
 
 set_target_properties(mlir-tblgen PROPERTIES FOLDER "Tablegenning")
 target_link_libraries(mlir-tblgen
   PRIVATE
+  MLIRSupportIndentedOstream
   MLIRTableGen)
 
 mlir_check_all_link_libraries(mlir-tblgen)

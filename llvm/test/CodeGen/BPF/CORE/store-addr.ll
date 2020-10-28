@@ -1,6 +1,9 @@
 ; RUN: opt -O2 %s | llvm-dis > %t1
 ; RUN: llc -filetype=asm -o - %t1 | FileCheck %s
 ; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck %s
+; RUN: opt -passes='default<O2>' %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck %s
 ; Source code:
 ;   struct t {
 ;     int a;

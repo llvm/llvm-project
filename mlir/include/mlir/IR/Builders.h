@@ -458,10 +458,8 @@ public:
   /// ( leaving them alone if no entry is present).  Replaces references to
   /// cloned sub-operations to the corresponding operation that is copied,
   /// and adds those mappings to the map.
-  Operation *clone(Operation &op, BlockAndValueMapping &mapper) {
-    return insert(op.clone(mapper));
-  }
-  Operation *clone(Operation &op) { return insert(op.clone()); }
+  Operation *clone(Operation &op, BlockAndValueMapping &mapper);
+  Operation *clone(Operation &op);
 
   /// Creates a deep copy of this operation but keep the operation regions
   /// empty. Operands are remapped using `mapper` (if present), and `mapper` is

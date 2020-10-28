@@ -1,9 +1,9 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx601 %s 2>&1 | FileCheck --check-prefixes=GFX6-7,GFX6-8,GFX6-9 --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx701 %s 2>&1 | FileCheck --check-prefixes=GFX6-7,GFX6-8,GFX6-9 --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx801 %s 2>&1 | FileCheck --check-prefixes=GFX6-8,GFX6-9 --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck --check-prefixes=GFX6-9 --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+WavefrontSize32,-WavefrontSize64 %s 2>&1 | FileCheck --check-prefixes=GFX10 --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 %s 2>&1 | FileCheck --check-prefixes=GFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx801 %s 2>&1 | FileCheck --check-prefixes=GFX6-8,GFX6-9,GFX8-9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck --check-prefixes=GFX6-9,GFX8-9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=GFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=GFX10 --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // ENC_DS.
@@ -271,4 +271,5 @@ s_endpgm_saved
 //===----------------------------------------------------------------------===//
 
 v_mov_b32_dpp v5, v1 dpp8:[0,1,2,3,4,5,6,7]
-// GFX6-9: error: not a valid operand
+// GFX6-7: error: dpp variant of this instruction is not supported
+// GFX8-9: error: not a valid operand

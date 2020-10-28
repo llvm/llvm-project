@@ -15,20 +15,20 @@ spv.module Logical GLSL450 {
   spv.globalVariable @__builtin_var_LocalInvocationId__ built_in("LocalInvocationId") : !spv.ptr<vector<3xi32>, Input>
   // CHECK-DAG: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
   spv.globalVariable @__builtin_var_WorkgroupId__ built_in("WorkgroupId") : !spv.ptr<vector<3xi32>, Input>
-  // CHECK-DAG: spv.globalVariable [[VAR0:@.*]] bind(0, 0) : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0]>, StorageBuffer>
-  // CHECK-DAG: spv.globalVariable [[VAR1:@.*]] bind(0, 1) : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0]>, StorageBuffer>
-  // CHECK-DAG: spv.globalVariable [[VAR2:@.*]] bind(0, 2) : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0]>, StorageBuffer>
-  // CHECK-DAG: spv.globalVariable [[VAR3:@.*]] bind(0, 3) : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
-  // CHECK-DAG: spv.globalVariable [[VAR4:@.*]] bind(0, 4) : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
-  // CHECK-DAG: spv.globalVariable [[VAR5:@.*]] bind(0, 5) : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
-  // CHECK-DAG: spv.globalVariable [[VAR6:@.*]] bind(0, 6) : !spv.ptr<!spv.struct<i32 [0]>, StorageBuffer>
+  // CHECK-DAG: spv.globalVariable [[VAR0:@.*]] bind(0, 0) : !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0])>, StorageBuffer>
+  // CHECK-DAG: spv.globalVariable [[VAR1:@.*]] bind(0, 1) : !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0])>, StorageBuffer>
+  // CHECK-DAG: spv.globalVariable [[VAR2:@.*]] bind(0, 2) : !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32, stride=4>, stride=16> [0])>, StorageBuffer>
+  // CHECK-DAG: spv.globalVariable [[VAR3:@.*]] bind(0, 3) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
+  // CHECK-DAG: spv.globalVariable [[VAR4:@.*]] bind(0, 4) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
+  // CHECK-DAG: spv.globalVariable [[VAR5:@.*]] bind(0, 5) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
+  // CHECK-DAG: spv.globalVariable [[VAR6:@.*]] bind(0, 6) : !spv.ptr<!spv.struct<(i32 [0])>, StorageBuffer>
   // CHECK: spv.func [[FN:@.*]]()
   spv.func @load_store_kernel(
-    %arg0: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
+    %arg0: !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32>>)>, StorageBuffer>
     {spv.interface_var_abi = #spv.interface_var_abi<(0, 0)>},
-    %arg1: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
+    %arg1: !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32>>)>, StorageBuffer>
     {spv.interface_var_abi = #spv.interface_var_abi<(0, 1)>},
-    %arg2: !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>
+    %arg2: !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32>>)>, StorageBuffer>
     {spv.interface_var_abi = #spv.interface_var_abi<(0, 2)>},
     %arg3: i32
     {spv.interface_var_abi = #spv.interface_var_abi<(0, 3), StorageBuffer>},
@@ -103,14 +103,14 @@ spv.module Logical GLSL450 {
     %37 = spv.IAdd %arg4, %11 : i32
     // CHECK: spv.AccessChain [[ARG0]]
     %c0 = spv.constant 0 : i32
-    %38 = spv.AccessChain %arg0[%c0, %36, %37] : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>, i32, i32, i32
+    %38 = spv.AccessChain %arg0[%c0, %36, %37] : !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32
     %39 = spv.Load "StorageBuffer" %38 : f32
     // CHECK: spv.AccessChain [[ARG1]]
-    %40 = spv.AccessChain %arg1[%c0, %36, %37] : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>, i32, i32, i32
+    %40 = spv.AccessChain %arg1[%c0, %36, %37] : !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32
     %41 = spv.Load "StorageBuffer" %40 : f32
     %42 = spv.FAdd %39, %41 : f32
     // CHECK: spv.AccessChain [[ARG2]]
-    %43 = spv.AccessChain %arg2[%c0, %36, %37] : !spv.ptr<!spv.struct<!spv.array<12 x !spv.array<4 x f32>>>, StorageBuffer>, i32, i32, i32
+    %43 = spv.AccessChain %arg2[%c0, %36, %37] : !spv.ptr<!spv.struct<(!spv.array<12 x !spv.array<4 x f32>>)>, StorageBuffer>, i32, i32, i32
     spv.Store "StorageBuffer" %43, %42 : f32
     spv.Return
   }

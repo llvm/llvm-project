@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// REQUIRES: libc++
+
+// These tests require locale for non-char paths
+// UNSUPPORTED: libcpp-has-no-localization
 
 // <filesystem>
 

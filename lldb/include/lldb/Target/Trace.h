@@ -12,7 +12,6 @@
 #include "llvm/Support/JSON.h"
 
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Target/TraceSettingsParser.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/lldb-private.h"
 
@@ -33,7 +32,8 @@ namespace lldb_private {
 /// Processor trace information can also be fetched through the process
 /// interfaces during a live debug session if your process supports gathering
 /// this information.
-class Trace : public PluginInterface {
+class Trace : public PluginInterface,
+              public std::enable_shared_from_this<Trace> {
 public:
   /// Dump the trace data that this plug-in has access to.
   ///
@@ -72,70 +72,52 @@ public:
   ///       correctly.
   ///
   /// \param[in] debugger
-  ///     The debugger instance were new Target will be created as part of the
+  ///     The debugger instance where new Targets will be created as part of the
   ///     JSON data parsing.
   ///
-  /// \param[in] settings
-  ///     JSON object describing a trace.
+  /// \param[in] trace_session_file
+  ///     The contents of the trace session file describing the trace session.
+  ///     See \a TraceSessionFileParser::BuildSchema for more information about
+  ///     the schema of this JSON file.
   ///
-  /// \param[in] settings_dir
-  ///     Path to a directory used to resolve relative paths in the JSON data.
-  ///     If the JSON data is defined in a file, this should be the
-  ///     folder containing it.
+  /// \param[in] session_file_dir
+  ///     The path to the directory that contains the session file. It's used to
+  ///     resolved relative paths in the session file.
   static llvm::Expected<lldb::TraceSP>
-  FindPlugin(Debugger &debugger, const llvm::json::Value &settings,
-             llvm::StringRef settings_dir);
+  FindPlugin(Debugger &debugger, const llvm::json::Value &trace_session_file,
+             llvm::StringRef session_file_dir);
 
-  /// Create an instance of trace plug-in by name.
+  /// Get the schema of a Trace plug-in given its name.
   ///
   /// \param[in] plugin_name
   ///     Name of the trace plugin.
-  static llvm::Expected<lldb::TraceSP> FindPlugin(llvm::StringRef plugin_name);
+  static llvm::Expected<llvm::StringRef>
+  FindPluginSchema(llvm::StringRef plugin_name);
 
-  /// Parse the JSON settings and create the corresponding \a Target
-  /// objects. In case of an error, no targets are created.
-  ///
-  /// \param[in] debugger
-  ///   The debugger instance where the targets are created.
-  ///
-  /// \param[in] settings
-  ///     JSON object describing a trace.
-  ///
-  /// \param[in] settings_dir
-  ///     Path to a directory used to resolve relative paths in the JSON data.
-  ///     If the JSON data is defined in a file, this should be the
-  ///     folder containing it.
-  ///
   /// \return
-  ///   An error object containing the reason if there is a failure.
-  llvm::Error ParseSettings(Debugger &debugger,
-                            const llvm::json::Value &settings,
-                            llvm::StringRef settings_dir);
+  ///     The JSON schema of this Trace plug-in.
+  virtual llvm::StringRef GetSchema() = 0;
 
-  /// Get the JSON schema of the settings for the trace plug-in.
-  llvm::StringRef GetSchema();
-
-protected:
-  Trace() {}
-
-  /// The actual plug-in should define its own implementation of \a
-  /// TraceSettingsParser for doing any custom parsing.
-  virtual std::unique_ptr<lldb_private::TraceSettingsParser> CreateParser() = 0;
-
-private:
-  Trace(const Trace &) = delete;
-  const Trace &operator=(const Trace &) = delete;
-
-protected:
-  friend class TraceSettingsParser;
-  /// JSON object that holds all settings for this trace session.
-  llvm::json::Object m_settings;
-  /// The directory that contains the settings file.
-  std::string m_settings_dir;
-
-  std::map<lldb::pid_t, std::map<lldb::tid_t, lldb_private::FileSpec>>
-      m_thread_to_trace_file_map;
-  std::vector<lldb::TargetSP> m_targets;
+  /// Dump \a count instructions of the given thread's \a Trace starting at the
+  /// \a start_position position in reverse order.
+  ///
+  /// The instructions are indexed in reverse order, which means that the \a
+  /// start_position 0 represents the last instruction of the trace
+  /// chronologically.
+  ///
+  /// \param[in] thread
+  ///     The thread whose trace will be dumped.
+  ///
+  /// \param[in] s
+  ///     The stream object where the instructions are printed.
+  ///
+  /// \param[in] count
+  ///     The number of instructions to print.
+  ///
+  /// \param[in] start_position
+  ///     The position of the first instruction to print.
+  void DumpTraceInstructions(Thread &thread, Stream &s, size_t count,
+                             size_t start_position) const;
 };
 
 } // namespace lldb_private

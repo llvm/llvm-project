@@ -125,7 +125,7 @@ ProgramHeaders:
 # SYMNDX-NEXT:   Shift Count: 0
 # SYMNDX-NEXT:   Bloom Filter: [0x1]
 # SYMNDX-NEXT:   Buckets: [2]
-# SYMNDX-NEXT: warning: '[[FILE]]': unable to dump 'Values' for the SHT_GNU_HASH section: the first hashed symbol index (2) is larger than the number of dynamic symbols (2)
+# SYMNDX-NEXT: warning: '[[FILE]]': unable to dump 'Values' for the SHT_GNU_HASH section: the first hashed symbol index (2) is greater than or equal to the number of dynamic symbols (2)
 # SYMNDX-NEXT: }
 
 --- !ELF

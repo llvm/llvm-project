@@ -58,7 +58,7 @@ void tools::CrossWindows::Assembler::ConstructJob(
   Exec = Args.MakeArgString(Assembler);
 
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         Exec, CmdArgs, Inputs));
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 void tools::CrossWindows::Linker::ConstructJob(
@@ -203,8 +203,9 @@ void tools::CrossWindows::Linker::ConstructJob(
 
   Exec = Args.MakeArgString(TC.GetLinkerPath());
 
-  C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileUTF8(),
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 CrossWindowsToolChain::CrossWindowsToolChain(const Driver &D,

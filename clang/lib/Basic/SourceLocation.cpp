@@ -14,6 +14,8 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -39,6 +41,15 @@ void PrettyStackTraceLoc::print(raw_ostream &OS) const {
 //===----------------------------------------------------------------------===//
 // SourceLocation
 //===----------------------------------------------------------------------===//
+
+unsigned SourceLocation::getHashValue() const {
+  return llvm::DenseMapInfo<unsigned>::getHashValue(ID);
+}
+
+void llvm::FoldingSetTrait<SourceLocation>::Profile(
+    const SourceLocation &X, llvm::FoldingSetNodeID &ID) {
+  ID.AddInteger(X.ID);
+}
 
 void SourceLocation::print(raw_ostream &OS, const SourceManager &SM)const{
   if (!isValid()) {
@@ -245,7 +256,7 @@ const char *FullSourceLoc::getCharacterData(bool *Invalid) const {
 
 StringRef FullSourceLoc::getBufferData(bool *Invalid) const {
   assert(isValid());
-  return SrcMgr->getBuffer(SrcMgr->getFileID(*this), Invalid)->getBuffer();
+  return SrcMgr->getBufferData(SrcMgr->getFileID(*this), Invalid);
 }
 
 std::pair<FileID, unsigned> FullSourceLoc::getDecomposedLoc() const {

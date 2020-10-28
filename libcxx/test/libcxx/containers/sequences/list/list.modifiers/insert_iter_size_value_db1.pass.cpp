@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Can't test the system lib because this test enables debug mode
-// UNSUPPORTED: with_system_cxx_lib=macosx
-
 // <list>
 
 // iterator insert(const_iterator position, size_type n, const value_type& x);
 
-#define _LIBCPP_DEBUG 1
+// UNSUPPORTED: libcxx-no-debug-mode
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <list>

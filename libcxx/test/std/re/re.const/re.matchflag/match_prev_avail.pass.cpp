@@ -17,7 +17,7 @@
 #include <regex>
 using namespace std;
 
-int main() {
+int main(int, char**) {
   char str1[] = "\na";
   auto str1_scnd = str1 + 1;
   // Assert that match_prev_avail disables match_not_bol and this matches

@@ -140,6 +140,8 @@ struct CodeGenSchedClass {
   // Instructions should be ignored by this class because they have been split
   // off to join another inferred class.
   RecVec InstRWs;
+  // InstRWs processor indices. Filled in inferFromInstRWs
+  DenseSet<unsigned> InstRWProcIndices;
 
   CodeGenSchedClass(unsigned Index, std::string Name, Record *ItinClassDef)
     : Index(Index), Name(std::move(Name)), ItinClassDef(ItinClassDef) {}

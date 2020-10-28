@@ -106,7 +106,7 @@ EnablePartialStoreMerging("enable-dse-partial-store-merging",
   cl::desc("Enable partial store merging in DSE"));
 
 static cl::opt<bool>
-    EnableMemorySSA("enable-dse-memoryssa", cl::init(false), cl::Hidden,
+    EnableMemorySSA("enable-dse-memoryssa", cl::init(true), cl::Hidden,
                     cl::desc("Use the new MemorySSA-backed DSE."));
 
 static cl::opt<unsigned>
@@ -1519,9 +1519,9 @@ namespace {
 //   3. StartDef completely overwrites CurrentDef.
 // 4. Erase CurrentDef from the function and MemorySSA.
 
-// Returns true if \p M is an intrisnic that does not read or write memory.
-bool isNoopIntrinsic(MemoryUseOrDef *M) {
-  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(M->getMemoryInst())) {
+// Returns true if \p I is an intrisnic that does not read or write memory.
+bool isNoopIntrinsic(Instruction *I) {
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
@@ -1564,7 +1564,7 @@ bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
     return true;
 
   // Skip intrinsics that do not really read or modify memory.
-  if (isNoopIntrinsic(D))
+  if (isNoopIntrinsic(D->getMemoryInst()))
     return true;
 
   return false;
@@ -1701,6 +1701,11 @@ struct DSEState {
       return {MemoryLocation::getForDest(MTI)};
 
     if (auto *CB = dyn_cast<CallBase>(I)) {
+      // If the functions may write to memory we do not know about, bail out.
+      if (!CB->onlyAccessesArgMemory() &&
+          !CB->onlyAccessesInaccessibleMemOrArgMem())
+        return None;
+
       LibFunc LF;
       if (TLI.getLibFunc(*CB, LF) && TLI.has(LF)) {
         switch (LF) {
@@ -1849,6 +1854,9 @@ struct DSEState {
 
   // Returns true if \p Use may read from \p DefLoc.
   bool isReadClobber(MemoryLocation DefLoc, Instruction *UseInst) {
+    if (isNoopIntrinsic(UseInst))
+      return false;
+
     // Monotonic or weaker atomic stores can be re-ordered and do not need to be
     // treated as read clobber.
     if (auto SI = dyn_cast<StoreInst>(UseInst))
@@ -2132,16 +2140,20 @@ struct DSEState {
         continue;
       }
 
-      if (isNoopIntrinsic(cast<MemoryUseOrDef>(UseAccess))) {
+      // A memory terminator kills all preceeding MemoryDefs and all succeeding
+      // MemoryAccesses. We do not have to check it's users.
+      if (isMemTerminator(DefLoc, KillingI, UseInst)) {
+        LLVM_DEBUG(
+            dbgs()
+            << " ... skipping, memterminator invalidates following accesses\n");
+        continue;
+      }
+
+      if (isNoopIntrinsic(cast<MemoryUseOrDef>(UseAccess)->getMemoryInst())) {
         LLVM_DEBUG(dbgs() << "    ... adding uses of intrinsic\n");
         PushMemUses(UseAccess);
         continue;
       }
-
-      // A memory terminator kills all preceeding MemoryDefs and all succeeding
-      // MemoryAccesses. We do not have to check it's users.
-      if (isMemTerminator(DefLoc, KillingI, UseInst))
-        continue;
 
       if (UseInst->mayThrow() && !isInvisibleToCallerBeforeRet(DefUO)) {
         LLVM_DEBUG(dbgs() << "  ... found throwing instruction\n");
@@ -2404,10 +2416,45 @@ struct DSEState {
 
     if (auto *LoadI = dyn_cast<LoadInst>(Store->getOperand(0))) {
       if (LoadI->getPointerOperand() == Store->getOperand(1)) {
+        // Get the defining access for the load.
         auto *LoadAccess = MSSA.getMemoryAccess(LoadI)->getDefiningAccess();
-        // If both accesses share the same defining access, no instructions
-        // between them can modify the memory location.
-        return LoadAccess == Def->getDefiningAccess();
+        // Fast path: the defining accesses are the same.
+        if (LoadAccess == Def->getDefiningAccess())
+          return true;
+
+        // Look through phi accesses. Recursively scan all phi accesses by
+        // adding them to a worklist. Bail when we run into a memory def that
+        // does not match LoadAccess.
+        SetVector<MemoryAccess *> ToCheck;
+        MemoryAccess *Current =
+            MSSA.getWalker()->getClobberingMemoryAccess(Def);
+        // We don't want to bail when we run into the store memory def. But,
+        // the phi access may point to it. So, pretend like we've already
+        // checked it.
+        ToCheck.insert(Def);
+        ToCheck.insert(Current);
+        // Start at current (1) to simulate already having checked Def.
+        for (unsigned I = 1; I < ToCheck.size(); ++I) {
+          Current = ToCheck[I];
+          if (auto PhiAccess = dyn_cast<MemoryPhi>(Current)) {
+            // Check all the operands.
+            for (auto &Use : PhiAccess->incoming_values())
+              ToCheck.insert(cast<MemoryAccess>(&Use));
+            continue;
+          }
+
+          // If we found a memory def, bail. This happens when we have an
+          // unrelated write in between an otherwise noop store.
+          assert(isa<MemoryDef>(Current) &&
+                 "Only MemoryDefs should reach here.");
+          // TODO: Skip no alias MemoryDefs that have no aliasing reads.
+          // We are searching for the definition of the store's destination.
+          // So, if that is the same definition as the load, then this is a
+          // noop. Otherwise, fail.
+          if (LoadAccess != Current)
+            return false;
+        }
+        return true;
       }
     }
 

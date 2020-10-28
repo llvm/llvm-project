@@ -30,31 +30,32 @@ int main(int, char**) {
   typedef std::underlying_type<E>::type UT;
   static_assert(!std::is_convertible<E, UT>::value, "");
 
-  static_assert(std::is_same<UT, unsigned short>::value, ""); // Implementation detail
+  LIBCPP_ONLY(static_assert(std::is_same<UT, unsigned short>::value, "")); // Implementation detail
 
   typedef check_bitmask_type<E, E::skip_existing, E::update_existing> BitmaskTester;
   assert(BitmaskTester::check());
 
-  static_assert(
+  // The standard doesn't specify the numeric values of the enum.
+  LIBCPP_STATIC_ASSERT(
           E::none == ME(0),
         "Expected enumeration values do not match");
   // Option group for copy_file
-  static_assert(
+  LIBCPP_STATIC_ASSERT(
           E::skip_existing      == ME(1) &&
           E::overwrite_existing == ME(2) &&
           E::update_existing    == ME(4),
         "Expected enumeration values do not match");
   // Option group for copy on directories
-  static_assert(
+  LIBCPP_STATIC_ASSERT(
           E::recursive == ME(8),
         "Expected enumeration values do not match");
   // Option group for copy on symlinks
-  static_assert(
+  LIBCPP_STATIC_ASSERT(
           E::copy_symlinks == ME(16) &&
           E::skip_symlinks == ME(32),
         "Expected enumeration values do not match");
   // Option group for changing form of copy
-  static_assert(
+  LIBCPP_STATIC_ASSERT(
           E::directories_only    == ME(64) &&
           E::create_symlinks     == ME(128) &&
           E::create_hard_links   == ME(256),

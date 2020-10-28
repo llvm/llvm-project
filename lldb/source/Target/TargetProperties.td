@@ -20,6 +20,10 @@ let Definition = "target" in {
   def ExprPrefix: Property<"expr-prefix", "FileSpec">,
     DefaultStringValue<"">,
     Desc<"Path to a file containing expressions to be prepended to all expressions.">;
+  def ExprErrorLimit: Property<"expr-error-limit", "UInt64">,
+    DefaultUnsignedValue<5>,
+    Desc<"The maximum amount of errors to emit while parsing an expression. "
+         "A value of 0 means to always continue parsing if possible.">;
   def PreferDynamic: Property<"prefer-dynamic-value", "Enum">,
     DefaultEnumValue<"eDynamicDontRunTarget">,
     EnumValues<"OptionEnumValues(g_dynamic_value_types)">,

@@ -34,11 +34,17 @@ define void @foo() {
 }
 
 define internal void @bar(%p_t %p)  {
-; CHECK: Function Attrs: nosync nounwind readnone willreturn
-; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: (i16* nocapture nofree readnone [[P:%.*]]) [[ATTR1:#.*]] {
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i16* [[P]], [[META3:metadata !.*]], metadata !DIExpression()) [[ATTR3:#.*]], [[DBG5:!dbg !.*]]
-; CHECK-NEXT:    ret void
+; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__TUNIT____-LABEL: define {{[^@]+}}@bar
+; IS__TUNIT____-SAME: (i16* nocapture nofree readnone [[P:%.*]]) [[ATTR0]] {
+; IS__TUNIT____-NEXT:    call void @llvm.dbg.value(metadata i16* [[P]], [[META3:metadata !.*]], metadata !DIExpression()) [[ATTR2:#.*]], [[DBG5:!dbg !.*]]
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@bar
+; IS__CGSCC____-SAME: (i16* nocapture nofree readnone [[P:%.*]]) [[ATTR1:#.*]] {
+; IS__CGSCC____-NEXT:    call void @llvm.dbg.value(metadata i16* [[P]], [[META3:metadata !.*]], metadata !DIExpression()) [[ATTR3:#.*]], [[DBG5:!dbg !.*]]
+; IS__CGSCC____-NEXT:    ret void
 ;
   call void @llvm.dbg.value(metadata %p_t %p, metadata !4, metadata !5), !dbg !6
   ret void

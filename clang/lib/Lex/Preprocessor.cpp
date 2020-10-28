@@ -395,12 +395,10 @@ bool Preprocessor::SetCodeCompletionPoint(const FileEntry *File,
   assert(CompleteLine && CompleteColumn && "Starts from 1:1");
   assert(!CodeCompletionFile && "Already set");
 
-  using llvm::MemoryBuffer;
-
   // Load the actual file's contents.
-  bool Invalid = false;
-  const MemoryBuffer *Buffer = SourceMgr.getMemoryBufferForFile(File, &Invalid);
-  if (Invalid)
+  Optional<llvm::MemoryBufferRef> Buffer =
+      SourceMgr.getMemoryBufferForFileOrNone(File);
+  if (!Buffer)
     return true;
 
   // Find the byte position of the truncation point.

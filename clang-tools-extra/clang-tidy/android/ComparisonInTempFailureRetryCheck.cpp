@@ -18,32 +18,17 @@ namespace clang {
 namespace tidy {
 namespace android {
 
-namespace {
-AST_MATCHER(BinaryOperator, isRHSATempFailureRetryArg) {
-  if (!Node.getBeginLoc().isMacroID())
-    return false;
-
-  const SourceManager &SM = Finder->getASTContext().getSourceManager();
-  if (!SM.isMacroArgExpansion(Node.getRHS()->IgnoreParenCasts()->getBeginLoc()))
-    return false;
-
-  const LangOptions &Opts = Finder->getASTContext().getLangOpts();
-  SourceLocation LocStart = Node.getBeginLoc();
-  while (LocStart.isMacroID()) {
-    SourceLocation Invocation = SM.getImmediateMacroCallerLoc(LocStart);
-    Token Tok;
-    if (!Lexer::getRawToken(SM.getSpellingLoc(Invocation), Tok, SM, Opts,
-                            /*IgnoreWhiteSpace=*/true)) {
-      if (Tok.getKind() == tok::raw_identifier &&
-          Tok.getRawIdentifier() == "TEMP_FAILURE_RETRY")
-        return true;
-    }
-
-    LocStart = Invocation;
-  }
-  return false;
+ComparisonInTempFailureRetryCheck::ComparisonInTempFailureRetryCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      RawRetryList(Options.get("RetryMacros", "TEMP_FAILURE_RETRY")) {
+  StringRef(RawRetryList).split(RetryMacros, ",", -1, false);
 }
-} // namespace
+
+void ComparisonInTempFailureRetryCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "RetryMacros", RawRetryList);
+}
 
 void ComparisonInTempFailureRetryCheck::registerMatchers(MatchFinder *Finder) {
   // Both glibc's and Bionic's TEMP_FAILURE_RETRY macros structurally look like:
@@ -63,15 +48,43 @@ void ComparisonInTempFailureRetryCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       binaryOperator(hasOperatorName("="),
                      hasRHS(ignoringParenCasts(
-                         binaryOperator(isComparisonOperator()).bind("binop"))),
-                     isRHSATempFailureRetryArg()),
+                         binaryOperator(isComparisonOperator()).bind("inner"))))
+          .bind("outer"),
       this);
 }
 
 void ComparisonInTempFailureRetryCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto &BinOp = *Result.Nodes.getNodeAs<BinaryOperator>("binop");
-  diag(BinOp.getOperatorLoc(), "top-level comparison in TEMP_FAILURE_RETRY");
+  StringRef RetryMacroName;
+  const auto &Node = *Result.Nodes.getNodeAs<BinaryOperator>("outer");
+  if (!Node.getBeginLoc().isMacroID())
+    return;
+
+  const SourceManager &SM = *Result.SourceManager;
+  if (!SM.isMacroArgExpansion(Node.getRHS()->IgnoreParenCasts()->getBeginLoc()))
+    return;
+
+  const LangOptions &Opts = Result.Context->getLangOpts();
+  SourceLocation LocStart = Node.getBeginLoc();
+  while (LocStart.isMacroID()) {
+    SourceLocation Invocation = SM.getImmediateMacroCallerLoc(LocStart);
+    Token Tok;
+    if (!Lexer::getRawToken(SM.getSpellingLoc(Invocation), Tok, SM, Opts,
+                            /*IgnoreWhiteSpace=*/true)) {
+      if (Tok.getKind() == tok::raw_identifier &&
+          llvm::is_contained(RetryMacros, Tok.getRawIdentifier())) {
+        RetryMacroName = Tok.getRawIdentifier();
+        break;
+      }
+    }
+
+    LocStart = Invocation;
+  }
+  if (RetryMacroName.empty())
+    return;
+
+  const auto &Inner = *Result.Nodes.getNodeAs<BinaryOperator>("inner");
+  diag(Inner.getOperatorLoc(), "top-level comparison in %0") << RetryMacroName;
 
   // FIXME: FixIts would be nice, but potentially nontrivial when nested macros
   // happen, e.g. `TEMP_FAILURE_RETRY(IS_ZERO(foo()))`

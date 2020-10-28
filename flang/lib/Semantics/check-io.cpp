@@ -298,14 +298,6 @@ void IoChecker::Enter(const parser::InputItem &spec) {
     return;
   }
   CheckForDefinableVariable(*var, "Input");
-  const auto &name{GetLastName(*var)};
-  const auto *expr{GetExpr(*var)};
-  if (name.symbol && IsAssumedSizeArray(*name.symbol) && expr &&
-      !evaluate::IsArrayElement(*GetExpr(*var))) {
-    context_.Say(name.source,
-        "Whole assumed size array '%s' may not be an input item"_err_en_US,
-        name.source); // C1231
-  }
 }
 
 void IoChecker::Enter(const parser::InquireSpec &spec) {

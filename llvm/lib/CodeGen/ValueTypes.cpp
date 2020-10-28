@@ -158,15 +158,17 @@ std::string EVT::getEVTString() const {
     if (isFloatingPoint())
       return "f" + utostr(getSizeInBits());
     llvm_unreachable("Invalid EVT!");
-  case MVT::bf16:    return "bf16";
-  case MVT::ppcf128: return "ppcf128";
-  case MVT::isVoid:  return "isVoid";
-  case MVT::Other:   return "ch";
-  case MVT::Glue:    return "glue";
-  case MVT::x86mmx:  return "x86mmx";
-  case MVT::Metadata:return "Metadata";
-  case MVT::Untyped: return "Untyped";
-  case MVT::exnref : return "exnref";
+  case MVT::bf16:      return "bf16";
+  case MVT::ppcf128:   return "ppcf128";
+  case MVT::isVoid:    return "isVoid";
+  case MVT::Other:     return "ch";
+  case MVT::Glue:      return "glue";
+  case MVT::x86mmx:    return "x86mmx";
+  case MVT::Metadata:  return "Metadata";
+  case MVT::Untyped:   return "Untyped";
+  case MVT::exnref:    return "exnref";
+  case MVT::funcref:   return "funcref";
+  case MVT::externref: return "externref";
   }
 }
 
@@ -291,6 +293,12 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return FixedVectorType::get(Type::getInt64Ty(Context), 16);
   case MVT::v32i64:
     return FixedVectorType::get(Type::getInt64Ty(Context), 32);
+  case MVT::v64i64:
+    return FixedVectorType::get(Type::getInt64Ty(Context), 64);
+  case MVT::v128i64:
+    return FixedVectorType::get(Type::getInt64Ty(Context), 128);
+  case MVT::v256i64:
+    return FixedVectorType::get(Type::getInt64Ty(Context), 256);
   case MVT::v1i128:
     return FixedVectorType::get(Type::getInt128Ty(Context), 1);
   case MVT::v2f16:
@@ -365,6 +373,12 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return FixedVectorType::get(Type::getDoubleTy(Context), 16);
   case MVT::v32f64:
     return FixedVectorType::get(Type::getDoubleTy(Context), 32);
+  case MVT::v64f64:
+    return FixedVectorType::get(Type::getDoubleTy(Context), 64);
+  case MVT::v128f64:
+    return FixedVectorType::get(Type::getDoubleTy(Context), 128);
+  case MVT::v256f64:
+    return FixedVectorType::get(Type::getDoubleTy(Context), 256);
   case MVT::nxv1i1:
     return ScalableVectorType::get(Type::getInt1Ty(Context), 1);
   case MVT::nxv2i1:

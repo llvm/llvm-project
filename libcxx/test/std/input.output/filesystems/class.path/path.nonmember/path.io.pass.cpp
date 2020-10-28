@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: libcpp-has-no-localization
 
 // <filesystem>
 
@@ -53,7 +54,7 @@ void doIOTest() {
   { // test input
     path p_in;
     auto& ret = ss >> p_in;
-    assert(p_in.native() == (const char*)InStr);
+    assert(p_in.native() == (const path::value_type*)InStr);
     assert(&ret == &ss);
   }
 }

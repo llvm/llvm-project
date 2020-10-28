@@ -39,11 +39,18 @@
 
 using namespace llvm;
 
+// FIXME: This cutoff value is CPU dependent and should be moved to
+// TargetTransformInfo once we consider enabling this on other platforms.
+// The value is expressed as a ProfileSummaryInfo integer percentile cutoff.
+// Defaults to 999950, i.e. all blocks colder than 99.995 percentile are split.
+// The default was empirically determined to be optimal when considering cutoff
+// values between 99%-ile to 100%-ile with respect to iTLB and icache metrics on
+// Intel CPUs.
 static cl::opt<unsigned>
     PercentileCutoff("mfs-psi-cutoff",
                      cl::desc("Percentile profile summary cutoff used to "
                               "determine cold blocks. Unused if set to zero."),
-                     cl::init(0), cl::Hidden);
+                     cl::init(999950), cl::Hidden);
 
 static cl::opt<unsigned> ColdCountThreshold(
     "mfs-count-threshold",

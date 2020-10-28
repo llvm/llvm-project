@@ -54,7 +54,7 @@ int bar(int n){
 }
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l29}}(
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 0)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
 // CHECK: call void @__kmpc_data_sharing_init_stack_spmd
 // CHECK: br label {{%?}}[[EXEC:.+]]
 //
@@ -72,7 +72,7 @@ int bar(int n){
 // CHECK: }
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l33}}(
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 0)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
 // CHECK: call void @__kmpc_data_sharing_init_stack_spmd
 // CHECK: br label {{%?}}[[EXEC:.+]]
 //
@@ -90,7 +90,7 @@ int bar(int n){
 // CHECK: }
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l38}}(
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 0)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
 // CHECK: call void @__kmpc_data_sharing_init_stack_spmd
 // CHECK: br label {{%?}}[[EXEC:.+]]
 //

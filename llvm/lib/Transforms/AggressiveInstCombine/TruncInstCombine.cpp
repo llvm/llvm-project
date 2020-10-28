@@ -31,8 +31,8 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
 
 using namespace llvm;
 
@@ -345,7 +345,7 @@ void TruncInstCombine::ReduceExpressionDag(Type *SclTy) {
       // 1. Update Old-TruncInst -> New-TruncInst.
       // 2. Remove Old-TruncInst (if New node is not TruncInst).
       // 3. Add New-TruncInst (if Old node was not TruncInst).
-      auto Entry = find(Worklist, I);
+      auto *Entry = find(Worklist, I);
       if (Entry != Worklist.end()) {
         if (auto *NewCI = dyn_cast<TruncInst>(Res))
           *Entry = NewCI;

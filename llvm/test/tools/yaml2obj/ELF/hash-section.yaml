@@ -1,9 +1,11 @@
 ## Check how yaml2obj produces SHT_HASH sections.
 
 ## Check we can describe a SHT_HASH section using the "Content" tag.
+## Check default values of section fields.
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
-# RUN: llvm-readobj --sections --section-data %t1 | FileCheck %s --check-prefix=CONTENT
+# RUN: llvm-readobj --sections --section-data %t1 | \
+# RUN:   FileCheck %s -DENTSIZE=4 --check-prefix=CONTENT
 
 # CONTENT:      Name: .hash
 # CONTENT-NEXT: Type: SHT_HASH
@@ -15,7 +17,7 @@
 # CONTENT-NEXT: Link: 1
 # CONTENT-NEXT: Info: 0
 # CONTENT-NEXT: AddressAlignment: 0
-# CONTENT-NEXT: EntrySize: 0
+# CONTENT-NEXT: EntrySize: [[ENTSIZE]]{{$}}
 # CONTENT-NEXT: SectionData (
 # CONTENT-NEXT:   0000: 01000000 02000000 03000000 04000000
 # CONTENT-NEXT:   0010: 05000000
@@ -33,6 +35,13 @@ Sections:
   - Name:    .hash
     Type:    SHT_HASH
     Content: '0100000002000000030000000400000005000000'
+    EntSize: [[ENTSIZE=<none>]]
+
+## Check we can set an arbitrary entry size for the SHT_HASH section.
+
+# RUN: yaml2obj --docnum=1 -DENTSIZE=0xFF %s -o %t1.entsize
+# RUN: llvm-readobj --sections --section-data %t1.entsize | \
+# RUN:   FileCheck %s -DENTSIZE=255 --check-prefix=CONTENT
 
 ## Check we can describe a SHT_HASH section using "Bucket" and "Chain" tags.
 
@@ -64,7 +73,7 @@ Sections:
 
 # RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --check-prefix=CONTENT-BUCKET
 
-# CONTENT-BUCKET: "Bucket" cannot be used with "Content" or "Size"
+# CONTENT-BUCKET: "Bucket" and "Chain" cannot be used with "Content" or "Size"
 
 --- !ELF
 FileHeader:
@@ -124,11 +133,14 @@ Sections:
     Type:  SHT_HASH
     Chain: [ 1 ]
 
-## Check we report an error if neither "Bucket", "Chain" nor "Content" were set.
+## Check we emit an empty section if neither "Bucket", "Chain",
+## "Content" nor "Size" were set.
 
-# RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=NO-TAGS
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: llvm-readelf --sections %t7 | FileCheck %s --check-prefix=NO-TAGS
 
-# NO-TAGS: error: one of "Content", "Size", "Bucket" or "Chain" must be specified
+# NO-TAGS: [Nr] Name  Type Address  Off    Size
+# NO-TAGS: [ 1] .hash HASH 00000000 000034 000000
 
 --- !ELF
 FileHeader:
@@ -221,7 +233,7 @@ Sections:
 
 # RUN: not yaml2obj --docnum=11 %s 2>&1 | FileCheck %s --check-prefix=SIZE-CONTENT-ERR
 
-# SIZE-CONTENT-ERR: error: "Size" must be greater than or equal to the content size
+# SIZE-CONTENT-ERR: error: Section size must be greater than or equal to the content size
 
 --- !ELF
 FileHeader:
@@ -280,7 +292,7 @@ Sections:
 # OVERRIDE-NEXT: Link: 0
 # OVERRIDE-NEXT: Info: 0
 # OVERRIDE-NEXT: AddressAlignment: 0
-# OVERRIDE-NEXT: EntrySize: 0
+# OVERRIDE-NEXT: EntrySize: 4
 # OVERRIDE-NEXT: SectionData (
 # OVERRIDE-NEXT:   0000: AA000000 BB000000 01000000 02000000
 # OVERRIDE-NEXT:   0010: 03000000 04000000 05000000

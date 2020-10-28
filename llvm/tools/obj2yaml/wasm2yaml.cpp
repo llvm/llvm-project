@@ -37,6 +37,7 @@ static WasmYAML::Table makeTable(const wasm::WasmTable &Table) {
   T.TableLimits.Flags = Table.Limits.Flags;
   T.TableLimits.Initial = Table.Limits.Initial;
   T.TableLimits.Maximum = Table.Limits.Maximum;
+  T.Index = Table.Index;
   return T;
 }
 
@@ -116,6 +117,7 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
         break;
       case wasm::WASM_SYMBOL_TYPE_FUNCTION:
       case wasm::WASM_SYMBOL_TYPE_GLOBAL:
+      case wasm::WASM_SYMBOL_TYPE_TABLE:
       case wasm::WASM_SYMBOL_TYPE_EVENT:
         Info.ElementIndex = Symbol.ElementIndex;
         break;

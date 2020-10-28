@@ -372,7 +372,7 @@ BCECmpBlock visitCmpBlock(Value *const Val, BasicBlock *const Block,
   } else {
     // In this case, we expect a constant incoming value (the comparison is
     // chained).
-    const auto *const Const = dyn_cast<ConstantInt>(Val);
+    const auto *const Const = cast<ConstantInt>(Val);
     LLVM_DEBUG(dbgs() << "const\n");
     if (!Const->isZero()) return {};
     LLVM_DEBUG(dbgs() << "false\n");

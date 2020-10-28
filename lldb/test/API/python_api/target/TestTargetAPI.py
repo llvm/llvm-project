@@ -331,7 +331,7 @@ class TargetAPITestCase(TestBase):
         if not desc:
             self.fail("SBTarget.GetDescription() failed")
         self.expect(desc, exe=False,
-                    substrs=['a.out', 'Target', 'Module', 'Breakpoint'])
+                    substrs=['Target', 'Module', 'a.out', 'Breakpoint'])
 
     @not_remote_testsuite_ready
     @add_test_categories(['pyapi'])

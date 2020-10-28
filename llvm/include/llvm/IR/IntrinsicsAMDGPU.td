@@ -255,7 +255,17 @@ def int_amdgcn_log_clamp : Intrinsic<
 
 def int_amdgcn_fmul_legacy : GCCBuiltin<"__builtin_amdgcn_fmul_legacy">,
   Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-  [IntrNoMem, IntrSpeculatable, IntrWillReturn]
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
+>;
+
+// Fused single-precision multiply-add with legacy behaviour for the multiply,
+// which is that +/- 0.0 * anything (even NaN or infinity) is +0.0. This is
+// intended for use on subtargets that have the v_fma_legacy_f32 and/or
+// v_fmac_legacy_f32 instructions. (Note that v_fma_legacy_f16 is unrelated and
+// has a completely different kind of legacy behaviour.)
+def int_amdgcn_fma_legacy :
+  Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty, llvm_float_ty],
+  [IntrNoMem, IntrSpeculatable, IntrWillReturn, Commutative]
 >;
 
 def int_amdgcn_rcp : Intrinsic<
@@ -688,11 +698,15 @@ class AMDGPUImageDimIntrinsicEval<AMDGPUDimProfile P_> {
   int NumRSrcArgs = 1;
   int NumSampArgs = !if(P_.IsSample, 2, 0);
   int DmaskArgIndex = NumDataArgs;
-  int VAddrArgIndex = !add(NumDataArgs, NumDmaskArgs);
-  int GradientArgIndex = !add(NumDataArgs, NumDmaskArgs, NumExtraAddrArgs);
-  int CoordArgIndex = !add(NumDataArgs, NumDmaskArgs, NumExtraAddrArgs, NumGradientArgs);
-  int UnormArgIndex = !add(NumDataArgs, NumDmaskArgs, NumVAddrArgs, NumRSrcArgs, 1);
-  int TexFailCtrlArgIndex = !add(NumDataArgs, NumDmaskArgs, NumVAddrArgs, NumRSrcArgs, NumSampArgs);
+  int VAddrArgIndex = !add(DmaskArgIndex, NumDmaskArgs);
+  int GradientArgIndex = !add(VAddrArgIndex, NumExtraAddrArgs);
+  int CoordArgIndex = !add(GradientArgIndex, NumGradientArgs);
+  int LodArgIndex = !add(VAddrArgIndex, NumVAddrArgs, -1);
+  int MipArgIndex = LodArgIndex;
+  int RsrcArgIndex = !add(VAddrArgIndex, NumVAddrArgs);
+  int SampArgIndex = !add(RsrcArgIndex, NumRSrcArgs);
+  int UnormArgIndex = !add(SampArgIndex, 1);
+  int TexFailCtrlArgIndex = !add(SampArgIndex, NumSampArgs);
   int CachePolicyArgIndex = !add(TexFailCtrlArgIndex, 1);
 }
 

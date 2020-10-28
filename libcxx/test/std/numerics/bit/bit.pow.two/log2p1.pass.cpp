@@ -73,7 +73,7 @@ void runtime_test()
 	assert( std::log2p1(T(130)) == T(8));
 }
 
-int main()
+int main(int, char**)
 {
 
     {
@@ -174,4 +174,5 @@ int main()
 	}
 #endif
 
+    return 0;
 }

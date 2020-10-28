@@ -887,12 +887,12 @@ public:
     FileID File;
     unsigned Offset;
     std::tie(File, Offset) = SM.getDecomposedLoc(ExpanLoc);
-    const llvm::MemoryBuffer *MB = SM.getBuffer(File);
-    const char *MacroNameTokenPos = MB->getBufferStart() + Offset;
+    llvm::MemoryBufferRef MB = SM.getBufferOrFake(File);
+    const char *MacroNameTokenPos = MB.getBufferStart() + Offset;
 
     RawLexer = std::make_unique<Lexer>(SM.getLocForStartOfFile(File), LangOpts,
-                                       MB->getBufferStart(), MacroNameTokenPos,
-                                       MB->getBufferEnd());
+                                       MB.getBufferStart(), MacroNameTokenPos,
+                                       MB.getBufferEnd());
   }
 
   void next(Token &Result) {

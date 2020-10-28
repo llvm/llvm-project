@@ -85,15 +85,13 @@ struct DenseMapInfo<
       clang::tidy::cppcoreguidelines::SpecialMemberFunctionsCheck::ClassDefId;
 
   static inline ClassDefId getEmptyKey() {
-    return ClassDefId(
-        clang::SourceLocation::getFromRawEncoding(static_cast<unsigned>(-1)),
-        "EMPTY");
+    return ClassDefId(DenseMapInfo<clang::SourceLocation>::getEmptyKey(),
+                      "EMPTY");
   }
 
   static inline ClassDefId getTombstoneKey() {
-    return ClassDefId(
-        clang::SourceLocation::getFromRawEncoding(static_cast<unsigned>(-2)),
-        "TOMBSTONE");
+    return ClassDefId(DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
+                      "TOMBSTONE");
   }
 
   static unsigned getHashValue(ClassDefId Val) {
@@ -101,7 +99,7 @@ struct DenseMapInfo<
     assert(Val != getTombstoneKey() && "Cannot hash the tombstone key!");
 
     std::hash<ClassDefId::second_type> SecondHash;
-    return Val.first.getRawEncoding() + SecondHash(Val.second);
+    return Val.first.getHashValue() + SecondHash(Val.second);
   }
 
   static bool isEqual(const ClassDefId &LHS, const ClassDefId &RHS) {

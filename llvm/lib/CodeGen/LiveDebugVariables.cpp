@@ -395,6 +395,11 @@ class LDVImpl {
   LiveIntervals *LIS;
   const TargetRegisterInfo *TRI;
 
+  using StashedInstrRef =
+      std::tuple<unsigned, unsigned, const DILocalVariable *,
+                 const DIExpression *, DebugLoc>;
+  std::map<SlotIndex, std::vector<StashedInstrRef>> StashedInstrReferences;
+
   /// Whether emitDebugValues is called.
   bool EmitDone = false;
 
@@ -431,6 +436,16 @@ class LDVImpl {
   /// \returns True if the DBG_VALUE instruction should be deleted.
   bool handleDebugValue(MachineInstr &MI, SlotIndex Idx);
 
+  /// Track a DBG_INSTR_REF. This needs to be removed from the MachineFunction
+  /// during regalloc -- but there's no need to maintain live ranges, as we
+  /// refer to a value rather than a location.
+  ///
+  /// \param MI DBG_INSTR_REF instruction
+  /// \param Idx Last valid SlotIndex before instruction
+  ///
+  /// \returns True if the DBG_VALUE instruction should be deleted.
+  bool handleDebugInstrRef(MachineInstr &MI, SlotIndex Idx);
+
   /// Add DBG_LABEL instruction to UserLabel.
   ///
   /// \param MI DBG_LABEL instruction
@@ -459,6 +474,7 @@ public:
   /// Release all memory.
   void clear() {
     MF = nullptr;
+    StashedInstrReferences.clear();
     userValues.clear();
     userLabels.clear();
     virtRegToEqClass.clear();
@@ -666,6 +682,19 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   return true;
 }
 
+bool LDVImpl::handleDebugInstrRef(MachineInstr &MI, SlotIndex Idx) {
+  assert(MI.isDebugRef());
+  unsigned InstrNum = MI.getOperand(0).getImm();
+  unsigned OperandNum = MI.getOperand(1).getImm();
+  auto *Var = MI.getDebugVariable();
+  auto *Expr = MI.getDebugExpression();
+  auto &DL = MI.getDebugLoc();
+  StashedInstrRef Stashed =
+      std::make_tuple(InstrNum, OperandNum, Var, Expr, DL);
+  StashedInstrReferences[Idx].push_back(Stashed);
+  return true;
+}
+
 bool LDVImpl::handleDebugLabel(MachineInstr &MI, SlotIndex Idx) {
   // DBG_LABEL label
   if (MI.getNumOperands() != 1 || !MI.getOperand(0).isMetadata()) {
@@ -713,6 +742,7 @@ bool LDVImpl::collectDebugValues(MachineFunction &mf) {
         // Only handle DBG_VALUE in handleDebugValue(). Skip all other
         // kinds of debug instructions.
         if ((MBBI->isDebugValue() && handleDebugValue(*MBBI, Idx)) ||
+            (MBBI->isDebugRef() && handleDebugInstrRef(*MBBI, Idx)) ||
             (MBBI->isDebugLabel() && handleDebugLabel(*MBBI, Idx))) {
           MBBI = MBB->erase(MBBI);
           Changed = true;
@@ -1435,6 +1465,28 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
     LLVM_DEBUG(userLabel->print(dbgs(), TRI));
     userLabel->emitDebugLabel(*LIS, *TII);
   }
+
+  LLVM_DEBUG(dbgs() << "********** EMITTING INSTR REFERENCES **********\n");
+
+  // Re-insert any DBG_INSTR_REFs back in the position they were. Ordering
+  // is preserved by vector.
+  auto Slots = LIS->getSlotIndexes();
+  const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_INSTR_REF);
+  for (auto &P : StashedInstrReferences) {
+    const SlotIndex &Idx = P.first;
+    auto *MBB = Slots->getMBBFromIndex(Idx);
+    MachineBasicBlock::iterator insertPos = findInsertLocation(MBB, Idx, *LIS);
+    for (auto &Stashed : P.second) {
+      auto MIB = BuildMI(*MF, std::get<4>(Stashed), RefII);
+      MIB.addImm(std::get<0>(Stashed));
+      MIB.addImm(std::get<1>(Stashed));
+      MIB.addMetadata(std::get<2>(Stashed));
+      MIB.addMetadata(std::get<3>(Stashed));
+      MachineInstr *New = MIB;
+      MBB->insert(insertPos, New);
+    }
+  }
+
   EmitDone = true;
 }
 

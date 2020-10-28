@@ -83,7 +83,7 @@ void ThrowNullptr() { throw nullptr; }
 
 struct IncompleteAtThrow {};
 
-int main() {
+int main(int, char**) {
   AssertIncompleteTypeInfoEquals(ReturnTypeInfoNeverDefinedMP(), typeid(int NeverDefined::*));
   try {
     ThrowNeverDefinedMP();
@@ -205,7 +205,8 @@ int main() {
     assert(!p);
   }
   catch(...) { assert(!"FAIL: Didn't catch nullptr as NeverDefined::*" ); }
-
 #endif
+
+  return 0;
 }
 #endif

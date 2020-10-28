@@ -50,7 +50,7 @@ declare i32 @baz() #1
 ; LINUX-SECTIONS1-LABEL:	.LBB_END0_1:
 ; LINUX-SECTIONS1-NEXT:        .size   foo.1, .LBB_END0_1-foo.1
 ; LINUX-SECTIONS1-NOT:  	.section
-; LINUX-SECTIONS1:		.section        .text.unlikely.foo,"ax",@progbits
+; LINUX-SECTIONS1:		.section        .text.split.foo,"ax",@progbits
 ; LINUX-SECTIONS1-LABEL:	foo.cold:
 ; LINUX-SECTIONS1-LABEL:	.LBB_END0_3:
 ; LINUX-SECTIONS1-NEXT:        .size   foo.cold, .LBB_END0_3-foo.cold

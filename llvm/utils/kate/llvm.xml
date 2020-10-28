@@ -81,6 +81,7 @@
       <item> argmemonly </item>
       <item> convergent </item>
       <item> inlinehint </item>
+      <item> mustprogress </item>
       <item> naked </item>
       <item> nobuiltin </item>
       <item> noimplicitfloat </item>
@@ -92,6 +93,7 @@
       <item> optsize </item>
       <item> readnone </item>
       <item> readonly </item>
+      <item> nossp </item>
       <item> ssp </item>
       <item> sspreq </item>
       <item> sspstrong </item>

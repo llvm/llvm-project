@@ -30,16 +30,10 @@ public:
   // Constructors and Destructors
   SymbolVendorMacOSX(const lldb::ModuleSP &module_sp);
 
-  virtual ~SymbolVendorMacOSX();
-
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
-
-private:
-  SymbolVendorMacOSX(const SymbolVendorMacOSX &) = delete;
-  const SymbolVendorMacOSX &operator=(const SymbolVendorMacOSX &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLVENDOR_MACOSX_SYMBOLVENDORMACOSX_H

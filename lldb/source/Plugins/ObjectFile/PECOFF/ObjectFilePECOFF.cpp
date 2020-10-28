@@ -142,7 +142,6 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
   // Cache coff binary.
   if (!objfile_up->CreateBinary())
     return nullptr;
-
   return objfile_up.release();
 }
 
@@ -852,7 +851,6 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
   if (m_sections_up)
     return;
   m_sections_up = std::make_unique<SectionList>();
-
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());

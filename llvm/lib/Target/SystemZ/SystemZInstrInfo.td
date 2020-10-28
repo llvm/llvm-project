@@ -2246,6 +2246,31 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
                                  (ins imm64zx48:$enc, bdaddr12only:$BD1,
                                       bdaddr12only:$BD2, AnyReg:$R3),
                                  ".insn ssf,$enc,$BD1,$BD2,$R3", []>;
+  def InsnVRI : DirectiveInsnVRI<(outs),
+                                 (ins imm64zx48:$enc, VR128:$V1, VR128:$V2,
+                                  imm32zx12:$I3, imm32zx4:$M4, imm32zx4:$M5),
+                                 ".insn vri,$enc,$V1,$V2,$I3,$M4,$M5", []>;
+  def InsnVRR : DirectiveInsnVRR<(outs),
+                                 (ins imm64zx48:$enc, VR128:$V1, VR128:$V2,
+                                  VR128:$V3, imm32zx4:$M4, imm32zx4:$M5,
+                                  imm32zx4:$M6),
+                                  ".insn vrr,$enc,$V1,$V2,$V3,$M4,$M5,$M6", []>;
+  def InsnVRS : DirectiveInsnVRS<(outs),
+                                 (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V3,
+                                  bdaddr12only:$BD2, imm32zx4:$M4),
+                                 ".insn vrs,$enc,$BD2,$M4", []>;
+  def InsnVRV : DirectiveInsnVRV<(outs),
+                                 (ins imm64zx48:$enc, VR128:$V1,
+                                      bdvaddr12only:$VBD2, imm32zx4:$M3),
+                                 ".insn vrv,$enc,$V1,$VBD2,$M3", []>;
+  def InsnVRX : DirectiveInsnVRX<(outs),
+                                 (ins imm64zx48:$enc, VR128:$V1,
+                                  bdxaddr12only:$XBD2, imm32zx4:$M3),
+                                 ".insn vrx,$enc,$V1,$XBD2,$M3", []>;
+  def InsnVSI : DirectiveInsnVSI<(outs),
+                                 (ins imm64zx48:$enc, VR128:$V1,
+                                  bdaddr12only:$BD2, imm32zx8:$I3),
+                                  ".insn vsi,$enc,$V1,$BD2,$I3", []>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -40,10 +40,7 @@ public:
   ///     should be used. If NULL, pick the best plug-in.
   static OperatingSystem *FindPlugin(Process *process, const char *plugin_name);
 
-  // Class Methods
   OperatingSystem(Process *process);
-
-  ~OperatingSystem() override;
 
   // Plug-in Methods
   virtual bool UpdateThreadList(ThreadList &old_thread_list,
@@ -68,9 +65,6 @@ protected:
   // Member variables.
   Process
       *m_process; ///< The process that this dynamic loader plug-in is tracking.
-private:
-  OperatingSystem(const OperatingSystem &) = delete;
-  const OperatingSystem &operator=(const OperatingSystem &) = delete;
 };
 
 } // namespace lldb_private

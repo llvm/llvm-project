@@ -18,11 +18,13 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Module.h"
+#include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/IR/StandardTypes.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/TypeTranslation.h"
 #include "llvm/ADT/TypeSwitch.h"
 
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
@@ -360,25 +362,17 @@ connectPHINodes(T &func, const DenseMap<Value, llvm::Value *> &valueMapping,
   }
 }
 
-// TODO: implement an iterative version
-static void topologicalSortImpl(llvm::SetVector<Block *> &blocks, Block *b) {
-  blocks.insert(b);
-  for (Block *bb : b->getSuccessors()) {
-    if (blocks.count(bb) == 0)
-      topologicalSortImpl(blocks, bb);
-  }
-}
-
 /// Sort function blocks topologically.
 template <typename T>
 static llvm::SetVector<Block *> topologicalSort(T &f) {
-  // For each blocks that has not been visited yet (i.e. that has no
-  // predecessors), add it to the list and traverse its successors in DFS
-  // preorder.
+  // For each block that has not been visited yet (i.e. that has no
+  // predecessors), add it to the list as well as its successors.
   llvm::SetVector<Block *> blocks;
   for (Block &b : f) {
-    if (blocks.count(&b) == 0)
-      topologicalSortImpl(blocks, &b);
+    if (blocks.count(&b) == 0) {
+      llvm::ReversePostOrderTraversal<Block *> traversal(&b);
+      blocks.insert(traversal.begin(), traversal.end());
+    }
   }
   assert(blocks.size() == f.getBlocks().size() && "some blocks are not sorted");
 
@@ -397,8 +391,8 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
 
     llvm::BasicBlock *codeGenIPBB = codeGenIP.getBlock();
     llvm::Instruction *codeGenIPBBTI = codeGenIPBB->getTerminator();
+    ompContinuationIPStack.push_back(&continuationIP);
 
-    builder.SetInsertPoint(codeGenIPBB);
     // ParallelOp has only `1` region associated with it.
     auto &region = cast<omp::ParallelOp>(opInst).getRegion();
     for (auto &bb : region) {
@@ -413,22 +407,22 @@ ModuleTranslation::convertOmpParallel(Operation &opInst,
     for (auto indexedBB : llvm::enumerate(blocks)) {
       Block *bb = indexedBB.value();
       llvm::BasicBlock *curLLVMBB = blockMapping[bb];
-      if (bb->isEntryBlock())
+      if (bb->isEntryBlock()) {
+        assert(codeGenIPBBTI->getNumSuccessors() == 1 &&
+               "OpenMPIRBuilder provided entry block has multiple successors");
+        assert(codeGenIPBBTI->getSuccessor(0) == &continuationIP &&
+               "ContinuationIP is not the successor of OpenMPIRBuilder "
+               "provided entry block");
         codeGenIPBBTI->setSuccessor(0, curLLVMBB);
+      }
 
       // TODO: Error not returned up the hierarchy
       if (failed(convertBlock(*bb, /*ignoreArguments=*/indexedBB.index() == 0)))
         return;
-
-      // If this block has the terminator then add a jump to
-      // continuation bb
-      for (auto &op : *bb) {
-        if (isa<omp::TerminatorOp>(op)) {
-          builder.SetInsertPoint(curLLVMBB);
-          builder.CreateBr(&continuationIP);
-        }
-      }
     }
+
+    ompContinuationIPStack.pop_back();
+
     // Finally, after all blocks have been traversed and values mapped,
     // connect the PHI nodes to the results of preceding blocks.
     connectPHINodes(region, valueMapping, blockMapping);
@@ -504,7 +498,10 @@ ModuleTranslation::convertOmpOperation(Operation &opInst,
         ompBuilder->CreateFlush(builder.saveIP());
         return success();
       })
-      .Case([&](omp::TerminatorOp) { return success(); })
+      .Case([&](omp::TerminatorOp) {
+        builder.CreateBr(ompContinuationIPStack.back());
+        return success();
+      })
       .Case(
           [&](omp::ParallelOp) { return convertOmpParallel(opInst, builder); })
       .Default([&](Operation *inst) {

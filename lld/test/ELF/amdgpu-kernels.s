@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu
-# RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri -mattr=-code-object-v3 %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri --amdhsa-code-object-version=2 %s -o %t.o
 # RUN: ld.lld -shared %t.o -o %t
 # RUN: llvm-readobj --sections --symbols -l %t | FileCheck %s
 

@@ -16,7 +16,7 @@
 
 ; CHECK: middle.block:
 ; CHECK: [[VPSEL:%[^ ]+]] = select <4 x i1> [[VCTP]],
-; CHECK: call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[VPSEL]])
+; CHECK: call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[VPSEL]])
 
 define i32 @vec_mul_reduce_add(i32* noalias nocapture readonly %a, i32* noalias nocapture readonly %b, i32 %N) {
 entry:
@@ -64,7 +64,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
 middle.block:                                     ; preds = %vector.body
   %12 = select <4 x i1> %7, <4 x i32> %9, <4 x i32> %vec.phi
-  %13 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %12)
+  %13 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %12)
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -73,7 +73,7 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
 }
 
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 declare void @llvm.set.loop.iterations.i32(i32)
 declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)

@@ -59,6 +59,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -80,6 +81,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/GlobalValue.h"
@@ -935,6 +937,8 @@ static bool isHighCostExpansion(const SCEV *S,
   case scSignExtend:
     return isHighCostExpansion(cast<SCEVSignExtendExpr>(S)->getOperand(),
                                Processed, SE);
+  default:
+    break;
   }
 
   if (!Processed.insert(S).second)
@@ -1210,7 +1214,7 @@ static unsigned getSetupCost(const SCEV *Reg, unsigned Depth) {
     return 0;
   if (const auto *S = dyn_cast<SCEVAddRecExpr>(Reg))
     return getSetupCost(S->getStart(), Depth - 1);
-  if (auto S = dyn_cast<SCEVCastExpr>(Reg))
+  if (auto S = dyn_cast<SCEVIntegralCastExpr>(Reg))
     return getSetupCost(S->getOperand(), Depth - 1);
   if (auto S = dyn_cast<SCEVNAryExpr>(Reg))
     return std::accumulate(S->op_begin(), S->op_end(), 0,
@@ -2786,6 +2790,7 @@ static const SCEV *getExprBase(const SCEV *S) {
   case scAddRecExpr:
     return getExprBase(cast<SCEVAddRecExpr>(S)->getStart());
   }
+  llvm_unreachable("Unknown SCEV kind!");
 }
 
 /// Return true if the chain increment is profitable to expand into a loop
@@ -2855,13 +2860,20 @@ static bool isProfitableChain(IVChain &Chain,
   unsigned NumVarIncrements = 0;
   unsigned NumReusedIncrements = 0;
 
-  if (TTI.isProfitableLSRChainElement(Chain.Incs[0].UserInst))
-    return true;
-
-  for (const IVInc &Inc : Chain) {
+  // If any LSRUse in the chain is marked as profitable by target, mark this
+  // chain as profitable.
+  for (const IVInc &Inc : Chain.Incs)
     if (TTI.isProfitableLSRChainElement(Inc.UserInst))
       return true;
 
+  // If number of registers is not the major cost, we cannot benefit from this
+  // profitable chain which is based on number of registers.
+  // FIXME: add profitable chain optimization for other kinds major cost, for
+  // example number of instructions.
+  if (!TTI.isNumRegsMajorCostOfLSR())
+    return false;
+
+  for (const IVInc &Inc : Chain) {
     if (Inc.IncExpr->isZero())
       continue;
 
@@ -3401,7 +3413,7 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
 
     if (const SCEVNAryExpr *N = dyn_cast<SCEVNAryExpr>(S))
       Worklist.append(N->op_begin(), N->op_end());
-    else if (const SCEVCastExpr *C = dyn_cast<SCEVCastExpr>(S))
+    else if (const SCEVIntegralCastExpr *C = dyn_cast<SCEVIntegralCastExpr>(S))
       Worklist.push_back(C->getOperand());
     else if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
       Worklist.push_back(D->getLHS());
@@ -5776,6 +5788,27 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   if (MSSA)
     MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
 
+  // Debug preservation - record all llvm.dbg.value from the loop as well as
+  // the SCEV of their variable location. Since salvageDebugInfo may change the
+  // DIExpression we need to store the original here as well (i.e. it needs to
+  // be in sync with the SCEV).
+  SmallVector<
+      std::tuple<DbgValueInst *, const Type *, const SCEV *, DIExpression *>,
+      32>
+      DbgValues;
+  for (auto &B : L->getBlocks()) {
+    for (auto &I : *B) {
+      if (DbgValueInst *D = dyn_cast<DbgValueInst>(&I)) {
+        auto V = D->getVariableLocation();
+        if (!V || !SE.isSCEVable(V->getType()))
+          continue;
+        auto DS = SE.getSCEV(V);
+        DbgValues.push_back(
+            std::make_tuple(D, V->getType(), DS, D->getExpression()));
+      }
+    }
+  }
+
   // Run the main LSR transformation.
   Changed |=
       LSRInstance(L, IU, SE, DT, LI, TTI, AC, TLI, MSSAU.get()).getChanged();
@@ -5795,6 +5828,40 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts, &TLI,
                                                            MSSAU.get());
       DeleteDeadPHIs(L->getHeader(), &TLI, MSSAU.get());
+    }
+  }
+  // Debug preservation - go through all recorded llvm.dbg.value and for those
+  // that now have an undef variable location use the recorded SCEV to try and
+  // update it. Compare with SCEV of Phi-nodes of loop header to find a
+  // suitable update candidate. SCEV match with constant offset is allowed and
+  // will be compensated for in the DIExpression.
+  if (Changed) {
+    for (auto &D : DbgValues) {
+      auto DbgValue = std::get<DbgValueInst *>(D);
+      auto DbgValueType = std::get<const Type *>(D);
+      auto DbgValueSCEV = std::get<const SCEV *>(D);
+      auto DbgDIExpr = std::get<DIExpression *>(D);
+      if (!isa<UndefValue>(DbgValue->getVariableLocation()))
+        continue;
+      for (PHINode &Phi : L->getHeader()->phis()) {
+        if (DbgValueType != Phi.getType())
+          continue;
+        if (!SE.isSCEVable(Phi.getType()))
+          continue;
+        auto PhiSCEV = SE.getSCEV(&Phi);
+        if (Optional<APInt> Offset =
+                SE.computeConstantDifference(DbgValueSCEV, PhiSCEV)) {
+          auto &Ctx = DbgValue->getContext();
+          DbgValue->setOperand(
+              0, MetadataAsValue::get(Ctx, ValueAsMetadata::get(&Phi)));
+          if (Offset.getValue().getSExtValue()) {
+            SmallVector<uint64_t, 8> Ops;
+            DIExpression::appendOffset(Ops, Offset.getValue().getSExtValue());
+            DbgDIExpr = DIExpression::prependOpcodes(DbgDIExpr, Ops, true);
+          }
+          DbgValue->setOperand(2, MetadataAsValue::get(Ctx, DbgDIExpr));
+        }
+      }
     }
   }
   return Changed;

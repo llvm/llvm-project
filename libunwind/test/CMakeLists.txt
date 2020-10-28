@@ -20,7 +20,6 @@ pythonize_bool(LIBUNWIND_USE_COMPILER_RT)
 pythonize_bool(LIBUNWIND_BUILD_EXTERNAL_THREAD_LIBRARY)
 set(LIBUNWIND_TARGET_INFO "libcxx.test.target_info.LocalTI" CACHE STRING
     "TargetInfo to use when setting up test environment.")
-set(LIBUNWIND_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../../libcxx")
 set(LIBUNWIND_EXECUTOR "${Python3_EXECUTABLE} ${LIBUNWIND_LIBCXX_PATH}/utils/run.py" CACHE STRING
     "Executor to use when running tests.")
 
@@ -32,4 +31,5 @@ configure_lit_site_cfg(
 
 add_lit_testsuite(check-unwind "Running libunwind tests"
   ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS unwind ${LIBUNWIND_TEST_DEPS})
+  DEPENDS unwind ${LIBUNWIND_TEST_DEPS}
+  PARAMS "${LIBUNWIND_TEST_PARAMS}")

@@ -39,7 +39,7 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-LABEL:	.LBB_END0_3:
 ; CHECK-LABEL:	.Lfunc_end0:
 
-; CHECK:	.section	.bb_addr_map,"o",@progbits,.text
+; CHECK:	.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text
 ; CHECK-NEXT:	.quad	.Lfunc_begin0
 ; CHECK-NEXT:	.byte	4
 ; CHECK-NEXT:	.uleb128 .Lfunc_begin0-.Lfunc_begin0

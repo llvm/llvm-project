@@ -435,7 +435,7 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
      // are the same size, this is an obvious bitcast.
      if (ValueVT.getSizeInBits() == PartEVT.getSizeInBits()) {
        return DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
-     } else if (ValueVT.getSizeInBits() < PartEVT.getSizeInBits()) {
+     } else if (ValueVT.bitsLT(PartEVT)) {
        // Bitcast Val back the original type and extract the corresponding
        // vector we want.
        unsigned Elts = PartEVT.getSizeInBits() / ValueVT.getScalarSizeInBits();
@@ -665,14 +665,14 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
       // Promoted vector extract
       Val = DAG.getAnyExtOrTrunc(Val, DL, PartVT);
     } else {
-      if (ValueVT.getVectorNumElements() == 1) {
+      if (ValueVT.getVectorElementCount().isScalar()) {
         Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, PartVT, Val,
                           DAG.getVectorIdxConstant(0, DL));
       } else {
-        assert(PartVT.getSizeInBits() > ValueVT.getSizeInBits() &&
+        uint64_t ValueSize = ValueVT.getFixedSizeInBits();
+        assert(PartVT.getFixedSizeInBits() > ValueSize &&
                "lossy conversion of vector to scalar type");
-        EVT IntermediateType =
-            EVT::getIntegerVT(*DAG.getContext(), ValueVT.getSizeInBits());
+        EVT IntermediateType = EVT::getIntegerVT(*DAG.getContext(), ValueSize);
         Val = DAG.getBitcast(IntermediateType, Val);
         Val = DAG.getAnyExtOrTrunc(Val, DL, PartVT);
       }
@@ -957,7 +957,7 @@ void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
     // shouldn't try to apply any sort of splitting logic to them.
     assert(Regs.size() == RegVTs.size() && Regs.size() == ValueVTs.size() &&
            "No 1:1 mapping from clobbers to regs?");
-    unsigned SP = TLI.getStackPointerRegisterToSaveRestore();
+    Register SP = TLI.getStackPointerRegisterToSaveRestore();
     (void)SP;
     for (unsigned I = 0, E = ValueVTs.size(); I != E; ++I) {
       Ops.push_back(DAG.getRegister(Regs[I], RegVTs[I]));
@@ -3097,10 +3097,11 @@ void SelectionDAGBuilder::visitFCmp(const User &I) {
 
   SDNodeFlags Flags;
   Flags.copyFMF(*FPMO);
+  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
 
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
-  setValue(&I, DAG.getSetCC(getCurSDLoc(), DestVT, Op1, Op2, Condition, Flags));
+  setValue(&I, DAG.getSetCC(getCurSDLoc(), DestVT, Op1, Op2, Condition));
 }
 
 // Check if the condition of the select has one use or two users that are both
@@ -6338,7 +6339,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     EVT ResTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
     // Result type for @llvm.get.dynamic.area.offset should match PtrTy for
     // target.
-    if (PtrTy.getSizeInBits() < ResTy.getSizeInBits())
+    if (PtrTy.getFixedSizeInBits() < ResTy.getFixedSizeInBits())
       report_fatal_error("Wrong result type for @llvm.get.dynamic.area.offset"
                          " intrinsic!");
     Res = DAG.getNode(ISD::GET_DYNAMIC_AREA_OFFSET, sdl, DAG.getVTList(ResTy),
@@ -6761,19 +6762,19 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     LowerDeoptimizeCall(&I);
     return;
 
-  case Intrinsic::experimental_vector_reduce_v2_fadd:
-  case Intrinsic::experimental_vector_reduce_v2_fmul:
-  case Intrinsic::experimental_vector_reduce_add:
-  case Intrinsic::experimental_vector_reduce_mul:
-  case Intrinsic::experimental_vector_reduce_and:
-  case Intrinsic::experimental_vector_reduce_or:
-  case Intrinsic::experimental_vector_reduce_xor:
-  case Intrinsic::experimental_vector_reduce_smax:
-  case Intrinsic::experimental_vector_reduce_smin:
-  case Intrinsic::experimental_vector_reduce_umax:
-  case Intrinsic::experimental_vector_reduce_umin:
-  case Intrinsic::experimental_vector_reduce_fmax:
-  case Intrinsic::experimental_vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fadd:
+  case Intrinsic::vector_reduce_fmul:
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_mul:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_xor:
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_fmax:
+  case Intrinsic::vector_reduce_fmin:
     visitVectorReduce(I, Intrinsic);
     return;
 
@@ -8936,53 +8937,53 @@ void SelectionDAGBuilder::visitVectorReduce(const CallInst &I,
     SDFlags.copyFMF(*FPMO);
 
   switch (Intrinsic) {
-  case Intrinsic::experimental_vector_reduce_v2_fadd:
+  case Intrinsic::vector_reduce_fadd:
     if (SDFlags.hasAllowReassociation())
       Res = DAG.getNode(ISD::FADD, dl, VT, Op1,
                         DAG.getNode(ISD::VECREDUCE_FADD, dl, VT, Op2, SDFlags),
                         SDFlags);
     else
-      Res = DAG.getNode(ISD::VECREDUCE_STRICT_FADD, dl, VT, Op1, Op2, SDFlags);
+      Res = DAG.getNode(ISD::VECREDUCE_SEQ_FADD, dl, VT, Op1, Op2, SDFlags);
     break;
-  case Intrinsic::experimental_vector_reduce_v2_fmul:
+  case Intrinsic::vector_reduce_fmul:
     if (SDFlags.hasAllowReassociation())
       Res = DAG.getNode(ISD::FMUL, dl, VT, Op1,
                         DAG.getNode(ISD::VECREDUCE_FMUL, dl, VT, Op2, SDFlags),
                         SDFlags);
     else
-      Res = DAG.getNode(ISD::VECREDUCE_STRICT_FMUL, dl, VT, Op1, Op2, SDFlags);
+      Res = DAG.getNode(ISD::VECREDUCE_SEQ_FMUL, dl, VT, Op1, Op2, SDFlags);
     break;
-  case Intrinsic::experimental_vector_reduce_add:
+  case Intrinsic::vector_reduce_add:
     Res = DAG.getNode(ISD::VECREDUCE_ADD, dl, VT, Op1);
     break;
-  case Intrinsic::experimental_vector_reduce_mul:
+  case Intrinsic::vector_reduce_mul:
     Res = DAG.getNode(ISD::VECREDUCE_MUL, dl, VT, Op1);
     break;
-  case Intrinsic::experimental_vector_reduce_and:
+  case Intrinsic::vector_reduce_and:
     Res = DAG.getNode(ISD::VECREDUCE_AND, dl, VT, Op1);
     break;
-  case Intrinsic::experimental_vector_reduce_or:
+  case Intrinsic::vector_reduce_or:
     Res = DAG.getNode(ISD::VECREDUCE_OR, dl, VT, Op1);
     break;
-  case Intrinsic::experimental_vector_reduce_xor:
+  case Intrinsic::vector_reduce_xor:
     Res = DAG.getNode(ISD::VECREDUCE_XOR, dl, VT, Op1);
     break;
-  case Intrinsic::experimental_vector_reduce_smax:
+  case Intrinsic::vector_reduce_smax:
     Res = DAG.getNode(ISD::VECREDUCE_SMAX, dl, VT, Op1);
     break;
-  case Intrinsic::experimental_vector_reduce_smin:
+  case Intrinsic::vector_reduce_smin:
     Res = DAG.getNode(ISD::VECREDUCE_SMIN, dl, VT, Op1);
     break;
-  case Intrinsic::experimental_vector_reduce_umax:
+  case Intrinsic::vector_reduce_umax:
     Res = DAG.getNode(ISD::VECREDUCE_UMAX, dl, VT, Op1);
     break;
-  case Intrinsic::experimental_vector_reduce_umin:
+  case Intrinsic::vector_reduce_umin:
     Res = DAG.getNode(ISD::VECREDUCE_UMIN, dl, VT, Op1);
     break;
-  case Intrinsic::experimental_vector_reduce_fmax:
+  case Intrinsic::vector_reduce_fmax:
     Res = DAG.getNode(ISD::VECREDUCE_FMAX, dl, VT, Op1, SDFlags);
     break;
-  case Intrinsic::experimental_vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fmin:
     Res = DAG.getNode(ISD::VECREDUCE_FMIN, dl, VT, Op1, SDFlags);
     break;
   default:

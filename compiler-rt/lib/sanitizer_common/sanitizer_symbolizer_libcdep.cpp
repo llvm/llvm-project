@@ -12,6 +12,7 @@
 
 #include "sanitizer_allocator_internal.h"
 #include "sanitizer_internal_defs.h"
+#include "sanitizer_platform.h"
 #include "sanitizer_symbolizer_internal.h"
 
 namespace __sanitizer {
@@ -258,6 +259,8 @@ class LLVMSymbolizerProcess : public SymbolizerProcess {
     const char* const kSymbolizerArch = "--default-arch=x86_64";
 #elif defined(__i386__)
     const char* const kSymbolizerArch = "--default-arch=i386";
+#elif SANITIZER_RISCV64
+    const char *const kSymbolizerArch = "--default-arch=riscv64";
 #elif defined(__aarch64__)
     const char* const kSymbolizerArch = "--default-arch=arm64";
 #elif defined(__arm__)

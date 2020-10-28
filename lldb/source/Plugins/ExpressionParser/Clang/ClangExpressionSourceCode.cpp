@@ -221,7 +221,7 @@ TokenVerifier::TokenVerifier(std::string body) {
   clang::SourceManager SM(diags, file_mgr);
   auto buf = llvm::MemoryBuffer::getMemBuffer(body);
 
-  FileID FID = SM.createFileID(clang::SourceManager::Unowned, buf.get());
+  FileID FID = SM.createFileID(buf->getMemBufferRef());
 
   // Let's just enable the latest ObjC and C++ which should get most tokens
   // right.
@@ -231,7 +231,7 @@ TokenVerifier::TokenVerifier(std::string body) {
   Opts.CPlusPlus17 = true;
   Opts.LineComment = true;
 
-  Lexer lex(FID, buf.get(), SM, Opts);
+  Lexer lex(FID, buf->getMemBufferRef(), SM, Opts);
 
   Token token;
   bool exit = false;

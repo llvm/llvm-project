@@ -4919,7 +4919,8 @@ void BoUpSLP::optimizeGatherSequence() {
   // instructions into different buckets based on the insert lane.
   SmallVector<Instruction *, 16> Visited;
   for (auto I = CSEWorkList.begin(), E = CSEWorkList.end(); I != E; ++I) {
-    assert((I == CSEWorkList.begin() || !DT->dominates(*I, *std::prev(I))) &&
+    assert(*I &&
+           (I == CSEWorkList.begin() || !DT->dominates(*I, *std::prev(I))) &&
            "Worklist not sorted properly!");
     BasicBlock *BB = (*I)->getBlock();
     // For all instructions in blocks containing gather sequences:

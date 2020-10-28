@@ -360,7 +360,6 @@ llvm::APSInt ConstantExpr::getResultAsAPSInt() const {
 }
 
 APValue ConstantExpr::getAPValueResult() const {
-  assert(hasAPValueResult());
 
   switch (ConstantExprBits.ResultKind) {
   case ConstantExpr::RSK_APValue:
@@ -370,6 +369,8 @@ APValue ConstantExpr::getAPValueResult() const {
         llvm::APSInt(llvm::APInt(ConstantExprBits.BitWidth, Int64Result()),
                      ConstantExprBits.IsUnsigned));
   case ConstantExpr::RSK_None:
+    if (ConstantExprBits.APValueKind == APValue::Indeterminate)
+      return APValue::IndeterminateValue();
     return APValue();
   }
   llvm_unreachable("invalid ResultKind");
@@ -510,34 +511,6 @@ PredefinedExpr::PredefinedExpr(SourceLocation L, QualType FNTy, IdentKind IK,
   setDependence(computeDependence(this));
 }
 
-PredefinedExpr::PredefinedExpr(SourceLocation L, QualType FnTy, IdentKind IK,
-                               TypeSourceInfo *Info)
-    : Expr(PredefinedExprClass, FnTy, VK_LValue, OK_Ordinary) {
-  PredefinedExprBits.Kind = IK;
-  assert((getIdentKind() == IK) &&
-         "IdentKind do not fit in PredefinedExprBitFields!");
-  assert(IK == UniqueStableNameType &&
-         "Constructor only valid with UniqueStableNameType");
-  PredefinedExprBits.HasFunctionName = false;
-  PredefinedExprBits.Loc = L;
-  setTypeSourceInfo(Info);
-  setDependence(computeDependence(this));
-}
-
-PredefinedExpr::PredefinedExpr(SourceLocation L, QualType FnTy, IdentKind IK,
-                               Expr *E)
-    : Expr(PredefinedExprClass, FnTy, VK_LValue, OK_Ordinary) {
-  PredefinedExprBits.Kind = IK;
-  assert((getIdentKind() == IK) &&
-         "IdentKind do not fit in PredefinedExprBitFields!");
-  assert(IK == UniqueStableNameExpr &&
-         "Constructor only valid with UniqueStableNameExpr");
-  PredefinedExprBits.HasFunctionName = false;
-  PredefinedExprBits.Loc = L;
-  setExpr(E);
-  setDependence(computeDependence(this));
-}
-
 PredefinedExpr::PredefinedExpr(EmptyShell Empty, bool HasFunctionName)
     : Expr(PredefinedExprClass, Empty) {
   PredefinedExprBits.HasFunctionName = HasFunctionName;
@@ -547,44 +520,15 @@ PredefinedExpr *PredefinedExpr::Create(const ASTContext &Ctx, SourceLocation L,
                                        QualType FNTy, IdentKind IK,
                                        StringLiteral *SL) {
   bool HasFunctionName = SL != nullptr;
-  void *Mem = Ctx.Allocate(
-      totalSizeToAlloc<Stmt *, Expr *, TypeSourceInfo *>(HasFunctionName, 0, 0),
-      alignof(PredefinedExpr));
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *>(HasFunctionName),
+                           alignof(PredefinedExpr));
   return new (Mem) PredefinedExpr(L, FNTy, IK, SL);
-}
-
-PredefinedExpr *PredefinedExpr::Create(const ASTContext &Ctx, SourceLocation L,
-                                       QualType FNTy, IdentKind IK,
-                                       StringLiteral *SL,
-                                       TypeSourceInfo *Info) {
-  assert(IK == UniqueStableNameType && "Only valid with UniqueStableNameType");
-  bool HasFunctionName = SL != nullptr;
-  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *, Expr *, TypeSourceInfo *>(
-                               HasFunctionName, 0, !HasFunctionName),
-                           alignof(PredefinedExpr));
-  if (HasFunctionName)
-    return new (Mem) PredefinedExpr(L, FNTy, IK, SL);
-  return new (Mem) PredefinedExpr(L, FNTy, IK, Info);
-}
-
-PredefinedExpr *PredefinedExpr::Create(const ASTContext &Ctx, SourceLocation L,
-                                       QualType FNTy, IdentKind IK,
-                                       StringLiteral *SL, Expr *E) {
-  assert(IK == UniqueStableNameExpr && "Only valid with UniqueStableNameExpr");
-  bool HasFunctionName = SL != nullptr;
-  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *, Expr *, TypeSourceInfo *>(
-                               HasFunctionName, !HasFunctionName, 0),
-                           alignof(PredefinedExpr));
-  if (HasFunctionName)
-    return new (Mem) PredefinedExpr(L, FNTy, IK, SL);
-  return new (Mem) PredefinedExpr(L, FNTy, IK, E);
 }
 
 PredefinedExpr *PredefinedExpr::CreateEmpty(const ASTContext &Ctx,
                                             bool HasFunctionName) {
-  void *Mem = Ctx.Allocate(
-      totalSizeToAlloc<Stmt *, Expr *, TypeSourceInfo *>(HasFunctionName, 0, 0),
-      alignof(PredefinedExpr));
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *>(HasFunctionName),
+                           alignof(PredefinedExpr));
   return new (Mem) PredefinedExpr(EmptyShell(), HasFunctionName);
 }
 
@@ -604,26 +548,10 @@ StringRef PredefinedExpr::getIdentKindName(PredefinedExpr::IdentKind IK) {
     return "__FUNCSIG__";
   case LFuncSig:
     return "L__FUNCSIG__";
-  case UniqueStableNameType:
-  case UniqueStableNameExpr:
-    return "__builtin_unique_stable_name";
   case PrettyFunctionNoVirtual:
     break;
   }
   llvm_unreachable("Unknown ident kind for PredefinedExpr");
-}
-
-std::string PredefinedExpr::ComputeName(ASTContext &Context, IdentKind IK,
-                                        QualType Ty) {
-  std::unique_ptr<MangleContext> Ctx{ItaniumMangleContext::create(
-      Context, Context.getDiagnostics(), /*IsUniqueNameMangler*/ true)};
-
-  Ty = Ty.getCanonicalType();
-
-  SmallString<256> Buffer;
-  llvm::raw_svector_ostream Out(Buffer);
-  Ctx->mangleTypeName(Ty, Out);
-  return std::string(Buffer.str());
 }
 
 // FIXME: Maybe this should use DeclPrinter with a special "print predefined
@@ -1764,6 +1692,8 @@ bool CastExpr::CastConsistency() const {
   case CK_ARCExtendBlockObject:
   case CK_ZeroToOCLOpaqueType:
   case CK_IntToOCLSampler:
+  case CK_FloatingToFixedPoint:
+  case CK_FixedPointToFloating:
   case CK_FixedPointCast:
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:

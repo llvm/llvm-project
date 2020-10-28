@@ -2883,7 +2883,11 @@ namespace __is_construct
 struct __nat {};
 }
 
-#if !defined(_LIBCPP_CXX03_LANG) && !__has_feature(is_constructible) && !defined(_LIBCPP_COMPILER_GCC)
+#if defined(_LIBCPP_COMPILER_GCC) && _GNUC_VER_NEW >= 10000
+# define _LIBCPP_GCC_SUPPORTS_IS_CONSTRUCTIBLE
+#endif
+
+#if !defined(_LIBCPP_CXX03_LANG) && !__has_feature(is_constructible) && !defined(_LIBCPP_GCC_SUPPORTS_IS_CONSTRUCTIBLE)
 
 template <class _Tp, class... _Args>
 struct __libcpp_is_constructible;
@@ -2998,7 +3002,7 @@ struct __libcpp_is_constructible<_Tp&&, _A0>
 
 #endif
 
-#if __has_feature(is_constructible) || defined(_LIBCPP_COMPILER_GCC)
+#if __has_feature(is_constructible) || defined(_LIBCPP_GCC_SUPPORTS_IS_CONSTRUCTIBLE)
 template <class _Tp, class ..._Args>
 struct _LIBCPP_TEMPLATE_VIS is_constructible
     : public integral_constant<bool, __is_constructible(_Tp, _Args...)>
@@ -4269,7 +4273,6 @@ _LIBCPP_INLINE_VAR constexpr bool negation_v
 #endif  // _LIBCPP_STD_VER > 14
 
 // These traits are used in __tree and __hash_table
-#ifndef _LIBCPP_CXX03_LANG
 struct __extract_key_fail_tag {};
 struct __extract_key_self_tag {};
 struct __extract_key_first_tag {};
@@ -4281,7 +4284,7 @@ struct __can_extract_key
                   __extract_key_fail_tag>::type {};
 
 template <class _Pair, class _Key, class _First, class _Second>
-struct __can_extract_key<_Pair, _Key, pair<_First, _Second>>
+struct __can_extract_key<_Pair, _Key, pair<_First, _Second> >
     : conditional<_IsSame<typename remove_const<_First>::type, _Key>::value,
                   __extract_key_first_tag, __extract_key_fail_tag>::type {};
 
@@ -4298,8 +4301,6 @@ struct __can_extract_map_key
 template <class _ValTy, class _Key, class _RawValTy>
 struct __can_extract_map_key<_ValTy, _Key, _Key, _RawValTy>
     : false_type {};
-
-#endif
 
 #ifndef _LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED
 #if _LIBCPP_STD_VER > 17

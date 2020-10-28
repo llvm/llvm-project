@@ -116,6 +116,15 @@ struct OrderMap {
 
 } // end anonymous namespace
 
+/// Look for a value that might be wrapped as metadata, e.g. a value in a
+/// metadata operand. Returns the input value as-is if it is not wrapped.
+static const Value *skipMetadataWrapper(const Value *V) {
+  if (const auto *MAV = dyn_cast<MetadataAsValue>(V))
+    if (const auto *VAM = dyn_cast<ValueAsMetadata>(MAV->getMetadata()))
+      return VAM->getValue();
+  return V;
+}
+
 static void orderValue(const Value *V, OrderMap &OM) {
   if (OM.lookup(V).first)
     return;
@@ -132,8 +141,6 @@ static void orderValue(const Value *V, OrderMap &OM) {
 }
 
 static OrderMap orderModule(const Module *M) {
-  // This needs to match the order used by ValueEnumerator::ValueEnumerator()
-  // and ValueEnumerator::incorporateFunction().
   OrderMap OM;
 
   for (const GlobalVariable &G : M->globals()) {
@@ -167,10 +174,12 @@ static OrderMap orderModule(const Module *M) {
     for (const BasicBlock &BB : F) {
       orderValue(&BB, OM);
       for (const Instruction &I : BB) {
-        for (const Value *Op : I.operands())
+        for (const Value *Op : I.operands()) {
+          Op = skipMetadataWrapper(Op);
           if ((isa<Constant>(*Op) && !isa<GlobalValue>(*Op)) ||
               isa<InlineAsm>(*Op))
             orderValue(Op, OM);
+        }
         orderValue(&I, OM);
       }
     }
@@ -284,9 +293,11 @@ static UseListOrderStack predictUseListOrder(const Module *M) {
       predictValueUseListOrder(&A, &F, OM, Stack);
     for (const BasicBlock &BB : F)
       for (const Instruction &I : BB)
-        for (const Value *Op : I.operands())
+        for (const Value *Op : I.operands()) {
+          Op = skipMetadataWrapper(Op);
           if (isa<Constant>(*Op) || isa<InlineAsm>(*Op)) // Visit GlobalValues.
             predictValueUseListOrder(Op, &F, OM, Stack);
+        }
     for (const BasicBlock &BB : F)
       for (const Instruction &I : BB)
         predictValueUseListOrder(&I, &F, OM, Stack);
@@ -1373,9 +1384,19 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
                     "assuming that double is 64 bits!");
       APFloat apf = APF;
       // Floats are represented in ASCII IR as double, convert.
-      if (!isDouble)
+      // FIXME: We should allow 32-bit hex float and remove this.
+      if (!isDouble) {
+        // A signaling NaN is quieted on conversion, so we need to recreate the
+        // expected value after convert (quiet bit of the payload is clear).
+        bool IsSNAN = apf.isSignaling();
         apf.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
-                          &ignored);
+                    &ignored);
+        if (IsSNAN) {
+          APInt Payload = apf.bitcastToAPInt();
+          apf = APFloat::getSNaN(APFloat::IEEEdouble(), apf.isNegative(),
+                                 &Payload);
+        }
+      }
       Out << format_hex(apf.bitcastToAPInt().getZExtValue(), 0, /*Upper=*/true);
       return;
     }
@@ -1981,6 +2002,11 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
   Printer.printMetadata("dataLocation", N->getRawDataLocation());
   Printer.printMetadata("associated", N->getRawAssociated());
   Printer.printMetadata("allocated", N->getRawAllocated());
+  if (auto *RankConst = N->getRankConst())
+    Printer.printInt("rank", RankConst->getSExtValue(),
+                     /* ShouldSkipZero */ false);
+  else
+    Printer.printMetadata("rank", N->getRawRank(), /*ShouldSkipNull */ true);
   Out << ")";
 }
 
@@ -4288,12 +4314,15 @@ void AssemblyWriter::writeAttribute(const Attribute &Attr, bool InAttrGroup) {
   }
 
   assert((Attr.hasAttribute(Attribute::ByVal) ||
+          Attr.hasAttribute(Attribute::StructRet) ||
           Attr.hasAttribute(Attribute::ByRef) ||
           Attr.hasAttribute(Attribute::Preallocated)) &&
          "unexpected type attr");
 
   if (Attr.hasAttribute(Attribute::ByVal)) {
     Out << "byval";
+  } else if (Attr.hasAttribute(Attribute::StructRet)) {
+    Out << "sret";
   } else if (Attr.hasAttribute(Attribute::ByRef)) {
     Out << "byref";
   } else {
@@ -4388,7 +4417,7 @@ void Function::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
 void BasicBlock::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                      bool ShouldPreserveUseListOrder,
                      bool IsForDebug) const {
-  SlotTracker SlotTable(this->getModule());
+  SlotTracker SlotTable(this->getParent());
   formatted_raw_ostream OS(ROS);
   AssemblyWriter W(OS, SlotTable, this->getModule(), AAW,
                    IsForDebug,

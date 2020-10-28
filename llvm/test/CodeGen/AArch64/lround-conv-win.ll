@@ -3,8 +3,6 @@
 ; CHECK-LABEL: testmsxs:
 ; CHECK:       fcvtas  w8, s0
 ; CHECK-NEXT:  sxtw    x0, w8
-; CHECK-NEXT:  .seh_startepilogue
-; CHECK-NEXT:  .seh_endepilogue
 ; CHECK-NEXT:  ret
 define i64 @testmsxs(float %x) {
 entry:
@@ -15,8 +13,6 @@ entry:
 
 ; CHECK-LABEL: testmsws:
 ; CHECK:       fcvtas  w0, s0
-; CHECK-NEXT:  .seh_startepilogue
-; CHECK-NEXT:  .seh_endepilogue
 ; CHECK-NEXT:  ret
 define i32 @testmsws(float %x) {
 entry:
@@ -27,8 +23,6 @@ entry:
 ; CHECK-LABEL: testmsxd:
 ; CHECK:       fcvtas  w8, d0
 ; CHECK-NEXT:  sxtw    x0, w8
-; CHECK-NEXT:  .seh_startepilogue
-; CHECK-NEXT:  .seh_endepilogue
 ; CHECK-NEXT:  ret
 define i64 @testmsxd(double %x) {
 entry:
@@ -39,8 +33,6 @@ entry:
 
 ; CHECK-LABEL: testmswd:
 ; CHECK:       fcvtas  w0, d0
-; CHECK-NEXT:  .seh_startepilogue
-; CHECK-NEXT:  .seh_endepilogue
 ; CHECK-NEXT:  ret
 define i32 @testmswd(double %x) {
 entry:

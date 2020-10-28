@@ -651,7 +651,7 @@ public:
   virtual bool CalculateMD5(const FileSpec &file_spec, uint64_t &low,
                             uint64_t &high);
 
-  virtual int32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
+  virtual uint32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
     return 1;
   }
 
@@ -951,9 +951,6 @@ private:
                               Platform &remote_platform);
 
   FileSpec GetModuleCacheRoot();
-
-  Platform(const Platform &) = delete;
-  const Platform &operator=(const Platform &) = delete;
 };
 
 class PlatformList {

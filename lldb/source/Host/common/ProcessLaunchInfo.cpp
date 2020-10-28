@@ -218,11 +218,10 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   // do for now.
   open_flags |= O_CLOEXEC;
 #endif
-  if (!m_pty->OpenFirstAvailablePrimary(open_flags, nullptr, 0)) {
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "PTY::OpenFirstAvailablePrimary failed");
-  }
-  const FileSpec secondary_file_spec(m_pty->GetSecondaryName(nullptr, 0));
+  if (llvm::Error Err = m_pty->OpenFirstAvailablePrimary(open_flags))
+    return Err;
+
+  const FileSpec secondary_file_spec(m_pty->GetSecondaryName());
 
   // Only use the secondary tty if we don't have anything specified for
   // input and don't have an action for stdin
@@ -242,8 +241,8 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
 }
 
 bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
-    Status &error, bool localhost, bool will_debug,
-    bool first_arg_is_full_shell_command, int32_t num_resumes) {
+    Status &error, bool will_debug, bool first_arg_is_full_shell_command,
+    uint32_t num_resumes) {
   error.Clear();
 
   if (GetFlags().Test(eLaunchFlagLaunchInShell)) {
@@ -254,7 +253,6 @@ bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
       if (argv == nullptr || argv[0] == nullptr)
         return false;
       Args shell_arguments;
-      std::string safe_arg;
       shell_arguments.AppendArgument(shell_executable);
       const llvm::Triple &triple = GetArchitecture().GetTriple();
       if (triple.getOS() == llvm::Triple::Win32 &&
@@ -331,9 +329,10 @@ bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
           return false;
       } else {
         for (size_t i = 0; argv[i] != nullptr; ++i) {
-          const char *arg =
-              Args::GetShellSafeArgument(m_shell, argv[i], safe_arg);
-          shell_command.Printf(" %s", arg);
+          std::string safe_arg = Args::GetShellSafeArgument(m_shell, argv[i]);
+          // Add a space to separate this arg from the previous one.
+          shell_command.PutCString(" ");
+          shell_command.PutCString(safe_arg);
         }
       }
       shell_arguments.AppendArgument(shell_command.GetString());

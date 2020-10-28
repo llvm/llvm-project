@@ -774,7 +774,7 @@ func @reduce_f16(%arg0: vector<16xf16>) -> f16 {
 // CHECK-LABEL: llvm.func @reduce_f16(
 // CHECK-SAME: %[[A:.*]]: !llvm.vec<16 x half>)
 //      CHECK: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f16) : !llvm.half
-//      CHECK: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.v2.fadd"(%[[C]], %[[A]])
+//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.fadd"(%[[C]], %[[A]])
 // CHECK-SAME: {reassoc = false} : (!llvm.half, !llvm.vec<16 x half>) -> !llvm.half
 //      CHECK: llvm.return %[[V]] : !llvm.half
 
@@ -785,7 +785,7 @@ func @reduce_f32(%arg0: vector<16xf32>) -> f32 {
 // CHECK-LABEL: llvm.func @reduce_f32(
 // CHECK-SAME: %[[A:.*]]: !llvm.vec<16 x float>)
 //      CHECK: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f32) : !llvm.float
-//      CHECK: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.v2.fadd"(%[[C]], %[[A]])
+//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.fadd"(%[[C]], %[[A]])
 // CHECK-SAME: {reassoc = false} : (!llvm.float, !llvm.vec<16 x float>) -> !llvm.float
 //      CHECK: llvm.return %[[V]] : !llvm.float
 
@@ -796,7 +796,7 @@ func @reduce_f64(%arg0: vector<16xf64>) -> f64 {
 // CHECK-LABEL: llvm.func @reduce_f64(
 // CHECK-SAME: %[[A:.*]]: !llvm.vec<16 x double>)
 //      CHECK: %[[C:.*]] = llvm.mlir.constant(0.000000e+00 : f64) : !llvm.double
-//      CHECK: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.v2.fadd"(%[[C]], %[[A]])
+//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.fadd"(%[[C]], %[[A]])
 // CHECK-SAME: {reassoc = false} : (!llvm.double, !llvm.vec<16 x double>) -> !llvm.double
 //      CHECK: llvm.return %[[V]] : !llvm.double
 
@@ -806,7 +806,7 @@ func @reduce_i8(%arg0: vector<16xi8>) -> i8 {
 }
 // CHECK-LABEL: llvm.func @reduce_i8(
 // CHECK-SAME: %[[A:.*]]: !llvm.vec<16 x i8>)
-//      CHECK: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.add"(%[[A]])
+//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.add"(%[[A]])
 //      CHECK: llvm.return %[[V]] : !llvm.i8
 
 func @reduce_i32(%arg0: vector<16xi32>) -> i32 {
@@ -815,7 +815,7 @@ func @reduce_i32(%arg0: vector<16xi32>) -> i32 {
 }
 // CHECK-LABEL: llvm.func @reduce_i32(
 // CHECK-SAME: %[[A:.*]]: !llvm.vec<16 x i32>)
-//      CHECK: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.add"(%[[A]])
+//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.add"(%[[A]])
 //      CHECK: llvm.return %[[V]] : !llvm.i32
 
 func @reduce_i64(%arg0: vector<16xi64>) -> i64 {
@@ -824,7 +824,7 @@ func @reduce_i64(%arg0: vector<16xi64>) -> i64 {
 }
 // CHECK-LABEL: llvm.func @reduce_i64(
 // CHECK-SAME: %[[A:.*]]: !llvm.vec<16 x i64>)
-//      CHECK: %[[V:.*]] = "llvm.intr.experimental.vector.reduce.add"(%[[A]])
+//      CHECK: %[[V:.*]] = "llvm.intr.vector.reduce.add"(%[[A]])
 //      CHECK: llvm.return %[[V]] : !llvm.i64
 
 

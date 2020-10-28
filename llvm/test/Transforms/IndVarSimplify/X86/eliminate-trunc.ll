@@ -390,7 +390,7 @@ define void @test_07(i32* %p, i32 %n) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[NARROW_IV:%.*]] = trunc i64 [[IV]] to i32
-; CHECK-NEXT:    store i32 [[NARROW_IV]], i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 [[NARROW_IV]], i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -474,7 +474,7 @@ define void @test_10(i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 90
 ; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP2]], i64 [[TMP1]], i64 90
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[UMIN]], -99
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[UMIN]], -99
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -100, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -550,7 +550,7 @@ bb7:                                             ; preds = %bb6
 define void @test_12(i32* %p) {
 ; CHECK-LABEL: @test_12(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[N:%.*]] = load i32, i32* [[P:%.*]], !range !0
+; CHECK-NEXT:    [[N:%.*]] = load i32, i32* [[P:%.*]], align 4, [[RNG0:!range !.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[N]], 1
 ; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i32 [[N]], i32 1
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64

@@ -356,6 +356,22 @@ TEST(SelectionTest, CommonAncestor) {
         )cpp",
           "DeclRefExpr"},
 
+      // Objective-C nullability attributes.
+      {
+          R"cpp(
+            @interface I{}
+            @property(nullable) [[^I]] *x;
+            @end
+          )cpp",
+          "ObjCInterfaceTypeLoc"},
+      {
+          R"cpp(
+            @interface I{}
+            - (void)doSomething:(nonnull [[i^d]])argument;
+            @end
+          )cpp",
+          "TypedefTypeLoc"},
+
       // Objective-C OpaqueValueExpr/PseudoObjectExpr has weird ASTs.
       // Need to traverse the contents of the OpaqueValueExpr to the POE,
       // and ensure we traverse only the syntactic form of the PseudoObjectExpr.

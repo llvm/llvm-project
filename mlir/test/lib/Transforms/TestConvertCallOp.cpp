@@ -58,9 +58,8 @@ public:
     target.addIllegalDialect<TestDialect>();
     target.addIllegalDialect<StandardOpsDialect>();
 
-    if (failed(applyPartialConversion(m, target, patterns))) {
+    if (failed(applyPartialConversion(m, target, std::move(patterns))))
       signalPassFailure();
-    }
   }
 };
 

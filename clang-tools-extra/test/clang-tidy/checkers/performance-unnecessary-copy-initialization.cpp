@@ -405,3 +405,58 @@ void negativeInitialzedFromFreeFunctionWithNonDefaultArg() {
   ExpensiveToCopyType Orig;
   const ExpensiveToCopyType Copy = freeFunctionWithDefaultArg(&Orig);
 }
+
+namespace std {
+inline namespace __1 {
+
+template <class>
+class function;
+template <class R, class... Args>
+class function<R(Args...)> {
+public:
+  function();
+  function(const function &other);
+  R operator()(Args &&...args) const;
+};
+
+} // namespace __1
+} // namespace std
+
+void negativeStdFunction() {
+  std::function<int()> Orig;
+  std::function<int()> Copy = Orig;
+  int i = Orig();
+}
+
+using Functor = std::function<int()>;
+
+void negativeAliasedStdFunction() {
+  Functor Orig;
+  Functor Copy = Orig;
+  int i = Orig();
+}
+
+typedef std::function<int()> TypedefFunc;
+
+void negativeTypedefedStdFunction() {
+  TypedefFunc Orig;
+  TypedefFunc Copy = Orig;
+  int i = Orig();
+}
+
+namespace fake {
+namespace std {
+template <class R, class... Args>
+struct function {
+  // Custom copy constructor makes it expensive to copy;
+  function(const function &);
+};
+} // namespace std
+
+void positiveFakeStdFunction(std::function<void(int)> F) {
+  auto Copy = F;
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: local copy 'Copy' of the variable 'F' is never modified;
+  // CHECK-FIXES: const auto& Copy = F;
+}
+
+} // namespace fake

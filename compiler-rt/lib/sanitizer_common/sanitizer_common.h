@@ -254,7 +254,6 @@ void UpdateProcessName();
 void CacheBinaryName();
 void DisableCoreDumperIfNecessary();
 void DumpProcessMap();
-void PrintModuleMap();
 const char *GetEnv(const char *name);
 bool SetEnv(const char *name, const char *value);
 
@@ -674,7 +673,8 @@ enum ModuleArch {
   kModuleArchARMV7,
   kModuleArchARMV7S,
   kModuleArchARMV7K,
-  kModuleArchARM64
+  kModuleArchARM64,
+  kModuleArchRISCV64
 };
 
 // Opens the file 'file_name" and reads up to 'max_len' bytes.
@@ -718,6 +718,8 @@ inline const char *ModuleArchToString(ModuleArch arch) {
       return "armv7k";
     case kModuleArchARM64:
       return "arm64";
+    case kModuleArchRISCV64:
+      return "riscv64";
   }
   CHECK(0 && "Invalid module arch");
   return "";

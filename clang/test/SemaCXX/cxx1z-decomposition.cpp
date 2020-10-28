@@ -103,4 +103,49 @@ int f2() {
 
 } // namespace instantiate_template
 
+namespace lambdas {
+  void f() {
+    int n;
+    auto [a] =  // expected-error {{cannot decompose lambda closure type}}
+        [n] {}; // expected-note {{lambda expression}}
+  }
+
+  auto [] = []{}; // expected-warning {{ISO C++17 does not allow a decomposition group to be empty}}
+
+  int g() {
+    int n = 0;
+    auto a = [=](auto &self) { // expected-note {{lambda expression}}
+      auto &[capture] = self; // expected-error {{cannot decompose lambda closure type}}
+      ++capture;
+      return n;
+    };
+    return a(a); // expected-note {{in instantiation of}}
+  }
+
+  int h() {
+    auto x = [] {};
+    struct A : decltype(x) {
+      int n;
+    };
+    auto &&[r] = A{x, 0}; // OK (presumably), non-capturing lambda has no non-static data members
+    return r;
+  }
+
+  int i() {
+    int n;
+    auto x = [n] {};
+    struct A : decltype(x) {
+      int n;
+    };
+    auto &&[r] = A{x, 0}; // expected-error-re {{cannot decompose class type 'A': both it and its base class 'decltype(x)' (aka '(lambda {{.*}})') have non-static data members}}
+    return r;
+  }
+
+  void j() {
+    auto x = [] {};
+    struct A : decltype(x) {};
+    auto &&[] = A{x}; // expected-warning {{ISO C++17 does not allow a decomposition group to be empty}}
+  }
+}
+
 // FIXME: by-value array copies

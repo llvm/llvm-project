@@ -88,7 +88,7 @@ add_library(libc-benchmark
 )
 add_dependencies(libc-benchmark google-benchmark)
 target_include_directories(libc-benchmark
-    PUBLIC
+    SYSTEM PUBLIC
     "${GOOGLE_BENCHMARK_LIBC_INSTALL}/include"
 )
 target_link_libraries(libc-benchmark
@@ -111,6 +111,8 @@ add_library(libc-memory-benchmark
     EXCLUDE_FROM_ALL
     LibcMemoryBenchmark.cpp
     LibcMemoryBenchmark.h
+    MemorySizeDistributions.cpp
+    MemorySizeDistributions.h
 )
 target_link_libraries(libc-memory-benchmark PUBLIC libc-benchmark)
 fix_rtti(libc-memory-benchmark)

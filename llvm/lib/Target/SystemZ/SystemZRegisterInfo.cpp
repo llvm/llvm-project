@@ -109,8 +109,9 @@ bool SystemZRegisterInfo::getRegAllocationHints(
 
         auto tryAddHint = [&](const MachineOperand *MO) -> void {
           Register Reg = MO->getReg();
-          Register PhysReg =
-            Register::isPhysicalRegister(Reg) ? Reg : VRM->getPhys(Reg);
+          Register PhysReg = Register::isPhysicalRegister(Reg)
+                                 ? Reg
+                                 : Register(VRM->getPhys(Reg));
           if (PhysReg) {
             if (MO->getSubReg())
               PhysReg = getSubReg(PhysReg, MO->getSubReg());
@@ -321,8 +322,8 @@ SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         // Load the high offset into the scratch register and use it as
         // an index.
         TII->loadImmediate(MBB, MI, ScratchReg, HighOffset);
-        BuildMI(MBB, MI, DL, TII->get(SystemZ::AGR),ScratchReg)
-          .addReg(ScratchReg, RegState::Kill).addReg(BasePtr);
+        BuildMI(MBB, MI, DL, TII->get(SystemZ::LA), ScratchReg)
+          .addReg(BasePtr, RegState::Kill).addImm(0).addReg(ScratchReg);
       }
 
       // Use the scratch register as the base.  It then dies here.

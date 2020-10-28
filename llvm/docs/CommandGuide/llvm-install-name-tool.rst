@@ -43,6 +43,10 @@ the same `<rpath>` value.
  times to delete multiple rpaths. Throws an error if ``<rpath>`` is not listed in
  the binary.
 
+.. option:: -delete_all_rpaths
+
+  Deletes all rpaths from the binary.
+
 .. option:: --help, -h
 
  Print a summary of command line options.

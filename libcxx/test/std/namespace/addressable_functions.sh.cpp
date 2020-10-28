@@ -17,9 +17,14 @@
 // RUN: %{cxx} %t.tu1.o %t.tu2.o %{flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
+// The functions checked below come from <iostream> & friends
+// UNSUPPORTED: libcpp-has-no-localization
+
 #include <cassert>
-#include <iostream>
+#include <ios>
+#include <istream>
 #include <map>
+#include <ostream>
 #include <string>
 #include <utility>
 
@@ -144,7 +149,7 @@ WIstreamManipFunction* get_wistreammanip_tu2(std::string func)
 
 
 #ifdef TU2
-    int main() {
+    int main(int, char**) {
         assert(get_formatflag_tu1("boolalpha") == get_formatflag_tu2("boolalpha"));
         assert(get_formatflag_tu1("noboolalpha") == get_formatflag_tu2("noboolalpha"));
         assert(get_formatflag_tu1("showbase") == get_formatflag_tu2("showbase"));
@@ -181,5 +186,7 @@ WIstreamManipFunction* get_wistreammanip_tu2(std::string func)
         assert(get_istreammanip_tu1("ws") == get_istreammanip_tu2("ws"));
 
         assert(get_wistreammanip_tu1("ws") == get_wistreammanip_tu2("ws"));
+
+        return 0;
     }
 #endif

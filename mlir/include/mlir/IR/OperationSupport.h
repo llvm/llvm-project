@@ -257,6 +257,12 @@ public:
   void set(Identifier name, Attribute value);
   void set(StringRef name, Attribute value);
 
+  /// Erase the attribute with the given name from the list. Return the
+  /// attribute that was erased, or nullptr if there was no attribute with such
+  /// name.
+  Attribute erase(Identifier name);
+  Attribute erase(StringRef name);
+
   const_iterator begin() const { return attrs.begin(); }
   const_iterator end() const { return attrs.end(); }
 
@@ -267,6 +273,9 @@ public:
 private:
   /// Return whether the attributes are sorted.
   bool isSorted() const { return dictionarySorted.getInt(); }
+
+  /// Erase the attribute at the given iterator position.
+  Attribute eraseImpl(SmallVectorImpl<NamedAttribute>::iterator it);
 
   // These are marked mutable as they may be modified (e.g., sorted)
   mutable SmallVector<NamedAttribute, 4> attrs;
@@ -562,10 +571,10 @@ public:
   OpPrintingFlags();
   OpPrintingFlags(llvm::NoneType) : OpPrintingFlags() {}
 
-  /// Enable the elision of large elements attributes, by printing a '...'
-  /// instead of the element data. Note: The IR generated with this option is
-  /// not parsable. `largeElementLimit` is used to configure what is considered
-  /// to be a "large" ElementsAttr by providing an upper limit to the number of
+  /// Enables the elision of large elements attributes by printing a lexically
+  /// valid but otherwise meaningless form instead of the element data. The
+  /// `largeElementLimit` is used to configure what is considered to be a
+  /// "large" ElementsAttr by providing an upper limit to the number of
   /// elements.
   OpPrintingFlags &elideLargeElementsAttrs(int64_t largeElementLimit = 16);
 

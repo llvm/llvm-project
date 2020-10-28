@@ -10,8 +10,9 @@
 
 // Add to iterator out of bounds.
 
-#if _LIBCPP_DEBUG >= 1
+// UNSUPPORTED: libcxx-no-debug-mode
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <vector>
@@ -50,13 +51,3 @@ int main(int, char**)
     }
 #endif
 }
-
-#else
-
-int main(int, char**)
-{
-
-  return 0;
-}
-
-#endif

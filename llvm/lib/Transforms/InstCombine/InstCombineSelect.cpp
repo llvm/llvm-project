@@ -259,26 +259,6 @@ static unsigned getSelectFoldableOperands(BinaryOperator *I) {
   }
 }
 
-/// For the same transformation as the previous function, return the identity
-/// constant that goes into the select.
-static APInt getSelectFoldableConstant(BinaryOperator *I) {
-  switch (I->getOpcode()) {
-  default: llvm_unreachable("This cannot happen!");
-  case Instruction::Add:
-  case Instruction::Sub:
-  case Instruction::Or:
-  case Instruction::Xor:
-  case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
-    return APInt::getNullValue(I->getType()->getScalarSizeInBits());
-  case Instruction::And:
-    return APInt::getAllOnesValue(I->getType()->getScalarSizeInBits());
-  case Instruction::Mul:
-    return APInt(I->getType()->getScalarSizeInBits(), 1);
-  }
-}
-
 /// We have (select c, TI, FI), and we know that TI and FI have the same opcode.
 Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
                                               Instruction *FI) {
@@ -434,14 +414,15 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
         }
 
         if (OpToFold) {
-          APInt CI = getSelectFoldableConstant(TVI);
+          Constant *C = ConstantExpr::getBinOpIdentity(TVI->getOpcode(),
+                                                       TVI->getType(), true);
           Value *OOp = TVI->getOperand(2-OpToFold);
           // Avoid creating select between 2 constants unless it's selecting
           // between 0, 1 and -1.
           const APInt *OOpC;
           bool OOpIsAPInt = match(OOp, m_APInt(OOpC));
-          if (!isa<Constant>(OOp) || (OOpIsAPInt && isSelect01(CI, *OOpC))) {
-            Value *C = ConstantInt::get(OOp->getType(), CI);
+          if (!isa<Constant>(OOp) ||
+              (OOpIsAPInt && isSelect01(C->getUniqueInteger(), *OOpC))) {
             Value *NewSel = Builder.CreateSelect(SI.getCondition(), OOp, C);
             NewSel->takeName(TVI);
             BinaryOperator *BO = BinaryOperator::Create(TVI->getOpcode(),
@@ -465,14 +446,15 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
         }
 
         if (OpToFold) {
-          APInt CI = getSelectFoldableConstant(FVI);
+          Constant *C = ConstantExpr::getBinOpIdentity(FVI->getOpcode(),
+                                                       FVI->getType(), true);
           Value *OOp = FVI->getOperand(2-OpToFold);
           // Avoid creating select between 2 constants unless it's selecting
           // between 0, 1 and -1.
           const APInt *OOpC;
           bool OOpIsAPInt = match(OOp, m_APInt(OOpC));
-          if (!isa<Constant>(OOp) || (OOpIsAPInt && isSelect01(CI, *OOpC))) {
-            Value *C = ConstantInt::get(OOp->getType(), CI);
+          if (!isa<Constant>(OOp) ||
+              (OOpIsAPInt && isSelect01(C->getUniqueInteger(), *OOpC))) {
             Value *NewSel = Builder.CreateSelect(SI.getCondition(), C, OOp);
             NewSel->takeName(FVI);
             BinaryOperator *BO = BinaryOperator::Create(FVI->getOpcode(),
@@ -1165,9 +1147,8 @@ static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
 ///
 /// We can't replace %sel with %add unless we strip away the flags.
 /// TODO: Wrapping flags could be preserved in some cases with better analysis.
-static Instruction *foldSelectValueEquivalence(SelectInst &Sel, ICmpInst &Cmp,
-                                               const SimplifyQuery &Q,
-                                               InstCombiner &IC) {
+Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
+                                                          ICmpInst &Cmp) {
   if (!Cmp.isEquality())
     return nullptr;
 
@@ -1179,18 +1160,22 @@ static Instruction *foldSelectValueEquivalence(SelectInst &Sel, ICmpInst &Cmp,
     Swapped = true;
   }
 
-  // In X == Y ? f(X) : Z, try to evaluate f(X) and replace the operand.
-  // Take care to avoid replacing X == Y ? X : Z with X == Y ? Y : Z, as that
-  // would lead to an infinite replacement cycle.
+  // In X == Y ? f(X) : Z, try to evaluate f(Y) and replace the operand.
+  // Make sure Y cannot be undef though, as we might pick different values for
+  // undef in the icmp and in f(Y). Additionally, take care to avoid replacing
+  // X == Y ? X : Z with X == Y ? Y : Z, as that would lead to an infinite
+  // replacement cycle.
   Value *CmpLHS = Cmp.getOperand(0), *CmpRHS = Cmp.getOperand(1);
-  if (TrueVal != CmpLHS)
-    if (Value *V = SimplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
+  if (TrueVal != CmpLHS &&
+      isGuaranteedNotToBeUndefOrPoison(CmpRHS, SQ.AC, &Sel, &DT))
+    if (Value *V = SimplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, SQ,
                                           /* AllowRefinement */ true))
-      return IC.replaceOperand(Sel, Swapped ? 2 : 1, V);
-  if (TrueVal != CmpRHS)
-    if (Value *V = SimplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, Q,
+      return replaceOperand(Sel, Swapped ? 2 : 1, V);
+  if (TrueVal != CmpRHS &&
+      isGuaranteedNotToBeUndefOrPoison(CmpLHS, SQ.AC, &Sel, &DT))
+    if (Value *V = SimplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, SQ,
                                           /* AllowRefinement */ true))
-      return IC.replaceOperand(Sel, Swapped ? 2 : 1, V);
+      return replaceOperand(Sel, Swapped ? 2 : 1, V);
 
   auto *FalseInst = dyn_cast<Instruction>(FalseVal);
   if (!FalseInst)
@@ -1199,7 +1184,7 @@ static Instruction *foldSelectValueEquivalence(SelectInst &Sel, ICmpInst &Cmp,
   // InstSimplify already performed this fold if it was possible subject to
   // current poison-generating flags. Try the transform again with
   // poison-generating flags temporarily dropped.
-  bool WasNUW = false, WasNSW = false, WasExact = false;
+  bool WasNUW = false, WasNSW = false, WasExact = false, WasInBounds = false;
   if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(FalseVal)) {
     WasNUW = OBO->hasNoUnsignedWrap();
     WasNSW = OBO->hasNoSignedWrap();
@@ -1210,16 +1195,20 @@ static Instruction *foldSelectValueEquivalence(SelectInst &Sel, ICmpInst &Cmp,
     WasExact = PEO->isExact();
     FalseInst->setIsExact(false);
   }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(FalseVal)) {
+    WasInBounds = GEP->isInBounds();
+    GEP->setIsInBounds(false);
+  }
 
   // Try each equivalence substitution possibility.
   // We have an 'EQ' comparison, so the select's false value will propagate.
   // Example:
   // (X == 42) ? 43 : (X + 1) --> (X == 42) ? (X + 1) : (X + 1) --> X + 1
-  if (SimplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
+  if (SimplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, SQ,
                              /* AllowRefinement */ false) == TrueVal ||
-      SimplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, Q,
+      SimplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, SQ,
                              /* AllowRefinement */ false) == TrueVal) {
-    return IC.replaceInstUsesWith(Sel, FalseVal);
+    return replaceInstUsesWith(Sel, FalseVal);
   }
 
   // Restore poison-generating flags if the transform did not apply.
@@ -1229,6 +1218,8 @@ static Instruction *foldSelectValueEquivalence(SelectInst &Sel, ICmpInst &Cmp,
     FalseInst->setHasNoSignedWrap();
   if (WasExact)
     FalseInst->setIsExact();
+  if (WasInBounds)
+    cast<GetElementPtrInst>(FalseInst)->setIsInBounds();
 
   return nullptr;
 }
@@ -1455,7 +1446,7 @@ tryToReuseConstantFromSelectInComparison(SelectInst &Sel, ICmpInst &Cmp,
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
                                                       ICmpInst *ICI) {
-  if (Instruction *NewSel = foldSelectValueEquivalence(SI, *ICI, SQ, *this))
+  if (Instruction *NewSel = foldSelectValueEquivalence(SI, *ICI))
     return NewSel;
 
   if (Instruction *NewSel = canonicalizeMinMaxWithConstant(SI, *ICI, *this))
@@ -2328,8 +2319,8 @@ static Instruction *factorizeMinMaxTree(SelectPatternFlavor SPF, Value *LHS,
 static Instruction *foldSelectRotate(SelectInst &Sel,
                                      InstCombiner::BuilderTy &Builder) {
   // The false value of the select must be a rotate of the true value.
-  Value *Or0, *Or1;
-  if (!match(Sel.getFalseValue(), m_OneUse(m_Or(m_Value(Or0), m_Value(Or1)))))
+  BinaryOperator *Or0, *Or1;
+  if (!match(Sel.getFalseValue(), m_OneUse(m_Or(m_BinOp(Or0), m_BinOp(Or1)))))
     return nullptr;
 
   Value *TVal = Sel.getTrueValue();
@@ -2337,16 +2328,20 @@ static Instruction *foldSelectRotate(SelectInst &Sel,
   if (!match(Or0, m_OneUse(m_LogicalShift(m_Specific(TVal),
                                           m_ZExtOrSelf(m_Value(SA0))))) ||
       !match(Or1, m_OneUse(m_LogicalShift(m_Specific(TVal),
-                                          m_ZExtOrSelf(m_Value(SA1))))))
+                                          m_ZExtOrSelf(m_Value(SA1))))) ||
+      Or0->getOpcode() == Or1->getOpcode())
     return nullptr;
 
-  auto ShiftOpcode0 = cast<BinaryOperator>(Or0)->getOpcode();
-  auto ShiftOpcode1 = cast<BinaryOperator>(Or1)->getOpcode();
-  if (ShiftOpcode0 == ShiftOpcode1)
-    return nullptr;
+  // Canonicalize to or(shl(TVal, SA0), lshr(TVal, SA1)).
+  if (Or0->getOpcode() == BinaryOperator::LShr) {
+    std::swap(Or0, Or1);
+    std::swap(SA0, SA1);
+  }
+  assert(Or0->getOpcode() == BinaryOperator::Shl &&
+         Or1->getOpcode() == BinaryOperator::LShr &&
+         "Illegal or(shift,shift) pair");
 
-  // We have one of these patterns so far:
-  // select ?, TVal, (or (lshr TVal, SA0), (shl TVal, SA1))
+  // We should now have this pattern:
   // select ?, TVal, (or (shl TVal, SA0), (lshr TVal, SA1))
   // This must be a power-of-2 rotate for a bitmasking transform to be valid.
   unsigned Width = Sel.getType()->getScalarSizeInBits();
@@ -2371,8 +2366,7 @@ static Instruction *foldSelectRotate(SelectInst &Sel,
 
   // This is a rotate that avoids shift-by-bitwidth UB in a suboptimal way.
   // Convert to funnel shift intrinsic.
-  bool IsFshl = (ShAmt == SA0 && ShiftOpcode0 == BinaryOperator::Shl) ||
-                (ShAmt == SA1 && ShiftOpcode1 == BinaryOperator::Shl);
+  bool IsFshl = (ShAmt == SA0);
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
   Function *F = Intrinsic::getDeclaration(Sel.getModule(), IID, Sel.getType());
   ShAmt = Builder.CreateZExt(ShAmt, Sel.getType());

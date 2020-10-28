@@ -115,6 +115,19 @@ Negator::~Negator() {
 }
 #endif
 
+// Due to the InstCombine's worklist management, there are no guarantees that
+// each instruction we'll encounter has been visited by InstCombine already.
+// In particular, most importantly for us, that means we have to canonicalize
+// constants to RHS ourselves, since that is helpful sometimes.
+std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
+  assert(I->getNumOperands() == 2 && "Only for binops!");
+  std::array<Value *, 2> Ops{I->getOperand(0), I->getOperand(1)};
+  if (I->isCommutative() && InstCombiner::getComplexity(I->getOperand(0)) <
+                                InstCombiner::getComplexity(I->getOperand(1)))
+    std::swap(Ops[0], Ops[1]);
+  return Ops;
+}
+
 // FIXME: can this be reworked into a worklist-based algorithm while preserving
 // the depth-first, early bailout traversal?
 LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
@@ -159,11 +172,13 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
 
   // In some cases we can give the answer without further recursion.
   switch (I->getOpcode()) {
-  case Instruction::Add:
+  case Instruction::Add: {
+    std::array<Value *, 2> Ops = getSortedOperandsOfBinOp(I);
     // `inc` is always negatible.
-    if (match(I->getOperand(1), m_One()))
-      return Builder.CreateNot(I->getOperand(0), I->getName() + ".neg");
+    if (match(Ops[1], m_One()))
+      return Builder.CreateNot(Ops[0], I->getName() + ".neg");
     break;
+  }
   case Instruction::Xor:
     // `not` is always negatible.
     if (match(I, m_Not(m_Value(X))))
@@ -344,16 +359,18 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
         ConstantExpr::getShl(Constant::getAllOnesValue(Op1C->getType()), Op1C),
         I->getName() + ".neg");
   }
-  case Instruction::Or:
+  case Instruction::Or: {
     if (!haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1), DL, &AC, I,
                              &DT))
       return nullptr; // Don't know how to handle `or` in general.
+    std::array<Value *, 2> Ops = getSortedOperandsOfBinOp(I);
     // `or`/`add` are interchangeable when operands have no common bits set.
     // `inc` is always negatible.
-    if (match(I->getOperand(1), m_One()))
-      return Builder.CreateNot(I->getOperand(0), I->getName() + ".neg");
+    if (match(Ops[1], m_One()))
+      return Builder.CreateNot(Ops[0], I->getName() + ".neg");
     // Else, just defer to Instruction::Add handling.
     LLVM_FALLTHROUGH;
+  }
   case Instruction::Add: {
     // `add` is negatible if both of its operands are negatible.
     SmallVector<Value *, 2> NegatedOps, NonNegatedOps;
@@ -383,26 +400,29 @@ LLVM_NODISCARD Value *Negator::visitImpl(Value *V, unsigned Depth) {
     return Builder.CreateSub(NegatedOps[0], NonNegatedOps[0],
                              I->getName() + ".neg");
   }
-  case Instruction::Xor:
+  case Instruction::Xor: {
+    std::array<Value *, 2> Ops = getSortedOperandsOfBinOp(I);
     // `xor` is negatible if one of its operands is invertible.
     // FIXME: InstCombineInverter? But how to connect Inverter and Negator?
-    if (auto *C = dyn_cast<Constant>(I->getOperand(1))) {
-      Value *Xor = Builder.CreateXor(I->getOperand(0), ConstantExpr::getNot(C));
+    if (auto *C = dyn_cast<Constant>(Ops[1])) {
+      Value *Xor = Builder.CreateXor(Ops[0], ConstantExpr::getNot(C));
       return Builder.CreateAdd(Xor, ConstantInt::get(Xor->getType(), 1),
                                I->getName() + ".neg");
     }
     return nullptr;
+  }
   case Instruction::Mul: {
+    std::array<Value *, 2> Ops = getSortedOperandsOfBinOp(I);
     // `mul` is negatible if one of its operands is negatible.
     Value *NegatedOp, *OtherOp;
     // First try the second operand, in case it's a constant it will be best to
     // just invert it instead of sinking the `neg` deeper.
-    if (Value *NegOp1 = negate(I->getOperand(1), Depth + 1)) {
+    if (Value *NegOp1 = negate(Ops[1], Depth + 1)) {
       NegatedOp = NegOp1;
-      OtherOp = I->getOperand(0);
-    } else if (Value *NegOp0 = negate(I->getOperand(0), Depth + 1)) {
+      OtherOp = Ops[0];
+    } else if (Value *NegOp0 = negate(Ops[0], Depth + 1)) {
       NegatedOp = NegOp0;
-      OtherOp = I->getOperand(1);
+      OtherOp = Ops[1];
     } else
       // Can't negate either of them.
       return nullptr;

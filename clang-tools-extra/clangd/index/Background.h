@@ -16,9 +16,11 @@
 #include "index/Index.h"
 #include "index/Serialization.h"
 #include "support/Context.h"
+#include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "support/Threading.h"
 #include "support/ThreadsafeFS.h"
+#include "support/Trace.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Threading.h"
@@ -171,6 +173,8 @@ public:
   blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds = 10) {
     return Queue.blockUntilIdleForTest(TimeoutSeconds);
   }
+
+  void profile(MemoryTree &MT) const;
 
 private:
   /// Represents the state of a single file when indexing was performed.

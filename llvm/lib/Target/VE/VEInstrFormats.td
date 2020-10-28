@@ -35,6 +35,25 @@ class InstVE<dag outs, dag ins, string asmstr, list<dag> pattern>
   let AsmString   = asmstr;
   let Pattern = pattern;
 
+  bits<1> VE_Vector = 0;
+  bits<1> VE_VLInUse = 0;
+  bits<3> VE_VLIndex = 0;
+  bits<1> VE_VLWithMask = 0;
+
+  /// These fields correspond to the fields in VEInstrInfo.h.  Any changes to
+  /// these must be reflected there!  See comments there for what these are.
+  ///
+  /// VLIndex is the index of VL register in MI's operands.  The HW instruction
+  /// doesn't have that field, but we add is in MI for the ease of optimization.
+  /// For example, the index of VL of (VST $sy, $sz, $sx, $vl) is 3 (beginning
+  /// from 0), and the index of VL of (VST $sy, $sz, $sx, $vm, $vl) is 4.  We
+  /// define vector instructions hierarchically, so use VE_VLIndex which is
+  /// defined by the type of instruction and VE_VLWithMask which is defined
+  /// whether the insturction use mask or not.
+  let TSFlags{0}   = VE_Vector;
+  let TSFlags{1}   = VE_VLInUse;
+  let TSFlags{4-2} = !add(VE_VLIndex, VE_VLWithMask);
+
   let DecoderNamespace = "VE";
   field bits<64> SoftFail = 0;
 }
@@ -179,11 +198,81 @@ class RRFENCE<bits<8>opVal, dag outs, dag ins, string asmstr,
 
 //-----------------------------------------------------------------------------
 // Section 5.6 RVM Type
+//
+// RVM type is for vector transfer instructions.
 //-----------------------------------------------------------------------------
+
+class RVM<bits<8>opVal, dag outs, dag ins, string asmstr,
+          list<dag> pattern = []>
+   : InstVE<outs, ins, asmstr, pattern> {
+  bits<1>  cx = 0;
+  bits<1>  vc = 0;
+  bits<1>  cs = 0;
+  bits<4>  m = 0;
+  bits<1>  cy = 1;
+  bits<7>  sy;
+  bits<1>  cz = 1;
+  bits<7>  sz;
+  bits<8>  vx;
+  bits<8>  vy = 0;
+  bits<7>  sw = 0;
+  let op = opVal;
+  let Inst{55} = cx;
+  let Inst{54} = vc;
+  let Inst{53} = cs;
+  let Inst{52} = 0;
+  let Inst{51-48} = m;
+  let Inst{47} = cy;
+  let Inst{46-40} = sy;
+  let Inst{39} = cz;
+  let Inst{38-32} = sz;
+  let Inst{31-24} = vx;
+  let Inst{23-16} = vy;
+  let Inst{15-8} = 0;
+  let Inst{7} = 0;
+  let Inst{6-0} = sw;
+
+  let VE_Vector = 1;
+}
 
 //-----------------------------------------------------------------------------
 // Section 5.7 RV Type
+//
+// RV type is for vector instructions.
 //-----------------------------------------------------------------------------
+
+class RV<bits<8>opVal, dag outs, dag ins, string asmstr, list<dag> pattern = []>
+   : InstVE<outs, ins, asmstr, pattern> {
+  bits<1>  cx = 0;
+  bits<1>  cx2 = 0;
+  bits<1>  cs = 0;
+  bits<1>  cs2 = 0;
+  bits<4>  m = 0;
+  bits<1>  cy = 1;
+  bits<7>  sy;
+  bits<1>  cz = 0;
+  bits<7>  sz = 0;
+  bits<8>  vx = 0;
+  bits<8>  vy = 0;
+  bits<8>  vz = 0;
+  bits<8>  vw = 0;
+  let op = opVal;
+  let Inst{55} = cx;
+  let Inst{54} = cx2;
+  let Inst{53} = cs;
+  let Inst{52} = cs2;
+  let Inst{51-48} = m;
+  let Inst{47} = cy;
+  let Inst{46-40} = sy;
+  let Inst{39} = cz;
+  let Inst{38-32} = sz;
+  let Inst{31-24} = vx;
+  let Inst{23-16} = vy;
+  let Inst{15-8} = vz;
+  let Inst{7-0} = vw;
+
+  let VE_Vector = 1;
+}
 
 // Pseudo instructions.
 class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern = []>

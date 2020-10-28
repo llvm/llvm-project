@@ -22,6 +22,9 @@
 
 namespace llvm {
 
+class APFloat;
+struct fltSemantics;
+
 /// The fixed point semantics work similarly to fltSemantics. The width
 /// specifies the whole bit width of the underlying scaled integer (with padding
 /// if any). The scale represents the number of fractional bits in this type.
@@ -62,6 +65,15 @@ public:
   /// given binary operation.
   FixedPointSemantics
   getCommonSemantics(const FixedPointSemantics &Other) const;
+
+  /// Returns true if this fixed-point semantic with its value bits interpreted
+  /// as an integer can fit in the given floating point semantic without
+  /// overflowing to infinity.
+  /// For example, a signed 8-bit fixed-point semantic has a maximum and
+  /// minimum integer representation of 127 and -128, respectively. If both of
+  /// these values can be represented (possibly inexactly) in the floating
+  /// point semantic without overflowing, this returns true.
+  bool fitsInFloatSemantics(const fltSemantics &FloatSema) const;
 
   /// Return the FixedPointSemantics for an integer type.
   static FixedPointSemantics GetIntegerSemantics(unsigned Width,
@@ -153,11 +165,12 @@ public:
   /// If the overflow parameter is provided, and the integral value is not able
   /// to be fully stored in the provided width and sign, the overflow parameter
   /// is set to true.
-  ///
-  /// If the overflow parameter is provided, set this value to true or false to
-  /// indicate if this operation results in an overflow.
   APSInt convertToInt(unsigned DstWidth, bool DstSign,
                       bool *Overflow = nullptr) const;
+
+  /// Convert this fixed point number to a floating point value with the
+  /// provided semantics.
+  APFloat convertToFloat(const fltSemantics &FloatSema) const;
 
   void toString(SmallVectorImpl<char> &Str) const;
   std::string toString() const {
@@ -186,6 +199,10 @@ public:
   static APFixedPoint getMax(const FixedPointSemantics &Sema);
   static APFixedPoint getMin(const FixedPointSemantics &Sema);
 
+  /// Given a floating point semantic, return the next floating point semantic
+  /// with a larger exponent and larger or equal mantissa.
+  static const fltSemantics *promoteFloatSemantics(const fltSemantics *S);
+
   /// Create an APFixedPoint with a value equal to that of the provided integer,
   /// and in the same semantics as the provided target semantics. If the value
   /// is not able to fit in the specified fixed point semantics, and the
@@ -193,6 +210,17 @@ public:
   static APFixedPoint getFromIntValue(const APSInt &Value,
                                       const FixedPointSemantics &DstFXSema,
                                       bool *Overflow = nullptr);
+
+  /// Create an APFixedPoint with a value equal to that of the provided
+  /// floating point value, in the provided target semantics. If the value is
+  /// not able to fit in the specified fixed point semantics and the overflow
+  /// parameter is specified, it is set to true.
+  /// For NaN, the Overflow flag is always set. For +inf and -inf, if the
+  /// semantic is saturating, the value saturates. Otherwise, the Overflow flag
+  /// is set.
+  static APFixedPoint getFromFloatValue(const APFloat &Value,
+                                        const FixedPointSemantics &DstFXSema,
+                                        bool *Overflow = nullptr);
 
 private:
   APSInt Val;
@@ -204,6 +232,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const APFixedPoint &FX) {
   return OS;
 }
 
-}  // namespace llvm
+} // namespace llvm
 
 #endif

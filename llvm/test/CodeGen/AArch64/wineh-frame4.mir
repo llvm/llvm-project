@@ -2,16 +2,16 @@
 # RUN:   -stop-after=prologepilog | FileCheck %s
 # Check save_freg_x, save_freg
 
-# CHECK:       early-clobber $sp = frame-setup STRDpre killed $d10, $sp, -16
-# CHECK-NEXT:  frame-setup SEH_SaveFReg_X 10, -16
-# CHECK-NEXT:  frame-setup STRDui killed $d8, $sp, 1 :: (store 8 into %stack.0)
-# CHECK-NEXT:  frame-setup SEH_SaveFReg 8, 8
+# CHECK:       early-clobber $sp = frame-setup STRDpre killed $d8, $sp, -16
+# CHECK-NEXT:  frame-setup SEH_SaveFReg_X 8, -16
+# CHECK-NEXT:  frame-setup STRDui killed $d10, $sp, 1 :: (store 8 into %stack.0)
+# CHECK-NEXT:  frame-setup SEH_SaveFReg 10, 8
 # CHECK-NEXT:  frame-setup SEH_PrologEnd
 # CHECK:       frame-destroy SEH_EpilogStart
-# CHECK-NEXT:  $d8 = frame-destroy LDRDui $sp, 1 :: (load 8 from %stack.0)
-# CHECK-NEXT:  frame-destroy SEH_SaveFReg 8, 8
-# CHECK-NEXT:  early-clobber $sp, $d10 = frame-destroy LDRDpost $sp, 16 :: (load 8 from %stack.1)
-# CHECK-NEXT:  frame-destroy SEH_SaveFReg_X 10, -16
+# CHECK-NEXT:  $d10 = frame-destroy LDRDui $sp, 1 :: (load 8 from %stack.0)
+# CHECK-NEXT:  frame-destroy SEH_SaveFReg 10, 8
+# CHECK-NEXT:  early-clobber $sp, $d8 = frame-destroy LDRDpost $sp, 16 :: (load 8 from %stack.1)
+# CHECK-NEXT:  frame-destroy SEH_SaveFReg_X 8, -16
 # CHECK-NEXT:  frame-destroy SEH_EpilogEnd
 # CHECK-NEXT:  RET_ReallyLR implicit $x0
 ...

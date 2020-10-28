@@ -262,7 +262,7 @@ static Error emitRemarks(const LinkOptions &Options, StringRef BinaryPath,
   return Error::success();
 }
 
-ErrorOr<DwarfFile &>
+ErrorOr<DWARFFile &>
 DwarfLinkerForBinary::loadObject(const DebugMapObject &Obj,
                                  const DebugMap &DebugMap,
                                  remarks::RemarkLinker &RL) {
@@ -274,7 +274,7 @@ DwarfLinkerForBinary::loadObject(const DebugMapObject &Obj,
     AddressMapForLinking.push_back(
         std::make_unique<AddressManager>(*this, *ErrorOrObj, Obj));
 
-    ObjectsForLinking.push_back(std::make_unique<DwarfFile>(
+    ObjectsForLinking.push_back(std::make_unique<DWARFFile>(
         Obj.getObjectFilename(), ContextForLinking.back().get(),
         AddressMapForLinking.back().get(),
         Obj.empty() ? Obj.getWarnings() : EmptyWarnings));
@@ -334,7 +334,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
       });
   GeneralLinker.setObjFileLoader(
       [&DebugMap, &RL, this](StringRef ContainerName,
-                             StringRef Path) -> ErrorOr<DwarfFile &> {
+                             StringRef Path) -> ErrorOr<DWARFFile &> {
         auto &Obj = DebugMap.addDebugMapObject(
             Path, sys::TimePoint<std::chrono::seconds>(), MachO::N_OSO);
 
@@ -429,7 +429,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
     if (auto ErrorOrObj = loadObject(*Obj, Map, RL))
       GeneralLinker.addObjectFile(*ErrorOrObj);
     else {
-      ObjectsForLinking.push_back(std::make_unique<DwarfFile>(
+      ObjectsForLinking.push_back(std::make_unique<DWARFFile>(
           Obj->getObjectFilename(), nullptr, nullptr,
           Obj->empty() ? Obj->getWarnings() : EmptyWarnings));
       GeneralLinker.addObjectFile(*ObjectsForLinking.back());

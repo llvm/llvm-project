@@ -162,39 +162,49 @@ struct kernel_descriptor_t {
   uint8_t reserved2[6];
 };
 
+enum : uint32_t {
+  GROUP_SEGMENT_FIXED_SIZE_OFFSET = 0,
+  PRIVATE_SEGMENT_FIXED_SIZE_OFFSET = 4,
+  RESERVED0_OFFSET = 8,
+  KERNEL_CODE_ENTRY_BYTE_OFFSET_OFFSET = 16,
+  RESERVED1_OFFSET = 24,
+  COMPUTE_PGM_RSRC3_OFFSET = 44,
+  COMPUTE_PGM_RSRC1_OFFSET = 48,
+  COMPUTE_PGM_RSRC2_OFFSET = 52,
+  KERNEL_CODE_PROPERTIES_OFFSET = 56,
+  RESERVED2_OFFSET = 58,
+};
+
 static_assert(
     sizeof(kernel_descriptor_t) == 64,
     "invalid size for kernel_descriptor_t");
-static_assert(
-    offsetof(kernel_descriptor_t, group_segment_fixed_size) == 0,
-    "invalid offset for group_segment_fixed_size");
-static_assert(
-    offsetof(kernel_descriptor_t, private_segment_fixed_size) == 4,
-    "invalid offset for private_segment_fixed_size");
-static_assert(
-    offsetof(kernel_descriptor_t, reserved0) == 8,
-    "invalid offset for reserved0");
-static_assert(
-    offsetof(kernel_descriptor_t, kernel_code_entry_byte_offset) == 16,
-    "invalid offset for kernel_code_entry_byte_offset");
-static_assert(
-    offsetof(kernel_descriptor_t, reserved1) == 24,
-    "invalid offset for reserved1");
-static_assert(
-    offsetof(kernel_descriptor_t, compute_pgm_rsrc3) == 44,
-    "invalid offset for compute_pgm_rsrc3");
-static_assert(
-    offsetof(kernel_descriptor_t, compute_pgm_rsrc1) == 48,
-    "invalid offset for compute_pgm_rsrc1");
-static_assert(
-    offsetof(kernel_descriptor_t, compute_pgm_rsrc2) == 52,
-    "invalid offset for compute_pgm_rsrc2");
-static_assert(
-    offsetof(kernel_descriptor_t, kernel_code_properties) == 56,
-    "invalid offset for kernel_code_properties");
-static_assert(
-    offsetof(kernel_descriptor_t, reserved2) == 58,
-    "invalid offset for reserved2");
+static_assert(offsetof(kernel_descriptor_t, group_segment_fixed_size) ==
+                  GROUP_SEGMENT_FIXED_SIZE_OFFSET,
+              "invalid offset for group_segment_fixed_size");
+static_assert(offsetof(kernel_descriptor_t, private_segment_fixed_size) ==
+                  PRIVATE_SEGMENT_FIXED_SIZE_OFFSET,
+              "invalid offset for private_segment_fixed_size");
+static_assert(offsetof(kernel_descriptor_t, reserved0) == RESERVED0_OFFSET,
+              "invalid offset for reserved0");
+static_assert(offsetof(kernel_descriptor_t, kernel_code_entry_byte_offset) ==
+                  KERNEL_CODE_ENTRY_BYTE_OFFSET_OFFSET,
+              "invalid offset for kernel_code_entry_byte_offset");
+static_assert(offsetof(kernel_descriptor_t, reserved1) == RESERVED1_OFFSET,
+              "invalid offset for reserved1");
+static_assert(offsetof(kernel_descriptor_t, compute_pgm_rsrc3) ==
+                  COMPUTE_PGM_RSRC3_OFFSET,
+              "invalid offset for compute_pgm_rsrc3");
+static_assert(offsetof(kernel_descriptor_t, compute_pgm_rsrc1) ==
+                  COMPUTE_PGM_RSRC1_OFFSET,
+              "invalid offset for compute_pgm_rsrc1");
+static_assert(offsetof(kernel_descriptor_t, compute_pgm_rsrc2) ==
+                  COMPUTE_PGM_RSRC2_OFFSET,
+              "invalid offset for compute_pgm_rsrc2");
+static_assert(offsetof(kernel_descriptor_t, kernel_code_properties) ==
+                  KERNEL_CODE_PROPERTIES_OFFSET,
+              "invalid offset for kernel_code_properties");
+static_assert(offsetof(kernel_descriptor_t, reserved2) == RESERVED2_OFFSET,
+              "invalid offset for reserved2");
 
 } // end namespace amdhsa
 } // end namespace llvm

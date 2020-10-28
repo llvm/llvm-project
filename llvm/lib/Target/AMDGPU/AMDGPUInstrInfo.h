@@ -52,11 +52,28 @@ struct ImageDimIntrinsicInfo {
   unsigned Intr;
   unsigned BaseOpcode;
   MIMGDim Dim;
-  unsigned GradientStart;
-  unsigned CoordStart;
-  unsigned VAddrEnd;
-  unsigned GradientTyArg;
-  unsigned CoordTyArg;
+
+  uint8_t NumGradients;
+  uint8_t NumDmask;
+  uint8_t NumData;
+  uint8_t NumVAddrs;
+  uint8_t NumArgs;
+
+  uint8_t DMaskIndex;
+  uint8_t VAddrStart;
+  uint8_t GradientStart;
+  uint8_t CoordStart;
+  uint8_t LodIndex;
+  uint8_t MipIndex;
+  uint8_t VAddrEnd;
+  uint8_t RsrcIndex;
+  uint8_t SampIndex;
+  uint8_t UnormIndex;
+  uint8_t TexFailCtrlIndex;
+  uint8_t CachePolicyIndex;
+
+  uint8_t GradientTyArg;
+  uint8_t CoordTyArg;
 };
 const ImageDimIntrinsicInfo *getImageDimIntrinsicInfo(unsigned Intr);
 

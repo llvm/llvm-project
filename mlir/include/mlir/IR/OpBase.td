@@ -791,12 +791,16 @@ class Attr<Pred condition, string descr = ""> :
   // instantiation.
   // TOOD(b/132458159): deduplicate the fields in attribute wrapper classes.
   Attr baseAttr = ?;
+
+  // The fully-qualified C++ namespace where the generated class lives.
+  string cppNamespace = "";
 }
 
 // An attribute of a specific dialect.
 class DialectAttr<Dialect d, Pred condition, string descr = ""> :
     Attr<condition, descr> {
   Dialect dialect = d;
+  let cppNamespace = d.cppNamespace;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1114,16 +1118,6 @@ class EnumAttrInfo<string name, list<EnumAttrCaseInfo> cases> {
   // The underlying type for the C++ enum class. An empty string mean the
   // underlying type is not explicitly specified.
   string underlyingType = "";
-
-  // The C++ namespaces that the enum class definition and utility functions
-  // should be placed into.
-  //
-  // Normally you want to place the full namespace path here. If it is nested,
-  // use "::" as the delimiter, e.g., given "A::B", generated code will be
-  // placed in `namespace A { namespace B { ... } }`. To avoid placing in any
-  // namespace, use "".
-  // TODO: use dialect to provide the namespace.
-  string cppNamespace = "";
 
   // The name of the utility function that converts a value of the underlying
   // type to the corresponding symbol. It will have the following signature:
@@ -1463,7 +1457,8 @@ class StructFieldAttr<string thisName, Attr thisType> {
 // useful when representing data that would normally be in a structure.
 class StructAttr<string name, Dialect d,
                  list<StructFieldAttr> attributes> :
-    DictionaryAttrBase<CPred<"$_self.isa<" # name # ">()">,
+    DictionaryAttrBase<CPred<"$_self.isa<" # d.cppNamespace
+                                           # "::" # name # ">()">,
         "DictionaryAttr with field(s): " #
         StrJoin<!foreach(a, attributes, "'" # a.name # "'"), ", ">.result #
         " (each field having its own constraints)"> {
@@ -1471,13 +1466,15 @@ class StructAttr<string name, Dialect d,
   string className = name;
 
   // Return type should match the name of the structure.
-  let returnType = name;
+  let returnType = d.cppNamespace # "::" # name;
 
   // Storage type should match the name of the structure.
-  let storageType = name;
+  let storageType = d.cppNamespace # "::" # name;
 
   // The dialect this StructAttr belongs to.
   Dialect dialect = d;
+
+  let cppNamespace = d.cppNamespace;
 
   // List of fields that the StructAttr contains.
   list<StructFieldAttr> fields = attributes;
@@ -1723,6 +1720,10 @@ def ResultsBroadcastableShape :
   NativeOpTrait<"ResultsBroadcastableShape">;
 // X op Y == Y op X
 def Commutative  : NativeOpTrait<"IsCommutative">;
+// op op X == op X
+def Idempotent  : NativeOpTrait<"IsIdempotent">;
+// op op X == X
+def Involution  : NativeOpTrait<"IsInvolution">;
 // Op behaves like a constant.
 def ConstantLike : NativeOpTrait<"ConstantLike">;
 // Op behaves like a function.
@@ -1802,6 +1803,13 @@ def NoRegionArguments : NativeOpTrait<"NoRegionArguments">;
 
 // Marker used to identify the argument list for an op or interface method.
 def ins;
+
+// This class represents a typed argument with optional default value for C
+// function signatures, e.g. builders or methods.
+class CArg<string ty, string value = ""> {
+  string type = ty;
+  string defaultValue = value;
+}
 
 // OpInterfaceTrait corresponds to a specific 'OpInterface' class defined in
 // C++. The purpose to wrap around C++ symbol string with this class is to make
@@ -1922,6 +1930,15 @@ def region;
 // Marker used to identify the successor list for an op.
 def successor;
 
+// Base class for custom builders. This is a transient class that will go away
+// when the transition to the DAG form of builder declaration is complete.
+// Should not be used directly.
+class OpBuilderBase<dag dp, code b> {
+  string params = ?;
+  dag dagParams = dp;
+  code body = b;
+}
+
 // Class for defining a custom builder.
 //
 // TableGen generates several generic builders for each op by default (see
@@ -1931,22 +1948,40 @@ def successor;
 // The signature of the builder is always
 //
 // ```c++
-// static void build(OpBuilder &builder, OperationState &state,
+// static void build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
 //                   <other-parameters>...) {
 //   <body>...
 // }
 // ```
 //
-// To define a custom builder, the parameter list (*including* the `Builder
-// *builder, OperationState &state` part) and body should be passed in
-// as separate template arguments to this class. This is because we generate
-// op declaration and definition into separate files. If an empty string is
-// passed in for `body`, then *only* the builder declaration will be
-// generated; this provides a way to define complicated builders entirely
-// in C++.
-class OpBuilder<string p, code b = ""> {
-  string params = p;
-  code body = b;
+// To define a custom builder, the parameter list (*excluding* the
+// `OpBuilder &builder, OperationState &state` part) and body should be passed
+// in as separate template arguments to this class. The parameter list is a
+// TableGen DAG with `ins` operation with named arguments, which has either:
+//   - string initializers ("Type":$name) to represent a typed parameter, or
+//   - CArg-typed initializers (CArg<"Type", "default">:$name) to represent a
+//     typed parameter that may have a default value.
+// The type string is used verbatim to produce code and, therefore, must be a
+// valid C++ type. It is used inside the C++ namespace of the parent Op's
+// dialect; explicit namespace qualification like `::mlir` may be necessary if
+// Ops are not placed inside the `mlir` namespace. The default value string is
+// used verbatim to produce code and must be a valid C++ initializer the given
+// type. For example, the following signature specification
+//
+// ```
+// OpBuilderDAG<(ins "int":$integerArg, CArg<"float", "3.0f">:$floatArg)>
+// ```
+//
+// has an integer parameter and a float parameter with a default value.
+//
+// If an empty string is passed in for `body`, then *only* the builder
+// declaration will be generated; this provides a way to define complicated
+// builders entirely in C++.
+class OpBuilderDAG<dag p, code b = ""> : OpBuilderBase<p, b>;
+
+// Deprecated version of OpBuilder that takes the builder signature as string.
+class OpBuilder<string p, code b = ""> : OpBuilderBase<(ins), b> {
+  let params = p;
 }
 
 // A base decorator class that may optionally be added to OpVariables.
@@ -2024,7 +2059,7 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   //                   ValueRange operands,
   //                   ArrayRef<NamedAttribute> attributes);
   // ```
-  list<OpBuilder> builders = ?;
+  list<OpBuilderBase> builders = ?;
 
   // Avoid generating default build functions.  Custom builders must be
   // provided.
@@ -2257,8 +2292,11 @@ def addBenefit;
 //
 // In the source pattern, `argN` can be used to specify matchers (e.g., using
 // type/attribute type constraints, etc.) and bound to a name for later use.
-// We can also bound names to op instances to reference them later in
-// multi-entity constraints.
+// We can also bind names to op instances to reference them later in
+// multi-entity constraints. Operands in the source pattern can have
+// the same name. This bounds one operand to the name while verifying
+// the rest are all equal.
+//
 //
 // In the result pattern, `argN` can be used to refer to a previously bound
 // name, with potential transformations (e.g., using tAttr, etc.). `argN` can
@@ -2268,16 +2306,18 @@ def addBenefit;
 // For example,
 //
 // ```
-// def : Pattern<(OneResultOp1:$op1 $arg0, $arg1),
+// def : Pattern<(OneResultOp1:$op1 $arg0, $arg1, $arg0),
 //               [(OneResultOp2:$op2 $arg0, $arg1),
 //                (OneResultOp3 $op2 (OneResultOp4))],
 //               [(HasStaticShapePred $op1)]>;
 // ```
 //
-// `$argN` is bound to the `OneResultOp1`'s N-th argument and used later to
-// build `OneResultOp2`. `$op1` is bound to `OneResultOp1` and used to
-// check whether the result's shape is static. `$op2` is bound to
-// `OneResultOp2` and used to build `OneResultOp3`.
+// First `$arg0` and '$arg1' are bound to the `OneResultOp1`'s first
+// and second arguments and used later to build `OneResultOp2`. Second '$arg0'
+// is verified to be equal to the first '$arg0' operand.
+// `$op1` is bound to `OneResultOp1` and used to check whether the result's
+// shape is static. `$op2` is bound to `OneResultOp2` and used to
+// build `OneResultOp3`.
 //
 // ## Multi-result op
 //
@@ -2352,6 +2392,8 @@ class NativeCodeCall<string expr> {
   string expression = expr;
 }
 
+def ConstantLikeMatcher : NativeCodeCall<"success(matchPattern($0->getResult(0), m_Constant(&$1)))">;
+
 //===----------------------------------------------------------------------===//
 // Rewrite directives
 //===----------------------------------------------------------------------===//
@@ -2364,5 +2406,117 @@ def location;
 // Directive used in result pattern to indicate that no new op are generated,
 // so to replace the matched DAG with an existing SSA value.
 def replaceWithValue;
+
+
+//===----------------------------------------------------------------------===//
+// Data type generation
+//===----------------------------------------------------------------------===//
+
+// Define a new type belonging to a dialect and called 'name'.
+class TypeDef<Dialect owningdialect, string name> {
+  Dialect dialect = owningdialect;
+  string cppClassName = name # "Type";
+
+  // Short summary of the type.
+  string summary = ?;
+  // The longer description of this type.
+  string description = ?;
+
+  // Name of storage class to generate or use.
+  string storageClass = name # "TypeStorage";
+  // Namespace (withing dialect c++ namespace) in which the storage class
+  // resides.
+  string storageNamespace = "detail";
+  // Specify if the storage class is to be generated.
+  bit genStorageClass = 1;
+  // Specify that the generated storage class has a constructor which is written
+  // in C++.
+  bit hasStorageCustomConstructor = 0;
+
+  // The list of parameters for this type. Parameters will become both
+  // parameters to the get() method and storage class member variables.
+  //
+  // The format of this dag is:
+  //    (ins
+  //        "<c++ type>":$param1Name,
+  //        "<c++ type>":$param2Name,
+  //        TypeParameter<"c++ type", "param description">:$param3Name)
+  // TypeParameters (or more likely one of their subclasses) are required to add
+  // more information about the parameter, specifically:
+  //  - Documentation
+  //  - Code to allocate the parameter (if allocation is needed in the storage
+  //    class constructor)
+  //
+  // For example:
+  //    (ins
+  //        "int":$width,
+  //        ArrayRefParameter<"bool", "list of bools">:$yesNoArray)
+  //
+  // (ArrayRefParameter is a subclass of TypeParameter which has allocation code
+  // for re-allocating ArrayRefs. It is defined below.)
+  dag parameters = (ins);
+
+  // Use the lowercased name as the keyword for parsing/printing. Specify only
+  // if you want tblgen to generate declarations and/or definitions of
+  // printer/parser for this type.
+  string mnemonic = ?;
+  // If 'mnemonic' specified,
+  //   If null, generate just the declarations.
+  //   If a non-empty code block, just use that code as the definition code.
+  //   Error if an empty code block.
+  code printer = ?;
+  code parser = ?;
+
+  // If set, generate accessors for each Type parameter.
+  bit genAccessors = 1;
+  // Generate the verifyConstructionInvariants declaration and getChecked
+  // method.
+  bit genVerifyInvariantsDecl = 0;
+  // Extra code to include in the class declaration.
+  code extraClassDeclaration = [{}];
+}
+
+// 'Parameters' should be subclasses of this or simple strings (which is a
+// shorthand for TypeParameter<"C++Type">).
+class TypeParameter<string type, string desc> {
+  // Custom memory allocation code for storage constructor.
+  code allocator = ?;
+  // The C++ type of this parameter.
+  string cppType = type;
+  // A description of this parameter.
+  string description = desc;
+  // The format string for the asm syntax (documentation only).
+  string syntax = ?;
+}
+
+// For StringRefs, which require allocation.
+class StringRefParameter<string desc> :
+    TypeParameter<"::llvm::StringRef", desc> {
+  let allocator = [{$_dst = $_allocator.copyInto($_self);}];
+}
+
+// For standard ArrayRefs, which require allocation.
+class ArrayRefParameter<string arrayOf, string desc> :
+    TypeParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
+  let allocator = [{$_dst = $_allocator.copyInto($_self);}];
+}
+
+// For classes which require allocation and have their own allocateInto method.
+class SelfAllocationParameter<string type, string desc> :
+    TypeParameter<type, desc> {
+  let allocator = [{$_dst = $_self.allocateInto($_allocator);}];
+}
+
+// For ArrayRefs which contain things which allocate themselves.
+class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
+    TypeParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
+  let allocator = [{
+    llvm::SmallVector<}] # arrayOf # [{, 4> tmpFields;
+    for (size_t i = 0, e = $_self.size(); i < e; ++i)
+      tmpFields.push_back($_self[i].allocateInto($_allocator));
+    $_dst = $_allocator.copyInto(ArrayRef<}] # arrayOf # [{>(tmpFields));
+  }];
+}
+
 
 #endif // OP_BASE

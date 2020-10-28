@@ -6761,21 +6761,34 @@ entry:
 define <1 x double> @constrained_vector_uitofp_v1f64_v1i64(<1 x i64> %x) #0 {
 ; CHECK-LABEL: constrained_vector_uitofp_v1f64_v1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rdi, %xmm1
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
-; CHECK-NEXT:    subpd {{.*}}(%rip), %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; CHECK-NEXT:    addpd %xmm1, %xmm0
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    shrq %rax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    andl $1, %ecx
+; CHECK-NEXT:    orq %rax, %rcx
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    cmovnsq %rdi, %rcx
+; CHECK-NEXT:    cvtsi2sd %rcx, %xmm0
+; CHECK-NEXT:    jns .LBB169_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    addsd %xmm0, %xmm0
+; CHECK-NEXT:  .LBB169_2: # %entry
 ; CHECK-NEXT:    retq
 ;
 ; AVX1-LABEL: constrained_vector_uitofp_v1f64_v1i64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovq %rdi, %xmm0
-; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; AVX1-NEXT:    vsubpd {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    movq %rdi, %rax
+; AVX1-NEXT:    shrq %rax
+; AVX1-NEXT:    movl %edi, %ecx
+; AVX1-NEXT:    andl $1, %ecx
+; AVX1-NEXT:    orq %rax, %rcx
+; AVX1-NEXT:    testq %rdi, %rdi
+; AVX1-NEXT:    cmovnsq %rdi, %rcx
+; AVX1-NEXT:    vcvtsi2sd %rcx, %xmm0, %xmm0
+; AVX1-NEXT:    jns .LBB169_2
+; AVX1-NEXT:  # %bb.1:
+; AVX1-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:  .LBB169_2: # %entry
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: constrained_vector_uitofp_v1f64_v1i64:
@@ -6906,35 +6919,77 @@ entry:
 define <2 x double> @constrained_vector_uitofp_v2f64_v2i64(<2 x i64> %x) #0 {
 ; CHECK-LABEL: constrained_vector_uitofp_v2f64_v2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [4294967295,4294967295]
-; CHECK-NEXT:    pand %xmm0, %xmm1
-; CHECK-NEXT:    por {{.*}}(%rip), %xmm1
-; CHECK-NEXT:    psrlq $32, %xmm0
-; CHECK-NEXT:    por {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    subpd {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    addpd %xmm1, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    andl $1, %edx
+; CHECK-NEXT:    orq %rcx, %rdx
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    cmovnsq %rax, %rdx
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2sd %rdx, %xmm0
+; CHECK-NEXT:    jns .LBB173_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    addsd %xmm0, %xmm0
+; CHECK-NEXT:  .LBB173_2: # %entry
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; CHECK-NEXT:    movq %xmm1, %rax
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    andl $1, %edx
+; CHECK-NEXT:    orq %rcx, %rdx
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    cmovnsq %rax, %rdx
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2sd %rdx, %xmm1
+; CHECK-NEXT:    jns .LBB173_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    addsd %xmm1, %xmm1
+; CHECK-NEXT:  .LBB173_4: # %entry
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; CHECK-NEXT:    retq
 ;
 ; AVX1-LABEL: constrained_vector_uitofp_v2f64_v2i64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
-; AVX1-NEXT:    vpor {{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; AVX1-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vsubpd {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    shrq %rcx
+; AVX1-NEXT:    movl %eax, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    orq %rcx, %rdx
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    cmovnsq %rax, %rdx
+; AVX1-NEXT:    vcvtsi2sd %rdx, %xmm1, %xmm1
+; AVX1-NEXT:    jns .LBB173_2
+; AVX1-NEXT:  # %bb.1:
+; AVX1-NEXT:    vaddsd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:  .LBB173_2: # %entry
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    shrq %rcx
+; AVX1-NEXT:    movl %eax, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    orq %rcx, %rdx
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    cmovnsq %rax, %rdx
+; AVX1-NEXT:    vcvtsi2sd %rdx, %xmm2, %xmm0
+; AVX1-NEXT:    jns .LBB173_4
+; AVX1-NEXT:  # %bb.3:
+; AVX1-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:  .LBB173_4: # %entry
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX512F-LABEL: constrained_vector_uitofp_v2f64_v2i64:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpblendd {{.*#+}} xmm1 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; AVX512F-NEXT:    vpor {{.*}}(%rip), %xmm1, %xmm1
-; AVX512F-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; AVX512F-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
-; AVX512F-NEXT:    vsubpd {{.*}}(%rip), %xmm0, %xmm0
-; AVX512F-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512F-NEXT:    vcvtusi2sd %rax, %xmm1, %xmm1
+; AVX512F-NEXT:    vmovq %xmm0, %rax
+; AVX512F-NEXT:    vcvtusi2sd %rax, %xmm2, %xmm0
+; AVX512F-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: constrained_vector_uitofp_v2f64_v2i64:
@@ -7124,51 +7179,91 @@ entry:
 define <3 x double> @constrained_vector_uitofp_v3f64_v3i64(<3 x i64> %x) #0 {
 ; CHECK-LABEL: constrained_vector_uitofp_v3f64_v3i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rdi, %xmm1
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [1127219200,1160773632,0,0]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-NEXT:    movapd {{.*#+}} xmm3 = [4.503599627370496E+15,1.9342813113834067E+25]
-; CHECK-NEXT:    subpd %xmm3, %xmm1
-; CHECK-NEXT:    movapd %xmm1, %xmm0
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; CHECK-NEXT:    addpd %xmm1, %xmm0
-; CHECK-NEXT:    movq %rsi, %xmm4
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
-; CHECK-NEXT:    subpd %xmm3, %xmm4
-; CHECK-NEXT:    movapd %xmm4, %xmm1
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm4[1]
-; CHECK-NEXT:    addpd %xmm4, %xmm1
-; CHECK-NEXT:    movq %rdx, %xmm4
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
-; CHECK-NEXT:    subpd %xmm3, %xmm4
-; CHECK-NEXT:    movapd %xmm4, %xmm2
-; CHECK-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm4[1]
-; CHECK-NEXT:    addpd %xmm4, %xmm2
-; CHECK-NEXT:    movlpd %xmm2, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    shrq %rax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    andl $1, %ecx
+; CHECK-NEXT:    orq %rax, %rcx
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    cmovnsq %rdi, %rcx
+; CHECK-NEXT:    cvtsi2sd %rcx, %xmm0
+; CHECK-NEXT:    jns .LBB177_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    addsd %xmm0, %xmm0
+; CHECK-NEXT:  .LBB177_2: # %entry
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    shrq %rax
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    andl $1, %ecx
+; CHECK-NEXT:    orq %rax, %rcx
+; CHECK-NEXT:    testq %rsi, %rsi
+; CHECK-NEXT:    cmovnsq %rsi, %rcx
+; CHECK-NEXT:    cvtsi2sd %rcx, %xmm1
+; CHECK-NEXT:    jns .LBB177_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    addsd %xmm1, %xmm1
+; CHECK-NEXT:  .LBB177_4: # %entry
+; CHECK-NEXT:    movq %rdx, %rax
+; CHECK-NEXT:    shrq %rax
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    andl $1, %ecx
+; CHECK-NEXT:    orq %rax, %rcx
+; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    cmovnsq %rdx, %rcx
+; CHECK-NEXT:    cvtsi2sd %rcx, %xmm2
+; CHECK-NEXT:    jns .LBB177_6
+; CHECK-NEXT:  # %bb.5:
+; CHECK-NEXT:    addsd %xmm2, %xmm2
+; CHECK-NEXT:  .LBB177_6: # %entry
+; CHECK-NEXT:    movsd %xmm2, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
 ; CHECK-NEXT:    retq
 ;
 ; AVX1-LABEL: constrained_vector_uitofp_v3f64_v3i64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovapd {{.*#+}} xmm1 = [1127219200,1160773632,0,0]
-; AVX1-NEXT:    vunpcklps {{.*#+}} xmm2 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX1-NEXT:    vmovapd {{.*#+}} xmm3 = [4.503599627370496E+15,1.9342813113834067E+25]
-; AVX1-NEXT:    vsubpd %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm2[1,0]
-; AVX1-NEXT:    vaddpd %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm4 = xmm0[2,3,2,3]
-; AVX1-NEXT:    vunpcklps {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
-; AVX1-NEXT:    vsubpd %xmm3, %xmm4, %xmm4
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm4[1,0]
-; AVX1-NEXT:    vaddpd %xmm4, %xmm5, %xmm4
-; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm4[0]
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    shrq %rcx
+; AVX1-NEXT:    movl %eax, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    orq %rcx, %rdx
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    cmovnsq %rax, %rdx
+; AVX1-NEXT:    vcvtsi2sd %rdx, %xmm1, %xmm1
+; AVX1-NEXT:    jns .LBB177_2
+; AVX1-NEXT:  # %bb.1:
+; AVX1-NEXT:    vaddsd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:  .LBB177_2: # %entry
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    shrq %rcx
+; AVX1-NEXT:    movl %eax, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    orq %rcx, %rdx
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    cmovnsq %rax, %rdx
+; AVX1-NEXT:    vcvtsi2sd %rdx, %xmm2, %xmm2
+; AVX1-NEXT:    jns .LBB177_4
+; AVX1-NEXT:  # %bb.3:
+; AVX1-NEXT:    vaddsd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:  .LBB177_4: # %entry
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX1-NEXT:    vsubpd %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX1-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    movq %rax, %rcx
+; AVX1-NEXT:    shrq %rcx
+; AVX1-NEXT:    movl %eax, %edx
+; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    orq %rcx, %rdx
+; AVX1-NEXT:    testq %rax, %rax
+; AVX1-NEXT:    cmovnsq %rax, %rdx
+; AVX1-NEXT:    vcvtsi2sd %rdx, %xmm3, %xmm0
+; AVX1-NEXT:    jns .LBB177_6
+; AVX1-NEXT:  # %bb.5:
+; AVX1-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:  .LBB177_6: # %entry
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: constrained_vector_uitofp_v3f64_v3i64:
@@ -7381,51 +7476,117 @@ entry:
 define <4 x double> @constrained_vector_uitofp_v4f64_v4i64(<4 x i64> %x) #0 {
 ; CHECK-LABEL: constrained_vector_uitofp_v4f64_v4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [4294967295,4294967295]
-; CHECK-NEXT:    movdqa %xmm1, %xmm3
-; CHECK-NEXT:    pand %xmm2, %xmm3
-; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [4841369599423283200,4841369599423283200]
-; CHECK-NEXT:    por %xmm4, %xmm3
-; CHECK-NEXT:    psrlq $32, %xmm1
-; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [4985484787499139072,4985484787499139072]
-; CHECK-NEXT:    por %xmm5, %xmm1
-; CHECK-NEXT:    movapd {{.*#+}} xmm6 = [1.9342813118337666E+25,1.9342813118337666E+25]
-; CHECK-NEXT:    subpd %xmm6, %xmm1
-; CHECK-NEXT:    addpd %xmm3, %xmm1
-; CHECK-NEXT:    pand %xmm0, %xmm2
-; CHECK-NEXT:    por %xmm4, %xmm2
-; CHECK-NEXT:    psrlq $32, %xmm0
-; CHECK-NEXT:    por %xmm5, %xmm0
-; CHECK-NEXT:    subpd %xmm6, %xmm0
-; CHECK-NEXT:    addpd %xmm2, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-NEXT:    movq %xmm0, %rax
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    andl $1, %edx
+; CHECK-NEXT:    orq %rcx, %rdx
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    cmovnsq %rax, %rdx
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtsi2sd %rdx, %xmm0
+; CHECK-NEXT:    jns .LBB181_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    addsd %xmm0, %xmm0
+; CHECK-NEXT:  .LBB181_2: # %entry
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
+; CHECK-NEXT:    movq %xmm2, %rax
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    andl $1, %edx
+; CHECK-NEXT:    orq %rcx, %rdx
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    cmovnsq %rax, %rdx
+; CHECK-NEXT:    cvtsi2sd %rdx, %xmm3
+; CHECK-NEXT:    jns .LBB181_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    addsd %xmm3, %xmm3
+; CHECK-NEXT:  .LBB181_4: # %entry
+; CHECK-NEXT:    movq %xmm1, %rax
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    andl $1, %edx
+; CHECK-NEXT:    orq %rcx, %rdx
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    cmovnsq %rax, %rdx
+; CHECK-NEXT:    xorps %xmm2, %xmm2
+; CHECK-NEXT:    cvtsi2sd %rdx, %xmm2
+; CHECK-NEXT:    jns .LBB181_6
+; CHECK-NEXT:  # %bb.5:
+; CHECK-NEXT:    addsd %xmm2, %xmm2
+; CHECK-NEXT:  .LBB181_6: # %entry
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm3[0]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; CHECK-NEXT:    movq %xmm1, %rax
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    andl $1, %edx
+; CHECK-NEXT:    orq %rcx, %rdx
+; CHECK-NEXT:    testq %rax, %rax
+; CHECK-NEXT:    cmovnsq %rax, %rdx
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cvtsi2sd %rdx, %xmm1
+; CHECK-NEXT:    jns .LBB181_8
+; CHECK-NEXT:  # %bb.7:
+; CHECK-NEXT:    addsd %xmm1, %xmm1
+; CHECK-NEXT:  .LBB181_8: # %entry
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; CHECK-NEXT:    movapd %xmm2, %xmm1
 ; CHECK-NEXT:    retq
 ;
 ; AVX1-LABEL: constrained_vector_uitofp_v4f64_v4i64:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
-; AVX1-NEXT:    vorps {{.*}}(%rip), %ymm1, %ymm1
-; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm3, %xmm3
+; AVX1-NEXT:    vmovq %xmm2, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm2
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; AVX1-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm3
+; AVX1-NEXT:    vmovq %xmm1, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm1
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpsrlq $32, %xmm2, %xmm2
+; AVX1-NEXT:    vpextrq $1, %xmm2, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm3
+; AVX1-NEXT:    vmovq %xmm2, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm2
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
 ; AVX1-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
-; AVX1-NEXT:    vorpd {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vsubpd {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm3
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm4, %xmm0
+; AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm3[0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmulpd {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512F-LABEL: constrained_vector_uitofp_v4f64_v4i64:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpblendd {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7]
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
-; AVX512F-NEXT:    vpor %ymm2, %ymm1, %ymm1
-; AVX512F-NEXT:    vpsrlq $32, %ymm0, %ymm0
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072]
-; AVX512F-NEXT:    vpor %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25]
-; AVX512F-NEXT:    vsubpd %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512F-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX512F-NEXT:    vcvtusi2sd %rax, %xmm2, %xmm2
+; AVX512F-NEXT:    vmovq %xmm1, %rax
+; AVX512F-NEXT:    vcvtusi2sd %rax, %xmm3, %xmm1
+; AVX512F-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; AVX512F-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512F-NEXT:    vcvtusi2sd %rax, %xmm3, %xmm2
+; AVX512F-NEXT:    vmovq %xmm0, %rax
+; AVX512F-NEXT:    vcvtusi2sd %rax, %xmm3, %xmm0
+; AVX512F-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; AVX512F-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: constrained_vector_uitofp_v4f64_v4i64:

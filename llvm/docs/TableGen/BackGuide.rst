@@ -22,12 +22,12 @@ for C++, but may be any type of file that the backend developer needs.
 This document is a guide to writing a backend for TableGen. It is not a
 complete reference manual, but rather a guide to using the facilities
 provided by TableGen for the backends. For a complete reference to the
-various data structures and functions involved, see the Doxygen
-documentation.
+various data structures and functions involved, see the primary TableGen
+header file (``record.h``) and/or the Doxygen documentation.
 
 This document assumes that you have read the :doc:`TableGen Programmer's
 Reference <./ProgRef>`, which provides a detailed reference for coding
-TableGen source files. This document and the relevant Doxygen pages will be
+TableGen source files. This document and the data structure comments will be
 improved over time.
 
 Data Structures
@@ -52,14 +52,7 @@ is usually abbreviated ``RK``.
 There are two maps in the recordkeeper, one for classes and one for records
 (the latter often referred to as *defs*). Each map maps the class or record
 name to an instance of the ``Record`` class (see `Record`_), which contains
-all the information about that class or record. The ``RecordKeeper`` class
-defines a type that must be used to declare these maps if they are requested
-directly.
-
-.. code-block:: text
-
-  using RecordMap = std::map<std::string, std::unique_ptr<Record>,
-                             std::less<>>;
+all the information about that class or record.
 
 In addition to the two maps, the ``RecordKeeper`` instance contains:
 
@@ -562,16 +555,16 @@ The ``RecordKeeper`` class provides four functions for getting the
 * ``getDefs()`` returns a ``RecordMap`` reference for all the concrete
   records.
 
-* ``getDef(``\ *name*\ ``)`` return a ``Record`` reference for the named
+* ``getDef(``\ *name*\ ``)`` returns a ``Record`` reference for the named
   concrete record.
 
 * ``getAllDerivedDefinitions(``\ *classname*\ ``)`` returns a vector of
   ``Record`` references for the concrete records that derive from the
   given class.
 
-* ``getAllDerivedDefinitionsTwo(``\ *classname1*\ ``,`` *classname2*\ ``)`` returns
+* ``getAllDerivedDefinitions(``\ *classnames*\ ``)`` returns
   a vector of ``Record`` references for the concrete records that derive from
-  *both* of the given classes. [function to come]
+  *all* of the given classes.
 
 This statement obtains all the records that derive from the ``Attribute``
 class and iterates over them.
@@ -690,11 +683,9 @@ Instances of the following classes can be printed using the ``<<`` operator:
 ``RecordVal``, and
 ``Init``.
 
-A constant and two helper functions are provided for producing the output
-file.  The constant ``MAX_LINE_LEN`` specifies the maximum length of output
-lines.  The helper function ``printLine`` prints a horizontal line comment.
-The helper function ``emitSourceFileHeader`` prints the header comment that
-should be included at the top of every output file.
+The helper function ``emitSourceFileHeader()`` prints the header comment
+that should be included at the top of every output file. A call to it is
+included in the skeleton backend file ``TableGenBackendSkeleton.cpp``.
 
 Printing Error Messages
 =======================
@@ -703,7 +694,7 @@ TableGen records are often derived from multiple classes and also often
 defined through a sequence of multiclasses. Because of this, it can be
 difficult for backends to report clear error messages with accurate source
 file locations.  To make error reporting easier, five error reporting
-functions are provided, each with four overloads. [all combinations to come]
+functions are provided, each with four overloads.
 
 * ``PrintWarning`` prints a message tagged as a warning.
 
@@ -780,9 +771,53 @@ Classes are shown with their template arguments, parent classes (following
 fields. Note that anonymous records are named ``anonymous_0``,
 ``anonymous_1``, etc.
 
-
-
 The ``PrintDetailedRecords`` Backend
 ------------------------------------
 
-[to come]
+The TableGen command option ``--print-detailed-records`` invokes a backend
+that prints all the global variables, classes, and records defined in the
+source files. The output looks like this.
+
+.. code-block:: text
+
+  DETAILED RECORDS for file llvm-project\llvm\lib\target\arc\arc.td
+  
+  -------------------- Global Variables (5) --------------------
+  
+  AMDGPUBufferIntrinsics = [int_amdgcn_buffer_load_format, ...
+  AMDGPUImageDimAtomicIntrinsics = [int_amdgcn_image_atomic_swap_1d, ...
+  ...
+  -------------------- Classes (758) --------------------
+  
+  AMDGPUBufferLoad  |IntrinsicsAMDGPU.td:879|
+    Template args:
+      LLVMType AMDGPUBufferLoad:data_ty = llvm_any_ty  |IntrinsicsAMDGPU.td:879|
+    Superclasses: (SDPatternOperator) Intrinsic AMDGPURsrcIntrinsic
+    Fields:
+      list<SDNodeProperty> Properties = [SDNPMemOperand]  |Intrinsics.td:348|
+      string LLVMName = ""  |Intrinsics.td:343|
+  ...
+  -------------------- Records (12303) --------------------
+  
+  AMDGPUSample_lz_o  |IntrinsicsAMDGPU.td:560|
+    Defm sequence: |IntrinsicsAMDGPU.td:584| |IntrinsicsAMDGPU.td:566|
+    Superclasses: AMDGPUSampleVariant
+    Fields:
+      string UpperCaseMod = "_LZ_O"  |IntrinsicsAMDGPU.td:542|
+      string LowerCaseMod = "_lz_o"  |IntrinsicsAMDGPU.td:543|
+  ...
+
+* Global variables defined with outer ``defvar`` statements are shown with
+  their values.
+
+* The classes are shown with their source location, template arguments,
+  superclasses, and fields. 
+
+* The records are shown with their source location, ``defm`` sequence,
+  superclasses, and fields.
+
+Superclasses are shown in the order processed, with indirect superclasses in
+parentheses. Each field is shown with its value and the source location at
+which it was set.
+The ``defm`` sequence gives the locations of the ``defm`` statements that
+were involved in generating the record, in the order they were invoked.

@@ -746,9 +746,9 @@ yield
 # CHECK-NEXT:  1      1     1.00                        smulwt	r0, r1, r2
 # CHECK-NEXT:  1      2     1.00                        smusd	r0, r1, r2
 # CHECK-NEXT:  1      2     1.00                        smusdx	r0, r1, r2
-# CHECK-NEXT:  1      1     1.00                  U     ssat	r0, #1, r2
-# CHECK-NEXT:  1      1     1.00                  U     ssat	r0, #1, r2, lsl #1
-# CHECK-NEXT:  1      1     1.00                  U     ssat16	r0, #1, r1
+# CHECK-NEXT:  1      1     1.00                        ssat	r0, #1, r2
+# CHECK-NEXT:  1      1     1.00                        ssat	r0, #1, r2, lsl #1
+# CHECK-NEXT:  1      1     1.00                        ssat16	r0, #1, r1
 # CHECK-NEXT:  1      1     1.00    *      *      U     ssax	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00    *      *      U     ssbb
 # CHECK-NEXT:  1      1     1.00    *      *      U     ssub16	r0, r1, r2
@@ -858,9 +858,9 @@ yield
 # CHECK-NEXT:  1      1     1.00                        uqsub8	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00                        usad8	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00                        usada8	r0, r1, r2, r3
-# CHECK-NEXT:  1      1     1.00                  U     usat	r0, #1, r1
-# CHECK-NEXT:  1      1     1.00                  U     usat	r0, #1, r1, lsl #1
-# CHECK-NEXT:  1      1     1.00                  U     usat16	r0, #1, r1
+# CHECK-NEXT:  1      1     1.00                        usat	r0, #1, r1
+# CHECK-NEXT:  1      1     1.00                        usat	r0, #1, r1, lsl #1
+# CHECK-NEXT:  1      1     1.00                        usat16	r0, #1, r1
 # CHECK-NEXT:  1      1     1.00    *      *      U     usax	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00    *      *      U     usub16	r0, r1, r2
 # CHECK-NEXT:  1      1     1.00    *      *      U     usub8	r0, r1, r2

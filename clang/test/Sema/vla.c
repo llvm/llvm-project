@@ -53,7 +53,7 @@ int pr2044b;
 int (*pr2044c(void))[pr2044b]; // expected-error {{variably modified type}}
 
 const int f5_ci = 1;
-void f5() { char a[][f5_ci] = {""}; } // expected-warning {{variable length array folded to constant array as an extension}}
+void f5() { char a[][f5_ci] = {""}; } // expected-error {{variable-sized object may not be initialized}}
 
 // PR5185
 void pr5185(int a[*]);
@@ -89,3 +89,14 @@ void VLAPtrAssign(int size) {
   // Not illegal in C, program _might_ be well formed if size == 3.
   int (*p4)[2][size][3][4][5] = array;
 }
+
+void pr44406() {
+  goto L; // expected-error {{cannot jump}}
+  int z[(int)(1.0 * 2)]; // expected-note {{bypasses initialization of variable length array}}
+L:;
+}
+
+const int pr44406_a = 32;
+typedef struct {
+  char c[pr44406_a]; // expected-warning {{folded to constant array as an extension}}
+} pr44406_s;

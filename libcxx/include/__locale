@@ -11,6 +11,11 @@
 #define _LIBCPP___LOCALE
 
 #include <__config>
+
+#if defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#   error "Localization is not supported by this configuration of libc++"
+#endif
+
 #include <string>
 #include <memory>
 #include <utility>
@@ -335,8 +340,8 @@ collate<_CharT>::do_hash(const char_type* __lo, const char_type* __hi) const
     return static_cast<long>(__h);
 }
 
-_LIBCPP_EXTERN_TEMPLATE2(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<char>)
-_LIBCPP_EXTERN_TEMPLATE2(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<wchar_t>)
+_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<char>)
+_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<wchar_t>)
 
 // template <class CharT> class collate_byname;
 
@@ -1263,10 +1268,10 @@ codecvt_byname<_InternT, _ExternT, _StateT>::~codecvt_byname()
 {
 }
 
-_LIBCPP_EXTERN_TEMPLATE2(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char, char, mbstate_t>)
-_LIBCPP_EXTERN_TEMPLATE2(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<wchar_t, char, mbstate_t>)
-_LIBCPP_EXTERN_TEMPLATE2(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>)
-_LIBCPP_EXTERN_TEMPLATE2(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>)
+_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char, char, mbstate_t>)
+_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<wchar_t, char, mbstate_t>)
+_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>)
+_LIBCPP_EXTERN_TEMPLATE(class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>)
 
 template <size_t _Np>
 struct __narrow_to_utf8
@@ -1407,7 +1412,7 @@ struct _LIBCPP_TEMPLATE_VIS __widen_from_utf8<16>
             if (__r == codecvt_base::error || __nn == __nb)
                 __throw_runtime_error("locale not supported");
             for (const char16_t* __p = __buf; __p < __bn; ++__p, ++__s)
-                *__s = (wchar_t)*__p;
+                *__s = *__p;
             __nb = __nn;
         }
         return __s;
@@ -1441,7 +1446,7 @@ struct _LIBCPP_TEMPLATE_VIS __widen_from_utf8<32>
             if (__r == codecvt_base::error || __nn == __nb)
                 __throw_runtime_error("locale not supported");
             for (const char32_t* __p = __buf; __p < __bn; ++__p, ++__s)
-                *__s = (wchar_t)*__p;
+                *__s = *__p;
             __nb = __nn;
         }
         return __s;

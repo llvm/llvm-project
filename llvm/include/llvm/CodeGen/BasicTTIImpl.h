@@ -264,6 +264,10 @@ public:
     return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
   }
 
+  bool isNumRegsMajorCostOfLSR() {
+    return TargetTransformInfoImplBase::isNumRegsMajorCostOfLSR();
+  }
+
   bool isProfitableLSRChainElement(Instruction *I) {
     return TargetTransformInfoImplBase::isProfitableLSRChainElement(I);
   }
@@ -944,7 +948,11 @@ public:
       return Cost;
 
     if (Src->isVectorTy() &&
-        Src->getPrimitiveSizeInBits() < LT.second.getSizeInBits()) {
+        // In practice it's not currently possible to have a change in lane
+        // length for extending loads or truncating stores so both types should
+        // have the same scalable property.
+        TypeSize::isKnownLT(Src->getPrimitiveSizeInBits(),
+                            LT.second.getSizeInBits())) {
       // This is a vector load that legalizes to a larger type than the vector
       // itself. Unless the corresponding extending load or truncating store is
       // legal, then this will scalarize.
@@ -1125,32 +1133,14 @@ public:
     if (BaseT::getIntrinsicInstrCost(ICA, CostKind) == 0)
       return 0;
 
-    // Special case some scalar intrinsics.
-    Intrinsic::ID IID = ICA.getID();
-    if (CostKind != TTI::TCK_RecipThroughput) {
-      switch (IID) {
-      default:
-        break;
-      case Intrinsic::cttz:
-        if (getTLI()->isCheapToSpeculateCttz())
-          return TargetTransformInfo::TCC_Basic;
-        break;
-      case Intrinsic::ctlz:
-        if (getTLI()->isCheapToSpeculateCtlz())
-          return TargetTransformInfo::TCC_Basic;
-        break;
-      case Intrinsic::memcpy:
-        return thisT()->getMemcpyCost(ICA.getInst());
-        // TODO: other libc intrinsics.
-      }
-      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
-    }
-
-    // TODO: Combine these two logic paths.
     if (ICA.isTypeBasedOnly())
       return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
 
+    // TODO: Handle scalable vectors?
     Type *RetTy = ICA.getReturnType();
+    if (isa<ScalableVectorType>(RetTy))
+      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+
     unsigned VF = ICA.getVectorFactor();
     unsigned RetVF =
         (RetTy->isVectorTy() ? cast<FixedVectorType>(RetTy)->getNumElements()
@@ -1159,36 +1149,29 @@ public:
     const IntrinsicInst *I = ICA.getInst();
     const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
     FastMathFlags FMF = ICA.getFlags();
-
+    Intrinsic::ID IID = ICA.getID();
     switch (IID) {
-    default: {
-      // Assume that we need to scalarize this intrinsic.
-      SmallVector<Type *, 4> Types;
-      for (const Value *Op : Args) {
-        Type *OpTy = Op->getType();
-        assert(VF == 1 || !OpTy->isVectorTy());
-        Types.push_back(VF == 1 ? OpTy : FixedVectorType::get(OpTy, VF));
-      }
+    default:
+      // FIXME: all cost kinds should default to the same thing?
+      if (CostKind != TTI::TCK_RecipThroughput)
+        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+      break;
 
-      if (VF > 1 && !RetTy->isVoidTy())
-        RetTy = FixedVectorType::get(RetTy, VF);
+    case Intrinsic::cttz:
+      // FIXME: If necessary, this should go in target-specific overrides.
+      if (VF == 1 && RetVF == 1 && getTLI()->isCheapToSpeculateCttz())
+        return TargetTransformInfo::TCC_Basic;
+      break;
 
-      // Compute the scalarization overhead based on Args for a vector
-      // intrinsic. A vectorizer will pass a scalar RetTy and VF > 1, while
-      // CostModel will pass a vector RetTy and VF is 1.
-      unsigned ScalarizationCost = std::numeric_limits<unsigned>::max();
-      if (RetVF > 1 || VF > 1) {
-        ScalarizationCost = 0;
-        if (!RetTy->isVoidTy())
-          ScalarizationCost +=
-              getScalarizationOverhead(cast<VectorType>(RetTy), true, false);
-        ScalarizationCost += getOperandsScalarizationOverhead(Args, VF);
-      }
+    case Intrinsic::ctlz:
+      // FIXME: If necessary, this should go in target-specific overrides.
+      if (VF == 1 && RetVF == 1 && getTLI()->isCheapToSpeculateCtlz())
+        return TargetTransformInfo::TCC_Basic;
+      break;
 
-      IntrinsicCostAttributes Attrs(IID, RetTy, Types, FMF,
-                                    ScalarizationCost, I);
-      return thisT()->getIntrinsicInstrCost(Attrs, CostKind);
-    }
+    case Intrinsic::memcpy:
+      return thisT()->getMemcpyCost(ICA.getInst());
+
     case Intrinsic::masked_scatter: {
       assert(VF == 1 && "Can't vectorize types here.");
       const Value *Mask = Args[3];
@@ -1206,24 +1189,31 @@ public:
       return thisT()->getGatherScatterOpCost(Instruction::Load, RetTy, Args[0],
                                              VarMask, Alignment, CostKind, I);
     }
-    case Intrinsic::experimental_vector_reduce_add:
-    case Intrinsic::experimental_vector_reduce_mul:
-    case Intrinsic::experimental_vector_reduce_and:
-    case Intrinsic::experimental_vector_reduce_or:
-    case Intrinsic::experimental_vector_reduce_xor:
-    case Intrinsic::experimental_vector_reduce_v2_fadd:
-    case Intrinsic::experimental_vector_reduce_v2_fmul:
-    case Intrinsic::experimental_vector_reduce_smax:
-    case Intrinsic::experimental_vector_reduce_smin:
-    case Intrinsic::experimental_vector_reduce_fmax:
-    case Intrinsic::experimental_vector_reduce_fmin:
-    case Intrinsic::experimental_vector_reduce_umax:
-    case Intrinsic::experimental_vector_reduce_umin: {
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_mul:
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_xor:
+    case Intrinsic::vector_reduce_smax:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_fmax:
+    case Intrinsic::vector_reduce_fmin:
+    case Intrinsic::vector_reduce_umax:
+    case Intrinsic::vector_reduce_umin: {
       IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, 1, I);
-      return getIntrinsicInstrCost(Attrs, CostKind);
+      return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
+    }
+    case Intrinsic::vector_reduce_fadd:
+    case Intrinsic::vector_reduce_fmul: {
+      IntrinsicCostAttributes Attrs(
+          IID, RetTy, {Args[0]->getType(), Args[1]->getType()}, FMF, 1, I);
+      return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
     }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
+      // FIXME: all cost kinds should default to the same thing?
+      if (CostKind != TTI::TCK_RecipThroughput)
+        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       const Value *X = Args[0];
       const Value *Y = Args[1];
       const Value *Z = Args[2];
@@ -1262,6 +1252,32 @@ public:
       return Cost;
     }
     }
+
+    // Assume that we need to scalarize this intrinsic.
+    SmallVector<Type *, 4> Types;
+    for (const Value *Op : Args) {
+      Type *OpTy = Op->getType();
+      assert(VF == 1 || !OpTy->isVectorTy());
+      Types.push_back(VF == 1 ? OpTy : FixedVectorType::get(OpTy, VF));
+    }
+
+    if (VF > 1 && !RetTy->isVoidTy())
+      RetTy = FixedVectorType::get(RetTy, VF);
+
+    // Compute the scalarization overhead based on Args for a vector
+    // intrinsic. A vectorizer will pass a scalar RetTy and VF > 1, while
+    // CostModel will pass a vector RetTy and VF is 1.
+    unsigned ScalarizationCost = std::numeric_limits<unsigned>::max();
+    if (RetVF > 1 || VF > 1) {
+      ScalarizationCost = 0;
+      if (!RetTy->isVoidTy())
+        ScalarizationCost +=
+            getScalarizationOverhead(cast<VectorType>(RetTy), true, false);
+      ScalarizationCost += getOperandsScalarizationOverhead(Args, VF);
+    }
+
+    IntrinsicCostAttributes Attrs(IID, RetTy, Types, FMF, ScalarizationCost, I);
+    return thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
   }
 
   /// Get intrinsic cost based on argument types.
@@ -1277,7 +1293,17 @@ public:
     unsigned ScalarizationCostPassed = ICA.getScalarizationCost();
     bool SkipScalarizationCost = ICA.skipScalarizationCost();
 
-    auto *VecOpTy = Tys.empty() ? nullptr : dyn_cast<VectorType>(Tys[0]);
+    VectorType *VecOpTy = nullptr;
+    if (!Tys.empty()) {
+      // The vector reduction operand is operand 0 except for fadd/fmul.
+      // Their operand 0 is a scalar start value, so the vector op is operand 1.
+      unsigned VecTyIndex = 0;
+      if (IID == Intrinsic::vector_reduce_fadd ||
+          IID == Intrinsic::vector_reduce_fmul)
+        VecTyIndex = 1;
+      assert(Tys.size() > VecTyIndex && "Unexpected IntrinsicCostAttributes");
+      VecOpTy = dyn_cast<VectorType>(Tys[VecTyIndex]);
+    }
 
     SmallVector<unsigned, 2> ISDs;
     unsigned SingleCallCost = 10; // Library call cost. Make it expensive.
@@ -1406,46 +1432,46 @@ public:
       return thisT()->getMaskedMemoryOpCost(Instruction::Load, Ty, TyAlign, 0,
                                             CostKind);
     }
-    case Intrinsic::experimental_vector_reduce_add:
+    case Intrinsic::vector_reduce_add:
       return thisT()->getArithmeticReductionCost(Instruction::Add, VecOpTy,
                                                  /*IsPairwiseForm=*/false,
                                                  CostKind);
-    case Intrinsic::experimental_vector_reduce_mul:
+    case Intrinsic::vector_reduce_mul:
       return thisT()->getArithmeticReductionCost(Instruction::Mul, VecOpTy,
                                                  /*IsPairwiseForm=*/false,
                                                  CostKind);
-    case Intrinsic::experimental_vector_reduce_and:
+    case Intrinsic::vector_reduce_and:
       return thisT()->getArithmeticReductionCost(Instruction::And, VecOpTy,
                                                  /*IsPairwiseForm=*/false,
                                                  CostKind);
-    case Intrinsic::experimental_vector_reduce_or:
+    case Intrinsic::vector_reduce_or:
       return thisT()->getArithmeticReductionCost(Instruction::Or, VecOpTy,
                                                  /*IsPairwiseForm=*/false,
                                                  CostKind);
-    case Intrinsic::experimental_vector_reduce_xor:
+    case Intrinsic::vector_reduce_xor:
       return thisT()->getArithmeticReductionCost(Instruction::Xor, VecOpTy,
                                                  /*IsPairwiseForm=*/false,
                                                  CostKind);
-    case Intrinsic::experimental_vector_reduce_v2_fadd:
+    case Intrinsic::vector_reduce_fadd:
       // FIXME: Add new flag for cost of strict reductions.
       return thisT()->getArithmeticReductionCost(Instruction::FAdd, VecOpTy,
                                                  /*IsPairwiseForm=*/false,
                                                  CostKind);
-    case Intrinsic::experimental_vector_reduce_v2_fmul:
+    case Intrinsic::vector_reduce_fmul:
       // FIXME: Add new flag for cost of strict reductions.
       return thisT()->getArithmeticReductionCost(Instruction::FMul, VecOpTy,
                                                  /*IsPairwiseForm=*/false,
                                                  CostKind);
-    case Intrinsic::experimental_vector_reduce_smax:
-    case Intrinsic::experimental_vector_reduce_smin:
-    case Intrinsic::experimental_vector_reduce_fmax:
-    case Intrinsic::experimental_vector_reduce_fmin:
+    case Intrinsic::vector_reduce_smax:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_fmax:
+    case Intrinsic::vector_reduce_fmin:
       return thisT()->getMinMaxReductionCost(
           VecOpTy, cast<VectorType>(CmpInst::makeCmpResultType(VecOpTy)),
           /*IsPairwiseForm=*/false,
           /*IsUnsigned=*/false, CostKind);
-    case Intrinsic::experimental_vector_reduce_umax:
-    case Intrinsic::experimental_vector_reduce_umin:
+    case Intrinsic::vector_reduce_umax:
+    case Intrinsic::vector_reduce_umin:
       return thisT()->getMinMaxReductionCost(
           VecOpTy, cast<VectorType>(CmpInst::makeCmpResultType(VecOpTy)),
           /*IsPairwiseForm=*/false,

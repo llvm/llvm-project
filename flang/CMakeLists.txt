@@ -82,6 +82,10 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(HandleLLVMOptions)
   include(VersionFromVCS)
 
+  if(FLANG_BUILD_NEW_DRIVER)
+    include(AddClang)
+  endif()
+
   if(LINK_WITH_FIR)
     include(TableGen)
     find_package(MLIR REQUIRED CONFIG)
@@ -229,9 +233,8 @@ if(LINK_WITH_FIR)
   endif()
   # Always build tco tool
   set(LLVM_BUILD_TOOLS ON)
-  message(STATUS "Linking driver with FIR and LLVM")
-  llvm_map_components_to_libnames(LLVM_COMMON_LIBS support)
-  message(STATUS "LLVM libraries: ${LLVM_COMMON_LIBS}")
+  set(LLVM_COMMON_COMPONENTS Support)
+  message(STATUS "Linking driver with FIR and LLVM, using LLVM components: ${LLVM_COMMON_COMPONENTS}")
 endif()
 
 # Add Flang-centric modules to cmake path.

@@ -1105,8 +1105,8 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     # "%{/[STpst]:regex_replacement}" should be normalized like "%/[STpst]" but we're
     # also in a regex replacement context of a s@@@ regex.
     def regex_escape(s):
-        s = s.replace('@', '\@')
-        s = s.replace('&', '\&')
+        s = s.replace('@', r'\@')
+        s = s.replace('&', r'\&')
         return s
     substitutions.extend([
             ('%{/s:regex_replacement}',

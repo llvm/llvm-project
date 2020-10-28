@@ -337,6 +337,10 @@ N: Michael McCracken
 E: michael.mccracken@gmail.com
 D: Line number support for llvmgcc
 
+N: Fanbo Meng
+E: fanbo.meng@ibm.com
+D: z/OS support
+
 N: Vladimir Merzliakov
 E: wanderer@rsu.ru
 D: Test suite fixes for FreeBSD
@@ -477,6 +481,10 @@ N: Reid Spencer
 E: rspencer@reidspencer.com
 W: http://reidspencer.com/
 D: Lots of stuff, see: http://wiki.llvm.org/index.php/User:Reid
+
+N: Abhina Sreeskantharajan
+E: Abhina.Sreeskantharajan@ibm.com
+D: z/OS support
 
 N: Alp Toker
 E: alp@nuanti.com

@@ -14,8 +14,32 @@
 #ifndef MLIR_TESTTYPES_H
 #define MLIR_TESTTYPES_H
 
+#include <tuple>
+
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
+
+namespace mlir {
+
+/// FieldInfo represents a field in the StructType data type. It is used as a
+/// parameter in TestTypeDefs.td.
+struct FieldInfo {
+  StringRef name;
+  Type type;
+
+  // Custom allocation called from generated constructor code
+  FieldInfo allocateInto(TypeStorageAllocator &alloc) const {
+    return FieldInfo{alloc.copyInto(name), type};
+  }
+};
+
+} // namespace mlir
+
+#define GET_TYPEDEF_CLASSES
+#include "TestTypeDefs.h.inc"
 
 namespace mlir {
 

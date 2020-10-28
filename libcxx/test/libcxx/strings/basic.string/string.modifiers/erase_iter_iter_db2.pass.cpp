@@ -10,8 +10,9 @@
 
 // Call erase(const_iterator first, const_iterator last); with second iterator from another container
 
-#if _LIBCPP_DEBUG >= 1
+// UNSUPPORTED: libcxx-no-debug-mode
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <string>
@@ -40,13 +41,3 @@ int main(int, char**)
     }
 #endif
 }
-
-#else
-
-int main(int, char**)
-{
-
-  return 0;
-}
-
-#endif

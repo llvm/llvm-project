@@ -21,6 +21,7 @@
 namespace llvm {
 namespace json {
 class Object;
+class Value;
 }
 } // namespace llvm
 
@@ -110,7 +111,9 @@ typedef lldb::REPLSP (*REPLCreateInstance)(Status &error,
                                            const char *repl_options);
 typedef int (*ComparisonFunction)(const void *, const void *);
 typedef void (*DebuggerInitializeCallback)(Debugger &debugger);
-typedef lldb::TraceSP (*TraceCreateInstance)();
+typedef llvm::Expected<lldb::TraceSP> (*TraceCreateInstance)(
+    const llvm::json::Value &trace_session_file,
+    llvm::StringRef session_file_dir, lldb_private::Debugger &debugger);
 
 } // namespace lldb_private
 

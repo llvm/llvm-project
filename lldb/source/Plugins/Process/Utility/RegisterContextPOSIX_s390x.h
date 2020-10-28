@@ -15,8 +15,6 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
-class ProcessMonitor;
-
 class RegisterContextPOSIX_s390x : public lldb_private::RegisterContext {
 public:
   RegisterContextPOSIX_s390x(

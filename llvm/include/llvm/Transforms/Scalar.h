@@ -151,6 +151,12 @@ Pass *createLoopInterchangePass();
 
 //===----------------------------------------------------------------------===//
 //
+// LoopFlatten - This pass flattens nested loops into a single loop.
+//
+Pass *createLoopFlattenPass();
+
+//===----------------------------------------------------------------------===//
+//
 // LoopStrengthReduce - This pass is strength reduces GEP instructions that use
 // a loop's canonical induction variable as one of their indices.
 //

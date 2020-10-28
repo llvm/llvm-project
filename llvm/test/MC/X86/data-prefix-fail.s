@@ -7,10 +7,8 @@
 
 // ERR64: error: 'data32' is not supported in 64-bit mode
 // ERR32: error: redundant data32 prefix
-// 16: data32
-// 16: encoding: [0x66]
-// 16: lgdtw 0
-// 16: encoding: [0x0f,0x01,0x16,0x00,0x00]
+// 16: lgdtl 0
+// 16-SAME: encoding: [0x66,0x0f,0x01,0x16,0x00,0x00]
 data32 lgdt 0
 
 // 64: data16

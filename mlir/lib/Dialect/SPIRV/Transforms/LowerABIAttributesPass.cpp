@@ -53,6 +53,10 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
   // Set the offset information.
   varPointeeType =
       VulkanLayoutUtils::decorateType(varPointeeType).cast<spirv::StructType>();
+
+  if (!varPointeeType)
+    return nullptr;
+
   varType =
       spirv::PointerType::get(varPointeeType, varPtrType.getStorageClass());
 
@@ -258,7 +262,7 @@ void LowerABIAttributesPass::runOnOperation() {
     return op->getDialect()->getNamespace() ==
            spirv::SPIRVDialect::getDialectNamespace();
   });
-  if (failed(applyPartialConversion(module, target, patterns)))
+  if (failed(applyPartialConversion(module, target, std::move(patterns))))
     return signalPassFailure();
 
   // Walks over all the FuncOps in spirv::ModuleOp to lower the entry point

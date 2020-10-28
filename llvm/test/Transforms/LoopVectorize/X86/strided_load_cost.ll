@@ -62,7 +62,7 @@ define i32 @matrix_row_col([100 x i32]* nocapture readonly %data, i32 %i, i32 %j
 ; CHECK-NEXT:    [[TMP38:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP38]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !5
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP39:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP37]])
+; CHECK-NEXT:    [[TMP39:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP37]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 100, 96
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

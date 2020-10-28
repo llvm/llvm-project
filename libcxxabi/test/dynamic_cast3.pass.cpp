@@ -1443,7 +1443,7 @@ void test()
 A1 A1
 |  |
 A2 |
- \ |  
+ \ |
   A3
 
 */
@@ -1926,7 +1926,7 @@ void test()
 A1
 | \
 A2 \
- \ |  
+ \ |
   A3
 
 */
@@ -2412,7 +2412,7 @@ void test()
 
 }  // t41
 
-int main()
+int main(int, char**)
 {
     timer t;
     t1::test();
@@ -2456,4 +2456,6 @@ int main()
     t39::test();
     t40::test();
     t41::test();
+
+    return 0;
 }

@@ -572,7 +572,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %10, label %middle.block, label %vector.body, !llvm.loop !7
 
 middle.block:                                     ; preds = %vector.body
-  %11 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %9)
+  %11 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %9)
 ;for.cond8.for.cond.cleanup10_crit_edge.us.us:     ; preds = %for.body11.us.us, %middle.block
   %add19.us.us = add i32 %j.051.us.us, %mul18.us
   %arrayidx20.us.us = getelementptr inbounds i32, i32* %C, i32 %add19.us.us
@@ -803,7 +803,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   br i1 %12, label %middle.block, label %vector.body, !llvm.loop !7
 
 middle.block:                                     ; preds = %vector.body
-  %13 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %11)
+  %13 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %11)
   br i1 %cmp.n, label %for.cond5.for.cond.cleanup7_crit_edge.us.us, label %for.body8.us.us.preheader
 
 for.cond5.for.cond.cleanup7_crit_edge.us.us:      ; preds = %for.body8.us.us, %middle.block
@@ -1065,7 +1065,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %wide.masked.gather75 = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> %tmp85, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
   %tmp86 = sext <4 x i8> %wide.masked.gather75 to <4 x i32>
   %tmp87 = mul nsw <4 x i32> %tmp84, %tmp86
-  %tmp88 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %tmp87)
+  %tmp88 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %tmp87)
   %tmp89 = add i32 %tmp88, %vec.phi
   %index.next = add i32 %index, 4
   %vec.ind.next = add <4 x i32> %vec.ind, <i32 4, i32 4, i32 4, i32 4>
@@ -1091,7 +1091,7 @@ declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*>, i32, <4 x i1>, <
 declare <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*>, i32, <4 x i1>, <4 x i16>)
 declare <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*>, i32 immarg, <4 x i1>, <4 x i8>) #3
 
-declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 declare void @llvm.memset.p0i8.i32(i8* align 2, i8, i32, i1)
 
 declare void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32>, <4 x i32*>, i32, <4 x i1>)

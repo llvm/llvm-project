@@ -27,6 +27,8 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
+#include <list>
+
 using llvm::ArrayRef;
 using llvm::formatv;
 using llvm::raw_ostream;
@@ -1031,7 +1033,7 @@ emitExtendedSetDeserializationDispatch(const RecordKeeper &recordKeeper,
   // raw_string_ostream needs a string&, use a vector to store all the string
   // that are captured by reference within raw_string_ostream.
   StringMap<raw_string_ostream> extensionSets;
-  SmallVector<std::string, 1> extensionSetNames;
+  std::list<std::string> extensionSetNames;
 
   initExtendedSetDeserializationDispatch(extensionSetName, instructionID, words,
                                          os);

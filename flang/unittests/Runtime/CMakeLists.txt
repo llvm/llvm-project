@@ -8,21 +8,24 @@ add_library(RuntimeTesting
 )
 llvm_update_compile_flags(RuntimeTesting)
 
+if (LLVM_LINK_LLVM_DYLIB)
+  set(llvm_libs LLVM)
+else()
+  llvm_map_components_to_libnames(llvm_libs Support)
+endif()
 target_link_libraries(RuntimeTesting
   FortranRuntime
-  LLVMSupport
+  ${llvm_libs}
 )
 
 add_flang_nongtest_unittest(format
   RuntimeTesting
   FortranRuntime
-  LLVMSupport
 )
 
 add_flang_nongtest_unittest(hello
   RuntimeTesting
   FortranRuntime
-  LLVMSupport
 )
 
 # This test is not run by default as it requires input.
@@ -32,23 +35,19 @@ add_executable(external-hello-world
 
 target_link_libraries(external-hello-world
   FortranRuntime
-  LLVMSupport
 )
 
 add_flang_nongtest_unittest(external-io
   RuntimeTesting
   FortranRuntime
-  LLVMSupport
 )
 
 add_flang_nongtest_unittest(list-input
   RuntimeTesting
   FortranRuntime
-  LLVMSupport
 )
 
 add_flang_nongtest_unittest(character
   RuntimeTesting
   FortranRuntime
-  LLVMSupport
 )

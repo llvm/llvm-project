@@ -188,7 +188,7 @@ INITIALIZE_PASS_END(AArch64PreLegalizerCombiner, DEBUG_TYPE,
 
 
 namespace llvm {
-FunctionPass *createAArch64PreLegalizeCombiner(bool IsOptNone) {
+FunctionPass *createAArch64PreLegalizerCombiner(bool IsOptNone) {
   return new AArch64PreLegalizerCombiner(IsOptNone);
 }
 } // end namespace llvm

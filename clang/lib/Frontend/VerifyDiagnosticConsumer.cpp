@@ -827,7 +827,7 @@ static bool findDirectives(SourceManager &SM, FileID FID,
     return false;
 
   // Create a lexer to lex all the tokens of the main file in raw mode.
-  const llvm::MemoryBuffer *FromFile = SM.getBuffer(FID);
+  llvm::MemoryBufferRef FromFile = SM.getBufferOrFake(FID);
   Lexer RawLex(FID, FromFile, SM, LangOpts);
 
   // Return comments as tokens, this is how we find expected diagnostics.

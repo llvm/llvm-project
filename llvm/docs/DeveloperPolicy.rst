@@ -298,11 +298,10 @@ omissions can be handled by sending a reply to the commits mailing list.
 Obtaining Commit Access
 -----------------------
 
-New Contributors
-^^^^^^^^^^^^^^^^
 We grant commit access to contributors with a track record of submitting high
 quality patches.  If you would like commit access, please send an email to
-`Chris <mailto:clattner@llvm.org>`_ with your GitHub username.
+`Chris <mailto:clattner@llvm.org>`_ with your GitHub username.  This is true
+for former contributors with SVN access as well as new contributors.
 
 Prior to obtaining commit access, it is common practice to request that
 someone with commit access commits on your behalf. When doing so, please
@@ -344,12 +343,6 @@ In any case, your changes are still subject to `code review`_ (either before or
 after they are committed, depending on the nature of the change).  You are
 encouraged to review other peoples' patches as well, but you aren't required
 to do so.
-
-Current Contributors - Transferring from SVN
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-If you had commit access to SVN and would like to request commit access to
-GitHub, please email `llvm-admin <mailto:llvm-admin@lists.llvm.org>`_ with your
-SVN username and GitHub username.
 
 .. _discuss the change/gather consensus:
 

@@ -436,6 +436,34 @@ public:
   /// next instruction number.
   unsigned DebugInstrNumberingCount = 0;
 
+  /// Set value of DebugInstrNumberingCount field. Avoid using this unless
+  /// you're deserializing this data.
+  void setDebugInstrNumberingCount(unsigned Num);
+
+  /// Pair of instruction number and operand number.
+  using DebugInstrOperandPair = std::pair<unsigned, unsigned>;
+
+  /// Substitution map: from one <inst,operand> pair to another. Used to
+  /// record changes in where a value is defined, so that debug variable
+  /// locations can find it later.
+  std::map<DebugInstrOperandPair, DebugInstrOperandPair>
+      DebugValueSubstitutions;
+
+  /// Create a substitution between one <instr,operand> value to a different,
+  /// new value.
+  void makeDebugValueSubstitution(DebugInstrOperandPair, DebugInstrOperandPair);
+
+  /// Create substitutions for any tracked values in \p Old, to point at
+  /// \p New. Needed when we re-create an instruction during optimization,
+  /// which has the same signature (i.e., def operands in the same place) but
+  /// a modified instruction type, flags, or otherwise. An example: X86 moves
+  /// are sometimes transformed into equivalent LEAs.
+  /// If the two instructions are not the same opcode, limit which operands to
+  /// examine for substitutions to the first N operands by setting
+  /// \p MaxOperand.
+  void substituteDebugValuesForInst(const MachineInstr &Old, MachineInstr &New,
+                                    unsigned MaxOperand = UINT_MAX);
+
   MachineFunction(Function &F, const LLVMTargetMachine &Target,
                   const TargetSubtargetInfo &STI, unsigned FunctionNum,
                   MachineModuleInfo &MMI);

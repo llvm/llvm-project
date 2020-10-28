@@ -22,3 +22,5 @@ Changes:
   to fix timestamp-related inline asm issues and 32-bit RISC-V build failures.
   The second cherrypicked commit fixes formatting issues introduced by the
   preceding change.
+* https://github.com/google/benchmark/commit/ffe1342eb2faa7d2e7c35b4db2ccf99fab81ec20
+  is applied to add the CycleTimer implementation for M680x0

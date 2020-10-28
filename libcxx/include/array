@@ -459,8 +459,6 @@ get(const array<_Tp, _Size>& __a) _NOEXCEPT
     return __a.__elems_[_Ip];
 }
 
-#ifndef _LIBCPP_CXX03_LANG
-
 template <size_t _Ip, class _Tp, size_t _Size>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 _Tp&&
@@ -478,8 +476,6 @@ get(const array<_Tp, _Size>&& __a) _NOEXCEPT
     static_assert(_Ip < _Size, "Index out of bounds in std::get<> (const std::array &&)");
     return _VSTD::move(__a.__elems_[_Ip]);
 }
-
-#endif  // !_LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 17
 

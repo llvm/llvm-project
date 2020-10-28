@@ -89,6 +89,8 @@ public:
   void emitStartOfAsmFile(Module &M) override;
   void emitJumpTableInfo() override;
 
+  void emitFunctionEntryLabel() override;
+
   void LowerJumpTableDest(MCStreamer &OutStreamer, const MachineInstr &MI);
 
   void LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
@@ -787,6 +789,19 @@ void AArch64AsmPrinter::emitJumpTableInfo() {
   }
 }
 
+void AArch64AsmPrinter::emitFunctionEntryLabel() {
+  if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall ||
+      MF->getFunction().getCallingConv() ==
+          CallingConv::AArch64_SVE_VectorCall ||
+      STI->getRegisterInfo()->hasSVEArgsOrReturn(MF)) {
+    auto *TS =
+        static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
+    TS->emitDirectiveVariantPCS(CurrentFnSym);
+  }
+
+  return AsmPrinter::emitFunctionEntryLabel();
+}
+
 /// Small jump tables contain an unsigned byte or half, representing the offset
 /// from the lowest-addressed possible destination to the desired basic
 /// block. Since all instructions are 4-byte aligned, this is further compressed
@@ -1314,6 +1329,14 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
 
   case AArch64::SEH_SaveRegP:
+    if (MI->getOperand(1).getImm() == 30 && MI->getOperand(0).getImm() >= 19 &&
+        MI->getOperand(0).getImm() <= 28) {
+      assert((MI->getOperand(0).getImm() - 19) % 2 == 0 &&
+             "Register paired with LR must be odd");
+      TS->EmitARM64WinCFISaveLRPair(MI->getOperand(0).getImm(),
+                                    MI->getOperand(2).getImm());
+      return;
+    }
     assert((MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1) &&
             "Non-consecutive registers not allowed for save_regp");
     TS->EmitARM64WinCFISaveRegP(MI->getOperand(0).getImm(),

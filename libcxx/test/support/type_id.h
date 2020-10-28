@@ -42,18 +42,15 @@ private:
 };
 
 // makeTypeID - Return the TypeID for the specified type 'T'.
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4640) // '%s' construction of local static object is not thread safe (/Zc:threadSafeInit-)
-#endif // _MSC_VER
 template <class T>
 inline TypeID const& makeTypeIDImp() {
+#ifdef _MSC_VER
+  static const TypeID id(__FUNCSIG__);
+#else
   static const TypeID id(__PRETTY_FUNCTION__);
+#endif // _MSC_VER
   return id;
 }
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 template <class T>
 struct TypeWrapper {};

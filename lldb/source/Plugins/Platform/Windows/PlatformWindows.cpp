@@ -151,12 +151,6 @@ void PlatformWindows::Terminate() {
 /// Default Constructor
 PlatformWindows::PlatformWindows(bool is_host) : RemoteAwarePlatform(is_host) {}
 
-/// Destructor.
-///
-/// The destructor is virtual since this class is designed to be
-/// inherited from by the plug-in instance.
-PlatformWindows::~PlatformWindows() = default;
-
 Status PlatformWindows::ConnectRemote(Args &args) {
   Status error;
   if (IsHost()) {

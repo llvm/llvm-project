@@ -10,6 +10,9 @@
 
 // pop_back() more than the number of elements in a vector
 
+// UNSUPPORTED: libcxx-no-debug-mode
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <cstdlib>
@@ -25,5 +28,5 @@ int main(int, char**) {
     v.pop_back();
     std::exit(1);
 
-  return 0;
+    return 0;
 }

@@ -11,6 +11,8 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcessControl.h"
 #include "llvm/Support/MathExtras.h"
 
+#include <future>
+
 using namespace llvm;
 using namespace llvm::orc;
 
@@ -396,6 +398,25 @@ TPCIndirectionUtils::getIndirectStubs(unsigned NumStubs) {
   }
 
   return std::move(Result);
+}
+
+static JITTargetAddress reentry(JITTargetAddress LCTMAddr,
+                                JITTargetAddress TrampolineAddr) {
+  auto &LCTM = *jitTargetAddressToPointer<LazyCallThroughManager *>(LCTMAddr);
+  std::promise<JITTargetAddress> LandingAddrP;
+  auto LandingAddrF = LandingAddrP.get_future();
+  LCTM.resolveTrampolineLandingAddress(
+      TrampolineAddr,
+      [&](JITTargetAddress Addr) { LandingAddrP.set_value(Addr); });
+  return LandingAddrF.get();
+}
+
+Error setUpInProcessLCTMReentryViaTPCIU(TPCIndirectionUtils &TPCIU) {
+  auto &LCTM = TPCIU.getLazyCallThroughManager();
+  return TPCIU
+      .writeResolverBlock(pointerToJITTargetAddress(&reentry),
+                          pointerToJITTargetAddress(&LCTM))
+      .takeError();
 }
 
 } // end namespace orc

@@ -10,6 +10,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_COMPARISONINTEMPFAILURERETRYCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include <string>
 
 namespace clang {
 namespace tidy {
@@ -22,10 +25,14 @@ namespace android {
 /// TEMP_FAILURE_RETRY is a macro provided by both glibc and Bionic.
 class ComparisonInTempFailureRetryCheck : public ClangTidyCheck {
 public:
-  ComparisonInTempFailureRetryCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  ComparisonInTempFailureRetryCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  const std::string RawRetryList;
+  SmallVector<StringRef, 5> RetryMacros;
 };
 
 } // namespace android

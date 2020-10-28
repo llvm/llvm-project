@@ -256,16 +256,6 @@ private:
     } else if (Contexts[Contexts.size() - 2].CaretFound) {
       // This is the parameter list of an ObjC block.
       Contexts.back().IsExpression = false;
-    } else if (PrevNonComment && PrevNonComment->is(tok::kw___attribute)) {
-      Left->setType(TT_AttributeParen);
-    } else if (PrevNonComment &&
-               PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
-                                       tok::kw_typeof, tok::kw__Atomic,
-                                       tok::kw___underlying_type)) {
-      Left->setType(TT_TypeDeclarationParen);
-      // decltype() and typeof() usually contain expressions.
-      if (PrevNonComment->isOneOf(tok::kw_decltype, tok::kw_typeof))
-        Contexts.back().IsExpression = true;
     } else if (Left->Previous && Left->Previous->is(TT_ForEachMacro)) {
       // The first argument to a foreach macro is a declaration.
       Contexts.back().IsForEachMacro = true;
@@ -277,6 +267,21 @@ private:
       bool IsForOrCatch =
           Left->Previous && Left->Previous->isOneOf(tok::kw_for, tok::kw_catch);
       Contexts.back().IsExpression = !IsForOrCatch;
+    }
+
+    // Infer the role of the l_paren based on the previous token if we haven't
+    // detected one one yet.
+    if (PrevNonComment && Left->is(TT_Unknown)) {
+      if (PrevNonComment->is(tok::kw___attribute)) {
+        Left->setType(TT_AttributeParen);
+      } else if (PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
+                                         tok::kw_typeof, tok::kw__Atomic,
+                                         tok::kw___underlying_type)) {
+        Left->setType(TT_TypeDeclarationParen);
+        // decltype() and typeof() usually contain expressions.
+        if (PrevNonComment->isOneOf(tok::kw_decltype, tok::kw_typeof))
+          Contexts.back().IsExpression = true;
+      }
     }
 
     if (StartsObjCMethodExpr) {
@@ -2859,6 +2864,13 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       if (!TokenBeforeMatchingParen || !Left.is(TT_TypeDeclarationParen))
         return true;
     }
+    // Add a space if the previous token is a pointer qualifer or the closing
+    // parenthesis of __attribute__(()) expression and the style requires spaces
+    // after pointer qualifiers.
+    if ((Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_After ||
+         Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_Both) &&
+        (Left.is(TT_AttributeParen) || Left.canBePointerOrReferenceQualifier()))
+      return true;
     return (Left.Tok.isLiteral() ||
             (!Left.isOneOf(TT_PointerOrReference, tok::l_paren) &&
              (Style.PointerAlignment != FormatStyle::PAS_Left ||
@@ -2871,7 +2883,13 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
        (Style.PointerAlignment != FormatStyle::PAS_Right &&
         !Line.IsMultiVariableDeclStmt)))
     return true;
-  if (Left.is(TT_PointerOrReference))
+  if (Left.is(TT_PointerOrReference)) {
+    // Add a space if the next token is a pointer qualifer and the style
+    // requires spaces before pointer qualifiers.
+    if ((Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_Before ||
+         Style.SpaceAroundPointerQualifiers == FormatStyle::SAPQ_Both) &&
+        Right.canBePointerOrReferenceQualifier())
+      return true;
     return Right.Tok.isLiteral() || Right.is(TT_BlockComment) ||
            (Right.isOneOf(Keywords.kw_override, Keywords.kw_final) &&
             !Right.is(TT_StartOfName)) ||
@@ -2883,6 +2901,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
             Left.Previous &&
             !Left.Previous->isOneOf(tok::l_paren, tok::coloncolon,
                                     tok::l_square));
+  }
   // Ensure right pointer alignement with ellipsis e.g. int *...P
   if (Left.is(tok::ellipsis) && Left.Previous &&
       Left.Previous->isOneOf(tok::star, tok::amp, tok::ampamp))

@@ -44,7 +44,7 @@ static test::TestStruct getTestStruct(mlir::MLIRContext *context) {
 /// Validates that test::TestStruct::classof correctly identifies a valid
 /// test::TestStruct.
 TEST(StructsGenTest, ClassofTrue) {
-  mlir::MLIRContext context(false);
+  mlir::MLIRContext context;
   auto structAttr = getTestStruct(&context);
   ASSERT_TRUE(test::TestStruct::classof(structAttr));
 }

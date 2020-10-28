@@ -319,6 +319,9 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
   BinaryStreamReader reader(file->debugTypes, support::little);
   cantFail(reader.readArray(types, reader.getLength()));
 
+  // When dealing with PCH.OBJ, some indices were already merged.
+  unsigned nbHeadIndices = indexMapStorage.size();
+
   if (auto err = mergeTypeAndIdRecords(
           m->idTable, m->typeTable, indexMapStorage, types, file->pchSignature))
     fatal("codeview::mergeTypeAndIdRecords failed: " +
@@ -329,13 +332,15 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
   ipiMap = indexMapStorage;
 
   if (config->showSummary) {
+    nbTypeRecords = indexMapStorage.size() - nbHeadIndices;
+    nbTypeRecordsBytes = reader.getLength();
     // Count how many times we saw each type record in our input. This
     // calculation requires a second pass over the type records to classify each
     // record as a type or index. This is slow, but this code executes when
     // collecting statistics.
     m->tpiCounts.resize(m->getTypeTable().size());
     m->ipiCounts.resize(m->getIDTable().size());
-    uint32_t srcIdx = 0;
+    uint32_t srcIdx = nbHeadIndices;
     for (CVType &ty : types) {
       TypeIndex dstIdx = tpiMap[srcIdx++];
       // Type merging may fail, so a complex source type may become the simple
@@ -383,6 +388,12 @@ Error TypeServerSource::mergeDebugT(TypeMerger *m) {
   }
 
   if (config->showSummary) {
+    nbTypeRecords = tpiMap.size() + ipiMap.size();
+    nbTypeRecordsBytes =
+        expectedTpi->typeArray().getUnderlyingStream().getLength() +
+        (maybeIpi ? maybeIpi->typeArray().getUnderlyingStream().getLength()
+                  : 0);
+
     // Count how many times we saw each type record in our input. If a
     // destination type index is present in the source to destination type index
     // map, that means we saw it once in the input. Add it to our histogram.
@@ -525,9 +536,6 @@ Error UsePrecompSource::mergeInPrecompHeaderObj() {
                          precompSrc->tpiMap.begin() +
                              precompDependency.getTypesCount());
 
-  if (config->debugGHashes)
-    funcIdToType = precompSrc->funcIdToType; // FIXME: Save copy
-
   return Error::success();
 }
 
@@ -612,7 +620,7 @@ void TpiSource::fillIsItemIndexFromDebugT() {
   });
 }
 
-void TpiSource::mergeTypeRecord(CVType ty) {
+void TpiSource::mergeTypeRecord(TypeIndex curIndex, CVType ty) {
   // Decide if the merged type goes into TPI or IPI.
   bool isItem = isIdRecord(ty.kind());
   MergedInfo &merged = isItem ? mergedIpi : mergedTpi;
@@ -637,6 +645,25 @@ void TpiSource::mergeTypeRecord(CVType ty) {
   uint32_t pdbHash = check(pdb::hashTypeRecord(CVType(newRec)));
   merged.recSizes.push_back(static_cast<uint16_t>(newSize));
   merged.recHashes.push_back(pdbHash);
+
+  // Retain a mapping from PDB function id to PDB function type. This mapping is
+  // used during symbol procesing to rewrite S_GPROC32_ID symbols to S_GPROC32
+  // symbols.
+  if (ty.kind() == LF_FUNC_ID || ty.kind() == LF_MFUNC_ID) {
+    bool success = ty.length() >= 12;
+    TypeIndex funcId = curIndex;
+    if (success)
+      success &= remapTypeIndex(funcId, TiRefKind::IndexRef);
+    TypeIndex funcType =
+        *reinterpret_cast<const TypeIndex *>(&newRec.data()[8]);
+    if (success) {
+      funcIdToType.push_back({funcId, funcType});
+    } else {
+      StringRef fname = file ? file->getName() : "<unknown PDB>";
+      warn("corrupt LF_[M]FUNC_ID record 0x" + utohexstr(curIndex.getIndex()) +
+           " in " + fname);
+    }
+  }
 }
 
 void TpiSource::mergeUniqueTypeRecords(ArrayRef<uint8_t> typeRecords,
@@ -655,26 +682,8 @@ void TpiSource::mergeUniqueTypeRecords(ArrayRef<uint8_t> typeRecords,
   forEachTypeChecked(typeRecords, [&](const CVType &ty) {
     if (nextUniqueIndex != uniqueTypes.end() &&
         *nextUniqueIndex == ghashIndex) {
-      mergeTypeRecord(ty);
+      mergeTypeRecord(beginIndex + ghashIndex, ty);
       ++nextUniqueIndex;
-    }
-    if (ty.kind() == LF_FUNC_ID || ty.kind() == LF_MFUNC_ID) {
-      bool success = ty.length() >= 12;
-      TypeIndex srcFuncIdIndex = beginIndex + ghashIndex;
-      TypeIndex funcId = srcFuncIdIndex;
-      TypeIndex funcType;
-      if (success) {
-        funcType = *reinterpret_cast<const TypeIndex *>(&ty.data()[8]);
-        success &= remapTypeIndex(funcId, TiRefKind::IndexRef);
-        success &= remapTypeIndex(funcType, TiRefKind::TypeRef);
-      }
-      if (success) {
-        funcIdToType.insert({funcId, funcType});
-      } else {
-        StringRef fname = file ? file->getName() : "<unknown PDB>";
-        warn("corrupt LF_[M]FUNC_ID record 0x" +
-             utohexstr(srcFuncIdIndex.getIndex()) + " in " + fname);
-      }
     }
     ++ghashIndex;
   });
@@ -692,6 +701,11 @@ void TpiSource::remapTpiWithGHashes(GHashState *g) {
   ipiMap = indexMapStorage;
   mergeUniqueTypeRecords(file->debugTypes);
   // TODO: Free all unneeded ghash resources now that we have a full index map.
+
+  if (config->showSummary) {
+    nbTypeRecords = ghashes.size();
+    nbTypeRecordsBytes = file->debugTypes.size();
+  }
 }
 
 // PDBs do not actually store global hashes, so when merging a type server
@@ -758,7 +772,16 @@ void TypeServerSource::remapTpiWithGHashes(GHashState *g) {
     ipiSrc->tpiMap = tpiMap;
     ipiSrc->ipiMap = ipiMap;
     ipiSrc->mergeUniqueTypeRecords(typeArrayToBytes(ipi.typeArray()));
-    funcIdToType = ipiSrc->funcIdToType; // FIXME: Save copy
+
+    if (config->showSummary) {
+      nbTypeRecords = ipiSrc->ghashes.size();
+      nbTypeRecordsBytes = ipi.typeArray().getUnderlyingStream().getLength();
+    }
+  }
+
+  if (config->showSummary) {
+    nbTypeRecords += ghashes.size();
+    nbTypeRecordsBytes += tpi.typeArray().getUnderlyingStream().getLength();
   }
 }
 
@@ -775,7 +798,6 @@ void UseTypeServerSource::remapTpiWithGHashes(GHashState *g) {
   TypeServerSource *tsSrc = *maybeTsSrc;
   tpiMap = tsSrc->tpiMap;
   ipiMap = tsSrc->ipiMap;
-  funcIdToType = tsSrc->funcIdToType; // FIXME: Save copy
 }
 
 void PrecompSource::loadGHashes() {
@@ -835,6 +857,10 @@ void UsePrecompSource::remapTpiWithGHashes(GHashState *g) {
   mergeUniqueTypeRecords(file->debugTypes,
                          TypeIndex(precompDependency.getStartTypeIndex() +
                                    precompDependency.getTypesCount()));
+  if (config->showSummary) {
+    nbTypeRecords = ghashes.size();
+    nbTypeRecordsBytes = file->debugTypes.size();
+  }
 }
 
 namespace {
@@ -1062,7 +1088,8 @@ void TypeMerger::mergeTypesWithGHash() {
   }
   parallelSort(entries, std::less<GHashCell>());
   log(formatv("ghash table load factor: {0:p} (size {1} / capacity {2})\n",
-              double(entries.size()) / tableSize, entries.size(), tableSize));
+              tableSize ? double(entries.size()) / tableSize : 0,
+              entries.size(), tableSize));
 
   // Find out how many type and item indices there are.
   auto mid =
@@ -1101,6 +1128,13 @@ void TypeMerger::mergeTypesWithGHash() {
   parallelForEach(TpiSource::objectSources, [&](TpiSource *source) {
     source->remapTpiWithGHashes(&ghashState);
   });
+
+  // Build a global map of from function ID to function type.
+  for (TpiSource *source : TpiSource::instances) {
+    for (auto idToType : source->funcIdToType)
+      funcIdToType.insert(idToType);
+    source->funcIdToType.clear();
+  }
 
   TpiSource::clearGHashes();
 }

@@ -17,6 +17,7 @@
 #include "mlir/Analysis/CallGraph.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/SCCIterator.h"
@@ -33,7 +34,7 @@ using namespace mlir;
 
 /// Walk all of the used symbol callgraph nodes referenced with the given op.
 static void walkReferencedSymbolNodes(
-    Operation *op, CallGraph &cg,
+    Operation *op, CallGraph &cg, SymbolTableCollection &symbolTable,
     DenseMap<Attribute, CallGraphNode *> &resolvedRefs,
     function_ref<void(CallGraphNode *, Operation *)> callback) {
   auto symbolUses = SymbolTable::getSymbolUses(op);
@@ -47,8 +48,8 @@ static void walkReferencedSymbolNodes(
     // If this is the first instance of this reference, try to resolve a
     // callgraph node for it.
     if (refIt.second) {
-      auto *symbolOp = SymbolTable::lookupNearestSymbolFrom(symbolTableOp,
-                                                            use.getSymbolRef());
+      auto *symbolOp = symbolTable.lookupNearestSymbolFrom(symbolTableOp,
+                                                           use.getSymbolRef());
       auto callableOp = dyn_cast_or_null<CallableOpInterface>(symbolOp);
       if (!callableOp)
         continue;
@@ -80,7 +81,7 @@ struct CGUseList {
     DenseMap<CallGraphNode *, int> innerUses;
   };
 
-  CGUseList(Operation *op, CallGraph &cg);
+  CGUseList(Operation *op, CallGraph &cg, SymbolTableCollection &symbolTable);
 
   /// Drop uses of nodes referred to by the given call operation that resides
   /// within 'userNode'.
@@ -110,13 +111,19 @@ private:
   /// A mapping between a discardable callgraph node (that is a symbol) and the
   /// number of uses for this node.
   DenseMap<CallGraphNode *, int> discardableSymNodeUses;
+
   /// A mapping between a callgraph node and the symbol callgraph nodes that it
   /// uses.
   DenseMap<CallGraphNode *, CGUser> nodeUses;
+
+  /// A symbol table to use when resolving call lookups.
+  SymbolTableCollection &symbolTable;
 };
 } // end anonymous namespace
 
-CGUseList::CGUseList(Operation *op, CallGraph &cg) {
+CGUseList::CGUseList(Operation *op, CallGraph &cg,
+                     SymbolTableCollection &symbolTable)
+    : symbolTable(symbolTable) {
   /// A set of callgraph nodes that are always known to be live during inlining.
   DenseMap<Attribute, CallGraphNode *> alwaysLiveNodes;
 
@@ -135,7 +142,7 @@ CGUseList::CGUseList(Operation *op, CallGraph &cg) {
         }
       }
       // Otherwise, check for any referenced nodes. These will be always-live.
-      walkReferencedSymbolNodes(&op, cg, alwaysLiveNodes,
+      walkReferencedSymbolNodes(&op, cg, symbolTable, alwaysLiveNodes,
                                 [](CallGraphNode *, Operation *) {});
     }
   };
@@ -162,7 +169,7 @@ void CGUseList::dropCallUses(CallGraphNode *userNode, Operation *callOp,
     --discardableSymNodeUses[node];
   };
   DenseMap<Attribute, CallGraphNode *> resolvedRefs;
-  walkReferencedSymbolNodes(callOp, cg, resolvedRefs, walkFn);
+  walkReferencedSymbolNodes(callOp, cg, symbolTable, resolvedRefs, walkFn);
 }
 
 void CGUseList::eraseNode(CallGraphNode *node) {
@@ -220,7 +227,7 @@ void CGUseList::recomputeUses(CallGraphNode *node, CallGraph &cg) {
       return;
     ++discardSymIt->second;
   };
-  walkReferencedSymbolNodes(parentOp, cg, resolvedRefs, walkFn);
+  walkReferencedSymbolNodes(parentOp, cg, symbolTable, resolvedRefs, walkFn);
 }
 
 void CGUseList::mergeUsesAfterInlining(CallGraphNode *lhs, CallGraphNode *rhs) {
@@ -305,6 +312,7 @@ struct ResolvedCall {
 /// inside of nested callgraph nodes.
 static void collectCallOps(iterator_range<Region::iterator> blocks,
                            CallGraphNode *sourceNode, CallGraph &cg,
+                           SymbolTableCollection &symbolTable,
                            SmallVectorImpl<ResolvedCall> &calls,
                            bool traverseNestedCGNodes) {
   SmallVector<std::pair<Block *, CallGraphNode *>, 8> worklist;
@@ -328,7 +336,7 @@ static void collectCallOps(iterator_range<Region::iterator> blocks,
             continue;
         }
 
-        CallGraphNode *targetNode = cg.resolveCallable(call);
+        CallGraphNode *targetNode = cg.resolveCallable(call, symbolTable);
         if (!targetNode->isExternal())
           calls.emplace_back(call, sourceNode, targetNode);
         continue;
@@ -352,8 +360,9 @@ static void collectCallOps(iterator_range<Region::iterator> blocks,
 namespace {
 /// This class provides a specialization of the main inlining interface.
 struct Inliner : public InlinerInterface {
-  Inliner(MLIRContext *context, CallGraph &cg)
-      : InlinerInterface(context), cg(cg) {}
+  Inliner(MLIRContext *context, CallGraph &cg,
+          SymbolTableCollection &symbolTable)
+      : InlinerInterface(context), cg(cg), symbolTable(symbolTable) {}
 
   /// Process a set of blocks that have been inlined. This callback is invoked
   /// *before* inlined terminator operations have been processed.
@@ -367,7 +376,7 @@ struct Inliner : public InlinerInterface {
       assert(region && "expected valid parent node");
     }
 
-    collectCallOps(inlinedBlocks, node, cg, calls,
+    collectCallOps(inlinedBlocks, node, cg, symbolTable, calls,
                    /*traverseNestedCGNodes=*/true);
   }
 
@@ -389,6 +398,9 @@ struct Inliner : public InlinerInterface {
 
   /// The callgraph being operated on.
   CallGraph &cg;
+
+  /// A symbol table to use when resolving call lookups.
+  SymbolTableCollection &symbolTable;
 };
 } // namespace
 
@@ -427,11 +439,12 @@ static LogicalResult inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
       continue;
 
     // Don't collect calls if the node is already dead.
-    if (useList.isDead(node))
+    if (useList.isDead(node)) {
       deadNodes.push_back(node);
-    else
-      collectCallOps(*node->getCallableRegion(), node, cg, calls,
-                     /*traverseNestedCGNodes=*/false);
+    } else {
+      collectCallOps(*node->getCallableRegion(), node, cg, inliner.symbolTable,
+                     calls, /*traverseNestedCGNodes=*/false);
+    }
   }
 
   // Try to inline each of the call operations. Don't cache the end iterator
@@ -490,7 +503,7 @@ static LogicalResult inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
 /// canonicalization patterns.
 static void canonicalizeSCC(CallGraph &cg, CGUseList &useList,
                             CallGraphSCC &currentSCC, MLIRContext *context,
-                            const OwningRewritePatternList &canonPatterns) {
+                            const FrozenRewritePatternList &canonPatterns) {
   // Collect the sets of nodes to canonicalize.
   SmallVector<CallGraphNode *, 4> nodesToCanonicalize;
   for (auto *node : currentSCC) {
@@ -561,7 +574,7 @@ struct InlinerPass : public InlinerBase<InlinerPass> {
   /// the inlining of newly devirtualized calls.
   void inlineSCC(Inliner &inliner, CGUseList &useList, CallGraphSCC &currentSCC,
                  MLIRContext *context,
-                 const OwningRewritePatternList &canonPatterns);
+                 const FrozenRewritePatternList &canonPatterns);
 };
 } // end anonymous namespace
 
@@ -583,12 +596,14 @@ void InlinerPass::runOnOperation() {
   OwningRewritePatternList canonPatterns;
   for (auto *op : context->getRegisteredOperations())
     op->getCanonicalizationPatterns(canonPatterns, context);
+  FrozenRewritePatternList frozenCanonPatterns(std::move(canonPatterns));
 
   // Run the inline transform in post-order over the SCCs in the callgraph.
-  Inliner inliner(context, cg);
-  CGUseList useList(getOperation(), cg);
+  SymbolTableCollection symbolTable;
+  Inliner inliner(context, cg, symbolTable);
+  CGUseList useList(getOperation(), cg, symbolTable);
   runTransformOnCGSCCs(cg, [&](CallGraphSCC &scc) {
-    inlineSCC(inliner, useList, scc, context, canonPatterns);
+    inlineSCC(inliner, useList, scc, context, frozenCanonPatterns);
   });
 
   // After inlining, make sure to erase any callables proven to be dead.
@@ -597,7 +612,7 @@ void InlinerPass::runOnOperation() {
 
 void InlinerPass::inlineSCC(Inliner &inliner, CGUseList &useList,
                             CallGraphSCC &currentSCC, MLIRContext *context,
-                            const OwningRewritePatternList &canonPatterns) {
+                            const FrozenRewritePatternList &canonPatterns) {
   // If we successfully inlined any calls, run some simplifications on the
   // nodes of the scc. Continue attempting to inline until we reach a fixed
   // point, or a maximum iteration count. We canonicalize here as it may

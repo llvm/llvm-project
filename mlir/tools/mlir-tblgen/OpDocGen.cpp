@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "DocGenUtilities.h"
+#include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
+#include "mlir/TableGen/TypeDef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -21,6 +23,8 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+
+#include <set>
 
 using namespace llvm;
 using namespace mlir;
@@ -35,39 +39,8 @@ using mlir::tblgen::Operator;
 // in a way the user wanted but has some additional indenting due to being
 // nested in the op definition.
 void mlir::tblgen::emitDescription(StringRef description, raw_ostream &os) {
-  // Determine the minimum number of spaces in a line.
-  size_t min_indent = -1;
-  StringRef remaining = description;
-  while (!remaining.empty()) {
-    auto split = remaining.split('\n');
-    size_t indent = split.first.find_first_not_of(" \t");
-    if (indent != StringRef::npos)
-      min_indent = std::min(indent, min_indent);
-    remaining = split.second;
-  }
-
-  // Print out the description indented.
-  os << "\n";
-  remaining = description;
-  bool printed = false;
-  while (!remaining.empty()) {
-    auto split = remaining.split('\n');
-    if (split.second.empty()) {
-      // Skip last line with just spaces.
-      if (split.first.ltrim().empty())
-        break;
-    }
-    // Print empty new line without spaces if line only has spaces, unless no
-    // text has been emitted before.
-    if (split.first.ltrim().empty()) {
-      if (printed)
-        os << "\n";
-    } else {
-      os << split.first.substr(min_indent) << "\n";
-      printed = true;
-    }
-    remaining = split.second;
-  }
+  raw_indented_ostream ros(os);
+  ros.reindent(description.rtrim(" \t"));
 }
 
 // Emits `str` with trailing newline if not empty.
@@ -116,7 +89,7 @@ static void emitOpDoc(Operator op, raw_ostream &os) {
 
   // Emit the summary, syntax, and description if present.
   if (op.hasSummary())
-    os << "\n" << op.getSummary() << "\n";
+    os << "\n" << op.getSummary() << "\n\n";
   if (op.hasAssemblyFormat())
     emitAssemblyFormat(op.getOperationName(), op.getAssemblyFormat().trim(),
                        os);
@@ -186,11 +159,66 @@ static void emitTypeDoc(const Type &type, raw_ostream &os) {
 }
 
 //===----------------------------------------------------------------------===//
+// TypeDef Documentation
+//===----------------------------------------------------------------------===//
+
+/// Emit the assembly format of a type.
+static void emitTypeAssemblyFormat(TypeDef td, raw_ostream &os) {
+  SmallVector<TypeParameter, 4> parameters;
+  td.getParameters(parameters);
+  if (parameters.size() == 0) {
+    os << "\nSyntax: `!" << td.getDialect().getName() << "." << td.getMnemonic()
+       << "`\n";
+    return;
+  }
+
+  os << "\nSyntax:\n\n```\n!" << td.getDialect().getName() << "."
+     << td.getMnemonic() << "<\n";
+  for (auto *it = parameters.begin(), *e = parameters.end(); it < e; ++it) {
+    os << "  " << it->getSyntax();
+    if (it < parameters.end() - 1)
+      os << ",";
+    os << "   # " << it->getName() << "\n";
+  }
+  os << ">\n```\n";
+}
+
+static void emitTypeDefDoc(TypeDef td, raw_ostream &os) {
+  os << llvm::formatv("### `{0}` ({1})\n", td.getName(), td.getCppClassName());
+
+  // Emit the summary, syntax, and description if present.
+  if (td.hasSummary())
+    os << "\n" << td.getSummary() << "\n";
+  if (td.getMnemonic() && td.getPrinterCode() && *td.getPrinterCode() == "" &&
+      td.getParserCode() && *td.getParserCode() == "")
+    emitTypeAssemblyFormat(td, os);
+  if (td.hasDescription())
+    mlir::tblgen::emitDescription(td.getDescription(), os);
+
+  // Emit attribute documentation.
+  SmallVector<TypeParameter, 4> parameters;
+  td.getParameters(parameters);
+  if (parameters.size() != 0) {
+    os << "\n#### Type parameters:\n\n";
+    os << "| Parameter | C++ type | Description |\n"
+       << "| :-------: | :-------: | ----------- |\n";
+    for (const auto &it : parameters) {
+      auto desc = it.getDescription();
+      os << "| " << it.getName() << " | `" << td.getCppClassName() << "` | "
+         << (desc ? *desc : "") << " |\n";
+    }
+  }
+
+  os << "\n";
+}
+
+//===----------------------------------------------------------------------===//
 // Dialect Documentation
 //===----------------------------------------------------------------------===//
 
 static void emitDialectDoc(const Dialect &dialect, ArrayRef<Operator> ops,
-                           ArrayRef<Type> types, raw_ostream &os) {
+                           ArrayRef<Type> types, ArrayRef<TypeDef> typeDefs,
+                           raw_ostream &os) {
   os << "# '" << dialect.getName() << "' Dialect\n\n";
   emitIfNotEmpty(dialect.getSummary(), os);
   emitIfNotEmpty(dialect.getDescription(), os);
@@ -199,7 +227,7 @@ static void emitDialectDoc(const Dialect &dialect, ArrayRef<Operator> ops,
 
   // TODO: Add link between use and def for types
   if (!types.empty()) {
-    os << "## Type definition\n\n";
+    os << "## Type constraint definition\n\n";
     for (const Type &type : types)
       emitTypeDoc(type, os);
   }
@@ -209,28 +237,43 @@ static void emitDialectDoc(const Dialect &dialect, ArrayRef<Operator> ops,
     for (const Operator &op : ops)
       emitOpDoc(op, os);
   }
+
+  if (!typeDefs.empty()) {
+    os << "## Type definition\n\n";
+    for (const TypeDef &td : typeDefs)
+      emitTypeDefDoc(td, os);
+  }
 }
 
 static void emitDialectDoc(const RecordKeeper &recordKeeper, raw_ostream &os) {
   const auto &opDefs = recordKeeper.getAllDerivedDefinitions("Op");
   const auto &typeDefs = recordKeeper.getAllDerivedDefinitions("DialectType");
+  const auto &typeDefDefs = recordKeeper.getAllDerivedDefinitions("TypeDef");
 
+  std::set<Dialect> dialectsWithDocs;
   std::map<Dialect, std::vector<Operator>> dialectOps;
   std::map<Dialect, std::vector<Type>> dialectTypes;
+  std::map<Dialect, std::vector<TypeDef>> dialectTypeDefs;
   for (auto *opDef : opDefs) {
     Operator op(opDef);
     dialectOps[op.getDialect()].push_back(op);
+    dialectsWithDocs.insert(op.getDialect());
   }
   for (auto *typeDef : typeDefs) {
     Type type(typeDef);
     if (auto dialect = type.getDialect())
       dialectTypes[dialect].push_back(type);
   }
+  for (auto *typeDef : typeDefDefs) {
+    TypeDef type(typeDef);
+    dialectTypeDefs[type.getDialect()].push_back(type);
+    dialectsWithDocs.insert(type.getDialect());
+  }
 
   os << "<!-- Autogenerated by mlir-tblgen; don't manually edit -->\n";
-  for (auto dialectWithOps : dialectOps)
-    emitDialectDoc(dialectWithOps.first, dialectWithOps.second,
-                   dialectTypes[dialectWithOps.first], os);
+  for (auto dialect : dialectsWithDocs)
+    emitDialectDoc(dialect, dialectOps[dialect], dialectTypes[dialect],
+                   dialectTypeDefs[dialect], os);
 }
 
 //===----------------------------------------------------------------------===//

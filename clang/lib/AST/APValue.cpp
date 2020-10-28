@@ -77,7 +77,7 @@ QualType APValue::LValueBase::getDynamicAllocType() const {
   return QualType::getFromOpaquePtr(DynamicAllocType);
 }
 
-void APValue::LValueBase::profile(llvm::FoldingSetNodeID &ID) const {
+void APValue::LValueBase::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.AddPointer(Ptr.getOpaqueValue());
   if (is<TypeInfoLValue>() || is<DynamicAllocLValue>())
     return;
@@ -103,7 +103,7 @@ APValue::LValuePathEntry::LValuePathEntry(BaseOrMemberType BaseOrMember) {
   Value = reinterpret_cast<uintptr_t>(BaseOrMember.getOpaqueValue());
 }
 
-void APValue::LValuePathEntry::profile(llvm::FoldingSetNodeID &ID) const {
+void APValue::LValuePathEntry::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.AddInteger(Value);
 }
 
@@ -414,7 +414,18 @@ void APValue::swap(APValue &RHS) {
   std::swap(Data, RHS.Data);
 }
 
-void APValue::profile(llvm::FoldingSetNodeID &ID) const {
+/// Profile the value of an APInt, excluding its bit-width.
+static void profileIntValue(llvm::FoldingSetNodeID &ID, const llvm::APInt &V) {
+  for (unsigned I = 0, N = V.getBitWidth(); I < N; I += 32)
+    ID.AddInteger((uint32_t)V.extractBitsAsZExtValue(std::min(32u, N - I), I));
+}
+
+void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
+  // Note that our profiling assumes that only APValues of the same type are
+  // ever compared. As a result, we don't consider collisions that could only
+  // happen if the types are different. (For example, structs with different
+  // numbers of members could profile the same.)
+
   ID.AddInteger(Kind);
 
   switch (Kind) {
@@ -428,25 +439,22 @@ void APValue::profile(llvm::FoldingSetNodeID &ID) const {
     return;
 
   case Struct:
-    ID.AddInteger(getStructNumBases());
     for (unsigned I = 0, N = getStructNumBases(); I != N; ++I)
-      getStructBase(I).profile(ID);
-    ID.AddInteger(getStructNumFields());
+      getStructBase(I).Profile(ID);
     for (unsigned I = 0, N = getStructNumFields(); I != N; ++I)
-      getStructField(I).profile(ID);
+      getStructField(I).Profile(ID);
     return;
 
   case Union:
     if (!getUnionField()) {
-      ID.AddPointer(nullptr);
+      ID.AddInteger(0);
       return;
     }
-    ID.AddPointer(getUnionField()->getCanonicalDecl());
-    getUnionValue().profile(ID);
+    ID.AddInteger(getUnionField()->getFieldIndex() + 1);
+    getUnionValue().Profile(ID);
     return;
 
   case Array: {
-    ID.AddInteger(getArraySize());
     if (getArraySize() == 0)
       return;
 
@@ -459,9 +467,9 @@ void APValue::profile(llvm::FoldingSetNodeID &ID) const {
     //   ['a', 'c', 'x', 'x', 'x'] is profiled as
     //   [5, 'x', 3, 'c', 'a']
     llvm::FoldingSetNodeID FillerID;
-    (hasArrayFiller() ? getArrayFiller() :
-     getArrayInitializedElt(getArrayInitializedElts() -
-       1)).profile(FillerID);
+    (hasArrayFiller() ? getArrayFiller()
+                      : getArrayInitializedElt(getArrayInitializedElts() - 1))
+        .Profile(FillerID);
     ID.AddNodeID(FillerID);
     unsigned NumFillers = getArraySize() - getArrayInitializedElts();
     unsigned N = getArrayInitializedElts();
@@ -481,7 +489,7 @@ void APValue::profile(llvm::FoldingSetNodeID &ID) const {
       // element.
       if (N != getArraySize()) {
         llvm::FoldingSetNodeID ElemID;
-        getArrayInitializedElt(N - 1).profile(ElemID);
+        getArrayInitializedElt(N - 1).Profile(ElemID);
         if (ElemID != FillerID) {
           ID.AddInteger(NumFillers);
           ID.AddNodeID(ElemID);
@@ -497,51 +505,51 @@ void APValue::profile(llvm::FoldingSetNodeID &ID) const {
 
     // Emit the remaining elements.
     for (; N != 0; --N)
-      getArrayInitializedElt(N - 1).profile(ID);
+      getArrayInitializedElt(N - 1).Profile(ID);
     return;
   }
 
   case Vector:
-    ID.AddInteger(getVectorLength());
     for (unsigned I = 0, N = getVectorLength(); I != N; ++I)
-      getVectorElt(I).profile(ID);
+      getVectorElt(I).Profile(ID);
     return;
 
   case Int:
-    // We don't need to include the sign bit; it's implied by the type.
-    getInt().APInt::Profile(ID);
+    profileIntValue(ID, getInt());
     return;
 
   case Float:
-    getFloat().Profile(ID);
+    profileIntValue(ID, getFloat().bitcastToAPInt());
     return;
 
   case FixedPoint:
-    // We don't need to include the fixed-point semantics; they're
-    // implied by the type.
-    getFixedPoint().getValue().APInt::Profile(ID);
+    profileIntValue(ID, getFixedPoint().getValue());
     return;
 
   case ComplexFloat:
-    getComplexFloatReal().Profile(ID);
-    getComplexFloatImag().Profile(ID);
+    profileIntValue(ID, getComplexFloatReal().bitcastToAPInt());
+    profileIntValue(ID, getComplexFloatImag().bitcastToAPInt());
     return;
 
   case ComplexInt:
-    getComplexIntReal().APInt::Profile(ID);
-    getComplexIntImag().APInt::Profile(ID);
+    profileIntValue(ID, getComplexIntReal());
+    profileIntValue(ID, getComplexIntImag());
     return;
 
   case LValue:
-    getLValueBase().profile(ID);
+    getLValueBase().Profile(ID);
     ID.AddInteger(getLValueOffset().getQuantity());
-    ID.AddInteger(isNullPointer());
-    ID.AddInteger(isLValueOnePastTheEnd());
-    // For uniqueness, we only need to profile the entries corresponding
-    // to union members, but we don't have the type here so we don't know
-    // how to interpret the entries.
-    for (LValuePathEntry E : getLValuePath())
-      E.profile(ID);
+    ID.AddInteger((isNullPointer() ? 1 : 0) |
+                  (isLValueOnePastTheEnd() ? 2 : 0) |
+                  (hasLValuePath() ? 4 : 0));
+    if (hasLValuePath()) {
+      ID.AddInteger(getLValuePath().size());
+      // For uniqueness, we only need to profile the entries corresponding
+      // to union members, but we don't have the type here so we don't know
+      // how to interpret the entries.
+      for (LValuePathEntry E : getLValuePath())
+        E.Profile(ID);
+    }
     return;
 
   case MemberPointer:
@@ -882,17 +890,33 @@ void APValue::setLValue(LValueBase B, const CharUnits &O, NoLValuePath,
   LVal.IsNullPtr = IsNullPtr;
 }
 
-void APValue::setLValue(LValueBase B, const CharUnits &O,
-                        ArrayRef<LValuePathEntry> Path, bool IsOnePastTheEnd,
-                        bool IsNullPtr) {
+MutableArrayRef<APValue::LValuePathEntry>
+APValue::setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,
+                         bool IsOnePastTheEnd, bool IsNullPtr) {
   assert(isLValue() && "Invalid accessor");
-  LV &LVal = *((LV*)(char*)Data.buffer);
+  LV &LVal = *((LV *)(char *)Data.buffer);
   LVal.Base = B;
   LVal.IsOnePastTheEnd = IsOnePastTheEnd;
   LVal.Offset = O;
-  LVal.resizePath(Path.size());
-  memcpy(LVal.getPath(), Path.data(), Path.size() * sizeof(LValuePathEntry));
   LVal.IsNullPtr = IsNullPtr;
+  LVal.resizePath(Size);
+  return {LVal.getPath(), Size};
+}
+
+void APValue::setLValue(LValueBase B, const CharUnits &O,
+                        ArrayRef<LValuePathEntry> Path, bool IsOnePastTheEnd,
+                        bool IsNullPtr) {
+  MutableArrayRef<APValue::LValuePathEntry> InternalPath =
+      setLValueUninit(B, O, Path.size(), IsOnePastTheEnd, IsNullPtr);
+  memcpy(InternalPath.data(), Path.data(),
+         Path.size() * sizeof(LValuePathEntry));
+}
+
+void APValue::setUnion(const FieldDecl *Field, const APValue &Value) {
+  assert(isUnion() && "Invalid accessor");
+  ((UnionData *)(char *)Data.buffer)->Field =
+      Field ? Field->getCanonicalDecl() : nullptr;
+  *((UnionData*)(char*)Data.buffer)->Value = Value;
 }
 
 const ValueDecl *APValue::getMemberPointerDecl() const {
@@ -929,15 +953,27 @@ void APValue::MakeArray(unsigned InitElts, unsigned Size) {
   Kind = Array;
 }
 
-void APValue::MakeMemberPointer(const ValueDecl *Member, bool IsDerivedMember,
-                                ArrayRef<const CXXRecordDecl*> Path) {
+MutableArrayRef<APValue::LValuePathEntry>
+setLValueUninit(APValue::LValueBase B, const CharUnits &O, unsigned Size,
+                bool OnePastTheEnd, bool IsNullPtr);
+
+MutableArrayRef<const CXXRecordDecl *>
+APValue::setMemberPointerUninit(const ValueDecl *Member, bool IsDerivedMember,
+                                unsigned Size) {
   assert(isAbsent() && "Bad state change");
-  MemberPointerData *MPD = new ((void*)(char*)Data.buffer) MemberPointerData;
+  MemberPointerData *MPD = new ((void *)(char *)Data.buffer) MemberPointerData;
   Kind = MemberPointer;
   MPD->MemberAndIsDerivedMember.setPointer(
       Member ? cast<ValueDecl>(Member->getCanonicalDecl()) : nullptr);
   MPD->MemberAndIsDerivedMember.setInt(IsDerivedMember);
-  MPD->resizePath(Path.size());
+  MPD->resizePath(Size);
+  return {MPD->getPath(), MPD->PathLength};
+}
+
+void APValue::MakeMemberPointer(const ValueDecl *Member, bool IsDerivedMember,
+                                ArrayRef<const CXXRecordDecl *> Path) {
+  MutableArrayRef<const CXXRecordDecl *> InternalPath =
+      setMemberPointerUninit(Member, IsDerivedMember, Path.size());
   for (unsigned I = 0; I != Path.size(); ++I)
-    MPD->getPath()[I] = Path[I]->getCanonicalDecl();
+    InternalPath[I] = Path[I]->getCanonicalDecl();
 }

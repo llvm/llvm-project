@@ -1780,6 +1780,16 @@ TEST_F(DICompositeTypeTest, dynamicArray) {
   uint64_t Elements2[] = {dwarf::DW_OP_constu, 0};
   Metadata *DataLocation2 = DIExpression::get(Context, Elements2);
 
+  uint64_t Elements3[] = {dwarf::DW_OP_constu, 3};
+  Metadata *Rank1 = DIExpression::get(Context, Elements3);
+
+  uint64_t Elements4[] = {dwarf::DW_OP_constu, 4};
+  Metadata *Rank2 = DIExpression::get(Context, Elements4);
+
+  ConstantInt *RankInt1 = ConstantInt::get(Context, APInt(7, 0));
+  ConstantAsMetadata *RankConst1 = ConstantAsMetadata::get(RankInt1);
+  ConstantInt *RankInt2 = ConstantInt::get(Context, APInt(6, 0));
+  ConstantAsMetadata *RankConst2 = ConstantAsMetadata::get(RankInt2);
   auto *N1 = DICompositeType::get(
       Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
       OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
@@ -1817,6 +1827,44 @@ TEST_F(DICompositeTypeTest, dynamicArray) {
   EXPECT_EQ(N2, Same2);
   EXPECT_NE(Same2, Other2);
   EXPECT_EQ(N2->getDataLocationExp(), DataLocation1);
+
+  auto *N3 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DataLocation1, nullptr, nullptr, Rank1);
+
+  auto *Same3 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DataLocation1, nullptr, nullptr, Rank1);
+
+  auto *Other3 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DataLocation1, nullptr, nullptr, Rank2);
+
+  EXPECT_EQ(N3, Same3);
+  EXPECT_NE(Same3, Other3);
+  EXPECT_EQ(N3->getRankExp(), Rank1);
+
+  auto *N4 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DataLocation1, nullptr, nullptr, RankConst1);
+
+  auto *Same4 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DataLocation1, nullptr, nullptr, RankConst1);
+
+  auto *Other4 = DICompositeType::get(
+      Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+      OffsetInBits, Flags, nullptr, RuntimeLang, nullptr, nullptr, Identifier,
+      nullptr, DataLocation1, nullptr, nullptr, RankConst2);
+
+  EXPECT_EQ(N4, Same4);
+  EXPECT_NE(Same4, Other4);
+  EXPECT_EQ(N4->getRankConst(), RankInt1);
 }
 
 typedef MetadataTest DISubroutineTypeTest;

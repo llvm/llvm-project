@@ -95,6 +95,8 @@ INITIALIZE_PASS_BEGIN(IRTranslator, DEBUG_TYPE, "IRTranslator LLVM IR -> MI",
                 false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(StackProtector)
 INITIALIZE_PASS_END(IRTranslator, DEBUG_TYPE, "IRTranslator LLVM IR -> MI",
                 false, false)
 
@@ -1718,6 +1720,29 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_PTRMASK;
     case Intrinsic::lrint:
       return TargetOpcode::G_INTRINSIC_LRINT;
+    // FADD/FMUL require checking the FMF, so are handled elsewhere.
+    case Intrinsic::vector_reduce_fmin:
+      return TargetOpcode::G_VECREDUCE_FMIN;
+    case Intrinsic::vector_reduce_fmax:
+      return TargetOpcode::G_VECREDUCE_FMAX;
+    case Intrinsic::vector_reduce_add:
+      return TargetOpcode::G_VECREDUCE_ADD;
+    case Intrinsic::vector_reduce_mul:
+      return TargetOpcode::G_VECREDUCE_MUL;
+    case Intrinsic::vector_reduce_and:
+      return TargetOpcode::G_VECREDUCE_AND;
+    case Intrinsic::vector_reduce_or:
+      return TargetOpcode::G_VECREDUCE_OR;
+    case Intrinsic::vector_reduce_xor:
+      return TargetOpcode::G_VECREDUCE_XOR;
+    case Intrinsic::vector_reduce_smax:
+      return TargetOpcode::G_VECREDUCE_SMAX;
+    case Intrinsic::vector_reduce_smin:
+      return TargetOpcode::G_VECREDUCE_SMIN;
+    case Intrinsic::vector_reduce_umax:
+      return TargetOpcode::G_VECREDUCE_UMAX;
+    case Intrinsic::vector_reduce_umin:
+      return TargetOpcode::G_VECREDUCE_UMIN;
   }
   return Intrinsic::not_intrinsic;
 }
@@ -2132,6 +2157,41 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
 
       EntryMBB.insert(EntryMBB.begin(), LocalEscape);
     }
+
+    return true;
+  }
+  case Intrinsic::vector_reduce_fadd:
+  case Intrinsic::vector_reduce_fmul: {
+    // Need to check for the reassoc flag to decide whether we want a
+    // sequential reduction opcode or not.
+    Register Dst = getOrCreateVReg(CI);
+    Register ScalarSrc = getOrCreateVReg(*CI.getArgOperand(0));
+    Register VecSrc = getOrCreateVReg(*CI.getArgOperand(1));
+    unsigned Opc = 0;
+    if (!CI.hasAllowReassoc()) {
+      // The sequential ordering case.
+      Opc = ID == Intrinsic::vector_reduce_fadd
+                ? TargetOpcode::G_VECREDUCE_SEQ_FADD
+                : TargetOpcode::G_VECREDUCE_SEQ_FMUL;
+      MIRBuilder.buildInstr(Opc, {Dst}, {ScalarSrc, VecSrc},
+                            MachineInstr::copyFlagsFromInstruction(CI));
+      return true;
+    }
+    // We split the operation into a separate G_FADD/G_FMUL + the reduce,
+    // since the associativity doesn't matter.
+    unsigned ScalarOpc;
+    if (ID == Intrinsic::vector_reduce_fadd) {
+      Opc = TargetOpcode::G_VECREDUCE_FADD;
+      ScalarOpc = TargetOpcode::G_FADD;
+    } else {
+      Opc = TargetOpcode::G_VECREDUCE_FMUL;
+      ScalarOpc = TargetOpcode::G_FMUL;
+    }
+    LLT DstTy = MRI->getType(Dst);
+    auto Rdx = MIRBuilder.buildInstr(
+        Opc, {DstTy}, {VecSrc}, MachineInstr::copyFlagsFromInstruction(CI));
+    MIRBuilder.buildInstr(ScalarOpc, {Dst}, {ScalarSrc, Rdx},
+                          MachineInstr::copyFlagsFromInstruction(CI));
 
     return true;
   }

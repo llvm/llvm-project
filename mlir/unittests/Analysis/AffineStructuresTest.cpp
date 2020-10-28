@@ -15,22 +15,11 @@
 
 namespace mlir {
 
-/// Evaluate the value of the given affine expression at the specified point.
-/// The expression is a list of coefficients for the dimensions followed by the
-/// constant term.
-int64_t valueAt(ArrayRef<int64_t> expr, ArrayRef<int64_t> point) {
-  assert(expr.size() == 1 + point.size());
-  int64_t value = expr.back();
-  for (unsigned i = 0; i < point.size(); ++i)
-    value += expr[i] * point[i];
-  return value;
-}
-
 /// If 'hasValue' is true, check that findIntegerSample returns a valid sample
 /// for the FlatAffineConstraints fac.
 ///
 /// If hasValue is false, check that findIntegerSample does not return None.
-void checkSample(bool hasValue, const FlatAffineConstraints &fac) {
+static void checkSample(bool hasValue, const FlatAffineConstraints &fac) {
   Optional<SmallVector<int64_t, 8>> maybeSample = fac.findIntegerSample();
   if (!hasValue) {
     EXPECT_FALSE(maybeSample.hasValue());
@@ -41,16 +30,13 @@ void checkSample(bool hasValue, const FlatAffineConstraints &fac) {
     }
   } else {
     ASSERT_TRUE(maybeSample.hasValue());
-    for (unsigned i = 0; i < fac.getNumEqualities(); ++i)
-      EXPECT_EQ(valueAt(fac.getEquality(i), *maybeSample), 0);
-    for (unsigned i = 0; i < fac.getNumInequalities(); ++i)
-      EXPECT_GE(valueAt(fac.getInequality(i), *maybeSample), 0);
+    EXPECT_TRUE(fac.containsPoint(*maybeSample));
   }
 }
 
 /// Construct a FlatAffineConstraints from a set of inequality and
 /// equality constraints.
-FlatAffineConstraints
+static FlatAffineConstraints
 makeFACFromConstraints(unsigned dims, ArrayRef<SmallVector<int64_t, 4>> ineqs,
                        ArrayRef<SmallVector<int64_t, 4>> eqs) {
   FlatAffineConstraints fac(ineqs.size(), eqs.size(), dims + 1, dims);
@@ -66,9 +52,9 @@ makeFACFromConstraints(unsigned dims, ArrayRef<SmallVector<int64_t, 4>> ineqs,
 /// orderings may cause the algorithm to proceed differently. At least some of
 ///.these permutations should make it past the heuristics and test the
 /// implementation of the GBR algorithm itself.
-void checkPermutationsSample(bool hasValue, unsigned nDim,
-                             ArrayRef<SmallVector<int64_t, 4>> ineqs,
-                             ArrayRef<SmallVector<int64_t, 4>> eqs) {
+static void checkPermutationsSample(bool hasValue, unsigned nDim,
+                                    ArrayRef<SmallVector<int64_t, 4>> ineqs,
+                                    ArrayRef<SmallVector<int64_t, 4>> eqs) {
   SmallVector<unsigned, 4> perm(nDim);
   std::iota(perm.begin(), perm.end(), 0);
   auto permute = [&perm](ArrayRef<int64_t> coeffs) {

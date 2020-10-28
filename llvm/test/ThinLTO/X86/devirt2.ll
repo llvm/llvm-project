@@ -15,8 +15,10 @@
 ; ENABLESPLITFLAG: !{i32 1, !"EnableSplitLTOUnit", i32 1}
 
 ; Generate unsplit module with summary for ThinLTO index-based WPD.
-; RUN: opt -thinlto-bc -o %t3.o %s
-; RUN: opt -thinlto-bc -o %t4.o %p/Inputs/devirt2.ll
+; Force generation of the bitcode index so that we also test lazy metadata
+; loader handling of the type metadata.
+; RUN: opt -bitcode-mdindex-threshold=0 -thinlto-bc -o %t3.o %s
+; RUN: opt -bitcode-mdindex-threshold=0 -thinlto-bc -o %t4.o %p/Inputs/devirt2.ll
 
 ; Check that we don't have module flag when splitting not enabled for ThinLTO,
 ; and that we generate summary information needed for index-based WPD.

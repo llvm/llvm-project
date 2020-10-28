@@ -83,6 +83,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -113,18 +114,11 @@ Instruction *BPFCoreSharedInfo::insertPassThrough(Module *M, BasicBlock *BB,
 using namespace llvm;
 
 namespace {
-
-class BPFAbstractMemberAccess final : public FunctionPass {
-  bool runOnFunction(Function &F) override;
-
+class BPFAbstractMemberAccess final {
 public:
-  static char ID;
-  TargetMachine *TM;
-  // Add optional BPFTargetMachine parameter so that BPF backend can add the phase
-  // with target machine to find out the endianness. The default constructor (without
-  // parameters) is used by the pass manager for managing purposes.
-  BPFAbstractMemberAccess(BPFTargetMachine *TM = nullptr)
-      : FunctionPass(ID), TM(TM) {}
+  BPFAbstractMemberAccess(BPFTargetMachine *TM) : TM(TM) {}
+
+  bool run(Function &F);
 
   struct CallInfo {
     uint32_t Kind;
@@ -143,10 +137,11 @@ private:
     BPFPreserveFieldInfoAI = 4,
   };
 
+  TargetMachine *TM;
   const DataLayout *DL = nullptr;
   Module *M = nullptr;
 
-  std::map<std::string, GlobalVariable *> GEPGlobals;
+  static std::map<std::string, GlobalVariable *> GEPGlobals;
   // A map to link preserve_*_access_index instrinsic calls.
   std::map<CallInst *, std::pair<CallInst *, CallInfo>> AIChain;
   // A map to hold all the base preserve_*_access_index instrinsic calls.
@@ -183,17 +178,38 @@ private:
   uint64_t getConstant(const Value *IndexValue);
   bool transformGEPChain(CallInst *Call, CallInfo &CInfo);
 };
+
+std::map<std::string, GlobalVariable *> BPFAbstractMemberAccess::GEPGlobals;
+
+class BPFAbstractMemberAccessLegacyPass final : public FunctionPass {
+  BPFTargetMachine *TM;
+
+  bool runOnFunction(Function &F) override {
+    return BPFAbstractMemberAccess(TM).run(F);
+  }
+
+public:
+  static char ID;
+
+  // Add optional BPFTargetMachine parameter so that BPF backend can add the
+  // phase with target machine to find out the endianness. The default
+  // constructor (without parameters) is used by the pass manager for managing
+  // purposes.
+  BPFAbstractMemberAccessLegacyPass(BPFTargetMachine *TM = nullptr)
+      : FunctionPass(ID), TM(TM) {}
+};
+
 } // End anonymous namespace
 
-char BPFAbstractMemberAccess::ID = 0;
-INITIALIZE_PASS(BPFAbstractMemberAccess, DEBUG_TYPE,
+char BPFAbstractMemberAccessLegacyPass::ID = 0;
+INITIALIZE_PASS(BPFAbstractMemberAccessLegacyPass, DEBUG_TYPE,
                 "BPF Abstract Member Access", false, false)
 
 FunctionPass *llvm::createBPFAbstractMemberAccess(BPFTargetMachine *TM) {
-  return new BPFAbstractMemberAccess(TM);
+  return new BPFAbstractMemberAccessLegacyPass(TM);
 }
 
-bool BPFAbstractMemberAccess::runOnFunction(Function &F) {
+bool BPFAbstractMemberAccess::run(Function &F) {
   LLVM_DEBUG(dbgs() << "********** Abstract Member Accesses **********\n");
 
   M = F.getParent();
@@ -1095,4 +1111,10 @@ bool BPFAbstractMemberAccess::doTransformation(Function &F) {
     Transformed = transformGEPChain(C.first, C.second) || Transformed;
 
   return removePreserveAccessIndexIntrinsic(F) || Transformed;
+}
+
+PreservedAnalyses
+BPFAbstractMemberAccessPass::run(Function &F, FunctionAnalysisManager &AM) {
+  return BPFAbstractMemberAccess(TM).run(F) ? PreservedAnalyses::none()
+                                            : PreservedAnalyses::all();
 }

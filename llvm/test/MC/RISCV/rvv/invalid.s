@@ -590,3 +590,11 @@ vadd.vx v0, v2, a0, v0.t
 vadd.vi v0, v2, 1, v0.t
 # CHECK-ERROR: The destination vector register group cannot overlap the mask register.
 # CHECK-ERROR-LABEL: vadd.vi v0, v2, 1, v0.t
+
+vmsge.vx v0, v4, a0, v0.t
+# CHECK-ERROR: too few operands for instruction
+# CHECK-ERROR-LABEL: vmsge.vx v0, v4, a0, v0.t
+
+vmsge.vx v8, v4, a0, v0.t, v2
+# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR-LABEL: vmsge.vx v8, v4, a0, v0.t, v2

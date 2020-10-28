@@ -316,7 +316,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
       if (Reg && MOI->readsReg() && !MRI.isReserved(Reg))
         ReadsPhysRegs = true;
       else if (MOI->isDef())
-        LIS.removePhysRegDefAt(Reg, Idx);
+        LIS.removePhysRegDefAt(Reg.asMCReg(), Idx);
       continue;
     }
     LiveInterval &LI = LIS.getInterval(Reg);
@@ -463,7 +463,7 @@ void
 LiveRangeEdit::calculateRegClassAndHint(MachineFunction &MF,
                                         const MachineLoopInfo &Loops,
                                         const MachineBlockFrequencyInfo &MBFI) {
-  VirtRegAuxInfo VRAI(MF, LIS, VRM, Loops, MBFI);
+  VirtRegAuxInfo VRAI(MF, LIS, *VRM, Loops, MBFI);
   for (unsigned I = 0, Size = size(); I < Size; ++I) {
     LiveInterval &LI = LIS.getInterval(get(I));
     if (MRI.recomputeRegClass(LI.reg()))

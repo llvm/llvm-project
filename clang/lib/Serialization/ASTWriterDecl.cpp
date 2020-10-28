@@ -96,6 +96,7 @@ namespace clang {
     void VisitFieldDecl(FieldDecl *D);
     void VisitMSPropertyDecl(MSPropertyDecl *D);
     void VisitMSGuidDecl(MSGuidDecl *D);
+    void VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D);
     void VisitIndirectFieldDecl(IndirectFieldDecl *D);
     void VisitVarDecl(VarDecl *D);
     void VisitImplicitParamDecl(ImplicitParamDecl *D);
@@ -565,7 +566,6 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.AddSourceLocation(D->getEndLoc());
 
   Record.push_back(D->getODRHash());
-  Record.push_back(D->usesFPIntrin());
 
   if (D->isDefaulted()) {
     if (auto *FDI = D->getDefaultedFunctionInfo()) {
@@ -965,6 +965,12 @@ void ASTDeclWriter::VisitMSGuidDecl(MSGuidDecl *D) {
   Code = serialization::DECL_MS_GUID;
 }
 
+void ASTDeclWriter::VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D) {
+  VisitValueDecl(D);
+  Record.AddAPValue(D->getValue());
+  Code = serialization::DECL_TEMPLATE_PARAM_OBJECT;
+}
+
 void ASTDeclWriter::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
   VisitValueDecl(D);
   Record.push_back(D->getChainingSize());
@@ -1000,19 +1006,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   }
   Record.push_back(D->getLinkageInternal());
 
-  if (D->getInit()) {
-    if (!D->isInitKnownICE())
-      Record.push_back(1);
-    else {
-      Record.push_back(
-          2 |
-          (D->isInitICE() ? 1 : 0) |
-          (D->ensureEvaluatedStmt()->HasConstantDestruction ? 4 : 0));
-    }
-    Record.AddStmt(D->getInit());
-  } else {
-    Record.push_back(0);
-  }
+  Record.AddVarDeclInit(D);
 
   if (D->hasAttr<BlocksAttr>() && D->getType()->getAsCXXRecordDecl()) {
     BlockVarCopyInit Init = Writer.Context->getBlockVarCopyInit(D);
@@ -2199,7 +2193,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                         // ImplicitParamKind
   Abv->Add(BitCodeAbbrevOp(0));                         // EscapingByref
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Linkage
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // IsInitICE (local)
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // HasConstant*
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // VarKind (local enum)
   // Type Source Info
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));

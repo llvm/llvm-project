@@ -3427,17 +3427,18 @@ class CXXUnresolvedConstructExpr final
   /// The location of the right parentheses (')').
   SourceLocation RParenLoc;
 
-  CXXUnresolvedConstructExpr(TypeSourceInfo *TSI, SourceLocation LParenLoc,
-                             ArrayRef<Expr *> Args, SourceLocation RParenLoc);
+  CXXUnresolvedConstructExpr(QualType T, TypeSourceInfo *TSI,
+                             SourceLocation LParenLoc, ArrayRef<Expr *> Args,
+                             SourceLocation RParenLoc);
 
   CXXUnresolvedConstructExpr(EmptyShell Empty, unsigned NumArgs)
-      : Expr(CXXUnresolvedConstructExprClass, Empty) {
+      : Expr(CXXUnresolvedConstructExprClass, Empty), TSI(nullptr) {
     CXXUnresolvedConstructExprBits.NumArgs = NumArgs;
   }
 
 public:
   static CXXUnresolvedConstructExpr *Create(const ASTContext &Context,
-                                            TypeSourceInfo *Type,
+                                            QualType T, TypeSourceInfo *TSI,
                                             SourceLocation LParenLoc,
                                             ArrayRef<Expr *> Args,
                                             SourceLocation RParenLoc);
@@ -4232,8 +4233,10 @@ class SubstNonTypeTemplateParmExpr : public Expr {
   friend class ASTReader;
   friend class ASTStmtReader;
 
-  /// The replaced parameter.
-  NonTypeTemplateParmDecl *Param;
+  /// The replaced parameter and a flag indicating if it was a reference
+  /// parameter. For class NTTPs, we can't determine that based on the value
+  /// category alone.
+  llvm::PointerIntPair<NonTypeTemplateParmDecl*, 1, bool> ParamAndRef;
 
   /// The replacement expression.
   Stmt *Replacement;
@@ -4244,10 +4247,10 @@ class SubstNonTypeTemplateParmExpr : public Expr {
 public:
   SubstNonTypeTemplateParmExpr(QualType Ty, ExprValueKind ValueKind,
                                SourceLocation Loc,
-                               NonTypeTemplateParmDecl *Param,
+                               NonTypeTemplateParmDecl *Param, bool RefParam,
                                Expr *Replacement)
       : Expr(SubstNonTypeTemplateParmExprClass, Ty, ValueKind, OK_Ordinary),
-        Param(Param), Replacement(Replacement) {
+        ParamAndRef(Param, RefParam), Replacement(Replacement) {
     SubstNonTypeTemplateParmExprBits.NameLoc = Loc;
     setDependence(computeDependence(this));
   }
@@ -4260,7 +4263,14 @@ public:
 
   Expr *getReplacement() const { return cast<Expr>(Replacement); }
 
-  NonTypeTemplateParmDecl *getParameter() const { return Param; }
+  NonTypeTemplateParmDecl *getParameter() const {
+    return ParamAndRef.getPointer();
+  }
+
+  bool isReferenceParameter() const { return ParamAndRef.getInt(); }
+
+  /// Determine the substituted type of the template parameter.
+  QualType getParameterType(const ASTContext &Ctx) const;
 
   static bool classof(const Stmt *s) {
     return s->getStmtClass() == SubstNonTypeTemplateParmExprClass;
@@ -4508,6 +4518,10 @@ public:
   bool isBoundToLvalueReference() const {
     return getValueKind() == VK_LValue;
   }
+
+  /// Determine whether this temporary object is usable in constant
+  /// expressions, as specified in C++20 [expr.const]p4.
+  bool isUsableInConstantExpressions(const ASTContext &Context) const;
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return getSubExpr()->getBeginLoc();

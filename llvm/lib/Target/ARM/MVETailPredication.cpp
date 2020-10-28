@@ -270,7 +270,7 @@ bool MVETailPredication::IsPredicatedVectorLoop() {
       case Intrinsic::uadd_sat:
       case Intrinsic::ssub_sat:
       case Intrinsic::usub_sat:
-      case Intrinsic::experimental_vector_reduce_add:
+      case Intrinsic::vector_reduce_add:
         continue;
       case Intrinsic::fma:
       case Intrinsic::trunc:

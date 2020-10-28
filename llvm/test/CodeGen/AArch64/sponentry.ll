@@ -38,8 +38,8 @@ define dso_local void @foo([24 x i64]*) {
 
 ; CHECK: foo:
 ; CHECK: sub     sp, sp, #448
-; CHECK: add     x29, sp, #416
-; CHECK: add     x1, x29, #32
+; CHECK: add     x29, sp, #424
+; CHECK: add     x1, x29, #24
 ; CHECK: bl      _setjmpex
 
 ; NOFP: sub     sp, sp, #432

@@ -74,6 +74,7 @@ struct MIToken {
     kw_exact,
     kw_nofpexcept,
     kw_debug_location,
+    kw_debug_instr_number,
     kw_cfi_same_value,
     kw_cfi_offset,
     kw_cfi_rel_offset,

@@ -104,26 +104,26 @@ define void @sub_i8rhs() minsize {
     %res32_zext = sub i32 %lhs32, %rhs32_zext
     store volatile i32 %res32_zext, i32* @var32
 ; CHECK: sub {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, uxtb
-; GISEL: subs {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, uxtb
+; GISEL: sub {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, uxtb
 
    %rhs32_zext_shift = shl i32 %rhs32_zext, 3
    %res32_zext_shift = sub i32 %lhs32, %rhs32_zext_shift
    store volatile i32 %res32_zext_shift, i32* @var32
 ; CHECK: sub {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, uxtb #3
-; GISEL: subs {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, uxtb #3
+; GISEL: sub {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, uxtb #3
 
 ; Zero-extending to 64-bits
     %rhs64_zext = zext i8 %val8 to i64
     %res64_zext = sub i64 %lhs64, %rhs64_zext
     store volatile i64 %res64_zext, i64* @var64
 ; CHECK: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtb
-; GISEL: subs {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtb
+; GISEL: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtb
 
    %rhs64_zext_shift = shl i64 %rhs64_zext, 1
    %res64_zext_shift = sub i64 %lhs64, %rhs64_zext_shift
    store volatile i64 %res64_zext_shift, i64* @var64
 ; CHECK: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtb #1
-; GISEL: subs {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtb #1
+; GISEL: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtb #1
 
 ; Sign-extending to 32-bits
     %rhs32_sext = sext i8 %val8 to i32
@@ -245,26 +245,26 @@ define void @sub_i16rhs() minsize {
     %res32_zext = sub i32 %lhs32, %rhs32_zext
     store volatile i32 %res32_zext, i32* @var32
 ; CHECK: sub {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, uxth
-; GISEL: subs {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, uxth
+; GISEL: sub {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, uxth
 
    %rhs32_zext_shift = shl i32 %rhs32_zext, 3
    %res32_zext_shift = sub i32 %lhs32, %rhs32_zext_shift
    store volatile i32 %res32_zext_shift, i32* @var32
 ; CHECK: sub {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, uxth #3
-; GISEL: subs {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, uxth #3
+; GISEL: sub {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}, uxth #3
 
 ; Zero-extending to 64-bits
     %rhs64_zext = zext i16 %val16 to i64
     %res64_zext = sub i64 %lhs64, %rhs64_zext
     store volatile i64 %res64_zext, i64* @var64
 ; CHECK: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxth
-; GISEL: subs {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxth
+; GISEL: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxth
 
    %rhs64_zext_shift = shl i64 %rhs64_zext, 1
    %res64_zext_shift = sub i64 %lhs64, %rhs64_zext_shift
    store volatile i64 %res64_zext_shift, i64* @var64
 ; CHECK: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxth #1
-; GISEL: subs {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxth #1
+; GISEL: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxth #1
 
 ; Sign-extending to 32-bits
     %rhs32_sext = sext i16 %val16 to i32
@@ -341,14 +341,14 @@ define void @sub_i32rhs(i32 %in32) minsize {
     %res64_zext = sub i64 %lhs64, %rhs64_zext
     store volatile i64 %res64_zext, i64* @var64
 ; CHECK: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtw
-; GISEL: subs {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtw
+; GISEL: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtw
 
     %rhs64_zext2 = zext i32 %val32 to i64
     %rhs64_zext_shift = shl i64 %rhs64_zext2, 2
     %res64_zext_shift = sub i64 %lhs64, %rhs64_zext_shift
     store volatile i64 %res64_zext_shift, i64* @var64
 ; CHECK: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtw #2
-; GISEL: subs {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtw #2
+; GISEL: sub {{x[0-9]+}}, {{x[0-9]+}}, {{w[0-9]+}}, uxtw #2
 
     %rhs64_sext = sext i32 %val32 to i64
     %res64_sext = sub i64 %lhs64, %rhs64_sext
@@ -390,7 +390,7 @@ entry:
   %m = and i32 %x, 3
   %ext = zext i32 %m to i64
 ; CHECK-NEXT: neg x0, x[[TMP]]
-; GISEL: negs x0, x[[TMP]]
+; GISEL: neg x0, x[[TMP]]
   %ret = sub i64 0, %ext
   ret i64 %ret
 }
@@ -452,7 +452,7 @@ entry:
   %m = and i32 %x, 3
   %ext = zext i32 %m to i64
 ; CHECK-NEXT: sub x0, x[[TMP]], #1
-; GISEL: subs x0, x[[TMP]], #1
+; GISEL: sub x0, x[[TMP]], #1
   %ret = add i64 %ext, -1
   ret i64 %ret
 }

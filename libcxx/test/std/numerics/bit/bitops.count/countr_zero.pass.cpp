@@ -65,7 +65,7 @@ void runtime_test()
 	assert( std::countr_zero(T(130)) == 1);
 }
 
-int main()
+int main(int, char**)
 {
 
     {
@@ -166,4 +166,5 @@ int main()
 	}
 #endif
 
+    return 0;
 }

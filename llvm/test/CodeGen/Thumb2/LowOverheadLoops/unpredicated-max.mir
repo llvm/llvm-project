@@ -26,7 +26,7 @@
     %tmp8 = call <8 x i1> @llvm.arm.mve.vctp16(i32 %tmp7)
     %tmp9 = sub i32 %tmp7, 8
     %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %lsr.iv17, i32 2, <8 x i1> %tmp8, <8 x i16> undef)
-    %min = tail call i16 @llvm.experimental.vector.reduce.smax.v8i16(<8 x i16> %wide.masked.load)
+    %min = tail call i16 @llvm.vector.reduce.smax.v8i16(<8 x i16> %wide.masked.load)
     store i16 %min, i16* %lsr.iv.2
     %scevgep = getelementptr i16, i16* %lsr.iv, i32 8
     %scevgep.2 = getelementptr i16, i16* %lsr.iv.2, i32 1
@@ -43,7 +43,7 @@
   declare void @llvm.set.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <8 x i1> @llvm.arm.mve.vctp16(i32)
-  declare i16 @llvm.experimental.vector.reduce.smax.v8i16(<8 x i16>)
+  declare i16 @llvm.vector.reduce.smax.v8i16(<8 x i16>)
 
 ...
 ---

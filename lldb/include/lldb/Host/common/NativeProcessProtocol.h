@@ -17,6 +17,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/TraceOptions.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -112,10 +113,14 @@ public:
   virtual Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
                              size_t &bytes_written) = 0;
 
-  virtual Status AllocateMemory(size_t size, uint32_t permissions,
-                                lldb::addr_t &addr) = 0;
+  virtual llvm::Expected<lldb::addr_t> AllocateMemory(size_t size,
+                                                      uint32_t permissions) {
+    return llvm::make_error<UnimplementedError>();
+  }
 
-  virtual Status DeallocateMemory(lldb::addr_t addr) = 0;
+  virtual llvm::Error DeallocateMemory(lldb::addr_t addr) {
+    return llvm::make_error<UnimplementedError>();
+  }
 
   virtual lldb::addr_t GetSharedLibraryInfoAddress() = 0;
 

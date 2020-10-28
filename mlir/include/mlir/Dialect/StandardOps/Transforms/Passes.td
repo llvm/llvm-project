@@ -16,4 +16,10 @@ def ExpandAtomic : FunctionPass<"expand-atomic"> {
   let constructor = "mlir::createExpandAtomicPass()";
 }
 
+def StdBufferize : FunctionPass<"std-bufferize"> {
+  let summary = "Bufferize the std dialect";
+  let constructor = "mlir::createStdBufferizePass()";
+  let dependentDialects = ["scf::SCFDialect"];
+}
+
 #endif // MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES

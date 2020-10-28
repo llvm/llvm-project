@@ -1,4 +1,4 @@
-; RUN: opt < %s -always-inline -instcombine -S | FileCheck %s
+; RUN: opt < %s -instcombine -always-inline -S | FileCheck %s
 
 define internal void @foo(i16*) alwaysinline {
   ret void

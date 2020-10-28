@@ -60,7 +60,7 @@ def SPV_AddressOfOp : SPV_Op<"_address_of", [InFunctionScope, NoSideEffect]> {
 
   let autogenSerialization = 0;
 
-  let builders = [OpBuilder<[{spirv::GlobalVariableOp var}]>];
+  let builders = [OpBuilderDAG<(ins "spirv::GlobalVariableOp":$var)>];
 
   let assemblyFormat = "$variable attr-dict `:` type($pointer)";
 }
@@ -188,9 +188,9 @@ def SPV_EntryPointOp : SPV_Op<"EntryPoint", [InModuleScope]> {
 
   let autogenSerialization = 0;
 
-  let builders = [OpBuilder<[{spirv::ExecutionModel executionModel,
-                              spirv::FuncOp function,
-                              ArrayRef<Attribute> interfaceVars}]>];
+  let builders = [
+    OpBuilderDAG<(ins "spirv::ExecutionModel":$executionModel,
+      "spirv::FuncOp":$function, "ArrayRef<Attribute>":$interfaceVars)>];
 }
 
 // -----
@@ -241,11 +241,10 @@ def SPV_FuncOp : SPV_Op<"func", [
 
   let verifier = [{ return success(); }];
 
-  let builders = [OpBuilder<[{
-    StringRef name, FunctionType type,
-    spirv::FunctionControl control = spirv::FunctionControl::None,
-    ArrayRef<NamedAttribute> attrs = {}
-  }]>];
+  let builders = [
+    OpBuilderDAG<(ins "StringRef":$name, "FunctionType":$type,
+      CArg<"spirv::FunctionControl", "spirv::FunctionControl::None">:$control,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
 
   let hasOpcode = 0;
 
@@ -330,14 +329,15 @@ def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
   let results = (outs);
 
   let builders = [
-    OpBuilder<
-      "TypeAttr type, ArrayRef<NamedAttribute> namedAttrs", [{
+    OpBuilderDAG<(ins "TypeAttr":$type, "ArrayRef<NamedAttribute>":$namedAttrs),
+    [{
       $_state.addAttribute("type", type);
       $_state.addAttributes(namedAttrs);
     }]>,
-    OpBuilder<[{Type type, StringRef name, unsigned descriptorSet,
-                unsigned binding}]>,
-    OpBuilder<[{Type type, StringRef name, spirv::BuiltIn builtin}]>
+    OpBuilderDAG<(ins "Type":$type, "StringRef":$name,
+      "unsigned":$descriptorSet, "unsigned":$binding)>,
+    OpBuilderDAG<(ins "Type":$type, "StringRef":$name,
+      "spirv::BuiltIn":$builtin)>
   ];
 
   let hasOpcode = 0;
@@ -413,10 +413,10 @@ def SPV_ModuleOp : SPV_Op<"module",
   let regions = (region SizedRegion<1>:$body);
 
   let builders = [
-    OpBuilder<[{Optional<StringRef> name = llvm::None}]>,
-    OpBuilder<[{spirv::AddressingModel addressing_model,
-                spirv::MemoryModel memory_model,
-                Optional<StringRef> name = llvm::None}]>
+    OpBuilderDAG<(ins CArg<"Optional<StringRef>", "llvm::None">:$name)>,
+    OpBuilderDAG<(ins "spirv::AddressingModel":$addressing_model,
+      "spirv::MemoryModel":$memory_model,
+      CArg<"Optional<StringRef>", "llvm::None">:$name)>
   ];
 
   // We need to ensure the block inside the region is properly terminated;
@@ -472,7 +472,7 @@ def SPV_ReferenceOfOp : SPV_Op<"_reference_of", [NoSideEffect]> {
   let summary = "Reference a specialization constant.";
 
   let description = [{
-    Specialization constant in module scope are defined using symbol names.
+    Specialization constants in module scope are defined using symbol names.
     This op generates an SSA value that can be used to refer to the symbol
     within function scope for use in ops that expect an SSA value.
     This operation has no corresponding SPIR-V instruction; it's merely used
@@ -491,6 +491,8 @@ def SPV_ReferenceOfOp : SPV_Op<"_reference_of", [NoSideEffect]> {
     ```mlir
     %0 = spv._reference_of @spec_const : f32
     ```
+
+    TODO Add support for composite specialization constants.
   }];
 
   let arguments = (ins
@@ -541,8 +543,6 @@ def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
     spv.specConstant @spec_const1 = true
     spv.specConstant @spec_const2 spec_id(5) = 42 : i32
     ```
-
-    TODO: support composite spec constants with another op
   }];
 
   let arguments = (ins
@@ -557,6 +557,56 @@ def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
   let autogenSerialization = 0;
 }
 
+def SPV_SpecConstantCompositeOp : SPV_Op<"specConstantComposite", [InModuleScope, Symbol]> {
+  let summary = "Declare a new composite specialization constant.";
+
+  let description = [{
+    This op declares a SPIR-V composite specialization constant. This covers
+    the `OpSpecConstantComposite` SPIR-V instruction. Scalar constants are
+    covered by `spv.specConstant`.
+
+    A constituent of a spec constant composite can be:
+    - A symbol referring of another spec constant.
+    - The SSA ID of a non-specialization constant (i.e. defined through
+      `spv.specConstant`).
+    - The SSA ID of a `spv.undef`.
+
+    ```
+    spv-spec-constant-composite-op ::= `spv.specConstantComposite` symbol-ref-id ` (`
+                                       symbol-ref-id (`, ` symbol-ref-id)*
+                                       `) :` composite-type
+    ```
+
+     where `composite-type` is some non-scalar type that can be represented in the `spv`
+     dialect: `spv.struct`, `spv.array`, or `vector`.
+
+     #### Example:
+
+     ```mlir
+     spv.specConstant @sc1 = 1   : i32
+     spv.specConstant @sc2 = 2.5 : f32
+     spv.specConstant @sc3 = 3.5 : f32
+     spv.specConstantComposite @scc (@sc1, @sc2, @sc3) : !spv.struct<i32, f32, f32>
+     ```
+
+    TODO Add support for constituents that are:
+    - regular constants.
+    - undef.
+    - spec constant composite.
+  }];
+
+  let arguments = (ins
+    TypeAttr:$type,
+    StrAttr:$sym_name,
+    SymbolRefArrayAttr:$constituents
+  );
+
+  let results = (outs);
+
+  let hasOpcode = 0;
+
+  let autogenSerialization = 0;
+}
 // -----
 
 #endif // SPIRV_STRUCTURE_OPS

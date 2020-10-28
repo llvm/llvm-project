@@ -214,3 +214,53 @@ llvm.func @test_omp_parallel_3() -> () {
 // CHECK: define internal void @[[OMP_OUTLINED_FN_3_3]]
 // CHECK: define internal void @[[OMP_OUTLINED_FN_3_2]]
 // CHECK: define internal void @[[OMP_OUTLINED_FN_3_1]]
+
+// CHECK-LABEL: define void @test_omp_parallel_4()
+llvm.func @test_omp_parallel_4() -> () {
+// CHECK: call void {{.*}}@__kmpc_fork_call{{.*}} @[[OMP_OUTLINED_FN_4_1:.*]] to
+// CHECK: define internal void @[[OMP_OUTLINED_FN_4_1]]
+// CHECK: call void @__kmpc_barrier
+// CHECK: call void {{.*}}@__kmpc_fork_call{{.*}} @[[OMP_OUTLINED_FN_4_1_1:.*]] to
+// CHECK: call void @__kmpc_barrier
+  omp.parallel {
+    omp.barrier
+
+// CHECK: define internal void @[[OMP_OUTLINED_FN_4_1_1]]
+// CHECK: call void @__kmpc_barrier
+    omp.parallel {
+      omp.barrier
+      omp.terminator
+    }
+
+    omp.barrier
+    omp.terminator
+  }
+  llvm.return
+}
+
+llvm.func @test_omp_parallel_5() -> () {
+// CHECK: call void {{.*}}@__kmpc_fork_call{{.*}} @[[OMP_OUTLINED_FN_5_1:.*]] to
+// CHECK: define internal void @[[OMP_OUTLINED_FN_5_1]]
+// CHECK: call void @__kmpc_barrier
+// CHECK: call void {{.*}}@__kmpc_fork_call{{.*}} @[[OMP_OUTLINED_FN_5_1_1:.*]] to
+// CHECK: call void @__kmpc_barrier
+  omp.parallel {
+    omp.barrier
+
+// CHECK: define internal void @[[OMP_OUTLINED_FN_5_1_1]]
+    omp.parallel {
+// CHECK: call void {{.*}}@__kmpc_fork_call{{.*}} @[[OMP_OUTLINED_FN_5_1_1_1:.*]] to
+// CHECK: define internal void @[[OMP_OUTLINED_FN_5_1_1_1]]
+// CHECK: call void @__kmpc_barrier
+      omp.parallel {
+        omp.barrier
+        omp.terminator
+      }
+      omp.terminator
+    }
+
+    omp.barrier
+    omp.terminator
+  }
+  llvm.return
+}

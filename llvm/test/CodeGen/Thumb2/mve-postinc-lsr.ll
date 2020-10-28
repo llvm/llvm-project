@@ -1390,7 +1390,7 @@ declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32 immarg, <4
 declare <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>*, i32, <8 x i1>, <8 x i8>)
 declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32 immarg, <16 x i1>, <16 x i8>)
 declare void @llvm.masked.store.v4f32.p0v4f32(<4 x float>, <4 x float>*, i32 immarg, <4 x i1>)
-declare i32 @llvm.experimental.vector.reduce.add.v16i8(<16 x i32> %ext4)
+declare i32 @llvm.vector.reduce.add.v16i8(<16 x i32> %ext4)
 declare i32 @llvm.arm.mve.vmldava.v8i16(i32, i32, i32, i32, <8 x i16>, <8 x i16>)
 declare i32 @llvm.arm.mve.vmldava.predicated.v16i8.v16i1(i32, i32, i32, i32, <16 x i8>, <16 x i8>, <16 x i1>)
 declare i32 @llvm.arm.mve.vmldava.predicated.v8i16.v8i1(i32, i32, i32, i32, <8 x i16>, <8 x i16>, <8 x i1>)

@@ -361,19 +361,19 @@ s_set_gpr_idx_off
 
 s_set_gpr_idx_mode 0
 // VI: s_set_gpr_idx_mode gpr_idx() ; encoding: [0x00,0x00,0x9d,0xbf]
-// NOSICI: error: invalid operand for instruction
+// NOSICI: error: instruction not supported on this GPU
 
 s_set_gpr_idx_mode gpr_idx()
 // VI: s_set_gpr_idx_mode gpr_idx() ; encoding: [0x00,0x00,0x9d,0xbf]
-// NOSICI: error: unknown token in expression
+// NOSICI: error: instruction not supported on this GPU
 
 s_set_gpr_idx_mode 15
 // VI: s_set_gpr_idx_mode gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x0f,0x00,0x9d,0xbf]
-// NOSICI: error: invalid operand for instruction
+// NOSICI: error: instruction not supported on this GPU
 
 s_set_gpr_idx_mode gpr_idx(SRC2,SRC1,SRC0,DST)
 // VI: s_set_gpr_idx_mode gpr_idx(SRC0,SRC1,SRC2,DST) ; encoding: [0x0f,0x00,0x9d,0xbf]
-// NOSICI: error: expected ')' in parentheses expression
+// NOSICI: error: instruction not supported on this GPU
 
 s_endpgm_saved
 // VI: s_endpgm_saved ; encoding: [0x00,0x00,0x9b,0xbf]

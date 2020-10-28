@@ -127,7 +127,7 @@ void OmpStructureChecker::Enter(const parser::OmpEndSectionsDirective &x) {
     // 2.7.2 end-sections -> END SECTIONS [nowait-clause]
   case llvm::omp::Directive::OMPD_sections:
     SetContextDirectiveEnum(llvm::omp::Directive::OMPD_end_sections);
-    SetContextAllowed(OmpClauseSet{llvm::omp::Clause::OMPC_nowait});
+    SetContextAllowedOnce(OmpClauseSet{llvm::omp::Clause::OMPC_nowait});
     break;
   default:
     // no clauses are allowed
@@ -184,6 +184,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPCancelConstruct &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPCancelConstruct &) {
+  dirContext_.pop_back();
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
+  const auto &dir{std::get<parser::OmpCriticalDirective>(x.t)};
+  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_critical);
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPCriticalConstruct &) {
   dirContext_.pop_back();
 }
 

@@ -102,12 +102,13 @@ def AffinePipelineDataTransfer
   let constructor = "mlir::createPipelineDataTransferPass()";
 }
 
-def BufferPlacement : FunctionPass<"buffer-placement"> {
-  let summary = "Optimizes placement of alloc and dealloc operations";
+def BufferDeallocation : FunctionPass<"buffer-deallocation"> {
+  let summary = "Adds all required dealloc operations for all allocations in the "
+                "input program";
   let description = [{
-    This pass implements an algorithm to optimize the placement of alloc and
-    dealloc operations. This pass also inserts missing dealloc operations
-    automatically to reclaim memory.
+    This pass implements an algorithm to automatically introduce all required
+    deallocation operations for all buffers in the input program. This ensures that
+    the resulting program does not have any memory leaks.
 
 
     Input
@@ -121,7 +122,11 @@ def BufferPlacement : FunctionPass<"buffer-placement"> {
         br ^bb3(%arg1 : memref<2xf32>)
       ^bb2:
         %0 = alloc() : memref<2xf32>
-        linalg.generic {args_in = 1 : i64, args_out = 1 : i64, indexing_maps = [#map0, #map0], iterator_types = ["parallel"]} %arg1, %0 {
+        linalg.generic {
+          args_in = 1 : i64,
+          args_out = 1 : i64,
+          indexing_maps = [#map0, #map0],
+          iterator_types = ["parallel"]} %arg1, %0 {
         ^bb0(%gen1_arg0: f32, %gen1_arg1: f32):
           %tmp1 = exp %gen1_arg0 : f32
           linalg.yield %tmp1 : f32
@@ -141,29 +146,75 @@ def BufferPlacement : FunctionPass<"buffer-placement"> {
     #map0 = affine_map<(d0) -> (d0)>
     module {
       func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
-        %0 = alloc() : memref<2xf32>
         cond_br %arg0, ^bb1, ^bb2
-      ^bb1: // pred: ^bb0
-        br ^bb3(%arg1 : memref<2xf32>)
-      ^bb2: // pred: ^bb0
-        linalg.generic {args_in = 1 : i64, args_out = 1 : i64, indexing_maps = [#map0, #map0], iterator_types = ["parallel"]} %arg1, %0 {
-        ^bb0(%arg3: f32, %arg4: f32):       // no predecessors
-          %2 = exp %arg3 : f32
-          linalg.yield %2 : f32
-        }: memref<2xf32>, memref<2xf32>
+      ^bb1:  // pred: ^bb0
+        %0 = alloc() : memref<2xf32>
+        linalg.copy(%arg1, %0) : memref<2xf32>, memref<2xf32>
         br ^bb3(%0 : memref<2xf32>)
-      ^bb3(%1: memref<2xf32>):      // 2 preds: ^bb1, ^bb2
-        linalg.copy(%1, %arg2) : memref<2xf32>, memref<2xf32>
-        dealloc %0 : memref<2xf32>
+      ^bb2:  // pred: ^bb0
+        %1 = alloc() : memref<2xf32>
+        linalg.generic {
+          args_in = 1 : i64,
+          args_out = 1 : i64,
+          indexing_maps = [#map0, #map0],
+          iterator_types = ["parallel"]} %arg1, %1 {
+        ^bb0(%arg3: f32, %arg4: f32):  // no predecessors
+          %4 = exp %arg3 : f32
+          linalg.yield %4 : f32
+        }: memref<2xf32>, memref<2xf32>
+        %2 = alloc() : memref<2xf32>
+        linalg.copy(%1, %2) : memref<2xf32>, memref<2xf32>
+        dealloc %1 : memref<2xf32>
+        br ^bb3(%2 : memref<2xf32>)
+      ^bb3(%3: memref<2xf32>):  // 2 preds: ^bb1, ^bb2
+        linalg.copy(%3, %arg2) : memref<2xf32>, memref<2xf32>
+        dealloc %3 : memref<2xf32>
         return
       }
+
     }
     ```
 
   }];
-  let constructor = "mlir::createBufferPlacementPass()";
+  let constructor = "mlir::createBufferDeallocationPass()";
   // TODO: this pass likely shouldn't depend on Linalg?
   let dependentDialects = ["linalg::LinalgDialect"];
+}
+
+def BufferHoisting : FunctionPass<"buffer-hoisting"> {
+  let summary = "Optimizes placement of allocation operations by moving them "
+                "into common dominators and out of nested regions";
+  let description = [{
+    This pass implements an approach to aggressively move allocations upwards
+    into common dominators and out of nested regions.
+  }];
+  let constructor = "mlir::createBufferHoistingPass()";
+}
+
+def BufferLoopHoisting : FunctionPass<"buffer-loop-hoisting"> {
+  let summary = "Optimizes placement of allocation operations by moving them "
+                "out of loop nests";
+  let description = [{
+    This pass implements an approach to aggressively move allocations upwards
+    out of loop nests. It does not move allocations into common dominators.
+  }];
+  let constructor = "mlir::createBufferLoopHoistingPass()";
+}
+
+def PromoteBuffersToStack : FunctionPass<"promote-buffers-to-stack"> {
+  let summary = "Promotes heap-based allocations to automatically managed "
+                "stack-based allocations";
+  let description = [{
+    This pass implements a simple algorithm to convert heap-based memory
+    allocations to stack-based ones. It uses a built-in heuristic to decide
+    whether it makes sense to convert an allocation.
+  }];
+  let constructor = "mlir::createPromoteBuffersToStackPass()";
+  let options = [
+    Option<"maxAllocSizeInBytes", "max-alloc-size-in-bytes", "unsigned",
+           /*default=*/"1024",
+           "Define the maximum size in bytes to promote allocations to stack.">,
+  ];
 }
 
 def Canonicalizer : Pass<"canonicalize"> {
@@ -313,6 +364,116 @@ def MemRefDataFlowOpt : FunctionPass<"memref-dataflow-opt"> {
 
 def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
   let summary = "Normalize memrefs";
+   let description = [{
+    This pass transforms memref types with a non-trivial
+    [layout map](https://mlir.llvm.org/docs/LangRef/#layout-map) into
+    memref types with an identity layout map, e.g. (i, j) -> (i, j). This
+    pass is inter-procedural, in the sense that it can modify function
+    interfaces and call sites that pass memref types. In order to modify
+    memref types while preserving the original behavior, users of those
+    memref types are also modified to incorporate the resulting layout map.
+    For instance, an [AffineLoadOp]
+    (https://mlir.llvm.org/docs/Dialects/Affine/#affineload-affineloadop)
+    will be updated to compose the layout map with with the affine expression
+    contained in the op. Operations marked with the [MemRefsNormalizable]
+    (https://mlir.llvm.org/docs/Traits/#memrefsnormalizable) trait are
+    expected to be normalizable. Supported operations include affine
+    operations, std.alloc, std.dealloc, and std.return.
+
+    Given an appropriate layout map specified in the code, this transformation
+    can express tiled or linearized access to multi-dimensional data
+    structures, but will not modify memref types without an explicit layout
+    map.
+
+    Currently this pass is limited to only modify
+    functions where all memref types can be normalized. If a function
+    contains any operations that are not MemRefNormalizable, then the function
+    and any functions that call or call it will not be modified.
+
+    Input
+
+    ```mlir
+    #tile = affine_map<(i) -> (i floordiv 4, i mod 4)>
+    func @matmul(%A: memref<16xf64, #tile>,
+                 %B: index, %C: memref<16xf64>) -> (memref<16xf64, #tile>) {
+      affine.for %arg3 = 0 to 16 {
+            %a = affine.load %A[%arg3] : memref<16xf64, #tile>
+            %p = mulf %a, %a : f64
+            affine.store %p, %A[%arg3] : memref<16xf64, #tile>
+      }
+      %c = alloc() : memref<16xf64, #tile>
+      %d = affine.load %c[0] : memref<16xf64, #tile>
+      return %A: memref<16xf64, #tile>
+    }
+    ```
+
+    Output
+
+    ```mlir
+    func @matmul(%arg0: memref<4x4xf64>, %arg1: index, %arg2: memref<16xf64>)
+      -> memref<4x4xf64> {
+      affine.for %arg3 = 0 to 16 {
+        %3 = affine.load %arg0[%arg3 floordiv 4, %arg3 mod 4]: memref<4x4xf64>
+        %4 = mulf %3, %3 : f64
+        affine.store %4, %arg0[%arg3 floordiv 4, %arg3 mod 4]: memref<4x4xf64>
+      }
+      %0 = alloc() : memref<4x4xf64>
+      %1 = affine.apply #map1()
+      %2 = affine.load %0[0, 0] : memref<4x4xf64>
+      return %arg0 : memref<4x4xf64>
+    }
+    ```
+
+    Input
+
+    ```
+    #linear8 = affine_map<(i, j) -> (i * 8 + j)>
+    func @linearize(%arg0: memref<8x8xi32, #linear8>,
+                    %arg1: memref<8x8xi32, #linear8>,
+                    %arg2: memref<8x8xi32, #linear8>) {
+      %c8 = constant 8 : index
+      %c0 = constant 0 : index
+      %c1 = constant 1 : index
+      affine.for %arg3 = %c0 to %c8  {
+      affine.for %arg4 = %c0 to %c8  {
+        affine.for %arg5 = %c0 to %c8 {
+          %0 = affine.load %arg0[%arg3, %arg5] : memref<8x8xi32, #linear8>
+          %1 = affine.load %arg1[%arg5, %arg4] : memref<8x8xi32, #linear8>
+          %2 = affine.load %arg2[%arg3, %arg4] : memref<8x8xi32, #linear8>
+          %3 = muli %0, %1 : i32
+          %4 = addi %2, %3 : i32
+          affine.store %4, %arg2[%arg3, %arg4] : memref<8x8xi32, #linear8>
+        }
+      }
+      }
+      return
+    }
+    ```
+
+    Output
+
+    ```mlir
+    func @linearize(%arg0: memref<64xi32>,
+                    %arg1: memref<64xi32>,
+                    %arg2: memref<64xi32>) {
+    %c8 = constant 8 : index
+    %c0 = constant 0 : index
+    affine.for %arg3 = %c0 to %c8 {
+      affine.for %arg4 = %c0 to %c8 {
+        affine.for %arg5 = %c0 to %c8 {
+          %0 = affine.load %arg0[%arg3 * 8 + %arg5] : memref<64xi32>
+          %1 = affine.load %arg1[%arg5 * 8 + %arg4] : memref<64xi32>
+          %2 = affine.load %arg2[%arg3 * 8 + %arg4] : memref<64xi32>
+          %3 = muli %0, %1 : i32
+          %4 = addi %2, %3 : i32
+          affine.store %4, %arg2[%arg3 * 8 + %arg4] : memref<64xi32>
+        }
+      }
+    }
+    return
+  }
+  ```
+  }];
   let constructor = "mlir::createNormalizeMemRefsPass()";
 }
 

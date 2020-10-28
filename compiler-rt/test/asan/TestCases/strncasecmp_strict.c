@@ -24,7 +24,7 @@
 
 int main(int argc, char **argv) {
   assert(argc >= 2);
-  const size_t size = 100;
+  enum { size = 100 };
   char fill = 'o';
   char s1[size];
   char s2[size];

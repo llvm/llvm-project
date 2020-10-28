@@ -131,6 +131,10 @@ static cl::opt<bool>
 LoopPredication("indvars-predicate-loops", cl::Hidden, cl::init(true),
                 cl::desc("Predicate conditions in read only loops"));
 
+static cl::opt<bool>
+AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
+                cl::desc("Allow widening of indvars to eliminate s/zext"));
+
 namespace {
 
 struct RewritePhi;
@@ -739,7 +743,6 @@ protected:
 
   bool widenLoopCompare(NarrowIVDefUse DU);
   bool widenWithVariantUse(NarrowIVDefUse DU);
-  void widenWithVariantUseCodegen(NarrowIVDefUse DU);
 
   void pushNarrowIVUsers(Instruction *NarrowDef, Instruction *WideDef);
 };
@@ -1111,21 +1114,16 @@ bool WidenIV::widenWithVariantUse(NarrowIVDefUse DU) {
 
   // The operand that is not defined by NarrowDef of DU. Let's call it the
   // other operand.
-  unsigned ExtendOperIdx = DU.NarrowUse->getOperand(0) == NarrowDef ? 1 : 0;
-  assert(DU.NarrowUse->getOperand(1 - ExtendOperIdx) == DU.NarrowDef &&
+  assert((NarrowUse->getOperand(0) == NarrowDef ||
+          NarrowUse->getOperand(1) == NarrowDef) &&
          "bad DU");
 
-  const SCEV *ExtendOperExpr = nullptr;
   const OverflowingBinaryOperator *OBO =
     cast<OverflowingBinaryOperator>(NarrowUse);
   ExtendKind ExtKind = getExtendKind(NarrowDef);
-  if (ExtKind == SignExtended && OBO->hasNoSignedWrap())
-    ExtendOperExpr = SE->getSignExtendExpr(
-      SE->getSCEV(NarrowUse->getOperand(ExtendOperIdx)), WideType);
-  else if (ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap())
-    ExtendOperExpr = SE->getZeroExtendExpr(
-      SE->getSCEV(NarrowUse->getOperand(ExtendOperIdx)), WideType);
-  else
+  bool CanSignExtend = ExtKind == SignExtended && OBO->hasNoSignedWrap();
+  bool CanZeroExtend = ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap();
+  if (!CanSignExtend && !CanZeroExtend)
     return false;
 
   // Verifying that Defining operand is an AddRec
@@ -1133,14 +1131,6 @@ bool WidenIV::widenWithVariantUse(NarrowIVDefUse DU) {
   const SCEVAddRecExpr *AddRecOp1 = dyn_cast<SCEVAddRecExpr>(Op1);
   if (!AddRecOp1 || AddRecOp1->getLoop() != L)
     return false;
-  // Verifying that other operand is an Extend.
-  if (ExtKind == SignExtended) {
-    if (!isa<SCEVSignExtendExpr>(ExtendOperExpr))
-      return false;
-  } else {
-    if (!isa<SCEVZeroExtendExpr>(ExtendOperExpr))
-      return false;
-  }
 
   if (ExtKind == SignExtended) {
     for (Use &U : NarrowUse->uses()) {
@@ -1155,18 +1145,6 @@ bool WidenIV::widenWithVariantUse(NarrowIVDefUse DU) {
         return false;
     }
   }
-
-  return true;
-}
-
-/// Special Case for widening with loop variant (see
-/// WidenIV::widenWithVariant). This is the code generation part.
-void WidenIV::widenWithVariantUseCodegen(NarrowIVDefUse DU) {
-  Instruction *NarrowUse = DU.NarrowUse;
-  Instruction *NarrowDef = DU.NarrowDef;
-  Instruction *WideDef = DU.WideDef;
-
-  ExtendKind ExtKind = getExtendKind(NarrowDef);
 
   LLVM_DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
 
@@ -1186,25 +1164,22 @@ void WidenIV::widenWithVariantUseCodegen(NarrowIVDefUse DU) {
   IRBuilder<> Builder(NarrowUse);
   Builder.Insert(WideBO);
   WideBO->copyIRFlags(NarrowBO);
-
-  assert(ExtKind != Unknown && "Unknown ExtKind not handled");
-
   ExtendKindMap[NarrowUse] = ExtKind;
 
   for (Use &U : NarrowUse->uses()) {
     Instruction *User = nullptr;
     if (ExtKind == SignExtended)
-      User = dyn_cast<SExtInst>(U.getUser());
+      User = cast<SExtInst>(U.getUser());
     else
-      User = dyn_cast<ZExtInst>(U.getUser());
-    if (User && User->getType() == WideType) {
-      LLVM_DEBUG(dbgs() << "INDVARS: eliminating " << *User << " replaced by "
-                        << *WideBO << "\n");
-      ++NumElimExt;
-      User->replaceAllUsesWith(WideBO);
-      DeadInsts.emplace_back(User);
-    }
+      User = cast<ZExtInst>(U.getUser());
+    assert(User->getType() == WideType && "Checked before!");
+    LLVM_DEBUG(dbgs() << "INDVARS: eliminating " << *User << " replaced by "
+                      << *WideBO << "\n");
+    ++NumElimExt;
+    User->replaceAllUsesWith(WideBO);
+    DeadInsts.emplace_back(User);
   }
+  return true;
 }
 
 /// Determine whether an individual user of the narrow IV can be widened. If so,
@@ -1309,10 +1284,8 @@ Instruction *WidenIV::widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter) {
     // in WideAddRec.first does not indicate a polynomial induction expression.
     // In that case, look at the operands of the use instruction to determine
     // if we can still widen the use instead of truncating its operand.
-    if (widenWithVariantUse(DU)) {
-      widenWithVariantUseCodegen(DU);
+    if (widenWithVariantUse(DU))
       return nullptr;
-    }
 
     // This user does not evaluate to a recurrence after widening, so don't
     // follow it. Instead insert a Trunc to kill off the original use,
@@ -1363,7 +1336,7 @@ void WidenIV::pushNarrowIVUsers(Instruction *NarrowDef, Instruction *WideDef) {
   const SCEV *NarrowSCEV = SE->getSCEV(NarrowDef);
   bool NonNegativeDef =
       SE->isKnownPredicate(ICmpInst::ICMP_SGE, NarrowSCEV,
-                           SE->getConstant(NarrowSCEV->getType(), 0));
+                           SE->getZero(NarrowSCEV->getType()));
   for (User *U : NarrowDef->users()) {
     Instruction *NarrowUser = cast<Instruction>(U);
 
@@ -1392,6 +1365,10 @@ void WidenIV::pushNarrowIVUsers(Instruction *NarrowDef, Instruction *WideDef) {
 /// It would be simpler to delete uses as they are processed, but we must avoid
 /// invalidating SCEV expressions.
 PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
+  // Bail if we disallowed widening.
+  if(!AllowIVWidening)
+    return nullptr;
+
   // Is this phi an induction variable?
   const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(OrigPhi));
   if (!AddRec)
@@ -2330,9 +2307,9 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
 }
 
 // Returns true if the condition of \p BI being checked is invariant and can be
-// proved to be trivially true.
+// proved to be trivially true during at least first \p MaxIter iterations.
 static bool isTrivialCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
-                          bool ProvingLoopExit) {
+                          bool ProvingLoopExit, const SCEV *MaxIter) {
   ICmpInst::Predicate Pred;
   Value *LHS, *RHS;
   using namespace PatternMatch;
@@ -2355,10 +2332,23 @@ static bool isTrivialCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
   const SCEV *LHSS = SE->getSCEVAtScope(LHS, L);
   const SCEV *RHSS = SE->getSCEVAtScope(RHS, L);
   // Can we prove it to be trivially true?
-  if (SE->isKnownPredicate(Pred, LHSS, RHSS))
+  if (SE->isKnownPredicateAt(Pred, LHSS, RHSS, BI))
     return true;
 
-  return false;
+  if (ProvingLoopExit)
+    return false;
+
+  ICmpInst::Predicate InvariantPred;
+  const SCEV *InvariantLHS, *InvariantRHS;
+
+  // Check if there is a loop-invariant predicate equivalent to our check.
+  if (!SE->isLoopInvariantExitCondDuringFirstIterations(
+           Pred, LHSS, RHSS, L, BI, MaxIter, InvariantPred, InvariantLHS,
+           InvariantRHS))
+    return false;
+
+  // Can we prove it to be trivially true?
+  return SE->isKnownPredicateAt(InvariantPred, InvariantLHS, InvariantRHS, BI);
 }
 
 bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
@@ -2395,7 +2385,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     return false;
 
   // Get a symbolic upper bound on the loop backedge taken count.
-  const SCEV *MaxExitCount = SE->computeMaxBackedgeTakenCount(L);
+  const SCEV *MaxExitCount = SE->getSymbolicMaxBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(MaxExitCount))
     return false;
 
@@ -2439,14 +2429,15 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // Okay, we do not know the exit count here. Can we at least prove that it
       // will remain the same within iteration space?
       auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
-      if (isTrivialCond(L, BI, SE, false)) {
-        FoldExit(ExitingBB, false);
+      auto OptimizeCond = [&](bool Inverted) {
+        if (isTrivialCond(L, BI, SE, Inverted, MaxExitCount)) {
+          FoldExit(ExitingBB, Inverted);
+          return true;
+        }
+        return false;
+      };
+      if (OptimizeCond(false) || OptimizeCond(true))
         Changed = true;
-      }
-      if (isTrivialCond(L, BI, SE, true)) {
-        FoldExit(ExitingBB, true);
-        Changed = true;
-      }
       continue;
     }
 

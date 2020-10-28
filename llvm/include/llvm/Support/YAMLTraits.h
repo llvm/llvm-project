@@ -20,6 +20,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -61,7 +62,7 @@ struct MappingTraits {
   // Must provide:
   // static void mapping(IO &io, T &fields);
   // Optionally may provide:
-  // static StringRef validate(IO &io, T &fields);
+  // static std::string validate(IO &io, T &fields);
   //
   // The optional flow flag will cause generated YAML to use a flow mapping
   // (e.g. { a: 0, b: 1 }):
@@ -83,7 +84,7 @@ template <class T, class Context> struct MappingContextTraits {
   // Must provide:
   // static void mapping(IO &io, T &fields, Context &Ctx);
   // Optionally may provide:
-  // static StringRef validate(IO &io, T &fields, Context &Ctx);
+  // static std::string validate(IO &io, T &fields, Context &Ctx);
   //
   // The optional flow flag will cause generated YAML to use a flow mapping
   // (e.g. { a: 0, b: 1 }):
@@ -421,7 +422,7 @@ template <class T> struct has_MappingTraits<T, EmptyContext> {
 
 // Test if MappingContextTraits<T>::validate() is defined on type T.
 template <class T, class Context> struct has_MappingValidateTraits {
-  using Signature_validate = StringRef (*)(class IO &, T &, Context &);
+  using Signature_validate = std::string (*)(class IO &, T &, Context &);
 
   template <typename U>
   static char test(SameType<Signature_validate, &U::validate>*);
@@ -435,7 +436,7 @@ template <class T, class Context> struct has_MappingValidateTraits {
 
 // Test if MappingTraits<T>::validate() is defined on type T.
 template <class T> struct has_MappingValidateTraits<T, EmptyContext> {
-  using Signature_validate = StringRef (*)(class IO &, T &);
+  using Signature_validate = std::string (*)(class IO &, T &);
 
   template <typename U>
   static char test(SameType<Signature_validate, &U::validate> *);
@@ -1041,7 +1042,7 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
   else
     io.beginMapping();
   if (io.outputting()) {
-    StringRef Err = MappingTraits<T>::validate(io, Val);
+    std::string Err = MappingTraits<T>::validate(io, Val);
     if (!Err.empty()) {
       errs() << Err << "\n";
       assert(Err.empty() && "invalid struct trying to be written as yaml");
@@ -1049,7 +1050,7 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
   }
   detail::doMapping(io, Val, Ctx);
   if (!io.outputting()) {
-    StringRef Err = MappingTraits<T>::validate(io, Val);
+    std::string Err = MappingTraits<T>::validate(io, Val);
     if (!Err.empty())
       io.setError(Err);
   }
@@ -1708,6 +1709,12 @@ template<>
 struct ScalarTraits<Hex64> {
   static void output(const Hex64 &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, Hex64 &);
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+};
+
+template <> struct ScalarTraits<VersionTuple> {
+  static void output(const VersionTuple &Value, void *, llvm::raw_ostream &Out);
+  static StringRef input(StringRef, void *, VersionTuple &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 

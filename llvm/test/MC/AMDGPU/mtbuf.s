@@ -277,7 +277,7 @@ tbuffer_store_format_xyzw v[1:4], v[1:2], ttmp[4:7], s0, format:[BUF_DATA_FORMAT
 // Check addr64
 tbuffer_store_format_xyzw v[1:4], v[1:2], ttmp[4:7], s0, format:[BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_FLOAT] addr64
 // SICI: tbuffer_store_format_xyzw v[1:4], v[1:2], ttmp[4:7], s0 format:[BUF_DATA_FORMAT_32,BUF_NUM_FORMAT_FLOAT] addr64 ; encoding: [0x00,0x80,0xa7,0xeb,0x01,0x01,0x1d,0x00]
-// VI-ERR: error: instruction not supported on this GPU
+// VI-ERR: error: operands are not valid for this GPU or mode
 
 //===----------------------------------------------------------------------===//
 // Tests for symbolic format errors handling

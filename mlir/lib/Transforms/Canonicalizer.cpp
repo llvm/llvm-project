@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
@@ -32,7 +32,7 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
       op->getCanonicalizationPatterns(patterns, context);
 
     Operation *op = getOperation();
-    applyPatternsAndFoldGreedily(op->getRegions(), patterns);
+    applyPatternsAndFoldGreedily(op->getRegions(), std::move(patterns));
   }
 };
 } // end anonymous namespace

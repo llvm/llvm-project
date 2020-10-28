@@ -595,7 +595,7 @@ static MachineInstr *rematerializeCheapDef(
   if (IsDead) {
     LLVM_DEBUG(dbgs() << " - Deleting original\n");
     SlotIndex Idx = LIS.getInstructionIndex(Def).getRegSlot();
-    LIS.removePhysRegDefAt(WebAssembly::ARGUMENTS, Idx);
+    LIS.removePhysRegDefAt(MCRegister::from(WebAssembly::ARGUMENTS), Idx);
     LIS.removeInterval(Reg);
     LIS.RemoveMachineInstrFromMaps(Def);
     Def.eraseFromParent();

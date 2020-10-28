@@ -206,12 +206,13 @@ TableGen provides "bang operators" that have a wide variety of uses:
 
 .. productionlist::
    BangOperator: one of
-               : !add    !and         !cast         !con         !dag
-               : !empty  !eq          !foldl        !foreach     !ge
-               : !getop  !gt          !head         !if          !isa
-               : !le     !listconcat  !listsplat    !lt          !mul
-               : !ne     !or          !setop        !shl         !size
-               : !sra    !srl         !strconcat    !subst       !tail
+               : !add        !and         !cast        !con         !dag
+               : !empty      !eq          !foldl       !foreach     !ge
+               : !getdagop   !gt          !head        !if          !isa
+               : !le         !listconcat  !listsplat   !lt          !mul
+               : !ne         !not         !or          !setdagop    !shl
+               : !size       !sra         !srl         !strconcat   !subst
+               : !tail       !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -273,7 +274,7 @@ wide range of records conveniently and compactly.
     the programmer's intention.
 
 ``bits<``\ *n*\ ``>``
-    The ``bits`` type is a fixed-size integer of arbitrary length *n* that
+    The ``bits`` type is a fixed-sized integer of arbitrary length *n* that
     is treated as separate bits. These bits can be accessed individually.
     A field of this type is useful for representing an instruction operation
     code, register number, or address mode/register/displacement.  The bits of
@@ -288,7 +289,8 @@ wide range of records conveniently and compactly.
 
 ``dag``
     This type represents a nestable directed acyclic graph (DAG) of nodes.
-    Each node has an operator and zero or more operands. A operand can be
+    Each node has an *operator* and zero or more *arguments* (or *operands*).
+    An argument can be
     another ``dag`` object, allowing an arbitrary tree of nodes and edges.
     As an example, DAGs are used to represent code patterns for use by
     the code generator instruction selection algorithms. See `Directed
@@ -444,8 +446,11 @@ sense after reading the remainder of this guide.
 
 This form creates a new anonymous record definition (as would be created by an
 unnamed ``def`` inheriting from the given class with the given template
-arguments; see `def`_) and the value is that record. (A field of the record can be
-obtained using a suffix; see `Suffixed Values`_.)
+arguments; see `def`_) and the value is that record. A field of the record can be
+obtained using a suffix; see `Suffixed Values`_.
+
+Invoking a class in this manner can provide a simple subroutine facility.
+See `Using Classes as Subroutines`_ for more information.
 
 .. productionlist::
    SimpleValue8: `BangOperator` ["<" `Type` ">"] "(" `ValueListNE` ")"
@@ -541,7 +546,7 @@ their declarations are parsed, and thus before the class is finally defined.
 
 .. _NAME:
 
-Every class has an implicit template argument named ``NAME`` (uppercse),
+Every class has an implicit template argument named ``NAME`` (uppercase),
 which is bound to the name of the :token:`Def` or :token:`Defm` inheriting
 the class. The value of ``NAME`` is undefined if the class is inherited by
 an anonymous record.
@@ -1211,33 +1216,34 @@ Directed acyclic graphs (DAGs)
 
 A directed acyclic graph can be represented directly in TableGen using the
 ``dag`` datatype. A DAG node consists of an operator and zero or more
-operands. Each operand can be of any desired type. By using another DAG node
-as an operand, an arbitrary graph of DAG nodes can be built. 
+arguments (or operands). Each argument can be of any desired type. By using
+another DAG node as an argument, an arbitrary graph of DAG nodes can be
+built. 
 
 The syntax of a ``dag`` instance is:
 
-  ``(`` *operator* *operand1*\ ``,`` *operand2*\ ``,`` ... ``)``
+  ``(`` *operator* *argument1*\ ``,`` *argument2*\ ``,`` ... ``)``
 
 The operator must be present and must be a record. There can be zero or more
-operands, separated by commas. The operator and operands can have three
+arguments, separated by commas. The operator and arguments can have three
 formats. 
 
 ====================== =============================================
 Format                 Meaning
 ====================== =============================================
-*value*                operand value
-*value*\ ``:``\ *name* operand value and associated name
-*name*                 operand name with unset (uninitialized) value
+*value*                argument value
+*value*\ ``:``\ *name* argument value and associated name
+*name*                 argument name with unset (uninitialized) value
 ====================== =============================================
 
 The *value* can be any TableGen value. The *name*, if present, must be a
 :token:`TokVarName`, which starts with a dollar sign (``$``). The purpose of
-a name is to tag an operator or operand in a DAG with a particular meaning,
-or to associate an operand in one DAG with a like-named operand in another
+a name is to tag an operator or argument in a DAG with a particular meaning,
+or to associate an argument in one DAG with a like-named argument in another
 DAG.
 
-The following bang operators manipulate DAGs: ``!con``, ``!dag``, ``!foreach``, 
-``!getop``, ``!setop``.
+The following bang operators are useful for working with DAGs:
+``!con``, ``!dag``, ``!empty``, ``!foreach``, ``!getdagop``, ``!setdagop``, ``!size``.
 
 Defvar in a record body
 -----------------------
@@ -1252,7 +1258,7 @@ list of a ``foreach``, which establishes a scope.
 A variable named ``V`` in an inner scope shadows (hides) any variables ``V``
 in outer scopes. In particular, ``V`` in a record body shadows a global
 ``V``, and ``V`` in a ``foreach`` statement list shadows any ``V`` in
-surrounding global or record scopes.
+surrounding record or global scopes.
 
 Variables defined in a ``foreach`` go out of scope at the end of
 each loop iteration, so their value in one iteration is not available in
@@ -1287,7 +1293,6 @@ abstract records and so go through the same steps.
 5. Make a pass over all the fields to resolve any inter-field references.
 
 6. Add the record to the master record list.
-
 
 Because references between fields are resolved (step 5) after ``let`` bindings are
 applied (step 3), the ``let`` statement has unusual power. For example:
@@ -1328,6 +1333,52 @@ where a local ``let`` does the same thing, the results are:
 ``Yplus1`` is 11 because the ``let Y`` is performed before the ``!add(Y,
 1)`` is resolved. Use this power wisely.
 
+
+Using Classes as Subroutines
+============================
+
+As described in `Simple values`_, a class can be invoked in an expression
+and passed template arguments. This causes TableGen to create a new anonymous
+record inheriting from that class. As usual, the record receives all the
+fields defined in the class.
+
+This feature can be employed as a simple subroutine facility. The class can
+use the template arguments to define various variables and fields, which end
+up in the anonymous record. Those fields can then be retrieved in the
+expression invoking the class as follows. Assume that the field ``ret``
+contains the final value of the subroutine.
+
+.. code-block:: text
+
+  int Result = ... CalcValue<arg>.ret ...;
+
+The ``CalcValue`` class is invoked with the template argument ``arg``. It
+calculates a value for the ``ret`` field, which is then retrieved at the
+"point of call" in the initialization for the Result field. The anonymous
+record created in this example serves no other purpose than to carry the
+result value.
+
+Here is a practical example. The class ``isValidSize`` determines whether a
+specified number of bytes represents a valid data size. The bit ``ret`` is
+set appropriately. The field ``ValidSize`` obtains its initial value by
+invoking ``isValidSize`` with the data size and retrieving the ``ret`` field
+from the resulting anonymous record.
+
+.. code-block:: text
+
+  class isValidSize<int size> {
+    bit ret = !cond(!eq(size,  1): 1,
+                    !eq(size,  2): 1,
+                    !eq(size,  4): 1,
+                    !eq(size,  8): 1,
+                    !eq(size, 16): 1,
+                    1: 0);
+  }
+
+  def Data1 {
+    int Size = ...;
+    bit ValidSize = isValidSize<Size>.ret;
+  }
 
 Preprocessing Facilities
 ========================
@@ -1372,8 +1423,8 @@ A macro test region begins with an ``#ifdef`` or ``#ifndef`` directive. If
 the macro name is defined (``#ifdef``) or undefined (``#ifndef``), then the
 source code between the directive and the corresponding ``#else`` or
 ``#endif`` is processed. If the test fails but there is an ``#else``
-portion, the source code between the ``#else`` and the ``#endif`` is
-processed. If the test fails and there is no ``#else`` portion, then no
+clause, the source code between the ``#else`` and the ``#endif`` is
+processed. If the test fails and there is no ``#else`` clause, then no
 source code in the test region is processed.
 
 Test regions may be nested, but they must be properly nested. A region
@@ -1381,7 +1432,7 @@ started in a file must end in that file; that is, must have its
 ``#endif`` in the same file.
 
 A :token:`MacroName` may be defined externally using the ``-D`` option on the
-``llvm-tblgen`` command line::
+``xxx-tblgen`` command line::
 
   llvm-tblgen self-reference.td -Dmacro1 -Dmacro3
 
@@ -1394,12 +1445,17 @@ operator produces a boolean result, the result value will be 1 for true or 0
 for false. When an operator tests a boolean argument, it interprets 0 as false
 and non-0 as true.
 
+.. warning::
+  The ``!getop`` and ``!setop`` bang operators are deprecated in favor of
+  ``!getdagop`` and ``!setdagop``.
+
 ``!add(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator adds *a*, *b*, etc., and produces the sum.
 
 ``!and(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator does a bitwise AND on *a*, *b*, etc., and produces the
-    result.
+    result. A logical AND can be performed if all the arguments are either
+    0 or 1.
 
 ``!cast<``\ *type*\ ``>(``\ *a*\ ``)``
     This operator performs a cast on *a* and produces the result.
@@ -1457,8 +1513,9 @@ and non-0 as true.
     Example: ``!dag(op, [a1, a2, ?], ["name1", "name2", "name3"])`` results in
     ``(op a1:$name1, a2:$name2, ?:$name3)``.
 
-``!empty(``\ *list*\ ``)``
-    This operator produces 1 if the *list* is empty; 0 otherwise.
+``!empty(``\ *a*\ ``)``
+    This operator produces 1 if the string, list, or DAG *a* is empty; 0 otherwise.
+    A dag is empty if it has no arguments; the operator does not count.
 
 ``!eq(`` *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is equal to *b*; 0 otherwise.
@@ -1491,26 +1548,27 @@ and non-0 as true.
     The arguments must be ``bit``, ``int``, or ``string`` values.
     Use ``!cast<string>`` to compare other types of objects.
 
-``!getop(``\ *dag*\ ``)`` --or-- ``!getop<``\ *type*\ ``>(``\ *dag*\ ``)``
+``!getdagop(``\ *dag*\ ``)`` --or-- ``!getdagop<``\ *type*\ ``>(``\ *dag*\ ``)``
     This operator produces the operator of the given *dag* node.
-    Example: ``!getop((foo 1, 2))`` results in ``foo``.
+    Example: ``!getdagop((foo 1, 2))`` results in ``foo``. Recall that
+    DAG operators are always records.
 
-    The result of ``!getop`` can be used directly in a context where
-    any record value at all is acceptable (typically placing it into
+    The result of ``!getdagop`` can be used directly in a context where
+    any record class at all is acceptable (typically placing it into
     another dag value). But in other contexts, it must be explicitly
-    cast to a particular class type. The ``<``\ *type*\ ``>`` syntax is
+    cast to a particular class. The ``<``\ *type*\ ``>`` syntax is
     provided to make this easy.
 
     For example, to assign the result to a value of type ``BaseClass``, you
     could write either of these::
 
-      BaseClass b = !getop<BaseClass>(someDag);
-      BaseClass b = !cast<BaseClass>(!getop(someDag));
+      BaseClass b = !getdagop<BaseClass>(someDag);
+      BaseClass b = !cast<BaseClass>(!getdagop(someDag));
 
     But to create a new DAG node that reuses the operator from another, no
     cast is necessary::
 
-      dag d = !dag(!getop(someDag), args, names);
+      dag d = !dag(!getdagop(someDag), args, names);
 
 ``!gt(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is greater than *b*; 0 otherwise.
@@ -1557,15 +1615,21 @@ and non-0 as true.
     The arguments must be ``bit``, ``int``, or ``string`` values.
     Use ``!cast<string>`` to compare other types of objects.
 
+``!not(``\ *a*\ ``)``
+    This operator performs a logical NOT on *a*, which must be
+    an integer. The argument 0 results in 1 (true); any other
+    argument results in 0 (false).
+
 ``!or(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator does a bitwise OR on *a*, *b*, etc., and produces the
-    result.
+    result. A logical OR can be performed if all the arguments are either
+    0 or 1.
 
-``!setop(``\ *dag*\ ``,`` *op*\ ``)``
+``!setdagop(``\ *dag*\ ``,`` *op*\ ``)``
     This operator produces a DAG node with the same arguments as *dag*, but with its
     operator replaced with *op*.
 
-    Example: ``!setop((foo 1, 2), bar)`` results in ``(bar 1, 2)``.
+    Example: ``!setdagop((foo 1, 2), bar)`` results in ``(bar 1, 2)``.
 
 ``!shl(``\ *a*\ ``,`` *count*\ ``)``
     This operator shifts *a* left logically by *count* bits and produces the resulting
@@ -1573,7 +1637,8 @@ and non-0 as true.
     is undefined for shift counts outside 0...63.
 
 ``!size(``\ *a*\ ``)``
-    This operator produces the number of elements in the list *a*.
+    This operator produces the size of the string, list, or dag *a*.
+    The size of a DAG is the number of arguments; the operator does not count.
 
 ``!sra(``\ *a*\ ``,`` *count*\ ``)``
     This operator shifts *a* right arithmetically by *count* bits and produces the resulting
@@ -1606,6 +1671,11 @@ and non-0 as true.
 ``!tail(``\ *a*\ ``)``
     This operator produces a new list with all the elements
     of the list *a* except for the zeroth one. (See also ``!head``.)
+
+``!xor(``\ *a*\ ``,`` *b*\ ``, ...)``
+    This operator does a bitwise EXCLUSIVE OR on *a*, *b*, etc., and produces
+    the result. A logical XOR can be performed if all the arguments are either
+    0 or 1.
 
 
 Appendix B: Sample Record

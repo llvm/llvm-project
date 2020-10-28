@@ -55,10 +55,20 @@ struct RenameInputs {
   DirtyBufferGetter GetDirtyBuffer = nullptr;
 };
 
+struct RenameResult {
+  // The range of the symbol that the user can attempt to rename.
+  Range Target;
+  // Rename occurrences for the current main file.
+  std::vector<Range> LocalChanges;
+  // Complete edits for the rename, including LocalChanges.
+  // If the full set of changes is unknown, this field is empty.
+  FileEdits GlobalChanges;
+};
+
 /// Renames all occurrences of the symbol. The result edits are unformatted.
 /// If AllowCrossFile is false, returns an error if rename a symbol that's used
 /// in another file (per the index).
-llvm::Expected<FileEdits> rename(const RenameInputs &RInputs);
+llvm::Expected<RenameResult> rename(const RenameInputs &RInputs);
 
 /// Generates rename edits that replaces all given occurrences with the
 /// NewName.

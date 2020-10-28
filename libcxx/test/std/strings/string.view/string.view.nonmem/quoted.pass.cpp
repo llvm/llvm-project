@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11
+// UNSUPPORTED: libcpp-has-no-localization
+
 // <iomanip>
 
 // quoted
@@ -16,9 +19,6 @@
 #include <cassert>
 
 #include "test_macros.h"
-
-#if TEST_STD_VER > 11
-// quoted is C++14 only
 
 bool is_skipws ( const std::istream *is ) {
     return ( is->flags() & std::ios_base::skipws ) != 0;
@@ -210,8 +210,3 @@ int main(int, char**)
 
     return 0;
 }
-#else
-int main(int, char**) {
-  return 0;
-}
-#endif

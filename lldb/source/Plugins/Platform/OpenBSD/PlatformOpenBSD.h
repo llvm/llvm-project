@@ -18,8 +18,6 @@ class PlatformOpenBSD : public PlatformPOSIX {
 public:
   PlatformOpenBSD(bool is_host);
 
-  ~PlatformOpenBSD() override;
-
   static void Initialize();
 
   static void Terminate();
@@ -52,10 +50,6 @@ public:
                                   lldb::addr_t length, unsigned prot,
                                   unsigned flags, lldb::addr_t fd,
                                   lldb::addr_t offset) override;
-
-private:
-  PlatformOpenBSD(const PlatformOpenBSD &) = delete;
-  const PlatformOpenBSD &operator=(const PlatformOpenBSD &) = delete;
 };
 
 } // namespace platform_openbsd

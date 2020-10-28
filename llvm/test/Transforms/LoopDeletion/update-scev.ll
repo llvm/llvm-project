@@ -1,4 +1,5 @@
-; RUN: opt -S -analyze -scalar-evolution -loop-deletion -scalar-evolution -verify-scev < %s | FileCheck %s --check-prefix=SCEV-EXPRS
+; RUN: opt -S -analyze -scalar-evolution -loop-deletion -scalar-evolution -verify-scev < %s -enable-new-pm=0 | FileCheck %s --check-prefix=SCEV-EXPRS
+; RUN: opt -S -passes='print<scalar-evolution>,loop-deletion,print<scalar-evolution>' -verify-scev < %s 2>&1 | FileCheck %s --check-prefix=SCEV-EXPRS
 ; RUN: opt -S -loop-deletion < %s | FileCheck %s --check-prefix=IR-AFTER-TRANSFORM
 ; RUN: opt -S -indvars -loop-deletion -indvars < %s | FileCheck %s --check-prefix=ORIGINAL-CRASH
 

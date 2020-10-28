@@ -15,14 +15,13 @@ entry:
   %c.realp = getelementptr inbounds { double, double }, { double, double }* %c, i32 0, i32 0, !dbg !17
   %c.imagp = getelementptr inbounds { double, double }, { double, double }* %c, i32 0, i32 1, !dbg !17
   store double 0.000000e+00, double* %c.realp, align 8, !dbg !17
-  ; SROA will split the complex double into two i64 values, because there is
-  ; no native double data type available.
+  ; SROA will split the complex double into two double values.
   ; Test that debug info for both values survives:
-  ; CHECK: call void @llvm.dbg.value(metadata i64 0,
+  ; CHECK: call void @llvm.dbg.value(metadata double 0.000000e+00,
   ; CHECK-SAME:                      metadata ![[C:[^,]*]],
   ; CHECK-SAME:                      metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))
   store double 0.000000e+00, double* %c.imagp, align 8, !dbg !17
-  ; CHECK: call void @llvm.dbg.value(metadata i64 0,
+  ; CHECK: call void @llvm.dbg.value(metadata double 0.000000e+00,
   ; CHECK-SAME:                      metadata ![[C]],
   ; CHECK-SAME:                      metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
   ret void, !dbg !18

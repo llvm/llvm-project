@@ -6,22 +6,38 @@
 #
 #===----------------------------------------------------------------------===##
 
-import libcxx.test.format
-import lit
-import lit.util
 import os
+import pickle
 import pipes
 import platform
 import re
 import tempfile
 
-def _memoize(f):
-  cache = dict()
-  def memoized(x):
-    if x not in cache:
-      cache[x] = f(x)
-    return cache[x]
-  return memoized
+import libcxx.test.format
+import lit
+import lit.LitConfig
+import lit.Test
+import lit.TestRunner
+import lit.util
+
+
+def _memoizeExpensiveOperation(extractCacheKey):
+  """
+  Allows memoizing a very expensive operation.
+
+  We pickle the cache key to make sure we store an immutable representation
+  of it. If we stored an object and the object was referenced elsewhere, it
+  could be changed from under our feet, which would break the cache.
+  """
+  def decorator(function):
+    cache = {}
+    def f(*args, **kwargs):
+      cacheKey = pickle.dumps(extractCacheKey(*args, **kwargs))
+      if cacheKey not in cache:
+        cache[cacheKey] = function(*args, **kwargs)
+      return cache[cacheKey]
+    return f
+  return decorator
 
 def _executeScriptInternal(test, commands):
   """
@@ -67,6 +83,7 @@ def _makeConfigTest(config, testPrefix=''):
     def __exit__(self, *args): os.remove(tmp.name)
   return TestWrapper(suite, pathInSuite, config)
 
+@_memoizeExpensiveOperation(lambda c, s: (c.substitutions, c.environment, s))
 def sourceBuilds(config, source):
   """
   Return whether the program in the given string builds successfully.
@@ -83,7 +100,8 @@ def sourceBuilds(config, source):
     _executeScriptInternal(test, ['rm %t.exe'])
     return exitCode == 0
 
-def programOutput(config, program, args=[], testPrefix=''):
+@_memoizeExpensiveOperation(lambda c, p, args=None, testPrefix='': (c.substitutions, c.environment, p, args))
+def programOutput(config, program, args=None, testPrefix=''):
   """
   Compiles a program for the test target, run it on the test target and return
   the output.
@@ -92,6 +110,8 @@ def programOutput(config, program, args=[], testPrefix=''):
   execution of the program is done through the %{exec} substitution, which means
   that the program may be run on a remote host depending on what %{exec} does.
   """
+  if args is None:
+    args = []
   with _makeConfigTest(config, testPrefix=testPrefix) as test:
     with open(test.getSourcePath(), 'w') as source:
       source.write(program)
@@ -115,6 +135,7 @@ def programOutput(config, program, args=[], testPrefix=''):
     finally:
       _executeScriptInternal(test, ['rm %t.exe'])
 
+@_memoizeExpensiveOperation(lambda c, f: (c.substitutions, c.environment, f))
 def hasCompileFlag(config, flag):
   """
   Return whether the compiler in the configuration supports a given compiler flag.
@@ -128,9 +149,13 @@ def hasCompileFlag(config, flag):
     ])
     return exitCode == 0
 
-def hasLocale(config, locale):
+@_memoizeExpensiveOperation(lambda c, l: (c.substitutions, c.environment, l))
+def hasAnyLocale(config, locales):
   """
   Return whether the runtime execution environment supports a given locale.
+  Different systems may use different names for a locale, so this function checks
+  whether any of the passed locale names is supported by setlocale() and returns
+  true if one of them works.
 
   This is done by executing a program that tries to set the given locale using
   %{exec} -- this means that the command may be executed on a remote host
@@ -138,14 +163,23 @@ def hasLocale(config, locale):
   """
   program = """
     #include <locale.h>
-    int main(int, char** argv) {
-      if (::setlocale(LC_ALL, argv[1]) != NULL) return 0;
-      else                                      return 1;
+    #include <stdio.h>
+    int main(int argc, char** argv) {
+      // For debugging purposes print which locales are (not) supported.
+      for (int i = 1; i < argc; i++) {
+        if (::setlocale(LC_ALL, argv[i]) != NULL) {
+          printf("%s is supported.\\n", argv[i]);
+          return 0;
+        }
+        printf("%s is not supported.\\n", argv[i]);
+      }
+      return 1;
     }
   """
-  return programOutput(config, program, args=[pipes.quote(locale)],
-                       testPrefix="check_locale_" + locale) is not None
+  return programOutput(config, program, args=[pipes.quote(l) for l in locales],
+                       testPrefix="check_locale_" + locales[0]) is not None
 
+@_memoizeExpensiveOperation(lambda c, flags='': (c.substitutions, c.environment, flags))
 def compilerMacros(config, flags=''):
   """
   Return a dictionary of predefined compiler macros.
@@ -157,8 +191,12 @@ def compilerMacros(config, flags=''):
   be added to the compiler invocation when generating the macros.
   """
   with _makeConfigTest(config) as test:
+    with open(test.getSourcePath(), 'w') as sourceFile:
+      # Make sure files like <__config> are included, since they can define
+      # additional macros.
+      sourceFile.write("#include <cstddef>")
     unparsedOutput, err, exitCode, timeoutInfo = _executeScriptInternal(test, [
-      "%{{cxx}} -xc++ {} -dM -E %{{flags}} %{{compile_flags}} {}".format(os.devnull, flags)
+      "%{{cxx}} %s -dM -E %{{flags}} %{{compile_flags}} {}".format(flags)
     ])
     parsedMacros = dict()
     defines = (l.strip() for l in unparsedOutput.split('\n') if l.startswith('#define '))

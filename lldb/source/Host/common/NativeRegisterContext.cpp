@@ -266,6 +266,10 @@ bool NativeRegisterContext::ClearHardwareWatchpoint(uint32_t hw_index) {
   return false;
 }
 
+Status NativeRegisterContext::ClearWatchpointHit(uint32_t hw_index) {
+  return Status("not implemented");
+}
+
 Status NativeRegisterContext::ClearAllHardwareWatchpoints() {
   return Status("not implemented");
 }

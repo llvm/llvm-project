@@ -122,7 +122,10 @@ protected:
 class InputFunction : public InputChunk {
 public:
   InputFunction(const WasmSignature &s, const WasmFunction *func, ObjFile *f)
-      : InputChunk(f, InputChunk::Function), signature(s), function(func) {}
+      : InputChunk(f, InputChunk::Function), signature(s), function(func),
+        exportName(func && func->ExportName.hasValue()
+                       ? (*func->ExportName).str()
+                       : llvm::Optional<std::string>()) {}
 
   static bool classof(const InputChunk *c) {
     return c->kind() == InputChunk::Function ||
@@ -133,8 +136,10 @@ public:
   StringRef getName() const override { return function->SymbolName; }
   StringRef getDebugName() const override { return function->DebugName; }
   llvm::Optional<StringRef> getExportName() const {
-    return function ? function->ExportName : llvm::Optional<StringRef>();
+    return exportName.hasValue() ? llvm::Optional<StringRef>(*exportName)
+                                 : llvm::Optional<StringRef>();
   }
+  void setExportName(std::string exportName) { this->exportName = exportName; }
   uint32_t getComdat() const override { return function->Comdat; }
   uint32_t getFunctionInputOffset() const { return getInputSectionOffset(); }
   uint32_t getFunctionCodeOffset() const { return function->CodeOffset; }
@@ -172,6 +177,7 @@ protected:
   }
 
   const WasmFunction *function;
+  llvm::Optional<std::string> exportName;
   llvm::Optional<uint32_t> functionIndex;
   llvm::Optional<uint32_t> tableIndex;
   uint32_t compressedFuncSize = 0;

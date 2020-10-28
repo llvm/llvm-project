@@ -133,22 +133,31 @@ interesting areas to contribute to lldb.
    use/python
    use/python-reference
    use/remote
+   use/qemu-testing
    use/troubleshooting
+   use/links
 
 .. toctree::
    :hidden:
    :maxdepth: 1
    :caption: Development
 
-   resources/architecture
    resources/contributing
    resources/build
    resources/test
    resources/bots
-   resources/reproducers
-   resources/structureddataplugins
-   resources/sbapi
    resources/caveats
+
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Design
+
+   design/overview
+   design/reproducers
+   design/structureddataplugins
+   design/sbapi
 
 .. toctree::
    :hidden:

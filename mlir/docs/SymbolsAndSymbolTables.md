@@ -142,6 +142,10 @@ See the `LangRef` definition of the
 [`SymbolRefAttr`](LangRef.md#symbol-reference-attribute) for more information
 about the structure of this attribute.
 
+Operations that reference a `Symbol` and want to perform verification and
+general mutation of the symbol should implement the `SymbolUserOpInterface` to
+ensure that symbol accesses are legal and efficient.
+
 ### Manipulating a Symbol
 
 As described above, `SymbolRefs` act as an auxiliary way of defining uses of

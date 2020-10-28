@@ -160,17 +160,6 @@ int main(int, char**)
 
         assert(c0.empty());
     }
-#if _LIBCPP_DEBUG >= 1
-    {
-        std::unordered_multiset<int> s1 = {1, 2, 3};
-        std::unordered_multiset<int>::iterator i = s1.begin();
-        int k = *i;
-        std::unordered_multiset<int> s2 = std::move(s1);
-        assert(*i == k);
-        s2.erase(i);
-        assert(s2.size() == 2);
-    }
-#endif
 
-  return 0;
+    return 0;
 }

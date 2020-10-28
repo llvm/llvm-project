@@ -164,16 +164,15 @@ private:
                    SrcMgr::CharacteristicKind Kind, FileID PrevFID) override {
     // It'd be nice if there was a better way to identify built-in headers...
     if (Reason == FileChangeReason::ExitFile &&
-        SM.getBuffer(PrevFID)->getBufferIdentifier() == "<built-in>")
+        SM.getBufferOrFake(PrevFID).getBufferIdentifier() == "<built-in>")
       replay();
   }
 
   void replay() {
     for (const auto &Inc : Includes) {
-      const FileEntry *File = nullptr;
+      llvm::Optional<FileEntryRef> File;
       if (Inc.Resolved != "")
-        if (auto FE = SM.getFileManager().getFile(Inc.Resolved))
-          File = *FE;
+        File = expectedToOptional(SM.getFileManager().getFileRef(Inc.Resolved));
 
       // Re-lex the #include directive to find its interesting parts.
       auto HashLoc = SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
@@ -211,17 +210,16 @@ private:
       SynthesizedFilenameTok.setKind(tok::header_name);
       SynthesizedFilenameTok.setLiteralData(Inc.Written.data());
 
+      const FileEntry *FE = File ? &File->getFileEntry() : nullptr;
       llvm::StringRef WrittenFilename =
           llvm::StringRef(Inc.Written).drop_front().drop_back();
       Delegate->InclusionDirective(HashTok->location(), SynthesizedIncludeTok,
                                    WrittenFilename, Inc.Written.front() == '<',
-                                   FileTok->range(SM).toCharRange(SM), File,
+                                   FileTok->range(SM).toCharRange(SM), FE,
                                    "SearchPath", "RelPath",
                                    /*Imported=*/nullptr, Inc.FileKind);
       if (File)
-        // FIXME: Use correctly named FileEntryRef.
-        Delegate->FileSkipped(FileEntryRef(File->getName(), *File),
-                              SynthesizedFilenameTok, Inc.FileKind);
+        Delegate->FileSkipped(*File, SynthesizedFilenameTok, Inc.FileKind);
       else {
         llvm::SmallString<1> UnusedRecovery;
         Delegate->FileNotFound(WrittenFilename, UnusedRecovery);

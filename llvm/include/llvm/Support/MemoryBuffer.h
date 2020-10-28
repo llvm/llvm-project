@@ -19,14 +19,12 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 
 namespace llvm {
-
-class MemoryBufferRef;
-
 namespace sys {
 namespace fs {
 // Duplicated from FileSystem.h to avoid a dependency.
@@ -258,26 +256,6 @@ private:
   using MemoryBuffer::getOpenFile;
   using MemoryBuffer::getOpenFileSlice;
   using MemoryBuffer::getSTDIN;
-};
-
-class MemoryBufferRef {
-  StringRef Buffer;
-  StringRef Identifier;
-
-public:
-  MemoryBufferRef() = default;
-  MemoryBufferRef(const MemoryBuffer& Buffer)
-      : Buffer(Buffer.getBuffer()), Identifier(Buffer.getBufferIdentifier()) {}
-  MemoryBufferRef(StringRef Buffer, StringRef Identifier)
-      : Buffer(Buffer), Identifier(Identifier) {}
-
-  StringRef getBuffer() const { return Buffer; }
-
-  StringRef getBufferIdentifier() const { return Identifier; }
-
-  const char *getBufferStart() const { return Buffer.begin(); }
-  const char *getBufferEnd() const { return Buffer.end(); }
-  size_t getBufferSize() const { return Buffer.size(); }
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

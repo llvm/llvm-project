@@ -25,6 +25,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Coroutines.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include <climits>
@@ -56,6 +57,7 @@ void mlir::initializeLLVMPasses() {
   llvm::initializeAggressiveInstCombine(registry);
   llvm::initializeAnalysis(registry);
   llvm::initializeVectorization(registry);
+  llvm::initializeCoroutines(registry);
 }
 
 // Populate pass managers according to the optimization and size levels.
@@ -72,6 +74,9 @@ static void populatePassManagers(llvm::legacy::PassManager &modulePM,
   builder.LoopVectorize = optLevel > 1 && sizeLevel < 2;
   builder.SLPVectorize = optLevel > 1 && sizeLevel < 2;
   builder.DisableUnrollLoops = (optLevel == 0);
+
+  // Add all coroutine passes to the builder.
+  addCoroutinePassesToExtensionPoints(builder);
 
   if (targetMachine) {
     // Add pass to initialize TTI for this specific target. Otherwise, TTI will

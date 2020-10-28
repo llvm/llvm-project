@@ -69,7 +69,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
 middle.block:                                     ; preds = %vector.body
   %7 = select <4 x i1> %1, <4 x i32> %5, <4 x i32> %vec.phi
-  %8 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %7)
+  %8 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %7)
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -145,7 +145,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
 middle.block:                                     ; preds = %vector.body
   %7 = select <4 x i1> %1, <4 x i32> %5, <4 x i32> %vec.phi
-  %8 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %7)
+  %8 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %7)
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -221,7 +221,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
 middle.block:                                     ; preds = %vector.body
   %7 = select <4 x i1> %1, <4 x i32> %5, <4 x i32> %vec.phi
-  %8 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %7)
+  %8 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %7)
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -297,7 +297,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
 middle.block:                                     ; preds = %vector.body
   %7 = select <4 x i1> %1, <4 x i32> %5, <4 x i32> %vec.phi
-  %8 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %7)
+  %8 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %7)
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -371,7 +371,7 @@ vector.body:                                      ; preds = %vector.body, %vecto
 
 middle.block:                                     ; preds = %vector.body
   %6 = select <4 x i1> %1, <4 x i32> %4, <4 x i32> %vec.phi
-  %7 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %6)
+  %7 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %6)
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %middle.block, %entry
@@ -1273,6 +1273,6 @@ declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32 immarg, <4 x i
 declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
 declare void @llvm.masked.store.v8i16.p0v8i16(<8 x i16>, <8 x i16>*, i32 immarg, <8 x i1>)
 declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>)
-declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
 declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)

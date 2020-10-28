@@ -2121,7 +2121,8 @@ void ASTStmtReader::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
-  E->Param = readDeclAs<NonTypeTemplateParmDecl>();
+  E->ParamAndRef.setPointer(readDeclAs<NonTypeTemplateParmDecl>());
+  E->ParamAndRef.setInt(Record.readInt());
   E->SubstNonTypeTemplateParmExprBits.NameLoc = readSourceLocation();
   E->Replacement = Record.readSubExpr();
 }
@@ -2186,9 +2187,9 @@ void ASTStmtReader::VisitRecoveryExpr(RecoveryExpr *E) {
   unsigned NumArgs = Record.readInt();
   E->BeginLoc = readSourceLocation();
   E->EndLoc = readSourceLocation();
-  assert(
-      (NumArgs == std::distance(E->children().begin(), E->children().end())) &&
-      "Wrong NumArgs!");
+  assert((NumArgs + 0LL ==
+          std::distance(E->children().begin(), E->children().end())) &&
+         "Wrong NumArgs!");
   (void)NumArgs;
   for (Stmt *&Child : E->children())
     Child = Record.readSubStmt();

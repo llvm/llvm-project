@@ -1078,7 +1078,7 @@ static IsTupleLike isTupleLike(Sema &S, SourceLocation Loc, QualType T,
   if (E.isInvalid())
     return IsTupleLike::Error;
 
-  E = S.VerifyIntegerConstantExpression(E.get(), &Size, Diagnoser, false);
+  E = S.VerifyIntegerConstantExpression(E.get(), &Size, Diagnoser);
   if (E.isInvalid())
     return IsTupleLike::Error;
 
@@ -1250,8 +1250,7 @@ static bool checkTupleLikeDecomposition(Sema &S,
     if (E.isInvalid())
       return true;
     RefVD->setInit(E.get());
-    if (!E.get()->isValueDependent())
-      RefVD->checkInitIsICE();
+    S.CheckCompleteVariableDeclaration(RefVD);
 
     E = S.BuildDeclarationNameExpr(CXXScopeSpec(),
                                    DeclarationNameInfo(B->getDeclName(), Loc),
@@ -1375,11 +1374,23 @@ static bool checkMemberDecomposition(Sema &S, ArrayRef<BindingDecl*> Bindings,
     if (FD->isUnnamedBitfield())
       continue;
 
-    if (FD->isAnonymousStructOrUnion()) {
-      S.Diag(Src->getLocation(), diag::err_decomp_decl_anon_union_member)
-        << DecompType << FD->getType()->isUnionType();
-      S.Diag(FD->getLocation(), diag::note_declared_at);
-      return true;
+    // All the non-static data members are required to be nameable, so they
+    // must all have names.
+    if (!FD->getDeclName()) {
+      if (RD->isLambda()) {
+        S.Diag(Src->getLocation(), diag::err_decomp_decl_lambda);
+        S.Diag(RD->getLocation(), diag::note_lambda_decl);
+        return true;
+      }
+
+      if (FD->isAnonymousStructOrUnion()) {
+        S.Diag(Src->getLocation(), diag::err_decomp_decl_anon_union_member)
+          << DecompType << FD->getType()->isUnionType();
+        S.Diag(FD->getLocation(), diag::note_declared_at);
+        return true;
+      }
+
+      // FIXME: Are there any other ways we could have an anonymous member?
     }
 
     // We have a real field to bind.
@@ -6060,7 +6071,8 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   Attr *ClassAttr = getDLLAttr(Class);
 
   // MSVC inherits DLL attributes to partial class template specializations.
-  if (Context.getTargetInfo().getCXXABI().isMicrosoft() && !ClassAttr) {
+  if ((Context.getTargetInfo().getCXXABI().isMicrosoft() || 
+       Context.getTargetInfo().getTriple().isWindowsItaniumEnvironment()) && !ClassAttr) {
     if (auto *Spec = dyn_cast<ClassTemplatePartialSpecializationDecl>(Class)) {
       if (Attr *TemplateAttr =
               getDLLAttr(Spec->getSpecializedTemplate()->getTemplatedDecl())) {
@@ -6080,7 +6092,8 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
     return;
   }
 
-  if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+  if ((Context.getTargetInfo().getCXXABI().isMicrosoft() || 
+       Context.getTargetInfo().getTriple().isWindowsItaniumEnvironment()) &&
       !ClassAttr->isInherited()) {
     // Diagnose dll attributes on members of class with dll attribute.
     for (Decl *Member : Class->decls()) {
@@ -11111,8 +11124,8 @@ QualType Sema::CheckComparisonCategoryType(ComparisonCategoryType Kind,
     // Attempt to diagnose reasons why the STL definition of this type
     // might be foobar, including it failing to be a constant expression.
     // TODO Handle more ways the lookup or result can be invalid.
-    if (!VD->isStaticDataMember() || !VD->isConstexpr() || !VD->hasInit() ||
-        VD->isWeak() || !VD->checkInitIsICE())
+    if (!VD->isStaticDataMember() ||
+        !VD->isUsableInConstantExpressions(Context))
       return UnsupportedSTLError(USS_InvalidMember, MemName, VD);
 
     // Attempt to evaluate the var decl as a constant expression and extract
@@ -15509,6 +15522,18 @@ checkLiteralOperatorTemplateParameterList(Sema &SemaRef,
         SemaRef.Context.hasSameType(PmDecl->getType(), SemaRef.Context.CharTy))
       return false;
 
+    // C++20 [over.literal]p5:
+    //   A string literal operator template is a literal operator template
+    //   whose template-parameter-list comprises a single non-type
+    //   template-parameter of class type.
+    //
+    // As a DR resolution, we also allow placeholders for deduced class
+    // template specializations.
+    if (SemaRef.getLangOpts().CPlusPlus20 &&
+        !PmDecl->isTemplateParameterPack() &&
+        (PmDecl->getType()->isRecordType() ||
+         PmDecl->getType()->getAs<DeducedTemplateSpecializationType>()))
+      return false;
   } else if (TemplateParams->size() == 2) {
     TemplateTypeParmDecl *PmType =
         dyn_cast<TemplateTypeParmDecl>(TemplateParams->getParam(0));
@@ -15565,6 +15590,8 @@ bool Sema::CheckLiteralOperatorDeclaration(FunctionDecl *FnDecl) {
   // template <char...> type operator "" name() and
   // template <class T, T...> type operator "" name() are the only valid
   // template signatures, and the only valid signatures with no parameters.
+  //
+  // C++20 also allows template <SomeClass T> type operator "" name().
   if (TpDecl) {
     if (FnDecl->param_size() != 0) {
       Diag(FnDecl->getLocation(),
@@ -15994,9 +16021,10 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
       AssertExpr = FullAssertExpr.get();
 
     llvm::APSInt Cond;
-    if (!Failed && VerifyIntegerConstantExpression(AssertExpr, &Cond,
-          diag::err_static_assert_expression_is_not_constant,
-          /*AllowFold=*/false).isInvalid())
+    if (!Failed && VerifyIntegerConstantExpression(
+                       AssertExpr, &Cond,
+                       diag::err_static_assert_expression_is_not_constant)
+                       .isInvalid())
       Failed = true;
 
     if (!Failed && !Cond) {

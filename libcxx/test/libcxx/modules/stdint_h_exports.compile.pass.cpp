@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FIXME: The <atomic> header is not supported for single-threaded systems,
-// but still gets built as part of the 'std' module, which breaks the build.
-// XFAIL: libcpp-has-no-threads
+// Some headers are not available when these features are disabled, but they
+// still get built as part of the 'std' module, which breaks the build.
+// UNSUPPORTED: libcpp-has-no-threads
+// UNSUPPORTED: libcpp-has-no-localization
 
 // Test that int8_t and the like are exported from stdint.h, not inttypes.h
 

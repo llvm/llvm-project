@@ -31,8 +31,6 @@ public:
   // Constructors and Destructors
   SymbolFileSymtab(lldb::ObjectFileSP objfile_sp);
 
-  ~SymbolFileSymtab() override;
-
   // Static Functions
   static void Initialize();
 
@@ -104,10 +102,6 @@ protected:
   lldb_private::Symtab::IndexCollection m_data_indexes;
   lldb_private::Symtab::NameToIndexMap m_objc_class_name_to_index;
   TypeMap m_objc_class_types;
-
-private:
-  SymbolFileSymtab(const SymbolFileSymtab &) = delete;
-  const SymbolFileSymtab &operator=(const SymbolFileSymtab &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_SYMTAB_SYMBOLFILESYMTAB_H

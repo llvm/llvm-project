@@ -54,6 +54,7 @@ namespace llvm {
 namespace clang {
   // Casting operators.
   using llvm::isa;
+  using llvm::isa_and_nonnull;
   using llvm::cast;
   using llvm::dyn_cast;
   using llvm::dyn_cast_or_null;

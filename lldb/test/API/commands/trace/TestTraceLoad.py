@@ -35,12 +35,16 @@ class TestTraceLoad(TestBase):
 
         self.assertEqual("6AA9A4E2-6F28-2F33-377D-59FECE874C71-5B41261A", module.GetUUIDString())
 
+        # check that the Process and Thread objects were created correctly
+        self.expect("thread info", substrs=["tid = 3842849"])
+        self.expect("thread list", substrs=["Process 1234 stopped", "tid = 3842849"])
+
 
     def testLoadInvalidTraces(self):
         src_dir = self.getSourceDir()
         # We test first an invalid type
         self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad.json"), error=True,
-          substrs=['''error: expected object at settings.processes[0]
+          substrs=['''error: expected object at traceSession.processes[0]
 
 Context:
 {
@@ -53,7 +57,7 @@ Context:
 
 Schema:
 {
- "trace": {
+  "trace": {
     "type": "intel-pt",
     "pt_cpu": {
       "vendor": "intel" | "unknown",
@@ -63,32 +67,35 @@ Schema:
     }
   },'''])
 
-        # Now we test a missing field in the global settings
+        # Now we test a missing field in the global session file
         self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad2.json"), error=True,
-            substrs=['error: missing value at settings.processes[1].triple', "Context", "Schema"])
+            substrs=['error: missing value at traceSession.processes[1].triple', "Context", "Schema"])
 
         # Now we test a missing field in the intel-pt settings
         self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad4.json"), error=True,
-            substrs=['''error: missing value at settings.trace.pt_cpu.family
+            substrs=['''error: missing value at traceSession.trace.pt_cpu.family
 
 Context:
 {
-  "pt_cpu": /* error: missing value */ {
-    "model": 79,
-    "stepping": 1,
-    "vendor": "intel"
-  },
-  "type": "intel-pt"
+  "processes": [],
+  "trace": {
+    "pt_cpu": /* error: missing value */ {
+      "model": 79,
+      "stepping": 1,
+      "vendor": "intel"
+    },
+    "type": "intel-pt"
+  }
 }''', "Schema"])
 
         # Now we test an incorrect load address in the intel-pt settings
         self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad5.json"), error=True,
-            substrs=['error: expected numeric string at settings.processes[0].modules[0].loadAddress',
+            substrs=['error: expected numeric string at traceSession.processes[0].modules[0].loadAddress',
                      '"loadAddress": /* error: expected numeric string */ 400000,', "Schema"])
 
         # The following wrong schema will have a valid target and an invalid one. In the case of failure,
         # no targets should be created.
         self.assertEqual(self.dbg.GetNumTargets(), 0)
         self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad3.json"), error=True,
-            substrs=['error: missing value at settings.processes[1].pid'])
+            substrs=['error: missing value at traceSession.processes[1].pid'])
         self.assertEqual(self.dbg.GetNumTargets(), 0)

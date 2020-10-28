@@ -58,25 +58,6 @@ TEST_F(CoreAPIsStandardTest, BasicSuccessfulLookup) {
   EXPECT_TRUE(OnCompletionRun) << "Should have been marked ready";
 }
 
-TEST_F(CoreAPIsStandardTest, ExecutionSessionFailQuery) {
-  bool OnCompletionRun = false;
-
-  auto OnCompletion = [&](Expected<SymbolMap> Result) {
-    EXPECT_FALSE(!!Result) << "Resolution unexpectedly returned success";
-    auto Msg = toString(Result.takeError());
-    EXPECT_EQ(Msg, "xyz") << "Resolution returned incorrect result";
-    OnCompletionRun = true;
-  };
-
-  AsynchronousSymbolQuery Q(SymbolLookupSet(Foo), SymbolState::Ready,
-                            OnCompletion);
-
-  ES.legacyFailQuery(Q,
-                     make_error<StringError>("xyz", inconvertibleErrorCode()));
-
-  EXPECT_TRUE(OnCompletionRun) << "OnCompletionCallback was not run";
-}
-
 TEST_F(CoreAPIsStandardTest, EmptyLookup) {
   bool OnCompletionRun = false;
 
@@ -255,25 +236,6 @@ TEST_F(CoreAPIsStandardTest, RemoveSymbolsTest) {
   EXPECT_TRUE(OnCompletionRun) << "OnCompletion should have been run";
 }
 
-TEST_F(CoreAPIsStandardTest, ChainedJITDylibLookup) {
-  cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
-
-  auto &JD2 = ES.createBareJITDylib("JD2");
-
-  bool OnCompletionRun = false;
-
-  auto Q = std::make_shared<AsynchronousSymbolQuery>(
-      SymbolLookupSet({Foo}), SymbolState::Ready,
-      [&](Expected<SymbolMap> Result) {
-        cantFail(std::move(Result));
-        OnCompletionRun = true;
-      });
-
-  cantFail(JD2.legacyLookup(Q, cantFail(JD.legacyLookup(Q, {Foo}))));
-
-  EXPECT_TRUE(OnCompletionRun) << "OnCompletion was not run for empty query";
-}
-
 TEST_F(CoreAPIsStandardTest, LookupWithHiddenSymbols) {
   auto BarHiddenFlags = BarSym.getFlags() & ~JITSymbolFlags::Exported;
   auto BarHiddenSym = JITEvaluatedSymbol(BarSym.getAddress(), BarHiddenFlags);
@@ -310,9 +272,11 @@ TEST_F(CoreAPIsStandardTest, LookupFlagsTest) {
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
   cantFail(JD.define(std::move(MU)));
 
-  auto SymbolFlags = cantFail(JD.lookupFlags(
-      LookupKind::Static, JITDylibLookupFlags::MatchExportedSymbolsOnly,
-      SymbolLookupSet({Foo, Bar, Baz})));
+  auto SymbolFlags = cantFail(ES.lookupFlags(
+      LookupKind::Static,
+      {{&JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
+      SymbolLookupSet({Foo, Bar, Baz},
+                      SymbolLookupFlags::WeaklyReferencedSymbol)));
 
   EXPECT_EQ(SymbolFlags.size(), 2U)
       << "Returned symbol flags contains unexpected results";
@@ -327,10 +291,10 @@ TEST_F(CoreAPIsStandardTest, LookupFlagsTest) {
 
 TEST_F(CoreAPIsStandardTest, LookupWithGeneratorFailure) {
 
-  class BadGenerator : public JITDylib::DefinitionGenerator {
+  class BadGenerator : public DefinitionGenerator {
   public:
-    Error tryToGenerate(LookupKind K, JITDylib &, JITDylibLookupFlags,
-                        const SymbolLookupSet &) override {
+    Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &,
+                        JITDylibLookupFlags, const SymbolLookupSet &) override {
       return make_error<StringError>("BadGenerator", inconvertibleErrorCode());
     }
   };
@@ -338,8 +302,8 @@ TEST_F(CoreAPIsStandardTest, LookupWithGeneratorFailure) {
   JD.addGenerator(std::make_unique<BadGenerator>());
 
   EXPECT_THAT_ERROR(
-      JD.lookupFlags(LookupKind::Static,
-                     JITDylibLookupFlags::MatchExportedSymbolsOnly,
+      ES.lookupFlags(LookupKind::Static,
+                     {{&JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
                      SymbolLookupSet(Foo))
           .takeError(),
       Failed<StringError>())
@@ -437,9 +401,11 @@ TEST_F(CoreAPIsStandardTest, TestReexportsGenerator) {
   JD.addGenerator(std::make_unique<ReexportsGenerator>(
       JD2, JITDylibLookupFlags::MatchExportedSymbolsOnly, Filter));
 
-  auto Flags = cantFail(JD.lookupFlags(
-      LookupKind::Static, JITDylibLookupFlags::MatchExportedSymbolsOnly,
-      SymbolLookupSet({Foo, Bar, Baz})));
+  auto Flags = cantFail(ES.lookupFlags(
+      LookupKind::Static,
+      {{&JD, JITDylibLookupFlags::MatchExportedSymbolsOnly}},
+      SymbolLookupSet({Foo, Bar, Baz},
+                      SymbolLookupFlags::WeaklyReferencedSymbol)));
   EXPECT_EQ(Flags.size(), 1U) << "Unexpected number of results";
   EXPECT_EQ(Flags[Foo], FooSym.getFlags()) << "Unexpected flags for Foo";
 
@@ -1083,12 +1049,14 @@ TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
 }
 
 TEST_F(CoreAPIsStandardTest, GeneratorTest) {
-  cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
+  JITEvaluatedSymbol BazHiddenSym(
+      BazSym.getAddress(), BazSym.getFlags() & ~JITSymbolFlags::Exported);
+  cantFail(JD.define(absoluteSymbols({{Foo, FooSym}, {Baz, BazHiddenSym}})));
 
-  class TestGenerator : public JITDylib::DefinitionGenerator {
+  class TestGenerator : public DefinitionGenerator {
   public:
     TestGenerator(SymbolMap Symbols) : Symbols(std::move(Symbols)) {}
-    Error tryToGenerate(LookupKind K, JITDylib &JD,
+    Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
                         JITDylibLookupFlags JDLookupFlags,
                         const SymbolLookupSet &Names) override {
       SymbolMap NewDefs;
@@ -1107,10 +1075,13 @@ TEST_F(CoreAPIsStandardTest, GeneratorTest) {
     SymbolMap Symbols;
   };
 
-  JD.addGenerator(std::make_unique<TestGenerator>(SymbolMap({{Bar, BarSym}})));
+  JD.addGenerator(std::make_unique<TestGenerator>(
+      SymbolMap({{Bar, BarSym}, {Baz, BazSym}})));
 
   auto Result = cantFail(
-      ES.lookup(makeJITDylibSearchOrder(&JD), SymbolLookupSet({Foo, Bar})));
+      ES.lookup(makeJITDylibSearchOrder(&JD),
+                SymbolLookupSet({Foo, Bar})
+                    .add(Baz, SymbolLookupFlags::WeaklyReferencedSymbol)));
 
   EXPECT_EQ(Result.count(Bar), 1U) << "Expected to find fallback def for 'bar'";
   EXPECT_EQ(Result[Bar].getAddress(), BarSym.getAddress())
@@ -1280,7 +1251,7 @@ TEST_F(CoreAPIsStandardTest, TestGetRequestedSymbolsAndReplace) {
               BarMaterialized = true;
             });
 
-        R->replace(std::move(NewMU));
+        cantFail(R->replace(std::move(NewMU)));
 
         cantFail(R->notifyResolved(SymbolMap({{Foo, FooSym}})));
         cantFail(R->notifyEmitted());
@@ -1310,7 +1281,7 @@ TEST_F(CoreAPIsStandardTest, TestMaterializationResponsibilityDelegation) {
   auto MU = std::make_unique<SimpleMaterializationUnit>(
       SymbolFlagsMap({{Foo, FooSym.getFlags()}, {Bar, BarSym.getFlags()}}),
       [&](std::unique_ptr<MaterializationResponsibility> R) {
-        auto R2 = R->delegate({Bar});
+        auto R2 = cantFail(R->delegate({Bar}));
 
         cantFail(R->notifyResolved({{Foo, FooSym}}));
         cantFail(R->notifyEmitted());
@@ -1371,7 +1342,7 @@ TEST_F(CoreAPIsStandardTest, TestMaterializeWeakSymbol) {
   cantFail(FooR->notifyEmitted());
 }
 
-static bool linkOrdersEqual(const std::vector<std::shared_ptr<JITDylib>> &LHS,
+static bool linkOrdersEqual(const std::vector<JITDylibSP> &LHS,
                             ArrayRef<JITDylib *> RHS) {
   if (LHS.size() != RHS.size())
     return false;
@@ -1405,23 +1376,21 @@ TEST(JITDylibTest, GetDFSLinkOrderTree) {
   LibB.setLinkOrder(makeJITDylibSearchOrder({&LibD, &LibE}));
   LibC.setLinkOrder(makeJITDylibSearchOrder({&LibF}));
 
-  auto DFSOrderFromB = JITDylib::getDFSLinkOrder({LibB.shared_from_this()});
+  auto DFSOrderFromB = JITDylib::getDFSLinkOrder({&LibB});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromB, {&LibB, &LibD, &LibE}))
       << "Incorrect DFS link order for LibB";
 
-  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({LibA.shared_from_this()});
+  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({&LibA});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA,
                               {&LibA, &LibB, &LibD, &LibE, &LibC, &LibF}))
       << "Incorrect DFS link order for libA";
 
-  auto DFSOrderFromAB = JITDylib::getDFSLinkOrder(
-      {LibA.shared_from_this(), LibB.shared_from_this()});
+  auto DFSOrderFromAB = JITDylib::getDFSLinkOrder({&LibA, &LibB});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromAB,
                               {&LibA, &LibB, &LibD, &LibE, &LibC, &LibF}))
       << "Incorrect DFS link order for { libA, libB }";
 
-  auto DFSOrderFromBA = JITDylib::getDFSLinkOrder(
-      {LibB.shared_from_this(), LibA.shared_from_this()});
+  auto DFSOrderFromBA = JITDylib::getDFSLinkOrder({&LibB, &LibA});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromBA,
                               {&LibB, &LibD, &LibE, &LibA, &LibC, &LibF}))
       << "Incorrect DFS link order for { libB, libA }";
@@ -1444,7 +1413,7 @@ TEST(JITDylibTest, GetDFSLinkOrderDiamond) {
   LibB.setLinkOrder(makeJITDylibSearchOrder({&LibD}));
   LibC.setLinkOrder(makeJITDylibSearchOrder({&LibD}));
 
-  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({LibA.shared_from_this()});
+  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({&LibA});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA, {&LibA, &LibB, &LibD, &LibC}))
       << "Incorrect DFS link order for libA";
 }
@@ -1464,15 +1433,15 @@ TEST(JITDylibTest, GetDFSLinkOrderCycle) {
   LibB.setLinkOrder(makeJITDylibSearchOrder({&LibC}));
   LibC.setLinkOrder(makeJITDylibSearchOrder({&LibA}));
 
-  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({LibA.shared_from_this()});
+  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({&LibA});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA, {&LibA, &LibB, &LibC}))
       << "Incorrect DFS link order for libA";
 
-  auto DFSOrderFromB = JITDylib::getDFSLinkOrder({LibB.shared_from_this()});
+  auto DFSOrderFromB = JITDylib::getDFSLinkOrder({&LibB});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromB, {&LibB, &LibC, &LibA}))
       << "Incorrect DFS link order for libB";
 
-  auto DFSOrderFromC = JITDylib::getDFSLinkOrder({LibC.shared_from_this()});
+  auto DFSOrderFromC = JITDylib::getDFSLinkOrder({&LibC});
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromC, {&LibC, &LibA, &LibB}))
       << "Incorrect DFS link order for libC";
 }

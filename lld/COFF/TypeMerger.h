@@ -45,6 +45,10 @@ public:
   /// indices in each TpiSource.
   void mergeTypesWithGHash();
 
+  /// Map from PDB function id type indexes to PDB function type indexes.
+  /// Populated after mergeTypesWithGHash.
+  llvm::DenseMap<TypeIndex, TypeIndex> funcIdToType;
+
   /// Type records that will go into the PDB TPI stream.
   llvm::codeview::MergingTypeTableBuilder typeTable;
 

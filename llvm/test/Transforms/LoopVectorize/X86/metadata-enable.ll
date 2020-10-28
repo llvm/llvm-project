@@ -8,6 +8,7 @@
 ; RUN: opt < %s -mcpu=corei7 -O1 -loop-vectorize -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=O1VEC2
 ; RUN: opt < %s -mcpu=corei7 -Oz -loop-vectorize -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=OzVEC2
 ; RUN: opt < %s -mcpu=corei7 -O3 -unroll-threshold=150 -vectorize-loops=false -S -unroll-allow-partial=0 | FileCheck %s --check-prefix=O3DIS
+; RUN: opt < %s -mcpu=corei7 -O1 -loop-vectorize -S -unroll-allow-partial=0 -enable-new-pm=1 | FileCheck %s --check-prefix=O1VEC2
 
 ; This file tests the llvm.loop.vectorize.enable metadata forcing
 ; vectorization even when optimization levels are too low, or when

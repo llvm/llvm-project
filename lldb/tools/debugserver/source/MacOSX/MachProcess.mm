@@ -79,6 +79,11 @@
 
 #endif // WITH_SPRINGBOARD
 
+#if WITH_CAROUSEL
+// For definition of CSLSOpenApplicationOptionForClockKit.
+#include <CarouselServices/CSLSOpenApplicationOptions.h>
+#endif // WITH_CAROUSEL
+
 #if defined(WITH_SPRINGBOARD) || defined(WITH_BKS) || defined(WITH_FBS)
 // This returns a CFRetained pointer to the Bundle ID for app_bundle_path,
 // or NULL if there was some problem getting the bundle id.
@@ -402,6 +407,12 @@ static bool FBSAddEventDataToOptions(NSMutableDictionary *options,
         DNBLog("Setting ActivateSuspended key in options dictionary.");
         [options setObject:@YES forKey: FBSOpenApplicationOptionKeyActivateSuspended];
         found_one = true;
+#if WITH_CAROUSEL
+      } else if (value.compare("WatchComplicationLaunch") == 0) {
+        DNBLog("Setting FBSOpenApplicationOptionKeyActivateSuspended key in options dictionary.");
+        [options setObject:@YES forKey: CSLSOpenApplicationOptionForClockKit];
+        found_one = true;
+#endif // WITH_CAROUSEL
       } else {
         DNBLogError("Unrecognized event type: %s.  Ignoring.", value.c_str());
         option_error.SetErrorString("Unrecognized event data.");

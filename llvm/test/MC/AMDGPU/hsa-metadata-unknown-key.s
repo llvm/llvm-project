@@ -1,9 +1,9 @@
-// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx700 -mattr=-code-object-v3 %s 2>&1 | FileCheck %s
-// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -mattr=-code-object-v3 %s 2>&1 | FileCheck %s
-// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-code-object-v3 %s 2>&1 | FileCheck %s
-// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx700 -mattr=-code-object-v3 -filetype=obj %s 2>&1 | FileCheck %s
-// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -mattr=-code-object-v3 -filetype=obj %s 2>&1 | FileCheck %s
-// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-code-object-v3 -filetype=obj %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx700 --amdhsa-code-object-version=2 %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx800 --amdhsa-code-object-version=2 %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=2 %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx700 --amdhsa-code-object-version=2 -filetype=obj %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx800 --amdhsa-code-object-version=2 -filetype=obj %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=2 -filetype=obj %s 2>&1 | FileCheck %s
 
 // CHECK: error: unknown key 'UnknownKey'
 .amd_amdgpu_hsa_metadata

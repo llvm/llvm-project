@@ -52,7 +52,7 @@ trap 'cleanup' INT HUP QUIT TERM EXIT
 # because whether/how these are installed differs between distributions,
 # and we have an executable copy in the tree anyway.
 arc_base_commit=$(arc which --show-base)
-git diff-index -U0 "${arc_base_commit}" \
+git diff-index -U0 "${arc_base_commit}" "${src_file}" \
   | clang/tools/clang-format/clang-format-diff.py -style file -i -p1
 
 cp -p "${src_file}" "${formatted_file}"

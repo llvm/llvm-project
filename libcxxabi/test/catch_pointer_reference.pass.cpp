@@ -427,7 +427,7 @@ void f13()
     assert_cannot_catch<const volatile Base * const volatile &, Protected *, Protected>();
 }
 
-int main()
+int main(int, char**)
 {
     f1();
     f2();
@@ -442,4 +442,6 @@ int main()
     f11();
     f12();
     f13();
+
+    return 0;
 }

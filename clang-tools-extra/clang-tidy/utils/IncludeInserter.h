@@ -34,7 +34,7 @@ namespace utils {
 ///  public:
 ///   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
 ///                            Preprocessor *ModuleExpanderPP) override {
-///     Inserter.registerPreprocessor();
+///     Inserter.registerPreprocessor(PP);
 ///   }
 ///
 ///   void registerMatchers(ast_matchers::MatchFinder* Finder) override { ... }
@@ -42,8 +42,7 @@ namespace utils {
 ///   void check(
 ///       const ast_matchers::MatchFinder::MatchResult& Result) override {
 ///     ...
-///     Inserter.createMainFileIncludeInsertion("path/to/Header.h",
-///                                             /*IsAngled=*/false);
+///     Inserter.createMainFileIncludeInsertion("path/to/Header.h");
 ///     ...
 ///   }
 ///
@@ -67,14 +66,6 @@ public:
   void registerPreprocessor(Preprocessor *PP);
 
   /// Creates a \p Header inclusion directive fixit in the File \p FileID.
-  /// Returns ``llvm::None`` on error or if the inclusion directive already
-  /// exists.
-  /// FIXME: This should be removed once the clients are migrated to the
-  /// overload without the ``IsAngled`` parameter.
-  llvm::Optional<FixItHint>
-  createIncludeInsertion(FileID FileID, llvm::StringRef Header, bool IsAngled);
-
-  /// Creates a \p Header inclusion directive fixit in the File \p FileID.
   /// When \p Header is enclosed in angle brackets, uses angle brackets in the
   /// inclusion directive, otherwise uses quotes.
   /// Returns ``llvm::None`` on error or if the inclusion directive already
@@ -83,17 +74,9 @@ public:
                                                    llvm::StringRef Header);
 
   /// Creates a \p Header inclusion directive fixit in the main file.
-  /// Returns``llvm::None`` on error or if the inclusion directive already
-  /// exists.
-  /// FIXME: This should be removed once the clients are migrated to the
-  /// overload without the ``IsAngled`` parameter.
-  llvm::Optional<FixItHint>
-  createMainFileIncludeInsertion(llvm::StringRef Header, bool IsAngled);
-
-  /// Creates a \p Header inclusion directive fixit in the main file.
   /// When \p Header is enclosed in angle brackets, uses angle brackets in the
   /// inclusion directive, otherwise uses quotes.
-  /// Returns``llvm::None`` on error or if the inclusion directive already
+  /// Returns ``llvm::None`` on error or if the inclusion directive already
   /// exists.
   llvm::Optional<FixItHint>
   createMainFileIncludeInsertion(llvm::StringRef Header);

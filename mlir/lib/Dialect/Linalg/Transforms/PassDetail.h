@@ -18,9 +18,17 @@ namespace mlir {
 template <typename ConcreteDialect>
 void registerDialect(DialectRegistry &registry);
 
+namespace linalg {
+class LinalgDialect;
+} // end namespace linalg
+
 namespace scf {
 class SCFDialect;
 } // end namespace scf
+
+namespace vector {
+class VectorDialect;
+} // end namespace vector
 
 #define GEN_PASS_CLASSES
 #include "mlir/Dialect/Linalg/Passes.h.inc"

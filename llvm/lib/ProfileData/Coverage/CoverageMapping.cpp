@@ -816,6 +816,8 @@ static std::string getCoverageMapErrString(coveragemap_error Err) {
     return "Malformed coverage data";
   case coveragemap_error::decompression_failed:
     return "Failed to decompress coverage data (zlib)";
+  case coveragemap_error::invalid_or_missing_arch_specifier:
+    return "`-arch` specifier is invalid or missing for universal binary";
   }
   llvm_unreachable("A value of coveragemap_error has no message.");
 }

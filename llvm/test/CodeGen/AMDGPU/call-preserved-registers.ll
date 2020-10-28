@@ -1,6 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MUBUF %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MUBUF %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MUBUF %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -amdgpu-enable-flat-scratch -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FLATSCR %s
 
 declare hidden void @external_void_func_void() #0
 
@@ -22,7 +23,8 @@ define amdgpu_kernel void @test_kernel_call_external_void_func_void_clobber_s30_
 }
 
 ; GCN-LABEL: {{^}}test_func_call_external_void_func_void_clobber_s30_s31_call_external_void_func_void:
-; GCN: buffer_store_dword
+; MUBUF:   buffer_store_dword
+; FLATSCR: scratch_store_dword
 ; GCN: v_writelane_b32 v40, s33, 4
 ; GCN: v_writelane_b32 v40, s34, 0
 ; GCN: v_writelane_b32 v40, s35, 1
@@ -39,7 +41,8 @@ define amdgpu_kernel void @test_kernel_call_external_void_func_void_clobber_s30_
 ; GCN: v_readlane_b32 s34, v40, 0
 
 ; GCN: v_readlane_b32 s33, v40, 4
-; GCN: buffer_load_dword
+; MUBUF:   buffer_load_dword
+; FLATSCR: scratch_load_dword
 ; GCN: s_setpc_b64
 define void @test_func_call_external_void_func_void_clobber_s30_s31_call_external_void_func_void() #0 {
   call void @external_void_func_void()
@@ -49,16 +52,19 @@ define void @test_func_call_external_void_func_void_clobber_s30_s31_call_externa
 }
 
 ; GCN-LABEL: {{^}}test_func_call_external_void_funcx2:
-; GCN: buffer_store_dword v40
+; MUBUF:   buffer_store_dword v40
+; FLATSCR: scratch_store_dword off, v40
 ; GCN: v_writelane_b32 v40, s33, 4
 
 ; GCN: s_mov_b32 s33, s32
-; GCN: s_add_u32 s32, s32, 0x400
+; MUBUF:   s_add_u32 s32, s32, 0x400
+; FLATSCR: s_add_u32 s32, s32, 16
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_swappc_b64
 
 ; GCN: v_readlane_b32 s33, v40, 4
-; GCN: buffer_load_dword v40,
+; MUBUF:   buffer_load_dword v40
+; FLATSCR: scratch_load_dword v40
 define void @test_func_call_external_void_funcx2() #0 {
   call void @external_void_func_void()
   call void @external_void_func_void()

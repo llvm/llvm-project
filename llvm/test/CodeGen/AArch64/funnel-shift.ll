@@ -29,6 +29,19 @@ define i32 @fshl_i32(i32 %x, i32 %y, i32 %z) {
   ret i32 %f
 }
 
+define i64 @fshl_i64(i64 %x, i64 %y, i64 %z) {
+; CHECK-LABEL: fshl_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w9, w2
+; CHECK-NEXT:    lsr x10, x1, #1
+; CHECK-NEXT:    lsl x8, x0, x2
+; CHECK-NEXT:    lsr x9, x10, x9
+; CHECK-NEXT:    orr x0, x8, x9
+; CHECK-NEXT:    ret
+  %f = call i64 @llvm.fshl.i64(i64 %x, i64 %y, i64 %z)
+  ret i64 %f
+}
+
 ; Verify that weird types are minimally supported.
 declare i37 @llvm.fshl.i37(i37, i37, i37)
 define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
@@ -151,6 +164,19 @@ define i32 @fshr_i32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    ret
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %z)
   ret i32 %f
+}
+
+define i64 @fshr_i64(i64 %x, i64 %y, i64 %z) {
+; CHECK-LABEL: fshr_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mvn w9, w2
+; CHECK-NEXT:    lsl x10, x0, #1
+; CHECK-NEXT:    lsr x8, x1, x2
+; CHECK-NEXT:    lsl x9, x10, x9
+; CHECK-NEXT:    orr x0, x9, x8
+; CHECK-NEXT:    ret
+  %f = call i64 @llvm.fshr.i64(i64 %x, i64 %y, i64 %z)
+  ret i64 %f
 }
 
 ; Verify that weird types are minimally supported.

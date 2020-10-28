@@ -518,7 +518,8 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   if (IsVariant) {
     unsigned CPUID = SM.getProcessorID();
     while (SchedClassID && SM.getSchedClassDesc(SchedClassID)->isVariant())
-      SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &MCI, CPUID);
+      SchedClassID =
+          STI.resolveVariantSchedClass(SchedClassID, &MCI, &MCII, CPUID);
 
     if (!SchedClassID) {
       return make_error<InstructionError<MCInst>>(

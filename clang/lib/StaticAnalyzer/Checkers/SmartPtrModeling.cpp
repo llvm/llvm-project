@@ -103,7 +103,8 @@ bool isStdSmartPtrCall(const CallEvent &Call) {
 
 bool isNullSmartPtr(const ProgramStateRef State, const MemRegion *ThisRegion) {
   const auto *InnerPointVal = State->get<TrackedRegionMap>(ThisRegion);
-  return InnerPointVal && InnerPointVal->isZeroConstant();
+  return InnerPointVal &&
+         !State->assume(InnerPointVal->castAs<DefinedOrUnknownSVal>(), true);
 }
 } // namespace smartptr
 } // namespace ento

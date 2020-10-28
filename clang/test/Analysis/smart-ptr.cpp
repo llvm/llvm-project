@@ -333,7 +333,7 @@ std::unique_ptr<A> &&returnRValRefOfUniquePtr();
 void drefOnAssignedNullFromMethodPtrValidSmartPtr() {
   std::unique_ptr<A> P(new A());
   P = returnRValRefOfUniquePtr();
-  P->foo(); // No warning. 
+  P->foo(); // No warning.
 }
 
 void derefMoveConstructedWithValidPtr() {
@@ -374,7 +374,7 @@ std::unique_ptr<A> &&functionReturnsRValueRef();
 
 void derefMoveConstructedWithRValueRefReturn() {
   std::unique_ptr<A> P(functionReturnsRValueRef());
-  P->foo();  // No warning.
+  P->foo(); // No warning.
 }
 
 void derefConditionOnNullPtr() {
@@ -449,4 +449,11 @@ int derefConditionOnUnKnownPtr(int *q) {
     return *P; // No warning.
   else
     return *P; // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefAfterBranchingOnUnknownInnerPtr(std::unique_ptr<A> P) {
+  A *RP = P.get();
+  if (!RP) {
+    P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+  }
 }

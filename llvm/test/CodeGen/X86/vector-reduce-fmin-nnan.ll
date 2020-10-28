@@ -14,7 +14,7 @@ define float @test_v1f32(<1 x float> %a0) {
 ; ALL-LABEL: test_v1f32:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    retq
-  %1 = call nnan float @llvm.experimental.vector.reduce.fmin.v1f32(<1 x float> %a0)
+  %1 = call nnan float @llvm.vector.reduce.fmin.v1f32(<1 x float> %a0)
   ret float %1
 }
 
@@ -43,7 +43,7 @@ define float @test_v2f32(<2 x float> %a0) {
 ; AVX512-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX512-NEXT:    vminss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %1 = call nnan float @llvm.experimental.vector.reduce.fmin.v2f32(<2 x float> %a0)
+  %1 = call nnan float @llvm.vector.reduce.fmin.v2f32(<2 x float> %a0)
   ret float %1
 }
 
@@ -84,7 +84,7 @@ define float @test_v3f32(<3 x float> %a0) {
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512-NEXT:    vminss %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
-  %1 = call nnan float @llvm.experimental.vector.reduce.fmin.v3f32(<3 x float> %a0)
+  %1 = call nnan float @llvm.vector.reduce.fmin.v3f32(<3 x float> %a0)
   ret float %1
 }
 
@@ -133,7 +133,7 @@ define float @test_v4f32(<4 x float> %a0) {
 ; AVX512-NEXT:    vminss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vminss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %1 = call nnan float @llvm.experimental.vector.reduce.fmin.v4f32(<4 x float> %a0)
+  %1 = call nnan float @llvm.vector.reduce.fmin.v4f32(<4 x float> %a0)
   ret float %1
 }
 
@@ -204,7 +204,7 @@ define float @test_v8f32(<8 x float> %a0) {
 ; AVX512-NEXT:    vminss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call nnan float @llvm.experimental.vector.reduce.fmin.v8f32(<8 x float> %a0)
+  %1 = call nnan float @llvm.vector.reduce.fmin.v8f32(<8 x float> %a0)
   ret float %1
 }
 
@@ -296,7 +296,7 @@ define float @test_v16f32(<16 x float> %a0) {
 ; AVX512-NEXT:    vminss %xmm8, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call nnan float @llvm.experimental.vector.reduce.fmin.v16f32(<16 x float> %a0)
+  %1 = call nnan float @llvm.vector.reduce.fmin.v16f32(<16 x float> %a0)
   ret float %1
 }
 
@@ -323,7 +323,7 @@ define double @test_v2f64(<2 x double> %a0) {
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX512-NEXT:    vminsd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %1 = call nnan double @llvm.experimental.vector.reduce.fmin.v2f64(<2 x double> %a0)
+  %1 = call nnan double @llvm.vector.reduce.fmin.v2f64(<2 x double> %a0)
   ret double %1
 }
 
@@ -357,7 +357,7 @@ define double @test_v4f64(<4 x double> %a0) {
 ; AVX512-NEXT:    vminsd %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call nnan double @llvm.experimental.vector.reduce.fmin.v4f64(<4 x double> %a0)
+  %1 = call nnan double @llvm.vector.reduce.fmin.v4f64(<4 x double> %a0)
   ret double %1
 }
 
@@ -402,7 +402,7 @@ define double @test_v8f64(<8 x double> %a0) {
 ; AVX512-NEXT:    vminsd %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call nnan double @llvm.experimental.vector.reduce.fmin.v8f64(<8 x double> %a0)
+  %1 = call nnan double @llvm.vector.reduce.fmin.v8f64(<8 x double> %a0)
   ret double %1
 }
 
@@ -454,7 +454,7 @@ define double @test_v16f64(<16 x double> %a0) {
 ; AVX512-NEXT:    vminsd %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %1 = call nnan double @llvm.experimental.vector.reduce.fmin.v16f64(<16 x double> %a0)
+  %1 = call nnan double @llvm.vector.reduce.fmin.v16f64(<16 x double> %a0)
   ret double %1
 }
 
@@ -518,20 +518,20 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512-NEXT:    retq
-  %1 = call nnan half @llvm.experimental.vector.reduce.fmin.v2f16(<2 x half> %a0)
+  %1 = call nnan half @llvm.vector.reduce.fmin.v2f16(<2 x half> %a0)
   ret half %1
 }
 
-declare float @llvm.experimental.vector.reduce.fmin.v1f32(<1 x float>)
-declare float @llvm.experimental.vector.reduce.fmin.v2f32(<2 x float>)
-declare float @llvm.experimental.vector.reduce.fmin.v3f32(<3 x float>)
-declare float @llvm.experimental.vector.reduce.fmin.v4f32(<4 x float>)
-declare float @llvm.experimental.vector.reduce.fmin.v8f32(<8 x float>)
-declare float @llvm.experimental.vector.reduce.fmin.v16f32(<16 x float>)
+declare float @llvm.vector.reduce.fmin.v1f32(<1 x float>)
+declare float @llvm.vector.reduce.fmin.v2f32(<2 x float>)
+declare float @llvm.vector.reduce.fmin.v3f32(<3 x float>)
+declare float @llvm.vector.reduce.fmin.v4f32(<4 x float>)
+declare float @llvm.vector.reduce.fmin.v8f32(<8 x float>)
+declare float @llvm.vector.reduce.fmin.v16f32(<16 x float>)
 
-declare double @llvm.experimental.vector.reduce.fmin.v2f64(<2 x double>)
-declare double @llvm.experimental.vector.reduce.fmin.v4f64(<4 x double>)
-declare double @llvm.experimental.vector.reduce.fmin.v8f64(<8 x double>)
-declare double @llvm.experimental.vector.reduce.fmin.v16f64(<16 x double>)
+declare double @llvm.vector.reduce.fmin.v2f64(<2 x double>)
+declare double @llvm.vector.reduce.fmin.v4f64(<4 x double>)
+declare double @llvm.vector.reduce.fmin.v8f64(<8 x double>)
+declare double @llvm.vector.reduce.fmin.v16f64(<16 x double>)
 
-declare half @llvm.experimental.vector.reduce.fmin.v2f16(<2 x half>)
+declare half @llvm.vector.reduce.fmin.v2f16(<2 x half>)

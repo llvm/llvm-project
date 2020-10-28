@@ -90,7 +90,6 @@ protected:
   SDValue performMulCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulhsCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulhuCombine(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue performMulLoHi24Combine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performCtlz_CttzCombine(const SDLoc &SL, SDValue Cond, SDValue LHS,
                              SDValue RHS, DAGCombinerInfo &DCI) const;
   SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -440,8 +439,6 @@ enum NodeType : unsigned {
   MAD_I24,
   MAD_U64_U32,
   MAD_I64_I32,
-  MUL_LOHI_I24,
-  MUL_LOHI_U24,
   PERM,
   TEXTURE_FETCH,
   R600_EXPORT,

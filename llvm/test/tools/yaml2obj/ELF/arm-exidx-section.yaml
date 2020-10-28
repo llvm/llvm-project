@@ -73,7 +73,7 @@ Sections:
     AddressAlign: 0x55
     EntSize:      0x66
 
-## Check we can't use "Entries" key together with "Content" or "Size" keys.
+## Check we can't use the "Entries" key together with the "Content" or "Size" keys.
 
 # RUN: not yaml2obj --docnum=3 -DSIZE=0 -DENT="[]" %s 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ENTRIES-ERR
@@ -95,13 +95,13 @@ Sections:
     Content: [[CONTENT=<none>]]
     Entries: [[ENT=<none>]]
 
-## Check we can use "Content" key with "Size" key when the size is greater
+## Check we can use the "Content" key with the "Size" key when the size is greater
 ## than or equal to the content size.
 
 # RUN: not yaml2obj --docnum=3 -DCONTENT="'00'" -DSIZE=0 %s 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=CONTENT-SIZE-ERR
 
-# CONTENT-SIZE-ERR: error: "Size" must be greater than or equal to the content size
+# CONTENT-SIZE-ERR: error: Section size must be greater than or equal to the content size
 
 # RUN: yaml2obj --docnum=3 -DCONTENT="'00'" -DSIZE=1 %s -o %t.cont.size.eq.o
 # RUN: llvm-readobj --sections --section-data %t.cont.size.eq.o | \

@@ -44,6 +44,8 @@ def F64_0 : WebAssemblyReg<"%f64.0">;
 def V128_0: WebAssemblyReg<"%v128">;
 
 def EXNREF_0 : WebAssemblyReg<"%exnref.0">;
+def FUNCREF_0 : WebAssemblyReg<"%funcref.0">;
+def EXTERNREF_0 : WebAssemblyReg<"%externref.0">;
 
 // The value stack "register". This is an opaque entity which serves to order
 // uses and defs that must remain in LIFO order.
@@ -65,3 +67,5 @@ def F64 : WebAssemblyRegClass<[f64], 64, (add F64_0)>;
 def V128 : WebAssemblyRegClass<[v4f32, v2f64, v2i64, v4i32, v16i8, v8i16], 128,
                                (add V128_0)>;
 def EXNREF : WebAssemblyRegClass<[exnref], 0, (add EXNREF_0)>;
+def FUNCREF : WebAssemblyRegClass<[funcref], 0, (add FUNCREF_0)>;
+def EXTERNREF : WebAssemblyRegClass<[externref], 0, (add EXTERNREF_0)>;

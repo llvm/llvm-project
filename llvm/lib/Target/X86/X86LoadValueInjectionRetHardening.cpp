@@ -72,62 +72,39 @@ bool X86LoadValueInjectionRetHardeningPass::runOnMachineFunction(
   ++NumFunctionsConsidered;
   const X86RegisterInfo *TRI = Subtarget->getRegisterInfo();
   const X86InstrInfo *TII = Subtarget->getInstrInfo();
-  unsigned ClobberReg = X86::NoRegister;
-  std::bitset<X86::NUM_TARGET_REGS> UnclobberableGR64s;
-  UnclobberableGR64s.set(X86::RSP); // can't clobber stack pointer
-  UnclobberableGR64s.set(X86::RIP); // can't clobber instruction pointer
-  UnclobberableGR64s.set(X86::RAX); // used for function return
-  UnclobberableGR64s.set(X86::RDX); // used for function return
-
-  // We can clobber any register allowed by the function's calling convention.
-  for (const MCPhysReg *PR = TRI->getCalleeSavedRegs(&MF); auto Reg = *PR; ++PR)
-    UnclobberableGR64s.set(Reg);
-  for (auto &Reg : X86::GR64RegClass) {
-    if (!UnclobberableGR64s.test(Reg)) {
-      ClobberReg = Reg;
-      break;
-    }
-  }
-
-  if (ClobberReg != X86::NoRegister) {
-    LLVM_DEBUG(dbgs() << "Selected register "
-                      << Subtarget->getRegisterInfo()->getRegAsmName(ClobberReg)
-                      << " to clobber\n");
-  } else {
-    LLVM_DEBUG(dbgs() << "Could not find a register to clobber\n");
-  }
 
   bool Modified = false;
   for (auto &MBB : MF) {
-    if (MBB.empty())
-      continue;
+    for (auto MBBI = MBB.begin(); MBBI != MBB.end(); ++MBBI) {
+      if (MBBI->getOpcode() != X86::RETQ)
+        continue;
 
-    MachineInstr &MI = MBB.back();
-    if (MI.getOpcode() != X86::RETQ)
-      continue;
+      unsigned ClobberReg = TRI->findDeadCallerSavedReg(MBB, MBBI);
+      if (ClobberReg != X86::NoRegister) {
+        BuildMI(MBB, MBBI, DebugLoc(), TII->get(X86::POP64r))
+            .addReg(ClobberReg, RegState::Define)
+            .setMIFlag(MachineInstr::FrameDestroy);
+        BuildMI(MBB, MBBI, DebugLoc(), TII->get(X86::LFENCE));
+        BuildMI(MBB, MBBI, DebugLoc(), TII->get(X86::JMP64r))
+            .addReg(ClobberReg);
+        MBB.erase(MBBI);
+      } else {
+        // In case there is no available scratch register, we can still read
+        // from RSP to assert that RSP points to a valid page. The write to RSP
+        // is also helpful because it verifies that the stack's write
+        // permissions are intact.
+        MachineInstr *Fence =
+            BuildMI(MBB, MBBI, DebugLoc(), TII->get(X86::LFENCE));
+        addRegOffset(BuildMI(MBB, Fence, DebugLoc(), TII->get(X86::SHL64mi)),
+                     X86::RSP, false, 0)
+            .addImm(0)
+            ->addRegisterDead(X86::EFLAGS, TRI);
+      }
 
-    if (ClobberReg != X86::NoRegister) {
-      MBB.erase_instr(&MI);
-      BuildMI(MBB, MBB.end(), DebugLoc(), TII->get(X86::POP64r))
-          .addReg(ClobberReg, RegState::Define)
-          .setMIFlag(MachineInstr::FrameDestroy);
-      BuildMI(MBB, MBB.end(), DebugLoc(), TII->get(X86::LFENCE));
-      BuildMI(MBB, MBB.end(), DebugLoc(), TII->get(X86::JMP64r))
-          .addReg(ClobberReg);
-    } else {
-      // In case there is no available scratch register, we can still read from
-      // RSP to assert that RSP points to a valid page. The write to RSP is
-      // also helpful because it verifies that the stack's write permissions
-      // are intact.
-      MachineInstr *Fence = BuildMI(MBB, MI, DebugLoc(), TII->get(X86::LFENCE));
-      addRegOffset(BuildMI(MBB, Fence, DebugLoc(), TII->get(X86::SHL64mi)),
-                   X86::RSP, false, 0)
-          .addImm(0)
-          ->addRegisterDead(X86::EFLAGS, TRI);
+      ++NumFences;
+      Modified = true;
+      break;
     }
-
-    ++NumFences;
-    Modified = true;
   }
 
   if (Modified)

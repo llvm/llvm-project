@@ -212,7 +212,7 @@ Token Lexer::lexBareIdentifierOrKeyword(const char *tokStart) {
        isAllDigit(spelling.drop_front(2))))
     return Token(Token::inttype, spelling);
 
-  Token::Kind kind = llvm::StringSwitch<Token::Kind>(spelling)
+  Token::Kind kind = StringSwitch<Token::Kind>(spelling)
 #define TOK_KEYWORD(SPELLING) .Case(#SPELLING, Token::kw_##SPELLING)
 #include "TokenKinds.def"
                          .Default(Token::bare_identifier);

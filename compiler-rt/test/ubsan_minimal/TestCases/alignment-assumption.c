@@ -2,16 +2,16 @@
 
 #include <stdlib.h>
 
-int main(int argc, char* argv[]) {
-// CHECK-NOT: alignment-assumption
+int main(int argc, char *argv[]) {
 
-char *ptr = (char *)malloc(2);
+  char *ptr = (char *)malloc(2);
 
-__builtin_assume_aligned(ptr + 1, 0x8000);
-// CHECK: alignment-assumption
-// CHECK-NOT: alignment-assumption
+  void *t = __builtin_assume_aligned(ptr + 1, 0x8000);
+  (void)t;
+  // CHECK: ubsan: alignment-assumption
+  // CHECK-NOT: alignment-assumption
 
-free(ptr);
+  free(ptr);
 
-return 0;
+  return 0;
 }

@@ -668,3 +668,163 @@ DWARF:
           ## Specify the ExtLen field.
           ExtLen:    0x1234
           SubOpcode: DW_LNE_end_sequence
+
+## m) Test how yaml2obj generates the opcode_base and the
+## standard_opcode_lengths fields.
+
+## Both the opcode_base and the standard_opcode_lengths fields are not
+## specified (DWARFv2).
+
+# RUN: yaml2obj --docnum=13 -DVERSION=2 -DMAXOPSPERINST='' %s -o %t13.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t13.o | \
+# RUN:   FileCheck %s --check-prefix=OPCODEBASEV2
+
+#      OPCODEBASEV2: Hex dump of section '.debug_line':
+# OPCODEBASEV2-NEXT: 0x00000000 16000000 02001000 00000101 00010a00 ................
+##                                                             ^-   opcode_base (10)
+##                                                               ^- standard_opcode_lengths[DW_LNS_copy] = 0
+# OPCODEBASEV2-NEXT: 0x00000010 01010101 00000001 0000              ..........
+##                              ^-                                  standard_opcode_lengths[DW_LNS_advance_pc] = 1
+##                                ^-                                standard_opcode_lengths[DW_LNS_advance_line] = 1
+##                                  ^-                              standard_opcode_lengths[DW_LNS_set_file] = 1
+##                                    ^-                            standard_opcode_lengths[DW_LNS_set_column] = 1
+##                                       ^-                         standard_opcode_lengths[DW_LNS_negate_stmt] = 0
+##                                         ^-                       standard_opcode_lengths[DW_LNS_set_basic_block] = 0
+##                                           ^-                     standard_opcode_lengths[DW_LNS_const_add_pc] = 0
+##                                             ^-                   standard_opcode_lengths[DW_LNS_fixed_advance_pc] = 1
+##                                                ^---              terminators for include_directories and file_names
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_line:
+    - Version:               [[VERSION=4]]
+      MinInstLength:         1
+      [[MAXOPSPERINST=MaxOpsPerInst: 0]]
+      DefaultIsStmt:         1
+      LineBase:              0
+      LineRange:             1
+      OpcodeBase:            [[OPCODEBASE=<none>]]
+      StandardOpcodeLengths: [[STANDARDOPCODELENGTHS=<none>]]
+
+## Both the opcode_base and the standard_opcode_lengths fields are not
+## specified (DWARFv3).
+
+# RUN: yaml2obj --docnum=13 -DVERSION=3 -DMAXOPSPERINST='' %s -o %t14.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t14.o | \
+# RUN:   FileCheck %s --check-prefix=OPCODEBASEV3
+
+#      OPCODEBASEV3: Hex dump of section '.debug_line':
+# OPCODEBASEV3-NEXT: 0x00000000 19000000 03001300 00000101 00010d00 ................
+##                                                             ^-   opcode_base (13)
+##                                                               ^- standard_opcode_lengths[DW_LNS_copy] = 0
+# OPCODEBASEV3-NEXT: 0x00000010 01010101 00000001 00000100 00       .............
+##                              ^-                                  standard_opcode_lengths[DW_LNS_advance_pc] = 1
+##                                ^-                                standard_opcode_lengths[DW_LNS_advance_line] = 1
+##                                  ^-                              standard_opcode_lengths[DW_LNS_set_file] = 1
+##                                    ^-                            standard_opcode_lengths[DW_LNS_set_column] = 1
+##                                       ^-                         standard_opcode_lengths[DW_LNS_negate_stmt] = 0
+##                                         ^-                       standard_opcode_lengths[DW_LNS_set_basic_block] = 0
+##                                           ^-                     standard_opcode_lengths[DW_LNS_const_add_pc] = 0
+##                                             ^-                   standard_opcode_lengths[DW_LNS_fixed_advance_pc] = 1
+##                                                ^-                standard_opcode_lengths[DW_LNS_set_prologue_end] = 0
+##                                                  ^-              standard_opcode_lengths[DW_LNS_set_epilogue_begin] = 0
+##                                                    ^-            standard_opcode_lengths[DW_LNS_set_isa] = 1
+##                                                      ^----       terminators for include_directories and file_names
+
+## Both the opcode_base and the standard_opcode_lengths fields are not
+## specified (DWARFv4).
+
+# RUN: yaml2obj --docnum=13 %s -o %t15.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t15.o | \
+# RUN:   FileCheck %s --check-prefix=OPCODEBASEV4
+
+#      OPCODEBASEV4: Hex dump of section '.debug_line':
+# OPCODEBASEV4-NEXT: 0x00000000 1a000000 04001400 00000100 0100010d ................
+##                                                              ^- opcode_base (13)
+# OPCODEBASEV4-NEXT: 0x00000010 00010101 01000000 01000001 0000     ..............
+##                              ^-                                  standard_opcode_lengths[DW_LNS_copy] = 0
+##                                ^-                                standard_opcode_lengths[DW_LNS_advance_pc] = 1
+##                                  ^-                              standard_opcode_lengths[DW_LNS_advance_line] = 1
+##                                    ^-                            standard_opcode_lengths[DW_LNS_set_file] = 1
+##                                       ^-                         standard_opcode_lengths[DW_LNS_set_column] = 1
+##                                         ^-                       standard_opcode_lengths[DW_LNS_negate_stmt] = 0
+##                                           ^-                     standard_opcode_lengths[DW_LNS_set_basic_block] = 0
+##                                             ^-                   standard_opcode_lengths[DW_LNS_const_add_pc] = 0
+##                                                ^-                standard_opcode_lengths[DW_LNS_fixed_advance_pc] = 1
+##                                                  ^-              standard_opcode_lengths[DW_LNS_set_prologue_end] = 0
+##                                                    ^-            standard_opcode_lengths[DW_LNS_set_epilogue_begin] = 0
+##                                                      ^-          standard_opcode_lengths[DW_LNS_set_isa] = 1
+##                                                         ^---     terminators for include_directories and file_names
+
+## Specify the opcode_base field (opcode_base == 0).
+
+# RUN: yaml2obj --docnum=13 -DOPCODEBASE=0 %s -o %t16.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t16.o | \
+# RUN:   FileCheck %s --check-prefix=ZERO-OPCODEBASE
+
+#      ZERO-OPCODEBASE: Hex dump of section '.debug_line':
+# ZERO-OPCODEBASE-NEXT: 0x00000000 0e000000 04000800 00000100 01000100 ................
+##                                                                  ^- opcode_base (0)
+# ZERO-OPCODEBASE-NEXT: 0x00000010 0000                                ..
+##                                 ^---                                terminators for include_directories and file_names
+
+## Specify the opcode_base field (opcode_base != 0, opcode_base - 1 < 12).
+## The standard_opcode_lengths array will be truncated.
+
+# RUN: yaml2obj --docnum=13 -DOPCODEBASE=4 %s -o %t17.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t17.o | \
+# RUN:   FileCheck %s --check-prefix=OPCODEBASE
+
+#      OPCODEBASE: Hex dump of section '.debug_line':
+# OPCODEBASE-NEXT: 0x00000000 11000000 04000b00 00000100 01000104 ................
+##                                                             ^- opcode_base (4)
+# OPCODEBASE-NEXT: 0x00000010 00010100 00                         .....
+##                            ^-----                              standard_opcode_lengths (3-byte)
+##                                  ^----                         terminators for include_directories and file_names
+
+## Specify the opcode_base field (opcode_base != 0, opcode_base - 1 > 12).
+## The standard_opcode_lengths array will be extended.
+
+# RUN: yaml2obj --docnum=13 -DOPCODEBASE=20 %s -o %t18.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t18.o | \
+# RUN:   FileCheck %s --check-prefix=OPCODEBASE1
+
+#      OPCODEBASE1: Hex dump of section '.debug_line':
+# OPCODEBASE1-NEXT: 0x00000000 21000000 04001b00 00000100 01000114 !...............
+##                                                              ^- opcode_base (20)
+# OPCODEBASE1-NEXT: 0x00000010 00010101 01000000 01000001 00000000 ................
+##                             ^-------------------------          standard_opcode_lengths defined in DWARFv5 (12-byte)
+##                                                        ^------- extended standard_opcode_lengths (7-byte)
+# OPCODEBASE1-NEXT: 0x00000020 00000000 00                         .....
+##                             ------
+##                                   ^----                         terminators for include_directories and file_names
+
+## Specify the standard_opcode_lengths field.
+
+# RUN: yaml2obj --docnum=13 -DSTANDARDOPCODELENGTHS=[0,1,0] %s -o %t19.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t19.o | \
+# RUN:   FileCheck %s --check-prefix=OPCODELENGTHS
+
+#      OPCODELENGTHS: Hex dump of section '.debug_line':
+# OPCODELENGTHS-NEXT: 0x00000000 11000000 04000b00 00000100 01000104 ................
+##                                                                ^- opcode_base (4)
+# OPCODELENGTHS-NEXT: 0x00000010 00010000 00                         .....
+##                               ^-----                              standard_opcode_lengths (3-byte)
+##                                     ^----                         terminators for include_directories and file_names
+
+## Specify both the opcode_base and the standard_opcode_lengths fields.
+
+# RUN: yaml2obj --docnum=13 -DOPCODEBASE=2 -DSTANDARDOPCODELENGTHS=[0,1,0] %s -o %t20.o
+# RUN: llvm-readelf --hex-dump=.debug_line %t20.o | \
+# RUN:   FileCheck %s --check-prefix=OPCODEBASE-LENGTHS
+
+#      OPCODEBASE-LENGTHS: Hex dump of section '.debug_line':
+# OPCODEBASE-LENGTHS-NEXT: 0x00000000 11000000 04000b00 00000100 01000102 ................
+##                                                                     ^- opcode_base (2)
+# OPCODEBASE-LENGTHS-NEXT: 0x00000010 00010000 00                         .....
+##                                    ^-----                              standard_opcode_lengths (3-byte)
+##                                          ^----                         terminators for include_directories and file_names

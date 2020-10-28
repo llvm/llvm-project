@@ -242,19 +242,14 @@ static bool lowerShiftReservedVGPR(MachineFunction &MF,
 
   // If there are no free lower VGPRs available, default to using the
   // pre-reserved register instead.
-  Register LowestAvailableVGPR = PreReservedVGPR;
-
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  MachineFrameInfo &FrameInfo = MF.getFrameInfo();
-  ArrayRef<MCPhysReg> AllVGPR32s = ST.getRegisterInfo()->getAllVGPR32(MF);
-  for (MCPhysReg Reg : AllVGPR32s) {
-    if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg)) {
-      LowestAvailableVGPR = Reg;
-      break;
-    }
-  }
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  Register LowestAvailableVGPR =
+      TRI->findUnusedRegister(MF.getRegInfo(), &AMDGPU::VGPR_32RegClass, MF);
+  if (!LowestAvailableVGPR)
+    LowestAvailableVGPR = PreReservedVGPR;
 
   const MCPhysReg *CSRegs = MF.getRegInfo().getCalleeSavedRegs();
+  MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   Optional<int> FI;
   // Check if we are reserving a CSR. Create a stack object for a possible spill
   // in the function prologue.

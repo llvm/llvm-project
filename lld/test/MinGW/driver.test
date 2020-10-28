@@ -63,18 +63,27 @@ RUN: ld.lld -### foo.o -m i386pep -subsystem=console | FileCheck -check-prefix=S
 RUN: ld.lld -### foo.o -m i386pep --subsystem=console | FileCheck -check-prefix=SUBSYSTEM %s
 SUBSYSTEM: -subsystem:console
 
-RUN: ld.lld -### foo.o -m i386pep --major-os-version 7 --minor-os-version 8 | FileCheck -check-prefix=SUBSYSTEM_VERSION %s
+RUN: ld.lld -### foo.o -m i386pep --major-os-version 7 --minor-os-version 8 | FileCheck -check-prefix=OS_VERSION %s
+RUN: ld.lld -### foo.o -m i386pep --major-os-version=7 --minor-os-version=8 | FileCheck -check-prefix=OS_VERSION %s
+OS_VERSION: -osversion:7.8 -subsystem:default,6.0
+
 RUN: ld.lld -### foo.o -m i386pep --major-subsystem-version 7 --minor-subsystem-version 8 | FileCheck -check-prefix=SUBSYSTEM_VERSION %s
-RUN: ld.lld -### foo.o -m i386pep --major-os-version=7 --minor-os-version=8 --major-subsystem-version=7 --minor-subsystem-version=8 | FileCheck -check-prefix=SUBSYSTEM_VERSION %s
-SUBSYSTEM_VERSION: -subsystem:default,7.8
+RUN: ld.lld -### foo.o -m i386pep --major-subsystem-version=7 --minor-subsystem-version=8 | FileCheck -check-prefix=SUBSYSTEM_VERSION %s
+SUBSYSTEM_VERSION: -osversion:6.0 -subsystem:default,7.8
 
 RUN: ld.lld -### foo.o -m i386pep --minor-subsystem-version 8 | FileCheck -check-prefix=SUBSYSTEM_DEFAULT_MAJOR %s
 SUBSYSTEM_DEFAULT_MAJOR: -subsystem:default,6.8
 
 RUN: ld.lld -### foo.o -m i386pep --major-subsystem-version 7 | FileCheck -check-prefix=SUBSYSTEM_DEFAULT_MINOR %s
-SUBSYSTEM_DEFAULT_MINOR: -subsystem:default,7
+SUBSYSTEM_DEFAULT_MINOR: -subsystem:default,7.0
 
-RUN: ld.lld -### foo.o -m i386pep --subsystem windows --major-os-version 7 --minor-os-version 8 | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
+RUN: ld.lld -### foo.o -m i386pep --subsystem windows --major-subsystem-version 7 --minor-subsystem-version 8 | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
+RUN: ld.lld -### foo.o -m i386pep --major-subsystem-version 7 --minor-subsystem-version 8 --subsystem windows | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
+RUN: ld.lld -### foo.o -m i386pep --subsystem windows:7.8 | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
+RUN: ld.lld -### foo.o -m i386pep --subsystem windows:2.3 --major-subsystem-version 7 --minor-subsystem-version 8 | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
+RUN: ld.lld -### foo.o -m i386pep --subsystem windows:7.8 | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
+RUN: ld.lld -### foo.o -m i386pep --major-subsystem-version 2 --minor-subsystem-version 3 --subsystem windows:7.8 | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
+RUN: ld.lld -### foo.o -m i386pep --major-subsystem-version 2 --minor-subsystem-version 8 --subsystem windows:7 | FileCheck -check-prefix=SUBSYSTEM_WINDOWS %s
 SUBSYSTEM_WINDOWS: -subsystem:windows,7.8
 
 RUN: ld.lld -### foo.o -m i386pep -stack 4194304,8192 | FileCheck -check-prefix=STACK %s
@@ -272,3 +281,7 @@ ALLOW_MULTIPLE_DEFINITION: -force:multiple
 RUN: ld.lld -### -m i386pep foo.o --allow-multiple-definition --no-allow-multiple-definition | FileCheck -check-prefix NO_ALLOW_MULTIPLE_DEFINITION %s
 RUN: ld.lld -### -m i386pep foo.o -allow-multiple-definition -no-allow-multiple-definition | FileCheck -check-prefix NO_ALLOW_MULTIPLE_DEFINITION %s
 NO_ALLOW_MULTIPLE_DEFINITION-NOT: -force:multiple
+
+RUN: ld.lld -### -m i386pep foo.o -wrap foo1 --wrap foo2 | FileCheck -check-prefix WRAP %s
+RUN: ld.lld -### -m i386pep foo.o -wrap=foo1 --wrap=foo2 | FileCheck -check-prefix WRAP %s
+WRAP: -wrap:foo1 -wrap:foo2

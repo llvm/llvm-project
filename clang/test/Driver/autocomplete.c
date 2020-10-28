@@ -43,6 +43,8 @@
 // CLSTDALL-NEXT: CL1.2
 // CLSTDALL-NEXT: cl2.0
 // CLSTDALL-NEXT: CL2.0
+// CLSTDALL-NEXT: cl3.0
+// CLSTDALL-NEXT: CL3.0
 // CLSTDALL-NEXT: clc++
 // CLSTDALL-NEXT: CLC++
 // RUN: %clang --autocomplete=-fno-sanitize-coverage=,f | FileCheck %s -check-prefix=FNOSANICOVER
@@ -71,6 +73,7 @@
 // FLTOALL-NEXT: thin
 // RUN: %clang --autocomplete=-fveclib= | FileCheck %s -check-prefix=FVECLIBALL
 // FVECLIBALL: Accelerate
+// FVECLIBALL-NEXT: libmvec
 // FVECLIBALL-NEXT: MASSV
 // FVECLIBALL-NEXT: none
 // FVECLIBALL-NEXT: SVML

@@ -54,10 +54,9 @@ public:
 // this function converts the spaces in string inputs to that character if need
 // be.
 static std::wstring convert_thousands_sep(std::wstring const& in) {
-#ifndef TEST_GLIBC_PREREQ
-#define TEST_GLIBC_PREREQ(x, y) 0
-#endif
-#if TEST_GLIBC_PREREQ(2,27)
+#if defined(_CS_GNU_LIBC_VERSION)
+  if (glibc_version_less_than("2.27"))
+    return in;
   std::wstring out;
   unsigned I = 0;
   bool seen_decimal = false;

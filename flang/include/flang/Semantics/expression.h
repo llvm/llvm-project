@@ -12,6 +12,7 @@
 #include "semantics.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Common/indirection.h"
+#include "flang/Common/restorer.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
@@ -138,6 +139,12 @@ public:
   // When the argument is the name of an active implied DO index, returns
   // its INTEGER kind type parameter.
   std::optional<int> IsImpliedDo(parser::CharBlock) const;
+
+  // Allows a whole assumed-size array to appear for the lifetime of
+  // the returned value.
+  common::Restorer<bool> AllowWholeAssumedSizeArray() {
+    return common::ScopedSet(isWholeAssumedSizeArrayOk_, true);
+  }
 
   Expr<SubscriptInteger> AnalyzeKindSelector(common::TypeCategory category,
       const std::optional<parser::KindSelector> &);
@@ -372,6 +379,7 @@ private:
   FoldingContext &foldingContext_{context_.foldingContext()};
   std::map<parser::CharBlock, int> impliedDos_; // values are INTEGER kinds
   bool fatalErrors_{false};
+  bool isWholeAssumedSizeArrayOk_{false};
   friend class ArgumentAnalyzer;
 };
 

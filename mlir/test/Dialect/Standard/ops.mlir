@@ -19,6 +19,13 @@ func @test_index_cast_tensor_reverse(%arg0 : tensor<i64>) -> tensor<index> {
   return %0 : tensor<index>
 }
 
+// CHECK-LABEL: test_tensor_to_memref
+func @test_tensor_to_memref(%arg0: tensor<?xi64>, %arg1: tensor<*xi64>) -> (memref<?xi64, affine_map<(d0) -> (d0 + 7)>>, memref<*xi64, 1>) {
+  %0 = tensor_to_memref %arg0 : memref<?xi64, affine_map<(d0) -> (d0 + 7)>>
+  %1 = tensor_to_memref %arg1 : memref<*xi64, 1>
+  return %0, %1 : memref<?xi64, affine_map<(d0) -> (d0 + 7)>>, memref<*xi64, 1>
+}
+
 // CHECK-LABEL: @assert
 func @assert(%arg : i1) {
   assert %arg, "Some message in case this assertion fails."
@@ -46,4 +53,27 @@ func @atan(%arg : f32) -> f32 {
 func @atan2(%arg0 : f32, %arg1 : f32) -> f32 {
   %result = atan2 %arg0, %arg1 : f32
   return %result : f32
+}
+
+// CHECK-LABEL: func @memref_reinterpret_cast
+func @memref_reinterpret_cast(%in: memref<?xf32>)
+    -> memref<10x?xf32, offset: ?, strides: [?, 1]> {
+  %c0 = constant 0 : index
+  %c10 = constant 10 : index
+  %out = memref_reinterpret_cast %in to
+           offset: [%c0], sizes: [10, %c10], strides: [%c10, 1]
+           : memref<?xf32> to memref<10x?xf32, offset: ?, strides: [?, 1]>
+  return %out : memref<10x?xf32, offset: ?, strides: [?, 1]>
+}
+
+// CHECK-LABEL: func @memref_reshape(
+func @memref_reshape(%unranked: memref<*xf32>, %shape1: memref<1xi32>,
+         %shape2: memref<2xi32>, %shape3: memref<?xi32>) -> memref<*xf32> {
+  %dyn_vec = memref_reshape %unranked(%shape1)
+               : (memref<*xf32>, memref<1xi32>) -> memref<?xf32>
+  %dyn_mat = memref_reshape %dyn_vec(%shape2)
+               : (memref<?xf32>, memref<2xi32>) -> memref<?x?xf32>
+  %new_unranked = memref_reshape %dyn_mat(%shape3)
+               : (memref<?x?xf32>, memref<?xi32>) -> memref<*xf32>
+  return %new_unranked : memref<*xf32>
 }

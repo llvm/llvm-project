@@ -56,6 +56,47 @@ Note: It is generally good practice to define the implementation of the
 `verifyTrait` hook out-of-line as a free function when possible to avoid
 instantiating the implementation for every concrete operation type.
 
+Operation traits may also provide a `foldTrait` hook that is called when
+folding the concrete operation. The trait folders will only be invoked if
+the concrete operation fold is either not implemented, fails, or performs
+an in-place fold.
+
+The following signature of fold will be called if it is implemented
+and the op has a single result.
+
+```c++
+template <typename ConcreteType>
+class MyTrait : public OpTrait::TraitBase<ConcreteType, MyTrait> {
+public:
+  /// Override the 'foldTrait' hook to support trait based folding on the
+  /// concrete operation.
+  static OpFoldResult foldTrait(Operation *op, ArrayRef<Attribute> operands) { {
+    // ...
+  }
+};
+```
+
+Otherwise, if the operation has a single result and the above signature is
+not implemented, or the operation has multiple results, then the following signature
+will be used (if implemented):
+
+```c++
+template <typename ConcreteType>
+class MyTrait : public OpTrait::TraitBase<ConcreteType, MyTrait> {
+public:
+  /// Override the 'foldTrait' hook to support trait based folding on the
+  /// concrete operation.
+  static LogicalResult foldTrait(Operation *op, ArrayRef<Attribute> operands,
+                                 SmallVectorImpl<OpFoldResult> &results) { {
+    // ...
+  }
+};
+```
+
+Note: It is generally good practice to define the implementation of the
+`foldTrait` hook out-of-line as a free function when possible to avoid
+instantiating the implementation for every concrete operation type.
+
 ### Parametric Traits
 
 The above demonstrates the definition of a simple self-contained trait. It is
@@ -208,7 +249,7 @@ particular:
 -   Ops must be symbols, i.e. also have the `Symbol` trait;
 -   Ops have a single region with multiple blocks that corresponds to the body
     of the function;
--   the absence of a region corresponds to an external function;
+-   An op with a single empty region corresponds to an external function;
 -   arguments of the first block of the region are treated as function
     arguments;
 -   they can have argument and result attributes that are stored in dictionary
@@ -222,7 +263,8 @@ assumption based on it.
 
 ### HasParent
 
-*   `OpTrait::HasParent<typename ParentOpType>` -- `HasParent<string op>`
+*   `OpTrait::HasParent<typename ParentOpType>` -- `HasParent<string op>` or
+    `ParentOneOf<list<string> opList>`
 
 This trait provides APIs and verifiers for operations that can only be nested
 within regions that are attached to operations of `ParentOpType`.
@@ -251,13 +293,15 @@ to have [passes](PassManagement.md) scheduled under them.
 
 * `OpTrait::MemRefsNormalizable` -- `MemRefsNormalizable`
 
-This trait is used to flag operations that can accommodate `MemRefs` with
-non-identity memory-layout specifications. This trait indicates that the
-normalization of memory layout can be performed for such operations.
-`MemRefs` normalization consists of replacing an original memory reference
-with layout specifications to an equivalent memory reference where
-the specified memory layout is applied by rewritting accesses and types
-associated with that memory reference.
+This trait is used to flag operations that consume or produce
+values of `MemRef` type where those references can be 'normalized'.
+In cases where an associated `MemRef` has a
+non-identity memory-layout specification, such normalizable operations can be
+modified so that the `MemRef` has an identity layout specification.
+This can be implemented by associating the operation with its own
+index expression that can express the equivalent of the memory-layout
+specification of the MemRef type. See [the -normalize-memrefs pass].
+(https://mlir.llvm.org/docs/Passes/#-normalize-memrefs-normalize-memrefs)
 
 ### Single Block with Implicit Terminator
 

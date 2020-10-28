@@ -205,7 +205,7 @@ entry:
   ret void
 }
 
-declare i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32>)
+declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
 
 define i32 @test_udot_v8i8(i8* nocapture readonly %a, i8* nocapture readonly %b) {
 entry:
@@ -218,7 +218,7 @@ entry:
   %4 = load <8 x i8>, <8 x i8>* %3
   %5 = zext <8 x i8> %4 to <8 x i32>
   %6 = mul nuw nsw <8 x i32> %5, %2
-  %7 = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> %6)
+  %7 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %6)
   ret i32 %7
 }
 
@@ -233,11 +233,11 @@ entry:
   %4 = load <8 x i8>, <8 x i8>* %3
   %5 = sext <8 x i8> %4 to <8 x i32>
   %6 = mul nsw <8 x i32> %5, %2
-  %7 = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> %6)
+  %7 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %6)
   ret i32 %7
 }
 
-declare i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32>)
+declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
 
 define i32 @test_udot_v16i8(i8* nocapture readonly %a, i8* nocapture readonly %b, i32 %sum) {
 entry:
@@ -250,9 +250,23 @@ entry:
   %4 = load <16 x i8>, <16 x i8>* %3
   %5 = zext <16 x i8> %4 to <16 x i32>
   %6 = mul nuw nsw <16 x i32> %5, %2
-  %7 = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %6)
+  %7 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %6)
   %op.extra = add i32 %7, %sum
   ret i32 %op.extra
+}
+
+define i32 @test_udot_v16i8_2(i8* nocapture readonly %a1) {
+; CHECK-LABEL: test_udot_v16i8_2:
+; CHECK:    movi {{v[0-9]+}}.16b, #1
+; CHECK:    movi {{v[0-9]+}}.2d, #0000000000000000
+; CHECK:    udot {{v[0-9]+}}.4s, {{v[0-9]+}}.16b, {{v[0-9]+}}.16b
+; CHECK:    addv s0, {{v[0-9]+}}.4s
+entry:
+  %0 = bitcast i8* %a1 to <16 x i8>*
+  %1 = load <16 x i8>, <16 x i8>* %0
+  %2 = zext <16 x i8> %1 to <16 x i32>
+  %3 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %2)
+  ret i32 %3
 }
 
 define i32 @test_sdot_v16i8(i8* nocapture readonly %a, i8* nocapture readonly %b, i32 %sum) {
@@ -266,7 +280,21 @@ entry:
   %4 = load <16 x i8>, <16 x i8>* %3
   %5 = sext <16 x i8> %4 to <16 x i32>
   %6 = mul nsw <16 x i32> %5, %2
-  %7 = call i32 @llvm.experimental.vector.reduce.add.v16i32(<16 x i32> %6)
+  %7 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %6)
   %op.extra = add nsw i32 %7, %sum
   ret i32 %op.extra
+}
+
+define i32 @test_sdot_v16i8_2(i8* nocapture readonly %a1) {
+; CHECK-LABEL: test_sdot_v16i8_2:
+; CHECK:    movi {{v[0-9]+}}.16b, #1
+; CHECK:    movi {{v[0-9]+}}.2d, #0000000000000000
+; CHECK:    sdot {{v[0-9]+}}.4s, {{v[0-9]+}}.16b, {{v[0-9]+}}.16b
+; CHECK:    addv s0, {{v[0-9]+}}.4s
+entry:
+  %0 = bitcast i8* %a1 to <16 x i8>*
+  %1 = load <16 x i8>, <16 x i8>* %0
+  %2 = sext <16 x i8> %1 to <16 x i32>
+  %3 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %2)
+  ret i32 %3
 }

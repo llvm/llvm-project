@@ -5,7 +5,8 @@ FileHeader:
 Sections:
   - Type:            TABLE
     Tables:         
-      - ElemType:        FUNCREF
+      - Index:           0
+        ElemType:        FUNCREF
         Limits:
           Flags:           [ HAS_MAX ]
           Initial:         0x00000010
@@ -17,7 +18,8 @@ Sections:
 # CHECK: Sections:
 # CHECK:  - Type:            TABLE
 # CHECK:    Tables:         
-# CHECK:      - ElemType:        FUNCREF
+# CHECK:      - Index:           0
+# CHECK:        ElemType:        FUNCREF
 # CHECK:        Limits:
 # CHECK:          Flags:           [ HAS_MAX ]
 # CHECK:          Initial:         0x00000010

@@ -27,6 +27,8 @@
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 
+#include "llvm/ADT/STLExtras.h"
+
 namespace mlir {
 namespace linalg {
 

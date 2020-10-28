@@ -21,6 +21,8 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 
+#include <unordered_map>
+
 namespace llvm {
 class DagInit;
 class Init;
@@ -228,6 +230,9 @@ public:
     // value bound by this symbol.
     std::string getVarDecl(StringRef name) const;
 
+    // Returns a variable name for the symbol named as `name`.
+    std::string getVarName(StringRef name) const;
+
   private:
     // Allow SymbolInfoMap to access private methods.
     friend class SymbolInfoMap;
@@ -246,6 +251,9 @@ public:
     // Static methods for creating SymbolInfo.
     static SymbolInfo getAttr(const Operator *op, int index) {
       return SymbolInfo(op, Kind::Attr, index);
+    }
+    static SymbolInfo getAttr() {
+      return SymbolInfo(nullptr, Kind::Attr, llvm::None);
     }
     static SymbolInfo getOperand(const Operator *op, int index) {
       return SymbolInfo(op, Kind::Operand, index);
@@ -285,9 +293,12 @@ public:
     Kind kind;          // The kind of the bound entity
     // The argument index (for `Attr` and `Operand` only)
     Optional<int> argIndex;
+    // Alternative name for the symbol. It is used in case the name
+    // is not unique. Applicable for `Operand` only.
+    Optional<std::string> alternativeName;
   };
 
-  using BaseT = llvm::StringMap<SymbolInfo>;
+  using BaseT = std::unordered_multimap<std::string, SymbolInfo>;
 
   // Iterators for accessing all symbols.
   using iterator = BaseT::iterator;
@@ -300,7 +311,7 @@ public:
   const_iterator end() const { return symbolInfoMap.end(); }
 
   // Binds the given `symbol` to the `argIndex`-th argument to the given `op`.
-  // Returns false if `symbol` is already bound.
+  // Returns false if `symbol` is already bound and symbols are not operands.
   bool bindOpArgument(StringRef symbol, const Operator &op, int argIndex);
 
   // Binds the given `symbol` to the results the given `op`. Returns false if
@@ -311,11 +322,27 @@ public:
   // is already bound.
   bool bindValue(StringRef symbol);
 
+  // Registers the given `symbol` as bound to an attr. Returns false if `symbol`
+  // is already bound.
+  bool bindAttr(StringRef symbol);
+
   // Returns true if the given `symbol` is bound.
   bool contains(StringRef symbol) const;
 
   // Returns an iterator to the information of the given symbol named as `key`.
   const_iterator find(StringRef key) const;
+
+  // Returns an iterator to the information of the given symbol named as `key`,
+  // with index `argIndex` for operator `op`.
+  const_iterator findBoundSymbol(StringRef key, const Operator &op,
+                                 int argIndex) const;
+
+  // Returns the bounds of a range that includes all the elements which
+  // bind to the `key`.
+  std::pair<iterator, iterator> getRangeOfEqualElements(StringRef key);
+
+  // Returns number of times symbol named as `key` was used.
+  int count(StringRef key) const;
 
   // Returns the number of static values of the given `symbol` corresponds to.
   // A static value is an operand/result declared in ODS. Normally a symbol only
@@ -338,6 +365,9 @@ public:
   std::string getAllRangeUse(StringRef symbol, const char *fmt = "{0}",
                              const char *separator = ", ") const;
 
+  // Assign alternative unique names to Operands that have equal names.
+  void assignUniqueAlternativeNames();
+
   // Splits the given `symbol` into a value pack name and an index. Returns the
   // value pack name and writes the index to `index` on success. Returns
   // `symbol` itself if it does not contain an index.
@@ -347,7 +377,7 @@ public:
   static StringRef getValuePackName(StringRef symbol, int *index = nullptr);
 
 private:
-  llvm::StringMap<SymbolInfo> symbolInfoMap;
+  BaseT symbolInfoMap;
 
   // Pattern instantiation location. This is intended to be used as parameter
   // to PrintFatalError() to report errors.
@@ -398,6 +428,9 @@ public:
   std::vector<IdentifierLine> getLocation() const;
 
 private:
+  // Helper function to verify variabld binding.
+  void verifyBind(bool result, StringRef symbolName);
+
   // Recursively collects all bound symbols inside the DAG tree rooted
   // at `tree` and updates the given `infoMap`.
   void collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,

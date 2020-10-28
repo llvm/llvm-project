@@ -44,9 +44,9 @@ exit:
 }
 ; CHECK-LABEL: @a.gep.resume(
 ; CHECK:         %testval = alloca %i8.array
+; CHECK-NEXT:    getelementptr inbounds %a.gep.Frame
 ; CHECK-NEXT:    %0 = bitcast %i8.array* %testval to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 100, i8* %0)
-; CHECK-NEXT:    getelementptr inbounds %a.gep.Frame
 ; CHECK-NEXT:    getelementptr inbounds %"struct.lean_future<int>::Awaiter"
 ; CHECK-NEXT:    getelementptr inbounds %i8.array, %i8.array* %testval
 ; CHECK-NEXT:    %val = load i32, i32* %Result

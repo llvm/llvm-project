@@ -21,9 +21,9 @@
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <type_traits>
@@ -111,18 +111,33 @@ mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
     : RewritePattern(opName, {}, benefit, context), marker(marker),
       options(options) {}
 
-LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewrite(
-    Operation *op, PatternRewriter &rewriter) const {
+LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
+    Operation *op, PatternRewriter &rewriter,
+    SmallVectorImpl<Value> &tensorResults) const {
   LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
   if (!linalgOp)
     return failure();
   if (failed(marker.checkAndNotify(rewriter, linalgOp)))
     return failure();
 
+  // If LinalgOp has results, they must all be tied to init tensors.
+  // We enforce this to ensure all tiled ops have been rewritten in
+  // "init tensor" form. This ensures tiling has anchor values into which to
+  // subtensor / subtensor_insert. Otherwise tiling would need to allocate which
+  // is not acceptable.
+  // This would not be the case with a special terminator op that generates the
+  // whole tensor (instead of inserting a subtensor). But the generator-based
+  // abstraction has other issues.
+  if (linalgOp.getNumInitTensors() != linalgOp.getOperation()->getNumResults())
+    return failure();
+
   Optional<TiledLinalgOp> res = tileLinalgOp(rewriter, linalgOp, options);
 
   if (!res)
     return failure();
+
+  // Return relevant information to derived pattern.
+  tensorResults = res->tensorResults;
 
   // New marker if specified.
   marker.replaceLinalgMarker(rewriter, res->op.getOperation());
@@ -242,8 +257,8 @@ LogicalResult mlir::linalg::LinalgBaseVectorizationPattern::matchAndRewrite(
 }
 
 LogicalResult mlir::linalg::applyStagedPatterns(
-    Operation *op, ArrayRef<OwningRewritePatternList> stage1Patterns,
-    const OwningRewritePatternList &stage2Patterns,
+    Operation *op, ArrayRef<FrozenRewritePatternList> stage1Patterns,
+    const FrozenRewritePatternList &stage2Patterns,
     function_ref<LogicalResult(Operation *)> stage3Lambda) {
   unsigned iteration = 0;
   (void)iteration;

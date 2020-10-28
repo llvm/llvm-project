@@ -20,6 +20,8 @@
 
 #cmakedefine01 HAVE_PPOLL
 
+#cmakedefine01 HAVE_PTSNAME_R
+
 #cmakedefine01 HAVE_SIGACTION
 
 #cmakedefine01 HAVE_PROCESS_VM_READV
@@ -50,7 +52,7 @@
 
 #cmakedefine01 LLDB_EMBED_PYTHON_HOME
 
-#cmakedefine LLDB_PYTHON_HOME "${LLDB_PYTHON_HOME}"
+#cmakedefine LLDB_PYTHON_HOME R"(${LLDB_PYTHON_HOME})"
 
 #define LLDB_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}"
 

@@ -1251,4 +1251,116 @@ TEST_F(ScalarEvolutionsTest, SCEVgetExitLimitForGuardedLoop) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, ImpliedViaAddRecStart) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "define void @foo(i32* %p) { "
+      "entry: "
+      "  %x = load i32, i32* %p, !range !0 "
+      "  br label %loop "
+      "loop: "
+      "  %iv = phi i32 [ %x, %entry], [%iv.next, %backedge] "
+      "  %ne.check = icmp ne i32 %iv, 0 "
+      "  br i1 %ne.check, label %backedge, label %exit "
+      "backedge: "
+      "  %iv.next = add i32 %iv, -1 "
+      "  br label %loop "
+      "exit:"
+      "  ret void "
+      "} "
+      "!0 = !{i32 0, i32 2147483647}",
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *X = SE.getSCEV(getInstructionByName(F, "x"));
+    auto *Context = getInstructionByName(F, "iv.next");
+    EXPECT_TRUE(SE.isKnownPredicateAt(ICmpInst::ICMP_NE, X,
+                                      SE.getZero(X->getType()), Context));
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, UnsignedIsImpliedViaOperations) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define void @foo(i32* %p1, i32* %p2) { "
+                          "entry: "
+                          "  %x = load i32, i32* %p1, !range !0 "
+                          "  %cond = icmp ne i32 %x, 0 "
+                          "  br i1 %cond, label %guarded, label %exit "
+                          "guarded: "
+                          "  %y = add i32 %x, -1 "
+                          "  ret void "
+                          "exit: "
+                          "  ret void "
+                          "} "
+                          "!0 = !{i32 0, i32 2147483647}",
+                          Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *X = SE.getSCEV(getInstructionByName(F, "x"));
+    auto *Y = SE.getSCEV(getInstructionByName(F, "y"));
+    auto *Guarded = getInstructionByName(F, "y")->getParent();
+    ASSERT_TRUE(Guarded);
+    EXPECT_TRUE(
+        SE.isBasicBlockEntryGuardedByCond(Guarded, ICmpInst::ICMP_ULT, Y, X));
+    EXPECT_TRUE(
+        SE.isBasicBlockEntryGuardedByCond(Guarded, ICmpInst::ICMP_UGT, X, Y));
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, ProveImplicationViaNarrowing) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "define i32 @foo(i32 %start, i32* %q) { "
+      "entry: "
+      "  %wide.start = zext i32 %start to i64 "
+      "  br label %loop "
+      "loop: "
+      "  %wide.iv = phi i64 [%wide.start, %entry], [%wide.iv.next, %backedge] "
+      "  %iv = phi i32 [%start, %entry], [%iv.next, %backedge] "
+      "  %cond = icmp eq i64 %wide.iv, 0 "
+      "  br i1 %cond, label %exit, label %backedge "
+      "backedge: "
+      "  %iv.next = add i32 %iv, -1 "
+      "  %index = zext i32 %iv.next to i64 "
+      "  %load.addr = getelementptr i32, i32* %q, i64 %index "
+      "  %stop = load i32, i32* %load.addr "
+      "  %loop.cond = icmp eq i32 %stop, 0 "
+      "  %wide.iv.next = add nsw i64 %wide.iv, -1 "
+      "  br i1 %loop.cond, label %loop, label %failure "
+      "exit: "
+      "  ret i32 0 "
+      "failure: "
+      "  unreachable "
+      "} ",
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *IV = SE.getSCEV(getInstructionByName(F, "iv"));
+    auto *Zero = SE.getZero(IV->getType());
+    auto *Backedge = getInstructionByName(F, "iv.next")->getParent();
+    ASSERT_TRUE(Backedge);
+    (void)IV;
+    (void)Zero;
+    // FIXME: This can only be proved with turned on option
+    // scalar-evolution-use-expensive-range-sharpening which is currently off.
+    // Enable the check once it's switched true by default.
+    // EXPECT_TRUE(SE.isBasicBlockEntryGuardedByCond(Backedge,
+    //                                               ICmpInst::ICMP_UGT,
+    //                                               IV, Zero));
+  });
+}
+
 }  // end namespace llvm

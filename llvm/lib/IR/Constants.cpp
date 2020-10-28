@@ -737,6 +737,40 @@ Constant *Constant::replaceUndefsWith(Constant *C, Constant *Replacement) {
   return ConstantVector::get(NewC);
 }
 
+Constant *Constant::mergeUndefsWith(Constant *C, Constant *Other) {
+  assert(C && Other && "Expected non-nullptr constant arguments");
+  if (match(C, m_Undef()))
+    return C;
+
+  Type *Ty = C->getType();
+  if (match(Other, m_Undef()))
+    return UndefValue::get(Ty);
+
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  if (!VTy)
+    return C;
+
+  Type *EltTy = VTy->getElementType();
+  unsigned NumElts = VTy->getNumElements();
+  assert(isa<FixedVectorType>(Other->getType()) &&
+         cast<FixedVectorType>(Other->getType())->getNumElements() == NumElts &&
+         "Type mismatch");
+
+  bool FoundExtraUndef = false;
+  SmallVector<Constant *, 32> NewC(NumElts);
+  for (unsigned I = 0; I != NumElts; ++I) {
+    NewC[I] = C->getAggregateElement(I);
+    Constant *OtherEltC = Other->getAggregateElement(I);
+    assert(NewC[I] && OtherEltC && "Unknown vector element");
+    if (!match(NewC[I], m_Undef()) && match(OtherEltC, m_Undef())) {
+      NewC[I] = UndefValue::get(EltTy);
+      FoundExtraUndef = true;
+    }
+  }
+  if (FoundExtraUndef)
+    return ConstantVector::get(NewC);
+  return C;
+}
 
 //===----------------------------------------------------------------------===//
 //                                ConstantInt
@@ -838,30 +872,12 @@ void ConstantInt::destroyConstantImpl() {
 //                                ConstantFP
 //===----------------------------------------------------------------------===//
 
-static const fltSemantics *TypeToFloatSemantics(Type *Ty) {
-  if (Ty->isHalfTy())
-    return &APFloat::IEEEhalf();
-  if (Ty->isBFloatTy())
-    return &APFloat::BFloat();
-  if (Ty->isFloatTy())
-    return &APFloat::IEEEsingle();
-  if (Ty->isDoubleTy())
-    return &APFloat::IEEEdouble();
-  if (Ty->isX86_FP80Ty())
-    return &APFloat::x87DoubleExtended();
-  else if (Ty->isFP128Ty())
-    return &APFloat::IEEEquad();
-
-  assert(Ty->isPPC_FP128Ty() && "Unknown FP format");
-  return &APFloat::PPCDoubleDouble();
-}
-
 Constant *ConstantFP::get(Type *Ty, double V) {
   LLVMContext &Context = Ty->getContext();
 
   APFloat FV(V);
   bool ignored;
-  FV.convert(*TypeToFloatSemantics(Ty->getScalarType()),
+  FV.convert(Ty->getScalarType()->getFltSemantics(),
              APFloat::rmNearestTiesToEven, &ignored);
   Constant *C = get(Context, FV);
 
@@ -887,7 +903,7 @@ Constant *ConstantFP::get(Type *Ty, const APFloat &V) {
 Constant *ConstantFP::get(Type *Ty, StringRef Str) {
   LLVMContext &Context = Ty->getContext();
 
-  APFloat FV(*TypeToFloatSemantics(Ty->getScalarType()), Str);
+  APFloat FV(Ty->getScalarType()->getFltSemantics(), Str);
   Constant *C = get(Context, FV);
 
   // For vectors, broadcast the value.
@@ -898,7 +914,7 @@ Constant *ConstantFP::get(Type *Ty, StringRef Str) {
 }
 
 Constant *ConstantFP::getNaN(Type *Ty, bool Negative, uint64_t Payload) {
-  const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
+  const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NaN = APFloat::getNaN(Semantics, Negative, Payload);
   Constant *C = get(Ty->getContext(), NaN);
 
@@ -909,7 +925,7 @@ Constant *ConstantFP::getNaN(Type *Ty, bool Negative, uint64_t Payload) {
 }
 
 Constant *ConstantFP::getQNaN(Type *Ty, bool Negative, APInt *Payload) {
-  const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
+  const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NaN = APFloat::getQNaN(Semantics, Negative, Payload);
   Constant *C = get(Ty->getContext(), NaN);
 
@@ -920,7 +936,7 @@ Constant *ConstantFP::getQNaN(Type *Ty, bool Negative, APInt *Payload) {
 }
 
 Constant *ConstantFP::getSNaN(Type *Ty, bool Negative, APInt *Payload) {
-  const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
+  const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NaN = APFloat::getSNaN(Semantics, Negative, Payload);
   Constant *C = get(Ty->getContext(), NaN);
 
@@ -931,7 +947,7 @@ Constant *ConstantFP::getSNaN(Type *Ty, bool Negative, APInt *Payload) {
 }
 
 Constant *ConstantFP::getNegativeZero(Type *Ty) {
-  const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
+  const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NegZero = APFloat::getZero(Semantics, /*Negative=*/true);
   Constant *C = get(Ty->getContext(), NegZero);
 
@@ -957,24 +973,7 @@ ConstantFP* ConstantFP::get(LLVMContext &Context, const APFloat& V) {
   std::unique_ptr<ConstantFP> &Slot = pImpl->FPConstants[V];
 
   if (!Slot) {
-    Type *Ty;
-    if (&V.getSemantics() == &APFloat::IEEEhalf())
-      Ty = Type::getHalfTy(Context);
-    else if (&V.getSemantics() == &APFloat::BFloat())
-      Ty = Type::getBFloatTy(Context);
-    else if (&V.getSemantics() == &APFloat::IEEEsingle())
-      Ty = Type::getFloatTy(Context);
-    else if (&V.getSemantics() == &APFloat::IEEEdouble())
-      Ty = Type::getDoubleTy(Context);
-    else if (&V.getSemantics() == &APFloat::x87DoubleExtended())
-      Ty = Type::getX86_FP80Ty(Context);
-    else if (&V.getSemantics() == &APFloat::IEEEquad())
-      Ty = Type::getFP128Ty(Context);
-    else {
-      assert(&V.getSemantics() == &APFloat::PPCDoubleDouble() &&
-             "Unknown FP format");
-      Ty = Type::getPPC_FP128Ty(Context);
-    }
+    Type *Ty = Type::getFloatingPointTy(Context, V.getSemantics());
     Slot.reset(new ConstantFP(Ty, V));
   }
 
@@ -982,7 +981,7 @@ ConstantFP* ConstantFP::get(LLVMContext &Context, const APFloat& V) {
 }
 
 Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
-  const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
+  const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   Constant *C = get(Ty->getContext(), APFloat::getInf(Semantics, Negative));
 
   if (VectorType *VTy = dyn_cast<VectorType>(Ty))
@@ -993,7 +992,7 @@ Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
 
 ConstantFP::ConstantFP(Type *Ty, const APFloat &V)
     : ConstantData(Ty, ConstantFPVal), Val(V) {
-  assert(&V.getSemantics() == TypeToFloatSemantics(Ty) &&
+  assert(&V.getSemantics() == &Ty->getFltSemantics() &&
          "FP type Mismatch");
 }
 
@@ -2582,6 +2581,35 @@ Constant *ConstantExpr::getAShr(Constant *C1, Constant *C2, bool isExact) {
              isExact ? PossiblyExactOperator::IsExact : 0);
 }
 
+Constant *ConstantExpr::getExactLogBase2(Constant *C) {
+  Type *Ty = C->getType();
+  const APInt *IVal;
+  if (match(C, m_APInt(IVal)) && IVal->isPowerOf2())
+    return ConstantInt::get(Ty, IVal->logBase2());
+
+  // FIXME: We can extract pow of 2 of splat constant for scalable vectors.
+  auto *VecTy = dyn_cast<FixedVectorType>(Ty);
+  if (!VecTy)
+    return nullptr;
+
+  SmallVector<Constant *, 4> Elts;
+  for (unsigned I = 0, E = VecTy->getNumElements(); I != E; ++I) {
+    Constant *Elt = C->getAggregateElement(I);
+    if (!Elt)
+      return nullptr;
+    // Note that log2(iN undef) is *NOT* iN undef, because log2(iN undef) u< N.
+    if (isa<UndefValue>(Elt)) {
+      Elts.push_back(Constant::getNullValue(Ty->getScalarType()));
+      continue;
+    }
+    if (!match(Elt, m_APInt(IVal)) || !IVal->isPowerOf2())
+      return nullptr;
+    Elts.push_back(ConstantInt::get(Ty->getScalarType(), IVal->logBase2()));
+  }
+
+  return ConstantVector::get(Elts);
+}
+
 Constant *ConstantExpr::getBinOpIdentity(unsigned Opcode, Type *Ty,
                                          bool AllowRHSConstant) {
   assert(Instruction::isBinaryOp(Opcode) && "Only binops allowed");
@@ -2755,56 +2783,58 @@ Constant *ConstantDataSequential::getImpl(StringRef Elements, Type *Ty) {
   // body but different types.  For example, 0,0,0,1 could be a 4 element array
   // of i8, or a 1-element array of i32.  They'll both end up in the same
   /// StringMap bucket, linked up by their Next pointers.  Walk the list.
-  ConstantDataSequential **Entry = &Slot.second;
-  for (ConstantDataSequential *Node = *Entry; Node;
-       Entry = &Node->Next, Node = *Entry)
-    if (Node->getType() == Ty)
-      return Node;
+  std::unique_ptr<ConstantDataSequential> *Entry = &Slot.second;
+  for (; *Entry; Entry = &(*Entry)->Next)
+    if ((*Entry)->getType() == Ty)
+      return Entry->get();
 
   // Okay, we didn't get a hit.  Create a node of the right class, link it in,
   // and return it.
-  if (isa<ArrayType>(Ty))
-    return *Entry = new ConstantDataArray(Ty, Slot.first().data());
+  if (isa<ArrayType>(Ty)) {
+    // Use reset because std::make_unique can't access the constructor.
+    Entry->reset(new ConstantDataArray(Ty, Slot.first().data()));
+    return Entry->get();
+  }
 
   assert(isa<VectorType>(Ty));
-  return *Entry = new ConstantDataVector(Ty, Slot.first().data());
+  // Use reset because std::make_unique can't access the constructor.
+  Entry->reset(new ConstantDataVector(Ty, Slot.first().data()));
+  return Entry->get();
 }
 
 void ConstantDataSequential::destroyConstantImpl() {
   // Remove the constant from the StringMap.
-  StringMap<ConstantDataSequential*> &CDSConstants =
-    getType()->getContext().pImpl->CDSConstants;
+  StringMap<std::unique_ptr<ConstantDataSequential>> &CDSConstants =
+      getType()->getContext().pImpl->CDSConstants;
 
-  StringMap<ConstantDataSequential*>::iterator Slot =
-    CDSConstants.find(getRawDataValues());
+  auto Slot = CDSConstants.find(getRawDataValues());
 
   assert(Slot != CDSConstants.end() && "CDS not found in uniquing table");
 
-  ConstantDataSequential **Entry = &Slot->getValue();
+  std::unique_ptr<ConstantDataSequential> *Entry = &Slot->getValue();
 
   // Remove the entry from the hash table.
   if (!(*Entry)->Next) {
     // If there is only one value in the bucket (common case) it must be this
     // entry, and removing the entry should remove the bucket completely.
-    assert((*Entry) == this && "Hash mismatch in ConstantDataSequential");
+    assert(Entry->get() == this && "Hash mismatch in ConstantDataSequential");
     getContext().pImpl->CDSConstants.erase(Slot);
-  } else {
-    // Otherwise, there are multiple entries linked off the bucket, unlink the
-    // node we care about but keep the bucket around.
-    for (ConstantDataSequential *Node = *Entry; ;
-         Entry = &Node->Next, Node = *Entry) {
-      assert(Node && "Didn't find entry in its uniquing hash table!");
-      // If we found our entry, unlink it from the list and we're done.
-      if (Node == this) {
-        *Entry = Node->Next;
-        break;
-      }
-    }
+    return;
   }
 
-  // If we were part of a list, make sure that we don't delete the list that is
-  // still owned by the uniquing map.
-  Next = nullptr;
+  // Otherwise, there are multiple entries linked off the bucket, unlink the
+  // node we care about but keep the bucket around.
+  while (true) {
+    std::unique_ptr<ConstantDataSequential> &Node = *Entry;
+    assert(Node && "Didn't find entry in its uniquing hash table!");
+    // If we found our entry, unlink it from the list and we're done.
+    if (Node.get() == this) {
+      Node = std::move(Node->Next);
+      return;
+    }
+
+    Entry = &Node->Next;
+  }
 }
 
 /// getFP() constructors - Return a constant of array type with a float

@@ -131,6 +131,7 @@ fi
 echo "@@@ Running tests for libc++ @@@"
 "${LLVM_BUILD_DIR}/bin/llvm-lit" -sv "${MONOREPO_ROOT}/libcxx/test" \
                                  --param=enable_experimental=false \
+                                 --param=enable_debug_tests=false \
                                  ${ENABLE_FILESYSTEM} \
                                  --param=cxx_headers="${LLVM_INSTALL_DIR}/include/c++/v1" \
                                  --param=std="${STD}" \

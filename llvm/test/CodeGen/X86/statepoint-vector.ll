@@ -32,11 +32,11 @@ define <2 x i8 addrspace(1)*> @test2(<2 x i8 addrspace(1)*> %obj, i64 %offset) g
 ; CHECK-NEXT:    movq %rdi, %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; CHECK-NEXT:    paddq %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movdqa %xmm1, (%rsp)
+; CHECK-NEXT:    movdqa %xmm0, {{[0-9]*}}(%rsp)
+; CHECK-NEXT:    movdqa %xmm1, {{[0-9]*}}(%rsp)
 ; CHECK-NEXT:    callq do_safepoint
 ; CHECK-NEXT:  .Ltmp1:
-; CHECK-NEXT:    movaps (%rsp), %xmm0
+; CHECK-NEXT:    movaps {{[0-9]*}}(%rsp), %xmm0
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -163,13 +163,13 @@ entry:
 ; CHECK: .short 16
 ; CHECK: .short	7
 ; CHECK: .short	0
-; CHECK: .long	16
+; CHECK: .long	0
 ; CHECK: .byte	3
 ; CHECK: .byte	0
 ; CHECK: .short 16
 ; CHECK: .short	7
 ; CHECK: .short	0
-; CHECK: .long	0
+; CHECK: .long	16
 
 ; CHECK: .Ltmp2-test3
 ; Check for the four spill slots

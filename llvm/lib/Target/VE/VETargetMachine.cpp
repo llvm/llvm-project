@@ -23,7 +23,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ve"
 
-extern "C" void LLVMInitializeVETarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVETarget() {
   // Register the target.
   RegisterTargetMachine<VETargetMachine> X(getTheVETarget());
 }
@@ -96,12 +96,19 @@ public:
     return getTM<VETargetMachine>();
   }
 
+  void addIRPasses() override;
   bool addInstSelector() override;
 };
 } // namespace
 
 TargetPassConfig *VETargetMachine::createPassConfig(PassManagerBase &PM) {
   return new VEPassConfig(*this, PM);
+}
+
+void VEPassConfig::addIRPasses() {
+  // VE requires atomic expand pass.
+  addPass(createAtomicExpandPass());
+  TargetPassConfig::addIRPasses();
 }
 
 bool VEPassConfig::addInstSelector() {

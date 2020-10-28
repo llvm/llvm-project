@@ -163,6 +163,27 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
   return IC.replaceInstUsesWith(II, NewCall);
 }
 
+bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Value *Op0, const Value *Op1,
+                                           InstCombiner &IC) const {
+  // The legacy behaviour is that multiplying +/-0.0 by anything, even NaN or
+  // infinity, gives +0.0. If we can prove we don't have one of the special
+  // cases then we can use a normal multiply instead.
+  // TODO: Create and use isKnownFiniteNonZero instead of just matching
+  // constants here.
+  if (match(Op0, PatternMatch::m_FiniteNonZero()) ||
+      match(Op1, PatternMatch::m_FiniteNonZero())) {
+    // One operand is not zero or infinity or NaN.
+    return true;
+  }
+  auto *TLI = &IC.getTargetLibraryInfo();
+  if (isKnownNeverInfinity(Op0, TLI) && isKnownNeverNaN(Op0, TLI) &&
+      isKnownNeverInfinity(Op1, TLI) && isKnownNeverNaN(Op1, TLI)) {
+    // Neither operand is infinity or NaN.
+    return true;
+  }
+  return false;
+}
+
 Optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
@@ -821,6 +842,53 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, Op0);
     }
 
+    break;
+  }
+  case Intrinsic::amdgcn_fmul_legacy: {
+    Value *Op0 = II.getArgOperand(0);
+    Value *Op1 = II.getArgOperand(1);
+
+    // The legacy behaviour is that multiplying +/-0.0 by anything, even NaN or
+    // infinity, gives +0.0.
+    // TODO: Move to InstSimplify?
+    if (match(Op0, PatternMatch::m_AnyZeroFP()) ||
+        match(Op1, PatternMatch::m_AnyZeroFP()))
+      return IC.replaceInstUsesWith(II, ConstantFP::getNullValue(II.getType()));
+
+    // If we can prove we don't have one of the special cases then we can use a
+    // normal fmul instruction instead.
+    if (canSimplifyLegacyMulToMul(Op0, Op1, IC)) {
+      auto *FMul = IC.Builder.CreateFMulFMF(Op0, Op1, &II);
+      FMul->takeName(&II);
+      return IC.replaceInstUsesWith(II, FMul);
+    }
+    break;
+  }
+  case Intrinsic::amdgcn_fma_legacy: {
+    Value *Op0 = II.getArgOperand(0);
+    Value *Op1 = II.getArgOperand(1);
+    Value *Op2 = II.getArgOperand(2);
+
+    // The legacy behaviour is that multiplying +/-0.0 by anything, even NaN or
+    // infinity, gives +0.0.
+    // TODO: Move to InstSimplify?
+    if (match(Op0, PatternMatch::m_AnyZeroFP()) ||
+        match(Op1, PatternMatch::m_AnyZeroFP())) {
+      // It's tempting to just return Op2 here, but that would give the wrong
+      // result if Op2 was -0.0.
+      auto *Zero = ConstantFP::getNullValue(II.getType());
+      auto *FAdd = IC.Builder.CreateFAddFMF(Zero, Op2, &II);
+      FAdd->takeName(&II);
+      return IC.replaceInstUsesWith(II, FAdd);
+    }
+
+    // If we can prove we don't have one of the special cases then we can use a
+    // normal fma instead.
+    if (canSimplifyLegacyMulToMul(Op0, Op1, IC)) {
+      II.setCalledOperand(Intrinsic::getDeclaration(
+          II.getModule(), Intrinsic::fma, II.getType()));
+      return &II;
+    }
     break;
   }
   default: {

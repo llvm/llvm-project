@@ -42,15 +42,34 @@ config("compiler_defaults") {
   cflags = target_flags
   ldflags = target_flags + target_ldflags
 
-  if (host_os == "mac" && clang_base_path != "") {
+  if ((current_os == "ios" || current_os == "mac") && clang_base_path != "") {
+    if (current_os == "ios" && current_cpu == "arm64") {
+      sdk_path = ios_sdk_path
+    } else if (current_os == "ios" && current_cpu == "x64") {
+      sdk_path = iossim_sdk_path
+    } else if (current_os == "mac") {
+      sdk_path = mac_sdk_path
+    }
     cflags += [
       "-isysroot",
-      mac_sdk_path,
+      sdk_path,
     ]
     ldflags += [
       "-isysroot",
-      mac_sdk_path,
+      sdk_path,
     ]
+  }
+
+  # Mostly for compiler-rt, see compiler-rt/cmake/config-ix.cmake
+  if (current_os == "ios") {
+    asmflags += [ "-miphoneos-version-min=8.0" ]
+    cflags += [ "-miphoneos-version-min=8.0" ]
+    ldflags += [ "-miphoneos-version-min=8.0" ]
+  }
+  if (current_os == "mac") {
+    asmflags += [ "-mmacosx-version-min=10.10" ]
+    cflags += [ "-mmacosx-version-min=10.10" ]
+    ldflags += [ "-mmacosx-version-min=10.10" ]
   }
 
   if (host_os != "win") {
@@ -256,6 +275,27 @@ config("compiler_defaults") {
     cflags += [ "-fsanitize=thread" ]
     ldflags += [ "-fsanitize=thread" ]
   }
+
+  if (use_thinlto) {
+    assert(is_clang, "ThinLTO only supported on Clang")
+
+    lto_opt_level = 2
+
+    cflags += [ "-flto=thin" ]
+
+    if (host_os == "win") {
+      ldflags += [
+        "/opt:lldlto=" + lto_opt_level,
+        "/opt:lldltojobs=" + max_jobs_per_lto_link,
+      ]
+    } else {
+      ldflags += [
+        "-flto=thin",
+        "-Wl,--thinlto-jobs=" + max_jobs_per_lto_link,
+        "-Wl,--lto-O" + lto_opt_level,
+      ]
+    }
+  }
 }
 
 config("no_exceptions") {
@@ -275,7 +315,7 @@ config("no_rtti") {
 # To make an archive that can be distributed, you need to remove this config and
 # set complete_static_lib.
 config("thin_archive") {
-  if (current_os != "win" && current_os != "mac") {
+  if (current_os != "ios" && current_os != "mac" && current_os != "win") {
     arflags = [ "-T" ]
   }
 }

@@ -59,8 +59,6 @@ SymbolFileSymtab::SymbolFileSymtab(ObjectFileSP objfile_sp)
     : SymbolFile(std::move(objfile_sp)), m_source_indexes(), m_func_indexes(),
       m_code_indexes(), m_objc_class_name_to_index() {}
 
-SymbolFileSymtab::~SymbolFileSymtab() {}
-
 uint32_t SymbolFileSymtab::CalculateAbilities() {
   uint32_t abilities = 0;
   if (m_objfile_sp) {

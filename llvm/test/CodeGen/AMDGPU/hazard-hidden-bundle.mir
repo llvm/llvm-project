@@ -1,6 +1,6 @@
 # RUN: llc -march=amdgcn -mcpu=gfx902 -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,XNACK,GCX9 %s
 # RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,NOXNACK,GFX9 %s
-# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-WavefrontSize32,+WavefrontSize64 -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,NOXNACK,GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,NOXNACK,GFX10 %s
 
 # GCN-LABEL: name: break_smem_clause_simple_load_smrd8_ptr_hidden_bundle
 # GCN: bb.0:
@@ -40,10 +40,7 @@ body:	|
 # GCN-LABEL: name: vmem_vcc_hazard_ignore_bundle_instr
 # GCN:      S_LOAD_DWORDX2_IMM
 # GCN-NEXT: }
-# GCN-NEXT: S_NOP
-# GCN-NEXT: S_NOP
-# GCN-NEXT: S_NOP
-# GCN-NEXT: S_NOP
+# GCN-NEXT: S_NOP 3
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
 ---
 name: vmem_vcc_hazard_ignore_bundle_instr
@@ -63,11 +60,7 @@ body: |
 
 # GCN-LABEL: name: vmem_vcc_min_of_two_after_bundle
 # GCN:      bb.2:
-# GCN-NEXT: S_NOP
-# GCN-NEXT: S_NOP
-# GCN-NEXT: S_NOP
-# GCN-NEXT: S_NOP
-# GCN-NEXT: S_NOP
+# GCN-NEXT: S_NOP 4
 # GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
 ---
 name: vmem_vcc_min_of_two_after_bundle

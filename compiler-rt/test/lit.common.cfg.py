@@ -57,6 +57,8 @@ config.available_features.add(compiler_id)
 # If needed, add cflag for shadow scale.
 if config.asan_shadow_scale != '':
   config.target_cflags += " -mllvm -asan-mapping-scale=" + config.asan_shadow_scale
+if config.memprof_shadow_scale != '':
+  config.target_cflags += " -mllvm -memprof-mapping-scale=" + config.memprof_shadow_scale
 
 # BFD linker in 64-bit android toolchains fails to find libc++_shared.so, which
 # is a transitive shared library dependency (via asan runtime).
@@ -132,9 +134,21 @@ if config.host_os == 'NetBSD':
 else:
   config.substitutions.append( ('%run_nomprotect', '%run') )
 
+# Copied from libcxx's config.py
+def get_lit_conf(name, default=None):
+    # Allow overriding on the command line using --param=<name>=<val>
+    val = lit_config.params.get(name, None)
+    if val is None:
+        val = getattr(config, name, None)
+        if val is None:
+            val = default
+    return val
+
+emulator = get_lit_conf('emulator', None)
+
 # Allow tests to be executed on a simulator or remotely.
-if config.emulator:
-  config.substitutions.append( ('%run', config.emulator) )
+if emulator:
+  config.substitutions.append( ('%run', emulator) )
   config.substitutions.append( ('%env ', "env ") )
   # TODO: Implement `%device_rm` to perform removal of files in the emulator.
   # For now just make it a no-op.
@@ -343,6 +357,14 @@ if config.android:
     config.environment['ANDROID_SERIAL'] = config.android_serial
 
   adb = os.environ.get('ADB', 'adb')
+
+  # These are needed for tests to upload/download temp files, such as
+  # suppression-files, to device.
+  config.substitutions.append( ('%device_rundir', "/data/local/tmp/Output") )
+  config.substitutions.append( ('%push_to_device', "%s -s '%s' push " % (adb, env['ANDROID_SERIAL']) ) )
+  config.substitutions.append( ('%pull_from_device', "%s -s '%s' pull " % (adb, env['ANDROID_SERIAL']) ) )
+  config.substitutions.append( ('%adb_shell ', "%s -s '%s' shell " % (adb, env['ANDROID_SERIAL']) ) )
+
   try:
     android_api_level_str = subprocess.check_output([adb, "shell", "getprop", "ro.build.version.sdk"], env=env).rstrip()
   except (subprocess.CalledProcessError, OSError):
@@ -361,6 +383,11 @@ if config.android:
   subprocess.check_call([adb, "shell", "mkdir", "-p", android_tmpdir], env=env)
   for file in config.android_files_to_push:
     subprocess.check_call([adb, "push", file, android_tmpdir], env=env)
+else:
+  config.substitutions.append( ('%device_rundir', "") )
+  config.substitutions.append( ('%push_to_device', "echo ") )
+  config.substitutions.append( ('%pull_from_device', "echo ") )
+  config.substitutions.append( ('%adb_shell', "echo ") )
 
 if config.host_os == 'Linux':
   # detect whether we are using glibc, and which version
@@ -541,6 +568,11 @@ if config.asan_shadow_scale:
   config.available_features.add("shadow-scale-%s" % config.asan_shadow_scale)
 else:
   config.available_features.add("shadow-scale-3")
+
+if config.memprof_shadow_scale:
+  config.available_features.add("memprof-shadow-scale-%s" % config.memprof_shadow_scale)
+else:
+  config.available_features.add("memprof-shadow-scale-3")
 
 if config.expensive_checks:
   config.available_features.add("expensive_checks")

@@ -118,6 +118,7 @@
 // CHECK-NEXT: ObjCExternallyRetained (SubjectMatchRule_variable_not_is_parameter, SubjectMatchRule_function, SubjectMatchRule_block, SubjectMatchRule_objc_method)
 // CHECK-NEXT: ObjCMethodFamily (SubjectMatchRule_objc_method)
 // CHECK-NEXT: ObjCNonLazyClass (SubjectMatchRule_objc_interface, SubjectMatchRule_objc_implementation)
+// CHECK-NEXT: ObjCNonRuntimeProtocol (SubjectMatchRule_objc_protocol)
 // CHECK-NEXT: ObjCPreciseLifetime (SubjectMatchRule_variable)
 // CHECK-NEXT: ObjCRequiresPropertyDefs (SubjectMatchRule_objc_interface)
 // CHECK-NEXT: ObjCRequiresSuper (SubjectMatchRule_objc_method)

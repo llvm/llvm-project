@@ -33,6 +33,10 @@ namespace NVVM {
 class NVVMDialect;
 } // end namespace NVVM
 
+namespace pdl_interp {
+class PDLInterpDialect;
+} // end namespace pdl_interp
+
 namespace ROCDL {
 class ROCDLDialect;
 } // end namespace ROCDL

@@ -15,16 +15,16 @@ spv.module Logical GLSL450 {
     %7 = spv.CompositeInsert %value2, %6[2 : i32] : f32 into !spv.array<4xf32>
     %8 = spv.CompositeInsert %value0, %7[3 : i32] : f32 into !spv.array<4xf32>
 
-    %9 = spv.undef : !spv.struct<f32, i32, f32>
-    // CHECK: spv.CompositeConstruct {{%.*}}, {{%.*}}, {{%.*}} : !spv.struct<f32, i32, f32>
-    %10 = spv.CompositeInsert %value0, %9[0 : i32] : f32 into !spv.struct<f32, i32, f32>
-    %11 = spv.CompositeInsert %value3, %10[1 : i32] : i32 into !spv.struct<f32, i32, f32>
-    %12 = spv.CompositeInsert %value1, %11[2 : i32] : f32 into !spv.struct<f32, i32, f32>
+    %9 = spv.undef : !spv.struct<(f32, i32, f32)>
+    // CHECK: spv.CompositeConstruct {{%.*}}, {{%.*}}, {{%.*}} : !spv.struct<(f32, i32, f32)>
+    %10 = spv.CompositeInsert %value0, %9[0 : i32] : f32 into !spv.struct<(f32, i32, f32)>
+    %11 = spv.CompositeInsert %value3, %10[1 : i32] : i32 into !spv.struct<(f32, i32, f32)>
+    %12 = spv.CompositeInsert %value1, %11[2 : i32] : f32 into !spv.struct<(f32, i32, f32)>
 
-    %13 = spv.undef : !spv.struct<f32, !spv.array<3xf32>>
-    // CHECK: spv.CompositeConstruct {{%.*}}, {{%.*}} : !spv.struct<f32, !spv.array<3 x f32>>
-    %14 = spv.CompositeInsert %value0, %13[0 : i32] : f32 into !spv.struct<f32, !spv.array<3xf32>>
-    %15 = spv.CompositeInsert %value4, %14[1 : i32] : !spv.array<3xf32> into !spv.struct<f32, !spv.array<3xf32>>
+    %13 = spv.undef : !spv.struct<(f32, !spv.array<3xf32>)>
+    // CHECK: spv.CompositeConstruct {{%.*}}, {{%.*}} : !spv.struct<(f32, !spv.array<3 x f32>)>
+    %14 = spv.CompositeInsert %value0, %13[0 : i32] : f32 into !spv.struct<(f32, !spv.array<3xf32>)>
+    %15 = spv.CompositeInsert %value4, %14[1 : i32] : !spv.array<3xf32> into !spv.struct<(f32, !spv.array<3xf32>)>
 
     spv.ReturnValue %3 : vector<3xf32>
   }

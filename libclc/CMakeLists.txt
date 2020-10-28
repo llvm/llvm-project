@@ -184,11 +184,11 @@ if( ENABLE_RUNTIME_SUBNORMAL )
 		DESTINATION ${CMAKE_INSTALL_DATADIR}/clc )
 endif()
 
-find_program( PYTHON python )
+find_package( Python3 REQUIRED COMPONENTS Interpreter )
 file( TO_CMAKE_PATH ${CMAKE_SOURCE_DIR}/generic/lib/gen_convert.py script_loc )
 add_custom_command(
 	OUTPUT convert.cl
-	COMMAND ${PYTHON} ${script_loc} > convert.cl
+	COMMAND ${Python3_EXECUTABLE} ${script_loc} > convert.cl
 	DEPENDS ${script_loc} )
 add_custom_target( "generate_convert.cl" DEPENDS convert.cl )
 

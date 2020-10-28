@@ -65,6 +65,12 @@ public:
   /// `argIndices` is allowed to have duplicates and can be in any order.
   void eraseArguments(ArrayRef<unsigned> argIndices);
 
+  /// Erase a single result at `resultIndex`.
+  void eraseResult(unsigned resultIndex) { eraseResults({resultIndex}); }
+  /// Erases the results listed in `resultIndices`.
+  /// `resultIndices` is allowed to have duplicates and can be in any order.
+  void eraseResults(ArrayRef<unsigned> resultIndices);
+
   /// Create a deep copy of this function and all of its blocks, remapping
   /// any operands that use values outside of the function using the map that is
   /// provided (leaving them alone if no entry is present). If the mapper

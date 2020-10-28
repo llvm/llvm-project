@@ -217,11 +217,11 @@ namespace ParameterScopes {
 
   const int k = 42;
   constexpr const int &ObscureTheTruth(const int &a) { return a; }
-  constexpr const int &MaybeReturnJunk(bool b, const int a) { // expected-note 2{{declared here}}
+  constexpr const int &MaybeReturnJunk(bool b, const int a) {
     return ObscureTheTruth(b ? a : k);
   }
   static_assert(MaybeReturnJunk(false, 0) == 42, ""); // ok
-  constexpr int a = MaybeReturnJunk(true, 0); // expected-error {{constant expression}} expected-note {{read of variable whose lifetime has ended}}
+  constexpr int a = MaybeReturnJunk(true, 0); // expected-error {{constant expression}} expected-note {{read of object outside its lifetime}}
 
   constexpr const int MaybeReturnNonstaticRef(bool b, const int a) {
     return ObscureTheTruth(b ? a : k);
@@ -230,7 +230,7 @@ namespace ParameterScopes {
   constexpr int b = MaybeReturnNonstaticRef(true, 0); // ok
 
   constexpr int InternalReturnJunk(int n) {
-    return MaybeReturnJunk(true, n); // expected-note {{read of variable whose lifetime has ended}}
+    return MaybeReturnJunk(true, n); // expected-note {{read of object outside its lifetime}}
   }
   constexpr int n3 = InternalReturnJunk(0); // expected-error {{must be initialized by a constant expression}} expected-note {{in call to 'InternalReturnJunk(0)'}}
 
@@ -409,12 +409,23 @@ namespace ConstAddedByReference {
   const int &r = (0);
   constexpr int n = r;
 
+  int &&r2 = 0; // expected-note {{created here}}
+  constexpr int n2 = r2; // expected-error {{constant}} expected-note {{read of temporary}}
+
   struct A { constexpr operator int() const { return 0; }};
   struct B { constexpr operator const int() const { return 0; }};
   const int &ra = A();
   const int &rb = B();
   constexpr int na = ra;
   constexpr int nb = rb;
+
+  struct C { int &&r; };
+  constexpr C c1 = {1};
+  constexpr int &c1r = c1.r;
+  constexpr const C &c2 = {2};
+  constexpr int &c2r = c2.r;
+  constexpr C &&c3 = {3}; // expected-note {{created here}}
+  constexpr int &c3r = c3.r; // expected-error {{constant}} expected-note {{read of temporary}}
 }
 
 }
@@ -1568,7 +1579,7 @@ namespace RecursiveOpaqueExpr {
 namespace VLASizeof {
 
   void f(int k) { // expected-note {{here}}
-    int arr[k]; // expected-warning {{C99}} expected-note {{non-const variable 'k'}}
+    int arr[k]; // expected-warning {{C99}} expected-note {{function parameter 'k'}}
     constexpr int n = 1 +
         sizeof(arr) // expected-error {{constant expression}}
         * 3;
@@ -1843,6 +1854,11 @@ namespace InitializerList {
 
   static_assert(*std::initializer_list<int>{1, 2, 3}.begin() == 1, "");
   static_assert(std::initializer_list<int>{1, 2, 3}.begin()[2] == 3, "");
+
+  namespace DR2126 {
+    constexpr std::initializer_list<float> il = {1.0, 2.0, 3.0};
+    static_assert(il.begin()[1] == 2.0, "");
+  }
 }
 
 namespace StmtExpr {
@@ -1928,9 +1944,9 @@ namespace Lifetime {
     int n = 0;
     constexpr int f() const { return 0; }
   };
-  constexpr Q *out_of_lifetime(Q q) { return &q; } // expected-warning {{address of stack}} expected-note 2{{declared here}}
-  constexpr int k3 = out_of_lifetime({})->n; // expected-error {{constant expression}} expected-note {{read of variable whose lifetime has ended}}
-  constexpr int k4 = out_of_lifetime({})->f(); // expected-error {{constant expression}} expected-note {{member call on variable whose lifetime has ended}}
+  constexpr Q *out_of_lifetime(Q q) { return &q; } // expected-warning {{address of stack}}
+  constexpr int k3 = out_of_lifetime({})->n; // expected-error {{constant expression}} expected-note {{read of object outside its lifetime}}
+  constexpr int k4 = out_of_lifetime({})->f(); // expected-error {{constant expression}} expected-note {{member call on object outside its lifetime}}
 
   constexpr int null = ((Q*)nullptr)->f(); // expected-error {{constant expression}} expected-note {{member call on dereferenced null pointer}}
 
@@ -2021,6 +2037,14 @@ namespace Bitfields {
     const HasUnnamedBitfield oneZero{1, 0};
     int b = 1 / oneZero.b; // expected-warning {{division by zero is undefined}}
   }
+
+  union UnionWithUnnamedBitfield {
+    int : 3;
+    int n;
+  };
+  static_assert(UnionWithUnnamedBitfield().n == 0, "");
+  static_assert(UnionWithUnnamedBitfield{}.n == 0, "");
+  static_assert(UnionWithUnnamedBitfield{1}.n == 1, "");
 }
 
 namespace ZeroSizeTypes {
@@ -2252,7 +2276,7 @@ namespace ns1 {
 void f(char c) { //expected-note2{{declared here}}
   struct X {
     static constexpr char f() { //expected-error{{never produces a constant expression}}
-      return c; //expected-error{{reference to local}} expected-note{{non-const variable}}
+      return c; //expected-error{{reference to local}} expected-note{{function parameter}}
     }
   };
   int I = X::f();
@@ -2312,8 +2336,8 @@ namespace array_size {
   template<typename T> void f1(T t) {
     constexpr int k = t.size();
   }
-  template<typename T> void f2(const T &t) {
-    constexpr int k = t.size(); // expected-error {{constant}} expected-note {{function parameter 't' with unknown value cannot be used in a constant expression}}
+  template<typename T> void f2(const T &t) { // expected-note 2{{declared here}}
+    constexpr int k = t.size(); // expected-error 2{{constant}} expected-note 2{{function parameter 't' with unknown value cannot be used in a constant expression}}
   }
   template<typename T> void f3(const T &t) {
     constexpr int k = T::size();
@@ -2322,6 +2346,14 @@ namespace array_size {
     f1(a);
     f2(a); // expected-note {{instantiation of}}
     f3(a);
+  }
+
+  template<int N> struct array_nonstatic {
+    constexpr int size() const { return N; }
+  };
+  void h(array_nonstatic<3> a) {
+    f1(a);
+    f2(a); // expected-note {{instantiation of}}
   }
 }
 

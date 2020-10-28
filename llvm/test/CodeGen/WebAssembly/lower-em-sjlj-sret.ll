@@ -19,7 +19,7 @@ entry:
   ; It needs to be the first argument (that's what we're testing here)
   ; CHECK: i32.const $push[[FPTR:[0-9]+]]=, returns_struct
   ; This is the sret stack region (as an offset from the stack pointer local)
-  ; CHECK: call "__invoke_{i32.i32}", $pop[[FPTR]]
+  ; CHECK: call invoke_vi, $pop[[FPTR]]
   %ret = call {i32, i32} @returns_struct()
   ret {i32, i32} %ret
 }

@@ -581,7 +581,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   std::unique_ptr<llvm::MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TT, TO.CPU, FeaturesStr));
   // Target MCTargetDesc may not be linked in clang-based tools.
-  if (!MAI || !MII | !MOFI || !STI) {
+  if (!MAI || !MII || !MOFI || !STI) {
     Diag(AsmLoc, diag::err_msasm_unable_to_create_target)
         << "target MC unavailable";
     return EmptyStmt();

@@ -459,8 +459,8 @@ define i64 @test38(i32 %a) {
 
 define i16 @test39(i16 %a) {
 ; ALL-LABEL: @test39(
-; ALL-NEXT:    [[REV:%.*]] = call i16 @llvm.bswap.i16(i16 [[A:%.*]])
-; ALL-NEXT:    ret i16 [[REV]]
+; ALL-NEXT:    [[T32:%.*]] = call i16 @llvm.bswap.i16(i16 [[A:%.*]])
+; ALL-NEXT:    ret i16 [[T32]]
 ;
   %t = zext i16 %a to i32
   %t21 = lshr i32 %t, 8
@@ -684,10 +684,9 @@ define i64 @test49(i64 %A) {
 
 define i64 @test50(i64 %x) {
 ; ALL-LABEL: @test50(
-; ALL-NEXT:    [[A:%.*]] = lshr i64 [[X:%.*]], 2
-; ALL-NEXT:    [[D:%.*]] = shl i64 [[A]], 32
-; ALL-NEXT:    [[SEXT:%.*]] = add i64 [[D]], -4294967296
-; ALL-NEXT:    [[E:%.*]] = ashr exact i64 [[SEXT]], 32
+; ALL-NEXT:    [[TMP1:%.*]] = shl i64 [[X:%.*]], 30
+; ALL-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -4294967296
+; ALL-NEXT:    [[E:%.*]] = ashr i64 [[TMP2]], 32
 ; ALL-NEXT:    ret i64 [[E]]
 ;
   %a = lshr i64 %x, 2
@@ -1318,8 +1317,8 @@ define double @test81(double *%p, float %f) {
 define i64 @test82(i64 %A) {
 ; ALL-LABEL: @test82(
 ; ALL-NEXT:    [[TMP1:%.*]] = shl i64 [[A:%.*]], 1
-; ALL-NEXT:    [[E:%.*]] = and i64 [[TMP1]], 4294966784
-; ALL-NEXT:    ret i64 [[E]]
+; ALL-NEXT:    [[D:%.*]] = and i64 [[TMP1]], 4294966784
+; ALL-NEXT:    ret i64 [[D]]
 ;
   %B = trunc i64 %A to i32
   %C = lshr i32 %B, 8
@@ -1570,7 +1569,7 @@ define <2 x i8> @trunc_lshr_sext_uniform(<2 x i8> %A) {
 
 define <2 x i8> @trunc_lshr_sext_uniform_undef(<2 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_sext_uniform_undef(
-; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A:%.*]], <i8 6, i8 7>
+; ALL-NEXT:    [[D:%.*]] = ashr <2 x i8> [[A:%.*]], <i8 6, i8 undef>
 ; ALL-NEXT:    ret <2 x i8> [[D]]
 ;
   %B = sext <2 x i8> %A to <2 x i32>
@@ -1592,7 +1591,7 @@ define <2 x i8> @trunc_lshr_sext_nonuniform(<2 x i8> %A) {
 
 define <3 x i8> @trunc_lshr_sext_nonuniform_undef(<3 x i8> %A) {
 ; ALL-LABEL: @trunc_lshr_sext_nonuniform_undef(
-; ALL-NEXT:    [[D:%.*]] = ashr <3 x i8> [[A:%.*]], <i8 6, i8 2, i8 7>
+; ALL-NEXT:    [[D:%.*]] = ashr <3 x i8> [[A:%.*]], <i8 6, i8 2, i8 undef>
 ; ALL-NEXT:    ret <3 x i8> [[D]]
 ;
   %B = sext <3 x i8> %A to <3 x i32>

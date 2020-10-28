@@ -1,9 +1,8 @@
 //====--- OMPGridValues.h - Language-specific address spaces --*- C++ -*-====//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
@@ -29,29 +28,30 @@ namespace omp {
 ///        use the new array name.
 ///
 /// Example usage in clang:
-///   const unsigned slot_size = ctx.GetTargetInfo().getGridValue(GV_Warp_Size);
+///   const unsigned slot_size =
+///   ctx.GetTargetInfo().getGridValue(llvm::omp::GVIDX::GV_Warp_Size);
 ///
 /// Example usage in libomptarget/deviceRTLs:
-///   #include "OMPGridValues.h"
+///   #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 ///   #ifdef __AMDGPU__
 ///     #define GRIDVAL AMDGPUGpuGridValues
 ///   #else
 ///     #define GRIDVAL NVPTXGpuGridValues
 ///   #endif
 ///   ... Then use this reference for GV_Warp_Size in the deviceRTL source.
-///   GRIDVAL[GV_Warp_Size]
+///   llvm::omp::GRIDVAL[llvm::omp::GVIDX::GV_Warp_Size]
 ///
 /// Example usage in libomptarget hsa plugin:
-///   #include "OMPGridValues.h"
+///   #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 ///   #define GRIDVAL AMDGPUGpuGridValues
 ///   ... Then use this reference to access GV_Warp_Size in the hsa plugin.
-///   GRIDVAL[GV_Warp_Size]
+///   llvm::omp::GRIDVAL[llvm::omp::GVIDX::GV_Warp_Size]
 ///
 /// Example usage in libomptarget cuda plugin:
-///    #include "OMPGridValues.h"
+///    #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 ///    #define GRIDVAL NVPTXGpuGridValues
 ///   ... Then use this reference to access GV_Warp_Size in the cuda plugin.
-///    GRIDVAL[GV_Warp_Size]
+///    llvm::omp::GRIDVAL[llvm::omp::GVIDX::GV_Warp_Size]
 ///
 enum GVIDX {
   /// The maximum number of workers in a kernel.

@@ -1535,6 +1535,22 @@ struct Attributor {
   bool checkForAllReadWriteInstructions(function_ref<bool(Instruction &)> Pred,
                                         AbstractAttribute &QueryingAA);
 
+  /// Create a shallow wrapper for \p F such that \p F has internal linkage
+  /// afterwards. It also sets the original \p F 's name to anonymous
+  ///
+  /// A wrapper is a function with the same type (and attributes) as \p F
+  /// that will only call \p F and return the result, if any.
+  ///
+  /// Assuming the declaration of looks like:
+  ///   rty F(aty0 arg0, ..., atyN argN);
+  ///
+  /// The wrapper will then look as follows:
+  ///   rty wrapper(aty0 arg0, ..., atyN argN) {
+  ///     return F(arg0, ..., argN);
+  ///   }
+  ///
+  static void createShallowWrapper(Function &F);
+
   /// Return the data layout associated with the anchor scope.
   const DataLayout &getDataLayout() const { return InfoCache.DL; }
 
@@ -1557,6 +1573,10 @@ private:
   /// Deletes dead functions, blocks and instructions.
   /// Rewrites function signitures and updates the call graph.
   ChangeStatus cleanupIR();
+
+  /// Identify internal functions that are effectively dead, thus not reachable
+  /// from a live entry point. The functions are added to ToBeDeletedFunctions.
+  void identifyDeadInternalFunctions();
 
   /// Run `::update` on \p AA and track the dependences queried while doing so.
   /// Also adjust the state if we know further updates are not necessary.

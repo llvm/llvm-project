@@ -304,3 +304,12 @@ struct S {
     // expected-note@-1 {{Division by zero}}
   }
 };
+
+void derefAfterBranchingOnUnknownInnerPtr(std::unique_ptr<A> P) {
+  A *RP = P.get();
+  if (!RP) { // expected-note {{Assuming 'RP' is null}}
+    // expected-note@-1 {{Taking true branch}}
+    P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+    // expected-note@-1{{Dereference of null smart pointer 'P'}}
+  }
+}

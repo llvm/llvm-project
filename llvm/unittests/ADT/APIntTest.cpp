@@ -1994,23 +1994,44 @@ TEST(APIntTest, extractBits) {
   APInt i32(32, 0x1234567);
   EXPECT_EQ(0x3456, i32.extractBits(16, 4));
 
+  APInt i64(64, 0x01234567FFFFFFFFull);
+  EXPECT_EQ(0xFFFFFFFF, i64.extractBits(32, 0));
+  EXPECT_EQ(0xFFFFFFFF, i64.trunc(32));
+  EXPECT_EQ(0x01234567, i64.extractBits(32, 32));
+  EXPECT_EQ(0x01234567, i64.lshr(32).trunc(32));
+
   APInt i257(257, 0xFFFFFFFFFF0000FFull, true);
   EXPECT_EQ(0xFFu, i257.extractBits(16, 0));
+  EXPECT_EQ(0xFFu, i257.lshr(0).trunc(16));
   EXPECT_EQ((0xFFu >> 1), i257.extractBits(16, 1));
+  EXPECT_EQ((0xFFu >> 1), i257.lshr(1).trunc(16));
   EXPECT_EQ(-1, i257.extractBits(32, 64).getSExtValue());
+  EXPECT_EQ(-1, i257.lshr(64).trunc(32).getSExtValue());
   EXPECT_EQ(-1, i257.extractBits(128, 128).getSExtValue());
+  EXPECT_EQ(-1, i257.lshr(128).trunc(128).getSExtValue());
   EXPECT_EQ(-1, i257.extractBits(66, 191).getSExtValue());
+  EXPECT_EQ(-1, i257.lshr(191).trunc(66).getSExtValue());
   EXPECT_EQ(static_cast<int64_t>(0xFFFFFFFFFF80007Full),
             i257.extractBits(128, 1).getSExtValue());
   EXPECT_EQ(static_cast<int64_t>(0xFFFFFFFFFF80007Full),
+            i257.lshr(1).trunc(128).getSExtValue());
+  EXPECT_EQ(static_cast<int64_t>(0xFFFFFFFFFF80007Full),
             i257.extractBits(129, 1).getSExtValue());
+  EXPECT_EQ(static_cast<int64_t>(0xFFFFFFFFFF80007Full),
+            i257.lshr(1).trunc(129).getSExtValue());
 
   EXPECT_EQ(APInt(48, 0),
             APInt(144, "281474976710655", 10).extractBits(48, 48));
+  EXPECT_EQ(APInt(48, 0),
+            APInt(144, "281474976710655", 10).lshr(48).trunc(48));
   EXPECT_EQ(APInt(48, 0x0000ffffffffffffull),
             APInt(144, "281474976710655", 10).extractBits(48, 0));
+  EXPECT_EQ(APInt(48, 0x0000ffffffffffffull),
+            APInt(144, "281474976710655", 10).lshr(0).trunc(48));
   EXPECT_EQ(APInt(48, 0x00007fffffffffffull),
             APInt(144, "281474976710655", 10).extractBits(48, 1));
+  EXPECT_EQ(APInt(48, 0x00007fffffffffffull),
+            APInt(144, "281474976710655", 10).lshr(1).trunc(48));
 }
 
 TEST(APIntTest, extractBitsAsZExtValue) {

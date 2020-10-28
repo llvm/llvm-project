@@ -59,7 +59,7 @@ entry:
   br i1 %.not, label %.non-spmd, label %.exit
 
 .non-spmd:                                        ; preds = %entry
-  %1 = tail call i8* @__kmpc_data_sharing_coalesced_push_stack(i64 128, i16 0) #4, !dbg !31
+  %1 = tail call i8* @__kmpc_data_sharing_push_stack(i64 128, i16 0) #4, !dbg !31
   %2 = bitcast i8* %1 to %struct._globalized_locals_ty*
   br label %.exit
 
@@ -85,6 +85,8 @@ entry:
 declare i8 @__kmpc_is_spmd_exec_mode() local_unnamed_addr
 
 declare i8* @__kmpc_data_sharing_coalesced_push_stack(i64, i16) local_unnamed_addr
+
+declare i8* @__kmpc_data_sharing_push_stack(i64, i16) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() #1

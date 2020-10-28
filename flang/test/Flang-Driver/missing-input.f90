@@ -2,4 +2,4 @@
 
 ! REQUIRES: new-flang-driver
 
-! CHECK: error: no input files
+! CHECK: flang-new: error: no input files

@@ -67,7 +67,7 @@ void ConvertOpenMPToLLVMPass::runOnOperation() {
       [&](omp::ParallelOp op) { return converter.isLegal(&op.getRegion()); });
   target.addLegalOp<omp::TerminatorOp, omp::TaskyieldOp, omp::FlushOp,
                     omp::BarrierOp, omp::TaskwaitOp>();
-  if (failed(applyPartialConversion(module, target, patterns)))
+  if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }
 

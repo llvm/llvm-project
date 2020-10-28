@@ -37,25 +37,16 @@ static cl::opt<bool>
                     cl::desc("Add no-alias annotation for instructions that "
                              "are disambiguated by memchecks"));
 
-LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI, Loop *L, LoopInfo *LI,
-                               DominatorTree *DT, ScalarEvolution *SE,
-                               bool UseLAIChecks)
-    : VersionedLoop(L), NonVersionedLoop(nullptr), LAI(LAI), LI(LI), DT(DT),
+LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI,
+                               ArrayRef<RuntimePointerCheck> Checks, Loop *L,
+                               LoopInfo *LI, DominatorTree *DT,
+                               ScalarEvolution *SE)
+    : VersionedLoop(L), NonVersionedLoop(nullptr),
+      AliasChecks(Checks.begin(), Checks.end()),
+      Preds(LAI.getPSE().getUnionPredicate()), LAI(LAI), LI(LI), DT(DT),
       SE(SE) {
   assert(L->getExitBlock() && "No single exit block");
   assert(L->isLoopSimplifyForm() && "Loop is not in loop-simplify form");
-  if (UseLAIChecks) {
-    setAliasChecks(LAI.getRuntimePointerChecking()->getChecks());
-    setSCEVChecks(LAI.getPSE().getUnionPredicate());
-  }
-}
-
-void LoopVersioning::setAliasChecks(ArrayRef<RuntimePointerCheck> Checks) {
-  AliasChecks = {Checks.begin(), Checks.end()};
-}
-
-void LoopVersioning::setSCEVChecks(SCEVUnionPredicate Check) {
-  Preds = std::move(Check);
 }
 
 void LoopVersioning::versionLoop(
@@ -72,11 +63,10 @@ void LoopVersioning::versionLoop(
       addRuntimeChecks(RuntimeCheckBB->getTerminator(), VersionedLoop,
                        AliasChecks, RtPtrChecking.getSE());
 
-  const SCEVUnionPredicate &Pred = LAI.getPSE().getUnionPredicate();
   SCEVExpander Exp(*SE, RuntimeCheckBB->getModule()->getDataLayout(),
                    "scev.check");
   SCEVRuntimeCheck =
-      Exp.expandCodeForPredicate(&Pred, RuntimeCheckBB->getTerminator());
+      Exp.expandCodeForPredicate(&Preds, RuntimeCheckBB->getTerminator());
   auto *CI = dyn_cast<ConstantInt>(SCEVRuntimeCheck);
 
   // Discard the SCEV runtime check if it is always true.
@@ -127,6 +117,11 @@ void LoopVersioning::versionLoop(
   // Adds the necessary PHI nodes for the versioned loops based on the
   // loop-defined values used outside of the loop.
   addPHINodes(DefsUsedOutside);
+  formDedicatedExitBlocks(NonVersionedLoop, DT, LI, nullptr, true);
+  formDedicatedExitBlocks(VersionedLoop, DT, LI, nullptr, true);
+  assert(NonVersionedLoop->isLoopSimplifyForm() &&
+         VersionedLoop->isLoopSimplifyForm() &&
+         "The versioned loops should be in simplify form.");
 }
 
 void LoopVersioning::addPHINodes(
@@ -278,7 +273,8 @@ bool runImpl(LoopInfo *LI, function_ref<const LoopAccessInfo &(Loop &)> GetLAA,
     if (L->isLoopSimplifyForm() && !LAI.hasConvergentOp() &&
         (LAI.getNumRuntimePointerChecks() ||
          !LAI.getPSE().getUnionPredicate().isAlwaysTrue())) {
-      LoopVersioning LVer(LAI, L, LI, DT, SE);
+      LoopVersioning LVer(LAI, LAI.getRuntimePointerChecking()->getChecks(), L,
+                          LI, DT, SE);
       LVer.versionLoop();
       LVer.annotateLoopWithNoAlias();
       Changed = true;

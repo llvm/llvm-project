@@ -22,3 +22,14 @@ __attribute__((availability(macosx,introduced=10.6)))
 
 @implementation WeakClass2(YourCategory) @end
 
+// CHECK-10_4: @"OBJC_CLASS_$_WeakClass3" = extern_weak global
+// CHECK-10_5: @"OBJC_CLASS_$_WeakClass3" = extern_weak global
+// CHECK-10_6: @"OBJC_CLASS_$_WeakClass3" = external global
+__attribute__((availability(macosx,introduced=10.6)))
+@interface WeakClass3 @end
+@class WeakClass3;
+
+@implementation WeakClass3(MyCategory) @end
+
+@implementation WeakClass3(YourCategory) @end
+

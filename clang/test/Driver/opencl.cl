@@ -2,6 +2,7 @@
 // RUN: %clang -S -### -cl-std=CL1.1 %s 2>&1 | FileCheck --check-prefix=CHECK-CL11 %s
 // RUN: %clang -S -### -cl-std=CL1.2 %s 2>&1 | FileCheck --check-prefix=CHECK-CL12 %s
 // RUN: %clang -S -### -cl-std=CL2.0 %s 2>&1 | FileCheck --check-prefix=CHECK-CL20 %s
+// RUN: %clang -S -### -cl-std=CL3.0 %s 2>&1 | FileCheck --check-prefix=CHECK-CL30 %s
 // RUN: %clang -S -### -cl-std=clc++ %s 2>&1 | FileCheck --check-prefix=CHECK-CLCPP %s
 // RUN: %clang -S -### -cl-opt-disable %s 2>&1 | FileCheck --check-prefix=CHECK-OPT-DISABLE %s
 // RUN: %clang -S -### -cl-strict-aliasing %s 2>&1 | FileCheck --check-prefix=CHECK-STRICT-ALIASING %s
@@ -22,6 +23,7 @@
 // CHECK-CL11: "-cc1" {{.*}} "-cl-std=CL1.1"
 // CHECK-CL12: "-cc1" {{.*}} "-cl-std=CL1.2"
 // CHECK-CL20: "-cc1" {{.*}} "-cl-std=CL2.0"
+// CHECK-CL30: "-cc1" {{.*}} "-cl-std=CL3.0"
 // CHECK-CLCPP: "-cc1" {{.*}} "-cl-std=clc++"
 // CHECK-OPT-DISABLE: "-cc1" {{.*}} "-cl-opt-disable"
 // CHECK-STRICT-ALIASING: "-cc1" {{.*}} "-cl-strict-aliasing"

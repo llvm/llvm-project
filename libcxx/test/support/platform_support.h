@@ -110,4 +110,18 @@ std::wstring get_wide_temp_file_name()
 
 #endif // __CloudABI__
 
+#if defined(_CS_GNU_LIBC_VERSION)
+inline bool glibc_version_less_than(char const* version) {
+  std::string test_version = std::string("glibc ") + version;
+
+  size_t n = confstr(_CS_GNU_LIBC_VERSION, nullptr, (size_t)0);
+  char *current_version = new char[n];
+  confstr(_CS_GNU_LIBC_VERSION, current_version, n);
+
+  bool result = strverscmp(current_version, test_version.c_str()) < 0;
+  delete[] current_version;
+  return result;
+}
+#endif // _CS_GNU_LIBC_VERSION
+
 #endif // PLATFORM_SUPPORT_H

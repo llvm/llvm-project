@@ -378,9 +378,9 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
       DebugLines.LineRange = LineData.getU8(&Offset);
       DebugLines.OpcodeBase = LineData.getU8(&Offset);
 
-      DebugLines.StandardOpcodeLengths.reserve(DebugLines.OpcodeBase - 1);
+      DebugLines.StandardOpcodeLengths.emplace();
       for (uint8_t i = 1; i < DebugLines.OpcodeBase; ++i)
-        DebugLines.StandardOpcodeLengths.push_back(LineData.getU8(&Offset));
+        DebugLines.StandardOpcodeLengths->push_back(LineData.getU8(&Offset));
 
       while (Offset < EndPrologue) {
         StringRef Dir = LineData.getCStr(&Offset);
@@ -422,7 +422,7 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
             while (Offset < StartExt + *NewOp.ExtLen)
               NewOp.UnknownOpcodeData.push_back(LineData.getU8(&Offset));
           }
-        } else if (NewOp.Opcode < DebugLines.OpcodeBase) {
+        } else if (NewOp.Opcode < *DebugLines.OpcodeBase) {
           switch (NewOp.Opcode) {
           case dwarf::DW_LNS_copy:
           case dwarf::DW_LNS_negate_stmt:
@@ -449,7 +449,9 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 
           default:
             for (uint8_t i = 0;
-                 i < DebugLines.StandardOpcodeLengths[NewOp.Opcode - 1]; ++i)
+                 i <
+                 DebugLines.StandardOpcodeLengths.getValue()[NewOp.Opcode - 1];
+                 ++i)
               NewOp.StandardOpcodeData.push_back(LineData.getULEB128(&Offset));
           }
         }

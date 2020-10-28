@@ -73,6 +73,12 @@ namespace llvm {
     None    // Do not use Basic Block Sections.
   };
 
+  enum class StackProtectorGuards {
+    None,
+    TLS,
+    Global
+  };
+
   enum class EABI {
     Unknown,
     Default, // Default means not specified
@@ -123,9 +129,10 @@ namespace llvm {
           EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
           DisableIntegratedAS(false), RelaxELFRelocations(false),
           FunctionSections(false), DataSections(false),
-          UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
-          TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
-          EmulatedTLS(false), ExplicitEmulatedTLS(false), EnableIPRA(false),
+          IgnoreXCOFFVisibility(false), UniqueSectionNames(true),
+          UniqueBasicBlockSectionNames(false), TrapUnreachable(false),
+          NoTrapAfterNoreturn(false), TLSSize(0), EmulatedTLS(false),
+          ExplicitEmulatedTLS(false), EnableIPRA(false),
           EmitStackSizeSection(false), EnableMachineOutliner(false),
           EnableMachineFunctionSplitter(false), SupportsDefaultOutlining(false),
           EmitAddrsig(false), EmitCallSiteInfo(false),
@@ -230,6 +237,9 @@ namespace llvm {
     /// Emit data into separate sections.
     unsigned DataSections : 1;
 
+    /// Do not emit visibility attribute for xcoff.
+    unsigned IgnoreXCOFFVisibility : 1;
+
     unsigned UniqueSectionNames : 1;
 
     /// Use unique names for basic block sections.
@@ -302,6 +312,16 @@ namespace llvm {
 
     /// Emit XRay Function Index section
     unsigned XRayOmitFunctionIndex : 1;
+
+    /// Stack protector guard offset to use.
+    unsigned StackProtectorGuardOffset : 32;
+
+    /// Stack protector guard mode to use, e.g. tls, global.
+    StackProtectorGuards StackProtectorGuard =
+                                         StackProtectorGuards::None;
+
+    /// Stack protector guard reg to use, e.g. usually fs or gs in X86.
+    std::string StackProtectorGuardReg = "None";
 
     /// FloatABIType - This setting is set by -float-abi=xxx option is specfied
     /// on the command line. This setting may either be Default, Soft, or Hard.

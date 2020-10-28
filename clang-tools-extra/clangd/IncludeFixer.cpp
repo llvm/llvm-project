@@ -68,10 +68,16 @@ private:
 std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
                                    const clang::Diagnostic &Info) const {
   switch (Info.getID()) {
-  case diag::err_incomplete_type:
-  case diag::err_incomplete_member_access:
-  case diag::err_incomplete_base_class:
   case diag::err_incomplete_nested_name_spec:
+  case diag::err_incomplete_base_class:
+  case diag::err_incomplete_member_access:
+  case diag::err_incomplete_type:
+  case diag::err_typecheck_decl_incomplete_type:
+  case diag::err_typecheck_incomplete_tag:
+  case diag::err_invalid_incomplete_type_use:
+  case diag::err_sizeof_alignof_incomplete_or_sizeless_type:
+  case diag::err_for_range_incomplete_type:
+  case diag::err_func_def_incomplete_result:
     // Incomplete type diagnostics should have a QualType argument for the
     // incomplete type.
     for (unsigned Idx = 0; Idx < Info.getNumArgs(); ++Idx) {

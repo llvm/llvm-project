@@ -54,16 +54,14 @@ public:
   }
 
   void setFillContentsMode(FillContentsMode FillContents) {
-    while (1) {
-      u32 Opts = atomic_load(&Val, memory_order_relaxed);
-      u32 NewOpts = Opts;
+    u32 Opts = atomic_load(&Val, memory_order_relaxed), NewOpts;
+    do {
+      NewOpts = Opts;
       NewOpts &= ~(3U << static_cast<u32>(OptionBit::FillContents0of2));
       NewOpts |= static_cast<u32>(FillContents)
                  << static_cast<u32>(OptionBit::FillContents0of2);
-      if (atomic_compare_exchange_strong(&Val, &Opts, NewOpts,
-                                         memory_order_relaxed))
-        break;
-    }
+    } while (!atomic_compare_exchange_strong(&Val, &Opts, NewOpts,
+                                             memory_order_relaxed));
   }
 };
 

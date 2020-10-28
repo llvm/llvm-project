@@ -189,17 +189,19 @@ bool InterfaceGenerator::emitInterfaceDefs() {
 //===----------------------------------------------------------------------===//
 
 void InterfaceGenerator::emitConceptDecl(Interface &interface) {
-  os << "  class Concept {\n"
-     << "  public:\n"
-     << "    virtual ~Concept() = default;\n";
+  os << "  struct Concept {\n";
 
   // Insert each of the pure virtual concept methods.
   for (auto &method : interface.getMethods()) {
-    os << "    virtual ";
+    os << "    ";
     emitCPPType(method.getReturnType(), os);
-    emitMethodNameAndArgs(method, os, valueType,
-                          /*addThisArg=*/!method.isStatic(), /*addConst=*/true);
-    os << " = 0;\n";
+    os << "(*" << method.getName() << ")(";
+    if (!method.isStatic())
+      emitCPPType(valueType, os) << (method.arg_empty() ? "" : ", ");
+    llvm::interleaveComma(
+        method.getArguments(), os,
+        [&](const InterfaceMethod::Argument &arg) { os << arg.type; });
+    os << ");\n";
   }
   os << "  };\n";
 }
@@ -207,13 +209,19 @@ void InterfaceGenerator::emitConceptDecl(Interface &interface) {
 void InterfaceGenerator::emitModelDecl(Interface &interface) {
   os << "  template<typename " << valueTemplate << ">\n";
   os << "  class Model : public Concept {\n  public:\n";
+  os << "    Model() : Concept{";
+  llvm::interleaveComma(
+      interface.getMethods(), os,
+      [&](const InterfaceMethod &method) { os << method.getName(); });
+  os << "} {}\n\n";
 
   // Insert each of the virtual method overrides.
   for (auto &method : interface.getMethods()) {
-    emitCPPType(method.getReturnType(), os << "    ");
+    emitCPPType(method.getReturnType(), os << "    static ");
     emitMethodNameAndArgs(method, os, valueType,
-                          /*addThisArg=*/!method.isStatic(), /*addConst=*/true);
-    os << " final {\n      ";
+                          /*addThisArg=*/!method.isStatic(),
+                          /*addConst=*/false);
+    os << " {\n      ";
 
     // Check for a provided body to the function.
     if (Optional<StringRef> body = method.getBody()) {

@@ -4984,18 +4984,19 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
                                      InOverloadResolution,
                                      AllowObjCWritebackConversion);
     }
-    // FIXME: Check the other conditions here: array of character type,
-    // initializer is a string literal.
-    if (ToType->isArrayType()) {
-      InitializedEntity Entity =
-        InitializedEntity::InitializeParameter(S.Context, ToType,
-                                               /*Consumed=*/false);
-      if (S.CanPerformCopyInitialization(Entity, From)) {
-        Result.setStandard();
-        Result.Standard.setAsIdentityConversion();
-        Result.Standard.setFromType(ToType);
-        Result.Standard.setAllToTypes(ToType);
-        return Result;
+
+    if (const auto *AT = S.Context.getAsArrayType(ToType)) {
+      if (S.IsStringInit(From->getInit(0), AT)) {
+        InitializedEntity Entity =
+          InitializedEntity::InitializeParameter(S.Context, ToType,
+                                                 /*Consumed=*/false);
+        if (S.CanPerformCopyInitialization(Entity, From)) {
+          Result.setStandard();
+          Result.Standard.setAsIdentityConversion();
+          Result.Standard.setFromType(ToType);
+          Result.Standard.setAllToTypes(ToType);
+          return Result;
+        }
       }
     }
   }
@@ -5570,7 +5571,8 @@ static bool CheckConvertedConstantConversions(Sema &S,
 static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
                                                    QualType T, APValue &Value,
                                                    Sema::CCEKind CCE,
-                                                   bool RequireInt) {
+                                                   bool RequireInt,
+                                                   NamedDecl *Dest) {
   assert(S.getLangOpts().CPlusPlus11 &&
          "converted constant expression outside C++11");
 
@@ -5600,9 +5602,10 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
     SCS = &ICS.Standard;
     break;
   case ImplicitConversionSequence::UserDefinedConversion:
-    // We are converting to a non-class type, so the Before sequence
-    // must be trivial.
-    SCS = &ICS.UserDefined.After;
+    if (T->isRecordType())
+      SCS = &ICS.UserDefined.Before;
+    else
+      SCS = &ICS.UserDefined.After;
     break;
   case ImplicitConversionSequence::AmbiguousConversion:
   case ImplicitConversionSequence::BadConversion:
@@ -5629,8 +5632,20 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
            << From->getType() << From->getSourceRange() << T;
   }
 
-  ExprResult Result =
-      S.PerformImplicitConversion(From, T, ICS, Sema::AA_Converting);
+  // Usually we can simply apply the ImplicitConversionSequence we formed
+  // earlier, but that's not guaranteed to work when initializing an object of
+  // class type.
+  ExprResult Result;
+  if (T->isRecordType()) {
+    assert(CCE == Sema::CCEK_TemplateArg &&
+           "unexpected class type converted constant expr");
+    Result = S.PerformCopyInitialization(
+        InitializedEntity::InitializeTemplateParameter(
+            T, cast<NonTypeTemplateParmDecl>(Dest)),
+        SourceLocation(), From);
+  } else {
+    Result = S.PerformImplicitConversion(From, T, ICS, Sema::AA_Converting);
+  }
   if (Result.isInvalid())
     return Result;
 
@@ -5688,11 +5703,16 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
   SmallVector<PartialDiagnosticAt, 8> Notes;
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
-  Expr::ConstExprUsage Usage = CCE == Sema::CCEK_TemplateArg
-                                   ? Expr::EvaluateForMangling
-                                   : Expr::EvaluateForCodeGen;
 
-  if (!Result.get()->EvaluateAsConstantExpr(Eval, Usage, S.Context) ||
+  ConstantExprKind Kind;
+  if (CCE == Sema::CCEK_TemplateArg && T->isRecordType())
+    Kind = ConstantExprKind::ClassTemplateArgument;
+  else if (CCE == Sema::CCEK_TemplateArg)
+    Kind = ConstantExprKind::NonClassTemplateArgument;
+  else
+    Kind = ConstantExprKind::Normal;
+
+  if (!Result.get()->EvaluateAsConstantExpr(Eval, S.Context, Kind) ||
       (RequireInt && !Eval.Val.isInt())) {
     // The expression can't be folded, so we can't keep it at this position in
     // the AST.
@@ -5711,9 +5731,14 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
 
   // It's not a constant expression. Produce an appropriate diagnostic.
   if (Notes.size() == 1 &&
-      Notes[0].second.getDiagID() == diag::note_invalid_subexpr_in_const_expr)
+      Notes[0].second.getDiagID() == diag::note_invalid_subexpr_in_const_expr) {
     S.Diag(Notes[0].first, diag::err_expr_not_cce) << CCE;
-  else {
+  } else if (!Notes.empty() && Notes[0].second.getDiagID() ==
+                                   diag::note_constexpr_invalid_template_arg) {
+    Notes[0].second.setDiagID(diag::err_constexpr_invalid_template_arg);
+    for (unsigned I = 0; I < Notes.size(); ++I)
+      S.Diag(Notes[I].first, Notes[I].second);
+  } else {
     S.Diag(From->getBeginLoc(), diag::err_expr_not_cce)
         << CCE << From->getSourceRange();
     for (unsigned I = 0; I < Notes.size(); ++I)
@@ -5723,8 +5748,10 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
 }
 
 ExprResult Sema::CheckConvertedConstantExpression(Expr *From, QualType T,
-                                                  APValue &Value, CCEKind CCE) {
-  return ::CheckConvertedConstantExpression(*this, From, T, Value, CCE, false);
+                                                  APValue &Value, CCEKind CCE,
+                                                  NamedDecl *Dest) {
+  return ::CheckConvertedConstantExpression(*this, From, T, Value, CCE, false,
+                                            Dest);
 }
 
 ExprResult Sema::CheckConvertedConstantExpression(Expr *From, QualType T,
@@ -5733,7 +5760,8 @@ ExprResult Sema::CheckConvertedConstantExpression(Expr *From, QualType T,
   assert(T->isIntegralOrEnumerationType() && "unexpected converted const type");
 
   APValue V;
-  auto R = ::CheckConvertedConstantExpression(*this, From, T, V, CCE, true);
+  auto R = ::CheckConvertedConstantExpression(*this, From, T, V, CCE, true,
+                                              /*Dest=*/nullptr);
   if (!R.isInvalid() && !R.get()->isValueDependent())
     Value = V.getInt();
   return R;
@@ -11522,9 +11550,19 @@ void OverloadCandidateSet::NoteCandidates(PartialDiagnosticAt PD,
     StringRef Opc, SourceLocation OpLoc,
     llvm::function_ref<bool(OverloadCandidate &)> Filter) {
 
+  bool DeferHint = false;
+  if (S.getLangOpts().CUDA && S.getLangOpts().GPUDeferDiag) {
+    // Defer diagnostic for CUDA/HIP if there are wrong-sided candidates.
+    auto WrongSidedCands =
+        CompleteCandidates(S, OCD_AllCandidates, Args, OpLoc, [](auto &Cand) {
+          return Cand.Viable == false &&
+                 Cand.FailureKind == ovl_fail_bad_target;
+        });
+    DeferHint = WrongSidedCands.size();
+  }
   auto Cands = CompleteCandidates(S, OCD, Args, OpLoc, Filter);
 
-  S.Diag(PD.first, PD.second);
+  S.Diag(PD.first, PD.second, DeferHint);
 
   NoteCandidates(S, Args, Cands, Opc, OpLoc);
 
@@ -12697,8 +12735,6 @@ public:
 }
 
 /// Attempts to recover from a call where no functions were found.
-///
-/// Returns true if new candidates were found.
 static ExprResult
 BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
                       UnresolvedLookupExpr *ULE,
@@ -12755,7 +12791,7 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
     return ExprError();
   }
 
-  // Build an implicit member call if appropriate.  Just drop the
+  // Build an implicit member access expression if appropriate. Just drop the
   // casts and such from the call, we don't really care.
   ExprResult NewFn = ExprError();
   if ((*R.begin())->isCXXClassMember())
@@ -12770,12 +12806,19 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   if (NewFn.isInvalid())
     return ExprError();
 
-  // This shouldn't cause an infinite loop because we're giving it
-  // an expression with viable lookup results, which should never
-  // end up here.
-  return SemaRef.BuildCallExpr(/*Scope*/ nullptr, NewFn.get(), LParenLoc,
-                               MultiExprArg(Args.data(), Args.size()),
-                               RParenLoc);
+  auto CallE =
+      SemaRef.BuildCallExpr(/*Scope*/ nullptr, NewFn.get(), LParenLoc,
+                            MultiExprArg(Args.data(), Args.size()), RParenLoc);
+  if (CallE.isInvalid())
+    return ExprError();
+  // We now have recovered a callee. However, building a real call may lead to
+  // incorrect secondary diagnostics if our recovery wasn't correct.
+  // We keep the recovery behavior but suppress all following diagnostics by
+  // using RecoveryExpr. We deliberately drop the return type of the recovery
+  // function, and rely on clang's dependent mechanism to suppress following
+  // diagnostics.
+  return SemaRef.CreateRecoveryExpr(CallE.get()->getBeginLoc(),
+                                    CallE.get()->getEndLoc(), {CallE.get()});
 }
 
 /// Constructs and populates an OverloadedCandidateSet from
@@ -12879,7 +12922,12 @@ static QualType chooseRecoveryType(OverloadCandidateSet &CS,
     for (const auto &C : CS)
       ConsiderCandidate(C);
 
-  return Result.getValueOr(QualType());
+  if (!Result)
+    return QualType();
+  auto Value = Result.getValue();
+  if (Value.isNull() || Value->isUndeducedType())
+    return QualType();
+  return Value;
 }
 
 /// FinishOverloadedCallExpr - given an OverloadCandidateSet, builds and returns
@@ -13339,14 +13387,14 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
     if (Fns.empty()) {
       // If there are no functions to store, just build a dependent
       // BinaryOperator or CompoundAssignment.
-      if (Opc <= BO_Assign || Opc > BO_OrAssign)
-        return BinaryOperator::Create(
-            Context, Args[0], Args[1], Opc, Context.DependentTy, VK_RValue,
-            OK_Ordinary, OpLoc, CurFPFeatureOverrides());
-      return CompoundAssignOperator::Create(
-          Context, Args[0], Args[1], Opc, Context.DependentTy, VK_LValue,
-          OK_Ordinary, OpLoc, CurFPFeatureOverrides(), Context.DependentTy,
-          Context.DependentTy);
+      if (BinaryOperator::isCompoundAssignmentOp(Opc))
+        return CompoundAssignOperator::Create(
+            Context, Args[0], Args[1], Opc, Context.DependentTy, VK_LValue,
+            OK_Ordinary, OpLoc, CurFPFeatureOverrides(), Context.DependentTy,
+            Context.DependentTy);
+      return BinaryOperator::Create(Context, Args[0], Args[1], Opc,
+                                    Context.DependentTy, VK_RValue, OK_Ordinary,
+                                    OpLoc, CurFPFeatureOverrides());
     }
 
     // FIXME: save results of ADL from here?

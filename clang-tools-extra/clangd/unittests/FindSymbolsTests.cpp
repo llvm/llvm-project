@@ -126,28 +126,43 @@ TEST(WorkspaceSymbols, Namespaces) {
   TU.AdditionalFiles["foo.h"] = R"cpp(
       namespace ans1 {
         int ai1;
-      namespace ans2 {
-        int ai2;
-      }
+        namespace ans2 {
+          int ai2;
+          namespace ans3 {
+            int ai3;
+          }
+        }
       }
       )cpp";
   TU.Code = R"cpp(
       #include "foo.h"
       )cpp";
   EXPECT_THAT(getSymbols(TU, "a"),
-              UnorderedElementsAre(QName("ans1"), QName("ans1::ai1"),
-                                   QName("ans1::ans2"),
-                                   QName("ans1::ans2::ai2")));
+              UnorderedElementsAre(
+                  QName("ans1"), QName("ans1::ai1"), QName("ans1::ans2"),
+                  QName("ans1::ans2::ai2"), QName("ans1::ans2::ans3"),
+                  QName("ans1::ans2::ans3::ai3")));
   EXPECT_THAT(getSymbols(TU, "::"), ElementsAre(QName("ans1")));
   EXPECT_THAT(getSymbols(TU, "::a"), ElementsAre(QName("ans1")));
   EXPECT_THAT(getSymbols(TU, "ans1::"),
-              UnorderedElementsAre(QName("ans1::ai1"), QName("ans1::ans2")));
+              UnorderedElementsAre(QName("ans1::ai1"), QName("ans1::ans2"),
+                                   QName("ans1::ans2::ai2"),
+                                   QName("ans1::ans2::ans3"),
+                                   QName("ans1::ans2::ans3::ai3")));
+  EXPECT_THAT(getSymbols(TU, "ans2::"),
+              UnorderedElementsAre(QName("ans1::ans2::ai2"),
+                                   QName("ans1::ans2::ans3"),
+                                   QName("ans1::ans2::ans3::ai3")));
   EXPECT_THAT(getSymbols(TU, "::ans1"), ElementsAre(QName("ans1")));
   EXPECT_THAT(getSymbols(TU, "::ans1::"),
               UnorderedElementsAre(QName("ans1::ai1"), QName("ans1::ans2")));
   EXPECT_THAT(getSymbols(TU, "::ans1::ans2"), ElementsAre(QName("ans1::ans2")));
   EXPECT_THAT(getSymbols(TU, "::ans1::ans2::"),
-              ElementsAre(QName("ans1::ans2::ai2")));
+              ElementsAre(QName("ans1::ans2::ai2"), QName("ans1::ans2::ans3")));
+
+  // Ensure sub-sequence matching works.
+  EXPECT_THAT(getSymbols(TU, "ans1::ans3::ai"),
+              UnorderedElementsAre(QName("ans1::ans2::ans3::ai3")));
 }
 
 TEST(WorkspaceSymbols, AnonymousNamespace) {
@@ -254,6 +269,17 @@ TEST(WorkspaceSymbols, Ranking) {
       #include "foo.h"
       )cpp";
   EXPECT_THAT(getSymbols(TU, "::"), ElementsAre(QName("func"), QName("ns")));
+}
+
+TEST(WorkspaceSymbols, RankingPartialNamespace) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    namespace ns1 {
+      namespace ns2 { struct Foo {}; }
+    }
+    namespace ns2 { struct FooB {}; })cpp";
+  EXPECT_THAT(getSymbols(TU, "ns2::f"),
+              ElementsAre(QName("ns2::FooB"), QName("ns1::ns2::Foo")));
 }
 
 TEST(WorkspaceSymbols, WithLimit) {
@@ -613,19 +639,27 @@ TEST(DocumentSymbols, FromMacro) {
     #define FF(name) \
       class name##_Test {};
 
-    $expansion[[FF]](abc);
+    $expansion1[[FF]](abc);
 
     #define FF2() \
-      class $spelling[[Test]] {};
+      class Test {};
 
-    FF2();
+    $expansion2[[FF2]]();
+
+    #define FF3() \
+      void waldo()
+
+    $fullDef[[FF3() {
+      int var = 42;
+    }]]
   )");
   TU.Code = Main.code().str();
   EXPECT_THAT(
       getSymbols(TU.build()),
       ElementsAre(
-          AllOf(WithName("abc_Test"), SymNameRange(Main.range("expansion"))),
-          AllOf(WithName("Test"), SymNameRange(Main.range("spelling")))));
+          AllOf(WithName("abc_Test"), SymNameRange(Main.range("expansion1"))),
+          AllOf(WithName("Test"), SymNameRange(Main.range("expansion2"))),
+          AllOf(WithName("waldo"), SymRange(Main.range("fullDef")))));
 }
 
 TEST(DocumentSymbols, FuncTemplates) {

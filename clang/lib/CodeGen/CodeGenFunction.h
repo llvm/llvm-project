@@ -1395,13 +1395,17 @@ private:
   };
   OpenMPCancelExitStack OMPCancelStack;
 
+  /// Calculate branch weights for the likelihood attribute
+  llvm::MDNode *createBranchWeights(Stmt::Likelihood LH) const;
+
   CodeGenPGO PGO;
 
   /// Calculate branch weights appropriate for PGO data
-  llvm::MDNode *createProfileWeights(uint64_t TrueCount, uint64_t FalseCount);
-  llvm::MDNode *createProfileWeights(ArrayRef<uint64_t> Weights);
+  llvm::MDNode *createProfileWeights(uint64_t TrueCount,
+                                     uint64_t FalseCount) const;
+  llvm::MDNode *createProfileWeights(ArrayRef<uint64_t> Weights) const;
   llvm::MDNode *createProfileWeightsForLoop(const Stmt *Cond,
-                                            uint64_t LoopCount);
+                                            uint64_t LoopCount) const;
 
 public:
   /// Increment the profiler's counter for the given statement by \p StepV.
@@ -1438,6 +1442,9 @@ private:
   llvm::SwitchInst *SwitchInsn = nullptr;
   /// The branch weights of SwitchInsn when doing instrumentation based PGO.
   SmallVector<uint64_t, 16> *SwitchWeights = nullptr;
+
+  /// The likelihood attributes of the SwitchCase.
+  SmallVector<Stmt::Likelihood, 16> *SwitchLikelihood = nullptr;
 
   /// CaseRangeBlock - This block holds if condition check for last case
   /// statement range in current switch instruction.
@@ -3075,7 +3082,7 @@ public:
   /// statements.
   ///
   /// \return True if the statement was handled.
-  bool EmitSimpleStmt(const Stmt *S);
+  bool EmitSimpleStmt(const Stmt *S, ArrayRef<const Attr *> Attrs);
 
   Address EmitCompoundStmt(const CompoundStmt &S, bool GetLast = false,
                            AggValueSlot AVS = AggValueSlot::ignored());
@@ -3104,9 +3111,9 @@ public:
   void EmitBreakStmt(const BreakStmt &S);
   void EmitContinueStmt(const ContinueStmt &S);
   void EmitSwitchStmt(const SwitchStmt &S);
-  void EmitDefaultStmt(const DefaultStmt &S);
-  void EmitCaseStmt(const CaseStmt &S);
-  void EmitCaseStmtRange(const CaseStmt &S);
+  void EmitDefaultStmt(const DefaultStmt &S, ArrayRef<const Attr *> Attrs);
+  void EmitCaseStmt(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
+  void EmitCaseStmtRange(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitAsmStmt(const AsmStmt &S);
 
   void EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S);
@@ -4319,7 +4326,8 @@ public:
   llvm::Value *EmitAnnotationCall(llvm::Function *AnnotationFn,
                                   llvm::Value *AnnotatedVal,
                                   StringRef AnnotationStr,
-                                  SourceLocation Location);
+                                  SourceLocation Location,
+                                  const AnnotateAttr *Attr);
 
   /// Emit local annotations for the local variable V, declared by D.
   void EmitVarAnnotations(const VarDecl *D, llvm::Value *V);
@@ -4365,7 +4373,7 @@ public:
   /// evaluate to true based on PGO data.
   void EmitBranchOnBoolExpr(const Expr *Cond, llvm::BasicBlock *TrueBlock,
                             llvm::BasicBlock *FalseBlock, uint64_t TrueCount,
-                            llvm::MDNode *Weights = nullptr);
+                            Stmt::Likelihood LH = Stmt::LH_None);
 
   /// Given an assignment `*LHS = RHS`, emit a test that checks if \p RHS is
   /// nonnull, if \p LHS is marked _Nonnull.

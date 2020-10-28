@@ -73,6 +73,24 @@ EditGenerator transformer::edit(ASTEdit Edit) {
   };
 }
 
+EditGenerator transformer::noopEdit(RangeSelector Anchor) {
+  return [Anchor = std::move(Anchor)](const MatchResult &Result)
+             -> Expected<SmallVector<transformer::Edit, 1>> {
+    Expected<CharSourceRange> Range = Anchor(Result);
+    if (!Range)
+      return Range.takeError();
+    // In case the range is inside a macro expansion, map the location back to a
+    // "real" source location.
+    SourceLocation Begin =
+        Result.SourceManager->getSpellingLoc(Range->getBegin());
+    Edit E;
+    // Implicitly, leave `E.Replacement` as the empty string.
+    E.Kind = EditKind::Range;
+    E.Range = CharSourceRange::getCharRange(Begin, Begin);
+    return SmallVector<Edit, 1>{E};
+  };
+}
+
 EditGenerator
 transformer::flattenVector(SmallVector<EditGenerator, 2> Generators) {
   if (Generators.size() == 1)

@@ -134,6 +134,7 @@ static_library("CodeGen") {
     "MachineVerifier.cpp",
     "MacroFusion.cpp",
     "ModuloSchedule.cpp",
+    "MultiHazardRecognizer.cpp",
     "NonRelocatableStringpool.cpp",
     "OptimizePHIs.cpp",
     "PHIElimination.cpp",

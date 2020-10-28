@@ -199,6 +199,11 @@ static bool isDimOpValidSymbol(DimOp dimOp, Region *region) {
   if (isTopLevelValue(dimOp.memrefOrTensor()))
     return true;
 
+  // Conservatively handle remaining BlockArguments as non-valid symbols.
+  // E.g. scf.for iterArgs.
+  if (dimOp.memrefOrTensor().isa<BlockArgument>())
+    return false;
+
   // The dim op is also okay if its operand memref/tensor is a view/subview
   // whose corresponding size is a valid symbol.
   Optional<int64_t> index = dimOp.getConstantIndex();

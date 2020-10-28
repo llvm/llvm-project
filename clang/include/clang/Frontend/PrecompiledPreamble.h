@@ -26,6 +26,7 @@
 
 namespace llvm {
 class MemoryBuffer;
+class MemoryBufferRef;
 namespace vfs {
 class FileSystem;
 }
@@ -216,7 +217,7 @@ private:
 
     static PreambleFileHash createForFile(off_t Size, time_t ModTime);
     static PreambleFileHash
-    createForMemoryBuffer(const llvm::MemoryBuffer *Buffer);
+    createForMemoryBuffer(const llvm::MemoryBufferRef &Buffer);
 
     friend bool operator==(const PreambleFileHash &LHS,
                            const PreambleFileHash &RHS) {

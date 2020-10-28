@@ -11,10 +11,6 @@
 // const charT& back() const;
 //       charT& back();
 
-#ifdef _LIBCPP_DEBUG
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
-#endif
-
 #include <string>
 #include <cassert>
 
@@ -50,13 +46,6 @@ int main(int, char**)
     test(S("1234567890123456789012345678901234567890"));
     }
 #endif
-#ifdef _LIBCPP_DEBUG
-    {
-        std::string s;
-        (void) s.back();
-        assert(false);
-    }
-#endif
 
-  return 0;
+    return 0;
 }

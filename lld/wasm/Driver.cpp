@@ -252,8 +252,15 @@ void LinkerDriver::addFile(StringRef path) {
 
     // Handle -whole-archive.
     if (inWholeArchive) {
-      for (MemoryBufferRef &m : getArchiveMembers(mbref))
-        files.push_back(createObjectFile(m, path));
+      for (MemoryBufferRef &m : getArchiveMembers(mbref)) {
+        auto *object = createObjectFile(m, path);
+        // Mark object as live; object members are normally not
+        // live by default but -whole-archive is designed to treat
+        // them as such.
+        object->markLive();
+        files.push_back(object);
+      }
+
       return;
     }
 
@@ -327,6 +334,7 @@ static StringRef getEntry(opt::InputArgList &args) {
 // Initializes Config members by the command line options.
 static void readConfigs(opt::InputArgList &args) {
   config->allowUndefined = args.hasArg(OPT_allow_undefined);
+  config->bsymbolic = args.hasArg(OPT_Bsymbolic);
   config->checkFeatures =
       args.hasFlag(OPT_check_features, OPT_no_check_features, true);
   config->compressRelocations = args.hasArg(OPT_compress_relocations);
@@ -490,6 +498,10 @@ static void checkOptions(opt::InputArgList &args) {
       warn("creating PIEs, with -pie, is not yet stable");
     }
   }
+
+  if (config->bsymbolic && !config->shared) {
+    warn("-Bsymbolic is only meaningful when combined with -shared");
+  }
 }
 
 // Force Sym to be entered in the output. Used for -u or equivalent.
@@ -571,7 +583,6 @@ static void createSyntheticSymbols() {
         "__wasm_apply_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(nullSignature, "__wasm_apply_relocs"));
   }
-
 
   if (config->isPic) {
     WasmSym::stackPointer =
@@ -839,6 +850,29 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     else
       error("entry symbol not defined (pass --no-entry to suppress): " +
             config->entry);
+  }
+
+  // If the user code defines a `__wasm_call_dtors` function, remember it so
+  // that we can call it from the command export wrappers. Unlike
+  // `__wasm_call_ctors` which we synthesize, `__wasm_call_dtors` is defined
+  // by libc/etc., because destructors are registered dynamically with
+  // `__cxa_atexit` and friends.
+  if (!config->relocatable && !config->shared &&
+      !WasmSym::callCtors->isUsedInRegularObj &&
+      WasmSym::callCtors->getName() != config->entry &&
+      !config->exportedSymbols.count(WasmSym::callCtors->getName())) {
+    if (Symbol *callDtors = handleUndefined("__wasm_call_dtors")) {
+      if (auto *callDtorsFunc = dyn_cast<DefinedFunction>(callDtors)) {
+        if (callDtorsFunc->signature &&
+            (!callDtorsFunc->signature->Params.empty() ||
+             !callDtorsFunc->signature->Returns.empty())) {
+          error("__wasm_call_dtors must have no argument or return values");
+        }
+        WasmSym::callDtors = callDtorsFunc;
+      } else {
+        error("__wasm_call_dtors must be a function");
+      }
+    }
   }
 
   createOptionalSymbols();

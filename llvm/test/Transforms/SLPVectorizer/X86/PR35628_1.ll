@@ -19,7 +19,7 @@ define void @mainTest(i32* %ptr) #0  {
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[TMP4]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP6]] to i64
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP8]])
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP8]])
 ; CHECK-NEXT:    [[OP_EXTRA:%.*]] = add i32 [[TMP10]], 1
 ; CHECK-NEXT:    [[OP_EXTRA1:%.*]] = add i32 [[OP_EXTRA]], [[TMP7]]
 ; CHECK-NEXT:    [[OP_EXTRA2:%.*]] = add i32 [[OP_EXTRA1]], [[TMP6]]

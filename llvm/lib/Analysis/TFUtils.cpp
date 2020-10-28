@@ -62,6 +62,89 @@ TFStatusPtr createTFStatus() {
 TFSessionOptionsPtr createTFSessionOptions() {
   return TFSessionOptionsPtr(TF_NewSessionOptions(), &TF_DeleteSessionOptions);
 }
+
+/// Write the values of one tensor as a list.
+template <typename T>
+void writeTensorValues(raw_ostream &OutFile, const char *TensorData,
+                       size_t ElemCount) {
+  OutFile << "[";
+  const T *TypedData = reinterpret_cast<const T *>(TensorData);
+  for (size_t I = 0; I < ElemCount; ++I) {
+    if (I > 0)
+      OutFile << ", ";
+    OutFile << TypedData[I];
+  }
+  OutFile << "]";
+}
+
+/// Write a list of tensors as a sequence of TensorFlow FeatureList protobufs.
+/// The tensors are assumed to be stored contiguously, in row-major format,
+/// in the TensorData buffer. Each tensor has the shape given by Spec. The
+/// feature name in the output is either the provided LoggingName, if
+/// specified, otherwise it's the name of the tensor (as given by Spec).
+void writeRawTensorsAsFeatureLists(raw_ostream &OutFile,
+                                   const Logger::LoggedFeatureSpec &LoggedSpec,
+                                   const char *TensorData, size_t TensorCount,
+                                   bool FinalReward = false) {
+  const char *FieldName = "<invalid>";
+  std::function<void(const char *)> ValueWriter;
+  const auto &Spec = LoggedSpec.Spec;
+  // The 'Feature' protobuf only has 3 possible fields: float_list,
+  // int64_list, or bytes_list, so we capture int32 values as int64. We don't
+  // support any other types.
+  if (Spec.isElementType<int64_t>()) {
+    FieldName = "int64_list";
+    ValueWriter = [&](const char *Data) {
+      writeTensorValues<int64_t>(OutFile, Data, Spec.getElementCount());
+    };
+  } else if (Spec.isElementType<int32_t>()) {
+    FieldName = "int64_list";
+    ValueWriter = [&](const char *Data) {
+      writeTensorValues<int32_t>(OutFile, Data, Spec.getElementCount());
+    };
+
+  } else if (Spec.isElementType<float>()) {
+    FieldName = "float_list";
+    ValueWriter = [&](const char *Data) {
+      writeTensorValues<float>(OutFile, Data, Spec.getElementCount());
+    };
+
+  } else {
+    llvm_unreachable("Unsupported tensor type.");
+  }
+
+  OutFile << "  feature_list: {\n";
+  OutFile << "    key: "
+          << "\""
+          << (LoggedSpec.LoggingName ? *LoggedSpec.LoggingName : Spec.name())
+          << "\" ";
+  OutFile << "value: {\n";
+  size_t TensorByteSize = Spec.getElementCount() * Spec.getElementByteSize();
+
+  auto WriteFeatureProto = [&](const char *P) {
+    OutFile << "      feature: { " << FieldName << ": { value: ";
+    ValueWriter(P);
+    OutFile << " } }\n";
+  };
+
+  const char *CurrentTensor = TensorData;
+  static int64_t Zero = 0;
+  // Write all but the last value. If this is the final reward, don't increment
+  // the CurrentTensor, and just write 0.
+  for (size_t I = 0; I < TensorCount - 1; ++I) {
+    if (FinalReward)
+      WriteFeatureProto(reinterpret_cast<const char *>(&Zero));
+    else {
+      WriteFeatureProto(CurrentTensor);
+      CurrentTensor += TensorByteSize;
+    }
+  }
+
+  WriteFeatureProto(CurrentTensor);
+
+  OutFile << "    }\n";
+  OutFile << "  }\n";
+}
 } // namespace
 
 namespace llvm {
@@ -318,4 +401,31 @@ TFUTILS_SUPPORTED_TYPES(TFUTILS_GETDATATYPE_IMPL)
 
 TFModelEvaluator::EvaluationResult::~EvaluationResult() {}
 TFModelEvaluator::~TFModelEvaluator() {}
+
+void Logger::print(raw_ostream &OS) {
+  if (RawLogData.empty())
+    return;
+  if (RawLogData[0].empty())
+    return;
+  size_t Tensor0Size = FeatureSpecs[0].Spec.getElementCount() *
+                       FeatureSpecs[0].Spec.getElementByteSize();
+  size_t NumberOfRecords = RawLogData[0].size() / Tensor0Size;
+  if (NumberOfRecords == 0)
+    return;
+  size_t RewardSize =
+      RewardSpec.getElementCount() * RewardSpec.getElementByteSize();
+  size_t NumberOfRewards = RawLogData.back().size() / RewardSize;
+
+  OS << "feature_lists: {\n";
+  for (size_t I = 0; I < FeatureSpecs.size(); ++I)
+    writeRawTensorsAsFeatureLists(OS, FeatureSpecs[I], RawLogData[I].data(),
+                                  NumberOfRecords);
+
+  if (IncludeReward)
+    writeRawTensorsAsFeatureLists(OS, {RewardSpec, None},
+                                  RawLogData.back().data(), NumberOfRecords,
+                                  NumberOfRewards == 1);
+
+  OS << "}\n";
+}
 #endif // defined(LLVM_HAVE_TF_API)

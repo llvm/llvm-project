@@ -11,7 +11,7 @@ declare void @llvm.init.trampoline(i8*, i8*, i8*)
 
 define void @test1(i32* %Q, i32* %P) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %DEAD = load i32, i32* %Q
@@ -56,7 +56,7 @@ define i32 @test3(i32* %g_addr) nounwind {
 define void @test4(i32* %Q) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[Q:%.*]], align 4
-; CHECK-NEXT:    store volatile i32 [[A]], i32* [[Q]]
+; CHECK-NEXT:    store volatile i32 [[A]], i32* [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = load i32, i32* %Q
@@ -133,9 +133,9 @@ define void @test7_atomic(i32* align 4 %p, i8* align 4 %q, i8* noalias align 4 %
 ; Do not delete stores that are only partially killed.
 define i32 @test8() {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[V:%.*]] = alloca i32
-; CHECK-NEXT:    store i32 1234567, i32* [[V]]
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[V]]
+; CHECK-NEXT:    [[V:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 1234567, i32* [[V]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[V]], align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %V = alloca i32
@@ -182,8 +182,8 @@ define void @test9_3(%struct.x* preallocated(%struct.x)  %a) nounwind  {
 ; va_arg has fuzzy dependence, the store shouldn't be zapped.
 define double @test10(i8* %X) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i8*
-; CHECK-NEXT:    store i8* [[X:%.*]], i8** [[X_ADDR]]
+; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i8*, align 8
+; CHECK-NEXT:    store i8* [[X:%.*]], i8** [[X_ADDR]], align 8
 ; CHECK-NEXT:    [[TMP_0:%.*]] = va_arg i8** [[X_ADDR]], double
 ; CHECK-NEXT:    ret double [[TMP_0]]
 ;
@@ -234,7 +234,7 @@ define i32* @test13() {
 ; CHECK-NEXT:    [[PTR:%.*]] = tail call i8* @malloc(i32 4)
 ; CHECK-NEXT:    [[P:%.*]] = bitcast i8* [[PTR]] to i32*
 ; CHECK-NEXT:    call void @test13f()
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret i32* [[P]]
 ;
   %ptr = tail call i8* @malloc(i32 4)
@@ -253,7 +253,7 @@ define i32 addrspace(1)* @test13_addrspacecast() {
 ; CHECK-NEXT:    [[P_BC:%.*]] = bitcast i8* [[P]] to i32*
 ; CHECK-NEXT:    [[P:%.*]] = addrspacecast i32* [[P_BC]] to i32 addrspace(1)*
 ; CHECK-NEXT:    call void @test13f()
-; CHECK-NEXT:    store i32 0, i32 addrspace(1)* [[P]]
+; CHECK-NEXT:    store i32 0, i32 addrspace(1)* [[P]], align 4
 ; CHECK-NEXT:    ret i32 addrspace(1)* [[P]]
 ;
   %p = tail call i8* @malloc(i32 4)
@@ -287,8 +287,9 @@ define void @test14(i32* %Q) {
 ; Dead store on an aligned_alloc: should know that %M doesn't alias with %A.
 define i32 @test14a(i8* %M, i8 %value) {
 ; CHECK-LABEL: @test14a(
-; CHECK-NOT: store
-; CHECK:     ret i32 0
+; CHECK-NEXT:    [[A:%.*]] = tail call i8* @aligned_alloc(i32 32, i32 1024)
+; CHECK-NEXT:    tail call void @free(i8* [[A]])
+; CHECK-NEXT:    ret i32 0
 ;
   %A = tail call i8* @aligned_alloc(i32 32, i32 1024)
   store i8 %value, i8* %A
@@ -481,7 +482,7 @@ define void @test19({i32} * nocapture byval align 4 %arg5) nounwind ssp {
 ; CHECK-LABEL: @test19(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds { i32 }, { i32 }* [[ARG5:%.*]], i32 0, i32 0
-; CHECK-NEXT:    store i32 912, i32* [[TMP7]]
+; CHECK-NEXT:    store i32 912, i32* [[TMP7]], align 4
 ; CHECK-NEXT:    call void @test19f({ i32 }* byval align 4 [[ARG5]])
 ; CHECK-NEXT:    ret void
 ;
@@ -531,7 +532,7 @@ define noalias i8* @test23() nounwind uwtable ssp {
 ; CHECK-NEXT:    store i8 97, i8* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [2 x i8], [2 x i8]* [[X]], i64 0, i64 1
 ; CHECK-NEXT:    store i8 0, i8* [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strdup(i8* [[ARRAYIDX]]) #3
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @strdup(i8* [[ARRAYIDX]]) [[ATTR5:#.*]]
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %x = alloca [2 x i8], align 1
@@ -569,7 +570,7 @@ define i8* @test25(i8* %p) nounwind {
 ; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, i8* [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8, i8* [[P_4]], align 1
 ; CHECK-NEXT:    store i8 0, i8* [[P_4]], align 1
-; CHECK-NEXT:    [[Q:%.*]] = call i8* @strdup(i8* [[P]]) #6
+; CHECK-NEXT:    [[Q:%.*]] = call i8* @strdup(i8* [[P]]) [[ATTR8:#.*]]
 ; CHECK-NEXT:    store i8 [[TMP]], i8* [[P_4]], align 1
 ; CHECK-NEXT:    ret i8* [[Q]]
 ;
@@ -794,9 +795,9 @@ bb3:
 ; Don't remove redundant store: unknown_func could unwind
 define void @test34(i32* noalias %p) {
 ; CHECK-LABEL: @test34(
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    store i32 0, i32* [[P]]
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, i32* %p
@@ -809,7 +810,7 @@ define void @test34(i32* noalias %p) {
 define void @test35(i32* noalias %p) {
 ; CHECK-LABEL: @test35(
 ; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   call void @unknown_func()
@@ -925,9 +926,9 @@ define i32 @test40() {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[P_NEXT:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]]
+; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]], align 1
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[P]]
+; CHECK-NEXT:    store i8 0, i8* [[P]], align 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[RETURN:%.*]]
 ; CHECK:       return:
@@ -958,11 +959,11 @@ define i32 @test41() {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[P_NEXT:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]]
+; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]], align 1
 ; CHECK-NEXT:    br label [[CONT]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[P]]
+; CHECK-NEXT:    store i8 0, i8* [[P]], align 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[RETURN:%.*]]
 ; CHECK:       return:
@@ -1004,7 +1005,7 @@ define i32 @test42() {
 ; CHECK-NEXT:    br label [[CONT]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[P]]
+; CHECK-NEXT:    store i8 0, i8* [[P]], align 1
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
 ; CHECK-NEXT:    br i1 [[CONTINUE]], label [[LOOP]], label [[RETURN:%.*]]
 ; CHECK:       return:
@@ -1037,11 +1038,11 @@ define i32 @test43() {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT_2:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[P_NEXT:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]]
+; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]], align 1
 ; CHECK-NEXT:    br label [[CONT:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[P]]
+; CHECK-NEXT:    store i8 0, i8* [[P]], align 1
 ; CHECK-NEXT:    br label [[CONT_2]]
 ; CHECK:       cont.2:
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
@@ -1082,10 +1083,10 @@ define i32 @test44() {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[P_NEXT:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i8 0, i8* [[P]]
+; CHECK-NEXT:    store i8 0, i8* [[P]], align 1
 ; CHECK-NEXT:    br label [[CONT:%.*]]
 ; CHECK:       cont:
-; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]]
+; CHECK-NEXT:    store i8 1, i8* [[P_NEXT]], align 1
 ; CHECK-NEXT:    br label [[CONT_2]]
 ; CHECK:       cont.2:
 ; CHECK-NEXT:    [[CONTINUE:%.*]] = icmp ugt i64 [[INDVARS_IV]], 15
@@ -1127,16 +1128,16 @@ define i32 @test45(i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    [[P_1:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 1
-; CHECK-NEXT:    store i8 1, i8* [[P_1]]
+; CHECK-NEXT:    store i8 1, i8* [[P_1]], align 1
 ; CHECK-NEXT:    br label [[CONT:%.*]]
 ; CHECK:       false:
 ; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 2
-; CHECK-NEXT:    store i8 1, i8* [[P_2]]
+; CHECK-NEXT:    store i8 1, i8* [[P_2]], align 1
 ; CHECK-NEXT:    br label [[CONT]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[OFFSET:%.*]] = phi i64 [ 2, [[TRUE]] ], [ 1, [[FALSE]] ]
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 [[OFFSET]]
-; CHECK-NEXT:    store i8 0, i8* [[P]]
+; CHECK-NEXT:    store i8 0, i8* [[P]], align 1
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret i32 0
@@ -1176,10 +1177,10 @@ define i32 @test46(i1 %c) {
 ; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds i8, i8* [[M]], i64 2
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    store i8 1, i8* [[P_1]]
+; CHECK-NEXT:    store i8 1, i8* [[P_1]], align 1
 ; CHECK-NEXT:    br label [[CONT:%.*]]
 ; CHECK:       false:
-; CHECK-NEXT:    store i8 1, i8* [[P_1]]
+; CHECK-NEXT:    store i8 1, i8* [[P_1]], align 1
 ; CHECK-NEXT:    br label [[CONT]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    br label [[RETURN:%.*]]

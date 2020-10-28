@@ -75,7 +75,7 @@ struct Checker {
 
 static Checker check;
 
-int main() {
+int main(int, char**) {
     assert(std::memcmp(check.cerr_mem_dump, (char const*)&std::cerr, sizeof(std::cerr)) == 0);
     assert(std::memcmp(check.cin_mem_dump, (char const*)&std::cin, sizeof(std::cin)) == 0);
     assert(std::memcmp(check.cout_mem_dump, (char const*)&std::cout, sizeof(std::cout)) == 0);
@@ -85,4 +85,5 @@ int main() {
     assert(std::memcmp(check.wcin_mem_dump, (char const*)&std::wcin, sizeof(std::wcin)) == 0);
     assert(std::memcmp(check.wcout_mem_dump, (char const*)&std::wcout, sizeof(std::wcout)) == 0);
     assert(std::memcmp(check.wclog_mem_dump, (char const*)&std::wclog, sizeof(std::wclog)) == 0);
+    return 0;
 }

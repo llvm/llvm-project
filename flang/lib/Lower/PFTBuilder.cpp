@@ -64,8 +64,11 @@ struct UnwrapStmt<parser::UnlabeledStatement<A>> {
 class PFTBuilder {
 public:
   PFTBuilder(const semantics::SemanticsContext &semanticsContext)
-      : pgm{std::make_unique<lower::pft::Program>()},
-        parentVariantStack{*pgm.get()}, semanticsContext{semanticsContext} {}
+      : pgm{std::make_unique<lower::pft::Program>()}, semanticsContext{
+                                                          semanticsContext} {
+    lower::pft::ParentVariant parent{*pgm.get()};
+    parentVariantStack.push_back(parent);
+  }
 
   /// Get the result
   std::unique_ptr<lower::pft::Program> result() { return std::move(pgm); }
@@ -905,11 +908,15 @@ private:
 template <typename A, typename T>
 static lower::pft::FunctionLikeUnit::FunctionStatement
 getFunctionStmt(const T &func) {
-  return std::get<parser::Statement<A>>(func.t);
+  lower::pft::FunctionLikeUnit::FunctionStatement result{
+      std::get<parser::Statement<A>>(func.t)};
+  return result;
 }
 template <typename A, typename T>
 static lower::pft::ModuleLikeUnit::ModuleStatement getModuleStmt(const T &mod) {
-  return std::get<parser::Statement<A>>(mod.t);
+  lower::pft::ModuleLikeUnit::ModuleStatement result{
+      std::get<parser::Statement<A>>(mod.t)};
+  return result;
 }
 
 static const semantics::Symbol *getSymbol(
@@ -1078,7 +1085,8 @@ Fortran::lower::pft::FunctionLikeUnit::FunctionLikeUnit(
   const auto &ps{
       std::get<std::optional<parser::Statement<parser::ProgramStmt>>>(func.t)};
   if (ps.has_value()) {
-    beginStmt = ps.value();
+    FunctionStatement begin{ps.value()};
+    beginStmt = begin;
     symbol = getSymbol(beginStmt);
     processSymbolTable(*symbol->scope());
   } else {

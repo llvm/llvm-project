@@ -375,10 +375,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
 }
 bool fromJSON(const Value &E, CustomStruct &R, Path P) {
   ObjectMapper O(E, P);
-  if (!O || !O.map("str", R.S) || !O.map("int", R.I))
-    return false;
-  O.map("bool", R.B);
-  return true;
+  return O && O.map("str", R.S) && O.map("int", R.I) &&
+         O.mapOptional("bool", R.B);
 }
 
 static std::string errorContext(const Value &V, const Path::Root &R) {
@@ -392,24 +390,18 @@ TEST(JSONTest, Deserialize) {
   std::map<std::string, std::vector<CustomStruct>> R;
   CustomStruct ExpectedStruct = {"foo", 42, true};
   std::map<std::string, std::vector<CustomStruct>> Expected;
-  Value J = Object{
-      {"foo",
-       Array{
-           Object{
-               {"str", "foo"},
-               {"int", 42},
-               {"bool", true},
-               {"unknown", "ignored"},
-           },
-           Object{{"str", "bar"}},
-           Object{
-               {"str", "baz"}, {"bool", "string"}, // OK, deserialize ignores.
-           },
-       }}};
+  Value J = Object{{"foo", Array{
+                               Object{
+                                   {"str", "foo"},
+                                   {"int", 42},
+                                   {"bool", true},
+                                   {"unknown", "ignored"},
+                               },
+                               Object{{"str", "bar"}},
+                           }}};
   Expected["foo"] = {
       CustomStruct("foo", 42, true),
       CustomStruct("bar", llvm::None, false),
-      CustomStruct("baz", llvm::None, false),
   };
   Path::Root Root("CustomStruct");
   ASSERT_TRUE(fromJSON(J, R, Root));
@@ -423,7 +415,6 @@ TEST(JSONTest, Deserialize) {
   "foo": [
     /* error: expected object */
     123,
-    { ... },
     { ... }
   ]
 })";
@@ -443,6 +434,10 @@ TEST(JSONTest, Deserialize) {
   // Optional<T> must parse as the correct type if present.
   EXPECT_FALSE(fromJSON(Object{{"str", "1"}, {"int", "string"}}, V, Root));
   EXPECT_EQ("expected integer at CustomStruct.int", toString(Root.getError()));
+
+  // mapOptional must parse as the correct type if present.
+  EXPECT_FALSE(fromJSON(Object{{"str", "1"}, {"bool", "string"}}, V, Root));
+  EXPECT_EQ("expected boolean at CustomStruct.bool", toString(Root.getError()));
 }
 
 TEST(JSONTest, ParseDeserialize) {
@@ -479,6 +474,7 @@ TEST(JSONTest, Stream) {
         J.arrayBegin();
         J.value(43);
         J.arrayEnd();
+        J.rawValue([](raw_ostream &OS) { OS << "'unverified\nraw value'"; });
       });
       J.comment("attribute");
       J.attributeBegin("bar");
@@ -492,7 +488,8 @@ TEST(JSONTest, Stream) {
   };
 
   const char *Plain =
-      R"(/*top* /level*/{"foo":[null,/*element*/42.5,[43]],/*attribute*/"bar":/*attribute value*/{},"baz":"xyz"})";
+      R"(/*top* /level*/{"foo":[null,/*element*/42.5,[43],'unverified
+raw value'],/*attribute*/"bar":/*attribute value*/{},"baz":"xyz"})";
   EXPECT_EQ(Plain, StreamStuff(0));
   const char *Pretty = R"(/* top* /level */
 {
@@ -502,7 +499,9 @@ TEST(JSONTest, Stream) {
     42.5,
     [
       43
-    ]
+    ],
+    'unverified
+raw value'
   ],
   /* attribute */
   "bar": /* attribute value */ {},

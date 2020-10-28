@@ -45,7 +45,7 @@ define <2 x i8> @trunc_lshr_trunc_nonuniform(<2 x i64> %a) {
 
 define <2 x i8> @trunc_lshr_trunc_uniform_undef(<2 x i64> %a) {
 ; CHECK-LABEL: @trunc_lshr_trunc_uniform_undef(
-; CHECK-NEXT:    [[C1:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 24, i64 0>
+; CHECK-NEXT:    [[C1:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 24, i64 undef>
 ; CHECK-NEXT:    [[D:%.*]] = trunc <2 x i64> [[C1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[D]]
 ;
@@ -131,7 +131,7 @@ define <2 x i8> @trunc_ashr_trunc_nonuniform(<2 x i64> %a) {
 
 define <2 x i8> @trunc_ashr_trunc_uniform_undef(<2 x i64> %a) {
 ; CHECK-LABEL: @trunc_ashr_trunc_uniform_undef(
-; CHECK-NEXT:    [[C1:%.*]] = ashr <2 x i64> [[A:%.*]], <i64 8, i64 0>
+; CHECK-NEXT:    [[C1:%.*]] = ashr <2 x i64> [[A:%.*]], <i64 8, i64 undef>
 ; CHECK-NEXT:    [[D:%.*]] = trunc <2 x i64> [[C1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[D]]
 ;

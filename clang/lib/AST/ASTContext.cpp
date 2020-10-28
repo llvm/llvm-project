@@ -1005,9 +1005,6 @@ ASTContext::~ASTContext() {
 
   for (const auto &Value : ModuleInitializers)
     Value.second->~PerModuleInitializers();
-
-  for (APValue *Value : APValueCleanups)
-    Value->~APValue();
 }
 
 void ASTContext::setTraversalScope(const std::vector<Decl *> &TopLevelDecls) {
@@ -1777,9 +1774,8 @@ CharUnits ASTContext::getExnObjectAlignment() const {
 // chars. If the type is a record, its data size is returned.  This is
 // the size of the memcpy that's performed when assigning this type
 // using a trivial copy/move assignment operator.
-std::pair<CharUnits, CharUnits>
-ASTContext::getTypeInfoDataSizeInChars(QualType T) const {
-  std::pair<CharUnits, CharUnits> sizeAndAlign = getTypeInfoInChars(T);
+TypeInfoChars ASTContext::getTypeInfoDataSizeInChars(QualType T) const {
+  TypeInfoChars Info = getTypeInfoInChars(T);
 
   // In C++, objects can sometimes be allocated into the tail padding
   // of a base-class subobject.  We decide whether that's possible
@@ -1787,44 +1783,43 @@ ASTContext::getTypeInfoDataSizeInChars(QualType T) const {
   if (getLangOpts().CPlusPlus) {
     if (const auto *RT = T->getAs<RecordType>()) {
       const ASTRecordLayout &layout = getASTRecordLayout(RT->getDecl());
-      sizeAndAlign.first = layout.getDataSize();
+      Info.Width = layout.getDataSize();
     }
   }
 
-  return sizeAndAlign;
+  return Info;
 }
 
 /// getConstantArrayInfoInChars - Performing the computation in CharUnits
 /// instead of in bits prevents overflowing the uint64_t for some large arrays.
-std::pair<CharUnits, CharUnits>
+TypeInfoChars
 static getConstantArrayInfoInChars(const ASTContext &Context,
                                    const ConstantArrayType *CAT) {
-  std::pair<CharUnits, CharUnits> EltInfo =
-      Context.getTypeInfoInChars(CAT->getElementType());
+  TypeInfoChars EltInfo = Context.getTypeInfoInChars(CAT->getElementType());
   uint64_t Size = CAT->getSize().getZExtValue();
-  assert((Size == 0 || static_cast<uint64_t>(EltInfo.first.getQuantity()) <=
+  assert((Size == 0 || static_cast<uint64_t>(EltInfo.Width.getQuantity()) <=
               (uint64_t)(-1)/Size) &&
          "Overflow in array type char size evaluation");
-  uint64_t Width = EltInfo.first.getQuantity() * Size;
-  unsigned Align = EltInfo.second.getQuantity();
+  uint64_t Width = EltInfo.Width.getQuantity() * Size;
+  unsigned Align = EltInfo.Align.getQuantity();
   if (!Context.getTargetInfo().getCXXABI().isMicrosoft() ||
       Context.getTargetInfo().getPointerWidth(0) == 64)
     Width = llvm::alignTo(Width, Align);
-  return std::make_pair(CharUnits::fromQuantity(Width),
-                        CharUnits::fromQuantity(Align));
+  return TypeInfoChars(CharUnits::fromQuantity(Width),
+                       CharUnits::fromQuantity(Align),
+                       EltInfo.AlignIsRequired);
 }
 
-std::pair<CharUnits, CharUnits>
-ASTContext::getTypeInfoInChars(const Type *T) const {
+TypeInfoChars ASTContext::getTypeInfoInChars(const Type *T) const {
   if (const auto *CAT = dyn_cast<ConstantArrayType>(T))
     return getConstantArrayInfoInChars(*this, CAT);
   TypeInfo Info = getTypeInfo(T);
-  return std::make_pair(toCharUnitsFromBits(Info.Width),
-                        toCharUnitsFromBits(Info.Align));
+  return TypeInfoChars(toCharUnitsFromBits(Info.Width),
+                       toCharUnitsFromBits(Info.Align),
+                       Info.AlignIsRequired);
 }
 
-std::pair<CharUnits, CharUnits>
-ASTContext::getTypeInfoInChars(QualType T) const {
+TypeInfoChars ASTContext::getTypeInfoInChars(QualType T) const {
   return getTypeInfoInChars(T.getTypePtr());
 }
 
@@ -2375,10 +2370,10 @@ int64_t ASTContext::toBits(CharUnits CharSize) const {
 /// getTypeSizeInChars - Return the size of the specified type, in characters.
 /// This method does not work on incomplete types.
 CharUnits ASTContext::getTypeSizeInChars(QualType T) const {
-  return getTypeInfoInChars(T).first;
+  return getTypeInfoInChars(T).Width;
 }
 CharUnits ASTContext::getTypeSizeInChars(const Type *T) const {
-  return getTypeInfoInChars(T).first;
+  return getTypeInfoInChars(T).Width;
 }
 
 /// getTypeAlignInChars - Return the ABI-specified alignment of a type, in
@@ -4875,9 +4870,16 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
 
     Arg = TemplateArgument(ArgType);
   } else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+    QualType T =
+        NTTP->getType().getNonPackExpansionType().getNonLValueExprType(*this);
+    // For class NTTPs, ensure we include the 'const' so the type matches that
+    // of a real template argument.
+    // FIXME: It would be more faithful to model this as something like an
+    // lvalue-to-rvalue conversion applied to a const-qualified lvalue.
+    if (T->isRecordType())
+      T.addConst();
     Expr *E = new (*this) DeclRefExpr(
-        *this, NTTP, /*enclosing*/ false,
-        NTTP->getType().getNonPackExpansionType().getNonLValueExprType(*this),
+        *this, NTTP, /*enclosing*/ false, T,
         Expr::getValueKindForType(NTTP->getType()), NTTP->getLocation());
 
     if (NTTP->isParameterPack())
@@ -9427,8 +9429,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
   // designates the object or function denoted by the reference, and the
   // expression is an lvalue unless the reference is an rvalue reference and
   // the expression is a function call (possibly inside parentheses).
-  assert(!LHS->getAs<ReferenceType>() && "LHS is a reference type?");
-  assert(!RHS->getAs<ReferenceType>() && "RHS is a reference type?");
+  if (LHS->getAs<ReferenceType>() || RHS->getAs<ReferenceType>())
+    return {};
 
   if (Unqualified) {
     LHS = LHS.getUnqualifiedType();
@@ -10967,6 +10969,27 @@ ASTContext::getMSGuidDecl(MSGuidDecl::Parts Parts) const {
   return New;
 }
 
+TemplateParamObjectDecl *
+ASTContext::getTemplateParamObjectDecl(QualType T, const APValue &V) const {
+  assert(T->isRecordType() && "template param object of unexpected type");
+
+  // C++ [temp.param]p8:
+  //   [...] a static storage duration object of type 'const T' [...]
+  T.addConst();
+
+  llvm::FoldingSetNodeID ID;
+  TemplateParamObjectDecl::Profile(ID, T, V);
+
+  void *InsertPos;
+  if (TemplateParamObjectDecl *Existing =
+          TemplateParamObjectDecls.FindNodeOrInsertPos(ID, InsertPos))
+    return Existing;
+
+  TemplateParamObjectDecl *New = TemplateParamObjectDecl::Create(*this, T, V);
+  TemplateParamObjectDecls.InsertNode(New, InsertPos);
+  return New;
+}
+
 bool ASTContext::AtomicUsesUnsupportedLibcall(const AtomicExpr *E) const {
   const llvm::Triple &T = getTargetInfo().getTriple();
   if (!T.isOSDarwin())
@@ -11301,9 +11324,9 @@ OMPTraitInfo &ASTContext::getNewOMPTraitInfo() {
   return *OMPTraitInfoVector.back();
 }
 
-const DiagnosticBuilder &
-clang::operator<<(const DiagnosticBuilder &DB,
-                  const ASTContext::SectionInfo &Section) {
+const StreamingDiagnostic &clang::
+operator<<(const StreamingDiagnostic &DB,
+           const ASTContext::SectionInfo &Section) {
   if (Section.Decl)
     return DB << Section.Decl;
   return DB << "a prior #pragma section";

@@ -112,7 +112,8 @@ static_assert(__COUNTER__ >= 1000, "");
 void fn1(T1 x) { DoNotOptimize(&x); }
 void fn2(typename std::invoke_result_t<T1, int, int>::type x) { DoNotOptimize(&x); }
 
-int main() {
+int main(int, char**) {
   DoNotOptimize(&fn1);
   DoNotOptimize(&fn2);
+  return 0;
 }

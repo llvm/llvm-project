@@ -746,11 +746,12 @@ RelExpr X86_64::adjustRelaxExpr(RelType type, const uint8_t *data,
   if (op == 0xff && (modRm == 0x15 || modRm == 0x25))
     return R_RELAX_GOT_PC;
 
+  // We don't support test/binop instructions without a REX prefix.
+  if (type == R_X86_64_GOTPCRELX)
+    return relExpr;
+
   // Relaxation of test, adc, add, and, cmp, or, sbb, sub, xor.
   // If PIC then no relaxation is available.
-  // We also don't relax test/binop instructions without REX byte,
-  // they are 32bit operations and not common to have.
-  assert(type == R_X86_64_REX_GOTPCRELX);
   return config->isPic ? relExpr : R_RELAX_GOT_PC_NOPIC;
 }
 

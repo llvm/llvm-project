@@ -12,6 +12,7 @@
 
 #include <type_traits>
 
+#include "mlir/Dialect/Affine/EDSC/Builders.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
@@ -510,35 +511,6 @@ static void getVectorElementwiseOpUnrollState(Operation *op,
   resultIndex = numVectors - 1;
 }
 
-// Entry point for unrolling declarative pattern rewrites.
-SmallVector<Value, 1>
-mlir::vector::unrollSingleResultVectorOp(OpBuilder &builder, Operation *op,
-                                         ArrayRef<int64_t> targetShape) {
-  assert(op->getNumResults() == 1 && "Expected single result operation");
-
-  // Populate 'iterationBounds', 'vectors' and 'resultIndex' to unroll 'op'.
-  SmallVector<int64_t, 6> iterationBounds;
-  auto unrollableVectorOp = cast<VectorUnrollOpInterface>(op);
-  auto maybeUnrollShape = unrollableVectorOp.getShapeForUnroll();
-  assert(maybeUnrollShape && "Trying to unroll an incorrect vector op");
-
-  std::vector<VectorState> vectors;
-  unsigned resultIndex;
-
-  if (auto contractionOp = dyn_cast<vector::ContractionOp>(op)) {
-    // Populate state for vector ContractionOp.
-    getVectorContractionOpUnrollState(contractionOp, targetShape, vectors,
-                                      resultIndex);
-  } else {
-    // Populate state for vector elementwise op.
-    getVectorElementwiseOpUnrollState(op, targetShape, vectors, resultIndex);
-  }
-
-  // Unroll 'op' with 'iterationBounds' to 'targetShape'.
-  return SmallVector<Value, 1>{unrollSingleResultStructuredOp(
-      op, *maybeUnrollShape, vectors, resultIndex, targetShape, builder)};
-}
-
 /// Generates slices of 'vectorType' according to 'sizes' and 'strides, and
 /// calls 'fn' with linear index and indices for each slice.
 static void generateTransferOpSlices(
@@ -614,6 +586,114 @@ static bool isIdentitySuffix(AffineMap map) {
   return true;
 }
 
+/// Unroll transfer_read ops to the given shape and create an aggregate with all
+/// the chunks.
+static Value unrollTransferReadOp(vector::TransferReadOp readOp,
+                                  ArrayRef<int64_t> targetShape,
+                                  OpBuilder &builder) {
+  if (!isIdentitySuffix(readOp.permutation_map()))
+    return nullptr;
+  auto sourceVectorType = readOp.getVectorType();
+  SmallVector<int64_t, 4> strides(targetShape.size(), 1);
+
+  Location loc = readOp.getLoc();
+  auto memrefElementType =
+      readOp.memref().getType().cast<MemRefType>().getElementType();
+  auto tupleType = generateExtractSlicesOpResultType(
+      sourceVectorType, targetShape, strides, builder);
+  int64_t numSlices = tupleType.size();
+
+  SmallVector<Value, 4> vectorTupleValues(numSlices);
+  SmallVector<Value, 4> indices(readOp.indices().begin(),
+                                readOp.indices().end());
+  auto createSlice = [&](unsigned index, ArrayRef<Value> sliceIndices) {
+    // Get VectorType for slice 'i'.
+    auto sliceVectorType = tupleType.getType(index);
+    // Create split TransferReadOp for 'sliceUser'.
+    // `masked` attribute propagates conservatively: if the coarse op didn't
+    // need masking, the fine op doesn't either.
+    vectorTupleValues[index] = builder.create<vector::TransferReadOp>(
+        loc, sliceVectorType, readOp.memref(), sliceIndices,
+        readOp.permutation_map(), readOp.padding(),
+        readOp.masked() ? *readOp.masked() : ArrayAttr());
+  };
+  generateTransferOpSlices(memrefElementType, sourceVectorType, tupleType,
+                           targetShape, strides, indices, builder, createSlice);
+
+  // Create tuple of splice transfer read operations.
+  Value tupleOp =
+      builder.create<vector::TupleOp>(loc, tupleType, vectorTupleValues);
+  // Replace 'readOp' with result 'insertSlicesResult'.
+  Value newVec = builder.create<vector::InsertSlicesOp>(
+      loc, sourceVectorType, tupleOp, builder.getI64ArrayAttr(targetShape),
+      builder.getI64ArrayAttr(strides));
+  return newVec;
+}
+
+// Entry point for unrolling declarative pattern rewrite for transfer_write op.
+LogicalResult
+mlir::vector::unrollTransferWriteOp(OpBuilder &builder, Operation *op,
+                                    ArrayRef<int64_t> targetShape) {
+  auto writeOp = cast<vector::TransferWriteOp>(op);
+  if (!isIdentitySuffix(writeOp.permutation_map()))
+    return failure();
+  VectorType sourceVectorType = writeOp.getVectorType();
+  SmallVector<int64_t, 4> strides(targetShape.size(), 1);
+  TupleType tupleType = generateExtractSlicesOpResultType(
+      sourceVectorType, targetShape, strides, builder);
+  Location loc = writeOp.getLoc();
+  Value tuple = builder.create<vector::ExtractSlicesOp>(
+      loc, tupleType, writeOp.vector(), targetShape, strides);
+  auto memrefElementType =
+      writeOp.memref().getType().cast<MemRefType>().getElementType();
+  SmallVector<Value, 4> indices(writeOp.indices().begin(),
+                                writeOp.indices().end());
+  auto createSlice = [&](unsigned index, ArrayRef<Value> sliceIndices) {
+    auto element = builder.create<vector::TupleGetOp>(
+        loc, tupleType.getType(index), tuple, builder.getI64IntegerAttr(index));
+    builder.create<vector::TransferWriteOp>(
+        loc, element.getResult(), writeOp.memref(), sliceIndices,
+        writeOp.permutation_map(),
+        writeOp.masked() ? *writeOp.masked() : ArrayAttr());
+  };
+  generateTransferOpSlices(memrefElementType, sourceVectorType, tupleType,
+                           targetShape, strides, indices, builder, createSlice);
+  return success();
+}
+
+// Entry point for unrolling declarative pattern rewrites.
+SmallVector<Value, 1>
+mlir::vector::unrollSingleResultVectorOp(OpBuilder &builder, Operation *op,
+                                         ArrayRef<int64_t> targetShape) {
+  assert(op->getNumResults() == 1 && "Expected single result operation");
+
+  // Populate 'iterationBounds', 'vectors' and 'resultIndex' to unroll 'op'.
+  SmallVector<int64_t, 6> iterationBounds;
+  auto unrollableVectorOp = cast<VectorUnrollOpInterface>(op);
+  auto maybeUnrollShape = unrollableVectorOp.getShapeForUnroll();
+  assert(maybeUnrollShape && "Trying to unroll an incorrect vector op");
+
+  std::vector<VectorState> vectors;
+  unsigned resultIndex;
+
+  if (auto readOp = dyn_cast<vector::TransferReadOp>(op))
+    return SmallVector<Value, 1>{
+        unrollTransferReadOp(readOp, targetShape, builder)};
+
+  if (auto contractionOp = dyn_cast<vector::ContractionOp>(op)) {
+    // Populate state for vector ContractionOp.
+    getVectorContractionOpUnrollState(contractionOp, targetShape, vectors,
+                                      resultIndex);
+  } else {
+    // Populate state for vector elementwise op.
+    getVectorElementwiseOpUnrollState(op, targetShape, vectors, resultIndex);
+  }
+
+  // Unroll 'op' with 'iterationBounds' to 'targetShape'.
+  return SmallVector<Value, 1>{unrollSingleResultStructuredOp(
+      op, *maybeUnrollShape, vectors, resultIndex, targetShape, builder)};
+}
+
 namespace {
 
 // Splits vector TransferReadOp into smaller TransferReadOps based on slicing
@@ -635,43 +715,16 @@ struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
       return failure();
 
     // Get 'sizes' and 'strides' parameters from ExtractSlicesOp user.
-    auto sourceVectorType = extractSlicesOp.getSourceVectorType();
-    auto resultTupleType = extractSlicesOp.getResultTupleType();
     SmallVector<int64_t, 4> sizes;
     extractSlicesOp.getSizes(sizes);
     SmallVector<int64_t, 4> strides;
     extractSlicesOp.getStrides(strides);
     assert(llvm::all_of(strides, [](int64_t s) { return s == 1; }));
 
-    Location loc = xferReadOp.getLoc();
-    auto memrefElementType =
-        xferReadOp.memref().getType().cast<MemRefType>().getElementType();
-    int64_t numSlices = resultTupleType.size();
-    SmallVector<Value, 4> vectorTupleValues(numSlices);
-    SmallVector<Value, 4> indices(xferReadOp.indices().begin(),
-                                  xferReadOp.indices().end());
-    auto createSlice = [&](unsigned index, ArrayRef<Value> sliceIndices) {
-      // Get VectorType for slice 'i'.
-      auto sliceVectorType = resultTupleType.getType(index);
-      // Create split TransferReadOp for 'sliceUser'.
-      // `masked` attribute propagates conservatively: if the coarse op didn't
-      // need masking, the fine op doesn't either.
-      vectorTupleValues[index] = rewriter.create<vector::TransferReadOp>(
-          loc, sliceVectorType, xferReadOp.memref(), sliceIndices,
-          xferReadOp.permutation_map(), xferReadOp.padding(),
-          xferReadOp.masked() ? *xferReadOp.masked() : ArrayAttr());
-    };
-    generateTransferOpSlices(memrefElementType, sourceVectorType,
-                             resultTupleType, sizes, strides, indices, rewriter,
-                             createSlice);
-
-    // Create tuple of splice xfer read operations.
-    Value tupleOp = rewriter.create<vector::TupleOp>(loc, resultTupleType,
-                                                     vectorTupleValues);
-    // Replace 'xferReadOp' with result 'insertSlicesResult'.
-    rewriter.replaceOpWithNewOp<vector::InsertSlicesOp>(
-        xferReadOp, sourceVectorType, tupleOp, extractSlicesOp.sizes(),
-        extractSlicesOp.strides());
+    Value newVec = unrollTransferReadOp(xferReadOp, sizes, rewriter);
+    if (!newVec)
+      return failure();
+    rewriter.replaceOp(xferReadOp, newVec);
     return success();
   }
 };
@@ -2443,14 +2496,72 @@ mlir::vector::distributPointwiseVectorOp(OpBuilder &builder, Operation *op,
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointAfter(op);
   Location loc = op->getLoc();
+  if (op->getNumResults() != 1)
+    return {};
   Value result = op->getResult(0);
+  VectorType type = op->getResult(0).getType().dyn_cast<VectorType>();
+  // Currently only support distributing 1-D vectors of size multiple of the
+  // given multiplicty. To handle more sizes we would need to support masking.
+  if (!type || type.getRank() != 1 || type.getNumElements() % multiplicity != 0)
+    return {};
   DistributeOps ops;
   ops.extract =
       builder.create<vector::ExtractMapOp>(loc, result, id, multiplicity);
-  ops.insert =
-      builder.create<vector::InsertMapOp>(loc, ops.extract, id, multiplicity);
+  ops.insert = builder.create<vector::InsertMapOp>(loc, ops.extract, result, id,
+                                                   multiplicity);
   return ops;
 }
+
+struct TransferReadExtractPattern
+    : public OpRewritePattern<vector::TransferReadOp> {
+  TransferReadExtractPattern(MLIRContext *context)
+      : OpRewritePattern<vector::TransferReadOp>(context) {}
+  LogicalResult matchAndRewrite(vector::TransferReadOp read,
+                                PatternRewriter &rewriter) const override {
+    if (!read.getResult().hasOneUse())
+      return failure();
+    auto extract =
+        dyn_cast<vector::ExtractMapOp>(*read.getResult().getUsers().begin());
+    if (!extract)
+      return failure();
+    edsc::ScopedContext scope(rewriter, read.getLoc());
+    using mlir::edsc::op::operator+;
+    using namespace mlir::edsc::intrinsics;
+    SmallVector<Value, 4> indices(read.indices().begin(), read.indices().end());
+    indices.back() = indices.back() + extract.id();
+    Value newRead = vector_transfer_read(extract.getType(), read.memref(),
+                                         indices, read.permutation_map(),
+                                         read.padding(), ArrayAttr());
+    Value dest = rewriter.create<ConstantOp>(
+        read.getLoc(), read.getType(), rewriter.getZeroAttr(read.getType()));
+    newRead = rewriter.create<vector::InsertMapOp>(
+        read.getLoc(), newRead, dest, extract.id(), extract.multiplicity());
+    rewriter.replaceOp(read, newRead);
+    return success();
+  }
+};
+
+struct TransferWriteInsertPattern
+    : public OpRewritePattern<vector::TransferWriteOp> {
+  TransferWriteInsertPattern(MLIRContext *context)
+      : OpRewritePattern<vector::TransferWriteOp>(context) {}
+  LogicalResult matchAndRewrite(vector::TransferWriteOp write,
+                                PatternRewriter &rewriter) const override {
+    auto insert = write.vector().getDefiningOp<vector::InsertMapOp>();
+    if (!insert)
+      return failure();
+    edsc::ScopedContext scope(rewriter, write.getLoc());
+    using mlir::edsc::op::operator+;
+    using namespace mlir::edsc::intrinsics;
+    SmallVector<Value, 4> indices(write.indices().begin(),
+                                  write.indices().end());
+    indices.back() = indices.back() + insert.id();
+    vector_transfer_write(insert.vector(), write.memref(), indices,
+                          write.permutation_map(), ArrayAttr());
+    rewriter.eraseOp(write);
+    return success();
+  }
+};
 
 // TODO: Add pattern to rewrite ExtractSlices(ConstantMaskOp).
 // TODO: Add this as DRR pattern.
@@ -2461,7 +2572,9 @@ void mlir::vector::populateVectorToVectorTransformationPatterns(
                   ShapeCastOpFolder,
                   SplitTransferReadOp,
                   SplitTransferWriteOp,
-                  TupleGetFolderOp>(context);
+                  TupleGetFolderOp,
+                  TransferReadExtractPattern,
+                  TransferWriteInsertPattern>(context);
   // clang-format on
 }
 

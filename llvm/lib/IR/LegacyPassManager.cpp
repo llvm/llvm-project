@@ -87,14 +87,14 @@ static cl::opt<bool> PrintAfterAll("print-after-all",
 static cl::opt<bool>
     PrintModuleScope("print-module-scope",
                      cl::desc("When printing IR for print-[before|after]{-all} "
-                              "always print a module IR"),
+                              "and change reporters, always print a module IR"),
                      cl::init(false), cl::Hidden);
 
 static cl::list<std::string>
     PrintFuncsList("filter-print-funcs", cl::value_desc("function names"),
                    cl::desc("Only print IR for functions whose name "
                             "match this for all print-[before|after][-all] "
-                            "options"),
+                            "and change reporter options"),
                    cl::CommaSeparated, cl::Hidden);
 
 /// This is a helper to determine whether to print IR before or

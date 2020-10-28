@@ -881,7 +881,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
     // FoldMI does not define this physreg. Remove the LI segment.
     assert(MO->isDead() && "Cannot fold physreg def");
     SlotIndex Idx = LIS.getInstructionIndex(*MI).getRegSlot();
-    LIS.removePhysRegDefAt(Reg, Idx);
+    LIS.removePhysRegDefAt(Reg.asMCReg(), Idx);
   }
 
   int FI;

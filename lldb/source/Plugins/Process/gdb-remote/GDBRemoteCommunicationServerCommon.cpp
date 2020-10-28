@@ -843,7 +843,7 @@ GDBRemoteCommunicationServerCommon::Handle_qSupported(
   response.PutCString(";QListThreadsInStopReply+");
   response.PutCString(";qEcho+");
   response.PutCString(";qXfer:features:read+");
-#if defined(__linux__) || defined(__NetBSD__)
+#if defined(__linux__) || defined(__NetBSD__) || defined(__FreeBSD__)
   response.PutCString(";QPassSignals+");
   response.PutCString(";qXfer:auxv:read+");
   response.PutCString(";qXfer:libraries-svr4:read+");

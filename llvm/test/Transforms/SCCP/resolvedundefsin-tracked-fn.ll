@@ -274,8 +274,9 @@ define internal void @test4_b(i8* %arg) {
 ; CHECK-SAME: (i8* [[ARG:%.*]])
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = bitcast i8* null to i16*
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, i8* null, i8* null
 ; CHECK-NEXT:    call void @use.16(i16* [[TMP]])
-; CHECK-NEXT:    call void @use.8(i8* null)
+; CHECK-NEXT:    call void @use.8(i8* [[SEL]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -384,7 +385,10 @@ define void @test3() {
 ; CHECK-NEXT:    store i32 [[MUL]], i32* @pcount, align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end24:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
+; CHECK-NEXT:    [[CMP25474:%.*]] = icmp sgt i32 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[CMP25474]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    ret void
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;

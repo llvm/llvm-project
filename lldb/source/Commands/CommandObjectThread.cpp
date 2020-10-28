@@ -8,6 +8,8 @@
 
 #include "CommandObjectThread.h"
 
+#include <sstream>
+
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -26,6 +28,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanStepInRange.h"
+#include "lldb/Target/Trace.h"
 #include "lldb/Utility/State.h"
 
 using namespace lldb;
@@ -2165,6 +2168,170 @@ public:
   ~CommandObjectMultiwordThreadPlan() override = default;
 };
 
+// Next are the subcommands of CommandObjectMultiwordTrace
+
+// CommandObjectTraceDumpInstructions
+#define LLDB_OPTIONS_thread_trace_dump_instructions
+#include "CommandOptions.inc"
+
+class CommandObjectTraceDumpInstructions
+    : public CommandObjectIterateOverThreads {
+public:
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() : Options() { OptionParsingStarting(nullptr); }
+
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'c': {
+        int32_t count;
+        if (option_arg.empty() || option_arg.getAsInteger(0, count) ||
+            count < 0)
+          error.SetErrorStringWithFormat(
+              "invalid integer value for option '%s'",
+              option_arg.str().c_str());
+        else
+          m_count = count;
+        break;
+      }
+      case 's': {
+        int32_t start_position;
+        if (option_arg.empty() || option_arg.getAsInteger(0, start_position) ||
+            start_position < 0)
+          error.SetErrorStringWithFormat(
+              "invalid integer value for option '%s'",
+              option_arg.str().c_str());
+        else
+          m_start_position = start_position;
+        break;
+      }
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_count = kDefaultCount;
+      m_start_position = kDefaultStartPosition;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_thread_trace_dump_instructions_options);
+    }
+
+    static const uint32_t kDefaultCount = 20;
+    static const uint32_t kDefaultStartPosition = 0;
+
+    // Instance variables to hold the values for command options.
+    uint32_t m_count;
+    uint32_t m_start_position;
+  };
+
+  CommandObjectTraceDumpInstructions(CommandInterpreter &interpreter)
+      : CommandObjectIterateOverThreads(
+            interpreter, "thread trace dump instructions",
+            "Dump the traced instructions for one or more threads.  If no "
+            "threads are specified, show the current thread.  Use the "
+            "thread-index \"all\" to see all threads.",
+            nullptr,
+            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
+        m_options(), m_create_repeat_command_just_invoked(false) {}
+
+  ~CommandObjectTraceDumpInstructions() override = default;
+
+  Options *GetOptions() override { return &m_options; }
+
+  const char *GetRepeatCommand(Args &current_command_args,
+                               uint32_t index) override {
+    current_command_args.GetCommandString(m_repeat_command);
+    m_create_repeat_command_just_invoked = true;
+    return m_repeat_command.c_str();
+  }
+
+protected:
+  bool DoExecute(Args &args, CommandReturnObject &result) override {
+    bool status = CommandObjectIterateOverThreads::DoExecute(args, result);
+    PrepareRepeatArguments();
+    return status;
+  }
+
+  void PrepareRepeatArguments() {
+    m_repeat_start_position = m_options.m_count + GetStartPosition();
+    m_create_repeat_command_just_invoked = false;
+  }
+
+  bool IsRepeatCommand() {
+    return !m_repeat_command.empty() && !m_create_repeat_command_just_invoked;
+  }
+
+  uint32_t GetStartPosition() {
+    return IsRepeatCommand() ? m_repeat_start_position
+                             : m_options.m_start_position;
+  }
+
+  bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
+    const TraceSP &trace_sp = m_exe_ctx.GetTargetSP()->GetTrace();
+    if (!trace_sp) {
+      result.SetError("error: this thread is not being traced");
+      return false;
+    }
+
+    ThreadSP thread_sp =
+        m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
+
+    trace_sp->DumpTraceInstructions(*thread_sp, result.GetOutputStream(),
+                                    m_options.m_count, GetStartPosition());
+    return true;
+  }
+
+  CommandOptions m_options;
+
+  // Repeat command helpers
+  std::string m_repeat_command;
+  bool m_create_repeat_command_just_invoked;
+  uint32_t m_repeat_start_position;
+};
+
+// CommandObjectMultiwordTraceDump
+class CommandObjectMultiwordTraceDump : public CommandObjectMultiword {
+public:
+  CommandObjectMultiwordTraceDump(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "dump",
+            "Commands for displaying trace information of the threads "
+            "in the current process.",
+            "thread trace dump <subcommand> [<subcommand objects>]") {
+    LoadSubCommand(
+        "instructions",
+        CommandObjectSP(new CommandObjectTraceDumpInstructions(interpreter)));
+  }
+  ~CommandObjectMultiwordTraceDump() override = default;
+};
+
+// CommandObjectMultiwordTrace
+class CommandObjectMultiwordTrace : public CommandObjectMultiword {
+public:
+  CommandObjectMultiwordTrace(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "trace",
+            "Commands for operating on traces of the threads in the current "
+            "process.",
+            "thread trace <subcommand> [<subcommand objects>]") {
+    LoadSubCommand("dump", CommandObjectSP(new CommandObjectMultiwordTraceDump(
+                               interpreter)));
+  }
+
+  ~CommandObjectMultiwordTrace() override = default;
+};
+
 // CommandObjectMultiwordThread
 
 CommandObjectMultiwordThread::CommandObjectMultiwordThread(
@@ -2240,6 +2407,8 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
 
   LoadSubCommand("plan", CommandObjectSP(new CommandObjectMultiwordThreadPlan(
                              interpreter)));
+  LoadSubCommand("trace",
+                 CommandObjectSP(new CommandObjectMultiwordTrace(interpreter)));
 }
 
 CommandObjectMultiwordThread::~CommandObjectMultiwordThread() = default;

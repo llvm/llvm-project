@@ -17,6 +17,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace Fortran::frontend;
@@ -35,6 +36,48 @@ CompilerInvocationBase::~CompilerInvocationBase() = default;
 //===----------------------------------------------------------------------===//
 // Deserialization (from args)
 //===----------------------------------------------------------------------===//
+static bool parseShowColorsArgs(
+    const llvm::opt::ArgList &args, bool defaultColor) {
+  // Color diagnostics default to auto ("on" if terminal supports) in the driver
+  // but default to off in cc1, needing an explicit OPT_fdiagnostics_color.
+  // Support both clang's -f[no-]color-diagnostics and gcc's
+  // -f[no-]diagnostics-colors[=never|always|auto].
+  enum {
+    Colors_On,
+    Colors_Off,
+    Colors_Auto
+  } ShowColors = defaultColor ? Colors_Auto : Colors_Off;
+
+  for (auto *a : args) {
+    const llvm::opt::Option &O = a->getOption();
+    if (O.matches(clang::driver::options::OPT_fcolor_diagnostics) ||
+        O.matches(clang::driver::options::OPT_fdiagnostics_color)) {
+      ShowColors = Colors_On;
+    } else if (O.matches(clang::driver::options::OPT_fno_color_diagnostics) ||
+        O.matches(clang::driver::options::OPT_fno_diagnostics_color)) {
+      ShowColors = Colors_Off;
+    } else if (O.matches(clang::driver::options::OPT_fdiagnostics_color_EQ)) {
+      llvm::StringRef value(a->getValue());
+      if (value == "always")
+        ShowColors = Colors_On;
+      else if (value == "never")
+        ShowColors = Colors_Off;
+      else if (value == "auto")
+        ShowColors = Colors_Auto;
+    }
+  }
+
+  return ShowColors == Colors_On ||
+      (ShowColors == Colors_Auto && llvm::sys::Process::StandardErrHasColors());
+}
+
+bool Fortran::frontend::ParseDiagnosticArgs(clang::DiagnosticOptions &opts,
+    llvm::opt::ArgList &args, bool defaultDiagColor) {
+  opts.ShowColors = parseShowColorsArgs(args, defaultDiagColor);
+
+  return true;
+}
+
 static InputKind ParseFrontendArgs(FrontendOptions &opts,
     llvm::opt::ArgList &args, clang::DiagnosticsEngine &diags) {
   // Identify the action (i.e. opts.ProgramAction)
@@ -44,6 +87,9 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
     default: {
       llvm_unreachable("Invalid option in group!");
     }
+    case clang::driver::options::OPT_test_io:
+      opts.programAction_ = InputOutputTest;
+      break;
       // TODO:
       // case clang::driver::options::OPT_E:
       // case clang::driver::options::OPT_emit_obj:
@@ -55,6 +101,7 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
     }
   }
 
+  opts.outputFile_ = args.getLastArgValue(clang::driver::options::OPT_o);
   opts.showHelp_ = args.hasArg(clang::driver::options::OPT_help);
   opts.showVersion_ = args.hasArg(clang::driver::options::OPT_version);
 
@@ -79,6 +126,26 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
           << a->getAsString(args) << a->getValue();
   }
 
+  // Collect the input files and save them in our instance of FrontendOptions.
+  std::vector<std::string> inputs =
+      args.getAllArgValues(clang::driver::options::OPT_INPUT);
+  opts.inputs_.clear();
+  if (inputs.empty())
+    // '-' is the default input if none is given.
+    inputs.push_back("-");
+  for (unsigned i = 0, e = inputs.size(); i != e; ++i) {
+    InputKind ik = dashX;
+    if (ik.IsUnknown()) {
+      ik = FrontendOptions::GetInputKindForExtension(
+          llvm::StringRef(inputs[i]).rsplit('.').second);
+      if (ik.IsUnknown())
+        ik = Language::Unknown;
+      if (i == 0)
+        dashX = ik;
+    }
+
+    opts.inputs_.emplace_back(std::move(inputs[i]), ik);
+  }
   return dashX;
 }
 

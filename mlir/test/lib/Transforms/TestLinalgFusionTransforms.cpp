@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -96,7 +97,7 @@ static void applyFusionPatterns(MLIRContext *context, FuncOp funcOp) {
   LinalgDependenceGraph dependenceGraph =
       LinalgDependenceGraph::buildDependenceGraph(alias, funcOp);
   fillFusionPatterns(context, dependenceGraph, fusionPatterns);
-  applyPatternsAndFoldGreedily(funcOp, fusionPatterns);
+  applyPatternsAndFoldGreedily(funcOp, std::move(fusionPatterns));
 }
 
 void TestLinalgFusionTransforms::runOnFunction() {

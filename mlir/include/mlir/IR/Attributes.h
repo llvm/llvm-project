@@ -148,8 +148,8 @@ class AttributeInterface
                                AttributeTrait::TraitBase> {
 public:
   using Base = AttributeInterface<ConcreteType, Traits>;
-  using InterfaceBase = detail::Interface<ConcreteType, Type, Traits, Type,
-                                          AttributeTrait::TraitBase>;
+  using InterfaceBase = detail::Interface<ConcreteType, Attribute, Traits,
+                                          Attribute, AttributeTrait::TraitBase>;
   using InterfaceBase::InterfaceBase;
 
 private:
@@ -632,7 +632,7 @@ using DenseIterPtrAndSplat =
     llvm::PointerIntPair<const char *, 1, bool,
                          DenseElementDataPointerTypeTraits>;
 
-/// Impl iterator for indexed DenseElementAttr iterators that records a data
+/// Impl iterator for indexed DenseElementsAttr iterators that records a data
 /// pointer and data index that is adjusted for the case of a splat attribute.
 template <typename ConcreteT, typename T, typename PointerT = T *,
           typename ReferenceT = T &>

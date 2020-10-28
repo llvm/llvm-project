@@ -97,6 +97,39 @@ def E2d : E2<0>;
 def EXd1 : EX<1, E1d, E2d>;
 def EXd2 : EX<0, E1d, E2d>;
 
+// CHECK: def Not1
+// CHECK: Result1a = "OK"
+// CHECK: Result1b = "OK"
+// CHECK: Result1c = "OK"
+// CHECK: Result1d = "OK"
+// CHECK: Result1e = "OK"
+// CHECK: def Not2
+// CHECK: Result2a = "OK"
+// CHECK: Result2b = "OK"
+// CHECK: Result2c = "OK"
+// CHECK: Result2d = "OK"
+
+def Not1 {
+  bit true = 1;
+  string Result1a = !if(true, "OK", "not OK");
+  string Result1b = !if(!not(true), "not OK", "OK");
+
+  bit false = 0;
+  string Result1c = !if(false, "not OK", "OK");
+  string Result1d = !if(!not(false), "OK", "not OK");
+  string Result1e = !if(!not(!not(false)), "not OK", "OK");
+}
+
+def Not2 {
+  int one = 1;
+  string Result2a = !if(one, "OK", "not OK");
+  string Result2b = !if(!not(one), "not OK", "OK");
+
+  int zero = 0;
+  string Result2c = !if(zero, "not OK", "OK");
+  string Result2d = !if(!not(zero), "OK", "not OK");
+}
+
 // CHECK:      def One
 // CHECK-NEXT: list<int> first = [1, 2, 3];
 // CHECK-NEXT: list<int> rest = [1, 2, 3];

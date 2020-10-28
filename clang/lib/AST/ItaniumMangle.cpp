@@ -127,9 +127,8 @@ class ItaniumMangleContextImpl : public ItaniumMangleContext {
 
 public:
   explicit ItaniumMangleContextImpl(ASTContext &Context,
-                                    DiagnosticsEngine &Diags,
-                                    bool IsUniqueNameMangler)
-      : ItaniumMangleContext(Context, Diags, IsUniqueNameMangler) {}
+                                    DiagnosticsEngine &Diags)
+      : ItaniumMangleContext(Context, Diags) {}
 
   /// @name Mangler Entry Points
   /// @{
@@ -661,7 +660,12 @@ void CXXNameMangler::mangle(GlobalDecl GD) {
     mangleName(GuidD);
   else if (const BindingDecl *BD = dyn_cast<BindingDecl>(GD.getDecl()))
     mangleName(BD);
-  else
+  else if (isa<TemplateParamObjectDecl>(GD.getDecl())) {
+    DiagnosticsEngine &Diags = Context.getDiags();
+    unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+      "cannot mangle template parameter objects yet");
+    Diags.Report(SourceLocation(), DiagID);
+  } else
     llvm_unreachable("unexpected kind of global decl");
 }
 
@@ -1413,8 +1417,7 @@ void CXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
     // <lambda-sig> ::= <template-param-decl>* <parameter-type>+
     //     # Parameter types or 'v' for 'void'.
     if (const CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(TD)) {
-      if (Record->isLambda() && (Record->getLambdaManglingNumber() ||
-                                 Context.isUniqueNameMangler())) {
+      if (Record->isLambda() && Record->getLambdaManglingNumber()) {
         assert(!AdditionalAbiTags &&
                "Lambda type cannot have additional abi tags");
         mangleLambda(Record);
@@ -1789,37 +1792,6 @@ void CXXNameMangler::mangleTemplateParamDecl(const NamedDecl *Decl) {
   }
 }
 
-// Handles the __builtin_unique_stable_name feature for lambdas.  Instead of the
-// ordinal of the lambda in its mangling, this does line/column to uniquely and
-// reliably identify the lambda.  Additionally, macro expansions are expressed
-// as well to prevent macros causing duplicates.
-static void mangleUniqueNameLambda(CXXNameMangler &Mangler, SourceManager &SM,
-                                   raw_ostream &Out,
-                                   const CXXRecordDecl *Lambda) {
-  SourceLocation Loc = Lambda->getLocation();
-
-  PresumedLoc PLoc = SM.getPresumedLoc(Loc);
-  Mangler.mangleNumber(PLoc.getLine());
-  Out << "_";
-  Mangler.mangleNumber(PLoc.getColumn());
-
-  while(Loc.isMacroID()) {
-    SourceLocation SLToPrint = Loc;
-    if (SM.isMacroArgExpansion(Loc))
-      SLToPrint = SM.getImmediateExpansionRange(Loc).getBegin();
-
-    PLoc = SM.getPresumedLoc(SM.getSpellingLoc(SLToPrint));
-    Out << "m";
-    Mangler.mangleNumber(PLoc.getLine());
-    Out << "_";
-    Mangler.mangleNumber(PLoc.getColumn());
-
-    Loc = SM.getImmediateMacroCallerLoc(Loc);
-    if (Loc.isFileID())
-      Loc = SM.getImmediateMacroCallerLoc(SLToPrint);
-  }
-}
-
 void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   // If the context of a closure type is an initializer for a class member
   // (static or nonstatic), it is encoded in a qualified name with a final
@@ -1849,12 +1821,6 @@ void CXXNameMangler::mangleLambda(const CXXRecordDecl *Lambda) {
   Out << "Ul";
   mangleLambdaSig(Lambda);
   Out << "E";
-
-  if (Context.isUniqueNameMangler()) {
-    mangleUniqueNameLambda(
-        *this, Context.getASTContext().getSourceManager(), Out, Lambda);
-    return;
-  }
 
   // The number is omitted for the first closure type with a given
   // <lambda-sig> in a given context; it is n-2 for the nth closure type
@@ -3707,13 +3673,18 @@ void CXXNameMangler::mangleType(const AutoType *T) {
 }
 
 void CXXNameMangler::mangleType(const DeducedTemplateSpecializationType *T) {
-  // FIXME: This is not the right mangling. We also need to include a scope
-  // here in some cases.
-  QualType D = T->getDeducedType();
-  if (D.isNull())
-    mangleUnscopedTemplateName(T->getTemplateName(), nullptr);
-  else
-    mangleType(D);
+  QualType Deduced = T->getDeducedType();
+  if (!Deduced.isNull())
+    mangleType(Deduced);
+  else if (TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl())
+    mangleName(GlobalDecl(TD));
+  else {
+    // For an unresolved template-name, mangle it as if it were a template
+    // specialization but leave off the template arguments.
+    Out << 'N';
+    mangleTemplatePrefix(T->getTemplateName());
+    Out << 'E';
+  }
 }
 
 void CXXNameMangler::mangleType(const AtomicType *T) {
@@ -5483,8 +5454,7 @@ void ItaniumMangleContextImpl::mangleLambdaSig(const CXXRecordDecl *Lambda,
   Mangler.mangleLambdaSig(Lambda);
 }
 
-ItaniumMangleContext *ItaniumMangleContext::create(ASTContext &Context,
-                                                   DiagnosticsEngine &Diags,
-                                                   bool IsUniqueNameMangler) {
-  return new ItaniumMangleContextImpl(Context, Diags, IsUniqueNameMangler);
+ItaniumMangleContext *
+ItaniumMangleContext::create(ASTContext &Context, DiagnosticsEngine &Diags) {
+  return new ItaniumMangleContextImpl(Context, Diags);
 }

@@ -110,6 +110,9 @@ static cl::opt<bool> GVNEnablePRE("enable-pre", cl::init(true), cl::Hidden);
 static cl::opt<bool> GVNEnableLoadPRE("enable-load-pre", cl::init(true));
 static cl::opt<bool> GVNEnableLoadInLoopPRE("enable-load-in-loop-pre",
                                             cl::init(true));
+static cl::opt<bool>
+GVNEnableSplitBackedgeInLoadPRE("enable-split-backedge-in-load-pre",
+                                cl::init(true));
 static cl::opt<bool> GVNEnableMemDep("enable-gvn-memdep", cl::init(true));
 
 static cl::opt<uint32_t> MaxNumDeps(
@@ -639,6 +642,11 @@ bool GVN::isLoadInLoopPREEnabled() const {
   return Options.AllowLoadInLoopPRE.getValueOr(GVNEnableLoadInLoopPRE);
 }
 
+bool GVN::isLoadPRESplitBackedgeEnabled() const {
+  return Options.AllowLoadPRESplitBackedge.getValueOr(
+      GVNEnableSplitBackedgeInLoadPRE);
+}
+
 bool GVN::isMemDepEnabled() const {
   return Options.AllowMemDep.getValueOr(GVNEnableMemDep);
 }
@@ -1133,7 +1141,6 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   // backwards through predecessors if needed.
   BasicBlock *LoadBB = LI->getParent();
   BasicBlock *TmpBB = LoadBB;
-  bool IsSafeToSpeculativelyExecute = isSafeToSpeculativelyExecute(LI);
 
   // Check that there is no implicit control flow instructions above our load in
   // its block. If there is an instruction that doesn't always pass the
@@ -1150,8 +1157,9 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   // because if the index is out of bounds we should deoptimize rather than
   // access the array.
   // Check that there is no guard in this block above our instruction.
-  if (!IsSafeToSpeculativelyExecute && ICF->isDominatedByICFIFromSameBlock(LI))
-    return false;
+  bool MustEnsureSafetyOfSpeculativeExecution =
+      ICF->isDominatedByICFIFromSameBlock(LI);
+
   while (TmpBB->getSinglePredecessor()) {
     TmpBB = TmpBB->getSinglePredecessor();
     if (TmpBB == LoadBB) // Infinite (unreachable) loop.
@@ -1168,8 +1176,8 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
       return false;
 
     // Check that there is no implicit control flow in a block above.
-    if (!IsSafeToSpeculativelyExecute && ICF->hasICF(TmpBB))
-      return false;
+    MustEnsureSafetyOfSpeculativeExecution =
+        MustEnsureSafetyOfSpeculativeExecution || ICF->hasICF(TmpBB);
   }
 
   assert(TmpBB);
@@ -1222,6 +1230,16 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
         return false;
       }
 
+      // Do not split backedge as it will break the canonical loop form.
+      if (!isLoadPRESplitBackedgeEnabled())
+        if (DT->dominates(LoadBB, Pred)) {
+          LLVM_DEBUG(
+              dbgs()
+              << "COULD NOT PRE LOAD BECAUSE OF A BACKEDGE CRITICAL EDGE '"
+              << Pred->getName() << "': " << *LI << '\n');
+          return false;
+        }
+
       CriticalEdgePred.push_back(Pred);
     } else {
       // Only add the predecessors that will not be split for now.
@@ -1240,6 +1258,17 @@ bool GVN::PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
   // that one block.
   if (NumUnavailablePreds != 1)
       return false;
+
+  // Now we know where we will insert load. We must ensure that it is safe
+  // to speculatively execute the load at that points.
+  if (MustEnsureSafetyOfSpeculativeExecution) {
+    if (CriticalEdgePred.size())
+      if (!isSafeToSpeculativelyExecute(LI, LoadBB->getFirstNonPHI(), DT))
+        return false;
+    for (auto &PL : PredLoads)
+      if (!isSafeToSpeculativelyExecute(LI, PL.first->getTerminator(), DT))
+        return false;
+  }
 
   // Split critical edges, and update the unavailable predecessors accordingly.
   for (BasicBlock *OrigPred : CriticalEdgePred) {

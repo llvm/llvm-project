@@ -65,10 +65,10 @@ public:
   Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
                      size_t &bytes_written) override;
 
-  Status AllocateMemory(size_t size, uint32_t permissions,
-                        lldb::addr_t &addr) override;
+  llvm::Expected<lldb::addr_t> AllocateMemory(size_t size,
+                                              uint32_t permissions) override;
 
-  Status DeallocateMemory(lldb::addr_t addr) override;
+  llvm::Error DeallocateMemory(lldb::addr_t addr) override;
 
   lldb::addr_t GetSharedLibraryInfoAddress() override;
 
@@ -137,39 +137,41 @@ class NativeDebugDelegate : public IDebugDelegate {
 public:
   NativeDebugDelegate(NativeProcessWindows &process) : m_process(process) {}
 
-  void OnExitProcess(uint32_t exit_code) { m_process.OnExitProcess(exit_code); }
+  void OnExitProcess(uint32_t exit_code) override {
+    m_process.OnExitProcess(exit_code);
+  }
 
-  void OnDebuggerConnected(lldb::addr_t image_base) {
+  void OnDebuggerConnected(lldb::addr_t image_base) override {
     m_process.OnDebuggerConnected(image_base);
   }
 
   ExceptionResult OnDebugException(bool first_chance,
-                                   const ExceptionRecord &record) {
+                                   const ExceptionRecord &record) override {
     return m_process.OnDebugException(first_chance, record);
   }
 
-  void OnCreateThread(const HostThread &thread) {
+  void OnCreateThread(const HostThread &thread) override {
     m_process.OnCreateThread(thread);
   }
 
-  void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) {
+  void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) override {
     m_process.OnExitThread(thread_id, exit_code);
   }
 
   void OnLoadDll(const lldb_private::ModuleSpec &module_spec,
-                 lldb::addr_t module_addr) {
+                 lldb::addr_t module_addr) override {
     m_process.OnLoadDll(module_spec, module_addr);
   }
 
-  void OnUnloadDll(lldb::addr_t module_addr) {
+  void OnUnloadDll(lldb::addr_t module_addr) override {
     m_process.OnUnloadDll(module_addr);
   }
 
-  void OnDebugString(const std::string &string) {
+  void OnDebugString(const std::string &string) override {
     m_process.OnDebugString(string);
   }
 
-  void OnDebuggerError(const Status &error, uint32_t type) {
+  void OnDebuggerError(const Status &error, uint32_t type) override {
     return m_process.OnDebuggerError(error, type);
   }
 

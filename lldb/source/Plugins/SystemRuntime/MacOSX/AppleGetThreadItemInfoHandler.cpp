@@ -153,29 +153,16 @@ lldb::addr_t AppleGetThreadItemInfoHandler::SetupGetThreadItemInfoFunction(
     if (!m_get_thread_item_info_impl_code) {
       Status error;
       if (g_get_thread_item_info_function_code != nullptr) {
-        m_get_thread_item_info_impl_code.reset(
-            exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
-                g_get_thread_item_info_function_code, eLanguageTypeC,
-                g_get_thread_item_info_function_name, error));
-        if (error.Fail()) {
-          LLDB_LOGF(log,
-                    "Failed to get UtilityFunction for "
-                    "get-thread-item-info introspection: %s.",
-                    error.AsCString());
-          m_get_thread_item_info_impl_code.reset();
+        auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
+            g_get_thread_item_info_function_code,
+            g_get_thread_item_info_function_name, eLanguageTypeC, exe_ctx);
+        if (!utility_fn_or_error) {
+          LLDB_LOG_ERROR(log, utility_fn_or_error.takeError(),
+                         "Failed to get UtilityFunction for "
+                         "get-thread-item-info introspection: {0}.");
           return args_addr;
         }
-
-        if (!m_get_thread_item_info_impl_code->Install(diagnostics, exe_ctx)) {
-          if (log) {
-            LLDB_LOGF(log,
-                      "Failed to install get-thread-item-info introspection.");
-            diagnostics.Dump(log);
-          }
-
-          m_get_thread_item_info_impl_code.reset();
-          return args_addr;
-        }
+        m_get_thread_item_info_impl_code = std::move(*utility_fn_or_error);
       } else {
         LLDB_LOGF(log, "No get-thread-item-info introspection code found.");
         return LLDB_INVALID_ADDRESS;

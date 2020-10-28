@@ -1280,6 +1280,12 @@ void CheckHelper::CheckPointer(const Symbol &symbol) { // C852
   CheckConflicting(symbol, Attr::POINTER, Attr::TARGET);
   CheckConflicting(symbol, Attr::POINTER, Attr::ALLOCATABLE); // C751
   CheckConflicting(symbol, Attr::POINTER, Attr::INTRINSIC);
+  // Prohibit constant pointers.  The standard does not explicitly prohibit
+  // them, but the PARAMETER attribute requires a entity-decl to have an
+  // initialization that is a constant-expr, and the only form of
+  // initialization that allows a constant-expr is the one that's not a "=>"
+  // pointer initialization.  See C811, C807, and section 8.5.13.
+  CheckConflicting(symbol, Attr::POINTER, Attr::PARAMETER);
   if (symbol.Corank() > 0) {
     messages_.Say(
         "'%s' may not have the POINTER attribute because it is a coarray"_err_en_US,

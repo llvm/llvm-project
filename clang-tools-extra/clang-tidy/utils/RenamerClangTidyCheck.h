@@ -94,9 +94,8 @@ public:
 
     ShouldFixStatus FixStatus = ShouldFixStatus::ShouldFix;
 
-    /// A set of all the identifier usages starting SourceLocation, in
-    /// their encoded form.
-    llvm::DenseSet<unsigned> RawUsageLocs;
+    /// A set of all the identifier usages starting SourceLocation.
+    llvm::DenseSet<SourceLocation> RawUsageLocs;
 
     NamingCheckFailure() = default;
   };

@@ -1,4 +1,4 @@
-; RUN: opt -reg2mem -disable-output < %s
+; RUN: opt -reg2mem -disable-output -enable-new-pm=0 < %s
 ; PR14782
 
 declare void @f1()

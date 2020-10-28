@@ -37,7 +37,7 @@ Trivial testTrivial(void) {
 
 void func1(TrivialBig *);
 
-// CHECK: define void @testTrivialBig(%[[STRUCT_TRIVIALBIG]]* noalias sret align 4 %[[AGG_RESULT:.*]])
+// CHECK: define void @testTrivialBig(%[[STRUCT_TRIVIALBIG]]* noalias sret(%[[STRUCT_TRIVIALBIG]]) align 4 %[[AGG_RESULT:.*]])
 // CHECK: call void @func1(%[[STRUCT_TRIVIALBIG]]* %[[AGG_RESULT]])
 // CHECK-NEXT: ret void
 
@@ -69,7 +69,7 @@ Strong testStrong(void) {
   return a;
 }
 
-// CHECK: define void @testWeak(%[[STRUCT_WEAK]]* noalias sret align 8 %[[AGG_RESULT:.*]])
+// CHECK: define void @testWeak(%[[STRUCT_WEAK]]* noalias sret(%[[STRUCT_WEAK]]) align 8 %[[AGG_RESULT:.*]])
 // CHECK: %[[NRVO:.*]] = alloca i1, align 1
 // CHECK: %[[V0:.*]] = bitcast %[[STRUCT_WEAK]]* %[[AGG_RESULT]] to i8**
 // CHECK: call void @__default_constructor_8_w0(i8** %[[V0]])
@@ -105,7 +105,7 @@ Weak testWeak2(int c) {
     return b;
 }
 
-// CHECK: define internal void @"\01-[C1 foo1]"(%[[STRUCT_WEAK]]* noalias sret align 8 %[[AGG_RESULT:.*]], %{{.*}}* %{{.*}}, i8* %{{.*}})
+// CHECK: define internal void @"\01-[C1 foo1]"(%[[STRUCT_WEAK]]* noalias sret(%[[STRUCT_WEAK]]) align 8 %[[AGG_RESULT:.*]], %{{.*}}* %{{.*}}, i8* %{{.*}})
 // CHECK: %[[NRVO:.*]] = alloca i1, align 1
 // CHECK: %[[V0:.*]] = bitcast %[[STRUCT_WEAK]]* %[[AGG_RESULT]] to i8**
 // CHECK: call void @__default_constructor_8_w0(i8** %[[V0]])

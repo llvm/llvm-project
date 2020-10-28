@@ -51,7 +51,7 @@ define void @mat_vec_sext_i16(i16** nocapture readonly %A, i16* nocapture readon
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP17:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[TMP14]], <4 x i32> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP17]])
+; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP17]])
 ; CHECK-NEXT:    store i32 [[TMP18]], i32* [[ARRAYIDX8_US]], align 4
 ; CHECK-NEXT:    [[INC10_US]] = add nuw i32 [[I_025_US]], 1
 ; CHECK-NEXT:    [[EXITCOND27:%.*]] = icmp eq i32 [[INC10_US]], [[N]]
@@ -112,7 +112,7 @@ vector.body:                                      ; preds = %vector.body, %for.c
 
 middle.block:                                     ; preds = %vector.body
   %tmp17 = select <4 x i1> %tmp7, <4 x i32> %tmp14, <4 x i32> %vec.phi
-  %tmp18 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %tmp17)
+  %tmp18 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %tmp17)
   store i32 %tmp18, i32* %arrayidx8.us, align 4
   %inc10.us = add nuw i32 %i.025.us, 1
   %exitcond27 = icmp eq i32 %inc10.us, %N
@@ -170,7 +170,7 @@ define void @mat_vec_i32(i32** nocapture readonly %A, i32* nocapture readonly %B
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP15:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[TMP12]], <4 x i32> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP15]])
+; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP15]])
 ; CHECK-NEXT:    store i32 [[TMP16]], i32* [[ARRAYIDX7_US]], align 4
 ; CHECK-NEXT:    [[INC9_US]] = add nuw i32 [[I_024_US]], 1
 ; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i32 [[INC9_US]], [[N]]
@@ -229,7 +229,7 @@ vector.body:                                      ; preds = %vector.body, %for.c
 
 middle.block:                                     ; preds = %vector.body
   %tmp15 = select <4 x i1> %tmp7, <4 x i32> %tmp12, <4 x i32> %vec.phi
-  %tmp16 = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> %tmp15)
+  %tmp16 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %tmp15)
   store i32 %tmp16, i32* %arrayidx7.us, align 4
   %inc9.us = add nuw i32 %i.024.us, 1
   %exitcond26 = icmp eq i32 %inc9.us, %N
@@ -247,7 +247,7 @@ declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i
 declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32 immarg, <4 x i1>, <4 x i16>) #0
 
 ; Function Attrs: nounwind readnone willreturn
-declare i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32>) #1
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>) #1
 
 ; Function Attrs: noduplicate nounwind
 declare void @llvm.set.loop.iterations.i32(i32) #2

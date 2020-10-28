@@ -18,7 +18,7 @@
 ;  g();
 ;}
 ;
-; RUN: opt -always-inline -S < %s | FileCheck %s
+; RUN: opt -always-inline -S -enable-new-pm=0 < %s | FileCheck %s
 
 ; FIXME: Why does the dbg.declare for "aaa" occur later in @h than the
 ; dbg.declare for "bbb"? I'd expect the opposite, given @f is inlined earlier.

@@ -673,7 +673,7 @@ static LogicalResult foldExtractOpFromExtractChain(ExtractOp extractOp) {
 
 /// Fold the result of an ExtractOp in place when it comes from a TransposeOp.
 static LogicalResult foldExtractOpFromTranspose(ExtractOp extractOp) {
-  auto transposeOp = extractOp.vector().getDefiningOp<TransposeOp>();
+  auto transposeOp = extractOp.vector().getDefiningOp<vector::TransposeOp>();
   if (!transposeOp)
     return failure();
 
@@ -812,12 +812,102 @@ static Value foldExtractOpFromInsertChainAndTranspose(ExtractOp extractOp) {
   return Value();
 }
 
+/// Fold extractOp with scalar result coming from BroadcastOp.
+static Value foldExtractFromBroadcast(ExtractOp extractOp) {
+  auto broadcastOp = extractOp.vector().getDefiningOp<vector::BroadcastOp>();
+  if (!broadcastOp)
+    return Value();
+  if (extractOp.getType() == broadcastOp.getSourceType())
+    return broadcastOp.source();
+  auto getRank = [](Type type) {
+    return type.isa<VectorType>() ? type.cast<VectorType>().getRank() : 0;
+  };
+  unsigned broadcasrSrcRank = getRank(broadcastOp.getSourceType());
+  unsigned extractResultRank = getRank(extractOp.getType());
+  if (extractResultRank < broadcasrSrcRank) {
+    auto extractPos = extractVector<int64_t>(extractOp.position());
+    unsigned rankDiff = broadcasrSrcRank - extractResultRank;
+    extractPos.erase(
+        extractPos.begin(),
+        std::next(extractPos.begin(), extractPos.size() - rankDiff));
+    extractOp.setOperand(broadcastOp.source());
+    // OpBuilder is only used as a helper to build an I64ArrayAttr.
+    OpBuilder b(extractOp.getContext());
+    extractOp.setAttr(ExtractOp::getPositionAttrName(),
+                      b.getI64ArrayAttr(extractPos));
+    return extractOp.getResult();
+  }
+  // TODO: In case the rank of the broadcast source is greater than the rank of
+  // the extract result this can be combined into a new broadcast op. This needs
+  // to be added a canonicalization pattern if needed.
+  return Value();
+}
+
+// Fold extractOp with source coming from ShapeCast op.
+static Value foldExtractFromShapeCast(ExtractOp extractOp) {
+  auto shapeCastOp = extractOp.vector().getDefiningOp<vector::ShapeCastOp>();
+  if (!shapeCastOp)
+    return Value();
+  // Get the nth dimension size starting from lowest dimension.
+  auto getDimReverse = [](VectorType type, int64_t n) {
+    return type.getDimSize(type.getRank() - n - 1);
+  };
+  int64_t destinationRank =
+      extractOp.getVectorType().getRank() - extractOp.position().size();
+  if (destinationRank > shapeCastOp.getSourceVectorType().getRank())
+    return Value();
+  if (destinationRank > 0) {
+    auto destinationType = extractOp.getResult().getType().cast<VectorType>();
+    for (int64_t i = 0; i < destinationRank; i++) {
+      // The lowest dimension of of the destination must match the lowest
+      // dimension of the shapecast op source.
+      if (getDimReverse(shapeCastOp.getSourceVectorType(), i) !=
+          getDimReverse(destinationType, i))
+        return Value();
+    }
+  }
+  // Extract the strides associated with the extract op vector source. Then use
+  // this to calculate a linearized position for the extract.
+  auto extractedPos = extractVector<int64_t>(extractOp.position());
+  std::reverse(extractedPos.begin(), extractedPos.end());
+  SmallVector<int64_t, 4> strides;
+  int64_t stride = 1;
+  for (int64_t i = 0, e = extractedPos.size(); i < e; i++) {
+    strides.push_back(stride);
+    stride *= getDimReverse(extractOp.getVectorType(), i + destinationRank);
+  }
+
+  int64_t position = linearize(extractedPos, strides);
+  // Then extract the strides assoociated to the shapeCast op vector source and
+  // delinearize the position using those strides.
+  SmallVector<int64_t, 4> newStrides;
+  int64_t numDimension =
+      shapeCastOp.getSourceVectorType().getRank() - destinationRank;
+  stride = 1;
+  for (int64_t i = 0; i < numDimension; i++) {
+    newStrides.push_back(stride);
+    stride *=
+        getDimReverse(shapeCastOp.getSourceVectorType(), i + destinationRank);
+  }
+  std::reverse(newStrides.begin(), newStrides.end());
+  SmallVector<int64_t, 4> newPosition = delinearize(newStrides, position);
+  OpBuilder b(extractOp.getContext());
+  extractOp.setAttr(ExtractOp::getPositionAttrName(),
+                    b.getI64ArrayAttr(newPosition));
+  extractOp.setOperand(shapeCastOp.source());
+  return extractOp.getResult();
+}
+
 OpFoldResult ExtractOp::fold(ArrayRef<Attribute>) {
   if (succeeded(foldExtractOpFromExtractChain(*this)))
     return getResult();
   if (succeeded(foldExtractOpFromTranspose(*this)))
     return getResult();
   if (auto val = foldExtractOpFromInsertChainAndTranspose(*this))
+    return val;
+  if (auto val = foldExtractFromBroadcast(*this))
+    return val;
+  if (auto val = foldExtractFromShapeCast(*this))
     return val;
   return OpFoldResult();
 }
@@ -909,18 +999,27 @@ void ExtractMapOp::build(OpBuilder &builder, OperationState &result,
   VectorType type = vector.getType().cast<VectorType>();
   VectorType resultType = VectorType::get(type.getNumElements() / multiplicity,
                                           type.getElementType());
-  ExtractMapOp::build(builder, result, resultType, vector, id, multiplicity);
+  ExtractMapOp::build(builder, result, resultType, vector, id);
 }
 
 static LogicalResult verify(ExtractMapOp op) {
   if (op.getSourceVectorType().getShape().size() != 1 ||
       op.getResultType().getShape().size() != 1)
     return op.emitOpError("expects source and destination vectors of rank 1");
-  if (op.getResultType().getNumElements() * (int64_t)op.multiplicity() !=
-      op.getSourceVectorType().getNumElements())
-    return op.emitOpError("vector sizes mismatch. Source size must be equal "
-                          "to destination size * multiplicity");
+  if (op.getSourceVectorType().getNumElements() %
+          op.getResultType().getNumElements() !=
+      0)
+    return op.emitOpError(
+        "source vector size must be a multiple of destination vector size");
   return success();
+}
+
+OpFoldResult ExtractMapOp::fold(ArrayRef<Attribute> operands) {
+  auto insert = vector().getDefiningOp<vector::InsertMapOp>();
+  if (insert == nullptr || multiplicity() != insert.multiplicity() ||
+      id() != insert.id())
+    return {};
+  return insert.vector();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1150,22 +1249,23 @@ void InsertSlicesOp::getStrides(SmallVectorImpl<int64_t> &results) {
 //===----------------------------------------------------------------------===//
 
 void InsertMapOp::build(OpBuilder &builder, OperationState &result,
-                        Value vector, Value id, int64_t multiplicity) {
+                        Value vector, Value dest, Value id,
+                        int64_t multiplicity) {
   VectorType type = vector.getType().cast<VectorType>();
   VectorType resultType = VectorType::get(type.getNumElements() * multiplicity,
                                           type.getElementType());
-  InsertMapOp::build(builder, result, resultType, vector, id, multiplicity);
+  InsertMapOp::build(builder, result, resultType, vector, dest, id);
 }
 
 static LogicalResult verify(InsertMapOp op) {
   if (op.getSourceVectorType().getShape().size() != 1 ||
       op.getResultType().getShape().size() != 1)
     return op.emitOpError("expected source and destination vectors of rank 1");
-  if ((int64_t)op.multiplicity() * op.getSourceVectorType().getNumElements() !=
-      op.getResultType().getNumElements())
+  if (op.getResultType().getNumElements() %
+          op.getSourceVectorType().getNumElements() !=
+      0)
     return op.emitOpError(
-        "vector sizes mismatch. Destination size must be equal "
-        "to source size * multiplicity");
+        "destination vector size must be a multiple of source vector size");
   return success();
 }
 
@@ -1529,6 +1629,81 @@ static LogicalResult verify(ExtractStridedSliceOp op) {
   }
 
   return success();
+}
+
+// When the source of ExtractStrided comes from a chain of InsertStrided ops try
+// to use the source o the InsertStrided ops if we can detect that the extracted
+// vector is a subset of one of the vector inserted.
+static LogicalResult
+foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
+  // Helper to extract integer out of ArrayAttr.
+  auto getElement = [](ArrayAttr array, int idx) {
+    return array[idx].cast<IntegerAttr>().getInt();
+  };
+  ArrayAttr extractOffsets = op.offsets();
+  ArrayAttr extractStrides = op.strides();
+  ArrayAttr extractSizes = op.sizes();
+  auto insertOp = op.vector().getDefiningOp<InsertStridedSliceOp>();
+  while (insertOp) {
+    if (op.getVectorType().getRank() !=
+        insertOp.getSourceVectorType().getRank())
+      return failure();
+    ArrayAttr insertOffsets = insertOp.offsets();
+    ArrayAttr insertStrides = insertOp.strides();
+    // If the rank of extract is greater than the rank of insert, we are likely
+    // extracting a partial chunk of the vector inserted.
+    if (extractOffsets.size() > insertOffsets.size())
+      return failure();
+    bool patialoverlap = false;
+    bool disjoint = false;
+    SmallVector<int64_t, 4> offsetDiffs;
+    for (unsigned dim = 0, e = extractOffsets.size(); dim < e; ++dim) {
+      if (getElement(extractStrides, dim) != getElement(insertStrides, dim))
+        return failure();
+      int64_t start = getElement(insertOffsets, dim);
+      int64_t end = start + insertOp.getSourceVectorType().getDimSize(dim);
+      int64_t offset = getElement(extractOffsets, dim);
+      int64_t size = getElement(extractSizes, dim);
+      // Check if the start of the extract offset is in the interval inserted.
+      if (start <= offset && offset < end) {
+        // If the extract interval overlaps but is not fully included we may
+        // have a partial overlap that will prevent any folding.
+        if (offset + size > end)
+          patialoverlap = true;
+        offsetDiffs.push_back(offset - start);
+        continue;
+      }
+      disjoint = true;
+      break;
+    }
+    // The extract element chunk is a subset of the insert element.
+    if (!disjoint && !patialoverlap) {
+      op.setOperand(insertOp.source());
+      // OpBuilder is only used as a helper to build an I64ArrayAttr.
+      OpBuilder b(op.getContext());
+      op.setAttr(ExtractStridedSliceOp::getOffsetsAttrName(),
+                 b.getI64ArrayAttr(offsetDiffs));
+      return success();
+    }
+    // If the chunk extracted is disjoint from the chunk inserted, keep looking
+    // in the insert chain.
+    if (disjoint)
+      insertOp = insertOp.dest().getDefiningOp<InsertStridedSliceOp>();
+    else {
+      // The extracted vector partially overlap the inserted vector, we cannot
+      // fold.
+      return failure();
+    }
+  }
+  return failure();
+}
+
+OpFoldResult ExtractStridedSliceOp::fold(ArrayRef<Attribute> operands) {
+  if (getVectorType() == getResult().getType())
+    return vector();
+  if (succeeded(foldExtractStridedOpFromInsertChain(*this)))
+    return getResult();
+  return {};
 }
 
 void ExtractStridedSliceOp::getOffsets(SmallVectorImpl<int64_t> &results) {
@@ -2513,7 +2688,7 @@ void vector::TransposeOp::build(OpBuilder &builder, OperationState &result,
 // Eliminates transpose operations, which produce values identical to their
 // input values. This happens when the dimensions of the input vector remain in
 // their original order after the transpose operation.
-OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult vector::TransposeOp::fold(ArrayRef<Attribute> operands) {
   SmallVector<int64_t, 4> transp;
   getTransp(transp);
 
@@ -2527,7 +2702,7 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
   return vector();
 }
 
-static LogicalResult verify(TransposeOp op) {
+static LogicalResult verify(vector::TransposeOp op) {
   VectorType vectorType = op.getVectorType();
   VectorType resultType = op.getResultType();
   int64_t rank = resultType.getRank();
@@ -2555,14 +2730,14 @@ static LogicalResult verify(TransposeOp op) {
 namespace {
 
 // Rewrites two back-to-back TransposeOp operations into a single TransposeOp.
-class TransposeFolder final : public OpRewritePattern<TransposeOp> {
+class TransposeFolder final : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern<TransposeOp>::OpRewritePattern;
+  using OpRewritePattern<vector::TransposeOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(TransposeOp transposeOp,
+  LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
-    // Wrapper around TransposeOp::getTransp() for cleaner code.
-    auto getPermutation = [](TransposeOp transpose) {
+    // Wrapper around vector::TransposeOp::getTransp() for cleaner code.
+    auto getPermutation = [](vector::TransposeOp transpose) {
       SmallVector<int64_t, 4> permutation;
       transpose.getTransp(permutation);
       return permutation;
@@ -2578,15 +2753,15 @@ public:
     };
 
     // Return if the input of 'transposeOp' is not defined by another transpose.
-    TransposeOp parentTransposeOp =
-        transposeOp.vector().getDefiningOp<TransposeOp>();
+    vector::TransposeOp parentTransposeOp =
+        transposeOp.vector().getDefiningOp<vector::TransposeOp>();
     if (!parentTransposeOp)
       return failure();
 
     SmallVector<int64_t, 4> permutation = composePermutations(
         getPermutation(parentTransposeOp), getPermutation(transposeOp));
     // Replace 'transposeOp' with a new transpose operation.
-    rewriter.replaceOpWithNewOp<TransposeOp>(
+    rewriter.replaceOpWithNewOp<vector::TransposeOp>(
         transposeOp, transposeOp.getResult().getType(),
         parentTransposeOp.vector(),
         vector::getVectorSubscriptAttr(rewriter, permutation));
@@ -2596,12 +2771,12 @@ public:
 
 } // end anonymous namespace
 
-void TransposeOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
-                                              MLIRContext *context) {
+void vector::TransposeOp::getCanonicalizationPatterns(
+    OwningRewritePatternList &results, MLIRContext *context) {
   results.insert<TransposeFolder>(context);
 }
 
-void TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {
+void vector::TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {
   populateFromInt64AttrArray(transp(), results);
 }
 

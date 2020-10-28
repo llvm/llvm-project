@@ -314,7 +314,7 @@ void f25() {
 // CHECK: [[DBG_F9]] = !DILocation(line: 1000,
 // CHECK: [[DBG_F10_STORE]] = !DILocation(line: 1100,
 // CHECK: [[DBG_GLBL_CTOR_B]] = !DILocation(line: 1200,
-// CHECK: [[DBG_GLBL_DTOR_B]] = !DILocation(line: 1200,
+// CHECK: [[DBG_GLBL_DTOR_B]] = !DILocation(line: 0,
 // CHECK: [[DBG_F11]] = !DILocation(line: 1300,
 // CHECK: [[DBG_F12]] = !DILocation(line: 1400,
 // CHECK: [[DBG_F13]] = !DILocation(line: 1500,

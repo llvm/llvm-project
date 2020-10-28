@@ -118,7 +118,7 @@ namespace format {
 
 /// Determines the semantic type of a syntactic token, e.g. whether "<" is a
 /// template opener or binary operator.
-enum TokenType {
+enum TokenType : uint8_t {
 #define TYPE(X) TT_##X,
   LIST_TOKEN_TYPES
 #undef TYPE
@@ -206,13 +206,12 @@ class AnnotatedLine;
 struct FormatToken {
   FormatToken()
       : HasUnescapedNewline(false), IsMultiline(false), IsFirst(false),
-        MustBreakBefore(false), MustBreakAlignBefore(false),
-        IsUnterminatedLiteral(false), CanBreakBefore(false),
-        ClosesTemplateDeclaration(false), StartsBinaryExpression(false),
-        EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
-        ContinuesLineCommentSection(false), Finalized(false),
-        BlockKind(BK_Unknown), Type(TT_Unknown), Decision(FD_Unformatted),
-        PackingKind(PPK_Inconclusive) {}
+        MustBreakBefore(false), IsUnterminatedLiteral(false),
+        CanBreakBefore(false), ClosesTemplateDeclaration(false),
+        StartsBinaryExpression(false), EndsBinaryExpression(false),
+        PartOfMultiVariableDeclStmt(false), ContinuesLineCommentSection(false),
+        Finalized(false), BlockKind(BK_Unknown), Decision(FD_Unformatted),
+        PackingKind(PPK_Inconclusive), Type(TT_Unknown) {}
 
   /// The \c Token.
   Token Tok;
@@ -247,12 +246,6 @@ struct FormatToken {
   /// This happens for example when a preprocessor directive ended directly
   /// before the token.
   unsigned MustBreakBefore : 1;
-
-  /// Whether to not align across this token
-  ///
-  /// This happens for example when a preprocessor directive ended directly
-  /// before the token, but very rarely otherwise.
-  unsigned MustBreakAlignBefore : 1;
 
   /// Set to \c true if this token is an unterminated literal.
   unsigned IsUnterminatedLiteral : 1;
@@ -298,18 +291,6 @@ public:
   }
 
 private:
-  unsigned Type : 8;
-
-public:
-  /// Returns the token's type, e.g. whether "<" is a template opener or
-  /// binary operator.
-  TokenType getType() const { return static_cast<TokenType>(Type); }
-  void setType(TokenType T) {
-    Type = T;
-    assert(getType() == T && "TokenType overflow!");
-  }
-
-private:
   /// Stores the formatting decision for the token once it was made.
   unsigned Decision : 2;
 
@@ -334,6 +315,15 @@ public:
     PackingKind = K;
     assert(getPackingKind() == K && "ParameterPackingKind overflow!");
   }
+
+private:
+  TokenType Type;
+
+public:
+  /// Returns the token's type, e.g. whether "<" is a template opener or
+  /// binary operator.
+  TokenType getType() const { return Type; }
+  void setType(TokenType T) { Type = T; }
 
   /// The number of newlines immediately before the \c Token.
   ///
