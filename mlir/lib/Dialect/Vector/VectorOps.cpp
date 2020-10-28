@@ -843,6 +843,61 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
   return Value();
 }
 
+// Fold extractOp with source coming from ShapeCast op.
+static Value foldExtractFromShapeCast(ExtractOp extractOp) {
+  auto shapeCastOp = extractOp.vector().getDefiningOp<vector::ShapeCastOp>();
+  if (!shapeCastOp)
+    return Value();
+  // Get the nth dimension size starting from lowest dimension.
+  auto getDimReverse = [](VectorType type, int64_t n) {
+    return type.getDimSize(type.getRank() - n - 1);
+  };
+  int64_t destinationRank =
+      extractOp.getVectorType().getRank() - extractOp.position().size();
+  if (destinationRank > shapeCastOp.getSourceVectorType().getRank())
+    return Value();
+  if (destinationRank > 0) {
+    auto destinationType = extractOp.getResult().getType().cast<VectorType>();
+    for (int64_t i = 0; i < destinationRank; i++) {
+      // The lowest dimension of of the destination must match the lowest
+      // dimension of the shapecast op source.
+      if (getDimReverse(shapeCastOp.getSourceVectorType(), i) !=
+          getDimReverse(destinationType, i))
+        return Value();
+    }
+  }
+  // Extract the strides associated with the extract op vector source. Then use
+  // this to calculate a linearized position for the extract.
+  auto extractedPos = extractVector<int64_t>(extractOp.position());
+  std::reverse(extractedPos.begin(), extractedPos.end());
+  SmallVector<int64_t, 4> strides;
+  int64_t stride = 1;
+  for (int64_t i = 0, e = extractedPos.size(); i < e; i++) {
+    strides.push_back(stride);
+    stride *= getDimReverse(extractOp.getVectorType(), i + destinationRank);
+  }
+
+  int64_t position = linearize(extractedPos, strides);
+  // Then extract the strides assoociated to the shapeCast op vector source and
+  // delinearize the position using those strides.
+  SmallVector<int64_t, 4> newStrides;
+  int64_t numDimension =
+      shapeCastOp.getSourceVectorType().getRank() - destinationRank;
+  stride = 1;
+  for (int64_t i = 0; i < numDimension; i++) {
+    newStrides.push_back(stride);
+    stride *=
+        getDimReverse(shapeCastOp.getSourceVectorType(), i + destinationRank);
+  }
+  std::reverse(newStrides.begin(), newStrides.end());
+  SmallVector<int64_t, 4> newPosition = delinearize(newStrides, position);
+  OpBuilder b(extractOp.getContext());
+  extractOp.setAttr(ExtractOp::getPositionAttrName(),
+                    b.getI64ArrayAttr(newPosition));
+  extractOp.setOperand(shapeCastOp.source());
+  return extractOp.getResult();
+}
+
 OpFoldResult ExtractOp::fold(ArrayRef<Attribute>) {
   if (succeeded(foldExtractOpFromExtractChain(*this)))
     return getResult();
@@ -851,6 +906,8 @@ OpFoldResult ExtractOp::fold(ArrayRef<Attribute>) {
   if (auto val = foldExtractOpFromInsertChainAndTranspose(*this))
     return val;
   if (auto val = foldExtractFromBroadcast(*this))
+    return val;
+  if (auto val = foldExtractFromShapeCast(*this))
     return val;
   return OpFoldResult();
 }
