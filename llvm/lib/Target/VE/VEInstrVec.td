@@ -597,3 +597,76 @@ def : MnemonicAlias<"vdivs.w", "vdivs.w.zx">;
 
 // Section 8.10.13 - VDVX (Vector Divide)
 defm VDIVSL : RVDIVm<"vdivs.l", 0xfb, V64, I64, VM>;
+
+// Section 8.10.14 - VCMP (Vector Compare)
+let cx = 0, cx2 = 0 in
+defm VCMPUL : RVm<"vcmpu.l", 0xb9, V64, I64, VM>;
+let cx = 0, cx2 = 1 in {
+  defm PVCMPULO : RVm<"pvcmpu.lo", 0xb9, V64, I32, VM>;
+  let isCodeGenOnly = 1 in
+  defm VCMPUW : RVm<"vcmpu.w", 0xb9, V64, I32, VM>;
+}
+let cx = 1, cx2 = 0 in
+defm PVCMPUUP : RVm<"pvcmpu.up", 0xb9, V64, I64, VM>;
+let cx = 1, cx2 = 1 in
+defm PVCMPU : RVm<"pvcmpu", 0xb9, V64, I64, VM512>;
+def : MnemonicAlias<"vcmpu.w", "pvcmpu.lo">;
+
+// Section 8.10.15 - VCPS (Vector Compare Single)
+let cx = 0, cx2 = 0 in
+defm VCMPSWSX : RVm<"vcmps.w.sx", 0xfa, V64, I32, VM>;
+let cx = 0, cx2 = 1 in {
+  defm PVCMPSLO : RVm<"pvcmps.lo", 0xfa, V64, I32, VM>;
+  let isCodeGenOnly = 1 in
+  defm VCMPSWZX : RVm<"vcmps.w.zx", 0xfa, V64, I32, VM>;
+}
+let cx = 1, cx2 = 0 in
+defm PVCMPSUP : RVm<"pvcmps.up", 0xfa, V64, I64, VM>;
+let cx = 1, cx2 = 1 in
+defm PVCMPS : RVm<"pvcmps", 0xfa, V64, I64, VM512>;
+def : MnemonicAlias<"pvcmps.lo.sx", "vcmps.w.sx">;
+def : MnemonicAlias<"vcmps.w.zx", "pvcmps.lo">;
+def : MnemonicAlias<"vcmps.w", "pvcmps.lo">;
+def : MnemonicAlias<"pvcmps.lo.zx", "pvcmps.lo">;
+
+// Section 8.10.16 - VCPX (Vector Compare)
+defm VCMPSL : RVm<"vcmps.l", 0xba, V64, I64, VM>;
+
+// Section 8.10.17 - VCMS (Vector Compare and Select Maximum/Minimum Single)
+let cx = 0, cx2 = 0 in
+defm VMAXSWSX : RVm<"vmaxs.w.sx", 0x8a, V64, I32, VM>;
+let cx = 0, cx2 = 1 in {
+  defm PVMAXSLO : RVm<"pvmaxs.lo", 0x8a, V64, I32, VM>;
+  let isCodeGenOnly = 1 in
+  defm VMAXSWZX : RVm<"vmaxs.w.zx", 0x8a, V64, I32, VM>;
+}
+let cx = 1, cx2 = 0 in
+defm PVMAXSUP : RVm<"pvmaxs.up", 0x8a, V64, I64, VM>;
+let cx = 1, cx2 = 1 in
+defm PVMAXS : RVm<"pvmaxs", 0x8a, V64, I64, VM512>;
+let cs2 = 1 in {
+  let cx = 0, cx2 = 0 in
+  defm VMINSWSX : RVm<"vmins.w.sx", 0x8a, V64, I32, VM>;
+  let cx = 0, cx2 = 1 in {
+    defm PVMINSLO : RVm<"pvmins.lo", 0x8a, V64, I32, VM>;
+    let isCodeGenOnly = 1 in
+    defm VMINSWZX : RVm<"vmins.w.zx", 0x8a, V64, I32, VM>;
+  }
+  let cx = 1, cx2 = 0 in
+  defm PVMINSUP : RVm<"pvmins.up", 0x8a, V64, I64, VM>;
+  let cx = 1, cx2 = 1 in
+  defm PVMINS : RVm<"pvmins", 0x8a, V64, I64, VM512>;
+}
+def : MnemonicAlias<"pvmaxs.lo.sx", "vmaxs.w.sx">;
+def : MnemonicAlias<"vmaxs.w.zx", "pvmaxs.lo">;
+def : MnemonicAlias<"vmaxs.w", "pvmaxs.lo">;
+def : MnemonicAlias<"pvmaxs.lo.zx", "pvmaxs.lo">;
+def : MnemonicAlias<"pvmins.lo.sx", "vmins.w.sx">;
+def : MnemonicAlias<"vmins.w.zx", "pvmins.lo">;
+def : MnemonicAlias<"vmins.w", "pvmins.lo">;
+def : MnemonicAlias<"pvmins.lo.zx", "pvmins.lo">;
+
+// Section 8.10.18 - VCMX (Vector Compare and Select Maximum/Minimum)
+defm VMAXSL : RVm<"vmaxs.l", 0x9a, V64, I64, VM>;
+let cs2 = 1 in
+defm VMINSL : RVm<"vmins.l", 0x9a, V64, I64, VM>;
