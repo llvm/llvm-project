@@ -148,6 +148,10 @@ MlirContext mlirModuleGetContext(MlirModule module) {
   return wrap(unwrap(module).getContext());
 }
 
+MlirBlock mlirModuleGetBody(MlirModule module) {
+  return wrap(unwrap(module).getBody());
+}
+
 void mlirModuleDestroy(MlirModule module) {
   // Transfer ownership to an OwningModuleRef so that its destructor is called.
   OwningModuleRef(unwrap(module));

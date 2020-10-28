@@ -2831,6 +2831,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
         << type_name;                                                          \
     break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define PPC_MMA_VECTOR_TYPE(Name, Id, Size) \
+  case BuiltinType::Id: \
+    type_name = #Name; \
+    Out << 'u' << type_name.size() << type_name; \
+    break;
+#include "clang/Basic/PPCTypes.def"
   }
 }
 

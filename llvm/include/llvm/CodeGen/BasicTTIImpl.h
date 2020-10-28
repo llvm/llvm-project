@@ -1211,9 +1211,6 @@ public:
     }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
-      // FIXME: all cost kinds should default to the same thing?
-      if (CostKind != TTI::TCK_RecipThroughput)
-        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       const Value *X = Args[0];
       const Value *Y = Args[1];
       const Value *Z = Args[2];
