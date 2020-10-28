@@ -5,20 +5,42 @@
 
 ; CHECK-INTERESTINGNESS: define void @fn3
 
+; CHECK-FINAL: @g1 = global
+; CHECK-FINAL: @g2 = global
+
 ; CHECK-FINAL: $a1
 ; CHECK-FINAL: $a2
 ; CHECK-FINAL: $a3
 ; CHECK-FINAL: $a4
+; CHECK-FINAL: $a5
+; CHECK-FINAL: $a6
+
+; CHECK-FINAL-NOT: @llvm.used
+; CHECK-FINAL-NOT: @llvm.compiler.used
 
 ; CHECK-FINAL: define void @fn1
 ; CHECK-FINAL: define void @fn2
 ; CHECK-FINAL: define void @fn3
 ; CHECK-FINAL: define void @fn4
 
+@g1 = global [ 4 x i32 ] zeroinitializer
+@g2 = global [ 4 x i32 ] zeroinitializer
+
 @"$a1" = alias void (), void ()* @fn1
 @"$a2" = alias void (), void ()* @fn2
 @"$a3" = alias void (), void ()* @fn3
 @"$a4" = alias void (), void ()* @fn4
+
+@"$a5" = alias i64, bitcast (i32* getelementptr ([ 4 x i32 ], [ 4 x i32 ]* @g1, i32 0, i32 1) to i64*)
+@"$a6" = alias i64, bitcast (i32* getelementptr ([ 4 x i32 ], [ 4 x i32 ]* @g2, i32 0, i32 1) to i64*)
+
+@llvm.used = appending global [1 x i8*] [
+   i8* bitcast (i64* @"$a5" to i8*)
+], section "llvm.metadata"
+
+@llvm.compiler.used = appending global [1 x i8*] [
+   i8* bitcast (i64* @"$a6" to i8*)
+], section "llvm.metadata"
 
 define void @fn1() {
   ret void
