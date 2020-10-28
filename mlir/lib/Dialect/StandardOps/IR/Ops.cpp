@@ -2269,6 +2269,34 @@ OpFoldResult MemRefCastOp::fold(ArrayRef<Attribute> operands) {
 // MemRefReinterpretCastOp
 //===----------------------------------------------------------------------===//
 
+void mlir::MemRefReinterpretCastOp::build(
+    OpBuilder &b, OperationState &result, MemRefType resultType, Value source,
+    int64_t staticOffset, ArrayRef<int64_t> staticSizes,
+    ArrayRef<int64_t> staticStrides, ValueRange offset, ValueRange sizes,
+    ValueRange strides, ArrayRef<NamedAttribute> attrs) {
+  build(b, result, resultType, source, offset, sizes, strides,
+        b.getI64ArrayAttr(staticOffset), b.getI64ArrayAttr(staticSizes),
+        b.getI64ArrayAttr(staticStrides));
+  result.addAttributes(attrs);
+}
+
+/// Build a MemRefReinterpretCastOp with all dynamic entries: `staticOffsets`,
+/// `staticSizes` and `staticStrides` are  automatically filled with
+/// source-memref-rank sentinel values that encode dynamic entries.
+void mlir::MemRefReinterpretCastOp::build(OpBuilder &b, OperationState &result,
+                                          MemRefType resultType, Value source,
+                                          Value offset, ValueRange sizes,
+                                          ValueRange strides,
+                                          ArrayRef<NamedAttribute> attrs) {
+  unsigned rank = resultType.getRank();
+  SmallVector<int64_t, 4> staticSizesVector(rank, ShapedType::kDynamicSize);
+  SmallVector<int64_t, 4> staticStridesVector(
+      rank, ShapedType::kDynamicStrideOrOffset);
+  build(b, result, resultType, source,
+        /*staticOffset=*/ShapedType::kDynamicStrideOrOffset, staticSizesVector,
+        staticStridesVector, offset, sizes, strides, attrs);
+}
+
 /// Print of the form:
 /// ```
 ///   `name` ssa-name to
@@ -2391,18 +2419,6 @@ static LogicalResult verify(MemRefReinterpretCastOp op) {
           op.strides())))
     return failure();
 
-  // Extract source offset and strides.
-  int64_t resultOffset;
-  SmallVector<int64_t, 4> resultStrides;
-  if (failed(getStridesAndOffset(resultType, resultStrides, resultOffset)))
-    return failure();
-
-  // Match offset in result memref type and in static_offsets attribute.
-  int64_t expectedOffset = extractFromI64ArrayAttr(op.static_offsets()).front();
-  if (resultOffset != expectedOffset)
-    return op.emitError("expected result type with offset = ")
-           << resultOffset << " instead of " << expectedOffset;
-
   // Match sizes in result memref type and in static_sizes attribute.
   for (auto &en :
        llvm::enumerate(llvm::zip(resultType.getShape(),
@@ -2415,15 +2431,31 @@ static LogicalResult verify(MemRefReinterpretCastOp op) {
              << " in dim = " << en.index();
   }
 
-  // Match strides in result memref type and in static_strides attribute.
-  for (auto &en : llvm::enumerate(llvm::zip(
-           resultStrides, extractFromI64ArrayAttr(op.static_strides())))) {
-    int64_t resultStride = std::get<0>(en.value());
-    int64_t expectedStride = std::get<1>(en.value());
-    if (resultStride != expectedStride)
-      return op.emitError("expected result type with stride = ")
-             << expectedStride << " instead of " << resultStride
-             << " in dim = " << en.index();
+  // Match offset and strides in static_offset and static_strides attributes if
+  // result memref type has an affine map specified.
+  if (!resultType.getAffineMaps().empty()) {
+    int64_t resultOffset;
+    SmallVector<int64_t, 4> resultStrides;
+    if (failed(getStridesAndOffset(resultType, resultStrides, resultOffset)))
+      return failure();
+
+    // Match offset in result memref type and in static_offsets attribute.
+    int64_t expectedOffset =
+        extractFromI64ArrayAttr(op.static_offsets()).front();
+    if (resultOffset != expectedOffset)
+      return op.emitError("expected result type with offset = ")
+             << resultOffset << " instead of " << expectedOffset;
+
+    // Match strides in result memref type and in static_strides attribute.
+    for (auto &en : llvm::enumerate(llvm::zip(
+             resultStrides, extractFromI64ArrayAttr(op.static_strides())))) {
+      int64_t resultStride = std::get<0>(en.value());
+      int64_t expectedStride = std::get<1>(en.value());
+      if (resultStride != expectedStride)
+        return op.emitError("expected result type with stride = ")
+               << expectedStride << " instead of " << resultStride
+               << " in dim = " << en.index();
+    }
   }
   return success();
 }

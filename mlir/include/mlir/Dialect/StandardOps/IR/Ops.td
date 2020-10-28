@@ -2262,6 +2262,20 @@ def MemRefReinterpretCastOp:
     I64ArrayAttr:$static_strides
   );
   let results = (outs AnyMemRef:$result);
+
+  let builders = [
+    // Build a ReinterpretCastOp with mixed static and dynamic entries.
+    OpBuilder<
+      "MemRefType resultType, Value source, int64_t staticOffset, "
+      "ArrayRef<int64_t> staticSizes, ArrayRef<int64_t> staticStrides, "
+      "ValueRange offset, ValueRange sizes, ValueRange strides, "
+      "ArrayRef<NamedAttribute> attrs = {}">,
+    // Build a ReinterpretCastOp with all dynamic entries.
+    OpBuilder<
+      "MemRefType resultType, Value source, Value offset, ValueRange sizes, "
+      "ValueRange strides, ArrayRef<NamedAttribute> attrs = {}">,
+  ];
+
   let extraClassDeclaration = extraBaseClassDeclaration # [{
     // The result of the op is always a ranked memref.
     MemRefType getType() { return getResult().getType().cast<MemRefType>(); }
@@ -2312,7 +2326,7 @@ def MemRefReshapeOp: Std_Op<"memref_reshape", [
 
   let arguments = (ins
     AnyRankedOrUnrankedMemRef:$source,
-    MemRefRankOf<[AnySignlessInteger], [1]>:$shape
+    MemRefRankOf<[AnySignlessInteger, Index], [1]>:$shape
   );
   let results = (outs AnyRankedOrUnrankedMemRef:$result);
 
