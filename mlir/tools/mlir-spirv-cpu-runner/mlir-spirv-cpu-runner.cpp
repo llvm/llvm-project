@@ -86,5 +86,9 @@ int main(int argc, char **argv) {
   llvm::InitializeNativeTargetAsmPrinter();
   mlir::initializeLLVMPasses();
 
-  return mlir::JitRunnerMain(argc, argv, &runMLIRPasses, &convertMLIRModule);
+  mlir::JitRunnerConfig jitRunnerConfig;
+  jitRunnerConfig.mlirTransformer = &runMLIRPasses;
+  jitRunnerConfig.llvmModuleBuilder = &convertMLIRModule;
+
+  return mlir::JitRunnerMain(argc, argv, jitRunnerConfig);
 }
