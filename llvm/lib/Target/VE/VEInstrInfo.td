@@ -157,6 +157,15 @@ def uimm3 : Operand<i32>, PatLeaf<(imm), [{
   let ParserMatchClass = UImm3AsmOperand;
 }
 
+// uimm4 - Generic immediate value.
+def UImm4AsmOperand : AsmOperandClass {
+  let Name = "UImm4";
+}
+def uimm4 : Operand<i32>, PatLeaf<(imm), [{
+    return isUInt<4>(N->getZExtValue()); }], ULO7> {
+  let ParserMatchClass = UImm4AsmOperand;
+}
+
 // uimm6 - Generic immediate value.
 def UImm6AsmOperand : AsmOperandClass {
   let Name = "UImm6";
