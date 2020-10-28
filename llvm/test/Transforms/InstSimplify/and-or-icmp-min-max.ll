@@ -1990,9 +1990,7 @@ define i1 @sge_or_max_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sge_or_max_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], -128
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp sge i8 %notx, %y
@@ -2005,9 +2003,7 @@ define i1 @sge_or_max_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sge_or_max_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], -128
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp sge i8 %notx, %y
@@ -2020,9 +2016,7 @@ define i1 @sge_swap_or_max_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sge_swap_or_max_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], -128
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp sle i8 %y, %notx
@@ -2035,9 +2029,7 @@ define i1 @sge_swap_or_max_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sge_swap_or_max_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], -128
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp sle i8 %y, %notx
@@ -2050,9 +2042,7 @@ define i1 @uge_or_max_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @uge_or_max_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp uge i8 %notx, %y
@@ -2065,9 +2055,7 @@ define i1 @uge_or_max_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @uge_or_max_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp uge i8 %notx, %y
@@ -2080,9 +2068,7 @@ define i1 @uge_swap_or_max_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @uge_swap_or_max_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp ule i8 %y, %notx
@@ -2095,9 +2081,7 @@ define i1 @uge_swap_or_max_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @uge_swap_or_max_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp ule i8 %y, %notx
@@ -2116,9 +2100,7 @@ define i1 @sle_or_min_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sle_or_min_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], 127
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp sle i8 %notx, %y
@@ -2131,9 +2113,7 @@ define i1 @sle_or_min_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sle_or_min_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], 127
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp sle i8 %notx, %y
@@ -2146,9 +2126,7 @@ define i1 @sle_swap_or_min_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sle_swap_or_min_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], 127
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp sge i8 %y, %notx
@@ -2161,9 +2139,7 @@ define i1 @sle_swap_or_min_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sle_swap_or_min_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], 127
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp sge i8 %y, %notx
@@ -2176,9 +2152,7 @@ define i1 @ule_or_min_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ule_or_min_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], -1
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp ule i8 %notx, %y
@@ -2191,9 +2165,7 @@ define i1 @ule_or_min_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ule_or_min_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], -1
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp ule i8 %notx, %y
@@ -2206,9 +2178,7 @@ define i1 @ule_swap_or_min_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ule_swap_or_min_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], -1
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp uge i8 %y, %notx
@@ -2221,9 +2191,7 @@ define i1 @ule_swap_or_min_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ule_swap_or_min_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp eq i8 [[X]], -1
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp uge i8 %y, %notx
@@ -2242,9 +2210,7 @@ define i1 @slt_and_not_max_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @slt_and_not_max_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], -128
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp slt i8 %notx, %y
@@ -2257,9 +2223,7 @@ define i1 @slt_and_not_max_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @slt_and_not_max_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], -128
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp slt i8 %notx, %y
@@ -2272,9 +2236,7 @@ define i1 @slt_swap_and_not_max_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @slt_swap_and_not_max_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], -128
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp sgt i8 %y, %notx
@@ -2287,9 +2249,7 @@ define i1 @slt_swap_and_not_max_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @slt_swap_and_not_max_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], -128
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp sgt i8 %y, %notx
@@ -2302,9 +2262,7 @@ define i1 @ult_and_not_max_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ult_and_not_max_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp ult i8 %notx, %y
@@ -2317,9 +2275,7 @@ define i1 @ult_and_not_max_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ult_and_not_max_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp ult i8 %notx, %y
@@ -2332,9 +2288,7 @@ define i1 @ult_swap_and_not_max_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ult_swap_and_not_max_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp ugt i8 %y, %notx
@@ -2347,9 +2301,7 @@ define i1 @ult_swap_and_not_max_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ult_swap_and_not_max_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp ugt i8 %y, %notx
@@ -2368,9 +2320,7 @@ define i1 @sgt_and_not_min_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sgt_and_not_min_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], 127
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp sgt i8 %notx, %y
@@ -2383,9 +2333,7 @@ define i1 @sgt_and_not_min_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sgt_and_not_min_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], 127
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp sgt i8 %notx, %y
@@ -2398,9 +2346,7 @@ define i1 @sgt_swap_and_not_min_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sgt_swap_and_not_min_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], 127
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp slt i8 %y, %notx
@@ -2413,9 +2359,7 @@ define i1 @sgt_swap_and_not_min_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @sgt_swap_and_not_min_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], 127
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp slt i8 %y, %notx
@@ -2428,9 +2372,7 @@ define i1 @ugt_and_not_min_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ugt_and_not_min_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp ugt i8 %notx, %y
@@ -2443,9 +2385,7 @@ define i1 @ugt_and_not_min_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ugt_and_not_min_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[NOTX]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp ugt i8 %notx, %y
@@ -2458,9 +2398,7 @@ define i1 @ugt_swap_and_not_min_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ugt_swap_and_not_min_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[CMPEQ]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp ult i8 %y, %notx
@@ -2473,9 +2411,7 @@ define i1 @ugt_swap_and_not_min_commute_not_op(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @ugt_swap_and_not_min_commute_not_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[Y:%.*]], [[NOTX]]
-; CHECK-NEXT:    [[CMPEQ:%.*]] = icmp ne i8 [[X]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMPEQ]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %notx = xor i8 %x, -1
   %cmp = icmp ult i8 %y, %notx
