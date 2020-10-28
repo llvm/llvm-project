@@ -1,5 +1,8 @@
 // RUN: %libomp-compile-and-run
 // REQUIRES: abt
+
+// Compilation error after clang11+
+// UNSUPPORTED: clang
 #include "omp_testsuite.h"
 #include <stdio.h>
 #include <stdlib.h>
