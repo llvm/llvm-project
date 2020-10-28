@@ -138,6 +138,14 @@ def use_support_substitutions(config):
     ]
     llvm_config.add_tool_substitutions(tools)
 
+    swift_bin_dir = os.path.dirname(config.swiftc)
+    swift_Benchmark_Onone = os.path.join(swift_bin_dir,
+            'Benchmark_Onone-{0}'.format(config.target_triple))
+    if os.path.exists(swift_Benchmark_Onone):
+        config.substitutions.append(('%swift_Benchmark_Onone',
+                                     swift_Benchmark_Onone))
+        config.available_features.add('swift_Benchmark_Onone')
+
     if sys.platform.startswith('netbsd'):
         # needed e.g. to use freshly built libc++
         host_flags += ['-L' + config.llvm_libs_dir,
