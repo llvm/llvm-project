@@ -47,13 +47,16 @@ def parse_options():
             SKIP_N_FRAMES_BETWEEN_INSPECTIONS
     opts = os.getenv('STEPPER_OPTIONS', '').split(';')
     for o in opts:
-        m = re.match('(\w+)=([^;]+)', o)
+        m = re.match('(\w+)=(.+)', o)
         if not m:
             print('Unrecognized option:', o)
-        else:
-            option, val = m.groups()
-            print('Setting', option, '=', val)
-            globals()[option] = eval(val)
+            continue
+        option, val = m.groups()
+        if option not in globals():
+            print('Unrecognized option:', option)
+            continue
+        print('Setting', option, '=', val)
+        globals()[option] = eval(val)
 
 
 def doit(dbg, cmd):
@@ -65,7 +68,7 @@ def doit(dbg, cmd):
 
 def doquit(dbg):
     "Quit the stepper script interpreter."
-    os._exit(0)
+    exit(0)
 
 
 def should_stop_stepping(process):
@@ -94,7 +97,7 @@ def return_from_frame(thread, frame):
     thread.StepOutOfFrame(frame)
     new_frame = thread.GetSelectedFrame()
     new_name = new_frame.GetFunctionName()
-    print(':: Transitioned from {0} -> {1}.'.format(old_name, new_name))
+    print(':: Transitioned from {} -> {}.'.format(old_name, new_name))
     return True
 
 
@@ -111,12 +114,13 @@ def __lldb_init_module(dbg, internal_dict):
 
     # Step through the program until it exits.
     gen = 0
+    inspections = 0
     target = dbg.GetSelectedTarget()
     process = target.GetProcess()
     visited_pc_counts = defaultdict(int)
     while True:
         gen += 1
-        print(':: Generation', gen)
+        print(':: Generation {} (# inspections = {})'.format(gen, inspections))
 
         thread = process.GetSelectedThread()
         frame = thread.GetSelectedFrame()
@@ -161,6 +165,8 @@ def __lldb_init_module(dbg, internal_dict):
 
         # Inspect the current frame if permitted to do so.
         if do_inspection:
+            inspections += 1
+
             doit(dbg, 'bt')
 
             # Exercise `frame variable`.
@@ -178,6 +184,8 @@ def __lldb_init_module(dbg, internal_dict):
                 for var in variables:
                     name = var.GetName()
                     if not var.GetLocation():
+                        # Debug info doesn't provide a location for the var, so
+                        # `po` cannot succeed. Skip it.
                         continue
                     doit(dbg, 'po {0}'.format(name))
 
@@ -194,7 +202,7 @@ def __lldb_init_module(dbg, internal_dict):
                 skip_inspection_due_to_frame_lang or not line_entry.IsValid():
             old_func_name = frame.GetFunctionName()
             if not old_func_name:
-                print(':: Stepped to frame without function name!!!')
+                print(':: Stepped to frame without function name!')
                 doquit(dbg)
                 return
 
