@@ -413,13 +413,13 @@ static LinalgOp createLinalgOpOfSameType(LinalgOp op, PatternRewriter &rewriter,
 static bool isFusableWithReshapeByDimExpansion(LinalgOp linalgOp,
                                                unsigned fusedTensorIndex) {
   // Is fusable only if:
-  // - The linalgOp is a generic op.
+  // - The linalgOp is a generic op, or an indexed_generic.
   // - All the indexing maps for operands in linalgOp are projected
   //   permutations.
   // - The indexing map at the position representing the fused tensor is a
   //   permutation.
   // - All the loops in linalgOp are parallel loops.
-  return isa<GenericOp>(linalgOp.getOperation()) &&
+  return isa<GenericOp, IndexedGenericOp>(linalgOp.getOperation()) &&
          linalgOp.hasTensorSemantics() &&
          llvm::all_of(linalgOp.indexing_maps().getValue().take_front(
                           linalgOp.getNumInputs()),
@@ -460,7 +460,7 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
   ArrayRef<int64_t> expandedShape = expandedType.getShape();
   SmallVector<unsigned, 4> numFoldedDims(foldedType.getRank(), 0);
   SmallVector<SmallVector<int64_t, 4>, 4> expandedDimsShape(
-      expandedType.getRank());
+      foldedType.getRank());
   auto reassociationMaps = reshapeOp.getReassociationMaps();
   for (auto resultExpr : llvm::enumerate(fusedIndexMap.getResults())) {
     unsigned pos = resultExpr.value().cast<AffineDimExpr>().getPosition();
@@ -470,6 +470,26 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
         foldedDims.getResult(0).cast<AffineDimExpr>().getPosition(),
         numFoldedDims[pos]);
     expandedDimsShape[pos].assign(shape.begin(), shape.end());
+  }
+
+  if (isa<IndexedGenericOp>(linalgOp.getOperation())) {
+    // For indexed generic op, the region contains arguments that represent the
+    // induction variable value of the loops. In the fused op these values are
+    // obtained by linearizing the expanded dimensions. For now just check that
+    // the extents used in the linearization (all the expanded dims except the
+    // front) are statically know. For dynamic case, we would need shape
+    // information on these dimensions to get these.
+    for (auto &expandedShape : expandedDimsShape) {
+      for (int64_t expandedDimShape : llvm::make_range(
+               std::next(expandedShape.begin()), expandedShape.end())) {
+        if (ShapedType::isDynamic(expandedDimShape)) {
+          linalgOp.emitError(
+              "unable to fuse indexed generic op where the expanded dim is "
+              "dynamic");
+          return llvm::None;
+        }
+      }
+    }
   }
 
   // The remapping of the indices is then the prefix sum (inclusive) of the
@@ -563,10 +583,56 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, TensorReshapeOp reshapeOp,
       /*outputBuffers=*/ValueRange{},
       /*initTensors=*/ValueRange{}, expandedOpIndexingMaps, iteratorTypes);
   Region &fusedRegion = fusedOp.getOperation()->getRegion(0);
-  // TODO: Add support for indexed generic op, which would need mapping the
-  // expanded dimensions to the original dimension arguments.
-  rewriter.cloneRegionBefore(linalgOp.getOperation()->getRegion(0), fusedRegion,
-                             fusedRegion.begin());
+  Region &originalRegion = linalgOp.getOperation()->getRegion(0);
+
+  if (isa<GenericOp>(linalgOp.getOperation())) {
+    rewriter.cloneRegionBefore(originalRegion, fusedRegion,
+                               fusedRegion.begin());
+  } else {
+    assert(isa<IndexedGenericOp>(linalgOp.getOperation()));
+    // Create an entry block in the fused Region with same number of arguments
+    // as the fused op
+    Block *fusedEntryBlock = new Block;
+    fusedRegion.push_back(fusedEntryBlock);
+    rewriter.cloneRegionBefore(originalRegion, fusedRegion, fusedRegion.end());
+
+    // Merge the entry block of the fused op with the cloned blocks. For this
+    // compute the value for arguments of the region in the original operation
+    // in terms of the arguments of the fused op. Since the original operation
+    // is expanded, the expanded dimensions need to be folded back to get the
+    // replacement value for the arguments corresponding to interation index.
+    // For now this expects that all the loop ranges are constants, which is
+    // true if the shapes are all static. This has already been checked in the
+    // precondition.
+    using namespace edsc::op;
+    using namespace edsc::intrinsics;
+    OpBuilder::InsertionGuard guard(rewriter);
+    SmallVector<Value, 4> argReplacements(originalRegion.getNumArguments());
+    rewriter.setInsertionPointToStart(fusedEntryBlock);
+    edsc::ScopedContext scopedContext(rewriter, fusedOp.getLoc());
+    IndexType indexType = rewriter.getIndexType();
+    for (unsigned i : llvm::seq<unsigned>(0, numFoldedDims.size())) {
+      Value linearizedIndex = fusedEntryBlock->addArgument(indexType);
+      for (unsigned foldedDim = remapping[i] + 1; foldedDim != remapping[i + 1];
+           foldedDim++) {
+        int64_t expandedDimExtent =
+            expandedDimsShape[i][foldedDim - remapping[i]];
+        assert(!ShapedType::isDynamic(expandedDimExtent));
+        linearizedIndex =
+            linearizedIndex * std_constant_index(expandedDimExtent);
+        linearizedIndex =
+            linearizedIndex + fusedEntryBlock->addArgument(indexType);
+      }
+      argReplacements[i] = linearizedIndex;
+    }
+    for (unsigned i :
+         llvm::seq<unsigned>(numFoldedDims.size(), argReplacements.size())) {
+      argReplacements[i] =
+          fusedEntryBlock->addArgument(originalRegion.getArgument(i).getType());
+    }
+    rewriter.mergeBlocks(fusedEntryBlock->getNextNode(), fusedEntryBlock,
+                         argReplacements);
+  }
 
   // Reshape the result values to their original shape if this is a collapsing
   // reshape folded into its consumer.
@@ -670,14 +736,15 @@ struct FoldProducerReshapeOpByLinearization
   }
 };
 
-/// Pattern to fuse a tensor_reshape op with its consumer generic op, when the
-/// reshape op is collapsing dimensions. The dimensionality of the loop in the
-/// consumer generic op is expanded.
+/// Pattern to fuse a tensor_reshape op with its consumer
+/// generic/indexed_generic op, when the reshape op is collapsing
+/// dimensions. The dimensionality of the loop in the consumer is expanded.
+template <typename GenericOpTy>
 struct FoldWithProducerReshapeOpByExpansion
-    : public OpRewritePattern<GenericOp> {
-  using OpRewritePattern<GenericOp>::OpRewritePattern;
+    : public OpRewritePattern<GenericOpTy> {
+  using OpRewritePattern<GenericOpTy>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(GenericOp genericOp,
+  LogicalResult matchAndRewrite(GenericOpTy genericOp,
                                 PatternRewriter &rewriter) const override {
     LinalgOp linalgOp = cast<LinalgOp>(genericOp.getOperation());
     for (auto operand : llvm::enumerate(linalgOp.getInputs())) {
@@ -942,7 +1009,9 @@ void mlir::populateFoldReshapeOpsByLinearizationPatterns(
 void mlir::populateFoldReshapeOpsByExpansionPatterns(
     MLIRContext *context, OwningRewritePatternList &patterns) {
   patterns.insert<FoldReshapeWithGenericOpByExpansion,
-                  FoldWithProducerReshapeOpByExpansion>(context);
+                  FoldWithProducerReshapeOpByExpansion<GenericOp>,
+                  FoldWithProducerReshapeOpByExpansion<IndexedGenericOp>>(
+      context);
 }
 
 void mlir::populateLinalgTensorOpsFusionPatterns(
