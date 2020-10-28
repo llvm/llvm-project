@@ -143,11 +143,13 @@ void test()
 
 }  // t5
 
-int main()
+int main(int, char**)
 {
     t1::test();
     t2::test();
     t3::test();
     t4::test();
     t5::test();
+
+    return 0;
 }

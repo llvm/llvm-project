@@ -1280,10 +1280,27 @@ TEST_F(SymbolCollectorTest, CanonicalSTLHeader) {
   Language.CPlusPlus = true;
   Includes.addSystemHeadersMapping(Language);
   CollectorOpts.Includes = &Includes;
-  runSymbolCollector("namespace std { class string {}; }", /*Main=*/"");
-  EXPECT_THAT(Symbols,
-              Contains(AllOf(QName("std::string"), DeclURI(TestHeaderURI),
-                             IncludeHeader("<string>"))));
+  runSymbolCollector(
+      R"cpp(
+      namespace std {
+        class string {};
+        // Move overloads have special handling.
+        template <typename T> T&& move(T&&);
+        template <typename I, typename O> O move(I, I, O);
+      }
+      )cpp",
+      /*Main=*/"");
+  for (const auto &S : Symbols)
+    llvm::errs() << S.Scope << S.Name << " in " << S.IncludeHeaders.size()
+                 << "\n";
+  EXPECT_THAT(
+      Symbols,
+      UnorderedElementsAre(
+          QName("std"),
+          AllOf(QName("std::string"), DeclURI(TestHeaderURI),
+                IncludeHeader("<string>")),
+          AllOf(Labeled("move(T &&)"), IncludeHeader("<utility>")),
+          AllOf(Labeled("move(I, I, O)"), IncludeHeader("<algorithm>"))));
 }
 
 TEST_F(SymbolCollectorTest, IWYUPragma) {

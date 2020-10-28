@@ -59,7 +59,7 @@ private:
   SDValue lowerImplicitZextParam(SelectionDAG &DAG, SDValue Op,
                                  MVT VT, unsigned Offset) const;
   SDValue lowerImage(SDValue Op, const AMDGPU::ImageDimIntrinsicInfo *Intr,
-                     SelectionDAG &DAG) const;
+                     SelectionDAG &DAG, bool WithChain) const;
   SDValue lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc, SDValue Offset,
                        SDValue CachePolicy, SelectionDAG &DAG) const;
 
@@ -108,7 +108,8 @@ private:
                               ArrayRef<SDValue> Ops, EVT MemVT,
                               MachineMemOperand *MMO, SelectionDAG &DAG) const;
 
-  SDValue handleD16VData(SDValue VData, SelectionDAG &DAG) const;
+  SDValue handleD16VData(SDValue VData, SelectionDAG &DAG,
+                         bool ImageStore = false) const;
 
   /// Converts \p Op, which must be of floating point type, to the
   /// floating point type \p VT, by either extending or truncating it.

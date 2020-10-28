@@ -93,3 +93,14 @@ define i32 @n5_is_not_not(i32 %x, i32 %y) {
   %t1 = sub i32 %y, %t0
   ret i32 %t1
 }
+
+define <2 x i32> @n5_is_not_not_vec_splat(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @n5_is_not_not_vec_splat(
+; CHECK-NEXT:    [[T0_NEG:%.*]] = add <2 x i32> [[X:%.*]], <i32 -2147483647, i32 -2147483647>
+; CHECK-NEXT:    [[T1:%.*]] = add <2 x i32> [[T0_NEG]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[T1]]
+;
+  %t0 = xor <2 x i32> %x, <i32 2147483647, i32 2147483647> ; signmask, but not -1
+  %t1 = sub <2 x i32> %y, %t0
+  ret <2 x i32> %t1
+}

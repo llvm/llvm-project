@@ -231,4 +231,12 @@ format of the header for each interface section goes as follows:
 
 ##### SymbolInterfaces
 
-*   `SymbolOpInterface` - Used to represent [`Symbol`](SymbolsAndSymbolTables.md#symbol) operations which reside immediately within a region that defines a [`SymbolTable`](SymbolsAndSymbolTables.md#symbol-table).
+*   `SymbolOpInterface` - Used to represent
+    [`Symbol`](SymbolsAndSymbolTables.md#symbol) operations which reside
+    immediately within a region that defines a
+    [`SymbolTable`](SymbolsAndSymbolTables.md#symbol-table).
+
+*   `SymbolUserOpInterface` - Used to represent operations that reference
+    [`Symbol`](SymbolsAndSymbolTables.md#symbol) operations. This provides the
+    ability to perform safe and efficient verification of symbol uses, as well
+    as additional functionality.

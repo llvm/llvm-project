@@ -42,9 +42,9 @@ define i32 @fib(i32 %0) local_unnamed_addr #0 {
 ; IS__TUNIT_OPM-NEXT:    br i1 [[TMP2]], label [[TMP9:%.*]], label [[TMP3:%.*]]
 ; IS__TUNIT_OPM:       3:
 ; IS__TUNIT_OPM-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP0]], -1
-; IS__TUNIT_OPM-NEXT:    [[TMP5:%.*]] = tail call i32 @fib(i32 [[TMP4]]) [[ATTR16:#.*]]
+; IS__TUNIT_OPM-NEXT:    [[TMP5:%.*]] = tail call i32 @fib(i32 [[TMP4]]) [[ATTR15:#.*]]
 ; IS__TUNIT_OPM-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP0]], -2
-; IS__TUNIT_OPM-NEXT:    [[TMP7:%.*]] = tail call i32 @fib(i32 [[TMP6]]) [[ATTR16]]
+; IS__TUNIT_OPM-NEXT:    [[TMP7:%.*]] = tail call i32 @fib(i32 [[TMP6]]) [[ATTR15]]
 ; IS__TUNIT_OPM-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP7]], [[TMP5]]
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP8]]
 ; IS__TUNIT_OPM:       9:
@@ -57,9 +57,9 @@ define i32 @fib(i32 %0) local_unnamed_addr #0 {
 ; IS__TUNIT_NPM-NEXT:    br i1 [[TMP2]], label [[TMP9:%.*]], label [[TMP3:%.*]]
 ; IS__TUNIT_NPM:       3:
 ; IS__TUNIT_NPM-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP0]], -1
-; IS__TUNIT_NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @fib(i32 [[TMP4]]) [[ATTR17:#.*]]
+; IS__TUNIT_NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @fib(i32 [[TMP4]]) [[ATTR16:#.*]]
 ; IS__TUNIT_NPM-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP0]], -2
-; IS__TUNIT_NPM-NEXT:    [[TMP7:%.*]] = tail call i32 @fib(i32 [[TMP6]]) [[ATTR17]]
+; IS__TUNIT_NPM-NEXT:    [[TMP7:%.*]] = tail call i32 @fib(i32 [[TMP6]]) [[ATTR16]]
 ; IS__TUNIT_NPM-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP7]], [[TMP5]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP8]]
 ; IS__TUNIT_NPM:       9:
@@ -284,8 +284,8 @@ define void @mutual_recursion1(i1 %c) #0 {
 ; IS__TUNIT_OPM-SAME: (i1 [[C:%.*]]) [[ATTR3:#.*]] {
 ; IS__TUNIT_OPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
 ; IS__TUNIT_OPM:       rec:
-; IS__TUNIT_OPM-NEXT:    call void @sink() [[ATTR12:#.*]]
-; IS__TUNIT_OPM-NEXT:    call void @mutual_recursion2(i1 [[C]]) [[ATTR17:#.*]]
+; IS__TUNIT_OPM-NEXT:    call void @sink() [[ATTR11:#.*]]
+; IS__TUNIT_OPM-NEXT:    call void @mutual_recursion2(i1 [[C]]) [[ATTR16:#.*]]
 ; IS__TUNIT_OPM-NEXT:    br label [[END]]
 ; IS__TUNIT_OPM:       end:
 ; IS__TUNIT_OPM-NEXT:    ret void
@@ -295,8 +295,8 @@ define void @mutual_recursion1(i1 %c) #0 {
 ; IS__TUNIT_NPM-SAME: (i1 [[C:%.*]]) [[ATTR3:#.*]] {
 ; IS__TUNIT_NPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
 ; IS__TUNIT_NPM:       rec:
-; IS__TUNIT_NPM-NEXT:    call void @sink() [[ATTR12:#.*]]
-; IS__TUNIT_NPM-NEXT:    call void @mutual_recursion2(i1 noundef [[C]]) [[ATTR19:#.*]]
+; IS__TUNIT_NPM-NEXT:    call void @sink() [[ATTR11:#.*]]
+; IS__TUNIT_NPM-NEXT:    call void @mutual_recursion2(i1 noundef [[C]]) [[ATTR18:#.*]]
 ; IS__TUNIT_NPM-NEXT:    br label [[END]]
 ; IS__TUNIT_NPM:       end:
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -337,13 +337,13 @@ define void @mutual_recursion2(i1 %c) #0 {
 ; IS__TUNIT_OPM: Function Attrs: nofree noinline nosync nounwind uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@mutual_recursion2
 ; IS__TUNIT_OPM-SAME: (i1 [[C:%.*]]) [[ATTR3]] {
-; IS__TUNIT_OPM-NEXT:    call void @mutual_recursion1(i1 [[C]]) [[ATTR17]]
+; IS__TUNIT_OPM-NEXT:    call void @mutual_recursion1(i1 [[C]]) [[ATTR16]]
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree noinline nosync nounwind uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@mutual_recursion2
 ; IS__TUNIT_NPM-SAME: (i1 [[C:%.*]]) [[ATTR3]] {
-; IS__TUNIT_NPM-NEXT:    call void @mutual_recursion1(i1 [[C]]) [[ATTR19]]
+; IS__TUNIT_NPM-NEXT:    call void @mutual_recursion1(i1 [[C]]) [[ATTR18]]
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree noinline nosync nounwind uwtable
@@ -455,7 +455,7 @@ define void @conditional_exit(i32 %0, i32* nocapture readonly %1) local_unnamed_
 
 ; TEST 6 (positive case)
 ; Call intrinsic function
-; CHECK: Function Attrs: nounwind readnone speculatable willreturn
+; CHECK: Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 ; CHECK-NEXT: declare float @llvm.floor.f32(float)
 declare float @llvm.floor.f32(float)
 
@@ -475,25 +475,25 @@ define void @call_floor(float %a) #0 {
 }
 
 define float @call_floor2(float %a) #0 {
-; IS__TUNIT_OPM: Function Attrs: noinline nosync nounwind readnone uwtable willreturn
+; IS__TUNIT_OPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@call_floor2
-; IS__TUNIT_OPM-SAME: (float [[A:%.*]]) [[ATTR8:#.*]] {
-; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) [[ATTR18:#.*]]
+; IS__TUNIT_OPM-SAME: (float [[A:%.*]]) [[ATTR0:#.*]] {
+; IS__TUNIT_OPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) [[ATTR17:#.*]]
 ; IS__TUNIT_OPM-NEXT:    ret float [[C]]
 ;
-; IS__TUNIT_NPM: Function Attrs: noinline nosync nounwind readnone uwtable willreturn
+; IS__TUNIT_NPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@call_floor2
-; IS__TUNIT_NPM-SAME: (float [[A:%.*]]) [[ATTR8:#.*]] {
-; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) [[ATTR20:#.*]]
+; IS__TUNIT_NPM-SAME: (float [[A:%.*]]) [[ATTR0]] {
+; IS__TUNIT_NPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) [[ATTR19:#.*]]
 ; IS__TUNIT_NPM-NEXT:    ret float [[C]]
 ;
-; IS__CGSCC_OPM: Function Attrs: noinline nosync nounwind readnone uwtable willreturn
+; IS__CGSCC_OPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@call_floor2
 ; IS__CGSCC_OPM-SAME: (float [[A:%.*]]) [[ATTR9:#.*]] {
 ; IS__CGSCC_OPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) [[ATTR21:#.*]]
 ; IS__CGSCC_OPM-NEXT:    ret float [[C]]
 ;
-; IS__CGSCC_NPM: Function Attrs: noinline nosync nounwind readnone uwtable willreturn
+; IS__CGSCC_NPM: Function Attrs: nofree noinline nosync nounwind readnone uwtable willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@call_floor2
 ; IS__CGSCC_NPM-SAME: (float [[A:%.*]]) [[ATTR9:#.*]] {
 ; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) [[ATTR23:#.*]]
@@ -516,13 +516,13 @@ define void @call_maybe_noreturn() #0 {
 ; IS__TUNIT_OPM: Function Attrs: noinline nounwind uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@call_maybe_noreturn
 ; IS__TUNIT_OPM-SAME: () [[ATTR6:#.*]] {
-; IS__TUNIT_OPM-NEXT:    tail call void @maybe_noreturn() [[ATTR19:#.*]]
+; IS__TUNIT_OPM-NEXT:    tail call void @maybe_noreturn() [[ATTR18:#.*]]
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM: Function Attrs: noinline nounwind uwtable
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@call_maybe_noreturn
 ; IS__TUNIT_NPM-SAME: () [[ATTR6:#.*]] {
-; IS__TUNIT_NPM-NEXT:    tail call void @maybe_noreturn() [[ATTR21:#.*]]
+; IS__TUNIT_NPM-NEXT:    tail call void @maybe_noreturn() [[ATTR20:#.*]]
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM: Function Attrs: noinline nounwind uwtable
@@ -552,14 +552,14 @@ declare void @will_return() willreturn norecurse
 define void @f1() #0 {
 ; IS__TUNIT_OPM: Function Attrs: noinline nounwind uwtable willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@f1
-; IS__TUNIT_OPM-SAME: () [[ATTR10:#.*]] {
-; IS__TUNIT_OPM-NEXT:    tail call void @will_return() [[ATTR18]]
+; IS__TUNIT_OPM-SAME: () [[ATTR9:#.*]] {
+; IS__TUNIT_OPM-NEXT:    tail call void @will_return() [[ATTR17]]
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM: Function Attrs: noinline nounwind uwtable willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@f1
-; IS__TUNIT_NPM-SAME: () [[ATTR10:#.*]] {
-; IS__TUNIT_NPM-NEXT:    tail call void @will_return() [[ATTR20]]
+; IS__TUNIT_NPM-SAME: () [[ATTR9:#.*]] {
+; IS__TUNIT_NPM-NEXT:    tail call void @will_return() [[ATTR19]]
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM: Function Attrs: noinline norecurse nounwind uwtable willreturn
@@ -581,8 +581,8 @@ define void @f1() #0 {
 define void @f2() #0 {
 ; IS__TUNIT____: Function Attrs: noinline nounwind uwtable willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@f2
-; IS__TUNIT____-SAME: () [[ATTR10:#.*]] {
-; IS__TUNIT____-NEXT:    tail call void @f1() [[ATTR12:#.*]]
+; IS__TUNIT____-SAME: () [[ATTR9:#.*]] {
+; IS__TUNIT____-NEXT:    tail call void @f1() [[ATTR11:#.*]]
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: noinline norecurse nounwind uwtable willreturn
@@ -639,8 +639,8 @@ declare i1 @maybe_raise_exception() #1 willreturn
 define void @invoke_test() personality i32 (...)* @__gxx_personality_v0 {
 ; IS__TUNIT_OPM: Function Attrs: nounwind willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@invoke_test
-; IS__TUNIT_OPM-SAME: () [[ATTR12]] personality i32 (...)* @__gxx_personality_v0 {
-; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() [[ATTR18]]
+; IS__TUNIT_OPM-SAME: () [[ATTR11]] personality i32 (...)* @__gxx_personality_v0 {
+; IS__TUNIT_OPM-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() [[ATTR17]]
 ; IS__TUNIT_OPM-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
 ; IS__TUNIT_OPM:       N:
 ; IS__TUNIT_OPM-NEXT:    ret void
@@ -651,8 +651,8 @@ define void @invoke_test() personality i32 (...)* @__gxx_personality_v0 {
 ;
 ; IS__TUNIT_NPM: Function Attrs: nounwind willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@invoke_test
-; IS__TUNIT_NPM-SAME: () [[ATTR12]] personality i32 (...)* @__gxx_personality_v0 {
-; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() [[ATTR20]]
+; IS__TUNIT_NPM-SAME: () [[ATTR11]] personality i32 (...)* @__gxx_personality_v0 {
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() [[ATTR19]]
 ; IS__TUNIT_NPM-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
 ; IS__TUNIT_NPM:       N:
 ; IS__TUNIT_NPM-NEXT:    ret void
@@ -711,7 +711,7 @@ declare i32 @__gxx_personality_v0(...)
 define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
 ; IS__TUNIT_OPM: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@loop_constant_trip_count
-; IS__TUNIT_OPM-SAME: (i32* nocapture nofree readonly [[TMP0:%.*]]) [[ATTR13:#.*]] {
+; IS__TUNIT_OPM-SAME: (i32* nocapture nofree readonly [[TMP0:%.*]]) [[ATTR12:#.*]] {
 ; IS__TUNIT_OPM-NEXT:    br label [[TMP3:%.*]]
 ; IS__TUNIT_OPM:       2:
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[TMP8:%.*]]
@@ -727,7 +727,7 @@ define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
 ;
 ; IS__TUNIT_NPM: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@loop_constant_trip_count
-; IS__TUNIT_NPM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[TMP0:%.*]]) [[ATTR13:#.*]] {
+; IS__TUNIT_NPM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[TMP0:%.*]]) [[ATTR12:#.*]] {
 ; IS__TUNIT_NPM-NEXT:    br label [[TMP3:%.*]]
 ; IS__TUNIT_NPM:       2:
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[TMP8:%.*]]
@@ -803,7 +803,7 @@ define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
 define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, i32 %3) local_unnamed_addr #0 {
 ; IS__TUNIT____: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@loop_trip_count_unbound
-; IS__TUNIT____-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* nocapture nofree readonly [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr [[ATTR14:#.*]] {
+; IS__TUNIT____-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* nocapture nofree readonly [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr [[ATTR13:#.*]] {
 ; IS__TUNIT____-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
 ; IS__TUNIT____-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP8:%.*]]
 ; IS__TUNIT____:       6:
@@ -873,7 +873,7 @@ define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, 
 define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1) local_unnamed_addr #0 {
 ; IS__TUNIT_OPM: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@loop_trip_dec
-; IS__TUNIT_OPM-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr [[ATTR13]] {
+; IS__TUNIT_OPM-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr [[ATTR12]] {
 ; IS__TUNIT_OPM-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], -1
 ; IS__TUNIT_OPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP14:%.*]]
 ; IS__TUNIT_OPM:       4:
@@ -894,7 +894,7 @@ define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1) local_unnamed_addr
 ;
 ; IS__TUNIT_NPM: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@loop_trip_dec
-; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr [[ATTR13]] {
+; IS__TUNIT_NPM-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr [[ATTR12]] {
 ; IS__TUNIT_NPM-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], -1
 ; IS__TUNIT_NPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP14:%.*]]
 ; IS__TUNIT_NPM:       4:
@@ -1017,16 +1017,16 @@ f:
 define void @unreachable_exit_positive1() #0 {
 ; IS__TUNIT_OPM: Function Attrs: noinline nounwind uwtable willreturn
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@unreachable_exit_positive1
-; IS__TUNIT_OPM-SAME: () [[ATTR10]] {
-; IS__TUNIT_OPM-NEXT:    tail call void @will_return() [[ATTR18]]
+; IS__TUNIT_OPM-SAME: () [[ATTR9]] {
+; IS__TUNIT_OPM-NEXT:    tail call void @will_return() [[ATTR17]]
 ; IS__TUNIT_OPM-NEXT:    ret void
 ; IS__TUNIT_OPM:       unreachable_label:
 ; IS__TUNIT_OPM-NEXT:    unreachable
 ;
 ; IS__TUNIT_NPM: Function Attrs: noinline nounwind uwtable willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@unreachable_exit_positive1
-; IS__TUNIT_NPM-SAME: () [[ATTR10]] {
-; IS__TUNIT_NPM-NEXT:    tail call void @will_return() [[ATTR20]]
+; IS__TUNIT_NPM-SAME: () [[ATTR9]] {
+; IS__TUNIT_NPM-NEXT:    tail call void @will_return() [[ATTR19]]
 ; IS__TUNIT_NPM-NEXT:    ret void
 ; IS__TUNIT_NPM:       unreachable_label:
 ; IS__TUNIT_NPM-NEXT:    unreachable
@@ -1179,7 +1179,7 @@ unreachable_label:
 define void @unreachable_exit_negative2() #0 {
 ; IS__TUNIT____: Function Attrs: nofree noinline noreturn nosync nounwind readnone uwtable
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@unreachable_exit_negative2
-; IS__TUNIT____-SAME: () [[ATTR15:#.*]] {
+; IS__TUNIT____-SAME: () [[ATTR14:#.*]] {
 ; IS__TUNIT____-NEXT:    br label [[L1:%.*]]
 ; IS__TUNIT____:       L1:
 ; IS__TUNIT____-NEXT:    br label [[L2:%.*]]
@@ -1245,7 +1245,7 @@ define void @call_longjmp(i8* nocapture readnone %0) local_unnamed_addr #0 {
 define i32 @infinite_loop_inside_bounded_loop(i32 %n) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@infinite_loop_inside_bounded_loop
-; IS__TUNIT____-SAME: (i32 [[N:%.*]]) [[ATTR17:#.*]] {
+; IS__TUNIT____-SAME: (i32 [[N:%.*]]) [[ATTR16:#.*]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    br label [[FOR_COND:%.*]]
 ; IS__TUNIT____:       for.cond:
@@ -1327,7 +1327,7 @@ for.end:                                          ; preds = %for.cond.cleanup
 define i32 @bounded_nested_loops(i32 %n) {
 ; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@bounded_nested_loops
-; IS__TUNIT_OPM-SAME: (i32 [[N:%.*]]) [[ATTR16]] {
+; IS__TUNIT_OPM-SAME: (i32 [[N:%.*]]) [[ATTR15]] {
 ; IS__TUNIT_OPM-NEXT:  entry:
 ; IS__TUNIT_OPM-NEXT:    br label [[FOR_COND:%.*]]
 ; IS__TUNIT_OPM:       for.cond:
@@ -1356,7 +1356,7 @@ define i32 @bounded_nested_loops(i32 %n) {
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@bounded_nested_loops
-; IS__TUNIT_NPM-SAME: (i32 [[N:%.*]]) [[ATTR18:#.*]] {
+; IS__TUNIT_NPM-SAME: (i32 [[N:%.*]]) [[ATTR17:#.*]] {
 ; IS__TUNIT_NPM-NEXT:  entry:
 ; IS__TUNIT_NPM-NEXT:    br label [[FOR_COND:%.*]]
 ; IS__TUNIT_NPM:       for.cond:
@@ -1491,7 +1491,7 @@ for.end:                                          ; preds = %for.cond.cleanup
 define i32 @bounded_loop_inside_unbounded_loop(i32 %n) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@bounded_loop_inside_unbounded_loop
-; IS__TUNIT____-SAME: (i32 [[N:%.*]]) [[ATTR17]] {
+; IS__TUNIT____-SAME: (i32 [[N:%.*]]) [[ATTR16]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    br label [[WHILE_COND:%.*]]
 ; IS__TUNIT____:       while.cond:
@@ -1606,7 +1606,7 @@ while.end:                                        ; preds = %while.cond
 define i32 @nested_unbounded_loops(i32 %n) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@nested_unbounded_loops
-; IS__TUNIT____-SAME: (i32 [[N:%.*]]) [[ATTR17]] {
+; IS__TUNIT____-SAME: (i32 [[N:%.*]]) [[ATTR16]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    br label [[WHILE_COND:%.*]]
 ; IS__TUNIT____:       while.cond:
@@ -1726,9 +1726,9 @@ while.end11:                                      ; preds = %while.cond
 define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_OPM: Function Attrs: nofree nosync nounwind readnone
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@non_loop_cycle
-; IS__TUNIT_OPM-SAME: (i32 [[N:%.*]]) [[ATTR16]] {
+; IS__TUNIT_OPM-SAME: (i32 [[N:%.*]]) [[ATTR15]] {
 ; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) [[ATTR16]]
+; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) [[ATTR15]]
 ; IS__TUNIT_OPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CALL]], 5
 ; IS__TUNIT_OPM-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; IS__TUNIT_OPM:       if.then:
@@ -1736,7 +1736,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_OPM:       if.else:
 ; IS__TUNIT_OPM-NEXT:    br label [[ENTRY2:%.*]]
 ; IS__TUNIT_OPM:       entry1:
-; IS__TUNIT_OPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) [[ATTR16]]
+; IS__TUNIT_OPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) [[ATTR15]]
 ; IS__TUNIT_OPM-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[CALL1]], 5
 ; IS__TUNIT_OPM-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_ELSE4:%.*]]
 ; IS__TUNIT_OPM:       if.then3:
@@ -1744,7 +1744,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_OPM:       if.else4:
 ; IS__TUNIT_OPM-NEXT:    br label [[ENTRY2]]
 ; IS__TUNIT_OPM:       entry2:
-; IS__TUNIT_OPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) [[ATTR16]]
+; IS__TUNIT_OPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) [[ATTR15]]
 ; IS__TUNIT_OPM-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[CALL5]], 5
 ; IS__TUNIT_OPM-NEXT:    br i1 [[CMP6]], label [[IF_THEN7:%.*]], label [[IF_ELSE8:%.*]]
 ; IS__TUNIT_OPM:       if.then7:
@@ -1756,9 +1756,9 @@ define void @non_loop_cycle(i32 %n) {
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@non_loop_cycle
-; IS__TUNIT_NPM-SAME: (i32 [[N:%.*]]) [[ATTR17]] {
+; IS__TUNIT_NPM-SAME: (i32 [[N:%.*]]) [[ATTR16]] {
 ; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) [[ATTR17]]
+; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) [[ATTR16]]
 ; IS__TUNIT_NPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CALL]], 5
 ; IS__TUNIT_NPM-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; IS__TUNIT_NPM:       if.then:
@@ -1766,7 +1766,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_NPM:       if.else:
 ; IS__TUNIT_NPM-NEXT:    br label [[ENTRY2:%.*]]
 ; IS__TUNIT_NPM:       entry1:
-; IS__TUNIT_NPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) [[ATTR17]]
+; IS__TUNIT_NPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) [[ATTR16]]
 ; IS__TUNIT_NPM-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[CALL1]], 5
 ; IS__TUNIT_NPM-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_ELSE4:%.*]]
 ; IS__TUNIT_NPM:       if.then3:
@@ -1774,7 +1774,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_NPM:       if.else4:
 ; IS__TUNIT_NPM-NEXT:    br label [[ENTRY2]]
 ; IS__TUNIT_NPM:       entry2:
-; IS__TUNIT_NPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) [[ATTR17]]
+; IS__TUNIT_NPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) [[ATTR16]]
 ; IS__TUNIT_NPM-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[CALL5]], 5
 ; IS__TUNIT_NPM-NEXT:    br i1 [[CMP6]], label [[IF_THEN7:%.*]], label [[IF_ELSE8:%.*]]
 ; IS__TUNIT_NPM:       if.then7:

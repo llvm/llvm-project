@@ -223,6 +223,7 @@ enum Kind {
   kw_returns_twice,
   kw_signext,
   kw_speculatable,
+  kw_nossp,
   kw_ssp,
   kw_sspreq,
   kw_sspstrong,
@@ -241,6 +242,7 @@ enum Kind {
   kw_zeroext,
   kw_immarg,
   kw_byref,
+  kw_mustprogress,
 
   kw_type,
   kw_opaque,

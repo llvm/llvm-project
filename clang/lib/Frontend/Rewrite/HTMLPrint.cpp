@@ -70,7 +70,7 @@ void HTMLPrinter::HandleTranslationUnit(ASTContext &Ctx) {
   if (Entry)
     Name = Entry->getName();
   else
-    Name = R.getSourceMgr().getBuffer(FID)->getBufferIdentifier();
+    Name = R.getSourceMgr().getBufferOrFake(FID).getBufferIdentifier();
 
   html::AddLineNumbers(R, FID);
   html::AddHeaderFooterInternalBuiltinCSS(R, FID, Name);

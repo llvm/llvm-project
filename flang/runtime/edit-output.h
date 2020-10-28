@@ -60,18 +60,17 @@ protected:
   char exponent_[16];
 };
 
-template <int binaryPrecision = 53>
-class RealOutputEditing : public RealOutputEditingBase {
+template <int KIND> class RealOutputEditing : public RealOutputEditingBase {
 public:
+  static constexpr int binaryPrecision{common::PrecisionOfRealKind(KIND)};
+  using BinaryFloatingPoint =
+      decimal::BinaryFloatingPointNumber<binaryPrecision>;
   template <typename A>
   RealOutputEditing(IoStatementState &io, A x)
       : RealOutputEditingBase{io}, x_{x} {}
   bool Edit(const DataEdit &);
 
 private:
-  using BinaryFloatingPoint =
-      decimal::BinaryFloatingPointNumber<binaryPrecision>;
-
   // The DataEdit arguments here are const references or copies so that
   // the original DataEdit can safely serve multiple array elements when
   // it has a repeat count.
@@ -104,12 +103,13 @@ extern template bool EditIntegerOutput<std::int64_t, std::uint64_t>(
 extern template bool EditIntegerOutput<common::uint128_t, common::uint128_t>(
     IoStatementState &, const DataEdit &, common::uint128_t);
 
+extern template class RealOutputEditing<2>;
+extern template class RealOutputEditing<3>;
+extern template class RealOutputEditing<4>;
 extern template class RealOutputEditing<8>;
-extern template class RealOutputEditing<11>;
-extern template class RealOutputEditing<24>;
-extern template class RealOutputEditing<53>;
-extern template class RealOutputEditing<64>;
-extern template class RealOutputEditing<113>;
+extern template class RealOutputEditing<10>;
+// TODO: double/double
+extern template class RealOutputEditing<16>;
 
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_EDIT_OUTPUT_H_

@@ -1632,7 +1632,8 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
         if (Register::isVirtualRegister(Reg))
           Uses.insert(Reg);
         else if (MRI.isAllocatable(Reg))
-          for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units)
+          for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
+               ++Units)
             Uses.insert(*Units);
       }
   }
@@ -1645,7 +1646,8 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
             LiveOutRegs.push_back(RegisterMaskPair(Reg,
                                                    LaneBitmask::getNone()));
         } else if (MRI.isAllocatable(Reg)) {
-          for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units)
+          for (MCRegUnitIterator Units(Reg.asMCReg(), TRI); Units.isValid();
+               ++Units)
             if (!Uses.count(*Units))
               LiveOutRegs.push_back(RegisterMaskPair(*Units,
                                                      LaneBitmask::getNone()));
@@ -2270,7 +2272,7 @@ void SwingSchedulerDAG::applyInstrChange(MachineInstr *MI,
 /// Return the instruction in the loop that defines the register.
 /// If the definition is a Phi, then follow the Phi operand to
 /// the instruction in the loop.
-MachineInstr *SwingSchedulerDAG::findDefInLoop(unsigned Reg) {
+MachineInstr *SwingSchedulerDAG::findDefInLoop(Register Reg) {
   SmallPtrSet<MachineInstr *, 8> Visited;
   MachineInstr *Def = MRI.getVRegDef(Reg);
   while (Def->isPHI()) {

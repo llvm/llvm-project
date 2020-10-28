@@ -95,8 +95,9 @@ define float @test4() nounwind {
 ; HARD-NEXT:    vcvt.f32.f64 s0, d16
 ; HARD-NEXT:    vmov.i32 d17, #0x80000000
 ; HARD-NEXT:    vshr.u64 d16, d16, #32
-; HARD-NEXT:    vmov.f32 s2, #5.000000e-01
-; HARD-NEXT:    vbit d1, d16, d17
+; HARD-NEXT:    vmov.i32 d18, #0x3f000000
+; HARD-NEXT:    vorr d1, d17, d17
+; HARD-NEXT:    vbsl d1, d16, d18
 ; HARD-NEXT:    vadd.f32 s0, s0, s2
 ; HARD-NEXT:    pop {r11, pc}
 entry:

@@ -352,6 +352,20 @@ SPIR-V Dialect op                     | LLVM Dialect op
 `spv.ULessThan`                       | `llvm.icmp "ult"`
 `spv.ULessThanEqual`                  | `llvm.icmp "ule"`
 
+### Composite ops
+
+Currently, conversion supports rewrite patterns for `spv.CompositeExtract` and
+`spv.CompositeInsert`. We distinguish two cases for these operations: when the
+composite object is a vector, and when the composite object is of a non-vector
+type (*i.e.* struct, array or runtime array).
+
+Composite type  | SPIR-V Dialect op      | LLVM Dialect op
+:-------------: | :--------------------: | :--------------------:
+vector          | `spv.CompositeExtract` | `llvm.extractelement`
+vector          | `spv.CompositeInsert`  | `llvm.insertelement`
+non-vector      | `spv.CompositeExtract` | `llvm.extractvalue`
+non-vector      | `spv.CompositeInsert`  | `llvm.insertvalue`
+
 ### `spv.EntryPoint` and `spv.ExecutionMode`
 
 **Note: these conversions are likely to be changed in the future**
@@ -597,8 +611,6 @@ There is no support of the following ops:
 As well as:
 
 *   spv.CompositeConstruct
-*   spv.CompositeExtract
-*   spv.CompositeInsert
 *   spv.ControlBarrier
 *   spv.CopyMemory
 *   spv.FMod

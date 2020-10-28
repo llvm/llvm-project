@@ -1,4 +1,3 @@
-import itertools
 import os
 import platform
 import re
@@ -21,16 +20,13 @@ class LLVMConfig(object):
         self.use_lit_shell = False
         # Tweak PATH for Win32 to decide to use bash.exe or not.
         if sys.platform == 'win32':
-            # Seek necessary tools in directories and set to $PATH.
-            path = None
-            lit_tools_dir = getattr(config, 'lit_tools_dir', None)
-            required_tools = ['cmp.exe', 'grep.exe', 'sed.exe', 'diff.exe', 'echo.exe']
-            if lit_tools_dir:
-                path = self.lit_config.getToolsPath(lit_tools_dir,
-                                                    config.environment['PATH'],
-                                                    required_tools)
-            if path is None:
-                path = self._find_git_windows_unix_tools(required_tools)
+            # For tests that require Windows to run.
+            features.add('system-windows')
+
+            # Seek sane tools in directories and set to $PATH.
+            path = self.lit_config.getToolsPath(config.lit_tools_dir,
+                                                config.environment['PATH'],
+                                                ['cmp.exe', 'grep.exe', 'sed.exe'])
             if path is not None:
                 self.with_environment('PATH', path, append_path=True)
             # Many tools behave strangely if these environment variables aren't set.
@@ -120,34 +116,6 @@ class LLVMConfig(object):
             if gmalloc_path_str is not None:
                 self.with_environment(
                     'DYLD_INSERT_LIBRARIES', gmalloc_path_str)
-
-    def _find_git_windows_unix_tools(self, tools_needed):
-        assert(sys.platform == 'win32')
-        if sys.version_info.major >= 3:
-            import winreg
-        else:
-            import _winreg as winreg
-
-        # Search both the 64 and 32-bit hives, as well as HKLM + HKCU
-        masks = [0, winreg.KEY_WOW64_64KEY]
-        hives = [winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER]
-        for mask, hive in itertools.product(masks, hives):
-            try:
-                with winreg.OpenKey(hive, r"SOFTWARE\GitForWindows", access=winreg.KEY_READ | mask) as key:
-                    install_root, _ = winreg.QueryValueEx(key, 'InstallPath')
-
-                    if not install_root:
-                        continue
-                    candidate_path = os.path.join(install_root, 'usr', 'bin')
-                    if not lit.util.checkToolsPath(candidate_path, tools_needed):
-                        continue
-
-                    # We found it, stop enumerating.
-                    return candidate_path
-            except:
-                continue
-
-        return None
 
     def with_environment(self, variable, value, append_path=False):
         if append_path:
@@ -471,7 +439,7 @@ class LLVMConfig(object):
         self.config.substitutions.append(
             (' clang ', """\"*** Do not use 'clang' in tests, use '%clang'. ***\""""))
         self.config.substitutions.append(
-            (' clang\+\+ ', """\"*** Do not use 'clang++' in tests, use '%clangxx'. ***\""""))
+            (r' clang\+\+ ', """\"*** Do not use 'clang++' in tests, use '%clangxx'. ***\""""))
         self.config.substitutions.append(
             (' clang-cc ',
              """\"*** Do not use 'clang-cc' in tests, use '%clang_cc1'. ***\""""))
@@ -526,11 +494,11 @@ class LLVMConfig(object):
         was_found = ld_lld and lld_link and ld64_lld and wasm_ld
         tool_substitutions = []
         if ld_lld:
-            tool_substitutions.append(ToolSubst('ld\.lld', command=ld_lld))
+            tool_substitutions.append(ToolSubst(r'ld\.lld', command=ld_lld))
         if lld_link:
             tool_substitutions.append(ToolSubst('lld-link', command=lld_link))
         if ld64_lld:
-            tool_substitutions.append(ToolSubst('ld64\.lld', command=ld64_lld))
+            tool_substitutions.append(ToolSubst(r'ld64\.lld', command=ld64_lld))
         if wasm_ld:
             tool_substitutions.append(ToolSubst('wasm-ld', command=wasm_ld))
         self.add_tool_substitutions(tool_substitutions)

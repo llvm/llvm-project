@@ -48,6 +48,7 @@ public:
   /// Build a DWARFAddressRangesVector from a rangelist.
   DWARFAddressRangesVector
   getAbsoluteRanges(Optional<object::SectionedAddress> BaseAddr,
+                    uint8_t AddressByteSize,
                     function_ref<Optional<object::SectionedAddress>(uint32_t)>
                         LookupPooledAddress) const;
 

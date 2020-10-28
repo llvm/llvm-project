@@ -14,6 +14,7 @@
 #include "GlobalCompilationDatabase.h"
 #include "index/CanonicalIncludes.h"
 #include "support/Function.h"
+#include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "support/Threading.h"
 #include "llvm/ADT/Optional.h"
@@ -207,7 +208,8 @@ public:
   ~TUScheduler();
 
   struct FileStats {
-    std::size_t UsedBytes = 0;
+    std::size_t UsedBytesAST = 0;
+    std::size_t UsedBytesPreamble = 0;
     unsigned PreambleBuilds = 0;
     unsigned ASTBuilds = 0;
   };
@@ -310,6 +312,8 @@ public:
   // integration.
   // FIXME: move to ClangdServer via createProcessingContext.
   static llvm::Optional<llvm::StringRef> getFileBeingProcessedInContext();
+
+  void profile(MemoryTree &MT) const;
 
 private:
   const GlobalCompilationDatabase &CDB;

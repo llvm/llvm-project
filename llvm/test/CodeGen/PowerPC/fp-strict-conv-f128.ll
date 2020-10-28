@@ -8,8 +8,6 @@
 ; RUN: llc -verify-machineinstrs -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
 ; RUN:   < %s -mtriple=powerpc64le-unknown-linux -mcpu=pwr8 -mattr=-vsx \
 ; RUN:   | FileCheck %s -check-prefix=NOVSX
-; RUN: llc -mtriple=powerpc64le-unknown-linux -mcpu=pwr9 < %s -simplify-mir \
-; RUN:   -stop-after=machine-cp | FileCheck %s -check-prefix=MIR
 
 declare i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128, metadata)
 declare i64 @llvm.experimental.constrained.fptosi.i64.f128(fp128, metadata)
@@ -261,10 +259,6 @@ define signext i32 @q_to_i32(fp128 %m) #0 {
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
 ; NOVSX-NEXT:    blr
-;
-; MIR-LABEL: name: q_to_i32
-; MIR: renamable $v{{[0-9]+}} = XSCVQPSWZ
-; MIR-NEXT: renamable $r{{[0-9]+}} = MFVSRWZ
 entry:
   %conv = tail call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %m, metadata !"fpexcept.strict") #0
   ret i32 %conv
@@ -304,10 +298,6 @@ define i64 @q_to_i64(fp128 %m) #0 {
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
 ; NOVSX-NEXT:    blr
-;
-; MIR-LABEL: name: q_to_i64
-; MIR: renamable $v{{[0-9]+}} = XSCVQPSDZ
-; MIR-NEXT: renamable $x{{[0-9]+}} = MFVRD
 entry:
   %conv = tail call i64 @llvm.experimental.constrained.fptosi.i64.f128(fp128 %m, metadata !"fpexcept.strict") #0
   ret i64 %conv
@@ -347,10 +337,6 @@ define i64 @q_to_u64(fp128 %m) #0 {
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
 ; NOVSX-NEXT:    blr
-;
-; MIR-LABEL: name: q_to_u64
-; MIR: renamable $v{{[0-9]+}} = XSCVQPUDZ
-; MIR-NEXT: renamable $x{{[0-9]+}} = MFVRD
 entry:
   %conv = tail call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %m, metadata !"fpexcept.strict") #0
   ret i64 %conv
@@ -391,10 +377,6 @@ define zeroext i32 @q_to_u32(fp128 %m) #0 {
 ; NOVSX-NEXT:    ld r0, 16(r1)
 ; NOVSX-NEXT:    mtlr r0
 ; NOVSX-NEXT:    blr
-;
-; MIR-LABEL: name: q_to_u32
-; MIR: renamable $v{{[0-9]+}} = XSCVQPUWZ
-; MIR-NEXT: renamable $r{{[0-9]+}} = MFVSRWZ
 entry:
   %conv = tail call i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128 %m, metadata !"fpexcept.strict") #0
   ret i32 %conv
@@ -825,34 +807,6 @@ define fp128 @u64_to_q(i64 %m) #0 {
 entry:
   %conv = tail call fp128 @llvm.experimental.constrained.uitofp.f128.i64(i64 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
   ret fp128 %conv
-}
-
-define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, i32* %addr1, i64* %addr2) {
-; MIR-LABEL: name: fptoint_nofpexcept
-; MIR: renamable $v{{[0-9]+}} = nofpexcept XSCVQPSWZ
-; MIR: renamable $v{{[0-9]+}} = nofpexcept XSCVQPUWZ
-; MIR: renamable $v{{[0-9]+}} = nofpexcept XSCVQPSDZ
-; MIR: renamable $v{{[0-9]+}} = nofpexcept XSCVQPUDZ
-;
-; MIR: renamable $f{{[0-9]+}} = nofpexcept FADD
-; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPSXWS
-; MIR: renamable $f{{[0-9]+}} = nofpexcept FADD
-; MIR: renamable $f{{[0-9]+}} = nofpexcept XSCVDPSXWS
-entry:
-  %conv1 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %m, metadata !"fpexcept.ignore") #0
-  store volatile i32 %conv1, i32* %addr1, align 4
-  %conv2 = tail call i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128 %m, metadata !"fpexcept.ignore") #0
-  store volatile i32 %conv2, i32* %addr1, align 4
-  %conv3 = tail call i64 @llvm.experimental.constrained.fptosi.i64.f128(fp128 %m, metadata !"fpexcept.ignore") #0
-  store volatile i64 %conv3, i64* %addr2, align 8
-  %conv4 = tail call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %m, metadata !"fpexcept.ignore") #0
-  store volatile i64 %conv4, i64* %addr2, align 8
-
-  %conv5 = tail call i32 @llvm.experimental.constrained.fptosi.i32.ppcf128(ppc_fp128 %p, metadata !"fpexcept.ignore") #0
-  store volatile i32 %conv5, i32* %addr1, align 4
-  %conv6 = tail call i32 @llvm.experimental.constrained.fptoui.i32.ppcf128(ppc_fp128 %p, metadata !"fpexcept.ignore") #0
-  store volatile i32 %conv6, i32* %addr1, align 4
-  ret void
 }
 
 attributes #0 = { strictfp }

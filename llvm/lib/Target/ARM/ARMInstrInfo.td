@@ -104,11 +104,6 @@ def SDT_ARMIntShiftParts : SDTypeProfile<2, 3, [SDTCisSameAs<0, 1>,
                                               SDTCisInt<0>,
                                               SDTCisInt<4>]>;
 
-// TODO Add another operand for 'Size' so that we can re-use this node when we
-// start supporting *TP versions.
-def SDT_ARMLoLoop : SDTypeProfile<0, 2, [SDTCisVT<0, i32>,
-                                         SDTCisVT<1, OtherVT>]>;
-
 def ARMSmlald        : SDNode<"ARMISD::SMLALD", SDT_LongMac>;
 def ARMSmlaldx       : SDNode<"ARMISD::SMLALDX", SDT_LongMac>;
 def ARMSmlsld        : SDNode<"ARMISD::SMLSLD", SDT_LongMac>;
@@ -302,10 +297,6 @@ def SDTARMVCMPZ   : SDTypeProfile<1, 2, [SDTCisInt<2>]>;
 
 def ARMvcmp      : SDNode<"ARMISD::VCMP", SDTARMVCMP>;
 def ARMvcmpz     : SDNode<"ARMISD::VCMPZ", SDTARMVCMPZ>;
-
-def ARMWLS      : SDNode<"ARMISD::WLS", SDT_ARMLoLoop, [SDNPHasChain]>;
-def ARMLE       : SDNode<"ARMISD::LE", SDT_ARMLoLoop, [SDNPHasChain]>;
-def ARMLoopDec  : SDNode<"ARMISD::LOOP_DEC", SDTIntBinOp, [SDNPHasChain]>;
 
 // 'VECTOR_REG_CAST' is an operation that reinterprets the contents of a
 // vector register as a different vector type, without changing the contents of

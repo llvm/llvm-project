@@ -154,19 +154,6 @@ static unsigned AdrImmBits(unsigned Value) {
   return (hi19 << 5) | (lo2 << 29);
 }
 
-static bool valueFitsIntoFixupKind(unsigned Kind, uint64_t Value) {
-  unsigned NumBits;
-  switch(Kind) {
-  case FK_Data_1: NumBits = 8; break;
-  case FK_Data_2: NumBits = 16; break;
-  case FK_Data_4: NumBits = 32; break;
-  case FK_Data_8: NumBits = 64; break;
-  default: return true;
-  }
-  return isUIntN(NumBits, Value) ||
-    isIntN(NumBits, static_cast<int64_t>(Value));
-}
-
 static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
                                  uint64_t Value, MCContext &Ctx,
                                  const Triple &TheTriple, bool IsResolved) {
@@ -341,9 +328,6 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
-    if (!valueFitsIntoFixupKind(Fixup.getTargetKind(), Value))
-      Ctx.reportError(Fixup.getLoc(), "fixup value too large for data type!");
-    LLVM_FALLTHROUGH;
   case FK_SecRel_2:
   case FK_SecRel_4:
     return Value;

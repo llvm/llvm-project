@@ -7,6 +7,7 @@ set(LLVM_LIBS_DIR "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/%(build_config)s"
 llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_LIBXML2
+  LLD_DEFAULT_LD_LLD_IS_MINGW
   )
 
 configure_lit_site_cfg(

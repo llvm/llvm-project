@@ -22,55 +22,21 @@ target triple = "x86_64-unknown-linux-gnu"
 %"struct.std::array" = type { [6 x i32] }
 
 define dso_local void @_Z3fooi(i32 %cnt) {
-; OLDPM-LABEL: @_Z3fooi(
-; OLDPM-NEXT:  entry:
-; OLDPM-NEXT:    [[ARR:%.*]] = alloca %"struct.std::array", align 16
-; OLDPM-NEXT:    [[TMP0:%.*]] = bitcast %"struct.std::array"* [[ARR]] to i8*
-; OLDPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 24, i8* nonnull [[TMP0]])
-; OLDPM-NEXT:    [[ARRAYDECAY_I_I_I:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* [[ARR]], i64 0, i32 0, i64 0
-; OLDPM-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* [[ARR]], i64 0, i32 0, i64 1
-; OLDPM-NEXT:    [[INCDEC_PTR_1:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* [[ARR]], i64 0, i32 0, i64 2
-; OLDPM-NEXT:    [[INCDEC_PTR_2:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* [[ARR]], i64 0, i32 0, i64 3
-; OLDPM-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> undef, i32 [[CNT:%.*]], i32 0
-; OLDPM-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> zeroinitializer
-; OLDPM-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[TMP2]], <i32 1, i32 2, i32 3, i32 4>
-; OLDPM-NEXT:    [[TMP4:%.*]] = bitcast %"struct.std::array"* [[ARR]] to <4 x i32>*
-; OLDPM-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* [[TMP4]], align 16
-; OLDPM-NEXT:    [[INCDEC_PTR_3:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* [[ARR]], i64 0, i32 0, i64 4
-; OLDPM-NEXT:    [[INC_4:%.*]] = add nsw i32 [[CNT]], 5
-; OLDPM-NEXT:    store i32 [[INC_4]], i32* [[INCDEC_PTR_3]], align 16
-; OLDPM-NEXT:    [[INCDEC_PTR_4:%.*]] = getelementptr inbounds %"struct.std::array", %"struct.std::array"* [[ARR]], i64 0, i32 0, i64 5
-; OLDPM-NEXT:    [[INC_5:%.*]] = add nsw i32 [[CNT]], 6
-; OLDPM-NEXT:    store i32 [[INC_5]], i32* [[INCDEC_PTR_4]], align 4
-; OLDPM-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYDECAY_I_I_I]], align 16
-; OLDPM-NEXT:    call void @_Z3usei(i32 [[TMP5]])
-; OLDPM-NEXT:    [[TMP6:%.*]] = load i32, i32* [[INCDEC_PTR]], align 4
-; OLDPM-NEXT:    call void @_Z3usei(i32 [[TMP6]])
-; OLDPM-NEXT:    [[TMP7:%.*]] = load i32, i32* [[INCDEC_PTR_1]], align 8
-; OLDPM-NEXT:    call void @_Z3usei(i32 [[TMP7]])
-; OLDPM-NEXT:    [[TMP8:%.*]] = load i32, i32* [[INCDEC_PTR_2]], align 4
-; OLDPM-NEXT:    call void @_Z3usei(i32 [[TMP8]])
-; OLDPM-NEXT:    [[TMP9:%.*]] = load i32, i32* [[INCDEC_PTR_3]], align 16
-; OLDPM-NEXT:    call void @_Z3usei(i32 [[TMP9]])
-; OLDPM-NEXT:    call void @_Z3usei(i32 [[INC_5]])
-; OLDPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 24, i8* nonnull [[TMP0]])
-; OLDPM-NEXT:    ret void
-;
-; NEWPM-LABEL: @_Z3fooi(
-; NEWPM-NEXT:  entry:
-; NEWPM-NEXT:    [[INC:%.*]] = add nsw i32 [[CNT:%.*]], 1
-; NEWPM-NEXT:    [[INC_1:%.*]] = add nsw i32 [[CNT]], 2
-; NEWPM-NEXT:    [[INC_2:%.*]] = add nsw i32 [[CNT]], 3
-; NEWPM-NEXT:    [[INC_3:%.*]] = add nsw i32 [[CNT]], 4
-; NEWPM-NEXT:    [[INC_4:%.*]] = add nsw i32 [[CNT]], 5
-; NEWPM-NEXT:    [[INC_5:%.*]] = add nsw i32 [[CNT]], 6
-; NEWPM-NEXT:    call void @_Z3usei(i32 [[INC]])
-; NEWPM-NEXT:    call void @_Z3usei(i32 [[INC_1]])
-; NEWPM-NEXT:    call void @_Z3usei(i32 [[INC_2]])
-; NEWPM-NEXT:    call void @_Z3usei(i32 [[INC_3]])
-; NEWPM-NEXT:    call void @_Z3usei(i32 [[INC_4]])
-; NEWPM-NEXT:    call void @_Z3usei(i32 [[INC_5]])
-; NEWPM-NEXT:    ret void
+; CHECK-LABEL: @_Z3fooi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[CNT:%.*]], 1
+; CHECK-NEXT:    [[INC_1:%.*]] = add nsw i32 [[CNT]], 2
+; CHECK-NEXT:    [[INC_2:%.*]] = add nsw i32 [[CNT]], 3
+; CHECK-NEXT:    [[INC_3:%.*]] = add nsw i32 [[CNT]], 4
+; CHECK-NEXT:    [[INC_4:%.*]] = add nsw i32 [[CNT]], 5
+; CHECK-NEXT:    [[INC_5:%.*]] = add nsw i32 [[CNT]], 6
+; CHECK-NEXT:    call void @_Z3usei(i32 [[INC]])
+; CHECK-NEXT:    call void @_Z3usei(i32 [[INC_1]])
+; CHECK-NEXT:    call void @_Z3usei(i32 [[INC_2]])
+; CHECK-NEXT:    call void @_Z3usei(i32 [[INC_3]])
+; CHECK-NEXT:    call void @_Z3usei(i32 [[INC_4]])
+; CHECK-NEXT:    call void @_Z3usei(i32 [[INC_5]])
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cnt.addr = alloca i32

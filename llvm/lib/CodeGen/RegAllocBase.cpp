@@ -110,7 +110,7 @@ void RegAllocBase::allocatePhysRegs() {
     using VirtRegVec = SmallVector<Register, 4>;
 
     VirtRegVec SplitVRegs;
-    unsigned AvailablePhysReg = selectOrSplit(*VirtReg, SplitVRegs);
+    MCRegister AvailablePhysReg = selectOrSplit(*VirtReg, SplitVRegs);
 
     if (AvailablePhysReg == ~0u) {
       // selectOrSplit failed to find a register!

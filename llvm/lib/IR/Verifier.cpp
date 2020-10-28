@@ -1056,6 +1056,11 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
     AssertDI(N.getTag() == dwarf::DW_TAG_array_type,
              "allocated can only appear in array type");
   }
+
+  if (N.getRawRank()) {
+    AssertDI(N.getTag() == dwarf::DW_TAG_array_type,
+             "rank can only appear in array type");
+  }
 }
 
 void Verifier::visitDISubroutineType(const DISubroutineType &N) {
@@ -1572,6 +1577,7 @@ static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
   case Attribute::NoInline:
   case Attribute::AlwaysInline:
   case Attribute::OptimizeForSize:
+  case Attribute::NoStackProtect:
   case Attribute::StackProtect:
   case Attribute::StackProtectReq:
   case Attribute::StackProtectStrong:
@@ -1608,6 +1614,7 @@ static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
   case Attribute::Speculatable:
   case Attribute::StrictFP:
   case Attribute::NullPointerIsValid:
+  case Attribute::MustProgress:
     return true;
   default:
     break;
@@ -1965,6 +1972,19 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (S.getAsInteger(10, N))
       CheckFailed(
           "\"patchable-function-entry\" takes an unsigned integer: " + S, V);
+  }
+  {
+    unsigned N = 0;
+    if (Attrs.hasFnAttribute(Attribute::NoStackProtect))
+      ++N;
+    if (Attrs.hasFnAttribute(Attribute::StackProtect))
+      ++N;
+    if (Attrs.hasFnAttribute(Attribute::StackProtectReq))
+      ++N;
+    if (Attrs.hasFnAttribute(Attribute::StackProtectStrong))
+      ++N;
+    Assert(N < 2,
+           "nossp, ssp, sspreq, sspstrong fn attrs are mutually exclusive", V);
   }
 }
 

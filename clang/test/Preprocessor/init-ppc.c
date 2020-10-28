@@ -398,7 +398,7 @@
 // PPC-AIX:#define _LONG_LONG 1
 // PPC-AIX-NOT:#define _LP64 1
 // PPC-AIX:#define _POWER 1
-// PPC-AIX:#define __BIGGEST_ALIGNMENT__ 8
+// PPC-AIX:#define __BIGGEST_ALIGNMENT__ 16
 // PPC-AIX:#define __BIG_ENDIAN__ 1
 // PPC-AIX:#define __BYTE_ORDER__ __ORDER_BIG_ENDIAN__
 // PPC-AIX:#define __CHAR16_TYPE__ unsigned short

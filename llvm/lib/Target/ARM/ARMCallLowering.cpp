@@ -335,8 +335,8 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
     assert(VA.isRegLoc() && "Value shouldn't be assigned to reg");
     assert(VA.getLocReg() == PhysReg && "Assigning to the wrong reg?");
 
-    auto ValSize = VA.getValVT().getSizeInBits();
-    auto LocSize = VA.getLocVT().getSizeInBits();
+    uint64_t ValSize = VA.getValVT().getFixedSizeInBits();
+    uint64_t LocSize = VA.getLocVT().getFixedSizeInBits();
 
     assert(ValSize <= 64 && "Unsupported value size");
     assert(LocSize <= 64 && "Unsupported location size");

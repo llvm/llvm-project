@@ -481,6 +481,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       ArchKind = llvm::AArch64::ArchKind::ARMV8_5A;
     if (Feature == "+v8.6a")
       ArchKind = llvm::AArch64::ArchKind::ARMV8_6A;
+    if (Feature == "+v8r")
+      ArchKind = llvm::AArch64::ArchKind::ARMV8R;
     if (Feature == "+fullfp16")
       HasFullFP16 = true;
     if (Feature == "+dotprod")

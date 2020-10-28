@@ -45,6 +45,10 @@ DEFAULT_PARAMETERS = [
             Feature(name='c++experimental', linkFlag='-lc++experimental')),
 
   Parameter(name='long_tests', choices=[True, False], type=bool, default=True,
-            help="Whether to tests that take longer to run. This can be useful when running on a very slow device.",
+            help="Whether to enable tests that take longer to run. This can be useful when running on a very slow device.",
             feature=lambda enabled: Feature(name='long_tests') if enabled else None),
+
+  Parameter(name='enable_debug_tests', choices=[True, False], type=bool, default=True,
+            help="Whether to enable tests that exercise the libc++ debugging mode.",
+            feature=lambda enabled: None if enabled else Feature(name='libcxx-no-debug-mode')),
 ]

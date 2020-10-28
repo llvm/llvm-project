@@ -28,10 +28,8 @@
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-DIS,CHECK-O,CHECK-O2,CHECK-O23SZ,CHECK-O123 --dump-input=fail
 ;
 ; CHECK-O: Starting {{.*}}Module pass manager run.
-; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: ForceFunctionAttrsPass
 ; CHECK-EP-PIPELINE-START-NEXT: Running pass: NoOpModulePass
-; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
 ; CHECK-O-NEXT: Running pass: InferFunctionAttrsPass
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis
@@ -61,6 +59,8 @@
 ; CHECK-O123-NEXT: Running pass: ModuleInlinerWrapperPass
 ; CHECK-O123-NEXT: Running analysis: InlineAdvisorAnalysis
 ; CHECK-O123-NEXT: Starting {{.*}}Module pass manager run.
+; CHECK-O123-NEXT: Running pass: AlwaysInlinerPass
+; CHECK-O123-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-O123-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O123-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O123-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy on (foo)
@@ -75,7 +75,6 @@
 ; CHECK-O123-NEXT: Finished {{.*}}Module pass manager run.
 ; CHECK-O123-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: PGOInstrumentationUse
-; CHECK-O-NEXT: Running analysis: ProfileSummaryAnalysis
 ; These next two can appear in any order since they are accessed as parameters
 ; on the same call to BlockFrequencyInfo::calculate.
 ; CHECK-O-DAG: Running analysis: BranchProbabilityAnalysis on foo
@@ -97,6 +96,7 @@
 ; CHECK-O-NEXT: Running analysis: GlobalsAA
 ; CHECK-O-NEXT: Running analysis: CallGraphAnalysis
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
+; CHECK-O-NEXT: Running pass: AlwaysInlinerPass
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis on foo
@@ -200,13 +200,13 @@
 ; CHECK-O23SZ-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: CorrelatedValuePropagationPass
 ; CHECK-O23SZ-NEXT: Invalidating analysis: LazyValueAnalysis
+; CHECK-O-NEXT: Running pass: ADCEPass
 ; CHECK-O23SZ-NEXT: Running pass: DSEPass
 ; CHECK-O23SZ-NEXT: Starting {{.*}}Function pass manager run
 ; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass
 ; CHECK-O23SZ-NEXT: Finished {{.*}}Function pass manager run
 ; CHECK-O23SZ-NEXT: Running pass: LICMPass
-; CHECK-O-NEXT: Running pass: ADCEPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O3-NEXT: Running pass: ControlHeightReductionPass on foo
@@ -215,27 +215,9 @@
 ; CHECK-O-NEXT: Finished {{.*}}Function pass manager run.
 ; CHECK-O-NEXT: Finished CGSCC pass manager run.
 ; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
-; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
-; CHECK-O23SZ-NEXT: Clearing all analysis results for: <possibly invalidated loop>
-; CHECK-O23SZ-NEXT: Invalidating analysis: DominatorTreeAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: MemorySSAAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: LoopAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: PostDominatorTreeAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: BranchProbabilityAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: BlockFrequencyAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: ScalarEvolutionAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: InnerAnalysisManagerProxy
-; CHECK-O23SZ-NEXT: Invalidating analysis: PhiValuesAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: MemoryDependenceAnalysis
-; CHECK-O23SZ-NEXT: Invalidating analysis: DemandedBitsAnalysis
-; CHECK-O3-NEXT: Invalidating analysis: DominanceFrontierAnalysis
-; CHECK-O3-NEXT: Invalidating analysis: RegionInfoAnalysis
-; CHECK-O23SZ-NEXT: Clearing all analysis results for: foo
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running analysis: TargetLibraryAnalysis on bar
 ; CHECK-EXT: Running pass: {{.*}}::Bye
-; CHECK-O-NEXT: Finished {{.*}}Module pass manager run.
-; CHECK-O23SZ-NEXT: Clearing all analysis results for: foo
 ; CHECK-O-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 

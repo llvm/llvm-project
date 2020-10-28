@@ -1359,4 +1359,19 @@ bool InCommonBlock(const Symbol &symbol) {
   return details && details->commonBlock();
 }
 
+const std::optional<parser::Name> &MaybeGetNodeName(
+    const ConstructNode &construct) {
+  return std::visit(
+      common::visitors{
+          [&](const parser::BlockConstruct *blockConstruct)
+              -> const std::optional<parser::Name> & {
+            return std::get<0>(blockConstruct->t).statement.v;
+          },
+          [&](const auto *a) -> const std::optional<parser::Name> & {
+            return std::get<0>(std::get<0>(a->t).statement.t);
+          },
+      },
+      construct);
+}
+
 } // namespace Fortran::semantics

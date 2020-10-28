@@ -1,4 +1,4 @@
-; RUN: opt < %s -mergereturn -loop-extract -S | FileCheck %s
+; RUN: opt < %s -mergereturn -loop-extract -enable-new-pm=0 -S | FileCheck %s
 
 ; This test used to enter an infinite loop, until out of memory (PR3082).
 

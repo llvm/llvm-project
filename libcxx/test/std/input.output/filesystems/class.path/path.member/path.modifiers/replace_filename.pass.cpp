@@ -22,8 +22,6 @@
 #include "test_iterators.h"
 #include "count_new.h"
 #include "filesystem_test_helper.h"
-#include "assert_checkpoint.h"
-#include "verbose_assert.h"
 
 struct ReplaceFilenameTestcase {
   const char* value;
@@ -52,11 +50,9 @@ int main(int, char**)
   using namespace fs;
   for (auto const & TC : TestCases) {
     path p(TC.value);
-    ASSERT_EQ(p, TC.value);
-    path& Ref = (p.replace_filename(TC.filename));
-    ASSERT_EQ(p, TC.expect)
-        << DISPLAY(TC.value)
-        << DISPLAY(TC.filename);
+    assert(p == TC.value);
+    path& Ref = p.replace_filename(TC.filename);
+    assert(p == TC.expect);
     assert(&Ref == &p);
     // Tests Effects "as-if": remove_filename() append(filename)
     {
@@ -64,7 +60,7 @@ int main(int, char**)
       path replace(TC.filename);
       p2.remove_filename();
       p2 /= replace;
-      ASSERT_EQ(p, p2);
+      assert(p == p2);
     }
   }
 

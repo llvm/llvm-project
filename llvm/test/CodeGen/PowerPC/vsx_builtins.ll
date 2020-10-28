@@ -54,3 +54,89 @@ define void @test4(<2 x double> %a, i8* %b) {
 }
 ; Function Attrs: nounwind readnone
 declare void @llvm.ppc.vsx.stxvd2x.be(<2 x double>, i8*)
+
+define i32 @test_vec_test_swdiv(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: test_vec_test_swdiv:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvtdivdp cr0, v2, v3
+; CHECK-NEXT:    mfocrf r3, 128
+; CHECK-NEXT:    srwi r3, r3, 28
+; CHECK-NEXT:    blr
+  entry:
+    %0 = tail call i32 @llvm.ppc.vsx.xvtdivdp(<2 x double> %a, <2 x double> %b)
+    ret i32 %0
+}
+declare i32 @llvm.ppc.vsx.xvtdivdp(<2 x double>, <2 x double>)
+
+define i32 @test_vec_test_swdivs(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: test_vec_test_swdivs:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvtdivsp cr0, v2, v3
+; CHECK-NEXT:    mfocrf r3, 128
+; CHECK-NEXT:    srwi r3, r3, 28
+; CHECK-NEXT:    blr
+  entry:
+    %0 = tail call i32 @llvm.ppc.vsx.xvtdivsp(<4 x float> %a, <4 x float> %b)
+    ret i32 %0
+}
+declare i32 @llvm.ppc.vsx.xvtdivsp(<4 x float>, <4 x float>)
+
+define i32 @test_vec_test_swsqrt(<2 x double> %a) {
+; CHECK-LABEL: test_vec_test_swsqrt:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvtsqrtdp cr0, v2
+; CHECK-NEXT:    mfocrf r3, 128
+; CHECK-NEXT:    srwi r3, r3, 28
+; CHECK-NEXT:    blr
+  entry:
+    %0 = tail call i32 @llvm.ppc.vsx.xvtsqrtdp(<2 x double> %a)
+    ret i32 %0
+}
+declare i32 @llvm.ppc.vsx.xvtsqrtdp(<2 x double>)
+
+define i32 @test_vec_test_swsqrts(<4 x float> %a) {
+; CHECK-LABEL: test_vec_test_swsqrts:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvtsqrtsp cr0, v2
+; CHECK-NEXT:    mfocrf r3, 128
+; CHECK-NEXT:    srwi r3, r3, 28
+; CHECK-NEXT:    blr
+  entry:
+    %0 = tail call i32 @llvm.ppc.vsx.xvtsqrtsp(<4 x float> %a)
+    ret i32 %0
+}
+declare i32 @llvm.ppc.vsx.xvtsqrtsp(<4 x float>)
+
+define i32 @xvtdivdp_andi(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: xvtdivdp_andi:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvtdivdp cr0, v2, v3
+; CHECK-NEXT:    li r4, 222
+; CHECK-NEXT:    mfocrf r3, 128
+; CHECK-NEXT:    srwi r3, r3, 28
+; CHECK-NEXT:    andi. r3, r3, 2
+; CHECK-NEXT:    li r3, 22
+; CHECK-NEXT:    iseleq r3, r4, r3
+; CHECK-NEXT:    blr
+  entry:
+    %0 = tail call i32 @llvm.ppc.vsx.xvtdivdp(<2 x double> %a, <2 x double> %b)
+    %1 = and i32 %0, 2
+    %cmp.not = icmp eq i32 %1, 0
+    %retval.0 = select i1 %cmp.not, i32 222, i32 22
+    ret i32 %retval.0
+}
+
+define i32 @xvtdivdp_shift(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: xvtdivdp_shift:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvtdivdp cr0, v2, v3
+; CHECK-NEXT:    mfocrf r3, 128
+; CHECK-NEXT:    srwi r3, r3, 28
+; CHECK-NEXT:    rlwinm r3, r3, 28, 31, 31
+; CHECK-NEXT:    blr
+entry:
+  %0 = tail call i32 @llvm.ppc.vsx.xvtdivdp(<2 x double> %a, <2 x double> %b)
+  %1 = lshr i32 %0, 4
+  %.lobit = and i32 %1, 1
+  ret i32 %.lobit
+}

@@ -1045,6 +1045,434 @@ define void @fmul_v32f64(<32 x double>* %a, <32 x double>* %b) #0 {
 }
 
 ;
+; FNEG
+;
+
+; Don't use SVE for 64-bit vectors.
+define <4 x half> @fneg_v4f16(<4 x half> %op) #0 {
+; CHECK-LABEL: fneg_v4f16:
+; CHECK: fneg v0.4h, v0.4h
+; CHECK: ret
+  %res = fneg <4 x half> %op
+  ret <4 x half> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <8 x half> @fneg_v8f16(<8 x half> %op) #0 {
+; CHECK-LABEL: fneg_v8f16:
+; CHECK: fneg v0.8h, v0.8h
+; CHECK: ret
+  %res = fneg <8 x half> %op
+  ret <8 x half> %res
+}
+
+define void @fneg_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
+; CHECK-LABEL: fneg_v16f16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),16)]]
+; CHECK: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK: fneg [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
+; CHECK: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <16 x half>, <16 x half>* %a
+  %res = fneg <16 x half> %op
+  store <16 x half> %res, <16 x half>* %a
+  ret void
+}
+
+define void @fneg_v32f16(<32 x half>* %a) #0 {
+; CHECK-LABEL: fneg_v32f16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),32)]]
+; CHECK: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK: fneg [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
+; CHECK: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <32 x half>, <32 x half>* %a
+  %res = fneg <32 x half> %op
+  store <32 x half> %res, <32 x half>* %a
+  ret void
+}
+
+define void @fneg_v64f16(<64 x half>* %a) #0 {
+; CHECK-LABEL: fneg_v64f16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),64)]]
+; CHECK: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK: fneg [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
+; CHECK: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <64 x half>, <64 x half>* %a
+  %res = fneg <64 x half> %op
+  store <64 x half> %res, <64 x half>* %a
+  ret void
+}
+
+define void @fneg_v128f16(<128 x half>* %a) #0 {
+; CHECK-LABEL: fneg_v128f16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),128)]]
+; CHECK: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK: fneg [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
+; CHECK: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <128 x half>, <128 x half>* %a
+  %res = fneg <128 x half> %op
+  store <128 x half> %res, <128 x half>* %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <2 x float> @fneg_v2f32(<2 x float> %op) #0 {
+; CHECK-LABEL: fneg_v2f32:
+; CHECK: fneg v0.2s, v0.2s
+; CHECK: ret
+  %res = fneg <2 x float> %op
+  ret <2 x float> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <4 x float> @fneg_v4f32(<4 x float> %op) #0 {
+; CHECK-LABEL: fneg_v4f32:
+; CHECK: fneg v0.4s, v0.4s
+; CHECK: ret
+  %res = fneg <4 x float> %op
+  ret <4 x float> %res
+}
+
+define void @fneg_v8f32(<8 x float>* %a) #0 {
+; CHECK-LABEL: fneg_v8f32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
+; CHECK: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK: fneg [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
+; CHECK: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <8 x float>, <8 x float>* %a
+  %res = fneg <8 x float> %op
+  store <8 x float> %res, <8 x float>* %a
+  ret void
+}
+
+define void @fneg_v16f32(<16 x float>* %a) #0 {
+; CHECK-LABEL: fneg_v16f32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),16)]]
+; CHECK: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK: fneg [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
+; CHECK: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <16 x float>, <16 x float>* %a
+  %res = fneg <16 x float> %op
+  store <16 x float> %res, <16 x float>* %a
+  ret void
+}
+
+define void @fneg_v32f32(<32 x float>* %a) #0 {
+; CHECK-LABEL: fneg_v32f32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),32)]]
+; CHECK: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK: fneg [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
+; CHECK: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <32 x float>, <32 x float>* %a
+  %res = fneg <32 x float> %op
+  store <32 x float> %res, <32 x float>* %a
+  ret void
+}
+
+define void @fneg_v64f32(<64 x float>* %a) #0 {
+; CHECK-LABEL: fneg_v64f32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),64)]]
+; CHECK: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK: fneg [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
+; CHECK: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <64 x float>, <64 x float>* %a
+  %res = fneg <64 x float> %op
+  store <64 x float> %res, <64 x float>* %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <1 x double> @fneg_v1f64(<1 x double> %op) #0 {
+; CHECK-LABEL: fneg_v1f64:
+; CHECK: fneg d0, d0
+; CHECK: ret
+  %res = fneg <1 x double> %op
+  ret <1 x double> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <2 x double> @fneg_v2f64(<2 x double> %op) #0 {
+; CHECK-LABEL: fneg_v2f64:
+; CHECK: fneg v0.2d, v0.2d
+; CHECK: ret
+  %res = fneg <2 x double> %op
+  ret <2 x double> %res
+}
+
+define void @fneg_v4f64(<4 x double>* %a) #0 {
+; CHECK-LABEL: fneg_v4f64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),4)]]
+; CHECK: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK: fneg [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
+; CHECK: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <4 x double>, <4 x double>* %a
+  %res = fneg <4 x double> %op
+  store <4 x double> %res, <4 x double>* %a
+  ret void
+}
+
+define void @fneg_v8f64(<8 x double>* %a) #0 {
+; CHECK-LABEL: fneg_v8f64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),8)]]
+; CHECK: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK: fneg [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
+; CHECK: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <8 x double>, <8 x double>* %a
+  %res = fneg <8 x double> %op
+  store <8 x double> %res, <8 x double>* %a
+  ret void
+}
+
+define void @fneg_v16f64(<16 x double>* %a) #0 {
+; CHECK-LABEL: fneg_v16f64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),16)]]
+; CHECK: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK: fneg [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
+; CHECK: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <16 x double>, <16 x double>* %a
+  %res = fneg <16 x double> %op
+  store <16 x double> %res, <16 x double>* %a
+  ret void
+}
+
+define void @fneg_v32f64(<32 x double>* %a) #0 {
+; CHECK-LABEL: fneg_v32f64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),32)]]
+; CHECK: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK: fneg [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
+; CHECK: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <32 x double>, <32 x double>* %a
+  %res = fneg <32 x double> %op
+  store <32 x double> %res, <32 x double>* %a
+  ret void
+}
+
+;
+; FSQRT
+;
+
+; Don't use SVE for 64-bit vectors.
+define <4 x half> @fsqrt_v4f16(<4 x half> %op) #0 {
+; CHECK-LABEL: fsqrt_v4f16:
+; CHECK: fsqrt v0.4h, v0.4h
+; CHECK: ret
+  %res = call <4 x half> @llvm.sqrt.v4f16(<4 x half> %op)
+  ret <4 x half> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <8 x half> @fsqrt_v8f16(<8 x half> %op) #0 {
+; CHECK-LABEL: fsqrt_v8f16:
+; CHECK: fsqrt v0.8h, v0.8h
+; CHECK: ret
+  %res = call <8 x half> @llvm.sqrt.v8f16(<8 x half> %op)
+  ret <8 x half> %res
+}
+
+define void @fsqrt_v16f16(<16 x half>* %a, <16 x half>* %b) #0 {
+; CHECK-LABEL: fsqrt_v16f16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),16)]]
+; CHECK: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK: fsqrt [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
+; CHECK: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <16 x half>, <16 x half>* %a
+  %res = call <16 x half> @llvm.sqrt.v16f16(<16 x half> %op)
+  store <16 x half> %res, <16 x half>* %a
+  ret void
+}
+
+define void @fsqrt_v32f16(<32 x half>* %a) #0 {
+; CHECK-LABEL: fsqrt_v32f16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),32)]]
+; CHECK: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK: fsqrt [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
+; CHECK: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <32 x half>, <32 x half>* %a
+  %res = call <32 x half> @llvm.sqrt.v32f16(<32 x half> %op)
+  store <32 x half> %res, <32 x half>* %a
+  ret void
+}
+
+define void @fsqrt_v64f16(<64 x half>* %a) #0 {
+; CHECK-LABEL: fsqrt_v64f16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),64)]]
+; CHECK: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK: fsqrt [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
+; CHECK: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <64 x half>, <64 x half>* %a
+  %res = call <64 x half> @llvm.sqrt.v64f16(<64 x half> %op)
+  store <64 x half> %res, <64 x half>* %a
+  ret void
+}
+
+define void @fsqrt_v128f16(<128 x half>* %a) #0 {
+; CHECK-LABEL: fsqrt_v128f16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl[[#min(div(VBYTES,2),128)]]
+; CHECK: ld1h { [[OP:z[0-9]+]].h }, [[PG]]/z, [x0]
+; CHECK: fsqrt [[RES:z[0-9]+]].h, [[PG]]/m, [[OP]].h
+; CHECK: st1h { [[RES]].h }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <128 x half>, <128 x half>* %a
+  %res = call <128 x half> @llvm.sqrt.v128f16(<128 x half> %op)
+  store <128 x half> %res, <128 x half>* %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <2 x float> @fsqrt_v2f32(<2 x float> %op) #0 {
+; CHECK-LABEL: fsqrt_v2f32:
+; CHECK: fsqrt v0.2s, v0.2s
+; CHECK: ret
+  %res = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %op)
+  ret <2 x float> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <4 x float> @fsqrt_v4f32(<4 x float> %op) #0 {
+; CHECK-LABEL: fsqrt_v4f32:
+; CHECK: fsqrt v0.4s, v0.4s
+; CHECK: ret
+  %res = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %op)
+  ret <4 x float> %res
+}
+
+define void @fsqrt_v8f32(<8 x float>* %a) #0 {
+; CHECK-LABEL: fsqrt_v8f32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
+; CHECK: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK: fsqrt [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
+; CHECK: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <8 x float>, <8 x float>* %a
+  %res = call <8 x float> @llvm.sqrt.v8f32(<8 x float> %op)
+  store <8 x float> %res, <8 x float>* %a
+  ret void
+}
+
+define void @fsqrt_v16f32(<16 x float>* %a) #0 {
+; CHECK-LABEL: fsqrt_v16f32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),16)]]
+; CHECK: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK: fsqrt [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
+; CHECK: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <16 x float>, <16 x float>* %a
+  %res = call <16 x float> @llvm.sqrt.v16f32(<16 x float> %op)
+  store <16 x float> %res, <16 x float>* %a
+  ret void
+}
+
+define void @fsqrt_v32f32(<32 x float>* %a) #0 {
+; CHECK-LABEL: fsqrt_v32f32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),32)]]
+; CHECK: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK: fsqrt [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
+; CHECK: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <32 x float>, <32 x float>* %a
+  %res = call <32 x float> @llvm.sqrt.v32f32(<32 x float> %op)
+  store <32 x float> %res, <32 x float>* %a
+  ret void
+}
+
+define void @fsqrt_v64f32(<64 x float>* %a) #0 {
+; CHECK-LABEL: fsqrt_v64f32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),64)]]
+; CHECK: ld1w { [[OP:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK: fsqrt [[RES:z[0-9]+]].s, [[PG]]/m, [[OP]].s
+; CHECK: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <64 x float>, <64 x float>* %a
+  %res = call <64 x float> @llvm.sqrt.v64f32(<64 x float> %op)
+  store <64 x float> %res, <64 x float>* %a
+  ret void
+}
+
+; Don't use SVE for 64-bit vectors.
+define <1 x double> @fsqrt_v1f64(<1 x double> %op) #0 {
+; CHECK-LABEL: fsqrt_v1f64:
+; CHECK: fsqrt d0, d0
+; CHECK: ret
+  %res = call <1 x double> @llvm.sqrt.v1f64(<1 x double> %op)
+  ret <1 x double> %res
+}
+
+; Don't use SVE for 128-bit vectors.
+define <2 x double> @fsqrt_v2f64(<2 x double> %op) #0 {
+; CHECK-LABEL: fsqrt_v2f64:
+; CHECK: fsqrt v0.2d, v0.2d
+; CHECK: ret
+  %res = call <2 x double> @llvm.sqrt.v2f64(<2 x double> %op)
+  ret <2 x double> %res
+}
+
+define void @fsqrt_v4f64(<4 x double>* %a) #0 {
+; CHECK-LABEL: fsqrt_v4f64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),4)]]
+; CHECK: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK: fsqrt [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
+; CHECK: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <4 x double>, <4 x double>* %a
+  %res = call <4 x double> @llvm.sqrt.v4f64(<4 x double> %op)
+  store <4 x double> %res, <4 x double>* %a
+  ret void
+}
+
+define void @fsqrt_v8f64(<8 x double>* %a) #0 {
+; CHECK-LABEL: fsqrt_v8f64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),8)]]
+; CHECK: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK: fsqrt [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
+; CHECK: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <8 x double>, <8 x double>* %a
+  %res = call <8 x double> @llvm.sqrt.v8f64(<8 x double> %op)
+  store <8 x double> %res, <8 x double>* %a
+  ret void
+}
+
+define void @fsqrt_v16f64(<16 x double>* %a) #0 {
+; CHECK-LABEL: fsqrt_v16f64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),16)]]
+; CHECK: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK: fsqrt [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
+; CHECK: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <16 x double>, <16 x double>* %a
+  %res = call <16 x double> @llvm.sqrt.v16f64(<16 x double> %op)
+  store <16 x double> %res, <16 x double>* %a
+  ret void
+}
+
+define void @fsqrt_v32f64(<32 x double>* %a) #0 {
+; CHECK-LABEL: fsqrt_v32f64:
+; CHECK: ptrue [[PG:p[0-9]+]].d, vl[[#min(div(VBYTES,8),32)]]
+; CHECK: ld1d { [[OP:z[0-9]+]].d }, [[PG]]/z, [x0]
+; CHECK: fsqrt [[RES:z[0-9]+]].d, [[PG]]/m, [[OP]].d
+; CHECK: st1d { [[RES]].d }, [[PG]], [x0]
+; CHECK: ret
+  %op = load <32 x double>, <32 x double>* %a
+  %res = call <32 x double> @llvm.sqrt.v32f64(<32 x double> %op)
+  store <32 x double> %res, <32 x double>* %a
+  ret void
+}
+
+;
 ; FSUB
 ;
 
@@ -1302,3 +1730,22 @@ declare <4 x double> @llvm.fma.v4f64(<4 x double>, <4 x double>, <4 x double>)
 declare <8 x double> @llvm.fma.v8f64(<8 x double>, <8 x double>, <8 x double>)
 declare <16 x double> @llvm.fma.v16f64(<16 x double>, <16 x double>, <16 x double>)
 declare <32 x double> @llvm.fma.v32f64(<32 x double>, <32 x double>, <32 x double>)
+
+declare <4 x half> @llvm.sqrt.v4f16(<4 x half>)
+declare <8 x half> @llvm.sqrt.v8f16(<8 x half>)
+declare <16 x half> @llvm.sqrt.v16f16(<16 x half>)
+declare <32 x half> @llvm.sqrt.v32f16(<32 x half>)
+declare <64 x half> @llvm.sqrt.v64f16(<64 x half>)
+declare <128 x half> @llvm.sqrt.v128f16(<128 x half>)
+declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)
+declare <4 x float> @llvm.sqrt.v4f32(<4 x float>)
+declare <8 x float> @llvm.sqrt.v8f32(<8 x float>)
+declare <16 x float> @llvm.sqrt.v16f32(<16 x float>)
+declare <32 x float> @llvm.sqrt.v32f32(<32 x float>)
+declare <64 x float> @llvm.sqrt.v64f32(<64 x float>)
+declare <1 x double> @llvm.sqrt.v1f64(<1 x double>)
+declare <2 x double> @llvm.sqrt.v2f64(<2 x double>)
+declare <4 x double> @llvm.sqrt.v4f64(<4 x double>)
+declare <8 x double> @llvm.sqrt.v8f64(<8 x double>)
+declare <16 x double> @llvm.sqrt.v16f64(<16 x double>)
+declare <32 x double> @llvm.sqrt.v32f64(<32 x double>)

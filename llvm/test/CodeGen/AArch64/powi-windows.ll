@@ -11,8 +11,6 @@ entry:
 
 ; CHECK-LABEL: d:
 ; CHECK: scvtf d1, w0
-; CHECK-NEXT:  .seh_startepilogue
-; CHECK-NEXT:  .seh_endepilogue
 ; CHECK-NEXT: b pow
 
 define float @f(float %f, i32 %i) {
@@ -23,8 +21,6 @@ entry:
 
 ; CHECK-LABEL: f:
 ; CHECK: scvtf s1, w0
-; CHECK-NEXT:  .seh_startepilogue
-; CHECK-NEXT:  .seh_endepilogue
 ; CHECK-NEXT: b powf
 
 define float @g(double %d, i32 %i) {

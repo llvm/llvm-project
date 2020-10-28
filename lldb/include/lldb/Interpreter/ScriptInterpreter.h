@@ -507,7 +507,8 @@ public:
   virtual bool
   LoadScriptingModule(const char *filename, bool init_session,
                       lldb_private::Status &error,
-                      StructuredData::ObjectSP *module_sp = nullptr);
+                      StructuredData::ObjectSP *module_sp = nullptr,
+                      FileSpec extra_search_dir = {});
 
   virtual bool IsReservedWord(const char *word) { return false; }
 

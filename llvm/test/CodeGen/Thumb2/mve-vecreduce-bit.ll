@@ -9,7 +9,7 @@ define arm_aapcs_vfpcc i32 @and_v2i32(<2 x i32> %x) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.and.v2i32(<2 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> %x)
   ret i32 %z
 }
 
@@ -25,7 +25,7 @@ define arm_aapcs_vfpcc i32 @and_v4i32(<4 x i32> %x) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.and.v4i32(<4 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %x)
   ret i32 %z
 }
 
@@ -42,7 +42,7 @@ define arm_aapcs_vfpcc i32 @and_v8i32(<8 x i32> %x) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.and.v8i32(<8 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> %x)
   ret i32 %z
 }
 
@@ -58,7 +58,7 @@ define arm_aapcs_vfpcc i16 @and_v4i16(<4 x i16> %x) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.and.v4i16(<4 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.and.v4i16(<4 x i16> %x)
   ret i16 %z
 }
 
@@ -76,7 +76,7 @@ define arm_aapcs_vfpcc i16 @and_v8i16(<8 x i16> %x) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.and.v8i16(<8 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.and.v8i16(<8 x i16> %x)
   ret i16 %z
 }
 
@@ -95,7 +95,7 @@ define arm_aapcs_vfpcc i16 @and_v16i16(<16 x i16> %x) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.and.v16i16(<16 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.and.v16i16(<16 x i16> %x)
   ret i16 %z
 }
 
@@ -113,7 +113,7 @@ define arm_aapcs_vfpcc i8 @and_v8i8(<8 x i8> %x) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.and.v8i8(<8 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.and.v8i8(<8 x i8> %x)
   ret i8 %z
 }
 
@@ -133,7 +133,7 @@ define arm_aapcs_vfpcc i8 @and_v16i8(<16 x i8> %x) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.and.v16i8(<16 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.and.v16i8(<16 x i8> %x)
   ret i8 %z
 }
 
@@ -154,7 +154,7 @@ define arm_aapcs_vfpcc i8 @and_v32i8(<32 x i8> %x) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.and.v32i8(<32 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.and.v32i8(<32 x i8> %x)
   ret i8 %z
 }
 
@@ -163,7 +163,7 @@ define arm_aapcs_vfpcc i64 @and_v1i64(<1 x i64> %x) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.and.v1i64(<1 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.and.v1i64(<1 x i64> %x)
   ret i64 %z
 }
 
@@ -178,7 +178,7 @@ define arm_aapcs_vfpcc i64 @and_v2i64(<2 x i64> %x) {
 ; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.and.v2i64(<2 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.and.v2i64(<2 x i64> %x)
   ret i64 %z
 }
 
@@ -194,7 +194,7 @@ define arm_aapcs_vfpcc i64 @and_v4i64(<4 x i64> %x) {
 ; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.and.v4i64(<4 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.and.v4i64(<4 x i64> %x)
   ret i64 %z
 }
 
@@ -207,7 +207,7 @@ define arm_aapcs_vfpcc i32 @and_v2i32_acc(<2 x i32> %x, i32 %y) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.and.v2i32(<2 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> %x)
   %r = and i32 %y, %z
   ret i32 %r
 }
@@ -225,7 +225,7 @@ define arm_aapcs_vfpcc i32 @and_v4i32_acc(<4 x i32> %x, i32 %y) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.and.v4i32(<4 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %x)
   %r = and i32 %y, %z
   ret i32 %r
 }
@@ -244,7 +244,7 @@ define arm_aapcs_vfpcc i32 @and_v8i32_acc(<8 x i32> %x, i32 %y) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.and.v8i32(<8 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> %x)
   %r = and i32 %y, %z
   ret i32 %r
 }
@@ -262,7 +262,7 @@ define arm_aapcs_vfpcc i16 @and_v4i16_acc(<4 x i16> %x, i16 %y) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.and.v4i16(<4 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.and.v4i16(<4 x i16> %x)
   %r = and i16 %y, %z
   ret i16 %r
 }
@@ -282,7 +282,7 @@ define arm_aapcs_vfpcc i16 @and_v8i16_acc(<8 x i16> %x, i16 %y) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.and.v8i16(<8 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.and.v8i16(<8 x i16> %x)
   %r = and i16 %y, %z
   ret i16 %r
 }
@@ -303,7 +303,7 @@ define arm_aapcs_vfpcc i16 @and_v16i16_acc(<16 x i16> %x, i16 %y) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.and.v16i16(<16 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.and.v16i16(<16 x i16> %x)
   %r = and i16 %y, %z
   ret i16 %r
 }
@@ -323,7 +323,7 @@ define arm_aapcs_vfpcc i8 @and_v8i8_acc(<8 x i8> %x, i8 %y) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.and.v8i8(<8 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.and.v8i8(<8 x i8> %x)
   %r = and i8 %y, %z
   ret i8 %r
 }
@@ -345,7 +345,7 @@ define arm_aapcs_vfpcc i8 @and_v16i8_acc(<16 x i8> %x, i8 %y) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.and.v16i8(<16 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.and.v16i8(<16 x i8> %x)
   %r = and i8 %y, %z
   ret i8 %r
 }
@@ -368,7 +368,7 @@ define arm_aapcs_vfpcc i8 @and_v32i8_acc(<32 x i8> %x, i8 %y) {
 ; CHECK-NEXT:    ands r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.and.v32i8(<32 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.and.v32i8(<32 x i8> %x)
   %r = and i8 %y, %z
   ret i8 %r
 }
@@ -380,7 +380,7 @@ define arm_aapcs_vfpcc i64 @and_v1i64_acc(<1 x i64> %x, i64 %y) {
 ; CHECK-NEXT:    ands r1, r3
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.and.v1i64(<1 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.and.v1i64(<1 x i64> %x)
   %r = and i64 %y, %z
   ret i64 %r
 }
@@ -398,7 +398,7 @@ define arm_aapcs_vfpcc i64 @and_v2i64_acc(<2 x i64> %x, i64 %y) {
 ; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.and.v2i64(<2 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.and.v2i64(<2 x i64> %x)
   %r = and i64 %y, %z
   ret i64 %r
 }
@@ -417,7 +417,7 @@ define arm_aapcs_vfpcc i64 @and_v4i64_acc(<4 x i64> %x, i64 %y) {
 ; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.and.v4i64(<4 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.and.v4i64(<4 x i64> %x)
   %r = and i64 %y, %z
   ret i64 %r
 }
@@ -430,7 +430,7 @@ define arm_aapcs_vfpcc i32 @or_v2i32(<2 x i32> %x) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.or.v2i32(<2 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> %x)
   ret i32 %z
 }
 
@@ -446,7 +446,7 @@ define arm_aapcs_vfpcc i32 @or_v4i32(<4 x i32> %x) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.or.v4i32(<4 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %x)
   ret i32 %z
 }
 
@@ -463,7 +463,7 @@ define arm_aapcs_vfpcc i32 @or_v8i32(<8 x i32> %x) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.or.v8i32(<8 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %x)
   ret i32 %z
 }
 
@@ -479,7 +479,7 @@ define arm_aapcs_vfpcc i16 @or_v4i16(<4 x i16> %x) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.or.v4i16(<4 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> %x)
   ret i16 %z
 }
 
@@ -497,7 +497,7 @@ define arm_aapcs_vfpcc i16 @or_v8i16(<8 x i16> %x) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.or.v8i16(<8 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> %x)
   ret i16 %z
 }
 
@@ -516,7 +516,7 @@ define arm_aapcs_vfpcc i16 @or_v16i16(<16 x i16> %x) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.or.v16i16(<16 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.or.v16i16(<16 x i16> %x)
   ret i16 %z
 }
 
@@ -534,7 +534,7 @@ define arm_aapcs_vfpcc i8 @or_v8i8(<8 x i8> %x) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.or.v8i8(<8 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> %x)
   ret i8 %z
 }
 
@@ -554,7 +554,7 @@ define arm_aapcs_vfpcc i8 @or_v16i8(<16 x i8> %x) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.or.v16i8(<16 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> %x)
   ret i8 %z
 }
 
@@ -575,7 +575,7 @@ define arm_aapcs_vfpcc i8 @or_v32i8(<32 x i8> %x) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.or.v32i8(<32 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.or.v32i8(<32 x i8> %x)
   ret i8 %z
 }
 
@@ -584,7 +584,7 @@ define arm_aapcs_vfpcc i64 @or_v1i64(<1 x i64> %x) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.or.v1i64(<1 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.or.v1i64(<1 x i64> %x)
   ret i64 %z
 }
 
@@ -599,7 +599,7 @@ define arm_aapcs_vfpcc i64 @or_v2i64(<2 x i64> %x) {
 ; CHECK-NEXT:    orrs r1, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.or.v2i64(<2 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> %x)
   ret i64 %z
 }
 
@@ -615,7 +615,7 @@ define arm_aapcs_vfpcc i64 @or_v4i64(<4 x i64> %x) {
 ; CHECK-NEXT:    orrs r1, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.or.v4i64(<4 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> %x)
   ret i64 %z
 }
 
@@ -628,7 +628,7 @@ define arm_aapcs_vfpcc i32 @or_v2i32_acc(<2 x i32> %x, i32 %y) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.or.v2i32(<2 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> %x)
   %r = or i32 %y, %z
   ret i32 %r
 }
@@ -646,7 +646,7 @@ define arm_aapcs_vfpcc i32 @or_v4i32_acc(<4 x i32> %x, i32 %y) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.or.v4i32(<4 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %x)
   %r = or i32 %y, %z
   ret i32 %r
 }
@@ -665,7 +665,7 @@ define arm_aapcs_vfpcc i32 @or_v8i32_acc(<8 x i32> %x, i32 %y) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.or.v8i32(<8 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %x)
   %r = or i32 %y, %z
   ret i32 %r
 }
@@ -683,7 +683,7 @@ define arm_aapcs_vfpcc i16 @or_v4i16_acc(<4 x i16> %x, i16 %y) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.or.v4i16(<4 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> %x)
   %r = or i16 %y, %z
   ret i16 %r
 }
@@ -703,7 +703,7 @@ define arm_aapcs_vfpcc i16 @or_v8i16_acc(<8 x i16> %x, i16 %y) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.or.v8i16(<8 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> %x)
   %r = or i16 %y, %z
   ret i16 %r
 }
@@ -724,7 +724,7 @@ define arm_aapcs_vfpcc i16 @or_v16i16_acc(<16 x i16> %x, i16 %y) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.or.v16i16(<16 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.or.v16i16(<16 x i16> %x)
   %r = or i16 %y, %z
   ret i16 %r
 }
@@ -744,7 +744,7 @@ define arm_aapcs_vfpcc i8 @or_v8i8_acc(<8 x i8> %x, i8 %y) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.or.v8i8(<8 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> %x)
   %r = or i8 %y, %z
   ret i8 %r
 }
@@ -766,7 +766,7 @@ define arm_aapcs_vfpcc i8 @or_v16i8_acc(<16 x i8> %x, i8 %y) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.or.v16i8(<16 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> %x)
   %r = or i8 %y, %z
   ret i8 %r
 }
@@ -789,7 +789,7 @@ define arm_aapcs_vfpcc i8 @or_v32i8_acc(<32 x i8> %x, i8 %y) {
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.or.v32i8(<32 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.or.v32i8(<32 x i8> %x)
   %r = or i8 %y, %z
   ret i8 %r
 }
@@ -801,7 +801,7 @@ define arm_aapcs_vfpcc i64 @or_v1i64_acc(<1 x i64> %x, i64 %y) {
 ; CHECK-NEXT:    orrs r1, r3
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.or.v1i64(<1 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.or.v1i64(<1 x i64> %x)
   %r = or i64 %y, %z
   ret i64 %r
 }
@@ -819,7 +819,7 @@ define arm_aapcs_vfpcc i64 @or_v2i64_acc(<2 x i64> %x, i64 %y) {
 ; CHECK-NEXT:    orrs r1, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.or.v2i64(<2 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> %x)
   %r = or i64 %y, %z
   ret i64 %r
 }
@@ -838,7 +838,7 @@ define arm_aapcs_vfpcc i64 @or_v4i64_acc(<4 x i64> %x, i64 %y) {
 ; CHECK-NEXT:    orrs r1, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.or.v4i64(<4 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> %x)
   %r = or i64 %y, %z
   ret i64 %r
 }
@@ -851,7 +851,7 @@ define arm_aapcs_vfpcc i32 @xor_v2i32(<2 x i32> %x) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.xor.v2i32(<2 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.xor.v2i32(<2 x i32> %x)
   ret i32 %z
 }
 
@@ -867,7 +867,7 @@ define arm_aapcs_vfpcc i32 @xor_v4i32(<4 x i32> %x) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.xor.v4i32(<4 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> %x)
   ret i32 %z
 }
 
@@ -884,7 +884,7 @@ define arm_aapcs_vfpcc i32 @xor_v8i32(<8 x i32> %x) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.xor.v8i32(<8 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.xor.v8i32(<8 x i32> %x)
   ret i32 %z
 }
 
@@ -900,7 +900,7 @@ define arm_aapcs_vfpcc i16 @xor_v4i16(<4 x i16> %x) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.xor.v4i16(<4 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.xor.v4i16(<4 x i16> %x)
   ret i16 %z
 }
 
@@ -918,7 +918,7 @@ define arm_aapcs_vfpcc i16 @xor_v8i16(<8 x i16> %x) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.xor.v8i16(<8 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.xor.v8i16(<8 x i16> %x)
   ret i16 %z
 }
 
@@ -937,7 +937,7 @@ define arm_aapcs_vfpcc i16 @xor_v16i16(<16 x i16> %x) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.xor.v16i16(<16 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.xor.v16i16(<16 x i16> %x)
   ret i16 %z
 }
 
@@ -955,7 +955,7 @@ define arm_aapcs_vfpcc i8 @xor_v8i8(<8 x i8> %x) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.xor.v8i8(<8 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.xor.v8i8(<8 x i8> %x)
   ret i8 %z
 }
 
@@ -975,7 +975,7 @@ define arm_aapcs_vfpcc i8 @xor_v16i8(<16 x i8> %x) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.xor.v16i8(<16 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.xor.v16i8(<16 x i8> %x)
   ret i8 %z
 }
 
@@ -996,7 +996,7 @@ define arm_aapcs_vfpcc i8 @xor_v32i8(<32 x i8> %x) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.xor.v32i8(<32 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.xor.v32i8(<32 x i8> %x)
   ret i8 %z
 }
 
@@ -1005,7 +1005,7 @@ define arm_aapcs_vfpcc i64 @xor_v1i64(<1 x i64> %x) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.xor.v1i64(<1 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.xor.v1i64(<1 x i64> %x)
   ret i64 %z
 }
 
@@ -1020,7 +1020,7 @@ define arm_aapcs_vfpcc i64 @xor_v2i64(<2 x i64> %x) {
 ; CHECK-NEXT:    eors r1, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.xor.v2i64(<2 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.xor.v2i64(<2 x i64> %x)
   ret i64 %z
 }
 
@@ -1036,7 +1036,7 @@ define arm_aapcs_vfpcc i64 @xor_v4i64(<4 x i64> %x) {
 ; CHECK-NEXT:    eors r1, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.xor.v4i64(<4 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.xor.v4i64(<4 x i64> %x)
   ret i64 %z
 }
 
@@ -1049,7 +1049,7 @@ define arm_aapcs_vfpcc i32 @xor_v2i32_acc(<2 x i32> %x, i32 %y) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.xor.v2i32(<2 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.xor.v2i32(<2 x i32> %x)
   %r = xor i32 %y, %z
   ret i32 %r
 }
@@ -1067,7 +1067,7 @@ define arm_aapcs_vfpcc i32 @xor_v4i32_acc(<4 x i32> %x, i32 %y) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.xor.v4i32(<4 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> %x)
   %r = xor i32 %y, %z
   ret i32 %r
 }
@@ -1086,7 +1086,7 @@ define arm_aapcs_vfpcc i32 @xor_v8i32_acc(<8 x i32> %x, i32 %y) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i32 @llvm.experimental.vector.reduce.xor.v8i32(<8 x i32> %x)
+  %z = call i32 @llvm.vector.reduce.xor.v8i32(<8 x i32> %x)
   %r = xor i32 %y, %z
   ret i32 %r
 }
@@ -1104,7 +1104,7 @@ define arm_aapcs_vfpcc i16 @xor_v4i16_acc(<4 x i16> %x, i16 %y) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.xor.v4i16(<4 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.xor.v4i16(<4 x i16> %x)
   %r = xor i16 %y, %z
   ret i16 %r
 }
@@ -1124,7 +1124,7 @@ define arm_aapcs_vfpcc i16 @xor_v8i16_acc(<8 x i16> %x, i16 %y) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.xor.v8i16(<8 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.xor.v8i16(<8 x i16> %x)
   %r = xor i16 %y, %z
   ret i16 %r
 }
@@ -1145,7 +1145,7 @@ define arm_aapcs_vfpcc i16 @xor_v16i16_acc(<16 x i16> %x, i16 %y) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i16 @llvm.experimental.vector.reduce.xor.v16i16(<16 x i16> %x)
+  %z = call i16 @llvm.vector.reduce.xor.v16i16(<16 x i16> %x)
   %r = xor i16 %y, %z
   ret i16 %r
 }
@@ -1165,7 +1165,7 @@ define arm_aapcs_vfpcc i8 @xor_v8i8_acc(<8 x i8> %x, i8 %y) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.xor.v8i8(<8 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.xor.v8i8(<8 x i8> %x)
   %r = xor i8 %y, %z
   ret i8 %r
 }
@@ -1187,7 +1187,7 @@ define arm_aapcs_vfpcc i8 @xor_v16i8_acc(<16 x i8> %x, i8 %y) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.xor.v16i8(<16 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.xor.v16i8(<16 x i8> %x)
   %r = xor i8 %y, %z
   ret i8 %r
 }
@@ -1210,7 +1210,7 @@ define arm_aapcs_vfpcc i8 @xor_v32i8_acc(<32 x i8> %x, i8 %y) {
 ; CHECK-NEXT:    eors r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i8 @llvm.experimental.vector.reduce.xor.v32i8(<32 x i8> %x)
+  %z = call i8 @llvm.vector.reduce.xor.v32i8(<32 x i8> %x)
   %r = xor i8 %y, %z
   ret i8 %r
 }
@@ -1222,7 +1222,7 @@ define arm_aapcs_vfpcc i64 @xor_v1i64_acc(<1 x i64> %x, i64 %y) {
 ; CHECK-NEXT:    eors r1, r3
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.xor.v1i64(<1 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.xor.v1i64(<1 x i64> %x)
   %r = xor i64 %y, %z
   ret i64 %r
 }
@@ -1240,7 +1240,7 @@ define arm_aapcs_vfpcc i64 @xor_v2i64_acc(<2 x i64> %x, i64 %y) {
 ; CHECK-NEXT:    eors r1, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.xor.v2i64(<2 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.xor.v2i64(<2 x i64> %x)
   %r = xor i64 %y, %z
   ret i64 %r
 }
@@ -1259,44 +1259,44 @@ define arm_aapcs_vfpcc i64 @xor_v4i64_acc(<4 x i64> %x, i64 %y) {
 ; CHECK-NEXT:    eors r1, r2
 ; CHECK-NEXT:    bx lr
 entry:
-  %z = call i64 @llvm.experimental.vector.reduce.xor.v4i64(<4 x i64> %x)
+  %z = call i64 @llvm.vector.reduce.xor.v4i64(<4 x i64> %x)
   %r = xor i64 %y, %z
   ret i64 %r
 }
 
-declare i16 @llvm.experimental.vector.reduce.and.v16i16(<16 x i16>)
-declare i16 @llvm.experimental.vector.reduce.and.v4i16(<4 x i16>)
-declare i16 @llvm.experimental.vector.reduce.and.v8i16(<8 x i16>)
-declare i16 @llvm.experimental.vector.reduce.or.v16i16(<16 x i16>)
-declare i16 @llvm.experimental.vector.reduce.or.v4i16(<4 x i16>)
-declare i16 @llvm.experimental.vector.reduce.or.v8i16(<8 x i16>)
-declare i16 @llvm.experimental.vector.reduce.xor.v16i16(<16 x i16>)
-declare i16 @llvm.experimental.vector.reduce.xor.v4i16(<4 x i16>)
-declare i16 @llvm.experimental.vector.reduce.xor.v8i16(<8 x i16>)
-declare i32 @llvm.experimental.vector.reduce.and.v2i32(<2 x i32>)
-declare i32 @llvm.experimental.vector.reduce.and.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.and.v8i32(<8 x i32>)
-declare i32 @llvm.experimental.vector.reduce.or.v2i32(<2 x i32>)
-declare i32 @llvm.experimental.vector.reduce.or.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.or.v8i32(<8 x i32>)
-declare i32 @llvm.experimental.vector.reduce.xor.v2i32(<2 x i32>)
-declare i32 @llvm.experimental.vector.reduce.xor.v4i32(<4 x i32>)
-declare i32 @llvm.experimental.vector.reduce.xor.v8i32(<8 x i32>)
-declare i64 @llvm.experimental.vector.reduce.and.v1i64(<1 x i64>)
-declare i64 @llvm.experimental.vector.reduce.and.v2i64(<2 x i64>)
-declare i64 @llvm.experimental.vector.reduce.and.v4i64(<4 x i64>)
-declare i64 @llvm.experimental.vector.reduce.or.v1i64(<1 x i64>)
-declare i64 @llvm.experimental.vector.reduce.or.v2i64(<2 x i64>)
-declare i64 @llvm.experimental.vector.reduce.or.v4i64(<4 x i64>)
-declare i64 @llvm.experimental.vector.reduce.xor.v1i64(<1 x i64>)
-declare i64 @llvm.experimental.vector.reduce.xor.v2i64(<2 x i64>)
-declare i64 @llvm.experimental.vector.reduce.xor.v4i64(<4 x i64>)
-declare i8 @llvm.experimental.vector.reduce.and.v16i8(<16 x i8>)
-declare i8 @llvm.experimental.vector.reduce.and.v32i8(<32 x i8>)
-declare i8 @llvm.experimental.vector.reduce.and.v8i8(<8 x i8>)
-declare i8 @llvm.experimental.vector.reduce.or.v16i8(<16 x i8>)
-declare i8 @llvm.experimental.vector.reduce.or.v32i8(<32 x i8>)
-declare i8 @llvm.experimental.vector.reduce.or.v8i8(<8 x i8>)
-declare i8 @llvm.experimental.vector.reduce.xor.v16i8(<16 x i8>)
-declare i8 @llvm.experimental.vector.reduce.xor.v32i8(<32 x i8>)
-declare i8 @llvm.experimental.vector.reduce.xor.v8i8(<8 x i8>)
+declare i16 @llvm.vector.reduce.and.v16i16(<16 x i16>)
+declare i16 @llvm.vector.reduce.and.v4i16(<4 x i16>)
+declare i16 @llvm.vector.reduce.and.v8i16(<8 x i16>)
+declare i16 @llvm.vector.reduce.or.v16i16(<16 x i16>)
+declare i16 @llvm.vector.reduce.or.v4i16(<4 x i16>)
+declare i16 @llvm.vector.reduce.or.v8i16(<8 x i16>)
+declare i16 @llvm.vector.reduce.xor.v16i16(<16 x i16>)
+declare i16 @llvm.vector.reduce.xor.v4i16(<4 x i16>)
+declare i16 @llvm.vector.reduce.xor.v8i16(<8 x i16>)
+declare i32 @llvm.vector.reduce.and.v2i32(<2 x i32>)
+declare i32 @llvm.vector.reduce.and.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.and.v8i32(<8 x i32>)
+declare i32 @llvm.vector.reduce.or.v2i32(<2 x i32>)
+declare i32 @llvm.vector.reduce.or.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.or.v8i32(<8 x i32>)
+declare i32 @llvm.vector.reduce.xor.v2i32(<2 x i32>)
+declare i32 @llvm.vector.reduce.xor.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.xor.v8i32(<8 x i32>)
+declare i64 @llvm.vector.reduce.and.v1i64(<1 x i64>)
+declare i64 @llvm.vector.reduce.and.v2i64(<2 x i64>)
+declare i64 @llvm.vector.reduce.and.v4i64(<4 x i64>)
+declare i64 @llvm.vector.reduce.or.v1i64(<1 x i64>)
+declare i64 @llvm.vector.reduce.or.v2i64(<2 x i64>)
+declare i64 @llvm.vector.reduce.or.v4i64(<4 x i64>)
+declare i64 @llvm.vector.reduce.xor.v1i64(<1 x i64>)
+declare i64 @llvm.vector.reduce.xor.v2i64(<2 x i64>)
+declare i64 @llvm.vector.reduce.xor.v4i64(<4 x i64>)
+declare i8 @llvm.vector.reduce.and.v16i8(<16 x i8>)
+declare i8 @llvm.vector.reduce.and.v32i8(<32 x i8>)
+declare i8 @llvm.vector.reduce.and.v8i8(<8 x i8>)
+declare i8 @llvm.vector.reduce.or.v16i8(<16 x i8>)
+declare i8 @llvm.vector.reduce.or.v32i8(<32 x i8>)
+declare i8 @llvm.vector.reduce.or.v8i8(<8 x i8>)
+declare i8 @llvm.vector.reduce.xor.v16i8(<16 x i8>)
+declare i8 @llvm.vector.reduce.xor.v32i8(<32 x i8>)
+declare i8 @llvm.vector.reduce.xor.v8i8(<8 x i8>)

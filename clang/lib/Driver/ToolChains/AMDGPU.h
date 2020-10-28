@@ -60,7 +60,7 @@ protected:
 public:
   AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
                   const llvm::opt::ArgList &Args);
-  unsigned GetDefaultDwarfVersion() const override { return 4; }
+  unsigned GetDefaultDwarfVersion() const override { return 5; }
   bool IsIntegratedAssemblerDefault() const override { return true; }
   bool IsMathErrnoDefault() const override { return false; }
 
@@ -94,11 +94,10 @@ public:
   bool shouldSkipArgument(const llvm::opt::Arg *Arg) const;
 
 protected:
-  /// Translate -mcpu option containing target ID to cc1 options.
-  /// Returns the GPU name.
-  StringRef translateTargetID(const llvm::opt::ArgList &DriverArgs,
-                              llvm::opt::ArgStringList &CC1Args) const;
+  /// Check and diagnose invalid target ID specified by -mcpu.
+  void checkTargetID(const llvm::opt::ArgList &DriverArgs) const;
 
+  /// Get GPU arch from -mcpu without checking.
   StringRef getGPUArch(const llvm::opt::ArgList &DriverArgs) const;
 };
 

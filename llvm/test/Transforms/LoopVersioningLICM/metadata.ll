@@ -1,4 +1,5 @@
 ; RUN: opt < %s  -O1  -S -loop-versioning-licm -licm 2>&1 | FileCheck %s
+; RUN: opt < %s  -S -passes='loop-versioning-licm,licm' 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: @without_metadata(
 define i32 @without_metadata(i32* nocapture %var1, i32* nocapture readnone %var2, i32* nocapture %var3, i32 %itr) #0 {

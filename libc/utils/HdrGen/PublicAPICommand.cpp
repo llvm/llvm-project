@@ -40,7 +40,9 @@ static void dedentAndWrite(llvm::StringRef Text, llvm::raw_ostream &OS) {
 
 namespace llvm_libc {
 
-void writeAPIFromIndex(APIIndexer &G, llvm::raw_ostream &OS) {
+void writeAPIFromIndex(APIIndexer &G,
+                       std::vector<std::string> EntrypointNameList,
+                       llvm::raw_ostream &OS) {
   for (auto &Pair : G.MacroDefsMap) {
     const std::string &Name = Pair.first;
     if (G.MacroSpecMap.find(Name) == G.MacroSpecMap.end())
@@ -83,9 +85,15 @@ void writeAPIFromIndex(APIIndexer &G, llvm::raw_ostream &OS) {
     OS << "};\n\n";
 
   OS << "__BEGIN_C_DECLS\n\n";
-  for (auto &Name : G.Functions) {
-    if (G.FunctionSpecMap.find(Name) == G.FunctionSpecMap.end())
-      llvm::PrintFatalError(Name + " not found in any standard spec.\n");
+  for (auto &Name : EntrypointNameList) {
+    if (G.FunctionSpecMap.find(Name) == G.FunctionSpecMap.end()) {
+      continue; // Functions that aren't in this header file are skipped as
+                // opposed to erroring out because the list of functions being
+                // iterated over is the complete list of functions with
+                // entrypoints. Thus this is filtering out the functions that
+                // don't go to this header file, whereas the other, similar
+                // conditionals above are more of a sanity check.
+    }
 
     llvm::Record *FunctionSpec = G.FunctionSpecMap[Name];
     llvm::Record *RetValSpec = FunctionSpec->getValueAsDef("Return");
@@ -119,7 +127,7 @@ void PublicAPICommand::run(llvm::raw_ostream &OS, const ArgVector &Args,
   }
 
   APIIndexer G(StdHeader, Records);
-  writeAPIFromIndex(G, OS);
+  writeAPIFromIndex(G, EntrypointNameList, OS);
 }
 
 } // namespace llvm_libc

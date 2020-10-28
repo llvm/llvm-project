@@ -4,7 +4,7 @@
 #include <immintrin.h>
 
 __m256d test_mm256_cmp_pd_eq_oq(__m256d a, __m256d b) {
-  // CHECK-LABEL: @test_mm256_cmp_pd_eq_oq
+  // CHECK-LABEL: test_mm256_cmp_pd_eq_oq
   // CHECK: call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(<4 x double> %{{.*}}, <4 x double> %{{.*}}, metadata !"oeq", metadata !"fpexcept.strict")
   return _mm256_cmp_pd(a, b, _CMP_EQ_OQ);
 }
@@ -196,7 +196,7 @@ __m256d test_mm256_cmp_pd_true_us(__m256d a, __m256d b) {
 }
 
 __m256 test_mm256_cmp_ps_eq_oq(__m256 a, __m256 b) {
-  // CHECK-LABEL: @test_mm256_cmp_ps_eq_oq
+  // CHECK-LABEL: test_mm256_cmp_ps_eq_oq
   // CHECK: call <8 x i1> @llvm.experimental.constrained.fcmp.v8f32(<8 x float> %{{.*}}, <8 x float> %{{.*}}, metadata !"oeq", metadata !"fpexcept.strict")
   return _mm256_cmp_ps(a, b, _CMP_EQ_OQ);
 }
@@ -388,7 +388,7 @@ __m256 test_mm256_cmp_ps_true_us(__m256 a, __m256 b) {
 }
 
 __m128d test_mm_cmp_pd_eq_oq(__m128d a, __m128d b) {
-  // CHECK-LABEL: @test_mm_cmp_pd_eq_oq
+  // CHECK-LABEL: test_mm_cmp_pd_eq_oq
   // CHECK: call <2 x i1> @llvm.experimental.constrained.fcmp.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, metadata !"oeq", metadata !"fpexcept.strict")
   return _mm_cmp_pd(a, b, _CMP_EQ_OQ);
 }
@@ -580,7 +580,7 @@ __m128d test_mm_cmp_pd_true_us(__m128d a, __m128d b) {
 }
 
 __m128 test_mm_cmp_ps_eq_oq(__m128 a, __m128 b) {
-  // CHECK-LABEL: @test_mm_cmp_ps_eq_oq
+  // CHECK-LABEL: test_mm_cmp_ps_eq_oq
   // CHECK: call <4 x i1> @llvm.experimental.constrained.fcmp.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, metadata !"oeq", metadata !"fpexcept.strict")
   return _mm_cmp_ps(a, b, _CMP_EQ_OQ);
 }

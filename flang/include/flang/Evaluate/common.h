@@ -9,7 +9,6 @@
 #ifndef FORTRAN_EVALUATE_COMMON_H_
 #define FORTRAN_EVALUATE_COMMON_H_
 
-#include "intrinsics-library.h"
 #include "flang/Common/Fortran.h"
 #include "flang/Common/default-kinds.h"
 #include "flang/Common/enum-set.h"
@@ -237,9 +236,6 @@ public:
   bool flushSubnormalsToZero() const { return flushSubnormalsToZero_; }
   bool bigEndian() const { return bigEndian_; }
   const semantics::DerivedTypeSpec *pdtInstance() const { return pdtInstance_; }
-  const HostIntrinsicProceduresLibrary &hostIntrinsicsLibrary() const {
-    return hostIntrinsicsLibrary_;
-  }
   const evaluate::IntrinsicProcTable &intrinsics() const { return intrinsics_; }
 
   ConstantSubscript &StartImpliedDo(parser::CharBlock, ConstantSubscript = 1);
@@ -264,7 +260,6 @@ private:
   bool bigEndian_{false};
   const semantics::DerivedTypeSpec *pdtInstance_{nullptr};
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;
-  HostIntrinsicProceduresLibrary hostIntrinsicsLibrary_;
 };
 
 void RealFlagWarnings(FoldingContext &, const RealFlags &, const char *op);

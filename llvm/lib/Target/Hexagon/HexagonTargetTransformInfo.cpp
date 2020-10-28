@@ -108,7 +108,7 @@ unsigned HexagonTTIImpl::getNumberOfRegisters(bool Vector) const {
 }
 
 unsigned HexagonTTIImpl::getMaxInterleaveFactor(unsigned VF) {
-  return useHVX() ? 2 : 0;
+  return useHVX() ? 2 : 1;
 }
 
 unsigned HexagonTTIImpl::getRegisterBitWidth(bool Vector) const {

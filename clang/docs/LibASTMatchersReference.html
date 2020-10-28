@@ -3569,6 +3569,17 @@ compiled in C mode.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isWeak0')"><a name="isWeak0Anchor">isWeak</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isWeak0"><pre>Matches weak function declarations.
+
+Given:
+  void foo() __attribute__((__weakref__("__foo")));
+  void bar();
+functionDecl(isWeak())
+  matches the weak declaration "foo", but not "bar".
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('parameterCountIs0')"><a name="parameterCountIs0Anchor">parameterCountIs</a></td><td>unsigned N</td></tr>
 <tr><td colspan="4" class="doc" id="parameterCountIs0"><pre>Matches FunctionDecls and FunctionProtoTypes that have a
 specific parameter count.

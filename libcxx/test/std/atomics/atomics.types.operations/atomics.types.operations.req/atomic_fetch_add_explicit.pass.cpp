@@ -67,7 +67,11 @@ testp()
         std::atomic_init(&t, T(1*sizeof(X)));
         assert(std::atomic_fetch_add_explicit(&t, 2,
                                   std::memory_order_seq_cst) == T(1*sizeof(X)));
+#ifdef _LIBCPP_VERSION // libc++ is not conforming
         std::atomic_fetch_add_explicit<X>(&t, 0, std::memory_order_relaxed);
+#else
+        std::atomic_fetch_add_explicit<T>(&t, 0, std::memory_order_relaxed);
+#endif // _LIBCPP_VERSION
         assert(t == T(3*sizeof(X)));
     }
     {
@@ -77,7 +81,11 @@ testp()
         std::atomic_init(&t, T(1*sizeof(X)));
         assert(std::atomic_fetch_add_explicit(&t, 2,
                                   std::memory_order_seq_cst) == T(1*sizeof(X)));
+#ifdef _LIBCPP_VERSION // libc++ is not conforming
         std::atomic_fetch_add_explicit<X>(&t, 0, std::memory_order_relaxed);
+#else
+        std::atomic_fetch_add_explicit<T>(&t, 0, std::memory_order_relaxed);
+#endif // _LIBCPP_VERSION
         assert(t == T(3*sizeof(X)));
     }
 }

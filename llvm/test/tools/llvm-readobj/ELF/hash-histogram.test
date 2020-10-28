@@ -331,7 +331,7 @@ ProgramHeaders:
 # RUN: llvm-readelf --elf-hash-histogram %t9 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t9 --check-prefix=ERR6
 
-# ERR6: warning: '[[FILE]]': unable to print the GNU hash table histogram: the first hashed symbol index (16) is larger than the number of dynamic symbols (1)
+# ERR6: warning: '[[FILE]]': unable to print the GNU hash table histogram: the first hashed symbol index (16) is greater than or equal to the number of dynamic symbols (1)
 
 ## Case B: we do not report a warning when the buckets array contains only zero values.
 # RUN: yaml2obj --docnum=7 -DVAL=0x0 %s -o %t10

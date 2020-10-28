@@ -26,24 +26,22 @@ static const int MaxArraysInAliasScops = 10;
 ///
 /// The MDNode looks like this (if arg0/arg1 are not null):
 ///
-///    '!n = metadata !{metadata !n, arg0, arg1}'
+///    '!n = distinct !{!n, arg0, arg1}'
 ///
 /// @return The self referencing id metadata node.
 static MDNode *getID(LLVMContext &Ctx, Metadata *arg0 = nullptr,
                      Metadata *arg1 = nullptr) {
   MDNode *ID;
   SmallVector<Metadata *, 3> Args;
-  // Use a temporary node to safely create a unique pointer for the first arg.
-  auto TempNode = MDNode::getTemporary(Ctx, None);
   // Reserve operand 0 for loop id self reference.
-  Args.push_back(TempNode.get());
+  Args.push_back(nullptr);
 
   if (arg0)
     Args.push_back(arg0);
   if (arg1)
     Args.push_back(arg1);
 
-  ID = MDNode::get(Ctx, Args);
+  ID = MDNode::getDistinct(Ctx, Args);
   ID->replaceOperandWith(0, ID);
   return ID;
 }

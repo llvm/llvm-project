@@ -26,11 +26,33 @@ class VEMiscReg<bits<6> enc, string n>: Register<n> {
   let Namespace = "VE";
 }
 
+class VEVecReg<bits<8> enc, string n, list<Register> subregs = [],
+               list<string> altNames = [], list<Register> aliases = []>
+        : Register<n, altNames> {
+  let HWEncoding{15-8} = 0;
+  let HWEncoding{7-0} = enc;
+  let Namespace = "VE";
+  let SubRegs = subregs;
+  let Aliases = aliases;
+}
+
+class VEMaskReg<bits<4> enc, string n, list<Register> subregs = [],
+                list<string> altNames = [], list<Register> aliases = []>
+        : Register<n, altNames> {
+  let HWEncoding{15-4} = 0;
+  let HWEncoding{3-0} = enc;
+  let Namespace = "VE";
+  let SubRegs = subregs;
+  let Aliases = aliases;
+}
+
 let Namespace = "VE" in {
   def sub_i32     : SubRegIndex<32, 32>;        // Low 32 bit (32..63)
   def sub_f32     : SubRegIndex<32>;            // High 32 bit (0..31)
   def sub_even    : SubRegIndex<64>;            // High 64 bit (0..63)
   def sub_odd     : SubRegIndex<64, 64>;        // Low 64 bit (64..127)
+  def sub_vm_even : SubRegIndex<256>;           // High 256 bit (0..255)
+  def sub_vm_odd  : SubRegIndex<256, 256>;      // Low 256 bit (256..511)
   def AsmName     : RegAltNameIndex;
 }
 
@@ -62,6 +84,15 @@ def MISC : RegisterClass<"VE", [i64], 64,
 //-----------------------------------------------------------------------------
 
 def IC : VEMiscReg<62, "ic">;
+
+//-----------------------------------------------------------------------------
+// Vector Length Register
+//-----------------------------------------------------------------------------
+
+def VL : VEMiscReg<63, "vl">;
+
+// Register classes.
+def VLS : RegisterClass<"VE", [i32], 64, (add VL)>;
 
 //-----------------------------------------------------------------------------
 // Generic Registers
@@ -98,6 +129,25 @@ foreach I = 0-31 in
                    !cast<VEReg>("SX"#!add(!shl(I,1),1))],
                   ["s"#!shl(I,1)]>;
 
+// Vector registers - 64 bits wide 256 elements
+foreach I = 0-63 in
+  def V#I : VEVecReg<I, "v"#I, [], ["v"#I]>, DwarfRegNum<[!add(64,I)]>;
+
+// Vector Index Register
+def VIX : VEVecReg<255, "vix", [], ["vix"]>;
+
+// Vector mask registers - 256 bits wide
+foreach I = 0-15 in
+  def VM#I : VEMaskReg<I, "vm"#I, [], ["vm"#I]>, DwarfRegNum<[!add(128,I)]>;
+
+// Aliases of VMs to use as a pair of two VM for packed instructions
+let SubRegIndices = [sub_vm_even, sub_vm_odd], CoveredBySubRegs = 1 in
+foreach I = 0-7 in
+  def VMP#I : VEMaskReg<!shl(I,1), "vmp"#I,
+                        [!cast<VEMaskReg>("VM"#!shl(I,1)),
+                         !cast<VEMaskReg>("VM"#!add(!shl(I,1),1))],
+                        ["vm"#!shl(I,1)]>;
+
 } // RegAltNameIndices = [AsmName]
 
 // Register classes.
@@ -120,3 +170,20 @@ def F128 : RegisterClass<"VE", [f128], 128,
                         (add (sequence "Q%u", 0, 3),
                              (sequence "Q%u", 17, 31),
                              (sequence "Q%u", 4, 16))>;
+
+def V64 : RegisterClass<"VE",
+                        [v512i32, v512f32,
+                         v256i64, v256i32, v256f32, v256f64,
+                         v128i64, v128i32, v128f32, v128f64,
+                         v64i64,  v64i32,  v64f32,  v64f64,
+                         v32i64,  v32i32,  v32f32,  v32f64,
+                         v16i64,  v16i32,  v16f32,  v16f64,
+                         v8i64,   v8i32,   v8f32,   v8f64,
+                         v4i64,   v4i32,   v4f32,   v4f64,
+                         v2i64,   v2i32,   v2f32,   v2f64], 64,
+                        (add (sequence "V%u", 0, 63),
+                             VIX)>;
+
+// vm0 is reserved for always true
+def VM : RegisterClass<"VE", [v256i1], 64, (sequence "VM%u", 0, 15)>;
+def VM512 : RegisterClass<"VE", [v512i1], 64, (sequence "VMP%u", 0, 7)>;

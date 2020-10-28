@@ -143,9 +143,8 @@ createLocalLazyCallThroughManager(const Triple &T, ExecutionSession &ES,
 
 LazyReexportsMaterializationUnit::LazyReexportsMaterializationUnit(
     LazyCallThroughManager &LCTManager, IndirectStubsManager &ISManager,
-    JITDylib &SourceJD, SymbolAliasMap CallableAliases, ImplSymbolMap *SrcJDLoc,
-    VModuleKey K)
-    : MaterializationUnit(extractFlags(CallableAliases), nullptr, std::move(K)),
+    JITDylib &SourceJD, SymbolAliasMap CallableAliases, ImplSymbolMap *SrcJDLoc)
+    : MaterializationUnit(extractFlags(CallableAliases), nullptr),
       LCTManager(LCTManager), ISManager(ISManager), SourceJD(SourceJD),
       CallableAliases(std::move(CallableAliases)), AliaseeTable(SrcJDLoc) {}
 
@@ -166,8 +165,13 @@ void LazyReexportsMaterializationUnit::materialize(
   }
 
   if (!CallableAliases.empty())
-    R->replace(lazyReexports(LCTManager, ISManager, SourceJD,
-                             std::move(CallableAliases), AliaseeTable));
+    if (auto Err = R->replace(lazyReexports(LCTManager, ISManager, SourceJD,
+                                            std::move(CallableAliases),
+                                            AliaseeTable))) {
+      R->getExecutionSession().reportError(std::move(Err));
+      R->failMaterialization();
+      return;
+    }
 
   IndirectStubsManager::StubInitsMap StubInits;
   for (auto &Alias : RequestedAliases) {

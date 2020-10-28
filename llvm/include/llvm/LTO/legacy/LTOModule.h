@@ -48,8 +48,6 @@ private:
 
   std::string LinkerOpts;
 
-  std::string DependentLibraries;
-
   std::unique_ptr<Module> Mod;
   MemoryBufferRef MBRef;
   ModuleSymbolTable SymTab;

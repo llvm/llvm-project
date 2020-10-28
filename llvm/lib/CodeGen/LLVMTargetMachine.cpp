@@ -196,11 +196,14 @@ bool LLVMTargetMachine::addPassesToEmitFile(
   if (!PassConfig)
     return true;
 
-  if (!TargetPassConfig::willCompleteCodeGenPipeline())
-    PM.add(createPrintMIRPass(Out));
-  else if (addAsmPrinter(PM, Out, DwoOut, FileType,
-                           MMIWP->getMMI().getContext()))
-    return true;
+  if (TargetPassConfig::willCompleteCodeGenPipeline()) {
+    if (addAsmPrinter(PM, Out, DwoOut, FileType, MMIWP->getMMI().getContext()))
+      return true;
+  } else {
+    // MIR printing is redundant with -filetype=null.
+    if (FileType != CGFT_Null)
+      PM.add(createPrintMIRPass(Out));
+  }
 
   PM.add(createFreeMachineFunctionPass());
   return false;

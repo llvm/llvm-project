@@ -55,9 +55,10 @@ void test_no_info() {
     abort();
 }
 
-int main() {
+int main(int, char**) {
   test1(1);
   test2(1, 2);
   test3(1, 2, 3);
   test_no_info();
+  return 0;
 }

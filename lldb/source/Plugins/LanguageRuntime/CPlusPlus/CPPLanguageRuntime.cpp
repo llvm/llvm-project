@@ -37,9 +37,6 @@ static ConstString g_this = ConstString("this");
 
 char CPPLanguageRuntime::ID = 0;
 
-// Destructor
-CPPLanguageRuntime::~CPPLanguageRuntime() {}
-
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     : LanguageRuntime(process) {}
 

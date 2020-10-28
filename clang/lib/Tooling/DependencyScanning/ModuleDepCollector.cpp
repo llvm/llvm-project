@@ -77,15 +77,10 @@ void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
   // Dependency generation really does want to go all the way to the
   // file entry for a source location to find out what is depended on.
   // We do not want #line markers to affect dependency generation!
-  Optional<FileEntryRef> File =
-      SM.getFileEntryRefForID(SM.getFileID(SM.getExpansionLoc(Loc)));
-  if (!File)
-    return;
-
-  StringRef FileName =
-      llvm::sys::path::remove_leading_dotslash(File->getName());
-
-  MDC.MainDeps.push_back(std::string(FileName));
+  if (Optional<StringRef> Filename =
+          SM.getNonBuiltinFilenameForID(SM.getFileID(SM.getExpansionLoc(Loc))))
+    MDC.MainDeps.push_back(
+        std::string(llvm::sys::path::remove_leading_dotslash(*Filename)));
 }
 
 void ModuleDepCollectorPP::InclusionDirective(

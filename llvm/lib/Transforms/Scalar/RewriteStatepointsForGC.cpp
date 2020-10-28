@@ -1487,7 +1487,9 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
   uint32_t NumPatchBytes = 0;
   uint32_t Flags = uint32_t(StatepointFlags::None);
 
-  ArrayRef<Use> CallArgs(Call->arg_begin(), Call->arg_end());
+  SmallVector<Value *, 8> CallArgs;
+  for (Value *Arg : Call->args())
+    CallArgs.push_back(Arg);
   Optional<ArrayRef<Use>> DeoptArgs;
   if (auto Bundle = Call->getOperandBundle(LLVMContext::OB_deopt))
     DeoptArgs = Bundle->Inputs;
@@ -1520,7 +1522,8 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
 
   Value *CallTarget = Call->getCalledOperand();
   if (Function *F = dyn_cast<Function>(CallTarget)) {
-    if (F->getIntrinsicID() == Intrinsic::experimental_deoptimize) {
+    auto IID = F->getIntrinsicID();
+    if (IID == Intrinsic::experimental_deoptimize) {
       // Calls to llvm.experimental.deoptimize are lowered to calls to the
       // __llvm_deoptimize symbol.  We want to resolve this now, since the
       // verifier does not allow taking the address of an intrinsic function.
@@ -1540,6 +1543,101 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
                        .getCallee();
 
       IsDeoptimize = true;
+    } else if (IID == Intrinsic::memcpy_element_unordered_atomic ||
+               IID == Intrinsic::memmove_element_unordered_atomic) {
+      // Unordered atomic memcpy and memmove intrinsics which are not explicitly
+      // marked as "gc-leaf-function" should be lowered in a GC parseable way.
+      // Specifically, these calls should be lowered to the
+      // __llvm_{memcpy|memmove}_element_unordered_atomic_safepoint symbols.
+      // Similarly to __llvm_deoptimize we want to resolve this now, since the
+      // verifier does not allow taking the address of an intrinsic function.
+      //
+      // Moreover we need to shuffle the arguments for the call in order to
+      // accommodate GC. The underlying source and destination objects might be
+      // relocated during copy operation should the GC occur. To relocate the
+      // derived source and destination pointers the implementation of the
+      // intrinsic should know the corresponding base pointers.
+      //
+      // To make the base pointers available pass them explicitly as arguments:
+      //   memcpy(dest_derived, source_derived, ...) =>
+      //   memcpy(dest_base, dest_offset, source_base, source_offset, ...)
+      auto &Context = Call->getContext();
+      auto &DL = Call->getModule()->getDataLayout();
+      auto GetBaseAndOffset = [&](Value *Derived) {
+        assert(Result.PointerToBase.count(Derived));
+        unsigned AddressSpace = Derived->getType()->getPointerAddressSpace();
+        unsigned IntPtrSize = DL.getPointerSizeInBits(AddressSpace);
+        Value *Base = Result.PointerToBase.find(Derived)->second;
+        Value *Base_int = Builder.CreatePtrToInt(
+            Base, Type::getIntNTy(Context, IntPtrSize));
+        Value *Derived_int = Builder.CreatePtrToInt(
+            Derived, Type::getIntNTy(Context, IntPtrSize));
+        return std::make_pair(Base, Builder.CreateSub(Derived_int, Base_int));
+      };
+
+      auto *Dest = CallArgs[0];
+      Value *DestBase, *DestOffset;
+      std::tie(DestBase, DestOffset) = GetBaseAndOffset(Dest);
+
+      auto *Source = CallArgs[1];
+      Value *SourceBase, *SourceOffset;
+      std::tie(SourceBase, SourceOffset) = GetBaseAndOffset(Source);
+
+      auto *LengthInBytes = CallArgs[2];
+      auto *ElementSizeCI = cast<ConstantInt>(CallArgs[3]);
+
+      CallArgs.clear();
+      CallArgs.push_back(DestBase);
+      CallArgs.push_back(DestOffset);
+      CallArgs.push_back(SourceBase);
+      CallArgs.push_back(SourceOffset);
+      CallArgs.push_back(LengthInBytes);
+
+      SmallVector<Type *, 8> DomainTy;
+      for (Value *Arg : CallArgs)
+        DomainTy.push_back(Arg->getType());
+      auto *FTy = FunctionType::get(Type::getVoidTy(F->getContext()), DomainTy,
+                                    /* isVarArg = */ false);
+
+      auto GetFunctionName = [](Intrinsic::ID IID, ConstantInt *ElementSizeCI) {
+        uint64_t ElementSize = ElementSizeCI->getZExtValue();
+        if (IID == Intrinsic::memcpy_element_unordered_atomic) {
+          switch (ElementSize) {
+          case 1:
+            return "__llvm_memcpy_element_unordered_atomic_safepoint_1";
+          case 2:
+            return "__llvm_memcpy_element_unordered_atomic_safepoint_2";
+          case 4:
+            return "__llvm_memcpy_element_unordered_atomic_safepoint_4";
+          case 8:
+            return "__llvm_memcpy_element_unordered_atomic_safepoint_8";
+          case 16:
+            return "__llvm_memcpy_element_unordered_atomic_safepoint_16";
+          default:
+            llvm_unreachable("unexpected element size!");
+          }
+        }
+        assert(IID == Intrinsic::memmove_element_unordered_atomic);
+        switch (ElementSize) {
+        case 1:
+          return "__llvm_memmove_element_unordered_atomic_safepoint_1";
+        case 2:
+          return "__llvm_memmove_element_unordered_atomic_safepoint_2";
+        case 4:
+          return "__llvm_memmove_element_unordered_atomic_safepoint_4";
+        case 8:
+          return "__llvm_memmove_element_unordered_atomic_safepoint_8";
+        case 16:
+          return "__llvm_memmove_element_unordered_atomic_safepoint_16";
+        default:
+          llvm_unreachable("unexpected element size!");
+        }
+      };
+
+      CallTarget =
+          F->getParent()
+              ->getOrInsertFunction(GetFunctionName(IID, ElementSizeCI), FTy)
+              .getCallee();
     }
   }
 
@@ -2581,8 +2679,27 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
   assert(shouldRewriteStatepointsIn(F) && "mismatch in rewrite decision");
 
   auto NeedsRewrite = [&TLI](Instruction &I) {
-    if (const auto *Call = dyn_cast<CallBase>(&I))
-      return !callsGCLeafFunction(Call, TLI) && !isa<GCStatepointInst>(Call);
+    if (const auto *Call = dyn_cast<CallBase>(&I)) {
+      if (isa<GCStatepointInst>(Call))
+        return false;
+      if (callsGCLeafFunction(Call, TLI))
+        return false;
+
+      // Normally it's up to the frontend to make sure that non-leaf calls also
+      // have proper deopt state if it is required. We make an exception for
+      // element atomic memcpy/memmove intrinsics here. Unlike other intrinsics
+      // these are non-leaf by default. They might be generated by the optimizer
+      // which doesn't know how to produce a proper deopt state. So if we see a
+      // non-leaf memcpy/memmove without deopt state just treat it as a leaf
+      // copy and don't produce a statepoint.
+      if (!AllowStatepointWithNoDeoptInfo &&
+          !Call->getOperandBundle(LLVMContext::OB_deopt)) {
+        assert((isa<AtomicMemCpyInst>(Call) || isa<AtomicMemMoveInst>(Call)) &&
+               "Don't expect any other calls here!");
+        return false;
+      }
+      return true;
+    }
     return false;
   };
 

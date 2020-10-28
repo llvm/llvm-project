@@ -538,6 +538,7 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
   Metadata *DataLocation;
   Metadata *Associated;
   Metadata *Allocated;
+  Metadata *Rank;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
@@ -546,14 +547,14 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
                 Metadata *VTableHolder, Metadata *TemplateParams,
                 MDString *Identifier, Metadata *Discriminator,
                 Metadata *DataLocation, Metadata *Associated,
-                Metadata *Allocated)
+                Metadata *Allocated, Metadata *Rank)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
         AlignInBits(AlignInBits), Flags(Flags), Elements(Elements),
         RuntimeLang(RuntimeLang), VTableHolder(VTableHolder),
         TemplateParams(TemplateParams), Identifier(Identifier),
         Discriminator(Discriminator), DataLocation(DataLocation),
-        Associated(Associated), Allocated(Allocated) {}
+        Associated(Associated), Allocated(Allocated), Rank(Rank) {}
   MDNodeKeyImpl(const DICompositeType *N)
       : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
         Line(N->getLine()), Scope(N->getRawScope()),
@@ -565,7 +566,8 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
         Identifier(N->getRawIdentifier()),
         Discriminator(N->getRawDiscriminator()),
         DataLocation(N->getRawDataLocation()),
-        Associated(N->getRawAssociated()), Allocated(N->getRawAllocated()) {}
+        Associated(N->getRawAssociated()), Allocated(N->getRawAllocated()),
+        Rank(N->getRawRank()) {}
 
   bool isKeyOf(const DICompositeType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
@@ -582,7 +584,7 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
            Discriminator == RHS->getRawDiscriminator() &&
            DataLocation == RHS->getRawDataLocation() &&
            Associated == RHS->getRawAssociated() &&
-           Allocated == RHS->getRawAllocated();
+           Allocated == RHS->getRawAllocated() && Rank == RHS->getRawRank();
   }
 
   unsigned getHashValue() const {
@@ -1222,33 +1224,48 @@ template <class NodeTy> struct MDNodeInfo {
 #define HANDLE_MDNODE_LEAF(CLASS) using CLASS##Info = MDNodeInfo<CLASS>;
 #include "llvm/IR/Metadata.def"
 
-/// Map-like storage for metadata attachments.
-class MDAttachmentMap {
-  SmallVector<std::pair<unsigned, TrackingMDNodeRef>, 2> Attachments;
+/// Multimap-like storage for metadata attachments.
+class MDAttachments {
+public:
+  struct Attachment {
+    unsigned MDKind;
+    TrackingMDNodeRef Node;
+  };
+
+private:
+  SmallVector<Attachment, 1> Attachments;
 
 public:
   bool empty() const { return Attachments.empty(); }
   size_t size() const { return Attachments.size(); }
 
-  /// Get a particular attachment (if any).
+  /// Returns the first attachment with the given ID or nullptr if no such
+  /// attachment exists.
   MDNode *lookup(unsigned ID) const;
+
+  /// Appends all attachments with the given ID to \c Result in insertion order.
+  /// If the global has no attachments with the given ID, or if ID is invalid,
+  /// leaves Result unchanged.
+  void get(unsigned ID, SmallVectorImpl<MDNode *> &Result) const;
+
+  /// Appends all attachments for the global to \c Result, sorting by attachment
+  /// ID. Attachments with the same ID appear in insertion order. This function
+  /// does \em not clear \c Result.
+  void getAll(SmallVectorImpl<std::pair<unsigned, MDNode *>> &Result) const;
 
   /// Set an attachment to a particular node.
   ///
-  /// Set the \c ID attachment to \c MD, replacing the current attachment at \c
+  /// Set the \c ID attachment to \c MD, replacing the current attachments at \c
   /// ID (if anyway).
-  void set(unsigned ID, MDNode &MD);
+  void set(unsigned ID, MDNode *MD);
 
-  /// Remove an attachment.
+  /// Adds an attachment to a particular node.
+  void insert(unsigned ID, MDNode &MD);
+
+  /// Remove attachments with the given ID.
   ///
-  /// Remove the attachment at \c ID, if any.
+  /// Remove the attachments at \c ID, if any.
   bool erase(unsigned ID);
-
-  /// Copy out all the attachments.
-  ///
-  /// Copies all the current attachments into \c Result, sorting by attachment
-  /// ID.  This function does \em not clear \c Result.
-  void getAll(SmallVectorImpl<std::pair<unsigned, MDNode *>> &Result) const;
 
   /// Erase matching attachments.
   ///
@@ -1257,37 +1274,6 @@ public:
     Attachments.erase(llvm::remove_if(Attachments, shouldRemove),
                       Attachments.end());
   }
-};
-
-/// Multimap-like storage for metadata attachments for globals. This differs
-/// from MDAttachmentMap in that it allows multiple attachments per metadata
-/// kind.
-class MDGlobalAttachmentMap {
-  struct Attachment {
-    unsigned MDKind;
-    TrackingMDNodeRef Node;
-  };
-  SmallVector<Attachment, 1> Attachments;
-
-public:
-  bool empty() const { return Attachments.empty(); }
-
-  /// Appends all attachments with the given ID to \c Result in insertion order.
-  /// If the global has no attachments with the given ID, or if ID is invalid,
-  /// leaves Result unchanged.
-  void get(unsigned ID, SmallVectorImpl<MDNode *> &Result) const;
-
-  /// Returns the first attachment with the given ID or nullptr if no such
-  /// attachment exists.
-  MDNode *lookup(unsigned ID) const;
-
-  void insert(unsigned ID, MDNode &MD);
-  bool erase(unsigned ID);
-
-  /// Appends all attachments for the global to \c Result, sorting by attachment
-  /// ID. Attachments with the same ID appear in insertion order. This function
-  /// does \em not clear \c Result.
-  void getAll(SmallVectorImpl<std::pair<unsigned, MDNode *>> &Result) const;
 };
 
 class LLVMContextImpl {
@@ -1360,7 +1346,7 @@ public:
 
   DenseMap<Type *, std::unique_ptr<UndefValue>> UVConstants;
 
-  StringMap<ConstantDataSequential*> CDSConstants;
+  StringMap<std::unique_ptr<ConstantDataSequential>> CDSConstants;
 
   DenseMap<std::pair<const Function *, const BasicBlock *>, BlockAddress *>
     BlockAddresses;
@@ -1405,11 +1391,8 @@ public:
   /// CustomMDKindNames - Map to hold the metadata string to ID mapping.
   StringMap<unsigned> CustomMDKindNames;
 
-  /// Collection of per-instruction metadata used in this context.
-  DenseMap<const Instruction *, MDAttachmentMap> InstructionMetadata;
-
-  /// Collection of per-GlobalObject metadata used in this context.
-  DenseMap<const GlobalObject *, MDGlobalAttachmentMap> GlobalObjectMetadata;
+  /// Collection of metadata used in this context.
+  DenseMap<const Value *, MDAttachments> ValueMetadata;
 
   /// Collection of per-GlobalObject sections used in this context.
   DenseMap<const GlobalObject *, StringRef> GlobalObjectSections;

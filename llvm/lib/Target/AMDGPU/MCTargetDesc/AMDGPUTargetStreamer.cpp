@@ -79,14 +79,17 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_R600_TURKS:     AK = GK_TURKS;   break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX600:  AK = GK_GFX600;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX601:  AK = GK_GFX601;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX602:  AK = GK_GFX602;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX700:  AK = GK_GFX700;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX701:  AK = GK_GFX701;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX702:  AK = GK_GFX702;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX703:  AK = GK_GFX703;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX704:  AK = GK_GFX704;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX705:  AK = GK_GFX705;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX801:  AK = GK_GFX801;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX802:  AK = GK_GFX802;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX803:  AK = GK_GFX803;  break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX805:  AK = GK_GFX805;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX810:  AK = GK_GFX810;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX900:  AK = GK_GFX900;  break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX902:  AK = GK_GFX902;  break;
@@ -99,6 +102,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012: AK = GK_GFX1012; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1030: AK = GK_GFX1030; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1031: AK = GK_GFX1031; break;
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1032: AK = GK_GFX1032; break;
   case ELF::EF_AMDGPU_MACH_NONE:           AK = GK_NONE;    break;
   }
 
@@ -132,14 +136,17 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_TURKS:   return ELF::EF_AMDGPU_MACH_R600_TURKS;
   case GK_GFX600:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX600;
   case GK_GFX601:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX601;
+  case GK_GFX602:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX602;
   case GK_GFX700:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX700;
   case GK_GFX701:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX701;
   case GK_GFX702:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX702;
   case GK_GFX703:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX703;
   case GK_GFX704:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX704;
+  case GK_GFX705:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX705;
   case GK_GFX801:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX801;
   case GK_GFX802:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX802;
   case GK_GFX803:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX803;
+  case GK_GFX805:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX805;
   case GK_GFX810:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX810;
   case GK_GFX900:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX900;
   case GK_GFX902:  return ELF::EF_AMDGPU_MACH_AMDGCN_GFX902;
@@ -152,6 +159,7 @@ unsigned AMDGPUTargetStreamer::getElfMach(StringRef GPU) {
   case GK_GFX1012: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1012;
   case GK_GFX1030: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1030;
   case GK_GFX1031: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1031;
+  case GK_GFX1032: return ELF::EF_AMDGPU_MACH_AMDGCN_GFX1032;
   case GK_NONE:    return ELF::EF_AMDGPU_MACH_NONE;
   }
 
@@ -656,9 +664,10 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
     KernelCodeSymbol->setVisibility(ELF::STV_PROTECTED);
 
   Streamer.emitLabel(KernelDescriptorSymbol);
-  Streamer.emitBytes(StringRef(
-      (const char*)&(KernelDescriptor),
-      offsetof(amdhsa::kernel_descriptor_t, kernel_code_entry_byte_offset)));
+  Streamer.emitInt32(KernelDescriptor.group_segment_fixed_size);
+  Streamer.emitInt32(KernelDescriptor.private_segment_fixed_size);
+  for (uint8_t Res : KernelDescriptor.reserved0)
+    Streamer.emitInt8(Res);
   // FIXME: Remove the use of VK_AMDGPU_REL64 in the expression below. The
   // expression being created is:
   //   (start of kernel code) - (start of kernel descriptor)
@@ -670,11 +679,12 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
           KernelDescriptorSymbol, MCSymbolRefExpr::VK_None, Context),
       Context),
       sizeof(KernelDescriptor.kernel_code_entry_byte_offset));
-  Streamer.emitBytes(StringRef(
-      (const char*)&(KernelDescriptor) +
-          offsetof(amdhsa::kernel_descriptor_t, kernel_code_entry_byte_offset) +
-          sizeof(KernelDescriptor.kernel_code_entry_byte_offset),
-      sizeof(KernelDescriptor) -
-          offsetof(amdhsa::kernel_descriptor_t, kernel_code_entry_byte_offset) -
-          sizeof(KernelDescriptor.kernel_code_entry_byte_offset)));
+  for (uint8_t Res : KernelDescriptor.reserved1)
+    Streamer.emitInt8(Res);
+  Streamer.emitInt32(KernelDescriptor.compute_pgm_rsrc3);
+  Streamer.emitInt32(KernelDescriptor.compute_pgm_rsrc1);
+  Streamer.emitInt32(KernelDescriptor.compute_pgm_rsrc2);
+  Streamer.emitInt16(KernelDescriptor.kernel_code_properties);
+  for (uint8_t Res : KernelDescriptor.reserved2)
+    Streamer.emitInt8(Res);
 }

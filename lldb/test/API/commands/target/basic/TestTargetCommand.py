@@ -350,6 +350,7 @@ class targetCommandTestCase(TestBase):
         self.expect("target create a b", error=True,
                     substrs=["'target create' takes exactly one executable path"])
 
+    @skipIfWindowsAndNonEnglish
     @no_debug_info_test
     def test_target_create_nonexistent_core_file(self):
         self.expect("target create -c doesntexist", error=True,
@@ -365,6 +366,7 @@ class targetCommandTestCase(TestBase):
         self.expect("target create -c '" + tf.name + "'", error=True,
                     substrs=["Cannot open '", "': Permission denied"])
 
+    @skipIfWindowsAndNonEnglish
     @no_debug_info_test
     def test_target_create_nonexistent_sym_file(self):
         self.expect("target create -s doesntexist doesntexisteither", error=True,

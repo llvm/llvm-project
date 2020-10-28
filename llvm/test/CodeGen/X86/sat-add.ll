@@ -395,10 +395,9 @@ define <16 x i8> @unsigned_sat_constant_v16i8_using_cmp_notval(<16 x i8> %x) {
 define <8 x i16> @unsigned_sat_constant_v8i16_using_min(<8 x i16> %x) {
 ; SSE2-LABEL: unsigned_sat_constant_v8i16_using_min:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm1, %xmm0
-; SSE2-NEXT:    pminsw {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    psubusw {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    psubw %xmm1, %xmm0
 ; SSE2-NEXT:    paddw {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -677,12 +676,11 @@ define <16 x i8> @unsigned_sat_variable_v16i8_using_cmp_notval(<16 x i8> %x, <16
 define <8 x i16> @unsigned_sat_variable_v8i16_using_min(<8 x i16> %x, <8 x i16> %y) {
 ; SSE2-LABEL: unsigned_sat_variable_v8i16_using_min:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE2-NEXT:    pxor %xmm2, %xmm0
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [32767,32767,32767,32767,32767,32767,32767,32767]
-; SSE2-NEXT:    pxor %xmm1, %xmm3
-; SSE2-NEXT:    pminsw %xmm3, %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE2-NEXT:    pxor %xmm1, %xmm2
+; SSE2-NEXT:    movdqa %xmm0, %xmm3
+; SSE2-NEXT:    psubusw %xmm2, %xmm3
+; SSE2-NEXT:    psubw %xmm3, %xmm0
 ; SSE2-NEXT:    paddw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;

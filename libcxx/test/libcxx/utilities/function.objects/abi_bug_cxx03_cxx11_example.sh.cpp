@@ -38,8 +38,9 @@ Func CreateFunc() {
   return f;
 }
 #else
-int main() {
+int main(int, char**) {
   Func f = CreateFunc();
   f(42);
+  return 0;
 }
 #endif

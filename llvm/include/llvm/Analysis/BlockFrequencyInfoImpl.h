@@ -1449,8 +1449,8 @@ void BlockFrequencyInfoImpl<BT>::verifyMatch(
       BlockNode Node = Entry.second;
       if (OtherValidNodes.count(BB)) {
         BlockNode OtherNode = OtherValidNodes[BB];
-        auto Freq = Freqs[Node.Index];
-        auto OtherFreq = Other.Freqs[OtherNode.Index];
+        const auto &Freq = Freqs[Node.Index];
+        const auto &OtherFreq = Other.Freqs[OtherNode.Index];
         if (Freq.Integer != OtherFreq.Integer) {
           Match = false;
           dbgs() << "Freq mismatch: " << bfi_detail::getBlockName(BB) << " "

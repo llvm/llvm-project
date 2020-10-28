@@ -22,16 +22,12 @@ void func() {
   _Fract fract = accum; // ok
   _Accum *accum_ptr;
 
-  accum = f;       // expected-error{{conversion between fixed point and 'float' is not yet supported}}
-  accum = d;       // expected-error{{conversion between fixed point and 'double' is not yet supported}}
   accum = dc;      // expected-error{{conversion between fixed point and '_Complex double' is not yet supported}}
   accum = ic;      // expected-error{{conversion between fixed point and '_Complex int' is not yet supported}}
   accum = s;       // expected-error{{assigning to '_Accum' from incompatible type 'struct S'}}
   accum = ptr;     // expected-error{{assigning to '_Accum' from incompatible type 'int *'}}
   accum_ptr = ptr; // expected-warning{{incompatible pointer types assigning to '_Accum *' from 'int *'}}
 
-  f = accum;       // expected-error{{conversion between fixed point and 'float' is not yet supported}}
-  d = accum;       // expected-error{{conversion between fixed point and 'double' is not yet supported}}
   dc = accum;      // expected-error{{conversion between fixed point and '_Complex double' is not yet supported}}
   ic = accum;      // expected-error{{conversion between fixed point and '_Complex int' is not yet supported}}
   s = accum;       // expected-error{{assigning to 'struct S' from incompatible type '_Accum'}}

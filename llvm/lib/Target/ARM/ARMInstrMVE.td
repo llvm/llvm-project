@@ -944,6 +944,14 @@ multiclass MVE_VMINMAXV_ty<string iname, bit isMin, string intrBaseName> {
   defm u32: MVE_VMINMAXV_p<iname, 1, isMin, MVE_v4u32, intrBaseName>;
 }
 
+def SDTVecReduceR : SDTypeProfile<1, 2, [   // Reduction of an integer and vector into an integer
+  SDTCisInt<0>, SDTCisInt<1>, SDTCisVec<2>
+]>;
+def ARMVMINVu       : SDNode<"ARMISD::VMINVu", SDTVecReduceR>;
+def ARMVMINVs       : SDNode<"ARMISD::VMINVs", SDTVecReduceR>;
+def ARMVMAXVu       : SDNode<"ARMISD::VMAXVu", SDTVecReduceR>;
+def ARMVMAXVs       : SDNode<"ARMISD::VMAXVs", SDTVecReduceR>;
+
 defm MVE_VMINV : MVE_VMINMAXV_ty<"vminv", 1, "int_arm_mve_minv">;
 defm MVE_VMAXV : MVE_VMINMAXV_ty<"vmaxv", 0, "int_arm_mve_maxv">;
 
@@ -973,6 +981,32 @@ let Predicates = [HasMVEInt] in {
             (i32 (MVE_VMINVu16 (t2MOVi16 (i32 65535)), $src))>;
   def : Pat<(i32 (vecreduce_umin (v4i32 MQPR:$src))),
             (i32 (MVE_VMINVu32 (t2MOVi (i32 4294967295)), $src))>;
+
+  def : Pat<(i32 (ARMVMINVu (i32 rGPR:$x), (v16i8 MQPR:$src))),
+            (i32 (MVE_VMINVu8 $x, $src))>;
+  def : Pat<(i32 (ARMVMINVu (i32 rGPR:$x), (v8i16 MQPR:$src))),
+            (i32 (MVE_VMINVu16 $x, $src))>;
+  def : Pat<(i32 (ARMVMINVu (i32 rGPR:$x), (v4i32 MQPR:$src))),
+            (i32 (MVE_VMINVu32 $x, $src))>;
+  def : Pat<(i32 (ARMVMINVs (i32 rGPR:$x), (v16i8 MQPR:$src))),
+            (i32 (MVE_VMINVs8 $x, $src))>;
+  def : Pat<(i32 (ARMVMINVs (i32 rGPR:$x), (v8i16 MQPR:$src))),
+            (i32 (MVE_VMINVs16 $x, $src))>;
+  def : Pat<(i32 (ARMVMINVs (i32 rGPR:$x), (v4i32 MQPR:$src))),
+            (i32 (MVE_VMINVs32 $x, $src))>;
+
+  def : Pat<(i32 (ARMVMAXVu (i32 rGPR:$x), (v16i8 MQPR:$src))),
+            (i32 (MVE_VMAXVu8 $x, $src))>;
+  def : Pat<(i32 (ARMVMAXVu (i32 rGPR:$x), (v8i16 MQPR:$src))),
+            (i32 (MVE_VMAXVu16 $x, $src))>;
+  def : Pat<(i32 (ARMVMAXVu (i32 rGPR:$x), (v4i32 MQPR:$src))),
+            (i32 (MVE_VMAXVu32 $x, $src))>;
+  def : Pat<(i32 (ARMVMAXVs (i32 rGPR:$x), (v16i8 MQPR:$src))),
+            (i32 (MVE_VMAXVs8 $x, $src))>;
+  def : Pat<(i32 (ARMVMAXVs (i32 rGPR:$x), (v8i16 MQPR:$src))),
+            (i32 (MVE_VMAXVs16 $x, $src))>;
+  def : Pat<(i32 (ARMVMAXVs (i32 rGPR:$x), (v4i32 MQPR:$src))),
+            (i32 (MVE_VMAXVs32 $x, $src))>;
 
 }
 
@@ -2440,7 +2474,7 @@ multiclass MVE_VABSNEG_int_m<string iname, bit negate, bit saturate,
 
   let Predicates = [HasMVEInt] in {
     // VQABS and VQNEG have more difficult isel patterns defined elsewhere
-    if !eq(saturate, 0) then {
+    if !not(saturate) then {
       def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$v))),
                 (VTI.Vec (Inst $v))>;
     }
@@ -2999,7 +3033,7 @@ multiclass MVE_VSHRN_patterns<MVE_shift_imm_partial inst,
   defvar outparams = (inst (OutVTI.Vec MQPR:$QdSrc), (InVTI.Vec MQPR:$Qm),
                            (imm:$imm));
 
-  def : Pat<(OutVTI.Vec !setop(inparams, int_arm_mve_vshrn)),
+  def : Pat<(OutVTI.Vec !setdagop(inparams, int_arm_mve_vshrn)),
             (OutVTI.Vec outparams)>;
   def : Pat<(OutVTI.Vec !con(inparams, (int_arm_mve_vshrn_predicated
                                            (InVTI.Pred VCCR:$pred)))),
@@ -3201,7 +3235,7 @@ multiclass MVE_VSxI_patterns<MVE_VSxI_imm inst, string name,
   defvar unpred_int = !cast<Intrinsic>("int_arm_mve_" # name);
   defvar pred_int = !cast<Intrinsic>("int_arm_mve_" # name # "_predicated");
 
-  def : Pat<(VTI.Vec !setop(inparams, unpred_int)),
+  def : Pat<(VTI.Vec !setdagop(inparams, unpred_int)),
             (VTI.Vec outparams)>;
   def : Pat<(VTI.Vec !con(inparams, (pred_int (VTI.Pred VCCR:$pred)))),
             (VTI.Vec !con(outparams, (? ARMVCCThen, VCCR:$pred)))>;
@@ -4743,7 +4777,7 @@ class MVE_VxMOVxN<string iname, string suffix, bit bit_28, bit bit_17,
   let Inst{16} = 0b1;
   let Inst{12} = T;
   let Inst{8} = 0b0;
-  let Inst{7} = !if(!eq(bit_17, 0), 1, 0);
+  let Inst{7} = !not(bit_17);
   let Inst{0} = 0b1;
   let validForTailPredication = 1;
   let retainsPreviousHalfElement = 1;
@@ -4774,7 +4808,7 @@ multiclass MVE_VMOVN_p<Instruction Inst, bit top,
                                (VTI.Vec MQPR:$Qm), (i32 top))),
             (VTI.Vec (Inst (VTI.Vec MQPR:$Qd_src), (VTI.Vec MQPR:$Qm)))>;
 
-  if !eq(top, 0) then {
+  if !not(top) then {
     // If we see MVEvmovn(a,ARMvrev(b),1), that wants to overwrite the odd
     // lanes of a with the odd lanes of b. In other words, the lanes we're
     // _keeping_ from a are the even ones. So we can flip it round and say that

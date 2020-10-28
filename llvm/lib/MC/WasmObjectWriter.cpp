@@ -194,8 +194,8 @@ class WasmObjectWriter : public MCObjectWriter {
   // Maps function symbols to the table element index space. Used
   // for TABLE_INDEX relocation types (i.e. address taken functions).
   DenseMap<const MCSymbolWasm *, uint32_t> TableIndices;
-  // Maps function/global symbols to the function/global/event/section index
-  // space.
+  // Maps function/global/table symbols to the
+  // function/global/table/event/section index space.
   DenseMap<const MCSymbolWasm *, uint32_t> WasmIndices;
   DenseMap<const MCSymbolWasm *, uint32_t> GOTIndices;
   // Maps data symbols to the Wasm segment and offset/size with the segment.
@@ -218,6 +218,9 @@ class WasmObjectWriter : public MCObjectWriter {
   SmallVector<WasmDataSegment, 4> DataSegments;
   unsigned NumFunctionImports = 0;
   unsigned NumGlobalImports = 0;
+  // NumTableImports is initialized to 1 to account for the hardcoded import of
+  // __indirect_function_table
+  unsigned NumTableImports = 1;
   unsigned NumEventImports = 0;
   uint32_t SectionCount = 0;
 
@@ -267,6 +270,7 @@ private:
     SectionFunctions.clear();
     NumFunctionImports = 0;
     NumGlobalImports = 0;
+    NumTableImports = 1;
     MCObjectWriter::reset();
   }
 
@@ -316,6 +320,7 @@ private:
   uint32_t writeDataSection(const MCAsmLayout &Layout);
   void writeEventSection(ArrayRef<wasm::WasmEventType> Events);
   void writeGlobalSection(ArrayRef<wasm::WasmGlobal> Globals);
+  void writeTableSection(ArrayRef<wasm::WasmTable> Tables);
   void writeRelocSection(uint32_t SectionIndex, StringRef Name,
                          std::vector<WasmRelocationEntry> &Relocations);
   void writeLinkingMetaDataSection(
@@ -554,6 +559,7 @@ WasmObjectWriter::getProvisionalValue(const WasmRelocationEntry &RelEntry,
   case wasm::R_WASM_GLOBAL_INDEX_LEB:
   case wasm::R_WASM_GLOBAL_INDEX_I32:
   case wasm::R_WASM_EVENT_INDEX_LEB:
+  case wasm::R_WASM_TABLE_NUMBER_LEB:
     // Provisional value is function/global/event Wasm index
     assert(WasmIndices.count(RelEntry.Symbol) > 0 && "symbol not found in wasm index space");
     return WasmIndices[RelEntry.Symbol];
@@ -658,6 +664,7 @@ void WasmObjectWriter::applyRelocations(
     case wasm::R_WASM_GLOBAL_INDEX_LEB:
     case wasm::R_WASM_MEMORY_ADDR_LEB:
     case wasm::R_WASM_EVENT_INDEX_LEB:
+    case wasm::R_WASM_TABLE_NUMBER_LEB:
       writePatchableLEB<5>(Stream, Value, Offset);
       break;
     case wasm::R_WASM_MEMORY_ADDR_LEB64:
@@ -824,6 +831,24 @@ void WasmObjectWriter::writeGlobalSection(ArrayRef<wasm::WasmGlobal> Globals) {
     W->OS << char(wasm::WASM_OPCODE_END);
   }
 
+  endSection(Section);
+}
+
+void WasmObjectWriter::writeTableSection(ArrayRef<wasm::WasmTable> Tables) {
+  if (Tables.empty())
+    return;
+
+  SectionBookkeeping Section;
+  startSection(Section, wasm::WASM_SEC_TABLE);
+
+  encodeULEB128(Tables.size(), W->OS);
+  for (const wasm::WasmTable &Table : Tables) {
+    encodeULEB128(Table.ElemType, W->OS);
+    encodeULEB128(Table.Limits.Flags, W->OS);
+    encodeULEB128(Table.Limits.Initial, W->OS);
+    if (Table.Limits.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
+      encodeULEB128(Table.Limits.Maximum, W->OS);
+  }
   endSection(Section);
 }
 
@@ -1003,6 +1028,7 @@ void WasmObjectWriter::writeLinkingMetaDataSection(
       case wasm::WASM_SYMBOL_TYPE_FUNCTION:
       case wasm::WASM_SYMBOL_TYPE_GLOBAL:
       case wasm::WASM_SYMBOL_TYPE_EVENT:
+      case wasm::WASM_SYMBOL_TYPE_TABLE:
         encodeULEB128(Sym.ElementIndex, W->OS);
         if ((Sym.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0 ||
             (Sym.Flags & wasm::WASM_SYMBOL_EXPLICIT_NAME) != 0)
@@ -1292,6 +1318,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
   SmallVector<wasm::WasmExport, 4> Exports;
   SmallVector<wasm::WasmEventType, 1> Events;
   SmallVector<wasm::WasmGlobal, 1> Globals;
+  SmallVector<wasm::WasmTable, 1> Tables;
   SmallVector<wasm::WasmSymbolInfo, 4> SymbolInfos;
   SmallVector<std::pair<uint16_t, uint32_t>, 2> InitFuncs;
   std::map<StringRef, std::vector<WasmComdatEntry>> Comdats;
@@ -1494,6 +1521,20 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         LLVM_DEBUG(dbgs() << "  -> global index: "
                           << WasmIndices.find(&WS)->second << "\n");
       }
+    } else if (WS.isTable()) {
+      if (WS.isDefined()) {
+        assert(WasmIndices.count(&WS) == 0);
+        wasm::WasmTable Table;
+        Table.ElemType = static_cast<uint8_t>(WS.getTableType());
+        Table.Index = NumTableImports + Tables.size();
+        // FIXME: Work on custom limits is ongoing
+        Table.Limits = {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
+
+        WasmIndices[&WS] = Table.Index;
+        Tables.push_back(Table);
+      }
+      LLVM_DEBUG(dbgs() << " -> table index: " << WasmIndices.find(&WS)->second
+                        << "\n");
     } else if (WS.isEvent()) {
       // C++ exception symbol (__cpp_exception)
       unsigned Index;
@@ -1715,10 +1756,10 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     writeTypeSection(Signatures);
     writeImportSection(Imports, DataSize, TableElems.size());
     writeFunctionSection(Functions);
-    // Skip the "table" section; we import the table instead.
     // Skip the "memory" section; we import the memory instead.
     writeEventSection(Events);
     writeGlobalSection(Globals);
+    writeTableSection(Tables);
     writeExportSection(Exports);
     writeElemSection(TableElems);
     writeDataCountSection();

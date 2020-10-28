@@ -60,7 +60,7 @@ Optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
 }
 
 FmtContext::PHKind FmtContext::getPlaceHolderKind(StringRef str) {
-  return llvm::StringSwitch<FmtContext::PHKind>(str)
+  return StringSwitch<FmtContext::PHKind>(str)
       .Case("_builder", FmtContext::PHKind::Builder)
       .Case("_op", FmtContext::PHKind::Op)
       .Case("_self", FmtContext::PHKind::Self)

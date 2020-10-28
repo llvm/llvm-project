@@ -16,7 +16,7 @@
 # as of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
 if (NOT ${hsa-runtime64_FOUND})
-  libomptarget_say("Not building HSA plugin: hsa-runtime64 not found")
+  libomptarget_say("Not building AMDGPU plugin: hsa-runtime64 not found")
   return()
 endif()
 
@@ -26,9 +26,15 @@ if(NOT LIBOMPTARGET_DEP_LIBELF_FOUND)
 endif()
 
 if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE_SYSTEM_NAME MATCHES "Linux")
-  libomptarget_say("Not building amdgpu plugin: only support amdgpu in Linux x86_64, ppc64le, or aarch64 hosts.")
+  libomptarget_say("Not building AMDGPU plugin: only support AMDGPU in Linux x86_64, ppc64le, or aarch64 hosts.")
   return()
 endif()
+
+if (NOT LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR)
+  libomptarget_say("Not building AMDGPU plugin: Missing definition for LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR")
+  return()
+endif()
+
 libomptarget_say("Building amdgpu offloading plugin")
 
 ################################################################################
@@ -44,6 +50,7 @@ endif()
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/impl
+  ${LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR}
 )
 
 add_library(omptarget.rtl.amdgpu SHARED
@@ -54,7 +61,7 @@ add_library(omptarget.rtl.amdgpu SHARED
       impl/system.cpp
       impl/utils.cpp
       impl/msgpack.cpp
-      src/rtl.cpp 
+      src/rtl.cpp
       )
 
 # Install plugin under the lib destination folder.

@@ -64,7 +64,7 @@ tools = [
 
 # The following tools are optional
 tools.extend([
-    ToolSubst('%PYTHON', config.python_executable),
+    ToolSubst('%PYTHON', config.python_executable, unresolved='ignore'),
     ToolSubst('toy-ch1', unresolved='ignore'),
     ToolSubst('toy-ch2', unresolved='ignore'),
     ToolSubst('toy-ch3', unresolved='ignore'),
@@ -74,6 +74,7 @@ tools.extend([
     ToolSubst('%linalg_test_lib_dir', config.linalg_test_lib_dir, unresolved='ignore'),
     ToolSubst('%mlir_runner_utils_dir', config.mlir_runner_utils_dir, unresolved='ignore'),
     ToolSubst('%rocm_wrapper_library_dir', config.rocm_wrapper_library_dir, unresolved='ignore'),
+    ToolSubst('%spirv_wrapper_library_dir', config.spirv_wrapper_library_dir, unresolved='ignore'),
     ToolSubst('%vulkan_wrapper_library_dir', config.vulkan_wrapper_library_dir, unresolved='ignore'),
 ])
 
@@ -99,6 +100,11 @@ if config.target_triple:
 # by copying/linking sources to build.
 if config.enable_bindings_python:
     llvm_config.with_environment('PYTHONPATH', [
-        os.path.join(config.mlir_src_root, "lib", "Bindings", "Python"),
-        os.path.join(config.mlir_obj_root, "lib", "Bindings", "Python"),
+        # TODO: Don't reference the llvm_obj_root here: the invariant is that
+        # the python/ must be at the same level of the lib directory
+        # where libMLIR.so is installed. This is presently not optimal from a
+        # project separation perspective and a discussion on how to better
+        # segment MLIR libraries needs to happen. See also
+        # lib/Bindings/Python/CMakeLists.txt for where this is set up.
+        os.path.join(config.llvm_obj_root, 'python'),
     ], append_path=True)

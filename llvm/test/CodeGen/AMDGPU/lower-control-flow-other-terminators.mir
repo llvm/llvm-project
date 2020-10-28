@@ -100,11 +100,12 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK:   liveins: $vgpr0, $vgpr1, $sgpr4_sgpr5
-  ; CHECK:   [[S_OR_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_SAVEEXEC_B64 %2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK:   [[S_OR_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_OR_SAVEEXEC_B64 %2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK:   [[COPY:%[0-9]+]]:vgpr_32 = COPY killed $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY $sgpr4_sgpr5
   ; CHECK:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 0, [[COPY]], implicit $exec
-  ; CHECK:   $exec = S_XOR_B64_term $exec, [[S_OR_SAVEEXEC_B64_]], implicit-def $scc
+  ; CHECK:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 $exec, [[S_OR_SAVEEXEC_B64_]], implicit-def $scc
+  ; CHECK:   $exec = S_XOR_B64_term $exec, [[S_AND_B64_]], implicit-def $scc
   ; CHECK:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term killed [[COPY1]], implicit $exec
   ; CHECK:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; CHECK:   S_BRANCH %bb.2
@@ -120,7 +121,7 @@ body:             |
     %0:vgpr_32 = COPY killed $vgpr0
     %1:sreg_64_xexec = COPY $sgpr4_sgpr5
     %2:sreg_64_xexec = V_CMP_EQ_U32_e64 0, %0, implicit $exec
-    %3:sreg_64_xexec = SI_ELSE %2, %bb.1, 0, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    %3:sreg_64_xexec = SI_ELSE %2, %bb.1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     %4:sreg_64_xexec = S_MOV_B64_term killed %1, implicit $exec
     S_BRANCH %bb.2
 

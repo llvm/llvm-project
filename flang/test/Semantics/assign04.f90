@@ -94,7 +94,7 @@ subroutine s6(x)
   x(:3) = [1, 2, 3]
   !ERROR: Assumed-size array 'x' must have explicit final subscript upper bound value
   x(:) = [1, 2, 3]
-  !ERROR: Left-hand side of assignment may not be a whole assumed-size array
+  !ERROR: Whole assumed-size array 'x' may not appear here without subscripts
   x = [1, 2, 3]
 end
 
@@ -106,7 +106,7 @@ contains
   subroutine s7(x)
     type(t) :: x(*)
     x(:3)%i = [1, 2, 3]
-    !ERROR: Left-hand side of assignment may not be a whole assumed-size array
+    !ERROR: Whole assumed-size array 'x' may not appear here without subscripts
     x%i = [1, 2, 3]
   end
 end

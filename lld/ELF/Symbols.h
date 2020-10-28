@@ -567,7 +567,9 @@ void reportBackrefs();
 
 // A mapping from a symbol to an InputFile referencing it backward. Used by
 // --warn-backrefs.
-extern llvm::DenseMap<const Symbol *, const InputFile *> backwardReferences;
+extern llvm::DenseMap<const Symbol *,
+                      std::pair<const InputFile *, const InputFile *>>
+    backwardReferences;
 
 } // namespace elf
 } // namespace lld

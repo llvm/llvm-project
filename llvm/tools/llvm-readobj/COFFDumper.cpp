@@ -67,6 +67,8 @@ struct LoadConfigTables {
   uint32_t GuardFlags = 0;
   uint64_t GuardFidTableVA = 0;
   uint64_t GuardFidTableCount = 0;
+  uint64_t GuardIatTableVA = 0;
+  uint64_t GuardIatTableCount = 0;
   uint64_t GuardLJmpTableVA = 0;
   uint64_t GuardLJmpTableCount = 0;
 };
@@ -89,6 +91,7 @@ public:
   void printCOFFDirectives() override;
   void printCOFFBaseReloc() override;
   void printCOFFDebugDirectory() override;
+  void printCOFFTLSDirectory() override;
   void printCOFFResources() override;
   void printCOFFLoadConfig() override;
   void printCodeViewDebugInfo() override;
@@ -116,6 +119,8 @@ private:
   void printBaseOfDataField(const pe32plus_header *Hdr);
   template <typename T>
   void printCOFFLoadConfig(const T *Conf, LoadConfigTables &Tables);
+  template <typename IntTy>
+  void printCOFFTLSDirectory(const coff_tls_directory<IntTy> *TlsTable);
   typedef void (*PrintExtraCB)(raw_ostream &, const uint8_t *);
   void printRVATable(uint64_t TableVA, uint64_t Count, uint64_t EntrySize,
                      PrintExtraCB PrintExtra = 0);
@@ -804,6 +809,11 @@ void COFFDumper::printCOFFLoadConfig() {
     }
   }
 
+  if (Tables.GuardIatTableVA) {
+    ListScope LS(W, "GuardIatTable");
+    printRVATable(Tables.GuardIatTableVA, Tables.GuardIatTableCount, 4);
+  }
+
   if (Tables.GuardLJmpTableVA) {
     ListScope LS(W, "GuardLJmpTable");
     printRVATable(Tables.GuardLJmpTableVA, Tables.GuardLJmpTableCount, 4);
@@ -887,6 +897,9 @@ void COFFDumper::printCOFFLoadConfig(const T *Conf, LoadConfigTables &Tables) {
   W.printHex("GuardRFVerifyStackPointerFunctionPointer",
              Conf->GuardRFVerifyStackPointerFunctionPointer);
   W.printHex("HotPatchTableOffset", Conf->HotPatchTableOffset);
+
+  Tables.GuardIatTableVA = Conf->GuardAddressTakenIatEntryTable;
+  Tables.GuardIatTableCount = Conf->GuardAddressTakenIatEntryCount;
 
   Tables.GuardLJmpTableVA = Conf->GuardLongJumpTargetTable;
   Tables.GuardLJmpTableCount = Conf->GuardLongJumpTargetCount;
@@ -2017,4 +2030,28 @@ void llvm::dumpCodeViewMergedTypes(ScopedPrinter &Writer,
       reportError(std::move(Err), "<?>");
     Writer.flush();
   }
+}
+
+void COFFDumper::printCOFFTLSDirectory() {
+  if (Obj->is64())
+    printCOFFTLSDirectory(Obj->getTLSDirectory64());
+  else
+    printCOFFTLSDirectory(Obj->getTLSDirectory32());
+}
+
+template <typename IntTy>
+void COFFDumper::printCOFFTLSDirectory(
+    const coff_tls_directory<IntTy> *TlsTable) {
+  DictScope D(W, "TLSDirectory");
+  if (!TlsTable)
+    return;
+
+  W.printHex("StartAddressOfRawData", TlsTable->StartAddressOfRawData);
+  W.printHex("EndAddressOfRawData", TlsTable->EndAddressOfRawData);
+  W.printHex("AddressOfIndex", TlsTable->AddressOfIndex);
+  W.printHex("AddressOfCallBacks", TlsTable->AddressOfCallBacks);
+  W.printHex("SizeOfZeroFill", TlsTable->SizeOfZeroFill);
+  W.printFlags("Characteristics", TlsTable->Characteristics,
+               makeArrayRef(ImageSectionCharacteristics),
+               COFF::SectionCharacteristics(COFF::IMAGE_SCN_ALIGN_MASK));
 }

@@ -210,6 +210,28 @@ AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) {
   return TTI::PSK_Software;
 }
 
+unsigned
+AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                      TTI::TargetCostKind CostKind) {
+  auto *RetTy = ICA.getReturnType();
+  switch (ICA.getID()) {
+  case Intrinsic::smin:
+  case Intrinsic::umin:
+  case Intrinsic::smax:
+  case Intrinsic::umax: {
+    static const auto ValidMinMaxTys = {MVT::v8i8,  MVT::v16i8, MVT::v4i16,
+                                        MVT::v8i16, MVT::v2i32, MVT::v4i32};
+    auto LT = TLI->getTypeLegalizationCost(DL, RetTy);
+    if (any_of(ValidMinMaxTys, [&LT](MVT M) { return M == LT.second; }))
+      return LT.first;
+    break;
+  }
+  default:
+    break;
+  }
+  return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+}
+
 bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
                                            ArrayRef<const Value *> Args) {
 
@@ -455,7 +477,7 @@ int AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
 
   // The destination type should be larger than the element type. If not, get
   // the default cost for the extend.
-  if (DstVT.getSizeInBits() < SrcVT.getSizeInBits())
+  if (DstVT.getFixedSizeInBits() < SrcVT.getFixedSizeInBits())
     return Cost + getCastInstrCost(Opcode, Dst, Src, TTI::CastContextHint::None,
                                    CostKind);
 

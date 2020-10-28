@@ -1570,11 +1570,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (SemaBuiltinSetjmp(TheCall))
       return ExprError();
     break;
-  case Builtin::BI_setjmp:
-  case Builtin::BI_setjmpex:
-    if (checkArgCount(*this, TheCall, 1))
-      return true;
-    break;
   case Builtin::BI__builtin_classify_type:
     if (checkArgCount(*this, TheCall, 1)) return true;
     TheCall->setType(Context.IntTy);
@@ -1819,8 +1814,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     SmallVector<PartialDiagnosticAt, 8> Notes;
     Expr::EvalResult Eval;
     Eval.Diag = &Notes;
-    if ((!ProbArg->EvaluateAsConstantExpr(Eval, Expr::EvaluateForCodeGen,
-                                          Context)) ||
+    if ((!ProbArg->EvaluateAsConstantExpr(Eval, Context)) ||
         !Eval.Val.isFloat()) {
       Diag(ProbArg->getBeginLoc(), diag::err_probability_not_constant_float)
           << ProbArg->getSourceRange();
@@ -3300,8 +3294,7 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   ArgExpr = Arg.get();
   Expr::EvalResult ArgResult1;
   // Check that sync scope is a constant literal
-  if (!ArgExpr->EvaluateAsConstantExpr(ArgResult1, Expr::EvaluateForCodeGen,
-                                       Context))
+  if (!ArgExpr->EvaluateAsConstantExpr(ArgResult1, Context))
     return Diag(ArgExpr->getExprLoc(), diag::err_expr_not_string_literal)
            << ArgExpr->getType();
 

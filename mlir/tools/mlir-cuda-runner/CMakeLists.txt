@@ -2,6 +2,10 @@ set(LLVM_OPTIONAL_SOURCES
   cuda-runtime-wrappers.cpp
   mlir-cuda-runner.cpp
   )
+set(LLVM_LINK_COMPONENTS
+  Core
+  Support
+)
 
 if(MLIR_CUDA_RUNNER_ENABLED)
   if (NOT ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD))
@@ -41,8 +45,6 @@ if(MLIR_CUDA_RUNNER_ENABLED)
   set(LIBS
     ${dialect_libs}
     ${conversion_libs}
-    LLVMCore
-    LLVMSupport
     MLIRJitRunner
     MLIRAnalysis
     MLIREDSC

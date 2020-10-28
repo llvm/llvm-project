@@ -21,6 +21,7 @@ using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Not;
+using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
 namespace clang {
@@ -345,14 +346,15 @@ TEST_F(BackgroundIndexTest, ShardStorageTest) {
     EXPECT_THAT(Ref.second,
                 UnorderedElementsAre(FileURI("unittest:///root/A.cc")));
 
-  // The BaseOf relationship between A_CC and B_CC is stored in the file
-  // containing the definition of the subject (A_CC)
+  // The BaseOf relationship between A_CC and B_CC is stored in both the file
+  // containing the definition of the subject (A_CC) and the file containing
+  // the definition of the object (B_CC).
   SymbolID A = findSymbol(*ShardHeader->Symbols, "A_CC").ID;
   SymbolID B = findSymbol(*ShardSource->Symbols, "B_CC").ID;
   EXPECT_THAT(*ShardHeader->Relations,
               UnorderedElementsAre(Relation{A, RelationKind::BaseOf, B}));
-  // (and not in the file containing the definition of the object (B_CC)).
-  EXPECT_EQ(ShardSource->Relations->size(), 0u);
+  EXPECT_THAT(*ShardSource->Relations,
+              UnorderedElementsAre(Relation{A, RelationKind::BaseOf, B}));
 }
 
 TEST_F(BackgroundIndexTest, DirectIncludesTest) {
@@ -870,6 +872,19 @@ TEST(BackgroundQueueTest, Progress) {
   EXPECT_EQ(S.Enqueued, 2000u);
   EXPECT_EQ(S.Completed, 2000u);
   EXPECT_EQ(S.LastIdle, 2000u);
+}
+
+TEST(BackgroundIndex, Profile) {
+  MockFS FS;
+  MockCompilationDatabase CDB;
+  BackgroundIndex Idx(FS, CDB, [](llvm::StringRef) { return nullptr; },
+                      /*Opts=*/{});
+
+  llvm::BumpPtrAllocator Alloc;
+  MemoryTree MT(&Alloc);
+  Idx.profile(MT);
+  ASSERT_THAT(MT.children(),
+              UnorderedElementsAre(Pair("slabs", _), Pair("index", _)));
 }
 
 } // namespace clangd

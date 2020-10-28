@@ -634,24 +634,69 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::f64, &VE::I64RegClass);
   addRegisterClass(MVT::f128, &VE::F128RegClass);
 
+  addRegisterClass(MVT::v2i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v4i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v8i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v16i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v32i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v64i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v128i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v256i32, &VE::V64RegClass);
+  addRegisterClass(MVT::v512i32, &VE::V64RegClass);
+
+  addRegisterClass(MVT::v2i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v4i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v8i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v16i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v32i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v64i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v128i64, &VE::V64RegClass);
+  addRegisterClass(MVT::v256i64, &VE::V64RegClass);
+
+  addRegisterClass(MVT::v2f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v4f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v8f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v16f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v32f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v64f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v128f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v256f32, &VE::V64RegClass);
+  addRegisterClass(MVT::v512f32, &VE::V64RegClass);
+
+  addRegisterClass(MVT::v2f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v4f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v8f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v16f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v32f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v64f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v128f64, &VE::V64RegClass);
+  addRegisterClass(MVT::v256f64, &VE::V64RegClass);
+
+  addRegisterClass(MVT::v256i1, &VE::VMRegClass);
+  addRegisterClass(MVT::v512i1, &VE::VM512RegClass);
+
   /// Load & Store {
-  for (MVT FPVT : MVT::fp_valuetypes()) {
-    for (MVT OtherFPVT : MVT::fp_valuetypes()) {
-      // Turn FP extload into load/fpextend
-      setLoadExtAction(ISD::EXTLOAD, FPVT, OtherFPVT, Expand);
 
-      // Turn FP truncstore into trunc + store.
-      setTruncStoreAction(FPVT, OtherFPVT, Expand);
-    }
-  }
-
-  // VE doesn't have i1 sign extending load
+  // VE doesn't have i1 sign extending load.
   for (MVT VT : MVT::integer_valuetypes()) {
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
     setTruncStoreAction(VT, MVT::i1, Expand);
   }
+
+  // VE doesn't have floating point extload/truncstore, so expand them.
+  for (MVT FPVT : MVT::fp_valuetypes()) {
+    for (MVT OtherFPVT : MVT::fp_valuetypes()) {
+      setLoadExtAction(ISD::EXTLOAD, FPVT, OtherFPVT, Expand);
+      setTruncStoreAction(FPVT, OtherFPVT, Expand);
+    }
+  }
+
+  // VE doesn't have fp128 load/store, so expand them in custom lower.
+  setOperationAction(ISD::LOAD, MVT::f128, Custom);
+  setOperationAction(ISD::STORE, MVT::f128, Custom);
+
   /// } Load & Store
 
   // Custom legalize address nodes into LO/HI parts.
@@ -675,6 +720,18 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
   /// } Stack
 
+  /// Branch {
+
+  // VE doesn't have BRCOND
+  setOperationAction(ISD::BRCOND, MVT::Other, Expand);
+
+  // BRIND and BR_JT are not implemented yet.
+  // FIXME: Implement both for the scalar perforamnce.
+  setOperationAction(ISD::BRIND, MVT::Other, Expand);
+  setOperationAction(ISD::BR_JT, MVT::Other, Expand);
+
+  /// } Branch
+
   /// Int Ops {
   for (MVT IntVT : {MVT::i32, MVT::i64}) {
     // VE has no REM or DIVREM operations.
@@ -682,6 +739,11 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SREM, IntVT, Expand);
     setOperationAction(ISD::SDIVREM, IntVT, Expand);
     setOperationAction(ISD::UDIVREM, IntVT, Expand);
+
+    // VE has no SHL_PARTS/SRA_PARTS/SRL_PARTS operations.
+    setOperationAction(ISD::SHL_PARTS, IntVT, Expand);
+    setOperationAction(ISD::SRA_PARTS, IntVT, Expand);
+    setOperationAction(ISD::SRL_PARTS, IntVT, Expand);
 
     // VE has no MULHU/S or U/SMUL_LOHI operations.
     // TODO: Use MPD instruction to implement SMUL_LOHI for i32 type.
@@ -731,19 +793,47 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   /// } Conversion
 
   /// Floating-point Ops {
+  /// Note: Floating-point operations are fneg, fadd, fsub, fmul, fdiv, frem,
+  ///       and fcmp.
+
+  // VE doesn't have following floating point operations.
+  for (MVT VT : MVT::fp_valuetypes()) {
+    setOperationAction(ISD::FNEG, VT, Expand);
+    setOperationAction(ISD::FREM, VT, Expand);
+  }
 
   // VE doesn't have fdiv of f128.
   setOperationAction(ISD::FDIV, MVT::f128, Expand);
-
-  // VE doesn't have load/store of f128, so use custom-lowering.
-  setOperationAction(ISD::LOAD, MVT::f128, Custom);
-  setOperationAction(ISD::STORE, MVT::f128, Custom);
 
   for (MVT FPVT : {MVT::f32, MVT::f64}) {
     // f32 and f64 uses ConstantFP.  f128 uses ConstantPool.
     setOperationAction(ISD::ConstantFP, FPVT, Legal);
   }
   /// } Floating-point Ops
+
+  /// Floating-point math functions {
+
+  // VE doesn't have following floating point math functions.
+  for (MVT VT : MVT::fp_valuetypes()) {
+    setOperationAction(ISD::FABS, VT, Expand);
+    setOperationAction(ISD::FCOPYSIGN, VT, Expand);
+    setOperationAction(ISD::FCOS, VT, Expand);
+    setOperationAction(ISD::FSIN, VT, Expand);
+    setOperationAction(ISD::FSQRT, VT, Expand);
+  }
+
+  /// } Floating-point math functions
+
+  /// Atomic instructions {
+
+  setMaxAtomicSizeInBitsSupported(64);
+  setMinCmpXchgSizeInBits(32);
+  setSupportsUnalignedAtomics(false);
+
+  // Use custom inserter for ATOMIC_FENCE.
+  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
+
+  /// } Atomic isntructions
 
   setStackPointerRegisterToSaveRestore(VE::SX11);
 
@@ -771,6 +861,7 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
     TARGET_NODE_CASE(GETFUNPLT)
     TARGET_NODE_CASE(GETSTACKTOP)
     TARGET_NODE_CASE(GETTLSADDR)
+    TARGET_NODE_CASE(MEMBARRIER)
     TARGET_NODE_CASE(CALL)
     TARGET_NODE_CASE(RET_FLAG)
     TARGET_NODE_CASE(GLOBAL_BASE_REG)
@@ -872,6 +963,93 @@ SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
 }
 
 /// Custom Lower {
+
+// The mappings for emitLeading/TrailingFence for VE is designed by following
+// http://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html
+Instruction *VETargetLowering::emitLeadingFence(IRBuilder<> &Builder,
+                                                Instruction *Inst,
+                                                AtomicOrdering Ord) const {
+  switch (Ord) {
+  case AtomicOrdering::NotAtomic:
+  case AtomicOrdering::Unordered:
+    llvm_unreachable("Invalid fence: unordered/non-atomic");
+  case AtomicOrdering::Monotonic:
+  case AtomicOrdering::Acquire:
+    return nullptr; // Nothing to do
+  case AtomicOrdering::Release:
+  case AtomicOrdering::AcquireRelease:
+    return Builder.CreateFence(AtomicOrdering::Release);
+  case AtomicOrdering::SequentiallyConsistent:
+    if (!Inst->hasAtomicStore())
+      return nullptr; // Nothing to do
+    return Builder.CreateFence(AtomicOrdering::SequentiallyConsistent);
+  }
+  llvm_unreachable("Unknown fence ordering in emitLeadingFence");
+}
+
+Instruction *VETargetLowering::emitTrailingFence(IRBuilder<> &Builder,
+                                                 Instruction *Inst,
+                                                 AtomicOrdering Ord) const {
+  switch (Ord) {
+  case AtomicOrdering::NotAtomic:
+  case AtomicOrdering::Unordered:
+    llvm_unreachable("Invalid fence: unordered/not-atomic");
+  case AtomicOrdering::Monotonic:
+  case AtomicOrdering::Release:
+    return nullptr; // Nothing to do
+  case AtomicOrdering::Acquire:
+  case AtomicOrdering::AcquireRelease:
+    return Builder.CreateFence(AtomicOrdering::Acquire);
+  case AtomicOrdering::SequentiallyConsistent:
+    return Builder.CreateFence(AtomicOrdering::SequentiallyConsistent);
+  }
+  llvm_unreachable("Unknown fence ordering in emitTrailingFence");
+}
+
+SDValue VETargetLowering::lowerATOMIC_FENCE(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  AtomicOrdering FenceOrdering = static_cast<AtomicOrdering>(
+      cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue());
+  SyncScope::ID FenceSSID = static_cast<SyncScope::ID>(
+      cast<ConstantSDNode>(Op.getOperand(2))->getZExtValue());
+
+  // VE uses Release consistency, so need a fence instruction if it is a
+  // cross-thread fence.
+  if (FenceSSID == SyncScope::System) {
+    switch (FenceOrdering) {
+    case AtomicOrdering::NotAtomic:
+    case AtomicOrdering::Unordered:
+    case AtomicOrdering::Monotonic:
+      // No need to generate fencem instruction here.
+      break;
+    case AtomicOrdering::Acquire:
+      // Generate "fencem 2" as acquire fence.
+      return SDValue(DAG.getMachineNode(VE::FENCEM, DL, MVT::Other,
+                                        DAG.getTargetConstant(2, DL, MVT::i32),
+                                        Op.getOperand(0)),
+                     0);
+    case AtomicOrdering::Release:
+      // Generate "fencem 1" as release fence.
+      return SDValue(DAG.getMachineNode(VE::FENCEM, DL, MVT::Other,
+                                        DAG.getTargetConstant(1, DL, MVT::i32),
+                                        Op.getOperand(0)),
+                     0);
+    case AtomicOrdering::AcquireRelease:
+    case AtomicOrdering::SequentiallyConsistent:
+      // Generate "fencem 3" as acq_rel and seq_cst fence.
+      // FIXME: "fencem 3" doesn't wait for for PCIe deveices accesses,
+      //        so  seq_cst may require more instruction for them.
+      return SDValue(DAG.getMachineNode(VE::FENCEM, DL, MVT::Other,
+                                        DAG.getTargetConstant(3, DL, MVT::i32),
+                                        Op.getOperand(0)),
+                     0);
+    }
+  }
+
+  // MEMBARRIER is a compiler barrier; it codegens to a no-op.
+  return DAG.getNode(VEISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
+}
 
 SDValue VETargetLowering::lowerGlobalAddress(SDValue Op,
                                              SelectionDAG &DAG) const {
@@ -1191,6 +1369,8 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default:
     llvm_unreachable("Should not custom lower this!");
+  case ISD::ATOMIC_FENCE:
+    return lowerATOMIC_FENCE(Op, DAG);
   case ISD::BlockAddress:
     return lowerBlockAddress(Op, DAG);
   case ISD::ConstantPool:

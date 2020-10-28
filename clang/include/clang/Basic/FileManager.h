@@ -71,6 +71,65 @@ private:
   const llvm::StringMapEntry<llvm::ErrorOr<DirectoryEntry &>> *Entry;
 };
 
+class FileEntry;
+
+/// A reference to a \c FileEntry that includes the name of the file as it was
+/// accessed by the FileManager's client.
+class FileEntryRef {
+public:
+  const StringRef getName() const { return Entry->first(); }
+  const FileEntry &getFileEntry() const {
+    return *Entry->second->V.get<FileEntry *>();
+  }
+
+  inline bool isValid() const;
+  inline off_t getSize() const;
+  inline unsigned getUID() const;
+  inline const llvm::sys::fs::UniqueID &getUniqueID() const;
+  inline time_t getModificationTime() const;
+
+  friend bool operator==(const FileEntryRef &LHS, const FileEntryRef &RHS) {
+    return LHS.Entry == RHS.Entry;
+  }
+  friend bool operator!=(const FileEntryRef &LHS, const FileEntryRef &RHS) {
+    return !(LHS == RHS);
+  }
+
+  struct MapValue;
+
+  /// Type used in the StringMap.
+  using MapEntry = llvm::StringMapEntry<llvm::ErrorOr<MapValue>>;
+
+  /// Type stored in the StringMap.
+  struct MapValue {
+    /// The pointer at another MapEntry is used when the FileManager should
+    /// silently forward from one name to another, which occurs in Redirecting
+    /// VFSs that use external names. In that case, the \c FileEntryRef
+    /// returned by the \c FileManager will have the external name, and not the
+    /// name that was used to lookup the file.
+    // The second type is really a `const MapEntry *`, but that confuses gcc5.3.
+    // Once that's no longer supported, change this back.
+    llvm::PointerUnion<FileEntry *, const void *> V;
+
+    MapValue() = delete;
+    MapValue(FileEntry &FE) : V(&FE) {}
+    MapValue(MapEntry &ME) : V(&ME) {}
+  };
+
+private:
+  friend class FileManager;
+
+  FileEntryRef() = delete;
+  explicit FileEntryRef(const MapEntry &Entry)
+      : Entry(&Entry) {
+    assert(Entry.second && "Expected payload");
+    assert(Entry.second->V && "Expected non-null");
+    assert(Entry.second->V.is<FileEntry *>() && "Expected FileEntry");
+  }
+
+  const MapEntry *Entry;
+};
+
 /// Cached information about one file (either on disk
 /// or in the virtual file system).
 ///
@@ -79,7 +138,6 @@ private:
 class FileEntry {
   friend class FileManager;
 
-  StringRef Name;             // Name of the file.
   std::string RealPathName;   // Real path to the file; could be empty.
   off_t Size;                 // File size in bytes.
   time_t ModTime;             // Modification time of file.
@@ -92,6 +150,14 @@ class FileEntry {
   /// The open file, if it is owned by the \p FileEntry.
   mutable std::unique_ptr<llvm::vfs::File> File;
 
+  // First access name for this FileEntry.
+  //
+  // This is Optional only to allow delayed construction (FileEntryRef has no
+  // default constructor). It should always have a value in practice.
+  //
+  // TODO: remote this once everyone that needs a name uses FileEntryRef.
+  Optional<FileEntryRef> LastRef;
+
 public:
   FileEntry()
       : UniqueID(0, 0), IsNamedPipe(false), IsValid(false)
@@ -100,7 +166,9 @@ public:
   FileEntry(const FileEntry &) = delete;
   FileEntry &operator=(const FileEntry &) = delete;
 
-  StringRef getName() const { return Name; }
+  StringRef getName() const { return LastRef->getName(); }
+  FileEntryRef getLastRef() const { return *LastRef; }
+
   StringRef tryGetRealPathName() const { return RealPathName; }
   bool isValid() const { return IsValid; }
   off_t getSize() const { return Size; }
@@ -126,41 +194,19 @@ public:
   bool isOpenForTests() const { return File != nullptr; }
 };
 
-/// A reference to a \c FileEntry that includes the name of the file as it was
-/// accessed by the FileManager's client.
-class FileEntryRef {
-public:
-  FileEntryRef() = delete;
-  FileEntryRef(StringRef Name, const FileEntry &Entry)
-      : Name(Name), Entry(&Entry) {}
+bool FileEntryRef::isValid() const { return getFileEntry().isValid(); }
 
-  const StringRef getName() const { return Name; }
+off_t FileEntryRef::getSize() const { return getFileEntry().getSize(); }
 
-  bool isValid() const { return Entry->isValid(); }
+unsigned FileEntryRef::getUID() const { return getFileEntry().getUID(); }
 
-  const FileEntry &getFileEntry() const { return *Entry; }
+const llvm::sys::fs::UniqueID &FileEntryRef::getUniqueID() const {
+  return getFileEntry().getUniqueID();
+}
 
-  off_t getSize() const { return Entry->getSize(); }
-
-  unsigned getUID() const { return Entry->getUID(); }
-
-  const llvm::sys::fs::UniqueID &getUniqueID() const {
-    return Entry->getUniqueID();
-  }
-
-  time_t getModificationTime() const { return Entry->getModificationTime(); }
-
-  friend bool operator==(const FileEntryRef &LHS, const FileEntryRef &RHS) {
-    return LHS.Entry == RHS.Entry && LHS.Name == RHS.Name;
-  }
-  friend bool operator!=(const FileEntryRef &LHS, const FileEntryRef &RHS) {
-    return !(LHS == RHS);
-  }
-
-private:
-  StringRef Name;
-  const FileEntry *Entry;
-};
+time_t FileEntryRef::getModificationTime() const {
+  return getFileEntry().getModificationTime();
+}
 
 /// Implements support for file system lookup, file system caching,
 /// and directory search management.
@@ -203,25 +249,20 @@ class FileManager : public RefCountedBase<FileManager> {
   llvm::StringMap<llvm::ErrorOr<DirectoryEntry &>, llvm::BumpPtrAllocator>
   SeenDirEntries;
 
-  /// A reference to the file entry that is associated with a particular
-  /// filename, or a reference to another filename that should be looked up
-  /// instead of the accessed filename.
-  ///
-  /// The reference to another filename is specifically useful for Redirecting
-  /// VFSs that use external names. In that case, the \c FileEntryRef returned
-  /// by the \c FileManager will have the external name, and not the name that
-  /// was used to lookup the file.
-  using SeenFileEntryOrRedirect =
-      llvm::PointerUnion<FileEntry *, const StringRef *>;
-
   /// A cache that maps paths to file entries (either real or
   /// virtual) we have looked up, or an error that occurred when we looked up
   /// the file.
   ///
   /// \see SeenDirEntries
-  llvm::StringMap<llvm::ErrorOr<SeenFileEntryOrRedirect>,
-                  llvm::BumpPtrAllocator>
+  llvm::StringMap<llvm::ErrorOr<FileEntryRef::MapValue>, llvm::BumpPtrAllocator>
       SeenFileEntries;
+
+  /// A mirror of SeenFileEntries to give fake answers for getBypassFile().
+  ///
+  /// Don't bother hooking up a BumpPtrAllocator. This should be rarely used,
+  /// and only on error paths.
+  std::unique_ptr<llvm::StringMap<llvm::ErrorOr<FileEntryRef::MapValue>>>
+      SeenBypassFileEntries;
 
   /// The canonical names of files and directories .
   llvm::DenseMap<const void *, llvm::StringRef> CanonicalNames;

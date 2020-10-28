@@ -8,9 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=0
-
-// Can't test the system lib because this test enables debug mode
-// UNSUPPORTED: with_system_cxx_lib=macosx
+// UNSUPPORTED: libcxx-no-debug-mode
 
 // Test that the default debug handler aborts the program.
 

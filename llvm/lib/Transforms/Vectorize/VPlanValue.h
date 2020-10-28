@@ -43,6 +43,7 @@ class VPValue {
   friend class VPBasicBlock;
   friend class VPInterleavedAccessInfo;
   friend class VPSlotTracker;
+  friend class VPRecipeBase;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -77,7 +78,7 @@ public:
   /// are actually instantiated. Values of this enumeration are kept in the
   /// SubclassID field of the VPValue objects. They are used for concrete
   /// type identification.
-  enum { VPValueSC, VPInstructionSC };
+  enum { VPValueSC, VPInstructionSC, VPMemoryInstructionSC };
 
   VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV) {}
   VPValue(const VPValue &) = delete;
@@ -96,6 +97,22 @@ public:
 
   unsigned getNumUsers() const { return Users.size(); }
   void addUser(VPUser &User) { Users.push_back(&User); }
+
+  /// Remove a single \p User from the list of users.
+  void removeUser(VPUser &User) {
+    bool Found = false;
+    // The same user can be added multiple times, e.g. because the same VPValue
+    // is used twice by the same VPUser. Remove a single one.
+    erase_if(Users, [&User, &Found](VPUser *Other) {
+      if (Found)
+        return false;
+      if (Other == &User) {
+        Found = true;
+        return true;
+      }
+      return false;
+    });
+  }
 
   typedef SmallVectorImpl<VPUser *>::iterator user_iterator;
   typedef SmallVectorImpl<VPUser *>::const_iterator const_user_iterator;
@@ -152,6 +169,10 @@ public:
 
   VPUser(const VPUser &) = delete;
   VPUser &operator=(const VPUser &) = delete;
+  virtual ~VPUser() {
+    for (VPValue *Op : operands())
+      Op->removeUser(*this);
+  }
 
   void addOperand(VPValue *Operand) {
     Operands.push_back(Operand);
@@ -164,7 +185,11 @@ public:
     return Operands[N];
   }
 
-  void setOperand(unsigned I, VPValue *New) { Operands[I] = New; }
+  void setOperand(unsigned I, VPValue *New) {
+    Operands[I]->removeUser(*this);
+    Operands[I] = New;
+    New->addUser(*this);
+  }
 
   typedef SmallVectorImpl<VPValue *>::iterator operand_iterator;
   typedef SmallVectorImpl<VPValue *>::const_iterator const_operand_iterator;

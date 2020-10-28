@@ -158,7 +158,7 @@ body:             |
   ; CHECK:   liveins: $x0
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
   ; CHECK:   [[LDRXui:%[0-9]+]]:gpr64common = LDRXui [[COPY]], 0 :: (load 8)
-  ; CHECK:   $xzr = SUBSXri [[LDRXui]], 42, 0, implicit-def $nzcv
+  ; CHECK:   [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[LDRXui]], 42, 0, implicit-def $nzcv
   ; CHECK:   Bcc 0, %bb.2, implicit $nzcv
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
@@ -184,35 +184,4 @@ body:             |
   bb.3:
     RET_ReallyLR
 
-...
----
-name:            update_pred_minus_one
-legalized:       true
-regBankSelected: true
 
-body:             |
-  ; The G_ICMP here will be optimized into a slt against 0.
-  ; The branch should inherit this change, so we should have Bcc 11 rather than
-  ; Bcc 13.
-
-  ; CHECK-LABEL: name: update_pred_minus_one
-  ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr32sp = COPY $w0
-  ; CHECK:   $wzr = SUBSWri [[COPY]], 0, 0, implicit-def $nzcv
-  ; CHECK:   Bcc 11, %bb.1, implicit $nzcv
-  ; CHECK:   B %bb.0
-  ; CHECK: bb.1:
-  bb.0:
-    liveins: $w0
-    successors: %bb.0, %bb.1
-
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = G_CONSTANT i32 -1
-    %2:gpr(s32) = G_ICMP intpred(sle), %0, %1
-    %3:gpr(s1) = G_TRUNC %2(s32)
-    G_BRCOND %3(s1), %bb.1
-    G_BR %bb.0
-
-  bb.1:
-...

@@ -314,7 +314,7 @@ InstCombinerImpl::foldCmpLoadFromIndexedGlobal(GetElementPtrInst *GEP,
   if (!GEP->isInBounds()) {
     Type *IntPtrTy = DL.getIntPtrType(GEP->getType());
     unsigned PtrSize = IntPtrTy->getIntegerBitWidth();
-    if (Idx->getType()->getPrimitiveSizeInBits() > PtrSize)
+    if (Idx->getType()->getPrimitiveSizeInBits().getFixedSize() > PtrSize)
       Idx = Builder.CreateTrunc(Idx, IntPtrTy);
   }
 
@@ -487,7 +487,8 @@ static Value *evaluateGEPOffsetExpression(User *GEP, InstCombinerImpl &IC,
     // Cast to intptrty in case a truncation occurs.  If an extension is needed,
     // we don't need to bother extending: the extension won't affect where the
     // computation crosses zero.
-    if (VariableIdx->getType()->getPrimitiveSizeInBits() > IntPtrWidth) {
+    if (VariableIdx->getType()->getPrimitiveSizeInBits().getFixedSize() >
+        IntPtrWidth) {
       VariableIdx = IC.Builder.CreateTrunc(VariableIdx, IntPtrTy);
     }
     return VariableIdx;
@@ -552,7 +553,7 @@ static bool canRewriteGEPAsOffset(Value *Start, Value *Base,
         return false;
 
       if (isa<IntToPtrInst>(V) || isa<PtrToIntInst>(V)) {
-        auto *CI = dyn_cast<CastInst>(V);
+        auto *CI = cast<CastInst>(V);
         if (!CI->isNoopCast(DL))
           return false;
 
@@ -942,8 +943,8 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
         Type *LHSIndexTy = LOffset->getType();
         Type *RHSIndexTy = ROffset->getType();
         if (LHSIndexTy != RHSIndexTy) {
-          if (LHSIndexTy->getPrimitiveSizeInBits() <
-              RHSIndexTy->getPrimitiveSizeInBits()) {
+          if (LHSIndexTy->getPrimitiveSizeInBits().getFixedSize() <
+              RHSIndexTy->getPrimitiveSizeInBits().getFixedSize()) {
             ROffset = Builder.CreateTrunc(ROffset, LHSIndexTy);
           } else
             LOffset = Builder.CreateTrunc(LOffset, RHSIndexTy);
@@ -3171,10 +3172,23 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
 
   Type *Ty = II->getType();
   unsigned BitWidth = C.getBitWidth();
+  ICmpInst::Predicate Pred = Cmp.getPredicate();
   switch (II->getIntrinsicID()) {
+  case Intrinsic::ctpop: {
+    // (ctpop X > BitWidth - 1) --> X == -1
+    Value *X = II->getArgOperand(0);
+    if (C == BitWidth - 1 && Pred == ICmpInst::ICMP_UGT)
+      return CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, X,
+                             ConstantInt::getAllOnesValue(Ty));
+    // (ctpop X < BitWidth) --> X != -1
+    if (C == BitWidth && Pred == ICmpInst::ICMP_ULT)
+      return CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_NE, X,
+                             ConstantInt::getAllOnesValue(Ty));
+    break;
+  }
   case Intrinsic::ctlz: {
     // ctlz(0bXXXXXXXX) > 3 -> 0bXXXXXXXX < 0b00010000
-    if (Cmp.getPredicate() == ICmpInst::ICMP_UGT && C.ult(BitWidth)) {
+    if (Pred == ICmpInst::ICMP_UGT && C.ult(BitWidth)) {
       unsigned Num = C.getLimitedValue();
       APInt Limit = APInt::getOneBitSet(BitWidth, BitWidth - Num - 1);
       return CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_ULT,
@@ -3182,8 +3196,7 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
     }
 
     // ctlz(0bXXXXXXXX) < 3 -> 0bXXXXXXXX > 0b00011111
-    if (Cmp.getPredicate() == ICmpInst::ICMP_ULT &&
-        C.uge(1) && C.ule(BitWidth)) {
+    if (Pred == ICmpInst::ICMP_ULT && C.uge(1) && C.ule(BitWidth)) {
       unsigned Num = C.getLimitedValue();
       APInt Limit = APInt::getLowBitsSet(BitWidth, BitWidth - Num);
       return CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_UGT,
@@ -3197,7 +3210,7 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
       return nullptr;
 
     // cttz(0bXXXXXXXX) > 3 -> 0bXXXXXXXX & 0b00001111 == 0
-    if (Cmp.getPredicate() == ICmpInst::ICMP_UGT && C.ult(BitWidth)) {
+    if (Pred == ICmpInst::ICMP_UGT && C.ult(BitWidth)) {
       APInt Mask = APInt::getLowBitsSet(BitWidth, C.getLimitedValue() + 1);
       return CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ,
                              Builder.CreateAnd(II->getArgOperand(0), Mask),
@@ -3205,8 +3218,7 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
     }
 
     // cttz(0bXXXXXXXX) < 3 -> 0bXXXXXXXX & 0b00000111 != 0
-    if (Cmp.getPredicate() == ICmpInst::ICMP_ULT &&
-        C.uge(1) && C.ule(BitWidth)) {
+    if (Pred == ICmpInst::ICMP_ULT && C.uge(1) && C.ule(BitWidth)) {
       APInt Mask = APInt::getLowBitsSet(BitWidth, C.getLimitedValue());
       return CmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_NE,
                              Builder.CreateAnd(II->getArgOperand(0), Mask),
@@ -6089,7 +6101,7 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
 /// Optimize fabs(X) compared with zero.
 static Instruction *foldFabsWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   Value *X;
-  if (!match(I.getOperand(0), m_Intrinsic<Intrinsic::fabs>(m_Value(X))) ||
+  if (!match(I.getOperand(0), m_FAbs(m_Value(X))) ||
       !match(I.getOperand(1), m_PosZeroFP()))
     return nullptr;
 

@@ -29,6 +29,11 @@ include(LibomptargetUtils)
 # Get dependencies for the different components of the project.
 include(LibomptargetGetDependencies)
 
+# LLVM source tree is required at build time for libomptarget
+if (NOT LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR)
+  message(FATAL_ERROR "Missing definition for LIBOMPTARGET_LLVM_MAIN_INCLUDE_DIR")
+endif()
+
 # This is a list of all the targets that are supported/tested right now.
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} aarch64-unknown-linux-gnu")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} powerpc64le-ibm-linux-gnu")

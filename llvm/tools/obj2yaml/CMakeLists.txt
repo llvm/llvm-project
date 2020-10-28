@@ -7,7 +7,8 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_llvm_tool(obj2yaml
+add_llvm_utility(obj2yaml
+  archive2yaml.cpp
   obj2yaml.cpp
   coff2yaml.cpp
   dwarf2yaml.cpp

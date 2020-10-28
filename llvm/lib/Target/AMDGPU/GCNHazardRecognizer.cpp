@@ -138,67 +138,71 @@ static unsigned getHWReg(const SIInstrInfo *TII, const MachineInstr &RegInstr) {
 ScheduleHazardRecognizer::HazardType
 GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   MachineInstr *MI = SU->getInstr();
+  // If we are not in "HazardRecognizerMode" and therefore not being run from
+  // the scheduler, track possible stalls from hazards but don't insert noops.
+  auto HazardType = IsHazardRecognizerMode ? NoopHazard : Hazard;
+
   if (MI->isBundle())
    return NoHazard;
 
   if (SIInstrInfo::isSMRD(*MI) && checkSMRDHazards(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   // FIXME: Should flat be considered vmem?
   if ((SIInstrInfo::isVMEM(*MI) ||
        SIInstrInfo::isFLAT(*MI))
       && checkVMEMHazards(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   if (ST.hasNSAtoVMEMBug() && checkNSAtoVMEMHazard(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   if (checkFPAtomicToDenormModeHazard(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   if (ST.hasNoDataDepHazard())
     return NoHazard;
 
   if (SIInstrInfo::isVALU(*MI) && checkVALUHazards(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   if (SIInstrInfo::isDPP(*MI) && checkDPPHazards(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   if (isDivFMas(MI->getOpcode()) && checkDivFMasHazards(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   if (isRWLane(MI->getOpcode()) && checkRWLaneHazards(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   if (isSGetReg(MI->getOpcode()) && checkGetRegHazards(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   if (isSSetReg(MI->getOpcode()) && checkSetRegHazards(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   if (isRFE(MI->getOpcode()) && checkRFEHazards(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   if (ST.hasReadM0MovRelInterpHazard() &&
       (TII.isVINTRP(*MI) || isSMovRel(MI->getOpcode())) &&
       checkReadM0Hazards(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   if (ST.hasReadM0SendMsgHazard() && isSendMsgTraceDataOrGDS(TII, *MI) &&
       checkReadM0Hazards(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   if (SIInstrInfo::isMAI(*MI) && checkMAIHazards(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   if ((SIInstrInfo::isVMEM(*MI) ||
        SIInstrInfo::isFLAT(*MI) ||
        SIInstrInfo::isDS(*MI)) && checkMAILdStHazards(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   if (MI->isInlineAsm() && checkInlineAsmHazards(MI) > 0)
-    return NoopHazard;
+    return HazardType;
 
   return NoHazard;
 }
@@ -312,15 +316,19 @@ void GCNHazardRecognizer::EmitNoop() {
 void GCNHazardRecognizer::AdvanceCycle() {
   // When the scheduler detects a stall, it will call AdvanceCycle() without
   // emitting any instructions.
-  if (!CurrCycleInstr)
+  if (!CurrCycleInstr) {
+    EmittedInstrs.push_front(nullptr);
     return;
+  }
 
   // Do not track non-instructions which do not affect the wait states.
   // If included, these instructions can lead to buffer overflow such that
   // detectable hazards are missed.
   if (CurrCycleInstr->isImplicitDef() || CurrCycleInstr->isDebugInstr() ||
-      CurrCycleInstr->isKill())
+      CurrCycleInstr->isKill()) {
+    CurrCycleInstr = nullptr;
     return;
+  }
 
   if (CurrCycleInstr->isBundle()) {
     processBundle();
@@ -1368,7 +1376,7 @@ int GCNHazardRecognizer::checkMAILdStHazards(MachineInstr *MI) {
     Register Reg = Op.getReg();
 
     const int AccVgprReadLdStWaitStates = 2;
-    const int VALUWriteAccVgprReadLdStDepVALUWaitStates = 1;
+    const int VALUWriteAccVgprRdWrLdStDepVALUWaitStates = 1;
     const int MaxWaitStates = 2;
 
     int WaitStatesNeededForUse = AccVgprReadLdStWaitStates -
@@ -1378,8 +1386,9 @@ int GCNHazardRecognizer::checkMAILdStHazards(MachineInstr *MI) {
     if (WaitStatesNeeded == MaxWaitStates)
       return WaitStatesNeeded; // Early exit.
 
-    auto IsVALUAccVgprReadCheckFn = [Reg, this] (MachineInstr *MI) {
-      if (MI->getOpcode() != AMDGPU::V_ACCVGPR_READ_B32)
+    auto IsVALUAccVgprRdWrCheckFn = [Reg, this](MachineInstr *MI) {
+      if (MI->getOpcode() != AMDGPU::V_ACCVGPR_READ_B32 &&
+          MI->getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32)
         return false;
       auto IsVALUFn = [] (MachineInstr *MI) {
         return SIInstrInfo::isVALU(*MI) && !SIInstrInfo::isMAI(*MI);
@@ -1388,8 +1397,8 @@ int GCNHazardRecognizer::checkMAILdStHazards(MachineInstr *MI) {
              std::numeric_limits<int>::max();
     };
 
-    WaitStatesNeededForUse = VALUWriteAccVgprReadLdStDepVALUWaitStates -
-      getWaitStatesSince(IsVALUAccVgprReadCheckFn, MaxWaitStates);
+    WaitStatesNeededForUse = VALUWriteAccVgprRdWrLdStDepVALUWaitStates -
+      getWaitStatesSince(IsVALUAccVgprRdWrCheckFn, MaxWaitStates);
     WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
   }
 

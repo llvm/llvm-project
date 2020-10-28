@@ -62,7 +62,7 @@ class EditedSource {
     }
   };
 
-  llvm::DenseMap<unsigned, SmallVector<MacroArgUse, 2>> ExpansionToArgMap;
+  llvm::DenseMap<SourceLocation, SmallVector<MacroArgUse, 2>> ExpansionToArgMap;
   SmallVector<std::pair<SourceLocation, MacroArgUse>, 2>
     CurrCommitMacroArgExps;
 

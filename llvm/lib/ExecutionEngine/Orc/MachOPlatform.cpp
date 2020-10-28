@@ -159,7 +159,9 @@ Error MachOPlatform::setupJITDylib(JITDylib &JD) {
   return ObjLinkingLayer.add(JD, std::move(ObjBuffer));
 }
 
-Error MachOPlatform::notifyAdding(JITDylib &JD, const MaterializationUnit &MU) {
+Error MachOPlatform::notifyAdding(ResourceTracker &RT,
+                                  const MaterializationUnit &MU) {
+  auto &JD = RT.getJITDylib();
   const auto &InitSym = MU.getInitializerSymbol();
   if (!InitSym)
     return Error::success();
@@ -173,7 +175,7 @@ Error MachOPlatform::notifyAdding(JITDylib &JD, const MaterializationUnit &MU) {
   return Error::success();
 }
 
-Error MachOPlatform::notifyRemoving(JITDylib &JD, VModuleKey K) {
+Error MachOPlatform::notifyRemoving(ResourceTracker &RT) {
   llvm_unreachable("Not supported yet");
 }
 
@@ -185,7 +187,7 @@ MachOPlatform::getInitializerSequence(JITDylib &JD) {
            << JD.getName() << "\n";
   });
 
-  std::vector<std::shared_ptr<JITDylib>> DFSLinkOrder;
+  std::vector<JITDylibSP> DFSLinkOrder;
 
   while (true) {
 
@@ -247,7 +249,7 @@ MachOPlatform::getInitializerSequence(JITDylib &JD) {
 
 Expected<MachOPlatform::DeinitializerSequence>
 MachOPlatform::getDeinitializerSequence(JITDylib &JD) {
-  std::vector<std::shared_ptr<JITDylib>> DFSLinkOrder = JD.getDFSLinkOrder();
+  std::vector<JITDylibSP> DFSLinkOrder = JD.getDFSLinkOrder();
 
   DeinitializerSequence FullDeinitSeq;
   {

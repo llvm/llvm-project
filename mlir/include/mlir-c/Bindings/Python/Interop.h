@@ -86,6 +86,16 @@ inline PyObject *mlirPythonModuleToCapsule(MlirModule module) {
   return PyCapsule_New(ptr, MLIR_PYTHON_CAPSULE_MODULE, NULL);
 }
 
+/** Extracts an MlirModule from a capsule as produced from
+ * mlirPythonModuleToCapsule. If the capsule is not of the right type, then
+ * a null module is returned (as checked via mlirModuleIsNull). In such a
+ * case, the Python APIs will have already set an error. */
+inline MlirModule mlirPythonCapsuleToModule(PyObject *capsule) {
+  void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_MODULE);
+  MlirModule module = {ptr};
+  return module;
+}
+
 #ifdef __cplusplus
 }
 #endif

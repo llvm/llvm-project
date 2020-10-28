@@ -106,20 +106,19 @@ private:
     unsigned LocColumn =
         SM.getSpellingColumnNumber(Loc, /*Invalid=*/nullptr) - 1;
     FileID FID = SM.getFileID(Loc);
-    const llvm::MemoryBuffer *Buffer =
-        SM.getBuffer(FID, Loc, /*Invalid=*/nullptr);
+    llvm::MemoryBufferRef Buffer = SM.getBufferOrFake(FID, Loc);
 
-    assert(LocData >= Buffer->getBufferStart() &&
-           LocData < Buffer->getBufferEnd());
+    assert(LocData >= Buffer.getBufferStart() &&
+           LocData < Buffer.getBufferEnd());
 
     const char *LineBegin = LocData - LocColumn;
 
-    assert(LineBegin >= Buffer->getBufferStart());
+    assert(LineBegin >= Buffer.getBufferStart());
 
     const char *LineEnd = nullptr;
 
     for (LineEnd = LineBegin; *LineEnd != '\n' && *LineEnd != '\r' &&
-                              LineEnd < Buffer->getBufferEnd();
+                              LineEnd < Buffer.getBufferEnd();
          ++LineEnd)
       ;
 

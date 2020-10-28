@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=tahiti -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN
-# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI
+# RUN: llc -march=amdgcn -mcpu=tahiti -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,SICI
+# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,SICI
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,VI
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass post-RA-hazard-rec  %s -o - | FileCheck %s -check-prefixes=GCN,CIVI,VI,GFX9
 
@@ -24,26 +24,17 @@
 
 # GCN-LABEL: bb.1:
 # GCN: V_CMP_EQ_I32
-# GCN: S_NOP
-# GCN: S_NOP
-# GCN: S_NOP
-# GCN: S_NOP
+# GCN: S_NOP 3
 # GCN: V_DIV_FMAS_F32
 
 # GCN-LABEL: bb.2:
 # GCN: V_CMP_EQ_I32
-# GCN: S_NOP
-# GCN: S_NOP
-# GCN: S_NOP
-# GCN: S_NOP
+# GCN: S_NOP 3
 # GCN: V_DIV_FMAS_F32
 
 # GCN-LABEL: bb.3:
 # GCN: V_DIV_SCALE_F32
-# GCN: S_NOP
-# GCN: S_NOP
-# GCN: S_NOP
-# GCN: S_NOP
+# GCN: S_NOP 3
 # GCN: V_DIV_FMAS_F32
 name: div_fmas
 
@@ -76,14 +67,12 @@ body: |
 
 # GCN-LABEL: bb.0:
 # GCN: S_SETREG
-# GCN: S_NOP 0
-# GCN: S_NOP 0
+# GCN: S_NOP 1
 # GCN: S_GETREG
 
 # GCN-LABEL: bb.1:
 # GCN: S_SETREG_IMM32
-# GCN: S_NOP 0
-# GCN: S_NOP 0
+# GCN: S_NOP 1
 # GCN: S_GETREG
 
 # GCN-LABEL: bb.2:
@@ -126,15 +115,15 @@ body: |
 
 # GCN-LABEL: bb.0:
 # GCN: S_SETREG
-# GCN: S_NOP 0
-# VI: S_NOP 0
-# GCN-NEXT: S_SETREG
+# SICI: S_NOP 0
+# VI: S_NOP 1
+# GCN: S_SETREG
 
 # GCN-LABEL: bb.1:
 # GCN: S_SETREG
-# GCN: S_NOP 0
-# VI: S_NOP 0
-# GCN-NEXT: S_SETREG
+# SICI: S_NOP 0
+# VI: S_NOP 1
+# GCN: S_SETREG
 
 # GCN-LABEL: bb.2:
 # GCN: S_SETREG
@@ -239,34 +228,22 @@ body: |
 
 # GCN-LABEL: bb.0:
 # GCN: V_ADD_CO_U32
-# GCN: S_NOP
-# GCN: S_NOP
-# GCN: S_NOP
-# GCN: S_NOP
+# GCN: S_NOP 3
 # GCN: V_READLANE_B32
 
 # GCN-LABEL: bb.1:
 # GCN: V_ADD_CO_U32
-# GCN: S_NOP
-# GCN: S_NOP
-# GCN: S_NOP
-# GCN: S_NOP
+# GCN: S_NOP 3
 # GCN: V_WRITELANE_B32
 
 # GCN-LABEL: bb.2:
 # GCN: V_ADD_CO_U32
-# GCN: S_NOP
-# GCN: S_NOP
-# GCN: S_NOP
-# GCN: S_NOP
+# GCN: S_NOP 3
 # GCN: V_READLANE_B32
 
 # GCN-LABEL: bb.3:
 # GCN: V_ADD_CO_U32
-# GCN: S_NOP
-# GCN: S_NOP
-# GCN: S_NOP
-# GCN: S_NOP
+# GCN: S_NOP 3
 # GCN: V_WRITELANE_B32
 
 name: readwrite_lane
@@ -429,17 +406,12 @@ body: |
 
 # VI-LABEL: bb.0:
 # VI: V_MOV_B32_e32
-# VI-NEXT: S_NOP 0
-# VI-NEXT: S_NOP 0
+# VI-NEXT: S_NOP 1
 # VI-NEXT: V_MOV_B32_dpp
 
 # VI-LABEL: bb.1:
 # VI: V_CMPX_EQ_I32_e32
-# VI-NEXT: S_NOP 0
-# VI-NEXT: S_NOP 0
-# VI-NEXT: S_NOP 0
-# VI-NEXT: S_NOP 0
-# VI-NEXT: S_NOP 0
+# VI-NEXT: S_NOP 4
 # VI-NEXT: V_MOV_B32_dpp
 
 name: dpp

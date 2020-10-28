@@ -2,6 +2,11 @@ template("gen_decision_forest") {
   model = invoker.model
   filename = invoker.filename
   cpp_class = invoker.cpp_class
+  if (defined(invoker.deps)) {
+    extra_deps = invoker.deps
+  } else {
+    extra_deps = []
+  }
 
   action("${target_name}Cpp") {
     script = "//clang-tools-extra/clangd/quality/CompletionModelCodegen.py"
@@ -34,7 +39,7 @@ template("gen_decision_forest") {
       "//llvm/utils/gn/build:clang_code",
       ":${target_name}Config",
     ]
-    deps = [ ":${target_name}Cpp" ]
+    deps = [ ":${target_name}Cpp" ] + extra_deps
     include_dirs = [ "." ]
     sources = get_target_outputs(":${target_name}Cpp")
   }

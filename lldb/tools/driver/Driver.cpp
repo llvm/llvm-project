@@ -729,25 +729,10 @@ void sigcont_handler(int signo) {
   signal(signo, sigcont_handler);
 }
 
-void reproducer_handler(void *argv0) {
+void reproducer_handler(void *finalize_cmd) {
   if (SBReproducer::Generate()) {
-    auto exe = static_cast<const char *>(argv0);
-    llvm::outs() << "********************\n";
-    llvm::outs() << "Crash reproducer for ";
-    llvm::outs() << lldb::SBDebugger::GetVersionString() << '\n';
-    llvm::outs() << '\n';
-    llvm::outs() << "Reproducer written to '" << SBReproducer::GetPath()
-                 << "'\n";
-    llvm::outs() << '\n';
-    llvm::outs() << "Before attaching the reproducer to a bug report:\n";
-    llvm::outs() << " - Look at the directory to ensure you're willing to "
-                    "share its content.\n";
-    llvm::outs()
-        << " - Make sure the reproducer works by replaying the reproducer.\n";
-    llvm::outs() << '\n';
-    llvm::outs() << "Replay the reproducer with the following command:\n";
-    llvm::outs() << exe << " -replay " << SBReproducer::GetPath() << "\n";
-    llvm::outs() << "********************\n";
+    std::system(static_cast<const char *>(finalize_cmd));
+    fflush(stdout);
   }
 }
 
@@ -799,6 +784,31 @@ EXAMPLES:
 
 llvm::Optional<int> InitializeReproducer(llvm::StringRef argv0,
                                          opt::InputArgList &input_args) {
+  if (auto *finalize_path = input_args.getLastArg(OPT_reproducer_finalize)) {
+    if (const char *error = SBReproducer::Finalize(finalize_path->getValue())) {
+      WithColor::error() << "reproducer finalization failed: " << error << '\n';
+      return 1;
+    }
+
+    llvm::outs() << "********************\n";
+    llvm::outs() << "Crash reproducer for ";
+    llvm::outs() << lldb::SBDebugger::GetVersionString() << '\n';
+    llvm::outs() << '\n';
+    llvm::outs() << "Reproducer written to '" << SBReproducer::GetPath()
+                 << "'\n";
+    llvm::outs() << '\n';
+    llvm::outs() << "Before attaching the reproducer to a bug report:\n";
+    llvm::outs() << " - Look at the directory to ensure you're willing to "
+                    "share its content.\n";
+    llvm::outs()
+        << " - Make sure the reproducer works by replaying the reproducer.\n";
+    llvm::outs() << '\n';
+    llvm::outs() << "Replay the reproducer with the following command:\n";
+    llvm::outs() << argv0 << " -replay " << finalize_path->getValue() << "\n";
+    llvm::outs() << "********************\n";
+    return 0;
+  }
+
   if (auto *replay_path = input_args.getLastArg(OPT_replay)) {
     SBReplayOptions replay_options;
     replay_options.SetCheckVersion(!input_args.hasArg(OPT_no_version_check));
@@ -821,12 +831,6 @@ llvm::Optional<int> InitializeReproducer(llvm::StringRef argv0,
   }
 
   if (capture || capture_path) {
-    // Register the reproducer signal handler.
-    if (!input_args.hasArg(OPT_no_generate_on_signal)) {
-      llvm::sys::AddSignalHandler(reproducer_handler,
-                                  const_cast<char *>(argv0.data()));
-    }
-
     if (capture_path) {
       if (!capture)
         WithColor::warning() << "-capture-path specified without -capture\n";
@@ -843,6 +847,19 @@ llvm::Optional<int> InitializeReproducer(llvm::StringRef argv0,
     }
     if (generate_on_exit)
       SBReproducer::SetAutoGenerate(true);
+
+    // Register the reproducer signal handler.
+    if (!input_args.hasArg(OPT_no_generate_on_signal)) {
+      if (const char *reproducer_path = SBReproducer::GetPath()) {
+        // Leaking the string on purpose.
+        std::string *finalize_cmd = new std::string(argv0);
+        finalize_cmd->append(" --reproducer-finalize '");
+        finalize_cmd->append(reproducer_path);
+        finalize_cmd->append("'");
+        llvm::sys::AddSignalHandler(reproducer_handler,
+                                    const_cast<char *>(finalize_cmd->c_str()));
+      }
+    }
   }
 
   return llvm::None;

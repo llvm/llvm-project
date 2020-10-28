@@ -698,7 +698,8 @@ int main(int argc, char **argv) {
   Triple ModuleTriple(M->getTargetTriple());
   std::string CPUStr, FeaturesStr;
   TargetMachine *Machine = nullptr;
-  const TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
+  const TargetOptions Options =
+      codegen::InitTargetOptionsFromCodeGenFlags(ModuleTriple);
 
   if (ModuleTriple.getArch()) {
     CPUStr = codegen::getCPUStr();
@@ -752,15 +753,16 @@ int main(int argc, char **argv) {
   // but `-enable-new-pm -codegenprepare` will still revert to legacy PM.
   if ((EnableNewPassManager && !CodegenPassSpecifiedInPassList()) ||
       PassPipeline.getNumOccurrences() > 0) {
+    if (AnalyzeOnly) {
+      errs() << "Cannot specify -analyze under new pass manager\n";
+      return 1;
+    }
     if (PassPipeline.getNumOccurrences() > 0 && PassList.size() > 0) {
       errs()
-          << "Cannot specify passes via both -foo-pass and --passes=foo-pass";
+          << "Cannot specify passes via both -foo-pass and --passes=foo-pass\n";
       return 1;
     }
     SmallVector<StringRef, 4> Passes;
-    for (const auto &P : PassList) {
-      Passes.push_back(P->getPassArgument());
-    }
     if (OptLevelO0)
       Passes.push_back("default<O0>");
     if (OptLevelO1)
@@ -773,6 +775,8 @@ int main(int argc, char **argv) {
       Passes.push_back("default<Os>");
     if (OptLevelOz)
       Passes.push_back("default<Oz>");
+    for (const auto &P : PassList)
+      Passes.push_back(P->getPassArgument());
     OutputKind OK = OK_NoOutput;
     if (!NoOutput)
       OK = OutputAssembly

@@ -136,7 +136,7 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
 unsigned llvm::getGEPInductionOperand(const GetElementPtrInst *Gep) {
   const DataLayout &DL = Gep->getModule()->getDataLayout();
   unsigned LastOperand = Gep->getNumOperands() - 1;
-  unsigned GEPAllocSize = DL.getTypeAllocSize(Gep->getResultElementType());
+  TypeSize GEPAllocSize = DL.getTypeAllocSize(Gep->getResultElementType());
 
   // Walk backwards and try to peel off zeros.
   while (LastOperand > 1 && match(Gep->getOperand(LastOperand), m_Zero())) {
@@ -208,7 +208,7 @@ Value *llvm::getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
 
   if (Ptr != OrigPtr)
     // Strip off casts.
-    while (const SCEVCastExpr *C = dyn_cast<SCEVCastExpr>(V))
+    while (const SCEVIntegralCastExpr *C = dyn_cast<SCEVIntegralCastExpr>(V))
       V = C->getOperand();
 
   const SCEVAddRecExpr *S = dyn_cast<SCEVAddRecExpr>(V);
@@ -241,7 +241,7 @@ Value *llvm::getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
 
   // Strip off casts.
   Type *StripedOffRecurrenceCast = nullptr;
-  if (const SCEVCastExpr *C = dyn_cast<SCEVCastExpr>(V)) {
+  if (const SCEVIntegralCastExpr *C = dyn_cast<SCEVIntegralCastExpr>(V)) {
     StripedOffRecurrenceCast = C->getType();
     V = C->getOperand();
   }

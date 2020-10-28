@@ -765,8 +765,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
 
   // This is the header that MSVC's header search would have found.
   ModuleMap::KnownHeader MSSuggestedModule;
-  const FileEntry *MSFE_FE = nullptr;
-  StringRef MSFE_Name;
+  Optional<FileEntryRef> MSFE;
 
   // Unless disabled, check to see if the file is in the #includer's
   // directory.  This cannot be based on CurDir, because each includer could be
@@ -841,8 +840,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
         if (Diags.isIgnored(diag::ext_pp_include_search_ms, IncludeLoc)) {
           return FE;
         } else {
-          MSFE_FE = &FE->getFileEntry();
-          MSFE_Name = FE->getName();
+          MSFE = FE;
           if (SuggestedModule) {
             MSSuggestedModule = *SuggestedModule;
             *SuggestedModule = ModuleMap::KnownHeader();
@@ -853,9 +851,6 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
       First = false;
     }
   }
-
-  Optional<FileEntryRef> MSFE(MSFE_FE ? FileEntryRef(MSFE_Name, *MSFE_FE)
-                                      : Optional<FileEntryRef>());
 
   CurDir = nullptr;
 

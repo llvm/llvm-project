@@ -14,6 +14,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Target/ProcessTrace.h"
 #include "lldb/Utility/Timer.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -45,6 +46,9 @@ llvm::Error SystemInitializerFull::Initialize() {
 #define LLDB_PLUGIN(p) LLDB_PLUGIN_INITIALIZE(p);
 #include "Plugins/Plugins.def"
 
+  // Initialize plug-ins in core LLDB
+  ProcessTrace::Initialize();
+
   // Scan for any system or user LLDB plug-ins
   PluginManager::Initialize();
 
@@ -60,6 +64,9 @@ void SystemInitializerFull::Terminate() {
   Timer scoped_timer(func_cat, LLVM_PRETTY_FUNCTION);
 
   Debugger::SettingsTerminate();
+
+  // Terminate plug-ins in core LLDB
+  ProcessTrace::Terminate();
 
   // Terminate and unload and loaded system or user LLDB plug-ins
   PluginManager::Terminate();

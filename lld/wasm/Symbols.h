@@ -471,6 +471,10 @@ struct WasmSym {
   // Function that directly calls all ctors in priority order.
   static DefinedFunction *callCtors;
 
+  // __wasm_call_dtors
+  // Function that calls the libc/etc. cleanup function.
+  static DefinedFunction *callDtors;
+
   // __wasm_apply_relocs
   // Function that applies relocations to data segment post-instantiation.
   static DefinedFunction *applyRelocs;

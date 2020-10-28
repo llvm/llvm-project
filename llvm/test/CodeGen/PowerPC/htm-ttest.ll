@@ -8,7 +8,7 @@ define dso_local void @main() #0 {
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    tabortwci. 0, 3, 0
 ; CHECK-NEXT:    mfocrf 3, 128
-; CHECK-NEXT:    rldicl 3, 3, 36, 28
+; CHECK-NEXT:    srwi 3, 3, 28
 ; CHECK-NEXT:    rlwinm. 3, 3, 31, 30, 31
 ; CHECK-NEXT:    beqlr+ 0
 ; CHECK-NEXT:  # %bb.1:

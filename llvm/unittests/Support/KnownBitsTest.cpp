@@ -112,6 +112,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       KnownBits KnownUMin(KnownAnd);
       KnownBits KnownSMax(KnownAnd);
       KnownBits KnownSMin(KnownAnd);
+      KnownBits KnownMul(KnownAnd);
 
       ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
         ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
@@ -144,6 +145,10 @@ TEST(KnownBitsTest, BinaryExhaustive) {
           Res = APIntOps::smin(N1, N2);
           KnownSMin.One &= Res;
           KnownSMin.Zero &= ~Res;
+
+          Res = N1 * N2;
+          KnownMul.One &= Res;
+          KnownMul.Zero &= ~Res;
         });
       });
 
@@ -174,6 +179,12 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       KnownBits ComputedSMin = KnownBits::smin(Known1, Known2);
       EXPECT_EQ(KnownSMin.Zero, ComputedSMin.Zero);
       EXPECT_EQ(KnownSMin.One, ComputedSMin.One);
+
+      // ComputedMul is conservatively correct, but not guaranteed to be
+      // precise.
+      KnownBits ComputedMul = KnownBits::computeForMul(Known1, Known2);
+      EXPECT_TRUE(ComputedMul.Zero.isSubsetOf(KnownMul.Zero));
+      EXPECT_TRUE(ComputedMul.One.isSubsetOf(KnownMul.One));
     });
   });
 }
@@ -190,6 +201,35 @@ TEST(KnownBitsTest, GetMinMaxVal) {
     EXPECT_EQ(Min, Known.getMinValue());
     EXPECT_EQ(Max, Known.getMaxValue());
   });
+}
+
+TEST(KnownBitsTest, SExtOrTrunc) {
+  const unsigned NarrowerSize = 4;
+  const unsigned BaseSize = 6;
+  const unsigned WiderSize = 8;
+  APInt NegativeFitsNarrower(BaseSize, -4, /*isSigned*/ true);
+  APInt NegativeDoesntFitNarrower(BaseSize, -28, /*isSigned*/ true);
+  APInt PositiveFitsNarrower(BaseSize, 14);
+  APInt PositiveDoesntFitNarrower(BaseSize, 36);
+  auto InitKnownBits = [&](KnownBits &Res, const APInt &Input) {
+    Res = KnownBits(Input.getBitWidth());
+    Res.One = Input;
+    Res.Zero = ~Input;
+  };
+
+  for (unsigned Size : {NarrowerSize, BaseSize, WiderSize}) {
+    for (const APInt &Input :
+         {NegativeFitsNarrower, NegativeDoesntFitNarrower, PositiveFitsNarrower,
+          PositiveDoesntFitNarrower}) {
+      KnownBits Test;
+      InitKnownBits(Test, Input);
+      KnownBits Baseline;
+      InitKnownBits(Baseline, Input.sextOrTrunc(Size));
+      Test = Test.sextOrTrunc(Size);
+      EXPECT_EQ(Test.One, Baseline.One);
+      EXPECT_EQ(Test.Zero, Baseline.Zero);
+    }
+  }
 }
 
 } // end anonymous namespace

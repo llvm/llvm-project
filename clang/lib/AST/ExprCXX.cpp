@@ -1316,12 +1316,12 @@ ExprWithCleanups *ExprWithCleanups::Create(const ASTContext &C,
   return new (buffer) ExprWithCleanups(empty, numObjects);
 }
 
-CXXUnresolvedConstructExpr::CXXUnresolvedConstructExpr(TypeSourceInfo *TSI,
+CXXUnresolvedConstructExpr::CXXUnresolvedConstructExpr(QualType T,
+                                                       TypeSourceInfo *TSI,
                                                        SourceLocation LParenLoc,
                                                        ArrayRef<Expr *> Args,
                                                        SourceLocation RParenLoc)
-    : Expr(CXXUnresolvedConstructExprClass,
-           TSI->getType().getNonReferenceType(),
+    : Expr(CXXUnresolvedConstructExprClass, T,
            (TSI->getType()->isLValueReferenceType()
                 ? VK_LValue
                 : TSI->getType()->isRValueReferenceType() ? VK_XValue
@@ -1336,10 +1336,11 @@ CXXUnresolvedConstructExpr::CXXUnresolvedConstructExpr(TypeSourceInfo *TSI,
 }
 
 CXXUnresolvedConstructExpr *CXXUnresolvedConstructExpr::Create(
-    const ASTContext &Context, TypeSourceInfo *TSI, SourceLocation LParenLoc,
+    const ASTContext &Context, QualType T, TypeSourceInfo *TSI, SourceLocation LParenLoc,
     ArrayRef<Expr *> Args, SourceLocation RParenLoc) {
   void *Mem = Context.Allocate(totalSizeToAlloc<Expr *>(Args.size()));
-  return new (Mem) CXXUnresolvedConstructExpr(TSI, LParenLoc, Args, RParenLoc);
+  return new (Mem)
+      CXXUnresolvedConstructExpr(T, TSI, LParenLoc, Args, RParenLoc);
 }
 
 CXXUnresolvedConstructExpr *
@@ -1564,6 +1565,15 @@ SizeOfPackExpr *SizeOfPackExpr::CreateDeserialized(ASTContext &Context,
   return new (Storage) SizeOfPackExpr(EmptyShell(), NumPartialArgs);
 }
 
+QualType SubstNonTypeTemplateParmExpr::getParameterType(
+    const ASTContext &Context) const {
+  // Note that, for a class type NTTP, we will have an lvalue of type 'const
+  // T', so we can't just compute this from the type and value category.
+  if (isReferenceParameter())
+    return Context.getLValueReferenceType(getType());
+  return getType().getUnqualifiedType();
+}
+
 SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
     QualType T, ExprValueKind ValueKind, NonTypeTemplateParmDecl *Param,
     SourceLocation NameLoc, const TemplateArgument &ArgPack)
@@ -1635,6 +1645,20 @@ void MaterializeTemporaryExpr::setExtendingDecl(ValueDecl *ExtendedBy,
   auto ES = State.get<LifetimeExtendedTemporaryDecl *>();
   ES->ExtendingDecl = ExtendedBy;
   ES->ManglingNumber = ManglingNumber;
+}
+
+bool MaterializeTemporaryExpr::isUsableInConstantExpressions(
+    const ASTContext &Context) const {
+  // C++20 [expr.const]p4:
+  //   An object or reference is usable in constant expressions if it is [...]
+  //   a temporary object of non-volatile const-qualified literal type
+  //   whose lifetime is extended to that of a variable that is usable
+  //   in constant expressions
+  auto *VD = dyn_cast_or_null<VarDecl>(getExtendingDecl());
+  return VD && getType().isConstant(Context) &&
+         !getType().isVolatileQualified() &&
+         getType()->isLiteralType(Context) &&
+         VD->isUsableInConstantExpressions(Context);
 }
 
 TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,

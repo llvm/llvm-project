@@ -148,7 +148,7 @@ class MIMG_Base <dag outs, string dns = "">
   let hasSideEffects = 0; // XXX ????
 
   let DecoderNamespace = dns;
-  let isAsmParserOnly = !if(!eq(dns,""), 1, 0);
+  let isAsmParserOnly = !eq(dns, "");
 }
 
 class MIMG <dag outs, string dns = "">
@@ -308,13 +308,13 @@ multiclass MIMG_NoSampler_Src_Helper <bits<8> op, string asm,
 multiclass MIMG_NoSampler <bits<8> op, string asm, bit has_d16, bit mip = 0,
                            bit isResInfo = 0> {
   def "" : MIMGBaseOpcode {
-    let Coordinates = !if(isResInfo, 0, 1);
+    let Coordinates = !not(isResInfo);
     let LodOrClampOrMip = mip;
     let HasD16 = has_d16;
   }
 
   let BaseOpcode = !cast<MIMGBaseOpcode>(NAME),
-      mayLoad = !if(isResInfo, 0, 1) in {
+      mayLoad = !not(isResInfo) in {
     let VDataDwords = 1 in
     defm _V1 : MIMG_NoSampler_Src_Helper <op, asm, VGPR_32, 1>;
     let VDataDwords = 2 in
@@ -665,12 +665,12 @@ multiclass MIMG_Sampler <bits<8> op, AMDGPUSampleVariant sample, bit wqm = 0,
                          bit isG16 = 0, bit isGetLod = 0,
                          string asm = "image_sample"#sample.LowerCaseMod#!if(isG16, "_g16", "")> {
   def "" : MIMG_Sampler_BaseOpcode<sample> {
-    let HasD16 = !if(isGetLod, 0, 1);
+    let HasD16 = !not(isGetLod);
     let G16 = isG16;
   }
 
   let BaseOpcode = !cast<MIMGBaseOpcode>(NAME), WQM = wqm,
-      mayLoad = !if(isGetLod, 0, 1) in {
+      mayLoad = !not(isGetLod) in {
     let VDataDwords = 1 in
     defm _V1 : MIMG_Sampler_Src_Helper<op, asm, sample, VGPR_32, 1>;
     let VDataDwords = 2 in
@@ -712,8 +712,8 @@ class MIMG_IntersectRay_gfx10<int op, string opcode, RegisterClass AddrRC, bit A
     : MIMG_gfx10<op, (outs VReg_128:$vdata), "AMDGPU"> {
 
   let InOperandList = !con((ins AddrRC:$vaddr0, SReg_128:$srsrc),
-                           !if(!eq(A16,1), (ins GFX10A16:$a16), (ins)));
-  let AsmString = opcode#" $vdata, $vaddr0, $srsrc"#!if(!eq(A16,1), "$a16", "");
+                           !if(A16, (ins GFX10A16:$a16), (ins)));
+  let AsmString = opcode#" $vdata, $vaddr0, $srsrc"#!if(A16, "$a16", "");
 
   let nsa = 0;
 }
@@ -722,15 +722,15 @@ class MIMG_IntersectRay_nsa_gfx10<int op, string opcode, int num_addrs, bit A16>
     : MIMG_nsa_gfx10<op, (outs VReg_128:$vdata), num_addrs, "AMDGPU"> {
   let InOperandList = !con(nsah.AddrIns,
                            (ins SReg_128:$srsrc),
-                           !if(!eq(A16,1), (ins GFX10A16:$a16), (ins)));
-  let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $srsrc"#!if(!eq(A16,1), "$a16", "");
+                           !if(A16, (ins GFX10A16:$a16), (ins)));
+  let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $srsrc"#!if(A16, "$a16", "");
 }
 
 multiclass MIMG_IntersectRay<int op, string opcode, int num_addrs, bit A16> {
   def "" : MIMGBaseOpcode;
   let SubtargetPredicate = HasGFX10_BEncoding,
       AssemblerPredicate = HasGFX10_BEncoding,
-      AsmMatchConverter = !if(!eq(A16,1), "cvtIntersectRay", ""),
+      AsmMatchConverter = !if(A16, "cvtIntersectRay", ""),
       dmask = 0xf,
       unorm = 1,
       d16 = 0,
@@ -896,9 +896,25 @@ class ImageDimIntrinsicInfo<AMDGPUImageDimIntrinsic I> {
   AMDGPUDimProps Dim = I.P.Dim;
   AMDGPUImageDimIntrinsicEval DimEval = AMDGPUImageDimIntrinsicEval<I.P>;
 
+  bits<8> NumGradients = DimEval.NumGradientArgs;
+  bits<8> NumDmask = DimEval.NumDmaskArgs;
+  bits<8> NumData = DimEval.NumDataArgs;
+  bits<8> NumVAddrs = DimEval.NumVAddrArgs;
+  bits<8> NumArgs = !add(DimEval.CachePolicyArgIndex, 1);
+
+  bits<8> DMaskIndex = DimEval.DmaskArgIndex;
+  bits<8> VAddrStart = DimEval.VAddrArgIndex;
   bits<8> GradientStart = DimEval.GradientArgIndex;
   bits<8> CoordStart = DimEval.CoordArgIndex;
+  bits<8> LodIndex = DimEval.LodArgIndex;
+  bits<8> MipIndex = DimEval.MipArgIndex;
   bits<8> VAddrEnd = !add(DimEval.VAddrArgIndex, DimEval.NumVAddrArgs);
+  bits<8> RsrcIndex = DimEval.RsrcArgIndex;
+  bits<8> SampIndex = DimEval.SampArgIndex;
+  bits<8> UnormIndex = DimEval.UnormArgIndex;
+  bits<8> TexFailCtrlIndex = DimEval.TexFailCtrlArgIndex;
+  bits<8> CachePolicyIndex = DimEval.CachePolicyArgIndex;
+
   bits<8> GradientTyArg = !add(I.P.NumRetAndDataAnyTypes,
     !foldl(0, I.P.ExtraAddrArgs, cnt, arg, !add(cnt, arg.Type.isAny)));
   bits<8> CoordTyArg = !add(GradientTyArg, !if(I.P.Gradients, 1, 0));
@@ -906,7 +922,10 @@ class ImageDimIntrinsicInfo<AMDGPUImageDimIntrinsic I> {
 
 def ImageDimIntrinsicTable : GenericTable {
   let FilterClass = "ImageDimIntrinsicInfo";
-  let Fields = ["Intr", "BaseOpcode", "Dim", "GradientStart", "CoordStart", "VAddrEnd", "GradientTyArg", "CoordTyArg"];
+  let Fields = ["Intr", "BaseOpcode", "Dim", "NumGradients", "NumDmask", "NumData", "NumVAddrs", "NumArgs",
+    "DMaskIndex", "VAddrStart", "GradientStart", "CoordStart", "LodIndex", "MipIndex", "VAddrEnd",
+    "RsrcIndex", "SampIndex", "UnormIndex", "TexFailCtrlIndex", "CachePolicyIndex",
+    "GradientTyArg", "CoordTyArg"];
   GenericEnum TypeOf_BaseOpcode = MIMGBaseOpcode;
   GenericEnum TypeOf_Dim = MIMGDim;
 

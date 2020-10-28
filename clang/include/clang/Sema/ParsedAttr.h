@@ -1023,7 +1023,8 @@ enum AttributeArgumentNType {
   AANT_ArgumentIntOrBool,
   AANT_ArgumentIntegerConstant,
   AANT_ArgumentString,
-  AANT_ArgumentIdentifier
+  AANT_ArgumentIdentifier,
+  AANT_ArgumentConstantExpr,
 };
 
 /// These constants match the enumerated choices of
@@ -1044,32 +1045,43 @@ enum AttributeDeclKind {
   ExpectedFunctionWithProtoType,
 };
 
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const ParsedAttr &At) {
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const ParsedAttr &At) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(At.getAttrName()),
                   DiagnosticsEngine::ak_identifierinfo);
   return DB;
 }
 
-inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                           const ParsedAttr &At) {
-  PD.AddTaggedVal(reinterpret_cast<intptr_t>(At.getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return PD;
-}
-
-inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
-                                           const ParsedAttr *At) {
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const ParsedAttr *At) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(At->getAttrName()),
                   DiagnosticsEngine::ak_identifierinfo);
   return DB;
 }
 
-inline const PartialDiagnostic &operator<<(const PartialDiagnostic &PD,
-                                           const ParsedAttr *At) {
-  PD.AddTaggedVal(reinterpret_cast<intptr_t>(At->getAttrName()),
+/// AttributeCommonInfo has a non-explicit constructor which takes an
+/// SourceRange as its only argument, this constructor has many uses so making
+/// it explicit is hard. This constructor causes ambiguity with
+/// DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB, SourceRange R).
+/// We use SFINAE to disable any conversion and remove any ambiguity.
+template <typename ACI,
+          typename std::enable_if_t<
+              std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                           const ACI &CI) {
+  DB.AddTaggedVal(reinterpret_cast<intptr_t>(CI.getAttrName()),
                   DiagnosticsEngine::ak_identifierinfo);
-  return PD;
+  return DB;
+}
+
+template <typename ACI,
+          typename std::enable_if_t<
+              std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                           const ACI* CI) {
+  DB.AddTaggedVal(reinterpret_cast<intptr_t>(CI->getAttrName()),
+                  DiagnosticsEngine::ak_identifierinfo);
+  return DB;
 }
 
 } // namespace clang

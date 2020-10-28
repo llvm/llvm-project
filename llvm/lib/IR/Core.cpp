@@ -146,6 +146,11 @@ LLVMAttributeRef LLVMCreateEnumAttribute(LLVMContextRef C, unsigned KindID,
     return wrap(Attribute::getWithByValType(Ctx, NULL));
   }
 
+  if (AttrKind == Attribute::AttrKind::StructRet) {
+    // Same as byval.
+    return wrap(Attribute::getWithStructRetType(Ctx, NULL));
+  }
+
   return wrap(Attribute::get(Ctx, AttrKind, Val));
 }
 
@@ -925,6 +930,7 @@ LLVMValueMetadataEntry *
 LLVMInstructionGetAllMetadataOtherThanDebugLoc(LLVMValueRef Value,
                                                size_t *NumEntries) {
   return llvm_getMetadata(NumEntries, [&Value](MetadataEntries &Entries) {
+    Entries.clear();
     unwrap<Instruction>(Value)->getAllMetadata(Entries);
   });
 }
@@ -2034,6 +2040,7 @@ void LLVMSetAlignment(LLVMValueRef V, unsigned Bytes) {
 LLVMValueMetadataEntry *LLVMGlobalCopyAllMetadata(LLVMValueRef Value,
                                                   size_t *NumEntries) {
   return llvm_getMetadata(NumEntries, [&Value](MetadataEntries &Entries) {
+    Entries.clear();
     if (Instruction *Instr = dyn_cast<Instruction>(unwrap(Value))) {
       Instr->getAllMetadata(Entries);
     } else {

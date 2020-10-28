@@ -679,7 +679,8 @@ class LowerAffinePass : public ConvertAffineToStandardBase<LowerAffinePass> {
     ConversionTarget target(getContext());
     target
         .addLegalDialect<scf::SCFDialect, StandardOpsDialect, VectorDialect>();
-    if (failed(applyPartialConversion(getOperation(), target, patterns)))
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };

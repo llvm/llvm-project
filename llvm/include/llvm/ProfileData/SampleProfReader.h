@@ -598,40 +598,23 @@ private:
 
 protected:
   std::vector<SecHdrTableEntry> SecHdrTable;
-  std::unique_ptr<ProfileSymbolList> ProfSymList;
   std::error_code readSecHdrTableEntry();
   std::error_code readSecHdrTable();
-  virtual std::error_code readHeader() override;
-  virtual std::error_code verifySPMagic(uint64_t Magic) override = 0;
-  virtual std::error_code readOneSection(const uint8_t *Start, uint64_t Size,
-                                         const SecHdrTableEntry &Entry) = 0;
 
-public:
-  SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
-                                   LLVMContext &C, SampleProfileFormat Format)
-      : SampleProfileReaderBinary(std::move(B), C, Format) {}
-
-  /// Read sample profiles in extensible format from the associated file.
-  std::error_code readImpl() override;
-
-  /// Get the total size of all \p Type sections.
-  uint64_t getSectionSize(SecType Type);
-  /// Get the total size of header and all sections.
-  uint64_t getFileSize();
-  virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) override;
-};
-
-class SampleProfileReaderExtBinary : public SampleProfileReaderExtBinaryBase {
-private:
-  virtual std::error_code verifySPMagic(uint64_t Magic) override;
-  virtual std::error_code
-  readOneSection(const uint8_t *Start, uint64_t Size,
-                 const SecHdrTableEntry &Entry) override;
-  std::error_code readProfileSymbolList();
   std::error_code readFuncOffsetTable();
   std::error_code readFuncProfiles();
   std::error_code readMD5NameTable();
   std::error_code readNameTableSec(bool IsMD5);
+  std::error_code readProfileSymbolList();
+
+  virtual std::error_code readHeader() override;
+  virtual std::error_code verifySPMagic(uint64_t Magic) override = 0;
+  virtual std::error_code readOneSection(const uint8_t *Start, uint64_t Size,
+                                         const SecHdrTableEntry &Entry);
+  // placeholder for subclasses to dispatch their own section readers.
+  virtual std::error_code readCustomSection(const SecHdrTableEntry &Entry) = 0;
+
+  std::unique_ptr<ProfileSymbolList> ProfSymList;
 
   /// The table mapping from function name to the offset of its FunctionSample
   /// towards file start.
@@ -651,16 +634,18 @@ private:
   std::unique_ptr<std::vector<std::string>> MD5StringBuf;
 
 public:
-  SampleProfileReaderExtBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
-                               SampleProfileFormat Format = SPF_Ext_Binary)
-      : SampleProfileReaderExtBinaryBase(std::move(B), C, Format) {}
+  SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
+                                   LLVMContext &C, SampleProfileFormat Format)
+      : SampleProfileReaderBinary(std::move(B), C, Format) {}
 
-  /// \brief Return true if \p Buffer is in the format supported by this class.
-  static bool hasFormat(const MemoryBuffer &Buffer);
+  /// Read sample profiles in extensible format from the associated file.
+  std::error_code readImpl() override;
 
-  virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
-    return std::move(ProfSymList);
-  };
+  /// Get the total size of all \p Type sections.
+  uint64_t getSectionSize(SecType Type);
+  /// Get the total size of header and all sections.
+  uint64_t getFileSize();
+  virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) override;
 
   /// Collect functions with definitions in Module \p M.
   void collectFuncsFrom(const Module &M) override;
@@ -670,6 +655,27 @@ public:
     assert(!NameTable.empty() && "NameTable should have been initialized");
     return MD5StringBuf && !MD5StringBuf->empty();
   }
+
+  virtual std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
+    return std::move(ProfSymList);
+  };
+};
+
+class SampleProfileReaderExtBinary : public SampleProfileReaderExtBinaryBase {
+private:
+  virtual std::error_code verifySPMagic(uint64_t Magic) override;
+  virtual std::error_code
+  readCustomSection(const SecHdrTableEntry &Entry) override {
+    return sampleprof_error::success;
+  };
+
+public:
+  SampleProfileReaderExtBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
+                               SampleProfileFormat Format = SPF_Ext_Binary)
+      : SampleProfileReaderExtBinaryBase(std::move(B), C, Format) {}
+
+  /// \brief Return true if \p Buffer is in the format supported by this class.
+  static bool hasFormat(const MemoryBuffer &Buffer);
 };
 
 class SampleProfileReaderCompactBinary : public SampleProfileReaderBinary {

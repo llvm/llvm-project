@@ -41,7 +41,7 @@ TEST_CASE(test_error_reporting)
     {
 #ifndef TEST_HAS_NO_EXCEPTIONS
         try {
-            fs::read_symlink(f);
+            (void)fs::read_symlink(f);
             return false;
         } catch (filesystem_error const& err) {
             return err.path1() == f

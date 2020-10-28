@@ -41,7 +41,7 @@ static_assert(alignof(_Unwind_Exception) == EXPECTED_ALIGNMENT,
 struct MinAligned {  };
 static_assert(alignof(MinAligned) == 1 && sizeof(MinAligned) == 1, "");
 
-int main() {
+int main(int, char**) {
   for (int i=0; i < 10; ++i) {
     try {
       throw MinAligned{};
@@ -49,4 +49,6 @@ int main() {
       assert(reinterpret_cast<uintptr_t>(&ref) % EXPECTED_ALIGNMENT == 0);
     }
   }
+
+  return 0;
 }

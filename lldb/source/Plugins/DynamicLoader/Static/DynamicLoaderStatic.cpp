@@ -63,9 +63,6 @@ DynamicLoader *DynamicLoaderStatic::CreateInstance(Process *process,
 DynamicLoaderStatic::DynamicLoaderStatic(Process *process)
     : DynamicLoader(process) {}
 
-// Destructor
-DynamicLoaderStatic::~DynamicLoaderStatic() {}
-
 /// Called after attaching a process.
 ///
 /// Allow DynamicLoader plug-ins to execute some code after

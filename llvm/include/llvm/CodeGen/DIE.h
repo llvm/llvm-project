@@ -247,6 +247,7 @@ public:
   unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const;
 
   void print(raw_ostream &O) const;
+  uint64_t getIndex() const { return Index; }
 };
 
 //===--------------------------------------------------------------------===//

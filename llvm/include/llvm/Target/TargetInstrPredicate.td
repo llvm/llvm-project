@@ -126,6 +126,11 @@ class CheckRegOperand<int Index, Register R> : CheckOperandBase<Index> {
 // Check if register operand at index `Index` is the invalid register.
 class CheckInvalidRegOperand<int Index> : CheckOperandBase<Index>;
 
+// Return true if machine operand at position `Index` is a valid
+// register operand.
+class CheckValidRegOperand<int Index> :
+  CheckNot<CheckInvalidRegOperand<Index>>;
+
 // Check that the operand at position `Index` is immediate `Imm`.
 // If field `FunctionMapper` is a non-empty string, then function
 // `FunctionMapper` is applied to the operand value, and the return value is then
@@ -251,6 +256,20 @@ class TIIPredicate<string Name, MCStatement body>
 // In this context, `MCInstFn` and `MachineInstrFn` are both function names.
 class CheckFunctionPredicate<string MCInstFn, string MachineInstrFn> : MCInstPredicate {
   string MCInstFnName = MCInstFn;
+  string MachineInstrFnName = MachineInstrFn;
+}
+
+// Similar to CheckFunctionPredicate. However it assumes that MachineInstrFn is
+// a method in TargetInstrInfo, and MCInstrFn takes an extra pointer to
+// MCInstrInfo.
+//
+// It Expands to:
+//  - TIIPointer->MachineInstrFn(MI)
+//  - MCInstrFn(MI, MCII);
+class CheckFunctionPredicateWithTII<string MCInstFn, string MachineInstrFn, string
+TIIPointer = "TII"> : MCInstPredicate {
+  string MCInstFnName = MCInstFn;
+  string TIIPtrName = TIIPointer;
   string MachineInstrFnName = MachineInstrFn;
 }
 

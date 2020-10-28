@@ -176,6 +176,10 @@ static cl::opt<bool> StackTaggingMergeSetTag(
     cl::desc("merge settag instruction in function epilog"), cl::init(true),
     cl::Hidden);
 
+static cl::opt<bool> OrderFrameObjects("aarch64-order-frame-objects",
+                                       cl::desc("sort stack allocations"),
+                                       cl::init(true), cl::Hidden);
+
 STATISTIC(NumRedZoneFunctions, "Number of functions using red zone");
 
 /// Returns the argument pop size.
@@ -579,6 +583,12 @@ static bool windowsRequiresStackProbe(MachineFunction &MF,
          !F.hasFnAttribute("no-stack-arg-probe");
 }
 
+static bool needsWinCFI(const MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+         F.needsUnwindTableEntry();
+}
+
 bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
     MachineFunction &MF, uint64_t StackBumpBytes) const {
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -587,6 +597,18 @@ bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
 
   if (AFI->getLocalStackSize() == 0)
+    return false;
+
+  // For WinCFI, if optimizing for size, prefer to not combine the stack bump
+  // (to force a stp with predecrement) to match the packed unwind format,
+  // provided that there actually are any callee saved registers to merge the
+  // decrement with.
+  // This is potentially marginally slower, but allows using the packed
+  // unwind format for functions that both have a local area and callee saved
+  // registers. Using the packed unwind format notably reduces the size of
+  // the unwind info.
+  if (needsWinCFI(MF) && AFI->getCalleeSavedStackSize() > 0 &&
+      MF.getFunction().hasOptSize())
     return false;
 
   // 512 is the maximum immediate for stp/ldp that will be used for
@@ -982,12 +1004,6 @@ static void adaptForLdStOpt(MachineBasicBlock &MBB,
   //
 }
 
-static bool needsWinCFI(const MachineFunction &MF) {
-  const Function &F = MF.getFunction();
-  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
-         F.needsUnwindTableEntry();
-}
-
 static bool isTargetWindows(const MachineFunction &MF) {
   return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
 }
@@ -1058,9 +1074,13 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
 
-  // Set tagged base pointer to the bottom of the stack frame.
+  // Set tagged base pointer to the requested stack slot.
   // Ideally it should match SP value after prologue.
-  AFI->setTaggedBasePointerOffset(MFI.getStackSize());
+  Optional<int> TBPI = AFI->getTaggedBasePointerIndex();
+  if (TBPI)
+    AFI->setTaggedBasePointerOffset(-MFI.getObjectOffset(*TBPI));
+  else
+    AFI->setTaggedBasePointerOffset(MFI.getStackSize());
 
   const StackOffset &SVEStackSize = getSVEStackSize(MF);
 
@@ -1524,10 +1544,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   bool NeedsWinCFI = needsWinCFI(MF);
   bool HasWinCFI = false;
   bool IsFunclet = false;
-  auto WinCFI = make_scope_exit([&]() {
-    if (!MF.hasWinCFI())
-      MF.setHasWinCFI(HasWinCFI);
-  });
+  auto WinCFI = make_scope_exit([&]() { assert(HasWinCFI == MF.hasWinCFI()); });
 
   if (MBB.end() != MBBI) {
     DL = MBBI->getDebugLoc();
@@ -1627,7 +1644,13 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                                         NeedsWinCFI, &HasWinCFI);
   }
 
-  if (NeedsWinCFI) {
+  if (MF.hasWinCFI()) {
+    // If the prologue didn't contain any SEH opcodes and didn't set the
+    // MF.hasWinCFI() flag, assume the epilogue won't either, and skip the
+    // EpilogStart - to avoid generating CFI for functions that don't need it.
+    // (And as we didn't generate any prologue at all, it would be assymetrical
+    // to the epilogue.) By the end of the function, we assert that
+    // HasWinCFI is equal to MF.hasWinCFI(), to verify this assumption.
     HasWinCFI = true;
     BuildMI(MBB, LastPopI, DL, TII->get(AArch64::SEH_EpilogStart))
         .setMIFlag(MachineInstr::FrameDestroy);
@@ -1641,7 +1664,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
                     {NumBytes + (int64_t)AfterCSRPopSize, MVT::i8}, TII,
                     MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
-    if (NeedsWinCFI && HasWinCFI)
+    if (HasWinCFI)
       BuildMI(MBB, MBB.getFirstTerminator(), DL,
               TII->get(AArch64::SEH_EpilogEnd))
           .setMIFlag(MachineInstr::FrameDestroy);
@@ -1720,8 +1743,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                     {StackRestoreBytes, MVT::i8}, TII,
                     MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
     if (Done) {
-      if (NeedsWinCFI) {
-        HasWinCFI = true;
+      if (HasWinCFI) {
         BuildMI(MBB, MBB.getFirstTerminator(), DL,
                 TII->get(AArch64::SEH_EpilogEnd))
             .setMIFlag(MachineInstr::FrameDestroy);
@@ -1767,11 +1789,9 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                     {(int64_t)AfterCSRPopSize, MVT::i8}, TII,
                     MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
   }
-  if (NeedsWinCFI && HasWinCFI)
+  if (HasWinCFI)
     BuildMI(MBB, MBB.getFirstTerminator(), DL, TII->get(AArch64::SEH_EpilogEnd))
         .setMIFlag(MachineInstr::FrameDestroy);
-
-  MF.setHasWinCFI(HasWinCFI);
 }
 
 /// getFrameIndexReference - Provide a base+offset reference to an FI slot for
@@ -1988,20 +2008,27 @@ static bool produceCompactUnwindFrame(MachineFunction &MF) {
 }
 
 static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
-                                             bool NeedsWinCFI) {
+                                             bool NeedsWinCFI, bool IsFirst) {
   // If we are generating register pairs for a Windows function that requires
   // EH support, then pair consecutive registers only.  There are no unwind
   // opcodes for saves/restores of non-consectuve register pairs.
-  // The unwind opcodes are save_regp, save_regp_x, save_fregp, save_frepg_x.
+  // The unwind opcodes are save_regp, save_regp_x, save_fregp, save_frepg_x,
+  // save_lrpair.
   // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
 
-  // TODO: LR can be paired with any register.  We don't support this yet in
-  // the MCLayer.  We need to add support for the save_lrpair unwind code.
   if (Reg2 == AArch64::FP)
     return true;
   if (!NeedsWinCFI)
     return false;
   if (Reg2 == Reg1 + 1)
+    return false;
+  // If pairing a GPR with LR, the pair can be described by the save_lrpair
+  // opcode. If this is the first register pair, it would end up with a
+  // predecrement, but there's no save_lrpair_x opcode, so we can only do this
+  // if LR is paired with something else than the first register.
+  // The save_lrpair opcode requires the first register to be an odd one.
+  if (Reg1 >= AArch64::X19 && Reg1 <= AArch64::X27 &&
+      (Reg1 - AArch64::X19) % 2 == 0 && Reg2 == AArch64::LR && !IsFirst)
     return false;
   return true;
 }
@@ -2011,9 +2038,10 @@ static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
 /// LR and FP need to be allocated together when the frame needs to save
 /// the frame-record. This means any other register pairing with LR is invalid.
 static bool invalidateRegisterPairing(unsigned Reg1, unsigned Reg2,
-                                      bool UsesWinAAPCS, bool NeedsWinCFI, bool NeedsFrameRecord) {
+                                      bool UsesWinAAPCS, bool NeedsWinCFI,
+                                      bool NeedsFrameRecord, bool IsFirst) {
   if (UsesWinAAPCS)
-    return invalidateWindowsRegisterPairing(Reg1, Reg2, NeedsWinCFI);
+    return invalidateWindowsRegisterPairing(Reg1, Reg2, NeedsWinCFI, IsFirst);
 
   // If we need to store the frame record, don't pair any register
   // with LR other than FP.
@@ -2077,14 +2105,22 @@ static void computeCalleeSaveRegisterPairs(
           (Count & 1) == 0) &&
          "Odd number of callee-saved regs to spill!");
   int ByteOffset = AFI->getCalleeSavedStackSize();
+  int StackFillDir = -1;
+  int RegInc = 1;
+  unsigned FirstReg = 0;
+  if (NeedsWinCFI) {
+    // For WinCFI, fill the stack from the bottom up.
+    ByteOffset = 0;
+    StackFillDir = 1;
+    // As the CSI array is reversed to match PrologEpilogInserter, iterate
+    // backwards, to pair up registers starting from lower numbered registers.
+    RegInc = -1;
+    FirstReg = Count - 1;
+  }
   int ScalableByteOffset = AFI->getSVECalleeSavedStackSize();
-  // On Linux, we will have either one or zero non-paired register.  On Windows
-  // with CFI, we can have multiple unpaired registers in order to utilize the
-  // available unwind codes.  This flag assures that the alignment fixup is done
-  // only once, as intened.
-  bool FixupDone = false;
 
-  for (unsigned i = 0; i < Count; ++i) {
+  // When iterating backwards, the loop condition relies on unsigned wraparound.
+  for (unsigned i = FirstReg; i < Count; i += RegInc) {
     RegPairInfo RPI;
     RPI.Reg1 = CSI[i].getReg();
 
@@ -2102,18 +2138,20 @@ static void computeCalleeSaveRegisterPairs(
       llvm_unreachable("Unsupported register class.");
 
     // Add the next reg to the pair if it is in the same register class.
-    if (i + 1 < Count) {
-      unsigned NextReg = CSI[i + 1].getReg();
+    if (unsigned(i + RegInc) < Count) {
+      unsigned NextReg = CSI[i + RegInc].getReg();
+      bool IsFirst = i == FirstReg;
       switch (RPI.Type) {
       case RegPairInfo::GPR:
         if (AArch64::GPR64RegClass.contains(NextReg) &&
-            !invalidateRegisterPairing(RPI.Reg1, NextReg, IsWindows, NeedsWinCFI,
-                                       NeedsFrameRecord))
+            !invalidateRegisterPairing(RPI.Reg1, NextReg, IsWindows,
+                                       NeedsWinCFI, NeedsFrameRecord, IsFirst))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR64:
         if (AArch64::FPR64RegClass.contains(NextReg) &&
-            !invalidateWindowsRegisterPairing(RPI.Reg1, NextReg, NeedsWinCFI))
+            !invalidateWindowsRegisterPairing(RPI.Reg1, NextReg, NeedsWinCFI,
+                                              IsFirst))
           RPI.Reg2 = NextReg;
         break;
       case RegPairInfo::FPR128:
@@ -2142,7 +2180,7 @@ static void computeCalleeSaveRegisterPairs(
     // The order of the registers in the list is controlled by
     // getCalleeSavedRegs(), so they will always be in-order, as well.
     assert((!RPI.isPaired() ||
-            (CSI[i].getFrameIdx() + 1 == CSI[i + 1].getFrameIdx())) &&
+            (CSI[i].getFrameIdx() + RegInc == CSI[i + RegInc].getFrameIdx())) &&
            "Out of order callee saved regs!");
 
     assert((!RPI.isPaired() || !NeedsFrameRecord || RPI.Reg2 != AArch64::FP ||
@@ -2164,30 +2202,43 @@ static void computeCalleeSaveRegisterPairs(
            "Callee-save registers not saved as adjacent register pair!");
 
     RPI.FrameIdx = CSI[i].getFrameIdx();
+    if (NeedsWinCFI &&
+        RPI.isPaired()) // RPI.FrameIdx must be the lower index of the pair
+      RPI.FrameIdx = CSI[i + RegInc].getFrameIdx();
 
     int Scale = RPI.getScale();
+
+    int OffsetPre = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
+    assert(OffsetPre % Scale == 0);
+
     if (RPI.isScalable())
-      ScalableByteOffset -= Scale;
+      ScalableByteOffset += StackFillDir * Scale;
     else
-      ByteOffset -= RPI.isPaired() ? 2 * Scale : Scale;
+      ByteOffset += StackFillDir * (RPI.isPaired() ? 2 * Scale : Scale);
 
     assert(!(RPI.isScalable() && RPI.isPaired()) &&
            "Paired spill/fill instructions don't exist for SVE vectors");
 
     // Round up size of non-pair to pair size if we need to pad the
     // callee-save area to ensure 16-byte alignment.
-    if (AFI->hasCalleeSaveStackFreeSpace() && !FixupDone &&
+    if (AFI->hasCalleeSaveStackFreeSpace() && !NeedsWinCFI &&
         !RPI.isScalable() && RPI.Type != RegPairInfo::FPR128 &&
         !RPI.isPaired()) {
-      FixupDone = true;
-      ByteOffset -= 8;
+      ByteOffset += 8 * StackFillDir;
       assert(ByteOffset % 16 == 0);
       assert(MFI.getObjectAlign(RPI.FrameIdx) <= Align(16));
+      // A stack frame with a gap looks like this, bottom up:
+      // d9, d8. x21, gap, x20, x19.
+      // Set extra alignment on the x21 object (the only unpaired register)
+      // to create the gap above it.
       MFI.setObjectAlignment(RPI.FrameIdx, Align(16));
     }
 
-    int Offset = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
-    assert(Offset % Scale == 0);
+    int OffsetPost = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
+    assert(OffsetPost % Scale == 0);
+    // If filling top down (default), we want the offset after incrementing it.
+    // If fillibg bootom up (WinCFI) we need the original offset.
+    int Offset = NeedsWinCFI ? OffsetPre : OffsetPost;
     RPI.Offset = Offset / Scale;
 
     assert(((!RPI.isScalable() && RPI.Offset >= -64 && RPI.Offset <= 63) ||
@@ -2204,7 +2255,19 @@ static void computeCalleeSaveRegisterPairs(
 
     RegPairs.push_back(RPI);
     if (RPI.isPaired())
-      ++i;
+      i += RegInc;
+  }
+  if (NeedsWinCFI) {
+    // If we need an alignment gap in the stack, align the topmost stack
+    // object. A stack frame with a gap looks like this, bottom up:
+    // x19, d8. d9, gap.
+    // Set extra alignment on the topmost stack object (the first element in
+    // CSI, which goes top down), to create the gap above it.
+    if (AFI->hasCalleeSaveStackFreeSpace())
+      MFI.setObjectAlignment(CSI[0].getFrameIdx(), Align(16));
+    // We iterated bottom up over the registers; flip RegPairs back to top
+    // down order.
+    std::reverse(RegPairs.begin(), RegPairs.end());
   }
 }
 
@@ -2634,6 +2697,21 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   AFI->setCalleeSavedStackSize(AlignedCSStackSize);
   AFI->setCalleeSaveStackHasFreeSpace(AlignedCSStackSize != CSStackSize);
   AFI->setSVECalleeSavedStackSize(alignTo(SVECSStackSize, 16));
+}
+
+bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
+    MachineFunction &MF, const TargetRegisterInfo *TRI,
+    std::vector<CalleeSavedInfo> &CSI) const {
+  bool NeedsWinCFI = needsWinCFI(MF);
+  // To match the canonical windows frame layout, reverse the list of
+  // callee saved registers to get them laid out by PrologEpilogInserter
+  // in the right order. (PrologEpilogInserter allocates stack objects top
+  // down. Windows canonical prologs store higher numbered registers at
+  // the top, thus have the CSI array start from the highest registers.)
+  if (NeedsWinCFI)
+    std::reverse(CSI.begin(), CSI.end());
+  // Let the generic code do the rest of the setup.
+  return false;
 }
 
 bool AArch64FrameLowering::enableStackSlotScavenging(
@@ -3222,4 +3300,163 @@ unsigned AArch64FrameLowering::getWinEHFuncletFrameSize(
   // This is the amount of stack a funclet needs to allocate.
   return alignTo(CSSize + MF.getFrameInfo().getMaxCallFrameSize(),
                  getStackAlign());
+}
+
+namespace {
+struct FrameObject {
+  bool IsValid = false;
+  // Index of the object in MFI.
+  int ObjectIndex = 0;
+  // Group ID this object belongs to.
+  int GroupIndex = -1;
+  // This object should be placed first (closest to SP).
+  bool ObjectFirst = false;
+  // This object's group (which always contains the object with
+  // ObjectFirst==true) should be placed first.
+  bool GroupFirst = false;
+};
+
+class GroupBuilder {
+  SmallVector<int, 8> CurrentMembers;
+  int NextGroupIndex = 0;
+  std::vector<FrameObject> &Objects;
+
+public:
+  GroupBuilder(std::vector<FrameObject> &Objects) : Objects(Objects) {}
+  void AddMember(int Index) { CurrentMembers.push_back(Index); }
+  void EndCurrentGroup() {
+    if (CurrentMembers.size() > 1) {
+      // Create a new group with the current member list. This might remove them
+      // from their pre-existing groups. That's OK, dealing with overlapping
+      // groups is too hard and unlikely to make a difference.
+      LLVM_DEBUG(dbgs() << "group:");
+      for (int Index : CurrentMembers) {
+        Objects[Index].GroupIndex = NextGroupIndex;
+        LLVM_DEBUG(dbgs() << " " << Index);
+      }
+      LLVM_DEBUG(dbgs() << "\n");
+      NextGroupIndex++;
+    }
+    CurrentMembers.clear();
+  }
+};
+
+bool FrameObjectCompare(const FrameObject &A, const FrameObject &B) {
+  // Objects at a lower index are closer to FP; objects at a higher index are
+  // closer to SP.
+  //
+  // For consistency in our comparison, all invalid objects are placed
+  // at the end. This also allows us to stop walking when we hit the
+  // first invalid item after it's all sorted.
+  //
+  // The "first" object goes first (closest to SP), followed by the members of
+  // the "first" group.
+  //
+  // The rest are sorted by the group index to keep the groups together.
+  // Higher numbered groups are more likely to be around longer (i.e. untagged
+  // in the function epilogue and not at some earlier point). Place them closer
+  // to SP.
+  //
+  // If all else equal, sort by the object index to keep the objects in the
+  // original order.
+  return std::make_tuple(!A.IsValid, A.ObjectFirst, A.GroupFirst, A.GroupIndex,
+                         A.ObjectIndex) <
+         std::make_tuple(!B.IsValid, B.ObjectFirst, B.GroupFirst, B.GroupIndex,
+                         B.ObjectIndex);
+}
+} // namespace
+
+void AArch64FrameLowering::orderFrameObjects(
+    const MachineFunction &MF, SmallVectorImpl<int> &ObjectsToAllocate) const {
+  if (!OrderFrameObjects || ObjectsToAllocate.empty())
+    return;
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  std::vector<FrameObject> FrameObjects(MFI.getObjectIndexEnd());
+  for (auto &Obj : ObjectsToAllocate) {
+    FrameObjects[Obj].IsValid = true;
+    FrameObjects[Obj].ObjectIndex = Obj;
+  }
+
+  // Identify stack slots that are tagged at the same time.
+  GroupBuilder GB(FrameObjects);
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (MI.isDebugInstr())
+        continue;
+      int OpIndex;
+      switch (MI.getOpcode()) {
+      case AArch64::STGloop:
+      case AArch64::STZGloop:
+        OpIndex = 3;
+        break;
+      case AArch64::STGOffset:
+      case AArch64::STZGOffset:
+      case AArch64::ST2GOffset:
+      case AArch64::STZ2GOffset:
+        OpIndex = 1;
+        break;
+      default:
+        OpIndex = -1;
+      }
+
+      int TaggedFI = -1;
+      if (OpIndex >= 0) {
+        const MachineOperand &MO = MI.getOperand(OpIndex);
+        if (MO.isFI()) {
+          int FI = MO.getIndex();
+          if (FI >= 0 && FI < MFI.getObjectIndexEnd() &&
+              FrameObjects[FI].IsValid)
+            TaggedFI = FI;
+        }
+      }
+
+      // If this is a stack tagging instruction for a slot that is not part of a
+      // group yet, either start a new group or add it to the current one.
+      if (TaggedFI >= 0)
+        GB.AddMember(TaggedFI);
+      else
+        GB.EndCurrentGroup();
+    }
+    // Groups should never span multiple basic blocks.
+    GB.EndCurrentGroup();
+  }
+
+  // If the function's tagged base pointer is pinned to a stack slot, we want to
+  // put that slot first when possible. This will likely place it at SP + 0,
+  // and save one instruction when generating the base pointer because IRG does
+  // not allow an immediate offset.
+  const AArch64FunctionInfo &AFI = *MF.getInfo<AArch64FunctionInfo>();
+  Optional<int> TBPI = AFI.getTaggedBasePointerIndex();
+  if (TBPI) {
+    FrameObjects[*TBPI].ObjectFirst = true;
+    FrameObjects[*TBPI].GroupFirst = true;
+    int FirstGroupIndex = FrameObjects[*TBPI].GroupIndex;
+    if (FirstGroupIndex >= 0)
+      for (FrameObject &Object : FrameObjects)
+        if (Object.GroupIndex == FirstGroupIndex)
+          Object.GroupFirst = true;
+  }
+
+  llvm::stable_sort(FrameObjects, FrameObjectCompare);
+
+  int i = 0;
+  for (auto &Obj : FrameObjects) {
+    // All invalid items are sorted at the end, so it's safe to stop.
+    if (!Obj.IsValid)
+      break;
+    ObjectsToAllocate[i++] = Obj.ObjectIndex;
+  }
+
+  LLVM_DEBUG(dbgs() << "Final frame order:\n"; for (auto &Obj
+                                                    : FrameObjects) {
+    if (!Obj.IsValid)
+      break;
+    dbgs() << "  " << Obj.ObjectIndex << ": group " << Obj.GroupIndex;
+    if (Obj.ObjectFirst)
+      dbgs() << ", first";
+    if (Obj.GroupFirst)
+      dbgs() << ", group-first";
+    dbgs() << "\n";
+  });
 }

@@ -6,6 +6,7 @@
 !   2.5.2 Kernels
 !   2.5.3 Serial
 !   2.9 Loop
+!   2.12 Atomic
 !   2.13 Declare
 !   2.14.3 Set
 !   2.14.4 Update
@@ -13,6 +14,7 @@
 !   2.11 Parallel Loop
 !   2.11 Kernels Loop
 !   2.11 Serial Loop
+!   2.16.13 Wait
 
 program openacc_clause_validity
 
@@ -25,10 +27,20 @@ program openacc_clause_validity
   real :: reduction_r
   logical :: reduction_l
   real(8), dimension(N, N) :: aa
+  logical :: ifCondition = .TRUE.
 
   !ERROR: At least one clause is required on the DECLARE directive
   !$acc declare
-  real(8), dimension(N) :: a
+  real(8), dimension(N) :: a, f, g, h
+
+  !$acc init
+  !$acc init if(.TRUE.)
+  !$acc init if(ifCondition)
+  !$acc init device_num(1)
+  !$acc init device_num(i)
+  !$acc init device_type(i)
+  !$acc init device_type(2, i, j)
+  !$acc init device_num(i) device_type(i, j) if(ifCondition)
 
   !ERROR: At least one of ATTACH, COPYIN, CREATE clause must appear on the ENTER DATA directive
   !$acc enter data
@@ -71,6 +83,8 @@ program openacc_clause_validity
   !ERROR: Unmatched PARALLEL directive
   !$acc end parallel
 
+  !$acc update self(a, f) host(g) device(h)
+
   !$acc update device(i) device_type(*) async
 
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the UPDATE directive
@@ -92,6 +106,21 @@ program openacc_clause_validity
   !$acc end parallel
 
   !$acc parallel loop tile(2)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+
+  !$acc parallel loop self
+  do i = 1, N
+    a(i) = 3.14
+  end do
+
+  !$acc parallel loop self(.true.)
+  do i = 1, N
+    a(i) = 3.14
+  end do
+
+  !$acc parallel loop self(ifCondition)
   do i = 1, N
     a(i) = 3.14
   end do
@@ -414,6 +443,10 @@ program openacc_clause_validity
   !$acc kernels wait(devnum: 1: queues: 1, 2) async(3)
   !$acc end kernels
 
+  !$acc wait
+
+  !$acc wait async
+
   !$acc wait(1)
   !$acc wait(1, 2)
 
@@ -425,6 +458,46 @@ program openacc_clause_validity
 
   !$acc wait(devnum: 1: queues: 3)
   !$acc wait(devnum: 1: queues: 3, 4)
+
+  !$acc wait(1) if(.true.)
+
+  !ERROR: At most one IF clause can appear on the WAIT directive
+  !$acc wait(1) if(.true.) if(.false.)
+
+  !$acc wait(1) if(.true.) async
+
+  !$acc wait(1) if(.true.) async(1)
+
+  !ERROR: At most one ASYNC clause can appear on the WAIT directive
+  !$acc wait(1) if(.true.) async(1) async
+
+  !$acc parallel
+  !$acc atomic update
+  c(i) = c(i) + 1
+
+  !$acc atomic update
+  c(i) = c(i) + 1
+  !$acc end atomic
+
+  !$acc atomic write
+  c(i) = 10
+
+  !$acc atomic write
+  c(i) = 10
+  !$acc end atomic
+
+  !$acc atomic read
+  i = c(i)
+
+  !$acc atomic read
+  i = c(i)
+  !$acc end atomic
+
+  !$acc atomic capture
+  c(i) = i
+  i = i + 1
+  !$acc end atomic
+  !$acc end parallel
 
  contains
 

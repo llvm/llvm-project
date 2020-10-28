@@ -237,37 +237,40 @@ namespace {
 class PointerReplacer {
 public:
   PointerReplacer(InstCombinerImpl &IC) : IC(IC) {}
+
+  bool collectUsers(Instruction &I);
   void replacePointer(Instruction &I, Value *V);
 
 private:
-  void findLoadAndReplace(Instruction &I);
   void replace(Instruction *I);
   Value *getReplacement(Value *I);
 
-  SmallVector<Instruction *, 4> Path;
+  SmallSetVector<Instruction *, 4> Worklist;
   MapVector<Value *, Value *> WorkMap;
   InstCombinerImpl &IC;
 };
 } // end anonymous namespace
 
-void PointerReplacer::findLoadAndReplace(Instruction &I) {
+bool PointerReplacer::collectUsers(Instruction &I) {
   for (auto U : I.users()) {
-    auto *Inst = dyn_cast<Instruction>(&*U);
-    if (!Inst)
-      return;
-    LLVM_DEBUG(dbgs() << "Found pointer user: " << *U << '\n');
-    if (isa<LoadInst>(Inst)) {
-      for (auto P : Path)
-        replace(P);
-      replace(Inst);
+    Instruction *Inst = cast<Instruction>(&*U);
+    if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
+      if (Load->isVolatile())
+        return false;
+      Worklist.insert(Load);
     } else if (isa<GetElementPtrInst>(Inst) || isa<BitCastInst>(Inst)) {
-      Path.push_back(Inst);
-      findLoadAndReplace(*Inst);
-      Path.pop_back();
+      Worklist.insert(Inst);
+      if (!collectUsers(*Inst))
+        return false;
+    } else if (isa<MemTransferInst>(Inst)) {
+      Worklist.insert(Inst);
     } else {
-      return;
+      LLVM_DEBUG(dbgs() << "Cannot handle pointer user: " << *U << '\n');
+      return false;
     }
   }
+
+  return true;
 }
 
 Value *PointerReplacer::getReplacement(Value *V) {
@@ -284,9 +287,12 @@ void PointerReplacer::replace(Instruction *I) {
   if (auto *LT = dyn_cast<LoadInst>(I)) {
     auto *V = getReplacement(LT->getPointerOperand());
     assert(V && "Operand not replaced");
-    auto *NewI = new LoadInst(I->getType(), V, "", false,
-                              IC.getDataLayout().getABITypeAlign(I->getType()));
+    auto *NewI = new LoadInst(LT->getType(), V, "", LT->isVolatile(),
+                              LT->getAlign(), LT->getOrdering(),
+                              LT->getSyncScopeID());
     NewI->takeName(LT);
+    copyMetadataForLoad(*NewI, *LT);
+
     IC.InsertNewInstWith(NewI, *LT);
     IC.replaceInstUsesWith(*LT, NewI);
     WorkMap[LT] = NewI;
@@ -309,6 +315,28 @@ void PointerReplacer::replace(Instruction *I) {
     IC.InsertNewInstWith(NewI, *BC);
     NewI->takeName(BC);
     WorkMap[BC] = NewI;
+  } else if (auto *MemCpy = dyn_cast<MemTransferInst>(I)) {
+    auto *SrcV = getReplacement(MemCpy->getRawSource());
+    // The pointer may appear in the destination of a copy, but we don't want to
+    // replace it.
+    if (!SrcV) {
+      assert(getReplacement(MemCpy->getRawDest()) &&
+             "destination not in replace list");
+      return;
+    }
+
+    IC.Builder.SetInsertPoint(MemCpy);
+    auto *NewI = IC.Builder.CreateMemTransferInst(
+        MemCpy->getIntrinsicID(), MemCpy->getRawDest(), MemCpy->getDestAlign(),
+        SrcV, MemCpy->getSourceAlign(), MemCpy->getLength(),
+        MemCpy->isVolatile());
+    AAMDNodes AAMD;
+    MemCpy->getAAMetadata(AAMD);
+    if (AAMD)
+      NewI->setAAMetadata(AAMD);
+
+    IC.eraseInstFromFunction(*MemCpy);
+    WorkMap[MemCpy] = NewI;
   } else {
     llvm_unreachable("should never reach here");
   }
@@ -322,7 +350,9 @@ void PointerReplacer::replacePointer(Instruction &I, Value *V) {
          "Invalid usage");
 #endif
   WorkMap[&I] = V;
-  findLoadAndReplace(I);
+
+  for (Instruction *Workitem : Worklist)
+    replace(Workitem);
 }
 
 Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
@@ -376,23 +406,21 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
   // read.
   SmallVector<Instruction *, 4> ToDelete;
   if (MemTransferInst *Copy = isOnlyCopiedFromConstantMemory(AA, &AI, ToDelete)) {
+    Value *TheSrc = Copy->getSource();
     Align AllocaAlign = AI.getAlign();
     Align SourceAlign = getOrEnforceKnownAlignment(
-        Copy->getSource(), AllocaAlign, DL, &AI, &AC, &DT);
+      TheSrc, AllocaAlign, DL, &AI, &AC, &DT);
     if (AllocaAlign <= SourceAlign &&
-        isDereferenceableForAllocaSize(Copy->getSource(), &AI, DL)) {
+        isDereferenceableForAllocaSize(TheSrc, &AI, DL)) {
       LLVM_DEBUG(dbgs() << "Found alloca equal to global: " << AI << '\n');
       LLVM_DEBUG(dbgs() << "  memcpy = " << *Copy << '\n');
-      for (unsigned i = 0, e = ToDelete.size(); i != e; ++i)
-        eraseInstFromFunction(*ToDelete[i]);
-      Value *TheSrc = Copy->getSource();
-      auto *SrcTy = TheSrc->getType();
-      auto *DestTy = PointerType::get(AI.getType()->getPointerElementType(),
-                                      SrcTy->getPointerAddressSpace());
-      Value *Cast =
-        Builder.CreatePointerBitCastOrAddrSpaceCast(TheSrc, DestTy);
-      if (AI.getType()->getPointerAddressSpace() ==
-          SrcTy->getPointerAddressSpace()) {
+      unsigned SrcAddrSpace = TheSrc->getType()->getPointerAddressSpace();
+      auto *DestTy = PointerType::get(AI.getAllocatedType(), SrcAddrSpace);
+      if (AI.getType()->getAddressSpace() == SrcAddrSpace) {
+        for (Instruction *Delete : ToDelete)
+          eraseInstFromFunction(*Delete);
+
+        Value *Cast = Builder.CreateBitCast(TheSrc, DestTy);
         Instruction *NewI = replaceInstUsesWith(AI, Cast);
         eraseInstFromFunction(*Copy);
         ++NumGlobalCopies;
@@ -400,8 +428,14 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
       }
 
       PointerReplacer PtrReplacer(*this);
-      PtrReplacer.replacePointer(AI, Cast);
-      ++NumGlobalCopies;
+      if (PtrReplacer.collectUsers(AI)) {
+        for (Instruction *Delete : ToDelete)
+          eraseInstFromFunction(*Delete);
+
+        Value *Cast = Builder.CreateBitCast(TheSrc, DestTy);
+        PtrReplacer.replacePointer(AI, Cast);
+        ++NumGlobalCopies;
+      }
     }
   }
 
@@ -488,6 +522,7 @@ static StoreInst *combineStoreToNewValue(InstCombinerImpl &IC, StoreInst &SI,
       break;
     case LLVMContext::MD_invariant_load:
     case LLVMContext::MD_nonnull:
+    case LLVMContext::MD_noundef:
     case LLVMContext::MD_range:
     case LLVMContext::MD_align:
     case LLVMContext::MD_dereferenceable:
@@ -554,49 +589,15 @@ static Instruction *combineLoadToOperationType(InstCombinerImpl &IC,
   if (LI.getPointerOperand()->isSwiftError())
     return nullptr;
 
-  Type *Ty = LI.getType();
   const DataLayout &DL = IC.getDataLayout();
 
-  // Try to canonicalize loads which are only ever stored to operate over
-  // integers instead of any other type. We only do this when the loaded type
-  // is sized and has a size exactly the same as its store size and the store
-  // size is a legal integer type.
-  // Do not perform canonicalization if minmax pattern is found (to avoid
-  // infinite loop).
-  Type *Dummy;
-  if (!Ty->isIntegerTy() && Ty->isSized() && !isa<ScalableVectorType>(Ty) &&
-      DL.isLegalInteger(DL.getTypeStoreSizeInBits(Ty)) &&
-      DL.typeSizeEqualsStoreSize(Ty) && !DL.isNonIntegralPointerType(Ty) &&
-      !isMinMaxWithLoads(InstCombiner::peekThroughBitcast(
-                             LI.getPointerOperand(), /*OneUseOnly=*/true),
-                         Dummy)) {
-    if (all_of(LI.users(), [&LI](User *U) {
-          auto *SI = dyn_cast<StoreInst>(U);
-          return SI && SI->getPointerOperand() != &LI &&
-                 !SI->getPointerOperand()->isSwiftError();
-        })) {
-      LoadInst *NewLoad = IC.combineLoadToNewType(
-          LI, Type::getIntNTy(LI.getContext(), DL.getTypeStoreSizeInBits(Ty)));
-      // Replace all the stores with stores of the newly loaded value.
-      for (auto UI = LI.user_begin(), UE = LI.user_end(); UI != UE;) {
-        auto *SI = cast<StoreInst>(*UI++);
-        IC.Builder.SetInsertPoint(SI);
-        combineStoreToNewValue(IC, *SI, NewLoad);
-        IC.eraseInstFromFunction(*SI);
-      }
-      assert(LI.use_empty() && "Failed to remove all users of the load!");
-      // Return the old load so the combiner can delete it safely.
-      return &LI;
-    }
-  }
-
   // Fold away bit casts of the loaded value by loading the desired type.
-  // We can do this for BitCastInsts as well as casts from and to pointer types,
-  // as long as those are noops (i.e., the source or dest type have the same
-  // bitwidth as the target's pointers).
+  // Note that we should not do this for pointer<->integer casts,
+  // because that would result in type punning.
   if (LI.hasOneUse())
     if (auto* CI = dyn_cast<CastInst>(LI.user_back()))
-      if (CI->isNoopCast(DL))
+      if (CI->isNoopCast(DL) && LI.getType()->isPtrOrPtrVectorTy() ==
+                                    CI->getDestTy()->isPtrOrPtrVectorTy())
         if (!LI.isAtomic() || isSupportedAtomicType(CI->getDestTy())) {
           LoadInst *NewLoad = IC.combineLoadToNewType(LI, CI->getDestTy());
           CI->replaceAllUsesWith(NewLoad);
@@ -839,12 +840,17 @@ static bool canReplaceGEPIdxWithZero(InstCombinerImpl &IC,
     return false;
 
   SmallVector<Value *, 4> Ops(GEPI->idx_begin(), GEPI->idx_begin() + Idx);
-  Type *AllocTy =
-    GetElementPtrInst::getIndexedType(GEPI->getSourceElementType(), Ops);
+  Type *SourceElementType = GEPI->getSourceElementType();
+  // Size information about scalable vectors is not available, so we cannot
+  // deduce whether indexing at n is undefined behaviour or not. Bail out.
+  if (isa<ScalableVectorType>(SourceElementType))
+    return false;
+
+  Type *AllocTy = GetElementPtrInst::getIndexedType(SourceElementType, Ops);
   if (!AllocTy || !AllocTy->isSized())
     return false;
   const DataLayout &DL = IC.getDataLayout();
-  uint64_t TyAllocSize = DL.getTypeAllocSize(AllocTy);
+  uint64_t TyAllocSize = DL.getTypeAllocSize(AllocTy).getFixedSize();
 
   // If there are more indices after the one we might replace with a zero, make
   // sure they're all non-negative. If any of them are negative, the overall

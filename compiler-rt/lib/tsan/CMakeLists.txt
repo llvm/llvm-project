@@ -25,6 +25,10 @@ append_list_if(SANITIZER_LIMIT_FRAME_SIZE -Wframe-larger-than=530
 append_list_if(COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG -Wglobal-constructors
                TSAN_RTL_CFLAGS)
 
+if (TARGET cxx-headers OR HAVE_LIBCXX)
+  set(TSAN_DEPS cxx-headers)
+endif()
+
 set(TSAN_SOURCES
   rtl/tsan_clock.cpp
   rtl/tsan_debugging.cpp
@@ -142,6 +146,7 @@ if(APPLE)
                 RTSanitizerCommonSymbolizer
                 RTUbsan
     CFLAGS ${TSAN_RTL_CFLAGS}
+    DEPS ${TSAN_DEPS}
     LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
     LINK_LIBS ${TSAN_LINK_LIBS} objc
     PARENT_TARGET tsan)
@@ -150,7 +155,8 @@ if(APPLE)
     ARCHS ${TSAN_SUPPORTED_ARCH}
     SOURCES ${TSAN_SOURCES} ${TSAN_CXX_SOURCES} ${TSAN_ASM_SOURCES}
     ADDITIONAL_HEADERS ${TSAN_HEADERS}
-    CFLAGS ${TSAN_RTL_CFLAGS})
+    CFLAGS ${TSAN_RTL_CFLAGS}
+    DEPS ${TSAN_DEPS})
 
   # Build and check Go runtime.
   set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
@@ -214,6 +220,7 @@ else()
               $<TARGET_OBJECTS:RTUbsan.${arch}>
       ADDITIONAL_HEADERS ${TSAN_HEADERS}
       CFLAGS ${TSAN_RTL_CFLAGS}
+      DEPS ${TSAN_DEPS}
       PARENT_TARGET tsan)
     add_compiler_rt_runtime(clang_rt.tsan_cxx
       STATIC
@@ -222,6 +229,7 @@ else()
               $<TARGET_OBJECTS:RTUbsan_cxx.${arch}>
       ADDITIONAL_HEADERS ${TSAN_HEADERS}
       CFLAGS ${TSAN_RTL_CFLAGS}
+      DEPS ${TSAN_DEPS}
       PARENT_TARGET tsan)
     list(APPEND TSAN_RUNTIME_LIBRARIES clang_rt.tsan-${arch}
                                        clang_rt.tsan_cxx-${arch})

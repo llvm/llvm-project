@@ -5,7 +5,7 @@
 ; passes *always* work on LCSSA. This should stop using a different set of
 ; checks at that point.
 
-; RUN: opt < %s -analyze -iv-users | FileCheck %s --check-prefixes=CHECK,CHECK-NO-LCSSA
+; RUN: opt < %s -analyze -iv-users -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,CHECK-NO-LCSSA
 ; RUN: opt < %s -disable-output -passes='print<iv-users>' 2>&1 | FileCheck %s
 
 ; Provide legal integer types.
@@ -38,7 +38,7 @@ exit:
 ; sure they aren't marked as post-inc users.
 ;
 ; CHECK-LABEL: IV Users for loop %test1.loop
-; CHECK-NO-LCSSA: %sext.us = {0,+,(16777216 + (-16777216 * %sub.us))<nuw><nsw>,+,33554432}<%test1.loop> (post-inc with loop %test1.loop) in    %f = ashr i32 %sext.us, 24
+; CHECK-NO-LCSSA: %sext.us = {0,+,(16777216 + (-16777216 * %sub.us)<nuw><nsw>)<nuw><nsw>,+,33554432}<%test1.loop> (post-inc with loop %test1.loop) in    %f = ashr i32 %sext.us, 24
 define i32 @test1(i1 %cond) {
 entry:
   %sub.us = select i1 %cond, i32 0, i32 0

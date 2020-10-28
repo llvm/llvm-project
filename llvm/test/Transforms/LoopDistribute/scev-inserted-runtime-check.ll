@@ -61,7 +61,7 @@ define void @f(i32* noalias %a, i32* noalias %b, i32* noalias %c, i32* noalias %
 ; CHECK-NEXT:    [[ARRAYIDXC_LVER_ORIG:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i64 [[MUL_EXT_LVER_ORIG]]
 ; CHECK-NEXT:    store i32 [[MULC_LVER_ORIG]], i32* [[ARRAYIDXC_LVER_ORIG]], align 4
 ; CHECK-NEXT:    [[EXITCOND_LVER_ORIG:%.*]] = icmp eq i64 [[ADD_LVER_ORIG]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_LVER_ORIG]], label [[FOR_END:%.*]], label [[FOR_BODY_LVER_ORIG]]
+; CHECK-NEXT:    br i1 [[EXITCOND_LVER_ORIG]], label %[[FOR_END1:.*]], label [[FOR_BODY_LVER_ORIG]]
 ; CHECK:       for.body.ph.ldist1:
 ; CHECK-NEXT:    br label [[FOR_BODY_LDIST1:%.*]]
 ; CHECK:       for.body.ldist1:
@@ -97,7 +97,11 @@ define void @f(i32* noalias %a, i32* noalias %b, i32* noalias %c, i32* noalias %
 ; CHECK-NEXT:    [[ARRAYIDXC:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 [[MUL_EXT]]
 ; CHECK-NEXT:    store i32 [[MULC]], i32* [[ARRAYIDXC]], align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[ADD]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END2:.*]], label [[FOR_BODY]]
+; CHECK:       [[FOR_END1]]:
+; CHECK:         br label %for.end
+; CHECK:       [[FOR_END2]]:
+; CHECK:         br label %for.end
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;

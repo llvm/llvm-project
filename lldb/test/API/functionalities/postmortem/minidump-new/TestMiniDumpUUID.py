@@ -22,11 +22,14 @@ class MiniDumpUUIDTestCase(TestBase):
     def verify_module(self, module, verify_path, verify_uuid):
         # Compare the filename and the directory separately. We are avoiding
         # SBFileSpec.fullpath because it causes a slash/backslash confusion
-        # on Windows.
+        # on Windows.  Similarly, we compare the directories using normcase
+        # because they may contain a Linux-style relative path from the
+        # minidump appended to a Windows-style root path from the host.
         self.assertEqual(
             os.path.basename(verify_path), module.GetFileSpec().basename)
         self.assertEqual(
-            os.path.dirname(verify_path), module.GetFileSpec().dirname or "")
+            os.path.normcase(os.path.dirname(verify_path)),
+            os.path.normcase(module.GetFileSpec().dirname or ""))
         self.assertEqual(verify_uuid, module.GetUUIDString())
 
     def get_minidump_modules(self, yaml_file):
@@ -198,6 +201,50 @@ class MiniDumpUUIDTestCase(TestBase):
         modules = self.get_minidump_modules("linux-arm-breakpad-uuid-match.yaml")
         self.assertEqual(1, len(modules))
         # LLDB makes up it own UUID as well when there is no build ID so we
+        # will check that this matches.
+        self.verify_module(modules[0], so_path, "D9C480E8")
+
+    def test_breakpad_hash_match_sysroot(self):
+        """
+            Check that we can match the breakpad .text section hash when the
+            module is located under a user-provided sysroot.
+        """
+        sysroot_path = os.path.join(self.getBuildDir(), "mock_sysroot")
+        # Create the directory under the sysroot where the minidump reports
+        # the module.
+        so_dir = os.path.join(sysroot_path, "invalid", "path", "on", "current", "system")
+        so_path = os.path.join(so_dir, "libbreakpad.so")
+        lldbutil.mkdir_p(so_dir)
+        self.yaml2obj("libbreakpad.yaml", so_path)
+        self.runCmd("platform select remote-linux --sysroot '%s'" % sysroot_path)
+        modules = self.get_minidump_modules("linux-arm-breakpad-uuid-match.yaml")
+        self.assertEqual(1, len(modules))
+        # LLDB makes up its own UUID as well when there is no build ID so we
+        # will check that this matches.
+        self.verify_module(modules[0], so_path, "D9C480E8")
+
+    def test_breakpad_hash_match_sysroot_decoy(self):
+        """
+            Check that we can match the breakpad .text section hash when there is
+            a module with the right name but wrong contents under a user-provided
+            sysroot, and the right module is at the given search path..
+        """
+        sysroot_path = os.path.join(self.getBuildDir(), "mock_sysroot")
+        # Create the directory under the sysroot where the minidump reports
+        # the module.
+        decoy_dir = os.path.join(sysroot_path, "invalid", "path", "on", "current", "system")
+        decoy_path = os.path.join(decoy_dir, "libbreakpad.so")
+        lldbutil.mkdir_p(decoy_dir)
+        self.yaml2obj("libbreakpad-decoy.yaml", decoy_path)
+        self.runCmd("platform select remote-linux --sysroot '%s'" % sysroot_path)
+        so_dir = os.path.join(self.getBuildDir(), "searchpath_dir")
+        so_path = os.path.join(so_dir, "libbreakpad.so")
+        lldbutil.mkdir_p(so_dir)
+        self.yaml2obj("libbreakpad.yaml", so_path)
+        self.runCmd('settings set target.exec-search-paths "%s"' % so_dir)
+        modules = self.get_minidump_modules("linux-arm-breakpad-uuid-match.yaml")
+        self.assertEqual(1, len(modules))
+        # LLDB makes up its own UUID as well when there is no build ID so we
         # will check that this matches.
         self.verify_module(modules[0], so_path, "D9C480E8")
 

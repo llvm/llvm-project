@@ -834,7 +834,8 @@ enum IIT_Info {
   IIT_VEC_OF_BITCASTS_TO_INT = 46,
   IIT_V128 = 47,
   IIT_BF16 = 48,
-  IIT_STRUCT9 = 49
+  IIT_STRUCT9 = 49,
+  IIT_V256 = 50
 };
 
 static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
@@ -926,6 +927,10 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   case IIT_V128:
     OutputTable.push_back(IITDescriptor::getVector(128, IsScalableVector));
+    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    return;
+  case IIT_V256:
+    OutputTable.push_back(IITDescriptor::getVector(256, IsScalableVector));
     DecodeIITType(NextElt, Infos, Info, OutputTable);
     return;
   case IIT_V512:

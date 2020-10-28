@@ -150,10 +150,11 @@ protected:
   /// This method is used by derived classes to add their operations to the set.
   ///
   template <typename... Args> void addOperations() {
-    (void)std::initializer_list<int>{
-        0, (addOperation(AbstractOperation::get<Args>(*this)), 0)...};
+    (void)std::initializer_list<int>{0, (addOperation<Args>(), 0)...};
   }
-
+  template <typename Arg> void addOperation() {
+    addOperation(AbstractOperation::get<Arg>(*this));
+  }
   void addOperation(AbstractOperation opInfo);
 
   /// Register a set of type classes with this dialect.
@@ -281,48 +282,6 @@ public:
 
 private:
   MapTy registry;
-};
-
-/// Deprecated: this provides a global registry for convenience, while we're
-/// transitioning the registration mechanism to a stateless approach.
-DialectRegistry &getGlobalDialectRegistry();
-
-/// This controls globally whether the dialect registry is / isn't enabled.
-/// This is deprecated and only intended to help the transition. It'll be
-/// removed soon.
-void enableGlobalDialectRegistry(bool);
-bool isGlobalDialectRegistryEnabled();
-
-/// Registers all dialects from the global registries with the
-/// specified MLIRContext. This won't load the dialects in the context,
-/// but only make them available for lazy loading by name.
-/// Note: This method is not thread-safe.
-/// Deprecated: this method will be deleted soon.
-void registerAllDialects(MLIRContext *context);
-
-/// Register and return the dialect with the given namespace in the provided
-/// context. Returns nullptr is there is no constructor registered for this
-/// dialect.
-inline Dialect *registerDialect(StringRef name, MLIRContext *context) {
-  return getGlobalDialectRegistry().loadByName(name, context);
-}
-
-/// Utility to register a dialect. Client can register their dialect with the
-/// global registry by calling registerDialect<MyDialect>();
-/// Note: This method is not thread-safe.
-template <typename ConcreteDialect> void registerDialect() {
-  getGlobalDialectRegistry().insert<ConcreteDialect>();
-}
-
-/// DialectRegistration provides a global initializer that registers a Dialect
-/// allocation routine.
-///
-/// Usage:
-///
-///   // At namespace scope.
-///   static DialectRegistration<MyDialect> Unused;
-template <typename ConcreteDialect> struct DialectRegistration {
-  DialectRegistration() { registerDialect<ConcreteDialect>(); }
 };
 
 } // namespace mlir

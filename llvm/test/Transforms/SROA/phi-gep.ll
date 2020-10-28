@@ -452,6 +452,75 @@ bb2:
   ret void
 }
 
+define void @constant_value_phi() {
+; CHECK-LABEL: @constant_value_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LAND_LHS_TRUE_I:%.*]]
+; CHECK:       land.lhs.true.i:
+; CHECK-NEXT:    br i1 undef, label [[COND_END_I:%.*]], label [[COND_END_I]]
+; CHECK:       cond.end.i:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  %s1 = alloca [3 x i16]
+  %s = alloca [3 x i16]
+  %cast = bitcast [3 x i16]* %s1 to i16*
+  br label %land.lhs.true.i
+
+land.lhs.true.i:                                  ; preds = %entry
+  br i1 undef, label %cond.end.i, label %cond.end.i
+
+cond.end.i:                                       ; preds = %land.lhs.true.i, %land.lhs.true.i
+  %.pre-phi1 = phi i16* [ %cast, %land.lhs.true.i ], [ %cast, %land.lhs.true.i ]
+  %cast2 = bitcast [3 x i16]* %s to i16*
+  call void @llvm.memcpy.p0i16.p0i16.i64(i16* %.pre-phi1, i16* %cast2, i64 3, i1 false)
+  %gep = getelementptr inbounds [3 x i16], [3 x i16]* %s, i32 0, i32 0
+  %load = load i16, i16* %gep
+  unreachable
+}
+
+define i32 @test_sroa_phi_gep_multiple_values_from_same_block(i32 %arg) {
+; CHECK-LABEL: @test_sroa_phi_gep_multiple_values_from_same_block(
+; CHECK-NEXT:  bb.1:
+; CHECK-NEXT:    switch i32 [[ARG:%.*]], label [[BB_3:%.*]] [
+; CHECK-NEXT:    i32 1, label [[BB_2:%.*]]
+; CHECK-NEXT:    i32 2, label [[BB_2]]
+; CHECK-NEXT:    i32 3, label [[BB_4:%.*]]
+; CHECK-NEXT:    i32 4, label [[BB_4]]
+; CHECK-NEXT:    ]
+; CHECK:       bb.2:
+; CHECK-NEXT:    br label [[BB_4]]
+; CHECK:       bb.3:
+; CHECK-NEXT:    br label [[BB_4]]
+; CHECK:       bb.4:
+; CHECK-NEXT:    [[PHI_SROA_PHI_SROA_SPECULATED:%.*]] = phi i32 [ undef, [[BB_3]] ], [ undef, [[BB_2]] ], [ undef, [[BB_1:%.*]] ], [ undef, [[BB_1]] ]
+; CHECK-NEXT:    ret i32 [[PHI_SROA_PHI_SROA_SPECULATED]]
+;
+bb.1:
+  %a = alloca %pair, align 4
+  %b = alloca %pair, align 4
+  switch i32 %arg, label %bb.3 [
+  i32 1, label %bb.2
+  i32 2, label %bb.2
+  i32 3, label %bb.4
+  i32 4, label %bb.4
+  ]
+
+bb.2:                                                ; preds = %bb.1, %bb.1
+  br label %bb.4
+
+bb.3:                                                ; preds = %bb.1
+  br label %bb.4
+
+bb.4:                                                ; preds = %bb.1, %bb.1, %bb.3, %bb.2
+  %phi = phi %pair* [ %a, %bb.3 ], [ %a, %bb.2 ], [ %b, %bb.1 ], [ %b, %bb.1 ]
+  %gep = getelementptr inbounds %pair, %pair* %phi, i32 0, i32 1
+  %load = load i32, i32* %gep, align 4
+  ret i32 %load
+}
+
 declare %pair* @foo()
 
 declare i32 @__gxx_personality_v0(...)
+
+declare void @llvm.memcpy.p0i16.p0i16.i64(i16* noalias nocapture writeonly, i16* noalias nocapture readonly, i64, i1 immarg)

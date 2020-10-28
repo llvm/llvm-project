@@ -50,6 +50,7 @@ extern "C" {
 DEFINE_C_API_STRUCT(MlirContext, void);
 DEFINE_C_API_STRUCT(MlirDialect, void);
 DEFINE_C_API_STRUCT(MlirOperation, void);
+DEFINE_C_API_STRUCT(MlirOpPrintingFlags, void);
 DEFINE_C_API_STRUCT(MlirBlock, void);
 DEFINE_C_API_STRUCT(MlirRegion, void);
 
@@ -92,7 +93,9 @@ MlirContext mlirContextCreate();
 int mlirContextEqual(MlirContext ctx1, MlirContext ctx2);
 
 /** Checks whether a context is null. */
-inline int mlirContextIsNull(MlirContext context) { return !context.ptr; }
+static inline int mlirContextIsNull(MlirContext context) {
+  return !context.ptr;
+}
 
 /** Takes an MLIR context owned by the caller and destroys it. */
 void mlirContextDestroy(MlirContext context);
@@ -127,7 +130,9 @@ MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
 MlirContext mlirDialectGetContext(MlirDialect dialect);
 
 /** Checks if the dialect is null. */
-int mlirDialectIsNull(MlirDialect dialect);
+static inline int mlirDialectIsNull(MlirDialect dialect) {
+  return !dialect.ptr;
+}
 
 /** Checks if two dialects that belong to the same context are equal. Dialects
  * from different contexts will not compare equal. */
@@ -171,7 +176,7 @@ MlirModule mlirModuleCreateParse(MlirContext context, const char *module);
 MlirContext mlirModuleGetContext(MlirModule module);
 
 /** Checks whether a module is null. */
-inline int mlirModuleIsNull(MlirModule module) { return !module.ptr; }
+static inline int mlirModuleIsNull(MlirModule module) { return !module.ptr; }
 
 /** Takes a module owned by the caller and deletes it. */
 void mlirModuleDestroy(MlirModule module);
@@ -225,6 +230,42 @@ void mlirOperationStateAddAttributes(MlirOperationState *state, intptr_t n,
                                      MlirNamedAttribute *attributes);
 
 /*============================================================================*/
+/* Op Printing flags API.                                                     */
+/* While many of these are simple settings that could be represented in a     */
+/* struct, they are wrapped in a heap allocated object and accessed via       */
+/* functions to maximize the possibility of compatibility over time.          */
+/*============================================================================*/
+
+/** Creates new printing flags with defaults, intended for customization.
+ * Must be freed with a call to mlirOpPrintingFlagsDestroy(). */
+MlirOpPrintingFlags mlirOpPrintingFlagsCreate();
+
+/** Destroys printing flags created with mlirOpPrintingFlagsCreate. */
+void mlirOpPrintingFlagsDestroy(MlirOpPrintingFlags flags);
+
+/** Enables the elision of large elements attributes by printing a lexically
+ * valid but otherwise meaningless form instead of the element data. The
+ * `largeElementLimit` is used to configure what is considered to be a "large"
+ * ElementsAttr by providing an upper limit to the number of elements. */
+void mlirOpPrintingFlagsElideLargeElementsAttrs(MlirOpPrintingFlags flags,
+                                                intptr_t largeElementLimit);
+
+/** Enable printing of debug information. If 'prettyForm' is set to true,
+ * debug information is printed in a more readable 'pretty' form. Note: The
+ * IR generated with 'prettyForm' is not parsable. */
+void mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags,
+                                        int prettyForm);
+
+/** Always print operations in the generic form. */
+void mlirOpPrintingFlagsPrintGenericOpForm(MlirOpPrintingFlags flags);
+
+/** Use local scope when printing the operation. This allows for using the
+ * printer in a more localized and thread-safe setting, but may not
+ * necessarily be identical to what the IR will look like when dumping
+ * the full module. */
+void mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags);
+
+/*============================================================================*/
 /* Operation API.                                                             */
 /*============================================================================*/
 
@@ -235,7 +276,11 @@ MlirOperation mlirOperationCreate(const MlirOperationState *state);
 void mlirOperationDestroy(MlirOperation op);
 
 /** Checks whether the underlying operation is null. */
-int mlirOperationIsNull(MlirOperation op);
+static inline int mlirOperationIsNull(MlirOperation op) { return !op.ptr; }
+
+/** Checks whether two operation handles point to the same operation. This does
+ * not perform deep comparison. */
+int mlirOperationEqual(MlirOperation op, MlirOperation other);
 
 /** Returns the number of regions attached to the given operation. */
 intptr_t mlirOperationGetNumRegions(MlirOperation op);
@@ -275,11 +320,25 @@ MlirNamedAttribute mlirOperationGetAttribute(MlirOperation op, intptr_t pos);
 MlirAttribute mlirOperationGetAttributeByName(MlirOperation op,
                                               const char *name);
 
+/** Sets an attribute by name, replacing the existing if it exists or
+ * adding a new one otherwise. */
+void mlirOperationSetAttributeByName(MlirOperation op, const char *name,
+                                     MlirAttribute attr);
+
+/** Removes an attribute by name. Returns 0 if the attribute was not found
+ * and !0 if removed. */
+int mlirOperationRemoveAttributeByName(MlirOperation op, const char *name);
+
 /** Prints an operation by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
  * several times with consecutive chunks of the string. */
 void mlirOperationPrint(MlirOperation op, MlirStringCallback callback,
                         void *userData);
+
+/** Same as mlirOperationPrint but accepts flags controlling the printing
+ * behavior. */
+void mlirOperationPrintWithFlags(MlirOperation op, MlirOpPrintingFlags flags,
+                                 MlirStringCallback callback, void *userData);
 
 /** Prints an operation to stderr. */
 void mlirOperationDump(MlirOperation op);
@@ -295,7 +354,7 @@ MlirRegion mlirRegionCreate();
 void mlirRegionDestroy(MlirRegion region);
 
 /** Checks whether a region is null. */
-int mlirRegionIsNull(MlirRegion region);
+static inline int mlirRegionIsNull(MlirRegion region) { return !region.ptr; }
 
 /** Gets the first block in the region. */
 MlirBlock mlirRegionGetFirstBlock(MlirRegion region);
@@ -333,7 +392,11 @@ MlirBlock mlirBlockCreate(intptr_t nArgs, MlirType *args);
 void mlirBlockDestroy(MlirBlock block);
 
 /** Checks whether a block is null. */
-int mlirBlockIsNull(MlirBlock block);
+static inline int mlirBlockIsNull(MlirBlock block) { return !block.ptr; }
+
+/** Checks whether two blocks handles point to the same block. This does not
+ * perform deep comparison. */
+int mlirBlockEqual(MlirBlock block, MlirBlock other);
 
 /** Returns the block immediately following the given block in its parent
  * region. */
@@ -381,8 +444,38 @@ void mlirBlockPrint(MlirBlock block, MlirStringCallback callback,
 /* Value API.                                                                 */
 /*============================================================================*/
 
+/** Returns whether the value is null. */
+static inline int mlirValueIsNull(MlirValue value) { return !value.ptr; }
+
+/** Returns 1 if the value is a block argument, 0 otherwise. */
+int mlirValueIsABlockArgument(MlirValue value);
+
+/** Returns 1 if the value is an operation result, 0 otherwise. */
+int mlirValueIsAOpResult(MlirValue value);
+
+/** Returns the block in which this value is defined as an argument. Asserts if
+ * the value is not a block argument. */
+MlirBlock mlirBlockArgumentGetOwner(MlirValue value);
+
+/** Returns the position of the value in the argument list of its block. */
+intptr_t mlirBlockArgumentGetArgNumber(MlirValue value);
+
+/** Sets the type of the block argument to the given type. */
+void mlirBlockArgumentSetType(MlirValue value, MlirType type);
+
+/** Returns an operation that produced this value as its result. Asserts if the
+ * value is not an op result. */
+MlirOperation mlirOpResultGetOwner(MlirValue value);
+
+/** Returns the position of the value in the list of results of the operation
+ * that produced it. */
+intptr_t mlirOpResultGetResultNumber(MlirValue value);
+
 /** Returns the type of the value. */
 MlirType mlirValueGetType(MlirValue value);
+
+/** Prints the value to the standard error stream. */
+void mlirValueDump(MlirValue value);
 
 /** Prints a value by sending chunks of the string representation and
  * forwarding `userData to `callback`. Note that the callback may be called
@@ -401,7 +494,7 @@ MlirType mlirTypeParseGet(MlirContext context, const char *type);
 MlirContext mlirTypeGetContext(MlirType type);
 
 /** Checks whether a type is null. */
-inline int mlirTypeIsNull(MlirType type) { return !type.ptr; }
+static inline int mlirTypeIsNull(MlirType type) { return !type.ptr; }
 
 /** Checks if two types are equal. */
 int mlirTypeEqual(MlirType t1, MlirType t2);
@@ -424,8 +517,11 @@ MlirAttribute mlirAttributeParseGet(MlirContext context, const char *attr);
 /** Gets the context that an attribute was created with. */
 MlirContext mlirAttributeGetContext(MlirAttribute attribute);
 
+/** Gets the type of this attribute. */
+MlirType mlirAttributeGetType(MlirAttribute attribute);
+
 /** Checks whether an attribute is null. */
-inline int mlirAttributeIsNull(MlirAttribute attr) { return !attr.ptr; }
+static inline int mlirAttributeIsNull(MlirAttribute attr) { return !attr.ptr; }
 
 /** Checks if two attributes are equal. */
 int mlirAttributeEqual(MlirAttribute a1, MlirAttribute a2);

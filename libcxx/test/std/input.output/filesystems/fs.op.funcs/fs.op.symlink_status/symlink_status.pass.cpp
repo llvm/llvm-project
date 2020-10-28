@@ -83,7 +83,7 @@ TEST_CASE(test_symlink_status_cannot_resolve)
 #ifndef TEST_HAS_NO_EXCEPTIONS
         { // test throwing case
             try {
-                symlink_status(p);
+                (void)symlink_status(p);
             } catch (filesystem_error const& err) {
                 TEST_CHECK(err.path1() == p);
                 TEST_CHECK(err.path2() == "");
@@ -123,7 +123,7 @@ TEST_CASE(symlink_status_file_types_test)
         {static_env.SymlinkToDir, file_type::symlink},
         // Block files tested elsewhere
         {static_env.CharFile, file_type::character},
-#if !defined(__APPLE__) && !defined(__FreeBSD__) // No support for domain sockets
+#if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(_WIN32) // No support for domain sockets
         {env.create_socket("socket"), file_type::socket},
 #endif
         {env.create_fifo("fifo"), file_type::fifo}

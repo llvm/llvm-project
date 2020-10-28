@@ -167,6 +167,9 @@ LANGSTANDARD(opencl12, "cl1.2",
 LANGSTANDARD(opencl20, "cl2.0",
              OpenCL, "OpenCL 2.0",
              LineComment | C99 | Digraphs | HexFloat | OpenCL)
+LANGSTANDARD(opencl30, "cl3.0",
+             OpenCL, "OpenCL 3.0",
+             LineComment | C99 | Digraphs | HexFloat | OpenCL)
 LANGSTANDARD(openclcpp, "clc++",
              OpenCL, "C++ for OpenCL",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
@@ -176,6 +179,7 @@ LANGSTANDARD_ALIAS_DEPR(opencl10, "CL")
 LANGSTANDARD_ALIAS_DEPR(opencl11, "CL1.1")
 LANGSTANDARD_ALIAS_DEPR(opencl12, "CL1.2")
 LANGSTANDARD_ALIAS_DEPR(opencl20, "CL2.0")
+LANGSTANDARD_ALIAS_DEPR(opencl30, "CL3.0")
 LANGSTANDARD_ALIAS_DEPR(openclcpp, "CLC++")
 
 // CUDA

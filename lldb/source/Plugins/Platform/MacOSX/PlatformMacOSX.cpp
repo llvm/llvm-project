@@ -171,12 +171,6 @@ const char *PlatformMacOSX::GetDescriptionStatic(bool is_host) {
 /// Default Constructor
 PlatformMacOSX::PlatformMacOSX(bool is_host) : PlatformDarwin(is_host) {}
 
-/// Destructor.
-///
-/// The destructor is virtual since this class is designed to be
-/// inherited from by the plug-in instance.
-PlatformMacOSX::~PlatformMacOSX() {}
-
 ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
   ModuleSP exe_module_sp(target.GetExecutableModule());
   if (!exe_module_sp)

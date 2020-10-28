@@ -50,11 +50,10 @@ LLVMContextImpl::~LLVMContextImpl() {
     delete *OwnedModules.begin();
 
 #ifndef NDEBUG
-  // Check for metadata references from leaked Instructions.
-  for (auto &Pair : InstructionMetadata)
+  // Check for metadata references from leaked Values.
+  for (auto &Pair : ValueMetadata)
     Pair.first->dump();
-  assert(InstructionMetadata.empty() &&
-         "Instructions with metadata have been leaked");
+  assert(ValueMetadata.empty() && "Values with metadata have been leaked");
 #endif
 
   // Drop references for MDNodes.  Do this before Values get deleted to avoid
@@ -100,9 +99,6 @@ LLVMContextImpl::~LLVMContextImpl() {
   UVConstants.clear();
   IntConstants.clear();
   FPConstants.clear();
-
-  for (auto &CDSConstant : CDSConstants)
-    delete CDSConstant.second;
   CDSConstants.clear();
 
   // Destroy attribute node lists.

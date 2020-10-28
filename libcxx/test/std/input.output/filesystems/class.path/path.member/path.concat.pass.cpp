@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03
 
+// These tests require locale for non-char paths
+// UNSUPPORTED: libcpp-has-no-localization
+
 // <filesystem>
 
 // class path
@@ -356,7 +359,7 @@ int main(int, char**)
       const char* E = TC.expect;
       PathReserve(LHS, StrLen(E) + 5);
       {
-        DisableAllocationGuard g;
+        LIBCPP_ONLY(DisableAllocationGuard g);
         path& Ref = (LHS += RHS);
         assert(&Ref == &LHS);
       }
@@ -368,14 +371,14 @@ int main(int, char**)
       const char* E = TC.expect;
       PathReserve(LHS, StrLen(E) + 5);
       {
-        DisableAllocationGuard g;
+        LIBCPP_ONLY(DisableAllocationGuard g);
         path& Ref = (LHS += RHS);
         assert(&Ref == &LHS);
       }
       assert(LHS == E);
     }
-    doConcatSourceAllocTest<char>(TC);
-    doConcatSourceAllocTest<wchar_t>(TC);
+    LIBCPP_ONLY(doConcatSourceAllocTest<char>(TC));
+    LIBCPP_ONLY(doConcatSourceAllocTest<wchar_t>(TC));
   }
   for (auto const& TC : CharTestCases) {
     doConcatECharTest<char>(TC);

@@ -16,7 +16,7 @@
 
 // RUN: %clang -### -fintegrated-as -gz -x assembler -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ %s
 // RUN: %clang -### -fintegrated-as -gz -c %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ %s
-// CHECK-OPT_GZ: "--compress-debug-sections"
+// CHECK-OPT_GZ: "--compress-debug-sections=zlib"
 
 // RUN: %clang -### -target x86_64-unknown-linux-gnu -gz=none -x assembler %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_NONE %s
 // RUN: %clang -### -target x86_64-unknown-linux-gnu -gz=none %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_NONE %s

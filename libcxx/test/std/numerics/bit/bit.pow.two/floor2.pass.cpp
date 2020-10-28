@@ -61,7 +61,7 @@ void runtime_test()
 	assert( std::floor2(T(130)) == T(128));
 }
 
-int main()
+int main(int, char**)
 {
 
     {
@@ -161,4 +161,5 @@ int main()
 	}
 #endif
 
+    return 0;
 }

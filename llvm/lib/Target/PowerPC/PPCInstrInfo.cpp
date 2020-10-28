@@ -672,6 +672,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case PPC::V_SETALLONES:
   case PPC::CRSET:
   case PPC::CRUNSET:
+  case PPC::XXSETACCZ:
     return true;
   }
   return false;
@@ -1272,14 +1273,22 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
        .addImm(31);
     return;
   } else if (PPC::CRRCRegClass.contains(SrcReg) &&
-      PPC::G8RCRegClass.contains(DestReg)) {
-    BuildMI(MBB, I, DL, get(PPC::MFOCRF8), DestReg).addReg(SrcReg);
+             (PPC::G8RCRegClass.contains(DestReg) ||
+              PPC::GPRCRegClass.contains(DestReg))) {
+    bool Is64Bit = PPC::G8RCRegClass.contains(DestReg);
+    unsigned MvCode = Is64Bit ? PPC::MFOCRF8 : PPC::MFOCRF;
+    unsigned ShCode = Is64Bit ? PPC::RLWINM8 : PPC::RLWINM;
+    unsigned CRNum = TRI->getEncodingValue(SrcReg);
+    BuildMI(MBB, I, DL, get(MvCode), DestReg).addReg(SrcReg);
     getKillRegState(KillSrc);
-    return;
-  } else if (PPC::CRRCRegClass.contains(SrcReg) &&
-      PPC::GPRCRegClass.contains(DestReg)) {
-    BuildMI(MBB, I, DL, get(PPC::MFOCRF), DestReg).addReg(SrcReg);
-    getKillRegState(KillSrc);
+    if (CRNum == 7)
+      return;
+    // Shift the CR bits to make the CR field in the lowest 4 bits of GRC.
+    BuildMI(MBB, I, DL, get(ShCode), DestReg)
+        .addReg(DestReg, RegState::Kill)
+        .addImm(CRNum * 4 + 4)
+        .addImm(28)
+        .addImm(31);
     return;
   } else if (PPC::G8RCRegClass.contains(SrcReg) &&
              PPC::VSFRCRegClass.contains(DestReg)) {
@@ -1332,6 +1341,22 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   else if (PPC::VSFRCRegClass.contains(DestReg, SrcReg) ||
            PPC::VSSRCRegClass.contains(DestReg, SrcReg))
     Opc = (Subtarget.hasP9Vector()) ? PPC::XSCPSGNDP : PPC::XXLORf;
+  else if (Subtarget.pairedVectorMemops() &&
+           PPC::VSRpRCRegClass.contains(DestReg, SrcReg)) {
+    if (SrcReg > PPC::VSRp15)
+      SrcReg = PPC::V0 + (SrcReg - PPC::VSRp16) * 2;
+    else
+      SrcReg = PPC::VSL0 + (SrcReg - PPC::VSRp0) * 2;
+    if (DestReg > PPC::VSRp15)
+      DestReg = PPC::V0 + (DestReg - PPC::VSRp16) * 2;
+    else
+      DestReg = PPC::VSL0 + (DestReg - PPC::VSRp0) * 2;
+    BuildMI(MBB, I, DL, get(PPC::XXLOR), DestReg).
+      addReg(SrcReg).addReg(SrcReg, getKillRegState(KillSrc));
+    BuildMI(MBB, I, DL, get(PPC::XXLOR), DestReg + 1).
+      addReg(SrcReg + 1).addReg(SrcReg + 1, getKillRegState(KillSrc));
+    return;
+  }
   else if (PPC::CRBITRCRegClass.contains(DestReg, SrcReg))
     Opc = PPC::CROR;
   else if (PPC::SPERCRegClass.contains(DestReg, SrcReg))
@@ -1777,8 +1802,9 @@ bool PPCInstrInfo::SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
   return false;
 }
 
-bool PPCInstrInfo::DefinesPredicate(MachineInstr &MI,
-                                    std::vector<MachineOperand> &Pred) const {
+bool PPCInstrInfo::ClobbersPredicate(MachineInstr &MI,
+                                     std::vector<MachineOperand> &Pred,
+                                     bool SkipDead) const {
   // Note: At the present time, the contents of Pred from this function is
   // unused by IfConversion. This implementation follows ARM by pushing the
   // CR-defining operand. Because the 'DZ' and 'DNZ' count as types of

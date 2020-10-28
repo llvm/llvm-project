@@ -354,14 +354,12 @@ void CGNVCUDARuntime::emitDeviceStubBodyLegacy(CodeGenFunction &CGF,
   llvm::BasicBlock *EndBlock = CGF.createBasicBlock("setup.end");
   CharUnits Offset = CharUnits::Zero();
   for (const VarDecl *A : Args) {
-    CharUnits TyWidth, TyAlign;
-    std::tie(TyWidth, TyAlign) =
-        CGM.getContext().getTypeInfoInChars(A->getType());
-    Offset = Offset.alignTo(TyAlign);
+    auto TInfo = CGM.getContext().getTypeInfoInChars(A->getType());
+    Offset = Offset.alignTo(TInfo.Align);
     llvm::Value *Args[] = {
         CGF.Builder.CreatePointerCast(CGF.GetAddrOfLocalVar(A).getPointer(),
                                       VoidPtrTy),
-        llvm::ConstantInt::get(SizeTy, TyWidth.getQuantity()),
+        llvm::ConstantInt::get(SizeTy, TInfo.Width.getQuantity()),
         llvm::ConstantInt::get(SizeTy, Offset.getQuantity()),
     };
     llvm::CallBase *CB = CGF.EmitRuntimeCallOrInvoke(cudaSetupArgFn, Args);
@@ -370,7 +368,7 @@ void CGNVCUDARuntime::emitDeviceStubBodyLegacy(CodeGenFunction &CGF,
     llvm::BasicBlock *NextBlock = CGF.createBasicBlock("setup.next");
     CGF.Builder.CreateCondBr(CBZero, NextBlock, EndBlock);
     CGF.EmitBlock(NextBlock);
-    Offset += TyWidth;
+    Offset += TInfo.Width;
   }
 
   // Emit the call to cudaLaunch
@@ -597,8 +595,10 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     if (CudaGpuBinary) {
       // If fatbin is available from early finalization, create a string
       // literal containing the fat binary loaded from the given file.
-      FatBinStr = makeConstantString(std::string(CudaGpuBinary->getBuffer()),
-                                     "", FatbinConstantName, 8);
+      const unsigned HIPCodeObjectAlign = 4096;
+      FatBinStr =
+          makeConstantString(std::string(CudaGpuBinary->getBuffer()), "",
+                             FatbinConstantName, HIPCodeObjectAlign);
     } else {
       // If fatbin is not available, create an external symbol
       // __hip_fatbin in section .hip_fatbin. The external symbol is supposed

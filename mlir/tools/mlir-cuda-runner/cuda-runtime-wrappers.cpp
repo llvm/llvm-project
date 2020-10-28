@@ -32,6 +32,15 @@
     llvm::errs() << "'" << #expr << "' failed with '" << name << "'\n";        \
   }(expr)
 
+// Static initialization of CUDA context for device ordinal 0.
+static auto InitializeCtx = [] {
+  CUdevice device;
+  CUDA_REPORT_IF_ERROR(cuDeviceGet(&device, /*ordinal=*/0));
+  CUcontext context;
+  CUDA_REPORT_IF_ERROR(cuCtxCreate(&context, /*flags=*/0, device));
+  return 0;
+}();
+
 extern "C" CUmodule mgpuModuleLoad(void *data) {
   CUmodule module = nullptr;
   CUDA_REPORT_IF_ERROR(cuModuleLoadData(&module, data));
@@ -63,8 +72,34 @@ extern "C" CUstream mgpuStreamCreate() {
   return stream;
 }
 
+extern "C" void mgpuStreamDestroy(CUstream stream) {
+  CUDA_REPORT_IF_ERROR(cuStreamDestroy(stream));
+}
+
 extern "C" void mgpuStreamSynchronize(CUstream stream) {
   CUDA_REPORT_IF_ERROR(cuStreamSynchronize(stream));
+}
+
+extern "C" void mgpuStreamWaitEvent(CUstream stream, CUevent event) {
+  CUDA_REPORT_IF_ERROR(cuStreamWaitEvent(stream, event, /*flags=*/0));
+}
+
+extern "C" CUevent mgpuEventCreate() {
+  CUevent event = nullptr;
+  CUDA_REPORT_IF_ERROR(cuEventCreate(&event, CU_EVENT_DISABLE_TIMING));
+  return event;
+}
+
+extern "C" void mgpuEventDestroy(CUevent event) {
+  CUDA_REPORT_IF_ERROR(cuEventDestroy(event));
+}
+
+extern "C" void mgpuEventSynchronize(CUevent event) {
+  CUDA_REPORT_IF_ERROR(cuEventSynchronize(event));
+}
+
+extern "C" void mgpuEventRecord(CUevent event, CUstream stream) {
+  CUDA_REPORT_IF_ERROR(cuEventRecord(event, stream));
 }
 
 /// Helper functions for writing mlir example code

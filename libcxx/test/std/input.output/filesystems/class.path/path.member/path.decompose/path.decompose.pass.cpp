@@ -44,20 +44,21 @@
 
 
 #include "filesystem_include.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <iterator>
 #include <type_traits>
 #include <vector>
-#include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "count_new.h"
 #include "filesystem_test_helper.h"
-#include "assert_checkpoint.h"
-#include "verbose_assert.h"
 
 struct ComparePathExact {
-  bool operator()(std::string const& LHS, std::string const& RHS) const {
-    return LHS == RHS;
+  bool operator()(fs::path const& LHS, std::string const& RHS) const {
+    return LHS.string() == RHS;
   }
 };
 
@@ -120,48 +121,42 @@ void decompPathTest()
 {
   using namespace fs;
   for (auto const & TC : PathTestCases) {
-    CHECKPOINT(TC.raw.c_str());
     fs::path p(TC.raw);
-    ASSERT(p == TC.raw);
+    assert(p == TC.raw);
 
-    ASSERT_EQ(p.root_path(), TC.root_path);
-    ASSERT_NEQ(p.has_root_path(), TC.root_path.empty());
+    assert(p.root_path() == TC.root_path);
+    assert(p.has_root_path() != TC.root_path.empty());
 
-    ASSERT(p.root_name().native().empty())
-        << DISPLAY(p.root_name());
-    ASSERT_EQ(p.root_name(),TC.root_name);
-    ASSERT_NEQ(p.has_root_name(), TC.root_name.empty());
+    assert(p.root_name().native().empty());
+    assert(p.root_name() == TC.root_name);
+    assert(p.has_root_name() != TC.root_name.empty());
 
-    ASSERT_EQ(p.root_directory(), TC.root_directory);
-    ASSERT_NEQ(p.has_root_directory(), TC.root_directory.empty());
+    assert(p.root_directory() == TC.root_directory);
+    assert(p.has_root_directory() != TC.root_directory.empty());
 
-    ASSERT_EQ(p.relative_path(), TC.relative_path);
-    ASSERT_NEQ(p.has_relative_path(), TC.relative_path.empty());
+    assert(p.relative_path() == TC.relative_path);
+    assert(p.has_relative_path() != TC.relative_path.empty());
 
-    ASSERT_EQ(p.parent_path(), TC.parent_path);
-    ASSERT_NEQ(p.has_parent_path(), TC.parent_path.empty());
+    assert(p.parent_path() == TC.parent_path);
+    assert(p.has_parent_path() != TC.parent_path.empty());
 
-    ASSERT_EQ(p.filename(), TC.filename);
-    ASSERT_NEQ(p.has_filename(), TC.filename.empty());
+    assert(p.filename() == TC.filename);
+    assert(p.has_filename() != TC.filename.empty());
 
-    ASSERT_EQ(p.is_absolute(), p.has_root_directory());
-    ASSERT_NEQ(p.is_relative(), p.is_absolute());
+    assert(p.is_absolute() == p.has_root_directory());
+    assert(p.is_relative() != p.is_absolute());
     if (p.empty())
-      ASSERT(p.is_relative());
+      assert(p.is_relative());
 
-    ASSERT_COLLECTION_EQ_COMP(
-        p.begin(), p.end(),
-        TC.elements.begin(), TC.elements.end(),
-        ComparePathExact()
-    );
+    assert(static_cast<std::size_t>(std::distance(p.begin(), p.end())) == TC.elements.size());
+    assert(std::equal(p.begin(), p.end(), TC.elements.begin(), ComparePathExact()));
+
     // check backwards
-
     std::vector<fs::path> Parts;
     for (auto it = p.end(); it != p.begin(); )
       Parts.push_back(*--it);
-    ASSERT_COLLECTION_EQ_COMP(Parts.begin(), Parts.end(),
-                                 TC.elements.rbegin(), TC.elements.rend(),
-                              ComparePathExact());
+    assert(static_cast<std::size_t>(std::distance(Parts.begin(), Parts.end())) == TC.elements.size());
+    assert(std::equal(Parts.begin(), Parts.end(), TC.elements.rbegin(), ComparePathExact()));
   }
 }
 
@@ -192,19 +187,18 @@ void decompFilenameTest()
 {
   using namespace fs;
   for (auto const & TC : FilenameTestCases) {
-    CHECKPOINT(TC.raw.c_str());
     fs::path p(TC.raw);
-    ASSERT_EQ(p, TC.raw);
+    assert(p == TC.raw);
     ASSERT_NOEXCEPT(p.empty());
 
-    ASSERT_EQ(p.filename(), TC.filename);
-    ASSERT_NEQ(p.has_filename(), TC.filename.empty());
+    assert(p.filename() == TC.filename);
+    assert(p.has_filename() != TC.filename.empty());
 
-    ASSERT_EQ(p.stem(), TC.stem);
-    ASSERT_NEQ(p.has_stem(), TC.stem.empty());
+    assert(p.stem() == TC.stem);
+    assert(p.has_stem() != TC.stem.empty());
 
-    ASSERT_EQ(p.extension(), TC.extension);
-    ASSERT_NEQ(p.has_extension(), TC.extension.empty());
+    assert(p.extension() == TC.extension);
+    assert(p.has_extension() != TC.extension.empty());
   }
 }
 

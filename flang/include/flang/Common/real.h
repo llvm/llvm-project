@@ -20,45 +20,84 @@ namespace Fortran::common {
 // Total representation size in bits for each type
 static constexpr int BitsForBinaryPrecision(int binaryPrecision) {
   switch (binaryPrecision) {
-  case 8:
-    return 16; // IEEE single (truncated): 1+8+7
-  case 11:
-    return 16; // IEEE half precision: 1+5+10
-  case 24:
-    return 32; // IEEE single precision: 1+8+23
-  case 53:
-    return 64; // IEEE double precision: 1+11+52
-  case 64:
-    return 80; // x87 extended precision: 1+15+64
-  case 106:
-    return 128; // "double-double": 2*(1+11+52)
-  case 113:
-    return 128; // IEEE quad precision: 1+15+112
+  case 8: // IEEE single (truncated): 1+8+7 with implicit bit
+    return 16;
+  case 11: // IEEE half precision: 1+5+10 with implicit bit
+    return 16;
+  case 24: // IEEE single precision: 1+8+23 with implicit bit
+    return 32;
+  case 53: // IEEE double precision: 1+11+52 with implicit bit
+    return 64;
+  case 64: // x87 extended precision: 1+15+64, no implicit bit
+    return 80;
+  case 106: // "double-double": 2*(1+11+52 with implicit bit)
+    return 128;
+  case 113: // IEEE quad precision: 1+15+112 with implicit bit
+    return 128;
   default:
     return -1;
   }
 }
 
-// Number of significant decimal digits in the fraction of the
-// exact conversion of the least nonzero (subnormal) value
-// in each type; i.e., a 128-bit quad value can be formatted
-// exactly with FORMAT(E0.22981).
+// Maximum number of significant decimal digits in the fraction of an
+// exact conversion in each type; computed by converting the value
+// with the minimum exponent (biased to 1) and all fractional bits set.
 static constexpr int MaxDecimalConversionDigits(int binaryPrecision) {
   switch (binaryPrecision) {
-  case 8:
-    return 93;
-  case 11:
-    return 17;
-  case 24:
-    return 105;
-  case 53:
-    return 751;
-  case 64:
-    return 11495;
-  case 106:
-    return 2 * 751;
-  case 113:
-    return 11530;
+  case 8: // IEEE single (truncated): 1+8+7 with implicit bit
+    return 96;
+  case 11: // IEEE half precision: 1+5+10 with implicit bit
+    return 21;
+  case 24: // IEEE single precision: 1+8+23 with implicit bit
+    return 112;
+  case 53: // IEEE double precision: 1+11+52 with implicit bit
+    return 767;
+  case 64: // x87 extended precision: 1+15+64, no implicit bit
+    return 11514;
+  case 106: // "double-double": 2*(1+11+52 with implicit bit)
+    return 2 * 767;
+  case 113: // IEEE quad precision: 1+15+112 with implicit bit
+    return 11563;
+  default:
+    return -1;
+  }
+}
+
+static constexpr int RealKindForPrecision(int binaryPrecision) {
+  switch (binaryPrecision) {
+  case 8: // IEEE single (truncated): 1+8+7 with implicit bit
+    return 3;
+  case 11: // IEEE half precision: 1+5+10 with implicit bit
+    return 2;
+  case 24: // IEEE single precision: 1+8+23 with implicit bit
+    return 4;
+  case 53: // IEEE double precision: 1+11+52 with implicit bit
+    return 8;
+  case 64: // x87 extended precision: 1+15+64, no implicit bit
+    return 10;
+  // TODO: case 106: return kind for double/double
+  case 113: // IEEE quad precision: 1+15+112 with implicit bit
+    return 16;
+  default:
+    return -1;
+  }
+}
+
+static constexpr int PrecisionOfRealKind(int kind) {
+  switch (kind) {
+  case 2: // IEEE half precision: 1+5+10 with implicit bit
+    return 11;
+  case 3: // IEEE single (truncated): 1+8+7 with implicit bit
+    return 8;
+  case 4: // IEEE single precision: 1+8+23 with implicit bit
+    return 24;
+  case 8: // IEEE double precision: 1+11+52 with implicit bit
+    return 53;
+  case 10: // x87 extended precision: 1+15+64, no implicit bit
+    return 64;
+  // TODO: case kind for double/double: return 106;
+  case 16: // IEEE quad precision: 1+15+112 with implicit bit
+    return 113;
   default:
     return -1;
   }

@@ -40,12 +40,17 @@ namespace WasmYAML {
 struct Object;
 }
 
+namespace ArchYAML {
+struct Archive;
+}
+
 namespace yaml {
 class Input;
 struct YamlObjectFile;
 
 using ErrorHandler = llvm::function_ref<void(const Twine &Msg)>;
 
+bool yaml2archive(ArchYAML::Archive &Doc, raw_ostream &Out, ErrorHandler EH);
 bool yaml2coff(COFFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH);
 bool yaml2elf(ELFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH,
               uint64_t MaxSize);

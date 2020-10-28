@@ -3663,6 +3663,45 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
   }
 }
 
+Optional<ExtAddrMode>
+X86InstrInfo::getAddrModeFromMemoryOp(const MachineInstr &MemI,
+                                      const TargetRegisterInfo *TRI) const {
+  const MCInstrDesc &Desc = MemI.getDesc();
+  int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
+  if (MemRefBegin < 0)
+    return None;
+
+  MemRefBegin += X86II::getOperandBias(Desc);
+
+  auto &BaseOp = MemI.getOperand(MemRefBegin + X86::AddrBaseReg);
+  if (!BaseOp.isReg()) // Can be an MO_FrameIndex
+    return None;
+
+  const MachineOperand &DispMO = MemI.getOperand(MemRefBegin + X86::AddrDisp);
+  // Displacement can be symbolic
+  if (!DispMO.isImm())
+    return None;
+
+  ExtAddrMode AM;
+  AM.BaseReg = BaseOp.getReg();
+  AM.ScaledReg = MemI.getOperand(MemRefBegin + X86::AddrIndexReg).getReg();
+  AM.Scale = MemI.getOperand(MemRefBegin + X86::AddrScaleAmt).getImm();
+  AM.Displacement = DispMO.getImm();
+  return AM;
+}
+
+bool X86InstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
+                                           const Register Reg,
+                                           int64_t &ImmVal) const {
+  if (MI.getOpcode() != X86::MOV32ri && MI.getOpcode() != X86::MOV64ri)
+    return false;
+  // Mov Src can be a global address.
+  if (!MI.getOperand(1).isImm() || MI.getOperand(0).getReg() != Reg)
+    return false;
+  ImmVal = MI.getOperand(1).getImm();
+  return true;
+}
+
 bool X86InstrInfo::preservesZeroValueInReg(
     const MachineInstr *MI, const Register NullValueReg,
     const TargetRegisterInfo *TRI) const {
@@ -5487,6 +5526,10 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
   if (I != nullptr) {
     unsigned Opcode = I->DstOp;
+    bool FoldedLoad =
+        isTwoAddrFold || (OpNum == 0 && I->Flags & TB_FOLDED_LOAD) || OpNum > 0;
+    bool FoldedStore =
+        isTwoAddrFold || (OpNum == 0 && I->Flags & TB_FOLDED_STORE);
     MaybeAlign MinAlign =
         decodeMaybeAlign((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT);
     if (MinAlign && Alignment < *MinAlign)
@@ -5497,20 +5540,25 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
       const TargetRegisterClass *RC = getRegClass(MI.getDesc(), OpNum,
                                                   &RI, MF);
       unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
-      if (Size < RCSize) {
-        // FIXME: Allow scalar intrinsic instructions like ADDSSrm_Int.
-        // Check if it's safe to fold the load. If the size of the object is
-        // narrower than the load width, then it's not.
-        if (Opcode != X86::MOV64rm || RCSize != 8 || Size != 4)
-          return nullptr;
+      // Check if it's safe to fold the load. If the size of the object is
+      // narrower than the load width, then it's not.
+      // FIXME: Allow scalar intrinsic instructions like ADDSSrm_Int.
+      if (FoldedLoad && Size < RCSize) {
         // If this is a 64-bit load, but the spill slot is 32, then we can do
         // a 32-bit load which is implicitly zero-extended. This likely is
         // due to live interval analysis remat'ing a load from stack slot.
+        if (Opcode != X86::MOV64rm || RCSize != 8 || Size != 4)
+          return nullptr;
         if (MI.getOperand(0).getSubReg() || MI.getOperand(1).getSubReg())
           return nullptr;
         Opcode = X86::MOV32rm;
         NarrowToMOV32rm = true;
       }
+      // For stores, make sure the size of the object is equal to the size of
+      // the store. If the object is larger, the extra bits would be garbage. If
+      // the object is smaller we might overwrite another object or fault.
+      if (FoldedStore && Size != RCSize)
+        return nullptr;
     }
 
     if (isTwoAddrFold)

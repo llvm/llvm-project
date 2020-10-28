@@ -49,7 +49,6 @@
 #include <climits>
 #include <clocale>
 #include <cmath>
-#include <codecvt>
 #include <compare>
 #include <complex>
 #include <complex.h>
@@ -77,23 +76,17 @@
 #include <filesystem>
 #include <float.h>
 #include <forward_list>
-#include <fstream>
 #include <functional>
 #ifndef _LIBCPP_HAS_NO_THREADS
 #include <future>
 #endif
 #include <initializer_list>
 #include <inttypes.h>
-#include <iomanip>
-#include <ios>
 #include <iosfwd>
-#include <iostream>
-#include <istream>
 #include <iterator>
 #include <limits>
 #include <limits.h>
 #include <list>
-#include <locale>
 #include <locale.h>
 #include <map>
 #include <math.h>
@@ -105,11 +98,9 @@
 #include <numbers>
 #include <numeric>
 #include <optional>
-#include <ostream>
 #include <queue>
 #include <random>
 #include <ratio>
-#include <regex>
 #include <scoped_allocator>
 #include <set>
 #include <setjmp.h>
@@ -117,7 +108,6 @@
 #include <shared_mutex>
 #endif
 #include <span>
-#include <sstream>
 #include <stack>
 #include <stdbool.h>
 #include <stddef.h>
@@ -125,11 +115,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <streambuf>
 #include <string>
 #include <string.h>
 #include <string_view>
-#include <strstream>
 #include <system_error>
 #include <tgmath.h>
 #ifndef _LIBCPP_HAS_NO_THREADS
@@ -149,6 +137,24 @@
 #include <wchar.h>
 #include <wctype.h>
 
+#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#   include <codecvt>
+#   include <fstream>
+#   include <iomanip>
+#   include <ios>
+#   include <iostream>
+#   include <istream>
+#   include <locale>
+#   include <ostream>
+#   include <regex>
+#   include <sstream>
+#   include <streambuf>
+#   include <strstream>
+#   if __cplusplus >= 201103L
+#       include <experimental/regex>
+#   endif
+#endif
+
 // experimental headers
 #if __cplusplus >= 201103L
 #include <experimental/algorithm>
@@ -164,7 +170,6 @@
 #include <experimental/map>
 #include <experimental/memory_resource>
 #include <experimental/propagate_const>
-#include <experimental/regex>
 #include <experimental/simd>
 #include <experimental/set>
 #include <experimental/string>

@@ -28,11 +28,19 @@ define float @fmf_transfer(float %x, float %y) {
   ret float %f8
 }
 
-; CHECK: Optimized type-legalized selection DAG: %bb.0 'fmf_setcc:'
+; CHECK-LABEL: Optimized type-legalized selection DAG: %bb.0 'fmf_setcc:'
 ; CHECK: t13: i8 = setcc nnan ninf nsz arcp contract afn reassoc t2, ConstantFP:f32<0.000000e+00>, setlt:ch
 
 define float @fmf_setcc(float %x, float %y) {
   %cmp = fcmp fast ult float %x, 0.0
+  %ret = select i1 %cmp, float %x, float %y
+  ret float %ret
+}
+
+; CHECK-LABEL: Initial selection DAG: %bb.0 'fmf_setcc_canon:'
+; CHECK: t14: i8 = setcc nnan ninf nsz arcp contract afn reassoc t2, ConstantFP:f32<0.000000e+00>, setgt:ch
+define float @fmf_setcc_canon(float %x, float %y) {
+  %cmp = fcmp fast ult float 0.0, %x
   %ret = select i1 %cmp, float %x, float %y
   ret float %ret
 }

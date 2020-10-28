@@ -73,6 +73,7 @@ struct GVNOptions {
   Optional<bool> AllowPRE = None;
   Optional<bool> AllowLoadPRE = None;
   Optional<bool> AllowLoadInLoopPRE = None;
+  Optional<bool> AllowLoadPRESplitBackedge = None;
   Optional<bool> AllowMemDep = None;
 
   GVNOptions() = default;
@@ -91,6 +92,12 @@ struct GVNOptions {
 
   GVNOptions &setLoadInLoopPRE(bool LoadInLoopPRE) {
     AllowLoadInLoopPRE = LoadInLoopPRE;
+    return *this;
+  }
+
+  /// Enables or disables PRE of loads in GVN.
+  GVNOptions &setLoadPRESplitBackedge(bool LoadPRESplitBackedge) {
+    AllowLoadPRESplitBackedge = LoadPRESplitBackedge;
     return *this;
   }
 
@@ -130,6 +137,7 @@ public:
   bool isPREEnabled() const;
   bool isLoadPREEnabled() const;
   bool isLoadInLoopPREEnabled() const;
+  bool isLoadPRESplitBackedgeEnabled() const;
   bool isMemDepEnabled() const;
 
   /// This class holds the mapping between values and value numbers.  It is used

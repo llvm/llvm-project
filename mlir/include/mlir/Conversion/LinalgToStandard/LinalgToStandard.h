@@ -12,14 +12,9 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
-class MLIRContext;
 class ModuleOp;
 template <typename T>
 class OperationPass;
-
-/// Populate the given list with patterns that convert from Linalg to Standard.
-void populateLinalgToStandardConversionPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *ctx);
 
 /// Create a pass to convert Linalg operations to the Standard dialect.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertLinalgToStandardPass();

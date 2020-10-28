@@ -1172,11 +1172,11 @@ constexpr auto endDirective{space >> endOfLine};
 constexpr auto ignore_tkr{
     "DIR$ IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
                              defaulted(parenthesized(some("tkr"_ch))), name))};
-TYPE_PARSER(
-    beginDirective >> sourced(construct<CompilerDirective>(ignore_tkr) ||
-                          construct<CompilerDirective>("DIR$" >>
-                              many(construct<CompilerDirective::NameValue>(
-                                  name, maybe("=" >> digitString64))))) /
+TYPE_PARSER(beginDirective >>
+    sourced(construct<CompilerDirective>(ignore_tkr) ||
+        construct<CompilerDirective>(
+            "DIR$" >> many(construct<CompilerDirective::NameValue>(name,
+                          maybe(("="_tok || ":"_tok) >> digitString64))))) /
         endDirective)
 
 TYPE_PARSER(extension<LanguageFeature::CrayPointer>(construct<BasedPointerStmt>(

@@ -3061,42 +3061,16 @@ define <8 x i16> @shuffle_scalar_to_vector_extract(<8 x i8>* %p0, i8* %p1, i8* %
 }
 
 define void @PR43024() {
-; SSE2-LABEL: PR43024:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
-; SSE2-NEXT:    movaps %xmm0, (%rax)
-; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
-; SSE2-NEXT:    addss %xmm0, %xmm1
-; SSE2-NEXT:    xorps %xmm0, %xmm0
-; SSE2-NEXT:    addss %xmm0, %xmm1
-; SSE2-NEXT:    addss %xmm0, %xmm1
-; SSE2-NEXT:    movss %xmm1, (%rax)
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: PR43024:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
-; SSSE3-NEXT:    movaps %xmm0, (%rax)
-; SSSE3-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSSE3-NEXT:    addss %xmm0, %xmm1
-; SSSE3-NEXT:    xorps %xmm0, %xmm0
-; SSSE3-NEXT:    addss %xmm0, %xmm1
-; SSSE3-NEXT:    addss %xmm0, %xmm1
-; SSSE3-NEXT:    movss %xmm1, (%rax)
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: PR43024:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
-; SSE41-NEXT:    movaps %xmm0, (%rax)
-; SSE41-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSE41-NEXT:    addss %xmm0, %xmm1
-; SSE41-NEXT:    xorps %xmm0, %xmm0
-; SSE41-NEXT:    addss %xmm0, %xmm1
-; SSE41-NEXT:    addss %xmm0, %xmm1
-; SSE41-NEXT:    movss %xmm1, (%rax)
-; SSE41-NEXT:    retq
+; SSE-LABEL: PR43024:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN,0.0E+0,0.0E+0]
+; SSE-NEXT:    movaps %xmm0, (%rax)
+; SSE-NEXT:    addss {{.*}}(%rip), %xmm0
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    addss %xmm1, %xmm0
+; SSE-NEXT:    addss %xmm1, %xmm0
+; SSE-NEXT:    movss %xmm0, (%rax)
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR43024:
 ; AVX:       # %bb.0:

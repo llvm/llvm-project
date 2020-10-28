@@ -25,8 +25,7 @@ define double @mag_pos0_double(double %x) nounwind {
 define double @mag_neg0_double(double %x) nounwind {
 ; CHECK-LABEL: mag_neg0_double:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    andps %xmm1, %xmm0
+; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %y = call double @copysign(double -0.0, double %x)
   ret double %y
@@ -42,8 +41,7 @@ define double @mag_pos1_double(double %x) nounwind {
 ; CHECK-LABEL: mag_pos1_double:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    orps %xmm1, %xmm0
+; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %y = call double @copysign(double 1.0, double %x)
   ret double %y
@@ -87,8 +85,7 @@ define float @mag_pos0_float(float %x) nounwind {
 define float @mag_neg0_float(float %x) nounwind {
 ; CHECK-LABEL: mag_neg0_float:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    andps %xmm1, %xmm0
+; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %y = call float @copysignf(float -0.0, float %x)
   ret float %y
@@ -106,8 +103,7 @@ define float @mag_pos1_float(float %x) nounwind {
 ; CHECK-LABEL: mag_pos1_float:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    orps %xmm1, %xmm0
+; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %y = call float @copysignf(float 1.0, float %x)
   ret float %y

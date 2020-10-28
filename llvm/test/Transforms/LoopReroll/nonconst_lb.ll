@@ -53,7 +53,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK:   %1 = sub i32 %0, %m
 ; CHECK:   %2 = lshr i32 %1, 2
 ; CHECK:   %3 = shl nuw i32 %2, 2
-; CHECK:   %4 = add i32 %3, 3
+; CHECK:   %4 = add nuw nsw i32 %3, 3
 ; CHECK:   br label %for.body
 
 ; CHECK: for.body:
@@ -132,7 +132,7 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK:   %1 = sub i32 %0, %rem
 ; CHECK:   %2 = lshr i32 %1, 2
 ; CHECK:   %3 = shl nuw i32 %2, 2
-; CHECK:   %4 = add i32 %3, 3
+; CHECK:   %4 = add nuw nsw i32 %3, 3
 ; CHECK:   br label %for.body
 
 ; CHECK: for.body:

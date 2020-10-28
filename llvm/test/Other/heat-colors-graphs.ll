@@ -1,4 +1,4 @@
-; RUN: opt < %s -analyze -dot-cfg -cfg-heat-colors -cfg-dot-filename-prefix=%t 2>/dev/null
+; RUN: opt < %s -dot-cfg -cfg-heat-colors -cfg-dot-filename-prefix=%t 2>/dev/null
 ; RUN: FileCheck %s -input-file=%t.f.dot --check-prefixes=CHECK-CFG,CHECK-BOTH
 ; RUN: opt %s -dot-callgraph -callgraph-heat-colors -callgraph-dot-filename-prefix=%t 2>/dev/null
 ; RUN: FileCheck %s -input-file=%t.callgraph.dot --check-prefix=CHECK-BOTH

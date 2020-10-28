@@ -17,7 +17,7 @@ namespace std {
 }
 
 template<typename T> constexpr bool has_type(...) { return false; }
-template<typename T> constexpr bool has_type(T) { return true; }
+template<typename T> constexpr bool has_type(T&) { return true; }
 
 std::initializer_list il = {1, 2, 3, 4, 5};
 
@@ -524,6 +524,12 @@ namespace PR45124 {
   // deduction guide 'template<typename T> y(x = x()) -> Y<T>;' leaves behind a
   // pending cleanup.
   __thread b g;
+}
+
+namespace PR47175 {
+  template<typename T> struct A { A(T); T x; };
+  template<typename T> int &&n = A(T()).x;
+  int m = n<int>;
 }
 
 #else

@@ -10,7 +10,7 @@ define i32 @reduction_sum_single(i32* noalias nocapture %A) {
 ; CHECK:         [[TMP24:%.*]] = select <4 x i1> [[TMP0:%.*]], <4 x i32> [[TMP23:%.*]], <4 x i32> zeroinitializer
 ; CHECK:         [[TMP25]] = add <4 x i32> [[VEC_PHI]], [[TMP24]]
 ; CHECK:       middle.block:
-; CHECK:         [[TMP27:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP25]])
+; CHECK:         [[TMP27:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP25]])
 ;
 entry:
   br label %.lr.ph
@@ -38,7 +38,7 @@ define i32 @reduction_sum(i32* noalias nocapture %A, i32* noalias nocapture %B) 
 ; CHECK:         [[TMP46:%.*]] = add <4 x i32> [[TMP45]], [[TMP43:%.*]]
 ; CHECK:         [[TMP47]] = select <4 x i1> [[TMP3:%.*]], <4 x i32> [[TMP46]], <4 x i32> [[VEC_PHI]]
 ; CHECK:       middle.block:
-; CHECK:         [[TMP49:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[TMP47]])
+; CHECK:         [[TMP49:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP47]])
 ;
 entry:
   br label %.lr.ph
@@ -70,7 +70,7 @@ define i32 @reduction_prod(i32* noalias nocapture %A, i32* noalias nocapture %B)
 ; CHECK:         [[TMP45:%.*]] = mul <4 x i32> [[TMP44]], [[TMP43:%.*]]
 ; CHECK:         [[TMP46]] = select <4 x i1> [[TMP3:%.*]], <4 x i32> [[TMP45]], <4 x i32> [[VEC_PHI]]
 ; CHECK:       middle.block:
-; CHECK:         [[TMP48:%.*]] = call i32 @llvm.experimental.vector.reduce.mul.v4i32(<4 x i32> [[TMP46]])
+; CHECK:         [[TMP48:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP46]])
 ;
 entry:
   br label %.lr.ph
@@ -101,7 +101,7 @@ define i32 @reduction_and(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK:         [[TMP45:%.*]] = and <4 x i32> [[TMP44]], [[TMP43:%.*]]
 ; CHECK:         [[TMP46]] = select <4 x i1> [[TMP3:%.*]], <4 x i32> [[TMP45]], <4 x i32> [[VEC_PHI]]
 ; CHECK:       middle.block:
-; CHECK:         [[TMP48:%.*]] = call i32 @llvm.experimental.vector.reduce.and.v4i32(<4 x i32> [[TMP46]])
+; CHECK:         [[TMP48:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP46]])
 ;
 entry:
   br label %for.body
@@ -131,7 +131,7 @@ define i32 @reduction_or(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK:         [[TMP45:%.*]] = select <4 x i1> [[TMP3:%.*]], <4 x i32> [[TMP44:%.*]], <4 x i32> zeroinitializer
 ; CHECK:         [[TMP46]] = or <4 x i32> [[VEC_PHI]], [[TMP45]]
 ; CHECK:       middle.block:
-; CHECK:         [[TMP48:%.*]] = call i32 @llvm.experimental.vector.reduce.or.v4i32(<4 x i32> [[TMP46]])
+; CHECK:         [[TMP48:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP46]])
 ;
 entry:
   br label %for.body
@@ -161,7 +161,7 @@ define i32 @reduction_xor(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK:         [[TMP45:%.*]] = select <4 x i1> [[TMP3:%.*]], <4 x i32> [[TMP44:%.*]], <4 x i32> zeroinitializer
 ; CHECK:         [[TMP46]] = xor <4 x i32> [[VEC_PHI]], [[TMP45]]
 ; CHECK:       middle.block:
-; CHECK:         [[TMP48:%.*]] = call i32 @llvm.experimental.vector.reduce.xor.v4i32(<4 x i32> [[TMP46]])
+; CHECK:         [[TMP48:%.*]] = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> [[TMP46]])
 ;
 entry:
   br label %for.body
@@ -192,7 +192,7 @@ define float @reduction_fadd(float* nocapture %A, float* nocapture %B) {
 ; CHECK:         [[TMP45:%.*]] = fadd fast <4 x float> [[TMP44]], [[TMP43:%.*]]
 ; CHECK:         [[TMP46]] = select <4 x i1> [[TMP3:%.*]], <4 x float> [[TMP45]], <4 x float> [[VEC_PHI]]
 ; CHECK:       middle.block:
-; CHECK:         [[TMP48:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fadd.f32.v4f32(float 0.000000e+00, <4 x float> [[TMP46]])
+; CHECK:         [[TMP48:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP46]])
 ;
 entry:
   br label %for.body
@@ -223,7 +223,7 @@ define float @reduction_fmul(float* nocapture %A, float* nocapture %B) {
 ; CHECK:         [[TMP45:%.*]] = fmul fast <4 x float> [[TMP44]], [[TMP43:%.*]]
 ; CHECK:         [[TMP46]] = select <4 x i1> [[TMP3:%.*]], <4 x float> [[TMP45]], <4 x float> [[VEC_PHI]]
 ; CHECK:       middle.block:
-; CHECK:         [[TMP48:%.*]] = call fast float @llvm.experimental.vector.reduce.v2.fmul.f32.v4f32(float 1.000000e+00, <4 x float> [[TMP46]])
+; CHECK:         [[TMP48:%.*]] = call fast float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[TMP46]])
 ;
 entry:
   br label %for.body
@@ -254,7 +254,7 @@ define i32 @reduction_min(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK:         [[TMP25:%.*]] = select <4 x i1> [[TMP24]], <4 x i32> [[VEC_PHI]], <4 x i32> [[TMP23]]
 ; CHECK:         [[TMP26]] = select <4 x i1> [[TMP0:%.*]], <4 x i32> [[TMP25]], <4 x i32> [[VEC_PHI]]
 ; CHECK:       middle.block:
-; CHECK:         [[TMP28:%.*]] = call i32 @llvm.experimental.vector.reduce.smin.v4i32(<4 x i32> [[TMP26]])
+; CHECK:         [[TMP28:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[TMP26]])
 ;
 entry:
   br label %for.body
@@ -283,7 +283,7 @@ define i32 @reduction_max(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK:         [[TMP25:%.*]] = select <4 x i1> [[TMP24]], <4 x i32> [[VEC_PHI]], <4 x i32> [[TMP23]]
 ; CHECK:         [[TMP26]] = select <4 x i1> [[TMP0:%.*]], <4 x i32> [[TMP25]], <4 x i32> [[VEC_PHI]]
 ; CHECK:       middle.block:
-; CHECK:         [[TMP28:%.*]] = call i32 @llvm.experimental.vector.reduce.umax.v4i32(<4 x i32> [[TMP26]])
+; CHECK:         [[TMP28:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[TMP26]])
 ;
 entry:
   br label %for.body

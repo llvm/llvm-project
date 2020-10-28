@@ -139,19 +139,23 @@ TEST(ScalableVectorMVTsTest, SizeQueries) {
   EXPECT_EQ(nxv4i32.getSizeInBits(), nxv2i64.getSizeInBits());
   EXPECT_EQ(nxv2f64.getSizeInBits(), nxv2i64.getSizeInBits());
   EXPECT_NE(nxv2i32.getSizeInBits(), nxv4i32.getSizeInBits());
-  EXPECT_LT(nxv2i32.getSizeInBits(), nxv2i64.getSizeInBits());
-  EXPECT_LE(nxv4i32.getSizeInBits(), nxv2i64.getSizeInBits());
-  EXPECT_GT(nxv4i32.getSizeInBits(), nxv2i32.getSizeInBits());
-  EXPECT_GE(nxv2i64.getSizeInBits(), nxv4i32.getSizeInBits());
+  EXPECT_LT(nxv2i32.getSizeInBits().getKnownMinSize(),
+            nxv2i64.getSizeInBits().getKnownMinSize());
+  EXPECT_LE(nxv4i32.getSizeInBits().getKnownMinSize(),
+            nxv2i64.getSizeInBits().getKnownMinSize());
+  EXPECT_GT(nxv4i32.getSizeInBits().getKnownMinSize(),
+            nxv2i32.getSizeInBits().getKnownMinSize());
+  EXPECT_GE(nxv2i64.getSizeInBits().getKnownMinSize(),
+            nxv4i32.getSizeInBits().getKnownMinSize());
 
   // Check equivalence and ordering on fixed types.
   EXPECT_EQ(v4i32.getSizeInBits(), v2i64.getSizeInBits());
   EXPECT_EQ(v2f64.getSizeInBits(), v2i64.getSizeInBits());
   EXPECT_NE(v2i32.getSizeInBits(), v4i32.getSizeInBits());
-  EXPECT_LT(v2i32.getSizeInBits(), v2i64.getSizeInBits());
-  EXPECT_LE(v4i32.getSizeInBits(), v2i64.getSizeInBits());
-  EXPECT_GT(v4i32.getSizeInBits(), v2i32.getSizeInBits());
-  EXPECT_GE(v2i64.getSizeInBits(), v4i32.getSizeInBits());
+  EXPECT_LT(v2i32.getFixedSizeInBits(), v2i64.getFixedSizeInBits());
+  EXPECT_LE(v4i32.getFixedSizeInBits(), v2i64.getFixedSizeInBits());
+  EXPECT_GT(v4i32.getFixedSizeInBits(), v2i32.getFixedSizeInBits());
+  EXPECT_GE(v2i64.getFixedSizeInBits(), v4i32.getFixedSizeInBits());
 
   // Check that scalable and non-scalable types with the same minimum size
   // are not considered equal.
@@ -159,8 +163,8 @@ TEST(ScalableVectorMVTsTest, SizeQueries) {
   ASSERT_FALSE(v2i64.getSizeInBits() == nxv2f64.getSizeInBits());
 
   // Check that we can obtain a known-exact size from a non-scalable type.
-  EXPECT_EQ(v4i32.getSizeInBits(), 128U);
-  EXPECT_EQ(v2i64.getSizeInBits().getFixedSize(), 128U);
+  EXPECT_EQ(v4i32.getFixedSizeInBits(), 128U);
+  EXPECT_EQ(v2i64.getFixedSizeInBits(), 128U);
 
   // Check that we can query the known minimum size for both scalable and
   // fixed length types.

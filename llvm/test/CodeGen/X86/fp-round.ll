@@ -13,11 +13,10 @@ define float @round_f32(float %x) {
 ; SSE41:       ## %bb.0:
 ; SSE41-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; SSE41-NEXT:    andps %xmm0, %xmm1
-; SSE41-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE41-NEXT:    orps %xmm1, %xmm2
-; SSE41-NEXT:    addss %xmm0, %xmm2
+; SSE41-NEXT:    orps {{.*}}(%rip), %xmm1
+; SSE41-NEXT:    addss %xmm0, %xmm1
 ; SSE41-NEXT:    xorps %xmm0, %xmm0
-; SSE41-NEXT:    roundss $11, %xmm2, %xmm0
+; SSE41-NEXT:    roundss $11, %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: round_f32:
@@ -51,11 +50,10 @@ define double @round_f64(double %x) {
 ; SSE41:       ## %bb.0:
 ; SSE41-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
 ; SSE41-NEXT:    andpd %xmm0, %xmm1
-; SSE41-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE41-NEXT:    orpd %xmm1, %xmm2
-; SSE41-NEXT:    addsd %xmm0, %xmm2
+; SSE41-NEXT:    orpd {{.*}}(%rip), %xmm1
+; SSE41-NEXT:    addsd %xmm0, %xmm1
 ; SSE41-NEXT:    xorps %xmm0, %xmm0
-; SSE41-NEXT:    roundsd $11, %xmm2, %xmm0
+; SSE41-NEXT:    roundsd $11, %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: round_f64:

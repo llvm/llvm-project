@@ -241,6 +241,10 @@ class VectorType;
       VMLALVAu,     //   provided as low and high halves
       VMLALVAps,    // Same as VMLALVA[su] with a v4i1 predicate mask
       VMLALVApu,
+      VMINVu,        // Find minimum unsigned value of a vector and register
+      VMINVs,        // Find minimum signed value of a vector and register
+      VMAXVu,        // Find maximum unsigned value of a vector and register
+      VMAXVs,        // Find maximum signed value of a vector and register
 
       SMULWB,       // Signed multiply word by half word, bottom
       SMULWT,       // Signed multiply word by half word, top

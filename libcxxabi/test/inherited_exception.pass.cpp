@@ -71,7 +71,7 @@ void f3() {
   throw static_cast<Base2*>(&child);
 }
 
-int main()
+int main(int, char**)
 {
     try
     {
@@ -170,4 +170,6 @@ int main()
     {
         assert(false);
     }
+
+    return 0;
 }

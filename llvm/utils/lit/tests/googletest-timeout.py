@@ -1,29 +1,47 @@
 # REQUIRES: lit-max-individual-test-time
 
+###############################################################################
+# Check tests can hit timeout when set
+###############################################################################
+
 # Check that the per test timeout is enforced when running GTest tests.
 #
-# RUN: not %{lit} -j 1 -v %{inputs}/googletest-timeout --timeout=1 > %t.cmd.out
-# RUN: FileCheck < %t.cmd.out %s
+# RUN: not %{lit} -j 1 -v %{inputs}/googletest-timeout \
+# RUN:   --filter=InfiniteLoopSubTest --timeout=1 > %t.cmd.out
+# RUN: FileCheck --check-prefix=CHECK-INF < %t.cmd.out %s
 
 # Check that the per test timeout is enforced when running GTest tests via
 # the configuration file
 #
 # RUN: not %{lit} -j 1 -v %{inputs}/googletest-timeout \
-# RUN: --param set_timeout=1 > %t.cfgset.out 2> %t.cfgset.err
-# RUN: FileCheck < %t.cfgset.out %s
+# RUN:  --filter=InfiniteLoopSubTest  --param set_timeout=1 \
+# RUN:  > %t.cfgset.out
+# RUN: FileCheck --check-prefix=CHECK-INF < %t.cfgset.out %s
 
-# CHECK: -- Testing:
-# CHECK: PASS: googletest-timeout :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/FirstTest.subTestA
-# CHECK: TIMEOUT: googletest-timeout :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/FirstTest.subTestB
-# CHECK: TIMEOUT: googletest-timeout :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/FirstTest.subTestC
-# CHECK: Passed   : 1
-# CHECK: Timed Out: 2
+# CHECK-INF: -- Testing:
+# CHECK-INF: TIMEOUT: googletest-timeout :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/T.InfiniteLoopSubTest
+# CHECK-INF: Timed Out: 1
+
+###############################################################################
+# Check tests can complete with a timeout set
+#
+# `QuickSubTest` should execute quickly so we shouldn't wait anywhere near the
+# 3600 second timeout.
+###############################################################################
+
+# RUN: %{lit} -j 1 -v %{inputs}/googletest-timeout \
+# RUN:   --filter=QuickSubTest --timeout=3600 > %t.cmd.out
+# RUN: FileCheck --check-prefix=CHECK-QUICK < %t.cmd.out %s
+
+# CHECK-QUICK: PASS: googletest-timeout :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/T.QuickSubTest
+# CHECK-QUICK: Passed : 1
 
 # Test per test timeout via a config file and on the command line.
 # The value set on the command line should override the config file.
-# RUN: not %{lit} -j 1 -v %{inputs}/googletest-timeout \
-# RUN: --param set_timeout=1 --timeout=2 > %t.cmdover.out 2> %t.cmdover.err
-# RUN: FileCheck < %t.cmdover.out %s
+# RUN: %{lit} -j 1 -v %{inputs}/googletest-timeout --filter=QuickSubTest \
+# RUN:   --param set_timeout=1 --timeout=3600 \
+# RUN:   > %t.cmdover.out 2> %t.cmdover.err
+# RUN: FileCheck --check-prefix=CHECK-QUICK < %t.cmdover.out %s
 # RUN: FileCheck --check-prefix=CHECK-CMDLINE-OVERRIDE-ERR < %t.cmdover.err %s
 
-# CHECK-CMDLINE-OVERRIDE-ERR: Forcing timeout to be 2 seconds
+# CHECK-CMDLINE-OVERRIDE-ERR: Forcing timeout to be 3600 seconds

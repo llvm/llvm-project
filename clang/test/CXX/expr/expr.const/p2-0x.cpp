@@ -62,11 +62,11 @@ namespace NonConstExprReturn {
   constexpr const int *address_of(const int &a) {
     return &a;
   }
-  constexpr const int *return_param(int n) { // expected-note {{declared here}}
+  constexpr const int *return_param(int n) {
     return address_of(n);
   }
   struct S {
-    int n : *return_param(0); // expected-error {{constant expression}} expected-note {{read of variable whose lifetime has ended}}
+    int n : *return_param(0); // expected-error {{constant expression}} expected-note {{read of object outside its lifetime}}
   };
 }
 
@@ -280,6 +280,16 @@ namespace UndefinedBehavior {
     constexpr float f10 = f2 - f2; // expected-error {{constant expression}} expected-note {{produces a NaN}}
     constexpr float f11 = f2 + f4; // expected-error {{constant expression}} expected-note {{produces a NaN}}
     constexpr float f12 = f2 / f2; // expected-error {{constant expression}} expected-note {{produces a NaN}}
+#pragma float_control(push)
+#pragma float_control(except, on)
+constexpr float pi = 3.14f;
+constexpr unsigned ubig = 0xFFFFFFFF;
+constexpr float ce = 1.0 / 3.0; // not-expected-error {{constant expression}} not-expected-note {{floating point arithmetic suppressed in strict evaluation modes}}
+constexpr int ci = (int) pi;
+constexpr float fbig = (float) ubig; // not-expected-error {{constant expression}} not-expected-note {{floating point arithmetic suppressed in strict evaluation modes}}
+constexpr float fabspi = __builtin_fabs(pi); // no error expected
+constexpr float negpi = -pi; // expect no error on unary operator
+#pragma float_control(pop)
     static_assert(!isinf(f1), "");
     static_assert(isinf(f2), "");
     static_assert(!isinf(f3), "");
@@ -427,13 +437,12 @@ namespace PseudoDtor {
     int n : (k.~I(), 1); // expected-error {{constant expression}} expected-note {{visible outside that expression}}
   };
 
-  // FIXME: It's unclear whether this should be accepted in C++20 mode. The parameter is destroyed twice here.
-  constexpr int f(int a = 1) { // cxx11-error {{constant expression}}
+  constexpr int f(int a = 1) { // cxx11-error {{constant expression}} expected-note {{destroying object 'a' whose lifetime has already ended}}
     return (
-        a.~I(), // cxx11-note 2{{pseudo-destructor}}
+        a.~I(), // cxx11-note {{pseudo-destructor}}
         0);
   }
-  static_assert(f() == 0, ""); // cxx11-error {{constant expression}} cxx11-note {{in call}}
+  static_assert(f() == 0, ""); // expected-error {{constant expression}}
 
   // This is OK in C++20: the union has no active member after the
   // pseudo-destructor call, so the union destructor has no effect.

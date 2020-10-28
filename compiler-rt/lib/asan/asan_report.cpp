@@ -151,7 +151,8 @@ class ScopedInErrorReport {
     if (common_flags()->print_cmdline)
       PrintCmdline();
 
-    if (common_flags()->print_module_map == 2) PrintModuleMap();
+    if (common_flags()->print_module_map == 2)
+      DumpProcessMap();
 
     // Copy the message buffer so that we could start logging without holding a
     // lock that gets aquired during printing.

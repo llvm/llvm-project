@@ -25,7 +25,7 @@
 #include "test_iterators.h"
 
 template <class InIter, class OutIter>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
+TEST_CONSTEXPR_CXX17 bool
 test()
 {
     const unsigned N = 1000;

@@ -172,11 +172,13 @@ Sections:
     Type:    SHT_NOTE
     Content: "1122334455"
 
-## Either "Content", "Size" or "Notes" must be specifed for SHT_NOTE sections.
+## Check we emit an empty section if neither "Content", "Size" nor "Notes" were set.
 
-# RUN: not yaml2obj --docnum=8 %s 2>&1 | FileCheck %s --check-prefix=NO-TAGS
+# RUN: yaml2obj --docnum=8 %s -o %t8
+# RUN: llvm-readelf --sections %t8 | FileCheck %s --check-prefix=NO-TAGS
 
-# NO-TAGS: error: one of "Content", "Size" or "Notes" must be specified
+# NO-TAGS: [Nr] Name      Type Address          Off    Size
+# NO-TAGS: [ 1] .note.foo NOTE 0000000000000000 000040 000000
 
 --- !ELF
 FileHeader:
@@ -274,7 +276,7 @@ Sections:
 ## must be greater than or equal to the content size.
 
 # RUN: not yaml2obj --docnum=13 %s 2>&1 | FileCheck %s --check-prefix=SIZE-CONTENT-ERR
-# SIZE-CONTENT-ERR: error: "Size" must be greater than or equal to the content size
+# SIZE-CONTENT-ERR: error: Section size must be greater than or equal to the content size
 
 --- !ELF
 FileHeader:

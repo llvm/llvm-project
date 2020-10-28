@@ -32,12 +32,13 @@ void register2();
 #elif defined(MAIN)
   std::vector<std::type_index> registry;
 
-  int main() {
+  int main(int, char**) {
     register1();
     register2();
 
     assert(registry.size() == 2);
     assert(registry[0] != registry[1]);
+    return 0;
   }
 #else
 # error

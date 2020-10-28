@@ -147,13 +147,9 @@ LinalgDependenceGraph::getDependencesInto(
 }
 
 void LinalgDependenceGraph::addDependencesBetween(LinalgOp src, LinalgOp dst) {
-  assert(src.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  assert(dst.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
   for (auto srcView : src.getOutputBuffers()) { // W
     // RAW graph
-    for (auto dstView : dst.getInputs()) {   // R
+    for (auto dstView : dst.getInputBuffers()) { // R
       if (aliases.alias(srcView, dstView)) { // if alias, fill RAW
         addDependenceElem(DependenceType::RAW,
                           LinalgOpView{src.getOperation(), srcView},
@@ -162,16 +158,16 @@ void LinalgDependenceGraph::addDependencesBetween(LinalgOp src, LinalgOp dst) {
     }
     // WAW graph
     for (auto dstView : dst.getOutputBuffers()) { // W
-      if (aliases.alias(srcView, dstView)) { // if alias, fill WAW
+      if (aliases.alias(srcView, dstView)) {      // if alias, fill WAW
         addDependenceElem(DependenceType::WAW,
                           LinalgOpView{src.getOperation(), srcView},
                           LinalgOpView{dst.getOperation(), dstView});
       }
     }
   }
-  for (auto srcView : src.getInputs()) { // R
+  for (auto srcView : src.getInputBuffers()) { // R
     // RAR graph
-    for (auto dstView : dst.getInputs()) {   // R
+    for (auto dstView : dst.getInputBuffers()) { // R
       if (aliases.alias(srcView, dstView)) { // if alias, fill RAR
         addDependenceElem(DependenceType::RAR,
                           LinalgOpView{src.getOperation(), srcView},
@@ -180,7 +176,7 @@ void LinalgDependenceGraph::addDependencesBetween(LinalgOp src, LinalgOp dst) {
     }
     // WAR graph
     for (auto dstView : dst.getOutputBuffers()) { // W
-      if (aliases.alias(srcView, dstView)) { // if alias, fill WAR
+      if (aliases.alias(srcView, dstView)) {      // if alias, fill WAR
         addDependenceElem(DependenceType::WAR,
                           LinalgOpView{src.getOperation(), srcView},
                           LinalgOpView{dst.getOperation(), dstView});
@@ -241,4 +237,27 @@ LinalgDependenceGraph::findOperationsWithCoveringDependences(
     }
   }
   return res;
+}
+
+bool LinalgDependenceGraph::hasDependenceFrom(
+    LinalgOp srcLinalgOp, LinalgOp dstLinalgOp,
+    ArrayRef<LinalgDependenceGraph::DependenceType> depTypes) const {
+  for (auto dep : depTypes) {
+    for (auto dependence : getDependencesInto(dstLinalgOp, dep)) {
+      if (dependence.dependentOpView.op == srcLinalgOp)
+        return true;
+    }
+  }
+  return false;
+}
+
+bool LinalgDependenceGraph::hasDependentOperations(
+    LinalgOp linalgOp,
+    ArrayRef<LinalgDependenceGraph::DependenceType> depTypes) const {
+  for (auto dep : depTypes) {
+    if (!getDependencesFrom(linalgOp, dep).empty() ||
+        !getDependencesInto(linalgOp, dep).empty())
+      return true;
+  }
+  return false;
 }

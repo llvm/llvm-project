@@ -666,7 +666,7 @@
 // PPC64-AIX:#define _LP64 1
 // PPC64-AIX:#define _POWER 1
 // PPC64-AIX:#define __64BIT__ 1
-// PPC64-AIX:#define __BIGGEST_ALIGNMENT__ 8
+// PPC64-AIX:#define __BIGGEST_ALIGNMENT__ 16
 // PPC64-AIX:#define __BIG_ENDIAN__ 1
 // PPC64-AIX:#define __BYTE_ORDER__ __ORDER_BIG_ENDIAN__
 // PPC64-AIX:#define __CHAR16_TYPE__ unsigned short

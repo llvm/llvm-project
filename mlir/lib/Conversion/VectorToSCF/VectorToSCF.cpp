@@ -16,7 +16,6 @@
 
 #include "../PassDetail.h"
 #include "mlir/Dialect/Affine/EDSC/Intrinsics.h"
-#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/SCF/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
@@ -25,14 +24,10 @@
 #include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/Location.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/OperationSupport.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/Types.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
@@ -40,6 +35,28 @@ using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using vector::TransferReadOp;
 using vector::TransferWriteOp;
+
+// Return a list of Values that correspond to multiple AffineApplyOp, one for
+// each result of `map`. Each `expr` in `map` is canonicalized and folded
+// greedily according to its operands.
+// TODO: factor out in a common location that both linalg and vector can use.
+static SmallVector<Value, 4>
+applyMapToValues(OpBuilder &b, Location loc, AffineMap map, ValueRange values) {
+  SmallVector<Value, 4> res;
+  res.reserve(map.getNumResults());
+  unsigned numDims = map.getNumDims(), numSym = map.getNumSymbols();
+  // For each `expr` in `map`, applies the `expr` to the values extracted from
+  // ranges. If the resulting application can be folded into a Value, the
+  // folding occurs eagerly. Otherwise, an affine.apply operation is emitted.
+  for (auto expr : map.getResults()) {
+    AffineMap map = AffineMap::get(numDims, numSym, expr);
+    SmallVector<Value, 4> operands(values.begin(), values.end());
+    fullyComposeAffineMapAndOperands(&map, &operands);
+    canonicalizeMapAndOperands(&map, &operands);
+    res.push_back(b.createOrFold<AffineApplyOp>(loc, map, operands));
+  }
+  return res;
+}
 
 namespace {
 /// Helper class captures the common information needed to lower N>1-D vector
@@ -193,7 +210,8 @@ static Value onTheFlyFoldSLT(Value v, Value ub) {
 
 ///   1. Compute the indexings `majorIvs + majorOffsets` and save them in
 ///      `majorIvsPlusOffsets`.
-///   2. Return a value of i1 that determines whether the first `majorIvs.rank()`
+///   2. Return a value of i1 that determines whether the first
+///   `majorIvs.rank()`
 ///      dimensions `majorIvs + majorOffsets` are all within `memrefBounds`.
 static Value
 emitInBoundsCondition(PatternRewriter &rewriter,
@@ -205,8 +223,8 @@ emitInBoundsCondition(PatternRewriter &rewriter,
   majorIvsPlusOffsets.reserve(majorIvs.size());
   unsigned idx = 0;
   SmallVector<Value, 4> bounds =
-      linalg::applyMapToValues(rewriter, xferOp.getLoc(),
-                               xferOp.permutation_map(), memrefBounds.getUbs());
+      applyMapToValues(rewriter, xferOp.getLoc(), xferOp.permutation_map(),
+                       memrefBounds.getUbs());
   for (auto it : llvm::zip(majorIvs, majorOffsets, bounds)) {
     Value iv = std::get<0>(it), off = std::get<1>(it), ub = std::get<2>(it);
     using namespace mlir::edsc::op;
@@ -450,8 +468,8 @@ static void emitWithBoundsChecks(
     function_ref<void(ArrayRef<Value>)> outOfBoundsFun = nullptr) {
   // Permute the incoming indices according to the permutation map.
   SmallVector<Value, 4> indices =
-      linalg::applyMapToValues(rewriter, transfer.getLoc(),
-                               transfer.permutation_map(), transfer.indices());
+      applyMapToValues(rewriter, transfer.getLoc(), transfer.permutation_map(),
+                       transfer.indices());
 
   // Generate a bounds check if necessary.
   SmallVector<Value, 4> majorIvsPlusOffsets;
@@ -692,7 +710,7 @@ struct ConvertVectorToSCFPass
     auto *context = getFunction().getContext();
     populateVectorToSCFConversionPatterns(
         patterns, context, VectorTransferToSCFOptions().setUnroll(fullUnroll));
-    applyPatternsAndFoldGreedily(getFunction(), patterns);
+    applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
 

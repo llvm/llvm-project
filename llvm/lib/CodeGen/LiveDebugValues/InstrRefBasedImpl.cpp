@@ -109,7 +109,7 @@
 /// a matching machine-location PHI, each input to which is the variables value
 /// in the predecessor block.
 ///
-/// To accomodate this difference, each point on the lattice is split in
+/// To accommodate this difference, each point on the lattice is split in
 /// two: a "proposed" PHI and "definite" PHI. Any PHI that can immediately
 /// have a location determined are "definite" PHIs, and no further work is
 /// needed. Otherwise, a location that all non-backedge predecessors agree
@@ -411,7 +411,7 @@ public:
   const TargetLowering &TLI;
 
   /// IndexedMap type, mapping from LocIdx to ValueIDNum.
-  typedef IndexedMap<ValueIDNum, LocIdxToIndexFunctor> LocToValueType;
+  using LocToValueType = IndexedMap<ValueIDNum, LocIdxToIndexFunctor>;
 
   /// Map of LocIdxes to the ValueIDNums that they store. This is tightly
   /// packed, entries only exist for locations that are being tracked.
@@ -497,7 +497,7 @@ public:
     // Always track SP. This avoids the implicit clobbering caused by regmasks
     // from affectings its values. (LiveDebugValues disbelieves calls and
     // regmasks that claim to clobber SP).
-    unsigned SP = TLI.getStackPointerRegisterToSaveRestore();
+    Register SP = TLI.getStackPointerRegisterToSaveRestore();
     if (SP) {
       unsigned ID = getLocID(SP, false);
       (void)lookupOrTrackRegister(ID);
@@ -506,8 +506,8 @@ public:
 
   /// Produce location ID number for indexing LocIDToLocIdx. Takes the register
   /// or spill number, and flag for whether it's a spill or not.
-  unsigned getLocID(unsigned RegOrSpill, bool isSpill) {
-    return (isSpill) ? RegOrSpill + NumRegs - 1 : RegOrSpill;
+  unsigned getLocID(Register RegOrSpill, bool isSpill) {
+    return (isSpill) ? RegOrSpill.id() + NumRegs - 1 : RegOrSpill.id();
   }
 
   /// Accessor for reading the value at Idx.
@@ -640,7 +640,7 @@ public:
   /// later.
   void writeRegMask(const MachineOperand *MO, unsigned CurBB, unsigned InstID) {
     // Ensure SP exists, so that we don't override it later.
-    unsigned SP = TLI.getStackPointerRegisterToSaveRestore();
+    Register SP = TLI.getStackPointerRegisterToSaveRestore();
 
     // Def any register we track have that isn't preserved. The regmask
     // terminates the liveness of a register, meaning its value can't be
@@ -900,12 +900,11 @@ public:
 public:
   VLocTracker() {}
 
-  void defVar(const MachineInstr &MI, Optional<ValueIDNum> ID) {
-    // XXX skipping overlapping fragments for now.
-    assert(MI.isDebugValue());
+  void defVar(const MachineInstr &MI, const DbgValueProperties &Properties,
+              Optional<ValueIDNum> ID) {
+    assert(MI.isDebugValue() || MI.isDebugRef());
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
-    DbgValueProperties Properties(MI);
     DbgValue Rec = (ID) ? DbgValue(*ID, Properties, DbgValue::Def)
                         : DbgValue(Properties, DbgValue::Undef);
 
@@ -917,7 +916,7 @@ public:
   }
 
   void defVar(const MachineInstr &MI, const MachineOperand &MO) {
-    // XXX skipping overlapping fragments for now.
+    // Only DBG_VALUEs can define constant-valued variables.
     assert(MI.isDebugValue());
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
@@ -993,6 +992,27 @@ public:
   /// Temporary cache of DBG_VALUEs to be entered into the Transfers collection.
   SmallVector<MachineInstr *, 4> PendingDbgValues;
 
+  /// Record of a use-before-def: created when a value that's live-in to the
+  /// current block isn't available in any machine location, but it will be
+  /// defined in this block.
+  struct UseBeforeDef {
+    /// Value of this variable, def'd in block.
+    ValueIDNum ID;
+    /// Identity of this variable.
+    DebugVariable Var;
+    /// Additional variable properties.
+    DbgValueProperties Properties;
+  };
+
+  /// Map from instruction index (within the block) to the set of UseBeforeDefs
+  /// that become defined at that instruction.
+  DenseMap<unsigned, SmallVector<UseBeforeDef, 1>> UseBeforeDefs;
+
+  /// The set of variables that are in UseBeforeDefs and can become a location
+  /// once the relevant value is defined. An element being erased from this
+  /// collection prevents the use-before-def materializing.
+  DenseSet<DebugVariable> UseBeforeDefVariables;
+
   const TargetRegisterInfo &TRI;
   const BitVector &CalleeSavedRegs;
 
@@ -1015,6 +1035,8 @@ public:
     ActiveVLocs.clear();
     VarLocs.clear();
     VarLocs.reserve(NumLocs);
+    UseBeforeDefs.clear();
+    UseBeforeDefVariables.clear();
 
     auto isCalleeSaved = [&](LocIdx L) {
       unsigned Reg = MTracker->LocIdxToLocID[L];
@@ -1059,9 +1081,15 @@ public:
       }
 
       // If the value has no location, we can't make a variable location.
-      auto ValuesPreferredLoc = ValueToLoc.find(Var.second.ID);
-      if (ValuesPreferredLoc == ValueToLoc.end())
+      const ValueIDNum &Num = Var.second.ID;
+      auto ValuesPreferredLoc = ValueToLoc.find(Num);
+      if (ValuesPreferredLoc == ValueToLoc.end()) {
+        // If it's a def that occurs in this block, register it as a
+        // use-before-def to be resolved as we step through the block.
+        if (Num.getBlock() == (unsigned)MBB.getNumber() && !Num.isPHI())
+          addUseBeforeDef(Var.first, Var.second.Properties, Num);
         continue;
+      }
 
       LocIdx M = ValuesPreferredLoc->second;
       auto NewValue = LocAndProperties{M, Var.second.Properties};
@@ -1075,6 +1103,44 @@ public:
     flushDbgValues(MBB.begin(), &MBB);
   }
 
+  /// Record that \p Var has value \p ID, a value that becomes available
+  /// later in the function.
+  void addUseBeforeDef(const DebugVariable &Var,
+                       const DbgValueProperties &Properties, ValueIDNum ID) {
+    UseBeforeDef UBD = {ID, Var, Properties};
+    UseBeforeDefs[ID.getInst()].push_back(UBD);
+    UseBeforeDefVariables.insert(Var);
+  }
+
+  /// After the instruction at index \p Inst and position \p pos has been
+  /// processed, check whether it defines a variable value in a use-before-def.
+  /// If so, and the variable value hasn't changed since the start of the
+  /// block, create a DBG_VALUE.
+  void checkInstForNewValues(unsigned Inst, MachineBasicBlock::iterator pos) {
+    auto MIt = UseBeforeDefs.find(Inst);
+    if (MIt == UseBeforeDefs.end())
+      return;
+
+    for (auto &Use : MIt->second) {
+      LocIdx L = Use.ID.getLoc();
+
+      // If something goes very wrong, we might end up labelling a COPY
+      // instruction or similar with an instruction number, where it doesn't
+      // actually define a new value, instead it moves a value. In case this
+      // happens, discard.
+      if (MTracker->LocIdxToIDNum[L] != Use.ID)
+        continue;
+
+      // If a different debug instruction defined the variable value / location
+      // since the start of the block, don't materialize this use-before-def.
+      if (!UseBeforeDefVariables.count(Use.Var))
+        continue;
+
+      PendingDbgValues.push_back(MTracker->emitLoc(L, Use.Var, Use.Properties));
+    }
+    flushDbgValues(pos, nullptr);
+  }
+
   /// Helper to move created DBG_VALUEs into Transfers collection.
   void flushDbgValues(MachineBasicBlock::iterator Pos, MachineBasicBlock *MBB) {
     if (PendingDbgValues.size() > 0) {
@@ -1083,50 +1149,68 @@ public:
     }
   }
 
-  /// Handle a DBG_VALUE within a block. Terminate the variables current
-  /// location, and record the value its DBG_VALUE refers to, so that we can
-  /// detect location transfers later on.
+  /// Change a variable value after encountering a DBG_VALUE inside a block.
   void redefVar(const MachineInstr &MI) {
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
+    DbgValueProperties Properties(MI);
+
     const MachineOperand &MO = MI.getOperand(0);
 
-    // Erase any previous location,
-    auto It = ActiveVLocs.find(Var);
-    if (It != ActiveVLocs.end()) {
-      ActiveMLocs[It->second.Loc].erase(Var);
-    }
-
-    // Insert a new variable location. Ignore non-register locations, we don't
-    // transfer those, and can't currently describe spill locs independently of
-    // regs.
-    // (This is because a spill location is a DBG_VALUE of the stack pointer).
+    // Ignore non-register locations, we don't transfer those.
     if (!MO.isReg() || MO.getReg() == 0) {
-      if (It != ActiveVLocs.end())
+      auto It = ActiveVLocs.find(Var);
+      if (It != ActiveVLocs.end()) {
+        ActiveMLocs[It->second.Loc].erase(Var);
         ActiveVLocs.erase(It);
+     }
+      // Any use-before-defs no longer apply.
+      UseBeforeDefVariables.erase(Var);
       return;
     }
 
     Register Reg = MO.getReg();
-    LocIdx MLoc = MTracker->getRegMLoc(Reg);
-    DbgValueProperties Properties(MI);
+    LocIdx NewLoc = MTracker->getRegMLoc(Reg);
+    redefVar(MI, Properties, NewLoc);
+  }
+
+  /// Handle a change in variable location within a block. Terminate the
+  /// variables current location, and record the value it now refers to, so
+  /// that we can detect location transfers later on.
+  void redefVar(const MachineInstr &MI, const DbgValueProperties &Properties,
+                Optional<LocIdx> OptNewLoc) {
+    DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
+                      MI.getDebugLoc()->getInlinedAt());
+    // Any use-before-defs no longer apply.
+    UseBeforeDefVariables.erase(Var);
+
+    // Erase any previous location,
+    auto It = ActiveVLocs.find(Var);
+    if (It != ActiveVLocs.end())
+      ActiveMLocs[It->second.Loc].erase(Var);
+
+    // If there _is_ no new location, all we had to do was erase.
+    if (!OptNewLoc)
+      return;
+    LocIdx NewLoc = *OptNewLoc;
 
     // Check whether our local copy of values-by-location in #VarLocs is out of
     // date. Wipe old tracking data for the location if it's been clobbered in
     // the meantime.
-    if (MTracker->getNumAtPos(MLoc) != VarLocs[MLoc.asU64()]) {
-      for (auto &P : ActiveMLocs[MLoc.asU64()]) {
+    if (MTracker->getNumAtPos(NewLoc) != VarLocs[NewLoc.asU64()]) {
+      for (auto &P : ActiveMLocs[NewLoc]) {
         ActiveVLocs.erase(P);
       }
-      ActiveMLocs[MLoc].clear();
-      VarLocs[MLoc.asU64()] = MTracker->getNumAtPos(MLoc);
+      ActiveMLocs[NewLoc.asU64()].clear();
+      VarLocs[NewLoc.asU64()] = MTracker->getNumAtPos(NewLoc);
     }
 
-    ActiveMLocs[MLoc].insert(Var);
+    ActiveMLocs[NewLoc].insert(Var);
     if (It == ActiveVLocs.end()) {
-      ActiveVLocs.insert(std::make_pair(Var, LocAndProperties{MLoc, Properties}));
+      ActiveVLocs.insert(
+          std::make_pair(Var, LocAndProperties{NewLoc, Properties}));
     } else {
-      It->second.Loc = MLoc;
+      It->second.Loc = NewLoc;
       It->second.Properties = Properties;
     }
   }
@@ -1218,23 +1302,22 @@ private:
       DenseMap<const DILocalVariable *, SmallSet<FragmentInfo, 4>>;
 
   /// Machine location/value transfer function, a mapping of which locations
-  // are assigned which new values.
-  typedef std::map<LocIdx, ValueIDNum> MLocTransferMap;
+  /// are assigned which new values.
+  using MLocTransferMap = std::map<LocIdx, ValueIDNum>;
 
   /// Live in/out structure for the variable values: a per-block map of
   /// variables to their values. XXX, better name?
-  typedef DenseMap<const MachineBasicBlock *,
-                   DenseMap<DebugVariable, DbgValue> *>
-      LiveIdxT;
+  using LiveIdxT =
+      DenseMap<const MachineBasicBlock *, DenseMap<DebugVariable, DbgValue> *>;
 
-  typedef std::pair<DebugVariable, DbgValue> VarAndLoc;
+  using VarAndLoc = std::pair<DebugVariable, DbgValue>;
 
   /// Type for a live-in value: the predecessor block, and its value.
-  typedef std::pair<MachineBasicBlock *, DbgValue *> InValueT;
+  using InValueT = std::pair<MachineBasicBlock *, DbgValue *>;
 
   /// Vector (per block) of a collection (inner smallvector) of live-ins.
   /// Used as the result type for the variable value dataflow problem.
-  typedef SmallVector<SmallVector<VarAndLoc, 8>, 8> LiveInsT;
+  using LiveInsT = SmallVector<SmallVector<VarAndLoc, 8>, 8>;
 
   const TargetRegisterInfo *TRI;
   const TargetInstrInfo *TII;
@@ -1272,6 +1355,13 @@ private:
   DenseMap<MachineBasicBlock *, unsigned int> BBToOrder;
   DenseMap<unsigned, unsigned> BBNumToRPO;
 
+  /// Pair of MachineInstr, and its 1-based offset into the containing block.
+  using InstAndNum = std::pair<const MachineInstr *, unsigned>;
+  /// Map from debug instruction number to the MachineInstr labelled with that
+  /// number, and its location within the function. Used to transform
+  /// instruction numbers in DBG_INSTR_REFs into machine value numbers.
+  std::map<uint64_t, InstAndNum> DebugInstrNumToInstr;
+
   // Map of overlapping variable fragments.
   OverlapMap OverlapFragments;
   VarToFragments SeenFragments;
@@ -1304,6 +1394,10 @@ private:
   /// \returns true if MI was recognized and processed.
   bool transferDebugValue(const MachineInstr &MI);
 
+  /// Examines whether \p MI is a DBG_INSTR_REF and notifies trackers.
+  /// \returns true if MI was recognized and processed.
+  bool transferDebugInstrRef(MachineInstr &MI);
+
   /// Examines whether \p MI is copy instruction, and notifies trackers.
   /// \returns true if MI was recognized and processed.
   bool transferRegisterCopy(MachineInstr &MI);
@@ -1324,13 +1418,11 @@ private:
   /// Step through the function, recording register definitions and movements
   /// in an MLocTracker. Convert the observations into a per-block transfer
   /// function in \p MLocTransfer, suitable for using with the machine value
-  /// location dataflow problem. Do the same with VLoc trackers in \p VLocs,
-  /// although the precise machine value numbers can't be known until after
-  /// the machine value number problem is solved.
-  void produceTransferFunctions(MachineFunction &MF,
-                                SmallVectorImpl<MLocTransferMap> &MLocTransfer,
-                                unsigned MaxNumBlocks,
-                                SmallVectorImpl<VLocTracker> &VLocs);
+  /// location dataflow problem.
+  void
+  produceMLocTransferFunction(MachineFunction &MF,
+                              SmallVectorImpl<MLocTransferMap> &MLocTransfer,
+                              unsigned MaxNumBlocks);
 
   /// Solve the machine value location dataflow problem. Takes as input the
   /// transfer functions in \p MLocTransfer. Writes the output live-in and
@@ -1499,6 +1591,7 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
          "Expected inlined-at fields to agree");
 
   DebugVariable V(Var, Expr, InlinedAt);
+  DbgValueProperties Properties(MI);
 
   // If there are no instructions in this lexical scope, do no location tracking
   // at all, this variable shouldn't get a legitimate location range.
@@ -1521,9 +1614,9 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
       // Feed defVar the new variable location, or if this is a
       // DBG_VALUE $noreg, feed defVar None.
       if (MO.getReg())
-        VTracker->defVar(MI, MTracker->readReg(MO.getReg()));
+        VTracker->defVar(MI, Properties, MTracker->readReg(MO.getReg()));
       else
-        VTracker->defVar(MI, None);
+        VTracker->defVar(MI, Properties, None);
     } else if (MI.getOperand(0).isImm() || MI.getOperand(0).isFPImm() ||
                MI.getOperand(0).isCImm()) {
       VTracker->defVar(MI, MI.getOperand(0));
@@ -1534,6 +1627,122 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
   // to the TransferTracker too.
   if (TTracker)
     TTracker->redefVar(MI);
+  return true;
+}
+
+bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI) {
+  if (!MI.isDebugRef())
+    return false;
+
+  // Only handle this instruction when we are building the variable value
+  // transfer function.
+  if (!VTracker)
+    return false;
+
+  unsigned InstNo = MI.getOperand(0).getImm();
+  unsigned OpNo = MI.getOperand(1).getImm();
+
+  const DILocalVariable *Var = MI.getDebugVariable();
+  const DIExpression *Expr = MI.getDebugExpression();
+  const DILocation *DebugLoc = MI.getDebugLoc();
+  const DILocation *InlinedAt = DebugLoc->getInlinedAt();
+  assert(Var->isValidLocationForIntrinsic(DebugLoc) &&
+         "Expected inlined-at fields to agree");
+
+  DebugVariable V(Var, Expr, InlinedAt);
+
+  auto *Scope = LS.findLexicalScope(MI.getDebugLoc().get());
+  if (Scope == nullptr)
+    return true; // Handled by doing nothing. This variable is never in scope.
+
+  const MachineFunction &MF = *MI.getParent()->getParent();
+
+  // Various optimizations may have happened to the value during codegen,
+  // recorded in the value substitution table. Apply any substitutions to
+  // the instruction / operand number in this DBG_INSTR_REF.
+  auto Sub = MF.DebugValueSubstitutions.find(std::make_pair(InstNo, OpNo));
+  while (Sub != MF.DebugValueSubstitutions.end()) {
+    InstNo = Sub->second.first;
+    OpNo = Sub->second.second;
+    Sub = MF.DebugValueSubstitutions.find(std::make_pair(InstNo, OpNo));
+  }
+
+  // Default machine value number is <None> -- if no instruction defines
+  // the corresponding value, it must have been optimized out.
+  Optional<ValueIDNum> NewID = None;
+
+  // Try to lookup the instruction number, and find the machine value number
+  // that it defines.
+  auto InstrIt = DebugInstrNumToInstr.find(InstNo);
+  if (InstrIt != DebugInstrNumToInstr.end()) {
+    const MachineInstr &TargetInstr = *InstrIt->second.first;
+    uint64_t BlockNo = TargetInstr.getParent()->getNumber();
+
+    // Pick out the designated operand.
+    assert(OpNo < TargetInstr.getNumOperands());
+    const MachineOperand &MO = TargetInstr.getOperand(OpNo);
+
+    // Today, this can only be a register.
+    assert(MO.isReg() && MO.isDef());
+
+    unsigned LocID = MTracker->getLocID(MO.getReg(), false);
+    LocIdx L = MTracker->LocIDToLocIdx[LocID];
+    NewID = ValueIDNum(BlockNo, InstrIt->second.second, L);
+  }
+
+  // We, we have a value number or None. Tell the variable value tracker about
+  // it. The rest of this LiveDebugValues implementation acts exactly the same
+  // for DBG_INSTR_REFs as DBG_VALUEs (just, the former can refer to values that
+  // aren't immediately available).
+  DbgValueProperties Properties(Expr, false);
+  VTracker->defVar(MI, Properties, NewID);
+
+  // If we're on the final pass through the function, decompose this INSTR_REF
+  // into a plain DBG_VALUE.
+  if (!TTracker)
+    return true;
+
+  // Pick a location for the machine value number, if such a location exists.
+  // (This information could be stored in TransferTracker to make it faster).
+  Optional<LocIdx> FoundLoc = None;
+  for (auto Location : MTracker->locations()) {
+    LocIdx CurL = Location.Idx;
+    ValueIDNum ID = MTracker->LocIdxToIDNum[CurL];
+    if (NewID && ID == NewID) {
+      // If this is the first location with that value, pick it. Otherwise,
+      // consider whether it's a "longer term" location.
+      if (!FoundLoc) {
+        FoundLoc = CurL;
+        continue;
+      }
+
+      if (MTracker->isSpill(CurL))
+        FoundLoc = CurL; // Spills are a longer term location.
+      else if (!MTracker->isSpill(*FoundLoc) &&
+               !MTracker->isSpill(CurL) &&
+               !isCalleeSaved(*FoundLoc) &&
+               isCalleeSaved(CurL))
+        FoundLoc = CurL; // Callee saved regs are longer term than normal.
+    }
+  }
+
+  // Tell transfer tracker that the variable value has changed.
+  TTracker->redefVar(MI, Properties, FoundLoc);
+
+  // If there was a value with no location; but the value is defined in a
+  // later instruction in this block, this is a block-local use-before-def.
+  if (!FoundLoc && NewID && NewID->getBlock() == CurBB &&
+      NewID->getInst() > CurInst)
+    TTracker->addUseBeforeDef(V, {MI.getDebugExpression(), false}, *NewID);
+
+  // Produce a DBG_VALUE representing what this DBG_INSTR_REF meant.
+  // This DBG_VALUE is potentially a $noreg / undefined location, if
+  // FoundLoc is None.
+  // (XXX -- could morph the DBG_INSTR_REF in the future).
+  MachineInstr *DbgMI = MTracker->emitLoc(FoundLoc, V, Properties);
+  TTracker->PendingDbgValues.push_back(DbgMI);
+  TTracker->flushDbgValues(MI.getIterator(), nullptr);
+
   return true;
 }
 
@@ -1555,7 +1764,7 @@ void InstrRefBasedLDV::transferRegisterDef(MachineInstr &MI) {
 
   MachineFunction *MF = MI.getMF();
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
-  unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+  Register SP = TLI->getStackPointerRegisterToSaveRestore();
 
   // Find the regs killed by MI, and find regmasks of preserved regs.
   // Max out the number of statically allocated elements in `DeadRegs`, as this
@@ -1918,6 +2127,8 @@ void InstrRefBasedLDV::process(MachineInstr &MI) {
   // definitions.
   if (transferDebugValue(MI))
     return;
+  if (transferDebugInstrRef(MI))
+    return;
   if (transferRegisterCopy(MI))
     return;
   if (transferSpillOrRestoreInst(MI))
@@ -1925,9 +2136,9 @@ void InstrRefBasedLDV::process(MachineInstr &MI) {
   transferRegisterDef(MI);
 }
 
-void InstrRefBasedLDV::produceTransferFunctions(
+void InstrRefBasedLDV::produceMLocTransferFunction(
     MachineFunction &MF, SmallVectorImpl<MLocTransferMap> &MLocTransfer,
-    unsigned MaxNumBlocks, SmallVectorImpl<VLocTracker> &VLocs) {
+    unsigned MaxNumBlocks) {
   // Because we try to optimize around register mask operands by ignoring regs
   // that aren't currently tracked, we set up something ugly for later: RegMask
   // operands that are seen earlier than the first use of a register, still need
@@ -1956,15 +2167,25 @@ void InstrRefBasedLDV::produceTransferFunctions(
     MTracker->reset();
     MTracker->setMPhis(CurBB);
 
-    VTracker = &VLocs[CurBB];
-    VTracker->MBB = &MBB;
-
     // Step through each instruction in this block.
     for (auto &MI : MBB) {
       process(MI);
       // Also accumulate fragment map.
       if (MI.isDebugValue())
         accumulateFragmentMap(MI);
+
+      // Create a map from the instruction number (if present) to the
+      // MachineInstr and its position.
+      if (uint64_t InstrNo = MI.peekDebugInstrNum()) {
+        auto InstrAndPos = std::make_pair(&MI, CurInst);
+        auto InsertResult =
+            DebugInstrNumToInstr.insert(std::make_pair(InstrNo, InstrAndPos));
+
+        // There should never be duplicate instruction numbers.
+        assert(InsertResult.second);
+        (void)InsertResult;
+      }
+
       ++CurInst;
     }
 
@@ -1994,7 +2215,7 @@ void InstrRefBasedLDV::produceTransferFunctions(
 
   // Compute a bitvector of all the registers that are tracked in this block.
   const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
-  unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+  Register SP = TLI->getStackPointerRegisterToSaveRestore();
   BitVector UsedRegs(TRI->getNumRegs());
   for (auto Location : MTracker->locations()) {
     unsigned ID = MTracker->LocIdxToLocID[Location.Idx];
@@ -2133,7 +2354,7 @@ InstrRefBasedLDV::mlocJoin(MachineBasicBlock &MBB,
     }
   }
 
-  // Uhhhhhh, reimplement NumInserted and NumRemoved pls.
+  // TODO: Reimplement NumInserted and NumRemoved.
   return std::tuple<bool, bool>(Changed, DowngradeOccurred);
 }
 
@@ -2349,7 +2570,7 @@ std::tuple<Optional<ValueIDNum>, bool> InstrRefBasedLDV::pickVPHILoc(
     return std::tuple<Optional<ValueIDNum>, bool>(None, false);
 
   // Lambda for seeking a common location within a range of location-sets.
-  typedef SmallVector<SmallVector<LocIdx, 4>, 8>::iterator LocsIt;
+  using LocsIt = SmallVector<SmallVector<LocIdx, 4>, 8>::iterator;
   auto SeekLocation =
       [&Locs](llvm::iterator_range<LocsIt> SearchRange) -> Optional<LocIdx> {
     // Starting with the first set of locations, take the intersection with
@@ -2809,7 +3030,6 @@ void InstrRefBasedLDV::vlocDataflow(
           CurBB, VarsWeCareAbout, MOutLocs, MInLocs, InScopeBlocks,
           BlocksToExplore, JoinedInLocs);
 
-      auto &VTracker = AllTheVLocs[MBB->getNumber()];
       bool FirstVisit = VLOCVisited.insert(MBB).second;
 
       // Always explore transfer function if inlocs changed, or if we've not
@@ -2821,23 +3041,11 @@ void InstrRefBasedLDV::vlocDataflow(
       if (DowngradeOccurred && OnPending.insert(MBB).second)
         Pending.push(BBToOrder[MBB]);
 
-      // Patch up the variable value transfer function to use the live-in
-      // machine values, now that that problem is solved.
-      if (FirstVisit) {
-        for (auto &Transfer : VTracker.Vars) {
-          if (Transfer.second.Kind == DbgValue::Def &&
-              Transfer.second.ID.getBlock() == CurBB &&
-              Transfer.second.ID.isPHI()) {
-            LocIdx Loc = Transfer.second.ID.getLoc();
-            Transfer.second.ID = MInLocs[CurBB][Loc.asU64()];
-          }
-        }
-      }
-
       if (!InLocsChanged)
         continue;
 
       // Do transfer function.
+      auto &VTracker = AllTheVLocs[MBB->getNumber()];
       for (auto &Transfer : VTracker.Vars) {
         // Is this var we're mangling in this scope?
         if (VarsWeCareAbout.count(Transfer.first)) {
@@ -2936,6 +3144,7 @@ void InstrRefBasedLDV::emitLocations(
     CurInst = 1;
     for (auto &MI : MBB) {
       process(MI);
+      TTracker->checkInstForNewValues(CurInst, MI.getIterator());
       ++CurInst;
     }
   }
@@ -3035,7 +3244,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
 
   initialSetup(MF);
 
-  produceTransferFunctions(MF, MLocTransfer, MaxNumBlocks, vlocs);
+  produceMLocTransferFunction(MF, MLocTransfer, MaxNumBlocks);
 
   // Allocate and initialize two array-of-arrays for the live-in and live-out
   // machine values. The outer dimension is the block number; while the inner
@@ -3053,6 +3262,22 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   // both live-ins and live-outs for decision making in the variable value
   // dataflow problem.
   mlocDataflow(MInLocs, MOutLocs, MLocTransfer);
+
+  // Walk back through each block / instruction, collecting DBG_VALUE
+  // instructions and recording what machine value their operands refer to.
+  for (auto &OrderPair : OrderToBB) {
+    MachineBasicBlock &MBB = *OrderPair.second;
+    CurBB = MBB.getNumber();
+    VTracker = &vlocs[CurBB];
+    VTracker->MBB = &MBB;
+    MTracker->loadFromArray(MInLocs[CurBB], CurBB);
+    CurInst = 1;
+    for (auto &MI : MBB) {
+      process(MI);
+      ++CurInst;
+    }
+    MTracker->reset();
+  }
 
   // Number all variables in the order that they appear, to be used as a stable
   // insertion order later.
@@ -3125,6 +3350,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   OrderToBB.clear();
   BBToOrder.clear();
   BBNumToRPO.clear();
+  DebugInstrNumToInstr.clear();
 
   return Changed;
 }

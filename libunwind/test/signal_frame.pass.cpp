@@ -25,7 +25,7 @@ void test() {
   assert(unw_is_signal_frame(&cursor));
 }
 
-int main() {
+int main(int, char**) {
   test();
   return 0;
 }

@@ -17,7 +17,6 @@
 #include <functional>
 #include <random>
 #include <cassert>
-#include <iostream>
 
 #include "test_macros.h"
 #include "min_allocator.h"

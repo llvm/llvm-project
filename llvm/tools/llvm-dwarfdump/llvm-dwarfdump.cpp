@@ -624,7 +624,7 @@ int main(int argc, char **argv) {
   if (Diff && Verbose) {
     WithColor::error() << "incompatible arguments: specifying both -diff and "
                           "-verbose is currently not supported";
-    return 0;
+    return 1;
   }
 
   std::error_code EC;

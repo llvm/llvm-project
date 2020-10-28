@@ -16,6 +16,9 @@
 #define CLANG_UNITTESTS_FORMAT_TESTLEXER_H
 
 #include "../../lib/Format/FormatTokenLexer.h"
+#include "../../lib/Format/TokenAnalyzer.h"
+#include "../../lib/Format/TokenAnnotator.h"
+#include "../../lib/Format/UnwrappedLineParser.h"
 
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
@@ -29,7 +32,8 @@ namespace format {
 typedef llvm::SmallVector<FormatToken *, 8> TokenList;
 
 inline std::ostream &operator<<(std::ostream &Stream, const FormatToken &Tok) {
-  Stream << "(" << Tok.Tok.getName() << ", \"" << Tok.TokenText.str() << "\")";
+  Stream << "(" << Tok.Tok.getName() << ", \"" << Tok.TokenText.str() << "\" , "
+         << getTokenTypeName(Tok.getType()) << ")";
   return Stream;
 }
 inline std::ostream &operator<<(std::ostream &Stream, const TokenList &Tokens) {
@@ -37,7 +41,7 @@ inline std::ostream &operator<<(std::ostream &Stream, const TokenList &Tokens) {
   for (size_t I = 0, E = Tokens.size(); I != E; ++I) {
     Stream << (I > 0 ? ", " : "") << *Tokens[I];
   }
-  Stream << "}";
+  Stream << "} (" << Tokens.size() << " tokens)";
   return Stream;
 }
 
@@ -53,19 +57,33 @@ inline std::string text(llvm::ArrayRef<FormatToken *> Tokens) {
                          });
 }
 
-class TestLexer {
+class TestLexer : public UnwrappedLineConsumer {
 public:
-  TestLexer() : SourceMgr("test.cpp", "") {}
+  TestLexer(llvm::SpecificBumpPtrAllocator<FormatToken> &Allocator,
+            std::vector<std::unique_ptr<llvm::MemoryBuffer>> &Buffers,
+            FormatStyle Style = getLLVMStyle())
+      : Allocator(Allocator), Buffers(Buffers), Style(Style),
+        SourceMgr("test.cpp", ""), IdentTable(getFormattingLangOpts(Style)) {}
 
   TokenList lex(llvm::StringRef Code) {
-    Buffers.push_back(
-        llvm::MemoryBuffer::getMemBufferCopy(Code, "<scratch space>"));
-    clang::FileID FID = SourceMgr.get().createFileID(SourceManager::Unowned,
-                                                     Buffers.back().get());
-    FormatTokenLexer Lex(SourceMgr.get(), FID, 0, Style, Encoding, Allocator,
-                         IdentTable);
-    auto Result = Lex.lex();
+    FormatTokenLexer Lex = getNewLexer(Code);
+    ArrayRef<FormatToken *> Result = Lex.lex();
     return TokenList(Result.begin(), Result.end());
+  }
+
+  TokenList annotate(llvm::StringRef Code) {
+    FormatTokenLexer Lex = getNewLexer(Code);
+    auto Tokens = Lex.lex();
+    UnwrappedLineParser Parser(Style, Lex.getKeywords(), 0, Tokens, *this);
+    Parser.parse();
+    TokenAnnotator Annotator(Style, Lex.getKeywords());
+    for (auto &Line : UnwrappedLines) {
+      AnnotatedLine Annotated(Line);
+      Annotator.annotate(Annotated);
+      Annotator.calculateFormattingInformation(Annotated);
+    }
+    UnwrappedLines.clear();
+    return TokenList(Tokens.begin(), Tokens.end());
   }
 
   FormatToken *id(llvm::StringRef Code) {
@@ -74,12 +92,29 @@ public:
     return Result[0];
   }
 
-  FormatStyle Style = getLLVMStyle();
+protected:
+  void consumeUnwrappedLine(const UnwrappedLine &TheLine) override {
+    UnwrappedLines.push_back(TheLine);
+  }
+  void finishRun() override {}
+
+  FormatTokenLexer getNewLexer(StringRef Code) {
+    Buffers.push_back(
+        llvm::MemoryBuffer::getMemBufferCopy(Code, "<scratch space>"));
+    clang::FileID FID =
+        SourceMgr.get().createFileID(Buffers.back()->getMemBufferRef());
+    return FormatTokenLexer(SourceMgr.get(), FID, 0, Style, Encoding, Allocator,
+                            IdentTable);
+  }
+
+public:
+  llvm::SpecificBumpPtrAllocator<FormatToken>& Allocator;
+  std::vector<std::unique_ptr<llvm::MemoryBuffer>>& Buffers;
+  FormatStyle Style;
   encoding::Encoding Encoding = encoding::Encoding_UTF8;
-  std::vector<std::unique_ptr<llvm::MemoryBuffer>> Buffers;
   clang::SourceManagerForFile SourceMgr;
-  llvm::SpecificBumpPtrAllocator<FormatToken> Allocator;
   IdentifierTable IdentTable;
+  SmallVector<UnwrappedLine, 16> UnwrappedLines;
 };
 
 } // namespace format

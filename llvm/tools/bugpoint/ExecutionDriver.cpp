@@ -33,7 +33,6 @@ enum OutputType {
   RunJIT,
   RunLLC,
   RunLLCIA,
-  LLC_Safe,
   CompileCustom,
   Custom
 };
@@ -53,7 +52,6 @@ cl::opt<OutputType> InterpreterSel(
                clEnumValN(RunLLC, "run-llc", "Compile with LLC"),
                clEnumValN(RunLLCIA, "run-llc-ia",
                           "Compile with LLC with integrated assembler"),
-               clEnumValN(LLC_Safe, "llc-safe", "Use LLC for all"),
                clEnumValN(CompileCustom, "compile-custom",
                           "Use -compile-command to define a command to "
                           "compile the bitcode. Useful to avoid linking."),
@@ -182,7 +180,6 @@ Error BugDriver::initializeExecutionEnvironment() {
     break;
   case RunLLC:
   case RunLLCIA:
-  case LLC_Safe:
     Interpreter = AbstractInterpreter::createLLC(
         getToolName(), Message, CCBinary, &ToolArgv, &CCToolArgv,
         InterpreterSel == RunLLCIA);
@@ -212,21 +209,12 @@ Error BugDriver::initializeExecutionEnvironment() {
   switch (SafeInterpreterSel) {
   case AutoPick:
     // In "llc-safe" mode, default to using LLC as the "safe" backend.
-    if (!SafeInterpreter && InterpreterSel == LLC_Safe) {
+    if (InterpreterSel == RunLLC) {
       SafeInterpreterSel = RunLLC;
       SafeToolArgs.push_back("--relocation-model=pic");
       SafeInterpreter = AbstractInterpreter::createLLC(
           Path.c_str(), Message, CCBinary, &SafeToolArgs, &CCToolArgv);
-    }
-
-    if (!SafeInterpreter && InterpreterSel != RunLLC &&
-        InterpreterSel != RunJIT) {
-      SafeInterpreterSel = RunLLC;
-      SafeToolArgs.push_back("--relocation-model=pic");
-      SafeInterpreter = AbstractInterpreter::createLLC(
-          Path.c_str(), Message, CCBinary, &SafeToolArgs, &CCToolArgv);
-    }
-    if (!SafeInterpreter) {
+    } else if (InterpreterSel != CompileCustom) {
       SafeInterpreterSel = AutoPick;
       Message = "Sorry, I can't automatically select a safe interpreter!\n";
     }
@@ -247,7 +235,7 @@ Error BugDriver::initializeExecutionEnvironment() {
               "\"safe\" backend right now!\n";
     break;
   }
-  if (!SafeInterpreter) {
+  if (!SafeInterpreter && InterpreterSel != CompileCustom) {
     outs() << Message << "\nExiting.\n";
     exit(1);
   }

@@ -136,22 +136,21 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemSet(
   return CI;
 }
 
-CallInst *IRBuilderBase::CreateMemCpy(Value *Dst, MaybeAlign DstAlign,
-                                      Value *Src, MaybeAlign SrcAlign,
-                                      Value *Size, bool isVolatile,
-                                      MDNode *TBAATag, MDNode *TBAAStructTag,
-                                      MDNode *ScopeTag, MDNode *NoAliasTag) {
+CallInst *IRBuilderBase::CreateMemTransferInst(
+    Intrinsic::ID IntrID, Value *Dst, MaybeAlign DstAlign, Value *Src,
+    MaybeAlign SrcAlign, Value *Size, bool isVolatile, MDNode *TBAATag,
+    MDNode *TBAAStructTag, MDNode *ScopeTag, MDNode *NoAliasTag) {
   Dst = getCastedInt8PtrValue(Dst);
   Src = getCastedInt8PtrValue(Src);
 
   Value *Ops[] = {Dst, Src, Size, getInt1(isVolatile)};
   Type *Tys[] = { Dst->getType(), Src->getType(), Size->getType() };
   Module *M = BB->getParent()->getParent();
-  Function *TheFn = Intrinsic::getDeclaration(M, Intrinsic::memcpy, Tys);
+  Function *TheFn = Intrinsic::getDeclaration(M, IntrID, Tys);
 
   CallInst *CI = createCallHelper(TheFn, Ops, this);
 
-  auto* MCI = cast<MemCpyInst>(CI);
+  auto* MCI = cast<MemTransferInst>(CI);
   if (DstAlign)
     MCI->setDestAlignment(*DstAlign);
   if (SrcAlign)
@@ -325,61 +324,53 @@ static CallInst *getReductionIntrinsic(IRBuilderBase *Builder, Intrinsic::ID ID,
 CallInst *IRBuilderBase::CreateFAddReduce(Value *Acc, Value *Src) {
   Module *M = GetInsertBlock()->getParent()->getParent();
   Value *Ops[] = {Acc, Src};
-  Type *Tys[] = {Acc->getType(), Src->getType()};
-  auto Decl = Intrinsic::getDeclaration(
-      M, Intrinsic::experimental_vector_reduce_v2_fadd, Tys);
+  auto Decl = Intrinsic::getDeclaration(M, Intrinsic::vector_reduce_fadd,
+                                        {Src->getType()});
   return createCallHelper(Decl, Ops, this);
 }
 
 CallInst *IRBuilderBase::CreateFMulReduce(Value *Acc, Value *Src) {
   Module *M = GetInsertBlock()->getParent()->getParent();
   Value *Ops[] = {Acc, Src};
-  Type *Tys[] = {Acc->getType(), Src->getType()};
-  auto Decl = Intrinsic::getDeclaration(
-      M, Intrinsic::experimental_vector_reduce_v2_fmul, Tys);
+  auto Decl = Intrinsic::getDeclaration(M, Intrinsic::vector_reduce_fmul,
+                                        {Src->getType()});
   return createCallHelper(Decl, Ops, this);
 }
 
 CallInst *IRBuilderBase::CreateAddReduce(Value *Src) {
-  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_add,
-                               Src);
+  return getReductionIntrinsic(this, Intrinsic::vector_reduce_add, Src);
 }
 
 CallInst *IRBuilderBase::CreateMulReduce(Value *Src) {
-  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_mul,
-                               Src);
+  return getReductionIntrinsic(this, Intrinsic::vector_reduce_mul, Src);
 }
 
 CallInst *IRBuilderBase::CreateAndReduce(Value *Src) {
-  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_and,
-                               Src);
+  return getReductionIntrinsic(this, Intrinsic::vector_reduce_and, Src);
 }
 
 CallInst *IRBuilderBase::CreateOrReduce(Value *Src) {
-  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_or,
-                               Src);
+  return getReductionIntrinsic(this, Intrinsic::vector_reduce_or, Src);
 }
 
 CallInst *IRBuilderBase::CreateXorReduce(Value *Src) {
-  return getReductionIntrinsic(this, Intrinsic::experimental_vector_reduce_xor,
-                               Src);
+  return getReductionIntrinsic(this, Intrinsic::vector_reduce_xor, Src);
 }
 
 CallInst *IRBuilderBase::CreateIntMaxReduce(Value *Src, bool IsSigned) {
-  auto ID = IsSigned ? Intrinsic::experimental_vector_reduce_smax
-                     : Intrinsic::experimental_vector_reduce_umax;
+  auto ID =
+      IsSigned ? Intrinsic::vector_reduce_smax : Intrinsic::vector_reduce_umax;
   return getReductionIntrinsic(this, ID, Src);
 }
 
 CallInst *IRBuilderBase::CreateIntMinReduce(Value *Src, bool IsSigned) {
-  auto ID = IsSigned ? Intrinsic::experimental_vector_reduce_smin
-                     : Intrinsic::experimental_vector_reduce_umin;
+  auto ID =
+      IsSigned ? Intrinsic::vector_reduce_smin : Intrinsic::vector_reduce_umin;
   return getReductionIntrinsic(this, ID, Src);
 }
 
 CallInst *IRBuilderBase::CreateFPMaxReduce(Value *Src, bool NoNaN) {
-  auto Rdx = getReductionIntrinsic(
-      this, Intrinsic::experimental_vector_reduce_fmax, Src);
+  auto Rdx = getReductionIntrinsic(this, Intrinsic::vector_reduce_fmax, Src);
   if (NoNaN) {
     FastMathFlags FMF;
     FMF.setNoNaNs();
@@ -389,8 +380,7 @@ CallInst *IRBuilderBase::CreateFPMaxReduce(Value *Src, bool NoNaN) {
 }
 
 CallInst *IRBuilderBase::CreateFPMinReduce(Value *Src, bool NoNaN) {
-  auto Rdx = getReductionIntrinsic(
-      this, Intrinsic::experimental_vector_reduce_fmin, Src);
+  auto Rdx = getReductionIntrinsic(this, Intrinsic::vector_reduce_fmin, Src);
   if (NoNaN) {
     FastMathFlags FMF;
     FMF.setNoNaNs();
@@ -663,10 +653,10 @@ CallInst *IRBuilderBase::CreateGCStatepointCall(
 
 CallInst *IRBuilderBase::CreateGCStatepointCall(
     uint64_t ID, uint32_t NumPatchBytes, Value *ActualCallee, uint32_t Flags,
-    ArrayRef<Use> CallArgs, Optional<ArrayRef<Use>> TransitionArgs,
+    ArrayRef<Value *> CallArgs, Optional<ArrayRef<Use>> TransitionArgs,
     Optional<ArrayRef<Use>> DeoptArgs, ArrayRef<Value *> GCArgs,
     const Twine &Name) {
-  return CreateGCStatepointCallCommon<Use, Use, Use, Value *>(
+  return CreateGCStatepointCallCommon<Value *, Use, Use, Value *>(
       this, ID, NumPatchBytes, ActualCallee, Flags, CallArgs, TransitionArgs,
       DeoptArgs, GCArgs, Name);
 }
@@ -721,9 +711,9 @@ InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
 InvokeInst *IRBuilderBase::CreateGCStatepointInvoke(
     uint64_t ID, uint32_t NumPatchBytes, Value *ActualInvokee,
     BasicBlock *NormalDest, BasicBlock *UnwindDest, uint32_t Flags,
-    ArrayRef<Use> InvokeArgs, Optional<ArrayRef<Use>> TransitionArgs,
+    ArrayRef<Value *> InvokeArgs, Optional<ArrayRef<Use>> TransitionArgs,
     Optional<ArrayRef<Use>> DeoptArgs, ArrayRef<Value *> GCArgs, const Twine &Name) {
-  return CreateGCStatepointInvokeCommon<Use, Use, Use, Value *>(
+  return CreateGCStatepointInvokeCommon<Value *, Use, Use, Value *>(
       this, ID, NumPatchBytes, ActualInvokee, NormalDest, UnwindDest, Flags,
       InvokeArgs, TransitionArgs, DeoptArgs, GCArgs, Name);
 }

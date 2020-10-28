@@ -41,8 +41,8 @@ TEST_CONSTEXPR bool test_constexpr() {
 
   auto it =
       std::merge(std::begin(ia), std::end(ia), std::begin(ib), std::end(ib),
-                 std::begin(ic), [](int a, int b) { return a == b; });
-  assert(std::distance(std::begin(ic), it) == (std::size(ia) + std::size(ib)));
+                 std::begin(ic), std::less<>{});
+  assert(std::distance(std::begin(ic), it) == static_cast<int>(std::size(ia) + std::size(ib)));
   assert(*it == 0);
   assert(
       std::equal(std::begin(ic), it, std::begin(expected), std::end(expected)));

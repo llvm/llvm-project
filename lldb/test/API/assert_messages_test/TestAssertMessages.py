@@ -113,3 +113,20 @@ class AssertMessagesTestCase(TestBase):
 
                Expecting start string: "cat" (was not found)
                Reason for check goes here!""")
+
+        # Verify expect() preconditions.
+        # Both `patterns` and `substrs` cannot be of type string.
+        self.assert_expect_fails_with("any command",
+            dict(patterns="some substring"),
+            "patterns must be a collection of strings")
+        self.assert_expect_fails_with("any command",
+            dict(substrs="some substring"),
+            "substrs must be a collection of strings")
+        # Prevent `self.expect("cmd", "substr")`
+        self.assert_expect_fails_with("any command",
+            dict(msg="some substring"),
+            "expect() missing a matcher argument")
+        # Prevent `self.expect("cmd", "msg", "substr")`
+        self.assert_expect_fails_with("any command",
+            dict(msg="a message", patterns="some substring"),
+            "must be a collection of strings")

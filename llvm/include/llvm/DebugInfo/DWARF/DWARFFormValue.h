@@ -82,6 +82,9 @@ public:
   void dump(raw_ostream &OS, DIDumpOptions DumpOpts = DIDumpOptions()) const;
   void dumpSectionedAddress(raw_ostream &OS, DIDumpOptions DumpOpts,
                             object::SectionedAddress SA) const;
+  void dumpAddress(raw_ostream &OS, uint64_t Address) const;
+  static void dumpAddress(raw_ostream &OS, uint8_t AddressSize,
+                          uint64_t Address);
   static void dumpAddressSection(const DWARFObject &Obj, raw_ostream &OS,
                                  DIDumpOptions DumpOpts, uint64_t SectionIndex);
 

@@ -1386,7 +1386,7 @@ Note that floating-point operations performed as part of constant initialization
    Details:
 
    * ``precise`` Disables optimizations that are not value-safe on floating-point data, although FP contraction (FMA) is enabled (``-ffp-contract=fast``).  This is the default behavior.
-   * ``strict`` Enables ``-frounding-math`` and ``-ffp-exception-behavior=strict``, and disables contractions (FMA).  All of the ``-ffast-math`` enablements are disabled.
+   * ``strict`` Enables ``-frounding-math`` and ``-ffp-exception-behavior=strict``, and disables contractions (FMA).  All of the ``-ffast-math`` enablements are disabled. Enables ``STDC FENV_ACCESS``: by default ``FENV_ACCESS`` is disabled. This option setting behaves as though ``#pragma STDC FENV_ACESS ON`` appeared at the top of the source file.
    * ``fast`` Behaves identically to specifying both ``-ffast-math`` and ``ffp-contract=fast``
 
    Note: If your command line specifies multiple instances
@@ -1408,6 +1408,44 @@ Note that floating-point operations performed as part of constant initialization
    * ``strict`` The compiler ensures that all transformations strictly preserve the floating point exception semantics of the original code.
 
 
+.. _fp-constant-eval:
+
+A note about Floating Point Constant Evaluation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In C, the only place floating point operations are guaranteed to be evaluated
+during translation is in the initializers of variables of static storage
+duration, which are all notionally initialized before the program begins
+executing (and thus before a non-default floating point environment can be
+entered).  But C++ has many more contexts where floating point constant
+evaluation occurs.  Specifically: for static/thread-local variables,
+first try evaluating the initializer in a constant context, including in the
+constant floating point environment (just like in C), and then, if that fails,
+fall back to emitting runtime code to perform the initialization (which might
+in general be in a different floating point environment).
+
+Consider this example when compiled with ``-frounding-math``
+
+   .. code-block:: console
+
+constexpr float func_01(float x, float y) {
+  return x + y;
+}
+float V1 = func_01(1.0F, 0x0.000001p0F);
+
+The C++ rule is that initializers for static storage duration variables are
+first evaluated during translation (therefore, in the default rounding mode),
+and only evaluated at runtime (and therefore in the runtime rounding mode) if
+the compile-time evaluation fails. This is in line with the C rules;
+C11 F.8.5 says: *All computation for automatic initialization is done (as if)
+at execution time; thus, it is affected by any operative modes and raises
+floating-point exceptions as required by IEC 60559 (provided the state for the
+FENV_ACCESS pragma is ‘‘on’’). All computation for initialization of objects
+that have static or thread storage duration is done (as if) at translation
+time.* C++ generalizes this by adding another phase of initialization
+(at runtime) if the translation-time initialization fails, but the
+translation-time evaluation of the initializer of succeeds, it will be
+treated as a constant initializer.
 
 
 .. _controlling-code-generation:
@@ -2479,8 +2517,8 @@ Differences between various standard modes
 ------------------------------------------
 
 clang supports the -std option, which changes what language mode clang uses.
-The supported modes for C are c89, gnu89, c99, gnu99, c11, gnu11, c17, gnu17,
-c2x, gnu2x, and various aliases for those modes. If no -std option is
+The supported modes for C are c89, gnu89, c94, c99, gnu99, c11, gnu11, c17,
+gnu17, c2x, gnu2x, and various aliases for those modes. If no -std option is
 specified, clang defaults to gnu17 mode. Many C99 and C11 features are
 supported in earlier modes as a conforming extension, with a warning. Use
 ``-pedantic-errors`` to request an error if a feature from a later standard
@@ -2489,34 +2527,36 @@ revision is used in an earlier mode.
 Differences between all ``c*`` and ``gnu*`` modes:
 
 -  ``c*`` modes define "``__STRICT_ANSI__``".
--  Target-specific defines not prefixed by underscores, like "linux",
+-  Target-specific defines not prefixed by underscores, like ``linux``,
    are defined in ``gnu*`` modes.
--  Trigraphs default to being off in ``gnu*`` modes; they can be enabled by
-   the -trigraphs option.
--  The parser recognizes "asm" and "typeof" as keywords in ``gnu*`` modes;
-   the variants "``__asm__``" and "``__typeof__``" are recognized in all
+-  Trigraphs default to being off in ``gnu*`` modes; they can be enabled
+   by the ``-trigraphs`` option.
+-  The parser recognizes ``asm`` and ``typeof`` as keywords in ``gnu*`` modes;
+   the variants ``__asm__`` and ``__typeof__`` are recognized in all modes.
+-  The parser recognizes ``inline`` as a keyword in ``gnu*`` mode, in
+   addition to recognizing it in the ``*99`` and later modes for which it is
+   part of the ISO C standard. The variant ``__inline__`` is recognized in all
    modes.
 -  The Apple "blocks" extension is recognized by default in ``gnu*`` modes
-   on some platforms; it can be enabled in any mode with the "-fblocks"
+   on some platforms; it can be enabled in any mode with the ``-fblocks``
    option.
--  Arrays that are VLA's according to the standard, but which can be
-   constant folded by the frontend are treated as fixed size arrays.
-   This occurs for things like "int X[(1, 2)];", which is technically a
-   VLA. ``c*`` modes are strictly compliant and treat these as VLAs.
 
-Differences between ``*89`` and ``*99`` modes:
+Differences between ``*89`` and ``*94`` modes:
 
--  The ``*99`` modes default to implementing "inline" as specified in C99,
-   while the ``*89`` modes implement the GNU version. This can be
-   overridden for individual functions with the ``__gnu_inline__``
-   attribute.
 -  Digraphs are not recognized in c89 mode.
--  The scope of names defined inside a "for", "if", "switch", "while",
-   or "do" statement is different. (example: "``if ((struct x {int
-   x;}*)0) {}``".)
+
+Differences between ``*94`` and ``*99`` modes:
+
+-  The ``*99`` modes default to implementing ``inline`` / ``__inline__``
+   as specified in C99, while the ``*89`` modes implement the GNU version.
+   This can be overridden for individual functions with the ``__gnu_inline__``
+   attribute.
+-  The scope of names defined inside a ``for``, ``if``, ``switch``, ``while``,
+  or ``do`` statement is different. (example: ``if ((struct x {int x;}*)0)
+  {}``.)
 -  ``__STDC_VERSION__`` is not defined in ``*89`` modes.
--  "inline" is not recognized as a keyword in c89 mode.
--  "restrict" is not recognized as a keyword in ``*89`` modes.
+-  ``inline`` is not recognized as a keyword in ``c89`` mode.
+-  ``restrict`` is not recognized as a keyword in ``*89`` modes.
 -  Commas are allowed in integer constant expressions in ``*99`` modes.
 -  Arrays which are not lvalues are not implicitly promoted to pointers
    in ``*89`` modes.
@@ -2538,9 +2578,7 @@ clang tries to be compatible with gcc as much as possible, but some gcc
 extensions are not implemented yet:
 
 -  clang does not support decimal floating point types (``_Decimal32`` and
-   friends) or fixed-point types (``_Fract`` and friends); nobody has
-   expressed interest in these features yet, so it's hard to say when
-   they will be implemented.
+   friends) yet.
 -  clang does not support nested functions; this is a complex feature
    which is infrequently used, so it is unlikely to be implemented
    anytime soon. In C++11 it can be emulated by assigning lambda
@@ -2590,10 +2628,12 @@ Intentionally unsupported GCC extensions
    the extension appears to be rarely used. Note that clang *does*
    support flexible array members (arrays with a zero or unspecified
    size at the end of a structure).
--  clang does not have an equivalent to gcc's "fold"; this means that
-   clang doesn't accept some constructs gcc might accept in contexts
-   where a constant expression is required, like "x-x" where x is a
-   variable.
+-  GCC accepts many expression forms that are not valid integer constant
+   expressions in bit-field widths, enumerator constants, case labels,
+   and in array bounds at global scope. Clang also accepts additional
+   expression forms in these contexts, but constructs that GCC accepts due to
+   simplifications GCC performs while parsing, such as ``x - x`` (where ``x`` is a
+   variable) will likely never be accepted by Clang.
 -  clang does not support ``__builtin_apply`` and friends; this extension
    is extremely obscure and difficult to implement reliably.
 
@@ -2634,8 +2674,11 @@ C++ Language Features
 =====================
 
 clang fully implements all of standard C++98 except for exported
-templates (which were removed in C++11), and all of standard C++11
-and the current draft standard for C++1y.
+templates (which were removed in C++11), all of standard C++11,
+C++14, and C++17, and most of C++20.
+
+See the `C++ support in Clang <https://clang.llvm.org/cxx_status.html>` page
+for detailed information on C++ feature support across Clang versions.
 
 Controlling implementation limits
 ---------------------------------
@@ -3200,6 +3243,15 @@ using ``asm(".code16gcc")`` with the GNU toolchain. The generated code
 and the ABI remains 32-bit but the assembler emits instructions
 appropriate for a CPU running in 16-bit mode, with address-size and
 operand-size prefixes to enable 32-bit addressing and operations.
+
+Several micro-architecture levels as specified by the x86-64 psABI are defined.
+They are cumulative in the sense that features from previous levels are
+implicitly included in later levels.
+
+- ``-march=x86-64``: CMOV, CMPXCHG8B, FPU, FXSR, MMX, FXSR, SCE, SSE, SSE2
+- ``-march=x86-64-v2``: (close to Nehalem) CMPXCHG16B, LAHF-SAHF, POPCNT, SSE3, SSE4.1, SSE4.2, SSSE3
+- ``-march=x86-64-v3``: (close to Haswell) AVX, AVX2, BMI1, BMI2, F16C, FMA, LZCNT, MOVBE, XSAVE
+- ``-march=x86-64-v4``: AVX512F, AVX512BW, AVX512CD, AVX512DQ, AVX512VL
 
 ARM
 ^^^

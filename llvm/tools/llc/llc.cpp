@@ -224,7 +224,7 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
           OutputFilename += ".o";
         break;
       case CGFT_Null:
-        OutputFilename += ".null";
+        OutputFilename = "-";
         break;
       }
     }
@@ -424,14 +424,17 @@ static int compileModule(char **argv, LLVMContext &Context) {
   case '3': OLvl = CodeGenOpt::Aggressive; break;
   }
 
-  TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags();
-  Options.DisableIntegratedAS = NoIntegratedAssembler;
-  Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
-  Options.MCOptions.MCUseDwarfDirectory = EnableDwarfDirectory;
-  Options.MCOptions.AsmVerbose = AsmVerbose;
-  Options.MCOptions.PreserveAsmComments = PreserveComments;
-  Options.MCOptions.IASSearchPaths = IncludeDirs;
-  Options.MCOptions.SplitDwarfFile = SplitDwarfFile;
+  TargetOptions Options;
+  auto InitializeOptions = [&](const Triple &TheTriple) {
+    Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
+    Options.DisableIntegratedAS = NoIntegratedAssembler;
+    Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
+    Options.MCOptions.MCUseDwarfDirectory = EnableDwarfDirectory;
+    Options.MCOptions.AsmVerbose = AsmVerbose;
+    Options.MCOptions.PreserveAsmComments = PreserveComments;
+    Options.MCOptions.IASSearchPaths = IncludeDirs;
+    Options.MCOptions.SplitDwarfFile = SplitDwarfFile;
+  };
 
   Optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
 
@@ -466,6 +469,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
         exit(1);
       }
 
+      InitializeOptions(TheTriple);
       Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
           TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM,
           codegen::getExplicitCodeModel(), OLvl));
@@ -510,6 +514,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       return 1;
     }
 
+    InitializeOptions(TheTriple);
     Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
         TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM,
         codegen::getExplicitCodeModel(), OLvl));

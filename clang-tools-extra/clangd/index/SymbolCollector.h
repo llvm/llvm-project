@@ -131,7 +131,7 @@ private:
   void processRelations(const NamedDecl &ND, const SymbolID &ID,
                         ArrayRef<index::SymbolRelation> Relations);
 
-  llvm::Optional<std::string> getIncludeHeader(llvm::StringRef QName, FileID);
+  llvm::Optional<std::string> getIncludeHeader(const Symbol &S, FileID);
   bool isSelfContainedHeader(FileID);
   // Heuristically headers that only want to be included via an umbrella.
   static bool isDontIncludeMeHeader(llvm::StringRef);

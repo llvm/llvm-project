@@ -35,6 +35,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       Plan->addCBV(NCondBit);
     }
   }
+  VPValue DummyValue;
   for (VPBlockBase *Base : RPOT) {
     // Do not widen instructions in pre-header and exit blocks.
     if (Base->getNumPredecessors() == 0 || Base->getNumSuccessors() == 0)
@@ -48,6 +49,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       VPInstruction *VPInst = cast<VPInstruction>(Ingredient);
       Instruction *Inst = cast<Instruction>(VPInst->getUnderlyingValue());
       if (DeadInstructions.count(Inst)) {
+        VPInst->replaceAllUsesWith(&DummyValue);
         Ingredient->eraseFromParent();
         continue;
       }
@@ -77,6 +79,7 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
             new VPWidenRecipe(*Inst, Plan->mapToVPValues(Inst->operands()));
 
       NewRecipe->insertBefore(Ingredient);
+      VPInst->replaceAllUsesWith(&DummyValue);
       Ingredient->eraseFromParent();
     }
   }

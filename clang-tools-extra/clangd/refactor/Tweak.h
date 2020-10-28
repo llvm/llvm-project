@@ -67,13 +67,6 @@ public:
     // FIXME: provide a way to get sources and ASTs for other files.
   };
 
-  /// Output of a tweak.
-  enum Intent {
-    /// Apply changes that preserve the behavior of the code.
-    Refactor,
-    /// Provide information to the user.
-    Info,
-  };
   struct Effect {
     /// A message to be displayed to the user.
     llvm::Optional<std::string> ShowMessage;
@@ -120,7 +113,7 @@ public:
   virtual std::string title() const = 0;
   /// Describes what kind of action this is.
   /// EXPECTS: prepare() was called and returned true.
-  virtual Intent intent() const = 0;
+  virtual llvm::StringLiteral kind() const = 0;
   /// Is this a 'hidden' tweak, which are off by default.
   virtual bool hidden() const { return false; }
 };

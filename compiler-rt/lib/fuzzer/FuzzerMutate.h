@@ -129,9 +129,6 @@ public:
 
   // Dictionary provided by the user via -dict=DICT_FILE.
   Dictionary ManualDictionary;
-  // Temporary dictionary modified by the fuzzer itself,
-  // recreated periodically.
-  Dictionary TempAutoDictionary;
   // Persistent dictionary modified by the fuzzer, consists of
   // entries that led to successful discoveries in the past mutations.
   Dictionary PersistentAutoDictionary;

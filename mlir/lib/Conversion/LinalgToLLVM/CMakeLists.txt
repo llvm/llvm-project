@@ -15,7 +15,7 @@ add_mlir_conversion_library(MLIRLinalgToLLVM
   MLIRAffineToStandard
   MLIREDSC
   MLIRIR
-  MLIRLinalgOps
+  MLIRLinalg
   MLIRLLVMIR
   MLIRSCFToStandard
   MLIRStandardToLLVM

@@ -18,14 +18,14 @@ define void @hoge() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <2 x i32> [[TMP3]], undef
 ; CHECK-NEXT:    [[SHUFFLE5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[SHUFFLE5]], <i32 15, i32 31, i32 47, i32 undef>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.vector.reduce.smax.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[T19:%.*]] = select i1 undef, i32 [[TMP6]], i32 undef
 ; CHECK-NEXT:    [[T20:%.*]] = icmp sgt i32 [[T19]], 63
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub nsw <2 x i32> undef, [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub <2 x i32> [[TMP7]], undef
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <4 x i32> [[SHUFFLE]], <i32 -49, i32 -33, i32 -33, i32 -17>
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.vector.reduce.smin.v4i32(<4 x i32> [[TMP9]])
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[TMP9]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt i32 [[TMP10]], undef
 ; CHECK-NEXT:    [[OP_EXTRA:%.*]] = select i1 [[TMP11]], i32 [[TMP10]], i32 undef
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp slt i32 [[OP_EXTRA]], undef

@@ -14,8 +14,9 @@
 #include <memory>
 #include <string>
 
-int main() {
+int main(int, char**) {
     std::string s1(10u, '-', std::allocator<char>()); (void)s1;
     std::string s2("hello", std::allocator<char>()); (void)s2;
     std::string s3("hello"); (void)s3;
+    return 0;
 }

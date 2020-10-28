@@ -30,12 +30,18 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   CmdArgs.push_back("-fc1");
 
-  CmdArgs.push_back("-triple");
-  CmdArgs.push_back(Args.MakeArgString(TripleStr));
-
+  // TODO: Eventually all actions will require a triple (e.g. `-triple
+  // aarch64-unknown-linux-gnu`). However, `-triple` is currently not supported
+  // by `flang-new -fc1`, so we only add it selectively to actions that we
+  // don't support/execute just yet.
   if (isa<PreprocessJobAction>(JA)) {
-    CmdArgs.push_back("-E");
+    if (C.getArgs().hasArg(options::OPT_test_io))
+      CmdArgs.push_back("-test-io");
+    else
+      CmdArgs.push_back("-E");
   } else if (isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) {
+    CmdArgs.push_back("-triple");
+    CmdArgs.push_back(Args.MakeArgString(TripleStr));
     if (JA.getType() == types::TY_Nothing) {
       CmdArgs.push_back("-fsyntax-only");
     } else if (JA.getType() == types::TY_AST) {
@@ -52,6 +58,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       assert(false && "Unexpected output type!");
     }
   } else if (isa<AssembleJobAction>(JA)) {
+    CmdArgs.push_back("-triple");
+    CmdArgs.push_back(Args.MakeArgString(TripleStr));
     CmdArgs.push_back("-emit-obj");
   } else {
     assert(false && "Unexpected action class for Flang tool.");
@@ -72,8 +80,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // TODO: Replace flang-new with flang once the new driver replaces the
   // throwaway driver
   const char *Exec = Args.MakeArgString(D.GetProgramPath("flang-new", TC));
-  C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::AtFileUTF8(), Exec, CmdArgs, Inputs));
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileUTF8(),
+                                         Exec, CmdArgs, Inputs, Output));
 }
 
 Flang::Flang(const ToolChain &TC) : Tool("flang-new", "flang frontend", TC) {}

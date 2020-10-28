@@ -186,8 +186,6 @@ following commands:
 .. code-block:: console
 
   $ cmake -G Ninja -C <path_to_clang>/cmake/caches/3-stage.cmake <source dir>
-  $ ninja stage3
+  $ cmake --build . --target stage3 --parallel
 
-After the build you can compare the stage2 & stage3 compilers. We have a bot
-setup `here <http://lab.llvm.org:8011/builders/clang-3stage-ubuntu>`_ that runs
-this build and compare configuration.
+After the build you can compare the stage2 & stage3 compilers.

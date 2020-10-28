@@ -109,7 +109,7 @@ void NopFutexWait(int*, int) { assert(false); }
 void NopFutexWake(int*) { assert(false); }
 uint32_t MockGetThreadID() { return 0; }
 
-int main() {
+int main(int, char**) {
   {
 #if defined(_LIBCXXABI_HAS_NO_THREADS)
     static_assert(CurrentImplementation == Implementation::NoThreads, "");
@@ -152,4 +152,6 @@ int main() {
     Tests<uint32_t, FutexImpl>::test();
     Tests<uint64_t, FutexImpl>::test();
   }
+
+  return 0;
 }

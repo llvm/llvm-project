@@ -552,6 +552,21 @@ static void writeLineTableOpcode(const DWARFYAML::LineTableOpcode &Op,
   }
 }
 
+static std::vector<uint8_t>
+getStandardOpcodeLengths(uint16_t Version, Optional<uint8_t> OpcodeBase) {
+  // If the opcode_base field isn't specified, we returns the
+  // standard_opcode_lengths array according to the version by default.
+  std::vector<uint8_t> StandardOpcodeLengths{0, 1, 1, 1, 1, 0,
+                                             0, 0, 1, 0, 0, 1};
+  if (Version == 2) {
+    // DWARF v2 uses the same first 9 standard opcodes as v3-5.
+    StandardOpcodeLengths.resize(9);
+  } else if (OpcodeBase) {
+    StandardOpcodeLengths.resize(*OpcodeBase > 0 ? *OpcodeBase - 1 : 0, 0);
+  }
+  return StandardOpcodeLengths;
+}
+
 Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (const DWARFYAML::LineTable &LineTable : DI.DebugLines) {
     // Buffer holds the bytes following the header_length (or prologue_length in
@@ -566,9 +581,15 @@ Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
     writeInteger(LineTable.DefaultIsStmt, BufferOS, DI.IsLittleEndian);
     writeInteger(LineTable.LineBase, BufferOS, DI.IsLittleEndian);
     writeInteger(LineTable.LineRange, BufferOS, DI.IsLittleEndian);
-    writeInteger(LineTable.OpcodeBase, BufferOS, DI.IsLittleEndian);
 
-    for (uint8_t OpcodeLength : LineTable.StandardOpcodeLengths)
+    std::vector<uint8_t> StandardOpcodeLengths =
+        LineTable.StandardOpcodeLengths.getValueOr(
+            getStandardOpcodeLengths(LineTable.Version, LineTable.OpcodeBase));
+    uint8_t OpcodeBase = LineTable.OpcodeBase
+                             ? *LineTable.OpcodeBase
+                             : StandardOpcodeLengths.size() + 1;
+    writeInteger(OpcodeBase, BufferOS, DI.IsLittleEndian);
+    for (uint8_t OpcodeLength : StandardOpcodeLengths)
       writeInteger(OpcodeLength, BufferOS, DI.IsLittleEndian);
 
     for (StringRef IncludeDir : LineTable.IncludeDirs) {
@@ -585,8 +606,8 @@ Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
         LineTable.PrologueLength ? *LineTable.PrologueLength : Buffer.size();
 
     for (const DWARFYAML::LineTableOpcode &Op : LineTable.Opcodes)
-      writeLineTableOpcode(Op, LineTable.OpcodeBase, DI.Is64BitAddrSize ? 8 : 4,
-                           BufferOS, DI.IsLittleEndian);
+      writeLineTableOpcode(Op, OpcodeBase, DI.Is64BitAddrSize ? 8 : 4, BufferOS,
+                           DI.IsLittleEndian);
 
     uint64_t Length;
     if (LineTable.Length) {

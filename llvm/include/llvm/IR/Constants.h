@@ -592,14 +592,13 @@ class ConstantDataSequential : public ConstantData {
   /// the same value but different type.  For example, 0,0,0,1 could be a 4
   /// element array of i8, or a 1-element array of i32.  They'll both end up in
   /// the same StringMap bucket, linked up.
-  ConstantDataSequential *Next;
+  std::unique_ptr<ConstantDataSequential> Next;
 
   void destroyConstantImpl();
 
 protected:
   explicit ConstantDataSequential(Type *ty, ValueTy VT, const char *Data)
-      : ConstantData(ty, VT), DataElements(Data), Next(nullptr) {}
-  ~ConstantDataSequential() { delete Next; }
+      : ConstantData(ty, VT), DataElements(Data) {}
 
   static Constant *getImpl(StringRef Bytes, Type *Ty);
 
@@ -1034,6 +1033,12 @@ public:
   static Constant *getExactLShr(Constant *C1, Constant *C2) {
     return getLShr(C1, C2, true);
   }
+
+  /// If C is a scalar/fixed width vector of known powers of 2, then this
+  /// function returns a new scalar/fixed width vector obtained from logBase2
+  /// of C. Undef vector elements are set to zero.
+  /// Return a null pointer otherwise.
+  static Constant *getExactLogBase2(Constant *C);
 
   /// Return the identity constant for a binary opcode.
   /// The identity constant C is defined as X op C = X and C op X = X for every

@@ -17,5 +17,5 @@ add_mlir_conversion_library(MLIRStandardToSPIRVTransforms
   MLIRSupport
   MLIRTransformUtils
   MLIRSPIRV
-  MLIRStandardOps
+  MLIRStandard
   )

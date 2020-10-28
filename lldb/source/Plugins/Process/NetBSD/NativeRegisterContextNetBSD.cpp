@@ -20,12 +20,6 @@ using namespace lldb_private::process_netbsd;
 #include <sys/ptrace.h>
 // clang-format on
 
-NativeRegisterContextNetBSD::NativeRegisterContextNetBSD(
-    NativeThreadProtocol &native_thread,
-    RegisterInfoInterface *reg_info_interface_p)
-    : NativeRegisterContextRegisterInfo(native_thread,
-                                        reg_info_interface_p) {}
-
 Status NativeRegisterContextNetBSD::DoRegisterSet(int ptrace_req, void *buf) {
   return NativeProcessNetBSD::PtraceWrapper(ptrace_req, GetProcessPid(), buf,
                                             m_thread.GetID());

@@ -213,9 +213,10 @@ public:
   void initInstrItins(InstrItineraryData &InstrItins) const;
 
   /// Resolve a variant scheduling class for the given MCInst and CPU.
-  virtual unsigned
-  resolveVariantSchedClass(unsigned SchedClass, const MCInst *MI,
-                           unsigned CPUID) const {
+  virtual unsigned resolveVariantSchedClass(unsigned SchedClass,
+                                            const MCInst *MI,
+                                            const MCInstrInfo *MCII,
+                                            unsigned CPUID) const {
     return 0;
   }
 

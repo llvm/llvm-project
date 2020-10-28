@@ -88,8 +88,9 @@ class GenericLLVMIRPlatform : public Platform {
 public:
   GenericLLVMIRPlatform(GenericLLVMIRPlatformSupport &S) : S(S) {}
   Error setupJITDylib(JITDylib &JD) override;
-  Error notifyAdding(JITDylib &JD, const MaterializationUnit &MU) override;
-  Error notifyRemoving(JITDylib &JD, VModuleKey K) override {
+  Error notifyAdding(ResourceTracker &RT,
+                     const MaterializationUnit &MU) override;
+  Error notifyRemoving(ResourceTracker &RT) override {
     // Noop -- Nothing to do (yet).
     return Error::success();
   }
@@ -187,7 +188,8 @@ public:
     return J.addIRModule(JD, ThreadSafeModule(std::move(M), std::move(Ctx)));
   }
 
-  Error notifyAdding(JITDylib &JD, const MaterializationUnit &MU) {
+  Error notifyAdding(ResourceTracker &RT, const MaterializationUnit &MU) {
+    auto &JD = RT.getJITDylib();
     if (auto &InitSym = MU.getInitializerSymbol())
       InitSymbols[&JD].add(InitSym, SymbolLookupFlags::WeaklyReferencedSymbol);
     else {
@@ -261,7 +263,7 @@ private:
       return std::move(Err);
 
     DenseMap<JITDylib *, SymbolLookupSet> LookupSymbols;
-    std::vector<std::shared_ptr<JITDylib>> DFSLinkOrder;
+    std::vector<JITDylibSP> DFSLinkOrder;
 
     getExecutionSession().runSessionLocked([&]() {
       DFSLinkOrder = JD.getDFSLinkOrder();
@@ -311,7 +313,7 @@ private:
     auto LLJITRunAtExits = J.mangleAndIntern("__lljit_run_atexits");
 
     DenseMap<JITDylib *, SymbolLookupSet> LookupSymbols;
-    std::vector<std::shared_ptr<JITDylib>> DFSLinkOrder;
+    std::vector<JITDylibSP> DFSLinkOrder;
 
     ES.runSessionLocked([&]() {
       DFSLinkOrder = JD.getDFSLinkOrder();
@@ -365,7 +367,7 @@ private:
   /// JITDylibs that it depends on).
   Error issueInitLookups(JITDylib &JD) {
     DenseMap<JITDylib *, SymbolLookupSet> RequiredInitSymbols;
-    std::vector<std::shared_ptr<JITDylib>> DFSLinkOrder;
+    std::vector<JITDylibSP> DFSLinkOrder;
 
     getExecutionSession().runSessionLocked([&]() {
       DFSLinkOrder = JD.getDFSLinkOrder();
@@ -446,9 +448,9 @@ Error GenericLLVMIRPlatform::setupJITDylib(JITDylib &JD) {
   return S.setupJITDylib(JD);
 }
 
-Error GenericLLVMIRPlatform::notifyAdding(JITDylib &JD,
+Error GenericLLVMIRPlatform::notifyAdding(ResourceTracker &RT,
                                           const MaterializationUnit &MU) {
-  return S.notifyAdding(JD, MU);
+  return S.notifyAdding(RT, MU);
 }
 
 Expected<ThreadSafeModule>
@@ -961,7 +963,7 @@ Error LLJITBuilderState::prepareForConstruction() {
           ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
               ES, std::make_unique<jitlink::InProcessMemoryManager>());
         ObjLinkingLayer->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-            std::make_unique<jitlink::InProcessEHFrameRegistrar>()));
+            ES, std::make_unique<jitlink::InProcessEHFrameRegistrar>()));
         return std::move(ObjLinkingLayer);
       };
     }
@@ -973,23 +975,33 @@ Error LLJITBuilderState::prepareForConstruction() {
 LLJIT::~LLJIT() {
   if (CompileThreads)
     CompileThreads->wait();
+  if (auto Err = ES->endSession())
+    ES->reportError(std::move(Err));
 }
 
-Error LLJIT::addIRModule(JITDylib &JD, ThreadSafeModule TSM) {
+Error LLJIT::addIRModule(ResourceTrackerSP RT, ThreadSafeModule TSM) {
   assert(TSM && "Can not add null module");
 
   if (auto Err =
           TSM.withModuleDo([&](Module &M) { return applyDataLayout(M); }))
     return Err;
 
-  return InitHelperTransformLayer->add(JD, std::move(TSM),
-                                       ES->allocateVModule());
+  return InitHelperTransformLayer->add(std::move(RT), std::move(TSM));
+}
+
+Error LLJIT::addIRModule(JITDylib &JD, ThreadSafeModule TSM) {
+  return addIRModule(JD.getDefaultResourceTracker(), std::move(TSM));
+}
+
+Error LLJIT::addObjectFile(ResourceTrackerSP RT,
+                           std::unique_ptr<MemoryBuffer> Obj) {
+  assert(Obj && "Can not add null object");
+
+  return ObjTransformLayer.add(std::move(RT), std::move(Obj));
 }
 
 Error LLJIT::addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj) {
-  assert(Obj && "Can not add null object");
-
-  return ObjTransformLayer.add(JD, std::move(Obj), ES->allocateVModule());
+  return addObjectFile(JD.getDefaultResourceTracker(), std::move(Obj));
 }
 
 Expected<JITEvaluatedSymbol> LLJIT::lookupLinkerMangled(JITDylib &JD,
@@ -1157,7 +1169,7 @@ Error LLLazyJIT::addLazyIRModule(JITDylib &JD, ThreadSafeModule TSM) {
           [&](Module &M) -> Error { return applyDataLayout(M); }))
     return Err;
 
-  return CODLayer->add(JD, std::move(TSM), ES->allocateVModule());
+  return CODLayer->add(JD, std::move(TSM));
 }
 
 LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {

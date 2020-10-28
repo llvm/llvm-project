@@ -73,7 +73,9 @@ macros = {
   '_LIBCPP_HAS_THREAD_API_PTHREAD': 'libcpp-has-thread-api-pthread',
   '_LIBCPP_NO_VCRUNTIME': 'libcpp-no-vcruntime',
   '_LIBCPP_ABI_VERSION': 'libcpp-abi-version',
-  '_LIBCPP_ABI_UNSTABLE': 'libcpp-abi-unstable'
+  '_LIBCPP_ABI_UNSTABLE': 'libcpp-abi-unstable',
+  '_LIBCPP_HAS_NO_RANDOM_DEVICE': 'libcpp-has-no-random-device',
+  '_LIBCPP_HAS_NO_LOCALIZATION': 'libcpp-has-no-localization',
 }
 for macro, feature in macros.items():
   DEFAULT_FEATURES += [
@@ -107,7 +109,7 @@ for locale, alts in locales.items():
   # Note: Using alts directly in the lambda body here will bind it to the value at the
   # end of the loop. Assigning it to a default argument works around this issue.
   DEFAULT_FEATURES.append(Feature(name='locale.{}'.format(locale),
-                                  when=lambda cfg, alts=alts: any(hasLocale(cfg, alt) for alt in alts)))
+                                  when=lambda cfg, alts=alts: hasAnyLocale(cfg, alts)))
 
 
 # Add features representing the platform name: darwin, linux, windows, etc...

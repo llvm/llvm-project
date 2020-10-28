@@ -1,5 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=verde -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 < %s | FileCheck -check-prefixes=CHECK,GFX6 %s
 ; RUN: llc -regalloc=basic -march=amdgcn -mcpu=tonga -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 < %s | FileCheck -check-prefixes=CHECK,GFX7 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=CHECK,GFX9-FLATSCR,FLATSCR %s
+; RUN: llc -march=amdgcn -mcpu=gfx1030 -enable-misched=0 -post-RA-scheduler=0 -amdgpu-spill-sgpr-to-vgpr=0 -amdgpu-enable-flat-scratch < %s | FileCheck -check-prefixes=CHECK,GFX10-FLATSCR,FLATSCR %s
 ;
 ; There is something about Tonga that causes this test to spend a lot of time
 ; in the default register allocator.
@@ -11,6 +13,16 @@
 
 ; Just test that it compiles successfully.
 ; CHECK-LABEL: test
+
+; GFX9-FLATSCR:     s_mov_b32 [[SOFF1:s[0-9]+]], 4{{$}}
+; GFX9-FLATSCR-DAG: scratch_store_dword off, v{{[0-9]+}}, [[SOFF1]] ; 4-byte Folded Spill
+; GFX9-FLATSCR-DAG: scratch_store_dword off, v{{[0-9]+}}, [[SOFF1]] offset:{{[0-9]+}} ; 4-byte Folded Spill
+; GFX9-FLATSCR:     s_movk_i32 [[SOFF2:s[0-9]+]], 0x{{[0-9a-f]+}}{{$}}
+; GFX9-FLATSCR-DAG: scratch_load_dword v{{[0-9]+}}, off, [[SOFF2]] ; 4-byte Folded Reload
+; GFX9-FLATSCR-DAG: scratch_load_dword v{{[0-9]+}}, off, [[SOFF2]] offset:{{[0-9]+}} ; 4-byte Folded Reload
+
+; GFX10-FLATSCR: scratch_store_dword off, v{{[0-9]+}}, off offset:{{[0-9]+}} ; 4-byte Folded Spill
+; GFX10-FLATSCR: scratch_load_dword v{{[0-9]+}}, off, off offset:{{[0-9]+}} ; 4-byte Folded Reload
 define amdgpu_kernel void @test(<1280 x i32> addrspace(1)* %out, <1280 x i32> addrspace(1)* %in) {
 entry:
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -35,11 +47,17 @@ entry:
 }
 
 ; CHECK-LABEL: test_limited_sgpr
-; GFX6: s_add_u32 s32, s32, 0x[[OFFSET:[0-9]+]]
+; GFX6: s_add_u32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
 ; GFX6-NEXT: buffer_load_dword v{{[0-9]+}}, off, s[{{[0-9:]+}}], s32
-; GFX6-NEXT: s_sub_u32 s32, s32, 0x[[OFFSET:[0-9]+]]
+; GFX6-NEXT: s_sub_u32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
 ; GFX6: NumSgprs: 48
 ; GFX6: ScratchSize: 8608
+
+; FLATSCR:           s_movk_i32 [[SOFF1:s[0-9]+]], 0x
+; GFX9-FLATSCR-NEXT: s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:      scratch_store_dword off, v{{[0-9]+}}, [[SOFF1]] ; 4-byte Folded Spill
+; FLATSCR:           s_movk_i32 [[SOFF2:s[0-9]+]], 0x
+; FLATSCR:           scratch_load_dword v{{[0-9]+}}, off, [[SOFF2]] ; 4-byte Folded Reload
 define amdgpu_kernel void @test_limited_sgpr(<64 x i32> addrspace(1)* %out, <64 x i32> addrspace(1)* %in) #0 {
 entry:
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)

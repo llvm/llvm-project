@@ -1239,5 +1239,29 @@ define i4 @negate_freeze_extrause(i4 %x, i4 %y, i4 %z) {
   ret i4 %t2
 }
 
+; Due to the InstCombine's worklist management, there are no guarantees that
+; each instruction we'll encounter has been visited by InstCombine already.
+; In particular, most importantly for us, that means we have to canonicalize
+; constants to RHS ourselves, since that is helpful sometimes.
+; This used to cause an endless combine loop.
+define void @noncanonical_mul_with_constant_as_first_operand() {
+; CHECK-LABEL: @noncanonical_mul_with_constant_as_first_operand(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[IF_END:%.*]]
+; CHECK:       if.end:
+; CHECK-NEXT:    br label [[IF_END]]
+;
+entry:
+  br label %if.end
+
+if.end:
+  %e.0 = phi i32 [ undef, %entry ], [ %div, %if.end ]
+  %conv = trunc i32 %e.0 to i16
+  %mul.i = mul nsw i16 -1, %conv
+  %conv1 = sext i16 %mul.i to i32
+  %div = sub nsw i32 0, %conv1
+  br label %if.end
+}
+
 ; CHECK: !0 = !{!"branch_weights", i32 40, i32 1}
 !0 = !{!"branch_weights", i32 40, i32 1}

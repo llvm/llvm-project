@@ -97,6 +97,9 @@ public:
     return 31;
   }
 
+  unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                 TTI::TargetCostKind CostKind);
+
   unsigned getRegisterBitWidth(bool Vector) const {
     if (Vector) {
       if (ST->hasSVE())
@@ -219,8 +222,16 @@ public:
 
   bool shouldExpandReduction(const IntrinsicInst *II) const {
     switch (II->getIntrinsicID()) {
-    case Intrinsic::experimental_vector_reduce_v2_fadd:
-    case Intrinsic::experimental_vector_reduce_v2_fmul:
+    case Intrinsic::vector_reduce_fadd: {
+      Value *VecOp = II->getArgOperand(1);
+      EVT VT = TLI->getValueType(getDataLayout(), VecOp->getType());
+      if (ST->hasSVE() &&
+          TLI->useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true))
+        return false;
+
+      return !II->getFastMathFlags().allowReassoc();
+    }
+    case Intrinsic::vector_reduce_fmul:
       // We don't have legalization support for ordered FP reductions.
       return !II->getFastMathFlags().allowReassoc();
 

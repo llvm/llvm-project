@@ -181,9 +181,9 @@ T_float32x2 f1_0(T_float32x2 a0) { return a0; }
 // CHECK: define <4 x float> @f1_1(<4 x float> %{{.*}})
 T_float32x4 f1_1(T_float32x4 a0) { return a0; }
 // Vector with length bigger than 16-byte is illegal and is passed indirectly.
-// CHECK: define void @f1_2(<8 x float>* noalias sret align 16 %{{.*}}, <8 x float>* %0)
+// CHECK: define void @f1_2(<8 x float>* noalias sret(<8 x float>) align 16 %{{.*}}, <8 x float>* %0)
 T_float32x8 f1_2(T_float32x8 a0) { return a0; }
-// CHECK: define void @f1_3(<16 x float>* noalias sret align 16 %{{.*}}, <16 x float>* %0)
+// CHECK: define void @f1_3(<16 x float>* noalias sret(<16 x float>) align 16 %{{.*}}, <16 x float>* %0)
 T_float32x16 f1_3(T_float32x16 a0) { return a0; }
 
 // Testing alignment with aggregates: HFA, aggregates with size <= 16 bytes and

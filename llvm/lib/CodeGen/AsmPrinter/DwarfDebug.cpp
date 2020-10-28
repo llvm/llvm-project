@@ -132,6 +132,13 @@ static cl::opt<bool>
                      cl::desc("Emit the GNU .debug_macro format with DWARF <5"),
                      cl::init(false));
 
+static cl::opt<DefaultOnOff> DwarfOpConvert(
+    "dwarf-op-convert", cl::Hidden,
+    cl::desc("Enable use of the DWARFv5 DW_OP_convert operator"),
+    cl::values(clEnumVal(Default, "Default for platform"),
+               clEnumVal(Enable, "Enabled"), clEnumVal(Disable, "Disabled")),
+    cl::init(Default));
+
 enum LinkageNameOption {
   DefaultLinkageNames,
   AllLinkageNames,
@@ -417,6 +424,10 @@ DwarfDebug::DwarfDebug(AsmPrinter *A, Module *M)
   // for split DWARF. For now, do not allow LLVM to emit it.
   UseDebugMacroSection =
       DwarfVersion >= 5 || (UseGNUDebugMacro && !useSplitDwarf());
+  if (DwarfOpConvert == Default)
+    EnableOpConvert = !((tuneForGDB() && useSplitDwarf()) || (tuneForLLDB() && !TT.isOSBinFormatMachO()));
+  else
+    EnableOpConvert = (DwarfOpConvert == Enable);
 
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
   Asm->OutStreamer->getContext().setDwarfFormat(Dwarf64 ? dwarf::DWARF64
@@ -695,7 +706,7 @@ static void interpretValues(const MachineInstr *CurMI,
                              ForwardedRegWorklist[ParamFwdReg], Params);
       } else if (ParamValue->first.isReg()) {
         Register RegLoc = ParamValue->first.getReg();
-        unsigned SP = TLI.getStackPointerRegisterToSaveRestore();
+        Register SP = TLI.getStackPointerRegisterToSaveRestore();
         Register FP = TRI.getFrameRegister(*MF);
         bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
         if (TRI.isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP) {
@@ -1277,7 +1288,7 @@ void DwarfDebug::finalizeModuleInfo() {
                       Asm->TM.Options.MCOptions.SplitDwarfFile);
       // Emit a unique identifier for this CU.
       uint64_t ID =
-          DIEHash(Asm).computeCUSignature(DWOName, TheCU.getUnitDie());
+          DIEHash(Asm, &TheCU).computeCUSignature(DWOName, TheCU.getUnitDie());
       if (getDwarfVersion() >= 5) {
         TheCU.setDWOId(ID);
         SkCU->setDWOId(ID);
@@ -2469,7 +2480,7 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
       DwarfExpr.addExpression(std::move(ExprCursor));
       return;
   } else if (Value.isConstantFP()) {
-    if (AP.getDwarfVersion() >= 4 && AP.getDwarfDebug()->tuneForGDB()) {
+    if (AP.getDwarfVersion() >= 4 && !AP.getDwarfDebug()->tuneForSCE()) {
       DwarfExpr.addConstantFP(Value.getConstantFP()->getValueAPF(), AP);
       return;
     } else if (Value.getConstantFP()

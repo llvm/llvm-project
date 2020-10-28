@@ -24,8 +24,8 @@ TPCDynamicLibrarySearchGenerator::Load(TargetProcessControl &TPC,
 }
 
 Error TPCDynamicLibrarySearchGenerator::tryToGenerate(
-    LookupKind K, JITDylib &JD, JITDylibLookupFlags JDLookupFlags,
-    const SymbolLookupSet &Symbols) {
+    LookupState &LS, LookupKind K, JITDylib &JD,
+    JITDylibLookupFlags JDLookupFlags, const SymbolLookupSet &Symbols) {
 
   if (Symbols.empty())
     return Error::success();

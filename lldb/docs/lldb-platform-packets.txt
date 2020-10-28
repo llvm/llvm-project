@@ -411,6 +411,11 @@ incompatible with the flags that gdb specifies.
 //
 //  Response is F, followed by the number of bytes read (base 10), a
 //  semicolon, followed by the data in the binary-escaped-data encoding.
+//
+//  COMPATIBILITY
+//    The gdb-remote serial protocol documentation says that numbers
+//    in "vFile:" packets should be hexadecimal. Instead lldb uses
+//    decimal.
 
 
 //----------------------------------------------------------------------
@@ -430,7 +435,11 @@ incompatible with the flags that gdb specifies.
 //     3. binary-escaped-data to be written
 //
 //  Response is F, followed by the number of bytes written (base 10)
-
+//
+//  COMPATIBILITY
+//    The gdb-remote serial protocol documentation says that numbers
+//    in "vFile:" packets should be hexadecimal. Instead lldb uses
+//    decimal.
 
 
 

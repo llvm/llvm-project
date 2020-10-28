@@ -150,6 +150,26 @@ void NamedAttrList::set(StringRef name, Attribute value) {
   return set(mlir::Identifier::get(name, value.getContext()), value);
 }
 
+Attribute
+NamedAttrList::eraseImpl(SmallVectorImpl<NamedAttribute>::iterator it) {
+  if (it == attrs.end())
+    return nullptr;
+
+  // Erasing does not affect the sorted property.
+  Attribute attr = it->second;
+  attrs.erase(it);
+  dictionarySorted.setPointer(nullptr);
+  return attr;
+}
+
+Attribute NamedAttrList::erase(Identifier name) {
+  return eraseImpl(findAttr(attrs, name, isSorted()));
+}
+
+Attribute NamedAttrList::erase(StringRef name) {
+  return eraseImpl(findAttr(attrs, name, isSorted()));
+}
+
 NamedAttrList &
 NamedAttrList::operator=(const SmallVectorImpl<NamedAttribute> &rhs) {
   assign(rhs.begin(), rhs.end());

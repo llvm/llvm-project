@@ -33,8 +33,9 @@ Sections:
                     0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,  ## Global entry 1
                     0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB, 0xBB ] ## Global entry 2
     Size: [[SIZE=<none>]]
-  - Name: .dynamic
-    Type: SHT_DYNAMIC
+  - Name:   .dynamic
+    Type:   SHT_DYNAMIC
+    ShType: [[DYNAMICTYPE=<none>]]
     Entries:
       - Tag:   DT_MIPS_LOCAL_GOTNO
         Value: 4
@@ -128,6 +129,70 @@ DynamicSymbols:
 # RUN:   --check-prefixes=BASIC-GNU,BASIC-GNU-OTHER --strict-whitespace --match-full-lines
 # RUN: llvm-readelf -A %t.other.entries2.exe 2>&1 | FileCheck %s -DOTHERNUM=2 \
 # RUN:   --check-prefixes=BASIC-GNU,BASIC-GNU-OTHER --strict-whitespace --match-full-lines
+
+## Check how we print static GOT. Our code assumes that the GOT is static when there
+## is no .dynamic section, so we change its type to hide it.
+
+# RUN: yaml2obj --docnum=1 -DDYNAMICTYPE=SHT_PROGBITS %s -o %t.got-static.exe
+# RUN: llvm-readobj -A %t.got-static.exe | FileCheck %s --check-prefix=STATIC-GOT-LLVM
+# RUN: llvm-readelf -A %t.got-static.exe | FileCheck %s --check-prefix=STATIC-GOT-GNU
+
+# STATIC-GOT-LLVM:      Static GOT {
+# STATIC-GOT-LLVM-NEXT:   Canonical gp value: 0x9112
+# STATIC-GOT-LLVM-NEXT:   Reserved entries [
+# STATIC-GOT-LLVM-NEXT:     Entry {
+# STATIC-GOT-LLVM-NEXT:       Address: 0x1122
+# STATIC-GOT-LLVM-NEXT:       Access: -32752
+# STATIC-GOT-LLVM-NEXT:       Initial: 0x0
+# STATIC-GOT-LLVM-NEXT:       Purpose: Lazy resolver
+# STATIC-GOT-LLVM-NEXT:     }
+# STATIC-GOT-LLVM-NEXT:     Entry {
+# STATIC-GOT-LLVM-NEXT:       Address: 0x112A
+# STATIC-GOT-LLVM-NEXT:       Access: -32744
+# STATIC-GOT-LLVM-NEXT:       Initial: 0xFFFFFFFFFFFFFFFF
+# STATIC-GOT-LLVM-NEXT:       Purpose: Module pointer (GNU extension)
+# STATIC-GOT-LLVM-NEXT:     }
+# STATIC-GOT-LLVM-NEXT:   ]
+# STATIC-GOT-LLVM-NEXT:   Local entries [
+# STATIC-GOT-LLVM-NEXT:     Entry {
+# STATIC-GOT-LLVM-NEXT:       Address: 0x1132
+# STATIC-GOT-LLVM-NEXT:       Access: -32736
+# STATIC-GOT-LLVM-NEXT:       Initial: 0x1111111111111111
+# STATIC-GOT-LLVM-NEXT:     }
+# STATIC-GOT-LLVM-NEXT:     Entry {
+# STATIC-GOT-LLVM-NEXT:       Address: 0x113A
+# STATIC-GOT-LLVM-NEXT:       Access: -32728
+# STATIC-GOT-LLVM-NEXT:       Initial: 0x2222222222222222
+# STATIC-GOT-LLVM-NEXT:     }
+# STATIC-GOT-LLVM-NEXT:     Entry {
+# STATIC-GOT-LLVM-NEXT:       Address: 0x1142
+# STATIC-GOT-LLVM-NEXT:       Access: -32720
+# STATIC-GOT-LLVM-NEXT:       Initial: 0xAAAAAAAAAAAAAAAA
+# STATIC-GOT-LLVM-NEXT:     }
+# STATIC-GOT-LLVM-NEXT:     Entry {
+# STATIC-GOT-LLVM-NEXT:       Address: 0x114A
+# STATIC-GOT-LLVM-NEXT:       Access: -32712
+# STATIC-GOT-LLVM-NEXT:       Initial: 0xBBBBBBBBBBBBBBBB
+# STATIC-GOT-LLVM-NEXT:     }
+# STATIC-GOT-LLVM-NEXT:   ]
+# STATIC-GOT-LLVM-NEXT: }
+
+# STATIC-GOT-GNU:       Static GOT:
+# STATIC-GOT-GNU-NEXT:   Canonical gp value: 0000000000009112
+# STATIC-GOT-GNU-EMPTY:
+# STATIC-GOT-GNU-NEXT:   Reserved entries:
+# STATIC-GOT-GNU-NEXT:             Address     Access          Initial Purpose
+# STATIC-GOT-GNU-NEXT:    0000000000001122 -32752(gp) 0000000000000000 Lazy resolver
+# STATIC-GOT-GNU-NEXT:    000000000000112a -32744(gp) ffffffffffffffff Module pointer (GNU extension)
+# STATIC-GOT-GNU-EMPTY:
+# STATIC-GOT-GNU-NEXT:   Local entries:
+# STATIC-GOT-GNU-NEXT:             Address     Access          Initial
+# STATIC-GOT-GNU-NEXT:    0000000000001132 -32736(gp) 1111111111111111
+# STATIC-GOT-GNU-NEXT:    000000000000113a -32728(gp) 2222222222222222
+# STATIC-GOT-GNU-NEXT:    0000000000001142 -32720(gp) aaaaaaaaaaaaaaaa
+# STATIC-GOT-GNU-NEXT:    000000000000114a -32712(gp) bbbbbbbbbbbbbbbb
+# STATIC-GOT-GNU-EMPTY:
+# STATIC-GOT-GNU-NOT:   {{.}}
 
 ## Check how we dump 32-bit inputs.
 
@@ -238,109 +303,81 @@ DynamicSymbols:
   - Name: bar
     Type: STT_FUNC
 
-# RUN: llvm-readobj -A %p/Inputs/got-empty.exe.mipsel | \
-# RUN:   FileCheck %s -check-prefix GOT-EMPTY
-# RUN: llvm-readobj -A %p/Inputs/got-static.exe.mips | \
-# RUN:   FileCheck %s -check-prefix GOT-STATIC
+## Check what we print when there are no local nor global GOT entries.
 
-# RUN: llvm-readelf -A %p/Inputs/got-empty.exe.mipsel | \
-# RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-EMPTY
-# RUN: llvm-readelf -A %p/Inputs/got-static.exe.mips | \
-# RUN:   FileCheck %s --strict-whitespace -check-prefix GNU-GOT-STATIC
+# RUN: yaml2obj --docnum=3 %s -o %t.got-noentries.exe
+# RUN: llvm-readobj -A %t.got-noentries.exe | FileCheck %s --check-prefix=GOT-EMPTY-LLVM
+# RUN: llvm-readelf -A %t.got-noentries.exe | FileCheck %s --check-prefix=GOT-EMPTY-GNU
 
-# GOT-EMPTY:      Primary GOT {
-# GOT-EMPTY-NEXT:   Canonical gp value: 0x409FF0
-# GOT-EMPTY-NEXT:   Reserved entries [
-# GOT-EMPTY-NEXT:     Entry {
-# GOT-EMPTY-NEXT:       Address: 0x402000
-# GOT-EMPTY-NEXT:       Access: -32752
-# GOT-EMPTY-NEXT:       Initial: 0x0
-# GOT-EMPTY-NEXT:       Purpose: Lazy resolver
-# GOT-EMPTY-NEXT:     }
-# GOT-EMPTY-NEXT:     Entry {
-# GOT-EMPTY-NEXT:       Address: 0x402004
-# GOT-EMPTY-NEXT:       Access: -32748
-# GOT-EMPTY-NEXT:       Initial: 0x80000000
-# GOT-EMPTY-NEXT:       Purpose: Module pointer (GNU extension)
-# GOT-EMPTY-NEXT:     }
-# GOT-EMPTY-NEXT:   ]
-# GOT-EMPTY-NEXT:   Local entries [
-# GOT-EMPTY-NEXT:   ]
-# GOT-EMPTY-NEXT:   Global entries [
-# GOT-EMPTY-NEXT:   ]
-# GOT-EMPTY-NEXT:   Number of TLS and multi-GOT entries: 2
-# GOT-EMPTY-NEXT: }
+# GOT-EMPTY-LLVM:      Primary GOT {
+# GOT-EMPTY-LLVM-NEXT:   Canonical gp value: 0x9112
+# GOT-EMPTY-LLVM-NEXT:   Reserved entries [
+# GOT-EMPTY-LLVM-NEXT:     Entry {
+# GOT-EMPTY-LLVM-NEXT:       Address: 0x1122
+# GOT-EMPTY-LLVM-NEXT:       Access: -32752
+# GOT-EMPTY-LLVM-NEXT:       Initial: 0x0
+# GOT-EMPTY-LLVM-NEXT:       Purpose: Lazy resolver
+# GOT-EMPTY-LLVM-NEXT:     }
+# GOT-EMPTY-LLVM-NEXT:     Entry {
+# GOT-EMPTY-LLVM-NEXT:       Address: 0x112A
+# GOT-EMPTY-LLVM-NEXT:       Access: -32744
+# GOT-EMPTY-LLVM-NEXT:       Initial: 0xFFFFFFFFFFFFFFFF
+# GOT-EMPTY-LLVM-NEXT:       Purpose: Module pointer (GNU extension)
+# GOT-EMPTY-LLVM-NEXT:     }
+# GOT-EMPTY-LLVM-NEXT:   ]
+# GOT-EMPTY-LLVM-NEXT:   Local entries [
+# GOT-EMPTY-LLVM-NEXT:   ]
+# GOT-EMPTY-LLVM-NEXT:   Global entries [
+# GOT-EMPTY-LLVM-NEXT:   ]
+# GOT-EMPTY-LLVM-NEXT:   Number of TLS and multi-GOT entries: 0
+# GOT-EMPTY-LLVM-NEXT: }
 
-# GOT-STATIC:      Static GOT {
-# GOT-STATIC-NEXT:   Canonical gp value: 0x418100
-# GOT-STATIC-NEXT:   Reserved entries [
-# GOT-STATIC-NEXT:     Entry {
-# GOT-STATIC-NEXT:       Address: 0x410110
-# GOT-STATIC-NEXT:       Access: -32752
-# GOT-STATIC-NEXT:       Initial: 0x0
-# GOT-STATIC-NEXT:       Purpose: Lazy resolver
-# GOT-STATIC-NEXT:     }
-# GOT-STATIC-NEXT:     Entry {
-# GOT-STATIC-NEXT:       Address: 0x410114
-# GOT-STATIC-NEXT:       Access: -32748
-# GOT-STATIC-NEXT:       Initial: 0x80000000
-# GOT-STATIC-NEXT:       Purpose: Module pointer (GNU extension)
-# GOT-STATIC-NEXT:     }
-# GOT-STATIC-NEXT:   ]
-# GOT-STATIC-NEXT:   Local entries [
-# GOT-STATIC-NEXT:     Entry {
-# GOT-STATIC-NEXT:       Address: 0x410118
-# GOT-STATIC-NEXT:       Access: -32744
-# GOT-STATIC-NEXT:       Initial: 0x400000
-# GOT-STATIC-NEXT:     }
-# GOT-STATIC-NEXT:     Entry {
-# GOT-STATIC-NEXT:       Address: 0x41011C
-# GOT-STATIC-NEXT:       Access: -32740
-# GOT-STATIC-NEXT:       Initial: 0x400100
-# GOT-STATIC-NEXT:     }
-# GOT-STATIC-NEXT:     Entry {
-# GOT-STATIC-NEXT:       Address: 0x410120
-# GOT-STATIC-NEXT:       Access: -32736
-# GOT-STATIC-NEXT:       Initial: 0x400104
-# GOT-STATIC-NEXT:     }
-# GOT-STATIC-NEXT:   ]
-# GOT-STATIC-NEXT: }
+# GOT-EMPTY-GNU:      Primary GOT:
+# GOT-EMPTY-GNU-NEXT:  Canonical gp value: 0000000000009112
+# GOT-EMPTY-GNU-EMPTY:
+# GOT-EMPTY-GNU-NEXT:  Reserved entries:
+# GOT-EMPTY-GNU-NEXT:            Address     Access          Initial Purpose
+# GOT-EMPTY-GNU-NEXT:   0000000000001122 -32752(gp) 0000000000000000 Lazy resolver
+# GOT-EMPTY-GNU-NEXT:   000000000000112a -32744(gp) ffffffffffffffff Module pointer (GNU extension)
+# GOT-EMPTY-GNU-NOT:  {{.}}
 
-# GNU-GOTY     : Primary GOT:
-# GNU-GOT-EMPTY:  Canonical gp value: 00409ff0
-
-# GNU-GOTY     :  Reserved entries:
-# GNU-GOT-EMPTY:    Address     Access  Initial Purpose
-# GNU-GOT-EMPTY:   00402000 -32752(gp) 00000000 Lazy resolver
-# GNU-GOT-EMPTY:   00402004 -32748(gp) 80000000 Module pointer (GNU extension)
-
-# GNU-GOT-STATIC:      Static GOT:
-# GNU-GOT-STATIC-NEXT:  Canonical gp value: 00418100
-
-# GNU-GOT-STATIC:       Reserved entries:
-# GNU-GOT-STATIC-NEXT:    Address     Access  Initial Purpose
-# GNU-GOT-STATIC-NEXT:   00410110 -32752(gp) 00000000 Lazy resolver
-# GNU-GOT-STATIC-NEXT:   00410114 -32748(gp) 80000000 Module pointer (GNU extension)
-
-# GNU-GOT-STATIC:       Local entries:
-# GNU-GOT-STATIC-NEXT:    Address     Access  Initial
-# GNU-GOT-STATIC-NEXT:   00410118 -32744(gp) 00400000
-# GNU-GOT-STATIC-NEXT:   0041011c -32740(gp) 00400100
-# GNU-GOT-STATIC-NEXT:   00410120 -32736(gp) 00400104
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_MIPS
+Sections:
+  - Name:    .got
+    Type:    SHT_PROGBITS
+    Address: 0x1122
+    ContentArray: [ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  ## Lazy resolver.
+                    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF ] ## Module pointer (GNU extension)
+    Size: [[SIZE=<none>]]
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_MIPS_LOCAL_GOTNO
+        Value: 2
+      - Tag:   DT_MIPS_GOTSYM
+        Value: 1
+      - Tag:   DT_PLTGOT
+        Value: 0x1122
+DynamicSymbols: []
 
 ## Check we report errors when dynamic tags, needed for dumping GOT, are missing.
 
-# RUN: yaml2obj --docnum=3 -DTAG1=DT_MIPS_LOCAL_GOTNO -DTAG2=DT_MIPS_GOTSYM %s -o %t.err1.o
+# RUN: yaml2obj --docnum=4 -DTAG1=DT_MIPS_LOCAL_GOTNO -DTAG2=DT_MIPS_GOTSYM %s -o %t.err1.o
 # RUN: not llvm-readobj -A %t.err1.o 2>&1 | FileCheck %s -DFILE=%t.err1.o -check-prefix ERR1
 
 # ERR1: error: '[[FILE]]': cannot find PLTGOT dynamic tag
 
-# RUN: yaml2obj --docnum=3 -DTAG1=DT_PLTGOT -DTAG2=DT_MIPS_GOTSYM %s -o %t.err2.o
+# RUN: yaml2obj --docnum=4 -DTAG1=DT_PLTGOT -DTAG2=DT_MIPS_GOTSYM %s -o %t.err2.o
 # RUN: not llvm-readobj -A %t.err2.o 2>&1 | FileCheck %s -DFILE=%t.err2.o -check-prefix ERR2
 
 # ERR2: error: '[[FILE]]': cannot find MIPS_LOCAL_GOTNO dynamic tag
 
-# RUN: yaml2obj --docnum=3 -DTAG1=DT_PLTGOT -DTAG2=DT_MIPS_LOCAL_GOTNO %s -o %t.err3.o
+# RUN: yaml2obj --docnum=4 -DTAG1=DT_PLTGOT -DTAG2=DT_MIPS_LOCAL_GOTNO %s -o %t.err3.o
 # RUN: not llvm-readobj -A %t.err3.o 2>&1 | FileCheck %s -DFILE=%t.err3.o -check-prefix ERR3
 
 # ERR3: error: '[[FILE]]': cannot find MIPS_GOTSYM dynamic tag
@@ -363,12 +400,12 @@ Sections:
         Value: 0
 DynamicSymbols: []
 
-# RUN: yaml2obj --docnum=4 -DVAL1=0xffff %s -o %t.err4.o
+# RUN: yaml2obj --docnum=5 -DVAL1=0xffff %s -o %t.err4.o
 # RUN: not llvm-readobj -A %t.err4.o 2>&1 | FileCheck %s -DFILE=%t.err4.o -check-prefix=ERR4
 
 # ERR4: error: '[[FILE]]': DT_MIPS_GOTSYM value (65535) exceeds the number of dynamic symbols (1)
 
-# RUN: yaml2obj --docnum=4 -DVAL2=0xffff %s -o %t.err5.o
+# RUN: yaml2obj --docnum=5 -DVAL2=0xffff %s -o %t.err5.o
 # RUN: not llvm-readobj -A %t.err5.o 2>&1 | FileCheck %s -DFILE=%t.err5.o -check-prefix=ERR5
 
 # ERR5: error: '[[FILE]]': there is no non-empty GOT section at 0xffff
@@ -392,7 +429,7 @@ Sections:
 DynamicSymbols: []
 
 ## Check that we do not report a warning about the .got section when we are able to locate it by name.
-# RUN: yaml2obj --docnum=5 -DNAME=0xffff %s -o %t.err6.o
+# RUN: yaml2obj --docnum=6 -DNAME=0xffff %s -o %t.err6.o
 # RUN: llvm-readobj -A %t.err6.o 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.err6.o -check-prefix=NAME-ERR-FOUND --implicit-check-not=warning:
 # RUN: llvm-readelf -A %t.err6.o 2>&1 | \
@@ -417,7 +454,7 @@ Sections:
     ShName: [[NAME=<none>]]
 
 ## Check we report a warning when we are unable to find the .got section due to an error.
-# RUN: yaml2obj --docnum=5 -DGOTNAME=0xffff %s -o %t.err7.o
+# RUN: yaml2obj --docnum=6 -DGOTNAME=0xffff %s -o %t.err7.o
 # RUN: llvm-readelf -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning:
 # RUN: llvm-readobj -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o --check-prefix=NAME-ERR-NOTFOUND --implicit-check-not=warning:
 
@@ -427,7 +464,7 @@ Sections:
 ## sections with the same address as the .got section.
 ## In this test the empty .data section has the same address as the .got section.
 
-# RUN: yaml2obj --docnum=6 %s -o %t.err7.o
+# RUN: yaml2obj --docnum=7 %s -o %t.err7.o
 # RUN: llvm-readobj -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o --check-prefix=SAME-ADDR-LLVM
 # RUN: llvm-readelf -A %t.err7.o 2>&1 | FileCheck %s -DFILE=%t.err7.o --check-prefix=SAME-ADDR-GNU
 
@@ -496,7 +533,7 @@ DynamicSymbols:
   - Name: foo
 
 ## Check how we print global GOT entries when they are unnamed section symbols.
-# RUN: yaml2obj --docnum=7 %s -o %t.err8.o
+# RUN: yaml2obj --docnum=8 %s -o %t.err8.o
 # RUN: llvm-readobj -A %t.err8.o 2>&1 | FileCheck %s -DFILE=%t.err8.o --check-prefix=SEC-SYMS-LLVM
 # RUN: llvm-readelf -A %t.err8.o 2>&1 | FileCheck %s -DFILE=%t.err8.o --check-prefix=SEC-SYMS-GNU
 

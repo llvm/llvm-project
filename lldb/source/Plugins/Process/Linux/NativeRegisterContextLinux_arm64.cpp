@@ -56,8 +56,8 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 
 NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextLinux(native_thread,
-                                 new RegisterInfoPOSIX_arm64(target_arch)) {
+    : NativeRegisterContextRegisterInfo(
+          native_thread, new RegisterInfoPOSIX_arm64(target_arch)) {
   ::memset(&m_fpr, 0, sizeof(m_fpr));
   ::memset(&m_gpr_arm64, 0, sizeof(m_gpr_arm64));
   ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));

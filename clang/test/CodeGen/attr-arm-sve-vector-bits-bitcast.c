@@ -31,21 +31,21 @@ DEFINE_STRUCT(bool)
 // CHECK-128-NEXT:  entry:
 // CHECK-128-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_INT64:%.*]], %struct.struct_int64* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-128-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64>* [[ARRAYIDX]] to <vscale x 2 x i64>*
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i64>, <vscale x 2 x i64>* [[TMP0]], align 16, [[TBAA2:!tbaa !.*]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i64>, <vscale x 2 x i64>* [[TMP0]], align 16, [[TBAA6:!tbaa !.*]]
 // CHECK-128-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-256-LABEL: @read_int64(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_INT64:%.*]], %struct.struct_int64* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <4 x i64>* [[ARRAYIDX]] to <vscale x 2 x i64>*
-// CHECK-256-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i64>, <vscale x 2 x i64>* [[TMP0]], align 16, [[TBAA2:!tbaa !.*]]
+// CHECK-256-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i64>, <vscale x 2 x i64>* [[TMP0]], align 16, [[TBAA6:!tbaa !.*]]
 // CHECK-256-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 // CHECK-512-LABEL: @read_int64(
 // CHECK-512-NEXT:  entry:
 // CHECK-512-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_INT64:%.*]], %struct.struct_int64* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <8 x i64>* [[ARRAYIDX]] to <vscale x 2 x i64>*
-// CHECK-512-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i64>, <vscale x 2 x i64>* [[TMP0]], align 16, [[TBAA2:!tbaa !.*]]
+// CHECK-512-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x i64>, <vscale x 2 x i64>* [[TMP0]], align 16, [[TBAA6:!tbaa !.*]]
 // CHECK-512-NEXT:    ret <vscale x 2 x i64> [[TMP1]]
 //
 svint64_t read_int64(struct struct_int64 *s) {
@@ -55,31 +55,31 @@ svint64_t read_int64(struct struct_int64 *s) {
 // CHECK-128-LABEL: @write_int64(
 // CHECK-128-NEXT:  entry:
 // CHECK-128-NEXT:    [[X_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
-// CHECK-128-NEXT:    store <vscale x 2 x i64> [[X:%.*]], <vscale x 2 x i64>* [[X_ADDR]], align 16, [[TBAA5:!tbaa !.*]]
+// CHECK-128-NEXT:    store <vscale x 2 x i64> [[X:%.*]], <vscale x 2 x i64>* [[X_ADDR]], align 16, [[TBAA9:!tbaa !.*]]
 // CHECK-128-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i64>* [[X_ADDR]] to <2 x i64>*
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-128-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_INT64:%.*]], %struct.struct_int64* [[S:%.*]], i64 0, i32 1, i64 0
-// CHECK-128-NEXT:    store <2 x i64> [[TMP1]], <2 x i64>* [[ARRAYIDX]], align 16, [[TBAA2]]
+// CHECK-128-NEXT:    store <2 x i64> [[TMP1]], <2 x i64>* [[ARRAYIDX]], align 16, [[TBAA6]]
 // CHECK-128-NEXT:    ret void
 //
 // CHECK-256-LABEL: @write_int64(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[X_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
-// CHECK-256-NEXT:    store <vscale x 2 x i64> [[X:%.*]], <vscale x 2 x i64>* [[X_ADDR]], align 16, [[TBAA5:!tbaa !.*]]
+// CHECK-256-NEXT:    store <vscale x 2 x i64> [[X:%.*]], <vscale x 2 x i64>* [[X_ADDR]], align 16, [[TBAA9:!tbaa !.*]]
 // CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i64>* [[X_ADDR]] to <4 x i64>*
-// CHECK-256-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-256-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-256-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_INT64:%.*]], %struct.struct_int64* [[S:%.*]], i64 0, i32 1, i64 0
-// CHECK-256-NEXT:    store <4 x i64> [[TMP1]], <4 x i64>* [[ARRAYIDX]], align 16, [[TBAA2]]
+// CHECK-256-NEXT:    store <4 x i64> [[TMP1]], <4 x i64>* [[ARRAYIDX]], align 16, [[TBAA6]]
 // CHECK-256-NEXT:    ret void
 //
 // CHECK-512-LABEL: @write_int64(
 // CHECK-512-NEXT:  entry:
 // CHECK-512-NEXT:    [[X_ADDR:%.*]] = alloca <vscale x 2 x i64>, align 16
-// CHECK-512-NEXT:    store <vscale x 2 x i64> [[X:%.*]], <vscale x 2 x i64>* [[X_ADDR]], align 16, [[TBAA5:!tbaa !.*]]
+// CHECK-512-NEXT:    store <vscale x 2 x i64> [[X:%.*]], <vscale x 2 x i64>* [[X_ADDR]], align 16, [[TBAA9:!tbaa !.*]]
 // CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x i64>* [[X_ADDR]] to <8 x i64>*
-// CHECK-512-NEXT:    [[TMP1:%.*]] = load <8 x i64>, <8 x i64>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-512-NEXT:    [[TMP1:%.*]] = load <8 x i64>, <8 x i64>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-512-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_INT64:%.*]], %struct.struct_int64* [[S:%.*]], i64 0, i32 1, i64 0
-// CHECK-512-NEXT:    store <8 x i64> [[TMP1]], <8 x i64>* [[ARRAYIDX]], align 16, [[TBAA2]]
+// CHECK-512-NEXT:    store <8 x i64> [[TMP1]], <8 x i64>* [[ARRAYIDX]], align 16, [[TBAA6]]
 // CHECK-512-NEXT:    ret void
 //
 void write_int64(struct struct_int64 *s, svint64_t x) {
@@ -94,21 +94,21 @@ void write_int64(struct struct_int64 *s, svint64_t x) {
 // CHECK-128-NEXT:  entry:
 // CHECK-128-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_FLOAT64:%.*]], %struct.struct_float64* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-128-NEXT:    [[TMP0:%.*]] = bitcast <2 x double>* [[ARRAYIDX]] to <vscale x 2 x double>*
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-128-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 // CHECK-256-LABEL: @read_float64(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_FLOAT64:%.*]], %struct.struct_float64* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <4 x double>* [[ARRAYIDX]] to <vscale x 2 x double>*
-// CHECK-256-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-256-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-256-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 // CHECK-512-LABEL: @read_float64(
 // CHECK-512-NEXT:  entry:
 // CHECK-512-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_FLOAT64:%.*]], %struct.struct_float64* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <8 x double>* [[ARRAYIDX]] to <vscale x 2 x double>*
-// CHECK-512-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-512-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x double>, <vscale x 2 x double>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-512-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 //
 svfloat64_t read_float64(struct struct_float64 *s) {
@@ -118,31 +118,31 @@ svfloat64_t read_float64(struct struct_float64 *s) {
 // CHECK-128-LABEL: @write_float64(
 // CHECK-128-NEXT:  entry:
 // CHECK-128-NEXT:    [[X_ADDR:%.*]] = alloca <vscale x 2 x double>, align 16
-// CHECK-128-NEXT:    store <vscale x 2 x double> [[X:%.*]], <vscale x 2 x double>* [[X_ADDR]], align 16, [[TBAA7:!tbaa !.*]]
+// CHECK-128-NEXT:    store <vscale x 2 x double> [[X:%.*]], <vscale x 2 x double>* [[X_ADDR]], align 16, [[TBAA11:!tbaa !.*]]
 // CHECK-128-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x double>* [[X_ADDR]] to <2 x double>*
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-128-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_FLOAT64:%.*]], %struct.struct_float64* [[S:%.*]], i64 0, i32 1, i64 0
-// CHECK-128-NEXT:    store <2 x double> [[TMP1]], <2 x double>* [[ARRAYIDX]], align 16, [[TBAA2]]
+// CHECK-128-NEXT:    store <2 x double> [[TMP1]], <2 x double>* [[ARRAYIDX]], align 16, [[TBAA6]]
 // CHECK-128-NEXT:    ret void
 //
 // CHECK-256-LABEL: @write_float64(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[X_ADDR:%.*]] = alloca <vscale x 2 x double>, align 16
-// CHECK-256-NEXT:    store <vscale x 2 x double> [[X:%.*]], <vscale x 2 x double>* [[X_ADDR]], align 16, [[TBAA7:!tbaa !.*]]
+// CHECK-256-NEXT:    store <vscale x 2 x double> [[X:%.*]], <vscale x 2 x double>* [[X_ADDR]], align 16, [[TBAA11:!tbaa !.*]]
 // CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x double>* [[X_ADDR]] to <4 x double>*
-// CHECK-256-NEXT:    [[TMP1:%.*]] = load <4 x double>, <4 x double>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-256-NEXT:    [[TMP1:%.*]] = load <4 x double>, <4 x double>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-256-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_FLOAT64:%.*]], %struct.struct_float64* [[S:%.*]], i64 0, i32 1, i64 0
-// CHECK-256-NEXT:    store <4 x double> [[TMP1]], <4 x double>* [[ARRAYIDX]], align 16, [[TBAA2]]
+// CHECK-256-NEXT:    store <4 x double> [[TMP1]], <4 x double>* [[ARRAYIDX]], align 16, [[TBAA6]]
 // CHECK-256-NEXT:    ret void
 //
 // CHECK-512-LABEL: @write_float64(
 // CHECK-512-NEXT:  entry:
 // CHECK-512-NEXT:    [[X_ADDR:%.*]] = alloca <vscale x 2 x double>, align 16
-// CHECK-512-NEXT:    store <vscale x 2 x double> [[X:%.*]], <vscale x 2 x double>* [[X_ADDR]], align 16, [[TBAA7:!tbaa !.*]]
+// CHECK-512-NEXT:    store <vscale x 2 x double> [[X:%.*]], <vscale x 2 x double>* [[X_ADDR]], align 16, [[TBAA11:!tbaa !.*]]
 // CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 2 x double>* [[X_ADDR]] to <8 x double>*
-// CHECK-512-NEXT:    [[TMP1:%.*]] = load <8 x double>, <8 x double>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-512-NEXT:    [[TMP1:%.*]] = load <8 x double>, <8 x double>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-512-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_FLOAT64:%.*]], %struct.struct_float64* [[S:%.*]], i64 0, i32 1, i64 0
-// CHECK-512-NEXT:    store <8 x double> [[TMP1]], <8 x double>* [[ARRAYIDX]], align 16, [[TBAA2]]
+// CHECK-512-NEXT:    store <8 x double> [[TMP1]], <8 x double>* [[ARRAYIDX]], align 16, [[TBAA6]]
 // CHECK-512-NEXT:    ret void
 //
 void write_float64(struct struct_float64 *s, svfloat64_t x) {
@@ -157,21 +157,21 @@ void write_float64(struct struct_float64 *s, svfloat64_t x) {
 // CHECK-128-NEXT:  entry:
 // CHECK-128-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BFLOAT16:%.*]], %struct.struct_bfloat16* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-128-NEXT:    [[TMP0:%.*]] = bitcast <8 x bfloat>* [[ARRAYIDX]] to <vscale x 8 x bfloat>*
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-128-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
 // CHECK-256-LABEL: @read_bfloat16(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BFLOAT16:%.*]], %struct.struct_bfloat16* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <16 x bfloat>* [[ARRAYIDX]] to <vscale x 8 x bfloat>*
-// CHECK-256-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-256-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-256-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
 // CHECK-512-LABEL: @read_bfloat16(
 // CHECK-512-NEXT:  entry:
 // CHECK-512-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BFLOAT16:%.*]], %struct.struct_bfloat16* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <32 x bfloat>* [[ARRAYIDX]] to <vscale x 8 x bfloat>*
-// CHECK-512-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-512-NEXT:    [[TMP1:%.*]] = load <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-512-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
 svbfloat16_t read_bfloat16(struct struct_bfloat16 *s) {
@@ -181,31 +181,31 @@ svbfloat16_t read_bfloat16(struct struct_bfloat16 *s) {
 // CHECK-128-LABEL: @write_bfloat16(
 // CHECK-128-NEXT:  entry:
 // CHECK-128-NEXT:    [[X_ADDR:%.*]] = alloca <vscale x 8 x bfloat>, align 16
-// CHECK-128-NEXT:    store <vscale x 8 x bfloat> [[X:%.*]], <vscale x 8 x bfloat>* [[X_ADDR]], align 16, [[TBAA9:!tbaa !.*]]
+// CHECK-128-NEXT:    store <vscale x 8 x bfloat> [[X:%.*]], <vscale x 8 x bfloat>* [[X_ADDR]], align 16, [[TBAA13:!tbaa !.*]]
 // CHECK-128-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat>* [[X_ADDR]] to <8 x bfloat>*
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <8 x bfloat>, <8 x bfloat>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <8 x bfloat>, <8 x bfloat>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-128-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BFLOAT16:%.*]], %struct.struct_bfloat16* [[S:%.*]], i64 0, i32 1, i64 0
-// CHECK-128-NEXT:    store <8 x bfloat> [[TMP1]], <8 x bfloat>* [[ARRAYIDX]], align 16, [[TBAA2]]
+// CHECK-128-NEXT:    store <8 x bfloat> [[TMP1]], <8 x bfloat>* [[ARRAYIDX]], align 16, [[TBAA6]]
 // CHECK-128-NEXT:    ret void
 //
 // CHECK-256-LABEL: @write_bfloat16(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[X_ADDR:%.*]] = alloca <vscale x 8 x bfloat>, align 16
-// CHECK-256-NEXT:    store <vscale x 8 x bfloat> [[X:%.*]], <vscale x 8 x bfloat>* [[X_ADDR]], align 16, [[TBAA9:!tbaa !.*]]
+// CHECK-256-NEXT:    store <vscale x 8 x bfloat> [[X:%.*]], <vscale x 8 x bfloat>* [[X_ADDR]], align 16, [[TBAA13:!tbaa !.*]]
 // CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat>* [[X_ADDR]] to <16 x bfloat>*
-// CHECK-256-NEXT:    [[TMP1:%.*]] = load <16 x bfloat>, <16 x bfloat>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-256-NEXT:    [[TMP1:%.*]] = load <16 x bfloat>, <16 x bfloat>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-256-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BFLOAT16:%.*]], %struct.struct_bfloat16* [[S:%.*]], i64 0, i32 1, i64 0
-// CHECK-256-NEXT:    store <16 x bfloat> [[TMP1]], <16 x bfloat>* [[ARRAYIDX]], align 16, [[TBAA2]]
+// CHECK-256-NEXT:    store <16 x bfloat> [[TMP1]], <16 x bfloat>* [[ARRAYIDX]], align 16, [[TBAA6]]
 // CHECK-256-NEXT:    ret void
 //
 // CHECK-512-LABEL: @write_bfloat16(
 // CHECK-512-NEXT:  entry:
 // CHECK-512-NEXT:    [[X_ADDR:%.*]] = alloca <vscale x 8 x bfloat>, align 16
-// CHECK-512-NEXT:    store <vscale x 8 x bfloat> [[X:%.*]], <vscale x 8 x bfloat>* [[X_ADDR]], align 16, [[TBAA9:!tbaa !.*]]
+// CHECK-512-NEXT:    store <vscale x 8 x bfloat> [[X:%.*]], <vscale x 8 x bfloat>* [[X_ADDR]], align 16, [[TBAA13:!tbaa !.*]]
 // CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat>* [[X_ADDR]] to <32 x bfloat>*
-// CHECK-512-NEXT:    [[TMP1:%.*]] = load <32 x bfloat>, <32 x bfloat>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-512-NEXT:    [[TMP1:%.*]] = load <32 x bfloat>, <32 x bfloat>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-512-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BFLOAT16:%.*]], %struct.struct_bfloat16* [[S:%.*]], i64 0, i32 1, i64 0
-// CHECK-512-NEXT:    store <32 x bfloat> [[TMP1]], <32 x bfloat>* [[ARRAYIDX]], align 16, [[TBAA2]]
+// CHECK-512-NEXT:    store <32 x bfloat> [[TMP1]], <32 x bfloat>* [[ARRAYIDX]], align 16, [[TBAA6]]
 // CHECK-512-NEXT:    ret void
 //
 void write_bfloat16(struct struct_bfloat16 *s, svbfloat16_t x) {
@@ -220,21 +220,21 @@ void write_bfloat16(struct struct_bfloat16 *s, svbfloat16_t x) {
 // CHECK-128-NEXT:  entry:
 // CHECK-128-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-128-NEXT:    [[TMP0:%.*]] = bitcast <2 x i8>* [[ARRAYIDX]] to <vscale x 16 x i1>*
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[TMP0]], align 2, [[TBAA2]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[TMP0]], align 2, [[TBAA6]]
 // CHECK-128-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CHECK-256-LABEL: @read_bool(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <4 x i8>* [[ARRAYIDX]] to <vscale x 16 x i1>*
-// CHECK-256-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[TMP0]], align 2, [[TBAA2]]
+// CHECK-256-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[TMP0]], align 2, [[TBAA6]]
 // CHECK-256-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 // CHECK-512-LABEL: @read_bool(
 // CHECK-512-NEXT:  entry:
 // CHECK-512-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1, i64 0
 // CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <8 x i8>* [[ARRAYIDX]] to <vscale x 16 x i1>*
-// CHECK-512-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[TMP0]], align 2, [[TBAA2]]
+// CHECK-512-NEXT:    [[TMP1:%.*]] = load <vscale x 16 x i1>, <vscale x 16 x i1>* [[TMP0]], align 2, [[TBAA6]]
 // CHECK-512-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t read_bool(struct struct_bool *s) {
@@ -244,33 +244,31 @@ svbool_t read_bool(struct struct_bool *s) {
 // CHECK-128-LABEL: @write_bool(
 // CHECK-128-NEXT:  entry:
 // CHECK-128-NEXT:    [[X_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 16
-// CHECK-128-NEXT:    store <vscale x 16 x i1> [[X:%.*]], <vscale x 16 x i1>* [[X_ADDR]], align 16, [[TBAA11:!tbaa !.*]]
+// CHECK-128-NEXT:    store <vscale x 16 x i1> [[X:%.*]], <vscale x 16 x i1>* [[X_ADDR]], align 16, [[TBAA15:!tbaa !.*]]
 // CHECK-128-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1>* [[X_ADDR]] to <2 x i8>*
-// CHECK-128-NEXT:    [[TMP1:%.*]] = load <2 x i8>, <2 x i8>* [[TMP0]], align 16, [[TBAA2]]
+// CHECK-128-NEXT:    [[TMP1:%.*]] = load <2 x i8>, <2 x i8>* [[TMP0]], align 16, [[TBAA6]]
 // CHECK-128-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1, i64 0
-// CHECK-128-NEXT:    store <2 x i8> [[TMP1]], <2 x i8>* [[ARRAYIDX]], align 2, [[TBAA2]]
+// CHECK-128-NEXT:    store <2 x i8> [[TMP1]], <2 x i8>* [[ARRAYIDX]], align 2, [[TBAA6]]
 // CHECK-128-NEXT:    ret void
 //
 // CHECK-256-LABEL: @write_bool(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[X_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 16
-// CHECK-256-NEXT:    store <vscale x 16 x i1> [[X:%.*]], <vscale x 16 x i1>* [[X_ADDR]], align 16, [[TBAA11:!tbaa !.*]]
-// CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1>* [[X_ADDR]] to i32*
-// CHECK-256-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 16, [[TBAA2]]
-// CHECK-256-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1
-// CHECK-256-NEXT:    [[TMP2:%.*]] = bitcast [3 x <4 x i8>]* [[Y]] to i32*
-// CHECK-256-NEXT:    store i32 [[TMP1]], i32* [[TMP2]], align 2, [[TBAA2]]
+// CHECK-256-NEXT:    store <vscale x 16 x i1> [[X:%.*]], <vscale x 16 x i1>* [[X_ADDR]], align 16, [[TBAA15:!tbaa !.*]]
+// CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1>* [[X_ADDR]] to <4 x i8>*
+// CHECK-256-NEXT:    [[TMP1:%.*]] = load <4 x i8>, <4 x i8>* [[TMP0]], align 16, [[TBAA6]]
+// CHECK-256-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1, i64 0
+// CHECK-256-NEXT:    store <4 x i8> [[TMP1]], <4 x i8>* [[ARRAYIDX]], align 2, [[TBAA6]]
 // CHECK-256-NEXT:    ret void
 //
 // CHECK-512-LABEL: @write_bool(
 // CHECK-512-NEXT:  entry:
 // CHECK-512-NEXT:    [[X_ADDR:%.*]] = alloca <vscale x 16 x i1>, align 16
-// CHECK-512-NEXT:    store <vscale x 16 x i1> [[X:%.*]], <vscale x 16 x i1>* [[X_ADDR]], align 16, [[TBAA11:!tbaa !.*]]
-// CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1>* [[X_ADDR]] to i64*
-// CHECK-512-NEXT:    [[TMP1:%.*]] = load i64, i64* [[TMP0]], align 16, [[TBAA2]]
-// CHECK-512-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1
-// CHECK-512-NEXT:    [[TMP2:%.*]] = bitcast [3 x <8 x i8>]* [[Y]] to i64*
-// CHECK-512-NEXT:    store i64 [[TMP1]], i64* [[TMP2]], align 2, [[TBAA2]]
+// CHECK-512-NEXT:    store <vscale x 16 x i1> [[X:%.*]], <vscale x 16 x i1>* [[X_ADDR]], align 16, [[TBAA15:!tbaa !.*]]
+// CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1>* [[X_ADDR]] to <8 x i8>*
+// CHECK-512-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* [[TMP0]], align 16, [[TBAA6]]
+// CHECK-512-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_STRUCT_BOOL:%.*]], %struct.struct_bool* [[S:%.*]], i64 0, i32 1, i64 0
+// CHECK-512-NEXT:    store <8 x i8> [[TMP1]], <8 x i8>* [[ARRAYIDX]], align 2, [[TBAA6]]
 // CHECK-512-NEXT:    ret void
 //
 void write_bool(struct struct_bool *s, svbool_t x) {

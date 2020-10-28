@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -loop-deletion -simplifycfg | opt -analyze -loops | FileCheck %s
+; RUN: opt < %s -indvars -loop-deletion -simplifycfg | opt -analyze -loops -enable-new-pm=0 | FileCheck %s
 ; PR1179
 
 ; CHECK-NOT: Loop Containing

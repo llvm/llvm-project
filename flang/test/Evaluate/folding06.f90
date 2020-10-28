@@ -3,6 +3,16 @@
 
 module m
 
+  ! Testing ASSOCATED
+  integer, pointer :: int_pointer
+  integer, allocatable :: int_allocatable
+  logical, parameter :: test_Assoc1 = .not.(associated(null()))
+  logical, parameter :: test_Assoc2 = .not.(associated(null(), null()))
+  logical, parameter :: test_Assoc3 = .not.(associated(null(int_pointer)))
+  logical, parameter :: test_Assoc4 = .not.(associated(null(int_allocatable)))
+  logical, parameter :: test_Assoc5 = .not.(associated(null(), null(int_pointer)))
+  logical, parameter :: test_Assoc6 = .not.(associated(null(), null(int_allocatable)))
+
   type A
     real(4) x
     integer(8) i

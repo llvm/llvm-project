@@ -1038,13 +1038,13 @@ Value *VectorBlockGenerator::getVectorValue(ScopStmt &Stmt, Value *Old,
 }
 
 Type *VectorBlockGenerator::getVectorPtrTy(const Value *Val, int Width) {
-  PointerType *PointerTy = dyn_cast<PointerType>(Val->getType());
-  assert(PointerTy && "PointerType expected");
+  auto *PointerTy = cast<PointerType>(Val->getType());
+  unsigned AddrSpace = PointerTy->getAddressSpace();
 
   Type *ScalarType = PointerTy->getElementType();
   auto *FVTy = FixedVectorType::get(ScalarType, Width);
 
-  return PointerType::getUnqual(FVTy);
+  return PointerType::get(FVTy, AddrSpace);
 }
 
 Value *VectorBlockGenerator::generateStrideOneLoad(

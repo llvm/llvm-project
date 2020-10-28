@@ -13,6 +13,7 @@
 #define SANITIZER_STACKTRACE_H
 
 #include "sanitizer_internal_defs.h"
+#include "sanitizer_platform.h"
 
 namespace __sanitizer {
 
@@ -24,8 +25,6 @@ static const u32 kStackTraceMax = 256;
 # define SANITIZER_CAN_FAST_UNWIND 0
 #elif SANITIZER_WINDOWS
 # define SANITIZER_CAN_FAST_UNWIND 0
-#elif SANITIZER_OPENBSD
-# define SANITIZER_CAN_FAST_UNWIND 0
 #else
 # define SANITIZER_CAN_FAST_UNWIND 1
 #endif
@@ -33,7 +32,7 @@ static const u32 kStackTraceMax = 256;
 // Fast unwind is the only option on Mac for now; we will need to
 // revisit this macro when slow unwind works on Mac, see
 // https://github.com/google/sanitizers/issues/137
-#if SANITIZER_MAC || SANITIZER_OPENBSD || SANITIZER_RTEMS
+#if SANITIZER_MAC || SANITIZER_RTEMS
 # define SANITIZER_CAN_SLOW_UNWIND 0
 #else
 # define SANITIZER_CAN_SLOW_UNWIND 1
@@ -85,6 +84,14 @@ uptr StackTrace::GetPreviousInstructionPc(uptr pc) {
   return pc - 4;
 #elif defined(__sparc__) || defined(__mips__)
   return pc - 8;
+#elif SANITIZER_RISCV64
+  // RV-64 has variable instruciton length...
+  // C extentions gives us 2-byte instructoins
+  // RV-64 has 4-byte instructions
+  // + RISCV architecture allows instructions up to 8 bytes
+  // It seems difficult to figure out the exact instruction length -
+  // pc - 2 seems like a safe option for the purposes of stack tracing
+  return pc - 2;
 #else
   return pc - 1;
 #endif

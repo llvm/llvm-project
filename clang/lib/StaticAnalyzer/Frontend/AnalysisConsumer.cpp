@@ -476,7 +476,7 @@ void AnalysisConsumer::HandleDeclsCallGraph(const unsigned LocalTUDeclsSize) {
 static bool isBisonFile(ASTContext &C) {
   const SourceManager &SM = C.getSourceManager();
   FileID FID = SM.getMainFileID();
-  StringRef Buffer = SM.getBuffer(FID)->getBuffer();
+  StringRef Buffer = SM.getBufferOrFake(FID).getBuffer();
   if (Buffer.startswith("/* A Bison parser, made by"))
     return true;
   return false;

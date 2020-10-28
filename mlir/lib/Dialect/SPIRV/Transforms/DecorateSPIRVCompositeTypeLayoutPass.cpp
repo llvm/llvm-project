@@ -35,6 +35,10 @@ public:
     auto ptrType = op.type().cast<spirv::PointerType>();
     auto structType = VulkanLayoutUtils::decorateType(
         ptrType.getPointeeType().cast<spirv::StructType>());
+
+    if (!structType)
+      return failure();
+
     auto decoratedType =
         spirv::PointerType::get(structType, ptrType.getStorageClass());
 
@@ -103,12 +107,10 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
 
   // TODO: Change the type for the indirect users such as spv.Load, spv.Store,
   // spv.FunctionCall and so on.
-
-  for (auto spirvModule : module.getOps<spirv::ModuleOp>()) {
-    if (failed(applyFullConversion(spirvModule, target, patterns))) {
+  FrozenRewritePatternList frozenPatterns(std::move(patterns));
+  for (auto spirvModule : module.getOps<spirv::ModuleOp>())
+    if (failed(applyFullConversion(spirvModule, target, frozenPatterns)))
       signalPassFailure();
-    }
-  }
 }
 
 std::unique_ptr<OperationPass<ModuleOp>>

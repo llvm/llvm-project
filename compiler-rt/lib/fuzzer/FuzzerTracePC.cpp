@@ -269,7 +269,7 @@ bool TracePC::ObservedFocusFunction() {
   return FocusFunctionCounterPtr && *FocusFunctionCounterPtr;
 }
 
-void TracePC::PrintCoverage() {
+void TracePC::PrintCoverage(bool PrintAllCounters) {
   if (!EF->__sanitizer_symbolize_pc ||
       !EF->__sanitizer_get_module_and_offset_for_pc) {
     Printf("INFO: __sanitizer_symbolize_pc or "
@@ -277,7 +277,7 @@ void TracePC::PrintCoverage() {
            " not printing coverage\n");
     return;
   }
-  Printf("COVERAGE:\n");
+  Printf(PrintAllCounters ? "FULL COVERAGE:\n" : "COVERAGE:\n");
   auto CoveredFunctionCallback = [&](const PCTableEntry *First,
                                      const PCTableEntry *Last,
                                      uintptr_t Counter) {
@@ -292,17 +292,33 @@ void TracePC::PrintCoverage() {
     std::string LineStr = DescribePC("%l", VisualizePC);
     size_t NumEdges = Last - First;
     Vector<uintptr_t> UncoveredPCs;
+    Vector<uintptr_t> CoveredPCs;
     for (auto TE = First; TE < Last; TE++)
       if (!ObservedPCs.count(TE))
         UncoveredPCs.push_back(TE->PC);
-    Printf("%sCOVERED_FUNC: hits: %zd", Counter ? "" : "UN", Counter);
-    Printf(" edges: %zd/%zd", NumEdges - UncoveredPCs.size(), NumEdges);
-    Printf(" %s %s:%s\n", FunctionStr.c_str(), FileStr.c_str(),
-           LineStr.c_str());
-    if (Counter)
+      else
+        CoveredPCs.push_back(TE->PC);
+
+    if (PrintAllCounters) {
+      Printf("U");
       for (auto PC : UncoveredPCs)
-        Printf("  UNCOVERED_PC: %s\n",
-               DescribePC("%s:%l", GetNextInstructionPc(PC)).c_str());
+        Printf(DescribePC(" %l", GetNextInstructionPc(PC)).c_str());
+      Printf("\n");
+
+      Printf("C");
+      for (auto PC : CoveredPCs)
+        Printf(DescribePC(" %l", GetNextInstructionPc(PC)).c_str());
+      Printf("\n");
+    } else {
+      Printf("%sCOVERED_FUNC: hits: %zd", Counter ? "" : "UN", Counter);
+      Printf(" edges: %zd/%zd", NumEdges - UncoveredPCs.size(), NumEdges);
+      Printf(" %s %s:%s\n", FunctionStr.c_str(), FileStr.c_str(),
+             LineStr.c_str());
+      if (Counter)
+        for (auto PC : UncoveredPCs)
+          Printf("  UNCOVERED_PC: %s\n",
+                 DescribePC("%s:%l", GetNextInstructionPc(PC)).c_str());
+    }
   };
 
   IterateCoveredFunctions(CoveredFunctionCallback);

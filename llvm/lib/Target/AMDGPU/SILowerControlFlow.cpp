@@ -333,13 +333,11 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
 
   Register DstReg = MI.getOperand(0).getReg();
 
-  bool ExecModified = MI.getOperand(3).getImm() != 0;
   MachineBasicBlock::iterator Start = MBB.begin();
 
   // This must be inserted before phis and any spill code inserted before the
   // else.
-  Register SaveReg = ExecModified ?
-    MRI->createVirtualRegister(BoolRC) : DstReg;
+  Register SaveReg = MRI->createVirtualRegister(BoolRC);
   MachineInstr *OrSaveExec =
     BuildMI(MBB, Start, DL, TII->get(OrSaveExecOpc), SaveReg)
     .add(MI.getOperand(1)); // Saved EXEC
@@ -348,15 +346,14 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
 
   MachineBasicBlock::iterator ElsePt(MI);
 
-  if (ExecModified) {
-    MachineInstr *And =
-      BuildMI(MBB, ElsePt, DL, TII->get(AndOpc), DstReg)
-      .addReg(Exec)
-      .addReg(SaveReg);
+  // This accounts for any modification of the EXEC mask within the block and
+  // can be optimized out pre-RA when not required.
+  MachineInstr *And = BuildMI(MBB, ElsePt, DL, TII->get(AndOpc), DstReg)
+                          .addReg(Exec)
+                          .addReg(SaveReg);
 
-    if (LIS)
-      LIS->InsertMachineInstrInMaps(*And);
-  }
+  if (LIS)
+    LIS->InsertMachineInstrInMaps(*And);
 
   MachineInstr *Xor =
     BuildMI(MBB, ElsePt, DL, TII->get(XorTermrOpc), Exec)
@@ -386,8 +383,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
 
   LIS->removeInterval(DstReg);
   LIS->createAndComputeVirtRegInterval(DstReg);
-  if (ExecModified)
-    LIS->createAndComputeVirtRegInterval(SaveReg);
+  LIS->createAndComputeVirtRegInterval(SaveReg);
 
   // Let this be recomputed.
   LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
@@ -684,6 +680,25 @@ MachineBasicBlock *SILowerControlFlow::process(MachineInstr &MI) {
 }
 
 bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
+  auto getFallThroughSucc = [=](MachineBasicBlock * MBB) {
+    MachineBasicBlock *Ret = nullptr;
+    for (auto S : MBB->successors()) {
+      if (MBB->isLayoutSuccessor(S)) {
+        // The only fallthrough candidate
+        MachineBasicBlock::iterator I(MBB->getFirstInstrTerminator());
+        while (I != MBB->end()) {
+          if (I->isBranch() && TII->getBranchDestBlock(*I) == S)
+            // We have unoptimized branch to layout successor
+            break;
+          I++;
+        }
+        if (I == MBB->end())
+          Ret = S;
+        break;
+      }
+    }
+    return Ret;
+  };
   bool Redundant = true;
   for (auto &I : MBB.instrs()) {
     if (!I.isDebugInstr() && !I.isUnconditionalBranch())
@@ -692,25 +707,11 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
   if (Redundant) {
     MachineBasicBlock *Succ = *MBB.succ_begin();
     SmallVector<MachineBasicBlock *, 2> Preds(MBB.predecessors());
+    MachineBasicBlock *FallThrough = nullptr;
     for (auto P : Preds) {
-      P->replaceSuccessor(&MBB, Succ);
-      MachineBasicBlock::iterator I(P->getFirstInstrTerminator());
-      while (I != P->end()) {
-        if (I->isBranch()) {
-          if (TII->getBranchDestBlock(*I) == &MBB) {
-            I->getOperand(0).setMBB(Succ);
-            break;
-          }
-        }
-        I++;
-      }
-      if (I == P->end()) {
-        MachineFunction *MF = P->getParent();
-        MachineFunction::iterator InsertPt =
-            P->getNextNode() ? MachineFunction::iterator(P->getNextNode())
-                             : MF->end();
-        MF->splice(InsertPt, Succ);
-      }
+      if (getFallThroughSucc(P) == &MBB)
+        FallThrough = P;
+      P->ReplaceUsesOfBlockWith(&MBB, Succ);
     }
     MBB.removeSuccessor(Succ);
     if (LIS) {
@@ -719,6 +720,17 @@ bool SILowerControlFlow::removeMBBifRedundant(MachineBasicBlock &MBB) {
     }
     MBB.clear();
     MBB.eraseFromParent();
+    if (FallThrough && !FallThrough->isLayoutSuccessor(Succ)) {
+      MachineFunction *MF = FallThrough->getParent();
+      if (!getFallThroughSucc(Succ)) {
+        MachineFunction::iterator InsertPt(FallThrough->getNextNode());
+        MF->splice(InsertPt, Succ);
+      } else
+        BuildMI(*FallThrough, FallThrough->end(),
+                FallThrough->findBranchDebugLoc(), TII->get(AMDGPU::S_BRANCH))
+            .addMBB(Succ);
+    }
+
     return true;
   }
   return false;

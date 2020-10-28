@@ -275,6 +275,17 @@ namespace IntToNullPtrConv {
 
   template<int N> int *get_n() { return N; }   // expected-warning {{expression which evaluates to zero treated as a null pointer constant}}
   int *g_nullptr = get_n<0>();  // expected-note {{in instantiation of function template specialization}}
+
+  // FIXME: MSVC accepts this.
+  constexpr float k = 0;
+  int *p1 = (int)k; // expected-error {{cannot initialize}}
+
+  constexpr int n = 0;
+  const int &r = n;
+  int *p2 = (int)r; // expected-error {{cannot initialize}}
+
+  constexpr int f() { return 0; }
+  int *p = f(); // expected-error {{cannot initialize}}
 }
 
 namespace signed_hex_i64 {

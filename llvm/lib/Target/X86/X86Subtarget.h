@@ -401,6 +401,9 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   /// Processor support key locker wide instructions
   bool HasWIDEKL = false;
 
+  /// Processor supports HRESET instruction
+  bool HasHRESET = false;
+
   /// Processor supports SERIALIZE instruction
   bool HasSERIALIZE = false;
 
@@ -411,6 +414,9 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   bool HasAMXTILE = false;
   bool HasAMXBF16 = false;
   bool HasAMXINT8 = false;
+
+  /// Processor supports User Level Interrupt instructions
+  bool HasUINTR = false;
 
   /// Processor has a single uop BEXTR implementation.
   bool HasFastBEXTR = false;
@@ -736,8 +742,10 @@ public:
   bool hasENQCMD() const { return HasENQCMD; }
   bool hasKL() const { return HasKL; }
   bool hasWIDEKL() const { return HasWIDEKL; }
+  bool hasHRESET() const { return HasHRESET; }
   bool hasSERIALIZE() const { return HasSERIALIZE; }
   bool hasTSXLDTRK() const { return HasTSXLDTRK; }
+  bool hasUINTR() const { return HasUINTR; }
   bool useRetpolineIndirectCalls() const { return UseRetpolineIndirectCalls; }
   bool useRetpolineIndirectBranches() const {
     return UseRetpolineIndirectBranches;

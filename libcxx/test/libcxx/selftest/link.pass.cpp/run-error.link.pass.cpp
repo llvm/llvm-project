@@ -9,6 +9,6 @@
 // Make sure the test passes if it succeeds to link, even though it would have
 // failed at runtime.
 
-int main() {
+int main(int, char**) {
     return 1;
 }

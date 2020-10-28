@@ -914,6 +914,13 @@ def imm0_1 : Operand<i64>, ImmLeaf<i64, [{
   let ParserMatchClass = Imm0_1Operand;
 }
 
+// timm0_1 - as above, but use TargetConstant (TImmLeaf)
+def timm0_1 : Operand<i64>, TImmLeaf<i64, [{
+  return ((uint64_t)Imm) < 2;
+}]> {
+  let ParserMatchClass = Imm0_1Operand;
+}
+
 // imm0_15 predicate - True if the immediate is in the range [0,15]
 def imm0_15 : Operand<i64>, ImmLeaf<i64, [{
   return ((uint64_t)Imm) < 16;

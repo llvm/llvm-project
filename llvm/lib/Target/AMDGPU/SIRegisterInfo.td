@@ -149,7 +149,7 @@ multiclass SIRegLoHi16 <string n, bits<16> regIdx, bit ArtificialHigh = 1,
                                    !cast<Register>(NAME#"_HI16")]> {
     let Namespace = "AMDGPU";
     let SubRegIndices = [lo16, hi16];
-    let CoveredBySubRegs = !if(ArtificialHigh,0,1);
+    let CoveredBySubRegs = !not(ArtificialHigh);
     let HWEncoding = regIdx;
     let HWEncoding{8} = HWEncodingHigh;
   }

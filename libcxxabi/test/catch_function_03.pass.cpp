@@ -53,11 +53,13 @@ void check_deep() {
     }
 }
 
-int main()
+int main(int, char**)
 {
     check<false, false>();
     check<false, true>();
     check<true, false>();
     check<true, true>();
     check_deep();
+
+    return 0;
 }

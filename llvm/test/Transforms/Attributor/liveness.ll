@@ -705,16 +705,16 @@ cond.end:                                               ; preds = %cond.if, %con
 @a2 = common global i8 0, align 16
 
 define internal i8* @f1(i8* readnone %0) local_unnamed_addr #0 {
-; CHECK-LABEL: define {{[^@]+}}@f1
-; CHECK-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr {
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP0]], null
-; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i8* @f2(i8* nonnull @a1)
-; CHECK-NEXT:    br label [[TMP5]]
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi i8* [ [[TMP4]], [[TMP3]] ], [ [[TMP0]], [[TMP1:%.*]] ]
-; CHECK-NEXT:    ret i8* [[TMP6]]
+; IS__CGSCC____-LABEL: define {{[^@]+}}@f1
+; IS__CGSCC____-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr {
+; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP0]], null
+; IS__CGSCC____-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
+; IS__CGSCC____:       3:
+; IS__CGSCC____-NEXT:    [[TMP4:%.*]] = tail call i8* @f2(i8* nonnull @a1)
+; IS__CGSCC____-NEXT:    br label [[TMP5]]
+; IS__CGSCC____:       5:
+; IS__CGSCC____-NEXT:    [[TMP6:%.*]] = phi i8* [ [[TMP4]], [[TMP3]] ], [ [[TMP0]], [[TMP1:%.*]] ]
+; IS__CGSCC____-NEXT:    ret i8* [[TMP6]]
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
@@ -729,19 +729,19 @@ define internal i8* @f1(i8* readnone %0) local_unnamed_addr #0 {
 }
 
 define internal i8* @f2(i8* readnone %0) local_unnamed_addr #0 {
-; CHECK-LABEL: define {{[^@]+}}@f2
-; CHECK-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr {
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP0]], null
-; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i8* @f1(i8* nonnull [[TMP0]])
-; CHECK-NEXT:    br label [[TMP7:%.*]]
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call i8* @f3(i8* nonnull @a2)
-; CHECK-NEXT:    br label [[TMP7]]
-; CHECK:       7:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i8* [ [[TMP4]], [[TMP3]] ], [ [[TMP6]], [[TMP5]] ]
-; CHECK-NEXT:    ret i8* [[TMP8]]
+; IS__CGSCC____-LABEL: define {{[^@]+}}@f2
+; IS__CGSCC____-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr {
+; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP0]], null
+; IS__CGSCC____-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
+; IS__CGSCC____:       3:
+; IS__CGSCC____-NEXT:    [[TMP4:%.*]] = tail call i8* @f1(i8* nonnull [[TMP0]])
+; IS__CGSCC____-NEXT:    br label [[TMP7:%.*]]
+; IS__CGSCC____:       5:
+; IS__CGSCC____-NEXT:    [[TMP6:%.*]] = tail call i8* @f3(i8* nonnull @a2)
+; IS__CGSCC____-NEXT:    br label [[TMP7]]
+; IS__CGSCC____:       7:
+; IS__CGSCC____-NEXT:    [[TMP8:%.*]] = phi i8* [ [[TMP4]], [[TMP3]] ], [ [[TMP6]], [[TMP5]] ]
+; IS__CGSCC____-NEXT:    ret i8* [[TMP8]]
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %5, label %3
@@ -761,16 +761,16 @@ define internal i8* @f2(i8* readnone %0) local_unnamed_addr #0 {
 }
 
 define internal i8* @f3(i8* readnone %0) local_unnamed_addr #0 {
-; CHECK-LABEL: define {{[^@]+}}@f3
-; CHECK-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr {
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP0]], null
-; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
-; CHECK:       3:
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i8* @f1(i8* nonnull @a2)
-; CHECK-NEXT:    br label [[TMP5]]
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi i8* [ [[TMP4]], [[TMP3]] ], [ @a1, [[TMP1:%.*]] ]
-; CHECK-NEXT:    ret i8* [[TMP6]]
+; IS__CGSCC____-LABEL: define {{[^@]+}}@f3
+; IS__CGSCC____-SAME: (i8* readnone [[TMP0:%.*]]) local_unnamed_addr {
+; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP0]], null
+; IS__CGSCC____-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
+; IS__CGSCC____:       3:
+; IS__CGSCC____-NEXT:    [[TMP4:%.*]] = tail call i8* @f1(i8* nonnull @a2)
+; IS__CGSCC____-NEXT:    br label [[TMP5]]
+; IS__CGSCC____:       5:
+; IS__CGSCC____-NEXT:    [[TMP6:%.*]] = phi i8* [ [[TMP4]], [[TMP3]] ], [ @a1, [[TMP1:%.*]] ]
+; IS__CGSCC____-NEXT:    ret i8* [[TMP6]]
 ;
   %2 = icmp eq i8* %0, null
   br i1 %2, label %3, label %5
@@ -789,7 +789,7 @@ define void @test_unreachable() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree noreturn nosync nounwind
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@test_unreachable
 ; NOT_CGSCC_NPM-SAME: () [[ATTR0:#.*]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15:#.*]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14:#.*]]
 ; NOT_CGSCC_NPM-NEXT:    call void @test_unreachable() [[ATTR0]]
 ; NOT_CGSCC_NPM-NEXT:    unreachable
 ;
@@ -1018,7 +1018,7 @@ define internal void @non_dead_a0() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a0
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1034,7 +1034,7 @@ define internal void @non_dead_a1() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a1
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1050,7 +1050,7 @@ define internal void @non_dead_a2() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a2
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1066,7 +1066,7 @@ define internal void @non_dead_a3() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a3
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1082,7 +1082,7 @@ define internal void @non_dead_a4() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a4
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1098,7 +1098,7 @@ define internal void @non_dead_a5() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a5
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1114,7 +1114,7 @@ define internal void @non_dead_a6() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a6
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1130,7 +1130,7 @@ define internal void @non_dead_a7() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a7
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1146,7 +1146,7 @@ define internal void @non_dead_a8() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a8
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1162,7 +1162,7 @@ define internal void @non_dead_a9() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a9
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1178,7 +1178,7 @@ define internal void @non_dead_a10() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a10
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1194,7 +1194,7 @@ define internal void @non_dead_a11() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a11
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1210,7 +1210,7 @@ define internal void @non_dead_a12() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a12
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1226,7 +1226,7 @@ define internal void @non_dead_a13() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a13
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1242,7 +1242,7 @@ define internal void @non_dead_a14() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a14
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1258,7 +1258,7 @@ define internal void @non_dead_a15() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_a15
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1274,7 +1274,7 @@ define internal void @non_dead_b0() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b0
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1290,7 +1290,7 @@ define internal void @non_dead_b1() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b1
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1306,7 +1306,7 @@ define internal void @non_dead_b2() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b2
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1322,7 +1322,7 @@ define internal void @non_dead_b3() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b3
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1338,7 +1338,7 @@ define internal void @non_dead_b4() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b4
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1354,7 +1354,7 @@ define internal void @non_dead_b5() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b5
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1370,7 +1370,7 @@ define internal void @non_dead_b6() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b6
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1386,7 +1386,7 @@ define internal void @non_dead_b7() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b7
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1402,7 +1402,7 @@ define internal void @non_dead_b8() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b8
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1418,7 +1418,7 @@ define internal void @non_dead_b9() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b9
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1434,7 +1434,7 @@ define internal void @non_dead_b10() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b10
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1450,7 +1450,7 @@ define internal void @non_dead_b11() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b11
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1466,7 +1466,7 @@ define internal void @non_dead_b12() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b12
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1482,7 +1482,7 @@ define internal void @non_dead_b13() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b13
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1498,7 +1498,7 @@ define internal void @non_dead_b14() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b14
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1514,7 +1514,7 @@ define internal void @non_dead_b15() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_b15
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1530,7 +1530,7 @@ define internal void @non_dead_c0() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c0
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1546,7 +1546,7 @@ define internal void @non_dead_c1() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c1
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1562,7 +1562,7 @@ define internal void @non_dead_c2() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c2
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1578,7 +1578,7 @@ define internal void @non_dead_c3() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c3
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1594,7 +1594,7 @@ define internal void @non_dead_c4() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c4
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1610,7 +1610,7 @@ define internal void @non_dead_c5() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c5
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1626,7 +1626,7 @@ define internal void @non_dead_c6() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c6
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1642,7 +1642,7 @@ define internal void @non_dead_c7() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c7
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1658,7 +1658,7 @@ define internal void @non_dead_c8() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c8
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1674,7 +1674,7 @@ define internal void @non_dead_c9() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c9
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1690,7 +1690,7 @@ define internal void @non_dead_c10() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c10
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1706,7 +1706,7 @@ define internal void @non_dead_c11() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c11
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1722,7 +1722,7 @@ define internal void @non_dead_c12() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c12
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1738,7 +1738,7 @@ define internal void @non_dead_c13() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c13
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1754,7 +1754,7 @@ define internal void @non_dead_c14() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c14
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1770,7 +1770,7 @@ define internal void @non_dead_c15() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_c15
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1786,7 +1786,7 @@ define internal void @non_dead_d0() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d0
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1802,7 +1802,7 @@ define internal void @non_dead_d1() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d1
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1818,7 +1818,7 @@ define internal void @non_dead_d2() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d2
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1834,7 +1834,7 @@ define internal void @non_dead_d3() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d3
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1850,7 +1850,7 @@ define internal void @non_dead_d4() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d4
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1866,7 +1866,7 @@ define internal void @non_dead_d5() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d5
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1882,7 +1882,7 @@ define internal void @non_dead_d6() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d6
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1898,7 +1898,7 @@ define internal void @non_dead_d7() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d7
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1914,7 +1914,7 @@ define internal void @non_dead_d8() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d8
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1930,7 +1930,7 @@ define internal void @non_dead_d9() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d9
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1946,7 +1946,7 @@ define internal void @non_dead_d10() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d10
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1962,7 +1962,7 @@ define internal void @non_dead_d11() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d11
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1978,7 +1978,7 @@ define internal void @non_dead_d12() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d12
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -1994,7 +1994,7 @@ define internal void @non_dead_d13() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d13
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -2010,7 +2010,7 @@ define internal void @non_dead_d14() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d14
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -2026,7 +2026,7 @@ define internal void @non_dead_d15() {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@non_dead_d15
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -2098,7 +2098,7 @@ define internal void @useless_arg_sink(i32* %a) {
 ; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@useless_arg_sink
 ; NOT_CGSCC_NPM-SAME: () [[ATTR11]] {
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree nosync nounwind willreturn
@@ -2171,7 +2171,7 @@ define internal i32 @switch_default(i64 %i) nounwind {
 ; NOT_CGSCC_NPM-NEXT:    i64 10, label [[RETURN]]
 ; NOT_CGSCC_NPM-NEXT:    ]
 ; NOT_CGSCC_NPM:       sw.default:
-; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR15]]
+; NOT_CGSCC_NPM-NEXT:    call void @sink() [[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret i32 undef
 ; NOT_CGSCC_NPM:       return:
 ; NOT_CGSCC_NPM-NEXT:    unreachable
@@ -2509,13 +2509,13 @@ define i32 @h(i32 %i) {
 @p = global i8 0
 
 define void @bad_gep() {
-; NOT_CGSCC_NPM: Function Attrs: nounwind readnone willreturn
+; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@bad_gep
-; NOT_CGSCC_NPM-SAME: () [[ATTR13:#.*]] {
+; NOT_CGSCC_NPM-SAME: () [[ATTR12]] {
 ; NOT_CGSCC_NPM-NEXT:  entry:
 ; NOT_CGSCC_NPM-NEXT:    [[N:%.*]] = alloca i8, align 1
 ; NOT_CGSCC_NPM-NEXT:    [[M:%.*]] = alloca i8, align 1
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 1, i8* noalias nocapture noundef nonnull dereferenceable(1) [[N]]) [[ATTR16:#.*]]
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 1, i8* noalias nocapture nofree noundef nonnull dereferenceable(1) [[N]]) [[ATTR15:#.*]]
 ; NOT_CGSCC_NPM-NEXT:    br label [[EXIT:%.*]]
 ; NOT_CGSCC_NPM:       while.body:
 ; NOT_CGSCC_NPM-NEXT:    unreachable
@@ -2524,16 +2524,16 @@ define void @bad_gep() {
 ; NOT_CGSCC_NPM:       if.end:
 ; NOT_CGSCC_NPM-NEXT:    unreachable
 ; NOT_CGSCC_NPM:       exit:
-; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 1, i8* noalias nocapture noundef nonnull dereferenceable(1) [[N]]) [[ATTR16]]
+; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 1, i8* noalias nocapture nofree noundef nonnull dereferenceable(1) [[N]]) [[ATTR15]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: nounwind readnone willreturn
+; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@bad_gep
 ; IS__CGSCC____-SAME: () [[ATTR14:#.*]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[N:%.*]] = alloca i8, align 1
 ; IS__CGSCC____-NEXT:    [[M:%.*]] = alloca i8, align 1
-; IS__CGSCC____-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 1, i8* noalias nocapture noundef nonnull dereferenceable(1) [[N]]) [[ATTR17:#.*]]
+; IS__CGSCC____-NEXT:    call void @llvm.lifetime.start.p0i8(i64 noundef 1, i8* noalias nocapture nofree noundef nonnull dereferenceable(1) [[N]]) [[ATTR17:#.*]]
 ; IS__CGSCC____-NEXT:    br label [[EXIT:%.*]]
 ; IS__CGSCC____:       while.body:
 ; IS__CGSCC____-NEXT:    unreachable
@@ -2542,7 +2542,7 @@ define void @bad_gep() {
 ; IS__CGSCC____:       if.end:
 ; IS__CGSCC____-NEXT:    unreachable
 ; IS__CGSCC____:       exit:
-; IS__CGSCC____-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 1, i8* noalias nocapture noundef nonnull dereferenceable(1) [[N]]) [[ATTR17]]
+; IS__CGSCC____-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 1, i8* noalias nocapture nofree noundef nonnull dereferenceable(1) [[N]]) [[ATTR17]]
 ; IS__CGSCC____-NEXT:    ret void
 ;
 entry:

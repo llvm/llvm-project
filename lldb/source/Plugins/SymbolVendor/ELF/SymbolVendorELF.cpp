@@ -31,9 +31,6 @@ LLDB_PLUGIN_DEFINE(SymbolVendorELF)
 SymbolVendorELF::SymbolVendorELF(const lldb::ModuleSP &module_sp)
     : SymbolVendor(module_sp) {}
 
-// Destructor
-SymbolVendorELF::~SymbolVendorELF() {}
-
 void SymbolVendorELF::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance);

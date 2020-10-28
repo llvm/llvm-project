@@ -62,8 +62,10 @@ coro.ret:
   call i1 @llvm.coro.end(i8* null, i1 false)
   ret void
 }
+; CHECK:       %a.Frame = type { void (%a.Frame*)*, void (%a.Frame*)*, %"struct.task::promise_type", %struct.big_structure, i1 }
 ; CHECK-LABEL: @a.resume(
-; CHECK:         %b.reload.addr = bitcast %struct.big_structure* %0 to %struct.big_structure.2*
+; CHECK:         %[[A:.*]] = getelementptr inbounds %a.Frame, %a.Frame* %FramePtr, i32 0, i32 3
+; CHECK:         %{{.*}} = bitcast %struct.big_structure* %[[A]] to %struct.big_structure.2*
 
 declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
 declare i1 @llvm.coro.alloc(token) #3

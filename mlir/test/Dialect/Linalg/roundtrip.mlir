@@ -126,11 +126,11 @@ func @fill_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: f32) {
 // CHECK-DAG: #[[$strided3DT:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2 * s1 + s0 + d1 * s2 + d0)>
 
 func @transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  %0 = linalg.transpose %arg0 (i, j, k) -> (k, j, i) : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]> to memref<?x?x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2 * s1 + s0 + d1 * s2 + d0)>>
+  %0 = transpose %arg0 (i, j, k) -> (k, j, i) : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]> to memref<?x?x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2 * s1 + s0 + d1 * s2 + d0)>>
   return
 }
 // CHECK-LABEL: func @transpose
-//       CHECK:   linalg.transpose %{{.*}} ([[i:.*]], [[j:.*]], [[k:.*]]) -> ([[k]], [[j]], [[i]]) :
+//       CHECK:   transpose %{{.*}} ([[i:.*]], [[j:.*]], [[k:.*]]) -> ([[k]], [[j]], [[i]]) :
 //  CHECK-SAME:      memref<?x?x?xf32, #[[$strided3D]]> to memref<?x?x?xf32, #[[$strided3DT]]>
 
 // -----
@@ -341,8 +341,27 @@ func @generic_with_tensor_input(%arg0: tensor<?x?xvector<3x4xi4>>,
 
 // -----
 
+#map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+func @generic_without_inputs(%arg0 : memref<?x?x?xf32>) {
+  linalg.generic  {indexing_maps = [#map0],
+                   iterator_types = ["parallel", "parallel", "parallel"]}
+                  outs(%arg0 : memref<?x?x?xf32>) {
+   ^bb0(%arg3: f32):  // no predecessors
+      %cst = constant 0.000000e+00 : f32
+      linalg.yield %cst : f32
+    }
+  return
+}
+
+// CHECK-LABEL: func @generic_without_inputs
+//       CHECK:   linalg.generic
+//   CHECK-NOT:     ins
+
+// -----
+
 #accesses = [
   affine_map<(i, j, k) -> (j, i)>,
+  affine_map<(i, j, k) -> (i, k, i + j)>,
   affine_map<(i, j, k) -> (i, k, i + j)>
 ]
 
@@ -377,6 +396,7 @@ func @generic_with_tensor_input_and_output(
 
 #accesses = [
   affine_map<(i, j, k) -> (j, i)>,
+  affine_map<(i, j, k) -> (i, k, i + j)>,
   affine_map<(i, j, k) -> (i, k, i + j)>
 ]
 

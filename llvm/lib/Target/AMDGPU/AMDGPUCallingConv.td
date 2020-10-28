@@ -125,6 +125,8 @@ def CSR_AMDGPU_HighRegs : CalleeSavedRegs<
   (add CSR_AMDGPU_VGPRs, CSR_AMDGPU_SGPRs_32_105)
 >;
 
+def CSR_AMDGPU_NoRegs : CalleeSavedRegs<(add)>;
+
 // Calling convention for leaf functions
 def CC_AMDGPU_Func : CallingConv<[
   CCIfByVal<CCPassByVal<4, 4>>,

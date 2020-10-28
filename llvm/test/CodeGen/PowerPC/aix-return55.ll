@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=pwr4 -mtriple=powerpc-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mcpu=pwr4 -mtriple=powerpc-ibm-aix-xcoff -verify-machineinstrs -filetype=obj -o %t.o < %s
+; RUN: llc -mcpu=pwr4 -mtriple=powerpc-ibm-aix-xcoff -verify-machineinstrs -data-sections=false < %s | FileCheck %s
+; RUN: llc -mcpu=pwr4 -mtriple=powerpc-ibm-aix-xcoff -verify-machineinstrs -data-sections=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=CHECKOBJ %s
 ; RUN: llvm-readobj -sections %t.o | FileCheck --check-prefix=CHECKSECT %s
 

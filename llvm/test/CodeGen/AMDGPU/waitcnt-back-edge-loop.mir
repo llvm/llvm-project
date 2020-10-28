@@ -2,7 +2,7 @@
 
 # GCN-LABEL: waitcnt-back-edge-loop
 # GCN: bb.2
-# GCN: S_WAITCNT 112
+# GCN: S_WAITCNT 3952
 # GCN: $vgpr5 = V_CVT_I32_F32_e32 killed $vgpr5, implicit $mode, implicit $exec
 
 ---

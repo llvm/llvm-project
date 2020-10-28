@@ -100,8 +100,8 @@ public:
     return LI;
   }
 
-  Register selectOrSplit(LiveInterval &VirtReg,
-                         SmallVectorImpl<Register> &SplitVRegs) override;
+  MCRegister selectOrSplit(LiveInterval &VirtReg,
+                           SmallVectorImpl<Register> &SplitVRegs) override;
 
   /// Perform register allocation.
   bool runOnMachineFunction(MachineFunction &mf) override;
@@ -253,15 +253,16 @@ bool RABasic::spillInterferences(LiveInterval &VirtReg, Register PhysReg,
 // |vregs| * |machineregs|. And since the number of interference tests is
 // minimal, there is no value in caching them outside the scope of
 // selectOrSplit().
-Register RABasic::selectOrSplit(LiveInterval &VirtReg,
-                                SmallVectorImpl<Register> &SplitVRegs) {
+MCRegister RABasic::selectOrSplit(LiveInterval &VirtReg,
+                                  SmallVectorImpl<Register> &SplitVRegs) {
   // Populate a list of physical register spill candidates.
-  SmallVector<Register, 8> PhysRegSpillCands;
+  SmallVector<MCRegister, 8> PhysRegSpillCands;
 
   // Check for an available register in this class.
   auto Order =
       AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
-  while (Register PhysReg = Order.next()) {
+  for (MCRegister PhysReg : Order) {
+    assert(PhysReg.isValid());
     // Check for interference in PhysReg
     switch (Matrix->checkInterference(VirtReg, PhysReg)) {
     case LiveRegMatrix::IK_Free:
@@ -280,8 +281,9 @@ Register RABasic::selectOrSplit(LiveInterval &VirtReg,
   }
 
   // Try to spill another interfering reg with less spill weight.
-  for (SmallVectorImpl<Register>::iterator PhysRegI = PhysRegSpillCands.begin(),
-       PhysRegE = PhysRegSpillCands.end(); PhysRegI != PhysRegE; ++PhysRegI) {
+  for (auto PhysRegI = PhysRegSpillCands.begin(),
+            PhysRegE = PhysRegSpillCands.end();
+       PhysRegI != PhysRegE; ++PhysRegI) {
     if (!spillInterferences(VirtReg, *PhysRegI, SplitVRegs))
       continue;
 
@@ -311,7 +313,7 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   RegAllocBase::init(getAnalysis<VirtRegMap>(),
                      getAnalysis<LiveIntervals>(),
                      getAnalysis<LiveRegMatrix>());
-  VirtRegAuxInfo VRAI(*MF, *LIS, VRM, getAnalysis<MachineLoopInfo>(),
+  VirtRegAuxInfo VRAI(*MF, *LIS, *VRM, getAnalysis<MachineLoopInfo>(),
                       getAnalysis<MachineBlockFrequencyInfo>());
   VRAI.calculateSpillWeightsAndHints();
 

@@ -244,8 +244,8 @@ void MappingTraits<DWARFYAML::LineTable>::mapping(
   IO.mapRequired("DefaultIsStmt", LineTable.DefaultIsStmt);
   IO.mapRequired("LineBase", LineTable.LineBase);
   IO.mapRequired("LineRange", LineTable.LineRange);
-  IO.mapRequired("OpcodeBase", LineTable.OpcodeBase);
-  IO.mapRequired("StandardOpcodeLengths", LineTable.StandardOpcodeLengths);
+  IO.mapOptional("OpcodeBase", LineTable.OpcodeBase);
+  IO.mapOptional("StandardOpcodeLengths", LineTable.StandardOpcodeLengths);
   IO.mapOptional("IncludeDirs", LineTable.IncludeDirs);
   IO.mapOptional("Files", LineTable.Files);
   IO.mapOptional("Opcodes", LineTable.Opcodes);
@@ -304,11 +304,11 @@ void MappingTraits<DWARFYAML::ListEntries<EntryType>>::mapping(
 }
 
 template <typename EntryType>
-StringRef MappingTraits<DWARFYAML::ListEntries<EntryType>>::validate(
+std::string MappingTraits<DWARFYAML::ListEntries<EntryType>>::validate(
     IO &IO, DWARFYAML::ListEntries<EntryType> &ListEntries) {
   if (ListEntries.Entries && ListEntries.Content)
     return "Entries and Content can't be used together";
-  return StringRef();
+  return "";
 }
 
 template <typename EntryType>

@@ -10,4 +10,4 @@
 
 // Make sure the test DOES NOT pass if it succeeds at compile-time
 
-int main() { }
+int main(int, char**) { return 0; }

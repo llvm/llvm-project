@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cstdlib>
 #include <algorithm>
-#include <iostream>
+#include <cstdio>
+#include <cstdlib>
 #include <__threading_support>
 #include <unistd.h>
 
@@ -19,19 +19,21 @@ typedef __cxxabiv1::__cxa_eh_globals globals_t ;
 void *thread_code (void *parm) {
     size_t *result = (size_t *) parm;
     globals_t *glob1, *glob2;
-    
+
     glob1 = __cxxabiv1::__cxa_get_globals ();
     if ( NULL == glob1 )
-        std::cerr << "Got null result from __cxa_get_globals" << std::endl;
+        std::printf("Got null result from __cxa_get_globals\n");
 
     glob2 = __cxxabiv1::__cxa_get_globals_fast ();
     if ( glob1 != glob2 )
-        std::cerr << "Got different globals!" << std::endl;
-    
+        std::printf("Got different globals!\n");
+
     *result = (size_t) glob1;
+#ifndef _LIBCXXABI_HAS_NO_THREADS
     sleep ( 1 );
+#endif
     return parm;
-    }
+}
 
 #ifndef _LIBCXXABI_HAS_NO_THREADS
 #define NUMTHREADS  10
@@ -49,18 +51,20 @@ int main () {
     for ( int i = 0; i < NUMTHREADS; ++i )
         std::__libcpp_thread_join ( &threads [ i ] );
 
-    for ( int i = 0; i < NUMTHREADS; ++i )
+    for ( int i = 0; i < NUMTHREADS; ++i ) {
         if ( 0 == thread_globals [ i ] ) {
-            std::cerr << "Thread #" << i << " had a zero global" << std::endl;
+            std::printf("Thread #%d had a zero global\n", i);
             retVal = 1;
-            }
-        
+        }
+    }
+
     std::sort ( thread_globals, thread_globals + NUMTHREADS );
-    for ( int i = 1; i < NUMTHREADS; ++i )
+    for ( int i = 1; i < NUMTHREADS; ++i ) {
         if ( thread_globals [ i - 1 ] == thread_globals [ i ] ) {
-            std::cerr << "Duplicate thread globals (" << i-1 << " and " << i << ")" << std::endl;
+            std::printf("Duplicate thread globals (%d and %d)\n", i-1, i);
             retVal = 2;
-            }
+        }
+    }
 #else // _LIBCXXABI_HAS_NO_THREADS
     size_t thread_globals;
     // Check that __cxa_get_globals() is not NULL.

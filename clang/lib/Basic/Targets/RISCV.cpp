@@ -178,6 +178,17 @@ void RISCV32TargetInfo::fillValidCPUList(
   llvm::RISCV::fillValidCPUArchList(Values, false);
 }
 
+bool RISCV32TargetInfo::isValidTuneCPUName(StringRef Name) const {
+  return llvm::RISCV::checkTuneCPUKind(
+      llvm::RISCV::parseTuneCPUKind(Name, false),
+      /*Is64Bit=*/false);
+}
+
+void RISCV32TargetInfo::fillValidTuneCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  llvm::RISCV::fillValidTuneCPUArchList(Values, false);
+}
+
 bool RISCV64TargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::RISCV::checkCPUKind(llvm::RISCV::parseCPUKind(Name),
                                    /*Is64Bit=*/true);
@@ -186,4 +197,15 @@ bool RISCV64TargetInfo::isValidCPUName(StringRef Name) const {
 void RISCV64TargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
   llvm::RISCV::fillValidCPUArchList(Values, true);
+}
+
+bool RISCV64TargetInfo::isValidTuneCPUName(StringRef Name) const {
+  return llvm::RISCV::checkTuneCPUKind(
+      llvm::RISCV::parseTuneCPUKind(Name, true),
+      /*Is64Bit=*/true);
+}
+
+void RISCV64TargetInfo::fillValidTuneCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  llvm::RISCV::fillValidTuneCPUArchList(Values, true);
 }

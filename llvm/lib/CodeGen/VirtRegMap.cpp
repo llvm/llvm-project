@@ -104,7 +104,7 @@ bool VirtRegMap::hasPreferredPhys(Register VirtReg) {
     return false;
   if (Hint.isVirtual())
     Hint = getPhys(Hint);
-  return getPhys(VirtReg) == Hint;
+  return Register(getPhys(VirtReg)) == Hint;
 }
 
 bool VirtRegMap::hasKnownPreference(Register VirtReg) {
@@ -452,7 +452,7 @@ void VirtRegRewriter::expandCopyBundle(MachineInstr &MI) const {
       // instruction, the bundle will have been completely undone.
       if (BundledMI != BundleStart) {
         BundledMI->removeFromBundle();
-        MBB.insert(FirstMI, BundledMI);
+        MBB.insert(BundleStart, BundledMI);
       } else if (BundledMI->isBundledWithSucc()) {
         BundledMI->unbundleFromSucc();
         BundleStart = &*std::next(BundledMI->getIterator());

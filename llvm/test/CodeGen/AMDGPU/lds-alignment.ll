@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefix=HSA -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 < %s | FileCheck -check-prefix=HSA -check-prefix=FUNC %s
 
 @lds.align16.0 = internal unnamed_addr addrspace(3) global [38 x i8] undef, align 16
 @lds.align16.1 = internal unnamed_addr addrspace(3) global [38 x i8] undef, align 16

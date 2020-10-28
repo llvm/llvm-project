@@ -20,13 +20,14 @@ module attributes {gpu.container_module} {
   func @foo(%buffer: memref<?xf32>) {
     %c8 = constant 8 : index
     %c32 = constant 32 : i32
-    "gpu.launch_func"(%c8, %c8, %c8, %c8, %c8, %c8, %c32, %buffer) {
-      kernel = @kernel_module::@kernel
-    } : (index, index, index, index, index, index, i32, memref<?xf32>) -> ()
+    gpu.launch_func @kernel_module::@kernel
+        blocks in (%c8, %c8, %c8)
+        threads in (%c8, %c8, %c8)
+        args(%c32 : i32, %buffer : memref<?xf32>)
     return
   }
 
-  // CHECK: [[C8:%.*]] = llvm.mlir.constant(8 : index) : !llvm.i64   
+  // CHECK: [[C8:%.*]] = llvm.mlir.constant(8 : index) : !llvm.i64
   // CHECK: [[ADDRESSOF:%.*]] = llvm.mlir.addressof @[[GLOBAL]]
   // CHECK: [[C0:%.*]] = llvm.mlir.constant(0 : index)
   // CHECK: [[BINARY:%.*]] = llvm.getelementptr [[ADDRESSOF]]{{\[}}[[C0]], [[C0]]]

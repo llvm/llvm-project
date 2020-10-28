@@ -931,6 +931,9 @@ namespace llvm {
       return true;
     }
 
+    bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                                SDValue C) const override;
+
     bool isDesirableToTransformToIntegerOp(unsigned Opc,
                                            EVT VT) const override {
       // Only handle float load/store pair because float(fpr) load/store
@@ -1015,11 +1018,6 @@ namespace llvm {
     /// exception typeid on entry to a landing pad.
     Register
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
-
-    /// isMulhCheaperThanMulShift - Return true if a mulh[s|u] node for a
-    /// specific type is cheaper than a multiply followed by a shift.
-    /// This is true for words and doublewords on 64-bit PowerPC.
-    bool isMulhCheaperThanMulShift(EVT Type) const override;
 
     /// Override to support customized stack guard loading.
     bool useLoadStackGuardNode() const override;

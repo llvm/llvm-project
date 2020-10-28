@@ -6,8 +6,8 @@ template<typename T, typename U> constexpr bool is_same = false; // expected-not
 template<typename T> constexpr bool is_same<T, T> = true;
 
 namespace String {
-  A<const char*, "test"> a; // expected-error {{does not refer to any declaration}}
-  A<const char (&)[5], "test"> b; // expected-error {{does not refer to any declaration}}
+  A<const char*, "test"> a; // expected-error {{pointer to subobject of string literal}}
+  A<const char (&)[5], "test"> b; // expected-error {{reference to string literal}}
 }
 
 namespace Array {
@@ -50,7 +50,7 @@ namespace Function {
 }
 
 void Func() {
-  A<const char*, __func__> a; // expected-error {{does not refer to any declaration}}
+  A<const char*, __func__> a; // expected-error {{pointer to subobject of predefined '__func__' variable}}
 }
 
 namespace LabelAddrDiff {
@@ -62,17 +62,17 @@ namespace LabelAddrDiff {
 namespace Temp {
   struct S { int n; };
   constexpr S &addr(S &&s) { return s; }
-  A<S &, addr({})> a; // expected-error {{constant}} expected-note 2{{temporary}}
-  A<S *, &addr({})> b; // expected-error {{constant}} expected-note 2{{temporary}}
-  A<int &, addr({}).n> c; // expected-error {{constant}} expected-note 2{{temporary}}
-  A<int *, &addr({}).n> d; // expected-error {{constant}} expected-note 2{{temporary}}
+  A<S &, addr({})> a; // expected-error {{reference to temporary object}}
+  A<S *, &addr({})> b; // expected-error {{pointer to temporary object}}
+  A<int &, addr({}).n> c; // expected-error {{reference to subobject of temporary object}}
+  A<int *, &addr({}).n> d; // expected-error {{pointer to subobject of temporary object}}
 }
 
 namespace std { struct type_info; }
 
 namespace RTTI {
-  A<const std::type_info&, typeid(int)> a; // expected-error {{does not refer to any declaration}}
-  A<const std::type_info*, &typeid(int)> b; // expected-error {{does not refer to any declaration}}
+  A<const std::type_info&, typeid(int)> a; // expected-error {{reference to type_info object}}
+  A<const std::type_info*, &typeid(int)> b; // expected-error {{pointer to type_info object}}
 }
 
 namespace PtrMem {
@@ -442,10 +442,8 @@ namespace PR42108 {
   template <const S &> struct A {};
   void f() {
     A<R{}>(); // expected-error {{would bind reference to a temporary}}
-    A<S{}>(); // expected-error {{non-type template argument is not a constant expression}} expected-note 2{{temporary}}
-    // FIXME: We could diagnose this better if we treated this as not binding
-    // directly. It's unclear whether that's the intent.
-    A<T{}>(); // expected-error {{non-type template argument is not a constant expression}} expected-note 2{{temporary}}
+    A<S{}>(); // expected-error {{reference to temporary object}}
+    A<T{}>(); // expected-error {{reference to temporary object}}
   }
 }
 

@@ -2266,7 +2266,7 @@ protected:
   /// Retrieve the set of partial specializations of this class
   /// template.
   llvm::FoldingSetVector<ClassTemplatePartialSpecializationDecl> &
-  getPartialSpecializations();
+  getPartialSpecializations() const;
 
   ClassTemplateDecl(ASTContext &C, DeclContext *DC, SourceLocation L,
                     DeclarationName Name, TemplateParameterList *Params,
@@ -2363,7 +2363,7 @@ public:
 
   /// Retrieve the partial specializations as an ordered list.
   void getPartialSpecializations(
-          SmallVectorImpl<ClassTemplatePartialSpecializationDecl *> &PS);
+      SmallVectorImpl<ClassTemplatePartialSpecializationDecl *> &PS) const;
 
   /// Find a class template partial specialization with the given
   /// type T.
@@ -3095,7 +3095,7 @@ protected:
   /// Retrieve the set of partial specializations of this class
   /// template.
   llvm::FoldingSetVector<VarTemplatePartialSpecializationDecl> &
-  getPartialSpecializations();
+  getPartialSpecializations() const;
 
   VarTemplateDecl(ASTContext &C, DeclContext *DC, SourceLocation L,
                   DeclarationName Name, TemplateParameterList *Params,
@@ -3191,7 +3191,7 @@ public:
 
   /// Retrieve the partial specializations as an ordered list.
   void getPartialSpecializations(
-      SmallVectorImpl<VarTemplatePartialSpecializationDecl *> &PS);
+      SmallVectorImpl<VarTemplatePartialSpecializationDecl *> &PS) const;
 
   /// Find a variable template partial specialization which was
   /// instantiated
@@ -3226,7 +3226,7 @@ public:
   static bool classofKind(Kind K) { return K == VarTemplate; }
 };
 
-// \brief Declaration of a C++2a concept.
+/// Declaration of a C++2a concept.
 class ConceptDecl : public TemplateDecl, public Mergeable<ConceptDecl> {
 protected:
   Expr *ConstraintExpr;
@@ -3255,6 +3255,9 @@ public:
     return isa<TemplateTypeParmDecl>(getTemplateParameters()->getParam(0));
   }
 
+  ConceptDecl *getCanonicalDecl() override { return getFirstDecl(); }
+  const ConceptDecl *getCanonicalDecl() const { return getFirstDecl(); }
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Concept; }
@@ -3262,6 +3265,74 @@ public:
   friend class ASTReader;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+};
+
+/// A template parameter object.
+///
+/// Template parameter objects represent values of class type used as template
+/// arguments. There is one template parameter object for each such distinct
+/// value used as a template argument across the program.
+///
+/// \code
+/// struct A { int x, y; };
+/// template<A> struct S;
+/// S<A{1, 2}> s1;
+/// S<A{1, 2}> s2; // same type, argument is same TemplateParamObjectDecl.
+/// \endcode
+class TemplateParamObjectDecl : public ValueDecl,
+                                public Mergeable<TemplateParamObjectDecl>,
+                                public llvm::FoldingSetNode {
+private:
+  /// The value of this template parameter object.
+  APValue Value;
+
+  TemplateParamObjectDecl(DeclContext *DC, QualType T, const APValue &V)
+      : ValueDecl(TemplateParamObject, DC, SourceLocation(), DeclarationName(),
+                  T),
+        Value(V) {}
+
+  static TemplateParamObjectDecl *Create(const ASTContext &C, QualType T,
+                                         const APValue &V);
+  static TemplateParamObjectDecl *CreateDeserialized(ASTContext &C,
+                                                     unsigned ID);
+
+  /// Only ASTContext::getTemplateParamObjectDecl and deserialization
+  /// create these.
+  friend class ASTContext;
+  friend class ASTReader;
+  friend class ASTDeclReader;
+
+public:
+  /// Print this template parameter object in a human-readable format.
+  void printName(llvm::raw_ostream &OS) const override;
+
+  /// Print this object as an equivalent expression.
+  void printAsExpr(llvm::raw_ostream &OS) const;
+
+  /// Print this object as an initializer suitable for a variable of the
+  /// object's type.
+  void printAsInit(llvm::raw_ostream &OS) const;
+
+  const APValue &getValue() const { return Value; }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType T,
+                      const APValue &V) {
+    ID.AddPointer(T.getCanonicalType().getAsOpaquePtr());
+    V.Profile(ID);
+  }
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, getType(), getValue());
+  }
+
+  TemplateParamObjectDecl *getCanonicalDecl() override {
+    return getFirstDecl();
+  }
+  const TemplateParamObjectDecl *getCanonicalDecl() const {
+    return getFirstDecl();
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == TemplateParamObject; }
 };
 
 inline NamedDecl *getAsNamedDecl(TemplateParameter P) {

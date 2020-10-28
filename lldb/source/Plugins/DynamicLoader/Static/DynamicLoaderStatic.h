@@ -18,8 +18,6 @@ class DynamicLoaderStatic : public lldb_private::DynamicLoader {
 public:
   DynamicLoaderStatic(lldb_private::Process *process);
 
-  ~DynamicLoaderStatic() override;
-
   // Static Functions
   static void Initialize();
 
@@ -52,9 +50,6 @@ public:
 
 private:
   void LoadAllImagesAtFileAddresses();
-
-  DynamicLoaderStatic(const DynamicLoaderStatic &) = delete;
-  const DynamicLoaderStatic &operator=(const DynamicLoaderStatic &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_DYNAMICLOADER_STATIC_DYNAMICLOADERSTATIC_H

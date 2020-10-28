@@ -4178,8 +4178,7 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
       // public (or SyncResume) broadcasters.  StopHooks are just for
       // real public stops.  They might also restart the target,
       // so watch for that.
-      process_sp->GetTarget().RunStopHooks();
-      if (process_sp->GetPrivateState() == eStateRunning)
+      if (process_sp->GetTarget().RunStopHooks())
         SetRestarted(true);
     }
   }

@@ -137,6 +137,11 @@ namespace opts {
   cl::opt<bool> DynRelocs("dyn-relocations",
     cl::desc("Display the dynamic relocation entries in the file"));
 
+  // --section-details
+  // Also -t in llvm-readelf mode.
+  cl::opt<bool> SectionDetails("section-details",
+                               cl::desc("Display the section details"));
+
   // --symbols
   // Also -s in llvm-readelf mode, or -t in llvm-readobj mode.
   cl::opt<bool>
@@ -271,6 +276,10 @@ namespace opts {
   cl::opt<bool>
   COFFDebugDirectory("coff-debug-directory",
                      cl::desc("Display the PE/COFF debug directory"));
+
+  // --coff-tls-directory
+  cl::opt<bool> COFFTLSDirectory("coff-tls-directory",
+                                 cl::desc("Display the PE/COFF TLS directory"));
 
   // --coff-resources
   cl::opt<bool> COFFResources("coff-resources",
@@ -476,8 +485,14 @@ static void dumpObject(const ObjectFile &Obj, ScopedPrinter &Writer,
 
   if (opts::FileHeaders)
     Dumper->printFileHeaders();
-  if (opts::SectionHeaders)
-    Dumper->printSectionHeaders();
+
+  if (opts::SectionDetails || opts::SectionHeaders) {
+    if (opts::Output == opts::GNU && opts::SectionDetails)
+      Dumper->printSectionDetails();
+    else
+      Dumper->printSectionHeaders();
+  }
+
   if (opts::HashSymbols)
     Dumper->printHashSymbols();
   if (opts::ProgramHeaders || opts::SectionMapping == cl::BOU_TRUE)
@@ -533,6 +548,8 @@ static void dumpObject(const ObjectFile &Obj, ScopedPrinter &Writer,
       Dumper->printCOFFBaseReloc();
     if (opts::COFFDebugDirectory)
       Dumper->printCOFFDebugDirectory();
+    if (opts::COFFTLSDirectory)
+      Dumper->printCOFFTLSDirectory();
     if (opts::COFFResources)
       Dumper->printCOFFResources();
     if (opts::COFFLoadConfig)
@@ -650,8 +667,7 @@ static void registerReadobjAliases() {
                                  cl::aliasopt(opts::SectionHeaders),
                                  cl::NotHidden);
 
-  // Only register -t in llvm-readobj, as readelf reserves it for
-  // --section-details (not implemented yet).
+  // llvm-readelf reserves it for --section-details.
   static cl::alias SymbolsShort("t", cl::desc("Alias for --symbols"),
                                 cl::aliasopt(opts::Symbols), cl::NotHidden);
 
@@ -676,6 +692,11 @@ static void registerReadelfAliases() {
   static cl::alias SymbolsShort("s", cl::desc("Alias for --symbols"),
                                 cl::aliasopt(opts::Symbols), cl::NotHidden,
                                 cl::Grouping);
+
+  // -t is here because for readobj it is an alias for --symbols.
+  static cl::alias SectionDetailsShort(
+      "t", cl::desc("Alias for --section-details"),
+      cl::aliasopt(opts::SectionDetails), cl::NotHidden);
 
   // Allow all single letter flags to be grouped together.
   for (auto &OptEntry : cl::getRegisteredOptions()) {

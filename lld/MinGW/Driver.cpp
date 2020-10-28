@@ -214,27 +214,43 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   if (args.hasArg(OPT_major_os_version, OPT_minor_os_version,
                   OPT_major_subsystem_version, OPT_minor_subsystem_version)) {
-    auto *majOSVer = args.getLastArg(OPT_major_os_version);
-    auto *minOSVer = args.getLastArg(OPT_minor_os_version);
-    auto *majSubSysVer = args.getLastArg(OPT_major_subsystem_version);
-    auto *minSubSysVer = args.getLastArg(OPT_minor_subsystem_version);
-    if (majOSVer && majSubSysVer &&
-        StringRef(majOSVer->getValue()) != StringRef(majSubSysVer->getValue()))
-      warn("--major-os-version and --major-subsystem-version set to differing "
-           "versions, not supported");
-    if (minOSVer && minSubSysVer &&
-        StringRef(minOSVer->getValue()) != StringRef(minSubSysVer->getValue()))
-      warn("--minor-os-version and --minor-subsystem-version set to differing "
-           "versions, not supported");
+    StringRef majOSVer = args.getLastArgValue(OPT_major_os_version, "6");
+    StringRef minOSVer = args.getLastArgValue(OPT_minor_os_version, "0");
+    StringRef majSubSysVer = "6";
+    StringRef minSubSysVer = "0";
+    StringRef subSysName = "default";
+    StringRef subSysVer;
+    // Iterate over --{major,minor}-subsystem-version and --subsystem, and pick
+    // the version number components from the last one of them that specifies
+    // a version.
+    for (auto *a : args.filtered(OPT_major_subsystem_version,
+                                 OPT_minor_subsystem_version, OPT_subs)) {
+      switch (a->getOption().getID()) {
+      case OPT_major_subsystem_version:
+        majSubSysVer = a->getValue();
+        break;
+      case OPT_minor_subsystem_version:
+        minSubSysVer = a->getValue();
+        break;
+      case OPT_subs:
+        std::tie(subSysName, subSysVer) = StringRef(a->getValue()).split(':');
+        if (!subSysVer.empty()) {
+          if (subSysVer.contains('.'))
+            std::tie(majSubSysVer, minSubSysVer) = subSysVer.split('.');
+          else
+            majSubSysVer = subSysVer;
+        }
+        break;
+      }
+    }
+    add("-osversion:" + majOSVer + "." + minOSVer);
+    add("-subsystem:" + subSysName + "," + majSubSysVer + "." + minSubSysVer);
+  } else if (args.hasArg(OPT_subs)) {
     StringRef subSys = args.getLastArgValue(OPT_subs, "default");
-    StringRef major = majOSVer ? majOSVer->getValue()
-                               : majSubSysVer ? majSubSysVer->getValue() : "6";
-    StringRef minor = minOSVer ? minOSVer->getValue()
-                               : minSubSysVer ? minSubSysVer->getValue() : "";
-    StringRef sep = minor.empty() ? "" : ".";
-    add("-subsystem:" + subSys + "," + major + sep + minor);
-  } else if (auto *a = args.getLastArg(OPT_subs)) {
-    add("-subsystem:" + StringRef(a->getValue()));
+    StringRef subSysName, subSysVer;
+    std::tie(subSysName, subSysVer) = subSys.split(':');
+    StringRef sep = subSysVer.empty() ? "" : ",";
+    add("-subsystem:" + subSysName + sep + subSysVer);
   }
 
   if (auto *a = args.getLastArg(OPT_out_implib))
@@ -361,6 +377,8 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     add("-includeoptional:" + StringRef(a->getValue()));
   for (auto *a : args.filtered(OPT_delayload))
     add("-delayload:" + StringRef(a->getValue()));
+  for (auto *a : args.filtered(OPT_wrap))
+    add("-wrap:" + StringRef(a->getValue()));
 
   std::vector<StringRef> searchPaths;
   for (auto *a : args.filtered(OPT_L)) {

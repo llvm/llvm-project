@@ -14,7 +14,7 @@
 // CHECK-RECORD:   LLVMType:%struct.s0 = type { [3 x i8] }
 // CHECK-RECORD:   IsZeroInitializable:1
 // CHECK-RECORD:   BitFields:[
-// CHECK-RECORD:     <CGBitFieldInfo Offset:0 Size:24 IsSigned:1 StorageSize:24 StorageOffset:0>
+// CHECK-RECORD:     <CGBitFieldInfo Offset:0 Size:24 IsSigned:1 StorageSize:24 StorageOffset:0
 struct __attribute((packed)) s0 {
   int f0 : 24;
 };
@@ -54,8 +54,8 @@ unsigned long long test_0() {
 // CHECK-RECORD:   LLVMType:%struct.s1 = type { [3 x i8] }
 // CHECK-RECORD:   IsZeroInitializable:1
 // CHECK-RECORD:   BitFields:[
-// CHECK-RECORD:     <CGBitFieldInfo Offset:0 Size:10 IsSigned:1 StorageSize:24 StorageOffset:0>
-// CHECK-RECORD:     <CGBitFieldInfo Offset:10 Size:10 IsSigned:1 StorageSize:24 StorageOffset:0>
+// CHECK-RECORD:     <CGBitFieldInfo Offset:0 Size:10 IsSigned:1 StorageSize:24 StorageOffset:0
+// CHECK-RECORD:     <CGBitFieldInfo Offset:10 Size:10 IsSigned:1 StorageSize:24 StorageOffset:0
 
 #pragma pack(push)
 #pragma pack(1)
@@ -102,7 +102,7 @@ unsigned long long test_1() {
 // CHECK-RECORD:   LLVMType:%union.u2 = type { i8 }
 // CHECK-RECORD:   IsZeroInitializable:1
 // CHECK-RECORD:   BitFields:[
-// CHECK-RECORD:     <CGBitFieldInfo Offset:0 Size:3 IsSigned:0 StorageSize:8 StorageOffset:0>
+// CHECK-RECORD:     <CGBitFieldInfo Offset:0 Size:3 IsSigned:0 StorageSize:8 StorageOffset:0
 
 union __attribute__((packed)) u2 {
   unsigned long long f0 : 3;
@@ -274,8 +274,8 @@ _Bool test_6() {
 // CHECK-RECORD:   LLVMType:%struct.s7 = type { i32, i32, i32, i8, i32, [12 x i8] }
 // CHECK-RECORD:   IsZeroInitializable:1
 // CHECK-RECORD:   BitFields:[
-// CHECK-RECORD:     <CGBitFieldInfo Offset:0 Size:5 IsSigned:1 StorageSize:8 StorageOffset:12>
-// CHECK-RECORD:     <CGBitFieldInfo Offset:0 Size:29 IsSigned:1 StorageSize:32 StorageOffset:16>
+// CHECK-RECORD:     <CGBitFieldInfo Offset:0 Size:5 IsSigned:1 StorageSize:8 StorageOffset:12
+// CHECK-RECORD:     <CGBitFieldInfo Offset:0 Size:29 IsSigned:1 StorageSize:32 StorageOffset:16
 
 struct __attribute__((aligned(16))) s7 {
   int a, b, c;

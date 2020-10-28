@@ -16,8 +16,12 @@
 ; added phi node.
 
 ; CHECK:       define void @f1
+; CHECK:       for.end.loopexit:
+; CHECK-NEXT:    %t2.lver.ph = phi i16 [ %t2.lver.orig, %for.body.lver.orig ]
+; CHECK:       for.end.loopexit2:
+; CHECK-NEXT:    %t2.lver.ph3 = phi i16 [ %t2, %for.body ]
 ; CHECK:       for.end:
-; CHECK-NEXT:    %t2.lver = phi i16 [ %t2, %for.body ], [ %t2.lver.orig, %for.body.lver.orig ]
+; CHECK-NEXT:    %t2.lver = phi i16 [ %t2.lver.ph, %for.end.loopexit ], [ %t2.lver.ph3, %for.end.loopexit2 ]
 ; CHECK-NEXT:    %tobool = icmp eq i16 %t2.lver, 0
 ; CHECK:       if.then:
 ; CHECK-NEXT:    store i16 %t2.lver

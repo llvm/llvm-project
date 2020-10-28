@@ -2591,6 +2591,16 @@ def : Pat<(int_ppc_vsx_xvdivsp v4f32:$A, v4f32:$B),
 def : Pat<(int_ppc_vsx_xvdivdp v2f64:$A, v2f64:$B),
           (XVDIVDP $A, $B)>;
 
+// Vector test for software divide and sqrt.
+def : Pat<(i32 (int_ppc_vsx_xvtdivdp v2f64:$A, v2f64:$B)),
+          (COPY_TO_REGCLASS (XVTDIVDP $A, $B), GPRC)>;
+def : Pat<(i32 (int_ppc_vsx_xvtdivsp v4f32:$A, v4f32:$B)),
+          (COPY_TO_REGCLASS (XVTDIVSP $A, $B), GPRC)>;
+def : Pat<(i32 (int_ppc_vsx_xvtsqrtdp v2f64:$A)),
+          (COPY_TO_REGCLASS (XVTSQRTDP $A), GPRC)>;
+def : Pat<(i32 (int_ppc_vsx_xvtsqrtsp v4f32:$A)),
+          (COPY_TO_REGCLASS (XVTSQRTSP $A), GPRC)>;
+
 // Reciprocal estimate
 def : Pat<(int_ppc_vsx_xvresp v4f32:$A),
           (XVRESP $A)>;

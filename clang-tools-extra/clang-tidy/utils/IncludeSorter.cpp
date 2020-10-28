@@ -9,6 +9,7 @@
 #include "IncludeSorter.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
+#include <algorithm>
 
 namespace clang {
 namespace tidy {
@@ -35,6 +36,21 @@ StringRef MakeCanonicalName(StringRef Str, IncludeSorter::IncludeStyle Style) {
   if (Style == IncludeSorter::IS_LLVM) {
     return RemoveFirstSuffix(
         RemoveFirstSuffix(Str, {".cc", ".cpp", ".c", ".h", ".hpp"}), {"Test"});
+  }
+  if (Style == IncludeSorter::IS_Google_ObjC) {
+    StringRef Canonical =
+        RemoveFirstSuffix(RemoveFirstSuffix(Str, {".cc", ".cpp", ".c", ".h",
+                                                  ".hpp", ".mm", ".m"}),
+                          {"_unittest", "_regtest", "_test", "Test"});
+
+    // Objective-C categories have a `+suffix` format, but should be grouped
+    // with the file they are a category of.
+    size_t StartIndex = Canonical.find_last_of('/');
+    if (StartIndex == StringRef::npos) {
+      StartIndex = 0;
+    }
+    return Canonical.substr(
+        0, Canonical.find_first_of('+', StartIndex));
   }
   return RemoveFirstSuffix(
       RemoveFirstSuffix(Str, {".cc", ".cpp", ".c", ".h", ".hpp"}),
@@ -65,7 +81,8 @@ DetermineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
       || CanonicalInclude.endswith(CanonicalFile)) {
     return IncludeSorter::IK_MainTUInclude;
   }
-  if (Style == IncludeSorter::IS_Google) {
+  if ((Style == IncludeSorter::IS_Google) ||
+      (Style == IncludeSorter::IS_Google_ObjC)) {
     std::pair<StringRef, StringRef> Parts = CanonicalInclude.split("/public/");
     std::string AltCanonicalInclude =
         Parts.first.str() + "/internal/" + Parts.second.str();
@@ -78,7 +95,30 @@ DetermineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
       return IncludeSorter::IK_MainTUInclude;
     }
   }
+  if (Style == IncludeSorter::IS_Google_ObjC) {
+    if (IncludeFile.endswith(".generated.h") ||
+        IncludeFile.endswith(".proto.h") || IncludeFile.endswith(".pbobjc.h")) {
+      return IncludeSorter::IK_GeneratedInclude;
+    }
+  }
   return IncludeSorter::IK_NonSystemInclude;
+}
+
+int compareHeaders(StringRef LHS, StringRef RHS,
+                   IncludeSorter::IncludeStyle Style) {
+  if (Style == IncludeSorter::IncludeStyle::IS_Google_ObjC) {
+    const std::pair<const char *, const char *> &Mismatch =
+        std::mismatch(LHS.begin(), LHS.end(), RHS.begin());
+    if ((Mismatch.first != LHS.end()) && (Mismatch.second != RHS.end())) {
+      if ((*Mismatch.first == '.') && (*Mismatch.second == '+')) {
+        return -1;
+      }
+      if ((*Mismatch.first == '+') && (*Mismatch.second == '.')) {
+        return 1;
+      }
+    }
+  }
+  return LHS.compare(RHS);
 }
 
 } // namespace
@@ -112,9 +152,16 @@ void IncludeSorter::AddInclude(StringRef FileName, bool IsAngled,
 
 Optional<FixItHint> IncludeSorter::CreateIncludeInsertion(StringRef FileName,
                                                           bool IsAngled) {
-  std::string IncludeStmt =
-      IsAngled ? llvm::Twine("#include <" + FileName + ">\n").str()
-               : llvm::Twine("#include \"" + FileName + "\"\n").str();
+  std::string IncludeStmt;
+  if (Style == IncludeStyle::IS_Google_ObjC) {
+    IncludeStmt = IsAngled
+                      ? llvm::Twine("#import <" + FileName + ">\n").str()
+                      : llvm::Twine("#import \"" + FileName + "\"\n").str();
+  } else {
+    IncludeStmt = IsAngled
+                      ? llvm::Twine("#include <" + FileName + ">\n").str()
+                      : llvm::Twine("#include \"" + FileName + "\"\n").str();
+  }
   if (SourceLocations.empty()) {
     // If there are no includes in this file, add it in the first line.
     // FIXME: insert after the file comment or the header guard, if present.
@@ -128,7 +175,7 @@ Optional<FixItHint> IncludeSorter::CreateIncludeInsertion(StringRef FileName,
 
   if (!IncludeBucket[IncludeKind].empty()) {
     for (const std::string &IncludeEntry : IncludeBucket[IncludeKind]) {
-      if (FileName < IncludeEntry) {
+      if (compareHeaders(FileName, IncludeEntry, Style) < 0) {
         const auto &Location = IncludeLocations[IncludeEntry][0];
         return FixItHint::CreateInsertion(Location.getBegin(), IncludeStmt);
       } else if (FileName == IncludeEntry) {
@@ -181,7 +228,8 @@ llvm::ArrayRef<std::pair<utils::IncludeSorter::IncludeStyle, StringRef>>
 OptionEnumMapping<utils::IncludeSorter::IncludeStyle>::getEnumMapping() {
   static constexpr std::pair<utils::IncludeSorter::IncludeStyle, StringRef>
       Mapping[] = {{utils::IncludeSorter::IS_LLVM, "llvm"},
-                   {utils::IncludeSorter::IS_Google, "google"}};
+                   {utils::IncludeSorter::IS_Google, "google"},
+                   {utils::IncludeSorter::IS_Google_ObjC, "google-objc"}};
   return makeArrayRef(Mapping);
 }
 } // namespace tidy

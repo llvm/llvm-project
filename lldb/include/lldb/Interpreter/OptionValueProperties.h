@@ -104,11 +104,6 @@ public:
   Status SetSubValue(const ExecutionContext *exe_ctx, VarSetOperationType op,
                      llvm::StringRef path, llvm::StringRef value) override;
 
-  virtual bool PredicateMatches(const ExecutionContext *exe_ctx,
-    llvm::StringRef predicate) const {
-    return false;
-  }
-
   OptionValueArch *
   GetPropertyAtIndexAsOptionValueArch(const ExecutionContext *exe_ctx,
                                       uint32_t idx) const;

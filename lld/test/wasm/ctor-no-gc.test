@@ -1,0 +1,12 @@
+; Like ctor-gc-setup.test, but it calls a different function, so it does pull
+; in the object containing `ctor`, so `ctor` is linked in.
+;
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ctor-ctor.s -o %t.ctor.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ctor-lib.s -o %t.lib.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ctor-setup-call-def.s -o %t.setup-call-def.o
+; RUN: rm -f %t.lib.a
+; RUN: llvm-ar rcs %t.lib.a %t.lib.o %t.ctor.o
+; RUN: wasm-ld %t.setup-call-def.o %t.lib.a -o %t.wasm
+; RUN: obj2yaml %t.wasm | FileCheck %s
+
+; CHECK: Name: test_ctor

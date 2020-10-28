@@ -619,6 +619,32 @@ def OpM : TEST_Op<"op_m"> {
   let results = (outs I32);
 }
 
+def OpN : TEST_Op<"op_n"> {
+  let arguments = (ins I32, I32);
+  let results = (outs I32);
+}
+
+def OpO : TEST_Op<"op_o"> {
+  let arguments = (ins I32);
+  let results = (outs I32);
+}
+
+def OpP : TEST_Op<"op_p"> {
+  let arguments = (ins I32, I32, I32, I32, I32, I32);
+  let results = (outs I32);
+}
+
+// Test same operand name enforces equality condition check.
+def TestEqualArgsPattern : Pat<(OpN $a, $a), (OpO $a)>;
+
+// Test when equality is enforced at different depth.
+def TestNestedOpEqualArgsPattern :
+  Pat<(OpN $b, (OpP $a, $b, $c, $d, $e, $f)), (replaceWithValue $b)>;
+
+// Test multiple equal arguments check enforced.
+def TestMultipleEqualArgsPattern :
+  Pat<(OpP $a, $b, $a, $a, $b, $c), (OpN $c, $b)>;
+
 // Test for memrefs normalization of an op with normalizable memrefs.
 def OpNorm : TEST_Op<"op_norm", [MemRefsNormalizable]> {
   let arguments = (ins AnyMemRef:$X, AnyMemRef:$Y);
@@ -635,7 +661,7 @@ def OpFuncRef : TEST_Op<"op_funcref"> {
   let description = [{
     The "test.op_funcref" is a test op with a reference to a function symbol.
   }];
-  let builders = [OpBuilder<[{FuncOp function}]>];
+  let builders = [OpBuilderDAG<(ins "FuncOp":$function)>];
 }
 
 // Pattern add the argument plus a increasing static number hidden in
@@ -773,6 +799,22 @@ def TestOpWithRegionPattern : TEST_Op<"op_with_region_pattern"> {
   let hasCanonicalizer = 1;
 }
 
+def TestOpConstant : TEST_Op<"constant", [ConstantLike, NoSideEffect]> {
+  let arguments = (ins AnyAttr:$value);
+  let results = (outs AnyType);
+  let extraClassDeclaration = [{
+    Attribute getValue() { return getAttr("value"); }
+  }];
+
+  let hasFolder = 1;
+}
+
+def OpR : TEST_Op<"op_r">, Arguments<(ins AnyInteger, AnyInteger)>, Results<(outs AnyInteger)>;
+def OpS : TEST_Op<"op_s">, Arguments<(ins AnyInteger, AnyAttr:$value)>, Results<(outs AnyInteger)>;
+
+def : Pat<(OpR $input1, (ConstantLikeMatcher I32Attr:$input2)),
+          (OpS:$unused $input1, $input2)>;
+
 // Op for testing trivial removal via folding of op with inner ops and no uses.
 def TestOpWithRegionFoldNoSideEffect : TEST_Op<
     "op_with_region_fold_no_side_effect", [NoSideEffect]> {
@@ -796,6 +838,36 @@ def TestOpWithVariadicResultsAndFolder: TEST_Op<"op_with_variadic_results_and_fo
 def TestCommutativeOp : TEST_Op<"op_commutative", [Commutative]> {
   let arguments = (ins I32:$op1, I32:$op2, I32:$op3, I32:$op4);
   let results = (outs I32);
+}
+
+def TestIdempotentTraitOp
+ : TEST_Op<"op_idempotent_trait",
+           [SameOperandsAndResultType, NoSideEffect, Idempotent]> {
+  let arguments = (ins I32:$op1);
+  let results = (outs I32);
+}
+
+def TestInvolutionTraitNoOperationFolderOp
+ : TEST_Op<"op_involution_trait_no_operation_fold",
+           [SameOperandsAndResultType, NoSideEffect, Involution]> {
+  let arguments = (ins I32:$op1);
+  let results = (outs I32);
+}
+
+def TestInvolutionTraitFailingOperationFolderOp
+ : TEST_Op<"op_involution_trait_failing_operation_fold",
+           [SameOperandsAndResultType, NoSideEffect, Involution]> {
+  let arguments = (ins I32:$op1);
+  let results = (outs I32);
+  let hasFolder = 1;
+}
+
+def TestInvolutionTraitSuccesfulOperationFolderOp
+ : TEST_Op<"op_involution_trait_succesful_operation_fold",
+           [SameOperandsAndResultType, NoSideEffect, Involution]> {
+  let arguments = (ins I32:$op1);
+  let results = (outs I32);
+  let hasFolder = 1;
 }
 
 def TestOpInPlaceFoldAnchor : TEST_Op<"op_in_place_fold_anchor"> {
@@ -1070,16 +1142,15 @@ def MixedVResultOp3 : TEST_Op<"mixed_variadic_out3",
   // We will use this op in a nested result pattern, where we cannot deduce the
   // result type. So need to provide a builder not requiring result types.
   let builders = [
-    OpBuilder<
-      "IntegerAttr count",
-      [{
-        auto i32Type = $_builder.getIntegerType(32);
-        $_state.addTypes(i32Type); // $output1
-        SmallVector<Type, 4> types(count.getInt(), i32Type);
-        $_state.addTypes(types); // $output2
-        $_state.addTypes(types); // $output3
-        $_state.addAttribute("count", count);
-      }]>
+    OpBuilderDAG<(ins "IntegerAttr":$count),
+    [{
+      auto i32Type = $_builder.getIntegerType(32);
+      $_state.addTypes(i32Type); // $output1
+      SmallVector<Type, 4> types(count.getInt(), i32Type);
+      $_state.addTypes(types); // $output2
+      $_state.addTypes(types); // $output3
+      $_state.addAttribute("count", count);
+    }]>
   ];
 }
 
@@ -1130,13 +1201,14 @@ def LegalOpB : TEST_Op<"legal_op_b">, Results<(outs I32)>;
 def IllegalOpTerminator : TEST_Op<"illegal_op_terminator", [Terminator]>;
 def IllegalOpWithRegion : TEST_Op<"illegal_op_with_region"> {
   let skipDefaultBuilders = 1;
-  let builders = [OpBuilder<"",
-                  [{ Region *bodyRegion = $_state.addRegion();
-                     OpBuilder::InsertionGuard g($_builder);
-                     Block *body = $_builder.createBlock(bodyRegion);
-                     $_builder.setInsertionPointToEnd(body);
-                     $_builder.create<IllegalOpTerminator>($_state.location);
-                  }]>];
+  let builders = [OpBuilderDAG<(ins),
+    [{
+       Region *bodyRegion = $_state.addRegion();
+       OpBuilder::InsertionGuard g($_builder);
+       Block *body = $_builder.createBlock(bodyRegion);
+       $_builder.setInsertionPointToEnd(body);
+       $_builder.create<IllegalOpTerminator>($_state.location);
+    }]>];
 }
 def IllegalOpWithRegionAnchor : TEST_Op<"illegal_op_with_region_anchor">;
 
@@ -1173,8 +1245,8 @@ def TestRecursiveRewriteOp : TEST_Op<"recursive_rewrite"> {
 def TestRegionBuilderOp : TEST_Op<"region_builder">;
 def TestReturnOp : TEST_Op<"return", [ReturnLike, Terminator]> {
   let arguments = (ins Variadic<AnyType>);
-  let builders = [
-    OpBuilder<"", [{ build($_builder, $_state, {}); }]>
+  let builders = [OpBuilderDAG<(ins),
+    [{ build($_builder, $_state, {}); }]>
   ];
 }
 def TestCastOp : TEST_Op<"cast">,
@@ -1302,7 +1374,7 @@ def AsmDialectInterfaceOp : TEST_Op<"asm_dialect_interface_op"> {
 
 def FormatLiteralOp : TEST_Op<"format_literal_op"> {
   let assemblyFormat = [{
-    `keyword_$.` `->` `:` `,` `=` `<` `>` `(` `)` `[` `]` attr-dict
+    `keyword_$.` `->` `:` `,` `=` `<` `>` `(` `)` `[` `]` ` ` `(` ` ` `)` ` ` attr-dict
   }];
 }
 
@@ -1563,6 +1635,14 @@ def FormatCustomDirectiveAttributes
       $attr, $optAttr
     )
     attr-dict
+  }];
+}
+
+def FormatCustomDirectiveAttrDict
+    : TEST_Op<"format_custom_directive_attrdict"> {
+  let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$optAttr);
+  let assemblyFormat = [{
+    custom<CustomDirectiveAttrDict>( attr-dict )
   }];
 }
 

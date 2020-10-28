@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm -std=c++98 -o - -fcxx-exceptions -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm -std=c++11 -o - -fcxx-exceptions -fexceptions | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
 
+// CHECK: %[[STRUCT_TEST13_A:.*]] = type { i32, i32 }
+
 typedef __typeof(sizeof(0)) size_t;
 
 // Declare the reserved global placement new.
@@ -146,12 +148,12 @@ namespace test1 {
     // CHECK:      [[NEW:%.*]] = call noalias nonnull i8* @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, i1* [[ACTIVE]]
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
-    // CHECK-NEXT: invoke void @_ZN5test15makeBEv([[B:%.*]]* sret align 4 [[T0:%.*]])
+    // CHECK-NEXT: invoke void @_ZN5test15makeBEv([[B:%.*]]* sret([[B]]) align 4 [[T0:%.*]])
     // CHECK:      [[T1:%.*]] = invoke i32 @_ZN5test11BcviEv([[B]]* [[T0]])
     // CHECK:      invoke void @_ZN5test11AC1Ei([[A]]* [[CAST]], i32 [[T1]])
     // CHECK:      store i1 false, i1* [[ACTIVE]]
     // CHECK-NEXT: store [[A]]* [[CAST]], [[A]]** [[X]], align 8
-    // CHECK:      invoke void @_ZN5test15makeBEv([[B:%.*]]* sret align 4 [[T2:%.*]])
+    // CHECK:      invoke void @_ZN5test15makeBEv([[B:%.*]]* sret([[B]]) align 4 [[T2:%.*]])
     // CHECK:      [[RET:%.*]] = load [[A]]*, [[A]]** [[X]], align 8
 
     // CHECK98:      invoke void @_ZN5test11BD1Ev([[B]]* [[T2]])
@@ -239,7 +241,7 @@ namespace test3 {
     // CHECK-NEXT: store i8* [[FOO]], i8** [[SAVED1]]
     // CHECK-NEXT: store i1 true, i1* [[CLEANUPACTIVE]]
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
-    // CHECK-NEXT: invoke void @_ZN5test35makeAEv([[A]]* sret align 8 [[CAST]])
+    // CHECK-NEXT: invoke void @_ZN5test35makeAEv([[A]]* sret([[A]]) align 8 [[CAST]])
     // CHECK: br label
     //   -> cond.end
             new(foo(),10.0) A(makeA()) :
@@ -592,6 +594,43 @@ namespace test12 {
 
   // CHECK98:       invoke void @_ZN6test121AdlEPvS1_(i8* [[PTR]], i8* [[PTR]])
   // CHECK11:       call void @_ZN6test121AdlEPvS1_(i8* [[PTR]], i8* [[PTR]])
+}
+
+namespace test13 {
+
+struct A {
+  A();
+  ~A();
+  int a, b;
+};
+
+// CHECK: define void @_ZN6test134testEi(
+// CHECK: %[[REF_TMP:.*]] = alloca %[[STRUCT_TEST13_A]], align 4
+// CHECK: %[[CLEANUP_COND:.*]] = alloca i1, align 1
+// CHECK: %[[REF_TMP1:.*]] = alloca %[[STRUCT_TEST13_A]], align 4
+// CHECK: %[[CLEANUP_COND2:.*]] = alloca i1, align 1
+
+// CHECK: call void @_ZN6test131AC1Ev(%[[STRUCT_TEST13_A]]* %[[REF_TMP]])
+// CHECK: store i1 true, i1* %[[CLEANUP_COND]], align 1
+// CHECK: br
+
+// CHECK: invoke void @_ZN6test131AC1Ev(%[[STRUCT_TEST13_A]]* %[[REF_TMP1]])
+
+// CHECK: store i1 true, i1* %[[CLEANUP_COND2]], align 1
+// CHECK: br
+
+// Check the flag before destructing the temporary.
+
+// CHECK: landingpad { i8*, i32 }
+// CHECK: %[[CLEANUP_IS_ACTIVE:.*]] = load i1, i1* %[[CLEANUP_COND]], align 1
+// CHECK: br i1 %[[CLEANUP_IS_ACTIVE]],
+
+// CHECK: void @_ZN6test131AD1Ev(%[[STRUCT_TEST13_A]]* %[[REF_TMP]])
+
+void test(int c) {
+  const A &s = c ? static_cast<const A &>(A()) : static_cast<const A &>(A());
+}
+
 }
 
 // CHECK98: attributes [[NI_NR_NUW]] = { noinline noreturn nounwind }

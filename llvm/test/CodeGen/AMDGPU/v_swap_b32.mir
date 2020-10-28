@@ -517,7 +517,9 @@ body:             |
 ...
 
 # GCN-LABEL: name: swap_virt_copy_subreg_impdef_super
-# GCN: %0.sub0:vreg_64, %1.sub0:vreg_64 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
+# GCN:      %2:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: %2.sub1:vreg_64 = COPY %0.sub1
+# GCN-NEXT: %0.sub0:vreg_64, %1.sub0:vreg_64 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
 ---
 name:            swap_virt_copy_subreg_impdef_super
 registers:
@@ -671,4 +673,223 @@ body:             |
     %0 = COPY %1
     %1 = COPY %2
     S_ENDPGM 0
+...
+
+# GCN-LABEL: name: swap_liveness_error_mov
+# GCN:      $vgpr6 = V_MOV_B32_e32 $vgpr1, implicit $exec
+# GCN-NEXT: $vgpr1, $vgpr5 = V_SWAP_B32 $vgpr5, $vgpr1, implicit $exec
+# GCN-NEXT: $vgpr5_vgpr6 = IMPLICIT_DEF
+# GCN-NEXT: $vgpr6 = V_MOV_B32_e32 $vgpr7, implicit $exec, implicit $vgpr6_vgpr7
+# GCN-NEXT: $vgpr5 = V_MOV_B32_e32 $vgpr6, implicit $exec
+
+---
+name: swap_liveness_error_mov
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr5, $vgpr1_vgpr2
+
+    $vgpr6 = V_MOV_B32_e32 $vgpr1, implicit $exec, implicit killed $vgpr1_vgpr2
+    $vgpr1 = V_MOV_B32_e32 killed $vgpr5, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 $vgpr6, implicit $exec, implicit-def $vgpr5_vgpr6, implicit $vgpr6_vgpr7
+    $vgpr6 = V_MOV_B32_e32 $vgpr7, implicit $exec, implicit $vgpr6_vgpr7
+    $vgpr5 = V_MOV_B32_e32 $vgpr6, implicit $exec
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: swap_liveness_error_copy
+# GCN:      $vgpr6 = COPY $vgpr1
+# GCN-NEXT: $vgpr1, $vgpr5 = V_SWAP_B32 $vgpr5, $vgpr1, implicit $exec
+# GCN-NEXT: $vgpr5_vgpr6 = IMPLICIT_DEF
+# GCN-NEXT: $vgpr6 = COPY $vgpr7, implicit $vgpr6_vgpr7
+# GCN-NEXT: $vgpr5 = COPY $vgpr6
+
+---
+name: swap_liveness_error_copy
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr5, $vgpr1_vgpr2
+
+    $vgpr6 = COPY $vgpr1, implicit killed $vgpr1_vgpr2
+    $vgpr1 = COPY killed $vgpr5
+    $vgpr5 = COPY $vgpr6, implicit-def $vgpr5_vgpr6, implicit $vgpr6_vgpr7
+    $vgpr6 = COPY $vgpr7, implicit $vgpr6_vgpr7
+    $vgpr5 = COPY $vgpr6
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: swap_killed_t_early
+# GCN:      $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+# GCN-NEXT: $vgpr3 = V_MOV_B32_e32 killed $vgpr4, implicit $exec, implicit killed $vgpr2
+# GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+# GCN-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr6, implicit $exec
+# GCN-NEXT: $vgpr1 = V_MOV_B32_e32 undef $vgpr2, implicit $exec
+
+---
+name:            swap_killed_t_early
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 killed $vgpr4, implicit $exec, implicit killed $vgpr2
+    $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 killed $vgpr6, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 undef $vgpr2, implicit $exec
+    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
+...
+
+# GCN-LABEL: name: swap_killed_t_late
+# GCN:      $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+# GCN-NEXT: $vgpr3 = V_MOV_B32_e32 killed $vgpr4, implicit $exec
+# GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+# GCN-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr6, implicit $exec, implicit killed $vgpr2
+# GCN-NEXT: $vgpr1 = V_MOV_B32_e32 undef $vgpr2, implicit $exec
+
+---
+name:            swap_killed_t_late
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 killed $vgpr4, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 killed $vgpr6, implicit $exec, implicit killed $vgpr2
+    $vgpr1 = V_MOV_B32_e32 undef $vgpr2, implicit $exec
+    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
+...
+
+# GCN-LABEL: name: swap_killed_x
+# GCN:      $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+# GCN-NEXT: $vgpr3 = V_MOV_B32_e32 killed $vgpr4, implicit $exec
+# GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+# GCN-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr6, implicit $exec, implicit killed $vgpr0
+# GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+
+---
+name:            swap_killed_x
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 killed $vgpr4, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 killed $vgpr6, implicit $exec, implicit killed $vgpr0
+    $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
+...
+
+# GCN-LABEL: name: indirect_mov_t
+# GCN:      $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec, implicit $m0
+# GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+# GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+# GCN-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
+
+---
+name:            indirect_mov_t
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec, implicit $m0
+    $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
+...
+
+# GCN-LABEL: name: indirect_mov_x
+# GCN:      $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+# GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec, implicit $m0
+# GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+# GCN-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
+
+---
+name:            indirect_mov_x
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec, implicit $m0
+    $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
+...
+
+# GCN-LABEL: name: indirect_mov_y
+# GCN:      $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+# GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+# GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec, implicit $m0
+# GCN-NEXT: S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
+
+---
+name:            indirect_mov_y
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec, implicit $m0
+    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
+...
+
+# GCN-LABEL: name: implicit_ops_mov_x_swap_b32
+# GCN: $vgpr0, $vgpr1 = V_SWAP_B32 $vgpr1, $vgpr0, implicit $exec, implicit $vgpr2, implicit killed $vgpr1_vgpr2
+
+---
+name:            implicit_ops_mov_x_swap_b32
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    $vgpr3 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec, implicit $vgpr2, implicit killed $vgpr1_vgpr2
+    $vgpr1 = V_MOV_B32_e32 killed $vgpr3, implicit $exec
+    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
+...
+
+# GCN-LABEL: name: implict_ops_mov_x_swap_b64
+# GCN:      %2:vreg_64 = COPY %0
+# GCN-NEXT: %0:vreg_64 = COPY %1, implicit $vgpr0
+# GCN-NEXT: %1:vreg_64 = COPY %2
+
+---
+name:            implict_ops_mov_x_swap_b64
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: vreg_64 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = COPY %0
+    %0 = COPY %1, implicit $vgpr0
+    %1 = COPY %2
+...
+
+# GCN-LABEL: implicit_ops_mov_t_swap_b32
+# GCN:      $vgpr1 = IMPLICIT_DEF
+# GCN-NEXT: $vgpr0, $vgpr1 = V_SWAP_B32 $vgpr1, $vgpr0, implicit $exec
+
+---
+name:            implicit_ops_mov_t_swap_b32
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    $vgpr3 = V_MOV_B32_e32 killed $vgpr0, implicit $exec, implicit $vgpr2, implicit killed $vgpr1_vgpr2, implicit-def $vgpr1
+    $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 killed $vgpr3, implicit $exec
+    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
+...
+
+# GCN-LABEL: implicit_ops_mov_y_swap_b32
+# GCN:      $vgpr0, $vgpr1 = V_SWAP_B32 $vgpr1, $vgpr0, implicit $exec
+# GCN-NEXT: $vgpr0_vgpr1 = IMPLICIT_DEF
+
+---
+name:            implicit_ops_mov_y_swap_b32
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    $vgpr3 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 killed $vgpr3, implicit $exec, implicit $vgpr2, implicit-def $vgpr0_vgpr1, implicit killed $vgpr3
+    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
 ...

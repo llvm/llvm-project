@@ -77,6 +77,13 @@ void WebAssemblyTargetAsmStreamer::emitGlobalType(const MCSymbolWasm *Sym) {
   OS << '\n';
 }
 
+void WebAssemblyTargetAsmStreamer::emitTableType(const MCSymbolWasm *Sym) {
+  assert(Sym->isTable());
+  OS << "\t.tabletype\t" << Sym->getName() << ", "
+     << WebAssembly::typeToString(Sym->getTableType());
+  OS << '\n';
+}
+
 void WebAssemblyTargetAsmStreamer::emitEventType(const MCSymbolWasm *Sym) {
   assert(Sym->isEvent());
   OS << "\t.eventtype\t" << Sym->getName() << " ";

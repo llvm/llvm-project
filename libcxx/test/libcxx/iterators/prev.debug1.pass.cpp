@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Can't test the system lib because this test enables debug mode
-// UNSUPPORTED: with_system_cxx_lib=macosx
-
 // UNSUPPORTED: c++03
 // UNSUPPORTED: windows
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=0
+// UNSUPPORTED: libcxx-no-debug-mode
 
 // <list>
 

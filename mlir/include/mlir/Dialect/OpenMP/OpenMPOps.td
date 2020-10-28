@@ -58,12 +58,15 @@ def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments]> {
     should be used to execute the parallel region.
 
     The optional $default_val attribute specifies the default data sharing attribute
-    of variables used in the parallel region that are not passed explicitly as parameters
+    of values used in the parallel region that are not passed explicitly as parameters
     to the operation.
 
     The $private_vars, $firstprivate_vars, $shared_vars and $copyin_vars parameters
-    are a variadic list of variables that specify the data sharing attribute of
-    those variables.
+    are a variadic list of values that specify the data sharing attribute of
+    those values.
+
+    The $allocators_vars and $allocate_vars parameters are a variadic list of values
+    that specify the memory allocator to be used to obtain storage for private values.
 
     The optional $proc_bind_val attribute controls the thread affinity for the execution
     of the parallel region.
@@ -76,12 +79,15 @@ def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments]> {
              Variadic<AnyType>:$firstprivate_vars,
              Variadic<AnyType>:$shared_vars,
              Variadic<AnyType>:$copyin_vars,
+             Variadic<AnyType>:$allocate_vars,
+             Variadic<AnyType>:$allocators_vars,
              OptionalAttr<ProcBindKind>:$proc_bind_val);
 
   let regions = (region AnyRegion:$region);
 
   let parser = [{ return parseParallelOp(parser, result); }];
   let printer = [{ return printParallelOp(p, *this); }];
+  let verifier = [{ return ::verifyParallelOp(*this); }];
 }
 
 def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {

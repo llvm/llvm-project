@@ -58,6 +58,9 @@ public:
     /// This element is a literal.
     Literal,
 
+    /// This element is printed as a space. It is ignored by the parser.
+    Space,
+
     /// This element is an variable value.
     AttributeVariable,
     OperandVariable,
@@ -291,6 +294,21 @@ bool LiteralElement::isValidLiteral(StringRef value) {
     return isalnum(c) || c == '_' || c == '$' || c == '.';
   });
 }
+
+//===----------------------------------------------------------------------===//
+// SpaceElement
+
+namespace {
+/// This class represents an instance of a space element. It's a literal that
+/// is only printed, but ignored by the parser.
+class SpaceElement : public Element {
+public:
+  SpaceElement() : Element{Kind::Space} {}
+  static bool classof(const Element *element) {
+    return element->getKind() == Kind::Space;
+  }
+};
+} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 // OptionalElement
@@ -719,7 +737,7 @@ static void genLiteralParser(StringRef value, OpMethodBody &body) {
     body << "Keyword(\"" << value << "\")";
     return;
   }
-  body << (StringRef)llvm::StringSwitch<StringRef>(value)
+  body << (StringRef)StringSwitch<StringRef>(value)
               .Case("->", "Arrow()")
               .Case(":", "Colon()")
               .Case(",", "Comma()")
@@ -845,7 +863,8 @@ static void genCustomParameterParser(Element &param, OpMethodBody &body) {
   body << ", ";
   if (auto *attr = dyn_cast<AttributeVariable>(&param)) {
     body << attr->getVar()->name << "Attr";
-
+  } else if (isa<AttrDictDirective>(&param)) {
+    body << "result.attributes";
   } else if (auto *operand = dyn_cast<OperandVariable>(&param)) {
     StringRef name = operand->getVar()->name;
     ArgumentLengthKind lengthKind = getArgumentLengthKind(operand->getVar());
@@ -1059,6 +1078,10 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
     body << "  if (parser.parse";
     genLiteralParser(literal->getLiteral(), body);
     body << ")\n    return ::mlir::failure();\n";
+
+    /// Spaces.
+  } else if (isa<SpaceElement>(element)) {
+    // Nothing to parse.
 
     /// Arguments.
   } else if (auto *attr = dyn_cast<AttributeVariable>(element)) {
@@ -1459,7 +1482,7 @@ static void genLiteralPrinter(StringRef value, OpMethodBody &body,
     return !StringRef("<>(){}[],").contains(value.front());
   };
   if (shouldEmitSpace && shouldPrintSpaceBeforeLiteral())
-    body << " << \" \"";
+    body << " << ' '";
   body << " << \"" << value << "\";\n";
 
   // Insert a space after certain literals.
@@ -1468,16 +1491,29 @@ static void genLiteralPrinter(StringRef value, OpMethodBody &body,
   lastWasPunctuation = !(value.front() == '_' || isalpha(value.front()));
 }
 
-/// Generate the printer for a literal value. `shouldEmitSpace` is true if a
-/// space should be emitted before this element. `lastWasPunctuation` is true if
-/// the previous element was a punctuation literal.
+/// Generate the printer for a space. `shouldEmitSpace` and `lastWasPunctuation`
+/// are set to false.
+static void genSpacePrinter(OpMethodBody &body, bool &shouldEmitSpace,
+                            bool &lastWasPunctuation) {
+  body << "  p << ' ';\n";
+  shouldEmitSpace = false;
+  lastWasPunctuation = false;
+}
+
+/// Generate the printer for a custom directive.
 static void genCustomDirectivePrinter(CustomDirective *customDir,
                                       OpMethodBody &body) {
-  body << "  print" << customDir->getName() << "(p";
+  body << "  print" << customDir->getName() << "(p, *this";
   for (Element &param : customDir->getArguments()) {
     body << ", ";
     if (auto *attr = dyn_cast<AttributeVariable>(&param)) {
       body << attr->getVar()->name << "Attr()";
+
+    } else if (isa<AttrDictDirective>(&param)) {
+      // Enforce the const-ness since getMutableAttrDict() returns a reference
+      // into the Operations `attr` member.
+      body << "(const "
+              "MutableDictionaryAttr&)getOperation()->getMutableAttrDict()";
 
     } else if (auto *operand = dyn_cast<OperandVariable>(&param)) {
       body << operand->getVar()->name << "()";
@@ -1562,6 +1598,9 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
     return genLiteralPrinter(literal->getLiteral(), body, shouldEmitSpace,
                              lastWasPunctuation);
 
+  if (isa<SpaceElement>(element))
+    return genSpacePrinter(body, shouldEmitSpace, lastWasPunctuation);
+
   // Emit an optional group.
   if (OptionalElement *optional = dyn_cast<OptionalElement>(element)) {
     // Emit the check for the presence of the anchor element.
@@ -1613,7 +1652,7 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
   // Optionally insert a space before the next element. The AttrDict printer
   // already adds a space as necessary.
   if (shouldEmitSpace || !lastWasPunctuation)
-    body << "  p << \" \";\n";
+    body << "  p << ' ';\n";
   lastWasPunctuation = false;
   shouldEmitSpace = true;
 
@@ -1623,8 +1662,8 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
     // If we are formatting as an enum, symbolize the attribute as a string.
     if (canFormatEnumAttr(var)) {
       const EnumAttr &enumAttr = cast<EnumAttr>(var->attr);
-      body << "  p << \"\\\"\" << " << enumAttr.getSymbolToStringFnName() << "("
-           << var->name << "()) << \"\\\"\";\n";
+      body << "  p << '\"' << " << enumAttr.getSymbolToStringFnName() << "("
+           << var->name << "()) << '\"';\n";
       return;
     }
 
@@ -1936,7 +1975,7 @@ Token FormatLexer::lexIdentifier(const char *tokStart) {
   // Check to see if this identifier is a keyword.
   StringRef str(tokStart, curPtr - tokStart);
   Token::Kind kind =
-      llvm::StringSwitch<Token::Kind>(str)
+      StringSwitch<Token::Kind>(str)
           .Case("attr-dict", Token::kw_attr_dict)
           .Case("attr-dict-with-keyword", Token::kw_attr_dict_w_keyword)
           .Case("custom", Token::kw_custom)
@@ -2208,8 +2247,9 @@ LogicalResult FormatParser::verifyAttributes(
     for (auto &nextItPair : iteratorStack) {
       ElementsIterT nextIt = nextItPair.first, nextE = nextItPair.second;
       for (; nextIt != nextE; ++nextIt) {
-        // Skip any trailing optional groups or attribute dictionaries.
-        if (isa<AttrDictDirective>(*nextIt) || isa<OptionalElement>(*nextIt))
+        // Skip any trailing spaces, attribute dictionaries, or optional groups.
+        if (isa<SpaceElement>(*nextIt) || isa<AttrDictDirective>(*nextIt) ||
+            isa<OptionalElement>(*nextIt))
           continue;
 
         // We are only interested in `:` literals.
@@ -2528,8 +2568,15 @@ LogicalResult FormatParser::parseLiteral(std::unique_ptr<Element> &element) {
   Token literalTok = curToken;
   consumeToken();
 
-  // Check that the parsed literal is valid.
   StringRef value = literalTok.getSpelling().drop_front().drop_back();
+
+  // The parsed literal is a space.
+  if (value.size() == 1 && value.front() == ' ') {
+    element = std::make_unique<SpaceElement>();
+    return ::mlir::success();
+  }
+
+  // Check that the parsed literal is valid.
   if (!LiteralElement::isValidLiteral(value))
     return emitError(literalTok.getLoc(), "expected valid literal");
 
@@ -2641,10 +2688,11 @@ LogicalResult FormatParser::parseOptionalChildElement(
         // a check here.
         return ::mlir::success();
       })
-      // Literals, custom directives, and type directives may be used,
+      // Literals, spaces, custom directives, and type directives may be used,
       // but they can't anchor the group.
-      .Case<LiteralElement, CustomDirective, FunctionalTypeDirective,
-            OptionalElement, TypeRefDirective, TypeDirective>([&](Element *) {
+      .Case<LiteralElement, SpaceElement, CustomDirective,
+            FunctionalTypeDirective, OptionalElement, TypeRefDirective,
+            TypeDirective>([&](Element *) {
         if (isAnchor)
           return emitError(childLoc, "only variables can be used to anchor "
                                      "an optional group");
@@ -2735,8 +2783,9 @@ LogicalResult FormatParser::parseCustomDirectiveParameter(
     return ::mlir::failure();
 
   // Verify that the element can be placed within a custom directive.
-  if (!isa<TypeRefDirective, TypeDirective, AttributeVariable, OperandVariable,
-           RegionVariable, SuccessorVariable>(parameters.back().get())) {
+  if (!isa<TypeRefDirective, TypeDirective, AttrDictDirective,
+           AttributeVariable, OperandVariable, RegionVariable,
+           SuccessorVariable>(parameters.back().get())) {
     return emitError(childLoc, "only variables and types may be used as "
                                "parameters to a custom directive");
   }

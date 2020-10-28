@@ -65,6 +65,10 @@ public:
 
   /// Creates an execution engine for the given module.
   ///
+  /// If `llvmModuleBuilder` is provided, it will be used to create LLVM module
+  /// from the given MLIR module. Otherwise, a default `translateModuleToLLVMIR`
+  /// function will be used to translate MLIR module to LLVM IR.
+  ///
   /// If `transformer` is provided, it will be called on the LLVM module during
   /// JIT-compilation and can be used, e.g., for reporting or optimization.
   ///
@@ -84,6 +88,9 @@ public:
   /// the llvm's global Perf notification listener.
   static llvm::Expected<std::unique_ptr<ExecutionEngine>>
   create(ModuleOp m,
+         llvm::function_ref<std::unique_ptr<llvm::Module>(ModuleOp,
+                                                          llvm::LLVMContext &)>
+             llvmModuleBuilder = nullptr,
          llvm::function_ref<llvm::Error(llvm::Module *)> transformer = {},
          Optional<llvm::CodeGenOpt::Level> jitCodeGenOptLevel = llvm::None,
          ArrayRef<StringRef> sharedLibPaths = {}, bool enableObjectCache = true,

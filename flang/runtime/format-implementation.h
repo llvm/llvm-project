@@ -97,7 +97,7 @@ int FormatControl<CONTEXT>::GetIntField(
   }
   int result{0};
   bool negate{ch == '-'};
-  if (negate) {
+  if (negate || ch == '+') {
     firstCh = '\0';
     ch = PeekNext();
   }

@@ -323,7 +323,10 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // The isPseudo check really shouldn't be here, but unfortunately there are
     // some negative lit tests that depend on being able to continue through
     // here even when pseudo instructions haven't been lowered.
-    if (!MI->isPseudo() && STI.isCPUStringValid(STI.getCPU())) {
+    //
+    // We also overestimate branch sizes with the offset bug.
+    if (!MI->isPseudo() && STI.isCPUStringValid(STI.getCPU()) &&
+        (!STI.hasOffset3fBug() || !MI->isBranch())) {
       SmallVector<MCFixup, 4> Fixups;
       SmallVector<char, 16> CodeBytes;
       raw_svector_ostream CodeStream(CodeBytes);

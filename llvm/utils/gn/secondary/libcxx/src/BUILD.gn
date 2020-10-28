@@ -2,6 +2,9 @@ import("//clang/runtimes.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
 declare_args() {
+  # Whether to support libc++ opt-in debug mode via _LIBCPP_DEBUG.
+  libcxx_enable_debug_mode = true
+
   # Build libc++ with definitions for operator new/delete.
   libcxx_enable_new_delete_definitions = true
 
@@ -115,7 +118,6 @@ cxx_sources = [
   "chrono.cpp",
   "condition_variable.cpp",
   "condition_variable_destructor.cpp",
-  "debug.cpp",
   "exception.cpp",
   "functional.cpp",
   "future.cpp",
@@ -168,6 +170,9 @@ if (target_os == "win") {
 }
 if (target_os == "solaris") {
   cxx_sources += [ "support/solaris/xlocale.cpp" ]
+}
+if (libcxx_enable_debug_mode) {
+  cxx_sources += [ "debug.cpp" ]
 }
 if (libcxx_enable_filesystem) {
   cxx_sources += [

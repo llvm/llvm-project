@@ -1,8 +1,8 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd- -mcpu=gfx600 -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,GFX6,GFX68 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd- -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,GFX8,GFX68 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,GFX8,GFX68 %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+code-object-v3 -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,GFX10,GFX10WGP %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+code-object-v3,+cumode -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,GFX10,GFX10CU %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,GFX10,GFX10WGP %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+cumode -verify-machineinstrs < %s | FileCheck -check-prefixes=FUNC,GCN,GFX10,GFX10CU %s
 
 ; FUNC-LABEL: {{^}}system_one_as_acquire:
 ; GCN:        %bb.0

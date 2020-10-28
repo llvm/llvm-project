@@ -53,3 +53,87 @@ func @no_iteration(%A: memref<?x?xi32>) {
 // CHECK:             scf.yield
 // CHECK:           }
 // CHECK:           return
+
+// -----
+
+func @one_unused() -> (index) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %true = constant true
+  %0, %1 = scf.if %true -> (index, index) {
+    scf.yield %c0, %c1 : index, index
+  } else {
+    scf.yield %c0, %c1 : index, index
+  }
+  return %1 : index
+}
+
+// CHECK-LABEL:   func @one_unused
+// CHECK:           [[C0:%.*]] = constant 1 : index
+// CHECK:           [[C1:%.*]] = constant true
+// CHECK:           [[V0:%.*]] = scf.if [[C1]] -> (index) {
+// CHECK:             scf.yield [[C0]] : index
+// CHECK:           } else
+// CHECK:             scf.yield [[C0]] : index
+// CHECK:           }
+// CHECK:           return [[V0]] : index
+
+// -----
+
+func @nested_unused() -> (index) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %true = constant true
+  %0, %1 = scf.if %true -> (index, index) {
+    %2, %3 = scf.if %true -> (index, index) {
+      scf.yield %c0, %c1 : index, index
+    } else {
+      scf.yield %c0, %c1 : index, index
+    }
+    scf.yield %2, %3 : index, index
+  } else {
+    scf.yield %c0, %c1 : index, index
+  }
+  return %1 : index
+}
+
+// CHECK-LABEL:   func @nested_unused
+// CHECK:           [[C0:%.*]] = constant 1 : index
+// CHECK:           [[C1:%.*]] = constant true
+// CHECK:           [[V0:%.*]] = scf.if [[C1]] -> (index) {
+// CHECK:             [[V1:%.*]] = scf.if [[C1]] -> (index) {
+// CHECK:               scf.yield [[C0]] : index
+// CHECK:             } else
+// CHECK:               scf.yield [[C0]] : index
+// CHECK:             }
+// CHECK:             scf.yield [[V1]] : index
+// CHECK:           } else
+// CHECK:             scf.yield [[C0]] : index
+// CHECK:           }
+// CHECK:           return [[V0]] : index
+
+// -----
+
+func @side_effect() {}
+func @all_unused() {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %true = constant true
+  %0, %1 = scf.if %true -> (index, index) {
+    call @side_effect() : () -> ()
+    scf.yield %c0, %c1 : index, index
+  } else {
+    call @side_effect() : () -> ()
+    scf.yield %c0, %c1 : index, index
+  }
+  return
+}
+
+// CHECK-LABEL:   func @all_unused
+// CHECK:           [[C1:%.*]] = constant true
+// CHECK:           scf.if [[C1]] {
+// CHECK:             call @side_effect() : () -> ()
+// CHECK:           } else
+// CHECK:             call @side_effect() : () -> ()
+// CHECK:           }
+// CHECK:           return

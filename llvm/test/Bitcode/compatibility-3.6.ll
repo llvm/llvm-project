@@ -408,7 +408,7 @@ declare void @f.param.byval({ i8, i8 }* byval)
 declare void @f.param.inalloca(i8* inalloca)
 ; CHECK: declare void @f.param.inalloca(i8* inalloca)
 declare void @f.param.sret(i8* sret)
-; CHECK: declare void @f.param.sret(i8* sret)
+; CHECK: declare void @f.param.sret(i8* sret(i8))
 declare void @f.param.noalias(i8* noalias)
 ; CHECK: declare void @f.param.noalias(i8* noalias)
 declare void @f.param.nocapture(i8* nocapture)
@@ -1179,12 +1179,12 @@ define void @intrinsics.codegen() {
 ; CHECK: attributes #26 = { sspstrong }
 ; CHECK: attributes #27 = { uwtable }
 ; CHECK: attributes #28 = { "cpu"="cortex-a8" }
-; CHECK: attributes #29 = { nounwind readnone willreturn }
-; CHECK: attributes #30 = { argmemonly nounwind readonly }
-; CHECK: attributes #31 = { argmemonly nounwind }
-; CHECK: attributes #32 = { nounwind readnone }
+; CHECK: attributes #29 = { nofree nosync nounwind readnone willreturn }
+; CHECK: attributes #30 = { nofree nosync nounwind willreturn }
+; CHECK: attributes #31 = { argmemonly nounwind readonly }
+; CHECK: attributes #32 = { argmemonly nounwind }
 ; CHECK: attributes #33 = { nounwind readonly }
-; CHECK: attributes #34 = { inaccessiblemem_or_argmemonly nounwind willreturn }
+; CHECK: attributes #34 = { inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn }
 ; CHECK: attributes #35 = { builtin }
 
 ;; Metadata

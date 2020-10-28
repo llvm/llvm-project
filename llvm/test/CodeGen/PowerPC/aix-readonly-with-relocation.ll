@@ -1,5 +1,7 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff --relocation-model=pic < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff --relocation-model=pic < %s | FileCheck --check-prefix=CHECK64 %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff \
+; RUN:     --relocation-model=pic -data-sections=false < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff \
+; RUN:     --relocation-model=pic -data-sections=false < %s | FileCheck --check-prefix=CHECK64 %s
 
 @a = common global i32 0
 @b = constant i32* @a

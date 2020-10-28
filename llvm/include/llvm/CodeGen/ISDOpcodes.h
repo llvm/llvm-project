@@ -283,6 +283,16 @@ enum NodeType {
   ADDCARRY,
   SUBCARRY,
 
+  /// Carry-using overflow-aware nodes for multiple precision addition and
+  /// subtraction. These nodes take three operands: The first two are normal lhs
+  /// and rhs to the add or sub, and the third is a boolean indicating if there
+  /// is an incoming carry. They produce two results: the normal result of the
+  /// add or sub, and a boolean that indicates if an overflow occured (*not*
+  /// flag, because it may be a store to memory, etc.). If the type of the
+  /// boolean is not i1 then the high bits conform to getBooleanContents.
+  SADDO_CARRY,
+  SSUBO_CARRY,
+
   /// RESULT, BOOL = [SU]ADDO(LHS, RHS) - Overflow-aware nodes for addition.
   /// These nodes take two operands: the normal LHS and RHS to the add. They
   /// produce two results: the normal result of the add, and a boolean that
@@ -1103,12 +1113,25 @@ enum NodeType {
 
   /// Generic reduction nodes. These nodes represent horizontal vector
   /// reduction operations, producing a scalar result.
-  /// The STRICT variants perform reductions in sequential order. The first
+  /// The SEQ variants perform reductions in sequential order. The first
   /// operand is an initial scalar accumulator value, and the second operand
   /// is the vector to reduce.
-  VECREDUCE_STRICT_FADD,
-  VECREDUCE_STRICT_FMUL,
-  /// These reductions are non-strict, and have a single vector operand.
+  /// E.g. RES = VECREDUCE_SEQ_FADD f32 ACC, <4 x f32> SRC_VEC
+  ///  ... is equivalent to
+  /// RES = (((ACC + SRC_VEC[0]) + SRC_VEC[1]) + SRC_VEC[2]) + SRC_VEC[3]
+  VECREDUCE_SEQ_FADD,
+  VECREDUCE_SEQ_FMUL,
+
+  /// These reductions have relaxed evaluation order semantics, and have a
+  /// single vector operand. The order of evaluation is unspecified. For
+  /// pow-of-2 vectors, one valid legalizer expansion is to use a tree
+  /// reduction, i.e.:
+  /// For RES = VECREDUCE_FADD <8 x f16> SRC_VEC
+  ///   PART_RDX = FADD SRC_VEC[0:3], SRC_VEC[4:7]
+  ///   PART_RDX2 = FADD PART_RDX[0:1], PART_RDX[2:3]
+  ///   RES = FADD PART_RDX2[0], PART_RDX2[1]
+  /// For non-pow-2 vectors, this can be computed by extracting each element
+  /// and performing the operation as if it were scalarized.
   VECREDUCE_FADD,
   VECREDUCE_FMUL,
   /// FMIN/FMAX nodes can have flags, for NaN/NoNaN variants.

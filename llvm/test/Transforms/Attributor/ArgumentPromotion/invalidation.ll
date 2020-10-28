@@ -12,7 +12,7 @@
 @G = constant i32 0
 
 define internal i32 @a(i32* %x) {
-; CHECK: Function Attrs: nofree nosync nounwind readonly willreturn
+; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@a
 ; CHECK-SAME: () [[ATTR0:#.*]] {
 ; CHECK-NEXT:  entry:
@@ -25,7 +25,7 @@ entry:
 }
 
 define i32 @b() {
-; CHECK: Function Attrs: nofree nosync nounwind readonly willreturn
+; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@b
 ; CHECK-SAME: () [[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -38,7 +38,7 @@ entry:
 }
 
 define i32 @c() {
-; CHECK: Function Attrs: nofree nosync nounwind readonly willreturn
+; CHECK: Function Attrs: nofree nosync nounwind readnone willreturn
 ; CHECK-LABEL: define {{[^@]+}}@c
 ; CHECK-SAME: () [[ATTR0]] {
 ; CHECK-NEXT:  entry:

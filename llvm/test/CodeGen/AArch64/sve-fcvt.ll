@@ -6,6 +6,94 @@
 ; WARN-NOT: warning
 
 ;
+; FP_EXTEND
+;
+
+define <vscale x 2 x float> @fcvts_nxv2f16(<vscale x 2 x half> %a) {
+; CHECK-LABEL: fcvts_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %res = fpext <vscale x 2 x half> %a to <vscale x 2 x float>
+  ret <vscale x 2 x float> %res
+}
+
+define <vscale x 4 x float> @fcvts_nxv4f16(<vscale x 4 x half> %a) {
+; CHECK-LABEL: fcvts_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %res = fpext <vscale x 4 x half> %a to <vscale x 4 x float>
+  ret <vscale x 4 x float> %res
+}
+
+define <vscale x 2 x double> @fcvtd_nxv2f16(<vscale x 2 x half> %a) {
+; CHECK-LABEL: fcvtd_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.h
+; CHECK-NEXT:    ret
+  %res = fpext <vscale x 2 x half> %a to <vscale x 2 x double>
+  ret <vscale x 2 x double> %res
+}
+
+define <vscale x 2 x double> @fcvtd_nxv2f32(<vscale x 2 x float> %a) {
+; CHECK-LABEL: fcvtd_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.d, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %res = fpext <vscale x 2 x float> %a to <vscale x 2 x double>
+  ret <vscale x 2 x double> %res
+}
+
+;
+; FP_ROUND
+;
+
+define <vscale x 2 x half> @fcvth_nxv2f32(<vscale x 2 x float> %a) {
+; CHECK-LABEL: fcvth_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %res = fptrunc <vscale x 2 x float> %a to <vscale x 2 x half>
+  ret <vscale x 2 x half> %res
+}
+
+define <vscale x 4 x half> @fcvth_nxv4f32(<vscale x 4 x float> %a) {
+; CHECK-LABEL: fcvth_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %res = fptrunc <vscale x 4 x float> %a to <vscale x 4 x half>
+  ret <vscale x 4 x half> %res
+}
+
+define <vscale x 2 x half> @fcvth_nxv2f64(<vscale x 2 x double> %a) {
+; CHECK-LABEL: fcvth_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.h, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %res = fptrunc <vscale x 2 x double> %a to <vscale x 2 x half>
+  ret <vscale x 2 x half> %res
+}
+
+define <vscale x 2 x float> @fcvts_nxv2f64(<vscale x 2 x double> %a) {
+; CHECK-LABEL: fcvts_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcvt z0.s, p0/m, z0.d
+; CHECK-NEXT:    ret
+  %res = fptrunc <vscale x 2 x double> %a to <vscale x 2 x float>
+  ret <vscale x 2 x float> %res
+}
+
+;
 ; FP_TO_SINT
 ;
 

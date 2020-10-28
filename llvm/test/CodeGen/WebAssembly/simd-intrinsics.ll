@@ -75,6 +75,16 @@ define <16 x i8> @avgr_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
   ret <16 x i8> %a
 }
 
+; CHECK-LABEL: popcnt_v16i8:
+; SIMD128-NEXT: .functype popcnt_v16i8 (v128) -> (v128){{$}}
+; SIMD128-NEXT: i8x16.popcnt $push[[R:[0-9]+]]=, $0{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <16 x i8> @llvm.wasm.popcnt(<16 x i8>)
+define <16 x i8> @popcnt_v16i8(<16 x i8> %x) {
+ %a = call <16 x i8> @llvm.wasm.popcnt(<16 x i8> %x)
+ ret <16 x i8> %a
+}
+
 ; CHECK-LABEL: any_v16i8:
 ; SIMD128-NEXT: .functype any_v16i8 (v128) -> (i32){{$}}
 ; SIMD128-NEXT: i8x16.any_true $push[[R:[0-9]+]]=, $0{{$}}
@@ -225,6 +235,17 @@ define <8 x i16> @sub_sat_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
 declare <8 x i16> @llvm.wasm.avgr.unsigned.v8i16(<8 x i16>, <8 x i16>)
 define <8 x i16> @avgr_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
   %a = call <8 x i16> @llvm.wasm.avgr.unsigned.v8i16(<8 x i16> %x, <8 x i16> %y)
+  ret <8 x i16> %a
+}
+
+; CHECK-LABEL: q15mulr_sat_s_v8i16:
+; SIMD128-NEXT: .functype q15mulr_sat_s_v8i16 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: i16x8.q15mulr_sat_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <8 x i16> @llvm.wasm.q15mulr.saturate.signed(<8 x i16>, <8 x i16>)
+define <8 x i16> @q15mulr_sat_s_v8i16(<8 x i16> %x, <8 x i16> %y) {
+  %a = call <8 x i16> @llvm.wasm.q15mulr.saturate.signed(<8 x i16> %x,
+                                                         <8 x i16> %y)
   ret <8 x i16> %a
 }
 

@@ -59,9 +59,6 @@ int f2() {
     // CHECK-NEXT: [[T1:%.*]] = load i32, i32* [[X]]
     // CHECK-NEXT: [[T2:%.*]] = add nsw i32 [[T1]], -1
 
-    // This store is dead.
-    // CHECK-NEXT: store i32 [[T2]], i32* [[X]]
-
     // CHECK: store i32 6, i32* [[X]]
     x++;
     // CHECK-NEXT: call void asm sideeffect "", "*m,*m"(i32* nonnull [[X]]

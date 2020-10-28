@@ -78,12 +78,12 @@ body:             |
   ; CHECK:   successors: %bb.5(0x80000000)
   ; CHECK:   liveins: $q0, $r0, $r1, $r2, $r4
   ; CHECK:   renamable $s4 = nnan ninf nsz VADDS renamable $s0, renamable $s1, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = t2DLS killed $r4
   ; CHECK:   $r3 = tMOVr $r1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $s4 = nnan ninf nsz VADDS renamable $s2, killed renamable $s4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $s0 = nnan ninf nsz VADDS killed renamable $s3, killed renamable $s4, 14 /* CC::al */, $noreg, implicit killed $q0
   ; CHECK:   $s2 = VMOVSR $r1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $s2 = VUITOS killed renamable $s2, 14 /* CC::al */, $noreg
+  ; CHECK:   $lr = t2DLS killed $r4
   ; CHECK:   renamable $s4 = nnan ninf nsz VDIVS killed renamable $s0, killed renamable $s2, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
   ; CHECK: bb.5:

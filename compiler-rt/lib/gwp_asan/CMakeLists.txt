@@ -10,8 +10,8 @@ set(GWP_ASAN_SOURCES
   platform_specific/mutex_posix.cpp
   platform_specific/utilities_posix.cpp
   guarded_pool_allocator.cpp
-  random.cpp
   stack_trace_compressor.cpp
+  utilities.cpp
 )
 
 set(GWP_ASAN_HEADERS
@@ -22,7 +22,6 @@ set(GWP_ASAN_HEADERS
   mutex.h
   options.h
   options.inc
-  random.h
   stack_trace_compressor.h
   utilities.h
 )

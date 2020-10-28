@@ -186,6 +186,7 @@
 /* Features in %edx for leaf 7 sub-leaf 0 */
 #define bit_AVX5124VNNIW  0x00000004
 #define bit_AVX5124FMAPS  0x00000008
+#define bit_UINTR         0x00000020
 #define bit_SERIALIZE     0x00004000
 #define bit_TSXLDTRK      0x00010000
 #define bit_PCONFIG       0x00040000
@@ -196,6 +197,7 @@
 
 /* Features in %eax for leaf 7 sub-leaf 1 */
 #define bit_AVX512BF16    0x00000020
+#define bit_HRESET        0x00400000
 
 /* Features in %eax for leaf 13 sub-leaf 1 */
 #define bit_XSAVEOPT    0x00000001

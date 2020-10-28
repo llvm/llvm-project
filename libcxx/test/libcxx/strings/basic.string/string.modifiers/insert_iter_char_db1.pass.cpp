@@ -10,9 +10,10 @@
 
 // iterator insert(const_iterator p, charT c);
 
-#if _LIBCPP_DEBUG >= 1
+// UNSUPPORTED: libcxx-no-debug-mode
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
-#endif
 
 #include <string>
 #include <stdexcept>
@@ -23,7 +24,6 @@
 
 int main(int, char**)
 {
-#if _LIBCPP_DEBUG >= 1
     {
         typedef std::string S;
         S s;
@@ -31,7 +31,6 @@ int main(int, char**)
         s.insert(s2.begin(), '1');
         assert(false);
     }
-#endif
 
-  return 0;
+    return 0;
 }

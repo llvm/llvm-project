@@ -97,6 +97,13 @@ public:
       ids.append(idArgs.begin(), idArgs.end());
   }
 
+  /// Return a system with no constraints, i.e., one which is satisfied by all
+  /// points.
+  static FlatAffineConstraints getUniverse(unsigned numDims = 0,
+                                           unsigned numSymbols = 0) {
+    return FlatAffineConstraints(numDims, numSymbols);
+  }
+
   /// Create a flat affine constraint system from an AffineValueMap or a list of
   /// these. The constructed system will only include equalities.
   explicit FlatAffineConstraints(const AffineValueMap &avm);
@@ -152,6 +159,10 @@ public:
   ///
   /// Returns such a point if one exists, or an empty Optional otherwise.
   Optional<SmallVector<int64_t, 8>> findIntegerSample() const;
+
+  /// Returns true if the given point satisfies the constraints, or false
+  /// otherwise.
+  bool containsPoint(ArrayRef<int64_t> point) const;
 
   // Clones this object.
   std::unique_ptr<FlatAffineConstraints> clone() const;

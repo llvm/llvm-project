@@ -80,6 +80,10 @@
 // RUN:   | FileCheck %s -check-prefix=tigerlake
 // tigerlake: "-target-cpu" "tigerlake"
 //
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=alderlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=alderlake
+// alderlake: "-target-cpu" "alderlake"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=lakemont 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=lakemont
 // lakemont: "-target-cpu" "lakemont"
@@ -175,3 +179,12 @@
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=znver2 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=znver2
 // znver2: "-target-cpu" "znver2"
+
+// RUN: %clang -target x86_64 -c -### %s -march=x86-64 2>&1 | FileCheck %s --check-prefix=x86-64
+// x86-64: "-target-cpu" "x86-64"
+// RUN: %clang -target x86_64 -c -### %s -march=x86-64-v2 2>&1 | FileCheck %s --check-prefix=x86-64-v2
+// x86-64-v2: "-target-cpu" "x86-64-v2"
+// RUN: %clang -target x86_64 -c -### %s -march=x86-64-v3 2>&1 | FileCheck %s --check-prefix=x86-64-v3
+// x86-64-v3: "-target-cpu" "x86-64-v3"
+// RUN: %clang -target x86_64 -c -### %s -march=x86-64-v4 2>&1 | FileCheck %s --check-prefix=x86-64-v4
+// x86-64-v4: "-target-cpu" "x86-64-v4"

@@ -1837,9 +1837,9 @@ template <class ELFT> void LinkerDriver::compileBitcodeFiles() {
 
 // The --wrap option is a feature to rename symbols so that you can write
 // wrappers for existing functions. If you pass `-wrap=foo`, all
-// occurrences of symbol `foo` are resolved to `wrap_foo` (so, you are
-// expected to write `wrap_foo` function as a wrapper). The original
-// symbol becomes accessible as `real_foo`, so you can call that from your
+// occurrences of symbol `foo` are resolved to `__wrap_foo` (so, you are
+// expected to write `__wrap_foo` function as a wrapper). The original
+// symbol becomes accessible as `__real_foo`, so you can call that from your
 // wrapper.
 //
 // This data structure is instantiated for each -wrap option.
@@ -1867,7 +1867,7 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
     if (!sym)
       continue;
 
-    Symbol *real = addUndefined(saver.save("__real_" + name));
+    Symbol *real = addUnusedUndefined(saver.save("__real_" + name));
     Symbol *wrap = addUnusedUndefined(saver.save("__wrap_" + name));
     v.push_back({sym, real, wrap});
 
@@ -1992,7 +1992,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will fetch a.a.
   for (StringRef name : config->undefined)
-    addUnusedUndefined(name);
+    addUnusedUndefined(name)->referenced = true;
 
   // Add all files to the symbol table. This will add almost all
   // symbols that we need to the symbol table. This process might

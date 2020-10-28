@@ -466,10 +466,12 @@ ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
              : Var->getType()->isIntegralOrEnumerationType()) &&
         (Var->getType().isConstQualified() ||
          Var->getType()->isReferenceType())) {
-      if (const Expr *Init = Var->getAnyInitializer())
-        if (Init->isValueDependent()) {
+      if (const Expr *Init = Var->getAnyInitializer()) {
+        if (Init->isValueDependent())
           Deps |= ExprDependence::ValueInstantiation;
-        }
+        if (Init->containsErrors())
+          Deps |= ExprDependence::Error;
+      }
     }
 
     // (VD) - FIXME: Missing from the standard:
@@ -709,8 +711,6 @@ ExprDependence clang::computeDependence(LambdaExpr *E,
 ExprDependence clang::computeDependence(CXXUnresolvedConstructExpr *E) {
   auto D = ExprDependence::ValueInstantiation;
   D |= toExprDependence(E->getType()->getDependence());
-  if (E->getType()->getContainedDeducedType())
-    D |= ExprDependence::Type;
   for (auto *A : E->arguments())
     D |= A->getDependence() &
          (ExprDependence::UnexpandedPack | ExprDependence::Error);

@@ -66,7 +66,7 @@ void runtime_test()
     assert( std::rotl(val, 7) == T((val << 7) + 127));
 }
 
-int main()
+int main(int, char**)
 {
 
     {
@@ -164,4 +164,5 @@ int main()
     }
 #endif
 
+    return 0;
 }

@@ -1,5 +1,6 @@
 ; First example from Doc/Coroutines.rst (two block loop) converted to retcon
-; RUN: opt < %s -enable-coroutines -O2 -S | FileCheck %s
+; RUN: opt < %s -enable-coroutines -O2 -S | FileCheck --check-prefixes=CHECK %s
+; RUN: opt < %s -enable-coroutines -aa-pipeline=basic-aa -passes='default<O2>' -S | FileCheck --check-prefixes=CHECK,NPM %s
 
 define i8* @f(i8* %buffer, i32 %n) {
 entry:
@@ -30,7 +31,7 @@ cleanup:
 ; CHECK-NEXT:    ret i8* bitcast (i8* (i8*, i1)* @f.resume.0 to i8*)
 ; CHECK-NEXT:  }
 
-; CHECK-LABEL: define internal i8* @f.resume.0(i8* noalias nonnull align 4 dereferenceable(8) %0, i1 zeroext %1)
+; CHECK-LABEL: define internal i8* @f.resume.0(i8* {{.*}} %0, i1 zeroext %1)
 ; CHECK-NEXT:  :
 ; CHECK-NEXT:    br i1 %1,
 ; CHECK:       :
@@ -74,7 +75,7 @@ entry:
 ; CHECK-NEXT:    call void @print(i32 [[INC]])
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[SLOT]], align 4
 ; CHECK-NEXT:    [[INC:%.*]] = add i32 [[LOAD]], 1
-; CHECK-NEXT:    store i32 [[INC]], i32* [[SLOT]], align 4
+; NPM-NEXT:      store i32 [[INC]], i32* [[SLOT]], align 4
 ; CHECK-NEXT:    call void @print(i32 [[INC]])
 ; CHECK-NEXT:    ret i32 0
 

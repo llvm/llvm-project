@@ -392,17 +392,6 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   m_dwo = std::shared_ptr<DWARFUnit>(std::move(dwo_symbol_file), dwo_cu);
 }
 
-DWARFDIE DWARFUnit::LookupAddress(const dw_addr_t address) {
-  if (DIE()) {
-    const DWARFDebugAranges &func_aranges = GetFunctionAranges();
-
-    // Re-check the aranges auto pointer contents in case it was created above
-    if (!func_aranges.IsEmpty())
-      return GetDIE(func_aranges.FindAddress(address));
-  }
-  return DWARFDIE();
-}
-
 size_t DWARFUnit::GetDebugInfoSize() const {
   return GetLengthByteSize() + GetLength() - GetHeaderByteSize();
 }
@@ -536,21 +525,23 @@ static bool CompareDIEOffset(const DWARFDebugInfoEntry &die,
 // DIE from this compile unit. Otherwise we grab the DIE from the DWARF file.
 DWARFDIE
 DWARFUnit::GetDIE(dw_offset_t die_offset) {
-  if (die_offset != DW_INVALID_OFFSET) {
-    if (ContainsDIEOffset(die_offset)) {
-      ExtractDIEsIfNeeded();
-      DWARFDebugInfoEntry::const_iterator end = m_die_array.cend();
-      DWARFDebugInfoEntry::const_iterator pos =
-          lower_bound(m_die_array.cbegin(), end, die_offset, CompareDIEOffset);
-      if (pos != end) {
-        if (die_offset == (*pos).GetOffset())
-          return DWARFDIE(this, &(*pos));
-      }
-    } else
-      GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-          "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
-          die_offset, GetOffset());
+  if (die_offset == DW_INVALID_OFFSET)
+    return DWARFDIE(); // Not found
+
+  if (!ContainsDIEOffset(die_offset)) {
+    GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+        "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
+        die_offset, GetOffset());
+    return DWARFDIE(); // Not found
   }
+
+  ExtractDIEsIfNeeded();
+  DWARFDebugInfoEntry::const_iterator end = m_die_array.cend();
+  DWARFDebugInfoEntry::const_iterator pos =
+      lower_bound(m_die_array.cbegin(), end, die_offset, CompareDIEOffset);
+
+  if (pos != end && die_offset == (*pos).GetOffset())
+    return DWARFDIE(this, &(*pos));
   return DWARFDIE(); // Not found
 }
 
@@ -946,7 +937,7 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
   llvm::Expected<llvm::DWARFAddressRangesVector> llvm_ranges =
       range_list_or_error->getAbsoluteRanges(
           llvm::object::SectionedAddress{GetBaseAddress()},
-          [&](uint32_t index) {
+          GetAddressByteSize(), [&](uint32_t index) {
             uint32_t index_size = GetAddressByteSize();
             dw_offset_t addr_base = GetAddrBase();
             lldb::offset_t offset = addr_base + index * index_size;

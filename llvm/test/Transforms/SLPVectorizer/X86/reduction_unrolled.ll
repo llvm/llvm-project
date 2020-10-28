@@ -26,7 +26,7 @@ define i32 @test_add(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -74,7 +74,7 @@ define i32 @test_mul(i32* nocapture readonly %p) {
 ; AVX-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
 ; AVX-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
 ; AVX-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
-; AVX-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.vector.reduce.mul.v8i32(<8 x i32> [[TMP1]])
+; AVX-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> [[TMP1]])
 ; AVX-NEXT:    ret i32 [[TMP2]]
 ;
 ; SSE-LABEL: @test_mul(
@@ -148,7 +148,7 @@ define i32 @test_and(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.vector.reduce.and.v8i32(<8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -196,7 +196,7 @@ define i32 @test_or(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.vector.reduce.or.v8i32(<8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -244,7 +244,7 @@ define i32 @test_xor(i32* nocapture readonly %p) {
 ; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.experimental.vector.reduce.xor.v8i32(<8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.xor.v8i32(<8 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -284,7 +284,7 @@ define i32 @PR37731(<4 x i32>* noalias nocapture dereferenceable(16) %self) unna
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl <4 x i32> [[TMP4]], <i32 18, i32 2, i32 7, i32 13>
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor <4 x i32> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* [[SELF]], align 16
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.vector.reduce.xor.v4i32(<4 x i32> [[TMP6]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> [[TMP6]])
 ; CHECK-NEXT:    ret i32 [[TMP7]]
 ;
 entry:

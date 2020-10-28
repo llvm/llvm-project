@@ -31,7 +31,7 @@ public:
   BadUserNoCookie& operator=(const BadUserNoCookie&) = default;
 };
 
-int main() {
+int main(int, char**) {
   // expected-error@memory:* 2 {{"The specified type does not meet the requirements of Cpp17MoveInsertable"}}
 
   // Other diagnostics that might be seen as Clang tries to continue compiling:
@@ -47,5 +47,5 @@ int main() {
     BadUserNoCookie<2> c;
     x.push_back(c);
   }
-    return 0;
+  return 0;
 }

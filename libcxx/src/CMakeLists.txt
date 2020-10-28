@@ -11,7 +11,6 @@ set(LIBCXX_SOURCES
   chrono.cpp
   condition_variable.cpp
   condition_variable_destructor.cpp
-  debug.cpp
   exception.cpp
   functional.cpp
   future.cpp
@@ -20,21 +19,15 @@ set(LIBCXX_SOURCES
   include/atomic_support.h
   include/config_elast.h
   include/refstring.h
-  ios.cpp
-  iostream.cpp
-  locale.cpp
   memory.cpp
   mutex.cpp
   mutex_destructor.cpp
   new.cpp
   optional.cpp
-  random.cpp
   random_shuffle.cpp
-  regex.cpp
   shared_mutex.cpp
   stdexcept.cpp
   string.cpp
-  strstream.cpp
   support/runtime/exception_fallback.ipp
   support/runtime/exception_glibcxx.ipp
   support/runtime/exception_libcxxabi.ipp
@@ -55,6 +48,28 @@ set(LIBCXX_SOURCES
   variant.cpp
   vector.cpp
   )
+
+if (LIBCXX_ENABLE_DEBUG_MODE_SUPPORT)
+  list(APPEND LIBCXX_SOURCES
+    debug.cpp
+    )
+endif()
+
+if (LIBCXX_ENABLE_RANDOM_DEVICE)
+  list(APPEND LIBCXX_SOURCES
+    random.cpp
+    )
+endif()
+
+if (LIBCXX_ENABLE_LOCALIZATION)
+  list(APPEND LIBCXX_SOURCES
+    ios.cpp
+    iostream.cpp
+    locale.cpp
+    regex.cpp
+    strstream.cpp
+    )
+endif()
 
 if(WIN32)
   list(APPEND LIBCXX_SOURCES
@@ -213,17 +228,7 @@ if (LIBCXX_ENABLE_SHARED)
       "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
       "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
 
-    if (LIBCXX_ENABLE_EXCEPTIONS)
-      if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
-        target_link_libraries(cxx_shared PRIVATE "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi-exceptions.sjlj.exp")
-      else()
-        target_link_libraries(cxx_shared PRIVATE "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi-exceptions.exp")
-      endif()
-    endif()
-
-    if (NOT LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-      target_link_libraries(cxx_shared PRIVATE "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi-new-delete.exp")
-    endif()
+    target_link_libraries(cxx_shared PRIVATE $<TARGET_NAME_IF_EXISTS:cxxabi-reexports>)
   endif()
 
   # Generate a linker script in place of a libc++.so symlink.
@@ -342,41 +347,38 @@ if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
   target_link_libraries(cxx_external_threads PRIVATE cxx-headers)
 endif()
 
-if (LIBCXX_INSTALL_LIBRARY)
-  if (LIBCXX_INSTALL_SHARED_LIBRARY)
-    install(TARGETS cxx_shared
-      ARCHIVE DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
-      LIBRARY DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
-      RUNTIME DESTINATION ${LIBCXX_INSTALL_PREFIX}bin COMPONENT cxx)
-  endif()
-
-  if (LIBCXX_INSTALL_STATIC_LIBRARY)
-    install(TARGETS cxx_static
-      ARCHIVE DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
-      LIBRARY DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
-      RUNTIME DESTINATION ${LIBCXX_INSTALL_PREFIX}bin COMPONENT cxx)
-  endif()
-
-  if(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY)
-    install(TARGETS cxx_experimental
-      LIBRARY DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
-      ARCHIVE DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
-      RUNTIME DESTINATION ${LIBCXX_INSTALL_PREFIX}bin COMPONENT cxx)
-  endif()
-
-  # NOTE: This install command must go after the cxx install command otherwise
-  # it will not be executed after the library symlinks are installed.
-  if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
-    # Replace the libc++ filename with $<TARGET_LINKER_FILE:cxx>
-    # after we required CMake 3.0.
-    install(FILES "${LIBCXX_LIBRARY_DIR}/libc++${CMAKE_SHARED_LIBRARY_SUFFIX}"
-      DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR}
-      COMPONENT libcxx)
-  endif()
+if (LIBCXX_INSTALL_SHARED_LIBRARY)
+  install(TARGETS cxx_shared
+    ARCHIVE DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
+    LIBRARY DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
+    RUNTIME DESTINATION ${LIBCXX_INSTALL_PREFIX}bin COMPONENT cxx)
 endif()
 
-if (NOT CMAKE_CONFIGURATION_TYPES AND (LIBCXX_INSTALL_LIBRARY OR
-                                       LIBCXX_INSTALL_HEADERS))
+if (LIBCXX_INSTALL_STATIC_LIBRARY)
+  install(TARGETS cxx_static
+    ARCHIVE DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
+    LIBRARY DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
+    RUNTIME DESTINATION ${LIBCXX_INSTALL_PREFIX}bin COMPONENT cxx)
+endif()
+
+if(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY)
+  install(TARGETS cxx_experimental
+    LIBRARY DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
+    ARCHIVE DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
+    RUNTIME DESTINATION ${LIBCXX_INSTALL_PREFIX}bin COMPONENT cxx)
+endif()
+
+# NOTE: This install command must go after the cxx install command otherwise
+# it will not be executed after the library symlinks are installed.
+if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
+  # Replace the libc++ filename with $<TARGET_LINKER_FILE:cxx>
+  # after we required CMake 3.0.
+  install(FILES "${LIBCXX_LIBRARY_DIR}/libc++${CMAKE_SHARED_LIBRARY_SUFFIX}"
+    DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR}
+    COMPONENT libcxx)
+endif()
+
+if (NOT CMAKE_CONFIGURATION_TYPES)
     if(LIBCXX_INSTALL_LIBRARY)
       set(lib_install_target cxx)
     endif()

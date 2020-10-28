@@ -179,6 +179,9 @@ def StackAlignment : IntAttr<"alignstack">;
 /// Function can be speculated.
 def Speculatable : EnumAttr<"speculatable">;
 
+/// Stack protection explicitly disabled.
+def NoStackProtect : EnumAttr<"nossp">;
+
 /// Stack protection.
 def StackProtect : EnumAttr<"ssp">;
 
@@ -192,7 +195,7 @@ def StackProtectStrong : EnumAttr<"sspstrong">;
 def StrictFP : EnumAttr<"strictfp">;
 
 /// Hidden pointer to structure to return.
-def StructRet : EnumAttr<"sret">;
+def StructRet : TypeAttr<"sret">;
 
 /// AddressSanitizer is on.
 def SanitizeAddress : EnumAttr<"sanitize_address">;
@@ -234,6 +237,9 @@ def WriteOnly : EnumAttr<"writeonly">;
 
 /// Zero extended before/after call.
 def ZExt : EnumAttr<"zeroext">;
+
+/// Function is required to make Forward Progress.
+def MustProgress : TypeAttr<"mustprogress">;
 
 /// Target-independent string attributes.
 def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;

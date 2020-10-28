@@ -334,6 +334,22 @@ namespace dr1467 {  // dr1467: 3.7 c++11
 
     X x;
     X x2{x};
+
+    void f1(int);                                  // expected-note {{candidate function}}
+    void f1(std::initializer_list<long>) = delete; // expected-note {{candidate function has been explicitly deleted}}
+    void g1() { f1({42}); }                        // expected-error {{call to deleted function 'f1'}}
+
+    template <class T, class U>
+    struct Pair {
+      Pair(T, U);
+    };
+    struct String {
+      String(const char *);
+    };
+
+    void f2(Pair<const char *, const char *>);       // expected-note {{candidate function}}
+    void f2(std::initializer_list<String>) = delete; // expected-note {{candidate function has been explicitly deleted}}
+    void g2() { f2({"foo", "bar"}); }                // expected-error {{call to deleted function 'f2'}}
   } // dr_example
 
   namespace nonaggregate {
@@ -379,6 +395,46 @@ namespace dr1467 {  // dr1467: 3.7 c++11
     struct Value { Value(Pair); Value(TwoPairs); };
     void f() { Value{{{1,2},{3,4}}}; }
   }
+  namespace NonAmbiguous {
+  // The original implementation made this case ambigious due to the special
+  // handling of one element initialization lists.
+  void f(int(&&)[1]);
+  void f(unsigned(&&)[1]);
+
+  void g(unsigned i) {
+    f({i});
+  }
+  } // namespace NonAmbiguous
+
+#if __cplusplus >= 201103L
+  namespace StringLiterals {
+  // When the array size is 4 the call will attempt to bind an lvalue to an
+  // rvalue and fail. Therefore #2 will be called. (rsmith will bring this
+  // issue to CWG)
+  void f(const char(&&)[4]);              // expected-note 5 {{no known conversion}}
+  void f(const char(&&)[5]) = delete;     // expected-note 2 {{candidate function has been explicitly deleted}} expected-note 3 {{no known conversion}}
+  void f(const wchar_t(&&)[4]);           // expected-note 5 {{no known conversion}}
+  void f(const wchar_t(&&)[5]) = delete;  // expected-note {{candidate function has been explicitly deleted}} expected-note 4 {{no known conversion}}
+#if __cplusplus >= 202002L
+  void f2(const char8_t(&&)[4]);          // expected-note {{no known conversion}}
+  void f2(const char8_t(&&)[5]) = delete; // expected-note {{candidate function has been explicitly deleted}}
+#endif
+  void f(const char16_t(&&)[4]);          // expected-note 5 {{no known conversion}}
+  void f(const char16_t(&&)[5]) = delete; // expected-note {{candidate function has been explicitly deleted}} expected-note 4 {{no known conversion}}
+  void f(const char32_t(&&)[4]);          // expected-note 5 {{no known conversion}}
+  void f(const char32_t(&&)[5]) = delete; // expected-note {{candidate function has been explicitly deleted}} expected-note 4 {{no known conversion}}
+  void g() {
+    f({"abc"});       // expected-error {{call to deleted function 'f'}}
+    f({((("abc")))}); // expected-error {{call to deleted function 'f'}}
+    f({L"abc"});      // expected-error {{call to deleted function 'f'}}
+#if __cplusplus >= 202002L
+    f2({u8"abc"});    // expected-error {{call to deleted function 'f2'}}
+#endif
+    f({uR"(abc)"});   // expected-error {{call to deleted function 'f'}}
+    f({(UR"(abc)")}); // expected-error {{call to deleted function 'f'}}
+  }
+  } // namespace StringLiterals
+#endif
 } // dr1467
 
 namespace dr1490 {  // dr1490: 3.7 c++11

@@ -259,4 +259,34 @@ TEST(ToolChainTest, GetTargetAndMode) {
   EXPECT_STREQ(Res.DriverMode, "--driver-mode=cl");
   EXPECT_FALSE(Res.TargetIsValid);
 }
+
+TEST(ToolChainTest, CommandOutput) {
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  struct TestDiagnosticConsumer : public DiagnosticConsumer {};
+  DiagnosticsEngine Diags(DiagID, &*DiagOpts, new TestDiagnosticConsumer);
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+
+  Driver CCDriver("/home/test/bin/clang", "arm-linux-gnueabi", Diags,
+                  "clang LLVM compiler", InMemoryFileSystem);
+  CCDriver.setCheckInputsExist(false);
+  std::unique_ptr<Compilation> CC(
+      CCDriver.BuildCompilation({"/home/test/bin/clang", "foo.cpp"}));
+  const JobList &Jobs = CC->getJobs();
+
+  const auto &CmdCompile = Jobs.getJobs().front();
+  const auto &InFile = CmdCompile->getInputFilenames().front();
+  EXPECT_STREQ(InFile, "foo.cpp");
+  auto ObjFile = CmdCompile->getOutputFilenames().front();
+  EXPECT_TRUE(StringRef(ObjFile).endswith(".o"));
+
+  const auto &CmdLink = Jobs.getJobs().back();
+  const auto LinkInFile = CmdLink->getInputFilenames().front();
+  EXPECT_EQ(ObjFile, LinkInFile);
+  auto ExeFile = CmdLink->getOutputFilenames().front();
+  EXPECT_EQ("a.out", ExeFile);
+}
+
 } // end anonymous namespace.

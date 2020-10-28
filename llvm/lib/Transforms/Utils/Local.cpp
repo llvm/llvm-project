@@ -2672,10 +2672,13 @@ bool llvm::callsGCLeafFunction(const CallBase *Call,
     if (F->hasFnAttribute("gc-leaf-function"))
       return true;
 
-    if (auto IID = F->getIntrinsicID())
+    if (auto IID = F->getIntrinsicID()) {
       // Most LLVM intrinsics do not take safepoints.
       return IID != Intrinsic::experimental_gc_statepoint &&
-             IID != Intrinsic::experimental_deoptimize;
+             IID != Intrinsic::experimental_deoptimize &&
+             IID != Intrinsic::memcpy_element_unordered_atomic &&
+             IID != Intrinsic::memmove_element_unordered_atomic;
+    }
   }
 
   // Lib calls can be materialized by some passes, and won't be
@@ -2803,7 +2806,7 @@ struct BitPart {
 
 /// Analyze the specified subexpression and see if it is capable of providing
 /// pieces of a bswap or bitreverse. The subexpression provides a potential
-/// piece of a bswap or bitreverse if it can be proven that each non-zero bit in
+/// piece of a bswap or bitreverse if it can be proved that each non-zero bit in
 /// the output of the expression came from a corresponding bit in some other
 /// value. This function is recursive, and the end result is a mapping of
 /// bitnumber to bitnumber. It is the caller's responsibility to validate that
@@ -2814,6 +2817,10 @@ struct BitPart {
 /// result and that all other bits are zero. This expression is accepted and a
 /// BitPart is returned with Provider set to %X and Provenance[24-31] set to
 /// [0-7].
+///
+/// For vector types, all analysis is performed at the per-element level. No
+/// cross-element analysis is supported (shuffle/insertion/reduction), and all
+/// constant masks must be splatted across all elements.
 ///
 /// To avoid revisiting values, the BitPart results are memoized into the
 /// provided map. To avoid unnecessary copying of BitParts, BitParts are
@@ -2832,7 +2839,7 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
     return I->second;
 
   auto &Result = BPS[V] = None;
-  auto BitWidth = cast<IntegerType>(V->getType())->getBitWidth();
+  auto BitWidth = V->getType()->getScalarSizeInBits();
 
   // Prevent stack overflow by limiting the recursion depth
   if (Depth == BitPartRecursionMaxDepth) {
@@ -2840,13 +2847,16 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
     return Result;
   }
 
-  if (Instruction *I = dyn_cast<Instruction>(V)) {
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    Value *X, *Y;
+    const APInt *C;
+
     // If this is an or instruction, it may be an inner node of the bswap.
-    if (I->getOpcode() == Instruction::Or) {
-      const auto &A = collectBitParts(I->getOperand(0), MatchBSwaps,
-                                      MatchBitReversals, BPS, Depth + 1);
-      const auto &B = collectBitParts(I->getOperand(1), MatchBSwaps,
-                                      MatchBitReversals, BPS, Depth + 1);
+    if (match(V, m_Or(m_Value(X), m_Value(Y)))) {
+      const auto &A =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      const auto &B =
+          collectBitParts(Y, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
       if (!A || !B)
         return Result;
 
@@ -2871,15 +2881,15 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
     }
 
     // If this is a logical shift by a constant, recurse then shift the result.
-    if (I->isLogicalShift() && isa<ConstantInt>(I->getOperand(1))) {
-      unsigned BitShift =
-          cast<ConstantInt>(I->getOperand(1))->getLimitedValue(~0U);
+    if (match(V, m_LogicalShift(m_Value(X), m_APInt(C)))) {
+      const APInt &BitShift = *C;
+
       // Ensure the shift amount is defined.
-      if (BitShift > BitWidth)
+      if (BitShift.uge(BitWidth))
         return Result;
 
-      const auto &Res = collectBitParts(I->getOperand(0), MatchBSwaps,
-                                        MatchBitReversals, BPS, Depth + 1);
+      const auto &Res =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
       if (!Res)
         return Result;
       Result = Res;
@@ -2887,11 +2897,11 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       // Perform the "shift" on BitProvenance.
       auto &P = Result->Provenance;
       if (I->getOpcode() == Instruction::Shl) {
-        P.erase(std::prev(P.end(), BitShift), P.end());
-        P.insert(P.begin(), BitShift, BitPart::Unset);
+        P.erase(std::prev(P.end(), BitShift.getZExtValue()), P.end());
+        P.insert(P.begin(), BitShift.getZExtValue(), BitPart::Unset);
       } else {
-        P.erase(P.begin(), std::next(P.begin(), BitShift));
-        P.insert(P.end(), BitShift, BitPart::Unset);
+        P.erase(P.begin(), std::next(P.begin(), BitShift.getZExtValue()));
+        P.insert(P.end(), BitShift.getZExtValue(), BitPart::Unset);
       }
 
       return Result;
@@ -2899,9 +2909,8 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
 
     // If this is a logical 'and' with a mask that clears bits, recurse then
     // unset the appropriate bits.
-    if (I->getOpcode() == Instruction::And &&
-        isa<ConstantInt>(I->getOperand(1))) {
-      const APInt &AndMask = cast<ConstantInt>(I->getOperand(1))->getValue();
+    if (match(V, m_And(m_Value(X), m_APInt(C)))) {
+      const APInt &AndMask = *C;
 
       // Check that the mask allows a multiple of 8 bits for a bswap, for an
       // early exit.
@@ -2909,8 +2918,8 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       if (!MatchBitReversals && (NumMaskedBits % 8) != 0)
         return Result;
 
-      const auto &Res = collectBitParts(I->getOperand(0), MatchBSwaps,
-                                        MatchBitReversals, BPS, Depth + 1);
+      const auto &Res =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
       if (!Res)
         return Result;
       Result = Res;
@@ -2923,15 +2932,14 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
     }
 
     // If this is a zext instruction zero extend the result.
-    if (I->getOpcode() == Instruction::ZExt) {
-      const auto &Res = collectBitParts(I->getOperand(0), MatchBSwaps,
-                                        MatchBitReversals, BPS, Depth + 1);
+    if (match(V, m_ZExt(m_Value(X)))) {
+      const auto &Res =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
       if (!Res)
         return Result;
 
       Result = BitPart(Res->Provider, BitWidth);
-      auto NarrowBitWidth =
-          cast<IntegerType>(cast<ZExtInst>(I)->getSrcTy())->getBitWidth();
+      auto NarrowBitWidth = X->getType()->getScalarSizeInBits();
       for (unsigned BitIdx = 0; BitIdx < NarrowBitWidth; ++BitIdx)
         Result->Provenance[BitIdx] = Res->Provenance[BitIdx];
       for (unsigned BitIdx = NarrowBitWidth; BitIdx < BitWidth; ++BitIdx)
@@ -2939,40 +2947,65 @@ collectBitParts(Value *V, bool MatchBSwaps, bool MatchBitReversals,
       return Result;
     }
 
-    // Handle intrinsic calls.
-    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-      Intrinsic::ID IntrinsicID = II->getIntrinsicID();
-
-      // Funnel 'double' shifts take 3 operands, 2 inputs and the shift
-      // amount (modulo).
-      // fshl(X,Y,Z): (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
-      // fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
-      const APInt *Amt;
-      if ((IntrinsicID == Intrinsic::fshl || IntrinsicID == Intrinsic::fshr) &&
-          match(II->getArgOperand(2), m_APInt(Amt))) {
-
-        // We can treat fshr as a fshl by flipping the modulo amount.
-        unsigned ModAmt = Amt->urem(BitWidth);
-        if (IntrinsicID == Intrinsic::fshr)
-          ModAmt = BitWidth - ModAmt;
-
-        const auto &LHS = collectBitParts(II->getArgOperand(0), MatchBSwaps,
-                                          MatchBitReversals, BPS, Depth + 1);
-        const auto &RHS = collectBitParts(II->getArgOperand(1), MatchBSwaps,
-                                          MatchBitReversals, BPS, Depth + 1);
-
-        // Check we have both sources and they are from the same provider.
-        if (!LHS || !RHS || !LHS->Provider || LHS->Provider != RHS->Provider)
-          return Result;
-
-        unsigned StartBitRHS = BitWidth - ModAmt;
-        Result = BitPart(LHS->Provider, BitWidth);
-        for (unsigned BitIdx = 0; BitIdx < StartBitRHS; ++BitIdx)
-          Result->Provenance[BitIdx + ModAmt] = LHS->Provenance[BitIdx];
-        for (unsigned BitIdx = 0; BitIdx < ModAmt; ++BitIdx)
-          Result->Provenance[BitIdx] = RHS->Provenance[BitIdx + StartBitRHS];
+    // BITREVERSE - most likely due to us previous matching a partial
+    // bitreverse.
+    if (match(V, m_BitReverse(m_Value(X)))) {
+      const auto &Res =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      if (!Res)
         return Result;
+
+      Result = BitPart(Res->Provider, BitWidth);
+      for (unsigned BitIdx = 0; BitIdx < BitWidth; ++BitIdx)
+        Result->Provenance[(BitWidth - 1) - BitIdx] = Res->Provenance[BitIdx];
+      return Result;
+    }
+
+    // BSWAP - most likely due to us previous matching a partial bswap.
+    if (match(V, m_BSwap(m_Value(X)))) {
+      const auto &Res =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      if (!Res)
+        return Result;
+
+      unsigned ByteWidth = BitWidth / 8;
+      Result = BitPart(Res->Provider, BitWidth);
+      for (unsigned ByteIdx = 0; ByteIdx < ByteWidth; ++ByteIdx) {
+        unsigned ByteBitOfs = ByteIdx * 8;
+        for (unsigned BitIdx = 0; BitIdx < 8; ++BitIdx)
+          Result->Provenance[(BitWidth - 8 - ByteBitOfs) + BitIdx] =
+              Res->Provenance[ByteBitOfs + BitIdx];
       }
+      return Result;
+    }
+
+    // Funnel 'double' shifts take 3 operands, 2 inputs and the shift
+    // amount (modulo).
+    // fshl(X,Y,Z): (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+    // fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+    if (match(V, m_FShl(m_Value(X), m_Value(Y), m_APInt(C))) ||
+        match(V, m_FShr(m_Value(X), m_Value(Y), m_APInt(C)))) {
+      // We can treat fshr as a fshl by flipping the modulo amount.
+      unsigned ModAmt = C->urem(BitWidth);
+      if (cast<IntrinsicInst>(I)->getIntrinsicID() == Intrinsic::fshr)
+        ModAmt = BitWidth - ModAmt;
+
+      const auto &LHS =
+          collectBitParts(X, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+      const auto &RHS =
+          collectBitParts(Y, MatchBSwaps, MatchBitReversals, BPS, Depth + 1);
+
+      // Check we have both sources and they are from the same provider.
+      if (!LHS || !RHS || !LHS->Provider || LHS->Provider != RHS->Provider)
+        return Result;
+
+      unsigned StartBitRHS = BitWidth - ModAmt;
+      Result = BitPart(LHS->Provider, BitWidth);
+      for (unsigned BitIdx = 0; BitIdx < StartBitRHS; ++BitIdx)
+        Result->Provenance[BitIdx + ModAmt] = LHS->Provenance[BitIdx];
+      for (unsigned BitIdx = 0; BitIdx < ModAmt; ++BitIdx)
+        Result->Provenance[BitIdx] = RHS->Provenance[BitIdx + StartBitRHS];
+      return Result;
     }
   }
 
@@ -3007,14 +3040,14 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
     return false;
   if (!MatchBSwaps && !MatchBitReversals)
     return false;
-  IntegerType *ITy = dyn_cast<IntegerType>(I->getType());
-  if (!ITy || ITy->getBitWidth() > 128)
-    return false;   // Can't do vectors or integers > 128 bits.
+  Type *ITy = I->getType();
+  if (!ITy->isIntOrIntVectorTy() || ITy->getScalarSizeInBits() > 128)
+    return false;  // Can't do integer/elements > 128 bits.
 
-  IntegerType *DemandedTy = ITy;
+  Type *DemandedTy = ITy;
   if (I->hasOneUse())
     if (auto *Trunc = dyn_cast<TruncInst>(I->user_back()))
-      DemandedTy = cast<IntegerType>(Trunc->getType());
+      DemandedTy = Trunc->getType();
 
   // Try to find all the pieces corresponding to the bswap.
   std::map<Value *, Optional<BitPart>> BPS;
@@ -3032,16 +3065,27 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
       BitProvenance = BitProvenance.drop_back();
     if (BitProvenance.empty())
       return false; // TODO - handle null value?
-    DemandedTy = IntegerType::get(I->getContext(), BitProvenance.size());
+    DemandedTy = Type::getIntNTy(I->getContext(), BitProvenance.size());
+    if (auto *IVecTy = dyn_cast<VectorType>(ITy))
+      DemandedTy = VectorType::get(DemandedTy, IVecTy);
   }
+
+  // Check BitProvenance hasn't found a source larger than the result type.
+  unsigned DemandedBW = DemandedTy->getScalarSizeInBits();
+  if (DemandedBW > ITy->getScalarSizeInBits())
+    return false;
 
   // Now, is the bit permutation correct for a bswap or a bitreverse? We can
   // only byteswap values with an even number of bytes.
-  unsigned DemandedBW = DemandedTy->getBitWidth();
+  APInt DemandedMask = APInt::getAllOnesValue(DemandedBW);
   bool OKForBSwap = MatchBSwaps && (DemandedBW % 16) == 0;
   bool OKForBitReverse = MatchBitReversals;
   for (unsigned BitIdx = 0;
        (BitIdx < DemandedBW) && (OKForBSwap || OKForBitReverse); ++BitIdx) {
+    if (BitProvenance[BitIdx] == BitPart::Unset) {
+      DemandedMask.clearBit(BitIdx);
+      continue;
+    }
     OKForBSwap &= bitTransformIsCorrectForBSwap(BitProvenance[BitIdx], BitIdx,
                                                 DemandedBW);
     OKForBitReverse &= bitTransformIsCorrectForBitReverse(BitProvenance[BitIdx],
@@ -3062,17 +3106,23 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   // We may need to truncate the provider.
   if (DemandedTy != Provider->getType()) {
     auto *Trunc =
-        CastInst::Create(Instruction::Trunc, Provider, DemandedTy, "trunc", I);
+        CastInst::CreateIntegerCast(Provider, DemandedTy, false, "trunc", I);
     InsertedInsts.push_back(Trunc);
     Provider = Trunc;
   }
 
-  auto *CI = CallInst::Create(F, Provider, "rev", I);
-  InsertedInsts.push_back(CI);
+  Instruction *Result = CallInst::Create(F, Provider, "rev", I);
+  InsertedInsts.push_back(Result);
+
+  if (!DemandedMask.isAllOnesValue()) {
+    auto *Mask = ConstantInt::get(DemandedTy, DemandedMask);
+    Result = BinaryOperator::Create(Instruction::And, Result, Mask, "mask", I);
+    InsertedInsts.push_back(Result);
+  }
 
   // We may need to zeroextend back to the result type.
-  if (ITy != CI->getType()) {
-    auto *ExtInst = CastInst::Create(Instruction::ZExt, CI, ITy, "zext", I);
+  if (ITy != Result->getType()) {
+    auto *ExtInst = CastInst::CreateIntegerCast(Result, ITy, false, "zext", I);
     InsertedInsts.push_back(ExtInst);
   }
 

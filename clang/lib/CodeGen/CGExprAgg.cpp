@@ -903,6 +903,8 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_ZeroToOCLOpaqueType:
 
   case CK_IntToOCLSampler:
+  case CK_FloatingToFixedPoint:
+  case CK_FixedPointToFloating:
   case CK_FixedPointCast:
   case CK_FixedPointToBoolean:
   case CK_FixedPointToIntegral:
@@ -1214,6 +1216,11 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
 
   // Copy into the destination if the assignment isn't ignored.
   EmitFinalDestCopy(E->getType(), LHS);
+
+  if (!Dest.isIgnored() && !Dest.isExternallyDestructed() &&
+      E->getType().isDestructedType() == QualType::DK_nontrivial_c_struct)
+    CGF.pushDestroy(QualType::DK_nontrivial_c_struct, Dest.getAddress(),
+                    E->getType());
 }
 
 void AggExprEmitter::
@@ -1231,6 +1238,11 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
   // Save whether the destination's lifetime is externally managed.
   bool isExternallyDestructed = Dest.isExternallyDestructed();
+  bool destructNonTrivialCStruct =
+      !isExternallyDestructed &&
+      E->getType().isDestructedType() == QualType::DK_nontrivial_c_struct;
+  isExternallyDestructed |= destructNonTrivialCStruct;
+  Dest.setExternallyDestructed(isExternallyDestructed);
 
   eval.begin(CGF);
   CGF.EmitBlock(LHSBlock);
@@ -1251,6 +1263,10 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   CGF.EmitBlock(RHSBlock);
   Visit(E->getFalseExpr());
   eval.end(CGF);
+
+  if (destructNonTrivialCStruct)
+    CGF.pushDestroy(QualType::DK_nontrivial_c_struct, Dest.getAddress(),
+                    E->getType());
 
   CGF.EmitBlock(ContBlock);
 }
@@ -1370,11 +1386,110 @@ void AggExprEmitter::VisitImplicitValueInitExpr(ImplicitValueInitExpr *E) {
   EmitNullInitializationToLValue(CGF.MakeAddrLValue(Slot.getAddress(), T));
 }
 
+/// Determine whether the given cast kind is known to always convert values
+/// with all zero bits in their value representation to values with all zero
+/// bits in their value representation.
+static bool castPreservesZero(const CastExpr *CE) {
+  switch (CE->getCastKind()) {
+    // No-ops.
+  case CK_NoOp:
+  case CK_UserDefinedConversion:
+  case CK_ConstructorConversion:
+  case CK_BitCast:
+  case CK_ToUnion:
+  case CK_ToVoid:
+    // Conversions between (possibly-complex) integral, (possibly-complex)
+    // floating-point, and bool.
+  case CK_BooleanToSignedIntegral:
+  case CK_FloatingCast:
+  case CK_FloatingComplexCast:
+  case CK_FloatingComplexToBoolean:
+  case CK_FloatingComplexToIntegralComplex:
+  case CK_FloatingComplexToReal:
+  case CK_FloatingRealToComplex:
+  case CK_FloatingToBoolean:
+  case CK_FloatingToIntegral:
+  case CK_IntegralCast:
+  case CK_IntegralComplexCast:
+  case CK_IntegralComplexToBoolean:
+  case CK_IntegralComplexToFloatingComplex:
+  case CK_IntegralComplexToReal:
+  case CK_IntegralRealToComplex:
+  case CK_IntegralToBoolean:
+  case CK_IntegralToFloating:
+    // Reinterpreting integers as pointers and vice versa.
+  case CK_IntegralToPointer:
+  case CK_PointerToIntegral:
+    // Language extensions.
+  case CK_VectorSplat:
+  case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic:
+    return true;
+
+  case CK_BaseToDerivedMemberPointer:
+  case CK_DerivedToBaseMemberPointer:
+  case CK_MemberPointerToBoolean:
+  case CK_NullToMemberPointer:
+  case CK_ReinterpretMemberPointer:
+    // FIXME: ABI-dependent.
+    return false;
+
+  case CK_AnyPointerToBlockPointerCast:
+  case CK_BlockPointerToObjCPointerCast:
+  case CK_CPointerToObjCPointerCast:
+  case CK_ObjCObjectLValueCast:
+  case CK_IntToOCLSampler:
+  case CK_ZeroToOCLOpaqueType:
+    // FIXME: Check these.
+    return false;
+
+  case CK_FixedPointCast:
+  case CK_FixedPointToBoolean:
+  case CK_FixedPointToFloating:
+  case CK_FixedPointToIntegral:
+  case CK_FloatingToFixedPoint:
+  case CK_IntegralToFixedPoint:
+    // FIXME: Do all fixed-point types represent zero as all 0 bits?
+    return false;
+
+  case CK_AddressSpaceConversion:
+  case CK_BaseToDerived:
+  case CK_DerivedToBase:
+  case CK_Dynamic:
+  case CK_NullToPointer:
+  case CK_PointerToBoolean:
+    // FIXME: Preserves zeroes only if zero pointers and null pointers have the
+    // same representation in all involved address spaces.
+    return false;
+
+  case CK_ARCConsumeObject:
+  case CK_ARCExtendBlockObject:
+  case CK_ARCProduceObject:
+  case CK_ARCReclaimReturnedObject:
+  case CK_CopyAndAutoreleaseBlockObject:
+  case CK_ArrayToPointerDecay:
+  case CK_FunctionToPointerDecay:
+  case CK_BuiltinFnToFnPtr:
+  case CK_Dependent:
+  case CK_LValueBitCast:
+  case CK_LValueToRValue:
+  case CK_LValueToRValueBitCast:
+  case CK_UncheckedDerivedToBase:
+    return false;
+  }
+  llvm_unreachable("Unhandled clang::CastKind enum");
+}
+
 /// isSimpleZero - If emitting this value will obviously just cause a store of
 /// zero to memory, return true.  This can return false if uncertain, so it just
 /// handles simple cases.
 static bool isSimpleZero(const Expr *E, CodeGenFunction &CGF) {
   E = E->IgnoreParens();
+  while (auto *CE = dyn_cast<CastExpr>(E)) {
+    if (!castPreservesZero(CE))
+      break;
+    E = CE->getSubExpr()->IgnoreParens();
+  }
 
   // 0
   if (const IntegerLiteral *IL = dyn_cast<IntegerLiteral>(E))
@@ -1757,7 +1872,9 @@ void AggExprEmitter::VisitDesignatedInitUpdateExpr(DesignatedInitUpdateExpr *E) 
 /// non-zero bytes that will be stored when outputting the initializer for the
 /// specified initializer expression.
 static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
-  E = E->IgnoreParens();
+  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+    E = MTE->getSubExpr();
+  E = E->IgnoreParenNoopCasts(CGF.getContext());
 
   // 0 and 0.0 won't require any non-zero stores!
   if (isSimpleZero(E, CGF)) return CharUnits::Zero();
@@ -1806,7 +1923,7 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
     }
   }
 
-
+  // FIXME: This overestimates the number of non-zero bytes for bit-fields.
   CharUnits NumNonZeroBytes = CharUnits::Zero();
   for (unsigned i = 0, e = ILE->getNumInits(); i != e; ++i)
     NumNonZeroBytes += GetNumNonZeroBytesInInit(ILE->getInit(i), CGF);
@@ -1974,28 +2091,28 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   // Get data size info for this aggregate. Don't copy the tail padding if this
   // might be a potentially-overlapping subobject, since the tail padding might
   // be occupied by a different object. Otherwise, copying it is fine.
-  std::pair<CharUnits, CharUnits> TypeInfo;
+  TypeInfoChars TypeInfo;
   if (MayOverlap)
     TypeInfo = getContext().getTypeInfoDataSizeInChars(Ty);
   else
     TypeInfo = getContext().getTypeInfoInChars(Ty);
 
   llvm::Value *SizeVal = nullptr;
-  if (TypeInfo.first.isZero()) {
+  if (TypeInfo.Width.isZero()) {
     // But note that getTypeInfo returns 0 for a VLA.
     if (auto *VAT = dyn_cast_or_null<VariableArrayType>(
             getContext().getAsArrayType(Ty))) {
       QualType BaseEltTy;
       SizeVal = emitArrayLength(VAT, BaseEltTy, DestPtr);
       TypeInfo = getContext().getTypeInfoInChars(BaseEltTy);
-      assert(!TypeInfo.first.isZero());
+      assert(!TypeInfo.Width.isZero());
       SizeVal = Builder.CreateNUWMul(
           SizeVal,
-          llvm::ConstantInt::get(SizeTy, TypeInfo.first.getQuantity()));
+          llvm::ConstantInt::get(SizeTy, TypeInfo.Width.getQuantity()));
     }
   }
   if (!SizeVal) {
-    SizeVal = llvm::ConstantInt::get(SizeTy, TypeInfo.first.getQuantity());
+    SizeVal = llvm::ConstantInt::get(SizeTy, TypeInfo.Width.getQuantity());
   }
 
   // FIXME: If we have a volatile struct, the optimizer can remove what might

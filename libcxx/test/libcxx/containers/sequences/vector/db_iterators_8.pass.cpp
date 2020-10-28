@@ -10,8 +10,9 @@
 
 // Dereference non-dereferenceable iterator.
 
-#if _LIBCPP_DEBUG >= 1
+// UNSUPPORTED: libcxx-no-debug-mode
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <vector>
@@ -30,7 +31,7 @@ int main(int, char**)
     typedef std::vector<T> C;
     C c(1);
     C::iterator i = c.end();
-    T j = *i;
+    T j = *i; (void)j;
     assert(false);
     }
 #if TEST_STD_VER >= 11
@@ -39,18 +40,8 @@ int main(int, char**)
     typedef std::vector<T, min_allocator<T>> C;
     C c(1);
     C::iterator i = c.end();
-    T j = *i;
+    T j = *i; (void)j;
     assert(false);
     }
 #endif
 }
-
-#else
-
-int main(int, char**)
-{
-
-  return 0;
-}
-
-#endif

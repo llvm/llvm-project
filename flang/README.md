@@ -15,9 +15,9 @@ To better understand Fortran as a language
 and the specific grammar accepted by flang,
 read [Fortran For C Programmers](docs/FortranForCProgrammers.md)
 and
-flang's specifications of the [Fortran grammar](docs/f2018-grammar.txt)
+flang's specifications of the [Fortran grammar](docs/f2018-grammar.md)
 and
-the [OpenMP grammar](docs/OpenMP-4.5-grammar.txt).
+the [OpenMP grammar](docs/OpenMP-4.5-grammar.md).
 
 Treatment of language extensions is covered
 in [this document](docs/Extensions.md).

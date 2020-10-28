@@ -59,8 +59,6 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
     FS.OverlayRealFileSystemForModules = true;
   Inputs.TFS = &FS;
   Inputs.Opts = ParseOptions();
-  Inputs.Opts.BuildRecoveryAST = true;
-  Inputs.Opts.PreserveRecoveryASTType = true;
   Inputs.Opts.ClangTidyOpts.Checks = ClangTidyChecks;
   Inputs.Opts.ClangTidyOpts.WarningsAsErrors = ClangTidyWarningsAsErrors;
   Inputs.Index = ExternalIndex;
@@ -82,7 +80,8 @@ void deleteModuleCache(const std::string ModuleCachePath) {
   }
 }
 
-std::shared_ptr<const PreambleData> TestTU::preamble() const {
+std::shared_ptr<const PreambleData>
+TestTU::preamble(PreambleParsedCallback PreambleCallback) const {
   MockFS FS;
   auto Inputs = inputs(FS);
   IgnoreDiagnostics Diags;
@@ -93,8 +92,7 @@ std::shared_ptr<const PreambleData> TestTU::preamble() const {
   auto ModuleCacheDeleter = llvm::make_scope_exit(
       std::bind(deleteModuleCache, CI->getHeaderSearchOpts().ModuleCachePath));
   return clang::clangd::buildPreamble(testPath(Filename), *CI, Inputs,
-                                      /*StoreInMemory=*/true,
-                                      /*PreambleCallback=*/nullptr);
+                                      /*StoreInMemory=*/true, PreambleCallback);
 }
 
 ParsedAST TestTU::build() const {

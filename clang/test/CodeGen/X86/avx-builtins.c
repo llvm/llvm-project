@@ -214,7 +214,7 @@ __m256 test_mm_ceil_ps(__m256 x) {
 }
 
 __m256d test_mm256_cmp_pd_eq_oq(__m256d a, __m256d b) {
-  // CHECK-LABEL: @test_mm256_cmp_pd_eq_oq
+  // CHECK-LABEL: test_mm256_cmp_pd_eq_oq
   // CHECK: fcmp oeq <4 x double> %{{.*}}, %{{.*}}
   return _mm256_cmp_pd(a, b, _CMP_EQ_OQ);
 }
@@ -406,7 +406,7 @@ __m256d test_mm256_cmp_pd_true_us(__m256d a, __m256d b) {
 }
 
 __m256 test_mm256_cmp_ps_eq_oq(__m256 a, __m256 b) {
-  // CHECK-LABEL: @test_mm256_cmp_ps_eq_oq
+  // CHECK-LABEL: test_mm256_cmp_ps_eq_oq
   // CHECK: fcmp oeq <8 x float> %{{.*}}, %{{.*}}
   return _mm256_cmp_ps(a, b, _CMP_EQ_OQ);
 }
@@ -598,7 +598,7 @@ __m256 test_mm256_cmp_ps_true_us(__m256 a, __m256 b) {
 }
 
 __m128d test_mm_cmp_pd_eq_oq(__m128d a, __m128d b) {
-  // CHECK-LABEL: @test_mm_cmp_pd_eq_oq
+  // CHECK-LABEL: test_mm_cmp_pd_eq_oq
   // CHECK: fcmp oeq <2 x double> %{{.*}}, %{{.*}}
   return _mm_cmp_pd(a, b, _CMP_EQ_OQ);
 }
@@ -790,7 +790,7 @@ __m128d test_mm_cmp_pd_true_us(__m128d a, __m128d b) {
 }
 
 __m128 test_mm_cmp_ps_eq_oq(__m128 a, __m128 b) {
-  // CHECK-LABEL: @test_mm_cmp_ps_eq_oq
+  // CHECK-LABEL: test_mm_cmp_ps_eq_oq
   // CHECK: fcmp oeq <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_EQ_OQ);
 }
@@ -2062,19 +2062,19 @@ int test_mm256_testz_si256(__m256i A, __m256i B) {
 }
 
 __m256 test_mm256_undefined_ps() {
-  // CHECK-LABEL: @test_mm256_undefined_ps
+  // CHECK-LABEL: test_mm256_undefined_ps
   // CHECK: ret <8 x float> zeroinitializer
   return _mm256_undefined_ps();
 }
 
 __m256d test_mm256_undefined_pd() {
-  // CHECK-LABEL: @test_mm256_undefined_pd
+  // CHECK-LABEL: test_mm256_undefined_pd
   // CHECK: ret <4 x double> zeroinitializer
   return _mm256_undefined_pd();
 }
 
 __m256i test_mm256_undefined_si256() {
-  // CHECK-LABEL: @test_mm256_undefined_si256
+  // CHECK-LABEL: test_mm256_undefined_si256
   // CHECK: ret <4 x i64> zeroinitializer
   return _mm256_undefined_si256();
 }
@@ -2150,21 +2150,21 @@ __m256i test_mm256_zextsi128_si256(__m128i A) {
 
 double test_mm256_cvtsd_f64(__m256d __a)
 {
-  // CHECK-LABEL: @test_mm256_cvtsd_f64
+  // CHECK-LABEL: test_mm256_cvtsd_f64
   // CHECK: extractelement <4 x double> %{{.*}}, i32 0
   return _mm256_cvtsd_f64(__a);
 }
 
 int test_mm256_cvtsi256_si32(__m256i __a)
 {
-  // CHECK-LABEL: @test_mm256_cvtsi256_si32
+  // CHECK-LABEL: test_mm256_cvtsi256_si32
   // CHECK: extractelement <8 x i32> %{{.*}}, i32 0
   return _mm256_cvtsi256_si32(__a);
 }
 
 float test_mm256_cvtss_f32(__m256 __a)
 {
-  // CHECK-LABEL: @test_mm256_cvtss_f32
+  // CHECK-LABEL: test_mm256_cvtss_f32
   // CHECK: extractelement <8 x float> %{{.*}}, i32 0
   return _mm256_cvtss_f32(__a);
 }

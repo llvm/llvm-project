@@ -1141,10 +1141,7 @@ bool SampleProfileLoader::inlineHotFunctions(
         // top-down processing of functions' annotation.
         FunctionSamples *OutlineFS = Reader->getOrCreateSamplesFor(*Callee);
         OutlineFS->merge(*FS);
-      } else
-        assert(FS->getHeadSamples() == FS->getEntrySamples() &&
-               "Expect same head and entry sample counts for profiles already "
-               "merged.");
+      }
     } else {
       auto pair =
           notInlinedCallInfo.try_emplace(Callee, NotInlinedProfileInfo{0});

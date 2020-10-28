@@ -29,6 +29,7 @@ set_default("compiler_rt_intercept_libdispatch", @COMPILER_RT_INTERCEPT_LIBDISPA
 set_default("compiler_rt_libdir", "@COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR@")
 set_default("emulator", "@COMPILER_RT_EMULATOR@")
 set_default("asan_shadow_scale", "@COMPILER_RT_ASAN_SHADOW_SCALE@")
+set_default("memprof_shadow_scale", "@COMPILER_RT_MEMPROF_SHADOW_SCALE@")
 set_default("apple_platform", "osx")
 set_default("apple_platform_min_deployment_target_flag", "-mmacosx-version-min")
 set_default("sanitizer_can_use_cxxabi", @SANITIZER_CAN_USE_CXXABI_PYBOOL@)

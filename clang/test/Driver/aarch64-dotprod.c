@@ -9,4 +9,5 @@
 // RUN: %clang -### -target aarch64 -mcpu=cortex-a75 %s 2>&1 | FileCheck %s
 // RUN: %clang -### -target aarch64 -mcpu=cortex-a76 %s 2>&1 | FileCheck %s
 // RUN: %clang -### -target aarch64 -mcpu=cortex-a55 %s 2>&1 | FileCheck %s
+// RUN: %clang -### -target aarch64 -mcpu=cortex-r82 %s 2>&1 | FileCheck %s
 // CHECK: "+dotprod"

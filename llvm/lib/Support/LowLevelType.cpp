@@ -23,7 +23,7 @@ LLT::LLT(MVT VT) {
   } else if (VT.isValid()) {
     // Aggregates are no different from real scalars as far as GlobalISel is
     // concerned.
-    assert(VT.getSizeInBits() != 0 && "invalid zero-sized type");
+    assert(VT.getSizeInBits().isNonZero() && "invalid zero-sized type");
     init(/*IsPointer=*/false, /*IsVector=*/false, /*NumElements=*/0,
          VT.getSizeInBits(), /*AddressSpace=*/0);
   } else {

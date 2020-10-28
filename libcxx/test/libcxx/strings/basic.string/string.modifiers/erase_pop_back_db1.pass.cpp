@@ -10,9 +10,10 @@
 
 // void pop_back();
 
-#if _LIBCPP_DEBUG >= 1
+// UNSUPPORTED: libcxx-no-debug-mode
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEBUG=1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
-#endif
 
 #include <string>
 #include <cassert>
@@ -21,13 +22,11 @@
 
 int main(int, char**)
 {
-#if _LIBCPP_DEBUG >= 1
     {
         std::string s;
         s.pop_back();
         assert(false);
     }
-#endif
 
-  return 0;
+    return 0;
 }

@@ -20,6 +20,7 @@ using MCPhysReg = uint16_t;
 
 /// Wrapper class representing physical registers. Should be passed by value.
 class MCRegister {
+  friend hash_code hash_value(const MCRegister &);
   unsigned Reg;
 
 public:
@@ -46,29 +47,24 @@ public:
   /// register. StackSlot values do not exist in the MC layer, see
   /// Register::isStackSlot() for the more information on them.
   ///
-  /// Note that isVirtualRegister() and isPhysicalRegister() cannot handle stack
-  /// slots, so if a variable may contains a stack slot, always check
-  /// isStackSlot() first.
   static bool isStackSlot(unsigned Reg) {
-    return !(Reg & VirtualRegFlag) &&
-           uint32_t(Reg & ~VirtualRegFlag) >= FirstStackSlot;
+    return FirstStackSlot <= Reg && Reg < VirtualRegFlag;
   }
 
   /// Return true if the specified register number is in
   /// the physical register namespace.
   static bool isPhysicalRegister(unsigned Reg) {
-    assert(!isStackSlot(Reg) && "Not a register! Check isStackSlot() first.");
-    return Reg >= FirstPhysicalReg && !(Reg & VirtualRegFlag);
-  }
-
-  /// Return true if the specified register number is in the physical register
-  /// namespace.
-  bool isPhysical() const {
-    return isPhysicalRegister(Reg);
+    return FirstPhysicalReg <= Reg && Reg < FirstStackSlot;
   }
 
   constexpr operator unsigned() const {
     return Reg;
+  }
+
+  /// Check the provided unsigned value is a valid MCRegister.
+  static MCRegister from(unsigned Val) {
+    assert(Val == NoRegister || isPhysicalRegister(Val));
+    return MCRegister(Val);
   }
 
   unsigned id() const {
@@ -110,6 +106,9 @@ template<> struct DenseMapInfo<MCRegister> {
   }
 };
 
+inline hash_code hash_value(const MCRegister &Reg) {
+  return hash_value(Reg.id());
+}
 }
 
 #endif // ifndef LLVM_MC_REGISTER_H

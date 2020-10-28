@@ -445,9 +445,8 @@ llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &SM,
 
 llvm::StringRef toSourceCode(const SourceManager &SM, SourceRange R) {
   assert(isValidFileRange(SM, R));
-  bool Invalid = false;
-  auto *Buf = SM.getBuffer(SM.getFileID(R.getBegin()), &Invalid);
-  assert(!Invalid);
+  auto Buf = SM.getBufferOrNone(SM.getFileID(R.getBegin()));
+  assert(Buf);
 
   size_t BeginOffset = SM.getFileOffset(R.getBegin());
   size_t EndOffset = SM.getFileOffset(R.getEnd());
@@ -456,7 +455,7 @@ llvm::StringRef toSourceCode(const SourceManager &SM, SourceRange R) {
 
 llvm::Expected<SourceLocation> sourceLocationInMainFile(const SourceManager &SM,
                                                         Position P) {
-  llvm::StringRef Code = SM.getBuffer(SM.getMainFileID())->getBuffer();
+  llvm::StringRef Code = SM.getBufferOrFake(SM.getMainFileID()).getBuffer();
   auto Offset =
       positionToOffset(Code, P, /*AllowColumnBeyondLineLength=*/false);
   if (!Offset)
@@ -631,6 +630,12 @@ std::vector<Range> collectIdentifierRanges(llvm::StringRef Identifier,
         Ranges.push_back(halfOpenToRange(SM, Tok.range(SM).toCharRange(SM)));
       });
   return Ranges;
+}
+
+bool isKeyword(llvm::StringRef NewName, const LangOptions &LangOpts) {
+  // Keywords are initialized in constructor.
+  clang::IdentifierTable KeywordsTable(LangOpts);
+  return KeywordsTable.find(NewName) != KeywordsTable.end();
 }
 
 namespace {

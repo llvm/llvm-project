@@ -1864,7 +1864,7 @@ UNUSED static void unpoison_passwd(void *ctx, __sanitizer_passwd *pwd) {
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwd->pw_gecos,
                                      REAL(strlen)(pwd->pw_gecos) + 1);
 #endif
-#if SANITIZER_MAC || SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_OPENBSD
+#if SANITIZER_MAC || SANITIZER_FREEBSD || SANITIZER_NETBSD
     if (pwd->pw_class)
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pwd->pw_class,
                                      REAL(strlen)(pwd->pw_class) + 1);
@@ -3750,7 +3750,7 @@ INTERCEPTOR(char *, strerror, int errnum) {
 //    static storage.
 #if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE) || \
     SANITIZER_MAC || SANITIZER_ANDROID || SANITIZER_NETBSD ||                 \
-    SANITIZER_FREEBSD || SANITIZER_OPENBSD
+    SANITIZER_FREEBSD
 // POSIX version. Spec is not clear on whether buf is NULL-terminated.
 // At least on OSX, buf contents are valid even when the call fails.
 INTERCEPTOR(int, strerror_r, int errnum, char *buf, SIZE_T buflen) {
@@ -4088,23 +4088,31 @@ INTERCEPTOR(int, sigfillset, __sanitizer_sigset_t *set) {
 #endif
 
 #if SANITIZER_INTERCEPT_SIGSET_LOGICOPS
-INTERCEPTOR(int, sigandset, __sanitizer_sigset_t *dst, __sanitizer_sigset_t *src1, __sanitizer_sigset_t *src2) {
+INTERCEPTOR(int, sigandset, __sanitizer_sigset_t *dst,
+            __sanitizer_sigset_t *src1, __sanitizer_sigset_t *src2) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, sigandset, dst, src1, src2);
-  if (src1) COMMON_INTERCEPTOR_READ_RANGE(ctx, src1, sizeof(*src1));
-  if (src2) COMMON_INTERCEPTOR_READ_RANGE(ctx, src2, sizeof(*src2));
+  if (src1)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, src1, sizeof(*src1));
+  if (src2)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, src2, sizeof(*src2));
   int res = REAL(sigandset)(dst, src1, src2);
-  if (!res && dst) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, sizeof(*dst));
+  if (!res && dst)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, sizeof(*dst));
   return res;
 }
 
-INTERCEPTOR(int, sigorset, __sanitizer_sigset_t *dst, __sanitizer_sigset_t *src1, __sanitizer_sigset_t *src2) {
+INTERCEPTOR(int, sigorset, __sanitizer_sigset_t *dst,
+            __sanitizer_sigset_t *src1, __sanitizer_sigset_t *src2) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, sigorset, dst, src1, src2);
-  if (src1) COMMON_INTERCEPTOR_READ_RANGE(ctx, src1, sizeof(*src1));
-  if (src2) COMMON_INTERCEPTOR_READ_RANGE(ctx, src2, sizeof(*src2));
+  if (src1)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, src1, sizeof(*src1));
+  if (src2)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, src2, sizeof(*src2));
   int res = REAL(sigorset)(dst, src1, src2);
-  if (!res && dst) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, sizeof(*dst));
+  if (!res && dst)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, sizeof(*dst));
   return res;
 }
 #define INIT_SIGSET_LOGICOPS                    \
@@ -5897,7 +5905,7 @@ INTERCEPTOR(void, xdrrec_create, __sanitizer_XDR *xdr, unsigned sndsize,
   COMMON_INTERCEPTOR_ENTER(ctx, xdrrec_create, xdr, sndsize, rcvsize,
                            handle, rd, wr);
   COMMON_INTERCEPTOR_READ_RANGE(ctx, &xdr->x_op, sizeof xdr->x_op);
-  
+
   // We can't allocate a wrapper on the stack, as the handle is used outside
   // this stack frame. So we put it on the heap, and keep track of it with
   // the HashMap (keyed by x_private). When we later need to xdr_destroy,

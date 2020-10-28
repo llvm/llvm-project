@@ -123,8 +123,6 @@ PlatformOpenBSD::PlatformOpenBSD(bool is_host)
     : PlatformPOSIX(is_host) // This is the local host platform
 {}
 
-PlatformOpenBSD::~PlatformOpenBSD() = default;
-
 bool PlatformOpenBSD::GetSupportedArchitectureAtIndex(uint32_t idx,
                                                       ArchSpec &arch) {
   if (IsHost()) {

@@ -64,6 +64,14 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 	elif [ "`uname -a | grep aarch64`" != "" ]; then
 		SUFFIX="linux_arm64"
 		ARCHCFLAGS=""
+	elif [ "`uname -a | grep -i mips64`" != "" ]; then
+		if [ "`lscpu | grep -i Little`" != "" ]; then
+			SUFFIX="linux_mips64le"
+			ARCHCFLAGS="-mips64 -EL"
+		else
+			SUFFIX="linux_mips64"
+			ARCHCFLAGS="-mips64 -EB"
+		fi
 	fi
 elif [ "`uname -a | grep FreeBSD`" != "" ]; then
 	# The resulting object still depends on libc.
@@ -107,27 +115,6 @@ elif [ "`uname -a | grep NetBSD`" != "" ]; then
 		../../sanitizer_common/sanitizer_netbsd.cpp
 		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cpp
 		../../sanitizer_common/sanitizer_stoptheworld_netbsd_libcdep.cpp
-	"
-elif [ "`uname -a | grep OpenBSD`" != "" ]; then
-	# The resulting object still depends on libc.
-	# We removed this dependency for Go runtime for other OSes,
-	# and we should remove it for OpenBSD as well, but there is no pressing need.
-	DEPENDS_ON_LIBC=1
-	SUFFIX="openbsd_amd64"
-	OSCFLAGS="-fno-strict-aliasing -fPIC -Werror"
-	ARCHCFLAGS="-m64"
-	OSLDFLAGS="-pthread -fPIC -fpie"
-	SRCS="
-		$SRCS
-		../rtl/tsan_platform_linux.cpp
-		../../sanitizer_common/sanitizer_posix.cpp
-		../../sanitizer_common/sanitizer_posix_libcdep.cpp
-		../../sanitizer_common/sanitizer_procmaps_bsd.cpp
-		../../sanitizer_common/sanitizer_procmaps_common.cpp
-		../../sanitizer_common/sanitizer_linux.cpp
-		../../sanitizer_common/sanitizer_linux_libcdep.cpp
-		../../sanitizer_common/sanitizer_openbsd.cpp
-		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cpp
 	"
 elif [ "`uname -a | grep Darwin`" != "" ]; then
 	SUFFIX="darwin_amd64"

@@ -201,10 +201,6 @@ public:
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
                    bool KillSrc) const override;
 
-  unsigned calculateLDSSpillAddress(MachineBasicBlock &MBB, MachineInstr &MI,
-                                    RegScavenger *RS, unsigned TmpReg,
-                                    unsigned Offset, unsigned Size) const;
-
   void materializeImmediate(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI,
                             const DebugLoc &DL,
@@ -511,9 +507,18 @@ public:
     return (Flags & SIInstrFlags::FLAT) && !(Flags & SIInstrFlags::LGKM_CNT);
   }
 
+  bool isSegmentSpecificFLAT(uint16_t Opcode) const {
+    auto Flags = get(Opcode).TSFlags;
+    return (Flags & SIInstrFlags::FLAT) && !(Flags & SIInstrFlags::LGKM_CNT);
+  }
+
   // FIXME: Make this more precise
   static bool isFLATScratch(const MachineInstr &MI) {
     return isSegmentSpecificFLAT(MI);
+  }
+
+  bool isFLATScratch(uint16_t Opcode) const {
+    return isSegmentSpecificFLAT(Opcode);
   }
 
   // Any FLAT encoded instruction, including global_* and scratch_*.
@@ -902,11 +907,11 @@ public:
   /// VALU if necessary. If present, \p MDT is updated.
   void moveToVALU(MachineInstr &MI, MachineDominatorTree *MDT = nullptr) const;
 
-  void insertWaitStates(MachineBasicBlock &MBB,MachineBasicBlock::iterator MI,
-                        int Count) const;
-
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;
+
+  void insertNoops(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                   unsigned Quantity) const override;
 
   void insertReturn(MachineBasicBlock &MBB) const;
   /// Return the number of wait states that result from executing this
@@ -1016,7 +1021,7 @@ public:
     return isUInt<12>(Imm);
   }
 
-  unsigned getNumFlatOffsetBits(unsigned AddrSpace, bool Signed) const;
+  unsigned getNumFlatOffsetBits(bool Signed) const;
 
   /// Returns if \p Offset is legal for the subtarget as the offset to a FLAT
   /// encoded instruction. If \p Signed, this is for an instruction that
@@ -1150,6 +1155,9 @@ namespace AMDGPU {
 
   LLVM_READONLY
   int getVCMPXNoSDstOp(uint16_t Opcode);
+
+  LLVM_READONLY
+  int getFlatScratchInstSTfromSS(uint16_t Opcode);
 
   const uint64_t RSRC_DATA_FORMAT = 0xf00000000000LL;
   const uint64_t RSRC_ELEMENT_SIZE_SHIFT = (32 + 19);

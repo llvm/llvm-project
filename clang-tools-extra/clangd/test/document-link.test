@@ -1,4 +1,5 @@
-# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+# %resource_dir actually points at builtin_include_dir, go up one directory.
+# RUN: clangd -lit-test -resource-dir=%resource_dir/.. < %s | FileCheck -strict-whitespace %s
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
 ---
 {"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"#include <stdint.h>\n#include <stddef.h>"}}}

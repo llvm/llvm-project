@@ -1702,17 +1702,19 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
   assert(LinkageAttr != MCSA_Invalid && "LinkageAttr should not MCSA_Invalid.");
 
   MCSymbolAttr VisibilityAttr = MCSA_Invalid;
-  switch (GV->getVisibility()) {
+  if (!TM.getIgnoreXCOFFVisibility()) {
+    switch (GV->getVisibility()) {
 
-  // TODO: "exported" and "internal" Visibility needs to go here.
-  case GlobalValue::DefaultVisibility:
-    break;
-  case GlobalValue::HiddenVisibility:
-    VisibilityAttr = MAI->getHiddenVisibilityAttr();
-    break;
-  case GlobalValue::ProtectedVisibility:
-    VisibilityAttr = MAI->getProtectedVisibilityAttr();
-    break;
+    // TODO: "exported" and "internal" Visibility needs to go here.
+    case GlobalValue::DefaultVisibility:
+      break;
+    case GlobalValue::HiddenVisibility:
+      VisibilityAttr = MAI->getHiddenVisibilityAttr();
+      break;
+    case GlobalValue::ProtectedVisibility:
+      VisibilityAttr = MAI->getProtectedVisibilityAttr();
+      break;
+    }
   }
 
   OutStreamer->emitXCOFFSymbolLinkageWithVisibility(GVSym, LinkageAttr,
@@ -1809,11 +1811,16 @@ void PPCAIXAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   MCSymbol *EmittedInitSym = GVSym;
   emitLinkage(GV, EmittedInitSym);
   emitAlignment(getGVAlignment(GV, DL), GV);
-  OutStreamer->emitLabel(EmittedInitSym);
+  // When -fdata-sections is enabled, every GlobalVariable will
+  // be put into its own csect; therefore, label is not necessary here.
+  if (!TM.getDataSections())
+    OutStreamer->emitLabel(EmittedInitSym);
+
   // Emit aliasing label for global variable.
   llvm::for_each(GOAliasMap[GV], [this](const GlobalAlias *Alias) {
     OutStreamer->emitLabel(getSymbol(Alias));
   });
+
   emitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
 }
 

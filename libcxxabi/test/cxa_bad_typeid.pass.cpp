@@ -14,7 +14,6 @@
 #include <exception>
 #include <typeinfo>
 #include <string>
-#include <iostream>
 
 #include "test_macros.h"
 
@@ -28,7 +27,7 @@ std::string test_bad_typeid(Derived *p) {
     return typeid(*p).name();
 }
 
-void my_terminate() { std::cout << "A" << std::endl; exit(0); }
+void my_terminate() { exit(0); }
 
 int main ()
 {

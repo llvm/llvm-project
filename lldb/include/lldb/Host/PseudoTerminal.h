@@ -9,10 +9,10 @@
 #ifndef LLDB_HOST_PSEUDOTERMINAL_H
 #define LLDB_HOST_PSEUDOTERMINAL_H
 
+#include "lldb/lldb-defines.h"
+#include "llvm/Support/Error.h"
 #include <fcntl.h>
 #include <string>
-
-#include "lldb/lldb-defines.h"
 
 namespace lldb_private {
 
@@ -62,15 +62,11 @@ public:
   /// @li PseudoTerminal::ReleasePrimaryFileDescriptor() @li
   /// PseudoTerminal::ReleaseSaveFileDescriptor()
   ///
-  /// \param[out] error_str
-  ///     An pointer to an error that can describe any errors that
-  ///     occur. This can be NULL if no error status is desired.
-  ///
   /// \return
   ///     \b Parent process: a child process ID that is greater
-  ///         than zero, or -1 if the fork fails.
+  ///         than zero, or an error if the fork fails.
   ///     \b Child process: zero.
-  lldb::pid_t Fork(char *error_str, size_t error_len);
+  llvm::Expected<lldb::pid_t> Fork();
 
   /// The primary file descriptor accessor.
   ///
@@ -105,20 +101,11 @@ public:
   /// A primary pseudo terminal should already be valid prior to
   /// calling this function.
   ///
-  /// \param[out] error_str
-  ///     An pointer to an error that can describe any errors that
-  ///     occur. This can be NULL if no error status is desired.
-  ///
   /// \return
-  ///     The name of the secondary pseudo terminal as a NULL terminated
-  ///     C. This string that comes from static memory, so a copy of
-  ///     the string should be made as subsequent calls can change
-  ///     this value. NULL is returned if this object doesn't have
-  ///     a valid primary pseudo terminal opened or if the call to
-  ///     \c ptsname() fails.
+  ///     The name of the secondary pseudo terminal.
   ///
   /// \see PseudoTerminal::OpenFirstAvailablePrimary()
-  const char *GetSecondaryName(char *error_str, size_t error_len) const;
+  std::string GetSecondaryName() const;
 
   /// Open the first available pseudo terminal.
   ///
@@ -137,18 +124,9 @@ public:
   ///     Flags to use when calling \c posix_openpt(\a oflag).
   ///     A value of "O_RDWR|O_NOCTTY" is suggested.
   ///
-  /// \param[out] error_str
-  ///     An pointer to an error that can describe any errors that
-  ///     occur. This can be NULL if no error status is desired.
-  ///
-  /// \return
-  ///     \b true when the primary files descriptor is
-  ///         successfully opened.
-  ///     \b false if anything goes wrong.
-  ///
   /// \see PseudoTerminal::GetPrimaryFileDescriptor() @see
   /// PseudoTerminal::ReleasePrimaryFileDescriptor()
-  bool OpenFirstAvailablePrimary(int oflag, char *error_str, size_t error_len);
+  llvm::Error OpenFirstAvailablePrimary(int oflag);
 
   /// Open the secondary for the current primary pseudo terminal.
   ///
@@ -166,19 +144,10 @@ public:
   /// \param[in] oflag
   ///     Flags to use when calling \c open(\a oflag).
   ///
-  /// \param[out] error_str
-  ///     An pointer to an error that can describe any errors that
-  ///     occur. This can be NULL if no error status is desired.
-  ///
-  /// \return
-  ///     \b true when the primary files descriptor is
-  ///         successfully opened.
-  ///     \b false if anything goes wrong.
-  ///
   /// \see PseudoTerminal::OpenFirstAvailablePrimary() @see
   /// PseudoTerminal::GetSecondaryFileDescriptor() @see
   /// PseudoTerminal::ReleaseSecondaryFileDescriptor()
-  bool OpenSecondary(int oflag, char *error_str, size_t error_len);
+  llvm::Error OpenSecondary(int oflag);
 
   /// Release the primary file descriptor.
   ///

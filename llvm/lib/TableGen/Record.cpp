@@ -761,6 +761,12 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
       return NewInit;
     break;
 
+  case NOT:
+    if (IntInit *LHSi =
+            dyn_cast_or_null<IntInit>(LHS->convertInitializerTo(IntRecTy::get())))
+      return IntInit::get(LHSi->getValue() ? 0 : 1);
+    break;
+
   case HEAD:
     if (ListInit *LHSl = dyn_cast<ListInit>(LHS)) {
       assert(!LHSl->empty() && "Empty list in head");
@@ -780,16 +786,22 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
   case SIZE:
     if (ListInit *LHSl = dyn_cast<ListInit>(LHS))
       return IntInit::get(LHSl->size());
+    if (DagInit *LHSd = dyn_cast<DagInit>(LHS))
+      return IntInit::get(LHSd->arg_size());
+    if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
+      return IntInit::get(LHSs->getValue().size());
     break;
 
   case EMPTY:
     if (ListInit *LHSl = dyn_cast<ListInit>(LHS))
       return IntInit::get(LHSl->empty());
+    if (DagInit *LHSd = dyn_cast<DagInit>(LHS))
+      return IntInit::get(LHSd->arg_empty());
     if (StringInit *LHSs = dyn_cast<StringInit>(LHS))
       return IntInit::get(LHSs->getValue().empty());
     break;
 
-  case GETOP:
+  case GETDAGOP:
     if (DagInit *Dag = dyn_cast<DagInit>(LHS)) {
       DefInit *DI = DefInit::get(Dag->getOperatorAsDef({}));
       if (!DI->getType()->typeIsA(getType())) {
@@ -820,11 +832,12 @@ std::string UnOpInit::getAsString() const {
   std::string Result;
   switch (getOpcode()) {
   case CAST: Result = "!cast<" + getType()->getAsString() + ">"; break;
+  case NOT: Result = "!not"; break;
   case HEAD: Result = "!head"; break;
   case TAIL: Result = "!tail"; break;
   case SIZE: Result = "!size"; break;
   case EMPTY: Result = "!empty"; break;
-  case GETOP: Result = "!getop"; break;
+  case GETDAGOP: Result = "!getdagop"; break;
   }
   return Result + "(" + LHS->getAsString() + ")";
 }
@@ -996,7 +1009,7 @@ Init *BinOpInit::Fold(Record *CurRec) const {
 
     break;
   }
-  case SETOP: {
+  case SETDAGOP: {
     DagInit *Dag = dyn_cast<DagInit>(LHS);
     DefInit *Op = dyn_cast<DefInit>(RHS);
     if (Dag && Op) {
@@ -1014,6 +1027,7 @@ Init *BinOpInit::Fold(Record *CurRec) const {
   case MUL:
   case AND:
   case OR:
+  case XOR:
   case SHL:
   case SRA:
   case SRL: {
@@ -1029,7 +1043,8 @@ Init *BinOpInit::Fold(Record *CurRec) const {
       case ADD: Result = LHSv +  RHSv; break;
       case MUL: Result = LHSv *  RHSv; break;
       case AND: Result = LHSv &  RHSv; break;
-      case OR: Result = LHSv | RHSv; break;
+      case OR:  Result = LHSv | RHSv; break;
+      case XOR: Result = LHSv ^ RHSv; break;
       case SHL: Result = (uint64_t)LHSv << (uint64_t)RHSv; break;
       case SRA: Result = LHSv >> RHSv; break;
       case SRL: Result = (uint64_t)LHSv >> (uint64_t)RHSv; break;
@@ -1060,6 +1075,7 @@ std::string BinOpInit::getAsString() const {
   case MUL: Result = "!mul"; break;
   case AND: Result = "!and"; break;
   case OR: Result = "!or"; break;
+  case XOR: Result = "!xor"; break;
   case SHL: Result = "!shl"; break;
   case SRA: Result = "!sra"; break;
   case SRL: Result = "!srl"; break;
@@ -1072,7 +1088,7 @@ std::string BinOpInit::getAsString() const {
   case LISTCONCAT: Result = "!listconcat"; break;
   case LISTSPLAT: Result = "!listsplat"; break;
   case STRCONCAT: Result = "!strconcat"; break;
-  case SETOP: Result = "!setop"; break;
+  case SETDAGOP: Result = "!setdagop"; break;
   }
   return Result + "(" + LHS->getAsString() + ", " + RHS->getAsString() + ")";
 }
@@ -2144,12 +2160,27 @@ void Record::setName(Init *NewName) {
   // this.  See TGParser::ParseDef and TGParser::ParseDefm.
 }
 
+// NOTE for the next two functions:
+// Superclasses are in post-order, so the final one is a direct
+// superclass. All of its transitive superclases immediately precede it,
+// so we can step through the direct superclasses in reverse order.
+
+bool Record::hasDirectSuperClass(const Record *Superclass) const {
+  ArrayRef<std::pair<Record *, SMRange>> SCs = getSuperClasses();
+
+  for (int I = SCs.size() - 1; I >= 0; --I) {
+    const Record *SC = SCs[I].first;
+    if (SC == Superclass)
+      return true;
+    I -= SC->getSuperClasses().size();
+  }
+
+  return false;
+}
+
 void Record::getDirectSuperClasses(SmallVectorImpl<Record *> &Classes) const {
   ArrayRef<std::pair<Record *, SMRange>> SCs = getSuperClasses();
 
-  // Superclasses are in post-order, so the final one is a direct
-  // superclass. All of its transitive superclases immediately precede it,
-  // so we can step through the direct superclasses in reverse order.
   while (!SCs.empty()) {
     Record *SC = SCs.back().first;
     SCs = SCs.drop_back(1 + SC->getSuperClasses().size());
@@ -2455,16 +2486,25 @@ Init *RecordKeeper::getNewAnonymousName() {
   return StringInit::get("anonymous_" + utostr(AnonCounter++));
 }
 
-std::vector<Record *>
-RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
-  Record *Class = getClass(ClassName);
-  if (!Class)
-    PrintFatalError("ERROR: Couldn't find the `" + ClassName + "' class!\n");
+std::vector<Record *> RecordKeeper::getAllDerivedDefinitions(
+    const ArrayRef<StringRef> ClassNames) const {
+  SmallVector<Record *, 2> ClassRecs;
+  std::vector<Record *> Defs;
 
-  std::vector<Record*> Defs;
-  for (const auto &D : getDefs())
-    if (D.second->isSubClassOf(Class))
-      Defs.push_back(D.second.get());
+  assert(ClassNames.size() > 0 && "At least one class must be passed.");
+  for (const auto &ClassName : ClassNames) {
+    Record *Class = getClass(ClassName);
+    if (!Class)
+      PrintFatalError("The class '" + ClassName + "' is not defined\n");
+    ClassRecs.push_back(Class);
+  }
+
+  for (const auto &OneDef : getDefs()) {
+    if (all_of(ClassRecs, [&OneDef](const Record *Class) {
+                            return OneDef.second->isSubClassOf(Class);
+                          }))
+      Defs.push_back(OneDef.second.get());
+  }
 
   return Defs;
 }

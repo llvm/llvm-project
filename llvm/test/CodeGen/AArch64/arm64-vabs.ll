@@ -141,12 +141,12 @@ define <2 x i64> @uabdl2_2d(<4 x i32>* %A, <4 x i32>* %B) nounwind {
   ret <2 x i64> %tmp4
 }
 
-declare i16 @llvm.experimental.vector.reduce.add.v16i16(<16 x i16>)
+declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)
+declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
 
-define i16 @uabdl8h_rdx(<16 x i8>* %a, <16 x i8>* %b) {
-; CHECK-LABEL: uabdl8h_rdx
-; CHECK: uabdl2.8h
-; CHECK: uabdl.8h
+define i16 @uabd16b_rdx(<16 x i8>* %a, <16 x i8>* %b) {
+; CHECK-LABEL: uabd16b_rdx
+; CHECK: uabd.16b
   %aload = load <16 x i8>, <16 x i8>* %a, align 1
   %bload = load <16 x i8>, <16 x i8>* %b, align 1
   %aext = zext <16 x i8> %aload to <16 x i16>
@@ -155,16 +155,43 @@ define i16 @uabdl8h_rdx(<16 x i8>* %a, <16 x i8>* %b) {
   %abcmp = icmp slt <16 x i16> %abdiff, zeroinitializer
   %ababs = sub nsw <16 x i16> zeroinitializer, %abdiff
   %absel = select <16 x i1> %abcmp, <16 x i16> %ababs, <16 x i16> %abdiff
-  %reduced_v = call i16 @llvm.experimental.vector.reduce.add.v16i16(<16 x i16> %absel)
+  %reduced_v = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %absel)
   ret i16 %reduced_v
 }
 
-declare i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32>)
+define i32 @uabd16b_rdx_i32(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: uabd16b_rdx_i32
+; CHECK: uabd.16b
+  %aext = zext <16 x i8> %a to <16 x i32>
+  %bext = zext <16 x i8> %b to <16 x i32>
+  %abdiff = sub nsw <16 x i32> %aext, %bext
+  %abcmp = icmp slt <16 x i32> %abdiff, zeroinitializer
+  %ababs = sub nsw <16 x i32> zeroinitializer, %abdiff
+  %absel = select <16 x i1> %abcmp, <16 x i32> %ababs, <16 x i32> %abdiff
+  %reduced_v = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %absel)
+  ret i32 %reduced_v
+}
 
-define i32 @uabdl4s_rdx(<8 x i16>* %a, <8 x i16>* %b) {
-; CHECK-LABEL: uabdl4s_rdx
-; CHECK: uabdl2.4s
-; CHECK: uabdl.4s
+define i32 @sabd16b_rdx_i32(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: sabd16b_rdx_i32
+; CHECK: sabd.16b
+  %aext = sext <16 x i8> %a to <16 x i32>
+  %bext = sext <16 x i8> %b to <16 x i32>
+  %abdiff = sub nsw <16 x i32> %aext, %bext
+  %abcmp = icmp slt <16 x i32> %abdiff, zeroinitializer
+  %ababs = sub nsw <16 x i32> zeroinitializer, %abdiff
+  %absel = select <16 x i1> %abcmp, <16 x i32> %ababs, <16 x i32> %abdiff
+  %reduced_v = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %absel)
+  ret i32 %reduced_v
+}
+
+
+declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
+declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
+
+define i32 @uabd8h_rdx(<8 x i16>* %a, <8 x i16>* %b) {
+; CHECK-LABEL: uabd8h_rdx
+; CHECK: uabd.8h
   %aload = load <8 x i16>, <8 x i16>* %a, align 1
   %bload = load <8 x i16>, <8 x i16>* %b, align 1
   %aext = zext <8 x i16> %aload to <8 x i32>
@@ -173,16 +200,45 @@ define i32 @uabdl4s_rdx(<8 x i16>* %a, <8 x i16>* %b) {
   %abcmp = icmp slt <8 x i32> %abdiff, zeroinitializer
   %ababs = sub nsw <8 x i32> zeroinitializer, %abdiff
   %absel = select <8 x i1> %abcmp, <8 x i32> %ababs, <8 x i32> %abdiff
-  %reduced_v = call i32 @llvm.experimental.vector.reduce.add.v8i32(<8 x i32> %absel)
+  %reduced_v = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %absel)
   ret i32 %reduced_v
 }
 
-declare i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64>)
+define i32 @sabd8h_rdx(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: sabd8h_rdx
+; CHECK: sabd.8h
+  %aext = sext <8 x i16> %a to <8 x i32>
+  %bext = sext <8 x i16> %b to <8 x i32>
+  %abdiff = sub nsw <8 x i32> %aext, %bext
+  %abcmp = icmp slt <8 x i32> %abdiff, zeroinitializer
+  %ababs = sub nsw <8 x i32> zeroinitializer, %abdiff
+  %absel = select <8 x i1> %abcmp, <8 x i32> %ababs, <8 x i32> %abdiff
+  %reduced_v = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %absel)
+  ret i32 %reduced_v
+}
 
-define i64 @uabdl2d_rdx(<4 x i32>* %a, <4 x i32>* %b, i32 %h) {
-; CHECK: uabdl2d_rdx
-; CHECK: uabdl2.2d
-; CHECK: uabdl.2d
+define i32 @uabdl4s_rdx_i32(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-LABEL: uabdl4s_rdx_i32
+; DAG: uabdl.4s
+
+; GISel doesn't match this pattern yet.
+; GISEL: addv.4s
+  %aext = zext <4 x i16> %a to <4 x i32>
+  %bext = zext <4 x i16> %b to <4 x i32>
+ %abdiff = sub nsw <4 x i32> %aext, %bext
+  %abcmp = icmp slt <4 x i32> %abdiff, zeroinitializer
+  %ababs = sub nsw <4 x i32> zeroinitializer, %abdiff
+  %absel = select <4 x i1> %abcmp, <4 x i32> %ababs, <4 x i32> %abdiff
+  %reduced_v = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %absel)
+  ret i32 %reduced_v
+}
+
+declare i64 @llvm.vector.reduce.add.v4i64(<4 x i64>)
+declare i64 @llvm.vector.reduce.add.v2i64(<2 x i64>)
+
+define i64 @uabd4s_rdx(<4 x i32>* %a, <4 x i32>* %b, i32 %h) {
+; CHECK: uabd4s_rdx
+; CHECK: uabd.4s
   %aload = load <4 x i32>, <4 x i32>* %a, align 1
   %bload = load <4 x i32>, <4 x i32>* %b, align 1
   %aext = zext <4 x i32> %aload to <4 x i64>
@@ -191,7 +247,36 @@ define i64 @uabdl2d_rdx(<4 x i32>* %a, <4 x i32>* %b, i32 %h) {
   %abcmp = icmp slt <4 x i64> %abdiff, zeroinitializer
   %ababs = sub nsw <4 x i64> zeroinitializer, %abdiff
   %absel = select <4 x i1> %abcmp, <4 x i64> %ababs, <4 x i64> %abdiff
-  %reduced_v = call i64 @llvm.experimental.vector.reduce.add.v4i64(<4 x i64> %absel)
+  %reduced_v = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %absel)
+  ret i64 %reduced_v
+}
+
+define i64 @sabd4s_rdx(<4 x i32> %a, <4 x i32> %b) {
+; CHECK: sabd4s_rdx
+; CHECK: sabd.4s
+  %aext = sext <4 x i32> %a to <4 x i64>
+  %bext = sext <4 x i32> %b to <4 x i64>
+  %abdiff = sub nsw <4 x i64> %aext, %bext
+  %abcmp = icmp slt <4 x i64> %abdiff, zeroinitializer
+  %ababs = sub nsw <4 x i64> zeroinitializer, %abdiff
+  %absel = select <4 x i1> %abcmp, <4 x i64> %ababs, <4 x i64> %abdiff
+  %reduced_v = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %absel)
+  ret i64 %reduced_v
+}
+
+define i64 @uabdl2d_rdx_i64(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: uabdl2d_rdx_i64
+; DAG: uabdl.2d
+
+; GISel doesn't match this pattern yet
+; GISEL: addp.2d
+  %aext = zext <2 x i32> %a to <2 x i64>
+  %bext = zext <2 x i32> %b to <2 x i64>
+  %abdiff = sub nsw <2 x i64> %aext, %bext
+  %abcmp = icmp slt <2 x i64> %abdiff, zeroinitializer
+  %ababs = sub nsw <2 x i64> zeroinitializer, %abdiff
+  %absel = select <2 x i1> %abcmp, <2 x i64> %ababs, <2 x i64> %abdiff
+  %reduced_v = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %absel)
   ret i64 %reduced_v
 }
 
@@ -956,8 +1041,8 @@ define <2 x i32> @abspattern1(<2 x i32> %a) nounwind {
 ; DAG: abs.2s
 ; DAG-NEXT: ret
 
-; GISEL: neg.2s
-; GISEL: cmge.2s
+; GISEL-DAG: neg.2s
+; GISEL-DAG: cmge.2s
 ; GISEL: bif.8b
         %tmp1neg = sub <2 x i32> zeroinitializer, %a
         %b = icmp sge <2 x i32> %a, zeroinitializer
@@ -982,8 +1067,12 @@ define <4 x i16> @abspattern2(<4 x i16> %a) nounwind {
 
 define <8 x i8> @abspattern3(<8 x i8> %a) nounwind {
 ; CHECK-LABEL: abspattern3:
-; CHECK: abs.8b
-; CHECK-NEXT: ret
+; DAG: abs.8b
+; DAG-NEXT: ret
+
+; GISEL-DAG: neg.8b
+; GISEL-DAG: cmgt.8b
+; GISEL: bit.8b
         %tmp1neg = sub <8 x i8> zeroinitializer, %a
         %b = icmp slt <8 x i8> %a, zeroinitializer
         %abs = select <8 x i1> %b, <8 x i8> %tmp1neg, <8 x i8> %a
@@ -1035,8 +1124,8 @@ define <2 x i64> @abspattern7(<2 x i64> %a) nounwind {
 ; DAG: abs.2d
 ; DAG-NEXT: ret
 
-; GISEL: neg.2d
-; GISEL: cmge.2d
+; GISEL-DAG: neg.2d
+; GISEL-DAG: cmge.2d
 ; GISEL: bit.16b
         %tmp1neg = sub <2 x i64> zeroinitializer, %a
         %b = icmp sle <2 x i64> %a, zeroinitializer

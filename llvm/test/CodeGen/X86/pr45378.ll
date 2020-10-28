@@ -6,7 +6,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512f  | FileCheck %s --check-prefixes=CHECK,AVX,AVX512,AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=avx512bw | FileCheck %s --check-prefixes=CHECK,AVX,AVX512,AVX512BW
 
-declare i64 @llvm.experimental.vector.reduce.or.v2i64(<2 x i64>)
+declare i64 @llvm.vector.reduce.or.v2i64(<2 x i64>)
 
 define i1 @parseHeaders(i64 * %ptr) nounwind {
 ; SSE2-LABEL: parseHeaders:
@@ -34,7 +34,7 @@ define i1 @parseHeaders(i64 * %ptr) nounwind {
 ; AVX-NEXT:    retq
   %vptr = bitcast i64 * %ptr to <2 x i64> *
   %vload = load <2 x i64>, <2 x i64> * %vptr, align 8
-  %vreduce = call i64 @llvm.experimental.vector.reduce.or.v2i64(<2 x i64> %vload)
+  %vreduce = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> %vload)
   %vcheck = icmp eq i64 %vreduce, 0
   ret i1 %vcheck
 }

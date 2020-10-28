@@ -33,7 +33,7 @@
 ; ASM:         popl    %ebx
 ; ASM: [[EPILOGUE]]:                                 # %return
 ; ASM:         retl    $8
-; ASM: Ltmp10:
+; ASM: Ltmp11:
 ; ASM:         .cv_fpo_endproc
 
 ; Note how RvaStart advances 7 bytes to skip the shrink-wrapped portion.

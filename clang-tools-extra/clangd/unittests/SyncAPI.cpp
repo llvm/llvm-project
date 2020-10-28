@@ -97,11 +97,20 @@ runFindDocumentHighlights(ClangdServer &Server, PathRef File, Position Pos) {
   return std::move(*Result);
 }
 
-llvm::Expected<FileEdits> runRename(ClangdServer &Server, PathRef File,
-                                    Position Pos, llvm::StringRef NewName,
-                                    const RenameOptions &RenameOpts) {
-  llvm::Optional<llvm::Expected<FileEdits>> Result;
+llvm::Expected<RenameResult> runRename(ClangdServer &Server, PathRef File,
+                                       Position Pos, llvm::StringRef NewName,
+                                       const RenameOptions &RenameOpts) {
+  llvm::Optional<llvm::Expected<RenameResult>> Result;
   Server.rename(File, Pos, NewName, RenameOpts, capture(Result));
+  return std::move(*Result);
+}
+
+llvm::Expected<RenameResult>
+runPrepareRename(ClangdServer &Server, PathRef File, Position Pos,
+                 llvm::Optional<std::string> NewName,
+                 const RenameOptions &RenameOpts) {
+  llvm::Optional<llvm::Expected<RenameResult>> Result;
+  Server.prepareRename(File, Pos, NewName, RenameOpts, capture(Result));
   return std::move(*Result);
 }
 

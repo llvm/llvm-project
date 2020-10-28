@@ -1,0 +1,65 @@
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prologepilog \
+# RUN:   -stop-after=prologepilog | FileCheck %s
+
+# Check that lr isn't paired with a GPR if it's the first pair, as
+# that can't be described as a SEH opcode if combined with predecrement.
+
+# CHECK: early-clobber $sp = frame-setup STRXpre killed $x19, $sp, -16
+# CHECK-NEXT: frame-setup SEH_SaveReg_X 19, -16
+# CHECK-NEXT: frame-setup STRXui killed $lr, $sp, 1
+# CHECK-NEXT: frame-setup SEH_SaveReg 30, 8
+# CHECK-NEXT: frame-setup SEH_PrologEnd
+
+--- |
+
+  define dso_local i32 @func(i32 %a) { ret i32 %a }
+  declare dso_local i32 @other()
+
+...
+---
+name:            func
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  4
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x19
+
+    BL @other, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
+    $x19 = ADDXrr $x0, $x0
+    $x0 = ADDXrr $x0, killed $x19
+
+    RET_ReallyLR
+
+...

@@ -10,6 +10,7 @@ add_mlir_dialect_library(MLIRGPU
 
   DEPENDS
   MLIRGPUOpsIncGen
+  MLIRGPUOpInterfacesIncGen
   MLIRGPUPassIncGen
   MLIRParallelLoopMapperAttrGen
   MLIRParallelLoopMapperEnumsGen
@@ -21,7 +22,7 @@ add_mlir_dialect_library(MLIRGPU
   MLIRSCF
   MLIRPass
   MLIRSideEffectInterfaces
-  MLIRStandardOps
+  MLIRStandard
   MLIRSupport
   MLIRTransformUtils
   )

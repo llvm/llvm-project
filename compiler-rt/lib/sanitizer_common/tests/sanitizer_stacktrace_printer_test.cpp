@@ -79,10 +79,11 @@ TEST(SanitizerStacktracePrinter, RenderFrame) {
   InternalScopedString str(256);
 
   // Dump all the AddressInfo fields.
-  RenderFrame(&str, "%% Frame:%n PC:%p Module:%m ModuleOffset:%o "
-                    "Function:%f FunctionOffset:%q Source:%s Line:%l "
-                    "Column:%c",
-              frame_no, info, false, "/path/to/", "function_");
+  RenderFrame(&str,
+              "%% Frame:%n PC:%p Module:%m ModuleOffset:%o "
+              "Function:%f FunctionOffset:%q Source:%s Line:%l "
+              "Column:%c",
+              frame_no, info.address, &info, false, "/path/to/", "function_");
   EXPECT_STREQ("% Frame:42 PC:0x400000 Module:my/module ModuleOffset:0x200 "
                "Function:foo FunctionOffset:0x100 Source:my/source Line:10 "
                "Column:5",
@@ -92,61 +93,61 @@ TEST(SanitizerStacktracePrinter, RenderFrame) {
 
   // Test special format specifiers.
   info.address = 0x400000;
-  RenderFrame(&str, "%M", frame_no, info, false);
+  RenderFrame(&str, "%M", frame_no, info.address, &info, false);
   EXPECT_NE(nullptr, internal_strstr(str.data(), "400000"));
   str.clear();
 
-  RenderFrame(&str, "%L", frame_no, info, false);
+  RenderFrame(&str, "%L", frame_no, info.address, &info, false);
   EXPECT_STREQ("(<unknown module>)", str.data());
   str.clear();
 
   info.module = internal_strdup("/path/to/module");
   info.module_offset = 0x200;
-  RenderFrame(&str, "%M", frame_no, info, false);
+  RenderFrame(&str, "%M", frame_no, info.address, &info, false);
   EXPECT_NE(nullptr, internal_strstr(str.data(), "(module+0x"));
   EXPECT_NE(nullptr, internal_strstr(str.data(), "200"));
   str.clear();
 
-  RenderFrame(&str, "%L", frame_no, info, false);
+  RenderFrame(&str, "%L", frame_no, info.address, &info, false);
   EXPECT_STREQ("(/path/to/module+0x200)", str.data());
   str.clear();
 
   info.function = internal_strdup("my_function");
-  RenderFrame(&str, "%F", frame_no, info, false);
+  RenderFrame(&str, "%F", frame_no, info.address, &info, false);
   EXPECT_STREQ("in my_function", str.data());
   str.clear();
 
   info.function_offset = 0x100;
-  RenderFrame(&str, "%F %S", frame_no, info, false);
+  RenderFrame(&str, "%F %S", frame_no, info.address, &info, false);
   EXPECT_STREQ("in my_function+0x100 <null>", str.data());
   str.clear();
 
   info.file = internal_strdup("my_file");
-  RenderFrame(&str, "%F %S", frame_no, info, false);
+  RenderFrame(&str, "%F %S", frame_no, info.address, &info, false);
   EXPECT_STREQ("in my_function my_file", str.data());
   str.clear();
 
   info.line = 10;
-  RenderFrame(&str, "%F %S", frame_no, info, false);
+  RenderFrame(&str, "%F %S", frame_no, info.address, &info, false);
   EXPECT_STREQ("in my_function my_file:10", str.data());
   str.clear();
 
   info.column = 5;
-  RenderFrame(&str, "%S %L", frame_no, info, false);
+  RenderFrame(&str, "%S %L", frame_no, info.address, &info, false);
   EXPECT_STREQ("my_file:10:5 my_file:10:5", str.data());
   str.clear();
 
-  RenderFrame(&str, "%S %L", frame_no, info, true);
+  RenderFrame(&str, "%S %L", frame_no, info.address, &info, true);
   EXPECT_STREQ("my_file(10,5) my_file(10,5)", str.data());
   str.clear();
 
   info.column = 0;
-  RenderFrame(&str, "%F %S", frame_no, info, true);
+  RenderFrame(&str, "%F %S", frame_no, info.address, &info, true);
   EXPECT_STREQ("in my_function my_file(10)", str.data());
   str.clear();
 
   info.line = 0;
-  RenderFrame(&str, "%F %S", frame_no, info, true);
+  RenderFrame(&str, "%F %S", frame_no, info.address, &info, true);
   EXPECT_STREQ("in my_function my_file", str.data());
   str.clear();
 

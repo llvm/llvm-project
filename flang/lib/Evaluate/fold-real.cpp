@@ -29,8 +29,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
       name == "log_gamma" || name == "sin" || name == "sinh" ||
       name == "sqrt" || name == "tan" || name == "tanh") {
     CHECK(args.size() == 1);
-    if (auto callable{context.hostIntrinsicsLibrary()
-                          .GetHostProcedureWrapper<Scalar, T, T>(name)}) {
+    if (auto callable{GetHostRuntimeWrapper<T, T>(name)}) {
       return FoldElementalIntrinsic<T, T>(
           context, std::move(funcRef), *callable);
     } else {
@@ -44,9 +43,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
       name == "mod") {
     std::string localName{name == "atan" ? "atan2" : name};
     CHECK(args.size() == 2);
-    if (auto callable{
-            context.hostIntrinsicsLibrary()
-                .GetHostProcedureWrapper<Scalar, T, T, T>(localName)}) {
+    if (auto callable{GetHostRuntimeWrapper<T, T, T>(localName)}) {
       return FoldElementalIntrinsic<T, T, T>(
           context, std::move(funcRef), *callable);
     } else {
@@ -58,9 +55,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     if (args.size() == 2) { // elemental
       // runtime functions use int arg
       using Int4 = Type<TypeCategory::Integer, 4>;
-      if (auto callable{
-              context.hostIntrinsicsLibrary()
-                  .GetHostProcedureWrapper<Scalar, T, Int4, T>(name)}) {
+      if (auto callable{GetHostRuntimeWrapper<T, Int4, T>(name)}) {
         return FoldElementalIntrinsic<T, Int4, T>(
             context, std::move(funcRef), *callable);
       } else {
@@ -75,9 +70,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
       return FoldElementalIntrinsic<T, T>(
           context, std::move(funcRef), &Scalar<T>::ABS);
     } else if (auto *z{UnwrapExpr<Expr<SomeComplex>>(args[0])}) {
-      if (auto callable{
-              context.hostIntrinsicsLibrary()
-                  .GetHostProcedureWrapper<Scalar, T, ComplexT>("abs")}) {
+      if (auto callable{GetHostRuntimeWrapper<T, ComplexT>("abs")}) {
         return FoldElementalIntrinsic<T, ComplexT>(
             context, std::move(funcRef), *callable);
       } else {

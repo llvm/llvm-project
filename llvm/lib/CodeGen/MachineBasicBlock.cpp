@@ -266,6 +266,10 @@ bool MachineBasicBlock::hasEHPadSuccessor() const {
   return false;
 }
 
+bool MachineBasicBlock::isEntryBlock() const {
+  return getParent()->begin() == getIterator();
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MachineBasicBlock::dump() const {
   print(dbgs());
@@ -583,7 +587,7 @@ void MachineBasicBlock::sortUniqueLiveIns() {
 Register
 MachineBasicBlock::addLiveIn(MCRegister PhysReg, const TargetRegisterClass *RC) {
   assert(getParent() && "MBB must be inserted in function");
-  assert(PhysReg.isPhysical() && "Expected physreg");
+  assert(Register::isPhysicalRegister(PhysReg) && "Expected physreg");
   assert(RC && "Register class is required");
   assert((isEHPad() || this == &getParent()->front()) &&
          "Only the entry block and landing pads can have physreg live ins");
@@ -961,9 +965,10 @@ MachineBasicBlock *MachineBasicBlock::splitAt(MachineInstr &MI,
   if (UpdateLiveIns) {
     // Make sure we add any physregs we define in the block as liveins to the
     // new block.
+    MachineBasicBlock::iterator Prev(&MI);
     LiveRegs.init(*MF->getSubtarget().getRegisterInfo());
     LiveRegs.addLiveOuts(*this);
-    for (auto I = rbegin(), E = SplitPoint.getReverse(); I != E; ++I)
+    for (auto I = rbegin(), E = Prev.getReverse(); I != E; ++I)
       LiveRegs.stepBackward(*I);
   }
 
