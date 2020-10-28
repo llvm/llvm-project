@@ -1,6 +1,7 @@
 if (CLANGD_ENABLE_REMOTE)
   generate_protos(RemoteIndexServiceProto "Service.proto" GRPC)
   generate_protos(RemoteIndexProto "Index.proto")
+  add_dependencies(RemoteIndexServiceProto RemoteIndexProto)
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../)
 
