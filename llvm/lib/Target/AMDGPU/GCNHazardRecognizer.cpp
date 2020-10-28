@@ -207,9 +207,18 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   return NoHazard;
 }
 
-static void insertNoopInBundle(MachineInstr *MI, const SIInstrInfo &TII) {
-  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::S_NOP))
-      .addImm(0);
+static void insertNoopsInBundle(MachineInstr *MI, const SIInstrInfo &TII,
+                                unsigned Quantity) {
+  while (Quantity > 0) {
+    unsigned Arg;
+    if (Quantity >= 8)
+      Arg = 7;
+    else
+      Arg = Quantity - 1;
+    Quantity -= Arg + 1;
+    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::S_NOP))
+        .addImm(Arg);
+  }
 }
 
 void GCNHazardRecognizer::processBundle() {
@@ -220,11 +229,11 @@ void GCNHazardRecognizer::processBundle() {
     CurrCycleInstr = &*MI;
     unsigned WaitStates = PreEmitNoopsCommon(CurrCycleInstr);
 
-    if (IsHazardRecognizerMode)
+    if (IsHazardRecognizerMode) {
       fixHazards(CurrCycleInstr);
 
-    for (unsigned i = 0; i < WaitStates; ++i)
-      insertNoopInBundle(CurrCycleInstr, TII);
+      insertNoopsInBundle(CurrCycleInstr, TII, WaitStates);
+    }
 
     // It’s unnecessary to track more than MaxLookAhead instructions. Since we
     // include the bundled MI directly after, only add a maximum of
