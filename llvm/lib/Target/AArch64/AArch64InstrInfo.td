@@ -5177,6 +5177,16 @@ def : Pat<(v4f16 (vector_insert (v4f16 V64:$Rn),
               (i64 0)),
             dsub)>;
 
+def : Pat<(vector_insert (v8f16 v8f16:$Rn), (f16 fpimm0),
+            (i64 VectorIndexH:$imm)),
+          (INSvi16gpr V128:$Rn, VectorIndexH:$imm, WZR)>;
+def : Pat<(vector_insert v4f32:$Rn, (f32 fpimm0),
+            (i64 VectorIndexS:$imm)),
+          (INSvi32gpr V128:$Rn, VectorIndexS:$imm, WZR)>;
+def : Pat<(vector_insert v2f64:$Rn, (f64 fpimm0),
+            (i64 VectorIndexD:$imm)),
+          (INSvi64gpr V128:$Rn, VectorIndexS:$imm, XZR)>;
+
 def : Pat<(v8f16 (vector_insert (v8f16 V128:$Rn),
             (f16 FPR16:$Rm), (i64 VectorIndexH:$imm))),
           (INSvi16lane
