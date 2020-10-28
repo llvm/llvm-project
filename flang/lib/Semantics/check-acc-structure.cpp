@@ -161,6 +161,14 @@ void AccStructureChecker::Leave(
   dirContext_.pop_back();
 }
 
+void AccStructureChecker::Enter(const parser::OpenACCWaitConstruct &x) {
+  PushContextAndClauseSets(x.source, llvm::acc::Directive::ACCD_wait);
+}
+
+void AccStructureChecker::Leave(const parser::OpenACCWaitConstruct &) {
+  dirContext_.pop_back();
+}
+
 void AccStructureChecker::Enter(const parser::OpenACCCombinedConstruct &x) {
   const auto &beginCombinedDir{
       std::get<parser::AccBeginCombinedDirective>(x.t)};
