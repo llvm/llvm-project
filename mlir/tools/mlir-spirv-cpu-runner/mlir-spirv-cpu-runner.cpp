@@ -87,8 +87,8 @@ int main(int argc, char **argv) {
   mlir::initializeLLVMPasses();
 
   mlir::JitRunnerConfig jitRunnerConfig;
-  jitRunnerConfig.mlirTransformer = &runMLIRPasses;
-  jitRunnerConfig.llvmModuleBuilder = &convertMLIRModule;
+  jitRunnerConfig.mlirTransformer = runMLIRPasses;
+  jitRunnerConfig.llvmModuleBuilder = convertMLIRModule;
 
   return mlir::JitRunnerMain(argc, argv, jitRunnerConfig);
 }
