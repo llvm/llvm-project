@@ -174,6 +174,19 @@ define i32 @vectorops(i32, i32) {
   ret i32 %p
 }
 
+define i32 @scalablevectorops(i32, <vscale x 4 x i32>) {
+  %a = insertelement <vscale x 4 x i32> undef, i32 %0, i32 0
+  %b = insertelement <vscale x 4 x i32> %a, i32 %0, i32 2
+  %c = shufflevector <vscale x 4 x i32> %b, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %e = add <vscale x 4 x i32> %a, %1
+  %f = mul <vscale x 4 x i32> %e, %b
+  %g = xor <vscale x 4 x i32> %f, %e
+  %h = or <vscale x 4 x i32> %g, %e
+  %i = lshr <vscale x 4 x i32> %h, undef
+  %j = extractelement <vscale x 4 x i32> %i, i32 3
+  ret i32 %j
+}
+
 declare void @personalityFn()
 
 define void @exn() personality void ()* @personalityFn {

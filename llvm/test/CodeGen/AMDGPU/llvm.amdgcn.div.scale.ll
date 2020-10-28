@@ -322,8 +322,7 @@ define amdgpu_kernel void @test_div_scale_f32_inline_imm_den(float addrspace(1)*
 ; SI-LABEL: {{^}}test_div_scale_f32_fneg_num:
 ; SI-DAG: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64
 ; SI-DAG: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; SI: v_xor_b32_e32 [[NEG_A:v[0-9]+]], 0x80000000, [[A]]
-; SI: v_div_scale_f32 [[RESULT0:v[0-9]+]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], [[B]], [[B]], [[NEG_A]]
+; SI: v_div_scale_f32 [[RESULT0:v[0-9]+]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], [[B]], [[B]], -[[A]]
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
 define amdgpu_kernel void @test_div_scale_f32_fneg_num(float addrspace(1)* %out, float addrspace(1)* %in) nounwind {
@@ -368,8 +367,7 @@ define amdgpu_kernel void @test_div_scale_f32_fabs_num(float addrspace(1)* %out,
 ; SI-LABEL: {{^}}test_div_scale_f32_fneg_den:
 ; SI-DAG: buffer_load_dword [[A:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64
 ; SI-DAG: buffer_load_dword [[B:v[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
-; SI: v_xor_b32_e32 [[NEG_B:v[0-9]+]], 0x80000000, [[B]]
-; SI: v_div_scale_f32 [[RESULT0:v[0-9]+]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], [[NEG_B]], [[NEG_B]], [[A]]
+; SI: v_div_scale_f32 [[RESULT0:v[0-9]+]], [[RESULT1:s\[[0-9]+:[0-9]+\]]], -[[B]], -[[B]], [[A]]
 ; SI: buffer_store_dword [[RESULT0]]
 ; SI: s_endpgm
 define amdgpu_kernel void @test_div_scale_f32_fneg_den(float addrspace(1)* %out, float addrspace(1)* %in) nounwind {

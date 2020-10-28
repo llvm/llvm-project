@@ -1018,7 +1018,7 @@ void MatchableInfo::tokenizeAsmString(const AsmMatcherInfo &Info,
 
     case '$': {
       if (InTok) {
-        addAsmOperand(String.slice(Prev, i), false);
+        addAsmOperand(String.slice(Prev, i), IsIsolatedToken);
         InTok = false;
         IsIsolatedToken = false;
       }
