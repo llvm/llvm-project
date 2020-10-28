@@ -1,3 +1,5 @@
+include(GetLibraryName)
+
 if(LLVM_ENABLE_ZLIB)
   set(imported_libs ZLIB::ZLIB)
 endif()
@@ -21,10 +23,8 @@ elseif( CMAKE_HOST_UNIX )
     STRING(REGEX REPLACE "^lib" "" Backtrace_LIBFILE ${Backtrace_LIBFILE})
     set(system_libs ${system_libs} ${Backtrace_LIBFILE})
   endif()
-  if(LLVM_ENABLE_TERMINFO)
-    if(HAVE_TERMINFO)
-      set(system_libs ${system_libs} ${TERMINFO_LIBS})
-    endif()
+  if( LLVM_ENABLE_TERMINFO )
+    set(imported_libs ${imported_libs} "${TERMINFO_LIB}")
   endif()
   if( LLVM_ENABLE_THREADS AND (HAVE_LIBATOMIC OR HAVE_CXX_LIBATOMICS64) )
     set(system_libs ${system_libs} atomic)
@@ -65,7 +65,6 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
     add_definitions(-DENABLE_OVERRIDE -DENABLE_PRELOAD)
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/rpmalloc/rpmalloc.c")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17" PARENT_SCOPE)
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/src/override/malloc.cc" "${LLVM_INTEGRATED_CRT_ALLOC}/src/override/new.cc")
     set(system_libs ${system_libs} "mincore.lib" "-INCLUDE:malloc")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "mimalloc$")
@@ -119,7 +118,6 @@ add_llvm_component_library(LLVMSupport
   Error.cpp
   ErrorHandling.cpp
   ExtensibleRTTI.cpp
-  FileCheck.cpp
   FileCollector.cpp
   FileUtilities.cpp
   FileOutputBuffer.cpp
@@ -228,6 +226,8 @@ add_llvm_component_library(LLVMSupport
 
 set(llvm_system_libs ${system_libs})
 
+# This block is only needed for llvm-config. When we deprecate llvm-config and
+# move to using CMake export, this block can be removed.
 if(LLVM_ENABLE_ZLIB)
   # CMAKE_BUILD_TYPE is only meaningful to single-configuration generators.
   if(CMAKE_BUILD_TYPE)
@@ -237,21 +237,28 @@ if(LLVM_ENABLE_ZLIB)
   if(NOT zlib_library)
     get_property(zlib_library TARGET ZLIB::ZLIB PROPERTY LOCATION)
   endif()
-  get_filename_component(zlib_library ${zlib_library} NAME)
-  if(CMAKE_STATIC_LIBRARY_PREFIX AND CMAKE_STATIC_LIBRARY_SUFFIX AND
-      zlib_library MATCHES "^${CMAKE_STATIC_LIBRARY_PREFIX}.*${CMAKE_STATIC_LIBRARY_SUFFIX}$")
-    STRING(REGEX REPLACE "^${CMAKE_STATIC_LIBRARY_PREFIX}" "" zlib_library ${zlib_library})
-    STRING(REGEX REPLACE "${CMAKE_STATIC_LIBRARY_SUFFIX}$" "" zlib_library ${zlib_library})
-  endif()
-  if(CMAKE_SHARED_LIBRARY_PREFIX AND CMAKE_SHARED_LIBRARY_SUFFIX AND
-      zlib_library MATCHES "^${CMAKE_SHARED_LIBRARY_PREFIX}.*${CMAKE_SHARED_LIBRARY_SUFFIX}$")
-    STRING(REGEX REPLACE "^${CMAKE_SHARED_LIBRARY_PREFIX}" "" zlib_library ${zlib_library})
-    STRING(REGEX REPLACE "${CMAKE_SHARED_LIBRARY_SUFFIX}$" "" zlib_library ${zlib_library})
-  endif()
+  get_library_name(${zlib_library} zlib_library)
   set(llvm_system_libs ${llvm_system_libs} "${zlib_library}")
 endif()
 
+if(LLVM_ENABLE_TERMINFO)
+  get_library_name(${TERMINFO_LIB} terminfo_library)
+  set(llvm_system_libs ${llvm_system_libs} "${terminfo_library}")
+endif()
+
 set_property(TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS "${llvm_system_libs}")
+
+
+if(LLVM_INTEGRATED_CRT_ALLOC)
+  if(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
+    set_property(TARGET LLVMSupport PROPERTY CXX_STANDARD 17)
+    add_definitions(-D_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING)
+    if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" AND
+        "${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64")
+      set_property(TARGET LLVMSupport PROPERTY COMPILE_FLAGS "-mcx16")
+    endif()
+  endif()
+endif()
 
 if(LLVM_WITH_Z3)
   target_include_directories(LLVMSupport SYSTEM

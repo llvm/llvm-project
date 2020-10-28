@@ -1,4 +1,4 @@
-; RUN: opt -early-cse-memssa -S %s | FileCheck %s
+; RUN: opt -early-cse-memssa -earlycse-debug-hash -S %s | FileCheck %s
 
 ; CHECK: define void @patatino() {
 ; CHECK:  for.cond:

@@ -431,7 +431,7 @@ SBAddress SBFrame::GetPCAddress() const {
     if (stop_locker.TryLock(&process->GetRunLock())) {
       frame = exe_ctx.GetFramePtr();
       if (frame)
-        sb_addr.SetAddress(&frame->GetFrameCodeAddress());
+        sb_addr.SetAddress(frame->GetFrameCodeAddress());
     }
   }
   return LLDB_RECORD_RESULT(sb_addr);

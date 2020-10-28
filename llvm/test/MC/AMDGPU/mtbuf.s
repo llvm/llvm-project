@@ -2,9 +2,9 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=SICI %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s  2>&1 | FileCheck -check-prefixes=GCN-ERR,SICI-ERR %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICI-ERR %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s   2>&1 | FileCheck -check-prefixes=GCN-ERR,VI-ERR %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s  2>&1 | FileCheck -check-prefixes=GCN-ERR,SICI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck -check-prefixes=GCN-ERR,SICI-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s   2>&1 | FileCheck -check-prefixes=GCN-ERR,VI-ERR --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // Positive tests for legacy dfmt/nfmt syntax.
@@ -289,7 +289,7 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], format:[BUF_DATA_FORMAT_32]
 
 // Invalid soffset
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], s[255] format:[BUF_NUM_FORMAT_FLOAT]
-// GCN-ERR: error: not a valid operand.
+// GCN-ERR: error: register index is out of range
 
 // Both legacy and symbolic formats are specified
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:1 s0 format:[BUF_NUM_FORMAT_FLOAT]

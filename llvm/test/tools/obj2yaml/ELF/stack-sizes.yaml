@@ -8,10 +8,9 @@
 
 # VALID:      --- !ELF
 # VALID-NEXT: FileHeader:
-# VALID-NEXT:   Class:   ELFCLASS64
-# VALID-NEXT:   Data:    ELFDATA2LSB
-# VALID-NEXT:   Type:    ET_EXEC
-# VALID-NEXT:   Machine: EM_NONE
+# VALID-NEXT:   Class: ELFCLASS64
+# VALID-NEXT:   Data:  ELFDATA2LSB
+# VALID-NEXT:   Type:  ET_EXEC
 # VALID-NEXT: Sections:
 # VALID-NEXT:   - Name: .stack_sizes
 # VALID-NEXT:     Type: SHT_PROGBITS
@@ -39,10 +38,9 @@ Sections:
 
 # INVALID:      --- !ELF
 # INVALID-NEXT: FileHeader:
-# INVALID-NEXT:   Class:   ELFCLASS64
-# INVALID-NEXT:   Data:    ELFDATA2LSB
-# INVALID-NEXT:   Type:    ET_EXEC
-# INVALID-NEXT:   Machine: EM_NONE
+# INVALID-NEXT:   Class: ELFCLASS64
+# INVALID-NEXT:   Data:  ELFDATA2LSB
+# INVALID-NEXT:   Type:  ET_EXEC
 # INVALID-NEXT: Sections:
 # INVALID-NEXT:   - Name:    .stack_sizes
 # INVALID-NEXT:     Type:    SHT_PROGBITS
@@ -65,10 +63,9 @@ Sections:
 
 # EMPTY:      --- !ELF
 # EMPTY-NEXT: FileHeader:
-# EMPTY-NEXT:   Class:   ELFCLASS64
-# EMPTY-NEXT:   Data:    ELFDATA2LSB
-# EMPTY-NEXT:   Type:    ET_EXEC
-# EMPTY-NEXT:   Machine: EM_NONE
+# EMPTY-NEXT:   Class: ELFCLASS64
+# EMPTY-NEXT:   Data:  ELFDATA2LSB
+# EMPTY-NEXT:   Type:  ET_EXEC
 # EMPTY-NEXT: Sections:
 # EMPTY-NEXT:   - Name:    .stack_sizes
 # EMPTY-NEXT:     Type:    SHT_PROGBITS
@@ -83,3 +80,50 @@ Sections:
   - Name:    .stack_sizes
     Type:    SHT_PROGBITS
     Content: ""
+
+## Check obj2yaml can dump multiple .stack_sizes.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: obj2yaml %t4 | FileCheck %s --check-prefix=MULTI
+
+# MULTI:      --- !ELF
+# MULTI-NEXT: FileHeader:
+# MULTI-NEXT:   Class: ELFCLASS64
+# MULTI-NEXT:   Data:  ELFDATA2LSB
+# MULTI-NEXT:   Type:  ET_EXEC
+# MULTI-NEXT: Sections:
+# MULTI-NEXT:   - Name:    .stack_sizes
+# MULTI-NEXT:     Type:    SHT_PROGBITS
+# MULTI-NEXT:     Entries:
+# MULTI-NEXT:       - Address: 0x0000000000000010
+# MULTI-NEXT:         Size:    0x0000000000000020
+# MULTI-NEXT:       - Address: 0x0000000000000030
+# MULTI-NEXT:         Size:    0x0000000000000040
+# MULTI-NEXT:   - Name:    '.stack_sizes (1)'
+# MULTI-NEXT:     Type:    SHT_PROGBITS
+# MULTI-NEXT:     Entries:
+# MULTI-NEXT:       - Address: 0x0000000000000050
+# MULTI-NEXT:         Size:    0x0000000000000001
+# MULTI-NEXT:       - Address: 0x0000000000000060
+# MULTI-NEXT:         Size:    0x0000000000000002
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .stack_sizes
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x0000000000000010
+        Size:    0x0000000000000020
+      - Address: 0x0000000000000030
+        Size:    0x0000000000000040
+  - Name:    '.stack_sizes (1)'
+    Type:    SHT_PROGBITS
+    Entries:
+      - Address: 0x0000000000000050
+        Size:    0x0000000000000001
+      - Address: 0x0000000000000060
+        Size:    0x0000000000000002

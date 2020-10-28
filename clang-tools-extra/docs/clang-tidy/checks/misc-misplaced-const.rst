@@ -8,7 +8,7 @@ This check diagnoses when a ``const`` qualifier is applied to a ``typedef``/
 are often misleading to developers because the ``const`` applies to the pointer
 rather than the pointee.
 
-For instance, in the following code, the resulting type is ``int *`` ``const``
+For instance, in the following code, the resulting type is ``int * const``
 rather than ``const int *``:
 
 .. code-block:: c++

@@ -28,4 +28,20 @@ NORETURN void __compilerrt_abort_impl(const char *file, int line,
 #define COMPILE_TIME_ASSERT2(expr, cnt)                                        \
   typedef char ct_assert_##cnt[(expr) ? 1 : -1] UNUSED
 
+// Force unrolling the code specified to be repeated N times.
+#define REPEAT_0_TIMES(code_to_repeat) /* do nothing */
+#define REPEAT_1_TIMES(code_to_repeat) code_to_repeat
+#define REPEAT_2_TIMES(code_to_repeat)                                         \
+  REPEAT_1_TIMES(code_to_repeat)                                               \
+  code_to_repeat
+#define REPEAT_3_TIMES(code_to_repeat)                                         \
+  REPEAT_2_TIMES(code_to_repeat)                                               \
+  code_to_repeat
+#define REPEAT_4_TIMES(code_to_repeat)                                         \
+  REPEAT_3_TIMES(code_to_repeat)                                               \
+  code_to_repeat
+
+#define REPEAT_N_TIMES_(N, code_to_repeat) REPEAT_##N##_TIMES(code_to_repeat)
+#define REPEAT_N_TIMES(N, code_to_repeat) REPEAT_N_TIMES_(N, code_to_repeat)
+
 #endif // INT_UTIL_H

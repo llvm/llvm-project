@@ -20,10 +20,6 @@
 
 using namespace __tsan;
 
-typedef u16 uint16_t;
-typedef u32 uint32_t;
-typedef u64 uint64_t;
-
 void __tsan_init() {
   cur_thread_init();
   Initialize(cur_thread());

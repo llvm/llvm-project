@@ -147,7 +147,7 @@ static void inlineRegionAndEmitStore(OpType op, ArrayRef<Value> indexedValues,
   }
 
   Operation &terminator = block.back();
-  assert(isa<YieldOp>(terminator) &&
+  assert(isa<linalg::YieldOp>(terminator) &&
          "expected a yield op in the end of the region");
   for (unsigned i = 0, e = terminator.getNumOperands(); i < e; ++i) {
     IndexedValueType O(outputBuffers[i]);
@@ -515,9 +515,12 @@ Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op, OpBuilder &builder) {
                                    map, getViewSizes(builder, linalgOp));
   SmallVector<Value, 4> allIvs;
   GenerateLoopNest<LoopTy>::doit(
-      loopRanges, linalgOp.iterator_types().getValue(), [&](ValueRange ivs) {
+      loopRanges, /*iterInitArgs*/ {}, linalgOp.iterator_types().getValue(),
+      [&](ValueRange ivs, ValueRange iterArgs) -> scf::ValueVector {
+        assert(iterArgs.empty() && "unexpected iterArgs");
         allIvs.append(ivs.begin(), ivs.end());
         emitScalarImplementation<IndexedValueTy>(allIvs, linalgOp);
+        return scf::ValueVector{};
       });
   // Number of loop ops might be different from the number of ivs since some
   // loops like affine.parallel and scf.parallel have multiple ivs.
@@ -679,6 +682,8 @@ static Optional<LinalgLoops> linalgOpToLoopsImplSwitch(Operation *op,
     return linalgOpToLoopsImpl<LoopTy, MatmulOp>(op, builder);
   if (isa<MatvecOp>(op))
     return linalgOpToLoopsImpl<LoopTy, MatvecOp>(op, builder);
+  if (isa<VecmatOp>(op))
+    return linalgOpToLoopsImpl<LoopTy, VecmatOp>(op, builder);
   if (isa<DotOp>(op))
     return linalgOpToLoopsImpl<LoopTy, DotOp>(op, builder);
   if (isa<BatchMatmulOp>(op))

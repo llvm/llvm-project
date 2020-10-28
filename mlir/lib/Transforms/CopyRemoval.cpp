@@ -30,16 +30,35 @@ public:
       reuseCopySourceAsTarget(copyOp);
       reuseCopyTargetAsSource(copyOp);
     });
+    for (std::pair<Value, Value> &pair : replaceList)
+      pair.first.replaceAllUsesWith(pair.second);
     for (Operation *op : eraseList)
       op->erase();
   }
 
 private:
   /// List of operations that need to be removed.
-  DenseSet<Operation *> eraseList;
+  llvm::SmallPtrSet<Operation *, 4> eraseList;
+
+  /// List of values that need to be replaced with their counterparts.
+  llvm::SmallDenseSet<std::pair<Value, Value>, 4> replaceList;
+
+  /// Returns the allocation operation for `value` in `block` if it exists.
+  /// nullptr otherwise.
+  Operation *getAllocationOpInBlock(Value value, Block *block) {
+    assert(block && "Block cannot be null");
+    Operation *op = value.getDefiningOp();
+    if (op && op->getBlock() == block) {
+      auto effects = dyn_cast<MemoryEffectOpInterface>(op);
+      if (effects && effects.hasEffect<Allocate>())
+        return op;
+    }
+    return nullptr;
+  }
 
   /// Returns the deallocation operation for `value` in `block` if it exists.
-  Operation *getDeallocationInBlock(Value value, Block *block) {
+  /// nullptr otherwise.
+  Operation *getDeallocationOpInBlock(Value value, Block *block) {
     assert(block && "Block cannot be null");
     auto valueUsers = value.getUsers();
     auto it = llvm::find_if(valueUsers, [&](Operation *op) {
@@ -119,9 +138,10 @@ private:
     Value to = copyOp.getTarget();
 
     Operation *copy = copyOp.getOperation();
+    Block *copyBlock = copy->getBlock();
     Operation *fromDefiningOp = from.getDefiningOp();
-    Operation *fromFreeingOp = getDeallocationInBlock(from, copy->getBlock());
-    Operation *toDefiningOp = to.getDefiningOp();
+    Operation *fromFreeingOp = getDeallocationOpInBlock(from, copyBlock);
+    Operation *toDefiningOp = getAllocationOpInBlock(to, copyBlock);
     if (!fromDefiningOp || !fromFreeingOp || !toDefiningOp ||
         !areOpsInTheSameBlock({fromFreeingOp, toDefiningOp, copy}) ||
         hasUsersBetween(to, toDefiningOp, copy) ||
@@ -129,7 +149,7 @@ private:
         hasMemoryEffectOpBetween(copy, fromFreeingOp))
       return;
 
-    to.replaceAllUsesWith(from);
+    replaceList.insert({to, from});
     eraseList.insert(copy);
     eraseList.insert(toDefiningOp);
     eraseList.insert(fromFreeingOp);
@@ -169,8 +189,9 @@ private:
     Value to = copyOp.getTarget();
 
     Operation *copy = copyOp.getOperation();
-    Operation *fromDefiningOp = from.getDefiningOp();
-    Operation *fromFreeingOp = getDeallocationInBlock(from, copy->getBlock());
+    Block *copyBlock = copy->getBlock();
+    Operation *fromDefiningOp = getAllocationOpInBlock(from, copyBlock);
+    Operation *fromFreeingOp = getDeallocationOpInBlock(from, copyBlock);
     if (!fromDefiningOp || !fromFreeingOp ||
         !areOpsInTheSameBlock({fromFreeingOp, fromDefiningOp, copy}) ||
         hasUsersBetween(to, fromDefiningOp, copy) ||
@@ -178,7 +199,7 @@ private:
         hasMemoryEffectOpBetween(copy, fromFreeingOp))
       return;
 
-    from.replaceAllUsesWith(to);
+    replaceList.insert({from, to});
     eraseList.insert(copy);
     eraseList.insert(fromDefiningOp);
     eraseList.insert(fromFreeingOp);

@@ -267,7 +267,8 @@ void ConnectToRemote(MainLoop &mainloop,
       final_host_and_port.append("localhost");
     final_host_and_port.append(host_and_port);
 
-    const std::string::size_type colon_pos = final_host_and_port.find(':');
+    // Note: use rfind, because the host/port may look like "[::1]:12345".
+    const std::string::size_type colon_pos = final_host_and_port.rfind(':');
     if (colon_pos != std::string::npos) {
       connection_host = final_host_and_port.substr(0, colon_pos);
       connection_port = final_host_and_port.substr(colon_pos + 1);

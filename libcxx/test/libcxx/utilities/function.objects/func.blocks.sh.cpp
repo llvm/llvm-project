@@ -51,12 +51,12 @@ int main(int, char**)
         std::function<int(int)> f1 = g;
         std::function<int(int)> f2 = ^(int x) { return x + 1; };
         assert(globalMemCounter.checkOutstandingNewEq(0));
-        assert(*f1.target<int(*)(int)>() == g);
-        assert(*f2.target<int(^)(int)>() != 0);
+        RTTI_ASSERT(*f1.target<int(*)(int)>() == g);
+        RTTI_ASSERT(*f2.target<int(^)(int)>() != 0);
         swap(f1, f2);
         assert(globalMemCounter.checkOutstandingNewEq(0));
-        assert(*f1.target<int(^)(int)>() != 0);
-        assert(*f2.target<int(*)(int)>() == g);
+        RTTI_ASSERT(*f1.target<int(^)(int)>() != 0);
+        RTTI_ASSERT(*f2.target<int(*)(int)>() == g);
     }
 
     // operator bool
@@ -107,13 +107,13 @@ int main(int, char**)
         std::function<int(int)> f2 = ^(int x) { return x + 1; };
         assert(A::count == 1);
         assert(globalMemCounter.checkOutstandingNewEq(1));
-        assert(f1.target<A>()->id() == 999);
-        assert((*f2.target<int(^)(int)>())(13) == 14);
+        RTTI_ASSERT(f1.target<A>()->id() == 999);
+        RTTI_ASSERT((*f2.target<int(^)(int)>())(13) == 14);
         f1.swap(f2);
         assert(A::count == 1);
         assert(globalMemCounter.checkOutstandingNewEq(1));
-        assert((*f1.target<int(^)(int)>())(13) == 14);
-        assert(f2.target<A>()->id() == 999);
+        RTTI_ASSERT((*f1.target<int(^)(int)>())(13) == 14);
+        RTTI_ASSERT(f2.target<A>()->id() == 999);
     }
     assert(globalMemCounter.checkOutstandingNewEq(0));
     assert(A::count == 0);
@@ -132,15 +132,15 @@ int main(int, char**)
     {
         int (^block)(int) = Block_copy(^(int x) { return x + 1; });
         std::function<int(int)> f = block;
-        assert(*f.target<int(^)(int)>() == block);
-        assert(f.target<int(*)(int)>() == 0);
+        RTTI_ASSERT(*f.target<int(^)(int)>() == block);
+        RTTI_ASSERT(f.target<int(*)(int)>() == 0);
         Block_release(block);
     }
 
     // target_type
     {
         std::function<int(int)> f = ^(int x) { return x + 1; };
-        assert(f.target_type() == typeid(int(^)(int)));
+        RTTI_ASSERT(f.target_type() == typeid(int(^)(int)));
     }
 
     return 0;

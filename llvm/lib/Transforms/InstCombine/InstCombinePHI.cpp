@@ -34,6 +34,7 @@ STATISTIC(NumPHIsOfInsertValues,
           "Number of phi-of-insertvalue turned into insertvalue-of-phis");
 STATISTIC(NumPHIsOfExtractValues,
           "Number of phi-of-extractvalue turned into extractvalue-of-phi");
+STATISTIC(NumPHICSEs, "Number of PHI's that got CSE'd");
 
 /// The PHI arguments will be folded into a single operation with a PHI node
 /// as input. The debug location of the single operation will be the merged
@@ -1012,7 +1013,7 @@ struct LoweredPHIRecord {
   LoweredPHIRecord(PHINode *pn, unsigned Sh)
     : PN(pn), Shift(Sh), Width(0) {}
 };
-}
+} // namespace
 
 namespace llvm {
   template<>
@@ -1033,7 +1034,7 @@ namespace llvm {
              LHS.Width == RHS.Width;
     }
   };
-}
+} // namespace llvm
 
 
 /// This is an integer PHI and we know that it has an illegal type: see if it is
@@ -1425,6 +1426,21 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
         // this in this case.
       }
     }
+
+  // Is there an identical PHI node in this basic block?
+  for (PHINode &IdenticalPN : PN.getParent()->phis()) {
+    // Ignore the PHI node itself.
+    if (&IdenticalPN == &PN)
+      continue;
+    // Note that even though we've just canonicalized this PHI, due to the
+    // worklist visitation order, there are no guarantess that *every* PHI
+    // has been canonicalized, so we can't just compare operands ranges.
+    if (!PN.isIdenticalToWhenDefined(&IdenticalPN))
+      continue;
+    // Just use that PHI instead then.
+    ++NumPHICSEs;
+    return replaceInstUsesWith(PN, &IdenticalPN);
+  }
 
   // If this is an integer PHI and we know that it has an illegal type, see if
   // it is only used by trunc or trunc(lshr) operations.  If so, we split the

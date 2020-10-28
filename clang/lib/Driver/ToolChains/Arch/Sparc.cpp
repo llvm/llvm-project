@@ -21,12 +21,19 @@ using namespace llvm::opt;
 const char *sparc::getSparcAsmModeForCPU(StringRef Name,
                                          const llvm::Triple &Triple) {
   if (Triple.getArch() == llvm::Triple::sparcv9) {
+    const char *DefV9CPU;
+
+    if (Triple.isOSLinux() || Triple.isOSFreeBSD() || Triple.isOSOpenBSD())
+      DefV9CPU = "-Av9a";
+    else
+      DefV9CPU = "-Av9";
+
     return llvm::StringSwitch<const char *>(Name)
         .Case("niagara", "-Av9b")
         .Case("niagara2", "-Av9b")
         .Case("niagara3", "-Av9d")
         .Case("niagara4", "-Av9d")
-        .Default("-Av9");
+        .Default(DefV9CPU);
   } else {
     return llvm::StringSwitch<const char *>(Name)
         .Case("v8", "-Av8")

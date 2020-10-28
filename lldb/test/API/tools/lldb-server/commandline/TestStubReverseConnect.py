@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import errno
 import gdbremote_testcase
 import lldbgdbserverutils
 import re
@@ -24,11 +25,20 @@ class TestStubReverseConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.listener_port = self.listener_socket.getsockname()[1]
 
     def create_listener_socket(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        except OSError as e:
+            if e.errno != errno.EAFNOSUPPORT:
+                raise
+            sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         self.assertIsNotNone(sock)
 
         sock.settimeout(self.DEFAULT_TIMEOUT)
-        sock.bind(("127.0.0.1", 0))
+        if sock.family == socket.AF_INET:
+            bind_addr = ("127.0.0.1", 0)
+        elif sock.family == socket.AF_INET6:
+            bind_addr = ("::1", 0)
+        sock.bind(bind_addr)
         sock.listen(1)
 
         def tear_down_listener():

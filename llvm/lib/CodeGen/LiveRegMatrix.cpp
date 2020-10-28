@@ -102,10 +102,10 @@ static bool foreachUnit(const TargetRegisterInfo *TRI,
 }
 
 void LiveRegMatrix::assign(LiveInterval &VirtReg, unsigned PhysReg) {
-  LLVM_DEBUG(dbgs() << "assigning " << printReg(VirtReg.reg, TRI) << " to "
+  LLVM_DEBUG(dbgs() << "assigning " << printReg(VirtReg.reg(), TRI) << " to "
                     << printReg(PhysReg, TRI) << ':');
-  assert(!VRM->hasPhys(VirtReg.reg) && "Duplicate VirtReg assignment");
-  VRM->assignVirt2Phys(VirtReg.reg, PhysReg);
+  assert(!VRM->hasPhys(VirtReg.reg()) && "Duplicate VirtReg assignment");
+  VRM->assignVirt2Phys(VirtReg.reg(), PhysReg);
 
   foreachUnit(
       TRI, VirtReg, PhysReg, [&](unsigned Unit, const LiveRange &Range) {
@@ -119,10 +119,10 @@ void LiveRegMatrix::assign(LiveInterval &VirtReg, unsigned PhysReg) {
 }
 
 void LiveRegMatrix::unassign(LiveInterval &VirtReg) {
-  Register PhysReg = VRM->getPhys(VirtReg.reg);
-  LLVM_DEBUG(dbgs() << "unassigning " << printReg(VirtReg.reg, TRI) << " from "
-                    << printReg(PhysReg, TRI) << ':');
-  VRM->clearVirt(VirtReg.reg);
+  Register PhysReg = VRM->getPhys(VirtReg.reg());
+  LLVM_DEBUG(dbgs() << "unassigning " << printReg(VirtReg.reg(), TRI)
+                    << " from " << printReg(PhysReg, TRI) << ':');
+  VRM->clearVirt(VirtReg.reg());
 
   foreachUnit(TRI, VirtReg, PhysReg,
               [&](unsigned Unit, const LiveRange &Range) {
@@ -148,8 +148,8 @@ bool LiveRegMatrix::checkRegMaskInterference(LiveInterval &VirtReg,
   // Check if the cached information is valid.
   // The same BitVector can be reused for all PhysRegs.
   // We could cache multiple VirtRegs if it becomes necessary.
-  if (RegMaskVirtReg != VirtReg.reg || RegMaskTag != UserTag) {
-    RegMaskVirtReg = VirtReg.reg;
+  if (RegMaskVirtReg != VirtReg.reg() || RegMaskTag != UserTag) {
+    RegMaskVirtReg = VirtReg.reg();
     RegMaskTag = UserTag;
     RegMaskUsable.clear();
     LIS->checkRegMaskInterference(VirtReg, RegMaskUsable);
@@ -165,7 +165,7 @@ bool LiveRegMatrix::checkRegUnitInterference(LiveInterval &VirtReg,
                                              unsigned PhysReg) {
   if (VirtReg.empty())
     return false;
-  CoalescerPair CP(VirtReg.reg, PhysReg, *TRI);
+  CoalescerPair CP(VirtReg.reg(), PhysReg, *TRI);
 
   bool Result = foreachUnit(TRI, VirtReg, PhysReg, [&](unsigned Unit,
                                                        const LiveRange &Range) {

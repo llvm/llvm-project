@@ -8,16 +8,18 @@
 void clang_analyzer_warnIfReached();
 void clang_analyzer_numTimesReached();
 void clang_analyzer_eval(bool);
+void clang_analyzer_warnOnDeadSymbol(int *);
 
 void derefAfterMove(std::unique_ptr<int> P) {
   std::unique_ptr<int> Q = std::move(P);
   if (Q)
     clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
-  *Q.get() = 1; // no-warning
+  *Q.get() = 1; // expected-warning {{Dereference of null pointer [core.NullDereference]}}
   if (P)
     clang_analyzer_warnIfReached(); // no-warning
   // TODO: Report a null dereference (instead).
-  *P.get() = 1; // expected-warning {{Method called on moved-from object 'P'}}
+  *P.get() = 1; // expected-warning {{Method called on moved-from object 'P' [cplusplus.Move]}}
+  // expected-warning@-1 {{Dereference of null pointer [core.NullDereference]}}
 }
 
 // Don't crash when attempting to model a call with unknown callee.
@@ -332,4 +334,119 @@ void drefOnAssignedNullFromMethodPtrValidSmartPtr() {
   std::unique_ptr<A> P(new A());
   P = returnRValRefOfUniquePtr();
   P->foo(); // No warning. 
+}
+
+void derefMoveConstructedWithValidPtr() {
+  std::unique_ptr<A> PToMove(new A());
+  std::unique_ptr<A> P(std::move(PToMove));
+  P->foo(); // No warning.
+}
+
+void derefMoveConstructedWithNullPtr() {
+  std::unique_ptr<A> PToMove;
+  std::unique_ptr<A> P(std::move(PToMove));
+  P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefMoveConstructedWithUnknownPtr(std::unique_ptr<A> PToMove) {
+  std::unique_ptr<A> P(std::move(PToMove));
+  P->foo(); // No warning.
+}
+
+void derefValidPtrMovedToConstruct() {
+  std::unique_ptr<A> PToMove(new A());
+  std::unique_ptr<A> P(std::move(PToMove));
+  PToMove->foo(); // expected-warning {{Dereference of null smart pointer 'PToMove' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefNullPtrMovedToConstruct() {
+  std::unique_ptr<A> PToMove;
+  std::unique_ptr<A> P(std::move(PToMove));
+  PToMove->foo(); // expected-warning {{Dereference of null smart pointer 'PToMove' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefUnknownPtrMovedToConstruct(std::unique_ptr<A> PToMove) {
+  std::unique_ptr<A> P(std::move(PToMove));
+  PToMove->foo(); // expected-warning {{Dereference of null smart pointer 'PToMove' [alpha.cplusplus.SmartPtr]}}
+}
+
+std::unique_ptr<A> &&functionReturnsRValueRef();
+
+void derefMoveConstructedWithRValueRefReturn() {
+  std::unique_ptr<A> P(functionReturnsRValueRef());
+  P->foo();  // No warning.
+}
+
+void derefConditionOnNullPtr() {
+  std::unique_ptr<A> P;
+  if (P)
+    P->foo(); // No warning.
+  else
+    P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefConditionOnNotNullPtr() {
+  std::unique_ptr<A> P;
+  if (!P)
+    P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefConditionOnValidPtr() {
+  std::unique_ptr<A> P(new A());
+  std::unique_ptr<A> PNull;
+  if (P)
+    PNull->foo(); // expected-warning {{Dereference of null smart pointer 'PNull' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefConditionOnNotValidPtr() {
+  std::unique_ptr<A> P(new A());
+  std::unique_ptr<A> PNull;
+  if (!P)
+    PNull->foo(); // No warning.
+}
+
+void derefConditionOnUnKnownPtr(std::unique_ptr<A> P) {
+  if (P)
+    P->foo(); // No warning.
+  else
+    P->foo(); // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
+}
+
+void derefOnValidPtrAfterReset(std::unique_ptr<A> P) {
+  P.reset(new A());
+  if (!P)
+    P->foo(); // No warning.
+  else
+    P->foo(); // No warning.
+}
+
+void innerPointerSymbolLiveness() {
+  std::unique_ptr<int> P(new int());
+  clang_analyzer_warnOnDeadSymbol(P.get());
+  int *RP = P.release();
+} // expected-warning{{SYMBOL DEAD}}
+
+void boolOpCreatedConjuredSymbolLiveness(std::unique_ptr<int> P) {
+  if (P) {
+    int *X = P.get();
+    clang_analyzer_warnOnDeadSymbol(X);
+  }
+} // expected-warning{{SYMBOL DEAD}}
+
+void getCreatedConjuredSymbolLiveness(std::unique_ptr<int> P) {
+  int *X = P.get();
+  clang_analyzer_warnOnDeadSymbol(X);
+  int Y;
+  if (!P) {
+    Y = *P.get(); // expected-warning {{Dereference of null pointer [core.NullDereference]}}
+    // expected-warning@-1 {{SYMBOL DEAD}}
+  }
+}
+
+int derefConditionOnUnKnownPtr(int *q) {
+  std::unique_ptr<int> P(q);
+  if (P)
+    return *P; // No warning.
+  else
+    return *P; // expected-warning {{Dereference of null smart pointer 'P' [alpha.cplusplus.SmartPtr]}}
 }

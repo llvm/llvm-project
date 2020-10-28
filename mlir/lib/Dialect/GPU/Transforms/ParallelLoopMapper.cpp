@@ -23,10 +23,9 @@ using namespace mlir;
 using namespace mlir::gpu;
 using namespace mlir::scf;
 
+#include "mlir/Dialect/GPU/ParallelLoopMapperAttr.cpp.inc"
 #include "mlir/Dialect/GPU/ParallelLoopMapperEnums.cpp.inc"
 namespace mlir {
-
-#include "mlir/Dialect/GPU/ParallelLoopMapperAttr.cpp.inc"
 namespace gpu {
 
 StringRef getMappingAttrName() { return "mapping"; }

@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 -show-encoding %s | FileCheck -check-prefix=GFX908 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 -show-encoding %s 2>&1 | FileCheck -check-prefix=NOGFX908 %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck -check-prefix=NOGFX908 --implicit-check-not=error: %s
 
 v_accvgpr_read_b32 v2, a0
 // GFX908: v_accvgpr_read_b32 v2, a0       ; encoding: [0x02,0x00,0xd8,0xd3,0x00,0x01,0x00,0x08]

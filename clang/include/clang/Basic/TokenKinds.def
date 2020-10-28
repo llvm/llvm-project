@@ -829,6 +829,11 @@ PRAGMA_ANNOTATION(pragma_fp_contract)
 // handles them.
 PRAGMA_ANNOTATION(pragma_fenv_access)
 
+// Annotation for #pragma STDC FENV_ROUND
+// The lexer produces these so that they only take effect when the parser
+// handles them.
+PRAGMA_ANNOTATION(pragma_fenv_round)
+
 // Annotation for #pragma float_control
 // The lexer produces these so that they only take effect when the parser
 // handles them.

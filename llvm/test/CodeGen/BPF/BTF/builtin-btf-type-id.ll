@@ -1,7 +1,6 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfel -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -mattr=+alu32 -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: opt -O2 %s | llvm-dis > %t1
+; RUN: llc -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mattr=+alu32 -filetype=asm -o - %t1 | FileCheck -check-prefixes=CHECK %s
 ;
 ; Source code:
 ;   static int (*bpf_log)(unsigned tid, void *data, int data_size) = (void *)999;
@@ -19,7 +18,9 @@
 ;     bpf_log(__builtin_btf_type_id(tmp__abc.f1[3], 1), &tmp__abc, sizeof(tmp__abc));
 ;   }
 ; Compilation flag:
-;   clang -target bpf -O2 -g -S -emit-llvm test.c
+;   clang -target bpf -O2 -g -S -emit-llvm -Xclang -disable-llvm-passes test.c
+
+target triple = "bpf"
 
 @tmp__abc = dso_local global { <{ i8, i8, [98 x i8] }>, i32 } { <{ i8, i8, [98 x i8] }> <{ i8 1, i8 3, [98 x i8] zeroinitializer }>, i32 0 }, align 4, !dbg !0
 

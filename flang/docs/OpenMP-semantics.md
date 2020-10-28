@@ -8,6 +8,11 @@
 
 # OpenMP Semantic Analysis
 
+```eval_rst
+.. contents::
+   :local:
+```
+
 ## OpenMP for F18
 
 1. Define and document the parse tree representation for

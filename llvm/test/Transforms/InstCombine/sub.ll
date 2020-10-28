@@ -414,123 +414,6 @@ define zeroext i1 @test22(i32 %a, i32 %b)  nounwind  {
   ret i1 %i5
 }
 
-; rdar://7362831
-define i32 @test23(i8* %P, i64 %A){
-; CHECK-LABEL: @test23(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[A:%.*]] to i32
-; CHECK-NEXT:    ret i32 [[TMP1]]
-;
-  %B = getelementptr inbounds i8, i8* %P, i64 %A
-  %C = ptrtoint i8* %B to i64
-  %D = trunc i64 %C to i32
-  %E = ptrtoint i8* %P to i64
-  %F = trunc i64 %E to i32
-  %G = sub i32 %D, %F
-  ret i32 %G
-}
-
-define i8 @test23_as1(i8 addrspace(1)* %P, i16 %A) {
-; CHECK-LABEL: @test23_as1(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[A:%.*]] to i8
-; CHECK-NEXT:    ret i8 [[TMP1]]
-;
-  %B = getelementptr inbounds i8, i8 addrspace(1)* %P, i16 %A
-  %C = ptrtoint i8 addrspace(1)* %B to i16
-  %D = trunc i16 %C to i8
-  %E = ptrtoint i8 addrspace(1)* %P to i16
-  %F = trunc i16 %E to i8
-  %G = sub i8 %D, %F
-  ret i8 %G
-}
-
-define i64 @test24(i8* %P, i64 %A){
-; CHECK-LABEL: @test24(
-; CHECK-NEXT:    ret i64 [[A:%.*]]
-;
-  %B = getelementptr inbounds i8, i8* %P, i64 %A
-  %C = ptrtoint i8* %B to i64
-  %E = ptrtoint i8* %P to i64
-  %G = sub i64 %C, %E
-  ret i64 %G
-}
-
-define i16 @test24_as1(i8 addrspace(1)* %P, i16 %A) {
-; CHECK-LABEL: @test24_as1(
-; CHECK-NEXT:    ret i16 [[A:%.*]]
-;
-  %B = getelementptr inbounds i8, i8 addrspace(1)* %P, i16 %A
-  %C = ptrtoint i8 addrspace(1)* %B to i16
-  %E = ptrtoint i8 addrspace(1)* %P to i16
-  %G = sub i16 %C, %E
-  ret i16 %G
-}
-
-define i64 @test24a(i8* %P, i64 %A){
-; CHECK-LABEL: @test24a(
-; CHECK-NEXT:    [[DIFF_NEG:%.*]] = sub i64 0, [[A:%.*]]
-; CHECK-NEXT:    ret i64 [[DIFF_NEG]]
-;
-  %B = getelementptr inbounds i8, i8* %P, i64 %A
-  %C = ptrtoint i8* %B to i64
-  %E = ptrtoint i8* %P to i64
-  %G = sub i64 %E, %C
-  ret i64 %G
-}
-
-define i16 @test24a_as1(i8 addrspace(1)* %P, i16 %A) {
-; CHECK-LABEL: @test24a_as1(
-; CHECK-NEXT:    [[DIFF_NEG:%.*]] = sub i16 0, [[A:%.*]]
-; CHECK-NEXT:    ret i16 [[DIFF_NEG]]
-;
-  %B = getelementptr inbounds i8, i8 addrspace(1)* %P, i16 %A
-  %C = ptrtoint i8 addrspace(1)* %B to i16
-  %E = ptrtoint i8 addrspace(1)* %P to i16
-  %G = sub i16 %E, %C
-  ret i16 %G
-}
-
-
-@Arr = external global [42 x i16]
-
-define i64 @test24b(i8* %P, i64 %A){
-; CHECK-LABEL: @test24b(
-; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw i64 [[A:%.*]], 1
-; CHECK-NEXT:    ret i64 [[B_IDX]]
-;
-  %B = getelementptr inbounds [42 x i16], [42 x i16]* @Arr, i64 0, i64 %A
-  %C = ptrtoint i16* %B to i64
-  %G = sub i64 %C, ptrtoint ([42 x i16]* @Arr to i64)
-  ret i64 %G
-}
-
-
-define i64 @test25(i8* %P, i64 %A){
-; CHECK-LABEL: @test25(
-; CHECK-NEXT:    [[B_IDX_NEG_NEG:%.*]] = shl i64 [[A:%.*]], 1
-; CHECK-NEXT:    [[DOTNEG:%.*]] = add i64 [[B_IDX_NEG_NEG]], -84
-; CHECK-NEXT:    ret i64 [[DOTNEG]]
-;
-  %B = getelementptr inbounds [42 x i16], [42 x i16]* @Arr, i64 0, i64 %A
-  %C = ptrtoint i16* %B to i64
-  %G = sub i64 %C, ptrtoint (i16* getelementptr ([42 x i16], [42 x i16]* @Arr, i64 1, i64 0) to i64)
-  ret i64 %G
-}
-
-@Arr_as1 = external addrspace(1) global [42 x i16]
-
-define i16 @test25_as1(i8 addrspace(1)* %P, i64 %A) {
-; CHECK-LABEL: @test25_as1(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[A:%.*]] to i16
-; CHECK-NEXT:    [[B_IDX_NEG_NEG:%.*]] = shl i16 [[TMP1]], 1
-; CHECK-NEXT:    [[DOTNEG:%.*]] = add i16 [[B_IDX_NEG_NEG]], -84
-; CHECK-NEXT:    ret i16 [[DOTNEG]]
-;
-  %B = getelementptr inbounds [42 x i16], [42 x i16] addrspace(1)* @Arr_as1, i64 0, i64 %A
-  %C = ptrtoint i16 addrspace(1)* %B to i16
-  %G = sub i16 %C, ptrtoint (i16 addrspace(1)* getelementptr ([42 x i16], [42 x i16] addrspace(1)* @Arr_as1, i64 1, i64 0) to i16)
-  ret i16 %G
-}
-
 define i32 @test26(i32 %x) {
 ; CHECK-LABEL: @test26(
 ; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i32 -3, [[X:%.*]]
@@ -822,49 +705,6 @@ define i32 @test28commuted(i32 %x, i32 %y, i32 %z) {
   %mul = mul i32 %y, %neg
   %sub = sub i32 %x, %mul
   ret i32 %sub
-}
-
-define i64 @test29(i8* %foo, i64 %i, i64 %j) {
-; CHECK-LABEL: @test29(
-; CHECK-NEXT:    [[DOTNEG:%.*]] = sub i64 [[I:%.*]], [[J:%.*]]
-; CHECK-NEXT:    ret i64 [[DOTNEG]]
-;
-  %gep1 = getelementptr inbounds i8, i8* %foo, i64 %i
-  %gep2 = getelementptr inbounds i8, i8* %foo, i64 %j
-  %cast1 = ptrtoint i8* %gep1 to i64
-  %cast2 = ptrtoint i8* %gep2 to i64
-  %sub = sub i64 %cast1, %cast2
-  ret i64 %sub
-}
-
-define i64 @test30(i8* %foo, i64 %i, i64 %j) {
-; CHECK-LABEL: @test30(
-; CHECK-NEXT:    [[GEP1_IDX_NEG_NEG:%.*]] = shl i64 [[I:%.*]], 2
-; CHECK-NEXT:    [[DOTNEG:%.*]] = sub i64 [[GEP1_IDX_NEG_NEG]], [[J:%.*]]
-; CHECK-NEXT:    ret i64 [[DOTNEG]]
-;
-  %bit = bitcast i8* %foo to i32*
-  %gep1 = getelementptr inbounds i32, i32* %bit, i64 %i
-  %gep2 = getelementptr inbounds i8, i8* %foo, i64 %j
-  %cast1 = ptrtoint i32* %gep1 to i64
-  %cast2 = ptrtoint i8* %gep2 to i64
-  %sub = sub i64 %cast1, %cast2
-  ret i64 %sub
-}
-
-define i16 @test30_as1(i8 addrspace(1)* %foo, i16 %i, i16 %j) {
-; CHECK-LABEL: @test30_as1(
-; CHECK-NEXT:    [[GEP1_IDX_NEG_NEG:%.*]] = shl i16 [[I:%.*]], 2
-; CHECK-NEXT:    [[DOTNEG:%.*]] = sub i16 [[GEP1_IDX_NEG_NEG]], [[J:%.*]]
-; CHECK-NEXT:    ret i16 [[DOTNEG]]
-;
-  %bit = bitcast i8 addrspace(1)* %foo to i32 addrspace(1)*
-  %gep1 = getelementptr inbounds i32, i32 addrspace(1)* %bit, i16 %i
-  %gep2 = getelementptr inbounds i8, i8 addrspace(1)* %foo, i16 %j
-  %cast1 = ptrtoint i32 addrspace(1)* %gep1 to i16
-  %cast2 = ptrtoint i8 addrspace(1)* %gep2 to i16
-  %sub = sub i16 %cast1, %cast2
-  ret i16 %sub
 }
 
 define <2 x i64> @test31(<2 x i64> %A) {
@@ -1235,10 +1075,10 @@ define i64 @test58([100 x [100 x i8]]* %foo, i64 %i, i64 %j) {
 ; "%sub = i64 %i, %j, ret i64 %sub"
 ; gep1 and gep2 have only one use
 ; CHECK-LABEL: @test58(
-; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add i64 [[J:%.*]], 4200
 ; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add i64 [[I:%.*]], 4200
-; CHECK-NEXT:    [[DOTNEG:%.*]] = sub i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
-; CHECK-NEXT:    ret i64 [[DOTNEG]]
+; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add i64 [[J:%.*]], 4200
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
 ;
   %gep1 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 %i
   %gep2 = getelementptr inbounds [100 x [100 x i8]], [100 x [100 x i8]]* %foo, i64 0, i64 42, i64 %j

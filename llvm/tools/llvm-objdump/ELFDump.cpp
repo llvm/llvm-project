@@ -92,7 +92,7 @@ static Error getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
         return SymSI.takeError();
       const typename ELFT::Shdr *SymSec =
           Obj->getSection((*SymSI)->getRawDataRefImpl());
-      auto SecName = EF.getSectionName(SymSec);
+      auto SecName = EF.getSectionName(*SymSec);
       if (!SecName)
         return SecName.takeError();
       Fmt << *SecName;
@@ -338,10 +338,10 @@ static void printSymbolVersionInfo(const ELFFile<ELFT> *Elf,
       continue;
 
     ArrayRef<uint8_t> Contents =
-        unwrapOrError(Elf->getSectionContents(&Shdr), FileName);
+        unwrapOrError(Elf->getSectionContents(Shdr), FileName);
     const typename ELFT::Shdr *StrTabSec =
         unwrapOrError(Elf->getSection(Shdr.sh_link), FileName);
-    StringRef StrTab = unwrapOrError(Elf->getStringTable(StrTabSec), FileName);
+    StringRef StrTab = unwrapOrError(Elf->getStringTable(*StrTabSec), FileName);
 
     if (Shdr.sh_type == ELF::SHT_GNU_verneed)
       printSymbolVersionDependency<ELFT>(Contents, StrTab);

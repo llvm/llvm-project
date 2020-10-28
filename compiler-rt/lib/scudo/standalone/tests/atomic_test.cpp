@@ -80,26 +80,14 @@ TEST(ScudoAtomicTest, AtomicStoreLoad) {
 
 template <typename T> void checkAtomicCompareExchange() {
   typedef typename T::Type Type;
-  {
-    Type OldVal = 42;
-    Type NewVal = 24;
-    Type V = OldVal;
-    EXPECT_TRUE(atomic_compare_exchange_strong(
-        reinterpret_cast<T *>(&V), &OldVal, NewVal, memory_order_relaxed));
-    EXPECT_FALSE(atomic_compare_exchange_strong(
-        reinterpret_cast<T *>(&V), &OldVal, NewVal, memory_order_relaxed));
-    EXPECT_EQ(NewVal, OldVal);
-  }
-  {
-    Type OldVal = 42;
-    Type NewVal = 24;
-    Type V = OldVal;
-    EXPECT_TRUE(atomic_compare_exchange_weak(reinterpret_cast<T *>(&V), &OldVal,
+  Type OldVal = 42;
+  Type NewVal = 24;
+  Type V = OldVal;
+  EXPECT_TRUE(atomic_compare_exchange_strong(reinterpret_cast<T *>(&V), &OldVal,
                                              NewVal, memory_order_relaxed));
-    EXPECT_FALSE(atomic_compare_exchange_weak(
-        reinterpret_cast<T *>(&V), &OldVal, NewVal, memory_order_relaxed));
-    EXPECT_EQ(NewVal, OldVal);
-  }
+  EXPECT_FALSE(atomic_compare_exchange_strong(
+      reinterpret_cast<T *>(&V), &OldVal, NewVal, memory_order_relaxed));
+  EXPECT_EQ(NewVal, OldVal);
 }
 
 TEST(ScudoAtomicTest, AtomicCompareExchangeTest) {

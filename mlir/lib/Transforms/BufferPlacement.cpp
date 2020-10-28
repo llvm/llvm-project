@@ -48,11 +48,10 @@
 // will be freed in the end.
 //
 // TODO:
-// The current implementation does not support loops and the resulting code will
-// be invalid with respect to program semantics. The only thing that is
-// currently missing is a high-level loop analysis that allows us to move allocs
-// and deallocs outside of the loop blocks. Furthermore, it doesn't also accept
-// functions which return buffers already.
+// The current implementation does not support explicit-control-flow loops and
+// the resulting code will be invalid with respect to program semantics.
+// However, structured control-flow loops are fully supported. Furthermore, it
+// doesn't accept functions which return buffers already.
 //
 //===----------------------------------------------------------------------===//
 
@@ -75,6 +74,22 @@ static void walkReturnOperations(Region *region, const FuncT &func) {
       if (operation.hasTrait<OpTrait::ReturnLike>())
         func(&operation);
     }
+}
+
+/// Wrapper for the actual `RegionBranchOpInterface.getSuccessorRegions`
+/// function that initializes the required `operandAttributes` array.
+static void getSuccessorRegions(RegionBranchOpInterface regionInterface,
+                                llvm::Optional<unsigned> index,
+                                SmallVectorImpl<RegionSuccessor> &successors) {
+  // Create a list of null attributes for each operand to comply with the
+  // `getSuccessorRegions` interface definition that requires a single
+  // attribute per operand.
+  SmallVector<Attribute, 2> operandAttributes(
+      regionInterface.getOperation()->getNumOperands());
+
+  // Get all successor regions using the temporarily allocated
+  // `operandAttributes`.
+  regionInterface.getSuccessorRegions(index, operandAttributes, successors);
 }
 
 namespace {
@@ -166,16 +181,10 @@ private:
 
     // Query the RegionBranchOpInterface to find potential successor regions.
     op->walk([&](RegionBranchOpInterface regionInterface) {
-      // Create an empty attribute for each operand to comply with the
-      // `getSuccessorRegions` interface definition that requires a single
-      // attribute per operand.
-      SmallVector<Attribute, 2> operandAttributes(
-          regionInterface.getOperation()->getNumOperands());
-
       // Extract all entry regions and wire all initial entry successor inputs.
       SmallVector<RegionSuccessor, 2> entrySuccessors;
-      regionInterface.getSuccessorRegions(/*index=*/llvm::None,
-                                          operandAttributes, entrySuccessors);
+      getSuccessorRegions(regionInterface, /*index=*/llvm::None,
+                          entrySuccessors);
       for (RegionSuccessor &entrySuccessor : entrySuccessors) {
         // Wire the entry region's successor arguments with the initial
         // successor inputs.
@@ -191,8 +200,8 @@ private:
         // Iterate over all successor region entries that are reachable from the
         // current region.
         SmallVector<RegionSuccessor, 2> successorRegions;
-        regionInterface.getSuccessorRegions(
-            region.getRegionNumber(), operandAttributes, successorRegions);
+        getSuccessorRegions(regionInterface, region.getRegionNumber(),
+                            successorRegions);
         for (RegionSuccessor &successorRegion : successorRegions) {
           // Iterate over all immediate terminator operations and wire the
           // successor inputs with the operands of each terminator.
@@ -207,6 +216,83 @@ private:
 
   /// Maps values to all immediate aliases this value can have.
   ValueMapT aliases;
+};
+
+//===----------------------------------------------------------------------===//
+// Backedges
+//===----------------------------------------------------------------------===//
+
+/// A straight-forward program analysis which detects loop backedges induced by
+/// explicit control flow.
+class Backedges {
+public:
+  using BlockSetT = SmallPtrSet<Block *, 16>;
+  using BackedgeSetT = llvm::DenseSet<std::pair<Block *, Block *>>;
+
+public:
+  /// Constructs a new backedges analysis using the op provided.
+  Backedges(Operation *op) { recurse(op, op->getBlock()); }
+
+  /// Returns the number of backedges formed by explicit control flow.
+  size_t size() const { return edgeSet.size(); }
+
+  /// Returns the start iterator to loop over all backedges.
+  BackedgeSetT::const_iterator begin() const { return edgeSet.begin(); }
+
+  /// Returns the end iterator to loop over all backedges.
+  BackedgeSetT::const_iterator end() const { return edgeSet.end(); }
+
+private:
+  /// Enters the current block and inserts a backedge into the `edgeSet` if we
+  /// have already visited the current block. The inserted edge links the given
+  /// `predecessor` with the `current` block.
+  bool enter(Block &current, Block *predecessor) {
+    bool inserted = visited.insert(&current).second;
+    if (!inserted)
+      edgeSet.insert(std::make_pair(predecessor, &current));
+    return inserted;
+  }
+
+  /// Leaves the current block.
+  void exit(Block &current) { visited.erase(&current); }
+
+  /// Recurses into the given operation while taking all attached regions into
+  /// account.
+  void recurse(Operation *op, Block *predecessor) {
+    Block *current = op->getBlock();
+    // If the current op implements the `BranchOpInterface`, there can be
+    // cycles in the scope of all successor blocks.
+    if (isa<BranchOpInterface>(op)) {
+      for (Block *succ : current->getSuccessors())
+        recurse(*succ, current);
+    }
+    // Recurse into all distinct regions and check for explicit control-flow
+    // loops.
+    for (Region &region : op->getRegions())
+      recurse(region.front(), current);
+  }
+
+  /// Recurses into explicit control-flow structures that are given by
+  /// the successor relation defined on the block level.
+  void recurse(Block &block, Block *predecessor) {
+    // Try to enter the current block. If this is not possible, we are
+    // currently processing this block and can safely return here.
+    if (!enter(block, predecessor))
+      return;
+
+    // Recurse into all operations and successor blocks.
+    for (auto &op : block.getOperations())
+      recurse(&op, predecessor);
+
+    // Leave the current block.
+    exit(block);
+  }
+
+  /// Stores all blocks that are currently visited and on the processing stack.
+  BlockSetT visited;
+
+  /// Stores all backedges in the format (source, target).
+  BackedgeSetT edgeSet;
 };
 
 //===----------------------------------------------------------------------===//
@@ -357,9 +443,14 @@ private:
       for (Value value : it->second) {
         if (valuesToFree.count(value) > 0)
           continue;
-        // Check whether we have to free this particular block argument.
-        if (!dominators.dominates(definingBlock, value.getParentBlock())) {
-          toProcess.emplace_back(value, value.getParentBlock());
+        Block *parentBlock = value.getParentBlock();
+        // Check whether we have to free this particular block argument or
+        // generic value. We have to free the current alias if it is either
+        // defined in a non-dominated block or it is defined in the same block
+        // but the current value is not dominated by the source value.
+        if (!dominators.dominates(definingBlock, parentBlock) ||
+            (definingBlock == parentBlock && value.isa<BlockArgument>())) {
+          toProcess.emplace_back(value, parentBlock);
           valuesToFree.insert(value);
         } else if (visitedValues.insert(std::make_tuple(value, definingBlock))
                        .second)
@@ -431,22 +522,42 @@ private:
     // argument belongs to the first block in a region and the parent operation
     // implements the RegionBranchOpInterface.
     Region *argRegion = block->getParent();
+    Operation *parentOp = argRegion->getParentOp();
     RegionBranchOpInterface regionInterface;
     if (!argRegion || &argRegion->front() != block ||
-        !(regionInterface =
-              dyn_cast<RegionBranchOpInterface>(argRegion->getParentOp())))
+        !(regionInterface = dyn_cast<RegionBranchOpInterface>(parentOp)))
       return;
 
     introduceCopiesForRegionSuccessors(
-        regionInterface, argRegion->getParentOp()->getRegions(),
+        regionInterface, argRegion->getParentOp()->getRegions(), blockArg,
         [&](RegionSuccessor &successorRegion) {
           // Find a predecessor of our argRegion.
           return successorRegion.getSuccessor() == argRegion;
-        },
-        [&](RegionSuccessor &successorRegion) {
-          // The operand index will be the argument number.
-          return blockArg.getArgNumber();
         });
+
+    // Check whether the block argument belongs to an entry region of the
+    // parent operation. In this case, we have to introduce an additional copy
+    // for buffer that is passed to the argument.
+    SmallVector<RegionSuccessor, 2> successorRegions;
+    getSuccessorRegions(regionInterface, llvm::None, successorRegions);
+    auto *it =
+        llvm::find_if(successorRegions, [&](RegionSuccessor &successorRegion) {
+          return successorRegion.getSuccessor() == argRegion;
+        });
+    if (it == successorRegions.end())
+      return;
+
+    // Determine the actual operand to introduce a copy for and rewire the
+    // operand to point to the copy instead.
+    Value operand =
+        regionInterface.getSuccessorEntryOperands(argRegion->getRegionNumber())
+            [llvm::find(it->getSuccessorInputs(), blockArg).getIndex()];
+    Value copy = introduceBufferCopy(operand, parentOp);
+
+    auto op = llvm::find(parentOp->getOperands(), operand);
+    assert(op != parentOp->getOperands().end() &&
+           "parentOp does not contain operand");
+    parentOp->setOperand(op.getIndex(), copy);
   }
 
   /// Introduces temporary allocs in front of all associated nested-region
@@ -455,42 +566,34 @@ private:
     // Get the actual result index in the scope of the parent terminator.
     Operation *operation = value.getDefiningOp();
     auto regionInterface = cast<RegionBranchOpInterface>(operation);
-    introduceCopiesForRegionSuccessors(
-        regionInterface, operation->getRegions(),
-        [&](RegionSuccessor &successorRegion) {
-          // Determine whether this region has a successor entry that leaves
-          // this region by returning to its parent operation.
-          return !successorRegion.getSuccessor();
-        },
-        [&](RegionSuccessor &successorRegion) {
-          // Find the associated success input index.
-          return llvm::find(successorRegion.getSuccessorInputs(), value)
-              .getIndex();
-        });
+    // Filter successors that return to the parent operation.
+    auto regionPredicate = [&](RegionSuccessor &successorRegion) {
+      // If the RegionSuccessor has no associated successor, it will return to
+      // its parent operation.
+      return !successorRegion.getSuccessor();
+    };
+    // Introduce a copy for all region "results" that are returned to the parent
+    // operation. This is required since the parent's result value has been
+    // considered critical. Therefore, the algorithm assumes that a copy of a
+    // previously allocated buffer is returned by the operation (like in the
+    // case of a block argument).
+    introduceCopiesForRegionSuccessors(regionInterface, operation->getRegions(),
+                                       value, regionPredicate);
   }
 
   /// Introduces buffer copies for all terminators in the given regions. The
   /// regionPredicate is applied to every successor region in order to restrict
-  /// the copies to specific regions. Thereby, the operandProvider is invoked
-  /// for each matching region successor and determines the operand index that
-  /// requires a buffer copy.
-  template <typename TPredicate, typename TOperandProvider>
-  void
-  introduceCopiesForRegionSuccessors(RegionBranchOpInterface regionInterface,
-                                     MutableArrayRef<Region> regions,
-                                     const TPredicate &regionPredicate,
-                                     const TOperandProvider &operandProvider) {
-    // Create an empty attribute for each operand to comply with the
-    // `getSuccessorRegions` interface definition that requires a single
-    // attribute per operand.
-    SmallVector<Attribute, 2> operandAttributes(
-        regionInterface.getOperation()->getNumOperands());
+  /// the copies to specific regions.
+  template <typename TPredicate>
+  void introduceCopiesForRegionSuccessors(
+      RegionBranchOpInterface regionInterface, MutableArrayRef<Region> regions,
+      Value argValue, const TPredicate &regionPredicate) {
     for (Region &region : regions) {
       // Query the regionInterface to get all successor regions of the current
       // one.
       SmallVector<RegionSuccessor, 2> successorRegions;
-      regionInterface.getSuccessorRegions(region.getRegionNumber(),
-                                          operandAttributes, successorRegions);
+      getSuccessorRegions(regionInterface, region.getRegionNumber(),
+                          successorRegions);
       // Try to find a matching region successor.
       RegionSuccessor *regionSuccessor =
           llvm::find_if(successorRegions, regionPredicate);
@@ -498,7 +601,9 @@ private:
         continue;
       // Get the operand index in the context of the current successor input
       // bindings.
-      auto operandIndex = operandProvider(*regionSuccessor);
+      size_t operandIndex =
+          llvm::find(regionSuccessor->getSuccessorInputs(), argValue)
+              .getIndex();
 
       // Iterate over all immediate terminator operations to introduce
       // new buffer allocations. Thereby, the appropriate terminator operand
@@ -518,6 +623,16 @@ private:
   /// its content into the newly allocated buffer. The terminator operation is
   /// used to insert the alloc and copy operations at the right places.
   Value introduceBufferCopy(Value sourceValue, Operation *terminator) {
+    // Avoid multiple copies of the same source value. This can happen in the
+    // presence of loops when a branch acts as a backedge while also having
+    // another successor that returns to its parent operation. Note: that
+    // copying copied buffers can introduce memory leaks since the invariant of
+    // BufferPlacement assumes that a buffer will be only copied once into a
+    // temporary buffer. Hence, the construction of copy chains introduces
+    // additional allocations that are not tracked automatically by the
+    // algorithm.
+    if (copiedValues.contains(sourceValue))
+      return sourceValue;
     // Create a new alloc at the current location of the terminator.
     auto memRefType = sourceValue.getType().cast<MemRefType>();
     OpBuilder builder(terminator);
@@ -541,6 +656,8 @@ private:
     // allocation to the new one.
     builder.create<linalg::CopyOp>(terminator->getLoc(), sourceValue, alloc);
 
+    // Remember the copy of original source value.
+    copiedValues.insert(alloc);
     return alloc;
   }
 
@@ -652,6 +769,9 @@ private:
   /// Maps allocation nodes to their associated blocks.
   AllocEntryList allocs;
 
+  // Stores already copied allocations to avoid additional copies of copies.
+  ValueSetT copiedValues;
+
   /// The underlying liveness analysis to compute fine grained information
   /// about alloc and dealloc positions.
   Liveness liveness;
@@ -673,6 +793,14 @@ private:
 struct BufferPlacementPass : BufferPlacementBase<BufferPlacementPass> {
 
   void runOnFunction() override {
+    // Ensure that there are supported loops only.
+    Backedges backedges(getFunction());
+    if (backedges.size()) {
+      getFunction().emitError(
+          "Structured control-flow loops are supported only.");
+      return;
+    }
+
     // Place all required alloc, copy and dealloc nodes.
     BufferPlacement placement(getFunction());
     placement.place();
@@ -680,20 +808,6 @@ struct BufferPlacementPass : BufferPlacementBase<BufferPlacementPass> {
 };
 
 } // end anonymous namespace
-
-//===----------------------------------------------------------------------===//
-// BufferAssignmentPlacer
-//===----------------------------------------------------------------------===//
-
-/// Creates a new assignment placer.
-BufferAssignmentPlacer::BufferAssignmentPlacer(Operation *op) : operation(op) {}
-
-/// Computes the actual position to place allocs for the given value.
-OpBuilder::InsertPoint
-BufferAssignmentPlacer::computeAllocPosition(OpResult result) {
-  Operation *owner = result.getOwner();
-  return OpBuilder::InsertPoint(owner->getBlock(), Block::iterator(owner));
-}
 
 //===----------------------------------------------------------------------===//
 // BufferAssignmentTypeConverter
@@ -713,9 +827,220 @@ BufferAssignmentTypeConverter::BufferAssignmentTypeConverter() {
   });
 }
 
-/// Checks if `type` has been converted from non-memref type to memref.
-bool BufferAssignmentTypeConverter::isConvertedMemref(Type type, Type before) {
-  return type.isa<BaseMemRefType>() && !before.isa<BaseMemRefType>();
+/// This method tries to decompose a value of a certain type using provided
+/// decompose callback functions. If it is unable to do so, the original value
+/// is returned.
+void BufferAssignmentTypeConverter::tryDecomposeValue(
+    OpBuilder &builder, Location loc, Type type, Value value,
+    SmallVectorImpl<Value> &results) {
+  for (auto conversion : decomposeValueConversions)
+    if (conversion(builder, loc, type, value, results) != llvm::None)
+      return;
+  results.push_back(value);
+}
+
+/// This method tries to decompose a type using provided decompose callback
+/// functions. If it is unable to do so, the original type is returned.
+void BufferAssignmentTypeConverter::tryDecomposeType(
+    Type type, SmallVectorImpl<Type> &types) {
+  for (auto conversion : decomposeTypeConversions)
+    if (conversion(type, types) != llvm::None)
+      return;
+  types.push_back(type);
+}
+
+/// This method returns ResultConversionKind for the input type.
+BufferAssignmentTypeConverter::ResultConversionKind
+BufferAssignmentTypeConverter::getResultConversionKind(Type origin,
+                                                       Type converted) {
+  for (auto conversion : resultTypeConversions) {
+    auto res = conversion(origin, converted);
+    if (res != llvm::None)
+      return res.getValue();
+  }
+  return KeepAsFunctionResult;
+}
+
+//===----------------------------------------------------------------------===//
+// BufferAssignmentFuncOpConverter
+//===----------------------------------------------------------------------===//
+
+/// Performs the actual function signature rewriting step.
+LogicalResult BufferAssignmentFuncOpConverter::matchAndRewrite(
+    mlir::FuncOp funcOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  auto funcType = funcOp.getType();
+
+  // Convert function arguments using the provided TypeConverter.
+  TypeConverter::SignatureConversion conversion(funcType.getNumInputs());
+  for (auto argType : llvm::enumerate(funcType.getInputs())) {
+    SmallVector<Type, 2> decomposedTypes, convertedTypes;
+    converter->tryDecomposeType(argType.value(), decomposedTypes);
+    converter->convertTypes(decomposedTypes, convertedTypes);
+    conversion.addInputs(argType.index(), convertedTypes);
+  }
+
+  // Convert the result types of the function.
+  SmallVector<Type, 2> newResultTypes;
+  newResultTypes.reserve(funcOp.getNumResults());
+  for (Type resultType : funcType.getResults()) {
+    SmallVector<Type, 2> originTypes;
+    converter->tryDecomposeType(resultType, originTypes);
+    for (auto origin : originTypes) {
+      Type converted = converter->convertType(origin);
+      auto kind = converter->getResultConversionKind(origin, converted);
+      if (kind == BufferAssignmentTypeConverter::AppendToArgumentsList)
+        conversion.addInputs(converted);
+      else
+        // kind = BufferAssignmentTypeConverter::KeepAsFunctionResult
+        newResultTypes.push_back(converted);
+    }
+  }
+
+  if (failed(rewriter.convertRegionTypes(&funcOp.getBody(), *converter,
+                                         &conversion)))
+    return failure();
+
+  // Update the signature of the function.
+  rewriter.updateRootInPlace(funcOp, [&] {
+    funcOp.setType(rewriter.getFunctionType(conversion.getConvertedTypes(),
+                                            newResultTypes));
+  });
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// BufferAssignmentCallOpConverter
+//===----------------------------------------------------------------------===//
+
+/// Performs the actual rewriting step.
+LogicalResult BufferAssignmentCallOpConverter::matchAndRewrite(
+    CallOp callOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+
+  // This class represents a mapping from a result to a list of values and some
+  // results that have not yet constructed. Instead, the indices of these
+  // results in the operation that will be constructed are known. They will be
+  // replaced with the actual values when they are available. The order of
+  // adding to this mapping is important.
+  class ResultMapping {
+  public:
+    ResultMapping() { order = 0; };
+
+    /// Add an available value to the mapping.
+    void addMapping(Value value) {
+      toValuesMapping.push_back({order++, value});
+    }
+
+    /// Add the index of unavailble result value to the mapping.
+    void addMapping(unsigned index) {
+      toIndicesMapping.push_back({order++, index});
+    }
+
+    /// This method returns the mapping values list. The unknown result values
+    /// that only their indicies are available are replaced with their values.
+    void getMappingValues(ValueRange valuesToReplaceIndices,
+                          SmallVectorImpl<Value> &values) {
+      // Append available values to the list.
+      SmallVector<std::pair<unsigned, Value>, 2> res(toValuesMapping.begin(),
+                                                     toValuesMapping.end());
+      // Replace the indices with the actual values.
+      llvm::for_each(
+          toIndicesMapping, [&](const std::pair<unsigned, unsigned> &entry) {
+            assert(entry.second < valuesToReplaceIndices.size() &&
+                   "The value index is out of range.");
+            res.push_back({entry.first, valuesToReplaceIndices[entry.second]});
+          });
+      // Sort the values based on their adding orders.
+      llvm::sort(res, [](const std::pair<unsigned, Value> &v1,
+                         const std::pair<unsigned, Value> &v2) {
+        return v1.first < v2.first;
+      });
+      // Fill the values.
+      llvm::for_each(res, [&](const std::pair<unsigned, Value> &entry) {
+        values.push_back(entry.second);
+      });
+    }
+
+  private:
+    /// Keeping the inserting order of mapping values.
+    int order;
+
+    /// Containing the mapping values with their inserting orders.
+    SmallVector<std::pair<unsigned, Value>, 2> toValuesMapping;
+
+    /// Containing the indices of result values with their inserting orders.
+    SmallVector<std::pair<unsigned, unsigned>, 2> toIndicesMapping;
+  };
+
+  Location loc = callOp.getLoc();
+  OpBuilder builder(callOp);
+  SmallVector<Value, 2> newOperands;
+
+  // Create the operands list of the new `CallOp`. It unpacks the decomposable
+  // values if a decompose callback function has been provided by the user.
+  for (auto operand : operands) {
+    SmallVector<Value, 2> values;
+    this->converter->tryDecomposeValue(builder, loc, operand.getType(), operand,
+                                       values);
+    newOperands.append(values.begin(), values.end());
+  }
+
+  // Create the new result types for the new `CallOp` and a mapping from the old
+  // result to new value(s).
+  SmallVector<Type, 2> newResultTypes;
+  SmallVector<ResultMapping, 4> mappings;
+  mappings.resize(callOp.getNumResults());
+  for (auto result : llvm::enumerate(callOp.getResults())) {
+    SmallVector<Type, 2> originTypes;
+    converter->tryDecomposeType(result.value().getType(), originTypes);
+    auto &resultMapping = mappings[result.index()];
+    for (Type origin : originTypes) {
+      Type converted = converter->convertType(origin);
+      auto kind = converter->getResultConversionKind(origin, converted);
+      if (kind == BufferAssignmentTypeConverter::KeepAsFunctionResult) {
+        newResultTypes.push_back(converted);
+        // The result value is not yet available. Its index is kept and it is
+        // replaced with the actual value of the new `CallOp` later.
+        resultMapping.addMapping(newResultTypes.size() - 1);
+      } else {
+        // kind = BufferAssignmentTypeConverter::AppendToArgumentsList
+        MemRefType memref = converted.dyn_cast<MemRefType>();
+        if (!memref)
+          return callOp.emitError("Cannot allocate for a non-Memref type");
+        Value alloc = rewriter.create<AllocOp>(loc, memref);
+        newOperands.push_back(alloc);
+        resultMapping.addMapping(alloc);
+      }
+    }
+  }
+
+  CallOp newCallOp = rewriter.create<CallOp>(loc, callOp.getCallee(),
+                                             newResultTypes, newOperands);
+
+  // Build a replacing value for each result to replace its uses. If a result
+  // has multiple mapping values, it needs to be packed to a single value.
+  OpBuilder nextBuilder(callOp.getOperation()->getNextNode());
+  SmallVector<Value, 2> replacedValues;
+  replacedValues.reserve(callOp.getNumResults());
+  for (unsigned i = 0, e = callOp.getNumResults(); i < e; ++i) {
+    SmallVector<Value, 2> valuesToPack;
+    mappings[i].getMappingValues(newCallOp.getResults(), valuesToPack);
+    if (valuesToPack.empty()) {
+      // No replacement is required.
+      replacedValues.push_back(nullptr);
+    } else if (valuesToPack.size() == 1) {
+      replacedValues.push_back(valuesToPack.front());
+    } else {
+      // Values need to be packed using callback function. The same callback
+      // that is used for materializeArgumentConversion is used for packing.
+      Value packed = converter->materializeArgumentConversion(
+          nextBuilder, loc, callOp.getType(i), valuesToPack);
+      replacedValues.push_back(packed);
+    }
+  }
+  rewriter.replaceOp(callOp, replacedValues);
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

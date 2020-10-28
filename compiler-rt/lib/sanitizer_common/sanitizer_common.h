@@ -53,25 +53,25 @@ const u64 kExternalPCBit = 1ULL << 60;
 extern const char *SanitizerToolName;  // Can be changed by the tool.
 
 extern atomic_uint32_t current_verbosity;
-INLINE void SetVerbosity(int verbosity) {
+inline void SetVerbosity(int verbosity) {
   atomic_store(&current_verbosity, verbosity, memory_order_relaxed);
 }
-INLINE int Verbosity() {
+inline int Verbosity() {
   return atomic_load(&current_verbosity, memory_order_relaxed);
 }
 
 #if SANITIZER_ANDROID
-INLINE uptr GetPageSize() {
+inline uptr GetPageSize() {
 // Android post-M sysconf(_SC_PAGESIZE) crashes if called from .preinit_array.
   return 4096;
 }
-INLINE uptr GetPageSizeCached() {
+inline uptr GetPageSizeCached() {
   return 4096;
 }
 #else
 uptr GetPageSize();
 extern uptr PageSizeCached;
-INLINE uptr GetPageSizeCached() {
+inline uptr GetPageSizeCached() {
   if (!PageSizeCached)
     PageSizeCached = GetPageSize();
   return PageSizeCached;
@@ -91,7 +91,7 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
 
 // Memory management
 void *MmapOrDie(uptr size, const char *mem_type, bool raw_report = false);
-INLINE void *MmapOrDieQuietly(uptr size, const char *mem_type) {
+inline void *MmapOrDieQuietly(uptr size, const char *mem_type) {
   return MmapOrDie(size, mem_type, /*raw_report*/ true);
 }
 void UnmapOrDie(void *addr, uptr size);
@@ -374,7 +374,7 @@ unsigned char _BitScanReverse64(unsigned long *index, unsigned __int64 mask);
 }
 #endif
 
-INLINE uptr MostSignificantSetBitIndex(uptr x) {
+inline uptr MostSignificantSetBitIndex(uptr x) {
   CHECK_NE(x, 0U);
   unsigned long up;
 #if !SANITIZER_WINDOWS || defined(__clang__) || defined(__GNUC__)
@@ -391,7 +391,7 @@ INLINE uptr MostSignificantSetBitIndex(uptr x) {
   return up;
 }
 
-INLINE uptr LeastSignificantSetBitIndex(uptr x) {
+inline uptr LeastSignificantSetBitIndex(uptr x) {
   CHECK_NE(x, 0U);
   unsigned long up;
 #if !SANITIZER_WINDOWS || defined(__clang__) || defined(__GNUC__)
@@ -408,11 +408,11 @@ INLINE uptr LeastSignificantSetBitIndex(uptr x) {
   return up;
 }
 
-INLINE bool IsPowerOfTwo(uptr x) {
+inline bool IsPowerOfTwo(uptr x) {
   return (x & (x - 1)) == 0;
 }
 
-INLINE uptr RoundUpToPowerOfTwo(uptr size) {
+inline uptr RoundUpToPowerOfTwo(uptr size) {
   CHECK(size);
   if (IsPowerOfTwo(size)) return size;
 
@@ -422,20 +422,20 @@ INLINE uptr RoundUpToPowerOfTwo(uptr size) {
   return 1ULL << (up + 1);
 }
 
-INLINE uptr RoundUpTo(uptr size, uptr boundary) {
+inline uptr RoundUpTo(uptr size, uptr boundary) {
   RAW_CHECK(IsPowerOfTwo(boundary));
   return (size + boundary - 1) & ~(boundary - 1);
 }
 
-INLINE uptr RoundDownTo(uptr x, uptr boundary) {
+inline uptr RoundDownTo(uptr x, uptr boundary) {
   return x & ~(boundary - 1);
 }
 
-INLINE bool IsAligned(uptr a, uptr alignment) {
+inline bool IsAligned(uptr a, uptr alignment) {
   return (a & (alignment - 1)) == 0;
 }
 
-INLINE uptr Log2(uptr x) {
+inline uptr Log2(uptr x) {
   CHECK(IsPowerOfTwo(x));
   return LeastSignificantSetBitIndex(x);
 }
@@ -451,14 +451,14 @@ template<class T> void Swap(T& a, T& b) {
 }
 
 // Char handling
-INLINE bool IsSpace(int c) {
+inline bool IsSpace(int c) {
   return (c == ' ') || (c == '\n') || (c == '\t') ||
          (c == '\f') || (c == '\r') || (c == '\v');
 }
-INLINE bool IsDigit(int c) {
+inline bool IsDigit(int c) {
   return (c >= '0') && (c <= '9');
 }
-INLINE int ToLower(int c) {
+inline int ToLower(int c) {
   return (c >= 'A' && c <= 'Z') ? (c + 'a' - 'A') : c;
 }
 
@@ -840,15 +840,15 @@ void WriteToSyslog(const char *buffer);
 #if SANITIZER_MAC || SANITIZER_WIN_TRACE
 void LogFullErrorReport(const char *buffer);
 #else
-INLINE void LogFullErrorReport(const char *buffer) {}
+inline void LogFullErrorReport(const char *buffer) {}
 #endif
 
 #if SANITIZER_LINUX || SANITIZER_MAC
 void WriteOneLineToSyslog(const char *s);
 void LogMessageOnPrintf(const char *str);
 #else
-INLINE void WriteOneLineToSyslog(const char *s) {}
-INLINE void LogMessageOnPrintf(const char *str) {}
+inline void WriteOneLineToSyslog(const char *s) {}
+inline void LogMessageOnPrintf(const char *str) {}
 #endif
 
 #if SANITIZER_LINUX || SANITIZER_WIN_TRACE
@@ -856,21 +856,21 @@ INLINE void LogMessageOnPrintf(const char *str) {}
 void AndroidLogInit();
 void SetAbortMessage(const char *);
 #else
-INLINE void AndroidLogInit() {}
+inline void AndroidLogInit() {}
 // FIXME: MacOS implementation could use CRSetCrashLogMessage.
-INLINE void SetAbortMessage(const char *) {}
+inline void SetAbortMessage(const char *) {}
 #endif
 
 #if SANITIZER_ANDROID
 void SanitizerInitializeUnwinder();
 AndroidApiLevel AndroidGetApiLevel();
 #else
-INLINE void AndroidLogWrite(const char *buffer_unused) {}
-INLINE void SanitizerInitializeUnwinder() {}
-INLINE AndroidApiLevel AndroidGetApiLevel() { return ANDROID_NOT_ANDROID; }
+inline void AndroidLogWrite(const char *buffer_unused) {}
+inline void SanitizerInitializeUnwinder() {}
+inline AndroidApiLevel AndroidGetApiLevel() { return ANDROID_NOT_ANDROID; }
 #endif
 
-INLINE uptr GetPthreadDestructorIterations() {
+inline uptr GetPthreadDestructorIterations() {
 #if SANITIZER_ANDROID
   return (AndroidGetApiLevel() == ANDROID_LOLLIPOP_MR1) ? 8 : 4;
 #elif SANITIZER_POSIX
@@ -976,7 +976,7 @@ RunOnDestruction<Fn> at_scope_exit(Fn fn) {
 #if SANITIZER_LINUX && SANITIZER_S390_64
 void AvoidCVE_2016_2143();
 #else
-INLINE void AvoidCVE_2016_2143() {}
+inline void AvoidCVE_2016_2143() {}
 #endif
 
 struct StackDepotStats {
@@ -997,7 +997,7 @@ bool GetRandom(void *buffer, uptr length, bool blocking = true);
 // Returns the number of logical processors on the system.
 u32 GetNumberOfCPUs();
 extern u32 NumberOfCPUsCached;
-INLINE u32 GetNumberOfCPUsCached() {
+inline u32 GetNumberOfCPUsCached() {
   if (!NumberOfCPUsCached)
     NumberOfCPUsCached = GetNumberOfCPUs();
   return NumberOfCPUsCached;

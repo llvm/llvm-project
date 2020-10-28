@@ -28,6 +28,21 @@ main_body:
   ret half %elt
 }
 
+; GCN-LABEL: {{^}}tbuffer_load_d16_xyz:
+; GCN: v_mov_b32_e32 [[ZEROREG:v[0-9]+]], 0
+; PREGFX10-UNPACKED: tbuffer_load_format_d16_xyz v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, [[ZEROREG]], s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] idxen
+; PREGFX10-UNPACKED: v_mov_b32_e32 v{{[0-9]+}}, v[[HI]]
+
+; PREGFX10-PACKED: tbuffer_load_format_d16_xyz v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, [[ZEROREG]], s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] idxen
+; GFX10-PACKED: tbuffer_load_format_d16_xyz v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, [[ZEROREG]], s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_FMT_32_FLOAT] idxen
+; PACKED: v_mov_b32_e32 v{{[0-9]+}}, v[[HI]]
+define amdgpu_ps half @tbuffer_load_d16_xyz(<4 x i32> inreg %rsrc) {
+main_body:
+  %data = call <3 x half> @llvm.amdgcn.struct.tbuffer.load.v3f16(<4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 22, i32 0)
+  %elt = extractelement <3 x half> %data, i32 2
+  ret half %elt
+}
+
 ; GCN-LABEL: {{^}}tbuffer_load_d16_xyzw:
 ; GCN: v_mov_b32_e32 [[ZEROREG:v[0-9]+]], 0
 ; PREGFX10-UNPACKED: tbuffer_load_format_d16_xyzw v{{\[}}{{[0-9]+}}:[[HI:[0-9]+]]{{\]}}, [[ZEROREG]], s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] idxen
@@ -45,5 +60,5 @@ main_body:
 
 declare half @llvm.amdgcn.struct.tbuffer.load.f16(<4 x i32>, i32, i32, i32, i32, i32)
 declare <2 x half> @llvm.amdgcn.struct.tbuffer.load.v2f16(<4 x i32>, i32, i32, i32, i32, i32)
+declare <3 x half> @llvm.amdgcn.struct.tbuffer.load.v3f16(<4 x i32>, i32, i32, i32, i32, i32)
 declare <4 x half> @llvm.amdgcn.struct.tbuffer.load.v4f16(<4 x i32>, i32, i32, i32, i32, i32)
-

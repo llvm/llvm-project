@@ -698,6 +698,26 @@ class Foo {})cpp";
          HI.Parameters->back().Name = "v";
          HI.AccessSpecifier = "public";
        }},
+      {// Setter (move)
+       R"cpp(
+          namespace std { template<typename T> T&& move(T&& t); }
+          struct X { int Y; void [[^setY]](float v) { Y = std::move(v); } };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "setY";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "void setY(float v)";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial setter for `Y`.";
+         HI.Type = "void (float)";
+         HI.ReturnType = "void";
+         HI.Parameters.emplace();
+         HI.Parameters->emplace_back();
+         HI.Parameters->back().Type = "float";
+         HI.Parameters->back().Name = "v";
+         HI.AccessSpecifier = "public";
+       }},
       {// Field type initializer.
        R"cpp(
           struct X { int x = 2; };
@@ -802,8 +822,8 @@ class Foo {})cpp";
          HI.Type = "int";
          HI.AccessSpecifier = "public";
        }},
-       {// No crash on InitListExpr.
-        R"cpp(
+      {// No crash on InitListExpr.
+       R"cpp(
           struct Foo {
             int a[10];
           };

@@ -60,9 +60,9 @@ uptr internal_prctl(int option, uptr arg2, uptr arg3, uptr arg4, uptr arg5);
 // internal_sigaction instead.
 int internal_sigaction_norestorer(int signum, const void *act, void *oldact);
 void internal_sigdelset(__sanitizer_sigset_t *set, int signum);
-#if defined(__x86_64__) || defined(__mips__) || defined(__aarch64__) \
-  || defined(__powerpc64__) || defined(__s390__) || defined(__i386__) \
-  || defined(__arm__)
+#if defined(__x86_64__) || defined(__mips__) || defined(__aarch64__) || \
+    defined(__powerpc64__) || defined(__s390__) || defined(__i386__) || \
+    defined(__arm__) || SANITIZER_RISCV64
 uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                     int *parent_tidptr, void *newtls, int *child_tidptr);
 #endif
@@ -109,7 +109,7 @@ void ForEachMappedRegion(link_map *map, void (*cb)(const void *, uptr));
 // Releases memory pages entirely within the [beg, end] address range.
 // The pages no longer count toward RSS; reads are guaranteed to return 0.
 // Requires (but does not verify!) that pages are MAP_PRIVATE.
-INLINE void ReleaseMemoryPagesToOSAndZeroFill(uptr beg, uptr end) {
+inline void ReleaseMemoryPagesToOSAndZeroFill(uptr beg, uptr end) {
   // man madvise on Linux promises zero-fill for anonymous private pages.
   // Testing shows the same behaviour for private (but not anonymous) mappings
   // of shm_open() files, as long as the underlying file is untouched.

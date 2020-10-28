@@ -1606,11 +1606,11 @@ TEST_F(SymbolCollectorTest, BadUTF8) {
   // Extracted from boost/spirit/home/support/char_encoding/iso8859_1.hpp
   // This looks like UTF-8 and fools clang, but has high-ISO-8859-1 comments.
   const char *Header = "int PUNCT = 0;\n"
-                       "int types[] = { /* \xa1 */PUNCT };";
+                       "/* \xa1 */ int types[] = { /* \xa1 */PUNCT };";
   CollectorOpts.RefFilter = RefKind::All;
   CollectorOpts.RefsInHeaders = true;
   runSymbolCollector(Header, "");
-  EXPECT_THAT(Symbols, Contains(QName("types")));
+  EXPECT_THAT(Symbols, Contains(AllOf(QName("types"), Doc("\xef\xbf\xbd "))));
   EXPECT_THAT(Symbols, Contains(QName("PUNCT")));
   // Reference is stored, although offset within line is not reliable.
   EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "PUNCT").ID, _)));

@@ -20,10 +20,7 @@ protected:
   std::pair<uint32_t, uint32_t>
   GetEHAndDWARFNums(llvm::StringRef name) override;
 
-  std::string GetMCName(std::string reg) override {
-    MapRegisterName(reg, "v", "q");
-    return reg;
-  }
+  std::string GetMCName(std::string reg) override;
 
   uint32_t GetGenericNum(llvm::StringRef name) override;
 

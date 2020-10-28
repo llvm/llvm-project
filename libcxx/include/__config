@@ -38,7 +38,7 @@
 #  define _LIBCPP_ABI_VERSION 1
 #endif
 
-#ifndef __STDC_HOSTED__
+#if __STDC_HOSTED__ == 0
 #  define _LIBCPP_FREESTANDING
 #endif
 
@@ -398,9 +398,7 @@
 #elif defined(_LIBCPP_COMPILER_CLANG)
 # define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
 #else
-// This definition is potentially buggy, but it's only taken with GCC in C++03,
-// which we barely support anyway. See llvm.org/PR39713
-# define _LIBCPP_ALIGNOF(_Tp) __alignof(_Tp)
+# error "We don't know a correct way to implement alignof(T) in C++03 outside of Clang"
 #endif
 
 #define _LIBCPP_PREFERRED_ALIGNOF(_Tp) __alignof(_Tp)
@@ -456,10 +454,6 @@ typedef __char32_t char32_t;
 
 #if !(__has_feature(cxx_auto_type))
 #define _LIBCPP_HAS_NO_AUTO_TYPE
-#endif
-
-#if !(__has_feature(cxx_variadic_templates))
-#define _LIBCPP_HAS_NO_VARIADICS
 #endif
 
 // Objective-C++ features (opt-in)
@@ -841,6 +835,12 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_CONSTEXPR
 #else
 #  define _LIBCPP_CONSTEXPR constexpr
+#endif
+
+#ifndef __cpp_consteval
+#  define _LIBCPP_CONSTEVAL _LIBCPP_CONSTEXPR
+#else
+#  define _LIBCPP_CONSTEVAL consteval
 #endif
 
 #ifdef _LIBCPP_CXX03_LANG

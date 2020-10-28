@@ -777,8 +777,10 @@ RCParser::parseVersionInfoFixed() {
 
     // VERSION variations take multiple integers.
     size_t NumInts = RetType::isVersionType(FixedType) ? 4 : 1;
-    ASSIGN_OR_RETURN(ArgsResult, readIntsWithCommas(NumInts, NumInts));
+    ASSIGN_OR_RETURN(ArgsResult, readIntsWithCommas(1, NumInts));
     SmallVector<uint32_t, 4> ArgInts(ArgsResult->begin(), ArgsResult->end());
+    while (ArgInts.size() < NumInts)
+      ArgInts.push_back(0);
     Result.setValue(FixedType, ArgInts);
   }
 

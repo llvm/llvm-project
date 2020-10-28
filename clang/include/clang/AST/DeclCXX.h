@@ -1396,6 +1396,11 @@ public:
             hasTrivialDefaultConstructor());
   }
 
+  /// Determine whether this is a structural type.
+  bool isStructural() const {
+    return isLiteral() && data().StructuralIfLiteral;
+  }
+
   /// If this record is an instantiation of a member class,
   /// retrieves the member class from which it was instantiated.
   ///

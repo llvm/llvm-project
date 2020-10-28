@@ -342,8 +342,7 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
 
     const auto *PreambleData = IP->Preamble;
     if (!PreambleData)
-      return CB(llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                        "Failed to parse includes"));
+      return CB(error("Failed to parse includes"));
 
     ParseInputs ParseInput{IP->Command, &TFS, IP->Contents.str()};
     ParseInput.Index = Index;
@@ -537,9 +536,12 @@ void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
 
 void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
                               Callback<Tweak::Effect> CB) {
-  // Tracks number of times a tweak has been applied.
+  // Tracks number of times a tweak has been attempted.
   static constexpr trace::Metric TweakAttempt(
       "tweak_attempt", trace::Metric::Counter, "tweak_id");
+  // Tracks number of times a tweak has failed to produce edits.
+  static constexpr trace::Metric TweakFailed(
+      "tweak_failed", trace::Metric::Counter, "tweak_id");
   TweakAttempt.record(1, TweakID);
   auto Action = [File = File.str(), Sel, TweakID = TweakID.str(),
                  CB = std::move(CB),
@@ -570,6 +572,8 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
         if (llvm::Error Err = reformatEdit(E, Style))
           elog("Failed to format {0}: {1}", It.first(), std::move(Err));
       }
+    } else {
+      TweakFailed.record(1, TweakID);
     }
     return CB(std::move(*Effect));
   };

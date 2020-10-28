@@ -6,8 +6,8 @@ func @gemm(%arg0 : memref<?x?xf32>,
            %arg1 : memref<?x?xf32>,
            %arg2 : memref<?x?xf32>)
 {
-  linalg.matmul %arg0, %arg1, %arg2
-    : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>)
+  linalg.matmul ins(%arg0, %arg1: memref<?x?xf32>, memref<?x?xf32>)
+               outs(%arg2: memref<?x?xf32>)
   return
 }
 // CHECK-LABEL: func @gemm
@@ -21,7 +21,7 @@ func @gemm(%arg0 : memref<?x?xf32>,
 //       CHECK:       %[[SV1:.*]] = subview %{{.*}}[%[[ARG3]], %[[ARG5]]]
 //       CHECK:       %[[SV2:.*]] = subview %{{.*}}[%[[ARG5]], %[[ARG4]]]
 //       CHECK:       %[[SV3:.*]] = subview %{{.*}}[%[[ARG3]], %[[ARG4]]]
-//       CHECK:       linalg.matmul %[[SV1]], %[[SV2]], %[[SV3]]
+//       CHECK:       linalg.matmul ins(%[[SV1]], %[[SV2]]{{.*}} outs(%[[SV3]]
 
 // TILE1-LABEL: func @gemm
 //   TILE1-DAG:   %[[C2:.*]] = constant 2 : index
@@ -30,7 +30,7 @@ func @gemm(%arg0 : memref<?x?xf32>,
 //       TILE1:     %[[SV1:.*]] = subview %{{.*}}[%[[ARG3]], 0]
 //       TILE1:     %[[SV3:.*]] = subview %{{.*}}[%[[ARG3]], 0]
 //   TILE1-NOT:     subview
-//       TILE1:     linalg.matmul %[[SV1]], %{{.*}}, %[[SV3]]
+//       TILE1:     linalg.matmul ins(%[[SV1]], %{{.*}} outs(%[[SV3]]
 
 // TILE2-LABEL: func @gemm
 //   TILE2-DAG:   %[[C2:.*]] = constant 2 : index
@@ -40,7 +40,7 @@ func @gemm(%arg0 : memref<?x?xf32>,
 //       TILE2:       %[[SV1:.*]] = subview %{{.*}}[%[[ARG3]], 0]
 //       TILE2:       %[[SV2:.*]] = subview %{{.*}}[0, %[[ARG4]]]
 //       TILE2:       %[[SV3:.*]] = subview %{{.*}}[%[[ARG3]], %[[ARG4]]]
-//       TILE2:       linalg.matmul %[[SV1]], %[[SV2]], %[[SV3]]
+//       TILE2:       linalg.matmul ins(%[[SV1]], %[[SV2]]{{.*}} outs(%[[SV3]]
 
 // -----
 
@@ -59,12 +59,14 @@ func @reduction(%arg0 : memref<?x?x?xf32>,
                 %arg1 : memref<?x?xf32>,
                 %arg2 : memref<?xf32>)
 {
-  linalg.generic #trait %arg0, %arg1, %arg2 {
+  linalg.generic #trait
+    ins(%arg0, %arg1 : memref<?x?x?xf32>, memref<?x?xf32>)
+   outs(%arg2 : memref<?xf32>) {
   ^bb0(%arg3 : f32, %arg4 : f32, %arg5 : f32):
     %0 = addf %arg3, %arg4 : f32
     %1 = addf %0, %arg5 : f32
     linalg.yield %1 : f32
-  } : memref<?x?x?xf32>, memref<?x?xf32>, memref<?xf32>
+  }
   return
 }
 
@@ -82,7 +84,8 @@ func @reduction(%arg0 : memref<?x?x?xf32>,
 //       CHECK:         %[[SV2:.*]] = subview %{{.*}}[%[[ARG3]], %[[ARG5]]]
 //       CHECK:         %[[SV3:.*]] = subview %{{.*}}[%[[ARG4]]]
 //       CHECK:         linalg.generic
-//  CHECK-SAME:           %[[SV1]], %[[SV2]], %[[SV3]]
+//  CHECK-SAME:           ins(%[[SV1]], %[[SV2]]
+//  CHECK-SAME:          outs(%[[SV3]]
 
 // TILE1-LABEL: func @reduction
 //   TILE1-DAG:   %[[C2:.*]] = constant 2 : index
@@ -92,7 +95,8 @@ func @reduction(%arg0 : memref<?x?x?xf32>,
 //       TILE1:         %[[SV2:.*]] = subview %{{.*}}[%[[ARG3]], 0]
 //   TILE1-NOT:         subview
 //       TILE1:         linalg.generic
-//  TILE1-SAME:           %[[SV1]], %[[SV2]], %{{.*}}
+//  TILE1-SAME:           ins(%[[SV1]], %[[SV2]]
+//  TILE1-SAME:          outs(%{{.*}}
 
 // TILE2-LABEL: func @reduction
 //   TILE2-DAG:   %[[C2:.*]] = constant 2 : index
@@ -105,4 +109,5 @@ func @reduction(%arg0 : memref<?x?x?xf32>,
 //       TILE2:         %[[SV2:.*]] = subview %{{.*}}[%[[ARG3]], 0]
 //       TILE2:         %[[SV3:.*]] = subview %{{.*}}[%[[ARG4]]]
 //       TILE2:         linalg.generic
-//  TILE2-SAME:           %[[SV1]], %[[SV2]], %[[SV3]]
+//  TILE2-SAME:           ins(%[[SV1]], %[[SV2]]
+//  TILE2-SAME:          outs(%[[SV3]]

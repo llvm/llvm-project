@@ -94,7 +94,7 @@ entry:
   store i32 %c, i32* %c.addr, align 4
   store i64 %d, i64* %d.addr, align 8
   %0 = load i16, i16* %b.addr, align 2
-; CHECK: tbz w8, #0, LBB4_2
+; CHECK: tbz {{w[0-9]+}}, #0, LBB4_2
   %conv = trunc i16 %0 to i1
   br i1 %conv, label %if.then, label %if.end
 

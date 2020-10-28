@@ -23,6 +23,9 @@ struct WeirdCopyCtorType {
 ExpensiveToCopyType global_expensive_to_copy_type;
 
 const ExpensiveToCopyType &ExpensiveTypeReference();
+const ExpensiveToCopyType &freeFunctionWithArg(const ExpensiveToCopyType &);
+const ExpensiveToCopyType &freeFunctionWithDefaultArg(
+    const ExpensiveToCopyType *arg = nullptr);
 const TrivialToCopyType &TrivialTypeReference();
 
 void mutate(ExpensiveToCopyType &);
@@ -386,4 +389,19 @@ public:
 void implicitVarFalsePositive() {
   for (const Element &E : Container()) {
   }
+}
+
+// This should not trigger the check as the argument could introduce an alias.
+void negativeInitializedFromFreeFunctionWithArg() {
+  ExpensiveToCopyType Orig;
+  const ExpensiveToCopyType Copy = freeFunctionWithArg(Orig);
+}
+
+void negativeInitializedFromFreeFunctionWithDefaultArg() {
+  const ExpensiveToCopyType Copy = freeFunctionWithDefaultArg();
+}
+
+void negativeInitialzedFromFreeFunctionWithNonDefaultArg() {
+  ExpensiveToCopyType Orig;
+  const ExpensiveToCopyType Copy = freeFunctionWithDefaultArg(&Orig);
 }

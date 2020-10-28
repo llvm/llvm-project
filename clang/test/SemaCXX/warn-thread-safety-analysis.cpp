@@ -4985,7 +4985,7 @@ public:
   }
 
   void bar() {
-    bar2();       // expected-warning {{calling function 'bar2' requires holding  '!mu'}}
+    bar2();       // expected-warning {{calling function 'bar2' requires negative capability '!mu'}}
   }
 
   void bar2() EXCLUSIVE_LOCKS_REQUIRED(!mu) {

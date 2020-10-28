@@ -5,12 +5,35 @@
 def SDT_PPCSplat32 : SDTypeProfile<1, 3, [ SDTCisVT<0, v2i64>,
   SDTCisVec<1>, SDTCisInt<2>, SDTCisInt<3>
 ]>;
+def SDT_PPCAccBuild : SDTypeProfile<1, 4, [
+  SDTCisVT<0, v512i1>, SDTCisVT<1, v4i32>, SDTCisVT<2, v4i32>,
+                       SDTCisVT<3, v4i32>, SDTCisVT<4, v4i32>
+]>;
+def SDT_PPCPairBuild : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v256i1>, SDTCisVT<1, v4i32>, SDTCisVT<2, v4i32>
+]>;
+def SDT_PPCAccExtractVsx : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v4i32>, SDTCisVT<1, v512i1>, SDTCisInt<2>
+]>;
+def SDT_PPCPairExtractVsx : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v4i32>, SDTCisVT<1, v256i1>, SDTCisInt<2>
+]>;
+def SDT_PPCxxmfacc : SDTypeProfile<1, 1, [
+  SDTCisVT<0, v512i1>, SDTCisVT<1, v512i1>
+]>;
 
 //===----------------------------------------------------------------------===//
 // ISA 3.1 specific PPCISD nodes.
 //
 
 def PPCxxsplti32dx : SDNode<"PPCISD::XXSPLTI32DX", SDT_PPCSplat32, []>;
+def PPCAccBuild : SDNode<"PPCISD::ACC_BUILD", SDT_PPCAccBuild, []>;
+def PPCPairBuild : SDNode<"PPCISD::PAIR_BUILD", SDT_PPCPairBuild, []>;
+def PPCAccExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCAccExtractVsx,
+                       []>;
+def PPCPairExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCPairExtractVsx,
+                        []>;
+def PPCxxmfacc : SDNode<"PPCISD::XXMFACC", SDT_PPCxxmfacc, []>;
 
 //===----------------------------------------------------------------------===//
 
@@ -481,6 +504,13 @@ class XX2_BF3_XO5_XB6_XO9<bits<6> opcode, bits<5> xo2, bits<9> xo, dag OOL,
   let Inst{31}    = 0;
 }
 
+// X-Form: [ PO RT BI /// XO / ]
+class XForm_XT5_BI5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                    string asmstr, InstrItinClass itin, list<dag> pattern>
+  : XForm_base_r3xo<opcode, xo, OOL, IOL, asmstr, itin, pattern> {
+  let B = 0;
+}
+
 multiclass MLS_DForm_R_SI34_RTA5_MEM_p<bits<6> opcode, dag OOL, dag IOL,
                                        dag PCRel_IOL, string asmstr,
                                        InstrItinClass itin> {
@@ -510,10 +540,301 @@ multiclass 8LS_DForm_R_SI34_XT6_RA5_p<bits<5> opcode, dag OOL, dag IOL,
                                     isPCRel;
 }
 
+def PPCRegVSRpRCAsmOperand : AsmOperandClass {
+  let Name = "RegVSRpRC"; let PredicateMethod = "isVSRpEvenRegNumber";
+}
+
+def vsrprc : RegisterOperand<VSRpRC> {
+  let ParserMatchClass = PPCRegVSRpRCAsmOperand;
+}
+
+def PPCRegVSRpEvenRCAsmOperand : AsmOperandClass {
+  let Name = "RegVSRpEvenRC"; let PredicateMethod = "isVSRpEvenRegNumber";
+}
+
+def vsrpevenrc : RegisterOperand<VSRpRC> {
+  let ParserMatchClass = PPCRegVSRpEvenRCAsmOperand;
+  let EncoderMethod = "getVSRpEvenEncoding";
+  let DecoderMethod = "decodeVSRpEvenOperands";
+}
+
+class DQForm_XTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
+                           string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<5> XTp;
+  bits<17> DQ_RA;
+  let Pattern = pattern;
+
+  let Inst{6-9} = XTp{3-0};
+  let Inst{10} = XTp{4};
+  let Inst{11-15} = DQ_RA{16-12};  // Register #
+  let Inst{16-27} = DQ_RA{11-0};   // Displacement.
+  let Inst{28-31} = xo;
+}
+
+class XForm_XTp5_XAB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                      string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin>, XFormMemOp {
+  bits<5> XTp;
+  bits<5> A;
+  bits<5> B;
+
+  let Pattern = pattern;
+  let Inst{6-9} = XTp{3-0};
+  let Inst{10} = XTp{4};
+  let Inst{11-15} = A;
+  let Inst{16-20} = B;
+  let Inst{21-30} = xo;
+  let Inst{31} = 0;
+}
+
+class 8LS_DForm_R_XTp5_SI34_MEM<bits<6> opcode, dag OOL, dag IOL, string asmstr,
+                                InstrItinClass itin, list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<5> XTp;
+  bits<39> D_RA;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-10} = 0;
+  let Inst{11} = PCRel;
+  let Inst{12-13} = 0;
+  let Inst{14-31} = D_RA{33-16}; // Imm18
+
+  // The instruction.
+  let Inst{38-41} = XTp{3-0};
+  let Inst{42}    = XTp{4};
+  let Inst{43-47} = D_RA{38-34};   // Register #
+  let Inst{48-63} = D_RA{15-0};    // D
+}
+
+multiclass 8LS_DForm_R_XTp5_SI34_MEM_p<bits<6> pref, bits<6> opcode, dag OOL,
+                                       dag IOL, dag PCRel_IOL,
+                                       string asmstr, InstrItinClass itin> {
+  def NAME : 8LS_DForm_R_XTp5_SI34_MEM<opcode, OOL, IOL,
+                                       !strconcat(asmstr, ", 0"), itin, []>;
+  def pc : 8LS_DForm_R_XTp5_SI34_MEM<opcode, OOL, PCRel_IOL,
+                                     !strconcat(asmstr, ", 1"), itin, []>,
+                                     isPCRel;
+}
+
+def PPCRegACCRCAsmOperand : AsmOperandClass {
+  let Name = "RegACCRC"; let PredicateMethod = "isACCRegNumber";
+}
+
+def acc : RegisterOperand<ACCRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
+}
+
+def uacc : RegisterOperand<UACCRC> {
+  let ParserMatchClass = PPCRegACCRCAsmOperand;
+}
+
+// [PO AS XO2 XO]
+class XForm_AT3<bits<6> opcode, bits<5> xo2, bits<10> xo, dag OOL, dag IOL,
+                    string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+
+  let Pattern = pattern;
+
+  let Inst{6-8}  = AT;
+  let Inst{9-10}  = 0;
+  let Inst{11-15} = xo2;
+  let Inst{16-20} = 0;
+  let Inst{21-30} = xo;
+  let Inst{31} = 0;
+}
+
+class XX3Form_AT3_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                           string asmstr, InstrItinClass itin,
+                           list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+  bits<6> XA;
+  bits<6> XB;
+
+  let Pattern = pattern;
+
+  let Inst{6-8} = AT;
+  let Inst{9-10} = 0;
+  let Inst{11-15} = XA{4-0};
+  let Inst{16-20} = XB{4-0};
+  let Inst{21-28} = xo;
+  let Inst{29}    = XA{5};
+  let Inst{30}    = XB{5};
+  let Inst{31} = 0;
+}
+
+class MMIRR_XX3Form_XY4P2_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                               string asmstr, InstrItinClass itin,
+                               list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+  bits<6> XA;
+  bits<6> XB;
+  bits<4> XMSK;
+  bits<4> YMSK;
+  bits<2> PMSK;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-7} = 3;
+  let Inst{8-11} = 9;
+  let Inst{12-15} = 0;
+  let Inst{16-17} = PMSK;
+  let Inst{18-23} = 0;
+  let Inst{24-27} = XMSK;
+  let Inst{28-31} = YMSK;
+
+  // The instruction.
+  let Inst{38-40} = AT;
+  let Inst{41-42} = 0;
+  let Inst{43-47} = XA{4-0};
+  let Inst{48-52} = XB{4-0};
+  let Inst{53-60} = xo;
+  let Inst{61} = XA{5};
+  let Inst{62} = XB{5};
+  let Inst{63} = 0;
+}
+
+class MMIRR_XX3Form_XY4_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                             string asmstr, InstrItinClass itin,
+                             list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+  bits<6> XA;
+  bits<6> XB;
+  bits<4> XMSK;
+  bits<4> YMSK;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-7} = 3;
+  let Inst{8-11} = 9;
+  let Inst{12-23} = 0;
+  let Inst{24-27} = XMSK;
+  let Inst{28-31} = YMSK;
+
+  // The instruction.
+  let Inst{38-40} = AT;
+  let Inst{41-42} = 0;
+  let Inst{43-47} = XA{4-0};
+  let Inst{48-52} = XB{4-0};
+  let Inst{53-60} = xo;
+  let Inst{61} = XA{5};
+  let Inst{62} = XB{5};
+  let Inst{63} = 0;
+}
+
+class MMIRR_XX3Form_X4Y2_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                              string asmstr, InstrItinClass itin,
+                              list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+  bits<6> XA;
+  bits<6> XB;
+  bits<4> XMSK;
+  bits<2> YMSK;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-7} = 3;
+  let Inst{8-11} = 9;
+  let Inst{12-23} = 0;
+  let Inst{24-27} = XMSK;
+  let Inst{28-29} = YMSK;
+  let Inst{30-31} = 0;
+
+  // The instruction.
+  let Inst{38-40} = AT;
+  let Inst{41-42} = 0;
+  let Inst{43-47} = XA{4-0};
+  let Inst{48-52} = XB{4-0};
+  let Inst{53-60} = xo;
+  let Inst{61} = XA{5};
+  let Inst{62} = XB{5};
+  let Inst{63} = 0;
+}
+
+class MMIRR_XX3Form_XY4P8_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                               string asmstr, InstrItinClass itin,
+                               list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+  bits<6> XA;
+  bits<6> XB;
+  bits<4> XMSK;
+  bits<4> YMSK;
+  bits<8> PMSK;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-7} = 3;
+  let Inst{8-11} = 9;
+  let Inst{12-15} = 0;
+  let Inst{16-23} = PMSK;
+  let Inst{24-27} = XMSK;
+  let Inst{28-31} = YMSK;
+
+  // The instruction.
+  let Inst{38-40} = AT;
+  let Inst{41-42} = 0;
+  let Inst{43-47} = XA{4-0};
+  let Inst{48-52} = XB{4-0};
+  let Inst{53-60} = xo;
+  let Inst{61} = XA{5};
+  let Inst{62} = XB{5};
+  let Inst{63} = 0;
+}
+
+class MMIRR_XX3Form_XYP4_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                              string asmstr, InstrItinClass itin,
+                              list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<3> AT;
+  bits<6> XA;
+  bits<6> XB;
+  bits<4> XMSK;
+  bits<4> YMSK;
+  bits<4> PMSK;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-7} = 3;
+  let Inst{8-11} = 9;
+  let Inst{12-15} = 0;
+  let Inst{16-19} = PMSK;
+  let Inst{20-23} = 0;
+  let Inst{24-27} = XMSK;
+  let Inst{28-31} = YMSK;
+
+  // The instruction.
+  let Inst{38-40} = AT;
+  let Inst{41-42} = 0;
+  let Inst{43-47} = XA{4-0};
+  let Inst{48-52} = XB{4-0};
+  let Inst{53-60} = xo;
+  let Inst{61} = XA{5};
+  let Inst{62} = XB{5};
+  let Inst{63} = 0;
+}
+
 def PrefixInstrs : Predicate<"Subtarget->hasPrefixInstrs()">;
 def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
-def PairedVectorMemops : Predicate<"PPCSubTarget->pairedVectorMemops()">;
-def MMA : Predicate<"PPCSubTarget->hasMMA()">;
+def PairedVectorMemops : Predicate<"Subtarget->pairedVectorMemops()">;
+def MMA : Predicate<"Subtarget->hasMMA()">;
+
+def RCCp {
+  dag AToVSRC = (COPY_TO_REGCLASS $XA, VSRC);
+  dag BToVSRC = (COPY_TO_REGCLASS $XB, VSRC);
+}
 
 let Predicates = [PrefixInstrs] in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
@@ -657,6 +978,439 @@ let Predicates = [PrefixInstrs] in {
       8LS_DForm_R_SI34_RTA5_p<61, (outs), (ins g8rc:$RS, memri34:$D_RA),
                               (ins g8rc:$RS, memri34_pcrel:$D_RA),
                               "pstd $RS, $D_RA", IIC_LdStLFD>;
+  }
+}
+
+// Multiclass definitions for MMA accumulator instructions.
+// ----------------------------------------------------------------------------
+
+// Defines 2 unmasked instructions where the xo field for acc/non-acc version
+// is even/odd.
+multiclass ACC_UM_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
+                       string asmstr> {
+  let Predicates = [MMA] in {
+  def NAME :
+    XX3Form_AT3_XAB6<opcode, !or(xo, 0x01), (outs acc:$AT), IOL,
+                     !strconcat(asmbase#" ", asmstr), IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PP :
+    XX3Form_AT3_XAB6<opcode, xo, (outs acc:$AT), !con((ins acc:$ATi), IOL),
+                     !strconcat(asmbase#"pp ", asmstr), IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 4 instructions, masked/unmasked with masks 8, 4, 4 bits.
+// The XO field for acc/non-acc version is even/odd.
+multiclass ACC_UM_M844_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
+                            string asmstr> {
+  defm NAME : ACC_UM_XOEO<opcode, xo, IOL, asmbase, asmstr>;
+  let Predicates = [MMA, PrefixInstrs] in {
+  def PM#NAME :
+    MMIRR_XX3Form_XY4P8_XAB6<
+      opcode, !or(xo, 0x01), (outs acc:$AT),
+      !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u8imm:$PMSK)),
+      !strconcat("pm"#asmbase#" ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PM#NAME#PP :
+    MMIRR_XX3Form_XY4P8_XAB6<
+      opcode, xo, (outs acc:$AT),
+      !con((ins acc:$ATi),
+           !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u8imm:$PMSK))),
+      !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 4 instructions, masked/unmasked with masks 4, 4, 4 bits.
+// The XO field for acc/non-acc version is even/odd.
+multiclass ACC_UM_M444_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
+                            string asmstr> {
+  defm NAME : ACC_UM_XOEO<opcode, xo, IOL, asmbase, asmstr>;
+  let Predicates = [MMA, PrefixInstrs] in {
+  def PM#NAME :
+    MMIRR_XX3Form_XYP4_XAB6<
+      opcode, !or(xo, 0x01), (outs acc:$AT),
+      !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u4imm:$PMSK)),
+      !strconcat("pm"#asmbase#" ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PM#NAME#PP :
+    MMIRR_XX3Form_XYP4_XAB6<
+      opcode, xo, (outs acc:$AT),
+      !con((ins acc:$ATi),
+           !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u4imm:$PMSK))),
+      !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 4 instructions, masked/unmasked with masks 2, 4, 4 bits.
+// The XO field for acc/non-acc version is even/odd.
+multiclass ACC_UM_M244_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
+                            string asmstr> {
+  defm NAME : ACC_UM_XOEO<opcode, xo, IOL, asmbase, asmstr>;
+  let Predicates = [MMA, PrefixInstrs] in {
+  def PM#NAME :
+    MMIRR_XX3Form_XY4P2_XAB6<
+      opcode, !or(xo, 0x01), (outs acc:$AT),
+      !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK)),
+      !strconcat("pm"#asmbase#" ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PM#NAME#PP :
+    MMIRR_XX3Form_XY4P2_XAB6<
+      opcode, xo, (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
+      !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 4 instructions, masked/unmasked with masks 2, 4, 4 bits.
+// Upper nibble of XO field for acc/non-acc version is 0x4/0x6.
+multiclass ACC_UM_M244_XO46<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
+                            string asmstr> {
+  let Predicates = [MMA] in {
+  def NAME :
+    XX3Form_AT3_XAB6<opcode, xo, (outs acc:$AT), IOL,
+                     !strconcat(asmbase#" ", asmstr), IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PP :
+    XX3Form_AT3_XAB6<
+      opcode, !or(xo, 0x20), (outs acc:$AT), !con((ins acc:$ATi), IOL),
+      !strconcat(asmbase#"pp ", asmstr), IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+  let Predicates = [MMA, PrefixInstrs] in {
+  def PM#NAME :
+    MMIRR_XX3Form_XY4P2_XAB6<
+      opcode, xo, (outs acc:$AT),
+      !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK)),
+      !strconcat("pm"#asmbase#" ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PM#NAME#PP :
+    MMIRR_XX3Form_XY4P2_XAB6<
+      opcode, !or(xo, 0x20), (outs acc:$AT),
+      !con((ins acc:$ATi),
+           !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
+      !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 10 instructions, operand negating, unmasked, masked with 2, 4, 4
+// bits. Upper nibble are masked with 0x8, 0x4, 0xC for negating operands.
+multiclass ACC_NEG_UM_M244_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
+                                  string asmbase, string asmstr> {
+  defm NAME : ACC_UM_M244_XOEO<opcode, xo, IOL, asmbase, asmstr>;
+  let Predicates = [MMA] in {
+  def PN : XX3Form_AT3_XAB6<
+             opcode, !or(xo, 0x80), (outs acc:$AT), !con((ins acc:$ATi), IOL),
+             !strconcat(asmbase#"pn ", asmstr), IIC_VecFP, []>,
+           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def NP : XX3Form_AT3_XAB6<
+             opcode, !or(xo, 0x40), (outs acc:$AT), !con((ins acc:$ATi), IOL),
+             !strconcat(asmbase#"np ", asmstr), IIC_VecFP, []>,
+           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def NN : XX3Form_AT3_XAB6<
+             opcode, !or(xo, 0xC0), (outs acc:$AT), !con((ins acc:$ATi), IOL),
+             !strconcat(asmbase#"nn ", asmstr), IIC_VecFP, []>,
+           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+  let Predicates = [MMA, PrefixInstrs] in {
+  def PM#NAME#PN :
+    MMIRR_XX3Form_XY4P2_XAB6<
+      opcode, !or(xo, 0x80), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
+      !strconcat("pm"#asmbase#"pn ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#NP :
+    MMIRR_XX3Form_XY4P2_XAB6<
+      opcode, !or(xo, 0x40), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
+      !strconcat("pm"#asmbase#"np ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#NN :
+    MMIRR_XX3Form_XY4P2_XAB6<
+      opcode, !or(xo, 0xC0), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK, u2imm:$PMSK))),
+      !strconcat("pm"#asmbase#"nn ", asmstr#", $XMSK, $YMSK, $PMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 5 instructions, unmasked, operand negating.
+// Upper nibble are masked with 0x8, 0x4, 0xC for negating operands.
+multiclass ACC_NEG_UM_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
+                             string asmbase, string asmstr> {
+  defm NAME : ACC_UM_XOEO<opcode, xo, IOL, asmbase, asmstr>;
+  let Predicates = [MMA] in {
+  def PN : XX3Form_AT3_XAB6<opcode, !or(xo, 0x80), (outs acc:$AT),
+                            !con((ins acc:$ATi), IOL),
+                            !strconcat(asmbase#"pn ", asmstr), IIC_VecFP, []>,
+           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def NP : XX3Form_AT3_XAB6<opcode, !or(xo, 0x40), (outs acc:$AT),
+                            !con((ins acc:$ATi), IOL),
+                            !strconcat(asmbase#"np ", asmstr), IIC_VecFP, []>,
+           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def NN : XX3Form_AT3_XAB6<opcode, !or(xo, 0xC0), (outs acc:$AT),
+                            !con((ins acc:$ATi), IOL),
+                            !strconcat(asmbase#"nn ", asmstr), IIC_VecFP, []>,
+           RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 10 instructions, operand negating, unmasked, masked with 4, 4 bits.
+// Upper nibble are masked with 0x8, 0x4, 0xC for negating operands.
+multiclass ACC_NEG_UM_M44_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
+                                 string asmbase, string asmstr> {
+  defm NAME : ACC_NEG_UM_XOM84C<opcode, xo, IOL, asmbase, asmstr>;
+  let Predicates = [MMA, PrefixInstrs] in {
+  def PM#NAME :
+    MMIRR_XX3Form_XY4_XAB6<
+      opcode, !or(xo, 0x01), (outs acc:$AT),
+      !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK)),
+      !strconcat("pm"#asmbase#" ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PM#NAME#PP :
+    MMIRR_XX3Form_XY4_XAB6<
+      opcode, xo, (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
+      !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#PN :
+    MMIRR_XX3Form_XY4_XAB6<
+      opcode, !or(xo, 0x80), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
+      !strconcat("pm"#asmbase#"pn ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#NP :
+    MMIRR_XX3Form_XY4_XAB6<
+      opcode, !or(xo, 0x40), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
+      !strconcat("pm"#asmbase#"np ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#NN :
+    MMIRR_XX3Form_XY4_XAB6<
+      opcode, !or(xo, 0xC0), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u4imm:$YMSK))),
+      !strconcat("pm"#asmbase#"nn ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// Defines 10 instructions, operand negating, unmasked, masked with 4, 2 bits.
+// Upper nibble are masked with 0x8, 0x4, 0xC for negating operands.
+multiclass ACC_NEG_UM_M42_XOM84C<bits<6> opcode, bits<8> xo, dag IOL,
+                                 string asmbase, string asmstr> {
+  defm NAME : ACC_NEG_UM_XOM84C<opcode, xo, IOL, asmbase, asmstr>;
+  let Predicates = [MMA, PrefixInstrs] in {
+  def PM#NAME :
+    MMIRR_XX3Form_X4Y2_XAB6<
+      opcode, !or(xo, 0x01), (outs acc:$AT),
+      !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK)),
+      !strconcat("pm"#asmbase#" ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"@earlyclobber $AT">;
+  def PM#NAME#PP :
+    MMIRR_XX3Form_X4Y2_XAB6<
+      opcode, xo, (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
+      !strconcat("pm"#asmbase#"pp ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#PN :
+    MMIRR_XX3Form_X4Y2_XAB6<
+      opcode, !or(xo, 0x80), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
+      !strconcat("pm"#asmbase#"pn ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#NP :
+    MMIRR_XX3Form_X4Y2_XAB6<
+      opcode, !or(xo, 0x40), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
+      !strconcat("pm"#asmbase#"np ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  def PM#NAME#NN :
+    MMIRR_XX3Form_X4Y2_XAB6<
+      opcode, !or(xo, 0xC0), (outs acc:$AT),
+      !con((ins acc:$ATi), !con(IOL, (ins u4imm:$XMSK, u2imm:$YMSK))),
+      !strconcat("pm"#asmbase#"nn ", asmstr#", $XMSK, $YMSK"),
+      IIC_VecFP, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+  }
+}
+
+// End of class definitions.
+//-----------------------------------------------------------------------------
+
+let Predicates = [MMA] in {
+  def XXMFACC :
+    XForm_AT3<31, 0, 177, (outs acc:$ASo), (ins acc:$AS), "xxmfacc $AS",
+              IIC_VecGeneral, []>, RegConstraint<"$ASo = $AS">,
+              NoEncode<"$ASo">;
+  def XXMTACC :
+    XForm_AT3<31, 1, 177, (outs acc:$AT), (ins acc:$ATi), "xxmtacc $AT",
+              IIC_VecGeneral, []>, RegConstraint<"$ATi = $AT">,
+              NoEncode<"$ATi">;
+  def KILL_PAIR : PPCPostRAExpPseudo<(outs vsrprc:$XTp), (ins vsrprc:$XSp),
+                                      "#KILL_PAIR", []>,
+                                      RegConstraint<"$XTp = $XSp">;
+  def BUILD_UACC : PPCPostRAExpPseudo<(outs acc:$AT), (ins uacc:$AS),
+                                      "#BUILD_UACC $AT, $AS", []>;
+  // We define XXSETACCZ as rematerializable to undo CSE of that intrinsic in
+  // the backend. We avoid CSE here because it generates a copy of the acc
+  // register and this copy is more expensive than calling the intrinsic again.
+  let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
+    def XXSETACCZ :
+      XForm_AT3<31, 3, 177, (outs acc:$AT), (ins), "xxsetaccz $AT",
+                IIC_VecGeneral, []>;
+  }
+  def XVI8GER4SPP :
+    XX3Form_AT3_XAB6<59, 99, (outs acc:$AT), (ins acc:$ATi, vsrc:$XA, vsrc:$XB),
+                     "xvi8ger4spp $AT, $XA, $XB", IIC_VecGeneral, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+}
+
+let Predicates = [MMA, PrefixInstrs] in {
+  def PMXVI8GER4SPP :
+    MMIRR_XX3Form_XYP4_XAB6<59, 99, (outs acc:$AT),
+                            (ins acc:$ATi, vsrc:$XA,vsrc:$XB, u4imm:$XMSK,
+                             u4imm:$YMSK, u4imm:$PMSK),
+                            "pmxvi8ger4spp $AT, $XA, $XB, $XMSK, $YMSK, $PMSK",
+                            IIC_VecGeneral, []>,
+    RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
+}
+
+// MMA accumulating/non-accumulating instructions.
+//------------------------------------------------------------------------------
+
+// XVBF16GER2, XVBF16GER2PP, XVBF16GER2PN, XVBF16GER2NP, XVBF16GER2NN
+// PMXVBF16GER2, PMXVBF16GER2PP, PMXVBF16GER2PN, PMXVBF16GER2NP, PMXVBF16GER2NN
+defm XVBF16GER2 : ACC_NEG_UM_M244_XOM84C<59, 50, (ins vsrc:$XA, vsrc:$XB),
+                                         "xvbf16ger2", "$AT, $XA, $XB">;
+
+// XVI4GER8, XVI4GER8PP, PMXVI4GER8,  PMXVI4GER8PP
+defm XVI4GER8 : ACC_UM_M844_XOEO<59, 34, (ins vsrc:$XA, vsrc:$XB),
+                                 "xvi4ger8", "$AT, $XA, $XB">;
+
+// XVI8GER4, XVI8GER4PP, PMXVI8GER4, PMXVI8GER4PP
+defm XVI8GER4 : ACC_UM_M444_XOEO<59, 2, (ins vsrc:$XA, vsrc:$XB),
+                                 "xvi8ger4", "$AT, $XA, $XB">;
+
+// XVI16GER2, XVI16GER2PP, PMXVI16GER2, PMXVI16GER2PP
+defm XVI16GER2 : ACC_UM_M244_XO46<59, 75, (ins vsrc:$XA, vsrc:$XB),
+                                  "xvi16ger2", "$AT, $XA, $XB">;
+
+// XVI16GER2S, XVI16GER2SPP, PMXVI16GER2S, PMXVI16GER2SPP
+defm XVI16GER2S : ACC_UM_M244_XOEO<59, 42, (ins vsrc:$XA, vsrc:$XB),
+                                   "xvi16ger2s", "$AT, $XA, $XB">;
+
+// XVF16GER2, XVF16GER2PP, XVF16GER2PN, XVF16GER2NP, XVF16GER2NN
+// PMXVF16GER2, PMXVF16GER2PP, PMXVF16GER2PN, PMXVF16GER2NP, PMXVF16GER2NN
+defm XVF16GER2 : ACC_NEG_UM_M244_XOM84C<59, 18, (ins vsrc:$XA, vsrc:$XB),
+                                        "xvf16ger2", "$AT, $XA, $XB">;
+
+// XVF32GER, XVF32GERPP, XVF32GERPN, XVF32GERNP, XVF32GERPP
+// PMXVF32GER, PMXVF32GERPP, PMXVF32GERPN, PMXVF32GERNP, PMXVF32GERPP
+defm XVF32GER : ACC_NEG_UM_M44_XOM84C<59, 26, (ins vsrc:$XA, vsrc:$XB),
+                                      "xvf32ger", "$AT, $XA, $XB">;
+
+// XVF64GER, XVF64GERPP, XVF64GERPN, XVF64GERNP, XVF64GERNN
+// PMXVF64GER, PMXVF64GERPP, PMXVF64GERPN, PMXVF64GERNP, PMXVF64GERNN
+defm XVF64GER : ACC_NEG_UM_M42_XOM84C<59, 58, (ins vsrpevenrc:$XA, vsrc:$XB),
+                                      "xvf64ger", "$AT, $XA, $XB">;
+//------------------------------------------------------------------------------
+
+def Concats {
+  dag VecsToVecPair0 =
+    (v256i1 (INSERT_SUBREG
+      (INSERT_SUBREG (IMPLICIT_DEF), $vs0, sub_vsx1),
+      $vs1, sub_vsx0));
+  dag VecsToVecPair1 =
+    (v256i1 (INSERT_SUBREG
+      (INSERT_SUBREG (IMPLICIT_DEF), $vs2, sub_vsx1),
+      $vs3, sub_vsx0));
+  dag VecsToVecQuad =
+    (BUILD_UACC (INSERT_SUBREG
+                  (INSERT_SUBREG (v512i1 (IMPLICIT_DEF)),
+                                 (KILL_PAIR VecsToVecPair0), sub_pair0),
+                  (KILL_PAIR VecsToVecPair1), sub_pair1));
+}
+
+def Extracts {
+  dag Pair0 = (v256i1 (EXTRACT_SUBREG $v, sub_pair0));
+  dag Pair1 = (v256i1 (EXTRACT_SUBREG $v, sub_pair1));
+  dag Vec0 = (v4i32 (EXTRACT_SUBREG Pair0, sub_vsx0));
+  dag Vec1 = (v4i32 (EXTRACT_SUBREG Pair0, sub_vsx1));
+  dag Vec2 = (v4i32 (EXTRACT_SUBREG Pair1, sub_vsx0));
+  dag Vec3 = (v4i32 (EXTRACT_SUBREG Pair1, sub_vsx1));
+}
+
+let Predicates = [MMA] in {
+  def : Pat<(v512i1 (PPCAccBuild v4i32:$vs1, v4i32:$vs0, v4i32:$vs3, v4i32:$vs2)),
+            (XXMTACC Concats.VecsToVecQuad)>;
+  def : Pat<(v256i1 (PPCPairBuild v4i32:$vs1, v4i32:$vs0)),
+            Concats.VecsToVecPair0>;
+  def : Pat<(v512i1 (PPCxxmfacc v512i1:$AS)), (XXMFACC acc:$AS)>;
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 0))),
+            Extracts.Vec0>;
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 1))),
+            Extracts.Vec1>;
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 2))),
+            Extracts.Vec2>;
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 3))),
+            Extracts.Vec3>;
+  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 0))),
+            (v4i32 (EXTRACT_SUBREG $v, sub_vsx0))>;
+  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 1))),
+            (v4i32 (EXTRACT_SUBREG $v, sub_vsx1))>;
+}
+
+let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops] in {
+  def LXVP : DQForm_XTp5_RA17_MEM<6, 0, (outs vsrprc:$XTp),
+                                  (ins memrix16:$DQ_RA), "lxvp $XTp, $DQ_RA",
+                                  IIC_LdStLFD, []>;
+  def LXVPX : XForm_XTp5_XAB5<31, 333, (outs vsrprc:$XTp), (ins memrr:$src),
+                              "lxvpx $XTp, $src", IIC_LdStLFD,
+                              []>;
+  let Predicates = [PrefixInstrs] in {
+    defm PLXVP :
+      8LS_DForm_R_XTp5_SI34_MEM_p<1, 58, (outs vsrprc:$XTp), (ins memri34:$D_RA),
+                                  (ins memri34_pcrel:$D_RA), "plxvp $XTp, $D_RA",
+                                  IIC_LdStLFD>;
+  }
+}
+
+let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops] in {
+  def STXVP : DQForm_XTp5_RA17_MEM<6, 1, (outs), (ins vsrprc:$XTp,
+                                   memrix16:$DQ_RA), "stxvp $XTp, $DQ_RA",
+                                   IIC_LdStLFD, []>;
+  def STXVPX : XForm_XTp5_XAB5<31, 461, (outs), (ins vsrprc:$XTp, memrr:$dst),
+                               "stxvpx $XTp, $dst", IIC_LdStLFD,
+                               []>;
+  let Predicates = [PrefixInstrs] in {
+    defm PSTXVP :
+      8LS_DForm_R_XTp5_SI34_MEM_p<1, 62, (outs), (ins vsrprc:$XTp, memri34:$D_RA),
+                                  (ins vsrprc:$XTp, memri34_pcrel:$D_RA),
+                                  "pstxvp $XTp, $D_RA", IIC_LdStLFD>;
   }
 }
 
@@ -824,6 +1578,10 @@ let Predicates = [PCRelativeMemops], AddedComplexity = 500 in {
   // PPCtlsdynamatpcreladdr node is used for TLS dynamic models to materialize
   // tls global address with paddi instruction.
   def : Pat<(PPCtlsdynamatpcreladdr pcreladdr:$addr), (PADDI8pc 0, $addr)>;
+  // PPCtlslocalexecmataddr node is used for TLS local exec models to
+  // materialize tls global address with paddi instruction.
+  def : Pat<(PPCaddTls i64:$in, (PPCtlslocalexecmataddr tglobaltlsaddr:$addr)),
+            (PADDI8 $in, $addr)>;
 }
 
 let Predicates = [PrefixInstrs] in {
@@ -868,6 +1626,26 @@ let Predicates = [PrefixInstrs] in {
 }
 
 let Predicates = [IsISA3_1] in {
+  def SETBC : XForm_XT5_BI5<31, 384, (outs gprc:$RT), (ins crbitrc:$BI),
+                            "setbc $RT, $BI", IIC_IntCompare, []>;
+  def SETBCR : XForm_XT5_BI5<31, 416, (outs gprc:$RT), (ins crbitrc:$BI),
+                             "setbcr $RT, $BI", IIC_IntCompare, []>;
+  def SETNBC : XForm_XT5_BI5<31, 448, (outs gprc:$RT), (ins crbitrc:$BI),
+                             "setnbc $RT, $BI", IIC_IntCompare, []>;
+  def SETNBCR : XForm_XT5_BI5<31, 480, (outs gprc:$RT), (ins crbitrc:$BI),
+                              "setnbcr $RT, $BI", IIC_IntCompare, []>;
+
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+    def SETBC8 : XForm_XT5_BI5<31, 384, (outs g8rc:$RT), (ins crbitrc:$BI),
+                               "setbc $RT, $BI", IIC_IntCompare, []>;
+    def SETBCR8 : XForm_XT5_BI5<31, 416, (outs g8rc:$RT), (ins crbitrc:$BI),
+                                "setbcr $RT, $BI", IIC_IntCompare, []>;
+    def SETNBC8 : XForm_XT5_BI5<31, 448, (outs g8rc:$RT), (ins crbitrc:$BI),
+                                "setnbc $RT, $BI", IIC_IntCompare, []>;
+    def SETNBCR8 : XForm_XT5_BI5<31, 480, (outs g8rc:$RT), (ins crbitrc:$BI),
+                                 "setnbcr $RT, $BI", IIC_IntCompare, []>;
+  }
+
   def VSLDBI : VNForm_VTAB5_SD3<22, 0, (outs vrrc:$VRT),
                                 (ins vrrc:$VRA, vrrc:$VRB, u3imm:$SH),
                                 "vsldbi $VRT, $VRA, $VRB, $SH",
@@ -885,13 +1663,21 @@ let Predicates = [IsISA3_1] in {
                                                               v16i8:$VRB, 
                                                               i32:$SH))]>;
   defm VSTRIBR : VXForm_VTB5_RCr<13, 1, (outs vrrc:$vT), (ins vrrc:$vB),
-                                 "vstribr", "$vT, $vB", IIC_VecGeneral, []>;
+                                 "vstribr", "$vT, $vB", IIC_VecGeneral,
+				 [(set v16i8:$vT,
+                                       (int_ppc_altivec_vstribr v16i8:$vB))]>;
   defm VSTRIBL : VXForm_VTB5_RCr<13, 0, (outs vrrc:$vT), (ins vrrc:$vB),
-                                 "vstribl", "$vT, $vB", IIC_VecGeneral, []>;
+                                 "vstribl", "$vT, $vB", IIC_VecGeneral,
+                                 [(set v16i8:$vT,
+                                       (int_ppc_altivec_vstribl v16i8:$vB))]>;
   defm VSTRIHR : VXForm_VTB5_RCr<13, 3, (outs vrrc:$vT), (ins vrrc:$vB),
-                                 "vstrihr", "$vT, $vB", IIC_VecGeneral, []>;
+                                 "vstrihr", "$vT, $vB", IIC_VecGeneral,
+                                 [(set v8i16:$vT,
+                                       (int_ppc_altivec_vstrihr v8i16:$vB))]>;
   defm VSTRIHL : VXForm_VTB5_RCr<13, 2, (outs vrrc:$vT), (ins vrrc:$vB),
-                                 "vstrihl", "$vT, $vB", IIC_VecGeneral, []>;
+                                 "vstrihl", "$vT, $vB", IIC_VecGeneral,
+                                 [(set v8i16:$vT,
+                                       (int_ppc_altivec_vstrihl v8i16:$vB))]>;
   def VINSW :
     VXForm_1<207, (outs vrrc:$vD), (ins vrrc:$vDi, u4imm:$UIM, gprc:$rB),
              "vinsw $vD, $rB, $UIM", IIC_VecGeneral,
@@ -998,53 +1784,68 @@ let Predicates = [IsISA3_1] in {
                                       (int_ppc_altivec_vextractqm v1i128:$vB))]>;
   def VEXPANDBM : VXForm_RD5_XO5_RS5<1602, 0, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandbm $vD, $vB", IIC_VecGeneral,
-                                     []>;
+                                     [(set v16i8:$vD, (int_ppc_altivec_vexpandbm
+                                           v16i8:$vB))]>;
   def VEXPANDHM : VXForm_RD5_XO5_RS5<1602, 1, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandhm $vD, $vB", IIC_VecGeneral,
-                                     []>;
+                                     [(set v8i16:$vD, (int_ppc_altivec_vexpandhm
+                                           v8i16:$vB))]>;
   def VEXPANDWM : VXForm_RD5_XO5_RS5<1602, 2, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandwm $vD, $vB", IIC_VecGeneral,
-                                     []>;
+                                     [(set v4i32:$vD, (int_ppc_altivec_vexpandwm
+                                           v4i32:$vB))]>;
   def VEXPANDDM : VXForm_RD5_XO5_RS5<1602, 3, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpanddm $vD, $vB", IIC_VecGeneral,
-                                     []>;
+                                     [(set v2i64:$vD, (int_ppc_altivec_vexpanddm
+                                           v2i64:$vB))]>;
   def VEXPANDQM : VXForm_RD5_XO5_RS5<1602, 4, (outs vrrc:$vD), (ins vrrc:$vB),
                                      "vexpandqm $vD, $vB", IIC_VecGeneral,
-                                     []>;
+                                     [(set v1i128:$vD, (int_ppc_altivec_vexpandqm
+                                           v1i128:$vB))]>;
   def MTVSRBM : VXForm_RD5_XO5_RS5<1602, 16, (outs vrrc:$vD), (ins g8rc:$rB),
                                    "mtvsrbm $vD, $rB", IIC_VecGeneral,
-                                   []>;
+                                   [(set v16i8:$vD,
+                                         (int_ppc_altivec_mtvsrbm i64:$rB))]>;
   def MTVSRHM : VXForm_RD5_XO5_RS5<1602, 17, (outs vrrc:$vD), (ins g8rc:$rB),
                                    "mtvsrhm $vD, $rB", IIC_VecGeneral,
-                                   []>;
+                                   [(set v8i16:$vD,
+                                         (int_ppc_altivec_mtvsrhm i64:$rB))]>;
   def MTVSRWM : VXForm_RD5_XO5_RS5<1602, 18, (outs vrrc:$vD), (ins g8rc:$rB),
                                    "mtvsrwm $vD, $rB", IIC_VecGeneral,
-                                   []>;
+                                   [(set v4i32:$vD,
+                                         (int_ppc_altivec_mtvsrwm i64:$rB))]>;
   def MTVSRDM : VXForm_RD5_XO5_RS5<1602, 19, (outs vrrc:$vD), (ins g8rc:$rB),
                                    "mtvsrdm $vD, $rB", IIC_VecGeneral,
-                                   []>;
+                                   [(set v2i64:$vD,
+                                         (int_ppc_altivec_mtvsrdm i64:$rB))]>;
   def MTVSRQM : VXForm_RD5_XO5_RS5<1602, 20, (outs vrrc:$vD), (ins g8rc:$rB),
                                    "mtvsrqm $vD, $rB", IIC_VecGeneral,
-                                   []>;
+                                   [(set v1i128:$vD,
+                                         (int_ppc_altivec_mtvsrqm i64:$rB))]>;
   def MTVSRBMI : DXForm<4, 10, (outs vrrc:$vD), (ins u16imm64:$D),
                         "mtvsrbmi $vD, $D", IIC_VecGeneral,
-                        []>;
+                        [(set v16i8:$vD,
+                              (int_ppc_altivec_mtvsrbm imm:$D))]>;
   def VCNTMBB : VXForm_RD5_MP_VB5<1602, 12, (outs g8rc:$rD),
                                   (ins vrrc:$vB, u1imm:$MP),
                                   "vcntmbb $rD, $vB, $MP", IIC_VecGeneral,
-                                  []>;
+                                  [(set i64:$rD, (int_ppc_altivec_vcntmbb
+                                        v16i8:$vB, timm:$MP))]>;
   def VCNTMBH : VXForm_RD5_MP_VB5<1602, 13, (outs g8rc:$rD),
                                   (ins vrrc:$vB, u1imm:$MP),
                                   "vcntmbh $rD, $vB, $MP", IIC_VecGeneral,
-                                  []>;
+                                  [(set i64:$rD, (int_ppc_altivec_vcntmbh
+                                        v8i16:$vB, timm:$MP))]>;
   def VCNTMBW : VXForm_RD5_MP_VB5<1602, 14, (outs g8rc:$rD),
                                   (ins vrrc:$vB, u1imm:$MP),
                                   "vcntmbw $rD, $vB, $MP", IIC_VecGeneral,
-                                  []>;
+                                  [(set i64:$rD, (int_ppc_altivec_vcntmbw
+                                        v4i32:$vB, timm:$MP))]>;
   def VCNTMBD : VXForm_RD5_MP_VB5<1602, 15, (outs g8rc:$rD),
                                   (ins vrrc:$vB, u1imm:$MP),
                                   "vcntmbd $rD, $vB, $MP", IIC_VecGeneral,
-                                  []>;
+                                  [(set i64:$rD, (int_ppc_altivec_vcntmbd
+                                        v2i64:$vB, timm:$MP))]>;
   def VEXTDUBVLX : VAForm_1a<24, (outs vrrc:$vD),
                              (ins vrrc:$vA, vrrc:$vB, gprc:$rC),
                              "vextdubvlx $vD, $vA, $vB, $rC",
@@ -1251,24 +2052,39 @@ let Predicates = [IsISA3_1] in {
   }
 
   def VMULESD : VXForm_1<968, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vmulesd $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vmulesd $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v1i128:$vD, (int_ppc_altivec_vmulesd v2i64:$vA,
+                               v2i64:$vB))]>;
   def VMULEUD : VXForm_1<712, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vmuleud $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vmuleud $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v1i128:$vD, (int_ppc_altivec_vmuleud v2i64:$vA,
+                               v2i64:$vB))]>;
   def VMULOSD : VXForm_1<456, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vmulosd $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vmulosd $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v1i128:$vD, (int_ppc_altivec_vmulosd v2i64:$vA,
+                               v2i64:$vB))]>;
   def VMULOUD : VXForm_1<200, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vmuloud $vD, $vA, $vB", IIC_VecGeneral, []>;
-  def VMSUMCUD : VAForm_1a<23, (outs vrrc:$vD),
-                           (ins vrrc:$vA, vrrc:$vB, vrrc:$vC),
-                           "vmsumcud $vD, $vA, $vB, $vC", IIC_VecGeneral, []>;
+                         "vmuloud $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v1i128:$vD, (int_ppc_altivec_vmuloud v2i64:$vA,
+                               v2i64:$vB))]>;
+  def VMSUMCUD : VAForm_1a<23, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB, vrrc:$vC),
+                           "vmsumcud $vD, $vA, $vB, $vC", IIC_VecGeneral,
+                           [(set v1i128:$vD, (int_ppc_altivec_vmsumcud
+                                 v2i64:$vA, v2i64:$vB, v1i128:$vC))]>;
   def VDIVSQ : VXForm_1<267, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vdivsq $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vdivsq $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v1i128:$vD, (sdiv v1i128:$vA, v1i128:$vB))]>;
   def VDIVUQ : VXForm_1<11, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vdivuq $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vdivuq $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v1i128:$vD, (udiv v1i128:$vA, v1i128:$vB))]>;
   def VDIVESQ : VXForm_1<779, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vdivesq $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vdivesq $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v1i128:$vD, (int_ppc_altivec_vdivesq v1i128:$vA,
+			       v1i128:$vB))]>;
   def VDIVEUQ : VXForm_1<523, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                         "vdiveuq $vD, $vA, $vB", IIC_VecGeneral, []>;
+                         "vdiveuq $vD, $vA, $vB", IIC_VecGeneral,
+                         [(set v1i128:$vD, (int_ppc_altivec_vdiveuq v1i128:$vA,
+			       v1i128:$vB))]>;
   def VCMPEQUQ : VCMP <455, "vcmpequq $vD, $vA, $vB" , v1i128>;
   def VCMPGTSQ : VCMP <903, "vcmpgtsq $vD, $vA, $vB" , v1i128>;
   def VCMPGTUQ : VCMP <647, "vcmpgtuq $vD, $vA, $vB" , v1i128>;
@@ -1276,11 +2092,14 @@ let Predicates = [IsISA3_1] in {
   def VCMPGTSQ_rec : VCMPo <903, "vcmpgtsq. $vD, $vA, $vB" , v1i128>;
   def VCMPGTUQ_rec : VCMPo <647, "vcmpgtuq. $vD, $vA, $vB" , v1i128>;
   def VMODSQ : VXForm_1<1803, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vmodsq $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vmodsq $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v1i128:$vD, (srem v1i128:$vA, v1i128:$vB))]>;
   def VMODUQ : VXForm_1<1547, (outs vrrc:$vD), (ins vrrc:$vA, vrrc:$vB),
-                        "vmoduq $vD, $vA, $vB", IIC_VecGeneral, []>;
+                        "vmoduq $vD, $vA, $vB", IIC_VecGeneral,
+                        [(set v1i128:$vD, (urem v1i128:$vA, v1i128:$vB))]>;
   def VEXTSD2Q : VXForm_RD5_XO5_RS5<1538, 27, (outs vrrc:$vD), (ins vrrc:$vB),
-                                    "vextsd2q $vD, $vB", IIC_VecGeneral, []>;
+                               "vextsd2q $vD, $vB", IIC_VecGeneral,
+                               [(set v1i128:$vD, (int_ppc_altivec_vextsd2q v2i64:$vB))]>;
   def VCMPUQ : VXForm_BF3_VAB5<257, (outs crrc:$BF), (ins vrrc:$vA, vrrc:$vB),
                                "vcmpuq $BF, $vA, $vB", IIC_VecGeneral, []>;
   def VCMPSQ : VXForm_BF3_VAB5<321, (outs crrc:$BF), (ins vrrc:$vA, vrrc:$vB),
@@ -1298,6 +2117,11 @@ let Predicates = [IsISA3_1] in {
   def XSCVQPSQZ : X_VT5_XO5_VB5<63, 8, 836, "xscvqpsqz", []>;
   def XSCVUQQP : X_VT5_XO5_VB5<63, 3, 836, "xscvuqqp", []>;
   def XSCVSQQP : X_VT5_XO5_VB5<63, 11, 836, "xscvsqqp", []>;
+}
+
+let Predicates = [IsISA3_1, HasVSX] in {
+  def XVCVSPBF16 : XX2_XT6_XO5_XB6<60, 17, 475, "xvcvspbf16", vsrc, []>;
+  def XVCVBF16SPN : XX2_XT6_XO5_XB6<60, 16, 475, "xvcvbf16spn", vsrc, []>;
 }
 
 //---------------------------- Anonymous Patterns ----------------------------//
@@ -1344,6 +2168,13 @@ let Predicates = [IsISA3_1] in {
              (v1i128 (COPY_TO_REGCLASS (LXVRWX xoaddr:$src), VRRC))>;
   def : Pat <(v1i128 (PPClxvrzx xoaddr:$src, 64)),
              (v1i128 (COPY_TO_REGCLASS (LXVRDX xoaddr:$src), VRRC))>;
+}
+
+let Predicates = [IsISA3_1, HasVSX] in {
+  def : Pat<(v16i8 (int_ppc_vsx_xvcvspbf16 v16i8:$XA)),
+            (COPY_TO_REGCLASS (XVCVSPBF16 RCCp.AToVSRC), VRRC)>;
+  def : Pat<(v16i8 (int_ppc_vsx_xvcvbf16spn v16i8:$XA)),
+            (COPY_TO_REGCLASS (XVCVBF16SPN RCCp.AToVSRC), VRRC)>;
 }
 
 let AddedComplexity = 400, Predicates = [IsISA3_1] in {

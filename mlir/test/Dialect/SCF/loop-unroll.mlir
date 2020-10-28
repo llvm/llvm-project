@@ -2,6 +2,7 @@
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=3' | FileCheck %s --check-prefix UNROLL-BY-3
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 loop-depth=0' | FileCheck %s --check-prefix UNROLL-OUTER-BY-2
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 loop-depth=1' | FileCheck %s --check-prefix UNROLL-INNER-BY-2
+// RUN: mlir-opt %s --affine-loop-unroll='unroll-factor=6 unroll-up-to-factor=true' | FileCheck %s --check-prefix UNROLL-UP-TO
 
 func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
                           %arg3: memref<?xf32>) {
@@ -248,3 +249,24 @@ func @static_loop_unroll_by_3_promote_epilogue(%arg0 : memref<?xf32>) {
 //  UNROLL-BY-3-NEXT:  }
 //  UNROLL-BY-3-NEXT:  store %{{.*}}, %[[MEM]][%[[C9]]] : memref<?xf32>
 //  UNROLL-BY-3-NEXT:  return
+
+// Test unroll-up-to functionality.
+func @static_loop_unroll_up_to_factor(%arg0 : memref<?xf32>) {
+  %0 = constant 7.0 : f32
+  %lb = constant 0 : index
+  %ub = constant 2 : index
+  affine.for %i0 = %lb to %ub {
+    affine.store %0, %arg0[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-UP-TO-LABEL: func @static_loop_unroll_up_to_factor
+//  UNROLL-UP-TO-SAME:  %[[MEM:.*0]]: memref<?xf32>
+//
+//   UNROLL-UP-TO-DAG:  %[[C0:.*]] = constant 0 : index
+//   UNROLL-UP-TO-DAG:  %[[C2:.*]] = constant 2 : index
+//   UNROLL-UP-TO-NEXT: %[[V0:.*]] = affine.apply {{.*}}
+//   UNROLL-UP-TO-NEXT: store %{{.*}}, %[[MEM]][%[[V0]]] : memref<?xf32>
+//   UNROLL-UP-TO-NEXT: %[[V1:.*]] = affine.apply {{.*}}
+//   UNROLL-UP-TO-NEXT: affine.store %{{.*}}, %[[MEM]][%[[V1]]] : memref<?xf32>
+//   UNROLL-UP-TO-NEXT: return

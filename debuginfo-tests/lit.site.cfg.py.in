@@ -20,6 +20,8 @@ config.target_triple = "@TARGET_TRIPLE@"
 config.host_arch = "@HOST_ARCH@"
 config.is_msvc = lit.util.pythonize_bool("@MSVC@")
 
+config.mlir_src_root = "@MLIR_SOURCE_DIR@"
+
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 
 config.python3_executable = "@Python3_EXECUTABLE@"

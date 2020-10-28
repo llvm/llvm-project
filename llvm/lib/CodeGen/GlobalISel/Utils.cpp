@@ -11,7 +11,8 @@
 
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/Twine.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
@@ -21,9 +22,11 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "globalisel-utils"
 
@@ -468,7 +471,8 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   if (!DefMI)
     return false;
 
-  if (DefMI->getFlag(MachineInstr::FmNoNans))
+  const TargetMachine& TM = DefMI->getMF()->getTarget();
+  if (DefMI->getFlag(MachineInstr::FmNoNans) || TM.Options.NoNaNsFPMath)
     return true;
 
   if (SNaN) {
@@ -694,6 +698,28 @@ static bool isBuildVectorConstantSplat(const MachineInstr &MI,
   return true;
 }
 
+Optional<int64_t>
+llvm::getBuildVectorConstantSplat(const MachineInstr &MI,
+                                  const MachineRegisterInfo &MRI) {
+  if (!isBuildVectorOp(MI.getOpcode()))
+    return None;
+
+  const unsigned NumOps = MI.getNumOperands();
+  Optional<int64_t> Scalar;
+  for (unsigned I = 1; I != NumOps; ++I) {
+    Register Element = MI.getOperand(I).getReg();
+    int64_t ElementValue;
+    if (!mi_match(Element, MRI, m_ICst(ElementValue)))
+      return None;
+    if (!Scalar)
+      Scalar = ElementValue;
+    else if (*Scalar != ElementValue)
+      return None;
+  }
+
+  return Scalar;
+}
+
 bool llvm::isBuildVectorAllZeros(const MachineInstr &MI,
                                  const MachineRegisterInfo &MRI) {
   return isBuildVectorConstantSplat(MI, MRI, 0);
@@ -702,4 +728,29 @@ bool llvm::isBuildVectorAllZeros(const MachineInstr &MI,
 bool llvm::isBuildVectorAllOnes(const MachineInstr &MI,
                                 const MachineRegisterInfo &MRI) {
   return isBuildVectorConstantSplat(MI, MRI, -1);
+}
+
+bool llvm::isConstTrueVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
+                          bool IsFP) {
+  switch (TLI.getBooleanContents(IsVector, IsFP)) {
+  case TargetLowering::UndefinedBooleanContent:
+    return Val & 0x1;
+  case TargetLowering::ZeroOrOneBooleanContent:
+    return Val == 1;
+  case TargetLowering::ZeroOrNegativeOneBooleanContent:
+    return Val == -1;
+  }
+  llvm_unreachable("Invalid boolean contents");
+}
+
+int64_t llvm::getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
+                             bool IsFP) {
+  switch (TLI.getBooleanContents(IsVector, IsFP)) {
+  case TargetLowering::UndefinedBooleanContent:
+  case TargetLowering::ZeroOrOneBooleanContent:
+    return 1;
+  case TargetLowering::ZeroOrNegativeOneBooleanContent:
+    return -1;
+  }
+  llvm_unreachable("Invalid boolean contents");
 }

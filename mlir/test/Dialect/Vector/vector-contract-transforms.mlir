@@ -785,41 +785,61 @@ func @genbool_3d() -> vector<2x3x4xi1> {
   return %v: vector<2x3x4xi1>
 }
 
-// CHECK-LABEL: func @genbool_var_1d
-// CHECK-SAME: %[[A:.*]]: index
-// CHECK:      %[[C1:.*]] = constant dense<[0, 1, 2]> : vector<3xi64>
-// CHECK:      %[[T0:.*]] = index_cast %[[A]] : index to i64
-// CHECK:      %[[T1:.*]] = splat %[[T0]] : vector<3xi64>
-// CHECK:      %[[T2:.*]] = cmpi "slt", %[[C1]], %[[T1]] : vector<3xi64>
-// CHECK:      return %[[T2]] : vector<3xi1>
+// CHECK-LABEL: func @genbool_var_1d(
+// CHECK-SAME: %[[A:.*]]: index)
+// CHECK:      %[[T0:.*]] = vector.create_mask %[[A]] : vector<3xi1>
+// CHECK:      return %[[T0]] : vector<3xi1>
 
 func @genbool_var_1d(%arg0: index) -> vector<3xi1> {
   %0 = vector.create_mask %arg0 : vector<3xi1>
   return %0 : vector<3xi1>
 }
 
-// CHECK-LABEL: func @genbool_var_2d
-// CHECK-SAME: %[[A:.*0]]: index
-// CHECK-SAME: %[[B:.*1]]: index
-// CHECK:      %[[CI:.*]] = constant dense<[0, 1, 2]> : vector<3xi64>
-// CHECK:      %[[CF:.*]] = constant dense<false> : vector<3xi1>
+// CHECK-LABEL: func @genbool_var_2d(
+// CHECK-SAME: %[[A:.*0]]: index,
+// CHECK-SAME: %[[B:.*1]]: index)
+// CHECK:      %[[C1:.*]] = constant dense<false> : vector<3xi1>
 // CHECK:      %[[C2:.*]] = constant dense<false> : vector<2x3xi1>
 // CHECK:      %[[c0:.*]] = constant 0 : index
 // CHECK:      %[[c1:.*]] = constant 1 : index
-// CHECK:      %[[T0:.*]] = index_cast %[[B]] : index to i64
-// CHECK:      %[[T1:.*]] = splat %[[T0]] : vector<3xi64>
-// CHECK:      %[[T2:.*]] = cmpi "slt", %[[CI]], %[[T1]] : vector<3xi64>
-// CHECK:      %[[T3:.*]] = cmpi "slt", %[[c0]], %[[A]] : index
-// CHECK:      %[[T4:.*]] = select %[[T3]], %[[T2]], %[[CF]] : vector<3xi1>
-// CHECK:      %[[T5:.*]] = vector.insert %[[T4]], %[[C2]] [0] : vector<3xi1> into vector<2x3xi1>
-// CHECK:      %[[T6:.*]] = cmpi "slt", %[[c1]], %[[A]] : index
-// CHECK:      %[[T7:.*]] = select %[[T6]], %[[T2]], %[[CF]] : vector<3xi1>
-// CHECK:      %[[T8:.*]] = vector.insert %[[T7]], %[[T5]] [1] : vector<3xi1> into vector<2x3xi1>
-// CHECK:      return %[[T8]] : vector<2x3xi1>
+// CHECK:      %[[T0:.*]] = vector.create_mask %[[B]] : vector<3xi1>
+// CHECK:      %[[T1:.*]] = cmpi "slt", %[[c0]], %[[A]] : index
+// CHECK:      %[[T2:.*]] = select %[[T1]], %[[T0]], %[[C1]] : vector<3xi1>
+// CHECK:      %[[T3:.*]] = vector.insert %[[T2]], %[[C2]] [0] : vector<3xi1> into vector<2x3xi1>
+// CHECK:      %[[T4:.*]] = cmpi "slt", %[[c1]], %[[A]] : index
+// CHECK:      %[[T5:.*]] = select %[[T4]], %[[T0]], %[[C1]] : vector<3xi1>
+// CHECK:      %[[T6:.*]] = vector.insert %[[T5]], %[[T3]] [1] : vector<3xi1> into vector<2x3xi1>
+// CHECK:      return %[[T6]] : vector<2x3xi1>
 
 func @genbool_var_2d(%arg0: index, %arg1: index) -> vector<2x3xi1> {
   %0 = vector.create_mask %arg0, %arg1 : vector<2x3xi1>
   return %0 : vector<2x3xi1>
+}
+
+// CHECK-LABEL: func @genbool_var_3d(
+// CHECK-SAME: %[[A:.*0]]: index,
+// CHECK-SAME: %[[B:.*1]]: index,
+// CHECK-SAME: %[[C:.*2]]: index)
+// CHECK:      %[[C1:.*]] = constant dense<false> : vector<7xi1>
+// CHECK:      %[[C2:.*]] = constant dense<false> : vector<1x7xi1>
+// CHECK:      %[[C3:.*]] = constant dense<false> : vector<2x1x7xi1>
+// CHECK:      %[[c0:.*]] = constant 0 : index
+// CHECK:      %[[c1:.*]] = constant 1 : index
+// CHECK:      %[[T0:.*]] = vector.create_mask %[[C]] : vector<7xi1>
+// CHECK:      %[[T1:.*]] = cmpi "slt", %[[c0]], %[[B]] : index
+// CHECK:      %[[T2:.*]] = select %[[T1]], %[[T0]], %[[C1]] : vector<7xi1>
+// CHECK:      %[[T3:.*]] = vector.insert %[[T2]], %[[C2]] [0] : vector<7xi1> into vector<1x7xi1>
+// CHECK:      %[[T4:.*]] = cmpi "slt", %[[c0]], %[[A]] : index
+// CHECK:      %[[T5:.*]] = select %[[T4]], %[[T3]], %[[C2]] : vector<1x7xi1>
+// CHECK:      %[[T6:.*]] = vector.insert %[[T5]], %[[C3]] [0] : vector<1x7xi1> into vector<2x1x7xi1>
+// CHECK:      %[[T7:.*]] = cmpi "slt", %[[c1]], %[[A]] : index
+// CHECK:      %[[T8:.*]] = select %[[T7]], %[[T3]], %[[C2]] : vector<1x7xi1>
+// CHECK:      %[[T9:.*]] = vector.insert %[[T8]], %[[T6]] [1] : vector<1x7xi1> into vector<2x1x7xi1>
+// CHECK:      return %[[T9]] : vector<2x1x7xi1>
+
+func @genbool_var_3d(%arg0: index, %arg1: index, %arg2: index) -> vector<2x1x7xi1> {
+  %0 = vector.create_mask %arg0, %arg1, %arg2 : vector<2x1x7xi1>
+  return %0 : vector<2x1x7xi1>
 }
 
 #matmat_accesses_0 = [

@@ -439,9 +439,9 @@ body:             |
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32: [[COPY2:%[0-9]+]]:_(p0) = COPY $a2
     ; MIPS32: [[COPY3:%[0-9]+]]:_(p0) = COPY $a3
-    ; MIPS32: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY]], [[COPY1]]
     ; MIPS32: [[UMULH:%[0-9]+]]:_(s32) = G_UMULH [[COPY]], [[COPY1]]
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; MIPS32: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[COPY]], [[COPY1]]
     ; MIPS32: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[UMULH]](s32), [[C]]
     ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)

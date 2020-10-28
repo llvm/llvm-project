@@ -2317,38 +2317,13 @@ QualType Type::getSveEltType(const ASTContext &Ctx) const {
   assert(isVLSTBuiltinType() && "unsupported type!");
 
   const BuiltinType *BTy = getAs<BuiltinType>();
-  switch (BTy->getKind()) {
-  default:
-    llvm_unreachable("Unknown builtin SVE type!");
-  case BuiltinType::SveInt8:
-    return Ctx.SignedCharTy;
-  case BuiltinType::SveUint8:
-  case BuiltinType::SveBool:
+  if (BTy->getKind() == BuiltinType::SveBool)
     // Represent predicates as i8 rather than i1 to avoid any layout issues.
     // The type is bitcasted to a scalable predicate type when casting between
     // scalable and fixed-length vectors.
     return Ctx.UnsignedCharTy;
-  case BuiltinType::SveInt16:
-    return Ctx.ShortTy;
-  case BuiltinType::SveUint16:
-    return Ctx.UnsignedShortTy;
-  case BuiltinType::SveInt32:
-    return Ctx.IntTy;
-  case BuiltinType::SveUint32:
-    return Ctx.UnsignedIntTy;
-  case BuiltinType::SveInt64:
-    return Ctx.LongTy;
-  case BuiltinType::SveUint64:
-    return Ctx.UnsignedLongTy;
-  case BuiltinType::SveFloat16:
-    return Ctx.Float16Ty;
-  case BuiltinType::SveBFloat16:
-    return Ctx.BFloat16Ty;
-  case BuiltinType::SveFloat32:
-    return Ctx.FloatTy;
-  case BuiltinType::SveFloat64:
-    return Ctx.DoubleTy;
-  }
+  else
+    return Ctx.getBuiltinVectorTypeInfo(BTy).ElementType;
 }
 
 bool QualType::isPODType(const ASTContext &Context) const {
@@ -2618,6 +2593,22 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
   if (isa<AutoType>(BaseTy->getCanonicalTypeInternal()))
     return true;
 
+  return false;
+}
+
+bool Type::isStructuralType() const {
+  // C++20 [temp.param]p6:
+  //   A structural type is one of the following:
+  //   -- a scalar type; or
+  //   -- a vector type [Clang extension]; or
+  if (isScalarType() || isVectorType())
+    return true;
+  //   -- an lvalue reference type; or
+  if (isLValueReferenceType())
+    return true;
+  //  -- a literal class type [...under some conditions]
+  if (const CXXRecordDecl *RD = getAsCXXRecordDecl())
+    return RD->isStructural();
   return false;
 }
 

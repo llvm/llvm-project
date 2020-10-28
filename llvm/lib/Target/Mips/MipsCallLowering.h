@@ -18,6 +18,7 @@
 
 namespace llvm {
 
+class MachineMemOperand;
 class MipsTargetLowering;
 
 class MipsCallLowering : public CallLowering {

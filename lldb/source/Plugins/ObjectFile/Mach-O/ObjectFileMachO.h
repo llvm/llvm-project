@@ -112,7 +112,9 @@ public:
 
   std::string GetIdentifierString() override;
 
-  bool GetCorefileMainBinaryInfo (lldb::addr_t &address, lldb_private::UUID &uuid) override;
+  bool GetCorefileMainBinaryInfo(lldb::addr_t &address,
+                                 lldb_private::UUID &uuid,
+                                 ObjectFile::BinaryType &type) override;
 
   lldb::RegisterContextSP
   GetThreadContextAtIndex(uint32_t idx, lldb_private::Thread &thread) override;

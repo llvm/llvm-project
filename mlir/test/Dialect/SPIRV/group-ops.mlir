@@ -61,3 +61,43 @@ func @group_broadcast_negative_locid_vec4(%value: f32, %localid: vector<4xi32> )
   %0 = spv.GroupBroadcast "Subgroup" %value, %localid : f32, vector<4xi32>
   return %0: f32
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.SubgroupBlockReadINTEL
+//===----------------------------------------------------------------------===//
+
+func @subgroup_block_read_intel(%ptr : !spv.ptr<i32, StorageBuffer>) -> i32 {
+  // CHECK: spv.SubgroupBlockReadINTEL %{{.*}} : i32
+  %0 = spv.SubgroupBlockReadINTEL "StorageBuffer" %ptr : i32
+  return %0: i32
+}
+
+// -----
+
+func @subgroup_block_read_intel_vector(%ptr : !spv.ptr<i32, StorageBuffer>) -> vector<3xi32> {
+  // CHECK: spv.SubgroupBlockReadINTEL %{{.*}} : vector<3xi32>
+  %0 = spv.SubgroupBlockReadINTEL "StorageBuffer" %ptr : vector<3xi32>
+  return %0: vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spv.SubgroupBlockWriteINTEL
+//===----------------------------------------------------------------------===//
+
+func @subgroup_block_write_intel(%ptr : !spv.ptr<i32, StorageBuffer>, %value: i32) -> () {
+  // CHECK: spv.SubgroupBlockWriteINTEL %{{.*}}, %{{.*}} : i32
+  spv.SubgroupBlockWriteINTEL "StorageBuffer" %ptr, %value : i32
+  return
+}
+
+// -----
+
+func @subgroup_block_write_intel_vector(%ptr : !spv.ptr<i32, StorageBuffer>, %value: vector<3xi32>) -> () {
+  // CHECK: spv.SubgroupBlockWriteINTEL %{{.*}}, %{{.*}} : vector<3xi32>
+  spv.SubgroupBlockWriteINTEL "StorageBuffer" %ptr, %value : vector<3xi32>
+  return
+}

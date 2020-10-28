@@ -6,7 +6,7 @@
 /// This documentation describes the **internal** software that makes
 /// up flang, not the **external** use of flang. There are no instructions
 /// here on how to use flang, only the APIs that make up the software. For
-/// usage instructions, please see the [project website](https://github.com/flang-compiler/f18)
+/// usage instructions, please see the [project website](https://github.com/llvm-project/flang)
 /// for further detail.
 ///
 /// \section main_caveat Caveat

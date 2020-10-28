@@ -1635,8 +1635,7 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
         }
         if (!found) {
           LastSymbolName = Entry.symbolName();
-          NMSymbol W;
-          memset(&W, '\0', sizeof(NMSymbol));
+          NMSymbol W = {};
           W.Name = Entry.symbolName();
           W.Address = 0;
           W.Size = 0;

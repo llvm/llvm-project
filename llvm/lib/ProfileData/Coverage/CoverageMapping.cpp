@@ -485,9 +485,15 @@ class SegmentBuilder {
       if (CurStartLoc == CR.value().endLoc()) {
         // Avoid making zero-length regions active. If it's the last region,
         // emit a skipped segment. Otherwise use its predecessor's count.
-        const bool Skipped = (CR.index() + 1) == Regions.size();
+        const bool Skipped =
+            (CR.index() + 1) == Regions.size() ||
+            CR.value().Kind == CounterMappingRegion::SkippedRegion;
         startSegment(ActiveRegions.empty() ? CR.value() : *ActiveRegions.back(),
                      CurStartLoc, !GapRegion, Skipped);
+        // If it is skipped segment, create a segment with last pushed
+        // regions's count at CurStartLoc.
+        if (Skipped && !ActiveRegions.empty())
+          startSegment(*ActiveRegions.back(), CurStartLoc, false);
         continue;
       }
       if (CR.index() + 1 == Regions.size() ||
@@ -587,6 +593,8 @@ public:
       const auto &L = Segments[I - 1];
       const auto &R = Segments[I];
       if (!(L.Line < R.Line) && !(L.Line == R.Line && L.Col < R.Col)) {
+        if (L.Line == R.Line && L.Col == R.Col && !L.HasCount)
+          continue;
         LLVM_DEBUG(dbgs() << " ! Segment " << L.Line << ":" << L.Col
                           << " followed by " << R.Line << ":" << R.Col << "\n");
         assert(false && "Coverage segments not unique or sorted");

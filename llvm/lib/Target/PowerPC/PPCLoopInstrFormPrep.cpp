@@ -795,7 +795,7 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
   bool MadeChange = false;
 
   // Only prep. the inner-most loop
-  if (!L->empty())
+  if (!L->isInnermost())
     return MadeChange;
 
   // Return if already done enough preparation.

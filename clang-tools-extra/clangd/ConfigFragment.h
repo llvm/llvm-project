@@ -161,6 +161,16 @@ struct Fragment {
     llvm::Optional<Located<std::string>> Background;
   };
   IndexBlock Index;
+
+  // Describes the style of the codebase, beyond formatting.
+  struct StyleBlock {
+    // Namespaces that should always be fully qualified, meaning no "using"
+    // declarations, always spell out the whole name (with or without leading
+    // ::). All nested namespaces are affected as well.
+    // Affects availability of the AddUsing tweak.
+    std::vector<Located<std::string>> FullyQualifiedNamespaces;
+  };
+  StyleBlock Style;
 };
 
 } // namespace config

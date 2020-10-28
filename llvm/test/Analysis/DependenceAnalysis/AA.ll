@@ -1,6 +1,6 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>"                            \
 ; RUN: "-aa-pipeline=basic-aa,tbaa" 2>&1 | FileCheck %s
-; RUN: opt < %s -analyze -basic-aa -tbaa -da | FileCheck %s
+; RUN: opt < %s -analyze -enable-new-pm=0 -basic-aa -tbaa -da | FileCheck %s
 
 ; CHECK-LABEL: 'Dependence Analysis' for function 'test_no_noalias'
 ; CHECK: da analyze - none!

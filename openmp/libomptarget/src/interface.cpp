@@ -11,13 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <omptarget.h>
-
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
 
 #include <cassert>
+#include <cstdio>
 #include <cstdlib>
 #include <mutex>
 
@@ -27,7 +26,6 @@ std::mutex TargetOffloadMtx;
 
 ////////////////////////////////////////////////////////////////////////////////
 /// manage the success or failure of a target construct
-
 static void HandleDefaultTargetOffload() {
   TargetOffloadMtx.lock();
   if (TargetOffloadPolicy == tgt_default) {
@@ -62,8 +60,13 @@ static void HandleTargetOutcome(bool success) {
       break;
     case tgt_mandatory:
       if (!success) {
-        if (InfoLevel > 0)
-          MESSAGE0("LIBOMPTARGET_INFO is not supported yet");
+        if (getInfoLevel() > 1)
+          for (const auto &Device : Devices)
+            dumpTargetPointerMappings(Device);
+        else
+          FAILURE_MESSAGE("run with env LIBOMPTARGET_INFO>1 to dump host-target"
+                          "pointer maps\n");
+
         FATAL_MESSAGE0(1, "failure of target construct while offloading is mandatory");
       }
       break;

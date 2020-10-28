@@ -265,6 +265,108 @@ def SPV_GLSLTanOp : SPV_GLSLUnaryArithmeticOp<"Tan", 15, SPV_Float16or32> {
 
 // -----
 
+def SPV_GLSLAsinOp : SPV_GLSLUnaryArithmeticOp<"Asin", 16, SPV_Float16or32> {
+  let summary = "Arc Sine of operand in radians";
+
+  let description = [{
+    The standard trigonometric arc sine of x radians.
+
+    Result is an angle, in radians, whose sine is x. The range of result values
+    is [-π / 2, π / 2]. Result is undefined if abs x > 1.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+    <!-- End of AutoGen section -->
+    ```
+    restricted-float-scalar-type ::=  `f16` | `f32`
+    restricted-float-scalar-vector-type ::=
+      restricted-float-scalar-type |
+      `vector<` integer-literal `x` restricted-float-scalar-type `>`
+    asin-op ::= ssa-id `=` `spv.GLSL.Asin` ssa-use `:`
+                restricted-float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.Asin %0 : f32
+    %3 = spv.GLSL.Asin %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_GLSLAcosOp : SPV_GLSLUnaryArithmeticOp<"Acos", 17, SPV_Float16or32> {
+  let summary = "Arc Cosine of operand in radians";
+
+  let description = [{
+    The standard trigonometric arc cosine of x radians.
+
+    Result is an angle, in radians, whose cosine is x. The range of result
+    values is [0, π]. Result is undefined if abs x > 1.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+    <!-- End of AutoGen section -->
+    ```
+    restricted-float-scalar-type ::=  `f16` | `f32`
+    restricted-float-scalar-vector-type ::=
+      restricted-float-scalar-type |
+      `vector<` integer-literal `x` restricted-float-scalar-type `>`
+    acos-op ::= ssa-id `=` `spv.GLSL.Acos` ssa-use `:`
+                restricted-float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.Acos %0 : f32
+    %3 = spv.GLSL.Acos %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_GLSLAtanOp : SPV_GLSLUnaryArithmeticOp<"Atan", 18, SPV_Float16or32> {
+  let summary = "Arc Tangent of operand in radians";
+
+  let description = [{
+    The standard trigonometric arc tangent of x radians.
+
+    Result is an angle, in radians, whose tangent is y_over_x. The range of
+    result values is [-π / 2, π / 2].
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+    <!-- End of AutoGen section -->
+    ```
+    restricted-float-scalar-type ::=  `f16` | `f32`
+    restricted-float-scalar-vector-type ::=
+      restricted-float-scalar-type |
+      `vector<` integer-literal `x` restricted-float-scalar-type `>`
+    atan-op ::= ssa-id `=` `spv.GLSL.Atan` ssa-use `:`
+                restricted-float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.Atan %0 : f32
+    %3 = spv.GLSL.Atan %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPV_GLSLExpOp : SPV_GLSLUnaryArithmeticOp<"Exp", 27, SPV_Float16or32> {
   let summary = "Exponentiation of Operand 1";
 
@@ -322,6 +424,36 @@ def SPV_GLSLFloorOp : SPV_GLSLUnaryArithmeticOp<"Floor", 8, SPV_Float> {
     ```mlir
     %2 = spv.GLSL.Floor %0 : f32
     %3 = spv.GLSL.Floor %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_GLSLRoundOp: SPV_GLSLUnaryArithmeticOp<"Round", 1, SPV_Float> {
+  let summary = "Rounds to the whole number";
+
+  let description = [{
+    Result is the value equal to the nearest whole number.
+
+    The operand x must be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    <!-- End of AutoGen section -->
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    floor-op ::= ssa-id `=` `spv.GLSL.Round` ssa-use `:`
+                float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.Round %0 : f32
+    %3 = spv.GLSL.Round %1 : vector<3xf16>
     ```
   }];
 }
@@ -513,6 +645,40 @@ def SPV_GLSLSMinOp : SPV_GLSLBinaryArithmeticOp<"SMin", 39, SPV_Integer> {
 
 // -----
 
+def SPV_GLSLPowOp : SPV_GLSLBinaryArithmeticOp<"Pow", 26, SPV_Float16or32> {
+  let summary = "Return x raised to the y power of two operands";
+
+  let description = [{
+    Result is x raised to the y power; x^y.
+
+    Result is undefined if x = 0 and y ≤ 0.
+
+    The operand x and y must be a scalar or vector whose component type is
+    16-bit or 32-bit floating-point.
+
+    Result Type and the type of all operands must be the same type. Results are
+    computed per component.
+
+    <!-- End of AutoGen section -->
+    ```
+    restricted-float-scalar-type ::=  `f16` | `f32`
+    restricted-float-scalar-vector-type ::=
+      restricted-float-scalar-type |
+      `vector<` integer-literal `x` restricted-float-scalar-type `>`
+    pow-op ::= ssa-id `=` `spv.GLSL.Pow` ssa-use `:`
+               restricted-float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.Pow %0, %1 : f32
+    %3 = spv.GLSL.Pow %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPV_GLSLFSignOp : SPV_GLSLUnaryArithmeticOp<"FSign", 6, SPV_Float> {
   let summary = "Returns the sign of the operand";
 
@@ -596,6 +762,70 @@ def SPV_GLSLSqrtOp : SPV_GLSLUnaryArithmeticOp<"Sqrt", 31, SPV_Float> {
     ```mlir
     %2 = spv.GLSL.Sqrt %0 : f32
     %3 = spv.GLSL.Sqrt %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_GLSLSinhOp : SPV_GLSLUnaryArithmeticOp<"Sinh", 19, SPV_Float16or32> {
+  let summary = "Hyperbolic sine of operand in radians";
+
+  let description = [{
+    Hyperbolic sine of x radians.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    <!-- End of AutoGen section -->
+    ```
+    restricted-float-scalar-type ::=  `f16` | `f32`
+    restricted-float-scalar-vector-type ::=
+      restricted-float-scalar-type |
+      `vector<` integer-literal `x` restricted-float-scalar-type `>`
+    sinh-op ::= ssa-id `=` `spv.GLSL.Sinh` ssa-use `:`
+                restricted-float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.Sinh %0 : f32
+    %3 = spv.GLSL.Sinh %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_GLSLCoshOp : SPV_GLSLUnaryArithmeticOp<"Cosh", 20, SPV_Float16or32> {
+  let summary = "Hyperbolic cosine of operand in radians";
+
+  let description = [{
+    Hyperbolic cosine of x radians.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    <!-- End of AutoGen section -->
+    ```
+    restricted-float-scalar-type ::=  `f16` | `f32`
+    restricted-float-scalar-vector-type ::=
+      restricted-float-scalar-type |
+      `vector<` integer-literal `x` restricted-float-scalar-type `>`
+    cosh-op ::= ssa-id `=` `spv.GLSL.Cosh` ssa-use `:`
+                restricted-float-scalar-vector-type
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.Cosh %0 : f32
+    %3 = spv.GLSL.Cosh %1 : vector<3xf16>
     ```
   }];
 }

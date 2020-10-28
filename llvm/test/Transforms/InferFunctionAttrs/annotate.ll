@@ -6,12 +6,12 @@
 
 ; operator new routines
 declare i8* @_Znwj(i64 )
-; CHECK: declare noalias nonnull i8* @_Znwj(i64) [[G0:#[0-9]+]]
+; CHECK: declare noalias noundef nonnull i8* @_Znwj(i64) [[G0:#[0-9]+]]
 declare i8* @_Znwm(i64)
-; CHECK: declare noalias nonnull i8* @_Znwm(i64) [[G0]]
+; CHECK: declare noalias noundef nonnull i8* @_Znwm(i64) [[G0]]
 
 declare i32 @__nvvm_reflect(i8*)
-; CHECK-NVPTX: declare i32 @__nvvm_reflect(i8*) [[G0:#[0-9]+]]
+; CHECK-NVPTX: declare noundef i32 @__nvvm_reflect(i8* noundef) [[G0:#[0-9]+]]
 ; CHECK-NVPTX: attributes [[G0]] = { nofree nounwind readnone }
 
 
@@ -163,7 +163,7 @@ declare float @__sinpif(float)
 ; CHECK: declare i32 @abs(i32) [[G0]]
 declare i32 @abs(i32)
 
-; CHECK: declare i32 @access(i8* nocapture readonly, i32) [[G1:#[0-9]+]]
+; CHECK: declare noundef i32 @access(i8* nocapture noundef readonly, i32 noundef) [[G1:#[0-9]+]]
 declare i32 @access(i8*, i32)
 
 ; CHECK: declare double @acos(double) [[G0]]
@@ -253,7 +253,7 @@ declare void @bcopy(i8*, i8*, i64)
 ; CHECK: declare void @bzero(i8* nocapture, i64) [[G1]]
 declare void @bzero(i8*, i64)
 
-; CHECK: declare noalias i8* @calloc(i64, i64) [[G1]]
+; CHECK: declare noalias noundef i8* @calloc(i64, i64) [[G1]]
 declare i8* @calloc(i64, i64)
 
 ; CHECK: declare double @cbrt(double) [[G0]]
@@ -274,16 +274,16 @@ declare float @ceilf(float)
 ; CHECK: declare x86_fp80 @ceill(x86_fp80) [[G0]]
 declare x86_fp80 @ceill(x86_fp80)
 
-; CHECK: declare i32 @chmod(i8* nocapture readonly, i16 zeroext) [[G1]]
+; CHECK: declare noundef i32 @chmod(i8* nocapture noundef readonly, i16 noundef zeroext) [[G1]]
 declare i32 @chmod(i8*, i16 zeroext)
 
-; CHECK: declare i32 @chown(i8* nocapture readonly, i32, i32) [[G1]]
+; CHECK: declare noundef i32 @chown(i8* nocapture noundef readonly, i32 noundef, i32 noundef) [[G1]]
 declare i32 @chown(i8*, i32, i32)
 
-; CHECK: declare void @clearerr(%opaque* nocapture) [[G1]]
+; CHECK: declare void @clearerr(%opaque* nocapture noundef) [[G1]]
 declare void @clearerr(%opaque*)
 
-; CHECK: declare i32 @closedir(%opaque* nocapture) [[G1]]
+; CHECK: declare noundef i32 @closedir(%opaque* nocapture noundef) [[G1]]
 declare i32 @closedir(%opaque*)
 
 ; CHECK: declare double @copysign(double, double) [[G0]]
@@ -313,7 +313,7 @@ declare x86_fp80 @coshl(x86_fp80)
 ; CHECK: declare x86_fp80 @cosl(x86_fp80) [[G0]]
 declare x86_fp80 @cosl(x86_fp80)
 
-; CHECK: declare i8* @ctermid(i8* nocapture) [[G1]]
+; CHECK: declare noundef i8* @ctermid(i8* nocapture noundef) [[G1]]
 declare i8* @ctermid(i8*)
 
 ; CHECK: declare double @exp(double) [[G0]]
@@ -451,7 +451,7 @@ declare i32 @fputs(i8*, %opaque*)
 ; CHECK: declare noundef i64 @fread(i8* nocapture noundef, i64 noundef, i64 noundef, %opaque* nocapture noundef) [[G1]]
 declare i64 @fread(i8*, i64, i64, %opaque*)
 
-; CHECK: declare void @free(i8* nocapture) [[G3:#[0-9]+]]
+; CHECK: declare void @free(i8* nocapture noundef) [[G3:#[0-9]+]]
 declare void @free(i8*)
 
 ; CHECK: declare double @frexp(double, i32* nocapture) [[G1]]
@@ -520,22 +520,22 @@ declare i32 @getchar()
 ; CHECK: declare noundef i32 @getchar_unlocked() [[G1]]
 declare i32 @getchar_unlocked()
 
-; CHECK: declare i8* @getenv(i8* nocapture) [[G2]]
+; CHECK: declare noundef i8* @getenv(i8* nocapture noundef) [[G2]]
 declare i8* @getenv(i8*)
 
-; CHECK: declare i32 @getitimer(i32, %opaque* nocapture) [[G1]]
+; CHECK: declare noundef i32 @getitimer(i32 noundef, %opaque* nocapture noundef) [[G1]]
 declare i32 @getitimer(i32, %opaque*)
 
-; CHECK: declare i32 @getlogin_r(i8* nocapture, i64) [[G1]]
+; CHECK: declare noundef i32 @getlogin_r(i8* nocapture noundef, i64 noundef) [[G1]]
 declare i32 @getlogin_r(i8*, i64)
 
-; CHECK: declare %opaque* @getpwnam(i8* nocapture readonly) [[G1]]
+; CHECK: declare noundef %opaque* @getpwnam(i8* nocapture noundef readonly) [[G1]]
 declare %opaque* @getpwnam(i8*)
 
 ; CHECK: declare noundef i8* @gets(i8* noundef) [[G1]]
 declare i8* @gets(i8*)
 
-; CHECK: declare i32 @gettimeofday(%opaque* nocapture, i8* nocapture) [[G1]]
+; CHECK: declare noundef i32 @gettimeofday(%opaque* nocapture noundef, i8* nocapture noundef) [[G1]]
 declare i32 @gettimeofday(%opaque*, i8*)
 
 ; CHECK: declare i32 @isascii(i32) [[G0]]
@@ -547,7 +547,7 @@ declare i32 @isdigit(i32)
 ; CHECK: declare i64 @labs(i64) [[G0]]
 declare i64 @labs(i64)
 
-; CHECK: declare i32 @lchown(i8* nocapture readonly, i32, i32) [[G1]]
+; CHECK: declare noundef i32 @lchown(i8* nocapture noundef readonly, i32 noundef, i32 noundef) [[G1]]
 declare i32 @lchown(i8*, i32, i32)
 
 ; CHECK: declare double @ldexp(double, i32) [[G0]]
@@ -607,13 +607,13 @@ declare float @logf(float)
 ; CHECK: declare x86_fp80 @logl(x86_fp80) [[G0]]
 declare x86_fp80 @logl(x86_fp80)
 
-; CHECK: declare i32 @lstat(i8* nocapture readonly, %opaque* nocapture) [[G1]]
+; CHECK: declare noundef i32 @lstat(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[G1]]
 declare i32 @lstat(i8*, %opaque*)
 
-; CHECK-LINUX: declare i32 @lstat64(i8* nocapture readonly, %opaque* nocapture) [[G1]]
+; CHECK-LINUX: declare noundef i32 @lstat64(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[G1]]
 declare i32 @lstat64(i8*, %opaque*)
 
-; CHECK: declare noalias i8* @malloc(i64) [[G1]]
+; CHECK: declare noalias noundef i8* @malloc(i64) [[G1]]
 declare i8* @malloc(i64)
 
 ; CHECK-LINUX: declare noalias i8* @memalign(i64, i64) [[G0]]
@@ -642,10 +642,10 @@ declare i8* @memmove(i8*, i8*, i64)
 ; CHECK: declare i8* @memset(i8*, i32, i64) [[G0]]
 declare i8* @memset(i8*, i32, i64)
 
-; CHECK: declare i32 @mkdir(i8* nocapture readonly, i16 zeroext) [[G1]]
+; CHECK: declare noundef i32 @mkdir(i8* nocapture noundef readonly, i16 noundef zeroext) [[G1]]
 declare i32 @mkdir(i8*, i16 zeroext)
 
-; CHECK: declare i64 @mktime(%opaque* nocapture) [[G1]]
+; CHECK: declare noundef i64 @mktime(%opaque* nocapture noundef) [[G1]]
 declare i64 @mktime(%opaque*)
 
 ; CHECK: declare double @modf(double, double* nocapture) [[G1]]
@@ -672,16 +672,16 @@ declare i32 @open(i8*, i32, ...)
 ; CHECK-LINUX: declare noundef i32 @open64(i8* nocapture noundef readonly, i32 noundef, ...) [[G0]]
 declare i32 @open64(i8*, i32, ...)
 
-; CHECK: declare noalias %opaque* @opendir(i8* nocapture readonly) [[G1]]
+; CHECK: declare noalias noundef %opaque* @opendir(i8* nocapture noundef readonly) [[G1]]
 declare %opaque* @opendir(i8*)
 
-; CHECK: declare i32 @pclose(%opaque* nocapture) [[G1]]
+; CHECK: declare noundef i32 @pclose(%opaque* nocapture noundef) [[G1]]
 declare i32 @pclose(%opaque*)
 
 ; CHECK: declare void @perror(i8* nocapture noundef readonly) [[G1]]
 declare void @perror(i8*)
 
-; CHECK: declare noalias %opaque* @popen(i8* nocapture readonly, i8* nocapture readonly) [[G1]]
+; CHECK: declare noalias noundef %opaque* @popen(i8* nocapture noundef readonly, i8* nocapture noundef readonly) [[G1]]
 declare %opaque* @popen(i8*, i8*)
 
 ; CHECK: declare i32 @posix_memalign(i8**, i64, i64) [[G0]]
@@ -717,28 +717,28 @@ declare i32 @puts(i8*)
 ; CHECK: declare noundef i64 @pwrite(i32 noundef, i8* nocapture noundef readonly, i64 noundef, i64 noundef) [[G0]]
 declare i64 @pwrite(i32, i8*, i64, i64)
 
-; CHECK: declare void @qsort(i8*, i64, i64, i32 (i8*, i8*)* nocapture) [[G0]]
+; CHECK: declare void @qsort(i8* noundef, i64 noundef, i64 noundef, i32 (i8*, i8*)* nocapture noundef) [[G0]]
 declare void @qsort(i8*, i64, i64, i32 (i8*, i8*)*)
 
 ; CHECK: declare noundef i64 @read(i32 noundef, i8* nocapture noundef, i64 noundef) [[G0]]
 declare i64 @read(i32, i8*, i64)
 
-; CHECK: declare i64 @readlink(i8* nocapture readonly, i8* nocapture, i64) [[G1]]
+; CHECK: declare noundef i64 @readlink(i8* nocapture noundef readonly, i8* nocapture noundef, i64 noundef) [[G1]]
 declare i64 @readlink(i8*, i8*, i64)
 
-; CHECK: declare noalias i8* @realloc(i8* nocapture, i64) [[G3]]
+; CHECK: declare noalias noundef i8* @realloc(i8* nocapture, i64) [[G3]]
 declare i8* @realloc(i8*, i64)
 
-; CHECK: declare i8* @reallocf(i8*, i64)
+; CHECK: declare noundef i8* @reallocf(i8*, i64)
 declare i8* @reallocf(i8*, i64)
 
-; CHECK: declare i8* @realpath(i8* nocapture readonly, i8*) [[G1]]
+; CHECK: declare noundef i8* @realpath(i8* nocapture noundef readonly, i8* noundef) [[G1]]
 declare i8* @realpath(i8*, i8*)
 
-; CHECK: declare i32 @remove(i8* nocapture readonly) [[G1]]
+; CHECK: declare noundef i32 @remove(i8* nocapture noundef readonly) [[G1]]
 declare i32 @remove(i8*)
 
-; CHECK: declare i32 @rename(i8* nocapture readonly, i8* nocapture readonly) [[G1]]
+; CHECK: declare noundef i32 @rename(i8* nocapture noundef readonly, i8* nocapture noundef readonly) [[G1]]
 declare i32 @rename(i8*, i8*)
 
 ; CHECK: declare void @rewind(%opaque* nocapture noundef) [[G1]]
@@ -753,7 +753,7 @@ declare float @rintf(float)
 ; CHECK: declare x86_fp80 @rintl(x86_fp80) [[G0]]
 declare x86_fp80 @rintl(x86_fp80)
 
-; CHECK: declare i32 @rmdir(i8* nocapture readonly) [[G1]]
+; CHECK: declare noundef i32 @rmdir(i8* nocapture noundef readonly) [[G1]]
 declare i32 @rmdir(i8*)
 
 ; CHECK: declare double @round(double) [[G0]]
@@ -768,13 +768,13 @@ declare x86_fp80 @roundl(x86_fp80)
 ; CHECK: declare noundef i32 @scanf(i8* nocapture noundef readonly, ...) [[G1]]
 declare i32 @scanf(i8*, ...)
 
-; CHECK: declare void @setbuf(%opaque* nocapture, i8*) [[G1]]
+; CHECK: declare void @setbuf(%opaque* nocapture noundef, i8* noundef) [[G1]]
 declare void @setbuf(%opaque*, i8*)
 
-; CHECK: declare i32 @setitimer(i32, %opaque* nocapture readonly, %opaque* nocapture) [[G1]]
+; CHECK: declare noundef i32 @setitimer(i32 noundef, %opaque* nocapture noundef readonly, %opaque* nocapture noundef) [[G1]]
 declare i32 @setitimer(i32, %opaque*, %opaque*)
 
-; CHECK: declare i32 @setvbuf(%opaque* nocapture, i8*, i32, i64) [[G1]]
+; CHECK: declare noundef i32 @setvbuf(%opaque* nocapture noundef, i8* noundef, i32 noundef, i64 noundef) [[G1]]
 declare i32 @setvbuf(%opaque*, i8*, i32, i64)
 
 ; CHECK: declare double @sin(double) [[G0]]
@@ -813,28 +813,28 @@ declare x86_fp80 @sqrtl(x86_fp80)
 ; CHECK: declare noundef i32 @sscanf(i8* nocapture noundef readonly, i8* nocapture noundef readonly, ...) [[G1]]
 declare i32 @sscanf(i8*, i8*, ...)
 
-; CHECK: declare i32 @stat(i8* nocapture readonly, %opaque* nocapture) [[G1]]
+; CHECK: declare noundef i32 @stat(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[G1]]
 declare i32 @stat(i8*, %opaque*)
 
-; CHECK-LINUX: declare i32 @stat64(i8* nocapture readonly, %opaque* nocapture) [[G1]]
+; CHECK-LINUX: declare noundef i32 @stat64(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[G1]]
 declare i32 @stat64(i8*, %opaque*)
 
-; CHECK: declare i32 @statvfs(i8* nocapture readonly, %opaque* nocapture) [[G1]]
+; CHECK: declare noundef i32 @statvfs(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[G1]]
 declare i32 @statvfs(i8*, %opaque*)
 
-; CHECK-LINUX: declare i32 @statvfs64(i8* nocapture readonly, %opaque* nocapture) [[G1]]
+; CHECK-LINUX: declare noundef i32 @statvfs64(i8* nocapture noundef readonly, %opaque* nocapture noundef) [[G1]]
 declare i32 @statvfs64(i8*, %opaque*)
 
-; CHECK: declare i8* @stpcpy(i8*, i8* nocapture readonly) [[G1]]
+; CHECK: declare i8* @stpcpy(i8* noalias, i8* noalias nocapture readonly) [[G1]]
 declare i8* @stpcpy(i8*, i8*)
 
-; CHECK: declare i8* @stpncpy(i8*, i8* nocapture readonly, i64) [[G1]]
+; CHECK: declare i8* @stpncpy(i8* noalias, i8* noalias nocapture readonly, i64) [[G1]]
 declare i8* @stpncpy(i8*, i8*, i64)
 
 ; CHECK: declare i32 @strcasecmp(i8* nocapture, i8* nocapture) [[G2]]
 declare i32 @strcasecmp(i8*, i8*)
 
-; CHECK: declare i8* @strcat(i8* returned, i8* nocapture readonly) [[G1]]
+; CHECK: declare i8* @strcat(i8* noalias returned, i8* noalias nocapture readonly) [[G1]]
 declare i8* @strcat(i8*, i8*)
 
 ; CHECK: declare i8* @strchr(i8*, i32) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
@@ -861,7 +861,7 @@ declare i64 @strlen(i8*)
 ; CHECK: declare i32 @strncasecmp(i8* nocapture, i8* nocapture, i64) [[G2]]
 declare i32 @strncasecmp(i8*, i8*, i64)
 
-; CHECK: declare i8* @strncat(i8* returned, i8* nocapture readonly, i64) [[G1]]
+; CHECK: declare i8* @strncat(i8* noalias returned, i8* noalias nocapture readonly, i64) [[G1]]
 declare i8* @strncat(i8*, i8*, i64)
 
 ; CHECK: declare i32 @strncmp(i8* nocapture, i8* nocapture, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
@@ -918,7 +918,7 @@ declare i64 @strtoull(i8*, i8**, i32)
 ; CHECK: declare i64 @strxfrm(i8* nocapture, i8* nocapture readonly, i64) [[G1]]
 declare i64 @strxfrm(i8*, i8*, i64)
 
-; CHECK: declare i32 @system(i8* nocapture readonly) [[G0]]
+; CHECK: declare noundef i32 @system(i8* nocapture noundef readonly) [[G0]]
 declare i32 @system(i8*)
 
 ; CHECK: declare double @tan(double) [[G0]]
@@ -939,13 +939,13 @@ declare x86_fp80 @tanhl(x86_fp80)
 ; CHECK: declare x86_fp80 @tanl(x86_fp80) [[G0]]
 declare x86_fp80 @tanl(x86_fp80)
 
-; CHECK: declare i64 @times(%opaque* nocapture) [[G1]]
+; CHECK: declare noundef i64 @times(%opaque* nocapture noundef) [[G1]]
 declare i64 @times(%opaque*)
 
-; CHECK: declare noalias %opaque* @tmpfile() [[G1]]
+; CHECK: declare noalias noundef %opaque* @tmpfile() [[G1]]
 declare %opaque* @tmpfile()
 
-; CHECK-LINUX: declare noalias %opaque* @tmpfile64() [[G1]]
+; CHECK-LINUX: declare noalias noundef %opaque* @tmpfile64() [[G1]]
 declare %opaque* @tmpfile64()
 
 ; CHECK: declare i32 @toascii(i32) [[G0]]
@@ -960,25 +960,25 @@ declare float @truncf(float)
 ; CHECK: declare x86_fp80 @truncl(x86_fp80) [[G0]]
 declare x86_fp80 @truncl(x86_fp80)
 
-; CHECK: declare i32 @uname(%opaque* nocapture) [[G1]]
+; CHECK: declare noundef i32 @uname(%opaque* nocapture noundef) [[G1]]
 declare i32 @uname(%opaque*)
 
 ; CHECK: declare noundef i32 @ungetc(i32 noundef, %opaque* nocapture noundef) [[G1]]
 declare i32 @ungetc(i32, %opaque*)
 
-; CHECK: declare i32 @unlink(i8* nocapture readonly) [[G1]]
+; CHECK: declare noundef i32 @unlink(i8* nocapture noundef readonly) [[G1]]
 declare i32 @unlink(i8*)
 
-; CHECK: declare i32 @unsetenv(i8* nocapture readonly) [[G1]]
+; CHECK: declare noundef i32 @unsetenv(i8* nocapture noundef readonly) [[G1]]
 declare i32 @unsetenv(i8*)
 
-; CHECK: declare i32 @utime(i8* nocapture readonly, %opaque* nocapture readonly) [[G1]]
+; CHECK: declare noundef i32 @utime(i8* nocapture noundef readonly, %opaque* nocapture noundef readonly) [[G1]]
 declare i32 @utime(i8*, %opaque*)
 
-; CHECK: declare i32 @utimes(i8* nocapture readonly, %opaque* nocapture readonly) [[G1]]
+; CHECK: declare noundef i32 @utimes(i8* nocapture noundef readonly, %opaque* nocapture noundef readonly) [[G1]]
 declare i32 @utimes(i8*, %opaque*)
 
-; CHECK: declare noalias i8* @valloc(i64) [[G1]]
+; CHECK: declare noalias noundef i8* @valloc(i64) [[G1]]
 declare i8* @valloc(i64)
 
 ; CHECK: declare noundef i32 @vfprintf(%opaque* nocapture noundef, i8* nocapture noundef readonly, %opaque* noundef) [[G1]]

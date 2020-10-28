@@ -1512,13 +1512,10 @@ define float @fmin_f32(float* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    le lr, .LBB15_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
-; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vminnm.f32 s4, s2, s3
+; CHECK-NEXT:    vminnm.f32 s0, s0, s1
+; CHECK-NEXT:    vminnm.f32 s0, s0, s4
 ; CHECK-NEXT:    cmp r2, r1
-; CHECK-NEXT:    vmov.f32 s5, s3
-; CHECK-NEXT:    vminnm.f32 q0, q0, q1
-; CHECK-NEXT:    vmov r3, s1
-; CHECK-NEXT:    vdup.32 q1, r3
-; CHECK-NEXT:    vminnm.f32 q0, q0, q1
 ; CHECK-NEXT:    beq .LBB15_9
 ; CHECK-NEXT:  .LBB15_7: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w lr, r1, r2
@@ -1526,10 +1523,10 @@ define float @fmin_f32(float* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB15_8: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldmia r0!, {s4}
-; CHECK-NEXT:    vcmp.f32 s0, s4
+; CHECK-NEXT:    vldmia r0!, {s2}
+; CHECK-NEXT:    vcmp.f32 s0, s2
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselge.f32 s0, s4, s0
+; CHECK-NEXT:    vselge.f32 s0, s2, s0
 ; CHECK-NEXT:    le lr, .LBB15_8
 ; CHECK-NEXT:  .LBB15_9: @ %for.cond.cleanup
 ; CHECK-NEXT:    vmov r0, s0
@@ -1620,13 +1617,10 @@ define float @fmax_f32(float* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    le lr, .LBB16_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
-; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmaxnm.f32 s4, s2, s3
+; CHECK-NEXT:    vmaxnm.f32 s0, s0, s1
+; CHECK-NEXT:    vmaxnm.f32 s0, s0, s4
 ; CHECK-NEXT:    cmp r2, r1
-; CHECK-NEXT:    vmov.f32 s5, s3
-; CHECK-NEXT:    vmaxnm.f32 q0, q0, q1
-; CHECK-NEXT:    vmov r3, s1
-; CHECK-NEXT:    vdup.32 q1, r3
-; CHECK-NEXT:    vmaxnm.f32 q0, q0, q1
 ; CHECK-NEXT:    beq .LBB16_9
 ; CHECK-NEXT:  .LBB16_7: @ %for.body.preheader1
 ; CHECK-NEXT:    sub.w lr, r1, r2
@@ -1634,10 +1628,10 @@ define float @fmax_f32(float* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB16_8: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldmia r0!, {s4}
-; CHECK-NEXT:    vcmp.f32 s4, s0
+; CHECK-NEXT:    vldmia r0!, {s2}
+; CHECK-NEXT:    vcmp.f32 s2, s0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vselge.f32 s0, s4, s0
+; CHECK-NEXT:    vselge.f32 s0, s2, s0
 ; CHECK-NEXT:    le lr, .LBB16_8
 ; CHECK-NEXT:  .LBB16_9: @ %for.cond.cleanup
 ; CHECK-NEXT:    vmov r0, s0

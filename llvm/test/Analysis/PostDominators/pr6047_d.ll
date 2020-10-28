@@ -1,4 +1,5 @@
-; RUN: opt < %s -postdomtree -analyze | FileCheck %s
+; RUN: opt < %s -postdomtree -analyze -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s -passes='print<postdomtree>' 2>&1 | FileCheck %s
 define internal void @f() {
 entry:
   br i1 1, label %a, label %b

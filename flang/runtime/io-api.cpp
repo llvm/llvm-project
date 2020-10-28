@@ -655,6 +655,31 @@ bool IONAME(SetAsynchronous)(
   }
 }
 
+bool IONAME(SetCarriagecontrol)(
+    Cookie cookie, const char *keyword, std::size_t length) {
+  IoStatementState &io{*cookie};
+  auto *open{io.get_if<OpenStatementState>()};
+  if (!open) {
+    io.GetIoErrorHandler().Crash(
+        "SetCarriageControl() called when not in an OPEN statement");
+  }
+  static const char *keywords[]{"LIST", "FORTRAN", "NONE", nullptr};
+  switch (IdentifyValue(keyword, length, keywords)) {
+  case 0:
+    return true;
+  case 1:
+  case 2:
+    open->SignalError(IostatErrorInKeyword,
+        "Unimplemented CARRIAGECONTROL='%.*s'", static_cast<int>(length),
+        keyword);
+    return false;
+  default:
+    open->SignalError(IostatErrorInKeyword, "Invalid CARRIAGECONTROL='%.*s'",
+        static_cast<int>(length), keyword);
+    return false;
+  }
+}
+
 bool IONAME(SetConvert)(
     Cookie cookie, const char *keyword, std::size_t length) {
   IoStatementState &io{*cookie};
@@ -708,7 +733,7 @@ bool IONAME(SetForm)(Cookie cookie, const char *keyword, std::size_t length) {
   auto *open{io.get_if<OpenStatementState>()};
   if (!open) {
     io.GetIoErrorHandler().Crash(
-        "SetEncoding() called when not in an OPEN statement");
+        "SetForm() called when not in an OPEN statement");
   }
   static const char *keywords[]{"FORMATTED", "UNFORMATTED", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {

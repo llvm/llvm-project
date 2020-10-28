@@ -22,6 +22,7 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <fstream>
@@ -30,6 +31,8 @@
 #include <tuple>
 
 using namespace llvm;
+using llvm::unittest::TempDir;
+using llvm::unittest::TempFile;
 
 namespace {
 
@@ -754,20 +757,13 @@ TEST(CommandLineTest, ResponseFileWindows) {
   StackOption<bool> TopLevelOpt("top-level", cl::init(false));
 
   // Create response file.
-  int FileDescriptor;
-  SmallString<64> TempPath;
-  std::error_code EC =
-      llvm::sys::fs::createTemporaryFile("resp-", ".txt", FileDescriptor, TempPath);
-  EXPECT_TRUE(!EC);
-
-  std::ofstream RspFile(TempPath.c_str());
-  EXPECT_TRUE(RspFile.is_open());
-  RspFile << "-top-level\npath\\dir\\file1\npath/dir/file2";
-  RspFile.close();
+  TempFile ResponseFile("resp-", ".txt",
+                        "-top-level\npath\\dir\\file1\npath/dir/file2",
+                        /*Unique*/ true);
 
   llvm::SmallString<128> RspOpt;
   RspOpt.append(1, '@');
-  RspOpt.append(TempPath.c_str());
+  RspOpt.append(ResponseFile.path());
   const char *args[] = {"prog", RspOpt.c_str()};
   EXPECT_FALSE(TopLevelOpt);
   EXPECT_TRUE(
@@ -775,8 +771,6 @@ TEST(CommandLineTest, ResponseFileWindows) {
   EXPECT_TRUE(TopLevelOpt);
   EXPECT_TRUE(InputFilenames[0] == "path\\dir\\file1");
   EXPECT_TRUE(InputFilenames[1] == "path/dir/file2");
-
-  llvm::sys::fs::remove(TempPath.c_str());
 }
 
 TEST(CommandLineTest, ResponseFiles) {
@@ -1007,44 +1001,38 @@ TEST(CommandLineTest, SetDefautValue) {
 TEST(CommandLineTest, ReadConfigFile) {
   llvm::SmallVector<const char *, 1> Argv;
 
-  llvm::SmallString<128> TestDir;
-  std::error_code EC =
-      llvm::sys::fs::createUniqueDirectory("unittest", TestDir);
-  EXPECT_TRUE(!EC);
+  TempDir TestDir("unittest", /*Unique*/ true);
 
   llvm::SmallString<128> TestCfg;
-  llvm::sys::path::append(TestCfg, TestDir, "foo");
-  std::ofstream ConfigFile(TestCfg.c_str());
-  EXPECT_TRUE(ConfigFile.is_open());
-  ConfigFile << "# Comment\n"
-                "-option_1\n"
-                "@subconfig\n"
-                "-option_3=abcd\n"
-                "-option_4=\\\n"
-                "cdef\n";
-  ConfigFile.close();
+  llvm::sys::path::append(TestCfg, TestDir.path(), "foo");
+
+  TempFile ConfigFile(TestCfg, "",
+                      "# Comment\n"
+                      "-option_1\n"
+                      "@subconfig\n"
+                      "-option_3=abcd\n"
+                      "-option_4=\\\n"
+                      "cdef\n");
 
   llvm::SmallString<128> TestCfg2;
-  llvm::sys::path::append(TestCfg2, TestDir, "subconfig");
-  std::ofstream ConfigFile2(TestCfg2.c_str());
-  EXPECT_TRUE(ConfigFile2.is_open());
-  ConfigFile2 << "-option_2\n"
-                 "\n"
-                 "   # comment\n";
-  ConfigFile2.close();
+  llvm::sys::path::append(TestCfg2, TestDir.path(), "subconfig");
+  TempFile ConfigFile2(TestCfg2, "",
+                       "-option_2\n"
+                       "\n"
+                       "   # comment\n");
 
   // Make sure the current directory is not the directory where config files
   // resides. In this case the code that expands response files will not find
   // 'subconfig' unless it resolves nested inclusions relative to the including
   // file.
   llvm::SmallString<128> CurrDir;
-  EC = llvm::sys::fs::current_path(CurrDir);
+  std::error_code EC = llvm::sys::fs::current_path(CurrDir);
   EXPECT_TRUE(!EC);
-  EXPECT_TRUE(StringRef(CurrDir) != StringRef(TestDir));
+  EXPECT_TRUE(StringRef(CurrDir) != TestDir.path());
 
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver(A);
-  bool Result = llvm::cl::readConfigFile(TestCfg, Saver, Argv);
+  bool Result = llvm::cl::readConfigFile(ConfigFile.path(), Saver, Argv);
 
   EXPECT_TRUE(Result);
   EXPECT_EQ(Argv.size(), 4U);
@@ -1052,10 +1040,6 @@ TEST(CommandLineTest, ReadConfigFile) {
   EXPECT_STREQ(Argv[1], "-option_2");
   EXPECT_STREQ(Argv[2], "-option_3=abcd");
   EXPECT_STREQ(Argv[3], "-option_4=cdef");
-
-  llvm::sys::fs::remove(TestCfg2);
-  llvm::sys::fs::remove(TestCfg);
-  llvm::sys::fs::remove(TestDir);
 }
 
 TEST(CommandLineTest, PositionalEatArgsError) {

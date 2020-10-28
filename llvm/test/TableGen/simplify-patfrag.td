@@ -9,7 +9,7 @@ def Demo : Target {
 }
 
 // Some registers which can hold ints or floats
-foreach i = 0-7 in
+foreach i = 0...7 in
   def "R" # i: Register<"r" # i>;
 def GPR : RegisterClass<"Demo", [i32, f32], 32, (sequence "R%u", 0, 7)>;
 

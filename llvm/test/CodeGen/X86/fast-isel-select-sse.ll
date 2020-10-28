@@ -65,12 +65,15 @@ define double @select_fcmp_oeq_f64(double %a, double %b, double %c, double %d) {
 define float @select_fcmp_ogt_f32(float %a, float %b, float %c, float %d) {
 ; SSE-LABEL: select_fcmp_ogt_f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cmpltss %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    andps %xmm2, %xmm0
-; SSE-NEXT:    andnps %xmm3, %xmm1
-; SSE-NEXT:    orps %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    movss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    cmpltss %xmm1, %xmm0
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    andps %xmm2, %xmm1
+; SSE-NEXT:    andnps %xmm3, %xmm0
+; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_ogt_f32:
@@ -93,12 +96,15 @@ define float @select_fcmp_ogt_f32(float %a, float %b, float %c, float %d) {
 define double @select_fcmp_ogt_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_ogt_f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cmpltsd %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    andpd %xmm2, %xmm0
-; SSE-NEXT:    andnpd %xmm3, %xmm1
-; SSE-NEXT:    orpd %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    movsd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
+; SSE-NEXT:    # xmm0 = mem[0],zero
+; SSE-NEXT:    cmpltsd %xmm1, %xmm0
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    andpd %xmm2, %xmm1
+; SSE-NEXT:    andnpd %xmm3, %xmm0
+; SSE-NEXT:    orpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_ogt_f64:
@@ -121,12 +127,15 @@ define double @select_fcmp_ogt_f64(double %a, double %b, double %c, double %d) {
 define float @select_fcmp_oge_f32(float %a, float %b, float %c, float %d) {
 ; SSE-LABEL: select_fcmp_oge_f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cmpless %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    andps %xmm2, %xmm0
-; SSE-NEXT:    andnps %xmm3, %xmm1
-; SSE-NEXT:    orps %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    movss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    cmpless %xmm1, %xmm0
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    andps %xmm2, %xmm1
+; SSE-NEXT:    andnps %xmm3, %xmm0
+; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_oge_f32:
@@ -149,12 +158,15 @@ define float @select_fcmp_oge_f32(float %a, float %b, float %c, float %d) {
 define double @select_fcmp_oge_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_oge_f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cmplesd %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    andpd %xmm2, %xmm0
-; SSE-NEXT:    andnpd %xmm3, %xmm1
-; SSE-NEXT:    orpd %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    movsd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
+; SSE-NEXT:    # xmm0 = mem[0],zero
+; SSE-NEXT:    cmplesd %xmm1, %xmm0
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    andpd %xmm2, %xmm1
+; SSE-NEXT:    andnpd %xmm3, %xmm0
+; SSE-NEXT:    orpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_oge_f64:
@@ -501,12 +513,15 @@ define double @select_fcmp_uge_f64(double %a, double %b, double %c, double %d) {
 define float @select_fcmp_ult_f32(float %a, float %b, float %c, float %d) {
 ; SSE-LABEL: select_fcmp_ult_f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cmpnless %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    andps %xmm2, %xmm0
-; SSE-NEXT:    andnps %xmm3, %xmm1
-; SSE-NEXT:    orps %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    movss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    cmpnless %xmm1, %xmm0
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    andps %xmm2, %xmm1
+; SSE-NEXT:    andnps %xmm3, %xmm0
+; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_ult_f32:
@@ -529,12 +544,15 @@ define float @select_fcmp_ult_f32(float %a, float %b, float %c, float %d) {
 define double @select_fcmp_ult_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_ult_f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cmpnlesd %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    andpd %xmm2, %xmm0
-; SSE-NEXT:    andnpd %xmm3, %xmm1
-; SSE-NEXT:    orpd %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    movsd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
+; SSE-NEXT:    # xmm0 = mem[0],zero
+; SSE-NEXT:    cmpnlesd %xmm1, %xmm0
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    andpd %xmm2, %xmm1
+; SSE-NEXT:    andnpd %xmm3, %xmm0
+; SSE-NEXT:    orpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_ult_f64:
@@ -557,12 +575,15 @@ define double @select_fcmp_ult_f64(double %a, double %b, double %c, double %d) {
 define float @select_fcmp_ule_f32(float %a, float %b, float %c, float %d) {
 ; SSE-LABEL: select_fcmp_ule_f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cmpnltss %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    andps %xmm2, %xmm0
-; SSE-NEXT:    andnps %xmm3, %xmm1
-; SSE-NEXT:    orps %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    movss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; SSE-NEXT:    cmpnltss %xmm1, %xmm0
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    andps %xmm2, %xmm1
+; SSE-NEXT:    andnps %xmm3, %xmm0
+; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_ule_f32:
@@ -585,12 +606,15 @@ define float @select_fcmp_ule_f32(float %a, float %b, float %c, float %d) {
 define double @select_fcmp_ule_f64(double %a, double %b, double %c, double %d) {
 ; SSE-LABEL: select_fcmp_ule_f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    cmpnltsd %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    andpd %xmm2, %xmm0
-; SSE-NEXT:    andnpd %xmm3, %xmm1
-; SSE-NEXT:    orpd %xmm0, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    movsd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
+; SSE-NEXT:    # xmm0 = mem[0],zero
+; SSE-NEXT:    cmpnltsd %xmm1, %xmm0
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    andpd %xmm2, %xmm1
+; SSE-NEXT:    andnpd %xmm3, %xmm0
+; SSE-NEXT:    orpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: select_fcmp_ule_f64:

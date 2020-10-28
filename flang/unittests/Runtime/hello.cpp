@@ -118,6 +118,41 @@ static void listInputTest() {
   }
 }
 
+static void descrOutputTest() {
+  char buffer[9];
+  // Formatted
+  const char *format{"(2A4)"};
+  auto cookie{IONAME(BeginInternalFormattedOutput)(
+      buffer, sizeof buffer, format, std::strlen(format))};
+  StaticDescriptor<1> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  SubscriptValue extent[]{2};
+  char data[2][4];
+  std::memcpy(data[0], "ABCD", 4);
+  std::memcpy(data[1], "EFGH", 4);
+  desc.Establish(TypeCode{CFI_type_char}, sizeof data[0], &data, 1, extent);
+  desc.Dump();
+  desc.Check();
+  IONAME(OutputDescriptor)(cookie, desc);
+  if (auto status{IONAME(EndIoStatement)(cookie)}) {
+    Fail() << "descrOutputTest: '" << format << "' failed, status "
+           << static_cast<int>(status) << '\n';
+  } else {
+    test("descrOutputTest(formatted)", "ABCDEFGH ",
+        std::string{buffer, sizeof buffer});
+  }
+  // List-directed
+  cookie = IONAME(BeginInternalListOutput)(buffer, sizeof buffer);
+  IONAME(OutputDescriptor)(cookie, desc);
+  if (auto status{IONAME(EndIoStatement)(cookie)}) {
+    Fail() << "descrOutputTest: list-directed failed, status "
+           << static_cast<int>(status) << '\n';
+  } else {
+    test("descrOutputTest(list)", " ABCDEFGH",
+        std::string{buffer, sizeof buffer});
+  }
+}
+
 static void realTest(const char *format, double x, const char *expect) {
   char buffer[800];
   auto cookie{IONAME(BeginInternalFormattedOutput)(
@@ -481,9 +516,11 @@ int main() {
   realInTest("(-1P,F18.0)", "               125", 0x4093880000000000); // 1250
   realInTest("(1P,F18.0)", "               125", 0x4029000000000000); // 12.5
   realInTest("(BZ,F18.0)", "              125 ", 0x4093880000000000); // 1250
+  realInTest("(BZ,F18.0)", "       125 . e +1 ", 0x42a6bcc41e900000); // 1.25e13
   realInTest("(DC,F18.0)", "              12,5", 0x4029000000000000);
 
   listInputTest();
+  descrOutputTest();
 
   return EndTests();
 }

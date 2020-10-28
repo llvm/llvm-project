@@ -208,6 +208,25 @@ struct FragmentCompiler {
     }
   }
 
+  void compile(Fragment::StyleBlock &&F) {
+    if (!F.FullyQualifiedNamespaces.empty()) {
+      std::vector<std::string> FullyQualifiedNamespaces;
+      for (auto &N : F.FullyQualifiedNamespaces) {
+        // Normalize the data by dropping both leading and trailing ::
+        StringRef Namespace(*N);
+        Namespace.consume_front("::");
+        Namespace.consume_back("::");
+        FullyQualifiedNamespaces.push_back(Namespace.str());
+      }
+      Out.Apply.push_back([FullyQualifiedNamespaces(
+                              std::move(FullyQualifiedNamespaces))](Config &C) {
+        C.Style.FullyQualifiedNamespaces.insert(
+            C.Style.FullyQualifiedNamespaces.begin(),
+            FullyQualifiedNamespaces.begin(), FullyQualifiedNamespaces.end());
+      });
+    }
+  }
+
   constexpr static llvm::SourceMgr::DiagKind Error = llvm::SourceMgr::DK_Error;
   constexpr static llvm::SourceMgr::DiagKind Warning =
       llvm::SourceMgr::DK_Warning;

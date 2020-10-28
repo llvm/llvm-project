@@ -24,4 +24,32 @@ entry:
   ret i32 %0
 }
 
+define arm_aapcs_vfpcc i32 @ssat_lsl2(i32 %num){
+; CHECK-LABEL: ssat_lsl2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    ssat r0, #16, r0, lsl #15
+; CHECK-NEXT:    bx lr
+entry:
+  %shl = shl nsw i32 %num, 15
+  %0 = icmp sgt i32 %shl, -32768
+  %1 = select i1 %0, i32 %shl, i32 -32768
+  %2 = icmp slt i32 %1, 32767
+  %3 = select i1 %2, i32 %1, i32 32767
+  ret i32 %3
+}
+
+define arm_aapcs_vfpcc i32 @ssat_asr2(i32 %num){
+; CHECK-LABEL: ssat_asr2:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    ssat r0, #16, r0, asr #15
+; CHECK-NEXT:    bx lr
+entry:
+  %shr = ashr i32 %num, 15
+  %0 = icmp sgt i32 %shr, -32768
+  %1 = select i1 %0, i32 %shr, i32 -32768
+  %2 = icmp slt i32 %1, 32767
+  %3 = select i1 %2, i32 %1, i32 32767
+  ret i32 %3
+}
+
 declare i32 @llvm.arm.ssat(i32, i32)

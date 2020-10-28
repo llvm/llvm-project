@@ -149,8 +149,11 @@ public:
   virtual Expected<DylibHandle> loadDylib(const char *DylibPath) = 0;
 
   /// Search for symbols in the target process.
+  ///
   /// The result of the lookup is a 2-dimentional array of target addresses
-  /// that correspond to the lookup order.
+  /// that correspond to the lookup order. If a required symbol is not
+  /// found then this method will return an error. If a weakly referenced
+  /// symbol is not found then it be assigned a '0' value in the result.
   virtual Expected<LookupResult> lookupSymbols(LookupRequest Request) = 0;
 
 protected:

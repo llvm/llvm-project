@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; should be inserted.
 define void @byref_callee(float* align(128) byref(float) nocapture %a, float* %b) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@byref_callee
-; CHECK-SAME: (float* nocapture byref(float) align 128 [[A:%.*]], float* [[B:%.*]]) #0
+; CHECK-SAME: (float* nocapture byref(float) align 128 [[A:%.*]], float* [[B:%.*]]) [[ATTR0:#.*]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, float* [[A]], align 4
 ; CHECK-NEXT:    [[B_IDX:%.*]] = getelementptr inbounds float, float* [[B]], i64 8
@@ -26,12 +26,9 @@ entry:
 
 define void @byref_caller(float* nocapture align 64 %a, float* %b) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@byref_caller
-; CHECK-SAME: (float* nocapture align 64 [[A:%.*]], float* [[B:%.*]]) #0
+; CHECK-SAME: (float* nocapture align 64 [[A:%.*]], float* [[B:%.*]]) [[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint float* [[A]] to i64
-; CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 127
-; CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(float* [[A]], i64 128) ]
 ; CHECK-NEXT:    [[LOAD_I:%.*]] = load float, float* [[A]], align 4
 ; CHECK-NEXT:    [[B_IDX_I:%.*]] = getelementptr inbounds float, float* [[B]], i64 8
 ; CHECK-NEXT:    [[ADD_I:%.*]] = fadd float [[LOAD_I]], 2.000000e+00

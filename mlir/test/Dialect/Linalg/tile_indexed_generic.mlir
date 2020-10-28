@@ -10,13 +10,15 @@
   iterator_types = ["parallel"]
 }
 func @indexed_generic_vector(%operand: memref<50xf32>, %result: memref<50xf32>) {
-  linalg.indexed_generic #pointwise_1d_trait %operand, %result {
+  linalg.indexed_generic #pointwise_1d_trait
+      ins(%operand :memref<50xf32>)
+     outs(%result : memref<50xf32>) {
     ^bb0(%i: index, %operand_in: f32, %result_in: f32):
       %i_int = index_cast %i: index to i32
       %i_float = sitofp %i_int : i32 to f32
       %out = addf %operand_in, %i_float : f32
       linalg.yield %out : f32
-  }: memref<50xf32>, memref<50xf32>
+  }
   return
 }
 // TILE-10n25-LABEL: func @indexed_generic_vector
@@ -53,7 +55,9 @@ func @indexed_generic_vector(%operand: memref<50xf32>, %result: memref<50xf32>) 
   iterator_types = ["parallel", "parallel"]
 }
 func @indexed_generic_matrix(%operand: memref<50x100xf32>, %result: memref<50x100xf32>) {
-  linalg.indexed_generic #combined_indices_trait %operand, %result {
+  linalg.indexed_generic #combined_indices_trait
+     ins(%operand : memref<50x100xf32>)
+    outs(%result : memref<50x100xf32>) {
     ^bb0(%i: index, %j: index, %operand_in: f32, %result_in: f32):
       %i_int = index_cast %i: index to i32
       %i_float = sitofp %i_int : i32 to f32
@@ -61,7 +65,7 @@ func @indexed_generic_matrix(%operand: memref<50x100xf32>, %result: memref<50x10
       %j_float = sitofp %j_int : i32 to f32
       %out = addf %i_float, %j_float : f32
       linalg.yield %out : f32
-  }: memref<50x100xf32>, memref<50x100xf32>
+  }
   return
 }
 // TILE-10n25-LABEL: func @indexed_generic_matrix

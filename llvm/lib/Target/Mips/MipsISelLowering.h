@@ -40,8 +40,6 @@
 namespace llvm {
 
 class Argument;
-class CCState;
-class CCValAssign;
 class FastISel;
 class FunctionLoweringInfo;
 class MachineBasicBlock;

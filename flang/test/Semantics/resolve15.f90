@@ -9,7 +9,9 @@ module m
   end interface
   interface operator(.foo.)
     !ERROR: 'var' is not a subprogram
-    procedure :: sub, var
+    procedure :: var
+    !ERROR: OPERATOR(.foo.) procedure 'sub' must be a function
+    procedure :: sub
     !ERROR: Procedure 'bad' not found
     procedure :: bad
   end interface

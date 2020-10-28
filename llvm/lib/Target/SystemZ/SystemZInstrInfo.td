@@ -101,10 +101,14 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
   }
 }
 
-// NOPs.  These are again variants of the conditional branches,
-// with the condition mask set to "never".
+// NOPs.  These are again variants of the conditional branches, with the
+// condition mask set to "never".  NOP_bare can't be an InstAlias since it
+// would need R0D hard coded which is not part of ADDR64BitRegClass.
 def NOP  : InstAlias<"nop\t$XBD", (BCAsm 0, bdxaddr12only:$XBD), 0>;
+let isAsmParserOnly = 1, hasNoSchedulingInfo = 1, M1 = 0, XBD2 = 0 in
+  def NOP_bare  : InstRXb<0x47,(outs), (ins), "nop", []>;
 def NOPR : InstAlias<"nopr\t$R", (BCRAsm 0, GR64:$R), 0>;
+def NOPR_bare : InstAlias<"nopr", (BCRAsm 0, R0D), 0>;
 
 // Fused compare-and-branch instructions.
 //

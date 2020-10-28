@@ -1,6 +1,6 @@
 // Check the data structures emitted by coverage mapping
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name ir.c %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping -mllvm -enable-name-compression=false | FileCheck %s -check-prefixes=COMMON,DARWIN
-// RUN: %clang_cc1 -triple x86_64--windows-msvc -main-file-name ir.c %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping -mllvm -enable-name-compression=false | FileCheck %s -check-prefixes=COMMON,WINDOWS
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -triple x86_64-apple-macosx10.9 -main-file-name ir.c %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping -mllvm -enable-name-compression=false | FileCheck %s -check-prefixes=COMMON,DARWIN
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -triple x86_64--windows-msvc -main-file-name ir.c %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping -mllvm -enable-name-compression=false | FileCheck %s -check-prefixes=COMMON,WINDOWS
 
 static inline void unused() {}
 

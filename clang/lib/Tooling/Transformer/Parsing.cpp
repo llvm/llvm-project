@@ -148,7 +148,7 @@ static ParseState advance(ParseState S, size_t N) {
 }
 
 static StringRef consumeWhitespace(StringRef S) {
-  return S.drop_while([](char c) { return c >= 0 && isWhitespace(c); });
+  return S.drop_while([](char c) { return isASCII(c) && isWhitespace(c); });
 }
 
 // Parses a single expected character \c c from \c State, skipping preceding
@@ -165,7 +165,7 @@ static ExpectedProgress<llvm::NoneType> parseChar(char c, ParseState State) {
 static ExpectedProgress<std::string> parseId(ParseState State) {
   State.Input = consumeWhitespace(State.Input);
   auto Id = State.Input.take_while(
-      [](char c) { return c >= 0 && isIdentifierBody(c); });
+      [](char c) { return isASCII(c) && isIdentifierBody(c); });
   if (Id.empty())
     return makeParseError(State, "failed to parse name");
   return makeParseProgress(advance(State, Id.size()), Id.str());

@@ -12,6 +12,7 @@
 #define lldb_NativeRegisterContextLinux_arm_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/lldb-arm-register-enums.h"
 
 namespace lldb_private {
@@ -98,37 +99,8 @@ protected:
   size_t GetFPRSize() override { return sizeof(m_fpr); }
 
 private:
-  struct RegInfo {
-    uint32_t num_registers;
-    uint32_t num_gpr_registers;
-    uint32_t num_fpr_registers;
-
-    uint32_t last_gpr;
-    uint32_t first_fpr;
-    uint32_t last_fpr;
-
-    uint32_t first_fpr_v;
-    uint32_t last_fpr_v;
-
-    uint32_t gpr_flags;
-  };
-
-  struct QReg {
-    uint8_t bytes[16];
-  };
-
-  struct FPU {
-    union {
-      uint32_t s[32];
-      uint64_t d[32];
-      QReg q[16]; // the 128-bit NEON registers
-    } floats;
-    uint32_t fpscr;
-  };
-
   uint32_t m_gpr_arm[k_num_gpr_registers_arm];
-  RegInfo m_reg_info;
-  FPU m_fpr;
+  RegisterInfoPOSIX_arm::FPU m_fpr;
 
   // Debug register info for hardware breakpoints and watchpoints management.
   struct DREG {
@@ -156,6 +128,8 @@ private:
   Status WriteHardwareDebugRegs(int hwbType, int hwb_index);
 
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
+
+  RegisterInfoPOSIX_arm &GetRegisterInfo() const;
 };
 
 } // namespace process_linux

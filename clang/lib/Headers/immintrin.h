@@ -472,6 +472,16 @@ _storebe_i64(void * __P, long long __D) {
 #endif
 
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
+    defined(__KL__)
+#include <keylockerintrin.h>
+#endif
+
+#if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
+    defined(__WIDEKL__)
+#include <keylocker_wide_intrin.h>
+#endif
+
+#if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
     defined(__AMXTILE__) || defined(__AMXINT8__) || defined(__AMXBF16__)
 #include <amxintrin.h>
 #endif

@@ -86,7 +86,7 @@ write_cmake_config("llvm-lit") {
 
   values = [
     "LLVM_SOURCE_DIR=" + rebase_path("//llvm", dir),
-    "Python3_EXECUTABLE=$python_path",
+    "Python3_EXECUTABLE=/usr/bin/env $python_path",
     "BUILD_MODE=.",
     "LLVM_LIT_CONFIG_MAP=" + config_map,
   ]

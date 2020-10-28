@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: not lld -flavor darwinnew -o /dev/null %t.o 2>&1 | FileCheck %s
+# RUN: not %lld -o /dev/null %t.o 2>&1 | FileCheck %s
 
 # CHECK: error: relocations in thread-local variable sections must be X86_64_RELOC_UNSIGNED
 

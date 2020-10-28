@@ -123,7 +123,9 @@ private:
 
   /// Builder for LLVM IR generation of OpenMP constructs.
   std::unique_ptr<llvm::OpenMPIRBuilder> ompBuilder;
-  /// Precomputed pointer to OpenMP dialect.
+  /// Precomputed pointer to OpenMP dialect. Note this can be nullptr if the
+  /// OpenMP dialect hasn't been loaded (it is always loaded if there are OpenMP
+  /// operations in the module though).
   const Dialect *ompDialect;
 
   /// Mappings between llvm.mlir.global definitions and corresponding globals.

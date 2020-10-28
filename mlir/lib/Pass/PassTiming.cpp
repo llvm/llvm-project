@@ -165,9 +165,9 @@ struct PassTiming : public PassInstrumentation {
   ~PassTiming() override { print(); }
 
   /// Setup the instrumentation hooks.
-  void runBeforePipeline(const OperationName &name,
+  void runBeforePipeline(Identifier name,
                          const PipelineParentInfo &parentInfo) override;
-  void runAfterPipeline(const OperationName &name,
+  void runAfterPipeline(Identifier name,
                         const PipelineParentInfo &parentInfo) override;
   void runBeforePass(Pass *pass, Operation *) override { startPassTimer(pass); }
   void runAfterPass(Pass *pass, Operation *) override;
@@ -242,15 +242,15 @@ struct PassTiming : public PassInstrumentation {
 };
 } // end anonymous namespace
 
-void PassTiming::runBeforePipeline(const OperationName &name,
+void PassTiming::runBeforePipeline(Identifier name,
                                    const PipelineParentInfo &parentInfo) {
   // We don't actually want to time the pipelines, they gather their total
   // from their held passes.
   getTimer(name.getAsOpaquePointer(), TimerKind::Pipeline,
-           [&] { return ("'" + name.getStringRef() + "' Pipeline").str(); });
+           [&] { return ("'" + name.strref() + "' Pipeline").str(); });
 }
 
-void PassTiming::runAfterPipeline(const OperationName &name,
+void PassTiming::runAfterPipeline(Identifier name,
                                   const PipelineParentInfo &parentInfo) {
   // Pop the timer for the pipeline.
   auto tid = llvm::get_threadid();

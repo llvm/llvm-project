@@ -560,3 +560,11 @@ class SubclassOffsetof : public Struct {
 };
 
 }
+
+namespace clangd_issue_504 {
+class A {};
+template <typename> class B {};
+class C : B<A> {};
+// CHECK: [[@LINE-1]]:13 | class/C++ | A | c:@N@clangd_issue_504@S@A | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | C | c:@N@clangd_issue_504@S@C
+} // namespace clangd_issue_504

@@ -38,7 +38,6 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
 namespace llvm {
 
@@ -61,7 +60,7 @@ template <class NodeT> class DomTreeNodeBase {
   NodeT *TheBB;
   DomTreeNodeBase *IDom;
   unsigned Level;
-  std::vector<DomTreeNodeBase *> Children;
+  SmallVector<DomTreeNodeBase *, 4> Children;
   mutable unsigned DFSNumIn = ~0;
   mutable unsigned DFSNumOut = ~0;
 
@@ -69,9 +68,9 @@ template <class NodeT> class DomTreeNodeBase {
   DomTreeNodeBase(NodeT *BB, DomTreeNodeBase *iDom)
       : TheBB(BB), IDom(iDom), Level(IDom ? IDom->Level + 1 : 0) {}
 
-  using iterator = typename std::vector<DomTreeNodeBase *>::iterator;
+  using iterator = typename SmallVector<DomTreeNodeBase *, 4>::iterator;
   using const_iterator =
-      typename std::vector<DomTreeNodeBase *>::const_iterator;
+      typename SmallVector<DomTreeNodeBase *, 4>::const_iterator;
 
   iterator begin() { return Children.begin(); }
   iterator end() { return Children.end(); }
@@ -837,7 +836,7 @@ protected:
            "NewBB should have a single successor!");
     NodeRef NewBBSucc = *GraphT::child_begin(NewBB);
 
-    std::vector<NodeRef> PredBlocks;
+    SmallVector<NodeRef, 4> PredBlocks;
     for (auto Pred : children<Inverse<N>>(NewBB))
       PredBlocks.push_back(Pred);
 

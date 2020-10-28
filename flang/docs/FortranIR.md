@@ -8,6 +8,11 @@
 
 # Design: Fortran IR
 
+```eval_rst
+.. contents::
+   :local:
+```
+
 ## Introduction
 
 After semantic analysis is complete and it has been determined that the compiler has a legal Fortran program as input, the parse tree will be lowered to an intermediate representation for the purposes of high-level analysis and optimization.  In this document, that intermediate representation will be called Fortran IR or FIR.  The pass that converts from the parse tree and other data structures of the front-end to FIR will be called the "Burnside bridge".

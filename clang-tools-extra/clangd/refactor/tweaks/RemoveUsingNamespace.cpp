@@ -10,6 +10,7 @@
 #include "Selection.h"
 #include "SourceCode.h"
 #include "refactor/Tweak.h"
+#include "support/Logger.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -73,8 +74,7 @@ removeUsingDirective(ASTContext &Ctx, const UsingDirectiveDecl *D) {
   llvm::Optional<Token> NextTok =
       Lexer::findNextToken(D->getEndLoc(), SM, Ctx.getLangOpts());
   if (!NextTok || NextTok->isNot(tok::semi))
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "no semicolon after using-directive");
+    return error("no semicolon after using-directive");
   // FIXME: removing the semicolon may be invalid in some obscure cases, e.g.
   //        if (x) using namespace std; else using namespace bar;
   return tooling::Replacement(

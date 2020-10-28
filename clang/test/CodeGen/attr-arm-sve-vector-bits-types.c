@@ -4,10 +4,11 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -msve-vector-bits=512 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-512
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -msve-vector-bits=1024 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-1024
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +bf16 -msve-vector-bits=2048 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-2048
+// RUN: %clang_cc1 -triple aarch64_32-unknown-darwin -target-feature +sve -target-feature +bf16 -msve-vector-bits=512 -fallow-half-arguments-and-returns -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ILP32
 
 #include <arm_sve.h>
 
-#define N __ARM_FEATURE_SVE_BITS_EXPERIMENTAL
+#define N __ARM_FEATURE_SVE_BITS
 
 typedef svint8_t fixed_int8_t __attribute__((arm_sve_vector_bits(N)));
 typedef svint16_t fixed_int16_t __attribute__((arm_sve_vector_bits(N)));
@@ -579,3 +580,11 @@ void f() {
 // CHECK-2048-NEXT:  %local_arr_f64 = alloca [3 x <32 x double>], align 16
 // CHECK-2048-NEXT:  %local_arr_bf16 = alloca [3 x <128 x bfloat>], align 16
 // CHECK-2048-NEXT:  %local_arr_bool = alloca [3 x <32 x i8>], align 2
+
+//===----------------------------------------------------------------------===//
+// ILP32 ABI
+//===----------------------------------------------------------------------===//
+// CHECK-ILP32: @global_i32 = global <16 x i32> zeroinitializer, align 16
+// CHECK-ILP32: @global_i64 = global <8 x i64> zeroinitializer, align 16
+// CHECK-ILP32: @global_u32 = global <16 x i32> zeroinitializer, align 16
+// CHECK-ILP32: @global_u64 = global <8 x i64> zeroinitializer, align 16

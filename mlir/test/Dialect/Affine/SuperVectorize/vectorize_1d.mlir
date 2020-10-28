@@ -1,7 +1,8 @@
 // RUN: mlir-opt %s -affine-super-vectorize="virtual-vector-size=128 test-fastest-varying=0" | FileCheck %s
 
 // Permutation maps used in vectorization.
-// CHECK: #[[$map_proj_d0d1_0:map[0-9]+]] = affine_map<(d0, d1) -> (0)>
+// CHECK-DAG: #[[$map_proj_d0d1_0:map[0-9]+]] = affine_map<(d0, d1) -> (0)>
+// CHECK-DAG: #[[$map_id1:map[0-9]+]] = affine_map<(d0) -> (d0)>
 
 #map0 = affine_map<(d0) -> (d0)>
 #mapadd1 = affine_map<(d0) -> (d0 + 1)>
@@ -26,8 +27,8 @@ func @vec1d_1(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    %P = dim %B, %c2 : memref<?x?x?xf32>
 
 // CHECK: for {{.*}} step 128
-// CHECK-NEXT: %{{.*}} = affine.apply #map0(%[[C0]])
-// CHECK-NEXT: %{{.*}} = affine.apply #map0(%[[C0]])
+// CHECK-NEXT: %{{.*}} = affine.apply #[[$map_id1]](%[[C0]])
+// CHECK-NEXT: %{{.*}} = affine.apply #[[$map_id1]](%[[C0]])
 // CHECK-NEXT: %{{.*}} = constant 0.0{{.*}}: f32
 // CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
    affine.for %i0 = 0 to %M { // vectorized due to scalar -> vector
@@ -331,8 +332,8 @@ func @vec_rejected_8(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 
 // CHECK: affine.for %{{.*}}{{[0-9]*}} = 0 to %{{[0-9]*}} {
 // CHECK:   for [[IV18:%[a-zA-Z0-9]+]] = 0 to [[ARG_M]] step 128
-// CHECK:     %{{.*}} = affine.apply #map0(%{{.*}})
-// CHECK:     %{{.*}} = affine.apply #map0(%{{.*}})
+// CHECK:     %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
+// CHECK:     %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
 // CHECK:     %{{.*}} = constant 0.0{{.*}}: f32
 // CHECK:     {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
    affine.for %i17 = 0 to %M { // not vectorized, the 1-D pattern that matched %{{.*}} in DFS post-order prevents vectorizing %{{.*}}
@@ -360,8 +361,8 @@ func @vec_rejected_9(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 
 // CHECK: affine.for %{{.*}}{{[0-9]*}} = 0 to %{{[0-9]*}} {
 // CHECK:   for [[IV18:%[a-zA-Z0-9]+]] = 0 to [[ARG_M]] step 128
-// CHECK:      %{{.*}} = affine.apply #map0(%{{.*}})
-// CHECK-NEXT: %{{.*}} = affine.apply #map0(%{{.*}})
+// CHECK:      %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
+// CHECK-NEXT: %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
 // CHECK-NEXT: %{{.*}} = constant 0.0{{.*}}: f32
 // CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
    affine.for %i17 = 0 to %M { // not vectorized, the 1-D pattern that matched %i18 in DFS post-order prevents vectorizing %{{.*}}
@@ -394,25 +395,6 @@ func @vec_rejected_10(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
      }
    }
    return
-}
-
-// This should not vectorize and should not crash.
-// CHECK-LABEL: @vec_rejected_11
-func @vec_rejected_11(%A : memref<?x?xf32>, %C : memref<?x?xf32>) {
-  %c0 = constant 0 : index
-  %N = dim %A, %c0 : memref<?x?xf32>
-  affine.for %i = 0 to %N {
-// CHECK-NOT: vector
-    %a = affine.load %A[%i, %i] : memref<?x?xf32> // not vectorized
-    affine.for %j = 0 to %N {
-      %b = affine.load %A[%i, %j] : memref<?x?xf32> // may be vectorized
-// CHECK-NOT: vector
-      %c = addf %a, %b : f32 // not vectorized because %a wasn't
-// CHECK-NOT: vector
-      affine.store %c, %C[%i, %j] : memref<?x?xf32> // not vectorized because %c wasn't
-    }
-  }
-  return
 }
 
 // This should not vectorize due to the sequential dependence in the scf.

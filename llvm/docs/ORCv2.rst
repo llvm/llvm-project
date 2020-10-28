@@ -468,7 +468,7 @@ are now referred to as ORCv1.
 
 The majority of the ORCv1 layers and utilities were renamed with a 'Legacy'
 prefix in LLVM 8.0, and have deprecation warnings attached in LLVM 9.0. In LLVM
-10.0 ORCv1 will be removed entirely.
+12.0 ORCv1 will be removed entirely.
 
 Transitioning from ORCv1 to ORCv2 should be easy for most clients. Most of the
 ORCv1 layers and utilities have ORCv2 counterparts [2]_ that can be directly

@@ -15,8 +15,12 @@ D: COFF, ELF backends (COFF/* ELF/*)
 
 N: Lang Hames, Nick Kledzik
 E: lhames@gmail.com, kledzik@apple.com
-D: Mach-O backend
+D: Old Mach-O backend
 
 N: Sam Clegg
 E: sbc@chromium.org
 D: WebAssembly backend (wasm/*)
+
+N: Jez Ng, Greg McGary, Shoaib Meenai
+E: jezng@fb.com, gkm@fb.com, smeenai@fb.com
+D: New Mach-O backend

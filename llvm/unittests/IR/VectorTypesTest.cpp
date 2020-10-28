@@ -71,8 +71,8 @@ TEST(VectorTypesTest, FixedLength) {
   EXPECT_EQ(V4Int64Ty->getNumElements(), 4U);
   EXPECT_EQ(V4Int64Ty->getElementType()->getScalarSizeInBits(), 64U);
 
-  auto *V2Int64Ty =
-      dyn_cast<FixedVectorType>(VectorType::get(Int64Ty, EltCnt / 2));
+  auto *V2Int64Ty = dyn_cast<FixedVectorType>(
+      VectorType::get(Int64Ty, EltCnt.divideCoefficientBy(2)));
   ASSERT_NE(nullptr, V2Int64Ty);
   EXPECT_EQ(V2Int64Ty->getNumElements(), 2U);
   EXPECT_EQ(V2Int64Ty->getElementType()->getScalarSizeInBits(), 64U);
@@ -166,8 +166,8 @@ TEST(VectorTypesTest, Scalable) {
   EXPECT_EQ(ScV4Int64Ty->getMinNumElements(), 4U);
   EXPECT_EQ(ScV4Int64Ty->getElementType()->getScalarSizeInBits(), 64U);
 
-  auto *ScV2Int64Ty =
-      dyn_cast<ScalableVectorType>(VectorType::get(Int64Ty, EltCnt / 2));
+  auto *ScV2Int64Ty = dyn_cast<ScalableVectorType>(
+      VectorType::get(Int64Ty, EltCnt.divideCoefficientBy(2)));
   ASSERT_NE(nullptr, ScV2Int64Ty);
   EXPECT_EQ(ScV2Int64Ty->getMinNumElements(), 2U);
   EXPECT_EQ(ScV2Int64Ty->getElementType()->getScalarSizeInBits(), 64U);

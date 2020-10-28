@@ -16,6 +16,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -24,6 +25,8 @@ using ::testing::Eq;
 using ::testing::get;
 using ::testing::Pointwise;
 using ::testing::Property;
+
+using llvm::unittest::TempDir;
 
 namespace llvm {
 namespace exegesis {
@@ -76,10 +79,8 @@ TEST_F(BenchmarkResultTest, WriteToAndReadFromDisk) {
   ToDisk.Error = "error";
   ToDisk.Info = "info";
 
-  SmallString<64> Filename;
-  std::error_code EC;
-  EC = sys::fs::createUniqueDirectory("BenchmarkResultTestDir", Filename);
-  ASSERT_FALSE(EC);
+  TempDir TestDirectory("BenchmarkResultTestDir", /*Unique*/ true);
+  SmallString<64> Filename(TestDirectory.path());
   sys::path::append(Filename, "data.yaml");
   errs() << Filename << "-------\n";
   ExitOnErr(ToDisk.writeYaml(State, Filename));

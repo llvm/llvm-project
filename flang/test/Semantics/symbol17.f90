@@ -80,7 +80,7 @@ type(fwdpdt(kind(0))) function f2(n)
   !REF: /f2/fwdpdt/k
   integer, kind :: k
   !REF: /f2/fwdpdt/k
-  !DEF: /f2/fwdpdt/n ObjectEntity INTEGER(int(k,kind=8))
+  !DEF: /f2/fwdpdt/n ObjectEntity INTEGER(int(int(k,kind=4),kind=8))
   integer(kind=k) :: n
  end type
  !DEF: /f2/f2 ObjectEntity TYPE(fwdpdt(k=4_4))
@@ -100,7 +100,7 @@ subroutine s2 (q1)
   !REF: /s2/fwdpdt/k
   integer, kind :: k
   !REF: /s2/fwdpdt/k
-  !DEF: /s2/fwdpdt/n ObjectEntity INTEGER(int(k,kind=8))
+  !DEF: /s2/fwdpdt/n ObjectEntity INTEGER(int(int(k,kind=4),kind=8))
   integer(kind=k) :: n
  end type
  !REF: /s2/q1

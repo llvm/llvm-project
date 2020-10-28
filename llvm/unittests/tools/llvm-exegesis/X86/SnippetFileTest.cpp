@@ -17,6 +17,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -34,16 +35,17 @@ using testing::Field;
 using testing::Property;
 using testing::SizeIs;
 
+using llvm::unittest::TempDir;
+
 class X86SnippetFileTest : public X86TestBase {
 protected:
   Expected<std::vector<BenchmarkCode>> TestCommon(StringRef Contents) {
-    SmallString<64> Filename;
-    std::error_code EC;
-    EC = sys::fs::createUniqueDirectory("SnippetFileTestDir", Filename);
-    EXPECT_FALSE(EC);
+    TempDir TestDirectory("SnippetFileTestDir", /*Unique*/ true);
+    SmallString<64> Filename(TestDirectory.path());
     sys::path::append(Filename, "snippet.s");
     errs() << Filename << "-------\n";
     {
+      std::error_code EC;
       raw_fd_ostream FOS(Filename, EC);
       FOS << Contents;
       EXPECT_FALSE(EC);

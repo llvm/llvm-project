@@ -21,6 +21,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -873,7 +874,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   // name, or a unique ID for the section.
   SmallString<128> Name;
   if (MBB.getSectionID() == MBBSectionID::ColdSectionID) {
-    Name += ".text.unlikely.";
+    Name += BBSectionsColdTextPrefix;
     Name += MBB.getParent()->getName();
   } else if (MBB.getSectionID() == MBBSectionID::ExceptionSectionID) {
     Name += ".text.eh.";
@@ -1591,6 +1592,73 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForJumpTable(
 
 void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
                                                       Module &M) const {
+  emitLinkerDirectives(Streamer, M);
+
+  unsigned Version = 0;
+  unsigned Flags = 0;
+  StringRef Section;
+
+  GetObjCImageInfo(M, Version, Flags, Section);
+  if (!Section.empty()) {
+    auto &C = getContext();
+    auto *S = C.getCOFFSection(Section,
+                               COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                   COFF::IMAGE_SCN_MEM_READ,
+                               SectionKind::getReadOnly());
+    Streamer.SwitchSection(S);
+    Streamer.emitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
+    Streamer.emitInt32(Version);
+    Streamer.emitInt32(Flags);
+    Streamer.AddBlankLine();
+  }
+
+  auto &C = getContext();
+  SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
+  M.getModuleFlagsMetadata(ModuleFlags);
+
+  MDNode *CFGProfile = nullptr;
+
+  for (const auto &MFE : ModuleFlags) {
+    StringRef Key = MFE.Key->getString();
+    if (Key == "CG Profile") {
+      CFGProfile = cast<MDNode>(MFE.Val);
+      break;
+    }
+  }
+
+  if (!CFGProfile)
+    return;
+
+  auto GetSym = [this](const MDOperand &MDO) -> MCSymbol * {
+    if (!MDO)
+      return nullptr;
+    auto V = cast<ValueAsMetadata>(MDO);
+    const Function *F = cast<Function>(V->getValue());
+    if (F->hasDLLImportStorageClass())
+      return nullptr;
+    return TM->getSymbol(F);
+  };
+
+  for (const auto &Edge : CFGProfile->operands()) {
+    MDNode *E = cast<MDNode>(Edge);
+    const MCSymbol *From = GetSym(E->getOperand(0));
+    const MCSymbol *To = GetSym(E->getOperand(1));
+    // Skip null functions. This can happen if functions are dead stripped after
+    // the CGProfile pass has been run.
+    if (!From || !To)
+      continue;
+    uint64_t Count = cast<ConstantAsMetadata>(E->getOperand(2))
+                         ->getValue()
+                         ->getUniqueInteger()
+                         .getZExtValue();
+    Streamer.emitCGProfileEntry(
+        MCSymbolRefExpr::create(From, MCSymbolRefExpr::VK_None, C),
+        MCSymbolRefExpr::create(To, MCSymbolRefExpr::VK_None, C), Count);
+  }
+}
+
+void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
+    MCStreamer &Streamer, Module &M) const {
   if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
     // Emit the linker options to the linker .drectve section.  According to the
     // spec, this section is a space-separated string containing flags for
@@ -1607,28 +1675,51 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
     }
   }
 
-  unsigned Version = 0;
-  unsigned Flags = 0;
-  StringRef Section;
+  // Emit /EXPORT: flags for each exported global as necessary.
+  std::string Flags;
+  for (const GlobalValue &GV : M.global_values()) {
+    raw_string_ostream OS(Flags);
+    emitLinkerFlagsForGlobalCOFF(OS, &GV, getTargetTriple(), getMangler());
+    OS.flush();
+    if (!Flags.empty()) {
+      Streamer.SwitchSection(getDrectveSection());
+      Streamer.emitBytes(Flags);
+    }
+    Flags.clear();
+  }
 
-  GetObjCImageInfo(M, Version, Flags, Section);
-  if (Section.empty())
-    return;
+  // Emit /INCLUDE: flags for each used global as necessary.
+  if (const auto *LU = M.getNamedGlobal("llvm.used")) {
+    assert(LU->hasInitializer() && "expected llvm.used to have an initializer");
+    assert(isa<ArrayType>(LU->getValueType()) &&
+           "expected llvm.used to be an array type");
+    if (const auto *A = cast<ConstantArray>(LU->getInitializer())) {
+      for (const Value *Op : A->operands()) {
+        const auto *GV = cast<GlobalValue>(Op->stripPointerCasts());
+        // Global symbols with internal or private linkage are not visible to
+        // the linker, and thus would cause an error when the linker tried to
+        // preserve the symbol due to the `/include:` directive.
+        if (GV->hasLocalLinkage())
+          continue;
 
-  auto &C = getContext();
-  auto *S = C.getCOFFSection(
-      Section, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
-      SectionKind::getReadOnly());
-  Streamer.SwitchSection(S);
-  Streamer.emitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
-  Streamer.emitInt32(Version);
-  Streamer.emitInt32(Flags);
-  Streamer.AddBlankLine();
+        raw_string_ostream OS(Flags);
+        emitLinkerFlagsForUsedCOFF(OS, GV, getTargetTriple(), getMangler());
+        OS.flush();
+
+        if (!Flags.empty()) {
+          Streamer.SwitchSection(getDrectveSection());
+          Streamer.emitBytes(Flags);
+        }
+        Flags.clear();
+      }
+    }
+  }
 }
 
 void TargetLoweringObjectFileCOFF::Initialize(MCContext &Ctx,
                                               const TargetMachine &TM) {
   TargetLoweringObjectFile::Initialize(Ctx, TM);
+  this->TM = &TM;
   const Triple &T = TM.getTargetTriple();
   if (T.isWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
     StaticCtorSection =
@@ -1701,16 +1792,6 @@ MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
   return getCOFFStaticStructorSection(getContext(), getTargetTriple(), false,
                                       Priority, KeySym,
                                       cast<MCSectionCOFF>(StaticDtorSection));
-}
-
-void TargetLoweringObjectFileCOFF::emitLinkerFlagsForGlobal(
-    raw_ostream &OS, const GlobalValue *GV) const {
-  emitLinkerFlagsForGlobalCOFF(OS, GV, getTargetTriple(), getMangler());
-}
-
-void TargetLoweringObjectFileCOFF::emitLinkerFlagsForUsed(
-    raw_ostream &OS, const GlobalValue *GV) const {
-  emitLinkerFlagsForUsedCOFF(OS, GV, getTargetTriple(), getMangler());
 }
 
 const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(

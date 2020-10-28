@@ -104,6 +104,15 @@ struct MyOperationPass : public OperationPass<MyOperationPass> {
 };
 ```
 
+### Dependent Dialects
+
+Dialects must be loaded in the MLIRContext before entities from these dialects
+(operations, types, attributes, ...) can be created. Dialects must be loaded
+before starting the multi-threaded pass pipeline execution. To this end, a pass
+that can create an entity from a dialect that isn't already loaded must express
+this by overriding the `getDependentDialects()` method and declare this list of
+Dialects explicitly.
+
 ## Analysis Management
 
 An important concept, along with transformation passes, are analyses. These are
@@ -684,6 +693,8 @@ It contains the following fields:
 *   description
     -   A longer, more detailed description of the pass. This is used when
         generating pass documentation.
+*   dependentDialects
+    -   A list of strings that are the Dialect classes this pass can introduce.
 *   constructor
     -   A piece of C++ code used to create a default instance of the pass.
 *   options

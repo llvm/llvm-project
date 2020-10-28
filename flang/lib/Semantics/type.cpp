@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Semantics/type.h"
+#include "check-declarations.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Parser/characters.h"
 #include "flang/Semantics/scope.h"
@@ -284,6 +285,7 @@ void DerivedTypeSpec::Instantiate(
   auto restorer{foldingContext.WithPDTInstance(*this)};
   newScope.AddSourceRange(typeScope.sourceRange());
   InstantiateHelper{context, newScope}.InstantiateComponents(typeScope);
+  CheckInstantiatedDerivedType(context, *this);
 }
 
 void InstantiateHelper::InstantiateComponents(const Scope &fromScope) {

@@ -221,11 +221,8 @@ define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 
 ; SI-NEXT:    s_and_b64 vcc, exec, s[14:15]
 ; SI-NEXT:    s_cbranch_vccz BB3_13
 ; SI-NEXT:  ; %bb.10: ; %for.cond.preheader
-; SI-NEXT:    s_waitcnt expcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, 0x3e8
-; SI-NEXT:    v_cmp_lt_i32_e32 vcc, s8, v0
-; SI-NEXT:    s_and_b64 vcc, exec, vcc
-; SI-NEXT:    s_cbranch_vccz BB3_13
+; SI-NEXT:    s_cmpk_lt_i32 s8, 0x3e8
+; SI-NEXT:    s_cbranch_scc0 BB3_13
 ; SI-NEXT:  ; %bb.11: ; %for.body
 ; SI-NEXT:    s_and_b64 vcc, exec, 0
 ; SI-NEXT:  BB3_12: ; %self.loop
@@ -295,10 +292,8 @@ define amdgpu_kernel void @loop_land_info_assert(i32 %c0, i32 %c1, i32 %c2, i32 
 ; FLAT-NEXT:    s_and_b64 vcc, exec, s[14:15]
 ; FLAT-NEXT:    s_cbranch_vccz BB3_13
 ; FLAT-NEXT:  ; %bb.10: ; %for.cond.preheader
-; FLAT-NEXT:    v_mov_b32_e32 v0, 0x3e8
-; FLAT-NEXT:    v_cmp_lt_i32_e32 vcc, s8, v0
-; FLAT-NEXT:    s_and_b64 vcc, exec, vcc
-; FLAT-NEXT:    s_cbranch_vccz BB3_13
+; FLAT-NEXT:    s_cmpk_lt_i32 s8, 0x3e8
+; FLAT-NEXT:    s_cbranch_scc0 BB3_13
 ; FLAT-NEXT:  ; %bb.11: ; %for.body
 ; FLAT-NEXT:    s_and_b64 vcc, exec, 0
 ; FLAT-NEXT:  BB3_12: ; %self.loop

@@ -20,6 +20,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/CodeGenOptions.h"
@@ -924,13 +925,6 @@ protected:
 
   llvm::StringMap<llvm::GlobalVariable *> NSConstantStringMap;
 
-  /// GetNameForMethod - Return a name for the given method.
-  /// \param[out] NameOut - The return value.
-  void GetNameForMethod(const ObjCMethodDecl *OMD,
-                        const ObjCContainerDecl *CD,
-                        SmallVectorImpl<char> &NameOut,
-                        bool ignoreCategoryNamespace = false);
-
   /// GetMethodVarName - Return a unique constant for the given
   /// selector's name. The return value has type char *.
   llvm::Constant *GetMethodVarName(Selector Sel);
@@ -1085,8 +1079,8 @@ protected:
   void EmitImageInfo();
 
 public:
-  CGObjCCommonMac(CodeGen::CodeGenModule &cgm) :
-    CGObjCRuntime(cgm), VMContext(cgm.getLLVMContext()) { }
+  CGObjCCommonMac(CodeGen::CodeGenModule &cgm)
+      : CGObjCRuntime(cgm), VMContext(cgm.getLLVMContext()) {}
 
   bool isNonFragileABI() const {
     return ObjCABI == 2;
@@ -4007,15 +4001,14 @@ llvm::Function *CGObjCCommonMac::GenerateMethod(const ObjCMethodDecl *OMD,
   if (OMD->isDirectMethod()) {
     Method = GenerateDirectMethod(OMD, CD);
   } else {
-    SmallString<256> Name;
-    GetNameForMethod(OMD, CD, Name);
+    auto Name = getSymbolNameForMethod(OMD);
 
     CodeGenTypes &Types = CGM.getTypes();
     llvm::FunctionType *MethodTy =
         Types.GetFunctionType(Types.arrangeObjCMethodDeclaration(OMD));
     Method =
         llvm::Function::Create(MethodTy, llvm::GlobalValue::InternalLinkage,
-                               Name.str(), &CGM.getModule());
+                               Name, &CGM.getModule());
   }
 
   MethodDefinitions.insert(std::make_pair(OMD, Method));
@@ -4060,11 +4053,10 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
     // Replace the cached function in the map.
     I->second = Fn;
   } else {
-    SmallString<256> Name;
-    GetNameForMethod(OMD, CD, Name, /*ignoreCategoryNamespace*/ true);
+    auto Name = getSymbolNameForMethod(OMD, /*include category*/ false);
 
     Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
-                                Name.str(), &CGM.getModule());
+                                Name, &CGM.getModule());
     DirectMethodDefinitions.insert(std::make_pair(COMD, Fn));
   }
 
@@ -5713,21 +5705,6 @@ CGObjCCommonMac::GetPropertyTypeString(const ObjCPropertyDecl *PD,
   std::string TypeStr =
     CGM.getContext().getObjCEncodingForPropertyDecl(PD, Container);
   return GetPropertyName(&CGM.getContext().Idents.get(TypeStr));
-}
-
-void CGObjCCommonMac::GetNameForMethod(const ObjCMethodDecl *D,
-                                       const ObjCContainerDecl *CD,
-                                       SmallVectorImpl<char> &Name,
-                                       bool ignoreCategoryNamespace) {
-  llvm::raw_svector_ostream OS(Name);
-  assert (CD && "Missing container decl in GetNameForMethod");
-  OS << '\01' << (D->isInstanceMethod() ? '-' : '+')
-     << '[' << CD->getName();
-  if (!ignoreCategoryNamespace)
-    if (const ObjCCategoryImplDecl *CID =
-        dyn_cast<ObjCCategoryImplDecl>(D->getDeclContext()))
-      OS << '(' << *CID << ')';
-  OS << ' ' << D->getSelector().getAsString() << ']';
 }
 
 void CGObjCMac::FinishModule() {

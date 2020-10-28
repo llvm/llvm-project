@@ -70,3 +70,12 @@ subroutine s7(x)
   type, extends(undef) :: t
   end type
 end subroutine
+
+subroutine s8
+  implicit type(t2)(x)
+  !ERROR: Cannot construct value for derived type 't2' before it is defined
+  parameter(y=t2(12.3))
+  type t2
+    real :: c
+  end type
+end subroutine

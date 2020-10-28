@@ -104,6 +104,9 @@ def HWVALU   : ProcResource<1> {
 def HWRC   : ProcResource<1> { // Register destination cache
   let BufferSize = 1;
 }
+def HWXDL   : ProcResource<1> { // MFMA CU
+  let BufferSize = 0;
+}
 
 class HWWriteRes<SchedWrite write, list<ProcResourceKind> resources,
                  int latency> : WriteRes<write, resources> {
@@ -138,9 +141,13 @@ multiclass SICommonWriteRes {
   def : HWVALUWriteRes<WriteFloatCvt,      4>;
   def : HWVALUWriteRes<WriteTrans32,       4>;
   def : HWVALUWriteRes<WriteQuarterRate32, 4>;
-  def : HWVALUWriteRes<Write2PassMAI,      2>;
-  def : HWVALUWriteRes<Write8PassMAI,      8>;
-  def : HWVALUWriteRes<Write16PassMAI,    16>;
+
+  let ResourceCycles = [2] in
+  def : HWWriteRes<Write2PassMAI,  [HWXDL], 2>;
+  let ResourceCycles = [8] in
+  def : HWWriteRes<Write8PassMAI,  [HWXDL], 8>;
+  let ResourceCycles = [16] in
+  def : HWWriteRes<Write16PassMAI, [HWXDL], 16>;
 
   def : ReadAdvance<MIVGPRRead, -2>;
   def : InstRW<[Write64Bit, MIReadVGPR], (instregex "^V_ACCVGPR_WRITE_B32$")>;

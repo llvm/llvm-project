@@ -145,13 +145,11 @@ def combine_indexed_load_store : GICombineRule<
          [{ return Helper.matchCombineIndexedLoadStore(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineIndexedLoadStore(*${root}, ${matchinfo}); }])>;
 
-// FIXME: Is there a reason this wasn't in tryCombine? I've left it out of
-//        all_combines because it wasn't there.
-def elide_br_by_inverting_cond : GICombineRule<
+def opt_brcond_by_inverting_cond : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_BR):$root,
-         [{ return Helper.matchElideBrByInvertingCond(*${root}); }]),
-  (apply [{ Helper.applyElideBrByInvertingCond(*${root}); }])>;
+         [{ return Helper.matchOptBrCondByInvertingCond(*${root}); }]),
+  (apply [{ Helper.applyOptBrCondByInvertingCond(*${root}); }])>;
 
 def ptr_add_immed_matchdata : GIDefMatchData<"PtrAddChain">;
 def ptr_add_immed_chain : GICombineRule<
@@ -194,11 +192,17 @@ def undef_to_negative_one: GICombineRule<
          [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${root}, -1); }])>;
 
+def binop_left_undef_to_zero: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_SHL):$root,
+         [{ return Helper.matchOperandIsUndef(*${root}, 1); }]),
+  (apply [{ Helper.replaceInstWithConstant(*${root}, 0); }])>;
+
 // Instructions where if any source operand is undef, the instruction can be
 // replaced with undef.
 def propagate_undef_any_op: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR):$root,
+  (match (wip_match_opcode G_ADD, G_FPTOSI, G_FPTOUI, G_SUB, G_XOR, G_TRUNC):$root,
          [{ return Helper.matchAnyExplicitUseIsUndef(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
 
@@ -251,6 +255,14 @@ def right_identity_zero: GICombineRule<
   (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
 
+// Fold x op 1 -> x
+def right_identity_one: GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_MUL):$root,
+    [{ return Helper.matchConstantOp(${root}->getOperand(2), 1); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+>;
+
 // Fold (x op x) - > x
 def binop_same_val: GICombineRule<
   (defs root:$root),
@@ -289,6 +301,15 @@ def simplify_add_to_sub: GICombineRule <
   (match (wip_match_opcode G_ADD):$root,
     [{ return Helper.matchSimplifyAddToSub(*${root}, ${info}); }]),
   (apply [{ return Helper.applySimplifyAddToSub(*${root}, ${info});}])
+>;
+
+// Fold fp_op(cst) to the constant result of the floating point operation.
+def constant_fp_op_matchinfo: GIDefMatchData<"Optional<APFloat>">;
+def constant_fp_op: GICombineRule <
+  (defs root:$root, constant_fp_op_matchinfo:$info),
+  (match (wip_match_opcode G_FNEG, G_FABS, G_FPTRUNC, G_FSQRT, G_FLOG2):$root,
+    [{ return Helper.matchCombineConstantFoldFpUnary(*${root}, ${info}); }]),
+  (apply [{ return Helper.applyCombineConstantFoldFpUnary(*${root}, ${info}); }])
 >;
 
 // Fold int2ptr(ptr2int(x)) -> x
@@ -344,9 +365,135 @@ def and_trivial_mask: GICombineRule <
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
+// If the input is already sign extended, just drop the extension.
+// sext_inreg x, K ->
+//   if computeNumSignBits(x) >= (x.getScalarSizeInBits() - K + 1)
+def redundant_sext_inreg: GICombineRule <
+  (defs root:$root),
+  (match (wip_match_opcode G_SEXT_INREG):$root,
+         [{ return Helper.matchRedundantSExtInReg(*${root}); }]),
+     (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+>;
+
+// Fold (anyext (trunc x)) -> x if the source type is same as
+// the destination type.
+def anyext_trunc_fold_matchinfo : GIDefMatchData<"Register">;
+def anyext_trunc_fold: GICombineRule <
+  (defs root:$root, anyext_trunc_fold_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_ANYEXT):$root,
+         [{ return Helper.matchCombineAnyExtTrunc(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyCombineAnyExtTrunc(*${root}, ${matchinfo}); }])
+>;
+
+// Fold ([asz]ext ([asz]ext x)) -> ([asz]ext x).
+def ext_ext_fold_matchinfo : GIDefMatchData<"std::tuple<Register, unsigned>">;
+def ext_ext_fold: GICombineRule <
+  (defs root:$root, ext_ext_fold_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_ANYEXT, G_SEXT, G_ZEXT):$root,
+         [{ return Helper.matchCombineExtOfExt(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyCombineExtOfExt(*${root}, ${matchinfo}); }])
+>;
+
+def not_cmp_fold_matchinfo : GIDefMatchData<"SmallVector<Register, 4>">;
+def not_cmp_fold : GICombineRule<
+  (defs root:$d, not_cmp_fold_matchinfo:$info),
+  (match (wip_match_opcode G_XOR): $d,
+  [{ return Helper.matchNotCmp(*${d}, ${info}); }]),
+  (apply [{ return Helper.applyNotCmp(*${d}, ${info}); }])
+>;
+
+// Fold (fneg (fneg x)) -> x.
+def fneg_fneg_fold_matchinfo : GIDefMatchData<"Register">;
+def fneg_fneg_fold: GICombineRule <
+  (defs root:$root, fneg_fneg_fold_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_FNEG):$root,
+         [{ return Helper.matchCombineFNegOfFNeg(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+>;
+
+// Fold (unmerge(merge x, y, z)) -> z, y, z.
+def unmerge_merge_matchinfo : GIDefMatchData<"SmallVector<Register, 8>">;
+def unmerge_merge : GICombineRule<
+  (defs root:$d, unmerge_merge_matchinfo:$info),
+  (match (wip_match_opcode G_UNMERGE_VALUES): $d,
+  [{ return Helper.matchCombineUnmergeMergeToPlainValues(*${d}, ${info}); }]),
+  (apply [{ return Helper.applyCombineUnmergeMergeToPlainValues(*${d}, ${info}); }])
+>;
+
+// Fold (fabs (fabs x)) -> (fabs x).
+def fabs_fabs_fold_matchinfo : GIDefMatchData<"Register">;
+def fabs_fabs_fold: GICombineRule<
+  (defs root:$root, fabs_fabs_fold_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_FABS):$root,
+         [{ return Helper.matchCombineFAbsOfFAbs(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyCombineFAbsOfFAbs(*${root}, ${matchinfo}); }])
+>;
+
+// Fold (unmerge cst) -> cst1, cst2, ...
+def unmerge_cst_matchinfo : GIDefMatchData<"SmallVector<APInt, 8>">;
+def unmerge_cst : GICombineRule<
+  (defs root:$d, unmerge_cst_matchinfo:$info),
+  (match (wip_match_opcode G_UNMERGE_VALUES): $d,
+  [{ return Helper.matchCombineUnmergeConstant(*${d}, ${info}); }]),
+  (apply [{ return Helper.applyCombineUnmergeConstant(*${d}, ${info}); }])
+>;
+
+// Transform x,y<dead> = unmerge z -> x = trunc z.
+def unmerge_dead_to_trunc : GICombineRule<
+  (defs root:$d),
+  (match (wip_match_opcode G_UNMERGE_VALUES): $d,
+  [{ return Helper.matchCombineUnmergeWithDeadLanesToTrunc(*${d}); }]),
+  (apply [{ return Helper.applyCombineUnmergeWithDeadLanesToTrunc(*${d}); }])
+>;
+
+// Transform x,y = unmerge(zext(z)) -> x = zext z; y = 0.
+def unmerge_zext_to_zext : GICombineRule<
+  (defs root:$d),
+  (match (wip_match_opcode G_UNMERGE_VALUES): $d,
+  [{ return Helper.matchCombineUnmergeZExtToZExt(*${d}); }]),
+  (apply [{ return Helper.applyCombineUnmergeZExtToZExt(*${d}); }])
+>;
+
+// Fold trunc ([asz]ext x) -> x or ([asz]ext x) or (trunc x).
+def trunc_ext_fold_matchinfo : GIDefMatchData<"std::pair<Register, unsigned>">;
+def trunc_ext_fold: GICombineRule <
+  (defs root:$root, trunc_ext_fold_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_TRUNC):$root,
+         [{ return Helper.matchCombineTruncOfExt(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyCombineTruncOfExt(*${root}, ${matchinfo}); }])
+>;
+
+// Fold trunc (shl x, K) -> shl (trunc x), K => K < VT.getScalarSizeInBits().
+def trunc_shl_matchinfo : GIDefMatchData<"std::pair<Register, Register>">;
+def trunc_shl: GICombineRule <
+  (defs root:$root, trunc_shl_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_TRUNC):$root,
+         [{ return Helper.matchCombineTruncOfShl(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyCombineTruncOfShl(*${root}, ${matchinfo}); }])
+>;
+
+// Transform (mul x, -1) -> (sub 0, x)
+def mul_by_neg_one: GICombineRule <
+  (defs root:$root),
+  (match (wip_match_opcode G_MUL):$root,
+         [{ return Helper.matchConstantOp(${root}->getOperand(2), -1); }]),
+  (apply [{ return Helper.applyCombineMulByNegativeOne(*${root}); }])
+>;
+
+// Fold (xor (and x, y), y) -> (and (not x), y)
+def xor_of_and_with_same_reg_matchinfo :
+    GIDefMatchData<"std::pair<Register, Register>">;
+def xor_of_and_with_same_reg: GICombineRule <
+  (defs root:$root, xor_of_and_with_same_reg_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_XOR):$root,
+         [{ return Helper.matchXorOfAndWithSameReg(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyXorOfAndWithSameReg(*${root}, ${matchinfo}); }])
+>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
+                                     binop_left_undef_to_zero,
                                      propagate_undef_any_op,
                                      propagate_undef_all_ops,
                                      propagate_undef_shuffle_mask,
@@ -355,19 +502,27 @@ def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
 def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         binop_same_val, binop_left_to_zero,
                                         binop_right_to_zero, p2i_to_i2p,
-                                        i2p_to_p2i]>;
+                                        i2p_to_p2i, anyext_trunc_fold,
+                                        fneg_fneg_fold, right_identity_one]>;
 
-def known_bits_simplifications : GICombineGroup<[and_trivial_mask]>;
+def known_bits_simplifications : GICombineGroup<[
+  and_trivial_mask, redundant_sext_inreg]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend]>;
 
 def select_combines : GICombineGroup<[select_undef_cmp, select_constant_cmp]>;
 
-def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd]>;
+def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd,
+                                       mul_by_neg_one]>;
+
 def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
     combines_for_extload, combine_indexed_load_store, undef_combines,
     identity_combines, simplify_add_to_sub,
     hoist_logic_op_with_same_opcode_hands,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
-    known_bits_simplifications]>;
+    known_bits_simplifications, ext_ext_fold,
+    not_cmp_fold, opt_brcond_by_inverting_cond,
+    unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc,
+    unmerge_zext_to_zext, trunc_ext_fold, trunc_shl,
+    constant_fp_op, xor_of_and_with_same_reg]>;

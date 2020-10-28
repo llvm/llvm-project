@@ -7,6 +7,9 @@
 #===------------------------------------------------------------------------===#
 
 add_subdirectory(f18)
+if(FLANG_BUILD_NEW_DRIVER)
+  add_subdirectory(flang-driver)
+endif()
 if(LINK_WITH_FIR)
   add_subdirectory(tco)
 endif()

@@ -2276,19 +2276,13 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
     return {}; // error occurred finding module
   }
   if (!useSymbol) {
-    Say(useName,
-        IsDefinedOperator(useName)
-            ? "Operator '%s' not found in module '%s'"_err_en_US
-            : "'%s' not found in module '%s'"_err_en_US,
-        useName, useModuleScope_->GetName().value());
+    Say(useName, "'%s' not found in module '%s'"_err_en_US, MakeOpName(useName),
+        useModuleScope_->GetName().value());
     return {};
   }
   if (useSymbol->attrs().test(Attr::PRIVATE)) {
-    Say(useName,
-        IsDefinedOperator(useName)
-            ? "Operator '%s' is PRIVATE in '%s'"_err_en_US
-            : "'%s' is PRIVATE in '%s'"_err_en_US,
-        useName, useModuleScope_->GetName().value());
+    Say(useName, "'%s' is PRIVATE in '%s'"_err_en_US, MakeOpName(useName),
+        useModuleScope_->GetName().value());
     return {};
   }
   auto &localSymbol{MakeSymbol(localName)};
@@ -2550,11 +2544,9 @@ void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
       }
     }
     if (!namesSeen.insert(name->source).second) {
-      Say(*name,
-          details.kind().IsDefinedOperator()
-              ? "Procedure '%s' is already specified in generic operator '%s'"_err_en_US
-              : "Procedure '%s' is already specified in generic '%s'"_err_en_US,
-          name->source, generic.name());
+      Say(name->source,
+          "Procedure '%s' is already specified in generic '%s'"_err_en_US,
+          name->source, MakeOpName(generic.name()));
       continue;
     }
     details.AddSpecificProc(*symbol, name->source);
@@ -4036,8 +4028,22 @@ void DeclarationVisitor::Post(
 }
 
 void DeclarationVisitor::Post(const parser::FinalProcedureStmt &x) {
-  for (auto &name : x.v) {
-    MakeTypeSymbol(name, FinalProcDetails{});
+  if (currScope().IsDerivedType() && currScope().symbol()) {
+    if (auto *details{currScope().symbol()->detailsIf<DerivedTypeDetails>()}) {
+      for (const auto &subrName : x.v) {
+        if (const auto *name{ResolveName(subrName)}) {
+          auto pair{
+              details->finals().emplace(name->source, DEREF(name->symbol))};
+          if (!pair.second) { // C787
+            Say(name->source,
+                "FINAL subroutine '%s' already appeared in this derived type"_err_en_US,
+                name->source)
+                .Attach(pair.first->first,
+                    "earlier appearance of this FINAL subroutine"_en_US);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -5044,6 +5050,9 @@ void ConstructVisitor::Post(const parser::Association &x) {
   const auto &name{std::get<parser::Name>(x.t)};
   GetCurrentAssociation().name = &name;
   if (auto *symbol{MakeAssocEntity()}) {
+    if (ExtractCoarrayRef(GetCurrentAssociation().selector.expr)) { // C1103
+      Say("Selector must not be a coindexed object"_err_en_US);
+    }
     SetTypeFromAssociation(*symbol);
     SetAttrsFromAssociation(*symbol);
   }
@@ -5098,6 +5107,9 @@ void ConstructVisitor::Post(const parser::SelectTypeStmt &x) {
     MakePlaceholder(*name, MiscDetails::Kind::SelectTypeAssociateName);
     association.name = &*name;
     auto exprType{association.selector.expr->GetType()};
+    if (ExtractCoarrayRef(association.selector.expr)) { // C1103
+      Say("Selector must not be a coindexed object"_err_en_US);
+    }
     if (exprType && !exprType->IsPolymorphic()) { // C1159
       Say(association.selector.source,
           "Selector '%s' in SELECT TYPE statement must be "
@@ -5733,9 +5745,9 @@ void DeclarationVisitor::NonPointerInitialization(const parser::Name &name,
       } else if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
         CHECK(!details->init());
         Walk(expr);
-        // TODO: check C762 - all bounds and type parameters of component
-        // are colons or constant expressions if component is initialized
         if (inComponentDecl) {
+          // TODO: check C762 - all bounds and type parameters of component
+          // are colons or constant expressions if component is initialized
           // Can't convert to type of component, which might not yet
           // be known; that's done later during instantiation.
           if (MaybeExpr value{EvaluateExpr(expr)}) {
@@ -5926,10 +5938,11 @@ Symbol &ModuleVisitor::SetAccess(
   if (attrs.HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
     // PUBLIC/PRIVATE already set: make it a fatal error if it changed
     Attr prev = attrs.test(Attr::PUBLIC) ? Attr::PUBLIC : Attr::PRIVATE;
-    auto msg{IsDefinedOperator(name)
-            ? "The accessibility of operator '%s' has already been specified as %s"_en_US
-            : "The accessibility of '%s' has already been specified as %s"_en_US};
-    Say(name, WithIsFatal(msg, attr != prev), name, EnumToString(prev));
+    Say(name,
+        WithIsFatal(
+            "The accessibility of '%s' has already been specified as %s"_en_US,
+            attr != prev),
+        MakeOpName(name), EnumToString(prev));
   } else {
     attrs.set(attr);
   }

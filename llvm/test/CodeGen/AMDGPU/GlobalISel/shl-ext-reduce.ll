@@ -10,7 +10,7 @@ define amdgpu_ps i64 @s_shl_i64_zext_i32(i32 inreg %x) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_andn2_b32 s0, s0, -2.0
 ; GCN-NEXT:    s_lshl_b32 s0, s0, 2
-; GCN-NEXT:    s_bfe_u64 s[0:1], s[0:1], 0x200000
+; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    ; return to shader part epilog
   %and = and i32 %x, 1073741823
   %ext = zext i32 %and to i64
@@ -37,7 +37,7 @@ define amdgpu_ps i64 @s_shl_i64_sext_i32(i32 inreg %x) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_and_b32 s0, s0, 0x1fffffff
 ; GCN-NEXT:    s_lshl_b32 s0, s0, 2
-; GCN-NEXT:    s_bfe_u64 s[0:1], s[0:1], 0x200000
+; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    ; return to shader part epilog
   %and = and i32 %x, 536870911
   %ext = sext i32 %and to i64

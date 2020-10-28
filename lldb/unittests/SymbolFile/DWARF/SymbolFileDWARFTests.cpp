@@ -19,6 +19,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDataExtractor.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugAbbrev.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugArangeSet.h"
+#include "Plugins/SymbolFile/DWARF/DWARFDebugAranges.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -70,7 +71,7 @@ TEST_F(SymbolFileDWARFTests, TestAbilitiesForDWARF) {
 TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start1) {
   // Test that if we have a .debug_abbrev that contains ordered abbreviation
   // codes that start at 1, that we get O(1) access.
-  
+
   const auto byte_order = eByteOrderLittle;
   const uint8_t addr_size = 4;
   StreamString encoder(Stream::eBinary, addr_size, byte_order);
@@ -81,7 +82,7 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start1) {
   encoder.PutULEB128(DW_FORM_strp);
   encoder.PutULEB128(0);
   encoder.PutULEB128(0);
-  
+
   encoder.PutULEB128(2); // Abbrev code 2
   encoder.PutULEB128(DW_TAG_subprogram);
   encoder.PutHex8(DW_CHILDREN_no);
@@ -89,9 +90,9 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start1) {
   encoder.PutULEB128(DW_FORM_strp);
   encoder.PutULEB128(0);
   encoder.PutULEB128(0);
-  
+
   encoder.PutULEB128(0); // Abbrev code 0 (termination)
- 
+
   DWARFDataExtractor data;
   data.SetData(encoder.GetData(), encoder.GetSize(), byte_order);
   DWARFAbbreviationDeclarationSet abbrev_set;
@@ -101,7 +102,7 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start1) {
   // Make sure we have O(1) access to each abbreviation by making sure the
   // index offset is 1 and not UINT32_MAX
   EXPECT_EQ(abbrev_set.GetIndexOffset(), 1u);
-  
+
   auto abbrev1 = abbrev_set.GetAbbreviationDeclaration(1);
   EXPECT_EQ(abbrev1->Tag(), DW_TAG_compile_unit);
   EXPECT_TRUE(abbrev1->HasChildren());
@@ -115,7 +116,7 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start1) {
 TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start5) {
   // Test that if we have a .debug_abbrev that contains ordered abbreviation
   // codes that start at 5, that we get O(1) access.
-  
+
   const auto byte_order = eByteOrderLittle;
   const uint8_t addr_size = 4;
   StreamString encoder(Stream::eBinary, addr_size, byte_order);
@@ -126,7 +127,7 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start5) {
   encoder.PutULEB128(DW_FORM_strp);
   encoder.PutULEB128(0);
   encoder.PutULEB128(0);
-  
+
   encoder.PutULEB128(6); // Abbrev code 6
   encoder.PutULEB128(DW_TAG_subprogram);
   encoder.PutHex8(DW_CHILDREN_no);
@@ -134,9 +135,9 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start5) {
   encoder.PutULEB128(DW_FORM_strp);
   encoder.PutULEB128(0);
   encoder.PutULEB128(0);
-  
+
   encoder.PutULEB128(0); // Abbrev code 0 (termination)
-  
+
   DWARFDataExtractor data;
   data.SetData(encoder.GetData(), encoder.GetSize(), byte_order);
   DWARFAbbreviationDeclarationSet abbrev_set;
@@ -146,7 +147,7 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start5) {
   // Make sure we have O(1) access to each abbreviation by making sure the
   // index offset is 5 and not UINT32_MAX
   EXPECT_EQ(abbrev_set.GetIndexOffset(), 5u);
-  
+
   auto abbrev1 = abbrev_set.GetAbbreviationDeclaration(5);
   EXPECT_EQ(abbrev1->Tag(), DW_TAG_compile_unit);
   EXPECT_TRUE(abbrev1->HasChildren());
@@ -160,7 +161,7 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOrder1Start5) {
 TEST_F(SymbolFileDWARFTests, TestAbbrevOutOfOrder) {
   // Test that if we have a .debug_abbrev that contains unordered abbreviation
   // codes, that we can access the information correctly.
-  
+
   const auto byte_order = eByteOrderLittle;
   const uint8_t addr_size = 4;
   StreamString encoder(Stream::eBinary, addr_size, byte_order);
@@ -171,7 +172,7 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOutOfOrder) {
   encoder.PutULEB128(DW_FORM_strp);
   encoder.PutULEB128(0);
   encoder.PutULEB128(0);
-  
+
   encoder.PutULEB128(1); // Abbrev code 1
   encoder.PutULEB128(DW_TAG_subprogram);
   encoder.PutHex8(DW_CHILDREN_no);
@@ -179,9 +180,9 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOutOfOrder) {
   encoder.PutULEB128(DW_FORM_strp);
   encoder.PutULEB128(0);
   encoder.PutULEB128(0);
-  
+
   encoder.PutULEB128(0); // Abbrev code 0 (termination)
-  
+
   DWARFDataExtractor data;
   data.SetData(encoder.GetData(), encoder.GetSize(), byte_order);
   DWARFAbbreviationDeclarationSet abbrev_set;
@@ -191,7 +192,7 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOutOfOrder) {
   // Make sure we don't have O(1) access to each abbreviation by making sure
   // the index offset is UINT32_MAX
   EXPECT_EQ(abbrev_set.GetIndexOffset(), UINT32_MAX);
-  
+
   auto abbrev1 = abbrev_set.GetAbbreviationDeclaration(2);
   EXPECT_EQ(abbrev1->Tag(), DW_TAG_compile_unit);
   EXPECT_TRUE(abbrev1->HasChildren());
@@ -205,7 +206,7 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevOutOfOrder) {
 TEST_F(SymbolFileDWARFTests, TestAbbrevInvalidNULLTag) {
   // Test that we detect when an abbreviation has a NULL tag and that we get
   // an error when decoding.
-  
+
   const auto byte_order = eByteOrderLittle;
   const uint8_t addr_size = 4;
   StreamString encoder(Stream::eBinary, addr_size, byte_order);
@@ -214,9 +215,9 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevInvalidNULLTag) {
   encoder.PutHex8(DW_CHILDREN_no);
   encoder.PutULEB128(0);
   encoder.PutULEB128(0);
-  
+
   encoder.PutULEB128(0); // Abbrev code 0 (termination)
-  
+
   DWARFDataExtractor data;
   data.SetData(encoder.GetData(), encoder.GetSize(), byte_order);
   DWARFAbbreviationDeclarationSet abbrev_set;
@@ -232,7 +233,7 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevInvalidNULLTag) {
 TEST_F(SymbolFileDWARFTests, TestAbbrevNullAttrValidForm) {
   // Test that we detect when an abbreviation has a NULL attribute and a non
   // NULL form and that we get an error when decoding.
-  
+
   const auto byte_order = eByteOrderLittle;
   const uint8_t addr_size = 4;
   StreamString encoder(Stream::eBinary, addr_size, byte_order);
@@ -245,7 +246,7 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevNullAttrValidForm) {
   encoder.PutULEB128(0);
 
   encoder.PutULEB128(0); // Abbrev code 0 (termination)
-  
+
   DWARFDataExtractor data;
   data.SetData(encoder.GetData(), encoder.GetSize(), byte_order);
   DWARFAbbreviationDeclarationSet abbrev_set;
@@ -255,13 +256,12 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevNullAttrValidForm) {
   EXPECT_TRUE(bool(error));
   EXPECT_EQ("malformed abbreviation declaration attribute",
             llvm::toString(std::move(error)));
-  
 }
 
 TEST_F(SymbolFileDWARFTests, TestAbbrevValidAttrNullForm) {
   // Test that we detect when an abbreviation has a valid attribute and a
   // NULL form and that we get an error when decoding.
-  
+
   const auto byte_order = eByteOrderLittle;
   const uint8_t addr_size = 4;
   StreamString encoder(Stream::eBinary, addr_size, byte_order);
@@ -272,9 +272,9 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevValidAttrNullForm) {
   encoder.PutULEB128(0); // NULL form
   encoder.PutULEB128(0);
   encoder.PutULEB128(0);
-  
+
   encoder.PutULEB128(0); // Abbrev code 0 (termination)
-  
+
   DWARFDataExtractor data;
   data.SetData(encoder.GetData(), encoder.GetSize(), byte_order);
   DWARFAbbreviationDeclarationSet abbrev_set;
@@ -290,7 +290,7 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevMissingTerminator) {
   // Test that we detect when an abbreviation has a valid attribute and a
   // form, but is missing the NULL attribute and form that terminates an
   // abbreviation
-  
+
   const auto byte_order = eByteOrderLittle;
   const uint8_t addr_size = 4;
   StreamString encoder(Stream::eBinary, addr_size, byte_order);
@@ -300,7 +300,7 @@ TEST_F(SymbolFileDWARFTests, TestAbbrevMissingTerminator) {
   encoder.PutULEB128(DW_AT_name);
   encoder.PutULEB128(DW_FORM_strp);
   // Don't add the NULL DW_AT and NULL DW_FORM terminator
-  
+
   DWARFDataExtractor data;
   data.SetData(encoder.GetData(), encoder.GetSize(), byte_order);
   DWARFAbbreviationDeclarationSet abbrev_set;
@@ -345,4 +345,43 @@ TEST_F(SymbolFileDWARFTests, ParseArangesNonzeroSegmentSize) {
   EXPECT_EQ("segmented arange entries are not supported",
             llvm::toString(std::move(error)));
   EXPECT_EQ(off, 12U); // Parser should read no further than the segment size
+}
+
+TEST_F(SymbolFileDWARFTests, ParseAranges) {
+  // Test we can successfully parse a DWARFDebugAranges. The initial error
+  // checking code had a bug where it would always return an empty address
+  // ranges for everything in .debug_aranges and no error.
+  const unsigned char binary_data[] = {
+      60, 0, 0, 0,  // unit_length
+      2, 0,         // DWARF version number
+      255, 0, 0, 0, // offset into the .debug_info_table
+      8,            // address size
+      0,            // segment size
+      0, 0, 0, 0,   // pad bytes
+      // BEGIN TUPLES
+      // First tuple: [0x1000-0x1100)
+      0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Address 0x1000
+      0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Size    0x0100
+      // Second tuple: [0x2000-0x2100)
+      0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Address 0x2000
+      0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Size    0x0100
+      // Terminating tuple
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Terminator
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  // Terminator
+  };
+  DWARFDataExtractor data;
+  data.SetData(static_cast<const void *>(binary_data), sizeof binary_data,
+               lldb::ByteOrder::eByteOrderLittle);
+  DWARFDebugAranges debug_aranges;
+  llvm::Error error = debug_aranges.extract(data);
+  ASSERT_FALSE(bool(error));
+  EXPECT_EQ(debug_aranges.GetNumRanges(), 2u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x0fff), DW_INVALID_OFFSET);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1000), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1100 - 1), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1100), DW_INVALID_OFFSET);
+  EXPECT_EQ(debug_aranges.FindAddress(0x1fff), DW_INVALID_OFFSET);
+  EXPECT_EQ(debug_aranges.FindAddress(0x2000), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x2100 - 1), 255u);
+  EXPECT_EQ(debug_aranges.FindAddress(0x2100), DW_INVALID_OFFSET);
 }

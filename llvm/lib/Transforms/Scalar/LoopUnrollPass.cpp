@@ -345,7 +345,7 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
   // Only analyze inner loops. We can't properly estimate cost of nested loops
   // and we won't visit inner loops again anyway.
-  if (!L->empty())
+  if (!L->isInnermost())
     return None;
 
   // Don't simulate loops with a big or unknown tripcount

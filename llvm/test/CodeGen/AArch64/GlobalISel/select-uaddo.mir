@@ -60,3 +60,54 @@ body:             |
     RET_ReallyLR implicit $w0
 
 ...
+---
+name:            uaddo_s32_imm
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $w0, $w1, $x2
+    ; Check that we get ADDSWri when we can fold in a constant.
+    ;
+    ; CHECK-LABEL: name: uaddo_s32_imm
+    ; CHECK: liveins: $w0, $w1, $x2
+    ; CHECK: %copy:gpr32sp = COPY $w0
+    ; CHECK: %add:gpr32 = ADDSWri %copy, 16, 0, implicit-def $nzcv
+    ; CHECK: %overflow:gpr32 = CSINCWr $wzr, $wzr, 3, implicit $nzcv
+    ; CHECK: $w0 = COPY %add
+    ; CHECK: RET_ReallyLR implicit $w0
+    %copy:gpr(s32) = COPY $w0
+    %constant:gpr(s32) = G_CONSTANT i32 16
+    %add:gpr(s32), %overflow:gpr(s1) = G_UADDO %copy, %constant
+    $w0 = COPY %add(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            uaddo_s32_shifted
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $w0, $w1, $x2
+    ; Check that we get ADDSWrs when we can fold in a shift.
+    ;
+    ; CHECK-LABEL: name: uaddo_s32_shifted
+    ; CHECK: liveins: $w0, $w1, $x2
+    ; CHECK: %copy1:gpr32 = COPY $w0
+    ; CHECK: %copy2:gpr32 = COPY $w1
+    ; CHECK: %add:gpr32 = ADDSWrs %copy1, %copy2, 16, implicit-def $nzcv
+    ; CHECK: %overflow:gpr32 = CSINCWr $wzr, $wzr, 3, implicit $nzcv
+    ; CHECK: $w0 = COPY %add
+    ; CHECK: RET_ReallyLR implicit $w0
+    %copy1:gpr(s32) = COPY $w0
+    %copy2:gpr(s32) = COPY $w1
+    %constant:gpr(s32) = G_CONSTANT i32 16
+    %shift:gpr(s32) = G_SHL %copy2(s32), %constant(s32)
+    %add:gpr(s32), %overflow:gpr(s1) = G_UADDO %copy1, %shift
+    $w0 = COPY %add(s32)
+    RET_ReallyLR implicit $w0

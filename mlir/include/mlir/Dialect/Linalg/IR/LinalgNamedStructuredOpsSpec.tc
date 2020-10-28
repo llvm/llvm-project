@@ -8,6 +8,11 @@ def matvec(A: f32(M, N), y: f32(N)) -> (x: f32(M)) {
   x(m) = std_addf<n>(std_mulf(A(m, n), y(n)));
 }
 
+ods_def<VecmatOp>:
+def vecmat(y: f32(M), A: f32(M, N)) -> (x: f32(N)) {
+  x(n) = std_addf<m>(std_mulf(y(m), A(m, n)));
+}
+
 ods_def<DotOp>:
 def dot(A: f32(M), B: f32(M)) -> (C: f32()) {
   C() = std_addf<m>(std_mulf(A(m), B(m)));
@@ -20,52 +25,50 @@ def batch_matmul(A: f32(Batch, M, K), B: f32(Batch, K, N)) -> (C: f32(Batch, M, 
 
 ods_def<ConvWOp>:
 def conv_1d(I: f32(W), K: f32(KW)) -> (O: f32(W)) {
-  O(w) = std_addf(O(w), std_mulf(I(w + kw), K(kw)));
+  O(w) = std_addf<kw>(std_mulf(I(w + kw), K(kw)));
 }
 
 ods_def<ConvNWCOp>:
 def conv_1d_nwc(I: f32(N, W, C), K: f32(F, KW, C)) -> (O: f32(N, W, F)) {
-  O(n, w, f) = std_addf(O(n, w, f),
-    std_mulf(I(n, w + kw, c), K(f, kw, c)));
+  O(n, w, f) = std_addf<kw>(std_mulf(I(n, w + kw, c), K(f, kw, c)));
 }
 
 ods_def<ConvNCWOp>:
 def conv_1d_ncw(I: f32(N, C, W), K: f32(F, C, KW)) -> (O: f32(N, F, W)) {
-  O(n, f, w) = std_addf(O(n, f, w),
-    std_mulf(I(n, c, w + kw), K(f, c, kw)));
+  O(n, f, w) = std_addf<kw>(std_mulf(I(n, c, w + kw), K(f, c, kw)));
 }
 
 ods_def<ConvHWOp>:
 def conv_2d(I: f32(H, W), K: f32(KH, KW)) -> (O: f32(H, W)) {
-  O(h, w) = std_addf(O(h, w), std_mulf(I(h + kh, w + kw), K(kh, kw)));
+  O(h, w) = std_addf<kh, kw>(std_mulf(I(h + kh, w + kw), K(kh, kw)));
 }
 
 ods_def<ConvNHWCOp>:
 def conv_2d_nhwc(I: f32(N, H, W, C), K: f32(F, KH, KW, C)) -> (O: f32(N, H, W, F)) {
-  O(n, h, w, f) = std_addf(O(n, h, w, f),
-    std_mulf(I(n, h + kh, w + kw, c), K(f, kh, kw, c)));
+  O(n, h, w, f) = std_addf<kh, kw>(std_mulf(
+    I(n, h + kh, w + kw, c), K(f, kh, kw, c)));
 }
 
 ods_def<ConvNCHWOp>:
 def conv_2d_nchw(I: f32(N, C, H, W), K: f32(F, C, KH, KW)) -> (O: f32(N, F, H, W)) {
-  O(n, f, h, w) = std_addf(O(n, f, h, w),
-    std_mulf(I(n, c, h + kh, w + kw), K(f, c, kh, kw)));
+  O(n, f, h, w) = std_addf<kh, kw>(std_mulf(
+    I(n, c, h + kh, w + kw), K(f, c, kh, kw)));
 }
 
 ods_def<ConvDHWOp>:
 def conv_3d(I: f32(D, H, W), K: f32(KD, KH, KW)) -> (O: f32(D, H, W)) {
-  O(d, h, w) = std_addf(O(d, h, w),
-    std_mulf(I(d + kd, h + kh, w + kw), K(kd, kh, kw)));
+  O(d, h, w) = std_addf<kd, kh, kw>(std_mulf(
+    I(d + kd, h + kh, w + kw), K(kd, kh, kw)));
 }
 
 ods_def<ConvNDHWCOp>:
 def conv_3d_ndhwc(I: f32(N, D, H, W, C), K: f32(F, KD, KH, KW, C)) -> (O: f32(N, D, H, W, F)) {
-  O(n, d, h, w, f) = std_addf(O(n, d, h, w, f),
-    std_mulf(I(n, d + kd, h + kh, w + kw, c), K(f, kd, kh, kw, c)));
+  O(n, d, h, w, f) = std_addf<kd, kh, kw>(std_mulf(
+    I(n, d + kd, h + kh, w + kw, c), K(f, kd, kh, kw, c)));
 }
 
 ods_def<ConvNCDHWOp>:
 def conv_3d_ncdhw(I: f32(N, C, D, H, W), K: f32(F, C, KD, KH, KW)) -> (O: f32(N, F, D, H, W)) {
-  O(n, f, d, h, w) = std_addf(O(n, f, d, h, w),
-    std_mulf(I(n, c, d + kd, h + kh, w + kw), K(f, c, kd, kh, kw)));
+  O(n, f, d, h, w) = std_addf<kd, kh, kw>(std_mulf(
+    I(n, c, d + kd, h + kh, w + kw), K(f, c, kd, kh, kw)));
 }

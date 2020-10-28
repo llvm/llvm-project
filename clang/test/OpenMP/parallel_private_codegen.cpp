@@ -361,12 +361,13 @@ int main() {
 // CHECK: [[GTID_ADDR:%.+]] = load i32*, i32** [[GTID_ADDR_PTR]],
 // CHECK: [[GTID:%.+]] = load i32, i32* [[GTID_ADDR]],
 // CHECK: [[A_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID]], i64 4, i8* inttoptr (i64 2 to i8*))
-// CHECK: [[A_PRIV:%.+]] = bitcast i8* [[A_VOID_PTR]] to i32*
-// CHECK: store i{{[0-9]+}}* [[A_PRIV]], i{{[0-9]+}}** [[REF:%.+]],
+// CHECK: [[A_PRIV_ADDR:%.+]] = bitcast i8* [[A_VOID_PTR]] to i32*
+// CHECK: store i{{[0-9]+}}* [[A_PRIV_ADDR]], i{{[0-9]+}}** [[REF:%.+]],
 // CHECK-NEXT: [[A_PRIV:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[REF]],
 // CHECK-NEXT: [[A_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[A_PRIV]],
 // CHECK-NEXT: [[INC:%.+]] = add nsw i{{[0-9]+}} [[A_VAL]], 1
 // CHECK-NEXT: store i{{[0-9]+}} [[INC]], i{{[0-9]+}}* [[A_PRIV]],
+// CHECK-NEXT: [[A_VOID_PTR:%.+]] = bitcast i32* [[A_PRIV_ADDR]] to i8*
 // CHECK-NEXT: call void @__kmpc_free(i32 [[GTID]], i8* [[A_VOID_PTR]], i8* inttoptr (i64 2 to i8*))
 // CHECK-NEXT: ret void
 

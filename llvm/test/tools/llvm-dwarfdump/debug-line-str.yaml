@@ -1,0 +1,32 @@
+## a) Test that llvm-dwarfdump is able to dump the debug_line_str section.
+
+##                        "abc\0cba\0\0"
+# RUN: yaml2obj -DCONTENT="616263006362610000" %s -o %t1.o
+# RUN: llvm-dwarfdump --debug-line-str %t1.o | FileCheck %s --check-prefix=LINE-STR
+
+#       LINE-STR: .debug_line_str contents:
+#  LINE-STR-NEXT: 0x00000000: "abc"
+#  LINE-STR-NEXT: 0x00000004: "cba"
+#  LINE-STR-NEXT: 0x00000008: ""
+# LINE-STR-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_EXEC
+Sections:
+  - Name:    .debug_line_str
+    Type:    SHT_PROGBITS
+    Content: [[CONTENT]]
+
+## b) Test how we dump unprintable chars.
+
+##                        ['\t', '\0', '\001', '\0', '\\', '0', '0', '1', '\0']
+# RUN: yaml2obj -DCONTENT="090001005C30303100" %s -o %t2.o
+# RUN: llvm-dwarfdump --debug-line-str %t2.o | FileCheck %s --check-prefix=ESCAPED
+
+#      ESCAPED: .debug_line_str contents:
+# ESCAPED-NEXT: 0x00000000: "\t"
+# ESCAPED-NEXT: 0x00000002: "\001"
+# ESCAPED-NEXT: 0x00000004: "\\001"

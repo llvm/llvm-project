@@ -41,6 +41,10 @@ if (LINK_WITH_FIR)
   list(APPEND FLANG_TEST_DEPENDS tco)
 endif()
 
+if (FLANG_BUILD_NEW_DRIVER)
+  list(APPEND FLANG_TEST_DEPENDS flang-new)
+endif()
+
 if (FLANG_INCLUDE_TESTS)
   if (FLANG_GTEST_AVAIL)
     list(APPEND FLANG_TEST_DEPENDS FlangUnitTests)

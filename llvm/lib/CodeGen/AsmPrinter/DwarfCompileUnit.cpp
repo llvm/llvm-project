@@ -422,7 +422,10 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
       // FIXME: duplicated from Target/WebAssembly/WebAssembly.h
       // don't want to depend on target specific headers in this code?
       const unsigned TI_GLOBAL_RELOC = 3;
-      if (FrameBase.Location.WasmLoc.Kind == TI_GLOBAL_RELOC) {
+      // FIXME: when writing dwo, we need to avoid relocations. Probably
+      // the "right" solution is to treat globals the way func and data symbols
+      // are (with entries in .debug_addr).
+      if (FrameBase.Location.WasmLoc.Kind == TI_GLOBAL_RELOC && !isDwoUnit()) {
         // These need to be relocatable.
         assert(FrameBase.Location.WasmLoc.Index == 0);  // Only SP so far.
         auto SPSym = cast<MCSymbolWasm>(
@@ -1346,11 +1349,9 @@ void DwarfCompileUnit::addComplexAddress(const DbgVariable &DV, DIE &Die,
 /// Add a Dwarf loclistptr attribute data and value.
 void DwarfCompileUnit::addLocationList(DIE &Die, dwarf::Attribute Attribute,
                                        unsigned Index) {
-  dwarf::Form Form = dwarf::DW_FORM_data4;
-  if (DD->getDwarfVersion() == 4)
-    Form =dwarf::DW_FORM_sec_offset;
-  if (DD->getDwarfVersion() >= 5)
-    Form =dwarf::DW_FORM_loclistx;
+  dwarf::Form Form = (DD->getDwarfVersion() >= 5)
+                         ? dwarf::DW_FORM_loclistx
+                         : DD->getDwarfSectionOffsetForm();
   Die.addValue(DIEValueAllocator, Attribute, Form, DIELocList(Index));
 }
 

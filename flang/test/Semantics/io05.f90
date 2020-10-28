@@ -25,6 +25,7 @@
   inquire(pending=v(5), file='abc')
   inquire(10, id=id, pending=v(5))
   inquire(10, id=const_id, pending=v(5))
+  inquire(10, carriagecontrol=c(1)) ! nonstandard
 
   ! using variable 'cv' multiple times seems to be allowed
   inquire(file='abc', &

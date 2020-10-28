@@ -8,11 +8,9 @@
 
 #include "Annotations.h"
 #include "ClangdLSPServer.h"
-#include "CodeComplete.h"
 #include "LSPClient.h"
 #include "Protocol.h"
 #include "TestFS.h"
-#include "refactor/Rename.h"
 #include "support/Logger.h"
 #include "support/TestTracer.h"
 #include "llvm/ADT/StringRef.h"
@@ -36,13 +34,14 @@ MATCHER_P(DiagMessage, M, "") {
 
 class LSPTest : public ::testing::Test, private clangd::Logger {
 protected:
-  LSPTest() : LogSession(*this) {}
+  LSPTest() : LogSession(*this) {
+    ClangdServer::Options &Base = Opts;
+    Base = ClangdServer::optsForTest();
+  }
 
   LSPClient &start() {
     EXPECT_FALSE(Server.hasValue()) << "Already initialized";
-    Server.emplace(Client.transport(), FS, CCOpts, RenameOpts,
-                   /*CompileCommandsDir=*/llvm::None, /*UseDirBasedCDB=*/false,
-                   /*ForcedOffsetEncoding=*/llvm::None, Opts);
+    Server.emplace(Client.transport(), FS, Opts);
     ServerThread.emplace([&] { EXPECT_TRUE(Server->run()); });
     Client.call("initialize", llvm::json::Object{});
     return Client;
@@ -64,9 +63,7 @@ protected:
   }
 
   MockFS FS;
-  CodeCompleteOptions CCOpts;
-  RenameOptions RenameOpts;
-  ClangdServer::Options Opts = ClangdServer::optsForTest();
+  ClangdLSPServer::Options Opts;
 
 private:
   // Color logs so we can distinguish them from test output.

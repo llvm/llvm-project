@@ -1619,6 +1619,16 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, const MCInstrAnalysis *MIA,
   }
 }
 
+static StringRef getSegmentName(const MachOObjectFile *MachO,
+                                const SectionRef &Section) {
+  if (MachO) {
+    DataRefImpl DR = Section.getRawDataRefImpl();
+    StringRef SegmentName = MachO->getSectionFinalSegmentName(DR);
+    return SegmentName;
+  }
+  return "";
+}
+
 static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
                               MCContext &Ctx, MCDisassembler *PrimaryDisAsm,
                               MCDisassembler *SecondaryDisAsm,
@@ -1783,12 +1793,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       }
     }
 
-    StringRef SegmentName = "";
-    if (MachO) {
-      DataRefImpl DR = Section.getRawDataRefImpl();
-      SegmentName = MachO->getSectionFinalSegmentName(DR);
-    }
-
+    StringRef SegmentName = getSegmentName(MachO, Section);
     StringRef SectionName = unwrapOrError(Section.getName(), Obj->getFileName());
     // If the section has no symbol at the start, just insert a dummy one.
     if (Symbols.empty() || Symbols[0].Addr != 0) {
@@ -2388,6 +2393,8 @@ void objdump::printSectionHeaders(const ObjectFile *Obj) {
 }
 
 void objdump::printSectionContents(const ObjectFile *Obj) {
+  const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(Obj);
+
   for (const SectionRef &Section : ToolSectionFilter(*Obj)) {
     StringRef Name = unwrapOrError(Section.getName(), Obj->getFileName());
     uint64_t BaseAddr = Section.getAddress();
@@ -2395,7 +2402,11 @@ void objdump::printSectionContents(const ObjectFile *Obj) {
     if (!Size)
       continue;
 
-    outs() << "Contents of section " << Name << ":\n";
+    outs() << "Contents of section ";
+    StringRef SegmentName = getSegmentName(MachO, Section);
+    if (!SegmentName.empty())
+      outs() << SegmentName << ",";
+    outs() << Name << ":\n";
     if (Section.isBSS()) {
       outs() << format("<skipping contents of bss section at [%04" PRIx64
                        ", %04" PRIx64 ")>\n",
@@ -2553,11 +2564,9 @@ void objdump::printSymbol(const ObjectFile *O, const SymbolRef &Symbol,
   } else if (Section == O->section_end()) {
     outs() << "*UND*";
   } else {
-    if (MachO) {
-      DataRefImpl DR = Section->getRawDataRefImpl();
-      StringRef SegmentName = MachO->getSectionFinalSegmentName(DR);
+    StringRef SegmentName = getSegmentName(MachO, *Section);
+    if (!SegmentName.empty())
       outs() << SegmentName << ",";
-    }
     StringRef SectionName = unwrapOrError(Section->getName(), FileName);
     outs() << SectionName;
   }

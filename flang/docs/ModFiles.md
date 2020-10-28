@@ -8,6 +8,11 @@
 
 # Module Files
 
+```eval_rst
+.. contents::
+   :local:
+```
+
 Module files hold information from a module that is necessary to compile 
 program units that depend on the module.
 

@@ -93,9 +93,7 @@ public:
 
   Result operator()(const ImpliedDoIndex &) const { return Scalar(); }
   Result operator()(const DescriptorInquiry &) const { return Scalar(); }
-  template <int KIND> Result operator()(const TypeParamInquiry<KIND> &) const {
-    return Scalar();
-  }
+  Result operator()(const TypeParamInquiry &) const { return Scalar(); }
   Result operator()(const BOZLiteralConstant &) const { return Scalar(); }
   Result operator()(const StaticDataObject::Pointer &) const {
     return Scalar();

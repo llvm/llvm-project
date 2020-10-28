@@ -21,14 +21,17 @@ add_lldb_library(lldbCommands
   CommandObjectPlugin.cpp
   CommandObjectProcess.cpp
   CommandObjectQuit.cpp
+  CommandObjectRegexCommand.cpp
   CommandObjectRegister.cpp
   CommandObjectReproducer.cpp
+  CommandObjectScript.cpp
   CommandObjectSession.cpp
   CommandObjectSettings.cpp
   CommandObjectSource.cpp
   CommandObjectStats.cpp
   CommandObjectTarget.cpp
   CommandObjectThread.cpp
+  CommandObjectTrace.cpp
   CommandObjectType.cpp
   CommandObjectVersion.cpp
   CommandObjectWatchpoint.cpp

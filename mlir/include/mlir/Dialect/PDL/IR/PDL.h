@@ -19,8 +19,6 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
-namespace mlir {
-namespace pdl {
 //===----------------------------------------------------------------------===//
 // PDL Dialect
 //===----------------------------------------------------------------------===//
@@ -34,7 +32,5 @@ namespace pdl {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/PDL/IR/PDLOps.h.inc"
 
-} // end namespace pdl
-} // end namespace mlir
 
 #endif // MLIR_DIALECT_PDL_IR_PDL_H_

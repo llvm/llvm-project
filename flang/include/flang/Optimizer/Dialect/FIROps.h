@@ -41,9 +41,10 @@ mlir::ParseResult parseSelector(mlir::OpAsmParser &parser,
                                 mlir::OpAsmParser::OperandType &selector,
                                 mlir::Type &type);
 
+} // namespace fir
+
 #define GET_OP_CLASSES
 #include "flang/Optimizer/Dialect/FIROps.h.inc"
 
-} // namespace fir
 
 #endif // OPTIMIZER_DIALECT_FIROPS_H

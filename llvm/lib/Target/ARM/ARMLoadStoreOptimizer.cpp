@@ -2570,8 +2570,83 @@ static int getBaseOperandIndex(MachineInstr &MI) {
   case ARM::t2STRHi8:
   case ARM::t2STRHi12:
     return 1;
+  case ARM::MVE_VLDRBS16_post:
+  case ARM::MVE_VLDRBS32_post:
+  case ARM::MVE_VLDRBU16_post:
+  case ARM::MVE_VLDRBU32_post:
+  case ARM::MVE_VLDRHS32_post:
+  case ARM::MVE_VLDRHU32_post:
+  case ARM::MVE_VLDRBU8_post:
+  case ARM::MVE_VLDRHU16_post:
+  case ARM::MVE_VLDRWU32_post:
+  case ARM::MVE_VSTRB16_post:
+  case ARM::MVE_VSTRB32_post:
+  case ARM::MVE_VSTRH32_post:
+  case ARM::MVE_VSTRBU8_post:
+  case ARM::MVE_VSTRHU16_post:
+  case ARM::MVE_VSTRWU32_post:
+  case ARM::MVE_VLDRBS16_pre:
+  case ARM::MVE_VLDRBS32_pre:
+  case ARM::MVE_VLDRBU16_pre:
+  case ARM::MVE_VLDRBU32_pre:
+  case ARM::MVE_VLDRHS32_pre:
+  case ARM::MVE_VLDRHU32_pre:
+  case ARM::MVE_VLDRBU8_pre:
+  case ARM::MVE_VLDRHU16_pre:
+  case ARM::MVE_VLDRWU32_pre:
+  case ARM::MVE_VSTRB16_pre:
+  case ARM::MVE_VSTRB32_pre:
+  case ARM::MVE_VSTRH32_pre:
+  case ARM::MVE_VSTRBU8_pre:
+  case ARM::MVE_VSTRHU16_pre:
+  case ARM::MVE_VSTRWU32_pre:
+    return 2;
   }
   return -1;
+}
+
+static bool isPostIndex(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case ARM::MVE_VLDRBS16_post:
+  case ARM::MVE_VLDRBS32_post:
+  case ARM::MVE_VLDRBU16_post:
+  case ARM::MVE_VLDRBU32_post:
+  case ARM::MVE_VLDRHS32_post:
+  case ARM::MVE_VLDRHU32_post:
+  case ARM::MVE_VLDRBU8_post:
+  case ARM::MVE_VLDRHU16_post:
+  case ARM::MVE_VLDRWU32_post:
+  case ARM::MVE_VSTRB16_post:
+  case ARM::MVE_VSTRB32_post:
+  case ARM::MVE_VSTRH32_post:
+  case ARM::MVE_VSTRBU8_post:
+  case ARM::MVE_VSTRHU16_post:
+  case ARM::MVE_VSTRWU32_post:
+    return true;
+  }
+  return false;
+}
+
+static bool isPreIndex(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case ARM::MVE_VLDRBS16_pre:
+  case ARM::MVE_VLDRBS32_pre:
+  case ARM::MVE_VLDRBU16_pre:
+  case ARM::MVE_VLDRBU32_pre:
+  case ARM::MVE_VLDRHS32_pre:
+  case ARM::MVE_VLDRHU32_pre:
+  case ARM::MVE_VLDRBU8_pre:
+  case ARM::MVE_VLDRHU16_pre:
+  case ARM::MVE_VLDRWU32_pre:
+  case ARM::MVE_VSTRB16_pre:
+  case ARM::MVE_VSTRB32_pre:
+  case ARM::MVE_VSTRH32_pre:
+  case ARM::MVE_VSTRBU8_pre:
+  case ARM::MVE_VSTRHU16_pre:
+  case ARM::MVE_VSTRWU32_pre:
+    return true;
+  }
+  return false;
 }
 
 // Given a memory access Opcode, check that the give Imm would be a valid Offset
@@ -2703,19 +2778,26 @@ static MachineInstr *createPostIncLoadStore(MachineInstr *MI, int Offset,
 }
 
 // Given a Base Register, optimise the load/store uses to attempt to create more
-// post-inc accesses. We do this by taking zero offset loads/stores with an add,
-// and convert them to a postinc load/store of the same type. Any subsequent
-// accesses will be adjusted to use and account for the post-inc value.
+// post-inc accesses and less register moves. We do this by taking zero offset
+// loads/stores with an add, and convert them to a postinc load/store of the
+// same type. Any subsequent accesses will be adjusted to use and account for
+// the post-inc value.
 // For example:
 // LDR #0            LDR_POSTINC #16
 // LDR #4            LDR #-12
 // LDR #8            LDR #-8
 // LDR #12           LDR #-4
 // ADD #16
+//
+// At the same time if we do not find an increment but do find an existing
+// pre/post inc instruction, we can still adjust the offsets of subsequent
+// instructions to save the register move that would otherwise be needed for the
+// in-place increment.
 bool ARMPreAllocLoadStoreOpt::DistributeIncrements(Register Base) {
   // We are looking for:
   // One zero offset load/store that can become postinc
   MachineInstr *BaseAccess = nullptr;
+  MachineInstr *PrePostInc = nullptr;
   // An increment that can be folded in
   MachineInstr *Increment = nullptr;
   // Other accesses after BaseAccess that will need to be updated to use the
@@ -2734,40 +2816,62 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements(Register Base) {
     if (!Use.getOperand(BaseOp).isReg() ||
         Use.getOperand(BaseOp).getReg() != Base)
       return false;
-    if (Use.getOperand(BaseOp + 1).getImm() == 0)
+    if (isPreIndex(Use) || isPostIndex(Use))
+      PrePostInc = &Use;
+    else if (Use.getOperand(BaseOp + 1).getImm() == 0)
       BaseAccess = &Use;
     else
       OtherAccesses.insert(&Use);
   }
 
-  if (!BaseAccess || !Increment ||
-      BaseAccess->getParent() != Increment->getParent())
-    return false;
-  Register PredReg;
-  if (Increment->definesRegister(ARM::CPSR) ||
-      getInstrPredicate(*Increment, PredReg) != ARMCC::AL)
-    return false;
+  int IncrementOffset;
+  Register NewBaseReg;
+  if (BaseAccess && Increment) {
+    if (PrePostInc || BaseAccess->getParent() != Increment->getParent())
+      return false;
+    Register PredReg;
+    if (Increment->definesRegister(ARM::CPSR) ||
+        getInstrPredicate(*Increment, PredReg) != ARMCC::AL)
+      return false;
 
-  LLVM_DEBUG(dbgs() << "\nAttempting to distribute increments on VirtualReg "
-                    << Base.virtRegIndex() << "\n");
+    LLVM_DEBUG(dbgs() << "\nAttempting to distribute increments on VirtualReg "
+                      << Base.virtRegIndex() << "\n");
 
-  // Make sure that Increment has no uses before BaseAccess.
-  for (MachineInstr &Use :
-       MRI->use_nodbg_instructions(Increment->getOperand(0).getReg())) {
-    if (!DT->dominates(BaseAccess, &Use) || &Use == BaseAccess) {
-      LLVM_DEBUG(dbgs() << "  BaseAccess doesn't dominate use of increment\n");
+    // Make sure that Increment has no uses before BaseAccess.
+    for (MachineInstr &Use :
+        MRI->use_nodbg_instructions(Increment->getOperand(0).getReg())) {
+      if (!DT->dominates(BaseAccess, &Use) || &Use == BaseAccess) {
+        LLVM_DEBUG(dbgs() << "  BaseAccess doesn't dominate use of increment\n");
+        return false;
+      }
+    }
+
+    // Make sure that Increment can be folded into Base
+    IncrementOffset = getAddSubImmediate(*Increment);
+    unsigned NewPostIncOpcode = getPostIndexedLoadStoreOpcode(
+        BaseAccess->getOpcode(), IncrementOffset > 0 ? ARM_AM::add : ARM_AM::sub);
+    if (!isLegalAddressImm(NewPostIncOpcode, IncrementOffset, TII)) {
+      LLVM_DEBUG(dbgs() << "  Illegal addressing mode immediate on postinc\n");
       return false;
     }
   }
+  else if (PrePostInc) {
+    // If we already have a pre/post index load/store then set BaseAccess,
+    // IncrementOffset and NewBaseReg to the values it already produces,
+    // allowing us to update and subsequent uses of BaseOp reg with the
+    // incremented value.
+    if (Increment)
+      return false;
 
-  // Make sure that Increment can be folded into Base
-  int IncrementOffset = getAddSubImmediate(*Increment);
-  unsigned NewPostIncOpcode = getPostIndexedLoadStoreOpcode(
-      BaseAccess->getOpcode(), IncrementOffset > 0 ? ARM_AM::add : ARM_AM::sub);
-  if (!isLegalAddressImm(NewPostIncOpcode, IncrementOffset, TII)) {
-    LLVM_DEBUG(dbgs() << "  Illegal addressing mode immediate on postinc\n");
-    return false;
+    LLVM_DEBUG(dbgs() << "\nAttempting to distribute increments on already "
+                      << "indexed VirtualReg " << Base.virtRegIndex() << "\n");
+    int BaseOp = getBaseOperandIndex(*PrePostInc);
+    IncrementOffset = PrePostInc->getOperand(BaseOp+1).getImm();
+    BaseAccess = PrePostInc;
+    NewBaseReg = PrePostInc->getOperand(0).getReg();
   }
+  else
+    return false;
 
   // And make sure that the negative value of increment can be added to all
   // other offsets after the BaseAccess. We rely on either
@@ -2801,16 +2905,18 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements(Register Base) {
     return false;
   }
 
-  // Replace BaseAccess with a post inc
-  LLVM_DEBUG(dbgs() << "Changing: "; BaseAccess->dump());
-  LLVM_DEBUG(dbgs() << "  And   : "; Increment->dump());
-  Register NewBaseReg = Increment->getOperand(0).getReg();
-  MachineInstr *BaseAccessPost =
-      createPostIncLoadStore(BaseAccess, IncrementOffset, NewBaseReg, TII, TRI);
-  BaseAccess->eraseFromParent();
-  Increment->eraseFromParent();
-  (void)BaseAccessPost;
-  LLVM_DEBUG(dbgs() << "  To    : "; BaseAccessPost->dump());
+  if (!PrePostInc) {
+    // Replace BaseAccess with a post inc
+    LLVM_DEBUG(dbgs() << "Changing: "; BaseAccess->dump());
+    LLVM_DEBUG(dbgs() << "  And   : "; Increment->dump());
+    NewBaseReg = Increment->getOperand(0).getReg();
+    MachineInstr *BaseAccessPost =
+        createPostIncLoadStore(BaseAccess, IncrementOffset, NewBaseReg, TII, TRI);
+    BaseAccess->eraseFromParent();
+    Increment->eraseFromParent();
+    (void)BaseAccessPost;
+    LLVM_DEBUG(dbgs() << "  To    : "; BaseAccessPost->dump());
+  }
 
   for (auto *Use : SuccessorAccesses) {
     LLVM_DEBUG(dbgs() << "Changing: "; Use->dump());

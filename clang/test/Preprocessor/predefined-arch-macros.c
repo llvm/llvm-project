@@ -2525,6 +2525,7 @@
 // CHECK_AMDFAM10_M32: #define __SSE4A__ 1
 // CHECK_AMDFAM10_M32: #define __SSE_MATH__ 1
 // CHECK_AMDFAM10_M32: #define __SSE__ 1
+// CHECK_AMDFAM10_M32-NOT: #define __SSSE3__ 1
 // CHECK_AMDFAM10_M32: #define __amdfam10 1
 // CHECK_AMDFAM10_M32: #define __amdfam10__ 1
 // CHECK_AMDFAM10_M32: #define __i386 1
@@ -2547,6 +2548,7 @@
 // CHECK_AMDFAM10_M64: #define __SSE4A__ 1
 // CHECK_AMDFAM10_M64: #define __SSE_MATH__ 1
 // CHECK_AMDFAM10_M64: #define __SSE__ 1
+// CHECK_AMDFAM10_M64-NOT: #define __SSSE3__ 1
 // CHECK_AMDFAM10_M64: #define __amd64 1
 // CHECK_AMDFAM10_M64: #define __amd64__ 1
 // CHECK_AMDFAM10_M64: #define __amdfam10 1
@@ -3233,9 +3235,26 @@
 // RUN:     -target sparc-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC-V9
 // CHECK_SPARC-V9-NOT: #define __sparcv8 1
+// CHECK_SPARC-V9-NOT: #define __sparcv8__ 1
 // CHECK_SPARC-V9: #define __sparc_v9__ 1
 // CHECK_SPARC-V9: #define __sparcv9 1
-// CHECK_SPARC-V9-NOT: #define __sparcv8 1
+// CHECK_SPARC-V9: #define __sparcv9__ 1
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-sun-solaris \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_SOLARIS_GCC_ATOMICS
+// CHECK_SPARC_SOLARIS_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_SPARC_SOLARIS_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_SPARC_SOLARIS_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_SPARC_SOLARIS_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
+
+// RUN: %clang -mcpu=v8 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-sun-solaris \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_SOLARIS_GCC_ATOMICS-V8
+// CHECK_SPARC_SOLARIS_GCC_ATOMICS-V8-NOT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// CHECK_SPARC_SOLARIS_GCC_ATOMICS-V8-NOT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// CHECK_SPARC_SOLARIS_GCC_ATOMICS-V8-NOT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// CHECK_SPARC_SOLARIS_GCC_ATOMICS-V8-NOT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target sparcel-unknown-linux \

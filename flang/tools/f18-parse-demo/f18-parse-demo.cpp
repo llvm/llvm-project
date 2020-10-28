@@ -160,14 +160,15 @@ std::string CompileFortran(
   }
   options.searchDirectories = driver.searchDirectories;
   Fortran::parser::AllSources allSources;
-  Fortran::parser::Parsing parsing{allSources};
+  Fortran::parser::AllCookedSources allCookedSources{allSources};
+  Fortran::parser::Parsing parsing{allCookedSources};
 
   auto start{CPUseconds()};
   parsing.Prescan(path, options);
   if (!parsing.messages().empty() &&
       (driver.warningsAreErrors || parsing.messages().AnyFatalError())) {
     llvm::errs() << driver.prefix << "could not scan " << path << '\n';
-    parsing.messages().Emit(llvm::errs(), parsing.cooked());
+    parsing.messages().Emit(llvm::errs(), parsing.allCooked());
     exitStatus = EXIT_FAILURE;
     return {};
   }
@@ -191,7 +192,7 @@ std::string CompileFortran(
   }
 
   parsing.ClearLog();
-  parsing.messages().Emit(llvm::errs(), parsing.cooked());
+  parsing.messages().Emit(llvm::errs(), parsing.allCooked());
   if (!parsing.consumedWholeFile()) {
     parsing.EmitMessage(llvm::errs(), parsing.finalRestingPlace(),
         "parser FAIL (final position)");

@@ -234,7 +234,7 @@ bool HardwareLoops::runOnFunction(Function &F) {
 
   for (LoopInfo::iterator I = LI->begin(), E = LI->end(); I != E; ++I) {
     Loop *L = *I;
-    if (!L->getParentLoop())
+    if (L->isOutermost())
       TryConvertLoop(L);
   }
 

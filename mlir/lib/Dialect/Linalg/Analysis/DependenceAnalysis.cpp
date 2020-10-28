@@ -30,7 +30,8 @@ Value Aliases::find(Value v) {
 
   auto it = aliases.find(v);
   if (it != aliases.end()) {
-    assert(it->getSecond().getType().isa<MemRefType>() && "Memref expected");
+    assert(it->getSecond().getType().isa<BaseMemRefType>() &&
+           "Memref expected");
     return it->getSecond();
   }
 

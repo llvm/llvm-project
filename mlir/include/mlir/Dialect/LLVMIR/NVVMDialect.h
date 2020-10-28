@@ -19,16 +19,10 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
-namespace mlir {
-namespace NVVM {
-
 ///// Ops /////
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMOps.h.inc"
 
 #include "mlir/Dialect/LLVMIR/NVVMOpsDialect.h.inc"
-
-} // namespace NVVM
-} // namespace mlir
 
 #endif /* MLIR_DIALECT_LLVMIR_NVVMDIALECT_H_ */

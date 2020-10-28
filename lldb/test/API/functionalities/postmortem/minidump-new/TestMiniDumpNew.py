@@ -455,3 +455,30 @@ class MiniDumpNewTestCase(TestBase):
         check_region(17, 0x40169000, 0x4016b000, True,  True,  False, True,  d)
         check_region(18, 0x4016b000, 0x40176000, True,  True,  False, True,  n)
         check_region(-1, 0x40176000, max_int,    False, False, False, False, n)
+
+    @skipIfLLVMTargetMissing("X86")
+    def test_minidump_sysroot(self):
+        """Test that lldb can find a module referenced in an i386 linux minidump using the sysroot."""
+
+        # Copy linux-x86_64 executable to tmp_sysroot/temp/test/ (since it was compiled as
+        # /tmp/test/linux-x86_64)
+        tmp_sysroot = os.path.join(
+            self.getBuildDir(), "lldb_i386_mock_sysroot")
+        executable = os.path.join(
+            tmp_sysroot, "tmp", "test", "linux-x86_64")
+        exe_dir = os.path.dirname(executable)
+        lldbutil.mkdir_p(exe_dir)
+        shutil.copyfile("linux-x86_64", executable)
+
+        # Set sysroot and load core
+        self.runCmd("platform select remote-linux --sysroot '%s'" %
+                    tmp_sysroot)
+        self.process_from_yaml("linux-x86_64.yaml")
+        self.check_state()
+
+        # Check that we loaded the module from the sysroot
+        self.assertEqual(self.target.GetNumModules(), 1)
+        module = self.target.GetModuleAtIndex(0)
+        spec_dir_norm = os.path.normcase(module.GetFileSpec().GetDirectory())
+        exe_dir_norm = os.path.normcase(exe_dir)
+        self.assertEqual(spec_dir_norm, exe_dir_norm)

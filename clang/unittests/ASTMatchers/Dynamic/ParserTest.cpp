@@ -354,8 +354,7 @@ TEST(ParserTest, Errors) {
             ParseMatcherWithError(R"query(decl(hasAttr("Final")))query"));
   EXPECT_EQ("1:1: Error parsing argument 1 for matcher decl.\n"
             "1:6: Error building matcher hasAttr.\n"
-            "1:14: Incorrect type for arg 1. (Expected = string) != (Actual = "
-            "String)",
+            "1:14: Value not found: unrelated",
             ParseMatcherWithError(R"query(decl(hasAttr("unrelated")))query"));
   EXPECT_EQ(
       "1:1: Error parsing argument 1 for matcher namedDecl.\n"
@@ -366,8 +365,7 @@ TEST(ParserTest, Errors) {
   EXPECT_EQ(
       "1:1: Error parsing argument 1 for matcher namedDecl.\n"
       "1:11: Error building matcher matchesName.\n"
-      "1:33: Incorrect type for arg 2. (Expected = string) != (Actual = "
-      "String)",
+      "1:33: Value not found: IgnoreCase & BasicRegex",
       ParseMatcherWithError(
           R"query(namedDecl(matchesName("[ABC]*", "IgnoreCase & BasicRegex")))query"));
   EXPECT_EQ(

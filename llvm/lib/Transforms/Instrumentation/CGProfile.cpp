@@ -53,7 +53,8 @@ static bool runCGProfilePass(
   InstrProfSymtab Symtab;
   auto UpdateCounts = [&](TargetTransformInfo &TTI, Function *F,
                           Function *CalledF, uint64_t NewCount) {
-    if (!CalledF || !TTI.isLoweredToCall(CalledF))
+    if (!CalledF || !TTI.isLoweredToCall(CalledF) ||
+        CalledF->hasDLLImportStorageClass())
       return;
     uint64_t &Count = Counts[std::make_pair(F, CalledF)];
     Count = SaturatingAdd(Count, NewCount);

@@ -1313,10 +1313,8 @@ define i32 @range_test(i32 %x) {
   ; CHECK:   [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY]], [[C1]]
   ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
   ; CHECK:   [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ule), [[SUB]](s32), [[C5]]
-  ; CHECK:   [[C6:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
-  ; CHECK:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[ICMP1]], [[C6]]
-  ; CHECK:   G_BRCOND [[XOR]](s1), %bb.4
-  ; CHECK:   G_BR %bb.2
+  ; CHECK:   G_BRCOND [[ICMP1]](s1), %bb.2
+  ; CHECK:   G_BR %bb.4
   ; CHECK: bb.2.sw.bb:
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = nsw G_ADD [[COPY]], [[C3]]

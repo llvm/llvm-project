@@ -1,6 +1,6 @@
 # REQUIRES: x86, shell
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: lld -flavor darwinnew -o %t %t.o
+# RUN: %lld -o %t %t.o
 # RUN: (llvm-readobj --macho-segment %t; echo "Total file size"; wc -c %t) | FileCheck %s
 
 ## These two segments must always be present at the start of an executable.

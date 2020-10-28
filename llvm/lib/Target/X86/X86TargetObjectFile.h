@@ -36,7 +36,7 @@ namespace llvm {
                                             MCStreamer &Streamer) const override;
   };
 
-  /// This implemenatation is used for X86 ELF targets that don't
+  /// This implementation is used for X86 ELF targets that don't
   /// have a further specialization.
   class X86ELFTargetObjectFile : public TargetLoweringObjectFileELF {
   public:

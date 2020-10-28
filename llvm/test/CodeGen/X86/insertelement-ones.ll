@@ -299,11 +299,11 @@ define <16 x i16> @insert_v16i16_x12345x789ABCDEx(<16 x i16> %a) {
 ;
 ; AVX512F-LABEL: insert_v16i16_x12345x789ABCDEx:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm0[1,2,3,4,5],xmm1[6],xmm0[7]
-; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX512F-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm2[7],ymm0[8,9,10,11,12,13,14],ymm2[15]
-; AVX512F-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512F-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm2 = [32,1,2,3,4,5,38,7,8,9,10,11,12,13,14,47]
+; AVX512F-NEXT:    vpermt2w %zmm1, %zmm2, %zmm0
+; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: insert_v16i16_x12345x789ABCDEx:

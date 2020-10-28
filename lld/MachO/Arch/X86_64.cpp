@@ -238,23 +238,7 @@ void X86_64::prepareSymbolRelocation(lld::macho::Symbol *sym,
     break;
   }
   case X86_64_RELOC_BRANCH: {
-    if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
-      if (in.stubs->addEntry(dysym)) {
-        if (sym->isWeakDef()) {
-          in.binding->addEntry(dysym, in.lazyPointers,
-                               sym->stubsIndex * WordSize);
-          in.weakBinding->addEntry(sym, in.lazyPointers,
-                                   sym->stubsIndex * WordSize);
-        } else {
-          in.lazyBinding->addEntry(dysym);
-        }
-      }
-    } else if (auto *defined = dyn_cast<Defined>(sym)) {
-      if (defined->isWeakDef() && defined->isExternal())
-        if (in.stubs->addEntry(sym))
-          in.weakBinding->addEntry(sym, in.lazyPointers,
-                                   sym->stubsIndex * WordSize);
-    }
+    prepareBranchTarget(sym);
     break;
   }
   case X86_64_RELOC_UNSIGNED: {

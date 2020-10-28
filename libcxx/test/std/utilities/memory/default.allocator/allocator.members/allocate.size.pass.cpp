@@ -10,7 +10,7 @@
 // <memory>
 
 // allocator:
-// T* allocate(size_t n);
+// constexpr T* allocate(size_t n);
 
 #include <memory>
 #include <cassert>

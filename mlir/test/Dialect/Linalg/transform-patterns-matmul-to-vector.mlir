@@ -5,21 +5,16 @@
 func @matmul(%A: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
                   %B: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
                   %C: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>) {
-  linalg.matmul %A, %B, %C {__internal_linalg_transform__ = "START"} :
-    (memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
-     memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
-     memref<1584x1584xf32, offset: 0, strides: [1584, 1]>)
+  linalg.matmul {__internal_linalg_transform__ = "START"}
+    ins(%A, %B: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
+                memref<1584x1584xf32, offset: 0, strides: [1584, 1]>)
+   outs(%C: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>)
   return
 }
 
 // CHECK-LABEL:func @matmul
-//      CHECK: vector.broadcast {{.*}} : f32 to vector<8x16xf32>
 //      CHECK: store {{.*}}[] : memref<vector<8x16xf32>>
-//
-//      CHECK: vector.broadcast {{.*}} : f32 to vector<16x12xf32>
 //      CHECK: store {{.*}}[] : memref<vector<16x12xf32>>
-//
-//      CHECK: vector.broadcast {{.*}} : f32 to vector<8x12xf32>
 //      CHECK: store {{.*}}[] : memref<vector<8x12xf32>>
 //
 //      CHECK: linalg.copy
@@ -36,7 +31,8 @@ func @matmul(%A: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
 func @contraction_dot(%A: memref<1584xf32>, %B: memref<1584xf32>, %C: memref<f32>) {
   // VECTOR-CONTRACTION: vector.contract
   // VECTOR-CONTRACTION-SAME: vector<1584xf32>, vector<1584xf32> into f32
-  linalg.dot %A, %B, %C : (memref<1584xf32>, memref<1584xf32>, memref<f32>)
+  linalg.dot ins(%A, %B: memref<1584xf32>, memref<1584xf32>)
+            outs(%C: memref<f32>)
   return
 }
 
@@ -44,8 +40,8 @@ func @contraction_dot(%A: memref<1584xf32>, %B: memref<1584xf32>, %C: memref<f32
 func @contraction_matvec(%A: memref<1584x1584xf32>, %B: memref<1584xf32>, %C: memref<1584xf32>) {
   // VECTOR-CONTRACTION: vector.contract
   // VECTOR-CONTRACTION-SAME: vector<1584x1584xf32>, vector<1584xf32> into vector<1584xf32>
-  linalg.matvec %A, %B, %C :
-    (memref<1584x1584xf32>, memref<1584xf32>, memref<1584xf32>)
+  linalg.matvec ins(%A, %B: memref<1584x1584xf32>, memref<1584xf32>)
+            outs(%C: memref<1584xf32>)
   return
 }
 
@@ -53,8 +49,8 @@ func @contraction_matvec(%A: memref<1584x1584xf32>, %B: memref<1584xf32>, %C: me
 func @contraction_matmul(%A: memref<1584x1584xf32>, %B: memref<1584x1584xf32>, %C: memref<1584x1584xf32>) {
   // VECTOR-CONTRACTION: vector.contract
   // VECTOR-CONTRACTION-SAME: vector<1584x1584xf32>, vector<1584x1584xf32> into vector<1584x1584xf32>
-  linalg.matmul %A, %B, %C :
-    (memref<1584x1584xf32>, memref<1584x1584xf32>, memref<1584x1584xf32>)
+  linalg.matmul ins(%A, %B: memref<1584x1584xf32>, memref<1584x1584xf32>)
+            outs(%C: memref<1584x1584xf32>)
   return
 }
 
@@ -62,7 +58,8 @@ func @contraction_matmul(%A: memref<1584x1584xf32>, %B: memref<1584x1584xf32>, %
 func @contraction_batch_matmul(%A: memref<1584x1584x1584xf32>, %B: memref<1584x1584x1584xf32>, %C: memref<1584x1584x1584xf32>) {
   // VECTOR-CONTRACTION: vector.contract
   // VECTOR-CONTRACTION-SAME: vector<1584x1584x1584xf32>, vector<1584x1584x1584xf32> into vector<1584x1584x1584xf32>
-  linalg.batch_matmul %A, %B, %C :
-    (memref<1584x1584x1584xf32>, memref<1584x1584x1584xf32>, memref<1584x1584x1584xf32>)
+  linalg.batch_matmul
+    ins(%A, %B: memref<1584x1584x1584xf32>, memref<1584x1584x1584xf32>)
+   outs(%C: memref<1584x1584x1584xf32>)
   return
 }

@@ -37,10 +37,12 @@ bb3:
   ret void
 }
 
-
+; We cannot remove the store in the entry block, because @unknown_func could
+; unwind and the stored value could be read by the caller.
 define void @test17(i32* noalias %P) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to i8*
+; CHECK-NEXT:    store i32 1, i32* [[P]], align 4
 ; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    call void @unknown_func()
@@ -81,31 +83,6 @@ bb1:
 bb3:
   call void @free(i8* %P2)
   %lv = load i8, i8* %P2
-  ret void
-}
-
-
-define void @test6(i32* noalias %P) {
-; CHECK-LABEL: @test6(
-; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB3:%.*]]
-; CHECK:       bb2:
-; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    br label [[BB3]]
-; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
-; CHECK-NEXT:    ret void
-;
-  store i32 0, i32* %P
-  br i1 true, label %bb1, label %bb2
-bb1:
-  br label %bb3
-bb2:
-  call void @unknown_func()
-  br label %bb3
-bb3:
-  store i32 0, i32* %P
   ret void
 }
 
@@ -173,71 +150,6 @@ bb3:
   ret void
 }
 
-
-define i32 @test22(i32* %P, i32* noalias %Q, i32* %R) {
-; CHECK-LABEL: @test22(
-; CHECK-NEXT:    store i32 2, i32* [[P:%.*]]
-; CHECK-NEXT:    store i32 3, i32* [[Q:%.*]]
-; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[R:%.*]]
-; CHECK-NEXT:    ret i32 [[L]]
-;
-  store i32 1, i32* %Q
-  store i32 2, i32* %P
-  store i32 3, i32* %Q
-  %l = load i32, i32* %R
-  ret i32 %l
-}
-
-
-define void @test23(i32* noalias %P) {
-; CHECK-LABEL: @test23(
-; CHECK-NEXT:    br i1 true, label [[BB1:%.*]], label [[BB2:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB3:%.*]]
-; CHECK:       bb2:
-; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    br label [[BB3]]
-; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
-; CHECK-NEXT:    ret void
-;
-  br i1 true, label %bb1, label %bb2
-bb1:
-  store i32 0, i32* %P
-  br label %bb3
-bb2:
-  call void @unknown_func()
-  br label %bb3
-bb3:
-  store i32 0, i32* %P
-  ret void
-}
-
-
-define void @test24(i32* noalias %P) {
-; CHECK-LABEL: @test24(
-; CHECK-NEXT:    br i1 true, label [[BB2:%.*]], label [[BB1:%.*]]
-; CHECK:       bb1:
-; CHECK-NEXT:    br label [[BB3:%.*]]
-; CHECK:       bb2:
-; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    br label [[BB3]]
-; CHECK:       bb3:
-; CHECK-NEXT:    store i32 0, i32* [[P:%.*]]
-; CHECK-NEXT:    ret void
-;
-  br i1 true, label %bb2, label %bb1
-bb1:
-  store i32 0, i32* %P
-  br label %bb3
-bb2:
-  call void @unknown_func()
-  br label %bb3
-bb3:
-  store i32 0, i32* %P
-  ret void
-}
-
 define i8* @test26() {
 ; CHECK-LABEL: @test26(
 ; CHECK-NEXT:  bb1:
@@ -268,6 +180,7 @@ define void @test27() {
 ; CHECK-NEXT:    br i1 true, label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[M:%.*]] = call noalias i8* @malloc(i64 10)
+; CHECK-NEXT:    store i8 1, i8* [[M]], align 1
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[R:%.*]] = phi i8* [ null, [[BB1:%.*]] ], [ [[M]], [[BB2]] ]

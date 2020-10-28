@@ -113,7 +113,6 @@ static void dumpTypeTagName(raw_ostream &OS, dwarf::Tag T) {
 }
 
 static void dumpArrayType(raw_ostream &OS, const DWARFDie &D) {
-  Optional<uint64_t> Bound;
   for (const DWARFDie &C : D.children())
     if (C.getTag() == DW_TAG_subrange_type) {
       Optional<uint64_t> LB;
@@ -556,6 +555,17 @@ const char *DWARFDie::getLinkageName() const {
 
 uint64_t DWARFDie::getDeclLine() const {
   return toUnsigned(findRecursively(DW_AT_decl_line), 0);
+}
+
+std::string
+DWARFDie::getDeclFile(DILineInfoSpecifier::FileLineInfoKind Kind) const {
+  std::string FileName;
+  if (auto DeclFile = toUnsigned(findRecursively(DW_AT_decl_file))) {
+    if (const auto *LT = U->getContext().getLineTableForUnit(U)) {
+      LT->getFileNameByIndex(*DeclFile, U->getCompilationDir(), Kind, FileName);
+    }
+  }
+  return FileName;
 }
 
 void DWARFDie::getCallerFrame(uint32_t &CallFile, uint32_t &CallLine,

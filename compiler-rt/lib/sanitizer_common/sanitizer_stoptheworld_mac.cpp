@@ -37,9 +37,9 @@ class SuspendedThreadsListMac : public SuspendedThreadsList {
   bool ContainsThread(thread_t thread) const;
   void Append(thread_t thread);
 
-  PtraceRegistersStatus GetRegistersAndSP(uptr index, uptr *buffer,
+  PtraceRegistersStatus GetRegistersAndSP(uptr index,
+                                          InternalMmapVector<uptr> *buffer,
                                           uptr *sp) const override;
-  uptr RegisterCount() const override;
 
  private:
   InternalMmapVector<SuspendedThreadInfo> threads_;
@@ -142,7 +142,7 @@ void SuspendedThreadsListMac::Append(thread_t thread) {
 }
 
 PtraceRegistersStatus SuspendedThreadsListMac::GetRegistersAndSP(
-    uptr index, uptr *buffer, uptr *sp) const {
+    uptr index, InternalMmapVector<uptr> *buffer, uptr *sp) const {
   thread_t thread = GetThread(index);
   regs_struct regs;
   int err;
@@ -159,7 +159,8 @@ PtraceRegistersStatus SuspendedThreadsListMac::GetRegistersAndSP(
                                         : REGISTERS_UNAVAILABLE;
   }
 
-  internal_memcpy(buffer, &regs, sizeof(regs));
+  buffer->resize(RoundUpTo(sizeof(regs), sizeof(uptr)) / sizeof(uptr));
+  internal_memcpy(buffer->data(), &regs, sizeof(regs));
 #if defined(__aarch64__) && defined(arm_thread_state64_get_sp)
   *sp = arm_thread_state64_get_sp(regs);
 #else
@@ -173,9 +174,6 @@ PtraceRegistersStatus SuspendedThreadsListMac::GetRegistersAndSP(
   return REGISTERS_AVAILABLE;
 }
 
-uptr SuspendedThreadsListMac::RegisterCount() const {
-  return MACHINE_THREAD_STATE_COUNT;
-}
 } // namespace __sanitizer
 
 #endif  // SANITIZER_MAC && (defined(__x86_64__) || defined(__aarch64__)) ||

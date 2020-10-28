@@ -268,6 +268,7 @@ bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
 void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
   // Reset the pragma for the next loop in iteration.
   disabledByPragma = false;
+  II_setByPragma = 0;
 
   MachineBasicBlock *LBLK = L.getTopBlock();
 

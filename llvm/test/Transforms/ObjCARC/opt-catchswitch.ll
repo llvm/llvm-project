@@ -15,6 +15,9 @@ declare dllimport void @llvm.objc.release(i8*)
 define i8* @g(i8* %p, i8* %q) local_unnamed_addr personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
 entry:
   %0 = tail call i8* @llvm.objc.retain(i8* %p) #0
+  ; the following call prevents ARC optimizer from removing the retain/release
+  ; pair on %p
+  %v1 = call i8* @f(i8* null, i8* null)
   %1 = tail call i8* @llvm.objc.retain(i8* %q) #0
   %call = invoke i8* @f(i8* %p, i8* %q)
           to label %invoke.cont unwind label %catch.dispatch, !clang.arc.no_objc_arc_exceptions !0
@@ -40,6 +43,7 @@ cleanup:
 
 ; CHECK-LABEL: entry:
 ; CHECK-NEXT:    %0 = tail call i8* @llvm.objc.retain(i8* %p) #0
+; CHECK-NEXT:    call i8* @f(i8* null, i8* null)
 ; CHECK-NEXT:    %call = invoke i8* @f(i8* %p, i8* %q)
 ; CHECK-NEXT:            to label %invoke.cont unwind label %catch.dispatch
 

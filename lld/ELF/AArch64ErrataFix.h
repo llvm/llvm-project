@@ -18,7 +18,7 @@ namespace elf {
 
 class Defined;
 class InputSection;
-struct InputSectionDescription;
+class InputSectionDescription;
 class OutputSection;
 class Patch843419Section;
 

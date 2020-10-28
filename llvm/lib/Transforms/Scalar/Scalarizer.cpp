@@ -398,7 +398,8 @@ void ScalarizerVisitor::gather(Instruction *Op, const ValueVector &CV) {
         continue;
 
       Instruction *Old = cast<Instruction>(V);
-      CV[I]->takeName(Old);
+      if (isa<Instruction>(CV[I]))
+        CV[I]->takeName(Old);
       Old->replaceAllUsesWith(CV[I]);
       PotentiallyDeadInstrs.emplace_back(Old);
     }

@@ -51,10 +51,9 @@ Symbols:
 
 # INVALID:      --- !ELF
 # INVALID-NEXT: FileHeader:
-# INVALID-NEXT:   Class:   ELFCLASS32
-# INVALID-NEXT:   Data:    ELFDATA2MSB
-# INVALID-NEXT:   Type:    ET_DYN
-# INVALID-NEXT:   Machine: EM_NONE
+# INVALID-NEXT:   Class: ELFCLASS32
+# INVALID-NEXT:   Data:  ELFDATA2MSB
+# INVALID-NEXT:   Type:  ET_DYN
 # INVALID-NEXT: Sections:
 # INVALID-NEXT:   - Name:    .empty
 # INVALID-NEXT:     Type:    SHT_LLVM_CALL_GRAPH_PROFILE

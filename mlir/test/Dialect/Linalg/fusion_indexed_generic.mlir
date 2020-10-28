@@ -3,8 +3,6 @@
 #map = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 #id_2d = affine_map<(d0, d1) -> (d0, d1)>
 #pointwise_2d_trait = {
-  args_in = 2,
-  args_out = 1,
   indexing_maps = [#id_2d, #id_2d, #id_2d],
   iterator_types = ["parallel", "parallel"]
 }
@@ -12,11 +10,13 @@ func @fuse_indexed_generic_consumer(%A: memref<?x?xf32>,
                                     %B: memref<?x?xf32>,
                                     %C: memref<?x?xf32>,
                                     %D: memref<?x?xf32>) {
-  linalg.generic #pointwise_2d_trait %A, %B, %C {
+  linalg.generic #pointwise_2d_trait
+    ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
+   outs(%C : memref<?x?xf32>) {
   ^bb0(%e: f32, %arg5: f32, %arg6: f32):   // no predecessors
     %2 = addf %e, %arg5 : f32
     linalg.yield %2 : f32
-  }: memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
+  }
   %c1 = constant 1 : index
   %c0 = constant 0 : index
   %c25 = constant 25 : index
@@ -33,10 +33,9 @@ func @fuse_indexed_generic_consumer(%A: memref<?x?xf32>,
           memref<?x?xf32> to memref<?x?xf32, #map>
       linalg.indexed_generic {
         indexing_maps = [#id_2d, #id_2d],
-        iterator_types = ["parallel", "parallel"],
-        args_in = 1,
-        args_out = 1
-      } %4, %5 {
+        iterator_types = ["parallel", "parallel"]}
+        ins(%4 : memref<?x?xf32, #map>)
+       outs(%5 : memref<?x?xf32, #map>) {
       ^bb0(%arg4: index, %arg5: index, %arg6: f32, %arg7: f32):
         %6 = addi %arg4, %arg2 : index
         %7 = addi %arg5, %arg3 : index
@@ -46,7 +45,7 @@ func @fuse_indexed_generic_consumer(%A: memref<?x?xf32>,
         %11 = sitofp %10 : i32 to f32
         %12 = addf %9, %11 : f32
         linalg.yield %12 : f32
-      }: memref<?x?xf32, #map>, memref<?x?xf32, #map>
+      }
     }
   }
   return
@@ -66,8 +65,6 @@ func @fuse_indexed_generic_consumer(%A: memref<?x?xf32>,
 #map = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 #id_2d = affine_map<(d0, d1) -> (d0, d1)>
 #pointwise_2d_trait = {
-  args_in = 2,
-  args_out = 1,
   indexing_maps = [#id_2d, #id_2d, #id_2d],
   iterator_types = ["parallel", "parallel"]
 }
@@ -79,14 +76,16 @@ func @fuse_indexed_generic_producer(%A: memref<?x?xf32>,
   %c0 = constant 0 : index
   %c25 = constant 25 : index
   %c10 = constant 10 : index
-  linalg.indexed_generic #pointwise_2d_trait %A, %B, %C {
+  linalg.indexed_generic #pointwise_2d_trait
+      ins(%A, %B : memref<?x?xf32>, memref<?x?xf32>)
+     outs(%C : memref<?x?xf32>) {
     ^bb0(%i: index, %j: index, %a: f32, %b: f32, %c: f32): // no predecessors
       %i_int = index_cast %i: index to i32
       %i_float = sitofp %i_int : i32 to f32
       %ab = addf %a, %b : f32
       %out = addf %ab, %i_float : f32
       linalg.yield %out : f32
-  }: memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
+  }
   %C_X = dim %C, %c0 : memref<?x?xf32>
   %C_Y = dim %C, %c1 : memref<?x?xf32>
   %D_X = dim %D, %c0 : memref<?x?xf32>
@@ -98,14 +97,13 @@ func @fuse_indexed_generic_producer(%A: memref<?x?xf32>,
         memref<?x?xf32> to memref<?x?xf32, #map>
     linalg.generic {
       indexing_maps = [#id_2d, #id_2d],
-      iterator_types = ["parallel", "parallel"],
-      args_in = 1,
-      args_out = 1
-    } %C_view, %D_view {
+      iterator_types = ["parallel", "parallel"]}
+      ins(%C_view : memref<?x?xf32, #map>)
+     outs(%D_view : memref<?x?xf32, #map>) {
     ^bb0( %a: f32, %b: f32):
       %ab = addf %a, %b : f32
       linalg.yield %ab : f32
-    }: memref<?x?xf32, #map>, memref<?x?xf32, #map>
+    }
   }
   return
 }
@@ -125,8 +123,6 @@ func @fuse_indexed_generic_producer(%A: memref<?x?xf32>,
 #map = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 #id_2d = affine_map<(d0, d1) -> (d0, d1)>
 #pointwise_2d_trait = {
-  args_in = 2,
-  args_out = 1,
   indexing_maps = [#id_2d, #id_2d, #id_2d],
   iterator_types = ["parallel", "parallel"]
 }
@@ -137,14 +133,16 @@ func @fuse_indexed_generic_producer_tile_second_dim_only(%A: memref<?x?xf32>,
   %c1 = constant 1 : index
   %c3 = constant 3 : index
   %c0 = constant 0 : index
-  linalg.indexed_generic #pointwise_2d_trait %A, %B, %C {
+  linalg.indexed_generic #pointwise_2d_trait
+    ins(%A, %B: memref<?x?xf32>, memref<?x?xf32>)
+   outs(%C : memref<?x?xf32>) {
     ^bb0(%i: index, %j: index, %a: f32, %b: f32, %c: f32): // no predecessors
       %j_int = index_cast %j: index to i32
       %j_float = sitofp %j_int : i32 to f32
       %ab = addf %a, %b : f32
       %out = addf %ab, %j_float : f32
       linalg.yield %out : f32
-  }: memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
+  }
   %C_X = dim %C, %c0 : memref<?x?xf32>
   %C_Y = dim %C, %c1 : memref<?x?xf32>
   %D_X = dim %D, %c0 : memref<?x?xf32>
@@ -161,14 +159,13 @@ func @fuse_indexed_generic_producer_tile_second_dim_only(%A: memref<?x?xf32>,
 
     linalg.generic {
       indexing_maps = [#id_2d, #id_2d],
-      iterator_types = ["parallel", "parallel"],
-      args_in = 1,
-      args_out = 1
-    } %C_view, %D_view {
+      iterator_types = ["parallel", "parallel"]}
+      ins(%C_view : memref<?x?xf32, #map>)
+     outs(%D_view : memref<?x?xf32, #map>) {
     ^bb0( %a: f32, %b: f32):
       %ab = addf %a, %b : f32
       linalg.yield %ab : f32
-    }: memref<?x?xf32, #map>, memref<?x?xf32, #map>
+    }
     scf.yield
   }
   return

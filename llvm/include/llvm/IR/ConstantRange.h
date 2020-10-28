@@ -261,6 +261,14 @@ public:
     return !operator==(CR);
   }
 
+  /// Compute the maximal number of active bits needed to represent every value
+  /// in this range.
+  unsigned getActiveBits() const;
+
+  /// Compute the maximal number of bits needed to represent every value
+  /// in this signed range.
+  unsigned getMinSignedBits() const;
+
   /// Subtract the specified constant from the endpoints of this constant range.
   ConstantRange subtract(const APInt &CI) const;
 
@@ -408,6 +416,11 @@ public:
   /// from a signed remainder operation of a value in this range and a
   /// value in \p Other.
   ConstantRange srem(const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting from
+  /// a binary-xor of a value in this range by an all-one value,
+  /// aka bitwise complement operation.
+  ConstantRange binaryNot() const;
 
   /// Return a new range representing the possible values resulting
   /// from a binary-and of a value in this range by a value in \p Other.

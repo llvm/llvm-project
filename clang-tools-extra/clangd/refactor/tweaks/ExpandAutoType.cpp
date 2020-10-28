@@ -45,11 +45,6 @@ public:
 private:
   /// Cache the AutoTypeLoc, so that we do not need to search twice.
   llvm::Optional<clang::AutoTypeLoc> CachedLocation;
-
-  /// Create an error message with filename and line number in it
-  llvm::Error createErrorMessage(const std::string& Message,
-                                 const Selection &Inputs);
-
 };
 
 REGISTER_TWEAK(ExpandAutoType)
@@ -78,21 +73,19 @@ Expected<Tweak::Effect> ExpandAutoType::apply(const Selection& Inputs) {
 
   // if we can't resolve the type, return an error message
   if (DeducedType == llvm::None)
-    return createErrorMessage("Could not deduce type for 'auto' type", Inputs);
+    return error("Could not deduce type for 'auto' type");
 
   // if it's a lambda expression, return an error message
   if (isa<RecordType>(*DeducedType) &&
       dyn_cast<RecordType>(*DeducedType)->getDecl()->isLambda()) {
-    return createErrorMessage("Could not expand type of lambda expression",
-                              Inputs);
+    return error("Could not expand type of lambda expression");
   }
 
   // if it's a function expression, return an error message
   // naively replacing 'auto' with the type will break declarations.
   // FIXME: there are other types that have similar problems
   if (DeducedType->getTypePtr()->isFunctionPointerType()) {
-    return createErrorMessage("Could not expand type of function pointer",
-                              Inputs);
+    return error("Could not expand type of function pointer");
   }
 
   std::string PrettyTypeName = printType(*DeducedType,
@@ -103,18 +96,6 @@ Expected<Tweak::Effect> ExpandAutoType::apply(const Selection& Inputs) {
                 PrettyTypeName);
 
   return Effect::mainFileEdit(SrcMgr, tooling::Replacements(Expansion));
-}
-
-llvm::Error ExpandAutoType::createErrorMessage(const std::string& Message,
-                                               const Selection& Inputs) {
-  auto &SrcMgr = Inputs.AST->getSourceManager();
-  std::string ErrorMessage =
-      Message + ": " +
-          SrcMgr.getFilename(Inputs.Cursor).str() + " Line " +
-          std::to_string(SrcMgr.getExpansionLineNumber(Inputs.Cursor));
-
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 ErrorMessage.c_str());
 }
 
 } // namespace

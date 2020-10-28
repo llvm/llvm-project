@@ -236,8 +236,6 @@ define void @f_thunk(i8* %this, ...) {
 ; WINDOWS-NEXT:    popq %rsi
 ; WINDOWS-NEXT:    popq %r14
 ; WINDOWS-NEXT:    rex64 jmpq *%rax # TAILCALL
-; WINDOWS-NEXT:    .seh_handlerdata
-; WINDOWS-NEXT:    .text
 ; WINDOWS-NEXT:    .seh_endproc
 ;
 ; X86-NOSSE-LABEL: f_thunk:

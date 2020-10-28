@@ -929,8 +929,7 @@ Syntax:
 memref-type ::= ranked-memref-type | unranked-memref-type
 
 ranked-memref-type ::= `memref` `<` dimension-list-ranked tensor-memref-element-type
-                      (`,` layout-specification)? |
-                      (`,` memory-space)? `>`
+                      (`,` layout-specification)? (`,` memory-space)? `>`
 
 unranked-memref-type ::= `memref` `<*x` tensor-memref-element-type
                          (`,` memory-space)? `>`
@@ -1039,7 +1038,7 @@ Examples of memref static type
 //
 //   { (i, j) : 0 <= i < 16, 0 <= j < 32 }
 //
-memref<16x32xf32, #identity, memspace0>
+memref<16x32xf32, #identity>
 
 // The dimension list "16x4x?" defines the following 3D index space:
 //
@@ -1049,7 +1048,7 @@ memref<16x32xf32, #identity, memspace0>
 // the third dimension.
 //
 // %N here binds to the size of the third dimension.
-%A = alloc(%N) : memref<16x4x?xf32, #col_major, memspace0>
+%A = alloc(%N) : memref<16x4x?xf32, #col_major>
 
 // A 2-d dynamic shaped memref that also has a dynamically sized tiled layout.
 // The memref index space is of size %M x %N, while %B1 and %B2 bind to the
@@ -1088,10 +1087,10 @@ Examples
 ```mlir
 // Allocates a memref with 2D index space:
 //   { (i, j) : 0 <= i < 16, 0 <= j < 32 }
-%A = alloc() : memref<16x32xf32, #imapA, memspace0>
+%A = alloc() : memref<16x32xf32, #imapA>
 
 // Loads data from memref '%A' using a 2D index: (%i, %j)
-%v = load %A[%i, %j] : memref<16x32xf32, #imapA, memspace0>
+%v = load %A[%i, %j] : memref<16x32xf32, #imapA>
 ```
 
 ##### Index Map

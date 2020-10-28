@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s 2>&1 | FileCheck %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga   -show-encoding %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga   %s 2>&1 | FileCheck --implicit-check-not=error: %s
 
 // GENERIC LIMITATIONS ON VOP FORMATS: CONSTANT BUS RESTRICTIONS
 

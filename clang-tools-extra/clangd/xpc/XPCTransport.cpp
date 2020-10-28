@@ -41,7 +41,7 @@ Error decodeError(const json::Object &O) {
       std::string(O.getString("message").getValueOr("Unspecified error"));
   if (auto Code = O.getInteger("code"))
     return make_error<LSPError>(std::move(Msg), ErrorCode(*Code));
-  return make_error<StringError>(std::move(Msg), inconvertibleErrorCode());
+  return error("{0}", Msg);
 }
 
 // C "closure" for XPCTransport::loop() method

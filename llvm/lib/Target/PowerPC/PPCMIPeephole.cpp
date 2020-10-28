@@ -1555,6 +1555,8 @@ bool PPCMIPeephole::emitRLDICWhenLoweringJumpTables(MachineInstr &MI) {
   MI.getOperand(1).setReg(SrcMI->getOperand(1).getReg());
   MI.getOperand(2).setImm(NewSH);
   MI.getOperand(3).setImm(NewMB);
+  MI.getOperand(1).setIsKill(SrcMI->getOperand(1).isKill());
+  SrcMI->getOperand(1).setIsKill(false);
 
   LLVM_DEBUG(dbgs() << "To: ");
   LLVM_DEBUG(MI.dump());

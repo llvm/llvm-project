@@ -182,10 +182,10 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
   set_target_properties(liblldb_exports PROPERTIES FOLDER "lldb misc")
 endif()
 
-if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
+if (MSVC)
   # Only MSVC has the ABI compatibility problem and avoids using FindPythonLibs,
   # so only it needs to explicitly link against ${Python3_LIBRARIES}
-  if (MSVC AND LLDB_ENABLE_PYTHON)
+  if (LLDB_ENABLE_PYTHON)
     target_link_libraries(liblldb PRIVATE ${Python3_LIBRARIES})
   endif()
 else()

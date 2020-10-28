@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/raw_ostream.h"
@@ -57,4 +58,19 @@ LLT llvm::getLLTForMVT(MVT Ty) {
 
   return LLT::vector(Ty.getVectorNumElements(),
                      Ty.getVectorElementType().getSizeInBits());
+}
+
+const llvm::fltSemantics &llvm::getFltSemanticForLLT(LLT Ty) {
+  assert(Ty.isScalar() && "Expected a scalar type.");
+  switch (Ty.getSizeInBits()) {
+  case 16:
+    return APFloat::IEEEhalf();
+  case 32:
+    return APFloat::IEEEsingle();
+  case 64:
+    return APFloat::IEEEdouble();
+  case 128:
+    return APFloat::IEEEquad();
+  }
+  llvm_unreachable("Invalid FP type size.");
 }

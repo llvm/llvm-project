@@ -2510,11 +2510,11 @@ define <2 x i64> @test_mm_max_epi16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %cmp = icmp sgt <8 x i16> %arg0, %arg1
-  %sel = select <8 x i1> %cmp, <8 x i16> %arg0, <8 x i16> %arg1
+  %sel = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %arg0, <8 x i16> %arg1)
   %bc = bitcast <8 x i16> %sel to <2 x i64>
   ret <2 x i64> %bc
 }
+declare <8 x i16> @llvm.smax.v8i16(<8 x i16>, <8 x i16>)
 
 define <2 x i64> @test_mm_max_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; SSE-LABEL: test_mm_max_epu8:
@@ -2533,11 +2533,11 @@ define <2 x i64> @test_mm_max_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %cmp = icmp ugt <16 x i8> %arg0, %arg1
-  %sel = select <16 x i1> %cmp, <16 x i8> %arg0, <16 x i8> %arg1
+  %sel = call <16 x i8> @llvm.umax.v16i8(<16 x i8> %arg0, <16 x i8> %arg1)
   %bc = bitcast <16 x i8> %sel to <2 x i64>
   ret <2 x i64> %bc
 }
+declare <16 x i8> @llvm.umax.v16i8(<16 x i8>, <16 x i8>)
 
 define <2 x double> @test_mm_max_pd(<2 x double> %a0, <2 x double> %a1) nounwind {
 ; SSE-LABEL: test_mm_max_pd:
@@ -2606,11 +2606,11 @@ define <2 x i64> @test_mm_min_epi16(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %cmp = icmp slt <8 x i16> %arg0, %arg1
-  %sel = select <8 x i1> %cmp, <8 x i16> %arg0, <8 x i16> %arg1
+  %sel = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %arg0, <8 x i16> %arg1)
   %bc = bitcast <8 x i16> %sel to <2 x i64>
   ret <2 x i64> %bc
 }
+declare <8 x i16> @llvm.smin.v8i16(<8 x i16>, <8 x i16>)
 
 define <2 x i64> @test_mm_min_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; SSE-LABEL: test_mm_min_epu8:
@@ -2629,11 +2629,11 @@ define <2 x i64> @test_mm_min_epu8(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg1 = bitcast <2 x i64> %a1 to <16 x i8>
-  %cmp = icmp ult <16 x i8> %arg0, %arg1
-  %sel = select <16 x i1> %cmp, <16 x i8> %arg0, <16 x i8> %arg1
+  %sel = call <16 x i8> @llvm.umin.v16i8(<16 x i8> %arg0, <16 x i8> %arg1)
   %bc = bitcast <16 x i8> %sel to <2 x i64>
   ret <2 x i64> %bc
 }
+declare <16 x i8> @llvm.umin.v16i8(<16 x i8>, <16 x i8>)
 
 define <2 x double> @test_mm_min_pd(<2 x double> %a0, <2 x double> %a1) nounwind {
 ; SSE-LABEL: test_mm_min_pd:

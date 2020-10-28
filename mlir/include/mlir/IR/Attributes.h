@@ -899,7 +899,7 @@ public:
   // Value Querying
   //===--------------------------------------------------------------------===//
 
-  /// Returns if this attribute corresponds to a splat, i.e. if all element
+  /// Returns true if this attribute corresponds to a splat, i.e. if all element
   /// values are the same.
   bool isSplat() const;
 

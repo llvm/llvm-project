@@ -26,6 +26,78 @@ using namespace clang;
 
 namespace {
 
+struct StaticDiagInfoRec;
+
+// Store the descriptions in a separate table to avoid pointers that need to
+// be relocated, and also decrease the amount of data needed on 64-bit
+// platforms. See "How To Write Shared Libraries" by Ulrich Drepper.
+struct StaticDiagInfoDescriptionStringTable {
+#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
+             SHOWINSYSHEADER, CATEGORY)                                        \
+  char ENUM##_desc[sizeof(DESC)];
+  // clang-format off
+#include "clang/Basic/DiagnosticCommonKinds.inc"
+#include "clang/Basic/DiagnosticDriverKinds.inc"
+#include "clang/Basic/DiagnosticFrontendKinds.inc"
+#include "clang/Basic/DiagnosticSerializationKinds.inc"
+#include "clang/Basic/DiagnosticLexKinds.inc"
+#include "clang/Basic/DiagnosticParseKinds.inc"
+#include "clang/Basic/DiagnosticASTKinds.inc"
+#include "clang/Basic/DiagnosticCommentKinds.inc"
+#include "clang/Basic/DiagnosticCrossTUKinds.inc"
+#include "clang/Basic/DiagnosticSemaKinds.inc"
+#include "clang/Basic/DiagnosticAnalysisKinds.inc"
+#include "clang/Basic/DiagnosticRefactoringKinds.inc"
+  // clang-format on
+#undef DIAG
+};
+
+const StaticDiagInfoDescriptionStringTable StaticDiagInfoDescriptions = {
+#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
+             SHOWINSYSHEADER, CATEGORY)                                        \
+  DESC,
+// clang-format off
+#include "clang/Basic/DiagnosticCommonKinds.inc"
+#include "clang/Basic/DiagnosticDriverKinds.inc"
+#include "clang/Basic/DiagnosticFrontendKinds.inc"
+#include "clang/Basic/DiagnosticSerializationKinds.inc"
+#include "clang/Basic/DiagnosticLexKinds.inc"
+#include "clang/Basic/DiagnosticParseKinds.inc"
+#include "clang/Basic/DiagnosticASTKinds.inc"
+#include "clang/Basic/DiagnosticCommentKinds.inc"
+#include "clang/Basic/DiagnosticCrossTUKinds.inc"
+#include "clang/Basic/DiagnosticSemaKinds.inc"
+#include "clang/Basic/DiagnosticAnalysisKinds.inc"
+#include "clang/Basic/DiagnosticRefactoringKinds.inc"
+  // clang-format on
+#undef DIAG
+};
+
+extern const StaticDiagInfoRec StaticDiagInfo[];
+
+// Stored separately from StaticDiagInfoRec to pack better.  Otherwise,
+// StaticDiagInfoRec would have extra padding on 64-bit platforms.
+const uint32_t StaticDiagInfoDescriptionOffsets[] = {
+#define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
+             SHOWINSYSHEADER, CATEGORY)                                        \
+  offsetof(StaticDiagInfoDescriptionStringTable, ENUM##_desc),
+// clang-format off
+#include "clang/Basic/DiagnosticCommonKinds.inc"
+#include "clang/Basic/DiagnosticDriverKinds.inc"
+#include "clang/Basic/DiagnosticFrontendKinds.inc"
+#include "clang/Basic/DiagnosticSerializationKinds.inc"
+#include "clang/Basic/DiagnosticLexKinds.inc"
+#include "clang/Basic/DiagnosticParseKinds.inc"
+#include "clang/Basic/DiagnosticASTKinds.inc"
+#include "clang/Basic/DiagnosticCommentKinds.inc"
+#include "clang/Basic/DiagnosticCrossTUKinds.inc"
+#include "clang/Basic/DiagnosticSemaKinds.inc"
+#include "clang/Basic/DiagnosticAnalysisKinds.inc"
+#include "clang/Basic/DiagnosticRefactoringKinds.inc"
+  // clang-format on
+#undef DIAG
+};
+
 // Diagnostic classes.
 enum {
   CLASS_NOTE       = 0x01,
@@ -47,14 +119,16 @@ struct StaticDiagInfoRec {
   uint16_t OptionGroupIndex;
 
   uint16_t DescriptionLen;
-  const char *DescriptionStr;
 
   unsigned getOptionGroupIndex() const {
     return OptionGroupIndex;
   }
 
   StringRef getDescription() const {
-    return StringRef(DescriptionStr, DescriptionLen);
+    size_t MyIndex = this - &StaticDiagInfo[0];
+    uint32_t StringOffset = StaticDiagInfoDescriptionOffsets[MyIndex];
+    const char* Table = reinterpret_cast<const char*>(&StaticDiagInfoDescriptions);
+    return StringRef(&Table[StringOffset], DescriptionLen);
   }
 
   diag::Flavor getFlavor() const {
@@ -92,16 +166,20 @@ VALIDATE_DIAG_SIZE(REFACTORING)
 #undef VALIDATE_DIAG_SIZE
 #undef STRINGIFY_NAME
 
-} // namespace anonymous
-
-static const StaticDiagInfoRec StaticDiagInfo[] = {
+const StaticDiagInfoRec StaticDiagInfo[] = {
 #define DIAG(ENUM, CLASS, DEFAULT_SEVERITY, DESC, GROUP, SFINAE, NOWERROR,     \
              SHOWINSYSHEADER, CATEGORY)                                        \
   {                                                                            \
-    diag::ENUM, DEFAULT_SEVERITY, CLASS, DiagnosticIDs::SFINAE, NOWERROR,      \
-        SHOWINSYSHEADER, CATEGORY, GROUP, STR_SIZE(DESC, uint16_t), DESC       \
-  }                                                                            \
-  ,
+      diag::ENUM,                                                              \
+      DEFAULT_SEVERITY,                                                        \
+      CLASS,                                                                   \
+      DiagnosticIDs::SFINAE,                                                   \
+      NOWERROR,                                                                \
+      SHOWINSYSHEADER,                                                         \
+      CATEGORY,                                                                \
+      GROUP,                                                                   \
+      STR_SIZE(DESC, uint16_t)},
+// clang-format off
 #include "clang/Basic/DiagnosticCommonKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"
 #include "clang/Basic/DiagnosticFrontendKinds.inc"
@@ -114,8 +192,11 @@ static const StaticDiagInfoRec StaticDiagInfo[] = {
 #include "clang/Basic/DiagnosticSemaKinds.inc"
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
+  // clang-format on
 #undef DIAG
 };
+
+} // namespace
 
 static const unsigned StaticDiagInfoSize = llvm::array_lengthof(StaticDiagInfo);
 

@@ -517,7 +517,7 @@ bool RISCVInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
     break;
   case RISCV::FSGNJ_D:
   case RISCV::FSGNJ_S:
-    // The canonical floatig-point move is fsgnj rd, rs, rs.
+    // The canonical floating-point move is fsgnj rd, rs, rs.
     return MI.getOperand(1).isReg() && MI.getOperand(2).isReg() &&
            MI.getOperand(1).getReg() == MI.getOperand(2).getReg();
   case RISCV::ADDI:
@@ -528,6 +528,28 @@ bool RISCVInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
            (MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0);
   }
   return MI.isAsCheapAsAMove();
+}
+
+Optional<DestSourcePair>
+RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
+  if (MI.isMoveReg())
+    return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  case RISCV::ADDI:
+    if (MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0)
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
+    break;
+  case RISCV::FSGNJ_D:
+  case RISCV::FSGNJ_S:
+    // The canonical floating-point move is fsgnj rd, rs, rs.
+    if (MI.getOperand(1).isReg() && MI.getOperand(2).isReg() &&
+        MI.getOperand(1).getReg() == MI.getOperand(2).getReg())
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
+    break;
+  }
+  return None;
 }
 
 bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,

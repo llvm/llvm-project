@@ -189,7 +189,7 @@ namespace PreferPredicateTy {
     PredicateElseScalarEpilogue,
     PredicateOrDontVectorize
   };
-}
+} // namespace PreferPredicateTy
 
 static cl::opt<PreferPredicateTy::Option> PreferPredicateOverEpilogue(
     "prefer-predicate-over-epilogue",
@@ -269,6 +269,12 @@ static cl::opt<bool> EnableLoadStoreRuntimeInterleave(
     "enable-loadstore-runtime-interleave", cl::init(true), cl::Hidden,
     cl::desc(
         "Enable runtime interleaving until load/store ports are saturated"));
+
+/// Interleave small loops with scalar reductions.
+static cl::opt<bool> InterleaveSmallLoopScalarReduction(
+    "interleave-small-loop-scalar-reduction", cl::init(false), cl::Hidden,
+    cl::desc("Enable interleaving for loops with small iteration counts that "
+             "contain scalar reductions to expose ILP."));
 
 /// The number of stores in a loop that are allowed to need predication.
 static cl::opt<unsigned> NumberOfStoresToPredicate(
@@ -1658,7 +1664,7 @@ public:
 // representation for pragma 'omp simd' is introduced.
 static bool isExplicitVecOuterLoop(Loop *OuterLp,
                                    OptimizationRemarkEmitter *ORE) {
-  assert(!OuterLp->empty() && "This is not an outer loop");
+  assert(!OuterLp->isInnermost() && "This is not an outer loop");
   LoopVectorizeHints Hints(OuterLp, true /*DisableInterleaving*/, *ORE);
 
   // Only outer loops with an explicit vectorization hint are supported.
@@ -1691,7 +1697,7 @@ static void collectSupportedLoops(Loop &L, LoopInfo *LI,
   // now, only collect outer loops that have explicit vectorization hints. If we
   // are stress testing the VPlan H-CFG construction, we collect the outermost
   // loop of every loop nest.
-  if (L.empty() || VPlanBuildStressTest ||
+  if (L.isInnermost() || VPlanBuildStressTest ||
       (EnableVPlanNativePath && isExplicitVecOuterLoop(&L, ORE))) {
     LoopBlocksRPO RPOT(&L);
     RPOT.perform(LI);
@@ -2266,8 +2272,7 @@ Value *InnerLoopVectorizer::reverseVector(Value *Vec) {
   for (unsigned i = 0; i < VF.getKnownMinValue(); ++i)
     ShuffleMask.push_back(VF.getKnownMinValue() - i - 1);
 
-  return Builder.CreateShuffleVector(Vec, UndefValue::get(Vec->getType()),
-                                     ShuffleMask, "reverse");
+  return Builder.CreateShuffleVector(Vec, ShuffleMask, "reverse");
 }
 
 // Return whether we allow using masked interleave-groups (for dealing with
@@ -2390,10 +2395,9 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         Value *GroupMask = MaskForGaps;
         if (BlockInMask) {
           Value *BlockInMaskPart = State.get(BlockInMask, Part);
-          auto *Undefs = UndefValue::get(BlockInMaskPart->getType());
           assert(!VF.isScalable() && "scalable vectors not yet supported.");
           Value *ShuffledMask = Builder.CreateShuffleVector(
-              BlockInMaskPart, Undefs,
+              BlockInMaskPart,
               createReplicatedMask(InterleaveFactor, VF.getKnownMinValue()),
               "interleaved.mask");
           GroupMask = MaskForGaps
@@ -2426,7 +2430,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
           createStrideMask(I, InterleaveFactor, VF.getKnownMinValue());
       for (unsigned Part = 0; Part < UF; Part++) {
         Value *StridedVec = Builder.CreateShuffleVector(
-            NewLoads[Part], UndefVec, StrideMask, "strided.vec");
+            NewLoads[Part], StrideMask, "strided.vec");
 
         // If this member has different type, cast the result type.
         if (Member->getType() != ScalarTy) {
@@ -2476,16 +2480,14 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
     // Interleave the elements in the wide vector.
     assert(!VF.isScalable() && "scalable vectors not yet supported.");
     Value *IVec = Builder.CreateShuffleVector(
-        WideVec, UndefVec,
-        createInterleaveMask(VF.getKnownMinValue(), InterleaveFactor),
+        WideVec, createInterleaveMask(VF.getKnownMinValue(), InterleaveFactor),
         "interleaved.vec");
 
     Instruction *NewStoreInstr;
     if (BlockInMask) {
       Value *BlockInMaskPart = State.get(BlockInMask, Part);
-      auto *Undefs = UndefValue::get(BlockInMaskPart->getType());
       Value *ShuffledMask = Builder.CreateShuffleVector(
-          BlockInMaskPart, Undefs,
+          BlockInMaskPart,
           createReplicatedMask(InterleaveFactor, VF.getKnownMinValue()),
           "interleaved.mask");
       NewStoreInstr = Builder.CreateMaskedStore(
@@ -2935,13 +2937,6 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
   const auto &RtPtrChecking = *LAI->getRuntimePointerChecking();
   if (!RtPtrChecking.Need)
     return;
-  Instruction *FirstCheckInst;
-  Instruction *MemRuntimeCheck;
-  std::tie(FirstCheckInst, MemRuntimeCheck) =
-      addRuntimeChecks(MemCheckBlock->getTerminator(), OrigLoop,
-                       RtPtrChecking.getChecks(), RtPtrChecking.getSE());
-  assert(MemRuntimeCheck && "no RT checks generated although RtPtrChecking "
-                            "claimed checks are required");
 
   if (MemCheckBlock->getParent()->hasOptSize() || OptForSizeBasedOnProfile) {
     assert(Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled &&
@@ -2963,17 +2958,26 @@ void InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass) {
       SplitBlock(MemCheckBlock, MemCheckBlock->getTerminator(), DT, LI, nullptr,
                  "vector.ph");
 
+  auto *CondBranch = cast<BranchInst>(
+      Builder.CreateCondBr(Builder.getTrue(), Bypass, LoopVectorPreHeader));
+  ReplaceInstWithInst(MemCheckBlock->getTerminator(), CondBranch);
+  LoopBypassBlocks.push_back(MemCheckBlock);
+  AddedSafetyChecks = true;
+
   // Update dominator only if this is first RT check.
   if (LoopBypassBlocks.empty()) {
     DT->changeImmediateDominator(Bypass, MemCheckBlock);
     DT->changeImmediateDominator(LoopExitBlock, MemCheckBlock);
   }
 
-  ReplaceInstWithInst(
-      MemCheckBlock->getTerminator(),
-      BranchInst::Create(Bypass, LoopVectorPreHeader, MemRuntimeCheck));
-  LoopBypassBlocks.push_back(MemCheckBlock);
-  AddedSafetyChecks = true;
+  Instruction *FirstCheckInst;
+  Instruction *MemRuntimeCheck;
+  std::tie(FirstCheckInst, MemRuntimeCheck) =
+      addRuntimeChecks(MemCheckBlock->getTerminator(), OrigLoop,
+                       RtPtrChecking.getChecks(), RtPtrChecking.getSE());
+  assert(MemRuntimeCheck && "no RT checks generated although RtPtrChecking "
+                            "claimed checks are required");
+  CondBranch->setCondition(MemRuntimeCheck);
 
   // We currently don't use LoopVersioning for the actual loop cloning but we
   // still use it to add the noalias metadata.
@@ -5517,10 +5521,15 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
   if (Legal->getMaxSafeDepDistBytes() != -1U)
     return 1;
 
-  // Do not interleave loops with a relatively small known or estimated trip
-  // count.
   auto BestKnownTC = getSmallBestKnownTC(*PSE.getSE(), TheLoop);
-  if (BestKnownTC && *BestKnownTC < TinyTripCountInterleaveThreshold)
+  const bool HasReductions = !Legal->getReductionVars().empty();
+  // Do not interleave loops with a relatively small known or estimated trip
+  // count. But we will interleave when InterleaveSmallLoopScalarReduction is
+  // enabled, and the code has scalar reductions(HasReductions && VF = 1),
+  // because with the above conditions interleaving can expose ILP and break
+  // cross iteration dependences for reductions.
+  if (BestKnownTC && (*BestKnownTC < TinyTripCountInterleaveThreshold) &&
+      !(InterleaveSmallLoopScalarReduction && HasReductions && VF.isScalar()))
     return 1;
 
   RegisterUsage R = calculateRegisterUsage({VF})[0];
@@ -5548,7 +5557,7 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
     LLVM_DEBUG(dbgs() << "LV: The target has " << TargetNumRegisters
                       << " registers of "
                       << TTI.getRegisterClassName(pair.first) << " register class\n");
-    if (VF == 1) {
+    if (VF.isScalar()) {
       if (ForceTargetNumScalarRegs.getNumOccurrences() > 0)
         TargetNumRegisters = ForceTargetNumScalarRegs;
     } else {
@@ -5577,7 +5586,7 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
       TTI.getMaxInterleaveFactor(VF.getKnownMinValue());
 
   // Check if the user has overridden the max.
-  if (VF == 1) {
+  if (VF.isScalar()) {
     if (ForceTargetMaxScalarInterleaveFactor.getNumOccurrences() > 0)
       MaxInterleaveCount = ForceTargetMaxScalarInterleaveFactor;
   } else {
@@ -5608,7 +5617,7 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
 
   // Interleave if we vectorized this loop and there is a reduction that could
   // benefit from interleaving.
-  if (VF.isVector() && !Legal->getReductionVars().empty()) {
+  if (VF.isVector() && HasReductions) {
     LLVM_DEBUG(dbgs() << "LV: Interleaving because of reductions.\n");
     return IC;
   }
@@ -5620,7 +5629,11 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
 
   // We want to interleave small loops in order to reduce the loop overhead and
   // potentially expose ILP opportunities.
-  LLVM_DEBUG(dbgs() << "LV: Loop cost is " << LoopCost << '\n');
+  LLVM_DEBUG(dbgs() << "LV: Loop cost is " << LoopCost << '\n'
+                    << "LV: IC is " << IC << '\n'
+                    << "LV: VF is " << VF.getKnownMinValue() << '\n');
+  const bool AggressivelyInterleaveReductions =
+      TTI.enableAggressiveInterleaving(HasReductions);
   if (!InterleavingRequiresRuntimePointerCheck && LoopCost < SmallLoopCost) {
     // We assume that the cost overhead is 1 and we use the cost model
     // to estimate the cost of the loop and interleave until the cost of the
@@ -5639,7 +5652,7 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
     // by this point), we can increase the critical path length if the loop
     // we're interleaving is inside another loop. Limit, by default to 2, so the
     // critical path only gets increased by one reduction operation.
-    if (!Legal->getReductionVars().empty() && TheLoop->getLoopDepth() > 1) {
+    if (HasReductions && TheLoop->getLoopDepth() > 1) {
       unsigned F = static_cast<unsigned>(MaxNestedScalarReductionIC);
       SmallIC = std::min(SmallIC, F);
       StoresIC = std::min(StoresIC, F);
@@ -5653,14 +5666,23 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
       return std::max(StoresIC, LoadsIC);
     }
 
-    LLVM_DEBUG(dbgs() << "LV: Interleaving to reduce branch cost.\n");
-    return SmallIC;
+    // If there are scalar reductions and TTI has enabled aggressive
+    // interleaving for reductions, we will interleave to expose ILP.
+    if (InterleaveSmallLoopScalarReduction && VF.isScalar() &&
+        AggressivelyInterleaveReductions) {
+      LLVM_DEBUG(dbgs() << "LV: Interleaving to expose ILP.\n");
+      // Interleave no less than SmallIC but not as aggressive as the normal IC
+      // to satisfy the rare situation when resources are too limited.
+      return std::max(IC / 2, SmallIC);
+    } else {
+      LLVM_DEBUG(dbgs() << "LV: Interleaving to reduce branch cost.\n");
+      return SmallIC;
+    }
   }
 
   // Interleave if this is a large loop (small loops are already dealt with by
   // this point) that could benefit from interleaving.
-  bool HasReductions = !Legal->getReductionVars().empty();
-  if (TTI.enableAggressiveInterleaving(HasReductions)) {
+  if (AggressivelyInterleaveReductions) {
     LLVM_DEBUG(dbgs() << "LV: Interleaving to expose ILP.\n");
     return IC;
   }
@@ -6841,7 +6863,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   // detection.
   for (auto &Reduction : Legal->getReductionVars()) {
     RecurrenceDescriptor &RedDes = Reduction.second;
-    SmallPtrSetImpl<Instruction *> &Casts = RedDes.getCastInsts();
+    const SmallPtrSetImpl<Instruction *> &Casts = RedDes.getCastInsts();
     VecValuesToIgnore.insert(Casts.begin(), Casts.end());
   }
   // Ignore type-casting instructions we identified during induction
@@ -6857,7 +6879,7 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
   // For the moment, without predicated reduction instructions, we do not
   // support inloop reductions whilst folding the tail, and hence in those cases
   // all reductions are currently out of the loop.
-  if (!PreferInLoopReductions || foldTailByMasking())
+  if (foldTailByMasking())
     return;
 
   for (auto &Reduction : Legal->getReductionVars()) {
@@ -6866,6 +6888,14 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
 
     // We don't collect reductions that are type promoted (yet).
     if (RdxDesc.getRecurrenceType() != Phi->getType())
+      continue;
+
+    // If the target would prefer this reduction to happen "in-loop", then we
+    // want to record it as such.
+    unsigned Opcode = RdxDesc.getRecurrenceBinOp(RdxDesc.getRecurrenceKind());
+    if (!PreferInLoopReductions &&
+        !TTI.preferInLoopReduction(Opcode, Phi->getType(),
+                                   TargetTransformInfo::ReductionFlags()))
       continue;
 
     // Check that we can correctly put the reductions into the loop, by
@@ -6901,7 +6931,7 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
   // transformations before even evaluating whether vectorization is profitable.
   // Since we cannot modify the incoming IR, we need to build VPlan upfront in
   // the vectorization pipeline.
-  if (!OrigLoop->empty()) {
+  if (!OrigLoop->isInnermost()) {
     // If the user doesn't provide a vectorization factor, determine a
     // reasonable one.
     if (UserVF.isZero()) {
@@ -6939,7 +6969,7 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
 Optional<VectorizationFactor>
 LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   assert(!UserVF.isScalable() && "scalable vectorization not yet handled");
-  assert(OrigLoop->empty() && "Inner loop expected.");
+  assert(OrigLoop->isInnermost() && "Inner loop expected.");
   Optional<unsigned> MaybeMaxVF =
       CM.computeMaxVF(UserVF.getKnownMinValue(), UserIC);
   if (!MaybeMaxVF) // Cases that should not to be vectorized nor interleaved.
@@ -7557,7 +7587,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(unsigned MinVF,
                                                         unsigned MaxVF) {
-  assert(OrigLoop->empty() && "Inner loop expected.");
+  assert(OrigLoop->isInnermost() && "Inner loop expected.");
 
   // Collect conditions feeding internal conditional branches; they need to be
   // represented in VPlan for it to model masking.
@@ -7807,7 +7837,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   // transformations before even evaluating whether vectorization is profitable.
   // Since we cannot modify the incoming IR, we need to build VPlan upfront in
   // the vectorization pipeline.
-  assert(!OrigLoop->empty());
+  assert(!OrigLoop->isInnermost());
   assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
 
   // Create new empty VPlan
@@ -7916,19 +7946,19 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
-  State.ILV->widenCallInstruction(Ingredient, User, State);
+  State.ILV->widenCallInstruction(Ingredient, *this, State);
 }
 
 void VPWidenSelectRecipe::execute(VPTransformState &State) {
-  State.ILV->widenSelectInstruction(Ingredient, User, InvariantCond, State);
+  State.ILV->widenSelectInstruction(Ingredient, *this, InvariantCond, State);
 }
 
 void VPWidenRecipe::execute(VPTransformState &State) {
-  State.ILV->widenInstruction(Ingredient, User, State);
+  State.ILV->widenInstruction(Ingredient, *this, State);
 }
 
 void VPWidenGEPRecipe::execute(VPTransformState &State) {
-  State.ILV->widenGEP(GEP, User, State.UF, State.VF, IsPtrLoopInvariant,
+  State.ILV->widenGEP(GEP, *this, State.UF, State.VF, IsPtrLoopInvariant,
                       IsIndexLoopInvariant, State);
 }
 
@@ -8009,7 +8039,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
   if (State.Instance) { // Generate a single instance.
-    State.ILV->scalarizeInstruction(Ingredient, User, *State.Instance,
+    State.ILV->scalarizeInstruction(Ingredient, *this, *State.Instance,
                                     IsPredicated, State);
     // Insert scalar instance packing it into a vector.
     if (AlsoPack && State.VF.isVector()) {
@@ -8031,7 +8061,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
   unsigned EndLane = IsUniform ? 1 : State.VF.getKnownMinValue();
   for (unsigned Part = 0; Part < State.UF; ++Part)
     for (unsigned Lane = 0; Lane < EndLane; ++Lane)
-      State.ILV->scalarizeInstruction(Ingredient, User, {Part, Lane},
+      State.ILV->scalarizeInstruction(Ingredient, *this, {Part, Lane},
                                       IsPredicated, State);
 }
 
@@ -8206,7 +8236,7 @@ LoopVectorizePass::LoopVectorizePass(LoopVectorizeOptions Opts)
                               !EnableLoopVectorization) {}
 
 bool LoopVectorizePass::processLoop(Loop *L) {
-  assert((EnableVPlanNativePath || L->empty()) &&
+  assert((EnableVPlanNativePath || L->isInnermost()) &&
          "VPlan-native path is not enabled. Only process inner loops.");
 
 #ifndef NDEBUG
@@ -8268,11 +8298,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // even evaluating whether vectorization is profitable. Since we cannot modify
   // the incoming IR, we need to build VPlan upfront in the vectorization
   // pipeline.
-  if (!L->empty())
+  if (!L->isInnermost())
     return processLoopInVPlanNativePath(L, PSE, LI, DT, &LVL, TTI, TLI, DB, AC,
                                         ORE, BFI, PSI, Hints);
 
-  assert(L->empty() && "Inner loop expected.");
+  assert(L->isInnermost() && "Inner loop expected.");
 
   // Check the loop for a trip count threshold: vectorize loops with a tiny trip
   // count by optimizing for size, to minimize overheads.
@@ -8587,7 +8617,8 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
     auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
     std::function<const LoopAccessInfo &(Loop &)> GetLAA =
         [&](Loop &L) -> const LoopAccessInfo & {
-      LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI, MSSA};
+      LoopStandardAnalysisResults AR = {AA,  AC,  DT,      LI,  SE,
+                                        TLI, TTI, nullptr, MSSA};
       return LAM.getResult<LoopAccessAnalysis>(L, AR);
     };
     auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);

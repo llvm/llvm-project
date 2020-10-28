@@ -14,13 +14,14 @@
 func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
           %rhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
           %sum: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
-  linalg.generic #pointwise_2d_trait %lhs, %rhs, %sum {
+  linalg.generic #pointwise_2d_trait
+     ins(%lhs, %rhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
+                     memref<?x?xf32, offset: ?, strides: [?, 1]>)
+    outs(%sum : memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   ^bb0(%lhs_in: f32, %rhs_in: f32, %sum_out: f32):
     %result = addf %lhs_in, %rhs_in : f32
     linalg.yield %result : f32
-  }: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-     memref<?x?xf32, offset: ?, strides: [?, 1]>,
-     memref<?x?xf32, offset: ?, strides: [?, 1]>
+  }
   return
 }
 // TILE-2-LABEL: func @sum(
@@ -33,7 +34,7 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // TILE-2:   [[LHS_SUBVIEW:%.*]] = subview [[LHS]]
 // TILE-2:   [[RHS_SUBVIEW:%.*]] = subview [[RHS]]
 // TILE-2:   [[SUM_SUBVIEW:%.*]] = subview [[SUM]]
-// TILE-2:   linalg.generic {{.*}} [[LHS_SUBVIEW]], [[RHS_SUBVIEW]], [[SUM_SUBVIEW]] {
+// TILE-2:   linalg.generic {{.*}} ins([[LHS_SUBVIEW]], [[RHS_SUBVIEW]]{{.*}} outs([[SUM_SUBVIEW]]
 
 // TILE-02-LABEL: func @sum(
 // TILE-02-SAME:    [[LHS:%.*]]: {{.*}}, [[RHS:%.*]]: {{.*}}, [[SUM:%.*]]: {{.*}}) {
@@ -45,12 +46,12 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // TILE-02:   [[LHS_SUBVIEW:%.*]] = subview [[LHS]]
 // TILE-02:   [[RHS_SUBVIEW:%.*]] = subview [[RHS]]
 // TILE-02:   [[SUM_SUBVIEW:%.*]] = subview [[SUM]]
-// TILE-02:   linalg.generic {{.*}} [[LHS_SUBVIEW]], [[RHS_SUBVIEW]], [[SUM_SUBVIEW]] {
+// TILE-02:    linalg.generic {{.*}} ins([[LHS_SUBVIEW]], [[RHS_SUBVIEW]]{{.*}} outs([[SUM_SUBVIEW]]
 
 // TILE-002-LABEL: func @sum(
 // TILE-002-SAME:    [[LHS:%.*]]: {{.*}}, [[RHS:%.*]]: {{.*}}, [[SUM:%.*]]: {{.*}}) {
 // TILE-002-NO: scf.parallel
-// TILE-002:   linalg.generic {{.*}} [[LHS]], [[RHS]], [[SUM]] {
+// TILE-002:   linalg.generic {{.*}} ins([[LHS]], [[RHS]]{{.*}} outs([[SUM]]
 
 // TILE-234-LABEL: func @sum(
 // TILE-234-SAME:    [[LHS:%.*]]: {{.*}}, [[RHS:%.*]]: {{.*}}, [[SUM:%.*]]: {{.*}}) {
@@ -64,4 +65,4 @@ func @sum(%lhs: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // TILE-234:   [[LHS_SUBVIEW:%.*]] = subview [[LHS]]
 // TILE-234:   [[RHS_SUBVIEW:%.*]] = subview [[RHS]]
 // TILE-234:   [[SUM_SUBVIEW:%.*]] = subview [[SUM]]
-// TILE-234:   linalg.generic {{.*}} [[LHS_SUBVIEW]], [[RHS_SUBVIEW]], [[SUM_SUBVIEW]] {
+// TILE-234:   linalg.generic {{.*}} ins([[LHS_SUBVIEW]], [[RHS_SUBVIEW]]{{.*}} outs([[SUM_SUBVIEW]]

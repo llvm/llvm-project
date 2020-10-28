@@ -1,4 +1,4 @@
-; RUN: opt < %s -debug-pass=Structure -globals-aa -loop-vectorize -sccp -loop-vectorize -globals-aa 2>&1 -S | FileCheck %s
+; RUN: opt < %s -debug-pass=Structure -globals-aa -loop-vectorize -sccp -loop-vectorize -globals-aa -enable-new-pm=0 2>&1 -S | FileCheck %s
 ; RUN: opt < %s -debug-pass-manager -passes='loop-vectorize,sccp,loop-vectorize' 2>&1 -S | FileCheck --check-prefix=NEW-PM %s
 
 ; Check CFG-only analysis are preserved by SCCP by running it between 2

@@ -276,7 +276,7 @@ static void computeGUIDPreservedSymbols(const lto::InputFile &File,
   // Iterate the symbols in the input file and if the input has preserved symbol
   // compute the GUID for the symbol.
   for (const auto &Sym : File.symbols()) {
-    if (PreservedSymbols.count(Sym.getName()))
+    if (PreservedSymbols.count(Sym.getName()) && !Sym.getIRName().empty())
       GUIDs.insert(GlobalValue::getGUID(GlobalValue::getGlobalIdentifier(
           Sym.getIRName(), GlobalValue::ExternalLinkage, "")));
   }
@@ -1054,19 +1054,11 @@ void ThinLTOCodeGenerator::run() {
     ModuleToDefinedGVSummaries[ModuleIdentifier];
   }
 
-  // Compute the ordering we will process the inputs: the rough heuristic here
-  // is to sort them per size so that the largest module get schedule as soon as
-  // possible. This is purely a compile-time optimization.
-  std::vector<int> ModulesOrdering;
-  ModulesOrdering.resize(Modules.size());
-  std::iota(ModulesOrdering.begin(), ModulesOrdering.end(), 0);
-  llvm::sort(ModulesOrdering, [&](int LeftIndex, int RightIndex) {
-    auto LSize =
-        Modules[LeftIndex]->getSingleBitcodeModule().getBuffer().size();
-    auto RSize =
-        Modules[RightIndex]->getSingleBitcodeModule().getBuffer().size();
-    return LSize > RSize;
-  });
+  std::vector<BitcodeModule *> ModulesVec;
+  ModulesVec.reserve(Modules.size());
+  for (auto &Mod : Modules)
+    ModulesVec.push_back(&Mod->getSingleBitcodeModule());
+  std::vector<int> ModulesOrdering = lto::generateModulesOrdering(ModulesVec);
 
   // Parallel optimizer + codegen
   {

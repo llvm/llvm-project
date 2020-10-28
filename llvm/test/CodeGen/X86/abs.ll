@@ -132,46 +132,43 @@ define i64 @test_i64(i64 %a) nounwind {
 define i128 @test_i128(i128 %a) nounwind {
 ; X64-LABEL: test_i128:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    movq %rsi, %rdx
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    negq %rax
-; X64-NEXT:    sbbq %rsi, %rdx
-; X64-NEXT:    testq %rsi, %rsi
-; X64-NEXT:    cmovnsq %rdi, %rax
-; X64-NEXT:    cmovnsq %rsi, %rdx
+; X64-NEXT:    movq %rsi, %rcx
+; X64-NEXT:    sarq $63, %rcx
+; X64-NEXT:    addq %rcx, %rax
+; X64-NEXT:    adcq %rcx, %rdx
+; X64-NEXT:    xorq %rcx, %rax
+; X64-NEXT:    xorq %rcx, %rdx
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_i128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    addl %edx, %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    negl %edi
-; X86-NEXT:    movl $0, %ebx
-; X86-NEXT:    sbbl %edx, %ebx
-; X86-NEXT:    movl $0, %ebp
-; X86-NEXT:    sbbl %ecx, %ebp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sbbl %eax, %esi
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    cmovnsl %eax, %esi
-; X86-NEXT:    cmovnsl %ecx, %ebp
-; X86-NEXT:    cmovnsl %edx, %ebx
-; X86-NEXT:    cmovnsl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %edi, (%eax)
-; X86-NEXT:    movl %ebx, 4(%eax)
-; X86-NEXT:    movl %ebp, 8(%eax)
-; X86-NEXT:    movl %esi, 12(%eax)
+; X86-NEXT:    adcl %edx, %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    adcl %edx, %ebx
+; X86-NEXT:    adcl %edx, %ecx
+; X86-NEXT:    xorl %edx, %ecx
+; X86-NEXT:    xorl %edx, %ebx
+; X86-NEXT:    xorl %edx, %edi
+; X86-NEXT:    xorl %edx, %esi
+; X86-NEXT:    movl %esi, (%eax)
+; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl %ebx, 8(%eax)
+; X86-NEXT:    movl %ecx, 12(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
   %r = call i128 @llvm.abs.i128(i128 %a, i1 false)
   ret i128 %r

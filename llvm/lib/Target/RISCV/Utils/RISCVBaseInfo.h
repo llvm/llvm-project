@@ -208,6 +208,9 @@ ABI getTargetABI(StringRef ABIName);
 // Returns the register used to hold the stack pointer after realignment.
 Register getBPReg();
 
+// Returns the register holding shadow call stack pointer.
+Register getSCSPReg();
+
 } // namespace RISCVABI
 
 namespace RISCVFeatures {

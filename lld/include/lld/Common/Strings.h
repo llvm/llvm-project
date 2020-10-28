@@ -39,6 +39,11 @@ public:
   // Match s against this pattern, exactly if ExactMatch is true.
   bool match(llvm::StringRef s) const;
 
+  // Returns true for pattern "*" which will match all inputs.
+  bool isTrivialMatchAll() const {
+    return !ExactMatch && GlobPatternMatcher.isTrivialMatchAll();
+  }
+
 private:
   // Whether to do an exact match irregardless of the presence of wildcard
   // character.
@@ -69,7 +74,7 @@ public:
   // Add a new pattern to the existing ones to match against.
   void addPattern(SingleStringMatcher Matcher) { patterns.push_back(Matcher); }
 
-  bool empty() { return patterns.empty(); }
+  bool empty() const { return patterns.empty(); }
 
   // Match s against the patterns.
   bool match(llvm::StringRef s) const;

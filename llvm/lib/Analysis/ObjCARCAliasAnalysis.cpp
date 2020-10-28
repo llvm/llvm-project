@@ -133,6 +133,8 @@ ModRefInfo ObjCARCAAResult::getModRefInfo(const CallBase *Call,
   return AAResultBase::getModRefInfo(Call, Loc, AAQI);
 }
 
+AnalysisKey ObjCARCAA::Key;
+
 ObjCARCAAResult ObjCARCAA::run(Function &F, FunctionAnalysisManager &AM) {
   return ObjCARCAAResult(F.getParent()->getDataLayout());
 }

@@ -23,7 +23,7 @@ def INSN : I<(outs GPR32:$dst), (ins GPR32:$src1, complex:$src2), []>;
 
 //===- Bail out when we define a variable twice wrt complex suboperands. -===//
 
-// CHECK: warning: Skipped pattern: Complex suboperand referenced more than once (Operand: x)
+// CHECK: warning: Skipped pattern: Error: Complex suboperand x referenced by different operands: complex_rr:x:y and complex_rr:x:z.
 def : Pat<(add (complex_rr GPR32:$x, GPR32:$y),
                (complex_rr GPR32:$x, GPR32:$z)),
                (INSN GPR32:$z, complex:$y)>;

@@ -129,34 +129,31 @@ define void @constrained_if_register_class() {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, external_constant@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, external_constant@gotpcrel32@hi+4
+; CHECK-NEXT:    s_addc_u32 s5, s5, external_constant@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
 ; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
-; CHECK-NEXT:    s_xor_b32 s4, s4, -1
 ; CHECK-NEXT:    s_and_b32 s4, s4, 1
 ; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
-; CHECK-NEXT:    s_cbranch_scc0 BB4_6
+; CHECK-NEXT:    s_cbranch_scc1 BB4_6
 ; CHECK-NEXT:  ; %bb.1: ; %bb2
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, const.ptr@gotpcrel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, const.ptr@gotpcrel32@hi+4
-; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s[6:7], 0, 1
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s4
-; CHECK-NEXT:    v_mov_b32_e32 v1, s5
-; CHECK-NEXT:    flat_load_dword v0, v[0:1]
+; CHECK-NEXT:    s_getpc_b64 s[6:7]
+; CHECK-NEXT:    s_add_u32 s6, s6, const.ptr@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s7, s7, const.ptr@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
 ; CHECK-NEXT:    s_mov_b32 s4, -1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s6
+; CHECK-NEXT:    v_mov_b32_e32 v1, s7
+; CHECK-NEXT:    flat_load_dword v0, v[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, 1.0, v0
-; CHECK-NEXT:    s_xor_b64 s[8:9], vcc, s[6:7]
-; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], s[8:9]
+; CHECK-NEXT:    v_cmp_ngt_f32_e32 vcc, 1.0, v0
+; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; CHECK-NEXT:  ; %bb.2: ; %bb7
 ; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:  ; %bb.3: ; %bb8
@@ -208,26 +205,26 @@ define amdgpu_kernel void @break_loop(i32 %arg) {
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    v_subrev_u32_e32 v0, s2, v0
-; CHECK-NEXT:  BB5_1: ; %bb1
+; CHECK-NEXT:    s_branch BB5_2
+; CHECK-NEXT:  BB5_1: ; %Flow
+; CHECK-NEXT:    ; in Loop: Header=BB5_2 Depth=1
+; CHECK-NEXT:    s_and_b64 s[2:3], exec, s[2:3]
+; CHECK-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
+; CHECK-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; CHECK-NEXT:    s_cbranch_execz BB5_4
+; CHECK-NEXT:  BB5_2: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_add_u32_e32 v1, 1, v1
 ; CHECK-NEXT:    v_cmp_le_i32_e32 vcc, 0, v1
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[2:3], 0, 1
-; CHECK-NEXT:    s_cbranch_vccnz BB5_3
-; CHECK-NEXT:  ; %bb.2: ; %bb4
-; CHECK-NEXT:    ; in Loop: Header=BB5_1 Depth=1
+; CHECK-NEXT:    s_cbranch_vccnz BB5_1
+; CHECK-NEXT:  ; %bb.3: ; %bb4
+; CHECK-NEXT:    ; in Loop: Header=BB5_2 Depth=1
 ; CHECK-NEXT:    global_load_dword v2, v[0:1], off
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s[2:3], 0, 1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_cmp_lt_i32_e32 vcc, v0, v2
-; CHECK-NEXT:    s_xor_b64 s[2:3], vcc, s[2:3]
-; CHECK-NEXT:  BB5_3: ; %Flow
-; CHECK-NEXT:    ; in Loop: Header=BB5_1 Depth=1
-; CHECK-NEXT:    s_and_b64 s[2:3], exec, s[2:3]
-; CHECK-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
-; CHECK-NEXT:    s_andn2_b64 exec, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_execnz BB5_1
-; CHECK-NEXT:  ; %bb.4: ; %bb9
+; CHECK-NEXT:    v_cmp_ge_i32_e64 s[2:3], v0, v2
+; CHECK-NEXT:    s_branch BB5_1
+; CHECK-NEXT:  BB5_4: ; %bb9
 ; CHECK-NEXT:    s_endpgm
 bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()

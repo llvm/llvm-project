@@ -93,7 +93,7 @@ bool isSaturating(AtomicRMWInst& RMWI) {
     return C->isMaxValue(false);
   };
 }
-}
+} // namespace
 
 Instruction *InstCombinerImpl::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
 

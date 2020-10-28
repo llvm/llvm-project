@@ -67,3 +67,5 @@ def : Flag<["--"], "inlining=false">, Alias<no_inlines>, HelpText<"Alias for --n
 // Compatibility aliases for pprof's symbolizer.
 def : Flag<["-"], "demangle=true">, Alias<demangle>, HelpText<"Alias for --demangle">;
 def : Flag<["-"], "demangle=false">, Alias<no_demangle>, HelpText<"Alias for --no-demangle">;
+// Compatibility no-op options.
+def : Flag<["--"], "use-symbol-table=true">;

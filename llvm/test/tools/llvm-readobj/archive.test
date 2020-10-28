@@ -1,3 +1,5 @@
+## Test how we dump archives.
+
 ## Show that dumping operations apply to all members in an archive.
 
 # RUN: rm -f %t.a
@@ -82,3 +84,17 @@ header:
   Characteristics: [  ]
 sections: []
 symbols: []
+
+## Here we test that we report a warning and continue dumping when an archive contains
+## an unrecognized object. We add a dummy archive to the middle of another archive,
+## so that it is between two valid objects.
+
+# RUN: rm -f %t2.a
+# RUN: llvm-ar rc %t.dir/broken.a %t.dir/trivial.obj.elf-x86-64
+# RUN: llvm-ar qc %t2.a %t.dir/trivial.obj.elf-x86-64 %t.dir/broken.a %t.dir/trivial.obj.elf-x86-64
+# RUN: llvm-readobj --all %t2.a 2>&1 | FileCheck %s -DARFILE="%t2.a" --check-prefix=BROKEN
+# RUN: llvm-readelf --all %t2.a 2>&1 | FileCheck %s -DARFILE="%t2.a" --check-prefix=BROKEN
+
+# BROKEN: File: [[ARFILE]](trivial.obj.elf-x86-64)
+# BROKEN: warning: '[[ARFILE]]': broken.a has an unsupported file type
+# BROKEN: File: [[ARFILE]](trivial.obj.elf-x86-64)

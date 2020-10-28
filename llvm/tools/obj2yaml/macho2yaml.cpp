@@ -154,10 +154,8 @@ static Error dumpDebugSection(StringRef SecName, DWARFContext &DCtx,
   }
   if (SecName == "__debug_ranges")
     return dumpDebugRanges(DCtx, DWARF);
-  if (SecName == "__debug_str") {
-    dumpDebugStrings(DCtx, DWARF);
-    return Error::success();
-  }
+  if (SecName == "__debug_str")
+    return dumpDebugStrings(DCtx, DWARF);
   return createStringError(errc::not_supported,
                            "dumping " + SecName + " section is not supported");
 }

@@ -7,6 +7,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestDbgInfoContentList(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -17,18 +18,30 @@ class TestDbgInfoContentList(TestBase):
         self.build()
 
         lldbutil.run_to_source_breakpoint(self,
-            "// Set break point at this line.", lldb.SBFileSpec("main.cpp"))
+                                          "// Set break point at this line.",
+                                          lldb.SBFileSpec("main.cpp"))
 
         self.runCmd("settings set target.import-std-module true")
 
-        self.expect("expr (size_t)a.size()", substrs=['(size_t) $0 = 3'])
-        self.expect("expr (int)a.front().a", substrs=['(int) $1 = 3'])
-        self.expect("expr (int)a.back().a", substrs=['(int) $2 = 2'])
+        list_type = "std::list<Foo, std::allocator<Foo> >"
+        size_type = list_type + "::size_type"
+        value_type = list_type + "::value_type"
+
+        self.expect_expr("a",
+                         result_type=list_type,
+                         result_children=[
+                             ValueCheck(children=[ValueCheck(value="3")]),
+                             ValueCheck(children=[ValueCheck(value="1")]),
+                             ValueCheck(children=[ValueCheck(value="2")])
+                         ])
+
+        self.expect_expr("a.size()", result_type=size_type, result_value="3")
+        self.expect_expr("a.front().a", result_type="int", result_value="3")
+        self.expect_expr("a.back().a", result_type="int", result_value="2")
 
         self.expect("expr std::reverse(a.begin(), a.end())")
-        self.expect("expr (int)a.front().a", substrs=['(int) $3 = 2'])
-        self.expect("expr (int)a.back().a", substrs=['(int) $4 = 3'])
+        self.expect_expr("a.front().a", result_type="int", result_value="2")
+        self.expect_expr("a.back().a", result_type="int", result_value="3")
 
-        self.expect("expr (int)(a.begin()->a)", substrs=['(int) $5 = 2'])
-        self.expect("expr (int)(a.rbegin()->a)", substrs=['(int) $6 = 3'])
-
+        self.expect_expr("a.begin()->a", result_type="int", result_value="2")
+        self.expect_expr("a.rbegin()->a", result_type="int", result_value="3")

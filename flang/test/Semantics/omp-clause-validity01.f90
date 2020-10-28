@@ -9,7 +9,7 @@ use omp_lib
 ! TODO: all the internal errors
 
   integer :: b = 128
-  integer :: c = 32
+  integer :: z, c = 32
   integer, parameter :: num = 16
   real(8) :: arrayA(256), arrayB(512)
 
@@ -39,29 +39,54 @@ use omp_lib
   enddo
   !$omp end parallel
 
-  !$omp parallel allocate(b)
+  !$omp parallel private(b) allocate(b)
   do i = 1, N
      a = 3.14
   enddo
   !$omp end parallel
 
-  !$omp parallel allocate(omp_default_mem_space : b, c)
+  !$omp parallel private(c, b) allocate(omp_default_mem_space : b, c)
   do i = 1, N
      a = 3.14
   enddo
   !$omp end parallel
 
-  !$omp parallel allocate(b) allocate(c)
+  !$omp parallel allocate(b) allocate(c) private(b, c)
   do i = 1, N
      a = 3.14
   enddo
   !$omp end parallel
 
-  !$omp parallel allocate(xy_alloc :b) 
+  !$omp parallel allocate(xy_alloc :b) private(b)
   do i = 1, N
      a = 3.14
   enddo
   !$omp end parallel
+  
+  !$omp task private(b) allocate(b)
+  do i = 1, N
+     z = 2
+  end do
+  !$omp end task
+
+  !$omp teams private(b) allocate(b)
+  do i = 1, N
+     z = 2
+  end do
+  !$omp end teams
+
+  !$omp target private(b) allocate(b)
+  do i = 1, N
+     z = 2
+  end do
+  !$omp end target
+ 
+  !ERROR: ALLOCATE clause is not allowed on the TARGET DATA directive
+  !$omp target data map(from: b) allocate(b)
+  do i = 1, N
+     z = 2
+  enddo
+   !$omp end target data
 
   !ERROR: SCHEDULE clause is not allowed on the PARALLEL directive
   !$omp parallel schedule(static)

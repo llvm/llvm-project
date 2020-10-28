@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=VI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOVI
+// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
 
 //===----------------------------------------------------------------------===//
 // Floating-point expressions are not supported
@@ -52,10 +52,10 @@ v_mad_f16 v5, v1, v2, |hm1|
 // Only primary expressions are allowed
 
 v_ceil_f32 v1, |1+i1|
-// NOVI: failed parsing operand
+// NOVI: error: expected vertical bar
 
 v_ceil_f32 v1, |i1+1|
-// NOVI: failed parsing operand
+// NOVI: error: expected vertical bar
 
 //===----------------------------------------------------------------------===//
 // Constant expressions may be used with 'abs' and 'neg' modifiers.
@@ -327,8 +327,8 @@ v_sin_f32 v0, -[ttmp0]
 
 s1000=1
 v_sin_f32 v0, -s1000
-// NOVI: failed parsing operand
+// NOVI: error: register index is out of range
 
 xnack_mask_lo=1
 v_sin_f32 v0, xnack_mask_lo
-// NOVI: failed parsing operand
+// NOVI: error: register not available on this GPU

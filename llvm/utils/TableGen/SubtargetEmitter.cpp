@@ -1507,7 +1507,8 @@ static void emitPredicates(const CodeGenSchedTransition &T,
 
 // Used by method `SubtargetEmitter::emitSchedModelHelpersImpl()` to generate
 // epilogue code for the auto-generated helper.
-void emitSchedModelHelperEpilogue(raw_ostream &OS, bool ShouldReturnZero) {
+static void emitSchedModelHelperEpilogue(raw_ostream &OS,
+                                         bool ShouldReturnZero) {
   if (ShouldReturnZero) {
     OS << "  // Don't know how to resolve this scheduling class.\n"
        << "  return 0;\n";
@@ -1517,15 +1518,15 @@ void emitSchedModelHelperEpilogue(raw_ostream &OS, bool ShouldReturnZero) {
   OS << "  report_fatal_error(\"Expected a variant SchedClass\");\n";
 }
 
-bool hasMCSchedPredicates(const CodeGenSchedTransition &T) {
+static bool hasMCSchedPredicates(const CodeGenSchedTransition &T) {
   return all_of(T.PredTerm, [](const Record *Rec) {
     return Rec->isSubClassOf("MCSchedPredicate");
   });
 }
 
-void collectVariantClasses(const CodeGenSchedModels &SchedModels,
-                           IdxVec &VariantClasses,
-                           bool OnlyExpandMCInstPredicates) {
+static void collectVariantClasses(const CodeGenSchedModels &SchedModels,
+                                  IdxVec &VariantClasses,
+                                  bool OnlyExpandMCInstPredicates) {
   for (const CodeGenSchedClass &SC : SchedModels.schedClasses()) {
     // Ignore non-variant scheduling classes.
     if (SC.Transitions.empty())
@@ -1544,7 +1545,8 @@ void collectVariantClasses(const CodeGenSchedModels &SchedModels,
   }
 }
 
-void collectProcessorIndices(const CodeGenSchedClass &SC, IdxVec &ProcIndices) {
+static void collectProcessorIndices(const CodeGenSchedClass &SC,
+                                    IdxVec &ProcIndices) {
   // A variant scheduling class may define transitions for multiple
   // processors.  This function identifies wich processors are associated with
   // transition rules specified by variant class `SC`.

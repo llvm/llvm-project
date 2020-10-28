@@ -89,6 +89,7 @@ target(libclang_target_type, "libclang") {
     "FatalErrorHandler.cpp",
     "Index_Internal.h",
     "Indexing.cpp",
+    "Rewrite.cpp",
   ]
   if (host_os == "mac") {
     ldflags = [

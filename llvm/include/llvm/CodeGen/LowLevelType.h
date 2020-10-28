@@ -23,6 +23,7 @@ namespace llvm {
 
 class DataLayout;
 class Type;
+struct fltSemantics;
 
 /// Construct a low-level type based on an LLVM type.
 LLT getLLTForType(Type &Ty, const DataLayout &DL);
@@ -35,6 +36,9 @@ MVT getMVTForLLT(LLT Ty);
 /// scalarable vector types, and will assert if used.
 LLT getLLTForMVT(MVT Ty);
 
+/// Get the appropriate floating point arithmetic semantic based on the bit size
+/// of the given scalar LLT.
+const llvm::fltSemantics &getFltSemanticForLLT(LLT Ty);
 }
 
 #endif // LLVM_CODEGEN_LOWLEVELTYPE_H

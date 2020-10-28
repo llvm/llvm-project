@@ -19,4 +19,28 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %0 = spv.GroupBroadcast "Workgroup" %value, %localid : f32, vector<3xi32>
     spv.ReturnValue %0: f32
   }
+  // CHECK-LABEL: @subgroup_block_read_intel
+  spv.func @subgroup_block_read_intel(%ptr : !spv.ptr<i32, StorageBuffer>) -> i32 "None" {
+    // CHECK: spv.SubgroupBlockReadINTEL %{{.*}} : i32
+    %0 = spv.SubgroupBlockReadINTEL "StorageBuffer" %ptr : i32
+    spv.ReturnValue %0: i32
+  }
+  // CHECK-LABEL: @subgroup_block_read_intel_vector
+  spv.func @subgroup_block_read_intel_vector(%ptr : !spv.ptr<i32, StorageBuffer>) -> vector<3xi32> "None" {
+    // CHECK: spv.SubgroupBlockReadINTEL %{{.*}} : vector<3xi32>
+    %0 = spv.SubgroupBlockReadINTEL "StorageBuffer" %ptr : vector<3xi32>
+    spv.ReturnValue %0: vector<3xi32>
+  }
+  // CHECK-LABEL: @subgroup_block_write_intel
+  spv.func @subgroup_block_write_intel(%ptr : !spv.ptr<i32, StorageBuffer>, %value: i32) -> () "None" {
+    // CHECK: spv.SubgroupBlockWriteINTEL %{{.*}}, %{{.*}} : i32
+    spv.SubgroupBlockWriteINTEL "StorageBuffer" %ptr, %value : i32
+    spv.Return
+  }
+  // CHECK-LABEL: @subgroup_block_write_intel_vector
+  spv.func @subgroup_block_write_intel_vector(%ptr : !spv.ptr<i32, StorageBuffer>, %value: vector<3xi32>) -> () "None" {
+    // CHECK: spv.SubgroupBlockWriteINTEL %{{.*}}, %{{.*}} : vector<3xi32>
+    spv.SubgroupBlockWriteINTEL "StorageBuffer" %ptr, %value : vector<3xi32>
+    spv.Return
+  }
 }

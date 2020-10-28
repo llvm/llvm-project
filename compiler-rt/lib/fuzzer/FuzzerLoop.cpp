@@ -463,12 +463,45 @@ static void RenameFeatureSetFile(const std::string &FeaturesDir,
              DirPlusFile(FeaturesDir, NewFile));
 }
 
+static void WriteEdgeToMutationGraphFile(const std::string &MutationGraphFile,
+                                         const InputInfo *II,
+                                         const InputInfo *BaseII,
+                                         const std::string &MS) {
+  if (MutationGraphFile.empty())
+    return;
+
+  std::string Sha1 = Sha1ToString(II->Sha1);
+
+  std::string OutputString;
+
+  // Add a new vertex.
+  OutputString.append("\"");
+  OutputString.append(Sha1);
+  OutputString.append("\"\n");
+
+  // Add a new edge if there is base input.
+  if (BaseII) {
+    std::string BaseSha1 = Sha1ToString(BaseII->Sha1);
+    OutputString.append("\"");
+    OutputString.append(BaseSha1);
+    OutputString.append("\" -> \"");
+    OutputString.append(Sha1);
+    OutputString.append("\" [label=\"");
+    OutputString.append(MS);
+    OutputString.append("\"];\n");
+  }
+
+  AppendToFile(OutputString, MutationGraphFile);
+}
+
 bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
-                    InputInfo *II, bool *FoundUniqFeatures) {
+                    InputInfo *II, bool ForceAddToCorpus,
+                    bool *FoundUniqFeatures) {
   if (!Size)
     return false;
 
   ExecuteCallback(Data, Size);
+  auto TimeOfUnit = duration_cast<microseconds>(UnitStopTime - UnitStartTime);
 
   UniqFeatureSetTmp.clear();
   size_t FoundUniqFeaturesOfII = 0;
@@ -478,7 +511,7 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
       UniqFeatureSetTmp.push_back(Feature);
     if (Options.Entropic)
       Corpus.UpdateFeatureFrequency(II, Feature);
-    if (Options.ReduceInputs && II)
+    if (Options.ReduceInputs && II && !II->NeverReduce)
       if (std::binary_search(II->UniqFeatureSet.begin(),
                              II->UniqFeatureSet.end(), Feature))
         FoundUniqFeaturesOfII++;
@@ -487,13 +520,16 @@ bool Fuzzer::RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile,
     *FoundUniqFeatures = FoundUniqFeaturesOfII;
   PrintPulseAndReportSlowInput(Data, Size);
   size_t NumNewFeatures = Corpus.NumFeatureUpdates() - NumUpdatesBefore;
-  if (NumNewFeatures) {
+  if (NumNewFeatures || ForceAddToCorpus) {
     TPC.UpdateObservedPCs();
-    auto NewII = Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures,
-                                    MayDeleteFile, TPC.ObservedFocusFunction(),
-                                    UniqFeatureSetTmp, DFT, II);
+    auto NewII =
+        Corpus.AddToCorpus({Data, Data + Size}, NumNewFeatures, MayDeleteFile,
+                           TPC.ObservedFocusFunction(), ForceAddToCorpus,
+                           TimeOfUnit, UniqFeatureSetTmp, DFT, II);
     WriteFeatureSetToFile(Options.FeaturesDir, Sha1ToString(NewII->Sha1),
                           NewII->UniqFeatureSet);
+    WriteEdgeToMutationGraphFile(Options.MutationGraphFile, NewII, II,
+                                 MD.MutationSequence());
     return true;
   }
   if (II && FoundUniqFeaturesOfII &&
@@ -600,7 +636,7 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U, const char *Text) {
   PrintStats(Text, "");
   if (Options.Verbosity) {
     Printf(" L: %zd/%zd ", U.size(), Corpus.MaxInputSize());
-    MD.PrintMutationSequence();
+    MD.PrintMutationSequence(Options.Verbosity >= 2);
     Printf("\n");
   }
 }
@@ -664,8 +700,11 @@ void Fuzzer::MutateAndTestOne() {
   MD.StartMutationSequence();
 
   auto &II = Corpus.ChooseUnitToMutate(MD.GetRand());
-  if (Options.DoCrossOver)
-    MD.SetCrossOverWith(&Corpus.ChooseUnitToMutate(MD.GetRand()).U);
+  if (Options.DoCrossOver) {
+    auto &CrossOverII = Corpus.ChooseUnitToCrossOverWith(
+        MD.GetRand(), Options.CrossOverUniformDist);
+    MD.SetCrossOverWith(&CrossOverII.U);
+  }
   const auto &U = II.U;
   memcpy(BaseSha1, II.Sha1, sizeof(BaseSha1));
   assert(CurrentUnitData);
@@ -700,7 +739,7 @@ void Fuzzer::MutateAndTestOne() {
 
     bool FoundUniqFeatures = false;
     bool NewCov = RunOne(CurrentUnitData, Size, /*MayDeleteFile=*/true, &II,
-                         &FoundUniqFeatures);
+                         /*ForceAddToCorpus*/ false, &FoundUniqFeatures);
     TryDetectingAMemoryLeak(CurrentUnitData, Size,
                             /*DuringInitialCorpusExecution*/ false);
     if (NewCov) {
@@ -768,7 +807,9 @@ void Fuzzer::ReadAndExecuteSeedCorpora(Vector<SizedFile> &CorporaFiles) {
     for (auto &SF : CorporaFiles) {
       auto U = FileToVector(SF.File, MaxInputLen, /*ExitOnError=*/false);
       assert(U.size() <= MaxInputLen);
-      RunOne(U.data(), U.size());
+      RunOne(U.data(), U.size(), /*MayDeleteFile*/ false, /*II*/ nullptr,
+             /*ForceAddToCorpus*/ Options.KeepSeed,
+             /*FoundUniqFeatures*/ nullptr);
       CheckExitOnSrcPosOrItem();
       TryDetectingAMemoryLeak(U.data(), U.size(),
                               /*DuringInitialCorpusExecution*/ true);

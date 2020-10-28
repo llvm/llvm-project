@@ -9,7 +9,7 @@
 // <memory>
 
 // allocator:
-// T* allocate(size_t n);
+// constexpr T* allocate(size_t n);
 
 #include <memory>
 #include <cassert>
@@ -77,6 +77,18 @@ void test_aligned() {
   }
 }
 
+#if TEST_STD_VER > 17
+template <size_t Align>
+constexpr bool test_aligned_constexpr() {
+    typedef AlignedType<Align> T;
+    std::allocator<T> a;
+    T* ap = a.allocate(3);
+    a.deallocate(ap, 3);
+
+    return true;
+}
+#endif
+
 int main(int, char**) {
     test_aligned<1>();
     test_aligned<2>();
@@ -86,6 +98,17 @@ int main(int, char**) {
     test_aligned<MaxAligned>();
     test_aligned<OverAligned>();
     test_aligned<OverAligned * 2>();
+
+#if TEST_STD_VER > 17
+    static_assert(test_aligned_constexpr<1>());
+    static_assert(test_aligned_constexpr<2>());
+    static_assert(test_aligned_constexpr<4>());
+    static_assert(test_aligned_constexpr<8>());
+    static_assert(test_aligned_constexpr<16>());
+    static_assert(test_aligned_constexpr<MaxAligned>());
+    static_assert(test_aligned_constexpr<OverAligned>());
+    static_assert(test_aligned_constexpr<OverAligned * 2>());
+#endif
 
   return 0;
 }

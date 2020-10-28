@@ -12,7 +12,7 @@ define i32 @add_v4i32(i32* %p) #0 {
 ; CHECK-LABEL: @add_v4i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P:%.*]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4, !tbaa !0
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4, [[TBAA0:!tbaa !.*]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP1]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -51,7 +51,7 @@ define signext i16 @mul_v8i16(i16* %p) #0 {
 ; CHECK-LABEL: @mul_v8i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16* [[P:%.*]] to <8 x i16>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* [[TMP0]], align 2, !tbaa !4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* [[TMP0]], align 2, [[TBAA4:!tbaa !.*]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = mul <8 x i16> [[TMP1]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <8 x i16> [[BIN_RDX]], <8 x i16> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -95,7 +95,7 @@ define signext i8 @or_v16i8(i8* %p) #0 {
 ; CHECK-LABEL: @or_v16i8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[P:%.*]] to <16 x i8>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* [[TMP0]], align 1, !tbaa !6
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* [[TMP0]], align 1, [[TBAA6:!tbaa !.*]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <16 x i8> [[TMP1]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <16 x i8> [[BIN_RDX]], <16 x i8> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -141,7 +141,7 @@ define i32 @smin_v4i32(i32* %p) #0 {
 ; CHECK-LABEL: @smin_v4i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P:%.*]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4, !tbaa !0
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4, [[TBAA0]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp slt <4 x i32> [[TMP1]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i32> [[TMP1]], <4 x i32> [[RDX_SHUF]]
@@ -195,7 +195,7 @@ define i32 @umax_v4i32(i32* %p) #0 {
 ; CHECK-LABEL: @umax_v4i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P:%.*]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4, !tbaa !0
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4, [[TBAA0]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ugt <4 x i32> [[TMP1]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <4 x i1> [[RDX_MINMAX_CMP]], <4 x i32> [[TMP1]], <4 x i32> [[RDX_SHUF]]
@@ -249,7 +249,7 @@ define float @fadd_v4i32(float* %p) #0 {
 ; CHECK-LABEL: @fadd_v4i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4, !tbaa !7
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4, [[TBAA7:!tbaa !.*]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP1]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -290,7 +290,7 @@ define float @fmul_v4i32(float* %p) #0 {
 ; CHECK-LABEL: @fmul_v4i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4, !tbaa !7
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4, [[TBAA7]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fmul fast <4 x float> [[TMP1]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF3:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -330,18 +330,17 @@ for.end:
 define float @fmin_v4i32(float* %p) #0 {
 ; CHECK-LABEL: @fmin_v4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[P:%.*]], align 4, !tbaa !7
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.minnum.f32(float [[TMP0]], float 0x47EFFFFFE0000000)
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* [[P:%.*]], align 4, [[TBAA7]]
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds float, float* [[P]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* [[ARRAYIDX_1]], align 4, !tbaa !7
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.minnum.f32(float [[TMP2]], float [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX_1]], align 4, [[TBAA7]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.minnum.f32(float [[TMP1]], float [[TMP0]])
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, float* [[ARRAYIDX_2]], align 4, !tbaa !7
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call fast float @llvm.minnum.f32(float [[TMP4]], float [[TMP3]])
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* [[ARRAYIDX_2]], align 4, [[TBAA7]]
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.minnum.f32(float [[TMP3]], float [[TMP2]])
 ; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
-; CHECK-NEXT:    [[TMP6:%.*]] = load float, float* [[ARRAYIDX_3]], align 4, !tbaa !7
-; CHECK-NEXT:    [[TMP7:%.*]] = tail call fast float @llvm.minnum.f32(float [[TMP6]], float [[TMP5]])
-; CHECK-NEXT:    ret float [[TMP7]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* [[ARRAYIDX_3]], align 4, [[TBAA7]]
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call fast float @llvm.minnum.f32(float [[TMP5]], float [[TMP4]])
+; CHECK-NEXT:    ret float [[TMP6]]
 ;
 entry:
   br label %for.cond

@@ -114,14 +114,6 @@ Symbol *Scope::FindComponent(SourceName name) const {
   }
 }
 
-std::optional<SourceName> Scope::GetName() const {
-  if (const auto *sym{GetSymbol()}) {
-    return sym->name();
-  } else {
-    return std::nullopt;
-  }
-}
-
 bool Scope::Contains(const Scope &that) const {
   for (const Scope *scope{&that};; scope = &scope->parent()) {
     if (*scope == *this) {
@@ -215,14 +207,6 @@ const DeclTypeSpec &Scope::MakeCharacterType(
 DeclTypeSpec &Scope::MakeDerivedType(
     DeclTypeSpec::Category category, DerivedTypeSpec &&spec) {
   return declTypeSpecs_.emplace_back(category, std::move(spec));
-}
-
-void Scope::set_chars(parser::CookedSource &cooked) {
-  CHECK(kind_ == Kind::Module);
-  CHECK(parent_.IsGlobal() || parent_.IsModuleFile());
-  CHECK(DEREF(symbol_).test(Symbol::Flag::ModFile));
-  // TODO: Preserve the CookedSource rather than acquiring its string.
-  chars_ = cooked.AcquireData();
 }
 
 Scope::ImportKind Scope::GetImportKind() const {

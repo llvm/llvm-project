@@ -1040,9 +1040,9 @@ define amdgpu_kernel void @frem_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
 ; CI-NEXT:    v_trunc_f32_e32 v4, v4
 ; CI-NEXT:    v_fma_f32 v0, -v4, v2, v0
 ; CI-NEXT:    v_div_scale_f32 v4, s[4:5], v3, v3, v1
+; CI-NEXT:    v_div_scale_f32 v2, vcc, v1, v3, v1
 ; CI-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; CI-NEXT:    v_div_scale_f32 v2, vcc, v1, v3, v1
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; CI-NEXT:    v_rcp_f32_e32 v5, v4
 ; CI-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s6
@@ -1265,9 +1265,9 @@ define amdgpu_kernel void @frem_v4f16(<4 x half> addrspace(1)* %out, <4 x half> 
 ; CI-NEXT:    v_trunc_f32_e32 v8, v8
 ; CI-NEXT:    v_fma_f32 v1, -v8, v1, v5
 ; CI-NEXT:    v_div_scale_f32 v8, s[4:5], v7, v7, v4
+; CI-NEXT:    v_div_scale_f32 v5, vcc, v4, v7, v4
 ; CI-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; CI-NEXT:    v_div_scale_f32 v5, vcc, v4, v7, v4
 ; CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; CI-NEXT:    v_rcp_f32_e32 v9, v8
 ; CI-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s6
@@ -1300,8 +1300,8 @@ define amdgpu_kernel void @frem_v4f16(<4 x half> addrspace(1)* %out, <4 x half> 
 ; CI-NEXT:    v_trunc_f32_e32 v4, v4
 ; CI-NEXT:    v_fma_f32 v0, -v4, v0, v3
 ; CI-NEXT:    v_div_scale_f32 v4, s[4:5], v6, v6, v2
-; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CI-NEXT:    v_div_scale_f32 v3, vcc, v2, v6, v2
+; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; CI-NEXT:    v_rcp_f32_e32 v5, v4
 ; CI-NEXT:    s_setreg_b32 hwreg(HW_REG_MODE, 4, 2), s6

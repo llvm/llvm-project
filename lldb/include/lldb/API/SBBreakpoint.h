@@ -140,7 +140,9 @@ public:
   // Can only be called from a ScriptedBreakpointResolver...
   SBError
   AddLocation(SBAddress &address);
-  
+
+  SBStructuredData SerializeToStructuredData();
+
 private:
   friend class SBBreakpointList;
   friend class SBBreakpointLocation;

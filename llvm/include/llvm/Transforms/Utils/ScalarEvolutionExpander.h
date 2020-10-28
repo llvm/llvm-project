@@ -39,6 +39,19 @@ bool isSafeToExpand(const SCEV *S, ScalarEvolution &SE);
 bool isSafeToExpandAt(const SCEV *S, const Instruction *InsertionPoint,
                       ScalarEvolution &SE);
 
+/// struct for holding enough information to help calculate the cost of the
+/// given SCEV when expanded into IR.
+struct SCEVOperand {
+  explicit SCEVOperand(unsigned Opc, int Idx, const SCEV *S) :
+    ParentOpcode(Opc), OperandIdx(Idx), S(S) { }
+  /// LLVM instruction opcode that uses the operand.
+  unsigned ParentOpcode;
+  /// The use index of an expanded instruction.
+  int OperandIdx;
+  /// The SCEV operand to be costed.
+  const SCEV* S;
+};
+
 /// This class uses information about analyze scalars to rewrite expressions
 /// in canonical form.
 ///
@@ -220,14 +233,14 @@ public:
     assert(At && "This function requires At instruction to be provided.");
     if (!TTI)      // In assert-less builds, avoid crashing
       return true; // by always claiming to be high-cost.
-    SmallVector<const SCEV *, 8> Worklist;
+    SmallVector<SCEVOperand, 8> Worklist;
     SmallPtrSet<const SCEV *, 8> Processed;
     int BudgetRemaining = Budget * TargetTransformInfo::TCC_Basic;
-    Worklist.emplace_back(Expr);
+    Worklist.emplace_back(-1, -1, Expr);
     while (!Worklist.empty()) {
-      const SCEV *S = Worklist.pop_back_val();
-      if (isHighCostExpansionHelper(S, L, *At, BudgetRemaining, *TTI, Processed,
-                                    Worklist))
+      const SCEVOperand WorkItem = Worklist.pop_back_val();
+      if (isHighCostExpansionHelper(WorkItem, L, *At, BudgetRemaining,
+                                    *TTI, Processed, Worklist))
         return true;
     }
     assert(BudgetRemaining >= 0 && "Should have returned from inner loop.");
@@ -394,11 +407,11 @@ private:
   Value *expandCodeForImpl(const SCEV *SH, Type *Ty, Instruction *I, bool Root);
 
   /// Recursive helper function for isHighCostExpansion.
-  bool isHighCostExpansionHelper(const SCEV *S, Loop *L, const Instruction &At,
-                                 int &BudgetRemaining,
-                                 const TargetTransformInfo &TTI,
-                                 SmallPtrSetImpl<const SCEV *> &Processed,
-                                 SmallVectorImpl<const SCEV *> &Worklist);
+  bool isHighCostExpansionHelper(
+    const SCEVOperand &WorkItem, Loop *L, const Instruction &At,
+    int &BudgetRemaining, const TargetTransformInfo &TTI,
+    SmallPtrSetImpl<const SCEV *> &Processed,
+    SmallVectorImpl<SCEVOperand> &Worklist);
 
   /// Insert the specified binary operator, doing a small amount of work to
   /// avoid inserting an obviously redundant operation, and hoisting to an

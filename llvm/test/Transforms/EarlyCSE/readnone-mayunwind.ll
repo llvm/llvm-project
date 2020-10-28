@@ -1,4 +1,4 @@
-; RUN: opt -S -early-cse < %s | FileCheck %s
+; RUN: opt -S -early-cse -earlycse-debug-hash < %s | FileCheck %s
 
 declare void @readnone_may_unwind() readnone
 

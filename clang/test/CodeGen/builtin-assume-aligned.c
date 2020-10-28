@@ -8,10 +8,7 @@
 // CHECK-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to i8*
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint i8* [[TMP1]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP1]], i64 32, i64 0) ]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to i32*
 // CHECK-NEXT:    store i32* [[TMP2]], i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[A_ADDR]], align 8
@@ -31,10 +28,7 @@ int test1(int *a) {
 // CHECK-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to i8*
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint i8* [[TMP1]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP1]], i64 32, i64 0) ]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to i32*
 // CHECK-NEXT:    store i32* [[TMP2]], i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[A_ADDR]], align 8
@@ -54,10 +48,7 @@ int test2(int *a) {
 // CHECK-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to i8*
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint i8* [[TMP1]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP1]], i64 32) ]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to i32*
 // CHECK-NEXT:    store i32* [[TMP2]], i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[A_ADDR]], align 8
@@ -81,11 +72,7 @@ int test3(int *a) {
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to i8*
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[B_ADDR]], align 4
 // CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP2]] to i64
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint i8* [[TMP1]] to i64
-// CHECK-NEXT:    [[OFFSETPTR:%.*]] = sub i64 [[PTRINT]], [[CONV]]
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[OFFSETPTR]], 31
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP1]], i64 32, i64 [[CONV]]) ]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP1]] to i32*
 // CHECK-NEXT:    store i32* [[TMP3]], i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32*, i32** [[A_ADDR]], align 8
@@ -115,11 +102,7 @@ int *m2() __attribute__((assume_aligned(64, 12)));
 // CHECK-LABEL: define {{[^@]+}}@test6() #0
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[CALL:%.*]] = call i32* (...) @m2()
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint i32* [[CALL]] to i64
-// CHECK-NEXT:    [[OFFSETPTR:%.*]] = sub i64 [[PTRINT]], 12
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[OFFSETPTR]], 63
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[CALL]], i64 64, i64 12) ]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
@@ -134,10 +117,7 @@ int test6() {
 // CHECK-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to i8*
-// CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint i8* [[TMP1]] to i64
-// CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 536870911
-// CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-// CHECK-NEXT:    call void @llvm.assume(i1 [[MASKCOND]])
+// CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP1]], i64 536870912) ]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[TMP1]] to i32*
 // CHECK-NEXT:    store i32* [[TMP2]], i32** [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[A_ADDR]], align 8

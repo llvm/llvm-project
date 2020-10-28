@@ -507,25 +507,31 @@ bool BranchRelaxation::relaxBranchInstructions() {
       Next = std::next(J);
       MachineInstr &MI = *J;
 
-      if (MI.isConditionalBranch()) {
-        MachineBasicBlock *DestBB = TII->getBranchDestBlock(MI);
-        if (!isBlockInRange(MI, *DestBB)) {
-          if (Next != MBB.end() && Next->isConditionalBranch()) {
-            // If there are multiple conditional branches, this isn't an
-            // analyzable block. Split later terminators into a new block so
-            // each one will be analyzable.
+      if (!MI.isConditionalBranch())
+        continue;
 
-            splitBlockBeforeInstr(*Next, DestBB);
-          } else {
-            fixupConditionalBranch(MI);
-            ++NumConditionalRelaxed;
-          }
+      if (MI.getOpcode() == TargetOpcode::FAULTING_OP)
+        // FAULTING_OP's destination is not encoded in the instruction stream
+        // and thus never needs relaxed.
+        continue;
 
-          Changed = true;
+      MachineBasicBlock *DestBB = TII->getBranchDestBlock(MI);
+      if (!isBlockInRange(MI, *DestBB)) {
+        if (Next != MBB.end() && Next->isConditionalBranch()) {
+          // If there are multiple conditional branches, this isn't an
+          // analyzable block. Split later terminators into a new block so
+          // each one will be analyzable.
 
-          // This may have modified all of the terminators, so start over.
-          Next = MBB.getFirstTerminator();
+          splitBlockBeforeInstr(*Next, DestBB);
+        } else {
+          fixupConditionalBranch(MI);
+          ++NumConditionalRelaxed;
         }
+
+        Changed = true;
+
+        // This may have modified all of the terminators, so start over.
+        Next = MBB.getFirstTerminator();
       }
     }
   }

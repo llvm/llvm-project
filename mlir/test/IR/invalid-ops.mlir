@@ -595,18 +595,18 @@ func @extract_element_tensor_too_few_indices(%t : tensor<2x3xf32>, %i : index) {
 // -----
 
 func @tensor_from_elements_wrong_result_type() {
-  // expected-error@+2 {{expected result type to be a ranked tensor}}
+  // expected-error@+2 {{'result' must be 1D tensor of any type values, but got 'tensor<*xi32>'}}
   %c0 = constant 0 : i32
-  %0 = tensor_from_elements(%c0) : tensor<*xi32>
+  %0 = tensor_from_elements %c0 : tensor<*xi32>
   return
 }
 
 // -----
 
 func @tensor_from_elements_wrong_elements_count() {
-  // expected-error@+2 {{expected result type to be a 1D tensor with 1 element}}
+  // expected-error@+2 {{1 operands present, but expected 2}}
   %c0 = constant 0 : index
-  %0 = tensor_from_elements(%c0) : tensor<2xindex>
+  %0 = tensor_from_elements %c0 : tensor<2xindex>
   return
 }
 
@@ -1015,6 +1015,16 @@ func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %1 = subview %0[%arg0, %arg1, %arg2][%arg0, %arg1, %arg2][%arg0, %arg1, %arg2]
     : memref<8x16x4xf32> to
       memref<?x?x?xf32, offset: ?, strides: [64, 4, 1]>
+  return
+}
+
+// -----
+
+func @invalid_rank_reducing_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
+  %0 = alloc() : memref<8x16x4xf32>
+  // expected-error@+1 {{expected result type to be 'memref<8x16x4xf32, affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>>'}}
+  %1 = subview %0[0, 0, 0][8, 16, 4][1, 1, 1]
+    : memref<8x16x4xf32> to memref<16x4xf32>
   return
 }
 

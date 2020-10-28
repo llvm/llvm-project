@@ -423,8 +423,6 @@ define <16 x float> @testf16_inp_mask(<16 x float> %a, i16 %mask)  {
 ; WIN64-KNL-NEXT:    nop
 ; WIN64-KNL-NEXT:    addq $40, %rsp
 ; WIN64-KNL-NEXT:    retq
-; WIN64-KNL-NEXT:    .seh_handlerdata
-; WIN64-KNL-NEXT:    .text
 ; WIN64-KNL-NEXT:    .seh_endproc
 ;
 ; WIN64-SKX-LABEL: testf16_inp_mask:
@@ -439,8 +437,6 @@ define <16 x float> @testf16_inp_mask(<16 x float> %a, i16 %mask)  {
 ; WIN64-SKX-NEXT:    nop
 ; WIN64-SKX-NEXT:    addq $40, %rsp
 ; WIN64-SKX-NEXT:    retq
-; WIN64-SKX-NEXT:    .seh_handlerdata
-; WIN64-SKX-NEXT:    .text
 ; WIN64-SKX-NEXT:    .seh_endproc
 ;
 ; X64-KNL-LABEL: testf16_inp_mask:

@@ -47,8 +47,6 @@ Symbol *Resolve(const parser::Name &, Symbol *);
 parser::MessageFixedText WithIsFatal(
     const parser::MessageFixedText &msg, bool isFatal);
 
-// Is this the name of a defined operator, e.g. ".foo."
-bool IsDefinedOperator(const SourceName &);
 bool IsIntrinsicOperator(const SemanticsContext &, const SourceName &);
 bool IsLogicalConstant(const SemanticsContext &, const SourceName &);
 

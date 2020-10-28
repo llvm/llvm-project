@@ -1998,3 +1998,19 @@ movl $1, (%rbp,%rbx,4)
 movl $1, (%r13,%rbx,4)
 {disp8} movl $1, (%r13,%rbx,4)
 {disp32} movl $1, (%r13,%rbx,4)
+
+// CHECK: seamcall
+// CHECK: encoding: [0x66,0x0f,0x01,0xcf]
+seamcall
+
+// CHECK: seamret
+// CHECK: encoding: [0x66,0x0f,0x01,0xcd]
+seamret
+
+// CHECK: seamops
+// CHECK: encoding: [0x66,0x0f,0x01,0xce]
+seamops
+
+// CHECK: tdcall
+// CHECK: encoding: [0x66,0x0f,0x01,0xcc]
+tdcall

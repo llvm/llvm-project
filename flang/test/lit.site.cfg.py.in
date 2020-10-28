@@ -11,6 +11,11 @@ config.flang_llvm_tools_dir = "@CMAKE_BINARY_DIR@/bin"
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.flang_standalone_build = @FLANG_STANDALONE_BUILD@
 
+# Control the regression test for flang-new driver
+import lit.util
+config.include_flang_new_driver_test = \
+    lit.util.pythonize_bool("@FLANG_BUILD_NEW_DRIVER@")
+
 # Support substitution of the tools_dir with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
 try:

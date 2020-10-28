@@ -36,6 +36,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 using namespace llvm;
@@ -150,15 +151,21 @@ namespace {
 } // end anonymous namespace
 
 namespace {
+  using NonNullPointerSet = SmallDenseSet<AssertingVH<Value>, 2>;
+
   /// This is the cache kept by LazyValueInfo which
   /// maintains information about queries across the clients' queries.
   class LazyValueInfoCache {
     /// This is all of the cached information for one basic block. It contains
     /// the per-value lattice elements, as well as a separate set for
-    /// overdefined values to reduce memory usage.
+    /// overdefined values to reduce memory usage. Additionally pointers
+    /// dereferenced in the block are cached for nullability queries.
     struct BlockCacheEntry {
       SmallDenseMap<AssertingVH<Value>, ValueLatticeElement, 4> LatticeElements;
       SmallDenseSet<AssertingVH<Value>, 4> OverDefined;
+      // None indicates that the nonnull pointers for this basic block
+      // block have not been computed yet.
+      Optional<NonNullPointerSet> NonNullPointers;
     };
 
     /// Cached information per basic block.
@@ -220,6 +227,19 @@ namespace {
       return LatticeIt->second;
     }
 
+    bool isNonNullAtEndOfBlock(
+        Value *V, BasicBlock *BB,
+        function_ref<NonNullPointerSet(BasicBlock *)> InitFn) {
+      BlockCacheEntry *Entry = getOrCreateBlockEntry(BB);
+      if (!Entry->NonNullPointers) {
+        Entry->NonNullPointers = InitFn(BB);
+        for (Value *V : *Entry->NonNullPointers)
+          addValueHandle(V);
+      }
+
+      return Entry->NonNullPointers->count(V);
+    }
+
     /// clear - Empty the cache.
     void clear() {
       BlockCache.clear();
@@ -244,6 +264,8 @@ void LazyValueInfoCache::eraseValue(Value *V) {
   for (auto &Pair : BlockCache) {
     Pair.second->LatticeElements.erase(V);
     Pair.second->OverDefined.erase(V);
+    if (Pair.second->NonNullPointers)
+      Pair.second->NonNullPointers->erase(V);
   }
 
   auto HandleIt = ValueHandles.find_as(V);
@@ -404,6 +426,7 @@ class LazyValueInfoImpl {
                                                          BasicBlock *BB);
   Optional<ValueLatticeElement> solveBlockValueExtractValue(
       ExtractValueInst *EVI, BasicBlock *BB);
+  bool isNonNullAtEndOfBlock(Value *Val, BasicBlock *BB);
   void intersectAssumeOrGuardBlockValueConstantRange(Value *Val,
                                                      ValueLatticeElement &BBLV,
                                                      Instruction *BBI);
@@ -411,14 +434,16 @@ class LazyValueInfoImpl {
   void solve();
 
 public:
-  /// This is the query interface to determine the lattice
-  /// value for the specified Value* at the end of the specified block.
+  /// This is the query interface to determine the lattice value for the
+  /// specified Value* at the context instruction (if specified) or at the
+  /// start of the block.
   ValueLatticeElement getValueInBlock(Value *V, BasicBlock *BB,
                                       Instruction *CxtI = nullptr);
 
-  /// This is the query interface to determine the lattice
-  /// value for the specified Value* at the specified instruction (generally
-  /// from an assume intrinsic).
+  /// This is the query interface to determine the lattice value for the
+  /// specified Value* at the specified instruction using only information
+  /// from assumes/guards and range metadata. Unlike getValueInBlock(), no
+  /// recursive query is performed.
   ValueLatticeElement getValueAt(Value *V, Instruction *CxtI);
 
   /// This is the query interface to determine the lattice
@@ -603,48 +628,43 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueImpl(
   return getFromRangeMetadata(BBI);
 }
 
-static bool InstructionDereferencesPointer(Instruction *I, Value *Ptr) {
+static void AddNonNullPointer(Value *Ptr, NonNullPointerSet &PtrSet) {
+  // TODO: Use NullPointerIsDefined instead.
+  if (Ptr->getType()->getPointerAddressSpace() == 0)
+    PtrSet.insert(getUnderlyingObject(Ptr));
+}
+
+static void AddNonNullPointersByInstruction(
+    Instruction *I, NonNullPointerSet &PtrSet) {
   if (LoadInst *L = dyn_cast<LoadInst>(I)) {
-    return L->getPointerAddressSpace() == 0 &&
-           getUnderlyingObject(L->getPointerOperand()) == Ptr;
-  }
-  if (StoreInst *S = dyn_cast<StoreInst>(I)) {
-    return S->getPointerAddressSpace() == 0 &&
-           getUnderlyingObject(S->getPointerOperand()) == Ptr;
-  }
-  if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
-    if (MI->isVolatile()) return false;
+    AddNonNullPointer(L->getPointerOperand(), PtrSet);
+  } else if (StoreInst *S = dyn_cast<StoreInst>(I)) {
+    AddNonNullPointer(S->getPointerOperand(), PtrSet);
+  } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
+    if (MI->isVolatile()) return;
 
     // FIXME: check whether it has a valuerange that excludes zero?
     ConstantInt *Len = dyn_cast<ConstantInt>(MI->getLength());
-    if (!Len || Len->isZero()) return false;
+    if (!Len || Len->isZero()) return;
 
-    if (MI->getDestAddressSpace() == 0)
-      if (getUnderlyingObject(MI->getRawDest()) == Ptr)
-        return true;
+    AddNonNullPointer(MI->getRawDest(), PtrSet);
     if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(MI))
-      if (MTI->getSourceAddressSpace() == 0)
-        if (getUnderlyingObject(MTI->getRawSource()) == Ptr)
-          return true;
+      AddNonNullPointer(MTI->getRawSource(), PtrSet);
   }
-  return false;
 }
 
-/// Return true if the allocation associated with Val is ever dereferenced
-/// within the given basic block.  This establishes the fact Val is not null,
-/// but does not imply that the memory at Val is dereferenceable.  (Val may
-/// point off the end of the dereferenceable part of the object.)
-static bool isObjectDereferencedInBlock(Value *Val, BasicBlock *BB) {
-  assert(Val->getType()->isPointerTy());
+bool LazyValueInfoImpl::isNonNullAtEndOfBlock(Value *Val, BasicBlock *BB) {
+  if (NullPointerIsDefined(BB->getParent(),
+                           Val->getType()->getPointerAddressSpace()))
+    return false;
 
-  Value *UnderlyingVal = getUnderlyingObject(Val);
-  // If 'getUnderlyingObject' didn't converge, skip it. It won't converge
-  // inside InstructionDereferencesPointer either.
-  if (UnderlyingVal == getUnderlyingObject(UnderlyingVal, 1))
+  Val = getUnderlyingObject(Val);
+  return TheCache.isNonNullAtEndOfBlock(Val, BB, [](BasicBlock *BB) {
+    NonNullPointerSet NonNullPointers;
     for (Instruction &I : *BB)
-      if (InstructionDereferencesPointer(&I, UnderlyingVal))
-        return true;
-  return false;
+      AddNonNullPointersByInstruction(&I, NonNullPointers);
+    return NonNullPointers;
+  });
 }
 
 Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueNonLocal(
@@ -655,16 +675,7 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueNonLocal(
   // value is overdefined.
   if (BB == &BB->getParent()->getEntryBlock()) {
     assert(isa<Argument>(Val) && "Unknown live-in to the entry block");
-    // Before giving up, see if we can prove the pointer non-null local to
-    // this particular block.
-    PointerType *PTy = dyn_cast<PointerType>(Val->getType());
-    if (PTy &&
-        (isKnownNonZero(Val, DL) ||
-          (isObjectDereferencedInBlock(Val, BB) &&
-           !NullPointerIsDefined(BB->getParent(), PTy->getAddressSpace()))))
-      return ValueLatticeElement::getNot(ConstantPointerNull::get(PTy));
-    else
-      return ValueLatticeElement::getOverdefined();
+    return ValueLatticeElement::getOverdefined();
   }
 
   // Loop over all of our predecessors, merging what we know from them into
@@ -689,14 +700,6 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueNonLocal(
     if (Result.isOverdefined()) {
       LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
                         << "' - overdefined because of pred (non local).\n");
-      // Before giving up, see if we can prove the pointer non-null local to
-      // this particular block.
-      PointerType *PTy = dyn_cast<PointerType>(Val->getType());
-      if (PTy && isObjectDereferencedInBlock(Val, BB) &&
-          !NullPointerIsDefined(BB->getParent(), PTy->getAddressSpace())) {
-        Result = ValueLatticeElement::getNot(ConstantPointerNull::get(PTy));
-      }
-
       return Result;
     }
   }
@@ -769,16 +772,23 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   }
 
   // If guards are not used in the module, don't spend time looking for them
-  if (!GuardDecl || GuardDecl->use_empty())
-    return;
+  if (GuardDecl && !GuardDecl->use_empty() &&
+      BBI->getIterator() != BB->begin()) {
+    for (Instruction &I : make_range(std::next(BBI->getIterator().getReverse()),
+                                     BB->rend())) {
+      Value *Cond = nullptr;
+      if (match(&I, m_Intrinsic<Intrinsic::experimental_guard>(m_Value(Cond))))
+        BBLV = intersect(BBLV, getValueFromCondition(Val, Cond));
+    }
+  }
 
-  if (BBI->getIterator() == BB->begin())
-    return;
-  for (Instruction &I : make_range(std::next(BBI->getIterator().getReverse()),
-                                   BB->rend())) {
-    Value *Cond = nullptr;
-    if (match(&I, m_Intrinsic<Intrinsic::experimental_guard>(m_Value(Cond))))
-      BBLV = intersect(BBLV, getValueFromCondition(Val, Cond));
+  if (BBLV.isOverdefined()) {
+    // Check whether we're checking at the terminator, and the pointer has
+    // been dereferenced in this block.
+    PointerType *PTy = dyn_cast<PointerType>(Val->getType());
+    if (PTy && BB->getTerminator() == BBI &&
+        isNonNullAtEndOfBlock(Val, BB))
+      BBLV = ValueLatticeElement::getNot(ConstantPointerNull::get(PTy));
   }
 }
 
@@ -1089,6 +1099,26 @@ static bool matchICmpOperand(const APInt *&Offset, Value *LHS, Value *Val,
   return false;
 }
 
+/// Get value range for a "(Val + Offset) Pred RHS" condition.
+static ValueLatticeElement getValueFromSimpleICmpCondition(
+    CmpInst::Predicate Pred, Value *RHS, const APInt *Offset) {
+  ConstantRange RHSRange(RHS->getType()->getIntegerBitWidth(),
+                         /*isFullSet=*/true);
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS))
+    RHSRange = ConstantRange(CI->getValue());
+  else if (Instruction *I = dyn_cast<Instruction>(RHS))
+    if (auto *Ranges = I->getMetadata(LLVMContext::MD_range))
+      RHSRange = getConstantRangeFromMetadata(*Ranges);
+
+  ConstantRange TrueValues =
+      ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
+
+  if (Offset)
+    TrueValues = TrueValues.subtract(*Offset);
+
+  return ValueLatticeElement::getRange(std::move(TrueValues));
+}
+
 static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
                                                      bool isTrueDest) {
   Value *LHS = ICI->getOperand(0);
@@ -1111,30 +1141,27 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
     return ValueLatticeElement::getOverdefined();
 
   const APInt *Offset = nullptr;
-  if (!matchICmpOperand(Offset, LHS, Val, EdgePred)) {
-    std::swap(LHS, RHS);
-    EdgePred = CmpInst::getSwappedPredicate(EdgePred);
-    if (!matchICmpOperand(Offset, LHS, Val, EdgePred))
-      return ValueLatticeElement::getOverdefined();
+  if (matchICmpOperand(Offset, LHS, Val, EdgePred))
+    return getValueFromSimpleICmpCondition(EdgePred, RHS, Offset);
+
+  CmpInst::Predicate SwappedPred = CmpInst::getSwappedPredicate(EdgePred);
+  if (matchICmpOperand(Offset, RHS, Val, SwappedPred))
+    return getValueFromSimpleICmpCondition(SwappedPred, LHS, Offset);
+
+  // If (Val & Mask) == C then all the masked bits are known and we can compute
+  // a value range based on that.
+  const APInt *Mask, *C;
+  if (EdgePred == ICmpInst::ICMP_EQ &&
+      match(LHS, m_And(m_Specific(Val), m_APInt(Mask))) &&
+      match(RHS, m_APInt(C))) {
+    KnownBits Known;
+    Known.Zero = ~*C & *Mask;
+    Known.One = *C & *Mask;
+    return ValueLatticeElement::getRange(
+        ConstantRange::fromKnownBits(Known, /*IsSigned*/ false));
   }
 
-  // Calculate the range of values that are allowed by the comparison.
-  ConstantRange RHSRange(RHS->getType()->getIntegerBitWidth(),
-                         /*isFullSet=*/true);
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS))
-    RHSRange = ConstantRange(CI->getValue());
-  else if (Instruction *I = dyn_cast<Instruction>(RHS))
-    if (auto *Ranges = I->getMetadata(LLVMContext::MD_range))
-      RHSRange = getConstantRangeFromMetadata(*Ranges);
-
-  // If we're interested in the false dest, invert the condition
-  ConstantRange TrueValues =
-      ConstantRange::makeAllowedICmpRegion(EdgePred, RHSRange);
-
-  if (Offset) // Apply the offset from above.
-    TrueValues = TrueValues.subtract(*Offset);
-
-  return ValueLatticeElement::getRange(std::move(TrueValues));
+  return ValueLatticeElement::getOverdefined();
 }
 
 // Handle conditions of the form
@@ -1561,12 +1588,12 @@ static bool isKnownNonConstant(Value *V) {
   return false;
 }
 
-Constant *LazyValueInfo::getConstant(Value *V, BasicBlock *BB,
-                                     Instruction *CxtI) {
+Constant *LazyValueInfo::getConstant(Value *V, Instruction *CxtI) {
   // Bail out early if V is known not to be a Constant.
   if (isKnownNonConstant(V))
     return nullptr;
 
+  BasicBlock *BB = CxtI->getParent();
   ValueLatticeElement Result =
       getImpl(PImpl, AC, BB->getModule()).getValueInBlock(V, BB, CxtI);
 
@@ -1580,11 +1607,11 @@ Constant *LazyValueInfo::getConstant(Value *V, BasicBlock *BB,
   return nullptr;
 }
 
-ConstantRange LazyValueInfo::getConstantRange(Value *V, BasicBlock *BB,
-                                              Instruction *CxtI,
+ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CxtI,
                                               bool UndefAllowed) {
   assert(V->getType()->isIntegerTy());
   unsigned Width = V->getType()->getIntegerBitWidth();
+  BasicBlock *BB = CxtI->getParent();
   ValueLatticeElement Result =
       getImpl(PImpl, AC, BB->getModule()).getValueInBlock(V, BB, CxtI);
   if (Result.isUnknown())
@@ -1717,7 +1744,7 @@ LazyValueInfo::getPredicateOnEdge(unsigned Pred, Value *V, Constant *C,
 
 LazyValueInfo::Tristate
 LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
-                              Instruction *CxtI) {
+                              Instruction *CxtI, bool UseBlockValue) {
   // Is or is not NonNull are common predicates being queried. If
   // isKnownNonZero can tell us the result of the predicate, we can
   // return it quickly. But this is only a fastpath, and falling
@@ -1731,7 +1758,10 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
     else if (Pred == ICmpInst::ICMP_NE)
       return LazyValueInfo::True;
   }
-  ValueLatticeElement Result = getImpl(PImpl, AC, M).getValueAt(V, CxtI);
+
+  ValueLatticeElement Result = UseBlockValue
+      ? getImpl(PImpl, AC, M).getValueInBlock(V, CxtI->getParent(), CxtI)
+      : getImpl(PImpl, AC, M).getValueAt(V, CxtI);
   Tristate Ret = getPredicateResult(Pred, C, Result, DL, TLI);
   if (Ret != Unknown)
     return Ret;

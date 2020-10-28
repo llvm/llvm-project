@@ -124,7 +124,7 @@ def Shape_ConstSizeOp : Shape_Op<"const_size", [
   let results = (outs Shape_SizeType:$result);
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, int64_t value">
+    OpBuilder<"int64_t value">
   ];
 
   let assemblyFormat = "$value attr-dict";
@@ -231,7 +231,7 @@ def Shape_GetExtentOp : Shape_Op<"get_extent", [NoSideEffect]> {
 
   let builders = [
     // Builder that allows passing a constant dimension as a simple integer.
-    OpBuilder<"OpBuilder &builder, OperationState &result, Value shape, "
+    OpBuilder<"Value shape, "
               "int64_t dim">
   ];
 
@@ -332,7 +332,7 @@ def Shape_NumElementsOp : Shape_Op<"num_elements", [NoSideEffect]> {
   let results = (outs Shape_SizeOrIndexType:$result);
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, Value shape">,
+    OpBuilder<"Value shape">,
   ];
 
   let assemblyFormat = "$shape `:` type($shape) `->` type($result) attr-dict";
@@ -383,8 +383,7 @@ def Shape_ReduceOp : Shape_Op<"reduce",
   let regions = (region SizedRegion<1>:$region);
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, "
-              "Value shape, ValueRange initVals">,
+    OpBuilder<"Value shape, ValueRange initVals">,
   ];
 
   let verifier = [{ return ::verify(*this); }];
@@ -406,7 +405,7 @@ def Shape_ShapeOfOp : Shape_Op<"shape_of", [NoSideEffect]> {
   let assemblyFormat = "$arg `:` type($arg) `->` type($result) attr-dict";
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &result, Value arg">
+    OpBuilder<"Value arg">
   ];
 
   let verifier = [{ return ::verifyShapeOrExtentTensorOp(*this); }];
@@ -440,7 +439,7 @@ def Shape_WithOp : Shape_Op<"with_shape", [NoSideEffect]> {
     value and shape equal to `shape`. If the ValueShape and given `shape` are
     non-conformant, then the returned ValueShape will represent an error of
     this mismatch. Similarly if either inputs are in an error state, then an
-    error is popagated.
+    error is propagated.
 
     Usage:
       %0 = shape.with_shape %1, %2 : tensor<...>, !shape.shape
@@ -619,6 +618,7 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [Commutative, NoSideEffect]> 
 
 def Shape_AssumingOp : Shape_Op<"assuming",
                            [SingleBlockImplicitTerminator<"AssumingYieldOp">,
+                            DeclareOpInterfaceMethods<RegionBranchOpInterface>,
                             RecursiveSideEffects]> {
   let summary = "Execute the region";
   let description = [{
@@ -738,5 +738,31 @@ def Shape_ConstWitnessOp : Shape_Op<"const_witness", [ConstantLike, NoSideEffect
   let hasFolder = 1;
 }
 
+def Shape_CstrRequireOp : Shape_Op<"cstr_require", []> {
+  let summary = "Represents a runtime assertion that an i1 is `true`";
+  let description = [{
+    Represents a runtime assertion that an i1 is true. It returns a
+    !shape.witness to order this assertion.
+
+    For simplicity, prefer using other cstr_* ops if they are available for a
+    given constraint.
+
+    Example:
+    ```mlir
+    %bool = ...
+    %w0 = shape.cstr_require %bool, "msg" // Passing if `%bool` is true.
+    ```
+
+    Since this op can be used to express many different possible assertions
+    (depending on whatever computation calculated `pred`), the `msg`
+    should clarify the nature of the assertion for users.
+  }];
+  let arguments = (ins I1:$pred, StrAttr:$msg);
+  let results = (outs Shape_WitnessType:$result);
+
+  let assemblyFormat = "$pred `,` $msg attr-dict";
+
+  let hasFolder = 1;
+}
 
 #endif // SHAPE_OPS

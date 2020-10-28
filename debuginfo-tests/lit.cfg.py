@@ -157,6 +157,6 @@ if platform.system() == 'Darwin':
         if apple_lldb_vers < 1000:
             config.available_features.add('apple-lldb-pre-1000')
 
-llvm_config.feature_config([('--build-mode', {
-    'Debug|RelWithDebInfo': 'debug-info'
-})])
+llvm_config.feature_config(
+    [('--build-mode', {'Debug|RelWithDebInfo': 'debug-info'})]
+)

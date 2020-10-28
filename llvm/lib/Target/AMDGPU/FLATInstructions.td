@@ -78,6 +78,7 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
   let AsmMatchConverter  = ps.AsmMatchConverter;
+  let OtherPredicates = ps.OtherPredicates;
   let TSFlags = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
 
@@ -714,16 +715,16 @@ let SubtargetPredicate = isGFX10Plus, is_flat_global = 1 in {
     FLAT_Global_Atomic_Pseudo<"global_atomic_fmax_x2", VReg_64, f64>;
 } // End SubtargetPredicate = isGFX10Plus, is_flat_global = 1
 
-let SubtargetPredicate = HasAtomicFaddInsts, is_flat_global = 1 in {
-
-defm GLOBAL_ATOMIC_ADD_F32 : FLAT_Global_Atomic_Pseudo_NO_RTN <
-  "global_atomic_add_f32", VGPR_32, f32, atomic_fadd_global_noret
->;
-defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Atomic_Pseudo_NO_RTN <
-  "global_atomic_pk_add_f16", VGPR_32, v2f16, atomic_fadd_global_noret
->;
-
-} // End SubtargetPredicate = HasAtomicFaddInsts
+let is_flat_global = 1 in {
+let OtherPredicates = [HasAtomicFaddInsts] in {
+  defm GLOBAL_ATOMIC_ADD_F32 : FLAT_Global_Atomic_Pseudo_NO_RTN <
+    "global_atomic_add_f32", VGPR_32, f32
+  >;
+  defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Atomic_Pseudo_NO_RTN <
+    "global_atomic_pk_add_f16", VGPR_32, v2f16
+  >;
+} // End OtherPredicates = [HasAtomicFaddInsts]
+} // End is_flat_global = 1
 
 //===----------------------------------------------------------------------===//
 // Flat Patterns
@@ -1081,8 +1082,10 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_SWAP_X2", atomic_swap_global_64, i64
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_CMPSWAP_X2", AMDGPUatomic_cmp_swap_global_64, i64, v2i64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_XOR_X2", atomic_load_xor_global_64, i64>;
 
-defm : GlobalFLATNoRtnAtomicPats <GLOBAL_ATOMIC_ADD_F32,    atomic_fadd_global_noret, f32>;
-defm : GlobalFLATNoRtnAtomicPats <GLOBAL_ATOMIC_PK_ADD_F16, atomic_fadd_global_noret, v2f16>;
+let OtherPredicates = [HasAtomicFaddInsts] in {
+defm : GlobalFLATNoRtnAtomicPats <GLOBAL_ATOMIC_ADD_F32,    atomic_load_fadd_global_noret_32, f32>;
+defm : GlobalFLATNoRtnAtomicPats <GLOBAL_ATOMIC_PK_ADD_F16, atomic_load_fadd_v2f16_global_noret_32, v2f16>;
+}
 
 } // End OtherPredicates = [HasFlatGlobalInsts], AddedComplexity = 10
 

@@ -80,5 +80,94 @@ entry:
 ; CHECK: blr
 }
 
-attributes #0 = { nounwind readnone }
+define i64 @uint32_1() #0 {
+entry:
+  ret i64 3900000000
 
+; CHECK-LABEL: @uint32_1
+; CHECK: lis [[REG1:[0-9]+]], 232
+; CHECK: ori [[REG2:[0-9]+]], [[REG1]], 30023
+; CHECK: sldi 3, [[REG2]], 8
+; CHECK: blr
+}
+
+define i32 @uint32_1_i32() #0 {
+entry:
+  ret i32 -394967296
+
+; CHECK-LABEL: @uint32_1_i32
+; CHECK: lis [[REG1:[0-9]+]], 232
+; CHECK: ori [[REG2:[0-9]+]], [[REG1]], 30023
+; CHECK: sldi 3, [[REG2]], 8
+; CHECK: blr
+}
+
+define i64 @uint32_2() #0 {
+entry:
+  ret i64 4294967295
+
+; CHECK-LABEL: @uint32_2
+; CHECK: li [[REG1:[0-9]+]], 0
+; CHECK: oris [[REG2:[0-9]+]], [[REG1]], 65535
+; CHECK: ori 3, [[REG2]], 65535
+; CHECK: blr
+}
+
+define i32 @uint32_2_i32() #0 {
+entry:
+  ret i32 -1
+
+; CHECK-LABEL: @uint32_2_i32
+; CHECK: li [[REG1:[0-9]+]], 0
+; CHECK: oris [[REG2:[0-9]+]], [[REG1]], 65535
+; CHECK: ori 3, [[REG2]], 65535
+; CHECK: blr
+}
+
+define i64 @uint32_3() #0 {
+entry:
+  ret i64 2147483648
+
+; CHECK-LABEL: @uint32_3
+; CHECK: li [[REG1:[0-9]+]], 1
+; CHECK: sldi 3, [[REG1]], 31
+; CHECK: blr
+}
+
+define i64 @uint32_4() #0 {
+entry:
+  ret i64 124800000032
+
+; CHECK-LABEL: @uint32_4
+; CHECK: li [[REG1:[0-9]+]], 29
+; CHECK: sldi [[REG2:[0-9]+]], [[REG1]], 32
+; CHECK: oris [[REG3:[0-9]+]], [[REG2]], 3752
+; CHECK: ori 3, [[REG3]], 57376
+; CHECK: blr
+}
+
+define i64 @cn_ones_1() #0 {
+entry:
+  ret i64 10460594175
+
+; CHECK-LABEL: @cn_ones_1
+; CHECK: li [[REG1:[0-9]+]], 2
+; CHECK: sldi [[REG2:[0-9]+]], [[REG1]], 32
+; CHECK: oris [[REG3:[0-9]+]], [[REG2]], 28543
+; CHECK: ori 3, [[REG3]], 65535
+; CHECK: blr
+}
+
+define i64 @cn_ones_2() #0 {
+entry:
+  ret i64 10459119615
+
+; CHECK-LABEL: @cn_ones_2
+; CHECK: li [[REG1:[0-9]+]], 2
+; CHECK: sldi [[REG2:[0-9]+]], [[REG1]], 32
+; CHECK: oris [[REG3:[0-9]+]], [[REG2]], 28521
+; CHECK: ori 3, [[REG3]], 32767
+; CHECK: blr
+}
+
+attributes #0 = { nounwind readnone }

@@ -830,7 +830,7 @@ def XTN2 : SOpInst<"vmovn_high", "(<Q)<Q", "silUsUiUl", OP_XTN>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Signed integer saturating extract and unsigned narrow to high
-def SQXTUN2 : SOpInst<"vqmovun_high", "(<U)(<q).", "HsHiHl", OP_SQXTUN>;
+def SQXTUN2 : SOpInst<"vqmovun_high", "(<U)(<Uq).", "HsHiHl", OP_SQXTUN>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Integer saturating extract and narrow to high
@@ -1419,19 +1419,19 @@ def SCALAR_FRSQRTE : IInst<"vrsqrte", "11", "SfSd">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Integer Comparison
-def SCALAR_CMEQ : SInst<"vceq", "111", "SlSUl">;
-def SCALAR_CMEQZ : SInst<"vceqz", "11", "SlSUl">;
-def SCALAR_CMGE : SInst<"vcge", "111", "Sl">;
-def SCALAR_CMGEZ : SInst<"vcgez", "11", "Sl">;
-def SCALAR_CMHS : SInst<"vcge", "111", "SUl">;
-def SCALAR_CMLE : SInst<"vcle", "111", "SlSUl">;
-def SCALAR_CMLEZ : SInst<"vclez", "11", "Sl">;
-def SCALAR_CMLT : SInst<"vclt", "111", "SlSUl">;
-def SCALAR_CMLTZ : SInst<"vcltz", "11", "Sl">;
-def SCALAR_CMGT : SInst<"vcgt", "111", "Sl">;
-def SCALAR_CMGTZ : SInst<"vcgtz", "11", "Sl">;
-def SCALAR_CMHI : SInst<"vcgt", "111", "SUl">;
-def SCALAR_CMTST : SInst<"vtst", "111", "SlSUl">;
+def SCALAR_CMEQ : SInst<"vceq", "(U1)11", "SlSUl">;
+def SCALAR_CMEQZ : SInst<"vceqz", "(U1)1", "SlSUl">;
+def SCALAR_CMGE : SInst<"vcge", "(U1)11", "Sl">;
+def SCALAR_CMGEZ : SInst<"vcgez", "(U1)1", "Sl">;
+def SCALAR_CMHS : SInst<"vcge", "(U1)11", "SUl">;
+def SCALAR_CMLE : SInst<"vcle", "(U1)11", "SlSUl">;
+def SCALAR_CMLEZ : SInst<"vclez", "(U1)1", "Sl">;
+def SCALAR_CMLT : SInst<"vclt", "(U1)11", "SlSUl">;
+def SCALAR_CMLTZ : SInst<"vcltz", "(U1)1", "Sl">;
+def SCALAR_CMGT : SInst<"vcgt", "(U1)11", "Sl">;
+def SCALAR_CMGTZ : SInst<"vcgtz", "(U1)1", "Sl">;
+def SCALAR_CMHI : SInst<"vcgt", "(U1)11", "SUl">;
+def SCALAR_CMTST : SInst<"vtst", "(U1)11", "SlSUl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Floating-point Comparison
@@ -1498,7 +1498,7 @@ def SCALAR_SQDMULL : SInst<"vqdmull", "(1>)11", "SsSi">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Signed Saturating Extract Unsigned Narrow
-def SCALAR_SQXTUN : SInst<"vqmovun", "(1<)1", "SsSiSl">;
+def SCALAR_SQXTUN : SInst<"vqmovun", "(U1<)1", "SsSiSl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Scalar Signed Saturating Extract Narrow

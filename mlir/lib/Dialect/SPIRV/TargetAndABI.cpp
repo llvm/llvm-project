@@ -134,13 +134,13 @@ DenseIntElementsAttr spirv::lookupLocalWorkGroupSize(Operation *op) {
 
 spirv::ResourceLimitsAttr
 spirv::getDefaultResourceLimits(MLIRContext *context) {
-  auto i32Type = IntegerType::get(32, context);
-  auto v3i32Type = VectorType::get(3, i32Type);
-
-  // These numbers are from "Table 46. Required Limits" of the Vulkan spec.
+  // All the fields have default values. Here we just provide a nicer way to
+  // construct a default resource limit attribute.
   return spirv::ResourceLimitsAttr ::get(
-      IntegerAttr::get(i32Type, 128),
-      DenseIntElementsAttr::get<int32_t>(v3i32Type, {128, 128, 64}), context);
+      /*max_compute_shared_memory_size=*/nullptr,
+      /*max_compute_workgroup_invocations=*/nullptr,
+      /*max_compute_workgroup_size=*/nullptr,
+      /*subgroup_size=*/nullptr, context);
 }
 
 StringRef spirv::getTargetEnvAttrName() { return "spv.target_env"; }
@@ -149,7 +149,9 @@ spirv::TargetEnvAttr spirv::getDefaultTargetEnv(MLIRContext *context) {
   auto triple = spirv::VerCapExtAttr::get(spirv::Version::V_1_0,
                                           {spirv::Capability::Shader},
                                           ArrayRef<Extension>(), context);
-  return spirv::TargetEnvAttr::get(triple,
+  return spirv::TargetEnvAttr::get(triple, spirv::Vendor::Unknown,
+                                   spirv::DeviceType::Unknown,
+                                   spirv::TargetEnvAttr::kUnknownDeviceID,
                                    spirv::getDefaultResourceLimits(context));
 }
 

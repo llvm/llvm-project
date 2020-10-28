@@ -291,7 +291,7 @@ In general, it's easier to use SCEV in loops that are in LCSSA form.
 The evolution of a scalar (loop-variant) expression that
 SCEV can analyze is, by definition, relative to a loop.
 An expression is represented in LLVM by an
-`llvm::Instruction <https://llvm.org/doxygen/classllvm_1_1Instruction.html>`.
+`llvm::Instruction <https://llvm.org/doxygen/classllvm_1_1Instruction.html>`_.
 If the expression is inside two (or more) loops (which can only
 happen if the loops are nested, like in the example above) and you want
 to get an analysis of its evolution (from SCEV),

@@ -88,7 +88,6 @@ def SPV_GroupBroadcastOp : SPV_Op<"GroupBroadcast",
   let assemblyFormat = [{
     $execution_scope operands attr-dict `:` type($value) `,` type($localid)
   }];
-
 }
 
 // -----
@@ -143,6 +142,106 @@ def SPV_SubgroupBallotKHROp : SPV_Op<"SubgroupBallotKHR", []> {
   let verifier = [{ return success(); }];
 
   let assemblyFormat = "$predicate attr-dict `:` type($result)";
+}
+
+// -----
+
+def SPV_SubgroupBlockReadINTELOp : SPV_Op<"SubgroupBlockReadINTEL", []> {
+  let summary = "See extension SPV_INTEL_subgroups";
+
+  let description = [{
+    Reads one or more components of Result data for each invocation in the
+    subgroup from the specified Ptr as a block operation.
+
+    The data is read strided, so the first value read is:
+    Ptr[ SubgroupLocalInvocationId ]
+
+    and the second value read is:
+    Ptr[ SubgroupLocalInvocationId + SubgroupMaxSize ]
+    etc.
+
+    Result Type may be a scalar or vector type, and its component type must be
+    equal to the type pointed to by Ptr.
+
+    The type of Ptr must be a pointer type, and must point to a scalar type.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    subgroup-block-read-INTEL-op ::= ssa-id `=` `spv.SubgroupBlockReadINTEL`
+                                storage-class ssa_use `:` spirv-element-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    %0 = spv.SubgroupBlockReadINTEL "StorageBuffer" %ptr : i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_5>,
+    Extension<[SPV_INTEL_subgroups]>,
+    Capability<[SPV_C_SubgroupBufferBlockIOINTEL]>
+  ];
+
+  let arguments = (ins
+    SPV_AnyPtr:$ptr
+  );
+
+  let results = (outs
+    SPV_Type:$value
+  );
+}
+
+// -----
+
+def SPV_SubgroupBlockWriteINTELOp : SPV_Op<"SubgroupBlockWriteINTEL", []> {
+  let summary = "See extension SPV_INTEL_subgroups";
+
+  let description = [{
+    Writes one or more components of Data for each invocation in the subgroup
+    from the specified Ptr as a block operation.
+
+    The data is written strided, so the first value is written to:
+    Ptr[ SubgroupLocalInvocationId ]
+
+    and the second value written is:
+    Ptr[ SubgroupLocalInvocationId + SubgroupMaxSize ]
+    etc.
+
+    The type of Ptr must be a pointer type, and must point to a scalar type.
+
+    The component type of Data must be equal to the type pointed to by Ptr.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    subgroup-block-write-INTEL-op ::= ssa-id `=` `spv.SubgroupBlockWriteINTEL`
+                      storage-class ssa_use `,` ssa-use `:` spirv-element-type
+    ```mlir
+
+    #### Example:
+
+    ```
+    spv.SubgroupBlockWriteINTEL "StorageBuffer" %ptr, %value : i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPV_V_1_0>,
+    MaxVersion<SPV_V_1_5>,
+    Extension<[SPV_INTEL_subgroups]>,
+    Capability<[SPV_C_SubgroupBufferBlockIOINTEL]>
+  ];
+
+  let arguments = (ins
+    SPV_AnyPtr:$ptr,
+    SPV_Type:$value
+  );
+
+  let results = (outs);
 }
 
 // -----

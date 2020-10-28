@@ -83,6 +83,86 @@ KnownBits KnownBits::computeForAddSub(bool Add, bool NSW,
   return KnownOut;
 }
 
+KnownBits KnownBits::makeGE(const APInt &Val) const {
+  // Count the number of leading bit positions where our underlying value is
+  // known to be less than or equal to Val.
+  unsigned N = (Zero | Val).countLeadingOnes();
+
+  // For each of those bit positions, if Val has a 1 in that bit then our
+  // underlying value must also have a 1.
+  APInt MaskedVal(Val);
+  MaskedVal.clearLowBits(getBitWidth() - N);
+  return KnownBits(Zero, One | MaskedVal);
+}
+
+KnownBits KnownBits::umax(const KnownBits &LHS, const KnownBits &RHS) {
+  // If we can prove that LHS >= RHS then use LHS as the result. Likewise for
+  // RHS. Ideally our caller would already have spotted these cases and
+  // optimized away the umax operation, but we handle them here for
+  // completeness.
+  if (LHS.getMinValue().uge(RHS.getMaxValue()))
+    return LHS;
+  if (RHS.getMinValue().uge(LHS.getMaxValue()))
+    return RHS;
+
+  // If the result of the umax is LHS then it must be greater than or equal to
+  // the minimum possible value of RHS. Likewise for RHS. Any known bits that
+  // are common to these two values are also known in the result.
+  KnownBits L = LHS.makeGE(RHS.getMinValue());
+  KnownBits R = RHS.makeGE(LHS.getMinValue());
+  return KnownBits(L.Zero & R.Zero, L.One & R.One);
+}
+
+KnownBits KnownBits::umin(const KnownBits &LHS, const KnownBits &RHS) {
+  // Flip the range of values: [0, 0xFFFFFFFF] <-> [0xFFFFFFFF, 0]
+  auto Flip = [](const KnownBits &Val) { return KnownBits(Val.One, Val.Zero); };
+  return Flip(umax(Flip(LHS), Flip(RHS)));
+}
+
+KnownBits KnownBits::smax(const KnownBits &LHS, const KnownBits &RHS) {
+  // Flip the range of values: [-0x80000000, 0x7FFFFFFF] <-> [0, 0xFFFFFFFF]
+  auto Flip = [](const KnownBits &Val) {
+    unsigned SignBitPosition = Val.getBitWidth() - 1;
+    APInt Zero = Val.Zero;
+    APInt One = Val.One;
+    Zero.setBitVal(SignBitPosition, Val.One[SignBitPosition]);
+    One.setBitVal(SignBitPosition, Val.Zero[SignBitPosition]);
+    return KnownBits(Zero, One);
+  };
+  return Flip(umax(Flip(LHS), Flip(RHS)));
+}
+
+KnownBits KnownBits::smin(const KnownBits &LHS, const KnownBits &RHS) {
+  // Flip the range of values: [-0x80000000, 0x7FFFFFFF] <-> [0xFFFFFFFF, 0]
+  auto Flip = [](const KnownBits &Val) {
+    unsigned SignBitPosition = Val.getBitWidth() - 1;
+    APInt Zero = Val.One;
+    APInt One = Val.Zero;
+    Zero.setBitVal(SignBitPosition, Val.Zero[SignBitPosition]);
+    One.setBitVal(SignBitPosition, Val.One[SignBitPosition]);
+    return KnownBits(Zero, One);
+  };
+  return Flip(umax(Flip(LHS), Flip(RHS)));
+}
+
+KnownBits KnownBits::abs() const {
+  // If the source's MSB is zero then we know the rest of the bits already.
+  if (isNonNegative())
+    return *this;
+
+  // Assume we know nothing.
+  KnownBits KnownAbs(getBitWidth());
+
+  // We only know that the absolute values's MSB will be zero iff there is
+  // a set bit that isn't the sign bit (otherwise it could be INT_MIN).
+  APInt Val = One;
+  Val.clearSignBit();
+  if (!Val.isNullValue())
+    KnownAbs.Zero.setSignBit();
+
+  return KnownAbs;
+}
+
 KnownBits &KnownBits::operator&=(const KnownBits &RHS) {
   // Result bit is 0 if either operand bit is 0.
   Zero |= RHS.Zero;

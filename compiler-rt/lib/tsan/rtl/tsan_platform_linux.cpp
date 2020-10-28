@@ -384,12 +384,16 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #endif
 }
 
-#ifdef __powerpc__
+#if SANITIZER_NETBSD
+# ifdef __x86_64__
+#  define LONG_JMP_SP_ENV_SLOT 6
+# else
+#  error unsupported
+# endif
+#elif defined(__powerpc__)
 # define LONG_JMP_SP_ENV_SLOT 0
 #elif SANITIZER_FREEBSD
 # define LONG_JMP_SP_ENV_SLOT 2
-#elif SANITIZER_NETBSD
-# define LONG_JMP_SP_ENV_SLOT 6
 #elif SANITIZER_LINUX
 # ifdef __aarch64__
 #  define LONG_JMP_SP_ENV_SLOT 13

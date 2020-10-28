@@ -17,12 +17,12 @@
 namespace __sanitizer {
 
 
-INLINE void proc_yield(int cnt) {
+inline void proc_yield(int cnt) {
   __asm__ __volatile__("" ::: "memory");
 }
 
 template<typename T>
-INLINE typename T::Type atomic_load(
+inline typename T::Type atomic_load(
     const volatile T *a, memory_order mo) {
   DCHECK(mo & (memory_order_relaxed | memory_order_consume
       | memory_order_acquire | memory_order_seq_cst));
@@ -60,7 +60,7 @@ INLINE typename T::Type atomic_load(
 }
 
 template<typename T>
-INLINE void atomic_store(volatile T *a, typename T::Type v, memory_order mo) {
+inline void atomic_store(volatile T *a, typename T::Type v, memory_order mo) {
   DCHECK(mo & (memory_order_relaxed | memory_order_release
       | memory_order_seq_cst));
   DCHECK(!((uptr)a % sizeof(*a)));

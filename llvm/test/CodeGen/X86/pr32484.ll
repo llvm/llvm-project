@@ -8,9 +8,9 @@ define void @foo() {
 ; CHECK-NEXT:    jmpq *%rax
 ; CHECK-NEXT:  .LBB0_1:
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    # implicit-def: $rax
-; CHECK-NEXT:    movdqu %xmm1, (%rax)
+; CHECK-NEXT:    movdqu %xmm0, (%rax)
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    retq
   indirectbr i8* undef, [label %9, label %1]

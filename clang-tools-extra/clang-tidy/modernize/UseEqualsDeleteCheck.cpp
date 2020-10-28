@@ -36,12 +36,12 @@ void UseEqualsDeleteCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxMethodDecl(
           PrivateSpecialFn,
-          unless(anyOf(hasBody(stmt()), isDefaulted(), isDeleted(),
+          unless(anyOf(hasAnyBody(stmt()), isDefaulted(), isDeleted(),
                        ast_matchers::isTemplateInstantiation(),
                        // Ensure that all methods except private special member
                        // functions are defined.
                        hasParent(cxxRecordDecl(hasMethod(unless(
-                           anyOf(PrivateSpecialFn, hasBody(stmt()), isPure(),
+                           anyOf(PrivateSpecialFn, hasAnyBody(stmt()), isPure(),
                                  isDefaulted(), isDeleted()))))))))
           .bind(SpecialFunction),
       this);

@@ -166,11 +166,9 @@ public:
   bool HasDeferredTypeParameter() const;
 
   // 7.3.2.3 & 15.5.2.4 type compatibility.
-  // x.IsTypeCompatibleWith(y) is true if "x => y" or passing actual y to
+  // x.IsTkCompatibleWith(y) is true if "x => y" or passing actual y to
   // dummy argument x would be valid.  Be advised, this is not a reflexive
-  // relation.
-  bool IsTypeCompatibleWith(const DynamicType &) const;
-  // Type compatible and kind type parameters match
+  // relation.  Kind type parameters must match.
   bool IsTkCompatibleWith(const DynamicType &) const;
 
   // Result will be missing when a symbol is absent or
@@ -217,6 +215,8 @@ private:
 const semantics::DerivedTypeSpec *GetDerivedTypeSpec(const DynamicType &);
 const semantics::DerivedTypeSpec *GetDerivedTypeSpec(
     const std::optional<DynamicType> &);
+const semantics::DerivedTypeSpec *GetParentTypeSpec(
+    const semantics::DerivedTypeSpec &);
 
 std::string DerivedTypeSpecAsFortran(const semantics::DerivedTypeSpec &);
 

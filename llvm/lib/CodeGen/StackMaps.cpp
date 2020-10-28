@@ -88,6 +88,29 @@ StackMaps::StackMaps(AsmPrinter &AP) : AP(AP) {
     llvm_unreachable("Unsupported stackmap version!");
 }
 
+unsigned StackMaps::getNextMetaArgIdx(MachineInstr *MI, unsigned CurIdx) {
+  assert(CurIdx < MI->getNumOperands() && "Bad meta arg index");
+  const auto &MO = MI->getOperand(CurIdx);
+  if (MO.isImm()) {
+    switch (MO.getImm()) {
+    default:
+      llvm_unreachable("Unrecognized operand type.");
+    case StackMaps::DirectMemRefOp:
+      CurIdx += 2;
+      break;
+    case StackMaps::IndirectMemRefOp:
+      CurIdx += 3;
+      break;
+    case StackMaps::ConstantOp:
+      ++CurIdx;
+      break;
+    }
+  }
+  ++CurIdx;
+  assert(CurIdx < MI->getNumOperands() && "points past operand list");
+  return CurIdx;
+}
+
 /// Go up the super-register chain until we hit a valid dwarf register number.
 static unsigned getDwarfRegNum(unsigned Reg, const TargetRegisterInfo *TRI) {
   int RegNum = TRI->getDwarfRegNum(Reg, false);

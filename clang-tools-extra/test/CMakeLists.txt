@@ -16,7 +16,7 @@ endif ()
 string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} CLANG_TOOLS_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
 
 llvm_canonicalize_cmake_booleans(
-  CLANG_ENABLE_STATIC_ANALYZER
+  CLANG_TIDY_ENABLE_STATIC_ANALYZER
   LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA
   )
 
@@ -90,3 +90,7 @@ add_lit_testsuite(check-clang-tools "Running the Clang extra tools' regression t
   )
 
 set_target_properties(check-clang-tools PROPERTIES FOLDER "Clang extra tools' tests")
+
+add_lit_testsuites(CLANG-EXTRA ${CMAKE_CURRENT_SOURCE_DIR}
+  DEPENDS ${CLANG_TOOLS_TEST_DEPS}
+  )

@@ -718,11 +718,10 @@ define <4 x half> @v_test_canonicalize_reg_reg_undef_undef_v4f16(half %val0, hal
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_reg_undef_reg_reg_v4f16:
 ; GFX9: s_waitcnt
-; GFX9-NEXT: v_mov_b32_e32 [[MASK:v[0-9]+]], 0xffff
-; GFX9-NEXT: v_and_b32_e32 v1, [[MASK]], v1
+; GFX9-NEXT: v_and_b32_e32 v1, 0xffff, v1
 ; GFX9-NEXT: v_max_f16_e32 v0, v0, v0
 ; GFX9-NEXT: v_lshl_or_b32 v1, v2, 16, v1
-; GFX9-NEXT: v_and_b32_e32 v0, [[MASK]], v0
+; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, v0
 ; GFX9-NEXT: v_pk_max_f16 v1, v1, v1
 ; GFX9-NEXT: s_setpc_b64
 

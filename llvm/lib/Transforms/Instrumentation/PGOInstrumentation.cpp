@@ -807,8 +807,11 @@ BasicBlock *FuncPGOInstrumentation<Edge, BBInfo>::getInstrBB(Edge *E) {
   if (!E->IsCritical)
     return canInstrument(DestBB);
 
+  // Some IndirectBr critical edges cannot be split by the previous
+  // SplitIndirectBrCriticalEdges call. Bail out.
   unsigned SuccNum = GetSuccessorNumber(SrcBB, DestBB);
-  BasicBlock *InstrBB = SplitCriticalEdge(TI, SuccNum);
+  BasicBlock *InstrBB =
+      isa<IndirectBrInst>(TI) ? nullptr : SplitCriticalEdge(TI, SuccNum);
   if (!InstrBB) {
     LLVM_DEBUG(
         dbgs() << "Fail to split critical edge: not instrument this edge.\n");

@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 -show-encoding %s | FileCheck --check-prefix=GFX908 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX908-ERR %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck --check-prefix=GFX908-ERR --implicit-check-not=error: %s
 
 buffer_atomic_add_f32 v5, off, s[8:11], s3 offset:4095
 // GFX908: encoding: [0xff,0x0f,0x34,0xe1,0x00,0x05,0x02,0x03]

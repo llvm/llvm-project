@@ -14,6 +14,7 @@
 #include "ProcessMonitor.h"
 #include "RegisterContextPOSIXProcessMonitor_arm.h"
 #include "Plugins/Process/Utility/RegisterContextPOSIX_arm.h"
+#include "Plugins/Process/Utility/lldb-arm-register-enums.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -21,9 +22,9 @@ using namespace lldb;
 #define REG_CONTEXT_SIZE (GetGPRSize())
 
 RegisterContextPOSIXProcessMonitor_arm::RegisterContextPOSIXProcessMonitor_arm(
-    Thread &thread, uint32_t concrete_frame_idx,
-    lldb_private::RegisterInfoInterface *register_info)
-    : RegisterContextPOSIX_arm(thread, concrete_frame_idx, register_info) {}
+    lldb_private::Thread &thread,
+    std::unique_ptr<RegisterInfoPOSIX_arm> register_info)
+    : RegisterContextPOSIX_arm(thread, std::move(register_info)) {}
 
 ProcessMonitor &RegisterContextPOSIXProcessMonitor_arm::GetMonitor() {
   ProcessSP base = CalculateProcess();

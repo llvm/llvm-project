@@ -68,3 +68,12 @@ int pr6130(unsigned i) {
       throw PR6130(); // no-warning
   }
 }
+
+extern "C" void foo(void);
+extern "C" __attribute__((weak)) decltype(foo) foo;
+
+void weak_redecl() {
+  if (foo)
+    return;
+  bar(); // no-warning
+}

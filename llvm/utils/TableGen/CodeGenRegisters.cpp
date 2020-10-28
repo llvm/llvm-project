@@ -999,6 +999,8 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
                       const CodeGenRegisterClass *B) {
     // If there are multiple, identical register classes, prefer the original
     // register class.
+    if (A == B)
+      return false;
     if (A->getMembers().size() == B->getMembers().size())
       return A == this;
     return A->getMembers().size() > B->getMembers().size();

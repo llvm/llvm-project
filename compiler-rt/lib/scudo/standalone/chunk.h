@@ -65,7 +65,8 @@ typedef u64 PackedHeader;
 struct UnpackedHeader {
   uptr ClassId : 8;
   u8 State : 2;
-  u8 Origin : 2;
+  // Origin if State == Allocated, or WasZeroed otherwise.
+  u8 OriginOrWasZeroed : 2;
   uptr SizeOrUnusedBytes : 20;
   uptr Offset : 16;
   uptr Checksum : 16;

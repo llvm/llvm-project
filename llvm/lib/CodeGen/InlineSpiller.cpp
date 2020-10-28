@@ -289,8 +289,9 @@ bool InlineSpiller::isSnippet(const LiveInterval &SnipLI) {
 
   // Check that all uses satisfy our criteria.
   for (MachineRegisterInfo::reg_instr_nodbg_iterator
-       RI = MRI.reg_instr_nodbg_begin(SnipLI.reg),
-       E = MRI.reg_instr_nodbg_end(); RI != E; ) {
+           RI = MRI.reg_instr_nodbg_begin(SnipLI.reg()),
+           E = MRI.reg_instr_nodbg_end();
+       RI != E;) {
     MachineInstr &MI = *RI++;
 
     // Allow copies to/from Reg.
@@ -299,11 +300,11 @@ bool InlineSpiller::isSnippet(const LiveInterval &SnipLI) {
 
     // Allow stack slot loads.
     int FI;
-    if (SnipLI.reg == TII.isLoadFromStackSlot(MI, FI) && FI == StackSlot)
+    if (SnipLI.reg() == TII.isLoadFromStackSlot(MI, FI) && FI == StackSlot)
       continue;
 
     // Allow stack slot stores.
-    if (SnipLI.reg == TII.isStoreToStackSlot(MI, FI) && FI == StackSlot)
+    if (SnipLI.reg() == TII.isStoreToStackSlot(MI, FI) && FI == StackSlot)
       continue;
 
     // Allow a single additional instruction.
@@ -432,7 +433,7 @@ void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
   do {
     LiveInterval *LI;
     std::tie(LI, VNI) = WorkList.pop_back_val();
-    Register Reg = LI->reg;
+    Register Reg = LI->reg();
     LLVM_DEBUG(dbgs() << "Checking redundant spills for " << VNI->id << '@'
                       << VNI->def << " in " << *LI << '\n');
 
@@ -511,7 +512,7 @@ void InlineSpiller::markValueUsed(LiveInterval *LI, VNInfo *VNI) {
     if (!SnippetCopies.count(MI))
       continue;
     LiveInterval &SnipLI = LIS.getInterval(MI->getOperand(1).getReg());
-    assert(isRegToSpill(SnipLI.reg) && "Unexpected register in copy");
+    assert(isRegToSpill(SnipLI.reg()) && "Unexpected register in copy");
     VNInfo *SnipVNI = SnipLI.getVNInfoAt(VNI->def.getRegSlot(true));
     assert(SnipVNI && "Snippet undefined before copy");
     WorkList.push_back(std::make_pair(&SnipLI, SnipVNI));
@@ -556,7 +557,7 @@ bool InlineSpiller::canGuaranteeAssignmentAfterRemat(Register VReg,
 bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Analyze instruction
   SmallVector<std::pair<MachineInstr *, unsigned>, 8> Ops;
-  VirtRegInfo RI = AnalyzeVirtRegInBundle(MI, VirtReg.reg, &Ops);
+  VirtRegInfo RI = AnalyzeVirtRegInBundle(MI, VirtReg.reg(), &Ops);
 
   if (!RI.Reads)
     return false;
@@ -568,7 +569,7 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
     LLVM_DEBUG(dbgs() << "\tadding <undef> flags: ");
     for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
       MachineOperand &MO = MI.getOperand(i);
-      if (MO.isReg() && MO.isUse() && MO.getReg() == VirtReg.reg)
+      if (MO.isReg() && MO.isUse() && MO.getReg() == VirtReg.reg())
         MO.setIsUndef();
     }
     LLVM_DEBUG(dbgs() << UseIdx << '\t' << MI);
@@ -608,7 +609,7 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
 
   // If we can't guarantee that we'll be able to actually assign the new vreg,
   // we can't remat.
-  if (!canGuaranteeAssignmentAfterRemat(VirtReg.reg, MI)) {
+  if (!canGuaranteeAssignmentAfterRemat(VirtReg.reg(), MI)) {
     markValueUsed(&VirtReg, ParentVNI);
     LLVM_DEBUG(dbgs() << "\tcannot remat for " << UseIdx << '\t' << MI);
     return false;
@@ -633,7 +634,7 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Replace operands
   for (const auto &OpPair : Ops) {
     MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
-    if (MO.isReg() && MO.isUse() && MO.getReg() == VirtReg.reg) {
+    if (MO.isReg() && MO.isUse() && MO.getReg() == VirtReg.reg()) {
       MO.setReg(NewVReg);
       MO.setIsKill();
     }
@@ -1171,7 +1172,7 @@ void HoistSpillHelper::addToMergeableSpills(MachineInstr &Spill, int StackSlot,
   // save a copy of LiveInterval in StackSlotToOrigLI because the original
   // LiveInterval may be cleared after all its references are spilled.
   if (StackSlotToOrigLI.find(StackSlot) == StackSlotToOrigLI.end()) {
-    auto LI = std::make_unique<LiveInterval>(OrigLI.reg, OrigLI.weight);
+    auto LI = std::make_unique<LiveInterval>(OrigLI.reg(), OrigLI.weight());
     LI->assign(OrigLI, Allocator);
     StackSlotToOrigLI[StackSlot] = std::move(LI);
   }
@@ -1199,7 +1200,7 @@ bool HoistSpillHelper::rmFromMergeableSpills(MachineInstr &Spill,
 bool HoistSpillHelper::isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
                                      MachineBasicBlock &BB, Register &LiveReg) {
   SlotIndex Idx;
-  Register OrigReg = OrigLI.reg;
+  Register OrigReg = OrigLI.reg();
   MachineBasicBlock::iterator MI = IPA.getLastInsertPointIter(OrigLI, BB);
   if (MI != BB.end())
     Idx = LIS.getInstructionIndex(*MI);

@@ -21,4 +21,4 @@ subdirectories = Coverage
 type = Library
 name = ProfileData
 parent = Libraries
-required_libraries = Core Support
+required_libraries = Core Support Demangle

@@ -59,8 +59,10 @@ public:
   /// \brief Mark \p UniVal as a value that is always uniform.
   void addUniformOverride(const Value &UniVal);
 
-  /// \brief Mark \p DivVal as a value that is always divergent.
-  void markDivergent(const Value &DivVal);
+  /// \brief Mark \p DivVal as a value that is always divergent. Will not do so
+  /// if `isAlwaysUniform(DivVal)`.
+  /// \returns Whether the tracked divergence state of \p DivVal changed.
+  bool markDivergent(const Value &DivVal);
 
   /// \brief Propagate divergence to all instructions in the region.
   /// Divergence is seeded by calls to \p markDivergent.
@@ -76,44 +78,37 @@ public:
   /// \brief Whether \p Val is divergent at its definition.
   bool isDivergent(const Value &Val) const;
 
-  /// \brief Whether \p U is divergent. Uses of a uniform value can be divergent.
+  /// \brief Whether \p U is divergent. Uses of a uniform value can be
+  /// divergent.
   bool isDivergentUse(const Use &U) const;
 
   void print(raw_ostream &OS, const Module *) const;
 
 private:
-  bool updateTerminator(const Instruction &Term) const;
-  bool updatePHINode(const PHINode &Phi) const;
+  /// \brief Mark \p Term as divergent and push all Instructions that become
+  /// divergent as a result on the worklist.
+  void analyzeControlDivergence(const Instruction &Term);
+  /// \brief Mark all phi nodes in \p JoinBlock as divergent and push them on
+  /// the worklist.
+  void taintAndPushPhiNodes(const BasicBlock &JoinBlock);
 
-  /// \brief Computes whether \p Inst is divergent based on the
-  /// divergence of its operands.
-  ///
-  /// \returns Whether \p Inst is divergent.
-  ///
-  /// This should only be called for non-phi, non-terminator instructions.
-  bool updateNormalInstruction(const Instruction &Inst) const;
+  /// \brief Identify all Instructions that become divergent because \p DivExit
+  /// is a divergent loop exit of \p DivLoop. Mark those instructions as
+  /// divergent and push them on the worklist.
+  void propagateLoopExitDivergence(const BasicBlock &DivExit,
+                                   const Loop &DivLoop);
 
-  /// \brief Mark users of live-out users as divergent.
-  ///
-  /// \param LoopHeader the header of the divergent loop.
-  ///
-  /// Marks all users of live-out values of the loop headed by \p LoopHeader
-  /// as divergent and puts them on the worklist.
-  void taintLoopLiveOuts(const BasicBlock &LoopHeader);
+  /// \brief Internal implementation function for propagateLoopExitDivergence.
+  void analyzeLoopExitDivergence(const BasicBlock &DivExit,
+                                 const Loop &OuterDivLoop);
 
-  /// \brief Push all users of \p Val (in the region) to the worklist
+  /// \brief Mark all instruction as divergent that use a value defined in \p
+  /// OuterDivLoop. Push their users on the worklist.
+  void analyzeTemporalDivergence(const Instruction &I,
+                                 const Loop &OuterDivLoop);
+
+  /// \brief Push all users of \p Val (in the region) to the worklist.
   void pushUsers(const Value &I);
-
-  /// \brief Push all phi nodes in @block to the worklist
-  void pushPHINodes(const BasicBlock &Block);
-
-  /// \brief Mark \p Block as join divergent
-  ///
-  /// A block is join divergent if two threads may reach it from different
-  /// incoming blocks at the same time.
-  void markBlockJoinDivergent(const BasicBlock &Block) {
-    DivergentJoinBlocks.insert(&Block);
-  }
 
   /// \brief Whether \p Val is divergent when read in \p ObservingBlock.
   bool isTemporalDivergent(const BasicBlock &ObservingBlock,
@@ -125,24 +120,6 @@ private:
   bool isJoinDivergent(const BasicBlock &Block) const {
     return DivergentJoinBlocks.find(&Block) != DivergentJoinBlocks.end();
   }
-
-  /// \brief Propagate control-induced divergence to users (phi nodes and
-  /// instructions).
-  //
-  // \param JoinBlock is a divergent loop exit or join point of two disjoint
-  // paths.
-  // \returns Whether \p JoinBlock is a divergent loop exit of \p TermLoop.
-  bool propagateJoinDivergence(const BasicBlock &JoinBlock,
-                               const Loop *TermLoop);
-
-  /// \brief Propagate induced value divergence due to control divergence in \p
-  /// Term.
-  void propagateBranchDivergence(const Instruction &Term);
-
-  /// \brief Propagate divergent caused by a divergent loop exit.
-  ///
-  /// \param ExitingLoop is a divergent loop.
-  void propagateLoopDivergence(const Loop &ExitingLoop);
 
 private:
   const Function &F;
@@ -166,7 +143,7 @@ private:
   DenseSet<const Value *> UniformOverrides;
 
   // Blocks with joining divergent control from different predecessors.
-  DenseSet<const BasicBlock *> DivergentJoinBlocks;
+  DenseSet<const BasicBlock *> DivergentJoinBlocks; // FIXME Deprecated
 
   // Detected/marked divergent values.
   DenseSet<const Value *> DivergentValues;

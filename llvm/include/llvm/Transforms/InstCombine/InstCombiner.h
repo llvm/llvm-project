@@ -37,7 +37,6 @@ class AssumptionCache;
 class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class TargetTransformInfo;
-struct KnownBits;
 
 /// The core instruction combiner logic.
 ///
@@ -293,8 +292,7 @@ public:
   static Constant *
   getSafeVectorConstantForBinop(BinaryOperator::BinaryOps Opcode, Constant *In,
                                 bool IsRHSConstant) {
-    auto *InVTy = dyn_cast<VectorType>(In->getType());
-    assert(InVTy && "Not expecting scalars here");
+    auto *InVTy = cast<FixedVectorType>(In->getType());
 
     Type *EltTy = InVTy->getElementType();
     auto *SafeC = ConstantExpr::getBinOpIdentity(Opcode, EltTy, IsRHSConstant);

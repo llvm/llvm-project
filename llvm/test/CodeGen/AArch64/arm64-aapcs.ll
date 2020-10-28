@@ -90,8 +90,8 @@ declare void @variadic(i32 %a, ...)
   ; others. The extra arguments should go in registers rather than on the stack.
 define void @test_variadic() {
   call void(i32, ...) @variadic(i32 0, i64 1, double 2.0)
-; CHECK: fmov d0, #2.0
 ; CHECK: mov w1, #1
+; CHECK: fmov d0, #2.0
 ; CHECK: bl variadic
   ret void
 }

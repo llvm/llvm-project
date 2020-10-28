@@ -9,5 +9,5 @@ class A<A x> {
 // This kind of self-reference is discourage, but if you *really* want it, you
 // can force it with !cast.
 //
-// CHECK: Value 'A:x' of type 'A' is incompatible with initializer
+// CHECK: Field 'A:x' of type 'A' is incompatible with value
 def A0 : A<A0>;

@@ -3379,7 +3379,7 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
     // Match the shift amount as: (bitwidth - y). It should go away, too.
     if (ShiftAmt.getOpcode() != ISD::SUB)
       return false;
-    auto V0 = dyn_cast<ConstantSDNode>(ShiftAmt.getOperand(0));
+    auto *V0 = dyn_cast<ConstantSDNode>(ShiftAmt.getOperand(0));
     if (!V0 || V0->getZExtValue() != Bitwidth)
       return false;
     NBits = ShiftAmt.getOperand(1);
@@ -3502,6 +3502,7 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
   // Shift NBits left by 8 bits, thus producing 'control'.
   // This makes the low 8 bits to be zero.
   SDValue C8 = CurDAG->getConstant(8, DL, MVT::i8);
+  insertDAGNode(*CurDAG, SDValue(Node, 0), C8);
   SDValue Control = CurDAG->getNode(ISD::SHL, DL, MVT::i32, NBits, C8);
   insertDAGNode(*CurDAG, SDValue(Node, 0), Control);
 

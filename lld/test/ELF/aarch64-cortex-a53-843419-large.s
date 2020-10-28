@@ -8,6 +8,7 @@
 // RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=102842376 --stop-address=102842392 | FileCheck --check-prefix=CHECK5 %s
 // RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=136384524 --stop-address=136384528 | FileCheck --check-prefix=CHECK6 %s
 // RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 --start-address=136388604 --stop-address=136388628 | FileCheck --check-prefix=CHECK7 %s
+// RUN: rm %t.o %t2
 // Test case for Cortex-A53 Erratum 843419 in an OutputSection exceeding
 // the maximum branch range. Both range extension thunks and patches are
 // required.					      

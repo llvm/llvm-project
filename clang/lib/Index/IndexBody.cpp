@@ -391,11 +391,13 @@ public:
     if (C->capturesThis() || C->capturesVLAType())
       return true;
 
+    if (!base::TraverseStmt(Init))
+      return false;
+
     if (C->capturesVariable() && IndexCtx.shouldIndexFunctionLocalSymbols())
       return IndexCtx.handleReference(C->getCapturedVar(), C->getLocation(),
                                       Parent, ParentDC, SymbolRoleSet());
 
-    // FIXME: Lambda init-captures.
     return true;
   }
 

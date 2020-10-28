@@ -683,6 +683,24 @@ bool is_absolute(const Twine &path, Style style) {
   return rootDir && rootName;
 }
 
+bool is_absolute_gnu(const Twine &path, Style style) {
+  SmallString<128> path_storage;
+  StringRef p = path.toStringRef(path_storage);
+
+  // Handle '/' which is absolute for both Windows and POSIX systems.
+  // Handle '\\' on Windows.
+  if (!p.empty() && is_separator(p.front(), style))
+    return true;
+
+  if (real_style(style) == Style::windows) {
+    // Handle drive letter pattern (a character followed by ':') on Windows.
+    if (p.size() >= 2 && (p[0] && p[1] == ':'))
+      return true;
+  }
+
+  return false;
+}
+
 bool is_relative(const Twine &path, Style style) {
   return !is_absolute(path, style);
 }

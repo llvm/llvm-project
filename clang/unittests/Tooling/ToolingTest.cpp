@@ -563,6 +563,40 @@ TEST(ClangToolTest, StripDependencyFileAdjusterShowIncludes) {
   EXPECT_TRUE(HasFlag("-c"));
 }
 
+// Check getClangStripDependencyFileAdjuster doesn't strip args when using the
+// MSVC cl.exe driver
+TEST(ClangToolTest, StripDependencyFileAdjusterMsvc) {
+  FixedCompilationDatabase Compilations(
+      "/", {"--driver-mode=cl", "-MD", "-MDd", "-MT", "-O1", "-MTd", "-MP"});
+
+  ClangTool Tool(Compilations, std::vector<std::string>(1, "/a.cc"));
+  Tool.mapVirtualFile("/a.cc", "void a() {}");
+
+  std::unique_ptr<FrontendActionFactory> Action(
+      newFrontendActionFactory<SyntaxOnlyAction>());
+
+  CommandLineArguments FinalArgs;
+  ArgumentsAdjuster CheckFlagsAdjuster =
+      [&FinalArgs](const CommandLineArguments &Args, StringRef /*unused*/) {
+        FinalArgs = Args;
+        return Args;
+      };
+  Tool.clearArgumentsAdjusters();
+  Tool.appendArgumentsAdjuster(getClangStripDependencyFileAdjuster());
+  Tool.appendArgumentsAdjuster(CheckFlagsAdjuster);
+  Tool.run(Action.get());
+
+  auto HasFlag = [&FinalArgs](const std::string &Flag) {
+    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+  };
+  EXPECT_TRUE(HasFlag("-MD"));
+  EXPECT_TRUE(HasFlag("-MDd"));
+  EXPECT_TRUE(HasFlag("-MT"));
+  EXPECT_TRUE(HasFlag("-O1"));
+  EXPECT_TRUE(HasFlag("-MTd"));
+  EXPECT_TRUE(HasFlag("-MP"));
+}
+
 // Check getClangStripPluginsAdjuster strips plugin related args.
 TEST(ClangToolTest, StripPluginsAdjuster) {
   FixedCompilationDatabase Compilations(

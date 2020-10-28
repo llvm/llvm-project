@@ -1,5 +1,4 @@
-// RUN: %strip_comments > %t.stripped.cpp
-// RUN: %clang_cc1 -triple %itanium_abi_triple -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name classtemplate.cpp %t.stripped.cpp > %tmapping
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -triple %itanium_abi_triple -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name classtemplate.cpp %s > %tmapping
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-CONSTRUCTOR
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-GETTER
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-SETTER

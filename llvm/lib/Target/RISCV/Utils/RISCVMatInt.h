@@ -9,12 +9,11 @@
 #ifndef LLVM_LIB_TARGET_RISCV_MATINT_H
 #define LLVM_LIB_TARGET_RISCV_MATINT_H
 
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/MachineValueType.h"
 #include <cstdint>
 
 namespace llvm {
+class APInt;
 
 namespace RISCVMatInt {
 struct Inst {

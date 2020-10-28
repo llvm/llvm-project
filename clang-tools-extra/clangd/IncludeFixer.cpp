@@ -153,8 +153,7 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
       return ResolvedInserted.takeError();
     auto Spelled = Inserter->calculateIncludePath(*ResolvedInserted, File);
     if (!Spelled)
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Header not on include path");
+      return error("Header not on include path");
     return std::make_pair(
         std::move(*Spelled),
         Inserter->shouldInsertInclude(*ResolvedDeclaring, *ResolvedInserted));

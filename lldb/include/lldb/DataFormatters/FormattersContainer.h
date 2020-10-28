@@ -202,6 +202,13 @@ public:
     return m_map.size();
   }
 
+  void AutoComplete(CompletionRequest &request) {
+    ForEach([&request](const TypeMatcher &matcher, const ValueSP &value) {
+      request.TryCompleteCurrentArg(matcher.GetMatchString().GetStringRef());
+      return true;
+    });
+  }
+
 protected:
   FormattersContainer(const FormattersContainer &) = delete;
   const FormattersContainer &operator=(const FormattersContainer &) = delete;

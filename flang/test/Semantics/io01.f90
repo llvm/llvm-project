@@ -62,6 +62,7 @@
   open(81, convert=convert_(2), dispose=dispose_(2))
 
   open(access='STREAM', 90) ! nonstandard
+  open (unit=91, file='xfile', carriagecontrol='list') ! nonstandard
 
   !ERROR: OPEN statement must have a UNIT or NEWUNIT specifier
   !ERROR: If ACCESS='DIRECT' appears, RECL must also appear
@@ -127,4 +128,10 @@
 
   !ERROR: If NEWUNIT appears, FILE or STATUS='SCRATCH' must also appear
   open(newunit=nn, status='old')
+
+  !ERROR: Unimplemented CARRIAGECONTROL value 'fortran'
+  open (unit=116, file='xfile', carriagecontrol='fortran') ! nonstandard
+
+  !ERROR: Invalid CARRIAGECONTROL value 'nonsense'
+  open (unit=116, file='xfile', carriagecontrol='nonsense') ! nonstandard
 end

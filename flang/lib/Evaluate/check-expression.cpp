@@ -29,7 +29,7 @@ public:
   IsConstantExprHelper() : Base{*this} {}
   using Base::operator();
 
-  template <int KIND> bool operator()(const TypeParamInquiry<KIND> &inq) const {
+  bool operator()(const TypeParamInquiry &inq) const {
     return IsKindTypeParameter(inq.parameter());
   }
   bool operator()(const semantics::Symbol &symbol) const {
@@ -155,9 +155,7 @@ public:
     return true;
   }
   bool operator()(const StaticDataObject &) const { return false; }
-  template <int KIND> bool operator()(const TypeParamInquiry<KIND> &) const {
-    return false;
-  }
+  bool operator()(const TypeParamInquiry &) const { return false; }
   bool operator()(const Triplet &x) const {
     return IsConstantExpr(x.lower()) && IsConstantExpr(x.upper()) &&
         IsConstantExpr(x.stride());
@@ -310,10 +308,9 @@ public:
     return std::nullopt;
   }
 
-  template <int KIND>
-  Result operator()(const TypeParamInquiry<KIND> &inq) const {
+  Result operator()(const TypeParamInquiry &inq) const {
     if (scope_.IsDerivedType() && !IsConstantExpr(inq) &&
-        inq.parameter().owner() != scope_) { // C750, C754
+        inq.base() /* X%T, not local T */) { // C750, C754
       return "non-constant reference to a type parameter inquiry not "
              "allowed for derived type components or type parameter values";
     }

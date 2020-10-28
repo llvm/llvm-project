@@ -17,46 +17,58 @@
 #include <utility>
 #include <memory>
 #include <cassert>
-#include <archetypes.h>
 
 #include "test_macros.h"
+#include "archetypes.h"
 
-struct Base
-{
-    virtual ~Base() {}
+struct Derived : ConstexprTestTypes::MoveOnly {
+  Derived() = default;
+  TEST_CONSTEXPR_CXX20 Derived(ConstexprTestTypes::MoveOnly&&){};
+};
+struct CountAssign {
+  int copied = 0;
+  int moved = 0;
+  TEST_CONSTEXPR_CXX20 CountAssign() = default;
+  TEST_CONSTEXPR_CXX20 CountAssign(const int){};
+  TEST_CONSTEXPR_CXX20 CountAssign& operator=(CountAssign const&) {
+    ++copied;
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX20 CountAssign& operator=(CountAssign&&) {
+    ++moved;
+    return *this;
+  }
 };
 
-struct Derived
-    : public Base
-{
-};
+TEST_CONSTEXPR_CXX20 bool test() {
+  {
+    typedef std::pair<Derived, short> P1;
+    typedef std::pair<ConstexprTestTypes::MoveOnly, long> P2;
+    P1 p1(Derived(), static_cast<short>(4));
+    P2 p2;
+    p2 = std::move(p1);
+    assert(p2.second == 4);
+  }
+  {
+    using P = std::pair<int, CountAssign>;
+    using T = std::pair<long, CountAssign>;
+    T t(42, -42);
+    P p(101, 101);
+    p = std::move(t);
+    assert(p.first == 42);
+    assert(p.second.moved == 1);
+    assert(p.second.copied == 0);
+    assert(t.second.moved == 0);
+    assert(t.second.copied == 0);
+  }
+  return true;
+}
 
-int main(int, char**)
-{
-    {
-        typedef std::pair<std::unique_ptr<Derived>, short> P1;
-        typedef std::pair<std::unique_ptr<Base>, long> P2;
-        P1 p1(std::unique_ptr<Derived>(), static_cast<short>(4));
-        P2 p2;
-        p2 = std::move(p1);
-        assert(p2.first == nullptr);
-        assert(p2.second == 4);
-    }
-    {
-       using C = TestTypes::TestType;
-       using P = std::pair<int, C>;
-       using T = std::pair<long, C>;
-       T t(42, -42);
-       P p(101, 101);
-       C::reset_constructors();
-       p = std::move(t);
-       assert(C::constructed == 0);
-       assert(C::assigned == 1);
-       assert(C::copy_assigned == 0);
-       assert(C::move_assigned == 1);
-       assert(p.first == 42);
-       assert(p.second.value == -42);
-    }
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 20
+  static_assert(test());
+#endif
 
   return 0;
 }

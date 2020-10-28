@@ -226,23 +226,23 @@ raw_ostream &syntax::operator<<(raw_ostream &OS, NodeRole R) {
 // vector
 std::vector<syntax::NameSpecifier *>
 syntax::NestedNameSpecifier::getSpecifiers() {
-  auto specifiersAsNodes = getElementsAsNodes();
+  auto SpecifiersAsNodes = getElementsAsNodes();
   std::vector<syntax::NameSpecifier *> Children;
-  for (const auto &element : specifiersAsNodes) {
-    Children.push_back(llvm::cast<syntax::NameSpecifier>(element));
+  for (const auto &Element : SpecifiersAsNodes) {
+    Children.push_back(llvm::cast<syntax::NameSpecifier>(Element));
   }
   return Children;
 }
 
 std::vector<syntax::List::ElementAndDelimiter<syntax::NameSpecifier>>
 syntax::NestedNameSpecifier::getSpecifiersAndDoubleColons() {
-  auto specifiersAsNodesAndDoubleColons = getElementsAsNodesAndDelimiters();
+  auto SpecifiersAsNodesAndDoubleColons = getElementsAsNodesAndDelimiters();
   std::vector<syntax::List::ElementAndDelimiter<syntax::NameSpecifier>>
       Children;
-  for (const auto &specifierAndDoubleColon : specifiersAsNodesAndDoubleColons) {
+  for (const auto &SpecifierAndDoubleColon : SpecifiersAsNodesAndDoubleColons) {
     Children.push_back(
-        {llvm::cast<syntax::NameSpecifier>(specifierAndDoubleColon.element),
-         specifierAndDoubleColon.delimiter});
+        {llvm::cast<syntax::NameSpecifier>(SpecifierAndDoubleColon.element),
+         SpecifierAndDoubleColon.delimiter});
   }
   return Children;
 }
@@ -501,8 +501,8 @@ syntax::Leaf *syntax::CompoundStatement::getLbrace() {
 
 std::vector<syntax::Statement *> syntax::CompoundStatement::getStatements() {
   std::vector<syntax::Statement *> Children;
-  for (auto *C = firstChild(); C; C = C->nextSibling()) {
-    assert(C->role() == syntax::NodeRole::Statement);
+  for (auto *C = getFirstChild(); C; C = C->getNextSibling()) {
+    assert(C->getRole() == syntax::NodeRole::Statement);
     Children.push_back(cast<syntax::Statement>(C));
   }
   return Children;
@@ -524,8 +524,8 @@ syntax::Expression *syntax::StaticAssertDeclaration::getMessage() {
 std::vector<syntax::SimpleDeclarator *>
 syntax::SimpleDeclaration::getDeclarators() {
   std::vector<syntax::SimpleDeclarator *> Children;
-  for (auto *C = firstChild(); C; C = C->nextSibling()) {
-    if (C->role() == syntax::NodeRole::Declarator)
+  for (auto *C = getFirstChild(); C; C = C->getNextSibling()) {
+    if (C->getRole() == syntax::NodeRole::Declarator)
       Children.push_back(cast<syntax::SimpleDeclarator>(C));
   }
   return Children;

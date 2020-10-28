@@ -26,7 +26,7 @@
 
 namespace Fortran::parser {
 
-class CookedSource;
+class AllCookedSources;
 class ParsingLog;
 class ParseState;
 
@@ -34,10 +34,11 @@ class Success {}; // for when one must return something that's present
 
 class UserState {
 public:
-  UserState(const CookedSource &cooked, common::LanguageFeatureControl features)
-      : cooked_{cooked}, features_{features} {}
+  UserState(const AllCookedSources &allCooked,
+      common::LanguageFeatureControl features)
+      : allCooked_{allCooked}, features_{features} {}
 
-  const CookedSource &cooked() const { return cooked_; }
+  const AllCookedSources &allCooked() const { return allCooked_; }
   const common::LanguageFeatureControl &features() const { return features_; }
 
   llvm::raw_ostream *debugOutput() const { return debugOutput_; }
@@ -89,7 +90,7 @@ public:
   }
 
 private:
-  const CookedSource &cooked_;
+  const AllCookedSources &allCooked_;
 
   llvm::raw_ostream *debugOutput_{nullptr};
 

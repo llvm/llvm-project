@@ -35,11 +35,11 @@ unsigned AArch64::getDefaultFPU(StringRef CPU, AArch64::ArchKind AK) {
   .Default(ARM::FK_INVALID);
 }
 
-unsigned AArch64::getDefaultExtensions(StringRef CPU, AArch64::ArchKind AK) {
+uint64_t AArch64::getDefaultExtensions(StringRef CPU, AArch64::ArchKind AK) {
   if (CPU == "generic")
     return AArch64ARCHNames[static_cast<unsigned>(AK)].ArchBaseExtensions;
 
-  return StringSwitch<unsigned>(CPU)
+  return StringSwitch<uint64_t>(CPU)
 #define AARCH64_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)       \
   .Case(NAME, AArch64ARCHNames[static_cast<unsigned>(ArchKind::ID)]            \
                       .ArchBaseExtensions |                                    \
@@ -59,7 +59,7 @@ AArch64::ArchKind AArch64::getCPUArchKind(StringRef CPU) {
   .Default(ArchKind::INVALID);
 }
 
-bool AArch64::getExtensionFeatures(unsigned Extensions,
+bool AArch64::getExtensionFeatures(uint64_t Extensions,
                                    std::vector<StringRef> &Features) {
   if (Extensions == AArch64::AEK_INVALID)
     return false;

@@ -196,9 +196,6 @@ typedef u64 tid_t;
 // This header should NOT include any other headers to avoid portability issues.
 
 // Common defs.
-#ifndef INLINE
-#define INLINE inline
-#endif
 #define INTERFACE_ATTRIBUTE SANITIZER_INTERFACE_ATTRIBUTE
 #define SANITIZER_WEAK_DEFAULT_IMPL \
   extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE NOINLINE
@@ -333,13 +330,9 @@ void NORETURN CheckFailed(const char *file, int line, const char *cond,
 
 #define UNIMPLEMENTED() UNREACHABLE("unimplemented")
 
-#define COMPILER_CHECK(pred) IMPL_COMPILER_ASSERT(pred, __LINE__)
+#define COMPILER_CHECK(pred) static_assert(pred, "")
 
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
-
-#define IMPL_PASTE(a, b) a##b
-#define IMPL_COMPILER_ASSERT(pred, line) \
-    typedef char IMPL_PASTE(assertion_failed_##_, line)[2*(int)(pred)-1]
 
 // Limits for integral types. We have to redefine it in case we don't
 // have stdint.h (like in Visual Studio 9).

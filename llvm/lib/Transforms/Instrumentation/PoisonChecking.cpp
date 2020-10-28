@@ -295,7 +295,7 @@ static bool rewrite(Function &F) {
           }
 
       SmallVector<Value*, 4> Checks;
-      if (propagatesPoison(&I))
+      if (propagatesPoison(cast<Operator>(&I)))
         for (Value *V : I.operands())
           Checks.push_back(getPoisonFor(ValToPoison, V));
 

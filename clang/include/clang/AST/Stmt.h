@@ -521,6 +521,9 @@ protected:
     unsigned Kind : 6;
     unsigned PartOfExplicitCast : 1; // Only set for ImplicitCastExpr.
 
+    /// True if the call expression has some floating-point features.
+    unsigned HasFPFeatures : 1;
+
     /// The number of CXXBaseSpecifiers in the cast. 14 bits would be enough
     /// here. ([implimits] Direct and indirect base classes [16384]).
     unsigned BasePathSize;
@@ -1098,6 +1101,14 @@ public:
   /// de-serialization).
   struct EmptyShell {};
 
+  /// The likelihood of a branch being taken.
+  enum Likelihood {
+    LH_Unlikely = -1, ///< Branch has the [[unlikely]] attribute.
+    LH_None,          ///< No attribute set or branches of the IfStmt have
+                      ///< the same attribute.
+    LH_Likely         ///< Branch has the [[likely]] attribute.
+  };
+
 protected:
   /// Iterator for iterating over Stmt * arrays that contain only T *.
   ///
@@ -1165,6 +1176,20 @@ public:
   static void addStmtClass(const StmtClass s);
   static void EnableStatistics();
   static void PrintStats();
+
+  /// \returns the likelihood of a statement.
+  static Likelihood getLikelihood(const Stmt *S);
+
+  /// \returns the likelihood of the 'then' branch of an 'if' statement. The
+  /// 'else' branch is required to determine whether both branches specify the
+  /// same likelihood, which affects the result.
+  static Likelihood getLikelihood(const Stmt *Then, const Stmt *Else);
+
+  /// \returns whether the likelihood of the branches of an if statement are
+  /// conflicting. When the first element is \c true there's a conflict and
+  /// the Attr's are the conflicting attributes of the Then and Else Stmt.
+  static std::tuple<bool, const Attr *, const Attr *>
+  determineLikelihoodConflict(const Stmt *Then, const Stmt *Else);
 
   /// Dumps the specified AST fragment and all subtrees to
   /// \c llvm::errs().

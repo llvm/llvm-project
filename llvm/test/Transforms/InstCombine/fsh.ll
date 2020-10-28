@@ -521,9 +521,9 @@ define i33 @fshr_multi_use(i33 %a) {
 
 define i33 @expanded_fshr_multi_use(i33 %a) {
 ; CHECK-LABEL: @expanded_fshr_multi_use(
-; CHECK-NEXT:    [[TMP:%.*]] = lshr i33 [[A:%.*]], 1
-; CHECK-NEXT:    [[C:%.*]] = lshr i33 [[A]], 24
-; CHECK-NEXT:    [[D:%.*]] = xor i33 [[C]], [[TMP]]
+; CHECK-NEXT:    [[B:%.*]] = call i33 @llvm.fshl.i33(i33 [[A:%.*]], i33 [[A]], i33 32)
+; CHECK-NEXT:    [[C:%.*]] = lshr i33 [[B]], 23
+; CHECK-NEXT:    [[D:%.*]] = xor i33 [[C]], [[B]]
 ; CHECK-NEXT:    [[E:%.*]] = and i33 [[D]], 31
 ; CHECK-NEXT:    ret i33 [[E]]
 ;

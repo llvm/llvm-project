@@ -1313,7 +1313,6 @@ private:
   bool transferSpillOrRestoreInst(MachineInstr &MI);
 
   /// Examines \p MI for any registers that it defines, and notifies trackers.
-  /// \returns true if MI was recognized and processed.
   void transferRegisterDef(MachineInstr &MI);
 
   /// Copy one location to the other, accounting for movement of subregisters
@@ -2906,6 +2905,7 @@ void InstrRefBasedLDV::vlocDataflow(
   BlocksToExplore.clear();
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void InstrRefBasedLDV::dump_mloc_transfer(
     const MLocTransferMap &mloc_transfer) const {
   for (auto &P : mloc_transfer) {
@@ -2914,6 +2914,7 @@ void InstrRefBasedLDV::dump_mloc_transfer(
     dbgs() << "Loc " << foo << " --> " << bar << "\n";
   }
 }
+#endif
 
 void InstrRefBasedLDV::emitLocations(
     MachineFunction &MF, LiveInsT SavedLiveIns, ValueIDNum **MInLocs,
@@ -3115,6 +3116,8 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   bool Changed = TTracker->Transfers.size() != 0;
 
   delete MTracker;
+  delete TTracker;
+  MTracker = nullptr;
   VTracker = nullptr;
   TTracker = nullptr;
 

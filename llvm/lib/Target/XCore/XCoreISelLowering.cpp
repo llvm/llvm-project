@@ -443,16 +443,15 @@ SDValue XCoreTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   }
 
   if (LD->getAlignment() == 2) {
-    SDValue Low =
-        DAG.getExtLoad(ISD::ZEXTLOAD, DL, MVT::i32, Chain, BasePtr,
-                       LD->getPointerInfo(), MVT::i16,
-                       /* Alignment = */ 2, LD->getMemOperand()->getFlags());
+    SDValue Low = DAG.getExtLoad(ISD::ZEXTLOAD, DL, MVT::i32, Chain, BasePtr,
+                                 LD->getPointerInfo(), MVT::i16, Align(2),
+                                 LD->getMemOperand()->getFlags());
     SDValue HighAddr = DAG.getNode(ISD::ADD, DL, MVT::i32, BasePtr,
                                    DAG.getConstant(2, DL, MVT::i32));
     SDValue High =
         DAG.getExtLoad(ISD::EXTLOAD, DL, MVT::i32, Chain, HighAddr,
                        LD->getPointerInfo().getWithOffset(2), MVT::i16,
-                       /* Alignment = */ 2, LD->getMemOperand()->getFlags());
+                       Align(2), LD->getMemOperand()->getFlags());
     SDValue HighShifted = DAG.getNode(ISD::SHL, DL, MVT::i32, High,
                                       DAG.getConstant(16, DL, MVT::i32));
     SDValue Result = DAG.getNode(ISD::OR, DL, MVT::i32, Low, HighShifted);
@@ -502,14 +501,14 @@ SDValue XCoreTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     SDValue Low = Value;
     SDValue High = DAG.getNode(ISD::SRL, dl, MVT::i32, Value,
                                DAG.getConstant(16, dl, MVT::i32));
-    SDValue StoreLow = DAG.getTruncStore(
-        Chain, dl, Low, BasePtr, ST->getPointerInfo(), MVT::i16,
-        /* Alignment = */ 2, ST->getMemOperand()->getFlags());
+    SDValue StoreLow =
+        DAG.getTruncStore(Chain, dl, Low, BasePtr, ST->getPointerInfo(),
+                          MVT::i16, Align(2), ST->getMemOperand()->getFlags());
     SDValue HighAddr = DAG.getNode(ISD::ADD, dl, MVT::i32, BasePtr,
                                    DAG.getConstant(2, dl, MVT::i32));
     SDValue StoreHigh = DAG.getTruncStore(
         Chain, dl, High, HighAddr, ST->getPointerInfo().getWithOffset(2),
-        MVT::i16, /* Alignment = */ 2, ST->getMemOperand()->getFlags());
+        MVT::i16, Align(2), ST->getMemOperand()->getFlags());
     return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, StoreLow, StoreHigh);
   }
 

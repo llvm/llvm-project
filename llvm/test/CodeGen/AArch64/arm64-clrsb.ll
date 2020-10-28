@@ -21,10 +21,8 @@ entry:
 ; CHECK-LABEL: clrsb32
 ; CHECK:   cls [[TEMP:w[0-9]+]], [[TEMP]]
 
-; FIXME: We should produce the same result here to save some code size. After
-; that, we can remove the GISEL special casing.
 ; GISEL-LABEL: clrsb32
-; GISEL: clz
+; GISEL: cls [[TEMP:w[0-9]+]], [[TEMP]]
 }
 
 ; Function Attrs: nounwind ssp

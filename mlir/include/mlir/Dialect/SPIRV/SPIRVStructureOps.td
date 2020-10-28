@@ -60,8 +60,7 @@ def SPV_AddressOfOp : SPV_Op<"_address_of", [InFunctionScope, NoSideEffect]> {
 
   let autogenSerialization = 0;
 
-  let builders = [OpBuilder<[{OpBuilder &builder, OperationState &state,
-                              spirv::GlobalVariableOp var}]>];
+  let builders = [OpBuilder<[{spirv::GlobalVariableOp var}]>];
 
   let assemblyFormat = "$variable attr-dict `:` type($pointer)";
 }
@@ -189,8 +188,7 @@ def SPV_EntryPointOp : SPV_Op<"EntryPoint", [InModuleScope]> {
 
   let autogenSerialization = 0;
 
-  let builders = [OpBuilder<[{OpBuilder &builder, OperationState &state,
-                              spirv::ExecutionModel executionModel,
+  let builders = [OpBuilder<[{spirv::ExecutionModel executionModel,
                               spirv::FuncOp function,
                               ArrayRef<Attribute> interfaceVars}]>];
 }
@@ -244,7 +242,6 @@ def SPV_FuncOp : SPV_Op<"func", [
   let verifier = [{ return success(); }];
 
   let builders = [OpBuilder<[{
-    OpBuilder &, OperationState &state,
     StringRef name, FunctionType type,
     spirv::FunctionControl control = spirv::FunctionControl::None,
     ArrayRef<NamedAttribute> attrs = {}
@@ -333,16 +330,14 @@ def SPV_GlobalVariableOp : SPV_Op<"globalVariable", [InModuleScope, Symbol]> {
   let results = (outs);
 
   let builders = [
-    OpBuilder<"OpBuilder &builder, OperationState &state, "
+    OpBuilder<
       "TypeAttr type, ArrayRef<NamedAttribute> namedAttrs", [{
-      state.addAttribute("type", type);
-      state.addAttributes(namedAttrs);
+      $_state.addAttribute("type", type);
+      $_state.addAttributes(namedAttrs);
     }]>,
-    OpBuilder<[{OpBuilder &builder, OperationState &state,
-                Type type, StringRef name, unsigned descriptorSet,
+    OpBuilder<[{Type type, StringRef name, unsigned descriptorSet,
                 unsigned binding}]>,
-    OpBuilder<[{OpBuilder &builder, OperationState &state,
-                Type type, StringRef name, spirv::BuiltIn builtin}]>
+    OpBuilder<[{Type type, StringRef name, spirv::BuiltIn builtin}]>
   ];
 
   let hasOpcode = 0;
@@ -418,10 +413,8 @@ def SPV_ModuleOp : SPV_Op<"module",
   let regions = (region SizedRegion<1>:$body);
 
   let builders = [
-    OpBuilder<[{OpBuilder &, OperationState &state,
-                Optional<StringRef> name = llvm::None}]>,
-    OpBuilder<[{OpBuilder &, OperationState &state,
-                spirv::AddressingModel addressing_model,
+    OpBuilder<[{Optional<StringRef> name = llvm::None}]>,
+    OpBuilder<[{spirv::AddressingModel addressing_model,
                 spirv::MemoryModel memory_model,
                 Optional<StringRef> name = llvm::None}]>
   ];

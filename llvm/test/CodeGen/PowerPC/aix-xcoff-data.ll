@@ -86,10 +86,7 @@
 
 ; CHECK:      .globl  chrarray
 ; CHECK-NEXT: chrarray:
-; CHECK-NEXT: .byte   97
-; CHECK-NEXT: .byte   98
-; CHECK-NEXT: .byte   99
-; CHECK-NEXT: .byte   100
+; CHECK-NEXT: .byte   'a,'b,'c,'d
 
 ; CHECK:      .globl  dblarr
 ; CHECK-NEXT: .align  3

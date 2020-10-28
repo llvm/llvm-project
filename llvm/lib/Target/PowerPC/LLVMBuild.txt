@@ -30,5 +30,5 @@ has_jit = 1
 type = Library
 name = PowerPCCodeGen
 parent = PowerPC
-required_libraries = Analysis AsmPrinter CodeGen Core MC PowerPCDesc PowerPCInfo Scalar SelectionDAG Support Target TransformUtils
+required_libraries = Analysis AsmPrinter CodeGen Core MC PowerPCDesc PowerPCInfo Scalar SelectionDAG Support Target TransformUtils GlobalISel
 add_to_library_groups = PowerPC

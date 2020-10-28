@@ -284,7 +284,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeFlattenSchedulePass(Registry);
   initializeForwardOpTreePass(Registry);
   initializeDeLICMPass(Registry);
-  initializeSimplifyPass(Registry);
+  initializeSimplifyLegacyPassPass(Registry);
   initializeDumpModulePass(Registry);
   initializePruneUnprofitablePass(Registry);
 }

@@ -13,4 +13,5 @@ target_link_libraries(mlir-capi-ir-test
   PRIVATE
   MLIRCAPIIR
   MLIRCAPIRegistration
+  MLIRCAPIStandard
   ${dialect_libs})

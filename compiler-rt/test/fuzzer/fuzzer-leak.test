@@ -7,7 +7,7 @@ RUN: %cpp_compiler %S/LeakTimeoutTest.cpp -o %t-LeakTimeoutTest
 RUN: rm -rf %t-corpus && mkdir -p %t-corpus
 RUN: not %run %t-LeakTest -runs=100000 -detect_leaks=1 %t-corpus 2>&1 | FileCheck %s --check-prefix=LEAK_DURING
 LEAK_DURING: ERROR: LeakSanitizer: detected memory leaks
-LEAK_DURING: Direct leak of 4 byte(s) in 1 object(s) allocated from:
+LEAK_DURING: Direct leak of {{.*}} byte(s) in {{.*}} object(s) allocated from:
 LEAK_DURING: INFO: to ignore leaks on libFuzzer side use -detect_leaks=0
 LEAK_DURING: Test unit written to ./leak-
 LEAK_DURING-NOT: DONE

@@ -34,12 +34,13 @@ struct KernelDim3 {
   Value z;
 };
 
+} // end namespace gpu
+} // end namespace mlir
+
 #include "mlir/Dialect/GPU/GPUOpsDialect.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/GPU/GPUOps.h.inc"
 
-} // end namespace gpu
-} // end namespace mlir
 
 #endif // MLIR_DIALECT_GPU_GPUDIALECT_H

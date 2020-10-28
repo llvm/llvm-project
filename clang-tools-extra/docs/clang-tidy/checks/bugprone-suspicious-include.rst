@@ -19,7 +19,7 @@ Options
 -------
 .. option:: HeaderFileExtensions
 
-   Default value: `";h;hh;hpp;hxx"`
+   Default value: ``";h;hh;hpp;hxx"``
    A semicolon-separated list of filename extensions of header files (the
    filename extensions should not contain a "." prefix). For extension-less
    header files, use an empty string or leave an empty string between ";"
@@ -27,6 +27,6 @@ Options
 
 .. option:: ImplementationFileExtensions
 
-   Default value: `"c;cc;cpp;cxx"`
+   Default value: ``"c;cc;cpp;cxx"``
    Likewise, a semicolon-separated list of filename extensions of
    implementation files.

@@ -449,6 +449,7 @@ static void applyContractionToVectorPatterns(FuncOp funcOp) {
   patterns.insert<LinalgVectorizationPattern<BatchMatmulOp>,
                   LinalgVectorizationPattern<MatmulOp>,
                   LinalgVectorizationPattern<MatvecOp>,
+                  LinalgVectorizationPattern<VecmatOp>,
                   LinalgVectorizationPattern<DotOp>,
                   LinalgVectorizationPattern<GenericOp>>(funcOp.getContext());
   applyPatternsAndFoldGreedily(funcOp, patterns);

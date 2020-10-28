@@ -33,6 +33,7 @@ define i32 @add_S( <4 x i32>* %arr)  {
 define i64 @add_D(<2 x i64>* %arr)  {
 ; CHECK-LABEL: add_D
 ; CHECK-NOT: addv
+; CHECK: addp {{d[0-9]+}}, {{v[0-9]+}}.2d
   %bin.rdx = load <2 x i64>, <2 x i64>* %arr
   %r = call i64 @llvm.experimental.vector.reduce.add.v2i64(<2 x i64> %bin.rdx)
   ret i64 %r

@@ -721,7 +721,7 @@ class TimePeriod {
   }
 })",
                Style);
- 
+
   // Microsoft style trivial property accessors have no line break before the
   // opening brace.
   auto MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
@@ -731,7 +731,6 @@ public class SaleItem
     public decimal Price { get; set; }
 })",
                MicrosoftStyle);
-
 }
 
 TEST_F(FormatTestCSharp, CSharpSpaces) {

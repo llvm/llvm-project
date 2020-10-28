@@ -61,9 +61,10 @@ TEST(ScalableVectorMVTsTest, HelperFuncs) {
   EXPECT_EQ(Vnx2i32.widenIntegerVectorElementType(Ctx), Vnx2i64);
   EXPECT_EQ(Vnx4i32.getHalfNumVectorElementsVT(Ctx), Vnx2i32);
 
-  // Check that overloaded '*' and '/' operators work
+  // Check that operators work
   EXPECT_EQ(EVT::getVectorVT(Ctx, MVT::i64, EltCnt * 2), MVT::nxv4i64);
-  EXPECT_EQ(EVT::getVectorVT(Ctx, MVT::i64, EltCnt / 2), MVT::nxv1i64);
+  EXPECT_EQ(EVT::getVectorVT(Ctx, MVT::i64, EltCnt.divideCoefficientBy(2)),
+            MVT::nxv1i64);
 
   // Check that float->int conversion works
   EVT Vnx2f64 = EVT::getVectorVT(Ctx, MVT::f64, ElementCount::getScalable(2));

@@ -15,11 +15,10 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYUTILITIES_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYUTILITIES_H
 
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineFunction.h"
-
 namespace llvm {
 
+class MachineInstr;
+class MachineOperand;
 class WebAssemblyFunctionInfo;
 
 namespace WebAssembly {

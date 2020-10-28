@@ -18,14 +18,14 @@ define void @no_check_lines() {
 ; UTC_ARGS: --enable
 
 define void @check_lines_2() {
-; CHECK-LABEL: define {{[^@]+}}@check_lines_2()
+; CHECK-LABEL: define {{[^@]+}}@check_lines_2() {
 ; CHECK-NEXT:    ret void
 ;
   ret void
 }
 
 define void @scrub() {
-; CHECK-LABEL: define {{[^@]+}}@scrub()
+; CHECK-LABEL: define {{[^@]+}}@scrub() {
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    ret void
 ;
@@ -35,7 +35,7 @@ define void @scrub() {
 
 define i32 @signature(i32 %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@signature
-; CHECK-SAME: (i32 [[ARG:%.*]])
+; CHECK-SAME: (i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:    ret i32 [[ARG]]
 ;
   ret i32 %arg

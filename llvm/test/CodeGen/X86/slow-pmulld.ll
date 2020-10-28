@@ -222,84 +222,86 @@ define <8 x i32> @test_mul_v8i32_v8i8(<8 x i8> %A) {
 define <16 x i32> @test_mul_v16i32_v16i8(<16 x i8> %A) {
 ; SLM32-LABEL: test_mul_v16i32_v16i8:
 ; SLM32:       # %bb.0:
-; SLM32-NEXT:    movdqa {{.*#+}} xmm2 = [18778,18778,18778,18778,18778,18778,18778,18778]
 ; SLM32-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; SLM32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; SLM32-NEXT:    pmovzxbw {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; SLM32-NEXT:    movdqa %xmm1, %xmm4
-; SLM32-NEXT:    movdqa %xmm3, %xmm5
-; SLM32-NEXT:    pmullw %xmm2, %xmm1
-; SLM32-NEXT:    pmullw %xmm2, %xmm3
-; SLM32-NEXT:    pmulhw %xmm2, %xmm4
-; SLM32-NEXT:    pmulhw %xmm2, %xmm5
+; SLM32-NEXT:    movdqa %xmm0, %xmm3
+; SLM32-NEXT:    movdqa {{.*#+}} xmm0 = [18778,18778,18778,18778,18778,18778,18778,18778]
+; SLM32-NEXT:    pxor %xmm4, %xmm4
+; SLM32-NEXT:    movdqa %xmm1, %xmm2
+; SLM32-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm4[8],xmm3[9],xmm4[9],xmm3[10],xmm4[10],xmm3[11],xmm4[11],xmm3[12],xmm4[12],xmm3[13],xmm4[13],xmm3[14],xmm4[14],xmm3[15],xmm4[15]
+; SLM32-NEXT:    movdqa %xmm3, %xmm4
+; SLM32-NEXT:    pmullw %xmm0, %xmm1
+; SLM32-NEXT:    pmulhw %xmm0, %xmm2
+; SLM32-NEXT:    pmullw %xmm0, %xmm3
+; SLM32-NEXT:    pmulhw %xmm0, %xmm4
 ; SLM32-NEXT:    movdqa %xmm1, %xmm0
+; SLM32-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; SLM32-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; SLM32-NEXT:    movdqa %xmm3, %xmm2
-; SLM32-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm4[4],xmm1[5],xmm4[5],xmm1[6],xmm4[6],xmm1[7],xmm4[7]
-; SLM32-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm5[4],xmm3[5],xmm5[5],xmm3[6],xmm5[6],xmm3[7],xmm5[7]
-; SLM32-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
-; SLM32-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3]
+; SLM32-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
+; SLM32-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
 ; SLM32-NEXT:    retl
 ;
 ; SLM64-LABEL: test_mul_v16i32_v16i8:
 ; SLM64:       # %bb.0:
-; SLM64-NEXT:    movdqa {{.*#+}} xmm2 = [18778,18778,18778,18778,18778,18778,18778,18778]
 ; SLM64-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; SLM64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; SLM64-NEXT:    pmovzxbw {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; SLM64-NEXT:    movdqa %xmm1, %xmm4
-; SLM64-NEXT:    movdqa %xmm3, %xmm5
-; SLM64-NEXT:    pmullw %xmm2, %xmm1
-; SLM64-NEXT:    pmullw %xmm2, %xmm3
-; SLM64-NEXT:    pmulhw %xmm2, %xmm4
-; SLM64-NEXT:    pmulhw %xmm2, %xmm5
+; SLM64-NEXT:    movdqa %xmm0, %xmm3
+; SLM64-NEXT:    movdqa {{.*#+}} xmm0 = [18778,18778,18778,18778,18778,18778,18778,18778]
+; SLM64-NEXT:    pxor %xmm4, %xmm4
+; SLM64-NEXT:    movdqa %xmm1, %xmm2
+; SLM64-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm4[8],xmm3[9],xmm4[9],xmm3[10],xmm4[10],xmm3[11],xmm4[11],xmm3[12],xmm4[12],xmm3[13],xmm4[13],xmm3[14],xmm4[14],xmm3[15],xmm4[15]
+; SLM64-NEXT:    movdqa %xmm3, %xmm4
+; SLM64-NEXT:    pmullw %xmm0, %xmm1
+; SLM64-NEXT:    pmulhw %xmm0, %xmm2
+; SLM64-NEXT:    pmullw %xmm0, %xmm3
+; SLM64-NEXT:    pmulhw %xmm0, %xmm4
 ; SLM64-NEXT:    movdqa %xmm1, %xmm0
+; SLM64-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; SLM64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; SLM64-NEXT:    movdqa %xmm3, %xmm2
-; SLM64-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm4[4],xmm1[5],xmm4[5],xmm1[6],xmm4[6],xmm1[7],xmm4[7]
-; SLM64-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm5[4],xmm3[5],xmm5[5],xmm3[6],xmm5[6],xmm3[7],xmm5[7]
-; SLM64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
-; SLM64-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3]
+; SLM64-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
+; SLM64-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
 ; SLM64-NEXT:    retq
 ;
 ; SLOW32-LABEL: test_mul_v16i32_v16i8:
 ; SLOW32:       # %bb.0:
+; SLOW32-NEXT:    movdqa %xmm0, %xmm3
 ; SLOW32-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SLOW32-NEXT:    movdqa {{.*#+}} xmm2 = [18778,18778,18778,18778,18778,18778,18778,18778]
-; SLOW32-NEXT:    movdqa %xmm1, %xmm3
-; SLOW32-NEXT:    pmulhw %xmm2, %xmm3
-; SLOW32-NEXT:    pmullw %xmm2, %xmm1
 ; SLOW32-NEXT:    movdqa %xmm1, %xmm4
-; SLOW32-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; SLOW32-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
-; SLOW32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; SLOW32-NEXT:    pmovzxbw {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; SLOW32-NEXT:    movdqa %xmm3, %xmm0
-; SLOW32-NEXT:    pmulhw %xmm2, %xmm0
+; SLOW32-NEXT:    pmulhw %xmm2, %xmm4
+; SLOW32-NEXT:    pmullw %xmm2, %xmm1
+; SLOW32-NEXT:    movdqa %xmm1, %xmm0
+; SLOW32-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
+; SLOW32-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm4[4],xmm1[5],xmm4[5],xmm1[6],xmm4[6],xmm1[7],xmm4[7]
+; SLOW32-NEXT:    pxor %xmm4, %xmm4
+; SLOW32-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm4[8],xmm3[9],xmm4[9],xmm3[10],xmm4[10],xmm3[11],xmm4[11],xmm3[12],xmm4[12],xmm3[13],xmm4[13],xmm3[14],xmm4[14],xmm3[15],xmm4[15]
+; SLOW32-NEXT:    movdqa %xmm3, %xmm4
+; SLOW32-NEXT:    pmulhw %xmm2, %xmm4
 ; SLOW32-NEXT:    pmullw %xmm2, %xmm3
 ; SLOW32-NEXT:    movdqa %xmm3, %xmm2
-; SLOW32-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
-; SLOW32-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
-; SLOW32-NEXT:    movdqa %xmm4, %xmm0
+; SLOW32-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
+; SLOW32-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
 ; SLOW32-NEXT:    retl
 ;
 ; SLOW64-LABEL: test_mul_v16i32_v16i8:
 ; SLOW64:       # %bb.0:
+; SLOW64-NEXT:    movdqa %xmm0, %xmm3
 ; SLOW64-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SLOW64-NEXT:    movdqa {{.*#+}} xmm2 = [18778,18778,18778,18778,18778,18778,18778,18778]
-; SLOW64-NEXT:    movdqa %xmm1, %xmm3
-; SLOW64-NEXT:    pmulhw %xmm2, %xmm3
-; SLOW64-NEXT:    pmullw %xmm2, %xmm1
 ; SLOW64-NEXT:    movdqa %xmm1, %xmm4
-; SLOW64-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; SLOW64-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
-; SLOW64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; SLOW64-NEXT:    pmovzxbw {{.*#+}} xmm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; SLOW64-NEXT:    movdqa %xmm3, %xmm0
-; SLOW64-NEXT:    pmulhw %xmm2, %xmm0
+; SLOW64-NEXT:    pmulhw %xmm2, %xmm4
+; SLOW64-NEXT:    pmullw %xmm2, %xmm1
+; SLOW64-NEXT:    movdqa %xmm1, %xmm0
+; SLOW64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
+; SLOW64-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm4[4],xmm1[5],xmm4[5],xmm1[6],xmm4[6],xmm1[7],xmm4[7]
+; SLOW64-NEXT:    pxor %xmm4, %xmm4
+; SLOW64-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm4[8],xmm3[9],xmm4[9],xmm3[10],xmm4[10],xmm3[11],xmm4[11],xmm3[12],xmm4[12],xmm3[13],xmm4[13],xmm3[14],xmm4[14],xmm3[15],xmm4[15]
+; SLOW64-NEXT:    movdqa %xmm3, %xmm4
+; SLOW64-NEXT:    pmulhw %xmm2, %xmm4
 ; SLOW64-NEXT:    pmullw %xmm2, %xmm3
 ; SLOW64-NEXT:    movdqa %xmm3, %xmm2
-; SLOW64-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
-; SLOW64-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
-; SLOW64-NEXT:    movdqa %xmm4, %xmm0
+; SLOW64-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
+; SLOW64-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
 ; SLOW64-NEXT:    retq
 ;
 ; SSE4-32-LABEL: test_mul_v16i32_v16i8:
@@ -494,22 +496,24 @@ define <8 x i32> @test_mul_v8i32_v8i16(<8 x i16> %A) {
 ;
 ; SSE4-32-LABEL: test_mul_v8i32_v8i16:
 ; SSE4-32:       # %bb.0:
-; SSE4-32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE4-32-NEXT:    movdqa {{.*#+}} xmm2 = [18778,18778,18778,18778]
-; SSE4-32-NEXT:    pmulld %xmm2, %xmm0
-; SSE4-32-NEXT:    pmulld %xmm2, %xmm1
+; SSE4-32-NEXT:    pxor %xmm1, %xmm1
+; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; SSE4-32-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE4-32-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
+; SSE4-32-NEXT:    pmulld %xmm1, %xmm2
+; SSE4-32-NEXT:    pmulld %xmm0, %xmm1
+; SSE4-32-NEXT:    movdqa %xmm2, %xmm0
 ; SSE4-32-NEXT:    retl
 ;
 ; SSE4-64-LABEL: test_mul_v8i32_v8i16:
 ; SSE4-64:       # %bb.0:
-; SSE4-64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE4-64-NEXT:    movdqa {{.*#+}} xmm2 = [18778,18778,18778,18778]
-; SSE4-64-NEXT:    pmulld %xmm2, %xmm0
-; SSE4-64-NEXT:    pmulld %xmm2, %xmm1
+; SSE4-64-NEXT:    pxor %xmm1, %xmm1
+; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; SSE4-64-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE4-64-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
+; SSE4-64-NEXT:    pmulld %xmm1, %xmm2
+; SSE4-64-NEXT:    pmulld %xmm0, %xmm1
+; SSE4-64-NEXT:    movdqa %xmm2, %xmm0
 ; SSE4-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_mul_v8i32_v8i16:
@@ -609,32 +613,32 @@ define <16 x i32> @test_mul_v16i32_v16i16(<16 x i16> %A) {
 ;
 ; SSE4-32-LABEL: test_mul_v16i32_v16i16:
 ; SSE4-32:       # %bb.0:
-; SSE4-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
-; SSE4-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; SSE4-32-NEXT:    movdqa %xmm0, %xmm4
+; SSE4-32-NEXT:    pxor %xmm3, %xmm3
 ; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; SSE4-32-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
 ; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE4-32-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
-; SSE4-32-NEXT:    pmulld %xmm1, %xmm0
-; SSE4-32-NEXT:    pmulld %xmm1, %xmm2
-; SSE4-32-NEXT:    pmulld %xmm1, %xmm4
+; SSE4-32-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
+; SSE4-32-NEXT:    movdqa {{.*#+}} xmm3 = [18778,18778,18778,18778]
+; SSE4-32-NEXT:    pmulld %xmm3, %xmm0
+; SSE4-32-NEXT:    pmulld %xmm3, %xmm4
+; SSE4-32-NEXT:    pmulld %xmm3, %xmm2
 ; SSE4-32-NEXT:    pmulld %xmm1, %xmm3
 ; SSE4-32-NEXT:    movdqa %xmm4, %xmm1
 ; SSE4-32-NEXT:    retl
 ;
 ; SSE4-64-LABEL: test_mul_v16i32_v16i16:
 ; SSE4-64:       # %bb.0:
-; SSE4-64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
-; SSE4-64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; SSE4-64-NEXT:    movdqa %xmm0, %xmm4
+; SSE4-64-NEXT:    pxor %xmm3, %xmm3
 ; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; SSE4-64-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
 ; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE4-64-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
-; SSE4-64-NEXT:    pmulld %xmm1, %xmm0
-; SSE4-64-NEXT:    pmulld %xmm1, %xmm2
-; SSE4-64-NEXT:    pmulld %xmm1, %xmm4
+; SSE4-64-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
+; SSE4-64-NEXT:    movdqa {{.*#+}} xmm3 = [18778,18778,18778,18778]
+; SSE4-64-NEXT:    pmulld %xmm3, %xmm0
+; SSE4-64-NEXT:    pmulld %xmm3, %xmm4
+; SSE4-64-NEXT:    pmulld %xmm3, %xmm2
 ; SSE4-64-NEXT:    pmulld %xmm1, %xmm3
 ; SSE4-64-NEXT:    movdqa %xmm4, %xmm1
 ; SSE4-64-NEXT:    retq
@@ -1074,64 +1078,48 @@ define <4 x i32> @test_mul_v4i32_v4i16_minsize(<4 x i16> %A) minsize {
 }
 
 define <8 x i32> @test_mul_v8i32_v8i16_minsize(<8 x i16> %A) minsize {
-; SLM32-LABEL: test_mul_v8i32_v8i16_minsize:
-; SLM32:       # %bb.0:
-; SLM32-NEXT:    movdqa {{.*#+}} xmm2 = [18778,18778,18778,18778]
-; SLM32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SLM32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SLM32-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SLM32-NEXT:    pmulld %xmm2, %xmm0
-; SLM32-NEXT:    pmulld %xmm2, %xmm1
-; SLM32-NEXT:    retl
+; CHECK32-LABEL: test_mul_v8i32_v8i16_minsize:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    pxor %xmm1, %xmm1
+; CHECK32-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; CHECK32-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; CHECK32-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
+; CHECK32-NEXT:    pmulld %xmm1, %xmm2
+; CHECK32-NEXT:    pmulld %xmm0, %xmm1
+; CHECK32-NEXT:    movdqa %xmm2, %xmm0
+; CHECK32-NEXT:    retl
 ;
-; SLM64-LABEL: test_mul_v8i32_v8i16_minsize:
-; SLM64:       # %bb.0:
-; SLM64-NEXT:    movdqa {{.*#+}} xmm2 = [18778,18778,18778,18778]
-; SLM64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SLM64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SLM64-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SLM64-NEXT:    pmulld %xmm2, %xmm0
-; SLM64-NEXT:    pmulld %xmm2, %xmm1
-; SLM64-NEXT:    retq
-;
-; SLOW32-LABEL: test_mul_v8i32_v8i16_minsize:
-; SLOW32:       # %bb.0:
-; SLOW32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SLOW32-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SLOW32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SLOW32-NEXT:    movdqa {{.*#+}} xmm2 = [18778,18778,18778,18778]
-; SLOW32-NEXT:    pmulld %xmm2, %xmm0
-; SLOW32-NEXT:    pmulld %xmm2, %xmm1
-; SLOW32-NEXT:    retl
-;
-; SLOW64-LABEL: test_mul_v8i32_v8i16_minsize:
-; SLOW64:       # %bb.0:
-; SLOW64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SLOW64-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SLOW64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SLOW64-NEXT:    movdqa {{.*#+}} xmm2 = [18778,18778,18778,18778]
-; SLOW64-NEXT:    pmulld %xmm2, %xmm0
-; SLOW64-NEXT:    pmulld %xmm2, %xmm1
-; SLOW64-NEXT:    retq
+; CHECK64-LABEL: test_mul_v8i32_v8i16_minsize:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    pxor %xmm1, %xmm1
+; CHECK64-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; CHECK64-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; CHECK64-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
+; CHECK64-NEXT:    pmulld %xmm1, %xmm2
+; CHECK64-NEXT:    pmulld %xmm0, %xmm1
+; CHECK64-NEXT:    movdqa %xmm2, %xmm0
+; CHECK64-NEXT:    retq
 ;
 ; SSE4-32-LABEL: test_mul_v8i32_v8i16_minsize:
 ; SSE4-32:       # %bb.0:
-; SSE4-32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE4-32-NEXT:    movdqa {{.*#+}} xmm2 = [18778,18778,18778,18778]
-; SSE4-32-NEXT:    pmulld %xmm2, %xmm0
-; SSE4-32-NEXT:    pmulld %xmm2, %xmm1
+; SSE4-32-NEXT:    pxor %xmm1, %xmm1
+; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; SSE4-32-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE4-32-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
+; SSE4-32-NEXT:    pmulld %xmm1, %xmm2
+; SSE4-32-NEXT:    pmulld %xmm0, %xmm1
+; SSE4-32-NEXT:    movdqa %xmm2, %xmm0
 ; SSE4-32-NEXT:    retl
 ;
 ; SSE4-64-LABEL: test_mul_v8i32_v8i16_minsize:
 ; SSE4-64:       # %bb.0:
-; SSE4-64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE4-64-NEXT:    movdqa {{.*#+}} xmm2 = [18778,18778,18778,18778]
-; SSE4-64-NEXT:    pmulld %xmm2, %xmm0
-; SSE4-64-NEXT:    pmulld %xmm2, %xmm1
+; SSE4-64-NEXT:    pxor %xmm1, %xmm1
+; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; SSE4-64-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE4-64-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
+; SSE4-64-NEXT:    pmulld %xmm1, %xmm2
+; SSE4-64-NEXT:    pmulld %xmm0, %xmm1
+; SSE4-64-NEXT:    movdqa %xmm2, %xmm0
 ; SSE4-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_mul_v8i32_v8i16_minsize:
@@ -1155,96 +1143,96 @@ define <8 x i32> @test_mul_v8i32_v8i16_minsize(<8 x i16> %A) minsize {
 define <16 x i32> @test_mul_v16i32_v16i16_minsize(<16 x i16> %A) minsize {
 ; SLM32-LABEL: test_mul_v16i32_v16i16_minsize:
 ; SLM32:       # %bb.0:
-; SLM32-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; SLM32-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
-; SLM32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; SLM32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SLM32-NEXT:    pmovzxwd {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; SLM32-NEXT:    movdqa %xmm0, %xmm4
+; SLM32-NEXT:    pxor %xmm3, %xmm3
 ; SLM32-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SLM32-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
-; SLM32-NEXT:    pmulld %xmm1, %xmm4
-; SLM32-NEXT:    pmulld %xmm1, %xmm0
-; SLM32-NEXT:    pmulld %xmm1, %xmm2
+; SLM32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; SLM32-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
+; SLM32-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
+; SLM32-NEXT:    movdqa {{.*#+}} xmm3 = [18778,18778,18778,18778]
+; SLM32-NEXT:    pmulld %xmm3, %xmm4
+; SLM32-NEXT:    pmulld %xmm3, %xmm0
+; SLM32-NEXT:    pmulld %xmm3, %xmm2
 ; SLM32-NEXT:    pmulld %xmm1, %xmm3
 ; SLM32-NEXT:    movdqa %xmm4, %xmm1
 ; SLM32-NEXT:    retl
 ;
 ; SLM64-LABEL: test_mul_v16i32_v16i16_minsize:
 ; SLM64:       # %bb.0:
-; SLM64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; SLM64-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
-; SLM64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; SLM64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SLM64-NEXT:    pmovzxwd {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; SLM64-NEXT:    movdqa %xmm0, %xmm4
+; SLM64-NEXT:    pxor %xmm3, %xmm3
 ; SLM64-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SLM64-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
-; SLM64-NEXT:    pmulld %xmm1, %xmm4
-; SLM64-NEXT:    pmulld %xmm1, %xmm0
-; SLM64-NEXT:    pmulld %xmm1, %xmm2
+; SLM64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; SLM64-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
+; SLM64-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
+; SLM64-NEXT:    movdqa {{.*#+}} xmm3 = [18778,18778,18778,18778]
+; SLM64-NEXT:    pmulld %xmm3, %xmm4
+; SLM64-NEXT:    pmulld %xmm3, %xmm0
+; SLM64-NEXT:    pmulld %xmm3, %xmm2
 ; SLM64-NEXT:    pmulld %xmm1, %xmm3
 ; SLM64-NEXT:    movdqa %xmm4, %xmm1
 ; SLM64-NEXT:    retq
 ;
 ; SLOW32-LABEL: test_mul_v16i32_v16i16_minsize:
 ; SLOW32:       # %bb.0:
-; SLOW32-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; SLOW32-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
-; SLOW32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; SLOW32-NEXT:    pmovzxwd {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; SLOW32-NEXT:    movdqa %xmm0, %xmm4
+; SLOW32-NEXT:    pxor %xmm3, %xmm3
 ; SLOW32-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; SLOW32-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
 ; SLOW32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SLOW32-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
-; SLOW32-NEXT:    pmulld %xmm1, %xmm0
-; SLOW32-NEXT:    pmulld %xmm1, %xmm2
-; SLOW32-NEXT:    pmulld %xmm1, %xmm4
+; SLOW32-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
+; SLOW32-NEXT:    movdqa {{.*#+}} xmm3 = [18778,18778,18778,18778]
+; SLOW32-NEXT:    pmulld %xmm3, %xmm0
+; SLOW32-NEXT:    pmulld %xmm3, %xmm4
+; SLOW32-NEXT:    pmulld %xmm3, %xmm2
 ; SLOW32-NEXT:    pmulld %xmm1, %xmm3
 ; SLOW32-NEXT:    movdqa %xmm4, %xmm1
 ; SLOW32-NEXT:    retl
 ;
 ; SLOW64-LABEL: test_mul_v16i32_v16i16_minsize:
 ; SLOW64:       # %bb.0:
-; SLOW64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; SLOW64-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
-; SLOW64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; SLOW64-NEXT:    pmovzxwd {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; SLOW64-NEXT:    movdqa %xmm0, %xmm4
+; SLOW64-NEXT:    pxor %xmm3, %xmm3
 ; SLOW64-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; SLOW64-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
 ; SLOW64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SLOW64-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
-; SLOW64-NEXT:    pmulld %xmm1, %xmm0
-; SLOW64-NEXT:    pmulld %xmm1, %xmm2
-; SLOW64-NEXT:    pmulld %xmm1, %xmm4
+; SLOW64-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
+; SLOW64-NEXT:    movdqa {{.*#+}} xmm3 = [18778,18778,18778,18778]
+; SLOW64-NEXT:    pmulld %xmm3, %xmm0
+; SLOW64-NEXT:    pmulld %xmm3, %xmm4
+; SLOW64-NEXT:    pmulld %xmm3, %xmm2
 ; SLOW64-NEXT:    pmulld %xmm1, %xmm3
 ; SLOW64-NEXT:    movdqa %xmm4, %xmm1
 ; SLOW64-NEXT:    retq
 ;
 ; SSE4-32-LABEL: test_mul_v16i32_v16i16_minsize:
 ; SSE4-32:       # %bb.0:
-; SSE4-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
-; SSE4-32-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; SSE4-32-NEXT:    movdqa %xmm0, %xmm4
+; SSE4-32-NEXT:    pxor %xmm3, %xmm3
 ; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; SSE4-32-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
 ; SSE4-32-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE4-32-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
-; SSE4-32-NEXT:    pmulld %xmm1, %xmm0
-; SSE4-32-NEXT:    pmulld %xmm1, %xmm2
-; SSE4-32-NEXT:    pmulld %xmm1, %xmm4
+; SSE4-32-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
+; SSE4-32-NEXT:    movdqa {{.*#+}} xmm3 = [18778,18778,18778,18778]
+; SSE4-32-NEXT:    pmulld %xmm3, %xmm0
+; SSE4-32-NEXT:    pmulld %xmm3, %xmm4
+; SSE4-32-NEXT:    pmulld %xmm3, %xmm2
 ; SSE4-32-NEXT:    pmulld %xmm1, %xmm3
 ; SSE4-32-NEXT:    movdqa %xmm4, %xmm1
 ; SSE4-32-NEXT:    retl
 ;
 ; SSE4-64-LABEL: test_mul_v16i32_v16i16_minsize:
 ; SSE4-64:       # %bb.0:
-; SSE4-64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
-; SSE4-64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; SSE4-64-NEXT:    movdqa %xmm0, %xmm4
+; SSE4-64-NEXT:    pxor %xmm3, %xmm3
 ; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; SSE4-64-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
 ; SSE4-64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE4-64-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
-; SSE4-64-NEXT:    pmulld %xmm1, %xmm0
-; SSE4-64-NEXT:    pmulld %xmm1, %xmm2
-; SSE4-64-NEXT:    pmulld %xmm1, %xmm4
+; SSE4-64-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
+; SSE4-64-NEXT:    movdqa {{.*#+}} xmm3 = [18778,18778,18778,18778]
+; SSE4-64-NEXT:    pmulld %xmm3, %xmm0
+; SSE4-64-NEXT:    pmulld %xmm3, %xmm4
+; SSE4-64-NEXT:    pmulld %xmm3, %xmm2
 ; SSE4-64-NEXT:    pmulld %xmm1, %xmm3
 ; SSE4-64-NEXT:    movdqa %xmm4, %xmm1
 ; SSE4-64-NEXT:    retq

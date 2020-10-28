@@ -109,9 +109,11 @@ def main():
       prefix_list.append((check_prefixes, tool_cmd_args))
 
     func_dict = {}
+    func_order = {}
     for prefixes, _ in prefix_list:
       for prefix in prefixes:
         func_dict.update({prefix: dict()})
+        func_order.update({prefix: []})
     for prefixes, opt_args in prefix_list:
       common.debug('Extracted opt cmd:', opt_basename, opt_args, file=sys.stderr)
       common.debug('Extracted FileCheck prefixes:', str(prefixes), file=sys.stderr)
@@ -122,7 +124,7 @@ def main():
       for raw_tool_output in re.split(r'Printing analysis ', raw_tool_outputs):
         common.build_function_body_dictionary(
           common.ANALYZE_FUNCTION_RE, common.scrub_body, [],
-          raw_tool_output, prefixes, func_dict, args.verbose, False, False)
+          raw_tool_output, prefixes, func_dict, func_order, args.verbose, False, False)
 
     is_in_function = False
     is_in_function_start = False

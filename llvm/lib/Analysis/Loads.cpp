@@ -503,3 +503,23 @@ Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
   // block.
   return nullptr;
 }
+
+bool llvm::canReplacePointersIfEqual(Value *A, Value *B, const DataLayout &DL,
+                                     Instruction *CtxI) {
+  Type *Ty = A->getType();
+  assert(Ty == B->getType() && Ty->isPointerTy() &&
+         "values must have matching pointer types");
+
+  // NOTE: The checks in the function are incomplete and currently miss illegal
+  // cases! The current implementation is a starting point and the
+  // implementation should be made stricter over time.
+  if (auto *C = dyn_cast<Constant>(B)) {
+    // Do not allow replacing a pointer with a constant pointer, unless it is
+    // either null or at least one byte is dereferenceable.
+    APInt OneByte(DL.getPointerTypeSizeInBits(Ty), 1);
+    return C->isNullValue() ||
+           isDereferenceableAndAlignedPointer(B, Align(1), OneByte, DL, CtxI);
+  }
+
+  return true;
+}

@@ -4,55 +4,55 @@ include "llvm/Option/OptParser.td"
 // These options seem to be important for the tool
 // and should be implemented.
 
-def FILEOUT : JoinedOrSeparate<[ "/", "-" ], "FO">,
+def fileout : JoinedOrSeparate<[ "/", "-" ], "FO">,
               HelpText<"Change the output file location.">;
 
-def DEFINE : Separate<[ "/", "-" ], "D">,
+def define : Separate<[ "/", "-" ], "D">,
              HelpText<"Define a symbol for the C preprocessor.">;
-def UNDEF : Separate<[ "/", "-" ], "U">,
+def undef : Separate<[ "/", "-" ], "U">,
             HelpText<"Undefine a symbol for the C preprocessor.">;
 
-def LANG_ID : JoinedOrSeparate<[ "/", "-" ], "L">,
+def lang_id : JoinedOrSeparate<[ "/", "-" ], "L">,
               HelpText<"Set the default language identifier.">;
-def LANG_NAME : Separate<[ "/", "-" ], "LN">,
+def lang_name : Separate<[ "/", "-" ], "LN">,
                 HelpText<"Set the default language name.">;
 
-def INCLUDE : Separate<[ "/", "-" ], "I">, HelpText<"Add an include path.">;
-def NOINCLUDE : Flag<[ "/", "-" ], "X">, HelpText<"Ignore 'include' variable.">;
+def includepath : Separate<[ "/", "-" ], "I">, HelpText<"Add an include path.">;
+def noinclude : Flag<[ "/", "-" ], "X">, HelpText<"Ignore 'include' variable.">;
 
-def ADD_NULL : Flag<[ "/", "-" ], "N">,
+def add_null : Flag<[ "/", "-" ], "N">,
                HelpText<"Null-terminate all strings in the string table.">;
 
-def DUPID_NOWARN : Flag<[ "/", "-" ], "Y">,
+def dupid_nowarn : Flag<[ "/", "-" ], "Y">,
                    HelpText<"Suppress warnings on duplicate resource IDs.">;
 
-def VERBOSE : Flag<[ "/", "-" ], "V">, HelpText<"Be verbose.">;
-def HELP : Flag<[ "/", "-" ], "?">, HelpText<"Display this help and exit.">;
-def H : Flag<[ "/", "-" ], "H">,
-        Alias<HELP>,
+def verbose : Flag<[ "/", "-" ], "V">, HelpText<"Be verbose.">;
+def help : Flag<[ "/", "-" ], "?">, HelpText<"Display this help and exit.">;
+def h : Flag<[ "/", "-" ], "H">,
+        Alias<help>,
         HelpText<"Display this help and exit.">;
 
-def DRY_RUN : Flag<[ "/", "-" ], "dry-run">,
+def dry_run : Flag<[ "/", "-" ], "dry-run">,
               HelpText<"Don't compile the input; only try to parse it.">;
 
-def CODEPAGE : JoinedOrSeparate<[ "/", "-" ], "C">,
+def codepage : JoinedOrSeparate<[ "/", "-" ], "C">,
                HelpText<"Set the codepage used for input strings.">;
 
 // Unused switches (at least for now). These will stay unimplemented
 // in an early stage of development and can be ignored. However, we need to
 // parse them in order to preserve the compatibility with the original tool.
 
-def NOLOGO : Flag<[ "/", "-" ], "NOLOGO">;
-def R : Flag<[ "/", "-" ], "R">;
-def SL : Flag<[ "/", "-" ], "SL">;
+def nologo : Flag<[ "/", "-" ], "NOLOGO">;
+def r : Flag<[ "/", "-" ], "R">;
+def sl : Flag<[ "/", "-" ], "SL">;
 
 // (Codepages support.)
-def W : Flag<[ "/", "-" ], "W">;
+def w : Flag<[ "/", "-" ], "W">;
 
 // (Support of MUI and similar.)
-def FM : Separate<[ "/", "-" ], "FM">;
-def Q : Separate<[ "/", "-" ], "Q">;
-def G : Flag<[ "/", "-" ], "G">;
-def GN : Flag<[ "/", "-" ], "GN">;
-def G1 : Flag<[ "/", "-" ], "G1">;
-def G2 : Flag<[ "/", "-" ], "G2">;
+def fm : Separate<[ "/", "-" ], "FM">;
+def q : Separate<[ "/", "-" ], "Q">;
+def g : Flag<[ "/", "-" ], "G">;
+def gn : Flag<[ "/", "-" ], "GN">;
+def g1 : Flag<[ "/", "-" ], "G1">;
+def g2 : Flag<[ "/", "-" ], "G2">;

@@ -219,6 +219,12 @@
 # define SANITIZER_MYRIAD2 0
 #endif
 
+#if defined(__riscv) && (__riscv_xlen == 64)
+#define SANITIZER_RISCV64 1
+#else
+#define SANITIZER_RISCV64 0
+#endif
+
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.
 // But in some cases (e.g. AArch64's 39-bit address space) SizeClassAllocator64
 // does not work well and we need to fallback to SizeClassAllocator32.

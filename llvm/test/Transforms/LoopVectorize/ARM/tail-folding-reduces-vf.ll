@@ -1,4 +1,4 @@
-; RUN: opt < %s -mattr=+mve,+mve.fp -loop-vectorize -S | FileCheck %s --check-prefixes=DEFAULT
+; RUN: opt < %s -mattr=+mve,+mve.fp -loop-vectorize -tail-predication=disabled -S | FileCheck %s --check-prefixes=DEFAULT
 ; RUN: opt < %s -mattr=+mve,+mve.fp -loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -S | FileCheck %s --check-prefixes=TAILPRED
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"

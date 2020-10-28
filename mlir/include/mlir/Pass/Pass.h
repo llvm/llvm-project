@@ -24,8 +24,11 @@ class OpToOpPassAdaptor;
 /// The state for a single execution of a pass. This provides a unified
 /// interface for accessing and initializing necessary state for pass execution.
 struct PassExecutionState {
-  PassExecutionState(Operation *ir, AnalysisManager analysisManager)
-      : irAndPassFailed(ir, false), analysisManager(analysisManager) {}
+  PassExecutionState(Operation *ir, AnalysisManager analysisManager,
+                     function_ref<LogicalResult(OpPassManager &, Operation *)>
+                         pipelineExecutor)
+      : irAndPassFailed(ir, false), analysisManager(analysisManager),
+        pipelineExecutor(pipelineExecutor) {}
 
   /// The current operation being transformed and a bool for if the pass
   /// signaled a failure.
@@ -36,6 +39,10 @@ struct PassExecutionState {
 
   /// The set of preserved analyses for the current execution.
   detail::PreservedAnalyses preservedAnalyses;
+
+  /// This is a callback in the PassManager that allows to schedule dynamic
+  /// pipelines that will be rooted at the provided operation.
+  function_ref<LogicalResult(OpPassManager &, Operation *)> pipelineExecutor;
 };
 } // namespace detail
 
@@ -111,7 +118,7 @@ public:
 
   /// Prints out the pass in the textual representation of pipelines. If this is
   /// an adaptor pass, print with the op_name(sub_pass,...) format.
-  void printAsTextualPipeline(raw_ostream &os);
+  void printAsTextualPipeline(raw_ostream &os, bool filterVerifier = true);
 
   //===--------------------------------------------------------------------===//
   // Statistics
@@ -155,6 +162,13 @@ protected:
 
   /// The polymorphic API that runs the pass over the currently held operation.
   virtual void runOnOperation() = 0;
+
+  /// Schedule an arbitrary pass pipeline on the provided operation.
+  /// This can be invoke any time in a pass to dynamic schedule more passes.
+  /// The provided operation must be the current one or one nested below.
+  LogicalResult runPipeline(OpPassManager &pipeline, Operation *op) {
+    return passState->pipelineExecutor(pipeline, op);
+  }
 
   /// A clone method to create a copy of this pass.
   std::unique_ptr<Pass> clone() const {

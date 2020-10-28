@@ -95,7 +95,7 @@ public:
   inline const Symbol *GetSymbol() const;
   const Scope *GetDerivedTypeParent() const;
   const Scope &GetDerivedTypeBase() const;
-  std::optional<SourceName> GetName() const;
+  inline std::optional<SourceName> GetName() const;
   bool Contains(const Scope &) const;
   /// Make a scope nested in this one
   Scope &MakeScope(Kind kind, Symbol *symbol = nullptr);
@@ -187,10 +187,6 @@ public:
   const DeclTypeSpec &MakeTypeStarType();
   const DeclTypeSpec &MakeClassStarType();
 
-  // For modules read from module files, this is the stream of characters
-  // that are referenced by SourceName objects.
-  void set_chars(parser::CookedSource &);
-
   std::size_t size() const { return size_; }
   void set_size(std::size_t size) { size_ = size; }
   std::size_t alignment() const { return alignment_; }
@@ -245,7 +241,6 @@ private:
   mapType crayPointers_;
   std::map<SourceName, common::Reference<Scope>> submodules_;
   std::list<DeclTypeSpec> declTypeSpecs_;
-  std::string chars_;
   std::optional<ImportKind> importKind_;
   std::set<SourceName> importNames_;
   DerivedTypeSpec *derivedTypeSpec_{nullptr}; // dTS->scope() == this
@@ -269,6 +264,14 @@ inline const Symbol *Scope::GetSymbol() const {
   return symbol_         ? symbol_
       : derivedTypeSpec_ ? &derivedTypeSpec_->typeSymbol()
                          : nullptr;
+}
+
+inline std::optional<SourceName> Scope::GetName() const {
+  if (const auto *sym{GetSymbol()}) {
+    return sym->name();
+  } else {
+    return std::nullopt;
+  }
 }
 
 } // namespace Fortran::semantics

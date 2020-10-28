@@ -1,4 +1,5 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-init-variables %t -- -- -fno-delayed-template-parsing -fexceptions
+// CHECK-FIXES: {{^}}#include <math.h>
 
 // Ensure that function declarations are not changed.
 void some_func(int x, double d, bool b, const char *p);

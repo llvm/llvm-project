@@ -56,8 +56,10 @@ std::vector<FuzzyFindRequest> extractQueriesFromLogs() {
   for (const auto &Item : *JSONArray->getAsArray()) {
     FuzzyFindRequest Request;
     // Panic if the provided file couldn't be parsed.
-    if (!fromJSON(Item, Request)) {
-      llvm::errs() << "Error when deserializing request: " << Item << '\n';
+    llvm::json::Path::Root Root("FuzzyFindRequest");
+    if (!fromJSON(Item, Request, Root)) {
+      llvm::errs() << llvm::toString(Root.getError()) << "\n";
+      Root.printErrorContext(Item, llvm::errs());
       exit(1);
     }
     Requests.push_back(Request);

@@ -24,6 +24,15 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     include(UseLibtool)
   endif()
   include(AddCompilerRT)
+
+  if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+    set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> -X32_64 qc <TARGET> <LINK_FLAGS> <OBJECTS>")
+    set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> -X32_64 qc <TARGET> <LINK_FLAGS> <OBJECTS>")
+    set(CMAKE_C_ARCHIVE_APPEND "<CMAKE_AR> -X32_64 q <TARGET> <LINK_FLAGS> <OBJECTS>")
+    set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> -X32_64 q <TARGET> <LINK_FLAGS> <OBJECTS>")
+    set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -X32_64 <TARGET>")
+    set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -X32_64 <TARGET>")
+  endif()
 endif()
 
 if (COMPILER_RT_STANDALONE_BUILD)
@@ -71,6 +80,7 @@ set(GENERIC_SOURCES
   divdi3.c
   divmoddi4.c
   divmodsi4.c
+  divmodti4.c
   divsc3.c
   divsf3.c
   divsi3.c
@@ -550,6 +560,8 @@ set(mips64_SOURCES ${GENERIC_TF_SOURCES}
                    ${mips_SOURCES})
 set(mips64el_SOURCES ${GENERIC_TF_SOURCES}
                      ${mips_SOURCES})
+
+set(powerpc_SOURCES ${GENERIC_SOURCES})
 
 set(powerpc64_SOURCES
   ppc/divtc3.c

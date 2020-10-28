@@ -153,7 +153,9 @@ bb:
 
 ; GCN-LABEL: barrier_vmcnt_vscnt_flat_workgroup:
 ; GCN:        flat_load_dword
-; GCN:        s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
+; GFX8_9:     s_waitcnt lgkmcnt(0){{$}}
+; GFX8_9:     s_waitcnt vmcnt(0){{$}}
+; GFX10:      s_waitcnt vmcnt(0) lgkmcnt(0){{$}}
 ; GFX10:      s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:   s_barrier
 define amdgpu_kernel void @barrier_vmcnt_vscnt_flat_workgroup(i32* %arg) {

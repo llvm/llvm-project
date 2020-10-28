@@ -28,7 +28,7 @@ enum AllocType {
   FROM_NEW_BR = 3   // Memory block came from operator new [ ]
 };
 
-struct AsanChunk;
+class AsanChunk;
 
 struct AllocatorOptions {
   u32 quarantine_size_mb;
@@ -171,7 +171,7 @@ template <typename AddressSpaceViewTy>
 struct AP32 {
   static const uptr kSpaceBeg = 0;
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
-  static const uptr kMetadataSize = 16;
+  static const uptr kMetadataSize = 0;
   typedef __asan::SizeClassMap SizeClassMap;
   static const uptr kRegionSizeLog = 20;
   using AddressSpaceView = AddressSpaceViewTy;

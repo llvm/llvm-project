@@ -114,14 +114,16 @@ int main(int Argc, char *Argv[]) {
   LabelArgv = dfsan_create_label("Argv", 0);
   dfsan_set_label(LabelArgv, Argv[1], LenArgv);
 
-  char SinkBuf[64];
-  assert(LenArgv < sizeof(SinkBuf) - 1);
+  char Buf[64];
+  assert(LenArgv < sizeof(Buf) - 1);
 
   // CHECK: Label 4 copied to memory
-  memcpy(SinkBuf, Argv[1], LenArgv);
+  void *volatile SinkPtr = Buf;
+  memcpy(SinkPtr, Argv[1], LenArgv);
 
   // CHECK: Label 4 copied to memory
-  memmove(&SinkBuf[1], SinkBuf, LenArgv);
+  SinkPtr = &Buf[1];
+  memmove(SinkPtr, Buf, LenArgv);
 
   return 0;
 }

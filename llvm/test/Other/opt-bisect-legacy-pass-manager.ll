@@ -83,14 +83,14 @@
 
 ; Test a function pass.
 
-; RUN: opt -disable-output -disable-verify -early-cse -opt-bisect-limit=-1 \
+; RUN: opt -disable-output -disable-verify -early-cse -earlycse-debug-hash -opt-bisect-limit=-1 \
 ; RUN:     %s 2>&1 | FileCheck %s --check-prefix=CHECK-EARLY-CSE
 ; CHECK-EARLY-CSE: BISECT: running pass ({{[0-9]+}}) Early CSE on function (f1)
 ; CHECK-EARLY-CSE: BISECT: running pass ({{[0-9]+}}) Early CSE on function (f2)
 ; CHECK-EARLY-CSE: BISECT: running pass ({{[0-9]+}}) Early CSE on function (f3)
 
-; RUN: opt -disable-output -disable-verify -early-cse -opt-bisect-limit=0 %s \
-; RUN:     2>&1 | FileCheck %s --check-prefix=CHECK-NOT-EARLY-CSE
+; RUN: opt -disable-output -disable-verify -early-cse -earlycse-debug-hash -opt-bisect-limit=0 \
+; RUN:     %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOT-EARLY-CSE
 ; CHECK-NOT-EARLY-CSE: BISECT: NOT running pass ({{[0-9]+}}) Early CSE on function (f1)
 ; CHECK-NOT-EARLY-CSE: BISECT: NOT running pass ({{[0-9]+}}) Early CSE on function (f2)
 ; CHECK-NOT-EARLY-CSE: BISECT: NOT running pass ({{[0-9]+}}) Early CSE on function (f3)

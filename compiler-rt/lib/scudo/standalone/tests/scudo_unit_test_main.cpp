@@ -29,11 +29,11 @@ __scudo_default_options() {
          "dealloc_type_mismatch=" DEALLOC_TYPE_MISMATCH;
 }
 
-int main(int argc, char **argv) {
+// The zxtest library provides a default main function that does the same thing
+// for Fuchsia builds.
 #if !SCUDO_FUCHSIA
+int main(int argc, char **argv) {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
-#else
-  return RUN_ALL_TESTS(argc, argv);
-#endif
 }
+#endif

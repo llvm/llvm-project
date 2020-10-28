@@ -1706,7 +1706,7 @@ static bool canNarrowShiftAmt(Constant *C, unsigned BitWidth) {
 
   if (C->getType()->isVectorTy()) {
     // Check each element of a constant vector.
-    unsigned NumElts = cast<VectorType>(C->getType())->getNumElements();
+    unsigned NumElts = cast<FixedVectorType>(C->getType())->getNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *Elt = C->getAggregateElement(i);
       if (!Elt)
@@ -2087,8 +2087,6 @@ static Instruction *matchRotate(Instruction &Or) {
   // TODO: Can we reduce the code duplication between this and the related
   // rotate matching code under visitSelect and visitTrunc?
   unsigned Width = Or.getType()->getScalarSizeInBits();
-  if (!isPowerOf2_32(Width))
-    return nullptr;
 
   // First, find an or'd pair of opposite shifts with the same shifted operand:
   // or (lshr ShVal, ShAmt0), (shl ShVal, ShAmt1)
@@ -2110,6 +2108,18 @@ static Instruction *matchRotate(Instruction &Or) {
   // Match the shift amount operands for a rotate pattern. This always matches
   // a subtraction on the R operand.
   auto matchShiftAmount = [](Value *L, Value *R, unsigned Width) -> Value * {
+    // Check for constant shift amounts that sum to the bitwidth.
+    // TODO: Support non-uniform shift amounts.
+    const APInt *LC, *RC;
+    if (match(L, m_APIntAllowUndef(LC)) && match(R, m_APIntAllowUndef(RC)))
+      if (LC->ult(Width) && RC->ult(Width) && (*LC + *RC) == Width)
+        return ConstantInt::get(L->getType(), *LC);
+
+    // For non-constant cases we don't support non-pow2 shift masks.
+    // TODO: Is it worth matching urem as well?
+    if (!isPowerOf2_32(Width))
+      return nullptr;
+
     // The shift amount may be masked with negation:
     // (shl ShVal, (X & (Width - 1))) | (lshr ShVal, ((-X) & (Width - 1)))
     Value *X;
@@ -2199,7 +2209,7 @@ static Instruction *matchOrConcat(Instruction &Or,
 
 /// If all elements of two constant vectors are 0/-1 and inverses, return true.
 static bool areInverseVectorBitmasks(Constant *C1, Constant *C2) {
-  unsigned NumElts = cast<VectorType>(C1->getType())->getNumElements();
+  unsigned NumElts = cast<FixedVectorType>(C1->getType())->getNumElements();
   for (unsigned i = 0; i != NumElts; ++i) {
     Constant *EltC1 = C1->getAggregateElement(i);
     Constant *EltC2 = C2->getAggregateElement(i);

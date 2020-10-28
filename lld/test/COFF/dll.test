@@ -13,10 +13,10 @@ EXPORT-NEXT:       2   0x1010  exportfn2
 EXPORT-NEXT:       3   0x1010  exportfn3
 EXPORT-NEXT:       4   0x1010  mangled
 
-# RUN: yaml2obj %p/Inputs/export2.yaml -o %t5.obj
-# RUN: rm -f %t5.lib
-# RUN: llvm-ar cru %t5.lib %t5.obj
-# RUN: lld-link /out:%t5.dll /dll %t.obj %t5.lib /export:mangled2
+# RUN: yaml2obj %p/Inputs/export2.yaml -o %t4.obj
+# RUN: rm -f %t4.lib
+# RUN: llvm-ar cru %t4.lib %t4.obj
+# RUN: lld-link /out:%t5.dll /dll %t.obj %t4.lib /export:mangled2
 # RUN: llvm-objdump -p %t5.dll | FileCheck --check-prefix=EXPORT2 %s
 
 EXPORT2:      Export Table:

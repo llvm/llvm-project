@@ -40,7 +40,8 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
-* ...
+* The ConstantPropagation pass was removed. Users should use the InstSimplify
+  pass instead.
 
 
 .. NOTE
@@ -68,10 +69,13 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+* The new "TableGen Programmer's Reference" replaces the "TableGen Language
+  Introduction" and "TableGen Language Reference" documents.
+
 * The syntax for specifying an integer range in a range list has changed.
   The old syntax used a hyphen in the range (e.g., ``{0-9}``). The new syntax
-  uses the "`...`" range punctuator (e.g., ``{0...9}``). The hyphen syntax
-  is deprecated. The "TableGen Language Reference" document has been updated.
+  uses the "`...`" range punctuation (e.g., ``{0...9}``). The hyphen syntax
+  is deprecated.
 
 Changes to the ARM Backend
 --------------------------
@@ -169,7 +173,6 @@ External Open Source Projects Using LLVM 12
 ===========================================
 
 * A project...
-
 
 Additional Information
 ======================

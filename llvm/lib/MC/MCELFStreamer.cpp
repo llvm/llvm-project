@@ -433,15 +433,18 @@ void MCELFStreamer::fixSymbolsInTLSFixups(const MCExpr *expr) {
     case MCSymbolRefExpr::VK_PPC_GOT_TPREL_LO:
     case MCSymbolRefExpr::VK_PPC_GOT_TPREL_HI:
     case MCSymbolRefExpr::VK_PPC_GOT_TPREL_HA:
+    case MCSymbolRefExpr::VK_PPC_GOT_TPREL_PCREL:
     case MCSymbolRefExpr::VK_PPC_GOT_DTPREL:
     case MCSymbolRefExpr::VK_PPC_GOT_DTPREL_LO:
     case MCSymbolRefExpr::VK_PPC_GOT_DTPREL_HI:
     case MCSymbolRefExpr::VK_PPC_GOT_DTPREL_HA:
     case MCSymbolRefExpr::VK_PPC_TLS:
+    case MCSymbolRefExpr::VK_PPC_TLS_PCREL:
     case MCSymbolRefExpr::VK_PPC_GOT_TLSGD:
     case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_LO:
     case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_HI:
     case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_HA:
+    case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL:
     case MCSymbolRefExpr::VK_PPC_TLSGD:
     case MCSymbolRefExpr::VK_PPC_GOT_TLSLD:
     case MCSymbolRefExpr::VK_PPC_GOT_TLSLD_LO:

@@ -810,35 +810,30 @@ class Type;
   };
 
   using ValueToValueMap = DenseMap<const Value *, Value *>;
+  using ValueToSCEVMapTy = DenseMap<const Value *, const SCEV *>;
 
   /// The SCEVParameterRewriter takes a scalar evolution expression and updates
-  /// the SCEVUnknown components following the Map (Value -> Value).
+  /// the SCEVUnknown components following the Map (Value -> SCEV).
   class SCEVParameterRewriter : public SCEVRewriteVisitor<SCEVParameterRewriter> {
   public:
     static const SCEV *rewrite(const SCEV *Scev, ScalarEvolution &SE,
-                               ValueToValueMap &Map,
-                               bool InterpretConsts = false) {
-      SCEVParameterRewriter Rewriter(SE, Map, InterpretConsts);
+                               ValueToSCEVMapTy &Map) {
+      SCEVParameterRewriter Rewriter(SE, Map);
       return Rewriter.visit(Scev);
     }
 
-    SCEVParameterRewriter(ScalarEvolution &SE, ValueToValueMap &M, bool C)
-      : SCEVRewriteVisitor(SE), Map(M), InterpretConsts(C) {}
+    SCEVParameterRewriter(ScalarEvolution &SE, ValueToSCEVMapTy &M)
+        : SCEVRewriteVisitor(SE), Map(M) {}
 
     const SCEV *visitUnknown(const SCEVUnknown *Expr) {
-      Value *V = Expr->getValue();
-      if (Map.count(V)) {
-        Value *NV = Map[V];
-        if (InterpretConsts && isa<ConstantInt>(NV))
-          return SE.getConstant(cast<ConstantInt>(NV));
-        return SE.getUnknown(NV);
-      }
-      return Expr;
+      auto I = Map.find(Expr->getValue());
+      if (I == Map.end())
+        return Expr;
+      return I->second;
     }
 
   private:
-    ValueToValueMap &Map;
-    bool InterpretConsts;
+    ValueToSCEVMapTy &Map;
   };
 
   using LoopToScevMapT = DenseMap<const Loop *, const SCEV *>;

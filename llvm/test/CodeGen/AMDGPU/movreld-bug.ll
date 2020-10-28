@@ -8,14 +8,14 @@
 ; MOVREL-NEXT: v_movreld_b32_e32 v0,
 
 ; GPRIDX: s_set_gpr_idx_on s0, gpr_idx(DST)
-; GPRIDX-NEXT: v_mov_b32_e32 v0, 0
+; GPRIDX-NEXT: v_mov_b32_e32 v0, 1.0
 ; GPRIDX-NEXT: s_set_gpr_idx_off
 
 ; GCN-NEXT: v_mov_b32_e32 v0, v1
 ; GCN-NEXT: ; return
 define amdgpu_ps float @main(i32 inreg %arg) #0 {
 main_body:
-  %tmp24 = insertelement <16 x float> undef, float 0.000000e+00, i32 %arg
+  %tmp24 = insertelement <16 x float> zeroinitializer, float 1.000000e+00, i32 %arg
   %tmp25 = extractelement <16 x float> %tmp24, i32 1
   ret float %tmp25
 }

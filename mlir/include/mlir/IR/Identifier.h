@@ -67,6 +67,9 @@ public:
     return Identifier(static_cast<const EntryType *>(entry));
   }
 
+  /// Compare the underlying StringRef.
+  int compare(Identifier rhs) const { return strref().compare(rhs.strref()); }
+
 private:
   /// This contains the bytes of the string, which is guaranteed to be nul
   /// terminated.

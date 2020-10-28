@@ -91,17 +91,11 @@ class VirtRegMap;
     /// \return The spill weight. Returns negative weight for unspillable li.
     float weightCalcHelper(LiveInterval &li, SlotIndex *start = nullptr,
                            SlotIndex *end = nullptr);
+
+    /// Compute spill weights and allocation hints for all virtual register
+    /// live intervals.
+    void calculateSpillWeightsAndHints();
   };
-
-  /// Compute spill weights and allocation hints for all virtual register
-  /// live intervals.
-  void calculateSpillWeightsAndHints(LiveIntervals &LIS, MachineFunction &MF,
-                                     VirtRegMap *VRM,
-                                     const MachineLoopInfo &MLI,
-                                     const MachineBlockFrequencyInfo &MBFI,
-                                     VirtRegAuxInfo::NormalizingFn norm =
-                                         normalizeSpillWeight);
-
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_CALCSPILLWEIGHTS_H

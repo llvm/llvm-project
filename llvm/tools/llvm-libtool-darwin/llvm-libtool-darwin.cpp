@@ -377,7 +377,7 @@ buildSlices(ArrayRef<OwningBinary<Archive>> OutputBinaries) {
   SmallVector<Slice, 2> Slices;
 
   for (const auto &OB : OutputBinaries) {
-    const Archive *A = OB.getBinary();
+    const Archive &A = *OB.getBinary();
     Expected<Slice> ArchiveSlice = Slice::create(A);
     if (!ArchiveSlice)
       return ArchiveSlice.takeError();

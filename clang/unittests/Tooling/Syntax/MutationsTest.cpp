@@ -19,15 +19,12 @@ using namespace clang::syntax;
 
 namespace {
 
-TEST_P(SyntaxTreeTest, Mutations) {
-  if (!GetParam().isCXX11OrLater()) {
-    return;
-  }
-
-  using Transformation = std::function<void(
-      const llvm::Annotations & /*Input*/, syntax::TranslationUnit * /*Root*/)>;
-  auto CheckTransformation = [this](std::string Input, std::string Expected,
-                                    Transformation Transform) -> void {
+class MutationTest : public SyntaxTreeTest {
+protected:
+  using Transformation = std::function<void(const llvm::Annotations & /*Input*/,
+                                            TranslationUnit * /*Root*/)>;
+  void CheckTransformation(Transformation Transform, std::string Input,
+                           std::string Expected) {
     llvm::Annotations Source(Input);
     auto *Root = buildTree(Source.code(), GetParam());
 
@@ -46,40 +43,32 @@ TEST_P(SyntaxTreeTest, Mutations) {
 
   // Removes the selected statement. Input should have exactly one selected
   // range and it should correspond to a single statement.
-  auto RemoveStatement = [this](const llvm::Annotations &Input,
-                                syntax::TranslationUnit *TU) {
-    auto *S = cast<syntax::Statement>(nodeByRange(Input.range(), TU));
+  Transformation RemoveStatement = [this](const llvm::Annotations &Input,
+                                          TranslationUnit *Root) {
+    auto *S = cast<syntax::Statement>(nodeByRange(Input.range(), Root));
     ASSERT_TRUE(S->canModify()) << "cannot remove a statement";
     syntax::removeStatement(*Arena, S);
     EXPECT_TRUE(S->isDetached());
     EXPECT_FALSE(S->isOriginal())
         << "node removed from tree cannot be marked as original";
   };
+};
 
-  std::vector<std::pair<std::string /*Input*/, std::string /*Expected*/>>
-      Cases = {
-          {"void test() { [[100+100;]] test(); }", "void test() {  test(); }"},
-          {"void test() { if (true) [[{}]] else {} }",
-           "void test() { if (true) ; else {} }"},
-          {"void test() { [[;]] }", "void test() {  }"}};
-  for (const auto &C : Cases)
-    CheckTransformation(C.first, C.second, RemoveStatement);
+INSTANTIATE_TEST_CASE_P(SyntaxTreeTests, MutationTest,
+                        ::testing::ValuesIn(allTestClangConfigs()), );
+
+TEST_P(MutationTest, RemoveStatement_InCompound) {
+  CheckTransformation(RemoveStatement, "void test() { [[100+100;]] test(); }",
+                      "void test() {  test(); }");
 }
 
-TEST_P(SyntaxTreeTest, SynthesizedNodes) {
-  buildTree("", GetParam());
+TEST_P(MutationTest, RemoveStatement_InCompound_Empty) {
+  CheckTransformation(RemoveStatement, "void test() { [[;]] }",
+                      "void test() {  }");
+}
 
-  auto *C = syntax::createPunctuation(*Arena, tok::comma);
-  ASSERT_NE(C, nullptr);
-  EXPECT_EQ(C->token()->kind(), tok::comma);
-  EXPECT_TRUE(C->canModify());
-  EXPECT_FALSE(C->isOriginal());
-  EXPECT_TRUE(C->isDetached());
-
-  auto *S = syntax::createEmptyStatement(*Arena);
-  ASSERT_NE(S, nullptr);
-  EXPECT_TRUE(S->canModify());
-  EXPECT_FALSE(S->isOriginal());
-  EXPECT_TRUE(S->isDetached());
+TEST_P(MutationTest, RemoveStatement_LeaveEmpty) {
+  CheckTransformation(RemoveStatement, "void test() { if (1) [[{}]] else {} }",
+                      "void test() { if (1) ; else {} }");
 }
 } // namespace

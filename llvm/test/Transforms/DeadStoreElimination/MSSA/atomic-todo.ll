@@ -21,14 +21,3 @@ define i32 @test9() {
   store i32 1, i32* @x
   ret i32 %x
 }
-
-; DSE across monotonic store (allowed as long as the eliminated store isUnordered)
-define void @test10() {
-; CHECK-LABEL: test10
-; CHECK-NOT: store i32 0
-; CHECK: store i32 1
-  store i32 0, i32* @x
-  store atomic i32 42, i32* @y monotonic, align 4
-  store i32 1, i32* @x
-  ret void
-}

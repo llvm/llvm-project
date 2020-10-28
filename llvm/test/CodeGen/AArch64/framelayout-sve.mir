@@ -40,6 +40,7 @@
   define aarch64_sve_vector_pcs void @save_restore_sve() { entry: unreachable }
   define aarch64_sve_vector_pcs void @save_restore_sve_realign() { entry: unreachable }
   define aarch64_sve_vector_pcs void @frame_layout() { entry: unreachable }
+  define void @fp_relative_index_with_float_save() { entry: unreachable }
 
 ...
 # +----------+
@@ -778,4 +779,38 @@ body:             |
 
     RET_ReallyLR
 
+---
+# Make sure we account for the offset between the fp and the sve area, if it exists.
+# FIXME: Should there be an offset?
+# CHECK-LABEL: name: fp_relative_index_with_float_save
+# CHECK:        - { id: 0, name: '', type: default, offset: -16, size: 16, alignment: 16,
+# CHECK-NEXT:       stack-id: sve-vec
+# CHECK:        - { id: 1, name: '', type: default, offset: -64, size: 16, alignment: 32,
+# CHECK-NEXT:      stack-id: default
+# CHECK:        - { id: 2, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8,
+# CHECK-NEXT:      stack-id: default, callee-saved-register: '$lr'
+# CHECK:        - { id: 3, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
+# CHECK-NEXT:      stack-id: default, callee-saved-register: '$fp'
+# CHECK:        - { id: 4, name: '', type: spill-slot, offset: -32, size: 8, alignment: 16,
+# CHECK-NEXT:      stack-id: default, callee-saved-register: '$d8'
+
+# CHECK: $x8 = SUBXri $fp, 16, 0
+# CHECK: STR_ZXI $z0, killed $x8, -1
+
+name: fp_relative_index_with_float_save
+stack:
+  - { id: 0, stack-id: sve-vec, size: 16, alignment: 16 }
+  - { id: 1, stack-id: default, size: 16, alignment: 32 }
+frameInfo:
+  maxAlignment:  16
+  isFrameAddressTaken: true
+body:             |
+  bb.0.entry:
+    liveins: $z0
+
+    $d8 = IMPLICIT_DEF
+
+    STR_ZXI $z0, %stack.0, 0
+
+    RET_ReallyLR
 ---

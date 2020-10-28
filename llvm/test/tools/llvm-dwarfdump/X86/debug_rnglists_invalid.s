@@ -30,7 +30,7 @@
 # CHECK-NEXT: error: .debug_rnglists table at offset 0x39 has unsupported address size 2
 # CHECK-NEXT: error: .debug_rnglists table at offset 0x45 has unsupported segment selector size 4
 # CHECK-NEXT: error: .debug_rnglists table at offset 0x51 has more offset entries (12345678) than there is space for
-# CHECK-NEXT: error: insufficient space remaining in table for DW_RLE_start_end encoding at offset 0x69
+# CHECK-NEXT: error: read past end of table when reading DW_RLE_start_end encoding at offset 0x69
 # CHECK-NEXT: error: read past end of table when reading DW_RLE_start_length encoding at offset 0x82
 # CHECK-NEXT: error: unknown rnglists encoding 0x2a at offset 0x98
 # CHECK-NEXT: error: no end of list marker detected at end of .debug_rnglists table starting at offset 0xaa

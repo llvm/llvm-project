@@ -161,6 +161,28 @@ issues that arise when combining RTTI-based modules (which pybind derived things
 are) with non-RTTI polymorphic C++ code (the default compilation mode of LLVM).
 
 
+### Ownership in the Core IR
+
+There are several top-level types in the core IR that are strongly owned by their python-side reference:
+
+* `PyContext` (`mlir.ir.Context`)
+* `PyModule` (`mlir.ir.Module`)
+* `PyOperation` (`mlir.ir.Operation`) - but with caveats
+
+All other objects are dependent. All objects maintain a back-reference (keep-alive) to their closest containing top-level object. Further, dependent objects fall into two categories: a) uniqued (which live for the life-time of the context) and b) mutable. Mutable objects need additional machinery for keeping track of when the C++ instance that backs their Python object is no longer valid (typically due to some specific mutation of the IR, deletion, or bulk operation).
+
+#### Operation hierarchy
+
+As mentioned above, `PyOperation` is special because it can exist in either a top-level or dependent state. The life-cycle is unidirectional: operations can be created detached (top-level) and once added to another operation, they are then dependent for the remainder of their lifetime. The situation is more complicated when considering construction scenarios where an operation is added to a transitive parent that is still detached, necessitating further accounting at such transition points (i.e. all such added children are initially added to the IR with a parent of their outer-most detached operation, but then once it is added to an attached operation, they need to be re-parented to the containing module).
+
+Due to the validity and parenting accounting needs, `PyOperation` is the owner for regions and blocks and needs to be a top-level type that we can count on not aliasing. This let's us do things like selectively invalidating instances when mutations occur without worrying that there is some alias to the same operation in the hierarchy. Operations are also the only entity that are allowed to be in a detached state, and they are interned at the context level so that there is never more than one Python `mlir.ir.Operation` object for a unique `MlirOperation`, regardless of how it is obtained.
+
+The C/C++ API allows for Region/Block to also be detached, but it simplifies the ownership model a lot to eliminate that possibility in this API, allowing the Region/Block to be completely dependent on its owning operation for accounting. The aliasing of Python `Region`/`Block` instances to underlying `MlirRegion`/`MlirBlock` is considered benign and these objects are not interned in the context (unlike operations).
+
+If we ever want to re-introduce detached regions/blocks, we could do so with new "DetachedRegion" class or similar and also avoid the complexity of accounting. With the way it is now, we can avoid having a global live list for regions and blocks. We may end up needing an op-local one at some point TBD, depending on how hard it is to guarantee how mutations interact with their Python peer objects. We can cross that bridge easily when we get there.
+
+Module, when used purely from the Python API, can't alias anyway, so we can use it as a top-level ref type without a live-list for interning. If the API ever changes such that this cannot be guaranteed (i.e. by letting you marshal a native-defined Module in), then there would need to be a live table for it too.
+
 ## Style
 
 In general, for the core parts of MLIR, the Python bindings should be largely

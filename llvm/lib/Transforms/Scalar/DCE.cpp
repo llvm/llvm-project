@@ -32,56 +32,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "dce"
 
-STATISTIC(DIEEliminated, "Number of insts removed by DIE pass");
 STATISTIC(DCEEliminated, "Number of insts removed");
 DEBUG_COUNTER(DCECounter, "dce-transform",
               "Controls which instructions are eliminated");
-
-namespace {
-  //===--------------------------------------------------------------------===//
-  // DeadInstElimination pass implementation
-  //
-struct DeadInstElimination : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  DeadInstElimination() : FunctionPass(ID) {
-    initializeDeadInstEliminationPass(*PassRegistry::getPassRegistry());
-  }
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-    TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
-
-    bool Changed = false;
-    for (auto &BB : F) {
-      for (BasicBlock::iterator DI = BB.begin(); DI != BB.end(); ) {
-        Instruction *Inst = &*DI++;
-        if (isInstructionTriviallyDead(Inst, TLI)) {
-          if (!DebugCounter::shouldExecute(DCECounter))
-            continue;
-          salvageDebugInfo(*Inst);
-          Inst->eraseFromParent();
-          Changed = true;
-          ++DIEEliminated;
-        }
-      }
-    }
-    return Changed;
-  }
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-    }
-};
-}
-
-char DeadInstElimination::ID = 0;
-INITIALIZE_PASS(DeadInstElimination, "die",
-                "Dead Instruction Elimination", false, false)
-
-Pass *llvm::createDeadInstEliminationPass() {
-  return new DeadInstElimination();
-}
 
 //===--------------------------------------------------------------------===//
 // RedundantDbgInstElimination pass implementation

@@ -19,6 +19,7 @@ add_subdirectory(StructuredData)
 add_subdirectory(SymbolFile)
 add_subdirectory(SystemRuntime)
 add_subdirectory(SymbolVendor)
+add_subdirectory(Trace)
 add_subdirectory(TypeSystem)
 add_subdirectory(UnwindAssembly)
 

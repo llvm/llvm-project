@@ -91,10 +91,5 @@ void ROCDLDialect::initialize() {
   allowUnknownOperations();
 }
 
-namespace mlir {
-namespace ROCDL {
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/ROCDLOps.cpp.inc"
-} // namespace ROCDL
-} // namespace mlir
-

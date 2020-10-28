@@ -77,7 +77,7 @@ LPPassManager::LPPassManager()
 
 // Insert loop into loop nest (LoopInfo) and loop queue (LQ).
 void LPPassManager::addLoop(Loop &L) {
-  if (!L.getParentLoop()) {
+  if (L.isOutermost()) {
     // This is the top level loop.
     LQ.push_front(&L);
     return;

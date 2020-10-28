@@ -1065,11 +1065,11 @@ static Value *likeBitCastFromVector(InstCombinerImpl &IC, Value *V) {
     return nullptr;
   }
   if (auto *AT = dyn_cast<ArrayType>(VT)) {
-    if (AT->getNumElements() != UT->getNumElements())
+    if (AT->getNumElements() != cast<FixedVectorType>(UT)->getNumElements())
       return nullptr;
   } else {
     auto *ST = cast<StructType>(VT);
-    if (ST->getNumElements() != UT->getNumElements())
+    if (ST->getNumElements() != cast<FixedVectorType>(UT)->getNumElements())
       return nullptr;
     for (const auto *EltT : ST->elements()) {
       if (EltT != UT->getElementType())

@@ -516,15 +516,18 @@ private:
       Power<Result>, Extremum<Result>>;
   using Indices = std::conditional_t<KIND == ImpliedDoIndex::Result::kind,
       std::tuple<ImpliedDoIndex>, std::tuple<>>;
+  using TypeParamInquiries =
+      std::conditional_t<KIND == TypeParamInquiry::Result::kind,
+          std::tuple<TypeParamInquiry>, std::tuple<>>;
   using DescriptorInquiries =
       std::conditional_t<KIND == DescriptorInquiry::Result::kind,
           std::tuple<DescriptorInquiry>, std::tuple<>>;
   using Others = std::tuple<Constant<Result>, ArrayConstructor<Result>,
-      TypeParamInquiry<KIND>, Designator<Result>, FunctionRef<Result>>;
+      Designator<Result>, FunctionRef<Result>>;
 
 public:
   common::TupleToVariant<common::CombineTuples<Operations, Conversions, Indices,
-      DescriptorInquiries, Others>>
+      TypeParamInquiries, DescriptorInquiries, Others>>
       u;
 };
 
@@ -714,7 +717,8 @@ public:
     return values_.end();
   }
 
-  const Expr<SomeType> *Find(const Symbol &) const; // can return null
+  // can return nullopt
+  std::optional<Expr<SomeType>> Find(const Symbol &) const;
 
   StructureConstructor &Add(const semantics::Symbol &, Expr<SomeType> &&);
   int Rank() const { return 0; }
@@ -722,6 +726,7 @@ public:
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
 private:
+  std::optional<Expr<SomeType>> CreateParentComponent(const Symbol &) const;
   Result result_;
   StructureConstructorValues values_;
 };

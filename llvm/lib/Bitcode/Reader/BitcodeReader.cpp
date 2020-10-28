@@ -651,7 +651,7 @@ private:
   /// Read a value/type pair out of the specified record from slot 'Slot'.
   /// Increment Slot past the number of slots used in the record. Return true on
   /// failure.
-  bool getValueTypePair(SmallVectorImpl<uint64_t> &Record, unsigned &Slot,
+  bool getValueTypePair(const SmallVectorImpl<uint64_t> &Record, unsigned &Slot,
                         unsigned InstNum, Value *&ResVal,
                         Type **FullTy = nullptr) {
     if (Slot == Record.size()) return true;
@@ -688,7 +688,7 @@ private:
   }
 
   /// Like popValue, but does not increment the Slot number.
-  bool getValue(SmallVectorImpl<uint64_t> &Record, unsigned Slot,
+  bool getValue(const SmallVectorImpl<uint64_t> &Record, unsigned Slot,
                 unsigned InstNum, Type *Ty, Value *&ResVal) {
     ResVal = getValue(Record, Slot, InstNum, Ty);
     return ResVal == nullptr;
@@ -696,7 +696,7 @@ private:
 
   /// Version of getValue that returns ResVal directly, or 0 if there is an
   /// error.
-  Value *getValue(SmallVectorImpl<uint64_t> &Record, unsigned Slot,
+  Value *getValue(const SmallVectorImpl<uint64_t> &Record, unsigned Slot,
                   unsigned InstNum, Type *Ty) {
     if (Slot == Record.size()) return nullptr;
     unsigned ValNo = (unsigned)Record[Slot];
@@ -707,7 +707,7 @@ private:
   }
 
   /// Like getValue, but decodes signed VBRs.
-  Value *getValueSigned(SmallVectorImpl<uint64_t> &Record, unsigned Slot,
+  Value *getValueSigned(const SmallVectorImpl<uint64_t> &Record, unsigned Slot,
                         unsigned InstNum, Type *Ty) {
     if (Slot == Record.size()) return nullptr;
     unsigned ValNo = (unsigned)decodeSignRotatedValue(Record[Slot]);
@@ -4989,54 +4989,55 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       InstructionList.push_back(I);
       break;
     }
-    case bitc::FUNC_CODE_INST_CMPXCHG_OLD:
-    case bitc::FUNC_CODE_INST_CMPXCHG: {
-      // CMPXCHG:[ptrty, ptr, cmp, new, vol, successordering, ssid,
-      //          failureordering?, isweak?]
+    case bitc::FUNC_CODE_INST_CMPXCHG_OLD: {
+      // CMPXCHG_OLD: [ptrty, ptr, cmp, val, vol, ordering, synchscope,
+      // failure_ordering?, weak?]
+      const size_t NumRecords = Record.size();
       unsigned OpNum = 0;
-      Value *Ptr, *Cmp, *New;
+      Value *Ptr = nullptr;
       if (getValueTypePair(Record, OpNum, NextValueNo, Ptr, &FullTy))
         return error("Invalid record");
 
       if (!isa<PointerType>(Ptr->getType()))
         return error("Cmpxchg operand is not a pointer type");
 
-      if (BitCode == bitc::FUNC_CODE_INST_CMPXCHG) {
-        if (getValueTypePair(Record, OpNum, NextValueNo, Cmp, &FullTy))
-          return error("Invalid record");
-      } else if (popValue(Record, OpNum, NextValueNo,
-                          getPointerElementFlatType(FullTy), Cmp))
+      Value *Cmp = nullptr;
+      if (popValue(Record, OpNum, NextValueNo,
+                   getPointerElementFlatType(FullTy), Cmp))
         return error("Invalid record");
-      else
-        FullTy = cast<PointerType>(FullTy)->getElementType();
 
+      FullTy = cast<PointerType>(FullTy)->getElementType();
+
+      Value *New = nullptr;
       if (popValue(Record, OpNum, NextValueNo, Cmp->getType(), New) ||
-          Record.size() < OpNum + 3 || Record.size() > OpNum + 5)
+          NumRecords < OpNum + 3 || NumRecords > OpNum + 5)
         return error("Invalid record");
 
-      AtomicOrdering SuccessOrdering = getDecodedOrdering(Record[OpNum + 1]);
+      const AtomicOrdering SuccessOrdering =
+          getDecodedOrdering(Record[OpNum + 1]);
       if (SuccessOrdering == AtomicOrdering::NotAtomic ||
           SuccessOrdering == AtomicOrdering::Unordered)
         return error("Invalid record");
-      SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 2]);
+
+      const SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 2]);
 
       if (Error Err = typeCheckLoadStoreInst(Cmp->getType(), Ptr->getType()))
         return Err;
-      AtomicOrdering FailureOrdering;
-      if (Record.size() < 7)
-        FailureOrdering =
-            AtomicCmpXchgInst::getStrongestFailureOrdering(SuccessOrdering);
-      else
-        FailureOrdering = getDecodedOrdering(Record[OpNum + 3]);
 
-      Align Alignment(
+      const AtomicOrdering FailureOrdering =
+          NumRecords < 7
+              ? AtomicCmpXchgInst::getStrongestFailureOrdering(SuccessOrdering)
+              : getDecodedOrdering(Record[OpNum + 3]);
+
+      const Align Alignment(
           TheModule->getDataLayout().getTypeStoreSize(Cmp->getType()));
+
       I = new AtomicCmpXchgInst(Ptr, Cmp, New, Alignment, SuccessOrdering,
                                 FailureOrdering, SSID);
-      FullTy = StructType::get(Context, {FullTy, Type::getInt1Ty(Context)});
       cast<AtomicCmpXchgInst>(I)->setVolatile(Record[OpNum]);
+      FullTy = StructType::get(Context, {FullTy, Type::getInt1Ty(Context)});
 
-      if (Record.size() < 8) {
+      if (NumRecords < 8) {
         // Before weak cmpxchgs existed, the instruction simply returned the
         // value loaded from memory, so bitcode files from that era will be
         // expecting the first component of a modern cmpxchg.
@@ -5044,8 +5045,55 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         I = ExtractValueInst::Create(I, 0);
         FullTy = cast<StructType>(FullTy)->getElementType(0);
       } else {
-        cast<AtomicCmpXchgInst>(I)->setWeak(Record[OpNum+4]);
+        cast<AtomicCmpXchgInst>(I)->setWeak(Record[OpNum + 4]);
       }
+
+      InstructionList.push_back(I);
+      break;
+    }
+    case bitc::FUNC_CODE_INST_CMPXCHG: {
+      // CMPXCHG: [ptrty, ptr, cmp, val, vol, success_ordering, synchscope,
+      // failure_ordering, weak]
+      const size_t NumRecords = Record.size();
+      unsigned OpNum = 0;
+      Value *Ptr = nullptr;
+      if (getValueTypePair(Record, OpNum, NextValueNo, Ptr, &FullTy))
+        return error("Invalid record");
+
+      if (!isa<PointerType>(Ptr->getType()))
+        return error("Cmpxchg operand is not a pointer type");
+
+      Value *Cmp = nullptr;
+      if (getValueTypePair(Record, OpNum, NextValueNo, Cmp, &FullTy))
+        return error("Invalid record");
+
+      Value *Val = nullptr;
+      if (popValue(Record, OpNum, NextValueNo, Cmp->getType(), Val) ||
+          NumRecords < OpNum + 3 || NumRecords > OpNum + 5)
+        return error("Invalid record");
+
+      const AtomicOrdering SuccessOrdering =
+          getDecodedOrdering(Record[OpNum + 1]);
+      if (SuccessOrdering == AtomicOrdering::NotAtomic ||
+          SuccessOrdering == AtomicOrdering::Unordered)
+        return error("Invalid record");
+
+      const SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 2]);
+
+      if (Error Err = typeCheckLoadStoreInst(Cmp->getType(), Ptr->getType()))
+        return Err;
+
+      const AtomicOrdering FailureOrdering =
+          getDecodedOrdering(Record[OpNum + 3]);
+
+      const Align Alignment(
+          TheModule->getDataLayout().getTypeStoreSize(Cmp->getType()));
+
+      I = new AtomicCmpXchgInst(Ptr, Cmp, Val, Alignment, SuccessOrdering,
+                                FailureOrdering, SSID);
+      FullTy = StructType::get(Context, {FullTy, Type::getInt1Ty(Context)});
+      cast<AtomicCmpXchgInst>(I)->setVolatile(Record[OpNum]);
+      cast<AtomicCmpXchgInst>(I)->setWeak(Record[OpNum + 4]);
 
       InstructionList.push_back(I);
       break;

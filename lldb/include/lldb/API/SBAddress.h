@@ -115,9 +115,9 @@ protected:
 
   const lldb_private::Address &ref() const;
 
-  SBAddress(const lldb_private::Address *lldb_object_ptr);
+  SBAddress(const lldb_private::Address &address);
 
-  void SetAddress(const lldb_private::Address *lldb_object_ptr);
+  void SetAddress(const lldb_private::Address &address);
 
 private:
   std::unique_ptr<lldb_private::Address> m_opaque_up;

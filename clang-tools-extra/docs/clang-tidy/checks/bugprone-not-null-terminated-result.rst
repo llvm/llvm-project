@@ -5,7 +5,7 @@ bugprone-not-null-terminated-result
 
 Finds function calls where it is possible to cause a not null-terminated result.
 Usually the proper length of a string is ``strlen(src) + 1`` or equal length of
-this expression, because the null terminator needs an extra space. Without the 
+this expression, because the null terminator needs an extra space. Without the
 null terminator it can result in undefined behaviour when the string is read.
 
 The following and their respective ``wchar_t`` based functions are checked:
@@ -17,27 +17,27 @@ The following is a real-world example where the programmer forgot to increase
 the passed third argument, which is ``size_t length``. That is why the length
 of the allocated memory is not enough to hold the null terminator.
 
-  .. code-block:: c
+.. code-block:: c
 
-    static char *stringCpy(const std::string &str) {
-      char *result = reinterpret_cast<char *>(malloc(str.size()));
-      memcpy(result, str.data(), str.size());
-      return result;
-    }
+  static char *stringCpy(const std::string &str) {
+    char *result = reinterpret_cast<char *>(malloc(str.size()));
+    memcpy(result, str.data(), str.size());
+    return result;
+  }
 
 In addition to issuing warnings, fix-it rewrites all the necessary code. It also
 tries to adjust the capacity of the destination array:
 
-  .. code-block:: c
+.. code-block:: c
 
-    static char *stringCpy(const std::string &str) {
-      char *result = reinterpret_cast<char *>(malloc(str.size() + 1));
-      strcpy(result, str.data());
-      return result;
-    }
+  static char *stringCpy(const std::string &str) {
+    char *result = reinterpret_cast<char *>(malloc(str.size() + 1));
+    strcpy(result, str.data());
+    return result;
+  }
 
 Note: It cannot guarantee to rewrite every of the path-sensitive memory
-      allocations.
+allocations.
 
 .. _MemcpyTransformation:
 

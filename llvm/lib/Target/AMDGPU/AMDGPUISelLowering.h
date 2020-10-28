@@ -150,8 +150,8 @@ public:
       return true;
 
     const auto Flags = Op.getNode()->getFlags();
-    if (Flags.isDefined())
-      return Flags.hasNoSignedZeros();
+    if (Flags.hasNoSignedZeros())
+      return true;
 
     return false;
   }

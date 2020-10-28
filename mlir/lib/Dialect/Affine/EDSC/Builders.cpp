@@ -47,14 +47,39 @@ void mlir::edsc::affineLoopBuilder(ValueRange lbs, ValueRange ubs, int64_t step,
   // updating the scoped context.
   builder.create<AffineForOp>(
       loc, lbs, builder.getMultiDimIdentityMap(lbs.size()), ubs,
-      builder.getMultiDimIdentityMap(ubs.size()), step,
-      [&](OpBuilder &nestedBuilder, Location nestedLoc, Value iv) {
+      builder.getMultiDimIdentityMap(ubs.size()), step, llvm::None,
+      [&](OpBuilder &nestedBuilder, Location nestedLoc, Value iv,
+          ValueRange itrArgs) {
         if (bodyBuilderFn) {
           ScopedContext nestedContext(nestedBuilder, nestedLoc);
           OpBuilder::InsertionGuard guard(nestedBuilder);
           bodyBuilderFn(iv);
         }
         nestedBuilder.create<AffineYieldOp>(nestedLoc);
+      });
+}
+
+void mlir::edsc::affineLoopBuilder(
+    ValueRange lbs, ValueRange ubs, int64_t step, ValueRange iterArgs,
+    function_ref<void(Value, ValueRange)> bodyBuilderFn) {
+  // Fetch the builder and location.
+  assert(ScopedContext::getContext() && "EDSC ScopedContext not set up");
+  OpBuilder &builder = ScopedContext::getBuilderRef();
+  Location loc = ScopedContext::getLocation();
+
+  // Create the actual loop and call the body builder, if provided, after
+  // updating the scoped context.
+  builder.create<AffineForOp>(
+      loc, lbs, builder.getMultiDimIdentityMap(lbs.size()), ubs,
+      builder.getMultiDimIdentityMap(ubs.size()), step, iterArgs,
+      [&](OpBuilder &nestedBuilder, Location nestedLoc, Value iv,
+          ValueRange itrArgs) {
+        if (bodyBuilderFn) {
+          ScopedContext nestedContext(nestedBuilder, nestedLoc);
+          OpBuilder::InsertionGuard guard(nestedBuilder);
+          bodyBuilderFn(iv, itrArgs);
+        } else if (itrArgs.empty())
+          nestedBuilder.create<AffineYieldOp>(nestedLoc);
       });
 }
 

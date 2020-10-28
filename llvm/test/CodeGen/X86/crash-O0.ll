@@ -16,14 +16,15 @@ define i32 @div8() nounwind {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
+; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) ## 1-byte Spill
 ; CHECK-NEXT:    ## implicit-def: $rcx
 ; CHECK-NEXT:    ## kill: def $cl killed $cl killed $rcx
-; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) ## 1-byte Spill
 ; CHECK-NEXT:    movzbw %al, %ax
 ; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %dl ## 1-byte Reload
-; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%r{{[sb]}}p) ## 1-byte Spill
-; CHECK-NEXT:    movzbw %dl, %ax
+; CHECK-NEXT:    movb %al, %dl
+; CHECK-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al ## 1-byte Reload
+; CHECK-NEXT:    movb %dl, {{[-0-9]+}}(%r{{[sb]}}p) ## 1-byte Spill
+; CHECK-NEXT:    movzbw %al, %ax
 ; CHECK-NEXT:    divb %cl
 ; CHECK-NEXT:    shrw $8, %ax
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $ax
@@ -31,11 +32,11 @@ define i32 @div8() nounwind {
 ; CHECK-NEXT:    jae LBB0_2
 ; CHECK-NEXT:  ## %bb.1: ## %"39"
 ; CHECK-NEXT:    movb {{[-0-9]+}}(%r{{[sb]}}p), %al ## 1-byte Reload
-; CHECK-NEXT:    movzbl %al, %ecx
-; CHECK-NEXT:    ## implicit-def: $edx
-; CHECK-NEXT:    imull %edx, %ecx
-; CHECK-NEXT:    addl %edx, %ecx
-; CHECK-NEXT:    cmpl %edx, %ecx
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    ## implicit-def: $ecx
+; CHECK-NEXT:    imull %ecx, %eax
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    cmpl %ecx, %eax
 ; CHECK-NEXT:    je LBB0_3
 ; CHECK-NEXT:  LBB0_2: ## %"40"
 ; CHECK-NEXT:    ud2
@@ -79,12 +80,11 @@ define i64 @addressModeWith32bitIndex(i32 %V) {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    ## kill: def $rax killed $eax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    movq %rcx, %rax
 ; CHECK-NEXT:    cqto
-; CHECK-NEXT:    movslq %edi, %rcx
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi ## 8-byte Reload
-; CHECK-NEXT:    idivq (%rsi,%rcx,8)
+; CHECK-NEXT:    movslq %edi, %rsi
+; CHECK-NEXT:    idivq (%rcx,%rsi,8)
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
   %gep = getelementptr i64, i64* null, i32 %V

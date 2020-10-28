@@ -4,7 +4,7 @@
 ; GCN-LABEL: {{^}}test_bitcast_return_type_noinline:
 ; GCN: s_getpc_b64
 ; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, ret_i32_noinline@rel32@lo+4
-; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ret_i32_noinline@rel32@hi+4
+; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ret_i32_noinline@rel32@hi+12
 ; GCN: s_swappc_b64
 ; OPT-LABEL: @test_bitcast_return_type_noinline(
 ; OPT: %val = call i32 @ret_i32_noinline()
@@ -19,7 +19,7 @@ define amdgpu_kernel void @test_bitcast_return_type_noinline() #0 {
 ; GCN-LABEL: {{^}}test_bitcast_return_type_alwaysinline:
 ; GCN-NOT: s_getpc_b64
 ; GCN-NOT: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, ret_i32_alwaysinline@rel32@lo+4
-; GCN-NOT: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ret_i32_alwaysinline@rel32@hi+4
+; GCN-NOT: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ret_i32_alwaysinline@rel32@hi+12
 ; GCN-NOT: s_swappc_b64
 ; OPT-LABEL: @test_bitcast_return_type_alwaysinline(
 ; OPT: %val = call i32 @ret_i32_alwaysinline()
@@ -34,7 +34,7 @@ define amdgpu_kernel void @test_bitcast_return_type_alwaysinline() #0 {
 ; GCN-LABEL: {{^}}test_bitcast_argument_type:
 ; GCN: s_getpc_b64
 ; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, ident_i32@rel32@lo+4
-; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ident_i32@rel32@hi+4
+; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ident_i32@rel32@hi+12
 ; GCN: s_swappc_b64
 ; OPT-LABEL: @test_bitcast_argument_type(
 ; OPT: %1 = bitcast float 2.000000e+00 to i32
@@ -50,7 +50,7 @@ define amdgpu_kernel void @test_bitcast_argument_type() #0 {
 ; GCN-LABEL: {{^}}test_bitcast_argument_and_return_types:
 ; GCN: s_getpc_b64
 ; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, ident_i32@rel32@lo+4
-; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ident_i32@rel32@hi+4
+; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ident_i32@rel32@hi+12
 ; GCN: s_swappc_b64
 ; OPT-LABEL: @test_bitcast_argument_and_return_types(
 ; OPT: %1 = bitcast float 2.000000e+00 to i32
@@ -78,7 +78,7 @@ define hidden i32 @use_workitem_id_x(i32 %arg0) #0 {
 ; GCN: v_mov_b32_e32 v1, v0
 ; GCN: s_getpc_b64
 ; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, use_workitem_id_x@rel32@lo+4
-; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, use_workitem_id_x@rel32@hi+4
+; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, use_workitem_id_x@rel32@hi+12
 ; GCN: v_mov_b32_e32 v0, 9
 ; GCN: s_swappc_b64
 ; GCN: v_add_f32_e32
@@ -95,7 +95,7 @@ define amdgpu_kernel void @test_bitcast_use_workitem_id_x() #0 {
 ; GCN-LABEL: {{^}}test_invoke:
 ; GCN: s_getpc_b64
 ; GCN: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, ident_i32@rel32@lo+4
-; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ident_i32@rel32@hi+4
+; GCN: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, ident_i32@rel32@hi+12
 ; GCN: s_swappc_b64
 ; OPT-LABEL: @test_invoke(
 ; OPT: %1 = bitcast float 2.000000e+00 to i32

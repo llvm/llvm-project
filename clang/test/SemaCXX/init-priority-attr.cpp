@@ -1,4 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -DSYSTEM -verify %s
+
+#if defined(SYSTEM)
+#5 "init-priority-attr.cpp" 3 // system header
+#endif
 
 class Two {
 private:
@@ -21,7 +26,15 @@ Two foo __attribute__((init_priority(101))) ( 5, 6 );
 
 Two goo __attribute__((init_priority(2,3))) ( 5, 6 ); // expected-error {{'init_priority' attribute takes one argument}}
 
-Two coo[2]  __attribute__((init_priority(3)));	// expected-error {{'init_priority' attribute requires integer constant between 101 and 65535 inclusive}}
+Two coo[2]  __attribute__((init_priority(100)));
+#if !defined(SYSTEM)
+// expected-error@-2 {{'init_priority' attribute requires integer constant between 101 and 65535 inclusive}}
+#endif
+
+Two boo[2]  __attribute__((init_priority(65536)));
+#if !defined(SYSTEM)
+// expected-error@-2 {{'init_priority' attribute requires integer constant between 101 and 65535 inclusive}}
+#endif
 
 Two koo[4]  __attribute__((init_priority(1.13))); // expected-error {{'init_priority' attribute requires an integer constant}}
 
@@ -30,6 +43,5 @@ Two func()  __attribute__((init_priority(1001))); // expected-error {{'init_prio
 int i  __attribute__((init_priority(1001))); // expected-error {{can only use 'init_priority' attribute on file-scope definitions of objects of class type}}
 
 int main() {
-	Two foo __attribute__((init_priority(1001)));	// expected-error {{can only use 'init_priority' attribute on file-scope definitions of objects of class type}}
+  Two foo __attribute__((init_priority(1001)));	// expected-error {{can only use 'init_priority' attribute on file-scope definitions of objects of class type}}
 }
-

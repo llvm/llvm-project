@@ -1835,17 +1835,17 @@ struct NotEqualsBoundNodePredicate {
   DynTypedNode Node;
 };
 
-template <typename Ty>
-struct GetBodyMatcher {
-  static const Stmt *get(const Ty &Node) {
-    return Node.getBody();
-  }
+template <typename Ty, typename Enable = void> struct GetBodyMatcher {
+  static const Stmt *get(const Ty &Node) { return Node.getBody(); }
 };
 
-template <>
-inline const Stmt *GetBodyMatcher<FunctionDecl>::get(const FunctionDecl &Node) {
-  return Node.doesThisDeclarationHaveABody() ? Node.getBody() : nullptr;
-}
+template <typename Ty>
+struct GetBodyMatcher<Ty, typename std::enable_if<
+                              std::is_base_of<FunctionDecl, Ty>::value>::type> {
+  static const Stmt *get(const Ty &Node) {
+    return Node.doesThisDeclarationHaveABody() ? Node.getBody() : nullptr;
+  }
+};
 
 template <typename Ty>
 struct HasSizeMatcher {

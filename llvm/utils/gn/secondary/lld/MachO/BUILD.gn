@@ -17,7 +17,10 @@ static_library("MachO2") {
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
   ]
-  include_dirs = [ "." ]
+  include_dirs = [
+    ".",
+    "//libunwind/include",
+  ]
   sources = [
     "Arch/X86_64.cpp",
     "Driver.cpp",
@@ -33,6 +36,7 @@ static_library("MachO2") {
     "Symbols.cpp",
     "SyntheticSections.cpp",
     "Target.cpp",
+    "UnwindInfoSection.cpp",
     "Writer.cpp",
   ]
 }

@@ -2,10 +2,7 @@
 
 module attributes {
   gpu.container_module,
-  spv.target_env = #spv.target_env<
-    #spv.vce<v1.0, [Kernel, Addresses], []>,
-    {max_compute_workgroup_invocations = 128 : i32,
-     max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>}>
+  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Kernel, Addresses], []>, {}>
 } {
   gpu.module @kernels {
     // CHECK-LABEL: spv.module @{{.*}} Physical64 OpenCL

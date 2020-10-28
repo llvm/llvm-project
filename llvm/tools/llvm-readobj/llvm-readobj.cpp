@@ -19,7 +19,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-readobj.h"
-#include "Error.h"
 #include "ObjDumper.h"
 #include "WindowsResourceDumper.h"
 #include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
@@ -496,13 +495,13 @@ static void dumpObject(const ObjectFile &Obj, ScopedPrinter &Writer,
   if (opts::Symbols || opts::DynamicSymbols)
     Dumper->printSymbols(opts::Symbols, opts::DynamicSymbols);
   if (!opts::StringDump.empty())
-    Dumper->printSectionsAsString(&Obj, opts::StringDump);
+    Dumper->printSectionsAsString(Obj, opts::StringDump);
   if (!opts::HexDump.empty())
-    Dumper->printSectionsAsHex(&Obj, opts::HexDump);
+    Dumper->printSectionsAsHex(Obj, opts::HexDump);
   if (opts::HashTable)
     Dumper->printHashTable();
   if (opts::GnuHashTable)
-    Dumper->printGnuHashTable(&Obj);
+    Dumper->printGnuHashTable();
   if (opts::VersionInfo)
     Dumper->printVersionInfo();
   if (Obj.isELF()) {
@@ -579,13 +578,17 @@ static void dumpArchive(const Archive *Arc, ScopedPrinter &Writer) {
         reportError(std::move(E), Arc->getFileName());
       continue;
     }
-    if (ObjectFile *Obj = dyn_cast<ObjectFile>(&*ChildOrErr.get()))
+
+    Binary *Bin = ChildOrErr->get();
+    if (ObjectFile *Obj = dyn_cast<ObjectFile>(Bin))
       dumpObject(*Obj, Writer, Arc);
-    else if (COFFImportFile *Imp = dyn_cast<COFFImportFile>(&*ChildOrErr.get()))
+    else if (COFFImportFile *Imp = dyn_cast<COFFImportFile>(Bin))
       dumpCOFFImportFile(Imp, Writer);
     else
-      reportError(errorCodeToError(readobj_error::unrecognized_file_format),
-                  Arc->getFileName());
+      reportWarning(createStringError(errc::invalid_argument,
+                                      Bin->getFileName() +
+                                          " has an unsupported file type"),
+                    Arc->getFileName());
   }
   if (Err)
     reportError(std::move(Err), Arc->getFileName());
@@ -634,8 +637,7 @@ static void dumpInput(StringRef File, ScopedPrinter &Writer) {
   else if (WindowsResource *WinRes = dyn_cast<WindowsResource>(&Binary))
     dumpWindowsResourceFile(WinRes, Writer);
   else
-    reportError(errorCodeToError(readobj_error::unrecognized_file_format),
-                File);
+    llvm_unreachable("unrecognized file type");
 
   CVTypes.Binaries.push_back(std::move(*BinaryOrErr));
 }

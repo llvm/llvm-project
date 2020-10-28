@@ -40,7 +40,7 @@ multiclass C<int c> {
 
 defset list<A> As = {
   def A0 : A<1>;
-  foreach i = 1-2 in {
+  foreach i = 1...2 in {
     def A#i : A<!add(i, 1)>;
   }
   defset list<A> SubAs = {

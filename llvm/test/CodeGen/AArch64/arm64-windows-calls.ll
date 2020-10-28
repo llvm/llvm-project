@@ -29,6 +29,7 @@ entry:
 ; CHECK:         stp     xzr, xzr, [sp, #-16]!
 ; CHECK-NEXT:    mov     x0, xzr
 ; CHECK-NEXT:    mov     x1, xzr
+; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    add     sp, sp, #16
 
   %retval = alloca %struct.S2, align 4

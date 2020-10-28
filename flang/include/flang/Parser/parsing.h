@@ -40,14 +40,16 @@ struct Options {
 
 class Parsing {
 public:
-  explicit Parsing(AllSources &);
+  explicit Parsing(AllCookedSources &);
   ~Parsing();
 
   bool consumedWholeFile() const { return consumedWholeFile_; }
   const char *finalRestingPlace() const { return finalRestingPlace_; }
-  CookedSource &cooked() { return cooked_; }
+  AllCookedSources &allCooked() { return allCooked_; }
   Messages &messages() { return messages_; }
   std::optional<Program> &parseTree() { return parseTree_; }
+
+  const CookedSource &cooked() const { return DEREF(currentCooked_); }
 
   const SourceFile *Prescan(const std::string &path, Options);
   void DumpCookedChars(llvm::raw_ostream &) const;
@@ -58,13 +60,14 @@ public:
 
   void EmitMessage(llvm::raw_ostream &o, const char *at,
       const std::string &message, bool echoSourceLine = false) const {
-    cooked_.allSources().EmitMessage(
-        o, cooked_.GetProvenanceRange(CharBlock(at)), message, echoSourceLine);
+    allCooked_.allSources().EmitMessage(o,
+        allCooked_.GetProvenanceRange(CharBlock(at)), message, echoSourceLine);
   }
 
 private:
   Options options_;
-  CookedSource cooked_;
+  AllCookedSources &allCooked_;
+  CookedSource *currentCooked_{nullptr};
   Messages messages_;
   bool consumedWholeFile_{false};
   const char *finalRestingPlace_{nullptr};

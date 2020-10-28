@@ -12,6 +12,18 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "gtest/gtest.h"
 
+#ifndef __has_extension
+#define __has_extension(x) 0
+#endif
+
+#if __has_extension(c_atomic) || __has_extension(cxx_atomic)
+#define ATOMIC_LLONG_LOCK_FREE __CLANG_ATOMIC_LLONG_LOCK_FREE
+#elif (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7))
+#define ATOMIC_LLONG_LOCK_FREE __GCC_ATOMIC_LLONG_LOCK_FREE
+#else
+#error Unsupported compiler.
+#endif
+
 namespace __sanitizer {
 
 template<typename T>
@@ -69,11 +81,15 @@ TEST(SanitizerCommon, AtomicStoreLoad) {
   CheckStoreLoad<atomic_uint32_t, memory_order_relaxed, memory_order_release>();
   CheckStoreLoad<atomic_uint32_t, memory_order_seq_cst, memory_order_seq_cst>();
 
+  // Avoid fallbacking to software emulated compiler atomics, that are usually
+  // provided by libatomic, which is not always present.
+#if ATOMIC_LLONG_LOCK_FREE == 2
   CheckStoreLoad<atomic_uint64_t, memory_order_relaxed, memory_order_relaxed>();
   CheckStoreLoad<atomic_uint64_t, memory_order_consume, memory_order_relaxed>();
   CheckStoreLoad<atomic_uint64_t, memory_order_acquire, memory_order_relaxed>();
   CheckStoreLoad<atomic_uint64_t, memory_order_relaxed, memory_order_release>();
   CheckStoreLoad<atomic_uint64_t, memory_order_seq_cst, memory_order_seq_cst>();
+#endif
 
   CheckStoreLoad<atomic_uintptr_t, memory_order_relaxed, memory_order_relaxed>
       ();
@@ -119,7 +135,9 @@ TEST(SanitizerCommon, AtomicCompareExchangeTest) {
   CheckAtomicCompareExchange<atomic_uint8_t>();
   CheckAtomicCompareExchange<atomic_uint16_t>();
   CheckAtomicCompareExchange<atomic_uint32_t>();
+#if ATOMIC_LLONG_LOCK_FREE == 2
   CheckAtomicCompareExchange<atomic_uint64_t>();
+#endif
   CheckAtomicCompareExchange<atomic_uintptr_t>();
 }
 #endif  //!SANITIZER_ANDROID

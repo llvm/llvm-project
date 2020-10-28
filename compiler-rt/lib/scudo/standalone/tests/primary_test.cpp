@@ -58,7 +58,8 @@ TEST(ScudoPrimaryTest, BasicPrimary) {
   testPrimary<scudo::SizeClassAllocator32<SizeClassMap, 18U>>();
 #endif
   testPrimary<scudo::SizeClassAllocator64<SizeClassMap, 24U>>();
-  testPrimary<scudo::SizeClassAllocator64<SizeClassMap, 24U, true>>();
+  testPrimary<scudo::SizeClassAllocator64<SizeClassMap, 24U, INT32_MIN,
+                                          INT32_MAX, true>>();
 }
 
 // The 64-bit SizeClassAllocator can be easily OOM'd with small region sizes.
@@ -144,7 +145,8 @@ TEST(ScudoPrimaryTest, PrimaryIterate) {
   testIteratePrimary<scudo::SizeClassAllocator32<SizeClassMap, 18U>>();
 #endif
   testIteratePrimary<scudo::SizeClassAllocator64<SizeClassMap, 24U>>();
-  testIteratePrimary<scudo::SizeClassAllocator64<SizeClassMap, 24U, true>>();
+  testIteratePrimary<scudo::SizeClassAllocator64<SizeClassMap, 24U, INT32_MIN,
+                                                 INT32_MAX, true>>();
 }
 
 static std::mutex Mutex;
@@ -152,7 +154,7 @@ static std::condition_variable Cv;
 static bool Ready;
 
 template <typename Primary> static void performAllocations(Primary *Allocator) {
-  static THREADLOCAL typename Primary::CacheT Cache;
+  static thread_local typename Primary::CacheT Cache;
   Cache.init(nullptr, Allocator);
   std::vector<std::pair<scudo::uptr, void *>> V;
   {
@@ -205,7 +207,8 @@ TEST(ScudoPrimaryTest, PrimaryThreaded) {
   testPrimaryThreaded<scudo::SizeClassAllocator32<SizeClassMap, 18U>>();
 #endif
   testPrimaryThreaded<scudo::SizeClassAllocator64<SizeClassMap, 24U>>();
-  testPrimaryThreaded<scudo::SizeClassAllocator64<SizeClassMap, 24U, true>>();
+  testPrimaryThreaded<scudo::SizeClassAllocator64<SizeClassMap, 24U, INT32_MIN,
+                                                  INT32_MAX, true>>();
 }
 
 // Through a simple allocation that spans two pages, verify that releaseToOS
@@ -236,5 +239,6 @@ TEST(ScudoPrimaryTest, ReleaseToOS) {
   testReleaseToOS<scudo::SizeClassAllocator32<SizeClassMap, 18U>>();
 #endif
   testReleaseToOS<scudo::SizeClassAllocator64<SizeClassMap, 24U>>();
-  testReleaseToOS<scudo::SizeClassAllocator64<SizeClassMap, 24U, true>>();
+  testReleaseToOS<scudo::SizeClassAllocator64<SizeClassMap, 24U, INT32_MIN,
+                                              INT32_MAX, true>>();
 }

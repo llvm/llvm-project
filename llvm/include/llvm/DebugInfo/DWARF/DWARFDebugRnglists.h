@@ -34,7 +34,7 @@ struct RangeListEntry : public DWARFListEntryBase {
   uint64_t Value0;
   uint64_t Value1;
 
-  Error extract(DWARFDataExtractor Data, uint64_t End, uint64_t *OffsetPtr);
+  Error extract(DWARFDataExtractor Data, uint64_t *OffsetPtr);
   void dump(raw_ostream &OS, uint8_t AddrSize, uint8_t MaxEncodingStringLength,
             uint64_t &CurrentBase, DIDumpOptions DumpOpts,
             llvm::function_ref<Optional<object::SectionedAddress>(uint32_t)>

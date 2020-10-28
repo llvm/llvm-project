@@ -102,8 +102,8 @@ func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> {
   return %0 : memref<*xf32>
 }
 
-func @print_i64(index) -> ()
-func @print_newline() -> ()
+func @printU64(index) -> ()
+func @printNewline() -> ()
 
 func @dim_op_of_unranked() {
   %ranked = alloc() : memref<4x3xf32>
@@ -111,14 +111,14 @@ func @dim_op_of_unranked() {
 
   %c0 = constant 0 : index
   %dim_0 = dim %unranked, %c0 : memref<*xf32>
-  call @print_i64(%dim_0) : (index) -> ()
-  call @print_newline() : () -> ()
+  call @printU64(%dim_0) : (index) -> ()
+  call @printNewline() : () -> ()
   // CHECK: 4
 
   %c1 = constant 1 : index
   %dim_1 = dim %unranked, %c1 : memref<*xf32>
-  call @print_i64(%dim_1) : (index) -> ()
-  call @print_newline() : () -> ()
+  call @printU64(%dim_1) : (index) -> ()
+  call @printNewline() : () -> ()
   // CHECK: 3
 
   return

@@ -303,25 +303,24 @@ define void @vst2_v4i64(<4 x i64> *%src, <8 x i64> *%dst) {
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vldrw.u32 q2, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q4, [r0, #48]
+; CHECK-NEXT:    vldrw.u32 q2, [r0, #32]
 ; CHECK-NEXT:    vmov.f64 d6, d1
-; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    vmov.f64 d10, d3
 ; CHECK-NEXT:    vmov.f32 s13, s3
 ; CHECK-NEXT:    vmov.f32 s21, s7
+; CHECK-NEXT:    vmov.f32 s2, s16
 ; CHECK-NEXT:    vmov.f32 s6, s8
 ; CHECK-NEXT:    vmov.f32 s14, s18
 ; CHECK-NEXT:    vmov.f32 s22, s10
-; CHECK-NEXT:    vmov.f32 s2, s16
-; CHECK-NEXT:    vmov.f32 s7, s9
-; CHECK-NEXT:    vmov.f32 s23, s11
-; CHECK-NEXT:    vstrb.8 q1, [r0], #48
-; CHECK-NEXT:    vmov.f32 s15, s19
-; CHECK-NEXT:    vstrw.32 q5, [r1, #16]
 ; CHECK-NEXT:    vmov.f32 s3, s17
-; CHECK-NEXT:    vstrw.32 q3, [r0]
+; CHECK-NEXT:    vmov.f32 s7, s9
 ; CHECK-NEXT:    vstrw.32 q0, [r1, #32]
+; CHECK-NEXT:    vmov.f32 s15, s19
+; CHECK-NEXT:    vstrb.8 q1, [r1], #48
+; CHECK-NEXT:    vmov.f32 s23, s11
+; CHECK-NEXT:    vstrw.32 q3, [r1]
+; CHECK-NEXT:    vstrw.32 q5, [r1, #-32]
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    bx lr
 entry:

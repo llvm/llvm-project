@@ -421,22 +421,6 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
       !isInSanitizerBlacklist(SanitizerKind::ShadowCallStack, Fn, Loc))
     Fn->addFnAttr(llvm::Attribute::ShadowCallStack);
 
-  auto RASignKind = getLangOpts().getSignReturnAddressScope();
-  if (RASignKind != LangOptions::SignReturnAddressScopeKind::None) {
-    Fn->addFnAttr("sign-return-address",
-                  RASignKind == LangOptions::SignReturnAddressScopeKind::All
-                      ? "all"
-                      : "non-leaf");
-    auto RASignKey = getLangOpts().getSignReturnAddressKey();
-    Fn->addFnAttr("sign-return-address-key",
-                  RASignKey == LangOptions::SignReturnAddressKeyKind::AKey
-                      ? "a_key"
-                      : "b_key");
-  }
-
-  if (getLangOpts().BranchTargetEnforcement)
-    Fn->addFnAttr("branch-target-enforcement");
-
   return Fn;
 }
 

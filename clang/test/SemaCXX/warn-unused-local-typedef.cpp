@@ -67,10 +67,10 @@ int printf(char const *, ...);
 
 void test() {
   typedef signed long int superint; // no diag
-  printf("%f", (superint) 42);
+  printf("%ld", (superint)42);
 
   typedef signed long int superint2; // no diag
-  printf("%f", static_cast<superint2>(42));
+  printf("%ld", static_cast<superint2>(42));
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-local-typedef"

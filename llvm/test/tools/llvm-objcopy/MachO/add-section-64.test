@@ -1,0 +1,119 @@
+## Show that llvm-objcopy adds a new section into a 64-bit object if
+## --add-section is given.
+
+# RUN: yaml2obj %s -o %t
+# RUN: echo -n abcdefg > %t.data
+
+## Case 1: Add a new section into an existing segment.
+# RUN: llvm-objcopy --add-section __TEXT,__bar=%t.data %t %t.out1
+# RUN: llvm-readobj --sections --section-data %t.out1 \
+# RUN:   | FileCheck %s --check-prefixes=COMMON,CASE1
+
+## Case 2: Add a new section into a nonexistent segment.
+# RUN: llvm-objcopy --add-section __FOO,__bar=%t.data %t %t.out2
+# RUN: llvm-readobj --sections --section-data %t.out2 \
+# RUN:   | FileCheck %s --check-prefixes=COMMON,CASE2
+# RUN: llvm-readobj --sections --section-data %t.out2 \
+# RUN:   | FileCheck %s --check-prefixes=COMMON,CASE2
+
+## Case 3: Add a new section into an existing segment using /dev/null as an input.
+# RUN: llvm-objcopy --add-section __TEXT,__bar=/dev/null %t %t.out3
+# RUN: llvm-readobj --sections --section-data %t.out3 \
+# RUN:   | FileCheck %s --check-prefixes=COMMON,CASE3
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      152
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4
+    fileoff:         184
+    filesize:        4
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000000
+        content:         'AABBCCDD'
+        size:            4
+        offset:          184
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+
+# COMMON:         Index: 0
+# COMMON-NEXT:    Name: __text (5F 5F 74 65 78 74 00 00 00 00 00 00 00 00 00 00)
+# COMMON-NEXT:    Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# COMMON-NEXT:    Address: 0x0
+# COMMON-NEXT:    Size: 0x4
+# COMMON-NEXT:    Offset:
+# COMMON-NEXT:    Alignment: 0
+# COMMON-NEXT:    RelocationOffset: 0x0
+# COMMON-NEXT:    RelocationCount: 0
+# COMMON-NEXT:    Type: Regular (0x0)
+# COMMON-NEXT:    Attributes [ (0x800004)
+# COMMON-NEXT:      PureInstructions (0x800000)
+# COMMON-NEXT:      SomeInstructions (0x4)
+# COMMON-NEXT:    ]
+# COMMON-NEXT:    Reserved1: 0x0
+# COMMON-NEXT:    Reserved2: 0x0
+# COMMON-NEXT:    Reserved3: 0x0
+# COMMON-NEXT:    SectionData (
+# COMMON-NEXT:      0000: AABBCCDD                             |....|
+# COMMON-NEXT:    )
+
+# COMMON:         Index: 1
+# COMMON-NEXT:    Name: __bar (5F 5F 62 61 72 00 00 00 00 00 00 00 00 00 00 00)
+
+# CASE1-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# CASE1-NEXT:     Address: 0x4
+# CASE1-NEXT:     Size: 0x7
+# CASE1-NEXT:     Offset: 268
+
+# CASE2:          Segment: __FOO (5F 5F 46 4F 4F 00 00 00 00 00 00 00 00 00 00 00)
+# CASE2-NEXT:     Address: 0xB8
+# CASE2-NEXT:     Size: 0x7
+# CASE2-NEXT:     Offset: 340
+
+# CASE3-NEXT:     Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# CASE3-NEXT:     Address: 0x4
+# CASE3-NEXT:     Size: 0x0
+# CASE3-NEXT:     Offset: 268
+
+# COMMON-NEXT:    Alignment: 0
+# COMMON-NEXT:    RelocationOffset: 0x0
+# COMMON-NEXT:    RelocationCount: 0
+# COMMON-NEXT:    Type: Regular (0x0)
+# COMMON-NEXT:    Attributes [ (0x0)
+# COMMON-NEXT:    ]
+# COMMON-NEXT:    Reserved1: 0x0
+# COMMON-NEXT:    Reserved2: 0x0
+# COMMON-NEXT:    Reserved3: 0x0
+
+# CASE1-NEXT:     SectionData (
+# CASE1-NEXT:       0000: 61626364 656667                      |abcdefg|
+# CASE1-NEXT:     )
+
+# CASE2-NEXT:     SectionData (
+# CASE2-NEXT:       0000: 61626364 656667                      |abcdefg|
+# CASE2-NEXT:     )
+
+# CASE3-NEXT:     SectionData (
+# CASE3-NEXT:     )

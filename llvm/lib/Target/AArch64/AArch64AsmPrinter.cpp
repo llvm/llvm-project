@@ -32,6 +32,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/FaultMaps.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -69,12 +70,13 @@ namespace {
 class AArch64AsmPrinter : public AsmPrinter {
   AArch64MCInstLower MCInstLowering;
   StackMaps SM;
+  FaultMaps FM;
   const AArch64Subtarget *STI;
 
 public:
   AArch64AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(OutContext, *this),
-        SM(*this) {}
+        SM(*this), FM(*this) {}
 
   StringRef getPassName() const override { return "AArch64 Assembly Printer"; }
 
@@ -86,15 +88,16 @@ public:
 
   void emitStartOfAsmFile(Module &M) override;
   void emitJumpTableInfo() override;
-  void emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
-                          const MachineBasicBlock *MBB, unsigned JTI);
 
-  void LowerJumpTableDestSmall(MCStreamer &OutStreamer, const MachineInstr &MI);
+  void LowerJumpTableDest(MCStreamer &OutStreamer, const MachineInstr &MI);
 
   void LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
                      const MachineInstr &MI);
   void LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
                        const MachineInstr &MI);
+  void LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
+                       const MachineInstr &MI);
+  void LowerFAULTING_OP(const MachineInstr &MI);
 
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
   void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
@@ -189,58 +192,24 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     return;
 
   // Assemble feature flags that may require creation of a note section.
-  unsigned Flags = ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI |
-                   ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
+  unsigned Flags = 0;
+  if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("branch-target-enforcement")))
+    if (BTE->getZExtValue())
+      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
 
-  if (any_of(M, [](const Function &F) {
-        return !F.isDeclaration() &&
-               !F.hasFnAttribute("branch-target-enforcement");
-      })) {
-    Flags &= ~ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-  }
-
-  if ((Flags & ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI) == 0 &&
-      any_of(M, [](const Function &F) {
-        return F.hasFnAttribute("branch-target-enforcement");
-      })) {
-    errs() << "warning: some functions compiled with BTI and some compiled "
-              "without BTI\n"
-           << "warning: not setting BTI in feature flags\n";
-  }
-
-  if (any_of(M, [](const Function &F) {
-        if (F.isDeclaration())
-          return false;
-        Attribute A = F.getFnAttribute("sign-return-address");
-        return !A.isStringAttribute() || A.getValueAsString() == "none";
-      })) {
-    Flags &= ~ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
-  }
+  if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
+          M.getModuleFlag("sign-return-address")))
+    if (Sign->getZExtValue())
+      Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
 
   if (Flags == 0)
     return;
 
   // Emit a .note.gnu.property section with the flags.
-  MCSection *Cur = OutStreamer->getCurrentSectionOnly();
-  MCSection *Nt = MMI->getContext().getELFSection(
-      ".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
-  OutStreamer->SwitchSection(Nt);
-
-  // Emit the note header.
-  emitAlignment(Align(8));
-  OutStreamer->emitInt32(4);     // data size for "GNU\0"
-  OutStreamer->emitInt32(4 * 4); // Elf_Prop size
-  OutStreamer->emitInt32(ELF::NT_GNU_PROPERTY_TYPE_0);
-  OutStreamer->emitBytes(StringRef("GNU", 4)); // note name
-
-  // Emit the PAC/BTI properties.
-  OutStreamer->emitInt32(ELF::GNU_PROPERTY_AARCH64_FEATURE_1_AND);
-  OutStreamer->emitInt32(4);     // data size
-  OutStreamer->emitInt32(Flags); // data
-  OutStreamer->emitInt32(0);     // pad
-
-  OutStreamer->endSection(Nt);
-  OutStreamer->SwitchSection(Cur);
+  if (auto *TS = static_cast<AArch64TargetStreamer *>(
+          OutStreamer->getTargetStreamer()))
+    TS->emitNoteSection(Flags);
 }
 
 void AArch64AsmPrinter::emitFunctionHeaderComment() {
@@ -539,7 +508,11 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
     // generates code that does this, it is always safe to set.
     OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
   }
+  
+  // Emit stack and fault map information.
   emitStackMaps(SM);
+  FM.serializeToFaultMapSection();
+
 }
 
 void AArch64AsmPrinter::EmitLOHs() {
@@ -793,33 +766,25 @@ void AArch64AsmPrinter::emitJumpTableInfo() {
     emitAlignment(Align(Size));
     OutStreamer->emitLabel(GetJTISymbol(JTI));
 
-    for (auto *JTBB : JTBBs)
-      emitJumpTableEntry(MJTI, JTBB, JTI);
-  }
-}
-
-void AArch64AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
-                                           const MachineBasicBlock *MBB,
-                                           unsigned JTI) {
-  const MCExpr *Value = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
-  auto AFI = MF->getInfo<AArch64FunctionInfo>();
-  unsigned Size = AFI->getJumpTableEntrySize(JTI);
-
-  if (Size == 4) {
-    // .word LBB - LJTI
-    const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
-    const MCExpr *Base = TLI->getPICJumpTableRelocBaseExpr(MF, JTI, OutContext);
-    Value = MCBinaryExpr::createSub(Value, Base, OutContext);
-  } else {
-    // .byte (LBB - LBB) >> 2 (or .hword)
-    const MCSymbol *BaseSym = AFI->getJumpTableEntryPCRelSymbol(JTI);
+    const MCSymbol *BaseSym = AArch64FI->getJumpTableEntryPCRelSymbol(JTI);
     const MCExpr *Base = MCSymbolRefExpr::create(BaseSym, OutContext);
-    Value = MCBinaryExpr::createSub(Value, Base, OutContext);
-    Value = MCBinaryExpr::createLShr(
-        Value, MCConstantExpr::create(2, OutContext), OutContext);
-  }
 
-  OutStreamer->emitValue(Value, Size);
+    for (auto *JTBB : JTBBs) {
+      const MCExpr *Value =
+          MCSymbolRefExpr::create(JTBB->getSymbol(), OutContext);
+
+      // Each entry is:
+      //     .byte/.hword (LBB - Lbase)>>2
+      // or plain:
+      //     .word LBB - Lbase
+      Value = MCBinaryExpr::createSub(Value, Base, OutContext);
+      if (Size != 4)
+        Value = MCBinaryExpr::createLShr(
+            Value, MCConstantExpr::create(2, OutContext), OutContext);
+
+      OutStreamer->emitValue(Value, Size);
+    }
+  }
 }
 
 /// Small jump tables contain an unsigned byte or half, representing the offset
@@ -830,9 +795,9 @@ void AArch64AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
 ///
 ///             adr xDest, .LBB0_0
 ///             ldrb wScratch, [xTable, xEntry]   (with "lsl #1" for ldrh).
-///             add xDest, xDest, xScratch, lsl #2
-void AArch64AsmPrinter::LowerJumpTableDestSmall(llvm::MCStreamer &OutStreamer,
-                                                const llvm::MachineInstr &MI) {
+///             add xDest, xDest, xScratch (with "lsl #2" for smaller entries)
+void AArch64AsmPrinter::LowerJumpTableDest(llvm::MCStreamer &OutStreamer,
+                                           const llvm::MachineInstr &MI) {
   Register DestReg = MI.getOperand(0).getReg();
   Register ScratchReg = MI.getOperand(1).getReg();
   Register ScratchRegW =
@@ -840,33 +805,50 @@ void AArch64AsmPrinter::LowerJumpTableDestSmall(llvm::MCStreamer &OutStreamer,
   Register TableReg = MI.getOperand(2).getReg();
   Register EntryReg = MI.getOperand(3).getReg();
   int JTIdx = MI.getOperand(4).getIndex();
-  bool IsByteEntry = MI.getOpcode() == AArch64::JumpTableDest8;
+  int Size = AArch64FI->getJumpTableEntrySize(JTIdx);
 
   // This has to be first because the compression pass based its reachability
   // calculations on the start of the JumpTableDest instruction.
   auto Label =
       MF->getInfo<AArch64FunctionInfo>()->getJumpTableEntryPCRelSymbol(JTIdx);
+
+  // If we don't already have a symbol to use as the base, use the ADR
+  // instruction itself.
+  if (!Label) {
+    Label = MF->getContext().createTempSymbol();
+    AArch64FI->setJumpTableEntryInfo(JTIdx, Size, Label);
+    OutStreamer.emitLabel(Label);
+  }
+
+  auto LabelExpr = MCSymbolRefExpr::create(Label, MF->getContext());
   EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::ADR)
                                   .addReg(DestReg)
-                                  .addExpr(MCSymbolRefExpr::create(
-                                      Label, MF->getContext())));
+                                  .addExpr(LabelExpr));
 
   // Load the number of instruction-steps to offset from the label.
-  unsigned LdrOpcode = IsByteEntry ? AArch64::LDRBBroX : AArch64::LDRHHroX;
+  unsigned LdrOpcode;
+  switch (Size) {
+  case 1: LdrOpcode = AArch64::LDRBBroX; break;
+  case 2: LdrOpcode = AArch64::LDRHHroX; break;
+  case 4: LdrOpcode = AArch64::LDRSWroX; break;
+  default:
+    llvm_unreachable("Unknown jump table size");
+  }
+
   EmitToStreamer(OutStreamer, MCInstBuilder(LdrOpcode)
-                                  .addReg(ScratchRegW)
+                                  .addReg(Size == 4 ? ScratchReg : ScratchRegW)
                                   .addReg(TableReg)
                                   .addReg(EntryReg)
                                   .addImm(0)
-                                  .addImm(IsByteEntry ? 0 : 1));
+                                  .addImm(Size == 1 ? 0 : 1));
 
-  // Multiply the steps by 4 and add to the already materialized base label
-  // address.
+  // Add to the already materialized base label address, multiplying by 4 if
+  // compressed.
   EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::ADDXrs)
                                   .addReg(DestReg)
                                   .addReg(DestReg)
                                   .addReg(ScratchReg)
-                                  .addImm(2));
+                                  .addImm(Size == 4 ? 0 : 2));
 }
 
 void AArch64AsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
@@ -942,6 +924,83 @@ void AArch64AsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
          "Invalid number of NOP bytes requested!");
   for (unsigned i = EncodedBytes; i < NumBytes; i += 4)
     EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
+}
+
+void AArch64AsmPrinter::LowerSTATEPOINT(MCStreamer &OutStreamer, StackMaps &SM,
+                                        const MachineInstr &MI) {
+  StatepointOpers SOpers(&MI);
+  if (unsigned PatchBytes = SOpers.getNumPatchBytes()) {
+    assert(PatchBytes % 4 == 0 && "Invalid number of NOP bytes requested!");
+    for (unsigned i = 0; i < PatchBytes; i += 4)
+      EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
+  } else {
+    // Lower call target and choose correct opcode
+    const MachineOperand &CallTarget = SOpers.getCallTarget();
+    MCOperand CallTargetMCOp;
+    unsigned CallOpcode;
+    switch (CallTarget.getType()) {
+    case MachineOperand::MO_GlobalAddress:
+    case MachineOperand::MO_ExternalSymbol:
+      MCInstLowering.lowerOperand(CallTarget, CallTargetMCOp);
+      CallOpcode = AArch64::BL;
+      break;
+    case MachineOperand::MO_Immediate:
+      CallTargetMCOp = MCOperand::createImm(CallTarget.getImm());
+      CallOpcode = AArch64::BL;
+      break;
+    case MachineOperand::MO_Register:
+      CallTargetMCOp = MCOperand::createReg(CallTarget.getReg());
+      CallOpcode = AArch64::BLR;
+      break;
+    default:
+      llvm_unreachable("Unsupported operand type in statepoint call target");
+      break;
+    }
+
+    EmitToStreamer(OutStreamer,
+                   MCInstBuilder(CallOpcode).addOperand(CallTargetMCOp));
+  }
+
+  auto &Ctx = OutStreamer.getContext();
+  MCSymbol *MILabel = Ctx.createTempSymbol();
+  OutStreamer.emitLabel(MILabel);
+  SM.recordStatepoint(*MILabel, MI);
+}
+
+void AArch64AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI) {
+  // FAULTING_LOAD_OP <def>, <faltinf type>, <MBB handler>,
+  //                  <opcode>, <operands>
+
+  Register DefRegister = FaultingMI.getOperand(0).getReg();
+  FaultMaps::FaultKind FK =
+      static_cast<FaultMaps::FaultKind>(FaultingMI.getOperand(1).getImm());
+  MCSymbol *HandlerLabel = FaultingMI.getOperand(2).getMBB()->getSymbol();
+  unsigned Opcode = FaultingMI.getOperand(3).getImm();
+  unsigned OperandsBeginIdx = 4;
+
+  auto &Ctx = OutStreamer->getContext();
+  MCSymbol *FaultingLabel = Ctx.createTempSymbol();
+  OutStreamer->emitLabel(FaultingLabel);
+
+  assert(FK < FaultMaps::FaultKindMax && "Invalid Faulting Kind!");
+  FM.recordFaultingOp(FK, FaultingLabel, HandlerLabel);
+
+  MCInst MI;
+  MI.setOpcode(Opcode);
+
+  if (DefRegister != (Register)0)
+    MI.addOperand(MCOperand::createReg(DefRegister));
+
+  for (auto I = FaultingMI.operands_begin() + OperandsBeginIdx,
+            E = FaultingMI.operands_end();
+       I != E; ++I) {
+    MCOperand Dest;
+    lowerOperand(*I, Dest);
+    MI.addOperand(Dest);
+  }
+
+  OutStreamer->AddComment("on-fault: " + HandlerLabel->getName());
+  OutStreamer->emitInstruction(MI, getSubtargetInfo());
 }
 
 void AArch64AsmPrinter::EmitFMov0(const MachineInstr &MI) {
@@ -1187,30 +1246,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
 
-  case AArch64::JumpTableDest32: {
-    // We want:
-    //     ldrsw xScratch, [xTable, xEntry, lsl #2]
-    //     add xDest, xTable, xScratch
-    unsigned DestReg = MI->getOperand(0).getReg(),
-             ScratchReg = MI->getOperand(1).getReg(),
-             TableReg = MI->getOperand(2).getReg(),
-             EntryReg = MI->getOperand(3).getReg();
-    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDRSWroX)
-                                     .addReg(ScratchReg)
-                                     .addReg(TableReg)
-                                     .addReg(EntryReg)
-                                     .addImm(0)
-                                     .addImm(1));
-    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXrs)
-                                     .addReg(DestReg)
-                                     .addReg(TableReg)
-                                     .addReg(ScratchReg)
-                                     .addImm(0));
-    return;
-  }
+  case AArch64::JumpTableDest32:
   case AArch64::JumpTableDest16:
   case AArch64::JumpTableDest8:
-    LowerJumpTableDestSmall(*OutStreamer, *MI);
+    LowerJumpTableDest(*OutStreamer, *MI);
     return;
 
   case AArch64::FMOVH0:
@@ -1224,6 +1263,12 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case TargetOpcode::PATCHPOINT:
     return LowerPATCHPOINT(*OutStreamer, SM, *MI);
+
+  case TargetOpcode::STATEPOINT:
+    return LowerSTATEPOINT(*OutStreamer, SM, *MI);
+
+  case TargetOpcode::FAULTING_OP:
+    return LowerFAULTING_OP(*MI);
 
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
     LowerPATCHABLE_FUNCTION_ENTER(*MI);

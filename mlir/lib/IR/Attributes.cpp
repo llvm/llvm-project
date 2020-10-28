@@ -597,8 +597,8 @@ static APInt readBits(const char *rawData, size_t bitPos, size_t bitWidth) {
   return result;
 }
 
-/// Returns if 'values' corresponds to a splat, i.e. one element, or has the
-/// same element count as 'type'.
+/// Returns true if 'values' corresponds to a splat, i.e. one element, or has
+/// the same element count as 'type'.
 template <typename Values>
 static bool hasSameElementsOrSplat(ShapedType type, const Values &values) {
   return (values.size() == 1) ||
@@ -913,7 +913,7 @@ bool DenseElementsAttr::isValidComplex(int64_t dataEltSize, bool isInt,
       dataEltSize / 2, isInt, isSigned);
 }
 
-/// Returns if this attribute corresponds to a splat, i.e. if all element
+/// Returns true if this attribute corresponds to a splat, i.e. if all element
 /// values are the same.
 bool DenseElementsAttr::isSplat() const {
   return static_cast<DenseElementsAttributeStorage *>(impl)->isSplat;

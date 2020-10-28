@@ -349,7 +349,7 @@ struct StructWithProperty {
   __declspec(property(get=GetV,)) int V10; // expected-error {{expected 'get' or 'put' in property declaration}}
   __declspec(property(get=GetV,put=SetV)) int V11; // no-warning
   __declspec(property(get=GetV,put=SetV,get=GetV)) int V12; // expected-error {{property declaration specifies 'get' accessor twice}}
-  __declspec(property(get=GetV)) int V13 = 3; // expected-error {{property declaration cannot have an in-class initializer}}
+  __declspec(property(get=GetV)) int V13 = 3; // expected-error {{property declaration cannot have a default member initializer}}
 
   int GetV() { return 123; }
   void SetV(int v) {}
@@ -466,6 +466,6 @@ namespace enum_class {
     // MSVC produces a "C4353 constant 0 as function expression" for this,
     // considering the final {} to be part of the bit-width. We follow P0683R1
     // and treat it as a default member initializer.
-    enum E : int : int{}{}; // expected-error {{anonymous bit-field cannot have a default member initializer}} expected-warning {{C++20 extension}}
+    enum E : int : int{}{}; // expected-error {{anonymous bit-field cannot have a default member initializer}}
   };
 }

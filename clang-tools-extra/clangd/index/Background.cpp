@@ -272,15 +272,13 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   IgnoreDiagnostics IgnoreDiags;
   auto CI = buildCompilerInvocation(Inputs, IgnoreDiags);
   if (!CI)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Couldn't build compiler invocation");
+    return error("Couldn't build compiler invocation");
 
   auto Clang =
       prepareCompilerInstance(std::move(CI), /*Preamble=*/nullptr,
                               std::move(*Buf), std::move(FS), IgnoreDiags);
   if (!Clang)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Couldn't build compiler instance");
+    return error("Couldn't build compiler instance");
 
   SymbolCollector::Options IndexOpts;
   // Creates a filter to not collect index results from files with unchanged
@@ -318,8 +316,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
 
   const FrontendInputFile &Input = Clang->getFrontendOpts().Inputs.front();
   if (!Action->BeginSourceFile(*Clang, Input))
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "BeginSourceFile() failed");
+    return error("BeginSourceFile() failed");
   if (llvm::Error Err = Action->Execute())
     return Err;
 

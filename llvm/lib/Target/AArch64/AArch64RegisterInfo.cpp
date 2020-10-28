@@ -240,6 +240,14 @@ AArch64RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return SCS ? CSR_AArch64_AAPCS_SCS_RegMask : CSR_AArch64_AAPCS_RegMask;
 }
 
+const uint32_t *AArch64RegisterInfo::getCustomEHPadPreservedMask(
+    const MachineFunction &MF) const {
+  if (MF.getSubtarget<AArch64Subtarget>().isTargetLinux())
+    return CSR_AArch64_AAPCS_RegMask;
+
+  return nullptr;
+}
+
 const uint32_t *AArch64RegisterInfo::getTLSCallPreservedMask() const {
   if (TT.isOSDarwin())
     return CSR_Darwin_AArch64_TLS_RegMask;
@@ -603,9 +611,10 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       MI.getOperand(FIOperandNum).getTargetFlags() & AArch64II::MO_TAGGED;
   Register FrameReg;
 
-  // Special handling of dbg_value, stackmap and patchpoint instructions.
+  // Special handling of dbg_value, stackmap patchpoint statepoint instructions.
   if (MI.isDebugValue() || MI.getOpcode() == TargetOpcode::STACKMAP ||
-      MI.getOpcode() == TargetOpcode::PATCHPOINT) {
+      MI.getOpcode() == TargetOpcode::PATCHPOINT ||
+      MI.getOpcode() == TargetOpcode::STATEPOINT) {
     StackOffset Offset =
         TFI->resolveFrameIndexReference(MF, FrameIndex, FrameReg,
                                         /*PreferFP=*/true,
@@ -725,4 +734,20 @@ unsigned AArch64RegisterInfo::getLocalAddressRegister(
   else if (needsStackRealignment(MF))
     return getBaseRegister();
   return getFrameRegister(MF);
+}
+
+/// SrcRC and DstRC will be morphed into NewRC if this returns true
+bool AArch64RegisterInfo::shouldCoalesce(
+    MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
+    const TargetRegisterClass *DstRC, unsigned DstSubReg,
+    const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
+  if (MI->isCopy() &&
+      ((DstRC->getID() == AArch64::GPR64RegClassID) ||
+       (DstRC->getID() == AArch64::GPR64commonRegClassID)) &&
+      MI->getOperand(0).getSubReg() && MI->getOperand(1).getSubReg())
+    // Do not coalesce in the case of a 32-bit subregister copy
+    // which implements a 32 to 64 bit zero extension
+    // which relies on the upper 32 bits being zeroed.
+    return false;
+  return true;
 }

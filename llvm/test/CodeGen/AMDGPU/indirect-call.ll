@@ -85,7 +85,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
 ; GCN-NEXT:    s_mov_b32 s12, s14
 ; GCN-NEXT:    s_getpc_b64 s[14:15]
 ; GCN-NEXT:    s_add_u32 s14, s14, gv.fptr0@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s15, s15, gv.fptr0@rel32@hi+4
+; GCN-NEXT:    s_addc_u32 s15, s15, gv.fptr0@rel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
@@ -181,7 +181,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
 ; GCN-NEXT:    s_mov_b32 s12, s14
 ; GCN-NEXT:    s_getpc_b64 s[14:15]
 ; GCN-NEXT:    s_add_u32 s14, s14, gv.fptr1@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s15, s15, gv.fptr1@rel32@hi+4
+; GCN-NEXT:    s_addc_u32 s15, s15, gv.fptr1@rel32@hi+12
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1

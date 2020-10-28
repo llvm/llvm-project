@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: lld -flavor darwinnew -Z -platform_version macos 10.14.1 10.15 -o %t %t.o
+# RUN: %lld -platform_version macos 10.14.1 10.15 -o %t %t.o
 # RUN: llvm-objdump --macho --all-headers %t | FileCheck %s
 
 # CHECK: cmd LC_BUILD_VERSION

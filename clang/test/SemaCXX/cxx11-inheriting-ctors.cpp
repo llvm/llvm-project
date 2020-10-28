@@ -133,3 +133,12 @@ namespace implicit_member_srcloc {
     S0<int> s0;
   }
 }
+
+namespace PR47555 {
+  struct A { constexpr A(int) {} };
+  struct B : A { using A::A; };
+  template<typename> void f() {
+    constexpr B b = 0;
+  };
+  template void f<int>();
+}

@@ -9,6 +9,7 @@
 #include "mlir-c/StandardAttributes.h"
 #include "mlir/CAPI/AffineMap.h"
 #include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/Support.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/StandardTypes.h"
 
@@ -165,10 +166,8 @@ const char *mlirOpaqueAttrGetDialectNamespace(MlirAttribute attr) {
   return unwrap(attr).cast<OpaqueAttr>().getDialectNamespace().c_str();
 }
 
-void mlirOpaqueAttrGetData(MlirAttribute attr, MlirStringCallback callback,
-                           void *userData) {
-  StringRef data = unwrap(attr).cast<OpaqueAttr>().getAttrData();
-  callback(data.data(), static_cast<intptr_t>(data.size()), userData);
+MlirStringRef mlirOpaqueAttrGetData(MlirAttribute attr) {
+  return wrap(unwrap(attr).cast<OpaqueAttr>().getAttrData());
 }
 
 /*============================================================================*/
@@ -189,10 +188,8 @@ MlirAttribute mlirStringAttrTypedGet(MlirType type, intptr_t length,
   return wrap(StringAttr::get(StringRef(data, length), unwrap(type)));
 }
 
-void mlirStringAttrGetValue(MlirAttribute attr, MlirStringCallback callback,
-                            void *userData) {
-  StringRef data = unwrap(attr).cast<StringAttr>().getValue();
-  callback(data.data(), static_cast<intptr_t>(data.size()), userData);
+MlirStringRef mlirStringAttrGetValue(MlirAttribute attr) {
+  return wrap(unwrap(attr).cast<StringAttr>().getValue());
 }
 
 /*============================================================================*/
@@ -213,18 +210,12 @@ MlirAttribute mlirSymbolRefAttrGet(MlirContext ctx, intptr_t length,
   return wrap(SymbolRefAttr::get(StringRef(symbol, length), refs, unwrap(ctx)));
 }
 
-void mlirSymbolRefAttrGetRootReference(MlirAttribute attr,
-                                       MlirStringCallback callback,
-                                       void *userData) {
-  StringRef ref = unwrap(attr).cast<SymbolRefAttr>().getRootReference();
-  callback(ref.data(), ref.size(), userData);
+MlirStringRef mlirSymbolRefAttrGetRootReference(MlirAttribute attr) {
+  return wrap(unwrap(attr).cast<SymbolRefAttr>().getRootReference());
 }
 
-void mlirSymbolRefAttrGetLeafReference(MlirAttribute attr,
-                                       MlirStringCallback callback,
-                                       void *userData) {
-  StringRef ref = unwrap(attr).cast<SymbolRefAttr>().getLeafReference();
-  callback(ref.data(), ref.size(), userData);
+MlirStringRef mlirSymbolRefAttrGetLeafReference(MlirAttribute attr) {
+  return wrap(unwrap(attr).cast<SymbolRefAttr>().getLeafReference());
 }
 
 intptr_t mlirSymbolRefAttrGetNumNestedReferences(MlirAttribute attr) {
@@ -250,11 +241,8 @@ MlirAttribute mlirFlatSymbolRefAttrGet(MlirContext ctx, intptr_t length,
   return wrap(FlatSymbolRefAttr::get(StringRef(symbol, length), unwrap(ctx)));
 }
 
-void mlirFloatSymbolRefAttrGetValue(MlirAttribute attr,
-                                    MlirStringCallback callback,
-                                    void *userData) {
-  StringRef symbol = unwrap(attr).cast<FlatSymbolRefAttr>().getValue();
-  callback(symbol.data(), symbol.size(), userData);
+MlirStringRef mlirFlatSymbolRefAttrGetValue(MlirAttribute attr) {
+  return wrap(unwrap(attr).cast<FlatSymbolRefAttr>().getValue());
 }
 
 /*============================================================================*/
@@ -477,12 +465,9 @@ float mlirDenseElementsAttrGetFloatSplatValue(MlirAttribute attr) {
 double mlirDenseElementsAttrGetDoubleSplatValue(MlirAttribute attr) {
   return unwrap(attr).cast<DenseElementsAttr>().getSplatValue<double>();
 }
-void mlirDenseElementsAttrGetStringSplatValue(MlirAttribute attr,
-                                              MlirStringCallback callback,
-                                              void *userData) {
-  StringRef str =
-      unwrap(attr).cast<DenseElementsAttr>().getSplatValue<StringRef>();
-  callback(str.data(), str.size(), userData);
+MlirStringRef mlirDenseElementsAttrGetStringSplatValue(MlirAttribute attr) {
+  return wrap(
+      unwrap(attr).cast<DenseElementsAttr>().getSplatValue<StringRef>());
 }
 
 //===----------------------------------------------------------------------===//
@@ -518,13 +503,11 @@ double mlirDenseElementsAttrGetDoubleValue(MlirAttribute attr, intptr_t pos) {
   return *(unwrap(attr).cast<DenseElementsAttr>().getValues<double>().begin() +
            pos);
 }
-void mlirDenseElementsAttrGetStringValue(MlirAttribute attr, intptr_t pos,
-                                         MlirStringCallback callback,
-                                         void *userData) {
-  StringRef str =
+MlirStringRef mlirDenseElementsAttrGetStringValue(MlirAttribute attr,
+                                                  intptr_t pos) {
+  return wrap(
       *(unwrap(attr).cast<DenseElementsAttr>().getValues<StringRef>().begin() +
-        pos);
-  callback(str.data(), str.size(), userData);
+        pos));
 }
 
 /*============================================================================*/

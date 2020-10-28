@@ -61,3 +61,18 @@ entry:
   %2 = select i1 %1, i32 %b, i32 %0
   ret i32 %2
 }
+
+define i32 @test_x86_tbm_bextri_demandedbits(i32 %x) nounwind readonly {
+; X86-LABEL: test_x86_tbm_bextri_demandedbits:
+; X86:       # %bb.0:
+; X86-NEXT:    bextrl $3841, {{[0-9]+}}(%esp), %eax # imm = 0xF01
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_x86_tbm_bextri_demandedbits:
+; X64:       # %bb.0:
+; X64-NEXT:    bextrl $3841, %edi, %eax # imm = 0xF01
+; X64-NEXT:    retq
+  %a = or i32 %x, 4294901761
+  %b = tail call i32 @llvm.x86.tbm.bextri.u32(i32 %a, i32 3841)
+  ret i32 %b
+}

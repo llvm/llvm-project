@@ -1,0 +1,17 @@
+REQUIRES: linux, x86_64
+RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
+
+RUN: rm -rf %t-SimpleTestGraph
+
+RUN: not %run %t-SimpleTest -seed=1 -max_len=3 -mutation_graph_file=%t-SimpleTestGraph 2>&1 | FileCheck %s
+CHECK: BINGO
+
+RUN: cat %t-SimpleTestGraph | FileCheck %s --check-prefix=GRAPH
+
+# A vertex and edge that correspond to the discovery of "H"
+GRAPH: "7cf184f4c67ad58283ecb19349720b0cae756829"
+GRAPH: {{.*}} -> "7cf184f4c67ad58283ecb19349720b0cae756829" [label="{{.*}}"];
+
+# A vertex and edge that correspond to the discovery of "Hi"
+GRAPH: "94dd9e08c129c785f7f256e82fbe0a30e6d1ae40"
+GRAPH: {{.*}} -> "94dd9e08c129c785f7f256e82fbe0a30e6d1ae40" [label="{{.*}}"];

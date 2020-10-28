@@ -268,7 +268,7 @@ bool runImpl(LoopInfo *LI, function_ref<const LoopAccessInfo &(Loop &)> GetLAA,
   for (Loop *TopLevelLoop : *LI)
     for (Loop *L : depth_first(TopLevelLoop))
       // We only handle inner-most loops.
-      if (L->empty())
+      if (L->isInnermost())
         Worklist.push_back(L);
 
   // Now walk the identified inner loops.
@@ -357,7 +357,8 @@ PreservedAnalyses LoopVersioningPass::run(Function &F,
 
   auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
   auto GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
-    LoopStandardAnalysisResults AR = {AA, AC, DT, LI, SE, TLI, TTI, MSSA};
+    LoopStandardAnalysisResults AR = {AA,  AC,  DT,      LI,  SE,
+                                      TLI, TTI, nullptr, MSSA};
     return LAM.getResult<LoopAccessAnalysis>(L, AR);
   };
 

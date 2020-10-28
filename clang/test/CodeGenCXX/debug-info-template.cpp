@@ -121,7 +121,7 @@ template<typename>
 struct tmpl_impl {
 };
 
-template <template <typename> class tmpl, int &lvr, int &&rvr>
+template <template <typename> class tmpl, int &lvr>
 struct NN {
 };
 
@@ -129,16 +129,14 @@ struct NN {
 // CHECK: [[NNV]] = distinct !DIGlobalVariable(name: "nn"
 // CHECK-SAME:                                 type: ![[NNT:[0-9]+]]
 
-// CHECK: ![[NNT]] ={{.*}}!DICompositeType(tag: DW_TAG_structure_type, name: "NN<tmpl_impl, glb, glb>",
+// CHECK: ![[NNT]] ={{.*}}!DICompositeType(tag: DW_TAG_structure_type, name: "NN<tmpl_impl, glb>",
 // CHECK-SAME:             templateParams: [[NNARGS:![0-9]*]]
 // CHECK-SAME:             identifier:
-// CHECK: [[NNARGS]] = !{[[NNARG1:![0-9]*]], [[NNARG2:![0-9]*]], [[NNARG3:![0-9]*]]}
+// CHECK: [[NNARGS]] = !{[[NNARG1:![0-9]*]], [[NNARG2:![0-9]*]]}
 // CHECK: [[NNARG1]] = !DITemplateValueParameter(tag: DW_TAG_GNU_template_template_param, name: "tmpl", value: !"tmpl_impl")
 // CHECK: [[NNARG2]] = !DITemplateValueParameter(name: "lvr", type: [[INTLVR:![0-9]*]], value: i32* @glb)
 // CHECK: [[INTLVR]] = !DIDerivedType(tag: DW_TAG_reference_type, baseType: [[INT]]
-// CHECK: [[NNARG3]] = !DITemplateValueParameter(name: "rvr", type: [[INTRVR:![0-9]*]], value: i32* @glb)
-// CHECK: [[INTRVR]] = !DIDerivedType(tag: DW_TAG_rvalue_reference_type, baseType: [[INT]]
-NN<tmpl_impl, glb, glb> nn;
+NN<tmpl_impl, glb> nn;
 
 // CHECK: ![[PADDINGATEND:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "PaddingAtEnd",
 struct PaddingAtEnd {

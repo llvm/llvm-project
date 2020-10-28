@@ -15,10 +15,11 @@
 #ifndef LLVM_MACHINEOUTLINER_H
 #define LLVM_MACHINEOUTLINER_H
 
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/CodeGen/LivePhysRegs.h"
 
 namespace llvm {
 namespace outliner {

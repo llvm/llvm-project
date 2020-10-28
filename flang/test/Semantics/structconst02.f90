@@ -35,7 +35,7 @@ module module1
     call scalararg(scalar(4)(ix='a'))
     !ERROR: Value in structure constructor of type LOGICAL(4) is incompatible with component 'ix' of type INTEGER(4)
     call scalararg(scalar(4)(ix=.false.))
-    !ERROR: Value in structure constructor of type INTEGER(4) is incompatible with component 'ix' of type INTEGER(4)
+    !ERROR: Rank-1 array value is not compatible with scalar component 'ix'
     call scalararg(scalar(4)(ix=[1]))
     !TODO more!
   end subroutine errors

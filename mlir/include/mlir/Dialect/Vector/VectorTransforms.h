@@ -172,6 +172,47 @@ private:
   FilterConstraintType filter;
 };
 
+struct DistributeOps {
+  ExtractMapOp extract;
+  InsertMapOp insert;
+};
+
+/// Distribute a 1D vector pointwise operation over a range of given IDs taking
+/// *all* values in [0 .. multiplicity - 1] (e.g. loop induction variable or
+/// SPMD id). This transformation only inserts
+/// vector.extract_map/vector.insert_map. It is meant to be used with
+/// canonicalizations pattern to propagate and fold the vector
+/// insert_map/extract_map operations.
+/// Transforms:
+//  %v = addf %a, %b : vector<32xf32>
+/// to:
+/// %v = addf %a, %b : vector<32xf32> %ev =
+/// vector.extract_map %v, %id, 32 : vector<32xf32> into vector<1xf32> %nv =
+/// vector.insert_map %ev, %id, 32 : vector<1xf32> into vector<32xf32>
+Optional<DistributeOps> distributPointwiseVectorOp(OpBuilder &builder,
+                                                   Operation *op, Value id,
+                                                   int64_t multiplicity);
+/// Canonicalize an extra element using the result of a pointwise operation.
+/// Transforms:
+/// %v = addf %a, %b : vector32xf32>
+/// %dv = vector.extract_map %v, %id, 32 : vector<32xf32> into vector<1xf32>
+/// to:
+/// %da = vector.extract_map %a, %id, 32 : vector<32xf32> into vector<1xf32>
+/// %db = vector.extract_map %a, %id, 32 : vector<32xf32> into vector<1xf32>
+/// %dv = addf %da, %db : vector<1xf32>
+struct PointwiseExtractPattern : public OpRewritePattern<ExtractMapOp> {
+  using FilterConstraintType = std::function<LogicalResult(ExtractMapOp op)>;
+  PointwiseExtractPattern(
+      MLIRContext *context, FilterConstraintType constraint =
+                                [](ExtractMapOp op) { return success(); })
+      : OpRewritePattern<ExtractMapOp>(context), filter(constraint) {}
+  LogicalResult matchAndRewrite(ExtractMapOp extract,
+                                PatternRewriter &rewriter) const override;
+
+private:
+  FilterConstraintType filter;
+};
+
 } // namespace vector
 
 //===----------------------------------------------------------------------===//

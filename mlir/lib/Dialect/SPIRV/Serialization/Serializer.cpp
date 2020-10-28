@@ -60,9 +60,10 @@ static LogicalResult encodeInstructionInto(SmallVectorImpl<uint32_t> &binary,
 /// readable to human, we perform depth-first CFG traversal and delay the
 /// serialization of the merge block and the continue block, if exists, until
 /// after all other blocks have been processed.
-static LogicalResult visitInPrettyBlockOrder(
-    Block *headerBlock, function_ref<LogicalResult(Block *)> blockHandler,
-    bool skipHeader = false, ArrayRef<Block *> skipBlocks = {}) {
+static LogicalResult
+visitInPrettyBlockOrder(Block *headerBlock,
+                        function_ref<LogicalResult(Block *)> blockHandler,
+                        bool skipHeader = false, BlockRange skipBlocks = {}) {
   llvm::df_iterator_default_set<Block *, 4> doneBlocks;
   doneBlocks.insert(skipBlocks.begin(), skipBlocks.end());
 
@@ -774,8 +775,7 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
   operands.push_back(resTypeID);
   auto funcID = getOrCreateFunctionID(op.getName());
   operands.push_back(funcID);
-  // TODO: Support other function control options.
-  operands.push_back(static_cast<uint32_t>(spirv::FunctionControl::None));
+  operands.push_back(static_cast<uint32_t>(op.function_control()));
   operands.push_back(fnTypeID);
   encodeInstructionInto(functionHeader, spirv::Opcode::OpFunction, operands);
 

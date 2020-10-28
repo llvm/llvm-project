@@ -190,7 +190,7 @@ class TranslationUnit final : public Tree {
 public:
   TranslationUnit() : Tree(NodeKind::TranslationUnit) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::TranslationUnit;
+    return N->getKind() == NodeKind::TranslationUnit;
   }
 };
 
@@ -200,8 +200,8 @@ class Expression : public Tree {
 public:
   Expression(NodeKind K) : Tree(K) {}
   static bool classof(const Node *N) {
-    return NodeKind::UnknownExpression <= N->kind() &&
-           N->kind() <= NodeKind::UnknownExpression;
+    return NodeKind::UnknownExpression <= N->getKind() &&
+           N->getKind() <= NodeKind::UnknownExpression;
   }
 };
 
@@ -211,10 +211,10 @@ class NameSpecifier : public Tree {
 public:
   NameSpecifier(NodeKind K) : Tree(K) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::GlobalNameSpecifier ||
-           N->kind() == NodeKind::DecltypeNameSpecifier ||
-           N->kind() == NodeKind::IdentifierNameSpecifier ||
-           N->kind() == NodeKind::SimpleTemplateNameSpecifier;
+    return N->getKind() == NodeKind::GlobalNameSpecifier ||
+           N->getKind() == NodeKind::DecltypeNameSpecifier ||
+           N->getKind() == NodeKind::IdentifierNameSpecifier ||
+           N->getKind() == NodeKind::SimpleTemplateNameSpecifier;
   }
 };
 
@@ -226,7 +226,7 @@ class GlobalNameSpecifier final : public NameSpecifier {
 public:
   GlobalNameSpecifier() : NameSpecifier(NodeKind::GlobalNameSpecifier) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::GlobalNameSpecifier;
+    return N->getKind() == NodeKind::GlobalNameSpecifier;
   }
 };
 
@@ -236,7 +236,7 @@ class DecltypeNameSpecifier final : public NameSpecifier {
 public:
   DecltypeNameSpecifier() : NameSpecifier(NodeKind::DecltypeNameSpecifier) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::DecltypeNameSpecifier;
+    return N->getKind() == NodeKind::DecltypeNameSpecifier;
   }
 };
 
@@ -247,7 +247,7 @@ public:
   IdentifierNameSpecifier()
       : NameSpecifier(NodeKind::IdentifierNameSpecifier) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::IdentifierNameSpecifier;
+    return N->getKind() == NodeKind::IdentifierNameSpecifier;
   }
 };
 
@@ -259,7 +259,7 @@ public:
   SimpleTemplateNameSpecifier()
       : NameSpecifier(NodeKind::SimpleTemplateNameSpecifier) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::SimpleTemplateNameSpecifier;
+    return N->getKind() == NodeKind::SimpleTemplateNameSpecifier;
   }
 };
 
@@ -269,7 +269,7 @@ class NestedNameSpecifier final : public List {
 public:
   NestedNameSpecifier() : List(NodeKind::NestedNameSpecifier) {}
   static bool classof(const Node *N) {
-    return N->kind() <= NodeKind::NestedNameSpecifier;
+    return N->getKind() <= NodeKind::NestedNameSpecifier;
   }
   std::vector<NameSpecifier *> getSpecifiers();
   std::vector<List::ElementAndDelimiter<syntax::NameSpecifier>>
@@ -282,7 +282,7 @@ class UnqualifiedId final : public Tree {
 public:
   UnqualifiedId() : Tree(NodeKind::UnqualifiedId) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::UnqualifiedId;
+    return N->getKind() == NodeKind::UnqualifiedId;
   }
 };
 
@@ -297,7 +297,7 @@ class IdExpression final : public Expression {
 public:
   IdExpression() : Expression(NodeKind::IdExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::IdExpression;
+    return N->getKind() == NodeKind::IdExpression;
   }
   NestedNameSpecifier *getQualifier();
   Leaf *getTemplateKeyword();
@@ -310,7 +310,7 @@ class UnknownExpression final : public Expression {
 public:
   UnknownExpression() : Expression(NodeKind::UnknownExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::UnknownExpression;
+    return N->getKind() == NodeKind::UnknownExpression;
   }
 };
 
@@ -319,7 +319,7 @@ class ThisExpression final : public Expression {
 public:
   ThisExpression() : Expression(NodeKind::ThisExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::ThisExpression;
+    return N->getKind() == NodeKind::ThisExpression;
   }
   Leaf *getThisKeyword();
 };
@@ -333,7 +333,7 @@ class CallArguments final : public List {
 public:
   CallArguments() : List(NodeKind::CallArguments) {}
   static bool classof(const Node *N) {
-    return N->kind() <= NodeKind::CallArguments;
+    return N->getKind() <= NodeKind::CallArguments;
   }
   std::vector<Expression *> getArguments();
   std::vector<List::ElementAndDelimiter<Expression>> getArgumentsAndCommas();
@@ -347,7 +347,7 @@ class CallExpression final : public Expression {
 public:
   CallExpression() : Expression(NodeKind::CallExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::CallExpression;
+    return N->getKind() == NodeKind::CallExpression;
   }
   Expression *getCallee();
   Leaf *getOpenParen();
@@ -361,7 +361,7 @@ class ParenExpression final : public Expression {
 public:
   ParenExpression() : Expression(NodeKind::ParenExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::ParenExpression;
+    return N->getKind() == NodeKind::ParenExpression;
   }
   Leaf *getOpenParen();
   Expression *getSubExpression();
@@ -380,7 +380,7 @@ class MemberExpression final : public Expression {
 public:
   MemberExpression() : Expression(NodeKind::MemberExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::MemberExpression;
+    return N->getKind() == NodeKind::MemberExpression;
   }
   Expression *getObject();
   Leaf *getAccessToken();
@@ -393,16 +393,16 @@ class LiteralExpression : public Expression {
 public:
   LiteralExpression(NodeKind K) : Expression(K) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::IntegerLiteralExpression ||
-           N->kind() == NodeKind::CharacterLiteralExpression ||
-           N->kind() == NodeKind::FloatingLiteralExpression ||
-           N->kind() == NodeKind::StringLiteralExpression ||
-           N->kind() == NodeKind::BoolLiteralExpression ||
-           N->kind() == NodeKind::CxxNullPtrExpression ||
-           N->kind() == NodeKind::IntegerUserDefinedLiteralExpression ||
-           N->kind() == NodeKind::FloatUserDefinedLiteralExpression ||
-           N->kind() == NodeKind::CharUserDefinedLiteralExpression ||
-           N->kind() == NodeKind::StringUserDefinedLiteralExpression;
+    return N->getKind() == NodeKind::IntegerLiteralExpression ||
+           N->getKind() == NodeKind::CharacterLiteralExpression ||
+           N->getKind() == NodeKind::FloatingLiteralExpression ||
+           N->getKind() == NodeKind::StringLiteralExpression ||
+           N->getKind() == NodeKind::BoolLiteralExpression ||
+           N->getKind() == NodeKind::CxxNullPtrExpression ||
+           N->getKind() == NodeKind::IntegerUserDefinedLiteralExpression ||
+           N->getKind() == NodeKind::FloatUserDefinedLiteralExpression ||
+           N->getKind() == NodeKind::CharUserDefinedLiteralExpression ||
+           N->getKind() == NodeKind::StringUserDefinedLiteralExpression;
   }
   Leaf *getLiteralToken();
 };
@@ -413,7 +413,7 @@ public:
   IntegerLiteralExpression()
       : LiteralExpression(NodeKind::IntegerLiteralExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::IntegerLiteralExpression;
+    return N->getKind() == NodeKind::IntegerLiteralExpression;
   }
 };
 
@@ -423,7 +423,7 @@ public:
   CharacterLiteralExpression()
       : LiteralExpression(NodeKind::CharacterLiteralExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::CharacterLiteralExpression;
+    return N->getKind() == NodeKind::CharacterLiteralExpression;
   }
 };
 
@@ -433,7 +433,7 @@ public:
   FloatingLiteralExpression()
       : LiteralExpression(NodeKind::FloatingLiteralExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::FloatingLiteralExpression;
+    return N->getKind() == NodeKind::FloatingLiteralExpression;
   }
 };
 
@@ -443,7 +443,7 @@ public:
   StringLiteralExpression()
       : LiteralExpression(NodeKind::StringLiteralExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::StringLiteralExpression;
+    return N->getKind() == NodeKind::StringLiteralExpression;
   }
 };
 
@@ -453,7 +453,7 @@ public:
   BoolLiteralExpression()
       : LiteralExpression(NodeKind::BoolLiteralExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::BoolLiteralExpression;
+    return N->getKind() == NodeKind::BoolLiteralExpression;
   }
 };
 
@@ -462,7 +462,7 @@ class CxxNullPtrExpression final : public LiteralExpression {
 public:
   CxxNullPtrExpression() : LiteralExpression(NodeKind::CxxNullPtrExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::CxxNullPtrExpression;
+    return N->getKind() == NodeKind::CxxNullPtrExpression;
   }
 };
 
@@ -476,10 +476,10 @@ class UserDefinedLiteralExpression : public LiteralExpression {
 public:
   UserDefinedLiteralExpression(NodeKind K) : LiteralExpression(K) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::IntegerUserDefinedLiteralExpression ||
-           N->kind() == NodeKind::FloatUserDefinedLiteralExpression ||
-           N->kind() == NodeKind::CharUserDefinedLiteralExpression ||
-           N->kind() == NodeKind::StringUserDefinedLiteralExpression;
+    return N->getKind() == NodeKind::IntegerUserDefinedLiteralExpression ||
+           N->getKind() == NodeKind::FloatUserDefinedLiteralExpression ||
+           N->getKind() == NodeKind::CharUserDefinedLiteralExpression ||
+           N->getKind() == NodeKind::StringUserDefinedLiteralExpression;
   }
 };
 
@@ -491,7 +491,7 @@ public:
       : UserDefinedLiteralExpression(
             NodeKind::IntegerUserDefinedLiteralExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::IntegerUserDefinedLiteralExpression;
+    return N->getKind() == NodeKind::IntegerUserDefinedLiteralExpression;
   }
 };
 
@@ -503,7 +503,7 @@ public:
       : UserDefinedLiteralExpression(
             NodeKind::FloatUserDefinedLiteralExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::FloatUserDefinedLiteralExpression;
+    return N->getKind() == NodeKind::FloatUserDefinedLiteralExpression;
   }
 };
 
@@ -515,7 +515,7 @@ public:
       : UserDefinedLiteralExpression(
             NodeKind::CharUserDefinedLiteralExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::CharUserDefinedLiteralExpression;
+    return N->getKind() == NodeKind::CharUserDefinedLiteralExpression;
   }
 };
 
@@ -527,7 +527,7 @@ public:
       : UserDefinedLiteralExpression(
             NodeKind::StringUserDefinedLiteralExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::StringUserDefinedLiteralExpression;
+    return N->getKind() == NodeKind::StringUserDefinedLiteralExpression;
   }
 };
 
@@ -536,8 +536,8 @@ class UnaryOperatorExpression : public Expression {
 public:
   UnaryOperatorExpression(NodeKind K) : Expression(K) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::PrefixUnaryOperatorExpression ||
-           N->kind() == NodeKind::PostfixUnaryOperatorExpression;
+    return N->getKind() == NodeKind::PrefixUnaryOperatorExpression ||
+           N->getKind() == NodeKind::PostfixUnaryOperatorExpression;
   }
   Leaf *getOperatorToken();
   Expression *getOperand();
@@ -557,7 +557,7 @@ public:
   PrefixUnaryOperatorExpression()
       : UnaryOperatorExpression(NodeKind::PrefixUnaryOperatorExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::PrefixUnaryOperatorExpression;
+    return N->getKind() == NodeKind::PrefixUnaryOperatorExpression;
   }
 };
 
@@ -571,7 +571,7 @@ public:
   PostfixUnaryOperatorExpression()
       : UnaryOperatorExpression(NodeKind::PostfixUnaryOperatorExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::PostfixUnaryOperatorExpression;
+    return N->getKind() == NodeKind::PostfixUnaryOperatorExpression;
   }
 };
 
@@ -586,7 +586,7 @@ class BinaryOperatorExpression final : public Expression {
 public:
   BinaryOperatorExpression() : Expression(NodeKind::BinaryOperatorExpression) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::BinaryOperatorExpression;
+    return N->getKind() == NodeKind::BinaryOperatorExpression;
   }
   Expression *getLhs();
   Leaf *getOperatorToken();
@@ -599,8 +599,8 @@ class Statement : public Tree {
 public:
   Statement(NodeKind K) : Tree(K) {}
   static bool classof(const Node *N) {
-    return NodeKind::UnknownStatement <= N->kind() &&
-           N->kind() <= NodeKind::CompoundStatement;
+    return NodeKind::UnknownStatement <= N->getKind() &&
+           N->getKind() <= NodeKind::CompoundStatement;
   }
 };
 
@@ -610,7 +610,7 @@ class UnknownStatement final : public Statement {
 public:
   UnknownStatement() : Statement(NodeKind::UnknownStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::UnknownStatement;
+    return N->getKind() == NodeKind::UnknownStatement;
   }
 };
 
@@ -619,7 +619,7 @@ class DeclarationStatement final : public Statement {
 public:
   DeclarationStatement() : Statement(NodeKind::DeclarationStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::DeclarationStatement;
+    return N->getKind() == NodeKind::DeclarationStatement;
   }
 };
 
@@ -628,7 +628,7 @@ class EmptyStatement final : public Statement {
 public:
   EmptyStatement() : Statement(NodeKind::EmptyStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::EmptyStatement;
+    return N->getKind() == NodeKind::EmptyStatement;
   }
 };
 
@@ -637,7 +637,7 @@ class SwitchStatement final : public Statement {
 public:
   SwitchStatement() : Statement(NodeKind::SwitchStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::SwitchStatement;
+    return N->getKind() == NodeKind::SwitchStatement;
   }
   Leaf *getSwitchKeyword();
   Statement *getBody();
@@ -648,7 +648,7 @@ class CaseStatement final : public Statement {
 public:
   CaseStatement() : Statement(NodeKind::CaseStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::CaseStatement;
+    return N->getKind() == NodeKind::CaseStatement;
   }
   Leaf *getCaseKeyword();
   Expression *getCaseValue();
@@ -660,7 +660,7 @@ class DefaultStatement final : public Statement {
 public:
   DefaultStatement() : Statement(NodeKind::DefaultStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::DefaultStatement;
+    return N->getKind() == NodeKind::DefaultStatement;
   }
   Leaf *getDefaultKeyword();
   Statement *getBody();
@@ -672,7 +672,7 @@ class IfStatement final : public Statement {
 public:
   IfStatement() : Statement(NodeKind::IfStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::IfStatement;
+    return N->getKind() == NodeKind::IfStatement;
   }
   Leaf *getIfKeyword();
   Statement *getThenStatement();
@@ -685,7 +685,7 @@ class ForStatement final : public Statement {
 public:
   ForStatement() : Statement(NodeKind::ForStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::ForStatement;
+    return N->getKind() == NodeKind::ForStatement;
   }
   Leaf *getForKeyword();
   Statement *getBody();
@@ -696,7 +696,7 @@ class WhileStatement final : public Statement {
 public:
   WhileStatement() : Statement(NodeKind::WhileStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::WhileStatement;
+    return N->getKind() == NodeKind::WhileStatement;
   }
   Leaf *getWhileKeyword();
   Statement *getBody();
@@ -707,7 +707,7 @@ class ContinueStatement final : public Statement {
 public:
   ContinueStatement() : Statement(NodeKind::ContinueStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::ContinueStatement;
+    return N->getKind() == NodeKind::ContinueStatement;
   }
   Leaf *getContinueKeyword();
 };
@@ -717,7 +717,7 @@ class BreakStatement final : public Statement {
 public:
   BreakStatement() : Statement(NodeKind::BreakStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::BreakStatement;
+    return N->getKind() == NodeKind::BreakStatement;
   }
   Leaf *getBreakKeyword();
 };
@@ -728,7 +728,7 @@ class ReturnStatement final : public Statement {
 public:
   ReturnStatement() : Statement(NodeKind::ReturnStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::ReturnStatement;
+    return N->getKind() == NodeKind::ReturnStatement;
   }
   Leaf *getReturnKeyword();
   Expression *getReturnValue();
@@ -739,7 +739,7 @@ class RangeBasedForStatement final : public Statement {
 public:
   RangeBasedForStatement() : Statement(NodeKind::RangeBasedForStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::RangeBasedForStatement;
+    return N->getKind() == NodeKind::RangeBasedForStatement;
   }
   Leaf *getForKeyword();
   Statement *getBody();
@@ -751,7 +751,7 @@ class ExpressionStatement final : public Statement {
 public:
   ExpressionStatement() : Statement(NodeKind::ExpressionStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::ExpressionStatement;
+    return N->getKind() == NodeKind::ExpressionStatement;
   }
   Expression *getExpression();
 };
@@ -761,7 +761,7 @@ class CompoundStatement final : public Statement {
 public:
   CompoundStatement() : Statement(NodeKind::CompoundStatement) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::CompoundStatement;
+    return N->getKind() == NodeKind::CompoundStatement;
   }
   Leaf *getLbrace();
   /// FIXME: use custom iterator instead of 'vector'.
@@ -777,8 +777,8 @@ class Declaration : public Tree {
 public:
   Declaration(NodeKind K) : Tree(K) {}
   static bool classof(const Node *N) {
-    return NodeKind::UnknownDeclaration <= N->kind() &&
-           N->kind() <= NodeKind::TypeAliasDeclaration;
+    return NodeKind::UnknownDeclaration <= N->getKind() &&
+           N->getKind() <= NodeKind::TypeAliasDeclaration;
   }
 };
 
@@ -787,7 +787,7 @@ class UnknownDeclaration final : public Declaration {
 public:
   UnknownDeclaration() : Declaration(NodeKind::UnknownDeclaration) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::UnknownDeclaration;
+    return N->getKind() == NodeKind::UnknownDeclaration;
   }
 };
 
@@ -796,7 +796,7 @@ class EmptyDeclaration final : public Declaration {
 public:
   EmptyDeclaration() : Declaration(NodeKind::EmptyDeclaration) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::EmptyDeclaration;
+    return N->getKind() == NodeKind::EmptyDeclaration;
   }
 };
 
@@ -806,7 +806,7 @@ class StaticAssertDeclaration final : public Declaration {
 public:
   StaticAssertDeclaration() : Declaration(NodeKind::StaticAssertDeclaration) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::StaticAssertDeclaration;
+    return N->getKind() == NodeKind::StaticAssertDeclaration;
   }
   Expression *getCondition();
   Expression *getMessage();
@@ -819,7 +819,7 @@ public:
   LinkageSpecificationDeclaration()
       : Declaration(NodeKind::LinkageSpecificationDeclaration) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::LinkageSpecificationDeclaration;
+    return N->getKind() == NodeKind::LinkageSpecificationDeclaration;
   }
 };
 
@@ -830,7 +830,7 @@ class SimpleDeclaration final : public Declaration {
 public:
   SimpleDeclaration() : Declaration(NodeKind::SimpleDeclaration) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::SimpleDeclaration;
+    return N->getKind() == NodeKind::SimpleDeclaration;
   }
   /// FIXME: use custom iterator instead of 'vector'.
   std::vector<SimpleDeclarator *> getDeclarators();
@@ -841,7 +841,7 @@ class TemplateDeclaration final : public Declaration {
 public:
   TemplateDeclaration() : Declaration(NodeKind::TemplateDeclaration) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::TemplateDeclaration;
+    return N->getKind() == NodeKind::TemplateDeclaration;
   }
   Leaf *getTemplateKeyword();
   Declaration *getDeclaration();
@@ -857,7 +857,7 @@ public:
   ExplicitTemplateInstantiation()
       : Declaration(NodeKind::ExplicitTemplateInstantiation) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::ExplicitTemplateInstantiation;
+    return N->getKind() == NodeKind::ExplicitTemplateInstantiation;
   }
   Leaf *getTemplateKeyword();
   Leaf *getExternKeyword();
@@ -869,7 +869,7 @@ class NamespaceDefinition final : public Declaration {
 public:
   NamespaceDefinition() : Declaration(NodeKind::NamespaceDefinition) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::NamespaceDefinition;
+    return N->getKind() == NodeKind::NamespaceDefinition;
   }
 };
 
@@ -879,7 +879,7 @@ public:
   NamespaceAliasDefinition()
       : Declaration(NodeKind::NamespaceAliasDefinition) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::NamespaceAliasDefinition;
+    return N->getKind() == NodeKind::NamespaceAliasDefinition;
   }
 };
 
@@ -888,7 +888,7 @@ class UsingNamespaceDirective final : public Declaration {
 public:
   UsingNamespaceDirective() : Declaration(NodeKind::UsingNamespaceDirective) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::UsingNamespaceDirective;
+    return N->getKind() == NodeKind::UsingNamespaceDirective;
   }
 };
 
@@ -898,7 +898,7 @@ class UsingDeclaration final : public Declaration {
 public:
   UsingDeclaration() : Declaration(NodeKind::UsingDeclaration) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::UsingDeclaration;
+    return N->getKind() == NodeKind::UsingDeclaration;
   }
 };
 
@@ -907,7 +907,7 @@ class TypeAliasDeclaration final : public Declaration {
 public:
   TypeAliasDeclaration() : Declaration(NodeKind::TypeAliasDeclaration) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::TypeAliasDeclaration;
+    return N->getKind() == NodeKind::TypeAliasDeclaration;
   }
 };
 
@@ -927,8 +927,8 @@ class Declarator : public Tree {
 public:
   Declarator(NodeKind K) : Tree(K) {}
   static bool classof(const Node *N) {
-    return NodeKind::SimpleDeclarator <= N->kind() &&
-           N->kind() <= NodeKind::ParenDeclarator;
+    return NodeKind::SimpleDeclarator <= N->getKind() &&
+           N->getKind() <= NodeKind::ParenDeclarator;
   }
 };
 
@@ -938,7 +938,7 @@ class SimpleDeclarator final : public Declarator {
 public:
   SimpleDeclarator() : Declarator(NodeKind::SimpleDeclarator) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::SimpleDeclarator;
+    return N->getKind() == NodeKind::SimpleDeclarator;
   }
 };
 
@@ -949,7 +949,7 @@ class ParenDeclarator final : public Declarator {
 public:
   ParenDeclarator() : Declarator(NodeKind::ParenDeclarator) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::ParenDeclarator;
+    return N->getKind() == NodeKind::ParenDeclarator;
   }
   Leaf *getLparen();
   Leaf *getRparen();
@@ -963,7 +963,7 @@ class ArraySubscript final : public Tree {
 public:
   ArraySubscript() : Tree(NodeKind::ArraySubscript) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::ArraySubscript;
+    return N->getKind() == NodeKind::ArraySubscript;
   }
   // TODO: add an accessor for the "static" keyword.
   Leaf *getLbracket();
@@ -977,7 +977,7 @@ class TrailingReturnType final : public Tree {
 public:
   TrailingReturnType() : Tree(NodeKind::TrailingReturnType) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::TrailingReturnType;
+    return N->getKind() == NodeKind::TrailingReturnType;
   }
   // TODO: add accessors for specifiers.
   Leaf *getArrowToken();
@@ -992,7 +992,7 @@ class ParameterDeclarationList final : public List {
 public:
   ParameterDeclarationList() : List(NodeKind::ParameterDeclarationList) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::ParameterDeclarationList;
+    return N->getKind() == NodeKind::ParameterDeclarationList;
   }
   std::vector<SimpleDeclaration *> getParameterDeclarations();
   std::vector<List::ElementAndDelimiter<syntax::SimpleDeclaration>>
@@ -1014,7 +1014,7 @@ class ParametersAndQualifiers final : public Tree {
 public:
   ParametersAndQualifiers() : Tree(NodeKind::ParametersAndQualifiers) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::ParametersAndQualifiers;
+    return N->getKind() == NodeKind::ParametersAndQualifiers;
   }
   Leaf *getLparen();
   ParameterDeclarationList *getParameters();
@@ -1028,7 +1028,7 @@ class MemberPointer final : public Tree {
 public:
   MemberPointer() : Tree(NodeKind::MemberPointer) {}
   static bool classof(const Node *N) {
-    return N->kind() == NodeKind::MemberPointer;
+    return N->getKind() == NodeKind::MemberPointer;
   }
 };
 

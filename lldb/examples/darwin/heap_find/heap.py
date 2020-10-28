@@ -129,6 +129,7 @@ typedef struct malloc_zone_t {
     void *reserved1[12];
     struct malloc_introspection_t	*introspect;
 } malloc_zone_t;
+kern_return_t malloc_get_all_zones(task_t task, memory_reader_t reader, vm_address_t **addresses, unsigned *count);
 memory_reader_t task_peek = [](task_t task, vm_address_t remote_address, vm_size_t size, void **local_memory) -> kern_return_t {
     *local_memory = (void*) remote_address;
     return KERN_SUCCESS;

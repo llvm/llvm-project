@@ -88,7 +88,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_MUL, G_AND, G_OR, G_XOR})
       .legalFor({s32})
-      .minScalar(0, s32);
+      .clampScalar(0, s32, s32);
 
   if (ST.hasNEON())
     getActionDefinitionsBuilder({G_ADD, G_SUB})

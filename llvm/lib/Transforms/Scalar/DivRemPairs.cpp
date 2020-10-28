@@ -151,8 +151,8 @@ static DivRemWorklistTy getWorklist(Function &F) {
   // rare than division.
   for (auto &RemPair : RemMap) {
     // Find the matching division instruction from the division map.
-    Instruction *DivInst = DivMap[RemPair.first];
-    if (!DivInst)
+    auto It = DivMap.find(RemPair.first);
+    if (It == DivMap.end())
       continue;
 
     // We have a matching pair of div/rem instructions.
@@ -160,7 +160,7 @@ static DivRemWorklistTy getWorklist(Function &F) {
     Instruction *RemInst = RemPair.second;
 
     // Place it in the worklist.
-    Worklist.emplace_back(DivInst, RemInst);
+    Worklist.emplace_back(It->second, RemInst);
   }
 
   return Worklist;

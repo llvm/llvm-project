@@ -34,7 +34,8 @@ public:
 
   ~ThinLtoInstrumentationLayer() override;
 
-  void emit(MaterializationResponsibility R, ThreadSafeModule TSM) override;
+  void emit(std::unique_ptr<MaterializationResponsibility> R,
+            ThreadSafeModule TSM) override;
 
   unsigned reserveDiscoveryFlags(unsigned Count);
   void registerDiscoveryFlagOwners(std::vector<GlobalValue::GUID> Guids,

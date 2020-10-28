@@ -30,6 +30,8 @@ declare <3 x float> @external_v3f32_func_void() #0
 declare <5 x float> @external_v5f32_func_void() #0
 declare <2 x double> @external_v2f64_func_void() #0
 
+declare <2 x i24> @external_v2i24_func_void() #0
+
 declare <2 x i32> @external_v2i32_func_void() #0
 declare <3 x i32> @external_v3i32_func_void() #0
 declare <4 x i32> @external_v4i32_func_void() #0
@@ -247,6 +249,18 @@ define amdgpu_kernel void @test_call_external_v2f16_func_void() #0 {
 define amdgpu_kernel void @test_call_external_v4f16_func_void() #0 {
   %val = call <4 x half> @external_v4f16_func_void()
   store volatile <4 x half> %val, <4 x half> addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_call_external_v2i24_func_void:
+; GCN: s_swappc_b64
+; GCN: v_add_{{i|u}}32_e32 v0, {{(vcc, )?}}v0, v1
+define amdgpu_kernel void @test_call_external_v2i24_func_void() #0 {
+  %val = call <2 x i24> @external_v2i24_func_void()
+  %elt0 = extractelement <2 x i24> %val, i32 0
+  %elt1 = extractelement <2 x i24> %val, i32 1
+  %add = add i24 %elt0, %elt1
+  store volatile i24 %add, i24 addrspace(1)* undef
   ret void
 }
 

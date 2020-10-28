@@ -1,5 +1,5 @@
-; RUN: opt -loop-unroll-and-jam -allow-unroll-and-jam -unroll-runtime -unroll-partial-threshold=60 < %s -S | FileCheck %s
-; RUN: opt -aa-pipeline=tbaa,basic-aa -passes='loop-unroll-and-jam' -allow-unroll-and-jam -unroll-runtime -unroll-partial-threshold=60 < %s -S | FileCheck %s
+; RUN: opt -loop-unroll-and-jam -unroll-runtime -unroll-partial-threshold=60 < %s -S | FileCheck %s
+; RUN: opt -aa-pipeline=tbaa,basic-aa -passes='loop-unroll-and-jam' -unroll-runtime -unroll-partial-threshold=60 < %s -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

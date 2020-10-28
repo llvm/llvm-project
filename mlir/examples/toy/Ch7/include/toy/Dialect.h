@@ -50,6 +50,9 @@ public:
   static llvm::StringRef getDialectNamespace() { return "toy"; }
 };
 
+} // end namespace toy
+} // end namespace mlir
+
 //===----------------------------------------------------------------------===//
 // Toy Operations
 //===----------------------------------------------------------------------===//
@@ -58,6 +61,9 @@ public:
 /// toy operations.
 #define GET_OP_CLASSES
 #include "toy/Ops.h.inc"
+
+namespace mlir {
+namespace toy {
 
 //===----------------------------------------------------------------------===//
 // Toy Types

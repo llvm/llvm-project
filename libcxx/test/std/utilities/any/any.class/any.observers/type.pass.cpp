@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// XFAIL: -fno-rtti
+// XFAIL: no-rtti
 
 // <any>
 

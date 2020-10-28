@@ -48,8 +48,8 @@ struct MemcpyContext : public BenchmarkRunner {
 
   BenchmarkResult benchmark(const BenchmarkOptions &Options,
                             StringRef FunctionName, size_t Size) override {
-    FunctionPrototype Function =
-        StringSwitch<FunctionPrototype>(FunctionName).Case("memcpy", &::memcpy);
+    FunctionPrototype Function = StringSwitch<FunctionPrototype>(FunctionName)
+                                     .Case("memcpy", &__llvm_libc::memcpy);
     return llvm::libc_benchmarks::benchmark(
         Options, PP, [this, Function, Size](ParameterType p) {
           Function(DstBuffer + p.DstOffset, SrcBuffer + p.SrcOffset, Size);

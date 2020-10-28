@@ -5,7 +5,10 @@
 ; after the frame setup.)
 
 ; CHECK: stp     x29, x30, [sp, #-32]!
+; CHECK-NEXT: .seh_save_fplr_x 32
 ; CHECK-NEXT: mov     x29, sp
+; CHECK-NEXT: .seh_set_fp
+; CHECK-NEXT: .seh_endprologue
 ; CHECK-NEXT: mov     x1, #-2
 ; CHECK-NEXT: stur    x1, [x29, #16]
 ; CHECK-NEXT: cbz     w0, .LBB0_2

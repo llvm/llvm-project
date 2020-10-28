@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/StackProtector.h"
+#include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -49,11 +50,13 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -71,6 +74,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <string>
@@ -111,7 +115,8 @@ static void reportTranslationError(MachineFunction &MF,
     ORE.emit(R);
 }
 
-IRTranslator::IRTranslator() : MachineFunctionPass(ID) { }
+IRTranslator::IRTranslator(CodeGenOpt::Level optlevel)
+    : MachineFunctionPass(ID), OptLevel(optlevel) {}
 
 #ifndef NDEBUG
 namespace {
@@ -155,6 +160,8 @@ void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<StackProtector>();
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
+  if (OptLevel != CodeGenOpt::None)
+    AU.addRequired<BranchProbabilityInfoWrapperPass>();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -360,28 +367,276 @@ bool IRTranslator::translateRet(const User &U, MachineIRBuilder &MIRBuilder) {
   return CLI->lowerReturn(MIRBuilder, Ret, VRegs, SwiftErrorVReg);
 }
 
-bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
-  const BranchInst &BrInst = cast<BranchInst>(U);
-  unsigned Succ = 0;
-  if (!BrInst.isUnconditional()) {
-    // We want a G_BRCOND to the true BB followed by an unconditional branch.
-    Register Tst = getOrCreateVReg(*BrInst.getCondition());
-    const BasicBlock &TrueTgt = *cast<BasicBlock>(BrInst.getSuccessor(Succ++));
-    MachineBasicBlock &TrueBB = getMBB(TrueTgt);
-    MIRBuilder.buildBrCond(Tst, TrueBB);
+void IRTranslator::emitBranchForMergedCondition(
+    const Value *Cond, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
+    MachineBasicBlock *CurBB, MachineBasicBlock *SwitchBB,
+    BranchProbability TProb, BranchProbability FProb, bool InvertCond) {
+  // If the leaf of the tree is a comparison, merge the condition into
+  // the caseblock.
+  if (const CmpInst *BOp = dyn_cast<CmpInst>(Cond)) {
+    CmpInst::Predicate Condition;
+    if (const ICmpInst *IC = dyn_cast<ICmpInst>(Cond)) {
+      Condition = InvertCond ? IC->getInversePredicate() : IC->getPredicate();
+    } else {
+      const FCmpInst *FC = cast<FCmpInst>(Cond);
+      Condition = InvertCond ? FC->getInversePredicate() : FC->getPredicate();
+    }
+
+    SwitchCG::CaseBlock CB(Condition, false, BOp->getOperand(0),
+                           BOp->getOperand(1), nullptr, TBB, FBB, CurBB,
+                           CurBuilder->getDebugLoc(), TProb, FProb);
+    SL->SwitchCases.push_back(CB);
+    return;
   }
 
-  const BasicBlock &BrTgt = *cast<BasicBlock>(BrInst.getSuccessor(Succ));
-  MachineBasicBlock &TgtBB = getMBB(BrTgt);
-  MachineBasicBlock &CurBB = MIRBuilder.getMBB();
+  // Create a CaseBlock record representing this branch.
+  CmpInst::Predicate Pred = InvertCond ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ;
+  SwitchCG::CaseBlock CB(
+      Pred, false, Cond, ConstantInt::getTrue(MF->getFunction().getContext()),
+      nullptr, TBB, FBB, CurBB, CurBuilder->getDebugLoc(), TProb, FProb);
+  SL->SwitchCases.push_back(CB);
+}
 
-  // If the unconditional target is the layout successor, fallthrough.
-  if (!CurBB.isLayoutSuccessor(&TgtBB))
-    MIRBuilder.buildBr(TgtBB);
+static bool isValInBlock(const Value *V, const BasicBlock *BB) {
+  if (const Instruction *I = dyn_cast<Instruction>(V))
+    return I->getParent() == BB;
+  return true;
+}
 
-  // Link successors.
-  for (const BasicBlock *Succ : successors(&BrInst))
-    CurBB.addSuccessor(&getMBB(*Succ));
+void IRTranslator::findMergedConditions(
+    const Value *Cond, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
+    MachineBasicBlock *CurBB, MachineBasicBlock *SwitchBB,
+    Instruction::BinaryOps Opc, BranchProbability TProb,
+    BranchProbability FProb, bool InvertCond) {
+  using namespace PatternMatch;
+  assert((Opc == Instruction::And || Opc == Instruction::Or) &&
+         "Expected Opc to be AND/OR");
+  // Skip over not part of the tree and remember to invert op and operands at
+  // next level.
+  Value *NotCond;
+  if (match(Cond, m_OneUse(m_Not(m_Value(NotCond)))) &&
+      isValInBlock(NotCond, CurBB->getBasicBlock())) {
+    findMergedConditions(NotCond, TBB, FBB, CurBB, SwitchBB, Opc, TProb, FProb,
+                         !InvertCond);
+    return;
+  }
+
+  const Instruction *BOp = dyn_cast<Instruction>(Cond);
+  // Compute the effective opcode for Cond, taking into account whether it needs
+  // to be inverted, e.g.
+  //   and (not (or A, B)), C
+  // gets lowered as
+  //   and (and (not A, not B), C)
+  unsigned BOpc = 0;
+  if (BOp) {
+    BOpc = BOp->getOpcode();
+    if (InvertCond) {
+      if (BOpc == Instruction::And)
+        BOpc = Instruction::Or;
+      else if (BOpc == Instruction::Or)
+        BOpc = Instruction::And;
+    }
+  }
+
+  // If this node is not part of the or/and tree, emit it as a branch.
+  if (!BOp || !(isa<BinaryOperator>(BOp) || isa<CmpInst>(BOp)) ||
+      BOpc != static_cast<unsigned>(Opc) || !BOp->hasOneUse() ||
+      BOp->getParent() != CurBB->getBasicBlock() ||
+      !isValInBlock(BOp->getOperand(0), CurBB->getBasicBlock()) ||
+      !isValInBlock(BOp->getOperand(1), CurBB->getBasicBlock())) {
+    emitBranchForMergedCondition(Cond, TBB, FBB, CurBB, SwitchBB, TProb, FProb,
+                                 InvertCond);
+    return;
+  }
+
+  //  Create TmpBB after CurBB.
+  MachineFunction::iterator BBI(CurBB);
+  MachineBasicBlock *TmpBB =
+      MF->CreateMachineBasicBlock(CurBB->getBasicBlock());
+  CurBB->getParent()->insert(++BBI, TmpBB);
+
+  if (Opc == Instruction::Or) {
+    // Codegen X | Y as:
+    // BB1:
+    //   jmp_if_X TBB
+    //   jmp TmpBB
+    // TmpBB:
+    //   jmp_if_Y TBB
+    //   jmp FBB
+    //
+
+    // We have flexibility in setting Prob for BB1 and Prob for TmpBB.
+    // The requirement is that
+    //   TrueProb for BB1 + (FalseProb for BB1 * TrueProb for TmpBB)
+    //     = TrueProb for original BB.
+    // Assuming the original probabilities are A and B, one choice is to set
+    // BB1's probabilities to A/2 and A/2+B, and set TmpBB's probabilities to
+    // A/(1+B) and 2B/(1+B). This choice assumes that
+    //   TrueProb for BB1 == FalseProb for BB1 * TrueProb for TmpBB.
+    // Another choice is to assume TrueProb for BB1 equals to TrueProb for
+    // TmpBB, but the math is more complicated.
+
+    auto NewTrueProb = TProb / 2;
+    auto NewFalseProb = TProb / 2 + FProb;
+    // Emit the LHS condition.
+    findMergedConditions(BOp->getOperand(0), TBB, TmpBB, CurBB, SwitchBB, Opc,
+                         NewTrueProb, NewFalseProb, InvertCond);
+
+    // Normalize A/2 and B to get A/(1+B) and 2B/(1+B).
+    SmallVector<BranchProbability, 2> Probs{TProb / 2, FProb};
+    BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
+    // Emit the RHS condition into TmpBB.
+    findMergedConditions(BOp->getOperand(1), TBB, FBB, TmpBB, SwitchBB, Opc,
+                         Probs[0], Probs[1], InvertCond);
+  } else {
+    assert(Opc == Instruction::And && "Unknown merge op!");
+    // Codegen X & Y as:
+    // BB1:
+    //   jmp_if_X TmpBB
+    //   jmp FBB
+    // TmpBB:
+    //   jmp_if_Y TBB
+    //   jmp FBB
+    //
+    //  This requires creation of TmpBB after CurBB.
+
+    // We have flexibility in setting Prob for BB1 and Prob for TmpBB.
+    // The requirement is that
+    //   FalseProb for BB1 + (TrueProb for BB1 * FalseProb for TmpBB)
+    //     = FalseProb for original BB.
+    // Assuming the original probabilities are A and B, one choice is to set
+    // BB1's probabilities to A+B/2 and B/2, and set TmpBB's probabilities to
+    // 2A/(1+A) and B/(1+A). This choice assumes that FalseProb for BB1 ==
+    // TrueProb for BB1 * FalseProb for TmpBB.
+
+    auto NewTrueProb = TProb + FProb / 2;
+    auto NewFalseProb = FProb / 2;
+    // Emit the LHS condition.
+    findMergedConditions(BOp->getOperand(0), TmpBB, FBB, CurBB, SwitchBB, Opc,
+                         NewTrueProb, NewFalseProb, InvertCond);
+
+    // Normalize A and B/2 to get 2A/(1+A) and B/(1+A).
+    SmallVector<BranchProbability, 2> Probs{TProb, FProb / 2};
+    BranchProbability::normalizeProbabilities(Probs.begin(), Probs.end());
+    // Emit the RHS condition into TmpBB.
+    findMergedConditions(BOp->getOperand(1), TBB, FBB, TmpBB, SwitchBB, Opc,
+                         Probs[0], Probs[1], InvertCond);
+  }
+}
+
+bool IRTranslator::shouldEmitAsBranches(
+    const std::vector<SwitchCG::CaseBlock> &Cases) {
+  // For multiple cases, it's better to emit as branches.
+  if (Cases.size() != 2)
+    return true;
+
+  // If this is two comparisons of the same values or'd or and'd together, they
+  // will get folded into a single comparison, so don't emit two blocks.
+  if ((Cases[0].CmpLHS == Cases[1].CmpLHS &&
+       Cases[0].CmpRHS == Cases[1].CmpRHS) ||
+      (Cases[0].CmpRHS == Cases[1].CmpLHS &&
+       Cases[0].CmpLHS == Cases[1].CmpRHS)) {
+    return false;
+  }
+
+  // Handle: (X != null) | (Y != null) --> (X|Y) != 0
+  // Handle: (X == null) & (Y == null) --> (X|Y) == 0
+  if (Cases[0].CmpRHS == Cases[1].CmpRHS &&
+      Cases[0].PredInfo.Pred == Cases[1].PredInfo.Pred &&
+      isa<Constant>(Cases[0].CmpRHS) &&
+      cast<Constant>(Cases[0].CmpRHS)->isNullValue()) {
+    if (Cases[0].PredInfo.Pred == CmpInst::ICMP_EQ &&
+        Cases[0].TrueBB == Cases[1].ThisBB)
+      return false;
+    if (Cases[0].PredInfo.Pred == CmpInst::ICMP_NE &&
+        Cases[0].FalseBB == Cases[1].ThisBB)
+      return false;
+  }
+
+  return true;
+}
+
+bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
+  const BranchInst &BrInst = cast<BranchInst>(U);
+  auto &CurMBB = MIRBuilder.getMBB();
+  auto *Succ0MBB = &getMBB(*BrInst.getSuccessor(0));
+
+  if (BrInst.isUnconditional()) {
+    // If the unconditional target is the layout successor, fallthrough.
+    if (!CurMBB.isLayoutSuccessor(Succ0MBB))
+      MIRBuilder.buildBr(*Succ0MBB);
+
+    // Link successors.
+    for (const BasicBlock *Succ : successors(&BrInst))
+      CurMBB.addSuccessor(&getMBB(*Succ));
+    return true;
+  }
+
+  // If this condition is one of the special cases we handle, do special stuff
+  // now.
+  const Value *CondVal = BrInst.getCondition();
+  MachineBasicBlock *Succ1MBB = &getMBB(*BrInst.getSuccessor(1));
+
+  const auto &TLI = *MF->getSubtarget().getTargetLowering();
+
+  // If this is a series of conditions that are or'd or and'd together, emit
+  // this as a sequence of branches instead of setcc's with and/or operations.
+  // As long as jumps are not expensive (exceptions for multi-use logic ops,
+  // unpredictable branches, and vector extracts because those jumps are likely
+  // expensive for any target), this should improve performance.
+  // For example, instead of something like:
+  //     cmp A, B
+  //     C = seteq
+  //     cmp D, E
+  //     F = setle
+  //     or C, F
+  //     jnz foo
+  // Emit:
+  //     cmp A, B
+  //     je foo
+  //     cmp D, E
+  //     jle foo
+  using namespace PatternMatch;
+  if (const BinaryOperator *BOp = dyn_cast<BinaryOperator>(CondVal)) {
+    Instruction::BinaryOps Opcode = BOp->getOpcode();
+    Value *Vec, *BOp0 = BOp->getOperand(0), *BOp1 = BOp->getOperand(1);
+    if (!TLI.isJumpExpensive() && BOp->hasOneUse() &&
+        !BrInst.hasMetadata(LLVMContext::MD_unpredictable) &&
+        (Opcode == Instruction::And || Opcode == Instruction::Or) &&
+        !(match(BOp0, m_ExtractElt(m_Value(Vec), m_Value())) &&
+          match(BOp1, m_ExtractElt(m_Specific(Vec), m_Value())))) {
+      findMergedConditions(BOp, Succ0MBB, Succ1MBB, &CurMBB, &CurMBB, Opcode,
+                           getEdgeProbability(&CurMBB, Succ0MBB),
+                           getEdgeProbability(&CurMBB, Succ1MBB),
+                           /*InvertCond=*/false);
+      assert(SL->SwitchCases[0].ThisBB == &CurMBB && "Unexpected lowering!");
+
+      // Allow some cases to be rejected.
+      if (shouldEmitAsBranches(SL->SwitchCases)) {
+        // Emit the branch for this block.
+        emitSwitchCase(SL->SwitchCases[0], &CurMBB, *CurBuilder);
+        SL->SwitchCases.erase(SL->SwitchCases.begin());
+        return true;
+      }
+
+      // Okay, we decided not to do this, remove any inserted MBB's and clear
+      // SwitchCases.
+      for (unsigned I = 1, E = SL->SwitchCases.size(); I != E; ++I)
+        MF->erase(SL->SwitchCases[I].ThisBB);
+
+      SL->SwitchCases.clear();
+    }
+  }
+
+  // Create a CaseBlock record representing this branch.
+  SwitchCG::CaseBlock CB(CmpInst::ICMP_EQ, false, CondVal,
+                         ConstantInt::getTrue(MF->getFunction().getContext()),
+                         nullptr, Succ0MBB, Succ1MBB, &CurMBB,
+                         CurBuilder->getDebugLoc());
+
+  // Use emitSwitchCase to actually insert the fast branch sequence for this
+  // cond branch.
+  emitSwitchCase(CB, &CurMBB, *CurBuilder);
   return true;
 }
 
@@ -567,8 +822,23 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
   const LLT i1Ty = LLT::scalar(1);
   // Build the compare.
   if (!CB.CmpMHS) {
-    Register CondRHS = getOrCreateVReg(*CB.CmpRHS);
-    Cond = MIB.buildICmp(CB.PredInfo.Pred, i1Ty, CondLHS, CondRHS).getReg(0);
+    const auto *CI = dyn_cast<ConstantInt>(CB.CmpRHS);
+    // For conditional branch lowering, we might try to do something silly like
+    // emit an G_ICMP to compare an existing G_ICMP i1 result with true. If so,
+    // just re-use the existing condition vreg.
+    if (CI && CI->getZExtValue() == 1 &&
+        MRI->getType(CondLHS).getSizeInBits() == 1 &&
+        CB.PredInfo.Pred == CmpInst::ICMP_EQ) {
+      Cond = CondLHS;
+    } else {
+      Register CondRHS = getOrCreateVReg(*CB.CmpRHS);
+      if (CmpInst::isFPPredicate(CB.PredInfo.Pred))
+        Cond =
+            MIB.buildFCmp(CB.PredInfo.Pred, i1Ty, CondLHS, CondRHS).getReg(0);
+      else
+        Cond =
+            MIB.buildICmp(CB.PredInfo.Pred, i1Ty, CondLHS, CondRHS).getReg(0);
+    }
   } else {
     assert(CB.PredInfo.Pred == CmpInst::ICMP_SLE &&
            "Can only handle SLE ranges");
@@ -601,17 +871,8 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
     addSuccessorWithProb(CB.ThisBB, CB.FalseBB, CB.FalseProb);
   CB.ThisBB->normalizeSuccProbs();
 
-  //  if (SwitchBB->getBasicBlock() != CB.FalseBB->getBasicBlock())
-    addMachineCFGPred({SwitchBB->getBasicBlock(), CB.FalseBB->getBasicBlock()},
-                      CB.ThisBB);
-
-  // If the lhs block is the next block, invert the condition so that we can
-  // fall through to the lhs instead of the rhs block.
-  if (CB.TrueBB == CB.ThisBB->getNextNode()) {
-    std::swap(CB.TrueBB, CB.FalseBB);
-    auto True = MIB.buildConstant(i1Ty, 1);
-    Cond = MIB.buildXor(i1Ty, Cond, True).getReg(0);
-  }
+  addMachineCFGPred({SwitchBB->getBasicBlock(), CB.FalseBB->getBasicBlock()},
+                    CB.ThisBB);
 
   MIB.buildBrCond(Cond, *CB.TrueBB);
   MIB.buildBr(*CB.FalseBB);
@@ -2108,6 +2369,12 @@ bool IRTranslator::translateLandingPad(const User &U,
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL)
     .addSym(MF->addLandingPad(&MBB));
 
+  // If the unwinder does not preserve all registers, ensure that the
+  // function marks the clobbered registers as used.
+  const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
+  if (auto *RegMask = TRI.getCustomEHPadPreservedMask(*MF))
+    MF->getRegInfo().addPhysRegsUsedFromRegMask(RegMask);
+
   LLT Ty = getLLTForType(*LP.getType(), *DL);
   Register Undef = MRI->createGenericVirtualRegister(Ty);
   MIRBuilder.buildUndef(Undef);
@@ -2584,6 +2851,10 @@ void IRTranslator::finalizeBasicBlock() {
     emitJumpTable(JTCase.second, JTCase.second.MBB);
   }
   SL->JTCases.clear();
+
+  for (auto &SwCase : SL->SwitchCases)
+    emitSwitchCase(SwCase, &CurBuilder->getMBB(), *CurBuilder);
+  SL->SwitchCases.clear();
 }
 
 void IRTranslator::finalizeFunction() {
@@ -2645,14 +2916,21 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   MRI = &MF->getRegInfo();
   DL = &F.getParent()->getDataLayout();
   ORE = std::make_unique<OptimizationRemarkEmitter>(&F);
-  FuncInfo.MF = MF;
-  FuncInfo.BPI = nullptr;
-  const auto &TLI = *MF->getSubtarget().getTargetLowering();
   const TargetMachine &TM = MF->getTarget();
+  TM.resetTargetOptions(F);
+  EnableOpts = OptLevel != CodeGenOpt::None && !skipFunction(F);
+  FuncInfo.MF = MF;
+  if (EnableOpts)
+    FuncInfo.BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
+  else
+    FuncInfo.BPI = nullptr;
+
+  const auto &TLI = *MF->getSubtarget().getTargetLowering();
+
   SL = std::make_unique<GISelSwitchLowering>(this, FuncInfo);
   SL->init(TLI, TM, *DL);
 
-  EnableOpts = TM.getOptLevel() != CodeGenOpt::None && !skipFunction(F);
+
 
   assert(PendingPHIs.empty() && "stale PHIs");
 

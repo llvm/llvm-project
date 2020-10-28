@@ -805,8 +805,14 @@ spirv-vce-attribute ::= `#` `spv.vce` `<`
                             spirv-capability-list `,`
                             spirv-extensions-list `>`
 
+spirv-vendor-id ::= `AMD` | `NVIDIA` | ...
+spirv-device-type ::= `DiscreteGPU` | `IntegratedGPU` | `CPU` | ...
+spirv-device-id ::= integer-literal
+spirv-device-info ::= spirv-vendor-id (`:` spirv-device-type (`:` spirv-device-id)?)?
+
 spirv-target-env-attribute ::= `#` `spv.target_env` `<`
                                   spirv-vce-attribute,
+                                  (spirv-device-info `,`)?
                                   spirv-resource-limits `>`
 ```
 
@@ -827,6 +833,7 @@ For example,
 module attributes {
 spv.target_env = #spv.target_env<
     #spv.vce<v1.3, [Shader, GroupNonUniform], [SPV_KHR_8bit_storage]>,
+    ARM:IntegratedGPU,
     {
       max_compute_workgroup_invocations = 128 : i32,
       max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>

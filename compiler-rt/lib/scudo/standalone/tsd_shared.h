@@ -9,8 +9,16 @@
 #ifndef SCUDO_TSD_SHARED_H_
 #define SCUDO_TSD_SHARED_H_
 
-#include "linux.h" // for getAndroidTlsPtr()
 #include "tsd.h"
+
+#if SCUDO_HAS_PLATFORM_TLS_SLOT
+// This is a platform-provided header that needs to be on the include path when
+// Scudo is compiled. It must declare a function with the prototype:
+//   uintptr_t *getPlatformAllocatorTlsSlot()
+// that returns the address of a thread-local word of storage reserved for
+// Scudo, that must be zero-initialized in newly created threads.
+#include "scudo_platform_tls_slot.h"
+#endif
 
 namespace scudo {
 
@@ -18,7 +26,6 @@ template <class Allocator, u32 TSDsArraySize, u32 DefaultTSDCount>
 struct TSDRegistrySharedT {
   void initLinkerInitialized(Allocator *Instance) {
     Instance->initLinkerInitialized();
-    CHECK_EQ(pthread_key_create(&PThreadKey, nullptr), 0); // For non-TLS
     for (u32 I = 0; I < TSDsArraySize; I++)
       TSDs[I].initLinkerInitialized(Instance);
     const u32 NumberOfCPUs = getNumberOfCPUs();
@@ -31,10 +38,7 @@ struct TSDRegistrySharedT {
     initLinkerInitialized(Instance);
   }
 
-  void unmapTestOnly() {
-    setCurrentTSD(nullptr);
-    pthread_key_delete(PThreadKey);
-  }
+  void unmapTestOnly() { setCurrentTSD(nullptr); }
 
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance,
                                      UNUSED bool MinimalInit) {
@@ -75,31 +79,33 @@ struct TSDRegistrySharedT {
   bool setOption(Option O, sptr Value) {
     if (O == Option::MaxTSDsCount)
       return setNumberOfTSDs(static_cast<u32>(Value));
+    if (O == Option::ThreadDisableMemInit)
+      setDisableMemInit(Value);
     // Not supported by the TSD Registry, but not an error either.
     return true;
   }
 
+  bool getDisableMemInit() const { return *getTlsPtr() & 1; }
+
 private:
-  ALWAYS_INLINE void setCurrentTSD(TSD<Allocator> *CurrentTSD) {
-#if _BIONIC
-    *getAndroidTlsPtr() = reinterpret_cast<uptr>(CurrentTSD);
-#elif SCUDO_LINUX
-    ThreadTSD = CurrentTSD;
+  ALWAYS_INLINE uptr *getTlsPtr() const {
+#if SCUDO_HAS_PLATFORM_TLS_SLOT
+    return reinterpret_cast<uptr *>(getPlatformAllocatorTlsSlot());
 #else
-    CHECK_EQ(
-        pthread_setspecific(PThreadKey, reinterpret_cast<void *>(CurrentTSD)),
-        0);
+    static thread_local uptr ThreadTSD;
+    return &ThreadTSD;
 #endif
   }
 
+  static_assert(alignof(TSD<Allocator>) >= 2, "");
+
+  ALWAYS_INLINE void setCurrentTSD(TSD<Allocator> *CurrentTSD) {
+    *getTlsPtr() &= 1;
+    *getTlsPtr() |= reinterpret_cast<uptr>(CurrentTSD);
+  }
+
   ALWAYS_INLINE TSD<Allocator> *getCurrentTSD() {
-#if _BIONIC
-    return reinterpret_cast<TSD<Allocator> *>(*getAndroidTlsPtr());
-#elif SCUDO_LINUX
-    return ThreadTSD;
-#else
-    return reinterpret_cast<TSD<Allocator> *>(pthread_getspecific(PThreadKey));
-#endif
+    return reinterpret_cast<TSD<Allocator> *>(*getTlsPtr() & ~1ULL);
   }
 
   bool setNumberOfTSDs(u32 N) {
@@ -126,6 +132,11 @@ private:
         CoPrimes[NumberOfCoPrimes++] = I + 1;
     }
     return true;
+  }
+
+  void setDisableMemInit(bool B) {
+    *getTlsPtr() &= ~1ULL;
+    *getTlsPtr() |= B;
   }
 
   void initOnceMaybe(Allocator *Instance) {
@@ -186,7 +197,6 @@ private:
     return CurrentTSD;
   }
 
-  pthread_key_t PThreadKey;
   atomic_u32 CurrentIndex;
   u32 NumberOfTSDs;
   u32 NumberOfCoPrimes;
@@ -195,16 +205,7 @@ private:
   HybridMutex Mutex;
   HybridMutex MutexTSDs;
   TSD<Allocator> TSDs[TSDsArraySize];
-#if SCUDO_LINUX && !_BIONIC
-  static THREADLOCAL TSD<Allocator> *ThreadTSD;
-#endif
 };
-
-#if SCUDO_LINUX && !_BIONIC
-template <class Allocator, u32 TSDsArraySize, u32 DefaultTSDCount>
-THREADLOCAL TSD<Allocator>
-    *TSDRegistrySharedT<Allocator, TSDsArraySize, DefaultTSDCount>::ThreadTSD;
-#endif
 
 } // namespace scudo
 

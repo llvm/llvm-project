@@ -23,6 +23,8 @@ namespace driver {
 class Distro {
 public:
   enum DistroType {
+    // Special value means that no detection was performed yet.
+    UninitializedDistro,
     // NB: Releases of a particular Linux distro should be kept together
     // in this enum, because some tests are done by integer comparison against
     // the first and last known member in the family, e.g. IsRedHat().
@@ -112,9 +114,7 @@ public:
     return DistroVal == Fedora || (DistroVal >= RHEL5 && DistroVal <= RHEL7);
   }
 
-  bool IsOpenSUSE() const {
-    return DistroVal == OpenSUSE;
-  }
+  bool IsOpenSUSE() const { return DistroVal == OpenSUSE; }
 
   bool IsDebian() const {
     return DistroVal >= DebianLenny && DistroVal <= DebianBullseye;
@@ -124,13 +124,9 @@ public:
     return DistroVal >= UbuntuHardy && DistroVal <= UbuntuGroovy;
   }
 
-  bool IsAlpineLinux() const {
-    return DistroVal == AlpineLinux;
-  }
+  bool IsAlpineLinux() const { return DistroVal == AlpineLinux; }
 
-  bool IsGentoo() const {
-    return DistroVal == Gentoo;
-  }
+  bool IsGentoo() const { return DistroVal == Gentoo; }
 
   /// @}
 };

@@ -304,6 +304,19 @@ module {
 
 // -----
 
+// Optional attribute lowering test
+
+func @parallel_loop_optional_attr() {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  scf.parallel (%i0) = (%c0) to (%c1) step (%c1) {
+  } { mapping = [{processor = 0, map = affine_map<(d0) -> (d0)>, bound = affine_map<(d0) -> (d0)>}], optional_attr = 1 }
+  // CHECK: optional_attr = 1
+  return
+}
+
+// -----
+
 // Mapping to the same processor twice.
 
 func @parallel_double_map(%arg0 : index, %arg1 : index, %arg2 : index,

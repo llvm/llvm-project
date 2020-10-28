@@ -152,7 +152,7 @@ public:
     return *Parent;
   }
 
-  Register getReg() const { return getParent().reg; }
+  Register getReg() const { return getParent().reg(); }
 
   /// Iterator for accessing the new registers added by this edit.
   using iterator = SmallVectorImpl<Register>::const_iterator;

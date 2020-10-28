@@ -263,10 +263,12 @@ static void collectAllSubModulesWithUmbrellaHeader(
 }
 
 void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
-  assert(Mod.getUmbrellaHeader() && "Module must use umbrella header");
-  SourceLocation StartLoc =
-      SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
-  if (getDiagnostics().isIgnored(diag::warn_uncovered_module_header, StartLoc))
+  const Module::Header &UmbrellaHeader = Mod.getUmbrellaHeader();
+  assert(UmbrellaHeader.Entry && "Module must use umbrella header");
+  const FileID &File = SourceMgr.translateFile(UmbrellaHeader.Entry);
+  SourceLocation ExpectedHeadersLoc = SourceMgr.getLocForEndOfFile(File);
+  if (getDiagnostics().isIgnored(diag::warn_uncovered_module_header,
+                                 ExpectedHeadersLoc))
     return;
 
   ModuleMap &ModMap = getHeaderSearchInfo().getModuleMap();
@@ -291,7 +293,7 @@ void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
           // Find the relative path that would access this header.
           SmallString<128> RelativePath;
           computeRelativePath(FileMgr, Dir, *Header, RelativePath);
-          Diag(StartLoc, diag::warn_uncovered_module_header)
+          Diag(ExpectedHeadersLoc, diag::warn_uncovered_module_header)
               << Mod.getFullModuleName() << RelativePath;
         }
       }

@@ -14,7 +14,7 @@ define dso_local i32 @main(i32 %argc, i8** %argv, ...) #0 {
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
-; CHECK-NEXT:    subq $336, %rsp ## imm = 0x150
+; CHECK-NEXT:    subq $320, %rsp ## imm = 0x140
 ; CHECK-NEXT:    movq ___security_cookie@{{.*}}(%rip), %rax
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    movq %rax, -8(%rbp)
@@ -25,10 +25,9 @@ define dso_local i32 @main(i32 %argc, i8** %argv, ...) #0 {
 ; CHECK-NEXT:    leaq {{.*}}(%rip), %rcx
 ; CHECK-NEXT:    callq _printf
 ; CHECK-NEXT:    movq -8(%rbp), %rcx
-; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; CHECK-NEXT:    callq ___security_check_cookie
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    addq $336, %rsp ## imm = 0x150
+; CHECK-NEXT:    addq $320, %rsp ## imm = 0x140
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
 entry:

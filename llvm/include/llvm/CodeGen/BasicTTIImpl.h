@@ -40,7 +40,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1122,9 +1121,12 @@ public:
   /// Get intrinsic cost based on arguments.
   unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                  TTI::TargetCostKind CostKind) {
-    Intrinsic::ID IID = ICA.getID();
+    // Check for generically free intrinsics.
+    if (BaseT::getIntrinsicInstrCost(ICA, CostKind) == 0)
+      return 0;
 
     // Special case some scalar intrinsics.
+    Intrinsic::ID IID = ICA.getID();
     if (CostKind != TTI::TCK_RecipThroughput) {
       switch (IID) {
       default:
@@ -1143,9 +1145,6 @@ public:
       }
       return BaseT::getIntrinsicInstrCost(ICA, CostKind);
     }
-
-    if (BaseT::getIntrinsicInstrCost(ICA, CostKind) == 0)
-      return 0;
 
     // TODO: Combine these two logic paths.
     if (ICA.isTypeBasedOnly())
@@ -1350,13 +1349,9 @@ public:
       break;
     case Intrinsic::minnum:
       ISDs.push_back(ISD::FMINNUM);
-      if (FMF.noNaNs())
-        ISDs.push_back(ISD::FMINIMUM);
       break;
     case Intrinsic::maxnum:
       ISDs.push_back(ISD::FMAXNUM);
-      if (FMF.noNaNs())
-        ISDs.push_back(ISD::FMAXIMUM);
       break;
     case Intrinsic::copysign:
       ISDs.push_back(ISD::FCOPYSIGN);

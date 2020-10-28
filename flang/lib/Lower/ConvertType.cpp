@@ -262,13 +262,13 @@ private:
   //===--------------------------------------------------------------------===//
 
   mlir::Type gen(const Fortran::evaluate::ImpliedDoIndex &) {
-    return genFIRType<Fortran::common::TypeCategory::Integer>(
-        context, defaultKind<Fortran::common::TypeCategory::Integer>());
+    return genFIRType<Fortran::evaluate::ImpliedDoIndex::Result::category>(
+        context, Fortran::evaluate::ImpliedDoIndex::Result::kind);
   }
 
-  template <int KIND>
-  mlir::Type gen(const Fortran::evaluate::TypeParamInquiry<KIND> &) {
-    return genFIRType<Fortran::common::TypeCategory::Integer, KIND>(context);
+  mlir::Type gen(const Fortran::evaluate::TypeParamInquiry &) {
+    return genFIRType<Fortran::evaluate::TypeParamInquiry::Result::category>(
+        context, Fortran::evaluate::TypeParamInquiry::Result::kind);
   }
 
   template <typename A>

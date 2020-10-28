@@ -62,7 +62,7 @@ enum class IFSSymbolType {
   Unknown = 16,
 };
 
-std::string getTypeName(IFSSymbolType Type) {
+static std::string getTypeName(IFSSymbolType Type) {
   switch (Type) {
   case IFSSymbolType::NoType:
     return "NoType";
@@ -213,8 +213,8 @@ static Expected<std::unique_ptr<IFSStub>> readInputFile(StringRef FilePath) {
   return std::move(Stub);
 }
 
-int writeTbdStub(const llvm::Triple &T, const std::vector<IFSSymbol> &Symbols,
-                 const StringRef Format, raw_ostream &Out) {
+static int writeTbdStub(const Triple &T, const std::vector<IFSSymbol> &Symbols,
+                        const StringRef Format, raw_ostream &Out) {
 
   auto PlatformKindOrError =
       [](const llvm::Triple &T) -> llvm::Expected<llvm::MachO::PlatformKind> {
@@ -275,8 +275,8 @@ int writeTbdStub(const llvm::Triple &T, const std::vector<IFSSymbol> &Symbols,
   return 0;
 }
 
-int writeElfStub(const llvm::Triple &T, const std::vector<IFSSymbol> &Symbols,
-                 const StringRef Format, raw_ostream &Out) {
+static int writeElfStub(const Triple &T, const std::vector<IFSSymbol> &Symbols,
+                        const StringRef Format, raw_ostream &Out) {
   SmallString<0> Storage;
   Storage.clear();
   raw_svector_ostream OS(Storage);
@@ -358,7 +358,7 @@ int writeElfStub(const llvm::Triple &T, const std::vector<IFSSymbol> &Symbols,
   return convertYAML(YIn, Out, ErrHandler) ? 0 : 1;
 }
 
-int writeIfso(const IFSStub &Stub, bool IsWriteIfs, raw_ostream &Out) {
+static int writeIfso(const IFSStub &Stub, bool IsWriteIfs, raw_ostream &Out) {
   if (IsWriteIfs) {
     yaml::Output YamlOut(Out, NULL, /*WrapColumn =*/0);
     YamlOut << const_cast<IFSStub &>(Stub);

@@ -12,14 +12,11 @@
 #ifndef LLVM_LIB_TARGET_SPARC_LEON_PASSES_H
 #define LLVM_LIB_TARGET_SPARC_LEON_PASSES_H
 
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/Passes.h"
-
-#include "Sparc.h"
-#include "SparcSubtarget.h"
 
 namespace llvm {
+class SparcSubtarget;
+
 class LLVM_LIBRARY_VISIBILITY LEONMachineFunctionPass
     : public MachineFunctionPass {
 protected:
@@ -33,13 +30,11 @@ protected:
 protected:
   LEONMachineFunctionPass(char &ID);
 
-  int GetRegIndexForOperand(MachineInstr &MI, int OperandIndex);
   void clearUsedRegisterList() { UsedRegisters.clear(); }
 
   void markRegisterUsed(int registerIndex) {
     UsedRegisters.push_back(registerIndex);
   }
-  int getUnusedFPRegister(MachineRegisterInfo &MRI);
 };
 
 class LLVM_LIBRARY_VISIBILITY InsertNOPLoad : public LEONMachineFunctionPass {

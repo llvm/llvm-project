@@ -11,5 +11,6 @@ add_lldb_unittest(ExpressionTests
     lldbPluginTypeSystemClang
     lldbUtility
     lldbUtilityHelpers
+    lldbSymbolHelpers
     LLVMTestingSupport
   )

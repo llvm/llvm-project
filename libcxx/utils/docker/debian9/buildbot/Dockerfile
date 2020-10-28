@@ -14,7 +14,6 @@ ADD install-packages.sh /tmp/
 RUN /tmp/install-packages.sh && rm /tmp/install-packages.sh
 
 COPY --from=ericwf/gcc:5.5.0 /compiler /opt/gcc-5
-COPY --from=ericwf/llvm:9.x /compiler /opt/llvm-9
 
 FROM base-image as worker-image
 

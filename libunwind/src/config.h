@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <__libunwind_config.h>
+
 // Platform specific configuration defines.
 #ifdef __APPLE__
   #if defined(FOR_DYLD)
@@ -32,8 +34,19 @@
   #else
     #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
   #endif
+#elif defined(_LIBUNWIND_IS_BAREMETAL)
+  #if !defined(_LIBUNWIND_ARM_EHABI)
+    #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
+    #define _LIBUNWIND_SUPPORT_DWARF_INDEX 1
+  #endif
+#elif defined(__BIONIC__) && defined(_LIBUNWIND_ARM_EHABI)
+  // For ARM EHABI, Bionic didn't implement dl_iterate_phdr until API 21. After
+  // API 21, dl_iterate_phdr exists, but dl_unwind_find_exidx is much faster.
+  #define _LIBUNWIND_USE_DL_UNWIND_FIND_EXIDX 1
 #else
-  #if defined(__ARM_DWARF_EH__) || !defined(__arm__)
+  // Assume an ELF system with a dl_iterate_phdr function.
+  #define _LIBUNWIND_USE_DL_ITERATE_PHDR 1
+  #if !defined(_LIBUNWIND_ARM_EHABI)
     #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
     #define _LIBUNWIND_SUPPORT_DWARF_INDEX 1
   #endif
@@ -81,6 +94,8 @@
 #error Unsupported target
 #endif
 
+// Apple/armv7k defaults to DWARF/Compact unwinding, but its libunwind also
+// needs to include the SJLJ APIs.
 #if (defined(__APPLE__) && defined(__arm__)) || defined(__USING_SJLJ_EXCEPTIONS__)
 #define _LIBUNWIND_BUILD_SJLJ_APIS
 #endif
