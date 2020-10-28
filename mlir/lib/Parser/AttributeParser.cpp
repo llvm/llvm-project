@@ -410,22 +410,16 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
 // TensorLiteralParser
 //===----------------------------------------------------------------------===//
 
-/// Parse elements values stored within a hex etring. On success, the values are
+/// Parse elements values stored within a hex string. On success, the values are
 /// stored into 'result'.
 static ParseResult parseElementAttrHexValues(Parser &parser, Token tok,
                                              std::string &result) {
-  std::string val = tok.getStringValue();
-  if (val.size() < 2 || val[0] != '0' || val[1] != 'x')
-    return parser.emitError(tok.getLoc(),
-                            "elements hex string should start with '0x'");
-
-  StringRef hexValues = StringRef(val).drop_front(2);
-  if (!llvm::all_of(hexValues, llvm::isHexDigit))
-    return parser.emitError(tok.getLoc(),
-                            "elements hex string only contains hex digits");
-
-  result = llvm::fromHex(hexValues);
-  return success();
+  if (Optional<std::string> value = tok.getHexStringValue()) {
+    result = std::move(*value);
+    return success();
+  }
+  return parser.emitError(
+      tok.getLoc(), "expected string containing hex digits starting with `0x`");
 }
 
 namespace {

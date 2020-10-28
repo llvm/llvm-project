@@ -15,12 +15,12 @@
 
 // -----
 
-// expected-error@+1 {{elements hex string should start with '0x'}}
+// expected-error@+1 {{expected string containing hex digits starting with `0x`}}
 "foo.op"() {dense.attr = dense<"00000000000024400000000000001440"> : tensor<2xf64>} : () -> ()
 
 // -----
 
-// expected-error@+1 {{elements hex string only contains hex digits}}
+// expected-error@+1 {{expected string containing hex digits starting with `0x`}}
 "foo.op"() {dense.attr = dense<"0x0000000000002440000000000000144X"> : tensor<2xf64>} : () -> ()
 
 // -----
