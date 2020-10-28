@@ -1,4 +1,5 @@
 // RUN: %libomp-compile-and-run
+// REQUIRES: !abt
 
 #include <stdio.h>
 #include <stdlib.h>

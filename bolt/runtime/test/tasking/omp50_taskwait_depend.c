@@ -6,6 +6,7 @@
 // icc does not yet support taskwait with depend clause
 // TODO: update expected result when support for icc is added
 // XFAIL: clang, icc
+// REQUIRES: !abt
 
 #include <stdio.h>
 #include <stdlib.h>
