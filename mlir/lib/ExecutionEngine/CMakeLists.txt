@@ -46,6 +46,7 @@ add_mlir_library(MLIRExecutionEngine
   MLIRTargetLLVMIR
   )
 
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 add_mlir_library(MLIRJitRunner
   JitRunner.cpp
 
@@ -60,6 +61,7 @@ add_mlir_library(MLIRJitRunner
   JITLink
 
   LINK_LIBS PUBLIC
+  ${dialect_libs}
   MLIRExecutionEngine
   MLIRIR
   MLIRParser
