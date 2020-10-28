@@ -9,8 +9,7 @@ union alignas(32) ymm_t {
 
 int main() {
   constexpr ymm_t ymm_fill = {
-    .as_uint64 = { 0x0F0F0F0F0F0F0F0F, 0x0F0F0F0F0F0F0F0F,
-                   0x0F0F0F0F0F0F0F0F, 0x0F0F0F0F0F0F0F0F }
+    .as_uint64 = { 0, 0, 0, 0 }
   };
 
   ymm_t ymm[16];
