@@ -6559,7 +6559,7 @@ GetExistentialTypeChild(swift::ASTContext *swift_ast_ctx, CompilerType type,
   // The instance for an error existential.
   if (idx == 0 && protocol_info.m_is_errortype) {
     auto raw_pointer = swift_ast_ctx->TheRawPointerType;
-    return {ToCompilerType(raw_pointer.getPointer()), "error_instance"};
+    return {ToCompilerType(raw_pointer.getPointer()), "error"};
   }
 
   // The metatype for a non-class, non-error existential.
